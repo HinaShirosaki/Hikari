@@ -1,0 +1,7 @@
+{
+  "paperSummary": "Summarize this scientific paper with sections: Objective, Methods, Key Results, Limitations, and 3 Actionable Takeaways. Title: {{title}}",
+  "extractMethods": "Extract experimental methods into protocol-like drafts with direct citation strings. Return ONLY JSON with shape: {\"methods\":[{\"title\":\"string\",\"steps\":[\"string\"],\"citations\":[\"string\"]}]}.",
+  "extractReagents": "Extract key reagents. Focus on antibodies, strains, plasmids, buffers, compounds, proteins, primers. Return ONLY JSON with shape: {\"reagents\":[{\"name\":\"string\",\"type\":\"antibody|strain|plasmid|buffer|compound|protein|primer|other\",\"identifier\":\"string\",\"notes\":\"string\",\"citation\":\"string\"}]}.",
+  "knowledgeQa": "You are the lab knowledge assistant. Answer using ONLY this project context. If not found, say \"Not found in project library\".\n\nProject: {{projectName}}\n\nContext:\n{{context}}\n\nQuestion:\n{{question}}",
+  "paperTitleSuffix": "Paper title: {{title}}"
+}

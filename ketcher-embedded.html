@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ketcher Embedded</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Avenir Next", "SF Pro Text", "Segoe UI", sans-serif;
+      background: #f4f8ff;
+      color: #1a2733;
+    }
+
+    .host {
+      min-height: 100vh;
+      display: grid;
+    }
+
+    .editor {
+      width: 100%;
+      min-height: 100vh;
+      border: 0;
+      background: #fff;
+    }
+
+    .fallback {
+      display: none;
+      padding: 18px;
+      line-height: 1.5;
+    }
+
+    .fallback h2 {
+      margin: 0 0 8px;
+      font-size: 1rem;
+    }
+
+    .fallback code {
+      background: rgba(16, 64, 107, 0.08);
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
+
+    .is-missing .fallback {
+      display: block;
+    }
+
+    .is-missing .editor {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <main id="host" class="host">
+    <iframe id="editor" class="editor" src="./vendor/ketcher-src/packages/release/index.html" title="Ketcher local editor"></iframe>
+    <section class="fallback" aria-live="polite">
+      <h2>Local Ketcher bundle not found</h2>
+      <p>This app now uses only local Ketcher files (no website homepage).</p>
+      <p>Place the Ketcher static build at <code>/Users/shiyifan/Projects/Enana/vendor/ketcher-src/packages/release/index.html</code>.</p>
+      <p>Once added, reopen Lab Notebook and the embedded editor will load automatically.</p>
+    </section>
+  </main>
+
+  <script>
+    const host = document.getElementById('host');
+    const editor = document.getElementById('editor');
+
+    function showMissing() {
+      host.classList.add('is-missing');
+    }
+
+    editor.addEventListener('load', () => {
+      try {
+        const href = editor.contentWindow.location.href || '';
+        if (href.startsWith('chrome-error://')) {
+          showMissing();
+        }
+      } catch (_error) {
+        showMissing();
+      }
+    });
+
+    editor.addEventListener('error', showMissing);
+    setTimeout(() => {
+      if (!editor.contentWindow) {
+        showMissing();
+      }
+    }, 1500);
+  </script>
+</body>
+</html>

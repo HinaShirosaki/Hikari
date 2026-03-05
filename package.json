@@ -1,0 +1,27 @@
+{
+  "name": "enana",
+  "version": "1.0.0",
+  "description": "Electron shell for Enana sub-app launcher",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron-forge start",
+    "test": "node test.js",
+    "package": "electron-forge package",
+    "make": "electron-forge make"
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "^7.11.1",
+    "@electron-forge/maker-deb": "^7.11.1",
+    "@electron-forge/maker-rpm": "^7.11.1",
+    "@electron-forge/maker-squirrel": "^7.11.1",
+    "@electron-forge/maker-zip": "^7.11.1",
+    "@electron-forge/plugin-auto-unpack-natives": "^7.11.1",
+    "@electron-forge/plugin-fuses": "^7.11.1",
+    "@electron/fuses": "^1.8.0",
+    "electron": "^40.4.1"
+  },
+  "dependencies": {
+    "electron-squirrel-startup": "^1.0.1",
+    "telegraf": "^4.16.3"
+  }
+}

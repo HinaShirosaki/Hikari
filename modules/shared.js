@@ -1,0 +1,292 @@
+export const VIEWS = {
+  HOME: 'home-view',
+  LAB_MANAGEMENT: 'lab-management-view',
+  INSTRUMENT_MANAGEMENT: 'instrument-management-view',
+  PROTOCOL_MANAGEMENT: 'protocol-management-view',
+  COLLABORATION_MANAGEMENT: 'collaboration-management-view',
+  LAB_NOTEBOOK: 'lab-notebook-view',
+  SYNTHESIS_NOTEBOOK: 'synthesis-notebook-view',
+  BIOLOGY_NOTEBOOK: 'biology-notebook-view',
+  LAB_COMMON_INVENTORY: 'lab-common-inventory-view',
+  SAMPLE_REGISTRY: 'sample-registry-view',
+  ASSAY: 'assay-view',
+  GEL: 'gel-view',
+  PERSONAL_INVENTORY: 'personal-inventory-view',
+  SETTING: 'setting-view',
+  PROJECT_MANAGEMENT: 'project-management-view',
+  WORKFLOW_MANAGEMENT: 'workflow-management-view',
+  PAPERS: 'papers-view',
+  TOOL_BOX: 'tool-box-view'
+};
+
+export const TITLES = {
+  [VIEWS.HOME]: 'Choose a sub-app to continue.',
+  [VIEWS.LAB_MANAGEMENT]: 'Manage members in card view.',
+  [VIEWS.INSTRUMENT_MANAGEMENT]: 'Manage instruments and reservations by calendar.',
+  [VIEWS.PROTOCOL_MANAGEMENT]: 'Create and edit protocols step by step.',
+  [VIEWS.COLLABORATION_MANAGEMENT]: 'Collabrations module.',
+  [VIEWS.LAB_NOTEBOOK]: 'Fill protocol-specific values and store experiment result notes.',
+  [VIEWS.SYNTHESIS_NOTEBOOK]: 'Synthesis notebook for chemistry workflows.',
+  [VIEWS.BIOLOGY_NOTEBOOK]: 'Biology notebook for wet lab workflows.',
+  [VIEWS.LAB_COMMON_INVENTORY]: 'Chemicals module.',
+  [VIEWS.SAMPLE_REGISTRY]: 'Registry for plasmids, cell lines, strains, antibodies, proteins, compounds, and primers.',
+  [VIEWS.ASSAY]: 'Create assay plates or open existing assay numbers to paste spreadsheet results and analyze.',
+  [VIEWS.GEL]: 'Analyze SDS-PAGE or Western blot gels with lane/band quantification and interpretation.',
+  [VIEWS.PERSONAL_INVENTORY]: 'Track inventory by temperature storage and wells.',
+  [VIEWS.SETTING]: 'Settings module.',
+  [VIEWS.PROJECT_MANAGEMENT]: 'Manage projects for notebook context.',
+  [VIEWS.WORKFLOW_MANAGEMENT]: 'Build editable protocol-block workflows and reusable templates.',
+  [VIEWS.PAPERS]: 'Upload papers, link them to projects or journal clubs, and summarize with LLM.',
+  [VIEWS.TOOL_BOX]: 'Tools: molarity calculator, peptide properties, and buffer preparer.'
+};
+
+export const STORAGE_KEY = 'enana_state_v1';
+const LEGACY_CHEMISTRY_DRAFT_KEY = 'enana_synthesis_chemistry_draft_v1';
+
+export const defaultState = {
+  members: [],
+  instruments: [],
+  protocols: [],
+  projects: [],
+  workflows: [],
+  workflowTemplates: [],
+  journalClubs: [],
+  papers: [],
+  paperExperimentLinks: [],
+  knowledgeChats: {},
+  messages: [],
+  growthMetrics: {
+    counters: {
+      protocol_share_sent: 0,
+      protocol_share_imported: 0,
+      protocol_share_link_copied: 0,
+      protocol_share_link_imported: 0
+    },
+    events: []
+  },
+  notebookEntries: [],
+  synthesisChemistryDrafts: {},
+  assays: [],
+  gelAnalyses: [],
+  samples: [],
+  objectGraph: {
+    nodes: {},
+    edges: [],
+    backlinks: {},
+    updatedAt: ''
+  },
+  labInventory: {
+    chemicals: [],
+    blocks: [],
+    lastLocationNumber: 0
+  },
+  settings: {
+    personalInfo: {
+      name: '',
+      position: '',
+      institutionEmail: '',
+      enanaEmail: ''
+    },
+    appearance: {
+      fontSize: 16,
+      themeColor: '#2688ff',
+      mode: 'day',
+      uiStyle: 'neutral-compact'
+    },
+    storagePath: '',
+    llm: {
+      model: '',
+      api: '',
+      apiEndpoint: 'https://api.openai.com/v1/responses',
+      apiKey: ''
+    },
+    enaFilePath: '',
+    autoSaveEna: true,
+    inventoryLocations: ['Main Storage', 'Cold Room', 'Fume Hood']
+  },
+  inventory: {
+    'Room Temp': [],
+    '4 Degree': [],
+    '-20 Degree': [],
+    '-80 Degree': [],
+    'Liquid Nitrogen': []
+  }
+};
+
+export function normalizeState(parsed) {
+  const source = parsed || {};
+  const rawLlm = source.settings?.llm || {};
+  const rawGrowthMetrics = source.growthMetrics && typeof source.growthMetrics === 'object'
+    ? source.growthMetrics
+    : {};
+  const rawGrowthCounters = rawGrowthMetrics.counters && typeof rawGrowthMetrics.counters === 'object'
+    ? rawGrowthMetrics.counters
+    : {};
+  const legacyApi = String(rawLlm.api || '').trim();
+  const legacyEndpoint = legacyApi.startsWith('http') ? legacyApi : '';
+  const legacyApiKey = legacyApi && !legacyApi.startsWith('http') ? legacyApi : '';
+
+  return {
+    ...structuredClone(defaultState),
+    ...source,
+    instruments: Array.isArray(source.instruments) ? source.instruments : [],
+    projects: Array.isArray(source.projects) ? source.projects : [],
+    workflows: Array.isArray(source.workflows) ? source.workflows : [],
+    workflowTemplates: Array.isArray(source.workflowTemplates) ? source.workflowTemplates : [],
+    journalClubs: Array.isArray(source.journalClubs) ? source.journalClubs : [],
+    papers: Array.isArray(source.papers) ? source.papers : [],
+    paperExperimentLinks: Array.isArray(source.paperExperimentLinks) ? source.paperExperimentLinks : [],
+    knowledgeChats: source.knowledgeChats && typeof source.knowledgeChats === 'object' ? source.knowledgeChats : {},
+    notebookEntries: Array.isArray(source.notebookEntries) ? source.notebookEntries : [],
+    synthesisChemistryDrafts:
+      source.synthesisChemistryDrafts && typeof source.synthesisChemistryDrafts === 'object'
+        ? source.synthesisChemistryDrafts
+        : {},
+    assays: Array.isArray(source.assays) ? source.assays : [],
+    gelAnalyses: Array.isArray(source.gelAnalyses) ? source.gelAnalyses : [],
+    samples: Array.isArray(source.samples) ? source.samples : [],
+    growthMetrics: {
+      ...defaultState.growthMetrics,
+      ...rawGrowthMetrics,
+      counters: {
+        ...defaultState.growthMetrics.counters,
+        ...rawGrowthCounters,
+        protocol_share_sent: Number(rawGrowthCounters.protocol_share_sent) || 0,
+        protocol_share_imported: Number(rawGrowthCounters.protocol_share_imported) || 0,
+        protocol_share_link_copied: Number(rawGrowthCounters.protocol_share_link_copied) || 0,
+        protocol_share_link_imported: Number(rawGrowthCounters.protocol_share_link_imported) || 0
+      },
+      events: Array.isArray(rawGrowthMetrics.events) ? rawGrowthMetrics.events : []
+    },
+    objectGraph: {
+      ...defaultState.objectGraph,
+      ...(source.objectGraph || {})
+    },
+    messages: Array.isArray(source.messages) ? source.messages : [],
+    labInventory: {
+      ...defaultState.labInventory,
+      ...(source.labInventory || {})
+    },
+    settings: {
+      ...defaultState.settings,
+      ...(source.settings || {}),
+      personalInfo: {
+        ...defaultState.settings.personalInfo,
+        ...(source.settings?.personalInfo || {})
+      },
+      appearance: {
+        ...defaultState.settings.appearance,
+        ...(source.settings?.appearance || {})
+      },
+      llm: {
+        ...defaultState.settings.llm,
+        ...rawLlm,
+        apiEndpoint: String(rawLlm.apiEndpoint || legacyEndpoint || defaultState.settings.llm.apiEndpoint).trim(),
+        apiKey: String(rawLlm.apiKey || legacyApiKey).trim(),
+        api: legacyApi
+      },
+      inventoryLocations: Array.isArray(source.settings?.inventoryLocations)
+        ? source.settings.inventoryLocations
+        : defaultState.settings.inventoryLocations
+    },
+    inventory: {
+      ...defaultState.inventory,
+      ...(source.inventory || {})
+    }
+  };
+}
+
+export function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const state = raw ? normalizeState(JSON.parse(raw)) : structuredClone(defaultState);
+    const hasDrafts = state.synthesisChemistryDrafts && Object.keys(state.synthesisChemistryDrafts).length > 0;
+    if (hasDrafts) {
+      return state;
+    }
+
+    const legacyRaw = localStorage.getItem(LEGACY_CHEMISTRY_DRAFT_KEY);
+    if (!legacyRaw) {
+      return state;
+    }
+
+    const legacyDrafts = JSON.parse(legacyRaw);
+    if (!legacyDrafts || typeof legacyDrafts !== 'object' || Array.isArray(legacyDrafts)) {
+      localStorage.removeItem(LEGACY_CHEMISTRY_DRAFT_KEY);
+      return state;
+    }
+
+    state.synthesisChemistryDrafts = legacyDrafts;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    localStorage.removeItem(LEGACY_CHEMISTRY_DRAFT_KEY);
+    return state;
+  } catch {
+    return structuredClone(defaultState);
+  }
+}
+
+export function persistState(state) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+export function createId() {
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+export function trackGrowthEvent(state, name, props = {}) {
+  if (!state || typeof state !== 'object') {
+    return;
+  }
+
+  if (!state.growthMetrics || typeof state.growthMetrics !== 'object') {
+    state.growthMetrics = structuredClone(defaultState.growthMetrics);
+  }
+
+  if (!state.growthMetrics.counters || typeof state.growthMetrics.counters !== 'object') {
+    state.growthMetrics.counters = { ...defaultState.growthMetrics.counters };
+  }
+
+  if (!Array.isArray(state.growthMetrics.events)) {
+    state.growthMetrics.events = [];
+  }
+
+  const counterEvents = new Set([
+    'protocol_share_sent',
+    'protocol_share_imported',
+    'protocol_share_link_copied',
+    'protocol_share_link_imported'
+  ]);
+
+  if (counterEvents.has(name)) {
+    const current = Number(state.growthMetrics.counters[name]) || 0;
+    state.growthMetrics.counters[name] = current + 1;
+  }
+
+  state.growthMetrics.events.push({
+    id: createId(),
+    name: String(name || 'unknown'),
+    props: props && typeof props === 'object' ? { ...props } : {},
+    createdAt: new Date().toISOString()
+  });
+
+  if (state.growthMetrics.events.length > 500) {
+    state.growthMetrics.events = state.growthMetrics.events.slice(-500);
+  }
+}
+
+export function safeText(text) {
+  return String(text || '').replace(/[&<>"']/g, (char) => {
+    const entityMap = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    };
+    return entityMap[char] || char;
+  });
+}
+
+export function cssEscape(value) {
+  return String(value).replace(/(["\\])/g, '\\$1');
+}

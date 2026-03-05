@@ -1,0 +1,1732 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Enana</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="./vendor/cropperjs/cropper.min.css" />
+  <link rel="stylesheet" href="./vendor/tabulator/tabulator.min.css" />
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <h1>Enana</h1>
+      <div class="topbar-row">
+        <p id="page-subtitle">Choose a sub-app to continue.</p>
+        <div class="topbar-tools">
+          <input id="topbar-search" type="search" placeholder="Search" aria-label="Search" />
+          <button id="home-btn" class="ghost-btn" hidden>Back to Home</button>
+        </div>
+      </div>
+    </header>
+    <div class="workspace-shell">
+      <aside class="app-sidebar" aria-label="Applications">
+        <h2 class="app-sidebar-title">Apps</h2>
+        <nav id="app-nav-list" class="app-nav-list">
+          <button class="app-nav-btn" type="button" data-view="lab-management-view">Members</button>
+          <button class="app-nav-btn" type="button" data-view="instrument-management-view">Instruments</button>
+          <button class="app-nav-btn" type="button" data-view="protocol-management-view">Protocols</button>
+          <button class="app-nav-btn" type="button" data-view="collaboration-management-view">Collabrations</button>
+          <button class="app-nav-btn" type="button" data-view="synthesis-notebook-view">Synthesis Notebook</button>
+          <button class="app-nav-btn" type="button" data-view="biology-notebook-view">Biology Notebook</button>
+          <button class="app-nav-btn" type="button" data-view="lab-common-inventory-view">Chemicals</button>
+          <button class="app-nav-btn" type="button" data-view="sample-registry-view">Samples</button>
+          <button class="app-nav-btn" type="button" data-view="assay-view">Assay</button>
+          <button class="app-nav-btn" type="button" data-view="gel-view">Gel</button>
+          <button class="app-nav-btn" type="button" data-view="personal-inventory-view">Inventory</button>
+          <button class="app-nav-btn" type="button" data-view="project-management-view">Projects</button>
+          <button class="app-nav-btn" type="button" data-view="workflow-management-view">Workflows</button>
+          <button class="app-nav-btn" type="button" data-view="papers-view">Papers</button>
+          <button class="app-nav-btn" type="button" data-view="tool-box-view">Tools</button>
+          <button class="app-nav-btn" type="button" data-view="setting-view">Setting</button>
+        </nav>
+      </aside>
+      <section class="workspace-main">
+
+    <section id="home-view" class="view is-active" aria-label="Sub applications">
+      <div class="grid">
+        <button class="tile" data-view="lab-management-view">
+          <span class="icon" aria-hidden="true">🧪</span>
+          <span class="label">Members</span>
+        </button>
+
+        <button class="tile" data-view="instrument-management-view">
+          <span class="icon" aria-hidden="true">🗓️</span>
+          <span class="label">Instruments</span>
+        </button>
+
+        <button class="tile" data-view="protocol-management-view">
+          <span class="icon" aria-hidden="true">📋</span>
+          <span class="label">Protocols</span>
+        </button>
+
+        <button class="tile" data-view="collaboration-management-view">
+          <span class="icon" aria-hidden="true">🤝</span>
+          <span class="label">Collabrations</span>
+        </button>
+
+        <button class="tile" data-view="synthesis-notebook-view">
+          <span class="icon" aria-hidden="true">📓</span>
+          <span class="label">Synthesis Notebook</span>
+        </button>
+
+        <button class="tile" data-view="biology-notebook-view">
+          <span class="icon" aria-hidden="true">🧫</span>
+          <span class="label">Biology Notebook</span>
+        </button>
+
+        <button class="tile" data-view="lab-common-inventory-view">
+          <span class="icon" aria-hidden="true">📦</span>
+          <span class="label">Chemicals</span>
+        </button>
+
+        <button class="tile" data-view="sample-registry-view">
+          <span class="icon" aria-hidden="true">🧬</span>
+          <span class="label">Samples</span>
+        </button>
+
+        <button class="tile" data-view="assay-view">
+          <span class="icon" aria-hidden="true">🧪</span>
+          <span class="label">Assay</span>
+        </button>
+
+        <button class="tile" data-view="gel-view">
+          <span class="icon" aria-hidden="true">🧬</span>
+          <span class="label">Gel</span>
+        </button>
+
+        <button class="tile" data-view="personal-inventory-view">
+          <span class="icon" aria-hidden="true">🧰</span>
+          <span class="label">Inventory</span>
+        </button>
+
+        <button class="tile" data-view="project-management-view">
+          <span class="icon" aria-hidden="true">🗂️</span>
+          <span class="label">Projects</span>
+        </button>
+
+        <button class="tile" data-view="workflow-management-view">
+          <span class="icon" aria-hidden="true">🔀</span>
+          <span class="label">Workflows</span>
+        </button>
+
+        <button class="tile" data-view="papers-view">
+          <span class="icon" aria-hidden="true">📄</span>
+          <span class="label">Papers</span>
+        </button>
+
+        <button class="tile" data-view="tool-box-view">
+          <span class="icon" aria-hidden="true">🧮</span>
+          <span class="label">Tools</span>
+        </button>
+
+        <button class="tile" data-view="setting-view">
+          <span class="icon" aria-hidden="true">⚙️</span>
+          <span class="label">Setting</span>
+        </button>
+      </div>
+    </section>
+
+    <section id="lab-management-view" class="view">
+      <div class="panel">
+        <h2>Members</h2>
+        <form id="member-form" class="form-grid">
+          <input type="hidden" id="member-id" />
+          <label>
+            Name
+            <input id="member-name" required />
+          </label>
+          <label>
+            Institution Email
+            <input id="member-institution-email" type="email" required />
+          </label>
+          <label>
+            Position
+            <input id="member-position" required />
+          </label>
+          <label>
+            Enana Email
+            <input id="member-enana-email" type="email" required />
+          </label>
+          <div class="form-actions">
+            <button type="submit" class="primary-btn">Save Member</button>
+            <button type="button" id="member-cancel-btn" class="ghost-btn">Cancel Edit</button>
+          </div>
+        </form>
+      </div>
+      <div id="member-cards" class="cards"></div>
+    </section>
+
+    <section id="instrument-management-view" class="view">
+      <div class="panel">
+        <h3>Instruments</h3>
+        <div id="instrument-list" class="list-table"></div>
+      </div>
+
+      <div id="instrument-detail-panel" class="panel" hidden>
+        <div class="inline-row">
+          <div>
+            <h3 id="instrument-detail-title">Instrument</h3>
+            <p id="instrument-detail-subtitle" class="small-note"></p>
+          </div>
+          <div class="inline-row calendar-toolbar">
+            <div class="calendar-view-switch" role="group" aria-label="Calendar view mode">
+              <button id="calendar-month-view-btn" class="ghost-btn" type="button">Month</button>
+              <button id="calendar-week-view-btn" class="ghost-btn" type="button">Week</button>
+            </div>
+            <div class="inline-row">
+              <button id="calendar-prev-btn" class="ghost-btn" type="button">Previous</button>
+              <button id="calendar-today-btn" class="ghost-btn" type="button">Today</button>
+              <button id="calendar-next-btn" class="ghost-btn" type="button">Next</button>
+            </div>
+          </div>
+        </div>
+        <h3 id="calendar-month-label"></h3>
+        <div id="instrument-calendar" class="instrument-calendar"></div>
+
+        <form id="reservation-form" class="stack-form">
+          <input type="hidden" id="reservation-id" />
+          <label>
+            Reservation Title
+            <input id="reservation-title" required placeholder="e.g. Sample run" />
+          </label>
+          <div class="form-grid">
+            <label>
+              Date
+              <input id="reservation-date" type="date" required />
+            </label>
+            <label>
+              Start Time
+              <input id="reservation-start-time" type="time" />
+            </label>
+            <label>
+              End Time
+              <input id="reservation-end-time" type="time" />
+            </label>
+          </div>
+          <label>
+            Notes
+            <textarea id="reservation-notes" rows="3" placeholder="Optional reservation details"></textarea>
+          </label>
+          <div class="form-actions">
+            <button type="submit" class="primary-btn">Save Reservation</button>
+            <button type="button" id="reservation-cancel-btn" class="ghost-btn">Cancel Edit</button>
+          </div>
+        </form>
+
+        <div class="panel">
+          <h3>Reservations</h3>
+          <div id="reservation-list" class="cards"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Create / Edit Instrument</h3>
+        <form id="instrument-form" class="form-grid instrument-create-form">
+          <input type="hidden" id="instrument-id" />
+          <label>
+            Instrument Name (Required)
+            <input id="instrument-name" required />
+          </label>
+          <label>
+            Nickname (Optional)
+            <input id="instrument-nickname" />
+          </label>
+          <div class="form-actions instrument-create-actions">
+            <button type="submit" class="primary-btn">Save Instrument</button>
+            <button type="button" id="instrument-cancel-btn" class="ghost-btn">Cancel Edit</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section id="protocol-management-view" class="view">
+      <div id="protocol-list-panel" class="panel">
+        <h2>Protocols</h2>
+        <div class="protocol-list-top">
+          <button type="button" id="create-protocol-btn" class="primary-btn">Create a New Protocol</button>
+          <div class="inline-row protocol-sort-controls">
+            <button type="button" id="protocol-sort-field-btn" class="ghost-btn">Sort: Time</button>
+            <button type="button" id="protocol-sort-order-btn" class="ghost-btn">Order: Low to High</button>
+          </div>
+        </div>
+        <p id="protocol-share-status" class="small-note">Click Share on a protocol, then select teammate and confirm.</p>
+        <div id="protocol-list" class="list-table"></div>
+      </div>
+
+      <div id="protocol-editor-panel" class="panel" hidden>
+        <div class="protocol-panel-head">
+          <h3 id="protocol-editor-heading">Protocol Editor</h3>
+          <button type="button" id="protocol-editor-back-btn" class="ghost-btn">Back to List</button>
+        </div>
+        <form id="protocol-form" class="stack-form">
+          <label>
+            Protocol Name
+            <input id="protocol-name" required placeholder="Protocol name" />
+          </label>
+          <label>
+            Purpose
+            <textarea id="protocol-purpose" rows="3" placeholder="Describe the purpose"></textarea>
+          </label>
+          <label>
+            Materials (start each material with a bullet point)
+            <textarea id="protocol-materials" rows="5" placeholder="• Material 1&#10;• Material 2"></textarea>
+          </label>
+          <label>
+            Steps (start each step with a bullet point)
+            <textarea id="protocol-steps" rows="7" placeholder="• Step 1&#10;• Step 2"></textarea>
+          </label>
+          <div class="inline-row">
+            <button type="button" id="add-placeholder-btn" class="ghost-btn">Insert Interactive Bar</button>
+            <input id="placeholder-name" placeholder="Interactive bar name (e.g. volume)" />
+          </div>
+          <label>
+            Troubleshooting
+            <textarea id="protocol-troubleshooting" rows="4" placeholder="Common issues and solutions"></textarea>
+          </label>
+          <div class="form-actions protocol-save-actions">
+            <button type="submit" class="primary-btn">Save Protocol</button>
+            <button type="button" id="protocol-cancel-btn" class="ghost-btn">Cancel</button>
+          </div>
+        </form>
+      </div>
+
+      <div id="protocol-view-panel" class="panel" hidden>
+        <div class="protocol-panel-head">
+          <h3 id="protocol-view-title">Protocol</h3>
+          <button type="button" id="protocol-view-back-btn" class="ghost-btn">Back to List</button>
+        </div>
+        <div id="protocol-view-content" class="stack-form"></div>
+      </div>
+    </section>
+
+    <section id="synthesis-notebook-view" class="view">
+      <div class="panel">
+        <h2>Synthesis Notebook</h2>
+        <label>
+          Select Project
+          <select id="synthesis-notebook-project-select">
+            <option value="">Select project</option>
+          </select>
+        </label>
+      </div>
+      <div id="synthesis-notebook-protocol-area" class="panel" hidden>
+        <h3 id="synthesis-notebook-protocol-title"></h3>
+        <div id="synthesis-notebook-steps" class="notebook-steps"></div>
+        <label>
+          Experiment Results File / Notes
+          <textarea id="synthesis-notebook-result" rows="4" placeholder="Path, summary, or notes"></textarea>
+        </label>
+        <label>
+          Experiment Result Files
+          <input id="synthesis-notebook-result-file" type="file" multiple />
+        </label>
+        <section class="card">
+          <h4>Object Links</h4>
+          <div class="form-grid">
+            <label>
+              Instrument
+              <select id="synthesis-ref-instrument">
+                <option value="">Select instrument</option>
+              </select>
+            </label>
+            <label>
+              People IDs (comma separated)
+              <input id="synthesis-ref-people-ids" placeholder="member-id-1, member-id-2" />
+            </label>
+            <label>
+              Chemical IDs (comma separated)
+              <input id="synthesis-ref-chemical-ids" placeholder="chemical-id-1, chemical-id-2" />
+            </label>
+            <label>
+              Samples (multi-select)
+              <select id="synthesis-ref-sample-ids" multiple size="5"></select>
+            </label>
+            <label>
+              Paper IDs (comma separated)
+              <input id="synthesis-ref-paper-ids" placeholder="paper-id-1, paper-id-2" />
+            </label>
+            <label>
+              Reagent Lots (comma separated)
+              <input id="synthesis-ref-reagent-lots" placeholder="A17, Lot-2026-02" />
+            </label>
+            <label>
+              Produced Compound Code
+              <input id="synthesis-produced-compound" placeholder="e.g. C-021" />
+            </label>
+            <label>
+              Purity (%)
+              <input id="synthesis-purity" type="number" min="0" max="100" step="0.01" placeholder="e.g. 97.5" />
+            </label>
+            <label>
+              Used In Assay
+              <input id="synthesis-used-in-assay" placeholder="e.g. Assay X" />
+            </label>
+          </div>
+        </section>
+        <section class="notebook-chemistry">
+          <div class="inline-row notebook-chemistry-head">
+            <h4>Synthesis Chemistry (Optional)</h4>
+            <span class="small-note">Integrated local editor</span>
+          </div>
+          <label class="inline-row">
+            <input id="synthesis-chem-enabled" type="checkbox" />
+            Add chemicals in this notebook page
+          </label>
+          <div id="synthesis-chem-workflow" hidden>
+            <p class="small-note">
+              Draw a structure or type an abbreviation, then press Next. Use Product mode when ready for product.
+            </p>
+            <div class="inline-row">
+              <input id="synthesis-chem-input" placeholder="Abbreviation (optional, e.g. NaBH4)" />
+              <button id="synthesis-chem-next-btn" class="ghost-btn" type="button">Next</button>
+              <button id="synthesis-chem-product-btn" class="ghost-btn" type="button">Product</button>
+              <button id="synthesis-chem-end-btn" class="ghost-btn" type="button">End</button>
+              <button id="synthesis-chem-reset-btn" class="ghost-btn" type="button">Reset</button>
+            </div>
+            <div id="synthesis-chem-status" class="small-note"></div>
+            <p class="small-note">
+              Use Ketcher canvas for drawing. PNG and hidden SMILES are captured when you press Next.
+            </p>
+            <iframe
+              id="synthesis-notebook-ketcher-frame"
+              class="ketcher-frame"
+              title="Ketcher chemical editor"
+              src="./ketcher-embedded.html"
+              loading="lazy"
+              referrerpolicy="no-referrer"
+            ></iframe>
+            <div class="synthesis-reaction-panel">
+              <h4>Reaction Scheme</h4>
+              <div id="synthesis-reaction-scheme" class="reaction-scheme"></div>
+              <div id="synthesis-substrate-numbering" class="reaction-numbering"></div>
+            </div>
+            <div class="synthesis-mw-panel">
+              <h4>Substrate MW Table</h4>
+              <table class="chem-mw-table">
+                <thead>
+                  <tr>
+                    <th>Substrate #</th>
+                    <th>MW</th>
+                  </tr>
+                </thead>
+                <tbody id="synthesis-mw-table-body">
+                  <tr>
+                    <td colspan="2">No substrates.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="stack-form">
+              <label>
+                Experiment Procedure
+                <textarea id="synthesis-procedure-input" rows="4" placeholder="Type how to do this experiment"></textarea>
+              </label>
+            </div>
+          </div>
+        </section>
+        <div class="form-actions">
+          <button id="save-synthesis-notebook-btn" class="primary-btn" type="button">Save Notebook Entry</button>
+          <button id="cancel-synthesis-notebook-edit-btn" class="ghost-btn" type="button" hidden>Cancel Edit</button>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>Saved Notebook Entries</h3>
+        <div id="synthesis-notebook-entry-list" class="list-table"></div>
+      </div>
+    </section>
+
+    <section id="biology-notebook-view" class="view">
+      <div class="panel">
+        <h2>Biology Notebook</h2>
+        <label>
+          Select Project
+          <select id="biology-notebook-project-select">
+            <option value="">Select project</option>
+          </select>
+        </label>
+        <label>
+          Select Protocol
+          <select id="biology-notebook-protocol-select">
+            <option value="">Select protocol</option>
+          </select>
+        </label>
+      </div>
+      <div id="biology-notebook-protocol-area" class="panel" hidden>
+        <h3 id="biology-notebook-protocol-title"></h3>
+        <div id="biology-notebook-steps" class="notebook-steps"></div>
+        <label>
+          Experiment Results File / Notes
+          <textarea id="biology-notebook-result" rows="4" placeholder="Path, summary, or notes"></textarea>
+        </label>
+        <label>
+          Experiment Result Files
+          <input id="biology-notebook-result-file" type="file" multiple />
+        </label>
+        <div class="form-actions">
+          <button id="save-biology-notebook-btn" class="primary-btn" type="button">Save Notebook Entry</button>
+          <button id="cancel-biology-notebook-edit-btn" class="ghost-btn" type="button" hidden>Cancel Edit</button>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>Saved Notebook Entries</h3>
+        <div id="biology-notebook-entry-list" class="list-table"></div>
+      </div>
+    </section>
+
+    <section id="personal-inventory-view" class="view">
+      <div class="panel">
+        <div class="inventory-toolbar">
+          <h2>Inventory</h2>
+          <button id="inventory-add-container-btn" type="button" class="primary-btn">Add Container</button>
+        </div>
+        <form id="inventory-add-container-form" class="form-grid inventory-add-form" hidden>
+          <label>
+            Container Name
+            <input id="inventory-add-container-name" placeholder="e.g. Box A" required />
+          </label>
+          <label>
+            Location
+            <select id="inventory-add-container-location" required>
+              <option value="">Select location</option>
+            </select>
+          </label>
+          <label>
+            Type
+            <select id="inventory-add-container-type">
+              <option value="box81">81-well cube box</option>
+              <option value="single">Single container (tube/bottle)</option>
+            </select>
+          </label>
+          <div class="form-actions">
+            <button type="submit" class="primary-btn">Save Container</button>
+            <button id="inventory-add-container-cancel" type="button" class="ghost-btn">Cancel</button>
+          </div>
+        </form>
+        <div id="inventory-sections" class="inventory-sections"></div>
+      </div>
+      <div id="container-detail" class="panel" hidden>
+        <h3 id="container-title"></h3>
+        <p id="container-detail-note" class="small-note">9 x 9 box (81 wells). Click each well to edit content.</p>
+        <div id="well-grid" class="well-grid"></div>
+        <div id="single-container-editor" class="stack-form" hidden>
+          <label>
+            Container Content
+            <textarea id="single-container-content" rows="4" placeholder="Describe content in tube or bottle"></textarea>
+          </label>
+          <button id="single-container-save-btn" type="button" class="primary-btn">Save Content</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="sample-registry-view" class="view">
+      <div class="panel">
+        <h2>Sample Registry</h2>
+        <form id="sample-form" class="form-grid">
+          <input type="hidden" id="sample-id" />
+          <label>
+            Sample Code
+            <input id="sample-code" placeholder="e.g. C-021, CL-HEK293-17, pET28a-Myc" />
+          </label>
+          <label>
+            Sample Name
+            <input id="sample-name" required />
+          </label>
+          <label>
+            Type
+            <select id="sample-type" required>
+              <option value="plasmid">Plasmid</option>
+              <option value="cell_line">Cell Line</option>
+              <option value="strain">Strain</option>
+              <option value="antibody">Antibody</option>
+              <option value="protein">Purified Protein</option>
+              <option value="compound">Compound</option>
+              <option value="primer">Primer</option>
+            </select>
+          </label>
+          <label>
+            Lot / Batch
+            <input id="sample-lot" placeholder="e.g. A17" />
+          </label>
+          <label>
+            Concentration
+            <input id="sample-concentration" placeholder="e.g. 2 mg/mL" />
+          </label>
+          <label>
+            Storage Type
+            <select id="sample-storage-type">
+              <option value="freezer">Freezer</option>
+              <option value="fridge">Fridge</option>
+              <option value="desiccator">Desiccator</option>
+              <option value="rt_cabinet">RT Cabinet</option>
+            </select>
+          </label>
+          <label>
+            Link Personal Inventory Container
+            <select id="sample-link-container">
+              <option value="">Not linked</option>
+            </select>
+          </label>
+          <label>
+            Link Position / Slot
+            <select id="sample-link-position">
+              <option value="">Auto / none</option>
+            </select>
+          </label>
+          <label>
+            Related Chemicals (multi-select)
+            <select id="sample-link-chemicals" multiple size="4"></select>
+          </label>
+          <div id="sample-location-fields" class="form-grid"></div>
+          <label>
+            Notes
+            <textarea id="sample-notes" rows="3"></textarea>
+          </label>
+          <div class="form-actions">
+            <button type="submit" class="primary-btn">Save Sample</button>
+            <button type="button" id="sample-cancel-btn" class="ghost-btn">Cancel Edit</button>
+          </div>
+        </form>
+      </div>
+      <div class="panel">
+        <h3>Registered Samples</h3>
+        <label>
+          Search
+          <input id="sample-search" placeholder="Code, name, lot, location..." />
+        </label>
+        <div id="sample-registry-list" class="cards"></div>
+      </div>
+    </section>
+
+    <section id="assay-view" class="view">
+      <div class="panel">
+        <h2>Assay</h2>
+        <div class="calendar-view-switch assay-mode-switch" role="group" aria-label="Assay mode">
+          <button type="button" id="assay-mode-create-btn" class="ghost-btn calendar-view-active">Create Assay</button>
+          <button type="button" id="assay-mode-results-btn" class="ghost-btn">View &amp; Results</button>
+        </div>
+        <p id="assay-mode-note" class="small-note"></p>
+      </div>
+
+      <div class="panel assay-mode-create-panel">
+        <h3>Create Assay Plate</h3>
+        <form id="assay-form" class="form-grid">
+          <input type="hidden" id="assay-id" />
+          <div id="assay-number-display" class="small-note"></div>
+          <label>
+            Assay Name
+            <input id="assay-name" required placeholder="e.g. Cell viability run 2026-02-19" />
+          </label>
+          <label>
+            Project
+            <select id="assay-project">
+              <option value="">Select project</option>
+            </select>
+          </label>
+          <label>
+            Plate Type
+            <select id="assay-plate-type">
+              <option value="6">6 well</option>
+              <option value="12">12 well</option>
+              <option value="24">24 well</option>
+              <option value="48">48 well</option>
+              <option value="96" selected>96 well</option>
+              <option value="384">384 well</option>
+              <option value="1536">1536 well</option>
+            </select>
+          </label>
+          <label>
+            Sample ID Axis
+            <select id="assay-sample-axis">
+              <option value="row" selected>Row</option>
+              <option value="column">Column</option>
+            </select>
+          </label>
+          <label>
+            Concentration Axis
+            <input id="assay-concentration-axis-display" readonly />
+          </label>
+          <label>
+            Link Notebook Page
+            <select id="assay-notebook-entry">
+              <option value="">Not linked</option>
+            </select>
+          </label>
+          <div id="assay-plate-definition" class="small-note"></div>
+          <div id="assay-csv-status" class="small-note"></div>
+          <label>
+            Notes
+            <textarea id="assay-notes" rows="3" placeholder="Optional assay notes"></textarea>
+          </label>
+          <div class="form-actions">
+            <button type="button" id="assay-export-template-btn" class="ghost-btn">Export CSV Template</button>
+            <button type="button" id="assay-import-template-btn" class="ghost-btn">Import CSV</button>
+            <input id="assay-import-file" type="file" accept=".csv,text/csv" hidden />
+            <button type="submit" class="primary-btn">Save Assay</button>
+            <button type="button" id="assay-cancel-btn" class="ghost-btn">Cancel Edit</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="panel assay-mode-create-panel">
+        <h3>Plate Preview</h3>
+        <p class="small-note">A1-style coordinates with axis mapping based on row/column selection.</p>
+        <div id="assay-plate-preview" class="assay-plate-preview"></div>
+      </div>
+
+      <div class="panel assay-mode-create-panel">
+        <h3>Axis Template Mapping</h3>
+        <p class="small-note">Bulk-fill by row/column. Enter one value per line (or comma-separated).</p>
+        <div class="form-grid">
+          <label>
+            Sample ID Values (selected sample axis)
+            <textarea id="assay-sample-axis-values" rows="4" placeholder="e.g. S1&#10;S2&#10;S3"></textarea>
+          </label>
+          <label>
+            Concentration Values (opposite axis)
+            <textarea id="assay-concentration-axis-values" rows="4" placeholder="e.g. 0 uM&#10;0.1 uM&#10;1 uM"></textarea>
+          </label>
+        </div>
+        <div class="form-actions">
+          <button type="button" id="assay-apply-axis-template-btn" class="ghost-btn">Apply Axis Template</button>
+        </div>
+      </div>
+
+      <div class="panel assay-mode-create-panel">
+        <h3>Well Mapping</h3>
+        <p class="small-note">Enter well-level sample ID and concentration directly.</p>
+        <div class="form-grid">
+          <label>
+            Well
+            <input id="assay-well-id" placeholder="e.g. A1" />
+          </label>
+          <label>
+            Sample ID
+            <input id="assay-well-sample-id" placeholder="e.g. S-001" />
+          </label>
+          <label>
+            Concentration
+            <input id="assay-well-concentration" placeholder="e.g. 1.0 uM" />
+          </label>
+        </div>
+        <div class="form-actions">
+          <button type="button" id="assay-well-upsert-btn" class="ghost-btn">Add / Update Well</button>
+          <button type="button" id="assay-well-remove-btn" class="ghost-btn">Remove Well</button>
+          <button type="button" id="assay-well-clear-btn" class="ghost-btn">Clear All Mappings</button>
+        </div>
+        <div id="assay-layout-status" class="small-note"></div>
+        <div id="assay-layout-list" class="list-table"></div>
+      </div>
+
+      <div class="panel assay-mode-results-panel" hidden>
+        <h3>View &amp; Results</h3>
+        <p class="small-note">Open a saved assay plate, paste values from spreadsheet, then save and analyze.</p>
+        <label>
+          Assay Plate
+          <select id="assay-results-assay-select">
+            <option value="">Select assay plate</option>
+          </select>
+        </label>
+        <label>
+          Analysis Method
+          <select id="assay-analysis-method">
+            <option value="grouped_summary" selected>Grouped Summary</option>
+            <option value="nested_summary">Nested Summary</option>
+            <option value="row_summary">Row Summary</option>
+            <option value="column_summary">Column Summary</option>
+            <option value="linear_regression">Linear Regression</option>
+            <option value="ec50">EC50 (4PL Fit)</option>
+            <option value="ic50">IC50 (4PL Fit)</option>
+            <option value="survival">Survival %</option>
+          </select>
+        </label>
+        <div class="form-actions">
+          <button type="button" id="assay-results-load-btn" class="ghost-btn">Load Plate</button>
+          <button type="button" id="assay-save-results-btn" class="primary-btn">Save Results</button>
+          <button type="button" id="assay-clear-results-btn" class="ghost-btn">Clear Results</button>
+          <button type="button" id="assay-analyze-results-btn" class="ghost-btn">Analyze Results</button>
+        </div>
+        <div id="assay-active-assay-info" class="small-note"></div>
+        <div id="assay-result-status" class="small-note"></div>
+        <div id="assay-result-table" class="assay-plate-preview"></div>
+        <div id="assay-analysis-summary" class="small-note"></div>
+        <div id="assay-analysis-table" class="list-table"></div>
+      </div>
+
+      <div class="panel assay-mode-results-panel" hidden>
+        <h3>Saved Assays</h3>
+        <label>
+          Search
+          <input id="assay-search" placeholder="Assay number, assay, project, plate, notebook..." />
+        </label>
+        <div id="assay-list" class="cards"></div>
+      </div>
+    </section>
+
+    <section id="gel-view" class="view">
+      <div class="panel">
+        <h2>Gel Analysis</h2>
+        <p class="small-note">Manual workflow only. Crop is optional.</p>
+        <form id="gel-form" class="form-grid">
+          <input type="hidden" id="gel-id" />
+          <label>
+            Analysis Name
+            <input id="gel-name" required placeholder="e.g. WB_RUN_2026_02_19" />
+          </label>
+          <label>
+            Project
+            <select id="gel-project">
+              <option value="">Select project</option>
+            </select>
+          </label>
+          <label>
+            Link Notebook Page
+            <select id="gel-notebook-entry">
+              <option value="">Not linked</option>
+            </select>
+          </label>
+          <label>
+            Analysis Type
+            <select id="gel-type">
+              <option value="sds-page">SDS-PAGE</option>
+              <option value="western">Western Blot</option>
+              <option value="agarose">DNA/RNA Agarose</option>
+            </select>
+          </label>
+          <label>
+            Gel Image
+            <input id="gel-image-file" type="file" accept="image/*" />
+          </label>
+          <label>
+            Ladder Lane (1-based)
+            <input id="gel-ladder-lane" type="number" min="1" step="1" value="1" />
+          </label>
+          <label>
+            Ladder Band MW (kDa)
+            <input id="gel-ladder-band-mw" type="number" min="0" step="0.1" placeholder="Use in Step 5, e.g. 50" />
+          </label>
+          <label>
+            Normalization
+            <select id="gel-normalization">
+              <option value="none">None</option>
+              <option value="total-lane">Total Lane Intensity</option>
+            </select>
+          </label>
+          <div class="form-actions">
+            <button type="button" id="gel-reset-overrides-btn" class="ghost-btn">Reset Manual Overrides</button>
+            <span id="gel-override-status" class="small-note">Manual overrides: none</span>
+          </div>
+          <div class="form-actions">
+            <button type="button" id="gel-start-crop-btn" class="ghost-btn">Start Crop</button>
+            <button type="button" id="gel-apply-crop-btn" class="ghost-btn" disabled>Apply Crop</button>
+            <button type="button" id="gel-cancel-crop-btn" class="ghost-btn" disabled>Cancel Crop</button>
+            <button type="button" id="gel-reset-crop-btn" class="ghost-btn">Reset to Full Image</button>
+          </div>
+          <div id="gel-status" class="small-note"></div>
+          <div class="form-actions">
+            <button type="button" id="gel-run-btn" class="primary-btn">Analyze Gel</button>
+            <button type="submit" class="primary-btn">Save Analysis</button>
+            <button type="button" id="gel-cancel-btn" class="ghost-btn">Cancel Edit</button>
+            <button type="button" id="gel-export-json-btn" class="ghost-btn">Export JSON</button>
+            <button type="button" id="gel-export-csv-btn" class="ghost-btn">Export CSV</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="panel">
+        <h3>Interactive Gel Viewer</h3>
+        <p class="small-note">Lane borders and band calls are overlaid. Re-run analysis after changing parameters.</p>
+        <div class="gel-workbench">
+          <div class="gel-canvas-shell">
+            <canvas id="gel-canvas"></canvas>
+            <img id="gel-cropper-image" alt="Gel cropper" />
+          </div>
+          <aside id="gel-manual-progress" class="gel-manual-progress" hidden>
+            <h4>Manual Steps</h4>
+            <ol class="gel-step-list">
+              <li id="gel-step-left">1. Click left gel border</li>
+              <li id="gel-step-right">2. Click right gel border</li>
+              <li id="gel-step-dividers">3. Click lane dividers</li>
+              <li id="gel-step-ladder">4. Click ladder lane</li>
+              <li id="gel-step-ladder-mw">5. Click ladder band and assign MW</li>
+              <li id="gel-step-band-top">6. Click top line of target band</li>
+              <li id="gel-step-band-bottom">7. Click bottom line of target band</li>
+              <li id="gel-step-bands">8. (Optional) Click bands to add</li>
+            </ol>
+            <div class="form-actions">
+              <button type="button" id="gel-manual-prev-btn" class="ghost-btn">Previous Step</button>
+              <button type="button" id="gel-manual-next-btn" class="ghost-btn">Done Dividers</button>
+              <button type="button" id="gel-manual-reset-btn" class="ghost-btn">Reset Steps</button>
+            </div>
+          </aside>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Analysis Report</h3>
+        <div id="gel-report-summary" class="cards"></div>
+        <pre id="gel-report-json" class="gel-report-json"></pre>
+      </div>
+
+      <div class="panel">
+        <h3>Saved Gel Analyses</h3>
+        <label>
+          Search
+          <input id="gel-search" placeholder="Name, type, project, notebook..." />
+        </label>
+        <div id="gel-list" class="cards"></div>
+      </div>
+    </section>
+
+    <section id="collaboration-management-view" class="view">
+      <div class="panel">
+        <h2>Collabrations</h2>
+        <div class="setting-grid">
+          <section class="card setting-card">
+            <h3>Send Enana Email</h3>
+            <form id="message-form" class="stack-form">
+              <label>
+                From (Enana Email)
+                <select id="message-from"></select>
+              </label>
+              <label>
+                To (Enana Email)
+                <select id="message-to"></select>
+              </label>
+              <label>
+                Subject
+                <input id="message-subject" />
+              </label>
+              <label>
+                Message
+                <textarea id="message-body" rows="4"></textarea>
+              </label>
+              <button type="submit" class="primary-btn">Send Message</button>
+            </form>
+          </section>
+
+          <section class="card setting-card">
+            <h3>Check Enana Email Inbox</h3>
+            <label>
+              Inbox For
+              <select id="inbox-email"></select>
+            </label>
+            <div id="inbox-list" class="stack-form"></div>
+            <div class="stack-form">
+              <h4>Import Shared Protocol Link</h4>
+              <label>
+                Share Link
+                <textarea id="protocol-link-input" rows="3" placeholder="Paste enana://protocol-share/... or ENANA_PROTOCOL_SHARE:..."></textarea>
+              </label>
+              <div class="form-actions">
+                <button type="button" id="import-protocol-link-btn" class="ghost-btn">Import Link</button>
+              </div>
+              <p id="protocol-link-status" class="small-note">Paste a shared protocol link, then click Import Link.</p>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <section id="lab-common-inventory-view" class="view">
+      <div class="panel">
+        <h2>Chemicals</h2>
+        <form id="chemical-form" class="form-grid">
+          <input type="hidden" id="chemical-id" />
+          <label>
+            Name (Required)
+            <input id="chemical-name" required />
+          </label>
+          <label>
+            CAS Number (Required)
+            <input id="chemical-cas" required />
+          </label>
+          <label>
+            Location (Required)
+            <select id="chemical-location" required></select>
+          </label>
+          <label>
+            Vendor
+            <input id="chemical-vendor" />
+          </label>
+          <label>
+            Catalog Number
+            <input id="chemical-catalog-number" />
+          </label>
+          <label>
+            Unit Size
+            <input id="chemical-unit-size" />
+          </label>
+          <label>
+            Price
+            <input id="chemical-price" />
+          </label>
+          <label>
+            Amount in Stock
+            <input id="chemical-stock" />
+          </label>
+          <label>
+            URL
+            <input id="chemical-url" />
+          </label>
+          <label>
+            Expiration Date
+            <input id="chemical-expiration" type="date" />
+          </label>
+          <div class="form-actions chemical-form-actions">
+            <button type="submit" class="primary-btn">Save Chemical</button>
+            <button type="button" id="chemical-cancel-btn" class="ghost-btn">Cancel Edit</button>
+          </div>
+        </form>
+      </div>
+      <div class="panel">
+        <h3>Enana Sync Inbox</h3>
+        <div class="inline-row chemical-inbox-row">
+          <label>
+            Inbox Email
+            <select id="inventory-inbox-email"></select>
+          </label>
+          <button type="button" id="inventory-import-btn" class="ghost-btn">Import Chemical Update</button>
+        </div>
+        <p class="small-note">Pending inventory updates: <span id="inventory-pending-count">0</span></p>
+      </div>
+      <div class="panel">
+        <h3>Chemical List</h3>
+        <div class="form-grid">
+          <label>
+            Search
+            <input id="chemical-search" placeholder="Name, CAS, vendor, catalog, location" />
+          </label>
+          <label>
+            Filter Location
+            <select id="chemical-filter-location">
+              <option value="">All locations</option>
+            </select>
+          </label>
+          <label>
+            Sort By
+            <select id="chemical-sort">
+              <option value="updated_desc">Updated (Newest)</option>
+              <option value="updated_asc">Updated (Oldest)</option>
+              <option value="name_asc">Name (A-Z)</option>
+              <option value="name_desc">Name (Z-A)</option>
+              <option value="location_asc">Location Number (Low-High)</option>
+              <option value="location_desc">Location Number (High-Low)</option>
+              <option value="expiration_asc">Expiration (Soonest)</option>
+              <option value="expiration_desc">Expiration (Latest)</option>
+            </select>
+          </label>
+        </div>
+        <div id="chemical-list" class="list-table"></div>
+      </div>
+      <div id="chemical-detail-panel" class="panel" hidden>
+        <h3 id="chemical-detail-title">Chemical Details</h3>
+        <div id="chemical-detail-content" class="stack-form"></div>
+        <div class="card-actions">
+          <button type="button" id="chemical-detail-edit-btn" class="ghost-btn">Edit</button>
+          <button type="button" id="chemical-detail-delete-btn" class="danger-btn">Delete</button>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>Blockchain Records</h3>
+        <div id="inventory-blockchain-list" class="stack-form"></div>
+      </div>
+    </section>
+
+    <section id="setting-view" class="view">
+      <div class="panel">
+        <h2>Setting</h2>
+        <div class="setting-grid">
+          <section class="card setting-card">
+            <h3>Personal Information</h3>
+            <form id="personal-info-form" class="stack-form">
+              <label>
+                Name
+                <input id="setting-name" />
+              </label>
+              <label>
+                Position
+                <input id="setting-position" />
+              </label>
+              <label>
+                Institution Email
+                <input id="setting-institution-email" type="email" />
+              </label>
+              <label>
+                Enana Email
+                <input id="setting-enana-email" type="email" />
+              </label>
+              <button type="submit" class="primary-btn">Save Personal Info</button>
+            </form>
+          </section>
+
+          <section class="card setting-card">
+            <h3>Appearance</h3>
+            <form id="appearance-form" class="stack-form">
+              <label>
+                Font Size
+                <select id="setting-font-size">
+                  <option value="14">Small</option>
+                  <option value="16">Medium</option>
+                  <option value="18">Large</option>
+                </select>
+              </label>
+              <label>
+                Theme Color
+                <input id="setting-theme-color" type="color" value="#2688ff" />
+              </label>
+              <label>
+                Day / Night
+                <select id="setting-mode">
+                  <option value="day">Day</option>
+                  <option value="night">Night</option>
+                </select>
+              </label>
+              <div class="inline-row">
+                <button type="button" id="setting-ui-style-toggle" class="ghost-btn">Use Neutral Compact UI</button>
+                <span id="setting-ui-style-label" class="small-note">Current style: Classic</span>
+              </div>
+              <button type="submit" class="primary-btn">Save Appearance</button>
+            </form>
+          </section>
+
+          <section class="card setting-card">
+            <h3>Storage Folder Path</h3>
+            <form id="storage-form" class="stack-form">
+              <label>
+                Root Folder Path
+                <input id="setting-storage-path" placeholder="/path/to/enana-data" readonly />
+              </label>
+              <p class="small-note">Notebook pages will reference individual folders under this path.</p>
+              <div class="form-actions">
+                <button type="button" id="select-storage-path-btn" class="ghost-btn">Select Folder</button>
+                <button type="submit" class="primary-btn">Save Storage Path</button>
+              </div>
+            </form>
+          </section>
+
+          <section class="card setting-card">
+            <h3>Inventory Locations</h3>
+            <div class="stack-form">
+              <div class="inline-row">
+                <input id="setting-location-input" placeholder="Add approximate location" />
+                <button type="button" id="setting-location-add-btn" class="ghost-btn">Add Location</button>
+              </div>
+              <div id="setting-location-list" class="stack-form"></div>
+            </div>
+          </section>
+
+          <section class="card setting-card">
+            <h3>LLM Model & API</h3>
+            <form id="llm-form" class="stack-form">
+              <label>
+                Model Name
+                <input id="setting-model" placeholder="e.g. gpt-4.1" />
+              </label>
+              <label>
+                API Endpoint
+                <input id="setting-api-endpoint" placeholder="https://api.openai.com/v1/responses" />
+              </label>
+              <label>
+                API Key
+                <input id="setting-api-key" type="password" placeholder="sk-..." />
+              </label>
+              <button type="submit" class="primary-btn">Save LLM Settings</button>
+            </form>
+          </section>
+
+          <section class="card setting-card">
+            <h3>Telegram Bot</h3>
+            <form id="telegram-form" class="stack-form">
+              <label>
+                Bot Token
+                <input id="setting-telegram-token" type="password" placeholder="123456:ABCDEF..." />
+              </label>
+              <p class="small-note">Enter token to store it in app settings. Clearing saved token falls back to env token if available.</p>
+              <p id="setting-telegram-status" class="small-note">Telegram bot status: loading...</p>
+              <div class="form-actions">
+                <button type="submit" class="primary-btn">Save Telegram Token</button>
+                <button type="button" id="clear-telegram-token-btn" class="ghost-btn">Clear Saved Token</button>
+              </div>
+            </form>
+          </section>
+
+          <section class="card setting-card">
+            <h3>Data File (.json)</h3>
+            <div class="stack-form">
+              <p class="small-note">Current .json file: <span id="setting-ena-path">Not set</span></p>
+              <label class="inline-row">
+                <input id="setting-auto-save-ena" type="checkbox" />
+                Auto-save to current .json file after each change
+              </label>
+              <div class="form-actions">
+                <button type="button" id="save-ena-btn" class="primary-btn">Save .json</button>
+                <button type="button" id="load-ena-btn" class="ghost-btn">Load .json</button>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <section id="project-management-view" class="view">
+      <div class="panel">
+        <h2>Projects</h2>
+        <form id="project-form" class="stack-form">
+          <input type="hidden" id="project-id" />
+          <label>
+            Project Name
+            <input id="project-name" required />
+          </label>
+          <label>
+            Description
+            <textarea id="project-description" rows="3"></textarea>
+          </label>
+          <div class="form-actions">
+            <button type="submit" class="primary-btn">Save Project</button>
+            <button type="button" id="project-cancel-btn" class="ghost-btn">Cancel Edit</button>
+          </div>
+        </form>
+      </div>
+      <div class="panel">
+        <h3>Project Notebook Pages</h3>
+        <label>
+          Select Project
+          <select id="project-notebook-filter">
+            <option value="">Select project</option>
+          </select>
+        </label>
+        <div id="project-notebook-pages" class="cards"></div>
+      </div>
+      <div id="project-list" class="cards"></div>
+    </section>
+
+    <section id="workflow-management-view" class="view">
+      <div class="panel">
+        <h2>Workflows</h2>
+        <form id="workflow-form" class="stack-form">
+          <input type="hidden" id="workflow-id" />
+          <label>
+            Workflow Name
+            <input id="workflow-name" required placeholder="e.g. Antibody purification pipeline" />
+          </label>
+          <label>
+            Description
+            <textarea id="workflow-description" rows="3" placeholder="Optional notes about this workflow"></textarea>
+          </label>
+          <label>
+            Linked Project
+            <select id="workflow-project">
+              <option value="">Select project</option>
+            </select>
+          </label>
+          <label>
+            Linked Notebook Pages (optional)
+            <select id="workflow-notebook-pages" multiple size="6"></select>
+          </label>
+          <div class="form-actions">
+            <button type="submit" class="primary-btn">Save Workflow</button>
+            <button type="button" id="workflow-cancel-btn" class="ghost-btn">Cancel Edit</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="panel">
+        <h3>Protocol Blocks</h3>
+        <p class="small-note">Each block is a stored protocol. New blocks default assignee to yourself.</p>
+        <div class="form-grid workflow-grid">
+          <label>
+            Protocol
+            <select id="workflow-block-protocol">
+              <option value="">Select protocol</option>
+            </select>
+          </label>
+          <div class="form-actions workflow-inline-actions">
+            <button type="button" id="workflow-block-add-btn" class="ghost-btn">Add Block</button>
+          </div>
+        </div>
+        <div id="workflow-block-list" class="list-table"></div>
+      </div>
+
+      <div class="panel">
+        <h3>Graph Editor</h3>
+        <p class="small-note">Drag blocks to arrange. Click an output dot, then an input dot to connect. Click a line to remove a connection.</p>
+        <div id="workflow-graph-canvas" class="workflow-graph-canvas">
+          <div id="workflow-graph-board" class="workflow-graph-board">
+            <svg id="workflow-graph-svg" class="workflow-graph-svg" aria-hidden="true"></svg>
+            <div id="workflow-graph-selection" class="workflow-graph-selection" hidden></div>
+            <div id="workflow-graph-nodes" class="workflow-graph-nodes"></div>
+          </div>
+        </div>
+        <p id="workflow-graph-status" class="small-note">Graph is empty. Add a block to start.</p>
+        <div id="workflow-graph-context-menu" class="workflow-context-menu" hidden></div>
+      </div>
+
+      <div class="panel">
+        <h3>Templates</h3>
+        <p class="small-note">Templates save block + connection structure only. You can link project/pages after experiments.</p>
+        <div class="form-grid workflow-grid">
+          <label>
+            Template Name
+            <input id="workflow-template-name" placeholder="e.g. Standard purification flow" />
+          </label>
+          <div class="form-actions workflow-inline-actions">
+            <button type="button" id="workflow-save-template-btn" class="ghost-btn">Save Current as Template</button>
+          </div>
+        </div>
+        <div class="form-grid workflow-grid">
+          <label>
+            Use Template
+            <select id="workflow-template-source">
+              <option value="">Select template</option>
+            </select>
+          </label>
+          <label>
+            New Workflow Name
+            <input id="workflow-template-create-name" placeholder="e.g. Batch 24 purification" />
+          </label>
+          <div class="form-actions workflow-inline-actions">
+            <button type="button" id="workflow-template-create-btn" class="ghost-btn">Create Workflow from Template</button>
+          </div>
+        </div>
+        <div id="workflow-template-list" class="cards"></div>
+      </div>
+
+      <div class="panel">
+        <h3>Saved Workflows</h3>
+        <div id="workflow-list" class="cards"></div>
+      </div>
+    </section>
+
+    <section id="papers-view" class="view">
+      <div class="panel">
+        <h2>Papers</h2>
+        <form id="paper-form" class="stack-form">
+          <label>
+            Paper Title (Optional)
+            <input id="paper-title" placeholder="Defaults to PDF filename" />
+          </label>
+          <label>
+            PDF File
+            <input id="paper-pdf" type="file" accept="application/pdf,.pdf" required />
+          </label>
+          <label>
+            Link Type
+            <select id="paper-link-type">
+              <option value="project">Project</option>
+              <option value="journal-club">Journal Club</option>
+            </select>
+          </label>
+          <label>
+            Link To
+            <select id="paper-link-target">
+              <option value="">Select target</option>
+            </select>
+          </label>
+          <button type="submit" class="primary-btn">Upload Paper</button>
+        </form>
+      </div>
+
+      <div class="panel">
+        <h3>Journal Clubs</h3>
+        <div class="stack-form">
+          <label>
+            Journal Club Name
+            <input id="journal-club-name" placeholder="e.g. Weekly Biochem JC" />
+          </label>
+          <label>
+            Description
+            <input id="journal-club-description" placeholder="Optional description" />
+          </label>
+          <button type="button" id="journal-club-add-btn" class="ghost-btn">Add Journal Club</button>
+        </div>
+        <div id="journal-club-list" class="cards"></div>
+      </div>
+
+      <div class="panel">
+        <h3>Uploaded Papers</h3>
+        <p class="small-note">To summarize, configure LLM model + API endpoint/key in Setting.</p>
+        <div id="paper-list" class="cards"></div>
+      </div>
+
+      <div class="panel">
+        <h3>Project Library Q&A</h3>
+        <div class="stack-form">
+          <label>
+            Project
+            <select id="knowledge-project-select">
+              <option value="">Select project</option>
+            </select>
+          </label>
+          <label>
+            Question
+            <textarea id="knowledge-question" rows="3" placeholder="Ask about papers, protocols, and notebook notes in this project"></textarea>
+          </label>
+          <div class="form-actions">
+            <button type="button" id="knowledge-ask-btn" class="primary-btn">Ask</button>
+          </div>
+          <div id="knowledge-answer" class="card"></div>
+          <div id="knowledge-chat-history" class="stack-form"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tool-box-view" class="view">
+      <div class="panel">
+        <h2>Tools</h2>
+        <p class="small-note">Quick experimental calculators for day-to-day bench work.</p>
+      </div>
+
+      <div class="grid tool-grid">
+        <button class="tile tool-tile" data-tool-view="tool-molarity-view">
+          <span class="icon" aria-hidden="true">⚗️</span>
+          <span class="label">Molarity Calculator</span>
+        </button>
+        <button class="tile tool-tile" data-tool-view="tool-peptide-view">
+          <span class="icon" aria-hidden="true">🧬</span>
+          <span class="label">Peptide Properties</span>
+        </button>
+        <button class="tile tool-tile" data-tool-view="tool-buffer-view">
+          <span class="icon" aria-hidden="true">🧫</span>
+          <span class="label">Buffer Preparer</span>
+        </button>
+        <button class="tile tool-tile" data-tool-view="tool-dna-protein-view">
+          <span class="icon" aria-hidden="true">🧾</span>
+          <span class="label">DNA to Protein</span>
+        </button>
+        <button class="tile tool-tile" data-tool-view="tool-oligo-view">
+          <span class="icon" aria-hidden="true">🧪</span>
+          <span class="label">DNA/RNA Oligo Properties</span>
+        </button>
+        <button class="tile tool-tile" data-tool-view="tool-extinction-view">
+          <span class="icon" aria-hidden="true">📈</span>
+          <span class="label">Extinction Coefficient</span>
+        </button>
+        <button class="tile tool-tile" data-tool-view="tool-qpcr-view">
+          <span class="icon" aria-hidden="true">📊</span>
+          <span class="label">qPCR Efficiency</span>
+        </button>
+      </div>
+
+      <div id="tool-molarity-view" class="panel tool-subview">
+        <h3>Molarity Calculator</h3>
+        <p class="small-note">GraphPad-style quick calcs with units for concentration, volume, and mass.</p>
+
+        <div class="molarity-block">
+          <h4>1) Find Mass from Concentration and Volume</h4>
+          <form id="molarity-mass-form" class="form-grid" autocomplete="off">
+            <label>
+              Concentration
+              <div class="inline-row">
+                <input id="mass-calc-concentration" type="number" min="0" step="0.000001" placeholder="e.g. 10" />
+                <select id="mass-calc-concentration-unit">
+                  <option value="fM">fM</option>
+                  <option value="pM">pM</option>
+                  <option value="nM">nM</option>
+                  <option value="uM">uM</option>
+                  <option value="mM" selected>mM</option>
+                  <option value="M">M</option>
+                </select>
+              </div>
+            </label>
+            <label>
+              Formula Weight (g/mol)
+              <input id="mass-calc-mw" type="number" min="0" step="0.000001" placeholder="e.g. 58.44" />
+            </label>
+            <label>
+              Volume
+              <div class="inline-row">
+                <input id="mass-calc-volume" type="number" min="0" step="0.000001" placeholder="e.g. 500" />
+                <select id="mass-calc-volume-unit">
+                  <option value="uL">uL</option>
+                  <option value="mL" selected>mL</option>
+                  <option value="L">L</option>
+                </select>
+              </div>
+            </label>
+            <label>
+              Output Mass Unit
+              <select id="mass-calc-output-unit">
+                <option value="ug">ug</option>
+                <option value="mg" selected>mg</option>
+                <option value="g">g</option>
+                <option value="kg">kg</option>
+              </select>
+            </label>
+          </form>
+          <p id="mass-calc-result" class="calc-output"></p>
+        </div>
+
+        <div class="molarity-block">
+          <h4>2) Find Volume from Mass and Concentration</h4>
+          <form id="molarity-volume-form" class="form-grid" autocomplete="off">
+            <label>
+              Mass
+              <div class="inline-row">
+                <input id="volume-calc-mass" type="number" min="0" step="0.000001" placeholder="e.g. 50" />
+                <select id="volume-calc-mass-unit">
+                  <option value="ug">ug</option>
+                  <option value="mg" selected>mg</option>
+                  <option value="g">g</option>
+                  <option value="kg">kg</option>
+                </select>
+              </div>
+            </label>
+            <label>
+              Formula Weight (g/mol)
+              <input id="volume-calc-mw" type="number" min="0" step="0.000001" placeholder="e.g. 58.44" />
+            </label>
+            <label>
+              Concentration
+              <div class="inline-row">
+                <input id="volume-calc-concentration" type="number" min="0" step="0.000001" placeholder="e.g. 10" />
+                <select id="volume-calc-concentration-unit">
+                  <option value="fM">fM</option>
+                  <option value="pM">pM</option>
+                  <option value="nM">nM</option>
+                  <option value="uM">uM</option>
+                  <option value="mM" selected>mM</option>
+                  <option value="M">M</option>
+                </select>
+              </div>
+            </label>
+            <label>
+              Output Volume Unit
+              <select id="volume-calc-output-unit">
+                <option value="uL">uL</option>
+                <option value="mL" selected>mL</option>
+                <option value="L">L</option>
+              </select>
+            </label>
+          </form>
+          <p id="volume-calc-result" class="calc-output"></p>
+        </div>
+
+        <div class="molarity-block">
+          <h4>3) Find Concentration from Mass and Volume</h4>
+          <form id="molarity-concentration-form" class="form-grid" autocomplete="off">
+            <label>
+              Mass
+              <div class="inline-row">
+                <input id="conc-calc-mass" type="number" min="0" step="0.000001" placeholder="e.g. 50" />
+                <select id="conc-calc-mass-unit">
+                  <option value="ug">ug</option>
+                  <option value="mg" selected>mg</option>
+                  <option value="g">g</option>
+                  <option value="kg">kg</option>
+                </select>
+              </div>
+            </label>
+            <label>
+              Formula Weight (g/mol)
+              <input id="conc-calc-mw" type="number" min="0" step="0.000001" placeholder="e.g. 58.44" />
+            </label>
+            <label>
+              Volume
+              <div class="inline-row">
+                <input id="conc-calc-volume" type="number" min="0" step="0.000001" placeholder="e.g. 1" />
+                <select id="conc-calc-volume-unit">
+                  <option value="uL">uL</option>
+                  <option value="mL" selected>mL</option>
+                  <option value="L">L</option>
+                </select>
+              </div>
+            </label>
+            <label>
+              Output Concentration Unit
+              <select id="conc-calc-output-unit">
+                <option value="fM">fM</option>
+                <option value="pM">pM</option>
+                <option value="nM">nM</option>
+                <option value="uM">uM</option>
+                <option value="mM" selected>mM</option>
+                <option value="M">M</option>
+              </select>
+            </label>
+          </form>
+          <p id="conc-calc-result" class="calc-output"></p>
+        </div>
+
+        <div class="molarity-block">
+          <h4>4) Dilute a Stock Solution (C1V1 = C2V2)</h4>
+          <form id="molarity-dilution-form" class="form-grid" autocomplete="off">
+            <label>
+              Stock Concentration
+              <div class="inline-row">
+                <input id="dilution-stock-conc" type="number" min="0" step="0.000001" placeholder="e.g. 100" />
+                <select id="dilution-stock-conc-unit">
+                  <option value="fM">fM</option>
+                  <option value="pM">pM</option>
+                  <option value="nM">nM</option>
+                  <option value="uM">uM</option>
+                  <option value="mM" selected>mM</option>
+                  <option value="M">M</option>
+                </select>
+              </div>
+            </label>
+            <label>
+              Desired Concentration
+              <div class="inline-row">
+                <input id="dilution-target-conc" type="number" min="0" step="0.000001" placeholder="e.g. 10" />
+                <select id="dilution-target-conc-unit">
+                  <option value="fM">fM</option>
+                  <option value="pM">pM</option>
+                  <option value="nM">nM</option>
+                  <option value="uM">uM</option>
+                  <option value="mM" selected>mM</option>
+                  <option value="M">M</option>
+                </select>
+              </div>
+            </label>
+            <label>
+              Final Volume
+              <div class="inline-row">
+                <input id="dilution-target-volume" type="number" min="0" step="0.000001" placeholder="e.g. 1" />
+                <select id="dilution-target-volume-unit">
+                  <option value="uL">uL</option>
+                  <option value="mL" selected>mL</option>
+                  <option value="L">L</option>
+                </select>
+              </div>
+            </label>
+            <label>
+              Output Volume Unit
+              <select id="dilution-output-unit">
+                <option value="uL">uL</option>
+                <option value="mL" selected>mL</option>
+                <option value="L">L</option>
+              </select>
+            </label>
+          </form>
+          <p id="dilution-calc-result" class="calc-output"></p>
+        </div>
+      </div>
+
+      <div id="tool-peptide-view" class="panel tool-subview" hidden>
+        <h3>Peptide Property Calculator</h3>
+        <form id="peptide-form" class="stack-form" autocomplete="off">
+          <label>
+            Amino Acid Sequence
+            <textarea id="peptide-sequence" rows="4" placeholder="e.g. ACDEFGHIKLMNPQRSTVWY"></textarea>
+          </label>
+        </form>
+        <div id="peptide-result" class="calc-output stack-form"></div>
+      </div>
+
+      <div id="tool-buffer-view" class="panel tool-subview" hidden>
+        <h3>Buffer Preparer</h3>
+        <div class="stack-form">
+          <label>
+            Buffer Volume (mL)
+            <input id="buffer-volume-ml" type="number" min="0" step="0.001" value="1000" />
+          </label>
+          <div class="form-actions">
+            <button id="add-buffer-chemical-btn" type="button" class="ghost-btn">Add Chemical</button>
+          </div>
+          <div id="buffer-rows" class="buffer-rows"></div>
+          <p id="buffer-total-result" class="calc-output"></p>
+        </div>
+      </div>
+
+      <div id="tool-dna-protein-view" class="panel tool-subview" hidden>
+        <h3>DNA Sequence to Protein Sequence</h3>
+        <form id="dna-protein-form" class="stack-form" autocomplete="off">
+          <label>
+            DNA / RNA Sequence
+            <textarea id="dna-protein-sequence" rows="5" placeholder="Paste sequence"></textarea>
+          </label>
+          <div class="form-grid">
+            <label>
+              Sequence Type
+              <select id="dna-protein-type">
+                <option value="DNA" selected>DNA</option>
+                <option value="RNA">RNA</option>
+              </select>
+            </label>
+            <label>
+              Reading Frame
+              <select id="dna-protein-frame">
+                <option value="1" selected>Frame +1</option>
+                <option value="2">Frame +2</option>
+                <option value="3">Frame +3</option>
+                <option value="-1">Frame -1</option>
+                <option value="-2">Frame -2</option>
+                <option value="-3">Frame -3</option>
+              </select>
+            </label>
+            <label>
+              Stop Codons
+              <select id="dna-protein-stop-mode">
+                <option value="star" selected>Show as *</option>
+                <option value="trim">Trim at first stop</option>
+              </select>
+            </label>
+          </div>
+        </form>
+        <div id="dna-protein-result" class="calc-output"></div>
+      </div>
+
+      <div id="tool-oligo-view" class="panel tool-subview" hidden>
+        <h3>DNA / RNA Oligo Properties</h3>
+        <form id="oligo-form" class="stack-form" autocomplete="off">
+          <label>
+            Oligo Sequence
+            <textarea id="oligo-sequence" rows="4" placeholder="Enter DNA or RNA oligo"></textarea>
+          </label>
+          <div class="form-grid">
+            <label>
+              Oligo Type
+              <select id="oligo-type">
+                <option value="DNA" selected>DNA</option>
+                <option value="RNA">RNA</option>
+              </select>
+            </label>
+          </div>
+        </form>
+        <div id="oligo-result" class="calc-output"></div>
+      </div>
+
+      <div id="tool-extinction-view" class="panel tool-subview" hidden>
+        <h3>Extinction Coefficient Calculator</h3>
+        <form id="extinction-form" class="stack-form" autocomplete="off">
+          <label>
+            Sequence Type
+            <select id="extinction-type">
+              <option value="protein" selected>Protein / Peptide</option>
+              <option value="DNA">DNA</option>
+              <option value="RNA">RNA</option>
+            </select>
+          </label>
+          <label>
+            Sequence
+            <textarea id="extinction-sequence" rows="4" placeholder="Enter sequence"></textarea>
+          </label>
+        </form>
+        <div id="extinction-result" class="calc-output"></div>
+      </div>
+
+      <div id="tool-qpcr-view" class="panel tool-subview" hidden>
+        <h3>qPCR Efficiency Calculator</h3>
+        <form id="qpcr-form" class="stack-form" autocomplete="off">
+          <label>
+            Slope (optional; from standard curve)
+            <input id="qpcr-slope" type="number" step="0.000001" placeholder="e.g. -3.32" />
+          </label>
+          <label>
+            Standard Curve Points (optional)
+            <textarea id="qpcr-points" rows="5" placeholder="quantity, Ct per line&#10;1, 18.0&#10;0.1, 21.3&#10;0.01, 24.7"></textarea>
+          </label>
+        </form>
+        <div id="qpcr-result" class="calc-output"></div>
+      </div>
+    </section>
+      </section>
+    </div>
+  </main>
+
+  <script src="./vendor/cropperjs/cropper.min.js"></script>
+  <script src="./vendor/tabulator/tabulator.min.js"></script>
+  <script type="module" src="renderer.js"></script>
+</body>
+</html>
