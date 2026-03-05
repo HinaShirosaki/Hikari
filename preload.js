@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('enanaApi', {
   getTelegramBotConfig: () => ipcRenderer.invoke('telegram:get-config'),
   setTelegramBotToken: (token) => ipcRenderer.invoke('telegram:set-token', { token }),
   clearTelegramBotToken: () => ipcRenderer.invoke('telegram:clear-token'),
+  agentChat: (payload) => ipcRenderer.invoke('agent:chat', payload),
   onTelegramCommand: (handler) => {
     if (typeof handler !== 'function') {
       return;

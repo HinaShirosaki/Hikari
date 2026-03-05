@@ -10,6 +10,9 @@ const {
 const appIconPath = path.join(__dirname, 'image.png');
 const DEFAULT_DATA_FILE_NAME = 'enana-data.json';
 const TELEGRAM_CONFIG_FILE_NAME = 'telegram-bot.json';
+const DEFAULT_LLM_RESPONSES_ENDPOINT = 'https://api.openai.com/v1/responses';
+const DEFAULT_AGENT_MODEL = 'gpt-4.1-mini';
+const MAX_AGENT_TOOL_ROUNDS = 4;
 let mainWindow = null;
 let telegramBot = null;
 let savedTelegramToken = '';
@@ -239,6 +242,799 @@ ipcMain.handle('storage:ensure-directory', async (_event, payload) => {
     return { ok: true, path: targetPath };
   } catch (error) {
     return { ok: false, error: String(error) };
+  }
+});
+
+const AGENT_TOOL_DEFINITIONS = [
+  {
+    type: 'function',
+    name: 'search_projects',
+    description: 'Read project records by semantic keyword or exact term.',
+    parameters: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        query: { type: 'string' },
+        limit: { type: 'integer', minimum: 1, maximum: 20 }
+      },
+      required: ['query']
+    }
+  },
+  {
+    type: 'function',
+    name: 'search_protocols',
+    description: 'Read protocol records, including names and step snippets.',
+    parameters: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        query: { type: 'string' },
+        limit: { type: 'integer', minimum: 1, maximum: 20 }
+      },
+      required: ['query']
+    }
+  },
+  {
+    type: 'function',
+    name: 'search_notebook_entries',
+    description: 'Read notebook entries with result summaries and timestamps.',
+    parameters: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        query: { type: 'string' },
+        limit: { type: 'integer', minimum: 1, maximum: 20 }
+      },
+      required: ['query']
+    }
+  },
+  {
+    type: 'function',
+    name: 'search_inventory',
+    description: 'Read chemical and personal inventory records.',
+    parameters: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        query: { type: 'string' },
+        limit: { type: 'integer', minimum: 1, maximum: 25 }
+      },
+      required: ['query']
+    }
+  },
+  {
+    type: 'function',
+    name: 'search_papers',
+    description: 'Read uploaded paper summaries, methods, and reagent extraction notes.',
+    parameters: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        query: { type: 'string' },
+        limit: { type: 'integer', minimum: 1, maximum: 20 }
+      },
+      required: ['query']
+    }
+  }
+];
+
+const AGENT_RESULT_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: [
+    'answer',
+    'confidence',
+    'requires_approval',
+    'proposed_write_actions',
+    'citations',
+    'decision_record'
+  ],
+  properties: {
+    answer: { type: 'string' },
+    confidence: { type: 'number', minimum: 0, maximum: 1 },
+    requires_approval: { type: 'boolean' },
+    proposed_write_actions: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['tool_name', 'reason'],
+        properties: {
+          tool_name: { type: 'string' },
+          reason: { type: 'string' }
+        }
+      }
+    },
+    citations: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['source', 'pointer', 'reason'],
+        properties: {
+          source: { type: 'string' },
+          pointer: { type: 'string' },
+          reason: { type: 'string' }
+        }
+      }
+    },
+    decision_record: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['assumptions', 'open_questions', 'verification_notes'],
+      properties: {
+        assumptions: { type: 'array', items: { type: 'string' } },
+        open_questions: { type: 'array', items: { type: 'string' } },
+        verification_notes: { type: 'array', items: { type: 'string' } }
+      }
+    }
+  }
+};
+
+function toInputText(role, text) {
+  return {
+    role,
+    content: [
+      {
+        type: 'input_text',
+        text: String(text || '')
+      }
+    ]
+  };
+}
+
+function asArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function clamp(number, min, max) {
+  return Math.max(min, Math.min(max, number));
+}
+
+function cleanText(value, maxLength = 2000) {
+  const text = String(value || '').trim();
+  if (!text) {
+    return '';
+  }
+  if (text.length <= maxLength) {
+    return text;
+  }
+  return `${text.slice(0, maxLength)}...`;
+}
+
+function safeParseJson(text, fallback) {
+  try {
+    const parsed = JSON.parse(String(text || ''));
+    if (parsed && typeof parsed === 'object') {
+      return parsed;
+    }
+    return fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function extractResponseText(payload) {
+  if (typeof payload?.output_text === 'string' && payload.output_text.trim()) {
+    return payload.output_text.trim();
+  }
+
+  const chunks = [];
+  asArray(payload?.output).forEach((item) => {
+    if (item?.type === 'message') {
+      asArray(item.content).forEach((content) => {
+        if (content?.type === 'output_text' && content.text) {
+          chunks.push(content.text);
+        }
+      });
+    } else if (item?.type === 'output_text' && item.text) {
+      chunks.push(item.text);
+    }
+  });
+  return chunks.join('\n').trim();
+}
+
+function extractFunctionCalls(payload) {
+  return asArray(payload?.output)
+    .filter((item) => item?.type === 'function_call')
+    .map((item) => ({
+      callId: String(item.call_id || item.id || ''),
+      name: String(item.name || '').trim(),
+      argsText: String(item.arguments || '{}')
+    }))
+    .filter((item) => item.callId && item.name);
+}
+
+function containsWriteIntent(text) {
+  return /\b(create|update|edit|delete|remove|reserve|consume|commit|save)\b/i.test(String(text || ''));
+}
+
+function buildIntermediateState(stage, goal, extras = {}) {
+  return {
+    state_id: `${Date.now()}-${Math.random().toString(16).slice(2, 10)}`,
+    created_at: new Date().toISOString(),
+    stage,
+    goal: cleanText(goal, 600),
+    assumptions: asArray(extras.assumptions).map((item) => cleanText(item, 300)).filter(Boolean),
+    open_questions: asArray(extras.openQuestions).map((item) => cleanText(item, 300)).filter(Boolean),
+    evidence: asArray(extras.evidence).slice(0, 20).map((item) => ({
+      source: cleanText(item?.source, 140),
+      pointer: cleanText(item?.pointer, 200),
+      reason: cleanText(item?.reason, 240)
+    })),
+    proposed_actions: asArray(extras.proposedActions).slice(0, 10).map((item) => ({
+      action_type: cleanText(item?.action_type, 40),
+      tool_name: cleanText(item?.tool_name, 80),
+      risk_level: cleanText(item?.risk_level, 20),
+      reason: cleanText(item?.reason, 260)
+    })),
+    tool_budget: {
+      max_calls: MAX_AGENT_TOOL_ROUNDS,
+      max_tokens_estimate: 6000
+    },
+    confidence: Number.isFinite(extras.confidence) ? clamp(Number(extras.confidence), 0, 1) : 0.5
+  };
+}
+
+function normalizeAgentSnapshot(rawSnapshot) {
+  const snapshot = rawSnapshot && typeof rawSnapshot === 'object' ? rawSnapshot : {};
+  return {
+    projects: asArray(snapshot.projects).slice(0, 40),
+    protocols: asArray(snapshot.protocols).slice(0, 100),
+    notebookEntries: asArray(snapshot.notebookEntries).slice(0, 180),
+    papers: asArray(snapshot.papers).slice(0, 80),
+    inventory: snapshot.inventory && typeof snapshot.inventory === 'object'
+      ? {
+        personal: asArray(snapshot.inventory.personal).slice(0, 40),
+        chemicals: asArray(snapshot.inventory.chemicals).slice(0, 160)
+      }
+      : { personal: [], chemicals: [] },
+    timestamp: cleanText(snapshot.timestamp, 80)
+  };
+}
+
+function scoreByQuery(text, queryTokens) {
+  if (!queryTokens.length) {
+    return 1;
+  }
+  const haystack = String(text || '').toLowerCase();
+  return queryTokens.reduce((score, token) => (haystack.includes(token) ? score + 1 : score), 0);
+}
+
+function normalizeQuery(value) {
+  const query = cleanText(value, 300).toLowerCase();
+  const tokens = query
+    .split(/[^a-z0-9]+/i)
+    .map((token) => token.trim())
+    .filter((token) => token.length >= 2)
+    .slice(0, 12);
+  return { query, tokens };
+}
+
+function pickTopMatches(items, buildSearchText, query, limit) {
+  const { tokens } = normalizeQuery(query);
+  const scored = items.map((item) => ({
+    item,
+    score: scoreByQuery(buildSearchText(item), tokens)
+  }));
+  return scored
+    .filter((entry) => entry.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, clamp(Number(limit) || 6, 1, 25))
+    .map((entry) => entry.item);
+}
+
+function runAgentTool(name, args, snapshot) {
+  const query = cleanText(args?.query, 300);
+  const limit = clamp(Number(args?.limit) || 6, 1, 25);
+
+  if (name === 'search_projects') {
+    const items = pickTopMatches(
+      snapshot.projects,
+      (project) => `${project?.name || ''} ${project?.summary || ''}`,
+      query,
+      limit
+    ).map((project) => ({
+      id: cleanText(project?.id, 80),
+      name: cleanText(project?.name, 200),
+      summary: cleanText(project?.summary, 300)
+    }));
+
+    return {
+      items,
+      citations: items.map((project) => ({
+        source: 'project',
+        pointer: project.id || project.name,
+        reason: 'Matched project metadata.'
+      })),
+      summary: `Found ${items.length} matching projects.`
+    };
+  }
+
+  if (name === 'search_protocols') {
+    const items = pickTopMatches(
+      snapshot.protocols,
+      (protocol) => `${protocol?.name || ''} ${protocol?.category || ''} ${asArray(protocol?.steps).join(' ')}`,
+      query,
+      limit
+    ).map((protocol) => ({
+      id: cleanText(protocol?.id, 80),
+      name: cleanText(protocol?.name, 180),
+      category: cleanText(protocol?.category, 80),
+      steps: asArray(protocol?.steps).slice(0, 8).map((step) => cleanText(step, 220)).filter(Boolean)
+    }));
+
+    return {
+      items,
+      citations: items.map((protocol) => ({
+        source: 'protocol',
+        pointer: protocol.id || protocol.name,
+        reason: 'Matched protocol name/steps.'
+      })),
+      summary: `Found ${items.length} matching protocols.`
+    };
+  }
+
+  if (name === 'search_notebook_entries') {
+    const items = pickTopMatches(
+      snapshot.notebookEntries,
+      (entry) => `${entry?.protocolName || ''} ${entry?.result || ''} ${entry?.updatedAt || ''}`,
+      query,
+      limit
+    ).map((entry) => ({
+      id: cleanText(entry?.id, 80),
+      protocolName: cleanText(entry?.protocolName, 180),
+      result: cleanText(entry?.result, 400),
+      updatedAt: cleanText(entry?.updatedAt, 80)
+    }));
+
+    return {
+      items,
+      citations: items.map((entry) => ({
+        source: 'notebook_entry',
+        pointer: entry.id || entry.protocolName,
+        reason: 'Matched notebook summary/results.'
+      })),
+      summary: `Found ${items.length} matching notebook entries.`
+    };
+  }
+
+  if (name === 'search_inventory') {
+    const personalItems = asArray(snapshot.inventory?.personal).flatMap((zone) => asArray(zone?.items).map((item) => ({
+      zone: cleanText(zone?.zone, 80),
+      id: cleanText(item?.id, 80),
+      name: cleanText(item?.name, 180),
+      quantity: cleanText(item?.quantity, 80),
+      location: cleanText(item?.location, 120)
+    })));
+    const chemicalItems = asArray(snapshot.inventory?.chemicals).map((item) => ({
+      id: cleanText(item?.id, 80),
+      name: cleanText(item?.name, 180),
+      amount: cleanText(item?.amount, 80),
+      cas: cleanText(item?.cas, 80),
+      location: cleanText(item?.location, 120),
+      supplier: cleanText(item?.supplier, 160)
+    }));
+    const merged = [
+      ...personalItems.map((item) => ({ kind: 'personal_inventory', ...item })),
+      ...chemicalItems.map((item) => ({ kind: 'chemical_inventory', ...item }))
+    ];
+    const items = pickTopMatches(
+      merged,
+      (item) => `${item?.kind || ''} ${item?.name || ''} ${item?.cas || ''} ${item?.location || ''} ${item?.supplier || ''}`,
+      query,
+      limit
+    );
+
+    return {
+      items,
+      citations: items.map((item) => ({
+        source: item.kind || 'inventory',
+        pointer: item.id || item.name,
+        reason: 'Matched inventory name and metadata.'
+      })),
+      summary: `Found ${items.length} matching inventory records.`
+    };
+  }
+
+  if (name === 'search_papers') {
+    const items = pickTopMatches(
+      snapshot.papers,
+      (paper) => `${paper?.title || ''} ${paper?.summary || ''} ${
+        asArray(paper?.methods).flatMap((method) => [method?.title, ...asArray(method?.steps)]).join(' ')
+      }`,
+      query,
+      limit
+    ).map((paper) => ({
+      id: cleanText(paper?.id, 80),
+      title: cleanText(paper?.title, 220),
+      summary: cleanText(paper?.summary, 500),
+      methods: asArray(paper?.methods).slice(0, 4).map((method) => ({
+        title: cleanText(method?.title, 180),
+        steps: asArray(method?.steps).slice(0, 6).map((step) => cleanText(step, 200)).filter(Boolean),
+        citations: asArray(method?.citations).slice(0, 6).map((citation) => cleanText(citation, 140)).filter(Boolean)
+      }))
+    }));
+
+    return {
+      items,
+      citations: items.map((paper) => ({
+        source: 'paper',
+        pointer: paper.id || paper.title,
+        reason: 'Matched paper title, summary, or extracted methods.'
+      })),
+      summary: `Found ${items.length} matching papers.`
+    };
+  }
+
+  return {
+    items: [],
+    citations: [],
+    summary: `Unknown tool: ${name}`
+  };
+}
+
+function extractConversation(rawConversation) {
+  return asArray(rawConversation)
+    .slice(-10)
+    .map((item) => ({
+      role: item?.role === 'assistant' ? 'assistant' : 'user',
+      text: cleanText(item?.text, 2500)
+    }))
+    .filter((item) => item.text);
+}
+
+function resolveAgentApiKey(llm) {
+  const fromSettings = cleanText(llm?.apiKey, 300);
+  if (fromSettings) {
+    return fromSettings;
+  }
+
+  const explicit = cleanText(process.env.ENANA_LLM_API_KEY, 300);
+  if (explicit) {
+    return explicit;
+  }
+
+  const generic = cleanText(process.env.LLM_API_KEY, 300);
+  if (generic) {
+    return generic;
+  }
+  return '';
+}
+
+function resolveAgentEndpoint(llm) {
+  const endpoint = cleanText(llm?.apiEndpoint, 300);
+  if (endpoint && /^https?:\/\//i.test(endpoint)) {
+    return endpoint;
+  }
+  return DEFAULT_LLM_RESPONSES_ENDPOINT;
+}
+
+function resolveAgentModel(llm) {
+  const model = cleanText(llm?.model, 120);
+  return model || DEFAULT_AGENT_MODEL;
+}
+
+function buildAgentSystemPrompt(projectName) {
+  return [
+    'You are Enana Lab Assistant Agent operating in a capability-limited orchestration environment.',
+    'Follow this state sequence internally: intake -> context -> plan -> execute -> verify -> synthesize.',
+    'Use tools for factual retrieval before final claims. Do not fabricate protocol details or inventory counts.',
+    'You may PROPOSE write actions but must never claim writes were executed.',
+    'If evidence is insufficient, say so and suggest a minimal next read action.',
+    projectName ? `Scoped project: ${projectName}.` : 'Scope: all projects.',
+    'Respond concisely and focus on practical next steps for the lab user.'
+  ].join('\n');
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+async function requestResponsesWithBackoff({ endpoint, apiKey, body }) {
+  let attempt = 0;
+  const maxRetries = 3;
+  while (attempt <= maxRetries) {
+    let response;
+    try {
+      response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`
+        },
+        body: JSON.stringify(body)
+      });
+    } catch (error) {
+      if (attempt >= maxRetries) {
+        throw error;
+      }
+      const waitMs = 350 * (2 ** attempt) + Math.floor(Math.random() * 250);
+      await sleep(waitMs);
+      attempt += 1;
+      continue;
+    }
+
+    if (response.status !== 429 && response.status !== 503) {
+      if (!response.ok) {
+        const raw = await response.text();
+        throw new Error(`LLM API error (${response.status}): ${raw}`);
+      }
+      return response.json();
+    }
+
+    if (attempt >= maxRetries) {
+      const raw = await response.text();
+      throw new Error(`LLM API rate-limited (${response.status}): ${raw}`);
+    }
+
+    const retryAfterHeader = Number(response.headers.get('retry-after'));
+    const retryAfterMs = Number.isFinite(retryAfterHeader) && retryAfterHeader > 0
+      ? retryAfterHeader * 1000
+      : 500 * (2 ** attempt) + Math.floor(Math.random() * 300);
+    await sleep(retryAfterMs);
+    attempt += 1;
+  }
+
+  throw new Error('LLM API request failed after retries.');
+}
+
+function normalizeAgentOutput(raw, fallbackText) {
+  const parsed = safeParseJson(raw, null);
+  if (parsed && typeof parsed === 'object') {
+    return {
+      answer: cleanText(parsed.answer, 12000) || fallbackText || 'No answer generated.',
+      confidence: Number.isFinite(parsed.confidence) ? clamp(Number(parsed.confidence), 0, 1) : 0.55,
+      requiresApproval: parsed.requires_approval === true,
+      proposedWriteActions: asArray(parsed.proposed_write_actions),
+      citations: asArray(parsed.citations),
+      decisionRecord: parsed.decision_record && typeof parsed.decision_record === 'object'
+        ? parsed.decision_record
+        : { assumptions: [], open_questions: [], verification_notes: [] }
+    };
+  }
+
+  return {
+    answer: fallbackText || 'No answer generated.',
+    confidence: 0.55,
+    requiresApproval: false,
+    proposedWriteActions: [],
+    citations: [],
+    decisionRecord: {
+      assumptions: [],
+      open_questions: [],
+      verification_notes: ['Structured synthesis was unavailable; returned plain-text fallback.']
+    }
+  };
+}
+
+async function runAgentController(payload) {
+  const message = cleanText(payload?.message, 3000);
+  if (!message) {
+    throw new Error('Message is required.');
+  }
+
+  const apiKey = resolveAgentApiKey(payload?.llm);
+  if (!apiKey) {
+    throw new Error('Missing LLM API key. Set it in Settings > LLM Model & API, or use LLM_API_KEY / ENANA_LLM_API_KEY.');
+  }
+
+  const endpoint = resolveAgentEndpoint(payload?.llm);
+  const model = resolveAgentModel(payload?.llm);
+  const conversation = extractConversation(payload?.conversation);
+  const hasLatestUserInConversation = conversation.length > 0
+    && conversation[conversation.length - 1].role === 'user'
+    && conversation[conversation.length - 1].text === message;
+  const snapshot = normalizeAgentSnapshot(payload?.stateSnapshot);
+  const projectName = cleanText(payload?.projectName, 180);
+  const intermediateStates = [];
+  const toolTrace = [];
+  const evidence = [];
+
+  intermediateStates.push(buildIntermediateState('intake', message, {
+    assumptions: ['User question is interpreted as read-first unless writes are explicitly requested.'],
+    openQuestions: containsWriteIntent(message) ? ['User may want a write action; approval is required before any write.'] : [],
+    confidence: 0.45
+  }));
+
+  intermediateStates.push(buildIntermediateState('context', 'Loaded snapshot context for retrieval tools.', {
+    assumptions: [
+      `Context sizes: projects=${snapshot.projects.length}, protocols=${snapshot.protocols.length}, notebook_entries=${snapshot.notebookEntries.length}, papers=${snapshot.papers.length}.`
+    ],
+    confidence: 0.52
+  }));
+
+  const initialResponse = await requestResponsesWithBackoff({
+    endpoint,
+    apiKey,
+    body: {
+      model,
+      input: [
+        toInputText('system', buildAgentSystemPrompt(projectName)),
+        ...conversation.map((item) => toInputText(item.role, item.text)),
+        ...(hasLatestUserInConversation ? [] : [toInputText('user', message)])
+      ],
+      tools: AGENT_TOOL_DEFINITIONS,
+      tool_choice: 'auto',
+      parallel_tool_calls: false,
+      max_output_tokens: 1400
+    }
+  });
+
+  let activeResponse = initialResponse;
+  let round = 0;
+
+  while (round < MAX_AGENT_TOOL_ROUNDS) {
+    const calls = extractFunctionCalls(activeResponse);
+    if (!calls.length) {
+      break;
+    }
+
+    const toolOutputs = [];
+    const proposedActions = [];
+    calls.slice(0, 4).forEach((call) => {
+      const args = safeParseJson(call.argsText, {});
+      const toolResult = runAgentTool(call.name, args, snapshot);
+      toolOutputs.push({
+        type: 'function_call_output',
+        call_id: call.callId,
+        output: JSON.stringify(toolResult)
+      });
+      toolTrace.push({
+        tool: call.name,
+        args,
+        summary: cleanText(toolResult.summary, 240)
+      });
+      asArray(toolResult.citations).forEach((citation) => {
+        evidence.push({
+          source: cleanText(citation?.source, 120),
+          pointer: cleanText(citation?.pointer, 180),
+          reason: cleanText(citation?.reason, 220)
+        });
+      });
+      proposedActions.push({
+        action_type: 'read',
+        tool_name: call.name,
+        risk_level: 'low',
+        reason: 'Model-requested read operation.'
+      });
+    });
+
+    intermediateStates.push(buildIntermediateState('execute', `Executed ${toolOutputs.length} tool calls in round ${round + 1}.`, {
+      evidence: evidence.slice(-10),
+      proposedActions,
+      confidence: 0.62
+    }));
+
+    activeResponse = await requestResponsesWithBackoff({
+      endpoint,
+      apiKey,
+      body: {
+        model,
+        previous_response_id: activeResponse.id,
+        input: toolOutputs,
+        tools: AGENT_TOOL_DEFINITIONS,
+        tool_choice: 'auto',
+        parallel_tool_calls: false,
+        max_output_tokens: 1400
+      }
+    });
+
+    round += 1;
+  }
+
+  const draftAnswer = extractResponseText(activeResponse);
+  const requiresApproval = containsWriteIntent(message);
+
+  intermediateStates.push(buildIntermediateState('verify', 'Verified evidence coverage and policy constraints.', {
+    assumptions: ['Only read tools were executed by policy.'],
+    openQuestions: evidence.length ? [] : ['No evidence citations were produced by tools.'],
+    evidence: evidence.slice(-12),
+    confidence: evidence.length ? 0.72 : 0.58
+  }));
+
+  const synthesisRequest = [
+    'Return JSON that matches the provided schema exactly.',
+    'Summarize the answer for a lab user and include a decision record.',
+    'If evidence is weak, say what is missing.',
+    'Do not claim any write operation was executed.',
+    `Write intent detected: ${requiresApproval ? 'yes' : 'no'}.`
+  ].join('\n');
+
+  let normalized;
+  try {
+    const synthesisPayload = await requestResponsesWithBackoff({
+      endpoint,
+      apiKey,
+      body: {
+        model,
+        input: [
+          toInputText('system', synthesisRequest),
+          toInputText('user', [
+            `User request: ${message}`,
+            `Draft answer: ${draftAnswer || '-'}`,
+            `Tool trace: ${JSON.stringify(toolTrace.slice(0, 20))}`,
+            `Evidence: ${JSON.stringify(evidence.slice(0, 20))}`
+          ].join('\n\n'))
+        ],
+        text: {
+          format: {
+            type: 'json_schema',
+            name: 'agent_result',
+            strict: true,
+            schema: AGENT_RESULT_SCHEMA
+          }
+        },
+        max_output_tokens: 1600
+      }
+    });
+
+    const structuredRaw = extractResponseText(synthesisPayload);
+    normalized = normalizeAgentOutput(structuredRaw, draftAnswer);
+  } catch {
+    normalized = {
+      answer: draftAnswer || 'No answer generated.',
+      confidence: evidence.length ? 0.66 : 0.52,
+      requiresApproval,
+      proposedWriteActions: [],
+      citations: evidence.slice(0, 12),
+      decisionRecord: {
+        assumptions: ['Structured synthesis was not available for this model/endpoint.'],
+        open_questions: evidence.length ? [] : ['Evidence retrieval returned no direct matches.'],
+        verification_notes: ['Returned fallback draft answer with tool evidence snapshot.']
+      }
+    };
+  }
+
+  if (requiresApproval && normalized.proposedWriteActions.length === 0) {
+    normalized.proposedWriteActions = [
+      {
+        tool_name: 'write_operation_pending_approval',
+        reason: 'User intent appears write-oriented; explicit approval is required before execution.'
+      }
+    ];
+  }
+  if (requiresApproval) {
+    normalized.requiresApproval = true;
+  }
+
+  intermediateStates.push(buildIntermediateState('synthesize', 'Generated final user-facing response with decision record.', {
+    evidence: normalized.citations,
+    proposedActions: normalized.proposedWriteActions.map((action) => ({
+      action_type: 'write',
+      tool_name: action?.tool_name,
+      risk_level: 'high',
+      reason: action?.reason
+    })),
+    confidence: normalized.confidence
+  }));
+
+  intermediateStates.push(buildIntermediateState('handoff', 'Prepared response for UI handoff and audit trail.', {
+    assumptions: ['Any write action remains pending explicit approval.'],
+    confidence: normalized.confidence
+  }));
+
+  return {
+    ok: true,
+    model,
+    answer: normalized.answer,
+    confidence: normalized.confidence,
+    requiresApproval: normalized.requiresApproval,
+    proposedWriteActions: normalized.proposedWriteActions,
+    citations: normalized.citations,
+    decisionRecord: normalized.decisionRecord,
+    intermediateStates,
+    toolTrace
+  };
+}
+
+ipcMain.handle('agent:chat', async (_event, payload) => {
+  try {
+    return await runAgentController(payload);
+  } catch (error) {
+    return { ok: false, error: String(error?.message || error) };
   }
 });
 

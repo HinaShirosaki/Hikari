@@ -25,6 +25,7 @@ import { initAssay } from './modules/assay.js';
 import { initGelAnalysis } from './modules/gel-analysis.js';
 import { initPapersManagement } from './modules/papers-management.js';
 import { initToolBox } from './modules/tool-box.js';
+import { initAgentChat } from './modules/agent-chat.js';
 import {
   rebuildObjectGraph,
   queryNotebookEntriesByRelation,
@@ -43,6 +44,7 @@ const DEFAULT_APP_VIEW = VIEWS.LAB_MANAGEMENT;
 let assay = null;
 let gel = null;
 let workflowManagement = null;
+let agentChat = null;
 
 function isNeutralCompactUi() {
   return state.settings?.appearance?.uiStyle !== 'classic';
@@ -177,7 +179,15 @@ const projectManagement = initProjectManagement({
     gel?.renderNotebookOptions();
     gel?.renderList();
     papers.render();
+    agentChat?.render();
   }
+});
+
+agentChat = initAgentChat({
+  state,
+  persist,
+  createId,
+  safeText
 });
 
 workflowManagement = initWorkflowManagement({
@@ -359,6 +369,10 @@ function showView(viewId) {
     papers.render();
   }
 
+  if (nextView === VIEWS.AGENT) {
+    agentChat.render();
+  }
+
   if (nextView === VIEWS.INSTRUMENT_MANAGEMENT) {
     instrumentManagement.render();
   }
@@ -464,6 +478,7 @@ function renderAll() {
   settings.renderForms();
   settings.applyAppearance();
   papers.render();
+  agentChat.render();
 }
 
 async function hydrateStateFromDataFile() {

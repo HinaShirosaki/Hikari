@@ -4,7 +4,6 @@ export const VIEWS = {
   INSTRUMENT_MANAGEMENT: 'instrument-management-view',
   PROTOCOL_MANAGEMENT: 'protocol-management-view',
   COLLABORATION_MANAGEMENT: 'collaboration-management-view',
-  LAB_NOTEBOOK: 'lab-notebook-view',
   SYNTHESIS_NOTEBOOK: 'synthesis-notebook-view',
   BIOLOGY_NOTEBOOK: 'biology-notebook-view',
   LAB_COMMON_INVENTORY: 'lab-common-inventory-view',
@@ -16,6 +15,7 @@ export const VIEWS = {
   PROJECT_MANAGEMENT: 'project-management-view',
   WORKFLOW_MANAGEMENT: 'workflow-management-view',
   PAPERS: 'papers-view',
+  AGENT: 'agent-view',
   TOOL_BOX: 'tool-box-view'
 };
 
@@ -25,7 +25,6 @@ export const TITLES = {
   [VIEWS.INSTRUMENT_MANAGEMENT]: 'Manage instruments and reservations by calendar.',
   [VIEWS.PROTOCOL_MANAGEMENT]: 'Create and edit protocols step by step.',
   [VIEWS.COLLABORATION_MANAGEMENT]: 'Collabrations module.',
-  [VIEWS.LAB_NOTEBOOK]: 'Fill protocol-specific values and store experiment result notes.',
   [VIEWS.SYNTHESIS_NOTEBOOK]: 'Synthesis notebook for chemistry workflows.',
   [VIEWS.BIOLOGY_NOTEBOOK]: 'Biology notebook for wet lab workflows.',
   [VIEWS.LAB_COMMON_INVENTORY]: 'Chemicals module.',
@@ -37,6 +36,7 @@ export const TITLES = {
   [VIEWS.PROJECT_MANAGEMENT]: 'Manage projects for notebook context.',
   [VIEWS.WORKFLOW_MANAGEMENT]: 'Build editable protocol-block workflows and reusable templates.',
   [VIEWS.PAPERS]: 'Upload papers, link them to projects or journal clubs, and summarize with LLM.',
+  [VIEWS.AGENT]: 'Ask the lab assistant agent with evidence-grounded context and decision records.',
   [VIEWS.TOOL_BOX]: 'Tools: molarity calculator, peptide properties, and buffer preparer.'
 };
 
@@ -54,6 +54,10 @@ export const defaultState = {
   papers: [],
   paperExperimentLinks: [],
   knowledgeChats: {},
+  agentChat: {
+    projectId: '',
+    messages: []
+  },
   messages: [],
   growthMetrics: {
     counters: {
@@ -137,6 +141,12 @@ export function normalizeState(parsed) {
     papers: Array.isArray(source.papers) ? source.papers : [],
     paperExperimentLinks: Array.isArray(source.paperExperimentLinks) ? source.paperExperimentLinks : [],
     knowledgeChats: source.knowledgeChats && typeof source.knowledgeChats === 'object' ? source.knowledgeChats : {},
+    agentChat: {
+      ...defaultState.agentChat,
+      ...(source.agentChat && typeof source.agentChat === 'object' ? source.agentChat : {}),
+      projectId: String(source.agentChat?.projectId || ''),
+      messages: Array.isArray(source.agentChat?.messages) ? source.agentChat.messages : []
+    },
     notebookEntries: Array.isArray(source.notebookEntries) ? source.notebookEntries : [],
     synthesisChemistryDrafts:
       source.synthesisChemistryDrafts && typeof source.synthesisChemistryDrafts === 'object'

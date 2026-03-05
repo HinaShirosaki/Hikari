@@ -6,6 +6,8 @@
   "scripts": {
     "start": "electron-forge start",
     "test": "node test.js",
+    "dist": "electron-forge make",
+    "package:app": "electron-forge package",
     "package": "electron-forge package",
     "make": "electron-forge make"
   },
@@ -18,7 +20,7 @@
     "@electron-forge/plugin-auto-unpack-natives": "^7.11.1",
     "@electron-forge/plugin-fuses": "^7.11.1",
     "@electron/fuses": "^1.8.0",
-    "electron": "^40.4.1"
+    "electron": "^40.7.0"
   },
   "dependencies": {
     "electron-squirrel-startup": "^1.0.1",

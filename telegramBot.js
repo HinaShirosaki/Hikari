@@ -290,12 +290,6 @@ function startTelegramBot(getMainWindow, tokenOverride = '') {
     }
 
     console.log('Telegram message:', msg);
-
-    const mainWindow = getMainWindowSafe(getMainWindow);
-    if (mainWindow) {
-      mainWindow.webContents.send('telegram-message', msg);
-    }
-
     ctx.reply(`Received: ${msg}`);
   });
 
