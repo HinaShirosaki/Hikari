@@ -1,40 +1,107 @@
-# Enana (Electron App)
+# Enana
 
-Enana is a desktop Electron app for lab workflow management:
-- members, instruments, protocols, notebooks
-- assay/gel analysis
-- inventory and sample registry
-- papers and agent-assisted Q&A
+Enana is an Electron desktop app for lab workflow management. It combines lab records, notebooks, inventory, assay/gel workflows, papers, and an agent chat interface in one local app.
 
-## Install For End Users
+## What It Includes
 
-1. Download the installer package produced from `npm run dist`.
-2. Install like a normal desktop app on your OS.
-3. Launch Enana directly (no Node.js or manual dependency install needed).
+- Member and role tracking
+- Instrument scheduling and reservations
+- Protocol management and sharing links
+- Synthesis and biology notebooks
+- Chemical + personal inventory management
+- Sample registry
+- Assay and gel analysis workflows
+- Project and workflow management
+- Papers management with LLM-assisted extraction
+- Agent chat with optional project-scoped context
+- Optional Telegram bot controls
 
-Installer outputs are generated under `out/make/`.
+## Tech Stack
 
-## Build / Package
+- Electron (main process + renderer)
+- Vanilla JavaScript modules under `modules/`
+- Local state persistence (`localStorage`) plus JSON/`.ena` save/load
+- Electron Forge for packaging
+
+## Project Structure
+
+- `main.js`: Electron main process, IPC handlers, file operations, agent calls, Telegram lifecycle
+- `preload.js`: secure renderer API bridge
+- `renderer.js`: boots modules and coordinates cross-module updates
+- `modules/`: domain modules (assay, inventory, notebooks, projects, etc.)
+- `index.html` + `styles.css`: UI shell and styling
+- `telegramBot.js`: Telegram command handling
+- `data/llm-prompts.json`: prompt templates for LLM-backed features
+
+## Getting Started (Development)
+
+### Prerequisites
+
+- Node.js 20+ (recommended)
+- npm
+
+### Install and Run
 
 ```bash
 npm install
-npm test
-npm run dist
+npm run start
 ```
 
-Helpful scripts:
-- `npm run start`: run app in dev mode
-- `npm run package:app`: package app folder without installer
-- `npm run dist`: build installer artifacts
+### Run Tests
 
-## Portability Notes
+```bash
+npm test
+```
 
-- Static frontend assets are loaded with app-relative paths (no machine-specific absolute paths).
-- Packaging is configured with `asar` + dependency pruning for smaller, portable builds.
-- Build artifacts (`out/`, `output/`, `tmp/`) are excluded from packaged installers.
+## Build and Package
 
-## Optional External Services
+```bash
+npm run package:app   # package app folder only
+npm run dist          # create platform installers/artifacts
+```
 
-Some features are optional and require external setup:
-- LLM/API features need an API key in Settings (or env vars).
-- Telegram bot commands need a Telegram bot token.
+Build output is generated under `out/`.
+
+## Data and Persistence
+
+- App state is persisted locally and auto-saved by default.
+- You can manually save/load data using JSON or `.ena` files from Settings.
+- Default auto-save file name is `enana-data.json` in Electron `userData`.
+
+## Optional Integrations
+
+### LLM Features
+
+Configure in **Settings -> LLM Model & API** or environment variables:
+
+- `ENANA_LLM_API_KEY` (preferred)
+- `LLM_API_KEY`
+
+Default endpoint:
+
+- `https://api.openai.com/v1/responses`
+
+### Telegram Bot
+
+Configure in **Settings -> Telegram Bot** or environment variable:
+
+- `TELEGRAM_BOT_TOKEN`
+
+If a token is saved in-app, it is stored in Electron `userData` as `telegram-bot.json`.
+
+## Utility Script
+
+Generate a one-page app summary PDF:
+
+```bash
+python3 scripts/generate_enana_summary_pdf.py
+```
+
+Output:
+
+- `output/pdf/enana-app-summary.pdf`
+
+## Notes
+
+- Packaging uses `asar` and dependency pruning.
+- Build/output directories (`out/`, `output/`, `tmp/`) are excluded from packaged artifacts.
