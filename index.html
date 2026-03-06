@@ -15,7 +15,7 @@
       <div class="topbar-row">
         <p id="page-subtitle">Choose a sub-app to continue.</p>
         <div class="topbar-tools">
-          <input id="topbar-search" type="search" placeholder="Search" aria-label="Search" />
+          <input id="topbar-search" type="search" placeholder="Search (e.g. assay: EGFR)" aria-label="Search" />
           <button id="home-btn" class="ghost-btn" hidden>Back to Home</button>
         </div>
       </div>
@@ -38,6 +38,7 @@
           <button class="app-nav-btn" type="button" data-view="project-management-view">Projects</button>
           <button class="app-nav-btn" type="button" data-view="workflow-management-view">Workflows</button>
           <button class="app-nav-btn" type="button" data-view="papers-view">Papers</button>
+          <button class="app-nav-btn" type="button" data-view="agent-view">Agent</button>
           <button class="app-nav-btn" type="button" data-view="tool-box-view">Tools</button>
           <button class="app-nav-btn" type="button" data-view="setting-view">Setting</button>
         </nav>
@@ -114,6 +115,11 @@
         <button class="tile" data-view="papers-view">
           <span class="icon" aria-hidden="true">📄</span>
           <span class="label">Papers</span>
+        </button>
+
+        <button class="tile" data-view="agent-view">
+          <span class="icon" aria-hidden="true">🤖</span>
+          <span class="label">Agent</span>
         </button>
 
         <button class="tile" data-view="tool-box-view">
@@ -1368,6 +1374,41 @@
           </div>
           <div id="knowledge-answer" class="card"></div>
           <div id="knowledge-chat-history" class="stack-form"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="agent-view" class="view">
+      <div class="panel">
+        <h2>Lab Assistant Agent</h2>
+        <p class="small-note">Read-only agent loop: intake, context, plan, execute, verify, synthesize. Write actions are proposed only and require approval.</p>
+        <p class="small-note">Set the API key in Settings, or provide <code>LLM_API_KEY</code> / <code>ENANA_LLM_API_KEY</code> in the app environment.</p>
+        <div class="form-grid">
+          <label>
+            Project Scope (Optional)
+            <select id="agent-project-select">
+              <option value="">All projects</option>
+            </select>
+          </label>
+          <label>
+            Context Summary
+            <input id="agent-context-summary" disabled />
+          </label>
+        </div>
+      </div>
+
+      <div class="panel agent-chat-panel">
+        <div id="agent-chat-history" class="agent-chat-history" aria-live="polite"></div>
+        <p id="agent-status" class="small-note">Ready.</p>
+        <div class="stack-form">
+          <label>
+            Message
+            <textarea id="agent-message-input" rows="4" placeholder="Ask for protocol guidance, inventory checks, literature-grounded suggestions, or planning support."></textarea>
+          </label>
+          <div class="form-actions">
+            <button type="button" id="agent-send-btn" class="primary-btn">Send</button>
+            <button type="button" id="agent-clear-btn" class="ghost-btn">Clear Chat</button>
+          </div>
         </div>
       </div>
     </section>

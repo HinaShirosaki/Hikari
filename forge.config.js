@@ -32,7 +32,16 @@ if (process.platform === 'linux') {
 
 module.exports = {
   packagerConfig: {
-    asar: true
+    asar: true,
+    prune: true,
+    ignore: [
+      /^\/out($|\/)/,
+      /^\/output($|\/)/,
+      /^\/tmp($|\/)/,
+      /^\/\.vscode($|\/)/,
+      /^\/\.DS_Store$/,
+      /^\/enana-data(?:\.ena)?\.json$/
+    ]
   },
   rebuildConfig: {},
   makers,
