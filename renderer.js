@@ -25,6 +25,7 @@ import { initAssay } from './modules/assay.js';
 import { initGelAnalysis } from './modules/gel-analysis.js';
 import { initPapersManagement } from './modules/papers-management.js';
 import { initToolBox } from './modules/tool-box.js';
+import { initAgentChat } from './modules/agent-chat.js';
 import {
   rebuildObjectGraph,
   queryNotebookEntriesByRelation,
@@ -36,13 +37,73 @@ const state = loadState();
 const pageSubtitle = document.getElementById('page-subtitle');
 const homeBtn = document.getElementById('home-btn');
 const exitBtn = document.getElementById('exit-btn');
+const topbarSearchInput = document.getElementById('topbar-search');
 const views = [...document.querySelectorAll('.view')];
 const appNavButtons = [...document.querySelectorAll('.app-nav-btn[data-view]')];
 const homeTiles = [...document.querySelectorAll('.tile[data-view]')];
 const DEFAULT_APP_VIEW = VIEWS.LAB_MANAGEMENT;
+
+const GLOBAL_VIEW_ALIASES = new Map([
+  ['home', VIEWS.HOME],
+  ['members', VIEWS.LAB_MANAGEMENT],
+  ['member', VIEWS.LAB_MANAGEMENT],
+  ['instruments', VIEWS.INSTRUMENT_MANAGEMENT],
+  ['instrument', VIEWS.INSTRUMENT_MANAGEMENT],
+  ['protocols', VIEWS.PROTOCOL_MANAGEMENT],
+  ['protocol', VIEWS.PROTOCOL_MANAGEMENT],
+  ['collaborations', VIEWS.COLLABORATION_MANAGEMENT],
+  ['collaboration', VIEWS.COLLABORATION_MANAGEMENT],
+  ['synthesis', VIEWS.SYNTHESIS_NOTEBOOK],
+  ['biology', VIEWS.BIOLOGY_NOTEBOOK],
+  ['chemicals', VIEWS.LAB_COMMON_INVENTORY],
+  ['chemical', VIEWS.LAB_COMMON_INVENTORY],
+  ['samples', VIEWS.SAMPLE_REGISTRY],
+  ['sample', VIEWS.SAMPLE_REGISTRY],
+  ['assay', VIEWS.ASSAY],
+  ['assays', VIEWS.ASSAY],
+  ['gel', VIEWS.GEL],
+  ['gels', VIEWS.GEL],
+  ['inventory', VIEWS.PERSONAL_INVENTORY],
+  ['projects', VIEWS.PROJECT_MANAGEMENT],
+  ['project', VIEWS.PROJECT_MANAGEMENT],
+  ['workflows', VIEWS.WORKFLOW_MANAGEMENT],
+  ['workflow', VIEWS.WORKFLOW_MANAGEMENT],
+  ['papers', VIEWS.PAPERS],
+  ['paper', VIEWS.PAPERS],
+  ['agent', VIEWS.AGENT],
+  ['tools', VIEWS.TOOL_BOX],
+  ['tool', VIEWS.TOOL_BOX],
+  ['toolbox', VIEWS.TOOL_BOX],
+  ['settings', VIEWS.SETTING],
+  ['setting', VIEWS.SETTING]
+]);
+
+const SEARCH_SCOPE_TARGETS = new Map([
+  ['chemical', { viewId: VIEWS.LAB_COMMON_INVENTORY, inputId: 'chemical-search', label: 'Chemicals' }],
+  ['chemicals', { viewId: VIEWS.LAB_COMMON_INVENTORY, inputId: 'chemical-search', label: 'Chemicals' }],
+  ['inventory', { viewId: VIEWS.LAB_COMMON_INVENTORY, inputId: 'chemical-search', label: 'Chemicals' }],
+  ['sample', { viewId: VIEWS.SAMPLE_REGISTRY, inputId: 'sample-search', label: 'Samples' }],
+  ['samples', { viewId: VIEWS.SAMPLE_REGISTRY, inputId: 'sample-search', label: 'Samples' }],
+  ['assay', { viewId: VIEWS.ASSAY, inputId: 'assay-search', label: 'Assay' }],
+  ['assays', { viewId: VIEWS.ASSAY, inputId: 'assay-search', label: 'Assay' }],
+  ['gel', { viewId: VIEWS.GEL, inputId: 'gel-search', label: 'Gel' }],
+  ['gels', { viewId: VIEWS.GEL, inputId: 'gel-search', label: 'Gel' }],
+  ['project', { viewId: VIEWS.PROJECT_MANAGEMENT, inputId: '', label: 'Projects' }],
+  ['projects', { viewId: VIEWS.PROJECT_MANAGEMENT, inputId: '', label: 'Projects' }],
+  ['protocol', { viewId: VIEWS.PROTOCOL_MANAGEMENT, inputId: '', label: 'Protocols' }],
+  ['protocols', { viewId: VIEWS.PROTOCOL_MANAGEMENT, inputId: '', label: 'Protocols' }],
+  ['paper', { viewId: VIEWS.PAPERS, inputId: '', label: 'Papers' }],
+  ['papers', { viewId: VIEWS.PAPERS, inputId: '', label: 'Papers' }],
+  ['member', { viewId: VIEWS.LAB_MANAGEMENT, inputId: '', label: 'Members' }],
+  ['members', { viewId: VIEWS.LAB_MANAGEMENT, inputId: '', label: 'Members' }],
+  ['instrument', { viewId: VIEWS.INSTRUMENT_MANAGEMENT, inputId: '', label: 'Instruments' }],
+  ['instruments', { viewId: VIEWS.INSTRUMENT_MANAGEMENT, inputId: '', label: 'Instruments' }]
+]);
+
 let assay = null;
 let gel = null;
 let workflowManagement = null;
+let agentChat = null;
 
 function isNeutralCompactUi() {
   return state.settings?.appearance?.uiStyle !== 'classic';
@@ -177,7 +238,15 @@ const projectManagement = initProjectManagement({
     gel?.renderNotebookOptions();
     gel?.renderList();
     papers.render();
+    agentChat?.render();
   }
+});
+
+agentChat = initAgentChat({
+  state,
+  persist,
+  createId,
+  safeText
 });
 
 workflowManagement = initWorkflowManagement({
@@ -359,9 +428,414 @@ function showView(viewId) {
     papers.render();
   }
 
+  if (nextView === VIEWS.AGENT) {
+    agentChat.render();
+  }
+
   if (nextView === VIEWS.INSTRUMENT_MANAGEMENT) {
     instrumentManagement.render();
   }
+}
+
+function asArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function normalizeSearchToken(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_]+/g, '-')
+    .replace(/[^a-z0-9-]/g, '');
+}
+
+function tokenizeSearchQuery(value) {
+  return String(value || '')
+    .toLowerCase()
+    .split(/[^a-z0-9]+/i)
+    .map((token) => token.trim())
+    .filter((token) => token.length >= 2)
+    .slice(0, 12);
+}
+
+function scoreTextByTokens(text, queryTokens, queryLower) {
+  const haystack = String(text || '').toLowerCase();
+  if (!haystack) {
+    return 0;
+  }
+
+  if (!queryTokens.length) {
+    return queryLower && haystack.includes(queryLower) ? 1 : 0;
+  }
+
+  let score = 0;
+  queryTokens.forEach((token) => {
+    if (haystack.includes(token)) {
+      score += 1;
+    }
+  });
+  if (queryLower && queryLower.length >= 3 && haystack.includes(queryLower)) {
+    score += 2;
+  }
+  return score;
+}
+
+function getScopeTarget(scopeToken) {
+  return SEARCH_SCOPE_TARGETS.get(normalizeSearchToken(scopeToken)) || null;
+}
+
+function parseTopbarSearch(rawValue) {
+  const raw = String(rawValue || '').trim();
+  const parsed = {
+    raw,
+    query: raw,
+    queryLower: raw.toLowerCase(),
+    tokens: tokenizeSearchQuery(raw),
+    scopeToken: '',
+    target: null,
+    openViewId: ''
+  };
+  if (!raw) {
+    return parsed;
+  }
+
+  // Scoped query syntax: "<scope>: <query>".
+  const scopedMatch = raw.match(/^([a-z0-9][a-z0-9_\-\s]{0,30})\s*:\s*(.+)$/i);
+  if (scopedMatch) {
+    const scopeToken = normalizeSearchToken(scopedMatch[1]);
+    const target = getScopeTarget(scopeToken);
+    if (target) {
+      const query = String(scopedMatch[2] || '').trim();
+      parsed.scopeToken = scopeToken;
+      parsed.target = target;
+      parsed.query = query;
+      parsed.queryLower = query.toLowerCase();
+      parsed.tokens = tokenizeSearchQuery(query);
+      return parsed;
+    }
+  }
+
+  const [rawFirstToken = '', ...restParts] = raw.split(/\s+/);
+  const firstToken = normalizeSearchToken(rawFirstToken);
+  const trailingQuery = restParts.join(' ').trim();
+  if (firstToken && trailingQuery) {
+    const target = getScopeTarget(firstToken);
+    if (target) {
+      parsed.scopeToken = firstToken;
+      parsed.target = target;
+      parsed.query = trailingQuery;
+      parsed.queryLower = trailingQuery.toLowerCase();
+      parsed.tokens = tokenizeSearchQuery(trailingQuery);
+      return parsed;
+    }
+  }
+
+  if (firstToken && GLOBAL_VIEW_ALIASES.has(firstToken)) {
+    parsed.openViewId = GLOBAL_VIEW_ALIASES.get(firstToken);
+    parsed.query = trailingQuery;
+    parsed.queryLower = trailingQuery.toLowerCase();
+    parsed.tokens = tokenizeSearchQuery(trailingQuery);
+  }
+  return parsed;
+}
+
+function applySearchTarget(target, query) {
+  if (!target || !target.viewId) {
+    return false;
+  }
+
+  showView(target.viewId);
+  if (target.inputId) {
+    return setSearchInputValue(target.inputId, query);
+  }
+  return true;
+}
+
+function getActiveViewId() {
+  return views.find((view) => view.classList.contains('is-active'))?.id
+    || (isNeutralCompactUi() ? DEFAULT_APP_VIEW : VIEWS.HOME);
+}
+
+function getScopeTargetForView(viewId) {
+  let fallback = null;
+  for (const target of SEARCH_SCOPE_TARGETS.values()) {
+    if (target.viewId !== viewId) {
+      continue;
+    }
+    if (target.inputId) {
+      return target;
+    }
+    if (!fallback) {
+      fallback = target;
+    }
+  }
+  return fallback;
+}
+
+function protocolSearchText(protocol) {
+  const stepsText = asArray(protocol?.steps)
+    .map((step) => (typeof step === 'string' ? step : step?.text || step?.instruction || step?.title || ''))
+    .join(' ');
+  return [
+    protocol?.name,
+    protocol?.purpose,
+    asArray(protocol?.materials).join(' '),
+    stepsText,
+    protocol?.troubleshooting
+  ].join(' ');
+}
+
+function buildGlobalSearchCandidates() {
+  const candidates = [];
+  const addCandidate = (target, text) => {
+    if (!target || !target.viewId) {
+      return;
+    }
+    const searchText = String(text || '').trim();
+    if (!searchText) {
+      return;
+    }
+    candidates.push({ target, text: searchText });
+  };
+
+  const chemicalTarget = getScopeTarget('chemicals');
+  asArray(state.labInventory?.chemicals).forEach((chemical) => {
+    addCandidate(chemicalTarget, [
+      chemical?.name,
+      chemical?.casNumber,
+      chemical?.vendor,
+      chemical?.catalogNumber,
+      chemical?.location,
+      chemical?.unitSize,
+      chemical?.amountInStock
+    ].join(' '));
+  });
+
+  const sampleTarget = getScopeTarget('samples');
+  asArray(state.samples).forEach((sample) => {
+    addCandidate(sampleTarget, [
+      sample?.code,
+      sample?.name,
+      sample?.type,
+      sample?.lot,
+      sample?.concentration,
+      sample?.notes
+    ].join(' '));
+  });
+
+  const assayTarget = getScopeTarget('assay');
+  asArray(state.assays).forEach((assayItem) => {
+    addCandidate(assayTarget, [
+      assayItem?.assayNumber,
+      assayItem?.name,
+      assayItem?.projectName,
+      assayItem?.plateLabel,
+      assayItem?.notebookEntryProtocolName,
+      assayItem?.notes,
+      asArray(assayItem?.sampleAxisValues).join(' '),
+      asArray(assayItem?.concentrationAxisValues).join(' ')
+    ].join(' '));
+  });
+
+  const gelTarget = getScopeTarget('gel');
+  asArray(state.gelAnalyses).forEach((record) => {
+    addCandidate(gelTarget, [
+      record?.name,
+      record?.projectName,
+      record?.notebookEntryProtocolName,
+      record?.analysisType,
+      record?.imageName,
+      record?.report?.confidence?.label,
+      asArray(record?.report?.warnings).join(' ')
+    ].join(' '));
+  });
+
+  const projectTarget = getScopeTarget('projects');
+  asArray(state.projects).forEach((project) => {
+    addCandidate(projectTarget, [project?.name, project?.description].join(' '));
+  });
+
+  const protocolTarget = getScopeTarget('protocols');
+  asArray(state.protocols).forEach((protocolItem) => {
+    addCandidate(protocolTarget, protocolSearchText(protocolItem));
+  });
+
+  const paperTarget = getScopeTarget('papers');
+  asArray(state.papers).forEach((paper) => {
+    addCandidate(paperTarget, [
+      paper?.title,
+      paper?.linkedName,
+      paper?.summary,
+      paper?.fileName
+    ].join(' '));
+  });
+
+  const memberTarget = getScopeTarget('members');
+  asArray(state.members).forEach((member) => {
+    addCandidate(memberTarget, [
+      member?.name,
+      member?.position,
+      member?.institutionEmail,
+      member?.enanaEmail
+    ].join(' '));
+  });
+
+  const instrumentTarget = getScopeTarget('instruments');
+  asArray(state.instruments).forEach((instrument) => {
+    addCandidate(instrumentTarget, [
+      instrument?.name,
+      instrument?.nickname,
+      asArray(instrument?.reservations)
+        .map((reservation) => [reservation?.title, reservation?.date, reservation?.notes].join(' '))
+        .join(' ')
+    ].join(' '));
+  });
+
+  const workflowTarget = {
+    viewId: VIEWS.WORKFLOW_MANAGEMENT,
+    inputId: '',
+    label: 'Workflows'
+  };
+  asArray(state.workflows).forEach((workflow) => {
+    addCandidate(workflowTarget, [workflow?.name, workflow?.description].join(' '));
+  });
+
+  const synthesisNotebookTarget = {
+    viewId: VIEWS.SYNTHESIS_NOTEBOOK,
+    inputId: '',
+    label: 'Synthesis Notebook'
+  };
+  const biologyNotebookTarget = {
+    viewId: VIEWS.BIOLOGY_NOTEBOOK,
+    inputId: '',
+    label: 'Biology Notebook'
+  };
+  asArray(state.notebookEntries).forEach((entry) => {
+    const target = entry?.notebookType === 'biology' ? biologyNotebookTarget : synthesisNotebookTarget;
+    addCandidate(target, [
+      entry?.projectName,
+      entry?.protocolName,
+      entry?.result,
+      asArray(entry?.resultFiles).join(' '),
+      entry?.updatedAt
+    ].join(' '));
+  });
+
+  const personalInventoryTarget = {
+    viewId: VIEWS.PERSONAL_INVENTORY,
+    inputId: '',
+    label: 'Personal Inventory'
+  };
+  // Flatten inventory containers/wells so the global matcher can route to inventory view.
+  Object.entries(state.inventory || {}).forEach(([zone, containers]) => {
+    asArray(containers).forEach((container) => {
+      addCandidate(personalInventoryTarget, [
+        zone,
+        container?.name,
+        container?.type,
+        container?.singleContent,
+        asArray(container?.wells)
+          .map((well) => (typeof well === 'string' ? well : `${well?.name || ''} ${well?.content || ''}`))
+          .join(' ')
+      ].join(' '));
+    });
+  });
+
+  return candidates;
+}
+
+function executeTopbarSearch(rawQuery) {
+  const parsed = parseTopbarSearch(rawQuery);
+  if (!parsed.raw) {
+    if (topbarSearchInput) {
+      topbarSearchInput.title = 'Type a query and press Enter.';
+    }
+    return false;
+  }
+
+  if (parsed.target) {
+    const applied = applySearchTarget(parsed.target, parsed.query);
+    if (topbarSearchInput) {
+      const canFilter = Boolean(parsed.target.inputId && parsed.query);
+      topbarSearchInput.title = applied
+        ? (canFilter
+          ? `Opened ${parsed.target.label} and searched for "${parsed.query}".`
+          : `Opened ${parsed.target.label}.`)
+        : 'Search target unavailable.';
+    }
+    return applied;
+  }
+
+  if (parsed.openViewId) {
+    showView(parsed.openViewId);
+    let appliedQuery = false;
+    if (parsed.query) {
+      const scopedTarget = getScopeTargetForView(parsed.openViewId);
+      if (scopedTarget?.inputId) {
+        setSearchInputValue(scopedTarget.inputId, parsed.query);
+        appliedQuery = true;
+      }
+    }
+    if (topbarSearchInput) {
+      topbarSearchInput.title = appliedQuery
+        ? `Opened ${TITLES[parsed.openViewId] || 'view'} and searched for "${parsed.query}".`
+        : `Opened ${TITLES[parsed.openViewId] || 'view'}.`;
+    }
+    return true;
+  }
+
+  const activeViewId = getActiveViewId();
+  const candidates = buildGlobalSearchCandidates();
+  let bestCandidate = null;
+  let bestScore = 0;
+  // Score all known records and route to the strongest matching module.
+  candidates.forEach((candidate) => {
+    let score = scoreTextByTokens(candidate.text, parsed.tokens, parsed.queryLower);
+    if (!score) {
+      return;
+    }
+    if (candidate.target.viewId === activeViewId) {
+      score += 0.25;
+    }
+    if (score > bestScore) {
+      bestScore = score;
+      bestCandidate = candidate;
+    }
+  });
+
+  if (bestCandidate) {
+    applySearchTarget(bestCandidate.target, parsed.query);
+    if (topbarSearchInput) {
+      const canFilter = Boolean(bestCandidate.target.inputId && parsed.query);
+      topbarSearchInput.title = canFilter
+        ? `Opened ${bestCandidate.target.label} and searched for "${parsed.query}".`
+        : `Opened ${bestCandidate.target.label}.`;
+    }
+    return true;
+  }
+
+  const activeScopeTarget = getScopeTargetForView(activeViewId);
+  if (activeScopeTarget?.inputId) {
+    applySearchTarget(activeScopeTarget, parsed.query);
+    if (topbarSearchInput) {
+      topbarSearchInput.title = `Searched in current ${activeScopeTarget.label} view.`;
+    }
+    return true;
+  }
+
+  const aliasViewId = GLOBAL_VIEW_ALIASES.get(normalizeSearchToken(parsed.query));
+  if (aliasViewId) {
+    showView(aliasViewId);
+    if (topbarSearchInput) {
+      topbarSearchInput.title = `Opened ${TITLES[aliasViewId] || 'view'}.`;
+    }
+    return true;
+  }
+
+  if (topbarSearchInput) {
+    topbarSearchInput.title = `No match found for "${parsed.query}". Try "assay: keyword" or "gel: keyword".`;
+  }
+  return false;
 }
 
 function setSearchInputValue(inputId, value) {
@@ -434,6 +908,19 @@ function initNavigation() {
   if (exitBtn) {
     exitBtn.addEventListener('click', () => window.close());
   }
+  if (topbarSearchInput) {
+    topbarSearchInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        executeTopbarSearch(topbarSearchInput.value);
+        return;
+      }
+      if (event.key === 'Escape') {
+        topbarSearchInput.value = '';
+        topbarSearchInput.title = 'Search cleared.';
+      }
+    });
+  }
 }
 
 window.addEventListener('enana:appearance-changed', () => {
@@ -464,6 +951,7 @@ function renderAll() {
   settings.renderForms();
   settings.applyAppearance();
   papers.render();
+  agentChat.render();
 }
 
 async function hydrateStateFromDataFile() {

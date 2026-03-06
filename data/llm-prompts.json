@@ -1,7 +1,14 @@
 {
-  "paperSummary": "Summarize this scientific paper with sections: Objective, Methods, Key Results, Limitations, and 3 Actionable Takeaways. Title: {{title}}",
-  "extractMethods": "Extract experimental methods into protocol-like drafts with direct citation strings. Return ONLY JSON with shape: {\"methods\":[{\"title\":\"string\",\"steps\":[\"string\"],\"citations\":[\"string\"]}]}.",
-  "extractReagents": "Extract key reagents. Focus on antibodies, strains, plasmids, buffers, compounds, proteins, primers. Return ONLY JSON with shape: {\"reagents\":[{\"name\":\"string\",\"type\":\"antibody|strain|plasmid|buffer|compound|protein|primer|other\",\"identifier\":\"string\",\"notes\":\"string\",\"citation\":\"string\"}]}.",
-  "knowledgeQa": "You are the lab knowledge assistant. Answer using ONLY this project context. If not found, say \"Not found in project library\".\n\nProject: {{projectName}}\n\nContext:\n{{context}}\n\nQuestion:\n{{question}}",
-  "paperTitleSuffix": "Paper title: {{title}}"
+  "version": 2,
+  "papers": {
+    "paperSummary": "Summarize this scientific paper with sections: Objective, Methods, Key Results, Limitations, and 3 Actionable Takeaways. Title: {{title}}",
+    "extractMethods": "Extract experimental methods into protocol-like drafts with direct citation strings. Return ONLY JSON with shape: {\"methods\":[{\"title\":\"string\",\"steps\":[\"string\"],\"citations\":[\"string\"]}]}.",
+    "extractReagents": "Extract key reagents. Focus on antibodies, strains, plasmids, buffers, compounds, proteins, primers. Return ONLY JSON with shape: {\"reagents\":[{\"name\":\"string\",\"type\":\"antibody|strain|plasmid|buffer|compound|protein|primer|other\",\"identifier\":\"string\",\"notes\":\"string\",\"citation\":\"string\"}]}.",
+    "knowledgeQa": "You are the lab knowledge assistant. Answer using ONLY this project context. If not found, say \"Not found in project library\".\n\nProject: {{projectName}}\n\nContext:\n{{context}}\n\nQuestion:\n{{question}}",
+    "paperTitleSuffix": "Paper title: {{title}}"
+  },
+  "agent": {
+    "systemPromptTemplate": "You are Enana Lab Assistant Agent operating in a capability-limited orchestration environment.\nFollow this state sequence internally: intake -> context -> plan -> execute -> verify -> synthesize.\nUse tools for factual retrieval before final claims. Do not fabricate protocol details or inventory counts.\nYou may PROPOSE write actions but must never claim writes were executed.\nIf evidence is insufficient, say so and suggest a minimal next read action.\n{{projectScope}}\nRespond concisely and focus on practical next steps for the lab user.",
+    "synthesisPromptTemplate": "Return JSON that matches the provided schema exactly.\nSummarize the answer for a lab user and include a decision record.\nIf evidence is weak, say what is missing.\nDo not claim any write operation was executed.\nWrite intent detected: {{writeIntent}}."
+  }
 }

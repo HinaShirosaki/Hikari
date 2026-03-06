@@ -189,10 +189,18 @@ export function initProtocolManagement({
     return parseBulletLines(value);
   }
 
+  function getStepText(step) {
+    if (typeof step === 'string') {
+      return step.trim();
+    }
+    return String(step?.text || step?.instruction || '').trim();
+  }
+
   function cloneStep(step) {
+    const stepText = getStepText(step);
     return {
       id: String(step?.id || createId()),
-      text: String(step?.text || '').trim(),
+      text: stepText,
       placeholders: Array.isArray(step?.placeholders)
         ? step.placeholders
           .filter((item) => item && typeof item === 'object')
@@ -218,7 +226,7 @@ export function initProtocolManagement({
   }
 
   function stepToEditableLine(step) {
-    const source = String(step?.text || '');
+    const source = getStepText(step);
     const placeholders = Array.isArray(step?.placeholders) ? step.placeholders : [];
     const matches = [...source.matchAll(PLACEHOLDER_TOKEN_REGEX)];
 
@@ -437,9 +445,9 @@ export function initProtocolManagement({
       materials: normalizeMaterials(protocol.materials),
       troubleshooting: String(protocol.troubleshooting || '').trim(),
       steps: (protocol.steps || []).map((step) => ({
-        id: step.id,
-        text: step.text,
-        placeholders: (step.placeholders || []).map((item) => ({ id: item.id, name: item.name }))
+        id: String(step?.id || createId()),
+        text: getStepText(step),
+        placeholders: (step?.placeholders || []).map((item) => ({ id: item.id, name: item.name }))
       }))
     };
   }
@@ -517,7 +525,7 @@ export function initProtocolManagement({
   }
 
   function renderReadonlyStepSentence(step) {
-    const source = String(step?.text || '');
+    const source = getStepText(step);
     const placeholders = Array.isArray(step?.placeholders) ? step.placeholders : [];
     const matches = [...source.matchAll(PLACEHOLDER_TOKEN_REGEX)];
 

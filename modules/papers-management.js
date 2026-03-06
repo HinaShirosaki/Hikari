@@ -157,7 +157,7 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
         pdfDataUrl: paper.pdfDataUrl,
         fileName: paper.fileName,
         title: paper.title,
-        instruction: prompts.extractMethods
+        instruction: requirePrompt(prompts, 'extractMethods')
       });
 
       const methods = Array.isArray(result?.methods) ? result.methods : [];
@@ -195,7 +195,7 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
         pdfDataUrl: paper.pdfDataUrl,
         fileName: paper.fileName,
         title: paper.title,
-        instruction: prompts.extractReagents
+        instruction: requirePrompt(prompts, 'extractReagents')
       });
 
       const reagents = Array.isArray(result?.reagents) ? result.reagents : [];
@@ -288,7 +288,7 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
     const previous = state.knowledgeChats[projectId] || [];
     const context = buildProjectKnowledgeContext(projectId);
     const prompts = await getLlmPrompts();
-    const prompt = renderPromptTemplate(prompts.knowledgeQa, {
+    const prompt = renderPromptTemplate(requirePrompt(prompts, 'knowledgeQa'), {
       projectName: project.name,
       context,
       question
@@ -734,7 +734,7 @@ async function requestSummary({ llm, pdfDataUrl, fileName, title }) {
     llm,
     fileName,
     pdfDataUrl,
-    prompt: renderPromptTemplate(prompts.paperSummary, {
+    prompt: renderPromptTemplate(requirePrompt(prompts, 'paperSummary'), {
       title: title || fileName
     })
   });
@@ -746,7 +746,7 @@ async function requestStructuredFromPaper({ llm, pdfDataUrl, fileName, title, in
     llm,
     fileName,
     pdfDataUrl,
-    prompt: `${instruction}\n\n${renderPromptTemplate(prompts.paperTitleSuffix, {
+    prompt: `${instruction}\n\n${renderPromptTemplate(requirePrompt(prompts, 'paperTitleSuffix'), {
       title: title || fileName
     })}`
   });
@@ -782,19 +782,26 @@ function parseJsonFromText(raw) {
 
 const LLM_PROMPTS_PATH = './data/llm-prompts.json';
 const DEFAULT_LLM_PROMPTS = {
-  paperSummary:
-    'Summarize this scientific paper with sections: Objective, Methods, Key Results, Limitations, and 3 Actionable Takeaways. Title: {{title}}',
-  extractMethods:
-    'Extract experimental methods into protocol-like drafts with direct citation strings. Return ONLY JSON with shape: {"methods":[{"title":"string","steps":["string"],"citations":["string"]}]}.',
-  extractReagents:
-    'Extract key reagents. Focus on antibodies, strains, plasmids, buffers, compounds, proteins, primers. Return ONLY JSON with shape: {"reagents":[{"name":"string","type":"antibody|strain|plasmid|buffer|compound|protein|primer|other","identifier":"string","notes":"string","citation":"string"}]}.',
-  knowledgeQa:
-    'You are the lab knowledge assistant. Answer using ONLY this project context. If not found, say "Not found in project library".\n\nProject: {{projectName}}\n\nContext:\n{{context}}\n\nQuestion:\n{{question}}',
-  paperTitleSuffix: 'Paper title: {{title}}'
+  paperSummary: '',
+  extractMethods: '',
+  extractReagents: '',
+  knowledgeQa: '',
+  paperTitleSuffix: ''
 };
 
 let llmPromptCache = null;
 let llmPromptPromise = null;
+
+function normalizePromptConfig(parsed) {
+  const source = parsed && typeof parsed === 'object' ? parsed : {};
+  const fromNested = source.papers && typeof source.papers === 'object' ? source.papers : {};
+  const fromFlat = source;
+  return {
+    ...DEFAULT_LLM_PROMPTS,
+    ...fromFlat,
+    ...fromNested
+  };
+}
 
 async function getLlmPrompts() {
   if (llmPromptCache) {
@@ -810,19 +817,24 @@ async function getLlmPrompts() {
         return response.json();
       })
       .then((parsed) => {
-        llmPromptCache = {
-          ...DEFAULT_LLM_PROMPTS,
-          ...(parsed && typeof parsed === 'object' ? parsed : {})
-        };
+        llmPromptCache = normalizePromptConfig(parsed);
         return llmPromptCache;
       })
       .catch(() => {
-        llmPromptCache = { ...DEFAULT_LLM_PROMPTS };
+        llmPromptCache = normalizePromptConfig({});
         return llmPromptCache;
       });
   }
 
   return llmPromptPromise;
+}
+
+function requirePrompt(prompts, key) {
+  const value = String(prompts?.[key] || '').trim();
+  if (!value) {
+    throw new Error(`Missing LLM prompt "${key}" in ${LLM_PROMPTS_PATH}.`);
+  }
+  return value;
 }
 
 function renderPromptTemplate(template, vars = {}) {
