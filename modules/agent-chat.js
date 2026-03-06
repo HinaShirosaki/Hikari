@@ -1,3 +1,5 @@
+import { mapExperimentDataToLlmJson } from './experiment-llm-mapper.js';
+
 function asArray(value) {
   return Array.isArray(value) ? value : [];
 }
@@ -44,6 +46,9 @@ function mapNotebookEntry(entry) {
     updatedAt: String(entry?.updatedAt || entry?.createdAt || '')
   };
 }
+
+// Re-export to preserve existing imports from agent-chat.js.
+export { mapExperimentDataToLlmJson };
 
 function mapPaper(paper) {
   return {
@@ -183,10 +188,10 @@ export function initAgentChat({ state, persist, createId, safeText }) {
       : asArray(state.projects);
     const projectIds = new Set(filteredProjects.map((project) => project.id));
 
-    const notebookEntries = asArray(state.notebookEntries)
+    const filteredNotebookEntries = asArray(state.notebookEntries)
       .filter((entry) => !projectIds.size || projectIds.has(entry.projectId))
-      .slice(-120)
-      .map(mapNotebookEntry);
+      .slice(-120);
+    const notebookEntries = filteredNotebookEntries.map(mapNotebookEntry);
 
     const protocolIds = new Set(notebookEntries.map((entry) => entry.protocolId).filter(Boolean));
     const protocols = asArray(state.protocols)
@@ -200,11 +205,17 @@ export function initAgentChat({ state, persist, createId, safeText }) {
       .map(mapPaper);
 
     const projects = filteredProjects.slice(0, 30).map(mapProject);
+    const experimentData = mapExperimentDataToLlmJson(state, projectId);
+    const assays = asArray(experimentData.assay_runs).slice(0, 80);
+    const gelAnalyses = asArray(experimentData.gel_runs).slice(0, 80);
 
     return {
       projects,
       protocols,
       notebookEntries,
+      assays,
+      gelAnalyses,
+      experimentData,
       papers,
       inventory: mapInventory(state),
       timestamp: new Date().toISOString()
@@ -218,6 +229,8 @@ export function initAgentChat({ state, persist, createId, safeText }) {
       `${snapshot.projects.length} projects`,
       `${snapshot.protocols.length} protocols`,
       `${snapshot.notebookEntries.length} notebook entries`,
+      `${snapshot.assays.length} assays`,
+      `${snapshot.gelAnalyses.length} gel analyses`,
       `${snapshot.papers.length} papers`,
       `${snapshot.inventory.chemicals.length} chemicals`
     ].join(' | ');

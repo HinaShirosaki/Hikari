@@ -330,6 +330,34 @@ const AGENT_TOOL_DEFINITIONS = [
   },
   {
     type: 'function',
+    name: 'search_assays',
+    description: 'Read assay runs with plate metadata and compact numeric summaries.',
+    parameters: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        query: { type: 'string' },
+        limit: { type: 'integer', minimum: 1, maximum: 20 }
+      },
+      required: ['query']
+    }
+  },
+  {
+    type: 'function',
+    name: 'search_gel_analyses',
+    description: 'Read gel analysis runs with confidence, calibration, and warning summaries.',
+    parameters: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        query: { type: 'string' },
+        limit: { type: 'integer', minimum: 1, maximum: 20 }
+      },
+      required: ['query']
+    }
+  },
+  {
+    type: 'function',
     name: 'search_inventory',
     description: 'Read chemical and personal inventory records.',
     parameters: {
@@ -518,6 +546,9 @@ function buildIntermediateState(stage, goal, extras = {}) {
 
 function normalizeAgentSnapshot(rawSnapshot) {
   const snapshot = rawSnapshot && typeof rawSnapshot === 'object' ? rawSnapshot : {};
+  const experimentData = snapshot.experimentData && typeof snapshot.experimentData === 'object'
+    ? snapshot.experimentData
+    : {};
   const normalizedPersonalInventory = Array.isArray(snapshot.inventory?.personal)
     ? asArray(snapshot.inventory.personal).slice(0, 40)
     : snapshot.inventory?.personal && typeof snapshot.inventory.personal === 'object'
@@ -528,10 +559,33 @@ function normalizeAgentSnapshot(rawSnapshot) {
           items: asArray(items).slice(0, 60)
         }))
       : [];
+  const assays = asArray(snapshot.assays).length
+    ? asArray(snapshot.assays).slice(0, 80)
+    : asArray(experimentData.assay_runs).slice(0, 80);
+  const gelAnalyses = asArray(snapshot.gelAnalyses).length
+    ? asArray(snapshot.gelAnalyses).slice(0, 80)
+    : asArray(experimentData.gel_runs).slice(0, 80);
+  const normalizedExperimentData = {
+    schema_name: cleanText(experimentData.schema_name, 80) || 'enana_experiment_json',
+    schema_version: cleanText(experimentData.schema_version, 20) || '1.0',
+    generated_utc: cleanText(experimentData.generated_utc, 80) || cleanText(snapshot.timestamp, 80),
+    notebook_runs: asArray(experimentData.notebook_runs).slice(0, 120),
+    assay_runs: asArray(experimentData.assay_runs).slice(0, 80),
+    gel_runs: asArray(experimentData.gel_runs).slice(0, 80)
+  };
+  if (!normalizedExperimentData.assay_runs.length && assays.length) {
+    normalizedExperimentData.assay_runs = assays;
+  }
+  if (!normalizedExperimentData.gel_runs.length && gelAnalyses.length) {
+    normalizedExperimentData.gel_runs = gelAnalyses;
+  }
   return {
     projects: asArray(snapshot.projects).slice(0, 40),
     protocols: asArray(snapshot.protocols).slice(0, 100),
     notebookEntries: asArray(snapshot.notebookEntries).slice(0, 180),
+    assays,
+    gelAnalyses,
+    experimentData: normalizedExperimentData,
     papers: asArray(snapshot.papers).slice(0, 80),
     inventory: snapshot.inventory && typeof snapshot.inventory === 'object'
       ? {
@@ -654,6 +708,87 @@ function runAgentTool(name, args, snapshot) {
         reason: 'Matched notebook summary/results.'
       })),
       summary: `Found ${items.length} matching notebook entries.`
+    };
+  }
+
+  if (name === 'search_assays') {
+    const items = pickTopMatches(
+      snapshot.assays,
+      (assay) => [
+        assay?.assay_number,
+        assay?.name,
+        assay?.project_name,
+        assay?.notebook_entry_protocol_name,
+        assay?.notes,
+        assay?.axis?.sample_axis,
+        assay?.axis?.concentration_axis,
+        asArray(assay?.axis?.sample_values).join(' '),
+        asArray(assay?.axis?.concentration_values).join(' ')
+      ].join(' '),
+      query,
+      limit
+    ).map((assay) => ({
+      id: cleanText(assay?.id, 80),
+      assay_number: cleanText(assay?.assay_number, 80),
+      name: cleanText(assay?.name, 180),
+      project_name: cleanText(assay?.project_name, 180),
+      notebook_entry_protocol_name: cleanText(assay?.notebook_entry_protocol_name, 180),
+      sample_axis: cleanText(assay?.axis?.sample_axis, 30),
+      concentration_axis: cleanText(assay?.axis?.concentration_axis, 30),
+      result_well_count: Number(assay?.result_summary?.result_well_count) || 0,
+      numeric_count: Number(assay?.result_summary?.numeric_count) || 0,
+      updated_at: cleanText(assay?.updated_at, 80)
+    }));
+
+    return {
+      items,
+      citations: items.map((assay) => ({
+        source: 'assay',
+        pointer: assay.id || assay.name || assay.assay_number,
+        reason: 'Matched assay metadata or axis annotations.'
+      })),
+      summary: `Found ${items.length} matching assays.`
+    };
+  }
+
+  if (name === 'search_gel_analyses') {
+    const items = pickTopMatches(
+      snapshot.gelAnalyses,
+      (analysis) => [
+        analysis?.name,
+        analysis?.analysis_type,
+        analysis?.project_name,
+        analysis?.notebook_entry_protocol_name,
+        analysis?.image_name,
+        asArray(analysis?.warnings).join(' ')
+      ].join(' '),
+      query,
+      limit
+    ).map((analysis) => ({
+      id: cleanText(analysis?.id, 80),
+      name: cleanText(analysis?.name, 180),
+      analysis_type: cleanText(analysis?.analysis_type, 40),
+      project_name: cleanText(analysis?.project_name, 180),
+      notebook_entry_protocol_name: cleanText(analysis?.notebook_entry_protocol_name, 180),
+      image_name: cleanText(analysis?.image_name, 220),
+      lane_count: Number(analysis?.lane_count) || 0,
+      band_count: Number(analysis?.band_count) || 0,
+      confidence_label: cleanText(analysis?.confidence?.label, 80),
+      confidence_score: Number.isFinite(Number(analysis?.confidence?.score))
+        ? Number(analysis?.confidence?.score)
+        : null,
+      warnings: asArray(analysis?.warnings).slice(0, 4).map((warning) => cleanText(warning, 220)),
+      updated_at: cleanText(analysis?.updated_at, 80)
+    }));
+
+    return {
+      items,
+      citations: items.map((analysis) => ({
+        source: 'gel_analysis',
+        pointer: analysis.id || analysis.name,
+        reason: 'Matched gel metadata, warnings, or confidence fields.'
+      })),
+      summary: `Found ${items.length} matching gel analyses.`
     };
   }
 
@@ -899,7 +1034,7 @@ async function runAgentController(payload) {
 
   intermediateStates.push(buildIntermediateState('context', 'Loaded snapshot context for retrieval tools.', {
     assumptions: [
-      `Context sizes: projects=${snapshot.projects.length}, protocols=${snapshot.protocols.length}, notebook_entries=${snapshot.notebookEntries.length}, papers=${snapshot.papers.length}.`
+      `Context sizes: projects=${snapshot.projects.length}, protocols=${snapshot.protocols.length}, notebook_entries=${snapshot.notebookEntries.length}, assays=${snapshot.assays.length}, gel_analyses=${snapshot.gelAnalyses.length}, papers=${snapshot.papers.length}.`
     ],
     confidence: 0.52
   }));
