@@ -13,10 +13,17 @@ const TELEGRAM_CONFIG_FILE_NAME = 'telegram-bot.json';
 const DEFAULT_LLM_RESPONSES_ENDPOINT = 'https://api.openai.com/v1/responses';
 const DEFAULT_AGENT_MODEL = 'gpt-4.1-mini';
 const MAX_AGENT_TOOL_ROUNDS = 4;
+const LLM_PROMPTS_FILE_PATH = path.join(__dirname, 'data', 'llm-prompts.json');
+const DEFAULT_AGENT_SYSTEM_PROMPT_TEMPLATE =
+  'You are Enana Lab Assistant Agent.\n{{projectScope}}\nRespond concisely and avoid fabrication.';
+const DEFAULT_AGENT_SYNTHESIS_PROMPT_TEMPLATE =
+  'Return JSON matching the schema exactly. Do not claim write operations were executed. Write intent detected: {{writeIntent}}.';
 let mainWindow = null;
 let telegramBot = null;
 let savedTelegramToken = '';
 let telegramTokenSource = 'none';
+let llmPromptsCache = null;
+let llmPromptsPromise = null;
 
 function getDefaultDataFilePath() {
   return path.join(app.getPath('userData'), DEFAULT_DATA_FILE_NAME);
@@ -24,6 +31,39 @@ function getDefaultDataFilePath() {
 
 function getTelegramConfigPath() {
   return path.join(app.getPath('userData'), TELEGRAM_CONFIG_FILE_NAME);
+}
+
+function renderPromptTemplate(template, vars = {}) {
+  const source = String(template || '');
+  return source.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_match, key) => String(vars[key] ?? ''));
+}
+
+function normalizeLlmPromptPayload(parsed) {
+  const source = parsed && typeof parsed === 'object' ? parsed : {};
+  const agent = source.agent && typeof source.agent === 'object' ? source.agent : {};
+  return { agent };
+}
+
+async function loadLlmPrompts() {
+  if (llmPromptsCache) {
+    return llmPromptsCache;
+  }
+
+  if (!llmPromptsPromise) {
+    llmPromptsPromise = fs.readFile(LLM_PROMPTS_FILE_PATH, 'utf8')
+      .then((raw) => JSON.parse(raw))
+      .then((parsed) => {
+        llmPromptsCache = normalizeLlmPromptPayload(parsed);
+        return llmPromptsCache;
+      })
+      .catch((error) => {
+        console.error('Failed to load LLM prompts config:', error);
+        llmPromptsCache = normalizeLlmPromptPayload({});
+        return llmPromptsCache;
+      });
+  }
+
+  return llmPromptsPromise;
 }
 
 async function loadSavedTelegramToken() {
@@ -478,6 +518,16 @@ function buildIntermediateState(stage, goal, extras = {}) {
 
 function normalizeAgentSnapshot(rawSnapshot) {
   const snapshot = rawSnapshot && typeof rawSnapshot === 'object' ? rawSnapshot : {};
+  const normalizedPersonalInventory = Array.isArray(snapshot.inventory?.personal)
+    ? asArray(snapshot.inventory.personal).slice(0, 40)
+    : snapshot.inventory?.personal && typeof snapshot.inventory.personal === 'object'
+      ? Object.entries(snapshot.inventory.personal)
+        .slice(0, 40)
+        .map(([zone, items]) => ({
+          zone: cleanText(zone, 80),
+          items: asArray(items).slice(0, 60)
+        }))
+      : [];
   return {
     projects: asArray(snapshot.projects).slice(0, 40),
     protocols: asArray(snapshot.protocols).slice(0, 100),
@@ -485,7 +535,7 @@ function normalizeAgentSnapshot(rawSnapshot) {
     papers: asArray(snapshot.papers).slice(0, 80),
     inventory: snapshot.inventory && typeof snapshot.inventory === 'object'
       ? {
-        personal: asArray(snapshot.inventory.personal).slice(0, 40),
+        personal: normalizedPersonalInventory,
         chemicals: asArray(snapshot.inventory.chemicals).slice(0, 160)
       }
       : { personal: [], chemicals: [] },
@@ -527,6 +577,12 @@ function pickTopMatches(items, buildSearchText, query, limit) {
 function runAgentTool(name, args, snapshot) {
   const query = cleanText(args?.query, 300);
   const limit = clamp(Number(args?.limit) || 6, 1, 25);
+  const protocolStepText = (step) => {
+    if (typeof step === 'string') {
+      return cleanText(step, 220);
+    }
+    return cleanText(step?.text || step?.instruction, 220);
+  };
 
   if (name === 'search_projects') {
     const items = pickTopMatches(
@@ -554,14 +610,16 @@ function runAgentTool(name, args, snapshot) {
   if (name === 'search_protocols') {
     const items = pickTopMatches(
       snapshot.protocols,
-      (protocol) => `${protocol?.name || ''} ${protocol?.category || ''} ${asArray(protocol?.steps).join(' ')}`,
+      (protocol) => `${protocol?.name || ''} ${protocol?.category || ''} ${
+        asArray(protocol?.steps).map((step) => protocolStepText(step)).filter(Boolean).join(' ')
+      }`,
       query,
       limit
     ).map((protocol) => ({
       id: cleanText(protocol?.id, 80),
       name: cleanText(protocol?.name, 180),
       category: cleanText(protocol?.category, 80),
-      steps: asArray(protocol?.steps).slice(0, 8).map((step) => cleanText(step, 220)).filter(Boolean)
+      steps: asArray(protocol?.steps).slice(0, 8).map((step) => protocolStepText(step)).filter(Boolean)
     }));
 
     return {
@@ -715,16 +773,15 @@ function resolveAgentModel(llm) {
   return model || DEFAULT_AGENT_MODEL;
 }
 
-function buildAgentSystemPrompt(projectName) {
-  return [
-    'You are Enana Lab Assistant Agent operating in a capability-limited orchestration environment.',
-    'Follow this state sequence internally: intake -> context -> plan -> execute -> verify -> synthesize.',
-    'Use tools for factual retrieval before final claims. Do not fabricate protocol details or inventory counts.',
-    'You may PROPOSE write actions but must never claim writes were executed.',
-    'If evidence is insufficient, say so and suggest a minimal next read action.',
-    projectName ? `Scoped project: ${projectName}.` : 'Scope: all projects.',
-    'Respond concisely and focus on practical next steps for the lab user.'
-  ].join('\n');
+function buildAgentSystemPrompt(projectName, prompts) {
+  const projectScope = projectName ? `Scoped project: ${projectName}.` : 'Scope: all projects.';
+  const template = String(prompts?.agent?.systemPromptTemplate || '').trim() || DEFAULT_AGENT_SYSTEM_PROMPT_TEMPLATE;
+  return renderPromptTemplate(template, { projectScope });
+}
+
+function buildAgentSynthesisPrompt(requiresApproval, prompts) {
+  const template = String(prompts?.agent?.synthesisPromptTemplate || '').trim() || DEFAULT_AGENT_SYNTHESIS_PROMPT_TEMPLATE;
+  return renderPromptTemplate(template, { writeIntent: requiresApproval ? 'yes' : 'no' });
 }
 
 function sleep(ms) {
@@ -829,6 +886,7 @@ async function runAgentController(payload) {
     && conversation[conversation.length - 1].text === message;
   const snapshot = normalizeAgentSnapshot(payload?.stateSnapshot);
   const projectName = cleanText(payload?.projectName, 180);
+  const promptConfig = await loadLlmPrompts();
   const intermediateStates = [];
   const toolTrace = [];
   const evidence = [];
@@ -852,7 +910,7 @@ async function runAgentController(payload) {
     body: {
       model,
       input: [
-        toInputText('system', buildAgentSystemPrompt(projectName)),
+        toInputText('system', buildAgentSystemPrompt(projectName, promptConfig)),
         ...conversation.map((item) => toInputText(item.role, item.text)),
         ...(hasLatestUserInConversation ? [] : [toInputText('user', message)])
       ],
@@ -935,13 +993,7 @@ async function runAgentController(payload) {
     confidence: evidence.length ? 0.72 : 0.58
   }));
 
-  const synthesisRequest = [
-    'Return JSON that matches the provided schema exactly.',
-    'Summarize the answer for a lab user and include a decision record.',
-    'If evidence is weak, say what is missing.',
-    'Do not claim any write operation was executed.',
-    `Write intent detected: ${requiresApproval ? 'yes' : 'no'}.`
-  ].join('\n');
+  const synthesisRequest = buildAgentSynthesisPrompt(requiresApproval, promptConfig);
 
   let normalized;
   try {

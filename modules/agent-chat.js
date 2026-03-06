@@ -13,10 +13,17 @@ function trimText(value, maxLength = 5000) {
   return `${text.slice(0, maxLength)}...`;
 }
 
+function getStepText(step) {
+  if (typeof step === 'string') {
+    return trimText(step, 200);
+  }
+  return trimText(step?.text || step?.instruction, 200);
+}
+
 function mapProtocol(protocol) {
   const steps = asArray(protocol?.steps)
     .slice(0, 30)
-    .map((step) => trimText(step?.text || step?.instruction, 200))
+    .map((step) => getStepText(step))
     .filter(Boolean);
 
   return {
