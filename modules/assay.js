@@ -14,6 +14,10 @@ const ASSAY_NUMBER_PADDING = 6;
 
 export function initAssay({ state, persist, createId, safeText, onAssaysChanged }) {
   const TabulatorLib = window.Tabulator || null;
+  const ReactLib = window.React || null;
+  const ReactDOMLib = window.ReactDOM || null;
+  const ReactVisLib = window.reactVis || null;
+  const hasReactVis = Boolean(ReactLib && ReactDOMLib && ReactVisLib);
   const assayForm = document.getElementById('assay-form');
   const assayIdInput = document.getElementById('assay-id');
   const assayNumberDisplay = document.getElementById('assay-number-display');
@@ -69,6 +73,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
   let resultGrid = null;
   let resultGridSignature = '';
   let resultPasteAnchor = { rowIndex: 0, columnIndex: 0 };
+  let analysisChartHost = null;
 
   assayForm?.addEventListener('submit', onSubmit);
   assayCancelBtn?.addEventListener('click', resetForm);
@@ -1378,6 +1383,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     if (assayAnalysisSummary) {
       assayAnalysisSummary.textContent = '';
     }
+    unmountAnalysisChart();
     if (assayAnalysisTable) {
       assayAnalysisTable.innerHTML = '';
     }
@@ -1531,6 +1537,283 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
         </tbody>
       </table>
     `;
+  }
+
+  function unmountAnalysisChart() {
+    if (analysisChartHost && ReactDOMLib?.unmountComponentAtNode) {
+      ReactDOMLib.unmountComponentAtNode(analysisChartHost);
+    }
+    analysisChartHost = null;
+  }
+
+  function parseAnalysisCellNumber(value) {
+    return parseFirstNumericToken(value);
+  }
+
+  function pickChartMetricIndex(method, headers, numericIndexes) {
+    const methodPriority = {
+      grouped_summary: ['mean'],
+      nested_summary: ['mean'],
+      row_summary: ['mean'],
+      column_summary: ['mean'],
+      linear_regression: ['slope', 'r²', 'r2', 'intercept'],
+      ec50: ['ec50'],
+      ic50: ['ic50'],
+      survival: ['survival', 'mean']
+    };
+    const priorities = methodPriority[method] || ['mean', 'value'];
+    for (let keywordIndex = 0; keywordIndex < priorities.length; keywordIndex += 1) {
+      const keyword = priorities[keywordIndex];
+      const match = numericIndexes.find((index) => String(headers[index] || '').toLowerCase().includes(keyword));
+      if (Number.isInteger(match)) {
+        return match;
+      }
+    }
+    return numericIndexes[0];
+  }
+
+  function buildAnalysisChartModel(result, method) {
+    const headers = Array.isArray(result?.headers) ? result.headers : [];
+    const rows = Array.isArray(result?.rows) ? result.rows : [];
+    if (!headers.length || !rows.length) {
+      return null;
+    }
+
+    const numericIndexes = headers
+      .map((_, index) => index)
+      .filter((index) => rows.some((row) => Number.isFinite(parseAnalysisCellNumber(row[index]))));
+    if (!numericIndexes.length) {
+      return null;
+    }
+
+    const yIndex = pickChartMetricIndex(method, headers, numericIndexes);
+    const otherNumeric = numericIndexes.filter((index) => index !== yIndex);
+    const nonNumericIndexes = headers
+      .map((_, index) => index)
+      .filter((index) => !numericIndexes.includes(index));
+    const xIndex = nonNumericIndexes[0] ?? otherNumeric[0] ?? null;
+    const seriesIndex = nonNumericIndexes.find((index) => index !== xIndex) ?? null;
+    const seriesMap = new Map();
+    let numericXCount = 0;
+    let totalCount = 0;
+
+    rows.forEach((row, rowIndex) => {
+      const y = parseAnalysisCellNumber(row[yIndex]);
+      if (!Number.isFinite(y)) {
+        return;
+      }
+      const rawX = xIndex === null ? rowIndex + 1 : row[xIndex];
+      const xLabel = String(rawX ?? '').trim() || `Row ${rowIndex + 1}`;
+      const xNumeric = parseAnalysisCellNumber(rawX);
+      if (Number.isFinite(xNumeric)) {
+        numericXCount += 1;
+      }
+      const seriesLabel = seriesIndex === null
+        ? 'Series'
+        : (String(row[seriesIndex] ?? '').trim() || 'Series');
+      if (!seriesMap.has(seriesLabel)) {
+        seriesMap.set(seriesLabel, []);
+      }
+      seriesMap.get(seriesLabel).push({ xLabel, xNumeric, y });
+      totalCount += 1;
+    });
+
+    if (!totalCount || !seriesMap.size) {
+      return null;
+    }
+
+    const numericXAxis = numericXCount / totalCount >= 0.75;
+    const prefersLineMethod = method === 'linear_regression' || method === 'ec50' || method === 'ic50' || method === 'survival';
+    const chartType = numericXAxis && prefersLineMethod ? 'line' : 'bar';
+
+    if (chartType === 'line') {
+      const series = Array.from(seriesMap.entries())
+        .map(([label, points]) => {
+          const xBuckets = new Map();
+          points.forEach((point) => {
+            if (!Number.isFinite(point.xNumeric)) {
+              return;
+            }
+            if (!xBuckets.has(point.xNumeric)) {
+              xBuckets.set(point.xNumeric, []);
+            }
+            xBuckets.get(point.xNumeric).push(point.y);
+          });
+          const data = Array.from(xBuckets.entries())
+            .map(([x, values]) => {
+              const stats = summarizeNumeric(values);
+              return stats ? { x: Number(x), y: stats.mean } : null;
+            })
+            .filter(Boolean)
+            .sort((a, b) => a.x - b.x);
+          return { label, data };
+        })
+        .filter((item) => item.data.length);
+
+      if (!series.length) {
+        return null;
+      }
+
+      return {
+        chartType,
+        xLabel: xIndex === null ? 'Row' : String(headers[xIndex] || 'X'),
+        yLabel: String(headers[yIndex] || 'Y'),
+        series
+      };
+    }
+
+    const categories = [];
+    const categorySet = new Set();
+    seriesMap.forEach((points) => {
+      points.forEach((point) => {
+        if (!categorySet.has(point.xLabel)) {
+          categorySet.add(point.xLabel);
+          categories.push(point.xLabel);
+        }
+      });
+    });
+
+    const series = Array.from(seriesMap.entries())
+      .map(([label, points]) => {
+        const categoryValues = new Map();
+        points.forEach((point) => {
+          if (!categoryValues.has(point.xLabel)) {
+            categoryValues.set(point.xLabel, []);
+          }
+          categoryValues.get(point.xLabel).push(point.y);
+        });
+        const data = categories
+          .map((category) => {
+            const values = categoryValues.get(category) || [];
+            const stats = summarizeNumeric(values);
+            return stats ? { x: category, y: stats.mean } : null;
+          })
+          .filter(Boolean);
+        return { label, data };
+      })
+      .filter((item) => item.data.length);
+
+    if (!series.length) {
+      return null;
+    }
+
+    return {
+      chartType,
+      xLabel: xIndex === null ? 'Row' : String(headers[xIndex] || 'Group'),
+      yLabel: String(headers[yIndex] || 'Value'),
+      series
+    };
+  }
+
+  function renderAnalysisChart(result, method) {
+    unmountAnalysisChart();
+    if (!hasReactVis || !assayAnalysisTable) {
+      return;
+    }
+
+    const chartModel = buildAnalysisChartModel(result, method);
+    const chartTarget = assayAnalysisTable.querySelector('[data-assay-analysis-chart]');
+    if (!chartModel || !chartTarget) {
+      return;
+    }
+
+    const {
+      XYPlot,
+      XAxis,
+      YAxis,
+      VerticalGridLines,
+      HorizontalGridLines,
+      VerticalBarSeries,
+      LineSeries,
+      MarkSeries,
+      DiscreteColorLegend
+    } = ReactVisLib;
+    if (!XYPlot || !XAxis || !YAxis || !VerticalGridLines || !HorizontalGridLines) {
+      return;
+    }
+
+    const palette = ['#1f77b4', '#ef6c3e', '#2ca25f', '#9467bd', '#d4a72c', '#8c564b'];
+    const longestSeries = chartModel.series.reduce((max, item) => Math.max(max, item.data.length), 0);
+    const plotWidth = Math.max(420, Math.min(1280, (longestSeries || 1) * (chartModel.chartType === 'line' ? 60 : 70)));
+    const plotHeight = 280;
+    const marginBottom = chartModel.chartType === 'bar' ? 108 : 72;
+    const plotProps = {
+      width: plotWidth,
+      height: plotHeight,
+      margin: { left: 72, right: 24, top: 20, bottom: marginBottom }
+    };
+    if (chartModel.chartType === 'bar') {
+      plotProps.xType = 'ordinal';
+    }
+
+    const plotChildren = [
+      ReactLib.createElement(VerticalGridLines, { key: 'v-grid' }),
+      ReactLib.createElement(HorizontalGridLines, { key: 'h-grid' }),
+      ReactLib.createElement(XAxis, {
+        key: 'x-axis',
+        title: chartModel.xLabel,
+        tickLabelAngle: chartModel.chartType === 'bar' ? -35 : 0
+      }),
+      ReactLib.createElement(YAxis, {
+        key: 'y-axis',
+        title: chartModel.yLabel
+      })
+    ];
+
+    chartModel.series.forEach((series, index) => {
+      const color = palette[index % palette.length];
+      if (chartModel.chartType === 'line') {
+        if (LineSeries) {
+          plotChildren.push(ReactLib.createElement(LineSeries, {
+            key: `line-${series.label}-${index}`,
+            data: series.data,
+            color,
+            curve: 'curveMonotoneX'
+          }));
+        }
+        if (MarkSeries) {
+          plotChildren.push(ReactLib.createElement(MarkSeries, {
+            key: `mark-${series.label}-${index}`,
+            data: series.data,
+            color,
+            size: 3
+          }));
+        }
+      } else if (VerticalBarSeries) {
+        plotChildren.push(ReactLib.createElement(VerticalBarSeries, {
+          key: `bar-${series.label}-${index}`,
+          data: series.data,
+          color,
+          cluster: 'assay-analysis'
+        }));
+      }
+    });
+
+    const legendItems = chartModel.series.map((series, index) => ({
+      title: series.label,
+      color: palette[index % palette.length]
+    }));
+    const legendElement = DiscreteColorLegend && legendItems.length > 1
+      ? ReactLib.createElement(DiscreteColorLegend, {
+        key: 'legend',
+        orientation: 'horizontal',
+        items: legendItems
+      })
+      : null;
+    const titleText = `${chartModel.yLabel} by ${chartModel.xLabel}`;
+
+    const chartElement = ReactLib.createElement('div', null, [
+      ReactLib.createElement('div', { className: 'assay-analysis-chart-head', key: 'head' }, [
+        ReactLib.createElement('div', { className: 'assay-analysis-chart-title', key: 'title' }, titleText),
+        legendElement
+      ]),
+      ReactLib.createElement('div', { className: 'assay-analysis-chart-plot', key: 'plot' }, [
+        ReactLib.createElement(XYPlot, { ...plotProps, key: 'xy-plot' }, plotChildren)
+      ])
+    ]);
+
+    ReactDOMLib.render(chartElement, chartTarget);
+    analysisChartHost = chartTarget;
   }
 
   function analyzeGroupedSummary(observations) {
@@ -2119,6 +2402,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
       return;
     }
 
+    unmountAnalysisChart();
     syncCurrentResultsFromGrid();
     const method = String(assayAnalysisMethodInput?.value || 'grouped_summary');
     const { observations, nonNumericCount } = collectNumericObservations();
@@ -2152,9 +2436,21 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     const ignoredNote = nonNumericCount ? ` Non-numeric cells ignored: ${nonNumericCount}.` : '';
     const rowCountNote = ` Rows: ${result.rows.length}.`;
     assayAnalysisSummary.textContent = `${result.summary}${rowCountNote}${ignoredNote}`;
-    assayAnalysisTable.innerHTML = result.rows.length
-      ? buildAnalysisTable(result.headers, result.rows)
-      : '<p class="small-note">No analyzable rows for this method.</p>';
+    if (!result.rows.length) {
+      assayAnalysisTable.innerHTML = '<p class="small-note">No analyzable rows for this method.</p>';
+      return;
+    }
+
+    const tableHtml = buildAnalysisTable(result.headers, result.rows);
+    assayAnalysisTable.innerHTML = hasReactVis
+      ? `
+        <div class="assay-analysis-results">
+          <div class="assay-analysis-chart" data-assay-analysis-chart></div>
+          ${tableHtml}
+        </div>
+      `
+      : tableHtml;
+    renderAnalysisChart(result, method);
   }
 
   function onAnalysisMethodChange() {
@@ -2162,6 +2458,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
       return;
     }
     assayAnalysisSummary.textContent = '';
+    unmountAnalysisChart();
     assayAnalysisTable.innerHTML = '';
     syncCurrentResultsFromGrid();
     if (getResultValueCount()) {
@@ -2225,6 +2522,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     if (assayAnalysisSummary) {
       assayAnalysisSummary.textContent = '';
     }
+    unmountAnalysisChart();
     if (assayAnalysisTable) {
       assayAnalysisTable.innerHTML = '';
     }
@@ -2503,6 +2801,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     if (assayAnalysisSummary) {
       assayAnalysisSummary.textContent = '';
     }
+    unmountAnalysisChart();
     if (assayAnalysisTable) {
       assayAnalysisTable.innerHTML = '';
     }
@@ -2702,6 +3001,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     if (assayAnalysisSummary) {
       assayAnalysisSummary.textContent = '';
     }
+    unmountAnalysisChart();
     if (assayAnalysisTable) {
       assayAnalysisTable.innerHTML = '';
     }
@@ -2777,6 +3077,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     if (assayAnalysisSummary) {
       assayAnalysisSummary.textContent = '';
     }
+    unmountAnalysisChart();
     if (assayAnalysisTable) {
       assayAnalysisTable.innerHTML = '';
     }
@@ -2793,6 +3094,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
       if (assayAnalysisSummary) {
         assayAnalysisSummary.textContent = '';
       }
+      unmountAnalysisChart();
       if (assayAnalysisTable) {
         assayAnalysisTable.innerHTML = '';
       }

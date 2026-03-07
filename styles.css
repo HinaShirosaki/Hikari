@@ -2879,6 +2879,49 @@ body.ui-neutral-compact .workspace-main {
   text-align: center;
 }
 
+.assay-analysis-results {
+  display: grid;
+  gap: 10px;
+}
+
+.assay-analysis-chart {
+  border: 1px solid rgba(53, 99, 153, 0.22);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.84);
+  padding: 10px;
+}
+
+.assay-analysis-chart-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.assay-analysis-chart-title {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.assay-analysis-chart-plot {
+  overflow-x: auto;
+}
+
+.assay-analysis-chart .rv-xy-plot__grid-lines__line {
+  stroke: rgba(53, 99, 153, 0.2);
+}
+
+.assay-analysis-chart .rv-xy-plot__axis__line,
+.assay-analysis-chart .rv-xy-plot__axis__tick__line {
+  stroke: rgba(53, 99, 153, 0.46);
+}
+
+.assay-analysis-chart .rv-xy-plot__axis__tick__text {
+  fill: var(--primary);
+  font-size: 11px;
+}
+
 body.theme-night .assay-plate-table-wrap {
   background: transparent;
 }
@@ -2899,6 +2942,24 @@ body.theme-night .assay-well {
 body.theme-night .assay-tabulator {
   border-color: rgba(145, 174, 214, 0.32);
   background: rgba(20, 33, 57, 0.78);
+}
+
+body.theme-night .assay-analysis-chart {
+  border-color: rgba(145, 174, 214, 0.32);
+  background: rgba(20, 33, 57, 0.78);
+}
+
+body.theme-night .assay-analysis-chart .rv-xy-plot__grid-lines__line {
+  stroke: rgba(145, 174, 214, 0.24);
+}
+
+body.theme-night .assay-analysis-chart .rv-xy-plot__axis__line,
+body.theme-night .assay-analysis-chart .rv-xy-plot__axis__tick__line {
+  stroke: rgba(145, 174, 214, 0.52);
+}
+
+body.theme-night .assay-analysis-chart .rv-xy-plot__axis__tick__text {
+  fill: #d7e5ff;
 }
 
 body.theme-night .workflow-graph-canvas {
