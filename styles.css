@@ -1383,6 +1383,40 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   font-size: 0.9rem;
 }
 
+.plannotate-table-wrap {
+  margin-top: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.45);
+  overflow: auto;
+}
+
+.plannotate-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 720px;
+}
+
+.plannotate-table th,
+.plannotate-table td {
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+  font-size: 0.86rem;
+}
+
+.plannotate-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: rgba(238, 248, 255, 0.92);
+  color: var(--primary);
+}
+
+.plannotate-table tr:last-child td {
+  border-bottom: 0;
+}
+
 .molarity-block {
   margin-top: 14px;
   padding-top: 10px;
@@ -1670,6 +1704,20 @@ body.theme-night .buffer-output {
 body.theme-night .sequence-block {
   border-color: rgba(186, 218, 255, 0.3);
   background: rgba(20, 31, 48, 0.5);
+}
+
+body.theme-night .plannotate-table-wrap {
+  border-color: rgba(186, 218, 255, 0.3);
+  background: rgba(20, 31, 48, 0.5);
+}
+
+body.theme-night .plannotate-table th,
+body.theme-night .plannotate-table td {
+  border-bottom-color: rgba(186, 218, 255, 0.24);
+}
+
+body.theme-night .plannotate-table th {
+  background: rgba(31, 47, 72, 0.95);
 }
 
 body.ui-neutral-compact {
@@ -2627,6 +2675,16 @@ body.ui-neutral-compact .workspace-main {
   gap: 6px;
 }
 
+.assay-axis-switch {
+  display: grid;
+  gap: 6px;
+  align-content: end;
+}
+
+.assay-create-legacy-hidden {
+  display: none !important;
+}
+
 .assay-axis-actions {
   align-items: end;
 }
@@ -2720,6 +2778,50 @@ body.ui-neutral-compact .workspace-main {
   cursor: pointer;
 }
 
+.assay-well-id {
+  font-weight: 700;
+  font-size: 0.72rem;
+  line-height: 1.1;
+}
+
+.assay-well-meta {
+  font-size: 0.68rem;
+  line-height: 1.15;
+  color: #334155;
+}
+
+.assay-plate-editor-row th {
+  background: rgba(222, 237, 255, 0.95);
+}
+
+.assay-plate-editor-row td {
+  white-space: normal;
+}
+
+.assay-plate-editor-row input[data-axis-dimension] {
+  width: 100%;
+  min-width: 88px;
+}
+
+.assay-plate-editor-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: end;
+  justify-content: flex-start;
+}
+
+.assay-plate-editor-inline label {
+  display: grid;
+  gap: 4px;
+  min-width: 140px;
+  text-align: left;
+}
+
+.assay-plate-editor-inline input {
+  width: 100%;
+}
+
 .assay-well.is-filled {
   font-weight: 600;
   background: color-mix(in srgb, var(--accent) 18%, #ffffff);
@@ -2749,6 +2851,11 @@ body.ui-neutral-compact .workspace-main {
 .assay-result-input:focus {
   outline: 2px solid color-mix(in srgb, var(--accent) 45%, #ffffff);
   outline-offset: -2px;
+}
+
+.assay-result-disabled {
+  background: rgba(232, 236, 242, 0.75);
+  color: #6b7280;
 }
 
 .assay-result-paste-target:focus {

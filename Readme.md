@@ -11,6 +11,7 @@ Enana is an Electron desktop app for lab workflow management. It combines lab re
 - Chemical + personal inventory management
 - Sample registry
 - Assay and gel analysis workflows
+- JS-based plasmid annotation tool (pLannotate port subset)
 - Project and workflow management
 - Papers management with LLM-assisted extraction
 - Agent chat with optional project-scoped context

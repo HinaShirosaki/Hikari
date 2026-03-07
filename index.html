@@ -647,13 +647,17 @@
               <option value="1536">1536 well</option>
             </select>
           </label>
-          <label>
-            Sample ID Axis
-            <select id="assay-sample-axis">
+          <div class="assay-axis-switch">
+            <span class="small-note">Sample ID Axis</span>
+            <div class="calendar-view-switch assay-mode-switch" role="group" aria-label="Sample ID axis switch">
+              <button type="button" id="assay-sample-axis-row-btn" class="ghost-btn calendar-view-active">Row</button>
+              <button type="button" id="assay-sample-axis-column-btn" class="ghost-btn">Column</button>
+            </div>
+            <select id="assay-sample-axis" hidden>
               <option value="row" selected>Row</option>
               <option value="column">Column</option>
             </select>
-          </label>
+          </div>
           <label>
             Concentration Axis
             <input id="assay-concentration-axis-display" readonly />
@@ -685,11 +689,18 @@
 
       <div class="panel assay-mode-create-panel">
         <h3>Plate Preview</h3>
-        <p class="small-note">A1-style coordinates with axis mapping based on row/column selection.</p>
+        <p class="small-note">Click a well and edit directly on this plate. Use switch to choose Sample ID or Concentration field.</p>
+        <div class="form-actions">
+          <div class="calendar-view-switch assay-mode-switch" role="group" aria-label="Plate edit field">
+            <button type="button" id="assay-plate-field-sample-btn" class="ghost-btn calendar-view-active">Edit Sample ID</button>
+            <button type="button" id="assay-plate-field-concentration-btn" class="ghost-btn">Edit Concentration</button>
+          </div>
+          <button type="button" id="assay-clear-mappings-btn" class="ghost-btn">Clear All Mappings</button>
+        </div>
         <div id="assay-plate-preview" class="assay-plate-preview"></div>
       </div>
 
-      <div class="panel assay-mode-create-panel">
+      <div class="panel assay-mode-create-panel assay-create-legacy-hidden" hidden>
         <h3>Axis Template Mapping</h3>
         <p class="small-note">Define sample IDs and concentrations directly on axis positions for this plate.</p>
         <div id="assay-axis-editor" class="assay-axis-editor"></div>
@@ -708,7 +719,7 @@
         </div>
       </div>
 
-      <div class="panel assay-mode-create-panel">
+      <div class="panel assay-mode-create-panel assay-create-legacy-hidden" hidden>
         <h3>Well Mapping</h3>
         <p class="small-note">Click a well in Plate Preview to load it here, then enter values (alternative to axis template).</p>
         <div class="form-grid">
@@ -1469,6 +1480,10 @@
           <span class="icon" aria-hidden="true">📊</span>
           <span class="label">qPCR Efficiency</span>
         </button>
+        <button class="tile tool-tile" data-tool-view="tool-plannotate-view">
+          <span class="icon" aria-hidden="true">🧭</span>
+          <span class="label">pLannotate (JS)</span>
+        </button>
       </div>
 
       <div id="tool-molarity-view" class="panel tool-subview">
@@ -1781,6 +1796,46 @@
           </label>
         </form>
         <div id="qpcr-result" class="calc-output"></div>
+      </div>
+
+      <div id="tool-plannotate-view" class="panel tool-subview" hidden>
+        <h3>pLannotate (JavaScript Port)</h3>
+        <p class="small-note">Ports core pLannotate scoring + overlap filtering into JS using an embedded reference subset from pXampl3 test data.</p>
+        <form id="plannotate-form" class="stack-form" autocomplete="off">
+          <label>
+            DNA Sequence (plain text or FASTA)
+            <textarea id="plannotate-sequence" rows="7" placeholder=">plasmid&#10;ACGT..."></textarea>
+          </label>
+          <div class="form-grid">
+            <label>
+              Topology
+              <select id="plannotate-topology">
+                <option value="circular" selected>Circular</option>
+                <option value="linear">Linear</option>
+              </select>
+            </label>
+            <label>
+              Min Identity (%)
+              <input id="plannotate-min-identity" type="number" min="50" max="100" step="0.1" value="85" />
+            </label>
+            <label>
+              Min Coverage (%)
+              <input id="plannotate-min-coverage" type="number" min="5" max="100" step="1" value="25" />
+            </label>
+            <label>
+              Min Hit Length (bp)
+              <input id="plannotate-min-length" type="number" min="12" max="2000" step="1" value="24" />
+            </label>
+          </div>
+          <label class="inline-row">
+            <input id="plannotate-detailed" type="checkbox" />
+            Detailed (enable seeded partial matching)
+          </label>
+          <div class="form-actions">
+            <button type="submit" class="primary-btn">Annotate</button>
+          </div>
+        </form>
+        <div id="plannotate-result" class="calc-output"></div>
       </div>
     </section>
       </section>

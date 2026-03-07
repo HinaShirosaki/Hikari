@@ -1,4 +1,5 @@
 import { BUFFER_COMPOUNDS } from './buffer-compounds.js';
+import { annotatePlasmidSequence } from './plannotate-js.js';
 
 const RESIDUE_MASS = {
   A: 71.08,
@@ -93,6 +94,15 @@ function formatSequenceLines(sequence, lineLength = 60) {
     lines.push(sequence.slice(i, i + lineLength));
   }
   return lines.join('<br />');
+}
+
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function concentrationToM(value, unit) {
@@ -435,6 +445,15 @@ export function initToolBox() {
   const qpcrForm = document.getElementById('qpcr-form');
   const qpcrResult = document.getElementById('qpcr-result');
 
+  const plannotateForm = document.getElementById('plannotate-form');
+  const plannotateResult = document.getElementById('plannotate-result');
+  const plannotateSequenceInput = document.getElementById('plannotate-sequence');
+  const plannotateTopologySelect = document.getElementById('plannotate-topology');
+  const plannotateDetailedToggle = document.getElementById('plannotate-detailed');
+  const plannotateMinIdentityInput = document.getElementById('plannotate-min-identity');
+  const plannotateMinCoverageInput = document.getElementById('plannotate-min-coverage');
+  const plannotateMinLengthInput = document.getElementById('plannotate-min-length');
+
   function getSelectedCompound(row) {
     const select = row.querySelector('.buffer-chemical-select');
     if (select.value === '__custom__') {
@@ -767,6 +786,95 @@ export function initToolBox() {
     `;
   }
 
+  function formatPlannotateLocation(hit, sequenceLength) {
+    const start = hit.qstart + 1;
+    const end = hit.qend === 0 ? sequenceLength : hit.qend;
+    if (!hit.crossesOrigin) {
+      return `${start}..${end}`;
+    }
+    return `${start}..${sequenceLength}, 1..${end}`;
+  }
+
+  function renderPlannotate() {
+    if (!plannotateResult || !plannotateSequenceInput) {
+      return;
+    }
+
+    const raw = plannotateSequenceInput.value;
+    if (!raw.trim()) {
+      plannotateResult.innerHTML = '<p class="small-note">Paste a DNA sequence or FASTA entry to annotate.</p>';
+      return;
+    }
+
+    const result = annotatePlasmidSequence(raw, {
+      topology: plannotateTopologySelect?.value || 'circular',
+      detailed: Boolean(plannotateDetailedToggle?.checked),
+      minIdentity: toNumber(plannotateMinIdentityInput?.value || 85),
+      minCoverage: toNumber(plannotateMinCoverageInput?.value || 25) / 100,
+      minHitLength: Math.round(toNumber(plannotateMinLengthInput?.value || 24))
+    });
+
+    const warningRows = (result.warnings || [])
+      .map((warning) => `<p class="small-note">${escapeHtml(warning)}</p>`)
+      .join('');
+
+    if (!result.sequenceLength) {
+      plannotateResult.innerHTML = `
+        <p class="small-note">No valid DNA bases detected. Valid symbols: A, C, G, T, and IUPAC ambiguity codes.</p>
+        ${warningRows}
+      `;
+      return;
+    }
+
+    if (!result.hits.length) {
+      plannotateResult.innerHTML = `
+        <p><strong>Sequence length:</strong> ${result.sequenceLength.toLocaleString()} bp</p>
+        <p><strong>Reference features scanned:</strong> ${result.stats.referenceFeatures}</p>
+        <p class="small-note">No annotations passed the current thresholds.</p>
+        ${warningRows}
+      `;
+      return;
+    }
+
+    const tableRows = result.hits.map((hit, index) => `
+      <tr>
+        <td>${index + 1}</td>
+        <td>${escapeHtml(hit.Feature)}</td>
+        <td>${escapeHtml(hit.Type)}</td>
+        <td>${escapeHtml(formatPlannotateLocation(hit, result.sequenceLength))}</td>
+        <td>${hit.sframe === -1 ? '-' : '+'}</td>
+        <td>${hit.pident.toFixed(2)}%</td>
+        <td>${hit.percmatch.toFixed(2)}%</td>
+        <td>${hit.matchMode}</td>
+      </tr>
+    `).join('');
+
+    plannotateResult.innerHTML = `
+      <p><strong>Sequence length:</strong> ${result.sequenceLength.toLocaleString()} bp</p>
+      <p><strong>Hits:</strong> ${result.stats.finalHits} (exact: ${result.stats.exactHits}, partial: ${result.stats.partialHits})</p>
+      <p><strong>Reference features scanned:</strong> ${result.stats.referenceFeatures}</p>
+      ${warningRows}
+      <div class="plannotate-table-wrap">
+        <table class="plannotate-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Feature</th>
+              <th>Type</th>
+              <th>Location (1-based)</th>
+              <th>Strand</th>
+              <th>Identity</th>
+              <th>Coverage</th>
+              <th>Mode</th>
+            </tr>
+          </thead>
+          <tbody>${tableRows}</tbody>
+        </table>
+      </div>
+      <p class="small-note">JS port of pLannotate core scoring and overlap logic with an embedded reference subset from pXampl3 test data.</p>
+    `;
+  }
+
   function resolveChemicalName(row) {
     const select = row.querySelector('.buffer-chemical-select');
     if (select.value !== '__custom__') {
@@ -856,6 +964,28 @@ export function initToolBox() {
     event.preventDefault();
     renderQpcr();
   });
+
+  if (plannotateForm) {
+    let plannotateRenderTimer = null;
+    const scheduleRender = typeof setTimeout === 'function'
+      ? (fn) => setTimeout(fn, 220)
+      : (fn) => {
+        fn();
+        return null;
+      };
+    const cancelRender = typeof clearTimeout === 'function'
+      ? (id) => clearTimeout(id)
+      : () => {};
+
+    plannotateForm.addEventListener('input', () => {
+      cancelRender(plannotateRenderTimer);
+      plannotateRenderTimer = scheduleRender(renderPlannotate);
+    });
+    plannotateForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      renderPlannotate();
+    });
+  }
 
   addBufferChemicalBtn.addEventListener('click', addRow);
   bufferVolumeInput.addEventListener('input', renderBuffer);
@@ -954,4 +1084,5 @@ export function initToolBox() {
   renderOligo();
   renderExtinction();
   renderQpcr();
+  renderPlannotate();
 }
