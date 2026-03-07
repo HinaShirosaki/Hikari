@@ -50,20 +50,10 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
   const assayAnalyzeResultsBtn = document.getElementById('assay-analyze-results-btn');
   const assayAnalysisSummary = document.getElementById('assay-analysis-summary');
   const assayAnalysisTable = document.getElementById('assay-analysis-table');
-  const assayWellIdInput = document.getElementById('assay-well-id');
-  const assayWellSampleIdInput = document.getElementById('assay-well-sample-id');
-  const assayWellConcentrationInput = document.getElementById('assay-well-concentration');
-  const assayWellUpsertBtn = document.getElementById('assay-well-upsert-btn');
-  const assayWellRemoveBtn = document.getElementById('assay-well-remove-btn');
-  const assayWellClearBtn = document.getElementById('assay-well-clear-btn');
-  const assaySampleAxisValuesInput = document.getElementById('assay-sample-axis-values');
-  const assayConcentrationAxisValuesInput = document.getElementById('assay-concentration-axis-values');
-  const assayAxisEditor = document.getElementById('assay-axis-editor');
   const assaySwapAxisBtn = document.getElementById('assay-swap-axis-btn');
   const assayPlateFieldSampleBtn = document.getElementById('assay-plate-field-sample-btn');
   const assayPlateFieldConcentrationBtn = document.getElementById('assay-plate-field-concentration-btn');
   const assayClearMappingsBtn = document.getElementById('assay-clear-mappings-btn');
-  const assayApplyAxisTemplateBtn = document.getElementById('assay-apply-axis-template-btn');
   const assayLayoutStatus = document.getElementById('assay-layout-status');
   const assayLayoutList = document.getElementById('assay-layout-list');
   const assayList = document.getElementById('assay-list');
@@ -72,6 +62,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
   let assayMode = 'create';
   let activeResultsAssayId = '';
   let activeWellEditorId = '';
+  let axisTemplateValues = { sampleValues: [], concentrationValues: [] };
   let plateEditField = 'sampleId';
   let manualWellOverrides = {};
   let suppressedWells = new Set();
@@ -88,8 +79,10 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
   assaySampleAxisInput?.addEventListener('change', () => {
     syncAxisDisplay();
     renderAxisSwitchButtons();
-    renderAxisEditor();
+    setLayoutFromAxisAndOverrides();
+    renderLayoutList();
     renderPlatePreview();
+    renderResultTable();
   });
   assaySampleAxisRowBtn?.addEventListener('click', () => setSampleAxis('row'));
   assaySampleAxisColumnBtn?.addEventListener('click', () => setSampleAxis('column'));
@@ -108,10 +101,6 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
   assayClearResultsBtn?.addEventListener('click', onClearResults);
   assayAnalyzeResultsBtn?.addEventListener('click', onAnalyzeResults);
   assayResultTable?.addEventListener('paste', onResultTablePaste);
-  assayWellUpsertBtn?.addEventListener('click', onUpsertWellMapping);
-  assayWellRemoveBtn?.addEventListener('click', onRemoveWellMapping);
-  assayWellClearBtn?.addEventListener('click', onClearWellMappings);
-  assayApplyAxisTemplateBtn?.addEventListener('click', onApplyAxisTemplate);
   assayPlatePreview?.addEventListener('input', onPlatePreviewInput);
   assayPlatePreview?.addEventListener('change', onPlatePreviewChange);
   assayPlatePreview?.addEventListener('focusin', onPlatePreviewFocusIn);
@@ -155,7 +144,6 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     syncAxisDisplay();
     renderAxisSwitchButtons();
     setLayoutFromAxisAndOverrides();
-    renderAxisEditor();
     renderLayoutList();
     renderPlatePreview();
     renderResultTable();
@@ -520,23 +508,8 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     return values;
   }
 
-  function parseAxisValues(raw, preserveEmpty = false) {
-    const values = String(raw || '')
-      .replace(/\r/g, '')
-      .split('\n')
-      .map((item) => item.trim());
-    if (preserveEmpty) {
-      return values;
-    }
-    return values.filter(Boolean);
-  }
-
   function getAxisLength(axis, def) {
     return axis === 'column' ? def.columns : def.rows;
-  }
-
-  function getAxisPositionLabel(axis, index) {
-    return axis === 'column' ? String(index + 1) : toRowLabel(index);
   }
 
   function normalizeAxisTemplateValues(values, maxLength) {
@@ -552,48 +525,13 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     };
   }
 
-  function setAxisTemplateInputValues(values, def = getCurrentDefinition(), sampleAxis = assaySampleAxisInput?.value === 'column' ? 'column' : 'row') {
-    const normalized = normalizeCurrentAxisTemplateValues(values, def, sampleAxis);
-    if (assaySampleAxisValuesInput) {
-      assaySampleAxisValuesInput.value = normalized.sampleValues.join('\n');
-    }
-    if (assayConcentrationAxisValuesInput) {
-      assayConcentrationAxisValuesInput.value = normalized.concentrationValues.join('\n');
-    }
-    return normalized;
+  function setAxisTemplateValues(values, def = getCurrentDefinition(), sampleAxis = assaySampleAxisInput?.value === 'column' ? 'column' : 'row') {
+    axisTemplateValues = normalizeCurrentAxisTemplateValues(values, def, sampleAxis);
+    return axisTemplateValues;
   }
 
   function hasAxisTemplateValues(values) {
     return (Array.isArray(values) ? values : []).some((item) => String(item || '').trim());
-  }
-
-  function readAxisValuesFromInputs() {
-    const def = getCurrentDefinition();
-    const sampleAxis = assaySampleAxisInput?.value === 'column' ? 'column' : 'row';
-    const concentrationAxis = oppositeAxis(sampleAxis);
-    const sampleLength = getAxisLength(sampleAxis, def);
-    const concentrationLength = getAxisLength(concentrationAxis, def);
-    const sampleValues = parseAxisValues(assaySampleAxisValuesInput?.value, true);
-    const concentrationValues = parseAxisValues(assayConcentrationAxisValuesInput?.value, true);
-    return {
-      sampleValues: normalizeAxisTemplateValues(sampleValues, sampleLength),
-      concentrationValues: normalizeAxisTemplateValues(concentrationValues, concentrationLength)
-    };
-  }
-
-  function readAxisValuesFromEditor() {
-    if (!assayAxisEditor) {
-      return null;
-    }
-    const sampleInputs = [...assayAxisEditor.querySelectorAll('[data-axis-role="sample"]')];
-    const concentrationInputs = [...assayAxisEditor.querySelectorAll('[data-axis-role="concentration"]')];
-    if (!sampleInputs.length && !concentrationInputs.length) {
-      return null;
-    }
-    return {
-      sampleValues: sampleInputs.map((input) => String(input.value || '').trim()),
-      concentrationValues: concentrationInputs.map((input) => String(input.value || '').trim())
-    };
   }
 
   function readAxisValuesFromPlatePreview() {
@@ -671,11 +609,8 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     return merged;
   }
 
-  function getAxisTemplateValues({ includeEditor = true, includePreview = true } = {}) {
-    const sources = [readAxisValuesFromInputs()];
-    if (includeEditor) {
-      sources.push(readAxisValuesFromEditor());
-    }
+  function getAxisTemplateValues({ includePreview = true } = {}) {
+    const sources = [axisTemplateValues];
     if (includePreview) {
       sources.push(readAxisValuesFromPlatePreview());
     }
@@ -719,7 +654,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
       ? normalizeCurrentAxisTemplateValues(axisValues, def, sampleAxis)
       : getAxisTemplateValues();
     const { sampleValues, concentrationValues } = normalizedAxisValues;
-    syncAxisValueTextareas(normalizedAxisValues);
+    syncAxisTemplateValues(normalizedAxisValues);
     normalizeManualWellOverrides(def);
     normalizeSuppressedWells(def);
     const baseLayout = applyAxisTemplate({
@@ -768,20 +703,6 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     return { sampleId: '', concentration: '' };
   }
 
-  function syncWellEditorFields(wellId) {
-    const normalizedWell = String(wellId || '').trim().toUpperCase();
-    const mapping = getEffectiveWellMapping(normalizedWell);
-    if (assayWellIdInput) {
-      assayWellIdInput.value = normalizedWell;
-    }
-    if (assayWellSampleIdInput) {
-      assayWellSampleIdInput.value = mapping.sampleId;
-    }
-    if (assayWellConcentrationInput) {
-      assayWellConcentrationInput.value = mapping.concentration;
-    }
-  }
-
   function updateActiveWellPreviewState() {
     if (!assayPlatePreview) {
       return;
@@ -793,7 +714,6 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
 
   function setActiveWellSelection(wellId) {
     activeWellEditorId = String(wellId || '').trim().toUpperCase();
-    syncWellEditorFields(activeWellEditorId);
     updateActiveWellPreviewState();
   }
 
@@ -841,7 +761,6 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
 
     activeWellEditorId = normalizedWell;
     setLayoutFromAxisAndOverrides();
-    syncWellEditorFields(normalizedWell);
   }
 
   function deriveManualWellOverridesFromLayout(layout, def, axisValues = null) {
@@ -883,59 +802,8 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     manualWellOverrides = overrides;
   }
 
-  function syncAxisValueTextareas(values = null) {
-    setAxisTemplateInputValues(values || getAxisTemplateValues());
-  }
-
-  function renderAxisEditor(sourceValues = null) {
-    if (!assayAxisEditor) {
-      return;
-    }
-    const def = getCurrentDefinition();
-    const sampleAxis = assaySampleAxisInput?.value === 'column' ? 'column' : 'row';
-    const concentrationAxis = oppositeAxis(sampleAxis);
-    const sampleLength = getAxisLength(sampleAxis, def);
-    const concentrationLength = getAxisLength(concentrationAxis, def);
-    const source = sourceValues
-      ? normalizeCurrentAxisTemplateValues(sourceValues, def, sampleAxis)
-      : getAxisTemplateValues();
-    const sampleValues = normalizeAxisTemplateValues(source.sampleValues, sampleLength);
-    const concentrationValues = normalizeAxisTemplateValues(source.concentrationValues, concentrationLength);
-
-    const sampleRows = [];
-    for (let index = 0; index < sampleLength; index += 1) {
-      const label = getAxisPositionLabel(sampleAxis, index);
-      sampleRows.push(`
-        <label class="assay-axis-editor-row">
-          <span>${safeText(label)}</span>
-          <input data-axis-role="sample" data-axis-index="${index}" value="${safeText(sampleValues[index] || '')}" placeholder="Sample ID" />
-        </label>
-      `);
-    }
-
-    const concentrationRows = [];
-    for (let index = 0; index < concentrationLength; index += 1) {
-      const label = getAxisPositionLabel(concentrationAxis, index);
-      concentrationRows.push(`
-        <label class="assay-axis-editor-row">
-          <span>${safeText(label)}</span>
-          <input data-axis-role="concentration" data-axis-index="${index}" value="${safeText(concentrationValues[index] || '')}" placeholder="Concentration" />
-        </label>
-      `);
-    }
-
-    assayAxisEditor.innerHTML = `
-      <div class="assay-axis-editor-grid">
-        <section class="assay-axis-editor-panel">
-          <h4>Sample ID by ${safeText(axisLabel(sampleAxis))}</h4>
-          <div class="assay-axis-editor-list">${sampleRows.join('')}</div>
-        </section>
-        <section class="assay-axis-editor-panel">
-          <h4>Concentration by ${safeText(axisLabel(concentrationAxis))}</h4>
-          <div class="assay-axis-editor-list">${concentrationRows.join('')}</div>
-        </section>
-      </div>
-    `;
+  function syncAxisTemplateValues(values = null) {
+    setAxisTemplateValues(values || getAxisTemplateValues());
   }
 
   function onSwapAxes() {
@@ -949,9 +817,8 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
       sampleValues: concentrationValues,
       concentrationValues: sampleValues
     };
-    syncAxisValueTextareas(swapped);
+    syncAxisTemplateValues(swapped);
     setLayoutFromAxisAndOverrides();
-    renderAxisEditor();
     renderLayoutList();
     renderPlatePreview();
     renderResultTable();
@@ -1033,20 +900,10 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     }, def, sampleAxis);
   }
 
-  function clearAxisLiveEditors() {
-    if (assayAxisEditor) {
-      assayAxisEditor.innerHTML = '';
-    }
-    if (assayPlatePreview) {
-      assayPlatePreview.innerHTML = '';
-    }
-  }
-
   function restoreAssayLayoutState(assay, def) {
     const sampleAxis = assay?.sampleAxis === 'column' ? 'column' : 'row';
     const axisValues = getAssayAxisTemplateValues(assay, def);
-    clearAxisLiveEditors();
-    setAxisTemplateInputValues(axisValues, def, sampleAxis);
+    setAxisTemplateValues(axisValues, def, sampleAxis);
     suppressedWells = new Set(Array.isArray(assay?.suppressedWells) ? assay.suppressedWells : []);
     activeWellEditorId = '';
 
@@ -2360,7 +2217,6 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     syncAxisDisplay();
     const def = getCurrentDefinition();
     const axisValues = restoreAssayLayoutState(assay, def);
-    renderAxisEditor(axisValues);
     renderPlatePreview(axisValues);
     renderLayoutList();
     renderPlateDefinition();
@@ -2442,24 +2298,10 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     `).join('');
   }
 
-  function clearWellEditor() {
-    if (assayWellIdInput) {
-      assayWellIdInput.value = '';
-    }
-    if (assayWellSampleIdInput) {
-      assayWellSampleIdInput.value = '';
-    }
-    if (assayWellConcentrationInput) {
-      assayWellConcentrationInput.value = '';
-    }
-    activeWellEditorId = '';
-    updateActiveWellPreviewState();
-  }
-
   function onPlatePreviewInput(event) {
     const axisInput = event.target.closest('[data-axis-dimension]');
     if (axisInput) {
-      syncAxisValueTextareas(getAxisTemplateValues());
+      syncAxisTemplateValues(getAxisTemplateValues());
       return;
     }
 
@@ -2535,70 +2377,10 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     cell.querySelector('[data-well-inline-field]')?.focus();
   }
 
-  function onUpsertWellMapping() {
-    const def = getCurrentDefinition();
-    const wellId = String(assayWellIdInput?.value || '').trim().toUpperCase();
-    const sampleId = String(assayWellSampleIdInput?.value || '').trim();
-    const concentration = String(assayWellConcentrationInput?.value || '').trim();
-    if (!wellId) {
-      setLayoutStatus('Enter a well ID, e.g. A1.');
-      return;
-    }
-    if (!isValidWellForDefinition(wellId, def)) {
-      setLayoutStatus(`Well ${wellId} is not valid for the selected ${def.label} plate.`);
-      return;
-    }
-    if (!sampleId && !concentration) {
-      setLayoutStatus('Enter sample ID and/or concentration.');
-      return;
-    }
-    suppressedWells.delete(wellId);
-    manualWellOverrides[wellId] = { sampleId, concentration };
-    activeWellEditorId = wellId;
-    setLayoutFromAxisAndOverrides();
-    renderLayoutList();
-    renderPlatePreview();
-    renderResultTable();
-    setLayoutStatus(`Mapped ${wellId}.`);
-    setCsvStatus(`Mapped wells: ${currentLayout.length}.`);
-    clearWellEditor();
-  }
-
-  function onRemoveWellMapping() {
-    const def = getCurrentDefinition();
-    const wellId = String(assayWellIdInput?.value || '').trim().toUpperCase();
-    if (!wellId) {
-      setLayoutStatus('Enter a well ID to remove.');
-      return;
-    }
-    const before = currentLayout.length;
-    delete manualWellOverrides[wellId];
-    suppressedWells.add(wellId);
-    setLayoutFromAxisAndOverrides();
-    if (activeWellEditorId === wellId) {
-      activeWellEditorId = '';
-    }
-    renderLayoutList();
-    renderPlatePreview();
-    renderResultTable();
-    if (before === currentLayout.length) {
-      setLayoutStatus(`No mapping found for ${wellId}.`);
-    } else {
-      setLayoutStatus(`Removed mapping for ${wellId}.`);
-      setCsvStatus(`Mapped wells: ${currentLayout.length}.`);
-    }
-  }
-
   function onClearWellMappings() {
     manualWellOverrides = {};
     suppressedWells = new Set();
-    if (assaySampleAxisValuesInput) {
-      assaySampleAxisValuesInput.value = '';
-    }
-    if (assayConcentrationAxisValuesInput) {
-      assayConcentrationAxisValuesInput.value = '';
-    }
-    clearAxisLiveEditors();
+    setAxisTemplateValues({ sampleValues: [], concentrationValues: [] });
     currentLayout = [];
     activeWellEditorId = '';
     currentResults = {};
@@ -2607,33 +2389,16 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     renderResultTable();
     setLayoutStatus('Cleared all well mappings.');
     setCsvStatus('');
-    clearWellEditor();
+    updateActiveWellPreviewState();
   }
 
-  function onApplyAxisTemplate() {
-    const { sampleValues, concentrationValues } = getAxisTemplateValues();
-    if (!sampleValues.length && !concentrationValues.length) {
-      setLayoutStatus('Enter sample and/or concentration values first.');
+  function focusPlateWellInput(wellId) {
+    const normalizedWell = String(wellId || '').trim().toUpperCase();
+    if (!normalizedWell || !assayPlatePreview) {
       return;
     }
-    syncAxisValueTextareas({ sampleValues, concentrationValues });
-    manualWellOverrides = {};
-    suppressedWells = new Set();
-    setLayoutFromAxisAndOverrides();
-    renderLayoutList();
-    renderPlatePreview();
-    renderResultTable();
-
-    const def = getCurrentDefinition();
-    const sampleAxis = assaySampleAxisInput?.value === 'column' ? 'column' : 'row';
-    const sampleAxisLength = sampleAxis === 'row' ? def.rows : def.columns;
-    const concentrationAxisLength = sampleAxis === 'row' ? def.columns : def.rows;
-    const filledSampleCount = sampleValues.filter(Boolean).length;
-    const filledConcentrationCount = concentrationValues.filter(Boolean).length;
-    setLayoutStatus(
-      `Applied template. Sample values: ${filledSampleCount}/${sampleAxisLength}, concentration values: ${filledConcentrationCount}/${concentrationAxisLength}.`
-    );
-    setCsvStatus(`Mapped wells: ${currentLayout.length}.`);
+    const selector = `[data-well="${normalizedWell}"] [data-well-inline-field="${plateEditField}"]`;
+    assayPlatePreview.querySelector(selector)?.focus();
   }
 
   function onLayoutListClick(event) {
@@ -2644,12 +2409,9 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
       if (!item) {
         return;
       }
-      assayWellIdInput.value = item.well || '';
-      assayWellSampleIdInput.value = item.sampleId || '';
-      assayWellConcentrationInput.value = item.concentration || '';
-      activeWellEditorId = item.well || '';
-      renderPlatePreview();
-      setLayoutStatus(`Loaded ${well} into editor.`);
+      setActiveWellSelection(item.well || '');
+      focusPlateWellInput(item.well || '');
+      setLayoutStatus(`Focused ${well} in plate preview.`);
       return;
     }
     const deleteBtn = event.target.closest('[data-layout-delete]');
@@ -2732,8 +2494,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     currentResults = normalizeResults(currentResults, getCurrentDefinition());
     setLayoutFromAxisAndOverrides();
     activeWellEditorId = '';
-    renderAxisEditor();
-    syncAxisValueTextareas();
+    syncAxisTemplateValues();
     renderPlateDefinition();
     renderAssayNumberDisplay();
     renderPlatePreview();
@@ -2824,13 +2585,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
         imported.push({ well: resolvedWell, sampleId, concentration });
       }
 
-      if (assaySampleAxisValuesInput) {
-        assaySampleAxisValuesInput.value = '';
-      }
-      if (assayConcentrationAxisValuesInput) {
-        assayConcentrationAxisValuesInput.value = '';
-      }
-      clearAxisLiveEditors();
+      setAxisTemplateValues({ sampleValues: [], concentrationValues: [] }, def);
       suppressedWells = new Set();
       manualWellOverrides = layoutToMap(normalizeLayout(imported, def));
       setLayoutFromAxisAndOverrides();
@@ -2864,7 +2619,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     const editingId = assayIdInput?.value || '';
     const existing = (state.assays || []).find((item) => item.id === editingId);
     const axisValues = getAxisTemplateValues();
-    syncAxisValueTextareas(axisValues);
+    syncAxisTemplateValues(axisValues);
     setLayoutFromAxisAndOverrides();
 
     const record = {
@@ -2920,12 +2675,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     currentLayout = [];
     currentResults = {};
     resultPasteAnchor = { rowIndex: 0, columnIndex: 0 };
-    if (assaySampleAxisValuesInput) {
-      assaySampleAxisValuesInput.value = '';
-    }
-    if (assayConcentrationAxisValuesInput) {
-      assayConcentrationAxisValuesInput.value = '';
-    }
+    axisTemplateValues = { sampleValues: [], concentrationValues: [] };
     if (assayAnalysisMethodInput) {
       assayAnalysisMethodInput.value = 'grouped_summary';
     }
@@ -2941,9 +2691,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     renderNotebookOptions();
     syncAxisDisplay();
     renderPlateEditFieldButtons();
-    clearAxisLiveEditors();
-    renderAxisEditor();
-    syncAxisValueTextareas();
+    syncAxisTemplateValues();
     renderPlateDefinition();
     renderPlatePreview();
     renderAssayNumberDisplay();
@@ -2957,7 +2705,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     if (assayAnalysisTable) {
       assayAnalysisTable.innerHTML = '';
     }
-    clearWellEditor();
+    updateActiveWellPreviewState();
     setAssayMode('create');
   }
 
@@ -3001,21 +2749,10 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     renderNotebookOptions();
     assayPlateTypeInput.value = String(assay.plateType || '96');
     assaySampleAxisInput.value = assay.sampleAxis === 'column' ? 'column' : 'row';
-    if (assaySampleAxisValuesInput) {
-      assaySampleAxisValuesInput.value = Array.isArray(assay.sampleAxisValues)
-        ? assay.sampleAxisValues.join('\n')
-        : '';
-    }
-    if (assayConcentrationAxisValuesInput) {
-      assayConcentrationAxisValuesInput.value = Array.isArray(assay.concentrationAxisValues)
-        ? assay.concentrationAxisValues.join('\n')
-        : '';
-    }
     const def = getCurrentDefinition();
     const axisValues = restoreAssayLayoutState(assay, def);
     activeResultsAssayId = assay.id;
     syncAxisDisplay();
-    renderAxisEditor(axisValues);
     renderPlateDefinition();
     renderPlatePreview(axisValues);
     renderAssayNumberDisplay();
@@ -3149,8 +2886,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     renderNotebookOptions();
     syncAxisDisplay();
     renderPlateEditFieldButtons();
-    renderAxisEditor();
-    syncAxisValueTextareas();
+    syncAxisTemplateValues();
     renderPlateDefinition();
     renderAssayNumberDisplay();
     renderResultsAssayOptions(activeResultsAssayId || assayResultsAssaySelect?.value || '');

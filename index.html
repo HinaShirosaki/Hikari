@@ -702,51 +702,9 @@
           </div>
           <button type="button" id="assay-clear-mappings-btn" class="ghost-btn">Clear All Mappings</button>
         </div>
-        <div id="assay-plate-preview" class="assay-plate-preview"></div>
-      </div>
-
-      <div class="panel assay-mode-create-panel assay-create-legacy-hidden" hidden>
-        <h3>Axis Template Mapping</h3>
-        <p class="small-note">Define sample IDs and concentrations directly on axis positions for this plate.</p>
-        <div id="assay-axis-editor" class="assay-axis-editor"></div>
-        <div class="form-grid" hidden>
-          <label>
-            Sample ID Values (selected sample axis)
-            <textarea id="assay-sample-axis-values" rows="4" placeholder="e.g. S1&#10;S2&#10;S3"></textarea>
-          </label>
-          <label>
-            Concentration Values (opposite axis)
-            <textarea id="assay-concentration-axis-values" rows="4" placeholder="e.g. 0 uM&#10;0.1 uM&#10;1 uM"></textarea>
-          </label>
-        </div>
-        <div class="form-actions">
-          <button type="button" id="assay-apply-axis-template-btn" class="ghost-btn">Apply Axis Template</button>
-        </div>
-      </div>
-
-      <div class="panel assay-mode-create-panel assay-create-legacy-hidden" hidden>
-        <h3>Well Mapping</h3>
-        <p class="small-note">Click a well in Plate Preview to load it here, then enter values (alternative to axis template).</p>
-        <div class="form-grid">
-          <label>
-            Well
-            <input id="assay-well-id" placeholder="e.g. A1" />
-          </label>
-          <label>
-            Sample ID
-            <input id="assay-well-sample-id" placeholder="e.g. S-001" />
-          </label>
-          <label>
-            Concentration
-            <input id="assay-well-concentration" placeholder="e.g. 1.0 uM" />
-          </label>
-        </div>
-        <div class="form-actions">
-          <button type="button" id="assay-well-upsert-btn" class="ghost-btn">Add / Update Well</button>
-          <button type="button" id="assay-well-remove-btn" class="ghost-btn">Remove Well</button>
-          <button type="button" id="assay-well-clear-btn" class="ghost-btn">Clear All Mappings</button>
-        </div>
         <div id="assay-layout-status" class="small-note"></div>
+        <div id="assay-plate-preview" class="assay-plate-preview"></div>
+        <h4>Mapped Wells</h4>
         <div id="assay-layout-list" class="list-table"></div>
       </div>
 

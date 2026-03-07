@@ -490,14 +490,19 @@ export function initProtocolManagement({
     return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
   }
 
-  function buildProtocolShareToken(protocol) {
-    const payload = {
+  function buildProtocolSharePayload(protocol) {
+    const serializedProtocol = serializeProtocol(protocol);
+    return {
       version: 1,
       type: 'protocol_share_link',
-      createdAt: new Date().toISOString(),
+      createdAt: serializedProtocol.updatedAt || serializedProtocol.createdAt || '',
       from: resolveSenderEmail(),
-      protocol: serializeProtocol(protocol)
+      protocol: serializedProtocol
     };
+  }
+
+  function buildProtocolShareToken(protocol) {
+    const payload = buildProtocolSharePayload(protocol);
     return encodeBase64Url(JSON.stringify(payload));
   }
 
@@ -559,8 +564,8 @@ export function initProtocolManagement({
       return;
     }
 
-    const protocolPayload = serializeProtocol(protocol);
-    const shareLink = buildProtocolShareLink(protocol);
+    const protocolPayload = buildProtocolSharePayload(protocol);
+    const shareLink = `${PROTOCOL_SHARE_LINK_PREFIX}${encodeBase64Url(JSON.stringify(protocolPayload))}`;
 
     state.messages.push({
       id: createId(),
@@ -573,7 +578,7 @@ export function initProtocolManagement({
       importedBy: [],
       type: 'protocol_share',
       payload: {
-        protocol: protocolPayload,
+        protocol: protocolPayload.protocol,
         shareLink
       }
     });
