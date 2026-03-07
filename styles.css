@@ -347,6 +347,10 @@ a.ghost-btn {
   flex-wrap: wrap;
 }
 
+.assay-results-actions {
+  margin-top: 8px;
+}
+
 .cards {
   margin-top: 14px;
   display: grid;
@@ -2740,9 +2744,6 @@ body.ui-neutral-compact .workspace-main {
 
 .assay-plate-table-wrap {
   overflow: auto;
-  border: 1px solid rgba(53, 99, 153, 0.22);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.72);
 }
 
 .assay-plate-table {
@@ -2754,7 +2755,7 @@ body.ui-neutral-compact .workspace-main {
 .assay-plate-table th,
 .assay-plate-table td {
   border: 1px solid rgba(53, 99, 153, 0.2);
-  padding: 6px 8px;
+  padding: 4px 6px;
   text-align: center;
   font-size: 0.75rem;
   white-space: nowrap;
@@ -2774,6 +2775,11 @@ body.ui-neutral-compact .workspace-main {
 }
 
 .assay-well {
+  width: 78px;
+  min-width: 78px;
+  height: 78px;
+  padding: 4px;
+  vertical-align: top;
   background: rgba(255, 255, 255, 0.9);
   cursor: pointer;
 }
@@ -2782,12 +2788,30 @@ body.ui-neutral-compact .workspace-main {
   font-weight: 700;
   font-size: 0.72rem;
   line-height: 1.1;
+  margin-bottom: 4px;
+}
+
+.assay-well-inline-input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  padding: 2px 4px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  text-align: center;
+  font-size: 0.72rem;
+  line-height: 1.2;
 }
 
 .assay-well-meta {
   font-size: 0.68rem;
   line-height: 1.15;
   color: #334155;
+  margin-top: 4px;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .assay-plate-editor-row th {
@@ -2796,11 +2820,23 @@ body.ui-neutral-compact .workspace-main {
 
 .assay-plate-editor-row td {
   white-space: normal;
+  padding: 0;
+  width: 72px;
+  min-width: 72px;
 }
 
 .assay-plate-editor-row input[data-axis-dimension] {
+  display: block;
   width: 100%;
-  min-width: 88px;
+  min-width: 0;
+  height: 34px;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  text-align: center;
+  font-size: 0.72rem;
 }
 
 .assay-plate-editor-inline {
@@ -2885,8 +2921,7 @@ body.ui-neutral-compact .workspace-main {
 }
 
 body.theme-night .assay-plate-table-wrap {
-  border-color: rgba(145, 174, 214, 0.32);
-  background: rgba(20, 33, 57, 0.72);
+  background: transparent;
 }
 
 body.theme-night .assay-plate-table th,
