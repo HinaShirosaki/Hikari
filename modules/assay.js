@@ -621,11 +621,38 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     };
   }
 
-  function getAxisTemplateValues() {
-    return readAxisValuesFromInputs() || readAxisValuesFromPlatePreview() || readAxisValuesFromEditor() || {
-      sampleValues: [],
-      concentrationValues: []
+  function mergeAxisTemplateValues(...sources) {
+    const def = getCurrentDefinition();
+    const sampleAxis = assaySampleAxisInput?.value === 'column' ? 'column' : 'row';
+    const sampleLength = getAxisLength(sampleAxis, def);
+    const concentrationLength = getAxisLength(oppositeAxis(sampleAxis), def);
+    const merged = {
+      sampleValues: new Array(sampleLength).fill(''),
+      concentrationValues: new Array(concentrationLength).fill('')
     };
+
+    sources.filter(Boolean).forEach((source) => {
+      if (Array.isArray(source.sampleValues)) {
+        for (let index = 0; index < Math.min(source.sampleValues.length, sampleLength); index += 1) {
+          merged.sampleValues[index] = String(source.sampleValues[index] || '').trim();
+        }
+      }
+      if (Array.isArray(source.concentrationValues)) {
+        for (let index = 0; index < Math.min(source.concentrationValues.length, concentrationLength); index += 1) {
+          merged.concentrationValues[index] = String(source.concentrationValues[index] || '').trim();
+        }
+      }
+    });
+
+    return merged;
+  }
+
+  function getAxisTemplateValues() {
+    return mergeAxisTemplateValues(
+      readAxisValuesFromInputs(),
+      readAxisValuesFromEditor(),
+      readAxisValuesFromPlatePreview()
+    );
   }
 
   function normalizeManualWellOverrides(def) {
