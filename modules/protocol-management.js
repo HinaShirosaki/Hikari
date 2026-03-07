@@ -1,3 +1,5 @@
+import { exportProtocolPdf } from './pdf-export.js';
+
 export function initProtocolManagement({
   state,
   persist,
@@ -17,6 +19,7 @@ export function initProtocolManagement({
   const protocolEditorBackBtn = document.getElementById('protocol-editor-back-btn');
   const protocolCancelBtn = document.getElementById('protocol-cancel-btn');
   const protocolViewBackBtn = document.getElementById('protocol-view-back-btn');
+  const protocolExportPdfBtn = document.getElementById('protocol-export-pdf-btn');
 
   const protocolEditorHeading = document.getElementById('protocol-editor-heading');
   const protocolViewTitle = document.getElementById('protocol-view-title');
@@ -44,6 +47,7 @@ export function initProtocolManagement({
   let activeShareTargetEmail = '';
   let protocolSortField = 'time';
   let protocolSortOrder = 'asc';
+  let activeViewedProtocolId = '';
 
   createProtocolBtn?.addEventListener('click', onCreateProtocol);
   protocolEditorBackBtn?.addEventListener('click', () => showListPanel({ resetEditor: true }));
@@ -68,6 +72,7 @@ export function initProtocolManagement({
     updateSortButtonLabels();
     renderList();
   });
+  protocolExportPdfBtn?.addEventListener('click', onExportViewedProtocolPdf);
 
   if (protocolShareStatus && !String(protocolShareStatus.textContent || '').trim()) {
     setShareStatus(defaultShareStatus);
@@ -576,6 +581,7 @@ export function initProtocolManagement({
     if (protocolViewPanel) {
       protocolViewPanel.hidden = true;
     }
+    activeViewedProtocolId = '';
   }
 
   function showEditorPanel() {
@@ -691,8 +697,20 @@ export function initProtocolManagement({
       return;
     }
 
+    activeViewedProtocolId = protocol.id;
     renderProtocolView(protocol);
     showViewPanel();
+  }
+
+  function onExportViewedProtocolPdf() {
+    if (!activeViewedProtocolId) {
+      return;
+    }
+    const protocol = state.protocols.find((item) => item.id === activeViewedProtocolId);
+    if (!protocol) {
+      return;
+    }
+    exportProtocolPdf(protocol);
   }
 
   function deleteProtocol(protocolId) {
@@ -855,6 +873,7 @@ export function initProtocolManagement({
         <span class="protocol-name-text">${safeText(protocol.name)}</span>
         <div class="card-actions list-actions protocol-list-actions">
           <button type="button" class="ghost-btn protocol-view-btn" data-protocol-view="${protocol.id}">View</button>
+          <button type="button" class="ghost-btn protocol-view-btn" data-protocol-export="${protocol.id}">Export PDF</button>
           <button type="button" class="ghost-btn protocol-edit-btn" data-protocol-edit="${protocol.id}">Edit</button>
           <button type="button" class="ghost-btn protocol-share-btn" data-protocol-share="${protocol.id}">Share</button>
           <button type="button" class="danger-btn protocol-delete-btn" data-protocol-delete="${protocol.id}">Delete</button>
@@ -877,6 +896,16 @@ export function initProtocolManagement({
 
     protocolList.querySelectorAll('[data-protocol-edit]').forEach((button) => {
       button.addEventListener('click', () => editProtocol(button.dataset.protocolEdit));
+    });
+
+    protocolList.querySelectorAll('[data-protocol-export]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const protocol = state.protocols.find((item) => item.id === button.dataset.protocolExport);
+        if (!protocol) {
+          return;
+        }
+        exportProtocolPdf(protocol);
+      });
     });
 
     protocolList.querySelectorAll('[data-protocol-share]').forEach((button) => {

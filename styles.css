@@ -2627,6 +2627,59 @@ body.ui-neutral-compact .workspace-main {
   gap: 6px;
 }
 
+.assay-axis-actions {
+  align-items: end;
+}
+
+.assay-axis-editor {
+  display: grid;
+  gap: 12px;
+}
+
+.assay-axis-editor-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.assay-axis-editor-panel {
+  border: 1px solid rgba(53, 99, 153, 0.22);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.assay-axis-editor-panel h4 {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.assay-axis-editor-list {
+  display: grid;
+  gap: 6px;
+  max-height: 260px;
+  overflow: auto;
+}
+
+.assay-axis-editor-row {
+  display: grid;
+  grid-template-columns: 46px minmax(110px, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+
+.assay-axis-editor-row span {
+  color: #27466f;
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+
+.assay-axis-editor-row input {
+  width: 100%;
+}
+
 .assay-plate-table-wrap {
   overflow: auto;
   border: 1px solid rgba(53, 99, 153, 0.22);
@@ -2664,11 +2717,17 @@ body.ui-neutral-compact .workspace-main {
 
 .assay-well {
   background: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
 }
 
 .assay-well.is-filled {
   font-weight: 600;
   background: color-mix(in srgb, var(--accent) 18%, #ffffff);
+}
+
+.assay-well.is-active {
+  outline: 2px solid color-mix(in srgb, var(--accent) 45%, #ffffff);
+  outline-offset: -2px;
 }
 
 .assay-result-cell {
@@ -2902,4 +2961,71 @@ body.theme-night .gel-manual-progress {
 body.theme-night .gel-report-json {
   border-color: rgba(145, 174, 214, 0.3);
   background: rgba(22, 36, 62, 0.9);
+}
+
+/* Spacing and overlap fixes by view */
+#collaboration-management-view #inbox-list {
+  margin-top: 10px;
+}
+
+#lab-common-inventory-view .chemical-inbox-row + .small-note {
+  margin-top: 10px;
+}
+
+.biology-notebook-select-stack {
+  gap: 12px;
+}
+
+#personal-inventory-view .inventory-add-form .form-actions {
+  grid-column: 1 / -1;
+  justify-content: flex-start;
+  margin-top: 2px;
+}
+
+#tool-molarity-view .inline-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: stretch;
+}
+
+#tool-molarity-view .inline-row input,
+#tool-molarity-view .inline-row select {
+  height: 38px;
+}
+
+.buffer-row {
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+.buffer-row label,
+.buffer-row .buffer-output,
+.buffer-row .buffer-remove-btn {
+  min-width: 0;
+}
+
+#tool-buffer-view .buffer-chemical-select,
+#tool-buffer-view .buffer-custom-name,
+#tool-buffer-view .buffer-mw,
+#tool-buffer-view .buffer-concentration {
+  width: 100%;
+}
+
+#gel-form label {
+  min-width: 0;
+}
+
+#gel-form #gel-image-file,
+#gel-form #gel-notebook-entry {
+  width: 100%;
+}
+
+@media (max-width: 960px) {
+  #gel-form {
+    grid-template-columns: 1fr;
+  }
+
+  #gel-form .form-actions {
+    width: 100%;
+  }
 }

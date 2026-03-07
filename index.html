@@ -301,7 +301,10 @@
       <div id="protocol-view-panel" class="panel" hidden>
         <div class="protocol-panel-head">
           <h3 id="protocol-view-title">Protocol</h3>
-          <button type="button" id="protocol-view-back-btn" class="ghost-btn">Back to List</button>
+          <div class="form-actions">
+            <button type="button" id="protocol-export-pdf-btn" class="ghost-btn">Export PDF</button>
+            <button type="button" id="protocol-view-back-btn" class="ghost-btn">Back to List</button>
+          </div>
         </div>
         <div id="protocol-view-content" class="stack-form"></div>
       </div>
@@ -446,18 +449,20 @@
     <section id="biology-notebook-view" class="view">
       <div class="panel">
         <h2>Biology Notebook</h2>
-        <label>
-          Select Project
-          <select id="biology-notebook-project-select">
-            <option value="">Select project</option>
-          </select>
-        </label>
-        <label>
-          Select Protocol
-          <select id="biology-notebook-protocol-select">
-            <option value="">Select protocol</option>
-          </select>
-        </label>
+        <div class="stack-form biology-notebook-select-stack">
+          <label>
+            Select Project
+            <select id="biology-notebook-project-select">
+              <option value="">Select project</option>
+            </select>
+          </label>
+          <label>
+            Select Protocol
+            <select id="biology-notebook-protocol-select">
+              <option value="">Select protocol</option>
+            </select>
+          </label>
+        </div>
       </div>
       <div id="biology-notebook-protocol-area" class="panel" hidden>
         <h3 id="biology-notebook-protocol-title"></h3>
@@ -582,12 +587,12 @@
           </label>
           <label>
             Related Chemicals (multi-select)
-            <select id="sample-link-chemicals" multiple size="4"></select>
+            <select id="sample-link-chemicals" multiple size="3"></select>
           </label>
           <div id="sample-location-fields" class="form-grid"></div>
           <label>
             Notes
-            <textarea id="sample-notes" rows="3"></textarea>
+            <textarea id="sample-notes" rows="2"></textarea>
           </label>
           <div class="form-actions">
             <button type="submit" class="primary-btn">Save Sample</button>
@@ -612,7 +617,7 @@
           <button type="button" id="assay-mode-create-btn" class="ghost-btn calendar-view-active">Create Assay</button>
           <button type="button" id="assay-mode-results-btn" class="ghost-btn">View &amp; Results</button>
         </div>
-        <p id="assay-mode-note" class="small-note"></p>
+        <p id="assay-mode-note" class="small-note" hidden></p>
       </div>
 
       <div class="panel assay-mode-create-panel">
@@ -653,15 +658,18 @@
             Concentration Axis
             <input id="assay-concentration-axis-display" readonly />
           </label>
+          <div class="form-actions assay-axis-actions">
+            <button type="button" id="assay-swap-axis-btn" class="ghost-btn">Switch Axes</button>
+          </div>
           <label>
             Link Notebook Page
             <select id="assay-notebook-entry">
               <option value="">Not linked</option>
             </select>
           </label>
-          <div id="assay-plate-definition" class="small-note"></div>
+          <div id="assay-plate-definition" class="small-note" hidden></div>
           <div id="assay-csv-status" class="small-note"></div>
-          <label>
+          <label hidden>
             Notes
             <textarea id="assay-notes" rows="3" placeholder="Optional assay notes"></textarea>
           </label>
@@ -683,8 +691,9 @@
 
       <div class="panel assay-mode-create-panel">
         <h3>Axis Template Mapping</h3>
-        <p class="small-note">Bulk-fill by row/column. Enter one value per line (or comma-separated).</p>
-        <div class="form-grid">
+        <p class="small-note">Define sample IDs and concentrations directly on axis positions for this plate.</p>
+        <div id="assay-axis-editor" class="assay-axis-editor"></div>
+        <div class="form-grid" hidden>
           <label>
             Sample ID Values (selected sample axis)
             <textarea id="assay-sample-axis-values" rows="4" placeholder="e.g. S1&#10;S2&#10;S3"></textarea>
@@ -701,7 +710,7 @@
 
       <div class="panel assay-mode-create-panel">
         <h3>Well Mapping</h3>
-        <p class="small-note">Enter well-level sample ID and concentration directly.</p>
+        <p class="small-note">Click a well in Plate Preview to load it here, then enter values (alternative to axis template).</p>
         <div class="form-grid">
           <label>
             Well
@@ -788,7 +797,7 @@
           </label>
           <label>
             Link Notebook Page
-            <select id="gel-notebook-entry">
+            <select id="gel-notebook-entry" class="gel-wide-field">
               <option value="">Not linked</option>
             </select>
           </label>
@@ -802,7 +811,7 @@
           </label>
           <label>
             Gel Image
-            <input id="gel-image-file" type="file" accept="image/*" />
+            <input id="gel-image-file" class="gel-wide-field" type="file" accept="image/*" />
           </label>
           <label>
             Ladder Lane (1-based)
@@ -821,7 +830,7 @@
           </label>
           <div class="form-actions">
             <button type="button" id="gel-reset-overrides-btn" class="ghost-btn">Reset Manual Overrides</button>
-            <span id="gel-override-status" class="small-note">Manual overrides: none</span>
+            <span id="gel-override-status" class="small-note" hidden>Manual overrides: none</span>
           </div>
           <div class="form-actions">
             <button type="button" id="gel-start-crop-btn" class="ghost-btn">Start Crop</button>
@@ -1211,6 +1220,18 @@
     <section id="workflow-management-view" class="view">
       <div class="panel">
         <h2>Workflows</h2>
+        <p class="small-note">Choose how you want to work with workflows.</p>
+        <div id="workflow-entry-panel" class="form-actions">
+          <button type="button" id="workflow-entry-create-btn" class="primary-btn">Create New Workflow</button>
+          <button type="button" id="workflow-entry-template-btn" class="ghost-btn">Create New Workflow Template</button>
+          <button type="button" id="workflow-entry-view-btn" class="ghost-btn">View/Edit Workflow</button>
+        </div>
+        <div id="workflow-entry-back-wrap" class="form-actions" hidden>
+          <button type="button" id="workflow-entry-back-btn" class="ghost-btn">Back to Workflow Actions</button>
+        </div>
+      </div>
+
+      <div class="panel workflow-editor-panel" hidden>
         <form id="workflow-form" class="stack-form">
           <input type="hidden" id="workflow-id" />
           <label>
@@ -1238,7 +1259,7 @@
         </form>
       </div>
 
-      <div class="panel">
+      <div class="panel workflow-editor-panel" hidden>
         <h3>Protocol Blocks</h3>
         <p class="small-note">Each block is a stored protocol. New blocks default assignee to yourself.</p>
         <div class="form-grid workflow-grid">
@@ -1255,7 +1276,7 @@
         <div id="workflow-block-list" class="list-table"></div>
       </div>
 
-      <div class="panel">
+      <div class="panel workflow-editor-panel" hidden>
         <h3>Graph Editor</h3>
         <p class="small-note">Drag blocks to arrange. Click an output dot, then an input dot to connect. Click a line to remove a connection.</p>
         <div id="workflow-graph-canvas" class="workflow-graph-canvas">
@@ -1269,7 +1290,7 @@
         <div id="workflow-graph-context-menu" class="workflow-context-menu" hidden></div>
       </div>
 
-      <div class="panel">
+      <div class="panel workflow-template-panel" hidden>
         <h3>Templates</h3>
         <p class="small-note">Templates save block + connection structure only. You can link project/pages after experiments.</p>
         <div class="form-grid workflow-grid">
@@ -1299,7 +1320,7 @@
         <div id="workflow-template-list" class="cards"></div>
       </div>
 
-      <div class="panel">
+      <div class="panel workflow-list-panel" hidden>
         <h3>Saved Workflows</h3>
         <div id="workflow-list" class="cards"></div>
       </div>
@@ -1768,6 +1789,7 @@
 
   <script src="./vendor/cropperjs/cropper.min.js"></script>
   <script src="./vendor/tabulator/tabulator.min.js"></script>
+  <script src="./vendor/jspdf.umd.min.js"></script>
   <script type="module" src="renderer.js"></script>
 </body>
 </html>

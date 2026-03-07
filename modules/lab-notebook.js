@@ -1,3 +1,5 @@
+import { exportNotebookEntryPdf } from './pdf-export.js';
+
 export function initLabNotebook({
   state,
   persist,
@@ -279,6 +281,7 @@ export function initLabNotebook({
           <div class="stack-form list-detail-content">
             <div class="card-actions">
               <button type="button" class="ghost-btn" data-notebook-edit="${entry.id}">Edit</button>
+              <button type="button" class="ghost-btn" data-notebook-export="${entry.id}">Export PDF</button>
             </div>
             <p><strong>Notebook Folder:</strong> ${safeText(entry.storageFolder || '-')}</p>
             ${chemistryHtml}
@@ -297,11 +300,26 @@ export function initLabNotebook({
   }
 
   function onEntryListClick(event) {
+    const exportBtn = event.target.closest('[data-notebook-export]');
+    if (exportBtn) {
+      exportEntryPdf(exportBtn.dataset.notebookExport);
+      return;
+    }
+
     const editBtn = event.target.closest('[data-notebook-edit]');
     if (!editBtn) {
       return;
     }
     editEntry(editBtn.dataset.notebookEdit);
+  }
+
+  function exportEntryPdf(entryId) {
+    const entry = state.notebookEntries.find((item) => item.id === entryId && matchesNotebookType(item));
+    if (!entry) {
+      return;
+    }
+    const protocol = state.protocols.find((item) => item.id === entry.protocolId) || null;
+    exportNotebookEntryPdf({ entry, protocol });
   }
 
   function editEntry(entryId) {

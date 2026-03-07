@@ -122,6 +122,17 @@ function massFromG(valueG, unit) {
   return factor ? valueG / factor : 0;
 }
 
+function formatSigFig(value, sigFigs = 4) {
+  if (!Number.isFinite(value) || value === 0) {
+    return '0';
+  }
+  const abs = Math.abs(value);
+  if (abs >= 1e4 || abs < 1e-3) {
+    return value.toExponential(Math.max(sigFigs - 1, 0));
+  }
+  return Number(value.toPrecision(sigFigs)).toString();
+}
+
 function cleanNucleotideSequence(raw, type = 'DNA') {
   const normalized = String(raw || '').toUpperCase().replace(/[^A-Z]/g, '');
   const targetType = type === 'RNA' ? 'RNA' : 'DNA';
@@ -781,7 +792,7 @@ export function initToolBox() {
         const requiredMl = (concentrationValue / 100) * volumeMl;
         const requiredUl = requiredMl * 1000;
         totalLiquidMl += requiredMl;
-        row.querySelector('.buffer-weight').textContent = `${name}: ${requiredMl.toFixed(4)} mL (${requiredUl.toFixed(1)} uL) at ${concentrationValue.toFixed(4)}% v/v`;
+        row.querySelector('.buffer-weight').textContent = `${name}: ${formatSigFig(requiredMl)} mL (${formatSigFig(requiredUl)} uL) at ${formatSigFig(concentrationValue)}% v/v`;
         return;
       }
 
@@ -790,10 +801,10 @@ export function initToolBox() {
       const grams = (concentrationMm / 1000) * volumeL * mw;
       const mg = grams * 1000;
       totalSolidMg += mg;
-      row.querySelector('.buffer-weight').textContent = `${name}: ${mg.toFixed(3)} mg (${grams.toFixed(6)} g) at ${concentrationMm.toFixed(3)} mM`;
+      row.querySelector('.buffer-weight').textContent = `${name}: ${formatSigFig(mg)} mg (${formatSigFig(grams)} g) at ${formatSigFig(concentrationMm)} mM`;
     });
 
-    bufferTotalResult.textContent = `Total solids: ${totalSolidMg.toFixed(3)} mg (${(totalSolidMg / 1000).toFixed(6)} g) | Total liquids: ${totalLiquidMl.toFixed(4)} mL (${(totalLiquidMl * 1000).toFixed(1)} uL)`;
+    bufferTotalResult.textContent = `Total solids: ${formatSigFig(totalSolidMg)} mg (${formatSigFig(totalSolidMg / 1000)} g) | Total liquids: ${formatSigFig(totalLiquidMl)} mL (${formatSigFig(totalLiquidMl * 1000)} uL)`;
   }
 
   function addRow() {

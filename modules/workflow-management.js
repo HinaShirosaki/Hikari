@@ -37,6 +37,15 @@ export function initWorkflowManagement({
   const workflowTemplateList = document.getElementById('workflow-template-list');
   const workflowList = document.getElementById('workflow-list');
   const workflowSubmitBtn = workflowForm?.querySelector('button[type="submit"]');
+  const workflowEntryPanel = document.getElementById('workflow-entry-panel');
+  const workflowEntryCreateBtn = document.getElementById('workflow-entry-create-btn');
+  const workflowEntryTemplateBtn = document.getElementById('workflow-entry-template-btn');
+  const workflowEntryViewBtn = document.getElementById('workflow-entry-view-btn');
+  const workflowEntryBackWrap = document.getElementById('workflow-entry-back-wrap');
+  const workflowEntryBackBtn = document.getElementById('workflow-entry-back-btn');
+  const workflowEditorPanels = [...document.querySelectorAll('#workflow-management-view .workflow-editor-panel')];
+  const workflowTemplatePanels = [...document.querySelectorAll('#workflow-management-view .workflow-template-panel')];
+  const workflowListPanels = [...document.querySelectorAll('#workflow-management-view .workflow-list-panel')];
 
   if (
     !workflowForm
@@ -68,9 +77,10 @@ export function initWorkflowManagement({
   let interactionSuppressUntil = 0;
   let graphWidth = GRAPH_MIN_WIDTH;
   let graphHeight = GRAPH_MIN_HEIGHT;
+  let workflowEntryMode = 'home';
 
   workflowForm.addEventListener('submit', onWorkflowSubmit);
-  workflowCancelBtn?.addEventListener('click', resetDraftToEmpty);
+  workflowCancelBtn?.addEventListener('click', onCancelWorkflowEdit);
   workflowProjectInput?.addEventListener('change', onProjectChange);
   workflowBlockAddBtn?.addEventListener('click', onAddBlock);
   workflowBlockList?.addEventListener('click', onBlockListClick);
@@ -88,6 +98,10 @@ export function initWorkflowManagement({
   workflowSaveTemplateBtn?.addEventListener('click', onSaveTemplate);
   workflowTemplateCreateBtn?.addEventListener('click', onCreateFromTemplate);
   workflowTemplateList?.addEventListener('click', onTemplateListClick);
+  workflowEntryCreateBtn?.addEventListener('click', onStartCreateWorkflow);
+  workflowEntryTemplateBtn?.addEventListener('click', onStartCreateWorkflowTemplate);
+  workflowEntryViewBtn?.addEventListener('click', onStartViewEditWorkflow);
+  workflowEntryBackBtn?.addEventListener('click', onBackToWorkflowEntry);
 
   window.addEventListener('mousemove', onWindowMouseMove);
   window.addEventListener('mouseup', onWindowMouseUp);
@@ -325,6 +339,57 @@ export function initWorkflowManagement({
     updateSelectionOverlay();
     applyDraftToForm();
     renderWorkflowList();
+  }
+
+  function setWorkflowEntryMode(nextMode) {
+    workflowEntryMode = nextMode === 'create' || nextMode === 'template' || nextMode === 'list'
+      ? nextMode
+      : 'home';
+
+    const showEditor = workflowEntryMode === 'create' || workflowEntryMode === 'template';
+    const showTemplates = workflowEntryMode === 'template';
+    const showList = workflowEntryMode === 'list';
+    const showHome = workflowEntryMode === 'home';
+
+    if (workflowEntryPanel) {
+      workflowEntryPanel.hidden = !showHome;
+    }
+    if (workflowEntryBackWrap) {
+      workflowEntryBackWrap.hidden = showHome;
+    }
+    workflowEditorPanels.forEach((panel) => {
+      panel.hidden = !showEditor;
+    });
+    workflowTemplatePanels.forEach((panel) => {
+      panel.hidden = !showTemplates;
+    });
+    workflowListPanels.forEach((panel) => {
+      panel.hidden = !showList;
+    });
+  }
+
+  function onStartCreateWorkflow() {
+    resetDraftToEmpty();
+    setWorkflowEntryMode('create');
+  }
+
+  function onStartCreateWorkflowTemplate() {
+    resetDraftToEmpty();
+    setWorkflowEntryMode('template');
+  }
+
+  function onStartViewEditWorkflow() {
+    setWorkflowEntryMode('list');
+  }
+
+  function onBackToWorkflowEntry() {
+    resetDraftToEmpty();
+    setWorkflowEntryMode('home');
+  }
+
+  function onCancelWorkflowEdit() {
+    resetDraftToEmpty();
+    setWorkflowEntryMode('home');
   }
 
   function notifyWorkflowsChanged() {
@@ -923,10 +988,11 @@ export function initWorkflowManagement({
 
     persist();
     notifyWorkflowsChanged();
-    resetDraftToEmpty();
+    cloneWorkflowIntoDraft(workflowRecord);
     renderTemplateSourceOptions();
     renderTemplateList();
     renderWorkflowList();
+    setWorkflowEntryMode('list');
   }
 
   function onAddBlock() {
@@ -1449,6 +1515,7 @@ export function initWorkflowManagement({
       cloneWorkflowIntoDraft(workflow);
       applyDraftToForm();
       renderWorkflowList();
+      setWorkflowEntryMode('create');
       return;
     }
 
@@ -1555,6 +1622,7 @@ export function initWorkflowManagement({
     cloneWorkflowIntoDraft(workflow);
     applyDraftToForm();
     renderWorkflowList();
+    setWorkflowEntryMode('create');
   }
 
   function onTemplateListClick(event) {
@@ -1598,6 +1666,7 @@ export function initWorkflowManagement({
     renderTemplateSourceOptions();
     renderTemplateList();
     renderWorkflowList();
+    setWorkflowEntryMode(workflowEntryMode);
   }
 
   return {

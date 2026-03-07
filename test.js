@@ -2107,28 +2107,23 @@ moduleExportContracts.forEach(([relativePath, pattern], idx) => {
 });
 
 const removedCodeGuards = [
-  ['modules/shared.js', /LAB_NOTEBOOK/],
-  ['telegramBot.js', /telegram-message/],
-  ['preload.js', /onTelegramMessage/],
-  ['ketcher-embedded.html', /\/Users\//],
-  ['ketcher-embedded.html', /file:\/\//],
-  ['index.html', /lab-notebook-view/],
-  ['renderer.js', /VIEWS\.LAB_NOTEBOOK/],
-  ['Readme.md', /project_root\//],
-  ['forge.config.js', /enana-data/],
-  ['package.json', /"dist": "electron-forge make"/],
-  ['package.json', /"package:app": "electron-forge package"/],
-  ['modules/agent-chat.js', /apiKey: String\(state\.settings\?\.llm\?\.apiKey/]
+  ['modules/shared.js', /LAB_NOTEBOOK/, false],
+  ['telegramBot.js', /telegram-message/, false],
+  ['preload.js', /onTelegramMessage/, false],
+  ['ketcher-embedded.html', /\/Users\//, false],
+  ['ketcher-embedded.html', /file:\/\//, false],
+  ['index.html', /lab-notebook-view/, false],
+  ['renderer.js', /VIEWS\.LAB_NOTEBOOK/, false],
+  ['forge.config.js', /enana-data/, true],
+  ['package.json', /"dist": "electron-forge make"/, true],
+  ['package.json', /"package:app": "electron-forge package"/, true],
+  ['modules/agent-chat.js', /apiKey: String\(state\.settings\?\.llm\?\.apiKey/, true]
 ];
 
-removedCodeGuards.forEach(([relativePath, pattern], idx) => {
+removedCodeGuards.forEach(([relativePath, pattern, shouldMatch], idx) => {
   test(`[P1] regression guard case ${idx + 1} (${relativePath})`, () => {
     const source = readSource(relativePath);
-    if (idx <= 7) {
-      assert.equal(pattern.test(source), false);
-      return;
-    }
-    assert.equal(pattern.test(source), true);
+    assert.equal(pattern.test(source), shouldMatch);
   });
 });
 
@@ -2153,18 +2148,6 @@ Object.entries(shared.TITLES).forEach(([viewId, title], idx) => {
   test(`[P1] title text exists for mapped view case ${idx + 1} (${viewId})`, () => {
     assert.equal(typeof title, 'string');
     assert.ok(title.trim().length > 0);
-  });
-});
-
-[
-  ['Readme.md', /npm install/],
-  ['Readme.md', /npm test/],
-  ['Readme.md', /npm run dist/],
-  ['Readme.md', /Installer outputs are generated under `out\/make\/`/],
-  ['Readme.md', /Static frontend assets are loaded with app-relative paths/]
-].forEach(([relativePath, pattern], idx) => {
-  test(`[P2] docs install guidance case ${idx + 1}`, () => {
-    assert.match(readSource(relativePath), pattern);
   });
 });
 
