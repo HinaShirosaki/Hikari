@@ -257,7 +257,12 @@
             <button type="button" id="protocol-sort-order-btn" class="ghost-btn">Order: Low to High</button>
           </div>
         </div>
-        <p id="protocol-share-status" class="small-note">Click Share on a protocol, then select teammate and confirm.</p>
+        <p id="protocol-share-status" class="small-note">Click Share on a protocol to send it to a teammate or copy a portable share link.</p>
+        <div id="protocol-share-link-panel" class="protocol-preview-block" hidden>
+          <h4>Portable Share Link</h4>
+          <p class="small-note">Paste this link into chat or email. Recipients can import it from Collaborations.</p>
+          <textarea id="protocol-share-link-output" rows="3" readonly></textarea>
+        </div>
         <div id="protocol-list" class="list-table"></div>
       </div>
 

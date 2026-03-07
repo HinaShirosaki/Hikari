@@ -789,7 +789,7 @@ test('collaboration-management sends messages and imports protocol share links',
   assert.ok(persistCalls >= 3);
 });
 
-test('protocol-management supports draft creation, sharing, and delete cascades', () => {
+test('protocol-management supports draft creation, sharing, link copy, and delete cascades', async () => {
   const document = createMockDocument([
     'protocol-list-panel',
     'protocol-editor-panel',
@@ -810,6 +810,8 @@ test('protocol-management supports draft creation, sharing, and delete cascades'
     'add-placeholder-btn',
     'placeholder-name',
     'protocol-share-status',
+    'protocol-share-link-panel',
+    'protocol-share-link-output',
     'protocol-list',
     'protocol-sort-field-btn',
     'protocol-sort-order-btn'
@@ -830,6 +832,7 @@ test('protocol-management supports draft creation, sharing, and delete cascades'
 
   let persistCalls = 0;
   let importedCalls = 0;
+  let copiedText = '';
   const tracked = [];
   const state = {
     protocols: [],
@@ -853,7 +856,14 @@ test('protocol-management supports draft creation, sharing, and delete cascades'
   const protocolModule = loadEsmStyleModule(path.join(__dirname, 'modules', 'protocol-management.js'), {
     document,
     TextEncoder,
-    btoa: btoaPolyfill
+    btoa: btoaPolyfill,
+    navigator: {
+      clipboard: {
+        writeText: async (value) => {
+          copiedText = String(value || '');
+        }
+      }
+    }
   });
   const protocol = protocolModule.initProtocolManagement({
     state,
@@ -913,6 +923,20 @@ test('protocol-management supports draft creation, sharing, and delete cascades'
   assert.equal(state.messages[0].type, 'protocol_share');
   assert.match(state.messages[0].payload.shareLink, /^enana:\/\/protocol-share\//);
   assert.equal(tracked[0].name, 'protocol_share_sent');
+
+  protocol.renderList();
+  const reopenedShareBtn = protocolList.querySelectorAll('[data-protocol-share]')[0];
+  trigger(reopenedShareBtn, 'click');
+
+  const copyLinkBtn = protocolList.querySelectorAll('[data-protocol-copy-link]')[0];
+  trigger(copyLinkBtn, 'click');
+  await flushAsync();
+
+  assert.equal(copiedText, state.messages[0].payload.shareLink);
+  assert.equal(tracked[1].name, 'protocol_share_link_copied');
+  assert.equal(document.getElementById('protocol-share-link-panel').hidden, false);
+  assert.equal(document.getElementById('protocol-share-link-output').value, copiedText);
+  assert.match(document.getElementById('protocol-share-status').textContent, /Copied a share link/);
 
   const protocolId = state.protocols[0].id;
   state.notebookEntries = [{ id: 'entry-1', protocolId, projectId: 'project-1' }];

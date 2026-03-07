@@ -36,11 +36,13 @@ export function initProtocolManagement({
   const placeholderNameInput = document.getElementById('placeholder-name');
 
   const protocolShareStatus = document.getElementById('protocol-share-status');
+  const protocolShareLinkPanel = document.getElementById('protocol-share-link-panel');
+  const protocolShareLinkOutput = document.getElementById('protocol-share-link-output');
   const protocolList = document.getElementById('protocol-list');
   const protocolSortFieldBtn = document.getElementById('protocol-sort-field-btn');
   const protocolSortOrderBtn = document.getElementById('protocol-sort-order-btn');
 
-  const defaultShareStatus = 'Click Share on a protocol, then select teammate and confirm.';
+  const defaultShareStatus = 'Click Share on a protocol to send it to a teammate or copy a portable share link.';
 
   let currentProtocolDraft = createEmptyDraft();
   let activeShareProtocolId = '';
@@ -345,6 +347,27 @@ export function initProtocolManagement({
     protocolShareStatus.textContent = message;
   }
 
+  function setShareLinkOutput(link = '', options = {}) {
+    if (!protocolShareLinkPanel || !protocolShareLinkOutput) {
+      return;
+    }
+
+    const normalizedLink = String(link || '').trim();
+    if (!normalizedLink) {
+      protocolShareLinkOutput.value = '';
+      protocolShareLinkPanel.hidden = true;
+      return;
+    }
+
+    protocolShareLinkPanel.hidden = false;
+    protocolShareLinkOutput.value = normalizedLink;
+
+    if (options.selectText !== false) {
+      protocolShareLinkOutput.focus();
+      protocolShareLinkOutput.setSelectionRange(0, normalizedLink.length);
+    }
+  }
+
   function resolveSenderEmail() {
     const personal = String(state.settings?.personalInfo?.enanaEmail || '').trim();
     if (personal) {
@@ -478,6 +501,46 @@ export function initProtocolManagement({
     return encodeBase64Url(JSON.stringify(payload));
   }
 
+  function buildProtocolShareLink(protocol) {
+    return `${PROTOCOL_SHARE_LINK_PREFIX}${buildProtocolShareToken(protocol)}`;
+  }
+
+  async function copyProtocolShareLink(protocolId) {
+    const protocol = state.protocols.find((item) => item.id === protocolId);
+    if (!protocol) {
+      return;
+    }
+
+    const shareLink = buildProtocolShareLink(protocol);
+    const clipboard = globalThis.navigator?.clipboard;
+
+    if (clipboard?.writeText) {
+      try {
+        await clipboard.writeText(shareLink);
+        trackGrowthEvent?.(state, 'protocol_share_link_copied', {
+          protocolId: protocol.id,
+          protocolName: protocol.name,
+          from: resolveSenderEmail()
+        });
+        persist();
+        setShareStatus(`Copied a share link for "${protocol.name}". Paste it anywhere to invite an import.`);
+        setShareLinkOutput(shareLink);
+        activeShareProtocolId = '';
+        activeShareTargetEmail = '';
+        renderList();
+        return;
+      } catch {
+        // Fall through to manual copy mode when clipboard access is unavailable.
+      }
+    }
+
+    setShareStatus(`Share link ready for "${protocol.name}". Copy it from the field below.`);
+    setShareLinkOutput(shareLink);
+    activeShareProtocolId = '';
+    activeShareTargetEmail = '';
+    renderList();
+  }
+
   function shareProtocol(protocolId, toEmail) {
     const protocol = state.protocols.find((item) => item.id === protocolId);
     if (!protocol) {
@@ -497,7 +560,7 @@ export function initProtocolManagement({
     }
 
     const protocolPayload = serializeProtocol(protocol);
-    const token = buildProtocolShareToken(protocol);
+    const shareLink = buildProtocolShareLink(protocol);
 
     state.messages.push({
       id: createId(),
@@ -511,7 +574,7 @@ export function initProtocolManagement({
       type: 'protocol_share',
       payload: {
         protocol: protocolPayload,
-        shareLink: `${PROTOCOL_SHARE_LINK_PREFIX}${token}`
+        shareLink
       }
     });
 
@@ -524,6 +587,7 @@ export function initProtocolManagement({
 
     persist();
     setShareStatus(`Shared "${protocol.name}" with ${to}.`);
+    setShareLinkOutput('');
     activeShareProtocolId = '';
     activeShareTargetEmail = '';
     renderList();
@@ -790,6 +854,7 @@ export function initProtocolManagement({
 
     persist();
     renderList();
+    setShareLinkOutput('');
     showListPanel({ resetEditor: true });
     onProtocolsChanged();
   }
@@ -884,6 +949,7 @@ export function initProtocolManagement({
               ${shareOptions.join('')}
             </select>
             <button type="button" class="primary-btn" data-protocol-share-confirm="${protocol.id}" ${activeShareTargetEmail ? '' : 'disabled'}>Confirm</button>
+            <button type="button" class="ghost-btn" data-protocol-copy-link="${protocol.id}">Copy Link</button>
             <button type="button" class="ghost-btn" data-protocol-share-cancel>Cancel</button>
           </div>
         ` : ''}
@@ -937,6 +1003,12 @@ export function initProtocolManagement({
       button.addEventListener('click', () => {
         const protocolId = String(button.dataset.protocolShareConfirm || '');
         shareProtocol(protocolId, activeShareTargetEmail);
+      });
+    });
+
+    protocolList.querySelectorAll('[data-protocol-copy-link]').forEach((button) => {
+      button.addEventListener('click', () => {
+        void copyProtocolShareLink(String(button.dataset.protocolCopyLink || ''));
       });
     });
 

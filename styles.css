@@ -520,6 +520,7 @@ button:disabled {
   grid-column: 1 / -1;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
   padding-top: 8px;
   border-top: 1px solid rgba(255, 255, 255, 0.65);
@@ -528,6 +529,17 @@ button:disabled {
 .protocol-share-inline select {
   min-width: 220px;
   max-width: 100%;
+}
+
+#protocol-share-link-panel {
+  margin-bottom: 12px;
+}
+
+#protocol-share-link-output {
+  width: 100%;
+  min-height: 72px;
+  resize: vertical;
+  margin-top: 8px;
 }
 
 .protocol-view-btn {
