@@ -715,6 +715,24 @@ export function initToolBox() {
   const plannotateMinIdentityInput = document.getElementById('plannotate-min-identity');
   const plannotateMinCoverageInput = document.getElementById('plannotate-min-coverage');
   const plannotateMinLengthInput = document.getElementById('plannotate-min-length');
+  const plannotateMapHost = document.getElementById('plannotate-map');
+  const plannotateMapMeta = document.getElementById('plannotate-map-meta');
+  const plannotateHitCount = document.getElementById('plannotate-hit-count');
+  const plannotateTableBody = document.getElementById('plannotate-table-body');
+  const plannotateRunStatus = document.getElementById('plannotate-run-status');
+  const plannotateModeTextBtn = document.getElementById('plannotate-mode-text');
+  const plannotateModeFileBtn = document.getElementById('plannotate-mode-file');
+  const plannotateTextPanel = document.getElementById('plannotate-text-panel');
+  const plannotateFilePanel = document.getElementById('plannotate-file-panel');
+  const plannotateFileInput = document.getElementById('plannotate-file-input');
+  const plannotateFileChooseBtn = document.getElementById('plannotate-file-choose');
+  const plannotateFileName = document.getElementById('plannotate-file-name');
+
+  const plannotateState = {
+    mode: 'text',
+    fileName: '',
+    fileText: ''
+  };
 
   function getSelectedCompound(row) {
     const select = row.querySelector('.buffer-chemical-select');
@@ -1057,55 +1075,202 @@ export function initToolBox() {
     return `${start}..${sequenceLength}, 1..${end}`;
   }
 
+  function setPlannotateStatus(message, isError = false) {
+    if (!plannotateRunStatus) {
+      return;
+    }
+    plannotateRunStatus.textContent = message;
+    plannotateRunStatus.style.color = isError ? 'var(--danger)' : '';
+  }
+
+  function setPlannotateMode(mode) {
+    const resolvedMode = mode === 'file' ? 'file' : 'text';
+    plannotateState.mode = resolvedMode;
+
+    if (plannotateModeTextBtn) {
+      plannotateModeTextBtn.classList.toggle('plannotate-mode-btn-active', resolvedMode === 'text');
+    }
+    if (plannotateModeFileBtn) {
+      plannotateModeFileBtn.classList.toggle('plannotate-mode-btn-active', resolvedMode === 'file');
+    }
+    if (plannotateTextPanel) {
+      plannotateTextPanel.hidden = resolvedMode !== 'text';
+    }
+    if (plannotateFilePanel) {
+      plannotateFilePanel.hidden = resolvedMode !== 'file';
+    }
+  }
+
+  function clearPlannotateTable(message = 'No annotations yet.') {
+    if (!plannotateTableBody) {
+      return;
+    }
+    plannotateTableBody.innerHTML = `
+      <tr>
+        <td colspan="8" class="small-note">${escapeHtml(message)}</td>
+      </tr>
+    `;
+  }
+
+  function renderPlannotateEmptyMap(message = 'Run annotation to display the plasmid map.') {
+    if (!plannotateMapHost) {
+      return;
+    }
+    plannotateMapHost.innerHTML = `<p class="small-note">${escapeHtml(message)}</p>`;
+  }
+
+  function normalizeIupacDna(raw) {
+    return String(raw || '')
+      .toUpperCase()
+      .replace(/U/g, 'T')
+      .replace(/[^ACGTRYSWKMBDHVN]/g, '');
+  }
+
+  function extractPlannotateSequence(rawInput) {
+    const raw = String(rawInput || '');
+    const trimmed = raw.trim();
+    if (!trimmed) {
+      return { sequence: '', warning: '' };
+    }
+
+    const hasGenbankHeader = /^\s*LOCUS\b/im.test(trimmed);
+    const originMatch = trimmed.match(/^\s*ORIGIN\b([\s\S]*)$/im);
+    if (originMatch) {
+      const fromOrigin = originMatch[1];
+      const stopIndex = fromOrigin.search(/^\s*\/\/\s*$/m);
+      const originBody = stopIndex >= 0 ? fromOrigin.slice(0, stopIndex) : fromOrigin;
+      const sequence = normalizeIupacDna(originBody);
+      return {
+        sequence,
+        warning: sequence ? '' : 'GenBank ORIGIN block was found but no DNA symbols were parsed.'
+      };
+    }
+
+    if (hasGenbankHeader) {
+      return {
+        sequence: '',
+        warning: 'GenBank input detected, but no ORIGIN section was found.'
+      };
+    }
+
+    if (/^\s*>/m.test(trimmed)) {
+      const sequence = normalizeIupacDna(trimmed.replace(/^>.*$/gm, ''));
+      return { sequence, warning: '' };
+    }
+
+    return {
+      sequence: normalizeIupacDna(trimmed),
+      warning: ''
+    };
+  }
+
+  function readPlannotateFile(file) {
+    return new Promise((resolve, reject) => {
+      if (!file) {
+        reject(new Error('No file selected.'));
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(new Error('Failed to read selected file.'));
+      reader.readAsText(file);
+    });
+  }
+
   function renderPlannotate() {
-    if (!plannotateResult || !plannotateSequenceInput) {
+    if (!plannotateResult) {
       return;
     }
 
-    const raw = plannotateSequenceInput.value;
-    if (!raw.trim()) {
-      plannotateResult.innerHTML = '<p class="small-note">Paste a DNA sequence or FASTA entry to annotate.</p>';
+    const raw = plannotateState.mode === 'file'
+      ? plannotateState.fileText
+      : (plannotateSequenceInput?.value || '');
+
+    const parsed = extractPlannotateSequence(raw);
+    if (!parsed.sequence) {
+      const emptyReason = plannotateState.mode === 'file'
+        ? (plannotateState.fileName ? 'Selected file does not contain a valid sequence.' : 'Choose a FASTA/GenBank file to annotate.')
+        : 'Paste a DNA sequence, FASTA entry, or GenBank content to annotate.';
+
+      if (plannotateMapMeta) {
+        plannotateMapMeta.textContent = '';
+      }
+      if (plannotateHitCount) {
+        plannotateHitCount.textContent = '0 hits';
+      }
+      renderPlannotateEmptyMap(emptyReason);
+      clearPlannotateTable(emptyReason);
+      plannotateResult.innerHTML = parsed.warning
+        ? `<p class="small-note">${escapeHtml(parsed.warning)}</p>`
+        : `<p class="small-note">${escapeHtml(emptyReason)}</p>`;
+      setPlannotateStatus('Idle');
       return;
     }
 
-    const result = annotatePlasmidSequence(raw, {
+    const baseOptions = {
       topology: plannotateTopologySelect?.value || 'circular',
       detailed: Boolean(plannotateDetailedToggle?.checked),
       minIdentity: toNumber(plannotateMinIdentityInput?.value || 85),
       minCoverage: toNumber(plannotateMinCoverageInput?.value || 25) / 100,
       minHitLength: Math.round(toNumber(plannotateMinLengthInput?.value || 24))
-    });
+    };
 
-    const warningRows = (result.warnings || [])
+    let result = annotatePlasmidSequence(parsed.sequence, baseOptions);
+    let relaxedWarning = '';
+    if (!result.hits.length && !baseOptions.detailed) {
+      const relaxed = annotatePlasmidSequence(parsed.sequence, {
+        ...baseOptions,
+        detailed: true,
+        minIdentity: Math.min(baseOptions.minIdentity, 78),
+        minCoverage: Math.min(baseOptions.minCoverage, 0.16),
+        minHitLength: Math.min(baseOptions.minHitLength, 18)
+      });
+      if (relaxed.hits.length) {
+        result = relaxed;
+        relaxedWarning = 'No strict hits found. Displaying relaxed detailed matches.';
+      }
+    }
+
+    const warnings = [];
+    if (parsed.warning) {
+      warnings.push(parsed.warning);
+    }
+    if (relaxedWarning) {
+      warnings.push(relaxedWarning);
+    }
+    warnings.push(...(result.warnings || []));
+
+    const warningRows = warnings
       .map((warning) => `<p class="small-note">${escapeHtml(warning)}</p>`)
       .join('');
 
-    if (!result.sequenceLength) {
-      plannotateResult.innerHTML = `
-        <p class="small-note">No valid DNA bases detected. Valid symbols: A, C, G, T, and IUPAC ambiguity codes.</p>
-        ${warningRows}
-      `;
-      return;
+    if (plannotateMapMeta) {
+      plannotateMapMeta.textContent = `${result.sequenceLength.toLocaleString()} bp · ${result.topology}`;
     }
-
-    if (!result.hits.length) {
-      const emptyMap = result.topology === 'linear'
-        ? renderPlannotateLinearMap(result)
-        : renderPlannotateCircularMap(result);
-      plannotateResult.innerHTML = `
-        <p><strong>Sequence length:</strong> ${result.sequenceLength.toLocaleString()} bp</p>
-        <p><strong>Reference features scanned:</strong> ${result.stats.referenceFeatures}</p>
-        <p class="small-note">No annotations passed the current thresholds.</p>
-        ${emptyMap}
-        ${warningRows}
-      `;
-      return;
+    if (plannotateHitCount) {
+      plannotateHitCount.textContent = `${result.hits.length} hits`;
     }
 
     const mapMarkup = result.topology === 'linear'
       ? renderPlannotateLinearMap(result)
       : renderPlannotateCircularMap(result);
     const legendMarkup = renderPlannotateLegend(result.hits);
+    if (plannotateMapHost) {
+      plannotateMapHost.innerHTML = mapMarkup
+        ? `${mapMarkup}${legendMarkup}`
+        : '<p class="small-note">No annotations passed the current thresholds.</p>';
+    }
+
+    if (!result.hits.length) {
+      clearPlannotateTable('No annotations passed the current thresholds.');
+      plannotateResult.innerHTML = `
+        <p><strong>Reference features scanned:</strong> ${result.stats.referenceFeatures}</p>
+        <p class="small-note">No annotations passed the current thresholds.</p>
+        ${warningRows}
+      `;
+      setPlannotateStatus('Completed: 0 hits');
+      return;
+    }
 
     const tableRows = result.hits.map((hit, index) => `
       <tr>
@@ -1120,32 +1285,17 @@ export function initToolBox() {
       </tr>
     `).join('');
 
+    if (plannotateTableBody) {
+      plannotateTableBody.innerHTML = tableRows;
+    }
+
     plannotateResult.innerHTML = `
       <p><strong>Sequence length:</strong> ${result.sequenceLength.toLocaleString()} bp</p>
       <p><strong>Hits:</strong> ${result.stats.finalHits} (exact: ${result.stats.exactHits}, partial: ${result.stats.partialHits})</p>
       <p><strong>Reference features scanned:</strong> ${result.stats.referenceFeatures}</p>
-      ${mapMarkup}
-      ${legendMarkup}
       ${warningRows}
-      <div class="plannotate-table-wrap">
-        <table class="plannotate-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Feature</th>
-              <th>Type</th>
-              <th>Location (1-based)</th>
-              <th>Strand</th>
-              <th>Identity</th>
-              <th>Coverage</th>
-              <th>Mode</th>
-            </tr>
-          </thead>
-          <tbody>${tableRows}</tbody>
-        </table>
-      </div>
-      <p class="small-note">Includes plasmid map visualization and table summary from the same annotation hits.</p>
     `;
+    setPlannotateStatus(`Completed: ${result.hits.length} hits`);
   }
 
   function resolveChemicalName(row) {
@@ -1239,24 +1389,62 @@ export function initToolBox() {
   });
 
   if (plannotateForm) {
-    let plannotateRenderTimer = null;
-    const scheduleRender = typeof setTimeout === 'function'
-      ? (fn) => setTimeout(fn, 220)
-      : (fn) => {
-        fn();
-        return null;
-      };
-    const cancelRender = typeof clearTimeout === 'function'
-      ? (id) => clearTimeout(id)
-      : () => {};
+    setPlannotateMode('text');
+    setPlannotateStatus('Idle');
+    renderPlannotateEmptyMap('Run annotation to display the plasmid map.');
+    clearPlannotateTable('No annotations yet.');
 
-    plannotateForm.addEventListener('input', () => {
-      cancelRender(plannotateRenderTimer);
-      plannotateRenderTimer = scheduleRender(renderPlannotate);
+    plannotateModeTextBtn?.addEventListener('click', () => {
+      setPlannotateMode('text');
+      setPlannotateStatus('Idle');
     });
+
+    plannotateModeFileBtn?.addEventListener('click', () => {
+      setPlannotateMode('file');
+      setPlannotateStatus('Idle');
+    });
+
+    plannotateFileChooseBtn?.addEventListener('click', () => {
+      plannotateFileInput?.click();
+    });
+
+    plannotateFileInput?.addEventListener('change', async () => {
+      const file = plannotateFileInput.files?.[0];
+      if (!file) {
+        return;
+      }
+      try {
+        setPlannotateStatus('Loading file...');
+        plannotateState.fileText = await readPlannotateFile(file);
+        plannotateState.fileName = file.name || '';
+        if (plannotateFileName) {
+          plannotateFileName.textContent = plannotateState.fileName || 'No file selected';
+        }
+        setPlannotateStatus(`Loaded ${plannotateState.fileName || 'file'}`);
+      } catch (error) {
+        plannotateState.fileText = '';
+        plannotateState.fileName = '';
+        if (plannotateFileName) {
+          plannotateFileName.textContent = 'No file selected';
+        }
+        setPlannotateStatus(error.message || 'Failed to load file.', true);
+      }
+    });
+
+    plannotateSequenceInput?.addEventListener('input', () => {
+      if (plannotateState.mode === 'text') {
+        setPlannotateStatus('Ready');
+      }
+    });
+
     plannotateForm.addEventListener('submit', (event) => {
       event.preventDefault();
-      renderPlannotate();
+      setPlannotateStatus('Running annotation...');
+      try {
+        renderPlannotate();
+      } catch (error) {
+        setPlannotateStatus(error.message || 'Annotation failed.', true);
+      }
     });
   }
 

@@ -1674,12 +1674,101 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   font-size: 0.9rem;
 }
 
+.plannotate-ui-shell {
+  display: grid;
+  gap: 12px;
+}
+
+.plannotate-controls {
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  background: linear-gradient(156deg, rgba(255, 255, 255, 0.68), rgba(236, 248, 255, 0.48));
+  padding: 12px;
+}
+
+.plannotate-mode-switch {
+  display: inline-grid;
+  grid-auto-flow: column;
+  gap: 6px;
+  align-self: start;
+  padding: 5px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  background: rgba(243, 248, 255, 0.72);
+}
+
+.plannotate-mode-btn {
+  border: 0;
+  border-radius: 8px;
+  padding: 8px 11px;
+  font: inherit;
+  font-weight: 650;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.plannotate-mode-btn-active {
+  color: #fff;
+  background: var(--accent);
+}
+
+.plannotate-mode-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.plannotate-input-panel {
+  display: grid;
+  gap: 8px;
+}
+
+.plannotate-results-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+}
+
+.plannotate-result-card {
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  background: linear-gradient(156deg, rgba(255, 255, 255, 0.68), rgba(236, 248, 255, 0.48));
+  padding: 12px;
+}
+
+.plannotate-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.plannotate-card-head h4 {
+  margin: 0;
+  color: var(--primary);
+}
+
+.plannotate-map-host {
+  min-height: 420px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.48);
+  padding: 10px;
+}
+
+.plannotate-map-host .plannotate-map-shell,
+.plannotate-map-host .plannotate-legend {
+  margin-top: 0;
+}
+
 .plannotate-table-wrap {
-  margin-top: 10px;
+  margin-top: 0;
   border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.7);
   background: rgba(255, 255, 255, 0.45);
   overflow: auto;
+  max-height: 458px;
 }
 
 .plannotate-table {
@@ -1806,7 +1895,7 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
 }
 
 .plannotate-legend {
-  margin-top: 10px;
+  margin-top: 8px;
   display: flex;
   flex-wrap: wrap;
   gap: 7px 10px;
@@ -1825,6 +1914,12 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   height: 11px;
   border-radius: 3px;
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+}
+
+@media (max-width: 1240px) {
+  .plannotate-results-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .molarity-block {
@@ -2128,6 +2223,30 @@ body.theme-night .plannotate-table td {
 
 body.theme-night .plannotate-table th {
   background: rgba(31, 47, 72, 0.95);
+}
+
+body.theme-night .plannotate-controls,
+body.theme-night .plannotate-result-card {
+  border-color: rgba(186, 218, 255, 0.3);
+  background: linear-gradient(160deg, rgba(34, 52, 78, 0.7), rgba(20, 31, 48, 0.6));
+}
+
+body.theme-night .plannotate-mode-switch {
+  border-color: rgba(186, 218, 255, 0.34);
+  background: rgba(27, 40, 61, 0.62);
+}
+
+body.theme-night .plannotate-mode-btn {
+  color: rgba(213, 234, 255, 0.8);
+}
+
+body.theme-night .plannotate-mode-btn-active {
+  color: #fff;
+}
+
+body.theme-night .plannotate-map-host {
+  border-color: rgba(186, 218, 255, 0.3);
+  background: rgba(20, 31, 48, 0.48);
 }
 
 body.theme-night .plannotate-map-shell {
