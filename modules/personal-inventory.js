@@ -1,4 +1,4 @@
-export function initPersonalInventory({ state, persist, createId, safeText, cssEscape }) {
+export function initPersonalInventory({ state, persist, createId, safeText, cssEscape, onSamplesChanged }) {
   const inventorySections = document.getElementById('inventory-sections');
   const containerDetail = document.getElementById('container-detail');
   const addContainerBtn = document.getElementById('inventory-add-container-btn');
@@ -10,6 +10,8 @@ export function initPersonalInventory({ state, persist, createId, safeText, cssE
 
   let selectedContainer = null;
   let editingWellIndex = null;
+  let editingSampleId = '';
+  let wellEditorStatus = '';
   let isAddContainerFormOpen = false;
   const SAMPLE_TYPE_COLORS = {
     plasmid: '#2f6fec',
@@ -64,6 +66,60 @@ export function initPersonalInventory({ state, persist, createId, safeText, cssE
     });
   }
 
+  function ensureSamples() {
+    if (!Array.isArray(state.samples)) {
+      state.samples = [];
+    }
+  }
+
+  function makeDefaultSampleCode() {
+    return `S-${Date.now().toString().slice(-6)}`;
+  }
+
+  function normalizeSampleCode(value) {
+    return String(value || '')
+      .trim()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-zA-Z0-9._-]/g, '');
+  }
+
+  function getSampleById(sampleId) {
+    return (state.samples || []).find((sample) => sample.id === sampleId) || null;
+  }
+
+  function isLocationEmpty(location) {
+    if (!location || typeof location !== 'object') {
+      return true;
+    }
+    return Object.entries(location)
+      .filter(([key]) => key !== 'storageType')
+      .every(([, value]) => !String(value || '').trim());
+  }
+
+  function buildAutoLocationFromLink(section, container, index) {
+    if (section === '4 Degree') {
+      return {
+        storageType: 'fridge',
+        fridge: '4 Degree',
+        shelf: container.name || ''
+      };
+    }
+    if (section === 'Room Temp') {
+      return {
+        storageType: 'rt_cabinet',
+        cabinet: 'Room Temp',
+        slot: container.name || ''
+      };
+    }
+    return {
+      storageType: 'freezer',
+      freezer: section,
+      rack: '',
+      box: container.name || '',
+      position: String(Number(index) + 1)
+    };
+  }
+
   function normalizeSampleType(type) {
     const key = String(type || '').trim().toLowerCase();
     if (!key) {
@@ -78,6 +134,14 @@ export function initPersonalInventory({ state, persist, createId, safeText, cssE
 
   function getSampleTypeLabel(type) {
     return SAMPLE_TYPE_LABELS[normalizeSampleType(type)] || SAMPLE_TYPE_LABELS.other;
+  }
+
+  function renderSampleTypeOptions(selectedType = 'plasmid') {
+    const selected = normalizeSampleType(selectedType);
+    return Object.entries(SAMPLE_TYPE_LABELS)
+      .filter(([value]) => value !== 'other')
+      .map(([value, label]) => `<option value="${safeText(value)}"${selected === value ? ' selected' : ''}>${safeText(label)}</option>`)
+      .join('');
   }
 
   function buildSampleDotFill(sampleTypes) {
@@ -141,15 +205,103 @@ export function initPersonalInventory({ state, persist, createId, safeText, cssE
     };
   }
 
-  function renderWellEditor(container, index) {
+  function renderWellEditor(section, container, index) {
     if (!Number.isInteger(index) || index < 0) {
-      return '';
+      return `
+        <div class="well-inline-editor well-side-editor">
+          <p class="small-note well-editor-empty">Select one cell to edit well and sample information.</p>
+        </div>
+      `;
     }
 
     const well = getWellData(container.wells[index], index);
+    const linkedSamples = getLinkedSamples(section, container.id, index);
+    const activeSample = linkedSamples.find((item) => item.id === editingSampleId) || linkedSamples[0] || null;
+    const statusMarkup = wellEditorStatus ? `<p class="small-note well-editor-status">${safeText(wellEditorStatus)}</p>` : '';
+    const sampleSelector = linkedSamples.length > 1
+      ? `
+        <label>
+          Linked Sample
+          <select data-well-sample-select="${index}">
+            ${linkedSamples.map((item) => `
+              <option value="${safeText(item.id)}"${activeSample && item.id === activeSample.id ? ' selected' : ''}>
+                ${safeText(item.code || item.name || item.id)}
+              </option>
+            `).join('')}
+          </select>
+        </label>
+      `
+      : '';
+    const sampleSection = activeSample
+      ? `
+        ${sampleSelector}
+        <label>
+          Sample Code
+          <input data-well-sample-code value="${safeText(activeSample.code || '')}" placeholder="e.g. S-001" />
+        </label>
+        <label>
+          Sample Name
+          <input data-well-sample-name value="${safeText(activeSample.name || '')}" required />
+        </label>
+        <label>
+          Type
+          <select data-well-sample-type>
+            ${renderSampleTypeOptions(activeSample.type || 'plasmid')}
+          </select>
+        </label>
+        <label>
+          Lot / Batch
+          <input data-well-sample-lot value="${safeText(activeSample.lot || '')}" />
+        </label>
+        <label>
+          Concentration
+          <input data-well-sample-concentration value="${safeText(activeSample.concentration || '')}" placeholder="e.g. 2 mg/mL" />
+        </label>
+        <label>
+          Notes
+          <textarea data-well-sample-notes rows="3">${safeText(activeSample.notes || '')}</textarea>
+        </label>
+        <div class="inline-row">
+          <button type="button" class="primary-btn" data-well-sample-save="${safeText(activeSample.id)}">Save Sample</button>
+          <button type="button" class="ghost-btn" data-well-sample-unlink="${safeText(activeSample.id)}">Unlink Sample</button>
+        </div>
+      `
+      : `
+        <p class="small-note">No sample linked to this cell yet.</p>
+        <label>
+          Sample Code
+          <input data-well-sample-new-code placeholder="e.g. S-001" />
+        </label>
+        <label>
+          Sample Name
+          <input data-well-sample-new-name placeholder="Required" />
+        </label>
+        <label>
+          Type
+          <select data-well-sample-new-type>
+            ${renderSampleTypeOptions('plasmid')}
+          </select>
+        </label>
+        <label>
+          Lot / Batch
+          <input data-well-sample-new-lot />
+        </label>
+        <label>
+          Concentration
+          <input data-well-sample-new-concentration placeholder="e.g. 2 mg/mL" />
+        </label>
+        <label>
+          Notes
+          <textarea data-well-sample-new-notes rows="3"></textarea>
+        </label>
+        <div class="inline-row">
+          <button type="button" class="primary-btn" data-well-sample-create="${index}">Create Linked Sample</button>
+        </div>
+      `;
+
     return `
-      <div class="well-inline-editor">
-        <strong>Well ${index + 1}</strong>
+      <div class="well-inline-editor well-side-editor">
+        <strong>${safeText(well.name)} (Cell ${index + 1})</strong>
         <label>
           Well Name
           <input data-well-name-input="${index}" value="${safeText(well.name)}" placeholder="e.g. A1 or Sample 1" />
@@ -160,8 +312,12 @@ export function initPersonalInventory({ state, persist, createId, safeText, cssE
         </label>
         <div class="inline-row">
           <button type="button" class="primary-btn" data-well-save="${index}">Save Well</button>
-          <button type="button" class="ghost-btn" data-well-cancel>Cancel</button>
+          <button type="button" class="ghost-btn" data-well-cancel>Clear Selection</button>
         </div>
+        <hr />
+        <strong>Linked Sample</strong>
+        ${sampleSection}
+        ${statusMarkup}
       </div>
     `;
   }
@@ -220,10 +376,14 @@ export function initPersonalInventory({ state, persist, createId, safeText, cssE
     return `
       <div class="container-inline-detail">
         <h4>${safeText(section)} / ${safeText(container.name)} (${getContainerTypeLabel(container.type)})</h4>
-        <p class="small-note">9 x 9 square box (81 wells). Each cell shows a sample circle; colors indicate sample type. Click a cell to edit well details.</p>
-        <div class="well-grid">${grid}</div>
-        ${renderSampleLegendForContainer(section, container)}
-        ${renderWellEditor(container, editingWellIndex)}
+        <p class="small-note">9 x 9 square box (81 wells). Click a cell to edit well and sample information on the right side.</p>
+        <div class="well-editor-shell">
+          <div class="well-grid-panel">
+            <div class="well-grid">${grid}</div>
+            ${renderSampleLegendForContainer(section, container)}
+          </div>
+          ${renderWellEditor(section, container, editingWellIndex)}
+        </div>
       </div>
     `;
   }
@@ -236,7 +396,15 @@ export function initPersonalInventory({ state, persist, createId, safeText, cssE
 
     selectedContainer = { section, containerId };
     editingWellIndex = -1;
+    editingSampleId = '';
+    wellEditorStatus = '';
     renderSections();
+  }
+
+  function notifySamplesChanged() {
+    if (typeof onSamplesChanged === 'function') {
+      onSamplesChanged();
+    }
   }
 
   function setAddContainerFormOpen(nextOpen) {
@@ -282,6 +450,8 @@ export function initPersonalInventory({ state, persist, createId, safeText, cssE
 
     selectedContainer = { section, containerId: container.id };
     editingWellIndex = -1;
+    editingSampleId = '';
+    wellEditorStatus = '';
     if (addContainerNameInput) {
       addContainerNameInput.value = '';
     }
@@ -346,6 +516,8 @@ export function initPersonalInventory({ state, persist, createId, safeText, cssE
         ) {
           selectedContainer = null;
           editingWellIndex = -1;
+          editingSampleId = '';
+          wellEditorStatus = '';
           renderSections();
           return;
         }
@@ -374,9 +546,12 @@ export function initPersonalInventory({ state, persist, createId, safeText, cssE
         if (selectedContainer && selectedContainer.section === section && selectedContainer.containerId === id) {
           selectedContainer = null;
           editingWellIndex = -1;
+          editingSampleId = '';
+          wellEditorStatus = '';
         }
 
         persist();
+        notifySamplesChanged();
         renderSections();
       });
     });
@@ -415,6 +590,9 @@ export function initPersonalInventory({ state, persist, createId, safeText, cssE
         }
 
         editingWellIndex = Number(button.dataset.wellIndex);
+        const linkedSamples = getLinkedSamples(section, containerId, editingWellIndex);
+        editingSampleId = linkedSamples[0]?.id || '';
+        wellEditorStatus = '';
         renderSections();
       });
     });
@@ -440,6 +618,157 @@ export function initPersonalInventory({ state, persist, createId, safeText, cssE
 
         container.wells[index] = { name, content };
         persist();
+        wellEditorStatus = `Saved ${name}.`;
+        renderSections();
+      });
+    });
+
+    inventorySections.querySelectorAll('[data-well-sample-select]').forEach((select) => {
+      select.addEventListener('change', () => {
+        editingSampleId = String(select.value || '');
+        wellEditorStatus = '';
+        renderSections();
+      });
+    });
+
+    inventorySections.querySelectorAll('[data-well-sample-save]').forEach((button) => {
+      button.addEventListener('click', () => {
+        ensureSamples();
+        const section = selectedContainer?.section;
+        const containerId = selectedContainer?.containerId;
+        const index = editingWellIndex;
+        if (!section || !containerId || !Number.isInteger(index) || index < 0) {
+          return;
+        }
+
+        const container = getContainer(section, containerId);
+        const sample = getSampleById(button.dataset.wellSampleSave);
+        if (!container || !sample) {
+          return;
+        }
+
+        const codeInput = inventorySections.querySelector('[data-well-sample-code]');
+        const nameInput = inventorySections.querySelector('[data-well-sample-name]');
+        const typeInput = inventorySections.querySelector('[data-well-sample-type]');
+        const lotInput = inventorySections.querySelector('[data-well-sample-lot]');
+        const concentrationInput = inventorySections.querySelector('[data-well-sample-concentration]');
+        const notesInput = inventorySections.querySelector('[data-well-sample-notes]');
+
+        const name = String(nameInput?.value || '').trim();
+        if (!name) {
+          wellEditorStatus = 'Sample name is required.';
+          renderSections();
+          return;
+        }
+
+        const code = normalizeSampleCode(codeInput?.value) || sample.code || makeDefaultSampleCode();
+        const duplicate = (state.samples || []).find((item) => item.code === code && item.id !== sample.id);
+        if (duplicate) {
+          wellEditorStatus = `Sample code ${code} already exists.`;
+          renderSections();
+          return;
+        }
+
+        const autoLocation = buildAutoLocationFromLink(section, container, index);
+        sample.code = code;
+        sample.name = name;
+        sample.type = normalizeSampleType(typeInput?.value || sample.type || 'plasmid');
+        sample.lot = String(lotInput?.value || '').trim();
+        sample.concentration = String(concentrationInput?.value || '').trim();
+        sample.notes = String(notesInput?.value || '').trim();
+        sample.inventoryLink = {
+          section,
+          containerId,
+          wellIndex: index
+        };
+        sample.location = isLocationEmpty(sample.location) ? autoLocation : sample.location;
+        sample.updatedAt = new Date().toISOString();
+
+        editingSampleId = sample.id;
+        wellEditorStatus = `Saved sample ${sample.code || sample.name}.`;
+        persist();
+        notifySamplesChanged();
+        renderSections();
+      });
+    });
+
+    inventorySections.querySelectorAll('[data-well-sample-unlink]').forEach((button) => {
+      button.addEventListener('click', () => {
+        ensureSamples();
+        const sample = getSampleById(button.dataset.wellSampleUnlink);
+        if (!sample) {
+          return;
+        }
+        sample.inventoryLink = null;
+        sample.updatedAt = new Date().toISOString();
+        editingSampleId = '';
+        wellEditorStatus = `Unlinked sample ${sample.code || sample.name || sample.id}.`;
+        persist();
+        notifySamplesChanged();
+        renderSections();
+      });
+    });
+
+    inventorySections.querySelectorAll('[data-well-sample-create]').forEach((button) => {
+      button.addEventListener('click', () => {
+        ensureSamples();
+        const section = selectedContainer?.section;
+        const containerId = selectedContainer?.containerId;
+        const index = Number(button.dataset.wellSampleCreate);
+        if (!section || !containerId || !Number.isInteger(index) || index < 0) {
+          return;
+        }
+
+        const container = getContainer(section, containerId);
+        if (!container) {
+          return;
+        }
+
+        const codeInput = inventorySections.querySelector('[data-well-sample-new-code]');
+        const nameInput = inventorySections.querySelector('[data-well-sample-new-name]');
+        const typeInput = inventorySections.querySelector('[data-well-sample-new-type]');
+        const lotInput = inventorySections.querySelector('[data-well-sample-new-lot]');
+        const concentrationInput = inventorySections.querySelector('[data-well-sample-new-concentration]');
+        const notesInput = inventorySections.querySelector('[data-well-sample-new-notes]');
+
+        const name = String(nameInput?.value || '').trim();
+        if (!name) {
+          wellEditorStatus = 'Sample name is required.';
+          renderSections();
+          return;
+        }
+
+        const code = normalizeSampleCode(codeInput?.value) || makeDefaultSampleCode();
+        const duplicate = (state.samples || []).find((item) => item.code === code);
+        if (duplicate) {
+          wellEditorStatus = `Sample code ${code} already exists.`;
+          renderSections();
+          return;
+        }
+
+        const sample = {
+          id: `sample-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`,
+          code,
+          name,
+          type: normalizeSampleType(typeInput?.value || 'plasmid'),
+          lot: String(lotInput?.value || '').trim(),
+          concentration: String(concentrationInput?.value || '').trim(),
+          notes: String(notesInput?.value || '').trim(),
+          location: buildAutoLocationFromLink(section, container, index),
+          inventoryLink: {
+            section,
+            containerId,
+            wellIndex: index
+          },
+          chemicalLinks: [],
+          updatedAt: new Date().toISOString()
+        };
+
+        state.samples.push(sample);
+        editingSampleId = sample.id;
+        wellEditorStatus = `Created sample ${sample.code}.`;
+        persist();
+        notifySamplesChanged();
         renderSections();
       });
     });
@@ -450,6 +779,8 @@ export function initPersonalInventory({ state, persist, createId, safeText, cssE
           return;
         }
         editingWellIndex = -1;
+        editingSampleId = '';
+        wellEditorStatus = '';
         renderSections();
       });
     });

@@ -729,8 +729,20 @@ button:disabled {
   margin: 0 0 8px;
 }
 
-.well-grid {
+.well-editor-shell {
   margin-top: 12px;
+  display: grid;
+  grid-template-columns: minmax(260px, 560px) minmax(260px, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.well-grid-panel {
+  min-width: 0;
+}
+
+.well-grid {
+  margin-top: 0;
   display: grid;
   grid-template-columns: repeat(9, 1fr);
   grid-template-rows: repeat(9, 1fr);
@@ -856,6 +868,27 @@ button:disabled {
 .well-inline-editor strong {
   display: block;
   margin-bottom: 8px;
+}
+
+.well-side-editor {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.well-side-editor hr {
+  border: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.55);
+  margin: 10px 0;
+}
+
+.well-editor-empty {
+  margin: 0;
+}
+
+.well-editor-status {
+  margin-top: 8px;
+  color: #195177;
 }
 
 .project-notebook-list {
@@ -2616,6 +2649,17 @@ body.ui-neutral-compact .tile.is-active .label {
 
   .well-grid {
     width: min(100%, 420px);
+  }
+
+  .well-editor-shell {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .well-side-editor {
+    margin-top: 0;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.55);
   }
 
   .well-number {

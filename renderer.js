@@ -59,11 +59,13 @@ const GLOBAL_VIEW_ALIASES = new Map([
   ['chemical', VIEWS.LAB_COMMON_INVENTORY],
   ['samples', VIEWS.SAMPLE_REGISTRY],
   ['sample', VIEWS.SAMPLE_REGISTRY],
+  ['sample-inventory', VIEWS.SAMPLE_REGISTRY],
+  ['sampleinventory', VIEWS.SAMPLE_REGISTRY],
   ['assay', VIEWS.ASSAY],
   ['assays', VIEWS.ASSAY],
   ['gel', VIEWS.GEL],
   ['gels', VIEWS.GEL],
-  ['inventory', VIEWS.PERSONAL_INVENTORY],
+  ['inventory', VIEWS.SAMPLE_REGISTRY],
   ['projects', VIEWS.PROJECT_MANAGEMENT],
   ['project', VIEWS.PROJECT_MANAGEMENT],
   ['workflows', VIEWS.WORKFLOW_MANAGEMENT],
@@ -81,9 +83,9 @@ const GLOBAL_VIEW_ALIASES = new Map([
 const SEARCH_SCOPE_TARGETS = new Map([
   ['chemical', { viewId: VIEWS.LAB_COMMON_INVENTORY, inputId: 'chemical-search', label: 'Chemicals' }],
   ['chemicals', { viewId: VIEWS.LAB_COMMON_INVENTORY, inputId: 'chemical-search', label: 'Chemicals' }],
-  ['inventory', { viewId: VIEWS.LAB_COMMON_INVENTORY, inputId: 'chemical-search', label: 'Chemicals' }],
-  ['sample', { viewId: VIEWS.SAMPLE_REGISTRY, inputId: 'sample-search', label: 'Samples' }],
-  ['samples', { viewId: VIEWS.SAMPLE_REGISTRY, inputId: 'sample-search', label: 'Samples' }],
+  ['inventory', { viewId: VIEWS.SAMPLE_REGISTRY, inputId: 'sample-search', label: 'Sample & Inventory' }],
+  ['sample', { viewId: VIEWS.SAMPLE_REGISTRY, inputId: 'sample-search', label: 'Sample & Inventory' }],
+  ['samples', { viewId: VIEWS.SAMPLE_REGISTRY, inputId: 'sample-search', label: 'Sample & Inventory' }],
   ['assay', { viewId: VIEWS.ASSAY, inputId: 'assay-search', label: 'Assay' }],
   ['assays', { viewId: VIEWS.ASSAY, inputId: 'assay-search', label: 'Assay' }],
   ['gel', { viewId: VIEWS.GEL, inputId: 'gel-search', label: 'Gel' }],
@@ -107,6 +109,10 @@ let agentChat = null;
 
 function isNeutralCompactUi() {
   return state.settings?.appearance?.uiStyle !== 'classic';
+}
+
+function normalizeViewId(viewId) {
+  return viewId === VIEWS.PERSONAL_INVENTORY ? VIEWS.SAMPLE_REGISTRY : viewId;
 }
 
 function replaceState(nextState) {
@@ -289,15 +295,19 @@ const labCommonInventory = initLabCommonInventory({
   safeText
 });
 
+let sampleRegistry = null;
 const personalInventory = initPersonalInventory({
   state,
   persist,
   createId,
   safeText,
-  cssEscape
+  cssEscape,
+  onSamplesChanged: () => {
+    sampleRegistry?.render();
+  }
 });
 
-const sampleRegistry = initSampleRegistry({
+sampleRegistry = initSampleRegistry({
   state,
   persist,
   safeText
@@ -360,16 +370,20 @@ const settings = initSettings({
 });
 
 function showView(viewId) {
-  let nextView = viewId;
+  let nextView = normalizeViewId(viewId);
   if (isNeutralCompactUi() && nextView === VIEWS.HOME) {
     nextView = DEFAULT_APP_VIEW;
   }
 
+  const showSampleInventoryWorkspace = nextView === VIEWS.SAMPLE_REGISTRY;
   views.forEach((view) => {
-    view.classList.toggle('is-active', view.id === nextView);
+    const isSampleInventorySection = view.id === VIEWS.SAMPLE_REGISTRY || view.id === VIEWS.PERSONAL_INVENTORY;
+    const active = view.id === nextView || (showSampleInventoryWorkspace && isSampleInventorySection);
+    view.classList.toggle('is-active', active);
   });
   [...appNavButtons, ...homeTiles].forEach((button) => {
-    button.classList.toggle('is-active', button.dataset.view === nextView);
+    const buttonView = normalizeViewId(button.dataset.view);
+    button.classList.toggle('is-active', buttonView === nextView);
   });
 
   pageSubtitle.textContent = TITLES[nextView] || '';
@@ -392,11 +406,8 @@ function showView(viewId) {
     protocol.renderList();
   }
 
-  if (nextView === VIEWS.PERSONAL_INVENTORY) {
-    personalInventory.renderSections();
-  }
-
   if (nextView === VIEWS.SAMPLE_REGISTRY) {
+    personalInventory.renderSections();
     sampleRegistry.render();
   }
 
@@ -552,8 +563,11 @@ function applySearchTarget(target, query) {
 }
 
 function getActiveViewId() {
-  return views.find((view) => view.classList.contains('is-active'))?.id
-    || (isNeutralCompactUi() ? DEFAULT_APP_VIEW : VIEWS.HOME);
+  const activeViews = views.filter((view) => view.classList.contains('is-active')).map((view) => view.id);
+  if (activeViews.includes(VIEWS.SAMPLE_REGISTRY) || activeViews.includes(VIEWS.PERSONAL_INVENTORY)) {
+    return VIEWS.SAMPLE_REGISTRY;
+  }
+  return activeViews[0] || (isNeutralCompactUi() ? DEFAULT_APP_VIEW : VIEWS.HOME);
 }
 
 function getScopeTargetForView(viewId) {
@@ -722,11 +736,11 @@ function buildGlobalSearchCandidates() {
   });
 
   const personalInventoryTarget = {
-    viewId: VIEWS.PERSONAL_INVENTORY,
+    viewId: VIEWS.SAMPLE_REGISTRY,
     inputId: '',
-    label: 'Personal Inventory'
+    label: 'Sample & Inventory'
   };
-  // Flatten inventory containers/wells so the global matcher can route to inventory view.
+  // Flatten inventory containers/wells so the global matcher can route to sample/inventory workspace.
   Object.entries(state.inventory || {}).forEach(([zone, containers]) => {
     asArray(containers).forEach((container) => {
       addCandidate(personalInventoryTarget, [
@@ -924,7 +938,7 @@ function initNavigation() {
 }
 
 window.addEventListener('enana:appearance-changed', () => {
-  const activeViewId = views.find((view) => view.classList.contains('is-active'))?.id || VIEWS.HOME;
+  const activeViewId = getActiveViewId();
   showView(activeViewId);
 });
 

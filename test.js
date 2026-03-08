@@ -606,6 +606,194 @@ test('lab-management supports member create, edit, and delete lifecycle', () => 
   assert.match(memberCards.innerHTML, /No members yet/);
 });
 
+test('personal-inventory shows right-side sample editor and saves linked sample fields', () => {
+  const document = createMockDocument([
+    'inventory-sections',
+    'container-detail',
+    'inventory-add-container-btn',
+    'inventory-add-container-form',
+    'inventory-add-container-name',
+    'inventory-add-container-location',
+    'inventory-add-container-type',
+    'inventory-add-container-cancel'
+  ]);
+  const inventorySections = document.getElementById('inventory-sections');
+  const inventoryModule = loadEsmStyleModule(path.join(__dirname, 'modules', 'personal-inventory.js'), {
+    document
+  });
+
+  let persistCalls = 0;
+  let sampleChangedCalls = 0;
+  const state = {
+    samples: [
+      {
+        id: 'sample-1',
+        code: 'S-001',
+        name: 'Seed Sample',
+        type: 'plasmid',
+        lot: 'L-1',
+        concentration: '1 mg/mL',
+        notes: 'initial',
+        location: {
+          storageType: 'freezer',
+          freezer: '-20 Degree',
+          rack: '',
+          box: 'Box A',
+          position: '1'
+        },
+        inventoryLink: {
+          section: '-20 Degree',
+          containerId: 'box-1',
+          wellIndex: 0
+        },
+        chemicalLinks: [],
+        updatedAt: '2026-03-01T00:00:00.000Z'
+      }
+    ],
+    inventory: {
+      'Room Temp': [],
+      '4 Degree': [],
+      '-20 Degree': [
+        {
+          id: 'box-1',
+          name: 'Box A',
+          type: 'box81',
+          wells: [{ name: 'A1', content: 'Seed slot' }]
+        }
+      ],
+      '-80 Degree': [],
+      'Liquid Nitrogen': []
+    }
+  };
+
+  const personalInventory = inventoryModule.initPersonalInventory({
+    state,
+    persist: () => {
+      persistCalls += 1;
+    },
+    createId: () => 'container-x',
+    safeText: shared.safeText,
+    cssEscape: shared.cssEscape,
+    onSamplesChanged: () => {
+      sampleChangedCalls += 1;
+    }
+  });
+
+  personalInventory.renderSections();
+  const openBtn = inventorySections.querySelectorAll('[data-container-open]')[0];
+  openBtn.dataset.section = '-20 Degree';
+  trigger(openBtn, 'click');
+  const wellBtn = inventorySections.querySelectorAll('[data-well-index]')[0];
+  wellBtn.dataset.section = '-20 Degree';
+  wellBtn.dataset.containerId = 'box-1';
+  trigger(wellBtn, 'click');
+
+  assert.match(inventorySections.innerHTML, /well-editor-shell/);
+  assert.match(inventorySections.innerHTML, /data-well-sample-save="sample-1"/);
+
+  inventorySections.querySelector('[data-well-sample-code]').value = 'S-UPDATED-1';
+  inventorySections.querySelector('[data-well-sample-name]').value = 'Updated Sample';
+  inventorySections.querySelector('[data-well-sample-type]').value = 'protein';
+  inventorySections.querySelector('[data-well-sample-lot]').value = 'LOT-99';
+  inventorySections.querySelector('[data-well-sample-concentration]').value = '2 mg/mL';
+  inventorySections.querySelector('[data-well-sample-notes]').value = 'edited in side panel';
+  trigger(inventorySections.querySelectorAll('[data-well-sample-save]')[0], 'click');
+
+  assert.equal(state.samples.length, 1);
+  assert.equal(state.samples[0].code, 'S-UPDATED-1');
+  assert.equal(state.samples[0].name, 'Updated Sample');
+  assert.equal(state.samples[0].type, 'protein');
+  assert.equal(state.samples[0].lot, 'LOT-99');
+  assert.equal(state.samples[0].concentration, '2 mg/mL');
+  assert.equal(state.samples[0].notes, 'edited in side panel');
+  assert.equal(state.samples[0].inventoryLink.section, '-20 Degree');
+  assert.equal(state.samples[0].inventoryLink.containerId, 'box-1');
+  assert.equal(state.samples[0].inventoryLink.wellIndex, 0);
+  assert.ok(persistCalls >= 1);
+  assert.equal(sampleChangedCalls, 1);
+});
+
+test('personal-inventory creates a linked sample from the side editor for an empty cell', () => {
+  const document = createMockDocument([
+    'inventory-sections',
+    'container-detail',
+    'inventory-add-container-btn',
+    'inventory-add-container-form',
+    'inventory-add-container-name',
+    'inventory-add-container-location',
+    'inventory-add-container-type',
+    'inventory-add-container-cancel'
+  ]);
+  const inventorySections = document.getElementById('inventory-sections');
+  const inventoryModule = loadEsmStyleModule(path.join(__dirname, 'modules', 'personal-inventory.js'), {
+    document
+  });
+
+  let persistCalls = 0;
+  let sampleChangedCalls = 0;
+  const state = {
+    samples: [],
+    inventory: {
+      'Room Temp': [],
+      '4 Degree': [],
+      '-20 Degree': [
+        {
+          id: 'box-2',
+          name: 'Box B',
+          type: 'box81',
+          wells: [{ name: 'A1', content: '' }]
+        }
+      ],
+      '-80 Degree': [],
+      'Liquid Nitrogen': []
+    }
+  };
+
+  const personalInventory = inventoryModule.initPersonalInventory({
+    state,
+    persist: () => {
+      persistCalls += 1;
+    },
+    createId: () => 'container-y',
+    safeText: shared.safeText,
+    cssEscape: shared.cssEscape,
+    onSamplesChanged: () => {
+      sampleChangedCalls += 1;
+    }
+  });
+
+  personalInventory.renderSections();
+  const openBtn = inventorySections.querySelectorAll('[data-container-open]')[0];
+  openBtn.dataset.section = '-20 Degree';
+  trigger(openBtn, 'click');
+  const wellBtn = inventorySections.querySelectorAll('[data-well-index]')[0];
+  wellBtn.dataset.section = '-20 Degree';
+  wellBtn.dataset.containerId = 'box-2';
+  trigger(wellBtn, 'click');
+
+  assert.match(inventorySections.innerHTML, /data-well-sample-create="0"/);
+  inventorySections.querySelector('[data-well-sample-new-code]').value = 'S-NEW-1';
+  inventorySections.querySelector('[data-well-sample-new-name]').value = 'Created Sample';
+  inventorySections.querySelector('[data-well-sample-new-type]').value = 'antibody';
+  inventorySections.querySelector('[data-well-sample-new-lot]').value = 'BATCH-7';
+  inventorySections.querySelector('[data-well-sample-new-concentration]').value = '5 mg/mL';
+  inventorySections.querySelector('[data-well-sample-new-notes]').value = 'created from inventory panel';
+  trigger(inventorySections.querySelectorAll('[data-well-sample-create]')[0], 'click');
+
+  assert.equal(state.samples.length, 1);
+  assert.equal(state.samples[0].code, 'S-NEW-1');
+  assert.equal(state.samples[0].name, 'Created Sample');
+  assert.equal(state.samples[0].type, 'antibody');
+  assert.equal(state.samples[0].lot, 'BATCH-7');
+  assert.equal(state.samples[0].concentration, '5 mg/mL');
+  assert.equal(state.samples[0].notes, 'created from inventory panel');
+  assert.equal(state.samples[0].inventoryLink.section, '-20 Degree');
+  assert.equal(state.samples[0].inventoryLink.containerId, 'box-2');
+  assert.equal(state.samples[0].inventoryLink.wellIndex, 0);
+  assert.ok(persistCalls >= 1);
+  assert.equal(sampleChangedCalls, 1);
+});
+
 test('project-management deletes projects with linked notebook and workflow cleanup', () => {
   const document = createMockDocument([
     'project-form',
@@ -1542,13 +1730,41 @@ test('view constants and index navigation stay in sync', () => {
   const navViews = new Set([...html.matchAll(/data-view=\"([^\"]+)\"/g)].map((match) => match[1]));
 
   const nonHomeViews = viewValues.filter((value) => value !== shared.VIEWS.HOME);
+  const navRequiredViews = nonHomeViews.filter((value) => value !== shared.VIEWS.PERSONAL_INVENTORY);
   const missingSections = nonHomeViews.filter((value) => !sectionViews.has(value));
-  const missingNav = nonHomeViews.filter((value) => !navViews.has(value));
+  const missingNav = navRequiredViews.filter((value) => !navViews.has(value));
   const unknownNav = [...navViews].filter((value) => !viewValues.includes(value));
 
   assert.deepEqual(missingSections, []);
   assert.deepEqual(missingNav, []);
   assert.deepEqual(unknownNav, []);
+});
+
+test('sample and inventory use a merged navigation entry', () => {
+  const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  assert.match(
+    html,
+    /<button class="app-nav-btn" type="button" data-view="sample-registry-view">Sample &amp; Inventory<\/button>/
+  );
+  assert.equal(/<button[^>]+data-view="personal-inventory-view"/.test(html), false);
+  assert.match(
+    html,
+    /<button class="tile" data-view="sample-registry-view">[\s\S]*?<span class="label">Sample &amp; Inventory<\/span>[\s\S]*?<\/button>/
+  );
+});
+
+test('renderer routes personal inventory aliases to merged sample workspace', () => {
+  const source = readSource('renderer.js');
+  assert.match(
+    source,
+    /function normalizeViewId\(viewId\)\s*\{\s*return viewId === VIEWS\.PERSONAL_INVENTORY \? VIEWS\.SAMPLE_REGISTRY : viewId;\s*\}/
+  );
+  assert.match(source, /\['inventory', \{ viewId: VIEWS\.SAMPLE_REGISTRY, inputId: 'sample-search', label: 'Sample & Inventory' \}\]/);
+  assert.match(source, /const showSampleInventoryWorkspace = nextView === VIEWS\.SAMPLE_REGISTRY;/);
+  assert.match(
+    source,
+    /if \(nextView === VIEWS\.SAMPLE_REGISTRY\) \{\s*personalInventory\.renderSections\(\);\s*sampleRegistry\.render\(\);\s*\}/
+  );
 });
 
 test('ketcher embedded page uses portable static path resolution', () => {
@@ -2162,7 +2378,8 @@ nonHomeViews.forEach((viewId) => {
   });
 });
 
-nonHomeViews.forEach((viewId) => {
+const navExpectedViews = nonHomeViews.filter((viewId) => viewId !== shared.VIEWS.PERSONAL_INVENTORY);
+navExpectedViews.forEach((viewId) => {
   test(`[P0] index nav entry exists for ${viewId}`, () => {
     assert.equal(navViews.has(viewId), true);
   });

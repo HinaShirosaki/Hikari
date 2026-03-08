@@ -10,6 +10,7 @@ const {
 const appIconPath = path.join(__dirname, 'image.png');
 const DEFAULT_DATA_FILE_NAME = 'enana-data.json';
 const TELEGRAM_CONFIG_FILE_NAME = 'telegram-bot.json';
+const CHEMICALS_DATA_FILE_PATH = path.join(__dirname, 'data', 'chemicals.json');
 const DEFAULT_LLM_RESPONSES_ENDPOINT = 'https://api.openai.com/v1/responses';
 const DEFAULT_AGENT_MODEL = 'gpt-4.1-mini';
 const MAX_AGENT_TOOL_ROUNDS = 4;
@@ -172,6 +173,68 @@ async function writeEnaFile(filePath, data) {
   await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8');
 }
 
+function normalizeChemicalStorePayload(payload) {
+  const source = payload && typeof payload === 'object' ? payload : {};
+  return {
+    chemicals: asArray(source.chemicals),
+    blocks: asArray(source.blocks),
+    lastLocationNumber: Number(source.lastLocationNumber) || 0
+  };
+}
+
+function splitChemicalsFromSnapshot(data) {
+  const source = data && typeof data === 'object' ? data : {};
+  const labInventorySource = source.labInventory && typeof source.labInventory === 'object'
+    ? source.labInventory
+    : {};
+  const chemicalsPayload = normalizeChemicalStorePayload(labInventorySource);
+  const next = {
+    ...source,
+    labInventory: {
+      ...labInventorySource,
+      chemicals: [],
+      blocks: [],
+      lastLocationNumber: 0
+    }
+  };
+  return { snapshot: next, chemicalsPayload };
+}
+
+function mergeChemicalsIntoSnapshot(data, chemicalsPayload) {
+  const source = data && typeof data === 'object' ? data : {};
+  if (!chemicalsPayload) {
+    return source;
+  }
+  const labInventorySource = source.labInventory && typeof source.labInventory === 'object'
+    ? source.labInventory
+    : {};
+  return {
+    ...source,
+    labInventory: {
+      ...labInventorySource,
+      ...normalizeChemicalStorePayload(chemicalsPayload)
+    }
+  };
+}
+
+async function writeChemicalsFile(labInventory) {
+  const payload = normalizeChemicalStorePayload(labInventory);
+  await fs.mkdir(path.dirname(CHEMICALS_DATA_FILE_PATH), { recursive: true });
+  await fs.writeFile(CHEMICALS_DATA_FILE_PATH, JSON.stringify(payload, null, 2), 'utf8');
+}
+
+async function readChemicalsFile() {
+  try {
+    const raw = await fs.readFile(CHEMICALS_DATA_FILE_PATH, 'utf8');
+    return normalizeChemicalStorePayload(JSON.parse(raw));
+  } catch (error) {
+    if (error?.code === 'ENOENT') {
+      return null;
+    }
+    throw error;
+  }
+}
+
 ipcMain.handle('ena:save', async (_event, payload) => {
   const { data, filePath } = payload || {};
   if (!data) {
@@ -196,7 +259,9 @@ ipcMain.handle('ena:save', async (_event, payload) => {
   }
 
   try {
-    await writeEnaFile(targetPath, data);
+    const { snapshot, chemicalsPayload } = splitChemicalsFromSnapshot(data);
+    await writeEnaFile(targetPath, snapshot);
+    await writeChemicalsFile(chemicalsPayload);
     return { ok: true, filePath: targetPath };
   } catch (error) {
     return { ok: false, error: String(error) };
@@ -217,7 +282,9 @@ ipcMain.handle('ena:load', async () => {
   const filePath = result.filePaths[0];
   try {
     const raw = await fs.readFile(filePath, 'utf8');
-    const data = JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    const chemicalsPayload = await readChemicalsFile();
+    const data = mergeChemicalsIntoSnapshot(parsed, chemicalsPayload);
     return { ok: true, filePath, data };
   } catch (error) {
     return { ok: false, error: String(error) };
@@ -234,7 +301,9 @@ ipcMain.handle('data:auto-save', async (_event, payload) => {
 
   try {
     await fs.mkdir(path.dirname(targetPath), { recursive: true });
-    await writeEnaFile(targetPath, data);
+    const { snapshot, chemicalsPayload } = splitChemicalsFromSnapshot(data);
+    await writeEnaFile(targetPath, snapshot);
+    await writeChemicalsFile(chemicalsPayload);
     return { ok: true, filePath: targetPath };
   } catch (error) {
     return { ok: false, error: String(error), filePath: targetPath };
@@ -246,7 +315,9 @@ ipcMain.handle('data:auto-load', async (_event, payload) => {
 
   try {
     const raw = await fs.readFile(targetPath, 'utf8');
-    const data = JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    const chemicalsPayload = await readChemicalsFile();
+    const data = mergeChemicalsIntoSnapshot(parsed, chemicalsPayload);
     return { ok: true, filePath: targetPath, data };
   } catch (error) {
     if (error?.code === 'ENOENT') {
