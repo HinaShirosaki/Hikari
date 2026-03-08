@@ -6,6 +6,10 @@ const {
   hasSupportedDataExtension,
   normalizeDataFilePath
 } = require('./main-utils');
+const {
+  annotateWithBlast,
+  checkPlannotateEnvironment
+} = require('./plannotate-engine');
 
 const appIconPath = path.join(__dirname, 'image.png');
 const DEFAULT_DATA_FILE_NAME = 'enana-data.json';
@@ -353,6 +357,24 @@ ipcMain.handle('storage:ensure-directory', async (_event, payload) => {
     return { ok: true, path: targetPath };
   } catch (error) {
     return { ok: false, error: String(error) };
+  }
+});
+
+ipcMain.handle('plannotate:check-env', async (_event, payload) => {
+  try {
+    const status = await checkPlannotateEnvironment(payload?.dbDir || '');
+    return { ok: true, status };
+  } catch (error) {
+    return { ok: false, error: String(error) };
+  }
+});
+
+ipcMain.handle('plannotate:annotate', async (_event, payload) => {
+  try {
+    const result = await annotateWithBlast(payload || {});
+    return { ok: true, result };
+  } catch (error) {
+    return { ok: false, error: String(error?.message || error) };
   }
 });
 

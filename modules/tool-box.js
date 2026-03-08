@@ -347,6 +347,15 @@ function getPlannotateSegments(hit, sequenceLength, topology = 'circular') {
   return segments;
 }
 
+function formatPlannotateLocation(hit, sequenceLength) {
+  const start = hit.qstart + 1;
+  const end = hit.qend === 0 ? sequenceLength : hit.qend;
+  if (!hit.crossesOrigin) {
+    return `${start}..${end}`;
+  }
+  return `${start}..${sequenceLength}, 1..${end}`;
+}
+
 function formatBpCompact(value) {
   const numeric = Number(value) || 0;
   if (numeric >= 1000) {
@@ -724,6 +733,7 @@ export function initToolBox() {
   const plannotateModeFileBtn = document.getElementById('plannotate-mode-file');
   const plannotateTextPanel = document.getElementById('plannotate-text-panel');
   const plannotateFilePanel = document.getElementById('plannotate-file-panel');
+  const plannotateEngineStatus = document.getElementById('plannotate-engine-status');
   const plannotateFileInput = document.getElementById('plannotate-file-input');
   const plannotateFileChooseBtn = document.getElementById('plannotate-file-choose');
   const plannotateFileName = document.getElementById('plannotate-file-name');
@@ -1066,15 +1076,6 @@ export function initToolBox() {
     `;
   }
 
-  function formatPlannotateLocation(hit, sequenceLength) {
-    const start = hit.qstart + 1;
-    const end = hit.qend === 0 ? sequenceLength : hit.qend;
-    if (!hit.crossesOrigin) {
-      return `${start}..${end}`;
-    }
-    return `${start}..${sequenceLength}, 1..${end}`;
-  }
-
   function setPlannotateStatus(message, isError = false) {
     if (!plannotateRunStatus) {
       return;
@@ -1177,7 +1178,32 @@ export function initToolBox() {
     });
   }
 
-  function renderPlannotate() {
+  async function runPlannotateAnnotation(sequence, options) {
+    const backend = window.enanaApi?.plannotateAnnotate;
+    if (typeof backend === 'function') {
+      const response = await backend({
+        sequenceText: sequence,
+        topology: options.topology,
+        detailed: options.detailed,
+        minIdentity: options.minIdentity,
+        minCoverage: options.minCoverage,
+        minHitLength: options.minHitLength
+      });
+      if (!response?.ok) {
+        throw new Error(response?.error || 'pLannotate backend annotation failed.');
+      }
+      return response.result;
+    }
+
+    const fallback = annotatePlasmidSequence(sequence, options);
+    fallback.warnings = [
+      'Native blastn/diamond backend unavailable. Displaying JS fallback annotations.',
+      ...(fallback.warnings || [])
+    ];
+    return fallback;
+  }
+
+  async function renderPlannotate() {
     if (!plannotateResult) {
       return;
     }
@@ -1215,28 +1241,11 @@ export function initToolBox() {
       minHitLength: Math.round(toNumber(plannotateMinLengthInput?.value || 24))
     };
 
-    let result = annotatePlasmidSequence(parsed.sequence, baseOptions);
-    let relaxedWarning = '';
-    if (!result.hits.length && !baseOptions.detailed) {
-      const relaxed = annotatePlasmidSequence(parsed.sequence, {
-        ...baseOptions,
-        detailed: true,
-        minIdentity: Math.min(baseOptions.minIdentity, 78),
-        minCoverage: Math.min(baseOptions.minCoverage, 0.16),
-        minHitLength: Math.min(baseOptions.minHitLength, 18)
-      });
-      if (relaxed.hits.length) {
-        result = relaxed;
-        relaxedWarning = 'No strict hits found. Displaying relaxed detailed matches.';
-      }
-    }
+    let result = await runPlannotateAnnotation(parsed.sequence, baseOptions);
 
     const warnings = [];
     if (parsed.warning) {
       warnings.push(parsed.warning);
-    }
-    if (relaxedWarning) {
-      warnings.push(relaxedWarning);
     }
     warnings.push(...(result.warnings || []));
 
@@ -1393,6 +1402,35 @@ export function initToolBox() {
     setPlannotateStatus('Idle');
     renderPlannotateEmptyMap('Run annotation to display the plasmid map.');
     clearPlannotateTable('No annotations yet.');
+    if (plannotateEngineStatus) {
+      plannotateEngineStatus.textContent = 'Checking blastn/diamond backend...';
+    }
+
+    (async () => {
+      if (!plannotateEngineStatus) {
+        return;
+      }
+      try {
+        const checker = window.enanaApi?.plannotateCheckEnv;
+        if (typeof checker !== 'function') {
+          plannotateEngineStatus.textContent = 'Native backend bridge unavailable.';
+          return;
+        }
+        const response = await checker();
+        if (!response?.ok) {
+          plannotateEngineStatus.textContent = `Backend check failed: ${response?.error || 'unknown error'}`;
+          return;
+        }
+        const status = response.status || {};
+        if (status.ok) {
+          plannotateEngineStatus.textContent = 'Backend ready: blastn + diamond + databases detected.';
+        } else {
+          plannotateEngineStatus.textContent = 'Backend not ready: install/configure pLannotate BLAST databases.';
+        }
+      } catch (error) {
+        plannotateEngineStatus.textContent = `Backend check failed: ${error.message || error}`;
+      }
+    })();
 
     plannotateModeTextBtn?.addEventListener('click', () => {
       setPlannotateMode('text');
@@ -1437,13 +1475,14 @@ export function initToolBox() {
       }
     });
 
-    plannotateForm.addEventListener('submit', (event) => {
+    plannotateForm.addEventListener('submit', async (event) => {
       event.preventDefault();
       setPlannotateStatus('Running annotation...');
       try {
-        renderPlannotate();
+        await renderPlannotate();
       } catch (error) {
         setPlannotateStatus(error.message || 'Annotation failed.', true);
+        plannotateResult.innerHTML = `<p class="small-note">${escapeHtml(error.message || 'Annotation failed.')}</p>`;
       }
     });
   }
@@ -1545,5 +1584,5 @@ export function initToolBox() {
   renderOligo();
   renderExtinction();
   renderQpcr();
-  renderPlannotate();
+  void renderPlannotate().catch(() => {});
 }
