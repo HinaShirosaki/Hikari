@@ -87,6 +87,30 @@ const RNA_BASE_MW = { A: 329.21, U: 306.17, G: 345.21, C: 305.18 };
 
 const DNA_EXTINCTION = { A: 15400, C: 7400, G: 11500, T: 8700 };
 const RNA_EXTINCTION = { A: 15400, C: 7400, G: 11500, U: 9900 };
+const PLANNOTATE_TYPE_COLORS = {
+  cds: '#2876d7',
+  promoter: '#e98636',
+  terminator: '#5f9443',
+  rep_origin: '#9a5de5',
+  ncrna: '#db3f66',
+  rna: '#db3f66',
+  enhancer: '#3caaa1',
+  operator: '#ac7132',
+  protein_bind: '#7b60bf',
+  misc_feature: '#6a7c8f'
+};
+const PLANNOTATE_FALLBACK_COLORS = [
+  '#2876d7',
+  '#e98636',
+  '#5f9443',
+  '#9a5de5',
+  '#db3f66',
+  '#3caaa1',
+  '#ac7132',
+  '#7b60bf',
+  '#6a7c8f',
+  '#2f8f9a'
+];
 
 function formatSequenceLines(sequence, lineLength = 60) {
   const lines = [];
@@ -257,6 +281,244 @@ function linearRegression(xValues, yValues) {
   const rSquared = ssYY === 0 ? 1 : (ssXY * ssXY) / (ssXX * ssYY);
 
   return { slope, intercept, rSquared };
+}
+
+function normalizePlannotateType(type) {
+  return String(type || 'misc_feature')
+    .trim()
+    .toLowerCase()
+    .replace(/[^\w]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
+
+function hashString(value) {
+  let hash = 0;
+  const text = String(value || '');
+  for (let i = 0; i < text.length; i += 1) {
+    hash = ((hash << 5) - hash) + text.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
+function getPlannotateTypeColor(type) {
+  const normalized = normalizePlannotateType(type);
+  if (PLANNOTATE_TYPE_COLORS[normalized]) {
+    return PLANNOTATE_TYPE_COLORS[normalized];
+  }
+  const index = hashString(normalized) % PLANNOTATE_FALLBACK_COLORS.length;
+  return PLANNOTATE_FALLBACK_COLORS[index];
+}
+
+function getPlannotateSegments(hit, sequenceLength, topology = 'circular') {
+  if (!sequenceLength) {
+    return [];
+  }
+
+  const qstart = Math.max(0, Math.min(sequenceLength, Number(hit.qstart) || 0));
+  const qendRaw = Number(hit.qend);
+  const qend = qendRaw === 0
+    ? sequenceLength
+    : Math.max(0, Math.min(sequenceLength, qendRaw || 0));
+
+  if (topology === 'linear') {
+    const left = Math.min(qstart, qend);
+    const right = Math.max(qstart, qend);
+    return right > left ? [{ start: left, end: right }] : [];
+  }
+
+  const wrapsOrigin = Boolean(hit.crossesOrigin) || qend < qstart;
+  if (!wrapsOrigin) {
+    return qend > qstart ? [{ start: qstart, end: qend }] : [];
+  }
+
+  const segments = [];
+  if (sequenceLength > qstart) {
+    segments.push({ start: qstart, end: sequenceLength });
+  }
+  if (qend > 0) {
+    segments.push({ start: 0, end: qend });
+  }
+
+  if (!segments.length && qstart === 0 && qend === 0) {
+    segments.push({ start: 0, end: sequenceLength });
+  }
+
+  return segments;
+}
+
+function formatBpCompact(value) {
+  const numeric = Number(value) || 0;
+  if (numeric >= 1000) {
+    return `${(numeric / 1000).toFixed(1).replace(/\.0$/, '')} kb`;
+  }
+  return `${Math.round(numeric)} bp`;
+}
+
+function makeCircularArcPath(cx, cy, radius, startRatio, endRatio) {
+  const startAngle = (startRatio * Math.PI * 2) - (Math.PI / 2);
+  const endAngle = (endRatio * Math.PI * 2) - (Math.PI / 2);
+  const delta = Math.max(0, endAngle - startAngle);
+  const largeArcFlag = delta > Math.PI ? 1 : 0;
+  const startX = cx + (radius * Math.cos(startAngle));
+  const startY = cy + (radius * Math.sin(startAngle));
+  const endX = cx + (radius * Math.cos(endAngle));
+  const endY = cy + (radius * Math.sin(endAngle));
+  return `M ${startX.toFixed(2)} ${startY.toFixed(2)} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX.toFixed(2)} ${endY.toFixed(2)}`;
+}
+
+function renderPlannotateCircularMap(result) {
+  const sequenceLength = result.sequenceLength;
+  const hits = result.hits || [];
+  if (!sequenceLength || !hits.length) {
+    return '';
+  }
+
+  const cx = 180;
+  const cy = 180;
+  const radius = 118;
+  const ringWidth = 18;
+
+  const tickRatios = [0, 0.25, 0.5, 0.75];
+  const ticks = tickRatios.map((ratio) => {
+    const angle = (ratio * Math.PI * 2) - (Math.PI / 2);
+    const inner = radius - 18;
+    const outer = radius + 18;
+    const labelRadius = radius + 36;
+    const x1 = cx + (inner * Math.cos(angle));
+    const y1 = cy + (inner * Math.sin(angle));
+    const x2 = cx + (outer * Math.cos(angle));
+    const y2 = cy + (outer * Math.sin(angle));
+    const lx = cx + (labelRadius * Math.cos(angle));
+    const ly = cy + (labelRadius * Math.sin(angle));
+    const bp = Math.round(sequenceLength * ratio);
+    return `
+      <line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}" />
+      <text x="${lx.toFixed(2)}" y="${ly.toFixed(2)}">${bp.toLocaleString()}</text>
+    `;
+  }).join('');
+
+  const featurePaths = hits.map((hit) => {
+    const color = getPlannotateTypeColor(hit.Type);
+    const segments = getPlannotateSegments(hit, sequenceLength, 'circular');
+    const title = escapeHtml(`${hit.Feature} (${formatPlannotateLocation(hit, sequenceLength)})`);
+    return segments.map((segment) => {
+      const startRatio = segment.start / sequenceLength;
+      const endRatio = segment.end / sequenceLength;
+      const ratioSpan = Math.max(0, endRatio - startRatio);
+      if (ratioSpan >= 0.999) {
+        return `
+          <circle class="plannotate-circular-hit" cx="${cx}" cy="${cy}" r="${radius}" stroke="${color}" stroke-width="${ringWidth}">
+            <title>${title}</title>
+          </circle>
+        `;
+      }
+      const path = makeCircularArcPath(cx, cy, radius, startRatio, endRatio);
+      return `
+        <path class="plannotate-circular-hit" d="${path}" stroke="${color}" stroke-width="${ringWidth}">
+          <title>${title}</title>
+        </path>
+      `;
+    }).join('');
+  }).join('');
+
+  return `
+    <div class="plannotate-map-shell">
+      <svg class="plannotate-circular-map" viewBox="0 0 360 360" role="img" aria-label="Circular plasmid map">
+        <circle class="plannotate-circular-backdrop" cx="${cx}" cy="${cy}" r="${radius}" />
+        <g class="plannotate-circular-axis">${ticks}</g>
+        <g class="plannotate-circular-features">${featurePaths}</g>
+        <text class="plannotate-circular-center" x="${cx}" y="${cy - 6}">${formatBpCompact(sequenceLength)}</text>
+        <text class="plannotate-circular-center-sub" x="${cx}" y="${cy + 16}">${hits.length} features</text>
+      </svg>
+    </div>
+  `;
+}
+
+function renderPlannotateLinearMap(result) {
+  const sequenceLength = result.sequenceLength;
+  const hits = result.hits || [];
+  if (!sequenceLength || !hits.length) {
+    return '';
+  }
+
+  const sorted = hits
+    .map((hit) => ({
+      hit,
+      segments: getPlannotateSegments(hit, sequenceLength, 'linear')
+    }))
+    .filter((item) => item.segments.length)
+    .sort((a, b) => a.segments[0].start - b.segments[0].start);
+
+  const lanes = [];
+  sorted.forEach((item) => {
+    const firstSegment = item.segments[0];
+    let laneIndex = lanes.findIndex((lane) => firstSegment.start >= lane);
+    if (laneIndex === -1) {
+      laneIndex = lanes.length;
+      lanes.push(firstSegment.end);
+    } else {
+      lanes[laneIndex] = firstSegment.end;
+    }
+    item.laneIndex = laneIndex;
+  });
+
+  const laneCount = Math.max(1, lanes.length);
+  const laneHeightPx = 22;
+  const railHeight = Math.max(32, (laneCount * laneHeightPx) + 10);
+  const laneLabels = [0, 0.25, 0.5, 0.75, 1].map((ratio) => `
+    <span style="left:${(ratio * 100).toFixed(2)}%">${Math.round(sequenceLength * ratio).toLocaleString()}</span>
+  `).join('');
+
+  const bars = sorted.map((item) => {
+    const color = getPlannotateTypeColor(item.hit.Type);
+    const rowTop = 6 + (item.laneIndex * laneHeightPx);
+    const title = escapeHtml(`${item.hit.Feature} (${formatPlannotateLocation(item.hit, sequenceLength)})`);
+    return item.segments.map((segment) => {
+      const left = (segment.start / sequenceLength) * 100;
+      const width = Math.max(0.35, ((segment.end - segment.start) / sequenceLength) * 100);
+      return `
+        <span
+          class="plannotate-linear-hit"
+          style="left:${left.toFixed(4)}%;width:${width.toFixed(4)}%;top:${rowTop}px;background:${color};"
+          title="${title}"
+        ></span>
+      `;
+    }).join('');
+  }).join('');
+
+  return `
+    <div class="plannotate-map-shell">
+      <div class="plannotate-linear-map" style="height:${railHeight}px;">
+        <div class="plannotate-linear-track">${bars}</div>
+      </div>
+      <div class="plannotate-linear-axis">${laneLabels}</div>
+    </div>
+  `;
+}
+
+function renderPlannotateLegend(hits) {
+  const counts = new Map();
+  hits.forEach((hit) => {
+    const type = String(hit.Type || 'misc_feature');
+    counts.set(type, (counts.get(type) || 0) + 1);
+  });
+
+  if (!counts.size) {
+    return '';
+  }
+
+  const items = [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([type, count]) => `
+      <span class="plannotate-legend-item">
+        <span class="plannotate-legend-swatch" style="background:${getPlannotateTypeColor(type)};"></span>
+        ${escapeHtml(type)} (${count})
+      </span>
+    `)
+    .join('');
+
+  return `<div class="plannotate-legend">${items}</div>`;
 }
 
 function cleanSequence(raw) {
@@ -827,14 +1089,23 @@ export function initToolBox() {
     }
 
     if (!result.hits.length) {
+      const emptyMap = result.topology === 'linear'
+        ? renderPlannotateLinearMap(result)
+        : renderPlannotateCircularMap(result);
       plannotateResult.innerHTML = `
         <p><strong>Sequence length:</strong> ${result.sequenceLength.toLocaleString()} bp</p>
         <p><strong>Reference features scanned:</strong> ${result.stats.referenceFeatures}</p>
         <p class="small-note">No annotations passed the current thresholds.</p>
+        ${emptyMap}
         ${warningRows}
       `;
       return;
     }
+
+    const mapMarkup = result.topology === 'linear'
+      ? renderPlannotateLinearMap(result)
+      : renderPlannotateCircularMap(result);
+    const legendMarkup = renderPlannotateLegend(result.hits);
 
     const tableRows = result.hits.map((hit, index) => `
       <tr>
@@ -853,6 +1124,8 @@ export function initToolBox() {
       <p><strong>Sequence length:</strong> ${result.sequenceLength.toLocaleString()} bp</p>
       <p><strong>Hits:</strong> ${result.stats.finalHits} (exact: ${result.stats.exactHits}, partial: ${result.stats.partialHits})</p>
       <p><strong>Reference features scanned:</strong> ${result.stats.referenceFeatures}</p>
+      ${mapMarkup}
+      ${legendMarkup}
       ${warningRows}
       <div class="plannotate-table-wrap">
         <table class="plannotate-table">
@@ -871,7 +1144,7 @@ export function initToolBox() {
           <tbody>${tableRows}</tbody>
         </table>
       </div>
-      <p class="small-note">JS port of pLannotate core scoring and overlap logic with an embedded reference subset from pXampl3 test data.</p>
+      <p class="small-note">Includes plasmid map visualization and table summary from the same annotation hits.</p>
     `;
   }
 

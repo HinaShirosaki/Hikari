@@ -11,6 +11,26 @@ export function initPersonalInventory({ state, persist, createId, safeText, cssE
   let selectedContainer = null;
   let editingWellIndex = null;
   let isAddContainerFormOpen = false;
+  const SAMPLE_TYPE_COLORS = {
+    plasmid: '#2f6fec',
+    cell_line: '#e8871a',
+    strain: '#159a8a',
+    antibody: '#d75062',
+    protein: '#3b9d3a',
+    compound: '#7a58e8',
+    primer: '#be9a1a',
+    other: '#718096'
+  };
+  const SAMPLE_TYPE_LABELS = {
+    plasmid: 'Plasmid',
+    cell_line: 'Cell Line',
+    strain: 'Strain',
+    antibody: 'Antibody',
+    protein: 'Protein',
+    compound: 'Compound',
+    primer: 'Primer',
+    other: 'Other'
+  };
 
   if (containerDetail) {
     containerDetail.hidden = true;
@@ -42,6 +62,68 @@ export function initPersonalInventory({ state, persist, createId, safeText, cssE
       }
       return Number(link.wellIndex) === Number(wellIndex);
     });
+  }
+
+  function normalizeSampleType(type) {
+    const key = String(type || '').trim().toLowerCase();
+    if (!key) {
+      return 'other';
+    }
+    return Object.prototype.hasOwnProperty.call(SAMPLE_TYPE_COLORS, key) ? key : 'other';
+  }
+
+  function getSampleTypeColor(type) {
+    return SAMPLE_TYPE_COLORS[normalizeSampleType(type)] || SAMPLE_TYPE_COLORS.other;
+  }
+
+  function getSampleTypeLabel(type) {
+    return SAMPLE_TYPE_LABELS[normalizeSampleType(type)] || SAMPLE_TYPE_LABELS.other;
+  }
+
+  function buildSampleDotFill(sampleTypes) {
+    const unique = Array.from(new Set((sampleTypes || []).map((type) => normalizeSampleType(type))));
+    if (!unique.length) {
+      return '';
+    }
+    if (unique.length === 1) {
+      return getSampleTypeColor(unique[0]);
+    }
+    const segmentSize = 100 / unique.length;
+    const segments = unique.map((type, index) => {
+      const start = Number((segmentSize * index).toFixed(2));
+      const end = Number((segmentSize * (index + 1)).toFixed(2));
+      return `${getSampleTypeColor(type)} ${start}% ${end}%`;
+    });
+    return `conic-gradient(${segments.join(', ')})`;
+  }
+
+  function renderSampleLegendForContainer(section, container) {
+    const linkedTypeSet = new Set();
+    (state.samples || []).forEach((sample) => {
+      const link = sample?.inventoryLink;
+      if (!link) {
+        return;
+      }
+      if (link.section !== section || link.containerId !== container.id) {
+        return;
+      }
+      linkedTypeSet.add(normalizeSampleType(sample.type));
+    });
+    const linkedTypes = Array.from(linkedTypeSet);
+    if (!linkedTypes.length) {
+      return '';
+    }
+
+    return `
+      <div class="well-sample-legend" aria-label="Sample type color legend">
+        ${linkedTypes.map((type) => `
+          <span class="well-sample-legend-item">
+            <span class="well-sample-legend-dot" style="--sample-type-color:${getSampleTypeColor(type)};"></span>
+            ${safeText(getSampleTypeLabel(type))}
+          </span>
+        `).join('')}
+      </div>
+    `;
   }
 
   function getWellData(rawWell, index) {
@@ -111,10 +193,14 @@ export function initPersonalInventory({ state, persist, createId, safeText, cssE
     const grid = wells.map((rawWell, index) => {
       const well = getWellData(rawWell, index);
       const linkedSamples = getLinkedSamples(section, container.id, index);
+      const linkedTypeLabels = Array.from(new Set(linkedSamples.map((item) => getSampleTypeLabel(item.type))));
       const linkedText = linkedSamples.length
-        ? ` | Samples: ${linkedSamples.map((item) => item.code || item.name || item.id).join(', ')}`
+        ? ` | Samples: ${linkedSamples.map((item) => item.code || item.name || item.id).join(', ')}${linkedTypeLabels.length ? ` | Types: ${linkedTypeLabels.join(', ')}` : ''}`
         : '';
       const title = well.content ? `${well.name}: ${well.content}${linkedText}` : `${well.name}${linkedText}`;
+      const sampleDotFill = buildSampleDotFill(linkedSamples.map((item) => item.type));
+      const hasSamples = linkedSamples.length > 0;
+      const sampleCount = linkedSamples.length;
       return `
         <button
           type="button"
@@ -124,7 +210,9 @@ export function initPersonalInventory({ state, persist, createId, safeText, cssE
           data-container-id="${safeText(container.id)}"
           title="${safeText(title)}"
         >
-          ${safeText(well.name)}${linkedSamples.length ? ' *' : ''}
+          <span class="well-number">${safeText(well.name)}</span>
+          <span class="well-sample-dot${hasSamples ? ' has-sample' : ''}"${sampleDotFill ? ` style="--well-sample-fill:${sampleDotFill};"` : ''}></span>
+          ${sampleCount > 1 ? `<span class="well-sample-count">${safeText(String(sampleCount))}</span>` : ''}
         </button>
       `;
     }).join('');
@@ -132,8 +220,9 @@ export function initPersonalInventory({ state, persist, createId, safeText, cssE
     return `
       <div class="container-inline-detail">
         <h4>${safeText(section)} / ${safeText(container.name)} (${getContainerTypeLabel(container.type)})</h4>
-        <p class="small-note">9 x 9 box (81 wells). Click a well to edit its name/content.</p>
+        <p class="small-note">9 x 9 square box (81 wells). Each cell shows a sample circle; colors indicate sample type. Click a cell to edit well details.</p>
         <div class="well-grid">${grid}</div>
+        ${renderSampleLegendForContainer(section, container)}
         ${renderWellEditor(container, editingWellIndex)}
       </div>
     `;

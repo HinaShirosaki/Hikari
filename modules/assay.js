@@ -975,9 +975,10 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     for (let col = 0; col < maxColumns; col += 1) {
       const value = String(columnAxisValues[col] || '');
       axisRowCells.push(`
-        <td>
+        <td class="assay-axis-cell">
           <input
             type="text"
+            class="assay-axis-input"
             data-axis-dimension="column"
             data-axis-index="${col}"
             value="${safeText(value)}"
@@ -994,9 +995,10 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
       const cells = [
         `<th>${rowLabel}</th>`,
         `
-          <td>
+          <td class="assay-axis-cell">
             <input
               type="text"
+              class="assay-axis-input"
               data-axis-dimension="row"
               data-axis-index="${row}"
               value="${safeText(rowAxisValue)}"
