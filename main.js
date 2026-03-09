@@ -16,8 +16,22 @@ const appIconPath = path.join(__dirname, 'image.png');
 const DEFAULT_DATA_FILE_NAME = 'enana-data.json';
 const TELEGRAM_CONFIG_FILE_NAME = 'telegram-bot.json';
 const CHEMICALS_DATA_FILE_PATH = path.join(__dirname, 'data', 'chemicals.json');
-const DEFAULT_LLM_RESPONSES_ENDPOINT = 'https://api.openai.com/v1/responses';
-const DEFAULT_AGENT_MODEL = 'gpt-4.1-mini';
+const LLM_PROVIDERS = Object.freeze({
+  OPENAI: 'openai',
+  GEMINI: 'gemini',
+  CLAUDE: 'claude'
+});
+const DEFAULT_LLM_PROVIDER = LLM_PROVIDERS.OPENAI;
+const DEFAULT_LLM_ENDPOINTS = Object.freeze({
+  [LLM_PROVIDERS.OPENAI]: 'https://api.openai.com/v1/responses',
+  [LLM_PROVIDERS.GEMINI]: 'https://generativelanguage.googleapis.com/v1beta',
+  [LLM_PROVIDERS.CLAUDE]: 'https://api.anthropic.com/v1/messages'
+});
+const DEFAULT_AGENT_MODELS = Object.freeze({
+  [LLM_PROVIDERS.OPENAI]: 'gpt-4.1-mini',
+  [LLM_PROVIDERS.GEMINI]: 'gemini-2.5-flash',
+  [LLM_PROVIDERS.CLAUDE]: 'claude-3-5-sonnet-latest'
+});
 const MAX_AGENT_TOOL_ROUNDS = 4;
 const LLM_PROMPTS_FILE_PATH = path.join(__dirname, 'data', 'llm-prompts.json');
 const DEFAULT_AGENT_SYSTEM_PROMPT_TEMPLATE =
@@ -998,17 +1012,51 @@ function resolveAgentApiKey(llm) {
   return '';
 }
 
-function resolveAgentEndpoint(llm) {
+function inferProviderFromEndpoint(endpoint) {
+  const value = cleanText(endpoint, 300).toLowerCase();
+  if (!value) {
+    return '';
+  }
+  if (value.includes('anthropic.com')) {
+    return LLM_PROVIDERS.CLAUDE;
+  }
+  if (value.includes('generativelanguage.googleapis.com') || value.includes('ai.google')) {
+    return LLM_PROVIDERS.GEMINI;
+  }
+  if (value.includes('openai.com') || value.includes('/openai/')) {
+    return LLM_PROVIDERS.OPENAI;
+  }
+  return '';
+}
+
+function normalizeLlmProvider(provider, endpoint = '') {
+  const clean = cleanText(provider, 80).toLowerCase();
+  if (Object.values(LLM_PROVIDERS).includes(clean)) {
+    return clean;
+  }
+  return inferProviderFromEndpoint(endpoint) || DEFAULT_LLM_PROVIDER;
+}
+
+function defaultEndpointForProvider(provider) {
+  const resolved = normalizeLlmProvider(provider);
+  return DEFAULT_LLM_ENDPOINTS[resolved] || DEFAULT_LLM_ENDPOINTS[DEFAULT_LLM_PROVIDER];
+}
+
+function resolveAgentProvider(llm) {
+  return normalizeLlmProvider(llm?.provider, llm?.apiEndpoint || llm?.api);
+}
+
+function resolveAgentEndpoint(llm, provider = DEFAULT_LLM_PROVIDER) {
   const endpoint = cleanText(llm?.apiEndpoint, 300);
   if (endpoint && /^https?:\/\//i.test(endpoint)) {
     return endpoint;
   }
-  return DEFAULT_LLM_RESPONSES_ENDPOINT;
+  return defaultEndpointForProvider(provider);
 }
 
-function resolveAgentModel(llm) {
+function resolveAgentModel(llm, provider = DEFAULT_LLM_PROVIDER) {
   const model = cleanText(llm?.model, 120);
-  return model || DEFAULT_AGENT_MODEL;
+  return model || DEFAULT_AGENT_MODELS[provider] || DEFAULT_AGENT_MODELS[DEFAULT_LLM_PROVIDER];
 }
 
 function buildAgentSystemPrompt(projectName, prompts) {
@@ -1028,18 +1076,20 @@ function sleep(ms) {
   });
 }
 
-async function requestResponsesWithBackoff({ endpoint, apiKey, body }) {
+async function requestJsonWithBackoff({
+  endpoint,
+  headers,
+  body,
+  retryStatuses = [429, 503],
+  maxRetries = 3
+}) {
   let attempt = 0;
-  const maxRetries = 3;
   while (attempt <= maxRetries) {
     let response;
     try {
       response = await fetch(endpoint, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`
-        },
+        headers,
         body: JSON.stringify(body)
       });
     } catch (error) {
@@ -1052,7 +1102,7 @@ async function requestResponsesWithBackoff({ endpoint, apiKey, body }) {
       continue;
     }
 
-    if (response.status !== 429 && response.status !== 503) {
+    if (!retryStatuses.includes(response.status)) {
       if (!response.ok) {
         const raw = await response.text();
         throw new Error(`LLM API error (${response.status}): ${raw}`);
@@ -1074,6 +1124,543 @@ async function requestResponsesWithBackoff({ endpoint, apiKey, body }) {
   }
 
   throw new Error('LLM API request failed after retries.');
+}
+
+async function requestOpenAiResponsesWithBackoff({ endpoint, apiKey, body }) {
+  return requestJsonWithBackoff({
+    endpoint,
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`
+    },
+    body,
+    retryStatuses: [429, 503]
+  });
+}
+
+async function requestClaudeMessagesWithBackoff({ endpoint, apiKey, body }) {
+  return requestJsonWithBackoff({
+    endpoint,
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01'
+    },
+    body,
+    retryStatuses: [429, 503, 529]
+  });
+}
+
+function buildGeminiGenerateContentUrl(endpoint, model, apiKey) {
+  const cleanEndpoint = cleanText(endpoint, 300) || DEFAULT_LLM_ENDPOINTS[LLM_PROVIDERS.GEMINI];
+  let url = cleanEndpoint.replace(/\/+$/, '');
+  if (!url.includes(':generateContent')) {
+    if (/\/models\/[^/?#]+$/i.test(url)) {
+      url = `${url}:generateContent`;
+    } else if (/\/models$/i.test(url)) {
+      url = `${url}/${encodeURIComponent(model)}:generateContent`;
+    } else {
+      url = `${url}/models/${encodeURIComponent(model)}:generateContent`;
+    }
+  }
+  return `${url}${url.includes('?') ? '&' : '?'}key=${encodeURIComponent(apiKey)}`;
+}
+
+async function requestGeminiGenerateContentWithBackoff({ endpoint, apiKey, model, body }) {
+  return requestJsonWithBackoff({
+    endpoint: buildGeminiGenerateContentUrl(endpoint, model, apiKey),
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body,
+    retryStatuses: [429, 503]
+  });
+}
+
+const CLAUDE_TOOL_DEFINITIONS = AGENT_TOOL_DEFINITIONS.map((tool) => ({
+  name: tool.name,
+  description: tool.description,
+  input_schema: tool.parameters
+}));
+
+const GEMINI_TOOL_DEFINITIONS = [
+  {
+    functionDeclarations: AGENT_TOOL_DEFINITIONS.map((tool) => ({
+      name: tool.name,
+      description: tool.description,
+      parameters: tool.parameters
+    }))
+  }
+];
+
+function toClaudeMessage(role, text) {
+  return {
+    role: role === 'assistant' ? 'assistant' : 'user',
+    content: [
+      {
+        type: 'text',
+        text: String(text || '')
+      }
+    ]
+  };
+}
+
+function toGeminiContent(role, text) {
+  return {
+    role: role === 'assistant' ? 'model' : 'user',
+    parts: [
+      {
+        text: String(text || '')
+      }
+    ]
+  };
+}
+
+function extractClaudeResponseText(payload) {
+  return asArray(payload?.content)
+    .filter((item) => item?.type === 'text' && item.text)
+    .map((item) => item.text)
+    .join('\n')
+    .trim();
+}
+
+function extractClaudeFunctionCalls(payload) {
+  return asArray(payload?.content)
+    .filter((item) => item?.type === 'tool_use')
+    .map((item, index) => ({
+      callId: cleanText(item?.id, 120) || `claude-call-${index + 1}`,
+      name: cleanText(item?.name, 120),
+      argsText: JSON.stringify(item?.input || {})
+    }))
+    .filter((item) => item.callId && item.name);
+}
+
+function extractGeminiPrimaryCandidate(payload) {
+  if (!Array.isArray(payload?.candidates) || payload.candidates.length === 0) {
+    return null;
+  }
+  return payload.candidates[0];
+}
+
+function extractGeminiPartFunctionCall(part) {
+  if (!part || typeof part !== 'object') {
+    return null;
+  }
+  return part.functionCall && typeof part.functionCall === 'object'
+    ? part.functionCall
+    : part.function_call && typeof part.function_call === 'object'
+      ? part.function_call
+      : null;
+}
+
+function extractGeminiResponseText(payload) {
+  const candidate = extractGeminiPrimaryCandidate(payload);
+  if (!candidate?.content?.parts) {
+    return '';
+  }
+  return asArray(candidate.content.parts)
+    .filter((part) => typeof part?.text === 'string' && part.text.trim())
+    .map((part) => part.text)
+    .join('\n')
+    .trim();
+}
+
+function extractGeminiFunctionCalls(payload, round = 0) {
+  const candidate = extractGeminiPrimaryCandidate(payload);
+  if (!candidate?.content?.parts) {
+    return [];
+  }
+  const calls = [];
+  asArray(candidate.content.parts).forEach((part, index) => {
+    const fn = extractGeminiPartFunctionCall(part);
+    if (!fn?.name) {
+      return;
+    }
+    const args = fn.args && typeof fn.args === 'object' ? fn.args : {};
+    calls.push({
+      callId: cleanText(fn.id, 120) || `gemini-call-${round + 1}-${index + 1}`,
+      name: cleanText(fn.name, 120),
+      argsText: JSON.stringify(args)
+    });
+  });
+  return calls.filter((item) => item.callId && item.name);
+}
+
+function normalizeClaudeAssistantContent(payload) {
+  return asArray(payload?.content)
+    .map((item) => {
+      if (item?.type === 'text') {
+        return {
+          type: 'text',
+          text: String(item.text || '')
+        };
+      }
+      if (item?.type === 'tool_use') {
+        return {
+          type: 'tool_use',
+          id: cleanText(item.id, 120),
+          name: cleanText(item.name, 120),
+          input: item.input && typeof item.input === 'object' ? item.input : {}
+        };
+      }
+      return null;
+    })
+    .filter(Boolean);
+}
+
+function parseToolOutputObject(rawOutput) {
+  const clean = String(rawOutput || '').trim();
+  if (!clean) {
+    return {};
+  }
+  const parsed = safeParseJson(clean, null);
+  if (parsed && typeof parsed === 'object') {
+    return parsed;
+  }
+  return { text: clean };
+}
+
+async function startAgentSession({
+  provider,
+  endpoint,
+  apiKey,
+  model,
+  systemPrompt,
+  conversation,
+  message,
+  hasLatestUserInConversation
+}) {
+  if (provider === LLM_PROVIDERS.CLAUDE) {
+    const messages = [
+      ...conversation.map((item) => toClaudeMessage(item.role, item.text)),
+      ...(hasLatestUserInConversation ? [] : [toClaudeMessage('user', message)])
+    ];
+    const response = await requestClaudeMessagesWithBackoff({
+      endpoint,
+      apiKey,
+      body: {
+        model,
+        system: systemPrompt,
+        messages,
+        tools: CLAUDE_TOOL_DEFINITIONS,
+        max_tokens: 1400
+      }
+    });
+    return {
+      provider,
+      endpoint,
+      apiKey,
+      model,
+      systemPrompt,
+      messages,
+      raw: response,
+      round: 0
+    };
+  }
+
+  if (provider === LLM_PROVIDERS.GEMINI) {
+    const contents = [
+      ...conversation.map((item) => toGeminiContent(item.role, item.text)),
+      ...(hasLatestUserInConversation ? [] : [toGeminiContent('user', message)])
+    ];
+    const response = await requestGeminiGenerateContentWithBackoff({
+      endpoint,
+      apiKey,
+      model,
+      body: {
+        systemInstruction: {
+          parts: [{ text: systemPrompt }]
+        },
+        contents,
+        tools: GEMINI_TOOL_DEFINITIONS,
+        toolConfig: {
+          functionCallingConfig: {
+            mode: 'AUTO'
+          }
+        },
+        generationConfig: {
+          maxOutputTokens: 1400
+        }
+      }
+    });
+    return {
+      provider,
+      endpoint,
+      apiKey,
+      model,
+      systemPrompt,
+      contents,
+      raw: response,
+      round: 0
+    };
+  }
+
+  const response = await requestOpenAiResponsesWithBackoff({
+    endpoint,
+    apiKey,
+    body: {
+      model,
+      input: [
+        toInputText('system', systemPrompt),
+        ...conversation.map((item) => toInputText(item.role, item.text)),
+        ...(hasLatestUserInConversation ? [] : [toInputText('user', message)])
+      ],
+      tools: AGENT_TOOL_DEFINITIONS,
+      tool_choice: 'auto',
+      parallel_tool_calls: false,
+      max_output_tokens: 1400
+    }
+  });
+  return {
+    provider: LLM_PROVIDERS.OPENAI,
+    endpoint,
+    apiKey,
+    model,
+    raw: response,
+    round: 0
+  };
+}
+
+function extractAgentSessionFunctionCalls(session) {
+  if (!session) {
+    return [];
+  }
+  if (session.provider === LLM_PROVIDERS.CLAUDE) {
+    return extractClaudeFunctionCalls(session.raw);
+  }
+  if (session.provider === LLM_PROVIDERS.GEMINI) {
+    return extractGeminiFunctionCalls(session.raw, session.round || 0);
+  }
+  return extractFunctionCalls(session.raw);
+}
+
+function extractAgentSessionText(session) {
+  if (!session) {
+    return '';
+  }
+  if (session.provider === LLM_PROVIDERS.CLAUDE) {
+    return extractClaudeResponseText(session.raw);
+  }
+  if (session.provider === LLM_PROVIDERS.GEMINI) {
+    return extractGeminiResponseText(session.raw);
+  }
+  return extractResponseText(session.raw);
+}
+
+async function continueAgentSessionWithToolOutputs(session, toolOutputs) {
+  if (!session) {
+    return session;
+  }
+
+  if (session.provider === LLM_PROVIDERS.CLAUDE) {
+    const byId = new Map(toolOutputs.map((item) => [item.callId, item]));
+    const assistantContent = normalizeClaudeAssistantContent(session.raw);
+    const toolResultBlocks = asArray(session.raw?.content)
+      .filter((item) => item?.type === 'tool_use')
+      .map((item, index) => {
+        const callId = cleanText(item?.id, 120) || `claude-call-${index + 1}`;
+        const matched = byId.get(callId) || toolOutputs.find((output) => output.name === item?.name);
+        return {
+          type: 'tool_result',
+          tool_use_id: callId,
+          content: matched?.output || '{}'
+        };
+      });
+
+    const nextMessages = [
+      ...session.messages,
+      { role: 'assistant', content: assistantContent },
+      { role: 'user', content: toolResultBlocks }
+    ];
+
+    const response = await requestClaudeMessagesWithBackoff({
+      endpoint: session.endpoint,
+      apiKey: session.apiKey,
+      body: {
+        model: session.model,
+        system: session.systemPrompt,
+        messages: nextMessages,
+        tools: CLAUDE_TOOL_DEFINITIONS,
+        max_tokens: 1400
+      }
+    });
+
+    return {
+      ...session,
+      messages: nextMessages,
+      raw: response,
+      round: Number(session.round || 0) + 1
+    };
+  }
+
+  if (session.provider === LLM_PROVIDERS.GEMINI) {
+    const callOutputs = new Map(toolOutputs.map((item) => [item.callId, item]));
+    const candidate = extractGeminiPrimaryCandidate(session.raw);
+    const modelContent = candidate?.content && typeof candidate.content === 'object'
+      ? candidate.content
+      : null;
+    const toolCalls = extractGeminiFunctionCalls(session.raw, session.round || 0);
+    const responseParts = toolCalls.map((call) => {
+      const matched = callOutputs.get(call.callId) || toolOutputs.find((item) => item.name === call.name);
+      return {
+        functionResponse: {
+          name: call.name,
+          response: parseToolOutputObject(matched?.output)
+        }
+      };
+    });
+
+    const nextContents = [...session.contents];
+    if (modelContent) {
+      nextContents.push(modelContent);
+    }
+    if (responseParts.length) {
+      nextContents.push({
+        role: 'user',
+        parts: responseParts
+      });
+    }
+
+    const response = await requestGeminiGenerateContentWithBackoff({
+      endpoint: session.endpoint,
+      apiKey: session.apiKey,
+      model: session.model,
+      body: {
+        systemInstruction: {
+          parts: [{ text: session.systemPrompt }]
+        },
+        contents: nextContents,
+        tools: GEMINI_TOOL_DEFINITIONS,
+        toolConfig: {
+          functionCallingConfig: {
+            mode: 'AUTO'
+          }
+        },
+        generationConfig: {
+          maxOutputTokens: 1400
+        }
+      }
+    });
+
+    return {
+      ...session,
+      contents: nextContents,
+      raw: response,
+      round: Number(session.round || 0) + 1
+    };
+  }
+
+  const response = await requestOpenAiResponsesWithBackoff({
+    endpoint: session.endpoint,
+    apiKey: session.apiKey,
+    body: {
+      model: session.model,
+      previous_response_id: session.raw?.id,
+      input: toolOutputs.map((output) => ({
+        type: 'function_call_output',
+        call_id: output.callId,
+        output: output.output
+      })),
+      tools: AGENT_TOOL_DEFINITIONS,
+      tool_choice: 'auto',
+      parallel_tool_calls: false,
+      max_output_tokens: 1400
+    }
+  });
+
+  return {
+    ...session,
+    raw: response,
+    round: Number(session.round || 0) + 1
+  };
+}
+
+async function requestSynthesisPayload({
+  provider,
+  endpoint,
+  apiKey,
+  model,
+  synthesisRequest,
+  message,
+  draftAnswer,
+  toolTrace,
+  evidence
+}) {
+  const userPrompt = [
+    `User request: ${message}`,
+    `Draft answer: ${draftAnswer || '-'}`,
+    `Tool trace: ${JSON.stringify(toolTrace.slice(0, 20))}`,
+    `Evidence: ${JSON.stringify(evidence.slice(0, 20))}`
+  ].join('\n\n');
+
+  if (provider === LLM_PROVIDERS.CLAUDE) {
+    const response = await requestClaudeMessagesWithBackoff({
+      endpoint,
+      apiKey,
+      body: {
+        model,
+        system: synthesisRequest,
+        max_tokens: 1600,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: userPrompt
+              }
+            ]
+          }
+        ]
+      }
+    });
+    return extractClaudeResponseText(response);
+  }
+
+  if (provider === LLM_PROVIDERS.GEMINI) {
+    const response = await requestGeminiGenerateContentWithBackoff({
+      endpoint,
+      apiKey,
+      model,
+      body: {
+        systemInstruction: {
+          parts: [{ text: synthesisRequest }]
+        },
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: userPrompt }]
+          }
+        ],
+        generationConfig: {
+          maxOutputTokens: 1600
+        }
+      }
+    });
+    return extractGeminiResponseText(response);
+  }
+
+  const response = await requestOpenAiResponsesWithBackoff({
+    endpoint,
+    apiKey,
+    body: {
+      model,
+      input: [
+        toInputText('system', synthesisRequest),
+        toInputText('user', userPrompt)
+      ],
+      text: {
+        format: {
+          type: 'json_schema',
+          name: 'agent_result',
+          strict: true,
+          schema: AGENT_RESULT_SCHEMA
+        }
+      },
+      max_output_tokens: 1600
+    }
+  });
+  return extractResponseText(response);
 }
 
 function normalizeAgentOutput(raw, fallbackText) {
@@ -1116,8 +1703,9 @@ async function runAgentController(payload) {
     throw new Error('Missing LLM API key. Set it in Settings > LLM Model & API, or use LLM_API_KEY / ENANA_LLM_API_KEY.');
   }
 
-  const endpoint = resolveAgentEndpoint(payload?.llm);
-  const model = resolveAgentModel(payload?.llm);
+  const provider = resolveAgentProvider(payload?.llm);
+  const endpoint = resolveAgentEndpoint(payload?.llm, provider);
+  const model = resolveAgentModel(payload?.llm, provider);
   const conversation = extractConversation(payload?.conversation);
   const hasLatestUserInConversation = conversation.length > 0
     && conversation[conversation.length - 1].role === 'user'
@@ -1142,28 +1730,21 @@ async function runAgentController(payload) {
     confidence: 0.52
   }));
 
-  const initialResponse = await requestResponsesWithBackoff({
+  const systemPrompt = buildAgentSystemPrompt(projectName, promptConfig);
+  let session = await startAgentSession({
+    provider,
     endpoint,
     apiKey,
-    body: {
-      model,
-      input: [
-        toInputText('system', buildAgentSystemPrompt(projectName, promptConfig)),
-        ...conversation.map((item) => toInputText(item.role, item.text)),
-        ...(hasLatestUserInConversation ? [] : [toInputText('user', message)])
-      ],
-      tools: AGENT_TOOL_DEFINITIONS,
-      tool_choice: 'auto',
-      parallel_tool_calls: false,
-      max_output_tokens: 1400
-    }
+    model,
+    systemPrompt,
+    conversation,
+    message,
+    hasLatestUserInConversation
   });
-
-  let activeResponse = initialResponse;
   let round = 0;
 
   while (round < MAX_AGENT_TOOL_ROUNDS) {
-    const calls = extractFunctionCalls(activeResponse);
+    const calls = extractAgentSessionFunctionCalls(session);
     if (!calls.length) {
       break;
     }
@@ -1174,8 +1755,8 @@ async function runAgentController(payload) {
       const args = safeParseJson(call.argsText, {});
       const toolResult = runAgentTool(call.name, args, snapshot);
       toolOutputs.push({
-        type: 'function_call_output',
-        call_id: call.callId,
+        callId: call.callId,
+        name: call.name,
         output: JSON.stringify(toolResult)
       });
       toolTrace.push({
@@ -1204,24 +1785,12 @@ async function runAgentController(payload) {
       confidence: 0.62
     }));
 
-    activeResponse = await requestResponsesWithBackoff({
-      endpoint,
-      apiKey,
-      body: {
-        model,
-        previous_response_id: activeResponse.id,
-        input: toolOutputs,
-        tools: AGENT_TOOL_DEFINITIONS,
-        tool_choice: 'auto',
-        parallel_tool_calls: false,
-        max_output_tokens: 1400
-      }
-    });
+    session = await continueAgentSessionWithToolOutputs(session, toolOutputs);
 
     round += 1;
   }
 
-  const draftAnswer = extractResponseText(activeResponse);
+  const draftAnswer = extractAgentSessionText(session);
   const requiresApproval = containsWriteIntent(message);
 
   intermediateStates.push(buildIntermediateState('verify', 'Verified evidence coverage and policy constraints.', {
@@ -1235,33 +1804,17 @@ async function runAgentController(payload) {
 
   let normalized;
   try {
-    const synthesisPayload = await requestResponsesWithBackoff({
+    const structuredRaw = await requestSynthesisPayload({
+      provider,
       endpoint,
       apiKey,
-      body: {
-        model,
-        input: [
-          toInputText('system', synthesisRequest),
-          toInputText('user', [
-            `User request: ${message}`,
-            `Draft answer: ${draftAnswer || '-'}`,
-            `Tool trace: ${JSON.stringify(toolTrace.slice(0, 20))}`,
-            `Evidence: ${JSON.stringify(evidence.slice(0, 20))}`
-          ].join('\n\n'))
-        ],
-        text: {
-          format: {
-            type: 'json_schema',
-            name: 'agent_result',
-            strict: true,
-            schema: AGENT_RESULT_SCHEMA
-          }
-        },
-        max_output_tokens: 1600
-      }
+      model,
+      synthesisRequest,
+      message,
+      draftAnswer,
+      toolTrace,
+      evidence
     });
-
-    const structuredRaw = extractResponseText(synthesisPayload);
     normalized = normalizeAgentOutput(structuredRaw, draftAnswer);
   } catch {
     normalized = {
@@ -1308,6 +1861,7 @@ async function runAgentController(payload) {
 
   return {
     ok: true,
+    provider,
     model,
     answer: normalized.answer,
     confidence: normalized.confidence,

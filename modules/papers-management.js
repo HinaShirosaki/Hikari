@@ -658,18 +658,54 @@ function fileToDataUrl(file) {
   });
 }
 
-function getLlmEndpointAndKey(llm) {
+const LLM_PROVIDER_ENDPOINTS = {
+  openai: 'https://api.openai.com/v1/responses',
+  gemini: 'https://generativelanguage.googleapis.com/v1beta',
+  claude: 'https://api.anthropic.com/v1/messages'
+};
+
+function inferProviderFromEndpoint(endpoint) {
+  const value = String(endpoint || '').trim().toLowerCase();
+  if (!value) {
+    return '';
+  }
+  if (value.includes('anthropic.com')) {
+    return 'claude';
+  }
+  if (value.includes('generativelanguage.googleapis.com') || value.includes('ai.google')) {
+    return 'gemini';
+  }
+  if (value.includes('openai.com') || value.includes('/openai/')) {
+    return 'openai';
+  }
+  return '';
+}
+
+function normalizeLlmProvider(provider, endpoint = '') {
+  const clean = String(provider || '').trim().toLowerCase();
+  if (clean === 'openai' || clean === 'gemini' || clean === 'claude') {
+    return clean;
+  }
+  return inferProviderFromEndpoint(endpoint) || 'openai';
+}
+
+function defaultEndpointForProvider(provider) {
+  const resolved = normalizeLlmProvider(provider);
+  return LLM_PROVIDER_ENDPOINTS[resolved] || LLM_PROVIDER_ENDPOINTS.openai;
+}
+
+function getLlmRequestConfig(llm) {
   const legacySetting = String(llm?.api || '').trim();
-  const endpoint = String(llm?.apiEndpoint || '').trim()
-    || (legacySetting.startsWith('http') ? legacySetting : '')
-    || 'https://api.openai.com/v1/responses';
+  const endpointCandidate = String(llm?.apiEndpoint || '').trim() || (legacySetting.startsWith('http') ? legacySetting : '');
+  const provider = normalizeLlmProvider(llm?.provider, endpointCandidate);
+  const endpoint = endpointCandidate || defaultEndpointForProvider(provider);
   const token = String(llm?.apiKey || '').trim() || (legacySetting && !legacySetting.startsWith('http') ? legacySetting : '');
 
   if (!token) {
     throw new Error('Missing API key in Settings > LLM Model & API.');
   }
 
-  return { endpoint, token };
+  return { provider, endpoint, token };
 }
 
 async function requestResponses({ llm, modelFallbackPrompt, fileName, pdfDataUrl, prompt }) {
@@ -677,8 +713,46 @@ async function requestResponses({ llm, modelFallbackPrompt, fileName, pdfDataUrl
   if (!model) {
     throw new Error('Missing model in Settings > LLM Model & API.');
   }
-  const { endpoint, token } = getLlmEndpointAndKey(llm);
+  const { provider, endpoint, token } = getLlmRequestConfig(llm);
 
+  if (provider === 'claude') {
+    return requestClaude({
+      endpoint,
+      token,
+      model,
+      prompt: prompt || modelFallbackPrompt || '',
+      pdfDataUrl
+    });
+  }
+  if (provider === 'gemini') {
+    return requestGemini({
+      endpoint,
+      token,
+      model,
+      prompt: prompt || modelFallbackPrompt || '',
+      pdfDataUrl
+    });
+  }
+  return requestOpenAi({
+    endpoint,
+    token,
+    model,
+    prompt: prompt || modelFallbackPrompt || '',
+    fileName,
+    pdfDataUrl
+  });
+}
+
+function parsePdfDataUrl(pdfDataUrl) {
+  const value = String(pdfDataUrl || '').trim();
+  const match = value.match(/^data:application\/pdf(?:;charset=[^;,]+)?;base64,(.+)$/i);
+  if (!match?.[1]) {
+    return '';
+  }
+  return match[1];
+}
+
+async function requestOpenAi({ endpoint, token, model, prompt, fileName, pdfDataUrl }) {
   const response = await fetch(endpoint, {
     method: 'POST',
     headers: {
@@ -692,7 +766,7 @@ async function requestResponses({ llm, modelFallbackPrompt, fileName, pdfDataUrl
           role: 'user',
           content: pdfDataUrl
             ? [
-              { type: 'input_text', text: prompt || modelFallbackPrompt || '' },
+              { type: 'input_text', text: prompt },
               {
                 type: 'input_file',
                 filename: fileName || 'paper.pdf',
@@ -700,7 +774,7 @@ async function requestResponses({ llm, modelFallbackPrompt, fileName, pdfDataUrl
               }
             ]
             : [
-              { type: 'input_text', text: prompt || modelFallbackPrompt || '' }
+              { type: 'input_text', text: prompt }
             ]
         }
       ]
@@ -726,6 +800,120 @@ async function requestResponses({ llm, modelFallbackPrompt, fileName, pdfDataUrl
     });
   });
   return chunks.join('\n').trim();
+}
+
+async function requestClaude({ endpoint, token, model, prompt, pdfDataUrl }) {
+  const content = [{ type: 'text', text: prompt }];
+  const pdfBase64 = parsePdfDataUrl(pdfDataUrl);
+  if (pdfDataUrl && !pdfBase64) {
+    throw new Error('Failed to parse PDF data for Claude request.');
+  }
+  if (pdfBase64) {
+    content.push({
+      type: 'document',
+      source: {
+        type: 'base64',
+        media_type: 'application/pdf',
+        data: pdfBase64
+      }
+    });
+  }
+
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': token,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: 1400,
+      messages: [
+        {
+          role: 'user',
+          content
+        }
+      ]
+    })
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`LLM API error (${response.status}): ${errorBody}`);
+  }
+
+  const payload = await response.json();
+  return (payload?.content || [])
+    .filter((item) => item?.type === 'text' && item.text)
+    .map((item) => item.text)
+    .join('\n')
+    .trim();
+}
+
+function buildGeminiGenerateContentUrl(endpoint, model, token) {
+  const cleanEndpoint = String(endpoint || '').trim() || LLM_PROVIDER_ENDPOINTS.gemini;
+  let url = cleanEndpoint.replace(/\/+$/, '');
+  if (!url.includes(':generateContent')) {
+    if (/\/models\/[^/?#]+$/i.test(url)) {
+      url = `${url}:generateContent`;
+    } else if (/\/models$/i.test(url)) {
+      url = `${url}/${encodeURIComponent(model)}:generateContent`;
+    } else {
+      url = `${url}/models/${encodeURIComponent(model)}:generateContent`;
+    }
+  }
+  return `${url}${url.includes('?') ? '&' : '?'}key=${encodeURIComponent(token)}`;
+}
+
+async function requestGemini({ endpoint, token, model, prompt, pdfDataUrl }) {
+  const parts = [{ text: prompt }];
+  const pdfBase64 = parsePdfDataUrl(pdfDataUrl);
+  if (pdfDataUrl && !pdfBase64) {
+    throw new Error('Failed to parse PDF data for Gemini request.');
+  }
+  if (pdfBase64) {
+    parts.push({
+      inlineData: {
+        mimeType: 'application/pdf',
+        data: pdfBase64
+      }
+    });
+  }
+
+  const response = await fetch(buildGeminiGenerateContentUrl(endpoint, model, token), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      contents: [
+        {
+          role: 'user',
+          parts
+        }
+      ],
+      generationConfig: {
+        maxOutputTokens: 1400
+      }
+    })
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`LLM API error (${response.status}): ${errorBody}`);
+  }
+
+  const payload = await response.json();
+  const candidate = Array.isArray(payload?.candidates) ? payload.candidates[0] : null;
+  if (!candidate?.content?.parts) {
+    return '';
+  }
+  return candidate.content.parts
+    .filter((part) => typeof part?.text === 'string' && part.text.trim())
+    .map((part) => part.text)
+    .join('\n')
+    .trim();
 }
 
 async function requestSummary({ llm, pdfDataUrl, fileName, title }) {

@@ -42,6 +42,47 @@ export const TITLES = {
 
 export const STORAGE_KEY = 'enana_state_v1';
 const LEGACY_CHEMISTRY_DRAFT_KEY = 'enana_synthesis_chemistry_draft_v1';
+export const LLM_PROVIDERS = Object.freeze({
+  OPENAI: 'openai',
+  GEMINI: 'gemini',
+  CLAUDE: 'claude'
+});
+export const DEFAULT_LLM_PROVIDER = LLM_PROVIDERS.OPENAI;
+export const LLM_DEFAULT_ENDPOINTS = Object.freeze({
+  [LLM_PROVIDERS.OPENAI]: 'https://api.openai.com/v1/responses',
+  [LLM_PROVIDERS.GEMINI]: 'https://generativelanguage.googleapis.com/v1beta',
+  [LLM_PROVIDERS.CLAUDE]: 'https://api.anthropic.com/v1/messages'
+});
+
+export function inferLlmProviderFromEndpoint(endpoint) {
+  const value = String(endpoint || '').trim().toLowerCase();
+  if (!value) {
+    return '';
+  }
+  if (value.includes('anthropic.com')) {
+    return LLM_PROVIDERS.CLAUDE;
+  }
+  if (value.includes('generativelanguage.googleapis.com') || value.includes('ai.google')) {
+    return LLM_PROVIDERS.GEMINI;
+  }
+  if (value.includes('openai.com') || value.includes('/openai/')) {
+    return LLM_PROVIDERS.OPENAI;
+  }
+  return '';
+}
+
+export function normalizeLlmProvider(provider, endpoint = '') {
+  const clean = String(provider || '').trim().toLowerCase();
+  if (Object.values(LLM_PROVIDERS).includes(clean)) {
+    return clean;
+  }
+  return inferLlmProviderFromEndpoint(endpoint) || DEFAULT_LLM_PROVIDER;
+}
+
+export function defaultLlmEndpointForProvider(provider) {
+  const resolved = normalizeLlmProvider(provider);
+  return LLM_DEFAULT_ENDPOINTS[resolved] || LLM_DEFAULT_ENDPOINTS[DEFAULT_LLM_PROVIDER];
+}
 
 export const defaultState = {
   members: [],
@@ -99,9 +140,10 @@ export const defaultState = {
     },
     storagePath: '',
     llm: {
+      provider: DEFAULT_LLM_PROVIDER,
       model: '',
       api: '',
-      apiEndpoint: 'https://api.openai.com/v1/responses',
+      apiEndpoint: LLM_DEFAULT_ENDPOINTS[DEFAULT_LLM_PROVIDER],
       apiKey: ''
     },
     enaFilePath: '',
@@ -129,6 +171,9 @@ export function normalizeState(parsed) {
   const legacyApi = String(rawLlm.api || '').trim();
   const legacyEndpoint = legacyApi.startsWith('http') ? legacyApi : '';
   const legacyApiKey = legacyApi && !legacyApi.startsWith('http') ? legacyApi : '';
+  const llmProvider = normalizeLlmProvider(rawLlm.provider, rawLlm.apiEndpoint || legacyEndpoint);
+  const llmEndpoint = String(rawLlm.apiEndpoint || legacyEndpoint || '').trim()
+    || defaultLlmEndpointForProvider(llmProvider);
 
   return {
     ...structuredClone(defaultState),
@@ -191,7 +236,8 @@ export function normalizeState(parsed) {
       llm: {
         ...defaultState.settings.llm,
         ...rawLlm,
-        apiEndpoint: String(rawLlm.apiEndpoint || legacyEndpoint || defaultState.settings.llm.apiEndpoint).trim(),
+        provider: llmProvider,
+        apiEndpoint: llmEndpoint,
         apiKey: String(rawLlm.apiKey || legacyApiKey).trim(),
         api: legacyApi
       },

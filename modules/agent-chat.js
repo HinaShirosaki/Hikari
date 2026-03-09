@@ -540,6 +540,7 @@ export function initAgentChat({ state, persist, createId, safeText }) {
         conversation: toConversation(state.agentChat.messages),
         stateSnapshot: buildStateSnapshot(projectId),
         llm: {
+          provider: String(state.settings?.llm?.provider || '').trim(),
           model: String(state.settings?.llm?.model || '').trim(),
           apiEndpoint: String(state.settings?.llm?.apiEndpoint || '').trim(),
           apiKey: String(state.settings?.llm?.apiKey || '').trim()

@@ -209,14 +209,22 @@ Recommended backup routine:
 
 Configure in `Setting > LLM Model & API`.
 
+Supported providers:
+
+- OpenAI
+- Gemini
+- Claude
+
 Environment variable fallbacks:
 
 - `ENANA_LLM_API_KEY` (preferred)
 - `LLM_API_KEY`
 
-Default endpoint:
+Default endpoints:
 
-- `https://api.openai.com/v1/responses`
+- OpenAI: `https://api.openai.com/v1/responses`
+- Gemini: `https://generativelanguage.googleapis.com/v1beta`
+- Claude: `https://api.anthropic.com/v1/messages`
 
 Notes:
 

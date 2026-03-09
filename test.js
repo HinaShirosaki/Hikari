@@ -432,6 +432,7 @@ test('normalizeState keeps defaults and migrates legacy LLM API key', () => {
   assert.equal(normalized.growthMetrics.counters.protocol_share_imported, 0);
   assert.equal(Array.isArray(normalized.growthMetrics.events), true);
   assert.equal(normalized.growthMetrics.events.length, 0);
+  assert.equal(normalized.settings.llm.provider, 'openai');
   assert.equal(normalized.settings.llm.apiKey, 'sk-test-123');
   assert.equal(
     normalized.settings.llm.apiEndpoint,
@@ -2051,6 +2052,7 @@ test('[P1] normalizeState migrates legacy endpoint from llm.api URL', () => {
   const normalized = shared.normalizeState({ settings: { llm: { api: 'https://example.com/v1' } } });
   assert.equal(normalized.settings.llm.apiEndpoint, 'https://example.com/v1');
   assert.equal(normalized.settings.llm.apiKey, '');
+  assert.equal(normalized.settings.llm.provider, 'openai');
 });
 
 test('[P1] normalizeState keeps explicit llm.apiKey over legacy llm.api key', () => {
@@ -2061,6 +2063,23 @@ test('[P1] normalizeState keeps explicit llm.apiKey over legacy llm.api key', ()
 test('[P1] normalizeState trims llm.apiEndpoint whitespace', () => {
   const normalized = shared.normalizeState({ settings: { llm: { apiEndpoint: '  https://api.example/v1  ' } } });
   assert.equal(normalized.settings.llm.apiEndpoint, 'https://api.example/v1');
+});
+
+test('[P1] normalizeState keeps explicit llm.provider', () => {
+  const normalized = shared.normalizeState({ settings: { llm: { provider: 'claude' } } });
+  assert.equal(normalized.settings.llm.provider, 'claude');
+  assert.equal(normalized.settings.llm.apiEndpoint, 'https://api.anthropic.com/v1/messages');
+});
+
+test('[P1] normalizeState infers llm.provider from endpoint', () => {
+  const normalized = shared.normalizeState({
+    settings: {
+      llm: {
+        apiEndpoint: 'https://generativelanguage.googleapis.com/v1beta'
+      }
+    }
+  });
+  assert.equal(normalized.settings.llm.provider, 'gemini');
 });
 
 test('[P1] normalizeState does not mutate defaultState arrays', () => {

@@ -1105,8 +1105,16 @@
             <h3>LLM Model & API</h3>
             <form id="llm-form" class="stack-form">
               <label>
+                Provider
+                <select id="setting-provider">
+                  <option value="openai">OpenAI</option>
+                  <option value="gemini">Gemini</option>
+                  <option value="claude">Claude</option>
+                </select>
+              </label>
+              <label>
                 Model Name
-                <input id="setting-model" placeholder="e.g. gpt-4.1" />
+                <input id="setting-model" placeholder="e.g. gpt-4.1 / gemini-2.5-pro / claude-sonnet-4-5" />
               </label>
               <label>
                 API Endpoint
@@ -1211,13 +1219,13 @@
             Description
             <textarea id="workflow-description" rows="3" placeholder="Optional notes about this workflow"></textarea>
           </label>
-          <label>
+          <label id="workflow-project-field">
             Linked Project
             <select id="workflow-project">
               <option value="">Select project</option>
             </select>
           </label>
-          <label>
+          <label id="workflow-notebook-pages-field">
             Linked Notebook Pages (optional)
             <select id="workflow-notebook-pages" multiple size="6"></select>
           </label>
@@ -1261,7 +1269,7 @@
 
       <div class="panel workflow-template-panel" hidden>
         <h3>Templates</h3>
-        <p class="small-note">Templates save block + connection structure only. You can link project/pages after experiments.</p>
+        <p class="small-note">Templates save only block + connection structure. No project or notebook page links are included.</p>
         <div class="form-grid workflow-grid">
           <label>
             Template Name

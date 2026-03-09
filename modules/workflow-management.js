@@ -18,6 +18,8 @@ export function initWorkflowManagement({
   const workflowDescriptionInput = document.getElementById('workflow-description');
   const workflowProjectInput = document.getElementById('workflow-project');
   const workflowNotebookPagesInput = document.getElementById('workflow-notebook-pages');
+  const workflowProjectField = document.getElementById('workflow-project-field');
+  const workflowNotebookPagesField = document.getElementById('workflow-notebook-pages-field');
   const workflowCancelBtn = document.getElementById('workflow-cancel-btn');
   const workflowBlockProtocolInput = document.getElementById('workflow-block-protocol');
   const workflowBlockAddBtn = document.getElementById('workflow-block-add-btn');
@@ -350,6 +352,7 @@ export function initWorkflowManagement({
     const showTemplates = workflowEntryMode === 'template';
     const showList = workflowEntryMode === 'list';
     const showHome = workflowEntryMode === 'home';
+    const hideLinkFields = workflowEntryMode === 'template';
 
     if (workflowEntryPanel) {
       workflowEntryPanel.hidden = !showHome;
@@ -366,6 +369,19 @@ export function initWorkflowManagement({
     workflowListPanels.forEach((panel) => {
       panel.hidden = !showList;
     });
+
+    if (workflowProjectField) {
+      workflowProjectField.hidden = hideLinkFields;
+    }
+    if (workflowNotebookPagesField) {
+      workflowNotebookPagesField.hidden = hideLinkFields;
+    }
+    if (workflowProjectInput) {
+      workflowProjectInput.disabled = hideLinkFields;
+    }
+    if (workflowNotebookPagesInput) {
+      workflowNotebookPagesInput.disabled = hideLinkFields;
+    }
   }
 
   function onStartCreateWorkflow() {

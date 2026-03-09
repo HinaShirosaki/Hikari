@@ -1750,11 +1750,11 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
 }
 
 .plannotate-map-host {
-  min-height: 580px;
-  border: 1px solid rgba(255, 255, 255, 0.72);
+  min-height: 700px;
+  border: 1px solid #d9d9d9;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.48);
-  padding: 10px;
+  background: #ffffff;
+  padding: 12px;
   display: grid;
   gap: 10px;
   align-content: start;
@@ -1801,20 +1801,20 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
 }
 
 .plannotate-map-shell {
-  margin-top: 12px;
+  margin-top: 8px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.72);
-  background: rgba(255, 255, 255, 0.54);
+  border: 1px solid #dddddd;
+  background: #ffffff;
   padding: 12px;
 }
 
 .plannotate-panzoom-viewport {
   position: relative;
   overflow: hidden;
-  min-height: 500px;
+  min-height: 620px;
   border-radius: 10px;
-  border: 1px solid rgba(147, 175, 214, 0.45);
-  background: linear-gradient(180deg, rgba(250, 253, 255, 0.86), rgba(236, 245, 255, 0.75));
+  border: 1px solid #dddddd;
+  background: #ffffff;
   cursor: grab;
   touch-action: none;
 }
@@ -1829,7 +1829,7 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   transform-origin: 50% 50%;
   transform: translate(0px, 0px) scale(1);
   transition: transform 80ms linear;
-  padding: 8px;
+  padding: 2px;
 }
 
 .plannotate-map-tooltip {
@@ -1837,11 +1837,11 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   z-index: 6;
   pointer-events: none;
   max-width: min(90%, 460px);
-  border-radius: 8px;
-  border: 1px solid rgba(110, 138, 181, 0.45);
-  background: rgba(255, 255, 255, 0.96);
-  color: #20304a;
-  box-shadow: 0 10px 28px rgba(22, 39, 66, 0.2);
+  border-radius: 6px;
+  border: 1px solid #8d8d8d;
+  background: rgba(255, 255, 255, 0.98);
+  color: #1a1a1a;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
   font-size: 0.76rem;
   line-height: 1.35;
   padding: 7px 9px;
@@ -1849,47 +1849,59 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
 }
 
 .plannotate-circular-map {
-  width: min(100%, 560px);
+  width: min(100%, 780px);
   display: block;
   margin: 0 auto;
 }
 
 .plannotate-circular-backdrop {
   fill: none;
-  stroke: rgba(111, 138, 183, 0.35);
-  stroke-width: 24;
+  stroke: #000000;
+  stroke-width: 4.6;
 }
 
 .plannotate-circular-axis line {
-  stroke: rgba(64, 85, 118, 0.6);
-  stroke-width: 1.2;
+  stroke: #000000;
+  stroke-width: 2.1;
+  opacity: 0.5;
 }
 
 .plannotate-circular-axis text {
-  fill: rgba(33, 49, 73, 0.84);
-  font-size: 11px;
-  font-weight: 600;
+  fill: #727272;
+  font-size: 12px;
+  font-weight: 500;
   text-anchor: middle;
   dominant-baseline: middle;
 }
 
 .plannotate-circular-hit {
-  fill: none;
   stroke-linecap: round;
-  opacity: 0.95;
+  opacity: 1;
+}
+
+.plannotate-circular-connectors line {
+  stroke-width: 3;
+  stroke-linecap: round;
+  opacity: 0.55;
+}
+
+.plannotate-circular-labels text {
+  font-size: 13px;
+  font-weight: 500;
+  dominant-baseline: middle;
 }
 
 .plannotate-circular-center {
-  fill: var(--primary);
-  font-size: 17px;
-  font-weight: 700;
+  fill: #7b7b7b;
+  font-size: 26px;
+  font-weight: 500;
   text-anchor: middle;
 }
 
 .plannotate-circular-center-sub {
-  fill: rgba(43, 63, 92, 0.78);
-  font-size: 11px;
-  font-weight: 600;
+  fill: #8a8a8a;
+  font-size: 13px;
+  font-weight: 500;
   text-anchor: middle;
 }
 
@@ -1897,10 +1909,10 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   position: relative;
   min-width: 840px;
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.72);
+  border: 1px solid #dddddd;
   background:
-    linear-gradient(to right, rgba(122, 151, 195, 0.16) 1px, transparent 1px),
-    rgba(255, 255, 255, 0.56);
+    linear-gradient(to right, rgba(0, 0, 0, 0.12) 1px, transparent 1px),
+    #ffffff;
   background-size: 12.5% 100%;
 }
 
@@ -1913,8 +1925,8 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
 .plannotate-linear-hit {
   position: absolute;
   height: 14px;
-  border-radius: 6px;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.45), 0 2px 5px rgba(18, 27, 43, 0.22);
+  border-radius: 4px;
+  box-shadow: none;
 }
 
 .plannotate-linear-axis {
@@ -1927,7 +1939,7 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   position: absolute;
   transform: translateX(-50%);
   font-size: 0.72rem;
-  color: rgba(36, 53, 77, 0.76);
+  color: #727272;
 }
 
 .plannotate-linear-axis span:first-child {
@@ -2322,46 +2334,48 @@ body.theme-night .plannotate-mode-btn-active {
 }
 
 body.theme-night .plannotate-map-host {
-  border-color: rgba(186, 218, 255, 0.3);
-  background: rgba(20, 31, 48, 0.48);
+  border-color: #d9d9d9;
+  background: #ffffff;
 }
 
 body.theme-night .plannotate-map-shell {
-  border-color: rgba(186, 218, 255, 0.3);
-  background: rgba(20, 31, 48, 0.52);
+  border-color: #dddddd;
+  background: #ffffff;
 }
 
 body.theme-night .plannotate-panzoom-viewport {
-  border-color: rgba(186, 218, 255, 0.3);
-  background: linear-gradient(180deg, rgba(25, 40, 62, 0.84), rgba(20, 31, 48, 0.78));
+  border-color: #dddddd;
+  background: #ffffff;
 }
 
 body.theme-night .plannotate-map-tooltip {
-  border-color: rgba(186, 218, 255, 0.34);
-  background: rgba(22, 33, 51, 0.96);
-  color: rgba(230, 241, 255, 0.96);
+  border-color: #8d8d8d;
+  background: rgba(255, 255, 255, 0.98);
+  color: #1a1a1a;
 }
 
 body.theme-night .plannotate-circular-backdrop {
-  stroke: rgba(186, 218, 255, 0.24);
+  stroke: #000000;
 }
 
 body.theme-night .plannotate-circular-axis line {
-  stroke: rgba(186, 218, 255, 0.44);
+  stroke: #000000;
+  opacity: 0.5;
 }
 
 body.theme-night .plannotate-circular-axis text,
+body.theme-night .plannotate-circular-center,
 body.theme-night .plannotate-circular-center-sub,
 body.theme-night .plannotate-linear-axis span {
-  color: rgba(212, 232, 255, 0.8);
-  fill: rgba(212, 232, 255, 0.8);
+  color: #727272;
+  fill: #727272;
 }
 
 body.theme-night .plannotate-linear-map {
-  border-color: rgba(186, 218, 255, 0.3);
+  border-color: #dddddd;
   background:
-    linear-gradient(to right, rgba(150, 182, 226, 0.14) 1px, transparent 1px),
-    rgba(20, 31, 48, 0.5);
+    linear-gradient(to right, rgba(0, 0, 0, 0.12) 1px, transparent 1px),
+    #ffffff;
   background-size: 12.5% 100%;
 }
 
