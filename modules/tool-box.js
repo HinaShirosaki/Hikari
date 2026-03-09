@@ -356,6 +356,14 @@ function formatPlannotateLocation(hit, sequenceLength) {
   return `${start}..${sequenceLength}, 1..${end}`;
 }
 
+function formatPlannotateHoverInfo(hit, sequenceLength) {
+  const location = formatPlannotateLocation(hit, sequenceLength);
+  const strand = hit.sframe === -1 ? '-' : '+';
+  const identity = Number.isFinite(hit.pident) ? `${hit.pident.toFixed(2)}%` : 'n/a';
+  const coverage = Number.isFinite(hit.percmatch) ? `${hit.percmatch.toFixed(2)}%` : 'n/a';
+  return `${hit.Feature} | ${hit.Type} | ${location} | Strand ${strand} | Identity ${identity} | Coverage ${coverage}`;
+}
+
 function formatBpCompact(value) {
   const numeric = Number(value) || 0;
   if (numeric >= 1000) {
@@ -411,20 +419,21 @@ function renderPlannotateCircularMap(result) {
     const color = getPlannotateTypeColor(hit.Type);
     const segments = getPlannotateSegments(hit, sequenceLength, 'circular');
     const title = escapeHtml(`${hit.Feature} (${formatPlannotateLocation(hit, sequenceLength)})`);
+    const hoverInfo = escapeHtml(formatPlannotateHoverInfo(hit, sequenceLength));
     return segments.map((segment) => {
       const startRatio = segment.start / sequenceLength;
       const endRatio = segment.end / sequenceLength;
       const ratioSpan = Math.max(0, endRatio - startRatio);
       if (ratioSpan >= 0.999) {
         return `
-          <circle class="plannotate-circular-hit" cx="${cx}" cy="${cy}" r="${radius}" stroke="${color}" stroke-width="${ringWidth}">
+          <circle class="plannotate-circular-hit plannotate-hover-target" data-hit-info="${hoverInfo}" cx="${cx}" cy="${cy}" r="${radius}" stroke="${color}" stroke-width="${ringWidth}">
             <title>${title}</title>
           </circle>
         `;
       }
       const path = makeCircularArcPath(cx, cy, radius, startRatio, endRatio);
       return `
-        <path class="plannotate-circular-hit" d="${path}" stroke="${color}" stroke-width="${ringWidth}">
+        <path class="plannotate-circular-hit plannotate-hover-target" data-hit-info="${hoverInfo}" d="${path}" stroke="${color}" stroke-width="${ringWidth}">
           <title>${title}</title>
         </path>
       `;
@@ -433,13 +442,17 @@ function renderPlannotateCircularMap(result) {
 
   return `
     <div class="plannotate-map-shell">
-      <svg class="plannotate-circular-map" viewBox="0 0 360 360" role="img" aria-label="Circular plasmid map">
-        <circle class="plannotate-circular-backdrop" cx="${cx}" cy="${cy}" r="${radius}" />
-        <g class="plannotate-circular-axis">${ticks}</g>
-        <g class="plannotate-circular-features">${featurePaths}</g>
-        <text class="plannotate-circular-center" x="${cx}" y="${cy - 6}">${formatBpCompact(sequenceLength)}</text>
-        <text class="plannotate-circular-center-sub" x="${cx}" y="${cy + 16}">${hits.length} features</text>
-      </svg>
+      <div class="plannotate-panzoom-viewport" data-panzoom="true">
+        <div class="plannotate-panzoom-content">
+          <svg class="plannotate-circular-map" viewBox="0 0 360 360" role="img" aria-label="Circular plasmid map">
+            <circle class="plannotate-circular-backdrop" cx="${cx}" cy="${cy}" r="${radius}" />
+            <g class="plannotate-circular-axis">${ticks}</g>
+            <g class="plannotate-circular-features">${featurePaths}</g>
+            <text class="plannotate-circular-center" x="${cx}" y="${cy - 6}">${formatBpCompact(sequenceLength)}</text>
+            <text class="plannotate-circular-center-sub" x="${cx}" y="${cy + 16}">${hits.length} features</text>
+          </svg>
+        </div>
+      </div>
     </div>
   `;
 }
@@ -483,14 +496,16 @@ function renderPlannotateLinearMap(result) {
     const color = getPlannotateTypeColor(item.hit.Type);
     const rowTop = 6 + (item.laneIndex * laneHeightPx);
     const title = escapeHtml(`${item.hit.Feature} (${formatPlannotateLocation(item.hit, sequenceLength)})`);
+    const hoverInfo = escapeHtml(formatPlannotateHoverInfo(item.hit, sequenceLength));
     return item.segments.map((segment) => {
       const left = (segment.start / sequenceLength) * 100;
       const width = Math.max(0.35, ((segment.end - segment.start) / sequenceLength) * 100);
       return `
         <span
-          class="plannotate-linear-hit"
+          class="plannotate-linear-hit plannotate-hover-target"
           style="left:${left.toFixed(4)}%;width:${width.toFixed(4)}%;top:${rowTop}px;background:${color};"
           title="${title}"
+          data-hit-info="${hoverInfo}"
         ></span>
       `;
     }).join('');
@@ -498,10 +513,14 @@ function renderPlannotateLinearMap(result) {
 
   return `
     <div class="plannotate-map-shell">
-      <div class="plannotate-linear-map" style="height:${railHeight}px;">
-        <div class="plannotate-linear-track">${bars}</div>
+      <div class="plannotate-panzoom-viewport" data-panzoom="true">
+        <div class="plannotate-panzoom-content">
+          <div class="plannotate-linear-map" style="height:${railHeight}px;">
+            <div class="plannotate-linear-track">${bars}</div>
+          </div>
+          <div class="plannotate-linear-axis">${laneLabels}</div>
+        </div>
       </div>
-      <div class="plannotate-linear-axis">${laneLabels}</div>
     </div>
   `;
 }
@@ -734,6 +753,7 @@ export function initToolBox() {
   const plannotateTextPanel = document.getElementById('plannotate-text-panel');
   const plannotateFilePanel = document.getElementById('plannotate-file-panel');
   const plannotateEngineStatus = document.getElementById('plannotate-engine-status');
+  const plannotateInstallAllBtn = document.getElementById('plannotate-install-all');
   const plannotateFileInput = document.getElementById('plannotate-file-input');
   const plannotateFileChooseBtn = document.getElementById('plannotate-file-choose');
   const plannotateFileName = document.getElementById('plannotate-file-name');
@@ -1084,6 +1104,196 @@ export function initToolBox() {
     plannotateRunStatus.style.color = isError ? 'var(--danger)' : '';
   }
 
+  async function refreshPlannotateEngineStatus() {
+    if (!plannotateEngineStatus) {
+      return;
+    }
+
+    plannotateEngineStatus.textContent = 'Checking blastn/diamond backend...';
+    const checker = window.enanaApi?.plannotateCheckEnv;
+    if (typeof checker !== 'function') {
+      plannotateEngineStatus.textContent = 'Native backend bridge unavailable.';
+      return;
+    }
+
+    try {
+      const response = await checker();
+      if (!response?.ok) {
+        plannotateEngineStatus.textContent = `Backend check failed: ${response?.error || 'unknown error'}`;
+        return;
+      }
+      const status = response.status || {};
+      if (status.ok) {
+        plannotateEngineStatus.textContent = 'Backend ready: blastn + diamond + databases detected.';
+      } else {
+        const missing = [];
+        if (!status.dataDir) {
+          missing.push('metadata');
+        }
+        if (!status.dbDir || !status.databases?.snapgene || !status.databases?.fpbase || !status.databases?.swissprot) {
+          missing.push('BLAST_dbs');
+        }
+        if (!status.executables?.blastn) {
+          missing.push('blastn');
+        }
+        if (!status.executables?.diamond) {
+          missing.push('diamond');
+        }
+        const details = missing.length ? `Missing: ${missing.join(', ')}` : 'Missing backend components.';
+        plannotateEngineStatus.textContent = `Backend not ready. ${details}`;
+      }
+    } catch (error) {
+      plannotateEngineStatus.textContent = `Backend check failed: ${error.message || error}`;
+    }
+  }
+
+  function setupPlannotateMapInteractions() {
+    if (!plannotateMapHost) {
+      return;
+    }
+
+    const viewport = plannotateMapHost.querySelector('.plannotate-panzoom-viewport');
+    const content = viewport?.querySelector('.plannotate-panzoom-content');
+    if (!viewport || !content) {
+      return;
+    }
+
+    const tooltip = document.createElement('div');
+    tooltip.className = 'plannotate-map-tooltip';
+    tooltip.hidden = true;
+    viewport.appendChild(tooltip);
+
+    const state = {
+      scale: 1,
+      panX: 0,
+      panY: 0,
+      dragging: false,
+      pointerId: null,
+      lastX: 0,
+      lastY: 0
+    };
+
+    function hideTooltip() {
+      tooltip.hidden = true;
+    }
+
+    function clampPan() {
+      const viewportWidth = viewport.clientWidth || 1;
+      const viewportHeight = viewport.clientHeight || 1;
+      const contentWidth = content.scrollWidth || viewportWidth;
+      const contentHeight = content.scrollHeight || viewportHeight;
+
+      const maxX = Math.max(40, ((contentWidth * state.scale) - viewportWidth) / 2 + 24);
+      const maxY = Math.max(40, ((contentHeight * state.scale) - viewportHeight) / 2 + 24);
+      state.panX = Math.max(-maxX, Math.min(maxX, state.panX));
+      state.panY = Math.max(-maxY, Math.min(maxY, state.panY));
+    }
+
+    function applyTransform() {
+      clampPan();
+      content.style.transform = `translate(${state.panX}px, ${state.panY}px) scale(${state.scale})`;
+    }
+
+    function updateTooltipPosition(event, text) {
+      if (!text || state.dragging) {
+        hideTooltip();
+        return;
+      }
+
+      tooltip.textContent = text;
+      tooltip.hidden = false;
+
+      const bounds = viewport.getBoundingClientRect();
+      let x = event.clientX - bounds.left + 14;
+      let y = event.clientY - bounds.top + 14;
+      const maxX = viewport.clientWidth - tooltip.offsetWidth - 8;
+      const maxY = viewport.clientHeight - tooltip.offsetHeight - 8;
+      x = Math.max(8, Math.min(maxX, x));
+      y = Math.max(8, Math.min(maxY, y));
+      tooltip.style.left = `${x}px`;
+      tooltip.style.top = `${y}px`;
+    }
+
+    viewport.addEventListener('pointerdown', (event) => {
+      if (event.button !== 0) {
+        return;
+      }
+      state.dragging = true;
+      state.pointerId = event.pointerId;
+      state.lastX = event.clientX;
+      state.lastY = event.clientY;
+      viewport.classList.add('is-dragging');
+      viewport.setPointerCapture(event.pointerId);
+      hideTooltip();
+      event.preventDefault();
+    });
+
+    viewport.addEventListener('pointermove', (event) => {
+      if (state.dragging && event.pointerId === state.pointerId) {
+        const dx = event.clientX - state.lastX;
+        const dy = event.clientY - state.lastY;
+        state.lastX = event.clientX;
+        state.lastY = event.clientY;
+        state.panX += dx;
+        state.panY += dy;
+        applyTransform();
+        return;
+      }
+
+      const hoverTarget = event.target?.closest('[data-hit-info]');
+      if (hoverTarget && viewport.contains(hoverTarget)) {
+        updateTooltipPosition(event, hoverTarget.getAttribute('data-hit-info'));
+      } else {
+        hideTooltip();
+      }
+    });
+
+    function stopDragging(event) {
+      if (!state.dragging || event.pointerId !== state.pointerId) {
+        return;
+      }
+      state.dragging = false;
+      state.pointerId = null;
+      viewport.classList.remove('is-dragging');
+      hideTooltip();
+      try {
+        viewport.releasePointerCapture(event.pointerId);
+      } catch {
+        // Ignore pointer-capture release errors.
+      }
+    }
+
+    viewport.addEventListener('pointerup', stopDragging);
+    viewport.addEventListener('pointercancel', stopDragging);
+    viewport.addEventListener('pointerleave', () => {
+      if (!state.dragging) {
+        hideTooltip();
+      }
+    });
+
+    viewport.addEventListener('wheel', (event) => {
+      event.preventDefault();
+      const factor = event.deltaY < 0 ? 1.12 : (1 / 1.12);
+      const nextScale = Math.max(0.55, Math.min(4.5, state.scale * factor));
+      if (nextScale === state.scale) {
+        return;
+      }
+      state.scale = nextScale;
+      applyTransform();
+      hideTooltip();
+    }, { passive: false });
+
+    viewport.addEventListener('dblclick', () => {
+      state.scale = 1;
+      state.panX = 0;
+      state.panY = 0;
+      applyTransform();
+      hideTooltip();
+    });
+
+    applyTransform();
+  }
+
   function setPlannotateMode(mode) {
     const resolvedMode = mode === 'file' ? 'file' : 'text';
     plannotateState.mode = resolvedMode;
@@ -1268,6 +1478,7 @@ export function initToolBox() {
       plannotateMapHost.innerHTML = mapMarkup
         ? `${mapMarkup}${legendMarkup}`
         : '<p class="small-note">No annotations passed the current thresholds.</p>';
+      setupPlannotateMapInteractions();
     }
 
     if (!result.hits.length) {
@@ -1402,35 +1613,54 @@ export function initToolBox() {
     setPlannotateStatus('Idle');
     renderPlannotateEmptyMap('Run annotation to display the plasmid map.');
     clearPlannotateTable('No annotations yet.');
-    if (plannotateEngineStatus) {
-      plannotateEngineStatus.textContent = 'Checking blastn/diamond backend...';
-    }
+    void refreshPlannotateEngineStatus();
 
-    (async () => {
-      if (!plannotateEngineStatus) {
+    plannotateInstallAllBtn?.addEventListener('click', async () => {
+      const installer = window.enanaApi?.plannotateInstallAll;
+      if (typeof installer !== 'function') {
+        setPlannotateStatus('Installer bridge unavailable.', true);
         return;
       }
+      plannotateInstallAllBtn.disabled = true;
+      setPlannotateStatus('Installing metadata + BLAST databases + executables...');
+      if (plannotateEngineStatus) {
+        plannotateEngineStatus.textContent = 'Installing pLannotate backend assets...';
+      }
       try {
-        const checker = window.enanaApi?.plannotateCheckEnv;
-        if (typeof checker !== 'function') {
-          plannotateEngineStatus.textContent = 'Native backend bridge unavailable.';
-          return;
-        }
-        const response = await checker();
+        const response = await installer();
         if (!response?.ok) {
-          plannotateEngineStatus.textContent = `Backend check failed: ${response?.error || 'unknown error'}`;
-          return;
+          throw new Error(response?.error || 'Installation failed.');
         }
-        const status = response.status || {};
-        if (status.ok) {
-          plannotateEngineStatus.textContent = 'Backend ready: blastn + diamond + databases detected.';
+        const logs = response.result?.logs || [];
+        const status = response.result?.status || {};
+        const missing = [];
+        if (!status.dataDir) {
+          missing.push('metadata');
+        }
+        if (!status.dbDir || !status.databases?.snapgene || !status.databases?.fpbase || !status.databases?.swissprot) {
+          missing.push('BLAST_dbs');
+        }
+        if (!status.executables?.blastn) {
+          missing.push('blastn');
+        }
+        if (!status.executables?.diamond) {
+          missing.push('diamond');
+        }
+        if (logs.length) {
+          plannotateResult.innerHTML = `<p class="small-note">${escapeHtml(logs.join(' | '))}</p>`;
+        }
+        if (missing.length) {
+          setPlannotateStatus(`Install finished, missing: ${missing.join(', ')}`, true);
         } else {
-          plannotateEngineStatus.textContent = 'Backend not ready: install/configure pLannotate BLAST databases.';
+          setPlannotateStatus('Install completed.');
         }
       } catch (error) {
-        plannotateEngineStatus.textContent = `Backend check failed: ${error.message || error}`;
+        setPlannotateStatus(error.message || 'Install failed.', true);
+      } finally {
+        plannotateInstallAllBtn.disabled = false;
+        await refreshPlannotateEngineStatus();
       }
-    })();
+    });
 
     plannotateModeTextBtn?.addEventListener('click', () => {
       setPlannotateMode('text');

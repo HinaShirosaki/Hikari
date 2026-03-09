@@ -2,10 +2,40 @@ const fs = require('fs');
 const fsp = require('fs/promises');
 const path = require('path');
 const os = require('os');
+const https = require('https');
 const { spawn } = require('child_process');
 
 const MAX_PLASMID_SIZE = 50000;
 const PROBLEM_HITS = new Set(['P03851', 'P03845', 'ISS', 'P03846']);
+
+function resolveInstallRoot() {
+  const envRoot = String(process.env.ENANA_PLANNOTATE_ROOT || process.env.PLANNOTATE_HOME || '').trim();
+  if (envRoot) {
+    return envRoot;
+  }
+
+  // Packaged Electron apps run from app.asar, which is read-only.
+  if (String(__dirname).includes('.asar')) {
+    return path.join(os.homedir(), '.enana', 'plannotate');
+  }
+
+  return path.join(__dirname, 'data', 'plannotate');
+}
+
+const PLANNOTATE_INSTALL_ROOT = resolveInstallRoot();
+const PLANNOTATE_INSTALL_DATA_DIR = path.join(PLANNOTATE_INSTALL_ROOT, 'data');
+const PLANNOTATE_INSTALL_DB_DIR = path.join(PLANNOTATE_INSTALL_ROOT, 'BLAST_dbs');
+const METADATA_SOURCE_FILES = [
+  'databases.yml',
+  'snapgene.csv',
+  'fpbase.csv',
+  'swissprot.csv.gz',
+  'colors.csv',
+  'feature_orientation.csv',
+  'protein_existence.csv'
+];
+const METADATA_REMOTE_BASE = 'https://raw.githubusercontent.com/mmcguffi/pLannotate/master/plannotate/data/data';
+const BLAST_DBS_RELEASE_URL = 'https://github.com/mmcguffi/pLannotate/releases/download/v1.2.0/BLAST_dbs.tar.gz';
 
 const DEFAULT_DATABASES = {
   Rfam: {
@@ -178,22 +208,171 @@ function runCommand(command, args, options = {}) {
   });
 }
 
+function downloadFile(url, destination, redirectCount = 0) {
+  const MAX_REDIRECTS = 5;
+  return new Promise((resolve, reject) => {
+    const request = https.get(url, {
+      headers: {
+        'User-Agent': 'Enana-pLannotate-Installer/1.0'
+      }
+    }, (response) => {
+      const statusCode = Number(response.statusCode || 0);
+      const location = response.headers.location;
+
+      if ([301, 302, 303, 307, 308].includes(statusCode) && location) {
+        response.resume();
+        if (redirectCount >= MAX_REDIRECTS) {
+          reject(new Error(`Too many redirects while downloading ${url}`));
+          return;
+        }
+        const nextUrl = location.startsWith('http') ? location : new URL(location, url).toString();
+        downloadFile(nextUrl, destination, redirectCount + 1).then(resolve).catch(reject);
+        return;
+      }
+
+      if (statusCode < 200 || statusCode >= 300) {
+        response.resume();
+        reject(new Error(`Download failed (${statusCode}) for ${url}`));
+        return;
+      }
+
+      const stream = fs.createWriteStream(destination);
+      response.pipe(stream);
+      stream.on('finish', () => {
+        stream.close(() => resolve(destination));
+      });
+      stream.on('error', (error) => {
+        reject(error);
+      });
+    });
+
+    request.on('error', (error) => {
+      reject(error);
+    });
+  });
+}
+
+async function copyDirectory(sourceDir, destinationDir) {
+  await fsp.mkdir(destinationDir, { recursive: true });
+  const entries = await fsp.readdir(sourceDir, { withFileTypes: true });
+  for (const entry of entries) {
+    const from = path.join(sourceDir, entry.name);
+    const to = path.join(destinationDir, entry.name);
+    if (entry.isDirectory()) {
+      await copyDirectory(from, to);
+      continue;
+    }
+    if (entry.isFile()) {
+      await fsp.copyFile(from, to);
+    }
+  }
+}
+
+function localMetadataSourceDir() {
+  const candidates = [
+    path.join(__dirname, 'tmp', 'pLannotate-src', 'plannotate', 'data', 'data'),
+    path.join(process.cwd(), 'tmp', 'pLannotate-src', 'plannotate', 'data', 'data')
+  ];
+  return candidates.find((candidate) => fs.existsSync(path.join(candidate, 'snapgene.csv'))) || '';
+}
+
+function localDbSourceDir() {
+  const candidates = [
+    path.join(__dirname, 'tmp', 'pLannotate-src', 'plannotate', 'data', 'BLAST_dbs'),
+    path.join(process.cwd(), 'tmp', 'pLannotate-src', 'plannotate', 'data', 'BLAST_dbs')
+  ];
+  return candidates.find((candidate) => fs.existsSync(path.join(candidate, 'snapgene.nsq'))) || '';
+}
+
 async function findExecutable(command) {
   const locator = process.platform === 'win32' ? 'where' : 'which';
   try {
     const result = await runCommand(locator, [command], { allowNonZero: true });
     if (result.code !== 0) {
-      return '';
+      // Continue to fallback path probing below.
+    } else {
+      const first = result.stdout.split(/\r?\n/).map((line) => line.trim()).find(Boolean);
+      if (first) {
+        return first;
+      }
     }
-    const first = result.stdout.split(/\r?\n/).map((line) => line.trim()).find(Boolean);
-    return first || '';
   } catch {
-    return '';
+    // Continue to fallback path probing below.
+  }
+
+  const pathEntries = String(process.env.PATH || '')
+    .split(path.delimiter)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+
+  if (process.platform === 'darwin') {
+    pathEntries.push('/opt/homebrew/bin', '/usr/local/bin', '/usr/local/ncbi/blast/bin');
+  } else if (process.platform === 'linux') {
+    pathEntries.push('/usr/local/bin', '/usr/bin', '/bin');
+  }
+
+  const binaryName = process.platform === 'win32' ? `${command}.exe` : command;
+  for (const dir of [...new Set(pathEntries)]) {
+    const candidate = path.join(dir, binaryName);
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  return '';
+}
+
+async function installExecutables(logs) {
+  let blastn = await findExecutable('blastn');
+  let diamond = await findExecutable('diamond');
+  if (blastn && diamond) {
+    logs.push('executables: blastn and diamond already present');
+    return;
+  }
+
+  const brew = await findExecutable('brew');
+  if (brew) {
+    const missingPackages = [];
+    if (!blastn) {
+      missingPackages.push('blast');
+    }
+    if (!diamond) {
+      missingPackages.push('diamond');
+    }
+
+    for (const pkg of missingPackages) {
+      const installed = await runCommand(brew, ['list', '--versions', pkg], { allowNonZero: true });
+      if (installed.code === 0 && installed.stdout.trim()) {
+        logs.push(`executables: brew package ${pkg} already installed`);
+        continue;
+      }
+      logs.push(`executables: installing ${pkg} with brew`);
+      await runCommand(brew, ['install', pkg], { allowNonZero: false });
+      logs.push(`executables: installed ${pkg}`);
+    }
+  } else {
+    logs.push('executables: brew not found; skipped automatic executable install');
+  }
+
+  blastn = await findExecutable('blastn');
+  diamond = await findExecutable('diamond');
+  if (!blastn || !diamond) {
+    const missing = [];
+    if (!blastn) {
+      missing.push('blastn');
+    }
+    if (!diamond) {
+      missing.push('diamond');
+    }
+    logs.push(`executables: still missing ${missing.join(', ')}`);
+  } else {
+    logs.push('executables: blastn and diamond detected after install step');
   }
 }
 
 function resolveDataDir() {
   const candidates = [
+    PLANNOTATE_INSTALL_DATA_DIR,
     path.join(__dirname, 'data', 'plannotate', 'data'),
     path.join(__dirname, 'tmp', 'pLannotate-src', 'plannotate', 'data', 'data'),
     path.join(process.cwd(), 'data', 'plannotate', 'data'),
@@ -213,6 +392,7 @@ function resolveDbDir(preferredDbDir = '') {
   const candidates = [
     preferredDbDir,
     envDir,
+    PLANNOTATE_INSTALL_DB_DIR,
     path.join(__dirname, 'data', 'plannotate', 'BLAST_dbs'),
     path.join(__dirname, 'tmp', 'pLannotate-src', 'plannotate', 'data', 'BLAST_dbs'),
     path.join(process.cwd(), 'data', 'plannotate', 'BLAST_dbs'),
@@ -706,6 +886,68 @@ async function enrichHitDetails(hits, dataDir, database, detailed) {
   }).filter((hit) => !hit.__drop);
 }
 
+async function installMetadataFiles(logs) {
+  await fsp.mkdir(PLANNOTATE_INSTALL_DATA_DIR, { recursive: true });
+  const localSource = localMetadataSourceDir();
+
+  for (const fileName of METADATA_SOURCE_FILES) {
+    const destination = path.join(PLANNOTATE_INSTALL_DATA_DIR, fileName);
+    if (fs.existsSync(destination)) {
+      logs.push(`metadata: ${fileName} already present`);
+      continue;
+    }
+
+    if (localSource && fs.existsSync(path.join(localSource, fileName))) {
+      await fsp.copyFile(path.join(localSource, fileName), destination);
+      logs.push(`metadata: copied ${fileName} from local source`);
+      continue;
+    }
+
+    const remoteUrl = `${METADATA_REMOTE_BASE}/${fileName}`;
+    await downloadFile(remoteUrl, destination);
+    logs.push(`metadata: downloaded ${fileName}`);
+  }
+}
+
+async function installBlastDatabases(logs) {
+  if (
+    hasBlastDb(PLANNOTATE_INSTALL_DB_DIR, 'snapgene')
+    && hasDiamondDb(PLANNOTATE_INSTALL_DB_DIR, 'fpbase')
+    && hasDiamondDb(PLANNOTATE_INSTALL_DB_DIR, 'swissprot')
+  ) {
+    logs.push('databases: BLAST and diamond databases already present');
+    return;
+  }
+
+  const localDbSource = localDbSourceDir();
+  if (localDbSource) {
+    await copyDirectory(localDbSource, PLANNOTATE_INSTALL_DB_DIR);
+    logs.push('databases: copied local BLAST_dbs directory');
+    return;
+  }
+
+  await fsp.mkdir(PLANNOTATE_INSTALL_ROOT, { recursive: true });
+  const archivePath = path.join(PLANNOTATE_INSTALL_ROOT, 'BLAST_dbs.tar.gz');
+  await downloadFile(BLAST_DBS_RELEASE_URL, archivePath);
+  logs.push('databases: downloaded BLAST_dbs archive');
+
+  await runCommand('tar', ['-xzf', archivePath, '-C', PLANNOTATE_INSTALL_ROOT]);
+  logs.push('databases: extracted BLAST_dbs archive');
+
+  await fsp.rm(archivePath, { force: true });
+}
+
+async function installPlannotateAssets() {
+  const logs = [];
+  logs.push(`install-root: ${PLANNOTATE_INSTALL_ROOT}`);
+  logs.push(`platform: ${process.platform} ${process.arch}`);
+  await installMetadataFiles(logs);
+  await installBlastDatabases(logs);
+  await installExecutables(logs);
+  const status = await checkPlannotateEnvironment('');
+  return { status, logs };
+}
+
 async function checkPlannotateEnvironment(preferredDbDir = '') {
   const dataDir = resolveDataDir();
   const dbDir = resolveDbDir(preferredDbDir);
@@ -757,7 +999,7 @@ async function annotateWithBlast(payload = {}) {
   const env = await checkPlannotateEnvironment(payload.dbDir || '');
   const warnings = [...normalizeWarnings];
   if (!env.dataDir) {
-    throw new Error('pLannotate metadata files were not found. Expected data under data/plannotate/data or tmp/pLannotate-src/plannotate/data/data.');
+    throw new Error('pLannotate metadata files were not found. Click One-Step Install Backend to download them.');
   }
   if (!env.executables.blastn) {
     throw new Error('blastn was not found on PATH. Install NCBI BLAST+ before annotating.');
@@ -766,7 +1008,7 @@ async function annotateWithBlast(payload = {}) {
     throw new Error('diamond was not found on PATH. Install diamond before annotating.');
   }
   if (!env.dbDir) {
-    throw new Error('BLAST database folder was not found. Set PLANNOTATE_DB_DIR or place BLAST_dbs under tmp/pLannotate-src/plannotate/data/.');
+    throw new Error('BLAST database folder was not found. Click One-Step Install Backend to download BLAST_dbs.');
   }
   if (!env.databases.snapgene || !env.databases.fpbase || !env.databases.swissprot) {
     throw new Error('Required pLannotate databases are missing (need snapgene BLAST and fpbase/swissprot diamond DBs).');
@@ -845,5 +1087,6 @@ async function annotateWithBlast(payload = {}) {
 
 module.exports = {
   annotateWithBlast,
-  checkPlannotateEnvironment
+  checkPlannotateEnvironment,
+  installPlannotateAssets
 };

@@ -8,7 +8,8 @@ const {
 } = require('./main-utils');
 const {
   annotateWithBlast,
-  checkPlannotateEnvironment
+  checkPlannotateEnvironment,
+  installPlannotateAssets
 } = require('./plannotate-engine');
 
 const appIconPath = path.join(__dirname, 'image.png');
@@ -372,6 +373,15 @@ ipcMain.handle('plannotate:check-env', async (_event, payload) => {
 ipcMain.handle('plannotate:annotate', async (_event, payload) => {
   try {
     const result = await annotateWithBlast(payload || {});
+    return { ok: true, result };
+  } catch (error) {
+    return { ok: false, error: String(error?.message || error) };
+  }
+});
+
+ipcMain.handle('plannotate:install-all', async () => {
+  try {
+    const result = await installPlannotateAssets();
     return { ok: true, result };
   } catch (error) {
     return { ok: false, error: String(error?.message || error) };
