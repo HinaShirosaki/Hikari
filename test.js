@@ -1929,6 +1929,24 @@ test('telegram bridge keeps only supported renderer IPC channel', () => {
   assert.equal(preloadSource.includes('onTelegramCommand'), true);
 });
 
+test('telegram bot writes events to data/telegram-events.log by default', () => {
+  const telegramBotSource = fs.readFileSync(path.join(__dirname, 'telegramBot.js'), 'utf8');
+  assert.match(telegramBotSource, /data', 'telegram-events\.log'/);
+  assert.equal(telegramBotSource.includes('telegram-messages.log'), false);
+});
+
+test('main agent chat logging records request/result/error with redacted API key metadata', () => {
+  const mainSource = fs.readFileSync(path.join(__dirname, 'main.js'), 'utf8');
+  assert.match(mainSource, /const AGENT_CHAT_LOG_FILE_NAME = 'agent-chat\.log';/);
+  assert.match(mainSource, /ENANA_AGENT_CHAT_LOG_PATH/);
+  assert.match(mainSource, /void ensureAgentChatLogFile\(getAgentChatLogPath\(\)\);/);
+  assert.match(mainSource, /apiKeyProvided: Boolean\(cleanText\(source\.apiKey, 12\)\)/);
+  assert.equal(mainSource.includes('apiKey: cleanText(source.apiKey'), false);
+  assert.match(mainSource, /type: 'agent-chat-request'/);
+  assert.match(mainSource, /type: 'agent-chat-result'/);
+  assert.match(mainSource, /type: 'agent-chat-error'/);
+});
+
 test('telegram bot internals normalize search and module parsing', () => {
   const internals = telegramBot._internals || {};
   assert.equal(typeof internals.getCommandArgs, 'function');

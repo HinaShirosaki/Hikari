@@ -16,6 +16,7 @@ const appIconPath = path.join(__dirname, 'image.png');
 const DEFAULT_DATA_FILE_NAME = 'enana-data.json';
 const TELEGRAM_CONFIG_FILE_NAME = 'telegram-bot.json';
 const CHEMICALS_DATA_FILE_PATH = path.join(__dirname, 'data', 'chemicals.json');
+const AGENT_CHAT_LOG_FILE_NAME = 'agent-chat.log';
 const LLM_PROVIDERS = Object.freeze({
   OPENAI: 'openai',
   GEMINI: 'gemini',
@@ -51,6 +52,14 @@ function getDefaultDataFilePath() {
 
 function getTelegramConfigPath() {
   return path.join(app.getPath('userData'), TELEGRAM_CONFIG_FILE_NAME);
+}
+
+function getAgentChatLogPath() {
+  const override = String(process.env.ENANA_AGENT_CHAT_LOG_PATH || '').trim();
+  if (override) {
+    return override;
+  }
+  return path.join(__dirname, 'data', AGENT_CHAT_LOG_FILE_NAME);
 }
 
 function renderPromptTemplate(template, vars = {}) {
@@ -112,6 +121,24 @@ async function writeSavedTelegramToken(token) {
   await fs.writeFile(configPath, JSON.stringify({ token: cleanToken }, null, 2), 'utf8');
 }
 
+async function appendAgentChatLogEntry(logPath, entry) {
+  try {
+    await fs.mkdir(path.dirname(logPath), { recursive: true });
+    await fs.appendFile(logPath, `${entry}\n`, 'utf8');
+  } catch (error) {
+    console.error('Failed to append agent chat log entry:', error);
+  }
+}
+
+async function ensureAgentChatLogFile(logPath) {
+  try {
+    await fs.mkdir(path.dirname(logPath), { recursive: true });
+    await fs.appendFile(logPath, '', 'utf8');
+  } catch (error) {
+    console.error('Failed to initialize agent chat log file:', error);
+  }
+}
+
 function stopTelegramBot(reason = 'app quit') {
   if (!telegramBot) {
     return;
@@ -170,6 +197,7 @@ app.whenReady().then(async () => {
   createWindow();
   savedTelegramToken = await loadSavedTelegramToken();
   restartTelegramBot();
+  void ensureAgentChatLogFile(getAgentChatLogPath());
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -984,6 +1012,96 @@ function extractConversation(rawConversation) {
       text: cleanText(item?.text, 2500)
     }))
     .filter((item) => item.text);
+}
+
+function buildAgentLogRequestId() {
+  return `${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
+}
+
+function summarizeLlmForAgentLog(llm) {
+  const source = llm && typeof llm === 'object' ? llm : {};
+  return {
+    provider: cleanText(source.provider, 80),
+    apiEndpoint: cleanText(source.apiEndpoint || source.api, 300),
+    model: cleanText(source.model, 120),
+    apiKeyProvided: Boolean(cleanText(source.apiKey, 12))
+  };
+}
+
+function normalizeDecisionRecordForAgentLog(record) {
+  const source = record && typeof record === 'object' ? record : {};
+  return {
+    assumptions: asArray(source.assumptions).map((item) => cleanText(item, 240)).filter(Boolean),
+    open_questions: asArray(source.open_questions).map((item) => cleanText(item, 240)).filter(Boolean),
+    verification_notes: asArray(source.verification_notes).map((item) => cleanText(item, 240)).filter(Boolean)
+  };
+}
+
+function normalizeIntermediateStatesForAgentLog(states) {
+  return asArray(states).map((state) => ({
+    state_id: cleanText(state?.state_id, 80),
+    created_at: cleanText(state?.created_at, 80),
+    stage: cleanText(state?.stage, 40),
+    goal: cleanText(state?.goal, 800),
+    assumptions: asArray(state?.assumptions).map((item) => cleanText(item, 240)).filter(Boolean),
+    open_questions: asArray(state?.open_questions).map((item) => cleanText(item, 240)).filter(Boolean),
+    evidence: asArray(state?.evidence).map((item) => ({
+      source: cleanText(item?.source, 120),
+      pointer: cleanText(item?.pointer, 180),
+      reason: cleanText(item?.reason, 220)
+    })),
+    proposed_actions: asArray(state?.proposed_actions).map((item) => ({
+      action_type: cleanText(item?.action_type, 40),
+      tool_name: cleanText(item?.tool_name, 120),
+      risk_level: cleanText(item?.risk_level, 20),
+      reason: cleanText(item?.reason, 260)
+    })),
+    confidence: Number.isFinite(Number(state?.confidence))
+      ? clamp(Number(state.confidence), 0, 1)
+      : null
+  }));
+}
+
+function normalizeToolTraceForAgentLog(trace) {
+  return asArray(trace).map((item) => ({
+    tool: cleanText(item?.tool, 120),
+    args: item?.args && typeof item.args === 'object' ? item.args : {},
+    summary: cleanText(item?.summary, 260)
+  }));
+}
+
+function summarizeAgentResultForLog(result) {
+  const source = result && typeof result === 'object' ? result : {};
+  return {
+    ok: source.ok === true,
+    provider: cleanText(source.provider, 80),
+    model: cleanText(source.model, 120),
+    answer: cleanText(source.answer, 12000),
+    confidence: Number.isFinite(Number(source.confidence))
+      ? clamp(Number(source.confidence), 0, 1)
+      : null,
+    requiresApproval: source.requiresApproval === true,
+    proposedWriteActions: asArray(source.proposedWriteActions).map((item) => ({
+      tool_name: cleanText(item?.tool_name, 120),
+      reason: cleanText(item?.reason, 280)
+    })),
+    citations: asArray(source.citations).map((item) => ({
+      source: cleanText(item?.source, 120),
+      pointer: cleanText(item?.pointer, 180),
+      reason: cleanText(item?.reason, 220)
+    })),
+    decisionRecord: normalizeDecisionRecordForAgentLog(source.decisionRecord),
+    intermediateStates: normalizeIntermediateStatesForAgentLog(source.intermediateStates),
+    toolTrace: normalizeToolTraceForAgentLog(source.toolTrace),
+    error: cleanText(source.error, 2000)
+  };
+}
+
+function formatAgentChatLogEntry(entry) {
+  return JSON.stringify({
+    timestamp: new Date().toISOString(),
+    ...entry
+  });
 }
 
 function resolveAgentApiKey(llm) {
@@ -1867,10 +1985,35 @@ async function runAgentController(payload) {
 }
 
 ipcMain.handle('agent:chat', async (_event, payload) => {
+  const requestId = buildAgentLogRequestId();
+  const logPath = getAgentChatLogPath();
+  await appendAgentChatLogEntry(logPath, formatAgentChatLogEntry({
+    type: 'agent-chat-request',
+    requestId,
+    projectId: cleanText(payload?.projectId, 80),
+    projectName: cleanText(payload?.projectName, 180),
+    message: cleanText(payload?.message, 3000),
+    conversation: extractConversation(payload?.conversation),
+    llm: summarizeLlmForAgentLog(payload?.llm)
+  }));
+
   try {
-    return await runAgentController(payload);
+    const result = await runAgentController(payload);
+    await appendAgentChatLogEntry(logPath, formatAgentChatLogEntry({
+      type: 'agent-chat-result',
+      requestId,
+      ...summarizeAgentResultForLog(result)
+    }));
+    return result;
   } catch (error) {
-    return { ok: false, error: String(error?.message || error) };
+    const errorMessage = String(error?.message || error);
+    await appendAgentChatLogEntry(logPath, formatAgentChatLogEntry({
+      type: 'agent-chat-error',
+      requestId,
+      ok: false,
+      error: cleanText(errorMessage, 2000)
+    }));
+    return { ok: false, error: errorMessage };
   }
 });
 

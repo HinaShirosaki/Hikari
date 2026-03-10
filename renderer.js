@@ -898,6 +898,22 @@ function handleTelegramCommand(payload) {
   if (type === 'search-gels') {
     showView(VIEWS.GEL);
     setSearchInputValue('gel-search', payload.query);
+    return;
+  }
+
+  if (type === 'global-search') {
+    const scope = String(payload.scope || '').trim();
+    const query = String(payload.query || '').trim();
+    const searchText = scope && query
+      ? `${scope}: ${query}`
+      : query || scope;
+    if (!searchText) {
+      return;
+    }
+    if (topbarSearchInput) {
+      topbarSearchInput.value = searchText;
+    }
+    executeTopbarSearch(searchText);
   }
 }
 
