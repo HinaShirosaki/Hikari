@@ -380,7 +380,13 @@ const toolBox = loadEsmStyleModule(
     'estimatePI',
     'residueSummary',
     'peptideStats',
-    'renderChemicalOptions'
+    'renderChemicalOptions',
+    'normalizeIupacPattern',
+    'matchesIupacPattern',
+    'parseCrisprTargetsInput',
+    'collectCrisprPamSites',
+    'computeCrisprOffTargetStats',
+    'designCrisprGuides'
   ]
 );
 const gelAnalysisInternals = loadEsmStyleModule(
@@ -408,6 +414,7 @@ const gelAnalysisInternals = loadEsmStyleModule(
     'interpretLane'
   ]
 );
+const assayAnalysis = loadEsmStyleModule(path.join(__dirname, 'modules', 'assay-analysis.js'));
 const mainUtils = require(path.join(__dirname, 'main-utils'));
 const telegramBot = require(path.join(__dirname, 'telegramBot.js'));
 const forgeConfig = require(path.join(__dirname, 'forge.config.js'));
@@ -1589,6 +1596,87 @@ test('agent-chat sends settings API key to main process and stores assistant res
   assert.equal(status.textContent, 'Chat history cleared.');
 });
 
+function buildStandardCurveObservations({
+  sampleId = 'Std',
+  concentrations = [0.1, 0.3, 1, 3, 10, 30],
+  replicates = 2
+} = {}) {
+  const observations = [];
+  concentrations.forEach((concentration, concentrationIndex) => {
+    const signal = 10 + (90 / (1 + Math.exp(1.3 * (1.1 - Math.log10(Math.max(concentration, 1e-6))))));
+    for (let replicateIndex = 0; replicateIndex < replicates; replicateIndex += 1) {
+      const offset = (replicateIndex % 2 === 0 ? -1 : 1) * 0.6;
+      observations.push({
+        well: `A${(concentrationIndex * replicates) + replicateIndex + 1}`,
+        response: signal + offset,
+        rowIndex: 0,
+        rowLabel: 'A',
+        columnIndex: concentrationIndex,
+        columnNumber: concentrationIndex + 1,
+        rawSampleId: sampleId,
+        sampleId,
+        sampleValue: Number.NaN,
+        rawConcentration: String(concentration),
+        concentrationLabel: String(concentration),
+        concentrationValue: concentration
+      });
+    }
+  });
+  return observations;
+}
+
+test('assay-analysis standard curve methods produce fitted rows and line chart models', () => {
+  const observations = buildStandardCurveObservations();
+  const methods = [
+    'standard_curve_line',
+    'standard_curve_4pl_log_concentration',
+    'standard_curve_4pl_concentration',
+    'standard_curve_5pl_log_concentration',
+    'standard_curve_5pl_concentration',
+    'standard_curve_semilog_line',
+    'standard_curve_hyperbola',
+    'standard_curve_quadratic',
+    'standard_curve_cubic',
+    'standard_curve_pade_11'
+  ];
+
+  methods.forEach((method) => {
+    const result = assayAnalysis.analyzeAssayData({ method, observations });
+    assert.equal(result.rows.length, 1, `expected one fitted row for ${method}`);
+    assert.equal(result.headers.includes('R²'), true, `expected R² column for ${method}`);
+    assert.equal(result.headers.includes('RMSE'), true, `expected RMSE column for ${method}`);
+    assert.equal(result.chartModel?.chartType, 'line', `expected line chart for ${method}`);
+    assert.equal(Array.isArray(result.chartModel?.series), true, `expected chart series for ${method}`);
+    assert.ok(result.chartModel.series.length >= 1, `expected non-empty chart series for ${method}`);
+
+    const row = result.rows[0];
+    assert.ok(String(row[0] || '').trim().length > 0, `expected non-empty series label for ${method}`);
+    assert.ok(Number.isFinite(Number(row[1])), `expected numeric point count for ${method}`);
+    assert.ok(Number.isFinite(Number(row[3])), `expected numeric r2 for ${method}`);
+    assert.ok(Number.isFinite(Number(row[4])), `expected numeric rmse for ${method}`);
+    assert.equal(typeof row[5], 'string');
+    assert.equal(typeof row[6], 'string');
+  });
+});
+
+test('assay-analysis log-concentration methods skip non-positive concentration points', () => {
+  const observations = buildStandardCurveObservations({
+    concentrations: [-5, -1, 0],
+    replicates: 2
+  });
+  const methods = [
+    'standard_curve_4pl_log_concentration',
+    'standard_curve_5pl_log_concentration',
+    'standard_curve_semilog_line'
+  ];
+
+  methods.forEach((method) => {
+    const result = assayAnalysis.analyzeAssayData({ method, observations });
+    assert.equal(result.rows.length, 0, `expected no fitted rows for ${method}`);
+    assert.match(result.summary, /skipped/i);
+  });
+});
+
 test('rebuildObjectGraph creates cross-module links used by queries', () => {
   const state = {
     members: [{ id: 'm1', name: 'Alice' }],
@@ -2383,6 +2471,7 @@ expectedGraphRelations.forEach(([from, relation, to], idx) => {
 const moduleExportContracts = [
   ['modules/agent-chat.js', /export function initAgentChat/],
   ['modules/assay.js', /export function initAssay/],
+  ['modules/assay-analysis.js', /export function analyzeAssayData/],
   ['modules/biology-notebook.js', /export function initLabNotebook/],
   ['modules/buffer-compounds.js', /export const BUFFER_COMPOUNDS/],
   ['modules/collaboration-management.js', /export function initCollaborationManagement/],
@@ -2724,7 +2813,9 @@ test('[EDGE] tool-box internal functions are exposed for unit tests', () => {
     'oligoTm',
     'linearRegression',
     'peptideStats',
-    'renderChemicalOptions'
+    'renderChemicalOptions',
+    'parseCrisprTargetsInput',
+    'designCrisprGuides'
   ].forEach((name) => {
     assert.equal(typeof toolBox[name], 'function');
   });
@@ -2923,6 +3014,24 @@ test('[EDGE] tool-box reverseTranslateProteinSequence reports impossible restric
   assert.equal(blocked.blockedPosition, 1);
 });
 
+test('[EDGE] tool-box reverseTranslateProteinSequence appends stop codon when requested', () => {
+  const withStop = toolBox.reverseTranslateProteinSequence('MA', {
+    organism: 'ecoli',
+    appendStopCodon: true
+  });
+  assert.equal(withStop.ok, true);
+  assert.equal(withStop.protein, 'MA*');
+  assert.equal(toolBox.translateDnaSequence(withStop.dna, 1, 'star').protein, 'MA*');
+
+  const alreadyStopped = toolBox.reverseTranslateProteinSequence('MA*', {
+    organism: 'ecoli',
+    appendStopCodon: true
+  });
+  assert.equal(alreadyStopped.ok, true);
+  assert.equal(alreadyStopped.protein, 'MA*');
+  assert.equal(toolBox.translateDnaSequence(alreadyStopped.dna, 1, 'star').protein, 'MA*');
+});
+
 test('[EDGE] tool-box reverseTranslateProteinSequence rejects unsupported amino acids', () => {
   const result = toolBox.reverseTranslateProteinSequence('MX');
   assert.equal(result.ok, false);
@@ -3056,6 +3165,102 @@ test('[EDGE] tool-box renderChemicalOptions includes Custom option', () => {
   const html = toolBox.renderChemicalOptions();
   assert.match(html, /Custom<\/option>/);
   assert.match(html, /<option value="[^"]+">/);
+});
+
+test('[EDGE] tool-box parseCrisprTargetsInput parses FASTA entries and normalizes sequence', () => {
+  const parsed = toolBox.parseCrisprTargetsInput(`
+>Target_A
+ACGTNNNN
+>Target_B
+acgu---
+`);
+  assert.equal(parsed.length, 2);
+  assert.equal(parsed[0].name, 'Target_A');
+  assert.equal(parsed[0].sequence, 'ACGTNNNN');
+  assert.equal(parsed[1].name, 'Target_B');
+  assert.equal(parsed[1].sequence, 'ACGT');
+});
+
+test('[EDGE] tool-box collectCrisprPamSites finds forward NGG protospacers', () => {
+  const target = {
+    id: 'target-1',
+    name: 'Target 1',
+    sequence: 'ATATATATAGGAAAA'
+  };
+  const sites = toolBox.collectCrisprPamSites(target, 4, 'NGG');
+  assert.equal(sites.length, 1);
+  assert.equal(sites[0].strand, '+');
+  assert.equal(sites[0].guideSequence, 'ATAT');
+  assert.equal(sites[0].pamSequence, 'AGG');
+  assert.equal(sites[0].start, 5);
+  assert.equal(sites[0].end, 8);
+});
+
+test('[EDGE] tool-box computeCrisprOffTargetStats buckets mismatch counts', () => {
+  const candidate = {
+    key: 'k1',
+    guideSequence: 'AAAAAAAAAAAAAAAAAAAA'
+  };
+  const background = [
+    { key: 'k1', guideSequence: 'AAAAAAAAAAAAAAAAAAAA' },
+    { key: 'k2', guideSequence: 'AAAAAAAAAAAAAAAAAAAA' },
+    { key: 'k3', guideSequence: 'CAAAAAAAAAAAAAAAAAAA' },
+    { key: 'k4', guideSequence: 'CCAAAAAAAAAAAAAAAAAA' },
+    { key: 'k5', guideSequence: 'CCCAAAAAAAAAAAAAAAAA' },
+    { key: 'k6', guideSequence: 'CCCCAAAAAAAAAAAAAAAA' }
+  ];
+  const stats = toolBox.computeCrisprOffTargetStats(candidate, background, 1);
+  assert.equal(stats.mismatchCounts.exact, 1);
+  assert.equal(stats.mismatchCounts.mismatch1, 1);
+  assert.equal(stats.mismatchCounts.mismatch2, 1);
+  assert.equal(stats.mismatchCounts.mismatch3, 1);
+  assertClose(stats.offTargetRate, 27.84, 1e-9);
+  assertClose(stats.specificityScore, 72.16, 1e-9);
+});
+
+test('[EDGE] tool-box designCrisprGuides returns ranked sgRNA candidates', () => {
+  const selectedTargets = [{
+    id: 'target-1',
+    name: 'Target 1',
+    sequence: 'ATATATATAGGAAAA'
+  }];
+  const result = toolBox.designCrisprGuides({
+    selectedTargets,
+    backgroundTargets: selectedTargets,
+    guideLength: 4,
+    pamPattern: toolBox.normalizeIupacPattern('NGG'),
+    minGc: 0,
+    maxGc: 100,
+    topCount: 10,
+    genomeMultiplier: 1
+  });
+  assert.equal(result.totalPamMatches, 1);
+  assert.equal(result.candidates.length, 1);
+  assert.equal(result.candidates[0].guideSequence, 'ATAT');
+  assert.equal(result.candidates[0].pamSequence, 'AGG');
+  assertClose(result.candidates[0].offTargetRate, 0, 1e-9);
+  assertClose(result.candidates[0].specificityScore, 100, 1e-9);
+});
+
+test('[EDGE] tool-box designCrisprGuides respects GC filtering', () => {
+  const selectedTargets = [{
+    id: 'target-1',
+    name: 'Target 1',
+    sequence: 'ATATATATAGGAAAA'
+  }];
+  const result = toolBox.designCrisprGuides({
+    selectedTargets,
+    backgroundTargets: selectedTargets,
+    guideLength: 4,
+    pamPattern: toolBox.normalizeIupacPattern('NGG'),
+    minGc: 50,
+    maxGc: 100,
+    topCount: 10,
+    genomeMultiplier: 1
+  });
+  assert.equal(result.totalPamMatches, 1);
+  assert.equal(result.filteredCandidateCount, 0);
+  assert.equal(result.candidates.length, 0);
 });
 
 test('[EDGE] gel-analysis internal functions are exposed for unit tests', () => {
