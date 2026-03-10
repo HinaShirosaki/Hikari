@@ -363,6 +363,10 @@ const toolBox = loadEsmStyleModule(
     'nucleotideCounts',
     'reverseComplementDna',
     'translateDnaSequence',
+    'cleanProteinSequence',
+    'parseRestrictionSites',
+    'getCodonOptionsForResidue',
+    'reverseTranslateProteinSequence',
     'oligoMolecularWeight',
     'oligoExtinction',
     'oligoTm',
@@ -1724,6 +1728,46 @@ test('rebuildObjectGraph creates cross-module links used by queries', () => {
   assert.equal(objectGraph.queryInstrumentUsageInRange(state, 'i1', 'bad', 'date').length, 0);
 });
 
+test('rebuildObjectGraph supports plain-text workflow blocks without protocol edges', () => {
+  const state = {
+    members: [{ id: 'm1', name: 'Alice' }],
+    workflowTemplates: [
+      {
+        id: 'wt-text',
+        name: 'Text Template',
+        blocks: [{ id: 'tb-text', type: 'text', text: 'Mix gently', assigneeId: 'm1' }],
+        links: []
+      }
+    ],
+    workflows: [
+      {
+        id: 'w-text',
+        name: 'Text Workflow',
+        projectId: '',
+        notebookEntryIds: [],
+        blocks: [{ id: 'b-text', type: 'text', text: 'Incubate 10 min', assigneeId: 'm1' }],
+        links: []
+      }
+    ]
+  };
+
+  const graph = objectGraph.rebuildObjectGraph(state);
+  assert.equal(Boolean(graph.nodes['workflow_block:w-text:block:b-text']), true);
+  assert.equal(Boolean(graph.nodes['workflow_template_block:wt-text:block:tb-text']), true);
+  assert.equal(
+    graph.edges.some((edge) => edge.from === 'workflow_block:w-text:block:b-text' && edge.relation === 'assigned_to' && edge.to === 'person:m1'),
+    true
+  );
+  assert.equal(
+    graph.edges.some((edge) => edge.from === 'workflow_block:w-text:block:b-text' && edge.relation === 'uses_protocol'),
+    false
+  );
+  assert.equal(
+    graph.edges.some((edge) => edge.from === 'workflow_template_block:wt-text:block:tb-text' && edge.relation === 'uses_protocol'),
+    false
+  );
+});
+
 test('view constants and index navigation stay in sync', () => {
   const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
   const viewValues = Object.values(shared.VIEWS);
@@ -2674,6 +2718,9 @@ test('[EDGE] tool-box internal functions are exposed for unit tests', () => {
     'massFromG',
     'cleanNucleotideSequence',
     'translateDnaSequence',
+    'cleanProteinSequence',
+    'parseRestrictionSites',
+    'reverseTranslateProteinSequence',
     'oligoTm',
     'linearRegression',
     'peptideStats',
@@ -2805,6 +2852,82 @@ test('[EDGE] tool-box internal functions are exposed for unit tests', () => {
     assert.equal(result.strand, scenario.strand);
     assert.equal(result.remainderBases, scenario.remainder);
   });
+});
+
+[
+  ['m k*t1', true, 'MK*T'],
+  ['m k*t1', false, 'MKT'],
+  ['bjouxz*', true, 'BJOUXZ*'],
+  ['', true, ''],
+  [null, true, '']
+].forEach(([input, allowStop, expected], idx) => {
+  test(`[EDGE] tool-box cleanProteinSequence case ${idx + 1}`, () => {
+    assert.equal(toolBox.cleanProteinSequence(input, allowStop), expected);
+  });
+});
+
+[
+  ['gaattc AAGCTT ggtctc', ['GAATTC', 'AAGCTT', 'GGTCTC'], []],
+  ['EcoRI NNNN atg', ['ATG'], ['ECORI', 'NNNN']],
+  ['', [], []]
+].forEach(([input, expectedSites, expectedIgnored], idx) => {
+  test(`[EDGE] tool-box parseRestrictionSites case ${idx + 1}`, () => {
+    const parsed = toolBox.parseRestrictionSites(input);
+    assert.equal(JSON.stringify(parsed.sites), JSON.stringify(expectedSites));
+    assert.equal(JSON.stringify(parsed.ignoredTokens), JSON.stringify(expectedIgnored));
+  });
+});
+
+test('[EDGE] tool-box parseRestrictionSites expands reverse complement motifs', () => {
+  const parsed = toolBox.parseRestrictionSites('GGTCTC');
+  assert.equal(parsed.expandedSites.includes('GGTCTC'), true);
+  assert.equal(parsed.expandedSites.includes('GAGACC'), true);
+});
+
+test('[EDGE] tool-box reverseTranslateProteinSequence basic translation is valid', () => {
+  const result = toolBox.reverseTranslateProteinSequence('MRA', { organism: 'ecoli' });
+  assert.equal(result.ok, true);
+  assert.equal(result.dna.length, 9);
+  assert.equal(toolBox.translateDnaSequence(result.dna, 1, 'star').protein, 'MRA');
+});
+
+test('[EDGE] tool-box reverseTranslateProteinSequence reflects organism codon preferences', () => {
+  const ecoli = toolBox.reverseTranslateProteinSequence('RRR', { organism: 'ecoli' });
+  const yeast = toolBox.reverseTranslateProteinSequence('RRR', { organism: 'yeast' });
+  assert.equal(ecoli.ok, true);
+  assert.equal(yeast.ok, true);
+  assert.notEqual(ecoli.dna, yeast.dna);
+});
+
+test('[EDGE] tool-box reverseTranslateProteinSequence can avoid a requested restriction site', () => {
+  const unconstrained = toolBox.reverseTranslateProteinSequence('EF', { organism: 'ecoli' });
+  const constrained = toolBox.reverseTranslateProteinSequence('EF', {
+    organism: 'ecoli',
+    restrictionSites: ['GAATTC']
+  });
+
+  assert.equal(unconstrained.ok, true);
+  assert.equal(constrained.ok, true);
+  assert.equal(unconstrained.dna.includes('GAATTC'), true);
+  assert.equal(constrained.dna.includes('GAATTC'), false);
+  assert.equal(toolBox.translateDnaSequence(constrained.dna, 1, 'star').protein, 'EF');
+});
+
+test('[EDGE] tool-box reverseTranslateProteinSequence reports impossible restriction constraints', () => {
+  const blocked = toolBox.reverseTranslateProteinSequence('M', {
+    organism: 'ecoli',
+    restrictionSites: ['ATG']
+  });
+  assert.equal(blocked.ok, false);
+  assert.equal(blocked.reason, 'restriction_conflict');
+  assert.equal(blocked.blockedPosition, 1);
+});
+
+test('[EDGE] tool-box reverseTranslateProteinSequence rejects unsupported amino acids', () => {
+  const result = toolBox.reverseTranslateProteinSequence('MX');
+  assert.equal(result.ok, false);
+  assert.equal(result.reason, 'unsupported_residue');
+  assert.equal(result.unsupportedResidues.includes('X'), true);
 });
 
 [

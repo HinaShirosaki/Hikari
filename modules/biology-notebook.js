@@ -10,6 +10,7 @@ export function initLabNotebook({
 }) {
   const PLACEHOLDER_TOKEN_REGEX = /\{\{ph:([^}]+)\}\}/g;
   const notebookProjectSelect = document.getElementById('biology-notebook-project-select');
+  const notebookProtocolSearchInput = document.getElementById('biology-notebook-protocol-search');
   const notebookProtocolSelect = document.getElementById('biology-notebook-protocol-select');
   const notebookProtocolArea = document.getElementById('biology-notebook-protocol-area');
   const notebookProtocolTitle = document.getElementById('biology-notebook-protocol-title');
@@ -22,6 +23,7 @@ export function initLabNotebook({
   let editingEntryId = null;
 
   notebookProjectSelect.addEventListener('change', onProjectChange);
+  notebookProtocolSearchInput?.addEventListener('input', onProtocolSearchInput);
   notebookProtocolSelect.addEventListener('change', onProtocolChange);
   saveNotebookBtn.addEventListener('click', saveEntry);
   cancelEditBtn?.addEventListener('click', cancelEdit);
@@ -34,6 +36,10 @@ export function initLabNotebook({
   function onProjectChange() {
     editingEntryId = null;
     updateSaveButtonLabel();
+    renderProtocolOptions();
+  }
+
+  function onProtocolSearchInput() {
     renderProtocolOptions();
   }
 
@@ -177,23 +183,34 @@ export function initLabNotebook({
     }
   }
 
-  function renderProtocolOptions() {
+  function renderProtocolOptions(preferredProtocolId = '') {
     const projectId = notebookProjectSelect.value;
-    const selected = notebookProtocolSelect.value;
+    const selected = preferredProtocolId || notebookProtocolSelect.value;
     const hasProject = Boolean(state.projects.find((item) => item.id === projectId));
+    const searchTerm = String(notebookProtocolSearchInput?.value || '').trim().toLowerCase();
     const options = ['<option value="">Select protocol</option>'];
+    const selectedProtocol = state.protocols.find((item) => item.id === selected) || null;
+    const filteredProtocols = hasProject
+      ? state.protocols.filter((protocol) => String(protocol.name || '').toLowerCase().includes(searchTerm))
+      : [];
 
-    if (hasProject) {
-      state.protocols.forEach((protocol) => {
-        const isSelected = protocol.id === selected ? ' selected' : '';
-        options.push(`<option value="${protocol.id}"${isSelected}>${safeText(protocol.name)}</option>`);
-      });
+    if (
+      hasProject
+      && selectedProtocol
+      && !filteredProtocols.some((protocol) => protocol.id === selectedProtocol.id)
+    ) {
+      filteredProtocols.unshift(selectedProtocol);
     }
+
+    filteredProtocols.forEach((protocol) => {
+      const isSelected = protocol.id === selected ? ' selected' : '';
+      options.push(`<option value="${protocol.id}"${isSelected}>${safeText(protocol.name)}</option>`);
+    });
 
     notebookProtocolSelect.innerHTML = options.join('');
     notebookProtocolSelect.disabled = !hasProject;
 
-    if (hasProject && selected) {
+    if (hasProject && selected && Array.from(notebookProtocolSelect.options).some((option) => option.value === selected)) {
       notebookProtocolSelect.value = selected;
     }
 
@@ -267,8 +284,7 @@ export function initLabNotebook({
 
     editingEntryId = entry.id;
     notebookProjectSelect.value = entry.projectId;
-    renderProtocolOptions();
-    notebookProtocolSelect.value = entry.protocolId;
+    renderProtocolOptions(entry.protocolId);
     onProtocolChange();
   }
 

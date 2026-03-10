@@ -201,37 +201,29 @@ function normalizeChemicalStorePayload(payload) {
   };
 }
 
-function splitChemicalsFromSnapshot(data) {
-  const source = data && typeof data === 'object' ? data : {};
-  const labInventorySource = source.labInventory && typeof source.labInventory === 'object'
-    ? source.labInventory
-    : {};
-  const chemicalsPayload = normalizeChemicalStorePayload(labInventorySource);
-  const next = {
-    ...source,
-    labInventory: {
-      ...labInventorySource,
-      chemicals: [],
-      blocks: [],
-      lastLocationNumber: 0
-    }
-  };
-  return { snapshot: next, chemicalsPayload };
-}
-
 function mergeChemicalsIntoSnapshot(data, chemicalsPayload) {
   const source = data && typeof data === 'object' ? data : {};
-  if (!chemicalsPayload) {
-    return source;
-  }
   const labInventorySource = source.labInventory && typeof source.labInventory === 'object'
     ? source.labInventory
     : {};
+  const normalizedSnapshotChemicals = normalizeChemicalStorePayload(labInventorySource);
+  const normalizedSidecarChemicals = chemicalsPayload
+    ? normalizeChemicalStorePayload(chemicalsPayload)
+    : null;
+  const hasSnapshotChemicals = normalizedSnapshotChemicals.chemicals.length > 0;
+  const mergedChemicalStore = hasSnapshotChemicals
+    ? normalizedSnapshotChemicals
+    : normalizedSidecarChemicals;
+
+  if (!mergedChemicalStore) {
+    return source;
+  }
+
   return {
     ...source,
     labInventory: {
       ...labInventorySource,
-      ...normalizeChemicalStorePayload(chemicalsPayload)
+      ...mergedChemicalStore
     }
   };
 }
@@ -278,9 +270,9 @@ ipcMain.handle('ena:save', async (_event, payload) => {
   }
 
   try {
-    const { snapshot, chemicalsPayload } = splitChemicalsFromSnapshot(data);
+    const snapshot = data && typeof data === 'object' ? data : {};
     await writeEnaFile(targetPath, snapshot);
-    await writeChemicalsFile(chemicalsPayload);
+    await writeChemicalsFile(snapshot.labInventory);
     return { ok: true, filePath: targetPath };
   } catch (error) {
     return { ok: false, error: String(error) };
@@ -320,9 +312,9 @@ ipcMain.handle('data:auto-save', async (_event, payload) => {
 
   try {
     await fs.mkdir(path.dirname(targetPath), { recursive: true });
-    const { snapshot, chemicalsPayload } = splitChemicalsFromSnapshot(data);
+    const snapshot = data && typeof data === 'object' ? data : {};
     await writeEnaFile(targetPath, snapshot);
-    await writeChemicalsFile(chemicalsPayload);
+    await writeChemicalsFile(snapshot.labInventory);
     return { ok: true, filePath: targetPath };
   } catch (error) {
     return { ok: false, error: String(error), filePath: targetPath };

@@ -1,3 +1,5 @@
+const fs = require('fs/promises');
+const path = require('path');
 const { app } = require('electron');
 const { Telegraf } = require('telegraf');
 
@@ -161,6 +163,85 @@ function sendTelegramCommandToRenderer(getMainWindow, payload) {
   return true;
 }
 
+function getTelegramLogPath() {
+  const override = String(process.env.TELEGRAM_BOT_LOG_PATH || '').trim();
+  if (override) {
+    return override;
+  }
+  return path.join(__dirname, 'data', 'telegram-messages.log');
+}
+
+function detectMessageType(message) {
+  if (!message) {
+    return 'unknown';
+  }
+  if (typeof message.text === 'string') {
+    return 'text';
+  }
+  if (typeof message.caption === 'string') {
+    return 'caption';
+  }
+
+  const knownTypes = [
+    'photo',
+    'video',
+    'document',
+    'audio',
+    'voice',
+    'animation',
+    'sticker',
+    'location',
+    'contact',
+    'poll'
+  ];
+  for (const type of knownTypes) {
+    if (message[type]) {
+      return type;
+    }
+  }
+  return 'other';
+}
+
+function formatTelegramLogEntry(ctx) {
+  const message = ctx.message || null;
+  const body = typeof message?.text === 'string'
+    ? message.text
+    : typeof message?.caption === 'string'
+      ? message.caption
+      : '';
+
+  return JSON.stringify({
+    timestamp: new Date().toISOString(),
+    updateType: String(ctx.updateType || ''),
+    messageType: detectMessageType(message),
+    chatId: message?.chat?.id ?? ctx.chat?.id ?? null,
+    chatType: message?.chat?.type ?? ctx.chat?.type ?? '',
+    fromId: message?.from?.id ?? ctx.from?.id ?? null,
+    fromUsername: message?.from?.username ?? ctx.from?.username ?? '',
+    fromName: [message?.from?.first_name, message?.from?.last_name].filter(Boolean).join(' ').trim(),
+    messageId: message?.message_id ?? null,
+    body
+  });
+}
+
+async function appendTelegramLogEntry(logPath, entry) {
+  try {
+    await fs.mkdir(path.dirname(logPath), { recursive: true });
+    await fs.appendFile(logPath, `${entry}\n`, 'utf8');
+  } catch (error) {
+    console.error('Failed to append Telegram message log:', error);
+  }
+}
+
+async function ensureTelegramLogFile(logPath) {
+  try {
+    await fs.mkdir(path.dirname(logPath), { recursive: true });
+    await fs.appendFile(logPath, '', 'utf8');
+  } catch (error) {
+    console.error('Failed to initialize Telegram message log file:', error);
+  }
+}
+
 function createStatusMessage(mainWindow) {
   if (!mainWindow) {
     return [
@@ -193,7 +274,17 @@ function startTelegramBot(getMainWindow, tokenOverride = '') {
   }
 
   const bot = new Telegraf(token);
+  const telegramLogPath = getTelegramLogPath();
+  console.log(`Telegram message log: ${telegramLogPath}`);
   const chatDefaultSearchScope = new Map();
+  void ensureTelegramLogFile(telegramLogPath);
+
+  bot.use(async (ctx, next) => {
+    if (ctx.message) {
+      await appendTelegramLogEntry(telegramLogPath, formatTelegramLogEntry(ctx));
+    }
+    return next();
+  });
 
   const getChatScopeKey = (ctx) => String(ctx?.chat?.id || ctx?.from?.id || 'global');
   const getDefaultSearchTarget = (ctx) => {

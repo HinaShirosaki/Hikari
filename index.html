@@ -457,6 +457,10 @@
             </select>
           </label>
           <label>
+            Search Protocol
+            <input id="biology-notebook-protocol-search" type="search" placeholder="Search protocols..." />
+          </label>
+          <label>
             Select Protocol
             <select id="biology-notebook-protocol-select">
               <option value="">Select protocol</option>
@@ -533,7 +537,11 @@
 
     <section id="sample-registry-view" class="view">
       <div class="panel">
-        <h2>Sample Registry</h2>
+        <h2>Sample &amp; Inventory</h2>
+        <label class="sample-top-search">
+          Search Samples
+          <input id="sample-search" type="search" placeholder="Code, name, lot, location..." />
+        </label>
         <form id="sample-form" class="form-grid">
           <input type="hidden" id="sample-id" />
           <label>
@@ -602,10 +610,6 @@
       </div>
       <div class="panel">
         <h3>Registered Samples</h3>
-        <label>
-          Search
-          <input id="sample-search" placeholder="Code, name, lot, location..." />
-        </label>
         <div id="sample-registry-list" class="cards"></div>
       </div>
     </section>
@@ -723,8 +727,47 @@
             <option value="ec50">EC50 (4PL Fit)</option>
             <option value="ic50">IC50 (4PL Fit)</option>
             <option value="survival">Survival %</option>
+            <optgroup label="Standard curves to interpolate">
+              <option value="standard_curve_line">Line</option>
+              <option value="standard_curve_4pl_log_concentration">Sigmoidal, 4PL, X is log(concentration)</option>
+              <option value="standard_curve_4pl_concentration">Sigmoidal, 4PL, X is concentration</option>
+              <option value="standard_curve_5pl_log_concentration">Asymmetric Sigmoidal, 5PL, X is log(concentration)</option>
+              <option value="standard_curve_5pl_concentration">Asymmetric Sigmoidal, 5PL, X is concentration</option>
+              <option value="standard_curve_semilog_line">Semilog line</option>
+              <option value="standard_curve_hyperbola">Hyperbola (X is concentration)</option>
+              <option value="standard_curve_quadratic">Second order polynomial (quadratic)</option>
+              <option value="standard_curve_cubic">Third order polynomial (cubic)</option>
+              <option value="standard_curve_pade_11">Pade (1,1) approximant</option>
+            </optgroup>
           </select>
         </label>
+        <div class="assay-analysis-controls">
+          <label>
+            Row Groups (optional)
+            <textarea id="assay-analysis-row-groups" rows="2" placeholder="Control: A,B; Treated: C,D"></textarea>
+          </label>
+          <label>
+            Column Groups (optional)
+            <textarea id="assay-analysis-column-groups" rows="2" placeholder="Early: 1,2; Late: 3,4"></textarea>
+          </label>
+          <label class="assay-analysis-checkbox">
+            <input id="assay-analysis-error-bars" type="checkbox" />
+            Show SD error bars (for Row/Column Summary)
+          </label>
+          <label>
+            Replicate Group Name (optional)
+            <input id="assay-analysis-group-name" placeholder="e.g. Control replicate" />
+          </label>
+          <div class="form-actions assay-analysis-group-actions">
+            <button type="button" id="assay-analysis-add-row-group-btn" class="ghost-btn">Add Selected as Row Group</button>
+            <button type="button" id="assay-analysis-add-column-group-btn" class="ghost-btn">Add Selected as Column Group</button>
+            <button type="button" id="assay-analysis-clear-groups-btn" class="ghost-btn">Clear Groups</button>
+          </div>
+          <div id="assay-analysis-selection-status" class="small-note"></div>
+          <p class="small-note assay-analysis-help">
+            Drag-select replicate wells in the result table, then add as row or column group. Manual format also works: <code>Group: item1,item2</code>; ranges: <code>A-C</code> or <code>1-3</code>.
+          </p>
+        </div>
         <div class="form-actions assay-results-actions">
           <button type="button" id="assay-results-load-btn" class="ghost-btn">Load Plate</button>
           <button type="button" id="assay-save-results-btn" class="primary-btn">Save Results</button>
@@ -796,6 +839,16 @@
               <option value="none">None</option>
               <option value="total-lane">Total Lane Intensity</option>
             </select>
+          </label>
+          <label class="gel-slider-field">
+            Denoise Strength
+            <input id="gel-denoise-strength" type="range" min="0" max="100" step="1" value="35" />
+            <span id="gel-denoise-strength-value" class="small-note">35%</span>
+          </label>
+          <label class="gel-slider-field">
+            Contrast Boost
+            <input id="gel-contrast-strength" type="range" min="0" max="220" step="1" value="100" />
+            <span id="gel-contrast-strength-value" class="small-note">100%</span>
           </label>
           <div class="form-actions">
             <button type="button" id="gel-reset-overrides-btn" class="ghost-btn">Reset Manual Overrides</button>
@@ -1237,17 +1290,32 @@
       </div>
 
       <div class="panel workflow-editor-panel" hidden>
-        <h3>Protocol Blocks</h3>
-        <p class="small-note">Each block is a stored protocol. New blocks default assignee to yourself.</p>
-        <div class="form-grid workflow-grid">
+        <h3>Workflow Blocks</h3>
+        <p class="small-note">Add protocol blocks or plain-text blocks. New blocks default assignee to yourself.</p>
+        <div class="form-grid workflow-grid workflow-block-grid">
           <label>
+            Block Type
+            <select id="workflow-block-type">
+              <option value="protocol">Protocol</option>
+              <option value="text">Plain Text</option>
+            </select>
+          </label>
+          <label id="workflow-block-protocol-search-field">
+            Search Protocol
+            <input id="workflow-block-protocol-search" type="search" placeholder="Search protocols..." />
+          </label>
+          <label id="workflow-block-protocol-field">
             Protocol
             <select id="workflow-block-protocol">
               <option value="">Select protocol</option>
             </select>
           </label>
+          <label id="workflow-block-text-field" hidden>
+            Plain Text
+            <input id="workflow-block-text" placeholder="e.g. Incubate at room temperature for 10 minutes" />
+          </label>
           <div class="form-actions workflow-inline-actions">
-            <button type="button" id="workflow-block-add-btn" class="ghost-btn">Add Block</button>
+            <button type="button" id="workflow-block-add-btn" class="ghost-btn">Add Protocol Block</button>
           </div>
         </div>
         <div id="workflow-block-list" class="list-table"></div>
@@ -1269,7 +1337,7 @@
 
       <div class="panel workflow-template-panel" hidden>
         <h3>Templates</h3>
-        <p class="small-note">Templates save only block + connection structure. No project or notebook page links are included.</p>
+        <p class="small-note">Templates save only block + connection structure. Specific notebook page links are never included.</p>
         <div class="form-grid workflow-grid">
           <label>
             Template Name
@@ -1434,6 +1502,10 @@
           <span class="icon" aria-hidden="true">🧾</span>
           <span class="label">DNA to Protein</span>
         </button>
+        <button class="tile tool-tile" data-tool-view="tool-reverse-translate-view">
+          <span class="icon" aria-hidden="true">🔁</span>
+          <span class="label">Protein to DNA</span>
+        </button>
         <button class="tile tool-tile" data-tool-view="tool-oligo-view">
           <span class="icon" aria-hidden="true">🧪</span>
           <span class="label">DNA/RNA Oligo Properties</span>
@@ -1449,6 +1521,10 @@
         <button class="tile tool-tile" data-tool-view="tool-plannotate-view">
           <span class="icon" aria-hidden="true">🧭</span>
           <span class="label">pLannotate</span>
+        </button>
+        <button class="tile tool-tile" data-tool-view="tool-crispr-view">
+          <span class="icon" aria-hidden="true">✂️</span>
+          <span class="label">CRISPR sgRNA Designer</span>
         </button>
       </div>
 
@@ -1710,6 +1786,31 @@
         <div id="dna-protein-result" class="calc-output"></div>
       </div>
 
+      <div id="tool-reverse-translate-view" class="panel tool-subview" hidden>
+        <h3>Protein Sequence to DNA Sequence (Reverse Translation)</h3>
+        <form id="reverse-translate-form" class="stack-form" autocomplete="off">
+          <label>
+            Protein Sequence
+            <textarea id="reverse-translate-protein" rows="5" placeholder="e.g. MKTIIALSYIFCLVFADYKDDD..."></textarea>
+          </label>
+          <div class="form-grid">
+            <label>
+              Codon Usage Profile
+              <select id="reverse-translate-organism"></select>
+            </label>
+            <label class="assay-analysis-checkbox">
+              <input id="reverse-translate-append-stop" type="checkbox" />
+              Append terminal stop codon
+            </label>
+          </div>
+          <label>
+            Restriction Sites to Avoid
+            <textarea id="reverse-translate-sites" rows="3" placeholder="Comma/space/newline separated DNA motifs, e.g. GAATTC AAGCTT GGTCTC"></textarea>
+          </label>
+        </form>
+        <div id="reverse-translate-result" class="calc-output"></div>
+      </div>
+
       <div id="tool-oligo-view" class="panel tool-subview" hidden>
         <h3>DNA / RNA Oligo Properties</h3>
         <form id="oligo-form" class="stack-form" autocomplete="off">
@@ -1865,6 +1966,96 @@
           </div>
 
           <div id="plannotate-result" class="calc-output"></div>
+        </div>
+      </div>
+
+      <div id="tool-crispr-view" class="panel tool-subview" hidden>
+        <h3>CRISPR sgRNA Designer</h3>
+        <p class="small-note">Choose a reference genome profile, select targets, and generate ranked sgRNA candidates.</p>
+
+        <div class="crispr-designer-shell">
+          <form id="crispr-form" class="stack-form crispr-controls" autocomplete="off">
+            <div class="form-grid">
+              <label>
+                Reference Genome
+                <select id="crispr-reference-genome"></select>
+              </label>
+              <label>
+                PAM Pattern
+                <select id="crispr-pam-pattern">
+                  <option value="NGG" selected>SpCas9 (NGG)</option>
+                  <option value="NAG">SpCas9 (NAG, permissive)</option>
+                </select>
+              </label>
+              <label>
+                Guide Length (nt)
+                <input id="crispr-guide-length" type="number" min="18" max="24" step="1" value="20" />
+              </label>
+              <label>
+                Return Top Candidates
+                <input id="crispr-top-count" type="number" min="1" max="100" step="1" value="12" />
+              </label>
+              <label>
+                Min GC (%)
+                <input id="crispr-min-gc" type="number" min="0" max="100" step="1" value="35" />
+              </label>
+              <label>
+                Max GC (%)
+                <input id="crispr-max-gc" type="number" min="0" max="100" step="1" value="75" />
+              </label>
+            </div>
+            <p id="crispr-reference-note" class="small-note">Genome profile not selected.</p>
+            <label>
+              Target Sequences (FASTA recommended)
+              <textarea id="crispr-target-input" rows="8" placeholder=">Target_A&#10;GAGTCCGAGCAGAAGAAGAAGGG...&#10;>Target_B&#10;ACTG..." spellcheck="false"></textarea>
+            </label>
+
+            <div class="crispr-target-grid">
+              <label>
+                Targets to Process
+                <select id="crispr-target-select" class="crispr-target-select" multiple size="6"></select>
+              </label>
+              <div id="crispr-selection-summary" class="calc-output crispr-selection-box">
+                Add target sequences to begin.
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="primary-btn">Design sgRNAs</button>
+              <button type="button" id="crispr-select-all-btn" class="ghost-btn">Select All Targets</button>
+              <button type="button" id="crispr-clear-btn" class="ghost-btn">Clear</button>
+            </div>
+          </form>
+
+          <div id="crispr-result-summary" class="calc-output">
+            Enter target sequences and run design to view candidate guides.
+          </div>
+
+          <div class="plannotate-table-wrap crispr-table-wrap">
+            <table class="plannotate-table crispr-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Target</th>
+                  <th>Position</th>
+                  <th>Strand</th>
+                  <th>Guide (5'-3')</th>
+                  <th>PAM</th>
+                  <th>GC%</th>
+                  <th>On-target</th>
+                  <th>Off-target rate</th>
+                  <th>Specificity</th>
+                  <th>Off-target hits (0/1/2/3 mm)</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody id="crispr-table-body">
+                <tr>
+                  <td colspan="12" class="small-note">No sgRNA candidates yet.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </section>

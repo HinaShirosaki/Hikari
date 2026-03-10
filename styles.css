@@ -921,6 +921,10 @@ button:disabled {
   grid-template-columns: minmax(260px, 1fr) auto;
 }
 
+.workflow-block-grid {
+  grid-template-columns: minmax(170px, 0.65fr) minmax(260px, 1fr) auto;
+}
+
 .workflow-inline-actions {
   align-self: end;
 }
@@ -932,6 +936,15 @@ button:disabled {
 
 .workflow-block-meta p {
   margin: 2px 0 0;
+}
+
+.workflow-text-block-field {
+  margin-top: 6px;
+  font-size: 0.84rem;
+}
+
+.workflow-text-block-field input {
+  width: 100%;
 }
 
 .workflow-assignee-field {
@@ -1018,6 +1031,11 @@ button:disabled {
   cursor: grab;
   color: var(--primary);
   font-size: 0.93rem;
+}
+
+.workflow-node-text .workflow-node-header strong {
+  font-size: 0.88rem;
+  line-height: 1.25;
 }
 
 .workflow-node-header:active {
@@ -2011,6 +2029,88 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   }
 }
 
+.crispr-designer-shell {
+  display: grid;
+  gap: 12px;
+}
+
+.crispr-controls {
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  background: linear-gradient(156deg, rgba(255, 255, 255, 0.68), rgba(236, 248, 255, 0.48));
+  padding: 12px;
+}
+
+.crispr-target-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.9fr);
+  align-items: start;
+}
+
+.crispr-target-select {
+  min-height: 210px;
+}
+
+.crispr-selection-box {
+  margin-top: 0;
+  min-height: 100%;
+}
+
+.crispr-table-wrap {
+  margin-top: 0;
+  max-height: 470px;
+}
+
+.crispr-table {
+  min-width: 1180px;
+}
+
+.crispr-guide-seq {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  letter-spacing: 0.015em;
+}
+
+.crispr-risk-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 74px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.crispr-risk-low {
+  color: #0b5c3f;
+  border-color: rgba(98, 191, 150, 0.58);
+  background: rgba(135, 226, 184, 0.3);
+}
+
+.crispr-risk-medium {
+  color: #8b4f00;
+  border-color: rgba(233, 168, 69, 0.58);
+  background: rgba(255, 214, 143, 0.36);
+}
+
+.crispr-risk-high {
+  color: #7b1b25;
+  border-color: rgba(224, 100, 124, 0.58);
+  background: rgba(255, 181, 194, 0.35);
+}
+
+@media (max-width: 920px) {
+  .crispr-target-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .crispr-target-select {
+    min-height: 170px;
+  }
+}
+
 .molarity-block {
   margin-top: 14px;
   padding-top: 10px;
@@ -2381,6 +2481,29 @@ body.theme-night .plannotate-linear-map {
 
 body.theme-night .plannotate-legend-item {
   color: rgba(224, 237, 255, 0.9);
+}
+
+body.theme-night .crispr-controls {
+  border-color: rgba(186, 218, 255, 0.3);
+  background: linear-gradient(160deg, rgba(34, 52, 78, 0.7), rgba(20, 31, 48, 0.6));
+}
+
+body.theme-night .crispr-risk-low {
+  color: #aaf4cf;
+  border-color: rgba(80, 184, 139, 0.65);
+  background: rgba(38, 89, 67, 0.56);
+}
+
+body.theme-night .crispr-risk-medium {
+  color: #ffd28f;
+  border-color: rgba(223, 155, 66, 0.66);
+  background: rgba(92, 61, 22, 0.54);
+}
+
+body.theme-night .crispr-risk-high {
+  color: #ffc2cd;
+  border-color: rgba(190, 91, 111, 0.68);
+  background: rgba(97, 32, 47, 0.56);
 }
 
 body.ui-neutral-compact {
@@ -3543,6 +3666,41 @@ body.ui-neutral-compact .workspace-main {
   text-align: center;
 }
 
+.assay-analysis-controls {
+  display: grid;
+  gap: 8px;
+  margin: 6px 0 4px;
+}
+
+.assay-analysis-controls textarea {
+  resize: vertical;
+  min-height: 52px;
+}
+
+.assay-analysis-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.assay-analysis-checkbox input[type="checkbox"] {
+  width: auto;
+}
+
+.assay-analysis-group-actions {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.assay-analysis-selection-status {
+  min-height: 1.1rem;
+}
+
+.assay-analysis-help code {
+  font-size: 0.82em;
+}
+
 .assay-analysis-results {
   display: grid;
   gap: 10px;
@@ -3802,6 +3960,11 @@ body.theme-night .gel-report-json {
   gap: 12px;
 }
 
+.sample-top-search {
+  margin-bottom: 10px;
+  max-width: 420px;
+}
+
 #personal-inventory-view .inventory-add-form .form-actions {
   grid-column: 1 / -1;
   justify-content: flex-start;
@@ -3844,6 +4007,15 @@ body.theme-night .gel-report-json {
 #gel-form #gel-image-file,
 #gel-form #gel-notebook-entry {
   width: 100%;
+}
+
+#gel-form .gel-slider-field input[type='range'] {
+  width: 100%;
+}
+
+#gel-form .gel-slider-field .small-note {
+  display: block;
+  margin-top: 4px;
 }
 
 @media (max-width: 960px) {

@@ -302,21 +302,11 @@ export function initPersonalInventory({ state, persist, createId, safeText, cssE
     return `
       <div class="well-inline-editor well-side-editor">
         <strong>${safeText(well.name)} (Cell ${index + 1})</strong>
-        <label>
-          Well Name
-          <input data-well-name-input="${index}" value="${safeText(well.name)}" placeholder="e.g. A1 or Sample 1" />
-        </label>
-        <label>
-          Well Content
-          <textarea data-well-content-input="${index}" rows="3" placeholder="Optional note or content">${safeText(well.content)}</textarea>
-        </label>
+        <strong>Set Samples</strong>
+        ${sampleSection}
         <div class="inline-row">
-          <button type="button" class="primary-btn" data-well-save="${index}">Save Well</button>
           <button type="button" class="ghost-btn" data-well-cancel>Clear Selection</button>
         </div>
-        <hr />
-        <strong>Linked Sample</strong>
-        ${sampleSection}
         ${statusMarkup}
       </div>
     `;
@@ -376,7 +366,7 @@ export function initPersonalInventory({ state, persist, createId, safeText, cssE
     return `
       <div class="container-inline-detail">
         <h4>${safeText(section)} / ${safeText(container.name)} (${getContainerTypeLabel(container.type)})</h4>
-        <p class="small-note">9 x 9 square box (81 wells). Click a cell to edit well and sample information on the right side.</p>
+        <p class="small-note">9 x 9 square box (81 wells). Click a cell to set samples on the right side.</p>
         <div class="well-editor-shell">
           <div class="well-grid-panel">
             <div class="well-grid">${grid}</div>
@@ -593,32 +583,6 @@ export function initPersonalInventory({ state, persist, createId, safeText, cssE
         const linkedSamples = getLinkedSamples(section, containerId, editingWellIndex);
         editingSampleId = linkedSamples[0]?.id || '';
         wellEditorStatus = '';
-        renderSections();
-      });
-    });
-
-    inventorySections.querySelectorAll('[data-well-save]').forEach((button) => {
-      button.addEventListener('click', () => {
-        const section = selectedContainer?.section;
-        const containerId = selectedContainer?.containerId;
-        if (!section || !containerId) {
-          return;
-        }
-
-        const container = getContainer(section, containerId);
-        if (!container || (container.type || 'box81') !== 'box81') {
-          return;
-        }
-
-        const index = Number(button.dataset.wellSave);
-        const nameInput = inventorySections.querySelector(`[data-well-name-input="${index}"]`);
-        const contentInput = inventorySections.querySelector(`[data-well-content-input="${index}"]`);
-        const name = nameInput?.value.trim() || `W${index + 1}`;
-        const content = contentInput?.value.trim() || '';
-
-        container.wells[index] = { name, content };
-        persist();
-        wellEditorStatus = `Saved ${name}.`;
         renderSections();
       });
     });

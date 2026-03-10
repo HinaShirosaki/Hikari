@@ -81,6 +81,125 @@ const CODON_TABLE = {
   GAT: 'D', GAC: 'D', GAA: 'E', GAG: 'E',
   GGT: 'G', GGC: 'G', GGA: 'G', GGG: 'G'
 };
+const REVERSE_TRANSLATE_DEFAULT_ORGANISM = 'ecoli';
+const REVERSE_TRANSLATE_DEFAULT_BEAM_WIDTH = 96;
+const REVERSE_TRANSLATE_MAX_BEAM_WIDTH = 512;
+const REVERSE_TRANSLATE_MIN_SITE_LENGTH = 3;
+const AMINO_ACID_TO_CODONS = Object.freeze(
+  Object.entries(CODON_TABLE).reduce((acc, [codon, residue]) => {
+    if (!acc[residue]) {
+      acc[residue] = [];
+    }
+    acc[residue].push(codon);
+    return acc;
+  }, {})
+);
+const CODON_USAGE_PROFILES = Object.freeze({
+  ecoli: {
+    label: 'E. coli (K-12)',
+    preferences: {
+      F: ['TTC', 'TTT'],
+      L: ['CTG', 'TTA', 'TTG', 'CTC', 'CTT', 'CTA'],
+      S: ['TCT', 'AGC', 'TCC', 'AGT', 'TCG', 'TCA'],
+      Y: ['TAC', 'TAT'],
+      '*': ['TAA', 'TGA', 'TAG'],
+      C: ['TGC', 'TGT'],
+      W: ['TGG'],
+      P: ['CCG', 'CCT', 'CCA', 'CCC'],
+      H: ['CAC', 'CAT'],
+      Q: ['CAG', 'CAA'],
+      R: ['CGT', 'CGC', 'CGG', 'AGA', 'AGG', 'CGA'],
+      I: ['ATT', 'ATC', 'ATA'],
+      M: ['ATG'],
+      T: ['ACC', 'ACT', 'ACA', 'ACG'],
+      N: ['AAC', 'AAT'],
+      K: ['AAA', 'AAG'],
+      V: ['GTG', 'GTT', 'GTC', 'GTA'],
+      A: ['GCG', 'GCC', 'GCT', 'GCA'],
+      D: ['GAT', 'GAC'],
+      E: ['GAA', 'GAG'],
+      G: ['GGC', 'GGT', 'GGG', 'GGA']
+    }
+  },
+  human: {
+    label: 'Human (H. sapiens)',
+    preferences: {
+      F: ['TTC', 'TTT'],
+      L: ['CTG', 'CTC', 'TTG', 'CTT', 'TTA', 'CTA'],
+      S: ['AGC', 'TCC', 'TCT', 'AGT', 'TCA', 'TCG'],
+      Y: ['TAC', 'TAT'],
+      '*': ['TGA', 'TAA', 'TAG'],
+      C: ['TGC', 'TGT'],
+      W: ['TGG'],
+      P: ['CCC', 'CCG', 'CCA', 'CCT'],
+      H: ['CAC', 'CAT'],
+      Q: ['CAG', 'CAA'],
+      R: ['CGC', 'AGA', 'CGG', 'AGG', 'CGT', 'CGA'],
+      I: ['ATC', 'ATT', 'ATA'],
+      M: ['ATG'],
+      T: ['ACC', 'ACA', 'ACT', 'ACG'],
+      N: ['AAC', 'AAT'],
+      K: ['AAG', 'AAA'],
+      V: ['GTG', 'GTC', 'GTT', 'GTA'],
+      A: ['GCC', 'GCT', 'GCA', 'GCG'],
+      D: ['GAC', 'GAT'],
+      E: ['GAG', 'GAA'],
+      G: ['GGC', 'GGG', 'GGA', 'GGT']
+    }
+  },
+  yeast: {
+    label: 'Yeast (S. cerevisiae)',
+    preferences: {
+      F: ['TTT', 'TTC'],
+      L: ['TTG', 'TTA', 'CTT', 'CTA', 'CTG', 'CTC'],
+      S: ['TCT', 'TCA', 'AGT', 'TCC', 'AGC', 'TCG'],
+      Y: ['TAT', 'TAC'],
+      '*': ['TAA', 'TAG', 'TGA'],
+      C: ['TGT', 'TGC'],
+      W: ['TGG'],
+      P: ['CCT', 'CCA', 'CCC', 'CCG'],
+      H: ['CAT', 'CAC'],
+      Q: ['CAA', 'CAG'],
+      R: ['AGA', 'AGG', 'CGT', 'CGC', 'CGA', 'CGG'],
+      I: ['ATT', 'ATA', 'ATC'],
+      M: ['ATG'],
+      T: ['ACT', 'ACA', 'ACC', 'ACG'],
+      N: ['AAT', 'AAC'],
+      K: ['AAA', 'AAG'],
+      V: ['GTT', 'GTA', 'GTG', 'GTC'],
+      A: ['GCT', 'GCA', 'GCC', 'GCG'],
+      D: ['GAT', 'GAC'],
+      E: ['GAA', 'GAG'],
+      G: ['GGT', 'GGA', 'GGC', 'GGG']
+    }
+  },
+  bacillus: {
+    label: 'B. subtilis',
+    preferences: {
+      F: ['TTT', 'TTC'],
+      L: ['TTA', 'TTG', 'CTT', 'CTA', 'CTG', 'CTC'],
+      S: ['TCT', 'TCA', 'AGT', 'TCC', 'AGC', 'TCG'],
+      Y: ['TAT', 'TAC'],
+      '*': ['TAA', 'TGA', 'TAG'],
+      C: ['TGT', 'TGC'],
+      W: ['TGG'],
+      P: ['CCA', 'CCT', 'CCC', 'CCG'],
+      H: ['CAT', 'CAC'],
+      Q: ['CAA', 'CAG'],
+      R: ['AGA', 'CGT', 'AGG', 'CGC', 'CGA', 'CGG'],
+      I: ['ATT', 'ATA', 'ATC'],
+      M: ['ATG'],
+      T: ['ACA', 'ACT', 'ACC', 'ACG'],
+      N: ['AAT', 'AAC'],
+      K: ['AAA', 'AAG'],
+      V: ['GTA', 'GTT', 'GTC', 'GTG'],
+      A: ['GCA', 'GCT', 'GCC', 'GCG'],
+      D: ['GAT', 'GAC'],
+      E: ['GAA', 'GAG'],
+      G: ['GGA', 'GGT', 'GGC', 'GGG']
+    }
+  }
+});
 
 const DNA_BASE_MW = { A: 313.21, T: 304.2, G: 329.21, C: 289.18 };
 const RNA_BASE_MW = { A: 329.21, U: 306.17, G: 345.21, C: 305.18 };
@@ -130,6 +249,78 @@ const PLANNOTATE_ORIENTED_TYPES = new Set([
   'trna',
   'swissprot',
   'origin_of_replication'
+]);
+const IUPAC_BASE_MAP = Object.freeze({
+  A: 'A',
+  C: 'C',
+  G: 'G',
+  T: 'T',
+  R: 'AG',
+  Y: 'CT',
+  S: 'GC',
+  W: 'AT',
+  K: 'GT',
+  M: 'AC',
+  B: 'CGT',
+  D: 'AGT',
+  H: 'ACT',
+  V: 'ACG',
+  N: 'ACGT'
+});
+const IUPAC_COMPLEMENT_MAP = Object.freeze({
+  A: 'T',
+  C: 'G',
+  G: 'C',
+  T: 'A',
+  R: 'Y',
+  Y: 'R',
+  S: 'S',
+  W: 'W',
+  K: 'M',
+  M: 'K',
+  B: 'V',
+  D: 'H',
+  H: 'D',
+  V: 'B',
+  N: 'N'
+});
+const CRISPR_REFERENCE_GENOMES = Object.freeze([
+  {
+    id: 'human-hg38',
+    label: 'Human (GRCh38 / hg38)',
+    offTargetMultiplier: 1.35,
+    note: 'Large and repetitive genome. Off-target estimates are scaled conservatively.'
+  },
+  {
+    id: 'mouse-mm39',
+    label: 'Mouse (GRCm39 / mm39)',
+    offTargetMultiplier: 1.2,
+    note: 'Mammalian-scale genome with moderate repeat burden.'
+  },
+  {
+    id: 'zebrafish-gz11',
+    label: 'Zebrafish (GRCz11)',
+    offTargetMultiplier: 1.05,
+    note: 'Intermediate genome size with common duplicated regions.'
+  },
+  {
+    id: 'yeast-r64',
+    label: 'Yeast (S288C / R64)',
+    offTargetMultiplier: 0.72,
+    note: 'Compact genome. Off-target rates are typically lower.'
+  },
+  {
+    id: 'ecoli-k12',
+    label: 'E. coli (K-12 MG1655)',
+    offTargetMultiplier: 0.58,
+    note: 'Small bacterial genome with reduced off-target search space.'
+  },
+  {
+    id: 'custom',
+    label: 'Custom / User-supplied',
+    offTargetMultiplier: 1,
+    note: 'No organism-specific scaling. Only submitted targets are evaluated directly.'
+  }
 ]);
 
 function formatSequenceLines(sequence, lineLength = 60) {
@@ -238,6 +429,250 @@ function translateDnaSequence(sequence, frame = 1, stopMode = 'star') {
     frame: absFrame,
     strand: isNegativeStrand ? '-' : '+',
     remainderBases: coding.length % 3
+  };
+}
+
+function cleanProteinSequence(raw, allowStop = true) {
+  const disallowed = allowStop ? /[^A-Z*]/g : /[^A-Z]/g;
+  return String(raw || '')
+    .toUpperCase()
+    .replace(disallowed, '');
+}
+
+function parseRestrictionSites(raw) {
+  const tokens = String(raw || '')
+    .toUpperCase()
+    .replace(/U/g, 'T')
+    .split(/[\s,;|]+/)
+    .map((token) => token.trim())
+    .filter(Boolean);
+
+  const sites = new Set();
+  const ignoredTokens = [];
+
+  tokens.forEach((token) => {
+    if (!/^[ACGT]+$/.test(token) || token.length < REVERSE_TRANSLATE_MIN_SITE_LENGTH) {
+      ignoredTokens.push(token);
+      return;
+    }
+    sites.add(token);
+  });
+
+  const normalizedSites = [...sites];
+  const expandedSites = new Set(normalizedSites);
+  normalizedSites.forEach((site) => {
+    expandedSites.add(reverseComplementDna(site));
+  });
+
+  return {
+    sites: normalizedSites,
+    expandedSites: [...expandedSites],
+    ignoredTokens
+  };
+}
+
+function resolveCodonProfile(profileKey = REVERSE_TRANSLATE_DEFAULT_ORGANISM) {
+  return CODON_USAGE_PROFILES[profileKey] || CODON_USAGE_PROFILES[REVERSE_TRANSLATE_DEFAULT_ORGANISM];
+}
+
+function getCodonOptionsForResidue(residue, profileKey = REVERSE_TRANSLATE_DEFAULT_ORGANISM) {
+  const codons = AMINO_ACID_TO_CODONS[residue];
+  if (!codons || !codons.length) {
+    return [];
+  }
+
+  const profile = resolveCodonProfile(profileKey);
+  const preferenceOrder = profile.preferences?.[residue] || [];
+  const rankByCodon = new Map(preferenceOrder.map((codon, index) => [codon, index]));
+  const ordered = [...codons].sort((a, b) => {
+    const aRank = rankByCodon.has(a) ? rankByCodon.get(a) : Number.MAX_SAFE_INTEGER;
+    const bRank = rankByCodon.has(b) ? rankByCodon.get(b) : Number.MAX_SAFE_INTEGER;
+    if (aRank !== bRank) {
+      return aRank - bRank;
+    }
+    return a.localeCompare(b);
+  });
+
+  const maxWeight = ordered.length;
+  return ordered.map((codon, index) => ({
+    codon,
+    weight: maxWeight - index,
+    maxWeight
+  }));
+}
+
+function introducesRestrictionSite(previousSequence, candidateSequence, expandedSites) {
+  if (!expandedSites.length) {
+    return false;
+  }
+
+  return expandedSites.some((site) => {
+    const searchFrom = Math.max(0, previousSequence.length - site.length + 1);
+    return candidateSequence.indexOf(site, searchFrom) !== -1;
+  });
+}
+
+function reverseTranslateProteinSequence(proteinInput, options = {}) {
+  const profileKey = CODON_USAGE_PROFILES[options.organism]
+    ? options.organism
+    : REVERSE_TRANSLATE_DEFAULT_ORGANISM;
+  const profile = resolveCodonProfile(profileKey);
+  const appendStopCodon = Boolean(options.appendStopCodon);
+  const cleanedProtein = cleanProteinSequence(proteinInput, true);
+  const protein = appendStopCodon && cleanedProtein && !cleanedProtein.endsWith('*')
+    ? `${cleanedProtein}*`
+    : cleanedProtein;
+  const restrictionInput = Array.isArray(options.restrictionSites)
+    ? options.restrictionSites.join(' ')
+    : String(options.restrictionSites || '');
+  const parsedSites = parseRestrictionSites(restrictionInput);
+  const maxRestrictionLength = parsedSites.expandedSites.reduce(
+    (maxLength, site) => Math.max(maxLength, site.length),
+    0
+  );
+  const suffixLength = Math.max(1, maxRestrictionLength - 1);
+  const requestedBeamWidth = Number(options.beamWidth);
+  const beamWidth = Math.min(
+    REVERSE_TRANSLATE_MAX_BEAM_WIDTH,
+    Math.max(
+      8,
+      Number.isFinite(requestedBeamWidth)
+        ? Math.round(requestedBeamWidth)
+        : REVERSE_TRANSLATE_DEFAULT_BEAM_WIDTH
+    )
+  );
+
+  if (!protein.length) {
+    return {
+      ok: false,
+      reason: 'empty_protein',
+      message: 'Enter a protein sequence to reverse translate.',
+      organism: profileKey,
+      organismLabel: profile.label,
+      protein: '',
+      dna: '',
+      codons: [],
+      restrictionSites: parsedSites.sites,
+      expandedRestrictionSites: parsedSites.expandedSites
+    };
+  }
+
+  const unsupportedResidues = [...new Set([...protein].filter((residue) => !AMINO_ACID_TO_CODONS[residue]))];
+  if (unsupportedResidues.length) {
+    return {
+      ok: false,
+      reason: 'unsupported_residue',
+      message: `Unsupported residues: ${unsupportedResidues.join(', ')}`,
+      unsupportedResidues,
+      organism: profileKey,
+      organismLabel: profile.label,
+      protein,
+      dna: '',
+      codons: [],
+      restrictionSites: parsedSites.sites,
+      expandedRestrictionSites: parsedSites.expandedSites
+    };
+  }
+
+  let states = [{
+    dna: '',
+    codons: [],
+    score: 0,
+    preferenceWeight: 0,
+    preferenceMax: 0
+  }];
+
+  for (let i = 0; i < protein.length; i += 1) {
+    const residue = protein[i];
+    const optionsForResidue = getCodonOptionsForResidue(residue, profileKey);
+    const nextStates = [];
+
+    states.forEach((state) => {
+      optionsForResidue.forEach((codonOption) => {
+        const dna = `${state.dna}${codonOption.codon}`;
+        if (introducesRestrictionSite(state.dna, dna, parsedSites.expandedSites)) {
+          return;
+        }
+
+        nextStates.push({
+          dna,
+          codons: [...state.codons, codonOption.codon],
+          score: state.score + Math.log(codonOption.weight),
+          preferenceWeight: state.preferenceWeight + codonOption.weight,
+          preferenceMax: state.preferenceMax + codonOption.maxWeight
+        });
+      });
+    });
+
+    if (!nextStates.length) {
+      const bestPartial = states
+        .slice()
+        .sort((a, b) => b.score - a.score)[0] || {
+        dna: '',
+        codons: [],
+        preferenceWeight: 0,
+        preferenceMax: 0
+      };
+      return {
+        ok: false,
+        reason: 'restriction_conflict',
+        message: `No codon path avoids restricted motifs at residue ${i + 1} (${residue}).`,
+        blockedPosition: i + 1,
+        blockedResidue: residue,
+        translatedResidues: i,
+        organism: profileKey,
+        organismLabel: profile.label,
+        protein,
+        dna: bestPartial.dna,
+        codons: bestPartial.codons,
+        restrictionSites: parsedSites.sites,
+        expandedRestrictionSites: parsedSites.expandedSites
+      };
+    }
+
+    nextStates.sort((a, b) => b.score - a.score);
+    if (!parsedSites.expandedSites.length) {
+      states = nextStates.slice(0, beamWidth);
+      continue;
+    }
+
+    const bestBySuffix = new Map();
+    nextStates.forEach((state) => {
+      const key = state.dna.slice(-suffixLength);
+      const existing = bestBySuffix.get(key);
+      if (!existing || state.score > existing.score) {
+        bestBySuffix.set(key, state);
+      }
+    });
+
+    states = [...bestBySuffix.values()]
+      .sort((a, b) => b.score - a.score)
+      .slice(0, beamWidth);
+  }
+
+  const best = states
+    .slice()
+    .sort((a, b) => b.score - a.score)[0];
+  const counts = nucleotideCounts(best.dna);
+  const gcContent = best.dna.length
+    ? (((counts.G || 0) + (counts.C || 0)) / best.dna.length) * 100
+    : 0;
+
+  return {
+    ok: true,
+    organism: profileKey,
+    organismLabel: profile.label,
+    protein,
+    dna: best.dna,
+    codons: best.codons,
+    aaLength: protein.length,
+    ntLength: best.dna.length,
+    gcContent,
+    preferenceScorePercent: best.preferenceMax
+      ? (best.preferenceWeight / best.preferenceMax) * 100
+      : 100,
+    restrictionSites: parsedSites.sites,
+    expandedRestrictionSites: parsedSites.expandedSites
   };
 }
 
@@ -859,6 +1294,396 @@ function renderChemicalOptions() {
   return `${options}<option value="__custom__">Custom</option>`;
 }
 
+function clampNumber(value, min, max, fallback = min) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
+  return Math.min(max, Math.max(min, parsed));
+}
+
+function normalizeDnaInput(raw, preserveUnknown = false) {
+  const letters = String(raw || '')
+    .toUpperCase()
+    .replace(/[^A-Z]/g, '')
+    .replace(/U/g, 'T');
+  if (!preserveUnknown) {
+    return letters.replace(/[^ACGT]/g, '');
+  }
+  return letters.replace(/[^ACGT]/g, 'N');
+}
+
+function normalizeIupacPattern(raw) {
+  const pattern = String(raw || '')
+    .toUpperCase()
+    .replace(/[^A-Z]/g, '');
+  if (!pattern) {
+    return 'NGG';
+  }
+  return [...pattern]
+    .map((base) => (IUPAC_BASE_MAP[base] ? base : 'N'))
+    .join('');
+}
+
+function reverseComplementIupac(pattern) {
+  return [...String(pattern || '').toUpperCase()]
+    .reverse()
+    .map((base) => IUPAC_COMPLEMENT_MAP[base] || 'N')
+    .join('');
+}
+
+function matchesIupacPattern(sequence, pattern) {
+  if (sequence.length !== pattern.length) {
+    return false;
+  }
+  for (let i = 0; i < sequence.length; i += 1) {
+    const base = sequence[i];
+    const allowed = IUPAC_BASE_MAP[pattern[i]] || 'ACGT';
+    if (!allowed.includes(base)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function countSequenceMismatches(left, right, maxMismatch = Infinity) {
+  if (left.length !== right.length) {
+    return maxMismatch + 1;
+  }
+  let mismatches = 0;
+  for (let i = 0; i < left.length; i += 1) {
+    if (left[i] !== right[i]) {
+      mismatches += 1;
+      if (mismatches > maxMismatch) {
+        return mismatches;
+      }
+    }
+  }
+  return mismatches;
+}
+
+function calculateGcPercent(sequence) {
+  if (!sequence.length) {
+    return 0;
+  }
+  const counts = nucleotideCounts(sequence);
+  const gc = (counts.G || 0) + (counts.C || 0);
+  return (gc / sequence.length) * 100;
+}
+
+function scoreCrisprOnTarget(guideSequence) {
+  if (!guideSequence.length) {
+    return 0;
+  }
+
+  const gcPercent = calculateGcPercent(guideSequence);
+  const seed = guideSequence.slice(Math.max(0, guideSequence.length - 10));
+  const seedGc = calculateGcPercent(seed);
+  let score = 70 - (Math.abs(gcPercent - 52) * 1.25);
+
+  if (guideSequence.startsWith('G')) {
+    score += 4.5;
+  }
+  if (guideSequence.endsWith('GG')) {
+    score += 2;
+  }
+  if (/TTTT/.test(guideSequence)) {
+    score -= 22;
+  }
+  if (/(AAAAA|CCCCC|GGGGG|TTTTT)/.test(guideSequence)) {
+    score -= 12;
+  }
+  if (seedGc < 35 || seedGc > 82) {
+    score -= 6;
+  } else {
+    score += 3;
+  }
+  if (!/^[ACGT]+$/.test(guideSequence)) {
+    score -= 30;
+  }
+
+  return clampNumber(score, 0, 100, 0);
+}
+
+function sanitizeCrisprTargetName(rawName, fallbackName) {
+  const clean = String(rawName || '')
+    .replace(/[\t\r\n]+/g, ' ')
+    .trim();
+  if (!clean) {
+    return fallbackName;
+  }
+  return clean.slice(0, 80);
+}
+
+function buildCrisprTargetEntry(name, sequenceText, index) {
+  const sequence = normalizeDnaInput(sequenceText, true);
+  if (!sequence.length) {
+    return null;
+  }
+  return {
+    id: `target-${index + 1}`,
+    name: sanitizeCrisprTargetName(name, `Target ${index + 1}`),
+    sequence
+  };
+}
+
+function parseCrisprLineTarget(line, index) {
+  const namedMatch = String(line).match(/^([^:|]{1,80})\s*[:|]\s*([A-Za-z\-\s]+)$/);
+  if (!namedMatch) {
+    return null;
+  }
+  return buildCrisprTargetEntry(namedMatch[1], namedMatch[2], index);
+}
+
+function parseCrisprTargetsInput(rawInput) {
+  const raw = String(rawInput || '').trim();
+  if (!raw) {
+    return [];
+  }
+
+  const parsed = [];
+  const pushTarget = (name, sequenceText) => {
+    const entry = buildCrisprTargetEntry(name, sequenceText, parsed.length);
+    if (entry) {
+      parsed.push(entry);
+    }
+  };
+
+  if (/^\s*>/m.test(raw)) {
+    const lines = raw.split(/\r?\n/);
+    let currentName = '';
+    let currentSequenceLines = [];
+
+    const flush = () => {
+      if (!currentSequenceLines.length) {
+        return;
+      }
+      pushTarget(currentName || `Target ${parsed.length + 1}`, currentSequenceLines.join(''));
+      currentSequenceLines = [];
+    };
+
+    lines.forEach((line) => {
+      if (/^\s*>/.test(line)) {
+        flush();
+        currentName = line.replace(/^\s*>\s*/, '').trim();
+      } else if (line.trim()) {
+        currentSequenceLines.push(line.trim());
+      }
+    });
+    flush();
+    return parsed;
+  }
+
+  const lines = raw
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const namedTargets = lines
+    .map((line, index) => parseCrisprLineTarget(line, index))
+    .filter(Boolean);
+  if (namedTargets.length) {
+    return namedTargets.map((entry, index) => ({ ...entry, id: `target-${index + 1}` }));
+  }
+
+  const dnaLikeLines = lines.filter((line) => normalizeDnaInput(line, true).length >= 18);
+  if (dnaLikeLines.length >= 2 && dnaLikeLines.length === lines.length) {
+    dnaLikeLines.forEach((line) => pushTarget(`Target ${parsed.length + 1}`, line));
+    return parsed;
+  }
+
+  pushTarget('Target 1', raw);
+  return parsed;
+}
+
+function collectCrisprPamSites(target, guideLength, pamPattern) {
+  const sequence = String(target.sequence || '').toUpperCase();
+  const pamLength = pamPattern.length;
+  const reversePamPattern = reverseComplementIupac(pamPattern);
+  const windowSize = guideLength + pamLength;
+  const sites = [];
+
+  for (let i = 0; i + windowSize <= sequence.length; i += 1) {
+    const guideForward = sequence.slice(i, i + guideLength);
+    const pamForward = sequence.slice(i + guideLength, i + windowSize);
+    if (/^[ACGT]+$/.test(guideForward) && matchesIupacPattern(pamForward, pamPattern)) {
+      sites.push({
+        key: `${target.id}|+|${i + 1}`,
+        targetId: target.id,
+        targetName: target.name,
+        strand: '+',
+        start: i + 1,
+        end: i + guideLength,
+        guideSequence: guideForward,
+        pamSequence: pamForward
+      });
+    }
+
+    const pamReverse = sequence.slice(i, i + pamLength);
+    const guideReverseWindow = sequence.slice(i + pamLength, i + windowSize);
+    if (/^[ACGT]+$/.test(guideReverseWindow) && matchesIupacPattern(pamReverse, reversePamPattern)) {
+      sites.push({
+        key: `${target.id}|-|${i + pamLength + 1}`,
+        targetId: target.id,
+        targetName: target.name,
+        strand: '-',
+        start: i + pamLength + 1,
+        end: i + windowSize,
+        guideSequence: reverseComplementDna(guideReverseWindow),
+        pamSequence: reverseComplementDna(pamReverse)
+      });
+    }
+  }
+
+  return sites;
+}
+
+function collectCrisprPamSitesFromTargets(targets, guideLength, pamPattern) {
+  const allSites = [];
+  targets.forEach((target) => {
+    allSites.push(...collectCrisprPamSites(target, guideLength, pamPattern));
+  });
+  return allSites;
+}
+
+function computeCrisprOffTargetStats(candidate, backgroundSites, genomeMultiplier = 1) {
+  const mismatchCounts = {
+    exact: 0,
+    mismatch1: 0,
+    mismatch2: 0,
+    mismatch3: 0
+  };
+
+  backgroundSites.forEach((site) => {
+    if (site.key === candidate.key) {
+      return;
+    }
+
+    const mismatches = countSequenceMismatches(candidate.guideSequence, site.guideSequence, 3);
+    if (mismatches > 3) {
+      return;
+    }
+
+    if (mismatches === 0) {
+      mismatchCounts.exact += 1;
+    } else if (mismatches === 1) {
+      mismatchCounts.mismatch1 += 1;
+    } else if (mismatches === 2) {
+      mismatchCounts.mismatch2 += 1;
+    } else {
+      mismatchCounts.mismatch3 += 1;
+    }
+  });
+
+  const weightedRisk =
+    (mismatchCounts.exact * 1.25) +
+    (mismatchCounts.mismatch1 * 0.46) +
+    (mismatchCounts.mismatch2 * 0.16) +
+    (mismatchCounts.mismatch3 * 0.05);
+  const offTargetRate = clampNumber(weightedRisk * 14.5 * genomeMultiplier, 0, 99.9, 0);
+  const specificityScore = clampNumber(100 - offTargetRate, 0, 100, 100);
+
+  return {
+    mismatchCounts,
+    offTargetRate,
+    specificityScore
+  };
+}
+
+function formatPercent(value, digits = 1) {
+  if (!Number.isFinite(value)) {
+    return 'n/a';
+  }
+  return `${Number(value).toFixed(digits)}%`;
+}
+
+function designCrisprGuides({
+  selectedTargets,
+  backgroundTargets,
+  guideLength,
+  pamPattern,
+  minGc,
+  maxGc,
+  topCount,
+  genomeMultiplier
+}) {
+  const selectedSites = collectCrisprPamSitesFromTargets(selectedTargets, guideLength, pamPattern);
+  const candidates = selectedSites
+    .map((site) => {
+      const gcPercent = calculateGcPercent(site.guideSequence);
+      const notes = [];
+      if (/TTTT/.test(site.guideSequence)) {
+        notes.push('poly-T motif');
+      }
+      if (/(AAAAA|CCCCC|GGGGG|TTTTT)/.test(site.guideSequence)) {
+        notes.push('homopolymer');
+      }
+
+      return {
+        ...site,
+        gcPercent,
+        onTargetScore: scoreCrisprOnTarget(site.guideSequence),
+        notes
+      };
+    })
+    .filter((candidate) => candidate.gcPercent >= minGc && candidate.gcPercent <= maxGc);
+
+  if (!candidates.length) {
+    return {
+      candidates: [],
+      totalPamMatches: selectedSites.length,
+      filteredCandidateCount: 0,
+      evaluatedCandidateCount: 0,
+      backgroundSiteCount: 0,
+      scannedBackgroundSiteCount: 0,
+      truncatedBackground: false,
+      truncatedCandidates: false
+    };
+  }
+
+  candidates.sort((left, right) => (
+    (right.onTargetScore - left.onTargetScore) ||
+    (right.gcPercent - left.gcPercent)
+  ));
+
+  const maxBackgroundSites = 15000;
+  const maxEvaluatedCandidates = Math.min(
+    candidates.length,
+    Math.max(topCount * 4, 120),
+    320
+  );
+  const backgroundSites = collectCrisprPamSitesFromTargets(backgroundTargets, guideLength, pamPattern);
+  const scannedBackgroundSites = backgroundSites.slice(0, maxBackgroundSites);
+
+  const scoredCandidates = candidates
+    .slice(0, maxEvaluatedCandidates)
+    .map((candidate) => {
+      const offTarget = computeCrisprOffTargetStats(candidate, scannedBackgroundSites, genomeMultiplier);
+      const totalScore = (candidate.onTargetScore * 0.62) + (offTarget.specificityScore * 0.38);
+      return {
+        ...candidate,
+        ...offTarget,
+        totalScore
+      };
+    })
+    .sort((left, right) => (
+      (right.totalScore - left.totalScore) ||
+      (right.onTargetScore - left.onTargetScore) ||
+      (right.specificityScore - left.specificityScore)
+    ));
+
+  return {
+    candidates: scoredCandidates.slice(0, topCount),
+    totalPamMatches: selectedSites.length,
+    filteredCandidateCount: candidates.length,
+    evaluatedCandidateCount: scoredCandidates.length,
+    backgroundSiteCount: backgroundSites.length,
+    scannedBackgroundSiteCount: scannedBackgroundSites.length,
+    truncatedBackground: backgroundSites.length > scannedBackgroundSites.length,
+    truncatedCandidates: candidates.length > scoredCandidates.length
+  };
+}
+
 function makeBufferRow() {
   const wrapper = document.createElement('div');
   wrapper.className = 'buffer-row';
@@ -928,6 +1753,9 @@ export function initToolBox() {
 
   const dnaProteinForm = document.getElementById('dna-protein-form');
   const dnaProteinResult = document.getElementById('dna-protein-result');
+  const reverseTranslateForm = document.getElementById('reverse-translate-form');
+  const reverseTranslateOrganismSelect = document.getElementById('reverse-translate-organism');
+  const reverseTranslateResult = document.getElementById('reverse-translate-result');
 
   const oligoForm = document.getElementById('oligo-form');
   const oligoResult = document.getElementById('oligo-result');
@@ -960,11 +1788,29 @@ export function initToolBox() {
   const plannotateFileInput = document.getElementById('plannotate-file-input');
   const plannotateFileChooseBtn = document.getElementById('plannotate-file-choose');
   const plannotateFileName = document.getElementById('plannotate-file-name');
+  const crisprForm = document.getElementById('crispr-form');
+  const crisprReferenceGenomeSelect = document.getElementById('crispr-reference-genome');
+  const crisprReferenceNote = document.getElementById('crispr-reference-note');
+  const crisprPamPatternSelect = document.getElementById('crispr-pam-pattern');
+  const crisprGuideLengthInput = document.getElementById('crispr-guide-length');
+  const crisprTopCountInput = document.getElementById('crispr-top-count');
+  const crisprMinGcInput = document.getElementById('crispr-min-gc');
+  const crisprMaxGcInput = document.getElementById('crispr-max-gc');
+  const crisprTargetInput = document.getElementById('crispr-target-input');
+  const crisprTargetSelect = document.getElementById('crispr-target-select');
+  const crisprSelectionSummary = document.getElementById('crispr-selection-summary');
+  const crisprSelectAllBtn = document.getElementById('crispr-select-all-btn');
+  const crisprClearBtn = document.getElementById('crispr-clear-btn');
+  const crisprResultSummary = document.getElementById('crispr-result-summary');
+  const crisprTableBody = document.getElementById('crispr-table-body');
 
   const plannotateState = {
     mode: 'text',
     fileName: '',
     fileText: ''
+  };
+  const crisprState = {
+    targets: []
   };
 
   function getSelectedCompound(row) {
@@ -1011,6 +1857,21 @@ export function initToolBox() {
     toolTiles.forEach((tile) => {
       tile.classList.toggle('tool-tile-active', tile.dataset.toolView === viewId);
     });
+  }
+
+  function populateReverseTranslateProfileOptions() {
+    if (!reverseTranslateOrganismSelect) {
+      return;
+    }
+
+    const selected = CODON_USAGE_PROFILES[reverseTranslateOrganismSelect.value]
+      ? reverseTranslateOrganismSelect.value
+      : REVERSE_TRANSLATE_DEFAULT_ORGANISM;
+
+    reverseTranslateOrganismSelect.innerHTML = Object.entries(CODON_USAGE_PROFILES)
+      .map(([key, profile]) => `<option value="${key}"${key === selected ? ' selected' : ''}>${profile.label}</option>`)
+      .join('');
+    reverseTranslateOrganismSelect.value = selected;
   }
 
   function renderMolarity() {
@@ -1147,6 +2008,75 @@ export function initToolBox() {
       <p><strong>Protein length:</strong> ${translated.protein.length} aa</p>
       <p><strong>Protein sequence:</strong></p>
       <div class="sequence-block">${formatSequenceLines(translated.protein || '-')}</div>
+    `;
+  }
+
+  function renderReverseTranslate() {
+    const rawProtein = document.getElementById('reverse-translate-protein').value;
+    const organism = reverseTranslateOrganismSelect?.value || REVERSE_TRANSLATE_DEFAULT_ORGANISM;
+    const restrictionRaw = document.getElementById('reverse-translate-sites').value;
+    const appendStopCodon = Boolean(document.getElementById('reverse-translate-append-stop').checked);
+    const cleanedProtein = cleanProteinSequence(rawProtein, true);
+    const parsedSites = parseRestrictionSites(restrictionRaw);
+    const warningRows = [];
+
+    if (!cleanedProtein.length) {
+      reverseTranslateResult.innerHTML = '<p class="small-note">Enter a protein sequence to reverse translate.</p>';
+      return;
+    }
+
+    if (parsedSites.ignoredTokens.length) {
+      warningRows.push(
+        `<p class="small-note">Ignored site tokens: ${escapeHtml(parsedSites.ignoredTokens.join(', '))}. Use DNA motifs with A/C/G/T and at least ${REVERSE_TRANSLATE_MIN_SITE_LENGTH} nt.</p>`
+      );
+    }
+
+    const translated = reverseTranslateProteinSequence(cleanedProtein, {
+      organism,
+      restrictionSites: parsedSites.sites,
+      appendStopCodon
+    });
+
+    if (!translated.ok) {
+      const progressLine = Number.isFinite(translated.translatedResidues)
+        ? `<p><strong>Progress:</strong> ${translated.translatedResidues}/${cleanedProtein.length} residues translated.</p>`
+        : '';
+      const partialDnaBlock = translated.dna
+        ? `
+          <p><strong>Partial DNA sequence:</strong></p>
+          <div class="sequence-block">${formatSequenceLines(translated.dna)}</div>
+        `
+        : '';
+
+      reverseTranslateResult.innerHTML = `
+        <p><strong>Status:</strong> Unable to satisfy all constraints.</p>
+        <p><strong>Reason:</strong> ${escapeHtml(translated.message || 'Unknown constraint error.')}</p>
+        <p><strong>Organism profile:</strong> ${escapeHtml(translated.organismLabel || resolveCodonProfile(organism).label)}</p>
+        ${progressLine}
+        ${partialDnaBlock}
+        ${warningRows.join('')}
+      `;
+      return;
+    }
+
+    const verificationProtein = translateDnaSequence(translated.dna, 1, 'star').protein;
+    const restrictionSummary = translated.restrictionSites.length
+      ? translated.restrictionSites.join(', ')
+      : 'None';
+
+    reverseTranslateResult.innerHTML = `
+      <p><strong>Organism profile:</strong> ${escapeHtml(translated.organismLabel)}</p>
+      <p><strong>Protein length:</strong> ${translated.aaLength} aa</p>
+      <p><strong>DNA length:</strong> ${translated.ntLength} bp</p>
+      <p><strong>GC content:</strong> ${translated.gcContent.toFixed(2)}%</p>
+      <p><strong>Codon preference score:</strong> ${translated.preferenceScorePercent.toFixed(2)}%</p>
+      <p><strong>Restricted motifs avoided:</strong> ${escapeHtml(restrictionSummary)}</p>
+      <p><strong>DNA sequence:</strong></p>
+      <div class="sequence-block">${formatSequenceLines(translated.dna || '-')}</div>
+      <p><strong>Codon sequence:</strong></p>
+      <div class="sequence-block">${formatSequenceLines(translated.codons.join(' ') || '-')}</div>
+      <p><strong>Translation check (+1 frame):</strong> ${escapeHtml(verificationProtein || '-')}</p>
+      ${warningRows.join('')}
     `;
   }
 
@@ -1721,6 +2651,212 @@ export function initToolBox() {
     setPlannotateStatus(`Completed: ${result.hits.length} hits`);
   }
 
+  function setCrisprTableMessage(message = 'No sgRNA candidates yet.') {
+    if (!crisprTableBody) {
+      return;
+    }
+    crisprTableBody.innerHTML = `
+      <tr>
+        <td colspan="12" class="small-note">${escapeHtml(message)}</td>
+      </tr>
+    `;
+  }
+
+  function getSelectedCrisprReferenceGenome() {
+    const selectedId = crisprReferenceGenomeSelect?.value || CRISPR_REFERENCE_GENOMES[0].id;
+    return CRISPR_REFERENCE_GENOMES.find((genome) => genome.id === selectedId) || CRISPR_REFERENCE_GENOMES[0];
+  }
+
+  function updateCrisprReferenceNote() {
+    if (!crisprReferenceNote) {
+      return;
+    }
+    const genome = getSelectedCrisprReferenceGenome();
+    crisprReferenceNote.textContent = genome?.note || 'Reference genome profile not selected.';
+  }
+
+  function populateCrisprReferenceGenomeOptions() {
+    if (!crisprReferenceGenomeSelect) {
+      return;
+    }
+    const current = crisprReferenceGenomeSelect.value;
+    crisprReferenceGenomeSelect.innerHTML = CRISPR_REFERENCE_GENOMES
+      .map((genome) => `<option value="${genome.id}">${escapeHtml(genome.label)}</option>`)
+      .join('');
+    if (current && CRISPR_REFERENCE_GENOMES.some((genome) => genome.id === current)) {
+      crisprReferenceGenomeSelect.value = current;
+    } else {
+      crisprReferenceGenomeSelect.value = CRISPR_REFERENCE_GENOMES[0].id;
+    }
+    updateCrisprReferenceNote();
+  }
+
+  function getSelectedCrisprTargets() {
+    if (!crisprTargetSelect) {
+      return [];
+    }
+    const selectedIds = new Set(
+      [...crisprTargetSelect.selectedOptions].map((option) => option.value)
+    );
+    return crisprState.targets.filter((target) => selectedIds.has(target.id));
+  }
+
+  function renderCrisprSelectionSummary() {
+    if (!crisprSelectionSummary) {
+      return;
+    }
+    if (!crisprState.targets.length) {
+      crisprSelectionSummary.textContent = 'Add target sequences to begin.';
+      return;
+    }
+
+    const selectedTargets = getSelectedCrisprTargets();
+    const totalBases = selectedTargets.reduce((sum, target) => sum + target.sequence.length, 0);
+    const shortest = selectedTargets.length
+      ? Math.min(...selectedTargets.map((target) => target.sequence.length))
+      : 0;
+    const longest = selectedTargets.length
+      ? Math.max(...selectedTargets.map((target) => target.sequence.length))
+      : 0;
+
+    crisprSelectionSummary.innerHTML = `
+      <p><strong>Targets loaded:</strong> ${crisprState.targets.length}</p>
+      <p><strong>Targets selected:</strong> ${selectedTargets.length}</p>
+      <p><strong>Total selected length:</strong> ${totalBases.toLocaleString()} bp</p>
+      <p><strong>Length range:</strong> ${shortest.toLocaleString()}-${longest.toLocaleString()} bp</p>
+      <p class="small-note">Tip: Use FASTA headers to name each target sequence.</p>
+    `;
+  }
+
+  function refreshCrisprTargets(selectAll = false) {
+    if (!crisprTargetSelect || !crisprTargetInput) {
+      return;
+    }
+
+    const previousSelection = new Set(
+      [...crisprTargetSelect.selectedOptions].map((option) => option.value)
+    );
+    const hadPreviousSelection = previousSelection.size > 0;
+    crisprState.targets = parseCrisprTargetsInput(crisprTargetInput.value);
+
+    if (!crisprState.targets.length) {
+      crisprTargetSelect.innerHTML = '<option value="" disabled>No targets parsed.</option>';
+      renderCrisprSelectionSummary();
+      return;
+    }
+
+    const optionsMarkup = crisprState.targets.map((target) => {
+      const shouldSelect = selectAll || !hadPreviousSelection || previousSelection.has(target.id);
+      const selectedAttr = shouldSelect ? ' selected' : '';
+      return `<option value="${target.id}"${selectedAttr}>${escapeHtml(target.name)} (${target.sequence.length.toLocaleString()} bp)</option>`;
+    }).join('');
+    crisprTargetSelect.innerHTML = optionsMarkup;
+    renderCrisprSelectionSummary();
+  }
+
+  function renderCrisprDesignResults(result, context) {
+    const { guideLength, pamPattern, referenceGenome } = context;
+    const warnings = [];
+    if (result.truncatedCandidates) {
+      warnings.push('Only the highest on-target guides were fully off-target scored for performance.');
+    }
+    if (result.truncatedBackground) {
+      warnings.push('Off-target scanning used a truncated background window set.');
+    }
+
+    if (!result.candidates.length) {
+      const noCandidateMessage = result.totalPamMatches > 0
+        ? 'No candidates passed current GC and scoring filters. Try widening GC range or using a different PAM.'
+        : 'No PAM-matching guides were found for the selected targets.';
+      if (crisprResultSummary) {
+        crisprResultSummary.innerHTML = `
+          <p><strong>Reference genome:</strong> ${escapeHtml(referenceGenome.label)}</p>
+          <p><strong>PAM:</strong> ${escapeHtml(pamPattern)} | <strong>Guide length:</strong> ${guideLength} nt</p>
+          <p><strong>PAM-matching guides:</strong> ${result.totalPamMatches.toLocaleString()}</p>
+          <p class="small-note">${escapeHtml(noCandidateMessage)}</p>
+        `;
+      }
+      setCrisprTableMessage(noCandidateMessage);
+      return;
+    }
+
+    const tableRows = result.candidates.map((candidate, index) => {
+      const offTargetRate = candidate.offTargetRate;
+      const riskClass = offTargetRate <= 10
+        ? 'crispr-risk-low'
+        : (offTargetRate <= 30 ? 'crispr-risk-medium' : 'crispr-risk-high');
+      const notes = candidate.notes.length ? candidate.notes.join(', ') : '-';
+      return `
+        <tr>
+          <td>${index + 1}</td>
+          <td>${escapeHtml(candidate.targetName)}</td>
+          <td>${candidate.start.toLocaleString()}-${candidate.end.toLocaleString()}</td>
+          <td>${candidate.strand}</td>
+          <td><span class="crispr-guide-seq">${escapeHtml(candidate.guideSequence)}</span></td>
+          <td><span class="crispr-guide-seq">${escapeHtml(candidate.pamSequence)}</span></td>
+          <td>${candidate.gcPercent.toFixed(1)}%</td>
+          <td>${candidate.onTargetScore.toFixed(1)}</td>
+          <td><span class="crispr-risk-badge ${riskClass}">${formatPercent(offTargetRate, 2)}</span></td>
+          <td>${candidate.specificityScore.toFixed(1)}</td>
+          <td>${candidate.mismatchCounts.exact}/${candidate.mismatchCounts.mismatch1}/${candidate.mismatchCounts.mismatch2}/${candidate.mismatchCounts.mismatch3}</td>
+          <td>${escapeHtml(notes)}</td>
+        </tr>
+      `;
+    }).join('');
+
+    if (crisprTableBody) {
+      crisprTableBody.innerHTML = tableRows;
+    }
+
+    if (crisprResultSummary) {
+      crisprResultSummary.innerHTML = `
+        <p><strong>Reference genome:</strong> ${escapeHtml(referenceGenome.label)}</p>
+        <p><strong>PAM:</strong> ${escapeHtml(pamPattern)} | <strong>Guide length:</strong> ${guideLength} nt</p>
+        <p><strong>Guides evaluated:</strong> ${result.evaluatedCandidateCount.toLocaleString()} / ${result.filteredCandidateCount.toLocaleString()} filtered candidates (${result.totalPamMatches.toLocaleString()} PAM-matching guides detected)</p>
+        <p><strong>Background sites scanned:</strong> ${result.scannedBackgroundSiteCount.toLocaleString()} / ${result.backgroundSiteCount.toLocaleString()}</p>
+        ${warnings.map((warning) => `<p class="small-note">${escapeHtml(warning)}</p>`).join('')}
+      `;
+    }
+  }
+
+  function runCrisprDesign() {
+    const selectedTargets = getSelectedCrisprTargets();
+    if (!selectedTargets.length) {
+      if (crisprResultSummary) {
+        crisprResultSummary.textContent = 'Select at least one target sequence to design sgRNAs.';
+      }
+      setCrisprTableMessage('Select at least one target sequence to design sgRNAs.');
+      return;
+    }
+
+    const referenceGenome = getSelectedCrisprReferenceGenome();
+    const guideLength = Math.round(clampNumber(crisprGuideLengthInput?.value, 18, 24, 20));
+    const topCount = Math.round(clampNumber(crisprTopCountInput?.value, 1, 100, 12));
+    let minGc = clampNumber(crisprMinGcInput?.value, 0, 100, 35);
+    let maxGc = clampNumber(crisprMaxGcInput?.value, 0, 100, 75);
+    if (minGc > maxGc) {
+      [minGc, maxGc] = [maxGc, minGc];
+    }
+
+    const pamPattern = normalizeIupacPattern(crisprPamPatternSelect?.value || 'NGG');
+    const result = designCrisprGuides({
+      selectedTargets,
+      backgroundTargets: crisprState.targets.length ? crisprState.targets : selectedTargets,
+      guideLength,
+      pamPattern,
+      minGc,
+      maxGc,
+      topCount,
+      genomeMultiplier: referenceGenome.offTargetMultiplier || 1
+    });
+
+    renderCrisprDesignResults(result, {
+      guideLength,
+      pamPattern,
+      referenceGenome
+    });
+  }
+
   function resolveChemicalName(row) {
     const select = row.querySelector('.buffer-chemical-select');
     if (select.value !== '__custom__') {
@@ -1791,6 +2927,12 @@ export function initToolBox() {
   dnaProteinForm.addEventListener('submit', (event) => {
     event.preventDefault();
     renderDnaProtein();
+  });
+
+  reverseTranslateForm.addEventListener('input', renderReverseTranslate);
+  reverseTranslateForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    renderReverseTranslate();
   });
 
   oligoForm.addEventListener('input', renderOligo);
@@ -1920,6 +3062,54 @@ export function initToolBox() {
     });
   }
 
+  if (crisprForm) {
+    populateCrisprReferenceGenomeOptions();
+    refreshCrisprTargets(true);
+    setCrisprTableMessage('No sgRNA candidates yet.');
+
+    crisprReferenceGenomeSelect?.addEventListener('change', () => {
+      updateCrisprReferenceNote();
+    });
+
+    crisprTargetInput?.addEventListener('input', () => {
+      refreshCrisprTargets();
+      if (!crisprTargetInput.value.trim()) {
+        if (crisprResultSummary) {
+          crisprResultSummary.textContent = 'Enter target sequences and run design to view candidate guides.';
+        }
+        setCrisprTableMessage('No sgRNA candidates yet.');
+      }
+    });
+
+    crisprTargetSelect?.addEventListener('change', () => {
+      renderCrisprSelectionSummary();
+    });
+
+    crisprSelectAllBtn?.addEventListener('click', () => {
+      refreshCrisprTargets(true);
+    });
+
+    crisprClearBtn?.addEventListener('click', () => {
+      if (crisprTargetInput) {
+        crisprTargetInput.value = '';
+      }
+      crisprState.targets = [];
+      if (crisprTargetSelect) {
+        crisprTargetSelect.innerHTML = '<option value="" disabled>No targets parsed.</option>';
+      }
+      renderCrisprSelectionSummary();
+      if (crisprResultSummary) {
+        crisprResultSummary.textContent = 'Enter target sequences and run design to view candidate guides.';
+      }
+      setCrisprTableMessage('No sgRNA candidates yet.');
+    });
+
+    crisprForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      runCrisprDesign();
+    });
+  }
+
   addBufferChemicalBtn.addEventListener('click', addRow);
   bufferVolumeInput.addEventListener('input', renderBuffer);
 
@@ -2010,10 +3200,12 @@ export function initToolBox() {
 
   showToolView('tool-molarity-view');
 
+  populateReverseTranslateProfileOptions();
   addRow();
   renderMolarity();
   renderPeptide();
   renderDnaProtein();
+  renderReverseTranslate();
   renderOligo();
   renderExtinction();
   renderQpcr();

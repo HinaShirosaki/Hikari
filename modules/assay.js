@@ -1,4 +1,5 @@
 import { exportAssayDefinitionPdf } from './pdf-export.js';
+import { analyzeAssayData } from './assay-analysis.js';
 
 const PLATE_DEFINITIONS = [
   { value: '6', label: '6 well', rows: 2, columns: 3 },
@@ -47,6 +48,14 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
   const assayResultTable = document.getElementById('assay-result-table');
   const assayResultsAssaySelect = document.getElementById('assay-results-assay-select');
   const assayAnalysisMethodInput = document.getElementById('assay-analysis-method');
+  const assayAnalysisRowGroupsInput = document.getElementById('assay-analysis-row-groups');
+  const assayAnalysisColumnGroupsInput = document.getElementById('assay-analysis-column-groups');
+  const assayAnalysisErrorBarsInput = document.getElementById('assay-analysis-error-bars');
+  const assayAnalysisGroupNameInput = document.getElementById('assay-analysis-group-name');
+  const assayAnalysisAddRowGroupBtn = document.getElementById('assay-analysis-add-row-group-btn');
+  const assayAnalysisAddColumnGroupBtn = document.getElementById('assay-analysis-add-column-group-btn');
+  const assayAnalysisClearGroupsBtn = document.getElementById('assay-analysis-clear-groups-btn');
+  const assayAnalysisSelectionStatus = document.getElementById('assay-analysis-selection-status');
   const assayResultsLoadBtn = document.getElementById('assay-results-load-btn');
   const assaySaveResultsBtn = document.getElementById('assay-save-results-btn');
   const assayActiveAssayInfo = document.getElementById('assay-active-assay-info');
@@ -101,6 +110,12 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
   assayImportFile?.addEventListener('change', onImportCsv);
   assayResultsAssaySelect?.addEventListener('change', onResultsAssaySelected);
   assayAnalysisMethodInput?.addEventListener('change', onAnalysisMethodChange);
+  assayAnalysisRowGroupsInput?.addEventListener('input', onAnalysisConfigChange);
+  assayAnalysisColumnGroupsInput?.addEventListener('input', onAnalysisConfigChange);
+  assayAnalysisErrorBarsInput?.addEventListener('change', onAnalysisConfigChange);
+  assayAnalysisAddRowGroupBtn?.addEventListener('click', onAddSelectedRowGroup);
+  assayAnalysisAddColumnGroupBtn?.addEventListener('click', onAddSelectedColumnGroup);
+  assayAnalysisClearGroupsBtn?.addEventListener('click', onClearAnalysisGroups);
   assayResultsLoadBtn?.addEventListener('click', onResultsAssayLoad);
   assaySaveResultsBtn?.addEventListener('click', onSaveResults);
   assayClearResultsBtn?.addEventListener('click', onClearResults);
@@ -1160,6 +1175,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     resultGrid.destroy();
     resultGrid = null;
     resultGridSignature = '';
+    setAnalysisSelectionStatus('');
   }
 
   function onResultGridCellEdited(cell) {
@@ -1201,6 +1217,135 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     return `${Math.max(260, (visibleRows * 33) + 58)}px`;
   }
 
+  function setAnalysisSelectionStatus(message) {
+    if (!assayAnalysisSelectionStatus) {
+      return;
+    }
+    assayAnalysisSelectionStatus.textContent = message || '';
+  }
+
+  function summarizeSelectionLabels(labels, maxItems = 8) {
+    const normalized = Array.isArray(labels)
+      ? labels.map((item) => String(item || '').trim()).filter(Boolean)
+      : [];
+    if (normalized.length <= maxItems) {
+      return normalized.join(', ');
+    }
+    return `${normalized.slice(0, maxItems).join(', ')}, +${normalized.length - maxItems} more`;
+  }
+
+  function getCurrentResultRangeSelection() {
+    if (!resultGrid || typeof resultGrid.getRanges !== 'function') {
+      return { rowLabels: [], columnLabels: [] };
+    }
+    const ranges = resultGrid.getRanges();
+    if (!Array.isArray(ranges) || !ranges.length) {
+      return { rowLabels: [], columnLabels: [] };
+    }
+    const activeRange = ranges[ranges.length - 1];
+    if (!activeRange) {
+      return { rowLabels: [], columnLabels: [] };
+    }
+
+    const rowLabels = Array.isArray(activeRange.getRows?.())
+      ? activeRange.getRows()
+        .map((row) => String(row?.getData?.()?.rowLabel || '').trim().toUpperCase())
+        .filter((value) => /^[A-Z]+$/.test(value))
+      : [];
+    const columnLabels = Array.isArray(activeRange.getColumns?.())
+      ? activeRange.getColumns()
+        .map((column) => resultFieldToColumnIndex(column?.getField?.()))
+        .filter((columnIndex) => columnIndex >= 0)
+        .map((columnIndex) => String(columnIndex + 1))
+      : [];
+
+    return {
+      rowLabels: [...new Set(rowLabels)].sort((a, b) => rowLabelToIndex(a) - rowLabelToIndex(b)),
+      columnLabels: [...new Set(columnLabels)].sort((a, b) => Number(a) - Number(b))
+    };
+  }
+
+  function updateResultRangeSelectionStatus() {
+    const selection = getCurrentResultRangeSelection();
+    if (!selection.rowLabels.length && !selection.columnLabels.length) {
+      setAnalysisSelectionStatus('Drag-select replicate wells in the table to build groups.');
+      return selection;
+    }
+    const rowText = selection.rowLabels.length
+      ? `${selection.rowLabels.length} row(s): ${summarizeSelectionLabels(selection.rowLabels)}`
+      : '0 row(s)';
+    const columnText = selection.columnLabels.length
+      ? `${selection.columnLabels.length} column(s): ${summarizeSelectionLabels(selection.columnLabels)}`
+      : '0 column(s)';
+    setAnalysisSelectionStatus(`Selected range -> ${rowText}; ${columnText}.`);
+    return selection;
+  }
+
+  function sanitizeGroupName(raw, fallbackName) {
+    const cleaned = String(raw || '')
+      .replace(/[:;\n\r]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    return cleaned || fallbackName;
+  }
+
+  function nextGroupName(dimension) {
+    const input = dimension === 'row' ? assayAnalysisRowGroupsInput : assayAnalysisColumnGroupsInput;
+    const prefix = dimension === 'row' ? 'Row Group' : 'Column Group';
+    const existing = String(input?.value || '')
+      .split(/[\n;]+/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+    return `${prefix} ${existing.length + 1}`;
+  }
+
+  function appendGroupEntry(input, groupName, members) {
+    if (!input) {
+      return;
+    }
+    const current = String(input.value || '').trim();
+    const entry = `${groupName}: ${members.join(',')}`;
+    input.value = current ? `${current}\n${entry}` : entry;
+  }
+
+  function addSelectedRangeGroup(dimension) {
+    const selection = updateResultRangeSelectionStatus();
+    const members = dimension === 'row' ? selection.rowLabels : selection.columnLabels;
+    if (members.length < 2) {
+      setAnalysisSelectionStatus(`Select at least two ${dimension === 'row' ? 'rows' : 'columns'} before adding a group.`);
+      return;
+    }
+
+    const input = dimension === 'row' ? assayAnalysisRowGroupsInput : assayAnalysisColumnGroupsInput;
+    const fallbackName = nextGroupName(dimension);
+    const groupName = sanitizeGroupName(assayAnalysisGroupNameInput?.value, fallbackName);
+    appendGroupEntry(input, groupName, members);
+    setAnalysisSelectionStatus(`Added "${groupName}" with ${members.length} ${dimension === 'row' ? 'row(s)' : 'column(s)'}.`);
+    onAnalysisConfigChange();
+  }
+
+  function onAddSelectedRowGroup() {
+    addSelectedRangeGroup('row');
+  }
+
+  function onAddSelectedColumnGroup() {
+    addSelectedRangeGroup('column');
+  }
+
+  function onClearAnalysisGroups() {
+    if (assayAnalysisRowGroupsInput) {
+      assayAnalysisRowGroupsInput.value = '';
+    }
+    if (assayAnalysisColumnGroupsInput) {
+      assayAnalysisColumnGroupsInput.value = '';
+    }
+    if (assayAnalysisGroupNameInput) {
+      assayAnalysisGroupNameInput.value = '';
+    }
+    setAnalysisSelectionStatus('Cleared row and column groups.');
+    onAnalysisConfigChange();
+  }
+
   function ensureResultGrid(def) {
     if (!assayResultTable) {
       return false;
@@ -1227,16 +1372,26 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
         height: getResultGridHeight(def),
         layout: 'fitDataTable',
         reactiveData: false,
+        selectableRange: true,
+        selectableRangeColumns: true,
+        selectableRangeRows: true,
         cellEdited: onResultGridCellEdited,
         cellClick: onResultGridCellClick
       });
+      if (typeof resultGrid.on === 'function') {
+        resultGrid.on('rangeAdded', updateResultRangeSelectionStatus);
+        resultGrid.on('rangeChanged', updateResultRangeSelectionStatus);
+        resultGrid.on('rangeRemoved', updateResultRangeSelectionStatus);
+      }
       host.addEventListener('focus', () => {
         setResultStatus('Table selected. Paste starts at A1 unless a result cell is selected.');
       });
       resultGridSignature = signature;
+      updateResultRangeSelectionStatus();
       return true;
     }
     resultGrid.replaceData(buildResultGridData(def));
+    updateResultRangeSelectionStatus();
     return true;
   }
 
@@ -1408,10 +1563,6 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     return Number.isFinite(numeric) ? numeric : null;
   }
 
-  function formatNumber(value, digits = 4) {
-    return Number.isFinite(value) ? Number(value).toFixed(digits) : '-';
-  }
-
   function summarizeNumeric(values) {
     if (!values.length) {
       return null;
@@ -1426,33 +1577,6 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     const min = Math.min(...values);
     const max = Math.max(...values);
     return { n, mean: meanValue, sd, min, max };
-  }
-
-  function groupBy(items, keyFn) {
-    const map = new Map();
-    items.forEach((item) => {
-      const key = keyFn(item);
-      if (!map.has(key)) {
-        map.set(key, []);
-      }
-      map.get(key).push(item);
-    });
-    return map;
-  }
-
-  function sortByConcentration(a, b) {
-    const aNumeric = Number.isFinite(a.concentrationValue);
-    const bNumeric = Number.isFinite(b.concentrationValue);
-    if (aNumeric && bNumeric && a.concentrationValue !== b.concentrationValue) {
-      return a.concentrationValue - b.concentrationValue;
-    }
-    if (aNumeric && !bNumeric) {
-      return -1;
-    }
-    if (!aNumeric && bNumeric) {
-      return 1;
-    }
-    return String(a.concentrationLabel).localeCompare(String(b.concentrationLabel));
   }
 
   function collectNumericObservations() {
@@ -1558,10 +1682,20 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
       nested_summary: ['mean'],
       row_summary: ['mean'],
       column_summary: ['mean'],
-      linear_regression: ['slope', 'r²', 'r2', 'intercept'],
+      linear_regression: ['r²', 'r2', 'intercept', 'points'],
       ec50: ['ec50'],
       ic50: ['ic50'],
-      survival: ['survival', 'mean']
+      survival: ['survival', 'mean'],
+      standard_curve_line: ['r²', 'rmse'],
+      standard_curve_4pl_log_concentration: ['r²', 'rmse'],
+      standard_curve_4pl_concentration: ['r²', 'rmse'],
+      standard_curve_5pl_log_concentration: ['r²', 'rmse'],
+      standard_curve_5pl_concentration: ['r²', 'rmse'],
+      standard_curve_semilog_line: ['r²', 'rmse'],
+      standard_curve_hyperbola: ['r²', 'rmse'],
+      standard_curve_quadratic: ['r²', 'rmse'],
+      standard_curve_cubic: ['r²', 'rmse'],
+      standard_curve_pade_11: ['r²', 'rmse']
     };
     const priorities = methodPriority[method] || ['mean', 'value'];
     for (let keywordIndex = 0; keywordIndex < priorities.length; keywordIndex += 1) {
@@ -1625,7 +1759,20 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     }
 
     const numericXAxis = numericXCount / totalCount >= 0.75;
-    const prefersLineMethod = method === 'linear_regression' || method === 'ec50' || method === 'ic50' || method === 'survival';
+    const prefersLineMethod = method === 'linear_regression'
+      || method === 'ec50'
+      || method === 'ic50'
+      || method === 'survival'
+      || method === 'standard_curve_line'
+      || method === 'standard_curve_4pl_log_concentration'
+      || method === 'standard_curve_4pl_concentration'
+      || method === 'standard_curve_5pl_log_concentration'
+      || method === 'standard_curve_5pl_concentration'
+      || method === 'standard_curve_semilog_line'
+      || method === 'standard_curve_hyperbola'
+      || method === 'standard_curve_quadratic'
+      || method === 'standard_curve_cubic'
+      || method === 'standard_curve_pade_11';
     const chartType = numericXAxis && prefersLineMethod ? 'line' : 'bar';
 
     if (chartType === 'line') {
@@ -1713,7 +1860,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
       return;
     }
 
-    const chartModel = buildAnalysisChartModel(result, method);
+    const chartModel = result?.chartModel || buildAnalysisChartModel(result, method);
     const chartTarget = assayAnalysisTable.querySelector('[data-assay-analysis-chart]');
     if (!chartModel || !chartTarget) {
       return;
@@ -1728,6 +1875,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
       VerticalBarSeries,
       LineSeries,
       MarkSeries,
+      WhiskerSeries,
       DiscreteColorLegend
     } = ReactVisLib;
     if (!XYPlot || !XAxis || !YAxis || !VerticalGridLines || !HorizontalGridLines) {
@@ -1789,6 +1937,20 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
           cluster: 'assay-analysis'
         }));
       }
+
+      if (chartModel.showErrorBars && WhiskerSeries) {
+        const whiskerData = series.data.filter((point) => Number.isFinite(point.yVariance) && point.yVariance > 0);
+        if (whiskerData.length) {
+          plotChildren.push(ReactLib.createElement(WhiskerSeries, {
+            key: `whisker-${series.label}-${index}`,
+            data: whiskerData,
+            color,
+            strokeWidth: 1.2,
+            crossBarWidth: 8,
+            style: { pointerEvents: 'none' }
+          }));
+        }
+      }
     });
 
     const legendItems = chartModel.series.map((series, index) => ({
@@ -1818,584 +1980,16 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     analysisChartHost = chartTarget;
   }
 
-  function analyzeGroupedSummary(observations) {
-    const axes = describeObservationAxes(observations);
-
-    if (axes.hasSampleFactor && axes.hasConcentrationFactor) {
-      const groups = new Map();
-      observations.forEach((item) => {
-        const key = `${item.sampleId}__${item.concentrationLabel}`;
-        if (!groups.has(key)) {
-          groups.set(key, {
-            sampleId: item.sampleId,
-            concentrationLabel: item.concentrationLabel,
-            concentrationValue: item.concentrationValue,
-            values: []
-          });
-        }
-        groups.get(key).values.push(item.response);
-      });
-
-      const rows = Array.from(groups.values())
-        .map((item) => ({ ...item, stats: summarizeNumeric(item.values) }))
-        .filter((item) => item.stats)
-        .sort((a, b) => {
-          const sampleCmp = a.sampleId.localeCompare(b.sampleId);
-          if (sampleCmp !== 0) {
-            return sampleCmp;
-          }
-          return sortByConcentration(a, b);
-        })
-        .map((item) => [
-          item.sampleId,
-          item.concentrationLabel,
-          item.stats.n,
-          formatNumber(item.stats.mean),
-          formatNumber(item.stats.sd),
-          formatNumber(item.stats.min),
-          formatNumber(item.stats.max)
-        ]);
-
-      return {
-        summary: `Grouped summary for ${rows.length} sample/concentration group(s).`,
-        headers: ['Sample ID', 'Concentration', 'N', 'Mean', 'SD', 'Min', 'Max'],
-        rows
-      };
-    }
-
-    if (axes.hasSampleFactor) {
-      const groups = groupBy(observations, (item) => item.sampleId);
-      const rows = Array.from(groups.entries())
-        .map(([sampleId, items]) => {
-          const stats = summarizeNumeric(items.map((item) => item.response));
-          return stats ? [sampleId, stats.n, formatNumber(stats.mean), formatNumber(stats.sd), formatNumber(stats.min), formatNumber(stats.max)] : null;
-        })
-        .filter(Boolean)
-        .sort((a, b) => String(a[0]).localeCompare(String(b[0])));
-
-      return {
-        summary: `Grouped summary for ${rows.length} sample ID group(s).`,
-        headers: ['Sample ID', 'N', 'Mean', 'SD', 'Min', 'Max'],
-        rows
-      };
-    }
-
-    if (axes.hasConcentrationFactor) {
-      const groups = new Map();
-      observations.forEach((item) => {
-        if (!groups.has(item.concentrationLabel)) {
-          groups.set(item.concentrationLabel, {
-            concentrationLabel: item.concentrationLabel,
-            concentrationValue: item.concentrationValue,
-            values: []
-          });
-        }
-        groups.get(item.concentrationLabel).values.push(item.response);
-      });
-
-      const rows = Array.from(groups.values())
-        .map((item) => ({ ...item, stats: summarizeNumeric(item.values) }))
-        .filter((item) => item.stats)
-        .sort(sortByConcentration)
-        .map((item) => [
-          item.concentrationLabel,
-          item.stats.n,
-          formatNumber(item.stats.mean),
-          formatNumber(item.stats.sd),
-          formatNumber(item.stats.min),
-          formatNumber(item.stats.max)
-        ]);
-
-      return {
-        summary: `Grouped summary for ${rows.length} concentration group(s).`,
-        headers: ['Concentration', 'N', 'Mean', 'SD', 'Min', 'Max'],
-        rows
-      };
-    }
-
-    const stats = summarizeNumeric(observations.map((item) => item.response));
-    const rows = stats
-      ? [['All Wells', stats.n, formatNumber(stats.mean), formatNumber(stats.sd), formatNumber(stats.min), formatNumber(stats.max)]]
-      : [];
-
+  function getDimensionAnalysisOptions(dimension) {
+    const plate = getPlateDefinition(assayPlateTypeInput?.value);
+    const maxMemberCount = dimension === 'row' ? plate.rows : plate.columns;
+    const groupSpec = dimension === 'row'
+      ? assayAnalysisRowGroupsInput?.value
+      : assayAnalysisColumnGroupsInput?.value;
     return {
-      summary: 'Grouped summary across all mapped wells.',
-      headers: ['Series', 'N', 'Mean', 'SD', 'Min', 'Max'],
-      rows
-    };
-  }
-
-  function analyzeNestedSummary(observations) {
-    const axes = describeObservationAxes(observations);
-    if (!(axes.hasSampleFactor && axes.hasConcentrationFactor)) {
-      return analyzeGroupedSummary(observations);
-    }
-
-    const sampleGroups = groupBy(observations, (item) => item.sampleId);
-    const rows = [];
-
-    Array.from(sampleGroups.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .forEach(([sampleId, sampleItems]) => {
-        const sampleStats = summarizeNumeric(sampleItems.map((item) => item.response));
-        if (sampleStats) {
-          rows.push([
-            sampleId,
-            'Sample Total',
-            '-',
-            sampleStats.n,
-            formatNumber(sampleStats.mean),
-            formatNumber(sampleStats.sd),
-            formatNumber(sampleStats.min),
-            formatNumber(sampleStats.max)
-          ]);
-        }
-
-        const concentrationGroups = new Map();
-        sampleItems.forEach((item) => {
-          const key = item.concentrationLabel;
-          if (!concentrationGroups.has(key)) {
-            concentrationGroups.set(key, {
-              concentrationLabel: item.concentrationLabel,
-              concentrationValue: item.concentrationValue,
-              values: []
-            });
-          }
-          concentrationGroups.get(key).values.push(item.response);
-        });
-
-        Array.from(concentrationGroups.values())
-          .map((item) => ({ ...item, stats: summarizeNumeric(item.values) }))
-          .filter((item) => item.stats)
-          .sort(sortByConcentration)
-          .forEach((item) => {
-            rows.push([
-              sampleId,
-              'Concentration',
-              item.concentrationLabel,
-              item.stats.n,
-              formatNumber(item.stats.mean),
-              formatNumber(item.stats.sd),
-              formatNumber(item.stats.min),
-              formatNumber(item.stats.max)
-            ]);
-          });
-      });
-
-    return {
-      summary: `Nested summary by sample then concentration for ${sampleGroups.size} sample(s).`,
-      headers: ['Sample ID', 'Level', 'Group', 'N', 'Mean', 'SD', 'Min', 'Max'],
-      rows
-    };
-  }
-
-  function analyzeDimensionSummary(observations, dimension) {
-    const isRow = dimension === 'row';
-    const groups = groupBy(observations, (item) => (isRow ? item.rowLabel : String(item.columnNumber)));
-    const rows = Array.from(groups.entries())
-      .map(([label, items]) => {
-        const stats = summarizeNumeric(items.map((item) => item.response));
-        return { label, stats };
-      })
-      .filter((item) => item.stats)
-      .sort((a, b) => {
-        if (isRow) {
-          return rowLabelToIndex(a.label) - rowLabelToIndex(b.label);
-        }
-        return Number(a.label) - Number(b.label);
-      })
-      .map((item) => [
-        item.label,
-        item.stats.n,
-        formatNumber(item.stats.mean),
-        formatNumber(item.stats.sd),
-        formatNumber(item.stats.min),
-        formatNumber(item.stats.max)
-      ]);
-
-    return {
-      summary: `${isRow ? 'Row' : 'Column'} summary for ${rows.length} ${isRow ? 'row(s)' : 'column(s)'}.`,
-      headers: [isRow ? 'Row' : 'Column', 'N', 'Mean', 'SD', 'Min', 'Max'],
-      rows
-    };
-  }
-
-  function getDoseAxisConfig(observations) {
-    const axes = describeObservationAxes(observations);
-
-    if (axes.numericConcentrationCount >= 2) {
-      return {
-        xSource: 'Concentration',
-        xAccessor: (item) => item.concentrationValue,
-        xLabelAccessor: (item) => item.concentrationLabel,
-        seriesHeader: axes.hasSampleFactor ? 'Sample ID' : 'Series',
-        seriesAccessor: axes.hasSampleFactor
-          ? (item) => item.sampleId
-          : () => 'All Wells'
-      };
-    }
-
-    if (axes.numericSampleCount >= 2) {
-      return {
-        xSource: 'Sample ID',
-        xAccessor: (item) => item.sampleValue,
-        xLabelAccessor: (item) => item.sampleId,
-        seriesHeader: axes.hasConcentrationFactor ? 'Concentration' : 'Series',
-        seriesAccessor: axes.hasConcentrationFactor
-          ? (item) => item.concentrationLabel
-          : () => 'All Wells'
-      };
-    }
-
-    return null;
-  }
-
-  function getRegressionAxisConfig(observations) {
-    const doseAxis = getDoseAxisConfig(observations);
-    if (doseAxis) {
-      return doseAxis;
-    }
-
-    const axes = describeObservationAxes(observations);
-    return {
-      xSource: 'Column',
-      xAccessor: (item) => item.columnNumber,
-      xLabelAccessor: (item) => String(item.columnNumber),
-      seriesHeader: axes.hasSampleFactor ? 'Sample ID' : 'Series',
-      seriesAccessor: axes.hasSampleFactor
-        ? (item) => item.sampleId
-        : () => 'All Wells'
-    };
-  }
-
-  function linearRegression(points) {
-    if (!Array.isArray(points) || points.length < 2) {
-      return null;
-    }
-    const xValues = points.map((item) => item.x);
-    const yValues = points.map((item) => item.y);
-    const xMean = xValues.reduce((sum, value) => sum + value, 0) / xValues.length;
-    const yMean = yValues.reduce((sum, value) => sum + value, 0) / yValues.length;
-    let numerator = 0;
-    let denominator = 0;
-    for (let index = 0; index < points.length; index += 1) {
-      const dx = points[index].x - xMean;
-      numerator += dx * (points[index].y - yMean);
-      denominator += dx * dx;
-    }
-    if (denominator === 0) {
-      return null;
-    }
-    const slope = numerator / denominator;
-    const intercept = yMean - (slope * xMean);
-    const yPred = points.map((item) => intercept + (slope * item.x));
-    const ssRes = yValues.reduce((sum, item, index) => sum + ((item - yPred[index]) ** 2), 0);
-    const ssTot = yValues.reduce((sum, item) => sum + ((item - yMean) ** 2), 0);
-    const r2 = ssTot === 0 ? 1 : 1 - (ssRes / ssTot);
-    return { slope, intercept, r2 };
-  }
-
-  function analyzeLinearRegression(observations) {
-    const config = getRegressionAxisConfig(observations);
-    const seriesGroups = groupBy(observations, (item) => config.seriesAccessor(item));
-    const rows = Array.from(seriesGroups.entries())
-      .map(([seriesLabel, items]) => {
-        const pointGroups = new Map();
-        items.forEach((item) => {
-          const x = config.xAccessor(item);
-          if (!Number.isFinite(x)) {
-            return;
-          }
-          if (!pointGroups.has(x)) {
-            pointGroups.set(x, []);
-          }
-          pointGroups.get(x).push(item.response);
-        });
-
-        const points = Array.from(pointGroups.entries())
-          .map(([x, values]) => {
-            const stats = summarizeNumeric(values);
-            return stats ? { x, y: stats.mean } : null;
-          })
-          .filter(Boolean)
-          .sort((a, b) => a.x - b.x);
-
-        const fit = linearRegression(points);
-        if (!fit) {
-          return null;
-        }
-
-        return [
-          seriesLabel,
-          config.xSource,
-          points.length,
-          formatNumber(fit.slope),
-          formatNumber(fit.intercept),
-          formatNumber(fit.r2, 5)
-        ];
-      })
-      .filter(Boolean)
-      .sort((a, b) => String(a[0]).localeCompare(String(b[0])));
-
-    return {
-      summary: `Linear regression fitted for ${rows.length} series using ${config.xSource} as X.`,
-      headers: [config.seriesHeader, 'X Source', 'Points', 'Slope', 'Intercept', 'R²'],
-      rows
-    };
-  }
-
-  function logistic4Point(x, params) {
-    const exponent = (params.logEC50 - Math.log10(x)) * params.hill;
-    return params.bottom + ((params.top - params.bottom) / (1 + (10 ** exponent)));
-  }
-
-  function clamp(value, min, max) {
-    if (!Number.isFinite(value)) {
-      return min;
-    }
-    return Math.min(max, Math.max(min, value));
-  }
-
-  function fitDoseResponse4PL(points) {
-    if (!Array.isArray(points) || points.length < 4) {
-      return null;
-    }
-    const xValues = points.map((item) => item.x).filter((item) => item > 0);
-    if (xValues.length < 4) {
-      return null;
-    }
-    const yValues = points.map((item) => item.y);
-    const yMin = Math.min(...yValues);
-    const yMax = Math.max(...yValues);
-    const yRange = Math.max(1e-9, yMax - yMin);
-    const logXValues = xValues.map((item) => Math.log10(item));
-    const minLogX = Math.min(...logXValues);
-    const maxLogX = Math.max(...logXValues);
-    const initial = {
-      bottom: yMin,
-      top: yMax,
-      logEC50: (minLogX + maxLogX) / 2,
-      hill: 1
-    };
-    const bounds = {
-      bottom: { min: yMin - (yRange * 2), max: yMax + yRange },
-      top: { min: yMin - yRange, max: yMax + (yRange * 2) },
-      logEC50: { min: minLogX - 2, max: maxLogX + 2 },
-      hill: { min: 0.05, max: 8 }
-    };
-    const ensureParams = (source) => {
-      const params = {
-        bottom: clamp(source.bottom, bounds.bottom.min, bounds.bottom.max),
-        top: clamp(source.top, bounds.top.min, bounds.top.max),
-        logEC50: clamp(source.logEC50, bounds.logEC50.min, bounds.logEC50.max),
-        hill: clamp(source.hill, bounds.hill.min, bounds.hill.max)
-      };
-      if (params.top <= params.bottom) {
-        params.top = params.bottom + 1e-9;
-      }
-      return params;
-    };
-    const calcSse = (params) => {
-      let total = 0;
-      for (let index = 0; index < points.length; index += 1) {
-        const predicted = logistic4Point(points[index].x, params);
-        total += (points[index].y - predicted) ** 2;
-      }
-      return total;
-    };
-
-    let best = ensureParams(initial);
-    let bestErr = calcSse(best);
-    const steps = {
-      bottom: yRange * 0.6,
-      top: yRange * 0.6,
-      logEC50: Math.max(0.1, (maxLogX - minLogX) * 0.5),
-      hill: 0.8
-    };
-    const paramKeys = ['bottom', 'top', 'logEC50', 'hill'];
-
-    for (let round = 0; round < 12; round += 1) {
-      let improved = false;
-      for (let keyIndex = 0; keyIndex < paramKeys.length; keyIndex += 1) {
-        const key = paramKeys[keyIndex];
-        const step = steps[key];
-        [-1, 1].forEach((direction) => {
-          const candidate = ensureParams({
-            ...best,
-            [key]: best[key] + (direction * step)
-          });
-          const err = calcSse(candidate);
-          if (err < bestErr) {
-            best = candidate;
-            bestErr = err;
-            improved = true;
-          }
-        });
-      }
-      if (!improved) {
-        paramKeys.forEach((key) => {
-          steps[key] *= 0.5;
-        });
-      }
-      const maxStep = Math.max(...Object.values(steps));
-      if (maxStep < 1e-6) {
-        break;
-      }
-    }
-
-    const yMean = yValues.reduce((sum, value) => sum + value, 0) / yValues.length;
-    const ssTot = yValues.reduce((sum, value) => sum + ((value - yMean) ** 2), 0);
-    const ssRes = points.reduce((sum, point) => sum + ((point.y - logistic4Point(point.x, best)) ** 2), 0);
-    const r2 = ssTot === 0 ? 1 : 1 - (ssRes / ssTot);
-    return {
-      ...best,
-      ec50: 10 ** best.logEC50,
-      r2,
-      rmse: Math.sqrt(ssRes / points.length)
-    };
-  }
-
-  function getMeanDosePoints(sampleItems, requirePositiveX, xAccessor) {
-    const groups = new Map();
-    sampleItems.forEach((item) => {
-      const xValue = xAccessor(item);
-      if (!Number.isFinite(xValue)) {
-        return;
-      }
-      if (requirePositiveX && xValue <= 0) {
-        return;
-      }
-      if (!groups.has(xValue)) {
-        groups.set(xValue, []);
-      }
-      groups.get(xValue).push(item.response);
-    });
-    return Array.from(groups.entries())
-      .map(([x, values]) => {
-        const stats = summarizeNumeric(values);
-        return stats ? { x, y: stats.mean, n: stats.n } : null;
-      })
-      .filter(Boolean)
-      .sort((a, b) => a.x - b.x);
-  }
-
-  function analyzeEc50Like(observations, mode) {
-    const config = getDoseAxisConfig(observations);
-    if (!config) {
-      return {
-        summary: `${mode.toUpperCase()} fit requires at least 2 numeric concentration or sample ID values.`,
-        headers: [mode.toUpperCase()],
-        rows: []
-      };
-    }
-
-    const sampleGroups = groupBy(observations, (item) => config.seriesAccessor(item));
-    let skipped = 0;
-    const rows = Array.from(sampleGroups.entries())
-      .map(([seriesLabel, sampleItems]) => {
-        const points = getMeanDosePoints(sampleItems, true, config.xAccessor);
-        if (points.length < 4) {
-          skipped += 1;
-          return null;
-        }
-        const fit = fitDoseResponse4PL(points);
-        if (!fit) {
-          skipped += 1;
-          return null;
-        }
-        const trend = points.length >= 2 && points[points.length - 1].y > points[0].y ? 'up' : 'down';
-        return [
-          seriesLabel,
-          points.length,
-          formatNumber(fit.ec50),
-          formatNumber(fit.hill),
-          formatNumber(fit.top),
-          formatNumber(fit.bottom),
-          formatNumber(fit.r2, 5),
-          trend
-        ];
-      })
-      .filter(Boolean)
-      .sort((a, b) => String(a[0]).localeCompare(String(b[0])));
-
-    return {
-      summary: `${mode.toUpperCase()} fit completed for ${rows.length} series using ${config.xSource} as dose axis. ${skipped ? `${skipped} series skipped (need >=4 positive numeric dose values).` : ''}`.trim(),
-      headers: [config.seriesHeader, 'Points', mode.toUpperCase(), 'Hill', 'Top', 'Bottom', 'R²', 'Trend'],
-      rows
-    };
-  }
-
-  function analyzeSurvival(observations) {
-    const config = getDoseAxisConfig(observations);
-    if (!config) {
-      return {
-        summary: 'Survival analysis requires numeric concentration or sample ID values.',
-        headers: ['Series'],
-        rows: []
-      };
-    }
-
-    const sampleGroups = groupBy(observations, (item) => config.seriesAccessor(item));
-    const rows = [];
-
-    Array.from(sampleGroups.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .forEach(([seriesLabel, sampleItems]) => {
-        const concentrationGroups = new Map();
-        sampleItems.forEach((item) => {
-          const xValue = config.xAccessor(item);
-          const xLabel = config.xLabelAccessor(item);
-          if (!Number.isFinite(xValue)) {
-            return;
-          }
-          if (!concentrationGroups.has(xLabel)) {
-            concentrationGroups.set(xLabel, {
-              concentrationLabel: xLabel,
-              concentrationValue: xValue,
-              values: []
-            });
-          }
-          concentrationGroups.get(xLabel).values.push(item.response);
-        });
-        const groups = Array.from(concentrationGroups.values())
-          .map((item) => ({ ...item, stats: summarizeNumeric(item.values) }))
-          .filter((item) => item.stats)
-          .sort(sortByConcentration);
-        if (!groups.length) {
-          return;
-        }
-
-        const numericGroups = groups.filter((item) => Number.isFinite(item.concentrationValue));
-        let baseline = numericGroups.length
-          ? numericGroups.reduce((best, item) => (
-            item.concentrationValue < best.concentrationValue ? item : best
-          ), numericGroups[0])
-          : null;
-        if (!baseline) {
-          baseline = groups[0];
-        }
-        const baselineMean = baseline.stats?.mean;
-
-        groups.forEach((item) => {
-          const survival = Number.isFinite(baselineMean) && baselineMean !== 0
-            ? (item.stats.mean / baselineMean) * 100
-            : null;
-          rows.push([
-            seriesLabel,
-            baseline.concentrationLabel,
-            formatNumber(baselineMean),
-            item.concentrationLabel,
-            item.stats.n,
-            formatNumber(item.stats.mean),
-            formatNumber(survival, 2)
-          ]);
-        });
-      });
-
-    return {
-      summary: `Survival analysis computed as (group mean / baseline mean) * 100 for ${sampleGroups.size} series using ${config.xSource} as dose axis.`,
-      headers: [config.seriesHeader, `Baseline ${config.xSource}`, 'Baseline Mean', config.xSource, 'N', 'Mean', 'Survival %'],
-      rows
+      groupSpec: String(groupSpec || ''),
+      maxMemberCount,
+      includeErrorBars: Boolean(assayAnalysisErrorBarsInput?.checked)
     };
   }
 
@@ -2416,24 +2010,14 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
       return;
     }
 
-    let result;
-    if (method === 'nested_summary') {
-      result = analyzeNestedSummary(observations);
-    } else if (method === 'row_summary') {
-      result = analyzeDimensionSummary(observations, 'row');
-    } else if (method === 'column_summary') {
-      result = analyzeDimensionSummary(observations, 'column');
-    } else if (method === 'linear_regression') {
-      result = analyzeLinearRegression(observations);
-    } else if (method === 'ec50') {
-      result = analyzeEc50Like(observations, 'ec50');
-    } else if (method === 'ic50') {
-      result = analyzeEc50Like(observations, 'ic50');
-    } else if (method === 'survival') {
-      result = analyzeSurvival(observations);
-    } else {
-      result = analyzeGroupedSummary(observations);
-    }
+    const result = analyzeAssayData({
+      method,
+      observations,
+      options: {
+        rowSummary: getDimensionAnalysisOptions('row'),
+        columnSummary: getDimensionAnalysisOptions('column')
+      }
+    });
 
     const ignoredNote = nonNumericCount ? ` Non-numeric cells ignored: ${nonNumericCount}.` : '';
     const rowCountNote = ` Rows: ${result.rows.length}.`;
@@ -2466,6 +2050,17 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     if (getResultValueCount()) {
       renderAnalysis();
     }
+  }
+
+  function onAnalysisConfigChange() {
+    if (!assayAnalysisSummary || !assayAnalysisTable) {
+      return;
+    }
+    syncCurrentResultsFromGrid();
+    if (!getResultValueCount()) {
+      return;
+    }
+    renderAnalysis();
   }
 
   function onAnalyzeResults() {
@@ -2980,6 +2575,19 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     if (assayAnalysisMethodInput) {
       assayAnalysisMethodInput.value = 'grouped_summary';
     }
+    if (assayAnalysisRowGroupsInput) {
+      assayAnalysisRowGroupsInput.value = '';
+    }
+    if (assayAnalysisColumnGroupsInput) {
+      assayAnalysisColumnGroupsInput.value = '';
+    }
+    if (assayAnalysisErrorBarsInput) {
+      assayAnalysisErrorBarsInput.checked = false;
+    }
+    if (assayAnalysisGroupNameInput) {
+      assayAnalysisGroupNameInput.value = '';
+    }
+    setAnalysisSelectionStatus('');
     setCsvStatus('');
     setLayoutStatus('');
     if (assaySampleAxisInput) {

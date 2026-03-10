@@ -34,7 +34,7 @@ export const TITLES = {
   [VIEWS.PERSONAL_INVENTORY]: 'Manage sample registry and personal inventory containers in one workspace.',
   [VIEWS.SETTING]: 'Settings module.',
   [VIEWS.PROJECT_MANAGEMENT]: 'Manage projects for notebook context.',
-  [VIEWS.WORKFLOW_MANAGEMENT]: 'Build editable protocol-block workflows and reusable templates.',
+  [VIEWS.WORKFLOW_MANAGEMENT]: 'Build editable workflows with protocol/text blocks and reusable templates.',
   [VIEWS.PAPERS]: 'Upload papers, link them to projects or journal clubs, and summarize with LLM.',
   [VIEWS.AGENT]: 'Ask the lab assistant agent with evidence-grounded context and decision records.',
   [VIEWS.TOOL_BOX]: 'Tools: molarity calculator, peptide properties, and buffer preparer.'

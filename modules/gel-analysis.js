@@ -298,27 +298,76 @@ function gaussianBlur2d(data, width, height, sigma) {
   return output;
 }
 
-function preprocessWithJs(gray, width, height) {
+function normalizeEnhancementSettings(raw = {}) {
+  const denoiseValue = Number(raw?.denoiseStrength);
+  const contrastValue = Number(raw?.contrastBoost);
+  return {
+    denoiseStrength: Number.isFinite(denoiseValue) ? clamp(denoiseValue, 0, 100) : 35,
+    contrastBoost: Number.isFinite(contrastValue) ? clamp(contrastValue, 0, 220) : 100
+  };
+}
+
+function applyPreviewContrast(data, contrastBoost) {
+  const contrastFactor = clamp((Number(contrastBoost) || 100) / 100, 0, 2.2);
+  const gain = 0.95 + (contrastFactor * 0.95);
+  const gamma = clamp(1.2 - (contrastFactor * 0.42), 0.45, 1.4);
+  const output = new Float32Array(data.length);
+  for (let index = 0; index < data.length; index += 1) {
+    const centered = ((data[index] - 0.5) * gain) + 0.5;
+    output[index] = Math.pow(clamp(centered, 0, 1), gamma);
+  }
+  return output;
+}
+
+function grayArrayToImageData(gray, width, height) {
+  const rgba = new Uint8ClampedArray(width * height * 4);
+  for (let index = 0, rgbaIndex = 0; index < gray.length; index += 1, rgbaIndex += 4) {
+    const value = clamp(Math.round(gray[index] * 255), 0, 255);
+    rgba[rgbaIndex] = value;
+    rgba[rgbaIndex + 1] = value;
+    rgba[rgbaIndex + 2] = value;
+    rgba[rgbaIndex + 3] = 255;
+  }
+  return new ImageData(rgba, width, height);
+}
+
+function preprocessWithJs(gray, width, height, settings = {}) {
+  const enhancement = normalizeEnhancementSettings(settings);
+  const denoiseFactor = enhancement.denoiseStrength / 100;
+  const contrastFactor = enhancement.contrastBoost / 100;
+  const claheClipFactor = 1 + (contrastFactor * 1.5);
+  const denoiseSigma = 0.6 + (denoiseFactor * 1.8);
+  const backgroundSigma = 10 + (denoiseFactor * 18);
+
   const clahe = applyClaheLike(gray, width, height, {
     tilesX: 8,
     tilesY: 8,
-    clipFactor: 2.5
+    clipFactor: claheClipFactor
   });
-  const smooth = gaussianBlur2d(clahe, width, height, 1.2);
-  const background = gaussianBlur2d(smooth, width, height, 16);
+  const smooth = gaussianBlur2d(clahe, width, height, denoiseSigma);
+  const background = gaussianBlur2d(smooth, width, height, backgroundSigma);
 
   const cleaned = new Float32Array(gray.length);
   for (let index = 0; index < gray.length; index += 1) {
     cleaned[index] = smooth[index] - background[index];
   }
 
+  const cleanNormalized = normalizeArrayRange(cleaned);
+  const previewGray = applyPreviewContrast(cleanNormalized, enhancement.contrastBoost);
+
   return {
-    cleanNormalized: normalizeArrayRange(cleaned),
+    cleanNormalized,
+    previewGray,
+    previewImageData: grayArrayToImageData(previewGray, width, height),
     preprocessing: {
+      grayscale: true,
       clahe: true,
       backend: 'js',
-      gaussianSigma: 1.2,
-      rollingBallApproxRadius: 50
+      denoiseStrength: enhancement.denoiseStrength,
+      contrastBoost: enhancement.contrastBoost,
+      claheClipFactor: round(claheClipFactor, 4),
+      gaussianSigma: round(denoiseSigma, 4),
+      rollingBallApproxRadius: round(backgroundSigma * 3, 2)
     }
   };
 }
@@ -329,11 +378,17 @@ function computeManualBand({
   width,
   height,
   lane,
-  pixelY
+  pixelY,
+  bandTopOverride = null,
+  bandBottomOverride = null,
+  measurementMode = 'manual-point'
 }) {
   const yCenter = clamp(Math.round(pixelY), 0, height - 1);
-  const bandTop = clamp(yCenter - 2, 0, height - 1);
-  const bandBottom = clamp(yCenter + 2, 0, height - 1);
+  const hasWindow = Number.isFinite(bandTopOverride) && Number.isFinite(bandBottomOverride);
+  const requestedTop = hasWindow ? Math.floor(Math.min(bandTopOverride, bandBottomOverride)) : (yCenter - 2);
+  const requestedBottom = hasWindow ? Math.floor(Math.max(bandTopOverride, bandBottomOverride)) : (yCenter + 2);
+  const bandTop = clamp(requestedTop, 0, height - 1);
+  const bandBottom = clamp(requestedBottom, bandTop, height - 1);
   const thickness = Math.max(1, bandBottom - bandTop + 1);
   const laneWidth = Math.max(1, lane.xEnd - lane.xStart + 1);
   const backgroundSpan = Math.max(2, Math.round(thickness * 1.5));
@@ -396,6 +451,12 @@ function computeManualBand({
     bottom: bandBottom,
     thickness,
     rawIntensity: correctedIntensity,
+    correctedIntensity,
+    bandSignalSum: bandSum,
+    backgroundMean: bgMean,
+    backgroundStd: bgStd,
+    areaPx: bandPixelCount,
+    measurementMode,
     snr,
     sharpness,
     saturationFraction: bandPixelCount ? (saturatedCount / bandPixelCount) : 0,
@@ -455,8 +516,33 @@ function applyBandOverrides({
   width,
   height
 }) {
+  const segmentation = overrides?.laneSegmentation || {};
+  const hasTargetWindow = Number.isFinite(segmentation.bandTop) && Number.isFinite(segmentation.bandBottom);
+  const targetTop = hasTargetWindow
+    ? clamp(Math.floor(Math.min(segmentation.bandTop, segmentation.bandBottom)), 0, height - 1)
+    : null;
+  const targetBottom = hasTargetWindow
+    ? clamp(Math.floor(Math.max(segmentation.bandTop, segmentation.bandBottom)), 0, height - 1)
+    : null;
+
   lanes.forEach((lane) => {
     const laneIndex = lane.index + 1;
+
+    if (Number.isFinite(targetTop) && Number.isFinite(targetBottom) && targetBottom >= targetTop) {
+      const centerY = clamp(Math.round((targetTop + targetBottom) / 2), 0, height - 1);
+      const targetBand = computeManualBand({
+        signal,
+        rawGray,
+        width,
+        height,
+        lane,
+        pixelY: centerY,
+        bandTopOverride: targetTop,
+        bandBottomOverride: targetBottom,
+        measurementMode: 'target-window'
+      });
+      lane.bands.push(targetBand);
+    }
 
     const added = overrides.addedBands.filter((item) => item.laneIndex === laneIndex);
     added.forEach((item) => {
@@ -468,7 +554,8 @@ function applyBandOverrides({
           width,
           height,
           lane,
-          pixelY: item.pixelY
+          pixelY: item.pixelY,
+          measurementMode: 'manual-point'
         });
         if (band.rawIntensity > 0) {
           lane.bands.push(band);
@@ -880,12 +967,14 @@ function buildReport({
     });
 
     const confidence = computeLaneConfidence(lane, calibration.ok ? calibration.r2 : 0.45);
+    const targetBand = lane.bands.find((band) => band.measurementMode === 'target-window') || null;
 
     return {
       laneIndex: lane.index + 1,
       xStart: lane.xStart,
       xEnd: lane.xEnd,
       totalBandIntensity: round(lane.totalBandIntensity, 4),
+      targetBandIntensity: targetBand ? round(targetBand.rawIntensity, 4) : null,
       rowActivityFraction: round(lane.rowActivityFraction, 4),
       confidence: {
         score: round(confidence.score, 4),
@@ -893,6 +982,17 @@ function buildReport({
         factors: confidence.factors
       },
       interpretation,
+      targetBand: targetBand
+        ? {
+          top: targetBand.top,
+          bottom: targetBand.bottom,
+          areaPx: targetBand.areaPx,
+          rawIntensity: round(targetBand.rawIntensity, 4),
+          correctedIntensity: round(targetBand.correctedIntensity, 4),
+          backgroundMean: round(targetBand.backgroundMean, 6),
+          backgroundStd: round(targetBand.backgroundStd, 6)
+        }
+        : null,
       bands: lane.bands.map((band) => ({
         bandIndex: band.bandIndex + 1,
         top: band.top,
@@ -901,6 +1001,12 @@ function buildReport({
         thickness: band.thickness,
         estimatedMw: Number.isFinite(band.estimatedMw) ? round(band.estimatedMw, 3) : null,
         rawIntensity: round(band.rawIntensity, 4),
+        correctedIntensity: round(band.correctedIntensity, 4),
+        bandSignalSum: round(band.bandSignalSum, 4),
+        backgroundMean: round(band.backgroundMean, 6),
+        backgroundStd: round(band.backgroundStd, 6),
+        areaPx: band.areaPx,
+        measurementMode: band.measurementMode || 'manual-point',
         normalizedIntensity: Number.isFinite(band.normalizedIntensity) ? round(band.normalizedIntensity, 4) : null,
         snr: round(band.snr, 4),
         sharpness: round(band.sharpness, 4),
@@ -947,6 +1053,7 @@ function buildReport({
       ladderStandards: params.ladderStandards,
       ladderLane: params.ladderLane,
       normalization: params.normalization,
+      enhancement: normalizeEnhancementSettings(params.enhancement),
       ladderBands: normalizeManualOverrides(params.manualOverrides).ladderBands,
       manualOverrides: normalizeManualOverrides(params.manualOverrides)
     },
@@ -987,10 +1094,16 @@ function analyzeGelImage({
   imageName,
   width,
   height,
-  params
+  params,
+  preprocessed = null
 }) {
   const manualOverrides = normalizeManualOverrides(params.manualOverrides);
-  const preprocessingResult = preprocessWithJs(gray, width, height);
+  const preprocessingResult = preprocessed || preprocessWithJs(
+    gray,
+    width,
+    height,
+    params.enhancement
+  );
   const signal = preprocessingResult.cleanNormalized;
 
   const segmentedLanes = buildLanesFromManualSegmentation(manualOverrides, width);
@@ -1262,9 +1375,15 @@ function createBandsCsv(report) {
     [
       'lane',
       'band',
+      'measurement_mode',
       'top_px',
       'bottom_px',
+      'area_px',
       'estimated_mw_kda',
+      'band_signal_sum',
+      'background_mean',
+      'background_std',
+      'corrected_intensity',
       'raw_intensity',
       'normalized_intensity',
       'snr',
@@ -1273,6 +1392,8 @@ function createBandsCsv(report) {
       'manual_band',
       'manual_mw',
       'band_group',
+      'lane_target_band_intensity',
+      'lane_total_band_intensity',
       'lane_confidence',
       'lane_confidence_label'
     ].join(',')
@@ -1294,6 +1415,14 @@ function createBandsCsv(report) {
         '',
         '',
         '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        lane.targetBandIntensity ?? '',
+        lane.totalBandIntensity ?? '',
         lane.confidence?.score ?? '',
         lane.confidence?.label ?? ''
       ].map(escapeCsv).join(','));
@@ -1304,9 +1433,15 @@ function createBandsCsv(report) {
       lines.push([
         lane.laneIndex,
         band.bandIndex,
+        band.measurementMode || '',
         band.top,
         band.bottom,
+        band.areaPx ?? '',
         band.estimatedMw ?? '',
+        band.bandSignalSum ?? '',
+        band.backgroundMean ?? '',
+        band.backgroundStd ?? '',
+        band.correctedIntensity ?? '',
         band.rawIntensity ?? '',
         band.normalizedIntensity ?? '',
         band.snr ?? '',
@@ -1315,6 +1450,8 @@ function createBandsCsv(report) {
         band.manual ? 'yes' : 'no',
         band.manualMw ? 'yes' : 'no',
         band.groupLabel || '',
+        lane.targetBandIntensity ?? '',
+        lane.totalBandIntensity ?? '',
         lane.confidence?.score ?? '',
         lane.confidence?.label ?? ''
       ].map(escapeCsv).join(','));
@@ -1347,6 +1484,10 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
   const gelLadderLaneInput = document.getElementById('gel-ladder-lane');
   const gelLadderBandMwInput = document.getElementById('gel-ladder-band-mw');
   const gelNormalizationInput = document.getElementById('gel-normalization');
+  const gelDenoiseStrengthInput = document.getElementById('gel-denoise-strength');
+  const gelDenoiseStrengthValue = document.getElementById('gel-denoise-strength-value');
+  const gelContrastStrengthInput = document.getElementById('gel-contrast-strength');
+  const gelContrastStrengthValue = document.getElementById('gel-contrast-strength-value');
   const gelResetOverridesBtn = document.getElementById('gel-reset-overrides-btn');
   const gelStartCropBtn = document.getElementById('gel-start-crop-btn');
   const gelApplyCropBtn = document.getElementById('gel-apply-crop-btn');
@@ -1386,9 +1527,14 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
   let cropperActive = false;
   let cropDisplaySize = null;
   let manualDividerConfirmed = false;
+  let imageRevision = 0;
+  let preprocessedCache = null;
+  let enhancementRerunTimer = null;
 
   gelProjectInput?.addEventListener('change', renderNotebookOptions);
   gelImageFileInput?.addEventListener('change', onImageFileChange);
+  gelDenoiseStrengthInput?.addEventListener('input', onEnhancementChanged);
+  gelContrastStrengthInput?.addEventListener('input', onEnhancementChanged);
   gelRunBtn?.addEventListener('click', onRunAnalysis);
   gelResetOverridesBtn?.addEventListener('click', onResetManualOverrides);
   gelStartCropBtn?.addEventListener('click', onStartCrop);
@@ -1415,6 +1561,85 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
   function setStatus(message) {
     if (gelStatus) {
       gelStatus.textContent = message || '';
+    }
+  }
+
+  function setCurrentImage(nextImage) {
+    currentImage = nextImage;
+    imageRevision += 1;
+    preprocessedCache = null;
+    if (enhancementRerunTimer) {
+      window.clearTimeout(enhancementRerunTimer);
+      enhancementRerunTimer = null;
+    }
+  }
+
+  function readEnhancementSettingsFromUi() {
+    return normalizeEnhancementSettings({
+      denoiseStrength: gelDenoiseStrengthInput?.value,
+      contrastBoost: gelContrastStrengthInput?.value
+    });
+  }
+
+  function renderEnhancementValues() {
+    const enhancement = readEnhancementSettingsFromUi();
+    if (gelDenoiseStrengthInput) {
+      gelDenoiseStrengthInput.value = String(enhancement.denoiseStrength);
+    }
+    if (gelContrastStrengthInput) {
+      gelContrastStrengthInput.value = String(enhancement.contrastBoost);
+    }
+    if (gelDenoiseStrengthValue) {
+      gelDenoiseStrengthValue.textContent = `${enhancement.denoiseStrength}%`;
+    }
+    if (gelContrastStrengthValue) {
+      gelContrastStrengthValue.textContent = `${enhancement.contrastBoost}%`;
+    }
+  }
+
+  function getPreprocessedImageForCurrentSettings() {
+    if (!currentImage) {
+      return null;
+    }
+    const enhancement = readEnhancementSettingsFromUi();
+    const cache = preprocessedCache;
+    if (
+      cache
+      && cache.imageRevision === imageRevision
+      && cache.enhancement?.denoiseStrength === enhancement.denoiseStrength
+      && cache.enhancement?.contrastBoost === enhancement.contrastBoost
+    ) {
+      return cache.result;
+    }
+
+    const result = preprocessWithJs(
+      currentImage.gray,
+      currentImage.width,
+      currentImage.height,
+      enhancement
+    );
+    preprocessedCache = {
+      imageRevision,
+      enhancement,
+      result
+    };
+    return result;
+  }
+
+  function onEnhancementChanged() {
+    renderEnhancementValues();
+    preprocessedCache = null;
+    if (currentImage) {
+      renderCanvas();
+    }
+    if (currentReport) {
+      if (enhancementRerunTimer) {
+        window.clearTimeout(enhancementRerunTimer);
+      }
+      enhancementRerunTimer = window.setTimeout(() => {
+        enhancementRerunTimer = null;
+        onRunAnalysis();
+      }, 140);
     }
   }
 
@@ -1622,6 +1847,7 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
   function readParams() {
     const rawType = gelTypeInput?.value;
     const analysisType = rawType === 'western' || rawType === 'agarose' ? rawType : 'sds-page';
+    const enhancement = readEnhancementSettingsFromUi();
 
     return {
       analysisType,
@@ -1634,6 +1860,7 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
       cropApplied,
       tiffPage: Number.isFinite(currentImage?.tiffPageIndex) ? currentImage.tiffPageIndex : null,
       tiffPageCount: Number.isFinite(currentImage?.tiffPageCount) ? currentImage.tiffPageCount : null,
+      enhancement,
       manualOverrides: normalizeManualOverrides(manualOverrides)
     };
   }
@@ -1749,14 +1976,14 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
     }
     const context = croppedCanvas.getContext('2d', { willReadFrequently: true });
     const croppedData = context.getImageData(0, 0, croppedCanvas.width, croppedCanvas.height);
-    currentImage = normalizeDecodedImage({
+    setCurrentImage(normalizeDecodedImage({
       name: currentImage.name,
       width: croppedCanvas.width,
       height: croppedCanvas.height,
       imageData: croppedData,
       tiffPageIndex: currentImage.tiffPageIndex,
       tiffPageCount: currentImage.tiffPageCount
-    });
+    }));
     cropApplied = true;
     currentReport = null;
     manualOverrides = createEmptyManualOverrides();
@@ -1773,7 +2000,7 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
       setStatus('No original image available to reset.');
       return;
     }
-    currentImage = copyNormalizedImage(originalImage);
+    setCurrentImage(copyNormalizedImage(originalImage));
     cropApplied = false;
     currentReport = null;
     manualOverrides = createEmptyManualOverrides();
@@ -1848,34 +2075,6 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
     manualOverrides = {
       ...normalized,
       ladderBands: points
-    };
-  }
-
-  function syncAddedBandsFromBandWindow() {
-    if (!currentImage) {
-      return;
-    }
-    const normalized = normalizeManualOverrides(manualOverrides);
-    const segmentation = normalized.laneSegmentation || {};
-    if (!Number.isFinite(segmentation.bandTop) || !Number.isFinite(segmentation.bandBottom)) {
-      return;
-    }
-    const top = segmentation.bandTop;
-    const bottom = segmentation.bandBottom;
-    if (bottom <= top + 1) {
-      return;
-    }
-    const lanes = buildLanesFromManualSegmentation(normalized, currentImage.width);
-    if (!lanes?.length) {
-      return;
-    }
-    const centerY = clamp(Math.round((top + bottom) / 2), 0, currentImage.height - 1);
-    manualOverrides = {
-      ...normalized,
-      addedBands: lanes.map((lane) => ({
-        laneIndex: lane.index + 1,
-        pixelY: centerY
-      }))
     };
   }
 
@@ -2160,7 +2359,6 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
         return;
       }
       updateLaneSegmentation({ bandBottom: point.y });
-      syncAddedBandsFromBandWindow();
       renderOverrideStatus();
       renderCanvas();
       setStatus(`Band bottom line set at y=${point.y}. Target band region applied to all lanes.`);
@@ -2189,7 +2387,7 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
 
     setStatus('Loading gel image...');
     try {
-      currentImage = await decodeImageFile(file);
+      setCurrentImage(await decodeImageFile(file));
       originalImage = copyNormalizedImage(currentImage);
       cropApplied = false;
       currentReport = null;
@@ -2207,7 +2405,7 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
         setStatus(`Loaded ${file.name} (${currentImage.width}x${currentImage.height}).`);
       }
     } catch (error) {
-      currentImage = null;
+      setCurrentImage(null);
       originalImage = null;
       cropApplied = false;
       currentReport = null;
@@ -2236,7 +2434,9 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
 
     gelCanvas.width = currentImage.width;
     gelCanvas.height = currentImage.height;
-    context.putImageData(currentImage.imageData, 0, 0);
+    const preprocessed = getPreprocessedImageForCurrentSettings();
+    const baseImageData = preprocessed?.previewImageData || currentImage.imageData;
+    context.putImageData(baseImageData, 0, 0);
 
     const overrides = normalizeManualOverrides(manualOverrides);
     const segmentation = overrides.laneSegmentation || {};
@@ -2381,9 +2581,16 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
     }
 
     const totalBands = (currentReport.lanes || []).reduce((sum, lane) => sum + (lane.bands?.length || 0), 0);
+    const targetIntensities = (currentReport.lanes || [])
+      .map((lane) => Number(lane.targetBandIntensity))
+      .filter((value) => Number.isFinite(value));
+    const averageTargetIntensity = targetIntensities.length
+      ? round(mean(targetIntensities), 4)
+      : null;
     const calibrationText = currentReport.calibration?.ok
       ? `R^2 ${currentReport.calibration.r2}`
       : 'Not calibrated';
+    const enhancementText = `${currentReport.preprocessing?.denoiseStrength ?? '-'}% denoise / ${currentReport.preprocessing?.contrastBoost ?? '-'}% contrast`;
     const tiffPageText = currentReport.image?.tiffPageCount
       ? `${currentReport.image.tiffPage}/${currentReport.image.tiffPageCount}`
       : '-';
@@ -2406,6 +2613,8 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
         <p><strong>Total Bands:</strong> ${safeText(String(totalBands))}</p>
         <p><strong>TIFF Page:</strong> ${safeText(String(tiffPageText))}</p>
         <p><strong>Calibration:</strong> ${safeText(calibrationText)}</p>
+        <p><strong>Enhancement:</strong> ${safeText(enhancementText)}</p>
+        <p><strong>Avg Target Intensity:</strong> ${safeText(String(averageTargetIntensity ?? '-'))}</p>
         <p><strong>Confidence:</strong> ${safeText(currentReport.confidence?.label || '-')} (${safeText(String(currentReport.confidence?.score ?? '-'))})</p>
       </article>
       <article class="card">
@@ -2428,22 +2637,16 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
     }
 
     try {
-      const normalized = normalizeManualOverrides(manualOverrides);
-      if (
-        Number.isFinite(normalized.laneSegmentation?.bandTop)
-        && Number.isFinite(normalized.laneSegmentation?.bandBottom)
-        && !(normalized.addedBands?.length || 0)
-      ) {
-        syncAddedBandsFromBandWindow();
-      }
       const params = readParams();
+      const preprocessed = getPreprocessedImageForCurrentSettings();
       setStatus('Running gel analysis pipeline...');
       const result = analyzeGelImage({
         gray: currentImage.gray,
         imageName: currentImage.name,
         width: currentImage.width,
         height: currentImage.height,
-        params
+        params,
+        preprocessed
       });
       currentReport = result.report;
       renderCanvas();
@@ -2547,8 +2750,15 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
     gelTypeInput.value = 'sds-page';
     gelLadderLaneInput.value = '1';
     gelNormalizationInput.value = 'none';
+    if (gelDenoiseStrengthInput) {
+      gelDenoiseStrengthInput.value = '35';
+    }
+    if (gelContrastStrengthInput) {
+      gelContrastStrengthInput.value = '100';
+    }
+    renderEnhancementValues();
 
-    currentImage = null;
+    setCurrentImage(null);
     originalImage = null;
     currentReport = null;
     manualOverrides = createEmptyManualOverrides();
@@ -2580,12 +2790,20 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
       : 'sds-page';
     gelLadderLaneInput.value = String(parameters.ladderLane || 1);
     gelNormalizationInput.value = parameters.normalization || 'none';
+    const enhancement = normalizeEnhancementSettings(parameters.enhancement || {});
+    if (gelDenoiseStrengthInput) {
+      gelDenoiseStrengthInput.value = String(enhancement.denoiseStrength);
+    }
+    if (gelContrastStrengthInput) {
+      gelContrastStrengthInput.value = String(enhancement.contrastBoost);
+    }
+    renderEnhancementValues();
     manualOverrides = normalizeManualOverrides(record.manualOverrides || parameters.manualOverrides);
     manualDividerConfirmed = Boolean(manualOverrides.laneSegmentation?.dividerDone);
     renderOverrideStatus();
 
     currentReport = record.report || null;
-    currentImage = null;
+    setCurrentImage(null);
     originalImage = null;
     cropApplied = false;
     leaveCropMode();
@@ -2698,6 +2916,7 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
 
   function render() {
     ensureState();
+    renderEnhancementValues();
     renderProjectOptions();
     renderNotebookOptions();
     setCropUiState();
