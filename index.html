@@ -2139,8 +2139,8 @@
       </div>
 
       <div id="tool-colony-counter-view" class="panel tool-subview" hidden>
-        <h3>Colony Counter (OpenCV)</h3>
-        <p class="small-note">Upload a plate image, tune segmentation settings, and count colonies automatically.</p>
+        <h3>Colony Counter (Manual Click)</h3>
+        <p class="small-note">Upload a plate image, then click each colony to count manually.</p>
 
         <div class="colony-counter-shell">
           <form id="colony-counter-form" class="stack-form colony-counter-controls" autocomplete="off">
@@ -2158,67 +2158,23 @@
 
             <div class="form-grid">
               <label>
-                Threshold Mode
-                <select id="colony-threshold-mode">
-                  <option value="otsu" selected>Otsu (Auto)</option>
-                  <option value="manual">Manual</option>
-                </select>
-              </label>
-              <label>
-                Manual Threshold (0-255)
-                <input id="colony-threshold-value" type="number" min="0" max="255" step="1" value="135" />
-              </label>
-              <label>
-                Blur Sigma
-                <input id="colony-blur-sigma" type="number" min="0" max="12" step="0.1" value="1.2" />
-              </label>
-              <label>
-                Morph Kernel Size (px)
-                <input id="colony-kernel-size" type="number" min="0" max="25" step="1" value="3" />
-              </label>
-              <label>
-                Min Area (px^2)
-                <input id="colony-min-area" type="number" min="1" step="1" value="30" />
-              </label>
-              <label>
-                Max Area (px^2)
-                <input id="colony-max-area" type="number" min="1" step="1" value="10000" />
-              </label>
-              <label>
-                Min Circularity (0-1)
-                <input id="colony-min-circularity" type="number" min="0" max="1" step="0.01" value="0.35" />
-              </label>
-              <label>
-                Max Process Size (px)
-                <input id="colony-max-size" type="number" min="300" max="4000" step="50" value="1400" />
+                Display Max Size (px)
+                <input id="colony-max-size" type="number" min="300" max="5000" step="50" value="1600" />
               </label>
             </div>
 
-            <label class="inline-row">
-              <input id="colony-dark-objects" type="checkbox" checked />
-              Colonies are darker than background
-            </label>
+            <p class="small-note">Left-click to add a colony marker. Right-click to remove the nearest marker.</p>
 
             <div class="form-actions">
-              <button id="colony-load-opencv-btn" type="button" class="ghost-btn">Load OpenCV</button>
-              <button id="colony-run-btn" type="submit" class="primary-btn">Count Colonies</button>
+              <button id="colony-clear-markers-btn" type="button" class="ghost-btn">Clear Markers</button>
+              <button id="colony-run-btn" type="submit" class="primary-btn">Save Manual Count</button>
               <button id="colony-reset-btn" type="button" class="ghost-btn">Reset</button>
-              <span id="colony-status" class="small-note">Load an image to begin.</span>
-            </div>
-
-            <div id="colony-opencv-loader" class="colony-opencv-loader" hidden>
-              <div class="colony-opencv-progress-track" aria-hidden="true">
-                <div id="colony-opencv-progress-fill" class="colony-opencv-progress-fill"></div>
-              </div>
-              <div class="colony-opencv-progress-row">
-                <span id="colony-opencv-progress-text" class="small-note">Preparing OpenCV runtime...</span>
-                <button id="colony-opencv-retry-btn" type="button" class="ghost-btn" hidden>Retry OpenCV</button>
-              </div>
+              <span id="colony-status" class="small-note">Load an image, then click colonies to count manually.</span>
             </div>
           </form>
 
           <div id="colony-summary" class="calc-output">
-            <p class="small-note">Load a plate image and run counting.</p>
+            <p class="small-note">Load a plate image, then click each colony to count manually.</p>
           </div>
 
           <div id="colony-cropper-shell" class="colony-cropper-shell" hidden>
@@ -2234,7 +2190,7 @@
             </section>
             <section class="plannotate-result-card colony-preview-card">
               <div class="plannotate-card-head">
-                <h4>Binary Mask</h4>
+                <h4>Marker Map</h4>
               </div>
               <canvas id="colony-mask-canvas" class="colony-preview-canvas"></canvas>
             </section>

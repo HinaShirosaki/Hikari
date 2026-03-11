@@ -16,6 +16,7 @@ const {
   getCodexLoginStatus,
   requestCodexCliText
 } = require('./codex-cli-provider');
+const { downloadPaperAndSiPdf } = require('./agent-paper-download');
 let AGENT_IO_CONTRACT_RAW = {};
 try {
   AGENT_IO_CONTRACT_RAW = require('./data/agent-io-contract.json');
@@ -52,7 +53,7 @@ const LLM_PROMPTS_FILE_PATH = path.join(__dirname, 'data', 'llm-prompts.json');
 const DEFAULT_AGENT_SYSTEM_PROMPT_TEMPLATE =
   'You are Enana Lab Assistant Agent.\n{{projectScope}}\nRespond concisely and avoid fabrication.';
 const DEFAULT_AGENT_SYNTHESIS_PROMPT_TEMPLATE =
-  'Return JSON matching the schema exactly. Do not claim write operations were executed. Write intent detected: {{writeIntent}}.';
+  'Return JSON matching the schema exactly. Only claim write operations were executed when tool trace confirms success. Write intent detected: {{writeIntent}}.';
 let mainWindow = null;
 let telegramBot = null;
 let savedTelegramToken = '';
@@ -681,7 +682,47 @@ function buildFallbackAgentIoTools() {
     makeTool('search_assays', 'Read assay runs with plate metadata and compact numeric summaries.'),
     makeTool('search_gel_analyses', 'Read gel analysis runs with confidence, calibration, and warning summaries.'),
     makeTool('search_inventory', 'Read chemical and personal inventory records.', 25),
-    makeTool('search_papers', 'Read uploaded paper summaries, methods, and reagent extraction notes.')
+    makeTool('search_papers', 'Read uploaded paper summaries, methods, and reagent extraction notes.'),
+    {
+      name: 'download_paper_pdf',
+      description: 'Write tool. Download a paper PDF and optional SI PDFs into the configured storage path.',
+      input_schema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['linked_type', 'linked_name', 'paper_pdf_url'],
+        properties: {
+          linked_type: { type: 'string', enum: ['project', 'journal-club'] },
+          linked_name: { type: 'string' },
+          paper_pdf_url: { type: 'string' },
+          paper_file_name: { type: 'string' },
+          si_pdf_urls: { type: 'array', items: { type: 'string' } },
+          si_file_names: { type: 'array', items: { type: 'string' } },
+          storage_path: { type: 'string' }
+        }
+      },
+      output_schema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['items', 'citations', 'summary'],
+        properties: {
+          items: { type: 'array', items: { type: 'object' } },
+          citations: {
+            type: 'array',
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              required: ['source', 'pointer', 'reason'],
+              properties: {
+                source: { type: 'string' },
+                pointer: { type: 'string' },
+                reason: { type: 'string' }
+              }
+            }
+          },
+          summary: { type: 'string' }
+        }
+      }
+    }
   ];
 }
 
@@ -883,7 +924,12 @@ function extractFunctionCalls(payload) {
 }
 
 function containsWriteIntent(text) {
-  return /\b(create|update|edit|delete|remove|reserve|consume|commit|save)\b/i.test(String(text || ''));
+  return /\b(create|update|edit|delete|remove|reserve|consume|commit|save|download|fetch|import|upload|store)\b/i
+    .test(String(text || ''));
+}
+
+function isWriteTool(name) {
+  return String(name || '').trim() === 'download_paper_pdf';
 }
 
 function buildIntermediateState(stage, goal, extras = {}) {
@@ -962,6 +1008,9 @@ function normalizeAgentSnapshot(rawSnapshot) {
         chemicals: asArray(snapshot.inventory.chemicals).slice(0, 160)
       }
       : { personal: [], chemicals: [] },
+    settings: {
+      storagePath: cleanText(snapshot?.settings?.storagePath || snapshot?.storagePath, 1200)
+    },
     timestamp: cleanText(snapshot.timestamp, 80)
   };
 }
@@ -1030,7 +1079,7 @@ function buildAgentToolOutputEnvelope(toolName, args, rawResult, options = {}) {
   };
 }
 
-function runAgentTool(name, args, snapshot) {
+async function runAgentTool(name, args, snapshot, options = {}) {
   const normalizedArgs = normalizeToolInvocationArgs(args);
   const query = cleanText(normalizedArgs?.query, 300);
   const requestedLimit = Number(normalizedArgs?.limit);
@@ -1038,6 +1087,7 @@ function runAgentTool(name, args, snapshot) {
   const schemaLimit = Number(toolDefinition?.input_schema?.properties?.limit?.maximum);
   const limitCap = Number.isFinite(schemaLimit) && schemaLimit > 0 ? schemaLimit : 25;
   const limit = clamp(Number.isFinite(requestedLimit) && requestedLimit > 0 ? requestedLimit : 6, 1, limitCap);
+  const allowWriteTools = options?.allowWriteTools === true;
   const protocolStepText = (step) => {
     if (typeof step === 'string') {
       return cleanText(step, 220);
@@ -1265,6 +1315,120 @@ function runAgentTool(name, args, snapshot) {
       })),
       summary: `Found ${items.length} matching papers.`
     });
+  }
+
+  if (name === 'download_paper_pdf') {
+    if (!allowWriteTools) {
+      return buildAgentToolOutputEnvelope(
+        name,
+        normalizedArgs,
+        {
+          items: [],
+          citations: [],
+          summary: 'Write action blocked: explicit approval is required before downloading files.'
+        },
+        {
+          ok: false,
+          error: 'Write action blocked: explicit approval is required.'
+        }
+      );
+    }
+
+    const linkedTypeRaw = cleanText(normalizedArgs?.linked_type, 40).toLowerCase();
+    const linkedType = linkedTypeRaw === 'journal-club' ? 'journal-club' : 'project';
+    const linkedName = cleanText(normalizedArgs?.linked_name, 180) || 'Uncategorized';
+    const storagePath = cleanText(normalizedArgs?.storage_path, 1200)
+      || cleanText(snapshot?.settings?.storagePath, 1200);
+    const paperPdfUrl = cleanText(normalizedArgs?.paper_pdf_url, 2200);
+    const paperFileName = cleanText(normalizedArgs?.paper_file_name, 240);
+    const siPdfUrls = asArray(normalizedArgs?.si_pdf_urls).map((value) => cleanText(value, 2200)).filter(Boolean);
+    const siFileNames = asArray(normalizedArgs?.si_file_names).map((value) => cleanText(value, 240)).filter(Boolean);
+
+    if (!storagePath) {
+      return buildAgentToolOutputEnvelope(
+        name,
+        normalizedArgs,
+        {
+          items: [],
+          citations: [],
+          summary: 'Cannot download PDFs because Settings storage path is missing.'
+        },
+        {
+          ok: false,
+          error: 'Missing storage path. Set Settings > Storage Folder Path or pass storage_path.'
+        }
+      );
+    }
+
+    if (!paperPdfUrl) {
+      return buildAgentToolOutputEnvelope(
+        name,
+        normalizedArgs,
+        {
+          items: [],
+          citations: [],
+          summary: 'Missing paper PDF URL.'
+        },
+        {
+          ok: false,
+          error: 'Missing required argument paper_pdf_url.'
+        }
+      );
+    }
+
+    try {
+      const downloaded = await downloadPaperAndSiPdf({
+        storagePath,
+        linkedType,
+        linkedName,
+        paperPdfUrl,
+        paperFileName,
+        siPdfSources: siPdfUrls,
+        siFileNames
+      });
+
+      const items = [
+        {
+          kind: 'paper',
+          source_url: downloaded.paper.sourceUrl,
+          file_name: cleanText(downloaded.paper.fileName, 240),
+          relative_path: cleanText(downloaded.paper.relativePath, 600),
+          size_bytes: Number(downloaded.paper.sizeBytes) || 0
+        },
+        ...asArray(downloaded.siPdfs).map((item) => ({
+          kind: 'si',
+          source_url: item.sourceUrl,
+          file_name: cleanText(item.fileName, 240),
+          relative_path: cleanText(item.relativePath, 600),
+          size_bytes: Number(item.sizeBytes) || 0
+        }))
+      ];
+      const citations = items.map((item) => ({
+        source: 'paper_download',
+        pointer: cleanText(item.relative_path || item.file_name, 240),
+        reason: item.kind === 'si' ? 'Downloaded SI PDF file.' : 'Downloaded main paper PDF file.'
+      }));
+
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+        items,
+        citations,
+        summary: `Downloaded 1 paper PDF and ${Math.max(0, items.length - 1)} SI PDF(s) into ${cleanText(downloaded.folders?.papers, 320)}.`
+      });
+    } catch (error) {
+      return buildAgentToolOutputEnvelope(
+        name,
+        normalizedArgs,
+        {
+          items: [],
+          citations: [],
+          summary: 'Paper/SI download failed.'
+        },
+        {
+          ok: false,
+          error: String(error?.message || error || 'Paper/SI download failed.')
+        }
+      );
+    }
   }
 
   return buildAgentToolOutputEnvelope(
@@ -2109,7 +2273,7 @@ function toPromptConversationTranscript(conversation) {
   return rows.length ? rows.join('\n') : 'No prior messages.';
 }
 
-function buildCodexAgentContext(message, snapshot) {
+async function buildCodexAgentContext(message, snapshot) {
   const retrievalTools = [
     'search_projects',
     'search_protocols',
@@ -2123,11 +2287,11 @@ function buildCodexAgentContext(message, snapshot) {
   const toolTrace = [];
   const evidence = [];
 
-  retrievalTools.forEach((toolName) => {
-    const result = runAgentTool(toolName, { query: message, limit: 5 }, snapshot);
+  for (const toolName of retrievalTools) {
+    const result = await runAgentTool(toolName, { query: message, limit: 5 }, snapshot);
     const items = asArray(result?.items).slice(0, 5);
     if (!items.length) {
-      return;
+      continue;
     }
     contextSlices.push({
       tool: toolName,
@@ -2145,7 +2309,7 @@ function buildCodexAgentContext(message, snapshot) {
         reason: cleanText(citation?.reason, 220)
       });
     });
-  });
+  }
 
   return {
     contextSlices,
@@ -2162,12 +2326,13 @@ async function runCodexAgentController({
   hasLatestUserInConversation,
   snapshot,
   projectName,
-  promptConfig
+  promptConfig,
+  allowWriteTools
 }) {
   const intermediateStates = [];
   const toolTrace = [];
   const evidence = [];
-  const requiresApproval = containsWriteIntent(message);
+  const requiresApproval = containsWriteIntent(message) && !allowWriteTools;
 
   intermediateStates.push(buildIntermediateState('intake', message, {
     assumptions: ['Codex CLI provider selected; retrieval context is assembled before generation.'],
@@ -2182,7 +2347,7 @@ async function runCodexAgentController({
     confidence: 0.52
   }));
 
-  const collected = buildCodexAgentContext(message, snapshot);
+  const collected = await buildCodexAgentContext(message, snapshot);
   toolTrace.push(...collected.toolTrace);
   evidence.push(...collected.evidence);
 
@@ -2277,7 +2442,11 @@ async function runCodexAgentController({
   }));
 
   intermediateStates.push(buildIntermediateState('handoff', 'Prepared response for UI handoff and audit trail.', {
-    assumptions: ['Any write action remains pending explicit approval.'],
+    assumptions: [
+      allowWriteTools
+        ? 'Write approval flag was enabled for this request.'
+        : 'Any write action remains pending explicit approval.'
+    ],
     confidence: normalized.confidence
   }));
 
@@ -2314,6 +2483,7 @@ async function runAgentController(payload) {
     && conversation[conversation.length - 1].role === 'user'
     && conversation[conversation.length - 1].text === message;
   const snapshot = normalizeAgentSnapshot(payload?.stateSnapshot);
+  const allowWriteTools = payload?.allowWriteTools === true;
   const projectName = cleanText(payload?.projectName, 180);
   const promptConfig = await loadLlmPrompts();
 
@@ -2326,7 +2496,8 @@ async function runAgentController(payload) {
       hasLatestUserInConversation,
       snapshot,
       projectName,
-      promptConfig
+      promptConfig,
+      allowWriteTools
     });
   }
 
@@ -2335,8 +2506,14 @@ async function runAgentController(payload) {
   const evidence = [];
 
   intermediateStates.push(buildIntermediateState('intake', message, {
-    assumptions: ['User question is interpreted as read-first unless writes are explicitly requested.'],
-    openQuestions: containsWriteIntent(message) ? ['User may want a write action; approval is required before any write.'] : [],
+    assumptions: [
+      allowWriteTools
+        ? 'Explicit approval flag enabled write tools for this request.'
+        : 'User question is interpreted as read-first unless writes are explicitly requested.'
+    ],
+    openQuestions: containsWriteIntent(message) && !allowWriteTools
+      ? ['User may want a write action; approval is required before any write.']
+      : [],
     confidence: 0.45
   }));
 
@@ -2368,9 +2545,9 @@ async function runAgentController(payload) {
 
     const toolOutputs = [];
     const proposedActions = [];
-    calls.slice(0, 4).forEach((call) => {
+    for (const call of calls.slice(0, 4)) {
       const args = normalizeToolInvocationArgs(call.argsText);
-      const toolResult = runAgentTool(call.name, args, snapshot);
+      const toolResult = await runAgentTool(call.name, args, snapshot, { allowWriteTools });
       const normalizedInput = toolResult?.input && typeof toolResult.input === 'object' ? toolResult.input : args;
       toolOutputs.push({
         callId: call.callId,
@@ -2390,12 +2567,16 @@ async function runAgentController(payload) {
         });
       });
       proposedActions.push({
-        action_type: 'read',
+        action_type: isWriteTool(call.name) ? 'write' : 'read',
         tool_name: call.name,
-        risk_level: 'low',
-        reason: 'Model-requested read operation.'
+        risk_level: isWriteTool(call.name) ? 'high' : 'low',
+        reason: isWriteTool(call.name)
+          ? (allowWriteTools
+            ? 'Model-requested write operation executed with explicit approval.'
+            : 'Model-requested write operation blocked pending explicit approval.')
+          : 'Model-requested read operation.'
       });
-    });
+    }
 
     intermediateStates.push(buildIntermediateState('execute', `Executed ${toolOutputs.length} tool calls in round ${round + 1}.`, {
       evidence: evidence.slice(-10),
@@ -2409,10 +2590,14 @@ async function runAgentController(payload) {
   }
 
   const draftAnswer = extractAgentSessionText(session);
-  const requiresApproval = containsWriteIntent(message);
+  const requiresApproval = containsWriteIntent(message) && !allowWriteTools;
 
   intermediateStates.push(buildIntermediateState('verify', 'Verified evidence coverage and policy constraints.', {
-    assumptions: ['Only read tools were executed by policy.'],
+    assumptions: [
+      allowWriteTools
+        ? 'Write tools were allowed for this request via explicit approval.'
+        : 'Write tools were blocked by policy; only read tools were executed.'
+    ],
     openQuestions: evidence.length ? [] : ['No evidence citations were produced by tools.'],
     evidence: evidence.slice(-12),
     confidence: evidence.length ? 0.72 : 0.58
@@ -2473,7 +2658,11 @@ async function runAgentController(payload) {
   }));
 
   intermediateStates.push(buildIntermediateState('handoff', 'Prepared response for UI handoff and audit trail.', {
-    assumptions: ['Any write action remains pending explicit approval.'],
+    assumptions: [
+      allowWriteTools
+        ? 'Write tools were allowed for this request via explicit approval.'
+        : 'Any write action remains pending explicit approval.'
+    ],
     confidence: normalized.confidence
   }));
 
@@ -2501,6 +2690,7 @@ ipcMain.handle('agent:chat', async (_event, payload) => {
     requestId,
     projectId: cleanText(normalizedPayload?.projectId, 80),
     projectName: cleanText(normalizedPayload?.projectName, 180),
+    allowWriteTools: normalizedPayload?.allowWriteTools === true,
     message: cleanText(normalizedPayload?.message, 3000),
     conversation: extractConversation(normalizedPayload?.conversation),
     llm: summarizeLlmForAgentLog(normalizedPayload?.llm)

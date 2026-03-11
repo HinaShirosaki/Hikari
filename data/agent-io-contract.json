@@ -16,6 +16,7 @@
           "message": { "type": "string" },
           "projectId": { "type": "string" },
           "projectName": { "type": "string" },
+          "allowWriteTools": { "type": "boolean" },
           "conversation": {
             "type": "array",
             "items": {
@@ -597,6 +598,60 @@
                     }
                   }
                 }
+              }
+            }
+          },
+          "citations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["source", "pointer", "reason"],
+              "properties": {
+                "source": { "type": "string" },
+                "pointer": { "type": "string" },
+                "reason": { "type": "string" }
+              }
+            }
+          },
+          "summary": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "download_paper_pdf",
+      "description": "Write tool. Download one paper PDF and optional SI PDFs into storage path under Project/JournalClub folders.",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["linked_type", "linked_name", "paper_pdf_url"],
+        "properties": {
+          "linked_type": { "type": "string", "enum": ["project", "journal-club"] },
+          "linked_name": { "type": "string" },
+          "paper_pdf_url": { "type": "string" },
+          "paper_file_name": { "type": "string" },
+          "si_pdf_urls": { "type": "array", "items": { "type": "string" } },
+          "si_file_names": { "type": "array", "items": { "type": "string" } },
+          "storage_path": { "type": "string" }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["items", "citations", "summary"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["kind", "source_url", "file_name", "relative_path", "size_bytes"],
+              "properties": {
+                "kind": { "type": "string", "enum": ["paper", "si"] },
+                "source_url": { "type": "string" },
+                "file_name": { "type": "string" },
+                "relative_path": { "type": "string" },
+                "size_bytes": { "type": "number" }
               }
             }
           },

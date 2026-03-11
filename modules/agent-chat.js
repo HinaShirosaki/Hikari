@@ -118,7 +118,8 @@ const TOOL_ACTIVITY_LABELS = {
   search_assays: 'Checking assay records',
   search_gel_analyses: 'Checking gel analysis records',
   search_inventory: 'Checking inventory records',
-  search_papers: 'Checking stored PDF papers'
+  search_papers: 'Checking stored PDF papers',
+  download_paper_pdf: 'Downloading papers'
 };
 
 function inferRequestedActivities(requestText) {
@@ -352,6 +353,9 @@ export function initAgentChat({ state, persist, createId, safeText }) {
       experimentData,
       papers,
       inventory: mapInventory(state),
+      settings: {
+        storagePath: trimText(state.settings?.storagePath, 1200)
+      },
       timestamp: new Date().toISOString()
     };
   }
