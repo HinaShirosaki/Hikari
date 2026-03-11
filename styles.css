@@ -2109,7 +2109,7 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
 .sequence-viewer-results {
   display: grid;
   gap: 12px;
-  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1fr) minmax(0, 1.15fr);
+  grid-template-columns: minmax(260px, 0.8fr) minmax(0, 1.6fr);
   align-items: start;
 }
 
@@ -2175,16 +2175,18 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   transform: translateX(-100%);
 }
 
-.sequence-viewer-table-wrap {
-  max-height: 330px;
+.sequence-viewer-sequence-card {
+  display: grid;
+  gap: 10px;
 }
 
-.sequence-viewer-table {
-  min-width: 810px;
+.sequence-viewer-feature-bottom {
+  display: grid;
+  gap: 8px;
 }
 
-.sequence-viewer-row-active td {
-  background: rgba(78, 127, 255, 0.14);
+.sequence-viewer-feature-detail {
+  margin-top: 0;
 }
 
 .sequence-viewer-sequence-host {
@@ -2196,26 +2198,51 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   overflow: auto;
 }
 
-.sequence-viewer-seq-line {
+.sequence-viewer-dual-line {
   display: grid;
   grid-template-columns: 74px 1fr;
   gap: 10px;
+  align-items: start;
+  margin-bottom: 6px;
+}
+
+.sequence-viewer-strand-pair {
+  display: grid;
+  gap: 2px;
+}
+
+.sequence-viewer-strand-row {
+  display: grid;
+  grid-template-columns: 28px 1fr 28px;
+  gap: 6px;
   align-items: baseline;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
   font-size: 0.79rem;
-  line-height: 1.42;
+  line-height: 1.35;
+}
+
+.sequence-viewer-strand-row-bottom {
+  opacity: 0.95;
 }
 
 .sequence-viewer-seq-coord {
   color: var(--muted);
   user-select: none;
   text-align: right;
+  line-height: 1.35;
+  padding-top: 2px;
+}
+
+.sequence-viewer-strand-end {
+  color: var(--muted);
+  user-select: none;
+  text-align: center;
 }
 
 .sequence-viewer-seq-text {
   letter-spacing: 0.022em;
-  white-space: pre-wrap;
-  word-break: break-word;
+  white-space: nowrap;
+  overflow-x: auto;
 }
 
 .sequence-viewer-seq-highlight {
@@ -2230,9 +2257,17 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
 }
 
 @media (max-width: 640px) {
-  .sequence-viewer-seq-line {
+  .sequence-viewer-results {
+    grid-template-columns: 1fr;
+  }
+
+  .sequence-viewer-dual-line {
     grid-template-columns: 58px 1fr;
     gap: 8px;
+  }
+
+  .sequence-viewer-strand-row {
+    grid-template-columns: 24px 1fr 24px;
     font-size: 0.74rem;
   }
 }
@@ -2820,7 +2855,8 @@ body.theme-night .sequence-viewer-mode-btn {
 }
 
 body.theme-night .sequence-viewer-feature-rail-host,
-body.theme-night .sequence-viewer-sequence-host {
+body.theme-night .sequence-viewer-sequence-host,
+body.theme-night .sequence-viewer-feature-detail {
   border-color: rgba(186, 218, 255, 0.3);
   background: rgba(20, 31, 48, 0.5);
 }
@@ -2834,7 +2870,8 @@ body.theme-night .sequence-viewer-feature-rail {
 }
 
 body.theme-night .sequence-viewer-feature-axis span,
-body.theme-night .sequence-viewer-seq-coord {
+body.theme-night .sequence-viewer-seq-coord,
+body.theme-night .sequence-viewer-strand-end {
   color: rgba(213, 234, 255, 0.76);
 }
 

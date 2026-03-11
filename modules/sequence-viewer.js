@@ -2,12 +2,41 @@ import { escapeHtml } from './tool-box/common.js';
 
 const DEFAULT_MAX_RECORDS = 5000;
 const SEQUENCE_LINE_LENGTH = 70;
+const DUAL_STRAND_SCROLL_STEP = 44;
+const BASE_COMPLEMENT = Object.freeze({
+  A: 'T',
+  C: 'G',
+  G: 'C',
+  T: 'A',
+  U: 'A',
+  R: 'Y',
+  Y: 'R',
+  S: 'S',
+  W: 'W',
+  K: 'M',
+  M: 'K',
+  B: 'V',
+  D: 'H',
+  H: 'D',
+  V: 'B',
+  N: 'N',
+  '*': '*'
+});
 
 function normalizeSequenceText(raw) {
   return String(raw || '')
     .toUpperCase()
     .replace(/U/g, 'T')
     .replace(/[^A-Z*]/g, '');
+}
+
+function complementBase(base) {
+  const normalized = String(base || '').toUpperCase();
+  return BASE_COMPLEMENT[normalized] || 'N';
+}
+
+function complementSequence(sequence) {
+  return [...normalizeSequenceText(sequence)].map((base) => complementBase(base)).join('');
 }
 
 function clamp(value, min, max) {
@@ -721,12 +750,34 @@ function assignFeatureLanes(features) {
   });
 }
 
-function renderSequenceLinesHtml(sequence, highlightedSegments = []) {
+function buildHighlightedLineMarkup(sourceText, lineStart, lineEnd, lineHighlights) {
+  let body = '';
+  if (!lineHighlights.length) {
+    return escapeHtml(sourceText.slice(lineStart, lineEnd));
+  }
+
+  let cursor = lineStart;
+  lineHighlights.forEach((segment) => {
+    if (segment.start > cursor) {
+      body += escapeHtml(sourceText.slice(cursor, segment.start));
+    }
+    body += `<span class="sequence-viewer-seq-highlight">${escapeHtml(sourceText.slice(segment.start, segment.end))}</span>`;
+    cursor = segment.end;
+  });
+
+  if (cursor < lineEnd) {
+    body += escapeHtml(sourceText.slice(cursor, lineEnd));
+  }
+  return body;
+}
+
+function renderDualStrandSequenceLinesHtml(sequence, highlightedSegments = []) {
   const text = normalizeSequenceText(sequence);
   if (!text.length) {
     return '<p class="small-note">No sequence loaded.</p>';
   }
 
+  const complementary = complementSequence(text);
   const sortedHighlights = highlightedSegments
     .map((segment) => ({
       start: Math.max(0, Number(segment.start) || 0),
@@ -739,7 +790,6 @@ function renderSequenceLinesHtml(sequence, highlightedSegments = []) {
 
   for (let lineStart = 0; lineStart < text.length; lineStart += SEQUENCE_LINE_LENGTH) {
     const lineEnd = Math.min(text.length, lineStart + SEQUENCE_LINE_LENGTH);
-    const lineText = text.slice(lineStart, lineEnd);
     const lineHighlights = sortedHighlights
       .map((segment) => ({
         start: Math.max(lineStart, segment.start),
@@ -748,32 +798,50 @@ function renderSequenceLinesHtml(sequence, highlightedSegments = []) {
       .filter((segment) => segment.end > segment.start)
       .sort((a, b) => a.start - b.start);
 
-    let body = '';
-    if (!lineHighlights.length) {
-      body = escapeHtml(lineText);
-    } else {
-      let cursor = lineStart;
-      lineHighlights.forEach((segment) => {
-        if (segment.start > cursor) {
-          body += escapeHtml(text.slice(cursor, segment.start));
-        }
-        body += `<span class="sequence-viewer-seq-highlight">${escapeHtml(text.slice(segment.start, segment.end))}</span>`;
-        cursor = segment.end;
-      });
-      if (cursor < lineEnd) {
-        body += escapeHtml(text.slice(cursor, lineEnd));
-      }
-    }
+    const forwardBody = buildHighlightedLineMarkup(text, lineStart, lineEnd, lineHighlights);
+    const complementaryBody = buildHighlightedLineMarkup(complementary, lineStart, lineEnd, lineHighlights);
 
     lines.push(`
-      <div class="sequence-viewer-seq-line">
+      <div class="sequence-viewer-dual-line">
         <span class="sequence-viewer-seq-coord">${(lineStart + 1).toLocaleString()}</span>
-        <span class="sequence-viewer-seq-text">${body}</span>
+        <div class="sequence-viewer-strand-pair">
+          <div class="sequence-viewer-strand-row sequence-viewer-strand-row-top">
+            <span class="sequence-viewer-strand-end">5'</span>
+            <span class="sequence-viewer-seq-text">${forwardBody}</span>
+            <span class="sequence-viewer-strand-end">3'</span>
+          </div>
+          <div class="sequence-viewer-strand-row sequence-viewer-strand-row-bottom">
+            <span class="sequence-viewer-strand-end">3'</span>
+            <span class="sequence-viewer-seq-text">${complementaryBody}</span>
+            <span class="sequence-viewer-strand-end">5'</span>
+          </div>
+        </div>
       </div>
     `);
   }
 
   return lines.join('');
+}
+
+function formatSelectedFeatureDetailHtml(feature, sequenceLength) {
+  if (!feature) {
+    return '<p class="small-note">Select a feature in the bottom track to view details.</p>';
+  }
+
+  const strand = feature.strand === -1 ? '-' : '+';
+  const location = buildFeatureLocationText(feature, sequenceLength);
+  const identity = Number.isFinite(feature.identity) ? `${feature.identity.toFixed(2)}%` : 'n/a';
+  const coverage = Number.isFinite(feature.coverage) ? `${feature.coverage.toFixed(2)}%` : 'n/a';
+  const source = String(feature.mode || feature.source || '-');
+  const description = String(feature.description || '').trim();
+
+  return `
+    <p><strong>${escapeHtml(feature.name || '-')}</strong></p>
+    <p><strong>Type:</strong> ${escapeHtml(feature.type || '-')} · <strong>Strand:</strong> ${strand}</p>
+    <p><strong>Location:</strong> ${escapeHtml(location)}</p>
+    <p><strong>Identity:</strong> ${identity} · <strong>Coverage:</strong> ${coverage} · <strong>Source:</strong> ${escapeHtml(source)}</p>
+    ${description ? `<p class="small-note">${escapeHtml(description)}</p>` : ''}
+  `;
 }
 
 export function initSequenceViewer() {
@@ -800,7 +868,7 @@ export function initSequenceViewer() {
   const statFeatures = document.getElementById('sequence-viewer-stat-features');
 
   const featureRailHost = document.getElementById('sequence-viewer-feature-rail-host');
-  const featureTableBody = document.getElementById('sequence-viewer-feature-table-body');
+  const featureDetail = document.getElementById('sequence-viewer-feature-detail');
   const sequenceHost = document.getElementById('sequence-viewer-sequence-host');
 
   const state = {
@@ -934,37 +1002,19 @@ export function initSequenceViewer() {
     `;
   }
 
-  function renderFeatureTable(record) {
-    if (!featureTableBody) {
+  function renderSelectedFeatureDetail(record) {
+    if (!featureDetail) {
       return;
     }
 
     const features = Array.isArray(record?.features) ? record.features : [];
-    if (!features.length) {
-      featureTableBody.innerHTML = '<tr><td colspan="8" class="small-note">No features available.</td></tr>';
+    if (!features.length || state.selectedFeatureIndex < 0) {
+      featureDetail.innerHTML = '<p class="small-note">Select a feature in the bottom track to view details.</p>';
       return;
     }
 
-    featureTableBody.innerHTML = features
-      .map((feature, index) => {
-        const activeClass = index === state.selectedFeatureIndex ? ' class="sequence-viewer-row-active"' : '';
-        const strand = feature.strand === -1 ? '-' : '+';
-        const identity = Number.isFinite(feature.identity) ? `${feature.identity.toFixed(2)}%` : 'n/a';
-        const coverage = Number.isFinite(feature.coverage) ? `${feature.coverage.toFixed(2)}%` : 'n/a';
-        return `
-          <tr data-feature-index="${index}"${activeClass}>
-            <td>${index + 1}</td>
-            <td>${escapeHtml(feature.name)}</td>
-            <td>${escapeHtml(feature.type || '-')}</td>
-            <td>${escapeHtml(buildFeatureLocationText(feature, record.sequence.length))}</td>
-            <td>${strand}</td>
-            <td>${identity}</td>
-            <td>${coverage}</td>
-            <td>${escapeHtml(feature.mode || feature.source || '-')}</td>
-          </tr>
-        `;
-      })
-      .join('');
+    const selected = features[state.selectedFeatureIndex] || null;
+    featureDetail.innerHTML = formatSelectedFeatureDetailHtml(selected, record.sequence.length);
   }
 
   function renderSequence(record) {
@@ -982,12 +1032,12 @@ export function initSequenceViewer() {
       : null;
 
     const highlights = selectedFeature?.segments || [];
-    sequenceHost.innerHTML = renderSequenceLinesHtml(record.sequence, highlights);
+    sequenceHost.innerHTML = renderDualStrandSequenceLinesHtml(record.sequence, highlights);
 
     if (highlights.length) {
       const first = highlights[0];
       const firstLine = Math.max(0, Math.floor(first.start / SEQUENCE_LINE_LENGTH));
-      sequenceHost.scrollTop = Math.max(0, (firstLine * 24) - 42);
+      sequenceHost.scrollTop = Math.max(0, (firstLine * DUAL_STRAND_SCROLL_STEP) - 42);
     } else {
       sequenceHost.scrollTop = 0;
     }
@@ -1037,9 +1087,9 @@ export function initSequenceViewer() {
   function renderActiveRecord() {
     const record = getSelectedRecord();
     renderStats(record);
-    renderFeatureRail(record);
-    renderFeatureTable(record);
     renderSequence(record);
+    renderFeatureRail(record);
+    renderSelectedFeatureDetail(record);
     updateMessages();
   }
 
@@ -1157,24 +1207,11 @@ export function initSequenceViewer() {
   });
 
   featureRailHost?.addEventListener('click', (event) => {
-    const trigger = event.target.closest('[data-feature-index]');
+    const trigger = event.target?.closest?.('[data-feature-index]') || null;
     if (!trigger) {
       return;
     }
     const index = Number(trigger.dataset.featureIndex);
-    if (!Number.isFinite(index)) {
-      return;
-    }
-    state.selectedFeatureIndex = index;
-    renderActiveRecord();
-  });
-
-  featureTableBody?.addEventListener('click', (event) => {
-    const row = event.target.closest('[data-feature-index]');
-    if (!row) {
-      return;
-    }
-    const index = Number(row.dataset.featureIndex);
     if (!Number.isFinite(index)) {
       return;
     }
@@ -1219,6 +1256,8 @@ export function initSequenceViewer() {
 
 export {
   normalizeSequenceText,
+  complementBase,
+  complementSequence,
   detectSequenceFormat,
   parseFastaRecords,
   parseFastqRecords,
@@ -1226,6 +1265,8 @@ export {
   parseInputRecords,
   normalizeExternalPayload,
   parseGenBankLocationSegments,
+  renderDualStrandSequenceLinesHtml,
+  formatSelectedFeatureDetailHtml,
   computeGcPercent,
   countAmbiguousBases,
   summarizeFastqQuality

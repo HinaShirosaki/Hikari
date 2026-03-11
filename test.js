@@ -402,6 +402,10 @@ const sequenceViewerInternals = loadEsmStyleModule(
     'parseInputRecords',
     'normalizeExternalPayload',
     'parseGenBankLocationSegments',
+    'complementBase',
+    'complementSequence',
+    'renderDualStrandSequenceLinesHtml',
+    'formatSelectedFeatureDetailHtml',
     'computeGcPercent',
     'countAmbiguousBases',
     'summarizeFastqQuality'
@@ -2185,6 +2189,15 @@ test('tool-box exposes optional sequence viewer handoff callback contract', () =
   assert.match(source, /plannotate-open-sequence-viewer/);
 });
 
+test('sequence viewer uses bottom feature track without table dependency', () => {
+  const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const viewerSource = readSource('modules/sequence-viewer.js');
+  assert.match(html, /id="sequence-viewer-feature-rail-host"/);
+  assert.match(html, /id="sequence-viewer-feature-detail"/);
+  assert.equal(html.includes('sequence-viewer-feature-table-body'), false);
+  assert.equal(viewerSource.includes('featureTableBody'), false);
+});
+
 test('ketcher embedded page uses portable static path resolution', () => {
   const html = fs.readFileSync(path.join(__dirname, 'ketcher-embedded.html'), 'utf8');
   assert.equal(html.includes('/Users/'), false);
@@ -3211,6 +3224,10 @@ test('[EDGE] sequence-viewer internal functions are exposed for unit tests', () 
     'parseInputRecords',
     'normalizeExternalPayload',
     'parseGenBankLocationSegments',
+    'complementBase',
+    'complementSequence',
+    'renderDualStrandSequenceLinesHtml',
+    'formatSelectedFeatureDetailHtml',
     'computeGcPercent',
     'countAmbiguousBases',
     'summarizeFastqQuality'
@@ -3308,6 +3325,105 @@ test('[EDGE] sequence-viewer normalizeExternalPayload clamps segments and keeps 
     JSON.stringify(normalized.features[0].segments),
     JSON.stringify([{ start: 0, end: 4 }, { start: 6, end: 8 }])
   );
+});
+
+test('[EDGE] sequence-viewer complement mapping handles canonical and ambiguous bases', () => {
+  assert.equal(sequenceViewerInternals.complementBase('A'), 'T');
+  assert.equal(sequenceViewerInternals.complementBase('C'), 'G');
+  assert.equal(sequenceViewerInternals.complementBase('R'), 'Y');
+  assert.equal(sequenceViewerInternals.complementBase('Z'), 'N');
+  assert.equal(sequenceViewerInternals.complementSequence('ACGTRYN'), 'TGCAYRN');
+});
+
+test('[EDGE] sequence-viewer dual-strand renderer shows 5/3 orientation and paired highlights', () => {
+  const html = sequenceViewerInternals.renderDualStrandSequenceLinesHtml('ACGTAC', [{ start: 1, end: 4 }]);
+  assert.match(html, /sequence-viewer-strand-row-top/);
+  assert.match(html, /sequence-viewer-strand-row-bottom/);
+  assert.match(html, /5'/);
+  assert.match(html, /3'/);
+  assert.match(html, /CGT/);
+  assert.match(html, /GCA/);
+  const highlightCount = (html.match(/sequence-viewer-seq-highlight/g) || []).length;
+  assert.equal(highlightCount, 2);
+});
+
+test('[EDGE] sequence-viewer feature detail formatter includes core metadata', () => {
+  const html = sequenceViewerInternals.formatSelectedFeatureDetailHtml({
+    name: 'ori',
+    type: 'origin',
+    strand: -1,
+    identity: 99.12,
+    coverage: 87.56,
+    source: 'plannotate',
+    segments: [{ start: 0, end: 4 }]
+  }, 8);
+  assert.match(html, /ori/);
+  assert.match(html, /origin/);
+  assert.match(html, /Strand:<\/strong> -/);
+  assert.match(html, /99.12%/);
+  assert.match(html, /87.56%/);
+});
+
+test('[EDGE] sequence-viewer bottom-track click updates selected feature detail strip', () => {
+  const ids = [
+    'sequence-viewer-mode-paste',
+    'sequence-viewer-mode-file',
+    'sequence-viewer-paste-panel',
+    'sequence-viewer-file-panel',
+    'sequence-viewer-textarea',
+    'sequence-viewer-file-input',
+    'sequence-viewer-file-choose',
+    'sequence-viewer-file-name',
+    'sequence-viewer-load-btn',
+    'sequence-viewer-clear-btn',
+    'sequence-viewer-status',
+    'sequence-viewer-messages',
+    'sequence-viewer-record-select',
+    'sequence-viewer-stat-format',
+    'sequence-viewer-stat-length',
+    'sequence-viewer-stat-topology',
+    'sequence-viewer-stat-gc',
+    'sequence-viewer-stat-ambiguous',
+    'sequence-viewer-stat-quality',
+    'sequence-viewer-stat-features',
+    'sequence-viewer-feature-rail-host',
+    'sequence-viewer-feature-detail',
+    'sequence-viewer-sequence-host'
+  ];
+  const document = createMockDocument(ids);
+  const moduleWithDom = loadEsmStyleModule(
+    path.join(__dirname, 'modules', 'sequence-viewer.js'),
+    { document }
+  );
+  const viewer = moduleWithDom.initSequenceViewer();
+  viewer.loadFromExternal({
+    name: 'test',
+    sequence: 'ACGTACGT',
+    source: 'plannotate',
+    features: [
+      {
+        name: 'Feature_A',
+        type: 'promoter',
+        strand: 1,
+        source: 'plannotate',
+        segments: [{ start: 1, end: 5 }]
+      }
+    ]
+  });
+
+  const detail = document.getElementById('sequence-viewer-feature-detail');
+  assert.match(detail.innerHTML, /Select a feature/);
+
+  trigger(document.getElementById('sequence-viewer-feature-rail-host'), 'click', {
+    target: {
+      closest() {
+        return { dataset: { featureIndex: '0' } };
+      }
+    }
+  });
+
+  assert.match(detail.innerHTML, /Feature_A/);
+  assert.match(detail.innerHTML, /promoter/);
 });
 
 [

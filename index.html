@@ -2486,42 +2486,23 @@
             </div>
           </section>
 
-          <section class="plannotate-result-card">
+          <section class="plannotate-result-card sequence-viewer-sequence-card">
             <div class="plannotate-card-head">
-              <h4>Feature Overlay</h4>
-            </div>
-            <div id="sequence-viewer-feature-rail-host" class="sequence-viewer-feature-rail-host">
-              <p class="small-note">No features to display.</p>
-            </div>
-            <div class="plannotate-table-wrap sequence-viewer-table-wrap">
-              <table class="plannotate-table sequence-viewer-table">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Name</th>
-                    <th>Type</th>
-                    <th>Location (1-based)</th>
-                    <th>Strand</th>
-                    <th>Identity</th>
-                    <th>Coverage</th>
-                    <th>Source</th>
-                  </tr>
-                </thead>
-                <tbody id="sequence-viewer-feature-table-body">
-                  <tr>
-                    <td colspan="8" class="small-note">No features available.</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          <section class="plannotate-result-card">
-            <div class="plannotate-card-head">
-              <h4>Sequence</h4>
+              <h4>Sequence (Dual Strand)</h4>
             </div>
             <div id="sequence-viewer-sequence-host" class="sequence-viewer-sequence-host">
               <p class="small-note">Load sequence data to begin.</p>
+            </div>
+            <div class="sequence-viewer-feature-bottom">
+              <div class="plannotate-card-head">
+                <h4>Features (Bottom Track)</h4>
+              </div>
+              <div id="sequence-viewer-feature-rail-host" class="sequence-viewer-feature-rail-host">
+                <p class="small-note">No features to display.</p>
+              </div>
+              <div id="sequence-viewer-feature-detail" class="calc-output sequence-viewer-feature-detail">
+                <p class="small-note">Select a feature in the bottom track to view details.</p>
+              </div>
             </div>
           </section>
         </div>
