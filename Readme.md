@@ -291,6 +291,7 @@ Generated file:
 - `modules/`: feature modules
 - `index.html` + `styles.css`: UI shell and styles
 - `data/llm-prompts.json`: configurable prompts for papers/agent
+- `data/agent-io-contract.json`: JSON input/output contract for LLM-facing functions and agent tools
 - `telegramBot.js`: Telegram command handling
 
 ## 11) Troubleshooting

@@ -66,6 +66,7 @@ import {
   sanitizeProteinAssemblySequence,
   buildProteinAssemblyConstruct
 } from './tool-box/protein-assembly.js';
+import { initColonyCounterTool } from './tool-box/colony-counter.js';
 
 const PLANNOTATE_TYPE_STYLES = {
   rep_origin: { fillColor: '#4e7fff', lineColor: '#000000' },
@@ -2423,6 +2424,7 @@ export function initToolBox() {
       runCrisprDesign();
     });
   }
+  initColonyCounterTool();
 
   addBufferChemicalBtn.addEventListener('click', addRow);
   bufferVolumeInput.addEventListener('input', renderBuffer);

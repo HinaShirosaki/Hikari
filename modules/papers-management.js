@@ -99,6 +99,7 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
       linkedId: linkId,
       linkedName: linked.name,
       summary: '',
+      summaryStructured: null,
       summaryStatus: 'idle',
       methodsExtract: [],
       methodsStatus: 'idle',
@@ -157,6 +158,7 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
 
     paper.summaryStatus = 'running';
     paper.summary = 'Summarizing...';
+    paper.summaryStructured = null;
     paper.updatedAt = new Date().toISOString();
     persist();
     renderPaperList();
@@ -168,10 +170,13 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
         fileName: paper.fileName,
         title: paper.title
       });
-      paper.summary = summary || 'No summary generated.';
+      const normalized = normalizePaperSummary(summary);
+      paper.summary = normalized.summary;
+      paper.summaryStructured = normalized.structured;
       paper.summaryStatus = 'idle';
     } catch (error) {
       paper.summary = `Failed to summarize: ${String(error.message || error)}`;
+      paper.summaryStructured = null;
       paper.summaryStatus = 'error';
     }
 
@@ -748,6 +753,52 @@ function normalizeMethodsExtract(result) {
       troubleshooting: item?.troubleshooting ?? ''
     };
   }).filter((item) => item.title || item.steps.length);
+}
+
+function normalizePaperSummary(rawSummary) {
+  const raw = String(rawSummary || '').trim();
+  if (!raw) {
+    return {
+      summary: 'No summary generated.',
+      structured: null
+    };
+  }
+
+  const parsed = parseJsonFromText(raw);
+  const hasStructuredPayload = parsed
+    && typeof parsed === 'object'
+    && !Array.isArray(parsed)
+    && Object.keys(parsed).length > 0;
+  if (hasStructuredPayload) {
+    const summaryFromFields = [
+      parsed.plain_english_summary,
+      parsed.plainEnglishSummary,
+      parsed.summary,
+      parsed.main_conclusion,
+      parsed.mainConclusion,
+      parsed.technical_summary,
+      parsed.technicalSummary,
+      parsed.background
+    ]
+      .map((value) => String(value || '').trim())
+      .find(Boolean) || '';
+    const keyFindingsSummary = Array.isArray(parsed.key_findings)
+      ? parsed.key_findings
+        .map((value) => String(value || '').trim())
+        .filter(Boolean)
+        .slice(0, 3)
+        .join(' ')
+      : '';
+    return {
+      summary: summaryFromFields || keyFindingsSummary || 'No plain-English summary generated.',
+      structured: parsed
+    };
+  }
+
+  return {
+    summary: raw,
+    structured: null
+  };
 }
 
 function fileToDataUrl(file) {

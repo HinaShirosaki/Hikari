@@ -16,6 +16,12 @@ const {
   getCodexLoginStatus,
   requestCodexCliText
 } = require('./codex-cli-provider');
+let AGENT_IO_CONTRACT_RAW = {};
+try {
+  AGENT_IO_CONTRACT_RAW = require('./data/agent-io-contract.json');
+} catch (error) {
+  console.error('Failed to load agent I/O contract file:', error);
+}
 
 const appIconPath = path.join(__dirname, 'image.png');
 const DEFAULT_DATA_FILE_NAME = 'enana-data.json';
@@ -399,8 +405,50 @@ async function readChemicalsFile() {
   }
 }
 
+function cloneJson(value, fallback = {}) {
+  if (!value || typeof value !== 'object') {
+    return fallback;
+  }
+  try {
+    return JSON.parse(JSON.stringify(value));
+  } catch {
+    return fallback;
+  }
+}
+
+function normalizeJsonPayload(payload, fallback = {}) {
+  if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
+    return payload;
+  }
+  if (typeof payload === 'string') {
+    const parsed = safeParseJson(payload, null);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed;
+    }
+  }
+  return fallback;
+}
+
+function normalizeToolInvocationArgs(rawArgs) {
+  const payload = normalizeJsonPayload(rawArgs, {});
+  if (payload.input && typeof payload.input === 'object' && !Array.isArray(payload.input)) {
+    return payload.input;
+  }
+  if (payload.args && typeof payload.args === 'object' && !Array.isArray(payload.args)) {
+    return payload.args;
+  }
+  if (payload.arguments && typeof payload.arguments === 'object' && !Array.isArray(payload.arguments)) {
+    return payload.arguments;
+  }
+  if (typeof payload.input_json === 'string') {
+    return normalizeJsonPayload(payload.input_json, payload);
+  }
+  return payload;
+}
+
 ipcMain.handle('ena:save', async (_event, payload) => {
-  const { data, filePath } = payload || {};
+  const normalizedPayload = normalizeJsonPayload(payload, {});
+  const { data, filePath } = normalizedPayload;
   if (!data) {
     return { ok: false, error: 'Missing data payload.' };
   }
@@ -456,7 +504,8 @@ ipcMain.handle('ena:load', async () => {
 });
 
 ipcMain.handle('data:auto-save', async (_event, payload) => {
-  const { data, filePath } = payload || {};
+  const normalizedPayload = normalizeJsonPayload(payload, {});
+  const { data, filePath } = normalizedPayload;
   if (!data) {
     return { ok: false, error: 'Missing data payload.' };
   }
@@ -475,7 +524,8 @@ ipcMain.handle('data:auto-save', async (_event, payload) => {
 });
 
 ipcMain.handle('data:auto-load', async (_event, payload) => {
-  const targetPath = normalizeDataFilePath(payload?.filePath, getDefaultDataFilePath());
+  const normalizedPayload = normalizeJsonPayload(payload, {});
+  const targetPath = normalizeDataFilePath(normalizedPayload?.filePath, getDefaultDataFilePath());
 
   try {
     const raw = await fs.readFile(targetPath, 'utf8');
@@ -492,7 +542,8 @@ ipcMain.handle('data:auto-load', async (_event, payload) => {
 });
 
 ipcMain.handle('storage:pick-directory', async (_event, payload) => {
-  const currentPath = typeof payload?.currentPath === 'string' ? payload.currentPath.trim() : '';
+  const normalizedPayload = normalizeJsonPayload(payload, {});
+  const currentPath = typeof normalizedPayload?.currentPath === 'string' ? normalizedPayload.currentPath.trim() : '';
   const result = await dialog.showOpenDialog({
     title: 'Select Storage Folder',
     defaultPath: currentPath || undefined,
@@ -507,7 +558,8 @@ ipcMain.handle('storage:pick-directory', async (_event, payload) => {
 });
 
 ipcMain.handle('storage:ensure-directory', async (_event, payload) => {
-  const targetPath = typeof payload?.path === 'string' ? payload.path.trim() : '';
+  const normalizedPayload = normalizeJsonPayload(payload, {});
+  const targetPath = typeof normalizedPayload?.path === 'string' ? normalizedPayload.path.trim() : '';
   if (!targetPath) {
     return { ok: false, error: 'Missing directory path.' };
   }
@@ -522,7 +574,7 @@ ipcMain.handle('storage:ensure-directory', async (_event, payload) => {
 
 ipcMain.handle('storage:store-imported-file', async (_event, payload) => {
   try {
-    const stored = await storeImportedFile(payload || {});
+    const stored = await storeImportedFile(normalizeJsonPayload(payload, {}));
     return { ok: true, ...stored };
   } catch (error) {
     return { ok: false, error: String(error?.message || error) };
@@ -531,7 +583,8 @@ ipcMain.handle('storage:store-imported-file', async (_event, payload) => {
 
 ipcMain.handle('plannotate:check-env', async (_event, payload) => {
   try {
-    const status = await checkPlannotateEnvironment(payload?.dbDir || '');
+    const normalizedPayload = normalizeJsonPayload(payload, {});
+    const status = await checkPlannotateEnvironment(normalizedPayload?.dbDir || '');
     return { ok: true, status };
   } catch (error) {
     return { ok: false, error: String(error) };
@@ -540,7 +593,7 @@ ipcMain.handle('plannotate:check-env', async (_event, payload) => {
 
 ipcMain.handle('plannotate:annotate', async (_event, payload) => {
   try {
-    const result = await annotateWithBlast(payload || {});
+    const result = await annotateWithBlast(normalizeJsonPayload(payload, {}));
     return { ok: true, result };
   } catch (error) {
     return { ok: false, error: String(error?.message || error) };
@@ -558,113 +611,149 @@ ipcMain.handle('plannotate:install-all', async () => {
 
 ipcMain.handle('plannotate:generate-gbk', async (_event, payload) => {
   try {
-    const gbk = generatePlannotateGbk(payload || {});
+    const gbk = generatePlannotateGbk(normalizeJsonPayload(payload, {}));
     return { ok: true, gbk };
   } catch (error) {
     return { ok: false, error: String(error?.message || error) };
   }
 });
 
-const AGENT_TOOL_DEFINITIONS = [
-  {
-    type: 'function',
-    name: 'search_projects',
-    description: 'Read project records by semantic keyword or exact term.',
-    parameters: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        query: { type: 'string' },
-        limit: { type: 'integer', minimum: 1, maximum: 20 }
-      },
-      required: ['query']
-    }
-  },
-  {
-    type: 'function',
-    name: 'search_protocols',
-    description: 'Read protocol records, including names and step snippets.',
-    parameters: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        query: { type: 'string' },
-        limit: { type: 'integer', minimum: 1, maximum: 20 }
-      },
-      required: ['query']
-    }
-  },
-  {
-    type: 'function',
-    name: 'search_notebook_entries',
-    description: 'Read notebook entries with result summaries and timestamps.',
-    parameters: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        query: { type: 'string' },
-        limit: { type: 'integer', minimum: 1, maximum: 20 }
-      },
-      required: ['query']
-    }
-  },
-  {
-    type: 'function',
-    name: 'search_assays',
-    description: 'Read assay runs with plate metadata and compact numeric summaries.',
-    parameters: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        query: { type: 'string' },
-        limit: { type: 'integer', minimum: 1, maximum: 20 }
-      },
-      required: ['query']
-    }
-  },
-  {
-    type: 'function',
-    name: 'search_gel_analyses',
-    description: 'Read gel analysis runs with confidence, calibration, and warning summaries.',
-    parameters: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        query: { type: 'string' },
-        limit: { type: 'integer', minimum: 1, maximum: 20 }
-      },
-      required: ['query']
-    }
-  },
-  {
-    type: 'function',
-    name: 'search_inventory',
-    description: 'Read chemical and personal inventory records.',
-    parameters: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        query: { type: 'string' },
-        limit: { type: 'integer', minimum: 1, maximum: 25 }
-      },
-      required: ['query']
-    }
-  },
-  {
-    type: 'function',
-    name: 'search_papers',
-    description: 'Read uploaded paper summaries, methods, and reagent extraction notes.',
-    parameters: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        query: { type: 'string' },
-        limit: { type: 'integer', minimum: 1, maximum: 20 }
-      },
-      required: ['query']
-    }
+function summarizeSchemaShape(schema) {
+  const source = schema && typeof schema === 'object' ? schema : {};
+  const properties = source.properties && typeof source.properties === 'object'
+    ? source.properties
+    : {};
+  const required = asArray(source.required);
+  const keys = Object.keys(properties).slice(0, 10);
+  if (!keys.length) {
+    return '{}';
   }
-];
+  const rows = keys.map((key) => {
+    const item = properties[key] && typeof properties[key] === 'object' ? properties[key] : {};
+    const type = cleanText(item.type, 24) || 'any';
+    const marker = required.includes(key) ? '!' : '?';
+    return `${key}${marker}:${type}`;
+  });
+  return `{ ${rows.join(', ')} }`;
+}
+
+function buildFallbackAgentIoTools() {
+  const makeTool = (name, description, limitMax = 20) => ({
+    name,
+    description,
+    input_schema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['query'],
+      properties: {
+        query: { type: 'string' },
+        limit: { type: 'integer', minimum: 1, maximum: limitMax }
+      }
+    },
+    output_schema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['items', 'citations', 'summary'],
+      properties: {
+        items: { type: 'array', items: { type: 'object' } },
+        citations: {
+          type: 'array',
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['source', 'pointer', 'reason'],
+            properties: {
+              source: { type: 'string' },
+              pointer: { type: 'string' },
+              reason: { type: 'string' }
+            }
+          }
+        },
+        summary: { type: 'string' }
+      }
+    }
+  });
+
+  return [
+    makeTool('search_projects', 'Read project records by semantic keyword or exact term.'),
+    makeTool('search_protocols', 'Read protocol records, including names and step snippets.'),
+    makeTool('search_notebook_entries', 'Read notebook entries with result summaries and timestamps.'),
+    makeTool('search_assays', 'Read assay runs with plate metadata and compact numeric summaries.'),
+    makeTool('search_gel_analyses', 'Read gel analysis runs with confidence, calibration, and warning summaries.'),
+    makeTool('search_inventory', 'Read chemical and personal inventory records.', 25),
+    makeTool('search_papers', 'Read uploaded paper summaries, methods, and reagent extraction notes.')
+  ];
+}
+
+function normalizeAgentIoContract(rawContract) {
+  const source = rawContract && typeof rawContract === 'object' ? rawContract : {};
+  const tools = asArray(source.tools).map((tool) => {
+    const name = cleanText(tool?.name, 120);
+    if (!name) {
+      return null;
+    }
+    const description = cleanText(tool?.description, 600);
+    const inputSchema = tool?.input_schema && typeof tool.input_schema === 'object'
+      ? cloneJson(tool.input_schema, {})
+      : { type: 'object', additionalProperties: false, properties: {} };
+    const outputSchema = tool?.output_schema && typeof tool.output_schema === 'object'
+      ? cloneJson(tool.output_schema, {})
+      : { type: 'object', additionalProperties: true };
+    return {
+      name,
+      description,
+      input_schema: inputSchema,
+      output_schema: outputSchema
+    };
+  }).filter(Boolean);
+
+  const outputEnvelope = source.tool_output_envelope && typeof source.tool_output_envelope === 'object'
+    ? cloneJson(source.tool_output_envelope, {})
+    : {};
+
+  return {
+    schema_name: cleanText(source.schema_name, 120) || 'enana_llm_agent_io',
+    schema_version: cleanText(source.schema_version, 40) || '1.0.0',
+    tools: tools.length ? tools : buildFallbackAgentIoTools(),
+    tool_output_envelope: outputEnvelope,
+    functions: asArray(source.functions).map((item) => cloneJson(item, {})).filter(Boolean)
+  };
+}
+
+function buildAgentToolContractPrompt(contract) {
+  const source = contract && typeof contract === 'object' ? contract : {};
+  const tools = asArray(source.tools);
+  if (!tools.length) {
+    return '';
+  }
+  const header = `Tool I/O contract ${cleanText(source.schema_name, 80) || 'enana_llm_agent_io'} v${
+    cleanText(source.schema_version, 40) || '1.0.0'
+  }`;
+  const rows = tools.map((tool) => {
+    const name = cleanText(tool?.name, 120) || 'unknown_tool';
+    const inputShape = summarizeSchemaShape(tool?.input_schema);
+    const outputShape = summarizeSchemaShape(tool?.output_schema);
+    return `- ${name} input ${inputShape} output ${outputShape}`;
+  });
+  return `${header}\n${rows.join('\n')}`;
+}
+
+const AGENT_IO_CONTRACT = normalizeAgentIoContract(AGENT_IO_CONTRACT_RAW);
+const AGENT_TOOL_DEFINITIONS = AGENT_IO_CONTRACT.tools.map((tool) => ({
+  type: 'function',
+  name: tool.name,
+  description: tool.description,
+  parameters: cloneJson(tool.input_schema, { type: 'object', additionalProperties: false, properties: {} })
+}));
+const AGENT_TOOL_DEFINITION_MAP = new Map(AGENT_IO_CONTRACT.tools.map((tool) => [tool.name, tool]));
+const AGENT_TOOL_OUTPUT_ENVELOPE = AGENT_IO_CONTRACT.tool_output_envelope && typeof AGENT_IO_CONTRACT.tool_output_envelope === 'object'
+  ? AGENT_IO_CONTRACT.tool_output_envelope
+  : {};
+const AGENT_TOOL_OUTPUT_SCHEMA_NAME = cleanText(AGENT_TOOL_OUTPUT_ENVELOPE.schema_name, 120) || 'enana_agent_tool_output';
+const AGENT_TOOL_OUTPUT_SCHEMA_VERSION = cleanText(AGENT_TOOL_OUTPUT_ENVELOPE.schema_version, 40)
+  || AGENT_IO_CONTRACT.schema_version
+  || '1.0.0';
+const AGENT_TOOL_CONTRACT_PROMPT = buildAgentToolContractPrompt(AGENT_IO_CONTRACT);
 
 const AGENT_RESULT_SCHEMA = {
   type: 'object',
@@ -908,9 +997,47 @@ function pickTopMatches(items, buildSearchText, query, limit) {
     .map((entry) => entry.item);
 }
 
+function normalizeAgentToolResultPayload(rawResult) {
+  const source = rawResult && typeof rawResult === 'object' ? rawResult : {};
+  return {
+    items: asArray(source.items),
+    citations: asArray(source.citations).map((citation) => ({
+      source: cleanText(citation?.source, 120),
+      pointer: cleanText(citation?.pointer, 180),
+      reason: cleanText(citation?.reason, 220)
+    })),
+    summary: cleanText(source.summary, 320) || 'No summary was generated.'
+  };
+}
+
+function buildAgentToolOutputEnvelope(toolName, args, rawResult, options = {}) {
+  const normalizedArgs = normalizeToolInvocationArgs(args);
+  const normalizedResult = normalizeAgentToolResultPayload(rawResult);
+  const ok = options.ok !== false;
+  const error = cleanText(options.error, 600);
+  return {
+    ok,
+    schema_name: AGENT_TOOL_OUTPUT_SCHEMA_NAME,
+    schema_version: AGENT_TOOL_OUTPUT_SCHEMA_VERSION,
+    tool_name: cleanText(toolName, 120),
+    input: cloneJson(normalizedArgs, {}),
+    result: normalizedResult,
+    items: normalizedResult.items,
+    citations: normalizedResult.citations,
+    summary: normalizedResult.summary,
+    generated_at: new Date().toISOString(),
+    ...(error ? { error } : {})
+  };
+}
+
 function runAgentTool(name, args, snapshot) {
-  const query = cleanText(args?.query, 300);
-  const limit = clamp(Number(args?.limit) || 6, 1, 25);
+  const normalizedArgs = normalizeToolInvocationArgs(args);
+  const query = cleanText(normalizedArgs?.query, 300);
+  const requestedLimit = Number(normalizedArgs?.limit);
+  const toolDefinition = AGENT_TOOL_DEFINITION_MAP.get(name);
+  const schemaLimit = Number(toolDefinition?.input_schema?.properties?.limit?.maximum);
+  const limitCap = Number.isFinite(schemaLimit) && schemaLimit > 0 ? schemaLimit : 25;
+  const limit = clamp(Number.isFinite(requestedLimit) && requestedLimit > 0 ? requestedLimit : 6, 1, limitCap);
   const protocolStepText = (step) => {
     if (typeof step === 'string') {
       return cleanText(step, 220);
@@ -930,7 +1057,7 @@ function runAgentTool(name, args, snapshot) {
       summary: cleanText(project?.summary, 300)
     }));
 
-    return {
+    return buildAgentToolOutputEnvelope(name, normalizedArgs, {
       items,
       citations: items.map((project) => ({
         source: 'project',
@@ -938,7 +1065,7 @@ function runAgentTool(name, args, snapshot) {
         reason: 'Matched project metadata.'
       })),
       summary: `Found ${items.length} matching projects.`
-    };
+    });
   }
 
   if (name === 'search_protocols') {
@@ -956,7 +1083,7 @@ function runAgentTool(name, args, snapshot) {
       steps: asArray(protocol?.steps).slice(0, 8).map((step) => protocolStepText(step)).filter(Boolean)
     }));
 
-    return {
+    return buildAgentToolOutputEnvelope(name, normalizedArgs, {
       items,
       citations: items.map((protocol) => ({
         source: 'protocol',
@@ -964,7 +1091,7 @@ function runAgentTool(name, args, snapshot) {
         reason: 'Matched protocol name/steps.'
       })),
       summary: `Found ${items.length} matching protocols.`
-    };
+    });
   }
 
   if (name === 'search_notebook_entries') {
@@ -980,7 +1107,7 @@ function runAgentTool(name, args, snapshot) {
       updatedAt: cleanText(entry?.updatedAt, 80)
     }));
 
-    return {
+    return buildAgentToolOutputEnvelope(name, normalizedArgs, {
       items,
       citations: items.map((entry) => ({
         source: 'notebook_entry',
@@ -988,7 +1115,7 @@ function runAgentTool(name, args, snapshot) {
         reason: 'Matched notebook summary/results.'
       })),
       summary: `Found ${items.length} matching notebook entries.`
-    };
+    });
   }
 
   if (name === 'search_assays') {
@@ -1020,7 +1147,7 @@ function runAgentTool(name, args, snapshot) {
       updated_at: cleanText(assay?.updated_at, 80)
     }));
 
-    return {
+    return buildAgentToolOutputEnvelope(name, normalizedArgs, {
       items,
       citations: items.map((assay) => ({
         source: 'assay',
@@ -1028,7 +1155,7 @@ function runAgentTool(name, args, snapshot) {
         reason: 'Matched assay metadata or axis annotations.'
       })),
       summary: `Found ${items.length} matching assays.`
-    };
+    });
   }
 
   if (name === 'search_gel_analyses') {
@@ -1061,7 +1188,7 @@ function runAgentTool(name, args, snapshot) {
       updated_at: cleanText(analysis?.updated_at, 80)
     }));
 
-    return {
+    return buildAgentToolOutputEnvelope(name, normalizedArgs, {
       items,
       citations: items.map((analysis) => ({
         source: 'gel_analysis',
@@ -1069,7 +1196,7 @@ function runAgentTool(name, args, snapshot) {
         reason: 'Matched gel metadata, warnings, or confidence fields.'
       })),
       summary: `Found ${items.length} matching gel analyses.`
-    };
+    });
   }
 
   if (name === 'search_inventory') {
@@ -1099,7 +1226,7 @@ function runAgentTool(name, args, snapshot) {
       limit
     );
 
-    return {
+    return buildAgentToolOutputEnvelope(name, normalizedArgs, {
       items,
       citations: items.map((item) => ({
         source: item.kind || 'inventory',
@@ -1107,7 +1234,7 @@ function runAgentTool(name, args, snapshot) {
         reason: 'Matched inventory name and metadata.'
       })),
       summary: `Found ${items.length} matching inventory records.`
-    };
+    });
   }
 
   if (name === 'search_papers') {
@@ -1129,7 +1256,7 @@ function runAgentTool(name, args, snapshot) {
       }))
     }));
 
-    return {
+    return buildAgentToolOutputEnvelope(name, normalizedArgs, {
       items,
       citations: items.map((paper) => ({
         source: 'paper',
@@ -1137,14 +1264,22 @@ function runAgentTool(name, args, snapshot) {
         reason: 'Matched paper title, summary, or extracted methods.'
       })),
       summary: `Found ${items.length} matching papers.`
-    };
+    });
   }
 
-  return {
-    items: [],
-    citations: [],
-    summary: `Unknown tool: ${name}`
-  };
+  return buildAgentToolOutputEnvelope(
+    name,
+    normalizedArgs,
+    {
+      items: [],
+      citations: [],
+      summary: `Unknown tool: ${name}`
+    },
+    {
+      ok: false,
+      error: `Unknown tool: ${name}`
+    }
+  );
 }
 
 function extractConversation(rawConversation) {
@@ -1327,7 +1462,16 @@ function resolveAgentModel(llm, provider = DEFAULT_LLM_PROVIDER) {
 function buildAgentSystemPrompt(projectName, prompts) {
   const projectScope = projectName ? `Scoped project: ${projectName}.` : 'Scope: all projects.';
   const template = String(prompts?.agent?.systemPromptTemplate || '').trim() || DEFAULT_AGENT_SYSTEM_PROMPT_TEMPLATE;
-  return renderPromptTemplate(template, { projectScope });
+  const basePrompt = renderPromptTemplate(template, { projectScope });
+  if (!AGENT_TOOL_CONTRACT_PROMPT) {
+    return basePrompt;
+  }
+  return [
+    basePrompt,
+    AGENT_TOOL_CONTRACT_PROMPT,
+    `Tool output envelope: ${AGENT_TOOL_OUTPUT_SCHEMA_NAME}@${AGENT_TOOL_OUTPUT_SCHEMA_VERSION}.`,
+    'Always send tool arguments as JSON and read tool results from result/items/citations/summary.'
+  ].join('\n\n');
 }
 
 function buildAgentSynthesisPrompt(requiresApproval, prompts) {
@@ -1991,7 +2135,7 @@ function buildCodexAgentContext(message, snapshot) {
     });
     toolTrace.push({
       tool: toolName,
-      args: { query: message, limit: 5 },
+      args: result?.input && typeof result.input === 'object' ? result.input : { query: message, limit: 5 },
       summary: cleanText(result?.summary || `Collected ${items.length} records.`, 240)
     });
     asArray(result?.citations).slice(0, 8).forEach((citation) => {
@@ -2225,8 +2369,9 @@ async function runAgentController(payload) {
     const toolOutputs = [];
     const proposedActions = [];
     calls.slice(0, 4).forEach((call) => {
-      const args = safeParseJson(call.argsText, {});
+      const args = normalizeToolInvocationArgs(call.argsText);
       const toolResult = runAgentTool(call.name, args, snapshot);
+      const normalizedInput = toolResult?.input && typeof toolResult.input === 'object' ? toolResult.input : args;
       toolOutputs.push({
         callId: call.callId,
         name: call.name,
@@ -2234,7 +2379,7 @@ async function runAgentController(payload) {
       });
       toolTrace.push({
         tool: call.name,
-        args,
+        args: normalizedInput,
         summary: cleanText(toolResult.summary, 240)
       });
       asArray(toolResult.citations).forEach((citation) => {
@@ -2348,20 +2493,21 @@ async function runAgentController(payload) {
 }
 
 ipcMain.handle('agent:chat', async (_event, payload) => {
+  const normalizedPayload = normalizeJsonPayload(payload, {});
   const requestId = buildAgentLogRequestId();
   const logPath = getAgentChatLogPath();
   await appendAgentChatLogEntry(logPath, formatAgentChatLogEntry({
     type: 'agent-chat-request',
     requestId,
-    projectId: cleanText(payload?.projectId, 80),
-    projectName: cleanText(payload?.projectName, 180),
-    message: cleanText(payload?.message, 3000),
-    conversation: extractConversation(payload?.conversation),
-    llm: summarizeLlmForAgentLog(payload?.llm)
+    projectId: cleanText(normalizedPayload?.projectId, 80),
+    projectName: cleanText(normalizedPayload?.projectName, 180),
+    message: cleanText(normalizedPayload?.message, 3000),
+    conversation: extractConversation(normalizedPayload?.conversation),
+    llm: summarizeLlmForAgentLog(normalizedPayload?.llm)
   }));
 
   try {
-    const result = await runAgentController(payload);
+    const result = await runAgentController(normalizedPayload);
     await appendAgentChatLogEntry(logPath, formatAgentChatLogEntry({
       type: 'agent-chat-result',
       requestId,
@@ -2380,6 +2526,11 @@ ipcMain.handle('agent:chat', async (_event, payload) => {
   }
 });
 
+ipcMain.handle('agent:get-io-contract', async () => ({
+  ok: true,
+  contract: AGENT_IO_CONTRACT
+}));
+
 ipcMain.handle('llm:codex-status', async () => {
   const status = await getCodexLoginStatus({ cwd: getCodexCliWorkingDirectory(), forceRefresh: true });
   return {
@@ -2391,15 +2542,16 @@ ipcMain.handle('llm:codex-status', async () => {
 
 ipcMain.handle('llm:codex-generate', async (_event, payload) => {
   try {
-    const promptRaw = typeof payload?.prompt === 'string' ? payload.prompt.trim() : '';
+    const normalizedPayload = normalizeJsonPayload(payload, {});
+    const promptRaw = typeof normalizedPayload?.prompt === 'string' ? normalizedPayload.prompt.trim() : '';
     if (!promptRaw) {
       return { ok: false, error: 'Prompt is required.' };
     }
 
     const prompt = promptRaw.length > 120000 ? `${promptRaw.slice(0, 120000)}...` : promptRaw;
-    const model = cleanText(payload?.model, 120);
-    const fileName = cleanText(payload?.fileName, 220);
-    const pdfDataUrl = typeof payload?.pdfDataUrl === 'string' ? payload.pdfDataUrl.trim() : '';
+    const model = cleanText(normalizedPayload?.model, 120);
+    const fileName = cleanText(normalizedPayload?.fileName, 220);
+    const pdfDataUrl = typeof normalizedPayload?.pdfDataUrl === 'string' ? normalizedPayload.pdfDataUrl.trim() : '';
 
     const text = await requestCodexCliText({
       prompt,
@@ -2431,7 +2583,8 @@ ipcMain.handle('telegram:get-config', async () => {
 });
 
 ipcMain.handle('telegram:set-token', async (_event, payload) => {
-  const token = typeof payload?.token === 'string' ? payload.token.trim() : '';
+  const normalizedPayload = normalizeJsonPayload(payload, {});
+  const token = typeof normalizedPayload?.token === 'string' ? normalizedPayload.token.trim() : '';
   if (!token) {
     return { ok: false, error: 'Token is required.' };
   }

@@ -2111,6 +2111,58 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   }
 }
 
+.colony-counter-shell {
+  display: grid;
+  gap: 12px;
+}
+
+.colony-counter-controls {
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  background: linear-gradient(156deg, rgba(255, 255, 255, 0.68), rgba(236, 248, 255, 0.48));
+  padding: 12px;
+}
+
+.colony-preview-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.colony-preview-card {
+  margin: 0;
+}
+
+.colony-cropper-shell {
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  background: #ffffff;
+  padding: 10px;
+  min-height: 320px;
+}
+
+.colony-cropper-image {
+  display: block;
+  width: 100%;
+  max-height: 760px;
+}
+
+.colony-preview-canvas {
+  width: 100%;
+  display: block;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  background: #ffffff;
+  max-height: 620px;
+  object-fit: contain;
+}
+
+@media (max-width: 920px) {
+  .colony-preview-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .protein-assembly-shell {
   display: grid;
   gap: 12px;
@@ -2548,6 +2600,21 @@ body.theme-night .plannotate-legend-item {
 body.theme-night .crispr-controls {
   border-color: rgba(186, 218, 255, 0.3);
   background: linear-gradient(160deg, rgba(34, 52, 78, 0.7), rgba(20, 31, 48, 0.6));
+}
+
+body.theme-night .colony-counter-controls {
+  border-color: rgba(186, 218, 255, 0.3);
+  background: linear-gradient(160deg, rgba(34, 52, 78, 0.7), rgba(20, 31, 48, 0.6));
+}
+
+body.theme-night .colony-preview-canvas {
+  border-color: #dddddd;
+  background: #ffffff;
+}
+
+body.theme-night .colony-cropper-shell {
+  border-color: #dddddd;
+  background: #ffffff;
 }
 
 body.theme-night .protein-assembly-controls,

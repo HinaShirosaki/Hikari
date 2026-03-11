@@ -414,6 +414,13 @@ const gelAnalysisInternals = loadEsmStyleModule(
     'interpretLane'
   ]
 );
+const papersManagementInternals = loadEsmStyleModule(
+  path.join(__dirname, 'modules', 'papers-management.js'),
+  {},
+  [
+    'normalizePaperSummary'
+  ]
+);
 const assayAnalysis = loadEsmStyleModule(path.join(__dirname, 'modules', 'assay-analysis.js'));
 const mainUtils = require(path.join(__dirname, 'main-utils'));
 const telegramBot = require(path.join(__dirname, 'telegramBot.js'));
@@ -474,6 +481,24 @@ test('plannotate GenBank generator preserves reverse-strand origin crossing orde
 
   assert.match(gbk, /complement\(join\(1\.\.5,41\.\.49\)\)/);
   assert.match(gbk, /\/label="cdsX \(fragment\)"/);
+});
+
+test('papers-management normalizePaperSummary preserves non-JSON text', () => {
+  const rawSummary = 'This paper reports a new screening assay with reproducible hit enrichment.';
+  const normalized = papersManagementInternals.normalizePaperSummary(rawSummary);
+  assert.equal(normalized.summary, rawSummary);
+  assert.equal(normalized.structured, null);
+});
+
+test('papers-management normalizePaperSummary prefers structured plain-English summary', () => {
+  const rawSummary = JSON.stringify({
+    title: 'Demo paper',
+    plain_english_summary: 'A simple plain-language summary.',
+    main_conclusion: 'Main conclusion text.'
+  });
+  const normalized = papersManagementInternals.normalizePaperSummary(rawSummary);
+  assert.equal(normalized.summary, 'A simple plain-language summary.');
+  assert.equal(normalized.structured?.title, 'Demo paper');
 });
 
 test('normalizeState keeps defaults and migrates legacy LLM API key', () => {
