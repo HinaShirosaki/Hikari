@@ -2111,6 +2111,68 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   }
 }
 
+.protein-assembly-shell {
+  display: grid;
+  gap: 12px;
+}
+
+.protein-assembly-controls {
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  background: linear-gradient(156deg, rgba(255, 255, 255, 0.68), rgba(236, 248, 255, 0.48));
+  padding: 12px;
+}
+
+.protein-assembly-rows {
+  display: grid;
+  gap: 10px;
+}
+
+.protein-assembly-row {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  align-items: end;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  background: linear-gradient(150deg, rgba(255, 255, 255, 0.64), rgba(255, 255, 255, 0.42));
+}
+
+.protein-assembly-row-actions {
+  justify-content: flex-end;
+  align-self: end;
+}
+
+.protein-assembly-row-note {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.protein-assembly-result-card {
+  padding: 12px;
+}
+
+.protein-assembly-table-wrap {
+  margin-top: 0;
+  max-height: 420px;
+}
+
+.protein-assembly-table {
+  min-width: 760px;
+}
+
+.protein-assembly-cell-seq {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  letter-spacing: 0.012em;
+}
+
+@media (max-width: 920px) {
+  .protein-assembly-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 .molarity-block {
   margin-top: 14px;
   padding-top: 10px;
@@ -2484,6 +2546,12 @@ body.theme-night .plannotate-legend-item {
 }
 
 body.theme-night .crispr-controls {
+  border-color: rgba(186, 218, 255, 0.3);
+  background: linear-gradient(160deg, rgba(34, 52, 78, 0.7), rgba(20, 31, 48, 0.6));
+}
+
+body.theme-night .protein-assembly-controls,
+body.theme-night .protein-assembly-row {
   border-color: rgba(186, 218, 255, 0.3);
   background: linear-gradient(160deg, rgba(34, 52, 78, 0.7), rgba(20, 31, 48, 0.6));
 }

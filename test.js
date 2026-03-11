@@ -417,10 +417,64 @@ const gelAnalysisInternals = loadEsmStyleModule(
 const assayAnalysis = loadEsmStyleModule(path.join(__dirname, 'modules', 'assay-analysis.js'));
 const mainUtils = require(path.join(__dirname, 'main-utils'));
 const telegramBot = require(path.join(__dirname, 'telegramBot.js'));
+const { generatePlannotateGbk } = require(path.join(__dirname, 'plannotate-engine.js'));
 const forgeConfig = require(path.join(__dirname, 'forge.config.js'));
 const packageManifest = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
 
 const LEGACY_CHEMISTRY_DRAFT_KEY = 'enana_synthesis_chemistry_draft_v1';
+
+test('plannotate GenBank generator builds a valid record with qualifiers', () => {
+  const gbk = generatePlannotateGbk({
+    sequence: 'ATGCGTACGTAGCTAGCTAGCTAGCATCGATCGATCGATCGATCGATCG',
+    topology: 'circular',
+    recordName: 'demo_plasmid',
+    hits: [
+      {
+        qstart: 0,
+        qend: 12,
+        sframe: 1,
+        Feature: 'promoterA',
+        Type: 'promoter',
+        db: 'snapgene',
+        pident: 99.7,
+        percmatch: 100,
+        fragment: false
+      }
+    ]
+  });
+
+  assert.match(gbk, /^LOCUS\s+demo_plasmid/m);
+  assert.match(gbk, /^FEATURES\s+Location\/Qualifiers$/m);
+  assert.match(gbk, /^\s+promoter\s+1\.\.12$/m);
+  assert.match(gbk, /\/label="promoterA"/);
+  assert.match(gbk, /\/identity="99\.7"/);
+  assert.match(gbk, /^ORIGIN$/m);
+  assert.match(gbk, /^\/\/$/m);
+});
+
+test('plannotate GenBank generator preserves reverse-strand origin crossing order', () => {
+  const gbk = generatePlannotateGbk({
+    sequence: 'ATGCGTACGTAGCTAGCTAGCTAGCATCGATCGATCGATCGATCGATCG',
+    topology: 'circular',
+    hits: [
+      {
+        qstart: 40,
+        qend: 5,
+        sframe: -1,
+        Feature: 'cdsX',
+        Type: 'CDS',
+        db: 'swissprot',
+        pident: 87.2,
+        percmatch: 45.4,
+        fragment: true,
+        crossesOrigin: true
+      }
+    ]
+  });
+
+  assert.match(gbk, /complement\(join\(1\.\.5,41\.\.49\)\)/);
+  assert.match(gbk, /\/label="cdsX \(fragment\)"/);
+});
 
 test('normalizeState keeps defaults and migrates legacy LLM API key', () => {
   const normalized = shared.normalizeState({
@@ -3083,6 +3137,33 @@ test('[EDGE] tool-box reverseTranslateProteinSequence reflects organism codon pr
   assert.equal(ecoli.ok, true);
   assert.equal(yeast.ok, true);
   assert.notEqual(ecoli.dna, yeast.dna);
+});
+
+[
+  'mouse',
+  'rat',
+  'pichia',
+  'arabidopsis',
+  'drosophila',
+  'c_elegans',
+  'zebrafish',
+  'pseudomonas',
+  'salmonella'
+].forEach((organismKey, idx) => {
+  test(`[EDGE] tool-box reverseTranslateProteinSequence supports extra species case ${idx + 1}`, () => {
+    const result = toolBox.reverseTranslateProteinSequence('MRT', { organism: organismKey });
+    assert.equal(result.ok, true);
+    assert.equal(result.organism, organismKey);
+    assert.equal(toolBox.translateDnaSequence(result.dna, 1, 'star').protein, 'MRT');
+  });
+});
+
+test('[EDGE] tool-box reverseTranslateProteinSequence applies new species codon preferences', () => {
+  const ecoli = toolBox.reverseTranslateProteinSequence('KKK', { organism: 'ecoli' });
+  const pseudomonas = toolBox.reverseTranslateProteinSequence('KKK', { organism: 'pseudomonas' });
+  assert.equal(ecoli.ok, true);
+  assert.equal(pseudomonas.ok, true);
+  assert.notEqual(ecoli.dna, pseudomonas.dna);
 });
 
 test('[EDGE] tool-box reverseTranslateProteinSequence can avoid a requested restriction site', () => {

@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('enanaApi', {
   storeImportedFile: (payload) => ipcRenderer.invoke('storage:store-imported-file', payload),
   plannotateCheckEnv: (dbDir = '') => ipcRenderer.invoke('plannotate:check-env', { dbDir }),
   plannotateAnnotate: (payload) => ipcRenderer.invoke('plannotate:annotate', payload),
+  plannotateGenerateGbk: (payload) => ipcRenderer.invoke('plannotate:generate-gbk', payload),
   plannotateInstallAll: () => ipcRenderer.invoke('plannotate:install-all'),
   getTelegramBotConfig: () => ipcRenderer.invoke('telegram:get-config'),
   setTelegramBotToken: (token) => ipcRenderer.invoke('telegram:set-token', { token }),

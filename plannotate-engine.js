@@ -7,6 +7,9 @@ const { spawn } = require('child_process');
 
 const MAX_PLASMID_SIZE = 50000;
 const PROBLEM_HITS = new Set(['P03851', 'P03845', 'ISS', 'P03846']);
+const PLANNOTATE_VERSION = '1.2.2';
+const GENBANK_LINE_WIDTH = 80;
+const SYNTHETIC_ORGANISM = 'synthetic DNA construct';
 
 function resolveInstallRoot() {
   const envRoot = String(process.env.ENANA_PLANNOTATE_ROOT || process.env.PLANNOTATE_HOME || '').trim();
@@ -142,6 +145,251 @@ function normalizeSequence(raw) {
     sequence: cleaned.slice(0, MAX_PLASMID_SIZE),
     warnings: [`Input was truncated to ${MAX_PLASMID_SIZE.toLocaleString()} bases to match pLannotate size guidance.`]
   };
+}
+
+function normalizeIupacSequenceForGenbank(raw) {
+  return String(raw || '')
+    .toUpperCase()
+    .replace(/U/g, 'T')
+    .replace(/[^ACGTRYSWKMBDHVN]/g, 'N');
+}
+
+function clampPosition(value, max) {
+  const parsed = Math.trunc(Number(value) || 0);
+  if (parsed < 0) {
+    return 0;
+  }
+  if (parsed > max) {
+    return max;
+  }
+  return parsed;
+}
+
+function roundOneDecimal(value, fallback = 0) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return Number(fallback).toFixed(1);
+  }
+  return (Math.round(parsed * 10) / 10).toFixed(1);
+}
+
+function sanitizeLocusName(value) {
+  const cleaned = String(value || '')
+    .trim()
+    .replace(/\s+/g, '_')
+    .replace(/[^A-Za-z0-9_.-]/g, '_')
+    .slice(0, 16);
+  return cleaned || 'plasmid';
+}
+
+function sanitizeQualifierValue(value) {
+  return String(value ?? '')
+    .replace(/\r?\n/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/"/g, '\'');
+}
+
+function formatGenbankDate(value = new Date()) {
+  const asDate = value instanceof Date ? value : new Date(value);
+  const date = Number.isFinite(asDate.getTime()) ? asDate : new Date();
+  const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = months[date.getMonth()] || 'JAN';
+  const year = String(date.getFullYear());
+  return `${day}-${month}-${year}`;
+}
+
+function wrapGenbankLine(value, firstPrefix, continuationPrefix = firstPrefix, width = GENBANK_LINE_WIDTH) {
+  const text = String(value ?? '');
+  if (!text.length) {
+    return [firstPrefix];
+  }
+
+  const lines = [];
+  let remaining = text;
+  let prefix = firstPrefix;
+
+  while (remaining.length) {
+    const available = Math.max(1, width - prefix.length);
+    if (remaining.length <= available) {
+      lines.push(`${prefix}${remaining}`);
+      break;
+    }
+
+    let splitAt = remaining.lastIndexOf(' ', available);
+    if (splitAt <= 0 || splitAt < Math.floor(available * 0.4)) {
+      splitAt = available;
+    }
+
+    const chunk = remaining.slice(0, splitAt);
+    lines.push(`${prefix}${chunk}`);
+    remaining = remaining.slice(splitAt);
+    if (remaining.startsWith(' ')) {
+      remaining = remaining.trimStart();
+    }
+    prefix = continuationPrefix;
+  }
+
+  return lines;
+}
+
+function buildLocusLine(name, sequenceLength, topology, dateStamp) {
+  const topologyText = topology === 'linear' ? 'linear' : 'circular';
+  return `LOCUS       ${name.padEnd(16, ' ')}${String(sequenceLength).padStart(11, ' ')} bp    DNA     ${topologyText.padEnd(8, ' ')} SYN ${dateStamp}`;
+}
+
+function normalizeFeatureType(type) {
+  const text = String(type || 'misc_feature').trim();
+  if (!text) {
+    return 'misc_feature';
+  }
+  if (text.toLowerCase() === 'origin of replication') {
+    return 'rep_origin';
+  }
+  return text.replace(/\s+/g, '_');
+}
+
+function getHitSegmentsForGbk(hit, sequenceLength, topology) {
+  const qstart = clampPosition(hit.qstart, sequenceLength);
+  const qend = clampPosition(hit.qend, sequenceLength);
+
+  if (topology === 'linear') {
+    const start = Math.min(qstart, qend);
+    const end = Math.max(qstart, qend);
+    if (end > start) {
+      return [{ start, end }];
+    }
+    if (sequenceLength && qstart === 0 && qend === 0 && (Number(hit.length) || 0) >= sequenceLength) {
+      return [{ start: 0, end: sequenceLength }];
+    }
+    return [];
+  }
+
+  const wrapsOrigin = Boolean(hit.crossesOrigin) || qend < qstart
+    || (sequenceLength && qstart === 0 && qend === 0 && (Number(hit.length) || 0) >= sequenceLength);
+
+  if (!wrapsOrigin) {
+    return qend > qstart ? [{ start: qstart, end: qend }] : [];
+  }
+
+  const segments = [];
+  if (sequenceLength > qstart) {
+    segments.push({ start: qstart, end: sequenceLength });
+  }
+  if (qend > 0) {
+    segments.push({ start: 0, end: qend });
+  }
+
+  if (!segments.length && qstart === 0 && qend === 0 && sequenceLength) {
+    segments.push({ start: 0, end: sequenceLength });
+  }
+
+  return segments;
+}
+
+function formatFeatureLocation(hit, sequenceLength, topology) {
+  const segments = getHitSegmentsForGbk(hit, sequenceLength, topology)
+    .filter((segment) => segment.end > segment.start)
+    .map((segment) => `${segment.start + 1}..${segment.end}`);
+
+  if (!segments.length) {
+    return '';
+  }
+
+  const strand = Number(hit.sframe) < 0 ? -1 : 1;
+  const ordered = strand === -1 && segments.length > 1
+    ? [...segments].reverse()
+    : segments;
+
+  const location = ordered.length === 1
+    ? ordered[0]
+    : `join(${ordered.join(',')})`;
+
+  return strand === -1 ? `complement(${location})` : location;
+}
+
+function formatOriginLines(sequence) {
+  const lines = ['ORIGIN'];
+  const lower = sequence.toLowerCase();
+
+  for (let i = 0; i < lower.length; i += 60) {
+    const chunk = lower.slice(i, i + 60);
+    const groups = [];
+    for (let j = 0; j < chunk.length; j += 10) {
+      groups.push(chunk.slice(j, j + 10));
+    }
+    lines.push(`${String(i + 1).padStart(9, ' ')} ${groups.join(' ')}`);
+  }
+
+  return lines;
+}
+
+function generatePlannotateGbk(payload = {}) {
+  const sequence = normalizeIupacSequenceForGenbank(payload.sequence || payload.sequenceText || '');
+  if (!sequence.length) {
+    throw new Error('No valid DNA sequence was provided for GenBank export.');
+  }
+
+  const topology = payload.topology === 'linear' ? 'linear' : 'circular';
+  const locusName = sanitizeLocusName(payload.recordName || payload.name || 'plasmid');
+  const dateStamp = formatGenbankDate(payload.date);
+  const accession = String(payload.accession || '.').trim() || '.';
+  const version = String(payload.version || '.').trim() || '.';
+  const source = String(payload.source || SYNTHETIC_ORGANISM).trim() || SYNTHETIC_ORGANISM;
+  const description = String(payload.definition || '.').trim() || '.';
+
+  const baseComment = `Annotated with pLannotate v${PLANNOTATE_VERSION}`;
+  const extraComment = String(payload.comment || '').trim();
+  const comment = extraComment ? `${baseComment}. ${extraComment}` : baseComment;
+  const hits = Array.isArray(payload.hits) ? payload.hits : [];
+
+  const lines = [
+    buildLocusLine(locusName, sequence.length, topology, dateStamp),
+    ...wrapGenbankLine(description, 'DEFINITION  ', '            '),
+    ...wrapGenbankLine(accession, 'ACCESSION   ', '            '),
+    ...wrapGenbankLine(version, 'VERSION     ', '            '),
+    'KEYWORDS    .',
+    ...wrapGenbankLine(source, 'SOURCE      ', '            '),
+    ...wrapGenbankLine(source, '  ORGANISM  ', '            '),
+    '            .',
+    ...wrapGenbankLine(comment, 'COMMENT     ', '            '),
+    'FEATURES             Location/Qualifiers'
+  ];
+
+  hits.forEach((rawHit) => {
+    const hit = rawHit || {};
+    const location = formatFeatureLocation(hit, sequence.length, topology);
+    if (!location) {
+      return;
+    }
+
+    const type = normalizeFeatureType(hit.Type).slice(0, 16) || 'misc_feature';
+    const featureName = String(hit.Feature || hit.sseqid || 'feature').trim() || 'feature';
+    const featureLabel = hit.fragment ? `${featureName} (fragment)` : featureName;
+    const otherType = normalizeFeatureType(hit.Type);
+    const qualifiers = [
+      ['note', 'pLannotate'],
+      ['label', featureLabel],
+      ['database', String(hit.db || '').trim() || 'snapgene'],
+      ['identity', roundOneDecimal(hit.pident)],
+      ['match_length', roundOneDecimal(hit.percmatch)],
+      ['fragment', hit.fragment ? 'true' : 'false'],
+      ['other', otherType]
+    ];
+
+    const featurePrefix = `     ${type.padEnd(16, ' ')}`;
+    const qualifierPrefix = '                     ';
+    lines.push(...wrapGenbankLine(location, featurePrefix, qualifierPrefix));
+    qualifiers.forEach(([key, value]) => {
+      const qualifier = `/${key}="${sanitizeQualifierValue(value)}"`;
+      lines.push(...wrapGenbankLine(qualifier, qualifierPrefix, qualifierPrefix));
+    });
+  });
+
+  lines.push(...formatOriginLines(sequence));
+  lines.push('//');
+  return `${lines.join('\n')}\n`;
 }
 
 function parseCsvRow(line) {
@@ -984,6 +1232,7 @@ async function annotateWithBlast(payload = {}) {
       sequenceLength: 0,
       topology,
       options: payload,
+      gbk: '',
       warnings: ['No valid DNA sequence was provided.'],
       stats: {
         referenceFeatures: 0,
@@ -1047,11 +1296,24 @@ async function annotateWithBlast(payload = {}) {
   }
 
   if (!rawHits.length) {
+    let gbk = '';
+    try {
+      gbk = generatePlannotateGbk({
+        sequence,
+        topology,
+        hits: [],
+        recordName: payload.recordName || payload.name || 'plasmid'
+      });
+    } catch (error) {
+      warnings.push(`GenBank export failed: ${error.message || error}`);
+    }
+
     return {
       sequence,
       sequenceLength: sequence.length,
       topology,
       options: payload,
+      gbk,
       warnings: warnings.length ? warnings : ['No annotations were found by blastn/diamond.'],
       stats: {
         referenceFeatures: 0,
@@ -1067,12 +1329,24 @@ async function annotateWithBlast(payload = {}) {
   const cleaned = cleanHits(rawHits, detailed, topology).slice(0, 500);
   const exactHits = cleaned.filter((hit) => hit.pi_permatch === 100).length;
   const partialHits = cleaned.length - exactHits;
+  let gbk = '';
+  try {
+    gbk = generatePlannotateGbk({
+      sequence,
+      topology,
+      hits: cleaned,
+      recordName: payload.recordName || payload.name || 'plasmid'
+    });
+  } catch (error) {
+    warnings.push(`GenBank export failed: ${error.message || error}`);
+  }
 
   return {
     sequence,
     sequenceLength: sequence.length,
     topology,
     options: payload,
+    gbk,
     warnings,
     stats: {
       referenceFeatures: rawHits.length,
@@ -1088,5 +1362,6 @@ async function annotateWithBlast(payload = {}) {
 module.exports = {
   annotateWithBlast,
   checkPlannotateEnvironment,
+  generatePlannotateGbk,
   installPlannotateAssets
 };

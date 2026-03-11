@@ -9,6 +9,7 @@ const {
 const {
   annotateWithBlast,
   checkPlannotateEnvironment,
+  generatePlannotateGbk,
   installPlannotateAssets
 } = require('./plannotate-engine');
 const {
@@ -550,6 +551,15 @@ ipcMain.handle('plannotate:install-all', async () => {
   try {
     const result = await installPlannotateAssets();
     return { ok: true, result };
+  } catch (error) {
+    return { ok: false, error: String(error?.message || error) };
+  }
+});
+
+ipcMain.handle('plannotate:generate-gbk', async (_event, payload) => {
+  try {
+    const gbk = generatePlannotateGbk(payload || {});
+    return { ok: true, gbk };
   } catch (error) {
     return { ok: false, error: String(error?.message || error) };
   }

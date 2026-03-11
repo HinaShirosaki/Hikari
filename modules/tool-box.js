@@ -59,6 +59,13 @@ import {
   renderChemicalOptions,
   makeBufferRow
 } from './tool-box/buffer.js';
+import {
+  PROTEIN_ASSEMBLY_PART_TYPES,
+  getProteinAssemblyLibraryByType,
+  defaultProteinAssemblyRows,
+  sanitizeProteinAssemblySequence,
+  buildProteinAssemblyConstruct
+} from './tool-box/protein-assembly.js';
 
 const PLANNOTATE_TYPE_STYLES = {
   rep_origin: { fillColor: '#4e7fff', lineColor: '#000000' },
@@ -585,6 +592,18 @@ export function initToolBox() {
   const reverseTranslateForm = document.getElementById('reverse-translate-form');
   const reverseTranslateOrganismSelect = document.getElementById('reverse-translate-organism');
   const reverseTranslateResult = document.getElementById('reverse-translate-result');
+  const proteinAssemblyForm = document.getElementById('protein-assembly-form');
+  const proteinAssemblyConstructNameInput = document.getElementById('protein-assembly-name');
+  const proteinAssemblyPoiNameInput = document.getElementById('protein-assembly-poi-name');
+  const proteinAssemblyPoiSequenceInput = document.getElementById('protein-assembly-poi-sequence');
+  const proteinAssemblyRows = document.getElementById('protein-assembly-rows');
+  const proteinAssemblyAddBlockBtn = document.getElementById('protein-assembly-add-block-btn');
+  const proteinAssemblyResetBtn = document.getElementById('protein-assembly-reset-btn');
+  const proteinAssemblyResult = document.getElementById('protein-assembly-result');
+  const proteinAssemblySequence = document.getElementById('protein-assembly-sequence');
+  const proteinAssemblyMeta = document.getElementById('protein-assembly-meta');
+  const proteinAssemblyMapSummary = document.getElementById('protein-assembly-map-summary');
+  const proteinAssemblyTableBody = document.getElementById('protein-assembly-table-body');
 
   const oligoForm = document.getElementById('oligo-form');
   const oligoResult = document.getElementById('oligo-result');
@@ -617,6 +636,7 @@ export function initToolBox() {
   const plannotateFileInput = document.getElementById('plannotate-file-input');
   const plannotateFileChooseBtn = document.getElementById('plannotate-file-choose');
   const plannotateFileName = document.getElementById('plannotate-file-name');
+  const plannotateDownloadGbkBtn = document.getElementById('plannotate-download-gbk');
   const crisprForm = document.getElementById('crispr-form');
   const crisprReferenceGenomeSelect = document.getElementById('crispr-reference-genome');
   const crisprReferenceNote = document.getElementById('crispr-reference-note');
@@ -636,10 +656,15 @@ export function initToolBox() {
   const plannotateState = {
     mode: 'text',
     fileName: '',
-    fileText: ''
+    fileText: '',
+    lastGbk: '',
+    lastRecordName: 'plasmid'
   };
   const crisprState = {
     targets: []
+  };
+  const proteinAssemblyState = {
+    nextRowId: 1
   };
 
   function getSelectedCompound(row) {
@@ -1058,6 +1083,261 @@ export function initToolBox() {
     `;
   }
 
+  function formatProteinAssemblyTypeOptions(selectedType = 'tag') {
+    return PROTEIN_ASSEMBLY_PART_TYPES
+      .map((typeEntry) => (
+        `<option value="${typeEntry.id}"${typeEntry.id === selectedType ? ' selected' : ''}>${escapeHtml(typeEntry.label)}</option>`
+      ))
+      .join('');
+  }
+
+  function formatProteinAssemblyLibraryOptions(type, selectedId = '') {
+    const options = getProteinAssemblyLibraryByType(type);
+    if (!options.length) {
+      return '<option value="">No library blocks</option>';
+    }
+
+    return options
+      .map((entry, index) => {
+        const shouldSelect = selectedId
+          ? entry.id === selectedId
+          : index === 0;
+        const selectedAttr = shouldSelect ? ' selected' : '';
+        const detail = entry.note ? ` · ${entry.note}` : '';
+        return `<option value="${entry.id}"${selectedAttr}>${escapeHtml(entry.label)} (${entry.sequence.length} aa${escapeHtml(detail)})</option>`;
+      })
+      .join('');
+  }
+
+  function describeProteinAssemblyLibrarySelection(type, libraryId) {
+    const library = getProteinAssemblyLibraryByType(type);
+    const selected = library.find((entry) => entry.id === libraryId) || library[0];
+    if (!selected) {
+      return 'No library block selected.';
+    }
+    const detail = selected.note ? `${selected.note} ` : '';
+    return `${detail}Length: ${selected.sequence.length} aa.`;
+  }
+
+  function createProteinAssemblyRow(seed = {}) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'protein-assembly-row';
+    wrapper.dataset.rowId = String(proteinAssemblyState.nextRowId++);
+
+    const selectedType = seed.type || 'tag';
+    wrapper.innerHTML = `
+      <label>
+        Block Type
+        <select class="protein-assembly-row-type">
+          ${formatProteinAssemblyTypeOptions(selectedType)}
+        </select>
+      </label>
+      <label class="protein-assembly-library-wrap">
+        Library Block
+        <select class="protein-assembly-row-library"></select>
+      </label>
+      <label class="protein-assembly-custom-label-wrap" hidden>
+        Custom Label
+        <input class="protein-assembly-row-custom-label" placeholder="e.g. Targeting peptide" />
+      </label>
+      <label class="protein-assembly-custom-sequence-wrap" hidden>
+        Custom Sequence
+        <input class="protein-assembly-row-custom-sequence" placeholder="Amino-acid sequence" />
+      </label>
+      <div class="form-actions protein-assembly-row-actions">
+        <button type="button" class="ghost-btn protein-assembly-up-btn">Up</button>
+        <button type="button" class="ghost-btn protein-assembly-down-btn">Down</button>
+        <button type="button" class="ghost-btn protein-assembly-remove-btn">Remove</button>
+      </div>
+      <p class="small-note protein-assembly-row-note"></p>
+    `;
+
+    const typeSelect = wrapper.querySelector('.protein-assembly-row-type');
+    const librarySelect = wrapper.querySelector('.protein-assembly-row-library');
+    const customLabelInput = wrapper.querySelector('.protein-assembly-row-custom-label');
+    const customSequenceInput = wrapper.querySelector('.protein-assembly-row-custom-sequence');
+    typeSelect.value = selectedType;
+    librarySelect.value = seed.libraryId || '';
+    customLabelInput.value = seed.customLabel || '';
+    customSequenceInput.value = seed.customSequence || '';
+    return wrapper;
+  }
+
+  function syncProteinAssemblyRow(row, seed = {}) {
+    if (!row) {
+      return;
+    }
+
+    const typeSelect = row.querySelector('.protein-assembly-row-type');
+    const libraryWrap = row.querySelector('.protein-assembly-library-wrap');
+    const librarySelect = row.querySelector('.protein-assembly-row-library');
+    const customLabelWrap = row.querySelector('.protein-assembly-custom-label-wrap');
+    const customSequenceWrap = row.querySelector('.protein-assembly-custom-sequence-wrap');
+    const customLabelInput = row.querySelector('.protein-assembly-row-custom-label');
+    const customSequenceInput = row.querySelector('.protein-assembly-row-custom-sequence');
+    const rowNote = row.querySelector('.protein-assembly-row-note');
+    const type = typeSelect.value;
+
+    if (type === 'poi') {
+      libraryWrap.hidden = true;
+      customLabelWrap.hidden = true;
+      customSequenceWrap.hidden = true;
+      rowNote.textContent = 'Uses the POI sequence entered above.';
+      return;
+    }
+
+    if (type === 'custom') {
+      libraryWrap.hidden = true;
+      customLabelWrap.hidden = false;
+      customSequenceWrap.hidden = false;
+      const customSequence = sanitizeProteinAssemblySequence(customSequenceInput.value, true);
+      rowNote.textContent = customSequence.length
+        ? `Custom block length: ${customSequence.length} aa.`
+        : 'Enter a custom amino-acid sequence.';
+      if (!customLabelInput.value.trim()) {
+        customLabelInput.placeholder = 'Custom part';
+      }
+      return;
+    }
+
+    libraryWrap.hidden = false;
+    customLabelWrap.hidden = true;
+    customSequenceWrap.hidden = true;
+
+    const preferredId = seed.libraryId || librarySelect.value || '';
+    librarySelect.innerHTML = formatProteinAssemblyLibraryOptions(type, preferredId);
+    const resolvedLibrary = getProteinAssemblyLibraryByType(type);
+    if (!resolvedLibrary.some((entry) => entry.id === librarySelect.value) && resolvedLibrary[0]) {
+      librarySelect.value = resolvedLibrary[0].id;
+    }
+    rowNote.textContent = describeProteinAssemblyLibrarySelection(type, librarySelect.value);
+  }
+
+  function addProteinAssemblyRow(seed = {}) {
+    if (!proteinAssemblyRows) {
+      return;
+    }
+    const row = createProteinAssemblyRow(seed);
+    proteinAssemblyRows.appendChild(row);
+    syncProteinAssemblyRow(row, seed);
+  }
+
+  function resetProteinAssemblyRows() {
+    if (!proteinAssemblyRows) {
+      return;
+    }
+    proteinAssemblyRows.innerHTML = '';
+    defaultProteinAssemblyRows().forEach((row) => addProteinAssemblyRow(row));
+  }
+
+  function collectProteinAssemblyRows() {
+    if (!proteinAssemblyRows) {
+      return [];
+    }
+
+    return [...proteinAssemblyRows.querySelectorAll('.protein-assembly-row')].map((row) => ({
+      type: row.querySelector('.protein-assembly-row-type')?.value || 'custom',
+      libraryId: row.querySelector('.protein-assembly-row-library')?.value || '',
+      customLabel: row.querySelector('.protein-assembly-row-custom-label')?.value || '',
+      customSequence: row.querySelector('.protein-assembly-row-custom-sequence')?.value || ''
+    }));
+  }
+
+  function renderProteinAssemblyTable(rows) {
+    if (!proteinAssemblyTableBody) {
+      return;
+    }
+
+    if (!rows.length) {
+      proteinAssemblyTableBody.innerHTML = `
+        <tr>
+          <td colspan="6" class="small-note">No blocks assembled.</td>
+        </tr>
+      `;
+      return;
+    }
+
+    proteinAssemblyTableBody.innerHTML = rows.map((row) => `
+      <tr>
+        <td>${row.index}</td>
+        <td>${escapeHtml(row.label)}</td>
+        <td>${escapeHtml(row.typeLabel)}</td>
+        <td>${row.start}-${row.end}</td>
+        <td>${row.length}</td>
+        <td><span class="protein-assembly-cell-seq">${escapeHtml(row.sequence)}</span></td>
+      </tr>
+    `).join('');
+  }
+
+  function renderProteinAssembly() {
+    if (!proteinAssemblyResult) {
+      return;
+    }
+
+    const constructName = proteinAssemblyConstructNameInput?.value || '';
+    const poiName = proteinAssemblyPoiNameInput?.value || '';
+    const poiSequence = sanitizeProteinAssemblySequence(proteinAssemblyPoiSequenceInput?.value || '', true);
+    const rows = collectProteinAssemblyRows();
+    const assembled = buildProteinAssemblyConstruct({
+      constructName,
+      poiName,
+      poiSequence,
+      rows
+    });
+
+    const sequenceForStats = assembled.sequence.replace(/\*/g, '');
+    const stats = sequenceForStats.length ? peptideStats(sequenceForStats) : null;
+    const massText = stats ? `${stats.mass.toFixed(2)} Da` : 'n/a';
+    const pIText = stats ? stats.pI.toFixed(2) : 'n/a';
+    const chargeText = stats ? stats.netCharge7.toFixed(2) : 'n/a';
+
+    if (proteinAssemblyMeta) {
+      proteinAssemblyMeta.textContent = `${assembled.length} aa · ${assembled.parts.length} blocks`;
+    }
+
+    if (proteinAssemblyMapSummary) {
+      const typeCounts = assembled.parts.reduce((acc, part) => {
+        acc[part.type] = (acc[part.type] || 0) + 1;
+        return acc;
+      }, {});
+      const segments = [
+        `tags ${typeCounts.tag || 0}`,
+        `linkers ${typeCounts.linker || 0}`,
+        `cleavage ${typeCounts.cleavage || 0}`,
+        `POI ${typeCounts.poi || 0}`,
+        `custom ${typeCounts.custom || 0}`
+      ];
+      proteinAssemblyMapSummary.textContent = segments.join(' · ');
+    }
+
+    if (proteinAssemblySequence) {
+      proteinAssemblySequence.innerHTML = assembled.sequence
+        ? formatSequenceLines(assembled.sequence, 70)
+        : '-';
+    }
+
+    renderProteinAssemblyTable(assembled.parts);
+
+    const warningMarkup = assembled.warnings
+      .map((warning) => `<p class="small-note">Warning: ${escapeHtml(warning)}</p>`)
+      .join('');
+    const errorMarkup = assembled.errors
+      .map((error) => `<p class="small-note">Error: ${escapeHtml(error)}</p>`)
+      .join('');
+    const statusText = assembled.ok ? 'Ready for cloning/expression planning.' : 'Assembly has issues to resolve.';
+
+    proteinAssemblyResult.innerHTML = `
+      <p><strong>Construct:</strong> ${escapeHtml(assembled.constructName)}</p>
+      <p><strong>Status:</strong> ${escapeHtml(statusText)}</p>
+      <p><strong>Total length:</strong> ${assembled.length} aa</p>
+      <p><strong>Estimated MW:</strong> ${massText}</p>
+      <p><strong>Estimated pI:</strong> ${pIText}</p>
+      <p><strong>Estimated net charge (pH 7.0):</strong> ${chargeText}</p>
+      ${warningMarkup}
+      ${errorMarkup}
+    `;
+  }
+
   function setPlannotateStatus(message, isError = false) {
     if (!plannotateRunStatus) {
       return;
@@ -1350,6 +1630,86 @@ export function initToolBox() {
     });
   }
 
+  function sanitizePlannotateRecordName(value) {
+    const cleaned = String(value || '')
+      .trim()
+      .replace(/\s+/g, '_')
+      .replace(/[^A-Za-z0-9_.-]/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .slice(0, 16);
+    return cleaned || 'plasmid';
+  }
+
+  function guessPlannotateRecordName(rawInput) {
+    const raw = String(rawInput || '');
+
+    if (plannotateState.mode === 'file' && plannotateState.fileName) {
+      const base = plannotateState.fileName.replace(/\.[^/.]+$/, '');
+      return sanitizePlannotateRecordName(base);
+    }
+
+    const locusMatch = raw.match(/^\s*LOCUS\s+(\S+)/im);
+    if (locusMatch?.[1]) {
+      return sanitizePlannotateRecordName(locusMatch[1]);
+    }
+
+    const fastaMatch = raw.match(/^\s*>\s*([^\s]+)/m);
+    if (fastaMatch?.[1]) {
+      return sanitizePlannotateRecordName(fastaMatch[1]);
+    }
+
+    return 'plasmid';
+  }
+
+  function setPlannotateGbkDownloadEnabled(isEnabled) {
+    if (!plannotateDownloadGbkBtn) {
+      return;
+    }
+    plannotateDownloadGbkBtn.disabled = !isEnabled;
+  }
+
+  function clearPlannotateGbkState() {
+    plannotateState.lastGbk = '';
+    plannotateState.lastRecordName = 'plasmid';
+    setPlannotateGbkDownloadEnabled(false);
+  }
+
+  function downloadTextFile(content, fileName, mimeType = 'text/plain;charset=utf-8') {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  }
+
+  async function resolvePlannotateGbk(result, rawInput) {
+    if (typeof result?.gbk === 'string' && result.gbk.trim()) {
+      return result.gbk;
+    }
+
+    const generator = window.enanaApi?.plannotateGenerateGbk;
+    if (typeof generator !== 'function') {
+      return '';
+    }
+
+    const response = await generator({
+      sequence: result?.sequence || '',
+      topology: result?.topology || 'circular',
+      hits: Array.isArray(result?.hits) ? result.hits : [],
+      recordName: guessPlannotateRecordName(rawInput)
+    });
+
+    if (!response?.ok) {
+      throw new Error(response?.error || 'Failed to generate GenBank output.');
+    }
+
+    return String(response.gbk || '');
+  }
+
   async function runPlannotateAnnotation(sequence, options) {
     const backend = window.enanaApi?.plannotateAnnotate;
     if (typeof backend === 'function') {
@@ -1386,6 +1746,8 @@ export function initToolBox() {
 
     const parsed = extractPlannotateSequence(raw);
     if (!parsed.sequence) {
+      clearPlannotateGbkState();
+
       const emptyReason = plannotateState.mode === 'file'
         ? (plannotateState.fileName ? 'Selected file does not contain a valid sequence.' : 'Choose a FASTA/GenBank file to annotate.')
         : 'Paste a DNA sequence, FASTA entry, or GenBank content to annotate.';
@@ -1414,12 +1776,30 @@ export function initToolBox() {
     };
 
     let result = await runPlannotateAnnotation(parsed.sequence, baseOptions);
+    const recordName = guessPlannotateRecordName(raw);
 
     const warnings = [];
     if (parsed.warning) {
       warnings.push(parsed.warning);
     }
     warnings.push(...(result.warnings || []));
+
+    try {
+      const gbk = await resolvePlannotateGbk(result, raw);
+      if (gbk.trim()) {
+        plannotateState.lastGbk = gbk;
+        plannotateState.lastRecordName = recordName;
+        setPlannotateGbkDownloadEnabled(true);
+      } else {
+        clearPlannotateGbkState();
+        plannotateState.lastRecordName = recordName;
+        warnings.push('GenBank export text was empty.');
+      }
+    } catch (error) {
+      clearPlannotateGbkState();
+      plannotateState.lastRecordName = recordName;
+      warnings.push(error.message || 'GenBank export generation failed.');
+    }
 
     const warningRows = warnings
       .map((warning) => `<p class="small-note">${escapeHtml(warning)}</p>`)
@@ -1764,6 +2144,94 @@ export function initToolBox() {
     renderReverseTranslate();
   });
 
+  if (proteinAssemblyForm) {
+    resetProteinAssemblyRows();
+
+    proteinAssemblyAddBlockBtn?.addEventListener('click', () => {
+      addProteinAssemblyRow({ type: 'tag' });
+      renderProteinAssembly();
+    });
+
+    proteinAssemblyResetBtn?.addEventListener('click', () => {
+      resetProteinAssemblyRows();
+      renderProteinAssembly();
+    });
+
+    proteinAssemblyRows?.addEventListener('change', (event) => {
+      const row = event.target.closest('.protein-assembly-row');
+      if (!row) {
+        return;
+      }
+      if (
+        event.target.classList.contains('protein-assembly-row-type')
+        || event.target.classList.contains('protein-assembly-row-library')
+      ) {
+        syncProteinAssemblyRow(row);
+      }
+      renderProteinAssembly();
+    });
+
+    proteinAssemblyRows?.addEventListener('input', (event) => {
+      const row = event.target.closest('.protein-assembly-row');
+      if (!row) {
+        renderProteinAssembly();
+        return;
+      }
+      if (
+        event.target.classList.contains('protein-assembly-row-custom-sequence')
+        || event.target.classList.contains('protein-assembly-row-custom-label')
+      ) {
+        syncProteinAssemblyRow(row);
+      }
+      renderProteinAssembly();
+    });
+
+    proteinAssemblyRows?.addEventListener('click', (event) => {
+      const row = event.target.closest('.protein-assembly-row');
+      if (!row) {
+        return;
+      }
+
+      if (event.target.classList.contains('protein-assembly-remove-btn')) {
+        row.remove();
+        if (!proteinAssemblyRows.children.length) {
+          addProteinAssemblyRow({ type: 'poi' });
+        }
+        renderProteinAssembly();
+        return;
+      }
+
+      if (event.target.classList.contains('protein-assembly-up-btn')) {
+        const previous = row.previousElementSibling;
+        if (previous) {
+          proteinAssemblyRows.insertBefore(row, previous);
+          renderProteinAssembly();
+        }
+        return;
+      }
+
+      if (event.target.classList.contains('protein-assembly-down-btn')) {
+        const next = row.nextElementSibling;
+        if (next) {
+          proteinAssemblyRows.insertBefore(next, row);
+          renderProteinAssembly();
+        }
+      }
+    });
+
+    proteinAssemblyForm.addEventListener('input', (event) => {
+      if (event.target.closest('.protein-assembly-row')) {
+        return;
+      }
+      renderProteinAssembly();
+    });
+
+    proteinAssemblyForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      renderProteinAssembly();
+    });
+  }
+
   oligoForm.addEventListener('input', renderOligo);
   oligoForm.addEventListener('submit', (event) => {
     event.preventDefault();
@@ -1787,7 +2255,19 @@ export function initToolBox() {
     setPlannotateStatus('Idle');
     renderPlannotateEmptyMap('Run annotation to display the plasmid map.');
     clearPlannotateTable('No annotations yet.');
+    clearPlannotateGbkState();
     void refreshPlannotateEngineStatus();
+
+    plannotateDownloadGbkBtn?.addEventListener('click', () => {
+      if (!plannotateState.lastGbk) {
+        setPlannotateStatus('Run annotation before downloading a GBK file.', true);
+        return;
+      }
+
+      const baseName = sanitizePlannotateRecordName(plannotateState.lastRecordName || 'plasmid');
+      downloadTextFile(plannotateState.lastGbk, `${baseName}_pLann.gbk`, 'text/plain;charset=utf-8');
+      setPlannotateStatus(`Downloaded ${baseName}_pLann.gbk`);
+    });
 
     plannotateInstallAllBtn?.addEventListener('click', async () => {
       const installer = window.enanaApi?.plannotateInstallAll;
@@ -1838,11 +2318,13 @@ export function initToolBox() {
 
     plannotateModeTextBtn?.addEventListener('click', () => {
       setPlannotateMode('text');
+      clearPlannotateGbkState();
       setPlannotateStatus('Idle');
     });
 
     plannotateModeFileBtn?.addEventListener('click', () => {
       setPlannotateMode('file');
+      clearPlannotateGbkState();
       setPlannotateStatus('Idle');
     });
 
@@ -1857,6 +2339,7 @@ export function initToolBox() {
       }
       try {
         setPlannotateStatus('Loading file...');
+        clearPlannotateGbkState();
         plannotateState.fileText = await readPlannotateFile(file);
         plannotateState.fileName = file.name || '';
         if (plannotateFileName) {
@@ -1864,6 +2347,7 @@ export function initToolBox() {
         }
         setPlannotateStatus(`Loaded ${plannotateState.fileName || 'file'}`);
       } catch (error) {
+        clearPlannotateGbkState();
         plannotateState.fileText = '';
         plannotateState.fileName = '';
         if (plannotateFileName) {
@@ -1875,6 +2359,7 @@ export function initToolBox() {
 
     plannotateSequenceInput?.addEventListener('input', () => {
       if (plannotateState.mode === 'text') {
+        clearPlannotateGbkState();
         setPlannotateStatus('Ready');
       }
     });
@@ -2035,6 +2520,7 @@ export function initToolBox() {
   renderPeptide();
   renderDnaProtein();
   renderReverseTranslate();
+  renderProteinAssembly();
   renderOligo();
   renderExtinction();
   renderQpcr();
