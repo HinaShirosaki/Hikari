@@ -49,11 +49,52 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
       return;
     }
 
+    const rootPath = String(state.settings.storagePath || '').trim();
+    if (!rootPath) {
+      window.alert('Set Storage Folder Path in Settings before uploading papers.');
+      return;
+    }
+
+    const pdfDataUrl = await fileToDataUrl(file);
+    const dataBase64 = extractBase64Payload(pdfDataUrl);
+    if (!dataBase64) {
+      window.alert('Cannot read the selected PDF.');
+      return;
+    }
+
+    if (!window.enanaApi?.storeImportedFile) {
+      window.alert('Imported file storage API is unavailable.');
+      return;
+    }
+
+    let storedFile = null;
+    try {
+      const result = await window.enanaApi.storeImportedFile({
+        storagePath: rootPath,
+        targetFolder: buildPaperStorageFolder({
+          rootPath,
+          linkedType: paperLinkTypeSelect.value,
+          linkedName: linked.name
+        }),
+        fileName: file.name,
+        dataBase64
+      });
+      if (!result?.ok) {
+        throw new Error(result?.error || 'Failed to store uploaded PDF.');
+      }
+      storedFile = result;
+    } catch (error) {
+      window.alert(String(error?.message || error || 'Failed to store uploaded PDF.'));
+      return;
+    }
+
     const paper = {
       id: createId(),
       title: paperTitleInput.value.trim() || file.name.replace(/\.pdf$/i, ''),
-      fileName: file.name,
-      pdfDataUrl: await fileToDataUrl(file),
+      fileName: storedFile.fileName || file.name,
+      pdfDataUrl,
+      storedFilePath: storedFile.filePath || '',
+      storedRelativePath: storedFile.relativePath || '',
       linkedType: paperLinkTypeSelect.value,
       linkedId: linkId,
       linkedName: linked.name,
@@ -160,12 +201,7 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
         instruction: requirePrompt(prompts, 'extractMethods')
       });
 
-      const methods = Array.isArray(result?.methods) ? result.methods : [];
-      paper.methodsExtract = methods.map((item, index) => ({
-        title: String(item?.title || `Method ${index + 1}`),
-        steps: Array.isArray(item?.steps) ? item.steps.map((step) => String(step || '').trim()).filter(Boolean) : [],
-        citations: Array.isArray(item?.citations) ? item.citations.map((cit) => String(cit || '').trim()).filter(Boolean) : []
-      }));
+      paper.methodsExtract = normalizeMethodsExtract(result);
       paper.methodsStatus = 'idle';
     } catch (error) {
       paper.methodsStatus = 'error';
@@ -649,6 +685,71 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
   return { render, renderLinkTargets };
 }
 
+function normalizeMethodsExtract(result) {
+  let methods = [];
+  if (Array.isArray(result?.methods)) {
+    methods = result.methods;
+  } else if (Array.isArray(result?.protocols)) {
+    methods = result.protocols;
+  } else if (Array.isArray(result)) {
+    methods = result;
+  } else if (result && typeof result === 'object') {
+    methods = [result];
+  }
+
+  const normalizeMaterial = (material) => {
+    if (typeof material === 'string') {
+      return String(material || '').trim();
+    }
+    if (!material || typeof material !== 'object') {
+      return '';
+    }
+    const fields = Object.entries(material)
+      .map(([key, value]) => {
+        if (value === null || value === undefined) {
+          return '';
+        }
+        const rendered = typeof value === 'object' ? JSON.stringify(value) : String(value).trim();
+        if (!rendered || rendered === '{}' || rendered === '[]') {
+          return '';
+        }
+        return `${key}: ${rendered}`;
+      })
+      .filter(Boolean);
+    return fields.join('; ').trim();
+  };
+
+  return methods.map((item, index) => {
+    const title = String(item?.title || item?.name || `Method ${index + 1}`).trim() || `Method ${index + 1}`;
+    const steps = Array.isArray(item?.steps)
+      ? item.steps
+        .map((step) => {
+          if (typeof step === 'string') {
+            return String(step || '').trim();
+          }
+          if (!step || typeof step !== 'object') {
+            return '';
+          }
+          return String(step.action || step.text || step.instruction || '').trim();
+        })
+        .filter(Boolean)
+      : [];
+    const citations = Array.isArray(item?.citations)
+      ? item.citations.map((cit) => String(cit || '').trim()).filter(Boolean)
+      : [];
+    return {
+      title,
+      steps,
+      citations,
+      purpose: String(item?.purpose || '').trim(),
+      materials: Array.isArray(item?.materials)
+        ? item.materials.map((material) => normalizeMaterial(material)).filter(Boolean)
+        : [],
+      troubleshooting: item?.troubleshooting ?? ''
+    };
+  }).filter((item) => item.title || item.steps.length);
+}
+
 function fileToDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -658,16 +759,43 @@ function fileToDataUrl(file) {
   });
 }
 
+function extractBase64Payload(dataUrl) {
+  const source = String(dataUrl || '');
+  const commaIndex = source.indexOf(',');
+  if (commaIndex < 0) {
+    return '';
+  }
+  return source.slice(commaIndex + 1).trim();
+}
+
+function sanitizeFolderName(value) {
+  return String(value || '')
+    .trim()
+    .replace(/[<>:"/\\|?*\x00-\x1F]+/g, '_')
+    .replace(/\s+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
+
+function buildPaperStorageFolder({ rootPath, linkedType, linkedName }) {
+  const category = linkedType === 'journal-club' ? 'JournalClub' : 'Project';
+  const safeLinkedName = sanitizeFolderName(linkedName) || 'Uncategorized';
+  return `${String(rootPath || '').trim()}/${category}/${safeLinkedName}/Papers`;
+}
+
 const LLM_PROVIDER_ENDPOINTS = {
   openai: 'https://api.openai.com/v1/responses',
   gemini: 'https://generativelanguage.googleapis.com/v1beta',
-  claude: 'https://api.anthropic.com/v1/messages'
+  claude: 'https://api.anthropic.com/v1/messages',
+  codex: 'codex://cli'
 };
 
 function inferProviderFromEndpoint(endpoint) {
   const value = String(endpoint || '').trim().toLowerCase();
   if (!value) {
     return '';
+  }
+  if (value.startsWith('codex://') || value.includes('codex cli') || value.includes('openai-cli')) {
+    return 'codex';
   }
   if (value.includes('anthropic.com')) {
     return 'claude';
@@ -683,7 +811,7 @@ function inferProviderFromEndpoint(endpoint) {
 
 function normalizeLlmProvider(provider, endpoint = '') {
   const clean = String(provider || '').trim().toLowerCase();
-  if (clean === 'openai' || clean === 'gemini' || clean === 'claude') {
+  if (clean === 'openai' || clean === 'gemini' || clean === 'claude' || clean === 'codex') {
     return clean;
   }
   return inferProviderFromEndpoint(endpoint) || 'openai';
@@ -696,12 +824,13 @@ function defaultEndpointForProvider(provider) {
 
 function getLlmRequestConfig(llm) {
   const legacySetting = String(llm?.api || '').trim();
-  const endpointCandidate = String(llm?.apiEndpoint || '').trim() || (legacySetting.startsWith('http') ? legacySetting : '');
+  const legacyLooksLikeEndpoint = /^[a-z]+:\/\//i.test(legacySetting);
+  const endpointCandidate = String(llm?.apiEndpoint || '').trim() || (legacyLooksLikeEndpoint ? legacySetting : '');
   const provider = normalizeLlmProvider(llm?.provider, endpointCandidate);
   const endpoint = endpointCandidate || defaultEndpointForProvider(provider);
-  const token = String(llm?.apiKey || '').trim() || (legacySetting && !legacySetting.startsWith('http') ? legacySetting : '');
+  const token = String(llm?.apiKey || '').trim() || (legacySetting && !legacyLooksLikeEndpoint ? legacySetting : '');
 
-  if (!token) {
+  if (provider !== 'codex' && !token) {
     throw new Error('Missing API key in Settings > LLM Model & API.');
   }
 
@@ -709,11 +838,11 @@ function getLlmRequestConfig(llm) {
 }
 
 async function requestResponses({ llm, modelFallbackPrompt, fileName, pdfDataUrl, prompt }) {
+  const { provider, endpoint, token } = getLlmRequestConfig(llm);
   const model = String(llm?.model || '').trim();
-  if (!model) {
+  if (!model && provider !== 'codex') {
     throw new Error('Missing model in Settings > LLM Model & API.');
   }
-  const { provider, endpoint, token } = getLlmRequestConfig(llm);
 
   if (provider === 'claude') {
     return requestClaude({
@@ -730,6 +859,14 @@ async function requestResponses({ llm, modelFallbackPrompt, fileName, pdfDataUrl
       token,
       model,
       prompt: prompt || modelFallbackPrompt || '',
+      pdfDataUrl
+    });
+  }
+  if (provider === 'codex') {
+    return requestCodex({
+      model,
+      prompt: prompt || modelFallbackPrompt || '',
+      fileName,
       pdfDataUrl
     });
   }
@@ -916,6 +1053,22 @@ async function requestGemini({ endpoint, token, model, prompt, pdfDataUrl }) {
     .trim();
 }
 
+async function requestCodex({ model, prompt, fileName, pdfDataUrl }) {
+  if (!window.enanaApi?.runCodexLlmPrompt) {
+    throw new Error('Codex CLI bridge is unavailable in this build.');
+  }
+  const result = await window.enanaApi.runCodexLlmPrompt({
+    model,
+    prompt,
+    fileName,
+    pdfDataUrl
+  });
+  if (!result?.ok) {
+    throw new Error(String(result?.error || 'Codex CLI request failed.'));
+  }
+  return String(result?.text || '').trim();
+}
+
 async function requestSummary({ llm, pdfDataUrl, fileName, title }) {
   const prompts = await getLlmPrompts();
   return requestResponses({
@@ -956,15 +1109,37 @@ function parseJsonFromText(raw) {
   try {
     return JSON.parse(clean);
   } catch {
-    const match = clean.match(/\{[\s\S]*\}/);
-    if (!match) {
-      return {};
+    const candidates = [];
+    const fenced = clean.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+    if (fenced?.[1]) {
+      candidates.push(fenced[1].trim());
     }
-    try {
-      return JSON.parse(match[0]);
-    } catch {
-      return {};
+
+    const arrayStart = clean.indexOf('[');
+    const arrayEnd = clean.lastIndexOf(']');
+    if (arrayStart >= 0 && arrayEnd > arrayStart) {
+      candidates.push(clean.slice(arrayStart, arrayEnd + 1));
     }
+
+    const objectStart = clean.indexOf('{');
+    const objectEnd = clean.lastIndexOf('}');
+    if (objectStart >= 0 && objectEnd > objectStart) {
+      candidates.push(clean.slice(objectStart, objectEnd + 1));
+    }
+
+    const seen = new Set();
+    for (const candidate of candidates) {
+      if (!candidate || seen.has(candidate)) {
+        continue;
+      }
+      seen.add(candidate);
+      try {
+        return JSON.parse(candidate);
+      } catch {
+        // Try the next extraction candidate.
+      }
+    }
+    return {};
   }
 }
 
@@ -976,9 +1151,6 @@ const DEFAULT_LLM_PROMPTS = {
   knowledgeQa: '',
   paperTitleSuffix: ''
 };
-
-let llmPromptCache = null;
-let llmPromptPromise = null;
 
 function normalizePromptConfig(parsed) {
   const source = parsed && typeof parsed === 'object' ? parsed : {};
@@ -992,29 +1164,16 @@ function normalizePromptConfig(parsed) {
 }
 
 async function getLlmPrompts() {
-  if (llmPromptCache) {
-    return llmPromptCache;
+  try {
+    const response = await fetch(`${LLM_PROMPTS_PATH}?t=${Date.now()}`, { cache: 'no-store' });
+    if (!response.ok) {
+      throw new Error(`Failed to load prompts: ${response.status}`);
+    }
+    const parsed = await response.json();
+    return normalizePromptConfig(parsed);
+  } catch {
+    return normalizePromptConfig({});
   }
-
-  if (!llmPromptPromise) {
-    llmPromptPromise = fetch(LLM_PROMPTS_PATH)
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error(`Failed to load prompts: ${response.status}`);
-        }
-        return response.json();
-      })
-      .then((parsed) => {
-        llmPromptCache = normalizePromptConfig(parsed);
-        return llmPromptCache;
-      })
-      .catch(() => {
-        llmPromptCache = normalizePromptConfig({});
-        return llmPromptCache;
-      });
-  }
-
-  return llmPromptPromise;
 }
 
 function requirePrompt(prompts, key) {

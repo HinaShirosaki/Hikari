@@ -277,19 +277,85 @@ export function initProtocolManagement({
   function extractPlaceholdersFromText(rawText) {
     const placeholders = [];
     const cleaned = String(rawText || '')
-      .replace(/\[([^[\]]+)\]/g, (_, name) => {
-        const trimmed = String(name).trim();
-        if (trimmed) {
-          const id = createId();
-          placeholders.push({ id, name: trimmed });
-          return `{{ph:${id}}}`;
-        }
-        return '';
+      .replace(/\[([^[\]]*)\]/g, (_, name) => {
+        const trimmed = String(name || '').trim() || 'value';
+        const id = createId();
+        placeholders.push({ id, name: trimmed });
+        return `{{ph:${id}}}`;
       })
       .replace(/\s+/g, ' ')
       .trim();
 
     return { cleanedText: cleaned, placeholders };
+  }
+
+  function normalizeTroubleshooting(rawTroubleshooting) {
+    if (Array.isArray(rawTroubleshooting)) {
+      return rawTroubleshooting
+        .filter((item) => item && typeof item === 'object')
+        .map((item) => {
+          const problem = String(item.problem || '').trim();
+          const possibleCause = String(item.possible_cause || item.possibleCause || '').trim();
+          const solution = String(item.solution || '').trim();
+          const parts = [];
+          if (problem) {
+            parts.push(`Problem: ${problem}`);
+          }
+          if (possibleCause) {
+            parts.push(`Possible cause: ${possibleCause}`);
+          }
+          if (solution) {
+            parts.push(`Solution: ${solution}`);
+          }
+          return parts.join('; ');
+        })
+        .filter(Boolean)
+        .join('\n');
+    }
+    return String(rawTroubleshooting || '').trim();
+  }
+
+  function normalizeMethodStepEntries(rawSteps) {
+    if (!Array.isArray(rawSteps)) {
+      return [];
+    }
+
+    const sortedSteps = rawSteps
+      .map((step, index) => ({ step, index }))
+      .sort((a, b) => {
+        const numberA = Number(a.step?.step_number);
+        const numberB = Number(b.step?.step_number);
+        const hasNumberA = Number.isFinite(numberA);
+        const hasNumberB = Number.isFinite(numberB);
+        if (hasNumberA && hasNumberB && numberA !== numberB) {
+          return numberA - numberB;
+        }
+        if (hasNumberA !== hasNumberB) {
+          return hasNumberA ? -1 : 1;
+        }
+        return a.index - b.index;
+      })
+      .map((entry) => entry.step);
+
+    return sortedSteps
+      .map((rawStep) => {
+        if (typeof rawStep === 'string') {
+          return String(rawStep || '').trim();
+        }
+        if (!rawStep || typeof rawStep !== 'object') {
+          return '';
+        }
+        return String(rawStep.action || rawStep.text || rawStep.instruction || '').trim();
+      })
+      .filter(Boolean)
+      .map((text) => {
+        const parsed = extractPlaceholdersFromText(text);
+        return {
+          id: createId(),
+          text: parsed.cleanedText || text,
+          placeholders: parsed.placeholders
+        };
+      });
   }
 
   function buildStepEntriesFromText(rawText, existingSteps = []) {
@@ -1027,22 +1093,20 @@ export function initProtocolManagement({
   }
 
   function addDraftFromExtractedMethod(method, source) {
-    const methodTitle = String(method?.title || 'Extracted Method').trim();
+    const protocolShapeCandidate = Array.isArray(method) ? method.find((item) => item && typeof item === 'object') : method;
+    const methodTitle = String(
+      protocolShapeCandidate?.title
+      || protocolShapeCandidate?.name
+      || 'Extracted Method'
+    ).trim();
     const sourceTitle = String(source?.title || 'Paper').trim();
-    const steps = Array.isArray(method?.steps) ? method.steps : [];
-    const citations = Array.isArray(method?.citations) ? method.citations.filter(Boolean) : [];
+    const steps = Array.isArray(protocolShapeCandidate?.steps) ? protocolShapeCandidate.steps : [];
+    const citations = Array.isArray(protocolShapeCandidate?.citations) ? protocolShapeCandidate.citations.filter(Boolean) : [];
+    const purpose = String(protocolShapeCandidate?.purpose || '').trim();
+    const materials = normalizeMaterials(protocolShapeCandidate?.materials);
+    const troubleshooting = normalizeTroubleshooting(protocolShapeCandidate?.troubleshooting);
 
-    const convertedSteps = steps
-      .map((rawStep) => String(rawStep || '').trim())
-      .filter(Boolean)
-      .map((text) => {
-        const parsed = extractPlaceholdersFromText(text);
-        return {
-          id: createId(),
-          text: parsed.cleanedText || text,
-          placeholders: parsed.placeholders
-        };
-      });
+    const convertedSteps = normalizeMethodStepEntries(steps);
 
     if (citations.length) {
       convertedSteps.unshift({
@@ -1059,10 +1123,10 @@ export function initProtocolManagement({
     openEditorWithDraft({
       id: null,
       name: `${sourceTitle} - ${methodTitle}`.trim(),
-      purpose: '',
-      materials: [],
+      purpose,
+      materials,
       steps: convertedSteps,
-      troubleshooting: ''
+      troubleshooting
     }, 'Create Protocol');
 
     return true;

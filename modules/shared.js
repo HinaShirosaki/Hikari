@@ -45,19 +45,24 @@ const LEGACY_CHEMISTRY_DRAFT_KEY = 'enana_synthesis_chemistry_draft_v1';
 export const LLM_PROVIDERS = Object.freeze({
   OPENAI: 'openai',
   GEMINI: 'gemini',
-  CLAUDE: 'claude'
+  CLAUDE: 'claude',
+  CODEX: 'codex'
 });
 export const DEFAULT_LLM_PROVIDER = LLM_PROVIDERS.OPENAI;
 export const LLM_DEFAULT_ENDPOINTS = Object.freeze({
   [LLM_PROVIDERS.OPENAI]: 'https://api.openai.com/v1/responses',
   [LLM_PROVIDERS.GEMINI]: 'https://generativelanguage.googleapis.com/v1beta',
-  [LLM_PROVIDERS.CLAUDE]: 'https://api.anthropic.com/v1/messages'
+  [LLM_PROVIDERS.CLAUDE]: 'https://api.anthropic.com/v1/messages',
+  [LLM_PROVIDERS.CODEX]: 'codex://cli'
 });
 
 export function inferLlmProviderFromEndpoint(endpoint) {
   const value = String(endpoint || '').trim().toLowerCase();
   if (!value) {
     return '';
+  }
+  if (value.startsWith('codex://') || value.includes('codex cli') || value.includes('openai-cli')) {
+    return LLM_PROVIDERS.CODEX;
   }
   if (value.includes('anthropic.com')) {
     return LLM_PROVIDERS.CLAUDE;
@@ -169,8 +174,9 @@ export function normalizeState(parsed) {
     ? rawGrowthMetrics.counters
     : {};
   const legacyApi = String(rawLlm.api || '').trim();
-  const legacyEndpoint = legacyApi.startsWith('http') ? legacyApi : '';
-  const legacyApiKey = legacyApi && !legacyApi.startsWith('http') ? legacyApi : '';
+  const legacyApiLooksLikeEndpoint = /^[a-z]+:\/\//i.test(legacyApi);
+  const legacyEndpoint = legacyApiLooksLikeEndpoint ? legacyApi : '';
+  const legacyApiKey = legacyApi && !legacyApiLooksLikeEndpoint ? legacyApi : '';
   const llmProvider = normalizeLlmProvider(rawLlm.provider, rawLlm.apiEndpoint || legacyEndpoint);
   const llmEndpoint = String(rawLlm.apiEndpoint || legacyEndpoint || '').trim()
     || defaultLlmEndpointForProvider(llmProvider);

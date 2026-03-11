@@ -18,11 +18,134 @@ export function initCollaborationManagement({
   const protocolLinkInput = document.getElementById('protocol-link-input');
   const importProtocolLinkBtn = document.getElementById('import-protocol-link-btn');
   const protocolLinkStatus = document.getElementById('protocol-link-status');
-  const defaultProtocolLinkStatus = 'Paste a shared protocol link, then click Import Link.';
+  const defaultProtocolLinkStatus = 'Paste a shared protocol link or protocol JSON, then click Import Link.';
 
   messageForm.addEventListener('submit', onSendMessage);
   inboxEmailSelect.addEventListener('change', renderInbox);
   importProtocolLinkBtn?.addEventListener('click', importProtocolFromLink);
+
+  function splitTextLines(rawText) {
+    return String(rawText || '').replace(/\r\n?/g, '\n').split('\n');
+  }
+
+  function stripBulletPrefix(rawLine) {
+    return String(rawLine || '')
+      .replace(/^\s*(?:[-*•]|\d+[.)])\s*/, '')
+      .trim();
+  }
+
+  function normalizeMaterials(rawMaterials) {
+    if (Array.isArray(rawMaterials)) {
+      return rawMaterials
+        .map((item) => String(item || '').trim())
+        .filter(Boolean);
+    }
+
+    return splitTextLines(rawMaterials)
+      .map((line) => stripBulletPrefix(line))
+      .filter(Boolean);
+  }
+
+  function normalizeTroubleshooting(rawTroubleshooting) {
+    if (Array.isArray(rawTroubleshooting)) {
+      return rawTroubleshooting
+        .filter((item) => item && typeof item === 'object')
+        .map((item) => {
+          const problem = String(item.problem || '').trim();
+          const possibleCause = String(item.possible_cause || item.possibleCause || '').trim();
+          const solution = String(item.solution || '').trim();
+          const chunks = [];
+          if (problem) {
+            chunks.push(`Problem: ${problem}`);
+          }
+          if (possibleCause) {
+            chunks.push(`Possible cause: ${possibleCause}`);
+          }
+          if (solution) {
+            chunks.push(`Solution: ${solution}`);
+          }
+          return chunks.join('; ');
+        })
+        .filter(Boolean)
+        .join('\n');
+    }
+
+    return String(rawTroubleshooting || '').trim();
+  }
+
+  function extractPlaceholdersFromText(rawText) {
+    const placeholders = [];
+    const cleanedText = String(rawText || '')
+      .replace(/\[([^[\]]*)\]/g, (_match, rawName) => {
+        const name = String(rawName || '').trim() || 'value';
+        const id = createId();
+        placeholders.push({ id, name });
+        return `{{ph:${id}}}`;
+      })
+      .replace(/\s+/g, ' ')
+      .trim();
+    return { cleanedText, placeholders };
+  }
+
+  function normalizeSteps(rawSteps) {
+    if (!Array.isArray(rawSteps)) {
+      return [];
+    }
+
+    const withOrder = rawSteps
+      .map((step, index) => ({ step, index }))
+      .filter(({ step }) => step != null)
+      .sort((a, b) => {
+        const stepNumberA = Number(a.step?.step_number);
+        const stepNumberB = Number(b.step?.step_number);
+        const hasNumberA = Number.isFinite(stepNumberA);
+        const hasNumberB = Number.isFinite(stepNumberB);
+        if (hasNumberA && hasNumberB && stepNumberA !== stepNumberB) {
+          return stepNumberA - stepNumberB;
+        }
+        if (hasNumberA !== hasNumberB) {
+          return hasNumberA ? -1 : 1;
+        }
+        return a.index - b.index;
+      });
+
+    return withOrder
+      .map(({ step }) => {
+        if (typeof step === 'string') {
+          const rawText = String(step || '').trim();
+          if (!rawText) {
+            return null;
+          }
+          const parsed = extractPlaceholdersFromText(rawText);
+          return {
+            id: createId(),
+            text: parsed.cleanedText || rawText,
+            placeholders: parsed.placeholders
+          };
+        }
+
+        if (typeof step !== 'object') {
+          return null;
+        }
+
+        const rawText = String(step.action || step.text || step.instruction || '').trim();
+        if (!rawText) {
+          return null;
+        }
+        const parsed = extractPlaceholdersFromText(rawText);
+        return {
+          id: String(step.id || createId()),
+          text: parsed.cleanedText || rawText,
+          placeholders: Array.isArray(step.placeholders)
+            ? step.placeholders
+              .filter((item) => item && typeof item === 'object')
+              .map((item) => ({ id: String(item.id || createId()), name: String(item.name || '').trim() || 'value' }))
+              .filter((item) => item.name)
+            : parsed.placeholders
+        };
+      })
+      .filter(Boolean);
+  }
 
   function getEnanaEmails() {
     const emails = state.members
@@ -58,13 +181,13 @@ export function initCollaborationManagement({
       return null;
     }
 
-    const name = String(raw.name || '').trim();
+    const name = String(raw.name || raw.title || '').trim();
     if (!name) {
       return null;
     }
 
     const purpose = String(raw.purpose || '').trim();
-    const troubleshooting = String(raw.troubleshooting || '').trim();
+    const troubleshooting = normalizeTroubleshooting(raw.troubleshooting);
     const nowIso = new Date().toISOString();
 
     const parsedCreatedAt = Date.parse(String(raw.createdAt || '').trim());
@@ -72,29 +195,8 @@ export function initCollaborationManagement({
     const parsedUpdatedAt = Date.parse(String(raw.updatedAt || '').trim());
     const updatedAt = Number.isFinite(parsedUpdatedAt) ? new Date(parsedUpdatedAt).toISOString() : createdAt;
 
-    const materials = Array.isArray(raw.materials)
-      ? raw.materials
-        .map((item) => String(item || '').trim())
-        .filter(Boolean)
-      : String(raw.materials || '')
-        .split(/\r?\n/)
-        .map((line) => String(line || '').replace(/^\s*(?:[-*•]|\d+[.)])\s*/, '').trim())
-        .filter(Boolean);
-
-    const steps = Array.isArray(raw.steps)
-      ? raw.steps
-        .filter((step) => step && typeof step === 'object')
-        .map((step) => ({
-          id: String(step.id || createId()),
-          text: String(step.text || '').trim(),
-          placeholders: Array.isArray(step.placeholders)
-            ? step.placeholders
-              .filter((item) => item && typeof item === 'object')
-              .map((item) => ({ id: String(item.id || createId()), name: String(item.name || '').trim() }))
-              .filter((item) => item.name)
-            : []
-        }))
-      : [];
+    const materials = normalizeMaterials(raw.materials);
+    const steps = normalizeSteps(raw.steps);
 
     return {
       id: String(raw.id || createId()),
@@ -106,6 +208,14 @@ export function initCollaborationManagement({
       steps,
       troubleshooting
     };
+  }
+
+  function sanitizeIncomingProtocols(raw) {
+    if (Array.isArray(raw)) {
+      return raw.map((item) => sanitizeIncomingProtocol(item)).filter(Boolean);
+    }
+    const single = sanitizeIncomingProtocol(raw);
+    return single ? [single] : [];
   }
 
   function buildUniqueProtocolCopyName(baseName) {
@@ -191,12 +301,39 @@ export function initCollaborationManagement({
       if (!parsed || typeof parsed !== 'object') {
         return null;
       }
-      if (parsed.type !== 'protocol_share_link' || !parsed.protocol) {
+      const hasProtocolPayload = Boolean(parsed.protocol) || Array.isArray(parsed.protocols);
+      if (parsed.type !== 'protocol_share_link' || !hasProtocolPayload) {
         return null;
       }
       return parsed;
     } catch {
       return null;
+    }
+  }
+
+  function parseProtocolsFromJson(raw) {
+    const value = String(raw || '').trim();
+    if (!value) {
+      return [];
+    }
+
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) {
+        return sanitizeIncomingProtocols(parsed);
+      }
+      if (!parsed || typeof parsed !== 'object') {
+        return [];
+      }
+      if (Array.isArray(parsed.protocols)) {
+        return sanitizeIncomingProtocols(parsed.protocols);
+      }
+      if (parsed.protocol && typeof parsed.protocol === 'object') {
+        return sanitizeIncomingProtocols(parsed.protocol);
+      }
+      return sanitizeIncomingProtocols(parsed);
+    } catch {
+      return [];
     }
   }
 
@@ -249,28 +386,28 @@ export function initCollaborationManagement({
   function importProtocolFromLink() {
     const rawInput = String(protocolLinkInput?.value || '').trim();
     if (!rawInput) {
-      setProtocolLinkStatus('Paste a protocol link first.');
+      setProtocolLinkStatus('Paste a protocol link or protocol JSON first.');
       return;
     }
 
     const payload = parseProtocolSharePayload(rawInput);
-    if (!payload) {
-      setProtocolLinkStatus('Invalid protocol link. Please paste a valid Enana share link.');
+    const incomingProtocols = payload
+      ? sanitizeIncomingProtocols(payload.protocol || payload.protocols)
+      : parseProtocolsFromJson(rawInput);
+
+    if (!incomingProtocols.length) {
+      setProtocolLinkStatus('Invalid protocol link or protocol JSON payload.');
       return;
     }
 
-    const incoming = sanitizeIncomingProtocol(payload.protocol);
-    if (!incoming) {
-      setProtocolLinkStatus('This link does not include a valid protocol payload.');
-      return;
-    }
-
-    const importedProtocol = addImportedProtocol(incoming);
-
-    trackGrowthEvent?.(state, 'protocol_share_link_imported', {
-      from: String(payload.from || '').trim() || 'unknown',
-      sourceProtocolId: incoming.id,
-      importedProtocolId: importedProtocol.id
+    const importedProtocols = incomingProtocols.map((incoming) => addImportedProtocol(incoming));
+    importedProtocols.forEach((importedProtocol, index) => {
+      const source = incomingProtocols[index];
+      trackGrowthEvent?.(state, 'protocol_share_link_imported', {
+        from: String(payload?.from || '').trim() || 'unknown',
+        sourceProtocolId: source.id,
+        importedProtocolId: importedProtocol.id
+      });
     });
 
     persist();
@@ -279,7 +416,11 @@ export function initCollaborationManagement({
     if (protocolLinkInput) {
       protocolLinkInput.value = '';
     }
-    setProtocolLinkStatus(`Imported "${importedProtocol.name}" from share link.`);
+    if (importedProtocols.length === 1) {
+      setProtocolLinkStatus(`Imported "${importedProtocols[0].name}".`);
+      return;
+    }
+    setProtocolLinkStatus(`Imported ${importedProtocols.length} protocols.`);
   }
 
   function renderProtocolShareActions(message, inboxEmail) {

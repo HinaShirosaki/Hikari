@@ -951,15 +951,15 @@
             </label>
             <div id="inbox-list" class="stack-form"></div>
             <div class="stack-form">
-              <h4>Import Shared Protocol Link</h4>
+              <h4>Import Shared Protocol Link / JSON</h4>
               <label>
                 Share Link
-                <textarea id="protocol-link-input" rows="3" placeholder="Paste enana://protocol-share/... or ENANA_PROTOCOL_SHARE:..."></textarea>
+                <textarea id="protocol-link-input" rows="3" placeholder="Paste enana://protocol-share/... or ENANA_PROTOCOL_SHARE:... or JSON"></textarea>
               </label>
               <div class="form-actions">
                 <button type="button" id="import-protocol-link-btn" class="ghost-btn">Import Link</button>
               </div>
-              <p id="protocol-link-status" class="small-note">Paste a shared protocol link, then click Import Link.</p>
+              <p id="protocol-link-status" class="small-note">Paste a shared protocol link or protocol JSON, then click Import Link.</p>
             </div>
           </section>
         </div>
@@ -1163,11 +1163,12 @@
                   <option value="openai">OpenAI</option>
                   <option value="gemini">Gemini</option>
                   <option value="claude">Claude</option>
+                  <option value="codex">OpenAI CLI (Codex)</option>
                 </select>
               </label>
               <label>
                 Model Name
-                <input id="setting-model" placeholder="e.g. gpt-4.1 / gemini-2.5-pro / claude-sonnet-4-5" />
+                <input id="setting-model" placeholder="e.g. gpt-4.1 / gemini-2.5-pro / claude-sonnet-4-5 / gpt-5" />
               </label>
               <label>
                 API Endpoint
@@ -1175,7 +1176,7 @@
               </label>
               <label>
                 API Key
-                <input id="setting-api-key" type="password" placeholder="sk-..." />
+                <input id="setting-api-key" type="password" placeholder="sk-... (not required for Codex CLI)" />
               </label>
               <button type="submit" class="primary-btn">Save LLM Settings</button>
             </form>

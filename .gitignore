@@ -1,6 +1,5 @@
 out/
 node_modules/
-vendor/
 tmp/
 *.zip
 *.asar

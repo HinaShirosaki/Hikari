@@ -11,6 +11,10 @@ const {
   checkPlannotateEnvironment,
   installPlannotateAssets
 } = require('./plannotate-engine');
+const {
+  getCodexLoginStatus,
+  requestCodexCliText
+} = require('./codex-cli-provider');
 
 const appIconPath = path.join(__dirname, 'image.png');
 const DEFAULT_DATA_FILE_NAME = 'enana-data.json';
@@ -20,18 +24,21 @@ const AGENT_CHAT_LOG_FILE_NAME = 'agent-chat.log';
 const LLM_PROVIDERS = Object.freeze({
   OPENAI: 'openai',
   GEMINI: 'gemini',
-  CLAUDE: 'claude'
+  CLAUDE: 'claude',
+  CODEX: 'codex'
 });
 const DEFAULT_LLM_PROVIDER = LLM_PROVIDERS.OPENAI;
 const DEFAULT_LLM_ENDPOINTS = Object.freeze({
   [LLM_PROVIDERS.OPENAI]: 'https://api.openai.com/v1/responses',
   [LLM_PROVIDERS.GEMINI]: 'https://generativelanguage.googleapis.com/v1beta',
-  [LLM_PROVIDERS.CLAUDE]: 'https://api.anthropic.com/v1/messages'
+  [LLM_PROVIDERS.CLAUDE]: 'https://api.anthropic.com/v1/messages',
+  [LLM_PROVIDERS.CODEX]: 'codex://cli'
 });
 const DEFAULT_AGENT_MODELS = Object.freeze({
   [LLM_PROVIDERS.OPENAI]: 'gpt-4.1-mini',
   [LLM_PROVIDERS.GEMINI]: 'gemini-2.5-flash',
-  [LLM_PROVIDERS.CLAUDE]: 'claude-3-5-sonnet-latest'
+  [LLM_PROVIDERS.CLAUDE]: 'claude-3-5-sonnet-latest',
+  [LLM_PROVIDERS.CODEX]: ''
 });
 const MAX_AGENT_TOOL_ROUNDS = 4;
 const LLM_PROMPTS_FILE_PATH = path.join(__dirname, 'data', 'llm-prompts.json');
@@ -46,6 +53,18 @@ let telegramTokenSource = 'none';
 let llmPromptsCache = null;
 let llmPromptsPromise = null;
 
+function getCodexCliWorkingDirectory() {
+  try {
+    const userDataPath = app.getPath('userData');
+    if (userDataPath) {
+      return userDataPath;
+    }
+  } catch {
+    // App path may be unavailable very early; fall back.
+  }
+  return process.cwd();
+}
+
 function getDefaultDataFilePath() {
   return path.join(app.getPath('userData'), DEFAULT_DATA_FILE_NAME);
 }
@@ -59,6 +78,16 @@ function getAgentChatLogPath() {
   if (override) {
     return override;
   }
+
+  try {
+    const userDataPath = app.getPath('userData');
+    if (userDataPath) {
+      return path.join(userDataPath, AGENT_CHAT_LOG_FILE_NAME);
+    }
+  } catch {
+    // App path may be unavailable very early; fall back.
+  }
+
   return path.join(__dirname, 'data', AGENT_CHAT_LOG_FILE_NAME);
 }
 
@@ -137,6 +166,101 @@ async function ensureAgentChatLogFile(logPath) {
   } catch (error) {
     console.error('Failed to initialize agent chat log file:', error);
   }
+}
+
+function sanitizeStorageName(value, fallback = 'item') {
+  const cleaned = String(value || '')
+    .trim()
+    .replace(/[<>:"/\\|?*\x00-\x1F]+/g, '_')
+    .replace(/\s+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 180);
+  return cleaned || fallback;
+}
+
+function sanitizeImportedFileName(fileName) {
+  const rawName = String(fileName || '').trim();
+  const ext = path.extname(rawName).replace(/[^.\w-]+/g, '').slice(0, 24);
+  const base = rawName.slice(0, Math.max(0, rawName.length - ext.length));
+  const safeBase = sanitizeStorageName(base, 'imported-file');
+  return `${safeBase}${ext}`;
+}
+
+function ensurePathWithinRoot(rootPath, targetPath) {
+  const resolvedRoot = path.resolve(rootPath);
+  const resolvedTarget = path.resolve(targetPath);
+  if (resolvedTarget === resolvedRoot) {
+    return resolvedTarget;
+  }
+  const rootWithSep = resolvedRoot.endsWith(path.sep)
+    ? resolvedRoot
+    : `${resolvedRoot}${path.sep}`;
+  if (!resolvedTarget.startsWith(rootWithSep)) {
+    throw new Error('Target path must be inside the configured storage path.');
+  }
+  return resolvedTarget;
+}
+
+async function pathExists(targetPath) {
+  try {
+    await fs.access(targetPath);
+    return true;
+  } catch (error) {
+    if (error?.code === 'ENOENT') {
+      return false;
+    }
+    throw error;
+  }
+}
+
+async function getUniqueFilePath(folderPath, fileName) {
+  const parsed = path.parse(fileName);
+  const safeNameBase = sanitizeStorageName(parsed.name, 'imported-file');
+  const safeExt = String(parsed.ext || '').replace(/[^.\w-]+/g, '').slice(0, 24);
+  let attempt = 0;
+
+  while (attempt < 5000) {
+    const suffix = attempt === 0 ? '' : `_${attempt + 1}`;
+    const candidateName = `${safeNameBase}${suffix}${safeExt}`;
+    const candidatePath = path.join(folderPath, candidateName);
+    if (!(await pathExists(candidatePath))) {
+      return candidatePath;
+    }
+    attempt += 1;
+  }
+
+  throw new Error('Unable to find a unique file name for imported file.');
+}
+
+async function storeImportedFile(payload) {
+  const storagePath = String(payload?.storagePath || '').trim();
+  const targetFolderInput = String(payload?.targetFolder || '').trim();
+  const fileName = sanitizeImportedFileName(payload?.fileName);
+  const dataBase64 = String(payload?.dataBase64 || '').trim();
+
+  if (!storagePath) {
+    throw new Error('Missing storage path.');
+  }
+  if (!targetFolderInput) {
+    throw new Error('Missing target folder.');
+  }
+  if (!dataBase64) {
+    throw new Error('Missing imported file data.');
+  }
+
+  const resolvedStoragePath = path.resolve(storagePath);
+  const resolvedTargetFolder = ensurePathWithinRoot(resolvedStoragePath, targetFolderInput);
+  await fs.mkdir(resolvedTargetFolder, { recursive: true });
+
+  const targetFilePath = await getUniqueFilePath(resolvedTargetFolder, fileName);
+  const binary = Buffer.from(dataBase64, 'base64');
+  await fs.writeFile(targetFilePath, binary);
+
+  return {
+    filePath: targetFilePath,
+    fileName: path.basename(targetFilePath),
+    relativePath: path.relative(resolvedStoragePath, targetFilePath).split(path.sep).join('/')
+  };
 }
 
 function stopTelegramBot(reason = 'app quit') {
@@ -392,6 +516,15 @@ ipcMain.handle('storage:ensure-directory', async (_event, payload) => {
     return { ok: true, path: targetPath };
   } catch (error) {
     return { ok: false, error: String(error) };
+  }
+});
+
+ipcMain.handle('storage:store-imported-file', async (_event, payload) => {
+  try {
+    const stored = await storeImportedFile(payload || {});
+    return { ok: true, ...stored };
+  } catch (error) {
+    return { ok: false, error: String(error?.message || error) };
   }
 });
 
@@ -1127,6 +1260,9 @@ function inferProviderFromEndpoint(endpoint) {
   if (!value) {
     return '';
   }
+  if (value.startsWith('codex://') || value.includes('codex cli') || value.includes('openai-cli')) {
+    return LLM_PROVIDERS.CODEX;
+  }
   if (value.includes('anthropic.com')) {
     return LLM_PROVIDERS.CLAUDE;
   }
@@ -1158,6 +1294,9 @@ function resolveAgentProvider(llm) {
 
 function resolveAgentEndpoint(llm, provider = DEFAULT_LLM_PROVIDER) {
   const endpoint = cleanText(llm?.apiEndpoint, 300);
+  if (provider === LLM_PROVIDERS.CODEX && endpoint) {
+    return endpoint;
+  }
   if (endpoint && /^https?:\/\//i.test(endpoint)) {
     return endpoint;
   }
@@ -1166,7 +1305,13 @@ function resolveAgentEndpoint(llm, provider = DEFAULT_LLM_PROVIDER) {
 
 function resolveAgentModel(llm, provider = DEFAULT_LLM_PROVIDER) {
   const model = cleanText(llm?.model, 120);
-  return model || DEFAULT_AGENT_MODELS[provider] || DEFAULT_AGENT_MODELS[DEFAULT_LLM_PROVIDER];
+  if (model) {
+    return model;
+  }
+  if (Object.prototype.hasOwnProperty.call(DEFAULT_AGENT_MODELS, provider)) {
+    return DEFAULT_AGENT_MODELS[provider];
+  }
+  return DEFAULT_AGENT_MODELS[DEFAULT_LLM_PROVIDER];
 }
 
 function buildAgentSystemPrompt(projectName, prompts) {
@@ -1802,20 +1947,214 @@ function normalizeAgentOutput(raw, fallbackText) {
   };
 }
 
+function toPromptConversationTranscript(conversation) {
+  const rows = asArray(conversation).map((item, index) => {
+    const role = item?.role === 'assistant' ? 'assistant' : 'user';
+    return `${index + 1}. ${role}: ${cleanText(item?.text, 2400)}`;
+  }).filter(Boolean);
+  return rows.length ? rows.join('\n') : 'No prior messages.';
+}
+
+function buildCodexAgentContext(message, snapshot) {
+  const retrievalTools = [
+    'search_projects',
+    'search_protocols',
+    'search_notebook_entries',
+    'search_assays',
+    'search_gel_analyses',
+    'search_inventory',
+    'search_papers'
+  ];
+  const contextSlices = [];
+  const toolTrace = [];
+  const evidence = [];
+
+  retrievalTools.forEach((toolName) => {
+    const result = runAgentTool(toolName, { query: message, limit: 5 }, snapshot);
+    const items = asArray(result?.items).slice(0, 5);
+    if (!items.length) {
+      return;
+    }
+    contextSlices.push({
+      tool: toolName,
+      items
+    });
+    toolTrace.push({
+      tool: toolName,
+      args: { query: message, limit: 5 },
+      summary: cleanText(result?.summary || `Collected ${items.length} records.`, 240)
+    });
+    asArray(result?.citations).slice(0, 8).forEach((citation) => {
+      evidence.push({
+        source: cleanText(citation?.source, 120),
+        pointer: cleanText(citation?.pointer, 180),
+        reason: cleanText(citation?.reason, 220)
+      });
+    });
+  });
+
+  return {
+    contextSlices,
+    toolTrace,
+    evidence
+  };
+}
+
+async function runCodexAgentController({
+  provider,
+  model,
+  message,
+  conversation,
+  hasLatestUserInConversation,
+  snapshot,
+  projectName,
+  promptConfig
+}) {
+  const intermediateStates = [];
+  const toolTrace = [];
+  const evidence = [];
+  const requiresApproval = containsWriteIntent(message);
+
+  intermediateStates.push(buildIntermediateState('intake', message, {
+    assumptions: ['Codex CLI provider selected; retrieval context is assembled before generation.'],
+    openQuestions: requiresApproval ? ['User may want a write action; approval is required before any write.'] : [],
+    confidence: 0.44
+  }));
+
+  intermediateStates.push(buildIntermediateState('context', 'Loaded snapshot context for Codex retrieval.', {
+    assumptions: [
+      `Context sizes: projects=${snapshot.projects.length}, protocols=${snapshot.protocols.length}, notebook_entries=${snapshot.notebookEntries.length}, assays=${snapshot.assays.length}, gel_analyses=${snapshot.gelAnalyses.length}, papers=${snapshot.papers.length}.`
+    ],
+    confidence: 0.52
+  }));
+
+  const collected = buildCodexAgentContext(message, snapshot);
+  toolTrace.push(...collected.toolTrace);
+  evidence.push(...collected.evidence);
+
+  intermediateStates.push(buildIntermediateState('execute', `Prepared ${collected.contextSlices.length} retrieval context slices for Codex CLI.`, {
+    evidence: evidence.slice(0, 12),
+    proposedActions: collected.contextSlices.map((slice) => ({
+      action_type: 'read',
+      tool_name: slice.tool,
+      risk_level: 'low',
+      reason: 'Context was retrieved locally before Codex generation.'
+    })),
+    confidence: collected.contextSlices.length ? 0.63 : 0.54
+  }));
+
+  const promptConversation = hasLatestUserInConversation
+    ? conversation
+    : [...conversation, { role: 'user', text: message }];
+  const systemPrompt = buildAgentSystemPrompt(projectName, promptConfig);
+  const draftPrompt = [
+    systemPrompt,
+    'Task: answer the latest user request using only the retrieved Enana context below. If context is missing, explicitly say what is missing.',
+    `Conversation transcript:\n${toPromptConversationTranscript(promptConversation)}`,
+    `Retrieved context JSON:\n${cleanText(JSON.stringify(collected.contextSlices, null, 2), 70000)}`,
+    'Respond as concise assistant text.'
+  ].join('\n\n');
+
+  const draftAnswer = await requestCodexCliText({
+    prompt: draftPrompt,
+    model,
+    cwd: getCodexCliWorkingDirectory()
+  });
+
+  intermediateStates.push(buildIntermediateState('verify', 'Verified evidence coverage and policy constraints.', {
+    assumptions: ['Only read-context assembly was executed before Codex response synthesis.'],
+    openQuestions: evidence.length ? [] : ['No direct matches were found in local retrieval context.'],
+    evidence: evidence.slice(-12),
+    confidence: evidence.length ? 0.69 : 0.56
+  }));
+
+  const synthesisRequest = buildAgentSynthesisPrompt(requiresApproval, promptConfig);
+  let normalized;
+  try {
+    const structuredRaw = await requestCodexCliText({
+      prompt: [
+        synthesisRequest,
+        'Return valid JSON and include citations only from provided evidence.',
+        `User request: ${message}`,
+        `Draft answer: ${draftAnswer || '-'}`,
+        `Tool trace: ${JSON.stringify(toolTrace.slice(0, 20))}`,
+        `Evidence: ${JSON.stringify(evidence.slice(0, 20))}`
+      ].join('\n\n'),
+      model,
+      cwd: getCodexCliWorkingDirectory()
+    });
+    normalized = normalizeAgentOutput(structuredRaw, draftAnswer);
+  } catch {
+    normalized = {
+      answer: draftAnswer || 'No answer generated.',
+      confidence: evidence.length ? 0.64 : 0.5,
+      requiresApproval,
+      proposedWriteActions: [],
+      citations: evidence.slice(0, 12),
+      decisionRecord: {
+        assumptions: ['Structured synthesis was not available for Codex CLI output.'],
+        open_questions: evidence.length ? [] : ['Evidence retrieval returned no direct matches.'],
+        verification_notes: ['Returned fallback draft answer with retrieved context snapshot.']
+      }
+    };
+  }
+
+  if (requiresApproval && normalized.proposedWriteActions.length === 0) {
+    normalized.proposedWriteActions = [
+      {
+        tool_name: 'write_operation_pending_approval',
+        reason: 'User intent appears write-oriented; explicit approval is required before execution.'
+      }
+    ];
+  }
+  if (requiresApproval) {
+    normalized.requiresApproval = true;
+  }
+
+  intermediateStates.push(buildIntermediateState('synthesize', 'Generated final user-facing response with decision record.', {
+    evidence: normalized.citations,
+    proposedActions: normalized.proposedWriteActions.map((action) => ({
+      action_type: 'write',
+      tool_name: action?.tool_name,
+      risk_level: 'high',
+      reason: action?.reason
+    })),
+    confidence: normalized.confidence
+  }));
+
+  intermediateStates.push(buildIntermediateState('handoff', 'Prepared response for UI handoff and audit trail.', {
+    assumptions: ['Any write action remains pending explicit approval.'],
+    confidence: normalized.confidence
+  }));
+
+  return {
+    ok: true,
+    provider,
+    model: model || 'codex-default',
+    answer: normalized.answer,
+    confidence: normalized.confidence,
+    requiresApproval: normalized.requiresApproval,
+    proposedWriteActions: normalized.proposedWriteActions,
+    citations: normalized.citations,
+    decisionRecord: normalized.decisionRecord,
+    intermediateStates,
+    toolTrace
+  };
+}
+
 async function runAgentController(payload) {
   const message = cleanText(payload?.message, 3000);
   if (!message) {
     throw new Error('Message is required.');
   }
 
-  const apiKey = resolveAgentApiKey(payload?.llm);
-  if (!apiKey) {
-    throw new Error('Missing LLM API key. Set it in Settings > LLM Model & API, or use LLM_API_KEY / ENANA_LLM_API_KEY.');
-  }
-
   const provider = resolveAgentProvider(payload?.llm);
   const endpoint = resolveAgentEndpoint(payload?.llm, provider);
   const model = resolveAgentModel(payload?.llm, provider);
+  const apiKey = provider === LLM_PROVIDERS.CODEX ? '' : resolveAgentApiKey(payload?.llm);
+  if (provider !== LLM_PROVIDERS.CODEX && !apiKey) {
+    throw new Error('Missing LLM API key. Set it in Settings > LLM Model & API, or use LLM_API_KEY / ENANA_LLM_API_KEY.');
+  }
   const conversation = extractConversation(payload?.conversation);
   const hasLatestUserInConversation = conversation.length > 0
     && conversation[conversation.length - 1].role === 'user'
@@ -1823,6 +2162,20 @@ async function runAgentController(payload) {
   const snapshot = normalizeAgentSnapshot(payload?.stateSnapshot);
   const projectName = cleanText(payload?.projectName, 180);
   const promptConfig = await loadLlmPrompts();
+
+  if (provider === LLM_PROVIDERS.CODEX) {
+    return runCodexAgentController({
+      provider,
+      model,
+      message,
+      conversation,
+      hasLatestUserInConversation,
+      snapshot,
+      projectName,
+      promptConfig
+    });
+  }
+
   const intermediateStates = [];
   const toolTrace = [];
   const evidence = [];
@@ -2014,6 +2367,47 @@ ipcMain.handle('agent:chat', async (_event, payload) => {
       error: cleanText(errorMessage, 2000)
     }));
     return { ok: false, error: errorMessage };
+  }
+});
+
+ipcMain.handle('llm:codex-status', async () => {
+  const status = await getCodexLoginStatus({ cwd: getCodexCliWorkingDirectory(), forceRefresh: true });
+  return {
+    ok: status.ok === true,
+    loggedIn: status.loggedIn === true,
+    message: status.message || ''
+  };
+});
+
+ipcMain.handle('llm:codex-generate', async (_event, payload) => {
+  try {
+    const promptRaw = typeof payload?.prompt === 'string' ? payload.prompt.trim() : '';
+    if (!promptRaw) {
+      return { ok: false, error: 'Prompt is required.' };
+    }
+
+    const prompt = promptRaw.length > 120000 ? `${promptRaw.slice(0, 120000)}...` : promptRaw;
+    const model = cleanText(payload?.model, 120);
+    const fileName = cleanText(payload?.fileName, 220);
+    const pdfDataUrl = typeof payload?.pdfDataUrl === 'string' ? payload.pdfDataUrl.trim() : '';
+
+    const text = await requestCodexCliText({
+      prompt,
+      model,
+      cwd: getCodexCliWorkingDirectory(),
+      fileName,
+      pdfDataUrl
+    });
+
+    return {
+      ok: true,
+      text
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error: cleanText(error?.message || error, 2400)
+    };
   }
 });
 

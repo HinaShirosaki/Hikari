@@ -983,10 +983,42 @@ test('collaboration-management sends messages and imports protocol share links',
   assert.match(state.protocols[1].name, /^PCR Protocol \(Shared Copy\)/);
   assert.equal(importedCalls, 2);
 
+  protocolLinkInput.value = JSON.stringify([
+    {
+      title: 'JSON Protocol',
+      purpose: 'Validate JSON import',
+      materials: ['Water', 'Salt'],
+      steps: [
+        { step_number: 2, action: 'Incubate for [time]' },
+        { step_number: 1, action: 'Add [] mL buffer' }
+      ],
+      troubleshooting: [
+        {
+          problem: 'Cloudy solution',
+          possible_cause: 'Contamination',
+          solution: 'Prepare a fresh buffer'
+        }
+      ]
+    }
+  ]);
+  trigger(importProtocolLinkBtn, 'click');
+  assert.equal(state.protocols.length, 3);
+  assert.equal(state.protocols[2].name, 'JSON Protocol');
+  assert.equal(state.protocols[2].purpose, 'Validate JSON import');
+  assert.deepEqual(state.protocols[2].materials, ['Water', 'Salt']);
+  assert.equal(state.protocols[2].steps.length, 2);
+  assert.match(state.protocols[2].steps[0].text, /Add \{\{ph:/);
+  assert.equal(state.protocols[2].steps[0].placeholders[0].name, 'value');
+  assert.match(state.protocols[2].steps[1].text, /Incubate for \{\{ph:/);
+  assert.equal(state.protocols[2].steps[1].placeholders[0].name, 'time');
+  assert.match(state.protocols[2].troubleshooting, /Problem: Cloudy solution/);
+  assert.match(protocolLinkStatus.textContent, /Imported "JSON Protocol"/);
+  assert.equal(importedCalls, 3);
+
   protocolLinkInput.value = 'invalid-link';
   trigger(importProtocolLinkBtn, 'click');
   assert.match(protocolLinkStatus.textContent, /Invalid protocol link/);
-  assert.ok(persistCalls >= 3);
+  assert.ok(persistCalls >= 4);
 });
 
 test('protocol-management supports draft creation, sharing, link copy, and delete cascades', async () => {
@@ -1102,6 +1134,33 @@ test('protocol-management supports draft creation, sharing, link copy, and delet
   assert.equal(created, true);
   assert.match(protocolName.value, /Paper X - Cell Prep/);
   assert.match(protocolSteps.value, /Resuspend pellet/);
+
+  const createdFromProtocolJson = protocol.addDraftFromExtractedMethod(
+    {
+      title: 'JSON Schema Protocol',
+      purpose: 'Validate protocol-shape method ingestion',
+      materials: ['Tube', 'PBS'],
+      steps: [
+        { step_number: 2, action: 'Incubate for [time]' },
+        { step_number: 1, action: 'Add [] mL PBS' }
+      ],
+      troubleshooting: [
+        {
+          problem: 'No pellet',
+          possible_cause: 'Low cell density',
+          solution: 'Increase starting cells'
+        }
+      ]
+    },
+    { title: 'Paper X' }
+  );
+  assert.equal(createdFromProtocolJson, true);
+  assert.match(protocolName.value, /Paper X - JSON Schema Protocol/);
+  assert.equal(protocolPurpose.value, 'Validate protocol-shape method ingestion');
+  assert.match(protocolMaterials.value, /Tube/);
+  assert.match(protocolTroubleshooting.value, /Problem: No pellet/);
+  assert.match(protocolSteps.value, /Add \[value\] mL PBS/);
+  assert.match(protocolSteps.value, /Incubate for \[time\]/);
 
   trigger(protocolForm, 'submit');
   assert.equal(state.protocols.length, 1);
@@ -2205,6 +2264,13 @@ test('[P1] normalizeState migrates legacy endpoint from llm.api URL', () => {
   assert.equal(normalized.settings.llm.provider, 'openai');
 });
 
+test('[P1] normalizeState treats codex:// legacy llm.api as endpoint', () => {
+  const normalized = shared.normalizeState({ settings: { llm: { provider: 'codex', api: 'codex://cli' } } });
+  assert.equal(normalized.settings.llm.provider, 'codex');
+  assert.equal(normalized.settings.llm.apiEndpoint, 'codex://cli');
+  assert.equal(normalized.settings.llm.apiKey, '');
+});
+
 test('[P1] normalizeState keeps explicit llm.apiKey over legacy llm.api key', () => {
   const normalized = shared.normalizeState({ settings: { llm: { api: 'legacy-key', apiKey: 'new-key' } } });
   assert.equal(normalized.settings.llm.apiKey, 'new-key');
@@ -2230,6 +2296,17 @@ test('[P1] normalizeState infers llm.provider from endpoint', () => {
     }
   });
   assert.equal(normalized.settings.llm.provider, 'gemini');
+});
+
+test('[P1] normalizeState infers llm.provider from codex endpoint', () => {
+  const normalized = shared.normalizeState({
+    settings: {
+      llm: {
+        apiEndpoint: 'codex://cli'
+      }
+    }
+  });
+  assert.equal(normalized.settings.llm.provider, 'codex');
 });
 
 test('[P1] normalizeState does not mutate defaultState arrays', () => {

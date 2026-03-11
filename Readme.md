@@ -214,6 +214,7 @@ Supported providers:
 - OpenAI
 - Gemini
 - Claude
+- OpenAI CLI (Codex)
 
 Environment variable fallbacks:
 
@@ -225,6 +226,14 @@ Default endpoints:
 - OpenAI: `https://api.openai.com/v1/responses`
 - Gemini: `https://generativelanguage.googleapis.com/v1beta`
 - Claude: `https://api.anthropic.com/v1/messages`
+- OpenAI CLI (Codex): `codex://cli`
+
+OpenAI CLI (Codex) setup:
+
+1. Install Codex CLI so the `codex` command is available.
+2. Run `codex login` and sign in with your ChatGPT account.
+3. In `Setting > LLM Model & API`, choose `OpenAI CLI (Codex)`.
+4. API key is optional for this provider.
 
 Notes:
 

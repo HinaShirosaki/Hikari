@@ -40,6 +40,7 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
     hasSavedToken: false
   };
   let activeLlmProvider = 'openai';
+  const looksLikeEndpoint = (value) => /^[a-z]+:\/\//i.test(String(value || '').trim());
 
   personalInfoForm.addEventListener('submit', onSavePersonalInfo);
   appearanceForm.addEventListener('submit', onSaveAppearance);
@@ -80,9 +81,12 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
     settingModel.value = llm.model || '';
     settingModel.placeholder = modelPlaceholderForProvider(llmProvider);
     settingApiEndpoint.value = llm.apiEndpoint
-      || (llm.api && llm.api.startsWith('http') ? llm.api : defaultLlmEndpointForProvider(llmProvider));
+      || (llm.api && looksLikeEndpoint(llm.api) ? llm.api : defaultLlmEndpointForProvider(llmProvider));
     settingApiEndpoint.placeholder = defaultLlmEndpointForProvider(llmProvider);
-    settingApiKey.value = llm.apiKey || (llm.api && !llm.api.startsWith('http') ? llm.api : '');
+    settingApiKey.value = llm.apiKey || (llm.api && !looksLikeEndpoint(llm.api) ? llm.api : '');
+    settingApiKey.placeholder = llmProvider === 'codex'
+      ? 'Not required (use `codex login`)'
+      : 'sk-...';
     settingEnaPath.textContent = state.settings.enaFilePath || 'Not set';
     if (settingAutoSaveEna) {
       settingAutoSaveEna.checked = state.settings.autoSaveEna !== false;
@@ -222,6 +226,9 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
     }
     settingApiEndpoint.placeholder = nextDefault;
     settingModel.placeholder = modelPlaceholderForProvider(provider);
+    settingApiKey.placeholder = provider === 'codex'
+      ? 'Not required (use `codex login`)'
+      : 'sk-...';
     activeLlmProvider = provider;
   }
 
@@ -398,6 +405,9 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
     }
     if (provider === 'claude') {
       return 'e.g. claude-sonnet-4-5';
+    }
+    if (provider === 'codex') {
+      return 'optional, e.g. gpt-5';
     }
     return 'e.g. gpt-4.1';
   }
