@@ -20,7 +20,7 @@ export const VIEWS = {
 };
 
 export const TITLES = {
-  [VIEWS.HOME]: 'Choose a sub-app to continue.',
+  [VIEWS.HOME]: 'Dashboard overview, reminders, and app launcher.',
   [VIEWS.LAB_MANAGEMENT]: 'Manage members in card view.',
   [VIEWS.INSTRUMENT_MANAGEMENT]: 'Manage instruments and reservations by calendar.',
   [VIEWS.PROTOCOL_MANAGEMENT]: 'Create and edit protocols step by step.',
@@ -89,6 +89,26 @@ export function defaultLlmEndpointForProvider(provider) {
   return LLM_DEFAULT_ENDPOINTS[resolved] || LLM_DEFAULT_ENDPOINTS[DEFAULT_LLM_PROVIDER];
 }
 
+const STARTUP_DEFAULT_VIEW_IDS = new Set([
+  VIEWS.HOME,
+  VIEWS.LAB_MANAGEMENT,
+  VIEWS.INSTRUMENT_MANAGEMENT,
+  VIEWS.PROTOCOL_MANAGEMENT,
+  VIEWS.COLLABORATION_MANAGEMENT,
+  VIEWS.SYNTHESIS_NOTEBOOK,
+  VIEWS.BIOLOGY_NOTEBOOK,
+  VIEWS.LAB_COMMON_INVENTORY,
+  VIEWS.SAMPLE_REGISTRY,
+  VIEWS.ASSAY,
+  VIEWS.GEL,
+  VIEWS.PROJECT_MANAGEMENT,
+  VIEWS.WORKFLOW_MANAGEMENT,
+  VIEWS.PAPERS,
+  VIEWS.AGENT,
+  VIEWS.TOOL_BOX,
+  VIEWS.SETTING
+]);
+
 export const defaultState = {
   members: [],
   instruments: [],
@@ -153,7 +173,16 @@ export const defaultState = {
     },
     enaFilePath: '',
     autoSaveEna: true,
-    inventoryLocations: ['Main Storage', 'Cold Room', 'Fume Hood']
+    inventoryLocations: ['Main Storage', 'Cold Room', 'Fume Hood'],
+    dashboard: {
+      currentWorkflowId: '',
+      workflowProgress: {}
+    },
+    startup: {
+      defaultViewId: VIEWS.HOME,
+      rememberLastView: false,
+      autoLoadDataFileOnLaunch: true
+    }
   },
   inventory: {
     'Room Temp': [],
@@ -164,9 +193,66 @@ export const defaultState = {
   }
 };
 
+function normalizeCellPassage(rawValue) {
+  if (!rawValue || typeof rawValue !== 'object') {
+    return null;
+  }
+  const lastPassageDate = String(rawValue.lastPassageDate || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(lastPassageDate)) {
+    return null;
+  }
+  const intervalDays = Math.round(Number(rawValue.intervalDays));
+  if (!Number.isFinite(intervalDays) || intervalDays <= 0) {
+    return null;
+  }
+  return {
+    lastPassageDate,
+    intervalDays
+  };
+}
+
+function normalizeSampleRecord(rawSample) {
+  if (!rawSample || typeof rawSample !== 'object') {
+    return rawSample;
+  }
+  const type = String(rawSample.type || '').trim().toLowerCase();
+  return {
+    ...rawSample,
+    cellPassage: type === 'cell_line' ? normalizeCellPassage(rawSample.cellPassage) : null
+  };
+}
+
+function normalizeWorkflowProgressMap(rawValue) {
+  if (!rawValue || typeof rawValue !== 'object' || Array.isArray(rawValue)) {
+    return {};
+  }
+  const normalized = {};
+  Object.entries(rawValue).forEach(([workflowId, rawBlockIds]) => {
+    const key = String(workflowId || '').trim();
+    if (!key) {
+      return;
+    }
+    const seen = new Set();
+    const blockIds = [];
+    (Array.isArray(rawBlockIds) ? rawBlockIds : []).forEach((blockId) => {
+      const normalizedId = String(blockId || '').trim();
+      if (!normalizedId || seen.has(normalizedId)) {
+        return;
+      }
+      seen.add(normalizedId);
+      blockIds.push(normalizedId);
+    });
+    normalized[key] = blockIds;
+  });
+  return normalized;
+}
+
 export function normalizeState(parsed) {
   const source = parsed || {};
   const rawLlm = source.settings?.llm || {};
+  const rawStartup = source.settings?.startup && typeof source.settings.startup === 'object'
+    ? source.settings.startup
+    : {};
   const rawGrowthMetrics = source.growthMetrics && typeof source.growthMetrics === 'object'
     ? source.growthMetrics
     : {};
@@ -205,7 +291,7 @@ export function normalizeState(parsed) {
         : {},
     assays: Array.isArray(source.assays) ? source.assays : [],
     gelAnalyses: Array.isArray(source.gelAnalyses) ? source.gelAnalyses : [],
-    samples: Array.isArray(source.samples) ? source.samples : [],
+    samples: (Array.isArray(source.samples) ? source.samples : []).map((sample) => normalizeSampleRecord(sample)),
     growthMetrics: {
       ...defaultState.growthMetrics,
       ...rawGrowthMetrics,
@@ -238,6 +324,25 @@ export function normalizeState(parsed) {
       appearance: {
         ...defaultState.settings.appearance,
         ...(source.settings?.appearance || {})
+      },
+      dashboard: {
+        ...defaultState.settings.dashboard,
+        ...(source.settings?.dashboard || {}),
+        currentWorkflowId: String(source.settings?.dashboard?.currentWorkflowId || ''),
+        workflowProgress: normalizeWorkflowProgressMap(source.settings?.dashboard?.workflowProgress)
+      },
+      startup: {
+        ...defaultState.settings.startup,
+        ...rawStartup,
+        defaultViewId: STARTUP_DEFAULT_VIEW_IDS.has(String(rawStartup.defaultViewId || '').trim())
+          ? String(rawStartup.defaultViewId || '').trim()
+          : defaultState.settings.startup.defaultViewId,
+        rememberLastView: typeof rawStartup.rememberLastView === 'boolean'
+          ? rawStartup.rememberLastView
+          : defaultState.settings.startup.rememberLastView,
+        autoLoadDataFileOnLaunch: typeof rawStartup.autoLoadDataFileOnLaunch === 'boolean'
+          ? rawStartup.autoLoadDataFileOnLaunch
+          : defaultState.settings.startup.autoLoadDataFileOnLaunch
       },
       llm: {
         ...defaultState.settings.llm,
