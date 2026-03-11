@@ -11,8 +11,34 @@ function getCanvasPointerPosition(canvas, event) {
   if (!rect.width || !rect.height) {
     return null;
   }
-  const x = (event.clientX - rect.left) * (canvas.width / rect.width);
-  const y = (event.clientY - rect.top) * (canvas.height / rect.height);
+
+  const canvasWidth = canvas.width || 0;
+  const canvasHeight = canvas.height || 0;
+  if (!canvasWidth || !canvasHeight) {
+    return null;
+  }
+
+  const styles = window.getComputedStyle(canvas);
+  const borderLeft = Number.parseFloat(styles.borderLeftWidth) || 0;
+  const borderRight = Number.parseFloat(styles.borderRightWidth) || 0;
+  const borderTop = Number.parseFloat(styles.borderTopWidth) || 0;
+  const borderBottom = Number.parseFloat(styles.borderBottomWidth) || 0;
+  const contentWidth = Math.max(1, rect.width - borderLeft - borderRight);
+  const contentHeight = Math.max(1, rect.height - borderTop - borderBottom);
+
+  // Handle CSS fit/letterboxing by mapping only inside the actually drawn bitmap area.
+  const fitScale = Math.min(contentWidth / canvasWidth, contentHeight / canvasHeight);
+  const renderedWidth = canvasWidth * fitScale;
+  const renderedHeight = canvasHeight * fitScale;
+  const offsetX = (contentWidth - renderedWidth) / 2;
+  const offsetY = (contentHeight - renderedHeight) / 2;
+
+  const pointerX = event.clientX - rect.left - borderLeft - offsetX;
+  const pointerY = event.clientY - rect.top - borderTop - offsetY;
+  const clampedX = clampNumber(pointerX, 0, renderedWidth, 0);
+  const clampedY = clampNumber(pointerY, 0, renderedHeight, 0);
+  const x = clampedX * (canvasWidth / Math.max(1, renderedWidth));
+  const y = clampedY * (canvasHeight / Math.max(1, renderedHeight));
   if (!Number.isFinite(x) || !Number.isFinite(y)) {
     return null;
   }
@@ -125,8 +151,15 @@ export function initColonyCounterTool() {
     sourceHeight: 0,
     hasImage: false,
     cropper: null,
-    previewScale: 1,
-    markers: []
+    markers: [],
+    zoom: 1,
+    viewX: 0,
+    viewY: 0,
+    isPanning: false,
+    panLastX: 0,
+    panLastY: 0,
+    panMoved: false,
+    suppressNextClick: false
   };
 
   function setColonyStatus(message, isError = false) {
@@ -151,7 +184,7 @@ export function initColonyCounterTool() {
     const count = colonyState.markers.length;
     colonySummary.innerHTML = `
       <p><strong>Manual colonies counted:</strong> ${count}</p>
-      <p class="small-note">Left-click to add a marker. Right-click to remove the nearest marker.</p>
+      <p class="small-note">Left-click to add a marker. Right-click to remove the nearest marker. Scroll to zoom, then drag to pan.</p>
     `;
   }
 
@@ -165,11 +198,111 @@ export function initColonyCounterTool() {
     };
   }
 
-  function drawMarkers(ctx, scale) {
-    if (!ctx || !Number.isFinite(scale) || scale <= 0) {
+  function resetViewport() {
+    colonyState.zoom = 1;
+    colonyState.viewX = 0;
+    colonyState.viewY = 0;
+    colonyState.isPanning = false;
+    colonyState.panLastX = 0;
+    colonyState.panLastY = 0;
+    colonyState.panMoved = false;
+    colonyState.suppressNextClick = false;
+  }
+
+  function setViewport(nextState = {}) {
+    const sourceWidth = colonyState.sourceWidth || 0;
+    const sourceHeight = colonyState.sourceHeight || 0;
+    if (!sourceWidth || !sourceHeight) {
+      resetViewport();
       return;
     }
 
+    const zoom = clampNumber(nextState.zoom ?? colonyState.zoom, 1, 12, 1);
+    const viewWidth = sourceWidth / zoom;
+    const viewHeight = sourceHeight / zoom;
+    const maxX = Math.max(0, sourceWidth - viewWidth);
+    const maxY = Math.max(0, sourceHeight - viewHeight);
+    const nextX = clampNumber(nextState.x ?? colonyState.viewX, 0, maxX, 0);
+    const nextY = clampNumber(nextState.y ?? colonyState.viewY, 0, maxY, 0);
+
+    colonyState.zoom = zoom;
+    colonyState.viewX = nextX;
+    colonyState.viewY = nextY;
+  }
+
+  function getViewport() {
+    const sourceWidth = colonyState.sourceWidth || 0;
+    const sourceHeight = colonyState.sourceHeight || 0;
+    const previewWidth = colonyPreviewCanvas?.width || 0;
+    const previewHeight = colonyPreviewCanvas?.height || 0;
+    if (!sourceWidth || !sourceHeight || !previewWidth || !previewHeight) {
+      return null;
+    }
+
+    const zoom = clampNumber(colonyState.zoom, 1, 12, 1);
+    const viewWidth = sourceWidth / zoom;
+    const viewHeight = sourceHeight / zoom;
+    const maxX = Math.max(0, sourceWidth - viewWidth);
+    const maxY = Math.max(0, sourceHeight - viewHeight);
+    const x = clampNumber(colonyState.viewX, 0, maxX, 0);
+    const y = clampNumber(colonyState.viewY, 0, maxY, 0);
+
+    return {
+      sourceWidth,
+      sourceHeight,
+      previewWidth,
+      previewHeight,
+      zoom,
+      viewWidth,
+      viewHeight,
+      x,
+      y
+    };
+  }
+
+  function sourceToPreviewPoint(sourcePoint) {
+    const viewport = getViewport();
+    if (!sourcePoint || !viewport) {
+      return null;
+    }
+    return {
+      x: ((sourcePoint.x - viewport.x) / viewport.viewWidth) * viewport.previewWidth,
+      y: ((sourcePoint.y - viewport.y) / viewport.viewHeight) * viewport.previewHeight
+    };
+  }
+
+  function previewToSourcePoint(previewPoint) {
+    const viewport = getViewport();
+    if (!previewPoint || !viewport) {
+      return null;
+    }
+    return {
+      x: clampNumber(
+        viewport.x + ((previewPoint.x / viewport.previewWidth) * viewport.viewWidth),
+        0,
+        Math.max(0, viewport.sourceWidth - 1),
+        0
+      ),
+      y: clampNumber(
+        viewport.y + ((previewPoint.y / viewport.previewHeight) * viewport.viewHeight),
+        0,
+        Math.max(0, viewport.sourceHeight - 1),
+        0
+      )
+    };
+  }
+
+  function drawMarkers(ctx) {
+    if (!ctx) {
+      return;
+    }
+
+    const viewport = getViewport();
+    if (!viewport) {
+      return;
+    }
+
+    const radius = 7;
     ctx.save();
     ctx.lineWidth = 2;
     ctx.strokeStyle = 'rgba(255, 99, 71, 0.95)';
@@ -178,9 +311,15 @@ export function initColonyCounterTool() {
     ctx.textBaseline = 'top';
 
     colonyState.markers.forEach((marker, index) => {
-      const x = marker.x * scale;
-      const y = marker.y * scale;
-      const radius = Math.max(4, Math.round(7 * Math.max(0.7, scale)));
+      const previewPoint = sourceToPreviewPoint(marker);
+      if (!previewPoint) {
+        return;
+      }
+      const x = previewPoint.x;
+      const y = previewPoint.y;
+      if (x < -radius || y < -radius || x > (viewport.previewWidth + radius) || y > (viewport.previewHeight + radius)) {
+        return;
+      }
 
       ctx.beginPath();
       ctx.arc(x, y, radius, 0, Math.PI * 2);
@@ -224,9 +363,16 @@ export function initColonyCounterTool() {
     ctx.save();
     ctx.fillStyle = 'rgba(90, 230, 140, 0.95)';
     colonyState.markers.forEach((marker) => {
-      const x = marker.x * colonyState.previewScale;
-      const y = marker.y * colonyState.previewScale;
-      const radius = Math.max(3, Math.round(5 * Math.max(0.7, colonyState.previewScale)));
+      const previewPoint = sourceToPreviewPoint(marker);
+      if (!previewPoint) {
+        return;
+      }
+      const x = previewPoint.x;
+      const y = previewPoint.y;
+      const radius = 5;
+      if (x < -radius || y < -radius || x > (previewWidth + radius) || y > (previewHeight + radius)) {
+        return;
+      }
       ctx.beginPath();
       ctx.arc(x, y, radius, 0, Math.PI * 2);
       ctx.fill();
@@ -240,8 +386,7 @@ export function initColonyCounterTool() {
     }
 
     const settings = getDisplaySettings();
-    const { width, height, scale } = setCanvasFromSource(colonyPreviewCanvas, colonySourceCanvas, settings.maxProcessSize);
-    colonyState.previewScale = scale;
+    const { width, height } = setCanvasFromSource(colonyPreviewCanvas, colonySourceCanvas, settings.maxProcessSize);
 
     if (!width || !height) {
       clearCanvas(colonyMaskCanvas);
@@ -249,7 +394,23 @@ export function initColonyCounterTool() {
     }
 
     const previewCtx = colonyPreviewCanvas.getContext('2d');
-    drawMarkers(previewCtx, scale);
+    const viewport = getViewport();
+    if (!previewCtx || !viewport) {
+      return;
+    }
+    previewCtx.clearRect(0, 0, width, height);
+    previewCtx.drawImage(
+      colonySourceCanvas,
+      viewport.x,
+      viewport.y,
+      viewport.viewWidth,
+      viewport.viewHeight,
+      0,
+      0,
+      width,
+      height
+    );
+    drawMarkers(previewCtx);
     renderMarkerCanvas();
   }
 
@@ -274,6 +435,17 @@ export function initColonyCounterTool() {
     }
     if (colonyRunBtn) {
       colonyRunBtn.disabled = !hasImage || cropActive;
+    }
+    if (colonyPreviewCanvas) {
+      if (!hasImage || cropActive) {
+        colonyPreviewCanvas.style.cursor = 'default';
+      } else if (colonyState.isPanning) {
+        colonyPreviewCanvas.style.cursor = 'grabbing';
+      } else if (colonyState.zoom > 1.001) {
+        colonyPreviewCanvas.style.cursor = 'grab';
+      } else {
+        colonyPreviewCanvas.style.cursor = 'crosshair';
+      }
     }
   }
 
@@ -338,6 +510,7 @@ export function initColonyCounterTool() {
     colonyState.hasImage = true;
 
     clearMarkersForImageChange();
+    resetViewport();
     renderPreviewCanvas();
     setColonyStatus(`Loaded ${colonyState.imageName} (${width}x${height}). Click each colony to count.`);
     updateControlState();
@@ -398,6 +571,7 @@ export function initColonyCounterTool() {
     colonyState.sourceHeight = croppedCanvas.height;
 
     clearMarkersForImageChange();
+    resetViewport();
     destroyCropper();
     renderPreviewCanvas();
     setColonyStatus(`Crop applied (${croppedCanvas.width}x${croppedCanvas.height}). Click colonies to recount.`);
@@ -425,6 +599,7 @@ export function initColonyCounterTool() {
     colonyState.sourceHeight = height;
 
     clearMarkersForImageChange();
+    resetViewport();
     renderPreviewCanvas();
     setColonyStatus(`Restored full image (${width}x${height}). Click colonies to count.`);
     updateControlState();
@@ -435,15 +610,20 @@ export function initColonyCounterTool() {
       return;
     }
 
-    const scale = Math.max(0.0001, colonyState.previewScale || 1);
-    const sourceX = clampNumber(point.x / scale, 0, Math.max(0, colonyState.sourceWidth - 1), 0);
-    const sourceY = clampNumber(point.y / scale, 0, Math.max(0, colonyState.sourceHeight - 1), 0);
+    const sourcePoint = previewToSourcePoint(point);
+    if (!sourcePoint) {
+      return;
+    }
 
-    const mergeThresholdSource = 10 / scale;
+    const mergeThresholdPx = 10;
     const hasNearbyMarker = colonyState.markers.some((marker) => {
-      const dx = marker.x - sourceX;
-      const dy = marker.y - sourceY;
-      return ((dx * dx) + (dy * dy)) <= (mergeThresholdSource * mergeThresholdSource);
+      const markerPreviewPoint = sourceToPreviewPoint(marker);
+      if (!markerPreviewPoint) {
+        return false;
+      }
+      const dx = markerPreviewPoint.x - point.x;
+      const dy = markerPreviewPoint.y - point.y;
+      return ((dx * dx) + (dy * dy)) <= (mergeThresholdPx * mergeThresholdPx);
     });
 
     if (hasNearbyMarker) {
@@ -451,7 +631,7 @@ export function initColonyCounterTool() {
       return;
     }
 
-    colonyState.markers.push({ x: sourceX, y: sourceY });
+    colonyState.markers.push(sourcePoint);
     renderPreviewCanvas();
     renderColonySummary();
     setColonyStatus(`Manual count: ${colonyState.markers.length}`);
@@ -463,16 +643,16 @@ export function initColonyCounterTool() {
       return;
     }
 
-    const scale = Math.max(0.0001, colonyState.previewScale || 1);
-    const sourceX = clampNumber(point.x / scale, 0, Math.max(0, colonyState.sourceWidth - 1), 0);
-    const sourceY = clampNumber(point.y / scale, 0, Math.max(0, colonyState.sourceHeight - 1), 0);
-
     let nearestIndex = -1;
     let nearestDistanceSq = Number.POSITIVE_INFINITY;
     for (let index = 0; index < colonyState.markers.length; index += 1) {
       const marker = colonyState.markers[index];
-      const dx = marker.x - sourceX;
-      const dy = marker.y - sourceY;
+      const markerPreviewPoint = sourceToPreviewPoint(marker);
+      if (!markerPreviewPoint) {
+        continue;
+      }
+      const dx = markerPreviewPoint.x - point.x;
+      const dy = markerPreviewPoint.y - point.y;
       const distanceSq = (dx * dx) + (dy * dy);
       if (distanceSq < nearestDistanceSq) {
         nearestDistanceSq = distanceSq;
@@ -484,8 +664,8 @@ export function initColonyCounterTool() {
       return;
     }
 
-    const removalThresholdSource = 16 / scale;
-    if (nearestDistanceSq > (removalThresholdSource * removalThresholdSource)) {
+    const removalThresholdPx = 16;
+    if (nearestDistanceSq > (removalThresholdPx * removalThresholdPx)) {
       setColonyStatus('No marker near that point. Right-click closer to the marker to remove it.');
       return;
     }
@@ -494,6 +674,64 @@ export function initColonyCounterTool() {
     renderPreviewCanvas();
     renderColonySummary();
     setColonyStatus(`Manual count: ${colonyState.markers.length}`);
+    updateControlState();
+  }
+
+  function zoomPreviewAtPoint(point, requestedZoom) {
+    const viewport = getViewport();
+    if (!viewport || !point) {
+      return;
+    }
+    const sourceAnchor = previewToSourcePoint(point);
+    if (!sourceAnchor) {
+      return;
+    }
+
+    const zoom = clampNumber(requestedZoom, 1, 12, 1);
+    if (Math.abs(zoom - viewport.zoom) < 0.0001) {
+      return;
+    }
+
+    const nextViewWidth = viewport.sourceWidth / zoom;
+    const nextViewHeight = viewport.sourceHeight / zoom;
+    const anchorRatioX = clampNumber(point.x / Math.max(1, viewport.previewWidth), 0, 1, 0.5);
+    const anchorRatioY = clampNumber(point.y / Math.max(1, viewport.previewHeight), 0, 1, 0.5);
+    const nextX = sourceAnchor.x - (anchorRatioX * nextViewWidth);
+    const nextY = sourceAnchor.y - (anchorRatioY * nextViewHeight);
+
+    setViewport({
+      zoom,
+      x: nextX,
+      y: nextY
+    });
+    renderPreviewCanvas();
+    updateControlState();
+  }
+
+  function panPreviewByCanvasDelta(deltaX, deltaY) {
+    const viewport = getViewport();
+    if (!viewport || viewport.zoom <= 1.001) {
+      return;
+    }
+
+    const sourcePerCanvasX = viewport.viewWidth / Math.max(1, viewport.previewWidth);
+    const sourcePerCanvasY = viewport.viewHeight / Math.max(1, viewport.previewHeight);
+    const nextX = viewport.x - (deltaX * sourcePerCanvasX);
+    const nextY = viewport.y - (deltaY * sourcePerCanvasY);
+
+    setViewport({ x: nextX, y: nextY });
+    renderPreviewCanvas();
+  }
+
+  function finishPanning() {
+    if (!colonyState.isPanning) {
+      return;
+    }
+    colonyState.isPanning = false;
+    if (colonyState.panMoved) {
+      colonyState.suppressNextClick = true;
+    }
+    colonyState.panMoved = false;
     updateControlState();
   }
 
@@ -514,8 +752,8 @@ export function initColonyCounterTool() {
     colonyState.sourceWidth = 0;
     colonyState.sourceHeight = 0;
     colonyState.hasImage = false;
-    colonyState.previewScale = 1;
     colonyState.markers = [];
+    resetViewport();
 
     if (colonyImageInput) {
       colonyImageInput.value = '';
@@ -540,6 +778,10 @@ export function initColonyCounterTool() {
   }
 
   function handlePreviewClick(event) {
+    if (colonyState.suppressNextClick) {
+      colonyState.suppressNextClick = false;
+      return;
+    }
     if (!colonyState.hasImage) {
       setColonyStatus('Load an image before counting.', true);
       return;
@@ -550,6 +792,61 @@ export function initColonyCounterTool() {
     }
     const point = getCanvasPointerPosition(colonyPreviewCanvas, event);
     addManualMarkerFromCanvasPoint(point);
+  }
+
+  function handlePreviewMouseDown(event) {
+    if (!colonyState.hasImage || isCropModeActive() || event.button !== 0) {
+      return;
+    }
+    if (colonyState.zoom <= 1.001) {
+      return;
+    }
+    const point = getCanvasPointerPosition(colonyPreviewCanvas, event);
+    if (!point) {
+      return;
+    }
+    colonyState.isPanning = true;
+    colonyState.panLastX = point.x;
+    colonyState.panLastY = point.y;
+    colonyState.panMoved = false;
+    updateControlState();
+    event.preventDefault();
+  }
+
+  function handlePreviewMouseMove(event) {
+    if (!colonyState.isPanning) {
+      return;
+    }
+    const point = getCanvasPointerPosition(colonyPreviewCanvas, event);
+    if (!point) {
+      return;
+    }
+    const deltaX = point.x - colonyState.panLastX;
+    const deltaY = point.y - colonyState.panLastY;
+    colonyState.panLastX = point.x;
+    colonyState.panLastY = point.y;
+    if (Math.abs(deltaX) >= 0.5 || Math.abs(deltaY) >= 0.5) {
+      colonyState.panMoved = true;
+      panPreviewByCanvasDelta(deltaX, deltaY);
+    }
+    event.preventDefault();
+  }
+
+  function handlePreviewWheel(event) {
+    if (!colonyState.hasImage || isCropModeActive()) {
+      return;
+    }
+    const point = getCanvasPointerPosition(colonyPreviewCanvas, event);
+    if (!point) {
+      return;
+    }
+    const viewport = getViewport();
+    if (!viewport) {
+      return;
+    }
+    const zoomFactor = Math.exp(-(Number(event.deltaY) || 0) * 0.0015);
+    zoomPreviewAtPoint(point, viewport.zoom * zoomFactor);
+    event.preventDefault();
   }
 
   function handlePreviewContextMenu(event) {
@@ -624,8 +921,32 @@ export function initColonyCounterTool() {
     handlePreviewClick(event);
   });
 
+  colonyPreviewCanvas?.addEventListener('mousedown', (event) => {
+    handlePreviewMouseDown(event);
+  });
+
+  colonyPreviewCanvas?.addEventListener('mousemove', (event) => {
+    handlePreviewMouseMove(event);
+  });
+
+  colonyPreviewCanvas?.addEventListener('mouseup', () => {
+    finishPanning();
+  });
+
+  colonyPreviewCanvas?.addEventListener('mouseleave', () => {
+    finishPanning();
+  });
+
+  colonyPreviewCanvas?.addEventListener('wheel', (event) => {
+    handlePreviewWheel(event);
+  }, { passive: false });
+
   colonyPreviewCanvas?.addEventListener('contextmenu', (event) => {
     handlePreviewContextMenu(event);
+  });
+
+  window.addEventListener('mouseup', () => {
+    finishPanning();
   });
 
   colonyCounterForm.addEventListener('submit', (event) => {

@@ -26,6 +26,7 @@ import { initGelAnalysis } from './modules/gel-analysis.js';
 import { initPapersManagement } from './modules/papers-management.js';
 import { initToolBox } from './modules/tool-box.js';
 import { initAgentChat } from './modules/agent-chat.js';
+import { initHomeDashboard } from './modules/home-dashboard.js';
 import {
   rebuildObjectGraph,
   queryNotebookEntriesByRelation,
@@ -33,6 +34,25 @@ import {
 } from './modules/object-graph.js';
 
 const state = loadState();
+const LAST_ACTIVE_VIEW_STORAGE_KEY = 'enana_last_active_view_v1';
+
+function applyAppearanceSnapshot(appearance) {
+  const root = document.documentElement;
+  const resolved = appearance && typeof appearance === 'object' ? appearance : {};
+  const themeColor = String(resolved.themeColor || '#2688ff').trim() || '#2688ff';
+  const fontSize = Number(resolved.fontSize) || 16;
+  const mode = resolved.mode === 'night' ? 'night' : 'day';
+  const uiStyle = resolved.uiStyle === 'classic' ? 'classic' : 'neutral-compact';
+
+  root.style.setProperty('--accent', themeColor);
+  root.style.setProperty('--focus', themeColor);
+  root.style.setProperty('--app-font-size', `${fontSize}px`);
+  root.style.setProperty('font-size', `${fontSize}px`);
+  document.body.classList.toggle('theme-night', mode === 'night');
+  document.body.classList.toggle('ui-neutral-compact', uiStyle === 'neutral-compact');
+}
+
+applyAppearanceSnapshot(state.settings?.appearance);
 
 const pageSubtitle = document.getElementById('page-subtitle');
 const homeBtn = document.getElementById('home-btn');
@@ -41,7 +61,6 @@ const topbarSearchInput = document.getElementById('topbar-search');
 const views = [...document.querySelectorAll('.view')];
 const appNavButtons = [...document.querySelectorAll('.app-nav-btn[data-view]')];
 const homeTiles = [...document.querySelectorAll('.tile[data-view]')];
-const DEFAULT_APP_VIEW = VIEWS.LAB_MANAGEMENT;
 
 const GLOBAL_VIEW_ALIASES = new Map([
   ['home', VIEWS.HOME],
@@ -106,13 +125,56 @@ let assay = null;
 let gel = null;
 let workflowManagement = null;
 let agentChat = null;
-
-function isNeutralCompactUi() {
-  return state.settings?.appearance?.uiStyle !== 'classic';
-}
+let homeDashboard = null;
+let lastViewPersistenceEnabled = false;
 
 function normalizeViewId(viewId) {
   return viewId === VIEWS.PERSONAL_INVENTORY ? VIEWS.SAMPLE_REGISTRY : viewId;
+}
+
+const VALID_STARTUP_VIEW_IDS = new Set([
+  VIEWS.HOME,
+  ...appNavButtons.map((button) => normalizeViewId(button.dataset.view))
+]);
+
+function isValidStartupViewId(viewId) {
+  return VALID_STARTUP_VIEW_IDS.has(normalizeViewId(String(viewId || '').trim()));
+}
+
+function rememberLastActiveView(viewId) {
+  if (!isValidStartupViewId(viewId)) {
+    return;
+  }
+  try {
+    localStorage.setItem(LAST_ACTIVE_VIEW_STORAGE_KEY, normalizeViewId(viewId));
+  } catch {}
+}
+
+function readLastActiveView() {
+  try {
+    const storedViewId = String(localStorage.getItem(LAST_ACTIVE_VIEW_STORAGE_KEY) || '').trim();
+    if (!isValidStartupViewId(storedViewId)) {
+      return '';
+    }
+    return normalizeViewId(storedViewId);
+  } catch {
+    return '';
+  }
+}
+
+function resolveStartupViewId() {
+  const startupSettings = state.settings?.startup || {};
+  const configuredDefaultView = String(startupSettings.defaultViewId || '').trim();
+  const defaultViewId = isValidStartupViewId(configuredDefaultView)
+    ? normalizeViewId(configuredDefaultView)
+    : VIEWS.HOME;
+  if (startupSettings.rememberLastView === true) {
+    const rememberedViewId = readLastActiveView();
+    if (rememberedViewId) {
+      return rememberedViewId;
+    }
+  }
+  return defaultViewId;
 }
 
 function replaceState(nextState) {
@@ -369,10 +431,20 @@ const settings = initSettings({
   }
 });
 
+homeDashboard = initHomeDashboard({
+  state,
+  persist,
+  safeText,
+  onOpenSampleSearch: (query) => {
+    showView(VIEWS.SAMPLE_REGISTRY);
+    setSearchInputValue('sample-search', query);
+  }
+});
+
 function showView(viewId) {
-  let nextView = normalizeViewId(viewId);
-  if (isNeutralCompactUi() && nextView === VIEWS.HOME) {
-    nextView = DEFAULT_APP_VIEW;
+  const nextView = normalizeViewId(viewId);
+  if (lastViewPersistenceEnabled) {
+    rememberLastActiveView(nextView);
   }
 
   const showSampleInventoryWorkspace = nextView === VIEWS.SAMPLE_REGISTRY;
@@ -387,7 +459,11 @@ function showView(viewId) {
   });
 
   pageSubtitle.textContent = TITLES[nextView] || '';
-  homeBtn.hidden = isNeutralCompactUi() || nextView === VIEWS.HOME;
+  homeBtn.hidden = nextView === VIEWS.HOME;
+
+  if (nextView === VIEWS.HOME) {
+    homeDashboard?.render();
+  }
 
   if (nextView === VIEWS.SYNTHESIS_NOTEBOOK) {
     synthesisNotebook.renderProjectOptions();
@@ -567,7 +643,7 @@ function getActiveViewId() {
   if (activeViews.includes(VIEWS.SAMPLE_REGISTRY) || activeViews.includes(VIEWS.PERSONAL_INVENTORY)) {
     return VIEWS.SAMPLE_REGISTRY;
   }
-  return activeViews[0] || (isNeutralCompactUi() ? DEFAULT_APP_VIEW : VIEWS.HOME);
+  return activeViews[0] || VIEWS.HOME;
 }
 
 function getScopeTargetForView(viewId) {
@@ -980,11 +1056,15 @@ function renderAll() {
   gel.render();
   settings.renderForms();
   settings.applyAppearance();
+  homeDashboard?.render();
   papers.render();
   agentChat.render();
 }
 
 async function hydrateStateFromDataFile() {
+  if (state.settings?.startup?.autoLoadDataFileOnLaunch === false) {
+    return;
+  }
   if (!window.enanaApi?.autoLoadDataFile) {
     return;
   }
@@ -1010,10 +1090,12 @@ async function hydrateStateFromDataFile() {
 
 async function initApp() {
   await hydrateStateFromDataFile();
+  applyAppearanceSnapshot(state.settings?.appearance);
   initNavigation();
   initTelegramCommandBridge();
   renderAll();
-  showView(isNeutralCompactUi() ? DEFAULT_APP_VIEW : VIEWS.HOME);
+  lastViewPersistenceEnabled = true;
+  showView(resolveStartupViewId());
 }
 
 initApp();

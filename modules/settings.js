@@ -17,6 +17,10 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
   const storageForm = document.getElementById('storage-form');
   const settingStoragePath = document.getElementById('setting-storage-path');
   const selectStoragePathBtn = document.getElementById('select-storage-path-btn');
+  const startupForm = document.getElementById('startup-form');
+  const settingStartupDefaultView = document.getElementById('setting-startup-default-view');
+  const settingStartupRememberLastView = document.getElementById('setting-startup-remember-last-view');
+  const settingStartupAutoLoadDataFile = document.getElementById('setting-startup-auto-load-data-file');
 
   const llmForm = document.getElementById('llm-form');
   const settingProvider = document.getElementById('setting-provider');
@@ -47,6 +51,7 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
   settingUiStyleToggle?.addEventListener('click', onToggleUiStyle);
   storageForm.addEventListener('submit', onSaveStoragePath);
   selectStoragePathBtn?.addEventListener('click', onSelectStoragePath);
+  startupForm?.addEventListener('submit', onSaveStartupSettings);
   llmForm.addEventListener('submit', onSaveLlmSettings);
   settingProvider?.addEventListener('change', onProviderChanged);
   telegramForm?.addEventListener('submit', onSaveTelegramToken);
@@ -73,6 +78,17 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
     syncUiStyleControls(appearance.uiStyle || 'neutral-compact');
 
     settingStoragePath.value = state.settings.storagePath || '';
+    if (settingStartupDefaultView) {
+      const startupDefaultViewId = String(state.settings.startup?.defaultViewId || 'home-view');
+      const hasOption = [...settingStartupDefaultView.options].some((option) => option.value === startupDefaultViewId);
+      settingStartupDefaultView.value = hasOption ? startupDefaultViewId : 'home-view';
+    }
+    if (settingStartupRememberLastView) {
+      settingStartupRememberLastView.checked = state.settings.startup?.rememberLastView === true;
+    }
+    if (settingStartupAutoLoadDataFile) {
+      settingStartupAutoLoadDataFile.checked = state.settings.startup?.autoLoadDataFileOnLaunch !== false;
+    }
     const llmProvider = normalizeLlmProvider(llm.provider, llm.apiEndpoint || llm.api);
     activeLlmProvider = llmProvider;
     if (settingProvider) {
@@ -196,6 +212,16 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
     state.settings.storagePath = String(path || '').trim();
     persist();
     onStoragePathSaved();
+  }
+
+  function onSaveStartupSettings(event) {
+    event.preventDefault();
+    state.settings.startup = {
+      defaultViewId: String(settingStartupDefaultView?.value || 'home-view').trim() || 'home-view',
+      rememberLastView: settingStartupRememberLastView?.checked === true,
+      autoLoadDataFileOnLaunch: settingStartupAutoLoadDataFile?.checked !== false
+    };
+    persist();
   }
 
   function onSaveLlmSettings(event) {

@@ -2336,6 +2336,47 @@ test('[P1] normalizeState preserves explicit inventory locations array', () => {
   assert.deepEqual(normalized.settings.inventoryLocations, ['Freezer A', 'Fridge B']);
 });
 
+test('[P1] normalizeState keeps startup defaults when settings.startup is missing', () => {
+  const normalized = shared.normalizeState({ settings: {} });
+  assert.deepEqual(normalized.settings.startup, shared.defaultState.settings.startup);
+});
+
+test('[P0] normalizeState falls back to home-view for invalid startup defaultViewId', () => {
+  const normalized = shared.normalizeState({
+    settings: {
+      startup: {
+        defaultViewId: 'unknown-view-id',
+        rememberLastView: true,
+        autoLoadDataFileOnLaunch: true
+      }
+    }
+  });
+  assert.equal(normalized.settings.startup.defaultViewId, 'home-view');
+  assert.equal(normalized.settings.startup.rememberLastView, true);
+  assert.equal(normalized.settings.startup.autoLoadDataFileOnLaunch, true);
+});
+
+test('[P0] normalizeState resets invalid startup flags to defaults', () => {
+  const normalized = shared.normalizeState({
+    settings: {
+      startup: {
+        defaultViewId: 'assay-view',
+        rememberLastView: 'yes',
+        autoLoadDataFileOnLaunch: 1
+      }
+    }
+  });
+  assert.equal(normalized.settings.startup.defaultViewId, 'assay-view');
+  assert.equal(
+    normalized.settings.startup.rememberLastView,
+    shared.defaultState.settings.startup.rememberLastView
+  );
+  assert.equal(
+    normalized.settings.startup.autoLoadDataFileOnLaunch,
+    shared.defaultState.settings.startup.autoLoadDataFileOnLaunch
+  );
+});
+
 test('[P1] normalizeState migrates legacy endpoint from llm.api URL', () => {
   const normalized = shared.normalizeState({ settings: { llm: { api: 'https://example.com/v1' } } });
   assert.equal(normalized.settings.llm.apiEndpoint, 'https://example.com/v1');

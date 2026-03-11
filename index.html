@@ -10,6 +10,31 @@
   <link rel="stylesheet" href="./vendor/react-vis/react-vis.css" />
 </head>
 <body>
+  <script>
+    (() => {
+      const DEFAULT_THEME_COLOR = '#2688ff';
+      const DEFAULT_FONT_SIZE = 16;
+      const STORAGE_KEY = 'enana_state_v1';
+      const root = document.documentElement;
+      const body = document.body;
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : null;
+        const appearance = parsed && parsed.settings ? parsed.settings.appearance || {} : {};
+        const themeColor = String(appearance.themeColor || DEFAULT_THEME_COLOR).trim() || DEFAULT_THEME_COLOR;
+        const fontSize = Number(appearance.fontSize) || DEFAULT_FONT_SIZE;
+        const mode = appearance.mode === 'night' ? 'night' : 'day';
+        const uiStyle = appearance.uiStyle === 'classic' ? 'classic' : 'neutral-compact';
+
+        root.style.setProperty('--accent', themeColor);
+        root.style.setProperty('--focus', themeColor);
+        root.style.setProperty('--app-font-size', `${fontSize}px`);
+        root.style.setProperty('font-size', `${fontSize}px`);
+        body.classList.toggle('theme-night', mode === 'night');
+        body.classList.toggle('ui-neutral-compact', uiStyle === 'neutral-compact');
+      } catch {}
+    })();
+  </script>
   <main class="app-shell">
     <header class="topbar">
       <h1>Enana</h1>
@@ -46,86 +71,152 @@
       <section class="workspace-main">
 
     <section id="home-view" class="view is-active" aria-label="Sub applications">
-      <div class="grid">
-        <button class="tile" data-view="lab-management-view">
-          <span class="icon" aria-hidden="true">🧪</span>
-          <span class="label">Members</span>
-        </button>
+      <div class="home-layout">
+        <aside class="home-dashboard panel" aria-label="Dashboard">
+          <h2>Dashboard</h2>
+          <p class="small-note">Live reminders, workflow progress, and timing tools.</p>
 
-        <button class="tile" data-view="instrument-management-view">
-          <span class="icon" aria-hidden="true">🗓️</span>
-          <span class="label">Instruments</span>
-        </button>
+          <section class="dashboard-widget" aria-labelledby="dashboard-passage-heading">
+            <h3 id="dashboard-passage-heading">Cell Passage Reminders</h3>
+            <p id="dashboard-passage-summary" class="small-note">No cell line reminders yet.</p>
+            <div class="dashboard-split-grid">
+              <div class="dashboard-list-group">
+                <h4>Overdue</h4>
+                <div id="dashboard-passage-overdue-list" class="dashboard-list"></div>
+              </div>
+              <div class="dashboard-list-group">
+                <h4>Due in 3 Days</h4>
+                <div id="dashboard-passage-soon-list" class="dashboard-list"></div>
+              </div>
+              <div class="dashboard-list-group">
+                <h4>Unconfigured</h4>
+                <div id="dashboard-passage-unconfigured-list" class="dashboard-list"></div>
+              </div>
+            </div>
+          </section>
 
-        <button class="tile" data-view="protocol-management-view">
-          <span class="icon" aria-hidden="true">📋</span>
-          <span class="label">Protocols</span>
-        </button>
+          <section class="dashboard-widget" aria-labelledby="dashboard-workflow-heading">
+            <div class="dashboard-widget-head">
+              <h3 id="dashboard-workflow-heading">Current Workflow Next Step</h3>
+            </div>
+            <label class="dashboard-field">
+              Current Workflow
+              <select id="dashboard-workflow-select"></select>
+            </label>
+            <p id="dashboard-workflow-next-step" class="small-note">No workflow selected.</p>
+            <div id="dashboard-workflow-progress-list" class="dashboard-list"></div>
+          </section>
 
-        <button class="tile" data-view="collaboration-management-view">
-          <span class="icon" aria-hidden="true">🤝</span>
-          <span class="label">Collabrations</span>
-        </button>
+          <section class="dashboard-widget" aria-labelledby="dashboard-timer-heading">
+            <h3 id="dashboard-timer-heading">Lab Countdown Timer</h3>
+            <p id="dashboard-timer-display" class="dashboard-timer-display">15:00</p>
+            <p id="dashboard-timer-status" class="small-note">Ready</p>
+            <div class="dashboard-inline-row">
+              <button type="button" class="ghost-btn" data-dashboard-preset-minutes="5">5m</button>
+              <button type="button" class="ghost-btn" data-dashboard-preset-minutes="10">10m</button>
+              <button type="button" class="ghost-btn" data-dashboard-preset-minutes="15">15m</button>
+              <button type="button" class="ghost-btn" data-dashboard-preset-minutes="30">30m</button>
+            </div>
+            <div class="dashboard-inline-row">
+              <label class="dashboard-field">
+                Custom Minutes
+                <input id="dashboard-timer-custom-minutes" type="number" min="1" step="1" value="15" />
+              </label>
+              <button type="button" id="dashboard-timer-set-btn" class="ghost-btn">Set</button>
+            </div>
+            <div class="dashboard-inline-row">
+              <button type="button" id="dashboard-timer-start-btn" class="primary-btn">Start</button>
+              <button type="button" id="dashboard-timer-pause-btn" class="ghost-btn">Pause</button>
+              <button type="button" id="dashboard-timer-reset-btn" class="ghost-btn">Reset</button>
+            </div>
+            <p class="small-note">Visual alert only when countdown reaches zero.</p>
+          </section>
+        </aside>
 
-        <button class="tile" data-view="synthesis-notebook-view">
-          <span class="icon" aria-hidden="true">📓</span>
-          <span class="label">Synthesis Notebook</span>
-        </button>
+        <div class="home-apps">
+          <h2 class="home-apps-title">Applications</h2>
+          <div class="grid">
+            <button class="tile" data-view="lab-management-view">
+              <span class="icon" aria-hidden="true">🧪</span>
+              <span class="label">Members</span>
+            </button>
 
-        <button class="tile" data-view="biology-notebook-view">
-          <span class="icon" aria-hidden="true">🧫</span>
-          <span class="label">Biology Notebook</span>
-        </button>
+            <button class="tile" data-view="instrument-management-view">
+              <span class="icon" aria-hidden="true">🗓️</span>
+              <span class="label">Instruments</span>
+            </button>
 
-        <button class="tile" data-view="lab-common-inventory-view">
-          <span class="icon" aria-hidden="true">📦</span>
-          <span class="label">Chemicals</span>
-        </button>
+            <button class="tile" data-view="protocol-management-view">
+              <span class="icon" aria-hidden="true">📋</span>
+              <span class="label">Protocols</span>
+            </button>
 
-        <button class="tile" data-view="sample-registry-view">
-          <span class="icon" aria-hidden="true">🧬</span>
-          <span class="label">Sample &amp; Inventory</span>
-        </button>
+            <button class="tile" data-view="collaboration-management-view">
+              <span class="icon" aria-hidden="true">🤝</span>
+              <span class="label">Collabrations</span>
+            </button>
 
-        <button class="tile" data-view="assay-view">
-          <span class="icon" aria-hidden="true">🧪</span>
-          <span class="label">Assay</span>
-        </button>
+            <button class="tile" data-view="synthesis-notebook-view">
+              <span class="icon" aria-hidden="true">📓</span>
+              <span class="label">Synthesis Notebook</span>
+            </button>
 
-        <button class="tile" data-view="gel-view">
-          <span class="icon" aria-hidden="true">🧬</span>
-          <span class="label">Gel</span>
-        </button>
+            <button class="tile" data-view="biology-notebook-view">
+              <span class="icon" aria-hidden="true">🧫</span>
+              <span class="label">Biology Notebook</span>
+            </button>
 
-        <button class="tile" data-view="project-management-view">
-          <span class="icon" aria-hidden="true">🗂️</span>
-          <span class="label">Projects</span>
-        </button>
+            <button class="tile" data-view="lab-common-inventory-view">
+              <span class="icon" aria-hidden="true">📦</span>
+              <span class="label">Chemicals</span>
+            </button>
 
-        <button class="tile" data-view="workflow-management-view">
-          <span class="icon" aria-hidden="true">🔀</span>
-          <span class="label">Workflows</span>
-        </button>
+            <button class="tile" data-view="sample-registry-view">
+              <span class="icon" aria-hidden="true">🧬</span>
+              <span class="label">Sample &amp; Inventory</span>
+            </button>
 
-        <button class="tile" data-view="papers-view">
-          <span class="icon" aria-hidden="true">📄</span>
-          <span class="label">Papers</span>
-        </button>
+            <button class="tile" data-view="assay-view">
+              <span class="icon" aria-hidden="true">🧪</span>
+              <span class="label">Assay</span>
+            </button>
 
-        <button class="tile" data-view="agent-view">
-          <span class="icon" aria-hidden="true">🤖</span>
-          <span class="label">Agent</span>
-        </button>
+            <button class="tile" data-view="gel-view">
+              <span class="icon" aria-hidden="true">🧬</span>
+              <span class="label">Gel</span>
+            </button>
 
-        <button class="tile" data-view="tool-box-view">
-          <span class="icon" aria-hidden="true">🧮</span>
-          <span class="label">Tools</span>
-        </button>
+            <button class="tile" data-view="project-management-view">
+              <span class="icon" aria-hidden="true">🗂️</span>
+              <span class="label">Projects</span>
+            </button>
 
-        <button class="tile" data-view="setting-view">
-          <span class="icon" aria-hidden="true">⚙️</span>
-          <span class="label">Setting</span>
-        </button>
+            <button class="tile" data-view="workflow-management-view">
+              <span class="icon" aria-hidden="true">🔀</span>
+              <span class="label">Workflows</span>
+            </button>
+
+            <button class="tile" data-view="papers-view">
+              <span class="icon" aria-hidden="true">📄</span>
+              <span class="label">Papers</span>
+            </button>
+
+            <button class="tile" data-view="agent-view">
+              <span class="icon" aria-hidden="true">🤖</span>
+              <span class="label">Agent</span>
+            </button>
+
+            <button class="tile" data-view="tool-box-view">
+              <span class="icon" aria-hidden="true">🧮</span>
+              <span class="label">Tools</span>
+            </button>
+
+            <button class="tile" data-view="setting-view">
+              <span class="icon" aria-hidden="true">⚙️</span>
+              <span class="label">Setting</span>
+            </button>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -564,6 +655,48 @@
               <option value="primer">Primer</option>
             </select>
           </label>
+          <section id="sample-cell-passage-fields" class="sample-cell-passage-fields" hidden>
+            <div class="inline-row sample-cell-passage-head">
+              <strong>Cell Passage Reminder</strong>
+              <span class="small-note">Shown on dashboard for cell line tracking</span>
+            </div>
+            <div class="form-grid">
+              <label>
+                Last Passage Date
+                <input id="sample-passage-last-date" type="date" />
+              </label>
+              <label>
+                Passage Interval (days)
+                <input id="sample-passage-interval-days" type="number" min="1" step="1" placeholder="e.g. 3" />
+              </label>
+            </div>
+          </section>
+          <section id="sample-compound-fields" class="sample-compound-fields" hidden>
+            <div class="inline-row sample-compound-head">
+              <strong>Compound Structure (Ketcher)</strong>
+              <span class="small-note">Draw structure for compound inventory records</span>
+            </div>
+            <div class="form-actions">
+              <button id="sample-compound-open-btn" type="button" class="ghost-btn">Open Ketcher</button>
+              <button id="sample-compound-capture-btn" type="button" class="ghost-btn">Capture Structure</button>
+              <button id="sample-compound-clear-btn" type="button" class="ghost-btn">Clear Structure</button>
+            </div>
+            <label>
+              Captured SMILES
+              <input id="sample-compound-smiles" readonly placeholder="No structure captured yet" />
+            </label>
+            <div id="sample-compound-status" class="small-note"></div>
+            <div id="sample-compound-editor-wrap" hidden>
+              <iframe
+                id="sample-compound-ketcher-frame"
+                class="ketcher-frame sample-ketcher-frame"
+                title="Sample compound Ketcher editor"
+                src="./ketcher-embedded.html"
+                loading="lazy"
+                referrerpolicy="no-referrer"
+              ></iframe>
+            </div>
+          </section>
           <label>
             Lot / Batch
             <input id="sample-lot" placeholder="e.g. A17" />
@@ -1140,6 +1273,44 @@
                 <button type="button" id="select-storage-path-btn" class="ghost-btn">Select Folder</button>
                 <button type="submit" class="primary-btn">Save Storage Path</button>
               </div>
+            </form>
+          </section>
+
+          <section class="card setting-card">
+            <h3>Startup &amp; Data</h3>
+            <form id="startup-form" class="stack-form">
+              <label>
+                Default Startup Module
+                <select id="setting-startup-default-view">
+                  <option value="home-view">Home</option>
+                  <option value="lab-management-view">Members</option>
+                  <option value="instrument-management-view">Instruments</option>
+                  <option value="protocol-management-view">Protocols</option>
+                  <option value="collaboration-management-view">Collabrations</option>
+                  <option value="synthesis-notebook-view">Synthesis Notebook</option>
+                  <option value="biology-notebook-view">Biology Notebook</option>
+                  <option value="lab-common-inventory-view">Chemicals</option>
+                  <option value="sample-registry-view">Sample &amp; Inventory</option>
+                  <option value="assay-view">Assay</option>
+                  <option value="gel-view">Gel</option>
+                  <option value="project-management-view">Projects</option>
+                  <option value="workflow-management-view">Workflows</option>
+                  <option value="papers-view">Papers</option>
+                  <option value="agent-view">Agent</option>
+                  <option value="tool-box-view">Tools</option>
+                  <option value="setting-view">Setting</option>
+                </select>
+              </label>
+              <label class="inline-row">
+                <input id="setting-startup-remember-last-view" type="checkbox" />
+                Remember last opened module on launch
+              </label>
+              <label class="inline-row">
+                <input id="setting-startup-auto-load-data-file" type="checkbox" />
+                Auto-load current .json data file on launch
+              </label>
+              <p class="small-note">If enabled, “Remember last opened module” overrides the default startup module.</p>
+              <button type="submit" class="primary-btn">Save Startup Settings</button>
             </form>
           </section>
 
@@ -2163,7 +2334,7 @@
               </label>
             </div>
 
-            <p class="small-note">Left-click to add a colony marker. Right-click to remove the nearest marker.</p>
+            <p class="small-note">Left-click to add a marker, right-click to remove nearest, scroll to zoom, and drag while zoomed to pan.</p>
 
             <div class="form-actions">
               <button id="colony-clear-markers-btn" type="button" class="ghost-btn">Clear Markers</button>
