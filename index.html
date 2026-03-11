@@ -2200,9 +2200,20 @@
             </label>
 
             <div class="form-actions">
+              <button id="colony-load-opencv-btn" type="button" class="ghost-btn">Load OpenCV</button>
               <button id="colony-run-btn" type="submit" class="primary-btn">Count Colonies</button>
               <button id="colony-reset-btn" type="button" class="ghost-btn">Reset</button>
               <span id="colony-status" class="small-note">Load an image to begin.</span>
+            </div>
+
+            <div id="colony-opencv-loader" class="colony-opencv-loader" hidden>
+              <div class="colony-opencv-progress-track" aria-hidden="true">
+                <div id="colony-opencv-progress-fill" class="colony-opencv-progress-fill"></div>
+              </div>
+              <div class="colony-opencv-progress-row">
+                <span id="colony-opencv-progress-text" class="small-note">Preparing OpenCV runtime...</span>
+                <button id="colony-opencv-retry-btn" type="button" class="ghost-btn" hidden>Retry OpenCV</button>
+              </div>
             </div>
           </form>
 

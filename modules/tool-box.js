@@ -66,7 +66,6 @@ import {
   sanitizeProteinAssemblySequence,
   buildProteinAssemblyConstruct
 } from './tool-box/protein-assembly.js';
-import { initColonyCounterTool } from './tool-box/colony-counter.js';
 
 const PLANNOTATE_TYPE_STYLES = {
   rep_origin: { fillColor: '#4e7fff', lineColor: '#000000' },
@@ -667,6 +666,31 @@ export function initToolBox() {
   const proteinAssemblyState = {
     nextRowId: 1
   };
+  let colonyToolInitPromise = null;
+
+  function ensureColonyToolInitialized() {
+    if (colonyToolInitPromise) {
+      return colonyToolInitPromise;
+    }
+
+    colonyToolInitPromise = import('./tool-box/colony-counter.js')
+      .then(({ initColonyCounterTool }) => {
+        if (typeof initColonyCounterTool === 'function') {
+          initColonyCounterTool();
+        }
+      })
+      .catch((error) => {
+        colonyToolInitPromise = null;
+        console.error('Failed to initialize colony counter tool:', error);
+        const colonyStatus = document.getElementById('colony-status');
+        if (colonyStatus) {
+          colonyStatus.textContent = 'Failed to load colony counter tool.';
+          colonyStatus.style.color = 'var(--danger)';
+        }
+      });
+
+    return colonyToolInitPromise;
+  }
 
   function getSelectedCompound(row) {
     const select = row.querySelector('.buffer-chemical-select');
@@ -712,6 +736,9 @@ export function initToolBox() {
     toolTiles.forEach((tile) => {
       tile.classList.toggle('tool-tile-active', tile.dataset.toolView === viewId);
     });
+    if (viewId === 'tool-colony-counter-view') {
+      void ensureColonyToolInitialized();
+    }
   }
 
   function populateReverseTranslateProfileOptions() {
@@ -2424,8 +2451,6 @@ export function initToolBox() {
       runCrisprDesign();
     });
   }
-  initColonyCounterTool();
-
   addBufferChemicalBtn.addEventListener('click', addRow);
   bufferVolumeInput.addEventListener('input', renderBuffer);
 

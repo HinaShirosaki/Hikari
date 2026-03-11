@@ -4,29 +4,284 @@ import {
   toNumber
 } from './common.js';
 
-const OPENCV_LOCAL_URL = './vendor/opencv/opencv.js';
+const OPENCV_ASSET_BASE_URL = './vendor/opencv/';
+const OPENCV_LOCAL_URL = `${OPENCV_ASSET_BASE_URL}opencv.js`;
+const OPENCV_WASM_LOCAL_URL = `${OPENCV_ASSET_BASE_URL}opencv.wasm`;
 const OPENCV_SCRIPT_SELECTOR = 'script[data-opencv-loader="true"]';
 let openCvLoadPromise = null;
+const OPEN_CV_PROGRESS_STATES = {
+  idle: 'idle',
+  loadingScript: 'loading-script',
+  scriptLoaded: 'script-loaded',
+  initializing: 'initializing',
+  ready: 'ready',
+  error: 'error'
+};
+const openCvProgressListeners = new Set();
+let openCvProgressState = {
+  phase: OPEN_CV_PROGRESS_STATES.idle,
+  progress: 0,
+  message: '',
+  elapsedMs: 0,
+  timeoutMs: 0
+};
 
 function isOpenCvApiReady() {
   const cvRef = window.cv;
   return Boolean(cvRef && typeof cvRef.Mat === 'function' && typeof cvRef.imread === 'function');
 }
 
-function ensureOpenCvReady(timeoutMs = 30000) {
+function resolveOpenCvAssetUrl(path) {
+  const normalizedPath = String(path || '').replace(/^\.\//, '');
+  let relativePath = OPENCV_ASSET_BASE_URL;
+  if (!normalizedPath) {
+    relativePath = OPENCV_ASSET_BASE_URL;
+  } else if (normalizedPath.endsWith('.wasm')) {
+    relativePath = OPENCV_WASM_LOCAL_URL;
+  } else if (normalizedPath === 'opencv.js') {
+    relativePath = OPENCV_LOCAL_URL;
+  } else {
+    relativePath = `${OPENCV_ASSET_BASE_URL}${normalizedPath}`;
+  }
+  try {
+    return new URL(relativePath, window.location.href).toString();
+  } catch {
+    return relativePath;
+  }
+}
+
+function ensureOpenCvModuleConfig() {
   if (isOpenCvApiReady()) {
-    return Promise.resolve(window.cv);
+    return;
+  }
+  const cvRef = window.cv;
+  if (!cvRef) {
+    return;
+  }
+  if (typeof cvRef === 'function') {
+    return;
+  }
+  if (typeof cvRef !== 'object') {
+    return;
+  }
+  cvRef.locateFile = (path) => resolveOpenCvAssetUrl(path);
+}
+
+function tryInitializeOpenCvFactory(callbacks = {}) {
+  const cvRef = window.cv;
+  if (typeof cvRef !== 'function' || isOpenCvApiReady()) {
+    return null;
+  }
+  if (cvRef.__opencvFactoryInitialized) {
+    return typeof window.cv === 'object' ? window.cv : null;
+  }
+  cvRef.__opencvFactoryInitialized = true;
+  const onRuntimeInitialized = typeof callbacks.onRuntimeInitialized === 'function' ? callbacks.onRuntimeInitialized : null;
+  const onAbort = typeof callbacks.onAbort === 'function' ? callbacks.onAbort : null;
+  const onErrorLog = typeof callbacks.onErrorLog === 'function' ? callbacks.onErrorLog : null;
+  const moduleConfig = {
+    locateFile: (path) => resolveOpenCvAssetUrl(path)
+  };
+  if (onRuntimeInitialized) {
+    moduleConfig.onRuntimeInitialized = onRuntimeInitialized;
+  }
+  if (onAbort) {
+    moduleConfig.onAbort = onAbort;
+  }
+  if (onErrorLog) {
+    moduleConfig.printErr = onErrorLog;
+  }
+  const moduleInstance = cvRef(moduleConfig);
+  if (moduleInstance && typeof moduleInstance === 'object') {
+    window.cv = moduleInstance;
+  }
+  return moduleInstance || null;
+}
+
+function publishOpenCvProgress(partialState = {}) {
+  const nextState = {
+    ...openCvProgressState,
+    ...partialState
+  };
+  const changed = nextState.phase !== openCvProgressState.phase
+    || nextState.progress !== openCvProgressState.progress
+    || nextState.message !== openCvProgressState.message
+    || nextState.elapsedMs !== openCvProgressState.elapsedMs
+    || nextState.timeoutMs !== openCvProgressState.timeoutMs;
+  if (!changed) {
+    return;
+  }
+  openCvProgressState = nextState;
+  openCvProgressListeners.forEach((listener) => {
+    try {
+      listener(openCvProgressState);
+    } catch {
+      // Ignore listener failures so the loader keeps working.
+    }
+  });
+}
+
+function subscribeOpenCvProgress(listener) {
+  if (typeof listener !== 'function') {
+    return () => {};
+  }
+  openCvProgressListeners.add(listener);
+  try {
+    listener(openCvProgressState);
+  } catch {
+    // Ignore listener failures.
+  }
+  return () => {
+    openCvProgressListeners.delete(listener);
+  };
+}
+
+function resetOpenCvLoaderArtifacts() {
+  openCvLoadPromise = null;
+  const script = document.querySelector(OPENCV_SCRIPT_SELECTOR);
+  if (script) {
+    script.remove();
+  }
+  if (!isOpenCvApiReady()) {
+    try {
+      delete window.cv;
+    } catch {
+      window.cv = undefined;
+    }
+  }
+  publishOpenCvProgress({
+    phase: OPEN_CV_PROGRESS_STATES.idle,
+    progress: 0,
+    message: '',
+    elapsedMs: 0,
+    timeoutMs: 0
+  });
+}
+
+function ensureOpenCvReady(timeoutMs = 30000, options = {}) {
+  const resolvedTimeoutMs = Math.max(1000, Math.round(Number(timeoutMs) || 30000));
+  const forceReload = Boolean(options?.forceReload);
+  const onProgress = typeof options?.onProgress === 'function' ? options.onProgress : null;
+  const unsubscribeProgress = onProgress ? subscribeOpenCvProgress(onProgress) : null;
+  const settle = (promise) => {
+    if (!unsubscribeProgress) {
+      return promise;
+    }
+    return promise.finally(() => {
+      unsubscribeProgress();
+    });
+  };
+
+  if (forceReload) {
+    resetOpenCvLoaderArtifacts();
+  }
+
+  ensureOpenCvModuleConfig();
+
+  if (isOpenCvApiReady()) {
+    publishOpenCvProgress({
+      phase: OPEN_CV_PROGRESS_STATES.ready,
+      progress: 100,
+      message: 'OpenCV runtime ready.',
+      elapsedMs: 0,
+      timeoutMs: resolvedTimeoutMs
+    });
+    return settle(Promise.resolve(window.cv));
   }
 
   if (openCvLoadPromise) {
-    return openCvLoadPromise;
+    publishOpenCvProgress({ timeoutMs: resolvedTimeoutMs });
+    return settle(openCvLoadPromise);
   }
 
   openCvLoadPromise = new Promise((resolve, reject) => {
+    const loadStartedAt = Date.now();
+    const scriptVariants = [
+      {
+        key: 'fast',
+        scriptPath: 'opencv.js',
+        label: 'fast OpenCV runtime',
+        timeoutMs: resolvedTimeoutMs
+      },
+      {
+        key: 'compat',
+        scriptPath: 'opencv-inline.js',
+        label: 'compatibility OpenCV runtime',
+        timeoutMs: Math.max(resolvedTimeoutMs, 120000)
+      }
+    ];
+    let activeVariantIndex = 0;
     let settled = false;
     let timeoutId = null;
     let pollId = null;
     let runtimeAttached = false;
+    let scriptLoaded = false;
+    let stageStartedAt = Date.now();
+    let lastRuntimeErrorMessage = '';
+
+    function activeVariant() {
+      return scriptVariants[Math.min(activeVariantIndex, scriptVariants.length - 1)];
+    }
+
+    function activeScriptUrl() {
+      return resolveOpenCvAssetUrl(activeVariant().scriptPath);
+    }
+
+    function rememberRuntimeError(errorLike) {
+      if (!errorLike) {
+        return;
+      }
+      let message = '';
+      if (typeof errorLike === 'string') {
+        message = errorLike.trim();
+      } else if (typeof errorLike?.message === 'string') {
+        message = errorLike.message.trim();
+      } else {
+        message = String(errorLike).trim();
+      }
+      if (!message) {
+        return;
+      }
+      lastRuntimeErrorMessage = message;
+    }
+
+    function resetRuntimeStateForNextAttempt() {
+      runtimeAttached = false;
+      scriptLoaded = false;
+      if (!isOpenCvApiReady()) {
+        try {
+          delete window.cv;
+        } catch {
+          window.cv = undefined;
+        }
+      }
+    }
+
+    function buildPendingProgress() {
+      const elapsedMs = Date.now() - loadStartedAt;
+      const stageElapsedMs = Date.now() - stageStartedAt;
+      const stageTimeoutMs = activeVariant().timeoutMs;
+      const progressStart = scriptLoaded ? 45 : 5;
+      const progressCap = scriptLoaded ? 92 : 42;
+      const ratio = Math.min(1, stageElapsedMs / stageTimeoutMs);
+      const progress = Math.round(progressStart + ((progressCap - progressStart) * ratio));
+      return {
+        elapsedMs,
+        progress,
+        timeoutMs: stageTimeoutMs
+      };
+    }
+
+    function updatePendingProgress() {
+      const { elapsedMs, progress, timeoutMs } = buildPendingProgress();
+      publishOpenCvProgress({
+        phase: scriptLoaded ? OPEN_CV_PROGRESS_STATES.initializing : OPEN_CV_PROGRESS_STATES.loadingScript,
+        progress,
+        message: scriptLoaded ? 'Initializing OpenCV runtime...' : 'Loading OpenCV script...',
+        elapsedMs,
+        timeoutMs
+      });
+    }
 
     function done(error, result) {
       if (settled) {
@@ -40,10 +295,24 @@ function ensureOpenCvReady(timeoutMs = 30000) {
         clearTimeout(pollId);
       }
       if (error) {
+        publishOpenCvProgress({
+          phase: OPEN_CV_PROGRESS_STATES.error,
+          progress: Math.max(5, Math.round(openCvProgressState.progress)),
+          message: error.message || 'OpenCV runtime failed to load.',
+          elapsedMs: Date.now() - loadStartedAt,
+          timeoutMs: activeVariant().timeoutMs
+        });
         openCvLoadPromise = null;
         reject(error);
         return;
       }
+      publishOpenCvProgress({
+        phase: OPEN_CV_PROGRESS_STATES.ready,
+        progress: 100,
+        message: 'OpenCV runtime ready.',
+        elapsedMs: Date.now() - loadStartedAt,
+        timeoutMs: activeVariant().timeoutMs
+      });
       resolve(result);
     }
 
@@ -55,17 +324,95 @@ function ensureOpenCvReady(timeoutMs = 30000) {
       return false;
     }
 
+    function armStageTimeout() {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      timeoutId = setTimeout(() => {
+        if (switchToFallback(`Timed out while loading ${activeVariant().label}.`)) {
+          return;
+        }
+        if (lastRuntimeErrorMessage) {
+          done(new Error(`Timed out while loading OpenCV: ${lastRuntimeErrorMessage}`));
+          return;
+        }
+        done(new Error('Timed out while loading OpenCV. Click Retry OpenCV.'));
+      }, activeVariant().timeoutMs);
+    }
+
     function attachRuntimeHandler() {
       if (runtimeAttached) {
         return true;
       }
+      let maybeModule = null;
+      try {
+        maybeModule = tryInitializeOpenCvFactory({
+          onRuntimeInitialized: () => {
+            if (!resolveIfReady()) {
+              done(new Error('OpenCV runtime initialized, but API is unavailable.'));
+            }
+          },
+          onAbort: (reason) => {
+            rememberRuntimeError(reason);
+            if (switchToFallback(`OpenCV runtime aborted: ${lastRuntimeErrorMessage || 'unknown error'}`)) {
+              return;
+            }
+            done(new Error(`OpenCV runtime aborted: ${lastRuntimeErrorMessage || 'unknown error'}`));
+          },
+          onErrorLog: (text) => {
+            if (typeof text !== 'string') {
+              return;
+            }
+            if (/abort|error|fail|wasm|exception/i.test(text)) {
+              rememberRuntimeError(text);
+            }
+          }
+        });
+      } catch (error) {
+        rememberRuntimeError(error);
+        if (switchToFallback(error?.message || 'Failed to initialize OpenCV runtime.')) {
+          return false;
+        }
+        done(new Error(error?.message || 'Failed to initialize OpenCV runtime.'));
+        return false;
+      }
       const cvRef = window.cv;
-      if (!cvRef) {
+      if (!cvRef || typeof cvRef === 'function') {
         return false;
       }
       runtimeAttached = true;
 
+      if (maybeModule?.ready && typeof maybeModule.ready.then === 'function') {
+        publishOpenCvProgress({
+          phase: OPEN_CV_PROGRESS_STATES.initializing,
+          progress: 72,
+          message: 'Initializing OpenCV runtime...',
+          elapsedMs: Date.now() - loadStartedAt,
+          timeoutMs: activeVariant().timeoutMs
+        });
+        maybeModule.ready
+          .then(() => {
+            if (!resolveIfReady()) {
+              done(new Error('OpenCV ready promise resolved, but API is unavailable.'));
+            }
+          })
+          .catch((error) => {
+            rememberRuntimeError(error);
+            if (switchToFallback(error?.message || 'OpenCV runtime ready promise rejected.')) {
+              return;
+            }
+            done(new Error(error?.message || 'OpenCV runtime ready promise rejected.'));
+          });
+      }
+
       if (typeof cvRef.then === 'function') {
+        publishOpenCvProgress({
+          phase: OPEN_CV_PROGRESS_STATES.initializing,
+          progress: 70,
+          message: 'Initializing OpenCV runtime...',
+          elapsedMs: Date.now() - loadStartedAt,
+          timeoutMs: activeVariant().timeoutMs
+        });
         cvRef
           .then((resolvedCv) => {
             if (resolvedCv) {
@@ -76,9 +423,36 @@ function ensureOpenCvReady(timeoutMs = 30000) {
             }
           })
           .catch((error) => {
+            rememberRuntimeError(error);
+            if (switchToFallback(error?.message || 'Failed to initialize OpenCV runtime.')) {
+              return;
+            }
             done(new Error(error?.message || 'Failed to initialize OpenCV runtime.'));
           });
         return true;
+      }
+
+      if (cvRef.ready && typeof cvRef.ready.then === 'function') {
+        publishOpenCvProgress({
+          phase: OPEN_CV_PROGRESS_STATES.initializing,
+          progress: 72,
+          message: 'Initializing OpenCV runtime...',
+          elapsedMs: Date.now() - loadStartedAt,
+          timeoutMs: activeVariant().timeoutMs
+        });
+        cvRef.ready
+          .then(() => {
+            if (!resolveIfReady()) {
+              done(new Error('OpenCV ready promise resolved, but API is unavailable.'));
+            }
+          })
+          .catch((error) => {
+            rememberRuntimeError(error);
+            if (switchToFallback(error?.message || 'OpenCV runtime ready promise rejected.')) {
+              return;
+            }
+            done(new Error(error?.message || 'OpenCV runtime ready promise rejected.'));
+          });
       }
 
       if (resolveIfReady()) {
@@ -107,53 +481,96 @@ function ensureOpenCvReady(timeoutMs = 30000) {
         return;
       }
       attachRuntimeHandler();
+      updatePendingProgress();
       pollId = setTimeout(pollForRuntime, 120);
     }
 
-    timeoutId = setTimeout(() => {
-      done(new Error('Timed out while loading OpenCV.'));
-    }, Math.max(1000, timeoutMs));
-
-    let script = document.querySelector(OPENCV_SCRIPT_SELECTOR);
-    if (script?.dataset.opencvLoadState === 'error') {
-      script.remove();
-      script = null;
-    }
-
-    if (!script) {
+    function injectScriptForActiveVariant() {
       const script = document.createElement('script');
-      script.src = OPENCV_LOCAL_URL;
+      script.src = activeScriptUrl();
       script.async = true;
       script.defer = true;
       script.dataset.opencvLoader = 'true';
       script.dataset.opencvLoadState = 'loading';
+      script.dataset.opencvVariant = activeVariant().key;
       script.addEventListener('error', () => {
         script.dataset.opencvLoadState = 'error';
-        done(new Error('Failed to load local OpenCV script.'));
+        if (switchToFallback(`Failed to load ${activeVariant().label} script.`)) {
+          return;
+        }
+        done(new Error('Failed to load local OpenCV script. Click Retry OpenCV.'));
       });
       script.addEventListener('load', () => {
+        scriptLoaded = true;
         script.dataset.opencvLoadState = 'loaded';
+        publishOpenCvProgress({
+          phase: OPEN_CV_PROGRESS_STATES.scriptLoaded,
+          progress: 45,
+          message: 'OpenCV script loaded. Initializing runtime...',
+          elapsedMs: Date.now() - loadStartedAt,
+          timeoutMs: activeVariant().timeoutMs
+        });
         attachRuntimeHandler();
         resolveIfReady();
       });
       document.body.appendChild(script);
-    } else {
-      script.addEventListener('error', () => {
-        script.dataset.opencvLoadState = 'error';
-        done(new Error('Failed to load local OpenCV script.'));
-      }, { once: true });
-      script.addEventListener('load', () => {
-        script.dataset.opencvLoadState = 'loaded';
-        attachRuntimeHandler();
-        resolveIfReady();
-      }, { once: true });
     }
 
+    function switchToFallback(reason) {
+      if (settled) {
+        return false;
+      }
+      if (activeVariantIndex >= scriptVariants.length - 1) {
+        return false;
+      }
+      rememberRuntimeError(reason);
+      const previousVariant = activeVariant();
+      activeVariantIndex += 1;
+      const nextVariant = activeVariant();
+      const existingScript = document.querySelector(OPENCV_SCRIPT_SELECTOR);
+      if (existingScript) {
+        existingScript.remove();
+      }
+      resetRuntimeStateForNextAttempt();
+      stageStartedAt = Date.now();
+      publishOpenCvProgress({
+        phase: OPEN_CV_PROGRESS_STATES.loadingScript,
+        progress: 5,
+        message: `Switching to ${nextVariant.label}...`,
+        elapsedMs: Date.now() - loadStartedAt,
+        timeoutMs: nextVariant.timeoutMs
+      });
+      armStageTimeout();
+      injectScriptForActiveVariant();
+      if (previousVariant.key !== nextVariant.key) {
+        attachRuntimeHandler();
+      }
+      return true;
+    }
+
+    const existingScript = document.querySelector(OPENCV_SCRIPT_SELECTOR);
+    if (existingScript) {
+      existingScript.remove();
+    }
+    resetRuntimeStateForNextAttempt();
+    stageStartedAt = Date.now();
+
+    publishOpenCvProgress({
+      phase: OPEN_CV_PROGRESS_STATES.loadingScript,
+      progress: 5,
+      message: 'Loading OpenCV script...',
+      elapsedMs: 0,
+      timeoutMs: activeVariant().timeoutMs
+    });
+
+    armStageTimeout();
+    ensureOpenCvModuleConfig();
+    injectScriptForActiveVariant();
     attachRuntimeHandler();
     pollForRuntime();
   });
 
-  return openCvLoadPromise;
+  return settle(openCvLoadPromise);
 }
 
 export function initColonyCounterTool() {
@@ -172,6 +589,7 @@ export function initColonyCounterTool() {
   const colonyMaxAreaInput = document.getElementById('colony-max-area');
   const colonyMinCircularityInput = document.getElementById('colony-min-circularity');
   const colonyMaxSizeInput = document.getElementById('colony-max-size');
+  const colonyLoadOpenCvBtn = document.getElementById('colony-load-opencv-btn');
   const colonyRunBtn = document.getElementById('colony-run-btn');
   const colonyResetBtn = document.getElementById('colony-reset-btn');
   const colonyStartCropBtn = document.getElementById('colony-start-crop-btn');
@@ -179,6 +597,10 @@ export function initColonyCounterTool() {
   const colonyCancelCropBtn = document.getElementById('colony-cancel-crop-btn');
   const colonyResetCropBtn = document.getElementById('colony-reset-crop-btn');
   const colonyStatus = document.getElementById('colony-status');
+  const colonyOpenCvLoader = document.getElementById('colony-opencv-loader');
+  const colonyOpenCvProgressFill = document.getElementById('colony-opencv-progress-fill');
+  const colonyOpenCvProgressText = document.getElementById('colony-opencv-progress-text');
+  const colonyOpenCvRetryBtn = document.getElementById('colony-opencv-retry-btn');
   const colonySummary = document.getElementById('colony-summary');
   const colonyPreviewCanvas = document.getElementById('colony-preview-canvas');
   const colonyMaskCanvas = document.getElementById('colony-mask-canvas');
@@ -207,6 +629,78 @@ export function initColonyCounterTool() {
     colonyStatus.style.color = isError ? 'var(--danger)' : '';
   }
 
+  function formatOpenCvElapsed(msValue) {
+    const ms = Math.max(0, Number(msValue) || 0);
+    return `${Math.round(ms / 1000)}s`;
+  }
+
+  function renderOpenCvLoadUi(progressState) {
+    if (!colonyOpenCvLoader || !colonyOpenCvProgressFill || !colonyOpenCvProgressText) {
+      return;
+    }
+
+    const phase = progressState?.phase || OPEN_CV_PROGRESS_STATES.idle;
+    const isBusy = phase === OPEN_CV_PROGRESS_STATES.loadingScript
+      || phase === OPEN_CV_PROGRESS_STATES.scriptLoaded
+      || phase === OPEN_CV_PROGRESS_STATES.initializing;
+    const isError = phase === OPEN_CV_PROGRESS_STATES.error;
+    const showLoader = isBusy || isError;
+
+    colonyOpenCvLoader.hidden = !showLoader;
+    colonyOpenCvLoader.classList.toggle('is-error', isError);
+
+    if (!showLoader) {
+      colonyOpenCvProgressFill.style.width = '0%';
+      colonyOpenCvProgressText.style.color = '';
+      if (colonyOpenCvRetryBtn) {
+        colonyOpenCvRetryBtn.hidden = true;
+      }
+      if (colonyLoadOpenCvBtn) {
+        if (phase === OPEN_CV_PROGRESS_STATES.ready) {
+          colonyLoadOpenCvBtn.disabled = true;
+          colonyLoadOpenCvBtn.textContent = 'OpenCV Loaded';
+        } else {
+          colonyLoadOpenCvBtn.disabled = false;
+          colonyLoadOpenCvBtn.textContent = 'Load OpenCV';
+        }
+      }
+      updateCropControlState();
+      return;
+    }
+
+    const progress = clampNumber(progressState?.progress, 0, 100, 0);
+    colonyOpenCvProgressFill.style.width = `${Math.round(progress)}%`;
+
+    const statusText = String(progressState?.message || 'Preparing OpenCV runtime...');
+    if (isBusy) {
+      const elapsedText = formatOpenCvElapsed(progressState?.elapsedMs);
+      const timeoutText = formatOpenCvElapsed(progressState?.timeoutMs);
+      colonyOpenCvProgressText.textContent = `${statusText} (${elapsedText}/${timeoutText})`;
+    } else {
+      colonyOpenCvProgressText.textContent = statusText;
+    }
+    colonyOpenCvProgressText.style.color = isError ? 'var(--danger)' : '';
+
+    if (colonyOpenCvRetryBtn) {
+      colonyOpenCvRetryBtn.hidden = !isError;
+      colonyOpenCvRetryBtn.disabled = false;
+    }
+
+    if (colonyLoadOpenCvBtn) {
+      if (isBusy) {
+        colonyLoadOpenCvBtn.disabled = true;
+        colonyLoadOpenCvBtn.textContent = 'Loading OpenCV...';
+      } else if (phase === OPEN_CV_PROGRESS_STATES.ready) {
+        colonyLoadOpenCvBtn.disabled = true;
+        colonyLoadOpenCvBtn.textContent = 'OpenCV Loaded';
+      } else {
+        colonyLoadOpenCvBtn.disabled = false;
+        colonyLoadOpenCvBtn.textContent = 'Load OpenCV';
+      }
+    }
+    updateCropControlState();
+  }
+
   function isCropModeActive() {
     return Boolean(colonyState.cropper);
   }
@@ -214,6 +708,7 @@ export function initColonyCounterTool() {
   function updateCropControlState() {
     const hasImage = colonyState.hasImage;
     const cropActive = isCropModeActive();
+    const openCvReady = isOpenCvApiReady();
     if (colonyStartCropBtn) {
       colonyStartCropBtn.disabled = !hasImage || cropActive;
     }
@@ -227,7 +722,7 @@ export function initColonyCounterTool() {
       colonyResetCropBtn.disabled = !hasImage || cropActive;
     }
     if (colonyRunBtn) {
-      colonyRunBtn.disabled = !hasImage || cropActive;
+      colonyRunBtn.disabled = !hasImage || cropActive || !openCvReady;
     }
   }
 
@@ -397,7 +892,11 @@ export function initColonyCounterTool() {
     setCanvasFromSource(colonyPreviewCanvas, colonySourceCanvas, settings.maxProcessSize);
     clearCanvas(colonyMaskCanvas);
     resetColonySummary();
-    setColonyStatus(`Loaded ${colonyState.imageName} (${width}x${height})`);
+    if (isOpenCvApiReady()) {
+      setColonyStatus(`Loaded ${colonyState.imageName} (${width}x${height})`);
+    } else {
+      setColonyStatus(`Loaded ${colonyState.imageName} (${width}x${height}). Click Load OpenCV.`);
+    }
     updateCropControlState();
   }
 
@@ -492,21 +991,21 @@ export function initColonyCounterTool() {
     updateCropControlState();
   }
 
-  function prewarmOpenCvRuntime() {
-    if (!colonyState.hasImage) {
-      setColonyStatus('Preparing OpenCV runtime...');
+  async function loadOpenCvRuntime(forceReload = false) {
+    if (isOpenCvApiReady() && !forceReload) {
+      setColonyStatus(colonyState.hasImage ? 'OpenCV ready. You can run counting.' : 'OpenCV ready. Load an image to begin.');
+      updateCropControlState();
+      return;
     }
-    ensureOpenCvReady(45000)
-      .then(() => {
-        if (!colonyState.hasImage && !isCropModeActive()) {
-          setColonyStatus('OpenCV ready. Load an image to begin.');
-        }
-      })
-      .catch((error) => {
-        if (!colonyState.hasImage) {
-          setColonyStatus(`OpenCV preload failed: ${error.message || error}`, true);
-        }
-      });
+    setColonyStatus(forceReload ? 'Retrying OpenCV runtime load...' : 'Loading OpenCV runtime...');
+    try {
+      await ensureOpenCvReady(45000, { forceReload });
+      setColonyStatus(colonyState.hasImage ? 'OpenCV ready. You can run counting.' : 'OpenCV ready. Load an image to begin.');
+    } catch (error) {
+      setColonyStatus(`OpenCV preload failed: ${error.message || error}`, true);
+    } finally {
+      updateCropControlState();
+    }
   }
 
   async function renderColonyCounting() {
@@ -516,6 +1015,10 @@ export function initColonyCounterTool() {
     }
     if (isCropModeActive()) {
       setColonyStatus('Apply or cancel crop mode before counting.', true);
+      return;
+    }
+    if (!isOpenCvApiReady()) {
+      setColonyStatus('OpenCV is not loaded. Click Load OpenCV first.', true);
       return;
     }
 
@@ -532,7 +1035,7 @@ export function initColonyCounterTool() {
     }
 
     colonyRunBtn?.setAttribute('disabled', 'true');
-    setColonyStatus('Loading OpenCV runtime...');
+    setColonyStatus('Running colony detection...');
 
     let src = null;
     let gray = null;
@@ -544,7 +1047,7 @@ export function initColonyCounterTool() {
     let annotated = null;
 
     try {
-      const cvRef = await ensureOpenCvReady();
+      const cvRef = await ensureOpenCvReady(45000);
       setColonyStatus('Detecting colonies...');
 
       src = cvRef.imread(colonyWorkingCanvas);
@@ -725,15 +1228,17 @@ export function initColonyCounterTool() {
     clearCanvas(colonyPreviewCanvas);
     clearCanvas(colonyMaskCanvas);
     resetColonySummary();
-    setColonyStatus('Load an image to begin.');
+    setColonyStatus('Load OpenCV, then load an image to begin.');
     updateCropControlState();
   }
 
   syncColonyThresholdMode();
   resetColonySummary();
-  setColonyStatus('Load an image to begin.');
+  setColonyStatus('Load OpenCV, then load an image to begin.');
   updateCropControlState();
-  prewarmOpenCvRuntime();
+  subscribeOpenCvProgress((progressState) => {
+    renderOpenCvLoadUi(progressState);
+  });
 
   colonyThresholdModeSelect?.addEventListener('change', () => {
     syncColonyThresholdMode();
@@ -777,6 +1282,19 @@ export function initColonyCounterTool() {
   colonyCounterForm.addEventListener('submit', async (event) => {
     event.preventDefault();
     await renderColonyCounting();
+  });
+
+  colonyLoadOpenCvBtn?.addEventListener('click', async () => {
+    await loadOpenCvRuntime(false);
+  });
+
+  colonyOpenCvRetryBtn?.addEventListener('click', async () => {
+    colonyOpenCvRetryBtn.disabled = true;
+    try {
+      await loadOpenCvRuntime(true);
+    } finally {
+      colonyOpenCvRetryBtn.disabled = false;
+    }
   });
 
   colonyResetBtn?.addEventListener('click', () => {

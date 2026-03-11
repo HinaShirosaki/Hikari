@@ -2123,6 +2123,47 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   padding: 12px;
 }
 
+.colony-opencv-loader {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(143, 188, 255, 0.42);
+  background: rgba(236, 246, 255, 0.45);
+}
+
+.colony-opencv-loader.is-error {
+  border-color: rgba(224, 100, 124, 0.55);
+  background: rgba(255, 232, 238, 0.5);
+}
+
+.colony-opencv-progress-track {
+  position: relative;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(125, 170, 236, 0.26);
+  overflow: hidden;
+}
+
+.colony-opencv-progress-fill {
+  width: 0%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #5893f7, #53cbff);
+  transition: width 0.18s ease;
+}
+
+.colony-opencv-progress-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.colony-opencv-progress-row .small-note {
+  margin: 0;
+}
+
 .colony-preview-grid {
   display: grid;
   gap: 12px;
@@ -2605,6 +2646,20 @@ body.theme-night .crispr-controls {
 body.theme-night .colony-counter-controls {
   border-color: rgba(186, 218, 255, 0.3);
   background: linear-gradient(160deg, rgba(34, 52, 78, 0.7), rgba(20, 31, 48, 0.6));
+}
+
+body.theme-night .colony-opencv-loader {
+  border-color: rgba(186, 218, 255, 0.36);
+  background: rgba(44, 64, 90, 0.42);
+}
+
+body.theme-night .colony-opencv-loader.is-error {
+  border-color: rgba(227, 126, 147, 0.56);
+  background: rgba(94, 46, 58, 0.46);
+}
+
+body.theme-night .colony-opencv-progress-track {
+  background: rgba(157, 193, 243, 0.25);
 }
 
 body.theme-night .colony-preview-canvas {
