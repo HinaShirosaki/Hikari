@@ -1,3 +1,5 @@
+import { exportProtocolPdf } from './pdf-export.js';
+
 export function initProtocolManagement({
   state,
   persist,
@@ -17,6 +19,7 @@ export function initProtocolManagement({
   const protocolEditorBackBtn = document.getElementById('protocol-editor-back-btn');
   const protocolCancelBtn = document.getElementById('protocol-cancel-btn');
   const protocolViewBackBtn = document.getElementById('protocol-view-back-btn');
+  const protocolExportPdfBtn = document.getElementById('protocol-export-pdf-btn');
 
   const protocolEditorHeading = document.getElementById('protocol-editor-heading');
   const protocolViewTitle = document.getElementById('protocol-view-title');
@@ -33,17 +36,20 @@ export function initProtocolManagement({
   const placeholderNameInput = document.getElementById('placeholder-name');
 
   const protocolShareStatus = document.getElementById('protocol-share-status');
+  const protocolShareLinkPanel = document.getElementById('protocol-share-link-panel');
+  const protocolShareLinkOutput = document.getElementById('protocol-share-link-output');
   const protocolList = document.getElementById('protocol-list');
   const protocolSortFieldBtn = document.getElementById('protocol-sort-field-btn');
   const protocolSortOrderBtn = document.getElementById('protocol-sort-order-btn');
 
-  const defaultShareStatus = 'Click Share on a protocol, then select teammate and confirm.';
+  const defaultShareStatus = 'Click Share on a protocol to send it to a teammate or copy a portable share link.';
 
   let currentProtocolDraft = createEmptyDraft();
   let activeShareProtocolId = '';
   let activeShareTargetEmail = '';
   let protocolSortField = 'time';
   let protocolSortOrder = 'asc';
+  let activeViewedProtocolId = '';
 
   createProtocolBtn?.addEventListener('click', onCreateProtocol);
   protocolEditorBackBtn?.addEventListener('click', () => showListPanel({ resetEditor: true }));
@@ -68,6 +74,7 @@ export function initProtocolManagement({
     updateSortButtonLabels();
     renderList();
   });
+  protocolExportPdfBtn?.addEventListener('click', onExportViewedProtocolPdf);
 
   if (protocolShareStatus && !String(protocolShareStatus.textContent || '').trim()) {
     setShareStatus(defaultShareStatus);
@@ -270,19 +277,85 @@ export function initProtocolManagement({
   function extractPlaceholdersFromText(rawText) {
     const placeholders = [];
     const cleaned = String(rawText || '')
-      .replace(/\[([^[\]]+)\]/g, (_, name) => {
-        const trimmed = String(name).trim();
-        if (trimmed) {
-          const id = createId();
-          placeholders.push({ id, name: trimmed });
-          return `{{ph:${id}}}`;
-        }
-        return '';
+      .replace(/\[([^[\]]*)\]/g, (_, name) => {
+        const trimmed = String(name || '').trim() || 'value';
+        const id = createId();
+        placeholders.push({ id, name: trimmed });
+        return `{{ph:${id}}}`;
       })
       .replace(/\s+/g, ' ')
       .trim();
 
     return { cleanedText: cleaned, placeholders };
+  }
+
+  function normalizeTroubleshooting(rawTroubleshooting) {
+    if (Array.isArray(rawTroubleshooting)) {
+      return rawTroubleshooting
+        .filter((item) => item && typeof item === 'object')
+        .map((item) => {
+          const problem = String(item.problem || '').trim();
+          const possibleCause = String(item.possible_cause || item.possibleCause || '').trim();
+          const solution = String(item.solution || '').trim();
+          const parts = [];
+          if (problem) {
+            parts.push(`Problem: ${problem}`);
+          }
+          if (possibleCause) {
+            parts.push(`Possible cause: ${possibleCause}`);
+          }
+          if (solution) {
+            parts.push(`Solution: ${solution}`);
+          }
+          return parts.join('; ');
+        })
+        .filter(Boolean)
+        .join('\n');
+    }
+    return String(rawTroubleshooting || '').trim();
+  }
+
+  function normalizeMethodStepEntries(rawSteps) {
+    if (!Array.isArray(rawSteps)) {
+      return [];
+    }
+
+    const sortedSteps = rawSteps
+      .map((step, index) => ({ step, index }))
+      .sort((a, b) => {
+        const numberA = Number(a.step?.step_number);
+        const numberB = Number(b.step?.step_number);
+        const hasNumberA = Number.isFinite(numberA);
+        const hasNumberB = Number.isFinite(numberB);
+        if (hasNumberA && hasNumberB && numberA !== numberB) {
+          return numberA - numberB;
+        }
+        if (hasNumberA !== hasNumberB) {
+          return hasNumberA ? -1 : 1;
+        }
+        return a.index - b.index;
+      })
+      .map((entry) => entry.step);
+
+    return sortedSteps
+      .map((rawStep) => {
+        if (typeof rawStep === 'string') {
+          return String(rawStep || '').trim();
+        }
+        if (!rawStep || typeof rawStep !== 'object') {
+          return '';
+        }
+        return String(rawStep.action || rawStep.text || rawStep.instruction || '').trim();
+      })
+      .filter(Boolean)
+      .map((text) => {
+        const parsed = extractPlaceholdersFromText(text);
+        return {
+          id: createId(),
+          text: parsed.cleanedText || text,
+          placeholders: parsed.placeholders
+        };
+      });
   }
 
   function buildStepEntriesFromText(rawText, existingSteps = []) {
@@ -338,6 +411,27 @@ export function initProtocolManagement({
       return;
     }
     protocolShareStatus.textContent = message;
+  }
+
+  function setShareLinkOutput(link = '', options = {}) {
+    if (!protocolShareLinkPanel || !protocolShareLinkOutput) {
+      return;
+    }
+
+    const normalizedLink = String(link || '').trim();
+    if (!normalizedLink) {
+      protocolShareLinkOutput.value = '';
+      protocolShareLinkPanel.hidden = true;
+      return;
+    }
+
+    protocolShareLinkPanel.hidden = false;
+    protocolShareLinkOutput.value = normalizedLink;
+
+    if (options.selectText !== false) {
+      protocolShareLinkOutput.focus();
+      protocolShareLinkOutput.setSelectionRange(0, normalizedLink.length);
+    }
   }
 
   function resolveSenderEmail() {
@@ -462,15 +556,60 @@ export function initProtocolManagement({
     return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
   }
 
-  function buildProtocolShareToken(protocol) {
-    const payload = {
+  function buildProtocolSharePayload(protocol) {
+    const serializedProtocol = serializeProtocol(protocol);
+    return {
       version: 1,
       type: 'protocol_share_link',
-      createdAt: new Date().toISOString(),
+      createdAt: serializedProtocol.updatedAt || serializedProtocol.createdAt || '',
       from: resolveSenderEmail(),
-      protocol: serializeProtocol(protocol)
+      protocol: serializedProtocol
     };
+  }
+
+  function buildProtocolShareToken(protocol) {
+    const payload = buildProtocolSharePayload(protocol);
     return encodeBase64Url(JSON.stringify(payload));
+  }
+
+  function buildProtocolShareLink(protocol) {
+    return `${PROTOCOL_SHARE_LINK_PREFIX}${buildProtocolShareToken(protocol)}`;
+  }
+
+  async function copyProtocolShareLink(protocolId) {
+    const protocol = state.protocols.find((item) => item.id === protocolId);
+    if (!protocol) {
+      return;
+    }
+
+    const shareLink = buildProtocolShareLink(protocol);
+    const clipboard = globalThis.navigator?.clipboard;
+
+    if (clipboard?.writeText) {
+      try {
+        await clipboard.writeText(shareLink);
+        trackGrowthEvent?.(state, 'protocol_share_link_copied', {
+          protocolId: protocol.id,
+          protocolName: protocol.name,
+          from: resolveSenderEmail()
+        });
+        persist();
+        setShareStatus(`Copied a share link for "${protocol.name}". Paste it anywhere to invite an import.`);
+        setShareLinkOutput(shareLink);
+        activeShareProtocolId = '';
+        activeShareTargetEmail = '';
+        renderList();
+        return;
+      } catch {
+        // Fall through to manual copy mode when clipboard access is unavailable.
+      }
+    }
+
+    setShareStatus(`Share link ready for "${protocol.name}". Copy it from the field below.`);
+    setShareLinkOutput(shareLink);
+    activeShareProtocolId = '';
+    activeShareTargetEmail = '';
+    renderList();
   }
 
   function shareProtocol(protocolId, toEmail) {
@@ -491,8 +630,8 @@ export function initProtocolManagement({
       return;
     }
 
-    const protocolPayload = serializeProtocol(protocol);
-    const token = buildProtocolShareToken(protocol);
+    const protocolPayload = buildProtocolSharePayload(protocol);
+    const shareLink = `${PROTOCOL_SHARE_LINK_PREFIX}${encodeBase64Url(JSON.stringify(protocolPayload))}`;
 
     state.messages.push({
       id: createId(),
@@ -505,8 +644,8 @@ export function initProtocolManagement({
       importedBy: [],
       type: 'protocol_share',
       payload: {
-        protocol: protocolPayload,
-        shareLink: `${PROTOCOL_SHARE_LINK_PREFIX}${token}`
+        protocol: protocolPayload.protocol,
+        shareLink
       }
     });
 
@@ -519,6 +658,7 @@ export function initProtocolManagement({
 
     persist();
     setShareStatus(`Shared "${protocol.name}" with ${to}.`);
+    setShareLinkOutput('');
     activeShareProtocolId = '';
     activeShareTargetEmail = '';
     renderList();
@@ -576,6 +716,7 @@ export function initProtocolManagement({
     if (protocolViewPanel) {
       protocolViewPanel.hidden = true;
     }
+    activeViewedProtocolId = '';
   }
 
   function showEditorPanel() {
@@ -691,8 +832,20 @@ export function initProtocolManagement({
       return;
     }
 
+    activeViewedProtocolId = protocol.id;
     renderProtocolView(protocol);
     showViewPanel();
+  }
+
+  function onExportViewedProtocolPdf() {
+    if (!activeViewedProtocolId) {
+      return;
+    }
+    const protocol = state.protocols.find((item) => item.id === activeViewedProtocolId);
+    if (!protocol) {
+      return;
+    }
+    exportProtocolPdf(protocol);
   }
 
   function deleteProtocol(protocolId) {
@@ -772,6 +925,7 @@ export function initProtocolManagement({
 
     persist();
     renderList();
+    setShareLinkOutput('');
     showListPanel({ resetEditor: true });
     onProtocolsChanged();
   }
@@ -855,6 +1009,7 @@ export function initProtocolManagement({
         <span class="protocol-name-text">${safeText(protocol.name)}</span>
         <div class="card-actions list-actions protocol-list-actions">
           <button type="button" class="ghost-btn protocol-view-btn" data-protocol-view="${protocol.id}">View</button>
+          <button type="button" class="ghost-btn protocol-view-btn" data-protocol-export="${protocol.id}">Export PDF</button>
           <button type="button" class="ghost-btn protocol-edit-btn" data-protocol-edit="${protocol.id}">Edit</button>
           <button type="button" class="ghost-btn protocol-share-btn" data-protocol-share="${protocol.id}">Share</button>
           <button type="button" class="danger-btn protocol-delete-btn" data-protocol-delete="${protocol.id}">Delete</button>
@@ -865,6 +1020,7 @@ export function initProtocolManagement({
               ${shareOptions.join('')}
             </select>
             <button type="button" class="primary-btn" data-protocol-share-confirm="${protocol.id}" ${activeShareTargetEmail ? '' : 'disabled'}>Confirm</button>
+            <button type="button" class="ghost-btn" data-protocol-copy-link="${protocol.id}">Copy Link</button>
             <button type="button" class="ghost-btn" data-protocol-share-cancel>Cancel</button>
           </div>
         ` : ''}
@@ -877,6 +1033,16 @@ export function initProtocolManagement({
 
     protocolList.querySelectorAll('[data-protocol-edit]').forEach((button) => {
       button.addEventListener('click', () => editProtocol(button.dataset.protocolEdit));
+    });
+
+    protocolList.querySelectorAll('[data-protocol-export]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const protocol = state.protocols.find((item) => item.id === button.dataset.protocolExport);
+        if (!protocol) {
+          return;
+        }
+        exportProtocolPdf(protocol);
+      });
     });
 
     protocolList.querySelectorAll('[data-protocol-share]').forEach((button) => {
@@ -911,6 +1077,12 @@ export function initProtocolManagement({
       });
     });
 
+    protocolList.querySelectorAll('[data-protocol-copy-link]').forEach((button) => {
+      button.addEventListener('click', () => {
+        void copyProtocolShareLink(String(button.dataset.protocolCopyLink || ''));
+      });
+    });
+
     protocolList.querySelectorAll('[data-protocol-share-cancel]').forEach((button) => {
       button.addEventListener('click', () => {
         activeShareProtocolId = '';
@@ -921,22 +1093,20 @@ export function initProtocolManagement({
   }
 
   function addDraftFromExtractedMethod(method, source) {
-    const methodTitle = String(method?.title || 'Extracted Method').trim();
+    const protocolShapeCandidate = Array.isArray(method) ? method.find((item) => item && typeof item === 'object') : method;
+    const methodTitle = String(
+      protocolShapeCandidate?.title
+      || protocolShapeCandidate?.name
+      || 'Extracted Method'
+    ).trim();
     const sourceTitle = String(source?.title || 'Paper').trim();
-    const steps = Array.isArray(method?.steps) ? method.steps : [];
-    const citations = Array.isArray(method?.citations) ? method.citations.filter(Boolean) : [];
+    const steps = Array.isArray(protocolShapeCandidate?.steps) ? protocolShapeCandidate.steps : [];
+    const citations = Array.isArray(protocolShapeCandidate?.citations) ? protocolShapeCandidate.citations.filter(Boolean) : [];
+    const purpose = String(protocolShapeCandidate?.purpose || '').trim();
+    const materials = normalizeMaterials(protocolShapeCandidate?.materials);
+    const troubleshooting = normalizeTroubleshooting(protocolShapeCandidate?.troubleshooting);
 
-    const convertedSteps = steps
-      .map((rawStep) => String(rawStep || '').trim())
-      .filter(Boolean)
-      .map((text) => {
-        const parsed = extractPlaceholdersFromText(text);
-        return {
-          id: createId(),
-          text: parsed.cleanedText || text,
-          placeholders: parsed.placeholders
-        };
-      });
+    const convertedSteps = normalizeMethodStepEntries(steps);
 
     if (citations.length) {
       convertedSteps.unshift({
@@ -953,10 +1123,10 @@ export function initProtocolManagement({
     openEditorWithDraft({
       id: null,
       name: `${sourceTitle} - ${methodTitle}`.trim(),
-      purpose: '',
-      materials: [],
+      purpose,
+      materials,
       steps: convertedSteps,
-      troubleshooting: ''
+      troubleshooting
     }, 'Create Protocol');
 
     return true;

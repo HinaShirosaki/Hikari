@@ -1,0 +1,48 @@
+
+> enana@1.0.0 start
+> electron-forge start
+
+❯ Checking your system
+❯ Checking package manager version
+✔ Found npm@11.9.0
+✔ Checking your system
+[?25h❯ Locating application
+✔ Locating application
+❯ Loading configuration
+✔ Loading configuration
+❯ Preparing native dependencies
+✔ Preparing native dependencies
+❯ Running generateAssets hook
+✔ Running generateAssets hook
+❯ Running preStart hook
+✔ Running preStart hook
+✔ Launched Electron app. Type rs in terminal to restart main process.
+[?25h
+(node:11356) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `Electron --trace-deprecation ...` to show where the warning was created)
+Telegram message log: /Users/shiyifan/Projects/Enana/data/telegram-events.log
+[11356:0310/112814.093840:ERROR:content/browser/network_service_instance_impl.cc:610] Network service crashed or was terminated, restarting service.
+Telegram bot started
+
+> enana@1.0.0 start
+> electron-forge start
+
+❯ Checking your system
+❯ Checking package manager version
+✔ Found npm@11.9.0
+✔ Checking your system
+[?25h❯ Locating application
+✔ Locating application
+❯ Loading configuration
+✔ Loading configuration
+❯ Preparing native dependencies
+✔ Preparing native dependencies
+❯ Running generateAssets hook
+✔ Running generateAssets hook
+❯ Running preStart hook
+✔ Running preStart hook
+✔ Launched Electron app. Type rs in terminal to restart main process.
+[?25h
+(node:11981) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `Electron --trace-deprecation ...` to show where the warning was created)
+Telegram message log: /Users/shiyifan/Projects/Enana/data/telegram-events.log

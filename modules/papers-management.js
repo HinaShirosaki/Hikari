@@ -49,15 +49,57 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
       return;
     }
 
+    const rootPath = String(state.settings.storagePath || '').trim();
+    if (!rootPath) {
+      window.alert('Set Storage Folder Path in Settings before uploading papers.');
+      return;
+    }
+
+    const pdfDataUrl = await fileToDataUrl(file);
+    const dataBase64 = extractBase64Payload(pdfDataUrl);
+    if (!dataBase64) {
+      window.alert('Cannot read the selected PDF.');
+      return;
+    }
+
+    if (!window.enanaApi?.storeImportedFile) {
+      window.alert('Imported file storage API is unavailable.');
+      return;
+    }
+
+    let storedFile = null;
+    try {
+      const result = await window.enanaApi.storeImportedFile({
+        storagePath: rootPath,
+        targetFolder: buildPaperStorageFolder({
+          rootPath,
+          linkedType: paperLinkTypeSelect.value,
+          linkedName: linked.name
+        }),
+        fileName: file.name,
+        dataBase64
+      });
+      if (!result?.ok) {
+        throw new Error(result?.error || 'Failed to store uploaded PDF.');
+      }
+      storedFile = result;
+    } catch (error) {
+      window.alert(String(error?.message || error || 'Failed to store uploaded PDF.'));
+      return;
+    }
+
     const paper = {
       id: createId(),
       title: paperTitleInput.value.trim() || file.name.replace(/\.pdf$/i, ''),
-      fileName: file.name,
-      pdfDataUrl: await fileToDataUrl(file),
+      fileName: storedFile.fileName || file.name,
+      pdfDataUrl,
+      storedFilePath: storedFile.filePath || '',
+      storedRelativePath: storedFile.relativePath || '',
       linkedType: paperLinkTypeSelect.value,
       linkedId: linkId,
       linkedName: linked.name,
       summary: '',
+      summaryStructured: null,
       summaryStatus: 'idle',
       methodsExtract: [],
       methodsStatus: 'idle',
@@ -116,6 +158,7 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
 
     paper.summaryStatus = 'running';
     paper.summary = 'Summarizing...';
+    paper.summaryStructured = null;
     paper.updatedAt = new Date().toISOString();
     persist();
     renderPaperList();
@@ -127,10 +170,13 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
         fileName: paper.fileName,
         title: paper.title
       });
-      paper.summary = summary || 'No summary generated.';
+      const normalized = normalizePaperSummary(summary);
+      paper.summary = normalized.summary;
+      paper.summaryStructured = normalized.structured;
       paper.summaryStatus = 'idle';
     } catch (error) {
       paper.summary = `Failed to summarize: ${String(error.message || error)}`;
+      paper.summaryStructured = null;
       paper.summaryStatus = 'error';
     }
 
@@ -160,12 +206,7 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
         instruction: requirePrompt(prompts, 'extractMethods')
       });
 
-      const methods = Array.isArray(result?.methods) ? result.methods : [];
-      paper.methodsExtract = methods.map((item, index) => ({
-        title: String(item?.title || `Method ${index + 1}`),
-        steps: Array.isArray(item?.steps) ? item.steps.map((step) => String(step || '').trim()).filter(Boolean) : [],
-        citations: Array.isArray(item?.citations) ? item.citations.map((cit) => String(cit || '').trim()).filter(Boolean) : []
-      }));
+      paper.methodsExtract = normalizeMethodsExtract(result);
       paper.methodsStatus = 'idle';
     } catch (error) {
       paper.methodsStatus = 'error';
@@ -649,6 +690,117 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
   return { render, renderLinkTargets };
 }
 
+function normalizeMethodsExtract(result) {
+  let methods = [];
+  if (Array.isArray(result?.methods)) {
+    methods = result.methods;
+  } else if (Array.isArray(result?.protocols)) {
+    methods = result.protocols;
+  } else if (Array.isArray(result)) {
+    methods = result;
+  } else if (result && typeof result === 'object') {
+    methods = [result];
+  }
+
+  const normalizeMaterial = (material) => {
+    if (typeof material === 'string') {
+      return String(material || '').trim();
+    }
+    if (!material || typeof material !== 'object') {
+      return '';
+    }
+    const fields = Object.entries(material)
+      .map(([key, value]) => {
+        if (value === null || value === undefined) {
+          return '';
+        }
+        const rendered = typeof value === 'object' ? JSON.stringify(value) : String(value).trim();
+        if (!rendered || rendered === '{}' || rendered === '[]') {
+          return '';
+        }
+        return `${key}: ${rendered}`;
+      })
+      .filter(Boolean);
+    return fields.join('; ').trim();
+  };
+
+  return methods.map((item, index) => {
+    const title = String(item?.title || item?.name || `Method ${index + 1}`).trim() || `Method ${index + 1}`;
+    const steps = Array.isArray(item?.steps)
+      ? item.steps
+        .map((step) => {
+          if (typeof step === 'string') {
+            return String(step || '').trim();
+          }
+          if (!step || typeof step !== 'object') {
+            return '';
+          }
+          return String(step.action || step.text || step.instruction || '').trim();
+        })
+        .filter(Boolean)
+      : [];
+    const citations = Array.isArray(item?.citations)
+      ? item.citations.map((cit) => String(cit || '').trim()).filter(Boolean)
+      : [];
+    return {
+      title,
+      steps,
+      citations,
+      purpose: String(item?.purpose || '').trim(),
+      materials: Array.isArray(item?.materials)
+        ? item.materials.map((material) => normalizeMaterial(material)).filter(Boolean)
+        : [],
+      troubleshooting: item?.troubleshooting ?? ''
+    };
+  }).filter((item) => item.title || item.steps.length);
+}
+
+function normalizePaperSummary(rawSummary) {
+  const raw = String(rawSummary || '').trim();
+  if (!raw) {
+    return {
+      summary: 'No summary generated.',
+      structured: null
+    };
+  }
+
+  const parsed = parseJsonFromText(raw);
+  const hasStructuredPayload = parsed
+    && typeof parsed === 'object'
+    && !Array.isArray(parsed)
+    && Object.keys(parsed).length > 0;
+  if (hasStructuredPayload) {
+    const summaryFromFields = [
+      parsed.plain_english_summary,
+      parsed.plainEnglishSummary,
+      parsed.summary,
+      parsed.main_conclusion,
+      parsed.mainConclusion,
+      parsed.technical_summary,
+      parsed.technicalSummary,
+      parsed.background
+    ]
+      .map((value) => String(value || '').trim())
+      .find(Boolean) || '';
+    const keyFindingsSummary = Array.isArray(parsed.key_findings)
+      ? parsed.key_findings
+        .map((value) => String(value || '').trim())
+        .filter(Boolean)
+        .slice(0, 3)
+        .join(' ')
+      : '';
+    return {
+      summary: summaryFromFields || keyFindingsSummary || 'No plain-English summary generated.',
+      structured: parsed
+    };
+  }
+
+  return {
+    summary: raw,
+    structured: null
+  };
+}
+
 function fileToDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -658,27 +810,137 @@ function fileToDataUrl(file) {
   });
 }
 
-function getLlmEndpointAndKey(llm) {
-  const legacySetting = String(llm?.api || '').trim();
-  const endpoint = String(llm?.apiEndpoint || '').trim()
-    || (legacySetting.startsWith('http') ? legacySetting : '')
-    || 'https://api.openai.com/v1/responses';
-  const token = String(llm?.apiKey || '').trim() || (legacySetting && !legacySetting.startsWith('http') ? legacySetting : '');
+function extractBase64Payload(dataUrl) {
+  const source = String(dataUrl || '');
+  const commaIndex = source.indexOf(',');
+  if (commaIndex < 0) {
+    return '';
+  }
+  return source.slice(commaIndex + 1).trim();
+}
 
-  if (!token) {
+function sanitizeFolderName(value) {
+  return String(value || '')
+    .trim()
+    .replace(/[<>:"/\\|?*\x00-\x1F]+/g, '_')
+    .replace(/\s+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
+
+function buildPaperStorageFolder({ rootPath, linkedType, linkedName }) {
+  const category = linkedType === 'journal-club' ? 'JournalClub' : 'Project';
+  const safeLinkedName = sanitizeFolderName(linkedName) || 'Uncategorized';
+  return `${String(rootPath || '').trim()}/${category}/${safeLinkedName}/Papers`;
+}
+
+const LLM_PROVIDER_ENDPOINTS = {
+  openai: 'https://api.openai.com/v1/responses',
+  gemini: 'https://generativelanguage.googleapis.com/v1beta',
+  claude: 'https://api.anthropic.com/v1/messages',
+  codex: 'codex://cli'
+};
+
+function inferProviderFromEndpoint(endpoint) {
+  const value = String(endpoint || '').trim().toLowerCase();
+  if (!value) {
+    return '';
+  }
+  if (value.startsWith('codex://') || value.includes('codex cli') || value.includes('openai-cli')) {
+    return 'codex';
+  }
+  if (value.includes('anthropic.com')) {
+    return 'claude';
+  }
+  if (value.includes('generativelanguage.googleapis.com') || value.includes('ai.google')) {
+    return 'gemini';
+  }
+  if (value.includes('openai.com') || value.includes('/openai/')) {
+    return 'openai';
+  }
+  return '';
+}
+
+function normalizeLlmProvider(provider, endpoint = '') {
+  const clean = String(provider || '').trim().toLowerCase();
+  if (clean === 'openai' || clean === 'gemini' || clean === 'claude' || clean === 'codex') {
+    return clean;
+  }
+  return inferProviderFromEndpoint(endpoint) || 'openai';
+}
+
+function defaultEndpointForProvider(provider) {
+  const resolved = normalizeLlmProvider(provider);
+  return LLM_PROVIDER_ENDPOINTS[resolved] || LLM_PROVIDER_ENDPOINTS.openai;
+}
+
+function getLlmRequestConfig(llm) {
+  const legacySetting = String(llm?.api || '').trim();
+  const legacyLooksLikeEndpoint = /^[a-z]+:\/\//i.test(legacySetting);
+  const endpointCandidate = String(llm?.apiEndpoint || '').trim() || (legacyLooksLikeEndpoint ? legacySetting : '');
+  const provider = normalizeLlmProvider(llm?.provider, endpointCandidate);
+  const endpoint = endpointCandidate || defaultEndpointForProvider(provider);
+  const token = String(llm?.apiKey || '').trim() || (legacySetting && !legacyLooksLikeEndpoint ? legacySetting : '');
+
+  if (provider !== 'codex' && !token) {
     throw new Error('Missing API key in Settings > LLM Model & API.');
   }
 
-  return { endpoint, token };
+  return { provider, endpoint, token };
 }
 
 async function requestResponses({ llm, modelFallbackPrompt, fileName, pdfDataUrl, prompt }) {
+  const { provider, endpoint, token } = getLlmRequestConfig(llm);
   const model = String(llm?.model || '').trim();
-  if (!model) {
+  if (!model && provider !== 'codex') {
     throw new Error('Missing model in Settings > LLM Model & API.');
   }
-  const { endpoint, token } = getLlmEndpointAndKey(llm);
 
+  if (provider === 'claude') {
+    return requestClaude({
+      endpoint,
+      token,
+      model,
+      prompt: prompt || modelFallbackPrompt || '',
+      pdfDataUrl
+    });
+  }
+  if (provider === 'gemini') {
+    return requestGemini({
+      endpoint,
+      token,
+      model,
+      prompt: prompt || modelFallbackPrompt || '',
+      pdfDataUrl
+    });
+  }
+  if (provider === 'codex') {
+    return requestCodex({
+      model,
+      prompt: prompt || modelFallbackPrompt || '',
+      fileName,
+      pdfDataUrl
+    });
+  }
+  return requestOpenAi({
+    endpoint,
+    token,
+    model,
+    prompt: prompt || modelFallbackPrompt || '',
+    fileName,
+    pdfDataUrl
+  });
+}
+
+function parsePdfDataUrl(pdfDataUrl) {
+  const value = String(pdfDataUrl || '').trim();
+  const match = value.match(/^data:application\/pdf(?:;charset=[^;,]+)?;base64,(.+)$/i);
+  if (!match?.[1]) {
+    return '';
+  }
+  return match[1];
+}
+
+async function requestOpenAi({ endpoint, token, model, prompt, fileName, pdfDataUrl }) {
   const response = await fetch(endpoint, {
     method: 'POST',
     headers: {
@@ -692,7 +954,7 @@ async function requestResponses({ llm, modelFallbackPrompt, fileName, pdfDataUrl
           role: 'user',
           content: pdfDataUrl
             ? [
-              { type: 'input_text', text: prompt || modelFallbackPrompt || '' },
+              { type: 'input_text', text: prompt },
               {
                 type: 'input_file',
                 filename: fileName || 'paper.pdf',
@@ -700,7 +962,7 @@ async function requestResponses({ llm, modelFallbackPrompt, fileName, pdfDataUrl
               }
             ]
             : [
-              { type: 'input_text', text: prompt || modelFallbackPrompt || '' }
+              { type: 'input_text', text: prompt }
             ]
         }
       ]
@@ -726,6 +988,136 @@ async function requestResponses({ llm, modelFallbackPrompt, fileName, pdfDataUrl
     });
   });
   return chunks.join('\n').trim();
+}
+
+async function requestClaude({ endpoint, token, model, prompt, pdfDataUrl }) {
+  const content = [{ type: 'text', text: prompt }];
+  const pdfBase64 = parsePdfDataUrl(pdfDataUrl);
+  if (pdfDataUrl && !pdfBase64) {
+    throw new Error('Failed to parse PDF data for Claude request.');
+  }
+  if (pdfBase64) {
+    content.push({
+      type: 'document',
+      source: {
+        type: 'base64',
+        media_type: 'application/pdf',
+        data: pdfBase64
+      }
+    });
+  }
+
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': token,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: 1400,
+      messages: [
+        {
+          role: 'user',
+          content
+        }
+      ]
+    })
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`LLM API error (${response.status}): ${errorBody}`);
+  }
+
+  const payload = await response.json();
+  return (payload?.content || [])
+    .filter((item) => item?.type === 'text' && item.text)
+    .map((item) => item.text)
+    .join('\n')
+    .trim();
+}
+
+function buildGeminiGenerateContentUrl(endpoint, model, token) {
+  const cleanEndpoint = String(endpoint || '').trim() || LLM_PROVIDER_ENDPOINTS.gemini;
+  let url = cleanEndpoint.replace(/\/+$/, '');
+  if (!url.includes(':generateContent')) {
+    if (/\/models\/[^/?#]+$/i.test(url)) {
+      url = `${url}:generateContent`;
+    } else if (/\/models$/i.test(url)) {
+      url = `${url}/${encodeURIComponent(model)}:generateContent`;
+    } else {
+      url = `${url}/models/${encodeURIComponent(model)}:generateContent`;
+    }
+  }
+  return `${url}${url.includes('?') ? '&' : '?'}key=${encodeURIComponent(token)}`;
+}
+
+async function requestGemini({ endpoint, token, model, prompt, pdfDataUrl }) {
+  const parts = [{ text: prompt }];
+  const pdfBase64 = parsePdfDataUrl(pdfDataUrl);
+  if (pdfDataUrl && !pdfBase64) {
+    throw new Error('Failed to parse PDF data for Gemini request.');
+  }
+  if (pdfBase64) {
+    parts.push({
+      inlineData: {
+        mimeType: 'application/pdf',
+        data: pdfBase64
+      }
+    });
+  }
+
+  const response = await fetch(buildGeminiGenerateContentUrl(endpoint, model, token), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      contents: [
+        {
+          role: 'user',
+          parts
+        }
+      ],
+      generationConfig: {
+        maxOutputTokens: 1400
+      }
+    })
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`LLM API error (${response.status}): ${errorBody}`);
+  }
+
+  const payload = await response.json();
+  const candidate = Array.isArray(payload?.candidates) ? payload.candidates[0] : null;
+  if (!candidate?.content?.parts) {
+    return '';
+  }
+  return candidate.content.parts
+    .filter((part) => typeof part?.text === 'string' && part.text.trim())
+    .map((part) => part.text)
+    .join('\n')
+    .trim();
+}
+
+async function requestCodex({ model, prompt, fileName, pdfDataUrl }) {
+  if (!window.enanaApi?.runCodexLlmPrompt) {
+    throw new Error('Codex CLI bridge is unavailable in this build.');
+  }
+  const result = await window.enanaApi.runCodexLlmPrompt({
+    model,
+    prompt,
+    fileName,
+    pdfDataUrl
+  });
+  if (!result?.ok) {
+    throw new Error(String(result?.error || 'Codex CLI request failed.'));
+  }
+  return String(result?.text || '').trim();
 }
 
 async function requestSummary({ llm, pdfDataUrl, fileName, title }) {
@@ -768,15 +1160,37 @@ function parseJsonFromText(raw) {
   try {
     return JSON.parse(clean);
   } catch {
-    const match = clean.match(/\{[\s\S]*\}/);
-    if (!match) {
-      return {};
+    const candidates = [];
+    const fenced = clean.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+    if (fenced?.[1]) {
+      candidates.push(fenced[1].trim());
     }
-    try {
-      return JSON.parse(match[0]);
-    } catch {
-      return {};
+
+    const arrayStart = clean.indexOf('[');
+    const arrayEnd = clean.lastIndexOf(']');
+    if (arrayStart >= 0 && arrayEnd > arrayStart) {
+      candidates.push(clean.slice(arrayStart, arrayEnd + 1));
     }
+
+    const objectStart = clean.indexOf('{');
+    const objectEnd = clean.lastIndexOf('}');
+    if (objectStart >= 0 && objectEnd > objectStart) {
+      candidates.push(clean.slice(objectStart, objectEnd + 1));
+    }
+
+    const seen = new Set();
+    for (const candidate of candidates) {
+      if (!candidate || seen.has(candidate)) {
+        continue;
+      }
+      seen.add(candidate);
+      try {
+        return JSON.parse(candidate);
+      } catch {
+        // Try the next extraction candidate.
+      }
+    }
+    return {};
   }
 }
 
@@ -788,9 +1202,6 @@ const DEFAULT_LLM_PROMPTS = {
   knowledgeQa: '',
   paperTitleSuffix: ''
 };
-
-let llmPromptCache = null;
-let llmPromptPromise = null;
 
 function normalizePromptConfig(parsed) {
   const source = parsed && typeof parsed === 'object' ? parsed : {};
@@ -804,29 +1215,16 @@ function normalizePromptConfig(parsed) {
 }
 
 async function getLlmPrompts() {
-  if (llmPromptCache) {
-    return llmPromptCache;
+  try {
+    const response = await fetch(`${LLM_PROMPTS_PATH}?t=${Date.now()}`, { cache: 'no-store' });
+    if (!response.ok) {
+      throw new Error(`Failed to load prompts: ${response.status}`);
+    }
+    const parsed = await response.json();
+    return normalizePromptConfig(parsed);
+  } catch {
+    return normalizePromptConfig({});
   }
-
-  if (!llmPromptPromise) {
-    llmPromptPromise = fetch(LLM_PROMPTS_PATH)
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error(`Failed to load prompts: ${response.status}`);
-        }
-        return response.json();
-      })
-      .then((parsed) => {
-        llmPromptCache = normalizePromptConfig(parsed);
-        return llmPromptCache;
-      })
-      .catch(() => {
-        llmPromptCache = normalizePromptConfig({});
-        return llmPromptCache;
-      });
-  }
-
-  return llmPromptPromise;
 }
 
 function requirePrompt(prompts, key) {

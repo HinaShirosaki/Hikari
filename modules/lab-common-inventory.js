@@ -347,20 +347,30 @@ export function initLabCommonInventory({ state, persist, createId, safeText }) {
     const linkedSamples = (state.samples || [])
       .filter((sample) => Array.isArray(sample.chemicalLinks) && sample.chemicalLinks.includes(selected.id))
       .map((sample) => sample.code || sample.name || sample.id);
-    chemicalDetailContent.innerHTML = `
-      <p><strong>Name:</strong> ${safeText(selected.name)}</p>
-      <p><strong>CAS:</strong> ${safeText(selected.casNumber)}</p>
-      <p><strong>Location:</strong> ${safeText(selected.location)} #${selected.locationNumber}</p>
-      <p><strong>Vendor:</strong> ${safeText(selected.vendor || '-')}</p>
-      <p><strong>Catalog:</strong> ${safeText(selected.catalogNumber || '-')}</p>
-      <p><strong>Unit Size:</strong> ${safeText(selected.unitSize || '-')}</p>
-      <p><strong>Price:</strong> ${safeText(selected.price || '-')}</p>
-      <p><strong>Stock:</strong> ${safeText(selected.amountInStock || '-')}</p>
-      <p><strong>URL:</strong> ${safeText(selected.url || '-')}</p>
-      <p><strong>Expiration:</strong> ${safeText(selected.expirationDate || '-')}</p>
-      <p><strong>Linked Samples:</strong> ${safeText(linkedSamples.join(', ') || '-')}</p>
-      <p><strong>Updated:</strong> ${new Date(selected.updatedAt).toLocaleString()}</p>
-    `;
+    const locationText = selected.locationNumber
+      ? `${selected.location} #${selected.locationNumber}`
+      : (selected.location || '-');
+    const details = [
+      { label: 'CAS', value: selected.casNumber || '-' },
+      { label: 'Location', value: locationText },
+      { label: 'Updated', value: selected.updatedAt ? new Date(selected.updatedAt).toLocaleString() : '-' },
+      { label: 'Vendor', value: selected.vendor || '-' },
+      { label: 'Catalog', value: selected.catalogNumber || '-' },
+      { label: 'Unit Size', value: selected.unitSize || '-' },
+      { label: 'Price', value: selected.price || '-' },
+      { label: 'Stock', value: selected.amountInStock || '-' },
+      { label: 'Expiration', value: selected.expirationDate || '-' },
+      { label: 'URL', value: selected.url || '-', wide: true },
+      { label: 'Linked Samples', value: linkedSamples.join(', ') || '-', wide: true }
+    ];
+    const detailMarkup = details.map((item) => `
+      <div class="chemical-detail-item${item.wide ? ' chemical-detail-item-wide' : ''}">
+        <span class="chemical-detail-label">${safeText(item.label)}</span>
+        <span class="chemical-detail-value">${safeText(item.value)}</span>
+      </div>
+    `).join('');
+
+    chemicalDetailContent.innerHTML = `<div class="chemical-detail-grid">${detailMarkup}</div>`;
   }
 
   function renderBlockchain() {

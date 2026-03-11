@@ -11,6 +11,10 @@ export function initWorkflowManagement({
   const GRAPH_MIN_WIDTH = 760;
   const GRAPH_MIN_HEIGHT = 360;
   const GRAPH_PADDING = 120;
+  const BLOCK_TYPES = Object.freeze({
+    PROTOCOL: 'protocol',
+    TEXT: 'text'
+  });
 
   const workflowForm = document.getElementById('workflow-form');
   const workflowIdInput = document.getElementById('workflow-id');
@@ -18,8 +22,16 @@ export function initWorkflowManagement({
   const workflowDescriptionInput = document.getElementById('workflow-description');
   const workflowProjectInput = document.getElementById('workflow-project');
   const workflowNotebookPagesInput = document.getElementById('workflow-notebook-pages');
+  const workflowProjectField = document.getElementById('workflow-project-field');
+  const workflowNotebookPagesField = document.getElementById('workflow-notebook-pages-field');
   const workflowCancelBtn = document.getElementById('workflow-cancel-btn');
+  const workflowBlockTypeInput = document.getElementById('workflow-block-type');
+  const workflowBlockProtocolSearchField = document.getElementById('workflow-block-protocol-search-field');
+  const workflowBlockProtocolField = document.getElementById('workflow-block-protocol-field');
+  const workflowBlockProtocolSearchInput = document.getElementById('workflow-block-protocol-search');
   const workflowBlockProtocolInput = document.getElementById('workflow-block-protocol');
+  const workflowBlockTextField = document.getElementById('workflow-block-text-field');
+  const workflowBlockTextInput = document.getElementById('workflow-block-text');
   const workflowBlockAddBtn = document.getElementById('workflow-block-add-btn');
   const workflowBlockList = document.getElementById('workflow-block-list');
   const workflowGraphCanvas = document.getElementById('workflow-graph-canvas');
@@ -37,6 +49,15 @@ export function initWorkflowManagement({
   const workflowTemplateList = document.getElementById('workflow-template-list');
   const workflowList = document.getElementById('workflow-list');
   const workflowSubmitBtn = workflowForm?.querySelector('button[type="submit"]');
+  const workflowEntryPanel = document.getElementById('workflow-entry-panel');
+  const workflowEntryCreateBtn = document.getElementById('workflow-entry-create-btn');
+  const workflowEntryTemplateBtn = document.getElementById('workflow-entry-template-btn');
+  const workflowEntryViewBtn = document.getElementById('workflow-entry-view-btn');
+  const workflowEntryBackWrap = document.getElementById('workflow-entry-back-wrap');
+  const workflowEntryBackBtn = document.getElementById('workflow-entry-back-btn');
+  const workflowEditorPanels = [...document.querySelectorAll('#workflow-management-view .workflow-editor-panel')];
+  const workflowTemplatePanels = [...document.querySelectorAll('#workflow-management-view .workflow-template-panel')];
+  const workflowListPanels = [...document.querySelectorAll('#workflow-management-view .workflow-list-panel')];
 
   if (
     !workflowForm
@@ -68,10 +89,13 @@ export function initWorkflowManagement({
   let interactionSuppressUntil = 0;
   let graphWidth = GRAPH_MIN_WIDTH;
   let graphHeight = GRAPH_MIN_HEIGHT;
+  let workflowEntryMode = 'home';
 
   workflowForm.addEventListener('submit', onWorkflowSubmit);
-  workflowCancelBtn?.addEventListener('click', resetDraftToEmpty);
+  workflowCancelBtn?.addEventListener('click', onCancelWorkflowEdit);
   workflowProjectInput?.addEventListener('change', onProjectChange);
+  workflowBlockTypeInput?.addEventListener('change', onBlockTypeChange);
+  workflowBlockProtocolSearchInput?.addEventListener('input', renderProtocolOptions);
   workflowBlockAddBtn?.addEventListener('click', onAddBlock);
   workflowBlockList?.addEventListener('click', onBlockListClick);
   workflowBlockList?.addEventListener('change', onBlockListChange);
@@ -88,6 +112,10 @@ export function initWorkflowManagement({
   workflowSaveTemplateBtn?.addEventListener('click', onSaveTemplate);
   workflowTemplateCreateBtn?.addEventListener('click', onCreateFromTemplate);
   workflowTemplateList?.addEventListener('click', onTemplateListClick);
+  workflowEntryCreateBtn?.addEventListener('click', onStartCreateWorkflow);
+  workflowEntryTemplateBtn?.addEventListener('click', onStartCreateWorkflowTemplate);
+  workflowEntryViewBtn?.addEventListener('click', onStartViewEditWorkflow);
+  workflowEntryBackBtn?.addEventListener('click', onBackToWorkflowEntry);
 
   window.addEventListener('mousemove', onWindowMouseMove);
   window.addEventListener('mouseup', onWindowMouseUp);
@@ -148,6 +176,41 @@ export function initWorkflowManagement({
     return out;
   }
 
+  function normalizePlainTextBlock(rawValue) {
+    return String(rawValue || '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function normalizeBlockType(rawType, protocolId = '', textContent = '') {
+    const explicit = String(rawType || '').trim().toLowerCase();
+    if (explicit === BLOCK_TYPES.PROTOCOL && protocolId) {
+      return BLOCK_TYPES.PROTOCOL;
+    }
+    if (explicit === BLOCK_TYPES.TEXT && textContent) {
+      return BLOCK_TYPES.TEXT;
+    }
+    if (protocolId) {
+      return BLOCK_TYPES.PROTOCOL;
+    }
+    if (textContent) {
+      return BLOCK_TYPES.TEXT;
+    }
+    return '';
+  }
+
+  function getBlockType(block) {
+    const protocolId = String(block?.protocolId || '').trim();
+    const textContent = normalizePlainTextBlock(block?.text);
+    const type = normalizeBlockType(block?.type, protocolId, textContent);
+    return type || (protocolId ? BLOCK_TYPES.PROTOCOL : BLOCK_TYPES.TEXT);
+  }
+
+  function getBlockComposerType() {
+    const selected = String(workflowBlockTypeInput?.value || '').trim().toLowerCase();
+    return selected === BLOCK_TYPES.TEXT ? BLOCK_TYPES.TEXT : BLOCK_TYPES.PROTOCOL;
+  }
+
   function resolveDefaultAssigneeId() {
     const personal = state.settings?.personalInfo || {};
     const personalEmail = String(personal.enanaEmail || '').trim().toLowerCase();
@@ -191,7 +254,9 @@ export function initWorkflowManagement({
 
     (Array.isArray(rawBlocks) ? rawBlocks : []).forEach((rawBlock) => {
       const protocolId = String(rawBlock?.protocolId || '').trim();
-      if (!protocolId) {
+      const textContent = normalizePlainTextBlock(rawBlock?.text || rawBlock?.label || '');
+      const blockType = normalizeBlockType(rawBlock?.type, protocolId, textContent);
+      if (!blockType) {
         return;
       }
 
@@ -207,7 +272,9 @@ export function initWorkflowManagement({
 
       blocks.push({
         id,
-        protocolId,
+        type: blockType,
+        protocolId: blockType === BLOCK_TYPES.PROTOCOL ? protocolId : '',
+        text: blockType === BLOCK_TYPES.TEXT ? textContent : '',
         assigneeId: String(rawBlock?.assigneeId || defaultAssigneeId).trim(),
         x: Number.isFinite(parsedX) ? Math.max(20, Math.round(parsedX)) : fallbackPosition.x,
         y: Number.isFinite(parsedY) ? Math.max(20, Math.round(parsedY)) : fallbackPosition.y
@@ -327,6 +394,80 @@ export function initWorkflowManagement({
     renderWorkflowList();
   }
 
+  function setWorkflowEntryMode(nextMode) {
+    workflowEntryMode = nextMode === 'create' || nextMode === 'template' || nextMode === 'list'
+      ? nextMode
+      : 'home';
+
+    const showEditor = workflowEntryMode === 'create' || workflowEntryMode === 'template';
+    const showTemplates = workflowEntryMode === 'template';
+    const showList = workflowEntryMode === 'list';
+    const showHome = workflowEntryMode === 'home';
+    const hideLinkFields = workflowEntryMode === 'template';
+    if (hideLinkFields && (draft.projectId || draft.notebookEntryIds.length)) {
+      draft.projectId = '';
+      draft.notebookEntryIds = [];
+      renderProjectOptions();
+      renderNotebookOptions();
+      setSelectedValues(workflowNotebookPagesInput, draft.notebookEntryIds);
+    }
+
+    if (workflowEntryPanel) {
+      workflowEntryPanel.hidden = !showHome;
+    }
+    if (workflowEntryBackWrap) {
+      workflowEntryBackWrap.hidden = showHome;
+    }
+    workflowEditorPanels.forEach((panel) => {
+      panel.hidden = !showEditor;
+    });
+    workflowTemplatePanels.forEach((panel) => {
+      panel.hidden = !showTemplates;
+    });
+    workflowListPanels.forEach((panel) => {
+      panel.hidden = !showList;
+    });
+
+    if (workflowProjectField) {
+      workflowProjectField.hidden = hideLinkFields;
+      workflowProjectField.style.display = hideLinkFields ? 'none' : '';
+    }
+    if (workflowNotebookPagesField) {
+      workflowNotebookPagesField.hidden = hideLinkFields;
+      workflowNotebookPagesField.style.display = hideLinkFields ? 'none' : '';
+    }
+    if (workflowProjectInput) {
+      workflowProjectInput.disabled = hideLinkFields;
+    }
+    if (workflowNotebookPagesInput) {
+      workflowNotebookPagesInput.disabled = hideLinkFields;
+    }
+  }
+
+  function onStartCreateWorkflow() {
+    resetDraftToEmpty();
+    setWorkflowEntryMode('create');
+  }
+
+  function onStartCreateWorkflowTemplate() {
+    resetDraftToEmpty();
+    setWorkflowEntryMode('template');
+  }
+
+  function onStartViewEditWorkflow() {
+    setWorkflowEntryMode('list');
+  }
+
+  function onBackToWorkflowEntry() {
+    resetDraftToEmpty();
+    setWorkflowEntryMode('home');
+  }
+
+  function onCancelWorkflowEdit() {
+    resetDraftToEmpty();
+    setWorkflowEntryMode('home');
+  }
+
   function notifyWorkflowsChanged() {
     onWorkflowsChanged();
   }
@@ -351,6 +492,48 @@ export function initWorkflowManagement({
   function protocolNameById(protocolId) {
     const protocol = (state.protocols || []).find((item) => item.id === protocolId);
     return protocol?.name || `Missing protocol (${protocolId})`;
+  }
+
+  function blockTypeLabel(block) {
+    return getBlockType(block) === BLOCK_TYPES.TEXT ? 'Plain Text' : 'Protocol';
+  }
+
+  function blockTitle(block) {
+    if (getBlockType(block) === BLOCK_TYPES.TEXT) {
+      return normalizePlainTextBlock(block?.text) || 'Text Block';
+    }
+    return protocolNameById(String(block?.protocolId || '').trim());
+  }
+
+  function syncBlockComposerFields() {
+    const blockType = getBlockComposerType();
+    const isProtocol = blockType === BLOCK_TYPES.PROTOCOL;
+
+    if (workflowBlockTypeInput) {
+      workflowBlockTypeInput.value = blockType;
+    }
+    if (workflowBlockProtocolSearchField) {
+      workflowBlockProtocolSearchField.hidden = !isProtocol;
+    }
+    if (workflowBlockProtocolField) {
+      workflowBlockProtocolField.hidden = !isProtocol;
+    }
+    if (workflowBlockTextField) {
+      workflowBlockTextField.hidden = isProtocol;
+    }
+    if (workflowBlockProtocolInput) {
+      workflowBlockProtocolInput.disabled = !isProtocol;
+    }
+    if (workflowBlockTextInput) {
+      workflowBlockTextInput.disabled = isProtocol;
+    }
+    if (workflowBlockAddBtn) {
+      workflowBlockAddBtn.textContent = isProtocol ? 'Add Protocol Block' : 'Add Text Block';
+    }
+  }
+
+  function onBlockTypeChange() {
+    syncBlockComposerFields();
   }
 
   function memberNameById(memberId) {
@@ -434,12 +617,23 @@ export function initWorkflowManagement({
 
   function renderProtocolOptions() {
     const selectedProtocolId = workflowBlockProtocolInput.value;
+    const selectedProtocol = (state.protocols || []).find((protocol) => protocol.id === selectedProtocolId) || null;
+    const searchTerm = String(workflowBlockProtocolSearchInput?.value || '').trim().toLowerCase();
     const options = ['<option value="">Select protocol</option>'];
-    (state.protocols || []).forEach((protocol) => {
+    const filteredProtocols = (state.protocols || []).filter((protocol) => (
+      String(protocol.name || '').toLowerCase().includes(searchTerm)
+    ));
+    if (
+      selectedProtocol
+      && !filteredProtocols.some((protocol) => protocol.id === selectedProtocol.id)
+    ) {
+      filteredProtocols.unshift(selectedProtocol);
+    }
+    filteredProtocols.forEach((protocol) => {
       options.push(`<option value="${safeText(protocol.id)}">${safeText(protocol.name)}</option>`);
     });
     workflowBlockProtocolInput.innerHTML = options.join('');
-    if (selectedProtocolId && (state.protocols || []).some((protocol) => protocol.id === selectedProtocolId)) {
+    if (selectedProtocolId && Array.from(workflowBlockProtocolInput.options).some((option) => option.value === selectedProtocolId)) {
       workflowBlockProtocolInput.value = selectedProtocolId;
     }
   }
@@ -473,7 +667,7 @@ export function initWorkflowManagement({
       return `Missing block (${blockId})`;
     }
     const index = draft.blocks.findIndex((item) => item.id === block.id);
-    return `Block ${index + 1}: ${protocolNameById(block.protocolId)}`;
+    return `Block ${index + 1}: ${blockTitle(block)}`;
   }
 
   function getBlockById(blockId) {
@@ -622,17 +816,20 @@ export function initWorkflowManagement({
     workflowGraphNodes.innerHTML = draft.blocks.map((block, index) => {
       const connectingClass = activeLinkFromBlockId === block.id ? ' workflow-node-connecting' : '';
       const selectedClass = selectedBlockIds.has(block.id) ? ' workflow-node-selected' : '';
-      const protocolName = protocolNameById(block.protocolId);
+      const typeClass = getBlockType(block) === BLOCK_TYPES.TEXT ? ' workflow-node-text' : '';
+      const title = blockTitle(block);
+      const typeLabel = blockTypeLabel(block);
       const assigneeName = assigneeLabelById(block.assigneeId);
       return `
-        <article class="workflow-node${connectingClass}${selectedClass}" data-workflow-node="${safeText(block.id)}" style="left:${safeText(block.x)}px; top:${safeText(block.y)}px;">
-          <button type="button" class="workflow-port workflow-port-in" data-workflow-port-in="${safeText(block.id)}" title="Connect into this block" aria-label="Input port for ${safeText(protocolName)}"></button>
-          <button type="button" class="workflow-port workflow-port-out" data-workflow-port-out="${safeText(block.id)}" title="Connect out from this block" aria-label="Output port for ${safeText(protocolName)}"></button>
+        <article class="workflow-node${typeClass}${connectingClass}${selectedClass}" data-workflow-node="${safeText(block.id)}" style="left:${safeText(block.x)}px; top:${safeText(block.y)}px;">
+          <button type="button" class="workflow-port workflow-port-in" data-workflow-port-in="${safeText(block.id)}" title="Connect into this block" aria-label="Input port for ${safeText(title)}"></button>
+          <button type="button" class="workflow-port workflow-port-out" data-workflow-port-out="${safeText(block.id)}" title="Connect out from this block" aria-label="Output port for ${safeText(title)}"></button>
           <header class="workflow-node-header" data-workflow-node-drag="${safeText(block.id)}">
             <span class="workflow-node-index">${safeText(index + 1)}</span>
-            <strong>${safeText(protocolName)}</strong>
+            <strong>${safeText(title)}</strong>
           </header>
           <div class="workflow-node-body">
+            <p>${safeText(`Type: ${typeLabel}`)}</p>
             <p>${safeText(`Assignee: ${assigneeName}`)}</p>
             <button type="button" class="ghost-btn workflow-node-remove" data-workflow-block-remove="${safeText(block.id)}">Remove</button>
           </div>
@@ -683,17 +880,34 @@ export function initWorkflowManagement({
     const { upstream, downstream } = buildDirectionMaps();
 
     if (!draft.blocks.length) {
-      workflowBlockList.innerHTML = '<p class="small-note">No blocks yet. Add a protocol block to start.</p>';
+      workflowBlockList.innerHTML = '<p class="small-note">No blocks yet. Add a protocol or plain-text block to start.</p>';
       return;
     }
 
     workflowBlockList.innerHTML = draft.blocks.map((block, index) => {
       const upstreamText = (upstream.get(block.id) || []).map((blockId) => blockDisplayLabel(blockId)).join(' | ') || '-';
       const downstreamText = (downstream.get(block.id) || []).map((blockId) => blockDisplayLabel(blockId)).join(' | ') || '-';
+      const type = getBlockType(block);
+      const title = blockTitle(block);
+      const typeLabel = blockTypeLabel(block);
+      const plainTextEditor = type === BLOCK_TYPES.TEXT
+        ? `
+            <label class="workflow-text-block-field">
+              <span>Text</span>
+              <input
+                data-workflow-block-text="${safeText(block.id)}"
+                value="${safeText(block.text)}"
+                placeholder="Plain text"
+              />
+            </label>
+          `
+        : `<p class="small-note">Protocol: ${safeText(title)}</p>`;
       return `
         <article class="list-row workflow-block-row">
           <div class="workflow-block-meta">
-            <strong>${safeText(`Block ${index + 1}: ${protocolNameById(block.protocolId)}`)}</strong>
+            <strong>${safeText(`Block ${index + 1}: ${title}`)}</strong>
+            <p class="small-note">Type: ${safeText(typeLabel)}</p>
+            ${plainTextEditor}
             <p class="small-note">Upstream: ${safeText(upstreamText)}</p>
             <p class="small-note">Downstream: ${safeText(downstreamText)}</p>
           </div>
@@ -862,6 +1076,7 @@ export function initWorkflowManagement({
 
   function renderBlockEditor() {
     renderProtocolOptions();
+    syncBlockComposerFields();
     renderBlockList();
     renderGraphEditor();
   }
@@ -900,7 +1115,9 @@ export function initWorkflowManagement({
     }
 
     const now = new Date().toISOString();
-    const notebookEntryIds = uniqueStrings(getSelectedValues(workflowNotebookPagesInput));
+    const isTemplateMode = workflowEntryMode === 'template';
+    const notebookEntryIds = isTemplateMode ? [] : uniqueStrings(getSelectedValues(workflowNotebookPagesInput));
+    const projectId = isTemplateMode ? '' : workflowProjectInput.value;
     const existing = (state.workflows || []).find((workflow) => workflow.id === workflowIdInput.value);
 
     const workflowRecord = normalizeWorkflow({
@@ -908,7 +1125,7 @@ export function initWorkflowManagement({
       id: workflowIdInput.value || draft.id || createId(),
       name,
       description: workflowDescriptionInput.value.trim(),
-      projectId: workflowProjectInput.value,
+      projectId,
       notebookEntryIds,
       createdAt: existing?.createdAt || draft.createdAt || now,
       updatedAt: now
@@ -923,13 +1140,39 @@ export function initWorkflowManagement({
 
     persist();
     notifyWorkflowsChanged();
-    resetDraftToEmpty();
+    cloneWorkflowIntoDraft(workflowRecord);
     renderTemplateSourceOptions();
     renderTemplateList();
     renderWorkflowList();
+    setWorkflowEntryMode('list');
   }
 
   function onAddBlock() {
+    const blockType = getBlockComposerType();
+    const position = suggestedBlockPosition(draft.blocks.length);
+
+    if (blockType === BLOCK_TYPES.TEXT) {
+      const textContent = normalizePlainTextBlock(workflowBlockTextInput?.value || '');
+      if (!textContent) {
+        return;
+      }
+      hideContextMenu();
+      draft.blocks.push({
+        id: createId(),
+        type: BLOCK_TYPES.TEXT,
+        protocolId: '',
+        text: textContent,
+        assigneeId: resolveDefaultAssigneeId(),
+        x: position.x,
+        y: position.y
+      });
+      if (workflowBlockTextInput) {
+        workflowBlockTextInput.value = '';
+      }
+      renderBlockEditor();
+      return;
+    }
+
     const protocolId = String(workflowBlockProtocolInput.value || '').trim();
     if (!protocolId) {
       return;
@@ -937,10 +1180,11 @@ export function initWorkflowManagement({
 
     hideContextMenu();
 
-    const position = suggestedBlockPosition(draft.blocks.length);
     draft.blocks.push({
       id: createId(),
+      type: BLOCK_TYPES.PROTOCOL,
       protocolId,
+      text: '',
       assigneeId: resolveDefaultAssigneeId(),
       x: position.x,
       y: position.y
@@ -959,6 +1203,28 @@ export function initWorkflowManagement({
   }
 
   function onBlockListChange(event) {
+    const textInput = event.target.closest('[data-workflow-block-text]');
+    if (textInput) {
+      const blockId = textInput.dataset.workflowBlockText;
+      const block = draft.blocks.find((item) => item.id === blockId);
+      if (!block || getBlockType(block) !== BLOCK_TYPES.TEXT) {
+        return;
+      }
+
+      const nextText = normalizePlainTextBlock(textInput.value || '');
+      if (!nextText) {
+        textInput.value = block.text || '';
+        return;
+      }
+
+      block.type = BLOCK_TYPES.TEXT;
+      block.protocolId = '';
+      block.text = nextText;
+      renderBlockList();
+      renderGraphEditor();
+      return;
+    }
+
     const assigneeSelect = event.target.closest('[data-workflow-block-assignee]');
     if (!assigneeSelect) {
       return;
@@ -1449,6 +1715,7 @@ export function initWorkflowManagement({
       cloneWorkflowIntoDraft(workflow);
       applyDraftToForm();
       renderWorkflowList();
+      setWorkflowEntryMode('create');
       return;
     }
 
@@ -1502,10 +1769,13 @@ export function initWorkflowManagement({
       const parsedX = Number(block.x);
       const parsedY = Number(block.y);
       const fallbackPos = suggestedBlockPosition(index);
+      const blockType = getBlockType(block);
 
       return {
         id: nextId,
-        protocolId: block.protocolId,
+        type: blockType,
+        protocolId: blockType === BLOCK_TYPES.PROTOCOL ? String(block.protocolId || '').trim() : '',
+        text: blockType === BLOCK_TYPES.TEXT ? normalizePlainTextBlock(block.text) : '',
         assigneeId: block.assigneeId || resolveDefaultAssigneeId(),
         x: Number.isFinite(parsedX) ? Math.max(20, Math.round(parsedX)) : fallbackPos.x,
         y: Number.isFinite(parsedY) ? Math.max(20, Math.round(parsedY)) : fallbackPos.y
@@ -1555,6 +1825,7 @@ export function initWorkflowManagement({
     cloneWorkflowIntoDraft(workflow);
     applyDraftToForm();
     renderWorkflowList();
+    setWorkflowEntryMode('create');
   }
 
   function onTemplateListClick(event) {
@@ -1598,6 +1869,7 @@ export function initWorkflowManagement({
     renderTemplateSourceOptions();
     renderTemplateList();
     renderWorkflowList();
+    setWorkflowEntryMode(workflowEntryMode);
   }
 
   return {

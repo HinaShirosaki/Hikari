@@ -1,3 +1,5 @@
+import { defaultLlmEndpointForProvider, normalizeLlmProvider } from './shared.js';
+
 export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile, onLoadEnaFile }) {
   const personalInfoForm = document.getElementById('personal-info-form');
   const settingNameInput = document.getElementById('setting-name');
@@ -17,6 +19,7 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
   const selectStoragePathBtn = document.getElementById('select-storage-path-btn');
 
   const llmForm = document.getElementById('llm-form');
+  const settingProvider = document.getElementById('setting-provider');
   const settingModel = document.getElementById('setting-model');
   const settingApiEndpoint = document.getElementById('setting-api-endpoint');
   const settingApiKey = document.getElementById('setting-api-key');
@@ -36,6 +39,8 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
     source: 'none',
     hasSavedToken: false
   };
+  let activeLlmProvider = 'openai';
+  const looksLikeEndpoint = (value) => /^[a-z]+:\/\//i.test(String(value || '').trim());
 
   personalInfoForm.addEventListener('submit', onSavePersonalInfo);
   appearanceForm.addEventListener('submit', onSaveAppearance);
@@ -43,6 +48,7 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
   storageForm.addEventListener('submit', onSaveStoragePath);
   selectStoragePathBtn?.addEventListener('click', onSelectStoragePath);
   llmForm.addEventListener('submit', onSaveLlmSettings);
+  settingProvider?.addEventListener('change', onProviderChanged);
   telegramForm?.addEventListener('submit', onSaveTelegramToken);
   clearTelegramTokenBtn?.addEventListener('click', onClearTelegramToken);
   saveEnaBtn.addEventListener('click', onSaveEnaClick);
@@ -67,9 +73,20 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
     syncUiStyleControls(appearance.uiStyle || 'neutral-compact');
 
     settingStoragePath.value = state.settings.storagePath || '';
+    const llmProvider = normalizeLlmProvider(llm.provider, llm.apiEndpoint || llm.api);
+    activeLlmProvider = llmProvider;
+    if (settingProvider) {
+      settingProvider.value = llmProvider;
+    }
     settingModel.value = llm.model || '';
-    settingApiEndpoint.value = llm.apiEndpoint || (llm.api && llm.api.startsWith('http') ? llm.api : 'https://api.openai.com/v1/responses');
-    settingApiKey.value = llm.apiKey || (llm.api && !llm.api.startsWith('http') ? llm.api : '');
+    settingModel.placeholder = modelPlaceholderForProvider(llmProvider);
+    settingApiEndpoint.value = llm.apiEndpoint
+      || (llm.api && looksLikeEndpoint(llm.api) ? llm.api : defaultLlmEndpointForProvider(llmProvider));
+    settingApiEndpoint.placeholder = defaultLlmEndpointForProvider(llmProvider);
+    settingApiKey.value = llm.apiKey || (llm.api && !looksLikeEndpoint(llm.api) ? llm.api : '');
+    settingApiKey.placeholder = llmProvider === 'codex'
+      ? 'Not required (use `codex login`)'
+      : 'sk-...';
     settingEnaPath.textContent = state.settings.enaFilePath || 'Not set';
     if (settingAutoSaveEna) {
       settingAutoSaveEna.checked = state.settings.autoSaveEna !== false;
@@ -183,10 +200,12 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
 
   function onSaveLlmSettings(event) {
     event.preventDefault();
-    const endpoint = settingApiEndpoint.value.trim() || 'https://api.openai.com/v1/responses';
+    const provider = normalizeLlmProvider(settingProvider?.value, settingApiEndpoint.value);
+    const endpoint = settingApiEndpoint.value.trim() || defaultLlmEndpointForProvider(provider);
     const apiKey = settingApiKey.value.trim();
 
     state.settings.llm = {
+      provider,
       model: settingModel.value.trim(),
       apiEndpoint: endpoint,
       apiKey,
@@ -194,6 +213,23 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
     };
 
     persist();
+  }
+
+  function onProviderChanged() {
+    const provider = normalizeLlmProvider(settingProvider?.value, settingApiEndpoint.value);
+    const previousDefault = defaultLlmEndpointForProvider(activeLlmProvider);
+    const nextDefault = defaultLlmEndpointForProvider(provider);
+    const currentEndpoint = settingApiEndpoint.value.trim();
+
+    if (!currentEndpoint || currentEndpoint === previousDefault) {
+      settingApiEndpoint.value = nextDefault;
+    }
+    settingApiEndpoint.placeholder = nextDefault;
+    settingModel.placeholder = modelPlaceholderForProvider(provider);
+    settingApiKey.placeholder = provider === 'codex'
+      ? 'Not required (use `codex login`)'
+      : 'sk-...';
+    activeLlmProvider = provider;
   }
 
   async function onSaveTelegramToken(event) {
@@ -361,6 +397,19 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
     const isNeutral = uiStyle === 'neutral-compact';
     settingUiStyleLabel.textContent = `Current style: ${isNeutral ? 'Neutral Compact' : 'Classic'}`;
     settingUiStyleToggle.textContent = isNeutral ? 'Switch to Classic UI' : 'Use Neutral Compact UI';
+  }
+
+  function modelPlaceholderForProvider(provider) {
+    if (provider === 'gemini') {
+      return 'e.g. gemini-2.5-pro';
+    }
+    if (provider === 'claude') {
+      return 'e.g. claude-sonnet-4-5';
+    }
+    if (provider === 'codex') {
+      return 'optional, e.g. gpt-5';
+    }
+    return 'e.g. gpt-4.1';
   }
 
   return { renderForms, applyAppearance };

@@ -1,3 +1,5 @@
+import { exportNotebookEntryPdf } from './pdf-export.js';
+
 export function initLabNotebook({
   state,
   persist,
@@ -166,6 +168,35 @@ export function initLabNotebook({
     const editingEntry = editingEntryId
       ? state.notebookEntries.find((item) => item.id === editingEntryId && matchesNotebookType(item))
       : null;
+    const selectedResultFiles = Array.from(notebookResultFile.files || []);
+    const existingResultFiles = Array.isArray(editingEntry?.resultFiles)
+      ? editingEntry.resultFiles.map((name) => String(name || '').trim()).filter(Boolean)
+      : [];
+    const existingResultFileRecords = Array.isArray(editingEntry?.resultFileRecords)
+      ? editingEntry.resultFileRecords
+        .filter((record) => record && typeof record === 'object')
+        .map((record) => ({ ...record }))
+      : [];
+    const storageFolder = editingEntry?.storageFolder || buildNotebookFolderPath(project.name);
+
+    let importedResultFileRecords = [];
+    try {
+      await ensureStorageFolderExists(storageFolder);
+      importedResultFileRecords = await persistImportedNotebookFiles({
+        files: selectedResultFiles,
+        storageFolder
+      });
+    } catch (error) {
+      window.alert(String(error?.message || error || 'Failed to store notebook files.'));
+      return;
+    }
+
+    const resultFileRecords = existingResultFileRecords.concat(importedResultFileRecords);
+    const recordNames = resultFileRecords.map((record) => String(record?.name || '').trim()).filter(Boolean);
+    const fallbackSelectedNames = selectedResultFiles.map((file) => file.name);
+    const resultFiles = Array.from(new Set(
+      existingResultFiles.concat(recordNames, recordNames.length ? [] : fallbackSelectedNames)
+    ));
 
     const entry = {
       id: editingEntry?.id || createId(),
@@ -176,7 +207,8 @@ export function initLabNotebook({
       protocolName: SYNTHESIS_ENTRY_PROTOCOL_NAME,
       values,
       result: notebookResult.value.trim(),
-      resultFiles: Array.from(notebookResultFile.files || []).map((file) => file.name),
+      resultFiles,
+      resultFileRecords,
       references: {
         instrumentId: refInstrument.value || '',
         peopleIds: readRefValues(refPeopleIds),
@@ -201,11 +233,9 @@ export function initLabNotebook({
         }
         : { enabled: false, substrates: [], product: null, phase: 'substrate', finished: false },
       synthesisProcedure: chemistryProcedureInput?.value.trim() || '',
-      storageFolder: editingEntry?.storageFolder || buildNotebookFolderPath(project.name),
+      storageFolder,
       updatedAt: new Date().toISOString()
     };
-
-    await ensureStorageFolderExists(entry.storageFolder);
 
     const index = editingEntry
       ? state.notebookEntries.findIndex((item) => item.id === editingEntry.id)
@@ -220,6 +250,7 @@ export function initLabNotebook({
 
     clearChemistryDraft(project.id, SYNTHESIS_ENTRY_PROTOCOL_KEY);
     persist();
+    notebookResultFile.value = '';
     renderEntries();
     if (typeof onNotebookEntriesChanged === 'function') {
       onNotebookEntriesChanged();
@@ -231,6 +262,64 @@ export function initLabNotebook({
       return;
     }
     await window.enanaApi.ensureStorageDirectory(storageFolder);
+  }
+
+  async function persistImportedNotebookFiles({ files, storageFolder }) {
+    const selectedFiles = Array.isArray(files) ? files.filter(Boolean) : [];
+    if (!selectedFiles.length) {
+      return [];
+    }
+
+    const rootPath = state.settings.storagePath.trim();
+    if (!rootPath) {
+      throw new Error('Set Storage Folder Path in Settings before importing notebook files.');
+    }
+    if (!storageFolder) {
+      throw new Error('Notebook storage folder is missing.');
+    }
+    if (!window.enanaApi?.storeImportedFile) {
+      throw new Error('Imported file storage API is unavailable.');
+    }
+
+    const targetFolder = `${storageFolder}/ResultFiles`;
+    const importedAt = new Date().toISOString();
+    const records = [];
+
+    for (const file of selectedFiles) {
+      const dataUrl = await blobToDataUrl(file);
+      const dataBase64 = extractBase64Payload(dataUrl);
+      if (!dataBase64) {
+        throw new Error(`Cannot read ${file.name}.`);
+      }
+      const result = await window.enanaApi.storeImportedFile({
+        storagePath: rootPath,
+        targetFolder,
+        fileName: file.name,
+        dataBase64
+      });
+      if (!result?.ok) {
+        throw new Error(result?.error || `Failed to store ${file.name}.`);
+      }
+
+      records.push({
+        name: result.fileName || file.name,
+        path: result.filePath || '',
+        relativePath: result.relativePath || '',
+        size: Number(file.size) || 0,
+        importedAt
+      });
+    }
+
+    return records;
+  }
+
+  function extractBase64Payload(dataUrl) {
+    const source = String(dataUrl || '');
+    const commaIndex = source.indexOf(',');
+    if (commaIndex < 0) {
+      return '';
+    }
+    return source.slice(commaIndex + 1).trim();
   }
 
   function renderProjectOptions() {
@@ -279,6 +368,7 @@ export function initLabNotebook({
           <div class="stack-form list-detail-content">
             <div class="card-actions">
               <button type="button" class="ghost-btn" data-notebook-edit="${entry.id}">Edit</button>
+              <button type="button" class="ghost-btn" data-notebook-export="${entry.id}">Export PDF</button>
             </div>
             <p><strong>Notebook Folder:</strong> ${safeText(entry.storageFolder || '-')}</p>
             ${chemistryHtml}
@@ -297,11 +387,26 @@ export function initLabNotebook({
   }
 
   function onEntryListClick(event) {
+    const exportBtn = event.target.closest('[data-notebook-export]');
+    if (exportBtn) {
+      exportEntryPdf(exportBtn.dataset.notebookExport);
+      return;
+    }
+
     const editBtn = event.target.closest('[data-notebook-edit]');
     if (!editBtn) {
       return;
     }
     editEntry(editBtn.dataset.notebookEdit);
+  }
+
+  function exportEntryPdf(entryId) {
+    const entry = state.notebookEntries.find((item) => item.id === entryId && matchesNotebookType(item));
+    if (!entry) {
+      return;
+    }
+    const protocol = state.protocols.find((item) => item.id === entry.protocolId) || null;
+    exportNotebookEntryPdf({ entry, protocol });
   }
 
   function editEntry(entryId) {

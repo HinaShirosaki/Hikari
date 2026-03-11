@@ -6,18 +6,54 @@ const {
   hasSupportedDataExtension,
   normalizeDataFilePath
 } = require('./main-utils');
+const {
+  annotateWithBlast,
+  checkPlannotateEnvironment,
+  generatePlannotateGbk,
+  installPlannotateAssets
+} = require('./plannotate-engine');
+const {
+  getCodexLoginStatus,
+  requestCodexCliText
+} = require('./codex-cli-provider');
+const { downloadPaperAndSiPdf } = require('./agent-paper-download');
+let AGENT_IO_CONTRACT_RAW = {};
+try {
+  AGENT_IO_CONTRACT_RAW = require('./data/agent-io-contract.json');
+} catch (error) {
+  console.error('Failed to load agent I/O contract file:', error);
+}
 
 const appIconPath = path.join(__dirname, 'image.png');
 const DEFAULT_DATA_FILE_NAME = 'enana-data.json';
 const TELEGRAM_CONFIG_FILE_NAME = 'telegram-bot.json';
-const DEFAULT_LLM_RESPONSES_ENDPOINT = 'https://api.openai.com/v1/responses';
-const DEFAULT_AGENT_MODEL = 'gpt-4.1-mini';
+const CHEMICALS_DATA_FILE_PATH = path.join(__dirname, 'data', 'chemicals.json');
+const AGENT_CHAT_LOG_FILE_NAME = 'agent-chat.log';
+const LLM_PROVIDERS = Object.freeze({
+  OPENAI: 'openai',
+  GEMINI: 'gemini',
+  CLAUDE: 'claude',
+  CODEX: 'codex'
+});
+const DEFAULT_LLM_PROVIDER = LLM_PROVIDERS.OPENAI;
+const DEFAULT_LLM_ENDPOINTS = Object.freeze({
+  [LLM_PROVIDERS.OPENAI]: 'https://api.openai.com/v1/responses',
+  [LLM_PROVIDERS.GEMINI]: 'https://generativelanguage.googleapis.com/v1beta',
+  [LLM_PROVIDERS.CLAUDE]: 'https://api.anthropic.com/v1/messages',
+  [LLM_PROVIDERS.CODEX]: 'codex://cli'
+});
+const DEFAULT_AGENT_MODELS = Object.freeze({
+  [LLM_PROVIDERS.OPENAI]: 'gpt-4.1-mini',
+  [LLM_PROVIDERS.GEMINI]: 'gemini-2.5-flash',
+  [LLM_PROVIDERS.CLAUDE]: 'claude-3-5-sonnet-latest',
+  [LLM_PROVIDERS.CODEX]: ''
+});
 const MAX_AGENT_TOOL_ROUNDS = 4;
 const LLM_PROMPTS_FILE_PATH = path.join(__dirname, 'data', 'llm-prompts.json');
 const DEFAULT_AGENT_SYSTEM_PROMPT_TEMPLATE =
   'You are Enana Lab Assistant Agent.\n{{projectScope}}\nRespond concisely and avoid fabrication.';
 const DEFAULT_AGENT_SYNTHESIS_PROMPT_TEMPLATE =
-  'Return JSON matching the schema exactly. Do not claim write operations were executed. Write intent detected: {{writeIntent}}.';
+  'Return JSON matching the schema exactly. Only claim write operations were executed when tool trace confirms success. Write intent detected: {{writeIntent}}.';
 let mainWindow = null;
 let telegramBot = null;
 let savedTelegramToken = '';
@@ -25,12 +61,42 @@ let telegramTokenSource = 'none';
 let llmPromptsCache = null;
 let llmPromptsPromise = null;
 
+function getCodexCliWorkingDirectory() {
+  try {
+    const userDataPath = app.getPath('userData');
+    if (userDataPath) {
+      return userDataPath;
+    }
+  } catch {
+    // App path may be unavailable very early; fall back.
+  }
+  return process.cwd();
+}
+
 function getDefaultDataFilePath() {
   return path.join(app.getPath('userData'), DEFAULT_DATA_FILE_NAME);
 }
 
 function getTelegramConfigPath() {
   return path.join(app.getPath('userData'), TELEGRAM_CONFIG_FILE_NAME);
+}
+
+function getAgentChatLogPath() {
+  const override = String(process.env.ENANA_AGENT_CHAT_LOG_PATH || '').trim();
+  if (override) {
+    return override;
+  }
+
+  try {
+    const userDataPath = app.getPath('userData');
+    if (userDataPath) {
+      return path.join(userDataPath, AGENT_CHAT_LOG_FILE_NAME);
+    }
+  } catch {
+    // App path may be unavailable very early; fall back.
+  }
+
+  return path.join(__dirname, 'data', AGENT_CHAT_LOG_FILE_NAME);
 }
 
 function renderPromptTemplate(template, vars = {}) {
@@ -92,6 +158,119 @@ async function writeSavedTelegramToken(token) {
   await fs.writeFile(configPath, JSON.stringify({ token: cleanToken }, null, 2), 'utf8');
 }
 
+async function appendAgentChatLogEntry(logPath, entry) {
+  try {
+    await fs.mkdir(path.dirname(logPath), { recursive: true });
+    await fs.appendFile(logPath, `${entry}\n`, 'utf8');
+  } catch (error) {
+    console.error('Failed to append agent chat log entry:', error);
+  }
+}
+
+async function ensureAgentChatLogFile(logPath) {
+  try {
+    await fs.mkdir(path.dirname(logPath), { recursive: true });
+    await fs.appendFile(logPath, '', 'utf8');
+  } catch (error) {
+    console.error('Failed to initialize agent chat log file:', error);
+  }
+}
+
+function sanitizeStorageName(value, fallback = 'item') {
+  const cleaned = String(value || '')
+    .trim()
+    .replace(/[<>:"/\\|?*\x00-\x1F]+/g, '_')
+    .replace(/\s+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 180);
+  return cleaned || fallback;
+}
+
+function sanitizeImportedFileName(fileName) {
+  const rawName = String(fileName || '').trim();
+  const ext = path.extname(rawName).replace(/[^.\w-]+/g, '').slice(0, 24);
+  const base = rawName.slice(0, Math.max(0, rawName.length - ext.length));
+  const safeBase = sanitizeStorageName(base, 'imported-file');
+  return `${safeBase}${ext}`;
+}
+
+function ensurePathWithinRoot(rootPath, targetPath) {
+  const resolvedRoot = path.resolve(rootPath);
+  const resolvedTarget = path.resolve(targetPath);
+  if (resolvedTarget === resolvedRoot) {
+    return resolvedTarget;
+  }
+  const rootWithSep = resolvedRoot.endsWith(path.sep)
+    ? resolvedRoot
+    : `${resolvedRoot}${path.sep}`;
+  if (!resolvedTarget.startsWith(rootWithSep)) {
+    throw new Error('Target path must be inside the configured storage path.');
+  }
+  return resolvedTarget;
+}
+
+async function pathExists(targetPath) {
+  try {
+    await fs.access(targetPath);
+    return true;
+  } catch (error) {
+    if (error?.code === 'ENOENT') {
+      return false;
+    }
+    throw error;
+  }
+}
+
+async function getUniqueFilePath(folderPath, fileName) {
+  const parsed = path.parse(fileName);
+  const safeNameBase = sanitizeStorageName(parsed.name, 'imported-file');
+  const safeExt = String(parsed.ext || '').replace(/[^.\w-]+/g, '').slice(0, 24);
+  let attempt = 0;
+
+  while (attempt < 5000) {
+    const suffix = attempt === 0 ? '' : `_${attempt + 1}`;
+    const candidateName = `${safeNameBase}${suffix}${safeExt}`;
+    const candidatePath = path.join(folderPath, candidateName);
+    if (!(await pathExists(candidatePath))) {
+      return candidatePath;
+    }
+    attempt += 1;
+  }
+
+  throw new Error('Unable to find a unique file name for imported file.');
+}
+
+async function storeImportedFile(payload) {
+  const storagePath = String(payload?.storagePath || '').trim();
+  const targetFolderInput = String(payload?.targetFolder || '').trim();
+  const fileName = sanitizeImportedFileName(payload?.fileName);
+  const dataBase64 = String(payload?.dataBase64 || '').trim();
+
+  if (!storagePath) {
+    throw new Error('Missing storage path.');
+  }
+  if (!targetFolderInput) {
+    throw new Error('Missing target folder.');
+  }
+  if (!dataBase64) {
+    throw new Error('Missing imported file data.');
+  }
+
+  const resolvedStoragePath = path.resolve(storagePath);
+  const resolvedTargetFolder = ensurePathWithinRoot(resolvedStoragePath, targetFolderInput);
+  await fs.mkdir(resolvedTargetFolder, { recursive: true });
+
+  const targetFilePath = await getUniqueFilePath(resolvedTargetFolder, fileName);
+  const binary = Buffer.from(dataBase64, 'base64');
+  await fs.writeFile(targetFilePath, binary);
+
+  return {
+    filePath: targetFilePath,
+    fileName: path.basename(targetFilePath),
+    relativePath: path.relative(resolvedStoragePath, targetFilePath).split(path.sep).join('/')
+  };
+}
+
 function stopTelegramBot(reason = 'app quit') {
   if (!telegramBot) {
     return;
@@ -150,6 +329,7 @@ app.whenReady().then(async () => {
   createWindow();
   savedTelegramToken = await loadSavedTelegramToken();
   restartTelegramBot();
+  void ensureAgentChatLogFile(getAgentChatLogPath());
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -172,8 +352,104 @@ async function writeEnaFile(filePath, data) {
   await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8');
 }
 
+function normalizeChemicalStorePayload(payload) {
+  const source = payload && typeof payload === 'object' ? payload : {};
+  return {
+    chemicals: asArray(source.chemicals),
+    blocks: asArray(source.blocks),
+    lastLocationNumber: Number(source.lastLocationNumber) || 0
+  };
+}
+
+function mergeChemicalsIntoSnapshot(data, chemicalsPayload) {
+  const source = data && typeof data === 'object' ? data : {};
+  const labInventorySource = source.labInventory && typeof source.labInventory === 'object'
+    ? source.labInventory
+    : {};
+  const normalizedSnapshotChemicals = normalizeChemicalStorePayload(labInventorySource);
+  const normalizedSidecarChemicals = chemicalsPayload
+    ? normalizeChemicalStorePayload(chemicalsPayload)
+    : null;
+  const hasSnapshotChemicals = normalizedSnapshotChemicals.chemicals.length > 0;
+  const mergedChemicalStore = hasSnapshotChemicals
+    ? normalizedSnapshotChemicals
+    : normalizedSidecarChemicals;
+
+  if (!mergedChemicalStore) {
+    return source;
+  }
+
+  return {
+    ...source,
+    labInventory: {
+      ...labInventorySource,
+      ...mergedChemicalStore
+    }
+  };
+}
+
+async function writeChemicalsFile(labInventory) {
+  const payload = normalizeChemicalStorePayload(labInventory);
+  await fs.mkdir(path.dirname(CHEMICALS_DATA_FILE_PATH), { recursive: true });
+  await fs.writeFile(CHEMICALS_DATA_FILE_PATH, JSON.stringify(payload, null, 2), 'utf8');
+}
+
+async function readChemicalsFile() {
+  try {
+    const raw = await fs.readFile(CHEMICALS_DATA_FILE_PATH, 'utf8');
+    return normalizeChemicalStorePayload(JSON.parse(raw));
+  } catch (error) {
+    if (error?.code === 'ENOENT') {
+      return null;
+    }
+    throw error;
+  }
+}
+
+function cloneJson(value, fallback = {}) {
+  if (!value || typeof value !== 'object') {
+    return fallback;
+  }
+  try {
+    return JSON.parse(JSON.stringify(value));
+  } catch {
+    return fallback;
+  }
+}
+
+function normalizeJsonPayload(payload, fallback = {}) {
+  if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
+    return payload;
+  }
+  if (typeof payload === 'string') {
+    const parsed = safeParseJson(payload, null);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed;
+    }
+  }
+  return fallback;
+}
+
+function normalizeToolInvocationArgs(rawArgs) {
+  const payload = normalizeJsonPayload(rawArgs, {});
+  if (payload.input && typeof payload.input === 'object' && !Array.isArray(payload.input)) {
+    return payload.input;
+  }
+  if (payload.args && typeof payload.args === 'object' && !Array.isArray(payload.args)) {
+    return payload.args;
+  }
+  if (payload.arguments && typeof payload.arguments === 'object' && !Array.isArray(payload.arguments)) {
+    return payload.arguments;
+  }
+  if (typeof payload.input_json === 'string') {
+    return normalizeJsonPayload(payload.input_json, payload);
+  }
+  return payload;
+}
+
 ipcMain.handle('ena:save', async (_event, payload) => {
-  const { data, filePath } = payload || {};
+  const normalizedPayload = normalizeJsonPayload(payload, {});
+  const { data, filePath } = normalizedPayload;
   if (!data) {
     return { ok: false, error: 'Missing data payload.' };
   }
@@ -196,7 +472,9 @@ ipcMain.handle('ena:save', async (_event, payload) => {
   }
 
   try {
-    await writeEnaFile(targetPath, data);
+    const snapshot = data && typeof data === 'object' ? data : {};
+    await writeEnaFile(targetPath, snapshot);
+    await writeChemicalsFile(snapshot.labInventory);
     return { ok: true, filePath: targetPath };
   } catch (error) {
     return { ok: false, error: String(error) };
@@ -217,7 +495,9 @@ ipcMain.handle('ena:load', async () => {
   const filePath = result.filePaths[0];
   try {
     const raw = await fs.readFile(filePath, 'utf8');
-    const data = JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    const chemicalsPayload = await readChemicalsFile();
+    const data = mergeChemicalsIntoSnapshot(parsed, chemicalsPayload);
     return { ok: true, filePath, data };
   } catch (error) {
     return { ok: false, error: String(error) };
@@ -225,7 +505,8 @@ ipcMain.handle('ena:load', async () => {
 });
 
 ipcMain.handle('data:auto-save', async (_event, payload) => {
-  const { data, filePath } = payload || {};
+  const normalizedPayload = normalizeJsonPayload(payload, {});
+  const { data, filePath } = normalizedPayload;
   if (!data) {
     return { ok: false, error: 'Missing data payload.' };
   }
@@ -234,7 +515,9 @@ ipcMain.handle('data:auto-save', async (_event, payload) => {
 
   try {
     await fs.mkdir(path.dirname(targetPath), { recursive: true });
-    await writeEnaFile(targetPath, data);
+    const snapshot = data && typeof data === 'object' ? data : {};
+    await writeEnaFile(targetPath, snapshot);
+    await writeChemicalsFile(snapshot.labInventory);
     return { ok: true, filePath: targetPath };
   } catch (error) {
     return { ok: false, error: String(error), filePath: targetPath };
@@ -242,11 +525,14 @@ ipcMain.handle('data:auto-save', async (_event, payload) => {
 });
 
 ipcMain.handle('data:auto-load', async (_event, payload) => {
-  const targetPath = normalizeDataFilePath(payload?.filePath, getDefaultDataFilePath());
+  const normalizedPayload = normalizeJsonPayload(payload, {});
+  const targetPath = normalizeDataFilePath(normalizedPayload?.filePath, getDefaultDataFilePath());
 
   try {
     const raw = await fs.readFile(targetPath, 'utf8');
-    const data = JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    const chemicalsPayload = await readChemicalsFile();
+    const data = mergeChemicalsIntoSnapshot(parsed, chemicalsPayload);
     return { ok: true, filePath: targetPath, data };
   } catch (error) {
     if (error?.code === 'ENOENT') {
@@ -257,7 +543,8 @@ ipcMain.handle('data:auto-load', async (_event, payload) => {
 });
 
 ipcMain.handle('storage:pick-directory', async (_event, payload) => {
-  const currentPath = typeof payload?.currentPath === 'string' ? payload.currentPath.trim() : '';
+  const normalizedPayload = normalizeJsonPayload(payload, {});
+  const currentPath = typeof normalizedPayload?.currentPath === 'string' ? normalizedPayload.currentPath.trim() : '';
   const result = await dialog.showOpenDialog({
     title: 'Select Storage Folder',
     defaultPath: currentPath || undefined,
@@ -272,7 +559,8 @@ ipcMain.handle('storage:pick-directory', async (_event, payload) => {
 });
 
 ipcMain.handle('storage:ensure-directory', async (_event, payload) => {
-  const targetPath = typeof payload?.path === 'string' ? payload.path.trim() : '';
+  const normalizedPayload = normalizeJsonPayload(payload, {});
+  const targetPath = typeof normalizedPayload?.path === 'string' ? normalizedPayload.path.trim() : '';
   if (!targetPath) {
     return { ok: false, error: 'Missing directory path.' };
   }
@@ -285,106 +573,228 @@ ipcMain.handle('storage:ensure-directory', async (_event, payload) => {
   }
 });
 
-const AGENT_TOOL_DEFINITIONS = [
-  {
-    type: 'function',
-    name: 'search_projects',
-    description: 'Read project records by semantic keyword or exact term.',
-    parameters: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        query: { type: 'string' },
-        limit: { type: 'integer', minimum: 1, maximum: 20 }
-      },
-      required: ['query']
-    }
-  },
-  {
-    type: 'function',
-    name: 'search_protocols',
-    description: 'Read protocol records, including names and step snippets.',
-    parameters: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        query: { type: 'string' },
-        limit: { type: 'integer', minimum: 1, maximum: 20 }
-      },
-      required: ['query']
-    }
-  },
-  {
-    type: 'function',
-    name: 'search_notebook_entries',
-    description: 'Read notebook entries with result summaries and timestamps.',
-    parameters: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        query: { type: 'string' },
-        limit: { type: 'integer', minimum: 1, maximum: 20 }
-      },
-      required: ['query']
-    }
-  },
-  {
-    type: 'function',
-    name: 'search_assays',
-    description: 'Read assay runs with plate metadata and compact numeric summaries.',
-    parameters: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        query: { type: 'string' },
-        limit: { type: 'integer', minimum: 1, maximum: 20 }
-      },
-      required: ['query']
-    }
-  },
-  {
-    type: 'function',
-    name: 'search_gel_analyses',
-    description: 'Read gel analysis runs with confidence, calibration, and warning summaries.',
-    parameters: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        query: { type: 'string' },
-        limit: { type: 'integer', minimum: 1, maximum: 20 }
-      },
-      required: ['query']
-    }
-  },
-  {
-    type: 'function',
-    name: 'search_inventory',
-    description: 'Read chemical and personal inventory records.',
-    parameters: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        query: { type: 'string' },
-        limit: { type: 'integer', minimum: 1, maximum: 25 }
-      },
-      required: ['query']
-    }
-  },
-  {
-    type: 'function',
-    name: 'search_papers',
-    description: 'Read uploaded paper summaries, methods, and reagent extraction notes.',
-    parameters: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        query: { type: 'string' },
-        limit: { type: 'integer', minimum: 1, maximum: 20 }
-      },
-      required: ['query']
-    }
+ipcMain.handle('storage:store-imported-file', async (_event, payload) => {
+  try {
+    const stored = await storeImportedFile(normalizeJsonPayload(payload, {}));
+    return { ok: true, ...stored };
+  } catch (error) {
+    return { ok: false, error: String(error?.message || error) };
   }
-];
+});
+
+ipcMain.handle('plannotate:check-env', async (_event, payload) => {
+  try {
+    const normalizedPayload = normalizeJsonPayload(payload, {});
+    const status = await checkPlannotateEnvironment(normalizedPayload?.dbDir || '');
+    return { ok: true, status };
+  } catch (error) {
+    return { ok: false, error: String(error) };
+  }
+});
+
+ipcMain.handle('plannotate:annotate', async (_event, payload) => {
+  try {
+    const result = await annotateWithBlast(normalizeJsonPayload(payload, {}));
+    return { ok: true, result };
+  } catch (error) {
+    return { ok: false, error: String(error?.message || error) };
+  }
+});
+
+ipcMain.handle('plannotate:install-all', async () => {
+  try {
+    const result = await installPlannotateAssets();
+    return { ok: true, result };
+  } catch (error) {
+    return { ok: false, error: String(error?.message || error) };
+  }
+});
+
+ipcMain.handle('plannotate:generate-gbk', async (_event, payload) => {
+  try {
+    const gbk = generatePlannotateGbk(normalizeJsonPayload(payload, {}));
+    return { ok: true, gbk };
+  } catch (error) {
+    return { ok: false, error: String(error?.message || error) };
+  }
+});
+
+function summarizeSchemaShape(schema) {
+  const source = schema && typeof schema === 'object' ? schema : {};
+  const properties = source.properties && typeof source.properties === 'object'
+    ? source.properties
+    : {};
+  const required = asArray(source.required);
+  const keys = Object.keys(properties).slice(0, 10);
+  if (!keys.length) {
+    return '{}';
+  }
+  const rows = keys.map((key) => {
+    const item = properties[key] && typeof properties[key] === 'object' ? properties[key] : {};
+    const type = cleanText(item.type, 24) || 'any';
+    const marker = required.includes(key) ? '!' : '?';
+    return `${key}${marker}:${type}`;
+  });
+  return `{ ${rows.join(', ')} }`;
+}
+
+function buildFallbackAgentIoTools() {
+  const makeTool = (name, description, limitMax = 20) => ({
+    name,
+    description,
+    input_schema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['query'],
+      properties: {
+        query: { type: 'string' },
+        limit: { type: 'integer', minimum: 1, maximum: limitMax }
+      }
+    },
+    output_schema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['items', 'citations', 'summary'],
+      properties: {
+        items: { type: 'array', items: { type: 'object' } },
+        citations: {
+          type: 'array',
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['source', 'pointer', 'reason'],
+            properties: {
+              source: { type: 'string' },
+              pointer: { type: 'string' },
+              reason: { type: 'string' }
+            }
+          }
+        },
+        summary: { type: 'string' }
+      }
+    }
+  });
+
+  return [
+    makeTool('search_projects', 'Read project records by semantic keyword or exact term.'),
+    makeTool('search_protocols', 'Read protocol records, including names and step snippets.'),
+    makeTool('search_notebook_entries', 'Read notebook entries with result summaries and timestamps.'),
+    makeTool('search_assays', 'Read assay runs with plate metadata and compact numeric summaries.'),
+    makeTool('search_gel_analyses', 'Read gel analysis runs with confidence, calibration, and warning summaries.'),
+    makeTool('search_inventory', 'Read chemical and personal inventory records.', 25),
+    makeTool('search_papers', 'Read uploaded paper summaries, methods, and reagent extraction notes.'),
+    {
+      name: 'download_paper_pdf',
+      description: 'Write tool. Download a paper PDF and optional SI PDFs into the configured storage path.',
+      input_schema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['linked_type', 'linked_name', 'paper_pdf_url'],
+        properties: {
+          linked_type: { type: 'string', enum: ['project', 'journal-club'] },
+          linked_name: { type: 'string' },
+          paper_pdf_url: { type: 'string' },
+          paper_file_name: { type: 'string' },
+          si_pdf_urls: { type: 'array', items: { type: 'string' } },
+          si_file_names: { type: 'array', items: { type: 'string' } },
+          storage_path: { type: 'string' }
+        }
+      },
+      output_schema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['items', 'citations', 'summary'],
+        properties: {
+          items: { type: 'array', items: { type: 'object' } },
+          citations: {
+            type: 'array',
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              required: ['source', 'pointer', 'reason'],
+              properties: {
+                source: { type: 'string' },
+                pointer: { type: 'string' },
+                reason: { type: 'string' }
+              }
+            }
+          },
+          summary: { type: 'string' }
+        }
+      }
+    }
+  ];
+}
+
+function normalizeAgentIoContract(rawContract) {
+  const source = rawContract && typeof rawContract === 'object' ? rawContract : {};
+  const tools = asArray(source.tools).map((tool) => {
+    const name = cleanText(tool?.name, 120);
+    if (!name) {
+      return null;
+    }
+    const description = cleanText(tool?.description, 600);
+    const inputSchema = tool?.input_schema && typeof tool.input_schema === 'object'
+      ? cloneJson(tool.input_schema, {})
+      : { type: 'object', additionalProperties: false, properties: {} };
+    const outputSchema = tool?.output_schema && typeof tool.output_schema === 'object'
+      ? cloneJson(tool.output_schema, {})
+      : { type: 'object', additionalProperties: true };
+    return {
+      name,
+      description,
+      input_schema: inputSchema,
+      output_schema: outputSchema
+    };
+  }).filter(Boolean);
+
+  const outputEnvelope = source.tool_output_envelope && typeof source.tool_output_envelope === 'object'
+    ? cloneJson(source.tool_output_envelope, {})
+    : {};
+
+  return {
+    schema_name: cleanText(source.schema_name, 120) || 'enana_llm_agent_io',
+    schema_version: cleanText(source.schema_version, 40) || '1.0.0',
+    tools: tools.length ? tools : buildFallbackAgentIoTools(),
+    tool_output_envelope: outputEnvelope,
+    functions: asArray(source.functions).map((item) => cloneJson(item, {})).filter(Boolean)
+  };
+}
+
+function buildAgentToolContractPrompt(contract) {
+  const source = contract && typeof contract === 'object' ? contract : {};
+  const tools = asArray(source.tools);
+  if (!tools.length) {
+    return '';
+  }
+  const header = `Tool I/O contract ${cleanText(source.schema_name, 80) || 'enana_llm_agent_io'} v${
+    cleanText(source.schema_version, 40) || '1.0.0'
+  }`;
+  const rows = tools.map((tool) => {
+    const name = cleanText(tool?.name, 120) || 'unknown_tool';
+    const inputShape = summarizeSchemaShape(tool?.input_schema);
+    const outputShape = summarizeSchemaShape(tool?.output_schema);
+    return `- ${name} input ${inputShape} output ${outputShape}`;
+  });
+  return `${header}\n${rows.join('\n')}`;
+}
+
+const AGENT_IO_CONTRACT = normalizeAgentIoContract(AGENT_IO_CONTRACT_RAW);
+const AGENT_TOOL_DEFINITIONS = AGENT_IO_CONTRACT.tools.map((tool) => ({
+  type: 'function',
+  name: tool.name,
+  description: tool.description,
+  parameters: cloneJson(tool.input_schema, { type: 'object', additionalProperties: false, properties: {} })
+}));
+const AGENT_TOOL_DEFINITION_MAP = new Map(AGENT_IO_CONTRACT.tools.map((tool) => [tool.name, tool]));
+const AGENT_TOOL_OUTPUT_ENVELOPE = AGENT_IO_CONTRACT.tool_output_envelope && typeof AGENT_IO_CONTRACT.tool_output_envelope === 'object'
+  ? AGENT_IO_CONTRACT.tool_output_envelope
+  : {};
+const AGENT_TOOL_OUTPUT_SCHEMA_NAME = cleanText(AGENT_TOOL_OUTPUT_ENVELOPE.schema_name, 120) || 'enana_agent_tool_output';
+const AGENT_TOOL_OUTPUT_SCHEMA_VERSION = cleanText(AGENT_TOOL_OUTPUT_ENVELOPE.schema_version, 40)
+  || AGENT_IO_CONTRACT.schema_version
+  || '1.0.0';
+const AGENT_TOOL_CONTRACT_PROMPT = buildAgentToolContractPrompt(AGENT_IO_CONTRACT);
 
 const AGENT_RESULT_SCHEMA = {
   type: 'object',
@@ -514,7 +924,12 @@ function extractFunctionCalls(payload) {
 }
 
 function containsWriteIntent(text) {
-  return /\b(create|update|edit|delete|remove|reserve|consume|commit|save)\b/i.test(String(text || ''));
+  return /\b(create|update|edit|delete|remove|reserve|consume|commit|save|download|fetch|import|upload|store)\b/i
+    .test(String(text || ''));
+}
+
+function isWriteTool(name) {
+  return String(name || '').trim() === 'download_paper_pdf';
 }
 
 function buildIntermediateState(stage, goal, extras = {}) {
@@ -593,6 +1008,9 @@ function normalizeAgentSnapshot(rawSnapshot) {
         chemicals: asArray(snapshot.inventory.chemicals).slice(0, 160)
       }
       : { personal: [], chemicals: [] },
+    settings: {
+      storagePath: cleanText(snapshot?.settings?.storagePath || snapshot?.storagePath, 1200)
+    },
     timestamp: cleanText(snapshot.timestamp, 80)
   };
 }
@@ -628,9 +1046,48 @@ function pickTopMatches(items, buildSearchText, query, limit) {
     .map((entry) => entry.item);
 }
 
-function runAgentTool(name, args, snapshot) {
-  const query = cleanText(args?.query, 300);
-  const limit = clamp(Number(args?.limit) || 6, 1, 25);
+function normalizeAgentToolResultPayload(rawResult) {
+  const source = rawResult && typeof rawResult === 'object' ? rawResult : {};
+  return {
+    items: asArray(source.items),
+    citations: asArray(source.citations).map((citation) => ({
+      source: cleanText(citation?.source, 120),
+      pointer: cleanText(citation?.pointer, 180),
+      reason: cleanText(citation?.reason, 220)
+    })),
+    summary: cleanText(source.summary, 320) || 'No summary was generated.'
+  };
+}
+
+function buildAgentToolOutputEnvelope(toolName, args, rawResult, options = {}) {
+  const normalizedArgs = normalizeToolInvocationArgs(args);
+  const normalizedResult = normalizeAgentToolResultPayload(rawResult);
+  const ok = options.ok !== false;
+  const error = cleanText(options.error, 600);
+  return {
+    ok,
+    schema_name: AGENT_TOOL_OUTPUT_SCHEMA_NAME,
+    schema_version: AGENT_TOOL_OUTPUT_SCHEMA_VERSION,
+    tool_name: cleanText(toolName, 120),
+    input: cloneJson(normalizedArgs, {}),
+    result: normalizedResult,
+    items: normalizedResult.items,
+    citations: normalizedResult.citations,
+    summary: normalizedResult.summary,
+    generated_at: new Date().toISOString(),
+    ...(error ? { error } : {})
+  };
+}
+
+async function runAgentTool(name, args, snapshot, options = {}) {
+  const normalizedArgs = normalizeToolInvocationArgs(args);
+  const query = cleanText(normalizedArgs?.query, 300);
+  const requestedLimit = Number(normalizedArgs?.limit);
+  const toolDefinition = AGENT_TOOL_DEFINITION_MAP.get(name);
+  const schemaLimit = Number(toolDefinition?.input_schema?.properties?.limit?.maximum);
+  const limitCap = Number.isFinite(schemaLimit) && schemaLimit > 0 ? schemaLimit : 25;
+  const limit = clamp(Number.isFinite(requestedLimit) && requestedLimit > 0 ? requestedLimit : 6, 1, limitCap);
+  const allowWriteTools = options?.allowWriteTools === true;
   const protocolStepText = (step) => {
     if (typeof step === 'string') {
       return cleanText(step, 220);
@@ -650,7 +1107,7 @@ function runAgentTool(name, args, snapshot) {
       summary: cleanText(project?.summary, 300)
     }));
 
-    return {
+    return buildAgentToolOutputEnvelope(name, normalizedArgs, {
       items,
       citations: items.map((project) => ({
         source: 'project',
@@ -658,7 +1115,7 @@ function runAgentTool(name, args, snapshot) {
         reason: 'Matched project metadata.'
       })),
       summary: `Found ${items.length} matching projects.`
-    };
+    });
   }
 
   if (name === 'search_protocols') {
@@ -676,7 +1133,7 @@ function runAgentTool(name, args, snapshot) {
       steps: asArray(protocol?.steps).slice(0, 8).map((step) => protocolStepText(step)).filter(Boolean)
     }));
 
-    return {
+    return buildAgentToolOutputEnvelope(name, normalizedArgs, {
       items,
       citations: items.map((protocol) => ({
         source: 'protocol',
@@ -684,7 +1141,7 @@ function runAgentTool(name, args, snapshot) {
         reason: 'Matched protocol name/steps.'
       })),
       summary: `Found ${items.length} matching protocols.`
-    };
+    });
   }
 
   if (name === 'search_notebook_entries') {
@@ -700,7 +1157,7 @@ function runAgentTool(name, args, snapshot) {
       updatedAt: cleanText(entry?.updatedAt, 80)
     }));
 
-    return {
+    return buildAgentToolOutputEnvelope(name, normalizedArgs, {
       items,
       citations: items.map((entry) => ({
         source: 'notebook_entry',
@@ -708,7 +1165,7 @@ function runAgentTool(name, args, snapshot) {
         reason: 'Matched notebook summary/results.'
       })),
       summary: `Found ${items.length} matching notebook entries.`
-    };
+    });
   }
 
   if (name === 'search_assays') {
@@ -740,7 +1197,7 @@ function runAgentTool(name, args, snapshot) {
       updated_at: cleanText(assay?.updated_at, 80)
     }));
 
-    return {
+    return buildAgentToolOutputEnvelope(name, normalizedArgs, {
       items,
       citations: items.map((assay) => ({
         source: 'assay',
@@ -748,7 +1205,7 @@ function runAgentTool(name, args, snapshot) {
         reason: 'Matched assay metadata or axis annotations.'
       })),
       summary: `Found ${items.length} matching assays.`
-    };
+    });
   }
 
   if (name === 'search_gel_analyses') {
@@ -781,7 +1238,7 @@ function runAgentTool(name, args, snapshot) {
       updated_at: cleanText(analysis?.updated_at, 80)
     }));
 
-    return {
+    return buildAgentToolOutputEnvelope(name, normalizedArgs, {
       items,
       citations: items.map((analysis) => ({
         source: 'gel_analysis',
@@ -789,7 +1246,7 @@ function runAgentTool(name, args, snapshot) {
         reason: 'Matched gel metadata, warnings, or confidence fields.'
       })),
       summary: `Found ${items.length} matching gel analyses.`
-    };
+    });
   }
 
   if (name === 'search_inventory') {
@@ -819,7 +1276,7 @@ function runAgentTool(name, args, snapshot) {
       limit
     );
 
-    return {
+    return buildAgentToolOutputEnvelope(name, normalizedArgs, {
       items,
       citations: items.map((item) => ({
         source: item.kind || 'inventory',
@@ -827,7 +1284,7 @@ function runAgentTool(name, args, snapshot) {
         reason: 'Matched inventory name and metadata.'
       })),
       summary: `Found ${items.length} matching inventory records.`
-    };
+    });
   }
 
   if (name === 'search_papers') {
@@ -849,7 +1306,7 @@ function runAgentTool(name, args, snapshot) {
       }))
     }));
 
-    return {
+    return buildAgentToolOutputEnvelope(name, normalizedArgs, {
       items,
       citations: items.map((paper) => ({
         source: 'paper',
@@ -857,14 +1314,136 @@ function runAgentTool(name, args, snapshot) {
         reason: 'Matched paper title, summary, or extracted methods.'
       })),
       summary: `Found ${items.length} matching papers.`
-    };
+    });
   }
 
-  return {
-    items: [],
-    citations: [],
-    summary: `Unknown tool: ${name}`
-  };
+  if (name === 'download_paper_pdf') {
+    if (!allowWriteTools) {
+      return buildAgentToolOutputEnvelope(
+        name,
+        normalizedArgs,
+        {
+          items: [],
+          citations: [],
+          summary: 'Write action blocked: explicit approval is required before downloading files.'
+        },
+        {
+          ok: false,
+          error: 'Write action blocked: explicit approval is required.'
+        }
+      );
+    }
+
+    const linkedTypeRaw = cleanText(normalizedArgs?.linked_type, 40).toLowerCase();
+    const linkedType = linkedTypeRaw === 'journal-club' ? 'journal-club' : 'project';
+    const linkedName = cleanText(normalizedArgs?.linked_name, 180) || 'Uncategorized';
+    const storagePath = cleanText(normalizedArgs?.storage_path, 1200)
+      || cleanText(snapshot?.settings?.storagePath, 1200);
+    const paperPdfUrl = cleanText(normalizedArgs?.paper_pdf_url, 2200);
+    const paperFileName = cleanText(normalizedArgs?.paper_file_name, 240);
+    const siPdfUrls = asArray(normalizedArgs?.si_pdf_urls).map((value) => cleanText(value, 2200)).filter(Boolean);
+    const siFileNames = asArray(normalizedArgs?.si_file_names).map((value) => cleanText(value, 240)).filter(Boolean);
+
+    if (!storagePath) {
+      return buildAgentToolOutputEnvelope(
+        name,
+        normalizedArgs,
+        {
+          items: [],
+          citations: [],
+          summary: 'Cannot download PDFs because Settings storage path is missing.'
+        },
+        {
+          ok: false,
+          error: 'Missing storage path. Set Settings > Storage Folder Path or pass storage_path.'
+        }
+      );
+    }
+
+    if (!paperPdfUrl) {
+      return buildAgentToolOutputEnvelope(
+        name,
+        normalizedArgs,
+        {
+          items: [],
+          citations: [],
+          summary: 'Missing paper PDF URL.'
+        },
+        {
+          ok: false,
+          error: 'Missing required argument paper_pdf_url.'
+        }
+      );
+    }
+
+    try {
+      const downloaded = await downloadPaperAndSiPdf({
+        storagePath,
+        linkedType,
+        linkedName,
+        paperPdfUrl,
+        paperFileName,
+        siPdfSources: siPdfUrls,
+        siFileNames
+      });
+
+      const items = [
+        {
+          kind: 'paper',
+          source_url: downloaded.paper.sourceUrl,
+          file_name: cleanText(downloaded.paper.fileName, 240),
+          relative_path: cleanText(downloaded.paper.relativePath, 600),
+          size_bytes: Number(downloaded.paper.sizeBytes) || 0
+        },
+        ...asArray(downloaded.siPdfs).map((item) => ({
+          kind: 'si',
+          source_url: item.sourceUrl,
+          file_name: cleanText(item.fileName, 240),
+          relative_path: cleanText(item.relativePath, 600),
+          size_bytes: Number(item.sizeBytes) || 0
+        }))
+      ];
+      const citations = items.map((item) => ({
+        source: 'paper_download',
+        pointer: cleanText(item.relative_path || item.file_name, 240),
+        reason: item.kind === 'si' ? 'Downloaded SI PDF file.' : 'Downloaded main paper PDF file.'
+      }));
+
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+        items,
+        citations,
+        summary: `Downloaded 1 paper PDF and ${Math.max(0, items.length - 1)} SI PDF(s) into ${cleanText(downloaded.folders?.papers, 320)}.`
+      });
+    } catch (error) {
+      return buildAgentToolOutputEnvelope(
+        name,
+        normalizedArgs,
+        {
+          items: [],
+          citations: [],
+          summary: 'Paper/SI download failed.'
+        },
+        {
+          ok: false,
+          error: String(error?.message || error || 'Paper/SI download failed.')
+        }
+      );
+    }
+  }
+
+  return buildAgentToolOutputEnvelope(
+    name,
+    normalizedArgs,
+    {
+      items: [],
+      citations: [],
+      summary: `Unknown tool: ${name}`
+    },
+    {
+      ok: false,
+      error: `Unknown tool: ${name}`
+    }
+  );
 }
 
 function extractConversation(rawConversation) {
@@ -875,6 +1454,96 @@ function extractConversation(rawConversation) {
       text: cleanText(item?.text, 2500)
     }))
     .filter((item) => item.text);
+}
+
+function buildAgentLogRequestId() {
+  return `${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
+}
+
+function summarizeLlmForAgentLog(llm) {
+  const source = llm && typeof llm === 'object' ? llm : {};
+  return {
+    provider: cleanText(source.provider, 80),
+    apiEndpoint: cleanText(source.apiEndpoint || source.api, 300),
+    model: cleanText(source.model, 120),
+    apiKeyProvided: Boolean(cleanText(source.apiKey, 12))
+  };
+}
+
+function normalizeDecisionRecordForAgentLog(record) {
+  const source = record && typeof record === 'object' ? record : {};
+  return {
+    assumptions: asArray(source.assumptions).map((item) => cleanText(item, 240)).filter(Boolean),
+    open_questions: asArray(source.open_questions).map((item) => cleanText(item, 240)).filter(Boolean),
+    verification_notes: asArray(source.verification_notes).map((item) => cleanText(item, 240)).filter(Boolean)
+  };
+}
+
+function normalizeIntermediateStatesForAgentLog(states) {
+  return asArray(states).map((state) => ({
+    state_id: cleanText(state?.state_id, 80),
+    created_at: cleanText(state?.created_at, 80),
+    stage: cleanText(state?.stage, 40),
+    goal: cleanText(state?.goal, 800),
+    assumptions: asArray(state?.assumptions).map((item) => cleanText(item, 240)).filter(Boolean),
+    open_questions: asArray(state?.open_questions).map((item) => cleanText(item, 240)).filter(Boolean),
+    evidence: asArray(state?.evidence).map((item) => ({
+      source: cleanText(item?.source, 120),
+      pointer: cleanText(item?.pointer, 180),
+      reason: cleanText(item?.reason, 220)
+    })),
+    proposed_actions: asArray(state?.proposed_actions).map((item) => ({
+      action_type: cleanText(item?.action_type, 40),
+      tool_name: cleanText(item?.tool_name, 120),
+      risk_level: cleanText(item?.risk_level, 20),
+      reason: cleanText(item?.reason, 260)
+    })),
+    confidence: Number.isFinite(Number(state?.confidence))
+      ? clamp(Number(state.confidence), 0, 1)
+      : null
+  }));
+}
+
+function normalizeToolTraceForAgentLog(trace) {
+  return asArray(trace).map((item) => ({
+    tool: cleanText(item?.tool, 120),
+    args: item?.args && typeof item.args === 'object' ? item.args : {},
+    summary: cleanText(item?.summary, 260)
+  }));
+}
+
+function summarizeAgentResultForLog(result) {
+  const source = result && typeof result === 'object' ? result : {};
+  return {
+    ok: source.ok === true,
+    provider: cleanText(source.provider, 80),
+    model: cleanText(source.model, 120),
+    answer: cleanText(source.answer, 12000),
+    confidence: Number.isFinite(Number(source.confidence))
+      ? clamp(Number(source.confidence), 0, 1)
+      : null,
+    requiresApproval: source.requiresApproval === true,
+    proposedWriteActions: asArray(source.proposedWriteActions).map((item) => ({
+      tool_name: cleanText(item?.tool_name, 120),
+      reason: cleanText(item?.reason, 280)
+    })),
+    citations: asArray(source.citations).map((item) => ({
+      source: cleanText(item?.source, 120),
+      pointer: cleanText(item?.pointer, 180),
+      reason: cleanText(item?.reason, 220)
+    })),
+    decisionRecord: normalizeDecisionRecordForAgentLog(source.decisionRecord),
+    intermediateStates: normalizeIntermediateStatesForAgentLog(source.intermediateStates),
+    toolTrace: normalizeToolTraceForAgentLog(source.toolTrace),
+    error: cleanText(source.error, 2000)
+  };
+}
+
+function formatAgentChatLogEntry(entry) {
+  return JSON.stringify({
+    timestamp: new Date().toISOString(),
+    ...entry
+  });
 }
 
 function resolveAgentApiKey(llm) {
@@ -895,23 +1564,78 @@ function resolveAgentApiKey(llm) {
   return '';
 }
 
-function resolveAgentEndpoint(llm) {
+function inferProviderFromEndpoint(endpoint) {
+  const value = cleanText(endpoint, 300).toLowerCase();
+  if (!value) {
+    return '';
+  }
+  if (value.startsWith('codex://') || value.includes('codex cli') || value.includes('openai-cli')) {
+    return LLM_PROVIDERS.CODEX;
+  }
+  if (value.includes('anthropic.com')) {
+    return LLM_PROVIDERS.CLAUDE;
+  }
+  if (value.includes('generativelanguage.googleapis.com') || value.includes('ai.google')) {
+    return LLM_PROVIDERS.GEMINI;
+  }
+  if (value.includes('openai.com') || value.includes('/openai/')) {
+    return LLM_PROVIDERS.OPENAI;
+  }
+  return '';
+}
+
+function normalizeLlmProvider(provider, endpoint = '') {
+  const clean = cleanText(provider, 80).toLowerCase();
+  if (Object.values(LLM_PROVIDERS).includes(clean)) {
+    return clean;
+  }
+  return inferProviderFromEndpoint(endpoint) || DEFAULT_LLM_PROVIDER;
+}
+
+function defaultEndpointForProvider(provider) {
+  const resolved = normalizeLlmProvider(provider);
+  return DEFAULT_LLM_ENDPOINTS[resolved] || DEFAULT_LLM_ENDPOINTS[DEFAULT_LLM_PROVIDER];
+}
+
+function resolveAgentProvider(llm) {
+  return normalizeLlmProvider(llm?.provider, llm?.apiEndpoint || llm?.api);
+}
+
+function resolveAgentEndpoint(llm, provider = DEFAULT_LLM_PROVIDER) {
   const endpoint = cleanText(llm?.apiEndpoint, 300);
+  if (provider === LLM_PROVIDERS.CODEX && endpoint) {
+    return endpoint;
+  }
   if (endpoint && /^https?:\/\//i.test(endpoint)) {
     return endpoint;
   }
-  return DEFAULT_LLM_RESPONSES_ENDPOINT;
+  return defaultEndpointForProvider(provider);
 }
 
-function resolveAgentModel(llm) {
+function resolveAgentModel(llm, provider = DEFAULT_LLM_PROVIDER) {
   const model = cleanText(llm?.model, 120);
-  return model || DEFAULT_AGENT_MODEL;
+  if (model) {
+    return model;
+  }
+  if (Object.prototype.hasOwnProperty.call(DEFAULT_AGENT_MODELS, provider)) {
+    return DEFAULT_AGENT_MODELS[provider];
+  }
+  return DEFAULT_AGENT_MODELS[DEFAULT_LLM_PROVIDER];
 }
 
 function buildAgentSystemPrompt(projectName, prompts) {
   const projectScope = projectName ? `Scoped project: ${projectName}.` : 'Scope: all projects.';
   const template = String(prompts?.agent?.systemPromptTemplate || '').trim() || DEFAULT_AGENT_SYSTEM_PROMPT_TEMPLATE;
-  return renderPromptTemplate(template, { projectScope });
+  const basePrompt = renderPromptTemplate(template, { projectScope });
+  if (!AGENT_TOOL_CONTRACT_PROMPT) {
+    return basePrompt;
+  }
+  return [
+    basePrompt,
+    AGENT_TOOL_CONTRACT_PROMPT,
+    `Tool output envelope: ${AGENT_TOOL_OUTPUT_SCHEMA_NAME}@${AGENT_TOOL_OUTPUT_SCHEMA_VERSION}.`,
+    'Always send tool arguments as JSON and read tool results from result/items/citations/summary.'
+  ].join('\n\n');
 }
 
 function buildAgentSynthesisPrompt(requiresApproval, prompts) {
@@ -925,18 +1649,20 @@ function sleep(ms) {
   });
 }
 
-async function requestResponsesWithBackoff({ endpoint, apiKey, body }) {
+async function requestJsonWithBackoff({
+  endpoint,
+  headers,
+  body,
+  retryStatuses = [429, 503],
+  maxRetries = 3
+}) {
   let attempt = 0;
-  const maxRetries = 3;
   while (attempt <= maxRetries) {
     let response;
     try {
       response = await fetch(endpoint, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`
-        },
+        headers,
         body: JSON.stringify(body)
       });
     } catch (error) {
@@ -949,7 +1675,7 @@ async function requestResponsesWithBackoff({ endpoint, apiKey, body }) {
       continue;
     }
 
-    if (response.status !== 429 && response.status !== 503) {
+    if (!retryStatuses.includes(response.status)) {
       if (!response.ok) {
         const raw = await response.text();
         throw new Error(`LLM API error (${response.status}): ${raw}`);
@@ -971,6 +1697,543 @@ async function requestResponsesWithBackoff({ endpoint, apiKey, body }) {
   }
 
   throw new Error('LLM API request failed after retries.');
+}
+
+async function requestOpenAiResponsesWithBackoff({ endpoint, apiKey, body }) {
+  return requestJsonWithBackoff({
+    endpoint,
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`
+    },
+    body,
+    retryStatuses: [429, 503]
+  });
+}
+
+async function requestClaudeMessagesWithBackoff({ endpoint, apiKey, body }) {
+  return requestJsonWithBackoff({
+    endpoint,
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01'
+    },
+    body,
+    retryStatuses: [429, 503, 529]
+  });
+}
+
+function buildGeminiGenerateContentUrl(endpoint, model, apiKey) {
+  const cleanEndpoint = cleanText(endpoint, 300) || DEFAULT_LLM_ENDPOINTS[LLM_PROVIDERS.GEMINI];
+  let url = cleanEndpoint.replace(/\/+$/, '');
+  if (!url.includes(':generateContent')) {
+    if (/\/models\/[^/?#]+$/i.test(url)) {
+      url = `${url}:generateContent`;
+    } else if (/\/models$/i.test(url)) {
+      url = `${url}/${encodeURIComponent(model)}:generateContent`;
+    } else {
+      url = `${url}/models/${encodeURIComponent(model)}:generateContent`;
+    }
+  }
+  return `${url}${url.includes('?') ? '&' : '?'}key=${encodeURIComponent(apiKey)}`;
+}
+
+async function requestGeminiGenerateContentWithBackoff({ endpoint, apiKey, model, body }) {
+  return requestJsonWithBackoff({
+    endpoint: buildGeminiGenerateContentUrl(endpoint, model, apiKey),
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body,
+    retryStatuses: [429, 503]
+  });
+}
+
+const CLAUDE_TOOL_DEFINITIONS = AGENT_TOOL_DEFINITIONS.map((tool) => ({
+  name: tool.name,
+  description: tool.description,
+  input_schema: tool.parameters
+}));
+
+const GEMINI_TOOL_DEFINITIONS = [
+  {
+    functionDeclarations: AGENT_TOOL_DEFINITIONS.map((tool) => ({
+      name: tool.name,
+      description: tool.description,
+      parameters: tool.parameters
+    }))
+  }
+];
+
+function toClaudeMessage(role, text) {
+  return {
+    role: role === 'assistant' ? 'assistant' : 'user',
+    content: [
+      {
+        type: 'text',
+        text: String(text || '')
+      }
+    ]
+  };
+}
+
+function toGeminiContent(role, text) {
+  return {
+    role: role === 'assistant' ? 'model' : 'user',
+    parts: [
+      {
+        text: String(text || '')
+      }
+    ]
+  };
+}
+
+function extractClaudeResponseText(payload) {
+  return asArray(payload?.content)
+    .filter((item) => item?.type === 'text' && item.text)
+    .map((item) => item.text)
+    .join('\n')
+    .trim();
+}
+
+function extractClaudeFunctionCalls(payload) {
+  return asArray(payload?.content)
+    .filter((item) => item?.type === 'tool_use')
+    .map((item, index) => ({
+      callId: cleanText(item?.id, 120) || `claude-call-${index + 1}`,
+      name: cleanText(item?.name, 120),
+      argsText: JSON.stringify(item?.input || {})
+    }))
+    .filter((item) => item.callId && item.name);
+}
+
+function extractGeminiPrimaryCandidate(payload) {
+  if (!Array.isArray(payload?.candidates) || payload.candidates.length === 0) {
+    return null;
+  }
+  return payload.candidates[0];
+}
+
+function extractGeminiPartFunctionCall(part) {
+  if (!part || typeof part !== 'object') {
+    return null;
+  }
+  return part.functionCall && typeof part.functionCall === 'object'
+    ? part.functionCall
+    : part.function_call && typeof part.function_call === 'object'
+      ? part.function_call
+      : null;
+}
+
+function extractGeminiResponseText(payload) {
+  const candidate = extractGeminiPrimaryCandidate(payload);
+  if (!candidate?.content?.parts) {
+    return '';
+  }
+  return asArray(candidate.content.parts)
+    .filter((part) => typeof part?.text === 'string' && part.text.trim())
+    .map((part) => part.text)
+    .join('\n')
+    .trim();
+}
+
+function extractGeminiFunctionCalls(payload, round = 0) {
+  const candidate = extractGeminiPrimaryCandidate(payload);
+  if (!candidate?.content?.parts) {
+    return [];
+  }
+  const calls = [];
+  asArray(candidate.content.parts).forEach((part, index) => {
+    const fn = extractGeminiPartFunctionCall(part);
+    if (!fn?.name) {
+      return;
+    }
+    const args = fn.args && typeof fn.args === 'object' ? fn.args : {};
+    calls.push({
+      callId: cleanText(fn.id, 120) || `gemini-call-${round + 1}-${index + 1}`,
+      name: cleanText(fn.name, 120),
+      argsText: JSON.stringify(args)
+    });
+  });
+  return calls.filter((item) => item.callId && item.name);
+}
+
+function normalizeClaudeAssistantContent(payload) {
+  return asArray(payload?.content)
+    .map((item) => {
+      if (item?.type === 'text') {
+        return {
+          type: 'text',
+          text: String(item.text || '')
+        };
+      }
+      if (item?.type === 'tool_use') {
+        return {
+          type: 'tool_use',
+          id: cleanText(item.id, 120),
+          name: cleanText(item.name, 120),
+          input: item.input && typeof item.input === 'object' ? item.input : {}
+        };
+      }
+      return null;
+    })
+    .filter(Boolean);
+}
+
+function parseToolOutputObject(rawOutput) {
+  const clean = String(rawOutput || '').trim();
+  if (!clean) {
+    return {};
+  }
+  const parsed = safeParseJson(clean, null);
+  if (parsed && typeof parsed === 'object') {
+    return parsed;
+  }
+  return { text: clean };
+}
+
+async function startAgentSession({
+  provider,
+  endpoint,
+  apiKey,
+  model,
+  systemPrompt,
+  conversation,
+  message,
+  hasLatestUserInConversation
+}) {
+  if (provider === LLM_PROVIDERS.CLAUDE) {
+    const messages = [
+      ...conversation.map((item) => toClaudeMessage(item.role, item.text)),
+      ...(hasLatestUserInConversation ? [] : [toClaudeMessage('user', message)])
+    ];
+    const response = await requestClaudeMessagesWithBackoff({
+      endpoint,
+      apiKey,
+      body: {
+        model,
+        system: systemPrompt,
+        messages,
+        tools: CLAUDE_TOOL_DEFINITIONS,
+        max_tokens: 1400
+      }
+    });
+    return {
+      provider,
+      endpoint,
+      apiKey,
+      model,
+      systemPrompt,
+      messages,
+      raw: response,
+      round: 0
+    };
+  }
+
+  if (provider === LLM_PROVIDERS.GEMINI) {
+    const contents = [
+      ...conversation.map((item) => toGeminiContent(item.role, item.text)),
+      ...(hasLatestUserInConversation ? [] : [toGeminiContent('user', message)])
+    ];
+    const response = await requestGeminiGenerateContentWithBackoff({
+      endpoint,
+      apiKey,
+      model,
+      body: {
+        systemInstruction: {
+          parts: [{ text: systemPrompt }]
+        },
+        contents,
+        tools: GEMINI_TOOL_DEFINITIONS,
+        toolConfig: {
+          functionCallingConfig: {
+            mode: 'AUTO'
+          }
+        },
+        generationConfig: {
+          maxOutputTokens: 1400
+        }
+      }
+    });
+    return {
+      provider,
+      endpoint,
+      apiKey,
+      model,
+      systemPrompt,
+      contents,
+      raw: response,
+      round: 0
+    };
+  }
+
+  const response = await requestOpenAiResponsesWithBackoff({
+    endpoint,
+    apiKey,
+    body: {
+      model,
+      input: [
+        toInputText('system', systemPrompt),
+        ...conversation.map((item) => toInputText(item.role, item.text)),
+        ...(hasLatestUserInConversation ? [] : [toInputText('user', message)])
+      ],
+      tools: AGENT_TOOL_DEFINITIONS,
+      tool_choice: 'auto',
+      parallel_tool_calls: false,
+      max_output_tokens: 1400
+    }
+  });
+  return {
+    provider: LLM_PROVIDERS.OPENAI,
+    endpoint,
+    apiKey,
+    model,
+    raw: response,
+    round: 0
+  };
+}
+
+function extractAgentSessionFunctionCalls(session) {
+  if (!session) {
+    return [];
+  }
+  if (session.provider === LLM_PROVIDERS.CLAUDE) {
+    return extractClaudeFunctionCalls(session.raw);
+  }
+  if (session.provider === LLM_PROVIDERS.GEMINI) {
+    return extractGeminiFunctionCalls(session.raw, session.round || 0);
+  }
+  return extractFunctionCalls(session.raw);
+}
+
+function extractAgentSessionText(session) {
+  if (!session) {
+    return '';
+  }
+  if (session.provider === LLM_PROVIDERS.CLAUDE) {
+    return extractClaudeResponseText(session.raw);
+  }
+  if (session.provider === LLM_PROVIDERS.GEMINI) {
+    return extractGeminiResponseText(session.raw);
+  }
+  return extractResponseText(session.raw);
+}
+
+async function continueAgentSessionWithToolOutputs(session, toolOutputs) {
+  if (!session) {
+    return session;
+  }
+
+  if (session.provider === LLM_PROVIDERS.CLAUDE) {
+    const byId = new Map(toolOutputs.map((item) => [item.callId, item]));
+    const assistantContent = normalizeClaudeAssistantContent(session.raw);
+    const toolResultBlocks = asArray(session.raw?.content)
+      .filter((item) => item?.type === 'tool_use')
+      .map((item, index) => {
+        const callId = cleanText(item?.id, 120) || `claude-call-${index + 1}`;
+        const matched = byId.get(callId) || toolOutputs.find((output) => output.name === item?.name);
+        return {
+          type: 'tool_result',
+          tool_use_id: callId,
+          content: matched?.output || '{}'
+        };
+      });
+
+    const nextMessages = [
+      ...session.messages,
+      { role: 'assistant', content: assistantContent },
+      { role: 'user', content: toolResultBlocks }
+    ];
+
+    const response = await requestClaudeMessagesWithBackoff({
+      endpoint: session.endpoint,
+      apiKey: session.apiKey,
+      body: {
+        model: session.model,
+        system: session.systemPrompt,
+        messages: nextMessages,
+        tools: CLAUDE_TOOL_DEFINITIONS,
+        max_tokens: 1400
+      }
+    });
+
+    return {
+      ...session,
+      messages: nextMessages,
+      raw: response,
+      round: Number(session.round || 0) + 1
+    };
+  }
+
+  if (session.provider === LLM_PROVIDERS.GEMINI) {
+    const callOutputs = new Map(toolOutputs.map((item) => [item.callId, item]));
+    const candidate = extractGeminiPrimaryCandidate(session.raw);
+    const modelContent = candidate?.content && typeof candidate.content === 'object'
+      ? candidate.content
+      : null;
+    const toolCalls = extractGeminiFunctionCalls(session.raw, session.round || 0);
+    const responseParts = toolCalls.map((call) => {
+      const matched = callOutputs.get(call.callId) || toolOutputs.find((item) => item.name === call.name);
+      return {
+        functionResponse: {
+          name: call.name,
+          response: parseToolOutputObject(matched?.output)
+        }
+      };
+    });
+
+    const nextContents = [...session.contents];
+    if (modelContent) {
+      nextContents.push(modelContent);
+    }
+    if (responseParts.length) {
+      nextContents.push({
+        role: 'user',
+        parts: responseParts
+      });
+    }
+
+    const response = await requestGeminiGenerateContentWithBackoff({
+      endpoint: session.endpoint,
+      apiKey: session.apiKey,
+      model: session.model,
+      body: {
+        systemInstruction: {
+          parts: [{ text: session.systemPrompt }]
+        },
+        contents: nextContents,
+        tools: GEMINI_TOOL_DEFINITIONS,
+        toolConfig: {
+          functionCallingConfig: {
+            mode: 'AUTO'
+          }
+        },
+        generationConfig: {
+          maxOutputTokens: 1400
+        }
+      }
+    });
+
+    return {
+      ...session,
+      contents: nextContents,
+      raw: response,
+      round: Number(session.round || 0) + 1
+    };
+  }
+
+  const response = await requestOpenAiResponsesWithBackoff({
+    endpoint: session.endpoint,
+    apiKey: session.apiKey,
+    body: {
+      model: session.model,
+      previous_response_id: session.raw?.id,
+      input: toolOutputs.map((output) => ({
+        type: 'function_call_output',
+        call_id: output.callId,
+        output: output.output
+      })),
+      tools: AGENT_TOOL_DEFINITIONS,
+      tool_choice: 'auto',
+      parallel_tool_calls: false,
+      max_output_tokens: 1400
+    }
+  });
+
+  return {
+    ...session,
+    raw: response,
+    round: Number(session.round || 0) + 1
+  };
+}
+
+async function requestSynthesisPayload({
+  provider,
+  endpoint,
+  apiKey,
+  model,
+  synthesisRequest,
+  message,
+  draftAnswer,
+  toolTrace,
+  evidence
+}) {
+  const userPrompt = [
+    `User request: ${message}`,
+    `Draft answer: ${draftAnswer || '-'}`,
+    `Tool trace: ${JSON.stringify(toolTrace.slice(0, 20))}`,
+    `Evidence: ${JSON.stringify(evidence.slice(0, 20))}`
+  ].join('\n\n');
+
+  if (provider === LLM_PROVIDERS.CLAUDE) {
+    const response = await requestClaudeMessagesWithBackoff({
+      endpoint,
+      apiKey,
+      body: {
+        model,
+        system: synthesisRequest,
+        max_tokens: 1600,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: userPrompt
+              }
+            ]
+          }
+        ]
+      }
+    });
+    return extractClaudeResponseText(response);
+  }
+
+  if (provider === LLM_PROVIDERS.GEMINI) {
+    const response = await requestGeminiGenerateContentWithBackoff({
+      endpoint,
+      apiKey,
+      model,
+      body: {
+        systemInstruction: {
+          parts: [{ text: synthesisRequest }]
+        },
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: userPrompt }]
+          }
+        ],
+        generationConfig: {
+          maxOutputTokens: 1600
+        }
+      }
+    });
+    return extractGeminiResponseText(response);
+  }
+
+  const response = await requestOpenAiResponsesWithBackoff({
+    endpoint,
+    apiKey,
+    body: {
+      model,
+      input: [
+        toInputText('system', synthesisRequest),
+        toInputText('user', userPrompt)
+      ],
+      text: {
+        format: {
+          type: 'json_schema',
+          name: 'agent_result',
+          strict: true,
+          schema: AGENT_RESULT_SCHEMA
+        }
+      },
+      max_output_tokens: 1600
+    }
+  });
+  return extractResponseText(response);
 }
 
 function normalizeAgentOutput(raw, fallbackText) {
@@ -1002,33 +2265,255 @@ function normalizeAgentOutput(raw, fallbackText) {
   };
 }
 
+function toPromptConversationTranscript(conversation) {
+  const rows = asArray(conversation).map((item, index) => {
+    const role = item?.role === 'assistant' ? 'assistant' : 'user';
+    return `${index + 1}. ${role}: ${cleanText(item?.text, 2400)}`;
+  }).filter(Boolean);
+  return rows.length ? rows.join('\n') : 'No prior messages.';
+}
+
+async function buildCodexAgentContext(message, snapshot) {
+  const retrievalTools = [
+    'search_projects',
+    'search_protocols',
+    'search_notebook_entries',
+    'search_assays',
+    'search_gel_analyses',
+    'search_inventory',
+    'search_papers'
+  ];
+  const contextSlices = [];
+  const toolTrace = [];
+  const evidence = [];
+
+  for (const toolName of retrievalTools) {
+    const result = await runAgentTool(toolName, { query: message, limit: 5 }, snapshot);
+    const items = asArray(result?.items).slice(0, 5);
+    if (!items.length) {
+      continue;
+    }
+    contextSlices.push({
+      tool: toolName,
+      items
+    });
+    toolTrace.push({
+      tool: toolName,
+      args: result?.input && typeof result.input === 'object' ? result.input : { query: message, limit: 5 },
+      summary: cleanText(result?.summary || `Collected ${items.length} records.`, 240)
+    });
+    asArray(result?.citations).slice(0, 8).forEach((citation) => {
+      evidence.push({
+        source: cleanText(citation?.source, 120),
+        pointer: cleanText(citation?.pointer, 180),
+        reason: cleanText(citation?.reason, 220)
+      });
+    });
+  }
+
+  return {
+    contextSlices,
+    toolTrace,
+    evidence
+  };
+}
+
+async function runCodexAgentController({
+  provider,
+  model,
+  message,
+  conversation,
+  hasLatestUserInConversation,
+  snapshot,
+  projectName,
+  promptConfig,
+  allowWriteTools
+}) {
+  const intermediateStates = [];
+  const toolTrace = [];
+  const evidence = [];
+  const requiresApproval = containsWriteIntent(message) && !allowWriteTools;
+
+  intermediateStates.push(buildIntermediateState('intake', message, {
+    assumptions: ['Codex CLI provider selected; retrieval context is assembled before generation.'],
+    openQuestions: requiresApproval ? ['User may want a write action; approval is required before any write.'] : [],
+    confidence: 0.44
+  }));
+
+  intermediateStates.push(buildIntermediateState('context', 'Loaded snapshot context for Codex retrieval.', {
+    assumptions: [
+      `Context sizes: projects=${snapshot.projects.length}, protocols=${snapshot.protocols.length}, notebook_entries=${snapshot.notebookEntries.length}, assays=${snapshot.assays.length}, gel_analyses=${snapshot.gelAnalyses.length}, papers=${snapshot.papers.length}.`
+    ],
+    confidence: 0.52
+  }));
+
+  const collected = await buildCodexAgentContext(message, snapshot);
+  toolTrace.push(...collected.toolTrace);
+  evidence.push(...collected.evidence);
+
+  intermediateStates.push(buildIntermediateState('execute', `Prepared ${collected.contextSlices.length} retrieval context slices for Codex CLI.`, {
+    evidence: evidence.slice(0, 12),
+    proposedActions: collected.contextSlices.map((slice) => ({
+      action_type: 'read',
+      tool_name: slice.tool,
+      risk_level: 'low',
+      reason: 'Context was retrieved locally before Codex generation.'
+    })),
+    confidence: collected.contextSlices.length ? 0.63 : 0.54
+  }));
+
+  const promptConversation = hasLatestUserInConversation
+    ? conversation
+    : [...conversation, { role: 'user', text: message }];
+  const systemPrompt = buildAgentSystemPrompt(projectName, promptConfig);
+  const draftPrompt = [
+    systemPrompt,
+    'Task: answer the latest user request using only the retrieved Enana context below. If context is missing, explicitly say what is missing.',
+    `Conversation transcript:\n${toPromptConversationTranscript(promptConversation)}`,
+    `Retrieved context JSON:\n${cleanText(JSON.stringify(collected.contextSlices, null, 2), 70000)}`,
+    'Respond as concise assistant text.'
+  ].join('\n\n');
+
+  const draftAnswer = await requestCodexCliText({
+    prompt: draftPrompt,
+    model,
+    cwd: getCodexCliWorkingDirectory()
+  });
+
+  intermediateStates.push(buildIntermediateState('verify', 'Verified evidence coverage and policy constraints.', {
+    assumptions: ['Only read-context assembly was executed before Codex response synthesis.'],
+    openQuestions: evidence.length ? [] : ['No direct matches were found in local retrieval context.'],
+    evidence: evidence.slice(-12),
+    confidence: evidence.length ? 0.69 : 0.56
+  }));
+
+  const synthesisRequest = buildAgentSynthesisPrompt(requiresApproval, promptConfig);
+  let normalized;
+  try {
+    const structuredRaw = await requestCodexCliText({
+      prompt: [
+        synthesisRequest,
+        'Return valid JSON and include citations only from provided evidence.',
+        `User request: ${message}`,
+        `Draft answer: ${draftAnswer || '-'}`,
+        `Tool trace: ${JSON.stringify(toolTrace.slice(0, 20))}`,
+        `Evidence: ${JSON.stringify(evidence.slice(0, 20))}`
+      ].join('\n\n'),
+      model,
+      cwd: getCodexCliWorkingDirectory()
+    });
+    normalized = normalizeAgentOutput(structuredRaw, draftAnswer);
+  } catch {
+    normalized = {
+      answer: draftAnswer || 'No answer generated.',
+      confidence: evidence.length ? 0.64 : 0.5,
+      requiresApproval,
+      proposedWriteActions: [],
+      citations: evidence.slice(0, 12),
+      decisionRecord: {
+        assumptions: ['Structured synthesis was not available for Codex CLI output.'],
+        open_questions: evidence.length ? [] : ['Evidence retrieval returned no direct matches.'],
+        verification_notes: ['Returned fallback draft answer with retrieved context snapshot.']
+      }
+    };
+  }
+
+  if (requiresApproval && normalized.proposedWriteActions.length === 0) {
+    normalized.proposedWriteActions = [
+      {
+        tool_name: 'write_operation_pending_approval',
+        reason: 'User intent appears write-oriented; explicit approval is required before execution.'
+      }
+    ];
+  }
+  if (requiresApproval) {
+    normalized.requiresApproval = true;
+  }
+
+  intermediateStates.push(buildIntermediateState('synthesize', 'Generated final user-facing response with decision record.', {
+    evidence: normalized.citations,
+    proposedActions: normalized.proposedWriteActions.map((action) => ({
+      action_type: 'write',
+      tool_name: action?.tool_name,
+      risk_level: 'high',
+      reason: action?.reason
+    })),
+    confidence: normalized.confidence
+  }));
+
+  intermediateStates.push(buildIntermediateState('handoff', 'Prepared response for UI handoff and audit trail.', {
+    assumptions: [
+      allowWriteTools
+        ? 'Write approval flag was enabled for this request.'
+        : 'Any write action remains pending explicit approval.'
+    ],
+    confidence: normalized.confidence
+  }));
+
+  return {
+    ok: true,
+    provider,
+    model: model || 'codex-default',
+    answer: normalized.answer,
+    confidence: normalized.confidence,
+    requiresApproval: normalized.requiresApproval,
+    proposedWriteActions: normalized.proposedWriteActions,
+    citations: normalized.citations,
+    decisionRecord: normalized.decisionRecord,
+    intermediateStates,
+    toolTrace
+  };
+}
+
 async function runAgentController(payload) {
   const message = cleanText(payload?.message, 3000);
   if (!message) {
     throw new Error('Message is required.');
   }
 
-  const apiKey = resolveAgentApiKey(payload?.llm);
-  if (!apiKey) {
+  const provider = resolveAgentProvider(payload?.llm);
+  const endpoint = resolveAgentEndpoint(payload?.llm, provider);
+  const model = resolveAgentModel(payload?.llm, provider);
+  const apiKey = provider === LLM_PROVIDERS.CODEX ? '' : resolveAgentApiKey(payload?.llm);
+  if (provider !== LLM_PROVIDERS.CODEX && !apiKey) {
     throw new Error('Missing LLM API key. Set it in Settings > LLM Model & API, or use LLM_API_KEY / ENANA_LLM_API_KEY.');
   }
-
-  const endpoint = resolveAgentEndpoint(payload?.llm);
-  const model = resolveAgentModel(payload?.llm);
   const conversation = extractConversation(payload?.conversation);
   const hasLatestUserInConversation = conversation.length > 0
     && conversation[conversation.length - 1].role === 'user'
     && conversation[conversation.length - 1].text === message;
   const snapshot = normalizeAgentSnapshot(payload?.stateSnapshot);
+  const allowWriteTools = payload?.allowWriteTools === true;
   const projectName = cleanText(payload?.projectName, 180);
   const promptConfig = await loadLlmPrompts();
+
+  if (provider === LLM_PROVIDERS.CODEX) {
+    return runCodexAgentController({
+      provider,
+      model,
+      message,
+      conversation,
+      hasLatestUserInConversation,
+      snapshot,
+      projectName,
+      promptConfig,
+      allowWriteTools
+    });
+  }
+
   const intermediateStates = [];
   const toolTrace = [];
   const evidence = [];
 
   intermediateStates.push(buildIntermediateState('intake', message, {
-    assumptions: ['User question is interpreted as read-first unless writes are explicitly requested.'],
-    openQuestions: containsWriteIntent(message) ? ['User may want a write action; approval is required before any write.'] : [],
+    assumptions: [
+      allowWriteTools
+        ? 'Explicit approval flag enabled write tools for this request.'
+        : 'User question is interpreted as read-first unless writes are explicitly requested.'
+    ],
+    openQuestions: containsWriteIntent(message) && !allowWriteTools
+      ? ['User may want a write action; approval is required before any write.']
+      : [],
     confidence: 0.45
   }));
 
@@ -1039,45 +2524,39 @@ async function runAgentController(payload) {
     confidence: 0.52
   }));
 
-  const initialResponse = await requestResponsesWithBackoff({
+  const systemPrompt = buildAgentSystemPrompt(projectName, promptConfig);
+  let session = await startAgentSession({
+    provider,
     endpoint,
     apiKey,
-    body: {
-      model,
-      input: [
-        toInputText('system', buildAgentSystemPrompt(projectName, promptConfig)),
-        ...conversation.map((item) => toInputText(item.role, item.text)),
-        ...(hasLatestUserInConversation ? [] : [toInputText('user', message)])
-      ],
-      tools: AGENT_TOOL_DEFINITIONS,
-      tool_choice: 'auto',
-      parallel_tool_calls: false,
-      max_output_tokens: 1400
-    }
+    model,
+    systemPrompt,
+    conversation,
+    message,
+    hasLatestUserInConversation
   });
-
-  let activeResponse = initialResponse;
   let round = 0;
 
   while (round < MAX_AGENT_TOOL_ROUNDS) {
-    const calls = extractFunctionCalls(activeResponse);
+    const calls = extractAgentSessionFunctionCalls(session);
     if (!calls.length) {
       break;
     }
 
     const toolOutputs = [];
     const proposedActions = [];
-    calls.slice(0, 4).forEach((call) => {
-      const args = safeParseJson(call.argsText, {});
-      const toolResult = runAgentTool(call.name, args, snapshot);
+    for (const call of calls.slice(0, 4)) {
+      const args = normalizeToolInvocationArgs(call.argsText);
+      const toolResult = await runAgentTool(call.name, args, snapshot, { allowWriteTools });
+      const normalizedInput = toolResult?.input && typeof toolResult.input === 'object' ? toolResult.input : args;
       toolOutputs.push({
-        type: 'function_call_output',
-        call_id: call.callId,
+        callId: call.callId,
+        name: call.name,
         output: JSON.stringify(toolResult)
       });
       toolTrace.push({
         tool: call.name,
-        args,
+        args: normalizedInput,
         summary: cleanText(toolResult.summary, 240)
       });
       asArray(toolResult.citations).forEach((citation) => {
@@ -1088,12 +2567,16 @@ async function runAgentController(payload) {
         });
       });
       proposedActions.push({
-        action_type: 'read',
+        action_type: isWriteTool(call.name) ? 'write' : 'read',
         tool_name: call.name,
-        risk_level: 'low',
-        reason: 'Model-requested read operation.'
+        risk_level: isWriteTool(call.name) ? 'high' : 'low',
+        reason: isWriteTool(call.name)
+          ? (allowWriteTools
+            ? 'Model-requested write operation executed with explicit approval.'
+            : 'Model-requested write operation blocked pending explicit approval.')
+          : 'Model-requested read operation.'
       });
-    });
+    }
 
     intermediateStates.push(buildIntermediateState('execute', `Executed ${toolOutputs.length} tool calls in round ${round + 1}.`, {
       evidence: evidence.slice(-10),
@@ -1101,28 +2584,20 @@ async function runAgentController(payload) {
       confidence: 0.62
     }));
 
-    activeResponse = await requestResponsesWithBackoff({
-      endpoint,
-      apiKey,
-      body: {
-        model,
-        previous_response_id: activeResponse.id,
-        input: toolOutputs,
-        tools: AGENT_TOOL_DEFINITIONS,
-        tool_choice: 'auto',
-        parallel_tool_calls: false,
-        max_output_tokens: 1400
-      }
-    });
+    session = await continueAgentSessionWithToolOutputs(session, toolOutputs);
 
     round += 1;
   }
 
-  const draftAnswer = extractResponseText(activeResponse);
-  const requiresApproval = containsWriteIntent(message);
+  const draftAnswer = extractAgentSessionText(session);
+  const requiresApproval = containsWriteIntent(message) && !allowWriteTools;
 
   intermediateStates.push(buildIntermediateState('verify', 'Verified evidence coverage and policy constraints.', {
-    assumptions: ['Only read tools were executed by policy.'],
+    assumptions: [
+      allowWriteTools
+        ? 'Write tools were allowed for this request via explicit approval.'
+        : 'Write tools were blocked by policy; only read tools were executed.'
+    ],
     openQuestions: evidence.length ? [] : ['No evidence citations were produced by tools.'],
     evidence: evidence.slice(-12),
     confidence: evidence.length ? 0.72 : 0.58
@@ -1132,33 +2607,17 @@ async function runAgentController(payload) {
 
   let normalized;
   try {
-    const synthesisPayload = await requestResponsesWithBackoff({
+    const structuredRaw = await requestSynthesisPayload({
+      provider,
       endpoint,
       apiKey,
-      body: {
-        model,
-        input: [
-          toInputText('system', synthesisRequest),
-          toInputText('user', [
-            `User request: ${message}`,
-            `Draft answer: ${draftAnswer || '-'}`,
-            `Tool trace: ${JSON.stringify(toolTrace.slice(0, 20))}`,
-            `Evidence: ${JSON.stringify(evidence.slice(0, 20))}`
-          ].join('\n\n'))
-        ],
-        text: {
-          format: {
-            type: 'json_schema',
-            name: 'agent_result',
-            strict: true,
-            schema: AGENT_RESULT_SCHEMA
-          }
-        },
-        max_output_tokens: 1600
-      }
+      model,
+      synthesisRequest,
+      message,
+      draftAnswer,
+      toolTrace,
+      evidence
     });
-
-    const structuredRaw = extractResponseText(synthesisPayload);
     normalized = normalizeAgentOutput(structuredRaw, draftAnswer);
   } catch {
     normalized = {
@@ -1199,12 +2658,17 @@ async function runAgentController(payload) {
   }));
 
   intermediateStates.push(buildIntermediateState('handoff', 'Prepared response for UI handoff and audit trail.', {
-    assumptions: ['Any write action remains pending explicit approval.'],
+    assumptions: [
+      allowWriteTools
+        ? 'Write tools were allowed for this request via explicit approval.'
+        : 'Any write action remains pending explicit approval.'
+    ],
     confidence: normalized.confidence
   }));
 
   return {
     ok: true,
+    provider,
     model,
     answer: normalized.answer,
     confidence: normalized.confidence,
@@ -1218,10 +2682,84 @@ async function runAgentController(payload) {
 }
 
 ipcMain.handle('agent:chat', async (_event, payload) => {
+  const normalizedPayload = normalizeJsonPayload(payload, {});
+  const requestId = buildAgentLogRequestId();
+  const logPath = getAgentChatLogPath();
+  await appendAgentChatLogEntry(logPath, formatAgentChatLogEntry({
+    type: 'agent-chat-request',
+    requestId,
+    projectId: cleanText(normalizedPayload?.projectId, 80),
+    projectName: cleanText(normalizedPayload?.projectName, 180),
+    allowWriteTools: normalizedPayload?.allowWriteTools === true,
+    message: cleanText(normalizedPayload?.message, 3000),
+    conversation: extractConversation(normalizedPayload?.conversation),
+    llm: summarizeLlmForAgentLog(normalizedPayload?.llm)
+  }));
+
   try {
-    return await runAgentController(payload);
+    const result = await runAgentController(normalizedPayload);
+    await appendAgentChatLogEntry(logPath, formatAgentChatLogEntry({
+      type: 'agent-chat-result',
+      requestId,
+      ...summarizeAgentResultForLog(result)
+    }));
+    return result;
   } catch (error) {
-    return { ok: false, error: String(error?.message || error) };
+    const errorMessage = String(error?.message || error);
+    await appendAgentChatLogEntry(logPath, formatAgentChatLogEntry({
+      type: 'agent-chat-error',
+      requestId,
+      ok: false,
+      error: cleanText(errorMessage, 2000)
+    }));
+    return { ok: false, error: errorMessage };
+  }
+});
+
+ipcMain.handle('agent:get-io-contract', async () => ({
+  ok: true,
+  contract: AGENT_IO_CONTRACT
+}));
+
+ipcMain.handle('llm:codex-status', async () => {
+  const status = await getCodexLoginStatus({ cwd: getCodexCliWorkingDirectory(), forceRefresh: true });
+  return {
+    ok: status.ok === true,
+    loggedIn: status.loggedIn === true,
+    message: status.message || ''
+  };
+});
+
+ipcMain.handle('llm:codex-generate', async (_event, payload) => {
+  try {
+    const normalizedPayload = normalizeJsonPayload(payload, {});
+    const promptRaw = typeof normalizedPayload?.prompt === 'string' ? normalizedPayload.prompt.trim() : '';
+    if (!promptRaw) {
+      return { ok: false, error: 'Prompt is required.' };
+    }
+
+    const prompt = promptRaw.length > 120000 ? `${promptRaw.slice(0, 120000)}...` : promptRaw;
+    const model = cleanText(normalizedPayload?.model, 120);
+    const fileName = cleanText(normalizedPayload?.fileName, 220);
+    const pdfDataUrl = typeof normalizedPayload?.pdfDataUrl === 'string' ? normalizedPayload.pdfDataUrl.trim() : '';
+
+    const text = await requestCodexCliText({
+      prompt,
+      model,
+      cwd: getCodexCliWorkingDirectory(),
+      fileName,
+      pdfDataUrl
+    });
+
+    return {
+      ok: true,
+      text
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error: cleanText(error?.message || error, 2400)
+    };
   }
 });
 
@@ -1235,7 +2773,8 @@ ipcMain.handle('telegram:get-config', async () => {
 });
 
 ipcMain.handle('telegram:set-token', async (_event, payload) => {
-  const token = typeof payload?.token === 'string' ? payload.token.trim() : '';
+  const normalizedPayload = normalizeJsonPayload(payload, {});
+  const token = typeof normalizedPayload?.token === 'string' ? normalizedPayload.token.trim() : '';
   if (!token) {
     return { ok: false, error: 'Token is required.' };
   }

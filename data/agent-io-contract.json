@@ -1,0 +1,676 @@
+{
+  "schema_name": "enana_llm_agent_io",
+  "schema_version": "1.0.0",
+  "description": "JSON I/O contract for Enana LLM-facing agent functions and retrieval tools.",
+  "functions": [
+    {
+      "name": "agent_chat",
+      "type": "ipc_function",
+      "channel": "agent:chat",
+      "description": "Primary LLM agent chat entrypoint.",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["message"],
+        "properties": {
+          "message": { "type": "string" },
+          "projectId": { "type": "string" },
+          "projectName": { "type": "string" },
+          "allowWriteTools": { "type": "boolean" },
+          "conversation": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["role", "text"],
+              "properties": {
+                "role": { "type": "string", "enum": ["user", "assistant"] },
+                "text": { "type": "string" }
+              }
+            }
+          },
+          "stateSnapshot": { "type": "object" },
+          "llm": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "provider": { "type": "string" },
+              "apiEndpoint": { "type": "string" },
+              "apiKey": { "type": "string" },
+              "model": { "type": "string" }
+            }
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ok"],
+        "properties": {
+          "ok": { "type": "boolean" },
+          "provider": { "type": "string" },
+          "model": { "type": "string" },
+          "answer": { "type": "string" },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+          "requiresApproval": { "type": "boolean" },
+          "proposedWriteActions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["tool_name", "reason"],
+              "properties": {
+                "tool_name": { "type": "string" },
+                "reason": { "type": "string" }
+              }
+            }
+          },
+          "citations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["source", "pointer", "reason"],
+              "properties": {
+                "source": { "type": "string" },
+                "pointer": { "type": "string" },
+                "reason": { "type": "string" }
+              }
+            }
+          },
+          "decisionRecord": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["assumptions", "open_questions", "verification_notes"],
+            "properties": {
+              "assumptions": { "type": "array", "items": { "type": "string" } },
+              "open_questions": { "type": "array", "items": { "type": "string" } },
+              "verification_notes": { "type": "array", "items": { "type": "string" } }
+            }
+          },
+          "intermediateStates": { "type": "array", "items": { "type": "object" } },
+          "toolTrace": { "type": "array", "items": { "type": "object" } },
+          "error": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "llm_codex_generate",
+      "type": "ipc_function",
+      "channel": "llm:codex-generate",
+      "description": "Codex CLI text generation entrypoint.",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["prompt"],
+        "properties": {
+          "prompt": { "type": "string" },
+          "model": { "type": "string" },
+          "fileName": { "type": "string" },
+          "pdfDataUrl": { "type": "string" }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ok"],
+        "properties": {
+          "ok": { "type": "boolean" },
+          "text": { "type": "string" },
+          "error": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "llm_codex_status",
+      "type": "ipc_function",
+      "channel": "llm:codex-status",
+      "description": "Codex CLI auth/session status check.",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ok", "loggedIn", "message"],
+        "properties": {
+          "ok": { "type": "boolean" },
+          "loggedIn": { "type": "boolean" },
+          "message": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "agent_get_io_contract",
+      "type": "ipc_function",
+      "channel": "agent:get-io-contract",
+      "description": "Returns this JSON contract to clients/agents.",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ok", "contract"],
+        "properties": {
+          "ok": { "type": "boolean" },
+          "contract": { "type": "object" }
+        }
+      }
+    }
+  ],
+  "tool_output_envelope": {
+    "schema_name": "enana_agent_tool_output",
+    "schema_version": "1.0.0",
+    "schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ok",
+        "schema_name",
+        "schema_version",
+        "tool_name",
+        "input",
+        "result",
+        "items",
+        "citations",
+        "summary",
+        "generated_at"
+      ],
+      "properties": {
+        "ok": { "type": "boolean" },
+        "schema_name": { "type": "string" },
+        "schema_version": { "type": "string" },
+        "tool_name": { "type": "string" },
+        "input": { "type": "object" },
+        "result": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["items", "citations", "summary"],
+          "properties": {
+            "items": { "type": "array", "items": { "type": "object" } },
+            "citations": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["source", "pointer", "reason"],
+                "properties": {
+                  "source": { "type": "string" },
+                  "pointer": { "type": "string" },
+                  "reason": { "type": "string" }
+                }
+              }
+            },
+            "summary": { "type": "string" }
+          }
+        },
+        "items": { "type": "array", "items": { "type": "object" } },
+        "citations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["source", "pointer", "reason"],
+            "properties": {
+              "source": { "type": "string" },
+              "pointer": { "type": "string" },
+              "reason": { "type": "string" }
+            }
+          }
+        },
+        "summary": { "type": "string" },
+        "generated_at": { "type": "string" },
+        "error": { "type": "string" }
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "search_projects",
+      "description": "Read project records by semantic keyword or exact term.",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["query"],
+        "properties": {
+          "query": { "type": "string" },
+          "limit": { "type": "integer", "minimum": 1, "maximum": 20 }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["items", "citations", "summary"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["id", "name", "summary"],
+              "properties": {
+                "id": { "type": "string" },
+                "name": { "type": "string" },
+                "summary": { "type": "string" }
+              }
+            }
+          },
+          "citations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["source", "pointer", "reason"],
+              "properties": {
+                "source": { "type": "string" },
+                "pointer": { "type": "string" },
+                "reason": { "type": "string" }
+              }
+            }
+          },
+          "summary": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "search_protocols",
+      "description": "Read protocol records, including names and step snippets.",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["query"],
+        "properties": {
+          "query": { "type": "string" },
+          "limit": { "type": "integer", "minimum": 1, "maximum": 20 }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["items", "citations", "summary"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["id", "name", "category", "steps"],
+              "properties": {
+                "id": { "type": "string" },
+                "name": { "type": "string" },
+                "category": { "type": "string" },
+                "steps": { "type": "array", "items": { "type": "string" } }
+              }
+            }
+          },
+          "citations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["source", "pointer", "reason"],
+              "properties": {
+                "source": { "type": "string" },
+                "pointer": { "type": "string" },
+                "reason": { "type": "string" }
+              }
+            }
+          },
+          "summary": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "search_notebook_entries",
+      "description": "Read notebook entries with result summaries and timestamps.",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["query"],
+        "properties": {
+          "query": { "type": "string" },
+          "limit": { "type": "integer", "minimum": 1, "maximum": 20 }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["items", "citations", "summary"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["id", "protocolName", "result", "updatedAt"],
+              "properties": {
+                "id": { "type": "string" },
+                "protocolName": { "type": "string" },
+                "result": { "type": "string" },
+                "updatedAt": { "type": "string" }
+              }
+            }
+          },
+          "citations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["source", "pointer", "reason"],
+              "properties": {
+                "source": { "type": "string" },
+                "pointer": { "type": "string" },
+                "reason": { "type": "string" }
+              }
+            }
+          },
+          "summary": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "search_assays",
+      "description": "Read assay runs with plate metadata and compact numeric summaries.",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["query"],
+        "properties": {
+          "query": { "type": "string" },
+          "limit": { "type": "integer", "minimum": 1, "maximum": 20 }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["items", "citations", "summary"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "assay_number",
+                "name",
+                "project_name",
+                "notebook_entry_protocol_name",
+                "sample_axis",
+                "concentration_axis",
+                "result_well_count",
+                "numeric_count",
+                "updated_at"
+              ],
+              "properties": {
+                "id": { "type": "string" },
+                "assay_number": { "type": "string" },
+                "name": { "type": "string" },
+                "project_name": { "type": "string" },
+                "notebook_entry_protocol_name": { "type": "string" },
+                "sample_axis": { "type": "string" },
+                "concentration_axis": { "type": "string" },
+                "result_well_count": { "type": "number" },
+                "numeric_count": { "type": "number" },
+                "updated_at": { "type": "string" }
+              }
+            }
+          },
+          "citations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["source", "pointer", "reason"],
+              "properties": {
+                "source": { "type": "string" },
+                "pointer": { "type": "string" },
+                "reason": { "type": "string" }
+              }
+            }
+          },
+          "summary": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "search_gel_analyses",
+      "description": "Read gel analysis runs with confidence, calibration, and warning summaries.",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["query"],
+        "properties": {
+          "query": { "type": "string" },
+          "limit": { "type": "integer", "minimum": 1, "maximum": 20 }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["items", "citations", "summary"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "name",
+                "analysis_type",
+                "project_name",
+                "notebook_entry_protocol_name",
+                "image_name",
+                "lane_count",
+                "band_count",
+                "confidence_label",
+                "warnings",
+                "updated_at"
+              ],
+              "properties": {
+                "id": { "type": "string" },
+                "name": { "type": "string" },
+                "analysis_type": { "type": "string" },
+                "project_name": { "type": "string" },
+                "notebook_entry_protocol_name": { "type": "string" },
+                "image_name": { "type": "string" },
+                "lane_count": { "type": "number" },
+                "band_count": { "type": "number" },
+                "confidence_label": { "type": "string" },
+                "confidence_score": { "type": ["number", "null"] },
+                "warnings": { "type": "array", "items": { "type": "string" } },
+                "updated_at": { "type": "string" }
+              }
+            }
+          },
+          "citations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["source", "pointer", "reason"],
+              "properties": {
+                "source": { "type": "string" },
+                "pointer": { "type": "string" },
+                "reason": { "type": "string" }
+              }
+            }
+          },
+          "summary": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "search_inventory",
+      "description": "Read chemical and personal inventory records.",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["query"],
+        "properties": {
+          "query": { "type": "string" },
+          "limit": { "type": "integer", "minimum": 1, "maximum": 25 }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["items", "citations", "summary"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "kind": { "type": "string" },
+                "zone": { "type": "string" },
+                "id": { "type": "string" },
+                "name": { "type": "string" },
+                "quantity": { "type": "string" },
+                "location": { "type": "string" },
+                "amount": { "type": "string" },
+                "cas": { "type": "string" },
+                "supplier": { "type": "string" }
+              }
+            }
+          },
+          "citations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["source", "pointer", "reason"],
+              "properties": {
+                "source": { "type": "string" },
+                "pointer": { "type": "string" },
+                "reason": { "type": "string" }
+              }
+            }
+          },
+          "summary": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "search_papers",
+      "description": "Read uploaded paper summaries, methods, and reagent extraction notes.",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["query"],
+        "properties": {
+          "query": { "type": "string" },
+          "limit": { "type": "integer", "minimum": 1, "maximum": 20 }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["items", "citations", "summary"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["id", "title", "summary", "methods"],
+              "properties": {
+                "id": { "type": "string" },
+                "title": { "type": "string" },
+                "summary": { "type": "string" },
+                "methods": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["title", "steps", "citations"],
+                    "properties": {
+                      "title": { "type": "string" },
+                      "steps": { "type": "array", "items": { "type": "string" } },
+                      "citations": { "type": "array", "items": { "type": "string" } }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "citations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["source", "pointer", "reason"],
+              "properties": {
+                "source": { "type": "string" },
+                "pointer": { "type": "string" },
+                "reason": { "type": "string" }
+              }
+            }
+          },
+          "summary": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "download_paper_pdf",
+      "description": "Write tool. Download one paper PDF and optional SI PDFs into storage path under Project/JournalClub folders.",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["linked_type", "linked_name", "paper_pdf_url"],
+        "properties": {
+          "linked_type": { "type": "string", "enum": ["project", "journal-club"] },
+          "linked_name": { "type": "string" },
+          "paper_pdf_url": { "type": "string" },
+          "paper_file_name": { "type": "string" },
+          "si_pdf_urls": { "type": "array", "items": { "type": "string" } },
+          "si_file_names": { "type": "array", "items": { "type": "string" } },
+          "storage_path": { "type": "string" }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["items", "citations", "summary"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["kind", "source_url", "file_name", "relative_path", "size_bytes"],
+              "properties": {
+                "kind": { "type": "string", "enum": ["paper", "si"] },
+                "source_url": { "type": "string" },
+                "file_name": { "type": "string" },
+                "relative_path": { "type": "string" },
+                "size_bytes": { "type": "number" }
+              }
+            }
+          },
+          "citations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["source", "pointer", "reason"],
+              "properties": {
+                "source": { "type": "string" },
+                "pointer": { "type": "string" },
+                "reason": { "type": "string" }
+              }
+            }
+          },
+          "summary": { "type": "string" }
+        }
+      }
+    }
+  ]
+}

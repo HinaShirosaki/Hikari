@@ -1,3 +1,6 @@
+import { exportAssayDefinitionPdf } from './pdf-export.js';
+import { analyzeAssayData } from './assay-analysis.js';
+
 const PLATE_DEFINITIONS = [
   { value: '6', label: '6 well', rows: 2, columns: 3 },
   { value: '12', label: '12 well', rows: 3, columns: 4 },
@@ -12,6 +15,10 @@ const ASSAY_NUMBER_PADDING = 6;
 
 export function initAssay({ state, persist, createId, safeText, onAssaysChanged }) {
   const TabulatorLib = window.Tabulator || null;
+  const ReactLib = window.React || null;
+  const ReactDOMLib = window.ReactDOM || null;
+  const ReactVisLib = window.reactVis || null;
+  const hasReactVis = Boolean(ReactLib && ReactDOMLib && ReactVisLib);
   const assayForm = document.getElementById('assay-form');
   const assayIdInput = document.getElementById('assay-id');
   const assayNumberDisplay = document.getElementById('assay-number-display');
@@ -24,6 +31,8 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
   const assayProjectInput = document.getElementById('assay-project');
   const assayPlateTypeInput = document.getElementById('assay-plate-type');
   const assaySampleAxisInput = document.getElementById('assay-sample-axis');
+  const assaySampleAxisRowBtn = document.getElementById('assay-sample-axis-row-btn');
+  const assaySampleAxisColumnBtn = document.getElementById('assay-sample-axis-column-btn');
   const assayConcentrationAxisDisplay = document.getElementById('assay-concentration-axis-display');
   const assayNotebookEntryInput = document.getElementById('assay-notebook-entry');
   const assayNotesInput = document.getElementById('assay-notes');
@@ -39,6 +48,14 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
   const assayResultTable = document.getElementById('assay-result-table');
   const assayResultsAssaySelect = document.getElementById('assay-results-assay-select');
   const assayAnalysisMethodInput = document.getElementById('assay-analysis-method');
+  const assayAnalysisRowGroupsInput = document.getElementById('assay-analysis-row-groups');
+  const assayAnalysisColumnGroupsInput = document.getElementById('assay-analysis-column-groups');
+  const assayAnalysisErrorBarsInput = document.getElementById('assay-analysis-error-bars');
+  const assayAnalysisGroupNameInput = document.getElementById('assay-analysis-group-name');
+  const assayAnalysisAddRowGroupBtn = document.getElementById('assay-analysis-add-row-group-btn');
+  const assayAnalysisAddColumnGroupBtn = document.getElementById('assay-analysis-add-column-group-btn');
+  const assayAnalysisClearGroupsBtn = document.getElementById('assay-analysis-clear-groups-btn');
+  const assayAnalysisSelectionStatus = document.getElementById('assay-analysis-selection-status');
   const assayResultsLoadBtn = document.getElementById('assay-results-load-btn');
   const assaySaveResultsBtn = document.getElementById('assay-save-results-btn');
   const assayActiveAssayInfo = document.getElementById('assay-active-assay-info');
@@ -46,15 +63,10 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
   const assayAnalyzeResultsBtn = document.getElementById('assay-analyze-results-btn');
   const assayAnalysisSummary = document.getElementById('assay-analysis-summary');
   const assayAnalysisTable = document.getElementById('assay-analysis-table');
-  const assayWellIdInput = document.getElementById('assay-well-id');
-  const assayWellSampleIdInput = document.getElementById('assay-well-sample-id');
-  const assayWellConcentrationInput = document.getElementById('assay-well-concentration');
-  const assayWellUpsertBtn = document.getElementById('assay-well-upsert-btn');
-  const assayWellRemoveBtn = document.getElementById('assay-well-remove-btn');
-  const assayWellClearBtn = document.getElementById('assay-well-clear-btn');
-  const assaySampleAxisValuesInput = document.getElementById('assay-sample-axis-values');
-  const assayConcentrationAxisValuesInput = document.getElementById('assay-concentration-axis-values');
-  const assayApplyAxisTemplateBtn = document.getElementById('assay-apply-axis-template-btn');
+  const assaySwapAxisBtn = document.getElementById('assay-swap-axis-btn');
+  const assayPlateFieldSampleBtn = document.getElementById('assay-plate-field-sample-btn');
+  const assayPlateFieldConcentrationBtn = document.getElementById('assay-plate-field-concentration-btn');
+  const assayClearMappingsBtn = document.getElementById('assay-clear-mappings-btn');
   const assayLayoutStatus = document.getElementById('assay-layout-status');
   const assayLayoutList = document.getElementById('assay-layout-list');
   const assayList = document.getElementById('assay-list');
@@ -62,9 +74,15 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
   let currentResults = {};
   let assayMode = 'create';
   let activeResultsAssayId = '';
+  let activeWellEditorId = '';
+  let axisTemplateValues = { sampleValues: [], concentrationValues: [] };
+  let plateEditField = 'sampleId';
+  let manualWellOverrides = {};
+  let suppressedWells = new Set();
   let resultGrid = null;
   let resultGridSignature = '';
   let resultPasteAnchor = { rowIndex: 0, columnIndex: 0 };
+  let analysisChartHost = null;
 
   assayForm?.addEventListener('submit', onSubmit);
   assayCancelBtn?.addEventListener('click', resetForm);
@@ -74,23 +92,39 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
   assayPlateTypeInput?.addEventListener('change', onPlateTypeChange);
   assaySampleAxisInput?.addEventListener('change', () => {
     syncAxisDisplay();
+    renderAxisSwitchButtons();
+    setLayoutFromAxisAndOverrides();
+    renderLayoutList();
     renderPlatePreview();
+    renderResultTable();
   });
+  assaySampleAxisRowBtn?.addEventListener('click', () => setSampleAxis('row'));
+  assaySampleAxisColumnBtn?.addEventListener('click', () => setSampleAxis('column'));
+  assaySwapAxisBtn?.addEventListener('click', onSwapAxes);
+  assayPlateFieldSampleBtn?.addEventListener('click', () => setPlateEditField('sampleId'));
+  assayPlateFieldConcentrationBtn?.addEventListener('click', () => setPlateEditField('concentration'));
+  assayClearMappingsBtn?.addEventListener('click', onClearWellMappings);
   assaySearchInput?.addEventListener('input', renderList);
   assayExportTemplateBtn?.addEventListener('click', exportCsvTemplate);
   assayImportTemplateBtn?.addEventListener('click', () => assayImportFile?.click());
   assayImportFile?.addEventListener('change', onImportCsv);
   assayResultsAssaySelect?.addEventListener('change', onResultsAssaySelected);
   assayAnalysisMethodInput?.addEventListener('change', onAnalysisMethodChange);
+  assayAnalysisRowGroupsInput?.addEventListener('input', onAnalysisConfigChange);
+  assayAnalysisColumnGroupsInput?.addEventListener('input', onAnalysisConfigChange);
+  assayAnalysisErrorBarsInput?.addEventListener('change', onAnalysisConfigChange);
+  assayAnalysisAddRowGroupBtn?.addEventListener('click', onAddSelectedRowGroup);
+  assayAnalysisAddColumnGroupBtn?.addEventListener('click', onAddSelectedColumnGroup);
+  assayAnalysisClearGroupsBtn?.addEventListener('click', onClearAnalysisGroups);
   assayResultsLoadBtn?.addEventListener('click', onResultsAssayLoad);
   assaySaveResultsBtn?.addEventListener('click', onSaveResults);
   assayClearResultsBtn?.addEventListener('click', onClearResults);
   assayAnalyzeResultsBtn?.addEventListener('click', onAnalyzeResults);
   assayResultTable?.addEventListener('paste', onResultTablePaste);
-  assayWellUpsertBtn?.addEventListener('click', onUpsertWellMapping);
-  assayWellRemoveBtn?.addEventListener('click', onRemoveWellMapping);
-  assayWellClearBtn?.addEventListener('click', onClearWellMappings);
-  assayApplyAxisTemplateBtn?.addEventListener('click', onApplyAxisTemplate);
+  assayPlatePreview?.addEventListener('input', onPlatePreviewInput);
+  assayPlatePreview?.addEventListener('change', onPlatePreviewChange);
+  assayPlatePreview?.addEventListener('focusin', onPlatePreviewFocusIn);
+  assayPlatePreview?.addEventListener('click', onPlatePreviewClick);
   assayLayoutList?.addEventListener('click', onLayoutListClick);
   assayList?.addEventListener('click', onListClick);
 
@@ -110,6 +144,40 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
 
   function axisLabel(axis) {
     return axis === 'column' ? 'Column' : 'Row';
+  }
+
+  function renderAxisSwitchButtons() {
+    const sampleAxis = assaySampleAxisInput?.value === 'column' ? 'column' : 'row';
+    assaySampleAxisRowBtn?.classList.toggle('calendar-view-active', sampleAxis === 'row');
+    assaySampleAxisColumnBtn?.classList.toggle('calendar-view-active', sampleAxis === 'column');
+  }
+
+  function setSampleAxis(axis) {
+    if (!assaySampleAxisInput) {
+      return;
+    }
+    const next = axis === 'column' ? 'column' : 'row';
+    if (assaySampleAxisInput.value === next) {
+      return;
+    }
+    assaySampleAxisInput.value = next;
+    syncAxisDisplay();
+    renderAxisSwitchButtons();
+    setLayoutFromAxisAndOverrides();
+    renderLayoutList();
+    renderPlatePreview();
+    renderResultTable();
+  }
+
+  function renderPlateEditFieldButtons() {
+    assayPlateFieldSampleBtn?.classList.toggle('calendar-view-active', plateEditField === 'sampleId');
+    assayPlateFieldConcentrationBtn?.classList.toggle('calendar-view-active', plateEditField === 'concentration');
+  }
+
+  function setPlateEditField(field) {
+    plateEditField = field === 'concentration' ? 'concentration' : 'sampleId';
+    renderPlateEditFieldButtons();
+    renderPlatePreview();
   }
 
   function formatTimestamp(raw) {
@@ -228,9 +296,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     assayModeCreateBtn?.classList.toggle('calendar-view-active', isCreate);
     assayModeResultsBtn?.classList.toggle('calendar-view-active', !isCreate);
     if (assayModeNote) {
-      assayModeNote.textContent = isCreate
-        ? 'Set up a new assay plate and mapping. Assay number is assigned automatically when saved.'
-        : 'Open an existing assay plate to paste results and run analysis.';
+      assayModeNote.textContent = '';
     }
     if (!isCreate) {
       renderResultsAssayOptions(activeResultsAssayId || assayResultsAssaySelect?.value || '');
@@ -325,6 +391,34 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
       };
     });
     return map;
+  }
+
+  function getMappedWellSet() {
+    return new Set((currentLayout || []).map((item) => String(item.well || '').trim().toUpperCase()).filter(Boolean));
+  }
+
+  function isMappedWell(wellId) {
+    return getMappedWellSet().has(String(wellId || '').trim().toUpperCase());
+  }
+
+  function filterResultsToMappedWells(results) {
+    const mapped = getMappedWellSet();
+    if (!mapped.size) {
+      return {};
+    }
+    const filtered = {};
+    Object.entries(results || {}).forEach(([well, value]) => {
+      const normalizedWell = String(well || '').trim().toUpperCase();
+      if (!mapped.has(normalizedWell)) {
+        return;
+      }
+      const normalizedValue = String(value ?? '').trim();
+      if (!normalizedValue) {
+        return;
+      }
+      filtered[normalizedWell] = normalizedValue;
+    });
+    return filtered;
   }
 
   function normalizeResults(results, def) {
@@ -434,19 +528,333 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     return values;
   }
 
-  function parseAxisValues(raw) {
-    return String(raw || '')
-      .split(/[\n,;]+/)
-      .map((item) => item.trim())
-      .filter(Boolean);
+  function getAxisLength(axis, def) {
+    return axis === 'column' ? def.columns : def.rows;
+  }
+
+  function normalizeAxisTemplateValues(values, maxLength) {
+    return (Array.isArray(values) ? values : [])
+      .map((item) => String(item || '').trim())
+      .slice(0, maxLength);
+  }
+
+  function normalizeCurrentAxisTemplateValues(values, def = getCurrentDefinition(), sampleAxis = assaySampleAxisInput?.value === 'column' ? 'column' : 'row') {
+    return {
+      sampleValues: normalizeAxisTemplateValues(values?.sampleValues, getAxisLength(sampleAxis, def)),
+      concentrationValues: normalizeAxisTemplateValues(values?.concentrationValues, getAxisLength(oppositeAxis(sampleAxis), def))
+    };
+  }
+
+  function setAxisTemplateValues(values, def = getCurrentDefinition(), sampleAxis = assaySampleAxisInput?.value === 'column' ? 'column' : 'row') {
+    axisTemplateValues = normalizeCurrentAxisTemplateValues(values, def, sampleAxis);
+    return axisTemplateValues;
+  }
+
+  function hasAxisTemplateValues(values) {
+    return (Array.isArray(values) ? values : []).some((item) => String(item || '').trim());
+  }
+
+  function readAxisValuesFromPlatePreview() {
+    if (!assayPlatePreview) {
+      return null;
+    }
+    const rowInputs = [...assayPlatePreview.querySelectorAll('[data-axis-dimension="row"]')];
+    const columnInputs = [...assayPlatePreview.querySelectorAll('[data-axis-dimension="column"]')];
+    if (!rowInputs.length && !columnInputs.length) {
+      return null;
+    }
+    const def = getCurrentDefinition();
+    const sampleAxis = assaySampleAxisInput?.value === 'column' ? 'column' : 'row';
+    const sampleLength = getAxisLength(sampleAxis, def);
+    const concentrationLength = getAxisLength(oppositeAxis(sampleAxis), def);
+    const sampleValues = new Array(sampleLength).fill('');
+    const concentrationValues = new Array(concentrationLength).fill('');
+    rowInputs.forEach((input) => {
+      const index = Number(input.dataset.axisIndex);
+      if (!Number.isFinite(index) || index < 0) {
+        return;
+      }
+      const text = String(input.value || '').trim();
+      if (sampleAxis === 'row') {
+        if (index < sampleValues.length) {
+          sampleValues[index] = text;
+        }
+      } else if (index < concentrationValues.length) {
+        concentrationValues[index] = text;
+      }
+    });
+    columnInputs.forEach((input) => {
+      const index = Number(input.dataset.axisIndex);
+      if (!Number.isFinite(index) || index < 0) {
+        return;
+      }
+      const text = String(input.value || '').trim();
+      if (sampleAxis === 'column') {
+        if (index < sampleValues.length) {
+          sampleValues[index] = text;
+        }
+      } else if (index < concentrationValues.length) {
+        concentrationValues[index] = text;
+      }
+    });
+    return {
+      sampleValues,
+      concentrationValues
+    };
+  }
+
+  function mergeAxisTemplateValues(...sources) {
+    const def = getCurrentDefinition();
+    const sampleAxis = assaySampleAxisInput?.value === 'column' ? 'column' : 'row';
+    const sampleLength = getAxisLength(sampleAxis, def);
+    const concentrationLength = getAxisLength(oppositeAxis(sampleAxis), def);
+    const merged = {
+      sampleValues: new Array(sampleLength).fill(''),
+      concentrationValues: new Array(concentrationLength).fill('')
+    };
+
+    sources.filter(Boolean).forEach((source) => {
+      if (Array.isArray(source.sampleValues)) {
+        for (let index = 0; index < Math.min(source.sampleValues.length, sampleLength); index += 1) {
+          merged.sampleValues[index] = String(source.sampleValues[index] || '').trim();
+        }
+      }
+      if (Array.isArray(source.concentrationValues)) {
+        for (let index = 0; index < Math.min(source.concentrationValues.length, concentrationLength); index += 1) {
+          merged.concentrationValues[index] = String(source.concentrationValues[index] || '').trim();
+        }
+      }
+    });
+
+    return merged;
+  }
+
+  function getAxisTemplateValues({ includePreview = true } = {}) {
+    const sources = [axisTemplateValues];
+    if (includePreview) {
+      sources.push(readAxisValuesFromPlatePreview());
+    }
+    return mergeAxisTemplateValues(...sources);
+  }
+
+  function normalizeManualWellOverrideMap(source, def) {
+    const normalized = {};
+    Object.entries(source || {}).forEach(([well, value]) => {
+      const normalizedWell = String(well || '').trim().toUpperCase();
+      if (!normalizedWell || !isValidWellForDefinition(normalizedWell, def)) {
+        return;
+      }
+      const sampleId = String(value?.sampleId || '').trim();
+      const concentration = String(value?.concentration || '').trim();
+      if (!sampleId && !concentration) {
+        return;
+      }
+      normalized[normalizedWell] = { sampleId, concentration };
+    });
+    return normalized;
+  }
+
+  function normalizeManualWellOverrides(def) {
+    manualWellOverrides = normalizeManualWellOverrideMap(manualWellOverrides, def);
+  }
+
+  function normalizeSuppressedWells(def) {
+    const validIds = new Set(buildAllWells(def).map((item) => item.well));
+    suppressedWells = new Set(
+      Array.from(suppressedWells || [])
+        .map((well) => String(well || '').trim().toUpperCase())
+        .filter((well) => validIds.has(well))
+    );
+  }
+
+  function setLayoutFromAxisAndOverrides({ preserveActiveWell = true, axisValues = null } = {}) {
+    const def = getCurrentDefinition();
+    const sampleAxis = assaySampleAxisInput?.value === 'column' ? 'column' : 'row';
+    const normalizedAxisValues = axisValues
+      ? normalizeCurrentAxisTemplateValues(axisValues, def, sampleAxis)
+      : getAxisTemplateValues();
+    const { sampleValues, concentrationValues } = normalizedAxisValues;
+    syncAxisTemplateValues(normalizedAxisValues);
+    normalizeManualWellOverrides(def);
+    normalizeSuppressedWells(def);
+    const baseLayout = applyAxisTemplate({
+      def,
+      sampleAxis,
+      sampleValues,
+      concentrationValues
+    });
+    const map = layoutToMap(baseLayout);
+    Object.entries(manualWellOverrides).forEach(([well, value]) => {
+      const sampleId = String(value?.sampleId || '').trim();
+      const concentration = String(value?.concentration || '').trim();
+      if (!sampleId && !concentration) {
+        delete map[well];
+        return;
+      }
+      map[well] = { sampleId, concentration };
+    });
+    suppressedWells.forEach((well) => {
+      delete map[well];
+    });
+    currentLayout = normalizeLayout(Object.entries(map).map(([well, value]) => ({
+      well,
+      sampleId: value.sampleId,
+      concentration: value.concentration
+    })), def);
+    currentResults = filterResultsToMappedWells(currentResults);
+    if (preserveActiveWell && activeWellEditorId && !isValidWellForDefinition(activeWellEditorId, def)) {
+      activeWellEditorId = '';
+    }
+  }
+
+  function getEffectiveWellMapping(wellId) {
+    const normalizedWell = String(wellId || '').trim().toUpperCase();
+    if (!normalizedWell) {
+      return { sampleId: '', concentration: '' };
+    }
+    const currentMap = layoutToMap(currentLayout);
+    const current = currentMap[normalizedWell];
+    if (current) {
+      return {
+        sampleId: String(current.sampleId || '').trim(),
+        concentration: String(current.concentration || '').trim()
+      };
+    }
+    return { sampleId: '', concentration: '' };
+  }
+
+  function updateActiveWellPreviewState() {
+    if (!assayPlatePreview) {
+      return;
+    }
+    [...assayPlatePreview.querySelectorAll('[data-well]')].forEach((cell) => {
+      cell.classList.toggle('is-active', String(cell.dataset.well || '').trim().toUpperCase() === activeWellEditorId);
+    });
+  }
+
+  function setActiveWellSelection(wellId) {
+    activeWellEditorId = String(wellId || '').trim().toUpperCase();
+    updateActiveWellPreviewState();
+  }
+
+  function updateInlineWellOverride(wellId, field, rawValue) {
+    const normalizedWell = String(wellId || '').trim().toUpperCase();
+    if (!normalizedWell) {
+      return;
+    }
+
+    const def = getCurrentDefinition();
+    const sampleAxis = assaySampleAxisInput?.value === 'column' ? 'column' : 'row';
+    const { sampleValues, concentrationValues } = getAxisTemplateValues();
+    const baseMap = layoutToMap(applyAxisTemplate({
+      def,
+      sampleAxis,
+      sampleValues,
+      concentrationValues
+    }));
+    const current = getEffectiveWellMapping(normalizedWell);
+    const base = baseMap[normalizedWell] || { sampleId: '', concentration: '' };
+    const next = {
+      sampleId: current.sampleId,
+      concentration: current.concentration
+    };
+
+    next[field === 'concentration' ? 'concentration' : 'sampleId'] = String(rawValue || '').trim();
+
+    const matchesBase = next.sampleId === String(base.sampleId || '').trim()
+      && next.concentration === String(base.concentration || '').trim();
+
+    if (!next.sampleId && !next.concentration) {
+      delete manualWellOverrides[normalizedWell];
+      if (base.sampleId || base.concentration) {
+        suppressedWells.add(normalizedWell);
+      } else {
+        suppressedWells.delete(normalizedWell);
+      }
+    } else if (matchesBase) {
+      delete manualWellOverrides[normalizedWell];
+      suppressedWells.delete(normalizedWell);
+    } else {
+      suppressedWells.delete(normalizedWell);
+      manualWellOverrides[normalizedWell] = next;
+    }
+
+    activeWellEditorId = normalizedWell;
+    setLayoutFromAxisAndOverrides();
+  }
+
+  function deriveManualWellOverridesFromLayout(layout, def, axisValues = null) {
+    const sampleAxis = assaySampleAxisInput?.value === 'column' ? 'column' : 'row';
+    const { sampleValues, concentrationValues } = axisValues
+      ? normalizeCurrentAxisTemplateValues(axisValues, def, sampleAxis)
+      : getAxisTemplateValues();
+    const baseLayout = applyAxisTemplate({
+      def,
+      sampleAxis,
+      sampleValues,
+      concentrationValues
+    });
+    const baseMap = layoutToMap(baseLayout);
+    const currentMap = layoutToMap(layout);
+    const keys = new Set([
+      ...Object.keys(baseMap),
+      ...Object.keys(currentMap)
+    ]);
+    const overrides = {};
+    keys.forEach((well) => {
+      if (!isValidWellForDefinition(well, def)) {
+        return;
+      }
+      const base = baseMap[well] || { sampleId: '', concentration: '' };
+      const current = currentMap[well] || { sampleId: '', concentration: '' };
+      if (!current.sampleId && !current.concentration) {
+        return;
+      }
+      if (String(base.sampleId || '').trim() === String(current.sampleId || '').trim()
+        && String(base.concentration || '').trim() === String(current.concentration || '').trim()) {
+        return;
+      }
+      overrides[well] = {
+        sampleId: String(current.sampleId || '').trim(),
+        concentration: String(current.concentration || '').trim()
+      };
+    });
+    manualWellOverrides = overrides;
+  }
+
+  function syncAxisTemplateValues(values = null) {
+    setAxisTemplateValues(values || getAxisTemplateValues());
+  }
+
+  function onSwapAxes() {
+    if (!assaySampleAxisInput) {
+      return;
+    }
+    const { sampleValues, concentrationValues } = getAxisTemplateValues();
+    assaySampleAxisInput.value = assaySampleAxisInput.value === 'column' ? 'row' : 'column';
+    syncAxisDisplay();
+    const swapped = {
+      sampleValues: concentrationValues,
+      concentrationValues: sampleValues
+    };
+    syncAxisTemplateValues(swapped);
+    setLayoutFromAxisAndOverrides();
+    renderLayoutList();
+    renderPlatePreview();
+    renderResultTable();
+    setLayoutStatus(`Switched axes. Sample axis is now ${axisLabel(assaySampleAxisInput.value)}.`);
   }
 
   function applyAxisTemplate({
     def,
     sampleAxis,
     sampleValues,
-    concentrationValues
+    concentrationValues,
+    mappingMode = 'auto'
   }) {
+    const requireIntersection = mappingMode === 'union'
+      ? false
+      : hasAxisTemplateValues(sampleValues) && hasAxisTemplateValues(concentrationValues);
     const layout = [];
     for (let rowIndex = 0; rowIndex < def.rows; rowIndex += 1) {
       for (let columnIndex = 0; columnIndex < def.columns; columnIndex += 1) {
@@ -456,7 +864,11 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
         const concentration = sampleAxis === 'row'
           ? (concentrationValues[columnIndex] || '')
           : (concentrationValues[rowIndex] || '');
-        if (!sampleId && !concentration) {
+        if (requireIntersection) {
+          if (!sampleId || !concentration) {
+            continue;
+          }
+        } else if (!sampleId && !concentration) {
           continue;
         }
         layout.push({
@@ -469,7 +881,85 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     return layout;
   }
 
-  function renderPlatePreview() {
+  function layoutsEqual(left, right, def) {
+    const leftMap = layoutToMap(normalizeLayout(left, def));
+    const rightMap = layoutToMap(normalizeLayout(right, def));
+    const keys = new Set([
+      ...Object.keys(leftMap),
+      ...Object.keys(rightMap)
+    ]);
+
+    for (const key of keys) {
+      const leftValue = leftMap[key] || { sampleId: '', concentration: '' };
+      const rightValue = rightMap[key] || { sampleId: '', concentration: '' };
+      if (String(leftValue.sampleId || '').trim() !== String(rightValue.sampleId || '').trim()
+        || String(leftValue.concentration || '').trim() !== String(rightValue.concentration || '').trim()) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  function removeSuppressedWellsFromLayout(layout, def, suppressed = suppressedWells) {
+    const map = layoutToMap(normalizeLayout(layout, def));
+    Array.from(suppressed || []).forEach((well) => {
+      delete map[String(well || '').trim().toUpperCase()];
+    });
+    return normalizeLayout(Object.entries(map).map(([well, value]) => ({
+      well,
+      sampleId: value.sampleId,
+      concentration: value.concentration
+    })), def);
+  }
+
+  function getAssayAxisTemplateValues(assay, def) {
+    const sampleAxis = assay?.sampleAxis === 'column' ? 'column' : 'row';
+    return normalizeCurrentAxisTemplateValues({
+      sampleValues: assay?.sampleAxisValues,
+      concentrationValues: assay?.concentrationAxisValues
+    }, def, sampleAxis);
+  }
+
+  function restoreAssayLayoutState(assay, def) {
+    const sampleAxis = assay?.sampleAxis === 'column' ? 'column' : 'row';
+    const axisValues = getAssayAxisTemplateValues(assay, def);
+    setAxisTemplateValues(axisValues, def, sampleAxis);
+    suppressedWells = new Set(Array.isArray(assay?.suppressedWells) ? assay.suppressedWells : []);
+    activeWellEditorId = '';
+
+    const savedLayout = normalizeLayout(assay?.wellLayout, def);
+    const persistedOverrides = normalizeManualWellOverrideMap(assay?.manualWellOverrides, def);
+
+    if (Object.keys(persistedOverrides).length) {
+      manualWellOverrides = persistedOverrides;
+    } else {
+      manualWellOverrides = {};
+      const expectedIntersectionLayout = removeSuppressedWellsFromLayout(applyAxisTemplate({
+        def,
+        sampleAxis,
+        sampleValues: axisValues.sampleValues,
+        concentrationValues: axisValues.concentrationValues
+      }), def);
+      const expectedLegacyUnionLayout = removeSuppressedWellsFromLayout(applyAxisTemplate({
+        def,
+        sampleAxis,
+        sampleValues: axisValues.sampleValues,
+        concentrationValues: axisValues.concentrationValues,
+        mappingMode: 'union'
+      }), def);
+
+      if (!layoutsEqual(savedLayout, expectedIntersectionLayout, def)
+        && !layoutsEqual(savedLayout, expectedLegacyUnionLayout, def)) {
+        deriveManualWellOverridesFromLayout(savedLayout, def, axisValues);
+      }
+    }
+
+    setLayoutFromAxisAndOverrides({ axisValues });
+    currentResults = filterResultsToMappedWells(normalizeResults(assay?.resultValues, def));
+    return axisValues;
+  }
+
+  function renderPlatePreview(sourceValues = null) {
     if (!assayPlatePreview) {
       return;
     }
@@ -481,23 +971,88 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     const maxRows = totalWells > 384 ? 16 : def.rows;
     const maxColumns = totalWells > 384 ? 24 : def.columns;
 
-    const headers = ['<th></th>'];
+    const { sampleValues, concentrationValues } = sourceValues
+      ? normalizeCurrentAxisTemplateValues(sourceValues, def, sampleAxis)
+      : getAxisTemplateValues();
+    const rowAxisRole = sampleAxis === 'row' ? 'sample' : 'concentration';
+    const columnAxisRole = sampleAxis === 'row' ? 'concentration' : 'sample';
+    const rowAxisLabel = rowAxisRole === 'sample' ? 'Sample ID' : 'Concentration';
+    const columnAxisLabel = columnAxisRole === 'sample' ? 'Sample ID' : 'Concentration';
+    const rowAxisValues = rowAxisRole === 'sample' ? sampleValues : concentrationValues;
+    const columnAxisValues = columnAxisRole === 'sample' ? sampleValues : concentrationValues;
+
+    const headers = ['<th></th>', `<th>${safeText(rowAxisLabel)}</th>`];
     for (let col = 0; col < maxColumns; col += 1) {
       headers.push(`<th>${col + 1}</th>`);
+    }
+
+    const axisRowCells = [`<th>${safeText(columnAxisLabel)}</th>`, '<td></td>'];
+    for (let col = 0; col < maxColumns; col += 1) {
+      const value = String(columnAxisValues[col] || '');
+      axisRowCells.push(`
+        <td class="assay-axis-cell">
+          <input
+            type="text"
+            class="assay-axis-input"
+            data-axis-dimension="column"
+            data-axis-index="${col}"
+            value="${safeText(value)}"
+            placeholder="${columnAxisRole === 'sample' ? 'Sample' : 'Conc'}"
+          />
+        </td>
+      `);
     }
 
     const rows = [];
     for (let row = 0; row < maxRows; row += 1) {
       const rowLabel = toRowLabel(row);
-      const cells = [`<th>${rowLabel}</th>`];
+      const rowAxisValue = String(rowAxisValues[row] || '');
+      const cells = [
+        `<th>${rowLabel}</th>`,
+        `
+          <td class="assay-axis-cell">
+            <input
+              type="text"
+              class="assay-axis-input"
+              data-axis-dimension="row"
+              data-axis-index="${row}"
+              value="${safeText(rowAxisValue)}"
+              placeholder="${rowAxisRole === 'sample' ? 'Sample' : 'Conc'}"
+            />
+          </td>
+        `
+      ];
       for (let col = 0; col < maxColumns; col += 1) {
         const well = wellIdFor(row, col);
         const layout = cellMap[well];
         const filled = layout && (layout.sampleId || layout.concentration) ? ' is-filled' : '';
+        const active = activeWellEditorId === well ? ' is-active' : '';
+        const sampleValue = String(layout?.sampleId || '').trim();
+        const concentrationValue = String(layout?.concentration || '').trim();
+        const sampleLabel = sampleValue || '-';
+        const concentrationLabel = concentrationValue || '-';
+        const editable = plateEditField === 'concentration' ? 'Concentration' : 'Sample ID';
+        const editableValue = plateEditField === 'concentration' ? concentrationValue : sampleValue;
+        const secondaryMeta = plateEditField === 'concentration'
+          ? `S: ${safeText(sampleLabel)}`
+          : `C: ${safeText(concentrationLabel)}`;
         const meta = layout
           ? `Sample ID: ${layout.sampleId || '-'} | Concentration: ${layout.concentration || '-'}`
           : 'Sample ID: - | Concentration: -';
-        cells.push(`<td class="assay-well${filled}" title="${safeText(`${well} • ${meta}`)}">${well}</td>`);
+        cells.push(`
+          <td class="assay-well${filled}${active}" data-well="${well}" title="${safeText(`${well} • ${meta} • Click to edit ${editable}`)}">
+            <div class="assay-well-id">${safeText(well)}</div>
+            <input
+              type="text"
+              class="assay-well-inline-input"
+              data-well-inline-field="${plateEditField}"
+              data-well="${well}"
+              value="${safeText(editableValue)}"
+              placeholder="${plateEditField === 'concentration' ? 'Conc' : 'Sample'}"
+            />
+            <div class="assay-well-meta">${secondaryMeta}</div>
+          </td>
+        `);
       }
       rows.push(`<tr>${cells.join('')}</tr>`);
     }
@@ -507,12 +1062,12 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
       : '';
 
     assayPlatePreview.innerHTML = `
-      <p class="small-note">Sample ID axis: ${axisLabel(sampleAxis)}. Concentration axis: ${axisLabel(concentrationAxis)}.</p>
+      <p class="small-note">Sample ID axis: ${axisLabel(sampleAxis)}. Concentration axis: ${axisLabel(concentrationAxis)}. When both axes have values, mapped wells use the x by y intersection area only. Type directly in a well cell for a specific override.</p>
       ${note}
       <div class="assay-plate-table-wrap">
         <table class="assay-plate-table">
           <thead><tr>${headers.join('')}</tr></thead>
-          <tbody>${rows.join('')}</tbody>
+          <tbody><tr class="assay-plate-editor-row">${axisRowCells.join('')}</tr>${rows.join('')}</tbody>
         </table>
       </div>
     `;
@@ -552,6 +1107,28 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
         title: String(columnIndex + 1),
         field: toResultField(columnIndex),
         editor: 'input',
+        editable: (cell) => {
+          const rowIndex = Number(cell.getRow()?.getData()?.__rowIndex);
+          if (!Number.isFinite(rowIndex) || rowIndex < 0) {
+            return false;
+          }
+          return isMappedWell(wellIdFor(rowIndex, columnIndex));
+        },
+        formatter: (cell) => {
+          const rowIndex = Number(cell.getRow()?.getData()?.__rowIndex);
+          const value = String(cell.getValue() || '');
+          if (!Number.isFinite(rowIndex) || rowIndex < 0) {
+            return value;
+          }
+          const well = wellIdFor(rowIndex, columnIndex);
+          const mapped = isMappedWell(well);
+          const element = cell.getElement();
+          element.classList.toggle('assay-result-disabled', !mapped);
+          if (!mapped) {
+            return value || '—';
+          }
+          return value;
+        },
         headerSort: false,
         hozAlign: 'center',
         headerHozAlign: 'center',
@@ -580,11 +1157,15 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
   function setResultValue(rowIndex, columnIndex, rawValue) {
     const value = String(rawValue ?? '').trim();
     const well = wellIdFor(rowIndex, columnIndex);
+    if (!isMappedWell(well)) {
+      return false;
+    }
     if (!value) {
       delete currentResults[well];
-      return;
+      return true;
     }
     currentResults[well] = value;
+    return true;
   }
 
   function clearResultGrid() {
@@ -594,6 +1175,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     resultGrid.destroy();
     resultGrid = null;
     resultGridSignature = '';
+    setAnalysisSelectionStatus('');
   }
 
   function onResultGridCellEdited(cell) {
@@ -606,9 +1188,14 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     if (!Number.isFinite(rowIndex) || rowIndex < 0) {
       return;
     }
-    setResultValue(rowIndex, columnIndex, cell.getValue());
+    const updated = setResultValue(rowIndex, columnIndex, cell.getValue());
+    if (!updated) {
+      renderResultTable();
+      setResultStatus(`Only mapped wells accept result values. ${wellIdFor(rowIndex, columnIndex)} is not mapped.`);
+      return;
+    }
     resultPasteAnchor = { rowIndex, columnIndex };
-    setResultStatus(`Result wells with values: ${getResultValueCount()}.`);
+    setResultStatus(`Result wells with values: ${getResultValueCount()}. Only mapped wells are editable.`);
   }
 
   function onResultGridCellClick(_event, cell) {
@@ -628,6 +1215,135 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
   function getResultGridHeight(def) {
     const visibleRows = Math.min(def.rows, 14);
     return `${Math.max(260, (visibleRows * 33) + 58)}px`;
+  }
+
+  function setAnalysisSelectionStatus(message) {
+    if (!assayAnalysisSelectionStatus) {
+      return;
+    }
+    assayAnalysisSelectionStatus.textContent = message || '';
+  }
+
+  function summarizeSelectionLabels(labels, maxItems = 8) {
+    const normalized = Array.isArray(labels)
+      ? labels.map((item) => String(item || '').trim()).filter(Boolean)
+      : [];
+    if (normalized.length <= maxItems) {
+      return normalized.join(', ');
+    }
+    return `${normalized.slice(0, maxItems).join(', ')}, +${normalized.length - maxItems} more`;
+  }
+
+  function getCurrentResultRangeSelection() {
+    if (!resultGrid || typeof resultGrid.getRanges !== 'function') {
+      return { rowLabels: [], columnLabels: [] };
+    }
+    const ranges = resultGrid.getRanges();
+    if (!Array.isArray(ranges) || !ranges.length) {
+      return { rowLabels: [], columnLabels: [] };
+    }
+    const activeRange = ranges[ranges.length - 1];
+    if (!activeRange) {
+      return { rowLabels: [], columnLabels: [] };
+    }
+
+    const rowLabels = Array.isArray(activeRange.getRows?.())
+      ? activeRange.getRows()
+        .map((row) => String(row?.getData?.()?.rowLabel || '').trim().toUpperCase())
+        .filter((value) => /^[A-Z]+$/.test(value))
+      : [];
+    const columnLabels = Array.isArray(activeRange.getColumns?.())
+      ? activeRange.getColumns()
+        .map((column) => resultFieldToColumnIndex(column?.getField?.()))
+        .filter((columnIndex) => columnIndex >= 0)
+        .map((columnIndex) => String(columnIndex + 1))
+      : [];
+
+    return {
+      rowLabels: [...new Set(rowLabels)].sort((a, b) => rowLabelToIndex(a) - rowLabelToIndex(b)),
+      columnLabels: [...new Set(columnLabels)].sort((a, b) => Number(a) - Number(b))
+    };
+  }
+
+  function updateResultRangeSelectionStatus() {
+    const selection = getCurrentResultRangeSelection();
+    if (!selection.rowLabels.length && !selection.columnLabels.length) {
+      setAnalysisSelectionStatus('Drag-select replicate wells in the table to build groups.');
+      return selection;
+    }
+    const rowText = selection.rowLabels.length
+      ? `${selection.rowLabels.length} row(s): ${summarizeSelectionLabels(selection.rowLabels)}`
+      : '0 row(s)';
+    const columnText = selection.columnLabels.length
+      ? `${selection.columnLabels.length} column(s): ${summarizeSelectionLabels(selection.columnLabels)}`
+      : '0 column(s)';
+    setAnalysisSelectionStatus(`Selected range -> ${rowText}; ${columnText}.`);
+    return selection;
+  }
+
+  function sanitizeGroupName(raw, fallbackName) {
+    const cleaned = String(raw || '')
+      .replace(/[:;\n\r]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    return cleaned || fallbackName;
+  }
+
+  function nextGroupName(dimension) {
+    const input = dimension === 'row' ? assayAnalysisRowGroupsInput : assayAnalysisColumnGroupsInput;
+    const prefix = dimension === 'row' ? 'Row Group' : 'Column Group';
+    const existing = String(input?.value || '')
+      .split(/[\n;]+/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+    return `${prefix} ${existing.length + 1}`;
+  }
+
+  function appendGroupEntry(input, groupName, members) {
+    if (!input) {
+      return;
+    }
+    const current = String(input.value || '').trim();
+    const entry = `${groupName}: ${members.join(',')}`;
+    input.value = current ? `${current}\n${entry}` : entry;
+  }
+
+  function addSelectedRangeGroup(dimension) {
+    const selection = updateResultRangeSelectionStatus();
+    const members = dimension === 'row' ? selection.rowLabels : selection.columnLabels;
+    if (members.length < 2) {
+      setAnalysisSelectionStatus(`Select at least two ${dimension === 'row' ? 'rows' : 'columns'} before adding a group.`);
+      return;
+    }
+
+    const input = dimension === 'row' ? assayAnalysisRowGroupsInput : assayAnalysisColumnGroupsInput;
+    const fallbackName = nextGroupName(dimension);
+    const groupName = sanitizeGroupName(assayAnalysisGroupNameInput?.value, fallbackName);
+    appendGroupEntry(input, groupName, members);
+    setAnalysisSelectionStatus(`Added "${groupName}" with ${members.length} ${dimension === 'row' ? 'row(s)' : 'column(s)'}.`);
+    onAnalysisConfigChange();
+  }
+
+  function onAddSelectedRowGroup() {
+    addSelectedRangeGroup('row');
+  }
+
+  function onAddSelectedColumnGroup() {
+    addSelectedRangeGroup('column');
+  }
+
+  function onClearAnalysisGroups() {
+    if (assayAnalysisRowGroupsInput) {
+      assayAnalysisRowGroupsInput.value = '';
+    }
+    if (assayAnalysisColumnGroupsInput) {
+      assayAnalysisColumnGroupsInput.value = '';
+    }
+    if (assayAnalysisGroupNameInput) {
+      assayAnalysisGroupNameInput.value = '';
+    }
+    setAnalysisSelectionStatus('Cleared row and column groups.');
+    onAnalysisConfigChange();
   }
 
   function ensureResultGrid(def) {
@@ -656,16 +1372,26 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
         height: getResultGridHeight(def),
         layout: 'fitDataTable',
         reactiveData: false,
+        selectableRange: true,
+        selectableRangeColumns: true,
+        selectableRangeRows: true,
         cellEdited: onResultGridCellEdited,
         cellClick: onResultGridCellClick
       });
+      if (typeof resultGrid.on === 'function') {
+        resultGrid.on('rangeAdded', updateResultRangeSelectionStatus);
+        resultGrid.on('rangeChanged', updateResultRangeSelectionStatus);
+        resultGrid.on('rangeRemoved', updateResultRangeSelectionStatus);
+      }
       host.addEventListener('focus', () => {
         setResultStatus('Table selected. Paste starts at A1 unless a result cell is selected.');
       });
       resultGridSignature = signature;
+      updateResultRangeSelectionStatus();
       return true;
     }
     resultGrid.replaceData(buildResultGridData(def));
+    updateResultRangeSelectionStatus();
     return true;
   }
 
@@ -674,7 +1400,49 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     if (!ensureResultGrid(def)) {
       return;
     }
-    setResultStatus(`Result wells with values: ${getResultValueCount()}.`);
+    setResultStatus(`Result wells with values: ${getResultValueCount()}. Only mapped wells are editable.`);
+  }
+
+  function syncCurrentResultsFromGrid() {
+    const def = getCurrentDefinition();
+
+    if (!resultGrid) {
+      currentResults = filterResultsToMappedWells(normalizeResults(currentResults, def));
+      return currentResults;
+    }
+
+    const editingCell = resultGrid.modules?.edit?.currentCell;
+    if (editingCell?.getComponent) {
+      const cellComponent = editingCell.getComponent();
+      const editorElement = cellComponent.getElement?.()?.querySelector?.('input, textarea, select');
+      if (editorElement) {
+        cellComponent.setValue(String(editorElement.value ?? '').trim(), true);
+      }
+    }
+
+    const nextResults = {};
+    const rows = typeof resultGrid.getRows === 'function' ? resultGrid.getRows() : [];
+    rows.forEach((row) => {
+      const data = row?.getData?.();
+      const rowIndex = Number(data?.__rowIndex);
+      if (!Number.isFinite(rowIndex) || rowIndex < 0) {
+        return;
+      }
+
+      for (let columnIndex = 0; columnIndex < def.columns; columnIndex += 1) {
+        const well = wellIdFor(rowIndex, columnIndex);
+        if (!isMappedWell(well)) {
+          continue;
+        }
+        const value = String(data?.[toResultField(columnIndex)] ?? '').trim();
+        if (value) {
+          nextResults[well] = value;
+        }
+      }
+    });
+
+    currentResults = filterResultsToMappedWells(normalizeResults(nextResults, def));
+    return currentResults;
   }
 
   function parseClipboardGrid(text) {
@@ -714,6 +1482,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
       currentResults = {};
     }
     let pastedCount = 0;
+    let skippedCount = 0;
     for (let rowOffset = 0; rowOffset < matrix.length; rowOffset += 1) {
       const rowIndex = startRowIndex + rowOffset;
       if (rowIndex >= def.rows) {
@@ -725,6 +1494,11 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
         if (columnIndex >= def.columns) {
           break;
         }
+        const well = wellIdFor(rowIndex, columnIndex);
+        if (!isMappedWell(well)) {
+          skippedCount += 1;
+          continue;
+        }
         const value = String(rowCells[columnOffset] || '').trim();
         setResultValue(rowIndex, columnIndex, value);
         if (value) {
@@ -733,7 +1507,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
       }
     }
     resultPasteAnchor = { rowIndex: startRowIndex, columnIndex: startColumnIndex };
-    return pastedCount;
+    return { pastedCount, skippedCount };
   }
 
   function onResultTablePaste(event) {
@@ -750,14 +1524,14 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
       return;
     }
     event.preventDefault();
-    const pastedCount = applyResultMatrix({
+    const { pastedCount, skippedCount } = applyResultMatrix({
       matrix,
       startRowIndex: start.rowIndex,
       startColumnIndex: start.columnIndex,
       replaceAll: start.fromTableSelection
     });
     renderResultTable();
-    setResultStatus(`Pasted ${pastedCount} value(s). Result wells with values: ${getResultValueCount()}.`);
+    setResultStatus(`Pasted ${pastedCount} value(s). Skipped ${skippedCount} unmapped cell(s). Result wells with values: ${getResultValueCount()}.`);
   }
 
   function onClearResults() {
@@ -766,10 +1540,11 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     if (assayAnalysisSummary) {
       assayAnalysisSummary.textContent = '';
     }
+    unmountAnalysisChart();
     if (assayAnalysisTable) {
       assayAnalysisTable.innerHTML = '';
     }
-    setResultStatus('Cleared all result values.');
+    setResultStatus('Cleared all result values. Only mapped wells are editable.');
   }
 
   function parseNumericResult(value) {
@@ -788,10 +1563,6 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     return Number.isFinite(numeric) ? numeric : null;
   }
 
-  function formatNumber(value, digits = 4) {
-    return Number.isFinite(value) ? Number(value).toFixed(digits) : '-';
-  }
-
   function summarizeNumeric(values) {
     if (!values.length) {
       return null;
@@ -806,33 +1577,6 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     const min = Math.min(...values);
     const max = Math.max(...values);
     return { n, mean: meanValue, sd, min, max };
-  }
-
-  function groupBy(items, keyFn) {
-    const map = new Map();
-    items.forEach((item) => {
-      const key = keyFn(item);
-      if (!map.has(key)) {
-        map.set(key, []);
-      }
-      map.get(key).push(item);
-    });
-    return map;
-  }
-
-  function sortByConcentration(a, b) {
-    const aNumeric = Number.isFinite(a.concentrationValue);
-    const bNumeric = Number.isFinite(b.concentrationValue);
-    if (aNumeric && bNumeric && a.concentrationValue !== b.concentrationValue) {
-      return a.concentrationValue - b.concentrationValue;
-    }
-    if (aNumeric && !bNumeric) {
-      return -1;
-    }
-    if (!aNumeric && bNumeric) {
-      return 1;
-    }
-    return String(a.concentrationLabel).localeCompare(String(b.concentrationLabel));
   }
 
   function collectNumericObservations() {
@@ -851,7 +1595,9 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
         return;
       }
       const mapping = layoutMap[well] || { sampleId: '', concentration: '' };
-      const concentrationLabel = String(mapping.concentration || '').trim() || '-';
+      const rawSampleId = String(mapping.sampleId || '').trim();
+      const rawConcentration = String(mapping.concentration || '').trim();
+      const concentrationLabel = rawConcentration || '-';
       observations.push({
         well,
         response,
@@ -859,13 +1605,47 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
         rowLabel: toRowLabel(parsedWell.rowIndex),
         columnIndex: parsedWell.columnIndex,
         columnNumber: parsedWell.columnIndex + 1,
-        sampleId: String(mapping.sampleId || '').trim() || '(unmapped)',
+        rawSampleId,
+        sampleId: rawSampleId || '(unmapped)',
+        sampleValue: parseFirstNumericToken(rawSampleId),
+        rawConcentration,
         concentrationLabel,
         concentrationValue: parseFirstNumericToken(concentrationLabel)
       });
     });
 
     return { observations, nonNumericCount };
+  }
+
+  function describeObservationAxes(observations) {
+    const sampleLabels = new Set();
+    const concentrationLabels = new Set();
+    const numericSampleValues = new Set();
+    const numericConcentrationValues = new Set();
+
+    observations.forEach((item) => {
+      if (item.rawSampleId) {
+        sampleLabels.add(item.rawSampleId);
+      }
+      if (item.rawConcentration) {
+        concentrationLabels.add(item.rawConcentration);
+      }
+      if (Number.isFinite(item.sampleValue)) {
+        numericSampleValues.add(item.sampleValue);
+      }
+      if (Number.isFinite(item.concentrationValue)) {
+        numericConcentrationValues.add(item.concentrationValue);
+      }
+    });
+
+    return {
+      sampleCount: sampleLabels.size,
+      concentrationCount: concentrationLabels.size,
+      numericSampleCount: numericSampleValues.size,
+      numericConcentrationCount: numericConcentrationValues.size,
+      hasSampleFactor: sampleLabels.size > 1,
+      hasConcentrationFactor: concentrationLabels.size > 1
+    };
   }
 
   function buildAnalysisTable(headers, rows) {
@@ -885,455 +1665,331 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     `;
   }
 
-  function analyzeGroupedSummary(observations) {
-    const groups = new Map();
-    observations.forEach((item) => {
-      const key = `${item.sampleId}__${item.concentrationLabel}`;
-      if (!groups.has(key)) {
-        groups.set(key, {
-          sampleId: item.sampleId,
-          concentrationLabel: item.concentrationLabel,
-          concentrationValue: item.concentrationValue,
-          values: []
-        });
+  function unmountAnalysisChart() {
+    if (analysisChartHost && ReactDOMLib?.unmountComponentAtNode) {
+      ReactDOMLib.unmountComponentAtNode(analysisChartHost);
+    }
+    analysisChartHost = null;
+  }
+
+  function parseAnalysisCellNumber(value) {
+    return parseFirstNumericToken(value);
+  }
+
+  function pickChartMetricIndex(method, headers, numericIndexes) {
+    const methodPriority = {
+      grouped_summary: ['mean'],
+      nested_summary: ['mean'],
+      row_summary: ['mean'],
+      column_summary: ['mean'],
+      linear_regression: ['r²', 'r2', 'intercept', 'points'],
+      ec50: ['ec50'],
+      ic50: ['ic50'],
+      survival: ['survival', 'mean'],
+      standard_curve_line: ['r²', 'rmse'],
+      standard_curve_4pl_log_concentration: ['r²', 'rmse'],
+      standard_curve_4pl_concentration: ['r²', 'rmse'],
+      standard_curve_5pl_log_concentration: ['r²', 'rmse'],
+      standard_curve_5pl_concentration: ['r²', 'rmse'],
+      standard_curve_semilog_line: ['r²', 'rmse'],
+      standard_curve_hyperbola: ['r²', 'rmse'],
+      standard_curve_quadratic: ['r²', 'rmse'],
+      standard_curve_cubic: ['r²', 'rmse'],
+      standard_curve_pade_11: ['r²', 'rmse']
+    };
+    const priorities = methodPriority[method] || ['mean', 'value'];
+    for (let keywordIndex = 0; keywordIndex < priorities.length; keywordIndex += 1) {
+      const keyword = priorities[keywordIndex];
+      const match = numericIndexes.find((index) => String(headers[index] || '').toLowerCase().includes(keyword));
+      if (Number.isInteger(match)) {
+        return match;
       }
-      groups.get(key).values.push(item.response);
+    }
+    return numericIndexes[0];
+  }
+
+  function buildAnalysisChartModel(result, method) {
+    const headers = Array.isArray(result?.headers) ? result.headers : [];
+    const rows = Array.isArray(result?.rows) ? result.rows : [];
+    if (!headers.length || !rows.length) {
+      return null;
+    }
+
+    const numericIndexes = headers
+      .map((_, index) => index)
+      .filter((index) => rows.some((row) => Number.isFinite(parseAnalysisCellNumber(row[index]))));
+    if (!numericIndexes.length) {
+      return null;
+    }
+
+    const yIndex = pickChartMetricIndex(method, headers, numericIndexes);
+    const otherNumeric = numericIndexes.filter((index) => index !== yIndex);
+    const nonNumericIndexes = headers
+      .map((_, index) => index)
+      .filter((index) => !numericIndexes.includes(index));
+    const xIndex = nonNumericIndexes[0] ?? otherNumeric[0] ?? null;
+    const seriesIndex = nonNumericIndexes.find((index) => index !== xIndex) ?? null;
+    const seriesMap = new Map();
+    let numericXCount = 0;
+    let totalCount = 0;
+
+    rows.forEach((row, rowIndex) => {
+      const y = parseAnalysisCellNumber(row[yIndex]);
+      if (!Number.isFinite(y)) {
+        return;
+      }
+      const rawX = xIndex === null ? rowIndex + 1 : row[xIndex];
+      const xLabel = String(rawX ?? '').trim() || `Row ${rowIndex + 1}`;
+      const xNumeric = parseAnalysisCellNumber(rawX);
+      if (Number.isFinite(xNumeric)) {
+        numericXCount += 1;
+      }
+      const seriesLabel = seriesIndex === null
+        ? 'Series'
+        : (String(row[seriesIndex] ?? '').trim() || 'Series');
+      if (!seriesMap.has(seriesLabel)) {
+        seriesMap.set(seriesLabel, []);
+      }
+      seriesMap.get(seriesLabel).push({ xLabel, xNumeric, y });
+      totalCount += 1;
     });
 
-    const rows = Array.from(groups.values())
-      .map((item) => ({ ...item, stats: summarizeNumeric(item.values) }))
-      .filter((item) => item.stats)
-      .sort((a, b) => {
-        const sampleCmp = a.sampleId.localeCompare(b.sampleId);
-        if (sampleCmp !== 0) {
-          return sampleCmp;
-        }
-        return sortByConcentration(a, b);
-      })
-      .map((item) => [
-        item.sampleId,
-        item.concentrationLabel,
-        item.stats.n,
-        formatNumber(item.stats.mean),
-        formatNumber(item.stats.sd),
-        formatNumber(item.stats.min),
-        formatNumber(item.stats.max)
-      ]);
-
-    return {
-      summary: `Grouped summary for ${rows.length} sample/concentration group(s).`,
-      headers: ['Sample ID', 'Concentration', 'N', 'Mean', 'SD', 'Min', 'Max'],
-      rows
-    };
-  }
-
-  function analyzeNestedSummary(observations) {
-    const sampleGroups = groupBy(observations, (item) => item.sampleId);
-    const rows = [];
-
-    Array.from(sampleGroups.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .forEach(([sampleId, sampleItems]) => {
-        const sampleStats = summarizeNumeric(sampleItems.map((item) => item.response));
-        if (sampleStats) {
-          rows.push([
-            sampleId,
-            'Sample Total',
-            '-',
-            sampleStats.n,
-            formatNumber(sampleStats.mean),
-            formatNumber(sampleStats.sd),
-            formatNumber(sampleStats.min),
-            formatNumber(sampleStats.max)
-          ]);
-        }
-
-        const concentrationGroups = new Map();
-        sampleItems.forEach((item) => {
-          const key = item.concentrationLabel;
-          if (!concentrationGroups.has(key)) {
-            concentrationGroups.set(key, {
-              concentrationLabel: item.concentrationLabel,
-              concentrationValue: item.concentrationValue,
-              values: []
-            });
-          }
-          concentrationGroups.get(key).values.push(item.response);
-        });
-
-        Array.from(concentrationGroups.values())
-          .map((item) => ({ ...item, stats: summarizeNumeric(item.values) }))
-          .filter((item) => item.stats)
-          .sort(sortByConcentration)
-          .forEach((item) => {
-            rows.push([
-              sampleId,
-              'Concentration',
-              item.concentrationLabel,
-              item.stats.n,
-              formatNumber(item.stats.mean),
-              formatNumber(item.stats.sd),
-              formatNumber(item.stats.min),
-              formatNumber(item.stats.max)
-            ]);
-          });
-      });
-
-    return {
-      summary: `Nested summary by sample then concentration for ${sampleGroups.size} sample(s).`,
-      headers: ['Sample ID', 'Level', 'Group', 'N', 'Mean', 'SD', 'Min', 'Max'],
-      rows
-    };
-  }
-
-  function analyzeDimensionSummary(observations, dimension) {
-    const isRow = dimension === 'row';
-    const groups = groupBy(observations, (item) => (isRow ? item.rowLabel : String(item.columnNumber)));
-    const rows = Array.from(groups.entries())
-      .map(([label, items]) => {
-        const stats = summarizeNumeric(items.map((item) => item.response));
-        return { label, stats };
-      })
-      .filter((item) => item.stats)
-      .sort((a, b) => {
-        if (isRow) {
-          return rowLabelToIndex(a.label) - rowLabelToIndex(b.label);
-        }
-        return Number(a.label) - Number(b.label);
-      })
-      .map((item) => [
-        item.label,
-        item.stats.n,
-        formatNumber(item.stats.mean),
-        formatNumber(item.stats.sd),
-        formatNumber(item.stats.min),
-        formatNumber(item.stats.max)
-      ]);
-
-    return {
-      summary: `${isRow ? 'Row' : 'Column'} summary for ${rows.length} ${isRow ? 'row(s)' : 'column(s)'}.`,
-      headers: [isRow ? 'Row' : 'Column', 'N', 'Mean', 'SD', 'Min', 'Max'],
-      rows
-    };
-  }
-
-  function linearRegression(points) {
-    if (!Array.isArray(points) || points.length < 2) {
+    if (!totalCount || !seriesMap.size) {
       return null;
     }
-    const xValues = points.map((item) => item.x);
-    const yValues = points.map((item) => item.y);
-    const xMean = xValues.reduce((sum, value) => sum + value, 0) / xValues.length;
-    const yMean = yValues.reduce((sum, value) => sum + value, 0) / yValues.length;
-    let numerator = 0;
-    let denominator = 0;
-    for (let index = 0; index < points.length; index += 1) {
-      const dx = points[index].x - xMean;
-      numerator += dx * (points[index].y - yMean);
-      denominator += dx * dx;
-    }
-    if (denominator === 0) {
-      return null;
-    }
-    const slope = numerator / denominator;
-    const intercept = yMean - (slope * xMean);
-    const yPred = points.map((item) => intercept + (slope * item.x));
-    const ssRes = yValues.reduce((sum, item, index) => sum + ((item - yPred[index]) ** 2), 0);
-    const ssTot = yValues.reduce((sum, item) => sum + ((item - yMean) ** 2), 0);
-    const r2 = ssTot === 0 ? 1 : 1 - (ssRes / ssTot);
-    return { slope, intercept, r2 };
-  }
 
-  function analyzeLinearRegression(observations) {
-    const sampleGroups = groupBy(observations, (item) => item.sampleId);
-    let fallbackToColumnCount = 0;
-    const rows = Array.from(sampleGroups.entries())
-      .map(([sampleId, sampleItems]) => {
-        const concentrationGroups = new Map();
-        sampleItems.forEach((item) => {
-          if (!Number.isFinite(item.concentrationValue)) {
-            return;
-          }
-          if (!concentrationGroups.has(item.concentrationValue)) {
-            concentrationGroups.set(item.concentrationValue, []);
-          }
-          concentrationGroups.get(item.concentrationValue).push(item.response);
-        });
+    const numericXAxis = numericXCount / totalCount >= 0.75;
+    const prefersLineMethod = method === 'linear_regression'
+      || method === 'ec50'
+      || method === 'ic50'
+      || method === 'survival'
+      || method === 'standard_curve_line'
+      || method === 'standard_curve_4pl_log_concentration'
+      || method === 'standard_curve_4pl_concentration'
+      || method === 'standard_curve_5pl_log_concentration'
+      || method === 'standard_curve_5pl_concentration'
+      || method === 'standard_curve_semilog_line'
+      || method === 'standard_curve_hyperbola'
+      || method === 'standard_curve_quadratic'
+      || method === 'standard_curve_cubic'
+      || method === 'standard_curve_pade_11';
+    const chartType = numericXAxis && prefersLineMethod ? 'line' : 'bar';
 
-        let xSource = 'Concentration';
-        let points = Array.from(concentrationGroups.entries()).map(([x, values]) => {
-          const stats = summarizeNumeric(values);
-          return { x, y: stats ? stats.mean : null };
-        }).filter((item) => Number.isFinite(item.y));
-
-        if (points.length < 2) {
-          xSource = 'Column';
-          fallbackToColumnCount += 1;
-          const columnGroups = new Map();
-          sampleItems.forEach((item) => {
-            if (!columnGroups.has(item.columnNumber)) {
-              columnGroups.set(item.columnNumber, []);
+    if (chartType === 'line') {
+      const series = Array.from(seriesMap.entries())
+        .map(([label, points]) => {
+          const xBuckets = new Map();
+          points.forEach((point) => {
+            if (!Number.isFinite(point.xNumeric)) {
+              return;
             }
-            columnGroups.get(item.columnNumber).push(item.response);
+            if (!xBuckets.has(point.xNumeric)) {
+              xBuckets.set(point.xNumeric, []);
+            }
+            xBuckets.get(point.xNumeric).push(point.y);
           });
-          points = Array.from(columnGroups.entries()).map(([x, values]) => {
-            const stats = summarizeNumeric(values);
-            return { x, y: stats ? stats.mean : null };
-          }).filter((item) => Number.isFinite(item.y));
-        }
+          const data = Array.from(xBuckets.entries())
+            .map(([x, values]) => {
+              const stats = summarizeNumeric(values);
+              return stats ? { x: Number(x), y: stats.mean } : null;
+            })
+            .filter(Boolean)
+            .sort((a, b) => a.x - b.x);
+          return { label, data };
+        })
+        .filter((item) => item.data.length);
 
-        points.sort((a, b) => a.x - b.x);
-        const fit = linearRegression(points);
-        if (!fit) {
-          return null;
-        }
-        return [
-          sampleId,
-          xSource,
-          points.length,
-          formatNumber(fit.slope),
-          formatNumber(fit.intercept),
-          formatNumber(fit.r2, 5)
-        ];
-      })
-      .filter(Boolean)
-      .sort((a, b) => String(a[0]).localeCompare(String(b[0])));
+      if (!series.length) {
+        return null;
+      }
 
-    return {
-      summary: `Linear regression fitted for ${rows.length} sample(s). ${fallbackToColumnCount ? `${fallbackToColumnCount} sample(s) used column index as X because concentration values were unavailable.` : ''}`.trim(),
-      headers: ['Sample ID', 'X Source', 'Points', 'Slope', 'Intercept', 'R²'],
-      rows
-    };
-  }
-
-  function logistic4Point(x, params) {
-    const exponent = (params.logEC50 - Math.log10(x)) * params.hill;
-    return params.bottom + ((params.top - params.bottom) / (1 + (10 ** exponent)));
-  }
-
-  function clamp(value, min, max) {
-    if (!Number.isFinite(value)) {
-      return min;
-    }
-    return Math.min(max, Math.max(min, value));
-  }
-
-  function fitDoseResponse4PL(points) {
-    if (!Array.isArray(points) || points.length < 4) {
-      return null;
-    }
-    const xValues = points.map((item) => item.x).filter((item) => item > 0);
-    if (xValues.length < 4) {
-      return null;
-    }
-    const yValues = points.map((item) => item.y);
-    const yMin = Math.min(...yValues);
-    const yMax = Math.max(...yValues);
-    const yRange = Math.max(1e-9, yMax - yMin);
-    const logXValues = xValues.map((item) => Math.log10(item));
-    const minLogX = Math.min(...logXValues);
-    const maxLogX = Math.max(...logXValues);
-    const initial = {
-      bottom: yMin,
-      top: yMax,
-      logEC50: (minLogX + maxLogX) / 2,
-      hill: 1
-    };
-    const bounds = {
-      bottom: { min: yMin - (yRange * 2), max: yMax + yRange },
-      top: { min: yMin - yRange, max: yMax + (yRange * 2) },
-      logEC50: { min: minLogX - 2, max: maxLogX + 2 },
-      hill: { min: 0.05, max: 8 }
-    };
-    const ensureParams = (source) => {
-      const params = {
-        bottom: clamp(source.bottom, bounds.bottom.min, bounds.bottom.max),
-        top: clamp(source.top, bounds.top.min, bounds.top.max),
-        logEC50: clamp(source.logEC50, bounds.logEC50.min, bounds.logEC50.max),
-        hill: clamp(source.hill, bounds.hill.min, bounds.hill.max)
+      return {
+        chartType,
+        xLabel: xIndex === null ? 'Row' : String(headers[xIndex] || 'X'),
+        yLabel: String(headers[yIndex] || 'Y'),
+        series
       };
-      if (params.top <= params.bottom) {
-        params.top = params.bottom + 1e-9;
-      }
-      return params;
-    };
-    const calcSse = (params) => {
-      let total = 0;
-      for (let index = 0; index < points.length; index += 1) {
-        const predicted = logistic4Point(points[index].x, params);
-        total += (points[index].y - predicted) ** 2;
-      }
-      return total;
-    };
-
-    let best = ensureParams(initial);
-    let bestErr = calcSse(best);
-    const steps = {
-      bottom: yRange * 0.6,
-      top: yRange * 0.6,
-      logEC50: Math.max(0.1, (maxLogX - minLogX) * 0.5),
-      hill: 0.8
-    };
-    const paramKeys = ['bottom', 'top', 'logEC50', 'hill'];
-
-    for (let round = 0; round < 12; round += 1) {
-      let improved = false;
-      for (let keyIndex = 0; keyIndex < paramKeys.length; keyIndex += 1) {
-        const key = paramKeys[keyIndex];
-        const step = steps[key];
-        [-1, 1].forEach((direction) => {
-          const candidate = ensureParams({
-            ...best,
-            [key]: best[key] + (direction * step)
-          });
-          const err = calcSse(candidate);
-          if (err < bestErr) {
-            best = candidate;
-            bestErr = err;
-            improved = true;
-          }
-        });
-      }
-      if (!improved) {
-        paramKeys.forEach((key) => {
-          steps[key] *= 0.5;
-        });
-      }
-      const maxStep = Math.max(...Object.values(steps));
-      if (maxStep < 1e-6) {
-        break;
-      }
     }
 
-    const yMean = yValues.reduce((sum, value) => sum + value, 0) / yValues.length;
-    const ssTot = yValues.reduce((sum, value) => sum + ((value - yMean) ** 2), 0);
-    const ssRes = points.reduce((sum, point) => sum + ((point.y - logistic4Point(point.x, best)) ** 2), 0);
-    const r2 = ssTot === 0 ? 1 : 1 - (ssRes / ssTot);
-    return {
-      ...best,
-      ec50: 10 ** best.logEC50,
-      r2,
-      rmse: Math.sqrt(ssRes / points.length)
-    };
-  }
-
-  function getMeanDosePoints(sampleItems, requirePositiveX) {
-    const groups = new Map();
-    sampleItems.forEach((item) => {
-      if (!Number.isFinite(item.concentrationValue)) {
-        return;
-      }
-      if (requirePositiveX && item.concentrationValue <= 0) {
-        return;
-      }
-      if (!groups.has(item.concentrationValue)) {
-        groups.set(item.concentrationValue, []);
-      }
-      groups.get(item.concentrationValue).push(item.response);
-    });
-    return Array.from(groups.entries())
-      .map(([x, values]) => {
-        const stats = summarizeNumeric(values);
-        return stats ? { x, y: stats.mean, n: stats.n } : null;
-      })
-      .filter(Boolean)
-      .sort((a, b) => a.x - b.x);
-  }
-
-  function analyzeEc50Like(observations, mode) {
-    const sampleGroups = groupBy(observations, (item) => item.sampleId);
-    let skipped = 0;
-    const rows = Array.from(sampleGroups.entries())
-      .map(([sampleId, sampleItems]) => {
-        const points = getMeanDosePoints(sampleItems, true);
-        if (points.length < 4) {
-          skipped += 1;
-          return null;
+    const categories = [];
+    const categorySet = new Set();
+    seriesMap.forEach((points) => {
+      points.forEach((point) => {
+        if (!categorySet.has(point.xLabel)) {
+          categorySet.add(point.xLabel);
+          categories.push(point.xLabel);
         }
-        const fit = fitDoseResponse4PL(points);
-        if (!fit) {
-          skipped += 1;
-          return null;
-        }
-        const trend = points.length >= 2 && points[points.length - 1].y > points[0].y ? 'up' : 'down';
-        return [
-          sampleId,
-          points.length,
-          formatNumber(fit.ec50),
-          formatNumber(fit.hill),
-          formatNumber(fit.top),
-          formatNumber(fit.bottom),
-          formatNumber(fit.r2, 5),
-          trend
-        ];
-      })
-      .filter(Boolean)
-      .sort((a, b) => String(a[0]).localeCompare(String(b[0])));
-
-    return {
-      summary: `${mode.toUpperCase()} fit completed for ${rows.length} sample(s). ${skipped ? `${skipped} sample(s) skipped (need >=4 positive numeric concentrations).` : ''}`.trim(),
-      headers: ['Sample ID', 'Points', mode.toUpperCase(), 'Hill', 'Top', 'Bottom', 'R²', 'Trend'],
-      rows
-    };
-  }
-
-  function analyzeSurvival(observations) {
-    const sampleGroups = groupBy(observations, (item) => item.sampleId);
-    const rows = [];
-
-    Array.from(sampleGroups.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .forEach(([sampleId, sampleItems]) => {
-        const concentrationGroups = new Map();
-        sampleItems.forEach((item) => {
-          if (!concentrationGroups.has(item.concentrationLabel)) {
-            concentrationGroups.set(item.concentrationLabel, {
-              concentrationLabel: item.concentrationLabel,
-              concentrationValue: item.concentrationValue,
-              values: []
-            });
-          }
-          concentrationGroups.get(item.concentrationLabel).values.push(item.response);
-        });
-        const groups = Array.from(concentrationGroups.values())
-          .map((item) => ({ ...item, stats: summarizeNumeric(item.values) }))
-          .filter((item) => item.stats)
-          .sort(sortByConcentration);
-        if (!groups.length) {
-          return;
-        }
-
-        const numericGroups = groups.filter((item) => Number.isFinite(item.concentrationValue));
-        let baseline = numericGroups.length
-          ? numericGroups.reduce((best, item) => (
-            item.concentrationValue < best.concentrationValue ? item : best
-          ), numericGroups[0])
-          : null;
-        if (!baseline) {
-          baseline = groups[0];
-        }
-        const baselineMean = baseline.stats?.mean;
-
-        groups.forEach((item) => {
-          const survival = Number.isFinite(baselineMean) && baselineMean !== 0
-            ? (item.stats.mean / baselineMean) * 100
-            : null;
-          rows.push([
-            sampleId,
-            baseline.concentrationLabel,
-            formatNumber(baselineMean),
-            item.concentrationLabel,
-            item.stats.n,
-            formatNumber(item.stats.mean),
-            formatNumber(survival, 2)
-          ]);
-        });
       });
+    });
+
+    const series = Array.from(seriesMap.entries())
+      .map(([label, points]) => {
+        const categoryValues = new Map();
+        points.forEach((point) => {
+          if (!categoryValues.has(point.xLabel)) {
+            categoryValues.set(point.xLabel, []);
+          }
+          categoryValues.get(point.xLabel).push(point.y);
+        });
+        const data = categories
+          .map((category) => {
+            const values = categoryValues.get(category) || [];
+            const stats = summarizeNumeric(values);
+            return stats ? { x: category, y: stats.mean } : null;
+          })
+          .filter(Boolean);
+        return { label, data };
+      })
+      .filter((item) => item.data.length);
+
+    if (!series.length) {
+      return null;
+    }
 
     return {
-      summary: `Survival analysis computed as (group mean / baseline mean) * 100 for ${sampleGroups.size} sample(s).`,
-      headers: ['Sample ID', 'Baseline Concentration', 'Baseline Mean', 'Concentration', 'N', 'Mean', 'Survival %'],
-      rows
+      chartType,
+      xLabel: xIndex === null ? 'Row' : String(headers[xIndex] || 'Group'),
+      yLabel: String(headers[yIndex] || 'Value'),
+      series
+    };
+  }
+
+  function renderAnalysisChart(result, method) {
+    unmountAnalysisChart();
+    if (!hasReactVis || !assayAnalysisTable) {
+      return;
+    }
+
+    const chartModel = result?.chartModel || buildAnalysisChartModel(result, method);
+    const chartTarget = assayAnalysisTable.querySelector('[data-assay-analysis-chart]');
+    if (!chartModel || !chartTarget) {
+      return;
+    }
+
+    const {
+      XYPlot,
+      XAxis,
+      YAxis,
+      VerticalGridLines,
+      HorizontalGridLines,
+      VerticalBarSeries,
+      LineSeries,
+      MarkSeries,
+      WhiskerSeries,
+      DiscreteColorLegend
+    } = ReactVisLib;
+    if (!XYPlot || !XAxis || !YAxis || !VerticalGridLines || !HorizontalGridLines) {
+      return;
+    }
+
+    const palette = ['#1f77b4', '#ef6c3e', '#2ca25f', '#9467bd', '#d4a72c', '#8c564b'];
+    const longestSeries = chartModel.series.reduce((max, item) => Math.max(max, item.data.length), 0);
+    const plotWidth = Math.max(420, Math.min(1280, (longestSeries || 1) * (chartModel.chartType === 'line' ? 60 : 70)));
+    const plotHeight = 280;
+    const marginBottom = chartModel.chartType === 'bar' ? 108 : 72;
+    const plotProps = {
+      width: plotWidth,
+      height: plotHeight,
+      margin: { left: 72, right: 24, top: 20, bottom: marginBottom }
+    };
+    if (chartModel.chartType === 'bar') {
+      plotProps.xType = 'ordinal';
+    }
+
+    const plotChildren = [
+      ReactLib.createElement(VerticalGridLines, { key: 'v-grid' }),
+      ReactLib.createElement(HorizontalGridLines, { key: 'h-grid' }),
+      ReactLib.createElement(XAxis, {
+        key: 'x-axis',
+        title: chartModel.xLabel,
+        tickLabelAngle: chartModel.chartType === 'bar' ? -35 : 0
+      }),
+      ReactLib.createElement(YAxis, {
+        key: 'y-axis',
+        title: chartModel.yLabel
+      })
+    ];
+
+    chartModel.series.forEach((series, index) => {
+      const color = palette[index % palette.length];
+      if (chartModel.chartType === 'line') {
+        if (LineSeries) {
+          plotChildren.push(ReactLib.createElement(LineSeries, {
+            key: `line-${series.label}-${index}`,
+            data: series.data,
+            color,
+            curve: 'curveMonotoneX'
+          }));
+        }
+        if (MarkSeries) {
+          plotChildren.push(ReactLib.createElement(MarkSeries, {
+            key: `mark-${series.label}-${index}`,
+            data: series.data,
+            color,
+            size: 3
+          }));
+        }
+      } else if (VerticalBarSeries) {
+        plotChildren.push(ReactLib.createElement(VerticalBarSeries, {
+          key: `bar-${series.label}-${index}`,
+          data: series.data,
+          color,
+          cluster: 'assay-analysis'
+        }));
+      }
+
+      if (chartModel.showErrorBars && WhiskerSeries) {
+        const whiskerData = series.data.filter((point) => Number.isFinite(point.yVariance) && point.yVariance > 0);
+        if (whiskerData.length) {
+          plotChildren.push(ReactLib.createElement(WhiskerSeries, {
+            key: `whisker-${series.label}-${index}`,
+            data: whiskerData,
+            color,
+            strokeWidth: 1.2,
+            crossBarWidth: 8,
+            style: { pointerEvents: 'none' }
+          }));
+        }
+      }
+    });
+
+    const legendItems = chartModel.series.map((series, index) => ({
+      title: series.label,
+      color: palette[index % palette.length]
+    }));
+    const legendElement = DiscreteColorLegend && legendItems.length > 1
+      ? ReactLib.createElement(DiscreteColorLegend, {
+        key: 'legend',
+        orientation: 'horizontal',
+        items: legendItems
+      })
+      : null;
+    const titleText = `${chartModel.yLabel} by ${chartModel.xLabel}`;
+
+    const chartElement = ReactLib.createElement('div', null, [
+      ReactLib.createElement('div', { className: 'assay-analysis-chart-head', key: 'head' }, [
+        ReactLib.createElement('div', { className: 'assay-analysis-chart-title', key: 'title' }, titleText),
+        legendElement
+      ]),
+      ReactLib.createElement('div', { className: 'assay-analysis-chart-plot', key: 'plot' }, [
+        ReactLib.createElement(XYPlot, { ...plotProps, key: 'xy-plot' }, plotChildren)
+      ])
+    ]);
+
+    ReactDOMLib.render(chartElement, chartTarget);
+    analysisChartHost = chartTarget;
+  }
+
+  function getDimensionAnalysisOptions(dimension) {
+    const plate = getPlateDefinition(assayPlateTypeInput?.value);
+    const maxMemberCount = dimension === 'row' ? plate.rows : plate.columns;
+    const groupSpec = dimension === 'row'
+      ? assayAnalysisRowGroupsInput?.value
+      : assayAnalysisColumnGroupsInput?.value;
+    return {
+      groupSpec: String(groupSpec || ''),
+      maxMemberCount,
+      includeErrorBars: Boolean(assayAnalysisErrorBarsInput?.checked)
     };
   }
 
@@ -1342,6 +1998,8 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
       return;
     }
 
+    unmountAnalysisChart();
+    syncCurrentResultsFromGrid();
     const method = String(assayAnalysisMethodInput?.value || 'grouped_summary');
     const { observations, nonNumericCount } = collectNumericObservations();
     if (!observations.length) {
@@ -1352,31 +2010,33 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
       return;
     }
 
-    let result;
-    if (method === 'nested_summary') {
-      result = analyzeNestedSummary(observations);
-    } else if (method === 'row_summary') {
-      result = analyzeDimensionSummary(observations, 'row');
-    } else if (method === 'column_summary') {
-      result = analyzeDimensionSummary(observations, 'column');
-    } else if (method === 'linear_regression') {
-      result = analyzeLinearRegression(observations);
-    } else if (method === 'ec50') {
-      result = analyzeEc50Like(observations, 'ec50');
-    } else if (method === 'ic50') {
-      result = analyzeEc50Like(observations, 'ic50');
-    } else if (method === 'survival') {
-      result = analyzeSurvival(observations);
-    } else {
-      result = analyzeGroupedSummary(observations);
-    }
+    const result = analyzeAssayData({
+      method,
+      observations,
+      options: {
+        rowSummary: getDimensionAnalysisOptions('row'),
+        columnSummary: getDimensionAnalysisOptions('column')
+      }
+    });
 
     const ignoredNote = nonNumericCount ? ` Non-numeric cells ignored: ${nonNumericCount}.` : '';
     const rowCountNote = ` Rows: ${result.rows.length}.`;
     assayAnalysisSummary.textContent = `${result.summary}${rowCountNote}${ignoredNote}`;
-    assayAnalysisTable.innerHTML = result.rows.length
-      ? buildAnalysisTable(result.headers, result.rows)
-      : '<p class="small-note">No analyzable rows for this method.</p>';
+    if (!result.rows.length) {
+      assayAnalysisTable.innerHTML = '<p class="small-note">No analyzable rows for this method.</p>';
+      return;
+    }
+
+    const tableHtml = buildAnalysisTable(result.headers, result.rows);
+    assayAnalysisTable.innerHTML = hasReactVis
+      ? `
+        <div class="assay-analysis-results">
+          <div class="assay-analysis-chart" data-assay-analysis-chart></div>
+          ${tableHtml}
+        </div>
+      `
+      : tableHtml;
+    renderAnalysisChart(result, method);
   }
 
   function onAnalysisMethodChange() {
@@ -1384,10 +2044,23 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
       return;
     }
     assayAnalysisSummary.textContent = '';
+    unmountAnalysisChart();
     assayAnalysisTable.innerHTML = '';
+    syncCurrentResultsFromGrid();
     if (getResultValueCount()) {
       renderAnalysis();
     }
+  }
+
+  function onAnalysisConfigChange() {
+    if (!assayAnalysisSummary || !assayAnalysisTable) {
+      return;
+    }
+    syncCurrentResultsFromGrid();
+    if (!getResultValueCount()) {
+      return;
+    }
+    renderAnalysis();
   }
 
   function onAnalyzeResults() {
@@ -1437,14 +2110,16 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     assaySampleAxisInput.value = assay.sampleAxis === 'column' ? 'column' : 'row';
     syncAxisDisplay();
     const def = getCurrentDefinition();
-    currentLayout = normalizeLayout(assay.wellLayout, def);
-    currentResults = normalizeResults(assay.resultValues, def);
+    const axisValues = restoreAssayLayoutState(assay, def);
+    renderPlatePreview(axisValues);
+    renderLayoutList();
     renderPlateDefinition();
     renderResultTable();
     renderActiveAssayInfo(assay);
     if (assayAnalysisSummary) {
       assayAnalysisSummary.textContent = '';
     }
+    unmountAnalysisChart();
     if (assayAnalysisTable) {
       assayAnalysisTable.innerHTML = '';
     }
@@ -1484,7 +2159,8 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
       return;
     }
     const def = getPlateDefinition(assay.plateType || assayPlateTypeInput?.value || '96');
-    assay.resultValues = normalizeResults(currentResults, def);
+    syncCurrentResultsFromGrid();
+    assay.resultValues = filterResultsToMappedWells(normalizeResults(currentResults, def));
     assay.updatedAt = new Date().toISOString();
     persist();
     renderResultsAssayOptions(assay.id);
@@ -1517,100 +2193,107 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     `).join('');
   }
 
-  function clearWellEditor() {
-    if (assayWellIdInput) {
-      assayWellIdInput.value = '';
+  function onPlatePreviewInput(event) {
+    const axisInput = event.target.closest('[data-axis-dimension]');
+    if (axisInput) {
+      syncAxisTemplateValues(getAxisTemplateValues());
+      return;
     }
-    if (assayWellSampleIdInput) {
-      assayWellSampleIdInput.value = '';
+
+    const inlineInput = event.target.closest('[data-well-inline-field]');
+    if (!inlineInput) {
+      return;
     }
-    if (assayWellConcentrationInput) {
-      assayWellConcentrationInput.value = '';
-    }
+
+    updateInlineWellOverride(
+      inlineInput.dataset.well,
+      inlineInput.dataset.wellInlineField,
+      inlineInput.value
+    );
   }
 
-  function onUpsertWellMapping() {
-    const def = getCurrentDefinition();
-    const wellId = String(assayWellIdInput?.value || '').trim().toUpperCase();
-    const sampleId = String(assayWellSampleIdInput?.value || '').trim();
-    const concentration = String(assayWellConcentrationInput?.value || '').trim();
-    if (!wellId) {
-      setLayoutStatus('Enter a well ID, e.g. A1.');
-      return;
-    }
-    if (!isValidWellForDefinition(wellId, def)) {
-      setLayoutStatus(`Well ${wellId} is not valid for the selected ${def.label} plate.`);
-      return;
-    }
-    if (!sampleId && !concentration) {
-      setLayoutStatus('Enter sample ID and/or concentration.');
-      return;
-    }
-    currentLayout = currentLayout.filter((item) => item.well !== wellId);
-    currentLayout.push({ well: wellId, sampleId, concentration });
-    currentLayout = normalizeLayout(currentLayout, def);
-    renderLayoutList();
-    renderPlatePreview();
-    setLayoutStatus(`Mapped ${wellId}.`);
-    setCsvStatus(`Mapped wells: ${currentLayout.length}.`);
-    clearWellEditor();
-  }
-
-  function onRemoveWellMapping() {
-    const def = getCurrentDefinition();
-    const wellId = String(assayWellIdInput?.value || '').trim().toUpperCase();
-    if (!wellId) {
-      setLayoutStatus('Enter a well ID to remove.');
-      return;
-    }
-    const before = currentLayout.length;
-    currentLayout = currentLayout.filter((item) => item.well !== wellId);
-    currentLayout = normalizeLayout(currentLayout, def);
-    renderLayoutList();
-    renderPlatePreview();
-    if (before === currentLayout.length) {
-      setLayoutStatus(`No mapping found for ${wellId}.`);
-    } else {
-      setLayoutStatus(`Removed mapping for ${wellId}.`);
+  function onPlatePreviewChange(event) {
+    const axisInput = event.target.closest('[data-axis-dimension]');
+    if (axisInput) {
+      setLayoutFromAxisAndOverrides();
+      renderLayoutList();
+      renderPlatePreview();
+      renderResultTable();
+      setLayoutStatus('Updated axis-based mapping from in-plate row/column definitions.');
       setCsvStatus(`Mapped wells: ${currentLayout.length}.`);
+      return;
     }
+
+    const inlineInput = event.target.closest('[data-well-inline-field]');
+    if (!inlineInput) {
+      return;
+    }
+
+    updateInlineWellOverride(
+      inlineInput.dataset.well,
+      inlineInput.dataset.wellInlineField,
+      inlineInput.value
+    );
+    renderLayoutList();
+    renderPlatePreview();
+    renderResultTable();
+    setLayoutStatus(`Updated ${String(inlineInput.dataset.well || '').trim().toUpperCase()}.`);
+    setCsvStatus(`Mapped wells: ${currentLayout.length}.`);
+  }
+
+  function onPlatePreviewFocusIn(event) {
+    const inlineInput = event.target.closest('[data-well-inline-field]');
+    if (!inlineInput) {
+      return;
+    }
+    setActiveWellSelection(inlineInput.dataset.well);
+  }
+
+  function onPlatePreviewClick(event) {
+    if (event.target.closest('[data-axis-dimension]')) {
+      return;
+    }
+
+    const inlineInput = event.target.closest('[data-well-inline-field]');
+    if (inlineInput) {
+      setActiveWellSelection(inlineInput.dataset.well);
+      return;
+    }
+
+    const cell = event.target.closest('[data-well]');
+    if (!cell) {
+      return;
+    }
+    const wellId = String(cell.dataset.well || '').trim().toUpperCase();
+    if (!wellId) {
+      return;
+    }
+    setActiveWellSelection(wellId);
+    cell.querySelector('[data-well-inline-field]')?.focus();
   }
 
   function onClearWellMappings() {
+    manualWellOverrides = {};
+    suppressedWells = new Set();
+    setAxisTemplateValues({ sampleValues: [], concentrationValues: [] });
     currentLayout = [];
+    activeWellEditorId = '';
+    currentResults = {};
     renderLayoutList();
     renderPlatePreview();
+    renderResultTable();
     setLayoutStatus('Cleared all well mappings.');
     setCsvStatus('');
-    clearWellEditor();
+    updateActiveWellPreviewState();
   }
 
-  function onApplyAxisTemplate() {
-    const def = getCurrentDefinition();
-    const sampleAxis = assaySampleAxisInput?.value === 'column' ? 'column' : 'row';
-    const sampleValues = parseAxisValues(assaySampleAxisValuesInput?.value);
-    const concentrationValues = parseAxisValues(assayConcentrationAxisValuesInput?.value);
-    if (!sampleValues.length && !concentrationValues.length) {
-      setLayoutStatus('Enter sample and/or concentration values first.');
+  function focusPlateWellInput(wellId) {
+    const normalizedWell = String(wellId || '').trim().toUpperCase();
+    if (!normalizedWell || !assayPlatePreview) {
       return;
     }
-
-    const layout = applyAxisTemplate({
-      def,
-      sampleAxis,
-      sampleValues,
-      concentrationValues
-    });
-    currentLayout = normalizeLayout(layout, def);
-    renderLayoutList();
-    renderPlatePreview();
-
-    const sampleAxisLength = sampleAxis === 'row' ? def.rows : def.columns;
-    const concentrationAxisLength = sampleAxis === 'row' ? def.columns : def.rows;
-    setLayoutStatus(
-      `Applied template. Sample values: ${sampleValues.length}/${sampleAxisLength}, concentration values: ${concentrationValues.length}/${concentrationAxisLength}.`
-    );
-    setCsvStatus(`Mapped wells: ${currentLayout.length}.`);
+    const selector = `[data-well="${normalizedWell}"] [data-well-inline-field="${plateEditField}"]`;
+    assayPlatePreview.querySelector(selector)?.focus();
   }
 
   function onLayoutListClick(event) {
@@ -1621,18 +2304,23 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
       if (!item) {
         return;
       }
-      assayWellIdInput.value = item.well || '';
-      assayWellSampleIdInput.value = item.sampleId || '';
-      assayWellConcentrationInput.value = item.concentration || '';
-      setLayoutStatus(`Loaded ${well} into editor.`);
+      setActiveWellSelection(item.well || '');
+      focusPlateWellInput(item.well || '');
+      setLayoutStatus(`Focused ${well} in plate preview.`);
       return;
     }
     const deleteBtn = event.target.closest('[data-layout-delete]');
     if (deleteBtn) {
       const well = deleteBtn.dataset.layoutDelete;
-      currentLayout = currentLayout.filter((item) => item.well !== well);
+      delete manualWellOverrides[well];
+      suppressedWells.add(well);
+      setLayoutFromAxisAndOverrides();
+      if (activeWellEditorId === well) {
+        activeWellEditorId = '';
+      }
       renderLayoutList();
       renderPlatePreview();
+      renderResultTable();
       setLayoutStatus(`Deleted ${well}.`);
       setCsvStatus(`Mapped wells: ${currentLayout.length}.`);
     }
@@ -1694,12 +2382,14 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     }
     const sampleAxis = assaySampleAxisInput?.value === 'column' ? 'column' : 'row';
     assayConcentrationAxisDisplay.value = axisLabel(oppositeAxis(sampleAxis));
+    renderAxisSwitchButtons();
   }
 
   function onPlateTypeChange() {
-    const def = getCurrentDefinition();
-    currentLayout = normalizeLayout(currentLayout, def);
-    currentResults = normalizeResults(currentResults, def);
+    currentResults = normalizeResults(currentResults, getCurrentDefinition());
+    setLayoutFromAxisAndOverrides();
+    activeWellEditorId = '';
+    syncAxisTemplateValues();
     renderPlateDefinition();
     renderAssayNumberDisplay();
     renderPlatePreview();
@@ -1708,6 +2398,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     if (assayAnalysisSummary) {
       assayAnalysisSummary.textContent = '';
     }
+    unmountAnalysisChart();
     if (assayAnalysisTable) {
       assayAnalysisTable.innerHTML = '';
     }
@@ -1790,9 +2481,13 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
         imported.push({ well: resolvedWell, sampleId, concentration });
       }
 
-      currentLayout = normalizeLayout(imported, def);
+      setAxisTemplateValues({ sampleValues: [], concentrationValues: [] }, def);
+      suppressedWells = new Set();
+      manualWellOverrides = layoutToMap(normalizeLayout(imported, def));
+      setLayoutFromAxisAndOverrides();
       renderPlatePreview();
       renderLayoutList();
+      renderResultTable();
       setCsvStatus(`Imported ${currentLayout.length} mapped wells from ${file.name}.`);
     } catch {
       setCsvStatus('Import failed: could not parse CSV file.');
@@ -1819,6 +2514,9 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     const notebookEntry = (state.notebookEntries || []).find((entry) => entry.id === assayNotebookEntryInput?.value);
     const editingId = assayIdInput?.value || '';
     const existing = (state.assays || []).find((item) => item.id === editingId);
+    const axisValues = getAxisTemplateValues();
+    syncAxisTemplateValues(axisValues);
+    setLayoutFromAxisAndOverrides();
 
     const record = {
       id: existing?.id || createId(),
@@ -1833,13 +2531,15 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
       wellCount: plateDef.rows * plateDef.columns,
       sampleAxis,
       concentrationAxis,
-      sampleAxisValues: parseAxisValues(assaySampleAxisValuesInput?.value),
-      concentrationAxisValues: parseAxisValues(assayConcentrationAxisValuesInput?.value),
+      sampleAxisValues: axisValues.sampleValues,
+      concentrationAxisValues: axisValues.concentrationValues,
+      manualWellOverrides: normalizeManualWellOverrideMap(manualWellOverrides, plateDef),
+      suppressedWells: Array.from(suppressedWells),
       notebookEntryId: assayNotebookEntryInput?.value || '',
       notebookEntryProtocolName: notebookEntry?.protocolName || '',
       notebookEntryType: notebookEntry?.notebookType || '',
       wellLayout: normalizeLayout(currentLayout, plateDef),
-      resultValues: normalizeResults(currentResults, plateDef),
+      resultValues: filterResultsToMappedWells(normalizeResults(currentResults, plateDef)),
       notes: assayNotesInput?.value.trim() || '',
       updatedAt: new Date().toISOString()
     };
@@ -1864,18 +2564,30 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     assayIdInput.value = '';
     assayForm.reset();
     activeResultsAssayId = '';
+    activeWellEditorId = '';
+    plateEditField = 'sampleId';
+    manualWellOverrides = {};
+    suppressedWells = new Set();
     currentLayout = [];
     currentResults = {};
     resultPasteAnchor = { rowIndex: 0, columnIndex: 0 };
-    if (assaySampleAxisValuesInput) {
-      assaySampleAxisValuesInput.value = '';
-    }
-    if (assayConcentrationAxisValuesInput) {
-      assayConcentrationAxisValuesInput.value = '';
-    }
+    axisTemplateValues = { sampleValues: [], concentrationValues: [] };
     if (assayAnalysisMethodInput) {
       assayAnalysisMethodInput.value = 'grouped_summary';
     }
+    if (assayAnalysisRowGroupsInput) {
+      assayAnalysisRowGroupsInput.value = '';
+    }
+    if (assayAnalysisColumnGroupsInput) {
+      assayAnalysisColumnGroupsInput.value = '';
+    }
+    if (assayAnalysisErrorBarsInput) {
+      assayAnalysisErrorBarsInput.checked = false;
+    }
+    if (assayAnalysisGroupNameInput) {
+      assayAnalysisGroupNameInput.value = '';
+    }
+    setAnalysisSelectionStatus('');
     setCsvStatus('');
     setLayoutStatus('');
     if (assaySampleAxisInput) {
@@ -1887,6 +2599,8 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     renderProjectOptions();
     renderNotebookOptions();
     syncAxisDisplay();
+    renderPlateEditFieldButtons();
+    syncAxisTemplateValues();
     renderPlateDefinition();
     renderPlatePreview();
     renderAssayNumberDisplay();
@@ -1897,10 +2611,11 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     if (assayAnalysisSummary) {
       assayAnalysisSummary.textContent = '';
     }
+    unmountAnalysisChart();
     if (assayAnalysisTable) {
       assayAnalysisTable.innerHTML = '';
     }
-    clearWellEditor();
+    updateActiveWellPreviewState();
     setAssayMode('create');
   }
 
@@ -1909,6 +2624,12 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     if (openResultsBtn) {
       setAssayMode('results');
       loadAssayForResults(openResultsBtn.dataset.assayOpenResults);
+      return;
+    }
+
+    const exportBtn = event.target.closest('[data-assay-export-pdf]');
+    if (exportBtn) {
+      exportAssayPdf(exportBtn.dataset.assayExportPdf);
       return;
     }
 
@@ -1938,23 +2659,12 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     renderNotebookOptions();
     assayPlateTypeInput.value = String(assay.plateType || '96');
     assaySampleAxisInput.value = assay.sampleAxis === 'column' ? 'column' : 'row';
-    if (assaySampleAxisValuesInput) {
-      assaySampleAxisValuesInput.value = Array.isArray(assay.sampleAxisValues)
-        ? assay.sampleAxisValues.join('\n')
-        : '';
-    }
-    if (assayConcentrationAxisValuesInput) {
-      assayConcentrationAxisValuesInput.value = Array.isArray(assay.concentrationAxisValues)
-        ? assay.concentrationAxisValues.join('\n')
-        : '';
-    }
     const def = getCurrentDefinition();
-    currentLayout = normalizeLayout(assay.wellLayout, def);
-    currentResults = normalizeResults(assay.resultValues, def);
+    const axisValues = restoreAssayLayoutState(assay, def);
     activeResultsAssayId = assay.id;
     syncAxisDisplay();
     renderPlateDefinition();
-    renderPlatePreview();
+    renderPlatePreview(axisValues);
     renderAssayNumberDisplay();
     renderResultsAssayOptions(assay.id);
     renderActiveAssayInfo(assay);
@@ -1968,13 +2678,16 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
       assayNotebookEntryInput.append(option);
       assayNotebookEntryInput.value = assay.notebookEntryId;
     }
-    assayNotesInput.value = assay.notes || '';
+    if (assayNotesInput) {
+      assayNotesInput.value = assay.notes || '';
+    }
     setCsvStatus(assay.wellLayout?.length ? `Loaded ${assay.wellLayout.length} mapped wells from saved assay.` : '');
     setResultStatus(`Loaded ${Object.keys(currentResults).length} result value(s) from saved assay.`);
     setLayoutStatus('');
     if (assayAnalysisSummary) {
       assayAnalysisSummary.textContent = '';
     }
+    unmountAnalysisChart();
     if (assayAnalysisTable) {
       assayAnalysisTable.innerHTML = '';
     }
@@ -1991,6 +2704,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
       if (assayAnalysisSummary) {
         assayAnalysisSummary.textContent = '';
       }
+      unmountAnalysisChart();
       if (assayAnalysisTable) {
         assayAnalysisTable.innerHTML = '';
       }
@@ -2001,6 +2715,14 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     if (typeof onAssaysChanged === 'function') {
       onAssaysChanged();
     }
+  }
+
+  function exportAssayPdf(assayId) {
+    const assay = getAssayById(assayId);
+    if (!assay) {
+      return;
+    }
+    exportAssayDefinitionPdf(assay);
   }
 
   function linkedNotebookLabel(assay) {
@@ -2058,6 +2780,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
         <p><strong>Notes:</strong> ${safeText(assay.notes || '-')}</p>
         <div class="card-actions">
           <button type="button" class="primary-btn" data-assay-open-results="${assay.id}">Open Results</button>
+          <button type="button" class="ghost-btn" data-assay-export-pdf="${assay.id}">Export PDF</button>
           <button type="button" class="ghost-btn" data-assay-edit="${assay.id}">Edit</button>
           <button type="button" class="danger-btn" data-assay-delete="${assay.id}">Delete</button>
         </div>
@@ -2074,6 +2797,8 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     renderProjectOptions();
     renderNotebookOptions();
     syncAxisDisplay();
+    renderPlateEditFieldButtons();
+    syncAxisTemplateValues();
     renderPlateDefinition();
     renderAssayNumberDisplay();
     renderResultsAssayOptions(activeResultsAssayId || assayResultsAssaySelect?.value || '');

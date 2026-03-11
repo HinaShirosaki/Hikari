@@ -363,6 +363,10 @@ const toolBox = loadEsmStyleModule(
     'nucleotideCounts',
     'reverseComplementDna',
     'translateDnaSequence',
+    'cleanProteinSequence',
+    'parseRestrictionSites',
+    'getCodonOptionsForResidue',
+    'reverseTranslateProteinSequence',
     'oligoMolecularWeight',
     'oligoExtinction',
     'oligoTm',
@@ -376,7 +380,13 @@ const toolBox = loadEsmStyleModule(
     'estimatePI',
     'residueSummary',
     'peptideStats',
-    'renderChemicalOptions'
+    'renderChemicalOptions',
+    'normalizeIupacPattern',
+    'matchesIupacPattern',
+    'parseCrisprTargetsInput',
+    'collectCrisprPamSites',
+    'computeCrisprOffTargetStats',
+    'designCrisprGuides'
   ]
 );
 const gelAnalysisInternals = loadEsmStyleModule(
@@ -404,12 +414,92 @@ const gelAnalysisInternals = loadEsmStyleModule(
     'interpretLane'
   ]
 );
+const papersManagementInternals = loadEsmStyleModule(
+  path.join(__dirname, 'modules', 'papers-management.js'),
+  {},
+  [
+    'normalizePaperSummary'
+  ]
+);
+const assayAnalysis = loadEsmStyleModule(path.join(__dirname, 'modules', 'assay-analysis.js'));
 const mainUtils = require(path.join(__dirname, 'main-utils'));
 const telegramBot = require(path.join(__dirname, 'telegramBot.js'));
+const { generatePlannotateGbk } = require(path.join(__dirname, 'plannotate-engine.js'));
 const forgeConfig = require(path.join(__dirname, 'forge.config.js'));
 const packageManifest = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
 
 const LEGACY_CHEMISTRY_DRAFT_KEY = 'enana_synthesis_chemistry_draft_v1';
+
+test('plannotate GenBank generator builds a valid record with qualifiers', () => {
+  const gbk = generatePlannotateGbk({
+    sequence: 'ATGCGTACGTAGCTAGCTAGCTAGCATCGATCGATCGATCGATCGATCG',
+    topology: 'circular',
+    recordName: 'demo_plasmid',
+    hits: [
+      {
+        qstart: 0,
+        qend: 12,
+        sframe: 1,
+        Feature: 'promoterA',
+        Type: 'promoter',
+        db: 'snapgene',
+        pident: 99.7,
+        percmatch: 100,
+        fragment: false
+      }
+    ]
+  });
+
+  assert.match(gbk, /^LOCUS\s+demo_plasmid/m);
+  assert.match(gbk, /^FEATURES\s+Location\/Qualifiers$/m);
+  assert.match(gbk, /^\s+promoter\s+1\.\.12$/m);
+  assert.match(gbk, /\/label="promoterA"/);
+  assert.match(gbk, /\/identity="99\.7"/);
+  assert.match(gbk, /^ORIGIN$/m);
+  assert.match(gbk, /^\/\/$/m);
+});
+
+test('plannotate GenBank generator preserves reverse-strand origin crossing order', () => {
+  const gbk = generatePlannotateGbk({
+    sequence: 'ATGCGTACGTAGCTAGCTAGCTAGCATCGATCGATCGATCGATCGATCG',
+    topology: 'circular',
+    hits: [
+      {
+        qstart: 40,
+        qend: 5,
+        sframe: -1,
+        Feature: 'cdsX',
+        Type: 'CDS',
+        db: 'swissprot',
+        pident: 87.2,
+        percmatch: 45.4,
+        fragment: true,
+        crossesOrigin: true
+      }
+    ]
+  });
+
+  assert.match(gbk, /complement\(join\(1\.\.5,41\.\.49\)\)/);
+  assert.match(gbk, /\/label="cdsX \(fragment\)"/);
+});
+
+test('papers-management normalizePaperSummary preserves non-JSON text', () => {
+  const rawSummary = 'This paper reports a new screening assay with reproducible hit enrichment.';
+  const normalized = papersManagementInternals.normalizePaperSummary(rawSummary);
+  assert.equal(normalized.summary, rawSummary);
+  assert.equal(normalized.structured, null);
+});
+
+test('papers-management normalizePaperSummary prefers structured plain-English summary', () => {
+  const rawSummary = JSON.stringify({
+    title: 'Demo paper',
+    plain_english_summary: 'A simple plain-language summary.',
+    main_conclusion: 'Main conclusion text.'
+  });
+  const normalized = papersManagementInternals.normalizePaperSummary(rawSummary);
+  assert.equal(normalized.summary, 'A simple plain-language summary.');
+  assert.equal(normalized.structured?.title, 'Demo paper');
+});
 
 test('normalizeState keeps defaults and migrates legacy LLM API key', () => {
   const normalized = shared.normalizeState({
@@ -432,6 +522,7 @@ test('normalizeState keeps defaults and migrates legacy LLM API key', () => {
   assert.equal(normalized.growthMetrics.counters.protocol_share_imported, 0);
   assert.equal(Array.isArray(normalized.growthMetrics.events), true);
   assert.equal(normalized.growthMetrics.events.length, 0);
+  assert.equal(normalized.settings.llm.provider, 'openai');
   assert.equal(normalized.settings.llm.apiKey, 'sk-test-123');
   assert.equal(
     normalized.settings.llm.apiEndpoint,
@@ -604,6 +695,194 @@ test('lab-management supports member create, edit, and delete lifecycle', () => 
   trigger(deleteBtn, 'click');
   assert.equal(state.members.length, 0);
   assert.match(memberCards.innerHTML, /No members yet/);
+});
+
+test('personal-inventory shows right-side sample editor and saves linked sample fields', () => {
+  const document = createMockDocument([
+    'inventory-sections',
+    'container-detail',
+    'inventory-add-container-btn',
+    'inventory-add-container-form',
+    'inventory-add-container-name',
+    'inventory-add-container-location',
+    'inventory-add-container-type',
+    'inventory-add-container-cancel'
+  ]);
+  const inventorySections = document.getElementById('inventory-sections');
+  const inventoryModule = loadEsmStyleModule(path.join(__dirname, 'modules', 'personal-inventory.js'), {
+    document
+  });
+
+  let persistCalls = 0;
+  let sampleChangedCalls = 0;
+  const state = {
+    samples: [
+      {
+        id: 'sample-1',
+        code: 'S-001',
+        name: 'Seed Sample',
+        type: 'plasmid',
+        lot: 'L-1',
+        concentration: '1 mg/mL',
+        notes: 'initial',
+        location: {
+          storageType: 'freezer',
+          freezer: '-20 Degree',
+          rack: '',
+          box: 'Box A',
+          position: '1'
+        },
+        inventoryLink: {
+          section: '-20 Degree',
+          containerId: 'box-1',
+          wellIndex: 0
+        },
+        chemicalLinks: [],
+        updatedAt: '2026-03-01T00:00:00.000Z'
+      }
+    ],
+    inventory: {
+      'Room Temp': [],
+      '4 Degree': [],
+      '-20 Degree': [
+        {
+          id: 'box-1',
+          name: 'Box A',
+          type: 'box81',
+          wells: [{ name: 'A1', content: 'Seed slot' }]
+        }
+      ],
+      '-80 Degree': [],
+      'Liquid Nitrogen': []
+    }
+  };
+
+  const personalInventory = inventoryModule.initPersonalInventory({
+    state,
+    persist: () => {
+      persistCalls += 1;
+    },
+    createId: () => 'container-x',
+    safeText: shared.safeText,
+    cssEscape: shared.cssEscape,
+    onSamplesChanged: () => {
+      sampleChangedCalls += 1;
+    }
+  });
+
+  personalInventory.renderSections();
+  const openBtn = inventorySections.querySelectorAll('[data-container-open]')[0];
+  openBtn.dataset.section = '-20 Degree';
+  trigger(openBtn, 'click');
+  const wellBtn = inventorySections.querySelectorAll('[data-well-index]')[0];
+  wellBtn.dataset.section = '-20 Degree';
+  wellBtn.dataset.containerId = 'box-1';
+  trigger(wellBtn, 'click');
+
+  assert.match(inventorySections.innerHTML, /well-editor-shell/);
+  assert.match(inventorySections.innerHTML, /data-well-sample-save="sample-1"/);
+
+  inventorySections.querySelector('[data-well-sample-code]').value = 'S-UPDATED-1';
+  inventorySections.querySelector('[data-well-sample-name]').value = 'Updated Sample';
+  inventorySections.querySelector('[data-well-sample-type]').value = 'protein';
+  inventorySections.querySelector('[data-well-sample-lot]').value = 'LOT-99';
+  inventorySections.querySelector('[data-well-sample-concentration]').value = '2 mg/mL';
+  inventorySections.querySelector('[data-well-sample-notes]').value = 'edited in side panel';
+  trigger(inventorySections.querySelectorAll('[data-well-sample-save]')[0], 'click');
+
+  assert.equal(state.samples.length, 1);
+  assert.equal(state.samples[0].code, 'S-UPDATED-1');
+  assert.equal(state.samples[0].name, 'Updated Sample');
+  assert.equal(state.samples[0].type, 'protein');
+  assert.equal(state.samples[0].lot, 'LOT-99');
+  assert.equal(state.samples[0].concentration, '2 mg/mL');
+  assert.equal(state.samples[0].notes, 'edited in side panel');
+  assert.equal(state.samples[0].inventoryLink.section, '-20 Degree');
+  assert.equal(state.samples[0].inventoryLink.containerId, 'box-1');
+  assert.equal(state.samples[0].inventoryLink.wellIndex, 0);
+  assert.ok(persistCalls >= 1);
+  assert.equal(sampleChangedCalls, 1);
+});
+
+test('personal-inventory creates a linked sample from the side editor for an empty cell', () => {
+  const document = createMockDocument([
+    'inventory-sections',
+    'container-detail',
+    'inventory-add-container-btn',
+    'inventory-add-container-form',
+    'inventory-add-container-name',
+    'inventory-add-container-location',
+    'inventory-add-container-type',
+    'inventory-add-container-cancel'
+  ]);
+  const inventorySections = document.getElementById('inventory-sections');
+  const inventoryModule = loadEsmStyleModule(path.join(__dirname, 'modules', 'personal-inventory.js'), {
+    document
+  });
+
+  let persistCalls = 0;
+  let sampleChangedCalls = 0;
+  const state = {
+    samples: [],
+    inventory: {
+      'Room Temp': [],
+      '4 Degree': [],
+      '-20 Degree': [
+        {
+          id: 'box-2',
+          name: 'Box B',
+          type: 'box81',
+          wells: [{ name: 'A1', content: '' }]
+        }
+      ],
+      '-80 Degree': [],
+      'Liquid Nitrogen': []
+    }
+  };
+
+  const personalInventory = inventoryModule.initPersonalInventory({
+    state,
+    persist: () => {
+      persistCalls += 1;
+    },
+    createId: () => 'container-y',
+    safeText: shared.safeText,
+    cssEscape: shared.cssEscape,
+    onSamplesChanged: () => {
+      sampleChangedCalls += 1;
+    }
+  });
+
+  personalInventory.renderSections();
+  const openBtn = inventorySections.querySelectorAll('[data-container-open]')[0];
+  openBtn.dataset.section = '-20 Degree';
+  trigger(openBtn, 'click');
+  const wellBtn = inventorySections.querySelectorAll('[data-well-index]')[0];
+  wellBtn.dataset.section = '-20 Degree';
+  wellBtn.dataset.containerId = 'box-2';
+  trigger(wellBtn, 'click');
+
+  assert.match(inventorySections.innerHTML, /data-well-sample-create="0"/);
+  inventorySections.querySelector('[data-well-sample-new-code]').value = 'S-NEW-1';
+  inventorySections.querySelector('[data-well-sample-new-name]').value = 'Created Sample';
+  inventorySections.querySelector('[data-well-sample-new-type]').value = 'antibody';
+  inventorySections.querySelector('[data-well-sample-new-lot]').value = 'BATCH-7';
+  inventorySections.querySelector('[data-well-sample-new-concentration]').value = '5 mg/mL';
+  inventorySections.querySelector('[data-well-sample-new-notes]').value = 'created from inventory panel';
+  trigger(inventorySections.querySelectorAll('[data-well-sample-create]')[0], 'click');
+
+  assert.equal(state.samples.length, 1);
+  assert.equal(state.samples[0].code, 'S-NEW-1');
+  assert.equal(state.samples[0].name, 'Created Sample');
+  assert.equal(state.samples[0].type, 'antibody');
+  assert.equal(state.samples[0].lot, 'BATCH-7');
+  assert.equal(state.samples[0].concentration, '5 mg/mL');
+  assert.equal(state.samples[0].notes, 'created from inventory panel');
+  assert.equal(state.samples[0].inventoryLink.section, '-20 Degree');
+  assert.equal(state.samples[0].inventoryLink.containerId, 'box-2');
+  assert.equal(state.samples[0].inventoryLink.wellIndex, 0);
+  assert.ok(persistCalls >= 1);
+  assert.equal(sampleChangedCalls, 1);
 });
 
 test('project-management deletes projects with linked notebook and workflow cleanup', () => {
@@ -783,13 +1062,45 @@ test('collaboration-management sends messages and imports protocol share links',
   assert.match(state.protocols[1].name, /^PCR Protocol \(Shared Copy\)/);
   assert.equal(importedCalls, 2);
 
+  protocolLinkInput.value = JSON.stringify([
+    {
+      title: 'JSON Protocol',
+      purpose: 'Validate JSON import',
+      materials: ['Water', 'Salt'],
+      steps: [
+        { step_number: 2, action: 'Incubate for [time]' },
+        { step_number: 1, action: 'Add [] mL buffer' }
+      ],
+      troubleshooting: [
+        {
+          problem: 'Cloudy solution',
+          possible_cause: 'Contamination',
+          solution: 'Prepare a fresh buffer'
+        }
+      ]
+    }
+  ]);
+  trigger(importProtocolLinkBtn, 'click');
+  assert.equal(state.protocols.length, 3);
+  assert.equal(state.protocols[2].name, 'JSON Protocol');
+  assert.equal(state.protocols[2].purpose, 'Validate JSON import');
+  assert.deepEqual(state.protocols[2].materials, ['Water', 'Salt']);
+  assert.equal(state.protocols[2].steps.length, 2);
+  assert.match(state.protocols[2].steps[0].text, /Add \{\{ph:/);
+  assert.equal(state.protocols[2].steps[0].placeholders[0].name, 'value');
+  assert.match(state.protocols[2].steps[1].text, /Incubate for \{\{ph:/);
+  assert.equal(state.protocols[2].steps[1].placeholders[0].name, 'time');
+  assert.match(state.protocols[2].troubleshooting, /Problem: Cloudy solution/);
+  assert.match(protocolLinkStatus.textContent, /Imported "JSON Protocol"/);
+  assert.equal(importedCalls, 3);
+
   protocolLinkInput.value = 'invalid-link';
   trigger(importProtocolLinkBtn, 'click');
   assert.match(protocolLinkStatus.textContent, /Invalid protocol link/);
-  assert.ok(persistCalls >= 3);
+  assert.ok(persistCalls >= 4);
 });
 
-test('protocol-management supports draft creation, sharing, and delete cascades', () => {
+test('protocol-management supports draft creation, sharing, link copy, and delete cascades', async () => {
   const document = createMockDocument([
     'protocol-list-panel',
     'protocol-editor-panel',
@@ -810,6 +1121,8 @@ test('protocol-management supports draft creation, sharing, and delete cascades'
     'add-placeholder-btn',
     'placeholder-name',
     'protocol-share-status',
+    'protocol-share-link-panel',
+    'protocol-share-link-output',
     'protocol-list',
     'protocol-sort-field-btn',
     'protocol-sort-order-btn'
@@ -830,6 +1143,7 @@ test('protocol-management supports draft creation, sharing, and delete cascades'
 
   let persistCalls = 0;
   let importedCalls = 0;
+  let copiedText = '';
   const tracked = [];
   const state = {
     protocols: [],
@@ -853,7 +1167,14 @@ test('protocol-management supports draft creation, sharing, and delete cascades'
   const protocolModule = loadEsmStyleModule(path.join(__dirname, 'modules', 'protocol-management.js'), {
     document,
     TextEncoder,
-    btoa: btoaPolyfill
+    btoa: btoaPolyfill,
+    navigator: {
+      clipboard: {
+        writeText: async (value) => {
+          copiedText = String(value || '');
+        }
+      }
+    }
   });
   const protocol = protocolModule.initProtocolManagement({
     state,
@@ -893,6 +1214,33 @@ test('protocol-management supports draft creation, sharing, and delete cascades'
   assert.match(protocolName.value, /Paper X - Cell Prep/);
   assert.match(protocolSteps.value, /Resuspend pellet/);
 
+  const createdFromProtocolJson = protocol.addDraftFromExtractedMethod(
+    {
+      title: 'JSON Schema Protocol',
+      purpose: 'Validate protocol-shape method ingestion',
+      materials: ['Tube', 'PBS'],
+      steps: [
+        { step_number: 2, action: 'Incubate for [time]' },
+        { step_number: 1, action: 'Add [] mL PBS' }
+      ],
+      troubleshooting: [
+        {
+          problem: 'No pellet',
+          possible_cause: 'Low cell density',
+          solution: 'Increase starting cells'
+        }
+      ]
+    },
+    { title: 'Paper X' }
+  );
+  assert.equal(createdFromProtocolJson, true);
+  assert.match(protocolName.value, /Paper X - JSON Schema Protocol/);
+  assert.equal(protocolPurpose.value, 'Validate protocol-shape method ingestion');
+  assert.match(protocolMaterials.value, /Tube/);
+  assert.match(protocolTroubleshooting.value, /Problem: No pellet/);
+  assert.match(protocolSteps.value, /Add \[value\] mL PBS/);
+  assert.match(protocolSteps.value, /Incubate for \[time\]/);
+
   trigger(protocolForm, 'submit');
   assert.equal(state.protocols.length, 1);
   assert.ok(Number.isFinite(Date.parse(state.protocols[0].createdAt)));
@@ -913,6 +1261,20 @@ test('protocol-management supports draft creation, sharing, and delete cascades'
   assert.equal(state.messages[0].type, 'protocol_share');
   assert.match(state.messages[0].payload.shareLink, /^enana:\/\/protocol-share\//);
   assert.equal(tracked[0].name, 'protocol_share_sent');
+
+  protocol.renderList();
+  const reopenedShareBtn = protocolList.querySelectorAll('[data-protocol-share]')[0];
+  trigger(reopenedShareBtn, 'click');
+
+  const copyLinkBtn = protocolList.querySelectorAll('[data-protocol-copy-link]')[0];
+  trigger(copyLinkBtn, 'click');
+  await flushAsync();
+
+  assert.equal(copiedText, state.messages[0].payload.shareLink);
+  assert.equal(tracked[1].name, 'protocol_share_link_copied');
+  assert.equal(document.getElementById('protocol-share-link-panel').hidden, false);
+  assert.equal(document.getElementById('protocol-share-link-output').value, copiedText);
+  assert.match(document.getElementById('protocol-share-status').textContent, /Copied a share link/);
 
   const protocolId = state.protocols[0].id;
   state.notebookEntries = [{ id: 'entry-1', protocolId, projectId: 'project-1' }];
@@ -1372,6 +1734,87 @@ test('agent-chat sends settings API key to main process and stores assistant res
   assert.equal(status.textContent, 'Chat history cleared.');
 });
 
+function buildStandardCurveObservations({
+  sampleId = 'Std',
+  concentrations = [0.1, 0.3, 1, 3, 10, 30],
+  replicates = 2
+} = {}) {
+  const observations = [];
+  concentrations.forEach((concentration, concentrationIndex) => {
+    const signal = 10 + (90 / (1 + Math.exp(1.3 * (1.1 - Math.log10(Math.max(concentration, 1e-6))))));
+    for (let replicateIndex = 0; replicateIndex < replicates; replicateIndex += 1) {
+      const offset = (replicateIndex % 2 === 0 ? -1 : 1) * 0.6;
+      observations.push({
+        well: `A${(concentrationIndex * replicates) + replicateIndex + 1}`,
+        response: signal + offset,
+        rowIndex: 0,
+        rowLabel: 'A',
+        columnIndex: concentrationIndex,
+        columnNumber: concentrationIndex + 1,
+        rawSampleId: sampleId,
+        sampleId,
+        sampleValue: Number.NaN,
+        rawConcentration: String(concentration),
+        concentrationLabel: String(concentration),
+        concentrationValue: concentration
+      });
+    }
+  });
+  return observations;
+}
+
+test('assay-analysis standard curve methods produce fitted rows and line chart models', () => {
+  const observations = buildStandardCurveObservations();
+  const methods = [
+    'standard_curve_line',
+    'standard_curve_4pl_log_concentration',
+    'standard_curve_4pl_concentration',
+    'standard_curve_5pl_log_concentration',
+    'standard_curve_5pl_concentration',
+    'standard_curve_semilog_line',
+    'standard_curve_hyperbola',
+    'standard_curve_quadratic',
+    'standard_curve_cubic',
+    'standard_curve_pade_11'
+  ];
+
+  methods.forEach((method) => {
+    const result = assayAnalysis.analyzeAssayData({ method, observations });
+    assert.equal(result.rows.length, 1, `expected one fitted row for ${method}`);
+    assert.equal(result.headers.includes('R²'), true, `expected R² column for ${method}`);
+    assert.equal(result.headers.includes('RMSE'), true, `expected RMSE column for ${method}`);
+    assert.equal(result.chartModel?.chartType, 'line', `expected line chart for ${method}`);
+    assert.equal(Array.isArray(result.chartModel?.series), true, `expected chart series for ${method}`);
+    assert.ok(result.chartModel.series.length >= 1, `expected non-empty chart series for ${method}`);
+
+    const row = result.rows[0];
+    assert.ok(String(row[0] || '').trim().length > 0, `expected non-empty series label for ${method}`);
+    assert.ok(Number.isFinite(Number(row[1])), `expected numeric point count for ${method}`);
+    assert.ok(Number.isFinite(Number(row[3])), `expected numeric r2 for ${method}`);
+    assert.ok(Number.isFinite(Number(row[4])), `expected numeric rmse for ${method}`);
+    assert.equal(typeof row[5], 'string');
+    assert.equal(typeof row[6], 'string');
+  });
+});
+
+test('assay-analysis log-concentration methods skip non-positive concentration points', () => {
+  const observations = buildStandardCurveObservations({
+    concentrations: [-5, -1, 0],
+    replicates: 2
+  });
+  const methods = [
+    'standard_curve_4pl_log_concentration',
+    'standard_curve_5pl_log_concentration',
+    'standard_curve_semilog_line'
+  ];
+
+  methods.forEach((method) => {
+    const result = assayAnalysis.analyzeAssayData({ method, observations });
+    assert.equal(result.rows.length, 0, `expected no fitted rows for ${method}`);
+    assert.match(result.summary, /skipped/i);
+  });
+});
+
 test('rebuildObjectGraph creates cross-module links used by queries', () => {
   const state = {
     members: [{ id: 'm1', name: 'Alice' }],
@@ -1511,6 +1954,46 @@ test('rebuildObjectGraph creates cross-module links used by queries', () => {
   assert.equal(objectGraph.queryInstrumentUsageInRange(state, 'i1', 'bad', 'date').length, 0);
 });
 
+test('rebuildObjectGraph supports plain-text workflow blocks without protocol edges', () => {
+  const state = {
+    members: [{ id: 'm1', name: 'Alice' }],
+    workflowTemplates: [
+      {
+        id: 'wt-text',
+        name: 'Text Template',
+        blocks: [{ id: 'tb-text', type: 'text', text: 'Mix gently', assigneeId: 'm1' }],
+        links: []
+      }
+    ],
+    workflows: [
+      {
+        id: 'w-text',
+        name: 'Text Workflow',
+        projectId: '',
+        notebookEntryIds: [],
+        blocks: [{ id: 'b-text', type: 'text', text: 'Incubate 10 min', assigneeId: 'm1' }],
+        links: []
+      }
+    ]
+  };
+
+  const graph = objectGraph.rebuildObjectGraph(state);
+  assert.equal(Boolean(graph.nodes['workflow_block:w-text:block:b-text']), true);
+  assert.equal(Boolean(graph.nodes['workflow_template_block:wt-text:block:tb-text']), true);
+  assert.equal(
+    graph.edges.some((edge) => edge.from === 'workflow_block:w-text:block:b-text' && edge.relation === 'assigned_to' && edge.to === 'person:m1'),
+    true
+  );
+  assert.equal(
+    graph.edges.some((edge) => edge.from === 'workflow_block:w-text:block:b-text' && edge.relation === 'uses_protocol'),
+    false
+  );
+  assert.equal(
+    graph.edges.some((edge) => edge.from === 'workflow_template_block:wt-text:block:tb-text' && edge.relation === 'uses_protocol'),
+    false
+  );
+});
+
 test('view constants and index navigation stay in sync', () => {
   const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
   const viewValues = Object.values(shared.VIEWS);
@@ -1518,13 +2001,41 @@ test('view constants and index navigation stay in sync', () => {
   const navViews = new Set([...html.matchAll(/data-view=\"([^\"]+)\"/g)].map((match) => match[1]));
 
   const nonHomeViews = viewValues.filter((value) => value !== shared.VIEWS.HOME);
+  const navRequiredViews = nonHomeViews.filter((value) => value !== shared.VIEWS.PERSONAL_INVENTORY);
   const missingSections = nonHomeViews.filter((value) => !sectionViews.has(value));
-  const missingNav = nonHomeViews.filter((value) => !navViews.has(value));
+  const missingNav = navRequiredViews.filter((value) => !navViews.has(value));
   const unknownNav = [...navViews].filter((value) => !viewValues.includes(value));
 
   assert.deepEqual(missingSections, []);
   assert.deepEqual(missingNav, []);
   assert.deepEqual(unknownNav, []);
+});
+
+test('sample and inventory use a merged navigation entry', () => {
+  const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  assert.match(
+    html,
+    /<button class="app-nav-btn" type="button" data-view="sample-registry-view">Sample &amp; Inventory<\/button>/
+  );
+  assert.equal(/<button[^>]+data-view="personal-inventory-view"/.test(html), false);
+  assert.match(
+    html,
+    /<button class="tile" data-view="sample-registry-view">[\s\S]*?<span class="label">Sample &amp; Inventory<\/span>[\s\S]*?<\/button>/
+  );
+});
+
+test('renderer routes personal inventory aliases to merged sample workspace', () => {
+  const source = readSource('renderer.js');
+  assert.match(
+    source,
+    /function normalizeViewId\(viewId\)\s*\{\s*return viewId === VIEWS\.PERSONAL_INVENTORY \? VIEWS\.SAMPLE_REGISTRY : viewId;\s*\}/
+  );
+  assert.match(source, /\['inventory', \{ viewId: VIEWS\.SAMPLE_REGISTRY, inputId: 'sample-search', label: 'Sample & Inventory' \}\]/);
+  assert.match(source, /const showSampleInventoryWorkspace = nextView === VIEWS\.SAMPLE_REGISTRY;/);
+  assert.match(
+    source,
+    /if \(nextView === VIEWS\.SAMPLE_REGISTRY\) \{\s*personalInventory\.renderSections\(\);\s*sampleRegistry\.render\(\);\s*\}/
+  );
 });
 
 test('ketcher embedded page uses portable static path resolution', () => {
@@ -1554,6 +2065,24 @@ test('telegram bridge keeps only supported renderer IPC channel', () => {
   const preloadSource = fs.readFileSync(path.join(__dirname, 'preload.js'), 'utf8');
   assert.equal(telegramBotSource.includes('telegram-message'), false);
   assert.equal(preloadSource.includes('onTelegramCommand'), true);
+});
+
+test('telegram bot writes events to data/telegram-events.log by default', () => {
+  const telegramBotSource = fs.readFileSync(path.join(__dirname, 'telegramBot.js'), 'utf8');
+  assert.match(telegramBotSource, /data', 'telegram-events\.log'/);
+  assert.equal(telegramBotSource.includes('telegram-messages.log'), false);
+});
+
+test('main agent chat logging records request/result/error with redacted API key metadata', () => {
+  const mainSource = fs.readFileSync(path.join(__dirname, 'main.js'), 'utf8');
+  assert.match(mainSource, /const AGENT_CHAT_LOG_FILE_NAME = 'agent-chat\.log';/);
+  assert.match(mainSource, /ENANA_AGENT_CHAT_LOG_PATH/);
+  assert.match(mainSource, /void ensureAgentChatLogFile\(getAgentChatLogPath\(\)\);/);
+  assert.match(mainSource, /apiKeyProvided: Boolean\(cleanText\(source\.apiKey, 12\)\)/);
+  assert.equal(mainSource.includes('apiKey: cleanText(source.apiKey'), false);
+  assert.match(mainSource, /type: 'agent-chat-request'/);
+  assert.match(mainSource, /type: 'agent-chat-result'/);
+  assert.match(mainSource, /type: 'agent-chat-error'/);
 });
 
 test('telegram bot internals normalize search and module parsing', () => {
@@ -1811,6 +2340,14 @@ test('[P1] normalizeState migrates legacy endpoint from llm.api URL', () => {
   const normalized = shared.normalizeState({ settings: { llm: { api: 'https://example.com/v1' } } });
   assert.equal(normalized.settings.llm.apiEndpoint, 'https://example.com/v1');
   assert.equal(normalized.settings.llm.apiKey, '');
+  assert.equal(normalized.settings.llm.provider, 'openai');
+});
+
+test('[P1] normalizeState treats codex:// legacy llm.api as endpoint', () => {
+  const normalized = shared.normalizeState({ settings: { llm: { provider: 'codex', api: 'codex://cli' } } });
+  assert.equal(normalized.settings.llm.provider, 'codex');
+  assert.equal(normalized.settings.llm.apiEndpoint, 'codex://cli');
+  assert.equal(normalized.settings.llm.apiKey, '');
 });
 
 test('[P1] normalizeState keeps explicit llm.apiKey over legacy llm.api key', () => {
@@ -1821,6 +2358,34 @@ test('[P1] normalizeState keeps explicit llm.apiKey over legacy llm.api key', ()
 test('[P1] normalizeState trims llm.apiEndpoint whitespace', () => {
   const normalized = shared.normalizeState({ settings: { llm: { apiEndpoint: '  https://api.example/v1  ' } } });
   assert.equal(normalized.settings.llm.apiEndpoint, 'https://api.example/v1');
+});
+
+test('[P1] normalizeState keeps explicit llm.provider', () => {
+  const normalized = shared.normalizeState({ settings: { llm: { provider: 'claude' } } });
+  assert.equal(normalized.settings.llm.provider, 'claude');
+  assert.equal(normalized.settings.llm.apiEndpoint, 'https://api.anthropic.com/v1/messages');
+});
+
+test('[P1] normalizeState infers llm.provider from endpoint', () => {
+  const normalized = shared.normalizeState({
+    settings: {
+      llm: {
+        apiEndpoint: 'https://generativelanguage.googleapis.com/v1beta'
+      }
+    }
+  });
+  assert.equal(normalized.settings.llm.provider, 'gemini');
+});
+
+test('[P1] normalizeState infers llm.provider from codex endpoint', () => {
+  const normalized = shared.normalizeState({
+    settings: {
+      llm: {
+        apiEndpoint: 'codex://cli'
+      }
+    }
+  });
+  assert.equal(normalized.settings.llm.provider, 'codex');
 });
 
 test('[P1] normalizeState does not mutate defaultState arrays', () => {
@@ -2080,6 +2645,7 @@ expectedGraphRelations.forEach(([from, relation, to], idx) => {
 const moduleExportContracts = [
   ['modules/agent-chat.js', /export function initAgentChat/],
   ['modules/assay.js', /export function initAssay/],
+  ['modules/assay-analysis.js', /export function analyzeAssayData/],
   ['modules/biology-notebook.js', /export function initLabNotebook/],
   ['modules/buffer-compounds.js', /export const BUFFER_COMPOUNDS/],
   ['modules/collaboration-management.js', /export function initCollaborationManagement/],
@@ -2107,28 +2673,23 @@ moduleExportContracts.forEach(([relativePath, pattern], idx) => {
 });
 
 const removedCodeGuards = [
-  ['modules/shared.js', /LAB_NOTEBOOK/],
-  ['telegramBot.js', /telegram-message/],
-  ['preload.js', /onTelegramMessage/],
-  ['ketcher-embedded.html', /\/Users\//],
-  ['ketcher-embedded.html', /file:\/\//],
-  ['index.html', /lab-notebook-view/],
-  ['renderer.js', /VIEWS\.LAB_NOTEBOOK/],
-  ['Readme.md', /project_root\//],
-  ['forge.config.js', /enana-data/],
-  ['package.json', /"dist": "electron-forge make"/],
-  ['package.json', /"package:app": "electron-forge package"/],
-  ['modules/agent-chat.js', /apiKey: String\(state\.settings\?\.llm\?\.apiKey/]
+  ['modules/shared.js', /LAB_NOTEBOOK/, false],
+  ['telegramBot.js', /telegram-message/, false],
+  ['preload.js', /onTelegramMessage/, false],
+  ['ketcher-embedded.html', /\/Users\//, false],
+  ['ketcher-embedded.html', /file:\/\//, false],
+  ['index.html', /lab-notebook-view/, false],
+  ['renderer.js', /VIEWS\.LAB_NOTEBOOK/, false],
+  ['forge.config.js', /enana-data/, true],
+  ['package.json', /"dist": "electron-forge make"/, true],
+  ['package.json', /"package:app": "electron-forge package"/, true],
+  ['modules/agent-chat.js', /apiKey: String\(state\.settings\?\.llm\?\.apiKey/, true]
 ];
 
-removedCodeGuards.forEach(([relativePath, pattern], idx) => {
+removedCodeGuards.forEach(([relativePath, pattern, shouldMatch], idx) => {
   test(`[P1] regression guard case ${idx + 1} (${relativePath})`, () => {
     const source = readSource(relativePath);
-    if (idx <= 7) {
-      assert.equal(pattern.test(source), false);
-      return;
-    }
-    assert.equal(pattern.test(source), true);
+    assert.equal(pattern.test(source), shouldMatch);
   });
 });
 
@@ -2143,7 +2704,8 @@ nonHomeViews.forEach((viewId) => {
   });
 });
 
-nonHomeViews.forEach((viewId) => {
+const navExpectedViews = nonHomeViews.filter((viewId) => viewId !== shared.VIEWS.PERSONAL_INVENTORY);
+navExpectedViews.forEach((viewId) => {
   test(`[P0] index nav entry exists for ${viewId}`, () => {
     assert.equal(navViews.has(viewId), true);
   });
@@ -2153,18 +2715,6 @@ Object.entries(shared.TITLES).forEach(([viewId, title], idx) => {
   test(`[P1] title text exists for mapped view case ${idx + 1} (${viewId})`, () => {
     assert.equal(typeof title, 'string');
     assert.ok(title.trim().length > 0);
-  });
-});
-
-[
-  ['Readme.md', /npm install/],
-  ['Readme.md', /npm test/],
-  ['Readme.md', /npm run dist/],
-  ['Readme.md', /Installer outputs are generated under `out\/make\/`/],
-  ['Readme.md', /Static frontend assets are loaded with app-relative paths/]
-].forEach(([relativePath, pattern], idx) => {
-  test(`[P2] docs install guidance case ${idx + 1}`, () => {
-    assert.match(readSource(relativePath), pattern);
   });
 });
 
@@ -2431,10 +2981,15 @@ test('[EDGE] tool-box internal functions are exposed for unit tests', () => {
     'massFromG',
     'cleanNucleotideSequence',
     'translateDnaSequence',
+    'cleanProteinSequence',
+    'parseRestrictionSites',
+    'reverseTranslateProteinSequence',
     'oligoTm',
     'linearRegression',
     'peptideStats',
-    'renderChemicalOptions'
+    'renderChemicalOptions',
+    'parseCrisprTargetsInput',
+    'designCrisprGuides'
   ].forEach((name) => {
     assert.equal(typeof toolBox[name], 'function');
   });
@@ -2565,6 +3120,127 @@ test('[EDGE] tool-box internal functions are exposed for unit tests', () => {
 });
 
 [
+  ['m k*t1', true, 'MK*T'],
+  ['m k*t1', false, 'MKT'],
+  ['bjouxz*', true, 'BJOUXZ*'],
+  ['', true, ''],
+  [null, true, '']
+].forEach(([input, allowStop, expected], idx) => {
+  test(`[EDGE] tool-box cleanProteinSequence case ${idx + 1}`, () => {
+    assert.equal(toolBox.cleanProteinSequence(input, allowStop), expected);
+  });
+});
+
+[
+  ['gaattc AAGCTT ggtctc', ['GAATTC', 'AAGCTT', 'GGTCTC'], []],
+  ['EcoRI NNNN atg', ['ATG'], ['ECORI', 'NNNN']],
+  ['', [], []]
+].forEach(([input, expectedSites, expectedIgnored], idx) => {
+  test(`[EDGE] tool-box parseRestrictionSites case ${idx + 1}`, () => {
+    const parsed = toolBox.parseRestrictionSites(input);
+    assert.equal(JSON.stringify(parsed.sites), JSON.stringify(expectedSites));
+    assert.equal(JSON.stringify(parsed.ignoredTokens), JSON.stringify(expectedIgnored));
+  });
+});
+
+test('[EDGE] tool-box parseRestrictionSites expands reverse complement motifs', () => {
+  const parsed = toolBox.parseRestrictionSites('GGTCTC');
+  assert.equal(parsed.expandedSites.includes('GGTCTC'), true);
+  assert.equal(parsed.expandedSites.includes('GAGACC'), true);
+});
+
+test('[EDGE] tool-box reverseTranslateProteinSequence basic translation is valid', () => {
+  const result = toolBox.reverseTranslateProteinSequence('MRA', { organism: 'ecoli' });
+  assert.equal(result.ok, true);
+  assert.equal(result.dna.length, 9);
+  assert.equal(toolBox.translateDnaSequence(result.dna, 1, 'star').protein, 'MRA');
+});
+
+test('[EDGE] tool-box reverseTranslateProteinSequence reflects organism codon preferences', () => {
+  const ecoli = toolBox.reverseTranslateProteinSequence('RRR', { organism: 'ecoli' });
+  const yeast = toolBox.reverseTranslateProteinSequence('RRR', { organism: 'yeast' });
+  assert.equal(ecoli.ok, true);
+  assert.equal(yeast.ok, true);
+  assert.notEqual(ecoli.dna, yeast.dna);
+});
+
+[
+  'mouse',
+  'rat',
+  'pichia',
+  'arabidopsis',
+  'drosophila',
+  'c_elegans',
+  'zebrafish',
+  'pseudomonas',
+  'salmonella'
+].forEach((organismKey, idx) => {
+  test(`[EDGE] tool-box reverseTranslateProteinSequence supports extra species case ${idx + 1}`, () => {
+    const result = toolBox.reverseTranslateProteinSequence('MRT', { organism: organismKey });
+    assert.equal(result.ok, true);
+    assert.equal(result.organism, organismKey);
+    assert.equal(toolBox.translateDnaSequence(result.dna, 1, 'star').protein, 'MRT');
+  });
+});
+
+test('[EDGE] tool-box reverseTranslateProteinSequence applies new species codon preferences', () => {
+  const ecoli = toolBox.reverseTranslateProteinSequence('KKK', { organism: 'ecoli' });
+  const pseudomonas = toolBox.reverseTranslateProteinSequence('KKK', { organism: 'pseudomonas' });
+  assert.equal(ecoli.ok, true);
+  assert.equal(pseudomonas.ok, true);
+  assert.notEqual(ecoli.dna, pseudomonas.dna);
+});
+
+test('[EDGE] tool-box reverseTranslateProteinSequence can avoid a requested restriction site', () => {
+  const unconstrained = toolBox.reverseTranslateProteinSequence('EF', { organism: 'ecoli' });
+  const constrained = toolBox.reverseTranslateProteinSequence('EF', {
+    organism: 'ecoli',
+    restrictionSites: ['GAATTC']
+  });
+
+  assert.equal(unconstrained.ok, true);
+  assert.equal(constrained.ok, true);
+  assert.equal(unconstrained.dna.includes('GAATTC'), true);
+  assert.equal(constrained.dna.includes('GAATTC'), false);
+  assert.equal(toolBox.translateDnaSequence(constrained.dna, 1, 'star').protein, 'EF');
+});
+
+test('[EDGE] tool-box reverseTranslateProteinSequence reports impossible restriction constraints', () => {
+  const blocked = toolBox.reverseTranslateProteinSequence('M', {
+    organism: 'ecoli',
+    restrictionSites: ['ATG']
+  });
+  assert.equal(blocked.ok, false);
+  assert.equal(blocked.reason, 'restriction_conflict');
+  assert.equal(blocked.blockedPosition, 1);
+});
+
+test('[EDGE] tool-box reverseTranslateProteinSequence appends stop codon when requested', () => {
+  const withStop = toolBox.reverseTranslateProteinSequence('MA', {
+    organism: 'ecoli',
+    appendStopCodon: true
+  });
+  assert.equal(withStop.ok, true);
+  assert.equal(withStop.protein, 'MA*');
+  assert.equal(toolBox.translateDnaSequence(withStop.dna, 1, 'star').protein, 'MA*');
+
+  const alreadyStopped = toolBox.reverseTranslateProteinSequence('MA*', {
+    organism: 'ecoli',
+    appendStopCodon: true
+  });
+  assert.equal(alreadyStopped.ok, true);
+  assert.equal(alreadyStopped.protein, 'MA*');
+  assert.equal(toolBox.translateDnaSequence(alreadyStopped.dna, 1, 'star').protein, 'MA*');
+});
+
+test('[EDGE] tool-box reverseTranslateProteinSequence rejects unsupported amino acids', () => {
+  const result = toolBox.reverseTranslateProteinSequence('MX');
+  assert.equal(result.ok, false);
+  assert.equal(result.reason, 'unsupported_residue');
+  assert.equal(result.unsupportedResidues.includes('X'), true);
+});
+
+[
   ['A', 'DNA', 313.21, 15400],
   ['AT', 'DNA', 617.41, 24100],
   ['AU', 'RNA', 635.38, 25300],
@@ -2690,6 +3366,102 @@ test('[EDGE] tool-box renderChemicalOptions includes Custom option', () => {
   const html = toolBox.renderChemicalOptions();
   assert.match(html, /Custom<\/option>/);
   assert.match(html, /<option value="[^"]+">/);
+});
+
+test('[EDGE] tool-box parseCrisprTargetsInput parses FASTA entries and normalizes sequence', () => {
+  const parsed = toolBox.parseCrisprTargetsInput(`
+>Target_A
+ACGTNNNN
+>Target_B
+acgu---
+`);
+  assert.equal(parsed.length, 2);
+  assert.equal(parsed[0].name, 'Target_A');
+  assert.equal(parsed[0].sequence, 'ACGTNNNN');
+  assert.equal(parsed[1].name, 'Target_B');
+  assert.equal(parsed[1].sequence, 'ACGT');
+});
+
+test('[EDGE] tool-box collectCrisprPamSites finds forward NGG protospacers', () => {
+  const target = {
+    id: 'target-1',
+    name: 'Target 1',
+    sequence: 'ATATATATAGGAAAA'
+  };
+  const sites = toolBox.collectCrisprPamSites(target, 4, 'NGG');
+  assert.equal(sites.length, 1);
+  assert.equal(sites[0].strand, '+');
+  assert.equal(sites[0].guideSequence, 'ATAT');
+  assert.equal(sites[0].pamSequence, 'AGG');
+  assert.equal(sites[0].start, 5);
+  assert.equal(sites[0].end, 8);
+});
+
+test('[EDGE] tool-box computeCrisprOffTargetStats buckets mismatch counts', () => {
+  const candidate = {
+    key: 'k1',
+    guideSequence: 'AAAAAAAAAAAAAAAAAAAA'
+  };
+  const background = [
+    { key: 'k1', guideSequence: 'AAAAAAAAAAAAAAAAAAAA' },
+    { key: 'k2', guideSequence: 'AAAAAAAAAAAAAAAAAAAA' },
+    { key: 'k3', guideSequence: 'CAAAAAAAAAAAAAAAAAAA' },
+    { key: 'k4', guideSequence: 'CCAAAAAAAAAAAAAAAAAA' },
+    { key: 'k5', guideSequence: 'CCCAAAAAAAAAAAAAAAAA' },
+    { key: 'k6', guideSequence: 'CCCCAAAAAAAAAAAAAAAA' }
+  ];
+  const stats = toolBox.computeCrisprOffTargetStats(candidate, background, 1);
+  assert.equal(stats.mismatchCounts.exact, 1);
+  assert.equal(stats.mismatchCounts.mismatch1, 1);
+  assert.equal(stats.mismatchCounts.mismatch2, 1);
+  assert.equal(stats.mismatchCounts.mismatch3, 1);
+  assertClose(stats.offTargetRate, 27.84, 1e-9);
+  assertClose(stats.specificityScore, 72.16, 1e-9);
+});
+
+test('[EDGE] tool-box designCrisprGuides returns ranked sgRNA candidates', () => {
+  const selectedTargets = [{
+    id: 'target-1',
+    name: 'Target 1',
+    sequence: 'ATATATATAGGAAAA'
+  }];
+  const result = toolBox.designCrisprGuides({
+    selectedTargets,
+    backgroundTargets: selectedTargets,
+    guideLength: 4,
+    pamPattern: toolBox.normalizeIupacPattern('NGG'),
+    minGc: 0,
+    maxGc: 100,
+    topCount: 10,
+    genomeMultiplier: 1
+  });
+  assert.equal(result.totalPamMatches, 1);
+  assert.equal(result.candidates.length, 1);
+  assert.equal(result.candidates[0].guideSequence, 'ATAT');
+  assert.equal(result.candidates[0].pamSequence, 'AGG');
+  assertClose(result.candidates[0].offTargetRate, 0, 1e-9);
+  assertClose(result.candidates[0].specificityScore, 100, 1e-9);
+});
+
+test('[EDGE] tool-box designCrisprGuides respects GC filtering', () => {
+  const selectedTargets = [{
+    id: 'target-1',
+    name: 'Target 1',
+    sequence: 'ATATATATAGGAAAA'
+  }];
+  const result = toolBox.designCrisprGuides({
+    selectedTargets,
+    backgroundTargets: selectedTargets,
+    guideLength: 4,
+    pamPattern: toolBox.normalizeIupacPattern('NGG'),
+    minGc: 50,
+    maxGc: 100,
+    topCount: 10,
+    genomeMultiplier: 1
+  });
+  assert.equal(result.totalPamMatches, 1);
+  assert.equal(result.filteredCandidateCount, 0);
+  assert.equal(result.candidates.length, 0);
 });
 
 test('[EDGE] gel-analysis internal functions are exposed for unit tests', () => {

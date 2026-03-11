@@ -1,3 +1,5 @@
+import { exportNotebookEntryPdf } from './pdf-export.js';
+
 export function initLabNotebook({
   state,
   persist,
@@ -8,6 +10,7 @@ export function initLabNotebook({
 }) {
   const PLACEHOLDER_TOKEN_REGEX = /\{\{ph:([^}]+)\}\}/g;
   const notebookProjectSelect = document.getElementById('biology-notebook-project-select');
+  const notebookProtocolSearchInput = document.getElementById('biology-notebook-protocol-search');
   const notebookProtocolSelect = document.getElementById('biology-notebook-protocol-select');
   const notebookProtocolArea = document.getElementById('biology-notebook-protocol-area');
   const notebookProtocolTitle = document.getElementById('biology-notebook-protocol-title');
@@ -20,6 +23,7 @@ export function initLabNotebook({
   let editingEntryId = null;
 
   notebookProjectSelect.addEventListener('change', onProjectChange);
+  notebookProtocolSearchInput?.addEventListener('input', onProtocolSearchInput);
   notebookProtocolSelect.addEventListener('change', onProtocolChange);
   saveNotebookBtn.addEventListener('click', saveEntry);
   cancelEditBtn?.addEventListener('click', cancelEdit);
@@ -32,6 +36,10 @@ export function initLabNotebook({
   function onProjectChange() {
     editingEntryId = null;
     updateSaveButtonLabel();
+    renderProtocolOptions();
+  }
+
+  function onProtocolSearchInput() {
     renderProtocolOptions();
   }
 
@@ -115,6 +123,35 @@ export function initLabNotebook({
     const editingEntry = editingEntryId
       ? state.notebookEntries.find((item) => item.id === editingEntryId && matchesNotebookType(item))
       : null;
+    const selectedResultFiles = Array.from(notebookResultFile.files || []);
+    const existingResultFiles = Array.isArray(editingEntry?.resultFiles)
+      ? editingEntry.resultFiles.map((name) => String(name || '').trim()).filter(Boolean)
+      : [];
+    const existingResultFileRecords = Array.isArray(editingEntry?.resultFileRecords)
+      ? editingEntry.resultFileRecords
+        .filter((record) => record && typeof record === 'object')
+        .map((record) => ({ ...record }))
+      : [];
+    const storageFolder = editingEntry?.storageFolder || buildNotebookFolderPath(project.name);
+
+    let importedResultFileRecords = [];
+    try {
+      await ensureStorageFolderExists(storageFolder);
+      importedResultFileRecords = await persistImportedNotebookFiles({
+        files: selectedResultFiles,
+        storageFolder
+      });
+    } catch (error) {
+      window.alert(String(error?.message || error || 'Failed to store notebook files.'));
+      return;
+    }
+
+    const resultFileRecords = existingResultFileRecords.concat(importedResultFileRecords);
+    const recordNames = resultFileRecords.map((record) => String(record?.name || '').trim()).filter(Boolean);
+    const fallbackSelectedNames = selectedResultFiles.map((file) => file.name);
+    const resultFiles = Array.from(new Set(
+      existingResultFiles.concat(recordNames, recordNames.length ? [] : fallbackSelectedNames)
+    ));
 
     const entry = {
       id: editingEntry?.id || createId(),
@@ -125,12 +162,11 @@ export function initLabNotebook({
       protocolName: protocol.name,
       values,
       result: notebookResult.value.trim(),
-      resultFiles: Array.from(notebookResultFile.files || []).map((file) => file.name),
-      storageFolder: editingEntry?.storageFolder || buildNotebookFolderPath(project.name),
+      resultFiles,
+      resultFileRecords,
+      storageFolder,
       updatedAt: new Date().toISOString()
     };
-
-    await ensureStorageFolderExists(entry.storageFolder);
 
     const index = editingEntry
       ? state.notebookEntries.findIndex((item) => item.id === editingEntry.id)
@@ -144,6 +180,7 @@ export function initLabNotebook({
     updateSaveButtonLabel();
 
     persist();
+    notebookResultFile.value = '';
     renderEntries();
     if (typeof onNotebookEntriesChanged === 'function') {
       onNotebookEntriesChanged();
@@ -155,6 +192,73 @@ export function initLabNotebook({
       return;
     }
     await window.enanaApi.ensureStorageDirectory(storageFolder);
+  }
+
+  async function persistImportedNotebookFiles({ files, storageFolder }) {
+    const selectedFiles = Array.isArray(files) ? files.filter(Boolean) : [];
+    if (!selectedFiles.length) {
+      return [];
+    }
+
+    const rootPath = state.settings.storagePath.trim();
+    if (!rootPath) {
+      throw new Error('Set Storage Folder Path in Settings before importing notebook files.');
+    }
+    if (!storageFolder) {
+      throw new Error('Notebook storage folder is missing.');
+    }
+    if (!window.enanaApi?.storeImportedFile) {
+      throw new Error('Imported file storage API is unavailable.');
+    }
+
+    const targetFolder = `${storageFolder}/ResultFiles`;
+    const importedAt = new Date().toISOString();
+    const records = [];
+
+    for (const file of selectedFiles) {
+      const dataUrl = await blobToDataUrl(file);
+      const dataBase64 = extractBase64Payload(dataUrl);
+      if (!dataBase64) {
+        throw new Error(`Cannot read ${file.name}.`);
+      }
+      const result = await window.enanaApi.storeImportedFile({
+        storagePath: rootPath,
+        targetFolder,
+        fileName: file.name,
+        dataBase64
+      });
+      if (!result?.ok) {
+        throw new Error(result?.error || `Failed to store ${file.name}.`);
+      }
+
+      records.push({
+        name: result.fileName || file.name,
+        path: result.filePath || '',
+        relativePath: result.relativePath || '',
+        size: Number(file.size) || 0,
+        importedAt
+      });
+    }
+
+    return records;
+  }
+
+  function blobToDataUrl(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(new Error('Cannot convert imported file to data URL.'));
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  function extractBase64Payload(dataUrl) {
+    const source = String(dataUrl || '');
+    const commaIndex = source.indexOf(',');
+    if (commaIndex < 0) {
+      return '';
+    }
+    return source.slice(commaIndex + 1).trim();
   }
 
   function renderProjectOptions() {
@@ -175,23 +279,34 @@ export function initLabNotebook({
     }
   }
 
-  function renderProtocolOptions() {
+  function renderProtocolOptions(preferredProtocolId = '') {
     const projectId = notebookProjectSelect.value;
-    const selected = notebookProtocolSelect.value;
+    const selected = preferredProtocolId || notebookProtocolSelect.value;
     const hasProject = Boolean(state.projects.find((item) => item.id === projectId));
+    const searchTerm = String(notebookProtocolSearchInput?.value || '').trim().toLowerCase();
     const options = ['<option value="">Select protocol</option>'];
+    const selectedProtocol = state.protocols.find((item) => item.id === selected) || null;
+    const filteredProtocols = hasProject
+      ? state.protocols.filter((protocol) => String(protocol.name || '').toLowerCase().includes(searchTerm))
+      : [];
 
-    if (hasProject) {
-      state.protocols.forEach((protocol) => {
-        const isSelected = protocol.id === selected ? ' selected' : '';
-        options.push(`<option value="${protocol.id}"${isSelected}>${safeText(protocol.name)}</option>`);
-      });
+    if (
+      hasProject
+      && selectedProtocol
+      && !filteredProtocols.some((protocol) => protocol.id === selectedProtocol.id)
+    ) {
+      filteredProtocols.unshift(selectedProtocol);
     }
+
+    filteredProtocols.forEach((protocol) => {
+      const isSelected = protocol.id === selected ? ' selected' : '';
+      options.push(`<option value="${protocol.id}"${isSelected}>${safeText(protocol.name)}</option>`);
+    });
 
     notebookProtocolSelect.innerHTML = options.join('');
     notebookProtocolSelect.disabled = !hasProject;
 
-    if (hasProject && selected) {
+    if (hasProject && selected && Array.from(notebookProtocolSelect.options).some((option) => option.value === selected)) {
       notebookProtocolSelect.value = selected;
     }
 
@@ -221,6 +336,7 @@ export function initLabNotebook({
           <div class="stack-form list-detail-content">
             <div class="card-actions">
               <button type="button" class="ghost-btn" data-notebook-edit="${entry.id}">Edit</button>
+              <button type="button" class="ghost-btn" data-notebook-export="${entry.id}">Export PDF</button>
             </div>
             <p><strong>Notebook Folder:</strong> ${safeText(entry.storageFolder || '-')}</p>
             <p><strong>Complete Protocol:</strong></p>
@@ -234,11 +350,26 @@ export function initLabNotebook({
   }
 
   function onEntryListClick(event) {
+    const exportBtn = event.target.closest('[data-notebook-export]');
+    if (exportBtn) {
+      exportEntryPdf(exportBtn.dataset.notebookExport);
+      return;
+    }
+
     const editBtn = event.target.closest('[data-notebook-edit]');
     if (!editBtn) {
       return;
     }
     editEntry(editBtn.dataset.notebookEdit);
+  }
+
+  function exportEntryPdf(entryId) {
+    const entry = state.notebookEntries.find((item) => item.id === entryId && matchesNotebookType(item));
+    if (!entry) {
+      return;
+    }
+    const protocol = state.protocols.find((item) => item.id === entry.protocolId) || null;
+    exportNotebookEntryPdf({ entry, protocol });
   }
 
   function editEntry(entryId) {
@@ -249,8 +380,7 @@ export function initLabNotebook({
 
     editingEntryId = entry.id;
     notebookProjectSelect.value = entry.projectId;
-    renderProtocolOptions();
-    notebookProtocolSelect.value = entry.protocolId;
+    renderProtocolOptions(entry.protocolId);
     onProtocolChange();
   }
 

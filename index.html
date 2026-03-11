@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="./vendor/cropperjs/cropper.min.css" />
   <link rel="stylesheet" href="./vendor/tabulator/tabulator.min.css" />
+  <link rel="stylesheet" href="./vendor/react-vis/react-vis.css" />
 </head>
 <body>
   <main class="app-shell">
@@ -31,10 +32,9 @@
           <button class="app-nav-btn" type="button" data-view="synthesis-notebook-view">Synthesis Notebook</button>
           <button class="app-nav-btn" type="button" data-view="biology-notebook-view">Biology Notebook</button>
           <button class="app-nav-btn" type="button" data-view="lab-common-inventory-view">Chemicals</button>
-          <button class="app-nav-btn" type="button" data-view="sample-registry-view">Samples</button>
+          <button class="app-nav-btn" type="button" data-view="sample-registry-view">Sample &amp; Inventory</button>
           <button class="app-nav-btn" type="button" data-view="assay-view">Assay</button>
           <button class="app-nav-btn" type="button" data-view="gel-view">Gel</button>
-          <button class="app-nav-btn" type="button" data-view="personal-inventory-view">Inventory</button>
           <button class="app-nav-btn" type="button" data-view="project-management-view">Projects</button>
           <button class="app-nav-btn" type="button" data-view="workflow-management-view">Workflows</button>
           <button class="app-nav-btn" type="button" data-view="papers-view">Papers</button>
@@ -84,7 +84,7 @@
 
         <button class="tile" data-view="sample-registry-view">
           <span class="icon" aria-hidden="true">🧬</span>
-          <span class="label">Samples</span>
+          <span class="label">Sample &amp; Inventory</span>
         </button>
 
         <button class="tile" data-view="assay-view">
@@ -95,11 +95,6 @@
         <button class="tile" data-view="gel-view">
           <span class="icon" aria-hidden="true">🧬</span>
           <span class="label">Gel</span>
-        </button>
-
-        <button class="tile" data-view="personal-inventory-view">
-          <span class="icon" aria-hidden="true">🧰</span>
-          <span class="label">Inventory</span>
         </button>
 
         <button class="tile" data-view="project-management-view">
@@ -257,7 +252,12 @@
             <button type="button" id="protocol-sort-order-btn" class="ghost-btn">Order: Low to High</button>
           </div>
         </div>
-        <p id="protocol-share-status" class="small-note">Click Share on a protocol, then select teammate and confirm.</p>
+        <p id="protocol-share-status" class="small-note">Click Share on a protocol to send it to a teammate or copy a portable share link.</p>
+        <div id="protocol-share-link-panel" class="protocol-preview-block" hidden>
+          <h4>Portable Share Link</h4>
+          <p class="small-note">Paste this link into chat or email. Recipients can import it from Collaborations.</p>
+          <textarea id="protocol-share-link-output" rows="3" readonly></textarea>
+        </div>
         <div id="protocol-list" class="list-table"></div>
       </div>
 
@@ -301,7 +301,10 @@
       <div id="protocol-view-panel" class="panel" hidden>
         <div class="protocol-panel-head">
           <h3 id="protocol-view-title">Protocol</h3>
-          <button type="button" id="protocol-view-back-btn" class="ghost-btn">Back to List</button>
+          <div class="form-actions">
+            <button type="button" id="protocol-export-pdf-btn" class="ghost-btn">Export PDF</button>
+            <button type="button" id="protocol-view-back-btn" class="ghost-btn">Back to List</button>
+          </div>
         </div>
         <div id="protocol-view-content" class="stack-form"></div>
       </div>
@@ -446,18 +449,24 @@
     <section id="biology-notebook-view" class="view">
       <div class="panel">
         <h2>Biology Notebook</h2>
-        <label>
-          Select Project
-          <select id="biology-notebook-project-select">
-            <option value="">Select project</option>
-          </select>
-        </label>
-        <label>
-          Select Protocol
-          <select id="biology-notebook-protocol-select">
-            <option value="">Select protocol</option>
-          </select>
-        </label>
+        <div class="stack-form biology-notebook-select-stack">
+          <label>
+            Select Project
+            <select id="biology-notebook-project-select">
+              <option value="">Select project</option>
+            </select>
+          </label>
+          <label>
+            Search Protocol
+            <input id="biology-notebook-protocol-search" type="search" placeholder="Search protocols..." />
+          </label>
+          <label>
+            Select Protocol
+            <select id="biology-notebook-protocol-select">
+              <option value="">Select protocol</option>
+            </select>
+          </label>
+        </div>
       </div>
       <div id="biology-notebook-protocol-area" class="panel" hidden>
         <h3 id="biology-notebook-protocol-title"></h3>
@@ -528,7 +537,11 @@
 
     <section id="sample-registry-view" class="view">
       <div class="panel">
-        <h2>Sample Registry</h2>
+        <h2>Sample &amp; Inventory</h2>
+        <label class="sample-top-search">
+          Search Samples
+          <input id="sample-search" type="search" placeholder="Code, name, lot, location..." />
+        </label>
         <form id="sample-form" class="form-grid">
           <input type="hidden" id="sample-id" />
           <label>
@@ -582,12 +595,12 @@
           </label>
           <label>
             Related Chemicals (multi-select)
-            <select id="sample-link-chemicals" multiple size="4"></select>
+            <select id="sample-link-chemicals" multiple size="3"></select>
           </label>
           <div id="sample-location-fields" class="form-grid"></div>
           <label>
             Notes
-            <textarea id="sample-notes" rows="3"></textarea>
+            <textarea id="sample-notes" rows="2"></textarea>
           </label>
           <div class="form-actions">
             <button type="submit" class="primary-btn">Save Sample</button>
@@ -597,10 +610,6 @@
       </div>
       <div class="panel">
         <h3>Registered Samples</h3>
-        <label>
-          Search
-          <input id="sample-search" placeholder="Code, name, lot, location..." />
-        </label>
         <div id="sample-registry-list" class="cards"></div>
       </div>
     </section>
@@ -612,7 +621,7 @@
           <button type="button" id="assay-mode-create-btn" class="ghost-btn calendar-view-active">Create Assay</button>
           <button type="button" id="assay-mode-results-btn" class="ghost-btn">View &amp; Results</button>
         </div>
-        <p id="assay-mode-note" class="small-note"></p>
+        <p id="assay-mode-note" class="small-note" hidden></p>
       </div>
 
       <div class="panel assay-mode-create-panel">
@@ -642,26 +651,33 @@
               <option value="1536">1536 well</option>
             </select>
           </label>
-          <label>
-            Sample ID Axis
-            <select id="assay-sample-axis">
+          <div class="assay-axis-switch">
+            <span class="small-note">Sample ID Axis</span>
+            <div class="calendar-view-switch assay-mode-switch" role="group" aria-label="Sample ID axis switch">
+              <button type="button" id="assay-sample-axis-row-btn" class="ghost-btn calendar-view-active">Row</button>
+              <button type="button" id="assay-sample-axis-column-btn" class="ghost-btn">Column</button>
+            </div>
+            <select id="assay-sample-axis" hidden>
               <option value="row" selected>Row</option>
               <option value="column">Column</option>
             </select>
-          </label>
+          </div>
           <label>
             Concentration Axis
             <input id="assay-concentration-axis-display" readonly />
           </label>
+          <div class="form-actions assay-axis-actions">
+            <button type="button" id="assay-swap-axis-btn" class="ghost-btn">Switch Axes</button>
+          </div>
           <label>
             Link Notebook Page
             <select id="assay-notebook-entry">
               <option value="">Not linked</option>
             </select>
           </label>
-          <div id="assay-plate-definition" class="small-note"></div>
+          <div id="assay-plate-definition" class="small-note" hidden></div>
           <div id="assay-csv-status" class="small-note"></div>
-          <label>
+          <label hidden>
             Notes
             <textarea id="assay-notes" rows="3" placeholder="Optional assay notes"></textarea>
           </label>
@@ -677,51 +693,17 @@
 
       <div class="panel assay-mode-create-panel">
         <h3>Plate Preview</h3>
-        <p class="small-note">A1-style coordinates with axis mapping based on row/column selection.</p>
-        <div id="assay-plate-preview" class="assay-plate-preview"></div>
-      </div>
-
-      <div class="panel assay-mode-create-panel">
-        <h3>Axis Template Mapping</h3>
-        <p class="small-note">Bulk-fill by row/column. Enter one value per line (or comma-separated).</p>
-        <div class="form-grid">
-          <label>
-            Sample ID Values (selected sample axis)
-            <textarea id="assay-sample-axis-values" rows="4" placeholder="e.g. S1&#10;S2&#10;S3"></textarea>
-          </label>
-          <label>
-            Concentration Values (opposite axis)
-            <textarea id="assay-concentration-axis-values" rows="4" placeholder="e.g. 0 uM&#10;0.1 uM&#10;1 uM"></textarea>
-          </label>
-        </div>
+        <p class="small-note">Click a well and edit directly on this plate. Use switch to choose Sample ID or Concentration field.</p>
         <div class="form-actions">
-          <button type="button" id="assay-apply-axis-template-btn" class="ghost-btn">Apply Axis Template</button>
-        </div>
-      </div>
-
-      <div class="panel assay-mode-create-panel">
-        <h3>Well Mapping</h3>
-        <p class="small-note">Enter well-level sample ID and concentration directly.</p>
-        <div class="form-grid">
-          <label>
-            Well
-            <input id="assay-well-id" placeholder="e.g. A1" />
-          </label>
-          <label>
-            Sample ID
-            <input id="assay-well-sample-id" placeholder="e.g. S-001" />
-          </label>
-          <label>
-            Concentration
-            <input id="assay-well-concentration" placeholder="e.g. 1.0 uM" />
-          </label>
-        </div>
-        <div class="form-actions">
-          <button type="button" id="assay-well-upsert-btn" class="ghost-btn">Add / Update Well</button>
-          <button type="button" id="assay-well-remove-btn" class="ghost-btn">Remove Well</button>
-          <button type="button" id="assay-well-clear-btn" class="ghost-btn">Clear All Mappings</button>
+          <div class="calendar-view-switch assay-mode-switch" role="group" aria-label="Plate edit field">
+            <button type="button" id="assay-plate-field-sample-btn" class="ghost-btn calendar-view-active">Edit Sample ID</button>
+            <button type="button" id="assay-plate-field-concentration-btn" class="ghost-btn">Edit Concentration</button>
+          </div>
+          <button type="button" id="assay-clear-mappings-btn" class="ghost-btn">Clear All Mappings</button>
         </div>
         <div id="assay-layout-status" class="small-note"></div>
+        <div id="assay-plate-preview" class="assay-plate-preview"></div>
+        <h4>Mapped Wells</h4>
         <div id="assay-layout-list" class="list-table"></div>
       </div>
 
@@ -745,9 +727,48 @@
             <option value="ec50">EC50 (4PL Fit)</option>
             <option value="ic50">IC50 (4PL Fit)</option>
             <option value="survival">Survival %</option>
+            <optgroup label="Standard curves to interpolate">
+              <option value="standard_curve_line">Line</option>
+              <option value="standard_curve_4pl_log_concentration">Sigmoidal, 4PL, X is log(concentration)</option>
+              <option value="standard_curve_4pl_concentration">Sigmoidal, 4PL, X is concentration</option>
+              <option value="standard_curve_5pl_log_concentration">Asymmetric Sigmoidal, 5PL, X is log(concentration)</option>
+              <option value="standard_curve_5pl_concentration">Asymmetric Sigmoidal, 5PL, X is concentration</option>
+              <option value="standard_curve_semilog_line">Semilog line</option>
+              <option value="standard_curve_hyperbola">Hyperbola (X is concentration)</option>
+              <option value="standard_curve_quadratic">Second order polynomial (quadratic)</option>
+              <option value="standard_curve_cubic">Third order polynomial (cubic)</option>
+              <option value="standard_curve_pade_11">Pade (1,1) approximant</option>
+            </optgroup>
           </select>
         </label>
-        <div class="form-actions">
+        <div class="assay-analysis-controls">
+          <label>
+            Row Groups (optional)
+            <textarea id="assay-analysis-row-groups" rows="2" placeholder="Control: A,B; Treated: C,D"></textarea>
+          </label>
+          <label>
+            Column Groups (optional)
+            <textarea id="assay-analysis-column-groups" rows="2" placeholder="Early: 1,2; Late: 3,4"></textarea>
+          </label>
+          <label class="assay-analysis-checkbox">
+            <input id="assay-analysis-error-bars" type="checkbox" />
+            Show SD error bars (for Row/Column Summary)
+          </label>
+          <label>
+            Replicate Group Name (optional)
+            <input id="assay-analysis-group-name" placeholder="e.g. Control replicate" />
+          </label>
+          <div class="form-actions assay-analysis-group-actions">
+            <button type="button" id="assay-analysis-add-row-group-btn" class="ghost-btn">Add Selected as Row Group</button>
+            <button type="button" id="assay-analysis-add-column-group-btn" class="ghost-btn">Add Selected as Column Group</button>
+            <button type="button" id="assay-analysis-clear-groups-btn" class="ghost-btn">Clear Groups</button>
+          </div>
+          <div id="assay-analysis-selection-status" class="small-note"></div>
+          <p class="small-note assay-analysis-help">
+            Drag-select replicate wells in the result table, then add as row or column group. Manual format also works: <code>Group: item1,item2</code>; ranges: <code>A-C</code> or <code>1-3</code>.
+          </p>
+        </div>
+        <div class="form-actions assay-results-actions">
           <button type="button" id="assay-results-load-btn" class="ghost-btn">Load Plate</button>
           <button type="button" id="assay-save-results-btn" class="primary-btn">Save Results</button>
           <button type="button" id="assay-clear-results-btn" class="ghost-btn">Clear Results</button>
@@ -788,7 +809,7 @@
           </label>
           <label>
             Link Notebook Page
-            <select id="gel-notebook-entry">
+            <select id="gel-notebook-entry" class="gel-wide-field">
               <option value="">Not linked</option>
             </select>
           </label>
@@ -802,7 +823,7 @@
           </label>
           <label>
             Gel Image
-            <input id="gel-image-file" type="file" accept="image/*" />
+            <input id="gel-image-file" class="gel-wide-field" type="file" accept="image/*" />
           </label>
           <label>
             Ladder Lane (1-based)
@@ -819,9 +840,19 @@
               <option value="total-lane">Total Lane Intensity</option>
             </select>
           </label>
+          <label class="gel-slider-field">
+            Denoise Strength
+            <input id="gel-denoise-strength" type="range" min="0" max="100" step="1" value="35" />
+            <span id="gel-denoise-strength-value" class="small-note">35%</span>
+          </label>
+          <label class="gel-slider-field">
+            Contrast Boost
+            <input id="gel-contrast-strength" type="range" min="0" max="220" step="1" value="100" />
+            <span id="gel-contrast-strength-value" class="small-note">100%</span>
+          </label>
           <div class="form-actions">
             <button type="button" id="gel-reset-overrides-btn" class="ghost-btn">Reset Manual Overrides</button>
-            <span id="gel-override-status" class="small-note">Manual overrides: none</span>
+            <span id="gel-override-status" class="small-note" hidden>Manual overrides: none</span>
           </div>
           <div class="form-actions">
             <button type="button" id="gel-start-crop-btn" class="ghost-btn">Start Crop</button>
@@ -920,15 +951,15 @@
             </label>
             <div id="inbox-list" class="stack-form"></div>
             <div class="stack-form">
-              <h4>Import Shared Protocol Link</h4>
+              <h4>Import Shared Protocol Link / JSON</h4>
               <label>
                 Share Link
-                <textarea id="protocol-link-input" rows="3" placeholder="Paste enana://protocol-share/... or ENANA_PROTOCOL_SHARE:..."></textarea>
+                <textarea id="protocol-link-input" rows="3" placeholder="Paste enana://protocol-share/... or ENANA_PROTOCOL_SHARE:... or JSON"></textarea>
               </label>
               <div class="form-actions">
                 <button type="button" id="import-protocol-link-btn" class="ghost-btn">Import Link</button>
               </div>
-              <p id="protocol-link-status" class="small-note">Paste a shared protocol link, then click Import Link.</p>
+              <p id="protocol-link-status" class="small-note">Paste a shared protocol link or protocol JSON, then click Import Link.</p>
             </div>
           </section>
         </div>
@@ -1127,8 +1158,17 @@
             <h3>LLM Model & API</h3>
             <form id="llm-form" class="stack-form">
               <label>
+                Provider
+                <select id="setting-provider">
+                  <option value="openai">OpenAI</option>
+                  <option value="gemini">Gemini</option>
+                  <option value="claude">Claude</option>
+                  <option value="codex">OpenAI CLI (Codex)</option>
+                </select>
+              </label>
+              <label>
                 Model Name
-                <input id="setting-model" placeholder="e.g. gpt-4.1" />
+                <input id="setting-model" placeholder="e.g. gpt-4.1 / gemini-2.5-pro / claude-sonnet-4-5 / gpt-5" />
               </label>
               <label>
                 API Endpoint
@@ -1136,7 +1176,7 @@
               </label>
               <label>
                 API Key
-                <input id="setting-api-key" type="password" placeholder="sk-..." />
+                <input id="setting-api-key" type="password" placeholder="sk-... (not required for Codex CLI)" />
               </label>
               <button type="submit" class="primary-btn">Save LLM Settings</button>
             </form>
@@ -1211,6 +1251,18 @@
     <section id="workflow-management-view" class="view">
       <div class="panel">
         <h2>Workflows</h2>
+        <p class="small-note">Choose how you want to work with workflows.</p>
+        <div id="workflow-entry-panel" class="form-actions">
+          <button type="button" id="workflow-entry-create-btn" class="primary-btn">Create New Workflow</button>
+          <button type="button" id="workflow-entry-template-btn" class="ghost-btn">Create New Workflow Template</button>
+          <button type="button" id="workflow-entry-view-btn" class="ghost-btn">View/Edit Workflow</button>
+        </div>
+        <div id="workflow-entry-back-wrap" class="form-actions" hidden>
+          <button type="button" id="workflow-entry-back-btn" class="ghost-btn">Back to Workflow Actions</button>
+        </div>
+      </div>
+
+      <div class="panel workflow-editor-panel" hidden>
         <form id="workflow-form" class="stack-form">
           <input type="hidden" id="workflow-id" />
           <label>
@@ -1221,13 +1273,13 @@
             Description
             <textarea id="workflow-description" rows="3" placeholder="Optional notes about this workflow"></textarea>
           </label>
-          <label>
+          <label id="workflow-project-field">
             Linked Project
             <select id="workflow-project">
               <option value="">Select project</option>
             </select>
           </label>
-          <label>
+          <label id="workflow-notebook-pages-field">
             Linked Notebook Pages (optional)
             <select id="workflow-notebook-pages" multiple size="6"></select>
           </label>
@@ -1238,24 +1290,39 @@
         </form>
       </div>
 
-      <div class="panel">
-        <h3>Protocol Blocks</h3>
-        <p class="small-note">Each block is a stored protocol. New blocks default assignee to yourself.</p>
-        <div class="form-grid workflow-grid">
+      <div class="panel workflow-editor-panel" hidden>
+        <h3>Workflow Blocks</h3>
+        <p class="small-note">Add protocol blocks or plain-text blocks. New blocks default assignee to yourself.</p>
+        <div class="form-grid workflow-grid workflow-block-grid">
           <label>
+            Block Type
+            <select id="workflow-block-type">
+              <option value="protocol">Protocol</option>
+              <option value="text">Plain Text</option>
+            </select>
+          </label>
+          <label id="workflow-block-protocol-search-field">
+            Search Protocol
+            <input id="workflow-block-protocol-search" type="search" placeholder="Search protocols..." />
+          </label>
+          <label id="workflow-block-protocol-field">
             Protocol
             <select id="workflow-block-protocol">
               <option value="">Select protocol</option>
             </select>
           </label>
+          <label id="workflow-block-text-field" hidden>
+            Plain Text
+            <input id="workflow-block-text" placeholder="e.g. Incubate at room temperature for 10 minutes" />
+          </label>
           <div class="form-actions workflow-inline-actions">
-            <button type="button" id="workflow-block-add-btn" class="ghost-btn">Add Block</button>
+            <button type="button" id="workflow-block-add-btn" class="ghost-btn">Add Protocol Block</button>
           </div>
         </div>
         <div id="workflow-block-list" class="list-table"></div>
       </div>
 
-      <div class="panel">
+      <div class="panel workflow-editor-panel" hidden>
         <h3>Graph Editor</h3>
         <p class="small-note">Drag blocks to arrange. Click an output dot, then an input dot to connect. Click a line to remove a connection.</p>
         <div id="workflow-graph-canvas" class="workflow-graph-canvas">
@@ -1269,9 +1336,9 @@
         <div id="workflow-graph-context-menu" class="workflow-context-menu" hidden></div>
       </div>
 
-      <div class="panel">
+      <div class="panel workflow-template-panel" hidden>
         <h3>Templates</h3>
-        <p class="small-note">Templates save block + connection structure only. You can link project/pages after experiments.</p>
+        <p class="small-note">Templates save only block + connection structure. Specific notebook page links are never included.</p>
         <div class="form-grid workflow-grid">
           <label>
             Template Name
@@ -1299,7 +1366,7 @@
         <div id="workflow-template-list" class="cards"></div>
       </div>
 
-      <div class="panel">
+      <div class="panel workflow-list-panel" hidden>
         <h3>Saved Workflows</h3>
         <div id="workflow-list" class="cards"></div>
       </div>
@@ -1436,6 +1503,14 @@
           <span class="icon" aria-hidden="true">🧾</span>
           <span class="label">DNA to Protein</span>
         </button>
+        <button class="tile tool-tile" data-tool-view="tool-reverse-translate-view">
+          <span class="icon" aria-hidden="true">🔁</span>
+          <span class="label">Protein to DNA</span>
+        </button>
+        <button class="tile tool-tile" data-tool-view="tool-protein-assembly-view">
+          <span class="icon" aria-hidden="true">🧱</span>
+          <span class="label">Protein Assembler</span>
+        </button>
         <button class="tile tool-tile" data-tool-view="tool-oligo-view">
           <span class="icon" aria-hidden="true">🧪</span>
           <span class="label">DNA/RNA Oligo Properties</span>
@@ -1447,6 +1522,18 @@
         <button class="tile tool-tile" data-tool-view="tool-qpcr-view">
           <span class="icon" aria-hidden="true">📊</span>
           <span class="label">qPCR Efficiency</span>
+        </button>
+        <button class="tile tool-tile" data-tool-view="tool-plannotate-view">
+          <span class="icon" aria-hidden="true">🧭</span>
+          <span class="label">pLannotate</span>
+        </button>
+        <button class="tile tool-tile" data-tool-view="tool-crispr-view">
+          <span class="icon" aria-hidden="true">✂️</span>
+          <span class="label">CRISPR sgRNA Designer</span>
+        </button>
+        <button class="tile tool-tile" data-tool-view="tool-colony-counter-view">
+          <span class="icon" aria-hidden="true">🧬</span>
+          <span class="label">Colony Counter</span>
         </button>
       </div>
 
@@ -1708,6 +1795,100 @@
         <div id="dna-protein-result" class="calc-output"></div>
       </div>
 
+      <div id="tool-reverse-translate-view" class="panel tool-subview" hidden>
+        <h3>Protein Sequence to DNA Sequence (Reverse Translation)</h3>
+        <form id="reverse-translate-form" class="stack-form" autocomplete="off">
+          <label>
+            Protein Sequence
+            <textarea id="reverse-translate-protein" rows="5" placeholder="e.g. MKTIIALSYIFCLVFADYKDDD..."></textarea>
+          </label>
+          <div class="form-grid">
+            <label>
+              Codon Usage Profile
+              <select id="reverse-translate-organism"></select>
+            </label>
+            <label class="assay-analysis-checkbox">
+              <input id="reverse-translate-append-stop" type="checkbox" />
+              Append terminal stop codon
+            </label>
+          </div>
+          <label>
+            Restriction Sites to Avoid
+            <textarea id="reverse-translate-sites" rows="3" placeholder="Comma/space/newline separated DNA motifs, e.g. GAATTC AAGCTT GGTCTC"></textarea>
+          </label>
+        </form>
+        <div id="reverse-translate-result" class="calc-output"></div>
+      </div>
+
+      <div id="tool-protein-assembly-view" class="panel tool-subview" hidden>
+        <h3>Protein Construct Assembler</h3>
+        <p class="small-note">Assemble tags, linkers, cleavage sites, and your protein of interest like Lego blocks.</p>
+        <div class="protein-assembly-shell">
+          <form id="protein-assembly-form" class="stack-form protein-assembly-controls" autocomplete="off">
+            <div class="form-grid">
+              <label>
+                Construct Name
+                <input id="protein-assembly-name" placeholder="e.g. N-His6-TEV-POI-TwinStrep" />
+              </label>
+              <label>
+                POI Name
+                <input id="protein-assembly-poi-name" placeholder="e.g. EGFR kinase domain" />
+              </label>
+            </div>
+            <label>
+              Protein of Interest Sequence
+              <textarea id="protein-assembly-poi-sequence" rows="5" placeholder="Paste amino-acid sequence (A-Z, optional *)"></textarea>
+            </label>
+            <div class="form-actions">
+              <button type="button" id="protein-assembly-add-block-btn" class="ghost-btn">Add Block</button>
+              <button type="button" id="protein-assembly-reset-btn" class="ghost-btn">Reset to Default</button>
+            </div>
+            <div id="protein-assembly-rows" class="protein-assembly-rows"></div>
+            <div class="form-actions">
+              <button type="submit" class="primary-btn">Assemble Construct</button>
+            </div>
+          </form>
+
+          <div id="protein-assembly-result" class="calc-output">
+            Add your POI sequence and configure assembly blocks.
+          </div>
+
+          <section class="plannotate-result-card protein-assembly-result-card">
+            <div class="plannotate-card-head">
+              <h4>Assembled Sequence</h4>
+              <span id="protein-assembly-meta" class="small-note">0 aa · 0 blocks</span>
+            </div>
+            <div id="protein-assembly-sequence" class="sequence-block">-</div>
+          </section>
+
+          <section class="plannotate-result-card protein-assembly-result-card">
+            <div class="plannotate-card-head">
+              <h4>Assembly Map</h4>
+              <span id="protein-assembly-map-summary" class="small-note">No blocks assembled.</span>
+            </div>
+            <div class="plannotate-table-wrap protein-assembly-table-wrap">
+              <table class="plannotate-table protein-assembly-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Part</th>
+                    <th>Type</th>
+                    <th>Range</th>
+                    <th>Length (aa)</th>
+                    <th>Sequence</th>
+                  </tr>
+                </thead>
+                <tbody id="protein-assembly-table-body">
+                  <tr>
+                    <td colspan="6" class="small-note">No blocks assembled.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </div>
+
       <div id="tool-oligo-view" class="panel tool-subview" hidden>
         <h3>DNA / RNA Oligo Properties</h3>
         <form id="oligo-form" class="stack-form" autocomplete="off">
@@ -1761,6 +1942,263 @@
         </form>
         <div id="qpcr-result" class="calc-output"></div>
       </div>
+
+      <div id="tool-plannotate-view" class="panel tool-subview" hidden>
+        <h3>pLannotate</h3>
+        <p class="small-note">Use text or file input, then run annotation to render a plasmid map and feature table.</p>
+        <div class="plannotate-ui-shell">
+          <form id="plannotate-form" class="stack-form plannotate-controls" autocomplete="off">
+            <div class="plannotate-mode-switch" role="tablist" aria-label="pLannotate input mode">
+              <button id="plannotate-mode-text" class="plannotate-mode-btn plannotate-mode-btn-active" type="button">Sequence Text</button>
+              <button id="plannotate-mode-file" class="plannotate-mode-btn" type="button">FASTA/GenBank File</button>
+            </div>
+            <p id="plannotate-engine-status" class="small-note">Checking BLAST engine...</p>
+            <div class="inline-row">
+              <button id="plannotate-install-all" type="button" class="ghost-btn">One-Step Install Backend</button>
+            </div>
+
+            <div id="plannotate-text-panel" class="plannotate-input-panel">
+              <label>
+                DNA Sequence
+                <textarea id="plannotate-sequence" rows="8" placeholder=">plasmid&#10;ACGT..."></textarea>
+              </label>
+            </div>
+
+            <div id="plannotate-file-panel" class="plannotate-input-panel" hidden>
+              <input id="plannotate-file-input" type="file" accept=".fa,.fasta,.fas,.fna,.gb,.gbk,.gbff,.gbf,.txt,.seq" hidden />
+              <div class="inline-row">
+                <button id="plannotate-file-choose" type="button" class="ghost-btn">Choose File</button>
+                <span id="plannotate-file-name" class="small-note">No file selected</span>
+              </div>
+            </div>
+
+            <div class="form-grid">
+              <label>
+                Topology
+                <select id="plannotate-topology">
+                  <option value="circular" selected>Circular</option>
+                  <option value="linear">Linear</option>
+                </select>
+              </label>
+              <label>
+                Min Identity (%)
+                <input id="plannotate-min-identity" type="number" min="50" max="100" step="0.1" value="85" />
+              </label>
+              <label>
+                Min Coverage (%)
+                <input id="plannotate-min-coverage" type="number" min="5" max="100" step="1" value="25" />
+              </label>
+              <label>
+                Min Hit Length (bp)
+                <input id="plannotate-min-length" type="number" min="12" max="2000" step="1" value="24" />
+              </label>
+            </div>
+            <label class="inline-row">
+              <input id="plannotate-detailed" type="checkbox" />
+              Detailed (seeded partial matching)
+            </label>
+            <div class="form-actions">
+              <button type="submit" class="primary-btn">Annotate</button>
+              <button id="plannotate-download-gbk" type="button" class="ghost-btn" disabled>Download GBK</button>
+              <span id="plannotate-run-status" class="small-note">Idle</span>
+            </div>
+          </form>
+
+          <div class="plannotate-results-grid">
+            <section class="plannotate-result-card">
+              <div class="plannotate-card-head">
+                <h4>Plasmid Map</h4>
+                <span id="plannotate-map-meta" class="small-note"></span>
+              </div>
+              <div id="plannotate-map" class="plannotate-map-host">
+                <p class="small-note">Run annotation to display the plasmid map.</p>
+              </div>
+            </section>
+
+            <section class="plannotate-result-card">
+              <div class="plannotate-card-head">
+                <h4>Features</h4>
+                <span id="plannotate-hit-count" class="small-note">0 hits</span>
+              </div>
+              <div class="plannotate-table-wrap">
+                <table class="plannotate-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Feature</th>
+                      <th>Type</th>
+                      <th>Location (1-based)</th>
+                      <th>Strand</th>
+                      <th>Identity</th>
+                      <th>Coverage</th>
+                      <th>Mode</th>
+                    </tr>
+                  </thead>
+                  <tbody id="plannotate-table-body">
+                    <tr>
+                      <td colspan="8" class="small-note">No annotations yet.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+
+          <div id="plannotate-result" class="calc-output"></div>
+        </div>
+      </div>
+
+      <div id="tool-crispr-view" class="panel tool-subview" hidden>
+        <h3>CRISPR sgRNA Designer</h3>
+        <p class="small-note">Choose a reference genome profile, select targets, and generate ranked sgRNA candidates.</p>
+
+        <div class="crispr-designer-shell">
+          <form id="crispr-form" class="stack-form crispr-controls" autocomplete="off">
+            <div class="form-grid">
+              <label>
+                Reference Genome
+                <select id="crispr-reference-genome"></select>
+              </label>
+              <label>
+                PAM Pattern
+                <select id="crispr-pam-pattern">
+                  <option value="NGG" selected>SpCas9 (NGG)</option>
+                  <option value="NAG">SpCas9 (NAG, permissive)</option>
+                </select>
+              </label>
+              <label>
+                Guide Length (nt)
+                <input id="crispr-guide-length" type="number" min="18" max="24" step="1" value="20" />
+              </label>
+              <label>
+                Return Top Candidates
+                <input id="crispr-top-count" type="number" min="1" max="100" step="1" value="12" />
+              </label>
+              <label>
+                Min GC (%)
+                <input id="crispr-min-gc" type="number" min="0" max="100" step="1" value="35" />
+              </label>
+              <label>
+                Max GC (%)
+                <input id="crispr-max-gc" type="number" min="0" max="100" step="1" value="75" />
+              </label>
+            </div>
+            <p id="crispr-reference-note" class="small-note">Genome profile not selected.</p>
+            <label>
+              Target Sequences (FASTA recommended)
+              <textarea id="crispr-target-input" rows="8" placeholder=">Target_A&#10;GAGTCCGAGCAGAAGAAGAAGGG...&#10;>Target_B&#10;ACTG..." spellcheck="false"></textarea>
+            </label>
+
+            <div class="crispr-target-grid">
+              <label>
+                Targets to Process
+                <select id="crispr-target-select" class="crispr-target-select" multiple size="6"></select>
+              </label>
+              <div id="crispr-selection-summary" class="calc-output crispr-selection-box">
+                Add target sequences to begin.
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="primary-btn">Design sgRNAs</button>
+              <button type="button" id="crispr-select-all-btn" class="ghost-btn">Select All Targets</button>
+              <button type="button" id="crispr-clear-btn" class="ghost-btn">Clear</button>
+            </div>
+          </form>
+
+          <div id="crispr-result-summary" class="calc-output">
+            Enter target sequences and run design to view candidate guides.
+          </div>
+
+          <div class="plannotate-table-wrap crispr-table-wrap">
+            <table class="plannotate-table crispr-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Target</th>
+                  <th>Position</th>
+                  <th>Strand</th>
+                  <th>Guide (5'-3')</th>
+                  <th>PAM</th>
+                  <th>GC%</th>
+                  <th>On-target</th>
+                  <th>Off-target rate</th>
+                  <th>Specificity</th>
+                  <th>Off-target hits (0/1/2/3 mm)</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody id="crispr-table-body">
+                <tr>
+                  <td colspan="12" class="small-note">No sgRNA candidates yet.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="tool-colony-counter-view" class="panel tool-subview" hidden>
+        <h3>Colony Counter (Manual Click)</h3>
+        <p class="small-note">Upload a plate image, then click each colony to count manually.</p>
+
+        <div class="colony-counter-shell">
+          <form id="colony-counter-form" class="stack-form colony-counter-controls" autocomplete="off">
+            <label>
+              Plate Image
+              <input id="colony-image-file" type="file" accept="image/*" />
+            </label>
+
+            <div class="form-actions">
+              <button id="colony-start-crop-btn" type="button" class="ghost-btn">Start Crop</button>
+              <button id="colony-apply-crop-btn" type="button" class="ghost-btn" disabled>Apply Crop</button>
+              <button id="colony-cancel-crop-btn" type="button" class="ghost-btn" disabled>Cancel Crop</button>
+              <button id="colony-reset-crop-btn" type="button" class="ghost-btn">Reset to Full Image</button>
+            </div>
+
+            <div class="form-grid">
+              <label>
+                Display Max Size (px)
+                <input id="colony-max-size" type="number" min="300" max="5000" step="50" value="1600" />
+              </label>
+            </div>
+
+            <p class="small-note">Left-click to add a colony marker. Right-click to remove the nearest marker.</p>
+
+            <div class="form-actions">
+              <button id="colony-clear-markers-btn" type="button" class="ghost-btn">Clear Markers</button>
+              <button id="colony-run-btn" type="submit" class="primary-btn">Save Manual Count</button>
+              <button id="colony-reset-btn" type="button" class="ghost-btn">Reset</button>
+              <span id="colony-status" class="small-note">Load an image, then click colonies to count manually.</span>
+            </div>
+          </form>
+
+          <div id="colony-summary" class="calc-output">
+            <p class="small-note">Load a plate image, then click each colony to count manually.</p>
+          </div>
+
+          <div id="colony-cropper-shell" class="colony-cropper-shell" hidden>
+            <img id="colony-cropper-image" class="colony-cropper-image" alt="Colony cropper preview" />
+          </div>
+
+          <div class="colony-preview-grid">
+            <section class="plannotate-result-card colony-preview-card">
+              <div class="plannotate-card-head">
+                <h4>Annotated Colonies</h4>
+              </div>
+              <canvas id="colony-preview-canvas" class="colony-preview-canvas"></canvas>
+            </section>
+            <section class="plannotate-result-card colony-preview-card">
+              <div class="plannotate-card-head">
+                <h4>Marker Map</h4>
+              </div>
+              <canvas id="colony-mask-canvas" class="colony-preview-canvas"></canvas>
+            </section>
+          </div>
+        </div>
+
+        <canvas id="colony-source-canvas" hidden></canvas>
+      </div>
     </section>
       </section>
     </div>
@@ -1768,6 +2206,10 @@
 
   <script src="./vendor/cropperjs/cropper.min.js"></script>
   <script src="./vendor/tabulator/tabulator.min.js"></script>
+  <script src="./vendor/jspdf.umd.min.js"></script>
+  <script src="./vendor/react/react.production.min.js"></script>
+  <script src="./vendor/react/react-dom.production.min.js"></script>
+  <script src="./vendor/react-vis/react-vis.min.js"></script>
   <script type="module" src="renderer.js"></script>
 </body>
 </html>

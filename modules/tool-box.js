@@ -1,395 +1,570 @@
 import { BUFFER_COMPOUNDS } from './buffer-compounds.js';
+import { annotatePlasmidSequence } from './plannotate-js.js';
+import {
+  toNumber,
+  formatSequenceLines,
+  escapeHtml,
+  formatSigFig,
+  clampNumber
+} from './tool-box/common.js';
+import {
+  concentrationToM,
+  concentrationFromM,
+  volumeToL,
+  volumeFromL,
+  massToG,
+  massFromG
+} from './tool-box/molarity.js';
+import {
+  CODON_USAGE_PROFILES,
+  REVERSE_TRANSLATE_DEFAULT_ORGANISM,
+  REVERSE_TRANSLATE_MIN_SITE_LENGTH,
+  cleanNucleotideSequence,
+  nucleotideCounts,
+  reverseComplementDna,
+  translateDnaSequence,
+  cleanProteinSequence,
+  parseRestrictionSites,
+  resolveCodonProfile,
+  getCodonOptionsForResidue,
+  reverseTranslateProteinSequence
+} from './tool-box/sequence.js';
+import {
+  oligoMolecularWeight,
+  oligoExtinction,
+  oligoTm
+} from './tool-box/oligo.js';
+import {
+  cleanSequence,
+  countResidues,
+  calculatePeptideMass,
+  positiveCharge,
+  negativeCharge,
+  calculateNetCharge,
+  estimatePI,
+  residueSummary,
+  peptideStats
+} from './tool-box/peptide.js';
+import { linearRegression } from './tool-box/qpcr.js';
+import {
+  CRISPR_REFERENCE_GENOMES,
+  normalizeIupacPattern,
+  matchesIupacPattern,
+  parseCrisprTargetsInput,
+  collectCrisprPamSites,
+  computeCrisprOffTargetStats,
+  designCrisprGuides
+} from './tool-box/crispr.js';
+import {
+  renderChemicalOptions,
+  makeBufferRow
+} from './tool-box/buffer.js';
+import {
+  PROTEIN_ASSEMBLY_PART_TYPES,
+  getProteinAssemblyLibraryByType,
+  defaultProteinAssemblyRows,
+  sanitizeProteinAssemblySequence,
+  buildProteinAssemblyConstruct
+} from './tool-box/protein-assembly.js';
 
-const RESIDUE_MASS = {
-  A: 71.08,
-  R: 156.19,
-  N: 114.1,
-  D: 115.09,
-  C: 103.15,
-  E: 129.12,
-  Q: 128.13,
-  G: 57.05,
-  H: 137.14,
-  I: 113.16,
-  L: 113.16,
-  K: 128.17,
-  M: 131.19,
-  F: 147.18,
-  P: 97.12,
-  S: 87.08,
-  T: 101.11,
-  W: 186.21,
-  Y: 163.18,
-  V: 99.13
+const PLANNOTATE_TYPE_STYLES = {
+  rep_origin: { fillColor: '#4e7fff', lineColor: '#000000' },
+  origin_of_replication: { fillColor: '#4e7fff', lineColor: '#000000' },
+  promoter: { fillColor: '#f6a35e', lineColor: '#000000' },
+  cds: { fillColor: '#479f71', lineColor: '#000000' },
+  misc_feature: { fillColor: '#808080', lineColor: '#000000' },
+  primer_bind: { fillColor: '#ffffff', lineColor: '#000000' },
+  terminator: { fillColor: '#c97064', lineColor: '#000000' },
+  ncrna: { fillColor: '#e8dab2', lineColor: '#000000' },
+  rna: { fillColor: '#e8dab2', lineColor: '#000000' }
 };
-
-const PKA = {
-  nTerminus: 9.69,
-  cTerminus: 2.34,
-  K: 10.54,
-  R: 12.48,
-  H: 6.04,
-  D: 3.9,
-  E: 4.07,
-  C: 8.37,
-  Y: 10.46
-};
-
-function toNumber(value) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : 0;
+const PLANNOTATE_FALLBACK_COLORS = [
+  '#4e7fff',
+  '#f6a35e',
+  '#479f71',
+  '#808080',
+  '#c97064',
+  '#e8dab2',
+  '#8eb6ff',
+  '#a3b1bf',
+  '#8dc5a5',
+  '#f1c086'
+];
+const PLANNOTATE_ORIENTED_TYPES = new Set([
+  'cds',
+  'exon',
+  'gene',
+  'intron',
+  'mat_peptide',
+  'mobile_element',
+  'mrna',
+  'ncrna',
+  'orit',
+  'polya_site',
+  'protein_bind',
+  'promoter',
+  '35_signal',
+  '10_signal',
+  'rbs',
+  'terminator',
+  'trna',
+  'swissprot',
+  'origin_of_replication'
+]);
+function normalizePlannotateType(type) {
+  return String(type || 'misc_feature')
+    .trim()
+    .toLowerCase()
+    .replace(/[^\w]+/g, '_')
+    .replace(/^_+|_+$/g, '');
 }
 
-const CONCENTRATION_TO_M = {
-  fM: 1e-15,
-  pM: 1e-12,
-  nM: 1e-9,
-  uM: 1e-6,
-  mM: 1e-3,
-  M: 1
-};
-
-const VOLUME_TO_L = {
-  uL: 1e-6,
-  mL: 1e-3,
-  L: 1
-};
-
-const MASS_TO_G = {
-  ug: 1e-6,
-  mg: 1e-3,
-  g: 1,
-  kg: 1e3
-};
-
-const CODON_TABLE = {
-  TTT: 'F', TTC: 'F', TTA: 'L', TTG: 'L',
-  TCT: 'S', TCC: 'S', TCA: 'S', TCG: 'S',
-  TAT: 'Y', TAC: 'Y', TAA: '*', TAG: '*',
-  TGT: 'C', TGC: 'C', TGA: '*', TGG: 'W',
-  CTT: 'L', CTC: 'L', CTA: 'L', CTG: 'L',
-  CCT: 'P', CCC: 'P', CCA: 'P', CCG: 'P',
-  CAT: 'H', CAC: 'H', CAA: 'Q', CAG: 'Q',
-  CGT: 'R', CGC: 'R', CGA: 'R', CGG: 'R',
-  ATT: 'I', ATC: 'I', ATA: 'I', ATG: 'M',
-  ACT: 'T', ACC: 'T', ACA: 'T', ACG: 'T',
-  AAT: 'N', AAC: 'N', AAA: 'K', AAG: 'K',
-  AGT: 'S', AGC: 'S', AGA: 'R', AGG: 'R',
-  GTT: 'V', GTC: 'V', GTA: 'V', GTG: 'V',
-  GCT: 'A', GCC: 'A', GCA: 'A', GCG: 'A',
-  GAT: 'D', GAC: 'D', GAA: 'E', GAG: 'E',
-  GGT: 'G', GGC: 'G', GGA: 'G', GGG: 'G'
-};
-
-const DNA_BASE_MW = { A: 313.21, T: 304.2, G: 329.21, C: 289.18 };
-const RNA_BASE_MW = { A: 329.21, U: 306.17, G: 345.21, C: 305.18 };
-
-const DNA_EXTINCTION = { A: 15400, C: 7400, G: 11500, T: 8700 };
-const RNA_EXTINCTION = { A: 15400, C: 7400, G: 11500, U: 9900 };
-
-function formatSequenceLines(sequence, lineLength = 60) {
-  const lines = [];
-  for (let i = 0; i < sequence.length; i += lineLength) {
-    lines.push(sequence.slice(i, i + lineLength));
+function hashString(value) {
+  let hash = 0;
+  const text = String(value || '');
+  for (let i = 0; i < text.length; i += 1) {
+    hash = ((hash << 5) - hash) + text.charCodeAt(i);
+    hash |= 0;
   }
-  return lines.join('<br />');
+  return Math.abs(hash);
 }
 
-function concentrationToM(value, unit) {
-  return toNumber(value) * (CONCENTRATION_TO_M[unit] || 0);
-}
+function getPlannotateTypeStyle(type, fragment = false) {
+  const normalized = normalizePlannotateType(type);
+  const baseStyle = PLANNOTATE_TYPE_STYLES[normalized] || {
+    fillColor: PLANNOTATE_FALLBACK_COLORS[hashString(normalized) % PLANNOTATE_FALLBACK_COLORS.length],
+    lineColor: '#000000'
+  };
 
-function concentrationFromM(valueM, unit) {
-  const factor = CONCENTRATION_TO_M[unit] || 0;
-  return factor ? valueM / factor : 0;
-}
-
-function volumeToL(value, unit) {
-  return toNumber(value) * (VOLUME_TO_L[unit] || 0);
-}
-
-function volumeFromL(valueL, unit) {
-  const factor = VOLUME_TO_L[unit] || 0;
-  return factor ? valueL / factor : 0;
-}
-
-function massToG(value, unit) {
-  return toNumber(value) * (MASS_TO_G[unit] || 0);
-}
-
-function massFromG(valueG, unit) {
-  const factor = MASS_TO_G[unit] || 0;
-  return factor ? valueG / factor : 0;
-}
-
-function cleanNucleotideSequence(raw, type = 'DNA') {
-  const normalized = String(raw || '').toUpperCase().replace(/[^A-Z]/g, '');
-  const targetType = type === 'RNA' ? 'RNA' : 'DNA';
-  if (targetType === 'RNA') {
-    return normalized.replace(/T/g, 'U').replace(/[^ACGU]/g, '');
-  }
-  return normalized.replace(/U/g, 'T').replace(/[^ACGT]/g, '');
-}
-
-function nucleotideCounts(sequence) {
-  const counts = {};
-  for (const base of sequence) {
-    counts[base] = (counts[base] || 0) + 1;
-  }
-  return counts;
-}
-
-function reverseComplementDna(sequence) {
-  const complement = { A: 'T', T: 'A', G: 'C', C: 'G' };
-  return [...sequence]
-    .reverse()
-    .map((base) => complement[base] || 'N')
-    .join('');
-}
-
-function translateDnaSequence(sequence, frame = 1, stopMode = 'star') {
-  const numericFrame = Number(frame);
-  const isNegativeStrand = numericFrame < 0;
-  const absFrame = Math.max(1, Math.min(3, Math.abs(numericFrame) || 1));
-  const startIndex = absFrame - 1;
-  const template = isNegativeStrand ? reverseComplementDna(sequence) : sequence;
-  const coding = template.slice(startIndex);
-  let protein = '';
-  let codons = 0;
-
-  for (let i = 0; i + 2 < coding.length; i += 3) {
-    const codon = coding.slice(i, i + 3);
-    const aa = CODON_TABLE[codon] || 'X';
-    codons += 1;
-    if (aa === '*' && stopMode === 'trim') {
-      break;
-    }
-    protein += aa;
+  if (!fragment) {
+    return baseStyle;
   }
 
   return {
-    protein,
-    codons,
-    frame: absFrame,
-    strand: isNegativeStrand ? '-' : '+',
-    remainderBases: coding.length % 3
+    fillColor: '#ffffff',
+    lineColor: baseStyle.fillColor === '#ffffff' ? baseStyle.lineColor : baseStyle.fillColor
   };
 }
 
-function oligoMolecularWeight(sequence, type = 'DNA') {
-  const map = type === 'RNA' ? RNA_BASE_MW : DNA_BASE_MW;
-  return [...sequence].reduce((sum, base) => sum + (map[base] || 0), 0);
+function getPlannotateTypeColor(type) {
+  return getPlannotateTypeStyle(type, false).fillColor;
 }
 
-function oligoExtinction(sequence, type = 'DNA') {
-  const map = type === 'RNA' ? RNA_EXTINCTION : DNA_EXTINCTION;
-  return [...sequence].reduce((sum, base) => sum + (map[base] || 0), 0);
+function hasPlannotateOrientation(type) {
+  return PLANNOTATE_ORIENTED_TYPES.has(normalizePlannotateType(type));
 }
 
-function oligoTm(sequence, type = 'DNA') {
-  const counts = nucleotideCounts(sequence);
-  const a = counts.A || 0;
-  const g = counts.G || 0;
-  const c = counts.C || 0;
-  const tOrU = type === 'RNA' ? (counts.U || 0) : (counts.T || 0);
-  const n = sequence.length;
-  const gc = g + c;
-
-  if (!n) {
-    return 0;
+function getPlannotateSegments(hit, sequenceLength, topology = 'circular') {
+  if (!sequenceLength) {
+    return [];
   }
 
-  if (n < 14) {
-    return (2 * (a + tOrU)) + (4 * (g + c));
+  const qstart = Math.max(0, Math.min(sequenceLength, Number(hit.qstart) || 0));
+  const qendRaw = Number(hit.qend);
+  const qend = qendRaw === 0
+    ? sequenceLength
+    : Math.max(0, Math.min(sequenceLength, qendRaw || 0));
+
+  if (topology === 'linear') {
+    const left = Math.min(qstart, qend);
+    const right = Math.max(qstart, qend);
+    return right > left ? [{ start: left, end: right }] : [];
   }
 
-  return 64.9 + (41 * (gc - 16.4)) / n;
-}
-
-function linearRegression(xValues, yValues) {
-  const n = xValues.length;
-  if (!n || n !== yValues.length) {
-    return null;
+  const wrapsOrigin = Boolean(hit.crossesOrigin) || qend < qstart;
+  if (!wrapsOrigin) {
+    return qend > qstart ? [{ start: qstart, end: qend }] : [];
   }
 
-  const xMean = xValues.reduce((sum, value) => sum + value, 0) / n;
-  const yMean = yValues.reduce((sum, value) => sum + value, 0) / n;
-
-  let ssXX = 0;
-  let ssXY = 0;
-  let ssYY = 0;
-
-  for (let i = 0; i < n; i += 1) {
-    const dx = xValues[i] - xMean;
-    const dy = yValues[i] - yMean;
-    ssXX += dx * dx;
-    ssXY += dx * dy;
-    ssYY += dy * dy;
+  const segments = [];
+  if (sequenceLength > qstart) {
+    segments.push({ start: qstart, end: sequenceLength });
+  }
+  if (qend > 0) {
+    segments.push({ start: 0, end: qend });
   }
 
-  if (ssXX === 0) {
-    return null;
+  if (!segments.length && qstart === 0 && qend === 0) {
+    segments.push({ start: 0, end: sequenceLength });
   }
 
-  const slope = ssXY / ssXX;
-  const intercept = yMean - (slope * xMean);
-  const rSquared = ssYY === 0 ? 1 : (ssXY * ssXY) / (ssXX * ssYY);
-
-  return { slope, intercept, rSquared };
+  return segments;
 }
 
-function cleanSequence(raw) {
-  return String(raw || '')
-    .toUpperCase()
-    .replace(/[^A-Z]/g, '');
-}
-
-function countResidues(sequence) {
-  const counts = {};
-  for (const aa of sequence) {
-    counts[aa] = (counts[aa] || 0) + 1;
+function formatPlannotateLocation(hit, sequenceLength) {
+  const start = hit.qstart + 1;
+  const end = hit.qend === 0 ? sequenceLength : hit.qend;
+  if (!hit.crossesOrigin) {
+    return `${start}..${end}`;
   }
-  return counts;
+  return `${start}..${sequenceLength}, 1..${end}`;
 }
 
-function calculatePeptideMass(sequence) {
-  if (!sequence.length) {
-    return 0;
+function formatPlannotateHoverInfo(hit, sequenceLength) {
+  const location = formatPlannotateLocation(hit, sequenceLength);
+  const strand = hit.sframe === -1 ? '-' : '+';
+  const identity = Number.isFinite(hit.pident) ? `${hit.pident.toFixed(2)}%` : 'n/a';
+  const coverage = Number.isFinite(hit.percmatch) ? `${hit.percmatch.toFixed(2)}%` : 'n/a';
+  return `${hit.Feature} | ${hit.Type} | ${location} | Strand ${strand} | Identity ${identity} | Coverage ${coverage}`;
+}
+
+function formatBpCompact(value) {
+  const numeric = Number(value) || 0;
+  if (numeric >= 1000) {
+    return `${(numeric / 1000).toFixed(1).replace(/\.0$/, '')} kb`;
   }
-
-  const residueSum = [...sequence].reduce((sum, aa) => sum + (RESIDUE_MASS[aa] || 0), 0);
-  return residueSum + 18.015;
+  return `${Math.round(numeric)} bp`;
 }
 
-function positiveCharge(pH, pKa, count) {
-  return count * (1 / (1 + 10 ** (pH - pKa)));
+function ratioToCircularAngle(ratio) {
+  return (ratio * Math.PI * 2) - (Math.PI / 2);
 }
 
-function negativeCharge(pH, pKa, count) {
-  return count * (1 / (1 + 10 ** (pKa - pH)));
-}
-
-function calculateNetCharge(sequence, pH) {
-  const counts = countResidues(sequence);
-  const positive =
-    positiveCharge(pH, PKA.nTerminus, 1) +
-    positiveCharge(pH, PKA.K, counts.K || 0) +
-    positiveCharge(pH, PKA.R, counts.R || 0) +
-    positiveCharge(pH, PKA.H, counts.H || 0);
-
-  const negative =
-    negativeCharge(pH, PKA.cTerminus, 1) +
-    negativeCharge(pH, PKA.D, counts.D || 0) +
-    negativeCharge(pH, PKA.E, counts.E || 0) +
-    negativeCharge(pH, PKA.C, counts.C || 0) +
-    negativeCharge(pH, PKA.Y, counts.Y || 0);
-
-  return positive - negative;
-}
-
-function estimatePI(sequence) {
-  if (!sequence.length) {
-    return 0;
-  }
-
-  let low = 0;
-  let high = 14;
-  for (let i = 0; i < 60; i += 1) {
-    const mid = (low + high) / 2;
-    const charge = calculateNetCharge(sequence, mid);
-    if (charge > 0) {
-      low = mid;
-    } else {
-      high = mid;
-    }
-  }
-
-  return (low + high) / 2;
-}
-
-function residueSummary(counts) {
-  const keys = Object.keys(counts).sort();
-  return keys.map((key) => `${key}:${counts[key]}`).join('  ');
-}
-
-function peptideStats(sequence) {
-  const counts = countResidues(sequence);
-  const invalidResidues = [...sequence].filter((aa) => !RESIDUE_MASS[aa]);
-  const mass = calculatePeptideMass(sequence);
-  const netCharge7 = calculateNetCharge(sequence, 7);
-  const pI = estimatePI(sequence);
-
-  const tyr = counts.Y || 0;
-  const trp = counts.W || 0;
-  const cys = counts.C || 0;
-
+function polarPoint(cx, cy, radius, theta) {
   return {
-    counts,
-    invalidResidues,
-    length: sequence.length,
-    mass,
-    netCharge7,
-    pI,
-    extinctionReduced: 5500 * trp + 1490 * tyr,
-    extinctionOxidized: 5500 * trp + 1490 * tyr + 125 * Math.floor(cys / 2)
+    x: cx + (radius * Math.cos(theta)),
+    y: cy + (radius * Math.sin(theta))
   };
 }
 
-function renderChemicalOptions() {
-  const options = BUFFER_COMPOUNDS.map(
-    (chemical) => {
-      const formTag = chemical.form === 'liquid' ? '; liquid' : '; solid';
-      return `<option value="${chemical.name}">${chemical.name} (${chemical.mw} g/mol; ${chemical.category}${formTag})</option>`;
-    }
-  ).join('');
-  return `${options}<option value="__custom__">Custom</option>`;
+function makePlannotateDonutSegmentPath(cx, cy, innerRadius, outerRadius, startRatio, endRatio) {
+  if (endRatio <= startRatio) {
+    return '';
+  }
+
+  const twoPi = Math.PI * 2;
+  const startAngle = ratioToCircularAngle(startRatio);
+  let delta = (endRatio - startRatio) * twoPi;
+  if (delta >= twoPi) {
+    delta = twoPi - 1e-4;
+  }
+  const endAngle = startAngle + delta;
+  const largeArcFlag = delta > Math.PI ? 1 : 0;
+
+  const outerStart = polarPoint(cx, cy, outerRadius, startAngle);
+  const outerEnd = polarPoint(cx, cy, outerRadius, endAngle);
+  const innerStart = polarPoint(cx, cy, innerRadius, startAngle);
+  const innerEnd = polarPoint(cx, cy, innerRadius, endAngle);
+
+  return [
+    `M ${outerStart.x.toFixed(2)} ${outerStart.y.toFixed(2)}`,
+    `A ${outerRadius.toFixed(2)} ${outerRadius.toFixed(2)} 0 ${largeArcFlag} 1 ${outerEnd.x.toFixed(2)} ${outerEnd.y.toFixed(2)}`,
+    `L ${innerEnd.x.toFixed(2)} ${innerEnd.y.toFixed(2)}`,
+    `A ${innerRadius.toFixed(2)} ${innerRadius.toFixed(2)} 0 ${largeArcFlag} 0 ${innerStart.x.toFixed(2)} ${innerStart.y.toFixed(2)}`,
+    'Z'
+  ].join(' ');
 }
 
-function makeBufferRow() {
-  const wrapper = document.createElement('div');
-  wrapper.className = 'buffer-row';
-  wrapper.innerHTML = `
-    <label>
-      Chemical
-      <select class="buffer-chemical-select">
-        ${renderChemicalOptions()}
-      </select>
-    </label>
-    <label>
-      Custom Name
-      <input class="buffer-custom-name" placeholder="Chemical name" disabled />
-    </label>
-    <label class="buffer-custom-form-wrap" hidden>
-      Custom Type
-      <select class="buffer-custom-form" disabled>
-        <option value="solid" selected>Solid</option>
-        <option value="liquid">Liquid</option>
-      </select>
-    </label>
-    <label>
-      MW (g/mol)
-      <input class="buffer-mw" type="number" min="0" step="0.001" />
-    </label>
-    <label>
-      <span class="buffer-concentration-label">Concentration (mM)</span>
-      <input class="buffer-concentration" type="number" min="0" step="0.001" placeholder="e.g. 150" />
-    </label>
-    <div class="buffer-output">
-      <span class="buffer-weight">0 mg</span>
+function makePlannotateLabelAnchor(theta) {
+  const x = Math.cos(theta);
+  const y = Math.sin(theta);
+  if (x > 0.35) {
+    return { anchor: 'start', dy: 4 };
+  }
+  if (x < -0.35) {
+    return { anchor: 'end', dy: 4 };
+  }
+  return { anchor: 'middle', dy: y > 0 ? 14 : -6 };
+}
+
+function shortenPlannotateLabel(text, maxLength = 26) {
+  const clean = String(text || '').trim();
+  if (clean.length <= maxLength) {
+    return clean;
+  }
+  return `${clean.slice(0, maxLength - 1)}…`;
+}
+
+function assignPlannotateCircularLevels(hits, sequenceLength) {
+  const records = hits
+    .map((hit) => ({
+      hit,
+      segments: getPlannotateSegments(hit, sequenceLength, 'circular')
+        .filter((segment) => segment.end > segment.start)
+        .sort((a, b) => a.start - b.start)
+    }))
+    .filter((item) => item.segments.length)
+    .sort((a, b) => {
+      if (a.segments[0].start !== b.segments[0].start) {
+        return a.segments[0].start - b.segments[0].start;
+      }
+      const aLen = a.segments.reduce((sum, segment) => sum + (segment.end - segment.start), 0);
+      const bLen = b.segments.reduce((sum, segment) => sum + (segment.end - segment.start), 0);
+      return bLen - aLen;
+    });
+
+  const levelIntervals = [];
+  records.forEach((record) => {
+    let level = 0;
+    while (true) {
+      if (!levelIntervals[level]) {
+        levelIntervals[level] = [];
+        break;
+      }
+      const overlaps = record.segments.some((segment) => levelIntervals[level].some((existing) => (
+        segment.start < existing.end && existing.start < segment.end
+      )));
+      if (!overlaps) {
+        break;
+      }
+      level += 1;
+    }
+
+    record.level = level;
+    levelIntervals[level].push(...record.segments.map((segment) => ({ ...segment })));
+  });
+
+  return records;
+}
+
+function computePlannotateTickValues(sequenceLength) {
+  const approxChunk = Math.round((Math.floor(sequenceLength / 5) / 500)) * 500;
+  const chunkSize = approxChunk > 0 ? approxChunk : 500;
+  const ticks = [];
+  for (let bp = 0; bp < sequenceLength - (chunkSize / 2); bp += chunkSize) {
+    ticks.push(bp === 0 ? 1 : bp);
+  }
+  return ticks;
+}
+
+function renderPlannotateCircularMap(result) {
+  const sequenceLength = result.sequenceLength;
+  const hits = result.hits || [];
+  if (!sequenceLength || !hits.length) {
+    return '';
+  }
+
+  const cx = 400;
+  const cy = 400;
+  const backboneRadius = 205;
+  const featureHalfThickness = 17;
+  const levelStep = 40;
+  const tickValues = computePlannotateTickValues(sequenceLength);
+  const records = assignPlannotateCircularLevels(hits, sequenceLength);
+
+  const ticks = tickValues.map((bp) => {
+    const ratio = bp / sequenceLength;
+    const theta = ratioToCircularAngle(ratio);
+    const lineStart = polarPoint(cx, cy, backboneRadius - 6, theta);
+    const lineEnd = polarPoint(cx, cy, backboneRadius - 22, theta);
+    const labelPoint = polarPoint(cx, cy, backboneRadius - 40, theta);
+    const anchor = makePlannotateLabelAnchor(theta);
+    return `
+      <line x1="${lineStart.x.toFixed(2)}" y1="${lineStart.y.toFixed(2)}" x2="${lineEnd.x.toFixed(2)}" y2="${lineEnd.y.toFixed(2)}" />
+      <text x="${labelPoint.x.toFixed(2)}" y="${(labelPoint.y + anchor.dy).toFixed(2)}" text-anchor="${anchor.anchor}">${bp.toLocaleString()}</text>
+    `;
+  }).join('');
+
+  const featurePaths = [];
+  const connectorLines = [];
+  const labels = [];
+
+  records.forEach((record) => {
+    const { hit, segments, level } = record;
+    const style = getPlannotateTypeStyle(hit.Type, Boolean(hit.fragment));
+    const title = escapeHtml(`${hit.Feature} (${formatPlannotateLocation(hit, sequenceLength)})`);
+    const hoverInfo = escapeHtml(formatPlannotateHoverInfo(hit, sequenceLength));
+    const levelRadius = backboneRadius + (level * levelStep);
+    const innerRadius = Math.max(10, levelRadius - featureHalfThickness);
+    const outerRadius = levelRadius + featureHalfThickness;
+
+    segments.forEach((segment) => {
+      const startRatio = segment.start / sequenceLength;
+      const endRatio = segment.end / sequenceLength;
+      const path = makePlannotateDonutSegmentPath(cx, cy, innerRadius, outerRadius, startRatio, endRatio);
+      if (!path) {
+        return;
+      }
+      featurePaths.push(`
+        <path
+          class="plannotate-circular-hit plannotate-hover-target"
+          data-hit-info="${hoverInfo}"
+          d="${path}"
+          fill="${style.fillColor}"
+          stroke="${style.lineColor}"
+          stroke-width="2.4"
+          stroke-linejoin="round"
+        >
+          <title>${title}</title>
+        </path>
+      `);
+    });
+
+    const mainSegment = [...segments].sort((a, b) => (b.end - b.start) - (a.end - a.start))[0];
+    if (!mainSegment) {
+      return;
+    }
+
+    const midBp = (mainSegment.start + mainSegment.end) / 2;
+    const midTheta = ratioToCircularAngle(midBp / sequenceLength);
+    const lineStart = polarPoint(cx, cy, outerRadius, midTheta);
+    const lineEnd = polarPoint(cx, cy, outerRadius + 30, midTheta);
+    const textPoint = polarPoint(cx, cy, outerRadius + 36, midTheta);
+    const textAnchor = makePlannotateLabelAnchor(midTheta);
+    const labelColor = style.fillColor === '#ffffff' ? style.lineColor : style.fillColor;
+    const labelText = escapeHtml(shortenPlannotateLabel(hit.Feature || 'feature'));
+
+    connectorLines.push(`
+      <line
+        x1="${lineStart.x.toFixed(2)}"
+        y1="${lineStart.y.toFixed(2)}"
+        x2="${lineEnd.x.toFixed(2)}"
+        y2="${lineEnd.y.toFixed(2)}"
+        stroke="${labelColor}"
+      />
+    `);
+
+    labels.push(`
+      <text
+        class="plannotate-hover-target"
+        data-hit-info="${hoverInfo}"
+        x="${textPoint.x.toFixed(2)}"
+        y="${(textPoint.y + textAnchor.dy).toFixed(2)}"
+        text-anchor="${textAnchor.anchor}"
+        fill="${labelColor}"
+      >${labelText}</text>
+    `);
+
+    if (hasPlannotateOrientation(hit.Type)) {
+      const forward = Number(hit.sframe) !== -1;
+      const tipBp = forward ? mainSegment.end : mainSegment.start;
+      const tipTheta = ratioToCircularAngle(tipBp / sequenceLength);
+      const offset = forward ? -0.11 : 0.11;
+      const tip = polarPoint(cx, cy, levelRadius, tipTheta);
+      const baseOuter = polarPoint(cx, cy, outerRadius + 1.5, tipTheta + offset);
+      const baseInner = polarPoint(cx, cy, innerRadius - 1.5, tipTheta + offset);
+      featurePaths.push(`
+        <path
+          class="plannotate-circular-hit plannotate-hover-target"
+          data-hit-info="${hoverInfo}"
+          d="M ${baseOuter.x.toFixed(2)} ${baseOuter.y.toFixed(2)} L ${tip.x.toFixed(2)} ${tip.y.toFixed(2)} L ${baseInner.x.toFixed(2)} ${baseInner.y.toFixed(2)} Z"
+          fill="${style.fillColor}"
+          stroke="${style.lineColor}"
+          stroke-width="2.1"
+          stroke-linejoin="round"
+        >
+          <title>${title}</title>
+        </path>
+      `);
+    }
+  });
+
+  return `
+    <div class="plannotate-map-shell">
+      <div class="plannotate-panzoom-viewport" data-panzoom="true">
+        <div class="plannotate-panzoom-content">
+          <svg class="plannotate-circular-map" viewBox="0 0 800 800" role="img" aria-label="Circular plasmid map">
+            <circle class="plannotate-circular-backdrop" cx="${cx}" cy="${cy}" r="${backboneRadius}" />
+            <g class="plannotate-circular-axis">${ticks}</g>
+            <g class="plannotate-circular-features">${featurePaths.join('')}</g>
+            <g class="plannotate-circular-connectors">${connectorLines.join('')}</g>
+            <g class="plannotate-circular-labels plannotate-hover-target">${labels.join('')}</g>
+            <text class="plannotate-circular-center" x="${cx}" y="${cy - 6}">${sequenceLength.toLocaleString()} bp</text>
+            <text class="plannotate-circular-center-sub" x="${cx}" y="${cy + 18}">${hits.length} features</text>
+          </svg>
+        </div>
+      </div>
     </div>
-    <button type="button" class="ghost-btn buffer-remove-btn">Remove</button>
   `;
+}
 
-  const select = wrapper.querySelector('.buffer-chemical-select');
-  const mwInput = wrapper.querySelector('.buffer-mw');
-  const customNameInput = wrapper.querySelector('.buffer-custom-name');
+function renderPlannotateLinearMap(result) {
+  const sequenceLength = result.sequenceLength;
+  const hits = result.hits || [];
+  if (!sequenceLength || !hits.length) {
+    return '';
+  }
 
-  const first = BUFFER_COMPOUNDS[0];
-  select.value = first.name;
-  mwInput.value = first.mw;
-  customNameInput.value = '';
+  const sorted = hits
+    .map((hit) => ({
+      hit,
+      segments: getPlannotateSegments(hit, sequenceLength, 'linear')
+    }))
+    .filter((item) => item.segments.length)
+    .sort((a, b) => a.segments[0].start - b.segments[0].start);
 
-  return wrapper;
+  const lanes = [];
+  sorted.forEach((item) => {
+    const firstSegment = item.segments[0];
+    let laneIndex = lanes.findIndex((lane) => firstSegment.start >= lane);
+    if (laneIndex === -1) {
+      laneIndex = lanes.length;
+      lanes.push(firstSegment.end);
+    } else {
+      lanes[laneIndex] = firstSegment.end;
+    }
+    item.laneIndex = laneIndex;
+  });
+
+  const laneCount = Math.max(1, lanes.length);
+  const laneHeightPx = 22;
+  const railHeight = Math.max(32, (laneCount * laneHeightPx) + 10);
+  const laneLabels = [0, 0.25, 0.5, 0.75, 1].map((ratio) => `
+    <span style="left:${(ratio * 100).toFixed(2)}%">${Math.round(sequenceLength * ratio).toLocaleString()}</span>
+  `).join('');
+
+  const bars = sorted.map((item) => {
+    const style = getPlannotateTypeStyle(item.hit.Type, Boolean(item.hit.fragment));
+    const rowTop = 6 + (item.laneIndex * laneHeightPx);
+    const title = escapeHtml(`${item.hit.Feature} (${formatPlannotateLocation(item.hit, sequenceLength)})`);
+    const hoverInfo = escapeHtml(formatPlannotateHoverInfo(item.hit, sequenceLength));
+    return item.segments.map((segment) => {
+      const left = (segment.start / sequenceLength) * 100;
+      const width = Math.max(0.35, ((segment.end - segment.start) / sequenceLength) * 100);
+      return `
+        <span
+          class="plannotate-linear-hit plannotate-hover-target"
+          style="left:${left.toFixed(4)}%;width:${width.toFixed(4)}%;top:${rowTop}px;background:${style.fillColor};border:2px solid ${style.lineColor};"
+          title="${title}"
+          data-hit-info="${hoverInfo}"
+        ></span>
+      `;
+    }).join('');
+  }).join('');
+
+  return `
+    <div class="plannotate-map-shell">
+      <div class="plannotate-panzoom-viewport" data-panzoom="true">
+        <div class="plannotate-panzoom-content">
+          <div class="plannotate-linear-map" style="height:${railHeight}px;">
+            <div class="plannotate-linear-track">${bars}</div>
+          </div>
+          <div class="plannotate-linear-axis">${laneLabels}</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderPlannotateLegend(hits) {
+  const counts = new Map();
+  hits.forEach((hit) => {
+    const type = String(hit.Type || 'misc_feature');
+    counts.set(type, (counts.get(type) || 0) + 1);
+  });
+
+  if (!counts.size) {
+    return '';
+  }
+
+  const items = [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([type, count]) => `
+      <span class="plannotate-legend-item">
+        <span class="plannotate-legend-swatch" style="background:${getPlannotateTypeColor(type)};"></span>
+        ${escapeHtml(type)} (${count})
+      </span>
+    `)
+    .join('');
+
+  return `<div class="plannotate-legend">${items}</div>`;
+}
+
+function formatPercent(value, digits = 1) {
+  if (!Number.isFinite(value)) {
+    return 'n/a';
+  }
+  return `${Number(value).toFixed(digits)}%`;
 }
 
 export function initToolBox() {
@@ -414,6 +589,21 @@ export function initToolBox() {
 
   const dnaProteinForm = document.getElementById('dna-protein-form');
   const dnaProteinResult = document.getElementById('dna-protein-result');
+  const reverseTranslateForm = document.getElementById('reverse-translate-form');
+  const reverseTranslateOrganismSelect = document.getElementById('reverse-translate-organism');
+  const reverseTranslateResult = document.getElementById('reverse-translate-result');
+  const proteinAssemblyForm = document.getElementById('protein-assembly-form');
+  const proteinAssemblyConstructNameInput = document.getElementById('protein-assembly-name');
+  const proteinAssemblyPoiNameInput = document.getElementById('protein-assembly-poi-name');
+  const proteinAssemblyPoiSequenceInput = document.getElementById('protein-assembly-poi-sequence');
+  const proteinAssemblyRows = document.getElementById('protein-assembly-rows');
+  const proteinAssemblyAddBlockBtn = document.getElementById('protein-assembly-add-block-btn');
+  const proteinAssemblyResetBtn = document.getElementById('protein-assembly-reset-btn');
+  const proteinAssemblyResult = document.getElementById('protein-assembly-result');
+  const proteinAssemblySequence = document.getElementById('protein-assembly-sequence');
+  const proteinAssemblyMeta = document.getElementById('protein-assembly-meta');
+  const proteinAssemblyMapSummary = document.getElementById('protein-assembly-map-summary');
+  const proteinAssemblyTableBody = document.getElementById('protein-assembly-table-body');
 
   const oligoForm = document.getElementById('oligo-form');
   const oligoResult = document.getElementById('oligo-result');
@@ -423,6 +613,84 @@ export function initToolBox() {
 
   const qpcrForm = document.getElementById('qpcr-form');
   const qpcrResult = document.getElementById('qpcr-result');
+
+  const plannotateForm = document.getElementById('plannotate-form');
+  const plannotateResult = document.getElementById('plannotate-result');
+  const plannotateSequenceInput = document.getElementById('plannotate-sequence');
+  const plannotateTopologySelect = document.getElementById('plannotate-topology');
+  const plannotateDetailedToggle = document.getElementById('plannotate-detailed');
+  const plannotateMinIdentityInput = document.getElementById('plannotate-min-identity');
+  const plannotateMinCoverageInput = document.getElementById('plannotate-min-coverage');
+  const plannotateMinLengthInput = document.getElementById('plannotate-min-length');
+  const plannotateMapHost = document.getElementById('plannotate-map');
+  const plannotateMapMeta = document.getElementById('plannotate-map-meta');
+  const plannotateHitCount = document.getElementById('plannotate-hit-count');
+  const plannotateTableBody = document.getElementById('plannotate-table-body');
+  const plannotateRunStatus = document.getElementById('plannotate-run-status');
+  const plannotateModeTextBtn = document.getElementById('plannotate-mode-text');
+  const plannotateModeFileBtn = document.getElementById('plannotate-mode-file');
+  const plannotateTextPanel = document.getElementById('plannotate-text-panel');
+  const plannotateFilePanel = document.getElementById('plannotate-file-panel');
+  const plannotateEngineStatus = document.getElementById('plannotate-engine-status');
+  const plannotateInstallAllBtn = document.getElementById('plannotate-install-all');
+  const plannotateFileInput = document.getElementById('plannotate-file-input');
+  const plannotateFileChooseBtn = document.getElementById('plannotate-file-choose');
+  const plannotateFileName = document.getElementById('plannotate-file-name');
+  const plannotateDownloadGbkBtn = document.getElementById('plannotate-download-gbk');
+  const crisprForm = document.getElementById('crispr-form');
+  const crisprReferenceGenomeSelect = document.getElementById('crispr-reference-genome');
+  const crisprReferenceNote = document.getElementById('crispr-reference-note');
+  const crisprPamPatternSelect = document.getElementById('crispr-pam-pattern');
+  const crisprGuideLengthInput = document.getElementById('crispr-guide-length');
+  const crisprTopCountInput = document.getElementById('crispr-top-count');
+  const crisprMinGcInput = document.getElementById('crispr-min-gc');
+  const crisprMaxGcInput = document.getElementById('crispr-max-gc');
+  const crisprTargetInput = document.getElementById('crispr-target-input');
+  const crisprTargetSelect = document.getElementById('crispr-target-select');
+  const crisprSelectionSummary = document.getElementById('crispr-selection-summary');
+  const crisprSelectAllBtn = document.getElementById('crispr-select-all-btn');
+  const crisprClearBtn = document.getElementById('crispr-clear-btn');
+  const crisprResultSummary = document.getElementById('crispr-result-summary');
+  const crisprTableBody = document.getElementById('crispr-table-body');
+
+  const plannotateState = {
+    mode: 'text',
+    fileName: '',
+    fileText: '',
+    lastGbk: '',
+    lastRecordName: 'plasmid'
+  };
+  const crisprState = {
+    targets: []
+  };
+  const proteinAssemblyState = {
+    nextRowId: 1
+  };
+  let colonyToolInitPromise = null;
+
+  function ensureColonyToolInitialized() {
+    if (colonyToolInitPromise) {
+      return colonyToolInitPromise;
+    }
+
+    colonyToolInitPromise = import('./tool-box/colony-counter.js')
+      .then(({ initColonyCounterTool }) => {
+        if (typeof initColonyCounterTool === 'function') {
+          initColonyCounterTool();
+        }
+      })
+      .catch((error) => {
+        colonyToolInitPromise = null;
+        console.error('Failed to initialize colony counter tool:', error);
+        const colonyStatus = document.getElementById('colony-status');
+        if (colonyStatus) {
+          colonyStatus.textContent = 'Failed to load colony counter tool.';
+          colonyStatus.style.color = 'var(--danger)';
+        }
+      });
+
+    return colonyToolInitPromise;
+  }
 
   function getSelectedCompound(row) {
     const select = row.querySelector('.buffer-chemical-select');
@@ -468,6 +736,24 @@ export function initToolBox() {
     toolTiles.forEach((tile) => {
       tile.classList.toggle('tool-tile-active', tile.dataset.toolView === viewId);
     });
+    if (viewId === 'tool-colony-counter-view') {
+      void ensureColonyToolInitialized();
+    }
+  }
+
+  function populateReverseTranslateProfileOptions() {
+    if (!reverseTranslateOrganismSelect) {
+      return;
+    }
+
+    const selected = CODON_USAGE_PROFILES[reverseTranslateOrganismSelect.value]
+      ? reverseTranslateOrganismSelect.value
+      : REVERSE_TRANSLATE_DEFAULT_ORGANISM;
+
+    reverseTranslateOrganismSelect.innerHTML = Object.entries(CODON_USAGE_PROFILES)
+      .map(([key, profile]) => `<option value="${key}"${key === selected ? ' selected' : ''}>${profile.label}</option>`)
+      .join('');
+    reverseTranslateOrganismSelect.value = selected;
   }
 
   function renderMolarity() {
@@ -604,6 +890,75 @@ export function initToolBox() {
       <p><strong>Protein length:</strong> ${translated.protein.length} aa</p>
       <p><strong>Protein sequence:</strong></p>
       <div class="sequence-block">${formatSequenceLines(translated.protein || '-')}</div>
+    `;
+  }
+
+  function renderReverseTranslate() {
+    const rawProtein = document.getElementById('reverse-translate-protein').value;
+    const organism = reverseTranslateOrganismSelect?.value || REVERSE_TRANSLATE_DEFAULT_ORGANISM;
+    const restrictionRaw = document.getElementById('reverse-translate-sites').value;
+    const appendStopCodon = Boolean(document.getElementById('reverse-translate-append-stop').checked);
+    const cleanedProtein = cleanProteinSequence(rawProtein, true);
+    const parsedSites = parseRestrictionSites(restrictionRaw);
+    const warningRows = [];
+
+    if (!cleanedProtein.length) {
+      reverseTranslateResult.innerHTML = '<p class="small-note">Enter a protein sequence to reverse translate.</p>';
+      return;
+    }
+
+    if (parsedSites.ignoredTokens.length) {
+      warningRows.push(
+        `<p class="small-note">Ignored site tokens: ${escapeHtml(parsedSites.ignoredTokens.join(', '))}. Use DNA motifs with A/C/G/T and at least ${REVERSE_TRANSLATE_MIN_SITE_LENGTH} nt.</p>`
+      );
+    }
+
+    const translated = reverseTranslateProteinSequence(cleanedProtein, {
+      organism,
+      restrictionSites: parsedSites.sites,
+      appendStopCodon
+    });
+
+    if (!translated.ok) {
+      const progressLine = Number.isFinite(translated.translatedResidues)
+        ? `<p><strong>Progress:</strong> ${translated.translatedResidues}/${cleanedProtein.length} residues translated.</p>`
+        : '';
+      const partialDnaBlock = translated.dna
+        ? `
+          <p><strong>Partial DNA sequence:</strong></p>
+          <div class="sequence-block">${formatSequenceLines(translated.dna)}</div>
+        `
+        : '';
+
+      reverseTranslateResult.innerHTML = `
+        <p><strong>Status:</strong> Unable to satisfy all constraints.</p>
+        <p><strong>Reason:</strong> ${escapeHtml(translated.message || 'Unknown constraint error.')}</p>
+        <p><strong>Organism profile:</strong> ${escapeHtml(translated.organismLabel || resolveCodonProfile(organism).label)}</p>
+        ${progressLine}
+        ${partialDnaBlock}
+        ${warningRows.join('')}
+      `;
+      return;
+    }
+
+    const verificationProtein = translateDnaSequence(translated.dna, 1, 'star').protein;
+    const restrictionSummary = translated.restrictionSites.length
+      ? translated.restrictionSites.join(', ')
+      : 'None';
+
+    reverseTranslateResult.innerHTML = `
+      <p><strong>Organism profile:</strong> ${escapeHtml(translated.organismLabel)}</p>
+      <p><strong>Protein length:</strong> ${translated.aaLength} aa</p>
+      <p><strong>DNA length:</strong> ${translated.ntLength} bp</p>
+      <p><strong>GC content:</strong> ${translated.gcContent.toFixed(2)}%</p>
+      <p><strong>Codon preference score:</strong> ${translated.preferenceScorePercent.toFixed(2)}%</p>
+      <p><strong>Restricted motifs avoided:</strong> ${escapeHtml(restrictionSummary)}</p>
+      <p><strong>DNA sequence:</strong></p>
+      <div class="sequence-block">${formatSequenceLines(translated.dna || '-')}</div>
+      <p><strong>Codon sequence:</strong></p>
+      <div class="sequence-block">${formatSequenceLines(translated.codons.join(' ') || '-')}</div>
+      <p><strong>Translation check (+1 frame):</strong> ${escapeHtml(verificationProtein || '-')}</p>
+      ${warningRows.join('')}
     `;
   }
 
@@ -756,6 +1111,989 @@ export function initToolBox() {
     `;
   }
 
+  function formatProteinAssemblyTypeOptions(selectedType = 'tag') {
+    return PROTEIN_ASSEMBLY_PART_TYPES
+      .map((typeEntry) => (
+        `<option value="${typeEntry.id}"${typeEntry.id === selectedType ? ' selected' : ''}>${escapeHtml(typeEntry.label)}</option>`
+      ))
+      .join('');
+  }
+
+  function formatProteinAssemblyLibraryOptions(type, selectedId = '') {
+    const options = getProteinAssemblyLibraryByType(type);
+    if (!options.length) {
+      return '<option value="">No library blocks</option>';
+    }
+
+    return options
+      .map((entry, index) => {
+        const shouldSelect = selectedId
+          ? entry.id === selectedId
+          : index === 0;
+        const selectedAttr = shouldSelect ? ' selected' : '';
+        const detail = entry.note ? ` · ${entry.note}` : '';
+        return `<option value="${entry.id}"${selectedAttr}>${escapeHtml(entry.label)} (${entry.sequence.length} aa${escapeHtml(detail)})</option>`;
+      })
+      .join('');
+  }
+
+  function describeProteinAssemblyLibrarySelection(type, libraryId) {
+    const library = getProteinAssemblyLibraryByType(type);
+    const selected = library.find((entry) => entry.id === libraryId) || library[0];
+    if (!selected) {
+      return 'No library block selected.';
+    }
+    const detail = selected.note ? `${selected.note} ` : '';
+    return `${detail}Length: ${selected.sequence.length} aa.`;
+  }
+
+  function createProteinAssemblyRow(seed = {}) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'protein-assembly-row';
+    wrapper.dataset.rowId = String(proteinAssemblyState.nextRowId++);
+
+    const selectedType = seed.type || 'tag';
+    wrapper.innerHTML = `
+      <label>
+        Block Type
+        <select class="protein-assembly-row-type">
+          ${formatProteinAssemblyTypeOptions(selectedType)}
+        </select>
+      </label>
+      <label class="protein-assembly-library-wrap">
+        Library Block
+        <select class="protein-assembly-row-library"></select>
+      </label>
+      <label class="protein-assembly-custom-label-wrap" hidden>
+        Custom Label
+        <input class="protein-assembly-row-custom-label" placeholder="e.g. Targeting peptide" />
+      </label>
+      <label class="protein-assembly-custom-sequence-wrap" hidden>
+        Custom Sequence
+        <input class="protein-assembly-row-custom-sequence" placeholder="Amino-acid sequence" />
+      </label>
+      <div class="form-actions protein-assembly-row-actions">
+        <button type="button" class="ghost-btn protein-assembly-up-btn">Up</button>
+        <button type="button" class="ghost-btn protein-assembly-down-btn">Down</button>
+        <button type="button" class="ghost-btn protein-assembly-remove-btn">Remove</button>
+      </div>
+      <p class="small-note protein-assembly-row-note"></p>
+    `;
+
+    const typeSelect = wrapper.querySelector('.protein-assembly-row-type');
+    const librarySelect = wrapper.querySelector('.protein-assembly-row-library');
+    const customLabelInput = wrapper.querySelector('.protein-assembly-row-custom-label');
+    const customSequenceInput = wrapper.querySelector('.protein-assembly-row-custom-sequence');
+    typeSelect.value = selectedType;
+    librarySelect.value = seed.libraryId || '';
+    customLabelInput.value = seed.customLabel || '';
+    customSequenceInput.value = seed.customSequence || '';
+    return wrapper;
+  }
+
+  function syncProteinAssemblyRow(row, seed = {}) {
+    if (!row) {
+      return;
+    }
+
+    const typeSelect = row.querySelector('.protein-assembly-row-type');
+    const libraryWrap = row.querySelector('.protein-assembly-library-wrap');
+    const librarySelect = row.querySelector('.protein-assembly-row-library');
+    const customLabelWrap = row.querySelector('.protein-assembly-custom-label-wrap');
+    const customSequenceWrap = row.querySelector('.protein-assembly-custom-sequence-wrap');
+    const customLabelInput = row.querySelector('.protein-assembly-row-custom-label');
+    const customSequenceInput = row.querySelector('.protein-assembly-row-custom-sequence');
+    const rowNote = row.querySelector('.protein-assembly-row-note');
+    const type = typeSelect.value;
+
+    if (type === 'poi') {
+      libraryWrap.hidden = true;
+      customLabelWrap.hidden = true;
+      customSequenceWrap.hidden = true;
+      rowNote.textContent = 'Uses the POI sequence entered above.';
+      return;
+    }
+
+    if (type === 'custom') {
+      libraryWrap.hidden = true;
+      customLabelWrap.hidden = false;
+      customSequenceWrap.hidden = false;
+      const customSequence = sanitizeProteinAssemblySequence(customSequenceInput.value, true);
+      rowNote.textContent = customSequence.length
+        ? `Custom block length: ${customSequence.length} aa.`
+        : 'Enter a custom amino-acid sequence.';
+      if (!customLabelInput.value.trim()) {
+        customLabelInput.placeholder = 'Custom part';
+      }
+      return;
+    }
+
+    libraryWrap.hidden = false;
+    customLabelWrap.hidden = true;
+    customSequenceWrap.hidden = true;
+
+    const preferredId = seed.libraryId || librarySelect.value || '';
+    librarySelect.innerHTML = formatProteinAssemblyLibraryOptions(type, preferredId);
+    const resolvedLibrary = getProteinAssemblyLibraryByType(type);
+    if (!resolvedLibrary.some((entry) => entry.id === librarySelect.value) && resolvedLibrary[0]) {
+      librarySelect.value = resolvedLibrary[0].id;
+    }
+    rowNote.textContent = describeProteinAssemblyLibrarySelection(type, librarySelect.value);
+  }
+
+  function addProteinAssemblyRow(seed = {}) {
+    if (!proteinAssemblyRows) {
+      return;
+    }
+    const row = createProteinAssemblyRow(seed);
+    proteinAssemblyRows.appendChild(row);
+    syncProteinAssemblyRow(row, seed);
+  }
+
+  function resetProteinAssemblyRows() {
+    if (!proteinAssemblyRows) {
+      return;
+    }
+    proteinAssemblyRows.innerHTML = '';
+    defaultProteinAssemblyRows().forEach((row) => addProteinAssemblyRow(row));
+  }
+
+  function collectProteinAssemblyRows() {
+    if (!proteinAssemblyRows) {
+      return [];
+    }
+
+    return [...proteinAssemblyRows.querySelectorAll('.protein-assembly-row')].map((row) => ({
+      type: row.querySelector('.protein-assembly-row-type')?.value || 'custom',
+      libraryId: row.querySelector('.protein-assembly-row-library')?.value || '',
+      customLabel: row.querySelector('.protein-assembly-row-custom-label')?.value || '',
+      customSequence: row.querySelector('.protein-assembly-row-custom-sequence')?.value || ''
+    }));
+  }
+
+  function renderProteinAssemblyTable(rows) {
+    if (!proteinAssemblyTableBody) {
+      return;
+    }
+
+    if (!rows.length) {
+      proteinAssemblyTableBody.innerHTML = `
+        <tr>
+          <td colspan="6" class="small-note">No blocks assembled.</td>
+        </tr>
+      `;
+      return;
+    }
+
+    proteinAssemblyTableBody.innerHTML = rows.map((row) => `
+      <tr>
+        <td>${row.index}</td>
+        <td>${escapeHtml(row.label)}</td>
+        <td>${escapeHtml(row.typeLabel)}</td>
+        <td>${row.start}-${row.end}</td>
+        <td>${row.length}</td>
+        <td><span class="protein-assembly-cell-seq">${escapeHtml(row.sequence)}</span></td>
+      </tr>
+    `).join('');
+  }
+
+  function renderProteinAssembly() {
+    if (!proteinAssemblyResult) {
+      return;
+    }
+
+    const constructName = proteinAssemblyConstructNameInput?.value || '';
+    const poiName = proteinAssemblyPoiNameInput?.value || '';
+    const poiSequence = sanitizeProteinAssemblySequence(proteinAssemblyPoiSequenceInput?.value || '', true);
+    const rows = collectProteinAssemblyRows();
+    const assembled = buildProteinAssemblyConstruct({
+      constructName,
+      poiName,
+      poiSequence,
+      rows
+    });
+
+    const sequenceForStats = assembled.sequence.replace(/\*/g, '');
+    const stats = sequenceForStats.length ? peptideStats(sequenceForStats) : null;
+    const massText = stats ? `${stats.mass.toFixed(2)} Da` : 'n/a';
+    const pIText = stats ? stats.pI.toFixed(2) : 'n/a';
+    const chargeText = stats ? stats.netCharge7.toFixed(2) : 'n/a';
+
+    if (proteinAssemblyMeta) {
+      proteinAssemblyMeta.textContent = `${assembled.length} aa · ${assembled.parts.length} blocks`;
+    }
+
+    if (proteinAssemblyMapSummary) {
+      const typeCounts = assembled.parts.reduce((acc, part) => {
+        acc[part.type] = (acc[part.type] || 0) + 1;
+        return acc;
+      }, {});
+      const segments = [
+        `tags ${typeCounts.tag || 0}`,
+        `linkers ${typeCounts.linker || 0}`,
+        `cleavage ${typeCounts.cleavage || 0}`,
+        `POI ${typeCounts.poi || 0}`,
+        `custom ${typeCounts.custom || 0}`
+      ];
+      proteinAssemblyMapSummary.textContent = segments.join(' · ');
+    }
+
+    if (proteinAssemblySequence) {
+      proteinAssemblySequence.innerHTML = assembled.sequence
+        ? formatSequenceLines(assembled.sequence, 70)
+        : '-';
+    }
+
+    renderProteinAssemblyTable(assembled.parts);
+
+    const warningMarkup = assembled.warnings
+      .map((warning) => `<p class="small-note">Warning: ${escapeHtml(warning)}</p>`)
+      .join('');
+    const errorMarkup = assembled.errors
+      .map((error) => `<p class="small-note">Error: ${escapeHtml(error)}</p>`)
+      .join('');
+    const statusText = assembled.ok ? 'Ready for cloning/expression planning.' : 'Assembly has issues to resolve.';
+
+    proteinAssemblyResult.innerHTML = `
+      <p><strong>Construct:</strong> ${escapeHtml(assembled.constructName)}</p>
+      <p><strong>Status:</strong> ${escapeHtml(statusText)}</p>
+      <p><strong>Total length:</strong> ${assembled.length} aa</p>
+      <p><strong>Estimated MW:</strong> ${massText}</p>
+      <p><strong>Estimated pI:</strong> ${pIText}</p>
+      <p><strong>Estimated net charge (pH 7.0):</strong> ${chargeText}</p>
+      ${warningMarkup}
+      ${errorMarkup}
+    `;
+  }
+
+  function setPlannotateStatus(message, isError = false) {
+    if (!plannotateRunStatus) {
+      return;
+    }
+    plannotateRunStatus.textContent = message;
+    plannotateRunStatus.style.color = isError ? 'var(--danger)' : '';
+  }
+
+  async function refreshPlannotateEngineStatus() {
+    if (!plannotateEngineStatus) {
+      return;
+    }
+
+    plannotateEngineStatus.textContent = 'Checking blastn/diamond backend...';
+    const checker = window.enanaApi?.plannotateCheckEnv;
+    if (typeof checker !== 'function') {
+      plannotateEngineStatus.textContent = 'Native backend bridge unavailable.';
+      return;
+    }
+
+    try {
+      const response = await checker();
+      if (!response?.ok) {
+        plannotateEngineStatus.textContent = `Backend check failed: ${response?.error || 'unknown error'}`;
+        return;
+      }
+      const status = response.status || {};
+      if (status.ok) {
+        plannotateEngineStatus.textContent = 'Backend ready: blastn + diamond + databases detected.';
+      } else {
+        const missing = [];
+        if (!status.dataDir) {
+          missing.push('metadata');
+        }
+        if (!status.dbDir || !status.databases?.snapgene || !status.databases?.fpbase || !status.databases?.swissprot) {
+          missing.push('BLAST_dbs');
+        }
+        if (!status.executables?.blastn) {
+          missing.push('blastn');
+        }
+        if (!status.executables?.diamond) {
+          missing.push('diamond');
+        }
+        const details = missing.length ? `Missing: ${missing.join(', ')}` : 'Missing backend components.';
+        plannotateEngineStatus.textContent = `Backend not ready. ${details}`;
+      }
+    } catch (error) {
+      plannotateEngineStatus.textContent = `Backend check failed: ${error.message || error}`;
+    }
+  }
+
+  function setupPlannotateMapInteractions() {
+    if (!plannotateMapHost) {
+      return;
+    }
+
+    const viewport = plannotateMapHost.querySelector('.plannotate-panzoom-viewport');
+    const content = viewport?.querySelector('.plannotate-panzoom-content');
+    if (!viewport || !content) {
+      return;
+    }
+
+    const tooltip = document.createElement('div');
+    tooltip.className = 'plannotate-map-tooltip';
+    tooltip.hidden = true;
+    viewport.appendChild(tooltip);
+
+    const state = {
+      scale: 1,
+      panX: 0,
+      panY: 0,
+      dragging: false,
+      pointerId: null,
+      lastX: 0,
+      lastY: 0
+    };
+
+    function hideTooltip() {
+      tooltip.hidden = true;
+    }
+
+    function clampPan() {
+      const viewportWidth = viewport.clientWidth || 1;
+      const viewportHeight = viewport.clientHeight || 1;
+      const contentWidth = content.scrollWidth || viewportWidth;
+      const contentHeight = content.scrollHeight || viewportHeight;
+
+      const maxX = Math.max(40, ((contentWidth * state.scale) - viewportWidth) / 2 + 24);
+      const maxY = Math.max(40, ((contentHeight * state.scale) - viewportHeight) / 2 + 24);
+      state.panX = Math.max(-maxX, Math.min(maxX, state.panX));
+      state.panY = Math.max(-maxY, Math.min(maxY, state.panY));
+    }
+
+    function applyTransform() {
+      clampPan();
+      content.style.transform = `translate(${state.panX}px, ${state.panY}px) scale(${state.scale})`;
+    }
+
+    function updateTooltipPosition(event, text) {
+      if (!text || state.dragging) {
+        hideTooltip();
+        return;
+      }
+
+      tooltip.textContent = text;
+      tooltip.hidden = false;
+
+      const bounds = viewport.getBoundingClientRect();
+      let x = event.clientX - bounds.left + 14;
+      let y = event.clientY - bounds.top + 14;
+      const maxX = viewport.clientWidth - tooltip.offsetWidth - 8;
+      const maxY = viewport.clientHeight - tooltip.offsetHeight - 8;
+      x = Math.max(8, Math.min(maxX, x));
+      y = Math.max(8, Math.min(maxY, y));
+      tooltip.style.left = `${x}px`;
+      tooltip.style.top = `${y}px`;
+    }
+
+    viewport.addEventListener('pointerdown', (event) => {
+      if (event.button !== 0) {
+        return;
+      }
+      state.dragging = true;
+      state.pointerId = event.pointerId;
+      state.lastX = event.clientX;
+      state.lastY = event.clientY;
+      viewport.classList.add('is-dragging');
+      viewport.setPointerCapture(event.pointerId);
+      hideTooltip();
+      event.preventDefault();
+    });
+
+    viewport.addEventListener('pointermove', (event) => {
+      if (state.dragging && event.pointerId === state.pointerId) {
+        const dx = event.clientX - state.lastX;
+        const dy = event.clientY - state.lastY;
+        state.lastX = event.clientX;
+        state.lastY = event.clientY;
+        state.panX += dx;
+        state.panY += dy;
+        applyTransform();
+        return;
+      }
+
+      const hoverTarget = event.target?.closest('[data-hit-info]');
+      if (hoverTarget && viewport.contains(hoverTarget)) {
+        updateTooltipPosition(event, hoverTarget.getAttribute('data-hit-info'));
+      } else {
+        hideTooltip();
+      }
+    });
+
+    function stopDragging(event) {
+      if (!state.dragging || event.pointerId !== state.pointerId) {
+        return;
+      }
+      state.dragging = false;
+      state.pointerId = null;
+      viewport.classList.remove('is-dragging');
+      hideTooltip();
+      try {
+        viewport.releasePointerCapture(event.pointerId);
+      } catch {
+        // Ignore pointer-capture release errors.
+      }
+    }
+
+    viewport.addEventListener('pointerup', stopDragging);
+    viewport.addEventListener('pointercancel', stopDragging);
+    viewport.addEventListener('pointerleave', () => {
+      if (!state.dragging) {
+        hideTooltip();
+      }
+    });
+
+    viewport.addEventListener('wheel', (event) => {
+      event.preventDefault();
+      const factor = event.deltaY < 0 ? 1.12 : (1 / 1.12);
+      const nextScale = Math.max(0.55, Math.min(4.5, state.scale * factor));
+      if (nextScale === state.scale) {
+        return;
+      }
+      state.scale = nextScale;
+      applyTransform();
+      hideTooltip();
+    }, { passive: false });
+
+    viewport.addEventListener('dblclick', () => {
+      state.scale = 1;
+      state.panX = 0;
+      state.panY = 0;
+      applyTransform();
+      hideTooltip();
+    });
+
+    applyTransform();
+  }
+
+  function setPlannotateMode(mode) {
+    const resolvedMode = mode === 'file' ? 'file' : 'text';
+    plannotateState.mode = resolvedMode;
+
+    if (plannotateModeTextBtn) {
+      plannotateModeTextBtn.classList.toggle('plannotate-mode-btn-active', resolvedMode === 'text');
+    }
+    if (plannotateModeFileBtn) {
+      plannotateModeFileBtn.classList.toggle('plannotate-mode-btn-active', resolvedMode === 'file');
+    }
+    if (plannotateTextPanel) {
+      plannotateTextPanel.hidden = resolvedMode !== 'text';
+    }
+    if (plannotateFilePanel) {
+      plannotateFilePanel.hidden = resolvedMode !== 'file';
+    }
+  }
+
+  function clearPlannotateTable(message = 'No annotations yet.') {
+    if (!plannotateTableBody) {
+      return;
+    }
+    plannotateTableBody.innerHTML = `
+      <tr>
+        <td colspan="8" class="small-note">${escapeHtml(message)}</td>
+      </tr>
+    `;
+  }
+
+  function renderPlannotateEmptyMap(message = 'Run annotation to display the plasmid map.') {
+    if (!plannotateMapHost) {
+      return;
+    }
+    plannotateMapHost.innerHTML = `<p class="small-note">${escapeHtml(message)}</p>`;
+  }
+
+  function normalizeIupacDna(raw) {
+    return String(raw || '')
+      .toUpperCase()
+      .replace(/U/g, 'T')
+      .replace(/[^ACGTRYSWKMBDHVN]/g, '');
+  }
+
+  function extractPlannotateSequence(rawInput) {
+    const raw = String(rawInput || '');
+    const trimmed = raw.trim();
+    if (!trimmed) {
+      return { sequence: '', warning: '' };
+    }
+
+    const hasGenbankHeader = /^\s*LOCUS\b/im.test(trimmed);
+    const originMatch = trimmed.match(/^\s*ORIGIN\b([\s\S]*)$/im);
+    if (originMatch) {
+      const fromOrigin = originMatch[1];
+      const stopIndex = fromOrigin.search(/^\s*\/\/\s*$/m);
+      const originBody = stopIndex >= 0 ? fromOrigin.slice(0, stopIndex) : fromOrigin;
+      const sequence = normalizeIupacDna(originBody);
+      return {
+        sequence,
+        warning: sequence ? '' : 'GenBank ORIGIN block was found but no DNA symbols were parsed.'
+      };
+    }
+
+    if (hasGenbankHeader) {
+      return {
+        sequence: '',
+        warning: 'GenBank input detected, but no ORIGIN section was found.'
+      };
+    }
+
+    if (/^\s*>/m.test(trimmed)) {
+      const sequence = normalizeIupacDna(trimmed.replace(/^>.*$/gm, ''));
+      return { sequence, warning: '' };
+    }
+
+    return {
+      sequence: normalizeIupacDna(trimmed),
+      warning: ''
+    };
+  }
+
+  function readPlannotateFile(file) {
+    return new Promise((resolve, reject) => {
+      if (!file) {
+        reject(new Error('No file selected.'));
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(new Error('Failed to read selected file.'));
+      reader.readAsText(file);
+    });
+  }
+
+  function sanitizePlannotateRecordName(value) {
+    const cleaned = String(value || '')
+      .trim()
+      .replace(/\s+/g, '_')
+      .replace(/[^A-Za-z0-9_.-]/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .slice(0, 16);
+    return cleaned || 'plasmid';
+  }
+
+  function guessPlannotateRecordName(rawInput) {
+    const raw = String(rawInput || '');
+
+    if (plannotateState.mode === 'file' && plannotateState.fileName) {
+      const base = plannotateState.fileName.replace(/\.[^/.]+$/, '');
+      return sanitizePlannotateRecordName(base);
+    }
+
+    const locusMatch = raw.match(/^\s*LOCUS\s+(\S+)/im);
+    if (locusMatch?.[1]) {
+      return sanitizePlannotateRecordName(locusMatch[1]);
+    }
+
+    const fastaMatch = raw.match(/^\s*>\s*([^\s]+)/m);
+    if (fastaMatch?.[1]) {
+      return sanitizePlannotateRecordName(fastaMatch[1]);
+    }
+
+    return 'plasmid';
+  }
+
+  function setPlannotateGbkDownloadEnabled(isEnabled) {
+    if (!plannotateDownloadGbkBtn) {
+      return;
+    }
+    plannotateDownloadGbkBtn.disabled = !isEnabled;
+  }
+
+  function clearPlannotateGbkState() {
+    plannotateState.lastGbk = '';
+    plannotateState.lastRecordName = 'plasmid';
+    setPlannotateGbkDownloadEnabled(false);
+  }
+
+  function downloadTextFile(content, fileName, mimeType = 'text/plain;charset=utf-8') {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  }
+
+  async function resolvePlannotateGbk(result, rawInput) {
+    if (typeof result?.gbk === 'string' && result.gbk.trim()) {
+      return result.gbk;
+    }
+
+    const generator = window.enanaApi?.plannotateGenerateGbk;
+    if (typeof generator !== 'function') {
+      return '';
+    }
+
+    const response = await generator({
+      sequence: result?.sequence || '',
+      topology: result?.topology || 'circular',
+      hits: Array.isArray(result?.hits) ? result.hits : [],
+      recordName: guessPlannotateRecordName(rawInput)
+    });
+
+    if (!response?.ok) {
+      throw new Error(response?.error || 'Failed to generate GenBank output.');
+    }
+
+    return String(response.gbk || '');
+  }
+
+  async function runPlannotateAnnotation(sequence, options) {
+    const backend = window.enanaApi?.plannotateAnnotate;
+    if (typeof backend === 'function') {
+      const response = await backend({
+        sequenceText: sequence,
+        topology: options.topology,
+        detailed: options.detailed,
+        minIdentity: options.minIdentity,
+        minCoverage: options.minCoverage,
+        minHitLength: options.minHitLength
+      });
+      if (!response?.ok) {
+        throw new Error(response?.error || 'pLannotate backend annotation failed.');
+      }
+      return response.result;
+    }
+
+    const fallback = annotatePlasmidSequence(sequence, options);
+    fallback.warnings = [
+      'Native blastn/diamond backend unavailable. Displaying JS fallback annotations.',
+      ...(fallback.warnings || [])
+    ];
+    return fallback;
+  }
+
+  async function renderPlannotate() {
+    if (!plannotateResult) {
+      return;
+    }
+
+    const raw = plannotateState.mode === 'file'
+      ? plannotateState.fileText
+      : (plannotateSequenceInput?.value || '');
+
+    const parsed = extractPlannotateSequence(raw);
+    if (!parsed.sequence) {
+      clearPlannotateGbkState();
+
+      const emptyReason = plannotateState.mode === 'file'
+        ? (plannotateState.fileName ? 'Selected file does not contain a valid sequence.' : 'Choose a FASTA/GenBank file to annotate.')
+        : 'Paste a DNA sequence, FASTA entry, or GenBank content to annotate.';
+
+      if (plannotateMapMeta) {
+        plannotateMapMeta.textContent = '';
+      }
+      if (plannotateHitCount) {
+        plannotateHitCount.textContent = '0 hits';
+      }
+      renderPlannotateEmptyMap(emptyReason);
+      clearPlannotateTable(emptyReason);
+      plannotateResult.innerHTML = parsed.warning
+        ? `<p class="small-note">${escapeHtml(parsed.warning)}</p>`
+        : `<p class="small-note">${escapeHtml(emptyReason)}</p>`;
+      setPlannotateStatus('Idle');
+      return;
+    }
+
+    const baseOptions = {
+      topology: plannotateTopologySelect?.value || 'circular',
+      detailed: Boolean(plannotateDetailedToggle?.checked),
+      minIdentity: toNumber(plannotateMinIdentityInput?.value || 85),
+      minCoverage: toNumber(plannotateMinCoverageInput?.value || 25) / 100,
+      minHitLength: Math.round(toNumber(plannotateMinLengthInput?.value || 24))
+    };
+
+    let result = await runPlannotateAnnotation(parsed.sequence, baseOptions);
+    const recordName = guessPlannotateRecordName(raw);
+
+    const warnings = [];
+    if (parsed.warning) {
+      warnings.push(parsed.warning);
+    }
+    warnings.push(...(result.warnings || []));
+
+    try {
+      const gbk = await resolvePlannotateGbk(result, raw);
+      if (gbk.trim()) {
+        plannotateState.lastGbk = gbk;
+        plannotateState.lastRecordName = recordName;
+        setPlannotateGbkDownloadEnabled(true);
+      } else {
+        clearPlannotateGbkState();
+        plannotateState.lastRecordName = recordName;
+        warnings.push('GenBank export text was empty.');
+      }
+    } catch (error) {
+      clearPlannotateGbkState();
+      plannotateState.lastRecordName = recordName;
+      warnings.push(error.message || 'GenBank export generation failed.');
+    }
+
+    const warningRows = warnings
+      .map((warning) => `<p class="small-note">${escapeHtml(warning)}</p>`)
+      .join('');
+
+    if (plannotateMapMeta) {
+      plannotateMapMeta.textContent = `${result.sequenceLength.toLocaleString()} bp · ${result.topology}`;
+    }
+    if (plannotateHitCount) {
+      plannotateHitCount.textContent = `${result.hits.length} hits`;
+    }
+
+    const mapMarkup = result.topology === 'linear'
+      ? renderPlannotateLinearMap(result)
+      : renderPlannotateCircularMap(result);
+    const legendMarkup = renderPlannotateLegend(result.hits);
+    if (plannotateMapHost) {
+      plannotateMapHost.innerHTML = mapMarkup
+        ? `${mapMarkup}${legendMarkup}`
+        : '<p class="small-note">No annotations passed the current thresholds.</p>';
+      setupPlannotateMapInteractions();
+    }
+
+    if (!result.hits.length) {
+      clearPlannotateTable('No annotations passed the current thresholds.');
+      plannotateResult.innerHTML = `
+        <p><strong>Reference features scanned:</strong> ${result.stats.referenceFeatures}</p>
+        <p class="small-note">No annotations passed the current thresholds.</p>
+        ${warningRows}
+      `;
+      setPlannotateStatus('Completed: 0 hits');
+      return;
+    }
+
+    const tableRows = result.hits.map((hit, index) => `
+      <tr>
+        <td>${index + 1}</td>
+        <td>${escapeHtml(hit.Feature)}</td>
+        <td>${escapeHtml(hit.Type)}</td>
+        <td>${escapeHtml(formatPlannotateLocation(hit, result.sequenceLength))}</td>
+        <td>${hit.sframe === -1 ? '-' : '+'}</td>
+        <td>${hit.pident.toFixed(2)}%</td>
+        <td>${hit.percmatch.toFixed(2)}%</td>
+        <td>${hit.matchMode}</td>
+      </tr>
+    `).join('');
+
+    if (plannotateTableBody) {
+      plannotateTableBody.innerHTML = tableRows;
+    }
+
+    plannotateResult.innerHTML = `
+      <p><strong>Sequence length:</strong> ${result.sequenceLength.toLocaleString()} bp</p>
+      <p><strong>Hits:</strong> ${result.stats.finalHits} (exact: ${result.stats.exactHits}, partial: ${result.stats.partialHits})</p>
+      <p><strong>Reference features scanned:</strong> ${result.stats.referenceFeatures}</p>
+      ${warningRows}
+    `;
+    setPlannotateStatus(`Completed: ${result.hits.length} hits`);
+  }
+
+  function setCrisprTableMessage(message = 'No sgRNA candidates yet.') {
+    if (!crisprTableBody) {
+      return;
+    }
+    crisprTableBody.innerHTML = `
+      <tr>
+        <td colspan="12" class="small-note">${escapeHtml(message)}</td>
+      </tr>
+    `;
+  }
+
+  function getSelectedCrisprReferenceGenome() {
+    const selectedId = crisprReferenceGenomeSelect?.value || CRISPR_REFERENCE_GENOMES[0].id;
+    return CRISPR_REFERENCE_GENOMES.find((genome) => genome.id === selectedId) || CRISPR_REFERENCE_GENOMES[0];
+  }
+
+  function updateCrisprReferenceNote() {
+    if (!crisprReferenceNote) {
+      return;
+    }
+    const genome = getSelectedCrisprReferenceGenome();
+    crisprReferenceNote.textContent = genome?.note || 'Reference genome profile not selected.';
+  }
+
+  function populateCrisprReferenceGenomeOptions() {
+    if (!crisprReferenceGenomeSelect) {
+      return;
+    }
+    const current = crisprReferenceGenomeSelect.value;
+    crisprReferenceGenomeSelect.innerHTML = CRISPR_REFERENCE_GENOMES
+      .map((genome) => `<option value="${genome.id}">${escapeHtml(genome.label)}</option>`)
+      .join('');
+    if (current && CRISPR_REFERENCE_GENOMES.some((genome) => genome.id === current)) {
+      crisprReferenceGenomeSelect.value = current;
+    } else {
+      crisprReferenceGenomeSelect.value = CRISPR_REFERENCE_GENOMES[0].id;
+    }
+    updateCrisprReferenceNote();
+  }
+
+  function getSelectedCrisprTargets() {
+    if (!crisprTargetSelect) {
+      return [];
+    }
+    const selectedIds = new Set(
+      [...crisprTargetSelect.selectedOptions].map((option) => option.value)
+    );
+    return crisprState.targets.filter((target) => selectedIds.has(target.id));
+  }
+
+  function renderCrisprSelectionSummary() {
+    if (!crisprSelectionSummary) {
+      return;
+    }
+    if (!crisprState.targets.length) {
+      crisprSelectionSummary.textContent = 'Add target sequences to begin.';
+      return;
+    }
+
+    const selectedTargets = getSelectedCrisprTargets();
+    const totalBases = selectedTargets.reduce((sum, target) => sum + target.sequence.length, 0);
+    const shortest = selectedTargets.length
+      ? Math.min(...selectedTargets.map((target) => target.sequence.length))
+      : 0;
+    const longest = selectedTargets.length
+      ? Math.max(...selectedTargets.map((target) => target.sequence.length))
+      : 0;
+
+    crisprSelectionSummary.innerHTML = `
+      <p><strong>Targets loaded:</strong> ${crisprState.targets.length}</p>
+      <p><strong>Targets selected:</strong> ${selectedTargets.length}</p>
+      <p><strong>Total selected length:</strong> ${totalBases.toLocaleString()} bp</p>
+      <p><strong>Length range:</strong> ${shortest.toLocaleString()}-${longest.toLocaleString()} bp</p>
+      <p class="small-note">Tip: Use FASTA headers to name each target sequence.</p>
+    `;
+  }
+
+  function refreshCrisprTargets(selectAll = false) {
+    if (!crisprTargetSelect || !crisprTargetInput) {
+      return;
+    }
+
+    const previousSelection = new Set(
+      [...crisprTargetSelect.selectedOptions].map((option) => option.value)
+    );
+    const hadPreviousSelection = previousSelection.size > 0;
+    crisprState.targets = parseCrisprTargetsInput(crisprTargetInput.value);
+
+    if (!crisprState.targets.length) {
+      crisprTargetSelect.innerHTML = '<option value="" disabled>No targets parsed.</option>';
+      renderCrisprSelectionSummary();
+      return;
+    }
+
+    const optionsMarkup = crisprState.targets.map((target) => {
+      const shouldSelect = selectAll || !hadPreviousSelection || previousSelection.has(target.id);
+      const selectedAttr = shouldSelect ? ' selected' : '';
+      return `<option value="${target.id}"${selectedAttr}>${escapeHtml(target.name)} (${target.sequence.length.toLocaleString()} bp)</option>`;
+    }).join('');
+    crisprTargetSelect.innerHTML = optionsMarkup;
+    renderCrisprSelectionSummary();
+  }
+
+  function renderCrisprDesignResults(result, context) {
+    const { guideLength, pamPattern, referenceGenome } = context;
+    const warnings = [];
+    if (result.truncatedCandidates) {
+      warnings.push('Only the highest on-target guides were fully off-target scored for performance.');
+    }
+    if (result.truncatedBackground) {
+      warnings.push('Off-target scanning used a truncated background window set.');
+    }
+
+    if (!result.candidates.length) {
+      const noCandidateMessage = result.totalPamMatches > 0
+        ? 'No candidates passed current GC and scoring filters. Try widening GC range or using a different PAM.'
+        : 'No PAM-matching guides were found for the selected targets.';
+      if (crisprResultSummary) {
+        crisprResultSummary.innerHTML = `
+          <p><strong>Reference genome:</strong> ${escapeHtml(referenceGenome.label)}</p>
+          <p><strong>PAM:</strong> ${escapeHtml(pamPattern)} | <strong>Guide length:</strong> ${guideLength} nt</p>
+          <p><strong>PAM-matching guides:</strong> ${result.totalPamMatches.toLocaleString()}</p>
+          <p class="small-note">${escapeHtml(noCandidateMessage)}</p>
+        `;
+      }
+      setCrisprTableMessage(noCandidateMessage);
+      return;
+    }
+
+    const tableRows = result.candidates.map((candidate, index) => {
+      const offTargetRate = candidate.offTargetRate;
+      const riskClass = offTargetRate <= 10
+        ? 'crispr-risk-low'
+        : (offTargetRate <= 30 ? 'crispr-risk-medium' : 'crispr-risk-high');
+      const notes = candidate.notes.length ? candidate.notes.join(', ') : '-';
+      return `
+        <tr>
+          <td>${index + 1}</td>
+          <td>${escapeHtml(candidate.targetName)}</td>
+          <td>${candidate.start.toLocaleString()}-${candidate.end.toLocaleString()}</td>
+          <td>${candidate.strand}</td>
+          <td><span class="crispr-guide-seq">${escapeHtml(candidate.guideSequence)}</span></td>
+          <td><span class="crispr-guide-seq">${escapeHtml(candidate.pamSequence)}</span></td>
+          <td>${candidate.gcPercent.toFixed(1)}%</td>
+          <td>${candidate.onTargetScore.toFixed(1)}</td>
+          <td><span class="crispr-risk-badge ${riskClass}">${formatPercent(offTargetRate, 2)}</span></td>
+          <td>${candidate.specificityScore.toFixed(1)}</td>
+          <td>${candidate.mismatchCounts.exact}/${candidate.mismatchCounts.mismatch1}/${candidate.mismatchCounts.mismatch2}/${candidate.mismatchCounts.mismatch3}</td>
+          <td>${escapeHtml(notes)}</td>
+        </tr>
+      `;
+    }).join('');
+
+    if (crisprTableBody) {
+      crisprTableBody.innerHTML = tableRows;
+    }
+
+    if (crisprResultSummary) {
+      crisprResultSummary.innerHTML = `
+        <p><strong>Reference genome:</strong> ${escapeHtml(referenceGenome.label)}</p>
+        <p><strong>PAM:</strong> ${escapeHtml(pamPattern)} | <strong>Guide length:</strong> ${guideLength} nt</p>
+        <p><strong>Guides evaluated:</strong> ${result.evaluatedCandidateCount.toLocaleString()} / ${result.filteredCandidateCount.toLocaleString()} filtered candidates (${result.totalPamMatches.toLocaleString()} PAM-matching guides detected)</p>
+        <p><strong>Background sites scanned:</strong> ${result.scannedBackgroundSiteCount.toLocaleString()} / ${result.backgroundSiteCount.toLocaleString()}</p>
+        ${warnings.map((warning) => `<p class="small-note">${escapeHtml(warning)}</p>`).join('')}
+      `;
+    }
+  }
+
+  function runCrisprDesign() {
+    const selectedTargets = getSelectedCrisprTargets();
+    if (!selectedTargets.length) {
+      if (crisprResultSummary) {
+        crisprResultSummary.textContent = 'Select at least one target sequence to design sgRNAs.';
+      }
+      setCrisprTableMessage('Select at least one target sequence to design sgRNAs.');
+      return;
+    }
+
+    const referenceGenome = getSelectedCrisprReferenceGenome();
+    const guideLength = Math.round(clampNumber(crisprGuideLengthInput?.value, 18, 24, 20));
+    const topCount = Math.round(clampNumber(crisprTopCountInput?.value, 1, 100, 12));
+    let minGc = clampNumber(crisprMinGcInput?.value, 0, 100, 35);
+    let maxGc = clampNumber(crisprMaxGcInput?.value, 0, 100, 75);
+    if (minGc > maxGc) {
+      [minGc, maxGc] = [maxGc, minGc];
+    }
+
+    const pamPattern = normalizeIupacPattern(crisprPamPatternSelect?.value || 'NGG');
+    const result = designCrisprGuides({
+      selectedTargets,
+      backgroundTargets: crisprState.targets.length ? crisprState.targets : selectedTargets,
+      guideLength,
+      pamPattern,
+      minGc,
+      maxGc,
+      topCount,
+      genomeMultiplier: referenceGenome.offTargetMultiplier || 1
+    });
+
+    renderCrisprDesignResults(result, {
+      guideLength,
+      pamPattern,
+      referenceGenome
+    });
+  }
+
   function resolveChemicalName(row) {
     const select = row.querySelector('.buffer-chemical-select');
     if (select.value !== '__custom__') {
@@ -781,7 +2119,7 @@ export function initToolBox() {
         const requiredMl = (concentrationValue / 100) * volumeMl;
         const requiredUl = requiredMl * 1000;
         totalLiquidMl += requiredMl;
-        row.querySelector('.buffer-weight').textContent = `${name}: ${requiredMl.toFixed(4)} mL (${requiredUl.toFixed(1)} uL) at ${concentrationValue.toFixed(4)}% v/v`;
+        row.querySelector('.buffer-weight').textContent = `${name}: ${formatSigFig(requiredMl)} mL (${formatSigFig(requiredUl)} uL) at ${formatSigFig(concentrationValue)}% v/v`;
         return;
       }
 
@@ -790,10 +2128,10 @@ export function initToolBox() {
       const grams = (concentrationMm / 1000) * volumeL * mw;
       const mg = grams * 1000;
       totalSolidMg += mg;
-      row.querySelector('.buffer-weight').textContent = `${name}: ${mg.toFixed(3)} mg (${grams.toFixed(6)} g) at ${concentrationMm.toFixed(3)} mM`;
+      row.querySelector('.buffer-weight').textContent = `${name}: ${formatSigFig(mg)} mg (${formatSigFig(grams)} g) at ${formatSigFig(concentrationMm)} mM`;
     });
 
-    bufferTotalResult.textContent = `Total solids: ${totalSolidMg.toFixed(3)} mg (${(totalSolidMg / 1000).toFixed(6)} g) | Total liquids: ${totalLiquidMl.toFixed(4)} mL (${(totalLiquidMl * 1000).toFixed(1)} uL)`;
+    bufferTotalResult.textContent = `Total solids: ${formatSigFig(totalSolidMg)} mg (${formatSigFig(totalSolidMg / 1000)} g) | Total liquids: ${formatSigFig(totalLiquidMl)} mL (${formatSigFig(totalLiquidMl * 1000)} uL)`;
   }
 
   function addRow() {
@@ -828,6 +2166,100 @@ export function initToolBox() {
     renderDnaProtein();
   });
 
+  reverseTranslateForm.addEventListener('input', renderReverseTranslate);
+  reverseTranslateForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    renderReverseTranslate();
+  });
+
+  if (proteinAssemblyForm) {
+    resetProteinAssemblyRows();
+
+    proteinAssemblyAddBlockBtn?.addEventListener('click', () => {
+      addProteinAssemblyRow({ type: 'tag' });
+      renderProteinAssembly();
+    });
+
+    proteinAssemblyResetBtn?.addEventListener('click', () => {
+      resetProteinAssemblyRows();
+      renderProteinAssembly();
+    });
+
+    proteinAssemblyRows?.addEventListener('change', (event) => {
+      const row = event.target.closest('.protein-assembly-row');
+      if (!row) {
+        return;
+      }
+      if (
+        event.target.classList.contains('protein-assembly-row-type')
+        || event.target.classList.contains('protein-assembly-row-library')
+      ) {
+        syncProteinAssemblyRow(row);
+      }
+      renderProteinAssembly();
+    });
+
+    proteinAssemblyRows?.addEventListener('input', (event) => {
+      const row = event.target.closest('.protein-assembly-row');
+      if (!row) {
+        renderProteinAssembly();
+        return;
+      }
+      if (
+        event.target.classList.contains('protein-assembly-row-custom-sequence')
+        || event.target.classList.contains('protein-assembly-row-custom-label')
+      ) {
+        syncProteinAssemblyRow(row);
+      }
+      renderProteinAssembly();
+    });
+
+    proteinAssemblyRows?.addEventListener('click', (event) => {
+      const row = event.target.closest('.protein-assembly-row');
+      if (!row) {
+        return;
+      }
+
+      if (event.target.classList.contains('protein-assembly-remove-btn')) {
+        row.remove();
+        if (!proteinAssemblyRows.children.length) {
+          addProteinAssemblyRow({ type: 'poi' });
+        }
+        renderProteinAssembly();
+        return;
+      }
+
+      if (event.target.classList.contains('protein-assembly-up-btn')) {
+        const previous = row.previousElementSibling;
+        if (previous) {
+          proteinAssemblyRows.insertBefore(row, previous);
+          renderProteinAssembly();
+        }
+        return;
+      }
+
+      if (event.target.classList.contains('protein-assembly-down-btn')) {
+        const next = row.nextElementSibling;
+        if (next) {
+          proteinAssemblyRows.insertBefore(next, row);
+          renderProteinAssembly();
+        }
+      }
+    });
+
+    proteinAssemblyForm.addEventListener('input', (event) => {
+      if (event.target.closest('.protein-assembly-row')) {
+        return;
+      }
+      renderProteinAssembly();
+    });
+
+    proteinAssemblyForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      renderProteinAssembly();
+    });
+  }
+
   oligoForm.addEventListener('input', renderOligo);
   oligoForm.addEventListener('submit', (event) => {
     event.preventDefault();
@@ -846,6 +2278,179 @@ export function initToolBox() {
     renderQpcr();
   });
 
+  if (plannotateForm) {
+    setPlannotateMode('text');
+    setPlannotateStatus('Idle');
+    renderPlannotateEmptyMap('Run annotation to display the plasmid map.');
+    clearPlannotateTable('No annotations yet.');
+    clearPlannotateGbkState();
+    void refreshPlannotateEngineStatus();
+
+    plannotateDownloadGbkBtn?.addEventListener('click', () => {
+      if (!plannotateState.lastGbk) {
+        setPlannotateStatus('Run annotation before downloading a GBK file.', true);
+        return;
+      }
+
+      const baseName = sanitizePlannotateRecordName(plannotateState.lastRecordName || 'plasmid');
+      downloadTextFile(plannotateState.lastGbk, `${baseName}_pLann.gbk`, 'text/plain;charset=utf-8');
+      setPlannotateStatus(`Downloaded ${baseName}_pLann.gbk`);
+    });
+
+    plannotateInstallAllBtn?.addEventListener('click', async () => {
+      const installer = window.enanaApi?.plannotateInstallAll;
+      if (typeof installer !== 'function') {
+        setPlannotateStatus('Installer bridge unavailable.', true);
+        return;
+      }
+      plannotateInstallAllBtn.disabled = true;
+      setPlannotateStatus('Installing metadata + BLAST databases + executables...');
+      if (plannotateEngineStatus) {
+        plannotateEngineStatus.textContent = 'Installing pLannotate backend assets...';
+      }
+      try {
+        const response = await installer();
+        if (!response?.ok) {
+          throw new Error(response?.error || 'Installation failed.');
+        }
+        const logs = response.result?.logs || [];
+        const status = response.result?.status || {};
+        const missing = [];
+        if (!status.dataDir) {
+          missing.push('metadata');
+        }
+        if (!status.dbDir || !status.databases?.snapgene || !status.databases?.fpbase || !status.databases?.swissprot) {
+          missing.push('BLAST_dbs');
+        }
+        if (!status.executables?.blastn) {
+          missing.push('blastn');
+        }
+        if (!status.executables?.diamond) {
+          missing.push('diamond');
+        }
+        if (logs.length) {
+          plannotateResult.innerHTML = `<p class="small-note">${escapeHtml(logs.join(' | '))}</p>`;
+        }
+        if (missing.length) {
+          setPlannotateStatus(`Install finished, missing: ${missing.join(', ')}`, true);
+        } else {
+          setPlannotateStatus('Install completed.');
+        }
+      } catch (error) {
+        setPlannotateStatus(error.message || 'Install failed.', true);
+      } finally {
+        plannotateInstallAllBtn.disabled = false;
+        await refreshPlannotateEngineStatus();
+      }
+    });
+
+    plannotateModeTextBtn?.addEventListener('click', () => {
+      setPlannotateMode('text');
+      clearPlannotateGbkState();
+      setPlannotateStatus('Idle');
+    });
+
+    plannotateModeFileBtn?.addEventListener('click', () => {
+      setPlannotateMode('file');
+      clearPlannotateGbkState();
+      setPlannotateStatus('Idle');
+    });
+
+    plannotateFileChooseBtn?.addEventListener('click', () => {
+      plannotateFileInput?.click();
+    });
+
+    plannotateFileInput?.addEventListener('change', async () => {
+      const file = plannotateFileInput.files?.[0];
+      if (!file) {
+        return;
+      }
+      try {
+        setPlannotateStatus('Loading file...');
+        clearPlannotateGbkState();
+        plannotateState.fileText = await readPlannotateFile(file);
+        plannotateState.fileName = file.name || '';
+        if (plannotateFileName) {
+          plannotateFileName.textContent = plannotateState.fileName || 'No file selected';
+        }
+        setPlannotateStatus(`Loaded ${plannotateState.fileName || 'file'}`);
+      } catch (error) {
+        clearPlannotateGbkState();
+        plannotateState.fileText = '';
+        plannotateState.fileName = '';
+        if (plannotateFileName) {
+          plannotateFileName.textContent = 'No file selected';
+        }
+        setPlannotateStatus(error.message || 'Failed to load file.', true);
+      }
+    });
+
+    plannotateSequenceInput?.addEventListener('input', () => {
+      if (plannotateState.mode === 'text') {
+        clearPlannotateGbkState();
+        setPlannotateStatus('Ready');
+      }
+    });
+
+    plannotateForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      setPlannotateStatus('Running annotation...');
+      try {
+        await renderPlannotate();
+      } catch (error) {
+        setPlannotateStatus(error.message || 'Annotation failed.', true);
+        plannotateResult.innerHTML = `<p class="small-note">${escapeHtml(error.message || 'Annotation failed.')}</p>`;
+      }
+    });
+  }
+
+  if (crisprForm) {
+    populateCrisprReferenceGenomeOptions();
+    refreshCrisprTargets(true);
+    setCrisprTableMessage('No sgRNA candidates yet.');
+
+    crisprReferenceGenomeSelect?.addEventListener('change', () => {
+      updateCrisprReferenceNote();
+    });
+
+    crisprTargetInput?.addEventListener('input', () => {
+      refreshCrisprTargets();
+      if (!crisprTargetInput.value.trim()) {
+        if (crisprResultSummary) {
+          crisprResultSummary.textContent = 'Enter target sequences and run design to view candidate guides.';
+        }
+        setCrisprTableMessage('No sgRNA candidates yet.');
+      }
+    });
+
+    crisprTargetSelect?.addEventListener('change', () => {
+      renderCrisprSelectionSummary();
+    });
+
+    crisprSelectAllBtn?.addEventListener('click', () => {
+      refreshCrisprTargets(true);
+    });
+
+    crisprClearBtn?.addEventListener('click', () => {
+      if (crisprTargetInput) {
+        crisprTargetInput.value = '';
+      }
+      crisprState.targets = [];
+      if (crisprTargetSelect) {
+        crisprTargetSelect.innerHTML = '<option value="" disabled>No targets parsed.</option>';
+      }
+      renderCrisprSelectionSummary();
+      if (crisprResultSummary) {
+        crisprResultSummary.textContent = 'Enter target sequences and run design to view candidate guides.';
+      }
+      setCrisprTableMessage('No sgRNA candidates yet.');
+    });
+
+    crisprForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      runCrisprDesign();
+    });
+  }
   addBufferChemicalBtn.addEventListener('click', addRow);
   bufferVolumeInput.addEventListener('input', renderBuffer);
 
@@ -936,11 +2541,15 @@ export function initToolBox() {
 
   showToolView('tool-molarity-view');
 
+  populateReverseTranslateProfileOptions();
   addRow();
   renderMolarity();
   renderPeptide();
   renderDnaProtein();
+  renderReverseTranslate();
+  renderProteinAssembly();
   renderOligo();
   renderExtinction();
   renderQpcr();
+  void renderPlannotate().catch(() => {});
 }

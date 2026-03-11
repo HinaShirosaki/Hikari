@@ -111,6 +111,141 @@ function toConversation(messages) {
     .filter((item) => item.text);
 }
 
+const TOOL_ACTIVITY_LABELS = {
+  search_projects: 'Checking project records',
+  search_protocols: 'Checking stored protocols',
+  search_notebook_entries: 'Checking lab notebook pages',
+  search_assays: 'Checking assay records',
+  search_gel_analyses: 'Checking gel analysis records',
+  search_inventory: 'Checking inventory records',
+  search_papers: 'Checking stored PDF papers',
+  download_paper_pdf: 'Downloading papers'
+};
+
+function inferRequestedActivities(requestText) {
+  const text = String(requestText || '').toLowerCase();
+  if (!text) {
+    return [];
+  }
+
+  const rows = [];
+  if (/\b(inventory|stock|reagent|chemical)\b/.test(text)) {
+    rows.push('Checking inventory records');
+  }
+  if (/\b(paper|papers|pdf|literature|journal)\b/.test(text)) {
+    rows.push('Checking stored PDF papers');
+  }
+  if (/\b(download|fetch|get)\b/.test(text) && /\b(paper|papers|pdf)\b/.test(text)) {
+    rows.push('Downloading papers (pending approval)');
+  }
+  if (/\b(protocol|sop|method)\b/.test(text) && /\b(generate|draft|create|write|build)\b/.test(text)) {
+    rows.push('Generating protocol draft (pending approval)');
+  }
+  if (/\b(lab notebook|notebook page|notebook)\b/.test(text) && /\b(generate|draft|create|write|build)\b/.test(text)) {
+    rows.push('Generating lab notebook page (pending approval)');
+  }
+  return rows;
+}
+
+function activityStatusRank(status) {
+  if (status === 'done') {
+    return 3;
+  }
+  if (status === 'pending') {
+    return 2;
+  }
+  return 1;
+}
+
+function formatStageActivity(stage, goal) {
+  const normalizedStage = trimText(stage, 60).toLowerCase();
+  if (normalizedStage === 'intake') {
+    return 'Reading user request';
+  }
+  if (normalizedStage === 'context') {
+    return 'Loading local project, protocol, notebook, inventory, and paper context';
+  }
+  if (normalizedStage === 'execute') {
+    return trimText(goal, 240) || 'Executing read tools';
+  }
+  if (normalizedStage === 'verify') {
+    return 'Verifying evidence before final answer';
+  }
+  if (normalizedStage === 'synthesize') {
+    return 'Generating final response and decision record';
+  }
+  if (normalizedStage === 'handoff') {
+    return 'Preparing response for chat display';
+  }
+  return trimText(goal, 240) || `Running ${normalizedStage || 'agent'} stage`;
+}
+
+function formatWriteActivity(action) {
+  const toolName = trimText(action?.tool_name, 120);
+  const reason = trimText(action?.reason, 240);
+  const combined = `${toolName} ${reason}`.toLowerCase();
+  if (combined.includes('protocol')) {
+    return 'Generating protocol draft (pending approval)';
+  }
+  if (combined.includes('notebook')) {
+    return 'Generating lab notebook page (pending approval)';
+  }
+  if (combined.includes('paper') || combined.includes('pdf') || combined.includes('download')) {
+    return 'Downloading papers (pending approval)';
+  }
+  if (reason) {
+    return `Write action pending approval: ${reason}`;
+  }
+  return `Write action pending approval: ${toolName || 'unspecified action'}`;
+}
+
+function collectActivityRows(meta) {
+  if (!meta || typeof meta !== 'object') {
+    return [];
+  }
+
+  const rows = [];
+  const rowIndexByKey = new Map();
+  const upsertRow = (status, text) => {
+    const clean = trimText(text, 260);
+    if (!clean) {
+      return;
+    }
+    const key = clean.toLowerCase();
+    const existingIndex = rowIndexByKey.get(key);
+    if (existingIndex === undefined) {
+      rowIndexByKey.set(key, rows.length);
+      rows.push({ status, text: clean });
+      return;
+    }
+    if (activityStatusRank(status) > activityStatusRank(rows[existingIndex].status)) {
+      rows[existingIndex].status = status;
+    }
+  };
+
+  asArray(meta.intermediateStates).forEach((stage) => {
+    upsertRow('done', formatStageActivity(stage?.stage, stage?.goal));
+  });
+
+  asArray(meta.toolTrace).forEach((item) => {
+    const toolName = trimText(item?.tool, 120);
+    const action = TOOL_ACTIVITY_LABELS[toolName] || `Running ${toolName || 'tool'}`;
+    const summary = trimText(item?.summary, 200);
+    upsertRow('done', summary ? `${action}: ${summary}` : action);
+  });
+
+  asArray(meta.proposedWriteActions).forEach((action) => {
+    upsertRow('pending', formatWriteActivity(action));
+  });
+
+  inferRequestedActivities(meta.requestText).forEach((activity) => {
+    const status = activity.includes('(pending approval)') ? 'pending' : 'planned';
+    upsertRow(status, activity);
+  });
+
+  return rows.slice(0, 20);
+}
+
 export function initAgentChat({ state, persist, createId, safeText }) {
   const projectSelect = document.getElementById('agent-project-select');
   const contextSummary = document.getElementById('agent-context-summary');
@@ -218,6 +353,9 @@ export function initAgentChat({ state, persist, createId, safeText }) {
       experimentData,
       papers,
       inventory: mapInventory(state),
+      settings: {
+        storagePath: trimText(state.settings?.storagePath, 1200)
+      },
       timestamp: new Date().toISOString()
     };
   }
@@ -296,9 +434,23 @@ export function initAgentChat({ state, persist, createId, safeText }) {
     const confidence = Number(meta.confidence);
     const confidenceText = Number.isFinite(confidence) ? `Confidence: ${confidence.toFixed(2)}` : 'Confidence: n/a';
     const approvalText = meta.requiresApproval ? 'Requires approval: yes' : 'Requires approval: no';
+    const activityRows = collectActivityRows(meta);
 
     return `
       <div class="agent-meta-grid">
+        ${activityRows.length ? `
+          <section class="agent-activity" aria-label="LLM activity">
+            <h4>LLM Activity</h4>
+            <ul class="agent-activity-list">
+              ${activityRows.map((row) => `
+                <li class="agent-activity-item">
+                  <span class="agent-activity-badge agent-activity-badge-${safeText(row.status)}">${safeText(row.status)}</span>
+                  <span>${safeText(row.text)}</span>
+                </li>
+              `).join('')}
+            </ul>
+          </section>
+        ` : ''}
         <p class="small-note">${safeText(confidenceText)} | ${safeText(approvalText)}</p>
         ${renderMetaList('Citations', citations)}
         ${renderMetaList('Assumptions', assumptions)}
@@ -321,17 +473,20 @@ export function initAgentChat({ state, persist, createId, safeText }) {
 
     historyNode.innerHTML = messages.map((message) => {
       const role = message.role === 'assistant' ? 'assistant' : 'user';
-      const headerLabel = role === 'assistant' ? 'Assistant' : 'You';
+      const headerLabel = role === 'assistant' ? 'Assistant' : 'User';
       const cardClass = role === 'assistant' ? 'agent-chat-item-assistant' : 'agent-chat-item-user';
+      const rowClass = role === 'assistant' ? 'agent-chat-row-assistant' : 'agent-chat-row-user';
       return `
-        <article class="agent-chat-item ${cardClass}">
-          <header class="agent-chat-header">
-            <strong>${headerLabel}</strong>
-            <span>${safeText(formatTime(message.createdAt))}</span>
-          </header>
-          <p class="agent-chat-body">${safeText(message.text || '')}</p>
-          ${role === 'assistant' ? renderAssistantMeta(message.meta) : ''}
-        </article>
+        <div class="agent-chat-row ${rowClass}">
+          <article class="agent-chat-item ${cardClass}">
+            <header class="agent-chat-header">
+              <strong>${headerLabel}</strong>
+              <span>${safeText(formatTime(message.createdAt))}</span>
+            </header>
+            <p class="agent-chat-body">${safeText(message.text || '')}</p>
+            ${role === 'assistant' ? renderAssistantMeta(message.meta) : ''}
+          </article>
+        </div>
       `;
     }).join('');
 
@@ -389,6 +544,7 @@ export function initAgentChat({ state, persist, createId, safeText }) {
         conversation: toConversation(state.agentChat.messages),
         stateSnapshot: buildStateSnapshot(projectId),
         llm: {
+          provider: String(state.settings?.llm?.provider || '').trim(),
           model: String(state.settings?.llm?.model || '').trim(),
           apiEndpoint: String(state.settings?.llm?.apiEndpoint || '').trim(),
           apiKey: String(state.settings?.llm?.apiKey || '').trim()
@@ -411,7 +567,8 @@ export function initAgentChat({ state, persist, createId, safeText }) {
           decisionRecord: result.decisionRecord || {},
           proposedWriteActions: asArray(result.proposedWriteActions),
           intermediateStates: asArray(result.intermediateStates),
-          toolTrace: asArray(result.toolTrace)
+          toolTrace: asArray(result.toolTrace),
+          requestText: messageText
         }
       });
 
@@ -432,7 +589,8 @@ export function initAgentChat({ state, persist, createId, safeText }) {
           decisionRecord: {},
           proposedWriteActions: [],
           intermediateStates: [],
-          toolTrace: []
+          toolTrace: [],
+          requestText: messageText
         }
       });
       state.agentChat.messages = state.agentChat.messages.slice(-40);

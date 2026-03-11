@@ -28,13 +28,13 @@ export const TITLES = {
   [VIEWS.SYNTHESIS_NOTEBOOK]: 'Synthesis notebook for chemistry workflows.',
   [VIEWS.BIOLOGY_NOTEBOOK]: 'Biology notebook for wet lab workflows.',
   [VIEWS.LAB_COMMON_INVENTORY]: 'Chemicals module.',
-  [VIEWS.SAMPLE_REGISTRY]: 'Registry for plasmids, cell lines, strains, antibodies, proteins, compounds, and primers.',
+  [VIEWS.SAMPLE_REGISTRY]: 'Manage sample registry and personal inventory containers in one workspace.',
   [VIEWS.ASSAY]: 'Create assay plates or open existing assay numbers to paste spreadsheet results and analyze.',
   [VIEWS.GEL]: 'Analyze SDS-PAGE or Western blot gels with lane/band quantification and interpretation.',
-  [VIEWS.PERSONAL_INVENTORY]: 'Track inventory by temperature storage and wells.',
+  [VIEWS.PERSONAL_INVENTORY]: 'Manage sample registry and personal inventory containers in one workspace.',
   [VIEWS.SETTING]: 'Settings module.',
   [VIEWS.PROJECT_MANAGEMENT]: 'Manage projects for notebook context.',
-  [VIEWS.WORKFLOW_MANAGEMENT]: 'Build editable protocol-block workflows and reusable templates.',
+  [VIEWS.WORKFLOW_MANAGEMENT]: 'Build editable workflows with protocol/text blocks and reusable templates.',
   [VIEWS.PAPERS]: 'Upload papers, link them to projects or journal clubs, and summarize with LLM.',
   [VIEWS.AGENT]: 'Ask the lab assistant agent with evidence-grounded context and decision records.',
   [VIEWS.TOOL_BOX]: 'Tools: molarity calculator, peptide properties, and buffer preparer.'
@@ -42,6 +42,52 @@ export const TITLES = {
 
 export const STORAGE_KEY = 'enana_state_v1';
 const LEGACY_CHEMISTRY_DRAFT_KEY = 'enana_synthesis_chemistry_draft_v1';
+export const LLM_PROVIDERS = Object.freeze({
+  OPENAI: 'openai',
+  GEMINI: 'gemini',
+  CLAUDE: 'claude',
+  CODEX: 'codex'
+});
+export const DEFAULT_LLM_PROVIDER = LLM_PROVIDERS.OPENAI;
+export const LLM_DEFAULT_ENDPOINTS = Object.freeze({
+  [LLM_PROVIDERS.OPENAI]: 'https://api.openai.com/v1/responses',
+  [LLM_PROVIDERS.GEMINI]: 'https://generativelanguage.googleapis.com/v1beta',
+  [LLM_PROVIDERS.CLAUDE]: 'https://api.anthropic.com/v1/messages',
+  [LLM_PROVIDERS.CODEX]: 'codex://cli'
+});
+
+export function inferLlmProviderFromEndpoint(endpoint) {
+  const value = String(endpoint || '').trim().toLowerCase();
+  if (!value) {
+    return '';
+  }
+  if (value.startsWith('codex://') || value.includes('codex cli') || value.includes('openai-cli')) {
+    return LLM_PROVIDERS.CODEX;
+  }
+  if (value.includes('anthropic.com')) {
+    return LLM_PROVIDERS.CLAUDE;
+  }
+  if (value.includes('generativelanguage.googleapis.com') || value.includes('ai.google')) {
+    return LLM_PROVIDERS.GEMINI;
+  }
+  if (value.includes('openai.com') || value.includes('/openai/')) {
+    return LLM_PROVIDERS.OPENAI;
+  }
+  return '';
+}
+
+export function normalizeLlmProvider(provider, endpoint = '') {
+  const clean = String(provider || '').trim().toLowerCase();
+  if (Object.values(LLM_PROVIDERS).includes(clean)) {
+    return clean;
+  }
+  return inferLlmProviderFromEndpoint(endpoint) || DEFAULT_LLM_PROVIDER;
+}
+
+export function defaultLlmEndpointForProvider(provider) {
+  const resolved = normalizeLlmProvider(provider);
+  return LLM_DEFAULT_ENDPOINTS[resolved] || LLM_DEFAULT_ENDPOINTS[DEFAULT_LLM_PROVIDER];
+}
 
 export const defaultState = {
   members: [],
@@ -99,9 +145,10 @@ export const defaultState = {
     },
     storagePath: '',
     llm: {
+      provider: DEFAULT_LLM_PROVIDER,
       model: '',
       api: '',
-      apiEndpoint: 'https://api.openai.com/v1/responses',
+      apiEndpoint: LLM_DEFAULT_ENDPOINTS[DEFAULT_LLM_PROVIDER],
       apiKey: ''
     },
     enaFilePath: '',
@@ -127,8 +174,12 @@ export function normalizeState(parsed) {
     ? rawGrowthMetrics.counters
     : {};
   const legacyApi = String(rawLlm.api || '').trim();
-  const legacyEndpoint = legacyApi.startsWith('http') ? legacyApi : '';
-  const legacyApiKey = legacyApi && !legacyApi.startsWith('http') ? legacyApi : '';
+  const legacyApiLooksLikeEndpoint = /^[a-z]+:\/\//i.test(legacyApi);
+  const legacyEndpoint = legacyApiLooksLikeEndpoint ? legacyApi : '';
+  const legacyApiKey = legacyApi && !legacyApiLooksLikeEndpoint ? legacyApi : '';
+  const llmProvider = normalizeLlmProvider(rawLlm.provider, rawLlm.apiEndpoint || legacyEndpoint);
+  const llmEndpoint = String(rawLlm.apiEndpoint || legacyEndpoint || '').trim()
+    || defaultLlmEndpointForProvider(llmProvider);
 
   return {
     ...structuredClone(defaultState),
@@ -191,7 +242,8 @@ export function normalizeState(parsed) {
       llm: {
         ...defaultState.settings.llm,
         ...rawLlm,
-        apiEndpoint: String(rawLlm.apiEndpoint || legacyEndpoint || defaultState.settings.llm.apiEndpoint).trim(),
+        provider: llmProvider,
+        apiEndpoint: llmEndpoint,
         apiKey: String(rawLlm.apiKey || legacyApiKey).trim(),
         api: legacyApi
       },
