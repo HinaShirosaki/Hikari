@@ -88,6 +88,17 @@
               "verification_notes": { "type": "array", "items": { "type": "string" } }
             }
           },
+          "routing": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "intent": { "type": "string" },
+              "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+              "entities": { "type": "object", "additionalProperties": true },
+              "plan": { "type": "object", "additionalProperties": true },
+              "classifier": { "type": "object", "additionalProperties": true }
+            }
+          },
           "intermediateStates": { "type": "array", "items": { "type": "object" } },
           "toolTrace": { "type": "array", "items": { "type": "object" } },
           "error": { "type": "string" }
@@ -598,6 +609,346 @@
                     }
                   }
                 }
+              }
+            }
+          },
+          "citations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["source", "pointer", "reason"],
+              "properties": {
+                "source": { "type": "string" },
+                "pointer": { "type": "string" },
+                "reason": { "type": "string" }
+              }
+            }
+          },
+          "summary": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "search_uniprot",
+      "description": "Search UniProtKB protein knowledgebase records by keyword, accession, or gene/protein term.",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["query"],
+        "properties": {
+          "query": { "type": "string" },
+          "limit": { "type": "integer", "minimum": 1, "maximum": 25 }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["items", "citations", "summary"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "accession",
+                "entry_id",
+                "protein_name",
+                "gene_names",
+                "organism",
+                "reviewed",
+                "length",
+                "uniprot_url"
+              ],
+              "properties": {
+                "accession": { "type": "string" },
+                "entry_id": { "type": "string" },
+                "protein_name": { "type": "string" },
+                "gene_names": { "type": "array", "items": { "type": "string" } },
+                "organism": { "type": "string" },
+                "reviewed": { "type": "boolean" },
+                "length": { "type": "number" },
+                "uniprot_url": { "type": "string" }
+              }
+            }
+          },
+          "citations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["source", "pointer", "reason"],
+              "properties": {
+                "source": { "type": "string" },
+                "pointer": { "type": "string" },
+                "reason": { "type": "string" }
+              }
+            }
+          },
+          "summary": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "search_pubmed",
+      "description": "Search PubMed literature records and return article metadata for biomedical queries.",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["query"],
+        "properties": {
+          "query": { "type": "string" },
+          "limit": { "type": "integer", "minimum": 1, "maximum": 25 }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["items", "citations", "summary"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "pmid",
+                "title",
+                "journal",
+                "pubdate",
+                "doi",
+                "authors",
+                "pubmed_url"
+              ],
+              "properties": {
+                "pmid": { "type": "string" },
+                "title": { "type": "string" },
+                "journal": { "type": "string" },
+                "pubdate": { "type": "string" },
+                "doi": { "type": "string" },
+                "authors": { "type": "array", "items": { "type": "string" } },
+                "pubmed_url": { "type": "string" }
+              }
+            }
+          },
+          "citations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["source", "pointer", "reason"],
+              "properties": {
+                "source": { "type": "string" },
+                "pointer": { "type": "string" },
+                "reason": { "type": "string" }
+              }
+            }
+          },
+          "summary": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "search_crossref",
+      "description": "Search Crossref works metadata by title, DOI, author, or keyword.",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["query"],
+        "properties": {
+          "query": { "type": "string" },
+          "limit": { "type": "integer", "minimum": 1, "maximum": 25 }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["items", "citations", "summary"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "doi",
+                "title",
+                "journal",
+                "published",
+                "type",
+                "cited_by_count",
+                "authors",
+                "url"
+              ],
+              "properties": {
+                "doi": { "type": "string" },
+                "title": { "type": "string" },
+                "journal": { "type": "string" },
+                "published": { "type": "string" },
+                "type": { "type": "string" },
+                "cited_by_count": { "type": "number" },
+                "authors": { "type": "array", "items": { "type": "string" } },
+                "url": { "type": "string" }
+              }
+            }
+          },
+          "citations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["source", "pointer", "reason"],
+              "properties": {
+                "source": { "type": "string" },
+                "pointer": { "type": "string" },
+                "reason": { "type": "string" }
+              }
+            }
+          },
+          "summary": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "search_europe_pmc",
+      "description": "Search Europe PMC literature records with PubMed/PMCID/DOI metadata.",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["query"],
+        "properties": {
+          "query": { "type": "string" },
+          "limit": { "type": "integer", "minimum": 1, "maximum": 25 }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["items", "citations", "summary"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "source",
+                "title",
+                "author_string",
+                "journal",
+                "pub_year",
+                "doi",
+                "pmid",
+                "pmcid",
+                "europe_pmc_url"
+              ],
+              "properties": {
+                "id": { "type": "string" },
+                "source": { "type": "string" },
+                "title": { "type": "string" },
+                "author_string": { "type": "string" },
+                "journal": { "type": "string" },
+                "pub_year": { "type": "string" },
+                "doi": { "type": "string" },
+                "pmid": { "type": "string" },
+                "pmcid": { "type": "string" },
+                "europe_pmc_url": { "type": "string" }
+              }
+            }
+          },
+          "citations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["source", "pointer", "reason"],
+              "properties": {
+                "source": { "type": "string" },
+                "pointer": { "type": "string" },
+                "reason": { "type": "string" }
+              }
+            }
+          },
+          "summary": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "run_python_sandbox",
+      "description": "Compute tool. Run Python code in an isolated temporary sandbox for deterministic calculations, parsing, and transformations. Use this when retrieval tools are insufficient and the task needs programmatic computation.",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code"],
+        "properties": {
+          "code": { "type": "string" },
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["path", "content"],
+              "properties": {
+                "path": { "type": "string" },
+                "content": { "type": "string" }
+              }
+            }
+          },
+          "timeout_ms": { "type": "integer", "minimum": 500, "maximum": 15000 },
+          "readback_paths": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["items", "citations", "summary"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "run_id",
+                "status",
+                "timeout_ms",
+                "python_executable",
+                "exit_code",
+                "signal",
+                "timed_out",
+                "stdout",
+                "stderr",
+                "files_written",
+                "readback_files",
+                "warnings"
+              ],
+              "properties": {
+                "run_id": { "type": "string" },
+                "status": { "type": "string", "enum": ["ok", "error", "timed_out"] },
+                "timeout_ms": { "type": "integer" },
+                "python_executable": { "type": "string" },
+                "exit_code": { "type": ["integer", "null"] },
+                "signal": { "type": ["string", "null"] },
+                "timed_out": { "type": "boolean" },
+                "stdout": { "type": "string" },
+                "stderr": { "type": "string" },
+                "files_written": { "type": "array", "items": { "type": "string" } },
+                "readback_files": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["path", "content", "truncated"],
+                    "properties": {
+                      "path": { "type": "string" },
+                      "content": { "type": "string" },
+                      "truncated": { "type": "boolean" }
+                    }
+                  }
+                },
+                "warnings": { "type": "array", "items": { "type": "string" } }
               }
             }
           },

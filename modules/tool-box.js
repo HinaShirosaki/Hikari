@@ -567,7 +567,10 @@ function formatPercent(value, digits = 1) {
   return `${Number(value).toFixed(digits)}%`;
 }
 
-export function initToolBox() {
+export function initToolBox(options = {}) {
+  const onOpenSequenceViewer = typeof options?.onOpenSequenceViewer === 'function'
+    ? options.onOpenSequenceViewer
+    : null;
   const toolTiles = [...document.querySelectorAll('.tool-tile')];
   const toolSubviews = [...document.querySelectorAll('.tool-subview')];
   const molarityMassForm = document.getElementById('molarity-mass-form');
@@ -636,6 +639,7 @@ export function initToolBox() {
   const plannotateFileInput = document.getElementById('plannotate-file-input');
   const plannotateFileChooseBtn = document.getElementById('plannotate-file-choose');
   const plannotateFileName = document.getElementById('plannotate-file-name');
+  const plannotateOpenSequenceViewerBtn = document.getElementById('plannotate-open-sequence-viewer');
   const plannotateDownloadGbkBtn = document.getElementById('plannotate-download-gbk');
   const crisprForm = document.getElementById('crispr-form');
   const crisprReferenceGenomeSelect = document.getElementById('crispr-reference-genome');
@@ -658,7 +662,8 @@ export function initToolBox() {
     fileName: '',
     fileText: '',
     lastGbk: '',
-    lastRecordName: 'plasmid'
+    lastRecordName: 'plasmid',
+    lastSequenceViewerPayload: null
   };
   const crisprState = {
     targets: []
@@ -1696,10 +1701,48 @@ export function initToolBox() {
     plannotateDownloadGbkBtn.disabled = !isEnabled;
   }
 
+  function setPlannotateSequenceViewerEnabled(isEnabled) {
+    if (!plannotateOpenSequenceViewerBtn) {
+      return;
+    }
+    plannotateOpenSequenceViewerBtn.disabled = !isEnabled;
+  }
+
+  function buildPlannotateSequenceViewerPayload(result, recordName) {
+    const sequence = String(result?.sequence || '');
+    const sequenceLength = Number(result?.sequenceLength) || sequence.length;
+    const topology = result?.topology === 'linear' ? 'linear' : 'circular';
+    const hits = Array.isArray(result?.hits) ? result.hits : [];
+
+    const features = hits.map((hit, index) => ({
+      id: `plannotate_${index + 1}`,
+      name: String(hit.Feature || `feature_${index + 1}`),
+      type: String(hit.Type || 'misc_feature'),
+      strand: hit.sframe === -1 ? -1 : 1,
+      description: String(hit.Description || ''),
+      source: 'plannotate',
+      location: formatPlannotateLocation(hit, sequenceLength),
+      identity: Number.isFinite(hit.pident) ? Number(hit.pident) : null,
+      coverage: Number.isFinite(hit.percmatch) ? Number(hit.percmatch) : null,
+      mode: String(hit.matchMode || ''),
+      segments: getPlannotateSegments(hit, sequenceLength, topology)
+    }));
+
+    return {
+      name: sanitizePlannotateRecordName(recordName || 'plasmid'),
+      sequence,
+      topology,
+      source: 'plannotate',
+      features
+    };
+  }
+
   function clearPlannotateGbkState() {
     plannotateState.lastGbk = '';
     plannotateState.lastRecordName = 'plasmid';
+    plannotateState.lastSequenceViewerPayload = null;
     setPlannotateGbkDownloadEnabled(false);
+    setPlannotateSequenceViewerEnabled(false);
   }
 
   function downloadTextFile(content, fileName, mimeType = 'text/plain;charset=utf-8') {
@@ -1827,6 +1870,14 @@ export function initToolBox() {
       clearPlannotateGbkState();
       plannotateState.lastRecordName = recordName;
       warnings.push(error.message || 'GenBank export generation failed.');
+    }
+
+    if (String(result?.sequence || '').length) {
+      plannotateState.lastSequenceViewerPayload = buildPlannotateSequenceViewerPayload(result, recordName);
+      setPlannotateSequenceViewerEnabled(Boolean(onOpenSequenceViewer));
+    } else {
+      plannotateState.lastSequenceViewerPayload = null;
+      setPlannotateSequenceViewerEnabled(false);
     }
 
     const warningRows = warnings
@@ -2295,6 +2346,24 @@ export function initToolBox() {
       const baseName = sanitizePlannotateRecordName(plannotateState.lastRecordName || 'plasmid');
       downloadTextFile(plannotateState.lastGbk, `${baseName}_pLann.gbk`, 'text/plain;charset=utf-8');
       setPlannotateStatus(`Downloaded ${baseName}_pLann.gbk`);
+    });
+
+    plannotateOpenSequenceViewerBtn?.addEventListener('click', () => {
+      if (!plannotateState.lastSequenceViewerPayload) {
+        setPlannotateStatus('Run annotation before opening Sequence Viewer.', true);
+        return;
+      }
+      if (!onOpenSequenceViewer) {
+        setPlannotateStatus('Sequence Viewer bridge unavailable.', true);
+        return;
+      }
+
+      try {
+        onOpenSequenceViewer(plannotateState.lastSequenceViewerPayload);
+        setPlannotateStatus('Opened annotation in Sequence Viewer.');
+      } catch (error) {
+        setPlannotateStatus(error?.message || 'Failed to open Sequence Viewer.', true);
+      }
     });
 
     plannotateInstallAllBtn?.addEventListener('click', async () => {

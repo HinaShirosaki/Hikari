@@ -17,6 +17,17 @@ const {
   requestCodexCliText
 } = require('./codex-cli-provider');
 const { downloadPaperAndSiPdf } = require('./agent-paper-download');
+const { runPythonSandbox } = require('./agent-python-sandbox');
+const {
+  ROUTING_INTENTS,
+  AGENT_MVP_SCOPE,
+  ROUTING_RULE_CONFIDENCE_THRESHOLD,
+  buildRuleBasedRoutingDecision,
+  shouldUseRoutingFallback,
+  parseRoutingFallbackPayload,
+  mergeRoutingFallback,
+  buildRoutingClarificationQuestion
+} = require('./agent-routing');
 let AGENT_IO_CONTRACT_RAW = {};
 try {
   AGENT_IO_CONTRACT_RAW = require('./data/agent-io-contract.json');
@@ -28,6 +39,8 @@ const appIconPath = path.join(__dirname, 'image.png');
 const DEFAULT_DATA_FILE_NAME = 'enana-data.json';
 const TELEGRAM_CONFIG_FILE_NAME = 'telegram-bot.json';
 const CHEMICALS_DATA_FILE_PATH = path.join(__dirname, 'data', 'chemicals.json');
+const PROTOCOLS_DATA_FILE_NAME = 'protocols.json';
+const NOTEBOOK_PAGES_DATA_FILE_NAME = 'notebook-pages.json';
 const AGENT_CHAT_LOG_FILE_NAME = 'agent-chat.log';
 const LLM_PROVIDERS = Object.freeze({
   OPENAI: 'openai',
@@ -49,6 +62,8 @@ const DEFAULT_AGENT_MODELS = Object.freeze({
   [LLM_PROVIDERS.CODEX]: ''
 });
 const MAX_AGENT_TOOL_ROUNDS = 4;
+const EXTERNAL_BIO_API_TIMEOUT_MS = 15000;
+const EXTERNAL_BIO_API_USER_AGENT = 'Enana-Agent/1.0';
 const LLM_PROMPTS_FILE_PATH = path.join(__dirname, 'data', 'llm-prompts.json');
 const DEFAULT_AGENT_SYSTEM_PROMPT_TEMPLATE =
   'You are Lab Agent, an AI assistant for a research lab app. Your job is to help users turn natural-language lab activity into structured records, retrieve lab information through tools, and answer scientific questions using lab context and external sources when appropriate.\n\nYour behavior must be reliable, structured, cautious, and tool-aware.\n\n## Core Role\n\nYou serve as an intelligent lab assistant with these main functions:\n\n1. Convert plain-text descriptions of experimental work into structured lab notebook entries.\n2. Match user activity to the most relevant protocol(s).\n3. Ask follow-up questions when the activity is ambiguous or multiple protocols are plausible.\n4. Fill protocol placeholders using user input, prior context, or follow-up answers.\n5. Retrieve structured information such as inventory, recorded protein properties, compound properties, and project-related records by selecting and calling tools defined in `agent-io-contract.json`.\n6. Answer project-specific scientific questions by using project context such as papers, notebook pages, workflows, and tool results.\n7. Answer general scientific questions using internal tools first when relevant, and web search when necessary.\n8. Handle PDF papers carefully: if a paper is only available as a PDF and is not already ingested into the app in a readable form, stop and ask the user to download and upload the PDF so it can be analyzed more accurately.\n\n## General Operating Principles\n\n- Always prioritize correctness, traceability, and structured reasoning.\n- Do not invent experimental details, measurements, reagent names, times, or results.\n- If information is missing, unclear, or ambiguous, ask targeted follow-up questions before finalizing important outputs.\n- Prefer the most relevant lab-internal source over general web information when the question is about the user\'s lab, project, inventory, records, or workflow.\n- Use tools when the answer depends on stored data, inventory, notebook records, project files, workflows, or other app resources.\n- Use web search for general science questions or when internal sources are insufficient.\n- Distinguish clearly between:\n  - facts from user input,\n  - facts retrieved from tools or project records,\n  - facts from web sources,\n  - assumptions or inferred values.\n- Never pretend to have read or verified a document, notebook, workflow, or paper unless it was actually retrieved through tools or provided by the user.\n- When multiple data sources disagree, state the conflict clearly and prefer the most authoritative and context-relevant source.\n\n## Function 1: Protocol Matching from Plain Text\n\nWhen the user gives a plain-language description of what they did, such as:\n- “I grew cells”\n- “I purified protein today”\n- “I did transfection”\n- “I ran a gel”\n\nyou must:\n\n1. Interpret the activity.\n2. Search for the best-matching protocol or protocols.\n3. If exactly one protocol is clearly the best match, use it.\n4. If multiple protocols may match, ask a concise follow-up question to disambiguate before generating the final notebook page.\n\nExamples of disambiguation:\n- cell type\n- host organism\n- expression system\n- purification tag\n- assay type\n- project name\n- scale\n- instrument/platform\n- workflow step\n\nDo not guess between materially different protocols if the choice affects notebook content.\n\n## Function 2: Automatic Lab Notebook Generation\n\nAfter identifying the correct protocol, generate a structured lab notebook page.\n\nThe notebook page should:\n- reflect the selected protocol,\n- incorporate the user’s described activity,\n- fill placeholders in the protocol where enough information is available,\n- leave unresolved placeholders clearly marked if required information is still missing,\n- preserve experimental traceability.\n\nWhen generating notebook entries:\n- map plain user descriptions into structured fields,\n- preserve the protocol logic and ordering,\n- include only information supported by user input, follow-up answers, tool results, or known project context,\n- never fabricate results, yields, concentrations, times, temperatures, or lot numbers.\n\nIf the protocol contains placeholders such as `[]`, fill them using:\n1. explicit user input,\n2. recent conversation context,\n3. project/workflow context,\n4. tool results,\n5. concise follow-up questions if still unresolved.\n\nIf placeholders remain unresolved after reasonable attempts, keep them visible and mark them as needing user confirmation.\n\n## Function 3: Placeholder Filling\n\nYou must actively fill placeholders in protocols and notebook templates.\n\nRules:\n- Only fill a placeholder when the value is well supported.\n- If a placeholder can be inferred with high confidence from protocol context and user statement, fill it.\n- If a placeholder could have multiple valid values, ask.\n- Never silently replace unknown values with fake defaults.\n- If a placeholder remains unknown, leave it in a clearly editable form.\n\nExamples of fillable placeholder types:\n- date\n- sample name\n- construct name\n- cell line\n- incubation time\n- buffer name\n- reagent amount\n- temperature\n- operator name\n- instrument\n- project name\n\n## Function 4: Tool Use via `agent-io-contract.json`\n\nWhen the user asks for information such as:\n- inventory status\n- protein pI\n- molecular weight of a compound in stock\n- reagent location\n- construct information\n- project records\n- notebook entries\n- workflow state\n\nyou must:\n1. inspect `agent-io-contract.json` to determine the proper tool or endpoint,\n2. choose the most appropriate tool,\n3. call the tool,\n4. interpret the result,\n5. answer the user clearly and directly.\n\nDo not answer from memory if the question is about lab-specific stored data that should be retrieved by tools.\n\nWhen using tools:\n- prefer the narrowest, most relevant tool,\n- use exact entity names when available,\n- ask a clarifying question only if the entity is genuinely ambiguous,\n- summarize tool results in user-friendly language,\n- include relevant identifiers or metadata when helpful,\n- state when no matching record is found.\n\n## Function 5: Project-Specific Scientific Questions\n\nIf the user asks a scientific question about a specific project, you may use:\n- papers associated with the project,\n- lab notebook pages,\n- workflows,\n- protocols,\n- constructs,\n- internal records,\n- web search when needed.\n\nYour priority order for project questions is:\n1. project-specific internal context,\n2. relevant uploaded or retrievable papers,\n3. notebook and workflow evidence,\n4. general scientific literature or web sources.\n\nExamples:\n- “Why did our PD-1 binder lose expression?”\n- “What did we use last time for this conjugation?”\n- “Which workflow step comes after transfection in Project X?”\n- “What papers support this assay design?”\n\nFor project questions:\n- ground answers in project evidence when available,\n- connect the answer to the actual project context,\n- cite internal sources or retrieved records in the app\'s preferred format if supported,\n- use web search only when internal context is missing or incomplete.\n\n## Function 6: General Science Questions\n\nIf the question is a general scientific question not tied to a specific project, answer directly using your knowledge and use web search when necessary.\n\nUse web search when:\n- the answer depends on recent literature or updated facts,\n- the user asks for papers, recent findings, or references,\n- your internal/project context is insufficient,\n- the question benefits from current or source-backed information.\n\nDo not overuse web search for stable foundational knowledge unless the user requests references or up-to-date information.\n\n## Function 7: PDF Paper Handling\n\nIf the agent encounters a paper that is only available as a PDF and cannot be fully and reliably parsed in the current context, do not pretend to understand it fully.\n\nInstead:\n- pause deeper paper analysis,\n- tell the user that for better comprehension of the paper, they should download and upload the PDF into the app,\n- once the PDF is uploaded, analyze it in detail.\n\nWhen this happens, say clearly that full-paper comprehension is limited until the PDF is uploaded.\n\nDo not hallucinate figure details, methods, tables, supporting information, or conclusions from incomplete PDF metadata alone.\n\n## Conversation Style\n\nYour responses should be:\n- concise but complete,\n- scientifically precise,\n- operationally useful,\n- structured when handling workflows or notebook generation,\n- clear about uncertainty.\n\nWhen asking follow-up questions:\n- ask only for the minimum information needed,\n- prefer a short list of specific missing fields,\n- avoid broad or vague requests.\n\n## Output Behavior by Task Type\n\n### A. If the user describes what they did\nOutput should:\n1. identify likely protocol match,\n2. ask for disambiguation if needed,\n3. otherwise generate a notebook page.\n\n### B. If the user asks for stored lab information\nOutput should:\n1. select tool via `agent-io-contract.json`,\n2. retrieve result,\n3. answer directly,\n4. mention if no record was found.\n\n### C. If the user asks a project science question\nOutput should:\n1. identify the project,\n2. gather internal project context,\n3. use papers/notebooks/workflows/tools as relevant,\n4. answer with project-aware reasoning,\n5. use web search if internal context is incomplete.\n\n### D. If the user asks a general science question\nOutput should:\n1. answer directly,\n2. use web search when needed,\n3. distinguish established knowledge from current literature.\n\n### E. If a PDF paper is needed but not properly available\nOutput should:\n1. stop deep analysis,\n2. ask the user to download and upload the PDF,\n3. continue only after upload.\n\n## Non-Negotiable Rules\n\n- Do not fabricate lab records.\n- Do not fabricate protocol matches.\n- Do not fabricate tool results.\n- Do not fabricate paper contents.\n- Do not fill placeholders with unsupported values.\n- Do not claim to have searched internal records, tools, papers, or workflows unless you actually did.\n- Always ask for clarification when ambiguity would materially change the notebook entry, protocol choice, or scientific answer.\n\nYour goal is to reduce lab documentation burden, improve retrieval of lab knowledge, and provide scientifically grounded assistance while remaining faithful to actual lab records and user input.';
@@ -97,6 +112,24 @@ function getAgentChatLogPath() {
   }
 
   return path.join(__dirname, 'data', AGENT_CHAT_LOG_FILE_NAME);
+}
+
+function getAgentPythonSandboxRoot() {
+  const override = String(process.env.ENANA_AGENT_PYTHON_SANDBOX_ROOT || '').trim();
+  if (override) {
+    return path.resolve(override);
+  }
+
+  try {
+    const userDataPath = app.getPath('userData');
+    if (userDataPath) {
+      return path.join(userDataPath, 'agent-python-sandbox');
+    }
+  } catch {
+    // App path may be unavailable very early; fall back.
+  }
+
+  return path.join(__dirname, 'tmp', 'agent-python-sandbox');
 }
 
 function renderPromptTemplate(template, vars = {}) {
@@ -352,6 +385,15 @@ async function writeEnaFile(filePath, data) {
   await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8');
 }
 
+function getSidecarDataFilePaths(dataFilePath) {
+  const normalizedDataPath = normalizeDataFilePath(dataFilePath, getDefaultDataFilePath());
+  const baseDir = path.dirname(normalizedDataPath);
+  return {
+    protocolsPath: path.join(baseDir, PROTOCOLS_DATA_FILE_NAME),
+    notebookPagesPath: path.join(baseDir, NOTEBOOK_PAGES_DATA_FILE_NAME)
+  };
+}
+
 function normalizeChemicalStorePayload(payload) {
   const source = payload && typeof payload === 'object' ? payload : {};
   return {
@@ -404,6 +446,180 @@ async function readChemicalsFile() {
     }
     throw error;
   }
+}
+
+function normalizeProtocolsPayload(payload) {
+  const source = payload && typeof payload === 'object' ? payload : {};
+  if (Array.isArray(payload)) {
+    return { protocols: asArray(payload) };
+  }
+  return { protocols: asArray(source.protocols) };
+}
+
+function extractNotebookResultFileAddresses(entry) {
+  const source = entry && typeof entry === 'object' ? entry : {};
+  const addresses = [];
+
+  asArray(source.resultFileRecords).forEach((record) => {
+    const filePath = String(record?.path || '').trim();
+    if (filePath) {
+      addresses.push(filePath);
+    }
+  });
+
+  const storageFolder = String(source.storageFolder || '').trim();
+  if (storageFolder && !addresses.length) {
+    asArray(source.resultFiles).forEach((name) => {
+      const fileName = String(name || '').trim();
+      if (!fileName) {
+        return;
+      }
+      addresses.push(path.join(storageFolder, 'ResultFiles', fileName));
+    });
+  }
+
+  return Array.from(new Set(addresses));
+}
+
+function normalizeNotebookPageEntry(entry) {
+  const source = entry && typeof entry === 'object' ? entry : {};
+  const existingAddresses = asArray(source.resultFileAddresses)
+    .map((item) => String(item || '').trim())
+    .filter(Boolean);
+  const derivedAddresses = extractNotebookResultFileAddresses(source);
+  return {
+    ...source,
+    resultFileAddresses: Array.from(new Set(existingAddresses.concat(derivedAddresses)))
+  };
+}
+
+function normalizeNotebookPagesPayload(payload) {
+  const source = payload && typeof payload === 'object' ? payload : {};
+  const pages = Array.isArray(payload) ? asArray(payload) : asArray(source.notebookPages);
+  return {
+    notebookPages: pages
+      .filter((entry) => entry && typeof entry === 'object')
+      .map((entry) => normalizeNotebookPageEntry(entry))
+  };
+}
+
+async function readJsonFileIfExists(filePath) {
+  try {
+    const raw = await fs.readFile(filePath, 'utf8');
+    return JSON.parse(raw);
+  } catch (error) {
+    if (error?.code === 'ENOENT') {
+      return null;
+    }
+    throw error;
+  }
+}
+
+async function writeProtocolsFile(dataFilePath, protocols) {
+  const { protocolsPath } = getSidecarDataFilePaths(dataFilePath);
+  const payload = {
+    schema_name: 'enana_protocols',
+    schema_version: '1.0.0',
+    updated_at: new Date().toISOString(),
+    protocols: asArray(protocols)
+  };
+  await fs.mkdir(path.dirname(protocolsPath), { recursive: true });
+  await fs.writeFile(protocolsPath, JSON.stringify(payload, null, 2), 'utf8');
+  return protocolsPath;
+}
+
+async function writeNotebookPagesFile(dataFilePath, notebookEntries) {
+  const { notebookPagesPath } = getSidecarDataFilePaths(dataFilePath);
+  const payload = {
+    schema_name: 'enana_notebook_pages',
+    schema_version: '1.0.0',
+    updated_at: new Date().toISOString(),
+    notebookPages: asArray(notebookEntries).map((entry) => normalizeNotebookPageEntry(entry))
+  };
+  await fs.mkdir(path.dirname(notebookPagesPath), { recursive: true });
+  await fs.writeFile(notebookPagesPath, JSON.stringify(payload, null, 2), 'utf8');
+  return notebookPagesPath;
+}
+
+async function readProtocolsFile(dataFilePath) {
+  const { protocolsPath } = getSidecarDataFilePaths(dataFilePath);
+  const payload = await readJsonFileIfExists(protocolsPath);
+  if (!payload) {
+    return null;
+  }
+  return {
+    filePath: protocolsPath,
+    ...normalizeProtocolsPayload(payload)
+  };
+}
+
+async function readNotebookPagesFile(dataFilePath) {
+  const { notebookPagesPath } = getSidecarDataFilePaths(dataFilePath);
+  const payload = await readJsonFileIfExists(notebookPagesPath);
+  if (!payload) {
+    return null;
+  }
+  return {
+    filePath: notebookPagesPath,
+    ...normalizeNotebookPagesPayload(payload)
+  };
+}
+
+function mergeProtocolsAndNotebookIntoSnapshot(data, sidecars = {}) {
+  const source = data && typeof data === 'object' ? data : {};
+  const sourceProtocols = asArray(source.protocols);
+  const sourceNotebookPages = asArray(source.notebookEntries).map((entry) => normalizeNotebookPageEntry(entry));
+  const hasProtocolsSidecar = Boolean(sidecars.protocols);
+  const hasNotebookPagesSidecar = Boolean(sidecars.notebookPages);
+  const sidecarProtocols = normalizeProtocolsPayload(sidecars.protocols || {}).protocols;
+  const sidecarNotebookPages = normalizeNotebookPagesPayload(sidecars.notebookPages || {}).notebookPages;
+
+  return {
+    ...source,
+    protocols: hasProtocolsSidecar ? sidecarProtocols : sourceProtocols,
+    notebookEntries: hasNotebookPagesSidecar ? sidecarNotebookPages : sourceNotebookPages
+  };
+}
+
+async function writeProtocolsAndNotebookSidecars(dataFilePath, snapshot, options = {}) {
+  const source = snapshot && typeof snapshot === 'object' ? snapshot : {};
+  const shouldWriteProtocols = options.writeProtocols !== false;
+  const shouldWriteNotebookPages = options.writeNotebookPages !== false;
+  const result = {};
+
+  if (shouldWriteProtocols) {
+    result.protocolsPath = await writeProtocolsFile(dataFilePath, source.protocols);
+  }
+
+  if (shouldWriteNotebookPages) {
+    result.notebookPagesPath = await writeNotebookPagesFile(dataFilePath, source.notebookEntries);
+  }
+
+  return result;
+}
+
+async function hydrateSnapshotFromDataFiles(dataFilePath, parsedSnapshot) {
+  const chemicalsPayload = await readChemicalsFile();
+  let merged = mergeChemicalsIntoSnapshot(parsedSnapshot, chemicalsPayload);
+  const [protocolsPayload, notebookPagesPayload] = await Promise.all([
+    readProtocolsFile(dataFilePath),
+    readNotebookPagesFile(dataFilePath)
+  ]);
+  merged = mergeProtocolsAndNotebookIntoSnapshot(merged, {
+    protocols: protocolsPayload,
+    notebookPages: notebookPagesPayload
+  });
+
+  const shouldBackfillProtocols = !protocolsPayload && asArray(merged.protocols).length > 0;
+  const shouldBackfillNotebookPages = !notebookPagesPayload && asArray(merged.notebookEntries).length > 0;
+  if (shouldBackfillProtocols || shouldBackfillNotebookPages) {
+    await writeProtocolsAndNotebookSidecars(dataFilePath, merged, {
+      writeProtocols: shouldBackfillProtocols,
+      writeNotebookPages: shouldBackfillNotebookPages
+    });
+  }
+
+  return merged;
 }
 
 function cloneJson(value, fallback = {}) {
@@ -475,7 +691,8 @@ ipcMain.handle('ena:save', async (_event, payload) => {
     const snapshot = data && typeof data === 'object' ? data : {};
     await writeEnaFile(targetPath, snapshot);
     await writeChemicalsFile(snapshot.labInventory);
-    return { ok: true, filePath: targetPath };
+    const sidecarPaths = await writeProtocolsAndNotebookSidecars(targetPath, snapshot);
+    return { ok: true, filePath: targetPath, sidecarPaths };
   } catch (error) {
     return { ok: false, error: String(error) };
   }
@@ -496,9 +713,8 @@ ipcMain.handle('ena:load', async () => {
   try {
     const raw = await fs.readFile(filePath, 'utf8');
     const parsed = JSON.parse(raw);
-    const chemicalsPayload = await readChemicalsFile();
-    const data = mergeChemicalsIntoSnapshot(parsed, chemicalsPayload);
-    return { ok: true, filePath, data };
+    const data = await hydrateSnapshotFromDataFiles(filePath, parsed);
+    return { ok: true, filePath, data, sidecarPaths: getSidecarDataFilePaths(filePath) };
   } catch (error) {
     return { ok: false, error: String(error) };
   }
@@ -518,7 +734,8 @@ ipcMain.handle('data:auto-save', async (_event, payload) => {
     const snapshot = data && typeof data === 'object' ? data : {};
     await writeEnaFile(targetPath, snapshot);
     await writeChemicalsFile(snapshot.labInventory);
-    return { ok: true, filePath: targetPath };
+    const sidecarPaths = await writeProtocolsAndNotebookSidecars(targetPath, snapshot);
+    return { ok: true, filePath: targetPath, sidecarPaths };
   } catch (error) {
     return { ok: false, error: String(error), filePath: targetPath };
   }
@@ -531,9 +748,8 @@ ipcMain.handle('data:auto-load', async (_event, payload) => {
   try {
     const raw = await fs.readFile(targetPath, 'utf8');
     const parsed = JSON.parse(raw);
-    const chemicalsPayload = await readChemicalsFile();
-    const data = mergeChemicalsIntoSnapshot(parsed, chemicalsPayload);
-    return { ok: true, filePath: targetPath, data };
+    const data = await hydrateSnapshotFromDataFiles(targetPath, parsed);
+    return { ok: true, filePath: targetPath, data, sidecarPaths: getSidecarDataFilePaths(targetPath) };
   } catch (error) {
     if (error?.code === 'ENOENT') {
       return { ok: true, filePath: targetPath, data: null };
@@ -683,6 +899,58 @@ function buildFallbackAgentIoTools() {
     makeTool('search_gel_analyses', 'Read gel analysis runs with confidence, calibration, and warning summaries.'),
     makeTool('search_inventory', 'Read chemical and personal inventory records.', 25),
     makeTool('search_papers', 'Read uploaded paper summaries, methods, and reagent extraction notes.'),
+    makeTool('search_uniprot', 'Search UniProtKB protein knowledgebase records by keyword, accession, or gene/protein term.', 25),
+    makeTool('search_pubmed', 'Search PubMed literature records and return article metadata for biomedical queries.', 25),
+    makeTool('search_crossref', 'Search Crossref works metadata by title, DOI, author, or keyword.', 25),
+    makeTool('search_europe_pmc', 'Search Europe PMC literature records with PubMed/PMCID/DOI metadata.', 25),
+    {
+      name: 'run_python_sandbox',
+      description: 'Run Python code in an isolated temporary sandbox for deterministic calculations and data transforms.',
+      input_schema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['code'],
+        properties: {
+          code: { type: 'string' },
+          files: {
+            type: 'array',
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              required: ['path', 'content'],
+              properties: {
+                path: { type: 'string' },
+                content: { type: 'string' }
+              }
+            }
+          },
+          timeout_ms: { type: 'integer', minimum: 500, maximum: 15000 },
+          readback_paths: { type: 'array', items: { type: 'string' } }
+        }
+      },
+      output_schema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['items', 'citations', 'summary'],
+        properties: {
+          items: { type: 'array', items: { type: 'object' } },
+          citations: {
+            type: 'array',
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              required: ['source', 'pointer', 'reason'],
+              properties: {
+                source: { type: 'string' },
+                pointer: { type: 'string' },
+                reason: { type: 'string' }
+              }
+            }
+          },
+          summary: { type: 'string' }
+        }
+      }
+    },
     {
       name: 'download_paper_pdf',
       description: 'Write tool. Download a paper PDF and optional SI PDFs into the configured storage path.',
@@ -787,6 +1055,7 @@ const AGENT_TOOL_DEFINITIONS = AGENT_IO_CONTRACT.tools.map((tool) => ({
   parameters: cloneJson(tool.input_schema, { type: 'object', additionalProperties: false, properties: {} })
 }));
 const AGENT_TOOL_DEFINITION_MAP = new Map(AGENT_IO_CONTRACT.tools.map((tool) => [tool.name, tool]));
+const AGENT_TOOL_DEFINITION_INPUT_MAP = new Map(AGENT_TOOL_DEFINITIONS.map((tool) => [tool.name, tool]));
 const AGENT_TOOL_OUTPUT_ENVELOPE = AGENT_IO_CONTRACT.tool_output_envelope && typeof AGENT_IO_CONTRACT.tool_output_envelope === 'object'
   ? AGENT_IO_CONTRACT.tool_output_envelope
   : {};
@@ -845,7 +1114,45 @@ const AGENT_RESULT_SCHEMA = {
         open_questions: { type: 'array', items: { type: 'string' } },
         verification_notes: { type: 'array', items: { type: 'string' } }
       }
+    },
+    routing: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        intent: { type: 'string' },
+        confidence: { type: 'number', minimum: 0, maximum: 1 },
+        entities: { type: 'object', additionalProperties: true },
+        plan: { type: 'object', additionalProperties: true },
+        classifier: { type: 'object', additionalProperties: true }
+      }
     }
+  }
+};
+
+const ROUTING_FALLBACK_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['intent', 'confidence', 'entities', 'needs_clarification', 'clarification_question', 'reason'],
+  properties: {
+    intent: { type: 'string', enum: ROUTING_INTENTS },
+    confidence: { type: 'number', minimum: 0, maximum: 1 },
+    entities: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        activity: { type: 'string' },
+        project: { type: 'string' },
+        protein: { type: 'string' },
+        compound: { type: 'string' },
+        protocol: { type: 'string' },
+        cell_line: { type: 'string' },
+        paper_title: { type: 'string' },
+        workflow_step: { type: 'string' }
+      }
+    },
+    needs_clarification: { type: 'boolean' },
+    clarification_question: { type: 'string' },
+    reason: { type: 'string' }
   }
 };
 
@@ -930,6 +1237,75 @@ function containsWriteIntent(text) {
 
 function isWriteTool(name) {
   return String(name || '').trim() === 'download_paper_pdf';
+}
+
+function isComputeTool(name) {
+  return String(name || '').trim() === 'run_python_sandbox';
+}
+
+function normalizeRoutingPayload(rawRouting) {
+  const source = rawRouting && typeof rawRouting === 'object' ? rawRouting : {};
+  const entities = source.entities && typeof source.entities === 'object' ? source.entities : {};
+  const plan = source.plan && typeof source.plan === 'object' ? source.plan : {};
+  const classifier = source.classifier && typeof source.classifier === 'object' ? source.classifier : {};
+  const selectedToolNames = asArray(plan.selected_tool_names).map((item) => cleanText(item, 120)).filter(Boolean);
+  return {
+    intent: ROUTING_INTENTS.includes(cleanText(source.intent, 80)) ? cleanText(source.intent, 80) : 'general_science_question',
+    confidence: Number.isFinite(Number(source.confidence))
+      ? clamp(Number(source.confidence), 0, 1)
+      : 0.5,
+    entities: {
+      activity: cleanText(entities.activity, 180),
+      project: cleanText(entities.project, 180),
+      protein: cleanText(entities.protein, 100),
+      compound: cleanText(entities.compound, 120),
+      protocol: cleanText(entities.protocol, 220),
+      cell_line: cleanText(entities.cell_line, 80),
+      paper_title: cleanText(entities.paper_title, 220),
+      workflow_step: cleanText(entities.workflow_step, 180)
+    },
+    plan: {
+      needs_tools: plan.needs_tools === true,
+      needs_protocol_search: plan.needs_protocol_search === true,
+      needs_notebook_retrieval: plan.needs_notebook_retrieval === true,
+      needs_pdf_reading: plan.needs_pdf_reading === true,
+      needs_python: plan.needs_python === true,
+      needs_web_search: plan.needs_web_search === true,
+      needs_clarification: plan.needs_clarification === true,
+      clarification_reason: cleanText(plan.clarification_reason, 260),
+      clarification_question: cleanText(plan.clarification_question, 320),
+      selected_tool_names: selectedToolNames
+    },
+    classifier: {
+      source: cleanText(classifier.source, 80) || 'rules',
+      fallbackAttempted: classifier.fallbackAttempted === true,
+      fallbackUsed: classifier.fallbackUsed === true,
+      lowConfidence: classifier.lowConfidence === true,
+      tieDetected: classifier.tieDetected === true,
+      ruleReason: cleanText(classifier.ruleReason, 260),
+      fallbackError: cleanText(classifier.fallbackError, 260),
+      ruleScores: classifier.ruleScores && typeof classifier.ruleScores === 'object'
+        ? classifier.ruleScores
+        : {}
+    }
+  };
+}
+
+function buildRoutingAssumptionRows(routing) {
+  const normalized = normalizeRoutingPayload(routing);
+  const rows = [
+    `Routing intent=${normalized.intent} confidence=${normalized.confidence.toFixed(2)} source=${normalized.classifier.source}.`,
+    `Planner flags tools=${normalized.plan.needs_tools} protocol_search=${normalized.plan.needs_protocol_search} notebook_retrieval=${normalized.plan.needs_notebook_retrieval} pdf=${normalized.plan.needs_pdf_reading} python=${normalized.plan.needs_python} web=${normalized.plan.needs_web_search} clarification=${normalized.plan.needs_clarification}.`
+  ];
+  if (normalized.plan.selected_tool_names.length) {
+    rows.push(`Planner selected tools: ${normalized.plan.selected_tool_names.join(', ')}.`);
+  }
+  if (normalized.classifier.fallbackAttempted) {
+    rows.push(normalized.classifier.fallbackUsed
+      ? 'Routing fallback completed successfully.'
+      : `Routing fallback attempted but not used${normalized.classifier.fallbackError ? `: ${normalized.classifier.fallbackError}` : '.'}`);
+  }
+  return rows;
 }
 
 function buildIntermediateState(stage, goal, extras = {}) {
@@ -1044,6 +1420,241 @@ function pickTopMatches(items, buildSearchText, query, limit) {
     .sort((a, b) => b.score - a.score)
     .slice(0, clamp(Number(limit) || 6, 1, 25))
     .map((entry) => entry.item);
+}
+
+function buildUrlWithParams(baseUrl, params = {}) {
+  const url = new URL(baseUrl);
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null) {
+      return;
+    }
+    const text = String(value).trim();
+    if (!text) {
+      return;
+    }
+    url.searchParams.set(key, text);
+  });
+  return url.toString();
+}
+
+async function fetchExternalJson(url, options = {}) {
+  const timeoutMs = clamp(Number(options.timeoutMs) || EXTERNAL_BIO_API_TIMEOUT_MS, 1000, 30000);
+  const controller = new AbortController();
+  const timeoutHandle = setTimeout(() => controller.abort(), timeoutMs);
+  const headers = {
+    Accept: 'application/json',
+    'User-Agent': EXTERNAL_BIO_API_USER_AGENT,
+    ...(options.headers && typeof options.headers === 'object' ? options.headers : {})
+  };
+
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers,
+      signal: controller.signal
+    });
+    const raw = await response.text();
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}${raw ? `: ${cleanText(raw, 240)}` : ''}`);
+    }
+    const parsed = safeParseJson(raw, null);
+    if (parsed === null || typeof parsed !== 'object') {
+      throw new Error('Response was not valid JSON.');
+    }
+    return parsed;
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      throw new Error(`Request timed out after ${timeoutMs} ms.`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutHandle);
+  }
+}
+
+function formatDateParts(parts) {
+  if (!Array.isArray(parts) || !parts.length) {
+    return '';
+  }
+  const year = Number(parts[0]);
+  if (!Number.isFinite(year) || year <= 0) {
+    return '';
+  }
+  const month = Number(parts[1]);
+  const day = Number(parts[2]);
+  if (Number.isFinite(month) && month >= 1 && month <= 12) {
+    const monthText = String(month).padStart(2, '0');
+    if (Number.isFinite(day) && day >= 1 && day <= 31) {
+      return `${year}-${monthText}-${String(day).padStart(2, '0')}`;
+    }
+    return `${year}-${monthText}`;
+  }
+  return String(year);
+}
+
+function parseUniProtProteinName(entry) {
+  const description = entry?.proteinDescription && typeof entry.proteinDescription === 'object'
+    ? entry.proteinDescription
+    : {};
+  const recommended = cleanText(description?.recommendedName?.fullName?.value, 280);
+  if (recommended) {
+    return recommended;
+  }
+  const submission = cleanText(asArray(description?.submissionNames)[0]?.fullName?.value, 280);
+  if (submission) {
+    return submission;
+  }
+  return cleanText(asArray(description?.alternativeNames)[0]?.fullName?.value, 280);
+}
+
+function parsePubMedDoi(summary) {
+  const doi = asArray(summary?.articleids).find((item) => cleanText(item?.idtype, 40).toLowerCase() === 'doi');
+  return cleanText(doi?.value, 220);
+}
+
+function parseCrossrefPublishedDate(item) {
+  const candidates = [
+    item?.issued,
+    item?.published,
+    item?.['published-print'],
+    item?.['published-online'],
+    item?.created
+  ];
+  for (const candidate of candidates) {
+    const parts = asArray(candidate?.['date-parts'])[0];
+    const formatted = formatDateParts(parts);
+    if (formatted) {
+      return formatted;
+    }
+  }
+  return '';
+}
+
+async function searchUniProtRecords(query, limit) {
+  const url = buildUrlWithParams('https://rest.uniprot.org/uniprotkb/search', {
+    query,
+    format: 'json',
+    size: String(limit),
+    fields: 'accession,id,protein_name,gene_names,organism_name,length,reviewed'
+  });
+  const payload = await fetchExternalJson(url);
+  return asArray(payload?.results).slice(0, limit).map((entry) => {
+    const accession = cleanText(entry?.primaryAccession, 40);
+    const entryId = cleanText(entry?.uniProtkbId, 80);
+    const entryType = cleanText(entry?.entryType, 80).toLowerCase();
+    const reviewed = entryType.includes('reviewed') && !entryType.includes('unreviewed');
+    return {
+      accession,
+      entry_id: entryId,
+      protein_name: parseUniProtProteinName(entry),
+      gene_names: asArray(entry?.genes)
+        .map((gene) => cleanText(gene?.geneName?.value, 80))
+        .filter(Boolean)
+        .slice(0, 6),
+      organism: cleanText(entry?.organism?.scientificName, 180),
+      reviewed,
+      length: Number(entry?.sequence?.length) || 0,
+      uniprot_url: accession ? `https://www.uniprot.org/uniprotkb/${encodeURIComponent(accession)}` : ''
+    };
+  }).filter((item) => item.accession || item.entry_id || item.protein_name);
+}
+
+async function searchPubMedRecords(query, limit) {
+  const searchUrl = buildUrlWithParams('https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi', {
+    db: 'pubmed',
+    retmode: 'json',
+    retmax: String(limit),
+    sort: 'relevance',
+    term: query
+  });
+  const searchPayload = await fetchExternalJson(searchUrl);
+  const ids = asArray(searchPayload?.esearchresult?.idlist)
+    .map((id) => cleanText(id, 40))
+    .filter(Boolean)
+    .slice(0, limit);
+
+  if (!ids.length) {
+    return [];
+  }
+
+  const summaryUrl = buildUrlWithParams('https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi', {
+    db: 'pubmed',
+    retmode: 'json',
+    id: ids.join(',')
+  });
+  const summaryPayload = await fetchExternalJson(summaryUrl);
+  const records = summaryPayload?.result && typeof summaryPayload.result === 'object'
+    ? summaryPayload.result
+    : {};
+
+  return ids.map((pmid) => {
+    const entry = records[pmid] && typeof records[pmid] === 'object' ? records[pmid] : {};
+    return {
+      pmid,
+      title: cleanText(entry?.title, 500),
+      journal: cleanText(entry?.fulljournalname, 220),
+      pubdate: cleanText(entry?.pubdate, 80),
+      doi: parsePubMedDoi(entry),
+      authors: asArray(entry?.authors).map((author) => cleanText(author?.name, 120)).filter(Boolean).slice(0, 8),
+      pubmed_url: `https://pubmed.ncbi.nlm.nih.gov/${encodeURIComponent(pmid)}/`
+    };
+  }).filter((item) => item.pmid);
+}
+
+async function searchCrossrefRecords(query, limit) {
+  const url = buildUrlWithParams('https://api.crossref.org/works', {
+    query,
+    rows: String(limit),
+    sort: 'relevance',
+    order: 'desc',
+    select: 'DOI,title,author,container-title,issued,published,published-print,published-online,URL,type,is-referenced-by-count,score'
+  });
+  const payload = await fetchExternalJson(url);
+  return asArray(payload?.message?.items).slice(0, limit).map((item) => {
+    const doi = cleanText(item?.DOI, 200);
+    return {
+      doi,
+      title: cleanText(asArray(item?.title)[0], 500),
+      journal: cleanText(asArray(item?.['container-title'])[0], 220),
+      published: parseCrossrefPublishedDate(item),
+      type: cleanText(item?.type, 120),
+      cited_by_count: Number(item?.['is-referenced-by-count']) || 0,
+      authors: asArray(item?.author).map((author) => {
+        const given = cleanText(author?.given, 80);
+        const family = cleanText(author?.family, 80);
+        return cleanText(`${given} ${family}`.trim(), 180);
+      }).filter(Boolean).slice(0, 8),
+      url: cleanText(item?.URL, 1200) || (doi ? `https://doi.org/${encodeURIComponent(doi)}` : '')
+    };
+  }).filter((item) => item.doi || item.title);
+}
+
+async function searchEuropePmcRecords(query, limit) {
+  const url = buildUrlWithParams('https://www.ebi.ac.uk/europepmc/webservices/rest/search', {
+    query,
+    format: 'json',
+    pageSize: String(limit),
+    sort: 'RELEVANCE'
+  });
+  const payload = await fetchExternalJson(url);
+  return asArray(payload?.resultList?.result).slice(0, limit).map((entry) => {
+    const source = cleanText(entry?.source, 20);
+    const id = cleanText(entry?.id, 80);
+    return {
+      id,
+      source,
+      title: cleanText(entry?.title, 500),
+      author_string: cleanText(entry?.authorString, 320),
+      journal: cleanText(entry?.journalTitle, 220),
+      pub_year: cleanText(entry?.pubYear, 20),
+      doi: cleanText(entry?.doi, 220),
+      pmid: cleanText(entry?.pmid, 40),
+      pmcid: cleanText(entry?.pmcid, 40),
+      europe_pmc_url: source && id
+        ? `https://europepmc.org/article/${encodeURIComponent(source)}/${encodeURIComponent(id)}`
+        : ''
+    };
+  }).filter((item) => item.id || item.doi || item.pmid || item.pmcid || item.title);
 }
 
 function normalizeAgentToolResultPayload(rawResult) {
@@ -1317,6 +1928,207 @@ async function runAgentTool(name, args, snapshot, options = {}) {
     });
   }
 
+  if (name === 'search_uniprot') {
+    if (!query) {
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+        items: [],
+        citations: [],
+        summary: 'No query was provided for UniProt search.'
+      });
+    }
+
+    try {
+      const items = await searchUniProtRecords(query, limit);
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+        items,
+        citations: items.map((item) => ({
+          source: 'uniprot',
+          pointer: item.accession || item.entry_id,
+          reason: 'Matched UniProtKB protein record.'
+        })),
+        summary: `Found ${items.length} matching UniProt records.`
+      });
+    } catch (error) {
+      return buildAgentToolOutputEnvelope(
+        name,
+        normalizedArgs,
+        {
+          items: [],
+          citations: [],
+          summary: 'UniProt search failed.'
+        },
+        {
+          ok: false,
+          error: cleanText(error?.message || error, 600)
+        }
+      );
+    }
+  }
+
+  if (name === 'search_pubmed') {
+    if (!query) {
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+        items: [],
+        citations: [],
+        summary: 'No query was provided for PubMed search.'
+      });
+    }
+
+    try {
+      const items = await searchPubMedRecords(query, limit);
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+        items,
+        citations: items.map((item) => ({
+          source: 'pubmed',
+          pointer: item.pmid,
+          reason: 'Matched PubMed article metadata.'
+        })),
+        summary: `Found ${items.length} matching PubMed records.`
+      });
+    } catch (error) {
+      return buildAgentToolOutputEnvelope(
+        name,
+        normalizedArgs,
+        {
+          items: [],
+          citations: [],
+          summary: 'PubMed search failed.'
+        },
+        {
+          ok: false,
+          error: cleanText(error?.message || error, 600)
+        }
+      );
+    }
+  }
+
+  if (name === 'search_crossref') {
+    if (!query) {
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+        items: [],
+        citations: [],
+        summary: 'No query was provided for Crossref search.'
+      });
+    }
+
+    try {
+      const items = await searchCrossrefRecords(query, limit);
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+        items,
+        citations: items.map((item) => ({
+          source: 'crossref',
+          pointer: item.doi || item.url || item.title,
+          reason: 'Matched Crossref works metadata.'
+        })),
+        summary: `Found ${items.length} matching Crossref records.`
+      });
+    } catch (error) {
+      return buildAgentToolOutputEnvelope(
+        name,
+        normalizedArgs,
+        {
+          items: [],
+          citations: [],
+          summary: 'Crossref search failed.'
+        },
+        {
+          ok: false,
+          error: cleanText(error?.message || error, 600)
+        }
+      );
+    }
+  }
+
+  if (name === 'search_europe_pmc') {
+    if (!query) {
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+        items: [],
+        citations: [],
+        summary: 'No query was provided for Europe PMC search.'
+      });
+    }
+
+    try {
+      const items = await searchEuropePmcRecords(query, limit);
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+        items,
+        citations: items.map((item) => ({
+          source: 'europe_pmc',
+          pointer: item.pmid || item.pmcid || item.doi || item.id,
+          reason: 'Matched Europe PMC literature metadata.'
+        })),
+        summary: `Found ${items.length} matching Europe PMC records.`
+      });
+    } catch (error) {
+      return buildAgentToolOutputEnvelope(
+        name,
+        normalizedArgs,
+        {
+          items: [],
+          citations: [],
+          summary: 'Europe PMC search failed.'
+        },
+        {
+          ok: false,
+          error: cleanText(error?.message || error, 600)
+        }
+      );
+    }
+  }
+
+  if (name === 'run_python_sandbox') {
+    const sandboxResult = await runPythonSandbox(normalizedArgs, {
+      sandboxRoot: getAgentPythonSandboxRoot(),
+      preferredPythonBin: cleanText(process.env.ENANA_AGENT_PYTHON_BIN, 220)
+    });
+
+    const readbackFiles = asArray(sandboxResult.readback_files).map((file) => ({
+      path: cleanText(file?.path, 260),
+      content: cleanText(file?.content, 12000),
+      truncated: file?.truncated === true
+    }));
+    const item = {
+      run_id: cleanText(sandboxResult.run_id, 120),
+      status: cleanText(sandboxResult.status, 40),
+      timeout_ms: Number(sandboxResult.timeout_ms) || 0,
+      python_executable: cleanText(sandboxResult.python_executable, 140),
+      exit_code: Number.isFinite(Number(sandboxResult.exit_code)) ? Number(sandboxResult.exit_code) : null,
+      signal: cleanText(sandboxResult.signal, 40),
+      timed_out: sandboxResult.timed_out === true,
+      stdout: cleanText(sandboxResult.stdout, 12000),
+      stderr: cleanText(sandboxResult.stderr, 12000),
+      files_written: asArray(sandboxResult.files_written).map((value) => cleanText(value, 240)).filter(Boolean),
+      readback_files: readbackFiles,
+      warnings: asArray(sandboxResult.warnings).map((value) => cleanText(value, 220)).filter(Boolean)
+    };
+    const summary = cleanText(sandboxResult.summary, 320)
+      || (sandboxResult.ok ? 'Python sandbox execution completed.' : 'Python sandbox execution failed.');
+
+    return buildAgentToolOutputEnvelope(
+      name,
+      normalizedArgs,
+      {
+        items: [item],
+        citations: [
+          {
+            source: 'python_sandbox',
+            pointer: item.run_id || 'python_sandbox',
+            reason: sandboxResult.ok
+              ? 'Executed Python code in isolated sandbox.'
+              : 'Python sandbox execution returned an error.'
+          }
+        ],
+        summary
+      },
+      {
+        ok: sandboxResult.ok === true,
+        error: sandboxResult.ok
+          ? ''
+          : cleanText(sandboxResult.error || sandboxResult.stderr, 600)
+      }
+    );
+  }
+
   if (name === 'download_paper_pdf') {
     if (!allowWriteTools) {
       return buildAgentToolOutputEnvelope(
@@ -1512,6 +2324,25 @@ function normalizeToolTraceForAgentLog(trace) {
   }));
 }
 
+function normalizeRoutingForAgentLog(routing) {
+  const normalized = normalizeRoutingPayload(routing);
+  return {
+    intent: normalized.intent,
+    confidence: normalized.confidence,
+    entities: normalized.entities,
+    plan: normalized.plan,
+    classifier: {
+      source: normalized.classifier.source,
+      fallbackAttempted: normalized.classifier.fallbackAttempted,
+      fallbackUsed: normalized.classifier.fallbackUsed,
+      lowConfidence: normalized.classifier.lowConfidence,
+      tieDetected: normalized.classifier.tieDetected,
+      ruleReason: normalized.classifier.ruleReason,
+      fallbackError: normalized.classifier.fallbackError
+    }
+  };
+}
+
 function summarizeAgentResultForLog(result) {
   const source = result && typeof result === 'object' ? result : {};
   return {
@@ -1533,6 +2364,7 @@ function summarizeAgentResultForLog(result) {
       reason: cleanText(item?.reason, 220)
     })),
     decisionRecord: normalizeDecisionRecordForAgentLog(source.decisionRecord),
+    routing: normalizeRoutingForAgentLog(source.routing),
     intermediateStates: normalizeIntermediateStatesForAgentLog(source.intermediateStates),
     toolTrace: normalizeToolTraceForAgentLog(source.toolTrace),
     error: cleanText(source.error, 2000)
@@ -1750,21 +2582,36 @@ async function requestGeminiGenerateContentWithBackoff({ endpoint, apiKey, model
   });
 }
 
-const CLAUDE_TOOL_DEFINITIONS = AGENT_TOOL_DEFINITIONS.map((tool) => ({
-  name: tool.name,
-  description: tool.description,
-  input_schema: tool.parameters
-}));
-
-const GEMINI_TOOL_DEFINITIONS = [
-  {
-    functionDeclarations: AGENT_TOOL_DEFINITIONS.map((tool) => ({
-      name: tool.name,
-      description: tool.description,
-      parameters: tool.parameters
-    }))
+function resolveAgentToolDefinitions(selectedToolNames = []) {
+  const names = asArray(selectedToolNames).map((name) => cleanText(name, 120)).filter(Boolean);
+  if (!names.length) {
+    return AGENT_TOOL_DEFINITIONS;
   }
-];
+  const picked = names
+    .map((name) => AGENT_TOOL_DEFINITION_INPUT_MAP.get(name))
+    .filter(Boolean);
+  return picked.length ? picked : AGENT_TOOL_DEFINITIONS;
+}
+
+function toClaudeToolDefinitions(toolDefinitions) {
+  return asArray(toolDefinitions).map((tool) => ({
+    name: tool.name,
+    description: tool.description,
+    input_schema: tool.parameters
+  }));
+}
+
+function toGeminiToolDefinitions(toolDefinitions) {
+  return [
+    {
+      functionDeclarations: asArray(toolDefinitions).map((tool) => ({
+        name: tool.name,
+        description: tool.description,
+        parameters: tool.parameters
+      }))
+    }
+  ];
+}
 
 function toClaudeMessage(role, text) {
   return {
@@ -1901,13 +2748,17 @@ async function startAgentSession({
   systemPrompt,
   conversation,
   message,
-  hasLatestUserInConversation
+  hasLatestUserInConversation,
+  toolDefinitions = AGENT_TOOL_DEFINITIONS
 }) {
+  const scopedToolDefinitions = asArray(toolDefinitions);
+  const hasTools = scopedToolDefinitions.length > 0;
   if (provider === LLM_PROVIDERS.CLAUDE) {
     const messages = [
       ...conversation.map((item) => toClaudeMessage(item.role, item.text)),
       ...(hasLatestUserInConversation ? [] : [toClaudeMessage('user', message)])
     ];
+    const claudeTools = toClaudeToolDefinitions(scopedToolDefinitions);
     const response = await requestClaudeMessagesWithBackoff({
       endpoint,
       apiKey,
@@ -1915,7 +2766,7 @@ async function startAgentSession({
         model,
         system: systemPrompt,
         messages,
-        tools: CLAUDE_TOOL_DEFINITIONS,
+        ...(hasTools ? { tools: claudeTools } : {}),
         max_tokens: 1400
       }
     });
@@ -1926,6 +2777,7 @@ async function startAgentSession({
       model,
       systemPrompt,
       messages,
+      toolDefinitions: scopedToolDefinitions,
       raw: response,
       round: 0
     };
@@ -1936,6 +2788,7 @@ async function startAgentSession({
       ...conversation.map((item) => toGeminiContent(item.role, item.text)),
       ...(hasLatestUserInConversation ? [] : [toGeminiContent('user', message)])
     ];
+    const geminiTools = toGeminiToolDefinitions(scopedToolDefinitions);
     const response = await requestGeminiGenerateContentWithBackoff({
       endpoint,
       apiKey,
@@ -1945,12 +2798,14 @@ async function startAgentSession({
           parts: [{ text: systemPrompt }]
         },
         contents,
-        tools: GEMINI_TOOL_DEFINITIONS,
-        toolConfig: {
-          functionCallingConfig: {
-            mode: 'AUTO'
+        ...(hasTools ? { tools: geminiTools } : {}),
+        ...(hasTools ? {
+          toolConfig: {
+            functionCallingConfig: {
+              mode: 'AUTO'
+            }
           }
-        },
+        } : {}),
         generationConfig: {
           maxOutputTokens: 1400
         }
@@ -1963,6 +2818,7 @@ async function startAgentSession({
       model,
       systemPrompt,
       contents,
+      toolDefinitions: scopedToolDefinitions,
       raw: response,
       round: 0
     };
@@ -1978,9 +2834,11 @@ async function startAgentSession({
         ...conversation.map((item) => toInputText(item.role, item.text)),
         ...(hasLatestUserInConversation ? [] : [toInputText('user', message)])
       ],
-      tools: AGENT_TOOL_DEFINITIONS,
-      tool_choice: 'auto',
-      parallel_tool_calls: false,
+      ...(hasTools ? {
+        tools: scopedToolDefinitions,
+        tool_choice: 'auto',
+        parallel_tool_calls: false
+      } : {}),
       max_output_tokens: 1400
     }
   });
@@ -1989,6 +2847,7 @@ async function startAgentSession({
     endpoint,
     apiKey,
     model,
+    toolDefinitions: scopedToolDefinitions,
     raw: response,
     round: 0
   };
@@ -2025,6 +2884,9 @@ async function continueAgentSessionWithToolOutputs(session, toolOutputs) {
     return session;
   }
 
+  const scopedToolDefinitions = asArray(session.toolDefinitions);
+  const hasTools = scopedToolDefinitions.length > 0;
+
   if (session.provider === LLM_PROVIDERS.CLAUDE) {
     const byId = new Map(toolOutputs.map((item) => [item.callId, item]));
     const assistantContent = normalizeClaudeAssistantContent(session.raw);
@@ -2046,6 +2908,7 @@ async function continueAgentSessionWithToolOutputs(session, toolOutputs) {
       { role: 'user', content: toolResultBlocks }
     ];
 
+    const claudeTools = toClaudeToolDefinitions(scopedToolDefinitions);
     const response = await requestClaudeMessagesWithBackoff({
       endpoint: session.endpoint,
       apiKey: session.apiKey,
@@ -2053,7 +2916,7 @@ async function continueAgentSessionWithToolOutputs(session, toolOutputs) {
         model: session.model,
         system: session.systemPrompt,
         messages: nextMessages,
-        tools: CLAUDE_TOOL_DEFINITIONS,
+        ...(hasTools ? { tools: claudeTools } : {}),
         max_tokens: 1400
       }
     });
@@ -2094,6 +2957,7 @@ async function continueAgentSessionWithToolOutputs(session, toolOutputs) {
       });
     }
 
+    const geminiTools = toGeminiToolDefinitions(scopedToolDefinitions);
     const response = await requestGeminiGenerateContentWithBackoff({
       endpoint: session.endpoint,
       apiKey: session.apiKey,
@@ -2103,12 +2967,14 @@ async function continueAgentSessionWithToolOutputs(session, toolOutputs) {
           parts: [{ text: session.systemPrompt }]
         },
         contents: nextContents,
-        tools: GEMINI_TOOL_DEFINITIONS,
-        toolConfig: {
-          functionCallingConfig: {
-            mode: 'AUTO'
+        ...(hasTools ? { tools: geminiTools } : {}),
+        ...(hasTools ? {
+          toolConfig: {
+            functionCallingConfig: {
+              mode: 'AUTO'
+            }
           }
-        },
+        } : {}),
         generationConfig: {
           maxOutputTokens: 1400
         }
@@ -2134,9 +3000,11 @@ async function continueAgentSessionWithToolOutputs(session, toolOutputs) {
         call_id: output.callId,
         output: output.output
       })),
-      tools: AGENT_TOOL_DEFINITIONS,
-      tool_choice: 'auto',
-      parallel_tool_calls: false,
+      ...(hasTools ? {
+        tools: scopedToolDefinitions,
+        tool_choice: 'auto',
+        parallel_tool_calls: false
+      } : {}),
       max_output_tokens: 1400
     }
   });
@@ -2236,6 +3104,126 @@ async function requestSynthesisPayload({
   return extractResponseText(response);
 }
 
+function buildRoutingFallbackPrompt({ message, conversation, projectName, ruleRouting }) {
+  const ruleIntent = cleanText(ruleRouting?.intent, 80) || 'general_science_question';
+  const ruleConfidence = Number.isFinite(Number(ruleRouting?.confidence))
+    ? Number(ruleRouting.confidence).toFixed(2)
+    : '0.50';
+  return [
+    'You are an intent router for a lab assistant.',
+    'Classify only into this fixed intent list:',
+    ROUTING_INTENTS.join(', '),
+    `Rule fallback threshold: ${ROUTING_RULE_CONFIDENCE_THRESHOLD}.`,
+    `Project scope: ${projectName ? cleanText(projectName, 180) : 'all projects'}.`,
+    `MVP scope features: ${asArray(AGENT_MVP_SCOPE?.phase0?.mvpFeatures).join('; ')}.`,
+    'Return strict JSON only with keys: intent, confidence, entities, needs_clarification, clarification_question, reason.',
+    'Do not include markdown or extra keys.',
+    `Rule-based candidate: intent=${ruleIntent}, confidence=${ruleConfidence}, entities=${JSON.stringify(ruleRouting?.entities || {})}`,
+    `Conversation transcript:\n${toPromptConversationTranscript(conversation)}`,
+    `Latest user request: ${message}`
+  ].join('\n\n');
+}
+
+async function requestRoutingFallbackPayload({
+  provider,
+  endpoint,
+  apiKey,
+  model,
+  message,
+  conversation,
+  projectName,
+  ruleRouting
+}) {
+  const prompt = buildRoutingFallbackPrompt({
+    message,
+    conversation,
+    projectName,
+    ruleRouting
+  });
+
+  try {
+    if (provider === LLM_PROVIDERS.CODEX) {
+      const raw = await requestCodexCliText({
+        prompt,
+        model,
+        cwd: getCodexCliWorkingDirectory()
+      });
+      return parseRoutingFallbackPayload(raw);
+    }
+
+    if (provider === LLM_PROVIDERS.CLAUDE) {
+      const response = await requestClaudeMessagesWithBackoff({
+        endpoint,
+        apiKey,
+        body: {
+          model,
+          system: 'Return valid JSON only.',
+          max_tokens: 700,
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'text',
+                  text: prompt
+                }
+              ]
+            }
+          ]
+        }
+      });
+      return parseRoutingFallbackPayload(extractClaudeResponseText(response));
+    }
+
+    if (provider === LLM_PROVIDERS.GEMINI) {
+      const response = await requestGeminiGenerateContentWithBackoff({
+        endpoint,
+        apiKey,
+        model,
+        body: {
+          systemInstruction: {
+            parts: [{ text: 'Return valid JSON only.' }]
+          },
+          contents: [
+            {
+              role: 'user',
+              parts: [{ text: prompt }]
+            }
+          ],
+          generationConfig: {
+            maxOutputTokens: 700
+          }
+        }
+      });
+      return parseRoutingFallbackPayload(extractGeminiResponseText(response));
+    }
+
+    const response = await requestOpenAiResponsesWithBackoff({
+      endpoint,
+      apiKey,
+      body: {
+        model,
+        input: [
+          toInputText('system', 'Return valid JSON only.'),
+          toInputText('user', prompt)
+        ],
+        text: {
+          format: {
+            type: 'json_schema',
+            name: 'routing_fallback',
+            strict: true,
+            schema: ROUTING_FALLBACK_SCHEMA
+          }
+        },
+        max_output_tokens: 700
+      }
+    });
+    return parseRoutingFallbackPayload(extractResponseText(response));
+  } catch {
+    return null;
+  }
+}
+
 function normalizeAgentOutput(raw, fallbackText) {
   const parsed = safeParseJson(raw, null);
   if (parsed && typeof parsed === 'object') {
@@ -2273,8 +3261,8 @@ function toPromptConversationTranscript(conversation) {
   return rows.length ? rows.join('\n') : 'No prior messages.';
 }
 
-async function buildCodexAgentContext(message, snapshot) {
-  const retrievalTools = [
+async function buildCodexAgentContext(message, snapshot, selectedToolNames = null) {
+  const allowedRetrievalTools = [
     'search_projects',
     'search_protocols',
     'search_notebook_entries',
@@ -2283,6 +3271,11 @@ async function buildCodexAgentContext(message, snapshot) {
     'search_inventory',
     'search_papers'
   ];
+  const retrievalTools = Array.isArray(selectedToolNames)
+    ? asArray(selectedToolNames)
+      .map((name) => cleanText(name, 120))
+      .filter((name) => allowedRetrievalTools.includes(name))
+    : allowedRetrievalTools;
   const contextSlices = [];
   const toolTrace = [];
   const evidence = [];
@@ -2327,16 +3320,24 @@ async function runCodexAgentController({
   snapshot,
   projectName,
   promptConfig,
-  allowWriteTools
+  allowWriteTools,
+  routing
 }) {
   const intermediateStates = [];
   const toolTrace = [];
   const evidence = [];
   const requiresApproval = containsWriteIntent(message) && !allowWriteTools;
+  const routingInfo = normalizeRoutingPayload(routing);
 
   intermediateStates.push(buildIntermediateState('intake', message, {
-    assumptions: ['Codex CLI provider selected; retrieval context is assembled before generation.'],
-    openQuestions: requiresApproval ? ['User may want a write action; approval is required before any write.'] : [],
+    assumptions: [
+      'Codex CLI provider selected; retrieval context is assembled before generation.',
+      ...buildRoutingAssumptionRows(routingInfo)
+    ],
+    openQuestions: [
+      ...(requiresApproval ? ['User may want a write action; approval is required before any write.'] : []),
+      ...(routingInfo.plan.needs_clarification ? [routingInfo.plan.clarification_reason || 'Routing requires clarification.'] : [])
+    ],
     confidence: 0.44
   }));
 
@@ -2347,7 +3348,13 @@ async function runCodexAgentController({
     confidence: 0.52
   }));
 
-  const collected = await buildCodexAgentContext(message, snapshot);
+  intermediateStates.push(buildIntermediateState('route', `Resolved routing intent "${routingInfo.intent}".`, {
+    assumptions: buildRoutingAssumptionRows(routingInfo),
+    openQuestions: routingInfo.plan.needs_clarification ? [routingInfo.plan.clarification_question] : [],
+    confidence: routingInfo.confidence
+  }));
+
+  const collected = await buildCodexAgentContext(message, snapshot, routingInfo.plan.selected_tool_names);
   toolTrace.push(...collected.toolTrace);
   evidence.push(...collected.evidence);
 
@@ -2370,6 +3377,7 @@ async function runCodexAgentController({
     systemPrompt,
     'Task: answer the latest user request using only the retrieved Enana context below. If context is missing, explicitly say what is missing.',
     `Conversation transcript:\n${toPromptConversationTranscript(promptConversation)}`,
+    `Routing decision JSON:\n${cleanText(JSON.stringify(routingInfo, null, 2), 10000)}`,
     `Retrieved context JSON:\n${cleanText(JSON.stringify(collected.contextSlices, null, 2), 70000)}`,
     'Respond as concise assistant text.'
   ].join('\n\n');
@@ -2460,6 +3468,7 @@ async function runCodexAgentController({
     proposedWriteActions: normalized.proposedWriteActions,
     citations: normalized.citations,
     decisionRecord: normalized.decisionRecord,
+    routing: routingInfo,
     intermediateStates,
     toolTrace
   };
@@ -2486,6 +3495,93 @@ async function runAgentController(payload) {
   const allowWriteTools = payload?.allowWriteTools === true;
   const projectName = cleanText(payload?.projectName, 180);
   const promptConfig = await loadLlmPrompts();
+  const requiresApproval = containsWriteIntent(message) && !allowWriteTools;
+  const availableToolNames = AGENT_IO_CONTRACT.tools.map((tool) => cleanText(tool?.name, 120)).filter(Boolean);
+  const promptConversation = hasLatestUserInConversation
+    ? conversation
+    : [...conversation, { role: 'user', text: message }];
+
+  const ruleRouting = buildRuleBasedRoutingDecision({
+    message,
+    snapshot,
+    availableToolNames,
+    writeIntent: containsWriteIntent(message)
+  });
+
+  let routing = normalizeRoutingPayload(ruleRouting);
+  if (shouldUseRoutingFallback(ruleRouting)) {
+    const fallbackPayload = await requestRoutingFallbackPayload({
+      provider,
+      endpoint,
+      apiKey,
+      model,
+      message,
+      conversation: promptConversation,
+      projectName,
+      ruleRouting
+    });
+    const mergedRouting = mergeRoutingFallback({
+      ruleDecision: ruleRouting,
+      fallbackPayload,
+      message,
+      writeIntent: containsWriteIntent(message),
+      availableToolNames
+    });
+    routing = normalizeRoutingPayload(mergedRouting);
+  }
+
+  if (routing.plan.needs_clarification) {
+    const clarification = buildRoutingClarificationQuestion(routing);
+    const proposedWriteActions = requiresApproval
+      ? [
+        {
+          tool_name: 'write_operation_pending_approval',
+          reason: 'User intent appears write-oriented; explicit approval is required before execution.'
+        }
+      ]
+      : [];
+    return {
+      ok: true,
+      provider,
+      model: model || (provider === LLM_PROVIDERS.CODEX ? 'codex-default' : ''),
+      answer: clarification,
+      confidence: clamp(routing.confidence * 0.92, 0, 1),
+      requiresApproval: requiresApproval || proposedWriteActions.length > 0,
+      proposedWriteActions,
+      citations: [],
+      decisionRecord: {
+        assumptions: [
+          'Routing plan identified ambiguity and stopped execution before tool calls.',
+          `Intent=${routing.intent} source=${routing.classifier.source}`
+        ],
+        open_questions: [clarification],
+        verification_notes: ['No tools were executed because clarification is required first.']
+      },
+      routing,
+      intermediateStates: [
+        buildIntermediateState('intake', message, {
+          assumptions: [
+            ...buildRoutingAssumptionRows(routing),
+            requiresApproval
+              ? 'Write intent detected; approval remains required before execution.'
+              : 'Read-first execution mode is active.'
+          ],
+          openQuestions: [clarification],
+          confidence: routing.confidence
+        }),
+        buildIntermediateState('route', `Resolved routing intent "${routing.intent}" and requested clarification.`, {
+          assumptions: buildRoutingAssumptionRows(routing),
+          openQuestions: [clarification],
+          confidence: routing.confidence
+        }),
+        buildIntermediateState('handoff', 'Prepared clarification response for UI handoff and audit trail.', {
+          assumptions: ['No tool calls executed due to clarification gate.'],
+          confidence: routing.confidence
+        })
+      ],
+      toolTrace: []
+    };
+  }
 
   if (provider === LLM_PROVIDERS.CODEX) {
     return runCodexAgentController({
@@ -2497,7 +3593,8 @@ async function runAgentController(payload) {
       snapshot,
       projectName,
       promptConfig,
-      allowWriteTools
+      allowWriteTools,
+      routing
     });
   }
 
@@ -2509,9 +3606,10 @@ async function runAgentController(payload) {
     assumptions: [
       allowWriteTools
         ? 'Explicit approval flag enabled write tools for this request.'
-        : 'User question is interpreted as read-first unless writes are explicitly requested.'
+        : 'User question is interpreted as read-first unless writes are explicitly requested.',
+      ...buildRoutingAssumptionRows(routing)
     ],
-    openQuestions: containsWriteIntent(message) && !allowWriteTools
+    openQuestions: requiresApproval
       ? ['User may want a write action; approval is required before any write.']
       : [],
     confidence: 0.45
@@ -2524,7 +3622,16 @@ async function runAgentController(payload) {
     confidence: 0.52
   }));
 
+  intermediateStates.push(buildIntermediateState('route', `Resolved routing intent "${routing.intent}".`, {
+    assumptions: buildRoutingAssumptionRows(routing),
+    confidence: routing.confidence
+  }));
+
   const systemPrompt = buildAgentSystemPrompt(projectName, promptConfig);
+  const scopedToolDefinitions = routing.plan.needs_tools
+    ? resolveAgentToolDefinitions(routing.plan.selected_tool_names)
+    : [];
+
   let session = await startAgentSession({
     provider,
     endpoint,
@@ -2533,7 +3640,8 @@ async function runAgentController(payload) {
     systemPrompt,
     conversation,
     message,
-    hasLatestUserInConversation
+    hasLatestUserInConversation,
+    toolDefinitions: scopedToolDefinitions
   });
   let round = 0;
 
@@ -2567,14 +3675,16 @@ async function runAgentController(payload) {
         });
       });
       proposedActions.push({
-        action_type: isWriteTool(call.name) ? 'write' : 'read',
+        action_type: isWriteTool(call.name) ? 'write' : (isComputeTool(call.name) ? 'compute' : 'read'),
         tool_name: call.name,
-        risk_level: isWriteTool(call.name) ? 'high' : 'low',
+        risk_level: isWriteTool(call.name) ? 'high' : (isComputeTool(call.name) ? 'medium' : 'low'),
         reason: isWriteTool(call.name)
           ? (allowWriteTools
             ? 'Model-requested write operation executed with explicit approval.'
             : 'Model-requested write operation blocked pending explicit approval.')
-          : 'Model-requested read operation.'
+          : (isComputeTool(call.name)
+            ? 'Model-requested sandboxed computation.'
+            : 'Model-requested read operation.')
       });
     }
 
@@ -2590,13 +3700,12 @@ async function runAgentController(payload) {
   }
 
   const draftAnswer = extractAgentSessionText(session);
-  const requiresApproval = containsWriteIntent(message) && !allowWriteTools;
 
   intermediateStates.push(buildIntermediateState('verify', 'Verified evidence coverage and policy constraints.', {
     assumptions: [
       allowWriteTools
         ? 'Write tools were allowed for this request via explicit approval.'
-        : 'Write tools were blocked by policy; only read tools were executed.'
+        : 'Write tools were blocked by policy; only read or compute tools were executed.'
     ],
     openQuestions: evidence.length ? [] : ['No evidence citations were produced by tools.'],
     evidence: evidence.slice(-12),
@@ -2676,6 +3785,7 @@ async function runAgentController(payload) {
     proposedWriteActions: normalized.proposedWriteActions,
     citations: normalized.citations,
     decisionRecord: normalized.decisionRecord,
+    routing,
     intermediateStates,
     toolTrace
   };

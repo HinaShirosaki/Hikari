@@ -346,6 +346,7 @@ const memoryStorage = createMemoryStorage();
 const shared = loadEsmStyleModule(path.join(__dirname, 'modules', 'shared.js'), {
   localStorage: memoryStorage
 });
+const agentRouting = require(path.join(__dirname, 'agent-routing.js'));
 const objectGraph = loadEsmStyleModule(path.join(__dirname, 'modules', 'object-graph.js'));
 const toolBox = loadEsmStyleModule(
   path.join(__dirname, 'modules', 'tool-box.js'),
@@ -387,6 +388,23 @@ const toolBox = loadEsmStyleModule(
     'collectCrisprPamSites',
     'computeCrisprOffTargetStats',
     'designCrisprGuides'
+  ]
+);
+const sequenceViewerInternals = loadEsmStyleModule(
+  path.join(__dirname, 'modules', 'sequence-viewer.js'),
+  {},
+  [
+    'normalizeSequenceText',
+    'detectSequenceFormat',
+    'parseFastaRecords',
+    'parseFastqRecords',
+    'parseGenBankRecords',
+    'parseInputRecords',
+    'normalizeExternalPayload',
+    'parseGenBankLocationSegments',
+    'computeGcPercent',
+    'countAmbiguousBases',
+    'summarizeFastqQuality'
   ]
 );
 const gelAnalysisInternals = loadEsmStyleModule(
@@ -627,6 +645,83 @@ test('main-utils normalizes output names, suffixes, and sequence input', () => {
   assert.equal(lines[1].length, 80);
   assert.equal(lines[2].length, 40);
   assert.equal(mainUtils.normalizeSequenceInput('>existing\nACGT\n'), '>existing\nACGT');
+});
+
+[
+  ['I grew HEK293 cells and ran transfection today.', 'protocol_to_notebook'],
+  ['What is the MW of biotin in stock?', 'inventory_lookup'],
+  ['What did we do last time for PD-1 expression?', 'record_lookup'],
+  ['Why did project Atlas fail after transfection?', 'project_science_question'],
+  ['Summarize this paper on PD-1 binder design.', 'paper_analysis'],
+  ['Use Python to analyze this CSV and plot IC50.', 'coding_data_analysis'],
+  ['What is ELISA and how does it work?', 'general_science_question']
+].forEach(([message, expectedIntent], idx) => {
+  test(`[P0] agent-routing classifyIntentByRules case ${idx + 1}`, () => {
+    const classified = agentRouting.classifyIntentByRules(message, {});
+    assert.equal(classified.intent, expectedIntent);
+    assert.equal(classified.confidence > 0, true);
+  });
+});
+
+[
+  ['protocol_to_notebook', { activity: 'grew cells', protocol: '', compound: '' }, { needs_tools: true, needs_protocol_search: true, needs_python: false }],
+  ['inventory_lookup', { compound: 'biotin' }, { needs_tools: true, needs_protocol_search: false, needs_python: false }],
+  ['record_lookup', { workflow_step: 'transfection' }, { needs_tools: true, needs_notebook_retrieval: true }],
+  ['project_science_question', { project: 'Atlas' }, { needs_tools: true, needs_notebook_retrieval: true }],
+  ['paper_analysis', { paper_title: 'Binder paper' }, { needs_tools: true, needs_pdf_reading: true }],
+  ['coding_data_analysis', { activity: 'fit curve' }, { needs_tools: true, needs_python: true }],
+  ['general_science_question', {}, { needs_tools: false }]
+].forEach(([intent, entities, expectedFlags], idx) => {
+  test(`[P0] agent-routing buildExecutionPlan case ${idx + 1}`, () => {
+    const plan = agentRouting.buildExecutionPlan({
+      intent,
+      entities,
+      message: 'test message',
+      writeIntent: false,
+      classificationConfidence: 0.9,
+      fallbackUsed: true
+    });
+    Object.entries(expectedFlags).forEach(([key, expected]) => {
+      assert.equal(plan[key], expected);
+    });
+  });
+});
+
+test('agent-routing fallback trigger and malformed fallback degrade safely', () => {
+  const ruleDecision = agentRouting.buildRuleBasedRoutingDecision({
+    message: 'help',
+    snapshot: {},
+    availableToolNames: ['search_projects', 'search_protocols', 'search_notebook_entries'],
+    writeIntent: false
+  });
+  assert.equal(agentRouting.shouldUseRoutingFallback(ruleDecision), true);
+  const merged = agentRouting.mergeRoutingFallback({
+    ruleDecision,
+    fallbackPayload: 'not-json',
+    message: 'help',
+    writeIntent: false,
+    availableToolNames: ['search_projects', 'search_protocols', 'search_notebook_entries']
+  });
+  assert.equal(merged.classifier.fallbackAttempted, true);
+  assert.equal(merged.classifier.fallbackUsed, false);
+  assert.equal(merged.plan.needs_clarification, true);
+  assert.equal(Boolean(merged.plan.clarification_question), true);
+});
+
+test('agent-routing fallback payload parsing accepts valid intent payload', () => {
+  const parsed = agentRouting.parseRoutingFallbackPayload(JSON.stringify({
+    intent: 'inventory_lookup',
+    confidence: 0.78,
+    entities: {
+      compound: 'biotin'
+    },
+    needs_clarification: false,
+    clarification_question: '',
+    reason: 'Detected compound lookup.'
+  }));
+  assert.equal(parsed.intent, 'inventory_lookup');
+  assert.equal(parsed.entities.compound, 'biotin');
+  assert.equal(parsed.needs_clarification, false);
 });
 
 test('createUid uses type:id convention', () => {
@@ -1661,6 +1756,41 @@ test('agent-chat sends settings API key to main process and stores assistant res
           answer: 'Use protocol Cell Prep and verify culture viability.',
           confidence: 0.88,
           requiresApproval: false,
+          routing: {
+            intent: 'protocol_to_notebook',
+            confidence: 0.81,
+            entities: {
+              activity: 'cell prep',
+              project: 'Cancer Study',
+              protein: '',
+              compound: '',
+              protocol: 'Cell Prep',
+              cell_line: 'HEK293',
+              paper_title: '',
+              workflow_step: ''
+            },
+            plan: {
+              needs_tools: true,
+              needs_protocol_search: true,
+              needs_notebook_retrieval: false,
+              needs_pdf_reading: false,
+              needs_python: false,
+              needs_web_search: false,
+              needs_clarification: false,
+              clarification_reason: '',
+              clarification_question: '',
+              selected_tool_names: ['search_protocols']
+            },
+            classifier: {
+              source: 'rules',
+              fallbackAttempted: false,
+              fallbackUsed: false,
+              lowConfidence: false,
+              tieDetected: false,
+              ruleReason: 'Matched protocol terms.',
+              fallbackError: ''
+            }
+          },
           citations: [{ source: 'protocol', pointer: 'pr1', reason: 'Matched protocol name.' }],
           decisionRecord: {
             assumptions: ['Test assumption'],
@@ -1722,6 +1852,8 @@ test('agent-chat sends settings API key to main process and stores assistant res
   assert.equal(state.agentChat.messages[0].role, 'user');
   assert.equal(state.agentChat.messages[1].role, 'assistant');
   assert.match(history.innerHTML, /Assistant/);
+  assert.match(history.innerHTML, /Routing/);
+  assert.match(history.innerHTML, /protocol_to_notebook/);
   assert.equal(sendBtn.disabled, false);
   assert.equal(clearBtn.disabled, false);
   assert.equal(projectSelect.disabled, false);
@@ -2038,6 +2170,21 @@ test('renderer routes personal inventory aliases to merged sample workspace', ()
   );
 });
 
+test('renderer defines sequence viewer aliases and showView render hook', () => {
+  const source = readSource('renderer.js');
+  assert.match(source, /\['sequence', VIEWS\.SEQUENCE_VIEWER\]/);
+  assert.match(source, /\['seqviewer', VIEWS\.SEQUENCE_VIEWER\]/);
+  assert.match(source, /\['sequence-viewer', VIEWS\.SEQUENCE_VIEWER\]/);
+  assert.match(source, /if \(nextView === VIEWS\.SEQUENCE_VIEWER\) \{\s*sequenceViewer\?\.render\?\.\(\);\s*\}/);
+});
+
+test('tool-box exposes optional sequence viewer handoff callback contract', () => {
+  const source = readSource('modules/tool-box.js');
+  assert.match(source, /export function initToolBox\(options = \{\}\)/);
+  assert.match(source, /const onOpenSequenceViewer = typeof options\?\.onOpenSequenceViewer === 'function'/);
+  assert.match(source, /plannotate-open-sequence-viewer/);
+});
+
 test('ketcher embedded page uses portable static path resolution', () => {
   const html = fs.readFileSync(path.join(__dirname, 'ketcher-embedded.html'), 'utf8');
   assert.equal(html.includes('/Users/'), false);
@@ -2083,6 +2230,24 @@ test('main agent chat logging records request/result/error with redacted API key
   assert.match(mainSource, /type: 'agent-chat-request'/);
   assert.match(mainSource, /type: 'agent-chat-result'/);
   assert.match(mainSource, /type: 'agent-chat-error'/);
+});
+
+test('agent chat contract exposes optional routing payload', () => {
+  const contract = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'agent-io-contract.json'), 'utf8'));
+  const agentChat = (contract.functions || []).find((fn) => fn.name === 'agent_chat');
+  assert.equal(Boolean(agentChat), true);
+  const props = agentChat.output_schema?.properties || {};
+  assert.equal(Boolean(props.routing), true);
+  assert.equal(props.routing.type, 'object');
+});
+
+test('main agent controller output includes routing metadata fields', () => {
+  const mainSource = fs.readFileSync(path.join(__dirname, 'main.js'), 'utf8');
+  assert.match(mainSource, /routing:\s*normalizeRoutingForAgentLog\(source\.routing\)/);
+  assert.match(mainSource, /routing,\n\s*intermediateStates,\n\s*toolTrace/);
+  assert.match(mainSource, /buildRuleBasedRoutingDecision\(/);
+  assert.match(mainSource, /shouldUseRoutingFallback\(/);
+  assert.match(mainSource, /requestRoutingFallbackPayload\(/);
 });
 
 test('telegram bot internals normalize search and module parsing', () => {
@@ -3034,6 +3199,115 @@ test('[EDGE] tool-box internal functions are exposed for unit tests', () => {
   ].forEach((name) => {
     assert.equal(typeof toolBox[name], 'function');
   });
+});
+
+test('[EDGE] sequence-viewer internal functions are exposed for unit tests', () => {
+  [
+    'normalizeSequenceText',
+    'detectSequenceFormat',
+    'parseFastaRecords',
+    'parseFastqRecords',
+    'parseGenBankRecords',
+    'parseInputRecords',
+    'normalizeExternalPayload',
+    'parseGenBankLocationSegments',
+    'computeGcPercent',
+    'countAmbiguousBases',
+    'summarizeFastqQuality'
+  ].forEach((name) => {
+    assert.equal(typeof sequenceViewerInternals[name], 'function');
+  });
+});
+
+test('[EDGE] sequence-viewer parseFastaRecords parses multi-record input', () => {
+  const parsed = sequenceViewerInternals.parseFastaRecords(`
+>alpha record
+ACGTNN
+>beta
+ttggcc
+`);
+  assert.equal(parsed.records.length, 2);
+  assert.equal(parsed.records[0].name, 'alpha');
+  assert.equal(parsed.records[0].sequence, 'ACGTNN');
+  assert.equal(parsed.records[1].name, 'beta');
+  assert.equal(parsed.records[1].sequence, 'TTGGCC');
+});
+
+test('[EDGE] sequence-viewer parseFastqRecords parses reads and validates quality length', () => {
+  const parsed = sequenceViewerInternals.parseFastqRecords(`
+@read_1
+ACGT
++
+IIII
+@read_2
+TTAA
++
+####
+`);
+  assert.equal(parsed.records.length, 2);
+  assert.equal(parsed.records[0].name, 'read_1');
+  assert.equal(parsed.records[0].quality, 'IIII');
+  assert.equal(parsed.records[1].sequence, 'TTAA');
+
+  const invalid = sequenceViewerInternals.parseFastqRecords(`
+@bad
+ACGT
++
+II
+`);
+  assert.equal(invalid.records.length, 0);
+  assert.equal(invalid.errors.length > 0, true);
+});
+
+test('[EDGE] sequence-viewer parseGenBankRecords parses ORIGIN and feature locations', () => {
+  const parsed = sequenceViewerInternals.parseGenBankRecords(`
+LOCUS       TESTSEQ        12 bp    DNA     circular SYN 01-JAN-2026
+FEATURES             Location/Qualifiers
+     CDS             complement(join(10..12,1..3))
+                     /label="cds_a"
+     promoter        4..8
+                     /label="prom_a"
+ORIGIN
+        1 acgtttggccaa
+//
+`);
+  assert.equal(parsed.records.length, 1);
+  assert.equal(parsed.records[0].sequence, 'ACGTTTGGCCAA');
+  assert.equal(parsed.records[0].features.length, 2);
+  assert.equal(parsed.records[0].features[0].name, 'cds_a');
+  assert.equal(parsed.records[0].features[0].strand, -1);
+  assert.equal(
+    JSON.stringify(parsed.records[0].features[0].segments),
+    JSON.stringify([{ start: 9, end: 12 }, { start: 0, end: 3 }])
+  );
+});
+
+test('[EDGE] sequence-viewer normalizeExternalPayload clamps segments and keeps metadata', () => {
+  const normalized = sequenceViewerInternals.normalizeExternalPayload({
+    name: 'Example payload',
+    sequence: 'acgtacgt',
+    topology: 'circular',
+    source: 'plannotate',
+    features: [
+      {
+        name: 'hit1',
+        type: 'CDS',
+        strand: -1,
+        source: 'plannotate',
+        segments: [{ start: -5, end: 4 }, { start: 6, end: 999 }]
+      }
+    ]
+  });
+
+  assert.equal(normalized.name, 'Example payload');
+  assert.equal(normalized.sequence, 'ACGTACGT');
+  assert.equal(normalized.topology, 'circular');
+  assert.equal(normalized.features.length, 1);
+  assert.equal(normalized.features[0].strand, -1);
+  assert.equal(
+    JSON.stringify(normalized.features[0].segments),
+    JSON.stringify([{ start: 0, end: 4 }, { start: 6, end: 8 }])
+  );
 });
 
 [

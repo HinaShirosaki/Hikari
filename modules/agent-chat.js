@@ -19,7 +19,14 @@ function getStepText(step) {
   if (typeof step === 'string') {
     return trimText(step, 200);
   }
-  return trimText(step?.text || step?.instruction, 200);
+  return trimText(step?.text || step?.instruction || step?.action || step?.description, 200);
+}
+
+function getMethodStepText(step) {
+  if (typeof step === 'string') {
+    return trimText(step, 180);
+  }
+  return trimText(step?.action || step?.text || step?.instruction || step?.description, 180);
 }
 
 function mapProtocol(protocol) {
@@ -61,7 +68,7 @@ function mapPaper(paper) {
       .slice(0, 6)
       .map((method) => ({
         title: trimText(method?.title, 180),
-        steps: asArray(method?.steps).slice(0, 10).map((step) => trimText(step, 180)).filter(Boolean),
+        steps: asArray(method?.steps).slice(0, 10).map((step) => getMethodStepText(step)).filter(Boolean),
         citations: asArray(method?.citations).slice(0, 8).map((item) => trimText(item, 120)).filter(Boolean)
       }))
   };
@@ -119,6 +126,7 @@ const TOOL_ACTIVITY_LABELS = {
   search_gel_analyses: 'Checking gel analysis records',
   search_inventory: 'Checking inventory records',
   search_papers: 'Checking stored PDF papers',
+  run_python_sandbox: 'Running Python sandbox',
   download_paper_pdf: 'Downloading papers'
 };
 
@@ -143,6 +151,9 @@ function inferRequestedActivities(requestText) {
   }
   if (/\b(lab notebook|notebook page|notebook)\b/.test(text) && /\b(generate|draft|create|write|build)\b/.test(text)) {
     rows.push('Generating lab notebook page (pending approval)');
+  }
+  if (/\b(python|script|compute|calculate|transform)\b/.test(text)) {
+    rows.push('Running Python sandbox');
   }
   return rows;
 }
@@ -242,6 +253,14 @@ function collectActivityRows(meta) {
     const status = activity.includes('(pending approval)') ? 'pending' : 'planned';
     upsertRow(status, activity);
   });
+
+  const routingIntent = trimText(meta.routing?.intent, 80);
+  if (routingIntent) {
+    upsertRow('done', `Routing intent: ${routingIntent}`);
+  }
+  if (meta.routing?.plan?.needs_clarification) {
+    upsertRow('pending', 'Waiting on routing clarification');
+  }
 
   return rows.slice(0, 20);
 }
@@ -430,6 +449,38 @@ export function initAgentChat({ state, persist, createId, safeText }) {
       const note = trimText(item?.summary, 220) || '';
       return note ? `${tool}: ${note}` : tool;
     });
+    const routing = meta.routing && typeof meta.routing === 'object' ? meta.routing : {};
+    const routingIntent = trimText(routing.intent, 80) || '-';
+    const routingConfidence = Number(routing.confidence);
+    const routingConfidenceText = Number.isFinite(routingConfidence) ? routingConfidence.toFixed(2) : 'n/a';
+    const routingSource = trimText(routing.classifier?.source, 80) || 'rules';
+    const routingHeader = `intent=${routingIntent} | confidence=${routingConfidenceText} | source=${routingSource}`;
+    const routingEntityRows = Object.entries(routing.entities && typeof routing.entities === 'object' ? routing.entities : {})
+      .map(([key, value]) => {
+        const clean = trimText(value, 180);
+        return clean ? `${key}: ${clean}` : '';
+      })
+      .filter(Boolean);
+    const routingPlanRows = Object.entries(routing.plan && typeof routing.plan === 'object' ? routing.plan : {})
+      .filter(([key]) => key !== 'selected_tool_names')
+      .map(([key, value]) => {
+        if (typeof value === 'boolean') {
+          return `${key}: ${value}`;
+        }
+        const clean = trimText(value, 180);
+        return clean ? `${key}: ${clean}` : '';
+      })
+      .filter(Boolean);
+    const routingToolRows = asArray(routing.plan?.selected_tool_names).map((tool) => trimText(tool, 120)).filter(Boolean);
+    const routingClassifierRows = [
+      `fallbackAttempted: ${routing.classifier?.fallbackAttempted === true}`,
+      `fallbackUsed: ${routing.classifier?.fallbackUsed === true}`,
+      `lowConfidence: ${routing.classifier?.lowConfidence === true}`,
+      `tieDetected: ${routing.classifier?.tieDetected === true}`,
+      trimText(routing.classifier?.ruleReason, 220) ? `ruleReason: ${trimText(routing.classifier?.ruleReason, 220)}` : '',
+      trimText(routing.classifier?.fallbackError, 220) ? `fallbackError: ${trimText(routing.classifier?.fallbackError, 220)}` : ''
+    ].filter(Boolean);
+    const routingRows = [routingHeader];
 
     const confidence = Number(meta.confidence);
     const confidenceText = Number.isFinite(confidence) ? `Confidence: ${confidence.toFixed(2)}` : 'Confidence: n/a';
@@ -452,6 +503,11 @@ export function initAgentChat({ state, persist, createId, safeText }) {
           </section>
         ` : ''}
         <p class="small-note">${safeText(confidenceText)} | ${safeText(approvalText)}</p>
+        ${renderMetaList('Routing', routingRows)}
+        ${renderMetaList('Routing Entities', routingEntityRows)}
+        ${renderMetaList('Routing Plan', routingPlanRows)}
+        ${renderMetaList('Routing Tools', routingToolRows)}
+        ${renderMetaList('Routing Classifier', routingClassifierRows)}
         ${renderMetaList('Citations', citations)}
         ${renderMetaList('Assumptions', assumptions)}
         ${renderMetaList('Open Questions', openQuestions)}
@@ -565,6 +621,7 @@ export function initAgentChat({ state, persist, createId, safeText }) {
           requiresApproval: result.requiresApproval === true,
           citations: asArray(result.citations),
           decisionRecord: result.decisionRecord || {},
+          routing: result.routing && typeof result.routing === 'object' ? result.routing : {},
           proposedWriteActions: asArray(result.proposedWriteActions),
           intermediateStates: asArray(result.intermediateStates),
           toolTrace: asArray(result.toolTrace),
@@ -587,6 +644,7 @@ export function initAgentChat({ state, persist, createId, safeText }) {
           requiresApproval: false,
           citations: [],
           decisionRecord: {},
+          routing: {},
           proposedWriteActions: [],
           intermediateStates: [],
           toolTrace: [],

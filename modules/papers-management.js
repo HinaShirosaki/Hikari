@@ -374,7 +374,7 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
     const paperText = papers.map((paper) => [
       `Paper: ${paper.title}`,
       `Summary: ${paper.summary || '-'}`,
-      `Methods: ${(paper.methodsExtract || []).map((method) => `${method.title}: ${(method.steps || []).join(' | ')}`).join(' || ') || '-'}`,
+      `Methods: ${(paper.methodsExtract || []).map((method) => `${method.title}: ${formatMethodStepTexts(method.steps).join(' | ') || '-'}`).join(' || ') || '-'}`,
       `Reagents: ${(paper.keyReagents || []).map((item) => `${item.type}:${item.name} (${item.identifier || '-'})`).join(' | ') || '-'}`
     ].join('\n')).join('\n\n');
 
@@ -584,7 +584,7 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
         const methodsHtml = (paper.methodsExtract || []).map((method, index) => `
           <article class="card">
             <p><strong>${safeText(method.title || `Method ${index + 1}`)}</strong></p>
-            <p>${safeText((method.steps || []).join(' | ') || '-')}</p>
+            <p>${safeText(formatMethodStepTexts(method.steps).join(' | ') || '-')}</p>
             <p><strong>Citations:</strong> ${safeText((method.citations || []).join('; ') || '-')}</p>
             <button class="ghost-btn" data-paper-method-to-protocol data-paper-id="${paper.id}" data-method-index="${index}">Create Protocol Draft</button>
           </article>
@@ -690,6 +690,121 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
   return { render, renderLinkTargets };
 }
 
+function getMethodStepText(step) {
+  if (typeof step === 'string') {
+    return String(step || '').trim();
+  }
+  if (!step || typeof step !== 'object') {
+    return '';
+  }
+  return String(
+    step.action
+    || step.text
+    || step.instruction
+    || step.description
+    || step.step
+    || step.content
+    || ''
+  ).trim();
+}
+
+function formatMethodStepTexts(steps) {
+  return (Array.isArray(steps) ? steps : [])
+    .map((step) => getMethodStepText(step))
+    .filter(Boolean);
+}
+
+function normalizeMethodSteps(rawSteps) {
+  const source = Array.isArray(rawSteps) ? rawSteps : [];
+  if (!source.length) {
+    return [];
+  }
+
+  const sorted = source
+    .map((step, index) => ({ step, index }))
+    .sort((a, b) => {
+      const numberA = Number(a.step?.step_number ?? a.step?.number ?? a.step?.index);
+      const numberB = Number(b.step?.step_number ?? b.step?.number ?? b.step?.index);
+      const hasNumberA = Number.isFinite(numberA);
+      const hasNumberB = Number.isFinite(numberB);
+      if (hasNumberA && hasNumberB && numberA !== numberB) {
+        return numberA - numberB;
+      }
+      if (hasNumberA !== hasNumberB) {
+        return hasNumberA ? -1 : 1;
+      }
+      return a.index - b.index;
+    });
+
+  const rows = sorted
+    .map(({ step }, index) => {
+      const action = getMethodStepText(step);
+      if (!action) {
+        return null;
+      }
+      const rawNumber = Number(step?.step_number ?? step?.number ?? step?.index);
+      return {
+        step_number: Number.isFinite(rawNumber) && rawNumber > 0 ? Math.round(rawNumber) : index + 1,
+        action
+      };
+    })
+    .filter(Boolean);
+
+  return rows.map((item, index) => ({
+    step_number: index + 1,
+    action: item.action
+  }));
+}
+
+function normalizeMethodTroubleshooting(rawTroubleshooting) {
+  if (!rawTroubleshooting) {
+    return [];
+  }
+  if (typeof rawTroubleshooting === 'string') {
+    return String(rawTroubleshooting || '')
+      .split(/\r?\n+/)
+      .map((line) => String(line || '').trim())
+      .filter(Boolean)
+      .map((problem) => ({
+        problem,
+        possible_cause: '',
+        solution: ''
+      }));
+  }
+  if (!Array.isArray(rawTroubleshooting)) {
+    return [];
+  }
+  return rawTroubleshooting
+    .map((item) => {
+      if (typeof item === 'string') {
+        const problem = String(item || '').trim();
+        if (!problem) {
+          return null;
+        }
+        return {
+          problem,
+          possible_cause: '',
+          solution: ''
+        };
+      }
+      if (!item || typeof item !== 'object') {
+        return null;
+      }
+      const problem = String(item.problem || item.issue || '').trim();
+      const possibleCause = String(item.possible_cause || item.possibleCause || item.cause || '').trim();
+      const solution = String(item.solution || item.fix || '').trim();
+      if (!problem && !possibleCause && !solution) {
+        return null;
+      }
+      return {
+        problem,
+        possible_cause: possibleCause,
+        solution
+      };
+    })
+    .filter(Boolean);
+}
+
 function normalizeMethodsExtract(result) {
   let methods = [];
   if (Array.isArray(result?.methods)) {
@@ -726,31 +841,23 @@ function normalizeMethodsExtract(result) {
 
   return methods.map((item, index) => {
     const title = String(item?.title || item?.name || `Method ${index + 1}`).trim() || `Method ${index + 1}`;
-    const steps = Array.isArray(item?.steps)
+    const rawSteps = Array.isArray(item?.steps)
       ? item.steps
-        .map((step) => {
-          if (typeof step === 'string') {
-            return String(step || '').trim();
-          }
-          if (!step || typeof step !== 'object') {
-            return '';
-          }
-          return String(step.action || step.text || step.instruction || '').trim();
-        })
-        .filter(Boolean)
-      : [];
+      : (Array.isArray(item?.procedure) ? item.procedure : []);
+    const steps = normalizeMethodSteps(rawSteps);
     const citations = Array.isArray(item?.citations)
       ? item.citations.map((cit) => String(cit || '').trim()).filter(Boolean)
-      : [];
+      : (Array.isArray(item?.references) ? item.references.map((cit) => String(cit || '').trim()).filter(Boolean) : []);
+
     return {
       title,
-      steps,
-      citations,
-      purpose: String(item?.purpose || '').trim(),
+      purpose: String(item?.purpose || item?.objective || '').trim(),
       materials: Array.isArray(item?.materials)
         ? item.materials.map((material) => normalizeMaterial(material)).filter(Boolean)
         : [],
-      troubleshooting: item?.troubleshooting ?? ''
+      steps,
+      troubleshooting: normalizeMethodTroubleshooting(item?.troubleshooting),
+      citations
     };
   }).filter((item) => item.title || item.steps.length);
 }
