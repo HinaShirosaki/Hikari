@@ -1,3 +1,5 @@
+const { selectToolsForRequest } = require('./agent-tools');
+
 const ROUTING_INTENTS = Object.freeze([
   'protocol_to_notebook',
   'inventory_lookup',
@@ -421,6 +423,7 @@ function buildRuleBasedRoutingDecision({
   message,
   snapshot = {},
   availableToolNames = [],
+  toolContract = null,
   writeIntent = false
 }) {
   const context = {
@@ -439,8 +442,21 @@ function buildRuleBasedRoutingDecision({
     fallbackUsed: false,
     tieDetected: classification.tieDetected
   });
-  const selectedToolNames = selectToolNamesForPlan(plan, availableToolNames);
+  const selection = toolContract
+    ? selectToolsForRequest({
+      intent: classification.intent,
+      entities,
+      message,
+      contract: toolContract,
+      allowWriteTools: writeIntent
+    })
+    : {
+      selectedToolNames: selectToolNamesForPlan(plan, availableToolNames),
+      rationaleRows: []
+    };
+  const selectedToolNames = selection.selectedToolNames;
   plan.selected_tool_names = selectedToolNames;
+  plan.tool_selection_rationale = selection.rationaleRows || [];
   return {
     intent: classification.intent,
     confidence: classification.confidence,
@@ -519,11 +535,13 @@ function mergeRoutingFallback({
   fallbackPayload,
   message,
   writeIntent = false,
-  availableToolNames = []
+  availableToolNames = [],
+  toolContract = null
 }) {
   const base = ruleDecision && typeof ruleDecision === 'object' ? ruleDecision : buildRuleBasedRoutingDecision({
     message,
     availableToolNames,
+    toolContract,
     writeIntent
   });
   const parsed = parseRoutingFallbackPayload(fallbackPayload);
@@ -535,7 +553,20 @@ function mergeRoutingFallback({
       clarification_question: cleanText(base.plan?.clarification_question, 280)
         || 'I need one clarification to route this request. Do you want protocol drafting, data lookup, project analysis, paper analysis, coding analysis, or a general science answer?'
     };
-    degradedPlan.selected_tool_names = selectToolNamesForPlan(degradedPlan, availableToolNames);
+    const degradedSelection = toolContract
+      ? selectToolsForRequest({
+        intent: cleanText(base.intent, 80) || DEFAULT_INTENT,
+        entities: base.entities || {},
+        message,
+        contract: toolContract,
+        allowWriteTools: writeIntent
+      })
+      : {
+        selectedToolNames: selectToolNamesForPlan(degradedPlan, availableToolNames),
+        rationaleRows: []
+      };
+    degradedPlan.selected_tool_names = degradedSelection.selectedToolNames;
+    degradedPlan.tool_selection_rationale = degradedSelection.rationaleRows || [];
     return {
       ...base,
       plan: degradedPlan,
@@ -566,7 +597,20 @@ function mergeRoutingFallback({
   if (parsed.reason && !mergedPlan.clarification_reason) {
     mergedPlan.clarification_reason = parsed.reason;
   }
-  mergedPlan.selected_tool_names = selectToolNamesForPlan(mergedPlan, availableToolNames);
+  const mergedSelection = toolContract
+    ? selectToolsForRequest({
+      intent: parsed.intent,
+      entities: parsed.entities,
+      message,
+      contract: toolContract,
+      allowWriteTools: writeIntent
+    })
+    : {
+      selectedToolNames: selectToolNamesForPlan(mergedPlan, availableToolNames),
+      rationaleRows: []
+    };
+  mergedPlan.selected_tool_names = mergedSelection.selectedToolNames;
+  mergedPlan.tool_selection_rationale = mergedSelection.rationaleRows || [];
 
   return {
     intent: parsed.intent,

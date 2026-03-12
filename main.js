@@ -19,6 +19,10 @@ const {
 const { downloadPaperAndSiPdf } = require('./agent-paper-download');
 const { runPythonSandbox } = require('./agent-python-sandbox');
 const {
+  loadToolContract,
+  executeToolCall
+} = require('./agent-tools');
+const {
   ROUTING_INTENTS,
   AGENT_MVP_SCOPE,
   ROUTING_RULE_CONFIDENCE_THRESHOLD,
@@ -1048,13 +1052,14 @@ function buildAgentToolContractPrompt(contract) {
 }
 
 const AGENT_IO_CONTRACT = normalizeAgentIoContract(AGENT_IO_CONTRACT_RAW);
+const AGENT_TOOL_REGISTRY = loadToolContract(AGENT_IO_CONTRACT);
 const AGENT_TOOL_DEFINITIONS = AGENT_IO_CONTRACT.tools.map((tool) => ({
   type: 'function',
   name: tool.name,
   description: tool.description,
   parameters: cloneJson(tool.input_schema, { type: 'object', additionalProperties: false, properties: {} })
 }));
-const AGENT_TOOL_DEFINITION_MAP = new Map(AGENT_IO_CONTRACT.tools.map((tool) => [tool.name, tool]));
+const AGENT_TOOL_DEFINITION_MAP = AGENT_TOOL_REGISTRY.toolMap;
 const AGENT_TOOL_DEFINITION_INPUT_MAP = new Map(AGENT_TOOL_DEFINITIONS.map((tool) => [tool.name, tool]));
 const AGENT_TOOL_OUTPUT_ENVELOPE = AGENT_IO_CONTRACT.tool_output_envelope && typeof AGENT_IO_CONTRACT.tool_output_envelope === 'object'
   ? AGENT_IO_CONTRACT.tool_output_envelope
@@ -1249,6 +1254,14 @@ function normalizeRoutingPayload(rawRouting) {
   const plan = source.plan && typeof source.plan === 'object' ? source.plan : {};
   const classifier = source.classifier && typeof source.classifier === 'object' ? source.classifier : {};
   const selectedToolNames = asArray(plan.selected_tool_names).map((item) => cleanText(item, 120)).filter(Boolean);
+  const toolSelectionRationale = asArray(plan.tool_selection_rationale).map((row) => ({
+    tool: cleanText(row?.tool, 120),
+    score: Number.isFinite(Number(row?.score)) ? Number(row.score) : 0,
+    entityScore: Number.isFinite(Number(row?.entityScore)) ? Number(row.entityScore) : 0,
+    taskScore: Number.isFinite(Number(row?.taskScore)) ? Number(row.taskScore) : 0,
+    exactnessScore: Number.isFinite(Number(row?.exactnessScore)) ? Number(row.exactnessScore) : 0,
+    reason: cleanText(row?.reason, 220)
+  })).filter((row) => row.tool);
   return {
     intent: ROUTING_INTENTS.includes(cleanText(source.intent, 80)) ? cleanText(source.intent, 80) : 'general_science_question',
     confidence: Number.isFinite(Number(source.confidence))
@@ -1274,7 +1287,8 @@ function normalizeRoutingPayload(rawRouting) {
       needs_clarification: plan.needs_clarification === true,
       clarification_reason: cleanText(plan.clarification_reason, 260),
       clarification_question: cleanText(plan.clarification_question, 320),
-      selected_tool_names: selectedToolNames
+      selected_tool_names: selectedToolNames,
+      tool_selection_rationale: toolSelectionRationale
     },
     classifier: {
       source: cleanText(classifier.source, 80) || 'rules',
@@ -1299,6 +1313,10 @@ function buildRoutingAssumptionRows(routing) {
   ];
   if (normalized.plan.selected_tool_names.length) {
     rows.push(`Planner selected tools: ${normalized.plan.selected_tool_names.join(', ')}.`);
+  }
+  if (asArray(normalized.plan.tool_selection_rationale).length) {
+    const top = normalized.plan.tool_selection_rationale[0];
+    rows.push(`Tool selector top candidate: ${top.tool} score=${top.score} (${top.reason || 'no reason'}).`);
   }
   if (normalized.classifier.fallbackAttempted) {
     rows.push(normalized.classifier.fallbackUsed
@@ -1690,7 +1708,7 @@ function buildAgentToolOutputEnvelope(toolName, args, rawResult, options = {}) {
   };
 }
 
-async function runAgentTool(name, args, snapshot, options = {}) {
+async function runAgentToolDispatchLegacy(name, args, snapshot, options = {}) {
   const normalizedArgs = normalizeToolInvocationArgs(args);
   const query = cleanText(normalizedArgs?.query, 300);
   const requestedLimit = Number(normalizedArgs?.limit);
@@ -2256,6 +2274,59 @@ async function runAgentTool(name, args, snapshot, options = {}) {
       error: `Unknown tool: ${name}`
     }
   );
+}
+
+function buildToolFuzzyVocabulary(snapshot) {
+  const source = snapshot && typeof snapshot === 'object' ? snapshot : {};
+  const values = [
+    ...asArray(source.projects).flatMap((item) => [item?.name, item?.summary]),
+    ...asArray(source.protocols).flatMap((item) => [item?.name, item?.category]),
+    ...asArray(source.notebookEntries).flatMap((item) => [item?.protocolName, item?.result]),
+    ...asArray(source.assays).flatMap((item) => [item?.name, item?.project_name, item?.notebook_entry_protocol_name]),
+    ...asArray(source.gelAnalyses).flatMap((item) => [item?.name, item?.project_name, item?.notebook_entry_protocol_name]),
+    ...asArray(source.papers).flatMap((item) => [item?.title, item?.summary]),
+    ...asArray(source.inventory?.chemicals).flatMap((item) => [item?.name, item?.cas, item?.supplier]),
+    ...asArray(source.inventory?.personal).flatMap((zone) => asArray(zone?.items).flatMap((item) => [item?.name, item?.location])),
+    'molecular weight',
+    'isoelectric point',
+    'pd-1',
+    'pd1'
+  ];
+  const seen = new Set();
+  const out = [];
+  values.forEach((value) => {
+    const normalized = cleanText(value, 220);
+    if (!normalized) {
+      return;
+    }
+    const key = normalized.toLowerCase();
+    if (seen.has(key)) {
+      return;
+    }
+    seen.add(key);
+    out.push(normalized);
+  });
+  return out;
+}
+
+async function runAgentTool(name, args, snapshot, options = {}) {
+  return executeToolCall(name, normalizeToolInvocationArgs(args), {
+    contract: AGENT_TOOL_REGISTRY,
+    allowWriteTools: options?.allowWriteTools === true,
+    fuzzyVocabulary: buildToolFuzzyVocabulary(snapshot),
+    toEnvelope: (toolName, callArgs, rawResult, envelopeOptions = {}) => buildAgentToolOutputEnvelope(
+      toolName,
+      callArgs,
+      rawResult,
+      envelopeOptions
+    ),
+    dispatch: async (toolName, callArgs) => runAgentToolDispatchLegacy(
+      toolName,
+      callArgs,
+      snapshot,
+      options
+    )
+  });
 }
 
 function extractConversation(rawConversation) {
@@ -3351,6 +3422,12 @@ async function runCodexAgentController({
   intermediateStates.push(buildIntermediateState('route', `Resolved routing intent "${routingInfo.intent}".`, {
     assumptions: buildRoutingAssumptionRows(routingInfo),
     openQuestions: routingInfo.plan.needs_clarification ? [routingInfo.plan.clarification_question] : [],
+    proposedActions: asArray(routingInfo.plan.tool_selection_rationale).slice(0, 5).map((row) => ({
+      action_type: 'read',
+      tool_name: row.tool,
+      risk_level: 'low',
+      reason: `selector score=${Number(row.score) || 0}; ${cleanText(row.reason, 180)}`
+    })),
     confidence: routingInfo.confidence
   }));
 
@@ -3505,6 +3582,7 @@ async function runAgentController(payload) {
     message,
     snapshot,
     availableToolNames,
+    toolContract: AGENT_TOOL_REGISTRY,
     writeIntent: containsWriteIntent(message)
   });
 
@@ -3525,7 +3603,8 @@ async function runAgentController(payload) {
       fallbackPayload,
       message,
       writeIntent: containsWriteIntent(message),
-      availableToolNames
+      availableToolNames,
+      toolContract: AGENT_TOOL_REGISTRY
     });
     routing = normalizeRoutingPayload(mergedRouting);
   }
@@ -3624,6 +3703,12 @@ async function runAgentController(payload) {
 
   intermediateStates.push(buildIntermediateState('route', `Resolved routing intent "${routing.intent}".`, {
     assumptions: buildRoutingAssumptionRows(routing),
+    proposedActions: asArray(routing.plan.tool_selection_rationale).slice(0, 5).map((row) => ({
+      action_type: 'read',
+      tool_name: row.tool,
+      risk_level: 'low',
+      reason: `selector score=${Number(row.score) || 0}; ${cleanText(row.reason, 180)}`
+    })),
     confidence: routing.confidence
   }));
 

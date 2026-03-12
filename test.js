@@ -347,6 +347,7 @@ const shared = loadEsmStyleModule(path.join(__dirname, 'modules', 'shared.js'), 
   localStorage: memoryStorage
 });
 const agentRouting = require(path.join(__dirname, 'agent-routing.js'));
+const agentTools = require(path.join(__dirname, 'agent-tools.js'));
 const objectGraph = loadEsmStyleModule(path.join(__dirname, 'modules', 'object-graph.js'));
 const toolBox = loadEsmStyleModule(
   path.join(__dirname, 'modules', 'tool-box.js'),
@@ -449,8 +450,479 @@ const telegramBot = require(path.join(__dirname, 'telegramBot.js'));
 const { generatePlannotateGbk } = require(path.join(__dirname, 'plannotate-engine.js'));
 const forgeConfig = require(path.join(__dirname, 'forge.config.js'));
 const packageManifest = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
+const AGENT_IO_CONTRACT_RAW = JSON.parse(
+  fs.readFileSync(path.join(__dirname, 'data', 'agent-io-contract.json'), 'utf8')
+);
+const AGENT_IO_CONTRACT = agentTools.loadToolContract(AGENT_IO_CONTRACT_RAW);
+const AGENT_IO_TOOL_NAMES = AGENT_IO_CONTRACT.tools.map((tool) => tool.name);
+const AGENT_SIMULATION_DISPATCH_TOOL_NAMES = new Set([
+  'search_projects',
+  'search_protocols',
+  'search_notebook_entries',
+  'search_assays',
+  'search_gel_analyses',
+  'search_inventory',
+  'search_papers',
+  'search_uniprot',
+  'search_pubmed',
+  'search_crossref',
+  'search_europe_pmc',
+  'run_python_sandbox',
+  'download_paper_pdf'
+]);
 
 const LEGACY_CHEMISTRY_DRAFT_KEY = 'enana_synthesis_chemistry_draft_v1';
+
+function buildAgentSimulationSnapshot() {
+  return {
+    projects: [
+      { id: 'project-atlas', name: 'Atlas', summary: 'PD-1 binder optimization and expression rescue.' },
+      { id: 'project-mercury', name: 'Mercury', summary: 'Secondary screening workflow.' }
+    ],
+    protocols: [
+      {
+        id: 'protocol-transfection',
+        name: 'HEK293 Transfection',
+        category: 'cell',
+        steps: ['Seed cells', 'Mix DNA and reagent', 'Incubate for [time]']
+      },
+      {
+        id: 'protocol-assay',
+        name: 'ELISA Workflow',
+        category: 'assay',
+        steps: ['Prepare plate', 'Add samples', 'Read plate']
+      }
+    ],
+    notebookEntries: [
+      {
+        id: 'note-1',
+        projectId: 'project-atlas',
+        protocolId: 'protocol-transfection',
+        protocolName: 'HEK293 Transfection',
+        result: 'Expression dropped after day 3.',
+        updatedAt: '2026-02-10T10:00:00.000Z'
+      }
+    ],
+    assays: [
+      {
+        id: 'assay-1',
+        assay_number: 'ASSAY-101',
+        name: 'PD-1 Viability',
+        project_name: 'Atlas',
+        notebook_entry_protocol_name: 'HEK293 Transfection',
+        sample_axis: 'row',
+        concentration_axis: 'column',
+        result_well_count: 96,
+        numeric_count: 96,
+        updated_at: '2026-02-10T11:00:00.000Z'
+      }
+    ],
+    gelAnalyses: [
+      {
+        id: 'gel-1',
+        name: 'Western Atlas 1',
+        analysis_type: 'western',
+        project_name: 'Atlas',
+        notebook_entry_protocol_name: 'HEK293 Transfection',
+        image_name: 'atlas-western-1.tiff',
+        lane_count: 8,
+        band_count: 20,
+        confidence_label: 'high',
+        confidence_score: 0.91,
+        warnings: ['Minor background noise'],
+        updated_at: '2026-02-10T12:00:00.000Z'
+      }
+    ],
+    papers: [
+      {
+        id: 'paper-1',
+        title: 'PD-1 Binder Design 2025',
+        summary: 'Discusses expression bottlenecks and rescue strategies.',
+        methods: [
+          {
+            title: 'Transfection method',
+            steps: ['Culture cells', 'Transfect', 'Measure expression'],
+            citations: ['doi:10.1000/pd1']
+          }
+        ]
+      }
+    ],
+    inventory: {
+      personal: [
+        {
+          zone: 'Bench',
+          items: [{ id: 'pi-1', name: 'PD-1 plasmid', quantity: '2', location: 'Box A1' }]
+        }
+      ],
+      chemicals: [
+        { id: 'chem-1', name: 'Biotin', amount: '10 g', cas: '58-85-5', location: 'Shelf 2', supplier: 'Sigma' },
+        { id: 'chem-2', name: 'Imidazole', amount: '500 g', cas: '288-32-4', location: 'Shelf 4', supplier: 'TCI' }
+      ]
+    },
+    settings: {
+      storagePath: '/tmp/enana-storage'
+    }
+  };
+}
+
+function pickMockRows(rows, projector, query, limit = 5) {
+  const source = Array.isArray(rows) ? rows : [];
+  const needle = String(query || '').trim().toLowerCase();
+  if (!needle) {
+    return source.slice(0, limit);
+  }
+  const tokens = needle.split(/[^a-z0-9]+/i).map((token) => token.trim()).filter(Boolean);
+  return source
+    .filter((item) => {
+      const target = String(projector(item) || '').toLowerCase();
+      if (!tokens.length) {
+        return target.includes(needle);
+      }
+      return tokens.some((token) => token.length >= 2 && target.includes(token));
+    })
+    .slice(0, limit);
+}
+
+function buildMockToolArgs(toolName, message, snapshot) {
+  if (toolName === 'run_python_sandbox') {
+    return {
+      code: 'import math\nprint(round((2 + 8) / 2, 2))',
+      timeout_ms: 1200,
+      files: [],
+      readback_paths: []
+    };
+  }
+  if (toolName === 'download_paper_pdf') {
+    return {
+      linked_type: 'project',
+      linked_name: snapshot.projects[0]?.name || 'Atlas',
+      paper_pdf_url: 'https://example.org/paper.pdf',
+      paper_file_name: 'atlas-paper.pdf',
+      storage_path: snapshot.settings?.storagePath || '/tmp/enana-storage'
+    };
+  }
+  return {
+    query: String(message || 'atlas'),
+    limit: 5
+  };
+}
+
+function buildMockToolDispatch(snapshot) {
+  const calls = [];
+
+  const handlers = {
+    search_projects: (args) => {
+      const items = pickMockRows(snapshot.projects, (item) => `${item.name} ${item.summary}`, args?.query, args?.limit)
+        .map((item) => ({
+          id: item.id,
+          name: item.name,
+          summary: item.summary
+        }));
+      return {
+        items,
+        citations: items.map((item) => ({ source: 'project', pointer: item.id, reason: 'Matched project metadata.' })),
+        summary: `Found ${items.length} matching projects.`
+      };
+    },
+    search_protocols: (args) => {
+      const items = pickMockRows(
+        snapshot.protocols,
+        (item) => `${item.name} ${item.category} ${(item.steps || []).join(' ')}`,
+        args?.query,
+        args?.limit
+      ).map((item) => ({
+        id: item.id,
+        name: item.name,
+        category: item.category,
+        steps: Array.isArray(item.steps) ? item.steps : []
+      }));
+      return {
+        items,
+        citations: items.map((item) => ({ source: 'protocol', pointer: item.id, reason: 'Matched protocol name/steps.' })),
+        summary: `Found ${items.length} matching protocols.`
+      };
+    },
+    search_notebook_entries: (args) => {
+      const items = pickMockRows(
+        snapshot.notebookEntries,
+        (item) => `${item.protocolName} ${item.result} ${item.updatedAt}`,
+        args?.query,
+        args?.limit
+      ).map((item) => ({
+        id: item.id,
+        protocolName: item.protocolName,
+        result: item.result,
+        updatedAt: item.updatedAt
+      }));
+      return {
+        items,
+        citations: items.map((item) => ({ source: 'notebook_entry', pointer: item.id, reason: 'Matched notebook records.' })),
+        summary: `Found ${items.length} matching notebook entries.`
+      };
+    },
+    search_assays: (args) => {
+      const items = pickMockRows(
+        snapshot.assays,
+        (item) => `${item.name} ${item.project_name} ${item.notebook_entry_protocol_name}`,
+        args?.query,
+        args?.limit
+      ).map((item) => ({ ...item }));
+      return {
+        items,
+        citations: items.map((item) => ({ source: 'assay', pointer: item.id, reason: 'Matched assay metadata.' })),
+        summary: `Found ${items.length} matching assays.`
+      };
+    },
+    search_gel_analyses: (args) => {
+      const items = pickMockRows(
+        snapshot.gelAnalyses,
+        (item) => `${item.name} ${item.project_name} ${item.notebook_entry_protocol_name}`,
+        args?.query,
+        args?.limit
+      ).map((item) => ({ ...item }));
+      return {
+        items,
+        citations: items.map((item) => ({ source: 'gel_analysis', pointer: item.id, reason: 'Matched gel analysis metadata.' })),
+        summary: `Found ${items.length} matching gel analyses.`
+      };
+    },
+    search_inventory: (args) => {
+      const merged = [
+        ...(snapshot.inventory?.chemicals || []).map((item) => ({ kind: 'chemical_inventory', ...item })),
+        ...((snapshot.inventory?.personal || []).flatMap((zone) => (
+          (zone.items || []).map((item) => ({ kind: 'personal_inventory', zone: zone.zone, ...item }))
+        )))
+      ];
+      const items = pickMockRows(
+        merged,
+        (item) => `${item.name} ${item.cas || ''} ${item.location || ''} ${item.supplier || ''}`,
+        args?.query,
+        args?.limit
+      ).map((item) => ({ ...item }));
+      return {
+        items,
+        citations: items.map((item) => ({ source: item.kind, pointer: item.id || item.name, reason: 'Matched inventory metadata.' })),
+        summary: `Found ${items.length} matching inventory records.`
+      };
+    },
+    search_papers: (args) => {
+      const items = pickMockRows(
+        snapshot.papers,
+        (item) => `${item.title} ${item.summary}`,
+        args?.query,
+        args?.limit
+      ).map((item) => ({ ...item }));
+      return {
+        items,
+        citations: items.map((item) => ({ source: 'paper', pointer: item.id, reason: 'Matched uploaded paper metadata.' })),
+        summary: `Found ${items.length} matching papers.`
+      };
+    },
+    search_uniprot: () => ({
+      items: [
+        {
+          accession: 'P12345',
+          entry_id: 'PD1_HUMAN',
+          protein_name: 'Programmed cell death protein 1',
+          gene_names: ['PDCD1'],
+          organism: 'Homo sapiens',
+          reviewed: true,
+          length: 288,
+          uniprot_url: 'https://www.uniprot.org/uniprotkb/P12345'
+        }
+      ],
+      citations: [{ source: 'uniprot', pointer: 'P12345', reason: 'Matched UniProtKB protein record.' }],
+      summary: 'Found 1 matching UniProt records.'
+    }),
+    search_pubmed: () => ({
+      items: [
+        {
+          pmid: '12345678',
+          title: 'PD-1 binder expression optimization',
+          journal: 'J Mol Bio',
+          pubdate: '2025-01-20',
+          doi: '10.1000/pubmed',
+          authors: ['A. Smith', 'B. Jones'],
+          pubmed_url: 'https://pubmed.ncbi.nlm.nih.gov/12345678/'
+        }
+      ],
+      citations: [{ source: 'pubmed', pointer: '12345678', reason: 'Matched PubMed article metadata.' }],
+      summary: 'Found 1 matching PubMed records.'
+    }),
+    search_crossref: () => ({
+      items: [
+        {
+          doi: '10.1000/crossref',
+          title: 'Crossref indexed binder design study',
+          journal: 'Bioengineering',
+          published: '2025-04-10',
+          type: 'journal-article',
+          cited_by_count: 12,
+          authors: ['C. Li', 'D. Park'],
+          url: 'https://doi.org/10.1000/crossref'
+        }
+      ],
+      citations: [{ source: 'crossref', pointer: '10.1000/crossref', reason: 'Matched Crossref works metadata.' }],
+      summary: 'Found 1 matching Crossref records.'
+    }),
+    search_europe_pmc: () => ({
+      items: [
+        {
+          id: 'PMC1234567',
+          source: 'MED',
+          title: 'Europe PMC indexed assay design',
+          author_string: 'E. Kim; F. Ray',
+          journal: 'Lab Methods',
+          pub_year: '2024',
+          doi: '10.1000/epmc',
+          pmid: '45678901',
+          pmcid: 'PMC1234567',
+          europe_pmc_url: 'https://europepmc.org/article/MED/45678901'
+        }
+      ],
+      citations: [{ source: 'europe_pmc', pointer: '45678901', reason: 'Matched Europe PMC metadata.' }],
+      summary: 'Found 1 matching Europe PMC records.'
+    }),
+    run_python_sandbox: () => ({
+      items: [
+        {
+          run_id: 'sandbox-run-1',
+          status: 'ok',
+          timeout_ms: 1200,
+          python_executable: 'python3',
+          exit_code: 0,
+          signal: null,
+          timed_out: false,
+          stdout: '5.0',
+          stderr: '',
+          files_written: [],
+          readback_files: [],
+          warnings: []
+        }
+      ],
+      citations: [{ source: 'python_sandbox', pointer: 'sandbox-run-1', reason: 'Executed deterministic Python sandbox.' }],
+      summary: 'Python sandbox execution completed.'
+    }),
+    download_paper_pdf: (args) => {
+      const linkedName = String(args?.linked_name || 'Atlas').trim() || 'Atlas';
+      return {
+        items: [
+          {
+            kind: 'paper',
+            source_url: String(args?.paper_pdf_url || 'https://example.org/paper.pdf'),
+            file_name: String(args?.paper_file_name || 'paper.pdf'),
+            relative_path: `${linkedName}/Papers/${String(args?.paper_file_name || 'paper.pdf')}`,
+            size_bytes: 2048
+          }
+        ],
+        citations: [{ source: 'paper_download', pointer: `${linkedName}/Papers`, reason: 'Downloaded mocked paper file.' }],
+        summary: 'Downloaded 1 paper PDF and 0 SI PDF(s).'
+      };
+    }
+  };
+
+  const dispatch = async (toolName, args) => {
+    calls.push({ toolName, args: args && typeof args === 'object' ? { ...args } : {} });
+    const handler = handlers[toolName];
+    if (!handler) {
+      throw new Error(`Unexpected tool in mock dispatch: ${toolName}`);
+    }
+    const raw = handler(args || {});
+    return {
+      ok: true,
+      tool_name: toolName,
+      input: args && typeof args === 'object' ? { ...args } : {},
+      items: Array.isArray(raw?.items) ? raw.items : [],
+      citations: Array.isArray(raw?.citations) ? raw.citations : [],
+      summary: String(raw?.summary || '')
+    };
+  };
+
+  return {
+    dispatch,
+    calls,
+    coveredToolNames: new Set(Object.keys(handlers))
+  };
+}
+
+async function runSimulatedAgentTurn({
+  message,
+  snapshot = buildAgentSimulationSnapshot(),
+  allowWriteTools = false,
+  writeIntent = false,
+  fallbackPayload = null
+}) {
+  const availableToolNames = AGENT_IO_TOOL_NAMES.slice();
+  const ruleDecision = agentRouting.buildRuleBasedRoutingDecision({
+    message,
+    snapshot,
+    availableToolNames,
+    toolContract: AGENT_IO_CONTRACT,
+    writeIntent
+  });
+
+  const routing = fallbackPayload
+    ? agentRouting.mergeRoutingFallback({
+      ruleDecision,
+      fallbackPayload,
+      message,
+      writeIntent,
+      availableToolNames,
+      toolContract: AGENT_IO_CONTRACT
+    })
+    : ruleDecision;
+
+  const requiresApproval = writeIntent && !allowWriteTools;
+  if (routing.plan.needs_clarification) {
+    return {
+      routing,
+      toolOutputs: [],
+      toolTrace: [],
+      citations: [],
+      executedToolNames: [],
+      requiresApproval,
+      dispatchCalls: []
+    };
+  }
+
+  const { dispatch, calls } = buildMockToolDispatch(snapshot);
+  const toolNames = routing.plan.needs_tools
+    ? [...new Set(Array.isArray(routing.plan.selected_tool_names) ? routing.plan.selected_tool_names : [])]
+    : [];
+
+  const toolOutputs = [];
+  const toolTrace = [];
+  const citations = [];
+
+  for (const toolName of toolNames) {
+    const args = buildMockToolArgs(toolName, message, snapshot);
+    const result = await agentTools.executeToolCall(toolName, args, {
+      contract: AGENT_IO_CONTRACT,
+      allowWriteTools,
+      dispatch,
+      fuzzyVocabulary: ['atlas', 'biotin', 'pd-1', 'transfection', 'assay', 'elisa']
+    });
+    toolOutputs.push(result);
+    toolTrace.push({
+      tool: toolName,
+      summary: result.summary,
+      ok: result.ok === true
+    });
+    if (Array.isArray(result.citations)) {
+      citations.push(...result.citations);
+    }
+  }
+
+  return {
+    routing,
+    toolOutputs,
+    toolTrace,
+    citations,
+    executedToolNames: toolOutputs.map((item) => item.tool_name),
+    requiresApproval,
+    dispatchCalls: calls
+  };
+}
 
 test('plannotate GenBank generator builds a valid record with qualifiers', () => {
   const gbk = generatePlannotateGbk({
@@ -712,6 +1184,26 @@ test('agent-routing fallback trigger and malformed fallback degrade safely', () 
   assert.equal(Boolean(merged.plan.clarification_question), true);
 });
 
+test('agent-routing uses scored tool selection when toolContract is provided', () => {
+  const toolContract = agentTools.loadToolContract({
+    tools: [
+      { name: 'search_inventory', description: 'inventory reagent stock', input_schema: {}, output_schema: {} },
+      { name: 'search_notebook_entries', description: 'notebook history', input_schema: {}, output_schema: {} },
+      { name: 'search_uniprot', description: 'protein uniprot', input_schema: {}, output_schema: {} }
+    ]
+  });
+  const routing = agentRouting.buildRuleBasedRoutingDecision({
+    message: 'what is the mw of biotin',
+    snapshot: {},
+    availableToolNames: ['search_inventory', 'search_notebook_entries', 'search_uniprot'],
+    toolContract,
+    writeIntent: false
+  });
+  assert.equal(routing.plan.selected_tool_names.includes('search_inventory'), true);
+  assert.equal(Array.isArray(routing.plan.tool_selection_rationale), true);
+  assert.equal(routing.plan.tool_selection_rationale.length > 0, true);
+});
+
 test('agent-routing fallback payload parsing accepts valid intent payload', () => {
   const parsed = agentRouting.parseRoutingFallbackPayload(JSON.stringify({
     intent: 'inventory_lookup',
@@ -726,6 +1218,545 @@ test('agent-routing fallback payload parsing accepts valid intent payload', () =
   assert.equal(parsed.intent, 'inventory_lookup');
   assert.equal(parsed.entities.compound, 'biotin');
   assert.equal(parsed.needs_clarification, false);
+});
+
+test('agent-tools registry loader/list/find APIs return expected tool subsets', () => {
+  const rawContract = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'agent-io-contract.json'), 'utf8'));
+  const contract = agentTools.loadToolContract(rawContract);
+  assert.equal(contract.tools.length > 0, true);
+  const allTools = agentTools.listAvailableTools(contract, { includeWrite: true });
+  const readOnlyTools = agentTools.listAvailableTools(contract, { includeWrite: false });
+  assert.equal(allTools.some((tool) => tool.name === 'download_paper_pdf'), true);
+  assert.equal(readOnlyTools.some((tool) => tool.name === 'download_paper_pdf'), false);
+  const proteinTools = agentTools.findToolsByEntityType(contract, 'protein');
+  assert.equal(proteinTools.some((tool) => tool.name === 'search_uniprot'), true);
+  const literatureTools = agentTools.findToolsByTaskType(contract, 'literature_lookup');
+  assert.equal(literatureTools.some((tool) => tool.name === 'search_pubmed'), true);
+});
+
+test('agent-tools selectToolsForRequest ranks tools by entity/task/exactness', () => {
+  const rawContract = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'agent-io-contract.json'), 'utf8'));
+  const contract = agentTools.loadToolContract(rawContract);
+
+  const inventorySelection = agentTools.selectToolsForRequest({
+    intent: 'inventory_lookup',
+    entities: { compound: 'biotin', protein: '' },
+    message: 'what is the MW of biotin in stock',
+    contract,
+    allowWriteTools: false
+  });
+  assert.equal(inventorySelection.selectedToolNames[0], 'search_inventory');
+
+  const proteinSelection = agentTools.selectToolsForRequest({
+    intent: 'inventory_lookup',
+    entities: { protein: 'PD-1' },
+    message: 'what is the pI of PD-1',
+    contract,
+    allowWriteTools: false
+  });
+  assert.equal(proteinSelection.selectedToolNames.includes('search_uniprot'), true);
+
+  const recordSelection = agentTools.selectToolsForRequest({
+    intent: 'record_lookup',
+    entities: { workflow_step: 'transfection', protocol: 'Cell Prep' },
+    message: 'what did we do last time for transfection',
+    contract,
+    allowWriteTools: false
+  });
+  assert.equal(recordSelection.selectedToolNames.includes('search_notebook_entries'), true);
+});
+
+test('agent-tools executeToolCall handles known, unknown, and write-policy paths', async () => {
+  const contract = agentTools.loadToolContract({
+    tools: [
+      { name: 'search_inventory', description: 'inventory', input_schema: {}, output_schema: {} },
+      { name: 'download_paper_pdf', description: 'write', input_schema: {}, output_schema: {} }
+    ]
+  });
+  const toEnvelope = (toolName, args, rawResult, options = {}) => ({
+    ok: options.ok !== false,
+    tool_name: toolName,
+    input: args,
+    items: rawResult?.items || [],
+    citations: rawResult?.citations || [],
+    summary: rawResult?.summary || '',
+    ...(options.error ? { error: options.error } : {})
+  });
+  const dispatch = async (toolName, args) => {
+    if (toolName === 'search_inventory') {
+      return toEnvelope(toolName, args, {
+        items: [{ id: 'c1', name: 'biotin' }],
+        citations: [{ source: 'inventory', pointer: 'c1', reason: 'match' }],
+        summary: 'Found 1'
+      });
+    }
+    if (toolName === 'download_paper_pdf') {
+      return toEnvelope(toolName, args, {
+        items: [{ linked_name: 'x', status: 'downloaded' }],
+        citations: [{ source: 'paper_store', pointer: 'x', reason: 'write completed' }],
+        summary: 'Downloaded 1'
+      });
+    }
+    throw new Error('unexpected');
+  };
+
+  const known = await agentTools.executeToolCall('search_inventory', { query: 'biotin' }, {
+    contract,
+    allowWriteTools: false,
+    toEnvelope,
+    dispatch
+  });
+  assert.equal(known.ok, true);
+  assert.equal(known.items.length, 1);
+
+  const unknown = await agentTools.executeToolCall('missing_tool', { query: 'x' }, {
+    contract,
+    allowWriteTools: false,
+    toEnvelope,
+    dispatch
+  });
+  assert.equal(unknown.ok, false);
+  assert.match(unknown.error, /Unknown tool/i);
+
+  const blockedWrite = await agentTools.executeToolCall('download_paper_pdf', { linked_name: 'x' }, {
+    contract,
+    allowWriteTools: false,
+    toEnvelope,
+    dispatch
+  });
+  assert.equal(blockedWrite.ok, false);
+  assert.match(blockedWrite.error, /Write action blocked/i);
+
+  const allowedWrite = await agentTools.executeToolCall('download_paper_pdf', { linked_name: 'x' }, {
+    contract,
+    allowWriteTools: true,
+    toEnvelope,
+    dispatch
+  });
+  assert.equal(allowedWrite.ok, true);
+  assert.equal(allowedWrite.items.length, 1);
+});
+
+test('agent-tools executeToolCall applies conservative local fuzzy retries then no-match fallback', async () => {
+  const contract = agentTools.loadToolContract({
+    tools: [
+      { name: 'search_inventory', description: 'inventory', input_schema: {}, output_schema: {} }
+    ]
+  });
+  const toEnvelope = (toolName, args, rawResult, options = {}) => ({
+    ok: options.ok !== false,
+    tool_name: toolName,
+    input: args,
+    items: rawResult?.items || [],
+    citations: rawResult?.citations || [],
+    summary: rawResult?.summary || '',
+    ...(options.error ? { error: options.error } : {})
+  });
+
+  const calls = [];
+  const dispatch = async (_toolName, args) => {
+    calls.push(String(args.query || ''));
+    const q = String(args.query || '').toLowerCase();
+    if (q.includes('molecular weight') && q.includes('biotin')) {
+      return toEnvelope('search_inventory', args, {
+        items: [{ id: 'biotin' }],
+        citations: [{ source: 'inventory', pointer: 'biotin', reason: 'alias retry' }],
+        summary: 'Found 1'
+      });
+    }
+    return toEnvelope('search_inventory', args, {
+      items: [],
+      citations: [],
+      summary: 'Found 0'
+    });
+  };
+
+  const aliasHit = await agentTools.executeToolCall('search_inventory', { query: 'mw biotin' }, {
+    contract,
+    allowWriteTools: false,
+    fuzzyVocabulary: ['biotin', 'molecular weight'],
+    toEnvelope,
+    dispatch
+  });
+  assert.equal(aliasHit.items.length, 1);
+  assert.equal(calls.length >= 2, true);
+
+  const noMatch = await agentTools.executeToolCall('search_inventory', { query: 'unknownzzzz' }, {
+    contract,
+    allowWriteTools: false,
+    fuzzyVocabulary: ['biotin'],
+    toEnvelope,
+    dispatch: async () => toEnvelope('search_inventory', { query: 'unknownzzzz' }, { items: [], citations: [], summary: 'Found 0' })
+  });
+  assert.equal(noMatch.items.length, 0);
+  assert.equal(noMatch.summary, 'No matching record found.');
+});
+
+test('agent-tools executeToolCall normalization retry can recover local-search misses', async () => {
+  const contract = agentTools.loadToolContract({
+    tools: [
+      { name: 'search_inventory', description: 'inventory', input_schema: {}, output_schema: {} }
+    ]
+  });
+  const toEnvelope = (toolName, args, rawResult, options = {}) => ({
+    ok: options.ok !== false,
+    tool_name: toolName,
+    input: args,
+    items: rawResult?.items || [],
+    citations: rawResult?.citations || [],
+    summary: rawResult?.summary || '',
+    ...(options.error ? { error: options.error } : {})
+  });
+  const calls = [];
+  const hit = await agentTools.executeToolCall('search_inventory', { query: 'TNF-α reagent' }, {
+    contract,
+    allowWriteTools: false,
+    fuzzyVocabulary: ['tnf-alpha', 'reagent'],
+    toEnvelope,
+    dispatch: async (_toolName, args) => {
+      const q = String(args.query || '');
+      calls.push(q);
+      if (q.includes('tnf-alpha')) {
+        return toEnvelope('search_inventory', args, {
+          items: [{ id: 'tnfa' }],
+          citations: [{ source: 'inventory', pointer: 'tnfa', reason: 'normalization retry' }],
+          summary: 'Found 1'
+        });
+      }
+      return toEnvelope('search_inventory', args, {
+        items: [],
+        citations: [],
+        summary: 'Found 0'
+      });
+    }
+  });
+  assert.equal(hit.items.length, 1);
+  assert.equal(calls.some((q) => q.includes('tnf-alpha')), true);
+});
+
+test('agent-tools executeToolCall light fuzzy retry can recover one-edit query typos', async () => {
+  const contract = agentTools.loadToolContract({
+    tools: [
+      { name: 'search_inventory', description: 'inventory', input_schema: {}, output_schema: {} }
+    ]
+  });
+  const toEnvelope = (toolName, args, rawResult, options = {}) => ({
+    ok: options.ok !== false,
+    tool_name: toolName,
+    input: args,
+    items: rawResult?.items || [],
+    citations: rawResult?.citations || [],
+    summary: rawResult?.summary || '',
+    ...(options.error ? { error: options.error } : {})
+  });
+  const calls = [];
+  const hit = await agentTools.executeToolCall('search_inventory', { query: 'biotn lot' }, {
+    contract,
+    allowWriteTools: false,
+    fuzzyVocabulary: ['biotin', 'lot'],
+    toEnvelope,
+    dispatch: async (_toolName, args) => {
+      const q = String(args.query || '').toLowerCase();
+      calls.push(q);
+      if (q.includes('biotin')) {
+        return toEnvelope('search_inventory', args, {
+          items: [{ id: 'biotin' }],
+          citations: [{ source: 'inventory', pointer: 'biotin', reason: 'fuzzy retry' }],
+          summary: 'Found 1'
+        });
+      }
+      return toEnvelope('search_inventory', args, {
+        items: [],
+        citations: [],
+        summary: 'Found 0'
+      });
+    }
+  });
+  assert.equal(hit.items.length, 1);
+  assert.equal(calls.includes('biotin lot'), true);
+});
+
+test('agent simulation contract parity guard keeps tool contract/capabilities/mock-dispatch in sync', () => {
+  const missingCapabilities = AGENT_IO_TOOL_NAMES.filter(
+    (name) => !Object.prototype.hasOwnProperty.call(agentTools.TOOL_CAPABILITY_MAP, name)
+  );
+  const missingMockDispatch = AGENT_IO_TOOL_NAMES.filter(
+    (name) => !AGENT_SIMULATION_DISPATCH_TOOL_NAMES.has(name)
+  );
+  assert.equal(
+    missingCapabilities.length,
+    0,
+    `Missing TOOL_CAPABILITY_MAP coverage: ${missingCapabilities.join(', ')}`
+  );
+  assert.equal(
+    missingMockDispatch.length,
+    0,
+    `Missing mock dispatch coverage: ${missingMockDispatch.join(', ')}`
+  );
+});
+
+test('agent simulation tool execution matrix covers all contract tools with write-policy behavior', async () => {
+  const snapshot = buildAgentSimulationSnapshot();
+  const matrixQuery = 'atlas biotin pd-1 transfection';
+  const { dispatch, coveredToolNames } = buildMockToolDispatch(snapshot);
+  const executedToolNames = [];
+
+  for (const toolName of AGENT_IO_TOOL_NAMES) {
+    const args = buildMockToolArgs(toolName, matrixQuery, snapshot);
+    const result = await agentTools.executeToolCall(toolName, args, {
+      contract: AGENT_IO_CONTRACT,
+      allowWriteTools: false,
+      dispatch,
+      fuzzyVocabulary: ['atlas', 'biotin', 'pd-1', 'transfection']
+    });
+
+    executedToolNames.push(toolName);
+    if (toolName === 'download_paper_pdf') {
+      assert.equal(result.ok, false);
+      assert.match(String(result.error || ''), /Write action blocked/i);
+      continue;
+    }
+
+    assert.equal(result.ok, true, `Expected ${toolName} to execute in matrix test`);
+    assert.equal(Array.isArray(result.items), true);
+    assert.equal(result.items.length > 0, true, `Expected ${toolName} to return at least one item`);
+    assert.equal(String(result.summary || '').length > 0, true);
+  }
+
+  const writeAllowed = await agentTools.executeToolCall(
+    'download_paper_pdf',
+    buildMockToolArgs('download_paper_pdf', matrixQuery, snapshot),
+    {
+      contract: AGENT_IO_CONTRACT,
+      allowWriteTools: true,
+      dispatch,
+      fuzzyVocabulary: ['atlas', 'biotin']
+    }
+  );
+  assert.equal(writeAllowed.ok, true);
+  assert.equal(Array.isArray(writeAllowed.items), true);
+  assert.equal(writeAllowed.items.length > 0, true);
+  assert.equal(coveredToolNames.has('download_paper_pdf'), true);
+  assert.deepEqual(executedToolNames.sort(), AGENT_IO_TOOL_NAMES.slice().sort());
+});
+
+test('agent simulation intent matrix executes expected tool families across request types', async () => {
+  const snapshot = buildAgentSimulationSnapshot();
+  const scenarios = [
+    {
+      intent: 'inventory_lookup',
+      message: 'What is the molecular weight of biotin in stock?',
+      expectedTools: ['search_inventory'],
+      expectNeedsTools: true
+    },
+    {
+      intent: 'record_lookup',
+      message: 'What did we do last time for PD-1 expression?',
+      expectedTools: ['search_notebook_entries', 'search_assays', 'search_gel_analyses'],
+      expectNeedsTools: true
+    },
+    {
+      intent: 'project_science_question',
+      message: 'Why did project Atlas fail after transfection?',
+      expectedTools: ['search_projects', 'search_notebook_entries', 'search_papers'],
+      expectNeedsTools: true
+    },
+    {
+      intent: 'paper_analysis',
+      message: 'Summarize this paper on PD-1 binder design.',
+      expectedTools: ['search_papers', 'search_pubmed'],
+      expectNeedsTools: true
+    },
+    {
+      intent: 'coding_data_analysis',
+      message: 'Use Python to analyze this CSV and compute mean values.',
+      expectedTools: ['run_python_sandbox'],
+      expectNeedsTools: true
+    },
+    {
+      intent: 'general_science_question',
+      message: 'What is ELISA and how does it work?',
+      expectedTools: [],
+      expectNeedsTools: false
+    },
+    {
+      intent: 'protocol_to_notebook',
+      message: 'I grew HEK293 cells and ran transfection today.',
+      expectedTools: ['search_protocols'],
+      expectNeedsTools: true
+    }
+  ];
+
+  for (const scenario of scenarios) {
+    const turn = await runSimulatedAgentTurn({
+      message: scenario.message,
+      snapshot,
+      allowWriteTools: false,
+      writeIntent: false
+    });
+
+    assert.equal(turn.routing.intent, scenario.intent);
+    assert.equal(turn.routing.plan.needs_tools, scenario.expectNeedsTools);
+    assert.equal(turn.routing.plan.needs_clarification, false);
+
+    if (!scenario.expectNeedsTools) {
+      assert.equal(turn.executedToolNames.length, 0);
+      continue;
+    }
+
+    scenario.expectedTools.forEach((toolName) => {
+      assert.equal(
+        turn.executedToolNames.includes(toolName),
+        true,
+        `Expected ${scenario.intent} to execute ${toolName}`
+      );
+    });
+    assert.equal(turn.toolTrace.length > 0, true);
+    assert.equal(turn.citations.length > 0, true);
+  }
+});
+
+test('agent simulation protocol-generation phrasing triggers routing clarification and write-approval gate', async () => {
+  const turn = await runSimulatedAgentTurn({
+    message: 'Generate a lab notebook page for today.',
+    snapshot: buildAgentSimulationSnapshot(),
+    allowWriteTools: false,
+    writeIntent: true
+  });
+
+  assert.equal(turn.routing.intent, 'protocol_to_notebook');
+  assert.equal(turn.routing.plan.needs_tools, true);
+  assert.equal(turn.routing.plan.needs_clarification, true);
+  assert.equal(String(turn.routing.plan.clarification_question || '').length > 0, true);
+  assert.equal(turn.requiresApproval, true);
+  assert.equal(turn.executedToolNames.length, 0);
+});
+
+test('protocol generation materialization persists normalized draft from extracted method payload', () => {
+  const document = createMockDocument([
+    'protocol-list-panel',
+    'protocol-editor-panel',
+    'protocol-view-panel',
+    'create-protocol-btn',
+    'protocol-editor-back-btn',
+    'protocol-cancel-btn',
+    'protocol-view-back-btn',
+    'protocol-editor-heading',
+    'protocol-view-title',
+    'protocol-view-content',
+    'protocol-form',
+    'protocol-name',
+    'protocol-purpose',
+    'protocol-materials',
+    'protocol-steps',
+    'protocol-troubleshooting',
+    'add-placeholder-btn',
+    'placeholder-name',
+    'protocol-share-status',
+    'protocol-share-link-panel',
+    'protocol-share-link-output',
+    'protocol-list',
+    'protocol-sort-field-btn',
+    'protocol-sort-order-btn'
+  ]);
+  const protocolForm = document.getElementById('protocol-form');
+  const protocolName = document.getElementById('protocol-name');
+  const protocolPurpose = document.getElementById('protocol-purpose');
+  const protocolMaterials = document.getElementById('protocol-materials');
+  const protocolSteps = document.getElementById('protocol-steps');
+  const protocolTroubleshooting = document.getElementById('protocol-troubleshooting');
+  wireFormReset(protocolForm, [
+    protocolName,
+    protocolPurpose,
+    protocolMaterials,
+    protocolSteps,
+    protocolTroubleshooting
+  ]);
+
+  let persistCalls = 0;
+  const state = {
+    protocols: [],
+    notebookEntries: [],
+    workflows: [],
+    workflowTemplates: [],
+    assays: [],
+    gelAnalyses: [],
+    messages: [],
+    members: [],
+    settings: {
+      personalInfo: {
+        enanaEmail: ''
+      }
+    }
+  };
+
+  const protocolModule = loadEsmStyleModule(path.join(__dirname, 'modules', 'protocol-management.js'), {
+    document,
+    TextEncoder,
+    btoa: btoaPolyfill
+  });
+  const protocol = protocolModule.initProtocolManagement({
+    state,
+    persist: () => {
+      persistCalls += 1;
+    },
+    createId: (() => {
+      let idx = 0;
+      return () => `generated-protocol-${idx += 1}`;
+    })(),
+    safeText: shared.safeText,
+    onProtocolsChanged: () => {},
+    trackGrowthEvent: () => {}
+  });
+
+  const created = protocol.addDraftFromExtractedMethod(
+    {
+      title: 'Transfection Rescue',
+      purpose: 'Recover expression by adjusting transfection conditions.',
+      materials: ['HEK293 cells', 'Transfection reagent'],
+      steps: [
+        { step_number: 2, action: 'Incubate for [time] at 37 C.' },
+        { step_number: 1, action: 'Add [] uL DNA mix.' }
+      ],
+      troubleshooting: [
+        {
+          problem: 'Low expression',
+          possible_cause: 'Inefficient transfection',
+          solution: 'Increase DNA purity and optimize reagent ratio'
+        }
+      ]
+    },
+    { title: 'Atlas Study' }
+  );
+
+  assert.equal(created, true);
+  assert.match(protocolName.value, /Atlas Study - Transfection Rescue/);
+  assert.match(protocolPurpose.value, /Recover expression/);
+  assert.match(protocolSteps.value, /Add \[value\] uL DNA mix/);
+  assert.match(protocolSteps.value, /Incubate for \[time\]/);
+  assert.match(protocolTroubleshooting.value, /Problem: Low expression/);
+
+  trigger(protocolForm, 'submit');
+
+  assert.equal(state.protocols.length, 1);
+  const persisted = state.protocols[0];
+  assert.match(String(persisted.id || ''), /^generated-protocol-/);
+  assert.equal(persisted.name, 'Atlas Study - Transfection Rescue');
+  assert.equal(Array.isArray(persisted.materials), true);
+  assert.equal(persisted.materials.length, 2);
+  assert.equal(persisted.materials.includes('HEK293 cells'), true);
+  assert.equal(persisted.materials.includes('Transfection reagent'), true);
+  assert.equal(Array.isArray(persisted.steps), true);
+  assert.equal(persisted.steps.length, 2);
+  assert.equal(persisted.steps.some((step) => String(step?.text || '').includes('{{ph:')), true);
+  const placeholderNames = persisted.steps.flatMap((step) => (
+    Array.isArray(step?.placeholders) ? step.placeholders.map((item) => item?.name) : []
+  ));
+  assert.equal(placeholderNames.includes('value'), true);
+  assert.equal(placeholderNames.includes('time'), true);
+  assert.ok(Number.isFinite(Date.parse(persisted.createdAt)));
+  assert.ok(Number.isFinite(Date.parse(persisted.updatedAt)));
+  assert.equal(persistCalls > 0, true);
 });
 
 test('createUid uses type:id convention', () => {
@@ -2261,6 +3292,10 @@ test('main agent controller output includes routing metadata fields', () => {
   assert.match(mainSource, /buildRuleBasedRoutingDecision\(/);
   assert.match(mainSource, /shouldUseRoutingFallback\(/);
   assert.match(mainSource, /requestRoutingFallbackPayload\(/);
+  assert.match(mainSource, /executeToolCall\(/);
+  assert.match(mainSource, /runAgentToolDispatchLegacy\(/);
+  assert.match(mainSource, /tool_selection_rationale/);
+  assert.match(mainSource, /selector score=/);
 });
 
 test('telegram bot internals normalize search and module parsing', () => {
