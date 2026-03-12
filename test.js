@@ -348,6 +348,7 @@ const shared = loadEsmStyleModule(path.join(__dirname, 'modules', 'shared.js'), 
 });
 const agentRouting = require(path.join(__dirname, 'agent-routing.js'));
 const agentTools = require(path.join(__dirname, 'agent-tools.js'));
+const agentProtocolMatching = require(path.join(__dirname, 'agent-protocol-matching.js'));
 const objectGraph = loadEsmStyleModule(path.join(__dirname, 'modules', 'object-graph.js'));
 const toolBox = loadEsmStyleModule(
   path.join(__dirname, 'modules', 'tool-box.js'),
@@ -1117,6 +1118,7 @@ async function runSimulatedAgentTurn({
       ruleDecision,
       fallbackPayload,
       message,
+      snapshot,
       writeIntent,
       availableToolNames,
       toolContract: AGENT_IO_CONTRACT
@@ -1469,6 +1471,205 @@ test('agent-routing fallback payload parsing accepts valid intent payload', () =
   assert.equal(parsed.intent, 'inventory_lookup');
   assert.equal(parsed.entities.compound, 'biotin');
   assert.equal(parsed.needs_clarification, false);
+});
+
+test('agent-protocol-matching builds searchable docs from mixed protocol shapes', () => {
+  const docs = agentProtocolMatching.buildSearchableProtocolDocs({
+    protocols: [
+      {
+        id: 'pr1',
+        name: 'Cell Prep',
+        category: 'cell',
+        purpose: 'Prepare HEK293 cells for transfection.',
+        tags: 'cell, transfection',
+        projectName: 'Atlas',
+        steps: [
+          'Seed cells at 70% confluence',
+          { text: 'Incubate for [time]', placeholders: [{ name: 'time' }] }
+        ]
+      },
+      {
+        id: 'pr2',
+        title: 'Legacy ELISA',
+        description: 'ELISA plate workflow.',
+        steps: [{ instruction: 'Read plate at 450nm' }]
+      }
+    ],
+    projects: [{ id: 'project-atlas', name: 'Atlas' }],
+    notebookEntries: [{ protocolId: 'pr2', projectId: 'project-atlas', updatedAt: '2026-02-01T00:00:00.000Z' }]
+  });
+
+  assert.equal(docs.length, 2);
+  const cellPrep = docs.find((doc) => doc.id === 'pr1');
+  const legacyElisa = docs.find((doc) => doc.id === 'pr2');
+  assert.equal(Boolean(cellPrep), true);
+  assert.equal(Boolean(legacyElisa), true);
+  assert.equal(cellPrep.linked_project, 'Atlas');
+  assert.equal(cellPrep.placeholders.includes('time'), true);
+  assert.equal(legacyElisa.linked_project, 'Atlas');
+  assert.equal(legacyElisa.steps[0], 'Read plate at 450nm');
+});
+
+test('agent-protocol-matching resolveProtocolMatch handles clear and empty candidate paths', () => {
+  const clear = agentProtocolMatching.resolveProtocolMatch({
+    message: 'I grew HEK293 cells and ran transfection today',
+    entities: { activity: 'transfection', cell_line: 'HEK293' },
+    protocols: [
+      {
+        id: 'pr-transfection',
+        name: 'HEK293 Transfection',
+        category: 'cell',
+        steps: ['Seed HEK293 cells', 'Mix DNA and reagent', 'Incubate for 24h']
+      },
+      {
+        id: 'pr-elisa',
+        name: 'ELISA Workflow',
+        category: 'assay',
+        steps: ['Prepare plate', 'Read absorbance']
+      }
+    ],
+    projects: [],
+    notebookEntries: [],
+    maxCandidates: 3
+  });
+  assert.equal(clear.candidates.length > 0, true);
+  assert.equal(clear.candidates[0].protocol_name, 'HEK293 Transfection');
+
+  const empty = agentProtocolMatching.resolveProtocolMatch({
+    message: 'I ran an unknown workflow',
+    entities: { activity: 'unknown workflow' },
+    protocols: [],
+    projects: [],
+    notebookEntries: [],
+    maxCandidates: 3
+  });
+  assert.equal(empty.candidates.length, 0);
+  assert.equal(empty.ambiguity.needs_clarification, true);
+  assert.equal(empty.ambiguity.ambiguity_reason, 'no_protocol_candidates');
+});
+
+test('agent-protocol-matching produces matcher-ranked rows compatible with search_protocols output shape', () => {
+  const resolved = agentProtocolMatching.resolveProtocolMatch({
+    message: 'Transfection in HEK293 cells',
+    entities: { activity: 'transfection', cell_line: 'HEK293' },
+    protocols: [
+      {
+        id: 'pr-transfection',
+        name: 'HEK293 Transfection',
+        category: 'cell',
+        steps: ['Seed HEK293', 'Mix DNA and reagent']
+      },
+      {
+        id: 'pr-legacy',
+        name: 'PCR Setup',
+        category: 'molecular',
+        steps: ['Prepare primers']
+      }
+    ],
+    projects: [],
+    notebookEntries: [],
+    maxCandidates: 5
+  });
+
+  const mapped = resolved.candidates.map((candidate) => ({
+    id: String(candidate.protocol_id || ''),
+    name: String(candidate.protocol_name || ''),
+    category: String(candidate.category || ''),
+    steps: Array.isArray(candidate.steps) ? candidate.steps : []
+  }));
+
+  assert.equal(mapped.length > 0, true);
+  assert.equal(mapped[0].name, 'HEK293 Transfection');
+  assert.equal(Array.isArray(mapped[0].steps), true);
+});
+
+test('agent-protocol-matching ambiguity thresholds and follow-up generation are deterministic', () => {
+  const lowScore = agentProtocolMatching.evaluateProtocolAmbiguity({
+    ranked: [{ protocol_name: 'A', score: 0.59 }]
+  });
+  assert.equal(lowScore.needs_clarification, true);
+  assert.equal(lowScore.ambiguity_reason, 'top_score_below_threshold');
+
+  const closeScores = agentProtocolMatching.evaluateProtocolAmbiguity({
+    ranked: [
+      { protocol_name: 'A', score: 0.81 },
+      { protocol_name: 'B', score: 0.74 }
+    ]
+  });
+  assert.equal(closeScores.needs_clarification, true);
+  assert.equal(closeScores.ambiguity_reason, 'top_two_scores_too_close');
+
+  const clearScores = agentProtocolMatching.evaluateProtocolAmbiguity({
+    ranked: [
+      { protocol_name: 'A', score: 0.81 },
+      { protocol_name: 'B', score: 0.71 }
+    ]
+  });
+  assert.equal(clearScores.needs_clarification, false);
+
+  const followUp = agentProtocolMatching.buildProtocolFollowUpQuestion({
+    ranked: [
+      { protocol_name: 'HEK293 Maintenance' },
+      { protocol_name: 'Expi293 Expansion' },
+      { protocol_name: 'Transient Transfection Setup' }
+    ],
+    entities: { cell_line: 'HEK293' }
+  });
+  assert.match(followUp, /HEK293 Maintenance/);
+  assert.match(followUp, /Expi293 Expansion/);
+  assert.match(followUp, /Transient Transfection Setup/);
+  assert.equal(/please tell me more/i.test(followUp), false);
+});
+
+test('agent-routing protocol intent includes protocol match metadata and candidates', () => {
+  const snapshot = buildAgentSimulationSnapshot();
+  const routing = agentRouting.buildRuleBasedRoutingDecision({
+    message: 'I grew HEK293 cells and ran transfection today.',
+    snapshot,
+    availableToolNames: AGENT_IO_TOOL_NAMES,
+    toolContract: AGENT_IO_CONTRACT,
+    writeIntent: false
+  });
+
+  assert.equal(routing.intent, 'protocol_to_notebook');
+  assert.equal(Boolean(routing.plan.protocol_match), true);
+  assert.equal(Array.isArray(routing.plan.protocol_candidates), true);
+  assert.equal(routing.plan.protocol_candidates.length > 0, true);
+  assert.equal(routing.plan.protocol_candidates[0].protocol_name.includes('Transfection'), true);
+});
+
+test('agent-routing fallback merge keeps deterministic protocol matcher metadata', () => {
+  const snapshot = buildAgentSimulationSnapshot();
+  const ruleDecision = agentRouting.buildRuleBasedRoutingDecision({
+    message: 'help',
+    snapshot,
+    availableToolNames: AGENT_IO_TOOL_NAMES,
+    toolContract: AGENT_IO_CONTRACT,
+    writeIntent: false
+  });
+  const merged = agentRouting.mergeRoutingFallback({
+    ruleDecision,
+    fallbackPayload: JSON.stringify({
+      intent: 'protocol_to_notebook',
+      confidence: 0.82,
+      entities: {
+        activity: 'transfection',
+        cell_line: 'HEK293'
+      },
+      needs_clarification: false,
+      clarification_question: '',
+      reason: 'Protocol-like activity detected.'
+    }),
+    message: 'I ran transfection in HEK293.',
+    snapshot,
+    writeIntent: false,
+    availableToolNames: AGENT_IO_TOOL_NAMES,
+    toolContract: AGENT_IO_CONTRACT
+  });
+  assert.equal(merged.intent, 'protocol_to_notebook');
+  assert.equal(Boolean(merged.plan.protocol_match), true);
+  assert.equal(Array.isArray(merged.plan.protocol_candidates), true);
+  assert.equal(merged.plan.protocol_candidates.length > 0, true);
 });
 
 test('agent-tools registry loader/list/find APIs return expected tool subsets', () => {
@@ -1880,6 +2081,45 @@ test('agent simulation protocol-generation phrasing triggers routing clarificati
   assert.equal(turn.routing.plan.needs_clarification, true);
   assert.equal(String(turn.routing.plan.clarification_question || '').length > 0, true);
   assert.equal(turn.requiresApproval, true);
+  assert.equal(turn.executedToolNames.length, 0);
+});
+
+test('agent simulation protocol ambiguity short-circuits tool execution with matcher-driven clarification', async () => {
+  const snapshot = buildAgentSimulationSnapshot();
+  snapshot.protocols = [
+    {
+      id: 'protocol-transfection-a',
+      name: 'HEK293 Transfection Setup',
+      category: 'cell',
+      steps: ['Seed HEK293 cells', 'Add DNA complex']
+    },
+    {
+      id: 'protocol-transfection-b',
+      name: 'HEK293 Transfection Maintenance',
+      category: 'cell',
+      steps: ['Seed HEK293 cells', 'Add transfection reagent']
+    },
+    {
+      id: 'protocol-assay',
+      name: 'ELISA Workflow',
+      category: 'assay',
+      steps: ['Prepare plate', 'Read absorbance']
+    }
+  ];
+
+  const turn = await runSimulatedAgentTurn({
+    message: 'I did HEK293 transfection today.',
+    snapshot,
+    allowWriteTools: false,
+    writeIntent: false
+  });
+
+  assert.equal(turn.routing.intent, 'protocol_to_notebook');
+  assert.equal(turn.routing.plan.protocol_match.needs_clarification, true);
+  assert.equal(turn.routing.plan.needs_clarification, true);
+  assert.equal(Array.isArray(turn.routing.plan.protocol_candidates), true);
+  assert.equal(turn.routing.plan.protocol_candidates.length >= 2, true);
+  assert.match(String(turn.routing.plan.clarification_question || ''), /Which protocol matches your run/i);
   assert.equal(turn.executedToolNames.length, 0);
 });
 
@@ -3065,7 +3305,38 @@ test('agent-chat sends settings API key to main process and stores assistant res
               needs_clarification: false,
               clarification_reason: '',
               clarification_question: '',
-              selected_tool_names: ['search_protocols']
+              selected_tool_names: ['search_protocols'],
+              protocol_match: {
+                selected_protocol_id: 'pr1',
+                selected_protocol_name: 'Cell Prep',
+                top_score: 0.86,
+                score_delta: 0.2,
+                needs_clarification: false,
+                ambiguity_reason: ''
+              },
+              protocol_candidates: [
+                {
+                  protocol_id: 'pr1',
+                  protocol_name: 'Cell Prep',
+                  category: 'cell',
+                  score: 0.86,
+                  semantic_score: 0.78,
+                  entity_overlap_score: 0.9,
+                  project_relevance_score: 0.8,
+                  recent_workflow_relevance_score: 0.64,
+                  reason: 'semantic=0.78 entity=0.90 project=0.80 recent=0.64'
+                }
+              ],
+              tool_selection_rationale: [
+                {
+                  tool: 'search_protocols',
+                  score: 12,
+                  entityScore: 5,
+                  taskScore: 4,
+                  exactnessScore: 3,
+                  reason: 'entity match, task match, keyword overlap'
+                }
+              ]
             },
             classifier: {
               source: 'rules',
@@ -3140,6 +3411,9 @@ test('agent-chat sends settings API key to main process and stores assistant res
   assert.match(history.innerHTML, /Assistant/);
   assert.match(history.innerHTML, /Routing/);
   assert.match(history.innerHTML, /protocol_to_notebook/);
+  assert.match(history.innerHTML, /Routing Protocol Match/);
+  assert.match(history.innerHTML, /Routing Protocol Candidates/);
+  assert.match(history.innerHTML, /Cell Prep/);
   assert.equal(sendBtn.disabled, false);
   assert.equal(clearBtn.disabled, false);
   assert.equal(projectSelect.disabled, false);
@@ -3562,6 +3836,11 @@ test('main agent controller output includes routing metadata fields', () => {
   assert.match(mainSource, /runAgentToolDispatchLegacy\(/);
   assert.match(mainSource, /tool_selection_rationale/);
   assert.match(mainSource, /selector score=/);
+});
+
+test('main search_protocols tool path uses Phase 4 protocol matcher ranking', () => {
+  const mainSource = fs.readFileSync(path.join(__dirname, 'main.js'), 'utf8');
+  assert.match(mainSource, /if \(name === 'search_protocols'\)[\s\S]*resolveProtocolMatch\(/);
 });
 
 test('telegram bot internals normalize search and module parsing', () => {

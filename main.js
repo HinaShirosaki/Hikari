@@ -32,6 +32,7 @@ const {
   mergeRoutingFallback,
   buildRoutingClarificationQuestion
 } = require('./agent-routing');
+const { resolveProtocolMatch } = require('./agent-protocol-matching');
 let AGENT_IO_CONTRACT_RAW = {};
 try {
   AGENT_IO_CONTRACT_RAW = require('./data/agent-io-contract.json');
@@ -2325,6 +2326,21 @@ function normalizeRoutingPayload(rawRouting) {
     exactnessScore: Number.isFinite(Number(row?.exactnessScore)) ? Number(row.exactnessScore) : 0,
     reason: cleanText(row?.reason, 220)
   })).filter((row) => row.tool);
+  const protocolMatch = plan.protocol_match && typeof plan.protocol_match === 'object' ? plan.protocol_match : {};
+  const protocolCandidates = asArray(plan.protocol_candidates).map((row) => ({
+    protocol_id: cleanText(row?.protocol_id, 80),
+    protocol_name: cleanText(row?.protocol_name, 220),
+    category: cleanText(row?.category, 80),
+    score: Number.isFinite(Number(row?.score)) ? Number(row.score) : 0,
+    semantic_score: Number.isFinite(Number(row?.semantic_score)) ? Number(row.semantic_score) : 0,
+    entity_overlap_score: Number.isFinite(Number(row?.entity_overlap_score)) ? Number(row.entity_overlap_score) : 0,
+    project_relevance_score: Number.isFinite(Number(row?.project_relevance_score)) ? Number(row.project_relevance_score) : 0,
+    recent_workflow_relevance_score: Number.isFinite(Number(row?.recent_workflow_relevance_score))
+      ? Number(row.recent_workflow_relevance_score)
+      : 0,
+    reason: cleanText(row?.reason, 220),
+    steps: asArray(row?.steps).map((step) => cleanText(step, 220)).filter(Boolean).slice(0, 8)
+  })).filter((row) => row.protocol_name);
   return {
     intent: ROUTING_INTENTS.includes(cleanText(source.intent, 80)) ? cleanText(source.intent, 80) : 'general_science_question',
     confidence: Number.isFinite(Number(source.confidence))
@@ -2351,7 +2367,16 @@ function normalizeRoutingPayload(rawRouting) {
       clarification_reason: cleanText(plan.clarification_reason, 260),
       clarification_question: cleanText(plan.clarification_question, 320),
       selected_tool_names: selectedToolNames,
-      tool_selection_rationale: toolSelectionRationale
+      tool_selection_rationale: toolSelectionRationale,
+      protocol_match: {
+        selected_protocol_id: cleanText(protocolMatch.selected_protocol_id, 80),
+        selected_protocol_name: cleanText(protocolMatch.selected_protocol_name, 220),
+        top_score: Number.isFinite(Number(protocolMatch.top_score)) ? Number(protocolMatch.top_score) : 0,
+        score_delta: Number.isFinite(Number(protocolMatch.score_delta)) ? Number(protocolMatch.score_delta) : 0,
+        needs_clarification: protocolMatch.needs_clarification === true,
+        ambiguity_reason: cleanText(protocolMatch.ambiguity_reason, 220)
+      },
+      protocol_candidates: protocolCandidates
     },
     classifier: {
       source: cleanText(classifier.source, 80) || 'rules',
@@ -2380,6 +2405,25 @@ function buildRoutingAssumptionRows(routing) {
   if (asArray(normalized.plan.tool_selection_rationale).length) {
     const top = normalized.plan.tool_selection_rationale[0];
     rows.push(`Tool selector top candidate: ${top.tool} score=${top.score} (${top.reason || 'no reason'}).`);
+  }
+  if (normalized.plan.protocol_match.selected_protocol_name) {
+    rows.push(
+      `Protocol matcher selected "${normalized.plan.protocol_match.selected_protocol_name}" `
+      + `(score=${normalized.plan.protocol_match.top_score.toFixed(2)}).`
+    );
+  }
+  if (normalized.plan.protocol_match.needs_clarification) {
+    rows.push(
+      `Protocol matcher requested clarification (${normalized.plan.protocol_match.ambiguity_reason || 'ambiguous'}; `
+      + `delta=${normalized.plan.protocol_match.score_delta.toFixed(2)}).`
+    );
+  }
+  if (asArray(normalized.plan.protocol_candidates).length) {
+    const topCandidate = normalized.plan.protocol_candidates[0];
+    rows.push(
+      `Protocol candidate top-1: ${topCandidate.protocol_name} `
+      + `score=${topCandidate.score.toFixed(2)} semantic=${topCandidate.semantic_score.toFixed(2)}.`
+    );
   }
   if (normalized.classifier.fallbackAttempted) {
     rows.push(normalized.classifier.fallbackUsed
@@ -2811,26 +2855,27 @@ async function runAgentToolDispatchLegacy(name, args, snapshot, options = {}) {
   }
 
   if (name === 'search_protocols') {
-    const items = pickTopMatches(
-      snapshot.protocols,
-      (protocol) => `${protocol?.name || ''} ${protocol?.category || ''} ${
-        asArray(protocol?.steps).map((step) => protocolStepText(step)).filter(Boolean).join(' ')
-      }`,
-      query,
-      limit
-    ).map((protocol) => ({
-      id: cleanText(protocol?.id, 80),
-      name: cleanText(protocol?.name, 180),
-      category: cleanText(protocol?.category, 80),
-      steps: asArray(protocol?.steps).slice(0, 8).map((step) => protocolStepText(step)).filter(Boolean)
-    }));
+    const match = resolveProtocolMatch({
+      message: query,
+      entities: {},
+      protocols: asArray(snapshot.protocols),
+      projects: asArray(snapshot.projects),
+      notebookEntries: asArray(snapshot.notebookEntries),
+      maxCandidates: limit
+    });
+    const items = asArray(match?.candidates).slice(0, limit).map((candidate) => ({
+      id: cleanText(candidate?.protocol_id, 80),
+      name: cleanText(candidate?.protocol_name, 180),
+      category: cleanText(candidate?.category, 80),
+      steps: asArray(candidate?.steps).slice(0, 8).map((step) => protocolStepText(step)).filter(Boolean)
+    })).filter((item) => item.name);
 
     return buildAgentToolOutputEnvelope(name, normalizedArgs, {
       items,
       citations: items.map((protocol) => ({
         source: 'protocol',
         pointer: protocol.id || protocol.name,
-        reason: 'Matched protocol name/steps.'
+        reason: 'Matched protocol with hybrid keyword and semantic ranking.'
       })),
       summary: `Found ${items.length} matching protocols.`
     });
@@ -5202,6 +5247,7 @@ async function runAgentController(payload) {
       ruleDecision: ruleRouting,
       fallbackPayload,
       message,
+      snapshot,
       writeIntent: containsWriteIntent(message),
       availableToolNames,
       toolContract: AGENT_TOOL_REGISTRY

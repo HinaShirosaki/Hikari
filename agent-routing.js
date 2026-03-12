@@ -1,4 +1,5 @@
 const { selectToolsForRequest } = require('./agent-tools');
+const { resolveProtocolMatch } = require('./agent-protocol-matching');
 
 const ROUTING_INTENTS = Object.freeze([
   'protocol_to_notebook',
@@ -306,7 +307,16 @@ function buildExecutionPlan({
     needs_clarification: false,
     clarification_reason: '',
     clarification_question: '',
-    selected_tool_names: []
+    selected_tool_names: [],
+    protocol_match: {
+      selected_protocol_id: '',
+      selected_protocol_name: '',
+      top_score: 0,
+      score_delta: 0,
+      needs_clarification: false,
+      ambiguity_reason: ''
+    },
+    protocol_candidates: []
   };
 
   if (normalizedIntent === 'protocol_to_notebook') {
@@ -372,6 +382,71 @@ function buildExecutionPlan({
   return plan;
 }
 
+function normalizeProtocolCandidates(candidates) {
+  return asArray(candidates).slice(0, 3).map((candidate) => ({
+    protocol_id: cleanText(candidate?.protocol_id, 80),
+    protocol_name: cleanText(candidate?.protocol_name, 220),
+    category: cleanText(candidate?.category, 80),
+    score: Number.isFinite(Number(candidate?.score)) ? Number(candidate.score) : 0,
+    semantic_score: Number.isFinite(Number(candidate?.semantic_score)) ? Number(candidate.semantic_score) : 0,
+    entity_overlap_score: Number.isFinite(Number(candidate?.entity_overlap_score))
+      ? Number(candidate.entity_overlap_score)
+      : 0,
+    project_relevance_score: Number.isFinite(Number(candidate?.project_relevance_score))
+      ? Number(candidate.project_relevance_score)
+      : 0,
+    recent_workflow_relevance_score: Number.isFinite(Number(candidate?.recent_workflow_relevance_score))
+      ? Number(candidate.recent_workflow_relevance_score)
+      : 0,
+    reason: cleanText(candidate?.reason, 220),
+    steps: asArray(candidate?.steps).map((step) => cleanText(step, 220)).filter(Boolean).slice(0, 8)
+  })).filter((candidate) => candidate.protocol_name);
+}
+
+function applyProtocolMatchingToPlan({
+  intent,
+  message,
+  entities,
+  plan,
+  snapshot = {}
+}) {
+  if (intent !== 'protocol_to_notebook') {
+    return plan;
+  }
+
+  const match = resolveProtocolMatch({
+    message,
+    entities,
+    protocols: asArray(snapshot.protocols),
+    projects: asArray(snapshot.projects),
+    notebookEntries: asArray(snapshot.notebookEntries),
+    maxCandidates: 3
+  });
+  const candidates = normalizeProtocolCandidates(match?.candidates);
+  const selected = match?.selected && typeof match.selected === 'object' ? match.selected : {};
+  const ambiguity = match?.ambiguity && typeof match.ambiguity === 'object' ? match.ambiguity : {};
+
+  plan.protocol_match = {
+    selected_protocol_id: cleanText(selected.protocol_id, 80),
+    selected_protocol_name: cleanText(selected.protocol_name, 220),
+    top_score: Number.isFinite(Number(ambiguity.top_score)) ? Number(ambiguity.top_score) : 0,
+    score_delta: Number.isFinite(Number(ambiguity.score_delta)) ? Number(ambiguity.score_delta) : 0,
+    needs_clarification: ambiguity.needs_clarification === true,
+    ambiguity_reason: cleanText(ambiguity.ambiguity_reason, 220)
+  };
+  plan.protocol_candidates = candidates;
+
+  if (ambiguity.needs_clarification === true) {
+    plan.needs_clarification = true;
+    plan.clarification_reason = cleanText(ambiguity.ambiguity_reason, 220) || 'Protocol workflow is ambiguous.';
+    plan.clarification_question = cleanText(ambiguity.clarification_question, 320)
+      || plan.clarification_question
+      || 'Which protocol matches your workflow?';
+  }
+
+  return plan;
+}
+
 function selectToolNamesForPlan(plan, availableToolNames = []) {
   const available = new Set(uniqueStrings(availableToolNames));
   const selected = [];
@@ -429,6 +504,7 @@ function buildRuleBasedRoutingDecision({
   const context = {
     projects: asArray(snapshot.projects),
     protocols: asArray(snapshot.protocols),
+    notebookEntries: asArray(snapshot.notebookEntries),
     projectNames: asArray(snapshot.projects).map((project) => cleanText(project?.name, 180)).filter(Boolean)
   };
   const classification = scoreIntentByRules(message, context);
@@ -441,6 +517,13 @@ function buildRuleBasedRoutingDecision({
     classificationConfidence: classification.confidence,
     fallbackUsed: false,
     tieDetected: classification.tieDetected
+  });
+  applyProtocolMatchingToPlan({
+    intent: classification.intent,
+    message,
+    entities,
+    plan,
+    snapshot: context
   });
   const selection = toolContract
     ? selectToolsForRequest({
@@ -534,12 +617,14 @@ function mergeRoutingFallback({
   ruleDecision,
   fallbackPayload,
   message,
+  snapshot = {},
   writeIntent = false,
   availableToolNames = [],
   toolContract = null
 }) {
   const base = ruleDecision && typeof ruleDecision === 'object' ? ruleDecision : buildRuleBasedRoutingDecision({
     message,
+    snapshot,
     availableToolNames,
     toolContract,
     writeIntent
@@ -588,13 +673,23 @@ function mergeRoutingFallback({
     fallbackUsed: true,
     tieDetected: false
   });
+  applyProtocolMatchingToPlan({
+    intent: parsed.intent,
+    message,
+    entities: parsed.entities,
+    plan: mergedPlan,
+    snapshot
+  });
   if (parsed.needs_clarification) {
     mergedPlan.needs_clarification = true;
   }
-  if (parsed.clarification_question) {
+  const protocolMatcherOwnsClarification = parsed.intent === 'protocol_to_notebook'
+    && mergedPlan.protocol_match
+    && mergedPlan.protocol_match.needs_clarification === true;
+  if (parsed.clarification_question && !protocolMatcherOwnsClarification) {
     mergedPlan.clarification_question = parsed.clarification_question;
   }
-  if (parsed.reason && !mergedPlan.clarification_reason) {
+  if (parsed.reason && !mergedPlan.clarification_reason && !protocolMatcherOwnsClarification) {
     mergedPlan.clarification_reason = parsed.reason;
   }
   const mergedSelection = toolContract

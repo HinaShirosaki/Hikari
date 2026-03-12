@@ -465,14 +465,15 @@ export function initAgentChat({ state, persist, createId, safeText }) {
     const routingConfidenceText = Number.isFinite(routingConfidence) ? routingConfidence.toFixed(2) : 'n/a';
     const routingSource = trimText(routing.classifier?.source, 80) || 'rules';
     const routingHeader = `intent=${routingIntent} | confidence=${routingConfidenceText} | source=${routingSource}`;
+    const routingPlan = routing.plan && typeof routing.plan === 'object' ? routing.plan : {};
     const routingEntityRows = Object.entries(routing.entities && typeof routing.entities === 'object' ? routing.entities : {})
       .map(([key, value]) => {
         const clean = trimText(value, 180);
         return clean ? `${key}: ${clean}` : '';
       })
       .filter(Boolean);
-    const routingPlanRows = Object.entries(routing.plan && typeof routing.plan === 'object' ? routing.plan : {})
-      .filter(([key]) => key !== 'selected_tool_names')
+    const routingPlanRows = Object.entries(routingPlan)
+      .filter(([key]) => !['selected_tool_names', 'tool_selection_rationale', 'protocol_match', 'protocol_candidates'].includes(key))
       .map(([key, value]) => {
         if (typeof value === 'boolean') {
           return `${key}: ${value}`;
@@ -481,7 +482,60 @@ export function initAgentChat({ state, persist, createId, safeText }) {
         return clean ? `${key}: ${clean}` : '';
       })
       .filter(Boolean);
-    const routingToolRows = asArray(routing.plan?.selected_tool_names).map((tool) => trimText(tool, 120)).filter(Boolean);
+    const routingProtocolMatch = routingPlan.protocol_match && typeof routingPlan.protocol_match === 'object'
+      ? routingPlan.protocol_match
+      : {};
+    const routingProtocolMatchRows = [
+      trimText(routingProtocolMatch.selected_protocol_id, 80)
+        ? `selected_protocol_id: ${trimText(routingProtocolMatch.selected_protocol_id, 80)}`
+        : '',
+      trimText(routingProtocolMatch.selected_protocol_name, 180)
+        ? `selected_protocol_name: ${trimText(routingProtocolMatch.selected_protocol_name, 180)}`
+        : '',
+      Number.isFinite(Number(routingProtocolMatch.top_score))
+        ? `top_score: ${Number(routingProtocolMatch.top_score).toFixed(3)}`
+        : '',
+      Number.isFinite(Number(routingProtocolMatch.score_delta))
+        ? `score_delta: ${Number(routingProtocolMatch.score_delta).toFixed(3)}`
+        : '',
+      `needs_clarification: ${routingProtocolMatch.needs_clarification === true}`,
+      trimText(routingProtocolMatch.ambiguity_reason, 180)
+        ? `ambiguity_reason: ${trimText(routingProtocolMatch.ambiguity_reason, 180)}`
+        : ''
+    ].filter(Boolean);
+    const routingProtocolCandidateRows = asArray(routingPlan.protocol_candidates).map((candidate, index) => {
+      const name = trimText(candidate?.protocol_name, 180) || trimText(candidate?.protocol_id, 80) || `candidate_${index + 1}`;
+      const score = Number(candidate?.score);
+      const semantic = Number(candidate?.semantic_score);
+      const entity = Number(candidate?.entity_overlap_score);
+      const project = Number(candidate?.project_relevance_score);
+      const recent = Number(candidate?.recent_workflow_relevance_score);
+      const metrics = [
+        Number.isFinite(score) ? `score=${score.toFixed(3)}` : '',
+        Number.isFinite(semantic) ? `semantic=${semantic.toFixed(3)}` : '',
+        Number.isFinite(entity) ? `entity=${entity.toFixed(3)}` : '',
+        Number.isFinite(project) ? `project=${project.toFixed(3)}` : '',
+        Number.isFinite(recent) ? `recent=${recent.toFixed(3)}` : ''
+      ].filter(Boolean).join(' ');
+      const reason = trimText(candidate?.reason, 180);
+      return `${index + 1}. ${name}${metrics ? ` (${metrics})` : ''}${reason ? ` - ${reason}` : ''}`;
+    }).filter(Boolean);
+    const routingToolRows = asArray(routingPlan.selected_tool_names).map((tool) => trimText(tool, 120)).filter(Boolean);
+    const routingSelectorRows = asArray(routingPlan.tool_selection_rationale).map((row, index) => {
+      const tool = trimText(row?.tool, 120) || `tool_${index + 1}`;
+      const score = Number(row?.score);
+      const entity = Number(row?.entityScore);
+      const task = Number(row?.taskScore);
+      const exactness = Number(row?.exactnessScore);
+      const reason = trimText(row?.reason, 180);
+      const metrics = [
+        Number.isFinite(score) ? `score=${score.toFixed(2)}` : '',
+        Number.isFinite(entity) ? `entity=${entity.toFixed(2)}` : '',
+        Number.isFinite(task) ? `task=${task.toFixed(2)}` : '',
+        Number.isFinite(exactness) ? `exactness=${exactness.toFixed(2)}` : ''
+      ].filter(Boolean).join(' ');
+      return `${tool}${metrics ? ` (${metrics})` : ''}${reason ? ` - ${reason}` : ''}`;
+    }).filter(Boolean);
     const routingClassifierRows = [
       `fallbackAttempted: ${routing.classifier?.fallbackAttempted === true}`,
       `fallbackUsed: ${routing.classifier?.fallbackUsed === true}`,
@@ -516,7 +570,10 @@ export function initAgentChat({ state, persist, createId, safeText }) {
         ${renderMetaList('Routing', routingRows)}
         ${renderMetaList('Routing Entities', routingEntityRows)}
         ${renderMetaList('Routing Plan', routingPlanRows)}
+        ${renderMetaList('Routing Protocol Match', routingProtocolMatchRows)}
+        ${renderMetaList('Routing Protocol Candidates', routingProtocolCandidateRows)}
         ${renderMetaList('Routing Tools', routingToolRows)}
+        ${renderMetaList('Routing Tool Selector', routingSelectorRows)}
         ${renderMetaList('Routing Classifier', routingClassifierRows)}
         ${renderMetaList('Citations', citations)}
         ${renderMetaList('Assumptions', assumptions)}
