@@ -126,6 +126,16 @@ const TOOL_ACTIVITY_LABELS = {
   search_gel_analyses: 'Checking gel analysis records',
   search_inventory: 'Checking inventory records',
   search_papers: 'Checking stored PDF papers',
+  toolbox_molarity_calculator: 'Running molarity calculator',
+  toolbox_peptide_properties: 'Computing peptide properties',
+  toolbox_buffer_preparer: 'Computing buffer preparation',
+  toolbox_dna_to_protein: 'Translating DNA/RNA to protein',
+  toolbox_protein_to_dna: 'Reverse-translating protein to DNA',
+  toolbox_oligo_properties: 'Computing oligo properties',
+  toolbox_extinction_coefficient: 'Computing extinction coefficient',
+  toolbox_qpcr_efficiency: 'Computing qPCR efficiency',
+  toolbox_plannotate: 'Running pLannotate annotation',
+  toolbox_crispr_sgrna_designer: 'Designing CRISPR sgRNAs',
   run_python_sandbox: 'Running Python sandbox',
   download_paper_pdf: 'Downloading papers'
 };

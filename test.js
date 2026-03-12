@@ -467,6 +467,16 @@ const AGENT_SIMULATION_DISPATCH_TOOL_NAMES = new Set([
   'search_pubmed',
   'search_crossref',
   'search_europe_pmc',
+  'toolbox_molarity_calculator',
+  'toolbox_peptide_properties',
+  'toolbox_buffer_preparer',
+  'toolbox_dna_to_protein',
+  'toolbox_protein_to_dna',
+  'toolbox_oligo_properties',
+  'toolbox_extinction_coefficient',
+  'toolbox_qpcr_efficiency',
+  'toolbox_plannotate',
+  'toolbox_crispr_sgrna_designer',
   'run_python_sandbox',
   'download_paper_pdf'
 ]);
@@ -584,6 +594,92 @@ function pickMockRows(rows, projector, query, limit = 5) {
 }
 
 function buildMockToolArgs(toolName, message, snapshot) {
+  if (toolName === 'toolbox_molarity_calculator') {
+    return {
+      operation: 'mass_from_concentration_volume',
+      concentration_value: 10,
+      concentration_unit: 'mM',
+      volume_value: 5,
+      volume_unit: 'mL',
+      molecular_weight_g_mol: 58.44,
+      output_unit: 'mg'
+    };
+  }
+  if (toolName === 'toolbox_peptide_properties') {
+    return {
+      sequence_text: 'ACDEFGHIKLMNPQRSTVWY',
+      ph: 7
+    };
+  }
+  if (toolName === 'toolbox_buffer_preparer') {
+    return {
+      volume_ml: 1000,
+      components: [
+        { name: 'NaCl', form: 'solid', molecular_weight_g_mol: 58.44, concentration_value: 150, concentration_unit: 'mM' },
+        { name: 'Tween-20', form: 'liquid', concentration_value: 0.05, concentration_unit: 'percent_vv' }
+      ]
+    };
+  }
+  if (toolName === 'toolbox_dna_to_protein') {
+    return {
+      sequence_text: 'ATGGCCATTGTAATGGGCCGCTGAAAGGGTGCCCGATAG',
+      sequence_type: 'DNA',
+      frame: 1,
+      stop_mode: 'star'
+    };
+  }
+  if (toolName === 'toolbox_protein_to_dna') {
+    return {
+      protein_sequence: 'MKTIIALSYIFCLVFA',
+      organism: 'ecoli',
+      append_stop_codon: true,
+      restriction_sites: ['GAATTC', 'AAGCTT']
+    };
+  }
+  if (toolName === 'toolbox_oligo_properties') {
+    return {
+      sequence_text: 'ATGCGTATCGAT',
+      oligo_type: 'DNA'
+    };
+  }
+  if (toolName === 'toolbox_extinction_coefficient') {
+    return {
+      sequence_type: 'protein',
+      sequence_text: 'MKWVTFISLLFLFSSAYS'
+    };
+  }
+  if (toolName === 'toolbox_qpcr_efficiency') {
+    return {
+      points: [
+        { quantity: 1, ct: 18.0 },
+        { quantity: 0.1, ct: 21.3 },
+        { quantity: 0.01, ct: 24.7 }
+      ]
+    };
+  }
+  if (toolName === 'toolbox_plannotate') {
+    return {
+      sequence_text: '>plasmid\\nATGCGTACGTAGCTAGCTAGCTAGCATCGATCGATCGATCGATCGATCG',
+      topology: 'circular',
+      detailed: false,
+      min_identity: 85,
+      min_coverage: 0.25,
+      min_hit_length: 24,
+      max_hits: 10,
+      record_name: 'mock_plasmid'
+    };
+  }
+  if (toolName === 'toolbox_crispr_sgrna_designer') {
+    return {
+      targets_text: '>Target_A\\nGAGTCCGAGCAGAAGAAGAAGGGGAGGAGGAGGAGGAGGA',
+      reference_genome_id: 'human-hg38',
+      pam_pattern: 'NGG',
+      guide_length: 20,
+      top_count: 5,
+      min_gc: 35,
+      max_gc: 75
+    };
+  }
   if (toolName === 'run_python_sandbox') {
     return {
       code: 'import math\nprint(round((2 + 8) / 2, 2))',
@@ -782,6 +878,161 @@ function buildMockToolDispatch(snapshot) {
       ],
       citations: [{ source: 'europe_pmc', pointer: '45678901', reason: 'Matched Europe PMC metadata.' }],
       summary: 'Found 1 matching Europe PMC records.'
+    }),
+    toolbox_molarity_calculator: () => ({
+      items: [
+        {
+          operation: 'mass_from_concentration_volume',
+          result_value: 2.922,
+          result_unit: 'mg',
+          concentration_M: 0.01,
+          volume_L: 0.005,
+          molecular_weight_g_mol: 58.44
+        }
+      ],
+      citations: [{ source: 'toolbox_molarity', pointer: 'mass_from_concentration_volume', reason: 'Computed deterministic molarity conversion.' }],
+      summary: 'Calculated mass from concentration and volume in mg.'
+    }),
+    toolbox_peptide_properties: () => ({
+      items: [
+        {
+          sequence: 'ACDEFGHIKLMNPQRSTVWY',
+          length: 20,
+          mass: 2395.7,
+          pI: 7.1,
+          net_charge: -0.4,
+          extinction_reduced: 6990,
+          extinction_oxidized: 7115
+        }
+      ],
+      citations: [{ source: 'toolbox_peptide', pointer: 'length:20', reason: 'Computed peptide physicochemical properties.' }],
+      summary: 'Computed peptide properties for 20 residues.'
+    }),
+    toolbox_buffer_preparer: () => ({
+      items: [
+        {
+          name: 'NaCl',
+          form: 'solid',
+          concentration_value: 150,
+          concentration_unit: 'mM',
+          molecular_weight_g_mol: 58.44,
+          required_mg: 8766
+        },
+        {
+          name: 'Tween-20',
+          form: 'liquid',
+          concentration_value: 0.05,
+          concentration_unit: 'percent_vv',
+          required_ml: 0.5
+        }
+      ],
+      citations: [{ source: 'toolbox_buffer', pointer: 'components:2', reason: 'Calculated buffer component amounts.' }],
+      summary: 'Calculated 2 buffer components.'
+    }),
+    toolbox_dna_to_protein: () => ({
+      items: [
+        {
+          sequence_type: 'DNA',
+          cleaned_sequence: 'ATGGCCATTGTAATGGGCCGCTGAAAGGGTGCCCGATAG',
+          protein: 'MAIVMGR*KGAR*',
+          codons: 13,
+          frame: 1,
+          strand: '+',
+          remainderBases: 0
+        }
+      ],
+      citations: [{ source: 'toolbox_translation', pointer: '+1', reason: 'Translated sequence with codon table.' }],
+      summary: 'Translated 13 codons in frame +1.'
+    }),
+    toolbox_protein_to_dna: () => ({
+      items: [
+        {
+          ok: true,
+          protein: 'MKTIIALSYIFCLVFA*',
+          dna: 'ATGAAAACAATTATTGCTCTTTCTTATATTTTTTGTTTTGCTTAA',
+          aa_length: 17,
+          nt_length: 51
+        }
+      ],
+      citations: [{ source: 'toolbox_reverse_translation', pointer: 'aa:17', reason: 'Reverse-translated protein sequence to DNA.' }],
+      summary: 'Reverse-translated protein to 51 bp DNA.'
+    }),
+    toolbox_oligo_properties: () => ({
+      items: [
+        {
+          oligo_type: 'DNA',
+          sequence: 'ATGCGTATCGAT',
+          length: 12,
+          tm_celsius: 36,
+          molecular_weight_g_mol: 3700,
+          extinction_coefficient_m1_cm1: 123000
+        }
+      ],
+      citations: [{ source: 'toolbox_oligo', pointer: 'DNA:12', reason: 'Computed oligo properties.' }],
+      summary: 'Computed oligo properties for 12 nt (DNA).'
+    }),
+    toolbox_extinction_coefficient: () => ({
+      items: [
+        {
+          sequence_type: 'protein',
+          sequence: 'MKWVTFISLLFLFSSAYS',
+          length: 18,
+          extinction_reduced_m1_cm1: 6990,
+          extinction_oxidized_m1_cm1: 6990
+        }
+      ],
+      citations: [{ source: 'toolbox_extinction', pointer: 'protein:18', reason: 'Computed protein extinction coefficients.' }],
+      summary: 'Computed protein extinction coefficient for 18 residues.'
+    }),
+    toolbox_qpcr_efficiency: () => ({
+      items: [
+        {
+          slope: -3.32,
+          slope_source: 'regression',
+          intercept: 18.01,
+          r_squared: 0.998,
+          points_used: 3,
+          efficiency_percent: 100.4
+        }
+      ],
+      citations: [{ source: 'toolbox_qpcr', pointer: 'points:3', reason: 'Computed qPCR efficiency from standard curve points.' }],
+      summary: 'Computed qPCR efficiency as 100.40%.'
+    }),
+    toolbox_plannotate: () => ({
+      items: [
+        {
+          id: 'mock_hit_1',
+          feature: 'CMV promoter',
+          type: 'promoter',
+          start: 1,
+          end: 600,
+          strand: '+',
+          identity_percent: 99.5,
+          coverage_percent: 100
+        }
+      ],
+      citations: [{ source: 'plannotate', pointer: 'mock_hit_1', reason: 'Annotated pLannotate feature hit from plain-text sequence.' }],
+      summary: 'Annotated 1 feature hit from plain-text sequence.'
+    }),
+    toolbox_crispr_sgrna_designer: () => ({
+      items: [
+        {
+          rank: 1,
+          target_id: 'target-1',
+          target_name: 'Target_A',
+          strand: '+',
+          start: 1,
+          end: 20,
+          guide_sequence: 'GAGTCCGAGCAGAAGAAGAA',
+          pam_sequence: 'GGG',
+          gc_percent: 55,
+          on_target_score: 78,
+          specificity_score: 88,
+          off_target_rate: 12
+        }
+      ],
+      citations: [{ source: 'toolbox_crispr', pointer: 'target-1:1-20:+', reason: 'Ranked sgRNA candidate from deterministic CRISPR scoring.' }],
+      summary: 'Designed 1 sgRNA candidate from 1 selected target.'
     }),
     run_python_sandbox: () => ({
       items: [
@@ -3283,6 +3534,21 @@ test('agent chat contract exposes optional routing payload', () => {
   const props = agentChat.output_schema?.properties || {};
   assert.equal(Boolean(props.routing), true);
   assert.equal(props.routing.type, 'object');
+});
+
+test('toolbox_plannotate contract enforces plain-text sequence input for LLM tool calls', () => {
+  const contract = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'agent-io-contract.json'), 'utf8'));
+  const tool = (contract.tools || []).find((entry) => entry.name === 'toolbox_plannotate');
+  assert.equal(Boolean(tool), true);
+  const schema = tool.input_schema || {};
+  assert.equal(Array.isArray(schema.required), true);
+  assert.equal(schema.required.includes('sequence_text'), true);
+  const props = schema.properties || {};
+  assert.equal(Boolean(props.sequence_text), true);
+  assert.equal(props.sequence_text.type, 'string');
+  assert.equal(Boolean(props.file_path), false);
+  assert.equal(Boolean(props.file_text), false);
+  assert.equal(Boolean(props.file_bytes_base64), false);
 });
 
 test('main agent controller output includes routing metadata fields', () => {

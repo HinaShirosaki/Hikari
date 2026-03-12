@@ -81,6 +81,66 @@ const TOOL_CAPABILITY_MAP = Object.freeze({
     taskTypes: ['paper_analysis', 'literature_lookup', 'general_science'],
     aliases: ['europe pmc', 'pmcid', 'pmid', 'paper', 'literature']
   },
+  toolbox_molarity_calculator: {
+    toolClass: TOOL_CLASS.COMPUTE,
+    entityTypes: [],
+    taskTypes: ['coding_data_analysis', 'compute'],
+    aliases: ['molarity', 'dilution', 'c1v1', 'concentration', 'mass', 'volume']
+  },
+  toolbox_peptide_properties: {
+    toolClass: TOOL_CLASS.COMPUTE,
+    entityTypes: ['protein'],
+    taskTypes: ['coding_data_analysis', 'compute', 'entity_property_lookup'],
+    aliases: ['peptide', 'pi', 'isoelectric point', 'net charge', 'mass']
+  },
+  toolbox_buffer_preparer: {
+    toolClass: TOOL_CLASS.COMPUTE,
+    entityTypes: ['compound'],
+    taskTypes: ['coding_data_analysis', 'compute', 'inventory_lookup'],
+    aliases: ['buffer', 'prepare buffer', 'component', 'mM', 'percent v/v']
+  },
+  toolbox_dna_to_protein: {
+    toolClass: TOOL_CLASS.COMPUTE,
+    entityTypes: ['protein'],
+    taskTypes: ['coding_data_analysis', 'compute'],
+    aliases: ['dna to protein', 'translate', 'reading frame', 'codon']
+  },
+  toolbox_protein_to_dna: {
+    toolClass: TOOL_CLASS.COMPUTE,
+    entityTypes: ['protein'],
+    taskTypes: ['coding_data_analysis', 'compute'],
+    aliases: ['reverse translate', 'protein to dna', 'codon optimization', 'restriction site']
+  },
+  toolbox_oligo_properties: {
+    toolClass: TOOL_CLASS.COMPUTE,
+    entityTypes: ['compound'],
+    taskTypes: ['coding_data_analysis', 'compute', 'entity_property_lookup'],
+    aliases: ['oligo', 'tm', 'melting temperature', 'extinction coefficient']
+  },
+  toolbox_extinction_coefficient: {
+    toolClass: TOOL_CLASS.COMPUTE,
+    entityTypes: ['protein', 'compound'],
+    taskTypes: ['coding_data_analysis', 'compute', 'entity_property_lookup'],
+    aliases: ['extinction coefficient', 'a280', 'protein concentration']
+  },
+  toolbox_qpcr_efficiency: {
+    toolClass: TOOL_CLASS.COMPUTE,
+    entityTypes: ['activity'],
+    taskTypes: ['coding_data_analysis', 'compute', 'project_science'],
+    aliases: ['qpcr', 'efficiency', 'slope', 'standard curve', 'ct']
+  },
+  toolbox_plannotate: {
+    toolClass: TOOL_CLASS.COMPUTE,
+    entityTypes: ['activity'],
+    taskTypes: ['coding_data_analysis', 'compute', 'project_science'],
+    aliases: ['plannotate', 'plasmid', 'annotate sequence', 'feature map']
+  },
+  toolbox_crispr_sgrna_designer: {
+    toolClass: TOOL_CLASS.COMPUTE,
+    entityTypes: ['protein', 'activity'],
+    taskTypes: ['coding_data_analysis', 'compute', 'project_science'],
+    aliases: ['crispr', 'sgrna', 'guide rna', 'pam', 'off-target']
+  },
   run_python_sandbox: {
     toolClass: TOOL_CLASS.COMPUTE,
     entityTypes: ['activity'],

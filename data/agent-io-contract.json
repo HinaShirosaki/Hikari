@@ -11,33 +11,64 @@
       "input_schema": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["message"],
+        "required": [
+          "message"
+        ],
         "properties": {
-          "message": { "type": "string" },
-          "projectId": { "type": "string" },
-          "projectName": { "type": "string" },
-          "allowWriteTools": { "type": "boolean" },
+          "message": {
+            "type": "string"
+          },
+          "projectId": {
+            "type": "string"
+          },
+          "projectName": {
+            "type": "string"
+          },
+          "allowWriteTools": {
+            "type": "boolean"
+          },
           "conversation": {
             "type": "array",
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["role", "text"],
+              "required": [
+                "role",
+                "text"
+              ],
               "properties": {
-                "role": { "type": "string", "enum": ["user", "assistant"] },
-                "text": { "type": "string" }
+                "role": {
+                  "type": "string",
+                  "enum": [
+                    "user",
+                    "assistant"
+                  ]
+                },
+                "text": {
+                  "type": "string"
+                }
               }
             }
           },
-          "stateSnapshot": { "type": "object" },
+          "stateSnapshot": {
+            "type": "object"
+          },
           "llm": {
             "type": "object",
             "additionalProperties": false,
             "properties": {
-              "provider": { "type": "string" },
-              "apiEndpoint": { "type": "string" },
-              "apiKey": { "type": "string" },
-              "model": { "type": "string" }
+              "provider": {
+                "type": "string"
+              },
+              "apiEndpoint": {
+                "type": "string"
+              },
+              "apiKey": {
+                "type": "string"
+              },
+              "model": {
+                "type": "string"
+              }
             }
           }
         }
@@ -45,23 +76,46 @@
       "output_schema": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["ok"],
+        "required": [
+          "ok"
+        ],
         "properties": {
-          "ok": { "type": "boolean" },
-          "provider": { "type": "string" },
-          "model": { "type": "string" },
-          "answer": { "type": "string" },
-          "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
-          "requiresApproval": { "type": "boolean" },
+          "ok": {
+            "type": "boolean"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "answer": {
+            "type": "string"
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "requiresApproval": {
+            "type": "boolean"
+          },
           "proposedWriteActions": {
             "type": "array",
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["tool_name", "reason"],
+              "required": [
+                "tool_name",
+                "reason"
+              ],
               "properties": {
-                "tool_name": { "type": "string" },
-                "reason": { "type": "string" }
+                "tool_name": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
               }
             }
           },
@@ -70,38 +124,94 @@
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["source", "pointer", "reason"],
+              "required": [
+                "source",
+                "pointer",
+                "reason"
+              ],
               "properties": {
-                "source": { "type": "string" },
-                "pointer": { "type": "string" },
-                "reason": { "type": "string" }
+                "source": {
+                  "type": "string"
+                },
+                "pointer": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
               }
             }
           },
           "decisionRecord": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["assumptions", "open_questions", "verification_notes"],
+            "required": [
+              "assumptions",
+              "open_questions",
+              "verification_notes"
+            ],
             "properties": {
-              "assumptions": { "type": "array", "items": { "type": "string" } },
-              "open_questions": { "type": "array", "items": { "type": "string" } },
-              "verification_notes": { "type": "array", "items": { "type": "string" } }
+              "assumptions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "open_questions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "verification_notes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
             }
           },
           "routing": {
             "type": "object",
             "additionalProperties": false,
             "properties": {
-              "intent": { "type": "string" },
-              "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
-              "entities": { "type": "object", "additionalProperties": true },
-              "plan": { "type": "object", "additionalProperties": true },
-              "classifier": { "type": "object", "additionalProperties": true }
+              "intent": {
+                "type": "string"
+              },
+              "confidence": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "entities": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "plan": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "classifier": {
+                "type": "object",
+                "additionalProperties": true
+              }
             }
           },
-          "intermediateStates": { "type": "array", "items": { "type": "object" } },
-          "toolTrace": { "type": "array", "items": { "type": "object" } },
-          "error": { "type": "string" }
+          "intermediateStates": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "toolTrace": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "error": {
+            "type": "string"
+          }
         }
       }
     },
@@ -113,22 +223,40 @@
       "input_schema": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["prompt"],
+        "required": [
+          "prompt"
+        ],
         "properties": {
-          "prompt": { "type": "string" },
-          "model": { "type": "string" },
-          "fileName": { "type": "string" },
-          "pdfDataUrl": { "type": "string" }
+          "prompt": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "fileName": {
+            "type": "string"
+          },
+          "pdfDataUrl": {
+            "type": "string"
+          }
         }
       },
       "output_schema": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["ok"],
+        "required": [
+          "ok"
+        ],
         "properties": {
-          "ok": { "type": "boolean" },
-          "text": { "type": "string" },
-          "error": { "type": "string" }
+          "ok": {
+            "type": "boolean"
+          },
+          "text": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          }
         }
       }
     },
@@ -145,11 +273,21 @@
       "output_schema": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["ok", "loggedIn", "message"],
+        "required": [
+          "ok",
+          "loggedIn",
+          "message"
+        ],
         "properties": {
-          "ok": { "type": "boolean" },
-          "loggedIn": { "type": "boolean" },
-          "message": { "type": "string" }
+          "ok": {
+            "type": "boolean"
+          },
+          "loggedIn": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
         }
       }
     },
@@ -166,10 +304,17 @@
       "output_schema": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["ok", "contract"],
+        "required": [
+          "ok",
+          "contract"
+        ],
         "properties": {
-          "ok": { "type": "boolean" },
-          "contract": { "type": "object" }
+          "ok": {
+            "type": "boolean"
+          },
+          "contract": {
+            "type": "object"
+          }
         }
       }
     }
@@ -193,50 +338,102 @@
         "generated_at"
       ],
       "properties": {
-        "ok": { "type": "boolean" },
-        "schema_name": { "type": "string" },
-        "schema_version": { "type": "string" },
-        "tool_name": { "type": "string" },
-        "input": { "type": "object" },
+        "ok": {
+          "type": "boolean"
+        },
+        "schema_name": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "tool_name": {
+          "type": "string"
+        },
+        "input": {
+          "type": "object"
+        },
         "result": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["items", "citations", "summary"],
+          "required": [
+            "items",
+            "citations",
+            "summary"
+          ],
           "properties": {
-            "items": { "type": "array", "items": { "type": "object" } },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
             "citations": {
               "type": "array",
               "items": {
                 "type": "object",
                 "additionalProperties": false,
-                "required": ["source", "pointer", "reason"],
+                "required": [
+                  "source",
+                  "pointer",
+                  "reason"
+                ],
                 "properties": {
-                  "source": { "type": "string" },
-                  "pointer": { "type": "string" },
-                  "reason": { "type": "string" }
+                  "source": {
+                    "type": "string"
+                  },
+                  "pointer": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
                 }
               }
             },
-            "summary": { "type": "string" }
+            "summary": {
+              "type": "string"
+            }
           }
         },
-        "items": { "type": "array", "items": { "type": "object" } },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
         "citations": {
           "type": "array",
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["source", "pointer", "reason"],
+            "required": [
+              "source",
+              "pointer",
+              "reason"
+            ],
             "properties": {
-              "source": { "type": "string" },
-              "pointer": { "type": "string" },
-              "reason": { "type": "string" }
+              "source": {
+                "type": "string"
+              },
+              "pointer": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              }
             }
           }
         },
-        "summary": { "type": "string" },
-        "generated_at": { "type": "string" },
-        "error": { "type": "string" }
+        "summary": {
+          "type": "string"
+        },
+        "generated_at": {
+          "type": "string"
+        },
+        "error": {
+          "type": "string"
+        }
       }
     }
   },
@@ -247,27 +444,49 @@
       "input_schema": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["query"],
+        "required": [
+          "query"
+        ],
         "properties": {
-          "query": { "type": "string" },
-          "limit": { "type": "integer", "minimum": 1, "maximum": 20 }
+          "query": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          }
         }
       },
       "output_schema": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["items", "citations", "summary"],
+        "required": [
+          "items",
+          "citations",
+          "summary"
+        ],
         "properties": {
           "items": {
             "type": "array",
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["id", "name", "summary"],
+              "required": [
+                "id",
+                "name",
+                "summary"
+              ],
               "properties": {
-                "id": { "type": "string" },
-                "name": { "type": "string" },
-                "summary": { "type": "string" }
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "summary": {
+                  "type": "string"
+                }
               }
             }
           },
@@ -276,15 +495,27 @@
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["source", "pointer", "reason"],
+              "required": [
+                "source",
+                "pointer",
+                "reason"
+              ],
               "properties": {
-                "source": { "type": "string" },
-                "pointer": { "type": "string" },
-                "reason": { "type": "string" }
+                "source": {
+                  "type": "string"
+                },
+                "pointer": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
               }
             }
           },
-          "summary": { "type": "string" }
+          "summary": {
+            "type": "string"
+          }
         }
       }
     },
@@ -294,28 +525,56 @@
       "input_schema": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["query"],
+        "required": [
+          "query"
+        ],
         "properties": {
-          "query": { "type": "string" },
-          "limit": { "type": "integer", "minimum": 1, "maximum": 20 }
+          "query": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          }
         }
       },
       "output_schema": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["items", "citations", "summary"],
+        "required": [
+          "items",
+          "citations",
+          "summary"
+        ],
         "properties": {
           "items": {
             "type": "array",
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["id", "name", "category", "steps"],
+              "required": [
+                "id",
+                "name",
+                "category",
+                "steps"
+              ],
               "properties": {
-                "id": { "type": "string" },
-                "name": { "type": "string" },
-                "category": { "type": "string" },
-                "steps": { "type": "array", "items": { "type": "string" } }
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "category": {
+                  "type": "string"
+                },
+                "steps": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
               }
             }
           },
@@ -324,15 +583,27 @@
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["source", "pointer", "reason"],
+              "required": [
+                "source",
+                "pointer",
+                "reason"
+              ],
               "properties": {
-                "source": { "type": "string" },
-                "pointer": { "type": "string" },
-                "reason": { "type": "string" }
+                "source": {
+                  "type": "string"
+                },
+                "pointer": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
               }
             }
           },
-          "summary": { "type": "string" }
+          "summary": {
+            "type": "string"
+          }
         }
       }
     },
@@ -342,28 +613,53 @@
       "input_schema": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["query"],
+        "required": [
+          "query"
+        ],
         "properties": {
-          "query": { "type": "string" },
-          "limit": { "type": "integer", "minimum": 1, "maximum": 20 }
+          "query": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          }
         }
       },
       "output_schema": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["items", "citations", "summary"],
+        "required": [
+          "items",
+          "citations",
+          "summary"
+        ],
         "properties": {
           "items": {
             "type": "array",
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["id", "protocolName", "result", "updatedAt"],
+              "required": [
+                "id",
+                "protocolName",
+                "result",
+                "updatedAt"
+              ],
               "properties": {
-                "id": { "type": "string" },
-                "protocolName": { "type": "string" },
-                "result": { "type": "string" },
-                "updatedAt": { "type": "string" }
+                "id": {
+                  "type": "string"
+                },
+                "protocolName": {
+                  "type": "string"
+                },
+                "result": {
+                  "type": "string"
+                },
+                "updatedAt": {
+                  "type": "string"
+                }
               }
             }
           },
@@ -372,15 +668,27 @@
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["source", "pointer", "reason"],
+              "required": [
+                "source",
+                "pointer",
+                "reason"
+              ],
               "properties": {
-                "source": { "type": "string" },
-                "pointer": { "type": "string" },
-                "reason": { "type": "string" }
+                "source": {
+                  "type": "string"
+                },
+                "pointer": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
               }
             }
           },
-          "summary": { "type": "string" }
+          "summary": {
+            "type": "string"
+          }
         }
       }
     },
@@ -390,16 +698,28 @@
       "input_schema": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["query"],
+        "required": [
+          "query"
+        ],
         "properties": {
-          "query": { "type": "string" },
-          "limit": { "type": "integer", "minimum": 1, "maximum": 20 }
+          "query": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          }
         }
       },
       "output_schema": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["items", "citations", "summary"],
+        "required": [
+          "items",
+          "citations",
+          "summary"
+        ],
         "properties": {
           "items": {
             "type": "array",
@@ -419,16 +739,36 @@
                 "updated_at"
               ],
               "properties": {
-                "id": { "type": "string" },
-                "assay_number": { "type": "string" },
-                "name": { "type": "string" },
-                "project_name": { "type": "string" },
-                "notebook_entry_protocol_name": { "type": "string" },
-                "sample_axis": { "type": "string" },
-                "concentration_axis": { "type": "string" },
-                "result_well_count": { "type": "number" },
-                "numeric_count": { "type": "number" },
-                "updated_at": { "type": "string" }
+                "id": {
+                  "type": "string"
+                },
+                "assay_number": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "project_name": {
+                  "type": "string"
+                },
+                "notebook_entry_protocol_name": {
+                  "type": "string"
+                },
+                "sample_axis": {
+                  "type": "string"
+                },
+                "concentration_axis": {
+                  "type": "string"
+                },
+                "result_well_count": {
+                  "type": "number"
+                },
+                "numeric_count": {
+                  "type": "number"
+                },
+                "updated_at": {
+                  "type": "string"
+                }
               }
             }
           },
@@ -437,15 +777,27 @@
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["source", "pointer", "reason"],
+              "required": [
+                "source",
+                "pointer",
+                "reason"
+              ],
               "properties": {
-                "source": { "type": "string" },
-                "pointer": { "type": "string" },
-                "reason": { "type": "string" }
+                "source": {
+                  "type": "string"
+                },
+                "pointer": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
               }
             }
           },
-          "summary": { "type": "string" }
+          "summary": {
+            "type": "string"
+          }
         }
       }
     },
@@ -455,16 +807,28 @@
       "input_schema": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["query"],
+        "required": [
+          "query"
+        ],
         "properties": {
-          "query": { "type": "string" },
-          "limit": { "type": "integer", "minimum": 1, "maximum": 20 }
+          "query": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          }
         }
       },
       "output_schema": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["items", "citations", "summary"],
+        "required": [
+          "items",
+          "citations",
+          "summary"
+        ],
         "properties": {
           "items": {
             "type": "array",
@@ -485,18 +849,48 @@
                 "updated_at"
               ],
               "properties": {
-                "id": { "type": "string" },
-                "name": { "type": "string" },
-                "analysis_type": { "type": "string" },
-                "project_name": { "type": "string" },
-                "notebook_entry_protocol_name": { "type": "string" },
-                "image_name": { "type": "string" },
-                "lane_count": { "type": "number" },
-                "band_count": { "type": "number" },
-                "confidence_label": { "type": "string" },
-                "confidence_score": { "type": ["number", "null"] },
-                "warnings": { "type": "array", "items": { "type": "string" } },
-                "updated_at": { "type": "string" }
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "analysis_type": {
+                  "type": "string"
+                },
+                "project_name": {
+                  "type": "string"
+                },
+                "notebook_entry_protocol_name": {
+                  "type": "string"
+                },
+                "image_name": {
+                  "type": "string"
+                },
+                "lane_count": {
+                  "type": "number"
+                },
+                "band_count": {
+                  "type": "number"
+                },
+                "confidence_label": {
+                  "type": "string"
+                },
+                "confidence_score": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "warnings": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "updated_at": {
+                  "type": "string"
+                }
               }
             }
           },
@@ -505,15 +899,27 @@
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["source", "pointer", "reason"],
+              "required": [
+                "source",
+                "pointer",
+                "reason"
+              ],
               "properties": {
-                "source": { "type": "string" },
-                "pointer": { "type": "string" },
-                "reason": { "type": "string" }
+                "source": {
+                  "type": "string"
+                },
+                "pointer": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
               }
             }
           },
-          "summary": { "type": "string" }
+          "summary": {
+            "type": "string"
+          }
         }
       }
     },
@@ -523,16 +929,28 @@
       "input_schema": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["query"],
+        "required": [
+          "query"
+        ],
         "properties": {
-          "query": { "type": "string" },
-          "limit": { "type": "integer", "minimum": 1, "maximum": 25 }
+          "query": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 25
+          }
         }
       },
       "output_schema": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["items", "citations", "summary"],
+        "required": [
+          "items",
+          "citations",
+          "summary"
+        ],
         "properties": {
           "items": {
             "type": "array",
@@ -540,15 +958,33 @@
               "type": "object",
               "additionalProperties": true,
               "properties": {
-                "kind": { "type": "string" },
-                "zone": { "type": "string" },
-                "id": { "type": "string" },
-                "name": { "type": "string" },
-                "quantity": { "type": "string" },
-                "location": { "type": "string" },
-                "amount": { "type": "string" },
-                "cas": { "type": "string" },
-                "supplier": { "type": "string" }
+                "kind": {
+                  "type": "string"
+                },
+                "zone": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "quantity": {
+                  "type": "string"
+                },
+                "location": {
+                  "type": "string"
+                },
+                "amount": {
+                  "type": "string"
+                },
+                "cas": {
+                  "type": "string"
+                },
+                "supplier": {
+                  "type": "string"
+                }
               }
             }
           },
@@ -557,15 +993,27 @@
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["source", "pointer", "reason"],
+              "required": [
+                "source",
+                "pointer",
+                "reason"
+              ],
               "properties": {
-                "source": { "type": "string" },
-                "pointer": { "type": "string" },
-                "reason": { "type": "string" }
+                "source": {
+                  "type": "string"
+                },
+                "pointer": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
               }
             }
           },
-          "summary": { "type": "string" }
+          "summary": {
+            "type": "string"
+          }
         }
       }
     },
@@ -575,37 +1023,76 @@
       "input_schema": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["query"],
+        "required": [
+          "query"
+        ],
         "properties": {
-          "query": { "type": "string" },
-          "limit": { "type": "integer", "minimum": 1, "maximum": 20 }
+          "query": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          }
         }
       },
       "output_schema": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["items", "citations", "summary"],
+        "required": [
+          "items",
+          "citations",
+          "summary"
+        ],
         "properties": {
           "items": {
             "type": "array",
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["id", "title", "summary", "methods"],
+              "required": [
+                "id",
+                "title",
+                "summary",
+                "methods"
+              ],
               "properties": {
-                "id": { "type": "string" },
-                "title": { "type": "string" },
-                "summary": { "type": "string" },
+                "id": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "summary": {
+                  "type": "string"
+                },
                 "methods": {
                   "type": "array",
                   "items": {
                     "type": "object",
                     "additionalProperties": false,
-                    "required": ["title", "steps", "citations"],
+                    "required": [
+                      "title",
+                      "steps",
+                      "citations"
+                    ],
                     "properties": {
-                      "title": { "type": "string" },
-                      "steps": { "type": "array", "items": { "type": "string" } },
-                      "citations": { "type": "array", "items": { "type": "string" } }
+                      "title": {
+                        "type": "string"
+                      },
+                      "steps": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "citations": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
                     }
                   }
                 }
@@ -617,15 +1104,27 @@
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["source", "pointer", "reason"],
+              "required": [
+                "source",
+                "pointer",
+                "reason"
+              ],
               "properties": {
-                "source": { "type": "string" },
-                "pointer": { "type": "string" },
-                "reason": { "type": "string" }
+                "source": {
+                  "type": "string"
+                },
+                "pointer": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
               }
             }
           },
-          "summary": { "type": "string" }
+          "summary": {
+            "type": "string"
+          }
         }
       }
     },
@@ -635,16 +1134,28 @@
       "input_schema": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["query"],
+        "required": [
+          "query"
+        ],
         "properties": {
-          "query": { "type": "string" },
-          "limit": { "type": "integer", "minimum": 1, "maximum": 25 }
+          "query": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 25
+          }
         }
       },
       "output_schema": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["items", "citations", "summary"],
+        "required": [
+          "items",
+          "citations",
+          "summary"
+        ],
         "properties": {
           "items": {
             "type": "array",
@@ -662,14 +1173,33 @@
                 "uniprot_url"
               ],
               "properties": {
-                "accession": { "type": "string" },
-                "entry_id": { "type": "string" },
-                "protein_name": { "type": "string" },
-                "gene_names": { "type": "array", "items": { "type": "string" } },
-                "organism": { "type": "string" },
-                "reviewed": { "type": "boolean" },
-                "length": { "type": "number" },
-                "uniprot_url": { "type": "string" }
+                "accession": {
+                  "type": "string"
+                },
+                "entry_id": {
+                  "type": "string"
+                },
+                "protein_name": {
+                  "type": "string"
+                },
+                "gene_names": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "organism": {
+                  "type": "string"
+                },
+                "reviewed": {
+                  "type": "boolean"
+                },
+                "length": {
+                  "type": "number"
+                },
+                "uniprot_url": {
+                  "type": "string"
+                }
               }
             }
           },
@@ -678,15 +1208,27 @@
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["source", "pointer", "reason"],
+              "required": [
+                "source",
+                "pointer",
+                "reason"
+              ],
               "properties": {
-                "source": { "type": "string" },
-                "pointer": { "type": "string" },
-                "reason": { "type": "string" }
+                "source": {
+                  "type": "string"
+                },
+                "pointer": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
               }
             }
           },
-          "summary": { "type": "string" }
+          "summary": {
+            "type": "string"
+          }
         }
       }
     },
@@ -696,16 +1238,28 @@
       "input_schema": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["query"],
+        "required": [
+          "query"
+        ],
         "properties": {
-          "query": { "type": "string" },
-          "limit": { "type": "integer", "minimum": 1, "maximum": 25 }
+          "query": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 25
+          }
         }
       },
       "output_schema": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["items", "citations", "summary"],
+        "required": [
+          "items",
+          "citations",
+          "summary"
+        ],
         "properties": {
           "items": {
             "type": "array",
@@ -722,13 +1276,30 @@
                 "pubmed_url"
               ],
               "properties": {
-                "pmid": { "type": "string" },
-                "title": { "type": "string" },
-                "journal": { "type": "string" },
-                "pubdate": { "type": "string" },
-                "doi": { "type": "string" },
-                "authors": { "type": "array", "items": { "type": "string" } },
-                "pubmed_url": { "type": "string" }
+                "pmid": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "journal": {
+                  "type": "string"
+                },
+                "pubdate": {
+                  "type": "string"
+                },
+                "doi": {
+                  "type": "string"
+                },
+                "authors": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "pubmed_url": {
+                  "type": "string"
+                }
               }
             }
           },
@@ -737,15 +1308,27 @@
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["source", "pointer", "reason"],
+              "required": [
+                "source",
+                "pointer",
+                "reason"
+              ],
               "properties": {
-                "source": { "type": "string" },
-                "pointer": { "type": "string" },
-                "reason": { "type": "string" }
+                "source": {
+                  "type": "string"
+                },
+                "pointer": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
               }
             }
           },
-          "summary": { "type": "string" }
+          "summary": {
+            "type": "string"
+          }
         }
       }
     },
@@ -755,16 +1338,28 @@
       "input_schema": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["query"],
+        "required": [
+          "query"
+        ],
         "properties": {
-          "query": { "type": "string" },
-          "limit": { "type": "integer", "minimum": 1, "maximum": 25 }
+          "query": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 25
+          }
         }
       },
       "output_schema": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["items", "citations", "summary"],
+        "required": [
+          "items",
+          "citations",
+          "summary"
+        ],
         "properties": {
           "items": {
             "type": "array",
@@ -782,14 +1377,33 @@
                 "url"
               ],
               "properties": {
-                "doi": { "type": "string" },
-                "title": { "type": "string" },
-                "journal": { "type": "string" },
-                "published": { "type": "string" },
-                "type": { "type": "string" },
-                "cited_by_count": { "type": "number" },
-                "authors": { "type": "array", "items": { "type": "string" } },
-                "url": { "type": "string" }
+                "doi": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "journal": {
+                  "type": "string"
+                },
+                "published": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                },
+                "cited_by_count": {
+                  "type": "number"
+                },
+                "authors": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "url": {
+                  "type": "string"
+                }
               }
             }
           },
@@ -798,15 +1412,27 @@
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["source", "pointer", "reason"],
+              "required": [
+                "source",
+                "pointer",
+                "reason"
+              ],
               "properties": {
-                "source": { "type": "string" },
-                "pointer": { "type": "string" },
-                "reason": { "type": "string" }
+                "source": {
+                  "type": "string"
+                },
+                "pointer": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
               }
             }
           },
-          "summary": { "type": "string" }
+          "summary": {
+            "type": "string"
+          }
         }
       }
     },
@@ -816,16 +1442,28 @@
       "input_schema": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["query"],
+        "required": [
+          "query"
+        ],
         "properties": {
-          "query": { "type": "string" },
-          "limit": { "type": "integer", "minimum": 1, "maximum": 25 }
+          "query": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 25
+          }
         }
       },
       "output_schema": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["items", "citations", "summary"],
+        "required": [
+          "items",
+          "citations",
+          "summary"
+        ],
         "properties": {
           "items": {
             "type": "array",
@@ -845,16 +1483,36 @@
                 "europe_pmc_url"
               ],
               "properties": {
-                "id": { "type": "string" },
-                "source": { "type": "string" },
-                "title": { "type": "string" },
-                "author_string": { "type": "string" },
-                "journal": { "type": "string" },
-                "pub_year": { "type": "string" },
-                "doi": { "type": "string" },
-                "pmid": { "type": "string" },
-                "pmcid": { "type": "string" },
-                "europe_pmc_url": { "type": "string" }
+                "id": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "author_string": {
+                  "type": "string"
+                },
+                "journal": {
+                  "type": "string"
+                },
+                "pub_year": {
+                  "type": "string"
+                },
+                "doi": {
+                  "type": "string"
+                },
+                "pmid": {
+                  "type": "string"
+                },
+                "pmcid": {
+                  "type": "string"
+                },
+                "europe_pmc_url": {
+                  "type": "string"
+                }
               }
             }
           },
@@ -863,15 +1521,870 @@
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["source", "pointer", "reason"],
+              "required": [
+                "source",
+                "pointer",
+                "reason"
+              ],
               "properties": {
-                "source": { "type": "string" },
-                "pointer": { "type": "string" },
-                "reason": { "type": "string" }
+                "source": {
+                  "type": "string"
+                },
+                "pointer": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
               }
             }
           },
-          "summary": { "type": "string" }
+          "summary": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "toolbox_molarity_calculator",
+      "description": "Compute molarity, mass, volume, concentration, or dilution conversions used in the Toolbox Molarity Calculator.",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "operation"
+        ],
+        "properties": {
+          "operation": {
+            "type": "string",
+            "enum": [
+              "mass_from_concentration_volume",
+              "volume_from_mass_concentration",
+              "concentration_from_mass_volume",
+              "dilution_c1v1"
+            ]
+          },
+          "concentration_value": {
+            "type": "number"
+          },
+          "concentration_unit": {
+            "type": "string",
+            "enum": [
+              "fM",
+              "pM",
+              "nM",
+              "uM",
+              "mM",
+              "M"
+            ]
+          },
+          "volume_value": {
+            "type": "number"
+          },
+          "volume_unit": {
+            "type": "string",
+            "enum": [
+              "uL",
+              "mL",
+              "L"
+            ]
+          },
+          "mass_value": {
+            "type": "number"
+          },
+          "mass_unit": {
+            "type": "string",
+            "enum": [
+              "ug",
+              "mg",
+              "g",
+              "kg"
+            ]
+          },
+          "molecular_weight_g_mol": {
+            "type": "number"
+          },
+          "stock_concentration_value": {
+            "type": "number"
+          },
+          "stock_concentration_unit": {
+            "type": "string",
+            "enum": [
+              "fM",
+              "pM",
+              "nM",
+              "uM",
+              "mM",
+              "M"
+            ]
+          },
+          "target_concentration_value": {
+            "type": "number"
+          },
+          "target_concentration_unit": {
+            "type": "string",
+            "enum": [
+              "fM",
+              "pM",
+              "nM",
+              "uM",
+              "mM",
+              "M"
+            ]
+          },
+          "target_volume_value": {
+            "type": "number"
+          },
+          "target_volume_unit": {
+            "type": "string",
+            "enum": [
+              "uL",
+              "mL",
+              "L"
+            ]
+          },
+          "output_unit": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items",
+          "citations",
+          "summary"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "citations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "source",
+                "pointer",
+                "reason"
+              ],
+              "properties": {
+                "source": {
+                  "type": "string"
+                },
+                "pointer": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "summary": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "toolbox_peptide_properties",
+      "description": "Compute peptide mass, pI, net charge, residue counts, and extinction coefficients used in the Toolbox Peptide Properties view.",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sequence_text"
+        ],
+        "properties": {
+          "sequence_text": {
+            "type": "string"
+          },
+          "ph": {
+            "type": "number"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items",
+          "citations",
+          "summary"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "citations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "source",
+                "pointer",
+                "reason"
+              ],
+              "properties": {
+                "source": {
+                  "type": "string"
+                },
+                "pointer": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "summary": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "toolbox_buffer_preparer",
+      "description": "Compute required masses or liquid volumes for buffer component preparation from Toolbox-style component definitions.",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "volume_ml",
+          "components"
+        ],
+        "properties": {
+          "volume_ml": {
+            "type": "number"
+          },
+          "components": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "name",
+                "form",
+                "concentration_value"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "form": {
+                  "type": "string",
+                  "enum": [
+                    "solid",
+                    "liquid"
+                  ]
+                },
+                "molecular_weight_g_mol": {
+                  "type": "number"
+                },
+                "concentration_value": {
+                  "type": "number"
+                },
+                "concentration_unit": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items",
+          "citations",
+          "summary"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "citations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "source",
+                "pointer",
+                "reason"
+              ],
+              "properties": {
+                "source": {
+                  "type": "string"
+                },
+                "pointer": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "summary": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "toolbox_dna_to_protein",
+      "description": "Convert DNA/RNA sequence to translated protein sequence with frame and stop-codon handling used in Toolbox DNA to Protein.",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sequence_text"
+        ],
+        "properties": {
+          "sequence_text": {
+            "type": "string"
+          },
+          "sequence_type": {
+            "type": "string",
+            "enum": [
+              "DNA",
+              "RNA"
+            ]
+          },
+          "frame": {
+            "type": "integer",
+            "minimum": -3,
+            "maximum": 3
+          },
+          "stop_mode": {
+            "type": "string",
+            "enum": [
+              "star",
+              "trim"
+            ]
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items",
+          "citations",
+          "summary"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "citations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "source",
+                "pointer",
+                "reason"
+              ],
+              "properties": {
+                "source": {
+                  "type": "string"
+                },
+                "pointer": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "summary": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "toolbox_protein_to_dna",
+      "description": "Reverse-translate protein sequence to DNA with optional codon profile, stop codon append, and restriction-site avoidance.",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "protein_sequence"
+        ],
+        "properties": {
+          "protein_sequence": {
+            "type": "string"
+          },
+          "organism": {
+            "type": "string"
+          },
+          "append_stop_codon": {
+            "type": "boolean"
+          },
+          "restriction_sites": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items",
+          "citations",
+          "summary"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "citations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "source",
+                "pointer",
+                "reason"
+              ],
+              "properties": {
+                "source": {
+                  "type": "string"
+                },
+                "pointer": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "summary": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "toolbox_oligo_properties",
+      "description": "Compute DNA/RNA oligo molecular weight, extinction coefficient, and approximate Tm.",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sequence_text"
+        ],
+        "properties": {
+          "sequence_text": {
+            "type": "string"
+          },
+          "oligo_type": {
+            "type": "string",
+            "enum": [
+              "DNA",
+              "RNA"
+            ]
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items",
+          "citations",
+          "summary"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "citations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "source",
+                "pointer",
+                "reason"
+              ],
+              "properties": {
+                "source": {
+                  "type": "string"
+                },
+                "pointer": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "summary": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "toolbox_extinction_coefficient",
+      "description": "Compute extinction coefficient for protein/peptide or DNA/RNA sequences.",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sequence_type",
+          "sequence_text"
+        ],
+        "properties": {
+          "sequence_type": {
+            "type": "string",
+            "enum": [
+              "protein",
+              "DNA",
+              "RNA"
+            ]
+          },
+          "sequence_text": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items",
+          "citations",
+          "summary"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "citations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "source",
+                "pointer",
+                "reason"
+              ],
+              "properties": {
+                "source": {
+                  "type": "string"
+                },
+                "pointer": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "summary": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "toolbox_qpcr_efficiency",
+      "description": "Compute qPCR efficiency from slope or standard-curve points.",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "slope": {
+            "type": "number"
+          },
+          "points": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "quantity",
+                "ct"
+              ],
+              "properties": {
+                "quantity": {
+                  "type": "number"
+                },
+                "ct": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items",
+          "citations",
+          "summary"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "citations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "source",
+                "pointer",
+                "reason"
+              ],
+              "properties": {
+                "source": {
+                  "type": "string"
+                },
+                "pointer": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "summary": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "toolbox_plannotate",
+      "description": "Run pLannotate-like plasmid annotation using plain-text sequence input only (no file/blob inputs).",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sequence_text"
+        ],
+        "properties": {
+          "sequence_text": {
+            "type": "string"
+          },
+          "topology": {
+            "type": "string",
+            "enum": [
+              "circular",
+              "linear"
+            ]
+          },
+          "detailed": {
+            "type": "boolean"
+          },
+          "min_identity": {
+            "type": "number",
+            "minimum": 50,
+            "maximum": 100
+          },
+          "min_coverage": {
+            "type": "number",
+            "minimum": 0.05,
+            "maximum": 1
+          },
+          "min_hit_length": {
+            "type": "integer",
+            "minimum": 12,
+            "maximum": 2000
+          },
+          "max_hits": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200
+          },
+          "record_name": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items",
+          "citations",
+          "summary"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "citations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "source",
+                "pointer",
+                "reason"
+              ],
+              "properties": {
+                "source": {
+                  "type": "string"
+                },
+                "pointer": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "summary": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "toolbox_crispr_sgrna_designer",
+      "description": "Design CRISPR sgRNA candidates from target sequence text and scoring parameters.",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "targets_text"
+        ],
+        "properties": {
+          "targets_text": {
+            "type": "string"
+          },
+          "reference_genome_id": {
+            "type": "string"
+          },
+          "pam_pattern": {
+            "type": "string"
+          },
+          "guide_length": {
+            "type": "integer",
+            "minimum": 18,
+            "maximum": 24
+          },
+          "top_count": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "min_gc": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "max_gc": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "selected_target_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items",
+          "citations",
+          "summary"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "citations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "source",
+                "pointer",
+                "reason"
+              ],
+              "properties": {
+                "source": {
+                  "type": "string"
+                },
+                "pointer": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "summary": {
+            "type": "string"
+          }
         }
       }
     },
@@ -881,29 +2394,53 @@
       "input_schema": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["code"],
+        "required": [
+          "code"
+        ],
         "properties": {
-          "code": { "type": "string" },
+          "code": {
+            "type": "string"
+          },
           "files": {
             "type": "array",
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["path", "content"],
+              "required": [
+                "path",
+                "content"
+              ],
               "properties": {
-                "path": { "type": "string" },
-                "content": { "type": "string" }
+                "path": {
+                  "type": "string"
+                },
+                "content": {
+                  "type": "string"
+                }
               }
             }
           },
-          "timeout_ms": { "type": "integer", "minimum": 500, "maximum": 15000 },
-          "readback_paths": { "type": "array", "items": { "type": "string" } }
+          "timeout_ms": {
+            "type": "integer",
+            "minimum": 500,
+            "maximum": 15000
+          },
+          "readback_paths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
         }
       },
       "output_schema": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["items", "citations", "summary"],
+        "required": [
+          "items",
+          "citations",
+          "summary"
+        ],
         "properties": {
           "items": {
             "type": "array",
@@ -925,30 +2462,79 @@
                 "warnings"
               ],
               "properties": {
-                "run_id": { "type": "string" },
-                "status": { "type": "string", "enum": ["ok", "error", "timed_out"] },
-                "timeout_ms": { "type": "integer" },
-                "python_executable": { "type": "string" },
-                "exit_code": { "type": ["integer", "null"] },
-                "signal": { "type": ["string", "null"] },
-                "timed_out": { "type": "boolean" },
-                "stdout": { "type": "string" },
-                "stderr": { "type": "string" },
-                "files_written": { "type": "array", "items": { "type": "string" } },
+                "run_id": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "ok",
+                    "error",
+                    "timed_out"
+                  ]
+                },
+                "timeout_ms": {
+                  "type": "integer"
+                },
+                "python_executable": {
+                  "type": "string"
+                },
+                "exit_code": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "signal": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "timed_out": {
+                  "type": "boolean"
+                },
+                "stdout": {
+                  "type": "string"
+                },
+                "stderr": {
+                  "type": "string"
+                },
+                "files_written": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
                 "readback_files": {
                   "type": "array",
                   "items": {
                     "type": "object",
                     "additionalProperties": false,
-                    "required": ["path", "content", "truncated"],
+                    "required": [
+                      "path",
+                      "content",
+                      "truncated"
+                    ],
                     "properties": {
-                      "path": { "type": "string" },
-                      "content": { "type": "string" },
-                      "truncated": { "type": "boolean" }
+                      "path": {
+                        "type": "string"
+                      },
+                      "content": {
+                        "type": "string"
+                      },
+                      "truncated": {
+                        "type": "boolean"
+                      }
                     }
                   }
                 },
-                "warnings": { "type": "array", "items": { "type": "string" } }
+                "warnings": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
               }
             }
           },
@@ -957,15 +2543,27 @@
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["source", "pointer", "reason"],
+              "required": [
+                "source",
+                "pointer",
+                "reason"
+              ],
               "properties": {
-                "source": { "type": "string" },
-                "pointer": { "type": "string" },
-                "reason": { "type": "string" }
+                "source": {
+                  "type": "string"
+                },
+                "pointer": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
               }
             }
           },
-          "summary": { "type": "string" }
+          "summary": {
+            "type": "string"
+          }
         }
       }
     },
@@ -975,34 +2573,86 @@
       "input_schema": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["linked_type", "linked_name", "paper_pdf_url"],
+        "required": [
+          "linked_type",
+          "linked_name",
+          "paper_pdf_url"
+        ],
         "properties": {
-          "linked_type": { "type": "string", "enum": ["project", "journal-club"] },
-          "linked_name": { "type": "string" },
-          "paper_pdf_url": { "type": "string" },
-          "paper_file_name": { "type": "string" },
-          "si_pdf_urls": { "type": "array", "items": { "type": "string" } },
-          "si_file_names": { "type": "array", "items": { "type": "string" } },
-          "storage_path": { "type": "string" }
+          "linked_type": {
+            "type": "string",
+            "enum": [
+              "project",
+              "journal-club"
+            ]
+          },
+          "linked_name": {
+            "type": "string"
+          },
+          "paper_pdf_url": {
+            "type": "string"
+          },
+          "paper_file_name": {
+            "type": "string"
+          },
+          "si_pdf_urls": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "si_file_names": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "storage_path": {
+            "type": "string"
+          }
         }
       },
       "output_schema": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["items", "citations", "summary"],
+        "required": [
+          "items",
+          "citations",
+          "summary"
+        ],
         "properties": {
           "items": {
             "type": "array",
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["kind", "source_url", "file_name", "relative_path", "size_bytes"],
+              "required": [
+                "kind",
+                "source_url",
+                "file_name",
+                "relative_path",
+                "size_bytes"
+              ],
               "properties": {
-                "kind": { "type": "string", "enum": ["paper", "si"] },
-                "source_url": { "type": "string" },
-                "file_name": { "type": "string" },
-                "relative_path": { "type": "string" },
-                "size_bytes": { "type": "number" }
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "paper",
+                    "si"
+                  ]
+                },
+                "source_url": {
+                  "type": "string"
+                },
+                "file_name": {
+                  "type": "string"
+                },
+                "relative_path": {
+                  "type": "string"
+                },
+                "size_bytes": {
+                  "type": "number"
+                }
               }
             }
           },
@@ -1011,15 +2661,27 @@
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["source", "pointer", "reason"],
+              "required": [
+                "source",
+                "pointer",
+                "reason"
+              ],
               "properties": {
-                "source": { "type": "string" },
-                "pointer": { "type": "string" },
-                "reason": { "type": "string" }
+                "source": {
+                  "type": "string"
+                },
+                "pointer": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
               }
             }
           },
-          "summary": { "type": "string" }
+          "summary": {
+            "type": "string"
+          }
         }
       }
     }

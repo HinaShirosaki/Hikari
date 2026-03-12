@@ -908,6 +908,392 @@ function buildFallbackAgentIoTools() {
     makeTool('search_crossref', 'Search Crossref works metadata by title, DOI, author, or keyword.', 25),
     makeTool('search_europe_pmc', 'Search Europe PMC literature records with PubMed/PMCID/DOI metadata.', 25),
     {
+      name: 'toolbox_molarity_calculator',
+      description: 'Compute molarity, mass, volume, concentration, or dilution conversions used in the Toolbox Molarity Calculator.',
+      input_schema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['operation'],
+        properties: {
+          operation: {
+            type: 'string',
+            enum: [
+              'mass_from_concentration_volume',
+              'volume_from_mass_concentration',
+              'concentration_from_mass_volume',
+              'dilution_c1v1'
+            ]
+          },
+          concentration_value: { type: 'number' },
+          concentration_unit: { type: 'string', enum: ['fM', 'pM', 'nM', 'uM', 'mM', 'M'] },
+          volume_value: { type: 'number' },
+          volume_unit: { type: 'string', enum: ['uL', 'mL', 'L'] },
+          mass_value: { type: 'number' },
+          mass_unit: { type: 'string', enum: ['ug', 'mg', 'g', 'kg'] },
+          molecular_weight_g_mol: { type: 'number' },
+          stock_concentration_value: { type: 'number' },
+          stock_concentration_unit: { type: 'string', enum: ['fM', 'pM', 'nM', 'uM', 'mM', 'M'] },
+          target_concentration_value: { type: 'number' },
+          target_concentration_unit: { type: 'string', enum: ['fM', 'pM', 'nM', 'uM', 'mM', 'M'] },
+          target_volume_value: { type: 'number' },
+          target_volume_unit: { type: 'string', enum: ['uL', 'mL', 'L'] },
+          output_unit: { type: 'string' }
+        }
+      },
+      output_schema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['items', 'citations', 'summary'],
+        properties: {
+          items: { type: 'array', items: { type: 'object' } },
+          citations: {
+            type: 'array',
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              required: ['source', 'pointer', 'reason'],
+              properties: {
+                source: { type: 'string' },
+                pointer: { type: 'string' },
+                reason: { type: 'string' }
+              }
+            }
+          },
+          summary: { type: 'string' }
+        }
+      }
+    },
+    {
+      name: 'toolbox_peptide_properties',
+      description: 'Compute peptide mass, pI, net charge, residue counts, and extinction coefficients.',
+      input_schema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['sequence_text'],
+        properties: {
+          sequence_text: { type: 'string' },
+          ph: { type: 'number' }
+        }
+      },
+      output_schema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['items', 'citations', 'summary'],
+        properties: {
+          items: { type: 'array', items: { type: 'object' } },
+          citations: {
+            type: 'array',
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              required: ['source', 'pointer', 'reason'],
+              properties: {
+                source: { type: 'string' },
+                pointer: { type: 'string' },
+                reason: { type: 'string' }
+              }
+            }
+          },
+          summary: { type: 'string' }
+        }
+      }
+    },
+    {
+      name: 'toolbox_buffer_preparer',
+      description: 'Compute required masses or liquid volumes for buffer preparation.',
+      input_schema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['volume_ml', 'components'],
+        properties: {
+          volume_ml: { type: 'number' },
+          components: { type: 'array', items: { type: 'object' } }
+        }
+      },
+      output_schema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['items', 'citations', 'summary'],
+        properties: {
+          items: { type: 'array', items: { type: 'object' } },
+          citations: {
+            type: 'array',
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              required: ['source', 'pointer', 'reason'],
+              properties: {
+                source: { type: 'string' },
+                pointer: { type: 'string' },
+                reason: { type: 'string' }
+              }
+            }
+          },
+          summary: { type: 'string' }
+        }
+      }
+    },
+    {
+      name: 'toolbox_dna_to_protein',
+      description: 'Translate DNA/RNA sequence to protein in selected frame and stop mode.',
+      input_schema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['sequence_text'],
+        properties: {
+          sequence_text: { type: 'string' },
+          sequence_type: { type: 'string', enum: ['DNA', 'RNA'] },
+          frame: { type: 'integer', minimum: -3, maximum: 3 },
+          stop_mode: { type: 'string', enum: ['star', 'trim'] }
+        }
+      },
+      output_schema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['items', 'citations', 'summary'],
+        properties: {
+          items: { type: 'array', items: { type: 'object' } },
+          citations: {
+            type: 'array',
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              required: ['source', 'pointer', 'reason'],
+              properties: {
+                source: { type: 'string' },
+                pointer: { type: 'string' },
+                reason: { type: 'string' }
+              }
+            }
+          },
+          summary: { type: 'string' }
+        }
+      }
+    },
+    {
+      name: 'toolbox_protein_to_dna',
+      description: 'Reverse-translate protein sequence to DNA with optional restriction-site constraints.',
+      input_schema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['protein_sequence'],
+        properties: {
+          protein_sequence: { type: 'string' },
+          organism: { type: 'string' },
+          append_stop_codon: { type: 'boolean' },
+          restriction_sites: { type: 'array', items: { type: 'string' } }
+        }
+      },
+      output_schema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['items', 'citations', 'summary'],
+        properties: {
+          items: { type: 'array', items: { type: 'object' } },
+          citations: {
+            type: 'array',
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              required: ['source', 'pointer', 'reason'],
+              properties: {
+                source: { type: 'string' },
+                pointer: { type: 'string' },
+                reason: { type: 'string' }
+              }
+            }
+          },
+          summary: { type: 'string' }
+        }
+      }
+    },
+    {
+      name: 'toolbox_oligo_properties',
+      description: 'Compute oligo molecular weight, extinction coefficient, and Tm.',
+      input_schema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['sequence_text'],
+        properties: {
+          sequence_text: { type: 'string' },
+          oligo_type: { type: 'string', enum: ['DNA', 'RNA'] }
+        }
+      },
+      output_schema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['items', 'citations', 'summary'],
+        properties: {
+          items: { type: 'array', items: { type: 'object' } },
+          citations: {
+            type: 'array',
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              required: ['source', 'pointer', 'reason'],
+              properties: {
+                source: { type: 'string' },
+                pointer: { type: 'string' },
+                reason: { type: 'string' }
+              }
+            }
+          },
+          summary: { type: 'string' }
+        }
+      }
+    },
+    {
+      name: 'toolbox_extinction_coefficient',
+      description: 'Compute extinction coefficient for protein/peptide or DNA/RNA sequences.',
+      input_schema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['sequence_type', 'sequence_text'],
+        properties: {
+          sequence_type: { type: 'string', enum: ['protein', 'DNA', 'RNA'] },
+          sequence_text: { type: 'string' }
+        }
+      },
+      output_schema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['items', 'citations', 'summary'],
+        properties: {
+          items: { type: 'array', items: { type: 'object' } },
+          citations: {
+            type: 'array',
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              required: ['source', 'pointer', 'reason'],
+              properties: {
+                source: { type: 'string' },
+                pointer: { type: 'string' },
+                reason: { type: 'string' }
+              }
+            }
+          },
+          summary: { type: 'string' }
+        }
+      }
+    },
+    {
+      name: 'toolbox_qpcr_efficiency',
+      description: 'Compute qPCR efficiency from slope or standard-curve points.',
+      input_schema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          slope: { type: 'number' },
+          points: { type: 'array', items: { type: 'object' } }
+        }
+      },
+      output_schema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['items', 'citations', 'summary'],
+        properties: {
+          items: { type: 'array', items: { type: 'object' } },
+          citations: {
+            type: 'array',
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              required: ['source', 'pointer', 'reason'],
+              properties: {
+                source: { type: 'string' },
+                pointer: { type: 'string' },
+                reason: { type: 'string' }
+              }
+            }
+          },
+          summary: { type: 'string' }
+        }
+      }
+    },
+    {
+      name: 'toolbox_plannotate',
+      description: 'Run pLannotate-like annotation from plain-text sequence input only (no file/blob input).',
+      input_schema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['sequence_text'],
+        properties: {
+          sequence_text: { type: 'string' },
+          topology: { type: 'string', enum: ['circular', 'linear'] },
+          detailed: { type: 'boolean' },
+          min_identity: { type: 'number', minimum: 50, maximum: 100 },
+          min_coverage: { type: 'number', minimum: 0.05, maximum: 1 },
+          min_hit_length: { type: 'integer', minimum: 12, maximum: 2000 },
+          max_hits: { type: 'integer', minimum: 1, maximum: 200 },
+          record_name: { type: 'string' }
+        }
+      },
+      output_schema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['items', 'citations', 'summary'],
+        properties: {
+          items: { type: 'array', items: { type: 'object' } },
+          citations: {
+            type: 'array',
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              required: ['source', 'pointer', 'reason'],
+              properties: {
+                source: { type: 'string' },
+                pointer: { type: 'string' },
+                reason: { type: 'string' }
+              }
+            }
+          },
+          summary: { type: 'string' }
+        }
+      }
+    },
+    {
+      name: 'toolbox_crispr_sgrna_designer',
+      description: 'Design CRISPR sgRNA candidates from target sequence text and scoring parameters.',
+      input_schema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['targets_text'],
+        properties: {
+          targets_text: { type: 'string' },
+          reference_genome_id: { type: 'string' },
+          pam_pattern: { type: 'string' },
+          guide_length: { type: 'integer', minimum: 18, maximum: 24 },
+          top_count: { type: 'integer', minimum: 1, maximum: 100 },
+          min_gc: { type: 'number', minimum: 0, maximum: 100 },
+          max_gc: { type: 'number', minimum: 0, maximum: 100 },
+          selected_target_ids: { type: 'array', items: { type: 'string' } }
+        }
+      },
+      output_schema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['items', 'citations', 'summary'],
+        properties: {
+          items: { type: 'array', items: { type: 'object' } },
+          citations: {
+            type: 'array',
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              required: ['source', 'pointer', 'reason'],
+              properties: {
+                source: { type: 'string' },
+                pointer: { type: 'string' },
+                reason: { type: 'string' }
+              }
+            }
+          },
+          summary: { type: 'string' }
+        }
+      }
+    },
+    {
       name: 'run_python_sandbox',
       description: 'Run Python code in an isolated temporary sandbox for deterministic calculations and data transforms.',
       input_schema: {
@@ -1204,6 +1590,670 @@ function safeParseJson(text, fallback) {
   }
 }
 
+const TOOLBOX_CONCENTRATION_TO_M = Object.freeze({
+  fM: 1e-15,
+  pM: 1e-12,
+  nM: 1e-9,
+  uM: 1e-6,
+  mM: 1e-3,
+  M: 1
+});
+
+const TOOLBOX_VOLUME_TO_L = Object.freeze({
+  uL: 1e-6,
+  mL: 1e-3,
+  L: 1
+});
+
+const TOOLBOX_MASS_TO_G = Object.freeze({
+  ug: 1e-6,
+  mg: 1e-3,
+  g: 1,
+  kg: 1e3
+});
+
+const TOOLBOX_DNA_BASE_MW = Object.freeze({ A: 313.21, T: 304.2, G: 329.21, C: 289.18 });
+const TOOLBOX_RNA_BASE_MW = Object.freeze({ A: 329.21, U: 306.17, G: 345.21, C: 305.18 });
+const TOOLBOX_DNA_EXTINCTION = Object.freeze({ A: 15400, C: 7400, G: 11500, T: 8700 });
+const TOOLBOX_RNA_EXTINCTION = Object.freeze({ A: 15400, C: 7400, G: 11500, U: 9900 });
+const TOOLBOX_COMPLEMENT = Object.freeze({ A: 'T', T: 'A', C: 'G', G: 'C' });
+const TOOLBOX_CODON_TABLE = Object.freeze({
+  TTT: 'F', TTC: 'F', TTA: 'L', TTG: 'L',
+  TCT: 'S', TCC: 'S', TCA: 'S', TCG: 'S',
+  TAT: 'Y', TAC: 'Y', TAA: '*', TAG: '*',
+  TGT: 'C', TGC: 'C', TGA: '*', TGG: 'W',
+  CTT: 'L', CTC: 'L', CTA: 'L', CTG: 'L',
+  CCT: 'P', CCC: 'P', CCA: 'P', CCG: 'P',
+  CAT: 'H', CAC: 'H', CAA: 'Q', CAG: 'Q',
+  CGT: 'R', CGC: 'R', CGA: 'R', CGG: 'R',
+  ATT: 'I', ATC: 'I', ATA: 'I', ATG: 'M',
+  ACT: 'T', ACC: 'T', ACA: 'T', ACG: 'T',
+  AAT: 'N', AAC: 'N', AAA: 'K', AAG: 'K',
+  AGT: 'S', AGC: 'S', AGA: 'R', AGG: 'R',
+  GTT: 'V', GTC: 'V', GTA: 'V', GTG: 'V',
+  GCT: 'A', GCC: 'A', GCA: 'A', GCG: 'A',
+  GAT: 'D', GAC: 'D', GAA: 'E', GAG: 'E',
+  GGT: 'G', GGC: 'G', GGA: 'G', GGG: 'G'
+});
+
+const TOOLBOX_AA_TO_CODONS = Object.freeze({
+  A: ['GCT', 'GCC', 'GCA', 'GCG'],
+  C: ['TGT', 'TGC'],
+  D: ['GAT', 'GAC'],
+  E: ['GAA', 'GAG'],
+  F: ['TTT', 'TTC'],
+  G: ['GGT', 'GGC', 'GGA', 'GGG'],
+  H: ['CAT', 'CAC'],
+  I: ['ATT', 'ATC', 'ATA'],
+  K: ['AAA', 'AAG'],
+  L: ['CTG', 'CTC', 'CTT', 'TTA', 'TTG', 'CTA'],
+  M: ['ATG'],
+  N: ['AAT', 'AAC'],
+  P: ['CCT', 'CCC', 'CCA', 'CCG'],
+  Q: ['CAA', 'CAG'],
+  R: ['CGT', 'CGC', 'CGG', 'AGA', 'AGG', 'CGA'],
+  S: ['TCT', 'TCC', 'TCA', 'TCG', 'AGC', 'AGT'],
+  T: ['ACT', 'ACC', 'ACA', 'ACG'],
+  V: ['GTG', 'GTT', 'GTC', 'GTA'],
+  W: ['TGG'],
+  Y: ['TAT', 'TAC'],
+  '*': ['TAA', 'TGA', 'TAG']
+});
+
+const TOOLBOX_PEPTIDE_RESIDUE_MASS = Object.freeze({
+  A: 71.08, R: 156.19, N: 114.1, D: 115.09, C: 103.15,
+  E: 129.12, Q: 128.13, G: 57.05, H: 137.14, I: 113.16,
+  L: 113.16, K: 128.17, M: 131.19, F: 147.18, P: 97.12,
+  S: 87.08, T: 101.11, W: 186.21, Y: 163.18, V: 99.13
+});
+
+const TOOLBOX_PEPTIDE_PKA = Object.freeze({
+  nTerminus: 9.69,
+  cTerminus: 2.34,
+  K: 10.54,
+  R: 12.48,
+  H: 6.04,
+  D: 3.9,
+  E: 4.07,
+  C: 8.37,
+  Y: 10.46
+});
+
+const TOOLBOX_IUPAC_BASE_MAP = Object.freeze({
+  A: 'A',
+  C: 'C',
+  G: 'G',
+  T: 'T',
+  R: 'AG',
+  Y: 'CT',
+  S: 'GC',
+  W: 'AT',
+  K: 'GT',
+  M: 'AC',
+  B: 'CGT',
+  D: 'AGT',
+  H: 'ACT',
+  V: 'ACG',
+  N: 'ACGT'
+});
+
+const TOOLBOX_IUPAC_COMPLEMENT_MAP = Object.freeze({
+  A: 'T',
+  C: 'G',
+  G: 'C',
+  T: 'A',
+  R: 'Y',
+  Y: 'R',
+  S: 'S',
+  W: 'W',
+  K: 'M',
+  M: 'K',
+  B: 'V',
+  D: 'H',
+  H: 'D',
+  V: 'B',
+  N: 'N'
+});
+
+const TOOLBOX_REFERENCE_GENOME_MULTIPLIER = Object.freeze({
+  'human-hg38': 1.35,
+  'mouse-mm39': 1.2,
+  'zebrafish-gz11': 1.05,
+  'yeast-r64': 0.72,
+  'ecoli-k12': 0.58,
+  custom: 1
+});
+
+function toFiniteNumber(value, fallback = 0) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function toolboxConcentrationToM(value, unit) {
+  return toFiniteNumber(value) * (TOOLBOX_CONCENTRATION_TO_M[unit] || 0);
+}
+
+function toolboxConcentrationFromM(valueM, unit) {
+  const factor = TOOLBOX_CONCENTRATION_TO_M[unit] || 0;
+  return factor ? valueM / factor : 0;
+}
+
+function toolboxVolumeToL(value, unit) {
+  return toFiniteNumber(value) * (TOOLBOX_VOLUME_TO_L[unit] || 0);
+}
+
+function toolboxVolumeFromL(valueL, unit) {
+  const factor = TOOLBOX_VOLUME_TO_L[unit] || 0;
+  return factor ? valueL / factor : 0;
+}
+
+function toolboxMassToG(value, unit) {
+  return toFiniteNumber(value) * (TOOLBOX_MASS_TO_G[unit] || 0);
+}
+
+function toolboxMassFromG(valueG, unit) {
+  const factor = TOOLBOX_MASS_TO_G[unit] || 0;
+  return factor ? valueG / factor : 0;
+}
+
+function cleanNucleotideSequenceForToolbox(raw, type = 'DNA') {
+  const normalized = String(raw || '').toUpperCase().replace(/[^A-Z]/g, '');
+  if (String(type || '').toUpperCase() === 'RNA') {
+    return normalized.replace(/T/g, 'U').replace(/[^ACGU]/g, '');
+  }
+  return normalized.replace(/U/g, 'T').replace(/[^ACGT]/g, '');
+}
+
+function countNucleotideResidues(sequence) {
+  const counts = {};
+  for (const base of String(sequence || '')) {
+    counts[base] = (counts[base] || 0) + 1;
+  }
+  return counts;
+}
+
+function reverseComplementDnaForToolbox(sequence) {
+  return [...String(sequence || '')]
+    .reverse()
+    .map((base) => TOOLBOX_COMPLEMENT[base] || 'N')
+    .join('');
+}
+
+function translateDnaSequenceForToolbox(sequence, frame = 1, stopMode = 'star') {
+  const numericFrame = toFiniteNumber(frame, 1);
+  const isNegativeStrand = numericFrame < 0;
+  const absFrame = Math.max(1, Math.min(3, Math.abs(Math.round(numericFrame)) || 1));
+  const startIndex = absFrame - 1;
+  const template = isNegativeStrand ? reverseComplementDnaForToolbox(sequence) : sequence;
+  const coding = template.slice(startIndex);
+  let protein = '';
+  let codons = 0;
+
+  for (let i = 0; i + 2 < coding.length; i += 3) {
+    const codon = coding.slice(i, i + 3);
+    const aa = TOOLBOX_CODON_TABLE[codon] || 'X';
+    codons += 1;
+    if (aa === '*' && stopMode === 'trim') {
+      break;
+    }
+    protein += aa;
+  }
+
+  return {
+    protein,
+    codons,
+    frame: absFrame,
+    strand: isNegativeStrand ? '-' : '+',
+    remainderBases: coding.length % 3
+  };
+}
+
+function cleanProteinSequenceForToolbox(raw, allowStop = true) {
+  const disallowed = allowStop ? /[^A-Z*]/g : /[^A-Z]/g;
+  return String(raw || '').toUpperCase().replace(disallowed, '');
+}
+
+function countProteinResidues(sequence) {
+  const counts = {};
+  for (const aa of String(sequence || '')) {
+    counts[aa] = (counts[aa] || 0) + 1;
+  }
+  return counts;
+}
+
+function positiveChargeForToolbox(pH, pKa, count) {
+  return count * (1 / (1 + (10 ** (pH - pKa))));
+}
+
+function negativeChargeForToolbox(pH, pKa, count) {
+  return count * (1 / (1 + (10 ** (pKa - pH))));
+}
+
+function calculateNetChargeForToolbox(sequence, pH = 7) {
+  const counts = countProteinResidues(sequence);
+  const positive =
+    positiveChargeForToolbox(pH, TOOLBOX_PEPTIDE_PKA.nTerminus, 1) +
+    positiveChargeForToolbox(pH, TOOLBOX_PEPTIDE_PKA.K, counts.K || 0) +
+    positiveChargeForToolbox(pH, TOOLBOX_PEPTIDE_PKA.R, counts.R || 0) +
+    positiveChargeForToolbox(pH, TOOLBOX_PEPTIDE_PKA.H, counts.H || 0);
+  const negative =
+    negativeChargeForToolbox(pH, TOOLBOX_PEPTIDE_PKA.cTerminus, 1) +
+    negativeChargeForToolbox(pH, TOOLBOX_PEPTIDE_PKA.D, counts.D || 0) +
+    negativeChargeForToolbox(pH, TOOLBOX_PEPTIDE_PKA.E, counts.E || 0) +
+    negativeChargeForToolbox(pH, TOOLBOX_PEPTIDE_PKA.C, counts.C || 0) +
+    negativeChargeForToolbox(pH, TOOLBOX_PEPTIDE_PKA.Y, counts.Y || 0);
+  return positive - negative;
+}
+
+function estimateIsoelectricPointForToolbox(sequence) {
+  if (!sequence.length) {
+    return 0;
+  }
+  let low = 0;
+  let high = 14;
+  for (let i = 0; i < 60; i += 1) {
+    const mid = (low + high) / 2;
+    const charge = calculateNetChargeForToolbox(sequence, mid);
+    if (charge > 0) {
+      low = mid;
+    } else {
+      high = mid;
+    }
+  }
+  return (low + high) / 2;
+}
+
+function calculatePeptideStatsForToolbox(sequence, ph = 7) {
+  const counts = countProteinResidues(sequence);
+  const invalidResidues = [...sequence].filter((aa) => !TOOLBOX_PEPTIDE_RESIDUE_MASS[aa]);
+  const residueMass = [...sequence].reduce((sum, aa) => sum + (TOOLBOX_PEPTIDE_RESIDUE_MASS[aa] || 0), 0);
+  const mass = sequence.length ? residueMass + 18.015 : 0;
+  const netCharge = calculateNetChargeForToolbox(sequence, ph);
+  const pI = estimateIsoelectricPointForToolbox(sequence);
+  const tyr = counts.Y || 0;
+  const trp = counts.W || 0;
+  const cys = counts.C || 0;
+  return {
+    counts,
+    invalidResidues: [...new Set(invalidResidues)],
+    length: sequence.length,
+    mass,
+    net_charge: netCharge,
+    pI,
+    extinction_reduced: 5500 * trp + 1490 * tyr,
+    extinction_oxidized: 5500 * trp + 1490 * tyr + (125 * Math.floor(cys / 2))
+  };
+}
+
+function oligoMolecularWeightForToolbox(sequence, type = 'DNA') {
+  const map = String(type || '').toUpperCase() === 'RNA'
+    ? TOOLBOX_RNA_BASE_MW
+    : TOOLBOX_DNA_BASE_MW;
+  return [...sequence].reduce((sum, base) => sum + (map[base] || 0), 0);
+}
+
+function oligoExtinctionForToolbox(sequence, type = 'DNA') {
+  const map = String(type || '').toUpperCase() === 'RNA'
+    ? TOOLBOX_RNA_EXTINCTION
+    : TOOLBOX_DNA_EXTINCTION;
+  return [...sequence].reduce((sum, base) => sum + (map[base] || 0), 0);
+}
+
+function oligoTmForToolbox(sequence, type = 'DNA') {
+  const counts = countNucleotideResidues(sequence);
+  const a = counts.A || 0;
+  const g = counts.G || 0;
+  const c = counts.C || 0;
+  const tOrU = String(type || '').toUpperCase() === 'RNA' ? (counts.U || 0) : (counts.T || 0);
+  const n = sequence.length;
+  if (!n) {
+    return 0;
+  }
+  if (n < 14) {
+    return (2 * (a + tOrU)) + (4 * (g + c));
+  }
+  return 64.9 + ((41 * ((g + c) - 16.4)) / n);
+}
+
+function linearRegressionForToolbox(xValues, yValues) {
+  const n = xValues.length;
+  if (!n || n !== yValues.length) {
+    return null;
+  }
+  const xMean = xValues.reduce((sum, value) => sum + value, 0) / n;
+  const yMean = yValues.reduce((sum, value) => sum + value, 0) / n;
+  let ssXX = 0;
+  let ssXY = 0;
+  let ssYY = 0;
+  for (let i = 0; i < n; i += 1) {
+    const dx = xValues[i] - xMean;
+    const dy = yValues[i] - yMean;
+    ssXX += dx * dx;
+    ssXY += dx * dy;
+    ssYY += dy * dy;
+  }
+  if (ssXX === 0) {
+    return null;
+  }
+  const slope = ssXY / ssXX;
+  const intercept = yMean - (slope * xMean);
+  const rSquared = ssYY === 0 ? 1 : ((ssXY * ssXY) / (ssXX * ssYY));
+  return { slope, intercept, rSquared };
+}
+
+function normalizeIupacPatternForToolbox(raw) {
+  const pattern = String(raw || '').toUpperCase().replace(/[^A-Z]/g, '');
+  if (!pattern) {
+    return 'NGG';
+  }
+  return [...pattern].map((base) => (TOOLBOX_IUPAC_BASE_MAP[base] ? base : 'N')).join('');
+}
+
+function reverseComplementIupacForToolbox(pattern) {
+  return [...String(pattern || '').toUpperCase()]
+    .reverse()
+    .map((base) => TOOLBOX_IUPAC_COMPLEMENT_MAP[base] || 'N')
+    .join('');
+}
+
+function matchesIupacPatternForToolbox(sequence, pattern) {
+  if (sequence.length !== pattern.length) {
+    return false;
+  }
+  for (let i = 0; i < sequence.length; i += 1) {
+    const base = sequence[i];
+    const allowed = TOOLBOX_IUPAC_BASE_MAP[pattern[i]] || 'ACGT';
+    if (!allowed.includes(base)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function parseCrisprTargetsTextForToolbox(rawInput) {
+  const raw = String(rawInput || '').trim();
+  if (!raw) {
+    return [];
+  }
+
+  const out = [];
+  const pushTarget = (name, sequenceText) => {
+    const sequence = String(sequenceText || '')
+      .toUpperCase()
+      .replace(/[^A-Z]/g, '')
+      .replace(/U/g, 'T')
+      .replace(/[^ACGT]/g, 'N');
+    if (sequence.length < 18) {
+      return;
+    }
+    out.push({
+      id: `target-${out.length + 1}`,
+      name: cleanText(name, 80) || `Target ${out.length + 1}`,
+      sequence
+    });
+  };
+
+  if (/^\s*>/m.test(raw)) {
+    const lines = raw.split(/\r?\n/);
+    let currentName = '';
+    let currentSequenceLines = [];
+    const flush = () => {
+      if (!currentSequenceLines.length) {
+        return;
+      }
+      pushTarget(currentName || `Target ${out.length + 1}`, currentSequenceLines.join(''));
+      currentSequenceLines = [];
+    };
+    lines.forEach((line) => {
+      if (/^\s*>/.test(line)) {
+        flush();
+        currentName = line.replace(/^\s*>\s*/, '').trim();
+      } else if (line.trim()) {
+        currentSequenceLines.push(line.trim());
+      }
+    });
+    flush();
+    return out;
+  }
+
+  const lines = raw.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  if (lines.length > 1) {
+    lines.forEach((line) => pushTarget(`Target ${out.length + 1}`, line));
+    if (out.length) {
+      return out;
+    }
+  }
+  pushTarget('Target 1', raw);
+  return out;
+}
+
+function collectCrisprPamSitesForToolbox(target, guideLength, pamPattern) {
+  const sequence = String(target.sequence || '').toUpperCase();
+  const pamLength = pamPattern.length;
+  const reversePamPattern = reverseComplementIupacForToolbox(pamPattern);
+  const windowSize = guideLength + pamLength;
+  const sites = [];
+
+  for (let i = 0; i + windowSize <= sequence.length; i += 1) {
+    const guideForward = sequence.slice(i, i + guideLength);
+    const pamForward = sequence.slice(i + guideLength, i + windowSize);
+    if (/^[ACGT]+$/.test(guideForward) && matchesIupacPatternForToolbox(pamForward, pamPattern)) {
+      sites.push({
+        key: `${target.id}|+|${i + 1}`,
+        target_id: target.id,
+        target_name: target.name,
+        strand: '+',
+        start: i + 1,
+        end: i + guideLength,
+        guide_sequence: guideForward,
+        pam_sequence: pamForward
+      });
+    }
+
+    const pamReverse = sequence.slice(i, i + pamLength);
+    const guideReverseWindow = sequence.slice(i + pamLength, i + windowSize);
+    if (/^[ACGT]+$/.test(guideReverseWindow) && matchesIupacPatternForToolbox(pamReverse, reversePamPattern)) {
+      sites.push({
+        key: `${target.id}|-|${i + pamLength + 1}`,
+        target_id: target.id,
+        target_name: target.name,
+        strand: '-',
+        start: i + pamLength + 1,
+        end: i + windowSize,
+        guide_sequence: reverseComplementDnaForToolbox(guideReverseWindow),
+        pam_sequence: reverseComplementDnaForToolbox(pamReverse)
+      });
+    }
+  }
+
+  return sites;
+}
+
+function countMismatchesForToolbox(left, right, maxMismatch = Infinity) {
+  if (left.length !== right.length) {
+    return maxMismatch + 1;
+  }
+  let mismatches = 0;
+  for (let i = 0; i < left.length; i += 1) {
+    if (left[i] !== right[i]) {
+      mismatches += 1;
+      if (mismatches > maxMismatch) {
+        return mismatches;
+      }
+    }
+  }
+  return mismatches;
+}
+
+function calculateGcPercentForToolbox(sequence) {
+  if (!sequence.length) {
+    return 0;
+  }
+  const counts = countNucleotideResidues(sequence);
+  return (((counts.G || 0) + (counts.C || 0)) / sequence.length) * 100;
+}
+
+function scoreCrisprOnTargetForToolbox(guideSequence) {
+  if (!guideSequence.length) {
+    return 0;
+  }
+  const gcPercent = calculateGcPercentForToolbox(guideSequence);
+  const seed = guideSequence.slice(Math.max(0, guideSequence.length - 10));
+  const seedGc = calculateGcPercentForToolbox(seed);
+  let score = 70 - (Math.abs(gcPercent - 52) * 1.25);
+
+  if (guideSequence.startsWith('G')) {
+    score += 4.5;
+  }
+  if (guideSequence.endsWith('GG')) {
+    score += 2;
+  }
+  if (/TTTT/.test(guideSequence)) {
+    score -= 22;
+  }
+  if (/(AAAAA|CCCCC|GGGGG|TTTTT)/.test(guideSequence)) {
+    score -= 12;
+  }
+  if (seedGc < 35 || seedGc > 82) {
+    score -= 6;
+  } else {
+    score += 3;
+  }
+  if (!/^[ACGT]+$/.test(guideSequence)) {
+    score -= 30;
+  }
+  return clamp(score, 0, 100);
+}
+
+function computeCrisprOffTargetStatsForToolbox(candidate, backgroundSites, genomeMultiplier = 1) {
+  const mismatchCounts = { exact: 0, mismatch1: 0, mismatch2: 0, mismatch3: 0 };
+  backgroundSites.forEach((site) => {
+    if (site.key === candidate.key) {
+      return;
+    }
+    const mismatches = countMismatchesForToolbox(candidate.guide_sequence, site.guide_sequence, 3);
+    if (mismatches > 3) {
+      return;
+    }
+    if (mismatches === 0) {
+      mismatchCounts.exact += 1;
+    } else if (mismatches === 1) {
+      mismatchCounts.mismatch1 += 1;
+    } else if (mismatches === 2) {
+      mismatchCounts.mismatch2 += 1;
+    } else {
+      mismatchCounts.mismatch3 += 1;
+    }
+  });
+  const weightedRisk =
+    (mismatchCounts.exact * 1.25) +
+    (mismatchCounts.mismatch1 * 0.46) +
+    (mismatchCounts.mismatch2 * 0.16) +
+    (mismatchCounts.mismatch3 * 0.05);
+  const offTargetRate = clamp(weightedRisk * 14.5 * genomeMultiplier, 0, 99.9);
+  const specificityScore = clamp(100 - offTargetRate, 0, 100);
+  return {
+    mismatch_counts: mismatchCounts,
+    off_target_rate: offTargetRate,
+    specificity_score: specificityScore
+  };
+}
+
+function splitRestrictionSitesForToolbox(rawSites) {
+  if (Array.isArray(rawSites)) {
+    return rawSites
+      .map((value) => String(value || '').toUpperCase().replace(/U/g, 'T').replace(/[^ACGT]/g, ''))
+      .filter((value) => value.length >= 3);
+  }
+  return String(rawSites || '')
+    .toUpperCase()
+    .replace(/U/g, 'T')
+    .split(/[\s,;|]+/)
+    .map((token) => token.trim())
+    .filter((token) => /^[ACGT]{3,}$/.test(token));
+}
+
+function anyRestrictedSiteIntroducedForToolbox(dna, restrictionSites) {
+  if (!restrictionSites.length) {
+    return false;
+  }
+  return restrictionSites.some((site) => dna.includes(site) || dna.includes(reverseComplementDnaForToolbox(site)));
+}
+
+function reverseTranslateProteinForToolbox(proteinInput, options = {}) {
+  const appendStopCodon = options.appendStopCodon === true;
+  const restrictionSites = splitRestrictionSitesForToolbox(options.restrictionSites);
+  const cleaned = cleanProteinSequenceForToolbox(proteinInput, true);
+  const protein = appendStopCodon && cleaned && !cleaned.endsWith('*')
+    ? `${cleaned}*`
+    : cleaned;
+  if (!protein) {
+    return {
+      ok: false,
+      reason: 'empty_protein',
+      message: 'Enter a protein sequence to reverse translate.',
+      protein: '',
+      dna: '',
+      codons: []
+    };
+  }
+
+  const unsupported = [...new Set([...protein].filter((residue) => !TOOLBOX_AA_TO_CODONS[residue]))];
+  if (unsupported.length) {
+    return {
+      ok: false,
+      reason: 'unsupported_residue',
+      message: `Unsupported residues: ${unsupported.join(', ')}`,
+      unsupported_residues: unsupported,
+      protein,
+      dna: '',
+      codons: []
+    };
+  }
+
+  let dna = '';
+  const codons = [];
+  for (let i = 0; i < protein.length; i += 1) {
+    const residue = protein[i];
+    const optionsForResidue = TOOLBOX_AA_TO_CODONS[residue] || [];
+    let picked = optionsForResidue[0] || '';
+    for (const candidate of optionsForResidue) {
+      const next = `${dna}${candidate}`;
+      if (!anyRestrictedSiteIntroducedForToolbox(next, restrictionSites)) {
+        picked = candidate;
+        break;
+      }
+    }
+    dna += picked;
+    codons.push(picked);
+  }
+
+  if (anyRestrictedSiteIntroducedForToolbox(dna, restrictionSites)) {
+    return {
+      ok: false,
+      reason: 'restriction_conflict',
+      message: 'Unable to avoid all restricted motifs with available codon choices.',
+      protein,
+      dna,
+      codons,
+      restriction_sites: restrictionSites
+    };
+  }
+
+  const counts = countNucleotideResidues(dna);
+  const gcContent = dna.length ? (((counts.G || 0) + (counts.C || 0)) / dna.length) * 100 : 0;
+  return {
+    ok: true,
+    protein,
+    dna,
+    codons,
+    aa_length: protein.length,
+    nt_length: dna.length,
+    gc_content: gcContent,
+    restriction_sites: restrictionSites
+  };
+}
+
 function extractResponseText(payload) {
   if (typeof payload?.output_text === 'string' && payload.output_text.trim()) {
     return payload.output_text.trim();
@@ -1245,7 +2295,20 @@ function isWriteTool(name) {
 }
 
 function isComputeTool(name) {
-  return String(name || '').trim() === 'run_python_sandbox';
+  const normalized = String(name || '').trim();
+  return [
+    'run_python_sandbox',
+    'toolbox_molarity_calculator',
+    'toolbox_peptide_properties',
+    'toolbox_buffer_preparer',
+    'toolbox_dna_to_protein',
+    'toolbox_protein_to_dna',
+    'toolbox_oligo_properties',
+    'toolbox_extinction_coefficient',
+    'toolbox_qpcr_efficiency',
+    'toolbox_plannotate',
+    'toolbox_crispr_sgrna_designer'
+  ].includes(normalized);
 }
 
 function normalizeRoutingPayload(rawRouting) {
@@ -2092,6 +3155,543 @@ async function runAgentToolDispatchLegacy(name, args, snapshot, options = {}) {
         }
       );
     }
+  }
+
+  if (name === 'toolbox_molarity_calculator') {
+    const operation = cleanText(normalizedArgs?.operation, 80);
+    const defaultConcentrationUnit = cleanText(normalizedArgs?.concentration_unit, 8) || 'mM';
+    const defaultVolumeUnit = cleanText(normalizedArgs?.volume_unit, 8) || 'mL';
+    const defaultMassUnit = cleanText(normalizedArgs?.mass_unit, 8) || 'mg';
+    let resultValue = 0;
+    let resultUnit = cleanText(normalizedArgs?.output_unit, 16);
+    let intermediate = {};
+    let summary = '';
+
+    if (operation === 'mass_from_concentration_volume') {
+      const concentrationM = toolboxConcentrationToM(normalizedArgs?.concentration_value, defaultConcentrationUnit);
+      const volumeL = toolboxVolumeToL(normalizedArgs?.volume_value, defaultVolumeUnit);
+      const mw = toFiniteNumber(normalizedArgs?.molecular_weight_g_mol);
+      const massG = concentrationM * volumeL * mw;
+      resultUnit = resultUnit || defaultMassUnit;
+      resultValue = toolboxMassFromG(massG, resultUnit);
+      intermediate = { concentration_M: concentrationM, volume_L: volumeL, molecular_weight_g_mol: mw, mass_g: massG };
+      summary = `Calculated mass from concentration and volume in ${resultUnit}.`;
+    } else if (operation === 'volume_from_mass_concentration') {
+      const massG = toolboxMassToG(normalizedArgs?.mass_value, defaultMassUnit);
+      const mw = toFiniteNumber(normalizedArgs?.molecular_weight_g_mol);
+      const concentrationM = toolboxConcentrationToM(normalizedArgs?.concentration_value, defaultConcentrationUnit);
+      const moles = mw > 0 ? (massG / mw) : 0;
+      const volumeL = concentrationM > 0 ? (moles / concentrationM) : 0;
+      resultUnit = resultUnit || defaultVolumeUnit;
+      resultValue = toolboxVolumeFromL(volumeL, resultUnit);
+      intermediate = { mass_g: massG, molecular_weight_g_mol: mw, concentration_M: concentrationM, moles, volume_L: volumeL };
+      summary = `Calculated volume from mass and concentration in ${resultUnit}.`;
+    } else if (operation === 'concentration_from_mass_volume') {
+      const massG = toolboxMassToG(normalizedArgs?.mass_value, defaultMassUnit);
+      const mw = toFiniteNumber(normalizedArgs?.molecular_weight_g_mol);
+      const volumeL = toolboxVolumeToL(normalizedArgs?.volume_value, defaultVolumeUnit);
+      const moles = mw > 0 ? (massG / mw) : 0;
+      const concentrationM = volumeL > 0 ? (moles / volumeL) : 0;
+      resultUnit = resultUnit || defaultConcentrationUnit;
+      resultValue = toolboxConcentrationFromM(concentrationM, resultUnit);
+      intermediate = { mass_g: massG, molecular_weight_g_mol: mw, volume_L: volumeL, moles, concentration_M: concentrationM };
+      summary = `Calculated concentration from mass and volume in ${resultUnit}.`;
+    } else if (operation === 'dilution_c1v1') {
+      const stockUnit = cleanText(normalizedArgs?.stock_concentration_unit, 8) || 'mM';
+      const targetUnit = cleanText(normalizedArgs?.target_concentration_unit, 8) || 'mM';
+      const targetVolumeUnit = cleanText(normalizedArgs?.target_volume_unit, 8) || 'mL';
+      const stockM = toolboxConcentrationToM(normalizedArgs?.stock_concentration_value, stockUnit);
+      const targetM = toolboxConcentrationToM(normalizedArgs?.target_concentration_value, targetUnit);
+      const targetVolumeL = toolboxVolumeToL(normalizedArgs?.target_volume_value, targetVolumeUnit);
+      const stockVolumeL = stockM > 0 ? ((targetM * targetVolumeL) / stockM) : 0;
+      const diluentL = Math.max(0, targetVolumeL - stockVolumeL);
+      resultUnit = resultUnit || targetVolumeUnit;
+      resultValue = toolboxVolumeFromL(stockVolumeL, resultUnit);
+      intermediate = {
+        stock_concentration_M: stockM,
+        target_concentration_M: targetM,
+        target_volume_L: targetVolumeL,
+        stock_volume_L: stockVolumeL,
+        diluent_volume_L: diluentL,
+        diluent_volume_in_output_unit: toolboxVolumeFromL(diluentL, resultUnit)
+      };
+      summary = `Calculated stock and diluent volumes for C1V1=C2V2 in ${resultUnit}.`;
+    } else {
+      return buildAgentToolOutputEnvelope(
+        name,
+        normalizedArgs,
+        { items: [], citations: [], summary: 'Unsupported molarity operation.' },
+        { ok: false, error: `Unsupported operation: ${operation}` }
+      );
+    }
+
+    return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+      items: [{
+        operation,
+        result_value: resultValue,
+        result_unit: resultUnit,
+        ...intermediate
+      }],
+      citations: [{
+        source: 'toolbox_molarity',
+        pointer: operation || 'molarity',
+        reason: 'Computed with deterministic unit conversion formulas.'
+      }],
+      summary
+    });
+  }
+
+  if (name === 'toolbox_peptide_properties') {
+    const sequence = cleanProteinSequenceForToolbox(normalizedArgs?.sequence_text, false);
+    if (!sequence) {
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+        items: [],
+        citations: [],
+        summary: 'No valid peptide sequence was provided.'
+      });
+    }
+    const ph = toFiniteNumber(normalizedArgs?.ph, 7);
+    const stats = calculatePeptideStatsForToolbox(sequence, ph);
+    return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+      items: [{ sequence, ph, ...stats }],
+      citations: [{
+        source: 'toolbox_peptide',
+        pointer: `length:${stats.length}`,
+        reason: 'Computed peptide physicochemical properties.'
+      }],
+      summary: `Computed peptide properties for ${stats.length} residues.`
+    });
+  }
+
+  if (name === 'toolbox_buffer_preparer') {
+    const volumeMl = toFiniteNumber(normalizedArgs?.volume_ml);
+    const volumeL = volumeMl / 1000;
+    const components = asArray(normalizedArgs?.components).slice(0, 60);
+    if (!(volumeMl > 0) || !components.length) {
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+        items: [],
+        citations: [],
+        summary: 'Buffer preparation requires positive volume_ml and at least one component.'
+      });
+    }
+
+    let totalSolidMg = 0;
+    let totalLiquidMl = 0;
+    const items = components.map((component, index) => {
+      const form = String(component?.form || 'solid').toLowerCase() === 'liquid' ? 'liquid' : 'solid';
+      const concentrationValue = toFiniteNumber(component?.concentration_value);
+      const concentrationUnitRaw = String(component?.concentration_unit || '').trim();
+      const concentrationUnit = concentrationUnitRaw || (form === 'liquid' ? 'percent_vv' : 'mM');
+      const nameLabel = cleanText(component?.name, 120) || `component_${index + 1}`;
+
+      if (form === 'liquid') {
+        const percent = concentrationUnit.toLowerCase().includes('%')
+          || concentrationUnit.toLowerCase().includes('percent')
+          ? concentrationValue
+          : concentrationValue;
+        const requiredMl = (volumeMl * percent) / 100;
+        const requiredUl = requiredMl * 1000;
+        totalLiquidMl += requiredMl;
+        return {
+          name: nameLabel,
+          form,
+          concentration_value: concentrationValue,
+          concentration_unit: concentrationUnit,
+          required_ml: requiredMl,
+          required_ul: requiredUl
+        };
+      }
+
+      const mw = toFiniteNumber(component?.molecular_weight_g_mol);
+      const concentrationM = toolboxConcentrationToM(
+        concentrationValue,
+        concentrationUnit in TOOLBOX_CONCENTRATION_TO_M ? concentrationUnit : 'mM'
+      );
+      const moles = concentrationM * volumeL;
+      const grams = moles * mw;
+      const mg = grams * 1000;
+      totalSolidMg += mg;
+      return {
+        name: nameLabel,
+        form,
+        concentration_value: concentrationValue,
+        concentration_unit: concentrationUnit,
+        molecular_weight_g_mol: mw,
+        required_mg: mg,
+        required_g: grams
+      };
+    });
+
+    return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+      items,
+      citations: [{
+        source: 'toolbox_buffer',
+        pointer: `components:${items.length}`,
+        reason: 'Calculated component amounts from target buffer formulation.'
+      }],
+      summary: `Calculated ${items.length} buffer components (solids ${totalSolidMg.toFixed(3)} mg, liquids ${totalLiquidMl.toFixed(3)} mL).`
+    });
+  }
+
+  if (name === 'toolbox_dna_to_protein') {
+    const sequenceType = String(normalizedArgs?.sequence_type || 'DNA').toUpperCase() === 'RNA' ? 'RNA' : 'DNA';
+    const cleaned = cleanNucleotideSequenceForToolbox(normalizedArgs?.sequence_text, sequenceType);
+    if (!cleaned) {
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+        items: [],
+        citations: [],
+        summary: 'No valid DNA/RNA sequence was provided.'
+      });
+    }
+    const frameRaw = Math.round(toFiniteNumber(normalizedArgs?.frame, 1));
+    const frame = frameRaw === 0 ? 1 : clamp(frameRaw, -3, 3);
+    const stopMode = String(normalizedArgs?.stop_mode || 'star') === 'trim' ? 'trim' : 'star';
+    const dnaSequence = sequenceType === 'RNA' ? cleaned.replace(/U/g, 'T') : cleaned;
+    const translated = translateDnaSequenceForToolbox(dnaSequence, frame, stopMode);
+    const counts = countNucleotideResidues(cleaned);
+    return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+      items: [{
+        sequence_type: sequenceType,
+        cleaned_sequence: cleaned,
+        nucleotide_counts: counts,
+        ...translated
+      }],
+      citations: [{
+        source: 'toolbox_translation',
+        pointer: `${translated.strand}${translated.frame}`,
+        reason: 'Translated sequence with codon table.'
+      }],
+      summary: `Translated ${translated.codons} codons in frame ${translated.strand}${translated.frame}.`
+    });
+  }
+
+  if (name === 'toolbox_protein_to_dna') {
+    const protein = cleanProteinSequenceForToolbox(normalizedArgs?.protein_sequence, true);
+    if (!protein) {
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+        items: [],
+        citations: [],
+        summary: 'No valid protein sequence was provided.'
+      });
+    }
+
+    const translated = reverseTranslateProteinForToolbox(protein, {
+      appendStopCodon: normalizedArgs?.append_stop_codon === true,
+      restrictionSites: asArray(normalizedArgs?.restriction_sites)
+    });
+
+    return buildAgentToolOutputEnvelope(
+      name,
+      normalizedArgs,
+      { items: [translated], citations: [{
+        source: 'toolbox_reverse_translation',
+        pointer: `aa:${translated.aa_length || protein.length}`,
+        reason: translated.ok ? 'Reverse-translated protein sequence to DNA.' : 'Reverse translation returned a constraint/validation error.'
+      }], summary: translated.ok
+        ? `Reverse-translated protein to ${translated.nt_length} bp DNA.`
+        : (translated.message || 'Reverse translation failed.') },
+      translated.ok ? {} : { ok: false, error: translated.message || 'Reverse translation failed.' }
+    );
+  }
+
+  if (name === 'toolbox_oligo_properties') {
+    const oligoType = String(normalizedArgs?.oligo_type || 'DNA').toUpperCase() === 'RNA' ? 'RNA' : 'DNA';
+    const sequence = cleanNucleotideSequenceForToolbox(normalizedArgs?.sequence_text, oligoType);
+    if (!sequence) {
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+        items: [],
+        citations: [],
+        summary: 'No valid oligo sequence was provided.'
+      });
+    }
+    const counts = countNucleotideResidues(sequence);
+    const mw = oligoMolecularWeightForToolbox(sequence, oligoType);
+    const extinction = oligoExtinctionForToolbox(sequence, oligoType);
+    const tm = oligoTmForToolbox(sequence, oligoType);
+    return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+      items: [{
+        oligo_type: oligoType,
+        sequence,
+        length: sequence.length,
+        counts,
+        molecular_weight_g_mol: mw,
+        extinction_coefficient_m1_cm1: extinction,
+        tm_celsius: tm
+      }],
+      citations: [{
+        source: 'toolbox_oligo',
+        pointer: `${oligoType}:${sequence.length}`,
+        reason: 'Computed oligo MW, extinction, and Tm.'
+      }],
+      summary: `Computed oligo properties for ${sequence.length} nt (${oligoType}).`
+    });
+  }
+
+  if (name === 'toolbox_extinction_coefficient') {
+    const sequenceType = String(normalizedArgs?.sequence_type || 'protein');
+    const normalizedType = sequenceType === 'DNA' || sequenceType === 'RNA' ? sequenceType : 'protein';
+    if (normalizedType === 'protein') {
+      const sequence = cleanProteinSequenceForToolbox(normalizedArgs?.sequence_text, false);
+      if (!sequence) {
+        return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+          items: [],
+          citations: [],
+          summary: 'No valid protein sequence was provided.'
+        });
+      }
+      const counts = countProteinResidues(sequence);
+      const tyr = counts.Y || 0;
+      const trp = counts.W || 0;
+      const cys = counts.C || 0;
+      const reduced = (5500 * trp) + (1490 * tyr);
+      const oxidized = reduced + (125 * Math.floor(cys / 2));
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+        items: [{
+          sequence_type: 'protein',
+          sequence,
+          length: sequence.length,
+          extinction_reduced_m1_cm1: reduced,
+          extinction_oxidized_m1_cm1: oxidized
+        }],
+        citations: [{
+          source: 'toolbox_extinction',
+          pointer: `protein:${sequence.length}`,
+          reason: 'Computed protein extinction coefficients from Trp/Tyr/Cys counts.'
+        }],
+        summary: `Computed protein extinction coefficient for ${sequence.length} residues.`
+      });
+    }
+
+    const sequence = cleanNucleotideSequenceForToolbox(normalizedArgs?.sequence_text, normalizedType);
+    if (!sequence) {
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+        items: [],
+        citations: [],
+        summary: `No valid ${normalizedType} sequence was provided.`
+      });
+    }
+    const extinction = oligoExtinctionForToolbox(sequence, normalizedType);
+    return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+      items: [{
+        sequence_type: normalizedType,
+        sequence,
+        length: sequence.length,
+        extinction_m1_cm1: extinction
+      }],
+      citations: [{
+        source: 'toolbox_extinction',
+        pointer: `${normalizedType}:${sequence.length}`,
+        reason: `Computed ${normalizedType} extinction coefficient.`
+      }],
+      summary: `Computed ${normalizedType} extinction coefficient for ${sequence.length} nt.`
+    });
+  }
+
+  if (name === 'toolbox_qpcr_efficiency') {
+    const inputSlope = toFiniteNumber(normalizedArgs?.slope, Number.NaN);
+    const slopeValid = Number.isFinite(inputSlope) && inputSlope !== 0;
+    const points = asArray(normalizedArgs?.points).map((point) => ({
+      quantity: toFiniteNumber(point?.quantity, Number.NaN),
+      ct: toFiniteNumber(point?.ct, Number.NaN)
+    })).filter((point) => Number.isFinite(point.quantity) && point.quantity > 0 && Number.isFinite(point.ct));
+
+    const xValues = points.map((point) => Math.log10(point.quantity));
+    const yValues = points.map((point) => point.ct);
+    const regression = points.length >= 2 ? linearRegressionForToolbox(xValues, yValues) : null;
+    const usedSlope = slopeValid ? inputSlope : (regression?.slope ?? Number.NaN);
+    if (!Number.isFinite(usedSlope) || usedSlope === 0) {
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+        items: [],
+        citations: [],
+        summary: 'Provide slope or at least two valid qPCR standard-curve points.'
+      });
+    }
+    const efficiencyPercent = ((10 ** (-1 / usedSlope)) - 1) * 100;
+    return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+      items: [{
+        slope: usedSlope,
+        slope_source: slopeValid ? 'input' : 'regression',
+        intercept: regression?.intercept ?? null,
+        r_squared: regression?.rSquared ?? null,
+        points_used: points.length,
+        efficiency_percent: efficiencyPercent
+      }],
+      citations: [{
+        source: 'toolbox_qpcr',
+        pointer: slopeValid ? 'input_slope' : `points:${points.length}`,
+        reason: 'Computed qPCR efficiency with Efficiency = (10^(-1/slope) - 1) * 100.'
+      }],
+      summary: `Computed qPCR efficiency as ${efficiencyPercent.toFixed(2)}%.`
+    });
+  }
+
+  if (name === 'toolbox_plannotate') {
+    const sequenceText = String(normalizedArgs?.sequence_text || '');
+    if (!sequenceText.trim()) {
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+        items: [],
+        citations: [],
+        summary: 'No plain-text sequence was provided for pLannotate.'
+      });
+    }
+
+    try {
+      const result = await annotateWithBlast({
+        sequenceText,
+        topology: String(normalizedArgs?.topology || '') === 'linear' ? 'linear' : 'circular',
+        detailed: normalizedArgs?.detailed === true,
+        minIdentity: clamp(toFiniteNumber(normalizedArgs?.min_identity, 85), 50, 100),
+        minCoverage: clamp(toFiniteNumber(normalizedArgs?.min_coverage, 0.25), 0.05, 1),
+        minHitLength: Math.round(clamp(toFiniteNumber(normalizedArgs?.min_hit_length, 24), 12, 2000)),
+        maxHits: Math.round(clamp(toFiniteNumber(normalizedArgs?.max_hits, 60), 1, 200)),
+        recordName: cleanText(normalizedArgs?.record_name, 120) || 'plasmid'
+      });
+
+      const resultLimit = Math.round(clamp(toFiniteNumber(normalizedArgs?.max_hits, 20), 1, 200));
+      const items = asArray(result?.hits).slice(0, resultLimit).map((hit, index) => ({
+        id: cleanText(`${hit?.sseqid || hit?.Feature || 'hit'}_${index + 1}`, 120),
+        feature: cleanText(hit?.Feature, 180),
+        type: cleanText(hit?.Type, 80),
+        start: Number(toFiniteNumber(hit?.qstart, 0)) + 1,
+        end: Number(toFiniteNumber(hit?.qend, 0)),
+        strand: Number(toFiniteNumber(hit?.sframe, 1)) === -1 ? '-' : '+',
+        identity_percent: Number(toFiniteNumber(hit?.pident, 0)),
+        coverage_percent: Number(toFiniteNumber(hit?.percmatch, 0)),
+        source_db: cleanText(hit?.db, 60),
+        fragment: hit?.fragment === true
+      }));
+      const citations = items.slice(0, 20).map((item) => ({
+        source: 'plannotate',
+        pointer: item.id || item.feature || 'hit',
+        reason: 'Annotated pLannotate feature hit from plain-text sequence.'
+      }));
+      const warningCount = asArray(result?.warnings).length;
+      const summary = `Annotated ${items.length} feature hit(s) from plain-text sequence${warningCount ? ` with ${warningCount} warning(s)` : ''}.`;
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, { items, citations, summary });
+    } catch (error) {
+      return buildAgentToolOutputEnvelope(
+        name,
+        normalizedArgs,
+        {
+          items: [],
+          citations: [],
+          summary: 'pLannotate annotation failed.'
+        },
+        {
+          ok: false,
+          error: cleanText(error?.message || error, 600)
+        }
+      );
+    }
+  }
+
+  if (name === 'toolbox_crispr_sgrna_designer') {
+    const parsedTargets = parseCrisprTargetsTextForToolbox(normalizedArgs?.targets_text);
+    if (!parsedTargets.length) {
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+        items: [],
+        citations: [],
+        summary: 'No valid CRISPR target sequence(s) were parsed.'
+      });
+    }
+
+    const selectedIds = new Set(asArray(normalizedArgs?.selected_target_ids).map((value) => cleanText(value, 80)).filter(Boolean));
+    const selectedTargets = selectedIds.size
+      ? parsedTargets.filter((target) => selectedIds.has(target.id))
+      : parsedTargets;
+    if (!selectedTargets.length) {
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+        items: [],
+        citations: [],
+        summary: 'selected_target_ids did not match any parsed targets.'
+      });
+    }
+
+    const pamPattern = normalizeIupacPatternForToolbox(normalizedArgs?.pam_pattern || 'NGG');
+    const guideLength = Math.round(clamp(toFiniteNumber(normalizedArgs?.guide_length, 20), 18, 24));
+    const topCount = Math.round(clamp(toFiniteNumber(normalizedArgs?.top_count, 12), 1, 100));
+    let minGc = clamp(toFiniteNumber(normalizedArgs?.min_gc, 35), 0, 100);
+    let maxGc = clamp(toFiniteNumber(normalizedArgs?.max_gc, 75), 0, 100);
+    if (minGc > maxGc) {
+      const swap = minGc;
+      minGc = maxGc;
+      maxGc = swap;
+    }
+    const referenceGenomeId = cleanText(normalizedArgs?.reference_genome_id, 40) || 'custom';
+    const genomeMultiplier = TOOLBOX_REFERENCE_GENOME_MULTIPLIER[referenceGenomeId] || 1;
+
+    const selectedSites = selectedTargets.flatMap((target) => collectCrisprPamSitesForToolbox(target, guideLength, pamPattern));
+    const backgroundSites = parsedTargets.flatMap((target) => collectCrisprPamSitesForToolbox(target, guideLength, pamPattern));
+
+    const candidates = selectedSites.map((site) => {
+      const gcPercent = calculateGcPercentForToolbox(site.guide_sequence);
+      const onTargetScore = scoreCrisprOnTargetForToolbox(site.guide_sequence);
+      const notes = [];
+      if (/TTTT/.test(site.guide_sequence)) {
+        notes.push('poly-T motif');
+      }
+      if (/(AAAAA|CCCCC|GGGGG|TTTTT)/.test(site.guide_sequence)) {
+        notes.push('homopolymer');
+      }
+      return {
+        ...site,
+        gc_percent: gcPercent,
+        on_target_score: onTargetScore,
+        notes
+      };
+    }).filter((candidate) => candidate.gc_percent >= minGc && candidate.gc_percent <= maxGc);
+
+    if (!candidates.length) {
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+        items: [],
+        citations: [],
+        summary: 'No sgRNA candidates passed GC and PAM filters.'
+      });
+    }
+
+    const evaluated = candidates.slice(0, Math.min(candidates.length, Math.max(topCount * 4, 120), 320))
+      .map((candidate) => {
+        const offTarget = computeCrisprOffTargetStatsForToolbox(candidate, backgroundSites.slice(0, 15000), genomeMultiplier);
+        const totalScore = (candidate.on_target_score * 0.62) + (offTarget.specificity_score * 0.38);
+        return {
+          ...candidate,
+          ...offTarget,
+          total_score: totalScore
+        };
+      })
+      .sort((left, right) => (
+        (right.total_score - left.total_score)
+        || (right.on_target_score - left.on_target_score)
+        || (right.specificity_score - left.specificity_score)
+      ));
+
+    const items = evaluated.slice(0, topCount).map((candidate, index) => ({
+      rank: index + 1,
+      target_id: candidate.target_id,
+      target_name: candidate.target_name,
+      strand: candidate.strand,
+      start: candidate.start,
+      end: candidate.end,
+      guide_sequence: candidate.guide_sequence,
+      pam_sequence: candidate.pam_sequence,
+      gc_percent: candidate.gc_percent,
+      on_target_score: candidate.on_target_score,
+      specificity_score: candidate.specificity_score,
+      off_target_rate: candidate.off_target_rate,
+      total_score: candidate.total_score,
+      mismatch_counts: candidate.mismatch_counts,
+      notes: candidate.notes
+    }));
+    const citations = items.slice(0, 20).map((item) => ({
+      source: 'toolbox_crispr',
+      pointer: `${item.target_id}:${item.start}-${item.end}:${item.strand}`,
+      reason: 'Ranked sgRNA candidate from deterministic CRISPR scoring.'
+    }));
+    return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+      items,
+      citations,
+      summary: `Designed ${items.length} sgRNA candidate(s) from ${selectedTargets.length} selected target(s).`
+    });
   }
 
   if (name === 'run_python_sandbox') {
