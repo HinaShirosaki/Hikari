@@ -41,6 +41,8 @@ function createAgentWorkflowHelpers(deps = {}) {
       reason: cleanText(row?.reason, 220)
     })).filter((row) => row.tool);
     const protocolMatch = plan.protocol_match && typeof plan.protocol_match === 'object' ? plan.protocol_match : {};
+    const projectMatch = plan.project_match && typeof plan.project_match === 'object' ? plan.project_match : {};
+    const paperMatch = plan.paper_match && typeof plan.paper_match === 'object' ? plan.paper_match : {};
     const protocolCandidates = asArray(plan.protocol_candidates).map((row) => ({
       protocol_id: cleanText(row?.protocol_id, 80),
       protocol_name: cleanText(row?.protocol_name, 220),
@@ -55,6 +57,36 @@ function createAgentWorkflowHelpers(deps = {}) {
       reason: cleanText(row?.reason, 220),
       steps: asArray(row?.steps).map((step) => cleanText(step, 220)).filter(Boolean).slice(0, 8)
     })).filter((row) => row.protocol_name);
+    const projectCandidates = asArray(plan.project_candidates).map((row) => ({
+      project_id: cleanText(row?.project_id, 80),
+      project_name: cleanText(row?.project_name, 220),
+      score: Number.isFinite(Number(row?.score)) ? Number(row.score) : 0,
+      exact_name_score: Number.isFinite(Number(row?.exact_name_score)) ? Number(row.exact_name_score) : 0,
+      partial_name_score: Number.isFinite(Number(row?.partial_name_score)) ? Number(row.partial_name_score) : 0,
+      selected_bias_score: Number.isFinite(Number(row?.selected_bias_score)) ? Number(row.selected_bias_score) : 0,
+      linked_record_support_score: Number.isFinite(Number(row?.linked_record_support_score))
+        ? Number(row.linked_record_support_score)
+        : 0,
+      reason: cleanText(row?.reason, 220)
+    })).filter((row) => row.project_id || row.project_name);
+    const paperCandidates = asArray(plan.paper_candidates).map((row) => ({
+      paper_id: cleanText(row?.paper_id, 80),
+      paper_title: cleanText(row?.paper_title, 320),
+      linked_project_name: cleanText(row?.linked_project_name, 220),
+      score: Number.isFinite(Number(row?.score)) ? Number(row.score) : 0,
+      semantic_score: Number.isFinite(Number(row?.semantic_score)) ? Number(row.semantic_score) : 0,
+      title_score: Number.isFinite(Number(row?.title_score)) ? Number(row.title_score) : 0,
+      entity_overlap_score: Number.isFinite(Number(row?.entity_overlap_score))
+        ? Number(row.entity_overlap_score)
+        : 0,
+      project_relevance_score: Number.isFinite(Number(row?.project_relevance_score))
+        ? Number(row.project_relevance_score)
+        : 0,
+      availability_status: cleanText(row?.availability_status, 80),
+      deep_read_ready: row?.deep_read_ready === true,
+      has_uploaded_pdf: row?.has_uploaded_pdf === true,
+      reason: cleanText(row?.reason, 220)
+    })).filter((row) => row.paper_id || row.paper_title);
 
     return {
       intent: routingIntents.includes(cleanText(source.intent, 80)) ? cleanText(source.intent, 80) : 'general_science_question',
@@ -75,6 +107,11 @@ function createAgentWorkflowHelpers(deps = {}) {
         needs_tools: plan.needs_tools === true,
         needs_protocol_search: plan.needs_protocol_search === true,
         needs_notebook_retrieval: plan.needs_notebook_retrieval === true,
+        needs_project_retrieval: plan.needs_project_retrieval === true,
+        needs_workflow_retrieval: plan.needs_workflow_retrieval === true,
+        needs_paper_retrieval: plan.needs_paper_retrieval === true,
+        needs_deep_paper_reading: plan.needs_deep_paper_reading === true,
+        needs_paper_comparison: plan.needs_paper_comparison === true,
         needs_notebook_generation: plan.needs_notebook_generation === true,
         notebook_autosave: plan.notebook_autosave === true,
         needs_pdf_reading: plan.needs_pdf_reading === true,
@@ -83,8 +120,25 @@ function createAgentWorkflowHelpers(deps = {}) {
         needs_clarification: plan.needs_clarification === true,
         clarification_reason: cleanText(plan.clarification_reason, 260),
         clarification_question: cleanText(plan.clarification_question, 320),
+        paper_task_mode: cleanText(plan.paper_task_mode, 80) || 'general_paper_query',
         selected_tool_names: selectedToolNames,
         tool_selection_rationale: toolSelectionRationale,
+        paper_match: {
+          selected_paper_id: cleanText(paperMatch.selected_paper_id, 80),
+          selected_paper_title: cleanText(paperMatch.selected_paper_title, 320),
+          secondary_paper_id: cleanText(paperMatch.secondary_paper_id, 80),
+          secondary_paper_title: cleanText(paperMatch.secondary_paper_title, 320),
+          top_score: Number.isFinite(Number(paperMatch.top_score)) ? Number(paperMatch.top_score) : 0,
+          score_delta: Number.isFinite(Number(paperMatch.score_delta)) ? Number(paperMatch.score_delta) : 0,
+          needs_clarification: paperMatch.needs_clarification === true,
+          ambiguity_reason: cleanText(paperMatch.ambiguity_reason, 220),
+          availability_status: cleanText(paperMatch.availability_status, 80),
+          deep_read_ready: paperMatch.deep_read_ready === true,
+          secondary_availability_status: cleanText(paperMatch.secondary_availability_status, 80),
+          secondary_deep_read_ready: paperMatch.secondary_deep_read_ready === true,
+          comparison_summary: cleanText(paperMatch.comparison_summary, 2200)
+        },
+        paper_candidates: paperCandidates,
         protocol_match: {
           selected_protocol_id: cleanText(protocolMatch.selected_protocol_id, 80),
           selected_protocol_name: cleanText(protocolMatch.selected_protocol_name, 220),
@@ -93,7 +147,17 @@ function createAgentWorkflowHelpers(deps = {}) {
           needs_clarification: protocolMatch.needs_clarification === true,
           ambiguity_reason: cleanText(protocolMatch.ambiguity_reason, 220)
         },
-        protocol_candidates: protocolCandidates
+        protocol_candidates: protocolCandidates,
+        project_match: {
+          selected_project_id: cleanText(projectMatch.selected_project_id, 80),
+          selected_project_name: cleanText(projectMatch.selected_project_name, 220),
+          top_score: Number.isFinite(Number(projectMatch.top_score)) ? Number(projectMatch.top_score) : 0,
+          score_delta: Number.isFinite(Number(projectMatch.score_delta)) ? Number(projectMatch.score_delta) : 0,
+          needs_clarification: projectMatch.needs_clarification === true,
+          ambiguity_reason: cleanText(projectMatch.ambiguity_reason, 220),
+          resolution_source: cleanText(projectMatch.resolution_source, 80)
+        },
+        project_candidates: projectCandidates
       },
       classifier: {
         source: cleanText(classifier.source, 80) || 'rules',
@@ -114,7 +178,7 @@ function createAgentWorkflowHelpers(deps = {}) {
     const normalized = normalizeRoutingPayload(routing);
     const rows = [
       `Routing intent=${normalized.intent} confidence=${normalized.confidence.toFixed(2)} source=${normalized.classifier.source}.`,
-      `Planner flags tools=${normalized.plan.needs_tools} protocol_search=${normalized.plan.needs_protocol_search} notebook_retrieval=${normalized.plan.needs_notebook_retrieval} notebook_generation=${normalized.plan.needs_notebook_generation} notebook_autosave=${normalized.plan.notebook_autosave} pdf=${normalized.plan.needs_pdf_reading} python=${normalized.plan.needs_python} web=${normalized.plan.needs_web_search} clarification=${normalized.plan.needs_clarification}.`
+      `Planner flags tools=${normalized.plan.needs_tools} protocol_search=${normalized.plan.needs_protocol_search} notebook_retrieval=${normalized.plan.needs_notebook_retrieval} project_retrieval=${normalized.plan.needs_project_retrieval} workflow_retrieval=${normalized.plan.needs_workflow_retrieval} paper_retrieval=${normalized.plan.needs_paper_retrieval} deep_paper=${normalized.plan.needs_deep_paper_reading} paper_compare=${normalized.plan.needs_paper_comparison} notebook_generation=${normalized.plan.needs_notebook_generation} notebook_autosave=${normalized.plan.notebook_autosave} pdf=${normalized.plan.needs_pdf_reading} python=${normalized.plan.needs_python} web=${normalized.plan.needs_web_search} clarification=${normalized.plan.needs_clarification}.`
     ];
     if (normalized.plan.selected_tool_names.length) {
       rows.push(`Planner selected tools: ${normalized.plan.selected_tool_names.join(', ')}.`);
@@ -140,6 +204,51 @@ function createAgentWorkflowHelpers(deps = {}) {
       rows.push(
         `Protocol candidate top-1: ${topCandidate.protocol_name} `
         + `score=${topCandidate.score.toFixed(2)} semantic=${topCandidate.semantic_score.toFixed(2)}.`
+      );
+    }
+    if (normalized.plan.project_match.selected_project_name) {
+      rows.push(
+        `Project matcher selected "${normalized.plan.project_match.selected_project_name}" `
+        + `(score=${normalized.plan.project_match.top_score.toFixed(2)} source=${normalized.plan.project_match.resolution_source || 'unknown'}).`
+      );
+    }
+    if (normalized.plan.project_match.needs_clarification) {
+      rows.push(
+        `Project matcher requested clarification (${normalized.plan.project_match.ambiguity_reason || 'ambiguous'}; `
+        + `delta=${normalized.plan.project_match.score_delta.toFixed(2)}).`
+      );
+    }
+    if (asArray(normalized.plan.project_candidates).length) {
+      const topProjectCandidate = normalized.plan.project_candidates[0];
+      rows.push(
+        `Project candidate top-1: ${topProjectCandidate.project_name || topProjectCandidate.project_id} `
+        + `score=${topProjectCandidate.score.toFixed(2)}.`
+      );
+    }
+    if (normalized.plan.paper_match.selected_paper_title) {
+      rows.push(
+        `Paper matcher selected "${normalized.plan.paper_match.selected_paper_title}" `
+        + `(mode=${normalized.plan.paper_task_mode}; score=${normalized.plan.paper_match.top_score.toFixed(2)}; `
+        + `availability=${normalized.plan.paper_match.availability_status || 'unknown'}).`
+      );
+    }
+    if (normalized.plan.paper_match.secondary_paper_title) {
+      rows.push(
+        `Paper matcher comparison target "${normalized.plan.paper_match.secondary_paper_title}" `
+        + `(availability=${normalized.plan.paper_match.secondary_availability_status || 'unknown'}).`
+      );
+    }
+    if (normalized.plan.paper_match.needs_clarification) {
+      rows.push(
+        `Paper matcher requested clarification (${normalized.plan.paper_match.ambiguity_reason || 'ambiguous'}; `
+        + `delta=${normalized.plan.paper_match.score_delta.toFixed(2)}).`
+      );
+    }
+    if (asArray(normalized.plan.paper_candidates).length) {
+      const topPaperCandidate = normalized.plan.paper_candidates[0];
+      rows.push(
+        `Paper candidate top-1: ${topPaperCandidate.paper_title || topPaperCandidate.paper_id} `
+        + `score=${topPaperCandidate.score.toFixed(2)} semantic=${topPaperCandidate.semantic_score.toFixed(2)}.`
       );
     }
     if (normalized.classifier.fallbackAttempted) {

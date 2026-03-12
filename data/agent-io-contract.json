@@ -767,6 +767,110 @@
       }
     },
     {
+      "name": "search_workflows",
+      "description": "Read workflow records with project links, block summaries, and recent step previews.",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items",
+          "citations",
+          "summary"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "name",
+                "project_name",
+                "description",
+                "block_count",
+                "link_count",
+                "steps_preview",
+                "updated_at"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "project_name": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "block_count": {
+                  "type": "number"
+                },
+                "link_count": {
+                  "type": "number"
+                },
+                "steps_preview": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "updated_at": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "citations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "source",
+                "pointer",
+                "reason"
+              ],
+              "properties": {
+                "source": {
+                  "type": "string"
+                },
+                "pointer": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "summary": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
       "name": "search_assays",
       "description": "Read assay runs with plate metadata and compact numeric summaries.",
       "input_schema": {
@@ -1169,6 +1273,27 @@
                       }
                     }
                   }
+                },
+                "availability_status": {
+                  "type": "string"
+                },
+                "deep_read_ready": {
+                  "type": "boolean"
+                },
+                "ingestion_status": {
+                  "type": "string"
+                },
+                "key_figures": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "linked_project_name": {
+                  "type": "string"
+                },
+                "updated_at": {
+                  "type": "string"
                 }
               }
             }

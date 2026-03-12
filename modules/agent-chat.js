@@ -67,6 +67,31 @@ function mapProtocol(protocol) {
   };
 }
 
+function mapWorkflow(workflow, protocolsById = new Map(), projectNameById = new Map()) {
+  const blocks = asArray(workflow?.blocks);
+  const stepsPreview = blocks.map((block) => {
+    if (String(block?.type || '').trim().toLowerCase() === 'text') {
+      return trimText(block?.text, 180);
+    }
+    const protocolId = String(block?.protocolId || '').trim();
+    const protocolName = protocolId ? protocolsById.get(protocolId) : '';
+    return trimText(protocolName || protocolId || block?.text, 180);
+  }).filter(Boolean).slice(0, 8);
+
+  const projectId = String(workflow?.projectId || '').trim();
+  return {
+    id: String(workflow?.id || ''),
+    name: trimText(workflow?.name, 180),
+    description: trimText(workflow?.description, 400),
+    projectId,
+    project_name: trimText(projectNameById.get(projectId), 180),
+    block_count: blocks.length,
+    link_count: asArray(workflow?.links).length,
+    steps_preview: stepsPreview,
+    updated_at: String(workflow?.updatedAt || workflow?.createdAt || '')
+  };
+}
+
 function mapNotebookEntry(entry) {
   return {
     id: String(entry?.id || ''),
@@ -82,11 +107,26 @@ function mapNotebookEntry(entry) {
 export { mapExperimentDataToLlmJson };
 
 function mapPaper(paper) {
+  const summaryStructured = paper?.summaryStructured && typeof paper.summaryStructured === 'object'
+    ? paper.summaryStructured
+    : {};
+  const keyFigures = asArray(paper?.keyFigures).length
+    ? asArray(paper.keyFigures)
+    : asArray(summaryStructured?.important_figures_or_tables).map((item) => (
+      typeof item === 'string'
+        ? trimText(item, 220)
+        : trimText(`${item?.item || item?.label || item?.figure || 'figure'}: ${item?.summary || item?.description || ''}`, 220)
+    ));
+  const hasUploadedPdf = Boolean(trimText(paper?.pdfDataUrl, 40))
+    || Boolean(trimText(paper?.storedFilePath, 80))
+    || Boolean(trimText(paper?.storedRelativePath, 80));
+
   return {
     id: String(paper?.id || ''),
     title: trimText(paper?.title, 220),
     linkedType: String(paper?.linkedType || ''),
     linkedId: String(paper?.linkedId || ''),
+    linked_project_name: trimText(paper?.linkedName || paper?.projectName, 220),
     summary: trimText(paper?.summary, 1200),
     methods: asArray(paper?.methodsExtract)
       .slice(0, 6)
@@ -94,7 +134,24 @@ function mapPaper(paper) {
         title: trimText(method?.title, 180),
         steps: asArray(method?.steps).slice(0, 10).map((step) => getMethodStepText(step)).filter(Boolean),
         citations: asArray(method?.citations).slice(0, 8).map((item) => trimText(item, 120)).filter(Boolean)
+      })),
+    reagents: asArray(paper?.keyReagents)
+      .slice(0, 12)
+      .map((item) => ({
+        name: trimText(item?.name, 160),
+        type: trimText(item?.type, 80),
+        identifier: trimText(item?.identifier, 120),
+        notes: trimText(item?.notes, 220)
       }))
+      .filter((item) => item.name),
+    key_figures: keyFigures.map((item) => trimText(item, 220)).filter(Boolean).slice(0, 10),
+    has_uploaded_pdf: hasUploadedPdf,
+    deep_read_ready: paper?.deepReadReady === true || paper?.deep_read_ready === true,
+    availability_status: trimText(paper?.availabilityStatus || paper?.availability_status, 80),
+    ingestion_status: trimText(paper?.ingestionStatus || paper?.ingestion_status, 80),
+    ingestion_updated_at: trimText(paper?.ingestionUpdatedAt || paper?.ingestion_updated_at || paper?.updatedAt, 80),
+    ingestion_errors: asArray(paper?.ingestionErrors || paper?.ingestion_errors).map((item) => trimText(item, 220)).filter(Boolean).slice(0, 5),
+    updated_at: trimText(paper?.updatedAt || paper?.createdAt, 80)
   };
 }
 
@@ -146,6 +203,7 @@ const TOOL_ACTIVITY_LABELS = {
   search_projects: 'Checking project records',
   search_protocols: 'Checking stored protocols',
   search_notebook_entries: 'Checking lab notebook pages',
+  search_workflows: 'Checking workflow records',
   search_assays: 'Checking assay records',
   search_gel_analyses: 'Checking gel analysis records',
   search_inventory: 'Checking inventory records',
@@ -173,6 +231,9 @@ function inferRequestedActivities(requestText) {
   const rows = [];
   if (/\b(inventory|stock|reagent|chemical)\b/.test(text)) {
     rows.push('Checking inventory records');
+  }
+  if (/\b(workflow|pipeline|next step|previous step)\b/.test(text)) {
+    rows.push('Checking workflow records');
   }
   if (/\b(paper|papers|pdf|literature|journal)\b/.test(text)) {
     rows.push('Checking stored PDF papers');
@@ -379,6 +440,7 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
       ? asArray(state.projects).filter((project) => project.id === projectId)
       : asArray(state.projects);
     const projectIds = new Set(filteredProjects.map((project) => project.id));
+    const projectNameById = new Map(asArray(state.projects).map((project) => [String(project.id || ''), trimText(project.name, 180)]));
 
     const filteredNotebookEntries = asArray(state.notebookEntries)
       .filter((entry) => !projectIds.size || projectIds.has(entry.projectId))
@@ -390,6 +452,12 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
       .filter((protocol) => !projectIds.size || protocolIds.has(protocol.id))
       .slice(0, 80)
       .map(mapProtocol);
+    const protocolNameById = new Map(asArray(state.protocols).map((protocol) => [String(protocol.id || ''), trimText(protocol.name, 180)]));
+
+    const workflows = asArray(state.workflows)
+      .filter((workflow) => !projectIds.size || projectIds.has(String(workflow?.projectId || '')))
+      .slice(0, 80)
+      .map((workflow) => mapWorkflow(workflow, protocolNameById, projectNameById));
 
     const papers = asArray(state.papers)
       .filter((paper) => !projectIds.size || (paper.linkedType === 'project' && projectIds.has(paper.linkedId)))
@@ -404,6 +472,7 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
     return {
       projects,
       protocols,
+      workflows,
       notebookEntries,
       assays,
       gelAnalyses,
@@ -556,6 +625,7 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
     const summary = [
       `${snapshot.projects.length} projects`,
       `${snapshot.protocols.length} protocols`,
+      `${snapshot.workflows.length} workflows`,
       `${snapshot.notebookEntries.length} notebook entries`,
       `${snapshot.assays.length} assays`,
       `${snapshot.gelAnalyses.length} gel analyses`,
@@ -659,7 +729,16 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
       })
       .filter(Boolean);
     const routingPlanRows = Object.entries(routingPlan)
-      .filter(([key]) => !['selected_tool_names', 'tool_selection_rationale', 'protocol_match', 'protocol_candidates'].includes(key))
+      .filter(([key]) => ![
+        'selected_tool_names',
+        'tool_selection_rationale',
+        'protocol_match',
+        'protocol_candidates',
+        'project_match',
+        'project_candidates',
+        'paper_match',
+        'paper_candidates'
+      ].includes(key))
       .map(([key, value]) => {
         if (typeof value === 'boolean') {
           return `${key}: ${value}`;
@@ -706,6 +785,111 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
       const reason = trimText(candidate?.reason, 180);
       return `${index + 1}. ${name}${metrics ? ` (${metrics})` : ''}${reason ? ` - ${reason}` : ''}`;
     }).filter(Boolean);
+    const routingProjectMatch = routingPlan.project_match && typeof routingPlan.project_match === 'object'
+      ? routingPlan.project_match
+      : {};
+    const routingProjectMatchRows = [
+      trimText(routingProjectMatch.selected_project_id, 80)
+        ? `selected_project_id: ${trimText(routingProjectMatch.selected_project_id, 80)}`
+        : '',
+      trimText(routingProjectMatch.selected_project_name, 180)
+        ? `selected_project_name: ${trimText(routingProjectMatch.selected_project_name, 180)}`
+        : '',
+      Number.isFinite(Number(routingProjectMatch.top_score))
+        ? `top_score: ${Number(routingProjectMatch.top_score).toFixed(3)}`
+        : '',
+      Number.isFinite(Number(routingProjectMatch.score_delta))
+        ? `score_delta: ${Number(routingProjectMatch.score_delta).toFixed(3)}`
+        : '',
+      trimText(routingProjectMatch.resolution_source, 80)
+        ? `resolution_source: ${trimText(routingProjectMatch.resolution_source, 80)}`
+        : '',
+      `needs_clarification: ${routingProjectMatch.needs_clarification === true}`,
+      trimText(routingProjectMatch.ambiguity_reason, 180)
+        ? `ambiguity_reason: ${trimText(routingProjectMatch.ambiguity_reason, 180)}`
+        : ''
+    ].filter(Boolean);
+    const routingProjectCandidateRows = asArray(routingPlan.project_candidates).map((candidate, index) => {
+      const name = trimText(candidate?.project_name, 180) || trimText(candidate?.project_id, 80) || `candidate_${index + 1}`;
+      const score = Number(candidate?.score);
+      const exact = Number(candidate?.exact_name_score);
+      const partial = Number(candidate?.partial_name_score);
+      const selected = Number(candidate?.selected_bias_score);
+      const linked = Number(candidate?.linked_record_support_score);
+      const metrics = [
+        Number.isFinite(score) ? `score=${score.toFixed(3)}` : '',
+        Number.isFinite(exact) ? `exact=${exact.toFixed(3)}` : '',
+        Number.isFinite(partial) ? `partial=${partial.toFixed(3)}` : '',
+        Number.isFinite(selected) ? `selected=${selected.toFixed(3)}` : '',
+        Number.isFinite(linked) ? `linked=${linked.toFixed(3)}` : ''
+      ].filter(Boolean).join(' ');
+      const reason = trimText(candidate?.reason, 180);
+      return `${index + 1}. ${name}${metrics ? ` (${metrics})` : ''}${reason ? ` - ${reason}` : ''}`;
+    }).filter(Boolean);
+    const routingPaperMatch = routingPlan.paper_match && typeof routingPlan.paper_match === 'object'
+      ? routingPlan.paper_match
+      : {};
+    const routingPaperMatchRows = [
+      trimText(routingPaperMatch.selected_paper_id, 80)
+        ? `selected_paper_id: ${trimText(routingPaperMatch.selected_paper_id, 80)}`
+        : '',
+      trimText(routingPaperMatch.selected_paper_title, 220)
+        ? `selected_paper_title: ${trimText(routingPaperMatch.selected_paper_title, 220)}`
+        : '',
+      trimText(routingPaperMatch.secondary_paper_id, 80)
+        ? `secondary_paper_id: ${trimText(routingPaperMatch.secondary_paper_id, 80)}`
+        : '',
+      trimText(routingPaperMatch.secondary_paper_title, 220)
+        ? `secondary_paper_title: ${trimText(routingPaperMatch.secondary_paper_title, 220)}`
+        : '',
+      Number.isFinite(Number(routingPaperMatch.top_score))
+        ? `top_score: ${Number(routingPaperMatch.top_score).toFixed(3)}`
+        : '',
+      Number.isFinite(Number(routingPaperMatch.score_delta))
+        ? `score_delta: ${Number(routingPaperMatch.score_delta).toFixed(3)}`
+        : '',
+      trimText(routingPaperMatch.availability_status, 80)
+        ? `availability_status: ${trimText(routingPaperMatch.availability_status, 80)}`
+        : '',
+      `deep_read_ready: ${routingPaperMatch.deep_read_ready === true}`,
+      trimText(routingPaperMatch.secondary_availability_status, 80)
+        ? `secondary_availability_status: ${trimText(routingPaperMatch.secondary_availability_status, 80)}`
+        : '',
+      `secondary_deep_read_ready: ${routingPaperMatch.secondary_deep_read_ready === true}`,
+      `needs_clarification: ${routingPaperMatch.needs_clarification === true}`,
+      trimText(routingPaperMatch.ambiguity_reason, 180)
+        ? `ambiguity_reason: ${trimText(routingPaperMatch.ambiguity_reason, 180)}`
+        : ''
+    ].filter(Boolean);
+    const routingPaperCandidateRows = asArray(routingPlan.paper_candidates).map((candidate, index) => {
+      const name = trimText(candidate?.paper_title, 220) || trimText(candidate?.paper_id, 80) || `paper_${index + 1}`;
+      const score = Number(candidate?.score);
+      const semantic = Number(candidate?.semantic_score);
+      const title = Number(candidate?.title_score);
+      const entity = Number(candidate?.entity_overlap_score);
+      const project = Number(candidate?.project_relevance_score);
+      const metrics = [
+        Number.isFinite(score) ? `score=${score.toFixed(3)}` : '',
+        Number.isFinite(semantic) ? `semantic=${semantic.toFixed(3)}` : '',
+        Number.isFinite(title) ? `title=${title.toFixed(3)}` : '',
+        Number.isFinite(entity) ? `entity=${entity.toFixed(3)}` : '',
+        Number.isFinite(project) ? `project=${project.toFixed(3)}` : ''
+      ].filter(Boolean).join(' ');
+      const availability = trimText(candidate?.availability_status, 80);
+      const reason = trimText(candidate?.reason, 180);
+      return `${index + 1}. ${name}${metrics ? ` (${metrics})` : ''}${availability ? ` availability=${availability}` : ''}${reason ? ` - ${reason}` : ''}`;
+    }).filter(Boolean);
+    const paperAvailabilityRows = [
+      trimText(routingPaperMatch.selected_paper_title, 220)
+        ? `${trimText(routingPaperMatch.selected_paper_title, 220)}: ${trimText(routingPaperMatch.availability_status, 80) || 'unknown'} (deep_ready=${routingPaperMatch.deep_read_ready === true})`
+        : '',
+      trimText(routingPaperMatch.secondary_paper_title, 220)
+        ? `${trimText(routingPaperMatch.secondary_paper_title, 220)}: ${trimText(routingPaperMatch.secondary_availability_status, 80) || 'unknown'} (deep_ready=${routingPaperMatch.secondary_deep_read_ready === true})`
+        : ''
+    ].filter(Boolean);
+    if (!paperAvailabilityRows.length) {
+      paperAvailabilityRows.push('No paper availability context.');
+    }
     const routingToolRows = asArray(routingPlan.selected_tool_names).map((tool) => trimText(tool, 120)).filter(Boolean);
     const routingSelectorRows = asArray(routingPlan.tool_selection_rationale).map((row, index) => {
       const tool = trimText(row?.tool, 120) || `tool_${index + 1}`;
@@ -756,6 +940,11 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
         ${renderMetaList('Routing', routingRows)}
         ${renderMetaList('Routing Entities', routingEntityRows)}
         ${renderMetaList('Routing Plan', routingPlanRows)}
+        ${renderMetaList('Routing Project Match', routingProjectMatchRows)}
+        ${renderMetaList('Routing Project Candidates', routingProjectCandidateRows)}
+        ${renderMetaList('Routing Paper Match', routingPaperMatchRows)}
+        ${renderMetaList('Routing Paper Candidates', routingPaperCandidateRows)}
+        ${renderMetaList('Paper Availability', paperAvailabilityRows)}
         ${renderMetaList('Routing Protocol Match', routingProtocolMatchRows)}
         ${renderMetaList('Routing Protocol Candidates', routingProtocolCandidateRows)}
         ${renderMetaList('Routing Tools', routingToolRows)}

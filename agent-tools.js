@@ -33,6 +33,12 @@ const TOOL_CAPABILITY_MAP = Object.freeze({
     taskTypes: ['record_lookup', 'history_lookup', 'project_science'],
     aliases: ['notebook', 'entry', 'last time', 'history', 'record']
   },
+  search_workflows: {
+    toolClass: TOOL_CLASS.READ,
+    entityTypes: ['workflow_step', 'project', 'activity', 'protocol'],
+    taskTypes: ['record_lookup', 'history_lookup', 'project_science'],
+    aliases: ['workflow', 'step', 'pipeline', 'next step', 'graph']
+  },
   search_assays: {
     toolClass: TOOL_CLASS.READ,
     entityTypes: ['activity', 'workflow_step', 'project'],
@@ -159,6 +165,7 @@ const LOCAL_SEARCH_TOOLS = new Set([
   'search_projects',
   'search_protocols',
   'search_notebook_entries',
+  'search_workflows',
   'search_assays',
   'search_gel_analyses',
   'search_inventory',
@@ -393,10 +400,10 @@ function requiredToolHintsForIntent(intent) {
     return ['search_inventory', 'search_uniprot'];
   }
   if (normalized === 'record_lookup') {
-    return ['search_notebook_entries', 'search_assays', 'search_gel_analyses', 'search_projects'];
+    return ['search_notebook_entries', 'search_workflows', 'search_assays', 'search_gel_analyses', 'search_projects'];
   }
   if (normalized === 'project_science_question') {
-    return ['search_projects', 'search_notebook_entries', 'search_papers', 'search_protocols'];
+    return ['search_projects', 'search_notebook_entries', 'search_workflows', 'search_papers', 'search_protocols'];
   }
   if (normalized === 'paper_analysis') {
     return ['search_papers', 'search_pubmed', 'search_crossref', 'search_europe_pmc'];

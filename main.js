@@ -34,6 +34,8 @@ const {
 } = require('./agent-routing');
 const { resolveProtocolMatch } = require('./agent-protocol-matching');
 const { buildNotebookDraft, buildNotebookDraftSummary } = require('./agent-notebook-generation');
+const { buildProjectRecordIndex, retrieveProjectEvidence } = require('./agent-project-retrieval');
+const { buildPaperSearchableDocs, retrievePaperCandidates, resolvePaperRequest } = require('./agent-paper-analysis');
 const { createAgentWorkflowHelpers } = require('./agent-workflow-helpers');
 let AGENT_IO_CONTRACT_RAW = {};
 try {
@@ -902,6 +904,7 @@ function buildFallbackAgentIoTools() {
     makeTool('search_projects', 'Read project records by semantic keyword or exact term.'),
     makeTool('search_protocols', 'Read protocol records, including names and step snippets.'),
     makeTool('search_notebook_entries', 'Read notebook entries with result summaries and timestamps.'),
+    makeTool('search_workflows', 'Read workflow records with project links, block summaries, and recent step previews.'),
     makeTool('search_assays', 'Read assay runs with plate metadata and compact numeric summaries.'),
     makeTool('search_gel_analyses', 'Read gel analysis runs with confidence, calibration, and warning summaries.'),
     makeTool('search_inventory', 'Read chemical and personal inventory records.', 25),
@@ -2358,6 +2361,116 @@ function maybeBuildNotebookDraft({
   });
 }
 
+function maybeCollectProjectEvidence({
+  message,
+  routing,
+  snapshot,
+  projectId = '',
+  projectName = ''
+}) {
+  const normalizedRouting = normalizeRoutingPayload(routing);
+  if (normalizedRouting.intent !== 'project_science_question') {
+    return null;
+  }
+  if (normalizedRouting.plan.needs_clarification) {
+    return null;
+  }
+
+  const evidence = retrieveProjectEvidence({
+    message,
+    entities: normalizedRouting.entities,
+    selectedProjectId: cleanText(projectId, 80),
+    selectedProjectName: cleanText(projectName, 180),
+    snapshot,
+    maxPerSource: 3
+  });
+  if (!evidence || evidence.needs_clarification) {
+    return null;
+  }
+  return evidence;
+}
+
+function buildProjectEvidenceAssumptionRows(projectEvidence) {
+  const source = projectEvidence && typeof projectEvidence === 'object' ? projectEvidence : {};
+  return asArray(source.summary_rows).map((row) => cleanText(row, 260)).filter(Boolean);
+}
+
+function maybeCollectPaperEvidence({
+  message,
+  routing,
+  snapshot
+}) {
+  const normalizedRouting = normalizeRoutingPayload(routing);
+  if (normalizedRouting.intent !== 'paper_analysis') {
+    return null;
+  }
+  if (normalizedRouting.plan.needs_clarification) {
+    return null;
+  }
+
+  const resolved = resolvePaperRequest({
+    message,
+    entities: normalizedRouting.entities,
+    papers: asArray(snapshot.papers),
+    projects: asArray(snapshot.projects),
+    maxCandidates: 6
+  });
+  const selected = resolved?.selected && typeof resolved.selected === 'object' ? resolved.selected : {};
+  const secondary = resolved?.secondary_selected && typeof resolved.secondary_selected === 'object'
+    ? resolved.secondary_selected
+    : {};
+  const candidates = asArray(resolved?.candidates);
+
+  const summaryRows = [
+    `Paper mode=${cleanText(resolved?.mode, 80) || 'general_paper_query'} deep_read=${resolved?.requires_deep_reading === true} compare=${cleanText(resolved?.mode, 80) === 'compare_papers'}.`,
+    `Paper selection=${cleanText(selected.paper_title || selected.paper_id, 220) || '-'} availability=${cleanText(resolved?.availability?.availability_status, 80) || 'unknown'} deep_ready=${resolved?.availability?.deep_read_ready === true}.`
+  ];
+  if (cleanText(secondary.paper_title || secondary.paper_id, 220)) {
+    summaryRows.push(
+      `Paper comparison target=${cleanText(secondary.paper_title || secondary.paper_id, 220)} `
+      + `availability=${cleanText(resolved?.secondary_availability?.availability_status, 80) || 'unknown'} `
+      + `deep_ready=${resolved?.secondary_availability?.deep_read_ready === true}.`
+    );
+  }
+  if (cleanText(resolved?.comparison_summary, 1200)) {
+    summaryRows.push(cleanText(resolved.comparison_summary, 1200));
+  }
+
+  const citations = [];
+  const pushCitation = (sourceLabel, paperId, paperTitle, reason) => {
+    const pointer = cleanText(paperId || paperTitle, 220);
+    if (!pointer) {
+      return;
+    }
+    citations.push({
+      source: cleanText(sourceLabel, 120),
+      pointer,
+      reason: cleanText(reason, 220)
+    });
+  };
+
+  pushCitation('paper', selected.paper_id, selected.paper_title, 'Resolved as primary paper candidate for current request.');
+  pushCitation('paper', secondary.paper_id, secondary.paper_title, 'Resolved as secondary comparison paper candidate.');
+  candidates.forEach((candidate) => {
+    pushCitation(
+      'paper',
+      candidate?.paper_id,
+      candidate?.paper_title,
+      `Phase 7 candidate score=${Number(candidate?.score || 0).toFixed(2)} availability=${cleanText(candidate?.availability_status, 80) || 'unknown'}.`
+    );
+  });
+
+  return {
+    summary_rows: uniqueStrings(summaryRows).filter(Boolean),
+    citations
+  };
+}
+
+function buildPaperEvidenceAssumptionRows(paperEvidence) {
+  const source = paperEvidence && typeof paperEvidence === 'object' ? paperEvidence : {};
+  return asArray(source.summary_rows).map((row) => cleanText(row, 260)).filter(Boolean);
+}
+
 function buildIntermediateState(stage, goal, extras = {}) {
   return {
     state_id: `${Date.now()}-${Math.random().toString(16).slice(2, 10)}`,
@@ -2420,10 +2533,11 @@ function normalizeAgentSnapshot(rawSnapshot) {
   if (!normalizedExperimentData.gel_runs.length && gelAnalyses.length) {
     normalizedExperimentData.gel_runs = gelAnalyses;
   }
-  return {
+  const normalizedSnapshot = {
     projects: asArray(snapshot.projects).slice(0, 40),
     protocols: asArray(snapshot.protocols).slice(0, 100),
     notebookEntries: asArray(snapshot.notebookEntries).slice(0, 180),
+    workflows: asArray(snapshot.workflows).slice(0, 120),
     assays,
     gelAnalyses,
     experimentData: normalizedExperimentData,
@@ -2436,9 +2550,11 @@ function normalizeAgentSnapshot(rawSnapshot) {
       : { personal: [], chemicals: [] },
     settings: {
       storagePath: cleanText(snapshot?.settings?.storagePath || snapshot?.storagePath, 1200)
-    },
+      },
     timestamp: cleanText(snapshot.timestamp, 80)
   };
+  normalizedSnapshot.projectIndex = buildProjectRecordIndex({ snapshot: normalizedSnapshot });
+  return normalizedSnapshot;
 }
 
 function scoreByQuery(text, queryTokens) {
@@ -2830,6 +2946,68 @@ async function runAgentToolDispatchLegacy(name, args, snapshot, options = {}) {
     });
   }
 
+  if (name === 'search_workflows') {
+    const scopedEvidence = retrieveProjectEvidence({
+      message: query,
+      entities: {
+        project: cleanText(normalizedArgs?.project_name || normalizedArgs?.project, 180),
+        workflow_step: cleanText(normalizedArgs?.workflow_step, 180),
+        protocol: cleanText(normalizedArgs?.protocol, 180),
+        activity: query
+      },
+      selectedProjectId: cleanText(normalizedArgs?.project_id, 80),
+      selectedProjectName: cleanText(normalizedArgs?.project_name, 180),
+      snapshot,
+      maxPerSource: limit,
+      allowAmbiguousScope: true
+    });
+
+    const evidenceRows = asArray(scopedEvidence?.packs?.workflows).map((workflow) => ({
+      id: cleanText(workflow?.id, 80),
+      name: cleanText(workflow?.name, 180),
+      project_name: cleanText(workflow?.project_name, 180),
+      description: cleanText(workflow?.description, 400),
+      block_count: Number(workflow?.block_count) || 0,
+      link_count: Number(workflow?.link_count) || 0,
+      steps_preview: asArray(workflow?.steps_preview).map((step) => cleanText(step, 220)).filter(Boolean).slice(0, 8),
+      updated_at: cleanText(workflow?.updated_at, 80)
+    })).filter((workflow) => workflow.id || workflow.name);
+
+    const fallbackRows = pickTopMatches(
+      snapshot.workflows,
+      (workflow) => [
+        workflow?.name,
+        workflow?.description,
+        asArray(workflow?.blocks).map((block) => block?.text || block?.protocolId).join(' ')
+      ].join(' '),
+      query,
+      limit
+    ).map((workflow) => ({
+      id: cleanText(workflow?.id, 80),
+      name: cleanText(workflow?.name, 180),
+      project_name: cleanText(
+        asArray(snapshot.projects).find((project) => project.id === cleanText(workflow?.projectId, 80))?.name,
+        180
+      ),
+      description: cleanText(workflow?.description, 400),
+      block_count: asArray(workflow?.blocks).length,
+      link_count: asArray(workflow?.links).length,
+      steps_preview: asArray(workflow?.blocks).map((block) => cleanText(block?.text || block?.protocolId, 220)).filter(Boolean).slice(0, 8),
+      updated_at: cleanText(workflow?.updatedAt || workflow?.createdAt, 80)
+    }));
+
+    const items = evidenceRows.length ? evidenceRows : fallbackRows;
+    return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+      items: items.slice(0, limit),
+      citations: items.slice(0, limit).map((workflow) => ({
+        source: 'workflow',
+        pointer: workflow.id || workflow.name,
+        reason: 'Matched workflow graph metadata and step previews.'
+      })),
+      summary: `Found ${items.slice(0, limit).length} matching workflows.`
+    });
+  }
+
   if (name === 'search_assays') {
     const items = pickTopMatches(
       snapshot.assays,
@@ -2950,32 +3128,47 @@ async function runAgentToolDispatchLegacy(name, args, snapshot, options = {}) {
   }
 
   if (name === 'search_papers') {
-    const items = pickTopMatches(
-      snapshot.papers,
-      (paper) => `${paper?.title || ''} ${paper?.summary || ''} ${
-        asArray(paper?.methods).flatMap((method) => [method?.title, ...asArray(method?.steps)]).join(' ')
-      }`,
-      query,
-      limit
-    ).map((paper) => ({
-      id: cleanText(paper?.id, 80),
-      title: cleanText(paper?.title, 220),
+    const docs = buildPaperSearchableDocs({
+      papers: asArray(snapshot.papers),
+      projects: asArray(snapshot.projects)
+    });
+    const ranked = retrievePaperCandidates({
+      message: query || 'paper',
+      entities: {
+        paper_title: cleanText(normalizedArgs?.paper_title || normalizedArgs?.title, 220),
+        project: cleanText(normalizedArgs?.project_name || normalizedArgs?.project, 180),
+        protein: cleanText(normalizedArgs?.protein, 140),
+        compound: cleanText(normalizedArgs?.compound, 140)
+      },
+      docs,
+      maxCandidates: limit
+    });
+    const items = ranked.slice(0, limit).map((paper) => ({
+      id: cleanText(paper?.paper_id, 80),
+      title: cleanText(paper?.paper_title, 220),
       summary: cleanText(paper?.summary, 500),
       methods: asArray(paper?.methods).slice(0, 4).map((method) => ({
         title: cleanText(method?.title, 180),
         steps: asArray(method?.steps).slice(0, 6).map((step) => cleanText(step, 200)).filter(Boolean),
         citations: asArray(method?.citations).slice(0, 6).map((citation) => cleanText(citation, 140)).filter(Boolean)
-      }))
+      })),
+      availability_status: cleanText(paper?.availability_status, 80),
+      deep_read_ready: paper?.deep_read_ready === true,
+      ingestion_status: cleanText(paper?.ingestion_status, 80),
+      key_figures: asArray(paper?.key_figures).map((item) => cleanText(item, 220)).filter(Boolean).slice(0, 8),
+      linked_project_name: cleanText(paper?.linked_project_name, 220),
+      updated_at: cleanText(paper?.updated_at, 80)
     }));
+    const deepReadyCount = items.filter((item) => item.deep_read_ready === true).length;
 
     return buildAgentToolOutputEnvelope(name, normalizedArgs, {
       items,
       citations: items.map((paper) => ({
         source: 'paper',
         pointer: paper.id || paper.title,
-        reason: 'Matched paper title, summary, or extracted methods.'
+        reason: 'Matched paper title, summary, methods, reagents, or key-figure metadata.'
       })),
-      summary: `Found ${items.length} matching papers.`
+      summary: `Found ${items.length} matching papers (${deepReadyCount} deep-ready).`
     });
   }
 
@@ -3851,6 +4044,11 @@ function buildToolFuzzyVocabulary(snapshot) {
   const values = [
     ...asArray(source.projects).flatMap((item) => [item?.name, item?.summary]),
     ...asArray(source.protocols).flatMap((item) => [item?.name, item?.category]),
+    ...asArray(source.workflows).flatMap((item) => [
+      item?.name,
+      item?.description,
+      ...asArray(item?.blocks).map((block) => block?.text || block?.protocolId)
+    ]),
     ...asArray(source.notebookEntries).flatMap((item) => [item?.protocolName, item?.result]),
     ...asArray(source.assays).flatMap((item) => [item?.name, item?.project_name, item?.notebook_entry_protocol_name]),
     ...asArray(source.gelAnalyses).flatMap((item) => [item?.name, item?.project_name, item?.notebook_entry_protocol_name]),
@@ -4918,6 +5116,7 @@ async function buildCodexAgentContext(message, snapshot, selectedToolNames = nul
     'search_projects',
     'search_protocols',
     'search_notebook_entries',
+    'search_workflows',
     'search_assays',
     'search_gel_analyses',
     'search_inventory',
@@ -4997,7 +5196,7 @@ async function runCodexAgentController({
 
   intermediateStates.push(buildIntermediateState('context', 'Loaded snapshot context for Codex retrieval.', {
     assumptions: [
-      `Context sizes: projects=${snapshot.projects.length}, protocols=${snapshot.protocols.length}, notebook_entries=${snapshot.notebookEntries.length}, assays=${snapshot.assays.length}, gel_analyses=${snapshot.gelAnalyses.length}, papers=${snapshot.papers.length}.`
+      `Context sizes: projects=${snapshot.projects.length}, protocols=${snapshot.protocols.length}, workflows=${snapshot.workflows.length}, notebook_entries=${snapshot.notebookEntries.length}, assays=${snapshot.assays.length}, gel_analyses=${snapshot.gelAnalyses.length}, papers=${snapshot.papers.length}.`
     ],
     confidence: 0.52
   }));
@@ -5013,6 +5212,55 @@ async function runCodexAgentController({
     })),
     confidence: routingInfo.confidence
   }));
+
+  const projectEvidence = maybeCollectProjectEvidence({
+    message,
+    routing: routingInfo,
+    snapshot,
+    projectId,
+    projectName
+  });
+  if (projectEvidence) {
+    const assumptions = buildProjectEvidenceAssumptionRows(projectEvidence);
+    intermediateStates.push(buildIntermediateState('project_evidence', 'Collected deterministic project-aware evidence packs.', {
+      assumptions,
+      evidence: asArray(projectEvidence.citations).slice(0, 10),
+      confidence: 0.67
+    }));
+    toolTrace.push({
+      tool: 'project_evidence_aggregator',
+      args: {
+        project_id: cleanText(projectEvidence?.selected_project?.id, 80),
+        project_name: cleanText(projectEvidence?.selected_project?.name, 180)
+      },
+      summary: cleanText(assumptions.join(' '), 240)
+    });
+    evidence.push(...asArray(projectEvidence.citations));
+  }
+
+  const paperEvidence = maybeCollectPaperEvidence({
+    message,
+    routing: routingInfo,
+    snapshot
+  });
+  if (paperEvidence) {
+    const assumptions = buildPaperEvidenceAssumptionRows(paperEvidence);
+    intermediateStates.push(buildIntermediateState('paper_evidence', 'Collected deterministic paper evidence packs.', {
+      assumptions,
+      evidence: asArray(paperEvidence.citations).slice(0, 10),
+      confidence: 0.66
+    }));
+    toolTrace.push({
+      tool: 'paper_evidence_aggregator',
+      args: {
+        mode: cleanText(routingInfo.plan.paper_task_mode, 80),
+        selected_paper_id: cleanText(routingInfo.plan.paper_match?.selected_paper_id, 80),
+        selected_paper_title: cleanText(routingInfo.plan.paper_match?.selected_paper_title, 220)
+      },
+      summary: cleanText(assumptions.join(' '), 240)
+    });
+    evidence.push(...asArray(paperEvidence.citations));
+  }
 
   const collected = await buildCodexAgentContext(message, snapshot, routingInfo.plan.selected_tool_names);
   toolTrace.push(...collected.toolTrace);
@@ -5059,6 +5307,9 @@ async function runCodexAgentController({
     'Task: answer the latest user request using only the retrieved Enana context below. If context is missing, explicitly say what is missing.',
     `Conversation transcript:\n${toPromptConversationTranscript(promptConversation)}`,
     `Routing decision JSON:\n${cleanText(JSON.stringify(routingInfo, null, 2), 10000)}`,
+    ...(projectEvidence
+      ? [`Project evidence JSON:\n${cleanText(JSON.stringify(projectEvidence, null, 2), 24000)}`]
+      : []),
     `Retrieved context JSON:\n${cleanText(JSON.stringify(collected.contextSlices, null, 2), 70000)}`,
     'Respond as concise assistant text.'
   ].join('\n\n');
@@ -5195,7 +5446,9 @@ async function runAgentController(payload) {
     snapshot,
     availableToolNames,
     toolContract: AGENT_TOOL_REGISTRY,
-    writeIntent: containsWriteIntent(message)
+    writeIntent: containsWriteIntent(message),
+    selectedProjectId: projectId,
+    selectedProjectName: projectName
   });
 
   let routing = normalizeRoutingPayload(ruleRouting);
@@ -5217,7 +5470,9 @@ async function runAgentController(payload) {
       snapshot,
       writeIntent: containsWriteIntent(message),
       availableToolNames,
-      toolContract: AGENT_TOOL_REGISTRY
+      toolContract: AGENT_TOOL_REGISTRY,
+      selectedProjectId: projectId,
+      selectedProjectName: projectName
     });
     routing = normalizeRoutingPayload(mergedRouting);
   }
@@ -5310,7 +5565,7 @@ async function runAgentController(payload) {
 
   intermediateStates.push(buildIntermediateState('context', 'Loaded snapshot context for retrieval tools.', {
     assumptions: [
-      `Context sizes: projects=${snapshot.projects.length}, protocols=${snapshot.protocols.length}, notebook_entries=${snapshot.notebookEntries.length}, assays=${snapshot.assays.length}, gel_analyses=${snapshot.gelAnalyses.length}, papers=${snapshot.papers.length}.`
+      `Context sizes: projects=${snapshot.projects.length}, protocols=${snapshot.protocols.length}, workflows=${snapshot.workflows.length}, notebook_entries=${snapshot.notebookEntries.length}, assays=${snapshot.assays.length}, gel_analyses=${snapshot.gelAnalyses.length}, papers=${snapshot.papers.length}.`
     ],
     confidence: 0.52
   }));
@@ -5325,6 +5580,55 @@ async function runAgentController(payload) {
     })),
     confidence: routing.confidence
   }));
+
+  const projectEvidence = maybeCollectProjectEvidence({
+    message,
+    routing,
+    snapshot,
+    projectId,
+    projectName
+  });
+  if (projectEvidence) {
+    const assumptions = buildProjectEvidenceAssumptionRows(projectEvidence);
+    intermediateStates.push(buildIntermediateState('project_evidence', 'Collected deterministic project-aware evidence packs.', {
+      assumptions,
+      evidence: asArray(projectEvidence.citations).slice(0, 10),
+      confidence: 0.67
+    }));
+    toolTrace.push({
+      tool: 'project_evidence_aggregator',
+      args: {
+        project_id: cleanText(projectEvidence?.selected_project?.id, 80),
+        project_name: cleanText(projectEvidence?.selected_project?.name, 180)
+      },
+      summary: cleanText(assumptions.join(' '), 240)
+    });
+    evidence.push(...asArray(projectEvidence.citations));
+  }
+
+  const paperEvidence = maybeCollectPaperEvidence({
+    message,
+    routing,
+    snapshot
+  });
+  if (paperEvidence) {
+    const assumptions = buildPaperEvidenceAssumptionRows(paperEvidence);
+    intermediateStates.push(buildIntermediateState('paper_evidence', 'Collected deterministic paper evidence packs.', {
+      assumptions,
+      evidence: asArray(paperEvidence.citations).slice(0, 10),
+      confidence: 0.66
+    }));
+    toolTrace.push({
+      tool: 'paper_evidence_aggregator',
+      args: {
+        mode: cleanText(routing.plan.paper_task_mode, 80),
+        selected_paper_id: cleanText(routing.plan.paper_match?.selected_paper_id, 80),
+        selected_paper_title: cleanText(routing.plan.paper_match?.selected_paper_title, 220)
+      },
+      summary: cleanText(assumptions.join(' '), 240)
+    });
+    evidence.push(...asArray(paperEvidence.citations));
+  }
 
   const systemPrompt = buildAgentSystemPrompt(projectName, promptConfig);
   const scopedToolDefinitions = routing.plan.needs_tools
