@@ -332,7 +332,17 @@ agentChat = initAgentChat({
   state,
   persist,
   createId,
-  safeText
+  safeText,
+  onNotebookEntriesChanged: () => {
+    synthesisNotebook.renderEntries();
+    biologyNotebook.renderEntries();
+    projectManagement.renderNotebookPages();
+    workflowManagement?.render();
+    assay?.renderNotebookOptions();
+    assay?.renderList();
+    gel?.renderNotebookOptions();
+    gel?.renderList();
+  }
 });
 
 workflowManagement = initWorkflowManagement({

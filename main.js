@@ -33,6 +33,8 @@ const {
   buildRoutingClarificationQuestion
 } = require('./agent-routing');
 const { resolveProtocolMatch } = require('./agent-protocol-matching');
+const { buildNotebookDraft, buildNotebookDraftSummary } = require('./agent-notebook-generation');
+const { createAgentWorkflowHelpers } = require('./agent-workflow-helpers');
 let AGENT_IO_CONTRACT_RAW = {};
 try {
   AGENT_IO_CONTRACT_RAW = require('./data/agent-io-contract.json');
@@ -1579,6 +1581,14 @@ function cleanText(value, maxLength = 2000) {
   return `${text.slice(0, maxLength)}...`;
 }
 
+const agentWorkflowHelpers = createAgentWorkflowHelpers({
+  cleanText,
+  asArray,
+  clamp,
+  routingIntents: ROUTING_INTENTS,
+  buildNotebookDraft
+});
+
 function safeParseJson(text, fallback) {
   try {
     const parsed = JSON.parse(String(text || ''));
@@ -2313,124 +2323,39 @@ function isComputeTool(name) {
 }
 
 function normalizeRoutingPayload(rawRouting) {
-  const source = rawRouting && typeof rawRouting === 'object' ? rawRouting : {};
-  const entities = source.entities && typeof source.entities === 'object' ? source.entities : {};
-  const plan = source.plan && typeof source.plan === 'object' ? source.plan : {};
-  const classifier = source.classifier && typeof source.classifier === 'object' ? source.classifier : {};
-  const selectedToolNames = asArray(plan.selected_tool_names).map((item) => cleanText(item, 120)).filter(Boolean);
-  const toolSelectionRationale = asArray(plan.tool_selection_rationale).map((row) => ({
-    tool: cleanText(row?.tool, 120),
-    score: Number.isFinite(Number(row?.score)) ? Number(row.score) : 0,
-    entityScore: Number.isFinite(Number(row?.entityScore)) ? Number(row.entityScore) : 0,
-    taskScore: Number.isFinite(Number(row?.taskScore)) ? Number(row.taskScore) : 0,
-    exactnessScore: Number.isFinite(Number(row?.exactnessScore)) ? Number(row.exactnessScore) : 0,
-    reason: cleanText(row?.reason, 220)
-  })).filter((row) => row.tool);
-  const protocolMatch = plan.protocol_match && typeof plan.protocol_match === 'object' ? plan.protocol_match : {};
-  const protocolCandidates = asArray(plan.protocol_candidates).map((row) => ({
-    protocol_id: cleanText(row?.protocol_id, 80),
-    protocol_name: cleanText(row?.protocol_name, 220),
-    category: cleanText(row?.category, 80),
-    score: Number.isFinite(Number(row?.score)) ? Number(row.score) : 0,
-    semantic_score: Number.isFinite(Number(row?.semantic_score)) ? Number(row.semantic_score) : 0,
-    entity_overlap_score: Number.isFinite(Number(row?.entity_overlap_score)) ? Number(row.entity_overlap_score) : 0,
-    project_relevance_score: Number.isFinite(Number(row?.project_relevance_score)) ? Number(row.project_relevance_score) : 0,
-    recent_workflow_relevance_score: Number.isFinite(Number(row?.recent_workflow_relevance_score))
-      ? Number(row.recent_workflow_relevance_score)
-      : 0,
-    reason: cleanText(row?.reason, 220),
-    steps: asArray(row?.steps).map((step) => cleanText(step, 220)).filter(Boolean).slice(0, 8)
-  })).filter((row) => row.protocol_name);
-  return {
-    intent: ROUTING_INTENTS.includes(cleanText(source.intent, 80)) ? cleanText(source.intent, 80) : 'general_science_question',
-    confidence: Number.isFinite(Number(source.confidence))
-      ? clamp(Number(source.confidence), 0, 1)
-      : 0.5,
-    entities: {
-      activity: cleanText(entities.activity, 180),
-      project: cleanText(entities.project, 180),
-      protein: cleanText(entities.protein, 100),
-      compound: cleanText(entities.compound, 120),
-      protocol: cleanText(entities.protocol, 220),
-      cell_line: cleanText(entities.cell_line, 80),
-      paper_title: cleanText(entities.paper_title, 220),
-      workflow_step: cleanText(entities.workflow_step, 180)
-    },
-    plan: {
-      needs_tools: plan.needs_tools === true,
-      needs_protocol_search: plan.needs_protocol_search === true,
-      needs_notebook_retrieval: plan.needs_notebook_retrieval === true,
-      needs_pdf_reading: plan.needs_pdf_reading === true,
-      needs_python: plan.needs_python === true,
-      needs_web_search: plan.needs_web_search === true,
-      needs_clarification: plan.needs_clarification === true,
-      clarification_reason: cleanText(plan.clarification_reason, 260),
-      clarification_question: cleanText(plan.clarification_question, 320),
-      selected_tool_names: selectedToolNames,
-      tool_selection_rationale: toolSelectionRationale,
-      protocol_match: {
-        selected_protocol_id: cleanText(protocolMatch.selected_protocol_id, 80),
-        selected_protocol_name: cleanText(protocolMatch.selected_protocol_name, 220),
-        top_score: Number.isFinite(Number(protocolMatch.top_score)) ? Number(protocolMatch.top_score) : 0,
-        score_delta: Number.isFinite(Number(protocolMatch.score_delta)) ? Number(protocolMatch.score_delta) : 0,
-        needs_clarification: protocolMatch.needs_clarification === true,
-        ambiguity_reason: cleanText(protocolMatch.ambiguity_reason, 220)
-      },
-      protocol_candidates: protocolCandidates
-    },
-    classifier: {
-      source: cleanText(classifier.source, 80) || 'rules',
-      fallbackAttempted: classifier.fallbackAttempted === true,
-      fallbackUsed: classifier.fallbackUsed === true,
-      lowConfidence: classifier.lowConfidence === true,
-      tieDetected: classifier.tieDetected === true,
-      ruleReason: cleanText(classifier.ruleReason, 260),
-      fallbackError: cleanText(classifier.fallbackError, 260),
-      ruleScores: classifier.ruleScores && typeof classifier.ruleScores === 'object'
-        ? classifier.ruleScores
-        : {}
-    }
-  };
+  return agentWorkflowHelpers.normalizeRoutingPayload(rawRouting);
 }
 
 function buildRoutingAssumptionRows(routing) {
-  const normalized = normalizeRoutingPayload(routing);
-  const rows = [
-    `Routing intent=${normalized.intent} confidence=${normalized.confidence.toFixed(2)} source=${normalized.classifier.source}.`,
-    `Planner flags tools=${normalized.plan.needs_tools} protocol_search=${normalized.plan.needs_protocol_search} notebook_retrieval=${normalized.plan.needs_notebook_retrieval} pdf=${normalized.plan.needs_pdf_reading} python=${normalized.plan.needs_python} web=${normalized.plan.needs_web_search} clarification=${normalized.plan.needs_clarification}.`
-  ];
-  if (normalized.plan.selected_tool_names.length) {
-    rows.push(`Planner selected tools: ${normalized.plan.selected_tool_names.join(', ')}.`);
-  }
-  if (asArray(normalized.plan.tool_selection_rationale).length) {
-    const top = normalized.plan.tool_selection_rationale[0];
-    rows.push(`Tool selector top candidate: ${top.tool} score=${top.score} (${top.reason || 'no reason'}).`);
-  }
-  if (normalized.plan.protocol_match.selected_protocol_name) {
-    rows.push(
-      `Protocol matcher selected "${normalized.plan.protocol_match.selected_protocol_name}" `
-      + `(score=${normalized.plan.protocol_match.top_score.toFixed(2)}).`
-    );
-  }
-  if (normalized.plan.protocol_match.needs_clarification) {
-    rows.push(
-      `Protocol matcher requested clarification (${normalized.plan.protocol_match.ambiguity_reason || 'ambiguous'}; `
-      + `delta=${normalized.plan.protocol_match.score_delta.toFixed(2)}).`
-    );
-  }
-  if (asArray(normalized.plan.protocol_candidates).length) {
-    const topCandidate = normalized.plan.protocol_candidates[0];
-    rows.push(
-      `Protocol candidate top-1: ${topCandidate.protocol_name} `
-      + `score=${topCandidate.score.toFixed(2)} semantic=${topCandidate.semantic_score.toFixed(2)}.`
-    );
-  }
-  if (normalized.classifier.fallbackAttempted) {
-    rows.push(normalized.classifier.fallbackUsed
-      ? 'Routing fallback completed successfully.'
-      : `Routing fallback attempted but not used${normalized.classifier.fallbackError ? `: ${normalized.classifier.fallbackError}` : '.'}`);
-  }
-  return rows;
+  return agentWorkflowHelpers.buildRoutingAssumptionRows(routing);
+}
+
+function normalizeNotebookDraftPayload(rawDraft) {
+  return agentWorkflowHelpers.normalizeNotebookDraftPayload(rawDraft);
+}
+
+function buildNotebookDraftAssumptionRows(notebookDraft) {
+  return agentWorkflowHelpers.buildNotebookDraftAssumptionRows(notebookDraft);
+}
+
+function maybeBuildNotebookDraft({
+  message,
+  conversation,
+  routing,
+  snapshot,
+  projectId = '',
+  projectName = '',
+  toolResults = []
+}) {
+  return agentWorkflowHelpers.maybeBuildNotebookDraft({
+    message,
+    conversation,
+    routing,
+    snapshot,
+    projectId,
+    projectName,
+    toolResults
+  });
 }
 
 function buildIntermediateState(stage, goal, extras = {}) {
@@ -4061,6 +3986,7 @@ function normalizeRoutingForAgentLog(routing) {
 
 function summarizeAgentResultForLog(result) {
   const source = result && typeof result === 'object' ? result : {};
+  const notebookDraft = normalizeNotebookDraftPayload(source.notebookDraft);
   return {
     ok: source.ok === true,
     provider: cleanText(source.provider, 80),
@@ -4081,6 +4007,16 @@ function summarizeAgentResultForLog(result) {
     })),
     decisionRecord: normalizeDecisionRecordForAgentLog(source.decisionRecord),
     routing: normalizeRoutingForAgentLog(source.routing),
+    notebookDraft: notebookDraft
+      ? {
+        protocol: notebookDraft.protocol,
+        project: notebookDraft.project,
+        notebook_type: notebookDraft.notebook_type,
+        placeholder_count: notebookDraft.placeholder_values.length,
+        unresolved_count: notebookDraft.unresolved_placeholders.length,
+        save: notebookDraft.save
+      }
+      : null,
     intermediateStates: normalizeIntermediateStatesForAgentLog(source.intermediateStates),
     toolTrace: normalizeToolTraceForAgentLog(source.toolTrace),
     error: cleanText(source.error, 2000)
@@ -5034,6 +4970,7 @@ async function runCodexAgentController({
   conversation,
   hasLatestUserInConversation,
   snapshot,
+  projectId,
   projectName,
   promptConfig,
   allowWriteTools,
@@ -5042,6 +4979,7 @@ async function runCodexAgentController({
   const intermediateStates = [];
   const toolTrace = [];
   const evidence = [];
+  const notebookToolResults = [];
   const requiresApproval = containsWriteIntent(message) && !allowWriteTools;
   const routingInfo = normalizeRoutingPayload(routing);
 
@@ -5094,6 +5032,27 @@ async function runCodexAgentController({
   const promptConversation = hasLatestUserInConversation
     ? conversation
     : [...conversation, { role: 'user', text: message }];
+  const notebookDraft = maybeBuildNotebookDraft({
+    message,
+    conversation: promptConversation,
+    routing: routingInfo,
+    snapshot,
+    projectId,
+    projectName,
+    toolResults: collected.contextSlices.map((slice) => ({
+      tool: slice.tool,
+      items: asArray(slice.items),
+      summary: ''
+    }))
+  });
+
+  if (notebookDraft) {
+    intermediateStates.push(buildIntermediateState('notebook_draft', 'Generated deterministic notebook draft metadata.', {
+      assumptions: buildNotebookDraftAssumptionRows(notebookDraft),
+      confidence: asArray(notebookDraft.unresolved_placeholders).length ? 0.62 : 0.74
+    }));
+  }
+
   const systemPrompt = buildAgentSystemPrompt(projectName, promptConfig);
   const draftPrompt = [
     systemPrompt,
@@ -5159,6 +5118,12 @@ async function runCodexAgentController({
   if (requiresApproval) {
     normalized.requiresApproval = true;
   }
+  if (notebookDraft) {
+    const summary = buildNotebookDraftSummary(notebookDraft);
+    if (summary) {
+      normalized.answer = cleanText(`${normalized.answer}\n\n${summary}`, 12000);
+    }
+  }
 
   intermediateStates.push(buildIntermediateState('synthesize', 'Generated final user-facing response with decision record.', {
     evidence: normalized.citations,
@@ -5191,6 +5156,7 @@ async function runCodexAgentController({
     citations: normalized.citations,
     decisionRecord: normalized.decisionRecord,
     routing: routingInfo,
+    ...(notebookDraft ? { notebookDraft } : {}),
     intermediateStates,
     toolTrace
   };
@@ -5215,6 +5181,7 @@ async function runAgentController(payload) {
     && conversation[conversation.length - 1].text === message;
   const snapshot = normalizeAgentSnapshot(payload?.stateSnapshot);
   const allowWriteTools = payload?.allowWriteTools === true;
+  const projectId = cleanText(payload?.projectId, 80);
   const projectName = cleanText(payload?.projectName, 180);
   const promptConfig = await loadLlmPrompts();
   const requiresApproval = containsWriteIntent(message) && !allowWriteTools;
@@ -5316,6 +5283,7 @@ async function runAgentController(payload) {
       conversation,
       hasLatestUserInConversation,
       snapshot,
+      projectId,
       projectName,
       promptConfig,
       allowWriteTools,
@@ -5398,6 +5366,11 @@ async function runAgentController(payload) {
         args: normalizedInput,
         summary: cleanText(toolResult.summary, 240)
       });
+      notebookToolResults.push({
+        tool: call.name,
+        items: asArray(toolResult.items),
+        summary: cleanText(toolResult.summary, 240)
+      });
       asArray(toolResult.citations).forEach((citation) => {
         evidence.push({
           source: cleanText(citation?.source, 120),
@@ -5443,6 +5416,22 @@ async function runAgentController(payload) {
     confidence: evidence.length ? 0.72 : 0.58
   }));
 
+  const notebookDraft = maybeBuildNotebookDraft({
+    message,
+    conversation: promptConversation,
+    routing,
+    snapshot,
+    projectId,
+    projectName,
+    toolResults: notebookToolResults
+  });
+  if (notebookDraft) {
+    intermediateStates.push(buildIntermediateState('notebook_draft', 'Generated deterministic notebook draft metadata.', {
+      assumptions: buildNotebookDraftAssumptionRows(notebookDraft),
+      confidence: asArray(notebookDraft.unresolved_placeholders).length ? 0.62 : 0.74
+    }));
+  }
+
   const synthesisRequest = buildAgentSynthesisPrompt(requiresApproval, promptConfig);
 
   let normalized;
@@ -5485,6 +5474,12 @@ async function runAgentController(payload) {
   if (requiresApproval) {
     normalized.requiresApproval = true;
   }
+  if (notebookDraft) {
+    const summary = buildNotebookDraftSummary(notebookDraft);
+    if (summary) {
+      normalized.answer = cleanText(`${normalized.answer}\n\n${summary}`, 12000);
+    }
+  }
 
   intermediateStates.push(buildIntermediateState('synthesize', 'Generated final user-facing response with decision record.', {
     evidence: normalized.citations,
@@ -5517,6 +5512,7 @@ async function runAgentController(payload) {
     citations: normalized.citations,
     decisionRecord: normalized.decisionRecord,
     routing,
+    ...(notebookDraft ? { notebookDraft } : {}),
     intermediateStates,
     toolTrace
   };

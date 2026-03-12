@@ -349,6 +349,7 @@ const shared = loadEsmStyleModule(path.join(__dirname, 'modules', 'shared.js'), 
 const agentRouting = require(path.join(__dirname, 'agent-routing.js'));
 const agentTools = require(path.join(__dirname, 'agent-tools.js'));
 const agentProtocolMatching = require(path.join(__dirname, 'agent-protocol-matching.js'));
+const agentNotebookGeneration = require(path.join(__dirname, 'agent-notebook-generation.js'));
 const objectGraph = loadEsmStyleModule(path.join(__dirname, 'modules', 'object-graph.js'));
 const toolBox = loadEsmStyleModule(
   path.join(__dirname, 'modules', 'tool-box.js'),
@@ -1393,7 +1394,7 @@ test('main-utils normalizes output names, suffixes, and sequence input', () => {
 });
 
 [
-  ['protocol_to_notebook', { activity: 'grew cells', protocol: '', compound: '' }, { needs_tools: true, needs_protocol_search: true, needs_python: false }],
+  ['protocol_to_notebook', { activity: 'grew cells', protocol: '', compound: '' }, { needs_tools: true, needs_protocol_search: true, needs_notebook_generation: true, notebook_autosave: true, needs_python: false }],
   ['inventory_lookup', { compound: 'biotin' }, { needs_tools: true, needs_protocol_search: false, needs_python: false }],
   ['record_lookup', { workflow_step: 'transfection' }, { needs_tools: true, needs_notebook_retrieval: true }],
   ['project_science_question', { project: 'Atlas' }, { needs_tools: true, needs_notebook_retrieval: true }],
@@ -1621,6 +1622,119 @@ test('agent-protocol-matching ambiguity thresholds and follow-up generation are 
   assert.equal(/please tell me more/i.test(followUp), false);
 });
 
+test('agent-notebook-generation extracts placeholders from structured and legacy step formats', () => {
+  const extracted = agentNotebookGeneration.extractProtocolPlaceholders([
+    {
+      id: 'step-1',
+      text: 'Seed [cell line] cells and label {{ph:sample}}.',
+      placeholders: [{ id: 'sample', name: 'sample_name' }]
+    },
+    {
+      id: 'step-2',
+      text: 'Incubate at 37 C.',
+      placeholders: [{ id: 'time', name: 'time' }]
+    }
+  ]);
+
+  assert.equal(extracted.length, 2);
+  assert.equal(extracted[0].step_id, 'step-1');
+  assert.equal(extracted[0].placeholders.some((item) => item.placeholder_key === 'cell_line'), true);
+  assert.equal(extracted[0].placeholders.some((item) => item.placeholder_id === 'sample'), true);
+  assert.equal(extracted[1].placeholders.some((item) => item.placeholder_id === 'time' && item.marker_type === 'trailing'), true);
+});
+
+test('agent-notebook-generation applies fill priority and protocol-history project resolution deterministically', () => {
+  const draft = agentNotebookGeneration.buildNotebookDraft({
+    message: 'I grew HEK293 cells today and ran transfection.',
+    conversation: [
+      { role: 'user', text: 'Can you use 6 h for incubation time?' },
+      { role: 'assistant', text: 'Acknowledged.' }
+    ],
+    routing: {
+      intent: 'protocol_to_notebook',
+      entities: { activity: 'transfection', project: '', cell_line: 'HEK293' },
+      plan: {
+        needs_clarification: false,
+        protocol_match: {
+          selected_protocol_id: 'pr1',
+          selected_protocol_name: 'HEK293 Transfection'
+        },
+        protocol_candidates: []
+      }
+    },
+    snapshot: {
+      projects: [
+        { id: 'p1', name: 'Atlas' },
+        { id: 'p2', name: 'Beacon' }
+      ],
+      protocols: [
+        {
+          id: 'pr1',
+          name: 'HEK293 Transfection',
+          steps: [
+            { id: 's1', text: 'Seed [cell line] cells.', placeholders: [{ id: 'c1', name: 'cell_line' }] },
+            { id: 's2', text: 'Incubate for [time].' }
+          ]
+        }
+      ],
+      notebookEntries: [
+        { id: 'n1', projectId: 'p2', projectName: 'Beacon', protocolId: 'pr1', result: 'Old run used 12 h incubation.', updatedAt: '2026-02-01T00:00:00.000Z' },
+        { id: 'n2', projectId: 'p2', projectName: 'Beacon', protocolId: 'pr1', result: 'Repeat run.', updatedAt: '2026-02-10T00:00:00.000Z' },
+        { id: 'n3', projectId: 'p1', projectName: 'Atlas', protocolId: 'pr1', result: 'Pilot.', updatedAt: '2026-01-10T00:00:00.000Z' }
+      ]
+    },
+    toolResults: [
+      { tool: 'search_protocols', items: [{ time: '24 h', cell_line: 'CHO' }], summary: 'mock' }
+    ],
+    now: new Date('2026-03-11T12:00:00.000Z')
+  });
+
+  assert.equal(Boolean(draft), true);
+  assert.equal(draft.project.id, 'p2');
+  assert.equal(draft.project.resolution_source, 'protocol_history');
+  const cellLine = draft.placeholder_values.find((item) => item.placeholder_key === 'cell_line');
+  const time = draft.placeholder_values.find((item) => item.placeholder_key === 'time');
+  assert.equal(cellLine.value, 'HEK293');
+  assert.equal(cellLine.source, 'user_input');
+  assert.equal(time.value.toLowerCase(), '6 h');
+  assert.equal(time.source, 'conversation_context');
+});
+
+test('agent-notebook-generation keeps unresolved placeholders visible in rendered steps', () => {
+  const draft = agentNotebookGeneration.buildNotebookDraft({
+    message: 'I ran the assay.',
+    conversation: [],
+    routing: {
+      intent: 'protocol_to_notebook',
+      entities: { activity: 'assay' },
+      plan: {
+        needs_clarification: false,
+        protocol_match: {
+          selected_protocol_id: 'pr-assay',
+          selected_protocol_name: 'Assay Prep'
+        },
+        protocol_candidates: []
+      }
+    },
+    snapshot: {
+      projects: [{ id: 'p1', name: 'Atlas' }],
+      protocols: [
+        {
+          id: 'pr-assay',
+          name: 'Assay Prep',
+          steps: [{ id: 's1', text: 'Add [reagent] to plate.' }]
+        }
+      ],
+      notebookEntries: []
+    },
+    now: new Date('2026-03-11T12:00:00.000Z')
+  });
+
+  assert.equal(Boolean(draft), true);
+  assert.equal(draft.unresolved_placeholders.length, 1);
+  assert.match(draft.rendered_steps[0], /\[reagent\]/i);
+});
+
 test('agent-routing protocol intent includes protocol match metadata and candidates', () => {
   const snapshot = buildAgentSimulationSnapshot();
   const routing = agentRouting.buildRuleBasedRoutingDecision({
@@ -1636,6 +1750,8 @@ test('agent-routing protocol intent includes protocol match metadata and candida
   assert.equal(Array.isArray(routing.plan.protocol_candidates), true);
   assert.equal(routing.plan.protocol_candidates.length > 0, true);
   assert.equal(routing.plan.protocol_candidates[0].protocol_name.includes('Transfection'), true);
+  assert.equal(routing.plan.needs_notebook_generation, true);
+  assert.equal(routing.plan.notebook_autosave, true);
 });
 
 test('agent-routing fallback merge keeps deterministic protocol matcher metadata', () => {
@@ -3193,13 +3309,21 @@ test('agent-chat sends settings API key to main process and stores assistant res
   const status = document.getElementById('agent-status');
 
   let persistCalls = 0;
+  let notebookChangedCalls = 0;
   let payloadSeen = null;
   const state = {
     projects: [
       { id: 'p1', name: 'Cancer Study' },
       { id: 'p2', name: 'Protein Screen' }
     ],
-    protocols: [{ id: 'pr1', name: 'Cell Prep', steps: [{ text: 'Harvest cells' }, 'Legacy mix step'] }],
+    protocols: [{
+      id: 'pr1',
+      name: 'Cell Prep',
+      steps: [
+        { id: 's1', text: 'Harvest [cell line] cells', placeholders: [{ id: 'p1', name: 'cell_line' }] },
+        'Legacy mix step'
+      ]
+    }],
     notebookEntries: [
       { id: 'n1', projectId: 'p1', protocolId: 'pr1', protocolName: 'Cell Prep', result: 'Done' },
       { id: 'n2', projectId: 'p2', protocolId: 'pr1', protocolName: 'Cell Prep', result: 'Deferred' }
@@ -3356,7 +3480,45 @@ test('agent-chat sends settings API key to main process and stores assistant res
           },
           proposedWriteActions: [],
           intermediateStates: [{ stage: 'synthesize', goal: 'Done.' }],
-          toolTrace: [{ tool: 'search_protocols', summary: 'Found one protocol.' }]
+          toolTrace: [{ tool: 'search_protocols', summary: 'Found one protocol.' }],
+          notebookDraft: {
+            protocol: { id: 'pr1', name: 'Cell Prep' },
+            project: { id: 'p1', name: 'Cancer Study', resolution_source: 'selected_project' },
+            notebook_type: 'biology',
+            rendered_steps: ['Harvest HEK293 cells', 'Legacy mix step'],
+            placeholder_values: [
+              {
+                step_id: 's1',
+                placeholder_id: 'p1',
+                placeholder_key: 'cell_line',
+                display: '[cell line]',
+                value: 'HEK293',
+                source: 'user_input',
+                source_type: 'by_type'
+              }
+            ],
+            unresolved_placeholders: [],
+            save: {
+              mode: 'auto_save_draft',
+              applied: false,
+              status: 'pending_client_autosave',
+              reason: 'Renderer will persist notebook draft entry locally.'
+            },
+            entry_template: {
+              notebookType: 'biology',
+              projectId: 'p1',
+              projectName: 'Cancer Study',
+              protocolId: 'pr1',
+              protocolName: 'Cell Prep',
+              values: { 's1:p1': 'HEK293' },
+              result: 'Agent-generated notebook draft from request: Give me next steps for p1.',
+              updatedAt: '2026-03-11T12:00:00.000Z',
+              resultFiles: [],
+              resultFileRecords: [],
+              agentDraftStatus: 'draft_ready',
+              agentDraftMeta: { generatedAt: '2026-03-11T12:00:00.000Z', unresolvedCount: 0 }
+            }
+          }
         };
       }
     }
@@ -3375,7 +3537,10 @@ test('agent-chat sends settings API key to main process and stores assistant res
       let idx = 0;
       return () => `agent-msg-${idx += 1}`;
     })(),
-    safeText: shared.safeText
+    safeText: shared.safeText,
+    onNotebookEntriesChanged: () => {
+      notebookChangedCalls += 1;
+    }
   });
 
   agent.render();
@@ -3396,7 +3561,9 @@ test('agent-chat sends settings API key to main process and stores assistant res
   assert.equal(payloadSeen.llm.apiEndpoint, 'https://api.openai.com/v1/responses');
   assert.equal(payloadSeen.llm.apiKey, 'sk-local-key');
   assert.equal(payloadSeen.projectId, 'p1');
-  assert.deepEqual(payloadSeen.stateSnapshot.protocols[0].steps, ['Harvest cells', 'Legacy mix step']);
+  assert.deepEqual(payloadSeen.stateSnapshot.protocols[0].steps, ['Harvest [cell line] cells', 'Legacy mix step']);
+  assert.equal(Array.isArray(payloadSeen.stateSnapshot.protocols[0].step_entries), true);
+  assert.equal(payloadSeen.stateSnapshot.protocols[0].step_entries[0].placeholders[0].name, 'cell_line');
   assert.equal(payloadSeen.stateSnapshot.notebookEntries[0].protocolName, 'Cell Prep');
   assert.equal(payloadSeen.stateSnapshot.assays.length, 1);
   assert.equal(payloadSeen.stateSnapshot.assays[0].project_id, 'p1');
@@ -3408,11 +3575,23 @@ test('agent-chat sends settings API key to main process and stores assistant res
   assert.equal(state.agentChat.messages.length, 2);
   assert.equal(state.agentChat.messages[0].role, 'user');
   assert.equal(state.agentChat.messages[1].role, 'assistant');
+  assert.equal(state.agentChat.messages[1].meta.notebookDraft.save.applied, true);
+  assert.equal(state.agentChat.messages[1].meta.notebookDraft.save.status, 'saved_draft');
+  assert.equal(state.notebookEntries.length, 3);
+  const autoSavedEntry = state.notebookEntries[state.notebookEntries.length - 1];
+  assert.equal(autoSavedEntry.notebookType, 'biology');
+  assert.equal(autoSavedEntry.agentDraftStatus, 'draft_ready');
+  assert.equal(autoSavedEntry.protocolId, 'pr1');
+  assert.equal(autoSavedEntry.projectId, 'p1');
+  assert.equal(autoSavedEntry.values['s1:p1'], 'HEK293');
+  assert.equal(notebookChangedCalls, 1);
   assert.match(history.innerHTML, /Assistant/);
   assert.match(history.innerHTML, /Routing/);
   assert.match(history.innerHTML, /protocol_to_notebook/);
   assert.match(history.innerHTML, /Routing Protocol Match/);
   assert.match(history.innerHTML, /Routing Protocol Candidates/);
+  assert.match(history.innerHTML, /Notebook Draft/);
+  assert.match(history.innerHTML, /saved_draft/);
   assert.match(history.innerHTML, /Cell Prep/);
   assert.equal(sendBtn.disabled, false);
   assert.equal(clearBtn.disabled, false);
@@ -3808,6 +3987,8 @@ test('agent chat contract exposes optional routing payload', () => {
   const props = agentChat.output_schema?.properties || {};
   assert.equal(Boolean(props.routing), true);
   assert.equal(props.routing.type, 'object');
+  assert.equal(Boolean(props.notebookDraft), true);
+  assert.equal(props.notebookDraft.type, 'object');
 });
 
 test('toolbox_plannotate contract enforces plain-text sequence input for LLM tool calls', () => {
@@ -3828,7 +4009,12 @@ test('toolbox_plannotate contract enforces plain-text sequence input for LLM too
 test('main agent controller output includes routing metadata fields', () => {
   const mainSource = fs.readFileSync(path.join(__dirname, 'main.js'), 'utf8');
   assert.match(mainSource, /routing:\s*normalizeRoutingForAgentLog\(source\.routing\)/);
-  assert.match(mainSource, /routing,\n\s*intermediateStates,\n\s*toolTrace/);
+  assert.match(mainSource, /normalizeNotebookDraftPayload\(source\.notebookDraft\)/);
+  assert.match(mainSource, /maybeBuildNotebookDraft\(/);
+  assert.match(mainSource, /buildNotebookDraftSummary\(/);
+  assert.match(mainSource, /routing,/);
+  assert.match(mainSource, /intermediateStates,/);
+  assert.match(mainSource, /toolTrace/);
   assert.match(mainSource, /buildRuleBasedRoutingDecision\(/);
   assert.match(mainSource, /shouldUseRoutingFallback\(/);
   assert.match(mainSource, /requestRoutingFallbackPayload\(/);

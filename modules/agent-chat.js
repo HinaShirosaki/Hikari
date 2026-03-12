@@ -22,6 +22,24 @@ function getStepText(step) {
   return trimText(step?.text || step?.instruction || step?.action || step?.description, 200);
 }
 
+function mapProtocolStep(step, index) {
+  if (typeof step === 'string') {
+    return {
+      id: `step_${index + 1}`,
+      text: getStepText(step),
+      placeholders: []
+    };
+  }
+  return {
+    id: String(step?.id || `step_${index + 1}`),
+    text: getStepText(step),
+    placeholders: asArray(step?.placeholders).map((placeholder, placeholderIndex) => ({
+      id: String(placeholder?.id || `placeholder_${placeholderIndex + 1}`),
+      name: trimText(placeholder?.name, 120)
+    })).filter((placeholder) => placeholder.name)
+  };
+}
+
 function getMethodStepText(step) {
   if (typeof step === 'string') {
     return trimText(step, 180);
@@ -30,16 +48,22 @@ function getMethodStepText(step) {
 }
 
 function mapProtocol(protocol) {
-  const steps = asArray(protocol?.steps)
+  const protocolSteps = asArray(protocol?.steps);
+  const steps = protocolSteps
     .slice(0, 30)
     .map((step) => getStepText(step))
     .filter(Boolean);
+  const stepEntries = protocolSteps
+    .slice(0, 30)
+    .map((step, index) => mapProtocolStep(step, index))
+    .filter((step) => step.text);
 
   return {
     id: String(protocol?.id || ''),
     name: trimText(protocol?.name, 180),
     category: trimText(protocol?.category, 80),
-    steps
+    steps,
+    step_entries: stepEntries
   };
 }
 
@@ -268,6 +292,10 @@ function collectActivityRows(meta) {
   if (routingIntent) {
     upsertRow('done', `Routing intent: ${routingIntent}`);
   }
+  if (meta.notebookDraft?.save?.mode === 'auto_save_draft') {
+    const status = meta.notebookDraft?.save?.applied === true ? 'done' : 'pending';
+    upsertRow(status, `Notebook draft auto-save: ${trimText(meta.notebookDraft?.save?.status, 80) || 'pending'}`);
+  }
   if (meta.routing?.plan?.needs_clarification) {
     upsertRow('pending', 'Waiting on routing clarification');
   }
@@ -275,7 +303,7 @@ function collectActivityRows(meta) {
   return rows.slice(0, 20);
 }
 
-export function initAgentChat({ state, persist, createId, safeText }) {
+export function initAgentChat({ state, persist, createId, safeText, onNotebookEntriesChanged }) {
   const projectSelect = document.getElementById('agent-project-select');
   const contextSummary = document.getElementById('agent-context-summary');
   const historyNode = document.getElementById('agent-chat-history');
@@ -389,6 +417,139 @@ export function initAgentChat({ state, persist, createId, safeText }) {
     };
   }
 
+  function normalizeNotebookDraft(rawDraft) {
+    if (!rawDraft || typeof rawDraft !== 'object') {
+      return null;
+    }
+    const placeholderValues = asArray(rawDraft.placeholder_values).map((item) => ({
+      step_id: trimText(item?.step_id, 120),
+      placeholder_id: trimText(item?.placeholder_id, 120),
+      placeholder_key: trimText(item?.placeholder_key, 120),
+      display: trimText(item?.display, 120),
+      value: trimText(item?.value, 220),
+      source: trimText(item?.source, 120),
+      source_type: trimText(item?.source_type, 80)
+    })).filter((item) => item.step_id && item.placeholder_id && item.value);
+
+    const unresolvedPlaceholders = asArray(rawDraft.unresolved_placeholders).map((item) => ({
+      step_id: trimText(item?.step_id, 120),
+      placeholder_id: trimText(item?.placeholder_id, 120),
+      placeholder_key: trimText(item?.placeholder_key, 120),
+      display: trimText(item?.display, 120),
+      reason: trimText(item?.reason, 120)
+    })).filter((item) => item.step_id && item.placeholder_id);
+
+    const entryTemplate = rawDraft.entry_template && typeof rawDraft.entry_template === 'object'
+      ? rawDraft.entry_template
+      : {};
+
+    return {
+      protocol: {
+        id: trimText(rawDraft?.protocol?.id, 120),
+        name: trimText(rawDraft?.protocol?.name, 220)
+      },
+      project: {
+        id: trimText(rawDraft?.project?.id, 80),
+        name: trimText(rawDraft?.project?.name, 180),
+        resolution_source: trimText(rawDraft?.project?.resolution_source, 80)
+      },
+      notebook_type: trimText(rawDraft?.notebook_type, 40) || 'biology',
+      rendered_steps: asArray(rawDraft.rendered_steps).map((step) => trimText(step, 300)).filter(Boolean),
+      placeholder_values: placeholderValues,
+      unresolved_placeholders: unresolvedPlaceholders,
+      save: {
+        mode: trimText(rawDraft?.save?.mode, 80) || 'auto_save_draft',
+        applied: rawDraft?.save?.applied === true,
+        status: trimText(rawDraft?.save?.status, 120),
+        reason: trimText(rawDraft?.save?.reason, 220)
+      },
+      entry_template: {
+        notebookType: trimText(entryTemplate.notebookType, 40) || 'biology',
+        projectId: trimText(entryTemplate.projectId, 80),
+        projectName: trimText(entryTemplate.projectName, 180),
+        protocolId: trimText(entryTemplate.protocolId, 120),
+        protocolName: trimText(entryTemplate.protocolName, 220),
+        values: entryTemplate.values && typeof entryTemplate.values === 'object' ? entryTemplate.values : {},
+        result: trimText(entryTemplate.result, 900),
+        updatedAt: trimText(entryTemplate.updatedAt, 80),
+        resultFiles: asArray(entryTemplate.resultFiles).map((value) => trimText(value, 220)).filter(Boolean),
+        resultFileRecords: asArray(entryTemplate.resultFileRecords),
+        agentDraftStatus: trimText(entryTemplate.agentDraftStatus, 80),
+        agentDraftMeta: entryTemplate.agentDraftMeta && typeof entryTemplate.agentDraftMeta === 'object'
+          ? entryTemplate.agentDraftMeta
+          : {}
+      }
+    };
+  }
+
+  function applyNotebookDraftAutoSave(rawDraft, requestText) {
+    const draft = normalizeNotebookDraft(rawDraft);
+    if (!draft || draft.save.mode !== 'auto_save_draft') {
+      return draft;
+    }
+
+    const template = draft.entry_template || {};
+    const projectId = template.projectId || draft.project.id;
+    const protocolId = template.protocolId || draft.protocol.id;
+    if (!projectId || !protocolId) {
+      return {
+        ...draft,
+        save: {
+          ...draft.save,
+          applied: false,
+          status: 'autosave_skipped',
+          reason: 'Missing project or protocol binding for draft auto-save.'
+        }
+      };
+    }
+
+    const unresolvedCount = asArray(draft.unresolved_placeholders).length;
+    const nowIso = new Date().toISOString();
+    const entry = {
+      id: createId(),
+      notebookType: 'biology',
+      projectId,
+      projectName: template.projectName || draft.project.name,
+      protocolId,
+      protocolName: template.protocolName || draft.protocol.name,
+      values: template.values && typeof template.values === 'object' ? template.values : {},
+      result: template.result || `Agent-generated notebook draft from request: ${trimText(requestText, 220)}`,
+      resultFiles: asArray(template.resultFiles),
+      resultFileRecords: asArray(template.resultFileRecords),
+      updatedAt: template.updatedAt || nowIso,
+      agentDraftStatus: unresolvedCount > 0 ? 'needs_review' : 'draft_ready',
+      agentDraftMeta: {
+        ...(template.agentDraftMeta && typeof template.agentDraftMeta === 'object' ? template.agentDraftMeta : {}),
+        savedAt: nowIso,
+        unresolvedCount,
+        source: 'agent_phase5'
+      }
+    };
+
+    state.notebookEntries = asArray(state.notebookEntries);
+    state.notebookEntries.push(entry);
+
+    try {
+      onNotebookEntriesChanged?.();
+    } catch {
+      // Keep chat path resilient even if downstream render hooks fail.
+    }
+
+    return {
+      ...draft,
+      save: {
+        ...draft.save,
+        applied: true,
+        status: 'saved_draft',
+        reason: 'Draft auto-saved to notebook entries.'
+      },
+      entry_template: {
+        ...draft.entry_template,
+        ...entry
+      }
+    };
+  }
+
   function renderContextSummary() {
     const projectId = state.agentChat?.projectId || '';
     const snapshot = buildStateSnapshot(projectId);
@@ -459,6 +620,31 @@ export function initAgentChat({ state, persist, createId, safeText }) {
       const note = trimText(item?.summary, 220) || '';
       return note ? `${tool}: ${note}` : tool;
     });
+    const notebookDraft = normalizeNotebookDraft(meta.notebookDraft);
+    const notebookDraftRows = notebookDraft ? [
+      `protocol: ${trimText(notebookDraft.protocol?.name, 220) || '-'}`,
+      `project: ${trimText(notebookDraft.project?.name, 180) || '-'} (${trimText(notebookDraft.project?.resolution_source, 80) || '-'})`,
+      `type: ${trimText(notebookDraft.notebook_type, 40) || 'biology'}`,
+      `save: mode=${trimText(notebookDraft.save?.mode, 80) || '-'} status=${trimText(notebookDraft.save?.status, 80) || '-'} applied=${notebookDraft.save?.applied === true}`
+    ] : [];
+    const notebookDraftFilledRows = notebookDraft
+      ? asArray(notebookDraft.placeholder_values).map((item) => {
+        const key = trimText(item?.placeholder_key, 120) || trimText(item?.display, 120) || 'placeholder';
+        const value = trimText(item?.value, 220) || '-';
+        const source = trimText(item?.source, 120) || '-';
+        return `${key}: ${value} (${source})`;
+      })
+      : [];
+    const notebookDraftUnresolvedRows = notebookDraft
+      ? asArray(notebookDraft.unresolved_placeholders).map((item) => {
+        const key = trimText(item?.placeholder_key, 120) || trimText(item?.display, 120) || 'placeholder';
+        const reason = trimText(item?.reason, 120) || 'missing_supported_value';
+        return `${key}: ${reason}`;
+      })
+      : [];
+    const notebookDraftStepRows = notebookDraft
+      ? asArray(notebookDraft.rendered_steps).map((step, index) => `${index + 1}. ${trimText(step, 220)}`)
+      : [];
     const routing = meta.routing && typeof meta.routing === 'object' ? meta.routing : {};
     const routingIntent = trimText(routing.intent, 80) || '-';
     const routingConfidence = Number(routing.confidence);
@@ -575,6 +761,10 @@ export function initAgentChat({ state, persist, createId, safeText }) {
         ${renderMetaList('Routing Tools', routingToolRows)}
         ${renderMetaList('Routing Tool Selector', routingSelectorRows)}
         ${renderMetaList('Routing Classifier', routingClassifierRows)}
+        ${renderMetaList('Notebook Draft', notebookDraftRows)}
+        ${renderMetaList('Notebook Draft Filled Placeholders', notebookDraftFilledRows)}
+        ${renderMetaList('Notebook Draft Unresolved Placeholders', notebookDraftUnresolvedRows)}
+        ${renderMetaList('Notebook Draft Steps', notebookDraftStepRows)}
         ${renderMetaList('Citations', citations)}
         ${renderMetaList('Assumptions', assumptions)}
         ${renderMetaList('Open Questions', openQuestions)}
@@ -677,6 +867,7 @@ export function initAgentChat({ state, persist, createId, safeText }) {
       if (!result?.ok) {
         throw new Error(result?.error || 'Agent request failed.');
       }
+      const notebookDraft = applyNotebookDraftAutoSave(result.notebookDraft, messageText);
 
       state.agentChat.messages.push({
         id: createId(),
@@ -689,6 +880,7 @@ export function initAgentChat({ state, persist, createId, safeText }) {
           citations: asArray(result.citations),
           decisionRecord: result.decisionRecord || {},
           routing: result.routing && typeof result.routing === 'object' ? result.routing : {},
+          notebookDraft: notebookDraft || null,
           proposedWriteActions: asArray(result.proposedWriteActions),
           intermediateStates: asArray(result.intermediateStates),
           toolTrace: asArray(result.toolTrace),
@@ -712,6 +904,7 @@ export function initAgentChat({ state, persist, createId, safeText }) {
           citations: [],
           decisionRecord: {},
           routing: {},
+          notebookDraft: null,
           proposedWriteActions: [],
           intermediateStates: [],
           toolTrace: [],

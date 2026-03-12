@@ -197,6 +197,80 @@
               }
             }
           },
+          "notebookDraft": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "protocol": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "id": { "type": "string" },
+                  "name": { "type": "string" }
+                }
+              },
+              "project": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "id": { "type": "string" },
+                  "name": { "type": "string" },
+                  "resolution_source": { "type": "string" }
+                }
+              },
+              "notebook_type": {
+                "type": "string"
+              },
+              "rendered_steps": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "placeholder_values": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "step_id": { "type": "string" },
+                    "placeholder_id": { "type": "string" },
+                    "placeholder_key": { "type": "string" },
+                    "display": { "type": "string" },
+                    "value": { "type": "string" },
+                    "source": { "type": "string" },
+                    "source_type": { "type": "string" }
+                  }
+                }
+              },
+              "unresolved_placeholders": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "step_id": { "type": "string" },
+                    "placeholder_id": { "type": "string" },
+                    "placeholder_key": { "type": "string" },
+                    "display": { "type": "string" },
+                    "reason": { "type": "string" }
+                  }
+                }
+              },
+              "save": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "mode": { "type": "string" },
+                  "applied": { "type": "boolean" },
+                  "status": { "type": "string" },
+                  "reason": { "type": "string" }
+                }
+              },
+              "entry_template": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          },
           "intermediateStates": {
             "type": "array",
             "items": {

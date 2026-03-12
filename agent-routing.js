@@ -301,6 +301,8 @@ function buildExecutionPlan({
     needs_tools: false,
     needs_protocol_search: false,
     needs_notebook_retrieval: false,
+    needs_notebook_generation: false,
+    notebook_autosave: false,
     needs_pdf_reading: false,
     needs_python: false,
     needs_web_search: false,
@@ -322,6 +324,8 @@ function buildExecutionPlan({
   if (normalizedIntent === 'protocol_to_notebook') {
     plan.needs_tools = true;
     plan.needs_protocol_search = true;
+    plan.needs_notebook_generation = true;
+    plan.notebook_autosave = true;
   } else if (normalizedIntent === 'inventory_lookup') {
     plan.needs_tools = true;
   } else if (normalizedIntent === 'record_lookup') {
