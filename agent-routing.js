@@ -2,6 +2,11 @@ const { selectToolsForRequest } = require('./agent-tools');
 const { resolveProtocolMatch } = require('./agent-protocol-matching');
 const { resolveProjectScope } = require('./agent-project-retrieval');
 const { resolvePaperRequest } = require('./agent-paper-analysis');
+const { classifyPythonTask, buildPythonRunRequest } = require('./agent-python-orchestration');
+const {
+  mapCanonicalIntentToExecutionIntent,
+  normalizeParserEntitiesToRoutingEntities
+} = require('./agent-intent-parser');
 
 const ROUTING_INTENTS = Object.freeze([
   'protocol_to_notebook',
@@ -29,7 +34,11 @@ const AGENT_MVP_SCOPE = Object.freeze({
       'project_science_question',
       'paper_analysis',
       'coding_data_analysis',
-      'general_science_question'
+      'general_science_question',
+      'literature_search',
+      'data_analysis_or_coding',
+      'mixed_request',
+      'unclear'
     ]),
     doneCriteria: Object.freeze({
       protocol_matching: 'top 3 candidate protocols can be returned',
@@ -40,7 +49,6 @@ const AGENT_MVP_SCOPE = Object.freeze({
   })
 });
 
-const ROUTING_RULE_CONFIDENCE_THRESHOLD = 0.68;
 const DEFAULT_INTENT = 'general_science_question';
 
 function asArray(value) {
@@ -76,227 +84,18 @@ function uniqueStrings(values) {
   return out;
 }
 
-function tokenize(value) {
-  return cleanText(value, 5000)
-    .toLowerCase()
-    .split(/[^a-z0-9]+/i)
-    .map((token) => token.trim())
-    .filter((token) => token.length >= 2)
-    .slice(0, 60);
-}
-
-function includesAny(text, patterns) {
-  const target = String(text || '').toLowerCase();
-  return patterns.some((pattern) => {
-    if (pattern instanceof RegExp) {
-      return pattern.test(target);
-    }
-    return target.includes(String(pattern).toLowerCase());
-  });
-}
-
-function scoreIntentByRules(message, context = {}) {
-  const source = cleanText(message, 4000);
-  const normalized = source.toLowerCase();
-  const tokens = new Set(tokenize(source));
-  const scores = {};
-  ROUTING_INTENTS.forEach((intent) => {
-    scores[intent] = 0;
-  });
-
-  const add = (intent, score) => {
-    if (!Object.prototype.hasOwnProperty.call(scores, intent)) {
-      return;
-    }
-    scores[intent] += score;
-  };
-
-  const hasQuestionMark = normalized.includes('?');
-  const startsWithQuestionWord = /^(what|why|how|when|where|which|who)\b/.test(normalized);
-  const hasProjectHint = includesAny(normalized, ['project ', 'our project', 'this project']);
-  const hasKnownPaperTitle = asArray(context.papers).some((paper) => {
-    const title = cleanText(paper?.title, 220).toLowerCase();
-    return title && normalized.includes(title);
-  });
-
-  if (includesAny(normalized, ['notebook', 'lab note', 'i grew', 'i did', 'i ran', 'i purified', 'transfection', 'culture'])) {
-    add('protocol_to_notebook', 4);
-  }
-  if (includesAny(normalized, ['protocol', 'sop', 'method']) && includesAny(normalized, ['write', 'draft', 'generate', 'create', 'build'])) {
-    add('protocol_to_notebook', 3);
-  }
-  if (includesAny(normalized, ['mw', 'molecular weight', 'pi ', 'cas', 'reagent', 'chemical', 'inventory', 'stock', 'where is'])) {
-    add('inventory_lookup', 5);
-  }
-  if (includesAny(normalized, ['notebook entry', 'what did we do', 'last time', 'record', 'history', 'assay run', 'gel run', 'workflow step', 'workflow state'])) {
-    add('record_lookup', 5);
-  }
-  if (hasProjectHint || (context.projectNames || []).some((name) => name && normalized.includes(name.toLowerCase()))) {
-    add('project_science_question', 4);
-  }
-  if (hasProjectHint && (hasQuestionMark || startsWithQuestionWord || includesAny(normalized, ['fail', 'failed', 'optimize', 'why']))) {
-    add('project_science_question', 3);
-  }
-  if (includesAny(normalized, ['paper', 'pdf', 'journal', 'literature', 'publication', 'manuscript'])) {
-    add('paper_analysis', 5);
-  }
-  if (hasKnownPaperTitle) {
-    add('paper_analysis', 6);
-  }
-  if (includesAny(normalized, ['summarize', 'summary', 'analyze']) && includesAny(normalized, ['paper', 'pdf'])) {
-    add('paper_analysis', 2);
-  }
-  if (includesAny(normalized, ['extract methods', 'extract method', 'extract reagents', 'key figures', 'compare'])
-    && includesAny(normalized, ['paper', 'pdf'])) {
-    add('paper_analysis', 4);
-  }
-  if (includesAny(normalized, ['extract methods', 'extract method', 'extract reagents', 'key figures', 'compare'])
-    && hasKnownPaperTitle) {
-    add('paper_analysis', 4);
-  }
-  if (includesAny(normalized, ['python', 'script', 'code', 'csv', 'plot', 'regression', 'calculate', 'compute', 'data analysis'])) {
-    add('coding_data_analysis', 5);
-  }
-  if (startsWithQuestionWord || hasQuestionMark) {
-    add('general_science_question', 2);
-  }
-  if (includesAny(normalized, ['explain', 'mechanism', 'biology', 'chemistry', 'science'])) {
-    add('general_science_question', 1);
-  }
-
-  if (tokens.has('protein') && tokens.has('pi')) {
-    add('inventory_lookup', 2);
-  }
-  if (tokens.has('download') && tokens.has('paper')) {
-    add('paper_analysis', 2);
-  }
-
-  const ranked = Object.entries(scores).sort((a, b) => b[1] - a[1]);
-  const top = ranked[0] || [DEFAULT_INTENT, 0];
-  const second = ranked[1] || [DEFAULT_INTENT, 0];
-  const topIntent = top[1] > 0 ? top[0] : DEFAULT_INTENT;
-  const diff = Math.max(0, Number(top[1] || 0) - Number(second[1] || 0));
-  const baseConfidence = top[1] <= 0
-    ? 0.42
-    : Math.min(0.95, 0.48 + (Math.min(Number(top[1] || 0), 10) * 0.04) + (Math.min(diff, 6) * 0.05));
-  const tieDetected = Number(top[1] || 0) > 0 && diff <= 1;
-  const lowConfidence = baseConfidence < ROUTING_RULE_CONFIDENCE_THRESHOLD || tieDetected;
+function normalizeRoutingEntities(rawEntities) {
+  const source = rawEntities && typeof rawEntities === 'object' ? rawEntities : {};
   return {
-    intent: topIntent,
-    confidence: Number(baseConfidence.toFixed(3)),
-    scores,
-    tieDetected,
-    lowConfidence,
-    reason: top[1] > 0 ? `Rule score ${topIntent}=${top[1]} (runner-up ${second[0]}=${second[1]}).` : 'No strong keyword signal.'
+    activity: cleanText(source.activity, 180),
+    project: cleanText(source.project, 180),
+    protein: cleanText(source.protein, 100),
+    compound: cleanText(source.compound, 120),
+    protocol: cleanText(source.protocol, 220),
+    cell_line: cleanText(source.cell_line, 80),
+    paper_title: cleanText(source.paper_title, 220),
+    workflow_step: cleanText(source.workflow_step, 180)
   };
-}
-
-function extractEntitiesByRules(message, context = {}) {
-  const source = cleanText(message, 4000);
-  const normalized = source.toLowerCase();
-  const projects = asArray(context.projects);
-  const protocols = asArray(context.protocols);
-  const proteinMatches = [];
-  const compoundMatches = [];
-
-  const entity = {
-    activity: '',
-    project: '',
-    protein: '',
-    compound: '',
-    protocol: '',
-    cell_line: '',
-    paper_title: '',
-    workflow_step: ''
-  };
-
-  const activityPatterns = [
-    /\b(grew cells?|cell culture|cultured cells?|transfection|purif(?:y|ied|ication)|ran a gel|assay|expression|conjugation)\b/i,
-    /\b(i\s+(?:did|ran|performed|completed)\s+[a-z0-9\- ]{2,80})\b/i
-  ];
-  activityPatterns.some((pattern) => {
-    const match = source.match(pattern);
-    if (!match) {
-      return false;
-    }
-    entity.activity = cleanText(match[1] || match[0], 160);
-    return true;
-  });
-
-  const projectFromText = source.match(/\bproject\s+([a-z0-9\- _]{2,80})/i);
-  if (projectFromText) {
-    entity.project = cleanText(projectFromText[1], 120);
-  } else {
-    const matchedProject = projects.find((project) => {
-      const name = cleanText(project?.name || '', 180);
-      return name && normalized.includes(name.toLowerCase());
-    });
-    if (matchedProject) {
-      entity.project = cleanText(matchedProject.name, 180);
-    }
-  }
-
-  const protocolFromText = source.match(/\bprotocol\s*[:\-]?\s*([a-z0-9\- _]{2,120})/i);
-  if (protocolFromText) {
-    entity.protocol = cleanText(protocolFromText[1], 180);
-  } else {
-    const matchedProtocol = protocols.find((protocol) => {
-      const name = cleanText(protocol?.name || '', 200);
-      return name && normalized.includes(name.toLowerCase());
-    });
-    if (matchedProtocol) {
-      entity.protocol = cleanText(matchedProtocol.name, 200);
-    }
-  }
-
-  const cellLineMatch = source.match(/\b(hek293|expi293|cho|293t|hela|vero|jurkat|sf9|k562)\b/i);
-  if (cellLineMatch) {
-    entity.cell_line = cleanText(cellLineMatch[1], 60);
-  }
-
-  const proteinRegexes = [
-    /\bprotein\s+([a-z0-9\-]{2,40})\b/ig,
-    /\b([a-z0-9\-]{2,40})\s+binder\b/ig,
-    /\b(pd-1|pd1|cd3|cd19|egfr|ifnγ|ifng|tnfα|tnfa)\b/ig
-  ];
-  proteinRegexes.forEach((pattern) => {
-    let match = pattern.exec(source);
-    while (match) {
-      proteinMatches.push(cleanText(match[1], 80));
-      match = pattern.exec(source);
-    }
-  });
-  entity.protein = uniqueStrings(proteinMatches)[0] || '';
-
-  const compoundRegexes = [
-    /\b(?:mw|molecular weight|compound|chemical|reagent)\s+(?:of\s+)?([a-z0-9\- ]{2,80})\b/ig,
-    /\b(biotin|dmso|imdz|imidazole|tris|hepes|nacl|edta)\b/ig
-  ];
-  compoundRegexes.forEach((pattern) => {
-    let match = pattern.exec(source);
-    while (match) {
-      compoundMatches.push(cleanText(match[1], 80));
-      match = pattern.exec(source);
-    }
-  });
-  entity.compound = uniqueStrings(compoundMatches)[0] || '';
-
-  const quotedTitle = source.match(/["“”']([^"“”']{8,220})["“”']/);
-  if (quotedTitle && includesAny(normalized, ['paper', 'pdf', 'journal', 'manuscript'])) {
-    entity.paper_title = cleanText(quotedTitle[1], 220);
-  } else {
-    const paperTail = source.match(/\bpaper\s+(.{4,220})$/i);
-    if (paperTail) {
-      entity.paper_title = cleanText(paperTail[1], 220);
-    }
-  }
-
-  const workflowMatch = source.match(/\b(after|before|next|step|workflow)\s+([a-z0-9\- ]{2,100})/i);
-  if (workflowMatch) {
-    entity.workflow_step = cleanText(workflowMatch[2], 120);
-  }
-
-  return entity;
 }
 
 function isEntityMissing(entity, key) {
@@ -307,10 +106,7 @@ function buildExecutionPlan({
   intent,
   entities,
   message,
-  writeIntent = false,
-  classificationConfidence = 0,
-  fallbackUsed = false,
-  tieDetected = false
+  writeIntent = false
 }) {
   const normalizedIntent = ROUTING_INTENTS.includes(intent) ? intent : DEFAULT_INTENT;
   const text = cleanText(message, 3000).toLowerCase();
@@ -328,6 +124,20 @@ function buildExecutionPlan({
     needs_pdf_reading: false,
     needs_python: false,
     needs_web_search: false,
+    python_task_type: '',
+    python_ready: false,
+    python_needs_clarification: false,
+    python_artifact_count: 0,
+    web_fallback_triggered: false,
+    web_fallback_reason: '',
+    web_queries: [],
+    web_sources: [],
+    inventory_search: {
+      normalized_query: '',
+      candidate_terms: [],
+      aliases: [],
+      search_mode: ''
+    },
     needs_clarification: false,
     clarification_reason: '',
     clarification_question: '',
@@ -394,8 +204,8 @@ function buildExecutionPlan({
     plan.needs_tools = true;
     plan.needs_python = true;
   } else {
-    plan.needs_tools = false;
     plan.needs_web_search = /latest|recent|new|review|citation|reference/.test(text);
+    plan.needs_tools = plan.needs_web_search;
   }
 
   if (writeIntent) {
@@ -424,16 +234,6 @@ function buildExecutionPlan({
     plan.needs_clarification = true;
     plan.clarification_reason = 'Paper target is missing.';
     plan.clarification_question = 'Which paper should I analyze? You can provide a title or upload a PDF.';
-  }
-
-  if (!fallbackUsed && (tieDetected || classificationConfidence < ROUTING_RULE_CONFIDENCE_THRESHOLD - 0.06)) {
-    plan.needs_clarification = true;
-    if (!plan.clarification_reason) {
-      plan.clarification_reason = 'Intent confidence is low.';
-    }
-    if (!plan.clarification_question) {
-      plan.clarification_question = 'Can you clarify whether you want protocol drafting, lab record lookup, project reasoning, paper analysis, coding help, or a general science answer?';
-    }
   }
 
   return plan;
@@ -667,6 +467,53 @@ function applyPaperMatchingToPlan({
   return plan;
 }
 
+function applyPythonPlanningToPlan({
+  intent,
+  message,
+  entities,
+  plan,
+  snapshot = {},
+  selectedProjectId = '',
+  selectedProjectName = ''
+}) {
+  if (intent !== 'coding_data_analysis' && plan?.needs_python !== true) {
+    return plan;
+  }
+
+  const pythonTask = classifyPythonTask({
+    message,
+    entities,
+    routing: {
+      intent,
+      plan
+    }
+  });
+  const runSpec = buildPythonRunRequest({
+    message,
+    snapshot,
+    projectId: cleanText(selectedProjectId, 80),
+    projectName: cleanText(selectedProjectName || entities?.project, 180),
+    taskType: cleanText(pythonTask?.task_type, 80) || 'general_compute'
+  });
+
+  plan.needs_python = true;
+  plan.needs_tools = true;
+  plan.python_task_type = cleanText(runSpec?.task_type || pythonTask?.task_type, 80) || 'general_compute';
+  plan.python_ready = runSpec?.ready === true;
+  plan.python_needs_clarification = runSpec?.needs_clarification === true;
+  plan.python_artifact_count = 0;
+
+  if (runSpec?.needs_clarification === true) {
+    plan.needs_clarification = true;
+    plan.clarification_reason = cleanText(runSpec?.reason, 220) || 'Python task requires additional input data.';
+    plan.clarification_question = cleanText(runSpec?.clarification_question, 320)
+      || plan.clarification_question
+      || 'Please provide the required input data for the Python analysis task.';
+  }
+
+  return plan;
+}
+
 function selectToolNamesForPlan(plan, availableToolNames = []) {
   const available = new Set(uniqueStrings(availableToolNames));
   const selected = [];
@@ -704,6 +551,12 @@ function selectToolNamesForPlan(plan, availableToolNames = []) {
   if (plan.needs_python) {
     add('run_python_sandbox');
   }
+  if (plan.needs_web_search) {
+    add('search_web');
+    add('search_pubmed');
+    add('search_crossref');
+    add('search_europe_pmc');
+  }
 
   add('search_projects');
   if (!plan.needs_protocol_search) {
@@ -723,7 +576,47 @@ function selectToolNamesForPlan(plan, availableToolNames = []) {
   return selected;
 }
 
-function buildRuleBasedRoutingDecision({
+function normalizeInventorySearch(rawInventorySearch) {
+  const source = rawInventorySearch && typeof rawInventorySearch === 'object' ? rawInventorySearch : {};
+  return {
+    normalized_query: cleanText(source.normalized_query, 220),
+    candidate_terms: uniqueStrings(asArray(source.candidate_terms)).slice(0, 10),
+    aliases: uniqueStrings(asArray(source.aliases)).slice(0, 10),
+    search_mode: cleanText(source.search_mode, 60)
+  };
+}
+
+function buildParserClarificationQuestion({
+  parserIntent,
+  parserNeedsClarification = false,
+  parserClarificationReason = '',
+  parserReasoningSummary = ''
+}) {
+  const intent = cleanText(parserIntent, 80);
+  const reason = cleanText(parserClarificationReason, 220) || cleanText(parserReasoningSummary, 220);
+  if (intent === 'mixed_request') {
+    return 'I detected multiple goals. Which should I handle first: protocol drafting, inventory lookup, record lookup, project question, paper analysis, literature search, or coding/data analysis?';
+  }
+  if (intent === 'unclear') {
+    return 'Could you clarify your primary goal so I can route correctly: protocol drafting, inventory lookup, record lookup, project question, paper analysis, literature search, or coding/data analysis?';
+  }
+  if (parserNeedsClarification) {
+    if (intent === 'inventory_lookup') {
+      return reason || 'Which inventory item or chemical should I look up?';
+    }
+    if (intent === 'paper_analysis') {
+      return reason || 'Which paper should I analyze?';
+    }
+    if (intent === 'project_science_question') {
+      return reason || 'Which project should I use for this question?';
+    }
+    return reason || 'Could you clarify what you want me to do first?';
+  }
+  return '';
+}
+
+function buildRoutingDecisionFromIntentParser({
+  parserPayload,
   message,
   snapshot = {},
   availableToolNames = [],
@@ -732,6 +625,12 @@ function buildRuleBasedRoutingDecision({
   selectedProjectId = '',
   selectedProjectName = ''
 }) {
+  const parsed = parserPayload && typeof parserPayload === 'object' ? parserPayload : {};
+  const parserIntent = cleanText(parsed.primary_intent, 80);
+  const parserSecondaryIntents = uniqueStrings(parsed.secondary_intents).slice(0, 5);
+  const mappedIntent = mapCanonicalIntentToExecutionIntent(parserIntent);
+  const parserEntities = parsed.entities && typeof parsed.entities === 'object' ? parsed.entities : {};
+  const entities = normalizeRoutingEntities(normalizeParserEntitiesToRoutingEntities(parserEntities, parserIntent));
   const context = {
     projects: asArray(snapshot.projects),
     protocols: asArray(snapshot.protocols),
@@ -739,29 +638,28 @@ function buildRuleBasedRoutingDecision({
     workflows: asArray(snapshot.workflows),
     papers: asArray(snapshot.papers),
     assays: asArray(snapshot.assays),
-    gelAnalyses: asArray(snapshot.gelAnalyses),
-    projectNames: asArray(snapshot.projects).map((project) => cleanText(project?.name, 180)).filter(Boolean)
+    gelAnalyses: asArray(snapshot.gelAnalyses)
   };
-  const classification = scoreIntentByRules(message, context);
-  const entities = extractEntitiesByRules(message, context);
   const plan = buildExecutionPlan({
-    intent: classification.intent,
+    intent: mappedIntent,
     entities,
     message,
-    writeIntent,
-    classificationConfidence: classification.confidence,
-    fallbackUsed: false,
-    tieDetected: classification.tieDetected
+    writeIntent
   });
+  plan.inventory_search = normalizeInventorySearch(parsed.inventory_search);
+  const parserNeedsClarification = parsed.needs_clarification === true;
+  const parserClarificationReason = cleanText(parsed.clarification_reason, 260);
+  const parserReasoningSummary = cleanText(parsed.reasoning_summary, 300);
+
   applyProtocolMatchingToPlan({
-    intent: classification.intent,
+    intent: mappedIntent,
     message,
     entities,
     plan,
     snapshot: context
   });
   applyProjectMatchingToPlan({
-    intent: classification.intent,
+    intent: mappedIntent,
     message,
     entities,
     plan,
@@ -770,15 +668,51 @@ function buildRuleBasedRoutingDecision({
     selectedProjectName
   });
   applyPaperMatchingToPlan({
-    intent: classification.intent,
+    intent: mappedIntent,
     message,
     entities,
     plan,
     snapshot: context
   });
+  applyPythonPlanningToPlan({
+    intent: mappedIntent,
+    message,
+    entities,
+    plan,
+    snapshot: context,
+    selectedProjectId,
+    selectedProjectName
+  });
+
+  if (parserIntent === 'literature_search') {
+    plan.needs_tools = true;
+    plan.needs_web_search = true;
+  }
+  if (parserIntent === 'mixed_request' || parserIntent === 'unclear') {
+    plan.needs_clarification = true;
+    plan.clarification_reason = parserClarificationReason || parserReasoningSummary || 'Request scope is ambiguous.';
+    plan.clarification_question = buildParserClarificationQuestion({
+      parserIntent,
+      parserNeedsClarification,
+      parserClarificationReason,
+      parserReasoningSummary
+    });
+  } else if (parserNeedsClarification) {
+    plan.needs_clarification = true;
+    plan.clarification_reason = parserClarificationReason || parserReasoningSummary || 'Intent parser requested clarification.';
+    if (!plan.clarification_question) {
+      plan.clarification_question = buildParserClarificationQuestion({
+        parserIntent,
+        parserNeedsClarification,
+        parserClarificationReason,
+        parserReasoningSummary
+      });
+    }
+  }
+
   const selection = toolContract
     ? selectToolsForRequest({
-      intent: classification.intent,
+      intent: parserIntent || mappedIntent,
       entities,
       message,
       contract: toolContract,
@@ -788,10 +722,11 @@ function buildRuleBasedRoutingDecision({
       selectedToolNames: selectToolNamesForPlan(plan, availableToolNames),
       rationaleRows: []
     };
-  const selectedToolNames = plan.paper_task_mode === 'compare_papers'
-    ? ['search_papers']
-    : selection.selectedToolNames;
-  plan.selected_tool_names = selectedToolNames;
+  plan.selected_tool_names = plan.needs_tools !== true
+    ? []
+    : (plan.paper_task_mode === 'compare_papers'
+      ? ['search_papers']
+      : selection.selectedToolNames);
   plan.tool_selection_rationale = plan.paper_task_mode === 'compare_papers'
     ? [
       {
@@ -804,226 +739,40 @@ function buildRuleBasedRoutingDecision({
       }
     ]
     : (selection.rationaleRows || []);
+
   return {
-    intent: classification.intent,
-    confidence: classification.confidence,
+    intent: mappedIntent,
+    confidence: Number.isFinite(Number(parsed.confidence))
+      ? Number(Math.max(0, Math.min(1, Number(parsed.confidence))).toFixed(3))
+      : 0.5,
     entities,
     plan,
     classifier: {
-      source: 'rules',
+      source: 'llm_parser',
       fallbackAttempted: false,
       fallbackUsed: false,
-      lowConfidence: classification.lowConfidence,
-      tieDetected: classification.tieDetected,
-      ruleReason: classification.reason,
-      ruleScores: classification.scores,
-      fallbackError: ''
-    }
-  };
-}
-
-function shouldUseRoutingFallback(routingDecision) {
-  const routing = routingDecision && typeof routingDecision === 'object' ? routingDecision : {};
-  const classifier = routing.classifier && typeof routing.classifier === 'object' ? routing.classifier : {};
-  return classifier.lowConfidence === true || classifier.tieDetected === true;
-}
-
-function normalizeRoutingEntities(rawEntities) {
-  const source = rawEntities && typeof rawEntities === 'object' ? rawEntities : {};
-  return {
-    activity: cleanText(source.activity, 180),
-    project: cleanText(source.project, 180),
-    protein: cleanText(source.protein, 100),
-    compound: cleanText(source.compound, 120),
-    protocol: cleanText(source.protocol, 220),
-    cell_line: cleanText(source.cell_line, 80),
-    paper_title: cleanText(source.paper_title, 220),
-    workflow_step: cleanText(source.workflow_step, 180)
-  };
-}
-
-function parseRoutingFallbackPayload(rawValue) {
-  if (!rawValue) {
-    return null;
-  }
-  let parsed = rawValue;
-  if (typeof rawValue === 'string') {
-    try {
-      parsed = JSON.parse(rawValue);
-    } catch {
-      return null;
-    }
-  }
-  if (!parsed || typeof parsed !== 'object') {
-    return null;
-  }
-  const intent = cleanText(parsed.intent, 80);
-  if (!ROUTING_INTENTS.includes(intent)) {
-    return null;
-  }
-  const confidenceRaw = Number(parsed.confidence);
-  const confidence = Number.isFinite(confidenceRaw)
-    ? Math.max(0, Math.min(1, confidenceRaw))
-    : 0.55;
-  const entities = normalizeRoutingEntities(parsed.entities);
-  const needsClarification = parsed.needs_clarification === true;
-  return {
-    intent,
-    confidence,
-    entities,
-    needs_clarification: needsClarification,
-    clarification_question: cleanText(parsed.clarification_question, 280),
-    reason: cleanText(parsed.reason, 260)
-  };
-}
-
-function mergeRoutingFallback({
-  ruleDecision,
-  fallbackPayload,
-  message,
-  snapshot = {},
-  writeIntent = false,
-  availableToolNames = [],
-  toolContract = null,
-  selectedProjectId = '',
-  selectedProjectName = ''
-}) {
-  const base = ruleDecision && typeof ruleDecision === 'object' ? ruleDecision : buildRuleBasedRoutingDecision({
-    message,
-    snapshot,
-    availableToolNames,
-    toolContract,
-    writeIntent,
-    selectedProjectId,
-    selectedProjectName
-  });
-  const parsed = parseRoutingFallbackPayload(fallbackPayload);
-  if (!parsed) {
-    const degradedPlan = {
-      ...(base.plan || {}),
-      needs_clarification: true,
-      clarification_reason: cleanText(base.plan?.clarification_reason, 220) || 'Routing fallback returned invalid output.',
-      clarification_question: cleanText(base.plan?.clarification_question, 280)
-        || 'I need one clarification to route this request. Do you want protocol drafting, data lookup, project analysis, paper analysis, coding analysis, or a general science answer?'
-    };
-    const degradedSelection = toolContract
-      ? selectToolsForRequest({
-        intent: cleanText(base.intent, 80) || DEFAULT_INTENT,
-        entities: base.entities || {},
-        message,
-        contract: toolContract,
-        allowWriteTools: writeIntent
-      })
-      : {
-        selectedToolNames: selectToolNamesForPlan(degradedPlan, availableToolNames),
-        rationaleRows: []
-      };
-    degradedPlan.selected_tool_names = degradedSelection.selectedToolNames;
-    degradedPlan.tool_selection_rationale = degradedSelection.rationaleRows || [];
-    return {
-      ...base,
-      plan: degradedPlan,
-      classifier: {
-        ...(base.classifier || {}),
-        fallbackAttempted: true,
-        fallbackUsed: false,
-        fallbackError: 'Routing fallback output was malformed.'
+      lowConfidence: Number(parsed.confidence) < 0.45,
+      tieDetected: false,
+      ruleReason: '',
+      fallbackError: '',
+      parser_primary_intent: parserIntent,
+      parser_secondary_intents: parserSecondaryIntents,
+      parser_needs_clarification: parserNeedsClarification,
+      parser_clarification_reason: parserClarificationReason,
+      parser_reasoning_summary: parserReasoningSummary,
+      mapped_execution_intent: mappedIntent,
+      parser_entities: {
+        activity_type: cleanText(parserEntities.activity_type, 180),
+        project_name: cleanText(parserEntities.project_name, 180),
+        protocol_name: cleanText(parserEntities.protocol_name, 220),
+        protein_name: cleanText(parserEntities.protein_name, 120),
+        compound_name: cleanText(parserEntities.compound_name, 120),
+        inventory_item: cleanText(parserEntities.inventory_item, 120),
+        cell_line: cleanText(parserEntities.cell_line, 80),
+        paper_title: cleanText(parserEntities.paper_title, 220),
+        workflow_step: cleanText(parserEntities.workflow_step, 180),
+        requested_output: cleanText(parserEntities.requested_output, 180)
       }
-    };
-  }
-
-  const mergedPlan = buildExecutionPlan({
-    intent: parsed.intent,
-    entities: parsed.entities,
-    message,
-    writeIntent,
-    classificationConfidence: parsed.confidence,
-    fallbackUsed: true,
-    tieDetected: false
-  });
-  applyProtocolMatchingToPlan({
-    intent: parsed.intent,
-    message,
-    entities: parsed.entities,
-    plan: mergedPlan,
-    snapshot
-  });
-  applyProjectMatchingToPlan({
-    intent: parsed.intent,
-    message,
-    entities: parsed.entities,
-    plan: mergedPlan,
-    snapshot,
-    selectedProjectId,
-    selectedProjectName
-  });
-  applyPaperMatchingToPlan({
-    intent: parsed.intent,
-    message,
-    entities: parsed.entities,
-    plan: mergedPlan,
-    snapshot
-  });
-  if (parsed.needs_clarification) {
-    mergedPlan.needs_clarification = true;
-  }
-  const protocolMatcherOwnsClarification = parsed.intent === 'protocol_to_notebook'
-    && mergedPlan.protocol_match
-    && mergedPlan.protocol_match.needs_clarification === true;
-  const projectMatcherOwnsClarification = parsed.intent === 'project_science_question'
-    && mergedPlan.project_match
-    && mergedPlan.project_match.needs_clarification === true;
-  const paperMatcherOwnsClarification = parsed.intent === 'paper_analysis'
-    && mergedPlan.paper_match
-    && mergedPlan.paper_match.needs_clarification === true;
-  const matcherOwnsClarification = protocolMatcherOwnsClarification
-    || projectMatcherOwnsClarification
-    || paperMatcherOwnsClarification;
-  if (parsed.clarification_question && !matcherOwnsClarification) {
-    mergedPlan.clarification_question = parsed.clarification_question;
-  }
-  if (parsed.reason && !mergedPlan.clarification_reason && !matcherOwnsClarification) {
-    mergedPlan.clarification_reason = parsed.reason;
-  }
-  const mergedSelection = toolContract
-    ? selectToolsForRequest({
-      intent: parsed.intent,
-      entities: parsed.entities,
-      message,
-      contract: toolContract,
-      allowWriteTools: writeIntent
-    })
-    : {
-      selectedToolNames: selectToolNamesForPlan(mergedPlan, availableToolNames),
-      rationaleRows: []
-    };
-  mergedPlan.selected_tool_names = mergedPlan.paper_task_mode === 'compare_papers'
-    ? ['search_papers']
-    : mergedSelection.selectedToolNames;
-  mergedPlan.tool_selection_rationale = mergedPlan.paper_task_mode === 'compare_papers'
-    ? [
-      {
-        tool: 'search_papers',
-        score: 999,
-        entityScore: 5,
-        taskScore: 4,
-        exactnessScore: 3,
-        reason: 'compare mode is limited to uploaded-paper retrieval in Phase 7'
-      }
-    ]
-    : (mergedSelection.rationaleRows || []);
-
-  return {
-    intent: parsed.intent,
-    confidence: Number(parsed.confidence.toFixed(3)),
-    entities: parsed.entities,
-    plan: mergedPlan,
-    classifier: {
-      ...(base.classifier || {}),
-      source: 'rules+llm_fallback',
-      fallbackAttempted: true,
-      fallbackUsed: true,
-      fallbackError: ''
     }
   };
 }
@@ -1040,15 +789,9 @@ function buildRoutingClarificationQuestion(routingDecision) {
 module.exports = {
   ROUTING_INTENTS,
   AGENT_MVP_SCOPE,
-  ROUTING_RULE_CONFIDENCE_THRESHOLD,
-  classifyIntentByRules: scoreIntentByRules,
-  extractEntitiesByRules,
   buildExecutionPlan,
   selectToolNamesForPlan,
-  buildRuleBasedRoutingDecision,
-  shouldUseRoutingFallback,
-  parseRoutingFallbackPayload,
-  mergeRoutingFallback,
+  buildRoutingDecisionFromIntentParser,
   buildRoutingClarificationQuestion,
   normalizeRoutingEntities
 };

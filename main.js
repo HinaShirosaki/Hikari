@@ -18,6 +18,12 @@ const {
 } = require('./codex-cli-provider');
 const { downloadPaperAndSiPdf } = require('./agent-paper-download');
 const { runPythonSandbox } = require('./agent-python-sandbox');
+const { searchWebResults } = require('./agent-web-fallback');
+const {
+  runPlannedPythonTask,
+  postProcessPythonToolResult,
+  runHybridWebFallback
+} = require('./agent-phase89-runtime');
 const {
   loadToolContract,
   executeToolCall
@@ -25,13 +31,16 @@ const {
 const {
   ROUTING_INTENTS,
   AGENT_MVP_SCOPE,
-  ROUTING_RULE_CONFIDENCE_THRESHOLD,
-  buildRuleBasedRoutingDecision,
-  shouldUseRoutingFallback,
-  parseRoutingFallbackPayload,
-  mergeRoutingFallback,
+  buildRoutingDecisionFromIntentParser,
   buildRoutingClarificationQuestion
 } = require('./agent-routing');
+const {
+  INTENT_PARSER_RESPONSE_SCHEMA,
+  normalizeIntentParserPayload,
+  buildIntentParserPrompt,
+  buildInventorySearchTerms
+} = require('./agent-intent-parser');
+const { buildPythonCodegenPrompt } = require('./agent-python-codegen');
 const { resolveProtocolMatch } = require('./agent-protocol-matching');
 const { buildNotebookDraft, buildNotebookDraftSummary } = require('./agent-notebook-generation');
 const { buildProjectRecordIndex, retrieveProjectEvidence } = require('./agent-project-retrieval');
@@ -672,6 +681,59 @@ function normalizeToolInvocationArgs(rawArgs) {
   return payload;
 }
 
+function normalizeInventorySearchMetadata(rawInventorySearch) {
+  const source = rawInventorySearch && typeof rawInventorySearch === 'object' ? rawInventorySearch : {};
+  return {
+    normalized_query: cleanText(source.normalized_query, 220),
+    candidate_terms: uniqueStrings(source.candidate_terms, 10),
+    aliases: uniqueStrings(source.aliases, 10),
+    search_mode: cleanText(source.search_mode, 60)
+  };
+}
+
+function buildInventoryToolArgs({
+  message,
+  routing = {},
+  args = {}
+}) {
+  const normalizedArgs = normalizeToolInvocationArgs(args);
+  const planInventorySearch = normalizeInventorySearchMetadata(routing?.plan?.inventory_search);
+  const argInventorySearch = normalizeInventorySearchMetadata(normalizedArgs);
+  const normalizedQuery = cleanText(
+    argInventorySearch.normalized_query || planInventorySearch.normalized_query,
+    220
+  );
+  const candidateTerms = uniqueStrings([
+    ...asArray(argInventorySearch.candidate_terms),
+    ...asArray(planInventorySearch.candidate_terms)
+  ], 10);
+  const aliases = uniqueStrings([
+    ...asArray(argInventorySearch.aliases),
+    ...asArray(planInventorySearch.aliases)
+  ], 10);
+  const searchMode = cleanText(argInventorySearch.search_mode || planInventorySearch.search_mode, 60);
+  const fallbackQuery = cleanText(normalizedArgs.query, 220) || cleanText(message, 220);
+  const searchTerms = buildInventorySearchTerms({
+    inventorySearch: {
+      normalized_query: normalizedQuery,
+      candidate_terms: candidateTerms,
+      aliases,
+      search_mode: searchMode
+    },
+    fallbackQuery,
+    maxTerms: 10
+  });
+  return {
+    ...normalizedArgs,
+    query: searchTerms[0] || normalizedQuery || fallbackQuery,
+    normalized_query: normalizedQuery || null,
+    candidate_terms: candidateTerms,
+    aliases,
+    search_mode: searchMode || null,
+    search_terms: searchTerms
+  };
+}
+
 ipcMain.handle('ena:save', async (_event, payload) => {
   const normalizedPayload = normalizeJsonPayload(payload, {});
   const { data, filePath } = normalizedPayload;
@@ -913,6 +975,7 @@ function buildFallbackAgentIoTools() {
     makeTool('search_pubmed', 'Search PubMed literature records and return article metadata for biomedical queries.', 25),
     makeTool('search_crossref', 'Search Crossref works metadata by title, DOI, author, or keyword.', 25),
     makeTool('search_europe_pmc', 'Search Europe PMC literature records with PubMed/PMCID/DOI metadata.', 25),
+    makeTool('search_web', 'Search generic web sources and return source URLs/snippets for recency-aware fallback.', 20),
     {
       name: 'toolbox_molarity_calculator',
       description: 'Compute molarity, mass, volume, concentration, or dilution conversions used in the Toolbox Molarity Calculator.',
@@ -1321,7 +1384,10 @@ function buildFallbackAgentIoTools() {
             }
           },
           timeout_ms: { type: 'integer', minimum: 500, maximum: 15000 },
-          readback_paths: { type: 'array', items: { type: 'string' } }
+          readback_paths: { type: 'array', items: { type: 'string' } },
+          artifact_paths: { type: 'array', items: { type: 'string' } },
+          persist_artifacts: { type: 'boolean' },
+          task_type: { type: 'string' }
         }
       },
       output_schema: {
@@ -1526,33 +1592,6 @@ const AGENT_RESULT_SCHEMA = {
   }
 };
 
-const ROUTING_FALLBACK_SCHEMA = {
-  type: 'object',
-  additionalProperties: false,
-  required: ['intent', 'confidence', 'entities', 'needs_clarification', 'clarification_question', 'reason'],
-  properties: {
-    intent: { type: 'string', enum: ROUTING_INTENTS },
-    confidence: { type: 'number', minimum: 0, maximum: 1 },
-    entities: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        activity: { type: 'string' },
-        project: { type: 'string' },
-        protein: { type: 'string' },
-        compound: { type: 'string' },
-        protocol: { type: 'string' },
-        cell_line: { type: 'string' },
-        paper_title: { type: 'string' },
-        workflow_step: { type: 'string' }
-      }
-    },
-    needs_clarification: { type: 'boolean' },
-    clarification_question: { type: 'string' },
-    reason: { type: 'string' }
-  }
-};
-
 function toInputText(role, text) {
   return {
     role,
@@ -1582,6 +1621,24 @@ function cleanText(value, maxLength = 2000) {
     return text;
   }
   return `${text.slice(0, maxLength)}...`;
+}
+
+function uniqueStrings(values, max = 50) {
+  const seen = new Set();
+  const out = [];
+  asArray(values).forEach((value) => {
+    const normalized = cleanText(value, 220);
+    if (!normalized) {
+      return;
+    }
+    const key = normalized.toLowerCase();
+    if (seen.has(key) || out.length >= max) {
+      return;
+    }
+    seen.add(key);
+    out.push(normalized);
+  });
+  return out;
 }
 
 const agentWorkflowHelpers = createAgentWorkflowHelpers({
@@ -2361,6 +2418,30 @@ function maybeBuildNotebookDraft({
   });
 }
 
+function applyRoutingPlanPatch(routing, planPatch = {}) {
+  const normalizedRouting = normalizeRoutingPayload(routing);
+  const patch = planPatch && typeof planPatch === 'object' ? planPatch : {};
+  return normalizeRoutingPayload({
+    ...normalizedRouting,
+    plan: {
+      ...(normalizedRouting.plan || {}),
+      ...patch
+    }
+  });
+}
+
+function appendCitations(target, citations) {
+  const source = Array.isArray(target) ? target : [];
+  asArray(citations).forEach((citation) => {
+    source.push({
+      source: cleanText(citation?.source, 120),
+      pointer: cleanText(citation?.pointer, 220),
+      reason: cleanText(citation?.reason, 260)
+    });
+  });
+  return source;
+}
+
 function maybeCollectProjectEvidence({
   message,
   routing,
@@ -3109,21 +3190,67 @@ async function runAgentToolDispatchLegacy(name, args, snapshot, options = {}) {
       ...personalItems.map((item) => ({ kind: 'personal_inventory', ...item })),
       ...chemicalItems.map((item) => ({ kind: 'chemical_inventory', ...item }))
     ];
-    const items = pickTopMatches(
-      merged,
-      (item) => `${item?.kind || ''} ${item?.name || ''} ${item?.cas || ''} ${item?.location || ''} ${item?.supplier || ''}`,
-      query,
-      limit
+    const searchMode = cleanText(normalizedArgs?.search_mode, 60) || 'exact_then_alias_then_fuzzy';
+    const searchTerms = uniqueStrings(
+      asArray(normalizedArgs?.search_terms).length
+        ? normalizedArgs.search_terms
+        : buildInventorySearchTerms({
+          inventorySearch: {
+            normalized_query: cleanText(normalizedArgs?.normalized_query, 220),
+            candidate_terms: asArray(normalizedArgs?.candidate_terms),
+            aliases: asArray(normalizedArgs?.aliases),
+            search_mode: searchMode
+          },
+          fallbackQuery: query,
+          maxTerms: 10
+        }),
+      10
     );
+    const termsToTry = searchTerms.length ? searchTerms : [query];
+    const seenKeys = new Set();
+    const scored = [];
+    const searchTargetText = (item) => (
+      `${item?.kind || ''} ${item?.name || ''} ${item?.cas || ''} ${item?.location || ''} ${item?.supplier || ''}`
+    );
+    for (const term of termsToTry) {
+      const matches = pickTopMatches(
+        merged,
+        searchTargetText,
+        term,
+        limit
+      );
+      matches.forEach((item) => {
+        const key = `${cleanText(item?.kind, 60).toLowerCase()}::${cleanText(item?.id || item?.name, 180).toLowerCase()}`;
+        if (!key || seenKeys.has(key)) {
+          return;
+        }
+        seenKeys.add(key);
+        scored.push({ ...item, matched_term: cleanText(term, 140) });
+      });
+      if (scored.length >= limit) {
+        break;
+      }
+      if (searchMode === 'exact_only' && scored.length > 0) {
+        break;
+      }
+    }
+    const items = scored.slice(0, limit);
+    const termsSummary = termsToTry.map((term) => cleanText(term, 120)).filter(Boolean).slice(0, 5);
 
     return buildAgentToolOutputEnvelope(name, normalizedArgs, {
       items,
       citations: items.map((item) => ({
         source: item.kind || 'inventory',
         pointer: item.id || item.name,
-        reason: 'Matched inventory name and metadata.'
+        reason: cleanText(
+          `Matched inventory metadata using "${cleanText(item?.matched_term, 120) || cleanText(query, 120) || 'query'}".`,
+          220
+        )
       })),
-      summary: `Found ${items.length} matching inventory records.`
+      summary: cleanText(
+        `Found ${items.length} matching inventory records.${termsSummary.length ? ` Terms tried: ${termsSummary.join(', ')}.` : ''}`,
+        320
+      )
     });
   }
 
@@ -3170,6 +3297,61 @@ async function runAgentToolDispatchLegacy(name, args, snapshot, options = {}) {
       })),
       summary: `Found ${items.length} matching papers (${deepReadyCount} deep-ready).`
     });
+  }
+
+  if (name === 'search_web') {
+    if (!query) {
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+        items: [],
+        citations: [],
+        summary: 'No query was provided for web search.'
+      });
+    }
+
+    try {
+      const rows = await searchWebResults({ query, limit });
+      const items = asArray(rows).slice(0, limit).map((item) => {
+        const url = cleanText(item?.url, 1800);
+        let sourceDomain = cleanText(item?.source_domain, 160).toLowerCase();
+        if (!sourceDomain && url) {
+          try {
+            sourceDomain = cleanText(new URL(url).hostname, 160).toLowerCase();
+          } catch {
+            sourceDomain = '';
+          }
+        }
+        return {
+          title: cleanText(item?.title, 320) || cleanText(url, 320),
+          url,
+          snippet: cleanText(item?.snippet, 900),
+          source_domain: sourceDomain,
+          published_at: cleanText(item?.published_at, 80)
+        };
+      }).filter((item) => item.title || item.url || item.snippet);
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+        items,
+        citations: items.map((item, index) => ({
+          source: 'web_source',
+          pointer: item.url || item.title || `web_result_${index + 1}`,
+          reason: `Matched generic web source from ${item.source_domain || 'unknown domain'}.`
+        })),
+        summary: `Found ${items.length} matching web sources.`
+      });
+    } catch (error) {
+      return buildAgentToolOutputEnvelope(
+        name,
+        normalizedArgs,
+        {
+          items: [],
+          citations: [],
+          summary: 'Web search failed.'
+        },
+        {
+          ok: false,
+          error: cleanText(error?.message || error, 600)
+        }
+      );
+    }
   }
 
   if (name === 'search_uniprot') {
@@ -3880,7 +4062,10 @@ async function runAgentToolDispatchLegacy(name, args, snapshot, options = {}) {
       stderr: cleanText(sandboxResult.stderr, 12000),
       files_written: asArray(sandboxResult.files_written).map((value) => cleanText(value, 240)).filter(Boolean),
       readback_files: readbackFiles,
-      warnings: asArray(sandboxResult.warnings).map((value) => cleanText(value, 220)).filter(Boolean)
+      warnings: asArray(sandboxResult.warnings).map((value) => cleanText(value, 220)).filter(Boolean),
+      python_task_type: cleanText(normalizedArgs?.task_type, 80),
+      artifact_paths: asArray(normalizedArgs?.artifact_paths).map((value) => cleanText(value, 220)).filter(Boolean),
+      persist_artifacts: normalizedArgs?.persist_artifacts === true
     };
     const summary = cleanText(sandboxResult.summary, 320)
       || (sandboxResult.ok ? 'Python sandbox execution completed.' : 'Python sandbox execution failed.');
@@ -4954,41 +5139,19 @@ async function requestSynthesisPayload({
   return extractResponseText(response);
 }
 
-function buildRoutingFallbackPrompt({ message, conversation, projectName, ruleRouting }) {
-  const ruleIntent = cleanText(ruleRouting?.intent, 80) || 'general_science_question';
-  const ruleConfidence = Number.isFinite(Number(ruleRouting?.confidence))
-    ? Number(ruleRouting.confidence).toFixed(2)
-    : '0.50';
-  return [
-    'You are an intent router for a lab assistant.',
-    'Classify only into this fixed intent list:',
-    ROUTING_INTENTS.join(', '),
-    `Rule fallback threshold: ${ROUTING_RULE_CONFIDENCE_THRESHOLD}.`,
-    `Project scope: ${projectName ? cleanText(projectName, 180) : 'all projects'}.`,
-    `MVP scope features: ${asArray(AGENT_MVP_SCOPE?.phase0?.mvpFeatures).join('; ')}.`,
-    'Return strict JSON only with keys: intent, confidence, entities, needs_clarification, clarification_question, reason.',
-    'Do not include markdown or extra keys.',
-    `Rule-based candidate: intent=${ruleIntent}, confidence=${ruleConfidence}, entities=${JSON.stringify(ruleRouting?.entities || {})}`,
-    `Conversation transcript:\n${toPromptConversationTranscript(conversation)}`,
-    `Latest user request: ${message}`
-  ].join('\n\n');
-}
-
-async function requestRoutingFallbackPayload({
+async function requestIntentParserPayload({
   provider,
   endpoint,
   apiKey,
   model,
   message,
   conversation,
-  projectName,
-  ruleRouting
+  projectName
 }) {
-  const prompt = buildRoutingFallbackPrompt({
+  const prompt = buildIntentParserPrompt({
     message,
     conversation,
-    projectName,
-    ruleRouting
+    projectName
   });
 
   try {
@@ -4998,7 +5161,7 @@ async function requestRoutingFallbackPayload({
         model,
         cwd: getCodexCliWorkingDirectory()
       });
-      return parseRoutingFallbackPayload(raw);
+      return normalizeIntentParserPayload(raw);
     }
 
     if (provider === LLM_PROVIDERS.CLAUDE) {
@@ -5008,7 +5171,7 @@ async function requestRoutingFallbackPayload({
         body: {
           model,
           system: 'Return valid JSON only.',
-          max_tokens: 700,
+          max_tokens: 1100,
           messages: [
             {
               role: 'user',
@@ -5022,7 +5185,7 @@ async function requestRoutingFallbackPayload({
           ]
         }
       });
-      return parseRoutingFallbackPayload(extractClaudeResponseText(response));
+      return normalizeIntentParserPayload(extractClaudeResponseText(response));
     }
 
     if (provider === LLM_PROVIDERS.GEMINI) {
@@ -5041,11 +5204,11 @@ async function requestRoutingFallbackPayload({
             }
           ],
           generationConfig: {
-            maxOutputTokens: 700
+            maxOutputTokens: 1100
           }
         }
       });
-      return parseRoutingFallbackPayload(extractGeminiResponseText(response));
+      return normalizeIntentParserPayload(extractGeminiResponseText(response));
     }
 
     const response = await requestOpenAiResponsesWithBackoff({
@@ -5060,17 +5223,20 @@ async function requestRoutingFallbackPayload({
         text: {
           format: {
             type: 'json_schema',
-            name: 'routing_fallback',
+            name: 'intent_parser',
             strict: true,
-            schema: ROUTING_FALLBACK_SCHEMA
+            schema: INTENT_PARSER_RESPONSE_SCHEMA
           }
         },
-        max_output_tokens: 700
+        max_output_tokens: 1100
       }
     });
-    return parseRoutingFallbackPayload(extractResponseText(response));
-  } catch {
-    return null;
+    return normalizeIntentParserPayload(extractResponseText(response));
+  } catch (error) {
+    return {
+      ok: false,
+      error: cleanText(error?.message || error, 240) || 'Intent parser request failed.'
+    };
   }
 }
 
@@ -5111,7 +5277,7 @@ function toPromptConversationTranscript(conversation) {
   return rows.length ? rows.join('\n') : 'No prior messages.';
 }
 
-async function buildCodexAgentContext(message, snapshot, selectedToolNames = null) {
+async function buildCodexAgentContext(message, snapshot, selectedToolNames = null, routing = null) {
   const allowedRetrievalTools = [
     'search_projects',
     'search_protocols',
@@ -5120,7 +5286,8 @@ async function buildCodexAgentContext(message, snapshot, selectedToolNames = nul
     'search_assays',
     'search_gel_analyses',
     'search_inventory',
-    'search_papers'
+    'search_papers',
+    'search_web'
   ];
   const retrievalTools = Array.isArray(selectedToolNames)
     ? asArray(selectedToolNames)
@@ -5132,7 +5299,14 @@ async function buildCodexAgentContext(message, snapshot, selectedToolNames = nul
   const evidence = [];
 
   for (const toolName of retrievalTools) {
-    const result = await runAgentTool(toolName, { query: message, limit: 5 }, snapshot);
+    const toolArgs = toolName === 'search_inventory'
+      ? buildInventoryToolArgs({
+        message,
+        routing,
+        args: { query: message, limit: 5 }
+      })
+      : { query: message, limit: 5 };
+    const result = await runAgentTool(toolName, toolArgs, snapshot);
     const items = asArray(result?.items).slice(0, 5);
     if (!items.length) {
       continue;
@@ -5180,7 +5354,7 @@ async function runCodexAgentController({
   const evidence = [];
   const notebookToolResults = [];
   const requiresApproval = containsWriteIntent(message) && !allowWriteTools;
-  const routingInfo = normalizeRoutingPayload(routing);
+  let routingInfo = normalizeRoutingPayload(routing);
 
   intermediateStates.push(buildIntermediateState('intake', message, {
     assumptions: [
@@ -5262,9 +5436,105 @@ async function runCodexAgentController({
     evidence.push(...asArray(paperEvidence.citations));
   }
 
-  const collected = await buildCodexAgentContext(message, snapshot, routingInfo.plan.selected_tool_names);
+  let pythonContextSlice = null;
+  if (routingInfo.plan.needs_python === true && asArray(routingInfo.plan.selected_tool_names).includes('run_python_sandbox')) {
+    const pythonRun = await runPlannedPythonTask({
+      message,
+      routing: routingInfo,
+      snapshot,
+      selectedProjectId: projectId,
+      selectedProjectName: projectName || routingInfo.entities?.project,
+      storagePath: cleanText(snapshot?.settings?.storagePath, 1200),
+      generatePythonRunRequest: async ({ taskType, taskContext }) => requestCodexCliText({
+        prompt: buildPythonCodegenPrompt({
+          message,
+          taskType,
+          taskContext
+        }),
+        model,
+        cwd: getCodexCliWorkingDirectory()
+      }),
+      runTool: async (toolName, args) => runAgentTool(toolName, args, snapshot, { allowWriteTools })
+    });
+    routingInfo = applyRoutingPlanPatch(routingInfo, pythonRun.plan_patch);
+
+    if (pythonRun.needs_clarification) {
+      const clarificationQuestion = cleanText(pythonRun.clarification_question, 320)
+        || 'Please provide the required input data for Python analysis.';
+      intermediateStates.push(buildIntermediateState('python_plan', 'Python orchestration requires clarification before execution.', {
+        assumptions: asArray(pythonRun.assumption_rows),
+        openQuestions: [clarificationQuestion],
+        confidence: clamp(routingInfo.confidence * 0.92, 0, 1)
+      }));
+      return {
+        ok: true,
+        provider,
+        model: model || 'codex-default',
+        answer: clarificationQuestion,
+        confidence: clamp(routingInfo.confidence * 0.92, 0, 1),
+        requiresApproval,
+        proposedWriteActions: requiresApproval
+          ? [{
+            tool_name: 'write_operation_pending_approval',
+            reason: 'User intent appears write-oriented; explicit approval is required before execution.'
+          }]
+          : [],
+        citations: [],
+        decisionRecord: {
+          assumptions: ['Python task planning detected missing/invalid input and requested clarification.'],
+          open_questions: [clarificationQuestion],
+          verification_notes: ['No further tools were executed because Python task input was incomplete.']
+        },
+        routing: routingInfo,
+        intermediateStates,
+        toolTrace
+      };
+    }
+
+    if (pythonRun.executed && pythonRun.tool_result) {
+      intermediateStates.push(buildIntermediateState('python_execute', 'Executed deterministic Python orchestration in Codex pre-retrieval.', {
+        assumptions: asArray(pythonRun.assumption_rows),
+        evidence: asArray(pythonRun.citations).slice(0, 10),
+        confidence: pythonRun.tool_result.ok === true ? 0.72 : 0.58
+      }));
+      toolTrace.push(...asArray(pythonRun.tool_trace_rows));
+      appendCitations(evidence, pythonRun.citations);
+      notebookToolResults.push(pythonRun.notebook_tool_result);
+      pythonContextSlice = {
+        tool: 'run_python_sandbox',
+        items: asArray(pythonRun.tool_result.items).slice(0, 4)
+      };
+    }
+  }
+
+  const collected = await buildCodexAgentContext(message, snapshot, routingInfo.plan.selected_tool_names, routingInfo);
+  if (pythonContextSlice && asArray(pythonContextSlice.items).length) {
+    collected.contextSlices.unshift(pythonContextSlice);
+  }
   toolTrace.push(...collected.toolTrace);
   evidence.push(...collected.evidence);
+
+  const webFallback = await runHybridWebFallback({
+    message,
+    routing: routingInfo,
+    projectName: projectName || routingInfo.plan.project_match?.selected_project_name || routingInfo.entities?.project,
+    internalEvidence: evidence,
+    runLiteratureTool: async (toolName, args) => runAgentTool(toolName, args, snapshot, { allowWriteTools: false })
+  });
+  routingInfo = applyRoutingPlanPatch(routingInfo, webFallback.plan_patch);
+  if (webFallback.triggered) {
+    intermediateStates.push(buildIntermediateState('web_fallback', 'Executed hybrid web + literature fallback retrieval.', {
+      assumptions: asArray(webFallback.assumption_rows),
+      evidence: asArray(webFallback.citations).slice(0, 10),
+      confidence: asArray(webFallback.merged_items).length ? 0.66 : 0.54
+    }));
+    toolTrace.push(...asArray(webFallback.tool_trace_rows));
+    appendCitations(evidence, webFallback.citations);
+    collected.contextSlices.push({
+      tool: 'hybrid_web_fallback',
+      items: asArray(webFallback.merged_items).slice(0, 10)
+    });
+  }
 
   intermediateStates.push(buildIntermediateState('execute', `Prepared ${collected.contextSlices.length} retrieval context slices for Codex CLI.`, {
     evidence: evidence.slice(0, 12),
@@ -5321,7 +5591,11 @@ async function runCodexAgentController({
   });
 
   intermediateStates.push(buildIntermediateState('verify', 'Verified evidence coverage and policy constraints.', {
-    assumptions: ['Only read-context assembly was executed before Codex response synthesis.'],
+    assumptions: [
+      routingInfo.plan.needs_python === true
+        ? 'Read-context assembly and deterministic Python computation were executed before Codex response synthesis.'
+        : 'Only read-context assembly was executed before Codex response synthesis.'
+    ],
     openQuestions: evidence.length ? [] : ['No direct matches were found in local retrieval context.'],
     evidence: evidence.slice(-12),
     confidence: evidence.length ? 0.69 : 0.56
@@ -5441,7 +5715,26 @@ async function runAgentController(payload) {
     ? conversation
     : [...conversation, { role: 'user', text: message }];
 
-  const ruleRouting = buildRuleBasedRoutingDecision({
+  const parserResult = await requestIntentParserPayload({
+    provider,
+    endpoint,
+    apiKey,
+    model,
+    message,
+    conversation: promptConversation,
+    projectName
+  });
+  if (!parserResult?.ok || !parserResult?.payload) {
+    return {
+      ok: false,
+      provider,
+      model: model || (provider === LLM_PROVIDERS.CODEX ? 'codex-default' : ''),
+      error: cleanText(`Intent parser failed: ${parserResult?.error || 'Malformed parser output.'}`, 360)
+    };
+  }
+
+  const routingDecision = buildRoutingDecisionFromIntentParser({
+    parserPayload: parserResult.payload,
     message,
     snapshot,
     availableToolNames,
@@ -5450,32 +5743,7 @@ async function runAgentController(payload) {
     selectedProjectId: projectId,
     selectedProjectName: projectName
   });
-
-  let routing = normalizeRoutingPayload(ruleRouting);
-  if (shouldUseRoutingFallback(ruleRouting)) {
-    const fallbackPayload = await requestRoutingFallbackPayload({
-      provider,
-      endpoint,
-      apiKey,
-      model,
-      message,
-      conversation: promptConversation,
-      projectName,
-      ruleRouting
-    });
-    const mergedRouting = mergeRoutingFallback({
-      ruleDecision: ruleRouting,
-      fallbackPayload,
-      message,
-      snapshot,
-      writeIntent: containsWriteIntent(message),
-      availableToolNames,
-      toolContract: AGENT_TOOL_REGISTRY,
-      selectedProjectId: projectId,
-      selectedProjectName: projectName
-    });
-    routing = normalizeRoutingPayload(mergedRouting);
-  }
+  let routing = normalizeRoutingPayload(routingDecision);
 
   if (routing.plan.needs_clarification) {
     const clarification = buildRoutingClarificationQuestion(routing);
@@ -5657,8 +5925,30 @@ async function runAgentController(payload) {
     const toolOutputs = [];
     const proposedActions = [];
     for (const call of calls.slice(0, 4)) {
-      const args = normalizeToolInvocationArgs(call.argsText);
-      const toolResult = await runAgentTool(call.name, args, snapshot, { allowWriteTools });
+      let args = normalizeToolInvocationArgs(call.argsText);
+      if (call.name === 'search_inventory') {
+        args = buildInventoryToolArgs({
+          message,
+          routing,
+          args
+        });
+      }
+      let toolResult = await runAgentTool(call.name, args, snapshot, { allowWriteTools });
+      if (call.name === 'run_python_sandbox') {
+        const pythonPost = await postProcessPythonToolResult({
+          toolResult,
+          storagePath: cleanText(snapshot?.settings?.storagePath, 1200),
+          projectName: cleanText(projectName || routing.plan.project_match?.selected_project_name || routing.entities?.project, 180),
+          taskType: cleanText(routing.plan.python_task_type, 80)
+        });
+        toolResult = pythonPost.tool_result;
+        routing = applyRoutingPlanPatch(routing, pythonPost.plan_patch);
+        intermediateStates.push(buildIntermediateState('python_execute', 'Validated Python sandbox output and persisted deterministic artifacts.', {
+          assumptions: asArray(pythonPost.assumption_rows),
+          evidence: asArray(pythonPost.citations).slice(0, 10),
+          confidence: toolResult.ok === true ? 0.71 : 0.57
+        }));
+      }
       const normalizedInput = toolResult?.input && typeof toolResult.input === 'object' ? toolResult.input : args;
       toolOutputs.push({
         callId: call.callId,
@@ -5705,6 +5995,33 @@ async function runAgentController(payload) {
     session = await continueAgentSessionWithToolOutputs(session, toolOutputs);
 
     round += 1;
+  }
+
+  const webFallback = await runHybridWebFallback({
+    message,
+    routing,
+    projectName: projectName || routing.plan.project_match?.selected_project_name || routing.entities?.project,
+    internalEvidence: evidence,
+    runLiteratureTool: async (toolName, args) => runAgentTool(toolName, args, snapshot, { allowWriteTools: false })
+  });
+  routing = applyRoutingPlanPatch(routing, webFallback.plan_patch);
+  if (webFallback.triggered) {
+    intermediateStates.push(buildIntermediateState('web_fallback', 'Executed hybrid web + literature fallback retrieval.', {
+      assumptions: asArray(webFallback.assumption_rows),
+      evidence: asArray(webFallback.citations).slice(0, 10),
+      confidence: asArray(webFallback.merged_items).length ? 0.66 : 0.54
+    }));
+    toolTrace.push(...asArray(webFallback.tool_trace_rows));
+    appendCitations(evidence, webFallback.citations);
+    notebookToolResults.push({
+      tool: 'hybrid_web_fallback',
+      items: asArray(webFallback.merged_items).slice(0, 10),
+      summary: cleanText(
+        asArray(webFallback.assumption_rows).join(' ')
+          || `Collected ${asArray(webFallback.merged_items).length} hybrid web source(s).`,
+        260
+      )
+    });
   }
 
   const draftAnswer = extractAgentSessionText(session);

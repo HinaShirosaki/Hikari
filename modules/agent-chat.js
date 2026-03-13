@@ -208,6 +208,7 @@ const TOOL_ACTIVITY_LABELS = {
   search_gel_analyses: 'Checking gel analysis records',
   search_inventory: 'Checking inventory records',
   search_papers: 'Checking stored PDF papers',
+  search_web: 'Searching web sources',
   toolbox_molarity_calculator: 'Running molarity calculator',
   toolbox_peptide_properties: 'Computing peptide properties',
   toolbox_buffer_preparer: 'Computing buffer preparation',
@@ -219,6 +220,7 @@ const TOOL_ACTIVITY_LABELS = {
   toolbox_plannotate: 'Running pLannotate annotation',
   toolbox_crispr_sgrna_designer: 'Designing CRISPR sgRNAs',
   run_python_sandbox: 'Running Python sandbox',
+  hybrid_web_fallback: 'Merging web and literature evidence',
   download_paper_pdf: 'Downloading papers'
 };
 
@@ -237,6 +239,9 @@ function inferRequestedActivities(requestText) {
   }
   if (/\b(paper|papers|pdf|literature|journal)\b/.test(text)) {
     rows.push('Checking stored PDF papers');
+  }
+  if (/\b(web|internet|latest|recent|citation|reference)\b/.test(text)) {
+    rows.push('Searching web sources');
   }
   if (/\b(download|fetch|get)\b/.test(text) && /\b(paper|papers|pdf)\b/.test(text)) {
     rows.push('Downloading papers (pending approval)');
@@ -273,6 +278,12 @@ function formatStageActivity(stage, goal) {
   }
   if (normalizedStage === 'execute') {
     return trimText(goal, 240) || 'Executing read tools';
+  }
+  if (normalizedStage === 'python_execute') {
+    return trimText(goal, 240) || 'Running deterministic Python orchestration';
+  }
+  if (normalizedStage === 'web_fallback') {
+    return trimText(goal, 240) || 'Running hybrid web fallback retrieval';
   }
   if (normalizedStage === 'verify') {
     return 'Verifying evidence before final answer';
@@ -719,7 +730,7 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
     const routingIntent = trimText(routing.intent, 80) || '-';
     const routingConfidence = Number(routing.confidence);
     const routingConfidenceText = Number.isFinite(routingConfidence) ? routingConfidence.toFixed(2) : 'n/a';
-    const routingSource = trimText(routing.classifier?.source, 80) || 'rules';
+    const routingSource = trimText(routing.classifier?.source, 80) || 'llm_parser';
     const routingHeader = `intent=${routingIntent} | confidence=${routingConfidenceText} | source=${routingSource}`;
     const routingPlan = routing.plan && typeof routing.plan === 'object' ? routing.plan : {};
     const routingEntityRows = Object.entries(routing.entities && typeof routing.entities === 'object' ? routing.entities : {})
@@ -737,7 +748,16 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
         'project_match',
         'project_candidates',
         'paper_match',
-        'paper_candidates'
+        'paper_candidates',
+        'python_task_type',
+        'python_ready',
+        'python_needs_clarification',
+        'python_artifact_count',
+        'web_fallback_triggered',
+        'web_fallback_reason',
+        'web_queries',
+        'web_sources',
+        'inventory_search'
       ].includes(key))
       .map(([key, value]) => {
         if (typeof value === 'boolean') {
@@ -890,6 +910,71 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
     if (!paperAvailabilityRows.length) {
       paperAvailabilityRows.push('No paper availability context.');
     }
+    const routingPythonRows = [
+      trimText(routingPlan.python_task_type, 80)
+        ? `python_task_type: ${trimText(routingPlan.python_task_type, 80)}`
+        : '',
+      `python_ready: ${routingPlan.python_ready === true}`,
+      `python_needs_clarification: ${routingPlan.python_needs_clarification === true}`,
+      Number.isFinite(Number(routingPlan.python_artifact_count))
+        ? `python_artifact_count: ${Number(routingPlan.python_artifact_count)}`
+        : '',
+      trimText(routingPlan.python_codegen_status, 80)
+        ? `python_codegen_status: ${trimText(routingPlan.python_codegen_status, 80)}`
+        : '',
+      trimText(routingPlan.python_codegen_reason, 180)
+        ? `python_codegen_reason: ${trimText(routingPlan.python_codegen_reason, 180)}`
+        : ''
+    ].filter(Boolean);
+    const routingWebFallbackRows = [
+      `web_fallback_triggered: ${routingPlan.web_fallback_triggered === true}`,
+      trimText(routingPlan.web_fallback_reason, 180)
+        ? `web_fallback_reason: ${trimText(routingPlan.web_fallback_reason, 180)}`
+        : ''
+    ].filter(Boolean);
+    asArray(routingPlan.web_queries).forEach((query, index) => {
+      const clean = trimText(query, 220);
+      if (clean) {
+        routingWebFallbackRows.push(`query_${index + 1}: ${clean}`);
+      }
+    });
+    const webSourceRows = asArray(routingPlan.web_sources).map((item, index) => {
+      const title = trimText(item?.title, 180) || trimText(item?.url, 180) || `web_source_${index + 1}`;
+      const lane = trimText(item?.source_lane, 40);
+      const domain = trimText(item?.source_domain, 120);
+      const tool = trimText(item?.source_tool, 120);
+      const score = Number(item?.score);
+      const metrics = [
+        lane ? `lane=${lane}` : '',
+        domain ? `domain=${domain}` : '',
+        tool ? `tool=${tool}` : '',
+        Number.isFinite(score) ? `score=${score.toFixed(2)}` : ''
+      ].filter(Boolean).join(' ');
+      return `${index + 1}. ${title}${metrics ? ` (${metrics})` : ''}`;
+    }).filter(Boolean);
+    const routingInventorySearch = routingPlan.inventory_search && typeof routingPlan.inventory_search === 'object'
+      ? routingPlan.inventory_search
+      : {};
+    const routingInventorySearchRows = [
+      trimText(routingInventorySearch.normalized_query, 220)
+        ? `normalized_query: ${trimText(routingInventorySearch.normalized_query, 220)}`
+        : '',
+      trimText(routingInventorySearch.search_mode, 80)
+        ? `search_mode: ${trimText(routingInventorySearch.search_mode, 80)}`
+        : ''
+    ].filter(Boolean);
+    asArray(routingInventorySearch.candidate_terms).forEach((term, index) => {
+      const clean = trimText(term, 160);
+      if (clean) {
+        routingInventorySearchRows.push(`candidate_${index + 1}: ${clean}`);
+      }
+    });
+    asArray(routingInventorySearch.aliases).forEach((term, index) => {
+      const clean = trimText(term, 160);
+      if (clean) {
+        routingInventorySearchRows.push(`alias_${index + 1}: ${clean}`);
+      }
+    });
     const routingToolRows = asArray(routingPlan.selected_tool_names).map((tool) => trimText(tool, 120)).filter(Boolean);
     const routingSelectorRows = asArray(routingPlan.tool_selection_rationale).map((row, index) => {
       const tool = trimText(row?.tool, 120) || `tool_${index + 1}`;
@@ -914,6 +999,32 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
       trimText(routing.classifier?.ruleReason, 220) ? `ruleReason: ${trimText(routing.classifier?.ruleReason, 220)}` : '',
       trimText(routing.classifier?.fallbackError, 220) ? `fallbackError: ${trimText(routing.classifier?.fallbackError, 220)}` : ''
     ].filter(Boolean);
+    const routingParserRows = [
+      trimText(routing.classifier?.parserPrimaryIntent, 80)
+        ? `primary_intent: ${trimText(routing.classifier?.parserPrimaryIntent, 80)}`
+        : '',
+      asArray(routing.classifier?.parserSecondaryIntents).length
+        ? `secondary_intents: ${asArray(routing.classifier?.parserSecondaryIntents).join(', ')}`
+        : '',
+      trimText(routing.classifier?.mappedExecutionIntent, 80)
+        ? `mapped_execution_intent: ${trimText(routing.classifier?.mappedExecutionIntent, 80)}`
+        : '',
+      `parser_needs_clarification: ${routing.classifier?.parserNeedsClarification === true}`,
+      trimText(routing.classifier?.parserClarificationReason, 220)
+        ? `clarification_reason: ${trimText(routing.classifier?.parserClarificationReason, 220)}`
+        : '',
+      trimText(routing.classifier?.parserReasoningSummary, 220)
+        ? `reasoning_summary: ${trimText(routing.classifier?.parserReasoningSummary, 220)}`
+        : ''
+    ].filter(Boolean);
+    const routingParserEntityRows = Object.entries(
+      routing.classifier?.parserEntities && typeof routing.classifier.parserEntities === 'object'
+        ? routing.classifier.parserEntities
+        : {}
+    ).map(([key, value]) => {
+      const clean = trimText(value, 180);
+      return clean ? `${key}: ${clean}` : '';
+    }).filter(Boolean);
     const routingRows = [routingHeader];
 
     const confidence = Number(meta.confidence);
@@ -938,13 +1049,19 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
         ` : ''}
         <p class="small-note">${safeText(confidenceText)} | ${safeText(approvalText)}</p>
         ${renderMetaList('Routing', routingRows)}
+        ${renderMetaList('Routing Parser', routingParserRows)}
+        ${renderMetaList('Routing Parser Entities', routingParserEntityRows)}
         ${renderMetaList('Routing Entities', routingEntityRows)}
         ${renderMetaList('Routing Plan', routingPlanRows)}
+        ${renderMetaList('Routing Inventory Search', routingInventorySearchRows)}
         ${renderMetaList('Routing Project Match', routingProjectMatchRows)}
         ${renderMetaList('Routing Project Candidates', routingProjectCandidateRows)}
         ${renderMetaList('Routing Paper Match', routingPaperMatchRows)}
         ${renderMetaList('Routing Paper Candidates', routingPaperCandidateRows)}
         ${renderMetaList('Paper Availability', paperAvailabilityRows)}
+        ${renderMetaList('Routing Python', routingPythonRows)}
+        ${renderMetaList('Routing Web Fallback', routingWebFallbackRows)}
+        ${renderMetaList('Web Sources', webSourceRows)}
         ${renderMetaList('Routing Protocol Match', routingProtocolMatchRows)}
         ${renderMetaList('Routing Protocol Candidates', routingProtocolCandidateRows)}
         ${renderMetaList('Routing Tools', routingToolRows)}

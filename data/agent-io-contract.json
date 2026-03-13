@@ -1114,6 +1114,30 @@
           "query": {
             "type": "string"
           },
+          "normalized_query": {
+            "type": "string"
+          },
+          "candidate_terms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "aliases": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "search_mode": {
+            "type": "string"
+          },
+          "search_terms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "limit": {
             "type": "integer",
             "minimum": 1,
@@ -1710,6 +1734,94 @@
                   "type": "string"
                 },
                 "europe_pmc_url": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "citations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "source",
+                "pointer",
+                "reason"
+              ],
+              "properties": {
+                "source": {
+                  "type": "string"
+                },
+                "pointer": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "summary": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "search_web",
+      "description": "Search generic web sources for current references, then return titles, URLs, snippets, and source domains.",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items",
+          "citations",
+          "summary"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "title",
+                "url",
+                "snippet",
+                "source_domain"
+              ],
+              "properties": {
+                "title": {
+                  "type": "string"
+                },
+                "url": {
+                  "type": "string"
+                },
+                "snippet": {
+                  "type": "string"
+                },
+                "source_domain": {
+                  "type": "string"
+                },
+                "published_at": {
                   "type": "string"
                 }
               }
@@ -2589,7 +2701,7 @@
     },
     {
       "name": "run_python_sandbox",
-      "description": "Compute tool. Run Python code in an isolated temporary sandbox for deterministic calculations, parsing, and transformations. Use this when retrieval tools are insufficient and the task needs programmatic computation.",
+      "description": "Python Sandbox Capability\n\nYou have access to a Python sandbox environment that can be used when computation or structured data processing is necessary.\n\nUse the Python sandbox only when it materially improves the answer. Good use cases include:\n- calculations\n- parsing CSV, TSV, JSON, or text files\n- data cleaning and transformation\n- plotting or generating tables\n- scoring/ranking candidates\n- sequence/property calculations\n- extracting structured information from semi-structured data\n- comparing multiple retrieved records\n- generating small helper files such as CSV, JSON, or plots\n\nDo not use the Python sandbox for simple facts, straightforward text rewriting, or tasks that can be answered directly without computation.\n\nBefore using Python, decide whether:\n1. the task truly benefits from code execution\n2. the required inputs are available\n3. tool retrieval or file retrieval should happen first\n\nWhen Python is used:\n- write clear, minimal, correct Python code\n- prefer standard libraries unless extra libraries are clearly needed\n- include brief comments only when useful\n- validate inputs before processing\n- handle errors gracefully\n- save output files only when they are useful to the user or the app\n- summarize the result in natural language after execution\n\nIf input files or structured data are required but missing, ask the user for the missing files or data instead of guessing.\n\nNever fabricate Python output. Only report results actually produced by the sandbox.\n\nWhen relevant, Python may be used after tool calls. For example:\n- retrieve inventory records, then rank/filter them in Python\n- retrieve notebook pages, then summarize or compare them in Python\n- retrieve protocol candidates, then score them in Python\n- parse uploaded paper text or extracted sections in Python\n\nUse Python as a computation tool, not as a replacement for evidence retrieval.",
       "input_schema": {
         "type": "object",
         "additionalProperties": false,
@@ -2629,6 +2741,18 @@
             "items": {
               "type": "string"
             }
+          },
+          "artifact_paths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "persist_artifacts": {
+            "type": "boolean"
+          },
+          "task_type": {
+            "type": "string"
           }
         }
       },
@@ -2732,6 +2856,37 @@
                   "type": "array",
                   "items": {
                     "type": "string"
+                  }
+                },
+                "python_task_type": {
+                  "type": "string"
+                },
+                "validation_status": {
+                  "type": "string"
+                },
+                "artifact_paths": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "persist_artifacts": {
+                  "type": "boolean"
+                },
+                "artifact_count": {
+                  "type": "integer"
+                },
+                "result_files": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "result_file_records": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
                   }
                 }
               }

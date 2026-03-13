@@ -40,6 +40,19 @@ function createAgentWorkflowHelpers(deps = {}) {
       exactnessScore: Number.isFinite(Number(row?.exactnessScore)) ? Number(row.exactnessScore) : 0,
       reason: cleanText(row?.reason, 220)
     })).filter((row) => row.tool);
+    const webQueries = asArray(plan.web_queries).map((item) => cleanText(item, 260)).filter(Boolean);
+    const webSources = asArray(plan.web_sources).map((row) => ({
+      title: cleanText(row?.title, 320),
+      url: cleanText(row?.url, 1200),
+      source_domain: cleanText(row?.source_domain, 160),
+      source_lane: cleanText(row?.source_lane, 60),
+      source_tool: cleanText(row?.source_tool, 120),
+      published_at: cleanText(row?.published_at, 80),
+      score: Number.isFinite(Number(row?.score)) ? Number(row.score) : 0
+    })).filter((row) => row.title || row.url);
+    const inventorySearch = plan.inventory_search && typeof plan.inventory_search === 'object'
+      ? plan.inventory_search
+      : {};
     const protocolMatch = plan.protocol_match && typeof plan.protocol_match === 'object' ? plan.protocol_match : {};
     const projectMatch = plan.project_match && typeof plan.project_match === 'object' ? plan.project_match : {};
     const paperMatch = plan.paper_match && typeof plan.paper_match === 'object' ? plan.paper_match : {};
@@ -117,6 +130,24 @@ function createAgentWorkflowHelpers(deps = {}) {
         needs_pdf_reading: plan.needs_pdf_reading === true,
         needs_python: plan.needs_python === true,
         needs_web_search: plan.needs_web_search === true,
+        python_task_type: cleanText(plan.python_task_type, 80),
+        python_ready: plan.python_ready === true,
+        python_needs_clarification: plan.python_needs_clarification === true,
+        python_artifact_count: Number.isFinite(Number(plan.python_artifact_count))
+          ? Number(plan.python_artifact_count)
+          : 0,
+        python_codegen_status: cleanText(plan.python_codegen_status, 80),
+        python_codegen_reason: cleanText(plan.python_codegen_reason, 180),
+        web_fallback_triggered: plan.web_fallback_triggered === true,
+        web_fallback_reason: cleanText(plan.web_fallback_reason, 180),
+        web_queries: webQueries,
+        web_sources: webSources,
+        inventory_search: {
+          normalized_query: cleanText(inventorySearch.normalized_query, 220),
+          candidate_terms: asArray(inventorySearch.candidate_terms).map((item) => cleanText(item, 220)).filter(Boolean).slice(0, 10),
+          aliases: asArray(inventorySearch.aliases).map((item) => cleanText(item, 220)).filter(Boolean).slice(0, 10),
+          search_mode: cleanText(inventorySearch.search_mode, 60)
+        },
         needs_clarification: plan.needs_clarification === true,
         clarification_reason: cleanText(plan.clarification_reason, 260),
         clarification_question: cleanText(plan.clarification_question, 320),
@@ -160,13 +191,33 @@ function createAgentWorkflowHelpers(deps = {}) {
         project_candidates: projectCandidates
       },
       classifier: {
-        source: cleanText(classifier.source, 80) || 'rules',
+        source: cleanText(classifier.source, 80) || 'llm_parser',
         fallbackAttempted: classifier.fallbackAttempted === true,
         fallbackUsed: classifier.fallbackUsed === true,
         lowConfidence: classifier.lowConfidence === true,
         tieDetected: classifier.tieDetected === true,
         ruleReason: cleanText(classifier.ruleReason, 260),
         fallbackError: cleanText(classifier.fallbackError, 260),
+        parserPrimaryIntent: cleanText(classifier.parser_primary_intent, 80),
+        parserSecondaryIntents: asArray(classifier.parser_secondary_intents).map((item) => cleanText(item, 80)).filter(Boolean).slice(0, 5),
+        parserNeedsClarification: classifier.parser_needs_clarification === true,
+        parserClarificationReason: cleanText(classifier.parser_clarification_reason, 260),
+        parserReasoningSummary: cleanText(classifier.parser_reasoning_summary, 320),
+        mappedExecutionIntent: cleanText(classifier.mapped_execution_intent, 80),
+        parserEntities: classifier.parser_entities && typeof classifier.parser_entities === 'object'
+          ? {
+            activity_type: cleanText(classifier.parser_entities.activity_type, 180),
+            project_name: cleanText(classifier.parser_entities.project_name, 180),
+            protocol_name: cleanText(classifier.parser_entities.protocol_name, 220),
+            protein_name: cleanText(classifier.parser_entities.protein_name, 120),
+            compound_name: cleanText(classifier.parser_entities.compound_name, 120),
+            inventory_item: cleanText(classifier.parser_entities.inventory_item, 120),
+            cell_line: cleanText(classifier.parser_entities.cell_line, 80),
+            paper_title: cleanText(classifier.parser_entities.paper_title, 220),
+            workflow_step: cleanText(classifier.parser_entities.workflow_step, 180),
+            requested_output: cleanText(classifier.parser_entities.requested_output, 180)
+          }
+          : {},
         ruleScores: classifier.ruleScores && typeof classifier.ruleScores === 'object'
           ? classifier.ruleScores
           : {}
@@ -180,6 +231,32 @@ function createAgentWorkflowHelpers(deps = {}) {
       `Routing intent=${normalized.intent} confidence=${normalized.confidence.toFixed(2)} source=${normalized.classifier.source}.`,
       `Planner flags tools=${normalized.plan.needs_tools} protocol_search=${normalized.plan.needs_protocol_search} notebook_retrieval=${normalized.plan.needs_notebook_retrieval} project_retrieval=${normalized.plan.needs_project_retrieval} workflow_retrieval=${normalized.plan.needs_workflow_retrieval} paper_retrieval=${normalized.plan.needs_paper_retrieval} deep_paper=${normalized.plan.needs_deep_paper_reading} paper_compare=${normalized.plan.needs_paper_comparison} notebook_generation=${normalized.plan.needs_notebook_generation} notebook_autosave=${normalized.plan.notebook_autosave} pdf=${normalized.plan.needs_pdf_reading} python=${normalized.plan.needs_python} web=${normalized.plan.needs_web_search} clarification=${normalized.plan.needs_clarification}.`
     ];
+    if (normalized.plan.needs_python || normalized.plan.python_task_type) {
+      rows.push(
+        `Python plan task=${normalized.plan.python_task_type || '-'} `
+        + `ready=${normalized.plan.python_ready} `
+        + `needs_clarification=${normalized.plan.python_needs_clarification} `
+        + `artifact_count=${Number(normalized.plan.python_artifact_count) || 0} `
+        + `codegen_status=${normalized.plan.python_codegen_status || '-'} `
+        + `codegen_reason=${normalized.plan.python_codegen_reason || '-'}.`
+      );
+    }
+    if (normalized.plan.web_fallback_triggered || normalized.plan.needs_web_search) {
+      rows.push(
+        `Web fallback triggered=${normalized.plan.web_fallback_triggered} `
+        + `reason=${normalized.plan.web_fallback_reason || '-'} `
+        + `queries=${asArray(normalized.plan.web_queries).length} `
+        + `sources=${asArray(normalized.plan.web_sources).length}.`
+      );
+    }
+    if (normalized.intent === 'inventory_lookup') {
+      rows.push(
+        `Inventory search normalized_query=${normalized.plan.inventory_search.normalized_query || '-'} `
+        + `candidate_terms=${asArray(normalized.plan.inventory_search.candidate_terms).length} `
+        + `aliases=${asArray(normalized.plan.inventory_search.aliases).length} `
+        + `mode=${normalized.plan.inventory_search.search_mode || '-'}.`
+      );
+    }
     if (normalized.plan.selected_tool_names.length) {
       rows.push(`Planner selected tools: ${normalized.plan.selected_tool_names.join(', ')}.`);
     }
@@ -255,6 +332,18 @@ function createAgentWorkflowHelpers(deps = {}) {
       rows.push(normalized.classifier.fallbackUsed
         ? 'Routing fallback completed successfully.'
         : `Routing fallback attempted but not used${normalized.classifier.fallbackError ? `: ${normalized.classifier.fallbackError}` : '.'}`);
+    }
+    if (normalized.classifier.source === 'llm_parser') {
+      rows.push(
+        `Parser primary=${normalized.classifier.parserPrimaryIntent || '-'} `
+        + `secondary=${asArray(normalized.classifier.parserSecondaryIntents).join('|') || '-'} `
+        + `mapped_intent=${normalized.classifier.mappedExecutionIntent || normalized.intent}.`
+      );
+      if (normalized.classifier.parserNeedsClarification) {
+        rows.push(
+          `Parser requested clarification (${normalized.classifier.parserClarificationReason || 'reason_not_provided'}).`
+        );
+      }
     }
     return rows;
   }

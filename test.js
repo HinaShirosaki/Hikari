@@ -347,11 +347,16 @@ const shared = loadEsmStyleModule(path.join(__dirname, 'modules', 'shared.js'), 
   localStorage: memoryStorage
 });
 const agentRouting = require(path.join(__dirname, 'agent-routing.js'));
+const agentIntentParser = require(path.join(__dirname, 'agent-intent-parser.js'));
 const agentTools = require(path.join(__dirname, 'agent-tools.js'));
 const agentProtocolMatching = require(path.join(__dirname, 'agent-protocol-matching.js'));
 const agentNotebookGeneration = require(path.join(__dirname, 'agent-notebook-generation.js'));
 const agentProjectRetrieval = require(path.join(__dirname, 'agent-project-retrieval.js'));
 const agentPaperAnalysis = require(path.join(__dirname, 'agent-paper-analysis.js'));
+const agentPythonOrchestration = require(path.join(__dirname, 'agent-python-orchestration.js'));
+const agentPythonCodegen = require(path.join(__dirname, 'agent-python-codegen.js'));
+const agentWebFallback = require(path.join(__dirname, 'agent-web-fallback.js'));
+const phase89Runtime = require(path.join(__dirname, 'agent-phase89-runtime.js'));
 const objectGraph = loadEsmStyleModule(path.join(__dirname, 'modules', 'object-graph.js'));
 const toolBox = loadEsmStyleModule(
   path.join(__dirname, 'modules', 'tool-box.js'),
@@ -472,6 +477,7 @@ const AGENT_SIMULATION_DISPATCH_TOOL_NAMES = new Set([
   'search_pubmed',
   'search_crossref',
   'search_europe_pmc',
+  'search_web',
   'toolbox_molarity_calculator',
   'toolbox_peptide_properties',
   'toolbox_buffer_preparer',
@@ -942,6 +948,19 @@ function buildMockToolDispatch(snapshot) {
       citations: [{ source: 'europe_pmc', pointer: '45678901', reason: 'Matched Europe PMC metadata.' }],
       summary: 'Found 1 matching Europe PMC records.'
     }),
+    search_web: () => ({
+      items: [
+        {
+          title: 'PD-1 review article',
+          url: 'https://example.org/pd1-review',
+          snippet: 'A concise review of PD-1 biology and assay considerations.',
+          source_domain: 'example.org',
+          published_at: '2026-01-12'
+        }
+      ],
+      citations: [{ source: 'web_source', pointer: 'https://example.org/pd1-review', reason: 'Matched web source metadata.' }],
+      summary: 'Found 1 matching web source.'
+    }),
     toolbox_molarity_calculator: () => ({
       items: [
         {
@@ -1164,28 +1183,113 @@ async function runSimulatedAgentTurn({
   snapshot = buildAgentSimulationSnapshot(),
   allowWriteTools = false,
   writeIntent = false,
-  fallbackPayload = null
+  parserPayload = null
 }) {
   const availableToolNames = AGENT_IO_TOOL_NAMES.slice();
-  const ruleDecision = agentRouting.buildRuleBasedRoutingDecision({
+  const inferPrimaryIntent = (text) => {
+    const source = String(text || '').toLowerCase();
+    if (/\b(compare .+ vs|extract methods?|extract reagents?|key figures?)\b/.test(source)) {
+      return 'paper_analysis';
+    }
+    if (/\b(mw|molecular weight|inventory|stock|where is|cas)\b/.test(source)) {
+      return 'inventory_lookup';
+    }
+    if (/\b(last time|history|record|workflow step)\b/.test(source)) {
+      return 'record_lookup';
+    }
+    if (/\bproject\b/.test(source)) {
+      return 'project_science_question';
+    }
+    if (/\bpaper|pdf|journal|literature|publication\b/.test(source)) {
+      return 'paper_analysis';
+    }
+    if (/\bpython|csv|plot|compute|code|script\b/.test(source)) {
+      return 'data_analysis_or_coding';
+    }
+    if (/\b(i grew|i did|i ran|transfection|protocol|notebook)\b/.test(source)) {
+      return 'protocol_to_notebook';
+    }
+    return 'general_science_question';
+  };
+  const primaryIntent = inferPrimaryIntent(message);
+  const sourceText = String(message || '');
+  const sourceLower = sourceText.toLowerCase();
+  const inferProjectName = () => {
+    const explicit = sourceText.match(/\bproject\s+([a-z0-9][a-z0-9\- _]{1,60})/i);
+    if (explicit) {
+      return String(explicit[1] || '').trim();
+    }
+    if (sourceLower.includes('atlas')) {
+      return 'Atlas';
+    }
+    return null;
+  };
+  const inferPaperTitle = () => {
+    const quoted = sourceText.match(/["“”']([^"“”']{4,220})["“”']/);
+    if (quoted) {
+      return String(quoted[1] || '').trim();
+    }
+    return null;
+  };
+  const inferInventoryItem = () => {
+    const mwMatch = sourceText.match(/\b(?:mw|molecular weight)\s+(?:of\s+)?([a-z0-9\- ]{2,80})/i);
+    if (mwMatch) {
+      return String(mwMatch[1] || '').trim();
+    }
+    const whereMatch = sourceText.match(/\bwhere is\s+([a-z0-9\- ]{2,80})/i);
+    if (whereMatch) {
+      return String(whereMatch[1] || '').trim();
+    }
+    return null;
+  };
+  const inferredEntities = {
+    activity_type: /\b(transfection|culture|grew|purif|assay|expression)\b/i.test(sourceText)
+      ? (sourceLower.includes('transfection') ? 'transfection' : 'lab activity')
+      : null,
+    project_name: inferProjectName(),
+    protocol_name: null,
+    protein_name: /\b(pd-1|pd1)\b/i.test(sourceText) ? 'PD-1' : null,
+    compound_name: null,
+    inventory_item: inferInventoryItem(),
+    cell_line: /\b(hek293|expi293|cho|293t)\b/i.test(sourceText)
+      ? String((sourceText.match(/\b(hek293|expi293|cho|293t)\b/i) || [])[1] || '').toUpperCase()
+      : null,
+    paper_title: inferPaperTitle(),
+    workflow_step: /\b(transfection|assay|purification)\b/i.test(sourceText)
+      ? String((sourceText.match(/\b(transfection|assay|purification)\b/i) || [])[1] || '')
+      : null,
+    requested_output: /\b(analyze|analysis|plot|compute|compare|extract)\b/i.test(sourceText)
+      ? 'analysis'
+      : null
+  };
+  if (primaryIntent === 'inventory_lookup' && inferredEntities.inventory_item && !inferredEntities.compound_name) {
+    inferredEntities.compound_name = inferredEntities.inventory_item;
+  }
+  const fallbackParserPayload = {
+    primary_intent: primaryIntent,
+    secondary_intents: [],
+    confidence: 0.8,
+    needs_clarification: false,
+    clarification_reason: null,
+    entities: inferredEntities,
+    inventory_search: {
+      normalized_query: null,
+      candidate_terms: [],
+      aliases: [],
+      search_mode: null
+    },
+    reasoning_summary: 'test parser payload'
+  };
+  const parserResult = agentIntentParser.normalizeIntentParserPayload(parserPayload || fallbackParserPayload);
+  assert.equal(parserResult.ok, true);
+  const routing = agentRouting.buildRoutingDecisionFromIntentParser({
+    parserPayload: parserResult.payload,
     message,
     snapshot,
     availableToolNames,
     toolContract: AGENT_IO_CONTRACT,
     writeIntent
   });
-
-  const routing = fallbackPayload
-    ? agentRouting.mergeRoutingFallback({
-      ruleDecision,
-      fallbackPayload,
-      message,
-      snapshot,
-      writeIntent,
-      availableToolNames,
-      toolContract: AGENT_IO_CONTRACT
-    })
-    : ruleDecision;
 
   const requiresApproval = writeIntent && !allowWriteTools;
   if (routing.plan.needs_clarification) {
@@ -1611,19 +1715,61 @@ test('main-utils normalizes output names, suffixes, and sequence input', () => {
   assert.equal(mainUtils.normalizeSequenceInput('>existing\nACGT\n'), '>existing\nACGT');
 });
 
+function makeIntentParserPayload({
+  primaryIntent = 'general_science_question',
+  confidence = 0.8,
+  needsClarification = false,
+  clarificationReason = null,
+  entities = {},
+  inventorySearch = {},
+  secondaryIntents = []
+} = {}) {
+  return {
+    primary_intent: primaryIntent,
+    secondary_intents: secondaryIntents,
+    confidence,
+    needs_clarification: needsClarification,
+    clarification_reason: clarificationReason,
+    entities: {
+      activity_type: entities.activity_type || null,
+      project_name: entities.project_name || null,
+      protocol_name: entities.protocol_name || null,
+      protein_name: entities.protein_name || null,
+      compound_name: entities.compound_name || null,
+      inventory_item: entities.inventory_item || null,
+      cell_line: entities.cell_line || null,
+      paper_title: entities.paper_title || null,
+      workflow_step: entities.workflow_step || null,
+      requested_output: entities.requested_output || null
+    },
+    inventory_search: {
+      normalized_query: inventorySearch.normalized_query || null,
+      candidate_terms: Array.isArray(inventorySearch.candidate_terms) ? inventorySearch.candidate_terms : [],
+      aliases: Array.isArray(inventorySearch.aliases) ? inventorySearch.aliases : [],
+      search_mode: inventorySearch.search_mode || null
+    },
+    reasoning_summary: 'test parser payload'
+  };
+}
+
 [
-  ['I grew HEK293 cells and ran transfection today.', 'protocol_to_notebook'],
-  ['What is the MW of biotin in stock?', 'inventory_lookup'],
-  ['What did we do last time for PD-1 expression?', 'record_lookup'],
-  ['Why did project Atlas fail after transfection?', 'project_science_question'],
-  ['Summarize this paper on PD-1 binder design.', 'paper_analysis'],
-  ['Use Python to analyze this CSV and plot IC50.', 'coding_data_analysis'],
-  ['What is ELISA and how does it work?', 'general_science_question']
-].forEach(([message, expectedIntent], idx) => {
-  test(`[P0] agent-routing classifyIntentByRules case ${idx + 1}`, () => {
-    const classified = agentRouting.classifyIntentByRules(message, {});
-    assert.equal(classified.intent, expectedIntent);
-    assert.equal(classified.confidence > 0, true);
+  ['protocol_to_notebook'],
+  ['inventory_lookup'],
+  ['record_lookup'],
+  ['project_science_question'],
+  ['general_science_question'],
+  ['paper_analysis'],
+  ['literature_search'],
+  ['data_analysis_or_coding'],
+  ['mixed_request'],
+  ['unclear']
+].forEach(([intent], idx) => {
+  test(`[P0] agent-intent-parser normalizes allowed intent ${idx + 1}`, () => {
+    const parsed = agentIntentParser.normalizeIntentParserPayload(makeIntentParserPayload({
+      primaryIntent: intent
+    }));
+    assert.equal(parsed.ok, true);
+    assert.equal(parsed.payload.primary_intent, intent);
   });
 });
 
@@ -1641,9 +1787,7 @@ test('main-utils normalizes output names, suffixes, and sequence input', () => {
       intent,
       entities,
       message: 'test message',
-      writeIntent: false,
-      classificationConfidence: 0.9,
-      fallbackUsed: true
+      writeIntent: false
     });
     Object.entries(expectedFlags).forEach(([key, expected]) => {
       assert.equal(plan[key], expected);
@@ -1651,25 +1795,10 @@ test('main-utils normalizes output names, suffixes, and sequence input', () => {
   });
 });
 
-test('agent-routing fallback trigger and malformed fallback degrade safely', () => {
-  const ruleDecision = agentRouting.buildRuleBasedRoutingDecision({
-    message: 'help',
-    snapshot: {},
-    availableToolNames: ['search_projects', 'search_protocols', 'search_notebook_entries'],
-    writeIntent: false
-  });
-  assert.equal(agentRouting.shouldUseRoutingFallback(ruleDecision), true);
-  const merged = agentRouting.mergeRoutingFallback({
-    ruleDecision,
-    fallbackPayload: 'not-json',
-    message: 'help',
-    writeIntent: false,
-    availableToolNames: ['search_projects', 'search_protocols', 'search_notebook_entries']
-  });
-  assert.equal(merged.classifier.fallbackAttempted, true);
-  assert.equal(merged.classifier.fallbackUsed, false);
-  assert.equal(merged.plan.needs_clarification, true);
-  assert.equal(Boolean(merged.plan.clarification_question), true);
+test('agent-intent-parser rejects malformed payload', () => {
+  const parsed = agentIntentParser.normalizeIntentParserPayload('not-json');
+  assert.equal(parsed.ok, false);
+  assert.match(String(parsed.error || ''), /json/i);
 });
 
 test('agent-routing uses scored tool selection when toolContract is provided', () => {
@@ -1680,7 +1809,21 @@ test('agent-routing uses scored tool selection when toolContract is provided', (
       { name: 'search_uniprot', description: 'protein uniprot', input_schema: {}, output_schema: {} }
     ]
   });
-  const routing = agentRouting.buildRuleBasedRoutingDecision({
+  const parserPayload = makeIntentParserPayload({
+    primaryIntent: 'inventory_lookup',
+    entities: {
+      compound_name: 'biotin',
+      inventory_item: 'biotin'
+    },
+    inventorySearch: {
+      normalized_query: 'biotin',
+      candidate_terms: ['biotin', 'd-biotin'],
+      aliases: ['vitamin b7'],
+      search_mode: 'exact_then_alias_then_fuzzy'
+    }
+  });
+  const routing = agentRouting.buildRoutingDecisionFromIntentParser({
+    parserPayload,
     message: 'what is the mw of biotin',
     snapshot: {},
     availableToolNames: ['search_inventory', 'search_notebook_entries', 'search_uniprot'],
@@ -1692,20 +1835,141 @@ test('agent-routing uses scored tool selection when toolContract is provided', (
   assert.equal(routing.plan.tool_selection_rationale.length > 0, true);
 });
 
-test('agent-routing fallback payload parsing accepts valid intent payload', () => {
-  const parsed = agentRouting.parseRoutingFallbackPayload(JSON.stringify({
-    intent: 'inventory_lookup',
-    confidence: 0.78,
-    entities: {
-      compound: 'biotin'
+test('agent-routing maps canonical intents to execution intents', () => {
+  const literatureRouting = agentRouting.buildRoutingDecisionFromIntentParser({
+    parserPayload: makeIntentParserPayload({
+      primaryIntent: 'literature_search',
+      entities: { protein_name: 'PD-1' }
+    }),
+    message: 'Find recent PD-1 literature.',
+    snapshot: {},
+    availableToolNames: AGENT_IO_TOOL_NAMES,
+    toolContract: AGENT_IO_CONTRACT
+  });
+  assert.equal(literatureRouting.intent, 'general_science_question');
+  assert.equal(literatureRouting.plan.needs_web_search, true);
+
+  const codingRouting = agentRouting.buildRoutingDecisionFromIntentParser({
+    parserPayload: makeIntentParserPayload({
+      primaryIntent: 'data_analysis_or_coding',
+      entities: { requested_output: 'plot IC50 curve' }
+    }),
+    message: 'Use python to analyze this csv.',
+    snapshot: {},
+    availableToolNames: AGENT_IO_TOOL_NAMES,
+    toolContract: AGENT_IO_CONTRACT
+  });
+  assert.equal(codingRouting.intent, 'coding_data_analysis');
+  assert.equal(codingRouting.plan.needs_python, true);
+});
+
+test('agent-routing coding intent emits python plan metadata with ready state', () => {
+  const routing = agentRouting.buildRoutingDecisionFromIntentParser({
+    parserPayload: makeIntentParserPayload({
+      primaryIntent: 'data_analysis_or_coding',
+      entities: {
+        requested_output: 'compute means'
+      }
+    }),
+    message: 'Use Python to analyze this CSV and compute means.',
+    snapshot: {
+      projects: [],
+      protocols: [],
+      notebookEntries: [],
+      workflows: [],
+      papers: [],
+      assays: [
+        { id: 'assay-1', name: 'Atlas assay', numeric_count: 8, result_well_count: 96 }
+      ],
+      gelAnalyses: []
     },
-    needs_clarification: false,
-    clarification_question: '',
-    reason: 'Detected compound lookup.'
-  }));
-  assert.equal(parsed.intent, 'inventory_lookup');
-  assert.equal(parsed.entities.compound, 'biotin');
-  assert.equal(parsed.needs_clarification, false);
+    availableToolNames: AGENT_IO_TOOL_NAMES,
+    toolContract: AGENT_IO_CONTRACT,
+    writeIntent: false
+  });
+  assert.equal(routing.intent, 'coding_data_analysis');
+  assert.equal(routing.plan.needs_python, true);
+  assert.equal(Boolean(routing.plan.python_task_type), true);
+  assert.equal(routing.plan.python_ready, true);
+  assert.equal(routing.plan.python_needs_clarification, false);
+});
+
+test('agent-routing coding intent requests clarification when Python input is missing', () => {
+  const routing = agentRouting.buildRoutingDecisionFromIntentParser({
+    parserPayload: makeIntentParserPayload({
+      primaryIntent: 'data_analysis_or_coding'
+    }),
+    message: 'Use Python to analyze attached CSV and compute growth curve.',
+    snapshot: {
+      projects: [],
+      protocols: [],
+      notebookEntries: [],
+      workflows: [],
+      papers: [],
+      assays: [],
+      gelAnalyses: []
+    },
+    availableToolNames: AGENT_IO_TOOL_NAMES,
+    toolContract: AGENT_IO_CONTRACT,
+    writeIntent: false
+  });
+  assert.equal(routing.intent, 'coding_data_analysis');
+  assert.equal(routing.plan.python_needs_clarification, true);
+  assert.equal(routing.plan.needs_clarification, true);
+  assert.match(String(routing.plan.clarification_question || ''), /csv|tabular|data/i);
+});
+
+test('agent-routing general recency query enables web-search planning flags', () => {
+  const routing = agentRouting.buildRoutingDecisionFromIntentParser({
+    parserPayload: makeIntentParserPayload({
+      primaryIntent: 'general_science_question'
+    }),
+    message: 'What are the latest reviews on PD-1 signaling with citations?',
+    snapshot: {
+      projects: [],
+      protocols: [],
+      notebookEntries: [],
+      workflows: [],
+      papers: [],
+      assays: [],
+      gelAnalyses: []
+    },
+    availableToolNames: AGENT_IO_TOOL_NAMES,
+    toolContract: AGENT_IO_CONTRACT,
+    writeIntent: false
+  });
+  assert.equal(routing.intent, 'general_science_question');
+  assert.equal(routing.plan.needs_web_search, true);
+  assert.equal(routing.plan.needs_tools, true);
+  assert.equal(routing.plan.selected_tool_names.includes('search_web'), true);
+});
+
+test('agent-routing mixed_request and unclear enforce clarification', () => {
+  const mixedRouting = agentRouting.buildRoutingDecisionFromIntentParser({
+    parserPayload: makeIntentParserPayload({
+      primaryIntent: 'mixed_request',
+      needsClarification: true,
+      clarificationReason: 'Multiple objectives detected.'
+    }),
+    message: 'Summarize paper and update notebook.',
+    snapshot: {},
+    availableToolNames: AGENT_IO_TOOL_NAMES,
+    toolContract: AGENT_IO_CONTRACT
+  });
+  assert.equal(mixedRouting.plan.needs_clarification, true);
+  assert.match(String(mixedRouting.plan.clarification_question || ''), /which should i handle first/i);
+
+  const unclearRouting = agentRouting.buildRoutingDecisionFromIntentParser({
+    parserPayload: makeIntentParserPayload({
+      primaryIntent: 'unclear',
+      needsClarification: true
+    }),
+    message: 'help',
+    snapshot: {},
+    availableToolNames: AGENT_IO_TOOL_NAMES,
+    toolContract: AGENT_IO_CONTRACT
+  });
+  assert.equal(unclearRouting.plan.needs_clarification, true);
 });
 
 test('agent-protocol-matching builds searchable docs from mixed protocol shapes', () => {
@@ -1971,7 +2235,14 @@ test('agent-notebook-generation keeps unresolved placeholders visible in rendere
 
 test('agent-routing protocol intent includes protocol match metadata and candidates', () => {
   const snapshot = buildAgentSimulationSnapshot();
-  const routing = agentRouting.buildRuleBasedRoutingDecision({
+  const routing = agentRouting.buildRoutingDecisionFromIntentParser({
+    parserPayload: makeIntentParserPayload({
+      primaryIntent: 'protocol_to_notebook',
+      entities: {
+        activity_type: 'transfection',
+        cell_line: 'HEK293'
+      }
+    }),
     message: 'I grew HEK293 cells and ran transfection today.',
     snapshot,
     availableToolNames: AGENT_IO_TOOL_NAMES,
@@ -1988,27 +2259,16 @@ test('agent-routing protocol intent includes protocol match metadata and candida
   assert.equal(routing.plan.notebook_autosave, true);
 });
 
-test('agent-routing fallback merge keeps deterministic protocol matcher metadata', () => {
+test('agent-routing parser path keeps deterministic protocol matcher metadata', () => {
   const snapshot = buildAgentSimulationSnapshot();
-  const ruleDecision = agentRouting.buildRuleBasedRoutingDecision({
-    message: 'help',
-    snapshot,
-    availableToolNames: AGENT_IO_TOOL_NAMES,
-    toolContract: AGENT_IO_CONTRACT,
-    writeIntent: false
-  });
-  const merged = agentRouting.mergeRoutingFallback({
-    ruleDecision,
-    fallbackPayload: JSON.stringify({
-      intent: 'protocol_to_notebook',
+  const merged = agentRouting.buildRoutingDecisionFromIntentParser({
+    parserPayload: makeIntentParserPayload({
+      primaryIntent: 'protocol_to_notebook',
       confidence: 0.82,
       entities: {
-        activity: 'transfection',
+        activity_type: 'transfection',
         cell_line: 'HEK293'
-      },
-      needs_clarification: false,
-      clarification_question: '',
-      reason: 'Protocol-like activity detected.'
+      }
     }),
     message: 'I ran transfection in HEK293.',
     snapshot,
@@ -2311,7 +2571,14 @@ test('agent-paper-analysis enforces upload-required gating for deep modes and co
 
 test('agent-routing project intent includes project matcher metadata and workflow retrieval flag', () => {
   const snapshot = buildAgentSimulationSnapshot();
-  const routing = agentRouting.buildRuleBasedRoutingDecision({
+  const routing = agentRouting.buildRoutingDecisionFromIntentParser({
+    parserPayload: makeIntentParserPayload({
+      primaryIntent: 'project_science_question',
+      entities: {
+        project_name: 'Atlas',
+        workflow_step: 'transfection'
+      }
+    }),
     message: 'Why did project Atlas fail after transfection?',
     snapshot,
     availableToolNames: AGENT_IO_TOOL_NAMES,
@@ -2372,7 +2639,13 @@ test('agent-routing project ambiguity triggers clarification before tool executi
     assays: [],
     gelAnalyses: []
   };
-  const routing = agentRouting.buildRuleBasedRoutingDecision({
+  const routing = agentRouting.buildRoutingDecisionFromIntentParser({
+    parserPayload: makeIntentParserPayload({
+      primaryIntent: 'project_science_question',
+      entities: {
+        project_name: 'atlas'
+      }
+    }),
     message: 'Why did project atlas fail?',
     snapshot,
     availableToolNames: AGENT_IO_TOOL_NAMES,
@@ -2388,7 +2661,7 @@ test('agent-routing project ambiguity triggers clarification before tool executi
   assert.match(String(routing.plan.clarification_question || ''), /Which project should I use/i);
 });
 
-test('agent-routing fallback merge keeps deterministic project matcher metadata', () => {
+test('agent-routing parser path keeps deterministic project matcher metadata', () => {
   const snapshot = {
     projects: [
       { id: 'p1', name: 'Atlas Alpha' },
@@ -2401,25 +2674,14 @@ test('agent-routing fallback merge keeps deterministic project matcher metadata'
     assays: [],
     gelAnalyses: []
   };
-  const ruleDecision = agentRouting.buildRuleBasedRoutingDecision({
-    message: 'help',
-    snapshot,
-    availableToolNames: AGENT_IO_TOOL_NAMES,
-    toolContract: AGENT_IO_CONTRACT,
-    writeIntent: false
-  });
-  const merged = agentRouting.mergeRoutingFallback({
-    ruleDecision,
-    fallbackPayload: JSON.stringify({
-      intent: 'project_science_question',
+  const merged = agentRouting.buildRoutingDecisionFromIntentParser({
+    parserPayload: makeIntentParserPayload({
+      primaryIntent: 'project_science_question',
       confidence: 0.81,
       entities: {
-        project: 'atlas',
+        project_name: 'atlas',
         workflow_step: 'transfection'
-      },
-      needs_clarification: false,
-      clarification_question: '',
-      reason: 'Project troubleshooting request detected.'
+      }
     }),
     message: 'Why did atlas fail after transfection?',
     snapshot,
@@ -2459,7 +2721,13 @@ test('agent-routing paper intent includes paper matcher metadata and candidates'
       }
     ]
   };
-  const routing = agentRouting.buildRuleBasedRoutingDecision({
+  const routing = agentRouting.buildRoutingDecisionFromIntentParser({
+    parserPayload: makeIntentParserPayload({
+      primaryIntent: 'paper_analysis',
+      entities: {
+        paper_title: 'Atlas Uploaded Paper'
+      }
+    }),
     message: 'Extract methods from Atlas Uploaded Paper.',
     snapshot,
     availableToolNames: AGENT_IO_TOOL_NAMES,
@@ -2495,7 +2763,13 @@ test('agent-routing paper deep-analysis upload gating triggers clarification bef
       }
     ]
   };
-  const routing = agentRouting.buildRuleBasedRoutingDecision({
+  const routing = agentRouting.buildRoutingDecisionFromIntentParser({
+    parserPayload: makeIntentParserPayload({
+      primaryIntent: 'paper_analysis',
+      entities: {
+        paper_title: 'Atlas Metadata Paper'
+      }
+    }),
     message: 'Extract reagents from Atlas Metadata Paper.',
     snapshot,
     availableToolNames: AGENT_IO_TOOL_NAMES,
@@ -2510,7 +2784,7 @@ test('agent-routing paper deep-analysis upload gating triggers clarification bef
   assert.match(String(routing.plan.clarification_question || ''), /upload/i);
 });
 
-test('agent-routing fallback merge keeps deterministic paper matcher metadata', () => {
+test('agent-routing parser path keeps deterministic paper matcher metadata', () => {
   const snapshot = {
     projects: [{ id: 'p1', name: 'Atlas' }],
     protocols: [],
@@ -2532,25 +2806,14 @@ test('agent-routing fallback merge keeps deterministic paper matcher metadata', 
       }
     ]
   };
-  const ruleDecision = agentRouting.buildRuleBasedRoutingDecision({
-    message: 'help',
-    snapshot,
-    availableToolNames: AGENT_IO_TOOL_NAMES,
-    toolContract: AGENT_IO_CONTRACT,
-    writeIntent: false
-  });
-  const merged = agentRouting.mergeRoutingFallback({
-    ruleDecision,
-    fallbackPayload: JSON.stringify({
-      intent: 'paper_analysis',
+  const merged = agentRouting.buildRoutingDecisionFromIntentParser({
+    parserPayload: makeIntentParserPayload({
+      primaryIntent: 'paper_analysis',
       confidence: 0.82,
       entities: {
         paper_title: 'Atlas Uploaded Paper',
-        project: 'Atlas'
-      },
-      needs_clarification: false,
-      clarification_question: '',
-      reason: 'Paper analysis request.'
+        project_name: 'Atlas'
+      }
     }),
     message: 'Extract methods from Atlas Uploaded Paper.',
     snapshot,
@@ -2578,6 +2841,7 @@ test('agent-tools registry loader/list/find APIs return expected tool subsets', 
   assert.equal(proteinTools.some((tool) => tool.name === 'search_uniprot'), true);
   const literatureTools = agentTools.findToolsByTaskType(contract, 'literature_lookup');
   assert.equal(literatureTools.some((tool) => tool.name === 'search_pubmed'), true);
+  assert.equal(literatureTools.some((tool) => tool.name === 'search_web'), true);
   const workflowTools = agentTools.findToolsByEntityType(contract, 'workflow_step');
   assert.equal(workflowTools.some((tool) => tool.name === 'search_workflows'), true);
 });
@@ -2612,6 +2876,15 @@ test('agent-tools selectToolsForRequest ranks tools by entity/task/exactness', (
     allowWriteTools: false
   });
   assert.equal(recordSelection.selectedToolNames.includes('search_notebook_entries'), true);
+
+  const webSelection = agentTools.selectToolsForRequest({
+    intent: 'general_science_question',
+    entities: { protein: 'PD-1' },
+    message: 'What are the latest PD-1 review papers with references?',
+    contract,
+    allowWriteTools: false
+  });
+  assert.equal(webSelection.selectedToolNames.includes('search_web'), true);
 });
 
 test('agent-tools selectToolsForRequest ranks workflow tool for workflow-step questions', () => {
@@ -2877,6 +3150,235 @@ test('agent-tools executeToolCall applies local fuzzy retry for search_workflows
   });
   assert.equal(hit.items.length, 1);
   assert.equal(calls.includes('transfection step'), true);
+});
+
+test('agent-python-orchestration classifies tasks and requests clarification when required input is missing', () => {
+  const routing = {
+    intent: 'coding_data_analysis',
+    plan: { needs_python: true }
+  };
+  const classified = agentPythonOrchestration.classifyPythonTask({
+    message: 'Use Python to analyze this CSV and compute means.',
+    entities: {},
+    routing
+  });
+  assert.equal(classified.task_type, 'csv_tsv_descriptive');
+  const runRequest = agentPythonOrchestration.buildPythonRunRequest({
+    message: 'Analyze attached CSV for growth curves.',
+    snapshot: { assays: [], gelAnalyses: [] },
+    projectId: 'project-atlas',
+    projectName: 'Atlas',
+    taskType: classified.task_type
+  });
+  assert.equal(runRequest.ready, false);
+  assert.equal(runRequest.needs_clarification, true);
+  assert.match(String(runRequest.clarification_question || ''), /csv|tsv|tabular/i);
+});
+
+test('agent-python-codegen sanitizes valid payloads and clamps bounded fields', () => {
+  const raw = {
+    code: 'print(\"ok\")',
+    files: new Array(12).fill(null).map((_, idx) => ({ path: `inputs/file_${idx + 1}.txt`, content: 'x' })),
+    timeout_ms: 999999,
+    readback_paths: new Array(12).fill(null).map((_, idx) => `outputs/r_${idx + 1}.txt`),
+    artifact_paths: new Array(12).fill(null).map((_, idx) => `artifacts/a_${idx + 1}.txt`),
+    persist_artifacts: true
+  };
+  const normalized = agentPythonCodegen.sanitizePythonRunRequest(JSON.stringify(raw), {
+    taskType: 'csv_tsv_descriptive',
+    defaults: {
+      task_type: 'csv_tsv_descriptive'
+    }
+  });
+  assert.equal(normalized.ok, true);
+  assert.equal(typeof normalized.run_request.code, 'string');
+  assert.equal(normalized.run_request.files.length, 10);
+  assert.equal(normalized.run_request.timeout_ms, 15000);
+  assert.equal(normalized.run_request.readback_paths.length, 8);
+  assert.equal(normalized.run_request.artifact_paths.length, 8);
+  assert.equal(normalized.run_request.task_type, 'csv_tsv_descriptive');
+});
+
+test('agent-python-codegen rejects malformed, missing code, and unsafe path payloads', () => {
+  const malformed = agentPythonCodegen.sanitizePythonRunRequest('{invalid-json');
+  assert.equal(malformed.ok, false);
+  assert.equal(malformed.reason, 'malformed_json');
+
+  const missingCode = agentPythonCodegen.sanitizePythonRunRequest({ files: [] });
+  assert.equal(missingCode.ok, false);
+  assert.equal(missingCode.reason, 'missing_code');
+
+  const unsafePath = agentPythonCodegen.sanitizePythonRunRequest({
+    code: 'print(\"ok\")',
+    readback_paths: ['../escape.txt']
+  });
+  assert.equal(unsafePath.ok, false);
+  assert.equal(unsafePath.reason, 'unsafe_path');
+});
+
+test('agent-python-orchestration validates sandbox output and persists artifacts inside storage root', async () => {
+  const storagePath = fs.mkdtempSync(path.join(__dirname, 'tmp', 'phase89-python-'));
+  const sandboxEnvelope = {
+    ok: true,
+    items: [
+      {
+        run_id: 'run-123',
+        status: 'ok',
+        readback_files: [
+          { path: 'summary.txt', content: 'ok', truncated: false }
+        ],
+        warnings: []
+      }
+    ],
+    citations: [],
+    summary: 'done'
+  };
+  const validation = agentPythonOrchestration.validatePythonResult({ result: sandboxEnvelope });
+  assert.equal(validation.ok, true);
+
+  const persisted = await agentPythonOrchestration.persistPythonArtifacts({
+    sandboxItem: validation.item,
+    storagePath,
+    projectName: 'Atlas'
+  });
+  assert.equal(persisted.applied, true);
+  assert.equal(persisted.artifact_count, 1);
+  assert.equal(Array.isArray(persisted.result_file_records), true);
+  assert.equal(persisted.result_file_records.length, 1);
+  assert.match(String(persisted.result_file_records[0].relativePath || ''), /Agent\/Python\/Atlas/);
+  fs.rmSync(storagePath, { recursive: true, force: true });
+});
+
+test('agent-web-fallback trigger/query/merge paths are deterministic', () => {
+  const routing = {
+    intent: 'general_science_question',
+    plan: { needs_web_search: true }
+  };
+  const trigger = agentWebFallback.shouldRunWebFallback({
+    routing,
+    intent: 'general_science_question',
+    message: 'What are the latest PD-1 papers?',
+    internalEvidence: []
+  });
+  assert.equal(trigger.should_run, true);
+  assert.equal(trigger.reason, 'planner_requested_web_search');
+
+  const queries = agentWebFallback.buildWebQueries({
+    message: 'What are the latest PD-1 papers?',
+    entities: { protein: 'PD-1' },
+    intent: 'general_science_question',
+    projectName: ''
+  });
+  assert.equal(Array.isArray(queries), true);
+  assert.equal(queries.length > 0, true);
+
+  const merged = agentWebFallback.mergeAndRankWebEvidence({
+    webItems: [{ title: 'PD-1 review', url: 'https://example.org/review', snippet: 'review', source_domain: 'example.org' }],
+    literatureItems: [{ title: 'PD-1 study', url: 'https://doi.org/10.1000/x', snippet: 'study', source_domain: 'doi.org', source_tool: 'search_pubmed' }],
+    query: 'PD-1 review'
+  });
+  assert.equal(Array.isArray(merged), true);
+  assert.equal(merged.length, 2);
+  assert.equal(merged.some((item) => item.source_lane === 'literature'), true);
+  assert.equal(merged.some((item) => item.source_lane === 'web'), true);
+});
+
+test('phase89 runtime executes planned python and post-processes artifacts', async () => {
+  const storagePath = fs.mkdtempSync(path.join(__dirname, 'tmp', 'phase89-runtime-'));
+  let runArgsSeen = null;
+  const pythonRun = await phase89Runtime.runPlannedPythonTask({
+    message: 'Use Python to parse this CSV and report mean values.',
+    routing: {
+      intent: 'coding_data_analysis',
+      entities: {},
+      plan: {
+        needs_python: true,
+        selected_tool_names: ['run_python_sandbox']
+      }
+    },
+    snapshot: {
+      assays: [
+        { id: 'a1', name: 'Atlas assay', numeric_count: 12, result_well_count: 96, project_id: 'project-atlas' }
+      ],
+      gelAnalyses: [],
+      settings: { storagePath }
+    },
+    selectedProjectId: 'project-atlas',
+    selectedProjectName: 'Atlas',
+    storagePath,
+    generatePythonRunRequest: async () => JSON.stringify({
+      code: [
+        'import json',
+        "with open('analysis.json', 'w', encoding='utf-8') as out:",
+        "    json.dump({'rows': 1}, out, indent=2)",
+        "print('rows=1')"
+      ].join('\\n')
+    }),
+    runTool: async (_toolName, args) => {
+      runArgsSeen = args;
+      return {
+      ok: true,
+      tool_name: 'run_python_sandbox',
+      input: {},
+      items: [
+        {
+          run_id: 'run-900',
+          status: 'ok',
+          readback_files: [{ path: 'analysis.json', content: '{"rows":1}', truncated: false }],
+          warnings: []
+        }
+      ],
+      citations: [{ source: 'python_sandbox', pointer: 'run-900', reason: 'sandbox ok' }],
+      summary: 'Python sandbox execution completed.'
+      };
+    }
+  });
+  assert.equal(pythonRun.executed, true);
+  assert.equal(Boolean(pythonRun.plan_patch.python_task_type), true);
+  assert.equal(pythonRun.plan_patch.python_artifact_count >= 1, true);
+  assert.equal(pythonRun.plan_patch.python_codegen_status, 'ok');
+  assert.equal(typeof runArgsSeen?.code, 'string');
+  assert.equal(runArgsSeen.code.length > 0, true);
+  assert.equal(Array.isArray(pythonRun.tool_result?.items), true);
+  fs.rmSync(storagePath, { recursive: true, force: true });
+});
+
+test('phase89 runtime short-circuits on malformed python codegen output before sandbox execution', async () => {
+  const storagePath = fs.mkdtempSync(path.join(__dirname, 'tmp', 'phase89-runtime-bad-'));
+  let runToolCalls = 0;
+  const pythonRun = await phase89Runtime.runPlannedPythonTask({
+    message: 'Use Python to parse this CSV and report mean values.',
+    routing: {
+      intent: 'coding_data_analysis',
+      entities: {},
+      plan: {
+        needs_python: true,
+        selected_tool_names: ['run_python_sandbox']
+      }
+    },
+    snapshot: {
+      assays: [
+        { id: 'a1', name: 'Atlas assay', numeric_count: 12, result_well_count: 96, project_id: 'project-atlas' }
+      ],
+      gelAnalyses: [],
+      settings: { storagePath }
+    },
+    selectedProjectId: 'project-atlas',
+    selectedProjectName: 'Atlas',
+    storagePath,
+    generatePythonRunRequest: async () => '{bad-json',
+    runTool: async () => {
+      runToolCalls += 1;
+      return {};
+    }
+  });
+
+  assert.equal(pythonRun.executed, false);
+  assert.equal(pythonRun.needs_clarification, true);
+  assert.equal(pythonRun.plan_patch.python_needs_clarification, true);
+  assert.equal(pythonRun.plan_patch.python_codegen_status, 'error');
+  assert.equal(runToolCalls, 0);
+  fs.rmSync(storagePath, { recursive: true, force: true });
 });
 
 test('agent simulation contract parity guard keeps tool contract/capabilities/mock-dispatch in sync', () => {
@@ -4406,6 +4908,23 @@ test('agent-chat sends settings API key to main process and stores assistant res
               needs_pdf_reading: false,
               needs_python: false,
               needs_web_search: false,
+              python_task_type: 'csv_tsv_descriptive',
+              python_ready: true,
+              python_needs_clarification: false,
+              python_artifact_count: 2,
+              web_fallback_triggered: true,
+              web_fallback_reason: 'planner_requested_web_search',
+              web_queries: ['Cancer Study transfection recovery latest review'],
+              web_sources: [
+                {
+                  title: 'Cancer Study transfection review',
+                  url: 'https://example.org/transfection-review',
+                  source_domain: 'example.org',
+                  source_lane: 'web',
+                  source_tool: 'search_web',
+                  score: 0.91
+                }
+              ],
               needs_clarification: false,
               clarification_reason: '',
               clarification_question: '',
@@ -4481,7 +5000,10 @@ test('agent-chat sends settings API key to main process and stores assistant res
           },
           proposedWriteActions: [],
           intermediateStates: [{ stage: 'synthesize', goal: 'Done.' }],
-          toolTrace: [{ tool: 'search_protocols', summary: 'Found one protocol.' }],
+          toolTrace: [
+            { tool: 'search_protocols', summary: 'Found one protocol.' },
+            { tool: 'search_web', summary: 'Found one web source.' }
+          ],
           notebookDraft: {
             protocol: { id: 'pr1', name: 'Cell Prep' },
             project: { id: 'p1', name: 'Cancer Study', resolution_source: 'selected_project' },
@@ -4600,11 +5122,15 @@ test('agent-chat sends settings API key to main process and stores assistant res
   assert.match(history.innerHTML, /Routing Project Candidates/);
   assert.match(history.innerHTML, /Routing Paper Match/);
   assert.match(history.innerHTML, /Paper Availability/);
+  assert.match(history.innerHTML, /Routing Python/);
+  assert.match(history.innerHTML, /Routing Web Fallback/);
+  assert.match(history.innerHTML, /Web Sources/);
   assert.match(history.innerHTML, /Routing Protocol Match/);
   assert.match(history.innerHTML, /Routing Protocol Candidates/);
   assert.match(history.innerHTML, /Notebook Draft/);
   assert.match(history.innerHTML, /saved_draft/);
   assert.match(history.innerHTML, /Cell Prep/);
+  assert.match(history.innerHTML, /search_web|Searching web sources/i);
   assert.equal(sendBtn.disabled, false);
   assert.equal(clearBtn.disabled, false);
   assert.equal(projectSelect.disabled, false);
@@ -5035,6 +5561,20 @@ test('search_workflows contract exposes workflow retrieval schema', () => {
   assert.equal(required.includes('updated_at'), true);
 });
 
+test('search_inventory contract preserves required query and supports parser search metadata fields', () => {
+  const contract = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'agent-io-contract.json'), 'utf8'));
+  const tool = (contract.tools || []).find((entry) => entry.name === 'search_inventory');
+  assert.equal(Boolean(tool), true);
+  assert.equal(Array.isArray(tool.input_schema?.required), true);
+  assert.equal(tool.input_schema.required.includes('query'), true);
+  const inputProps = tool.input_schema?.properties || {};
+  assert.equal(Boolean(inputProps.normalized_query), true);
+  assert.equal(Boolean(inputProps.candidate_terms), true);
+  assert.equal(Boolean(inputProps.aliases), true);
+  assert.equal(Boolean(inputProps.search_mode), true);
+  assert.equal(Boolean(inputProps.search_terms), true);
+});
+
 test('search_papers contract preserves required fields and exposes Phase 7 optional metadata', () => {
   const contract = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'agent-io-contract.json'), 'utf8'));
   const tool = (contract.tools || []).find((entry) => entry.name === 'search_papers');
@@ -5054,6 +5594,38 @@ test('search_papers contract preserves required fields and exposes Phase 7 optio
   assert.equal(Boolean(properties.updated_at), true);
 });
 
+test('search_web contract exposes hybrid web fallback schema', () => {
+  const contract = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'agent-io-contract.json'), 'utf8'));
+  const tool = (contract.tools || []).find((entry) => entry.name === 'search_web');
+  assert.equal(Boolean(tool), true);
+  assert.equal(Array.isArray(tool.input_schema?.required), true);
+  assert.equal(tool.input_schema.required.includes('query'), true);
+  const itemSchema = tool.output_schema?.properties?.items?.items || {};
+  const required = Array.isArray(itemSchema.required) ? itemSchema.required : [];
+  assert.equal(required.includes('title'), true);
+  assert.equal(required.includes('url'), true);
+  assert.equal(required.includes('snippet'), true);
+  assert.equal(required.includes('source_domain'), true);
+});
+
+test('run_python_sandbox contract includes optional artifact fields without breaking required base fields', () => {
+  const contract = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'agent-io-contract.json'), 'utf8'));
+  const tool = (contract.tools || []).find((entry) => entry.name === 'run_python_sandbox');
+  assert.equal(Boolean(tool), true);
+  const inputProps = tool.input_schema?.properties || {};
+  assert.equal(Boolean(inputProps.code), true);
+  assert.equal(Boolean(inputProps.artifact_paths), true);
+  assert.equal(Boolean(inputProps.persist_artifacts), true);
+  const itemSchema = tool.output_schema?.properties?.items?.items || {};
+  const required = Array.isArray(itemSchema.required) ? itemSchema.required : [];
+  assert.equal(required.includes('run_id'), true);
+  assert.equal(required.includes('status'), true);
+  const outputProps = itemSchema.properties || {};
+  assert.equal(Boolean(outputProps.artifact_count), true);
+  assert.equal(Boolean(outputProps.result_files), true);
+  assert.equal(Boolean(outputProps.result_file_records), true);
+});
+
 test('main agent controller output includes routing metadata fields', () => {
   const mainSource = fs.readFileSync(path.join(__dirname, 'main.js'), 'utf8');
   assert.match(mainSource, /routing:\s*normalizeRoutingForAgentLog\(source\.routing\)/);
@@ -5063,13 +5635,20 @@ test('main agent controller output includes routing metadata fields', () => {
   assert.match(mainSource, /routing,/);
   assert.match(mainSource, /intermediateStates,/);
   assert.match(mainSource, /toolTrace/);
-  assert.match(mainSource, /buildRuleBasedRoutingDecision\(/);
-  assert.match(mainSource, /shouldUseRoutingFallback\(/);
-  assert.match(mainSource, /requestRoutingFallbackPayload\(/);
+  assert.match(mainSource, /buildRoutingDecisionFromIntentParser\(/);
+  assert.match(mainSource, /requestIntentParserPayload\(/);
+  assert.match(mainSource, /normalizeIntentParserPayload\(/);
   assert.match(mainSource, /executeToolCall\(/);
   assert.match(mainSource, /runAgentToolDispatchLegacy\(/);
   assert.match(mainSource, /tool_selection_rationale/);
   assert.match(mainSource, /selector score=/);
+});
+
+test('main agent controller hard-errors when intent parser output is invalid', () => {
+  const mainSource = fs.readFileSync(path.join(__dirname, 'main.js'), 'utf8');
+  assert.match(mainSource, /if \(!parserResult\?\.ok \|\| !parserResult\?\.payload\)/);
+  assert.match(mainSource, /ok:\s*false/);
+  assert.match(mainSource, /Intent parser failed:/);
 });
 
 test('main search_protocols tool path uses Phase 4 protocol matcher ranking', () => {
@@ -5091,6 +5670,19 @@ test('main search_papers tool path and paper evidence hook use Phase 7 module', 
   assert.match(mainSource, /if \(name === 'search_papers'\)[\s\S]*retrievePaperCandidates\(/);
   assert.match(mainSource, /maybeCollectPaperEvidence\(/);
   assert.match(mainSource, /paper_evidence/);
+});
+
+test('main Phase 8+9 wiring keeps orchestration in helper modules and adds search_web dispatch', () => {
+  const mainSource = fs.readFileSync(path.join(__dirname, 'main.js'), 'utf8');
+  assert.match(mainSource, /require\('\.\/agent-phase89-runtime'\)/);
+  assert.match(mainSource, /require\('\.\/agent-python-codegen'\)/);
+  assert.match(mainSource, /buildPythonCodegenPrompt\(/);
+  assert.match(mainSource, /runPlannedPythonTask\(/);
+  assert.match(mainSource, /postProcessPythonToolResult\(/);
+  assert.match(mainSource, /runHybridWebFallback\(/);
+  assert.match(mainSource, /if \(name === 'search_web'\)/);
+  assert.match(mainSource, /searchWebResults\(/);
+  assert.match(mainSource, /'search_web'/);
 });
 
 test('telegram bot internals normalize search and module parsing', () => {

@@ -11,7 +11,11 @@ const INTENT_TASK_MAP = Object.freeze({
   project_science_question: ['project_science', 'record_lookup'],
   paper_analysis: ['paper_analysis', 'literature_lookup'],
   coding_data_analysis: ['coding_data_analysis', 'compute'],
-  general_science_question: ['general_science', 'literature_lookup']
+  general_science_question: ['general_science', 'literature_lookup'],
+  literature_search: ['literature_lookup', 'general_science'],
+  data_analysis_or_coding: ['coding_data_analysis', 'compute'],
+  mixed_request: ['record_lookup', 'project_science', 'literature_lookup'],
+  unclear: []
 });
 
 const TOOL_CAPABILITY_MAP = Object.freeze({
@@ -62,6 +66,12 @@ const TOOL_CAPABILITY_MAP = Object.freeze({
     entityTypes: ['paper_title', 'protein', 'compound', 'project'],
     taskTypes: ['paper_analysis', 'literature_lookup', 'project_science'],
     aliases: ['paper', 'pdf', 'journal', 'literature']
+  },
+  search_web: {
+    toolClass: TOOL_CLASS.READ,
+    entityTypes: ['project', 'paper_title', 'protein', 'compound', 'workflow_step'],
+    taskTypes: ['general_science', 'literature_lookup', 'project_science', 'paper_analysis'],
+    aliases: ['web', 'internet', 'latest', 'recent', 'news', 'review', 'reference']
   },
   search_uniprot: {
     toolClass: TOOL_CLASS.READ,
@@ -388,6 +398,15 @@ function topCountForIntent(intent) {
   if (normalized === 'coding_data_analysis') {
     return 2;
   }
+  if (normalized === 'data_analysis_or_coding') {
+    return 2;
+  }
+  if (normalized === 'literature_search') {
+    return 4;
+  }
+  if (normalized === 'mixed_request') {
+    return 3;
+  }
   return 2;
 }
 
@@ -403,7 +422,7 @@ function requiredToolHintsForIntent(intent) {
     return ['search_notebook_entries', 'search_workflows', 'search_assays', 'search_gel_analyses', 'search_projects'];
   }
   if (normalized === 'project_science_question') {
-    return ['search_projects', 'search_notebook_entries', 'search_workflows', 'search_papers', 'search_protocols'];
+    return ['search_projects', 'search_notebook_entries', 'search_workflows', 'search_papers', 'search_protocols', 'search_web'];
   }
   if (normalized === 'paper_analysis') {
     return ['search_papers', 'search_pubmed', 'search_crossref', 'search_europe_pmc'];
@@ -411,7 +430,19 @@ function requiredToolHintsForIntent(intent) {
   if (normalized === 'coding_data_analysis') {
     return ['run_python_sandbox'];
   }
-  return ['search_pubmed', 'search_crossref'];
+  if (normalized === 'data_analysis_or_coding') {
+    return ['run_python_sandbox'];
+  }
+  if (normalized === 'literature_search') {
+    return ['search_web', 'search_pubmed', 'search_crossref', 'search_europe_pmc'];
+  }
+  if (normalized === 'mixed_request') {
+    return ['search_projects', 'search_notebook_entries', 'search_web'];
+  }
+  if (normalized === 'unclear') {
+    return [];
+  }
+  return ['search_web', 'search_pubmed', 'search_crossref'];
 }
 
 function selectToolsForRequest({ intent, entities, message, contract, allowWriteTools = false }) {

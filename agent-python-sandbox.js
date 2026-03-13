@@ -2,6 +2,7 @@ const fs = require('fs/promises');
 const path = require('path');
 const { execFile } = require('child_process');
 const { promisify } = require('util');
+const { clamp, normalizeRelativePath } = require('./agent-python-common');
 
 const execFileAsync = promisify(execFile);
 
@@ -18,28 +19,12 @@ const MAX_STDIO_CHARS = 12000;
 
 let cachedPythonExecutable = null;
 
-function clamp(number, min, max) {
-  return Math.max(min, Math.min(max, number));
-}
-
 function truncateText(value, maxLength) {
   const text = String(value || '');
   if (text.length <= maxLength) {
     return { text, truncated: false };
   }
   return { text: `${text.slice(0, maxLength)}...`, truncated: true };
-}
-
-function normalizeRelativePath(rawPath, fallback = '') {
-  const candidate = String(rawPath || fallback || '').replace(/\\/g, '/').trim();
-  if (!candidate || candidate.includes('\0')) {
-    return '';
-  }
-  const normalized = path.posix.normalize(candidate).replace(/^\/+/, '');
-  if (!normalized || normalized === '.' || normalized.startsWith('../') || normalized.includes('/../')) {
-    return '';
-  }
-  return normalized;
 }
 
 function isInsideDirectory(basePath, targetPath) {
