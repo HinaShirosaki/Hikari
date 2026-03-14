@@ -64,6 +64,7 @@
           <button class="app-nav-btn" type="button" data-view="workflow-management-view">Workflows</button>
           <button class="app-nav-btn" type="button" data-view="papers-view">Papers</button>
           <button class="app-nav-btn" type="button" data-view="agent-view">Agent</button>
+          <button class="app-nav-btn" type="button" data-view="sequence-viewer-view">Sequence Viewer</button>
           <button class="app-nav-btn" type="button" data-view="tool-box-view">Tools</button>
           <button class="app-nav-btn" type="button" data-view="setting-view">Setting</button>
         </nav>
@@ -206,6 +207,11 @@
               <span class="label">Agent</span>
             </button>
 
+            <button class="tile" data-view="sequence-viewer-view">
+              <span class="icon" aria-hidden="true">🧬</span>
+              <span class="label">Sequence Viewer</span>
+            </button>
+
             <button class="tile" data-view="tool-box-view">
               <span class="icon" aria-hidden="true">🧮</span>
               <span class="label">Tools</span>
@@ -342,6 +348,21 @@
             <button type="button" id="protocol-sort-field-btn" class="ghost-btn">Sort: Time</button>
             <button type="button" id="protocol-sort-order-btn" class="ghost-btn">Order: Low to High</button>
           </div>
+        </div>
+        <div class="stack-form">
+          <h4>Import Protocol JSON</h4>
+          <label>
+            JSON File
+            <input id="protocol-json-import-file" type="file" accept=".json,.ena,application/json" />
+          </label>
+          <label>
+            Or Paste JSON
+            <textarea id="protocol-json-import-input" rows="4" placeholder='Paste protocol JSON, e.g. {"protocols":[...]} or [...]'></textarea>
+          </label>
+          <div class="form-actions">
+            <button type="button" id="import-protocol-json-btn" class="ghost-btn">Import Protocol JSON</button>
+          </div>
+          <p id="protocol-json-import-status" class="small-note">Import one or more protocols from JSON.</p>
         </div>
         <p id="protocol-share-status" class="small-note">Click Share on a protocol to send it to a teammate or copy a portable share link.</p>
         <div id="protocol-share-link-panel" class="protocol-preview-block" hidden>
@@ -1297,6 +1318,7 @@
                   <option value="workflow-management-view">Workflows</option>
                   <option value="papers-view">Papers</option>
                   <option value="agent-view">Agent</option>
+                  <option value="sequence-viewer-view">Sequence Viewer</option>
                   <option value="tool-box-view">Tools</option>
                   <option value="setting-view">Setting</option>
                 </select>
@@ -2170,6 +2192,7 @@
             </label>
             <div class="form-actions">
               <button type="submit" class="primary-btn">Annotate</button>
+              <button id="plannotate-open-sequence-viewer" type="button" class="ghost-btn" disabled>View in Sequence Viewer</button>
               <button id="plannotate-download-gbk" type="button" class="ghost-btn" disabled>Download GBK</button>
               <span id="plannotate-run-status" class="small-note">Idle</span>
             </div>
@@ -2369,6 +2392,90 @@
         </div>
 
         <canvas id="colony-source-canvas" hidden></canvas>
+      </div>
+    </section>
+
+    <section id="sequence-viewer-view" class="view">
+      <div class="panel">
+        <h2>Sequence Viewer</h2>
+        <p class="small-note">Load FASTA/FASTQ/GenBank or pasted sequence and inspect records with feature overlays.</p>
+      </div>
+
+      <div class="sequence-viewer-shell">
+        <form id="sequence-viewer-form" class="stack-form sequence-viewer-controls" autocomplete="off">
+          <div class="sequence-viewer-mode-switch" role="tablist" aria-label="Sequence viewer input mode">
+            <button id="sequence-viewer-mode-paste" class="sequence-viewer-mode-btn sequence-viewer-mode-btn-active" type="button">Paste Text</button>
+            <button id="sequence-viewer-mode-file" class="sequence-viewer-mode-btn" type="button">Load File</button>
+          </div>
+
+          <div id="sequence-viewer-paste-panel" class="sequence-viewer-input-panel">
+            <label>
+              Sequence or Records
+              <textarea id="sequence-viewer-textarea" rows="8" placeholder="Paste FASTA, FASTQ, GenBank, or raw sequence text."></textarea>
+            </label>
+          </div>
+
+          <div id="sequence-viewer-file-panel" class="sequence-viewer-input-panel" hidden>
+            <input id="sequence-viewer-file-input" type="file" accept=".gbk,.gb,.gbff,.fasta,.fa,.fas,.fna,.fastq,.fq,.txt,.seq" hidden />
+            <div class="inline-row">
+              <button id="sequence-viewer-file-choose" type="button" class="ghost-btn">Choose File</button>
+              <span id="sequence-viewer-file-name" class="small-note">No file selected</span>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button id="sequence-viewer-load-btn" type="button" class="primary-btn">Load</button>
+            <button id="sequence-viewer-clear-btn" type="button" class="ghost-btn">Clear</button>
+            <span id="sequence-viewer-status" class="small-note">Idle</span>
+          </div>
+
+          <label>
+            Record
+            <select id="sequence-viewer-record-select">
+              <option value="">No records loaded</option>
+            </select>
+          </label>
+        </form>
+
+        <div class="sequence-viewer-results">
+          <section class="plannotate-result-card">
+            <div class="plannotate-card-head">
+              <h4>Summary</h4>
+            </div>
+            <div class="sequence-viewer-stats">
+              <div><strong>Format:</strong> <span id="sequence-viewer-stat-format">-</span></div>
+              <div><strong>Length:</strong> <span id="sequence-viewer-stat-length">0</span> bp</div>
+              <div><strong>Topology:</strong> <span id="sequence-viewer-stat-topology">-</span></div>
+              <div><strong>GC:</strong> <span id="sequence-viewer-stat-gc">-</span></div>
+              <div><strong>Ambiguous:</strong> <span id="sequence-viewer-stat-ambiguous">-</span></div>
+              <div><strong>Quality (min/mean/max):</strong> <span id="sequence-viewer-stat-quality">-</span></div>
+              <div><strong>Features:</strong> <span id="sequence-viewer-stat-features">0</span></div>
+            </div>
+            <div id="sequence-viewer-messages" class="calc-output sequence-viewer-message-box">
+              <p class="small-note">No parser warnings.</p>
+            </div>
+          </section>
+
+          <section class="plannotate-result-card sequence-viewer-sequence-card">
+            <div class="plannotate-card-head">
+              <h4>Sequence (Dual Strand)</h4>
+            </div>
+            <div id="sequence-viewer-sequence-host" class="sequence-viewer-sequence-host">
+              <p class="small-note">Load sequence data to begin.</p>
+            </div>
+            <div class="sequence-viewer-feature-bottom">
+              <div class="plannotate-card-head">
+                <h4>Features (Bottom Track)</h4>
+              </div>
+              <div id="sequence-viewer-feature-rail-host" class="sequence-viewer-feature-rail-host">
+                <p class="small-note">No features to display.</p>
+              </div>
+              <div id="sequence-viewer-feature-detail" class="calc-output sequence-viewer-feature-detail">
+                <p class="small-note">Select a feature in the bottom track to view details.</p>
+              </div>
+            </div>
+          </section>
+        </div>
       </div>
     </section>
       </section>

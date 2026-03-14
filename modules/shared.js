@@ -16,6 +16,7 @@ export const VIEWS = {
   WORKFLOW_MANAGEMENT: 'workflow-management-view',
   PAPERS: 'papers-view',
   AGENT: 'agent-view',
+  SEQUENCE_VIEWER: 'sequence-viewer-view',
   TOOL_BOX: 'tool-box-view'
 };
 
@@ -37,6 +38,7 @@ export const TITLES = {
   [VIEWS.WORKFLOW_MANAGEMENT]: 'Build editable workflows with protocol/text blocks and reusable templates.',
   [VIEWS.PAPERS]: 'Upload papers, link them to projects or journal clubs, and summarize with LLM.',
   [VIEWS.AGENT]: 'Ask the lab assistant agent with evidence-grounded context and decision records.',
+  [VIEWS.SEQUENCE_VIEWER]: 'Load FASTA/FASTQ/GenBank or pasted sequence and inspect records with feature overlays.',
   [VIEWS.TOOL_BOX]: 'Tools: molarity calculator, peptide properties, and buffer preparer.'
 };
 
@@ -105,6 +107,7 @@ const STARTUP_DEFAULT_VIEW_IDS = new Set([
   VIEWS.WORKFLOW_MANAGEMENT,
   VIEWS.PAPERS,
   VIEWS.AGENT,
+  VIEWS.SEQUENCE_VIEWER,
   VIEWS.TOOL_BOX,
   VIEWS.SETTING
 ]);
@@ -148,7 +151,9 @@ export const defaultState = {
   labInventory: {
     chemicals: [],
     blocks: [],
-    lastLocationNumber: 0
+    lastLocationNumber: 0,
+    locationCodeMap: {},
+    locationCodeNextByLocation: {}
   },
   settings: {
     personalInfo: {
@@ -216,10 +221,17 @@ function normalizeSampleRecord(rawSample) {
     return rawSample;
   }
   const type = String(rawSample.type || '').trim().toLowerCase();
-  return {
-    ...rawSample,
-    cellPassage: type === 'cell_line' ? normalizeCellPassage(rawSample.cellPassage) : null
-  };
+  if (type === 'cell_line') {
+    return {
+      ...rawSample,
+      cellPassage: normalizeCellPassage(rawSample.cellPassage)
+    };
+  }
+  if (Object.prototype.hasOwnProperty.call(rawSample, 'cellPassage')) {
+    const { cellPassage, ...rest } = rawSample;
+    return rest;
+  }
+  return rawSample;
 }
 
 function normalizeWorkflowProgressMap(rawValue) {

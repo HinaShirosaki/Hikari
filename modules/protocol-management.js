@@ -41,8 +41,13 @@ export function initProtocolManagement({
   const protocolList = document.getElementById('protocol-list');
   const protocolSortFieldBtn = document.getElementById('protocol-sort-field-btn');
   const protocolSortOrderBtn = document.getElementById('protocol-sort-order-btn');
+  const protocolJsonImportFileInput = document.getElementById('protocol-json-import-file');
+  const protocolJsonImportInput = document.getElementById('protocol-json-import-input');
+  const importProtocolJsonBtn = document.getElementById('import-protocol-json-btn');
+  const protocolJsonImportStatus = document.getElementById('protocol-json-import-status');
 
   const defaultShareStatus = 'Click Share on a protocol to send it to a teammate or copy a portable share link.';
+  const defaultProtocolJsonImportStatus = 'Import one or more protocols from JSON.';
 
   let currentProtocolDraft = createEmptyDraft();
   let activeShareProtocolId = '';
@@ -75,9 +80,13 @@ export function initProtocolManagement({
     renderList();
   });
   protocolExportPdfBtn?.addEventListener('click', onExportViewedProtocolPdf);
+  importProtocolJsonBtn?.addEventListener('click', onImportProtocolJson);
 
   if (protocolShareStatus && !String(protocolShareStatus.textContent || '').trim()) {
     setShareStatus(defaultShareStatus);
+  }
+  if (protocolJsonImportStatus && !String(protocolJsonImportStatus.textContent || '').trim()) {
+    protocolJsonImportStatus.textContent = defaultProtocolJsonImportStatus;
   }
   updateSortButtonLabels();
 
@@ -356,6 +365,295 @@ export function initProtocolManagement({
           placeholders: parsed.placeholders
         };
       });
+  }
+
+  function normalizeImportedProtocolStepEntries(rawSteps) {
+    if (!Array.isArray(rawSteps)) {
+      return [];
+    }
+
+    const sortedSteps = rawSteps
+      .map((step, index) => ({ step, index }))
+      .filter((entry) => entry.step != null)
+      .sort((a, b) => {
+        const numberA = Number(a.step?.step_number);
+        const numberB = Number(b.step?.step_number);
+        const hasNumberA = Number.isFinite(numberA);
+        const hasNumberB = Number.isFinite(numberB);
+        if (hasNumberA && hasNumberB && numberA !== numberB) {
+          return numberA - numberB;
+        }
+        if (hasNumberA !== hasNumberB) {
+          return hasNumberA ? -1 : 1;
+        }
+        return a.index - b.index;
+      })
+      .map((entry) => entry.step);
+
+    return sortedSteps
+      .map((rawStep) => {
+        if (typeof rawStep === 'string') {
+          const rawText = String(rawStep || '').trim();
+          if (!rawText) {
+            return null;
+          }
+          const parsed = extractPlaceholdersFromText(rawText);
+          return {
+            id: createId(),
+            text: parsed.cleanedText || rawText,
+            placeholders: parsed.placeholders
+          };
+        }
+        if (!rawStep || typeof rawStep !== 'object') {
+          return null;
+        }
+
+        const rawText = String(rawStep.text || rawStep.action || rawStep.instruction || '').trim();
+        if (!rawText) {
+          return null;
+        }
+
+        const placeholders = Array.isArray(rawStep.placeholders)
+          ? rawStep.placeholders
+            .filter((item) => item && typeof item === 'object')
+            .map((item) => ({ id: String(item.id || createId()), name: String(item.name || '').trim() }))
+            .filter((item) => item.name)
+          : [];
+
+        if (placeholders.length) {
+          return {
+            id: String(rawStep.id || createId()),
+            text: rawText,
+            placeholders
+          };
+        }
+
+        const parsed = extractPlaceholdersFromText(rawText);
+        return {
+          id: String(rawStep.id || createId()),
+          text: parsed.cleanedText || rawText,
+          placeholders: parsed.placeholders
+        };
+      })
+      .filter(Boolean);
+  }
+
+  function sanitizeIncomingProtocol(rawProtocol) {
+    if (!rawProtocol || typeof rawProtocol !== 'object') {
+      return null;
+    }
+
+    const name = String(rawProtocol.name || rawProtocol.title || '').trim();
+    if (!name) {
+      return null;
+    }
+
+    const nowIso = new Date().toISOString();
+    const parsedCreatedAt = Date.parse(String(rawProtocol.createdAt || '').trim());
+    const createdAt = Number.isFinite(parsedCreatedAt) ? new Date(parsedCreatedAt).toISOString() : nowIso;
+    const parsedUpdatedAt = Date.parse(String(rawProtocol.updatedAt || '').trim());
+    const updatedAt = Number.isFinite(parsedUpdatedAt) ? new Date(parsedUpdatedAt).toISOString() : createdAt;
+
+    return {
+      id: String(rawProtocol.id || createId()),
+      name,
+      createdAt,
+      updatedAt,
+      purpose: String(rawProtocol.purpose || '').trim(),
+      materials: normalizeMaterials(rawProtocol.materials),
+      steps: normalizeImportedProtocolStepEntries(rawProtocol.steps || rawProtocol.procedure),
+      troubleshooting: normalizeTroubleshooting(rawProtocol.troubleshooting)
+    };
+  }
+
+  function sanitizeIncomingProtocols(rawProtocols) {
+    if (Array.isArray(rawProtocols)) {
+      return rawProtocols.map((item) => sanitizeIncomingProtocol(item)).filter(Boolean);
+    }
+    const single = sanitizeIncomingProtocol(rawProtocols);
+    return single ? [single] : [];
+  }
+
+  function parseLooseJsonObjectOrArray(rawInput) {
+    const text = String(rawInput || '').trim();
+    if (!text) {
+      return null;
+    }
+
+    const candidates = [text];
+    const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    if (fenceMatch?.[1]) {
+      candidates.push(String(fenceMatch[1]).trim());
+    }
+
+    const firstBrace = text.indexOf('{');
+    const lastBrace = text.lastIndexOf('}');
+    if (firstBrace >= 0 && lastBrace > firstBrace) {
+      candidates.push(text.slice(firstBrace, lastBrace + 1));
+    }
+
+    const firstBracket = text.indexOf('[');
+    const lastBracket = text.lastIndexOf(']');
+    if (firstBracket >= 0 && lastBracket > firstBracket) {
+      candidates.push(text.slice(firstBracket, lastBracket + 1));
+    }
+
+    for (const candidate of candidates) {
+      try {
+        const parsed = JSON.parse(candidate);
+        if (Array.isArray(parsed) || (parsed && typeof parsed === 'object')) {
+          return parsed;
+        }
+      } catch {
+        // Try next candidate.
+      }
+    }
+    return null;
+  }
+
+  function parseProtocolsFromJson(rawInput) {
+    const parsed = parseLooseJsonObjectOrArray(rawInput);
+    if (!parsed) {
+      return [];
+    }
+
+    if (Array.isArray(parsed)) {
+      return sanitizeIncomingProtocols(parsed);
+    }
+    if (Array.isArray(parsed.protocols)) {
+      return sanitizeIncomingProtocols(parsed.protocols);
+    }
+    if (parsed.protocol && typeof parsed.protocol === 'object') {
+      return sanitizeIncomingProtocols(parsed.protocol);
+    }
+    if (parsed.type === 'protocol_share_link') {
+      return sanitizeIncomingProtocols(parsed.protocol || parsed.protocols);
+    }
+    return sanitizeIncomingProtocols(parsed);
+  }
+
+  function buildUniqueImportedProtocolName(baseName) {
+    const takenNames = new Set(
+      state.protocols
+        .map((item) => String(item?.name || '').trim().toLowerCase())
+        .filter(Boolean)
+    );
+
+    const resolvedBaseName = String(baseName || '').trim() || 'Imported Protocol';
+    let candidate = resolvedBaseName;
+    let suffix = 2;
+    while (takenNames.has(candidate.toLowerCase())) {
+      candidate = `${resolvedBaseName} ${suffix}`;
+      suffix += 1;
+    }
+    return candidate;
+  }
+
+  function addImportedProtocol(incoming, copySuffixLabel = 'Imported Copy') {
+    const idConflict = state.protocols.some((item) => String(item?.id || '') === String(incoming.id || ''));
+    const nameConflict = state.protocols.some(
+      (item) => String(item?.name || '').trim().toLowerCase() === String(incoming.name || '').trim().toLowerCase()
+    );
+
+    if (!idConflict && !nameConflict) {
+      state.protocols.push(incoming);
+      return incoming;
+    }
+
+    const suffixedName = `${incoming.name} (${String(copySuffixLabel || 'Imported Copy').trim() || 'Imported Copy'})`;
+    const imported = {
+      ...incoming,
+      id: createId(),
+      name: buildUniqueImportedProtocolName(suffixedName)
+    };
+    state.protocols.push(imported);
+    return imported;
+  }
+
+  async function readTextFile(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(new Error('Failed to read selected JSON file.'));
+      reader.readAsText(file);
+    });
+  }
+
+  async function readProtocolJsonImportInput() {
+    const directText = String(protocolJsonImportInput?.value || '').trim();
+    if (directText) {
+      return directText;
+    }
+    const file = protocolJsonImportFileInput?.files?.[0];
+    if (!file) {
+      return '';
+    }
+    return readTextFile(file);
+  }
+
+  function setProtocolJsonImportStatus(message) {
+    if (!protocolJsonImportStatus) {
+      return;
+    }
+    protocolJsonImportStatus.textContent = String(message || '').trim() || defaultProtocolJsonImportStatus;
+  }
+
+  function importProtocolsFromJson(rawInput, options = {}) {
+    const incomingProtocols = parseProtocolsFromJson(rawInput);
+    if (!incomingProtocols.length) {
+      return {
+        ok: false,
+        error: 'Invalid protocol JSON payload. Use a protocol object, {"protocols":[...]}, or a protocol array.'
+      };
+    }
+
+    const copySuffixLabel = String(options.copySuffixLabel || 'Imported Copy').trim() || 'Imported Copy';
+    const importedProtocols = incomingProtocols.map((incoming) => addImportedProtocol(incoming, copySuffixLabel));
+    persist();
+    if (options.notifyChanged !== false) {
+      onProtocolsChanged?.();
+    }
+    if (options.renderList !== false) {
+      renderList();
+    }
+    return {
+      ok: true,
+      importedProtocols
+    };
+  }
+
+  async function onImportProtocolJson() {
+    let rawInput = '';
+    try {
+      rawInput = await readProtocolJsonImportInput();
+    } catch (error) {
+      setProtocolJsonImportStatus(String(error?.message || error || 'Failed to read JSON input.'));
+      return;
+    }
+
+    if (!String(rawInput || '').trim()) {
+      setProtocolJsonImportStatus('Paste protocol JSON or choose a JSON file first.');
+      return;
+    }
+
+    const result = importProtocolsFromJson(rawInput, { copySuffixLabel: 'Imported Copy' });
+    if (!result.ok) {
+      setProtocolJsonImportStatus(result.error || 'Failed to import protocol JSON.');
+      return;
+    }
+
+    if (protocolJsonImportInput) {
+      protocolJsonImportInput.value = '';
+    }
+    if (protocolJsonImportFileInput) {
+      protocolJsonImportFileInput.value = '';
+    }
+
+    if (result.importedProtocols.length === 1) {
+      setProtocolJsonImportStatus(`Imported "${result.importedProtocols[0].name}".`);
+      return;
+    }
+    setProtocolJsonImportStatus(`Imported ${result.importedProtocols.length} protocols.`);
   }
 
   function buildStepEntriesFromText(rawText, existingSteps = []) {
@@ -1136,6 +1434,7 @@ export function initProtocolManagement({
     renderShareTargets,
     renderList,
     editProtocol,
-    addDraftFromExtractedMethod
+    addDraftFromExtractedMethod,
+    importProtocolsFromJson
   };
 }

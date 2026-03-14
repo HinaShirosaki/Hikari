@@ -17,6 +17,76 @@ const {
   requestCodexCliText
 } = require('./codex-cli-provider');
 const { downloadPaperAndSiPdf } = require('./agent-paper-download');
+const { runPythonSandbox, buildPythonCodegenPrompt } = require('./agent-python');
+const { searchWebResults } = require('./agent-web-fallback');
+const {
+  getBundlePaths,
+  syncBundleFromSnapshot,
+  hydrateSnapshotFromBundle,
+  searchInventoryIndex,
+  searchProtocolsIndex,
+  searchNotebookEntriesIndex
+} = require('./agent-sqlite-index');
+const {
+  runPlannedPythonTask,
+  postProcessPythonToolResult,
+  runHybridWebFallback
+} = require('./agent-phase89-runtime');
+const {
+  loadToolContract,
+  executeToolCall
+} = require('./agent-tools');
+const {
+  ROUTING_INTENTS,
+  buildRoutingDecisionFromIntentParser,
+  buildRoutingClarificationQuestion
+} = require('./agent-routing');
+const {
+  INTENT_PARSER_RESPONSE_SCHEMA,
+  normalizeIntentParserPayload,
+  buildIntentParserPrompt,
+  buildInventorySearchTerms
+} = require('./agent-intent-parser');
+const { buildNotebookDraft, buildNotebookDraftSummary } = require('./agent-notebook-generation');
+const { buildProjectRecordIndex, retrieveProjectEvidence } = require('./agent-project-retrieval');
+const { buildPaperSearchableDocs, retrievePaperCandidates, resolvePaperRequest } = require('./agent-paper-analysis');
+const { finalizeAgentResponse } = require('./agent-response-layer');
+const { validateAndGateResponse } = require('./agent-validation-safety');
+const {
+  createLifecycleRecorder,
+  recordLifecycleEvent,
+  classifyFailureReasons,
+  appendLogWithRotation,
+  readLifecycleLogs,
+  replayRequestLifecycle
+} = require('./agent-observability');
+const { createMainDataHelpers } = require('./main-data-helpers');
+const { addEvidencePack, applyFinalResponseLayerAndValidation } = require('./agent-controller-shared');
+const { createAgentWorkflowHelpers } = require('./agent-workflow-helpers');
+const { createExternalBioSearchHelpers } = require('./agent-external-bio-search');
+const {
+  toolboxConcentrationToM,
+  toolboxConcentrationFromM,
+  toolboxVolumeToL,
+  toolboxVolumeFromL,
+  toolboxMassToG,
+  toolboxMassFromG,
+  cleanNucleotideSequenceForToolbox,
+  countNucleotideResidues,
+  translateDnaSequenceForToolbox,
+  cleanProteinSequenceForToolbox,
+  calculatePeptideStatsForToolbox,
+  oligoMolecularWeightForToolbox,
+  oligoExtinctionForToolbox,
+  oligoTmForToolbox,
+  linearRegressionForToolbox,
+  parseCrisprTargetsTextForToolbox,
+  collectCrisprPamSitesForToolbox,
+  calculateGcPercentForToolbox,
+  scoreCrisprOnTargetForToolbox,
+  computeCrisprOffTargetStatsForToolbox,
+  reverseTranslateProteinForToolbox
+} = require('./agent-toolbox-helpers');
 let AGENT_IO_CONTRACT_RAW = {};
 try {
   AGENT_IO_CONTRACT_RAW = require('./data/agent-io-contract.json');
@@ -99,6 +169,24 @@ function getAgentChatLogPath() {
   return path.join(__dirname, 'data', AGENT_CHAT_LOG_FILE_NAME);
 }
 
+function getAgentPythonSandboxRoot() {
+  const override = String(process.env.ENANA_AGENT_PYTHON_SANDBOX_ROOT || '').trim();
+  if (override) {
+    return path.resolve(override);
+  }
+
+  try {
+    const userDataPath = app.getPath('userData');
+    if (userDataPath) {
+      return path.join(userDataPath, 'agent-python-sandbox');
+    }
+  } catch {
+    // App path may be unavailable very early; fall back.
+  }
+
+  return path.join(__dirname, 'tmp', 'agent-python-sandbox');
+}
+
 function renderPromptTemplate(template, vars = {}) {
   const source = String(template || '');
   return source.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_match, key) => String(vars[key] ?? ''));
@@ -160,8 +248,10 @@ async function writeSavedTelegramToken(token) {
 
 async function appendAgentChatLogEntry(logPath, entry) {
   try {
-    await fs.mkdir(path.dirname(logPath), { recursive: true });
-    await fs.appendFile(logPath, `${entry}\n`, 'utf8');
+    await appendLogWithRotation({
+      logPath,
+      entry
+    });
   } catch (error) {
     console.error('Failed to append agent chat log entry:', error);
   }
@@ -352,58 +442,51 @@ async function writeEnaFile(filePath, data) {
   await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8');
 }
 
+function buildCompactIndexedSnapshot(snapshot) {
+  const source = snapshot && typeof snapshot === 'object' ? snapshot : {};
+  const labInventory = normalizeChemicalStorePayload(source.labInventory);
+  return {
+    ...source,
+    protocols: [],
+    notebookEntries: [],
+    labInventory: {
+      chemicals: [],
+      blocks: asArray(labInventory.blocks),
+      lastLocationNumber: Number(labInventory.lastLocationNumber) || 0,
+      locationCodeMap: labInventory.locationCodeMap || {},
+      locationCodeNextByLocation: labInventory.locationCodeNextByLocation || {}
+    },
+    inventory: {},
+    data_bundle: {
+      mode: 'sqlite_indexed',
+      updated_at: new Date().toISOString()
+    }
+  };
+}
+
 function normalizeChemicalStorePayload(payload) {
   const source = payload && typeof payload === 'object' ? payload : {};
+  const locationCodeMap = source.locationCodeMap && typeof source.locationCodeMap === 'object'
+    ? Object.fromEntries(
+      Object.entries(source.locationCodeMap)
+        .map(([key, value]) => [cleanText(key, 240).toLowerCase(), cleanText(value, 32).toUpperCase()])
+        .filter(([key, value]) => key && value)
+    )
+    : {};
+  const locationCodeNextByLocation = source.locationCodeNextByLocation && typeof source.locationCodeNextByLocation === 'object'
+    ? Object.fromEntries(
+      Object.entries(source.locationCodeNextByLocation)
+        .map(([key, value]) => [cleanText(key, 240).toLowerCase(), Number(value) || 0])
+        .filter(([key, value]) => key && value > 0)
+    )
+    : {};
   return {
     chemicals: asArray(source.chemicals),
     blocks: asArray(source.blocks),
-    lastLocationNumber: Number(source.lastLocationNumber) || 0
+    lastLocationNumber: Number(source.lastLocationNumber) || 0,
+    locationCodeMap,
+    locationCodeNextByLocation
   };
-}
-
-function mergeChemicalsIntoSnapshot(data, chemicalsPayload) {
-  const source = data && typeof data === 'object' ? data : {};
-  const labInventorySource = source.labInventory && typeof source.labInventory === 'object'
-    ? source.labInventory
-    : {};
-  const normalizedSnapshotChemicals = normalizeChemicalStorePayload(labInventorySource);
-  const normalizedSidecarChemicals = chemicalsPayload
-    ? normalizeChemicalStorePayload(chemicalsPayload)
-    : null;
-  const hasSnapshotChemicals = normalizedSnapshotChemicals.chemicals.length > 0;
-  const mergedChemicalStore = hasSnapshotChemicals
-    ? normalizedSnapshotChemicals
-    : normalizedSidecarChemicals;
-
-  if (!mergedChemicalStore) {
-    return source;
-  }
-
-  return {
-    ...source,
-    labInventory: {
-      ...labInventorySource,
-      ...mergedChemicalStore
-    }
-  };
-}
-
-async function writeChemicalsFile(labInventory) {
-  const payload = normalizeChemicalStorePayload(labInventory);
-  await fs.mkdir(path.dirname(CHEMICALS_DATA_FILE_PATH), { recursive: true });
-  await fs.writeFile(CHEMICALS_DATA_FILE_PATH, JSON.stringify(payload, null, 2), 'utf8');
-}
-
-async function readChemicalsFile() {
-  try {
-    const raw = await fs.readFile(CHEMICALS_DATA_FILE_PATH, 'utf8');
-    return normalizeChemicalStorePayload(JSON.parse(raw));
-  } catch (error) {
-    if (error?.code === 'ENOENT') {
-      return null;
-    }
-    throw error;
-  }
 }
 
 function cloneJson(value, fallback = {}) {
@@ -447,6 +530,74 @@ function normalizeToolInvocationArgs(rawArgs) {
   return payload;
 }
 
+function normalizeInventorySearchMetadata(rawInventorySearch) {
+  const source = rawInventorySearch && typeof rawInventorySearch === 'object' ? rawInventorySearch : {};
+  return {
+    normalized_query: cleanText(source.normalized_query, 220),
+    candidate_terms: uniqueStrings(source.candidate_terms, 10),
+    aliases: uniqueStrings(source.aliases, 10),
+    search_mode: cleanText(source.search_mode, 60)
+  };
+}
+
+function buildInventoryToolArgs({
+  message,
+  routing = {},
+  args = {}
+}) {
+  const normalizedArgs = normalizeToolInvocationArgs(args);
+  const planInventorySearch = normalizeInventorySearchMetadata(routing?.plan?.inventory_search);
+  const argInventorySearch = normalizeInventorySearchMetadata(normalizedArgs);
+  const normalizedQuery = cleanText(
+    argInventorySearch.normalized_query || planInventorySearch.normalized_query,
+    220
+  );
+  const candidateTerms = uniqueStrings([
+    ...asArray(argInventorySearch.candidate_terms),
+    ...asArray(planInventorySearch.candidate_terms)
+  ], 10);
+  const aliases = uniqueStrings([
+    ...asArray(argInventorySearch.aliases),
+    ...asArray(planInventorySearch.aliases)
+  ], 10);
+  const searchMode = cleanText(argInventorySearch.search_mode || planInventorySearch.search_mode, 60);
+  const fallbackQuery = cleanText(normalizedArgs.query, 220) || cleanText(message, 220);
+  const searchTerms = buildInventorySearchTerms({
+    inventorySearch: {
+      normalized_query: normalizedQuery,
+      candidate_terms: candidateTerms,
+      aliases,
+      search_mode: searchMode
+    },
+    fallbackQuery,
+    maxTerms: 10
+  });
+  return {
+    ...normalizedArgs,
+    query: searchTerms[0] || normalizedQuery || fallbackQuery,
+    normalized_query: normalizedQuery || null,
+    candidate_terms: candidateTerms,
+    aliases,
+    search_mode: searchMode || null,
+    search_terms: searchTerms
+  };
+}
+
+const mainDataHelpers = createMainDataHelpers({
+  fs,
+  path,
+  cleanText,
+  hasSupportedDataExtension,
+  normalizeDataFilePath,
+  writeSnapshot: async (filePath, snapshot) => {
+    await writeEnaFile(filePath, buildCompactIndexedSnapshot(snapshot));
+  },
+  syncBundleFromSnapshot: async (payload) => syncBundleFromSnapshot(payload),
+  hydrateSnapshotFromBundle,
+  getDefaultDataFilePath,
+  legacyChemicalsPath: CHEMICALS_DATA_FILE_PATH
+});
+
 ipcMain.handle('ena:save', async (_event, payload) => {
   const normalizedPayload = normalizeJsonPayload(payload, {});
   const { data, filePath } = normalizedPayload;
@@ -471,14 +622,10 @@ ipcMain.handle('ena:save', async (_event, payload) => {
     targetPath = `${targetPath}.json`;
   }
 
-  try {
-    const snapshot = data && typeof data === 'object' ? data : {};
-    await writeEnaFile(targetPath, snapshot);
-    await writeChemicalsFile(snapshot.labInventory);
-    return { ok: true, filePath: targetPath };
-  } catch (error) {
-    return { ok: false, error: String(error) };
-  }
+  return mainDataHelpers.saveSelectedDataFile({
+    data,
+    filePath: targetPath
+  });
 });
 
 ipcMain.handle('ena:load', async () => {
@@ -493,15 +640,7 @@ ipcMain.handle('ena:load', async () => {
   }
 
   const filePath = result.filePaths[0];
-  try {
-    const raw = await fs.readFile(filePath, 'utf8');
-    const parsed = JSON.parse(raw);
-    const chemicalsPayload = await readChemicalsFile();
-    const data = mergeChemicalsIntoSnapshot(parsed, chemicalsPayload);
-    return { ok: true, filePath, data };
-  } catch (error) {
-    return { ok: false, error: String(error) };
-  }
+  return mainDataHelpers.loadSelectedDataFile(filePath);
 });
 
 ipcMain.handle('data:auto-save', async (_event, payload) => {
@@ -511,35 +650,12 @@ ipcMain.handle('data:auto-save', async (_event, payload) => {
     return { ok: false, error: 'Missing data payload.' };
   }
 
-  const targetPath = normalizeDataFilePath(filePath, getDefaultDataFilePath());
-
-  try {
-    await fs.mkdir(path.dirname(targetPath), { recursive: true });
-    const snapshot = data && typeof data === 'object' ? data : {};
-    await writeEnaFile(targetPath, snapshot);
-    await writeChemicalsFile(snapshot.labInventory);
-    return { ok: true, filePath: targetPath };
-  } catch (error) {
-    return { ok: false, error: String(error), filePath: targetPath };
-  }
+  return mainDataHelpers.autoSaveDataFile({ data, filePath });
 });
 
 ipcMain.handle('data:auto-load', async (_event, payload) => {
   const normalizedPayload = normalizeJsonPayload(payload, {});
-  const targetPath = normalizeDataFilePath(normalizedPayload?.filePath, getDefaultDataFilePath());
-
-  try {
-    const raw = await fs.readFile(targetPath, 'utf8');
-    const parsed = JSON.parse(raw);
-    const chemicalsPayload = await readChemicalsFile();
-    const data = mergeChemicalsIntoSnapshot(parsed, chemicalsPayload);
-    return { ok: true, filePath: targetPath, data };
-  } catch (error) {
-    if (error?.code === 'ENOENT') {
-      return { ok: true, filePath: targetPath, data: null };
-    }
-    return { ok: false, error: String(error), filePath: targetPath };
-  }
+  return mainDataHelpers.autoLoadDataFile(normalizedPayload?.filePath);
 });
 
 ipcMain.handle('storage:pick-directory', async (_event, payload) => {
@@ -639,6 +755,28 @@ function summarizeSchemaShape(schema) {
 }
 
 function buildFallbackAgentIoTools() {
+  const buildStandardToolOutputSchema = () => ({
+    type: 'object',
+    additionalProperties: false,
+    required: ['items', 'citations', 'summary'],
+    properties: {
+      items: { type: 'array', items: { type: 'object' } },
+      citations: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['source', 'pointer', 'reason'],
+          properties: {
+            source: { type: 'string' },
+            pointer: { type: 'string' },
+            reason: { type: 'string' }
+          }
+        }
+      },
+      summary: { type: 'string' }
+    }
+  });
   const makeTool = (name, description, limitMax = 20) => ({
     name,
     description,
@@ -651,38 +789,229 @@ function buildFallbackAgentIoTools() {
         limit: { type: 'integer', minimum: 1, maximum: limitMax }
       }
     },
-    output_schema: {
-      type: 'object',
-      additionalProperties: false,
-      required: ['items', 'citations', 'summary'],
-      properties: {
-        items: { type: 'array', items: { type: 'object' } },
-        citations: {
-          type: 'array',
-          items: {
-            type: 'object',
-            additionalProperties: false,
-            required: ['source', 'pointer', 'reason'],
-            properties: {
-              source: { type: 'string' },
-              pointer: { type: 'string' },
-              reason: { type: 'string' }
-            }
-          }
-        },
-        summary: { type: 'string' }
-      }
-    }
+    output_schema: buildStandardToolOutputSchema()
   });
 
   return [
     makeTool('search_projects', 'Read project records by semantic keyword or exact term.'),
     makeTool('search_protocols', 'Read protocol records, including names and step snippets.'),
     makeTool('search_notebook_entries', 'Read notebook entries with result summaries and timestamps.'),
+    makeTool('search_workflows', 'Read workflow records with project links, block summaries, and recent step previews.'),
     makeTool('search_assays', 'Read assay runs with plate metadata and compact numeric summaries.'),
     makeTool('search_gel_analyses', 'Read gel analysis runs with confidence, calibration, and warning summaries.'),
     makeTool('search_inventory', 'Read chemical and personal inventory records.', 25),
     makeTool('search_papers', 'Read uploaded paper summaries, methods, and reagent extraction notes.'),
+    makeTool('search_uniprot', 'Search UniProtKB protein knowledgebase records by keyword, accession, or gene/protein term.', 25),
+    makeTool('search_pubmed', 'Search PubMed literature records and return article metadata for biomedical queries.', 25),
+    makeTool('search_crossref', 'Search Crossref works metadata by title, DOI, author, or keyword.', 25),
+    makeTool('search_europe_pmc', 'Search Europe PMC literature records with PubMed/PMCID/DOI metadata.', 25),
+    makeTool('search_web', 'Search generic web sources and return source URLs/snippets for recency-aware fallback.', 20),
+    {
+      name: 'toolbox_molarity_calculator',
+      description: 'Compute molarity, mass, volume, concentration, or dilution conversions used in the Toolbox Molarity Calculator.',
+      input_schema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['operation'],
+        properties: {
+          operation: {
+            type: 'string',
+            enum: [
+              'mass_from_concentration_volume',
+              'volume_from_mass_concentration',
+              'concentration_from_mass_volume',
+              'dilution_c1v1'
+            ]
+          },
+          concentration_value: { type: 'number' },
+          concentration_unit: { type: 'string', enum: ['fM', 'pM', 'nM', 'uM', 'mM', 'M'] },
+          volume_value: { type: 'number' },
+          volume_unit: { type: 'string', enum: ['uL', 'mL', 'L'] },
+          mass_value: { type: 'number' },
+          mass_unit: { type: 'string', enum: ['ug', 'mg', 'g', 'kg'] },
+          molecular_weight_g_mol: { type: 'number' },
+          stock_concentration_value: { type: 'number' },
+          stock_concentration_unit: { type: 'string', enum: ['fM', 'pM', 'nM', 'uM', 'mM', 'M'] },
+          target_concentration_value: { type: 'number' },
+          target_concentration_unit: { type: 'string', enum: ['fM', 'pM', 'nM', 'uM', 'mM', 'M'] },
+          target_volume_value: { type: 'number' },
+          target_volume_unit: { type: 'string', enum: ['uL', 'mL', 'L'] },
+          output_unit: { type: 'string' }
+        }
+      },
+      output_schema: buildStandardToolOutputSchema()
+    },
+    {
+      name: 'toolbox_peptide_properties',
+      description: 'Compute peptide mass, pI, net charge, residue counts, and extinction coefficients.',
+      input_schema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['sequence_text'],
+        properties: {
+          sequence_text: { type: 'string' },
+          ph: { type: 'number' }
+        }
+      },
+      output_schema: buildStandardToolOutputSchema()
+    },
+    {
+      name: 'toolbox_buffer_preparer',
+      description: 'Compute required masses or liquid volumes for buffer preparation.',
+      input_schema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['volume_ml', 'components'],
+        properties: {
+          volume_ml: { type: 'number' },
+          components: { type: 'array', items: { type: 'object' } }
+        }
+      },
+      output_schema: buildStandardToolOutputSchema()
+    },
+    {
+      name: 'toolbox_dna_to_protein',
+      description: 'Translate DNA/RNA sequence to protein in selected frame and stop mode.',
+      input_schema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['sequence_text'],
+        properties: {
+          sequence_text: { type: 'string' },
+          sequence_type: { type: 'string', enum: ['DNA', 'RNA'] },
+          frame: { type: 'integer', minimum: -3, maximum: 3 },
+          stop_mode: { type: 'string', enum: ['star', 'trim'] }
+        }
+      },
+      output_schema: buildStandardToolOutputSchema()
+    },
+    {
+      name: 'toolbox_protein_to_dna',
+      description: 'Reverse-translate protein sequence to DNA with optional restriction-site constraints.',
+      input_schema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['protein_sequence'],
+        properties: {
+          protein_sequence: { type: 'string' },
+          organism: { type: 'string' },
+          append_stop_codon: { type: 'boolean' },
+          restriction_sites: { type: 'array', items: { type: 'string' } }
+        }
+      },
+      output_schema: buildStandardToolOutputSchema()
+    },
+    {
+      name: 'toolbox_oligo_properties',
+      description: 'Compute oligo molecular weight, extinction coefficient, and Tm.',
+      input_schema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['sequence_text'],
+        properties: {
+          sequence_text: { type: 'string' },
+          oligo_type: { type: 'string', enum: ['DNA', 'RNA'] }
+        }
+      },
+      output_schema: buildStandardToolOutputSchema()
+    },
+    {
+      name: 'toolbox_extinction_coefficient',
+      description: 'Compute extinction coefficient for protein/peptide or DNA/RNA sequences.',
+      input_schema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['sequence_type', 'sequence_text'],
+        properties: {
+          sequence_type: { type: 'string', enum: ['protein', 'DNA', 'RNA'] },
+          sequence_text: { type: 'string' }
+        }
+      },
+      output_schema: buildStandardToolOutputSchema()
+    },
+    {
+      name: 'toolbox_qpcr_efficiency',
+      description: 'Compute qPCR efficiency from slope or standard-curve points.',
+      input_schema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          slope: { type: 'number' },
+          points: { type: 'array', items: { type: 'object' } }
+        }
+      },
+      output_schema: buildStandardToolOutputSchema()
+    },
+    {
+      name: 'toolbox_plannotate',
+      description: 'Run pLannotate-like annotation from plain-text sequence input only (no file/blob input).',
+      input_schema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['sequence_text'],
+        properties: {
+          sequence_text: { type: 'string' },
+          topology: { type: 'string', enum: ['circular', 'linear'] },
+          detailed: { type: 'boolean' },
+          min_identity: { type: 'number', minimum: 50, maximum: 100 },
+          min_coverage: { type: 'number', minimum: 0.05, maximum: 1 },
+          min_hit_length: { type: 'integer', minimum: 12, maximum: 2000 },
+          max_hits: { type: 'integer', minimum: 1, maximum: 200 },
+          record_name: { type: 'string' }
+        }
+      },
+      output_schema: buildStandardToolOutputSchema()
+    },
+    {
+      name: 'toolbox_crispr_sgrna_designer',
+      description: 'Design CRISPR sgRNA candidates from target sequence text and scoring parameters.',
+      input_schema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['targets_text'],
+        properties: {
+          targets_text: { type: 'string' },
+          reference_genome_id: { type: 'string' },
+          pam_pattern: { type: 'string' },
+          guide_length: { type: 'integer', minimum: 18, maximum: 24 },
+          top_count: { type: 'integer', minimum: 1, maximum: 100 },
+          min_gc: { type: 'number', minimum: 0, maximum: 100 },
+          max_gc: { type: 'number', minimum: 0, maximum: 100 },
+          selected_target_ids: { type: 'array', items: { type: 'string' } }
+        }
+      },
+      output_schema: buildStandardToolOutputSchema()
+    },
+    {
+      name: 'run_python_sandbox',
+      description: 'Run Python code in an isolated temporary sandbox for deterministic calculations and data transforms.',
+      input_schema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['code'],
+        properties: {
+          code: { type: 'string' },
+          files: {
+            type: 'array',
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              required: ['path', 'content'],
+              properties: {
+                path: { type: 'string' },
+                content: { type: 'string' }
+              }
+            }
+          },
+          timeout_ms: { type: 'integer', minimum: 500, maximum: 15000 },
+          readback_paths: { type: 'array', items: { type: 'string' } },
+          artifact_paths: { type: 'array', items: { type: 'string' } },
+          persist_artifacts: { type: 'boolean' },
+          task_type: { type: 'string' }
+        }
+      },
+      output_schema: buildStandardToolOutputSchema()
+    },
     {
       name: 'download_paper_pdf',
       description: 'Write tool. Download a paper PDF and optional SI PDFs into the configured storage path.',
@@ -700,28 +1029,7 @@ function buildFallbackAgentIoTools() {
           storage_path: { type: 'string' }
         }
       },
-      output_schema: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['items', 'citations', 'summary'],
-        properties: {
-          items: { type: 'array', items: { type: 'object' } },
-          citations: {
-            type: 'array',
-            items: {
-              type: 'object',
-              additionalProperties: false,
-              required: ['source', 'pointer', 'reason'],
-              properties: {
-                source: { type: 'string' },
-                pointer: { type: 'string' },
-                reason: { type: 'string' }
-              }
-            }
-          },
-          summary: { type: 'string' }
-        }
-      }
+      output_schema: buildStandardToolOutputSchema()
     }
   ];
 }
@@ -780,13 +1088,15 @@ function buildAgentToolContractPrompt(contract) {
 }
 
 const AGENT_IO_CONTRACT = normalizeAgentIoContract(AGENT_IO_CONTRACT_RAW);
+const AGENT_TOOL_REGISTRY = loadToolContract(AGENT_IO_CONTRACT);
 const AGENT_TOOL_DEFINITIONS = AGENT_IO_CONTRACT.tools.map((tool) => ({
   type: 'function',
   name: tool.name,
   description: tool.description,
   parameters: cloneJson(tool.input_schema, { type: 'object', additionalProperties: false, properties: {} })
 }));
-const AGENT_TOOL_DEFINITION_MAP = new Map(AGENT_IO_CONTRACT.tools.map((tool) => [tool.name, tool]));
+const AGENT_TOOL_DEFINITION_MAP = AGENT_TOOL_REGISTRY.toolMap;
+const AGENT_TOOL_DEFINITION_INPUT_MAP = new Map(AGENT_TOOL_DEFINITIONS.map((tool) => [tool.name, tool]));
 const AGENT_TOOL_OUTPUT_ENVELOPE = AGENT_IO_CONTRACT.tool_output_envelope && typeof AGENT_IO_CONTRACT.tool_output_envelope === 'object'
   ? AGENT_IO_CONTRACT.tool_output_envelope
   : {};
@@ -845,6 +1155,17 @@ const AGENT_RESULT_SCHEMA = {
         open_questions: { type: 'array', items: { type: 'string' } },
         verification_notes: { type: 'array', items: { type: 'string' } }
       }
+    },
+    routing: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        intent: { type: 'string' },
+        confidence: { type: 'number', minimum: 0, maximum: 1 },
+        entities: { type: 'object', additionalProperties: true },
+        plan: { type: 'object', additionalProperties: true },
+        classifier: { type: 'object', additionalProperties: true }
+      }
     }
   }
 };
@@ -880,6 +1201,48 @@ function cleanText(value, maxLength = 2000) {
   return `${text.slice(0, maxLength)}...`;
 }
 
+function uniqueStrings(values, max = 50) {
+  const seen = new Set();
+  const out = [];
+  asArray(values).forEach((value) => {
+    const normalized = cleanText(value, 220);
+    if (!normalized) {
+      return;
+    }
+    const key = normalized.toLowerCase();
+    if (seen.has(key) || out.length >= max) {
+      return;
+    }
+    seen.add(key);
+    out.push(normalized);
+  });
+  return out;
+}
+
+const {
+  normalizeRoutingPayload,
+  buildRoutingAssumptionRows,
+  normalizeNotebookDraftPayload,
+  buildNotebookDraftAssumptionRows,
+  maybeBuildNotebookDraft
+} = createAgentWorkflowHelpers({
+  cleanText,
+  asArray,
+  clamp,
+  routingIntents: ROUTING_INTENTS,
+  buildNotebookDraft
+});
+
+const {
+  searchUniProtRecords,
+  searchPubMedRecords,
+  searchCrossrefRecords,
+  searchEuropePmcRecords
+} = createExternalBioSearchHelpers({
+  cleanText,
+  clamp
+});
+
 function safeParseJson(text, fallback) {
   try {
     const parsed = JSON.parse(String(text || ''));
@@ -890,6 +1253,11 @@ function safeParseJson(text, fallback) {
   } catch {
     return fallback;
   }
+}
+
+function toFiniteNumber(value, fallback = 0) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
 }
 
 function extractResponseText(payload) {
@@ -930,6 +1298,398 @@ function containsWriteIntent(text) {
 
 function isWriteTool(name) {
   return String(name || '').trim() === 'download_paper_pdf';
+}
+
+function isComputeTool(name) {
+  const normalized = String(name || '').trim();
+  return [
+    'run_python_sandbox',
+    'toolbox_molarity_calculator',
+    'toolbox_peptide_properties',
+    'toolbox_buffer_preparer',
+    'toolbox_dna_to_protein',
+    'toolbox_protein_to_dna',
+    'toolbox_oligo_properties',
+    'toolbox_extinction_coefficient',
+    'toolbox_qpcr_efficiency',
+    'toolbox_plannotate',
+    'toolbox_crispr_sgrna_designer'
+  ].includes(normalized);
+}
+
+function buildSnapshotBundleAssumptionRows(snapshot) {
+  const source = snapshot && typeof snapshot === 'object' ? snapshot : {};
+  const dataFilePath = cleanText(source.data_file_path, 1600);
+  if (!dataFilePath) {
+    return ['No data bundle path was provided; retrieval may rely on in-memory snapshot fallback.'];
+  }
+  const bundlePaths = getBundlePaths({
+    dataFilePath,
+    fallbackDataFilePath: getDefaultDataFilePath()
+  });
+  return [
+    `Data file: ${dataFilePath}`,
+    `SQLite index: ${bundlePaths.sqlitePath}`,
+    `Protocol sidecar: ${bundlePaths.protocolsPath}`,
+    `Notebook sidecar: ${bundlePaths.notebookPagesPath}`
+  ];
+}
+
+function buildResponseLayerAssumptionRows(responseLayer) {
+  const source = responseLayer && typeof responseLayer === 'object' ? responseLayer : {};
+  const sourceSummary = source.source_summary && typeof source.source_summary === 'object'
+    ? source.source_summary
+    : {};
+  const groups = asArray(sourceSummary.groups);
+  return [
+    `Response layer type=${cleanText(source.response_type, 80) || 'factual_answer'} confidence_label=${cleanText(source.confidence_label, 20) || 'low'}.`,
+    `Response layer source groups=${groups.length} total_sources=${Number(sourceSummary.total_sources) || 0} unresolved_fields=${asArray(source.unresolved_fields).length}.`
+  ];
+}
+
+function applyResponseLayerToOutput({
+  normalized,
+  routing,
+  notebookDraft,
+  toolTrace
+}) {
+  const source = normalized && typeof normalized === 'object' ? normalized : {};
+  const responseLayer = finalizeAgentResponse({
+    answer: source.answer,
+    confidence: source.confidence,
+    routing,
+    notebookDraft,
+    toolTrace: asArray(toolTrace),
+    citations: asArray(source.citations)
+  });
+  return {
+    ...source,
+    answer: responseLayer.answer,
+    response_type: responseLayer.response_type,
+    confidence_label: responseLayer.confidence_label,
+    source_summary: responseLayer.source_summary,
+    unresolved_fields: responseLayer.unresolved_fields
+  };
+}
+
+function buildValidationAssumptionRows(validationMeta) {
+  const validation = validationMeta && typeof validationMeta === 'object' ? validationMeta : {};
+  const violations = asArray(validation.violations);
+  const rows = [
+    `Validation passed=${validation.passed === true} forced_clarification=${validation.forced_clarification === true} violation_count=${violations.length}.`
+  ];
+  if (violations.length) {
+    const top = violations[0];
+    rows.push(
+      `Top validation violation code=${cleanText(top?.code, 80) || '-'} severity=${cleanText(top?.severity, 20) || '-'} message=${cleanText(top?.message, 220) || '-'}.`
+    );
+  }
+  if (asArray(validation.failure_reasons).length) {
+    rows.push(`Validation failure reasons: ${asArray(validation.failure_reasons).join(', ')}.`);
+  }
+  return rows;
+}
+
+function buildProvenanceAssumptionRows(provenanceMeta) {
+  const provenance = provenanceMeta && typeof provenanceMeta === 'object' ? provenanceMeta : {};
+  const sourceEvidence = asArray(provenance.source_evidence);
+  const directCount = sourceEvidence.filter((row) => row?.support_level === 'direct').length;
+  const indirectCount = sourceEvidence.filter((row) => row?.support_level === 'indirect').length;
+  const noneCount = sourceEvidence.filter((row) => row?.support_level === 'none').length;
+  return [
+    `Provenance statements=${sourceEvidence.length} direct=${directCount} indirect=${indirectCount} unsupported=${noneCount}.`,
+    `Unsupported statement count=${Number(provenance.unsupported_statement_count) || 0}.`
+  ];
+}
+
+function applyValidationGateToOutput({
+  routing,
+  normalized,
+  notebookDraft,
+  toolTrace
+}) {
+  const normalizedRouting = normalizeRoutingPayload(routing);
+  const normalizedOutput = normalized && typeof normalized === 'object' ? normalized : {};
+  const validationResult = validateAndGateResponse({
+    routing: normalizedRouting,
+    normalized: normalizedOutput,
+    notebookDraft: normalizeNotebookDraftPayload(notebookDraft),
+    toolTrace: asArray(toolTrace),
+    citations: asArray(normalizedOutput.citations)
+  });
+  const validationMeta = validationResult.validation && typeof validationResult.validation === 'object'
+    ? validationResult.validation
+    : {
+      passed: true,
+      forced_clarification: false,
+      violations: [],
+      failure_reasons: []
+    };
+  const provenanceMeta = validationResult.provenance && typeof validationResult.provenance === 'object'
+    ? validationResult.provenance
+    : {
+      source_evidence: [],
+      unsupported_statement_count: 0
+    };
+  let routed = normalizedRouting;
+  let finalized = {
+    ...normalizedOutput
+  };
+
+  if (validationMeta.forced_clarification === true) {
+    const clarificationAnswer = cleanText(validationResult?.clarification?.answer, 400)
+      || cleanText(routed.plan?.clarification_question, 400)
+      || 'Could you clarify the missing details so I can continue safely?';
+    const clarificationReason = cleanText(validationResult?.clarification?.reason, 260)
+      || 'Response validation requested clarification.';
+    routed = applyRoutingPlanPatch(routed, {
+      needs_clarification: true,
+      clarification_reason: clarificationReason,
+      clarification_question: cleanText(validationResult?.clarification?.question, 320) || clarificationAnswer
+    });
+    finalized = applyResponseLayerToOutput({
+      normalized: {
+        ...finalized,
+        answer: clarificationAnswer
+      },
+      routing: routed,
+      notebookDraft,
+      toolTrace
+    });
+  }
+
+  return {
+    routing: routed,
+    normalized: finalized,
+    validation: {
+      passed: validationMeta.passed === true,
+      forced_clarification: validationMeta.forced_clarification === true,
+      violations: asArray(validationMeta.violations).map((row) => ({
+        code: cleanText(row?.code, 80),
+        severity: cleanText(row?.severity, 20),
+        message: cleanText(row?.message, 280),
+        detail: cleanText(row?.detail, 360)
+      })).filter((row) => row.code || row.message),
+      failure_reasons: asArray(validationMeta.failure_reasons).map((row) => cleanText(row, 80)).filter(Boolean)
+    },
+    provenance: {
+      source_evidence: asArray(provenanceMeta.source_evidence).map((row) => ({
+        statement: cleanText(row?.statement, 360),
+        support_level: cleanText(row?.support_level, 20) || 'none',
+        supports: asArray(row?.supports).map((support) => ({
+          source: cleanText(support?.source, 120),
+          pointer: cleanText(support?.pointer, 220),
+          overlap: Number.isFinite(Number(support?.overlap)) ? Number(support.overlap) : 0
+        })).filter((support) => support.source || support.pointer)
+      })).filter((row) => row.statement),
+      unsupported_statement_count: Number.isFinite(Number(provenanceMeta.unsupported_statement_count))
+        ? Number(provenanceMeta.unsupported_statement_count)
+        : 0
+    }
+  };
+}
+
+function createLifecycleToolRunner({
+  snapshot,
+  allowWriteTools = false,
+  lifecycleRecorder
+}) {
+  return async (toolName, args, options = {}) => {
+    const normalizedArgs = normalizeToolInvocationArgs(args);
+    const effectiveAllowWrite = options?.allowWriteTools === true || allowWriteTools === true;
+    recordLifecycleEvent(lifecycleRecorder, {
+      stage: 'tool_call_started',
+      status: 'started',
+      tool_name: toolName,
+      tool_args: normalizedArgs,
+      message: `Started tool call for ${cleanText(toolName, 120) || 'unknown_tool'}.`
+    });
+    try {
+      const result = await runAgentTool(toolName, normalizedArgs, snapshot, {
+        ...options,
+        allowWriteTools: effectiveAllowWrite
+      });
+      if (result?.ok === false) {
+        recordLifecycleEvent(lifecycleRecorder, {
+          stage: 'tool_call_failed',
+          status: 'failed',
+          tool_name: toolName,
+          tool_args: normalizedArgs,
+          tool_output: result,
+          message: cleanText(result?.error || result?.summary, 320) || 'Tool call returned an error envelope.'
+        });
+      } else {
+        recordLifecycleEvent(lifecycleRecorder, {
+          stage: 'tool_call_completed',
+          status: 'ok',
+          tool_name: toolName,
+          tool_args: normalizedArgs,
+          tool_output: result,
+          message: cleanText(result?.summary, 280) || 'Tool call completed.'
+        });
+      }
+      return result;
+    } catch (error) {
+      const message = cleanText(String(error?.message || error), 320) || 'Tool call failed.';
+      recordLifecycleEvent(lifecycleRecorder, {
+        stage: 'tool_call_failed',
+        status: 'failed',
+        tool_name: toolName,
+        tool_args: normalizedArgs,
+        message
+      });
+      throw error;
+    }
+  };
+}
+
+async function flushLifecycleRecorderEvents(logPath, lifecycleRecorder) {
+  const recorder = lifecycleRecorder && typeof lifecycleRecorder === 'object' ? lifecycleRecorder : null;
+  if (!recorder) {
+    return;
+  }
+  const start = Number.isFinite(Number(recorder.flushed_count))
+    ? Number(recorder.flushed_count)
+    : 0;
+  const events = asArray(recorder.events);
+  for (let index = start; index < events.length; index += 1) {
+    await appendAgentChatLogEntry(logPath, formatAgentChatLogEntry(events[index]));
+  }
+  recorder.flushed_count = events.length;
+}
+
+function applyRoutingPlanPatch(routing, planPatch = {}) {
+  const normalizedRouting = normalizeRoutingPayload(routing);
+  const patch = planPatch && typeof planPatch === 'object' ? planPatch : {};
+  return normalizeRoutingPayload({
+    ...normalizedRouting,
+    plan: {
+      ...(normalizedRouting.plan || {}),
+      ...patch
+    }
+  });
+}
+
+function appendCitations(target, citations) {
+  const source = Array.isArray(target) ? target : [];
+  asArray(citations).forEach((citation) => {
+    source.push({
+      source: cleanText(citation?.source, 120),
+      pointer: cleanText(citation?.pointer, 220),
+      reason: cleanText(citation?.reason, 260)
+    });
+  });
+  return source;
+}
+
+function maybeCollectProjectEvidence({
+  message,
+  routing,
+  snapshot,
+  projectId = '',
+  projectName = ''
+}) {
+  const normalizedRouting = normalizeRoutingPayload(routing);
+  if (normalizedRouting.intent !== 'project_science_question') {
+    return null;
+  }
+  if (normalizedRouting.plan.needs_clarification) {
+    return null;
+  }
+
+  const evidence = retrieveProjectEvidence({
+    message,
+    entities: normalizedRouting.entities,
+    selectedProjectId: cleanText(projectId, 80),
+    selectedProjectName: cleanText(projectName, 180),
+    snapshot,
+    maxPerSource: 3
+  });
+  if (!evidence || evidence.needs_clarification) {
+    return null;
+  }
+  return evidence;
+}
+
+function buildProjectEvidenceAssumptionRows(projectEvidence) {
+  const source = projectEvidence && typeof projectEvidence === 'object' ? projectEvidence : {};
+  return asArray(source.summary_rows).map((row) => cleanText(row, 260)).filter(Boolean);
+}
+
+function maybeCollectPaperEvidence({
+  message,
+  routing,
+  snapshot
+}) {
+  const normalizedRouting = normalizeRoutingPayload(routing);
+  if (normalizedRouting.intent !== 'paper_analysis') {
+    return null;
+  }
+  if (normalizedRouting.plan.needs_clarification) {
+    return null;
+  }
+
+  const resolved = resolvePaperRequest({
+    message,
+    entities: normalizedRouting.entities,
+    papers: asArray(snapshot.papers),
+    projects: asArray(snapshot.projects),
+    maxCandidates: 6
+  });
+  const selected = resolved?.selected && typeof resolved.selected === 'object' ? resolved.selected : {};
+  const secondary = resolved?.secondary_selected && typeof resolved.secondary_selected === 'object'
+    ? resolved.secondary_selected
+    : {};
+  const candidates = asArray(resolved?.candidates);
+
+  const summaryRows = [
+    `Paper mode=${cleanText(resolved?.mode, 80) || 'general_paper_query'} deep_read=${resolved?.requires_deep_reading === true} compare=${cleanText(resolved?.mode, 80) === 'compare_papers'}.`,
+    `Paper selection=${cleanText(selected.paper_title || selected.paper_id, 220) || '-'} availability=${cleanText(resolved?.availability?.availability_status, 80) || 'unknown'} deep_ready=${resolved?.availability?.deep_read_ready === true}.`
+  ];
+  if (cleanText(secondary.paper_title || secondary.paper_id, 220)) {
+    summaryRows.push(
+      `Paper comparison target=${cleanText(secondary.paper_title || secondary.paper_id, 220)} `
+      + `availability=${cleanText(resolved?.secondary_availability?.availability_status, 80) || 'unknown'} `
+      + `deep_ready=${resolved?.secondary_availability?.deep_read_ready === true}.`
+    );
+  }
+  if (cleanText(resolved?.comparison_summary, 1200)) {
+    summaryRows.push(cleanText(resolved.comparison_summary, 1200));
+  }
+
+  const citations = [];
+  const pushCitation = (sourceLabel, paperId, paperTitle, reason) => {
+    const pointer = cleanText(paperId || paperTitle, 220);
+    if (!pointer) {
+      return;
+    }
+    citations.push({
+      source: cleanText(sourceLabel, 120),
+      pointer,
+      reason: cleanText(reason, 220)
+    });
+  };
+
+  pushCitation('paper', selected.paper_id, selected.paper_title, 'Resolved as primary paper candidate for current request.');
+  pushCitation('paper', secondary.paper_id, secondary.paper_title, 'Resolved as secondary comparison paper candidate.');
+  candidates.forEach((candidate) => {
+    pushCitation(
+      'paper',
+      candidate?.paper_id,
+      candidate?.paper_title,
+      `Phase 7 candidate score=${Number(candidate?.score || 0).toFixed(2)} availability=${cleanText(candidate?.availability_status, 80) || 'unknown'}.`
+    );
+  });
+
+  return {
+    summary_rows: uniqueStrings(summaryRows).filter(Boolean),
+    citations
+  };
+}
+
+function buildPaperEvidenceAssumptionRows(paperEvidence) {
+  const source = paperEvidence && typeof paperEvidence === 'object' ? paperEvidence : {};
+  return asArray(source.summary_rows).map((row) => cleanText(row, 260)).filter(Boolean);
 }
 
 function buildIntermediateState(stage, goal, extras = {}) {
@@ -980,6 +1740,9 @@ function normalizeAgentSnapshot(rawSnapshot) {
   const gelAnalyses = asArray(snapshot.gelAnalyses).length
     ? asArray(snapshot.gelAnalyses).slice(0, 80)
     : asArray(experimentData.gel_runs).slice(0, 80);
+  const normalizedChemicalInventory = asArray(snapshot.inventory?.chemicals).length
+    ? asArray(snapshot.inventory.chemicals).slice(0, 220)
+    : asArray(snapshot.labInventory?.chemicals).slice(0, 220);
   const normalizedExperimentData = {
     schema_name: cleanText(experimentData.schema_name, 80) || 'enana_experiment_json',
     schema_version: cleanText(experimentData.schema_version, 20) || '1.0',
@@ -994,10 +1757,11 @@ function normalizeAgentSnapshot(rawSnapshot) {
   if (!normalizedExperimentData.gel_runs.length && gelAnalyses.length) {
     normalizedExperimentData.gel_runs = gelAnalyses;
   }
-  return {
+  const normalizedSnapshot = {
     projects: asArray(snapshot.projects).slice(0, 40),
     protocols: asArray(snapshot.protocols).slice(0, 100),
     notebookEntries: asArray(snapshot.notebookEntries).slice(0, 180),
+    workflows: asArray(snapshot.workflows).slice(0, 120),
     assays,
     gelAnalyses,
     experimentData: normalizedExperimentData,
@@ -1005,14 +1769,21 @@ function normalizeAgentSnapshot(rawSnapshot) {
     inventory: snapshot.inventory && typeof snapshot.inventory === 'object'
       ? {
         personal: normalizedPersonalInventory,
-        chemicals: asArray(snapshot.inventory.chemicals).slice(0, 160)
+        chemicals: normalizedChemicalInventory
       }
-      : { personal: [], chemicals: [] },
+      : {
+        personal: [],
+        chemicals: normalizedChemicalInventory
+      },
+    labInventory: normalizeChemicalStorePayload(snapshot.labInventory),
     settings: {
       storagePath: cleanText(snapshot?.settings?.storagePath || snapshot?.storagePath, 1200)
     },
+    data_file_path: cleanText(snapshot.data_file_path || snapshot.dataFilePath, 1600),
     timestamp: cleanText(snapshot.timestamp, 80)
   };
+  normalizedSnapshot.projectIndex = buildProjectRecordIndex({ snapshot: normalizedSnapshot });
+  return normalizedSnapshot;
 }
 
 function scoreByQuery(text, queryTokens) {
@@ -1079,7 +1850,7 @@ function buildAgentToolOutputEnvelope(toolName, args, rawResult, options = {}) {
   };
 }
 
-async function runAgentTool(name, args, snapshot, options = {}) {
+async function runAgentToolDispatchLegacy(name, args, snapshot, options = {}) {
   const normalizedArgs = normalizeToolInvocationArgs(args);
   const query = cleanText(normalizedArgs?.query, 300);
   const requestedLimit = Number(normalizedArgs?.limit);
@@ -1119,52 +1890,126 @@ async function runAgentTool(name, args, snapshot, options = {}) {
   }
 
   if (name === 'search_protocols') {
-    const items = pickTopMatches(
-      snapshot.protocols,
-      (protocol) => `${protocol?.name || ''} ${protocol?.category || ''} ${
-        asArray(protocol?.steps).map((step) => protocolStepText(step)).filter(Boolean).join(' ')
-      }`,
+    const protocolSearch = await searchProtocolsIndex({
+      dataFilePath: cleanText(snapshot?.data_file_path, 1600),
+      fallbackDataFilePath: getDefaultDataFilePath(),
       query,
-      limit
-    ).map((protocol) => ({
-      id: cleanText(protocol?.id, 80),
-      name: cleanText(protocol?.name, 180),
-      category: cleanText(protocol?.category, 80),
-      steps: asArray(protocol?.steps).slice(0, 8).map((step) => protocolStepText(step)).filter(Boolean)
-    }));
+      limit,
+      snapshot
+    });
+    const items = asArray(protocolSearch.items).slice(0, limit).map((item) => ({
+      id: cleanText(item?.id, 80),
+      name: cleanText(item?.name, 180),
+      category: cleanText(item?.category, 80),
+      steps: asArray(item?.steps).slice(0, 8).map((step) => protocolStepText(step)).filter(Boolean)
+    })).filter((item) => item.name || item.id);
 
     return buildAgentToolOutputEnvelope(name, normalizedArgs, {
       items,
       citations: items.map((protocol) => ({
         source: 'protocol',
         pointer: protocol.id || protocol.name,
-        reason: 'Matched protocol name/steps.'
+        reason: protocolSearch.usedSqlite
+          ? 'Matched protocol index (SQLite) with deterministic JS ranking.'
+          : 'Matched protocol metadata from snapshot fallback.'
       })),
-      summary: `Found ${items.length} matching protocols.`
+      summary: cleanText(
+        `Found ${items.length} matching protocols.${protocolSearch.usedSqlite ? ' Source: SQLite index.' : ' Source: snapshot fallback.'}`,
+        320
+      )
     });
   }
 
   if (name === 'search_notebook_entries') {
-    const items = pickTopMatches(
-      snapshot.notebookEntries,
-      (entry) => `${entry?.protocolName || ''} ${entry?.result || ''} ${entry?.updatedAt || ''}`,
+    const notebookSearch = await searchNotebookEntriesIndex({
+      dataFilePath: cleanText(snapshot?.data_file_path, 1600),
+      fallbackDataFilePath: getDefaultDataFilePath(),
       query,
-      limit
-    ).map((entry) => ({
+      limit,
+      snapshot
+    });
+    const items = asArray(notebookSearch.items).slice(0, limit).map((entry) => ({
       id: cleanText(entry?.id, 80),
       protocolName: cleanText(entry?.protocolName, 180),
       result: cleanText(entry?.result, 400),
       updatedAt: cleanText(entry?.updatedAt, 80)
-    }));
+    })).filter((entry) => entry.id || entry.protocolName);
 
     return buildAgentToolOutputEnvelope(name, normalizedArgs, {
       items,
       citations: items.map((entry) => ({
         source: 'notebook_entry',
         pointer: entry.id || entry.protocolName,
-        reason: 'Matched notebook summary/results.'
+        reason: notebookSearch.usedSqlite
+          ? 'Matched notebook index (SQLite) with deterministic JS ranking.'
+          : 'Matched notebook summary/results from snapshot fallback.'
       })),
-      summary: `Found ${items.length} matching notebook entries.`
+      summary: cleanText(
+        `Found ${items.length} matching notebook entries.${notebookSearch.usedSqlite ? ' Source: SQLite index.' : ' Source: snapshot fallback.'}`,
+        320
+      )
+    });
+  }
+
+  if (name === 'search_workflows') {
+    const scopedEvidence = retrieveProjectEvidence({
+      message: query,
+      entities: {
+        project: cleanText(normalizedArgs?.project_name || normalizedArgs?.project, 180),
+        workflow_step: cleanText(normalizedArgs?.workflow_step, 180),
+        protocol: cleanText(normalizedArgs?.protocol, 180),
+        activity: query
+      },
+      selectedProjectId: cleanText(normalizedArgs?.project_id, 80),
+      selectedProjectName: cleanText(normalizedArgs?.project_name, 180),
+      snapshot,
+      maxPerSource: limit,
+      allowAmbiguousScope: true
+    });
+
+    const evidenceRows = asArray(scopedEvidence?.packs?.workflows).map((workflow) => ({
+      id: cleanText(workflow?.id, 80),
+      name: cleanText(workflow?.name, 180),
+      project_name: cleanText(workflow?.project_name, 180),
+      description: cleanText(workflow?.description, 400),
+      block_count: Number(workflow?.block_count) || 0,
+      link_count: Number(workflow?.link_count) || 0,
+      steps_preview: asArray(workflow?.steps_preview).map((step) => cleanText(step, 220)).filter(Boolean).slice(0, 8),
+      updated_at: cleanText(workflow?.updated_at, 80)
+    })).filter((workflow) => workflow.id || workflow.name);
+
+    const fallbackRows = pickTopMatches(
+      snapshot.workflows,
+      (workflow) => [
+        workflow?.name,
+        workflow?.description,
+        asArray(workflow?.blocks).map((block) => block?.text || block?.protocolId).join(' ')
+      ].join(' '),
+      query,
+      limit
+    ).map((workflow) => ({
+      id: cleanText(workflow?.id, 80),
+      name: cleanText(workflow?.name, 180),
+      project_name: cleanText(
+        asArray(snapshot.projects).find((project) => project.id === cleanText(workflow?.projectId, 80))?.name,
+        180
+      ),
+      description: cleanText(workflow?.description, 400),
+      block_count: asArray(workflow?.blocks).length,
+      link_count: asArray(workflow?.links).length,
+      steps_preview: asArray(workflow?.blocks).map((block) => cleanText(block?.text || block?.protocolId, 220)).filter(Boolean).slice(0, 8),
+      updated_at: cleanText(workflow?.updatedAt || workflow?.createdAt, 80)
+    }));
+
+    const items = evidenceRows.length ? evidenceRows : fallbackRows;
+    return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+      items: items.slice(0, limit),
+      citations: items.slice(0, limit).map((workflow) => ({
+        source: 'workflow',
+        pointer: workflow.id || workflow.name,
+        reason: 'Matched workflow graph metadata and step previews.'
+      })),
+      summary: `Found ${items.slice(0, limit).length} matching workflows.`
     });
   }
 
@@ -1250,71 +2095,903 @@ async function runAgentTool(name, args, snapshot, options = {}) {
   }
 
   if (name === 'search_inventory') {
-    const personalItems = asArray(snapshot.inventory?.personal).flatMap((zone) => asArray(zone?.items).map((item) => ({
-      zone: cleanText(zone?.zone, 80),
+    const searchMode = cleanText(normalizedArgs?.search_mode, 60) || 'exact_then_alias_then_fuzzy';
+    const searchTerms = uniqueStrings(
+      asArray(normalizedArgs?.search_terms).length
+        ? normalizedArgs.search_terms
+        : buildInventorySearchTerms({
+          inventorySearch: {
+            normalized_query: cleanText(normalizedArgs?.normalized_query, 220),
+            candidate_terms: asArray(normalizedArgs?.candidate_terms),
+            aliases: asArray(normalizedArgs?.aliases),
+            search_mode: searchMode
+          },
+          fallbackQuery: query,
+          maxTerms: 10
+        }),
+      10
+    );
+    const termsToTry = searchTerms.length ? searchTerms : [query];
+    const inventorySearch = await searchInventoryIndex({
+      dataFilePath: cleanText(snapshot?.data_file_path, 1600),
+      fallbackDataFilePath: getDefaultDataFilePath(),
+      query,
+      limit,
+      searchTerms: termsToTry,
+      snapshot
+    });
+    const items = asArray(inventorySearch.items).slice(0, limit).map((item) => ({
+      kind: cleanText(item?.kind, 40),
+      zone: cleanText(item?.zone, 80),
       id: cleanText(item?.id, 80),
       name: cleanText(item?.name, 180),
       quantity: cleanText(item?.quantity, 80),
-      location: cleanText(item?.location, 120)
-    })));
-    const chemicalItems = asArray(snapshot.inventory?.chemicals).map((item) => ({
-      id: cleanText(item?.id, 80),
-      name: cleanText(item?.name, 180),
       amount: cleanText(item?.amount, 80),
       cas: cleanText(item?.cas, 80),
       location: cleanText(item?.location, 120),
-      supplier: cleanText(item?.supplier, 160)
+      supplier: cleanText(item?.supplier, 160),
+      matched_term: cleanText(item?.matched_term, 140)
     }));
-    const merged = [
-      ...personalItems.map((item) => ({ kind: 'personal_inventory', ...item })),
-      ...chemicalItems.map((item) => ({ kind: 'chemical_inventory', ...item }))
-    ];
-    const items = pickTopMatches(
-      merged,
-      (item) => `${item?.kind || ''} ${item?.name || ''} ${item?.cas || ''} ${item?.location || ''} ${item?.supplier || ''}`,
-      query,
-      limit
-    );
+    const termsSummary = asArray(inventorySearch.termsUsed).length
+      ? asArray(inventorySearch.termsUsed).map((term) => cleanText(term, 120)).filter(Boolean).slice(0, 5)
+      : termsToTry.map((term) => cleanText(term, 120)).filter(Boolean).slice(0, 5);
 
     return buildAgentToolOutputEnvelope(name, normalizedArgs, {
       items,
       citations: items.map((item) => ({
         source: item.kind || 'inventory',
         pointer: item.id || item.name,
-        reason: 'Matched inventory name and metadata.'
+        reason: cleanText(
+          `Matched inventory metadata using "${cleanText(item?.matched_term, 120) || cleanText(query, 120) || 'query'}".`,
+          220
+        )
       })),
-      summary: `Found ${items.length} matching inventory records.`
+      summary: cleanText(
+        `Found ${items.length} matching inventory records.${termsSummary.length ? ` Terms tried: ${termsSummary.join(', ')}.` : ''}${inventorySearch.usedSqlite ? ' Source: SQLite index.' : ' Source: snapshot fallback.'}`,
+        320
+      )
     });
   }
 
   if (name === 'search_papers') {
-    const items = pickTopMatches(
-      snapshot.papers,
-      (paper) => `${paper?.title || ''} ${paper?.summary || ''} ${
-        asArray(paper?.methods).flatMap((method) => [method?.title, ...asArray(method?.steps)]).join(' ')
-      }`,
-      query,
-      limit
-    ).map((paper) => ({
-      id: cleanText(paper?.id, 80),
-      title: cleanText(paper?.title, 220),
+    const docs = buildPaperSearchableDocs({
+      papers: asArray(snapshot.papers),
+      projects: asArray(snapshot.projects)
+    });
+    const ranked = retrievePaperCandidates({
+      message: query || 'paper',
+      entities: {
+        paper_title: cleanText(normalizedArgs?.paper_title || normalizedArgs?.title, 220),
+        project: cleanText(normalizedArgs?.project_name || normalizedArgs?.project, 180),
+        protein: cleanText(normalizedArgs?.protein, 140),
+        compound: cleanText(normalizedArgs?.compound, 140)
+      },
+      docs,
+      maxCandidates: limit
+    });
+    const items = ranked.slice(0, limit).map((paper) => ({
+      id: cleanText(paper?.paper_id, 80),
+      title: cleanText(paper?.paper_title, 220),
       summary: cleanText(paper?.summary, 500),
       methods: asArray(paper?.methods).slice(0, 4).map((method) => ({
         title: cleanText(method?.title, 180),
         steps: asArray(method?.steps).slice(0, 6).map((step) => cleanText(step, 200)).filter(Boolean),
         citations: asArray(method?.citations).slice(0, 6).map((citation) => cleanText(citation, 140)).filter(Boolean)
-      }))
+      })),
+      availability_status: cleanText(paper?.availability_status, 80),
+      deep_read_ready: paper?.deep_read_ready === true,
+      ingestion_status: cleanText(paper?.ingestion_status, 80),
+      key_figures: asArray(paper?.key_figures).map((item) => cleanText(item, 220)).filter(Boolean).slice(0, 8),
+      linked_project_name: cleanText(paper?.linked_project_name, 220),
+      updated_at: cleanText(paper?.updated_at, 80)
     }));
+    const deepReadyCount = items.filter((item) => item.deep_read_ready === true).length;
 
     return buildAgentToolOutputEnvelope(name, normalizedArgs, {
       items,
       citations: items.map((paper) => ({
         source: 'paper',
         pointer: paper.id || paper.title,
-        reason: 'Matched paper title, summary, or extracted methods.'
+        reason: 'Matched paper title, summary, methods, reagents, or key-figure metadata.'
       })),
-      summary: `Found ${items.length} matching papers.`
+      summary: `Found ${items.length} matching papers (${deepReadyCount} deep-ready).`
     });
+  }
+
+  if (name === 'search_web') {
+    if (!query) {
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+        items: [],
+        citations: [],
+        summary: 'No query was provided for web search.'
+      });
+    }
+
+    try {
+      const rows = await searchWebResults({ query, limit });
+      const items = asArray(rows).slice(0, limit).map((item) => {
+        const url = cleanText(item?.url, 1800);
+        let sourceDomain = cleanText(item?.source_domain, 160).toLowerCase();
+        if (!sourceDomain && url) {
+          try {
+            sourceDomain = cleanText(new URL(url).hostname, 160).toLowerCase();
+          } catch {
+            sourceDomain = '';
+          }
+        }
+        return {
+          title: cleanText(item?.title, 320) || cleanText(url, 320),
+          url,
+          snippet: cleanText(item?.snippet, 900),
+          source_domain: sourceDomain,
+          published_at: cleanText(item?.published_at, 80)
+        };
+      }).filter((item) => item.title || item.url || item.snippet);
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+        items,
+        citations: items.map((item, index) => ({
+          source: 'web_source',
+          pointer: item.url || item.title || `web_result_${index + 1}`,
+          reason: `Matched generic web source from ${item.source_domain || 'unknown domain'}.`
+        })),
+        summary: `Found ${items.length} matching web sources.`
+      });
+    } catch (error) {
+      return buildAgentToolOutputEnvelope(
+        name,
+        normalizedArgs,
+        {
+          items: [],
+          citations: [],
+          summary: 'Web search failed.'
+        },
+        {
+          ok: false,
+          error: cleanText(error?.message || error, 600)
+        }
+      );
+    }
+  }
+
+  if (name === 'search_uniprot') {
+    if (!query) {
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+        items: [],
+        citations: [],
+        summary: 'No query was provided for UniProt search.'
+      });
+    }
+
+    try {
+      const items = await searchUniProtRecords(query, limit);
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+        items,
+        citations: items.map((item) => ({
+          source: 'uniprot',
+          pointer: item.accession || item.entry_id,
+          reason: 'Matched UniProtKB protein record.'
+        })),
+        summary: `Found ${items.length} matching UniProt records.`
+      });
+    } catch (error) {
+      return buildAgentToolOutputEnvelope(
+        name,
+        normalizedArgs,
+        {
+          items: [],
+          citations: [],
+          summary: 'UniProt search failed.'
+        },
+        {
+          ok: false,
+          error: cleanText(error?.message || error, 600)
+        }
+      );
+    }
+  }
+
+  if (name === 'search_pubmed') {
+    if (!query) {
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+        items: [],
+        citations: [],
+        summary: 'No query was provided for PubMed search.'
+      });
+    }
+
+    try {
+      const items = await searchPubMedRecords(query, limit);
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+        items,
+        citations: items.map((item) => ({
+          source: 'pubmed',
+          pointer: item.pmid,
+          reason: 'Matched PubMed article metadata.'
+        })),
+        summary: `Found ${items.length} matching PubMed records.`
+      });
+    } catch (error) {
+      return buildAgentToolOutputEnvelope(
+        name,
+        normalizedArgs,
+        {
+          items: [],
+          citations: [],
+          summary: 'PubMed search failed.'
+        },
+        {
+          ok: false,
+          error: cleanText(error?.message || error, 600)
+        }
+      );
+    }
+  }
+
+  if (name === 'search_crossref') {
+    if (!query) {
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+        items: [],
+        citations: [],
+        summary: 'No query was provided for Crossref search.'
+      });
+    }
+
+    try {
+      const items = await searchCrossrefRecords(query, limit);
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+        items,
+        citations: items.map((item) => ({
+          source: 'crossref',
+          pointer: item.doi || item.url || item.title,
+          reason: 'Matched Crossref works metadata.'
+        })),
+        summary: `Found ${items.length} matching Crossref records.`
+      });
+    } catch (error) {
+      return buildAgentToolOutputEnvelope(
+        name,
+        normalizedArgs,
+        {
+          items: [],
+          citations: [],
+          summary: 'Crossref search failed.'
+        },
+        {
+          ok: false,
+          error: cleanText(error?.message || error, 600)
+        }
+      );
+    }
+  }
+
+  if (name === 'search_europe_pmc') {
+    if (!query) {
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+        items: [],
+        citations: [],
+        summary: 'No query was provided for Europe PMC search.'
+      });
+    }
+
+    try {
+      const items = await searchEuropePmcRecords(query, limit);
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+        items,
+        citations: items.map((item) => ({
+          source: 'europe_pmc',
+          pointer: item.pmid || item.pmcid || item.doi || item.id,
+          reason: 'Matched Europe PMC literature metadata.'
+        })),
+        summary: `Found ${items.length} matching Europe PMC records.`
+      });
+    } catch (error) {
+      return buildAgentToolOutputEnvelope(
+        name,
+        normalizedArgs,
+        {
+          items: [],
+          citations: [],
+          summary: 'Europe PMC search failed.'
+        },
+        {
+          ok: false,
+          error: cleanText(error?.message || error, 600)
+        }
+      );
+    }
+  }
+
+  if (name === 'toolbox_molarity_calculator') {
+    const operation = cleanText(normalizedArgs?.operation, 80);
+    const defaultConcentrationUnit = cleanText(normalizedArgs?.concentration_unit, 8) || 'mM';
+    const defaultVolumeUnit = cleanText(normalizedArgs?.volume_unit, 8) || 'mL';
+    const defaultMassUnit = cleanText(normalizedArgs?.mass_unit, 8) || 'mg';
+    let resultValue = 0;
+    let resultUnit = cleanText(normalizedArgs?.output_unit, 16);
+    let intermediate = {};
+    let summary = '';
+
+    if (operation === 'mass_from_concentration_volume') {
+      const concentrationM = toolboxConcentrationToM(normalizedArgs?.concentration_value, defaultConcentrationUnit);
+      const volumeL = toolboxVolumeToL(normalizedArgs?.volume_value, defaultVolumeUnit);
+      const mw = toFiniteNumber(normalizedArgs?.molecular_weight_g_mol);
+      const massG = concentrationM * volumeL * mw;
+      resultUnit = resultUnit || defaultMassUnit;
+      resultValue = toolboxMassFromG(massG, resultUnit);
+      intermediate = { concentration_M: concentrationM, volume_L: volumeL, molecular_weight_g_mol: mw, mass_g: massG };
+      summary = `Calculated mass from concentration and volume in ${resultUnit}.`;
+    } else if (operation === 'volume_from_mass_concentration') {
+      const massG = toolboxMassToG(normalizedArgs?.mass_value, defaultMassUnit);
+      const mw = toFiniteNumber(normalizedArgs?.molecular_weight_g_mol);
+      const concentrationM = toolboxConcentrationToM(normalizedArgs?.concentration_value, defaultConcentrationUnit);
+      const moles = mw > 0 ? (massG / mw) : 0;
+      const volumeL = concentrationM > 0 ? (moles / concentrationM) : 0;
+      resultUnit = resultUnit || defaultVolumeUnit;
+      resultValue = toolboxVolumeFromL(volumeL, resultUnit);
+      intermediate = { mass_g: massG, molecular_weight_g_mol: mw, concentration_M: concentrationM, moles, volume_L: volumeL };
+      summary = `Calculated volume from mass and concentration in ${resultUnit}.`;
+    } else if (operation === 'concentration_from_mass_volume') {
+      const massG = toolboxMassToG(normalizedArgs?.mass_value, defaultMassUnit);
+      const mw = toFiniteNumber(normalizedArgs?.molecular_weight_g_mol);
+      const volumeL = toolboxVolumeToL(normalizedArgs?.volume_value, defaultVolumeUnit);
+      const moles = mw > 0 ? (massG / mw) : 0;
+      const concentrationM = volumeL > 0 ? (moles / volumeL) : 0;
+      resultUnit = resultUnit || defaultConcentrationUnit;
+      resultValue = toolboxConcentrationFromM(concentrationM, resultUnit);
+      intermediate = { mass_g: massG, molecular_weight_g_mol: mw, volume_L: volumeL, moles, concentration_M: concentrationM };
+      summary = `Calculated concentration from mass and volume in ${resultUnit}.`;
+    } else if (operation === 'dilution_c1v1') {
+      const stockUnit = cleanText(normalizedArgs?.stock_concentration_unit, 8) || 'mM';
+      const targetUnit = cleanText(normalizedArgs?.target_concentration_unit, 8) || 'mM';
+      const targetVolumeUnit = cleanText(normalizedArgs?.target_volume_unit, 8) || 'mL';
+      const stockM = toolboxConcentrationToM(normalizedArgs?.stock_concentration_value, stockUnit);
+      const targetM = toolboxConcentrationToM(normalizedArgs?.target_concentration_value, targetUnit);
+      const targetVolumeL = toolboxVolumeToL(normalizedArgs?.target_volume_value, targetVolumeUnit);
+      const stockVolumeL = stockM > 0 ? ((targetM * targetVolumeL) / stockM) : 0;
+      const diluentL = Math.max(0, targetVolumeL - stockVolumeL);
+      resultUnit = resultUnit || targetVolumeUnit;
+      resultValue = toolboxVolumeFromL(stockVolumeL, resultUnit);
+      intermediate = {
+        stock_concentration_M: stockM,
+        target_concentration_M: targetM,
+        target_volume_L: targetVolumeL,
+        stock_volume_L: stockVolumeL,
+        diluent_volume_L: diluentL,
+        diluent_volume_in_output_unit: toolboxVolumeFromL(diluentL, resultUnit)
+      };
+      summary = `Calculated stock and diluent volumes for C1V1=C2V2 in ${resultUnit}.`;
+    } else {
+      return buildAgentToolOutputEnvelope(
+        name,
+        normalizedArgs,
+        { items: [], citations: [], summary: 'Unsupported molarity operation.' },
+        { ok: false, error: `Unsupported operation: ${operation}` }
+      );
+    }
+
+    return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+      items: [{
+        operation,
+        result_value: resultValue,
+        result_unit: resultUnit,
+        ...intermediate
+      }],
+      citations: [{
+        source: 'toolbox_molarity',
+        pointer: operation || 'molarity',
+        reason: 'Computed with deterministic unit conversion formulas.'
+      }],
+      summary
+    });
+  }
+
+  if (name === 'toolbox_peptide_properties') {
+    const sequence = cleanProteinSequenceForToolbox(normalizedArgs?.sequence_text, false);
+    if (!sequence) {
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+        items: [],
+        citations: [],
+        summary: 'No valid peptide sequence was provided.'
+      });
+    }
+    const ph = toFiniteNumber(normalizedArgs?.ph, 7);
+    const stats = calculatePeptideStatsForToolbox(sequence, ph);
+    return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+      items: [{ sequence, ph, ...stats }],
+      citations: [{
+        source: 'toolbox_peptide',
+        pointer: `length:${stats.length}`,
+        reason: 'Computed peptide physicochemical properties.'
+      }],
+      summary: `Computed peptide properties for ${stats.length} residues.`
+    });
+  }
+
+  if (name === 'toolbox_buffer_preparer') {
+    const volumeMl = toFiniteNumber(normalizedArgs?.volume_ml);
+    const volumeL = volumeMl / 1000;
+    const components = asArray(normalizedArgs?.components).slice(0, 60);
+    if (!(volumeMl > 0) || !components.length) {
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+        items: [],
+        citations: [],
+        summary: 'Buffer preparation requires positive volume_ml and at least one component.'
+      });
+    }
+
+    let totalSolidMg = 0;
+    let totalLiquidMl = 0;
+    const items = components.map((component, index) => {
+      const form = String(component?.form || 'solid').toLowerCase() === 'liquid' ? 'liquid' : 'solid';
+      const concentrationValue = toFiniteNumber(component?.concentration_value);
+      const concentrationUnitRaw = String(component?.concentration_unit || '').trim();
+      const concentrationUnit = concentrationUnitRaw || (form === 'liquid' ? 'percent_vv' : 'mM');
+      const nameLabel = cleanText(component?.name, 120) || `component_${index + 1}`;
+
+      if (form === 'liquid') {
+        const percent = concentrationUnit.toLowerCase().includes('%')
+          || concentrationUnit.toLowerCase().includes('percent')
+          ? concentrationValue
+          : concentrationValue;
+        const requiredMl = (volumeMl * percent) / 100;
+        const requiredUl = requiredMl * 1000;
+        totalLiquidMl += requiredMl;
+        return {
+          name: nameLabel,
+          form,
+          concentration_value: concentrationValue,
+          concentration_unit: concentrationUnit,
+          required_ml: requiredMl,
+          required_ul: requiredUl
+        };
+      }
+
+      const mw = toFiniteNumber(component?.molecular_weight_g_mol);
+      const concentrationM = toolboxConcentrationToM(
+        concentrationValue,
+        concentrationUnit in TOOLBOX_CONCENTRATION_TO_M ? concentrationUnit : 'mM'
+      );
+      const moles = concentrationM * volumeL;
+      const grams = moles * mw;
+      const mg = grams * 1000;
+      totalSolidMg += mg;
+      return {
+        name: nameLabel,
+        form,
+        concentration_value: concentrationValue,
+        concentration_unit: concentrationUnit,
+        molecular_weight_g_mol: mw,
+        required_mg: mg,
+        required_g: grams
+      };
+    });
+
+    return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+      items,
+      citations: [{
+        source: 'toolbox_buffer',
+        pointer: `components:${items.length}`,
+        reason: 'Calculated component amounts from target buffer formulation.'
+      }],
+      summary: `Calculated ${items.length} buffer components (solids ${totalSolidMg.toFixed(3)} mg, liquids ${totalLiquidMl.toFixed(3)} mL).`
+    });
+  }
+
+  if (name === 'toolbox_dna_to_protein') {
+    const sequenceType = String(normalizedArgs?.sequence_type || 'DNA').toUpperCase() === 'RNA' ? 'RNA' : 'DNA';
+    const cleaned = cleanNucleotideSequenceForToolbox(normalizedArgs?.sequence_text, sequenceType);
+    if (!cleaned) {
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+        items: [],
+        citations: [],
+        summary: 'No valid DNA/RNA sequence was provided.'
+      });
+    }
+    const frameRaw = Math.round(toFiniteNumber(normalizedArgs?.frame, 1));
+    const frame = frameRaw === 0 ? 1 : clamp(frameRaw, -3, 3);
+    const stopMode = String(normalizedArgs?.stop_mode || 'star') === 'trim' ? 'trim' : 'star';
+    const dnaSequence = sequenceType === 'RNA' ? cleaned.replace(/U/g, 'T') : cleaned;
+    const translated = translateDnaSequenceForToolbox(dnaSequence, frame, stopMode);
+    const counts = countNucleotideResidues(cleaned);
+    return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+      items: [{
+        sequence_type: sequenceType,
+        cleaned_sequence: cleaned,
+        nucleotide_counts: counts,
+        ...translated
+      }],
+      citations: [{
+        source: 'toolbox_translation',
+        pointer: `${translated.strand}${translated.frame}`,
+        reason: 'Translated sequence with codon table.'
+      }],
+      summary: `Translated ${translated.codons} codons in frame ${translated.strand}${translated.frame}.`
+    });
+  }
+
+  if (name === 'toolbox_protein_to_dna') {
+    const protein = cleanProteinSequenceForToolbox(normalizedArgs?.protein_sequence, true);
+    if (!protein) {
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+        items: [],
+        citations: [],
+        summary: 'No valid protein sequence was provided.'
+      });
+    }
+
+    const translated = reverseTranslateProteinForToolbox(protein, {
+      appendStopCodon: normalizedArgs?.append_stop_codon === true,
+      restrictionSites: asArray(normalizedArgs?.restriction_sites)
+    });
+
+    return buildAgentToolOutputEnvelope(
+      name,
+      normalizedArgs,
+      { items: [translated], citations: [{
+        source: 'toolbox_reverse_translation',
+        pointer: `aa:${translated.aa_length || protein.length}`,
+        reason: translated.ok ? 'Reverse-translated protein sequence to DNA.' : 'Reverse translation returned a constraint/validation error.'
+      }], summary: translated.ok
+        ? `Reverse-translated protein to ${translated.nt_length} bp DNA.`
+        : (translated.message || 'Reverse translation failed.') },
+      translated.ok ? {} : { ok: false, error: translated.message || 'Reverse translation failed.' }
+    );
+  }
+
+  if (name === 'toolbox_oligo_properties') {
+    const oligoType = String(normalizedArgs?.oligo_type || 'DNA').toUpperCase() === 'RNA' ? 'RNA' : 'DNA';
+    const sequence = cleanNucleotideSequenceForToolbox(normalizedArgs?.sequence_text, oligoType);
+    if (!sequence) {
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+        items: [],
+        citations: [],
+        summary: 'No valid oligo sequence was provided.'
+      });
+    }
+    const counts = countNucleotideResidues(sequence);
+    const mw = oligoMolecularWeightForToolbox(sequence, oligoType);
+    const extinction = oligoExtinctionForToolbox(sequence, oligoType);
+    const tm = oligoTmForToolbox(sequence, oligoType);
+    return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+      items: [{
+        oligo_type: oligoType,
+        sequence,
+        length: sequence.length,
+        counts,
+        molecular_weight_g_mol: mw,
+        extinction_coefficient_m1_cm1: extinction,
+        tm_celsius: tm
+      }],
+      citations: [{
+        source: 'toolbox_oligo',
+        pointer: `${oligoType}:${sequence.length}`,
+        reason: 'Computed oligo MW, extinction, and Tm.'
+      }],
+      summary: `Computed oligo properties for ${sequence.length} nt (${oligoType}).`
+    });
+  }
+
+  if (name === 'toolbox_extinction_coefficient') {
+    const sequenceType = String(normalizedArgs?.sequence_type || 'protein');
+    const normalizedType = sequenceType === 'DNA' || sequenceType === 'RNA' ? sequenceType : 'protein';
+    if (normalizedType === 'protein') {
+      const sequence = cleanProteinSequenceForToolbox(normalizedArgs?.sequence_text, false);
+      if (!sequence) {
+        return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+          items: [],
+          citations: [],
+          summary: 'No valid protein sequence was provided.'
+        });
+      }
+      const counts = countProteinResidues(sequence);
+      const tyr = counts.Y || 0;
+      const trp = counts.W || 0;
+      const cys = counts.C || 0;
+      const reduced = (5500 * trp) + (1490 * tyr);
+      const oxidized = reduced + (125 * Math.floor(cys / 2));
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+        items: [{
+          sequence_type: 'protein',
+          sequence,
+          length: sequence.length,
+          extinction_reduced_m1_cm1: reduced,
+          extinction_oxidized_m1_cm1: oxidized
+        }],
+        citations: [{
+          source: 'toolbox_extinction',
+          pointer: `protein:${sequence.length}`,
+          reason: 'Computed protein extinction coefficients from Trp/Tyr/Cys counts.'
+        }],
+        summary: `Computed protein extinction coefficient for ${sequence.length} residues.`
+      });
+    }
+
+    const sequence = cleanNucleotideSequenceForToolbox(normalizedArgs?.sequence_text, normalizedType);
+    if (!sequence) {
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+        items: [],
+        citations: [],
+        summary: `No valid ${normalizedType} sequence was provided.`
+      });
+    }
+    const extinction = oligoExtinctionForToolbox(sequence, normalizedType);
+    return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+      items: [{
+        sequence_type: normalizedType,
+        sequence,
+        length: sequence.length,
+        extinction_m1_cm1: extinction
+      }],
+      citations: [{
+        source: 'toolbox_extinction',
+        pointer: `${normalizedType}:${sequence.length}`,
+        reason: `Computed ${normalizedType} extinction coefficient.`
+      }],
+      summary: `Computed ${normalizedType} extinction coefficient for ${sequence.length} nt.`
+    });
+  }
+
+  if (name === 'toolbox_qpcr_efficiency') {
+    const inputSlope = toFiniteNumber(normalizedArgs?.slope, Number.NaN);
+    const slopeValid = Number.isFinite(inputSlope) && inputSlope !== 0;
+    const points = asArray(normalizedArgs?.points).map((point) => ({
+      quantity: toFiniteNumber(point?.quantity, Number.NaN),
+      ct: toFiniteNumber(point?.ct, Number.NaN)
+    })).filter((point) => Number.isFinite(point.quantity) && point.quantity > 0 && Number.isFinite(point.ct));
+
+    const xValues = points.map((point) => Math.log10(point.quantity));
+    const yValues = points.map((point) => point.ct);
+    const regression = points.length >= 2 ? linearRegressionForToolbox(xValues, yValues) : null;
+    const usedSlope = slopeValid ? inputSlope : (regression?.slope ?? Number.NaN);
+    if (!Number.isFinite(usedSlope) || usedSlope === 0) {
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+        items: [],
+        citations: [],
+        summary: 'Provide slope or at least two valid qPCR standard-curve points.'
+      });
+    }
+    const efficiencyPercent = ((10 ** (-1 / usedSlope)) - 1) * 100;
+    return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+      items: [{
+        slope: usedSlope,
+        slope_source: slopeValid ? 'input' : 'regression',
+        intercept: regression?.intercept ?? null,
+        r_squared: regression?.rSquared ?? null,
+        points_used: points.length,
+        efficiency_percent: efficiencyPercent
+      }],
+      citations: [{
+        source: 'toolbox_qpcr',
+        pointer: slopeValid ? 'input_slope' : `points:${points.length}`,
+        reason: 'Computed qPCR efficiency with Efficiency = (10^(-1/slope) - 1) * 100.'
+      }],
+      summary: `Computed qPCR efficiency as ${efficiencyPercent.toFixed(2)}%.`
+    });
+  }
+
+  if (name === 'toolbox_plannotate') {
+    const sequenceText = String(normalizedArgs?.sequence_text || '');
+    if (!sequenceText.trim()) {
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+        items: [],
+        citations: [],
+        summary: 'No plain-text sequence was provided for pLannotate.'
+      });
+    }
+
+    try {
+      const result = await annotateWithBlast({
+        sequenceText,
+        topology: String(normalizedArgs?.topology || '') === 'linear' ? 'linear' : 'circular',
+        detailed: normalizedArgs?.detailed === true,
+        minIdentity: clamp(toFiniteNumber(normalizedArgs?.min_identity, 85), 50, 100),
+        minCoverage: clamp(toFiniteNumber(normalizedArgs?.min_coverage, 0.25), 0.05, 1),
+        minHitLength: Math.round(clamp(toFiniteNumber(normalizedArgs?.min_hit_length, 24), 12, 2000)),
+        maxHits: Math.round(clamp(toFiniteNumber(normalizedArgs?.max_hits, 60), 1, 200)),
+        recordName: cleanText(normalizedArgs?.record_name, 120) || 'plasmid'
+      });
+
+      const resultLimit = Math.round(clamp(toFiniteNumber(normalizedArgs?.max_hits, 20), 1, 200));
+      const items = asArray(result?.hits).slice(0, resultLimit).map((hit, index) => ({
+        id: cleanText(`${hit?.sseqid || hit?.Feature || 'hit'}_${index + 1}`, 120),
+        feature: cleanText(hit?.Feature, 180),
+        type: cleanText(hit?.Type, 80),
+        start: Number(toFiniteNumber(hit?.qstart, 0)) + 1,
+        end: Number(toFiniteNumber(hit?.qend, 0)),
+        strand: Number(toFiniteNumber(hit?.sframe, 1)) === -1 ? '-' : '+',
+        identity_percent: Number(toFiniteNumber(hit?.pident, 0)),
+        coverage_percent: Number(toFiniteNumber(hit?.percmatch, 0)),
+        source_db: cleanText(hit?.db, 60),
+        fragment: hit?.fragment === true
+      }));
+      const citations = items.slice(0, 20).map((item) => ({
+        source: 'plannotate',
+        pointer: item.id || item.feature || 'hit',
+        reason: 'Annotated pLannotate feature hit from plain-text sequence.'
+      }));
+      const warningCount = asArray(result?.warnings).length;
+      const summary = `Annotated ${items.length} feature hit(s) from plain-text sequence${warningCount ? ` with ${warningCount} warning(s)` : ''}.`;
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, { items, citations, summary });
+    } catch (error) {
+      return buildAgentToolOutputEnvelope(
+        name,
+        normalizedArgs,
+        {
+          items: [],
+          citations: [],
+          summary: 'pLannotate annotation failed.'
+        },
+        {
+          ok: false,
+          error: cleanText(error?.message || error, 600)
+        }
+      );
+    }
+  }
+
+  if (name === 'toolbox_crispr_sgrna_designer') {
+    const parsedTargets = parseCrisprTargetsTextForToolbox(normalizedArgs?.targets_text);
+    if (!parsedTargets.length) {
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+        items: [],
+        citations: [],
+        summary: 'No valid CRISPR target sequence(s) were parsed.'
+      });
+    }
+
+    const selectedIds = new Set(asArray(normalizedArgs?.selected_target_ids).map((value) => cleanText(value, 80)).filter(Boolean));
+    const selectedTargets = selectedIds.size
+      ? parsedTargets.filter((target) => selectedIds.has(target.id))
+      : parsedTargets;
+    if (!selectedTargets.length) {
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+        items: [],
+        citations: [],
+        summary: 'selected_target_ids did not match any parsed targets.'
+      });
+    }
+
+    const pamPattern = cleanText(normalizedArgs?.pam_pattern, 24) || 'NGG';
+    const guideLength = Math.round(clamp(toFiniteNumber(normalizedArgs?.guide_length, 20), 18, 24));
+    const topCount = Math.round(clamp(toFiniteNumber(normalizedArgs?.top_count, 12), 1, 100));
+    let minGc = clamp(toFiniteNumber(normalizedArgs?.min_gc, 35), 0, 100);
+    let maxGc = clamp(toFiniteNumber(normalizedArgs?.max_gc, 75), 0, 100);
+    if (minGc > maxGc) {
+      const swap = minGc;
+      minGc = maxGc;
+      maxGc = swap;
+    }
+    const referenceGenomeId = cleanText(normalizedArgs?.reference_genome_id, 40) || 'custom';
+    const genomeMultiplier = TOOLBOX_REFERENCE_GENOME_MULTIPLIER[referenceGenomeId] || 1;
+
+    const selectedSites = selectedTargets.flatMap((target) => collectCrisprPamSitesForToolbox(target, guideLength, pamPattern));
+    const backgroundSites = parsedTargets.flatMap((target) => collectCrisprPamSitesForToolbox(target, guideLength, pamPattern));
+
+    const candidates = selectedSites.map((site) => {
+      const gcPercent = calculateGcPercentForToolbox(site.guide_sequence);
+      const onTargetScore = scoreCrisprOnTargetForToolbox(site.guide_sequence);
+      const notes = [];
+      if (/TTTT/.test(site.guide_sequence)) {
+        notes.push('poly-T motif');
+      }
+      if (/(AAAAA|CCCCC|GGGGG|TTTTT)/.test(site.guide_sequence)) {
+        notes.push('homopolymer');
+      }
+      return {
+        ...site,
+        gc_percent: gcPercent,
+        on_target_score: onTargetScore,
+        notes
+      };
+    }).filter((candidate) => candidate.gc_percent >= minGc && candidate.gc_percent <= maxGc);
+
+    if (!candidates.length) {
+      return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+        items: [],
+        citations: [],
+        summary: 'No sgRNA candidates passed GC and PAM filters.'
+      });
+    }
+
+    const evaluated = candidates.slice(0, Math.min(candidates.length, Math.max(topCount * 4, 120), 320))
+      .map((candidate) => {
+        const offTarget = computeCrisprOffTargetStatsForToolbox(candidate, backgroundSites.slice(0, 15000), genomeMultiplier);
+        const totalScore = (candidate.on_target_score * 0.62) + (offTarget.specificity_score * 0.38);
+        return {
+          ...candidate,
+          ...offTarget,
+          total_score: totalScore
+        };
+      })
+      .sort((left, right) => (
+        (right.total_score - left.total_score)
+        || (right.on_target_score - left.on_target_score)
+        || (right.specificity_score - left.specificity_score)
+      ));
+
+    const items = evaluated.slice(0, topCount).map((candidate, index) => ({
+      rank: index + 1,
+      target_id: candidate.target_id,
+      target_name: candidate.target_name,
+      strand: candidate.strand,
+      start: candidate.start,
+      end: candidate.end,
+      guide_sequence: candidate.guide_sequence,
+      pam_sequence: candidate.pam_sequence,
+      gc_percent: candidate.gc_percent,
+      on_target_score: candidate.on_target_score,
+      specificity_score: candidate.specificity_score,
+      off_target_rate: candidate.off_target_rate,
+      total_score: candidate.total_score,
+      mismatch_counts: candidate.mismatch_counts,
+      notes: candidate.notes
+    }));
+    const citations = items.slice(0, 20).map((item) => ({
+      source: 'toolbox_crispr',
+      pointer: `${item.target_id}:${item.start}-${item.end}:${item.strand}`,
+      reason: 'Ranked sgRNA candidate from deterministic CRISPR scoring.'
+    }));
+    return buildAgentToolOutputEnvelope(name, normalizedArgs, {
+      items,
+      citations,
+      summary: `Designed ${items.length} sgRNA candidate(s) from ${selectedTargets.length} selected target(s).`
+    });
+  }
+
+  if (name === 'run_python_sandbox') {
+    const sandboxResult = await runPythonSandbox(normalizedArgs, {
+      sandboxRoot: getAgentPythonSandboxRoot(),
+      preferredPythonBin: cleanText(process.env.ENANA_AGENT_PYTHON_BIN, 220)
+    });
+
+    const readbackFiles = asArray(sandboxResult.readback_files).map((file) => ({
+      path: cleanText(file?.path, 260),
+      content: cleanText(file?.content, 12000),
+      truncated: file?.truncated === true
+    }));
+    const item = {
+      run_id: cleanText(sandboxResult.run_id, 120),
+      status: cleanText(sandboxResult.status, 40),
+      timeout_ms: Number(sandboxResult.timeout_ms) || 0,
+      python_executable: cleanText(sandboxResult.python_executable, 140),
+      exit_code: Number.isFinite(Number(sandboxResult.exit_code)) ? Number(sandboxResult.exit_code) : null,
+      signal: cleanText(sandboxResult.signal, 40),
+      timed_out: sandboxResult.timed_out === true,
+      stdout: cleanText(sandboxResult.stdout, 12000),
+      stderr: cleanText(sandboxResult.stderr, 12000),
+      files_written: asArray(sandboxResult.files_written).map((value) => cleanText(value, 240)).filter(Boolean),
+      readback_files: readbackFiles,
+      warnings: asArray(sandboxResult.warnings).map((value) => cleanText(value, 220)).filter(Boolean),
+      python_task_type: cleanText(normalizedArgs?.task_type, 80),
+      artifact_paths: asArray(normalizedArgs?.artifact_paths).map((value) => cleanText(value, 220)).filter(Boolean),
+      persist_artifacts: normalizedArgs?.persist_artifacts === true
+    };
+    const summary = cleanText(sandboxResult.summary, 320)
+      || (sandboxResult.ok ? 'Python sandbox execution completed.' : 'Python sandbox execution failed.');
+
+    return buildAgentToolOutputEnvelope(
+      name,
+      normalizedArgs,
+      {
+        items: [item],
+        citations: [
+          {
+            source: 'python_sandbox',
+            pointer: item.run_id || 'python_sandbox',
+            reason: sandboxResult.ok
+              ? 'Executed Python code in isolated sandbox.'
+              : 'Python sandbox execution returned an error.'
+          }
+        ],
+        summary
+      },
+      {
+        ok: sandboxResult.ok === true,
+        error: sandboxResult.ok
+          ? ''
+          : cleanText(sandboxResult.error || sandboxResult.stderr, 600)
+      }
+    );
   }
 
   if (name === 'download_paper_pdf') {
@@ -1446,6 +3123,64 @@ async function runAgentTool(name, args, snapshot, options = {}) {
   );
 }
 
+function buildToolFuzzyVocabulary(snapshot) {
+  const source = snapshot && typeof snapshot === 'object' ? snapshot : {};
+  const values = [
+    ...asArray(source.projects).flatMap((item) => [item?.name, item?.summary]),
+    ...asArray(source.protocols).flatMap((item) => [item?.name, item?.category]),
+    ...asArray(source.workflows).flatMap((item) => [
+      item?.name,
+      item?.description,
+      ...asArray(item?.blocks).map((block) => block?.text || block?.protocolId)
+    ]),
+    ...asArray(source.notebookEntries).flatMap((item) => [item?.protocolName, item?.result]),
+    ...asArray(source.assays).flatMap((item) => [item?.name, item?.project_name, item?.notebook_entry_protocol_name]),
+    ...asArray(source.gelAnalyses).flatMap((item) => [item?.name, item?.project_name, item?.notebook_entry_protocol_name]),
+    ...asArray(source.papers).flatMap((item) => [item?.title, item?.summary]),
+    ...asArray(source.inventory?.chemicals).flatMap((item) => [item?.name, item?.cas, item?.supplier]),
+    ...asArray(source.inventory?.personal).flatMap((zone) => asArray(zone?.items).flatMap((item) => [item?.name, item?.location])),
+    'molecular weight',
+    'isoelectric point',
+    'pd-1',
+    'pd1'
+  ];
+  const seen = new Set();
+  const out = [];
+  values.forEach((value) => {
+    const normalized = cleanText(value, 220);
+    if (!normalized) {
+      return;
+    }
+    const key = normalized.toLowerCase();
+    if (seen.has(key)) {
+      return;
+    }
+    seen.add(key);
+    out.push(normalized);
+  });
+  return out;
+}
+
+async function runAgentTool(name, args, snapshot, options = {}) {
+  return executeToolCall(name, normalizeToolInvocationArgs(args), {
+    contract: AGENT_TOOL_REGISTRY,
+    allowWriteTools: options?.allowWriteTools === true,
+    fuzzyVocabulary: buildToolFuzzyVocabulary(snapshot),
+    toEnvelope: (toolName, callArgs, rawResult, envelopeOptions = {}) => buildAgentToolOutputEnvelope(
+      toolName,
+      callArgs,
+      rawResult,
+      envelopeOptions
+    ),
+    dispatch: async (toolName, callArgs) => runAgentToolDispatchLegacy(
+      toolName,
+      callArgs,
+      snapshot,
+      options
+    )
+  });
+}
+
 function extractConversation(rawConversation) {
   return asArray(rawConversation)
     .slice(-10)
@@ -1512,8 +3247,82 @@ function normalizeToolTraceForAgentLog(trace) {
   }));
 }
 
+function normalizeValidationForAgentLog(validation) {
+  const source = validation && typeof validation === 'object' ? validation : {};
+  return {
+    passed: source.passed === true,
+    forced_clarification: source.forced_clarification === true,
+    failure_reasons: asArray(source.failure_reasons).map((item) => cleanText(item, 80)).filter(Boolean),
+    violations: asArray(source.violations).map((item) => ({
+      code: cleanText(item?.code, 80),
+      severity: cleanText(item?.severity, 20),
+      message: cleanText(item?.message, 280),
+      detail: cleanText(item?.detail, 360)
+    })).filter((item) => item.code || item.message)
+  };
+}
+
+function normalizeProvenanceForAgentLog(provenance) {
+  const source = provenance && typeof provenance === 'object' ? provenance : {};
+  return {
+    unsupported_statement_count: Number.isFinite(Number(source.unsupported_statement_count))
+      ? Number(source.unsupported_statement_count)
+      : 0,
+    source_evidence: asArray(source.source_evidence).map((item) => ({
+      statement: cleanText(item?.statement, 300),
+      support_level: cleanText(item?.support_level, 20),
+      supports: asArray(item?.supports).map((support) => ({
+        source: cleanText(support?.source, 120),
+        pointer: cleanText(support?.pointer, 220),
+        overlap: Number.isFinite(Number(support?.overlap)) ? Number(support.overlap) : 0
+      })).filter((support) => support.source || support.pointer)
+    })).filter((item) => item.statement).slice(0, 24)
+  };
+}
+
+function normalizeRoutingForAgentLog(routing) {
+  const normalized = normalizeRoutingPayload(routing);
+  return {
+    intent: normalized.intent,
+    confidence: normalized.confidence,
+    entities: normalized.entities,
+    plan: normalized.plan,
+    classifier: {
+      source: normalized.classifier.source,
+      fallbackAttempted: normalized.classifier.fallbackAttempted,
+      fallbackUsed: normalized.classifier.fallbackUsed,
+      lowConfidence: normalized.classifier.lowConfidence,
+      tieDetected: normalized.classifier.tieDetected,
+      ruleReason: normalized.classifier.ruleReason,
+      fallbackError: normalized.classifier.fallbackError
+    }
+  };
+}
+
 function summarizeAgentResultForLog(result) {
   const source = result && typeof result === 'object' ? result : {};
+  const notebookDraft = normalizeNotebookDraftPayload(source.notebookDraft);
+  const sourceSummary = source.source_summary && typeof source.source_summary === 'object'
+    ? source.source_summary
+    : {};
+  const normalizedSourceSummaryGroups = asArray(sourceSummary.groups).map((group) => ({
+    source_type: cleanText(group?.source_type, 80),
+    label: cleanText(group?.label, 80),
+    count: Number.isFinite(Number(group?.count)) ? Number(group.count) : 0,
+    items: asArray(group?.items).map((item) => ({
+      source_type: cleanText(item?.source_type, 80),
+      source: cleanText(item?.source, 120),
+      pointer: cleanText(item?.pointer, 180),
+      reason: cleanText(item?.reason, 220)
+    }))
+  })).filter((group) => group.source_type || group.label || group.count > 0 || group.items.length > 0);
+  const unresolvedFields = asArray(source.unresolved_fields).map((item) => ({
+    step_id: cleanText(item?.step_id, 120),
+    placeholder_id: cleanText(item?.placeholder_id, 120),
+    placeholder_key: cleanText(item?.placeholder_key, 120),
+    display: cleanText(item?.display, 120),
+    reason: cleanText(item?.reason, 180)
+  })).filter((item) => item.placeholder_id || item.placeholder_key || item.display);
   return {
     ok: source.ok === true,
     provider: cleanText(source.provider, 80),
@@ -1533,6 +3342,26 @@ function summarizeAgentResultForLog(result) {
       reason: cleanText(item?.reason, 220)
     })),
     decisionRecord: normalizeDecisionRecordForAgentLog(source.decisionRecord),
+    routing: normalizeRoutingForAgentLog(source.routing),
+    response_type: cleanText(source.response_type, 80),
+    confidence_label: cleanText(source.confidence_label, 20),
+    source_summary: {
+      total_sources: Number.isFinite(Number(sourceSummary.total_sources)) ? Number(sourceSummary.total_sources) : 0,
+      groups: normalizedSourceSummaryGroups
+    },
+    unresolved_fields: unresolvedFields,
+    validation: normalizeValidationForAgentLog(source.validation),
+    provenance: normalizeProvenanceForAgentLog(source.provenance),
+    notebookDraft: notebookDraft
+      ? {
+        protocol: notebookDraft.protocol,
+        project: notebookDraft.project,
+        notebook_type: notebookDraft.notebook_type,
+        placeholder_count: notebookDraft.placeholder_values.length,
+        unresolved_count: notebookDraft.unresolved_placeholders.length,
+        save: notebookDraft.save
+      }
+      : null,
     intermediateStates: normalizeIntermediateStatesForAgentLog(source.intermediateStates),
     toolTrace: normalizeToolTraceForAgentLog(source.toolTrace),
     error: cleanText(source.error, 2000)
@@ -1750,21 +3579,36 @@ async function requestGeminiGenerateContentWithBackoff({ endpoint, apiKey, model
   });
 }
 
-const CLAUDE_TOOL_DEFINITIONS = AGENT_TOOL_DEFINITIONS.map((tool) => ({
-  name: tool.name,
-  description: tool.description,
-  input_schema: tool.parameters
-}));
-
-const GEMINI_TOOL_DEFINITIONS = [
-  {
-    functionDeclarations: AGENT_TOOL_DEFINITIONS.map((tool) => ({
-      name: tool.name,
-      description: tool.description,
-      parameters: tool.parameters
-    }))
+function resolveAgentToolDefinitions(selectedToolNames = []) {
+  const names = asArray(selectedToolNames).map((name) => cleanText(name, 120)).filter(Boolean);
+  if (!names.length) {
+    return AGENT_TOOL_DEFINITIONS;
   }
-];
+  const picked = names
+    .map((name) => AGENT_TOOL_DEFINITION_INPUT_MAP.get(name))
+    .filter(Boolean);
+  return picked.length ? picked : AGENT_TOOL_DEFINITIONS;
+}
+
+function toClaudeToolDefinitions(toolDefinitions) {
+  return asArray(toolDefinitions).map((tool) => ({
+    name: tool.name,
+    description: tool.description,
+    input_schema: tool.parameters
+  }));
+}
+
+function toGeminiToolDefinitions(toolDefinitions) {
+  return [
+    {
+      functionDeclarations: asArray(toolDefinitions).map((tool) => ({
+        name: tool.name,
+        description: tool.description,
+        parameters: tool.parameters
+      }))
+    }
+  ];
+}
 
 function toClaudeMessage(role, text) {
   return {
@@ -1901,13 +3745,17 @@ async function startAgentSession({
   systemPrompt,
   conversation,
   message,
-  hasLatestUserInConversation
+  hasLatestUserInConversation,
+  toolDefinitions = AGENT_TOOL_DEFINITIONS
 }) {
+  const scopedToolDefinitions = asArray(toolDefinitions);
+  const hasTools = scopedToolDefinitions.length > 0;
   if (provider === LLM_PROVIDERS.CLAUDE) {
     const messages = [
       ...conversation.map((item) => toClaudeMessage(item.role, item.text)),
       ...(hasLatestUserInConversation ? [] : [toClaudeMessage('user', message)])
     ];
+    const claudeTools = toClaudeToolDefinitions(scopedToolDefinitions);
     const response = await requestClaudeMessagesWithBackoff({
       endpoint,
       apiKey,
@@ -1915,7 +3763,7 @@ async function startAgentSession({
         model,
         system: systemPrompt,
         messages,
-        tools: CLAUDE_TOOL_DEFINITIONS,
+        ...(hasTools ? { tools: claudeTools } : {}),
         max_tokens: 1400
       }
     });
@@ -1926,6 +3774,7 @@ async function startAgentSession({
       model,
       systemPrompt,
       messages,
+      toolDefinitions: scopedToolDefinitions,
       raw: response,
       round: 0
     };
@@ -1936,6 +3785,7 @@ async function startAgentSession({
       ...conversation.map((item) => toGeminiContent(item.role, item.text)),
       ...(hasLatestUserInConversation ? [] : [toGeminiContent('user', message)])
     ];
+    const geminiTools = toGeminiToolDefinitions(scopedToolDefinitions);
     const response = await requestGeminiGenerateContentWithBackoff({
       endpoint,
       apiKey,
@@ -1945,12 +3795,14 @@ async function startAgentSession({
           parts: [{ text: systemPrompt }]
         },
         contents,
-        tools: GEMINI_TOOL_DEFINITIONS,
-        toolConfig: {
-          functionCallingConfig: {
-            mode: 'AUTO'
+        ...(hasTools ? { tools: geminiTools } : {}),
+        ...(hasTools ? {
+          toolConfig: {
+            functionCallingConfig: {
+              mode: 'AUTO'
+            }
           }
-        },
+        } : {}),
         generationConfig: {
           maxOutputTokens: 1400
         }
@@ -1963,6 +3815,7 @@ async function startAgentSession({
       model,
       systemPrompt,
       contents,
+      toolDefinitions: scopedToolDefinitions,
       raw: response,
       round: 0
     };
@@ -1978,9 +3831,11 @@ async function startAgentSession({
         ...conversation.map((item) => toInputText(item.role, item.text)),
         ...(hasLatestUserInConversation ? [] : [toInputText('user', message)])
       ],
-      tools: AGENT_TOOL_DEFINITIONS,
-      tool_choice: 'auto',
-      parallel_tool_calls: false,
+      ...(hasTools ? {
+        tools: scopedToolDefinitions,
+        tool_choice: 'auto',
+        parallel_tool_calls: false
+      } : {}),
       max_output_tokens: 1400
     }
   });
@@ -1989,6 +3844,7 @@ async function startAgentSession({
     endpoint,
     apiKey,
     model,
+    toolDefinitions: scopedToolDefinitions,
     raw: response,
     round: 0
   };
@@ -2025,6 +3881,9 @@ async function continueAgentSessionWithToolOutputs(session, toolOutputs) {
     return session;
   }
 
+  const scopedToolDefinitions = asArray(session.toolDefinitions);
+  const hasTools = scopedToolDefinitions.length > 0;
+
   if (session.provider === LLM_PROVIDERS.CLAUDE) {
     const byId = new Map(toolOutputs.map((item) => [item.callId, item]));
     const assistantContent = normalizeClaudeAssistantContent(session.raw);
@@ -2046,6 +3905,7 @@ async function continueAgentSessionWithToolOutputs(session, toolOutputs) {
       { role: 'user', content: toolResultBlocks }
     ];
 
+    const claudeTools = toClaudeToolDefinitions(scopedToolDefinitions);
     const response = await requestClaudeMessagesWithBackoff({
       endpoint: session.endpoint,
       apiKey: session.apiKey,
@@ -2053,7 +3913,7 @@ async function continueAgentSessionWithToolOutputs(session, toolOutputs) {
         model: session.model,
         system: session.systemPrompt,
         messages: nextMessages,
-        tools: CLAUDE_TOOL_DEFINITIONS,
+        ...(hasTools ? { tools: claudeTools } : {}),
         max_tokens: 1400
       }
     });
@@ -2094,6 +3954,7 @@ async function continueAgentSessionWithToolOutputs(session, toolOutputs) {
       });
     }
 
+    const geminiTools = toGeminiToolDefinitions(scopedToolDefinitions);
     const response = await requestGeminiGenerateContentWithBackoff({
       endpoint: session.endpoint,
       apiKey: session.apiKey,
@@ -2103,12 +3964,14 @@ async function continueAgentSessionWithToolOutputs(session, toolOutputs) {
           parts: [{ text: session.systemPrompt }]
         },
         contents: nextContents,
-        tools: GEMINI_TOOL_DEFINITIONS,
-        toolConfig: {
-          functionCallingConfig: {
-            mode: 'AUTO'
+        ...(hasTools ? { tools: geminiTools } : {}),
+        ...(hasTools ? {
+          toolConfig: {
+            functionCallingConfig: {
+              mode: 'AUTO'
+            }
           }
-        },
+        } : {}),
         generationConfig: {
           maxOutputTokens: 1400
         }
@@ -2134,9 +3997,11 @@ async function continueAgentSessionWithToolOutputs(session, toolOutputs) {
         call_id: output.callId,
         output: output.output
       })),
-      tools: AGENT_TOOL_DEFINITIONS,
-      tool_choice: 'auto',
-      parallel_tool_calls: false,
+      ...(hasTools ? {
+        tools: scopedToolDefinitions,
+        tool_choice: 'auto',
+        parallel_tool_calls: false
+      } : {}),
       max_output_tokens: 1400
     }
   });
@@ -2236,6 +4101,107 @@ async function requestSynthesisPayload({
   return extractResponseText(response);
 }
 
+async function requestIntentParserPayload({
+  provider,
+  endpoint,
+  apiKey,
+  model,
+  message,
+  conversation,
+  projectName
+}) {
+  const prompt = buildIntentParserPrompt({
+    message,
+    conversation,
+    projectName
+  });
+
+  try {
+    if (provider === LLM_PROVIDERS.CODEX) {
+      const raw = await requestCodexCliText({
+        prompt,
+        model,
+        cwd: getCodexCliWorkingDirectory()
+      });
+      return normalizeIntentParserPayload(raw);
+    }
+
+    if (provider === LLM_PROVIDERS.CLAUDE) {
+      const response = await requestClaudeMessagesWithBackoff({
+        endpoint,
+        apiKey,
+        body: {
+          model,
+          system: 'Return valid JSON only.',
+          max_tokens: 1100,
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'text',
+                  text: prompt
+                }
+              ]
+            }
+          ]
+        }
+      });
+      return normalizeIntentParserPayload(extractClaudeResponseText(response));
+    }
+
+    if (provider === LLM_PROVIDERS.GEMINI) {
+      const response = await requestGeminiGenerateContentWithBackoff({
+        endpoint,
+        apiKey,
+        model,
+        body: {
+          systemInstruction: {
+            parts: [{ text: 'Return valid JSON only.' }]
+          },
+          contents: [
+            {
+              role: 'user',
+              parts: [{ text: prompt }]
+            }
+          ],
+          generationConfig: {
+            maxOutputTokens: 1100
+          }
+        }
+      });
+      return normalizeIntentParserPayload(extractGeminiResponseText(response));
+    }
+
+    const response = await requestOpenAiResponsesWithBackoff({
+      endpoint,
+      apiKey,
+      body: {
+        model,
+        input: [
+          toInputText('system', 'Return valid JSON only.'),
+          toInputText('user', prompt)
+        ],
+        text: {
+          format: {
+            type: 'json_schema',
+            name: 'intent_parser',
+            strict: true,
+            schema: INTENT_PARSER_RESPONSE_SCHEMA
+          }
+        },
+        max_output_tokens: 1100
+      }
+    });
+    return normalizeIntentParserPayload(extractResponseText(response));
+  } catch (error) {
+    return {
+      ok: false,
+      error: cleanText(error?.message || error, 240) || 'Intent parser request failed.'
+    };
+  }
+}
+
 function normalizeAgentOutput(raw, fallbackText) {
   const parsed = safeParseJson(raw, null);
   if (parsed && typeof parsed === 'object') {
@@ -2273,22 +4239,39 @@ function toPromptConversationTranscript(conversation) {
   return rows.length ? rows.join('\n') : 'No prior messages.';
 }
 
-async function buildCodexAgentContext(message, snapshot) {
-  const retrievalTools = [
+async function buildCodexAgentContext(message, snapshot, selectedToolNames = null, routing = null, runTool = null) {
+  const allowedRetrievalTools = [
     'search_projects',
     'search_protocols',
     'search_notebook_entries',
+    'search_workflows',
     'search_assays',
     'search_gel_analyses',
     'search_inventory',
-    'search_papers'
+    'search_papers',
+    'search_web'
   ];
+  const retrievalTools = Array.isArray(selectedToolNames)
+    ? asArray(selectedToolNames)
+      .map((name) => cleanText(name, 120))
+      .filter((name) => allowedRetrievalTools.includes(name))
+    : allowedRetrievalTools;
   const contextSlices = [];
   const toolTrace = [];
   const evidence = [];
+  const runToolCall = typeof runTool === 'function'
+    ? runTool
+    : ((toolName, args) => runAgentTool(toolName, args, snapshot));
 
   for (const toolName of retrievalTools) {
-    const result = await runAgentTool(toolName, { query: message, limit: 5 }, snapshot);
+    const toolArgs = toolName === 'search_inventory'
+      ? buildInventoryToolArgs({
+        message,
+        routing,
+        args: { query: message, limit: 5 }
+      })
+      : { query: message, limit: 5 };
+    const result = await runToolCall(toolName, toolArgs);
     const items = asArray(result?.items).slice(0, 5);
     if (!items.length) {
       continue;
@@ -2325,31 +4308,271 @@ async function runCodexAgentController({
   conversation,
   hasLatestUserInConversation,
   snapshot,
+  projectId,
   projectName,
   promptConfig,
-  allowWriteTools
+  allowWriteTools,
+  routing,
+  lifecycleRecorder
 }) {
   const intermediateStates = [];
   const toolTrace = [];
   const evidence = [];
+  const runTrackedTool = createLifecycleToolRunner({
+    snapshot,
+    allowWriteTools,
+    lifecycleRecorder
+  });
+  const notebookToolResults = [];
   const requiresApproval = containsWriteIntent(message) && !allowWriteTools;
+  let routingInfo = normalizeRoutingPayload(routing);
 
   intermediateStates.push(buildIntermediateState('intake', message, {
-    assumptions: ['Codex CLI provider selected; retrieval context is assembled before generation.'],
-    openQuestions: requiresApproval ? ['User may want a write action; approval is required before any write.'] : [],
+    assumptions: [
+      'Codex CLI provider selected; retrieval context is assembled before generation.',
+      ...buildRoutingAssumptionRows(routingInfo)
+    ],
+    openQuestions: [
+      ...(requiresApproval ? ['User may want a write action; approval is required before any write.'] : []),
+      ...(routingInfo.plan.needs_clarification ? [routingInfo.plan.clarification_reason || 'Routing requires clarification.'] : [])
+    ],
     confidence: 0.44
   }));
 
   intermediateStates.push(buildIntermediateState('context', 'Loaded snapshot context for Codex retrieval.', {
     assumptions: [
-      `Context sizes: projects=${snapshot.projects.length}, protocols=${snapshot.protocols.length}, notebook_entries=${snapshot.notebookEntries.length}, assays=${snapshot.assays.length}, gel_analyses=${snapshot.gelAnalyses.length}, papers=${snapshot.papers.length}.`
+      `Context sizes: projects=${snapshot.projects.length}, protocols=${snapshot.protocols.length}, workflows=${snapshot.workflows.length}, notebook_entries=${snapshot.notebookEntries.length}, assays=${snapshot.assays.length}, gel_analyses=${snapshot.gelAnalyses.length}, papers=${snapshot.papers.length}.`,
+      ...buildSnapshotBundleAssumptionRows(snapshot)
     ],
     confidence: 0.52
   }));
 
-  const collected = await buildCodexAgentContext(message, snapshot);
+  intermediateStates.push(buildIntermediateState('route', `Resolved routing intent "${routingInfo.intent}".`, {
+    assumptions: buildRoutingAssumptionRows(routingInfo),
+    openQuestions: routingInfo.plan.needs_clarification ? [routingInfo.plan.clarification_question] : [],
+    proposedActions: asArray(routingInfo.plan.tool_selection_rationale).slice(0, 5).map((row) => ({
+      action_type: 'read',
+      tool_name: row.tool,
+      risk_level: 'low',
+      reason: `selector score=${Number(row.score) || 0}; ${cleanText(row.reason, 180)}`
+    })),
+    confidence: routingInfo.confidence
+  }));
+
+  const projectEvidence = maybeCollectProjectEvidence({
+    message,
+    routing: routingInfo,
+    snapshot,
+    projectId,
+    projectName
+  });
+  addEvidencePack({
+    pack: projectEvidence,
+    stage: 'project_evidence',
+    stageMessage: 'Collected deterministic project-aware evidence packs.',
+    confidence: 0.67,
+    traceTool: 'project_evidence_aggregator',
+    traceArgs: {
+      project_id: cleanText(projectEvidence?.selected_project?.id, 80),
+      project_name: cleanText(projectEvidence?.selected_project?.name, 180)
+    },
+    buildAssumptions: buildProjectEvidenceAssumptionRows,
+    intermediateStates,
+    toolTrace,
+    evidence,
+    buildIntermediateState,
+    cleanText
+  });
+
+  const paperEvidence = maybeCollectPaperEvidence({
+    message,
+    routing: routingInfo,
+    snapshot
+  });
+  addEvidencePack({
+    pack: paperEvidence,
+    stage: 'paper_evidence',
+    stageMessage: 'Collected deterministic paper evidence packs.',
+    confidence: 0.66,
+    traceTool: 'paper_evidence_aggregator',
+    traceArgs: {
+      mode: cleanText(routingInfo.plan.paper_task_mode, 80),
+      selected_paper_id: cleanText(routingInfo.plan.paper_match?.selected_paper_id, 80),
+      selected_paper_title: cleanText(routingInfo.plan.paper_match?.selected_paper_title, 220)
+    },
+    buildAssumptions: buildPaperEvidenceAssumptionRows,
+    intermediateStates,
+    toolTrace,
+    evidence,
+    buildIntermediateState,
+    cleanText
+  });
+
+  let pythonContextSlice = null;
+  if (routingInfo.plan.needs_python === true && asArray(routingInfo.plan.selected_tool_names).includes('run_python_sandbox')) {
+    const pythonRun = await runPlannedPythonTask({
+      message,
+      routing: routingInfo,
+      snapshot,
+      selectedProjectId: projectId,
+      selectedProjectName: projectName || routingInfo.entities?.project,
+      storagePath: cleanText(snapshot?.settings?.storagePath, 1200),
+      generatePythonRunRequest: async ({ taskType, taskContext }) => requestCodexCliText({
+        prompt: buildPythonCodegenPrompt({
+          message,
+          taskType,
+          taskContext
+        }),
+        model,
+        cwd: getCodexCliWorkingDirectory()
+      }),
+      runTool: async (toolName, args) => runTrackedTool(toolName, args, { allowWriteTools })
+    });
+    routingInfo = applyRoutingPlanPatch(routingInfo, pythonRun.plan_patch);
+
+    if (pythonRun.needs_clarification) {
+      const clarificationQuestion = cleanText(pythonRun.clarification_question, 320)
+        || 'Please provide the required input data for Python analysis.';
+      const clarificationConfidence = clamp(routingInfo.confidence * 0.92, 0, 1);
+      intermediateStates.push(buildIntermediateState('python_plan', 'Python orchestration requires clarification before execution.', {
+        assumptions: asArray(pythonRun.assumption_rows),
+        openQuestions: [clarificationQuestion],
+        confidence: clarificationConfidence
+      }));
+      const responseLayer = finalizeAgentResponse({
+        answer: clarificationQuestion,
+        confidence: clarificationConfidence,
+        routing: routingInfo,
+        notebookDraft: null,
+        toolTrace,
+        citations: []
+      });
+      intermediateStates.push(buildIntermediateState('response_layer', 'Applied deterministic response-layer metadata for clarification response.', {
+        assumptions: buildResponseLayerAssumptionRows(responseLayer),
+        openQuestions: [clarificationQuestion],
+        confidence: clarificationConfidence
+      }));
+      recordLifecycleEvent(lifecycleRecorder, {
+        stage: 'clarification_gate',
+        status: 'ok',
+        routing_intent: routingInfo.intent,
+        response_type: responseLayer.response_type,
+        message: 'Python orchestration requested clarification before sandbox execution.'
+      });
+      const validationGate = applyValidationGateToOutput({
+        routing: routingInfo,
+        normalized: {
+          answer: responseLayer.answer,
+          confidence: clarificationConfidence,
+          requiresApproval,
+          proposedWriteActions: requiresApproval
+            ? [{
+              tool_name: 'write_operation_pending_approval',
+              reason: 'User intent appears write-oriented; explicit approval is required before execution.'
+            }]
+            : [],
+          citations: [],
+          decisionRecord: {
+            assumptions: ['Python task planning detected missing/invalid input and requested clarification.'],
+            open_questions: [clarificationQuestion],
+            verification_notes: ['No further tools were executed because Python task input was incomplete.']
+          },
+          response_type: responseLayer.response_type,
+          confidence_label: responseLayer.confidence_label,
+          source_summary: responseLayer.source_summary,
+          unresolved_fields: responseLayer.unresolved_fields
+        },
+        notebookDraft: null,
+        toolTrace
+      });
+      routingInfo = validationGate.routing;
+      intermediateStates.push(buildIntermediateState('validation', 'Ran deterministic validation and safety gate.', {
+        assumptions: [
+          ...buildValidationAssumptionRows(validationGate.validation),
+          ...buildProvenanceAssumptionRows(validationGate.provenance)
+        ],
+        confidence: clarificationConfidence
+      }));
+      recordLifecycleEvent(lifecycleRecorder, {
+        stage: 'validation_completed',
+        status: validationGate.validation.passed ? 'ok' : 'failed',
+        routing_intent: routingInfo.intent,
+        response_type: responseLayer.response_type,
+        failure_reasons: validationGate.validation.failure_reasons,
+        message: buildValidationAssumptionRows(validationGate.validation).join(' ')
+      });
+      return {
+        ok: true,
+        provider,
+        model: model || 'codex-default',
+        answer: validationGate.normalized.answer,
+        confidence: clarificationConfidence,
+        requiresApproval: validationGate.normalized.requiresApproval === true,
+        proposedWriteActions: asArray(validationGate.normalized.proposedWriteActions),
+        citations: [],
+        decisionRecord: validationGate.normalized.decisionRecord,
+        routing: routingInfo,
+        response_type: validationGate.normalized.response_type,
+        confidence_label: validationGate.normalized.confidence_label,
+        source_summary: validationGate.normalized.source_summary,
+        unresolved_fields: validationGate.normalized.unresolved_fields,
+        validation: validationGate.validation,
+        provenance: validationGate.provenance,
+        intermediateStates,
+        toolTrace
+      };
+    }
+
+    if (pythonRun.executed && pythonRun.tool_result) {
+      intermediateStates.push(buildIntermediateState('python_execute', 'Executed deterministic Python orchestration in Codex pre-retrieval.', {
+        assumptions: asArray(pythonRun.assumption_rows),
+        evidence: asArray(pythonRun.citations).slice(0, 10),
+        confidence: pythonRun.tool_result.ok === true ? 0.72 : 0.58
+      }));
+      toolTrace.push(...asArray(pythonRun.tool_trace_rows));
+      appendCitations(evidence, pythonRun.citations);
+      notebookToolResults.push(pythonRun.notebook_tool_result);
+      pythonContextSlice = {
+        tool: 'run_python_sandbox',
+        items: asArray(pythonRun.tool_result.items).slice(0, 4)
+      };
+    }
+  }
+
+  const collected = await buildCodexAgentContext(
+    message,
+    snapshot,
+    routingInfo.plan.selected_tool_names,
+    routingInfo,
+    runTrackedTool
+  );
+  if (pythonContextSlice && asArray(pythonContextSlice.items).length) {
+    collected.contextSlices.unshift(pythonContextSlice);
+  }
   toolTrace.push(...collected.toolTrace);
   evidence.push(...collected.evidence);
+
+  const webFallback = await runHybridWebFallback({
+    message,
+    routing: routingInfo,
+    projectName: projectName || routingInfo.plan.project_match?.selected_project_name || routingInfo.entities?.project,
+    internalEvidence: evidence,
+    runLiteratureTool: async (toolName, args) => runTrackedTool(toolName, args, { allowWriteTools: false })
+  });
+  routingInfo = applyRoutingPlanPatch(routingInfo, webFallback.plan_patch);
+  if (webFallback.triggered) {
+    intermediateStates.push(buildIntermediateState('web_fallback', 'Executed hybrid web + literature fallback retrieval.', {
+      assumptions: asArray(webFallback.assumption_rows),
+      evidence: asArray(webFallback.citations).slice(0, 10),
+      confidence: asArray(webFallback.merged_items).length ? 0.66 : 0.54
+    }));
+    toolTrace.push(...asArray(webFallback.tool_trace_rows));
+    appendCitations(evidence, webFallback.citations);
+    collected.contextSlices.push({
+      tool: 'hybrid_web_fallback',
+      items: asArray(webFallback.merged_items).slice(0, 10)
+    });
+  }
 
   intermediateStates.push(buildIntermediateState('execute', `Prepared ${collected.contextSlices.length} retrieval context slices for Codex CLI.`, {
     evidence: evidence.slice(0, 12),
@@ -2365,11 +4588,36 @@ async function runCodexAgentController({
   const promptConversation = hasLatestUserInConversation
     ? conversation
     : [...conversation, { role: 'user', text: message }];
+  const notebookDraft = maybeBuildNotebookDraft({
+    message,
+    conversation: promptConversation,
+    routing: routingInfo,
+    snapshot,
+    projectId,
+    projectName,
+    toolResults: collected.contextSlices.map((slice) => ({
+      tool: slice.tool,
+      items: asArray(slice.items),
+      summary: ''
+    }))
+  });
+
+  if (notebookDraft) {
+    intermediateStates.push(buildIntermediateState('notebook_draft', 'Generated deterministic notebook draft metadata.', {
+      assumptions: buildNotebookDraftAssumptionRows(notebookDraft),
+      confidence: asArray(notebookDraft.unresolved_placeholders).length ? 0.62 : 0.74
+    }));
+  }
+
   const systemPrompt = buildAgentSystemPrompt(projectName, promptConfig);
   const draftPrompt = [
     systemPrompt,
     'Task: answer the latest user request using only the retrieved Enana context below. If context is missing, explicitly say what is missing.',
     `Conversation transcript:\n${toPromptConversationTranscript(promptConversation)}`,
+    `Routing decision JSON:\n${cleanText(JSON.stringify(routingInfo, null, 2), 10000)}`,
+    ...(projectEvidence
+      ? [`Project evidence JSON:\n${cleanText(JSON.stringify(projectEvidence, null, 2), 24000)}`]
+      : []),
     `Retrieved context JSON:\n${cleanText(JSON.stringify(collected.contextSlices, null, 2), 70000)}`,
     'Respond as concise assistant text.'
   ].join('\n\n');
@@ -2381,7 +4629,11 @@ async function runCodexAgentController({
   });
 
   intermediateStates.push(buildIntermediateState('verify', 'Verified evidence coverage and policy constraints.', {
-    assumptions: ['Only read-context assembly was executed before Codex response synthesis.'],
+    assumptions: [
+      routingInfo.plan.needs_python === true
+        ? 'Read-context assembly and deterministic Python computation were executed before Codex response synthesis.'
+        : 'Only read-context assembly was executed before Codex response synthesis.'
+    ],
     openQuestions: evidence.length ? [] : ['No direct matches were found in local retrieval context.'],
     evidence: evidence.slice(-12),
     confidence: evidence.length ? 0.69 : 0.56
@@ -2418,37 +4670,29 @@ async function runCodexAgentController({
     };
   }
 
-  if (requiresApproval && normalized.proposedWriteActions.length === 0) {
-    normalized.proposedWriteActions = [
-      {
-        tool_name: 'write_operation_pending_approval',
-        reason: 'User intent appears write-oriented; explicit approval is required before execution.'
-      }
-    ];
-  }
-  if (requiresApproval) {
-    normalized.requiresApproval = true;
-  }
-
-  intermediateStates.push(buildIntermediateState('synthesize', 'Generated final user-facing response with decision record.', {
-    evidence: normalized.citations,
-    proposedActions: normalized.proposedWriteActions.map((action) => ({
-      action_type: 'write',
-      tool_name: action?.tool_name,
-      risk_level: 'high',
-      reason: action?.reason
-    })),
-    confidence: normalized.confidence
-  }));
-
-  intermediateStates.push(buildIntermediateState('handoff', 'Prepared response for UI handoff and audit trail.', {
-    assumptions: [
-      allowWriteTools
-        ? 'Write approval flag was enabled for this request.'
-        : 'Any write action remains pending explicit approval.'
-    ],
-    confidence: normalized.confidence
-  }));
+  const finalizedOutput = applyFinalResponseLayerAndValidation({
+    normalized,
+    requiresApproval,
+    notebookDraft,
+    buildNotebookDraftSummary: (draft) => buildNotebookDraftSummary(draft),
+    cleanText,
+    routing: routingInfo,
+    toolTrace,
+    intermediateStates,
+    buildIntermediateState,
+    buildResponseLayerAssumptionRows,
+    applyResponseLayerToOutput,
+    applyValidationGateToOutput,
+    buildValidationAssumptionRows,
+    buildProvenanceAssumptionRows,
+    recordLifecycleEvent,
+    lifecycleRecorder,
+    handoffWriteAssumption: allowWriteTools
+      ? 'Write approval flag was enabled for this request.'
+      : 'Any write action remains pending explicit approval.'
+  });
+  routingInfo = finalizedOutput.routing;
+  normalized = finalizedOutput.normalized;
 
   return {
     ok: true,
@@ -2460,12 +4704,23 @@ async function runCodexAgentController({
     proposedWriteActions: normalized.proposedWriteActions,
     citations: normalized.citations,
     decisionRecord: normalized.decisionRecord,
+    routing: routingInfo,
+    response_type: normalized.response_type,
+    confidence_label: normalized.confidence_label,
+    source_summary: normalized.source_summary,
+    unresolved_fields: normalized.unresolved_fields,
+    validation: finalizedOutput.validation,
+    provenance: finalizedOutput.provenance,
+    ...(notebookDraft ? { notebookDraft } : {}),
     intermediateStates,
     toolTrace
   };
 }
 
-async function runAgentController(payload) {
+async function runAgentController(payload, runtime = {}) {
+  const lifecycleRecorder = runtime && typeof runtime === 'object'
+    ? runtime.lifecycleRecorder
+    : null;
   const message = cleanText(payload?.message, 3000);
   if (!message) {
     throw new Error('Message is required.');
@@ -2482,10 +4737,211 @@ async function runAgentController(payload) {
   const hasLatestUserInConversation = conversation.length > 0
     && conversation[conversation.length - 1].role === 'user'
     && conversation[conversation.length - 1].text === message;
-  const snapshot = normalizeAgentSnapshot(payload?.stateSnapshot);
+  const rawSnapshot = normalizeJsonPayload(payload?.stateSnapshot, {});
+  const snapshotDataFilePath = cleanText(
+    rawSnapshot?.data_file_path || rawSnapshot?.dataFilePath || payload?.data_file_path || payload?.dataFilePath,
+    1600
+  );
+  const hydratedSnapshot = await hydrateSnapshotFromBundle({
+    dataFilePath: snapshotDataFilePath,
+    snapshot: rawSnapshot,
+    fallbackDataFilePath: getDefaultDataFilePath(),
+    legacyChemicalsPath: CHEMICALS_DATA_FILE_PATH
+  });
+  const snapshot = normalizeAgentSnapshot({
+    ...hydratedSnapshot.snapshot,
+    data_file_path: cleanText(
+      hydratedSnapshot?.bundlePaths?.dataFilePath || snapshotDataFilePath,
+      1600
+    )
+  });
   const allowWriteTools = payload?.allowWriteTools === true;
+  const projectId = cleanText(payload?.projectId, 80);
   const projectName = cleanText(payload?.projectName, 180);
   const promptConfig = await loadLlmPrompts();
+  const requiresApproval = containsWriteIntent(message) && !allowWriteTools;
+  const availableToolNames = AGENT_IO_CONTRACT.tools.map((tool) => cleanText(tool?.name, 120)).filter(Boolean);
+  const promptConversation = hasLatestUserInConversation
+    ? conversation
+    : [...conversation, { role: 'user', text: message }];
+
+  const parserResult = await requestIntentParserPayload({
+    provider,
+    endpoint,
+    apiKey,
+    model,
+    message,
+    conversation: promptConversation,
+    projectName
+  });
+  if (!parserResult?.ok || !parserResult?.payload) {
+    recordLifecycleEvent(lifecycleRecorder, {
+      stage: 'parser_completed',
+      status: 'failed',
+      message: cleanText(parserResult?.error || 'Malformed parser output.', 320),
+      failure_reasons: ['intent_parser_failed']
+    });
+    return {
+      ok: false,
+      provider,
+      model: model || (provider === LLM_PROVIDERS.CODEX ? 'codex-default' : ''),
+      error: cleanText(`Intent parser failed: ${parserResult?.error || 'Malformed parser output.'}`, 360)
+    };
+  }
+  recordLifecycleEvent(lifecycleRecorder, {
+    stage: 'parser_completed',
+    status: 'ok',
+    routing_intent: cleanText(parserResult.payload.primary_intent, 80),
+    message: `Intent parser returned primary_intent=${cleanText(parserResult.payload.primary_intent, 80) || 'unknown'}.`,
+    meta: {
+      confidence: Number.isFinite(Number(parserResult.payload.confidence))
+        ? Number(parserResult.payload.confidence)
+        : null,
+      needs_clarification: parserResult.payload.needs_clarification === true
+    }
+  });
+
+  const routingDecision = buildRoutingDecisionFromIntentParser({
+    parserPayload: parserResult.payload,
+    message,
+    snapshot,
+    availableToolNames,
+    toolContract: AGENT_TOOL_REGISTRY,
+    writeIntent: containsWriteIntent(message),
+    selectedProjectId: projectId,
+    selectedProjectName: projectName
+  });
+  let routing = normalizeRoutingPayload(routingDecision);
+  recordLifecycleEvent(lifecycleRecorder, {
+    stage: 'routing_completed',
+    status: 'ok',
+    routing_intent: routing.intent,
+    message: `Routing resolved intent=${routing.intent}.`,
+    meta: {
+      confidence: routing.confidence,
+      needs_clarification: routing.plan?.needs_clarification === true,
+      selected_tool_count: asArray(routing.plan?.selected_tool_names).length
+    }
+  });
+
+  if (routing.plan.needs_clarification) {
+    const clarification = buildRoutingClarificationQuestion(routing);
+    const proposedWriteActions = requiresApproval
+      ? [
+        {
+          tool_name: 'write_operation_pending_approval',
+          reason: 'User intent appears write-oriented; explicit approval is required before execution.'
+        }
+      ]
+      : [];
+    const clarificationConfidence = clamp(routing.confidence * 0.92, 0, 1);
+    const responseLayer = finalizeAgentResponse({
+      answer: clarification,
+      confidence: clarificationConfidence,
+      routing,
+      notebookDraft: null,
+      toolTrace: [],
+      citations: []
+    });
+    recordLifecycleEvent(lifecycleRecorder, {
+      stage: 'clarification_gate',
+      status: 'ok',
+      routing_intent: routing.intent,
+      response_type: responseLayer.response_type,
+      message: cleanText(routing.plan.clarification_reason, 320) || 'Routing requested clarification before tool execution.'
+    });
+    const validationGate = applyValidationGateToOutput({
+      routing,
+      normalized: {
+        answer: responseLayer.answer,
+        confidence: clarificationConfidence,
+        requiresApproval: requiresApproval || proposedWriteActions.length > 0,
+        proposedWriteActions,
+        citations: [],
+        decisionRecord: {
+          assumptions: [
+            'Routing plan identified ambiguity and stopped execution before tool calls.',
+            `Intent=${routing.intent} source=${routing.classifier.source}`
+          ],
+          open_questions: [clarification],
+          verification_notes: ['No tools were executed because clarification is required first.']
+        },
+        response_type: responseLayer.response_type,
+        confidence_label: responseLayer.confidence_label,
+        source_summary: responseLayer.source_summary,
+        unresolved_fields: responseLayer.unresolved_fields
+      },
+      notebookDraft: null,
+      toolTrace: []
+    });
+    routing = validationGate.routing;
+    const clarificationIntermediateStates = [
+      buildIntermediateState('intake', message, {
+        assumptions: [
+          ...buildRoutingAssumptionRows(routing),
+          requiresApproval
+            ? 'Write intent detected; approval remains required before execution.'
+            : 'Read-first execution mode is active.'
+        ],
+        openQuestions: [clarification],
+        confidence: routing.confidence
+      }),
+      buildIntermediateState('route', `Resolved routing intent "${routing.intent}" and requested clarification.`, {
+        assumptions: buildRoutingAssumptionRows(routing),
+        openQuestions: [clarification],
+        confidence: routing.confidence
+      }),
+      buildIntermediateState('response_layer', 'Applied deterministic response-layer metadata for clarification response.', {
+        assumptions: buildResponseLayerAssumptionRows(responseLayer),
+        openQuestions: [clarification],
+        confidence: clarificationConfidence
+      }),
+      buildIntermediateState('validation', 'Ran deterministic validation and safety gate.', {
+        assumptions: [
+          ...buildValidationAssumptionRows(validationGate.validation),
+          ...buildProvenanceAssumptionRows(validationGate.provenance)
+        ],
+        openQuestions: [cleanText(routing.plan?.clarification_question, 320) || clarification],
+        confidence: clarificationConfidence
+      }),
+      buildIntermediateState('handoff', 'Prepared clarification response for UI handoff and audit trail.', {
+        assumptions: [
+          'No tool calls executed due to clarification gate.',
+          ...buildResponseLayerAssumptionRows(validationGate.normalized),
+          ...buildValidationAssumptionRows(validationGate.validation)
+        ],
+        confidence: clarificationConfidence
+      })
+    ];
+    recordLifecycleEvent(lifecycleRecorder, {
+      stage: 'validation_completed',
+      status: validationGate.validation.passed ? 'ok' : 'failed',
+      routing_intent: routing.intent,
+      response_type: validationGate.normalized.response_type,
+      failure_reasons: validationGate.validation.failure_reasons,
+      message: buildValidationAssumptionRows(validationGate.validation).join(' ')
+    });
+    return {
+      ok: true,
+      provider,
+      model: model || (provider === LLM_PROVIDERS.CODEX ? 'codex-default' : ''),
+      answer: validationGate.normalized.answer,
+      confidence: clarificationConfidence,
+      requiresApproval: validationGate.normalized.requiresApproval === true,
+      proposedWriteActions: asArray(validationGate.normalized.proposedWriteActions),
+      citations: [],
+      decisionRecord: validationGate.normalized.decisionRecord,
+      routing,
+      response_type: validationGate.normalized.response_type,
+      confidence_label: validationGate.normalized.confidence_label,
+      source_summary: validationGate.normalized.source_summary,
+      unresolved_fields: validationGate.normalized.unresolved_fields,
+      validation: validationGate.validation,
+      provenance: validationGate.provenance,
+      intermediateStates: clarificationIntermediateStates,
+      toolTrace: []
+    };
+  }
 
   if (provider === LLM_PROVIDERS.CODEX) {
     return runCodexAgentController({
@@ -2495,23 +4951,33 @@ async function runAgentController(payload) {
       conversation,
       hasLatestUserInConversation,
       snapshot,
+      projectId,
       projectName,
       promptConfig,
-      allowWriteTools
+      allowWriteTools,
+      routing,
+      lifecycleRecorder
     });
   }
 
   const intermediateStates = [];
   const toolTrace = [];
   const evidence = [];
+  const runTrackedTool = createLifecycleToolRunner({
+    snapshot,
+    allowWriteTools,
+    lifecycleRecorder
+  });
+  const notebookToolResults = [];
 
   intermediateStates.push(buildIntermediateState('intake', message, {
     assumptions: [
       allowWriteTools
         ? 'Explicit approval flag enabled write tools for this request.'
-        : 'User question is interpreted as read-first unless writes are explicitly requested.'
+        : 'User question is interpreted as read-first unless writes are explicitly requested.',
+      ...buildRoutingAssumptionRows(routing)
     ],
-    openQuestions: containsWriteIntent(message) && !allowWriteTools
+    openQuestions: requiresApproval
       ? ['User may want a write action; approval is required before any write.']
       : [],
     confidence: 0.45
@@ -2519,12 +4985,77 @@ async function runAgentController(payload) {
 
   intermediateStates.push(buildIntermediateState('context', 'Loaded snapshot context for retrieval tools.', {
     assumptions: [
-      `Context sizes: projects=${snapshot.projects.length}, protocols=${snapshot.protocols.length}, notebook_entries=${snapshot.notebookEntries.length}, assays=${snapshot.assays.length}, gel_analyses=${snapshot.gelAnalyses.length}, papers=${snapshot.papers.length}.`
+      `Context sizes: projects=${snapshot.projects.length}, protocols=${snapshot.protocols.length}, workflows=${snapshot.workflows.length}, notebook_entries=${snapshot.notebookEntries.length}, assays=${snapshot.assays.length}, gel_analyses=${snapshot.gelAnalyses.length}, papers=${snapshot.papers.length}.`,
+      ...buildSnapshotBundleAssumptionRows(snapshot)
     ],
     confidence: 0.52
   }));
 
+  intermediateStates.push(buildIntermediateState('route', `Resolved routing intent "${routing.intent}".`, {
+    assumptions: buildRoutingAssumptionRows(routing),
+    proposedActions: asArray(routing.plan.tool_selection_rationale).slice(0, 5).map((row) => ({
+      action_type: 'read',
+      tool_name: row.tool,
+      risk_level: 'low',
+      reason: `selector score=${Number(row.score) || 0}; ${cleanText(row.reason, 180)}`
+    })),
+    confidence: routing.confidence
+  }));
+
+  const projectEvidence = maybeCollectProjectEvidence({
+    message,
+    routing,
+    snapshot,
+    projectId,
+    projectName
+  });
+  addEvidencePack({
+    pack: projectEvidence,
+    stage: 'project_evidence',
+    stageMessage: 'Collected deterministic project-aware evidence packs.',
+    confidence: 0.67,
+    traceTool: 'project_evidence_aggregator',
+    traceArgs: {
+      project_id: cleanText(projectEvidence?.selected_project?.id, 80),
+      project_name: cleanText(projectEvidence?.selected_project?.name, 180)
+    },
+    buildAssumptions: buildProjectEvidenceAssumptionRows,
+    intermediateStates,
+    toolTrace,
+    evidence,
+    buildIntermediateState,
+    cleanText
+  });
+
+  const paperEvidence = maybeCollectPaperEvidence({
+    message,
+    routing,
+    snapshot
+  });
+  addEvidencePack({
+    pack: paperEvidence,
+    stage: 'paper_evidence',
+    stageMessage: 'Collected deterministic paper evidence packs.',
+    confidence: 0.66,
+    traceTool: 'paper_evidence_aggregator',
+    traceArgs: {
+      mode: cleanText(routing.plan.paper_task_mode, 80),
+      selected_paper_id: cleanText(routing.plan.paper_match?.selected_paper_id, 80),
+      selected_paper_title: cleanText(routing.plan.paper_match?.selected_paper_title, 220)
+    },
+    buildAssumptions: buildPaperEvidenceAssumptionRows,
+    intermediateStates,
+    toolTrace,
+    evidence,
+    buildIntermediateState,
+    cleanText
+  });
+
   const systemPrompt = buildAgentSystemPrompt(projectName, promptConfig);
+  const scopedToolDefinitions = routing.plan.needs_tools
+    ? resolveAgentToolDefinitions(routing.plan.selected_tool_names)
+    : [];
+
   let session = await startAgentSession({
     provider,
     endpoint,
@@ -2533,7 +5064,8 @@ async function runAgentController(payload) {
     systemPrompt,
     conversation,
     message,
-    hasLatestUserInConversation
+    hasLatestUserInConversation,
+    toolDefinitions: scopedToolDefinitions
   });
   let round = 0;
 
@@ -2546,8 +5078,30 @@ async function runAgentController(payload) {
     const toolOutputs = [];
     const proposedActions = [];
     for (const call of calls.slice(0, 4)) {
-      const args = normalizeToolInvocationArgs(call.argsText);
-      const toolResult = await runAgentTool(call.name, args, snapshot, { allowWriteTools });
+      let args = normalizeToolInvocationArgs(call.argsText);
+      if (call.name === 'search_inventory') {
+        args = buildInventoryToolArgs({
+          message,
+          routing,
+          args
+        });
+      }
+      let toolResult = await runTrackedTool(call.name, args, { allowWriteTools });
+      if (call.name === 'run_python_sandbox') {
+        const pythonPost = await postProcessPythonToolResult({
+          toolResult,
+          storagePath: cleanText(snapshot?.settings?.storagePath, 1200),
+          projectName: cleanText(projectName || routing.plan.project_match?.selected_project_name || routing.entities?.project, 180),
+          taskType: cleanText(routing.plan.python_task_type, 80)
+        });
+        toolResult = pythonPost.tool_result;
+        routing = applyRoutingPlanPatch(routing, pythonPost.plan_patch);
+        intermediateStates.push(buildIntermediateState('python_execute', 'Validated Python sandbox output and persisted deterministic artifacts.', {
+          assumptions: asArray(pythonPost.assumption_rows),
+          evidence: asArray(pythonPost.citations).slice(0, 10),
+          confidence: toolResult.ok === true ? 0.71 : 0.57
+        }));
+      }
       const normalizedInput = toolResult?.input && typeof toolResult.input === 'object' ? toolResult.input : args;
       toolOutputs.push({
         callId: call.callId,
@@ -2559,6 +5113,11 @@ async function runAgentController(payload) {
         args: normalizedInput,
         summary: cleanText(toolResult.summary, 240)
       });
+      notebookToolResults.push({
+        tool: call.name,
+        items: asArray(toolResult.items),
+        summary: cleanText(toolResult.summary, 240)
+      });
       asArray(toolResult.citations).forEach((citation) => {
         evidence.push({
           source: cleanText(citation?.source, 120),
@@ -2567,14 +5126,16 @@ async function runAgentController(payload) {
         });
       });
       proposedActions.push({
-        action_type: isWriteTool(call.name) ? 'write' : 'read',
+        action_type: isWriteTool(call.name) ? 'write' : (isComputeTool(call.name) ? 'compute' : 'read'),
         tool_name: call.name,
-        risk_level: isWriteTool(call.name) ? 'high' : 'low',
+        risk_level: isWriteTool(call.name) ? 'high' : (isComputeTool(call.name) ? 'medium' : 'low'),
         reason: isWriteTool(call.name)
           ? (allowWriteTools
             ? 'Model-requested write operation executed with explicit approval.'
             : 'Model-requested write operation blocked pending explicit approval.')
-          : 'Model-requested read operation.'
+          : (isComputeTool(call.name)
+            ? 'Model-requested sandboxed computation.'
+            : 'Model-requested read operation.')
       });
     }
 
@@ -2589,19 +5150,61 @@ async function runAgentController(payload) {
     round += 1;
   }
 
+  const webFallback = await runHybridWebFallback({
+    message,
+    routing,
+    projectName: projectName || routing.plan.project_match?.selected_project_name || routing.entities?.project,
+    internalEvidence: evidence,
+    runLiteratureTool: async (toolName, args) => runTrackedTool(toolName, args, { allowWriteTools: false })
+  });
+  routing = applyRoutingPlanPatch(routing, webFallback.plan_patch);
+  if (webFallback.triggered) {
+    intermediateStates.push(buildIntermediateState('web_fallback', 'Executed hybrid web + literature fallback retrieval.', {
+      assumptions: asArray(webFallback.assumption_rows),
+      evidence: asArray(webFallback.citations).slice(0, 10),
+      confidence: asArray(webFallback.merged_items).length ? 0.66 : 0.54
+    }));
+    toolTrace.push(...asArray(webFallback.tool_trace_rows));
+    appendCitations(evidence, webFallback.citations);
+    notebookToolResults.push({
+      tool: 'hybrid_web_fallback',
+      items: asArray(webFallback.merged_items).slice(0, 10),
+      summary: cleanText(
+        asArray(webFallback.assumption_rows).join(' ')
+          || `Collected ${asArray(webFallback.merged_items).length} hybrid web source(s).`,
+        260
+      )
+    });
+  }
+
   const draftAnswer = extractAgentSessionText(session);
-  const requiresApproval = containsWriteIntent(message) && !allowWriteTools;
 
   intermediateStates.push(buildIntermediateState('verify', 'Verified evidence coverage and policy constraints.', {
     assumptions: [
       allowWriteTools
         ? 'Write tools were allowed for this request via explicit approval.'
-        : 'Write tools were blocked by policy; only read tools were executed.'
+        : 'Write tools were blocked by policy; only read or compute tools were executed.'
     ],
     openQuestions: evidence.length ? [] : ['No evidence citations were produced by tools.'],
     evidence: evidence.slice(-12),
     confidence: evidence.length ? 0.72 : 0.58
   }));
+
+  const notebookDraft = maybeBuildNotebookDraft({
+    message,
+    conversation: promptConversation,
+    routing,
+    snapshot,
+    projectId,
+    projectName,
+    toolResults: notebookToolResults
+  });
+  if (notebookDraft) {
+    intermediateStates.push(buildIntermediateState('notebook_draft', 'Generated deterministic notebook draft metadata.', {
+      assumptions: buildNotebookDraftAssumptionRows(notebookDraft),
+      confidence: asArray(notebookDraft.unresolved_placeholders).length ? 0.62 : 0.74
+    }));
+  }
 
   const synthesisRequest = buildAgentSynthesisPrompt(requiresApproval, promptConfig);
 
@@ -2634,37 +5237,29 @@ async function runAgentController(payload) {
     };
   }
 
-  if (requiresApproval && normalized.proposedWriteActions.length === 0) {
-    normalized.proposedWriteActions = [
-      {
-        tool_name: 'write_operation_pending_approval',
-        reason: 'User intent appears write-oriented; explicit approval is required before execution.'
-      }
-    ];
-  }
-  if (requiresApproval) {
-    normalized.requiresApproval = true;
-  }
-
-  intermediateStates.push(buildIntermediateState('synthesize', 'Generated final user-facing response with decision record.', {
-    evidence: normalized.citations,
-    proposedActions: normalized.proposedWriteActions.map((action) => ({
-      action_type: 'write',
-      tool_name: action?.tool_name,
-      risk_level: 'high',
-      reason: action?.reason
-    })),
-    confidence: normalized.confidence
-  }));
-
-  intermediateStates.push(buildIntermediateState('handoff', 'Prepared response for UI handoff and audit trail.', {
-    assumptions: [
-      allowWriteTools
-        ? 'Write tools were allowed for this request via explicit approval.'
-        : 'Any write action remains pending explicit approval.'
-    ],
-    confidence: normalized.confidence
-  }));
+  const finalizedOutput = applyFinalResponseLayerAndValidation({
+    normalized,
+    requiresApproval,
+    notebookDraft,
+    buildNotebookDraftSummary: (draft) => buildNotebookDraftSummary(draft),
+    cleanText,
+    routing,
+    toolTrace,
+    intermediateStates,
+    buildIntermediateState,
+    buildResponseLayerAssumptionRows,
+    applyResponseLayerToOutput,
+    applyValidationGateToOutput,
+    buildValidationAssumptionRows,
+    buildProvenanceAssumptionRows,
+    recordLifecycleEvent,
+    lifecycleRecorder,
+    handoffWriteAssumption: allowWriteTools
+      ? 'Write tools were allowed for this request via explicit approval.'
+      : 'Any write action remains pending explicit approval.'
+  });
+  routing = finalizedOutput.routing;
+  normalized = finalizedOutput.normalized;
 
   return {
     ok: true,
@@ -2676,6 +5271,14 @@ async function runAgentController(payload) {
     proposedWriteActions: normalized.proposedWriteActions,
     citations: normalized.citations,
     decisionRecord: normalized.decisionRecord,
+    routing,
+    response_type: normalized.response_type,
+    confidence_label: normalized.confidence_label,
+    source_summary: normalized.source_summary,
+    unresolved_fields: normalized.unresolved_fields,
+    validation: finalizedOutput.validation,
+    provenance: finalizedOutput.provenance,
+    ...(notebookDraft ? { notebookDraft } : {}),
     intermediateStates,
     toolTrace
   };
@@ -2685,11 +5288,27 @@ ipcMain.handle('agent:chat', async (_event, payload) => {
   const normalizedPayload = normalizeJsonPayload(payload, {});
   const requestId = buildAgentLogRequestId();
   const logPath = getAgentChatLogPath();
+  const lifecycleRecorder = createLifecycleRecorder({ requestId });
+  recordLifecycleEvent(lifecycleRecorder, {
+    stage: 'request_received',
+    status: 'ok',
+    message: cleanText(normalizedPayload?.message, 320),
+    meta: {
+      project_id: cleanText(normalizedPayload?.projectId, 80),
+      project_name: cleanText(normalizedPayload?.projectName, 180),
+      allow_write_tools: normalizedPayload?.allowWriteTools === true,
+      provider: cleanText(normalizedPayload?.llm?.provider, 80)
+    }
+  });
   await appendAgentChatLogEntry(logPath, formatAgentChatLogEntry({
     type: 'agent-chat-request',
     requestId,
     projectId: cleanText(normalizedPayload?.projectId, 80),
     projectName: cleanText(normalizedPayload?.projectName, 180),
+    dataFilePath: cleanText(
+      normalizedPayload?.stateSnapshot?.data_file_path || normalizedPayload?.stateSnapshot?.dataFilePath,
+      1600
+    ),
     allowWriteTools: normalizedPayload?.allowWriteTools === true,
     message: cleanText(normalizedPayload?.message, 3000),
     conversation: extractConversation(normalizedPayload?.conversation),
@@ -2697,19 +5316,52 @@ ipcMain.handle('agent:chat', async (_event, payload) => {
   }));
 
   try {
-    const result = await runAgentController(normalizedPayload);
+    const result = await runAgentController(normalizedPayload, {
+      requestId,
+      lifecycleRecorder
+    });
+    const failureReasons = classifyFailureReasons({
+      result,
+      routing: result?.routing,
+      validation: result?.validation,
+      lifecycleEvents: lifecycleRecorder.events
+    });
+    recordLifecycleEvent(lifecycleRecorder, {
+      stage: 'response_emitted',
+      status: result?.ok === true ? 'ok' : 'error',
+      response_type: cleanText(result?.response_type, 80),
+      routing_intent: cleanText(result?.routing?.intent, 80),
+      failure_reasons: failureReasons,
+      message: result?.ok === true
+        ? 'Agent response emitted to renderer.'
+        : cleanText(result?.error, 320) || 'Agent response emitted with error.'
+    });
+    await flushLifecycleRecorderEvents(logPath, lifecycleRecorder);
     await appendAgentChatLogEntry(logPath, formatAgentChatLogEntry({
       type: 'agent-chat-result',
       requestId,
+      failure_reasons: failureReasons,
       ...summarizeAgentResultForLog(result)
     }));
     return result;
   } catch (error) {
     const errorMessage = String(error?.message || error);
+    const failureReasons = classifyFailureReasons({
+      error: errorMessage,
+      lifecycleEvents: lifecycleRecorder.events
+    });
+    recordLifecycleEvent(lifecycleRecorder, {
+      stage: 'controller_error',
+      status: 'failed',
+      failure_reasons: failureReasons,
+      message: cleanText(errorMessage, 320)
+    });
+    await flushLifecycleRecorderEvents(logPath, lifecycleRecorder);
     await appendAgentChatLogEntry(logPath, formatAgentChatLogEntry({
       type: 'agent-chat-error',
       requestId,
       ok: false,
+      failure_reasons: failureReasons,
       error: cleanText(errorMessage, 2000)
     }));
     return { ok: false, error: errorMessage };
@@ -2720,6 +5372,116 @@ ipcMain.handle('agent:get-io-contract', async () => ({
   ok: true,
   contract: AGENT_IO_CONTRACT
 }));
+
+ipcMain.handle('agent:logs:list-requests', async () => {
+  try {
+    const rows = await readLifecycleLogs({
+      logPath: getAgentChatLogPath(),
+      limit: 8000
+    });
+    const byRequest = new Map();
+
+    rows.forEach((row) => {
+      const requestId = cleanText(row?.requestId, 80);
+      if (!requestId) {
+        return;
+      }
+      const existing = byRequest.get(requestId) || {
+        requestId,
+        message: '',
+        projectId: '',
+        projectName: '',
+        provider: '',
+        model: '',
+        response_type: '',
+        ok: null,
+        failure_reasons: [],
+        started_at: '',
+        ended_at: '',
+        stages: []
+      };
+      const type = cleanText(row?.type, 80);
+      const timestamp = cleanText(row?.timestamp, 80);
+      if (!existing.started_at && timestamp) {
+        existing.started_at = timestamp;
+      }
+      if (timestamp) {
+        existing.ended_at = timestamp;
+      }
+
+      if (type === 'agent-chat-request') {
+        existing.message = cleanText(row?.message, 320);
+        existing.projectId = cleanText(row?.projectId, 80);
+        existing.projectName = cleanText(row?.projectName, 180);
+        existing.provider = cleanText(row?.llm?.provider, 80);
+      } else if (type === 'agent-chat-result') {
+        existing.ok = row?.ok === true;
+        existing.model = cleanText(row?.model, 120);
+        existing.response_type = cleanText(row?.response_type, 80);
+        existing.failure_reasons = uniqueStrings([
+          ...asArray(existing.failure_reasons),
+          ...asArray(row?.failure_reasons)
+        ]);
+      } else if (type === 'agent-chat-error') {
+        existing.ok = false;
+        existing.failure_reasons = uniqueStrings([
+          ...asArray(existing.failure_reasons),
+          ...asArray(row?.failure_reasons)
+        ]);
+      } else if (type === 'agent-lifecycle') {
+        const stage = cleanText(row?.stage, 40);
+        if (stage && !existing.stages.includes(stage)) {
+          existing.stages.push(stage);
+        }
+        existing.failure_reasons = uniqueStrings([
+          ...asArray(existing.failure_reasons),
+          ...asArray(row?.failure_reasons)
+        ]);
+      }
+      byRequest.set(requestId, existing);
+    });
+
+    const items = Array.from(byRequest.values())
+      .sort((a, b) => {
+        const left = Date.parse(a.ended_at || a.started_at || '') || 0;
+        const right = Date.parse(b.ended_at || b.started_at || '') || 0;
+        return right - left;
+      })
+      .slice(0, 200);
+
+    return {
+      ok: true,
+      items
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error: cleanText(error?.message || error, 2400)
+    };
+  }
+});
+
+ipcMain.handle('agent:logs:replay', async (_event, payload) => {
+  const requestId = cleanText(payload?.requestId, 80);
+  if (!requestId) {
+    return {
+      ok: false,
+      error: 'requestId is required.'
+    };
+  }
+  try {
+    return await replayRequestLifecycle({
+      requestId,
+      logPath: getAgentChatLogPath()
+    });
+  } catch (error) {
+    return {
+      ok: false,
+      requestId,
+      error: cleanText(error?.message || error, 2400)
+    };
+  }
+});
 
 ipcMain.handle('llm:codex-status', async () => {
   const status = await getCodexLoginStatus({ cwd: getCodexCliWorkingDirectory(), forceRefresh: true });

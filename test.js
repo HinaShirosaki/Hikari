@@ -2,6 +2,7 @@
 
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const fsPromises = require('node:fs/promises');
 const path = require('node:path');
 const { TextDecoder, TextEncoder } = require('node:util');
 const vm = require('node:vm');
@@ -346,6 +347,22 @@ const memoryStorage = createMemoryStorage();
 const shared = loadEsmStyleModule(path.join(__dirname, 'modules', 'shared.js'), {
   localStorage: memoryStorage
 });
+const agentRouting = require(path.join(__dirname, 'agent-routing.js'));
+const agentIntentParser = require(path.join(__dirname, 'agent-intent-parser.js'));
+const agentTools = require(path.join(__dirname, 'agent-tools.js'));
+const agentProtocolMatching = require(path.join(__dirname, 'agent-protocol-matching.js'));
+const agentNotebookGeneration = require(path.join(__dirname, 'agent-notebook-generation.js'));
+const agentProjectRetrieval = require(path.join(__dirname, 'agent-project-retrieval.js'));
+const agentPaperAnalysis = require(path.join(__dirname, 'agent-paper-analysis.js'));
+const agentResponseLayer = require(path.join(__dirname, 'agent-response-layer.js'));
+const agentValidationSafety = require(path.join(__dirname, 'agent-validation-safety.js'));
+const agentObservability = require(path.join(__dirname, 'agent-observability.js'));
+const agentPython = require(path.join(__dirname, 'agent-python.js'));
+const agentPythonOrchestration = agentPython;
+const agentPythonCodegen = agentPython;
+const agentWebFallback = require(path.join(__dirname, 'agent-web-fallback.js'));
+const phase89Runtime = require(path.join(__dirname, 'agent-phase89-runtime.js'));
+const agentSqliteIndex = require(path.join(__dirname, 'agent-sqlite-index.js'));
 const objectGraph = loadEsmStyleModule(path.join(__dirname, 'modules', 'object-graph.js'));
 const toolBox = loadEsmStyleModule(
   path.join(__dirname, 'modules', 'tool-box.js'),
@@ -389,6 +406,27 @@ const toolBox = loadEsmStyleModule(
     'designCrisprGuides'
   ]
 );
+const sequenceViewerInternals = loadEsmStyleModule(
+  path.join(__dirname, 'modules', 'sequence-viewer.js'),
+  {},
+  [
+    'normalizeSequenceText',
+    'detectSequenceFormat',
+    'parseFastaRecords',
+    'parseFastqRecords',
+    'parseGenBankRecords',
+    'parseInputRecords',
+    'normalizeExternalPayload',
+    'parseGenBankLocationSegments',
+    'complementBase',
+    'complementSequence',
+    'renderDualStrandSequenceLinesHtml',
+    'formatSelectedFeatureDetailHtml',
+    'computeGcPercent',
+    'countAmbiguousBases',
+    'summarizeFastqQuality'
+  ]
+);
 const gelAnalysisInternals = loadEsmStyleModule(
   path.join(__dirname, 'modules', 'gel-analysis.js'),
   {},
@@ -427,8 +465,889 @@ const telegramBot = require(path.join(__dirname, 'telegramBot.js'));
 const { generatePlannotateGbk } = require(path.join(__dirname, 'plannotate-engine.js'));
 const forgeConfig = require(path.join(__dirname, 'forge.config.js'));
 const packageManifest = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
+const AGENT_IO_CONTRACT_RAW = JSON.parse(
+  fs.readFileSync(path.join(__dirname, 'data', 'agent-io-contract.json'), 'utf8')
+);
+const AGENT_IO_CONTRACT = agentTools.loadToolContract(AGENT_IO_CONTRACT_RAW);
+const AGENT_IO_TOOL_NAMES = AGENT_IO_CONTRACT.tools.map((tool) => tool.name);
+const AGENT_SIMULATION_DISPATCH_TOOL_NAMES = new Set([
+  'search_projects',
+  'search_protocols',
+  'search_notebook_entries',
+  'search_workflows',
+  'search_assays',
+  'search_gel_analyses',
+  'search_inventory',
+  'search_papers',
+  'search_uniprot',
+  'search_pubmed',
+  'search_crossref',
+  'search_europe_pmc',
+  'search_web',
+  'toolbox_molarity_calculator',
+  'toolbox_peptide_properties',
+  'toolbox_buffer_preparer',
+  'toolbox_dna_to_protein',
+  'toolbox_protein_to_dna',
+  'toolbox_oligo_properties',
+  'toolbox_extinction_coefficient',
+  'toolbox_qpcr_efficiency',
+  'toolbox_plannotate',
+  'toolbox_crispr_sgrna_designer',
+  'run_python_sandbox',
+  'download_paper_pdf'
+]);
 
 const LEGACY_CHEMISTRY_DRAFT_KEY = 'enana_synthesis_chemistry_draft_v1';
+
+function buildAgentSimulationSnapshot() {
+  return {
+    projects: [
+      { id: 'project-atlas', name: 'Atlas', summary: 'PD-1 binder optimization and expression rescue.' },
+      { id: 'project-mercury', name: 'Mercury', summary: 'Secondary screening workflow.' }
+    ],
+    protocols: [
+      {
+        id: 'protocol-transfection',
+        name: 'HEK293 Transfection',
+        category: 'cell',
+        steps: ['Seed cells', 'Mix DNA and reagent', 'Incubate for [time]']
+      },
+      {
+        id: 'protocol-assay',
+        name: 'ELISA Workflow',
+        category: 'assay',
+        steps: ['Prepare plate', 'Add samples', 'Read plate']
+      }
+    ],
+    notebookEntries: [
+      {
+        id: 'note-1',
+        projectId: 'project-atlas',
+        protocolId: 'protocol-transfection',
+        protocolName: 'HEK293 Transfection',
+        result: 'Expression dropped after day 3.',
+        updatedAt: '2026-02-10T10:00:00.000Z'
+      }
+    ],
+    workflows: [
+      {
+        id: 'workflow-1',
+        name: 'Atlas Transfection Recovery',
+        description: 'Rescue expression workflow after transfection.',
+        projectId: 'project-atlas',
+        notebookEntryIds: ['note-1'],
+        blocks: [
+          { id: 'wf-1-b1', protocolId: 'protocol-transfection' },
+          { id: 'wf-1-b2', type: 'text', text: 'Check viability after 24 hours.' }
+        ],
+        links: [{ fromBlockId: 'wf-1-b1', toBlockId: 'wf-1-b2' }],
+        updatedAt: '2026-02-10T09:00:00.000Z'
+      },
+      {
+        id: 'workflow-2',
+        name: 'Mercury ELISA Sweep',
+        description: 'Secondary screen assay workflow.',
+        projectId: 'project-mercury',
+        notebookEntryIds: [],
+        blocks: [
+          { id: 'wf-2-b1', protocolId: 'protocol-assay' }
+        ],
+        links: [],
+        updatedAt: '2026-02-08T09:00:00.000Z'
+      }
+    ],
+    assays: [
+      {
+        id: 'assay-1',
+        assay_number: 'ASSAY-101',
+        name: 'PD-1 Viability',
+        project_name: 'Atlas',
+        notebook_entry_protocol_name: 'HEK293 Transfection',
+        sample_axis: 'row',
+        concentration_axis: 'column',
+        result_well_count: 96,
+        numeric_count: 96,
+        updated_at: '2026-02-10T11:00:00.000Z'
+      }
+    ],
+    gelAnalyses: [
+      {
+        id: 'gel-1',
+        name: 'Western Atlas 1',
+        analysis_type: 'western',
+        project_name: 'Atlas',
+        notebook_entry_protocol_name: 'HEK293 Transfection',
+        image_name: 'atlas-western-1.tiff',
+        lane_count: 8,
+        band_count: 20,
+        confidence_label: 'high',
+        confidence_score: 0.91,
+        warnings: ['Minor background noise'],
+        updated_at: '2026-02-10T12:00:00.000Z'
+      }
+    ],
+    papers: [
+      {
+        id: 'paper-1',
+        title: 'PD-1 Binder Design 2025',
+        linkedType: 'project',
+        linkedId: 'project-atlas',
+        summary: 'Discusses expression bottlenecks and rescue strategies.',
+        methods: [
+          {
+            title: 'Transfection method',
+            steps: ['Culture cells', 'Transfect', 'Measure expression'],
+            citations: ['doi:10.1000/pd1']
+          }
+        ]
+      }
+    ],
+    inventory: {
+      personal: [
+        {
+          zone: 'Bench',
+          items: [{ id: 'pi-1', name: 'PD-1 plasmid', quantity: '2', location: 'Box A1' }]
+        }
+      ],
+      chemicals: [
+        { id: 'chem-1', name: 'Biotin', amount: '10 g', cas: '58-85-5', location: 'Shelf 2', supplier: 'Sigma' },
+        { id: 'chem-2', name: 'Imidazole', amount: '500 g', cas: '288-32-4', location: 'Shelf 4', supplier: 'TCI' }
+      ]
+    },
+    settings: {
+      storagePath: '/tmp/enana-storage'
+    }
+  };
+}
+
+function pickMockRows(rows, projector, query, limit = 5) {
+  const source = Array.isArray(rows) ? rows : [];
+  const needle = String(query || '').trim().toLowerCase();
+  if (!needle) {
+    return source.slice(0, limit);
+  }
+  const tokens = needle.split(/[^a-z0-9]+/i).map((token) => token.trim()).filter(Boolean);
+  return source
+    .filter((item) => {
+      const target = String(projector(item) || '').toLowerCase();
+      if (!tokens.length) {
+        return target.includes(needle);
+      }
+      return tokens.some((token) => token.length >= 2 && target.includes(token));
+    })
+    .slice(0, limit);
+}
+
+function buildMockToolArgs(toolName, message, snapshot) {
+  if (toolName === 'toolbox_molarity_calculator') {
+    return {
+      operation: 'mass_from_concentration_volume',
+      concentration_value: 10,
+      concentration_unit: 'mM',
+      volume_value: 5,
+      volume_unit: 'mL',
+      molecular_weight_g_mol: 58.44,
+      output_unit: 'mg'
+    };
+  }
+  if (toolName === 'toolbox_peptide_properties') {
+    return {
+      sequence_text: 'ACDEFGHIKLMNPQRSTVWY',
+      ph: 7
+    };
+  }
+  if (toolName === 'toolbox_buffer_preparer') {
+    return {
+      volume_ml: 1000,
+      components: [
+        { name: 'NaCl', form: 'solid', molecular_weight_g_mol: 58.44, concentration_value: 150, concentration_unit: 'mM' },
+        { name: 'Tween-20', form: 'liquid', concentration_value: 0.05, concentration_unit: 'percent_vv' }
+      ]
+    };
+  }
+  if (toolName === 'toolbox_dna_to_protein') {
+    return {
+      sequence_text: 'ATGGCCATTGTAATGGGCCGCTGAAAGGGTGCCCGATAG',
+      sequence_type: 'DNA',
+      frame: 1,
+      stop_mode: 'star'
+    };
+  }
+  if (toolName === 'toolbox_protein_to_dna') {
+    return {
+      protein_sequence: 'MKTIIALSYIFCLVFA',
+      organism: 'ecoli',
+      append_stop_codon: true,
+      restriction_sites: ['GAATTC', 'AAGCTT']
+    };
+  }
+  if (toolName === 'toolbox_oligo_properties') {
+    return {
+      sequence_text: 'ATGCGTATCGAT',
+      oligo_type: 'DNA'
+    };
+  }
+  if (toolName === 'toolbox_extinction_coefficient') {
+    return {
+      sequence_type: 'protein',
+      sequence_text: 'MKWVTFISLLFLFSSAYS'
+    };
+  }
+  if (toolName === 'toolbox_qpcr_efficiency') {
+    return {
+      points: [
+        { quantity: 1, ct: 18.0 },
+        { quantity: 0.1, ct: 21.3 },
+        { quantity: 0.01, ct: 24.7 }
+      ]
+    };
+  }
+  if (toolName === 'toolbox_plannotate') {
+    return {
+      sequence_text: '>plasmid\\nATGCGTACGTAGCTAGCTAGCTAGCATCGATCGATCGATCGATCGATCG',
+      topology: 'circular',
+      detailed: false,
+      min_identity: 85,
+      min_coverage: 0.25,
+      min_hit_length: 24,
+      max_hits: 10,
+      record_name: 'mock_plasmid'
+    };
+  }
+  if (toolName === 'toolbox_crispr_sgrna_designer') {
+    return {
+      targets_text: '>Target_A\\nGAGTCCGAGCAGAAGAAGAAGGGGAGGAGGAGGAGGAGGA',
+      reference_genome_id: 'human-hg38',
+      pam_pattern: 'NGG',
+      guide_length: 20,
+      top_count: 5,
+      min_gc: 35,
+      max_gc: 75
+    };
+  }
+  if (toolName === 'run_python_sandbox') {
+    return {
+      code: 'import math\nprint(round((2 + 8) / 2, 2))',
+      timeout_ms: 1200,
+      files: [],
+      readback_paths: []
+    };
+  }
+  if (toolName === 'download_paper_pdf') {
+    return {
+      linked_type: 'project',
+      linked_name: snapshot.projects[0]?.name || 'Atlas',
+      paper_pdf_url: 'https://example.org/paper.pdf',
+      paper_file_name: 'atlas-paper.pdf',
+      storage_path: snapshot.settings?.storagePath || '/tmp/enana-storage'
+    };
+  }
+  return {
+    query: String(message || 'atlas'),
+    limit: 5
+  };
+}
+
+function buildMockToolDispatch(snapshot) {
+  const calls = [];
+
+  const handlers = {
+    search_projects: (args) => {
+      const items = pickMockRows(snapshot.projects, (item) => `${item.name} ${item.summary}`, args?.query, args?.limit)
+        .map((item) => ({
+          id: item.id,
+          name: item.name,
+          summary: item.summary
+        }));
+      return {
+        items,
+        citations: items.map((item) => ({ source: 'project', pointer: item.id, reason: 'Matched project metadata.' })),
+        summary: `Found ${items.length} matching projects.`
+      };
+    },
+    search_protocols: (args) => {
+      const items = pickMockRows(
+        snapshot.protocols,
+        (item) => `${item.name} ${item.category} ${(item.steps || []).join(' ')}`,
+        args?.query,
+        args?.limit
+      ).map((item) => ({
+        id: item.id,
+        name: item.name,
+        category: item.category,
+        steps: Array.isArray(item.steps) ? item.steps : []
+      }));
+      return {
+        items,
+        citations: items.map((item) => ({ source: 'protocol', pointer: item.id, reason: 'Matched protocol name/steps.' })),
+        summary: `Found ${items.length} matching protocols.`
+      };
+    },
+    search_notebook_entries: (args) => {
+      const items = pickMockRows(
+        snapshot.notebookEntries,
+        (item) => `${item.protocolName} ${item.result} ${item.updatedAt}`,
+        args?.query,
+        args?.limit
+      ).map((item) => ({
+        id: item.id,
+        protocolName: item.protocolName,
+        result: item.result,
+        updatedAt: item.updatedAt
+      }));
+      return {
+        items,
+        citations: items.map((item) => ({ source: 'notebook_entry', pointer: item.id, reason: 'Matched notebook records.' })),
+        summary: `Found ${items.length} matching notebook entries.`
+      };
+    },
+    search_workflows: (args) => {
+      const items = pickMockRows(
+        snapshot.workflows,
+        (item) => [
+          item.name,
+          item.description,
+          (item.blocks || []).map((block) => block.text || block.protocolId).join(' ')
+        ].join(' '),
+        args?.query,
+        args?.limit
+      ).map((item) => {
+        const project = (snapshot.projects || []).find((row) => row.id === item.projectId);
+        return {
+          id: item.id,
+          name: item.name,
+          project_name: project?.name || '',
+          description: item.description || '',
+          block_count: Array.isArray(item.blocks) ? item.blocks.length : 0,
+          link_count: Array.isArray(item.links) ? item.links.length : 0,
+          steps_preview: (item.blocks || []).map((block) => String(block?.text || block?.protocolId || '').trim()).filter(Boolean).slice(0, 8),
+          updated_at: item.updatedAt || item.createdAt || ''
+        };
+      });
+      return {
+        items,
+        citations: items.map((item) => ({ source: 'workflow', pointer: item.id, reason: 'Matched workflow metadata.' })),
+        summary: `Found ${items.length} matching workflows.`
+      };
+    },
+    search_assays: (args) => {
+      const items = pickMockRows(
+        snapshot.assays,
+        (item) => `${item.name} ${item.project_name} ${item.notebook_entry_protocol_name}`,
+        args?.query,
+        args?.limit
+      ).map((item) => ({ ...item }));
+      return {
+        items,
+        citations: items.map((item) => ({ source: 'assay', pointer: item.id, reason: 'Matched assay metadata.' })),
+        summary: `Found ${items.length} matching assays.`
+      };
+    },
+    search_gel_analyses: (args) => {
+      const items = pickMockRows(
+        snapshot.gelAnalyses,
+        (item) => `${item.name} ${item.project_name} ${item.notebook_entry_protocol_name}`,
+        args?.query,
+        args?.limit
+      ).map((item) => ({ ...item }));
+      return {
+        items,
+        citations: items.map((item) => ({ source: 'gel_analysis', pointer: item.id, reason: 'Matched gel analysis metadata.' })),
+        summary: `Found ${items.length} matching gel analyses.`
+      };
+    },
+    search_inventory: (args) => {
+      const merged = [
+        ...(snapshot.inventory?.chemicals || []).map((item) => ({ kind: 'chemical_inventory', ...item })),
+        ...((snapshot.inventory?.personal || []).flatMap((zone) => (
+          (zone.items || []).map((item) => ({ kind: 'personal_inventory', zone: zone.zone, ...item }))
+        )))
+      ];
+      const items = pickMockRows(
+        merged,
+        (item) => `${item.name} ${item.cas || ''} ${item.location || ''} ${item.supplier || ''}`,
+        args?.query,
+        args?.limit
+      ).map((item) => ({ ...item }));
+      return {
+        items,
+        citations: items.map((item) => ({ source: item.kind, pointer: item.id || item.name, reason: 'Matched inventory metadata.' })),
+        summary: `Found ${items.length} matching inventory records.`
+      };
+    },
+    search_papers: (args) => {
+      const items = pickMockRows(
+        snapshot.papers,
+        (item) => `${item.title} ${item.summary}`,
+        args?.query,
+        args?.limit
+      ).map((item) => ({ ...item }));
+      return {
+        items,
+        citations: items.map((item) => ({ source: 'paper', pointer: item.id, reason: 'Matched uploaded paper metadata.' })),
+        summary: `Found ${items.length} matching papers.`
+      };
+    },
+    search_uniprot: () => ({
+      items: [
+        {
+          accession: 'P12345',
+          entry_id: 'PD1_HUMAN',
+          protein_name: 'Programmed cell death protein 1',
+          gene_names: ['PDCD1'],
+          organism: 'Homo sapiens',
+          reviewed: true,
+          length: 288,
+          uniprot_url: 'https://www.uniprot.org/uniprotkb/P12345'
+        }
+      ],
+      citations: [{ source: 'uniprot', pointer: 'P12345', reason: 'Matched UniProtKB protein record.' }],
+      summary: 'Found 1 matching UniProt records.'
+    }),
+    search_pubmed: () => ({
+      items: [
+        {
+          pmid: '12345678',
+          title: 'PD-1 binder expression optimization',
+          journal: 'J Mol Bio',
+          pubdate: '2025-01-20',
+          doi: '10.1000/pubmed',
+          authors: ['A. Smith', 'B. Jones'],
+          pubmed_url: 'https://pubmed.ncbi.nlm.nih.gov/12345678/'
+        }
+      ],
+      citations: [{ source: 'pubmed', pointer: '12345678', reason: 'Matched PubMed article metadata.' }],
+      summary: 'Found 1 matching PubMed records.'
+    }),
+    search_crossref: () => ({
+      items: [
+        {
+          doi: '10.1000/crossref',
+          title: 'Crossref indexed binder design study',
+          journal: 'Bioengineering',
+          published: '2025-04-10',
+          type: 'journal-article',
+          cited_by_count: 12,
+          authors: ['C. Li', 'D. Park'],
+          url: 'https://doi.org/10.1000/crossref'
+        }
+      ],
+      citations: [{ source: 'crossref', pointer: '10.1000/crossref', reason: 'Matched Crossref works metadata.' }],
+      summary: 'Found 1 matching Crossref records.'
+    }),
+    search_europe_pmc: () => ({
+      items: [
+        {
+          id: 'PMC1234567',
+          source: 'MED',
+          title: 'Europe PMC indexed assay design',
+          author_string: 'E. Kim; F. Ray',
+          journal: 'Lab Methods',
+          pub_year: '2024',
+          doi: '10.1000/epmc',
+          pmid: '45678901',
+          pmcid: 'PMC1234567',
+          europe_pmc_url: 'https://europepmc.org/article/MED/45678901'
+        }
+      ],
+      citations: [{ source: 'europe_pmc', pointer: '45678901', reason: 'Matched Europe PMC metadata.' }],
+      summary: 'Found 1 matching Europe PMC records.'
+    }),
+    search_web: () => ({
+      items: [
+        {
+          title: 'PD-1 review article',
+          url: 'https://example.org/pd1-review',
+          snippet: 'A concise review of PD-1 biology and assay considerations.',
+          source_domain: 'example.org',
+          published_at: '2026-01-12'
+        }
+      ],
+      citations: [{ source: 'web_source', pointer: 'https://example.org/pd1-review', reason: 'Matched web source metadata.' }],
+      summary: 'Found 1 matching web source.'
+    }),
+    toolbox_molarity_calculator: () => ({
+      items: [
+        {
+          operation: 'mass_from_concentration_volume',
+          result_value: 2.922,
+          result_unit: 'mg',
+          concentration_M: 0.01,
+          volume_L: 0.005,
+          molecular_weight_g_mol: 58.44
+        }
+      ],
+      citations: [{ source: 'toolbox_molarity', pointer: 'mass_from_concentration_volume', reason: 'Computed deterministic molarity conversion.' }],
+      summary: 'Calculated mass from concentration and volume in mg.'
+    }),
+    toolbox_peptide_properties: () => ({
+      items: [
+        {
+          sequence: 'ACDEFGHIKLMNPQRSTVWY',
+          length: 20,
+          mass: 2395.7,
+          pI: 7.1,
+          net_charge: -0.4,
+          extinction_reduced: 6990,
+          extinction_oxidized: 7115
+        }
+      ],
+      citations: [{ source: 'toolbox_peptide', pointer: 'length:20', reason: 'Computed peptide physicochemical properties.' }],
+      summary: 'Computed peptide properties for 20 residues.'
+    }),
+    toolbox_buffer_preparer: () => ({
+      items: [
+        {
+          name: 'NaCl',
+          form: 'solid',
+          concentration_value: 150,
+          concentration_unit: 'mM',
+          molecular_weight_g_mol: 58.44,
+          required_mg: 8766
+        },
+        {
+          name: 'Tween-20',
+          form: 'liquid',
+          concentration_value: 0.05,
+          concentration_unit: 'percent_vv',
+          required_ml: 0.5
+        }
+      ],
+      citations: [{ source: 'toolbox_buffer', pointer: 'components:2', reason: 'Calculated buffer component amounts.' }],
+      summary: 'Calculated 2 buffer components.'
+    }),
+    toolbox_dna_to_protein: () => ({
+      items: [
+        {
+          sequence_type: 'DNA',
+          cleaned_sequence: 'ATGGCCATTGTAATGGGCCGCTGAAAGGGTGCCCGATAG',
+          protein: 'MAIVMGR*KGAR*',
+          codons: 13,
+          frame: 1,
+          strand: '+',
+          remainderBases: 0
+        }
+      ],
+      citations: [{ source: 'toolbox_translation', pointer: '+1', reason: 'Translated sequence with codon table.' }],
+      summary: 'Translated 13 codons in frame +1.'
+    }),
+    toolbox_protein_to_dna: () => ({
+      items: [
+        {
+          ok: true,
+          protein: 'MKTIIALSYIFCLVFA*',
+          dna: 'ATGAAAACAATTATTGCTCTTTCTTATATTTTTTGTTTTGCTTAA',
+          aa_length: 17,
+          nt_length: 51
+        }
+      ],
+      citations: [{ source: 'toolbox_reverse_translation', pointer: 'aa:17', reason: 'Reverse-translated protein sequence to DNA.' }],
+      summary: 'Reverse-translated protein to 51 bp DNA.'
+    }),
+    toolbox_oligo_properties: () => ({
+      items: [
+        {
+          oligo_type: 'DNA',
+          sequence: 'ATGCGTATCGAT',
+          length: 12,
+          tm_celsius: 36,
+          molecular_weight_g_mol: 3700,
+          extinction_coefficient_m1_cm1: 123000
+        }
+      ],
+      citations: [{ source: 'toolbox_oligo', pointer: 'DNA:12', reason: 'Computed oligo properties.' }],
+      summary: 'Computed oligo properties for 12 nt (DNA).'
+    }),
+    toolbox_extinction_coefficient: () => ({
+      items: [
+        {
+          sequence_type: 'protein',
+          sequence: 'MKWVTFISLLFLFSSAYS',
+          length: 18,
+          extinction_reduced_m1_cm1: 6990,
+          extinction_oxidized_m1_cm1: 6990
+        }
+      ],
+      citations: [{ source: 'toolbox_extinction', pointer: 'protein:18', reason: 'Computed protein extinction coefficients.' }],
+      summary: 'Computed protein extinction coefficient for 18 residues.'
+    }),
+    toolbox_qpcr_efficiency: () => ({
+      items: [
+        {
+          slope: -3.32,
+          slope_source: 'regression',
+          intercept: 18.01,
+          r_squared: 0.998,
+          points_used: 3,
+          efficiency_percent: 100.4
+        }
+      ],
+      citations: [{ source: 'toolbox_qpcr', pointer: 'points:3', reason: 'Computed qPCR efficiency from standard curve points.' }],
+      summary: 'Computed qPCR efficiency as 100.40%.'
+    }),
+    toolbox_plannotate: () => ({
+      items: [
+        {
+          id: 'mock_hit_1',
+          feature: 'CMV promoter',
+          type: 'promoter',
+          start: 1,
+          end: 600,
+          strand: '+',
+          identity_percent: 99.5,
+          coverage_percent: 100
+        }
+      ],
+      citations: [{ source: 'plannotate', pointer: 'mock_hit_1', reason: 'Annotated pLannotate feature hit from plain-text sequence.' }],
+      summary: 'Annotated 1 feature hit from plain-text sequence.'
+    }),
+    toolbox_crispr_sgrna_designer: () => ({
+      items: [
+        {
+          rank: 1,
+          target_id: 'target-1',
+          target_name: 'Target_A',
+          strand: '+',
+          start: 1,
+          end: 20,
+          guide_sequence: 'GAGTCCGAGCAGAAGAAGAA',
+          pam_sequence: 'GGG',
+          gc_percent: 55,
+          on_target_score: 78,
+          specificity_score: 88,
+          off_target_rate: 12
+        }
+      ],
+      citations: [{ source: 'toolbox_crispr', pointer: 'target-1:1-20:+', reason: 'Ranked sgRNA candidate from deterministic CRISPR scoring.' }],
+      summary: 'Designed 1 sgRNA candidate from 1 selected target.'
+    }),
+    run_python_sandbox: () => ({
+      items: [
+        {
+          run_id: 'sandbox-run-1',
+          status: 'ok',
+          timeout_ms: 1200,
+          python_executable: 'python3',
+          exit_code: 0,
+          signal: null,
+          timed_out: false,
+          stdout: '5.0',
+          stderr: '',
+          files_written: [],
+          readback_files: [],
+          warnings: []
+        }
+      ],
+      citations: [{ source: 'python_sandbox', pointer: 'sandbox-run-1', reason: 'Executed deterministic Python sandbox.' }],
+      summary: 'Python sandbox execution completed.'
+    }),
+    download_paper_pdf: (args) => {
+      const linkedName = String(args?.linked_name || 'Atlas').trim() || 'Atlas';
+      return {
+        items: [
+          {
+            kind: 'paper',
+            source_url: String(args?.paper_pdf_url || 'https://example.org/paper.pdf'),
+            file_name: String(args?.paper_file_name || 'paper.pdf'),
+            relative_path: `${linkedName}/Papers/${String(args?.paper_file_name || 'paper.pdf')}`,
+            size_bytes: 2048
+          }
+        ],
+        citations: [{ source: 'paper_download', pointer: `${linkedName}/Papers`, reason: 'Downloaded mocked paper file.' }],
+        summary: 'Downloaded 1 paper PDF and 0 SI PDF(s).'
+      };
+    }
+  };
+
+  const dispatch = async (toolName, args) => {
+    calls.push({ toolName, args: args && typeof args === 'object' ? { ...args } : {} });
+    const handler = handlers[toolName];
+    if (!handler) {
+      throw new Error(`Unexpected tool in mock dispatch: ${toolName}`);
+    }
+    const raw = handler(args || {});
+    return {
+      ok: true,
+      tool_name: toolName,
+      input: args && typeof args === 'object' ? { ...args } : {},
+      items: Array.isArray(raw?.items) ? raw.items : [],
+      citations: Array.isArray(raw?.citations) ? raw.citations : [],
+      summary: String(raw?.summary || '')
+    };
+  };
+
+  return {
+    dispatch,
+    calls,
+    coveredToolNames: new Set(Object.keys(handlers))
+  };
+}
+
+async function runSimulatedAgentTurn({
+  message,
+  snapshot = buildAgentSimulationSnapshot(),
+  allowWriteTools = false,
+  writeIntent = false,
+  parserPayload = null
+}) {
+  const availableToolNames = AGENT_IO_TOOL_NAMES.slice();
+  const inferPrimaryIntent = (text) => {
+    const source = String(text || '').toLowerCase();
+    if (/\b(compare .+ vs|extract methods?|extract reagents?|key figures?)\b/.test(source)) {
+      return 'paper_analysis';
+    }
+    if (/\b(mw|molecular weight|inventory|stock|where is|cas)\b/.test(source)) {
+      return 'inventory_lookup';
+    }
+    if (/\b(last time|history|record|workflow step)\b/.test(source)) {
+      return 'record_lookup';
+    }
+    if (/\bproject\b/.test(source)) {
+      return 'project_science_question';
+    }
+    if (/\bpaper|pdf|journal|literature|publication\b/.test(source)) {
+      return 'paper_analysis';
+    }
+    if (/\bpython|csv|plot|compute|code|script\b/.test(source)) {
+      return 'data_analysis_or_coding';
+    }
+    if (/\b(i grew|i did|i ran|transfection|protocol|notebook)\b/.test(source)) {
+      return 'protocol_to_notebook';
+    }
+    return 'general_science_question';
+  };
+  const primaryIntent = inferPrimaryIntent(message);
+  const sourceText = String(message || '');
+  const sourceLower = sourceText.toLowerCase();
+  const inferProjectName = () => {
+    const explicit = sourceText.match(/\bproject\s+([a-z0-9][a-z0-9\- _]{1,60})/i);
+    if (explicit) {
+      return String(explicit[1] || '').trim();
+    }
+    if (sourceLower.includes('atlas')) {
+      return 'Atlas';
+    }
+    return null;
+  };
+  const inferPaperTitle = () => {
+    const quoted = sourceText.match(/["“”']([^"“”']{4,220})["“”']/);
+    if (quoted) {
+      return String(quoted[1] || '').trim();
+    }
+    return null;
+  };
+  const inferInventoryItem = () => {
+    const mwMatch = sourceText.match(/\b(?:mw|molecular weight)\s+(?:of\s+)?([a-z0-9\- ]{2,80})/i);
+    if (mwMatch) {
+      return String(mwMatch[1] || '').trim();
+    }
+    const whereMatch = sourceText.match(/\bwhere is\s+([a-z0-9\- ]{2,80})/i);
+    if (whereMatch) {
+      return String(whereMatch[1] || '').trim();
+    }
+    return null;
+  };
+  const inferredEntities = {
+    activity_type: /\b(transfection|culture|grew|purif|assay|expression)\b/i.test(sourceText)
+      ? (sourceLower.includes('transfection') ? 'transfection' : 'lab activity')
+      : null,
+    project_name: inferProjectName(),
+    protocol_name: null,
+    protein_name: /\b(pd-1|pd1)\b/i.test(sourceText) ? 'PD-1' : null,
+    compound_name: null,
+    inventory_item: inferInventoryItem(),
+    cell_line: /\b(hek293|expi293|cho|293t)\b/i.test(sourceText)
+      ? String((sourceText.match(/\b(hek293|expi293|cho|293t)\b/i) || [])[1] || '').toUpperCase()
+      : null,
+    paper_title: inferPaperTitle(),
+    workflow_step: /\b(transfection|assay|purification)\b/i.test(sourceText)
+      ? String((sourceText.match(/\b(transfection|assay|purification)\b/i) || [])[1] || '')
+      : null,
+    requested_output: /\b(analyze|analysis|plot|compute|compare|extract)\b/i.test(sourceText)
+      ? 'analysis'
+      : null
+  };
+  if (primaryIntent === 'inventory_lookup' && inferredEntities.inventory_item && !inferredEntities.compound_name) {
+    inferredEntities.compound_name = inferredEntities.inventory_item;
+  }
+  const fallbackParserPayload = {
+    primary_intent: primaryIntent,
+    secondary_intents: [],
+    confidence: 0.8,
+    needs_clarification: false,
+    clarification_reason: null,
+    entities: inferredEntities,
+    inventory_search: {
+      normalized_query: null,
+      candidate_terms: [],
+      aliases: [],
+      search_mode: null
+    },
+    reasoning_summary: 'test parser payload'
+  };
+  const parserResult = agentIntentParser.normalizeIntentParserPayload(parserPayload || fallbackParserPayload);
+  assert.equal(parserResult.ok, true);
+  const routing = agentRouting.buildRoutingDecisionFromIntentParser({
+    parserPayload: parserResult.payload,
+    message,
+    snapshot,
+    availableToolNames,
+    toolContract: AGENT_IO_CONTRACT,
+    writeIntent
+  });
+
+  const requiresApproval = writeIntent && !allowWriteTools;
+  if (routing.plan.needs_clarification) {
+    return {
+      routing,
+      toolOutputs: [],
+      toolTrace: [],
+      citations: [],
+      executedToolNames: [],
+      requiresApproval,
+      dispatchCalls: []
+    };
+  }
+
+  const { dispatch, calls } = buildMockToolDispatch(snapshot);
+  const toolNames = routing.plan.needs_tools
+    ? [...new Set(Array.isArray(routing.plan.selected_tool_names) ? routing.plan.selected_tool_names : [])]
+    : [];
+
+  const toolOutputs = [];
+  const toolTrace = [];
+  const citations = [];
+
+  for (const toolName of toolNames) {
+    const args = buildMockToolArgs(toolName, message, snapshot);
+    const result = await agentTools.executeToolCall(toolName, args, {
+      contract: AGENT_IO_CONTRACT,
+      allowWriteTools,
+      dispatch,
+      fuzzyVocabulary: ['atlas', 'biotin', 'pd-1', 'transfection', 'assay', 'elisa']
+    });
+    toolOutputs.push(result);
+    toolTrace.push({
+      tool: toolName,
+      summary: result.summary,
+      ok: result.ok === true
+    });
+    if (Array.isArray(result.citations)) {
+      citations.push(...result.citations);
+    }
+  }
+
+  return {
+    routing,
+    toolOutputs,
+    toolTrace,
+    citations,
+    executedToolNames: toolOutputs.map((item) => item.tool_name),
+    requiresApproval,
+    dispatchCalls: calls
+  };
+}
 
 test('plannotate GenBank generator builds a valid record with qualifiers', () => {
   const gbk = generatePlannotateGbk({
@@ -499,6 +1418,179 @@ test('papers-management normalizePaperSummary prefers structured plain-English s
   const normalized = papersManagementInternals.normalizePaperSummary(rawSummary);
   assert.equal(normalized.summary, 'A simple plain-language summary.');
   assert.equal(normalized.structured?.title, 'Demo paper');
+});
+
+test('papers-management upload triggers background auto-ingestion and deep-read availability fields', async () => {
+  const document = createMockDocument([
+    'paper-form',
+    'paper-title',
+    'paper-pdf',
+    'paper-link-type',
+    'paper-link-target',
+    'paper-list',
+    'journal-club-name',
+    'journal-club-description',
+    'journal-club-add-btn',
+    'journal-club-list',
+    'knowledge-project-select',
+    'knowledge-question',
+    'knowledge-ask-btn',
+    'knowledge-answer',
+    'knowledge-chat-history'
+  ]);
+  const paperForm = document.getElementById('paper-form');
+  const paperTitleInput = document.getElementById('paper-title');
+  const paperPdfInput = document.getElementById('paper-pdf');
+  const paperLinkTypeSelect = document.getElementById('paper-link-type');
+  const paperLinkTargetSelect = document.getElementById('paper-link-target');
+
+  paperLinkTypeSelect.value = 'project';
+  paperLinkTargetSelect.value = 'p1';
+  paperTitleInput.value = 'Atlas Upload';
+  paperPdfInput.files = [{ name: 'atlas-upload.pdf' }];
+  wireFormReset(paperForm, [paperTitleInput, paperPdfInput, paperLinkTargetSelect, paperLinkTypeSelect]);
+
+  class MockFileReader {
+    readAsDataURL() {
+      this.result = 'data:application/pdf;base64,AAAA';
+      setTimeout(() => {
+        if (typeof this.onload === 'function') {
+          this.onload();
+        }
+      }, 0);
+    }
+  }
+
+  const fetch = async () => ({
+    ok: true,
+    json: async () => ({
+      papers: {
+        paperSummary: 'SUMMARY_PROMPT {{title}}',
+        extractMethods: 'METHODS_PROMPT',
+        extractReagents: 'REAGENTS_PROMPT',
+        knowledgeQa: 'QA_PROMPT',
+        paperTitleSuffix: 'TITLE {{title}}'
+      }
+    })
+  });
+
+  const codexResponses = [];
+  const window = {
+    alert: () => {},
+    enanaApi: {
+      storeImportedFile: async () => ({
+        ok: true,
+        filePath: '/tmp/enana/atlas-upload.pdf',
+        fileName: 'atlas-upload.pdf',
+        relativePath: 'Project/Atlas/Papers/atlas-upload.pdf'
+      }),
+      runCodexLlmPrompt: async ({ prompt }) => {
+        codexResponses.push(String(prompt || ''));
+        const promptText = String(prompt || '');
+        if (promptText.includes('SUMMARY_PROMPT')) {
+          return {
+            ok: true,
+            text: JSON.stringify({
+              title: 'Atlas Upload',
+              plain_english_summary: 'Paper summary.',
+              important_figures_or_tables: [
+                { item: 'Figure 2', summary: 'Expression rescue trend.' }
+              ]
+            })
+          };
+        }
+        if (promptText.includes('METHODS_PROMPT')) {
+          return {
+            ok: true,
+            text: JSON.stringify([
+              {
+                title: 'Method A',
+                purpose: 'Test method',
+                materials: ['Buffer'],
+                steps: [{ step_number: 1, action: 'Prepare cells' }],
+                troubleshooting: []
+              }
+            ])
+          };
+        }
+        if (promptText.includes('REAGENTS_PROMPT')) {
+          return {
+            ok: true,
+            text: JSON.stringify({
+              reagents: [
+                { name: 'Reagent Z', type: 'compound', identifier: 'RZ-1', notes: 'demo' }
+              ]
+            })
+          };
+        }
+        return { ok: true, text: '{}' };
+      }
+    }
+  };
+
+  let persistCalls = 0;
+  const state = {
+    projects: [{ id: 'p1', name: 'Atlas' }],
+    journalClubs: [],
+    papers: [],
+    paperExperimentLinks: [],
+    notebookEntries: [],
+    protocols: [],
+    knowledgeChats: {},
+    settings: {
+      storagePath: '/tmp/enana',
+      llm: {
+        provider: 'codex',
+        model: 'codex-default'
+      }
+    }
+  };
+
+  const module = loadEsmStyleModule(path.join(__dirname, 'modules', 'papers-management.js'), {
+    document,
+    window,
+    fetch,
+    FileReader: MockFileReader
+  });
+  const papersManager = module.initPapersManagement({
+    state,
+    persist: () => {
+      persistCalls += 1;
+    },
+    createId: (() => {
+      let idx = 0;
+      return () => `paper-${idx += 1}`;
+    })(),
+    safeText: shared.safeText,
+    onCreateProtocolDraft: () => {}
+  });
+  papersManager.render();
+  paperLinkTargetSelect.value = 'p1';
+
+  trigger(paperForm, 'submit');
+  await flushAsync();
+  await flushAsync();
+  await flushAsync();
+  await flushAsync();
+  await flushAsync();
+  await flushAsync();
+
+  assert.equal(state.papers.length, 1);
+  const paper = state.papers[0];
+  assert.equal(paper.title, 'Atlas Upload');
+  assert.equal(paper.ingestionStatus, 'ready');
+  assert.equal(paper.availabilityStatus, 'deep_ready');
+  assert.equal(paper.deepReadReady, true);
+  assert.equal(Array.isArray(paper.keyFigures), true);
+  assert.equal(paper.keyFigures.length > 0, true);
+  assert.equal(Array.isArray(paper.methodsExtract), true);
+  assert.equal(paper.methodsExtract.length > 0, true);
+  assert.equal(Array.isArray(paper.keyReagents), true);
+  assert.equal(paper.keyReagents.length > 0, true);
+  assert.equal(codexResponses.some((prompt) => prompt.includes('SUMMARY_PROMPT')), true);
+  assert.equal(codexResponses.some((prompt) => prompt.includes('METHODS_PROMPT')), true);
+  assert.equal(codexResponses.some((prompt) => prompt.includes('REAGENTS_PROMPT')), true);
+  assert.equal(persistCalls > 1, true);
 });
 
 test('normalizeState keeps defaults and migrates legacy LLM API key', () => {
@@ -627,6 +1719,2361 @@ test('main-utils normalizes output names, suffixes, and sequence input', () => {
   assert.equal(lines[1].length, 80);
   assert.equal(lines[2].length, 40);
   assert.equal(mainUtils.normalizeSequenceInput('>existing\nACGT\n'), '>existing\nACGT');
+});
+
+function makeIntentParserPayload({
+  primaryIntent = 'general_science_question',
+  confidence = 0.8,
+  needsClarification = false,
+  clarificationReason = null,
+  entities = {},
+  inventorySearch = {},
+  secondaryIntents = []
+} = {}) {
+  return {
+    primary_intent: primaryIntent,
+    secondary_intents: secondaryIntents,
+    confidence,
+    needs_clarification: needsClarification,
+    clarification_reason: clarificationReason,
+    entities: {
+      activity_type: entities.activity_type || null,
+      project_name: entities.project_name || null,
+      protocol_name: entities.protocol_name || null,
+      protein_name: entities.protein_name || null,
+      compound_name: entities.compound_name || null,
+      inventory_item: entities.inventory_item || null,
+      cell_line: entities.cell_line || null,
+      paper_title: entities.paper_title || null,
+      workflow_step: entities.workflow_step || null,
+      requested_output: entities.requested_output || null
+    },
+    inventory_search: {
+      normalized_query: inventorySearch.normalized_query || null,
+      candidate_terms: Array.isArray(inventorySearch.candidate_terms) ? inventorySearch.candidate_terms : [],
+      aliases: Array.isArray(inventorySearch.aliases) ? inventorySearch.aliases : [],
+      search_mode: inventorySearch.search_mode || null
+    },
+    reasoning_summary: 'test parser payload'
+  };
+}
+
+[
+  ['protocol_to_notebook'],
+  ['inventory_lookup'],
+  ['record_lookup'],
+  ['project_science_question'],
+  ['general_science_question'],
+  ['paper_analysis'],
+  ['literature_search'],
+  ['data_analysis_or_coding'],
+  ['mixed_request'],
+  ['unclear']
+].forEach(([intent], idx) => {
+  test(`[P0] agent-intent-parser normalizes allowed intent ${idx + 1}`, () => {
+    const parsed = agentIntentParser.normalizeIntentParserPayload(makeIntentParserPayload({
+      primaryIntent: intent
+    }));
+    assert.equal(parsed.ok, true);
+    assert.equal(parsed.payload.primary_intent, intent);
+  });
+});
+
+[
+  ['protocol_to_notebook', { activity: 'grew cells', protocol: '', compound: '' }, { needs_tools: true, needs_protocol_search: true, needs_notebook_generation: true, notebook_autosave: true, needs_python: false }],
+  ['inventory_lookup', { compound: 'biotin' }, { needs_tools: true, needs_protocol_search: false, needs_python: false }],
+  ['record_lookup', { workflow_step: 'transfection' }, { needs_tools: true, needs_notebook_retrieval: true }],
+  ['project_science_question', { project: 'Atlas' }, { needs_tools: true, needs_notebook_retrieval: true }],
+  ['paper_analysis', { paper_title: 'Binder paper' }, { needs_tools: true, needs_pdf_reading: true }],
+  ['coding_data_analysis', { activity: 'fit curve' }, { needs_tools: true, needs_python: true }],
+  ['general_science_question', {}, { needs_tools: false }]
+].forEach(([intent, entities, expectedFlags], idx) => {
+  test(`[P0] agent-routing buildExecutionPlan case ${idx + 1}`, () => {
+    const plan = agentRouting.buildExecutionPlan({
+      intent,
+      entities,
+      message: 'test message',
+      writeIntent: false
+    });
+    Object.entries(expectedFlags).forEach(([key, expected]) => {
+      assert.equal(plan[key], expected);
+    });
+  });
+});
+
+test('agent-intent-parser rejects malformed payload', () => {
+  const parsed = agentIntentParser.normalizeIntentParserPayload('not-json');
+  assert.equal(parsed.ok, false);
+  assert.match(String(parsed.error || ''), /json/i);
+});
+
+test('agent-routing uses scored tool selection when toolContract is provided', () => {
+  const toolContract = agentTools.loadToolContract({
+    tools: [
+      { name: 'search_inventory', description: 'inventory reagent stock', input_schema: {}, output_schema: {} },
+      { name: 'search_notebook_entries', description: 'notebook history', input_schema: {}, output_schema: {} },
+      { name: 'search_uniprot', description: 'protein uniprot', input_schema: {}, output_schema: {} }
+    ]
+  });
+  const parserPayload = makeIntentParserPayload({
+    primaryIntent: 'inventory_lookup',
+    entities: {
+      compound_name: 'biotin',
+      inventory_item: 'biotin'
+    },
+    inventorySearch: {
+      normalized_query: 'biotin',
+      candidate_terms: ['biotin', 'd-biotin'],
+      aliases: ['vitamin b7'],
+      search_mode: 'exact_then_alias_then_fuzzy'
+    }
+  });
+  const routing = agentRouting.buildRoutingDecisionFromIntentParser({
+    parserPayload,
+    message: 'what is the mw of biotin',
+    snapshot: {},
+    availableToolNames: ['search_inventory', 'search_notebook_entries', 'search_uniprot'],
+    toolContract,
+    writeIntent: false
+  });
+  assert.equal(routing.plan.selected_tool_names.includes('search_inventory'), true);
+  assert.equal(Array.isArray(routing.plan.tool_selection_rationale), true);
+  assert.equal(routing.plan.tool_selection_rationale.length > 0, true);
+});
+
+test('agent-routing maps canonical intents to execution intents', () => {
+  const literatureRouting = agentRouting.buildRoutingDecisionFromIntentParser({
+    parserPayload: makeIntentParserPayload({
+      primaryIntent: 'literature_search',
+      entities: { protein_name: 'PD-1' }
+    }),
+    message: 'Find recent PD-1 literature.',
+    snapshot: {},
+    availableToolNames: AGENT_IO_TOOL_NAMES,
+    toolContract: AGENT_IO_CONTRACT
+  });
+  assert.equal(literatureRouting.intent, 'general_science_question');
+  assert.equal(literatureRouting.plan.needs_web_search, true);
+
+  const codingRouting = agentRouting.buildRoutingDecisionFromIntentParser({
+    parserPayload: makeIntentParserPayload({
+      primaryIntent: 'data_analysis_or_coding',
+      entities: { requested_output: 'plot IC50 curve' }
+    }),
+    message: 'Use python to analyze this csv.',
+    snapshot: {},
+    availableToolNames: AGENT_IO_TOOL_NAMES,
+    toolContract: AGENT_IO_CONTRACT
+  });
+  assert.equal(codingRouting.intent, 'coding_data_analysis');
+  assert.equal(codingRouting.plan.needs_python, true);
+});
+
+test('agent-routing coding intent emits python plan metadata with ready state', () => {
+  const routing = agentRouting.buildRoutingDecisionFromIntentParser({
+    parserPayload: makeIntentParserPayload({
+      primaryIntent: 'data_analysis_or_coding',
+      entities: {
+        requested_output: 'compute means'
+      }
+    }),
+    message: 'Use Python to analyze this CSV and compute means.',
+    snapshot: {
+      projects: [],
+      protocols: [],
+      notebookEntries: [],
+      workflows: [],
+      papers: [],
+      assays: [
+        { id: 'assay-1', name: 'Atlas assay', numeric_count: 8, result_well_count: 96 }
+      ],
+      gelAnalyses: []
+    },
+    availableToolNames: AGENT_IO_TOOL_NAMES,
+    toolContract: AGENT_IO_CONTRACT,
+    writeIntent: false
+  });
+  assert.equal(routing.intent, 'coding_data_analysis');
+  assert.equal(routing.plan.needs_python, true);
+  assert.equal(Boolean(routing.plan.python_task_type), true);
+  assert.equal(routing.plan.python_ready, true);
+  assert.equal(routing.plan.python_needs_clarification, false);
+});
+
+test('agent-routing coding intent requests clarification when Python input is missing', () => {
+  const routing = agentRouting.buildRoutingDecisionFromIntentParser({
+    parserPayload: makeIntentParserPayload({
+      primaryIntent: 'data_analysis_or_coding'
+    }),
+    message: 'Use Python to analyze attached CSV and compute growth curve.',
+    snapshot: {
+      projects: [],
+      protocols: [],
+      notebookEntries: [],
+      workflows: [],
+      papers: [],
+      assays: [],
+      gelAnalyses: []
+    },
+    availableToolNames: AGENT_IO_TOOL_NAMES,
+    toolContract: AGENT_IO_CONTRACT,
+    writeIntent: false
+  });
+  assert.equal(routing.intent, 'coding_data_analysis');
+  assert.equal(routing.plan.python_needs_clarification, true);
+  assert.equal(routing.plan.needs_clarification, true);
+  assert.match(String(routing.plan.clarification_question || ''), /csv|tabular|data/i);
+});
+
+test('agent-routing general recency query enables web-search planning flags', () => {
+  const routing = agentRouting.buildRoutingDecisionFromIntentParser({
+    parserPayload: makeIntentParserPayload({
+      primaryIntent: 'general_science_question'
+    }),
+    message: 'What are the latest reviews on PD-1 signaling with citations?',
+    snapshot: {
+      projects: [],
+      protocols: [],
+      notebookEntries: [],
+      workflows: [],
+      papers: [],
+      assays: [],
+      gelAnalyses: []
+    },
+    availableToolNames: AGENT_IO_TOOL_NAMES,
+    toolContract: AGENT_IO_CONTRACT,
+    writeIntent: false
+  });
+  assert.equal(routing.intent, 'general_science_question');
+  assert.equal(routing.plan.needs_web_search, true);
+  assert.equal(routing.plan.needs_tools, true);
+  assert.equal(routing.plan.selected_tool_names.includes('search_web'), true);
+});
+
+test('agent-routing mixed_request and unclear enforce clarification', () => {
+  const mixedRouting = agentRouting.buildRoutingDecisionFromIntentParser({
+    parserPayload: makeIntentParserPayload({
+      primaryIntent: 'mixed_request',
+      needsClarification: true,
+      clarificationReason: 'Multiple objectives detected.'
+    }),
+    message: 'Summarize paper and update notebook.',
+    snapshot: {},
+    availableToolNames: AGENT_IO_TOOL_NAMES,
+    toolContract: AGENT_IO_CONTRACT
+  });
+  assert.equal(mixedRouting.plan.needs_clarification, true);
+  assert.match(String(mixedRouting.plan.clarification_question || ''), /which should i handle first/i);
+
+  const unclearRouting = agentRouting.buildRoutingDecisionFromIntentParser({
+    parserPayload: makeIntentParserPayload({
+      primaryIntent: 'unclear',
+      needsClarification: true
+    }),
+    message: 'help',
+    snapshot: {},
+    availableToolNames: AGENT_IO_TOOL_NAMES,
+    toolContract: AGENT_IO_CONTRACT
+  });
+  assert.equal(unclearRouting.plan.needs_clarification, true);
+});
+
+test('agent-protocol-matching builds searchable docs from mixed protocol shapes', () => {
+  const docs = agentProtocolMatching.buildSearchableProtocolDocs({
+    protocols: [
+      {
+        id: 'pr1',
+        name: 'Cell Prep',
+        category: 'cell',
+        purpose: 'Prepare HEK293 cells for transfection.',
+        tags: 'cell, transfection',
+        projectName: 'Atlas',
+        steps: [
+          'Seed cells at 70% confluence',
+          { text: 'Incubate for [time]', placeholders: [{ name: 'time' }] }
+        ]
+      },
+      {
+        id: 'pr2',
+        title: 'Legacy ELISA',
+        description: 'ELISA plate workflow.',
+        steps: [{ instruction: 'Read plate at 450nm' }]
+      }
+    ],
+    projects: [{ id: 'project-atlas', name: 'Atlas' }],
+    notebookEntries: [{ protocolId: 'pr2', projectId: 'project-atlas', updatedAt: '2026-02-01T00:00:00.000Z' }]
+  });
+
+  assert.equal(docs.length, 2);
+  const cellPrep = docs.find((doc) => doc.id === 'pr1');
+  const legacyElisa = docs.find((doc) => doc.id === 'pr2');
+  assert.equal(Boolean(cellPrep), true);
+  assert.equal(Boolean(legacyElisa), true);
+  assert.equal(cellPrep.linked_project, 'Atlas');
+  assert.equal(cellPrep.placeholders.includes('time'), true);
+  assert.equal(legacyElisa.linked_project, 'Atlas');
+  assert.equal(legacyElisa.steps[0], 'Read plate at 450nm');
+});
+
+test('agent-protocol-matching resolveProtocolMatch handles clear and empty candidate paths', () => {
+  const clear = agentProtocolMatching.resolveProtocolMatch({
+    message: 'I grew HEK293 cells and ran transfection today',
+    entities: { activity: 'transfection', cell_line: 'HEK293' },
+    protocols: [
+      {
+        id: 'pr-transfection',
+        name: 'HEK293 Transfection',
+        category: 'cell',
+        steps: ['Seed HEK293 cells', 'Mix DNA and reagent', 'Incubate for 24h']
+      },
+      {
+        id: 'pr-elisa',
+        name: 'ELISA Workflow',
+        category: 'assay',
+        steps: ['Prepare plate', 'Read absorbance']
+      }
+    ],
+    projects: [],
+    notebookEntries: [],
+    maxCandidates: 3
+  });
+  assert.equal(clear.candidates.length > 0, true);
+  assert.equal(clear.candidates[0].protocol_name, 'HEK293 Transfection');
+
+  const empty = agentProtocolMatching.resolveProtocolMatch({
+    message: 'I ran an unknown workflow',
+    entities: { activity: 'unknown workflow' },
+    protocols: [],
+    projects: [],
+    notebookEntries: [],
+    maxCandidates: 3
+  });
+  assert.equal(empty.candidates.length, 0);
+  assert.equal(empty.ambiguity.needs_clarification, true);
+  assert.equal(empty.ambiguity.ambiguity_reason, 'no_protocol_candidates');
+});
+
+test('agent-protocol-matching produces matcher-ranked rows compatible with search_protocols output shape', () => {
+  const resolved = agentProtocolMatching.resolveProtocolMatch({
+    message: 'Transfection in HEK293 cells',
+    entities: { activity: 'transfection', cell_line: 'HEK293' },
+    protocols: [
+      {
+        id: 'pr-transfection',
+        name: 'HEK293 Transfection',
+        category: 'cell',
+        steps: ['Seed HEK293', 'Mix DNA and reagent']
+      },
+      {
+        id: 'pr-legacy',
+        name: 'PCR Setup',
+        category: 'molecular',
+        steps: ['Prepare primers']
+      }
+    ],
+    projects: [],
+    notebookEntries: [],
+    maxCandidates: 5
+  });
+
+  const mapped = resolved.candidates.map((candidate) => ({
+    id: String(candidate.protocol_id || ''),
+    name: String(candidate.protocol_name || ''),
+    category: String(candidate.category || ''),
+    steps: Array.isArray(candidate.steps) ? candidate.steps : []
+  }));
+
+  assert.equal(mapped.length > 0, true);
+  assert.equal(mapped[0].name, 'HEK293 Transfection');
+  assert.equal(Array.isArray(mapped[0].steps), true);
+});
+
+test('agent-protocol-matching ambiguity thresholds and follow-up generation are deterministic', () => {
+  const lowScore = agentProtocolMatching.evaluateProtocolAmbiguity({
+    ranked: [{ protocol_name: 'A', score: 0.59 }]
+  });
+  assert.equal(lowScore.needs_clarification, true);
+  assert.equal(lowScore.ambiguity_reason, 'top_score_below_threshold');
+
+  const closeScores = agentProtocolMatching.evaluateProtocolAmbiguity({
+    ranked: [
+      { protocol_name: 'A', score: 0.81 },
+      { protocol_name: 'B', score: 0.74 }
+    ]
+  });
+  assert.equal(closeScores.needs_clarification, true);
+  assert.equal(closeScores.ambiguity_reason, 'top_two_scores_too_close');
+
+  const clearScores = agentProtocolMatching.evaluateProtocolAmbiguity({
+    ranked: [
+      { protocol_name: 'A', score: 0.81 },
+      { protocol_name: 'B', score: 0.71 }
+    ]
+  });
+  assert.equal(clearScores.needs_clarification, false);
+
+  const followUp = agentProtocolMatching.buildProtocolFollowUpQuestion({
+    ranked: [
+      { protocol_name: 'HEK293 Maintenance' },
+      { protocol_name: 'Expi293 Expansion' },
+      { protocol_name: 'Transient Transfection Setup' }
+    ],
+    entities: { cell_line: 'HEK293' }
+  });
+  assert.match(followUp, /HEK293 Maintenance/);
+  assert.match(followUp, /Expi293 Expansion/);
+  assert.match(followUp, /Transient Transfection Setup/);
+  assert.equal(/please tell me more/i.test(followUp), false);
+});
+
+test('agent-notebook-generation extracts placeholders from structured and legacy step formats', () => {
+  const extracted = agentNotebookGeneration.extractProtocolPlaceholders([
+    {
+      id: 'step-1',
+      text: 'Seed [cell line] cells and label {{ph:sample}}.',
+      placeholders: [{ id: 'sample', name: 'sample_name' }]
+    },
+    {
+      id: 'step-2',
+      text: 'Incubate at 37 C.',
+      placeholders: [{ id: 'time', name: 'time' }]
+    }
+  ]);
+
+  assert.equal(extracted.length, 2);
+  assert.equal(extracted[0].step_id, 'step-1');
+  assert.equal(extracted[0].placeholders.some((item) => item.placeholder_key === 'cell_line'), true);
+  assert.equal(extracted[0].placeholders.some((item) => item.placeholder_id === 'sample'), true);
+  assert.equal(extracted[1].placeholders.some((item) => item.placeholder_id === 'time' && item.marker_type === 'trailing'), true);
+});
+
+test('agent-notebook-generation applies fill priority and protocol-history project resolution deterministically', () => {
+  const draft = agentNotebookGeneration.buildNotebookDraft({
+    message: 'I grew HEK293 cells today and ran transfection.',
+    conversation: [
+      { role: 'user', text: 'Can you use 6 h for incubation time?' },
+      { role: 'assistant', text: 'Acknowledged.' }
+    ],
+    routing: {
+      intent: 'protocol_to_notebook',
+      entities: { activity: 'transfection', project: '', cell_line: 'HEK293' },
+      plan: {
+        needs_clarification: false,
+        protocol_match: {
+          selected_protocol_id: 'pr1',
+          selected_protocol_name: 'HEK293 Transfection'
+        },
+        protocol_candidates: []
+      }
+    },
+    snapshot: {
+      projects: [
+        { id: 'p1', name: 'Atlas' },
+        { id: 'p2', name: 'Beacon' }
+      ],
+      protocols: [
+        {
+          id: 'pr1',
+          name: 'HEK293 Transfection',
+          steps: [
+            { id: 's1', text: 'Seed [cell line] cells.', placeholders: [{ id: 'c1', name: 'cell_line' }] },
+            { id: 's2', text: 'Incubate for [time].' }
+          ]
+        }
+      ],
+      notebookEntries: [
+        { id: 'n1', projectId: 'p2', projectName: 'Beacon', protocolId: 'pr1', result: 'Old run used 12 h incubation.', updatedAt: '2026-02-01T00:00:00.000Z' },
+        { id: 'n2', projectId: 'p2', projectName: 'Beacon', protocolId: 'pr1', result: 'Repeat run.', updatedAt: '2026-02-10T00:00:00.000Z' },
+        { id: 'n3', projectId: 'p1', projectName: 'Atlas', protocolId: 'pr1', result: 'Pilot.', updatedAt: '2026-01-10T00:00:00.000Z' }
+      ]
+    },
+    toolResults: [
+      { tool: 'search_protocols', items: [{ time: '24 h', cell_line: 'CHO' }], summary: 'mock' }
+    ],
+    now: new Date('2026-03-11T12:00:00.000Z')
+  });
+
+  assert.equal(Boolean(draft), true);
+  assert.equal(draft.project.id, 'p2');
+  assert.equal(draft.project.resolution_source, 'protocol_history');
+  const cellLine = draft.placeholder_values.find((item) => item.placeholder_key === 'cell_line');
+  const time = draft.placeholder_values.find((item) => item.placeholder_key === 'time');
+  assert.equal(cellLine.value, 'HEK293');
+  assert.equal(cellLine.source, 'user_input');
+  assert.equal(time.value.toLowerCase(), '6 h');
+  assert.equal(time.source, 'conversation_context');
+});
+
+test('agent-notebook-generation keeps unresolved placeholders visible in rendered steps', () => {
+  const draft = agentNotebookGeneration.buildNotebookDraft({
+    message: 'I ran the assay.',
+    conversation: [],
+    routing: {
+      intent: 'protocol_to_notebook',
+      entities: { activity: 'assay' },
+      plan: {
+        needs_clarification: false,
+        protocol_match: {
+          selected_protocol_id: 'pr-assay',
+          selected_protocol_name: 'Assay Prep'
+        },
+        protocol_candidates: []
+      }
+    },
+    snapshot: {
+      projects: [{ id: 'p1', name: 'Atlas' }],
+      protocols: [
+        {
+          id: 'pr-assay',
+          name: 'Assay Prep',
+          steps: [{ id: 's1', text: 'Add [reagent] to plate.' }]
+        }
+      ],
+      notebookEntries: []
+    },
+    now: new Date('2026-03-11T12:00:00.000Z')
+  });
+
+  assert.equal(Boolean(draft), true);
+  assert.equal(draft.unresolved_placeholders.length, 1);
+  assert.match(draft.rendered_steps[0], /\[reagent\]/i);
+});
+
+test('agent-routing protocol intent includes protocol match metadata and candidates', () => {
+  const snapshot = buildAgentSimulationSnapshot();
+  const routing = agentRouting.buildRoutingDecisionFromIntentParser({
+    parserPayload: makeIntentParserPayload({
+      primaryIntent: 'protocol_to_notebook',
+      entities: {
+        activity_type: 'transfection',
+        cell_line: 'HEK293'
+      }
+    }),
+    message: 'I grew HEK293 cells and ran transfection today.',
+    snapshot,
+    availableToolNames: AGENT_IO_TOOL_NAMES,
+    toolContract: AGENT_IO_CONTRACT,
+    writeIntent: false
+  });
+
+  assert.equal(routing.intent, 'protocol_to_notebook');
+  assert.equal(Boolean(routing.plan.protocol_match), true);
+  assert.equal(Array.isArray(routing.plan.protocol_candidates), true);
+  assert.equal(routing.plan.protocol_candidates.length > 0, true);
+  assert.equal(routing.plan.protocol_candidates[0].protocol_name.includes('Transfection'), true);
+  assert.equal(routing.plan.needs_notebook_generation, true);
+  assert.equal(routing.plan.notebook_autosave, true);
+});
+
+test('agent-routing parser path keeps deterministic protocol matcher metadata', () => {
+  const snapshot = buildAgentSimulationSnapshot();
+  const merged = agentRouting.buildRoutingDecisionFromIntentParser({
+    parserPayload: makeIntentParserPayload({
+      primaryIntent: 'protocol_to_notebook',
+      confidence: 0.82,
+      entities: {
+        activity_type: 'transfection',
+        cell_line: 'HEK293'
+      }
+    }),
+    message: 'I ran transfection in HEK293.',
+    snapshot,
+    writeIntent: false,
+    availableToolNames: AGENT_IO_TOOL_NAMES,
+    toolContract: AGENT_IO_CONTRACT
+  });
+  assert.equal(merged.intent, 'protocol_to_notebook');
+  assert.equal(Boolean(merged.plan.protocol_match), true);
+  assert.equal(Array.isArray(merged.plan.protocol_candidates), true);
+  assert.equal(merged.plan.protocol_candidates.length > 0, true);
+});
+
+test('agent-project-retrieval builds project index from mixed linked records', () => {
+  const snapshot = {
+    projects: [
+      { id: 'p1', name: 'Atlas', summary: 'Primary rescue project.' },
+      { id: 'p2', name: 'Mercury', summary: 'Secondary screening.' }
+    ],
+    protocols: [
+      { id: 'pr1', name: 'HEK293 Transfection', category: 'cell', steps: ['Seed cells', 'Transfect cells'] }
+    ],
+    notebookEntries: [
+      { id: 'n1', projectId: 'p1', projectName: 'Atlas', protocolId: 'pr1', protocolName: 'HEK293 Transfection', result: 'Recovered signal', updatedAt: '2026-02-11T10:00:00.000Z' }
+    ],
+    workflows: [
+      {
+        id: 'w1',
+        name: 'Atlas Recovery Workflow',
+        description: 'Recover expression after transfection.',
+        projectId: 'p1',
+        notebookEntryIds: ['n1'],
+        blocks: [{ id: 'b1', protocolId: 'pr1' }, { id: 'b2', type: 'text', text: 'Review assay response' }],
+        links: [{ fromBlockId: 'b1', toBlockId: 'b2' }],
+        updatedAt: '2026-02-12T10:00:00.000Z'
+      }
+    ],
+    papers: [
+      { id: 'paper-1', title: 'Atlas transfection rescue', summary: 'Workflow rationale.', linkedType: 'project', linkedId: 'p1', updatedAt: '2026-02-09T00:00:00.000Z' }
+    ],
+    assays: [{ id: 'a1', name: 'Atlas plate', projectId: 'p1', updatedAt: '2026-02-12T09:00:00.000Z' }],
+    gelAnalyses: [{ id: 'g1', name: 'Atlas western', projectId: 'p1', updatedAt: '2026-02-12T08:00:00.000Z' }]
+  };
+
+  const index = agentProjectRetrieval.buildProjectRecordIndex({ snapshot });
+  assert.equal(index.projects.length, 2);
+  assert.equal(Boolean(index.by_project_id.p1), true);
+  assert.equal(index.by_project_id.p1.notebook_entries.length, 1);
+  assert.equal(index.by_project_id.p1.workflows.length, 1);
+  assert.equal(index.by_project_id.p1.protocols.length, 1);
+  assert.equal(index.by_project_id.p1.papers.length, 1);
+  assert.equal(index.by_project_id.p1.linked_record_count >= 5, true);
+});
+
+test('agent-project-retrieval resolveProjectScope handles clear, ambiguous, low-score, and no-project cases', () => {
+  const index = agentProjectRetrieval.buildProjectRecordIndex({
+    snapshot: {
+      projects: [
+        { id: 'p1', name: 'Atlas Alpha', summary: 'first atlas' },
+        { id: 'p2', name: 'Atlas Beta', summary: 'second atlas' }
+      ]
+    }
+  });
+
+  const clear = agentProjectRetrieval.resolveProjectScope({
+    message: 'Why did project Atlas Alpha fail?',
+    entities: { project: 'Atlas Alpha' },
+    selectedProjectId: '',
+    selectedProjectName: '',
+    projects: index.projects,
+    index
+  });
+  assert.equal(clear.needs_clarification, false);
+  assert.equal(clear.project_match.selected_project_id, 'p1');
+
+  const ambiguous = agentProjectRetrieval.resolveProjectScope({
+    message: 'why did atlas fail',
+    entities: { project: 'atlas' },
+    selectedProjectId: '',
+    selectedProjectName: '',
+    projects: index.projects,
+    index
+  });
+  assert.equal(ambiguous.needs_clarification, true);
+  assert.equal(ambiguous.project_match.ambiguity_reason, 'top_two_scores_too_close');
+  assert.equal(ambiguous.project_match.top_score >= 0.6, true);
+  assert.equal(ambiguous.project_match.score_delta < 0.1, true);
+
+  const lowScore = agentProjectRetrieval.resolveProjectScope({
+    message: 'why did project neutron fail',
+    entities: { project: 'neutron' },
+    selectedProjectId: '',
+    selectedProjectName: '',
+    projects: index.projects,
+    index
+  });
+  assert.equal(lowScore.needs_clarification, true);
+  assert.equal(lowScore.project_match.ambiguity_reason, 'top_score_below_threshold');
+  assert.equal(lowScore.project_match.top_score < 0.6, true);
+
+  const none = agentProjectRetrieval.resolveProjectScope({
+    message: 'why did project fail',
+    entities: {},
+    selectedProjectId: '',
+    selectedProjectName: '',
+    projects: [],
+    index: { projects: [], by_project_id: {} }
+  });
+  assert.equal(none.needs_clarification, true);
+  assert.equal(none.project_match.ambiguity_reason, 'no_project_candidates');
+});
+
+test('agent-project-retrieval retrieves ranked project evidence packs with workflow support', () => {
+  const evidence = agentProjectRetrieval.retrieveProjectEvidence({
+    message: 'What happened in the transfection workflow for Atlas?',
+    entities: { project: 'Atlas', workflow_step: 'transfection', activity: 'transfection' },
+    selectedProjectId: 'p1',
+    selectedProjectName: 'Atlas',
+    snapshot: {
+      projects: [{ id: 'p1', name: 'Atlas', summary: 'PD-1 rescue' }],
+      protocols: [{ id: 'pr1', name: 'HEK293 Transfection', category: 'cell', steps: ['Transfection setup', 'Incubate'] }],
+      notebookEntries: [
+        { id: 'n1', projectId: 'p1', projectName: 'Atlas', protocolId: 'pr1', protocolName: 'HEK293 Transfection', result: 'Transfection efficiency dropped.', updatedAt: '2026-02-12T12:00:00.000Z' }
+      ],
+      workflows: [
+        {
+          id: 'w-hit',
+          name: 'Atlas Transfection Workflow',
+          description: 'Primary transfection troubleshooting sequence.',
+          projectId: 'p1',
+          blocks: [{ id: 'b1', protocolId: 'pr1' }, { id: 'b2', type: 'text', text: 'Review transfection efficiency' }],
+          links: [{ fromBlockId: 'b1', toBlockId: 'b2' }],
+          updatedAt: '2026-02-13T08:00:00.000Z'
+        },
+        {
+          id: 'w-noise',
+          name: 'Atlas ELISA',
+          description: 'Assay follow-up only.',
+          projectId: 'p1',
+          blocks: [{ id: 'b3', type: 'text', text: 'Read plate absorbance' }],
+          links: [],
+          updatedAt: '2026-01-01T08:00:00.000Z'
+        }
+      ],
+      papers: [
+        { id: 'paper-1', title: 'Atlas transfection troubleshooting', summary: 'Discusses rescue factors.', linkedType: 'project', linkedId: 'p1', updatedAt: '2026-02-10T00:00:00.000Z' }
+      ],
+      assays: [],
+      gelAnalyses: []
+    },
+    maxPerSource: 3
+  });
+
+  assert.equal(evidence.needs_clarification, false);
+  assert.equal(evidence.selected_project.id, 'p1');
+  assert.equal(evidence.packs.workflows.length > 0, true);
+  assert.equal(evidence.packs.workflows[0].id, 'w-hit');
+  assert.equal(evidence.packs.notebook.length > 0, true);
+  assert.equal(evidence.packs.protocols.length > 0, true);
+  assert.equal(evidence.packs.papers.length > 0, true);
+  assert.equal(evidence.citations.some((citation) => citation.source === 'workflow'), true);
+});
+
+test('agent-paper-analysis classifies task modes and deep-reading requirements', () => {
+  const summarize = agentPaperAnalysis.classifyPaperTaskMode({
+    message: 'Summarize this paper on PD-1 binders.',
+    entities: { paper_title: '' }
+  });
+  assert.equal(summarize.mode, 'summarize');
+  assert.equal(summarize.requires_deep_reading, false);
+
+  const methods = agentPaperAnalysis.classifyPaperTaskMode({
+    message: 'Extract methods from "Atlas Rescue Paper".',
+    entities: {}
+  });
+  assert.equal(methods.mode, 'extract_methods');
+  assert.equal(methods.requires_deep_reading, true);
+
+  const compare = agentPaperAnalysis.classifyPaperTaskMode({
+    message: 'Compare "Atlas Rescue" vs "Mercury ELISA".',
+    entities: {}
+  });
+  assert.equal(compare.mode, 'compare_papers');
+  assert.equal(compare.requires_deep_reading, true);
+  assert.equal(compare.compare_queries.length >= 2, true);
+});
+
+test('agent-paper-analysis resolves clear, ambiguous, and no-match requests with fixed thresholds', () => {
+  const docs = agentPaperAnalysis.buildPaperSearchableDocs({
+    projects: [{ id: 'p1', name: 'Atlas' }],
+    papers: [
+      {
+        id: 'paper-1',
+        title: 'Atlas Transfection Rescue',
+        summary: 'Rescue transfection efficiency using additive screen.',
+        linkedType: 'project',
+        linkedId: 'p1',
+        pdfDataUrl: 'data:application/pdf;base64,AAAA',
+        methodsExtract: [{ title: 'Rescue workflow', steps: [{ action: 'Transfect cells' }] }],
+        keyReagents: [{ name: 'Additive A', type: 'compound' }],
+        updatedAt: '2026-02-12T00:00:00.000Z'
+      },
+      {
+        id: 'paper-2',
+        title: 'Mercury ELISA Baseline',
+        summary: 'Unrelated assay baseline study.',
+        linkedType: 'project',
+        linkedId: 'p1',
+        methodsExtract: [{ title: 'ELISA workflow', steps: [{ action: 'Read absorbance' }] }],
+        updatedAt: '2026-02-11T00:00:00.000Z'
+      }
+    ]
+  });
+
+  const clear = agentPaperAnalysis.resolvePaperRequest({
+    message: 'Summarize paper Atlas Transfection Rescue.',
+    entities: { paper_title: 'Atlas Transfection Rescue' },
+    docs
+  });
+  assert.equal(clear.needs_clarification, false);
+  assert.equal(clear.selected.paper_id, 'paper-1');
+
+  const ambiguous = agentPaperAnalysis.evaluatePaperAmbiguity({
+    ranked: [
+      { paper_title: 'A', score: 0.68 },
+      { paper_title: 'B', score: 0.62 }
+    ]
+  });
+  assert.equal(ambiguous.needs_clarification, true);
+  assert.equal(ambiguous.ambiguity_reason, 'top_two_scores_too_close');
+  assert.equal(ambiguous.top_score >= 0.6, true);
+  assert.equal(ambiguous.score_delta < 0.1, true);
+
+  const lowScore = agentPaperAnalysis.evaluatePaperAmbiguity({
+    ranked: [
+      { paper_title: 'A', score: 0.59 },
+      { paper_title: 'B', score: 0.21 }
+    ]
+  });
+  assert.equal(lowScore.needs_clarification, true);
+  assert.equal(lowScore.ambiguity_reason, 'top_score_below_threshold');
+  assert.equal(lowScore.top_score < 0.6, true);
+
+  const noMatch = agentPaperAnalysis.resolvePaperRequest({
+    message: 'Summarize paper completely unrelated title',
+    entities: { paper_title: 'neutron decay atlas 2026' },
+    docs: []
+  });
+  assert.equal(noMatch.needs_clarification, true);
+  assert.equal(noMatch.ambiguity_reason, 'no_paper_candidates');
+});
+
+test('agent-paper-analysis enforces upload-required gating for deep modes and compare mode', () => {
+  const docs = agentPaperAnalysis.buildPaperSearchableDocs({
+    projects: [{ id: 'p1', name: 'Atlas' }],
+    papers: [
+      {
+        id: 'paper-a',
+        title: 'Atlas Methods Paper',
+        summary: 'Detailed assay setup.',
+        linkedType: 'project',
+        linkedId: 'p1',
+        methodsExtract: [{ title: 'Assay', steps: [{ action: 'Prepare plate' }] }],
+        updatedAt: '2026-02-10T00:00:00.000Z'
+      },
+      {
+        id: 'paper-b',
+        title: 'Atlas Uploaded Paper',
+        summary: 'Uploaded full text with reagent extraction.',
+        linkedType: 'project',
+        linkedId: 'p1',
+        pdfDataUrl: 'data:application/pdf;base64,AAAA',
+        methodsExtract: [{ title: 'Protocol', steps: [{ action: 'Run assay' }] }],
+        keyReagents: [{ name: 'Reagent X', type: 'compound' }],
+        updatedAt: '2026-02-12T00:00:00.000Z'
+      }
+    ]
+  });
+
+  const deepMethods = agentPaperAnalysis.resolvePaperRequest({
+    message: 'Extract methods from Atlas Methods Paper.',
+    entities: { paper_title: 'Atlas Methods Paper' },
+    docs
+  });
+  assert.equal(deepMethods.mode, 'extract_methods');
+  assert.equal(deepMethods.requires_deep_reading, true);
+  assert.equal(deepMethods.needs_clarification, true);
+  assert.equal(deepMethods.ambiguity_reason, 'deep_read_requires_uploaded_pdf');
+
+  const compare = agentPaperAnalysis.resolvePaperRequest({
+    message: 'Compare "Atlas Methods Paper" vs "Atlas Uploaded Paper".',
+    entities: {},
+    docs
+  });
+  assert.equal(compare.mode, 'compare_papers');
+  assert.equal(compare.needs_clarification, true);
+  assert.equal(compare.ambiguity_reason, 'compare_requires_uploaded_pdfs');
+  assert.match(String(compare.clarification_question || ''), /upload/i);
+});
+
+test('agent-response-layer determines deterministic response types by precedence', () => {
+  const clarification = agentResponseLayer.determineResponseType({
+    routing: { intent: 'project_science_question', plan: { needs_clarification: true } }
+  });
+  assert.equal(clarification, 'clarification_question');
+
+  const notebook = agentResponseLayer.determineResponseType({
+    routing: { intent: 'general_science_question', plan: {} },
+    notebookDraft: { protocol: { id: 'p1' } }
+  });
+  assert.equal(notebook, 'notebook_draft');
+
+  const project = agentResponseLayer.determineResponseType({
+    routing: { intent: 'project_science_question', plan: {} }
+  });
+  assert.equal(project, 'project_science_answer');
+
+  const paper = agentResponseLayer.determineResponseType({
+    routing: { intent: 'paper_analysis', plan: {} }
+  });
+  assert.equal(paper, 'paper_summary');
+
+  const analysis = agentResponseLayer.determineResponseType({
+    routing: { intent: 'general_science_question', plan: { needs_python: true } }
+  });
+  assert.equal(analysis, 'analysis_result');
+
+  const factual = agentResponseLayer.determineResponseType({
+    routing: { intent: 'general_science_question', plan: {} }
+  });
+  assert.equal(factual, 'factual_answer');
+});
+
+test('agent-response-layer confidence labels use fixed 0.80/0.60 thresholds', () => {
+  assert.equal(agentResponseLayer.labelConfidence({ score: 0.8 }), 'high');
+  assert.equal(agentResponseLayer.labelConfidence({ score: 0.79 }), 'medium');
+  assert.equal(agentResponseLayer.labelConfidence({ score: 0.6 }), 'medium');
+  assert.equal(agentResponseLayer.labelConfidence({ score: 0.59 }), 'low');
+});
+
+test('agent-response-layer source summary maps categories with deterministic order and dedupe', () => {
+  const summary = agentResponseLayer.buildSourceSummary({
+    citations: [
+      { source: 'protocol', pointer: 'pr1', reason: 'Matched protocol.' },
+      { source: 'notebook_entry', pointer: 'n1', reason: 'Matched notebook.' },
+      { source: 'workflow', pointer: 'w1', reason: 'Matched workflow.' },
+      { source: 'paper', pointer: 'paper-1', reason: 'Matched paper.' },
+      { source: 'web_source', pointer: 'https://example.org', reason: 'Matched web.' },
+      { source: 'inference', pointer: 'derived:1', reason: 'Derived from evidence.' },
+      { source: 'paper', pointer: 'paper-1', reason: 'Duplicate should dedupe.' }
+    ],
+    toolTrace: [
+      { tool: 'search_inventory', summary: 'Inventory used.' },
+      { tool: 'search_web', summary: 'Web used.' }
+    ]
+  });
+  assert.equal(summary.total_sources > 0, true);
+  assert.deepEqual(
+    summary.groups.map((group) => group.source_type),
+    ['tool_result', 'notebook_page', 'workflow_record', 'uploaded_paper', 'web_search', 'inference']
+  );
+  const paperGroup = summary.groups.find((group) => group.source_type === 'uploaded_paper');
+  assert.equal(Boolean(paperGroup), true);
+  assert.equal(paperGroup.count >= 1, true);
+  assert.equal(paperGroup.items.filter((item) => item.pointer === 'paper-1').length, 1);
+});
+
+test('agent-response-layer unresolved field extraction and template rendering are deterministic', () => {
+  const unresolvedFields = agentResponseLayer.buildUnresolvedFields({
+    responseType: 'notebook_draft',
+    notebookDraft: {
+      unresolved_placeholders: [
+        { step_id: 's1', placeholder_id: 'ph1', placeholder_key: 'cell_line', display: '[cell line]', reason: 'missing_supported_value' }
+      ]
+    }
+  });
+  assert.equal(unresolvedFields.length, 1);
+  assert.equal(unresolvedFields[0].placeholder_key, 'cell_line');
+
+  const withSources = agentResponseLayer.applyResponseTemplate({
+    answer: 'Base answer.',
+    responseType: 'factual_answer',
+    sourceSummary: {
+      total_sources: 1,
+      groups: [{ source_type: 'tool_result', label: 'Tool result', count: 1, items: [{ pointer: 'pr1', source: 'protocol' }] }]
+    },
+    unresolvedFields: []
+  });
+  assert.match(withSources, /Sources used:/);
+
+  const clarification = agentResponseLayer.applyResponseTemplate({
+    answer: 'Need clarification.',
+    responseType: 'clarification_question',
+    sourceSummary: { total_sources: 1, groups: [{ source_type: 'tool_result', label: 'Tool result', count: 1, items: [{ pointer: 'x' }] }] },
+    unresolvedFields: []
+  });
+  assert.equal(/Sources used:/i.test(clarification), false);
+
+  const notebookTemplate = agentResponseLayer.applyResponseTemplate({
+    answer: 'Notebook draft prepared.',
+    responseType: 'notebook_draft',
+    sourceSummary: { total_sources: 0, groups: [] },
+    unresolvedFields
+  });
+  assert.match(notebookTemplate, /Unresolved placeholders:/);
+  assert.match(notebookTemplate, /cell line|cell_line/i);
+});
+
+test('agent-response-layer finalize emits response metadata and templated answer', () => {
+  const finalized = agentResponseLayer.finalizeAgentResponse({
+    answer: 'Final answer text.',
+    confidence: 0.82,
+    routing: { intent: 'general_science_question', plan: {} },
+    notebookDraft: null,
+    toolTrace: [{ tool: 'search_inventory', summary: 'Found items.' }],
+    citations: [{ source: 'chemical_inventory', pointer: 'chem-1', reason: 'Matched chemical.' }]
+  });
+  assert.equal(finalized.response_type, 'factual_answer');
+  assert.equal(finalized.confidence_label, 'high');
+  assert.equal(Array.isArray(finalized.unresolved_fields), true);
+  assert.equal(Boolean(finalized.source_summary), true);
+  assert.match(finalized.answer, /Sources used:/);
+});
+
+test('agent-validation-safety detects tool-claim mismatch when retrieval claims lack tool evidence', () => {
+  const result = agentValidationSafety.validateToolClaimIntegrity({
+    routing: { intent: 'inventory_lookup', plan: { needs_tools: true } },
+    toolTrace: [],
+    citations: [],
+    answer: 'Inventory shows we found sulfo-SMCC in stock.'
+  });
+  assert.equal(result.passed, false);
+  assert.equal(result.violations[0].code, 'tool_claim_without_tool_evidence');
+});
+
+test('agent-validation-safety detects missing protocol selection for protocol-to-notebook answers', () => {
+  const result = agentValidationSafety.validateProtocolClaimIntegrity({
+    routing: {
+      intent: 'protocol_to_notebook',
+      plan: {
+        protocol_match: {
+          selected_protocol_id: '',
+          selected_protocol_name: ''
+        },
+        protocol_candidates: []
+      }
+    },
+    answer: 'I prepared a notebook draft from protocol steps.'
+  });
+  assert.equal(result.passed, false);
+  assert.equal(result.violations.some((item) => item.code === 'no_protocol_candidates'), true);
+});
+
+test('agent-validation-safety rejects unsupported notebook placeholder fills', () => {
+  const result = agentValidationSafety.validateNotebookPlaceholderSupport({
+    notebookDraft: {
+      placeholder_values: [
+        {
+          placeholder_key: 'cell_line',
+          value: 'HEK293',
+          source: 'unknown_source'
+        }
+      ]
+    },
+    toolTrace: []
+  });
+  assert.equal(result.passed, false);
+  assert.equal(result.violations.some((item) => item.code === 'unsupported_placeholder_fill'), true);
+});
+
+test('agent-validation-safety blocks deep paper detail claims when paper is not deep-ready', () => {
+  const result = agentValidationSafety.validatePaperDetailClaims({
+    routing: {
+      intent: 'paper_analysis',
+      plan: {
+        needs_deep_paper_reading: true,
+        needs_paper_comparison: false,
+        paper_match: {
+          deep_read_ready: false,
+          availability_status: 'metadata_only'
+        }
+      }
+    },
+    answer: 'Figure 2 confirms the reagent concentration and methods table details.'
+  });
+  assert.equal(result.passed, false);
+  assert.equal(result.violations.some((item) => item.code === 'pdf_missing'), true);
+});
+
+test('agent-validation-safety validateAndGateResponse returns provenance and clarification gate metadata', () => {
+  const result = agentValidationSafety.validateAndGateResponse({
+    routing: {
+      intent: 'inventory_lookup',
+      plan: {
+        needs_tools: true,
+        needs_clarification: false
+      }
+    },
+    normalized: {
+      answer: 'Inventory shows PEI in stock at shelf A.',
+      confidence_label: 'medium',
+      response_type: 'factual_answer',
+      source_summary: { total_sources: 0, groups: [] },
+      citations: []
+    },
+    notebookDraft: null,
+    toolTrace: [],
+    citations: []
+  });
+  assert.equal(result.validation.passed, false);
+  assert.equal(result.validation.forced_clarification, true);
+  assert.equal(Array.isArray(result.provenance.source_evidence), true);
+  assert.equal(Number.isFinite(Number(result.provenance.unsupported_statement_count)), true);
+});
+
+test('agent-observability records lifecycle events and classifies deterministic failure reasons', () => {
+  const recorder = agentObservability.createLifecycleRecorder({ requestId: 'req-1' });
+  agentObservability.recordLifecycleEvent(recorder, {
+    stage: 'tool_call_failed',
+    status: 'failed',
+    tool_name: 'run_python_sandbox',
+    message: 'Python exception: NameError'
+  });
+  const reasons = agentObservability.classifyFailureReasons({
+    lifecycleEvents: recorder.events,
+    validation: {
+      passed: false,
+      forced_clarification: true
+    }
+  });
+  assert.equal(Array.isArray(recorder.events), true);
+  assert.equal(recorder.events.length, 1);
+  assert.equal(reasons.includes('python_exception'), true);
+  assert.equal(reasons.includes('validation_failed'), true);
+});
+
+test('agent-observability rotates logs and replays one request lifecycle', async () => {
+  const tempDir = path.join(__dirname, 'tmp', 'agent-observability-test');
+  await fsPromises.rm(tempDir, { recursive: true, force: true });
+  await fsPromises.mkdir(tempDir, { recursive: true });
+  const logPath = path.join(tempDir, 'agent-chat.log');
+
+  for (let index = 0; index < 6; index += 1) {
+    await agentObservability.appendLogWithRotation({
+      logPath,
+      maxBytes: 180,
+      maxRotations: 5,
+      entry: JSON.stringify({
+        type: index % 2 === 0 ? 'agent-chat-request' : 'agent-lifecycle',
+        requestId: 'req-rotate',
+        stage: index % 2 === 0 ? undefined : 'tool_call_completed',
+        timestamp: `2026-03-13T00:00:0${index}Z`,
+        message: `entry-${index}`
+      })
+    });
+  }
+  await agentObservability.appendLogWithRotation({
+    logPath,
+    maxBytes: 180,
+    maxRotations: 5,
+    entry: JSON.stringify({
+      type: 'agent-chat-result',
+      requestId: 'req-rotate',
+      ok: true,
+      response_type: 'factual_answer',
+      timestamp: '2026-03-13T00:00:09Z'
+    })
+  });
+
+  const replay = await agentObservability.replayRequestLifecycle({
+    requestId: 'req-rotate',
+    logPath
+  });
+  assert.equal(replay.ok, true);
+  assert.equal(replay.requestId, 'req-rotate');
+  assert.equal(Array.isArray(replay.events), true);
+  assert.equal(fs.existsSync(`${logPath}.1`), true);
+});
+
+test('agent-routing project intent includes project matcher metadata and workflow retrieval flag', () => {
+  const snapshot = buildAgentSimulationSnapshot();
+  const routing = agentRouting.buildRoutingDecisionFromIntentParser({
+    parserPayload: makeIntentParserPayload({
+      primaryIntent: 'project_science_question',
+      entities: {
+        project_name: 'Atlas',
+        workflow_step: 'transfection'
+      }
+    }),
+    message: 'Why did project Atlas fail after transfection?',
+    snapshot,
+    availableToolNames: AGENT_IO_TOOL_NAMES,
+    toolContract: AGENT_IO_CONTRACT,
+    writeIntent: false,
+    selectedProjectId: 'project-atlas',
+    selectedProjectName: 'Atlas'
+  });
+
+  assert.equal(routing.intent, 'project_science_question');
+  assert.equal(routing.plan.needs_project_retrieval, true);
+  assert.equal(routing.plan.needs_workflow_retrieval, true);
+  assert.equal(Boolean(routing.plan.project_match), true);
+  assert.equal(Array.isArray(routing.plan.project_candidates), true);
+  assert.equal(routing.plan.project_match.selected_project_id, 'project-atlas');
+});
+
+test('agent-routing project ambiguity triggers clarification before tool execution', () => {
+  const snapshot = {
+    projects: [
+      { id: 'p1', name: 'Atlas Alpha' },
+      { id: 'p2', name: 'Atlas Beta' }
+    ],
+    protocols: [],
+    notebookEntries: [],
+    workflows: [],
+    papers: [
+      {
+        id: 'paper-1',
+        title: 'Atlas Uploaded Paper',
+        linkedType: 'project',
+        linkedId: 'p1',
+        linkedName: 'Cancer Study',
+        summary: 'Paper summary text.',
+        summaryStructured: {
+          important_figures_or_tables: [
+            { item: 'Figure 2', summary: 'Expression rescue trend.' }
+          ]
+        },
+        methodsExtract: [
+          {
+            title: 'Method A',
+            steps: [{ action: 'Prepare cells' }]
+          }
+        ],
+        keyReagents: [
+          { name: 'Reagent Z', type: 'compound', identifier: 'RZ-1', notes: 'demo' }
+        ],
+        pdfDataUrl: 'data:application/pdf;base64,AAAA',
+        deepReadReady: true,
+        availabilityStatus: 'deep_ready',
+        ingestionStatus: 'ready',
+        ingestionUpdatedAt: '2026-02-01T00:00:00.000Z',
+        ingestionErrors: [],
+        updatedAt: '2026-02-01T00:00:00.000Z'
+      }
+    ],
+    assays: [],
+    gelAnalyses: []
+  };
+  const routing = agentRouting.buildRoutingDecisionFromIntentParser({
+    parserPayload: makeIntentParserPayload({
+      primaryIntent: 'project_science_question',
+      entities: {
+        project_name: 'atlas'
+      }
+    }),
+    message: 'Why did project atlas fail?',
+    snapshot,
+    availableToolNames: AGENT_IO_TOOL_NAMES,
+    toolContract: AGENT_IO_CONTRACT,
+    writeIntent: false
+  });
+
+  assert.equal(routing.intent, 'project_science_question');
+  assert.equal(routing.plan.project_match.needs_clarification, true);
+  assert.equal(routing.plan.needs_clarification, true);
+  assert.equal(Array.isArray(routing.plan.project_candidates), true);
+  assert.equal(routing.plan.project_candidates.length >= 2, true);
+  assert.match(String(routing.plan.clarification_question || ''), /Which project should I use/i);
+});
+
+test('agent-routing parser path keeps deterministic project matcher metadata', () => {
+  const snapshot = {
+    projects: [
+      { id: 'p1', name: 'Atlas Alpha' },
+      { id: 'p2', name: 'Atlas Beta' }
+    ],
+    protocols: [],
+    notebookEntries: [],
+    workflows: [],
+    papers: [],
+    assays: [],
+    gelAnalyses: []
+  };
+  const merged = agentRouting.buildRoutingDecisionFromIntentParser({
+    parserPayload: makeIntentParserPayload({
+      primaryIntent: 'project_science_question',
+      confidence: 0.81,
+      entities: {
+        project_name: 'atlas',
+        workflow_step: 'transfection'
+      }
+    }),
+    message: 'Why did atlas fail after transfection?',
+    snapshot,
+    writeIntent: false,
+    availableToolNames: AGENT_IO_TOOL_NAMES,
+    toolContract: AGENT_IO_CONTRACT,
+    selectedProjectId: 'p1',
+    selectedProjectName: 'Atlas Alpha'
+  });
+
+  assert.equal(merged.intent, 'project_science_question');
+  assert.equal(Boolean(merged.plan.project_match), true);
+  assert.equal(merged.plan.project_match.selected_project_id, 'p1');
+  assert.equal(Array.isArray(merged.plan.project_candidates), true);
+  assert.equal(merged.plan.project_candidates.length > 0, true);
+});
+
+test('agent-routing paper intent includes paper matcher metadata and candidates', () => {
+  const snapshot = {
+    projects: [{ id: 'p1', name: 'Atlas' }],
+    protocols: [],
+    notebookEntries: [],
+    workflows: [],
+    assays: [],
+    gelAnalyses: [],
+    papers: [
+      {
+        id: 'paper-1',
+        title: 'Atlas Uploaded Paper',
+        summary: 'Uploaded paper with full extraction.',
+        linkedType: 'project',
+        linkedId: 'p1',
+        pdfDataUrl: 'data:application/pdf;base64,AAAA',
+        methodsExtract: [{ title: 'Methods', steps: [{ action: 'Run assay' }] }],
+        keyReagents: [{ name: 'Reagent A', type: 'compound' }],
+        updatedAt: '2026-02-12T00:00:00.000Z'
+      }
+    ]
+  };
+  const routing = agentRouting.buildRoutingDecisionFromIntentParser({
+    parserPayload: makeIntentParserPayload({
+      primaryIntent: 'paper_analysis',
+      entities: {
+        paper_title: 'Atlas Uploaded Paper'
+      }
+    }),
+    message: 'Extract methods from Atlas Uploaded Paper.',
+    snapshot,
+    availableToolNames: AGENT_IO_TOOL_NAMES,
+    toolContract: AGENT_IO_CONTRACT,
+    writeIntent: false
+  });
+
+  assert.equal(routing.intent, 'paper_analysis');
+  assert.equal(routing.plan.needs_paper_retrieval, true);
+  assert.equal(routing.plan.needs_deep_paper_reading, true);
+  assert.equal(Boolean(routing.plan.paper_match), true);
+  assert.equal(Array.isArray(routing.plan.paper_candidates), true);
+  assert.equal(routing.plan.paper_candidates.length > 0, true);
+  assert.equal(routing.plan.paper_match.selected_paper_id, 'paper-1');
+});
+
+test('agent-routing paper deep-analysis upload gating triggers clarification before tools', () => {
+  const snapshot = {
+    projects: [{ id: 'p1', name: 'Atlas' }],
+    protocols: [],
+    notebookEntries: [],
+    workflows: [],
+    assays: [],
+    gelAnalyses: [],
+    papers: [
+      {
+        id: 'paper-meta',
+        title: 'Atlas Metadata Paper',
+        summary: 'Metadata-only summary, no upload.',
+        linkedType: 'project',
+        linkedId: 'p1',
+        updatedAt: '2026-02-10T00:00:00.000Z'
+      }
+    ]
+  };
+  const routing = agentRouting.buildRoutingDecisionFromIntentParser({
+    parserPayload: makeIntentParserPayload({
+      primaryIntent: 'paper_analysis',
+      entities: {
+        paper_title: 'Atlas Metadata Paper'
+      }
+    }),
+    message: 'Extract reagents from Atlas Metadata Paper.',
+    snapshot,
+    availableToolNames: AGENT_IO_TOOL_NAMES,
+    toolContract: AGENT_IO_CONTRACT,
+    writeIntent: false
+  });
+
+  assert.equal(routing.intent, 'paper_analysis');
+  assert.equal(routing.plan.paper_match.needs_clarification, true);
+  assert.equal(routing.plan.needs_clarification, true);
+  assert.equal(routing.plan.paper_match.ambiguity_reason, 'deep_read_requires_uploaded_pdf');
+  assert.match(String(routing.plan.clarification_question || ''), /upload/i);
+});
+
+test('agent-routing parser path keeps deterministic paper matcher metadata', () => {
+  const snapshot = {
+    projects: [{ id: 'p1', name: 'Atlas' }],
+    protocols: [],
+    notebookEntries: [],
+    workflows: [],
+    assays: [],
+    gelAnalyses: [],
+    papers: [
+      {
+        id: 'paper-1',
+        title: 'Atlas Uploaded Paper',
+        summary: 'Uploaded paper with deep extraction.',
+        linkedType: 'project',
+        linkedId: 'p1',
+        pdfDataUrl: 'data:application/pdf;base64,AAAA',
+        methodsExtract: [{ title: 'Methods', steps: [{ action: 'Run assay' }] }],
+        keyReagents: [{ name: 'Reagent A', type: 'compound' }],
+        updatedAt: '2026-02-12T00:00:00.000Z'
+      }
+    ]
+  };
+  const merged = agentRouting.buildRoutingDecisionFromIntentParser({
+    parserPayload: makeIntentParserPayload({
+      primaryIntent: 'paper_analysis',
+      confidence: 0.82,
+      entities: {
+        paper_title: 'Atlas Uploaded Paper',
+        project_name: 'Atlas'
+      }
+    }),
+    message: 'Extract methods from Atlas Uploaded Paper.',
+    snapshot,
+    writeIntent: false,
+    availableToolNames: AGENT_IO_TOOL_NAMES,
+    toolContract: AGENT_IO_CONTRACT
+  });
+
+  assert.equal(merged.intent, 'paper_analysis');
+  assert.equal(Boolean(merged.plan.paper_match), true);
+  assert.equal(merged.plan.paper_match.selected_paper_id, 'paper-1');
+  assert.equal(Array.isArray(merged.plan.paper_candidates), true);
+  assert.equal(merged.plan.paper_candidates.length > 0, true);
+});
+
+test('agent-tools registry loader/list/find APIs return expected tool subsets', () => {
+  const rawContract = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'agent-io-contract.json'), 'utf8'));
+  const contract = agentTools.loadToolContract(rawContract);
+  assert.equal(contract.tools.length > 0, true);
+  const allTools = agentTools.listAvailableTools(contract, { includeWrite: true });
+  const readOnlyTools = agentTools.listAvailableTools(contract, { includeWrite: false });
+  assert.equal(allTools.some((tool) => tool.name === 'download_paper_pdf'), true);
+  assert.equal(readOnlyTools.some((tool) => tool.name === 'download_paper_pdf'), false);
+  const proteinTools = agentTools.findToolsByEntityType(contract, 'protein');
+  assert.equal(proteinTools.some((tool) => tool.name === 'search_uniprot'), true);
+  const literatureTools = agentTools.findToolsByTaskType(contract, 'literature_lookup');
+  assert.equal(literatureTools.some((tool) => tool.name === 'search_pubmed'), true);
+  assert.equal(literatureTools.some((tool) => tool.name === 'search_web'), true);
+  const workflowTools = agentTools.findToolsByEntityType(contract, 'workflow_step');
+  assert.equal(workflowTools.some((tool) => tool.name === 'search_workflows'), true);
+});
+
+test('agent-tools selectToolsForRequest ranks tools by entity/task/exactness', () => {
+  const rawContract = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'agent-io-contract.json'), 'utf8'));
+  const contract = agentTools.loadToolContract(rawContract);
+
+  const inventorySelection = agentTools.selectToolsForRequest({
+    intent: 'inventory_lookup',
+    entities: { compound: 'biotin', protein: '' },
+    message: 'what is the MW of biotin in stock',
+    contract,
+    allowWriteTools: false
+  });
+  assert.equal(inventorySelection.selectedToolNames[0], 'search_inventory');
+
+  const proteinSelection = agentTools.selectToolsForRequest({
+    intent: 'inventory_lookup',
+    entities: { protein: 'PD-1' },
+    message: 'what is the pI of PD-1',
+    contract,
+    allowWriteTools: false
+  });
+  assert.equal(proteinSelection.selectedToolNames.includes('search_uniprot'), true);
+
+  const recordSelection = agentTools.selectToolsForRequest({
+    intent: 'record_lookup',
+    entities: { workflow_step: 'transfection', protocol: 'Cell Prep' },
+    message: 'what did we do last time for transfection',
+    contract,
+    allowWriteTools: false
+  });
+  assert.equal(recordSelection.selectedToolNames.includes('search_notebook_entries'), true);
+
+  const webSelection = agentTools.selectToolsForRequest({
+    intent: 'general_science_question',
+    entities: { protein: 'PD-1' },
+    message: 'What are the latest PD-1 review papers with references?',
+    contract,
+    allowWriteTools: false
+  });
+  assert.equal(webSelection.selectedToolNames.includes('search_web'), true);
+});
+
+test('agent-tools selectToolsForRequest ranks workflow tool for workflow-step questions', () => {
+  const rawContract = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'agent-io-contract.json'), 'utf8'));
+  const contract = agentTools.loadToolContract(rawContract);
+  const selection = agentTools.selectToolsForRequest({
+    intent: 'project_science_question',
+    entities: { workflow_step: 'transfection', project: 'Atlas' },
+    message: 'Which workflow step comes after transfection in project Atlas?',
+    contract,
+    allowWriteTools: false
+  });
+  assert.equal(selection.selectedToolNames.includes('search_workflows'), true);
+});
+
+test('agent-tools executeToolCall handles known, unknown, and write-policy paths', async () => {
+  const contract = agentTools.loadToolContract({
+    tools: [
+      { name: 'search_inventory', description: 'inventory', input_schema: {}, output_schema: {} },
+      { name: 'download_paper_pdf', description: 'write', input_schema: {}, output_schema: {} }
+    ]
+  });
+  const toEnvelope = (toolName, args, rawResult, options = {}) => ({
+    ok: options.ok !== false,
+    tool_name: toolName,
+    input: args,
+    items: rawResult?.items || [],
+    citations: rawResult?.citations || [],
+    summary: rawResult?.summary || '',
+    ...(options.error ? { error: options.error } : {})
+  });
+  const dispatch = async (toolName, args) => {
+    if (toolName === 'search_inventory') {
+      return toEnvelope(toolName, args, {
+        items: [{ id: 'c1', name: 'biotin' }],
+        citations: [{ source: 'inventory', pointer: 'c1', reason: 'match' }],
+        summary: 'Found 1'
+      });
+    }
+    if (toolName === 'download_paper_pdf') {
+      return toEnvelope(toolName, args, {
+        items: [{ linked_name: 'x', status: 'downloaded' }],
+        citations: [{ source: 'paper_store', pointer: 'x', reason: 'write completed' }],
+        summary: 'Downloaded 1'
+      });
+    }
+    throw new Error('unexpected');
+  };
+
+  const known = await agentTools.executeToolCall('search_inventory', { query: 'biotin' }, {
+    contract,
+    allowWriteTools: false,
+    toEnvelope,
+    dispatch
+  });
+  assert.equal(known.ok, true);
+  assert.equal(known.items.length, 1);
+
+  const unknown = await agentTools.executeToolCall('missing_tool', { query: 'x' }, {
+    contract,
+    allowWriteTools: false,
+    toEnvelope,
+    dispatch
+  });
+  assert.equal(unknown.ok, false);
+  assert.match(unknown.error, /Unknown tool/i);
+
+  const blockedWrite = await agentTools.executeToolCall('download_paper_pdf', { linked_name: 'x' }, {
+    contract,
+    allowWriteTools: false,
+    toEnvelope,
+    dispatch
+  });
+  assert.equal(blockedWrite.ok, false);
+  assert.match(blockedWrite.error, /Write action blocked/i);
+
+  const allowedWrite = await agentTools.executeToolCall('download_paper_pdf', { linked_name: 'x' }, {
+    contract,
+    allowWriteTools: true,
+    toEnvelope,
+    dispatch
+  });
+  assert.equal(allowedWrite.ok, true);
+  assert.equal(allowedWrite.items.length, 1);
+});
+
+test('agent-tools executeToolCall applies conservative local fuzzy retries then no-match fallback', async () => {
+  const contract = agentTools.loadToolContract({
+    tools: [
+      { name: 'search_inventory', description: 'inventory', input_schema: {}, output_schema: {} }
+    ]
+  });
+  const toEnvelope = (toolName, args, rawResult, options = {}) => ({
+    ok: options.ok !== false,
+    tool_name: toolName,
+    input: args,
+    items: rawResult?.items || [],
+    citations: rawResult?.citations || [],
+    summary: rawResult?.summary || '',
+    ...(options.error ? { error: options.error } : {})
+  });
+
+  const calls = [];
+  const dispatch = async (_toolName, args) => {
+    calls.push(String(args.query || ''));
+    const q = String(args.query || '').toLowerCase();
+    if (q.includes('molecular weight') && q.includes('biotin')) {
+      return toEnvelope('search_inventory', args, {
+        items: [{ id: 'biotin' }],
+        citations: [{ source: 'inventory', pointer: 'biotin', reason: 'alias retry' }],
+        summary: 'Found 1'
+      });
+    }
+    return toEnvelope('search_inventory', args, {
+      items: [],
+      citations: [],
+      summary: 'Found 0'
+    });
+  };
+
+  const aliasHit = await agentTools.executeToolCall('search_inventory', { query: 'mw biotin' }, {
+    contract,
+    allowWriteTools: false,
+    fuzzyVocabulary: ['biotin', 'molecular weight'],
+    toEnvelope,
+    dispatch
+  });
+  assert.equal(aliasHit.items.length, 1);
+  assert.equal(calls.length >= 2, true);
+
+  const noMatch = await agentTools.executeToolCall('search_inventory', { query: 'unknownzzzz' }, {
+    contract,
+    allowWriteTools: false,
+    fuzzyVocabulary: ['biotin'],
+    toEnvelope,
+    dispatch: async () => toEnvelope('search_inventory', { query: 'unknownzzzz' }, { items: [], citations: [], summary: 'Found 0' })
+  });
+  assert.equal(noMatch.items.length, 0);
+  assert.equal(noMatch.summary, 'No matching record found.');
+});
+
+test('agent-tools executeToolCall normalization retry can recover local-search misses', async () => {
+  const contract = agentTools.loadToolContract({
+    tools: [
+      { name: 'search_inventory', description: 'inventory', input_schema: {}, output_schema: {} }
+    ]
+  });
+  const toEnvelope = (toolName, args, rawResult, options = {}) => ({
+    ok: options.ok !== false,
+    tool_name: toolName,
+    input: args,
+    items: rawResult?.items || [],
+    citations: rawResult?.citations || [],
+    summary: rawResult?.summary || '',
+    ...(options.error ? { error: options.error } : {})
+  });
+  const calls = [];
+  const hit = await agentTools.executeToolCall('search_inventory', { query: 'TNF-α reagent' }, {
+    contract,
+    allowWriteTools: false,
+    fuzzyVocabulary: ['tnf-alpha', 'reagent'],
+    toEnvelope,
+    dispatch: async (_toolName, args) => {
+      const q = String(args.query || '');
+      calls.push(q);
+      if (q.includes('tnf-alpha')) {
+        return toEnvelope('search_inventory', args, {
+          items: [{ id: 'tnfa' }],
+          citations: [{ source: 'inventory', pointer: 'tnfa', reason: 'normalization retry' }],
+          summary: 'Found 1'
+        });
+      }
+      return toEnvelope('search_inventory', args, {
+        items: [],
+        citations: [],
+        summary: 'Found 0'
+      });
+    }
+  });
+  assert.equal(hit.items.length, 1);
+  assert.equal(calls.some((q) => q.includes('tnf-alpha')), true);
+});
+
+test('agent-tools executeToolCall light fuzzy retry can recover one-edit query typos', async () => {
+  const contract = agentTools.loadToolContract({
+    tools: [
+      { name: 'search_inventory', description: 'inventory', input_schema: {}, output_schema: {} }
+    ]
+  });
+  const toEnvelope = (toolName, args, rawResult, options = {}) => ({
+    ok: options.ok !== false,
+    tool_name: toolName,
+    input: args,
+    items: rawResult?.items || [],
+    citations: rawResult?.citations || [],
+    summary: rawResult?.summary || '',
+    ...(options.error ? { error: options.error } : {})
+  });
+  const calls = [];
+  const hit = await agentTools.executeToolCall('search_inventory', { query: 'biotn lot' }, {
+    contract,
+    allowWriteTools: false,
+    fuzzyVocabulary: ['biotin', 'lot'],
+    toEnvelope,
+    dispatch: async (_toolName, args) => {
+      const q = String(args.query || '').toLowerCase();
+      calls.push(q);
+      if (q.includes('biotin')) {
+        return toEnvelope('search_inventory', args, {
+          items: [{ id: 'biotin' }],
+          citations: [{ source: 'inventory', pointer: 'biotin', reason: 'fuzzy retry' }],
+          summary: 'Found 1'
+        });
+      }
+      return toEnvelope('search_inventory', args, {
+        items: [],
+        citations: [],
+        summary: 'Found 0'
+      });
+    }
+  });
+  assert.equal(hit.items.length, 1);
+  assert.equal(calls.includes('biotin lot'), true);
+});
+
+test('agent-tools executeToolCall applies local fuzzy retry for search_workflows', async () => {
+  const contract = agentTools.loadToolContract({
+    tools: [
+      { name: 'search_workflows', description: 'workflow search', input_schema: {}, output_schema: {} }
+    ]
+  });
+  const toEnvelope = (toolName, args, rawResult, options = {}) => ({
+    ok: options.ok !== false,
+    tool_name: toolName,
+    input: args,
+    items: rawResult?.items || [],
+    citations: rawResult?.citations || [],
+    summary: rawResult?.summary || '',
+    ...(options.error ? { error: options.error } : {})
+  });
+  const calls = [];
+  const hit = await agentTools.executeToolCall('search_workflows', { query: 'transfectin step' }, {
+    contract,
+    allowWriteTools: false,
+    fuzzyVocabulary: ['transfection', 'step'],
+    toEnvelope,
+    dispatch: async (_toolName, args) => {
+      const q = String(args.query || '').toLowerCase();
+      calls.push(q);
+      if (q.includes('transfection')) {
+        return toEnvelope('search_workflows', args, {
+          items: [{ id: 'wf-1' }],
+          citations: [{ source: 'workflow', pointer: 'wf-1', reason: 'fuzzy retry hit' }],
+          summary: 'Found 1'
+        });
+      }
+      return toEnvelope('search_workflows', args, {
+        items: [],
+        citations: [],
+        summary: 'Found 0'
+      });
+    }
+  });
+  assert.equal(hit.items.length, 1);
+  assert.equal(calls.includes('transfection step'), true);
+});
+
+test('agent-python-orchestration classifies tasks and requests clarification when required input is missing', () => {
+  const routing = {
+    intent: 'coding_data_analysis',
+    plan: { needs_python: true }
+  };
+  const classified = agentPythonOrchestration.classifyPythonTask({
+    message: 'Use Python to analyze this CSV and compute means.',
+    entities: {},
+    routing
+  });
+  assert.equal(classified.task_type, 'csv_tsv_descriptive');
+  const runRequest = agentPythonOrchestration.buildPythonRunRequest({
+    message: 'Analyze attached CSV for growth curves.',
+    snapshot: { assays: [], gelAnalyses: [] },
+    projectId: 'project-atlas',
+    projectName: 'Atlas',
+    taskType: classified.task_type
+  });
+  assert.equal(runRequest.ready, false);
+  assert.equal(runRequest.needs_clarification, true);
+  assert.match(String(runRequest.clarification_question || ''), /csv|tsv|tabular/i);
+});
+
+test('agent-python-codegen sanitizes valid payloads and clamps bounded fields', () => {
+  const raw = {
+    code: 'print(\"ok\")',
+    files: new Array(12).fill(null).map((_, idx) => ({ path: `inputs/file_${idx + 1}.txt`, content: 'x' })),
+    timeout_ms: 999999,
+    readback_paths: new Array(12).fill(null).map((_, idx) => `outputs/r_${idx + 1}.txt`),
+    artifact_paths: new Array(12).fill(null).map((_, idx) => `artifacts/a_${idx + 1}.txt`),
+    persist_artifacts: true
+  };
+  const normalized = agentPythonCodegen.sanitizePythonRunRequest(JSON.stringify(raw), {
+    taskType: 'csv_tsv_descriptive',
+    defaults: {
+      task_type: 'csv_tsv_descriptive'
+    }
+  });
+  assert.equal(normalized.ok, true);
+  assert.equal(typeof normalized.run_request.code, 'string');
+  assert.equal(normalized.run_request.files.length, 10);
+  assert.equal(normalized.run_request.timeout_ms, 15000);
+  assert.equal(normalized.run_request.readback_paths.length, 8);
+  assert.equal(normalized.run_request.artifact_paths.length, 8);
+  assert.equal(normalized.run_request.task_type, 'csv_tsv_descriptive');
+});
+
+test('agent-python-codegen rejects malformed, missing code, and unsafe path payloads', () => {
+  const malformed = agentPythonCodegen.sanitizePythonRunRequest('{invalid-json');
+  assert.equal(malformed.ok, false);
+  assert.equal(malformed.reason, 'malformed_json');
+
+  const missingCode = agentPythonCodegen.sanitizePythonRunRequest({ files: [] });
+  assert.equal(missingCode.ok, false);
+  assert.equal(missingCode.reason, 'missing_code');
+
+  const unsafePath = agentPythonCodegen.sanitizePythonRunRequest({
+    code: 'print(\"ok\")',
+    readback_paths: ['../escape.txt']
+  });
+  assert.equal(unsafePath.ok, false);
+  assert.equal(unsafePath.reason, 'unsafe_path');
+});
+
+test('agent-python-orchestration validates sandbox output and persists artifacts inside storage root', async () => {
+  const storagePath = fs.mkdtempSync(path.join(__dirname, 'tmp', 'phase89-python-'));
+  const sandboxEnvelope = {
+    ok: true,
+    items: [
+      {
+        run_id: 'run-123',
+        status: 'ok',
+        readback_files: [
+          { path: 'summary.txt', content: 'ok', truncated: false }
+        ],
+        warnings: []
+      }
+    ],
+    citations: [],
+    summary: 'done'
+  };
+  const validation = agentPythonOrchestration.validatePythonResult({ result: sandboxEnvelope });
+  assert.equal(validation.ok, true);
+
+  const persisted = await agentPythonOrchestration.persistPythonArtifacts({
+    sandboxItem: validation.item,
+    storagePath,
+    projectName: 'Atlas'
+  });
+  assert.equal(persisted.applied, true);
+  assert.equal(persisted.artifact_count, 1);
+  assert.equal(Array.isArray(persisted.result_file_records), true);
+  assert.equal(persisted.result_file_records.length, 1);
+  assert.match(String(persisted.result_file_records[0].relativePath || ''), /Agent\/Python\/Atlas/);
+  fs.rmSync(storagePath, { recursive: true, force: true });
+});
+
+test('agent-web-fallback trigger/query/merge paths are deterministic', () => {
+  const routing = {
+    intent: 'general_science_question',
+    plan: { needs_web_search: true }
+  };
+  const trigger = agentWebFallback.shouldRunWebFallback({
+    routing,
+    intent: 'general_science_question',
+    message: 'What are the latest PD-1 papers?',
+    internalEvidence: []
+  });
+  assert.equal(trigger.should_run, true);
+  assert.equal(trigger.reason, 'planner_requested_web_search');
+
+  const queries = agentWebFallback.buildWebQueries({
+    message: 'What are the latest PD-1 papers?',
+    entities: { protein: 'PD-1' },
+    intent: 'general_science_question',
+    projectName: ''
+  });
+  assert.equal(Array.isArray(queries), true);
+  assert.equal(queries.length > 0, true);
+
+  const merged = agentWebFallback.mergeAndRankWebEvidence({
+    webItems: [{ title: 'PD-1 review', url: 'https://example.org/review', snippet: 'review', source_domain: 'example.org' }],
+    literatureItems: [{ title: 'PD-1 study', url: 'https://doi.org/10.1000/x', snippet: 'study', source_domain: 'doi.org', source_tool: 'search_pubmed' }],
+    query: 'PD-1 review'
+  });
+  assert.equal(Array.isArray(merged), true);
+  assert.equal(merged.length, 2);
+  assert.equal(merged.some((item) => item.source_lane === 'literature'), true);
+  assert.equal(merged.some((item) => item.source_lane === 'web'), true);
+});
+
+test('phase89 runtime executes planned python and post-processes artifacts', async () => {
+  const storagePath = fs.mkdtempSync(path.join(__dirname, 'tmp', 'phase89-runtime-'));
+  let runArgsSeen = null;
+  const pythonRun = await phase89Runtime.runPlannedPythonTask({
+    message: 'Use Python to parse this CSV and report mean values.',
+    routing: {
+      intent: 'coding_data_analysis',
+      entities: {},
+      plan: {
+        needs_python: true,
+        selected_tool_names: ['run_python_sandbox']
+      }
+    },
+    snapshot: {
+      assays: [
+        { id: 'a1', name: 'Atlas assay', numeric_count: 12, result_well_count: 96, project_id: 'project-atlas' }
+      ],
+      gelAnalyses: [],
+      settings: { storagePath }
+    },
+    selectedProjectId: 'project-atlas',
+    selectedProjectName: 'Atlas',
+    storagePath,
+    generatePythonRunRequest: async () => JSON.stringify({
+      code: [
+        'import json',
+        "with open('analysis.json', 'w', encoding='utf-8') as out:",
+        "    json.dump({'rows': 1}, out, indent=2)",
+        "print('rows=1')"
+      ].join('\\n')
+    }),
+    runTool: async (_toolName, args) => {
+      runArgsSeen = args;
+      return {
+      ok: true,
+      tool_name: 'run_python_sandbox',
+      input: {},
+      items: [
+        {
+          run_id: 'run-900',
+          status: 'ok',
+          readback_files: [{ path: 'analysis.json', content: '{"rows":1}', truncated: false }],
+          warnings: []
+        }
+      ],
+      citations: [{ source: 'python_sandbox', pointer: 'run-900', reason: 'sandbox ok' }],
+      summary: 'Python sandbox execution completed.'
+      };
+    }
+  });
+  assert.equal(pythonRun.executed, true);
+  assert.equal(Boolean(pythonRun.plan_patch.python_task_type), true);
+  assert.equal(pythonRun.plan_patch.python_artifact_count >= 1, true);
+  assert.equal(pythonRun.plan_patch.python_codegen_status, 'ok');
+  assert.equal(typeof runArgsSeen?.code, 'string');
+  assert.equal(runArgsSeen.code.length > 0, true);
+  assert.equal(Array.isArray(pythonRun.tool_result?.items), true);
+  fs.rmSync(storagePath, { recursive: true, force: true });
+});
+
+test('phase89 runtime short-circuits on malformed python codegen output before sandbox execution', async () => {
+  const storagePath = fs.mkdtempSync(path.join(__dirname, 'tmp', 'phase89-runtime-bad-'));
+  let runToolCalls = 0;
+  const pythonRun = await phase89Runtime.runPlannedPythonTask({
+    message: 'Use Python to parse this CSV and report mean values.',
+    routing: {
+      intent: 'coding_data_analysis',
+      entities: {},
+      plan: {
+        needs_python: true,
+        selected_tool_names: ['run_python_sandbox']
+      }
+    },
+    snapshot: {
+      assays: [
+        { id: 'a1', name: 'Atlas assay', numeric_count: 12, result_well_count: 96, project_id: 'project-atlas' }
+      ],
+      gelAnalyses: [],
+      settings: { storagePath }
+    },
+    selectedProjectId: 'project-atlas',
+    selectedProjectName: 'Atlas',
+    storagePath,
+    generatePythonRunRequest: async () => '{bad-json',
+    runTool: async () => {
+      runToolCalls += 1;
+      return {};
+    }
+  });
+
+  assert.equal(pythonRun.executed, false);
+  assert.equal(pythonRun.needs_clarification, true);
+  assert.equal(pythonRun.plan_patch.python_needs_clarification, true);
+  assert.equal(pythonRun.plan_patch.python_codegen_status, 'error');
+  assert.equal(runToolCalls, 0);
+  fs.rmSync(storagePath, { recursive: true, force: true });
+});
+
+test('agent simulation contract parity guard keeps tool contract/capabilities/mock-dispatch in sync', () => {
+  const missingCapabilities = AGENT_IO_TOOL_NAMES.filter(
+    (name) => !Object.prototype.hasOwnProperty.call(agentTools.TOOL_CAPABILITY_MAP, name)
+  );
+  const missingMockDispatch = AGENT_IO_TOOL_NAMES.filter(
+    (name) => !AGENT_SIMULATION_DISPATCH_TOOL_NAMES.has(name)
+  );
+  assert.equal(
+    missingCapabilities.length,
+    0,
+    `Missing TOOL_CAPABILITY_MAP coverage: ${missingCapabilities.join(', ')}`
+  );
+  assert.equal(
+    missingMockDispatch.length,
+    0,
+    `Missing mock dispatch coverage: ${missingMockDispatch.join(', ')}`
+  );
+});
+
+test('agent simulation tool execution matrix covers all contract tools with write-policy behavior', async () => {
+  const snapshot = buildAgentSimulationSnapshot();
+  const matrixQuery = 'atlas biotin pd-1 transfection';
+  const { dispatch, coveredToolNames } = buildMockToolDispatch(snapshot);
+  const executedToolNames = [];
+
+  for (const toolName of AGENT_IO_TOOL_NAMES) {
+    const args = buildMockToolArgs(toolName, matrixQuery, snapshot);
+    const result = await agentTools.executeToolCall(toolName, args, {
+      contract: AGENT_IO_CONTRACT,
+      allowWriteTools: false,
+      dispatch,
+      fuzzyVocabulary: ['atlas', 'biotin', 'pd-1', 'transfection']
+    });
+
+    executedToolNames.push(toolName);
+    if (toolName === 'download_paper_pdf') {
+      assert.equal(result.ok, false);
+      assert.match(String(result.error || ''), /Write action blocked/i);
+      continue;
+    }
+
+    assert.equal(result.ok, true, `Expected ${toolName} to execute in matrix test`);
+    assert.equal(Array.isArray(result.items), true);
+    assert.equal(result.items.length > 0, true, `Expected ${toolName} to return at least one item`);
+    assert.equal(String(result.summary || '').length > 0, true);
+  }
+
+  const writeAllowed = await agentTools.executeToolCall(
+    'download_paper_pdf',
+    buildMockToolArgs('download_paper_pdf', matrixQuery, snapshot),
+    {
+      contract: AGENT_IO_CONTRACT,
+      allowWriteTools: true,
+      dispatch,
+      fuzzyVocabulary: ['atlas', 'biotin']
+    }
+  );
+  assert.equal(writeAllowed.ok, true);
+  assert.equal(Array.isArray(writeAllowed.items), true);
+  assert.equal(writeAllowed.items.length > 0, true);
+  assert.equal(coveredToolNames.has('download_paper_pdf'), true);
+  assert.deepEqual(executedToolNames.sort(), AGENT_IO_TOOL_NAMES.slice().sort());
+});
+
+test('agent simulation intent matrix executes expected tool families across request types', async () => {
+  const snapshot = buildAgentSimulationSnapshot();
+  const scenarios = [
+    {
+      intent: 'inventory_lookup',
+      message: 'What is the molecular weight of biotin in stock?',
+      expectedTools: ['search_inventory'],
+      expectNeedsTools: true
+    },
+    {
+      intent: 'record_lookup',
+      message: 'What did we do last time for PD-1 expression?',
+      expectedTools: ['search_notebook_entries', 'search_assays', 'search_gel_analyses'],
+      expectNeedsTools: true
+    },
+    {
+      intent: 'project_science_question',
+      message: 'Why did project Atlas fail after transfection?',
+      expectedTools: ['search_projects', 'search_notebook_entries', 'search_workflows'],
+      expectNeedsTools: true
+    },
+    {
+      intent: 'paper_analysis',
+      message: 'Summarize this paper on PD-1 binder design.',
+      expectedTools: ['search_papers', 'search_pubmed'],
+      expectNeedsTools: true
+    },
+    {
+      intent: 'coding_data_analysis',
+      message: 'Use Python to analyze this CSV and compute mean values.',
+      expectedTools: ['run_python_sandbox'],
+      expectNeedsTools: true
+    },
+    {
+      intent: 'general_science_question',
+      message: 'What is ELISA and how does it work?',
+      expectedTools: [],
+      expectNeedsTools: false
+    },
+    {
+      intent: 'protocol_to_notebook',
+      message: 'I grew HEK293 cells and ran transfection today.',
+      expectedTools: ['search_protocols'],
+      expectNeedsTools: true
+    }
+  ];
+
+  for (const scenario of scenarios) {
+    const turn = await runSimulatedAgentTurn({
+      message: scenario.message,
+      snapshot,
+      allowWriteTools: false,
+      writeIntent: false
+    });
+
+    assert.equal(turn.routing.intent, scenario.intent);
+    assert.equal(turn.routing.plan.needs_tools, scenario.expectNeedsTools);
+    assert.equal(turn.routing.plan.needs_clarification, false);
+
+    if (!scenario.expectNeedsTools) {
+      assert.equal(turn.executedToolNames.length, 0);
+      continue;
+    }
+
+    scenario.expectedTools.forEach((toolName) => {
+      assert.equal(
+        turn.executedToolNames.includes(toolName),
+        true,
+        `Expected ${scenario.intent} to execute ${toolName}`
+      );
+    });
+    assert.equal(turn.toolTrace.length > 0, true);
+    assert.equal(turn.citations.length > 0, true);
+  }
+});
+
+test('agent simulation compare-papers mode uses uploaded-paper-only retrieval tools', async () => {
+  const snapshot = buildAgentSimulationSnapshot();
+  snapshot.papers = [
+    {
+      id: 'paper-a',
+      title: 'Atlas PD-1 Methods',
+      linkedType: 'project',
+      linkedId: 'project-atlas',
+      summary: 'Detailed method summary.',
+      pdfDataUrl: 'data:application/pdf;base64,AAAA',
+      methods: [{ title: 'Method A', steps: ['step 1'], citations: [] }],
+      keyReagents: [{ name: 'Reagent A', type: 'compound' }]
+    },
+    {
+      id: 'paper-b',
+      title: 'Atlas PD-1 Reagents',
+      linkedType: 'project',
+      linkedId: 'project-atlas',
+      summary: 'Reagent-heavy workflow.',
+      pdfDataUrl: 'data:application/pdf;base64,BBBB',
+      methods: [{ title: 'Method B', steps: ['step 1'], citations: [] }],
+      keyReagents: [{ name: 'Reagent B', type: 'compound' }]
+    }
+  ];
+
+  const turn = await runSimulatedAgentTurn({
+    message: 'Compare "Atlas PD-1 Methods" vs "Atlas PD-1 Reagents".',
+    snapshot,
+    allowWriteTools: false,
+    writeIntent: false
+  });
+
+  assert.equal(turn.routing.intent, 'paper_analysis');
+  assert.equal(turn.routing.plan.needs_paper_comparison, true);
+  assert.deepEqual(turn.routing.plan.selected_tool_names, ['search_papers']);
+  assert.equal(turn.routing.plan.needs_clarification, false);
+  assert.deepEqual(turn.executedToolNames, ['search_papers']);
+});
+
+test('agent simulation deep paper request with metadata-only paper clarifies before execution', async () => {
+  const snapshot = buildAgentSimulationSnapshot();
+  snapshot.papers = [
+    {
+      id: 'paper-meta',
+      title: 'Atlas Metadata Only',
+      linkedType: 'project',
+      linkedId: 'project-atlas',
+      summary: 'No uploaded PDF available.',
+      methods: []
+    }
+  ];
+
+  const turn = await runSimulatedAgentTurn({
+    message: 'Extract methods from Atlas Metadata Only.',
+    snapshot,
+    allowWriteTools: false,
+    writeIntent: false
+  });
+
+  assert.equal(turn.routing.intent, 'paper_analysis');
+  assert.equal(turn.routing.plan.needs_clarification, true);
+  assert.equal(turn.executedToolNames.length, 0);
+  assert.match(String(turn.routing.plan.clarification_question || ''), /upload/i);
+});
+
+test('agent simulation protocol-generation phrasing triggers routing clarification and write-approval gate', async () => {
+  const turn = await runSimulatedAgentTurn({
+    message: 'Generate a lab notebook page for today.',
+    snapshot: buildAgentSimulationSnapshot(),
+    allowWriteTools: false,
+    writeIntent: true
+  });
+
+  assert.equal(turn.routing.intent, 'protocol_to_notebook');
+  assert.equal(turn.routing.plan.needs_tools, true);
+  assert.equal(turn.routing.plan.needs_clarification, true);
+  assert.equal(String(turn.routing.plan.clarification_question || '').length > 0, true);
+  assert.equal(turn.requiresApproval, true);
+  assert.equal(turn.executedToolNames.length, 0);
+});
+
+test('agent simulation protocol ambiguity short-circuits tool execution with matcher-driven clarification', async () => {
+  const snapshot = buildAgentSimulationSnapshot();
+  snapshot.protocols = [
+    {
+      id: 'protocol-transfection-a',
+      name: 'HEK293 Transfection Setup',
+      category: 'cell',
+      steps: ['Seed HEK293 cells', 'Add DNA complex']
+    },
+    {
+      id: 'protocol-transfection-b',
+      name: 'HEK293 Transfection Maintenance',
+      category: 'cell',
+      steps: ['Seed HEK293 cells', 'Add transfection reagent']
+    },
+    {
+      id: 'protocol-assay',
+      name: 'ELISA Workflow',
+      category: 'assay',
+      steps: ['Prepare plate', 'Read absorbance']
+    }
+  ];
+
+  const turn = await runSimulatedAgentTurn({
+    message: 'I did HEK293 transfection today.',
+    snapshot,
+    allowWriteTools: false,
+    writeIntent: false
+  });
+
+  assert.equal(turn.routing.intent, 'protocol_to_notebook');
+  assert.equal(turn.routing.plan.protocol_match.needs_clarification, true);
+  assert.equal(turn.routing.plan.needs_clarification, true);
+  assert.equal(Array.isArray(turn.routing.plan.protocol_candidates), true);
+  assert.equal(turn.routing.plan.protocol_candidates.length >= 2, true);
+  assert.match(String(turn.routing.plan.clarification_question || ''), /Which protocol matches your run/i);
+  assert.equal(turn.executedToolNames.length, 0);
+});
+
+test('agent simulation project ambiguity short-circuits tool execution with matcher-driven clarification', async () => {
+  const snapshot = buildAgentSimulationSnapshot();
+  snapshot.projects = [
+    { id: 'project-atlas-a', name: 'Atlas Alpha', summary: 'alpha branch' },
+    { id: 'project-atlas-b', name: 'Atlas Beta', summary: 'beta branch' }
+  ];
+
+  const turn = await runSimulatedAgentTurn({
+    message: 'Why did project atlas fail?',
+    snapshot,
+    allowWriteTools: false,
+    writeIntent: false
+  });
+
+  assert.equal(turn.routing.intent, 'project_science_question');
+  assert.equal(turn.routing.plan.project_match.needs_clarification, true);
+  assert.equal(turn.routing.plan.needs_clarification, true);
+  assert.equal(Array.isArray(turn.routing.plan.project_candidates), true);
+  assert.equal(turn.routing.plan.project_candidates.length >= 2, true);
+  assert.match(String(turn.routing.plan.clarification_question || ''), /Which project should I use/i);
+  assert.equal(turn.executedToolNames.length, 0);
+});
+
+test('protocol generation materialization persists normalized draft from extracted method payload', () => {
+  const document = createMockDocument([
+    'protocol-list-panel',
+    'protocol-editor-panel',
+    'protocol-view-panel',
+    'create-protocol-btn',
+    'protocol-editor-back-btn',
+    'protocol-cancel-btn',
+    'protocol-view-back-btn',
+    'protocol-editor-heading',
+    'protocol-view-title',
+    'protocol-view-content',
+    'protocol-form',
+    'protocol-name',
+    'protocol-purpose',
+    'protocol-materials',
+    'protocol-steps',
+    'protocol-troubleshooting',
+    'add-placeholder-btn',
+    'placeholder-name',
+    'protocol-share-status',
+    'protocol-share-link-panel',
+    'protocol-share-link-output',
+    'protocol-list',
+    'protocol-sort-field-btn',
+    'protocol-sort-order-btn'
+  ]);
+  const protocolForm = document.getElementById('protocol-form');
+  const protocolName = document.getElementById('protocol-name');
+  const protocolPurpose = document.getElementById('protocol-purpose');
+  const protocolMaterials = document.getElementById('protocol-materials');
+  const protocolSteps = document.getElementById('protocol-steps');
+  const protocolTroubleshooting = document.getElementById('protocol-troubleshooting');
+  wireFormReset(protocolForm, [
+    protocolName,
+    protocolPurpose,
+    protocolMaterials,
+    protocolSteps,
+    protocolTroubleshooting
+  ]);
+
+  let persistCalls = 0;
+  const state = {
+    protocols: [],
+    notebookEntries: [],
+    workflows: [],
+    workflowTemplates: [],
+    assays: [],
+    gelAnalyses: [],
+    messages: [],
+    members: [],
+    settings: {
+      personalInfo: {
+        enanaEmail: ''
+      }
+    }
+  };
+
+  const protocolModule = loadEsmStyleModule(path.join(__dirname, 'modules', 'protocol-management.js'), {
+    document,
+    TextEncoder,
+    btoa: btoaPolyfill
+  });
+  const protocol = protocolModule.initProtocolManagement({
+    state,
+    persist: () => {
+      persistCalls += 1;
+    },
+    createId: (() => {
+      let idx = 0;
+      return () => `generated-protocol-${idx += 1}`;
+    })(),
+    safeText: shared.safeText,
+    onProtocolsChanged: () => {},
+    trackGrowthEvent: () => {}
+  });
+
+  const created = protocol.addDraftFromExtractedMethod(
+    {
+      title: 'Transfection Rescue',
+      purpose: 'Recover expression by adjusting transfection conditions.',
+      materials: ['HEK293 cells', 'Transfection reagent'],
+      steps: [
+        { step_number: 2, action: 'Incubate for [time] at 37 C.' },
+        { step_number: 1, action: 'Add [] uL DNA mix.' }
+      ],
+      troubleshooting: [
+        {
+          problem: 'Low expression',
+          possible_cause: 'Inefficient transfection',
+          solution: 'Increase DNA purity and optimize reagent ratio'
+        }
+      ]
+    },
+    { title: 'Atlas Study' }
+  );
+
+  assert.equal(created, true);
+  assert.match(protocolName.value, /Atlas Study - Transfection Rescue/);
+  assert.match(protocolPurpose.value, /Recover expression/);
+  assert.match(protocolSteps.value, /Add \[value\] uL DNA mix/);
+  assert.match(protocolSteps.value, /Incubate for \[time\]/);
+  assert.match(protocolTroubleshooting.value, /Problem: Low expression/);
+
+  trigger(protocolForm, 'submit');
+
+  assert.equal(state.protocols.length, 1);
+  const persisted = state.protocols[0];
+  assert.match(String(persisted.id || ''), /^generated-protocol-/);
+  assert.equal(persisted.name, 'Atlas Study - Transfection Rescue');
+  assert.equal(Array.isArray(persisted.materials), true);
+  assert.equal(persisted.materials.length, 2);
+  assert.equal(persisted.materials.includes('HEK293 cells'), true);
+  assert.equal(persisted.materials.includes('Transfection reagent'), true);
+  assert.equal(Array.isArray(persisted.steps), true);
+  assert.equal(persisted.steps.length, 2);
+  assert.equal(persisted.steps.some((step) => String(step?.text || '').includes('{{ph:')), true);
+  const placeholderNames = persisted.steps.flatMap((step) => (
+    Array.isArray(step?.placeholders) ? step.placeholders.map((item) => item?.name) : []
+  ));
+  assert.equal(placeholderNames.includes('value'), true);
+  assert.equal(placeholderNames.includes('time'), true);
+  assert.ok(Number.isFinite(Date.parse(persisted.createdAt)));
+  assert.ok(Number.isFinite(Date.parse(persisted.updatedAt)));
+  assert.equal(persistCalls > 0, true);
 });
 
 test('createUid uses type:id convention', () => {
@@ -1320,6 +4767,102 @@ test('protocol-management supports draft creation, sharing, link copy, and delet
   assert.ok(importedCalls >= 2);
 });
 
+test('protocol-management import accepts external title/action schema without ids (including fenced LLM JSON)', () => {
+  const document = createMockDocument([
+    'protocol-list-panel',
+    'protocol-editor-panel',
+    'protocol-view-panel',
+    'create-protocol-btn',
+    'protocol-editor-back-btn',
+    'protocol-cancel-btn',
+    'protocol-view-back-btn',
+    'protocol-export-pdf-btn',
+    'protocol-editor-heading',
+    'protocol-view-title',
+    'protocol-view-content',
+    'protocol-form',
+    'protocol-name',
+    'protocol-purpose',
+    'protocol-materials',
+    'protocol-steps',
+    'protocol-troubleshooting',
+    'add-placeholder-btn',
+    'placeholder-name',
+    'protocol-share-status',
+    'protocol-share-link-panel',
+    'protocol-share-link-output',
+    'protocol-list',
+    'protocol-sort-field-btn',
+    'protocol-sort-order-btn'
+  ]);
+
+  const protocolForm = document.getElementById('protocol-form');
+  wireFormReset(protocolForm, [
+    document.getElementById('protocol-name'),
+    document.getElementById('protocol-purpose'),
+    document.getElementById('protocol-materials'),
+    document.getElementById('protocol-steps'),
+    document.getElementById('protocol-troubleshooting')
+  ]);
+
+  const state = {
+    protocols: [],
+    notebookEntries: [],
+    workflows: [],
+    workflowTemplates: [],
+    assays: [],
+    gelAnalyses: [],
+    messages: [],
+    members: [],
+    settings: { personalInfo: { enanaEmail: '' } }
+  };
+
+  let nextId = 0;
+  const protocolModule = loadEsmStyleModule(path.join(__dirname, 'modules', 'protocol-management.js'), {
+    document,
+    TextEncoder,
+    btoa: btoaPolyfill,
+    navigator: {
+      clipboard: {
+        writeText: async () => {}
+      }
+    }
+  });
+
+  const protocol = protocolModule.initProtocolManagement({
+    state,
+    persist: () => {},
+    createId: () => `generated-id-${nextId += 1}`,
+    safeText: shared.safeText,
+    onProtocolsChanged: () => {},
+    trackGrowthEvent: () => {}
+  });
+
+  const llmPayload = `I extracted one protocol:\n\`\`\`json\n{\n  "title": "Protocol name",\n  "purpose": "What this protocol is used for",\n  "materials": [\n    "material 1",\n    "material 2"\n  ],\n  "steps": [\n    {\n      "step_number": 1,\n      "action": "Describe the step clearly and concisely."\n    },\n    {\n      "step_number": 2,\n      "action": "Add the next step. Use placeholders like [time] or [volume] where needed."\n    }\n  ],\n  "troubleshooting": [\n    {\n      "problem": "Potential issue",\n      "possible_cause": "Why it may happen",\n      "solution": "How to address it"\n    }\n  ]\n}\n\`\`\``;
+
+  const result = protocol.importProtocolsFromJson(llmPayload, {
+    notifyChanged: false,
+    renderList: false
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.importedProtocols.length, 1);
+  assert.equal(state.protocols.length, 1);
+
+  const imported = state.protocols[0];
+  assert.match(imported.id, /^generated-id-/);
+  assert.equal(imported.name, 'Protocol name');
+  assert.equal(imported.purpose, 'What this protocol is used for');
+  assert.deepEqual(imported.materials, ['material 1', 'material 2']);
+  assert.equal(imported.steps.length, 2);
+  assert.equal(imported.steps[0].placeholders.length, 0);
+  assert.match(imported.steps[1].text, /Add the next step/);
+  assert.equal(imported.steps[1].placeholders.length, 2);
+  assert.equal(imported.steps[1].placeholders[0].name, 'time');
+  assert.equal(imported.steps[1].placeholders[1].name, 'volume');
+  assert.match(imported.troubleshooting, /Problem: Potential issue/);
+});
+
 test('protocol-management keeps legacy string steps editable and viewable', () => {
   const document = createMockDocument([
     'protocol-list-panel',
@@ -1572,13 +5115,22 @@ test('agent-chat sends settings API key to main process and stores assistant res
   const status = document.getElementById('agent-status');
 
   let persistCalls = 0;
+  let notebookChangedCalls = 0;
   let payloadSeen = null;
+  const autoSaveCalls = [];
   const state = {
     projects: [
       { id: 'p1', name: 'Cancer Study' },
       { id: 'p2', name: 'Protein Screen' }
     ],
-    protocols: [{ id: 'pr1', name: 'Cell Prep', steps: [{ text: 'Harvest cells' }, 'Legacy mix step'] }],
+    protocols: [{
+      id: 'pr1',
+      name: 'Cell Prep',
+      steps: [
+        { id: 's1', text: 'Harvest [cell line] cells', placeholders: [{ id: 'p1', name: 'cell_line' }] },
+        'Legacy mix step'
+      ]
+    }],
     notebookEntries: [
       { id: 'n1', projectId: 'p1', protocolId: 'pr1', protocolName: 'Cell Prep', result: 'Done' },
       { id: 'n2', projectId: 'p2', protocolId: 'pr1', protocolName: 'Cell Prep', result: 'Deferred' }
@@ -1639,7 +5191,62 @@ test('agent-chat sends settings API key to main process and stores assistant res
         updatedAt: '2026-02-01T00:00:00.000Z'
       }
     ],
-    papers: [],
+    workflows: [
+      {
+        id: 'w1',
+        name: 'Cancer Workflow',
+        description: 'Recovery workflow after transfection.',
+        projectId: 'p1',
+        notebookEntryIds: ['n1'],
+        blocks: [
+          { id: 'b1', protocolId: 'pr1' },
+          { id: 'b2', type: 'text', text: 'Verify viability next day' }
+        ],
+        links: [{ fromBlockId: 'b1', toBlockId: 'b2' }],
+        updatedAt: '2026-02-01T00:00:00.000Z'
+      },
+      {
+        id: 'w2',
+        name: 'Other Workflow',
+        description: 'Other project flow.',
+        projectId: 'p2',
+        notebookEntryIds: ['n2'],
+        blocks: [{ id: 'b3', protocolId: 'pr1' }],
+        links: [],
+        updatedAt: '2026-02-02T00:00:00.000Z'
+      }
+    ],
+    papers: [
+      {
+        id: 'paper-1',
+        title: 'Atlas Uploaded Paper',
+        linkedType: 'project',
+        linkedId: 'p1',
+        linkedName: 'Cancer Study',
+        summary: 'Paper summary text.',
+        summaryStructured: {
+          important_figures_or_tables: [
+            { item: 'Figure 2', summary: 'Expression rescue trend.' }
+          ]
+        },
+        methodsExtract: [
+          {
+            title: 'Method A',
+            steps: [{ action: 'Prepare cells' }]
+          }
+        ],
+        keyReagents: [
+          { name: 'Reagent Z', type: 'compound', identifier: 'RZ-1', notes: 'demo' }
+        ],
+        pdfDataUrl: 'data:application/pdf;base64,AAAA',
+        deepReadReady: true,
+        availabilityStatus: 'deep_ready',
+        ingestionStatus: 'ready',
+        ingestionUpdatedAt: '2026-02-01T00:00:00.000Z',
+        ingestionErrors: [],
+        updatedAt: '2026-02-01T00:00:00.000Z'
+      }
+    ],
     inventory: {},
     labInventory: { chemicals: [] },
     settings: {
@@ -1654,13 +5261,179 @@ test('agent-chat sends settings API key to main process and stores assistant res
 
   const window = {
     enanaApi: {
+      autoSaveDataFile: async (data, filePath) => {
+        autoSaveCalls.push({ data, filePath });
+        return {
+          ok: true,
+          filePath: '/tmp/enana-data.ena.json',
+          sidecarPaths: {
+            protocolsPath: '/tmp/enana-data.protocols.json',
+            notebookPagesPath: '/tmp/enana-data.notebook-pages.json',
+            sqlitePath: '/tmp/enana-data.index.sqlite'
+          },
+          bundlePaths: {
+            dataFilePath: '/tmp/enana-data.ena.json',
+            protocolsPath: '/tmp/enana-data.protocols.json',
+            notebookPagesPath: '/tmp/enana-data.notebook-pages.json',
+            sqlitePath: '/tmp/enana-data.index.sqlite'
+          }
+        };
+      },
       agentChat: async (payload) => {
         payloadSeen = payload;
         return {
           ok: true,
           answer: 'Use protocol Cell Prep and verify culture viability.',
           confidence: 0.88,
+          response_type: 'notebook_draft',
+          confidence_label: 'high',
+          source_summary: {
+            total_sources: 2,
+            groups: [
+              {
+                source_type: 'tool_result',
+                label: 'Tool result',
+                count: 1,
+                items: [
+                  { source_type: 'tool_result', source: 'protocol', pointer: 'pr1', reason: 'Matched protocol name.' }
+                ]
+              },
+              {
+                source_type: 'web_search',
+                label: 'Web search',
+                count: 1,
+                items: [
+                  { source_type: 'web_search', source: 'web_source', pointer: 'https://example.org/transfection-review', reason: 'Matched web fallback source.' }
+                ]
+              }
+            ]
+          },
+          unresolved_fields: [],
+          validation: {
+            passed: true,
+            forced_clarification: false,
+            violations: [],
+            failure_reasons: []
+          },
+          provenance: {
+            source_evidence: [
+              {
+                statement: 'Use protocol Cell Prep and verify culture viability.',
+                support_level: 'direct',
+                supports: [
+                  { source: 'protocol', pointer: 'pr1', overlap: 3 }
+                ]
+              }
+            ],
+            unsupported_statement_count: 0
+          },
           requiresApproval: false,
+          routing: {
+            intent: 'protocol_to_notebook',
+            confidence: 0.81,
+            entities: {
+              activity: 'cell prep',
+              project: 'Cancer Study',
+              protein: '',
+              compound: '',
+              protocol: 'Cell Prep',
+              cell_line: 'HEK293',
+              paper_title: '',
+              workflow_step: ''
+            },
+            plan: {
+              needs_tools: true,
+              needs_protocol_search: true,
+              needs_notebook_retrieval: false,
+              needs_project_retrieval: false,
+              needs_workflow_retrieval: false,
+              needs_pdf_reading: false,
+              needs_python: false,
+              needs_web_search: false,
+              python_task_type: 'csv_tsv_descriptive',
+              python_ready: true,
+              python_needs_clarification: false,
+              python_artifact_count: 2,
+              web_fallback_triggered: true,
+              web_fallback_reason: 'planner_requested_web_search',
+              web_queries: ['Cancer Study transfection recovery latest review'],
+              web_sources: [
+                {
+                  title: 'Cancer Study transfection review',
+                  url: 'https://example.org/transfection-review',
+                  source_domain: 'example.org',
+                  source_lane: 'web',
+                  source_tool: 'search_web',
+                  score: 0.91
+                }
+              ],
+              needs_clarification: false,
+              clarification_reason: '',
+              clarification_question: '',
+              selected_tool_names: ['search_protocols'],
+              project_match: {
+                selected_project_id: 'p1',
+                selected_project_name: 'Cancer Study',
+                top_score: 0.91,
+                score_delta: 0.82,
+                needs_clarification: false,
+                ambiguity_reason: '',
+                resolution_source: 'selected_project'
+              },
+              project_candidates: [
+                {
+                  project_id: 'p1',
+                  project_name: 'Cancer Study',
+                  score: 0.91,
+                  exact_name_score: 1,
+                  partial_name_score: 1,
+                  selected_bias_score: 1,
+                  linked_record_support_score: 0.7,
+                  reason: 'selected project bias, exact project name, linked records'
+                }
+              ],
+              protocol_match: {
+                selected_protocol_id: 'pr1',
+                selected_protocol_name: 'Cell Prep',
+                top_score: 0.86,
+                score_delta: 0.2,
+                needs_clarification: false,
+                ambiguity_reason: ''
+              },
+              protocol_candidates: [
+                {
+                  protocol_id: 'pr1',
+                  protocol_name: 'Cell Prep',
+                  category: 'cell',
+                  score: 0.86,
+                  semantic_score: 0.78,
+                  entity_overlap_score: 0.9,
+                  project_relevance_score: 0.8,
+                  recent_workflow_relevance_score: 0.64,
+                  reason: 'semantic=0.78 entity=0.90 project=0.80 recent=0.64'
+                }
+              ],
+              tool_selection_rationale: [
+                {
+                  tool: 'search_protocols',
+                  score: 12,
+                  entityScore: 5,
+                  taskScore: 4,
+                  exactnessScore: 3,
+                  reason: 'entity match, task match, keyword overlap'
+                }
+              ]
+            },
+            classifier: {
+              source: 'rules',
+              fallbackAttempted: false,
+              fallbackUsed: false,
+              lowConfidence: false,
+              tieDetected: false,
+              ruleReason: 'Matched protocol terms.',
+              fallbackError: ''
+            }
+          },
           citations: [{ source: 'protocol', pointer: 'pr1', reason: 'Matched protocol name.' }],
           decisionRecord: {
             assumptions: ['Test assumption'],
@@ -1669,7 +5442,48 @@ test('agent-chat sends settings API key to main process and stores assistant res
           },
           proposedWriteActions: [],
           intermediateStates: [{ stage: 'synthesize', goal: 'Done.' }],
-          toolTrace: [{ tool: 'search_protocols', summary: 'Found one protocol.' }]
+          toolTrace: [
+            { tool: 'search_protocols', summary: 'Found one protocol.' },
+            { tool: 'search_web', summary: 'Found one web source.' }
+          ],
+          notebookDraft: {
+            protocol: { id: 'pr1', name: 'Cell Prep' },
+            project: { id: 'p1', name: 'Cancer Study', resolution_source: 'selected_project' },
+            notebook_type: 'biology',
+            rendered_steps: ['Harvest HEK293 cells', 'Legacy mix step'],
+            placeholder_values: [
+              {
+                step_id: 's1',
+                placeholder_id: 'p1',
+                placeholder_key: 'cell_line',
+                display: '[cell line]',
+                value: 'HEK293',
+                source: 'user_input',
+                source_type: 'by_type'
+              }
+            ],
+            unresolved_placeholders: [],
+            save: {
+              mode: 'auto_save_draft',
+              applied: false,
+              status: 'pending_client_autosave',
+              reason: 'Renderer will persist notebook draft entry locally.'
+            },
+            entry_template: {
+              notebookType: 'biology',
+              projectId: 'p1',
+              projectName: 'Cancer Study',
+              protocolId: 'pr1',
+              protocolName: 'Cell Prep',
+              values: { 's1:p1': 'HEK293' },
+              result: 'Agent-generated notebook draft from request: Give me next steps for p1.',
+              updatedAt: '2026-03-11T12:00:00.000Z',
+              resultFiles: [],
+              resultFileRecords: [],
+              agentDraftStatus: 'draft_ready',
+              agentDraftMeta: { generatedAt: '2026-03-11T12:00:00.000Z', unresolvedCount: 0 }
+            }
+          }
         };
       }
     }
@@ -1688,7 +5502,10 @@ test('agent-chat sends settings API key to main process and stores assistant res
       let idx = 0;
       return () => `agent-msg-${idx += 1}`;
     })(),
-    safeText: shared.safeText
+    safeText: shared.safeText,
+    onNotebookEntriesChanged: () => {
+      notebookChangedCalls += 1;
+    }
   });
 
   agent.render();
@@ -1709,8 +5526,19 @@ test('agent-chat sends settings API key to main process and stores assistant res
   assert.equal(payloadSeen.llm.apiEndpoint, 'https://api.openai.com/v1/responses');
   assert.equal(payloadSeen.llm.apiKey, 'sk-local-key');
   assert.equal(payloadSeen.projectId, 'p1');
-  assert.deepEqual(payloadSeen.stateSnapshot.protocols[0].steps, ['Harvest cells', 'Legacy mix step']);
-  assert.equal(payloadSeen.stateSnapshot.notebookEntries[0].protocolName, 'Cell Prep');
+  assert.equal(payloadSeen.stateSnapshot.snapshot_mode, 'thin');
+  assert.equal(payloadSeen.stateSnapshot.data_file_path, '/tmp/enana-data.ena.json');
+  assert.equal(payloadSeen.stateSnapshot.protocols.length, 0);
+  assert.equal(payloadSeen.stateSnapshot.notebookEntries.length, 0);
+  assert.equal(payloadSeen.stateSnapshot.context_counts.protocols, 1);
+  assert.equal(payloadSeen.stateSnapshot.context_counts.notebookEntries, 1);
+  assert.equal(payloadSeen.stateSnapshot.workflows.length, 1);
+  assert.equal(payloadSeen.stateSnapshot.workflows[0].projectId, 'p1');
+  assert.equal(payloadSeen.stateSnapshot.papers.length, 1);
+  assert.equal(payloadSeen.stateSnapshot.papers[0].availability_status, 'deep_ready');
+  assert.equal(payloadSeen.stateSnapshot.papers[0].deep_read_ready, true);
+  assert.equal(Array.isArray(payloadSeen.stateSnapshot.papers[0].key_figures), true);
+  assert.equal(payloadSeen.stateSnapshot.papers[0].key_figures.length > 0, true);
   assert.equal(payloadSeen.stateSnapshot.assays.length, 1);
   assert.equal(payloadSeen.stateSnapshot.assays[0].project_id, 'p1');
   assert.equal(payloadSeen.stateSnapshot.gelAnalyses.length, 1);
@@ -1718,10 +5546,47 @@ test('agent-chat sends settings API key to main process and stores assistant res
   assert.equal(payloadSeen.stateSnapshot.experimentData.schema_name, 'enana_experiment_json');
   assert.equal(payloadSeen.stateSnapshot.experimentData.assay_runs.length, 1);
   assert.equal(payloadSeen.stateSnapshot.experimentData.gel_runs.length, 1);
+  assert.equal(autoSaveCalls.length, 1);
+  assert.equal(autoSaveCalls[0].filePath, '');
   assert.equal(state.agentChat.messages.length, 2);
   assert.equal(state.agentChat.messages[0].role, 'user');
   assert.equal(state.agentChat.messages[1].role, 'assistant');
+  assert.equal(state.agentChat.messages[1].meta.response_type, 'notebook_draft');
+  assert.equal(state.agentChat.messages[1].meta.confidence_label, 'high');
+  assert.equal(Number(state.agentChat.messages[1].meta.source_summary?.total_sources), 2);
+  assert.equal(state.agentChat.messages[1].meta.validation?.passed, true);
+  assert.equal(Number(state.agentChat.messages[1].meta.provenance?.unsupported_statement_count), 0);
+  assert.equal(state.agentChat.messages[1].meta.notebookDraft.save.applied, true);
+  assert.equal(state.agentChat.messages[1].meta.notebookDraft.save.status, 'saved_draft');
+  assert.equal(state.notebookEntries.length, 3);
+  const autoSavedEntry = state.notebookEntries[state.notebookEntries.length - 1];
+  assert.equal(autoSavedEntry.notebookType, 'biology');
+  assert.equal(autoSavedEntry.agentDraftStatus, 'draft_ready');
+  assert.equal(autoSavedEntry.protocolId, 'pr1');
+  assert.equal(autoSavedEntry.projectId, 'p1');
+  assert.equal(autoSavedEntry.values['s1:p1'], 'HEK293');
+  assert.equal(notebookChangedCalls, 1);
   assert.match(history.innerHTML, /Assistant/);
+  assert.match(history.innerHTML, /Routing/);
+  assert.match(history.innerHTML, /protocol_to_notebook/);
+  assert.match(history.innerHTML, /Routing Project Match/);
+  assert.match(history.innerHTML, /Routing Project Candidates/);
+  assert.match(history.innerHTML, /Routing Paper Match/);
+  assert.match(history.innerHTML, /Paper Availability/);
+  assert.match(history.innerHTML, /Routing Python/);
+  assert.match(history.innerHTML, /Routing Web Fallback/);
+  assert.match(history.innerHTML, /Web Sources/);
+  assert.match(history.innerHTML, /Routing Protocol Match/);
+  assert.match(history.innerHTML, /Routing Protocol Candidates/);
+  assert.match(history.innerHTML, /Response Layer/);
+  assert.match(history.innerHTML, /Source Summary/);
+  assert.match(history.innerHTML, /Unresolved Fields/);
+  assert.match(history.innerHTML, /Validation/);
+  assert.match(history.innerHTML, /Provenance/);
+  assert.match(history.innerHTML, /Notebook Draft/);
+  assert.match(history.innerHTML, /saved_draft/);
+  assert.match(history.innerHTML, /Cell Prep/);
+  assert.match(history.innerHTML, /search_web|Searching web sources/i);
   assert.equal(sendBtn.disabled, false);
   assert.equal(clearBtn.disabled, false);
   assert.equal(projectSelect.disabled, false);
@@ -2038,6 +5903,30 @@ test('renderer routes personal inventory aliases to merged sample workspace', ()
   );
 });
 
+test('renderer defines sequence viewer aliases and showView render hook', () => {
+  const source = readSource('renderer.js');
+  assert.match(source, /\['sequence', VIEWS\.SEQUENCE_VIEWER\]/);
+  assert.match(source, /\['seqviewer', VIEWS\.SEQUENCE_VIEWER\]/);
+  assert.match(source, /\['sequence-viewer', VIEWS\.SEQUENCE_VIEWER\]/);
+  assert.match(source, /if \(nextView === VIEWS\.SEQUENCE_VIEWER\) \{\s*sequenceViewer\?\.render\?\.\(\);\s*\}/);
+});
+
+test('tool-box exposes optional sequence viewer handoff callback contract', () => {
+  const source = readSource('modules/tool-box.js');
+  assert.match(source, /export function initToolBox\(options = \{\}\)/);
+  assert.match(source, /const onOpenSequenceViewer = typeof options\?\.onOpenSequenceViewer === 'function'/);
+  assert.match(source, /plannotate-open-sequence-viewer/);
+});
+
+test('sequence viewer uses bottom feature track without table dependency', () => {
+  const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const viewerSource = readSource('modules/sequence-viewer.js');
+  assert.match(html, /id="sequence-viewer-feature-rail-host"/);
+  assert.match(html, /id="sequence-viewer-feature-detail"/);
+  assert.equal(html.includes('sequence-viewer-feature-table-body'), false);
+  assert.equal(viewerSource.includes('featureTableBody'), false);
+});
+
 test('ketcher embedded page uses portable static path resolution', () => {
   const html = fs.readFileSync(path.join(__dirname, 'ketcher-embedded.html'), 'utf8');
   assert.equal(html.includes('/Users/'), false);
@@ -2083,6 +5972,340 @@ test('main agent chat logging records request/result/error with redacted API key
   assert.match(mainSource, /type: 'agent-chat-request'/);
   assert.match(mainSource, /type: 'agent-chat-result'/);
   assert.match(mainSource, /type: 'agent-chat-error'/);
+});
+
+test('main agent chat includes lifecycle recorder, validation gate, and replay IPC handlers', () => {
+  const mainSource = fs.readFileSync(path.join(__dirname, 'main.js'), 'utf8');
+  assert.match(mainSource, /const \{ validateAndGateResponse \} = require\('\.\/agent-validation-safety'\)/);
+  assert.match(mainSource, /createLifecycleRecorder/);
+  assert.match(mainSource, /recordLifecycleEvent/);
+  assert.match(mainSource, /appendLogWithRotation/);
+  assert.match(mainSource, /applyValidationGateToOutput\(/);
+  assert.match(mainSource, /stage: 'validation_completed'/);
+  assert.match(mainSource, /ipcMain\.handle\('agent:logs:list-requests'/);
+  assert.match(mainSource, /ipcMain\.handle\('agent:logs:replay'/);
+  assert.match(mainSource, /stage: 'tool_call_started'/);
+  assert.match(mainSource, /stage: 'tool_call_completed'/);
+  assert.match(mainSource, /stage: 'tool_call_failed'/);
+});
+
+test('agent chat contract exposes optional routing payload', () => {
+  const contract = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'agent-io-contract.json'), 'utf8'));
+  const agentChat = (contract.functions || []).find((fn) => fn.name === 'agent_chat');
+  assert.equal(Boolean(agentChat), true);
+  const props = agentChat.output_schema?.properties || {};
+  assert.equal(Boolean(props.routing), true);
+  assert.equal(props.routing.type, 'object');
+  assert.equal(Boolean(props.notebookDraft), true);
+  assert.equal(props.notebookDraft.type, 'object');
+  assert.equal(Boolean(props.response_type), true);
+  assert.equal(Boolean(props.confidence_label), true);
+  assert.equal(Boolean(props.source_summary), true);
+  assert.equal(Boolean(props.unresolved_fields), true);
+  assert.equal(Boolean(props.validation), true);
+  assert.equal(Boolean(props.provenance), true);
+});
+
+test('agent log replay/list IPC functions are present in contract and preload bridge', () => {
+  const contract = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'agent-io-contract.json'), 'utf8'));
+  const listFn = (contract.functions || []).find((fn) => fn.name === 'agent_logs_list_requests');
+  const replayFn = (contract.functions || []).find((fn) => fn.name === 'agent_logs_replay');
+  assert.equal(Boolean(listFn), true);
+  assert.equal(Boolean(replayFn), true);
+  assert.equal(listFn.channel, 'agent:logs:list-requests');
+  assert.equal(replayFn.channel, 'agent:logs:replay');
+  const preloadSource = fs.readFileSync(path.join(__dirname, 'preload.js'), 'utf8');
+  assert.match(preloadSource, /agentLogsListRequests:\s*\(\)\s*=>\s*ipcRenderer\.invoke\('agent:logs:list-requests'\)/);
+  assert.match(preloadSource, /agentLogsReplay:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\('agent:logs:replay', payload\)/);
+});
+
+test('toolbox_plannotate contract enforces plain-text sequence input for LLM tool calls', () => {
+  const contract = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'agent-io-contract.json'), 'utf8'));
+  const tool = (contract.tools || []).find((entry) => entry.name === 'toolbox_plannotate');
+  assert.equal(Boolean(tool), true);
+  const schema = tool.input_schema || {};
+  assert.equal(Array.isArray(schema.required), true);
+  assert.equal(schema.required.includes('sequence_text'), true);
+  const props = schema.properties || {};
+  assert.equal(Boolean(props.sequence_text), true);
+  assert.equal(props.sequence_text.type, 'string');
+  assert.equal(Boolean(props.file_path), false);
+  assert.equal(Boolean(props.file_text), false);
+  assert.equal(Boolean(props.file_bytes_base64), false);
+});
+
+test('search_workflows contract exposes workflow retrieval schema', () => {
+  const contract = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'agent-io-contract.json'), 'utf8'));
+  const tool = (contract.tools || []).find((entry) => entry.name === 'search_workflows');
+  assert.equal(Boolean(tool), true);
+  assert.equal(Array.isArray(tool.input_schema?.required), true);
+  assert.equal(tool.input_schema.required.includes('query'), true);
+  const itemSchema = tool.output_schema?.properties?.items?.items || {};
+  const required = Array.isArray(itemSchema.required) ? itemSchema.required : [];
+  assert.equal(required.includes('id'), true);
+  assert.equal(required.includes('name'), true);
+  assert.equal(required.includes('project_name'), true);
+  assert.equal(required.includes('block_count'), true);
+  assert.equal(required.includes('link_count'), true);
+  assert.equal(required.includes('steps_preview'), true);
+  assert.equal(required.includes('updated_at'), true);
+});
+
+test('search_inventory contract preserves required query and supports parser search metadata fields', () => {
+  const contract = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'agent-io-contract.json'), 'utf8'));
+  const tool = (contract.tools || []).find((entry) => entry.name === 'search_inventory');
+  assert.equal(Boolean(tool), true);
+  assert.equal(Array.isArray(tool.input_schema?.required), true);
+  assert.equal(tool.input_schema.required.includes('query'), true);
+  const inputProps = tool.input_schema?.properties || {};
+  assert.equal(Boolean(inputProps.normalized_query), true);
+  assert.equal(Boolean(inputProps.candidate_terms), true);
+  assert.equal(Boolean(inputProps.aliases), true);
+  assert.equal(Boolean(inputProps.search_mode), true);
+  assert.equal(Boolean(inputProps.search_terms), true);
+});
+
+test('search_papers contract preserves required fields and exposes Phase 7 optional metadata', () => {
+  const contract = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'agent-io-contract.json'), 'utf8'));
+  const tool = (contract.tools || []).find((entry) => entry.name === 'search_papers');
+  assert.equal(Boolean(tool), true);
+  const itemSchema = tool.output_schema?.properties?.items?.items || {};
+  const required = Array.isArray(itemSchema.required) ? itemSchema.required : [];
+  assert.equal(required.includes('id'), true);
+  assert.equal(required.includes('title'), true);
+  assert.equal(required.includes('summary'), true);
+  assert.equal(required.includes('methods'), true);
+  const properties = itemSchema.properties || {};
+  assert.equal(Boolean(properties.availability_status), true);
+  assert.equal(Boolean(properties.deep_read_ready), true);
+  assert.equal(Boolean(properties.ingestion_status), true);
+  assert.equal(Boolean(properties.key_figures), true);
+  assert.equal(Boolean(properties.linked_project_name), true);
+  assert.equal(Boolean(properties.updated_at), true);
+});
+
+test('search_web contract exposes hybrid web fallback schema', () => {
+  const contract = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'agent-io-contract.json'), 'utf8'));
+  const tool = (contract.tools || []).find((entry) => entry.name === 'search_web');
+  assert.equal(Boolean(tool), true);
+  assert.equal(Array.isArray(tool.input_schema?.required), true);
+  assert.equal(tool.input_schema.required.includes('query'), true);
+  const itemSchema = tool.output_schema?.properties?.items?.items || {};
+  const required = Array.isArray(itemSchema.required) ? itemSchema.required : [];
+  assert.equal(required.includes('title'), true);
+  assert.equal(required.includes('url'), true);
+  assert.equal(required.includes('snippet'), true);
+  assert.equal(required.includes('source_domain'), true);
+});
+
+test('run_python_sandbox contract includes optional artifact fields without breaking required base fields', () => {
+  const contract = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'agent-io-contract.json'), 'utf8'));
+  const tool = (contract.tools || []).find((entry) => entry.name === 'run_python_sandbox');
+  assert.equal(Boolean(tool), true);
+  const inputProps = tool.input_schema?.properties || {};
+  assert.equal(Boolean(inputProps.code), true);
+  assert.equal(Boolean(inputProps.artifact_paths), true);
+  assert.equal(Boolean(inputProps.persist_artifacts), true);
+  const itemSchema = tool.output_schema?.properties?.items?.items || {};
+  const required = Array.isArray(itemSchema.required) ? itemSchema.required : [];
+  assert.equal(required.includes('run_id'), true);
+  assert.equal(required.includes('status'), true);
+  const outputProps = itemSchema.properties || {};
+  assert.equal(Boolean(outputProps.artifact_count), true);
+  assert.equal(Boolean(outputProps.result_files), true);
+  assert.equal(Boolean(outputProps.result_file_records), true);
+});
+
+test('main agent controller output includes routing metadata fields', () => {
+  const mainSource = fs.readFileSync(path.join(__dirname, 'main.js'), 'utf8');
+  assert.match(mainSource, /routing:\s*normalizeRoutingForAgentLog\(source\.routing\)/);
+  assert.match(mainSource, /normalizeNotebookDraftPayload\(source\.notebookDraft\)/);
+  assert.match(mainSource, /const \{ finalizeAgentResponse \} = require\('\.\/agent-response-layer'\)/);
+  assert.match(mainSource, /applyResponseLayerToOutput\(/);
+  assert.match(mainSource, /response_type:\s*normalized\.response_type/);
+  assert.match(mainSource, /confidence_label:\s*normalized\.confidence_label/);
+  assert.match(mainSource, /source_summary:\s*normalized\.source_summary/);
+  assert.match(mainSource, /unresolved_fields:\s*normalized\.unresolved_fields/);
+  assert.match(mainSource, /validation:\s*validationGate\.validation/);
+  assert.match(mainSource, /provenance:\s*validationGate\.provenance/);
+  assert.match(mainSource, /maybeBuildNotebookDraft\(/);
+  assert.match(mainSource, /buildNotebookDraftSummary\(/);
+  assert.match(mainSource, /routing,/);
+  assert.match(mainSource, /intermediateStates,/);
+  assert.match(mainSource, /toolTrace/);
+  assert.match(mainSource, /buildRoutingDecisionFromIntentParser\(/);
+  assert.match(mainSource, /requestIntentParserPayload\(/);
+  assert.match(mainSource, /normalizeIntentParserPayload\(/);
+  assert.match(mainSource, /executeToolCall\(/);
+  assert.match(mainSource, /runAgentToolDispatchLegacy\(/);
+  assert.match(mainSource, /tool_selection_rationale/);
+  assert.match(mainSource, /selector score=/);
+});
+
+test('main agent controller hard-errors when intent parser output is invalid', () => {
+  const mainSource = fs.readFileSync(path.join(__dirname, 'main.js'), 'utf8');
+  assert.match(mainSource, /if \(!parserResult\?\.ok \|\| !parserResult\?\.payload\)/);
+  assert.match(mainSource, /ok:\s*false/);
+  assert.match(mainSource, /Intent parser failed:/);
+});
+
+test('main search_protocols tool path uses SQLite-backed protocol index ranking', () => {
+  const mainSource = fs.readFileSync(path.join(__dirname, 'main.js'), 'utf8');
+  assert.match(mainSource, /if \(name === 'search_protocols'\)[\s\S]*searchProtocolsIndex\(/);
+  assert.match(mainSource, /Matched protocol index \(SQLite\) with deterministic JS ranking/);
+});
+
+test('sqlite index module exposes per-data-file bundle naming', () => {
+  const bundle = agentSqliteIndex.getBundlePaths({
+    dataFilePath: '/tmp/enana-data.ena.json'
+  });
+  assert.equal(bundle.sqlitePath, '/tmp/enana-data.index.sqlite');
+  assert.equal(bundle.protocolsPath, '/tmp/enana-data.protocols.json');
+  assert.equal(bundle.notebookPagesPath, '/tmp/enana-data.notebook-pages.json');
+  assert.equal(bundle.legacyProtocolsPath, '/tmp/protocols.json');
+  assert.equal(bundle.legacyNotebookPagesPath, '/tmp/notebook-pages.json');
+});
+
+test('sqlite index module syncs and retrieves inventory/protocol/notebook search rows', async () => {
+  const tempDir = path.join(__dirname, 'tmp', 'sqlite-index-test');
+  await fsPromises.rm(tempDir, { recursive: true, force: true });
+  await fsPromises.mkdir(tempDir, { recursive: true });
+  const dataFilePath = path.join(tempDir, 'bundle.ena.json');
+  const snapshot = {
+    protocols: [
+      {
+        id: 'pr1',
+        name: 'Cell Prep',
+        category: 'cell',
+        steps: [
+          'Seed cells in media',
+          'Harvest [cell line] cells'
+        ]
+      }
+    ],
+    notebookEntries: [
+      {
+        id: 'n1',
+        protocolId: 'pr1',
+        protocolName: 'Cell Prep',
+        projectId: 'p1',
+        projectName: 'Cancer Study',
+        result: 'Observed 85% viability.',
+        updatedAt: '2026-03-01T00:00:00.000Z'
+      }
+    ],
+    labInventory: {
+      chemicals: [
+        {
+          id: 'c1',
+          name: 'Tris-HCl',
+          amount: '250 g',
+          cas: '1185-53-1',
+          supplier: 'Sigma',
+          location: 'Shelf A'
+        }
+      ],
+      blocks: [],
+      lastLocationNumber: 0
+    },
+    inventory: {
+      'Room Temp': [
+        {
+          id: 'p1',
+          name: 'PEI',
+          quantity: '2 bottles',
+          location: 'Cabinet 4'
+        }
+      ]
+    }
+  };
+
+  await agentSqliteIndex.syncBundleFromSnapshot({
+    dataFilePath,
+    snapshot,
+    fallbackDataFilePath: dataFilePath
+  });
+
+  const protocolSearch = await agentSqliteIndex.searchProtocolsIndex({
+    dataFilePath,
+    query: 'cell prep',
+    limit: 3,
+    snapshot: {}
+  });
+  assert.equal(protocolSearch.usedSqlite, true);
+  assert.equal(protocolSearch.items.length > 0, true);
+  assert.equal(protocolSearch.items[0].name, 'Cell Prep');
+
+  const notebookSearch = await agentSqliteIndex.searchNotebookEntriesIndex({
+    dataFilePath,
+    query: 'viability',
+    limit: 3,
+    snapshot: {}
+  });
+  assert.equal(notebookSearch.usedSqlite, true);
+  assert.equal(notebookSearch.items.length > 0, true);
+  assert.equal(notebookSearch.items[0].id, 'n1');
+
+  const inventorySearch = await agentSqliteIndex.searchInventoryIndex({
+    dataFilePath,
+    query: 'tris',
+    limit: 3,
+    searchTerms: ['Tris-HCl'],
+    snapshot: {}
+  });
+  assert.equal(inventorySearch.usedSqlite, true);
+  assert.equal(inventorySearch.items.some((item) => item.name === 'Tris-HCl'), true);
+
+  const hydrated = await agentSqliteIndex.hydrateSnapshotFromBundle({
+    dataFilePath,
+    snapshot: {},
+    fallbackDataFilePath: dataFilePath,
+    legacyChemicalsPath: ''
+  });
+  assert.equal(Array.isArray(hydrated.snapshot.protocols), true);
+  assert.equal(hydrated.snapshot.protocols.length, 1);
+  assert.equal(hydrated.snapshot.labInventory.chemicals.length, 1);
+
+  await fsPromises.rm(tempDir, { recursive: true, force: true });
+});
+
+test('main wires sqlite index module for save/load and retrieval paths', () => {
+  const mainSource = fs.readFileSync(path.join(__dirname, 'main.js'), 'utf8');
+  assert.match(mainSource, /require\('\.\/agent-sqlite-index'\)/);
+  assert.match(mainSource, /syncBundleFromSnapshot\(/);
+  assert.match(mainSource, /hydrateSnapshotFromBundle\(/);
+  assert.match(mainSource, /searchInventoryIndex\(/);
+  assert.match(mainSource, /searchNotebookEntriesIndex\(/);
+  assert.match(mainSource, /searchProtocolsIndex\(/);
+});
+
+test('main search_workflows tool path and project evidence hook use Phase 6 module', () => {
+  const mainSource = fs.readFileSync(path.join(__dirname, 'main.js'), 'utf8');
+  assert.match(mainSource, /if \(name === 'search_workflows'\)[\s\S]*retrieveProjectEvidence\(/);
+  assert.match(mainSource, /maybeCollectProjectEvidence\(/);
+  assert.match(mainSource, /buildProjectRecordIndex\(/);
+  assert.match(mainSource, /project_evidence/);
+});
+
+test('main search_papers tool path and paper evidence hook use Phase 7 module', () => {
+  const mainSource = fs.readFileSync(path.join(__dirname, 'main.js'), 'utf8');
+  assert.match(mainSource, /if \(name === 'search_papers'\)[\s\S]*buildPaperSearchableDocs\(/);
+  assert.match(mainSource, /if \(name === 'search_papers'\)[\s\S]*retrievePaperCandidates\(/);
+  assert.match(mainSource, /maybeCollectPaperEvidence\(/);
+  assert.match(mainSource, /paper_evidence/);
+});
+
+test('main Phase 8+9 wiring keeps orchestration in helper modules and adds search_web dispatch', () => {
+  const mainSource = fs.readFileSync(path.join(__dirname, 'main.js'), 'utf8');
+  assert.match(mainSource, /require\('\.\/agent-phase89-runtime'\)/);
+  assert.match(mainSource, /require\('\.\/agent-python'\)/);
+  assert.match(mainSource, /buildPythonCodegenPrompt\(/);
+  assert.match(mainSource, /runPlannedPythonTask\(/);
+  assert.match(mainSource, /postProcessPythonToolResult\(/);
+  assert.match(mainSource, /runHybridWebFallback\(/);
+  assert.match(mainSource, /if \(name === 'search_web'\)/);
+  assert.match(mainSource, /searchWebResults\(/);
+  assert.match(mainSource, /'search_web'/);
 });
 
 test('telegram bot internals normalize search and module parsing', () => {
@@ -3034,6 +7257,218 @@ test('[EDGE] tool-box internal functions are exposed for unit tests', () => {
   ].forEach((name) => {
     assert.equal(typeof toolBox[name], 'function');
   });
+});
+
+test('[EDGE] sequence-viewer internal functions are exposed for unit tests', () => {
+  [
+    'normalizeSequenceText',
+    'detectSequenceFormat',
+    'parseFastaRecords',
+    'parseFastqRecords',
+    'parseGenBankRecords',
+    'parseInputRecords',
+    'normalizeExternalPayload',
+    'parseGenBankLocationSegments',
+    'complementBase',
+    'complementSequence',
+    'renderDualStrandSequenceLinesHtml',
+    'formatSelectedFeatureDetailHtml',
+    'computeGcPercent',
+    'countAmbiguousBases',
+    'summarizeFastqQuality'
+  ].forEach((name) => {
+    assert.equal(typeof sequenceViewerInternals[name], 'function');
+  });
+});
+
+test('[EDGE] sequence-viewer parseFastaRecords parses multi-record input', () => {
+  const parsed = sequenceViewerInternals.parseFastaRecords(`
+>alpha record
+ACGTNN
+>beta
+ttggcc
+`);
+  assert.equal(parsed.records.length, 2);
+  assert.equal(parsed.records[0].name, 'alpha');
+  assert.equal(parsed.records[0].sequence, 'ACGTNN');
+  assert.equal(parsed.records[1].name, 'beta');
+  assert.equal(parsed.records[1].sequence, 'TTGGCC');
+});
+
+test('[EDGE] sequence-viewer parseFastqRecords parses reads and validates quality length', () => {
+  const parsed = sequenceViewerInternals.parseFastqRecords(`
+@read_1
+ACGT
++
+IIII
+@read_2
+TTAA
++
+####
+`);
+  assert.equal(parsed.records.length, 2);
+  assert.equal(parsed.records[0].name, 'read_1');
+  assert.equal(parsed.records[0].quality, 'IIII');
+  assert.equal(parsed.records[1].sequence, 'TTAA');
+
+  const invalid = sequenceViewerInternals.parseFastqRecords(`
+@bad
+ACGT
++
+II
+`);
+  assert.equal(invalid.records.length, 0);
+  assert.equal(invalid.errors.length > 0, true);
+});
+
+test('[EDGE] sequence-viewer parseGenBankRecords parses ORIGIN and feature locations', () => {
+  const parsed = sequenceViewerInternals.parseGenBankRecords(`
+LOCUS       TESTSEQ        12 bp    DNA     circular SYN 01-JAN-2026
+FEATURES             Location/Qualifiers
+     CDS             complement(join(10..12,1..3))
+                     /label="cds_a"
+     promoter        4..8
+                     /label="prom_a"
+ORIGIN
+        1 acgtttggccaa
+//
+`);
+  assert.equal(parsed.records.length, 1);
+  assert.equal(parsed.records[0].sequence, 'ACGTTTGGCCAA');
+  assert.equal(parsed.records[0].features.length, 2);
+  assert.equal(parsed.records[0].features[0].name, 'cds_a');
+  assert.equal(parsed.records[0].features[0].strand, -1);
+  assert.equal(
+    JSON.stringify(parsed.records[0].features[0].segments),
+    JSON.stringify([{ start: 9, end: 12 }, { start: 0, end: 3 }])
+  );
+});
+
+test('[EDGE] sequence-viewer normalizeExternalPayload clamps segments and keeps metadata', () => {
+  const normalized = sequenceViewerInternals.normalizeExternalPayload({
+    name: 'Example payload',
+    sequence: 'acgtacgt',
+    topology: 'circular',
+    source: 'plannotate',
+    features: [
+      {
+        name: 'hit1',
+        type: 'CDS',
+        strand: -1,
+        source: 'plannotate',
+        segments: [{ start: -5, end: 4 }, { start: 6, end: 999 }]
+      }
+    ]
+  });
+
+  assert.equal(normalized.name, 'Example payload');
+  assert.equal(normalized.sequence, 'ACGTACGT');
+  assert.equal(normalized.topology, 'circular');
+  assert.equal(normalized.features.length, 1);
+  assert.equal(normalized.features[0].strand, -1);
+  assert.equal(
+    JSON.stringify(normalized.features[0].segments),
+    JSON.stringify([{ start: 0, end: 4 }, { start: 6, end: 8 }])
+  );
+});
+
+test('[EDGE] sequence-viewer complement mapping handles canonical and ambiguous bases', () => {
+  assert.equal(sequenceViewerInternals.complementBase('A'), 'T');
+  assert.equal(sequenceViewerInternals.complementBase('C'), 'G');
+  assert.equal(sequenceViewerInternals.complementBase('R'), 'Y');
+  assert.equal(sequenceViewerInternals.complementBase('Z'), 'N');
+  assert.equal(sequenceViewerInternals.complementSequence('ACGTRYN'), 'TGCAYRN');
+});
+
+test('[EDGE] sequence-viewer dual-strand renderer shows 5/3 orientation and paired highlights', () => {
+  const html = sequenceViewerInternals.renderDualStrandSequenceLinesHtml('ACGTAC', [{ start: 1, end: 4 }]);
+  assert.match(html, /sequence-viewer-strand-row-top/);
+  assert.match(html, /sequence-viewer-strand-row-bottom/);
+  assert.match(html, /5'/);
+  assert.match(html, /3'/);
+  assert.match(html, /CGT/);
+  assert.match(html, /GCA/);
+  const highlightCount = (html.match(/sequence-viewer-seq-highlight/g) || []).length;
+  assert.equal(highlightCount, 2);
+});
+
+test('[EDGE] sequence-viewer feature detail formatter includes core metadata', () => {
+  const html = sequenceViewerInternals.formatSelectedFeatureDetailHtml({
+    name: 'ori',
+    type: 'origin',
+    strand: -1,
+    identity: 99.12,
+    coverage: 87.56,
+    source: 'plannotate',
+    segments: [{ start: 0, end: 4 }]
+  }, 8);
+  assert.match(html, /ori/);
+  assert.match(html, /origin/);
+  assert.match(html, /Strand:<\/strong> -/);
+  assert.match(html, /99.12%/);
+  assert.match(html, /87.56%/);
+});
+
+test('[EDGE] sequence-viewer bottom-track click updates selected feature detail strip', () => {
+  const ids = [
+    'sequence-viewer-mode-paste',
+    'sequence-viewer-mode-file',
+    'sequence-viewer-paste-panel',
+    'sequence-viewer-file-panel',
+    'sequence-viewer-textarea',
+    'sequence-viewer-file-input',
+    'sequence-viewer-file-choose',
+    'sequence-viewer-file-name',
+    'sequence-viewer-load-btn',
+    'sequence-viewer-clear-btn',
+    'sequence-viewer-status',
+    'sequence-viewer-messages',
+    'sequence-viewer-record-select',
+    'sequence-viewer-stat-format',
+    'sequence-viewer-stat-length',
+    'sequence-viewer-stat-topology',
+    'sequence-viewer-stat-gc',
+    'sequence-viewer-stat-ambiguous',
+    'sequence-viewer-stat-quality',
+    'sequence-viewer-stat-features',
+    'sequence-viewer-feature-rail-host',
+    'sequence-viewer-feature-detail',
+    'sequence-viewer-sequence-host'
+  ];
+  const document = createMockDocument(ids);
+  const moduleWithDom = loadEsmStyleModule(
+    path.join(__dirname, 'modules', 'sequence-viewer.js'),
+    { document }
+  );
+  const viewer = moduleWithDom.initSequenceViewer();
+  viewer.loadFromExternal({
+    name: 'test',
+    sequence: 'ACGTACGT',
+    source: 'plannotate',
+    features: [
+      {
+        name: 'Feature_A',
+        type: 'promoter',
+        strand: 1,
+        source: 'plannotate',
+        segments: [{ start: 1, end: 5 }]
+      }
+    ]
+  });
+
+  const detail = document.getElementById('sequence-viewer-feature-detail');
+  assert.match(detail.innerHTML, /Select a feature/);
+
+  trigger(document.getElementById('sequence-viewer-feature-rail-host'), 'click', {
+    target: {
+      closest() {
+        return { dataset: { featureIndex: '0' } };
+      }
+    }
+  });
+
+  assert.match(detail.innerHTML, /Feature_A/);
+  assert.match(detail.innerHTML, /promoter/);
 });
 
 [

@@ -27,6 +27,7 @@ import { initPapersManagement } from './modules/papers-management.js';
 import { initToolBox } from './modules/tool-box.js';
 import { initAgentChat } from './modules/agent-chat.js';
 import { initHomeDashboard } from './modules/home-dashboard.js';
+import { initSequenceViewer } from './modules/sequence-viewer.js';
 import {
   rebuildObjectGraph,
   queryNotebookEntriesByRelation,
@@ -92,6 +93,9 @@ const GLOBAL_VIEW_ALIASES = new Map([
   ['papers', VIEWS.PAPERS],
   ['paper', VIEWS.PAPERS],
   ['agent', VIEWS.AGENT],
+  ['sequence', VIEWS.SEQUENCE_VIEWER],
+  ['seqviewer', VIEWS.SEQUENCE_VIEWER],
+  ['sequence-viewer', VIEWS.SEQUENCE_VIEWER],
   ['tools', VIEWS.TOOL_BOX],
   ['tool', VIEWS.TOOL_BOX],
   ['toolbox', VIEWS.TOOL_BOX],
@@ -126,7 +130,9 @@ let gel = null;
 let workflowManagement = null;
 let agentChat = null;
 let homeDashboard = null;
+let protocol = null;
 let lastViewPersistenceEnabled = false;
+let sequenceViewer = null;
 
 function normalizeViewId(viewId) {
   return viewId === VIEWS.PERSONAL_INVENTORY ? VIEWS.SAMPLE_REGISTRY : viewId;
@@ -239,6 +245,12 @@ const synthesisNotebook = initLabNotebook({
   createId,
   safeText,
   notebookType: 'synthesis',
+  importProtocolsFromJson: (rawInput, options = {}) => {
+    if (!protocol?.importProtocolsFromJson) {
+      return { ok: false, error: 'Protocol import is not ready.' };
+    }
+    return protocol.importProtocolsFromJson(rawInput, options);
+  },
   onNotebookEntriesChanged: () => {
     projectManagement.renderNotebookPages();
     workflowManagement?.render();
@@ -255,6 +267,12 @@ const biologyNotebook = initBiologyNotebook({
   createId,
   safeText,
   notebookType: 'biology',
+  importProtocolsFromJson: (rawInput, options = {}) => {
+    if (!protocol?.importProtocolsFromJson) {
+      return { ok: false, error: 'Protocol import is not ready.' };
+    }
+    return protocol.importProtocolsFromJson(rawInput, options);
+  },
   onNotebookEntriesChanged: () => {
     projectManagement.renderNotebookPages();
     workflowManagement?.render();
@@ -277,7 +295,7 @@ function refreshProtocolDependents() {
   gel?.renderList();
 }
 
-const protocol = initProtocolManagement({
+protocol = initProtocolManagement({
   state,
   persist,
   createId,
@@ -314,7 +332,17 @@ agentChat = initAgentChat({
   state,
   persist,
   createId,
-  safeText
+  safeText,
+  onNotebookEntriesChanged: () => {
+    synthesisNotebook.renderEntries();
+    biologyNotebook.renderEntries();
+    projectManagement.renderNotebookPages();
+    workflowManagement?.render();
+    assay?.renderNotebookOptions();
+    assay?.renderList();
+    gel?.renderNotebookOptions();
+    gel?.renderList();
+  }
 });
 
 workflowManagement = initWorkflowManagement({
@@ -395,7 +423,17 @@ gel = initGelAnalysis({
   }
 });
 
-initToolBox();
+sequenceViewer = initSequenceViewer();
+
+initToolBox({
+  onOpenSequenceViewer: (payload) => {
+    if (!sequenceViewer?.loadFromExternal) {
+      return;
+    }
+    sequenceViewer.loadFromExternal(payload);
+    showView(VIEWS.SEQUENCE_VIEWER);
+  }
+});
 
 const settings = initSettings({
   state,
@@ -517,6 +555,10 @@ function showView(viewId) {
 
   if (nextView === VIEWS.AGENT) {
     agentChat.render();
+  }
+
+  if (nextView === VIEWS.SEQUENCE_VIEWER) {
+    sequenceViewer?.render?.();
   }
 
   if (nextView === VIEWS.INSTRUMENT_MANAGEMENT) {

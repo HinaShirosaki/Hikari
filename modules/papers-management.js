@@ -38,6 +38,104 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
     }));
   }
 
+  function normalizeKeyFigures(paper) {
+    const source = paper && typeof paper === 'object' ? paper : {};
+    const fromPaper = Array.isArray(source.keyFigures) ? source.keyFigures : [];
+    const fromSummary = Array.isArray(source.summaryStructured?.important_figures_or_tables)
+      ? source.summaryStructured.important_figures_or_tables
+      : [];
+    const merged = fromPaper.length ? fromPaper : fromSummary.map((item) => {
+      if (typeof item === 'string') {
+        return String(item || '').trim();
+      }
+      if (!item || typeof item !== 'object') {
+        return '';
+      }
+      const label = String(item.item || item.label || item.figure || item.table || '').trim();
+      const summary = String(item.summary || item.description || '').trim();
+      return [label, summary].filter(Boolean).join(': ');
+    });
+    const seen = new Set();
+    return merged
+      .map((item) => String(item || '').trim())
+      .filter(Boolean)
+      .filter((item) => {
+        const key = item.toLowerCase();
+        if (seen.has(key)) {
+          return false;
+        }
+        seen.add(key);
+        return true;
+      })
+      .slice(0, 10);
+  }
+
+  function updatePaperAvailability(paper) {
+    if (!paper || typeof paper !== 'object') {
+      return;
+    }
+    const hasUploadedPdf = Boolean(String(paper.pdfDataUrl || '').trim())
+      || Boolean(String(paper.storedFilePath || '').trim())
+      || Boolean(String(paper.storedRelativePath || '').trim());
+    const hasSummary = Boolean(String(paper.summary || '').trim())
+      && !String(paper.summary || '').trim().startsWith('Failed to summarize');
+    const methodCount = Array.isArray(paper.methodsExtract) ? paper.methodsExtract.length : 0;
+    const reagentCount = Array.isArray(paper.keyReagents) ? paper.keyReagents.length : 0;
+    paper.keyFigures = normalizeKeyFigures(paper);
+    const figureCount = Array.isArray(paper.keyFigures) ? paper.keyFigures.length : 0;
+
+    paper.deepReadReady = Boolean(hasUploadedPdf && (hasSummary || methodCount > 0 || reagentCount > 0 || figureCount > 0));
+    if (paper.deepReadReady) {
+      paper.availabilityStatus = 'deep_ready';
+    } else if (hasUploadedPdf) {
+      paper.availabilityStatus = 'uploaded_pdf';
+    } else if (hasSummary) {
+      paper.availabilityStatus = 'metadata_only';
+    } else {
+      paper.availabilityStatus = 'unavailable';
+    }
+  }
+
+  async function startPaperAutoIngest(paperId) {
+    const paper = state.papers.find((item) => item.id === paperId);
+    if (!paper || paper.ingestionStatus === 'running') {
+      return;
+    }
+
+    paper.ingestionStatus = 'running';
+    paper.ingestionErrors = [];
+    paper.ingestionUpdatedAt = new Date().toISOString();
+    updatePaperAvailability(paper);
+    persist();
+    renderPaperList();
+
+    await summarizePaper(paperId);
+    await extractMethods(paperId);
+    await extractReagents(paperId);
+
+    const refreshed = state.papers.find((item) => item.id === paperId);
+    if (!refreshed) {
+      return;
+    }
+
+    const errors = [];
+    if (refreshed.summaryStatus === 'error') {
+      errors.push('summary_failed');
+    }
+    if (refreshed.methodsStatus === 'error') {
+      errors.push('methods_failed');
+    }
+    if (refreshed.reagentsStatus === 'error') {
+      errors.push('reagents_failed');
+    }
+    refreshed.ingestionErrors = errors;
+    refreshed.ingestionStatus = errors.length ? 'error' : 'ready';
+    refreshed.ingestionUpdatedAt = new Date().toISOString();
+    updatePaperAvailability(refreshed);
+    persist();
+    renderPaperList();
+  }
+
   async function onPaperSubmit(event) {
     event.preventDefault();
     const options = getCurrentLinkOptions();
@@ -105,15 +203,24 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
       methodsStatus: 'idle',
       keyReagents: [],
       reagentsStatus: 'idle',
+      keyFigures: [],
+      deepReadReady: false,
+      availabilityStatus: 'uploaded_pdf',
+      ingestionStatus: 'queued',
+      ingestionUpdatedAt: new Date().toISOString(),
+      ingestionErrors: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
+
+    updatePaperAvailability(paper);
 
     state.papers.push(paper);
     persist();
     paperForm.reset();
     paperLinkTypeSelect.value = 'project';
     render();
+    void startPaperAutoIngest(paper.id);
   }
 
   function onAddJournalClub() {
@@ -181,6 +288,7 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
     }
 
     paper.updatedAt = new Date().toISOString();
+    updatePaperAvailability(paper);
     persist();
     renderPaperList();
   }
@@ -214,6 +322,7 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
     }
 
     paper.updatedAt = new Date().toISOString();
+    updatePaperAvailability(paper);
     persist();
     renderPaperList();
   }
@@ -254,6 +363,7 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
     }
 
     paper.updatedAt = new Date().toISOString();
+    updatePaperAvailability(paper);
     persist();
     renderPaperList();
   }
@@ -374,7 +484,7 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
     const paperText = papers.map((paper) => [
       `Paper: ${paper.title}`,
       `Summary: ${paper.summary || '-'}`,
-      `Methods: ${(paper.methodsExtract || []).map((method) => `${method.title}: ${(method.steps || []).join(' | ')}`).join(' || ') || '-'}`,
+      `Methods: ${(paper.methodsExtract || []).map((method) => `${method.title}: ${formatMethodStepTexts(method.steps).join(' | ') || '-'}`).join(' || ') || '-'}`,
       `Reagents: ${(paper.keyReagents || []).map((item) => `${item.type}:${item.name} (${item.identifier || '-'})`).join(' | ') || '-'}`
     ].join('\n')).join('\n\n');
 
@@ -584,7 +694,7 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
         const methodsHtml = (paper.methodsExtract || []).map((method, index) => `
           <article class="card">
             <p><strong>${safeText(method.title || `Method ${index + 1}`)}</strong></p>
-            <p>${safeText((method.steps || []).join(' | ') || '-')}</p>
+            <p>${safeText(formatMethodStepTexts(method.steps).join(' | ') || '-')}</p>
             <p><strong>Citations:</strong> ${safeText((method.citations || []).join('; ') || '-')}</p>
             <button class="ghost-btn" data-paper-method-to-protocol data-paper-id="${paper.id}" data-method-index="${index}">Create Protocol Draft</button>
           </article>
@@ -598,6 +708,12 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
             <p><strong>Citation:</strong> ${safeText(item.citation || '-')}</p>
           </article>
         `).join('');
+        const keyFiguresHtml = (paper.keyFigures || []).map((item) => `
+          <article class="card">
+            <p>${safeText(item)}</p>
+          </article>
+        `).join('');
+        const ingestionErrors = Array.isArray(paper.ingestionErrors) ? paper.ingestionErrors : [];
 
         const projectIdDefault = paper.linkedType === 'project' ? paper.linkedId : '';
         const links = (state.paperExperimentLinks || []).filter((item) => item.paperId === paper.id);
@@ -611,6 +727,10 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
             <p><strong>PDF:</strong> ${safeText(paper.fileName)}</p>
             <p><strong>Linked To:</strong> ${safeText(formatLinkedTarget(paper))}</p>
             <p><strong>Status:</strong> <span class="status-badge ${statusClass(paper.summaryStatus)}">${safeText(statusLabel(paper.summaryStatus))}</span></p>
+            <p><strong>Ingestion:</strong> <span class="status-badge ${statusClass(paper.ingestionStatus)}">${safeText(statusLabel(paper.ingestionStatus || 'idle'))}</span></p>
+            <p><strong>Availability:</strong> ${safeText(paper.availabilityStatus || 'unknown')} | deep-ready=${paper.deepReadReady === true ? 'yes' : 'no'}</p>
+            <p><strong>Ingestion Updated:</strong> ${safeText(paper.ingestionUpdatedAt ? new Date(paper.ingestionUpdatedAt).toLocaleString() : '-')}</p>
+            ${ingestionErrors.length ? `<p><strong>Ingestion Errors:</strong> ${safeText(ingestionErrors.join(', '))}</p>` : ''}
             <p><strong>Updated:</strong> ${new Date(paper.updatedAt).toLocaleString()}</p>
             <p><strong>Summary:</strong> ${safeText(paper.summary || 'No summary yet.')}</p>
             <div class="card-actions">
@@ -631,6 +751,8 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
               ${methodsHtml || '<p class="small-note">No methods extracted yet.</p>'}
               <p><strong>Key Reagents</strong></p>
               ${reagentsHtml || '<p class="small-note">No key reagents extracted yet.</p>'}
+              <p><strong>Key Figures</strong></p>
+              ${keyFiguresHtml || '<p class="small-note">No key figures extracted yet.</p>'}
             </div>
             <div class="stack-form">
               <p><strong>Link to Experiment</strong></p>
@@ -661,16 +783,28 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
   }
 
   function statusLabel(status) {
+    if (status === 'queued') {
+      return 'Queued';
+    }
     if (status === 'running') {
       return 'Running';
     }
     if (status === 'error') {
       return 'Error';
     }
+    if (status === 'ready') {
+      return 'Ready';
+    }
+    if (status === 'uploaded') {
+      return 'Uploaded';
+    }
     return 'Idle';
   }
 
   function statusClass(status) {
+    if (status === 'queued') {
+      return 'status-running';
+    }
     if (status === 'running') {
       return 'status-running';
     }
@@ -688,6 +822,121 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
   }
 
   return { render, renderLinkTargets };
+}
+
+function getMethodStepText(step) {
+  if (typeof step === 'string') {
+    return String(step || '').trim();
+  }
+  if (!step || typeof step !== 'object') {
+    return '';
+  }
+  return String(
+    step.action
+    || step.text
+    || step.instruction
+    || step.description
+    || step.step
+    || step.content
+    || ''
+  ).trim();
+}
+
+function formatMethodStepTexts(steps) {
+  return (Array.isArray(steps) ? steps : [])
+    .map((step) => getMethodStepText(step))
+    .filter(Boolean);
+}
+
+function normalizeMethodSteps(rawSteps) {
+  const source = Array.isArray(rawSteps) ? rawSteps : [];
+  if (!source.length) {
+    return [];
+  }
+
+  const sorted = source
+    .map((step, index) => ({ step, index }))
+    .sort((a, b) => {
+      const numberA = Number(a.step?.step_number ?? a.step?.number ?? a.step?.index);
+      const numberB = Number(b.step?.step_number ?? b.step?.number ?? b.step?.index);
+      const hasNumberA = Number.isFinite(numberA);
+      const hasNumberB = Number.isFinite(numberB);
+      if (hasNumberA && hasNumberB && numberA !== numberB) {
+        return numberA - numberB;
+      }
+      if (hasNumberA !== hasNumberB) {
+        return hasNumberA ? -1 : 1;
+      }
+      return a.index - b.index;
+    });
+
+  const rows = sorted
+    .map(({ step }, index) => {
+      const action = getMethodStepText(step);
+      if (!action) {
+        return null;
+      }
+      const rawNumber = Number(step?.step_number ?? step?.number ?? step?.index);
+      return {
+        step_number: Number.isFinite(rawNumber) && rawNumber > 0 ? Math.round(rawNumber) : index + 1,
+        action
+      };
+    })
+    .filter(Boolean);
+
+  return rows.map((item, index) => ({
+    step_number: index + 1,
+    action: item.action
+  }));
+}
+
+function normalizeMethodTroubleshooting(rawTroubleshooting) {
+  if (!rawTroubleshooting) {
+    return [];
+  }
+  if (typeof rawTroubleshooting === 'string') {
+    return String(rawTroubleshooting || '')
+      .split(/\r?\n+/)
+      .map((line) => String(line || '').trim())
+      .filter(Boolean)
+      .map((problem) => ({
+        problem,
+        possible_cause: '',
+        solution: ''
+      }));
+  }
+  if (!Array.isArray(rawTroubleshooting)) {
+    return [];
+  }
+  return rawTroubleshooting
+    .map((item) => {
+      if (typeof item === 'string') {
+        const problem = String(item || '').trim();
+        if (!problem) {
+          return null;
+        }
+        return {
+          problem,
+          possible_cause: '',
+          solution: ''
+        };
+      }
+      if (!item || typeof item !== 'object') {
+        return null;
+      }
+      const problem = String(item.problem || item.issue || '').trim();
+      const possibleCause = String(item.possible_cause || item.possibleCause || item.cause || '').trim();
+      const solution = String(item.solution || item.fix || '').trim();
+      if (!problem && !possibleCause && !solution) {
+        return null;
+      }
+      return {
+        problem,
+        possible_cause: possibleCause,
+        solution
+      };
+    })
+    .filter(Boolean);
 }
 
 function normalizeMethodsExtract(result) {
@@ -726,31 +975,23 @@ function normalizeMethodsExtract(result) {
 
   return methods.map((item, index) => {
     const title = String(item?.title || item?.name || `Method ${index + 1}`).trim() || `Method ${index + 1}`;
-    const steps = Array.isArray(item?.steps)
+    const rawSteps = Array.isArray(item?.steps)
       ? item.steps
-        .map((step) => {
-          if (typeof step === 'string') {
-            return String(step || '').trim();
-          }
-          if (!step || typeof step !== 'object') {
-            return '';
-          }
-          return String(step.action || step.text || step.instruction || '').trim();
-        })
-        .filter(Boolean)
-      : [];
+      : (Array.isArray(item?.procedure) ? item.procedure : []);
+    const steps = normalizeMethodSteps(rawSteps);
     const citations = Array.isArray(item?.citations)
       ? item.citations.map((cit) => String(cit || '').trim()).filter(Boolean)
-      : [];
+      : (Array.isArray(item?.references) ? item.references.map((cit) => String(cit || '').trim()).filter(Boolean) : []);
+
     return {
       title,
-      steps,
-      citations,
-      purpose: String(item?.purpose || '').trim(),
+      purpose: String(item?.purpose || item?.objective || '').trim(),
       materials: Array.isArray(item?.materials)
         ? item.materials.map((material) => normalizeMaterial(material)).filter(Boolean)
         : [],
-      troubleshooting: item?.troubleshooting ?? ''
+      steps,
+      troubleshooting: normalizeMethodTroubleshooting(item?.troubleshooting),
+      citations
     };
   }).filter((item) => item.title || item.steps.length);
 }
