@@ -347,22 +347,22 @@ const memoryStorage = createMemoryStorage();
 const shared = loadEsmStyleModule(path.join(__dirname, 'modules', 'shared.js'), {
   localStorage: memoryStorage
 });
-const agentRouting = require(path.join(__dirname, 'agent-routing.js'));
-const agentIntentParser = require(path.join(__dirname, 'agent-intent-parser.js'));
-const agentTools = require(path.join(__dirname, 'agent-tools.js'));
-const agentProtocolMatching = require(path.join(__dirname, 'agent-protocol-matching.js'));
-const agentNotebookGeneration = require(path.join(__dirname, 'agent-notebook-generation.js'));
-const agentProjectRetrieval = require(path.join(__dirname, 'agent-project-retrieval.js'));
-const agentPaperAnalysis = require(path.join(__dirname, 'agent-paper-analysis.js'));
-const agentResponseLayer = require(path.join(__dirname, 'agent-response-layer.js'));
-const agentValidationSafety = require(path.join(__dirname, 'agent-validation-safety.js'));
-const agentObservability = require(path.join(__dirname, 'agent-observability.js'));
-const agentPython = require(path.join(__dirname, 'agent-python.js'));
+const agentRouting = require(path.join(__dirname, 'helpers', 'agent', 'agent-routing.js'));
+const agentIntentParser = require(path.join(__dirname, 'helpers', 'agent', 'agent-intent-parser.js'));
+const agentTools = require(path.join(__dirname, 'helpers', 'agent', 'agent-tools.js'));
+const agentProtocolMatching = require(path.join(__dirname, 'helpers', 'agent', 'agent-protocol-matching.js'));
+const agentNotebookGeneration = require(path.join(__dirname, 'helpers', 'agent', 'agent-notebook-generation.js'));
+const agentProjectRetrieval = require(path.join(__dirname, 'helpers', 'agent', 'agent-project-retrieval.js'));
+const agentPaperAnalysis = require(path.join(__dirname, 'helpers', 'agent', 'agent-paper-analysis.js'));
+const agentResponseLayer = require(path.join(__dirname, 'helpers', 'agent', 'agent-response-layer.js'));
+const agentValidationSafety = require(path.join(__dirname, 'helpers', 'agent', 'agent-validation-safety.js'));
+const agentObservability = require(path.join(__dirname, 'helpers', 'agent', 'agent-observability.js'));
+const agentPython = require(path.join(__dirname, 'helpers', 'agent', 'agent-python.js'));
 const agentPythonOrchestration = agentPython;
 const agentPythonCodegen = agentPython;
-const agentWebFallback = require(path.join(__dirname, 'agent-web-fallback.js'));
-const phase89Runtime = require(path.join(__dirname, 'agent-phase89-runtime.js'));
-const agentSqliteIndex = require(path.join(__dirname, 'agent-sqlite-index.js'));
+const agentWebFallback = require(path.join(__dirname, 'helpers', 'agent', 'agent-web-fallback.js'));
+const phase89Runtime = require(path.join(__dirname, 'helpers', 'agent', 'agent-phase89-runtime.js'));
+const agentSqliteIndex = require(path.join(__dirname, 'helpers', 'agent', 'agent-sqlite-index.js'));
 const objectGraph = loadEsmStyleModule(path.join(__dirname, 'modules', 'object-graph.js'));
 const toolBox = loadEsmStyleModule(
   path.join(__dirname, 'modules', 'tool-box.js'),
@@ -5976,7 +5976,7 @@ test('main agent chat logging records request/result/error with redacted API key
 
 test('main agent chat includes lifecycle recorder, validation gate, and replay IPC handlers', () => {
   const mainSource = fs.readFileSync(path.join(__dirname, 'main.js'), 'utf8');
-  assert.match(mainSource, /const \{ validateAndGateResponse \} = require\('\.\/agent-validation-safety'\)/);
+  assert.match(mainSource, /const \{ validateAndGateResponse \} = require\('\.\/helpers\/agent\/agent-validation-safety'\)/);
   assert.match(mainSource, /createLifecycleRecorder/);
   assert.match(mainSource, /recordLifecycleEvent/);
   assert.match(mainSource, /appendLogWithRotation/);
@@ -6120,7 +6120,7 @@ test('main agent controller output includes routing metadata fields', () => {
   const mainSource = fs.readFileSync(path.join(__dirname, 'main.js'), 'utf8');
   assert.match(mainSource, /routing:\s*normalizeRoutingForAgentLog\(source\.routing\)/);
   assert.match(mainSource, /normalizeNotebookDraftPayload\(source\.notebookDraft\)/);
-  assert.match(mainSource, /const \{ finalizeAgentResponse \} = require\('\.\/agent-response-layer'\)/);
+  assert.match(mainSource, /const \{ finalizeAgentResponse \} = require\('\.\/helpers\/agent\/agent-response-layer'\)/);
   assert.match(mainSource, /applyResponseLayerToOutput\(/);
   assert.match(mainSource, /response_type:\s*normalized\.response_type/);
   assert.match(mainSource, /confidence_label:\s*normalized\.confidence_label/);
@@ -6271,7 +6271,7 @@ test('sqlite index module syncs and retrieves inventory/protocol/notebook search
 
 test('main wires sqlite index module for save/load and retrieval paths', () => {
   const mainSource = fs.readFileSync(path.join(__dirname, 'main.js'), 'utf8');
-  assert.match(mainSource, /require\('\.\/agent-sqlite-index'\)/);
+  assert.match(mainSource, /require\('\.\/helpers\/agent\/agent-sqlite-index'\)/);
   assert.match(mainSource, /syncBundleFromSnapshot\(/);
   assert.match(mainSource, /hydrateSnapshotFromBundle\(/);
   assert.match(mainSource, /searchInventoryIndex\(/);
@@ -6297,8 +6297,8 @@ test('main search_papers tool path and paper evidence hook use Phase 7 module', 
 
 test('main Phase 8+9 wiring keeps orchestration in helper modules and adds search_web dispatch', () => {
   const mainSource = fs.readFileSync(path.join(__dirname, 'main.js'), 'utf8');
-  assert.match(mainSource, /require\('\.\/agent-phase89-runtime'\)/);
-  assert.match(mainSource, /require\('\.\/agent-python'\)/);
+  assert.match(mainSource, /require\('\.\/helpers\/agent\/agent-phase89-runtime'\)/);
+  assert.match(mainSource, /require\('\.\/helpers\/agent\/agent-python'\)/);
   assert.match(mainSource, /buildPythonCodegenPrompt\(/);
   assert.match(mainSource, /runPlannedPythonTask\(/);
   assert.match(mainSource, /postProcessPythonToolResult\(/);

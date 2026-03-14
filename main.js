@@ -16,9 +16,9 @@ const {
   getCodexLoginStatus,
   requestCodexCliText
 } = require('./codex-cli-provider');
-const { downloadPaperAndSiPdf } = require('./agent-paper-download');
-const { runPythonSandbox, buildPythonCodegenPrompt } = require('./agent-python');
-const { searchWebResults } = require('./agent-web-fallback');
+const { downloadPaperAndSiPdf } = require('./helpers/agent/agent-paper-download');
+const { runPythonSandbox, buildPythonCodegenPrompt } = require('./helpers/agent/agent-python');
+const { searchWebResults } = require('./helpers/agent/agent-web-fallback');
 const {
   getBundlePaths,
   syncBundleFromSnapshot,
@@ -26,32 +26,32 @@ const {
   searchInventoryIndex,
   searchProtocolsIndex,
   searchNotebookEntriesIndex
-} = require('./agent-sqlite-index');
+} = require('./helpers/agent/agent-sqlite-index');
 const {
   runPlannedPythonTask,
   postProcessPythonToolResult,
   runHybridWebFallback
-} = require('./agent-phase89-runtime');
+} = require('./helpers/agent/agent-phase89-runtime');
 const {
   loadToolContract,
   executeToolCall
-} = require('./agent-tools');
+} = require('./helpers/agent/agent-tools');
 const {
   ROUTING_INTENTS,
   buildRoutingDecisionFromIntentParser,
   buildRoutingClarificationQuestion
-} = require('./agent-routing');
+} = require('./helpers/agent/agent-routing');
 const {
   INTENT_PARSER_RESPONSE_SCHEMA,
   normalizeIntentParserPayload,
   buildIntentParserPrompt,
   buildInventorySearchTerms
-} = require('./agent-intent-parser');
-const { buildNotebookDraft, buildNotebookDraftSummary } = require('./agent-notebook-generation');
-const { buildProjectRecordIndex, retrieveProjectEvidence } = require('./agent-project-retrieval');
-const { buildPaperSearchableDocs, retrievePaperCandidates, resolvePaperRequest } = require('./agent-paper-analysis');
-const { finalizeAgentResponse } = require('./agent-response-layer');
-const { validateAndGateResponse } = require('./agent-validation-safety');
+} = require('./helpers/agent/agent-intent-parser');
+const { buildNotebookDraft, buildNotebookDraftSummary } = require('./helpers/agent/agent-notebook-generation');
+const { buildProjectRecordIndex, retrieveProjectEvidence } = require('./helpers/agent/agent-project-retrieval');
+const { buildPaperSearchableDocs, retrievePaperCandidates, resolvePaperRequest } = require('./helpers/agent/agent-paper-analysis');
+const { finalizeAgentResponse } = require('./helpers/agent/agent-response-layer');
+const { validateAndGateResponse } = require('./helpers/agent/agent-validation-safety');
 const {
   createLifecycleRecorder,
   recordLifecycleEvent,
@@ -59,11 +59,11 @@ const {
   appendLogWithRotation,
   readLifecycleLogs,
   replayRequestLifecycle
-} = require('./agent-observability');
-const { createMainDataHelpers } = require('./main-data-helpers');
-const { addEvidencePack, applyFinalResponseLayerAndValidation } = require('./agent-controller-shared');
-const { createAgentWorkflowHelpers } = require('./agent-workflow-helpers');
-const { createExternalBioSearchHelpers } = require('./agent-external-bio-search');
+} = require('./helpers/agent/agent-observability');
+const { createMainDataHelpers } = require('./helpers/main/data-helpers');
+const { addEvidencePack, applyFinalResponseLayerAndValidation } = require('./helpers/agent/controller-shared');
+const { createAgentWorkflowHelpers } = require('./helpers/agent/agent-workflow-helpers');
+const { createExternalBioSearchHelpers } = require('./helpers/agent/external-bio-search');
 const {
   toolboxConcentrationToM,
   toolboxConcentrationFromM,
@@ -86,7 +86,7 @@ const {
   scoreCrisprOnTargetForToolbox,
   computeCrisprOffTargetStatsForToolbox,
   reverseTranslateProteinForToolbox
-} = require('./agent-toolbox-helpers');
+} = require('./helpers/agent/toolbox-helpers');
 let AGENT_IO_CONTRACT_RAW = {};
 try {
   AGENT_IO_CONTRACT_RAW = require('./data/agent-io-contract.json');
