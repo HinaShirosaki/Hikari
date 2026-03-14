@@ -19,6 +19,8 @@ contextBridge.exposeInMainWorld('enanaApi', {
   runCodexLlmPrompt: (payload) => ipcRenderer.invoke('llm:codex-generate', payload),
   agentChat: (payload) => ipcRenderer.invoke('agent:chat', payload),
   getAgentIoContract: () => ipcRenderer.invoke('agent:get-io-contract'),
+  agentLogsListRequests: () => ipcRenderer.invoke('agent:logs:list-requests'),
+  agentLogsReplay: (payload) => ipcRenderer.invoke('agent:logs:replay', payload),
   onTelegramCommand: (handler) => {
     if (typeof handler !== 'function') {
       return;

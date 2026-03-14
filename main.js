@@ -17,8 +17,16 @@ const {
   requestCodexCliText
 } = require('./codex-cli-provider');
 const { downloadPaperAndSiPdf } = require('./agent-paper-download');
-const { runPythonSandbox } = require('./agent-python-sandbox');
+const { runPythonSandbox, buildPythonCodegenPrompt } = require('./agent-python');
 const { searchWebResults } = require('./agent-web-fallback');
+const {
+  getBundlePaths,
+  syncBundleFromSnapshot,
+  hydrateSnapshotFromBundle,
+  searchInventoryIndex,
+  searchProtocolsIndex,
+  searchNotebookEntriesIndex
+} = require('./agent-sqlite-index');
 const {
   runPlannedPythonTask,
   postProcessPythonToolResult,
@@ -30,7 +38,6 @@ const {
 } = require('./agent-tools');
 const {
   ROUTING_INTENTS,
-  AGENT_MVP_SCOPE,
   buildRoutingDecisionFromIntentParser,
   buildRoutingClarificationQuestion
 } = require('./agent-routing');
@@ -40,11 +47,21 @@ const {
   buildIntentParserPrompt,
   buildInventorySearchTerms
 } = require('./agent-intent-parser');
-const { buildPythonCodegenPrompt } = require('./agent-python-codegen');
-const { resolveProtocolMatch } = require('./agent-protocol-matching');
 const { buildNotebookDraft, buildNotebookDraftSummary } = require('./agent-notebook-generation');
 const { buildProjectRecordIndex, retrieveProjectEvidence } = require('./agent-project-retrieval');
 const { buildPaperSearchableDocs, retrievePaperCandidates, resolvePaperRequest } = require('./agent-paper-analysis');
+const { finalizeAgentResponse } = require('./agent-response-layer');
+const { validateAndGateResponse } = require('./agent-validation-safety');
+const {
+  createLifecycleRecorder,
+  recordLifecycleEvent,
+  classifyFailureReasons,
+  appendLogWithRotation,
+  readLifecycleLogs,
+  replayRequestLifecycle
+} = require('./agent-observability');
+const { createMainDataHelpers } = require('./main-data-helpers');
+const { addEvidencePack, applyFinalResponseLayerAndValidation } = require('./agent-controller-shared');
 const { createAgentWorkflowHelpers } = require('./agent-workflow-helpers');
 let AGENT_IO_CONTRACT_RAW = {};
 try {
@@ -57,8 +74,6 @@ const appIconPath = path.join(__dirname, 'image.png');
 const DEFAULT_DATA_FILE_NAME = 'enana-data.json';
 const TELEGRAM_CONFIG_FILE_NAME = 'telegram-bot.json';
 const CHEMICALS_DATA_FILE_PATH = path.join(__dirname, 'data', 'chemicals.json');
-const PROTOCOLS_DATA_FILE_NAME = 'protocols.json';
-const NOTEBOOK_PAGES_DATA_FILE_NAME = 'notebook-pages.json';
 const AGENT_CHAT_LOG_FILE_NAME = 'agent-chat.log';
 const LLM_PROVIDERS = Object.freeze({
   OPENAI: 'openai',
@@ -211,8 +226,10 @@ async function writeSavedTelegramToken(token) {
 
 async function appendAgentChatLogEntry(logPath, entry) {
   try {
-    await fs.mkdir(path.dirname(logPath), { recursive: true });
-    await fs.appendFile(logPath, `${entry}\n`, 'utf8');
+    await appendLogWithRotation({
+      logPath,
+      entry
+    });
   } catch (error) {
     console.error('Failed to append agent chat log entry:', error);
   }
@@ -403,241 +420,51 @@ async function writeEnaFile(filePath, data) {
   await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8');
 }
 
-function getSidecarDataFilePaths(dataFilePath) {
-  const normalizedDataPath = normalizeDataFilePath(dataFilePath, getDefaultDataFilePath());
-  const baseDir = path.dirname(normalizedDataPath);
+function buildCompactIndexedSnapshot(snapshot) {
+  const source = snapshot && typeof snapshot === 'object' ? snapshot : {};
+  const labInventory = normalizeChemicalStorePayload(source.labInventory);
   return {
-    protocolsPath: path.join(baseDir, PROTOCOLS_DATA_FILE_NAME),
-    notebookPagesPath: path.join(baseDir, NOTEBOOK_PAGES_DATA_FILE_NAME)
+    ...source,
+    protocols: [],
+    notebookEntries: [],
+    labInventory: {
+      chemicals: [],
+      blocks: asArray(labInventory.blocks),
+      lastLocationNumber: Number(labInventory.lastLocationNumber) || 0,
+      locationCodeMap: labInventory.locationCodeMap || {},
+      locationCodeNextByLocation: labInventory.locationCodeNextByLocation || {}
+    },
+    inventory: {},
+    data_bundle: {
+      mode: 'sqlite_indexed',
+      updated_at: new Date().toISOString()
+    }
   };
 }
 
 function normalizeChemicalStorePayload(payload) {
   const source = payload && typeof payload === 'object' ? payload : {};
+  const locationCodeMap = source.locationCodeMap && typeof source.locationCodeMap === 'object'
+    ? Object.fromEntries(
+      Object.entries(source.locationCodeMap)
+        .map(([key, value]) => [cleanText(key, 240).toLowerCase(), cleanText(value, 32).toUpperCase()])
+        .filter(([key, value]) => key && value)
+    )
+    : {};
+  const locationCodeNextByLocation = source.locationCodeNextByLocation && typeof source.locationCodeNextByLocation === 'object'
+    ? Object.fromEntries(
+      Object.entries(source.locationCodeNextByLocation)
+        .map(([key, value]) => [cleanText(key, 240).toLowerCase(), Number(value) || 0])
+        .filter(([key, value]) => key && value > 0)
+    )
+    : {};
   return {
     chemicals: asArray(source.chemicals),
     blocks: asArray(source.blocks),
-    lastLocationNumber: Number(source.lastLocationNumber) || 0
+    lastLocationNumber: Number(source.lastLocationNumber) || 0,
+    locationCodeMap,
+    locationCodeNextByLocation
   };
-}
-
-function mergeChemicalsIntoSnapshot(data, chemicalsPayload) {
-  const source = data && typeof data === 'object' ? data : {};
-  const labInventorySource = source.labInventory && typeof source.labInventory === 'object'
-    ? source.labInventory
-    : {};
-  const normalizedSnapshotChemicals = normalizeChemicalStorePayload(labInventorySource);
-  const normalizedSidecarChemicals = chemicalsPayload
-    ? normalizeChemicalStorePayload(chemicalsPayload)
-    : null;
-  const hasSnapshotChemicals = normalizedSnapshotChemicals.chemicals.length > 0;
-  const mergedChemicalStore = hasSnapshotChemicals
-    ? normalizedSnapshotChemicals
-    : normalizedSidecarChemicals;
-
-  if (!mergedChemicalStore) {
-    return source;
-  }
-
-  return {
-    ...source,
-    labInventory: {
-      ...labInventorySource,
-      ...mergedChemicalStore
-    }
-  };
-}
-
-async function writeChemicalsFile(labInventory) {
-  const payload = normalizeChemicalStorePayload(labInventory);
-  await fs.mkdir(path.dirname(CHEMICALS_DATA_FILE_PATH), { recursive: true });
-  await fs.writeFile(CHEMICALS_DATA_FILE_PATH, JSON.stringify(payload, null, 2), 'utf8');
-}
-
-async function readChemicalsFile() {
-  try {
-    const raw = await fs.readFile(CHEMICALS_DATA_FILE_PATH, 'utf8');
-    return normalizeChemicalStorePayload(JSON.parse(raw));
-  } catch (error) {
-    if (error?.code === 'ENOENT') {
-      return null;
-    }
-    throw error;
-  }
-}
-
-function normalizeProtocolsPayload(payload) {
-  const source = payload && typeof payload === 'object' ? payload : {};
-  if (Array.isArray(payload)) {
-    return { protocols: asArray(payload) };
-  }
-  return { protocols: asArray(source.protocols) };
-}
-
-function extractNotebookResultFileAddresses(entry) {
-  const source = entry && typeof entry === 'object' ? entry : {};
-  const addresses = [];
-
-  asArray(source.resultFileRecords).forEach((record) => {
-    const filePath = String(record?.path || '').trim();
-    if (filePath) {
-      addresses.push(filePath);
-    }
-  });
-
-  const storageFolder = String(source.storageFolder || '').trim();
-  if (storageFolder && !addresses.length) {
-    asArray(source.resultFiles).forEach((name) => {
-      const fileName = String(name || '').trim();
-      if (!fileName) {
-        return;
-      }
-      addresses.push(path.join(storageFolder, 'ResultFiles', fileName));
-    });
-  }
-
-  return Array.from(new Set(addresses));
-}
-
-function normalizeNotebookPageEntry(entry) {
-  const source = entry && typeof entry === 'object' ? entry : {};
-  const existingAddresses = asArray(source.resultFileAddresses)
-    .map((item) => String(item || '').trim())
-    .filter(Boolean);
-  const derivedAddresses = extractNotebookResultFileAddresses(source);
-  return {
-    ...source,
-    resultFileAddresses: Array.from(new Set(existingAddresses.concat(derivedAddresses)))
-  };
-}
-
-function normalizeNotebookPagesPayload(payload) {
-  const source = payload && typeof payload === 'object' ? payload : {};
-  const pages = Array.isArray(payload) ? asArray(payload) : asArray(source.notebookPages);
-  return {
-    notebookPages: pages
-      .filter((entry) => entry && typeof entry === 'object')
-      .map((entry) => normalizeNotebookPageEntry(entry))
-  };
-}
-
-async function readJsonFileIfExists(filePath) {
-  try {
-    const raw = await fs.readFile(filePath, 'utf8');
-    return JSON.parse(raw);
-  } catch (error) {
-    if (error?.code === 'ENOENT') {
-      return null;
-    }
-    throw error;
-  }
-}
-
-async function writeProtocolsFile(dataFilePath, protocols) {
-  const { protocolsPath } = getSidecarDataFilePaths(dataFilePath);
-  const payload = {
-    schema_name: 'enana_protocols',
-    schema_version: '1.0.0',
-    updated_at: new Date().toISOString(),
-    protocols: asArray(protocols)
-  };
-  await fs.mkdir(path.dirname(protocolsPath), { recursive: true });
-  await fs.writeFile(protocolsPath, JSON.stringify(payload, null, 2), 'utf8');
-  return protocolsPath;
-}
-
-async function writeNotebookPagesFile(dataFilePath, notebookEntries) {
-  const { notebookPagesPath } = getSidecarDataFilePaths(dataFilePath);
-  const payload = {
-    schema_name: 'enana_notebook_pages',
-    schema_version: '1.0.0',
-    updated_at: new Date().toISOString(),
-    notebookPages: asArray(notebookEntries).map((entry) => normalizeNotebookPageEntry(entry))
-  };
-  await fs.mkdir(path.dirname(notebookPagesPath), { recursive: true });
-  await fs.writeFile(notebookPagesPath, JSON.stringify(payload, null, 2), 'utf8');
-  return notebookPagesPath;
-}
-
-async function readProtocolsFile(dataFilePath) {
-  const { protocolsPath } = getSidecarDataFilePaths(dataFilePath);
-  const payload = await readJsonFileIfExists(protocolsPath);
-  if (!payload) {
-    return null;
-  }
-  return {
-    filePath: protocolsPath,
-    ...normalizeProtocolsPayload(payload)
-  };
-}
-
-async function readNotebookPagesFile(dataFilePath) {
-  const { notebookPagesPath } = getSidecarDataFilePaths(dataFilePath);
-  const payload = await readJsonFileIfExists(notebookPagesPath);
-  if (!payload) {
-    return null;
-  }
-  return {
-    filePath: notebookPagesPath,
-    ...normalizeNotebookPagesPayload(payload)
-  };
-}
-
-function mergeProtocolsAndNotebookIntoSnapshot(data, sidecars = {}) {
-  const source = data && typeof data === 'object' ? data : {};
-  const sourceProtocols = asArray(source.protocols);
-  const sourceNotebookPages = asArray(source.notebookEntries).map((entry) => normalizeNotebookPageEntry(entry));
-  const hasProtocolsSidecar = Boolean(sidecars.protocols);
-  const hasNotebookPagesSidecar = Boolean(sidecars.notebookPages);
-  const sidecarProtocols = normalizeProtocolsPayload(sidecars.protocols || {}).protocols;
-  const sidecarNotebookPages = normalizeNotebookPagesPayload(sidecars.notebookPages || {}).notebookPages;
-
-  return {
-    ...source,
-    protocols: hasProtocolsSidecar ? sidecarProtocols : sourceProtocols,
-    notebookEntries: hasNotebookPagesSidecar ? sidecarNotebookPages : sourceNotebookPages
-  };
-}
-
-async function writeProtocolsAndNotebookSidecars(dataFilePath, snapshot, options = {}) {
-  const source = snapshot && typeof snapshot === 'object' ? snapshot : {};
-  const shouldWriteProtocols = options.writeProtocols !== false;
-  const shouldWriteNotebookPages = options.writeNotebookPages !== false;
-  const result = {};
-
-  if (shouldWriteProtocols) {
-    result.protocolsPath = await writeProtocolsFile(dataFilePath, source.protocols);
-  }
-
-  if (shouldWriteNotebookPages) {
-    result.notebookPagesPath = await writeNotebookPagesFile(dataFilePath, source.notebookEntries);
-  }
-
-  return result;
-}
-
-async function hydrateSnapshotFromDataFiles(dataFilePath, parsedSnapshot) {
-  const chemicalsPayload = await readChemicalsFile();
-  let merged = mergeChemicalsIntoSnapshot(parsedSnapshot, chemicalsPayload);
-  const [protocolsPayload, notebookPagesPayload] = await Promise.all([
-    readProtocolsFile(dataFilePath),
-    readNotebookPagesFile(dataFilePath)
-  ]);
-  merged = mergeProtocolsAndNotebookIntoSnapshot(merged, {
-    protocols: protocolsPayload,
-    notebookPages: notebookPagesPayload
-  });
-
-  const shouldBackfillProtocols = !protocolsPayload && asArray(merged.protocols).length > 0;
-  const shouldBackfillNotebookPages = !notebookPagesPayload && asArray(merged.notebookEntries).length > 0;
-  if (shouldBackfillProtocols || shouldBackfillNotebookPages) {
-    await writeProtocolsAndNotebookSidecars(dataFilePath, merged, {
-      writeProtocols: shouldBackfillProtocols,
-      writeNotebookPages: shouldBackfillNotebookPages
-    });
-  }
-
-  return merged;
 }
 
 function cloneJson(value, fallback = {}) {
@@ -734,6 +561,21 @@ function buildInventoryToolArgs({
   };
 }
 
+const mainDataHelpers = createMainDataHelpers({
+  fs,
+  path,
+  cleanText,
+  hasSupportedDataExtension,
+  normalizeDataFilePath,
+  writeSnapshot: async (filePath, snapshot) => {
+    await writeEnaFile(filePath, buildCompactIndexedSnapshot(snapshot));
+  },
+  syncBundleFromSnapshot: async (payload) => syncBundleFromSnapshot(payload),
+  hydrateSnapshotFromBundle,
+  getDefaultDataFilePath,
+  legacyChemicalsPath: CHEMICALS_DATA_FILE_PATH
+});
+
 ipcMain.handle('ena:save', async (_event, payload) => {
   const normalizedPayload = normalizeJsonPayload(payload, {});
   const { data, filePath } = normalizedPayload;
@@ -758,15 +600,10 @@ ipcMain.handle('ena:save', async (_event, payload) => {
     targetPath = `${targetPath}.json`;
   }
 
-  try {
-    const snapshot = data && typeof data === 'object' ? data : {};
-    await writeEnaFile(targetPath, snapshot);
-    await writeChemicalsFile(snapshot.labInventory);
-    const sidecarPaths = await writeProtocolsAndNotebookSidecars(targetPath, snapshot);
-    return { ok: true, filePath: targetPath, sidecarPaths };
-  } catch (error) {
-    return { ok: false, error: String(error) };
-  }
+  return mainDataHelpers.saveSelectedDataFile({
+    data,
+    filePath: targetPath
+  });
 });
 
 ipcMain.handle('ena:load', async () => {
@@ -781,14 +618,7 @@ ipcMain.handle('ena:load', async () => {
   }
 
   const filePath = result.filePaths[0];
-  try {
-    const raw = await fs.readFile(filePath, 'utf8');
-    const parsed = JSON.parse(raw);
-    const data = await hydrateSnapshotFromDataFiles(filePath, parsed);
-    return { ok: true, filePath, data, sidecarPaths: getSidecarDataFilePaths(filePath) };
-  } catch (error) {
-    return { ok: false, error: String(error) };
-  }
+  return mainDataHelpers.loadSelectedDataFile(filePath);
 });
 
 ipcMain.handle('data:auto-save', async (_event, payload) => {
@@ -798,35 +628,12 @@ ipcMain.handle('data:auto-save', async (_event, payload) => {
     return { ok: false, error: 'Missing data payload.' };
   }
 
-  const targetPath = normalizeDataFilePath(filePath, getDefaultDataFilePath());
-
-  try {
-    await fs.mkdir(path.dirname(targetPath), { recursive: true });
-    const snapshot = data && typeof data === 'object' ? data : {};
-    await writeEnaFile(targetPath, snapshot);
-    await writeChemicalsFile(snapshot.labInventory);
-    const sidecarPaths = await writeProtocolsAndNotebookSidecars(targetPath, snapshot);
-    return { ok: true, filePath: targetPath, sidecarPaths };
-  } catch (error) {
-    return { ok: false, error: String(error), filePath: targetPath };
-  }
+  return mainDataHelpers.autoSaveDataFile({ data, filePath });
 });
 
 ipcMain.handle('data:auto-load', async (_event, payload) => {
   const normalizedPayload = normalizeJsonPayload(payload, {});
-  const targetPath = normalizeDataFilePath(normalizedPayload?.filePath, getDefaultDataFilePath());
-
-  try {
-    const raw = await fs.readFile(targetPath, 'utf8');
-    const parsed = JSON.parse(raw);
-    const data = await hydrateSnapshotFromDataFiles(targetPath, parsed);
-    return { ok: true, filePath: targetPath, data, sidecarPaths: getSidecarDataFilePaths(targetPath) };
-  } catch (error) {
-    if (error?.code === 'ENOENT') {
-      return { ok: true, filePath: targetPath, data: null };
-    }
-    return { ok: false, error: String(error), filePath: targetPath };
-  }
+  return mainDataHelpers.autoLoadDataFile(normalizedPayload?.filePath);
 });
 
 ipcMain.handle('storage:pick-directory', async (_event, payload) => {
@@ -926,6 +733,28 @@ function summarizeSchemaShape(schema) {
 }
 
 function buildFallbackAgentIoTools() {
+  const buildStandardToolOutputSchema = () => ({
+    type: 'object',
+    additionalProperties: false,
+    required: ['items', 'citations', 'summary'],
+    properties: {
+      items: { type: 'array', items: { type: 'object' } },
+      citations: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['source', 'pointer', 'reason'],
+          properties: {
+            source: { type: 'string' },
+            pointer: { type: 'string' },
+            reason: { type: 'string' }
+          }
+        }
+      },
+      summary: { type: 'string' }
+    }
+  });
   const makeTool = (name, description, limitMax = 20) => ({
     name,
     description,
@@ -938,28 +767,7 @@ function buildFallbackAgentIoTools() {
         limit: { type: 'integer', minimum: 1, maximum: limitMax }
       }
     },
-    output_schema: {
-      type: 'object',
-      additionalProperties: false,
-      required: ['items', 'citations', 'summary'],
-      properties: {
-        items: { type: 'array', items: { type: 'object' } },
-        citations: {
-          type: 'array',
-          items: {
-            type: 'object',
-            additionalProperties: false,
-            required: ['source', 'pointer', 'reason'],
-            properties: {
-              source: { type: 'string' },
-              pointer: { type: 'string' },
-              reason: { type: 'string' }
-            }
-          }
-        },
-        summary: { type: 'string' }
-      }
-    }
+    output_schema: buildStandardToolOutputSchema()
   });
 
   return [
@@ -1009,28 +817,7 @@ function buildFallbackAgentIoTools() {
           output_unit: { type: 'string' }
         }
       },
-      output_schema: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['items', 'citations', 'summary'],
-        properties: {
-          items: { type: 'array', items: { type: 'object' } },
-          citations: {
-            type: 'array',
-            items: {
-              type: 'object',
-              additionalProperties: false,
-              required: ['source', 'pointer', 'reason'],
-              properties: {
-                source: { type: 'string' },
-                pointer: { type: 'string' },
-                reason: { type: 'string' }
-              }
-            }
-          },
-          summary: { type: 'string' }
-        }
-      }
+      output_schema: buildStandardToolOutputSchema()
     },
     {
       name: 'toolbox_peptide_properties',
@@ -1044,28 +831,7 @@ function buildFallbackAgentIoTools() {
           ph: { type: 'number' }
         }
       },
-      output_schema: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['items', 'citations', 'summary'],
-        properties: {
-          items: { type: 'array', items: { type: 'object' } },
-          citations: {
-            type: 'array',
-            items: {
-              type: 'object',
-              additionalProperties: false,
-              required: ['source', 'pointer', 'reason'],
-              properties: {
-                source: { type: 'string' },
-                pointer: { type: 'string' },
-                reason: { type: 'string' }
-              }
-            }
-          },
-          summary: { type: 'string' }
-        }
-      }
+      output_schema: buildStandardToolOutputSchema()
     },
     {
       name: 'toolbox_buffer_preparer',
@@ -1079,28 +845,7 @@ function buildFallbackAgentIoTools() {
           components: { type: 'array', items: { type: 'object' } }
         }
       },
-      output_schema: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['items', 'citations', 'summary'],
-        properties: {
-          items: { type: 'array', items: { type: 'object' } },
-          citations: {
-            type: 'array',
-            items: {
-              type: 'object',
-              additionalProperties: false,
-              required: ['source', 'pointer', 'reason'],
-              properties: {
-                source: { type: 'string' },
-                pointer: { type: 'string' },
-                reason: { type: 'string' }
-              }
-            }
-          },
-          summary: { type: 'string' }
-        }
-      }
+      output_schema: buildStandardToolOutputSchema()
     },
     {
       name: 'toolbox_dna_to_protein',
@@ -1116,28 +861,7 @@ function buildFallbackAgentIoTools() {
           stop_mode: { type: 'string', enum: ['star', 'trim'] }
         }
       },
-      output_schema: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['items', 'citations', 'summary'],
-        properties: {
-          items: { type: 'array', items: { type: 'object' } },
-          citations: {
-            type: 'array',
-            items: {
-              type: 'object',
-              additionalProperties: false,
-              required: ['source', 'pointer', 'reason'],
-              properties: {
-                source: { type: 'string' },
-                pointer: { type: 'string' },
-                reason: { type: 'string' }
-              }
-            }
-          },
-          summary: { type: 'string' }
-        }
-      }
+      output_schema: buildStandardToolOutputSchema()
     },
     {
       name: 'toolbox_protein_to_dna',
@@ -1153,28 +877,7 @@ function buildFallbackAgentIoTools() {
           restriction_sites: { type: 'array', items: { type: 'string' } }
         }
       },
-      output_schema: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['items', 'citations', 'summary'],
-        properties: {
-          items: { type: 'array', items: { type: 'object' } },
-          citations: {
-            type: 'array',
-            items: {
-              type: 'object',
-              additionalProperties: false,
-              required: ['source', 'pointer', 'reason'],
-              properties: {
-                source: { type: 'string' },
-                pointer: { type: 'string' },
-                reason: { type: 'string' }
-              }
-            }
-          },
-          summary: { type: 'string' }
-        }
-      }
+      output_schema: buildStandardToolOutputSchema()
     },
     {
       name: 'toolbox_oligo_properties',
@@ -1188,28 +891,7 @@ function buildFallbackAgentIoTools() {
           oligo_type: { type: 'string', enum: ['DNA', 'RNA'] }
         }
       },
-      output_schema: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['items', 'citations', 'summary'],
-        properties: {
-          items: { type: 'array', items: { type: 'object' } },
-          citations: {
-            type: 'array',
-            items: {
-              type: 'object',
-              additionalProperties: false,
-              required: ['source', 'pointer', 'reason'],
-              properties: {
-                source: { type: 'string' },
-                pointer: { type: 'string' },
-                reason: { type: 'string' }
-              }
-            }
-          },
-          summary: { type: 'string' }
-        }
-      }
+      output_schema: buildStandardToolOutputSchema()
     },
     {
       name: 'toolbox_extinction_coefficient',
@@ -1223,28 +905,7 @@ function buildFallbackAgentIoTools() {
           sequence_text: { type: 'string' }
         }
       },
-      output_schema: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['items', 'citations', 'summary'],
-        properties: {
-          items: { type: 'array', items: { type: 'object' } },
-          citations: {
-            type: 'array',
-            items: {
-              type: 'object',
-              additionalProperties: false,
-              required: ['source', 'pointer', 'reason'],
-              properties: {
-                source: { type: 'string' },
-                pointer: { type: 'string' },
-                reason: { type: 'string' }
-              }
-            }
-          },
-          summary: { type: 'string' }
-        }
-      }
+      output_schema: buildStandardToolOutputSchema()
     },
     {
       name: 'toolbox_qpcr_efficiency',
@@ -1257,28 +918,7 @@ function buildFallbackAgentIoTools() {
           points: { type: 'array', items: { type: 'object' } }
         }
       },
-      output_schema: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['items', 'citations', 'summary'],
-        properties: {
-          items: { type: 'array', items: { type: 'object' } },
-          citations: {
-            type: 'array',
-            items: {
-              type: 'object',
-              additionalProperties: false,
-              required: ['source', 'pointer', 'reason'],
-              properties: {
-                source: { type: 'string' },
-                pointer: { type: 'string' },
-                reason: { type: 'string' }
-              }
-            }
-          },
-          summary: { type: 'string' }
-        }
-      }
+      output_schema: buildStandardToolOutputSchema()
     },
     {
       name: 'toolbox_plannotate',
@@ -1298,28 +938,7 @@ function buildFallbackAgentIoTools() {
           record_name: { type: 'string' }
         }
       },
-      output_schema: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['items', 'citations', 'summary'],
-        properties: {
-          items: { type: 'array', items: { type: 'object' } },
-          citations: {
-            type: 'array',
-            items: {
-              type: 'object',
-              additionalProperties: false,
-              required: ['source', 'pointer', 'reason'],
-              properties: {
-                source: { type: 'string' },
-                pointer: { type: 'string' },
-                reason: { type: 'string' }
-              }
-            }
-          },
-          summary: { type: 'string' }
-        }
-      }
+      output_schema: buildStandardToolOutputSchema()
     },
     {
       name: 'toolbox_crispr_sgrna_designer',
@@ -1339,28 +958,7 @@ function buildFallbackAgentIoTools() {
           selected_target_ids: { type: 'array', items: { type: 'string' } }
         }
       },
-      output_schema: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['items', 'citations', 'summary'],
-        properties: {
-          items: { type: 'array', items: { type: 'object' } },
-          citations: {
-            type: 'array',
-            items: {
-              type: 'object',
-              additionalProperties: false,
-              required: ['source', 'pointer', 'reason'],
-              properties: {
-                source: { type: 'string' },
-                pointer: { type: 'string' },
-                reason: { type: 'string' }
-              }
-            }
-          },
-          summary: { type: 'string' }
-        }
-      }
+      output_schema: buildStandardToolOutputSchema()
     },
     {
       name: 'run_python_sandbox',
@@ -1390,28 +988,7 @@ function buildFallbackAgentIoTools() {
           task_type: { type: 'string' }
         }
       },
-      output_schema: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['items', 'citations', 'summary'],
-        properties: {
-          items: { type: 'array', items: { type: 'object' } },
-          citations: {
-            type: 'array',
-            items: {
-              type: 'object',
-              additionalProperties: false,
-              required: ['source', 'pointer', 'reason'],
-              properties: {
-                source: { type: 'string' },
-                pointer: { type: 'string' },
-                reason: { type: 'string' }
-              }
-            }
-          },
-          summary: { type: 'string' }
-        }
-      }
+      output_schema: buildStandardToolOutputSchema()
     },
     {
       name: 'download_paper_pdf',
@@ -1430,28 +1007,7 @@ function buildFallbackAgentIoTools() {
           storage_path: { type: 'string' }
         }
       },
-      output_schema: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['items', 'citations', 'summary'],
-        properties: {
-          items: { type: 'array', items: { type: 'object' } },
-          citations: {
-            type: 'array',
-            items: {
-              type: 'object',
-              additionalProperties: false,
-              required: ['source', 'pointer', 'reason'],
-              properties: {
-                source: { type: 'string' },
-                pointer: { type: 'string' },
-                reason: { type: 'string' }
-              }
-            }
-          },
-          summary: { type: 'string' }
-        }
-      }
+      output_schema: buildStandardToolOutputSchema()
     }
   ];
 }
@@ -1641,7 +1197,13 @@ function uniqueStrings(values, max = 50) {
   return out;
 }
 
-const agentWorkflowHelpers = createAgentWorkflowHelpers({
+const {
+  normalizeRoutingPayload,
+  buildRoutingAssumptionRows,
+  normalizeNotebookDraftPayload,
+  buildNotebookDraftAssumptionRows,
+  maybeBuildNotebookDraft
+} = createAgentWorkflowHelpers({
   cleanText,
   asArray,
   clamp,
@@ -2382,40 +1944,245 @@ function isComputeTool(name) {
   ].includes(normalized);
 }
 
-function normalizeRoutingPayload(rawRouting) {
-  return agentWorkflowHelpers.normalizeRoutingPayload(rawRouting);
-}
-
-function buildRoutingAssumptionRows(routing) {
-  return agentWorkflowHelpers.buildRoutingAssumptionRows(routing);
-}
-
-function normalizeNotebookDraftPayload(rawDraft) {
-  return agentWorkflowHelpers.normalizeNotebookDraftPayload(rawDraft);
-}
-
-function buildNotebookDraftAssumptionRows(notebookDraft) {
-  return agentWorkflowHelpers.buildNotebookDraftAssumptionRows(notebookDraft);
-}
-
-function maybeBuildNotebookDraft({
-  message,
-  conversation,
-  routing,
-  snapshot,
-  projectId = '',
-  projectName = '',
-  toolResults = []
-}) {
-  return agentWorkflowHelpers.maybeBuildNotebookDraft({
-    message,
-    conversation,
-    routing,
-    snapshot,
-    projectId,
-    projectName,
-    toolResults
+function buildSnapshotBundleAssumptionRows(snapshot) {
+  const source = snapshot && typeof snapshot === 'object' ? snapshot : {};
+  const dataFilePath = cleanText(source.data_file_path, 1600);
+  if (!dataFilePath) {
+    return ['No data bundle path was provided; retrieval may rely on in-memory snapshot fallback.'];
+  }
+  const bundlePaths = getBundlePaths({
+    dataFilePath,
+    fallbackDataFilePath: getDefaultDataFilePath()
   });
+  return [
+    `Data file: ${dataFilePath}`,
+    `SQLite index: ${bundlePaths.sqlitePath}`,
+    `Protocol sidecar: ${bundlePaths.protocolsPath}`,
+    `Notebook sidecar: ${bundlePaths.notebookPagesPath}`
+  ];
+}
+
+function buildResponseLayerAssumptionRows(responseLayer) {
+  const source = responseLayer && typeof responseLayer === 'object' ? responseLayer : {};
+  const sourceSummary = source.source_summary && typeof source.source_summary === 'object'
+    ? source.source_summary
+    : {};
+  const groups = asArray(sourceSummary.groups);
+  return [
+    `Response layer type=${cleanText(source.response_type, 80) || 'factual_answer'} confidence_label=${cleanText(source.confidence_label, 20) || 'low'}.`,
+    `Response layer source groups=${groups.length} total_sources=${Number(sourceSummary.total_sources) || 0} unresolved_fields=${asArray(source.unresolved_fields).length}.`
+  ];
+}
+
+function applyResponseLayerToOutput({
+  normalized,
+  routing,
+  notebookDraft,
+  toolTrace
+}) {
+  const source = normalized && typeof normalized === 'object' ? normalized : {};
+  const responseLayer = finalizeAgentResponse({
+    answer: source.answer,
+    confidence: source.confidence,
+    routing,
+    notebookDraft,
+    toolTrace: asArray(toolTrace),
+    citations: asArray(source.citations)
+  });
+  return {
+    ...source,
+    answer: responseLayer.answer,
+    response_type: responseLayer.response_type,
+    confidence_label: responseLayer.confidence_label,
+    source_summary: responseLayer.source_summary,
+    unresolved_fields: responseLayer.unresolved_fields
+  };
+}
+
+function buildValidationAssumptionRows(validationMeta) {
+  const validation = validationMeta && typeof validationMeta === 'object' ? validationMeta : {};
+  const violations = asArray(validation.violations);
+  const rows = [
+    `Validation passed=${validation.passed === true} forced_clarification=${validation.forced_clarification === true} violation_count=${violations.length}.`
+  ];
+  if (violations.length) {
+    const top = violations[0];
+    rows.push(
+      `Top validation violation code=${cleanText(top?.code, 80) || '-'} severity=${cleanText(top?.severity, 20) || '-'} message=${cleanText(top?.message, 220) || '-'}.`
+    );
+  }
+  if (asArray(validation.failure_reasons).length) {
+    rows.push(`Validation failure reasons: ${asArray(validation.failure_reasons).join(', ')}.`);
+  }
+  return rows;
+}
+
+function buildProvenanceAssumptionRows(provenanceMeta) {
+  const provenance = provenanceMeta && typeof provenanceMeta === 'object' ? provenanceMeta : {};
+  const sourceEvidence = asArray(provenance.source_evidence);
+  const directCount = sourceEvidence.filter((row) => row?.support_level === 'direct').length;
+  const indirectCount = sourceEvidence.filter((row) => row?.support_level === 'indirect').length;
+  const noneCount = sourceEvidence.filter((row) => row?.support_level === 'none').length;
+  return [
+    `Provenance statements=${sourceEvidence.length} direct=${directCount} indirect=${indirectCount} unsupported=${noneCount}.`,
+    `Unsupported statement count=${Number(provenance.unsupported_statement_count) || 0}.`
+  ];
+}
+
+function applyValidationGateToOutput({
+  routing,
+  normalized,
+  notebookDraft,
+  toolTrace
+}) {
+  const normalizedRouting = normalizeRoutingPayload(routing);
+  const normalizedOutput = normalized && typeof normalized === 'object' ? normalized : {};
+  const validationResult = validateAndGateResponse({
+    routing: normalizedRouting,
+    normalized: normalizedOutput,
+    notebookDraft: normalizeNotebookDraftPayload(notebookDraft),
+    toolTrace: asArray(toolTrace),
+    citations: asArray(normalizedOutput.citations)
+  });
+  const validationMeta = validationResult.validation && typeof validationResult.validation === 'object'
+    ? validationResult.validation
+    : {
+      passed: true,
+      forced_clarification: false,
+      violations: [],
+      failure_reasons: []
+    };
+  const provenanceMeta = validationResult.provenance && typeof validationResult.provenance === 'object'
+    ? validationResult.provenance
+    : {
+      source_evidence: [],
+      unsupported_statement_count: 0
+    };
+  let routed = normalizedRouting;
+  let finalized = {
+    ...normalizedOutput
+  };
+
+  if (validationMeta.forced_clarification === true) {
+    const clarificationAnswer = cleanText(validationResult?.clarification?.answer, 400)
+      || cleanText(routed.plan?.clarification_question, 400)
+      || 'Could you clarify the missing details so I can continue safely?';
+    const clarificationReason = cleanText(validationResult?.clarification?.reason, 260)
+      || 'Response validation requested clarification.';
+    routed = applyRoutingPlanPatch(routed, {
+      needs_clarification: true,
+      clarification_reason: clarificationReason,
+      clarification_question: cleanText(validationResult?.clarification?.question, 320) || clarificationAnswer
+    });
+    finalized = applyResponseLayerToOutput({
+      normalized: {
+        ...finalized,
+        answer: clarificationAnswer
+      },
+      routing: routed,
+      notebookDraft,
+      toolTrace
+    });
+  }
+
+  return {
+    routing: routed,
+    normalized: finalized,
+    validation: {
+      passed: validationMeta.passed === true,
+      forced_clarification: validationMeta.forced_clarification === true,
+      violations: asArray(validationMeta.violations).map((row) => ({
+        code: cleanText(row?.code, 80),
+        severity: cleanText(row?.severity, 20),
+        message: cleanText(row?.message, 280),
+        detail: cleanText(row?.detail, 360)
+      })).filter((row) => row.code || row.message),
+      failure_reasons: asArray(validationMeta.failure_reasons).map((row) => cleanText(row, 80)).filter(Boolean)
+    },
+    provenance: {
+      source_evidence: asArray(provenanceMeta.source_evidence).map((row) => ({
+        statement: cleanText(row?.statement, 360),
+        support_level: cleanText(row?.support_level, 20) || 'none',
+        supports: asArray(row?.supports).map((support) => ({
+          source: cleanText(support?.source, 120),
+          pointer: cleanText(support?.pointer, 220),
+          overlap: Number.isFinite(Number(support?.overlap)) ? Number(support.overlap) : 0
+        })).filter((support) => support.source || support.pointer)
+      })).filter((row) => row.statement),
+      unsupported_statement_count: Number.isFinite(Number(provenanceMeta.unsupported_statement_count))
+        ? Number(provenanceMeta.unsupported_statement_count)
+        : 0
+    }
+  };
+}
+
+function createLifecycleToolRunner({
+  snapshot,
+  allowWriteTools = false,
+  lifecycleRecorder
+}) {
+  return async (toolName, args, options = {}) => {
+    const normalizedArgs = normalizeToolInvocationArgs(args);
+    const effectiveAllowWrite = options?.allowWriteTools === true || allowWriteTools === true;
+    recordLifecycleEvent(lifecycleRecorder, {
+      stage: 'tool_call_started',
+      status: 'started',
+      tool_name: toolName,
+      tool_args: normalizedArgs,
+      message: `Started tool call for ${cleanText(toolName, 120) || 'unknown_tool'}.`
+    });
+    try {
+      const result = await runAgentTool(toolName, normalizedArgs, snapshot, {
+        ...options,
+        allowWriteTools: effectiveAllowWrite
+      });
+      if (result?.ok === false) {
+        recordLifecycleEvent(lifecycleRecorder, {
+          stage: 'tool_call_failed',
+          status: 'failed',
+          tool_name: toolName,
+          tool_args: normalizedArgs,
+          tool_output: result,
+          message: cleanText(result?.error || result?.summary, 320) || 'Tool call returned an error envelope.'
+        });
+      } else {
+        recordLifecycleEvent(lifecycleRecorder, {
+          stage: 'tool_call_completed',
+          status: 'ok',
+          tool_name: toolName,
+          tool_args: normalizedArgs,
+          tool_output: result,
+          message: cleanText(result?.summary, 280) || 'Tool call completed.'
+        });
+      }
+      return result;
+    } catch (error) {
+      const message = cleanText(String(error?.message || error), 320) || 'Tool call failed.';
+      recordLifecycleEvent(lifecycleRecorder, {
+        stage: 'tool_call_failed',
+        status: 'failed',
+        tool_name: toolName,
+        tool_args: normalizedArgs,
+        message
+      });
+      throw error;
+    }
+  };
+}
+
+async function flushLifecycleRecorderEvents(logPath, lifecycleRecorder) {
+  const recorder = lifecycleRecorder && typeof lifecycleRecorder === 'object' ? lifecycleRecorder : null;
+  if (!recorder) {
+    return;
+  }
+  const start = Number.isFinite(Number(recorder.flushed_count))
+    ? Number(recorder.flushed_count)
+    : 0;
+  const events = asArray(recorder.events);
+  for (let index = start; index < events.length; index += 1) {
+    await appendAgentChatLogEntry(logPath, formatAgentChatLogEntry(events[index]));
+  }
+  recorder.flushed_count = events.length;
 }
 
 function applyRoutingPlanPatch(routing, planPatch = {}) {
@@ -2600,6 +2367,9 @@ function normalizeAgentSnapshot(rawSnapshot) {
   const gelAnalyses = asArray(snapshot.gelAnalyses).length
     ? asArray(snapshot.gelAnalyses).slice(0, 80)
     : asArray(experimentData.gel_runs).slice(0, 80);
+  const normalizedChemicalInventory = asArray(snapshot.inventory?.chemicals).length
+    ? asArray(snapshot.inventory.chemicals).slice(0, 220)
+    : asArray(snapshot.labInventory?.chemicals).slice(0, 220);
   const normalizedExperimentData = {
     schema_name: cleanText(experimentData.schema_name, 80) || 'enana_experiment_json',
     schema_version: cleanText(experimentData.schema_version, 20) || '1.0',
@@ -2626,12 +2396,17 @@ function normalizeAgentSnapshot(rawSnapshot) {
     inventory: snapshot.inventory && typeof snapshot.inventory === 'object'
       ? {
         personal: normalizedPersonalInventory,
-        chemicals: asArray(snapshot.inventory.chemicals).slice(0, 160)
+        chemicals: normalizedChemicalInventory
       }
-      : { personal: [], chemicals: [] },
+      : {
+        personal: [],
+        chemicals: normalizedChemicalInventory
+      },
+    labInventory: normalizeChemicalStorePayload(snapshot.labInventory),
     settings: {
       storagePath: cleanText(snapshot?.settings?.storagePath || snapshot?.storagePath, 1200)
-      },
+    },
+    data_file_path: cleanText(snapshot.data_file_path || snapshot.dataFilePath, 1600),
     timestamp: cleanText(snapshot.timestamp, 80)
   };
   normalizedSnapshot.projectIndex = buildProjectRecordIndex({ snapshot: normalizedSnapshot });
@@ -2977,53 +2752,64 @@ async function runAgentToolDispatchLegacy(name, args, snapshot, options = {}) {
   }
 
   if (name === 'search_protocols') {
-    const match = resolveProtocolMatch({
-      message: query,
-      entities: {},
-      protocols: asArray(snapshot.protocols),
-      projects: asArray(snapshot.projects),
-      notebookEntries: asArray(snapshot.notebookEntries),
-      maxCandidates: limit
+    const protocolSearch = await searchProtocolsIndex({
+      dataFilePath: cleanText(snapshot?.data_file_path, 1600),
+      fallbackDataFilePath: getDefaultDataFilePath(),
+      query,
+      limit,
+      snapshot
     });
-    const items = asArray(match?.candidates).slice(0, limit).map((candidate) => ({
-      id: cleanText(candidate?.protocol_id, 80),
-      name: cleanText(candidate?.protocol_name, 180),
-      category: cleanText(candidate?.category, 80),
-      steps: asArray(candidate?.steps).slice(0, 8).map((step) => protocolStepText(step)).filter(Boolean)
-    })).filter((item) => item.name);
+    const items = asArray(protocolSearch.items).slice(0, limit).map((item) => ({
+      id: cleanText(item?.id, 80),
+      name: cleanText(item?.name, 180),
+      category: cleanText(item?.category, 80),
+      steps: asArray(item?.steps).slice(0, 8).map((step) => protocolStepText(step)).filter(Boolean)
+    })).filter((item) => item.name || item.id);
 
     return buildAgentToolOutputEnvelope(name, normalizedArgs, {
       items,
       citations: items.map((protocol) => ({
         source: 'protocol',
         pointer: protocol.id || protocol.name,
-        reason: 'Matched protocol with hybrid keyword and semantic ranking.'
+        reason: protocolSearch.usedSqlite
+          ? 'Matched protocol index (SQLite) with deterministic JS ranking.'
+          : 'Matched protocol metadata from snapshot fallback.'
       })),
-      summary: `Found ${items.length} matching protocols.`
+      summary: cleanText(
+        `Found ${items.length} matching protocols.${protocolSearch.usedSqlite ? ' Source: SQLite index.' : ' Source: snapshot fallback.'}`,
+        320
+      )
     });
   }
 
   if (name === 'search_notebook_entries') {
-    const items = pickTopMatches(
-      snapshot.notebookEntries,
-      (entry) => `${entry?.protocolName || ''} ${entry?.result || ''} ${entry?.updatedAt || ''}`,
+    const notebookSearch = await searchNotebookEntriesIndex({
+      dataFilePath: cleanText(snapshot?.data_file_path, 1600),
+      fallbackDataFilePath: getDefaultDataFilePath(),
       query,
-      limit
-    ).map((entry) => ({
+      limit,
+      snapshot
+    });
+    const items = asArray(notebookSearch.items).slice(0, limit).map((entry) => ({
       id: cleanText(entry?.id, 80),
       protocolName: cleanText(entry?.protocolName, 180),
       result: cleanText(entry?.result, 400),
       updatedAt: cleanText(entry?.updatedAt, 80)
-    }));
+    })).filter((entry) => entry.id || entry.protocolName);
 
     return buildAgentToolOutputEnvelope(name, normalizedArgs, {
       items,
       citations: items.map((entry) => ({
         source: 'notebook_entry',
         pointer: entry.id || entry.protocolName,
-        reason: 'Matched notebook summary/results.'
+        reason: notebookSearch.usedSqlite
+          ? 'Matched notebook index (SQLite) with deterministic JS ranking.'
+          : 'Matched notebook summary/results from snapshot fallback.'
       })),
-      summary: `Found ${items.length} matching notebook entries.`
+      summary: cleanText(
+        `Found ${items.length} matching notebook entries.${notebookSearch.usedSqlite ? ' Source: SQLite index.' : ' Source: snapshot fallback.'}`,
+        320
+      )
     });
   }
 
@@ -3171,25 +2957,6 @@ async function runAgentToolDispatchLegacy(name, args, snapshot, options = {}) {
   }
 
   if (name === 'search_inventory') {
-    const personalItems = asArray(snapshot.inventory?.personal).flatMap((zone) => asArray(zone?.items).map((item) => ({
-      zone: cleanText(zone?.zone, 80),
-      id: cleanText(item?.id, 80),
-      name: cleanText(item?.name, 180),
-      quantity: cleanText(item?.quantity, 80),
-      location: cleanText(item?.location, 120)
-    })));
-    const chemicalItems = asArray(snapshot.inventory?.chemicals).map((item) => ({
-      id: cleanText(item?.id, 80),
-      name: cleanText(item?.name, 180),
-      amount: cleanText(item?.amount, 80),
-      cas: cleanText(item?.cas, 80),
-      location: cleanText(item?.location, 120),
-      supplier: cleanText(item?.supplier, 160)
-    }));
-    const merged = [
-      ...personalItems.map((item) => ({ kind: 'personal_inventory', ...item })),
-      ...chemicalItems.map((item) => ({ kind: 'chemical_inventory', ...item }))
-    ];
     const searchMode = cleanText(normalizedArgs?.search_mode, 60) || 'exact_then_alias_then_fuzzy';
     const searchTerms = uniqueStrings(
       asArray(normalizedArgs?.search_terms).length
@@ -3207,35 +2974,29 @@ async function runAgentToolDispatchLegacy(name, args, snapshot, options = {}) {
       10
     );
     const termsToTry = searchTerms.length ? searchTerms : [query];
-    const seenKeys = new Set();
-    const scored = [];
-    const searchTargetText = (item) => (
-      `${item?.kind || ''} ${item?.name || ''} ${item?.cas || ''} ${item?.location || ''} ${item?.supplier || ''}`
-    );
-    for (const term of termsToTry) {
-      const matches = pickTopMatches(
-        merged,
-        searchTargetText,
-        term,
-        limit
-      );
-      matches.forEach((item) => {
-        const key = `${cleanText(item?.kind, 60).toLowerCase()}::${cleanText(item?.id || item?.name, 180).toLowerCase()}`;
-        if (!key || seenKeys.has(key)) {
-          return;
-        }
-        seenKeys.add(key);
-        scored.push({ ...item, matched_term: cleanText(term, 140) });
-      });
-      if (scored.length >= limit) {
-        break;
-      }
-      if (searchMode === 'exact_only' && scored.length > 0) {
-        break;
-      }
-    }
-    const items = scored.slice(0, limit);
-    const termsSummary = termsToTry.map((term) => cleanText(term, 120)).filter(Boolean).slice(0, 5);
+    const inventorySearch = await searchInventoryIndex({
+      dataFilePath: cleanText(snapshot?.data_file_path, 1600),
+      fallbackDataFilePath: getDefaultDataFilePath(),
+      query,
+      limit,
+      searchTerms: termsToTry,
+      snapshot
+    });
+    const items = asArray(inventorySearch.items).slice(0, limit).map((item) => ({
+      kind: cleanText(item?.kind, 40),
+      zone: cleanText(item?.zone, 80),
+      id: cleanText(item?.id, 80),
+      name: cleanText(item?.name, 180),
+      quantity: cleanText(item?.quantity, 80),
+      amount: cleanText(item?.amount, 80),
+      cas: cleanText(item?.cas, 80),
+      location: cleanText(item?.location, 120),
+      supplier: cleanText(item?.supplier, 160),
+      matched_term: cleanText(item?.matched_term, 140)
+    }));
+    const termsSummary = asArray(inventorySearch.termsUsed).length
+      ? asArray(inventorySearch.termsUsed).map((term) => cleanText(term, 120)).filter(Boolean).slice(0, 5)
+      : termsToTry.map((term) => cleanText(term, 120)).filter(Boolean).slice(0, 5);
 
     return buildAgentToolOutputEnvelope(name, normalizedArgs, {
       items,
@@ -3248,7 +3009,7 @@ async function runAgentToolDispatchLegacy(name, args, snapshot, options = {}) {
         )
       })),
       summary: cleanText(
-        `Found ${items.length} matching inventory records.${termsSummary.length ? ` Terms tried: ${termsSummary.join(', ')}.` : ''}`,
+        `Found ${items.length} matching inventory records.${termsSummary.length ? ` Terms tried: ${termsSummary.join(', ')}.` : ''}${inventorySearch.usedSqlite ? ' Source: SQLite index.' : ' Source: snapshot fallback.'}`,
         320
       )
     });
@@ -4348,6 +4109,39 @@ function normalizeToolTraceForAgentLog(trace) {
   }));
 }
 
+function normalizeValidationForAgentLog(validation) {
+  const source = validation && typeof validation === 'object' ? validation : {};
+  return {
+    passed: source.passed === true,
+    forced_clarification: source.forced_clarification === true,
+    failure_reasons: asArray(source.failure_reasons).map((item) => cleanText(item, 80)).filter(Boolean),
+    violations: asArray(source.violations).map((item) => ({
+      code: cleanText(item?.code, 80),
+      severity: cleanText(item?.severity, 20),
+      message: cleanText(item?.message, 280),
+      detail: cleanText(item?.detail, 360)
+    })).filter((item) => item.code || item.message)
+  };
+}
+
+function normalizeProvenanceForAgentLog(provenance) {
+  const source = provenance && typeof provenance === 'object' ? provenance : {};
+  return {
+    unsupported_statement_count: Number.isFinite(Number(source.unsupported_statement_count))
+      ? Number(source.unsupported_statement_count)
+      : 0,
+    source_evidence: asArray(source.source_evidence).map((item) => ({
+      statement: cleanText(item?.statement, 300),
+      support_level: cleanText(item?.support_level, 20),
+      supports: asArray(item?.supports).map((support) => ({
+        source: cleanText(support?.source, 120),
+        pointer: cleanText(support?.pointer, 220),
+        overlap: Number.isFinite(Number(support?.overlap)) ? Number(support.overlap) : 0
+      })).filter((support) => support.source || support.pointer)
+    })).filter((item) => item.statement).slice(0, 24)
+  };
+}
+
 function normalizeRoutingForAgentLog(routing) {
   const normalized = normalizeRoutingPayload(routing);
   return {
@@ -4370,6 +4164,27 @@ function normalizeRoutingForAgentLog(routing) {
 function summarizeAgentResultForLog(result) {
   const source = result && typeof result === 'object' ? result : {};
   const notebookDraft = normalizeNotebookDraftPayload(source.notebookDraft);
+  const sourceSummary = source.source_summary && typeof source.source_summary === 'object'
+    ? source.source_summary
+    : {};
+  const normalizedSourceSummaryGroups = asArray(sourceSummary.groups).map((group) => ({
+    source_type: cleanText(group?.source_type, 80),
+    label: cleanText(group?.label, 80),
+    count: Number.isFinite(Number(group?.count)) ? Number(group.count) : 0,
+    items: asArray(group?.items).map((item) => ({
+      source_type: cleanText(item?.source_type, 80),
+      source: cleanText(item?.source, 120),
+      pointer: cleanText(item?.pointer, 180),
+      reason: cleanText(item?.reason, 220)
+    }))
+  })).filter((group) => group.source_type || group.label || group.count > 0 || group.items.length > 0);
+  const unresolvedFields = asArray(source.unresolved_fields).map((item) => ({
+    step_id: cleanText(item?.step_id, 120),
+    placeholder_id: cleanText(item?.placeholder_id, 120),
+    placeholder_key: cleanText(item?.placeholder_key, 120),
+    display: cleanText(item?.display, 120),
+    reason: cleanText(item?.reason, 180)
+  })).filter((item) => item.placeholder_id || item.placeholder_key || item.display);
   return {
     ok: source.ok === true,
     provider: cleanText(source.provider, 80),
@@ -4390,6 +4205,15 @@ function summarizeAgentResultForLog(result) {
     })),
     decisionRecord: normalizeDecisionRecordForAgentLog(source.decisionRecord),
     routing: normalizeRoutingForAgentLog(source.routing),
+    response_type: cleanText(source.response_type, 80),
+    confidence_label: cleanText(source.confidence_label, 20),
+    source_summary: {
+      total_sources: Number.isFinite(Number(sourceSummary.total_sources)) ? Number(sourceSummary.total_sources) : 0,
+      groups: normalizedSourceSummaryGroups
+    },
+    unresolved_fields: unresolvedFields,
+    validation: normalizeValidationForAgentLog(source.validation),
+    provenance: normalizeProvenanceForAgentLog(source.provenance),
     notebookDraft: notebookDraft
       ? {
         protocol: notebookDraft.protocol,
@@ -5277,7 +5101,7 @@ function toPromptConversationTranscript(conversation) {
   return rows.length ? rows.join('\n') : 'No prior messages.';
 }
 
-async function buildCodexAgentContext(message, snapshot, selectedToolNames = null, routing = null) {
+async function buildCodexAgentContext(message, snapshot, selectedToolNames = null, routing = null, runTool = null) {
   const allowedRetrievalTools = [
     'search_projects',
     'search_protocols',
@@ -5297,6 +5121,9 @@ async function buildCodexAgentContext(message, snapshot, selectedToolNames = nul
   const contextSlices = [];
   const toolTrace = [];
   const evidence = [];
+  const runToolCall = typeof runTool === 'function'
+    ? runTool
+    : ((toolName, args) => runAgentTool(toolName, args, snapshot));
 
   for (const toolName of retrievalTools) {
     const toolArgs = toolName === 'search_inventory'
@@ -5306,7 +5133,7 @@ async function buildCodexAgentContext(message, snapshot, selectedToolNames = nul
         args: { query: message, limit: 5 }
       })
       : { query: message, limit: 5 };
-    const result = await runAgentTool(toolName, toolArgs, snapshot);
+    const result = await runToolCall(toolName, toolArgs);
     const items = asArray(result?.items).slice(0, 5);
     if (!items.length) {
       continue;
@@ -5347,11 +5174,17 @@ async function runCodexAgentController({
   projectName,
   promptConfig,
   allowWriteTools,
-  routing
+  routing,
+  lifecycleRecorder
 }) {
   const intermediateStates = [];
   const toolTrace = [];
   const evidence = [];
+  const runTrackedTool = createLifecycleToolRunner({
+    snapshot,
+    allowWriteTools,
+    lifecycleRecorder
+  });
   const notebookToolResults = [];
   const requiresApproval = containsWriteIntent(message) && !allowWriteTools;
   let routingInfo = normalizeRoutingPayload(routing);
@@ -5370,7 +5203,8 @@ async function runCodexAgentController({
 
   intermediateStates.push(buildIntermediateState('context', 'Loaded snapshot context for Codex retrieval.', {
     assumptions: [
-      `Context sizes: projects=${snapshot.projects.length}, protocols=${snapshot.protocols.length}, workflows=${snapshot.workflows.length}, notebook_entries=${snapshot.notebookEntries.length}, assays=${snapshot.assays.length}, gel_analyses=${snapshot.gelAnalyses.length}, papers=${snapshot.papers.length}.`
+      `Context sizes: projects=${snapshot.projects.length}, protocols=${snapshot.protocols.length}, workflows=${snapshot.workflows.length}, notebook_entries=${snapshot.notebookEntries.length}, assays=${snapshot.assays.length}, gel_analyses=${snapshot.gelAnalyses.length}, papers=${snapshot.papers.length}.`,
+      ...buildSnapshotBundleAssumptionRows(snapshot)
     ],
     confidence: 0.52
   }));
@@ -5394,47 +5228,47 @@ async function runCodexAgentController({
     projectId,
     projectName
   });
-  if (projectEvidence) {
-    const assumptions = buildProjectEvidenceAssumptionRows(projectEvidence);
-    intermediateStates.push(buildIntermediateState('project_evidence', 'Collected deterministic project-aware evidence packs.', {
-      assumptions,
-      evidence: asArray(projectEvidence.citations).slice(0, 10),
-      confidence: 0.67
-    }));
-    toolTrace.push({
-      tool: 'project_evidence_aggregator',
-      args: {
-        project_id: cleanText(projectEvidence?.selected_project?.id, 80),
-        project_name: cleanText(projectEvidence?.selected_project?.name, 180)
-      },
-      summary: cleanText(assumptions.join(' '), 240)
-    });
-    evidence.push(...asArray(projectEvidence.citations));
-  }
+  addEvidencePack({
+    pack: projectEvidence,
+    stage: 'project_evidence',
+    stageMessage: 'Collected deterministic project-aware evidence packs.',
+    confidence: 0.67,
+    traceTool: 'project_evidence_aggregator',
+    traceArgs: {
+      project_id: cleanText(projectEvidence?.selected_project?.id, 80),
+      project_name: cleanText(projectEvidence?.selected_project?.name, 180)
+    },
+    buildAssumptions: buildProjectEvidenceAssumptionRows,
+    intermediateStates,
+    toolTrace,
+    evidence,
+    buildIntermediateState,
+    cleanText
+  });
 
   const paperEvidence = maybeCollectPaperEvidence({
     message,
     routing: routingInfo,
     snapshot
   });
-  if (paperEvidence) {
-    const assumptions = buildPaperEvidenceAssumptionRows(paperEvidence);
-    intermediateStates.push(buildIntermediateState('paper_evidence', 'Collected deterministic paper evidence packs.', {
-      assumptions,
-      evidence: asArray(paperEvidence.citations).slice(0, 10),
-      confidence: 0.66
-    }));
-    toolTrace.push({
-      tool: 'paper_evidence_aggregator',
-      args: {
-        mode: cleanText(routingInfo.plan.paper_task_mode, 80),
-        selected_paper_id: cleanText(routingInfo.plan.paper_match?.selected_paper_id, 80),
-        selected_paper_title: cleanText(routingInfo.plan.paper_match?.selected_paper_title, 220)
-      },
-      summary: cleanText(assumptions.join(' '), 240)
-    });
-    evidence.push(...asArray(paperEvidence.citations));
-  }
+  addEvidencePack({
+    pack: paperEvidence,
+    stage: 'paper_evidence',
+    stageMessage: 'Collected deterministic paper evidence packs.',
+    confidence: 0.66,
+    traceTool: 'paper_evidence_aggregator',
+    traceArgs: {
+      mode: cleanText(routingInfo.plan.paper_task_mode, 80),
+      selected_paper_id: cleanText(routingInfo.plan.paper_match?.selected_paper_id, 80),
+      selected_paper_title: cleanText(routingInfo.plan.paper_match?.selected_paper_title, 220)
+    },
+    buildAssumptions: buildPaperEvidenceAssumptionRows,
+    intermediateStates,
+    toolTrace,
+    evidence,
+    buildIntermediateState,
+    cleanText
+  });
 
   let pythonContextSlice = null;
   if (routingInfo.plan.needs_python === true && asArray(routingInfo.plan.selected_tool_names).includes('run_python_sandbox')) {
@@ -5454,38 +5288,98 @@ async function runCodexAgentController({
         model,
         cwd: getCodexCliWorkingDirectory()
       }),
-      runTool: async (toolName, args) => runAgentTool(toolName, args, snapshot, { allowWriteTools })
+      runTool: async (toolName, args) => runTrackedTool(toolName, args, { allowWriteTools })
     });
     routingInfo = applyRoutingPlanPatch(routingInfo, pythonRun.plan_patch);
 
     if (pythonRun.needs_clarification) {
       const clarificationQuestion = cleanText(pythonRun.clarification_question, 320)
         || 'Please provide the required input data for Python analysis.';
+      const clarificationConfidence = clamp(routingInfo.confidence * 0.92, 0, 1);
       intermediateStates.push(buildIntermediateState('python_plan', 'Python orchestration requires clarification before execution.', {
         assumptions: asArray(pythonRun.assumption_rows),
         openQuestions: [clarificationQuestion],
-        confidence: clamp(routingInfo.confidence * 0.92, 0, 1)
+        confidence: clarificationConfidence
       }));
+      const responseLayer = finalizeAgentResponse({
+        answer: clarificationQuestion,
+        confidence: clarificationConfidence,
+        routing: routingInfo,
+        notebookDraft: null,
+        toolTrace,
+        citations: []
+      });
+      intermediateStates.push(buildIntermediateState('response_layer', 'Applied deterministic response-layer metadata for clarification response.', {
+        assumptions: buildResponseLayerAssumptionRows(responseLayer),
+        openQuestions: [clarificationQuestion],
+        confidence: clarificationConfidence
+      }));
+      recordLifecycleEvent(lifecycleRecorder, {
+        stage: 'clarification_gate',
+        status: 'ok',
+        routing_intent: routingInfo.intent,
+        response_type: responseLayer.response_type,
+        message: 'Python orchestration requested clarification before sandbox execution.'
+      });
+      const validationGate = applyValidationGateToOutput({
+        routing: routingInfo,
+        normalized: {
+          answer: responseLayer.answer,
+          confidence: clarificationConfidence,
+          requiresApproval,
+          proposedWriteActions: requiresApproval
+            ? [{
+              tool_name: 'write_operation_pending_approval',
+              reason: 'User intent appears write-oriented; explicit approval is required before execution.'
+            }]
+            : [],
+          citations: [],
+          decisionRecord: {
+            assumptions: ['Python task planning detected missing/invalid input and requested clarification.'],
+            open_questions: [clarificationQuestion],
+            verification_notes: ['No further tools were executed because Python task input was incomplete.']
+          },
+          response_type: responseLayer.response_type,
+          confidence_label: responseLayer.confidence_label,
+          source_summary: responseLayer.source_summary,
+          unresolved_fields: responseLayer.unresolved_fields
+        },
+        notebookDraft: null,
+        toolTrace
+      });
+      routingInfo = validationGate.routing;
+      intermediateStates.push(buildIntermediateState('validation', 'Ran deterministic validation and safety gate.', {
+        assumptions: [
+          ...buildValidationAssumptionRows(validationGate.validation),
+          ...buildProvenanceAssumptionRows(validationGate.provenance)
+        ],
+        confidence: clarificationConfidence
+      }));
+      recordLifecycleEvent(lifecycleRecorder, {
+        stage: 'validation_completed',
+        status: validationGate.validation.passed ? 'ok' : 'failed',
+        routing_intent: routingInfo.intent,
+        response_type: responseLayer.response_type,
+        failure_reasons: validationGate.validation.failure_reasons,
+        message: buildValidationAssumptionRows(validationGate.validation).join(' ')
+      });
       return {
         ok: true,
         provider,
         model: model || 'codex-default',
-        answer: clarificationQuestion,
-        confidence: clamp(routingInfo.confidence * 0.92, 0, 1),
-        requiresApproval,
-        proposedWriteActions: requiresApproval
-          ? [{
-            tool_name: 'write_operation_pending_approval',
-            reason: 'User intent appears write-oriented; explicit approval is required before execution.'
-          }]
-          : [],
+        answer: validationGate.normalized.answer,
+        confidence: clarificationConfidence,
+        requiresApproval: validationGate.normalized.requiresApproval === true,
+        proposedWriteActions: asArray(validationGate.normalized.proposedWriteActions),
         citations: [],
-        decisionRecord: {
-          assumptions: ['Python task planning detected missing/invalid input and requested clarification.'],
-          open_questions: [clarificationQuestion],
-          verification_notes: ['No further tools were executed because Python task input was incomplete.']
-        },
+        decisionRecord: validationGate.normalized.decisionRecord,
         routing: routingInfo,
+        response_type: validationGate.normalized.response_type,
+        confidence_label: validationGate.normalized.confidence_label,
+        source_summary: validationGate.normalized.source_summary,
+        unresolved_fields: validationGate.normalized.unresolved_fields,
+        validation: validationGate.validation,
+        provenance: validationGate.provenance,
         intermediateStates,
         toolTrace
       };
@@ -5507,7 +5401,13 @@ async function runCodexAgentController({
     }
   }
 
-  const collected = await buildCodexAgentContext(message, snapshot, routingInfo.plan.selected_tool_names, routingInfo);
+  const collected = await buildCodexAgentContext(
+    message,
+    snapshot,
+    routingInfo.plan.selected_tool_names,
+    routingInfo,
+    runTrackedTool
+  );
   if (pythonContextSlice && asArray(pythonContextSlice.items).length) {
     collected.contextSlices.unshift(pythonContextSlice);
   }
@@ -5519,7 +5419,7 @@ async function runCodexAgentController({
     routing: routingInfo,
     projectName: projectName || routingInfo.plan.project_match?.selected_project_name || routingInfo.entities?.project,
     internalEvidence: evidence,
-    runLiteratureTool: async (toolName, args) => runAgentTool(toolName, args, snapshot, { allowWriteTools: false })
+    runLiteratureTool: async (toolName, args) => runTrackedTool(toolName, args, { allowWriteTools: false })
   });
   routingInfo = applyRoutingPlanPatch(routingInfo, webFallback.plan_patch);
   if (webFallback.triggered) {
@@ -5632,43 +5532,29 @@ async function runCodexAgentController({
     };
   }
 
-  if (requiresApproval && normalized.proposedWriteActions.length === 0) {
-    normalized.proposedWriteActions = [
-      {
-        tool_name: 'write_operation_pending_approval',
-        reason: 'User intent appears write-oriented; explicit approval is required before execution.'
-      }
-    ];
-  }
-  if (requiresApproval) {
-    normalized.requiresApproval = true;
-  }
-  if (notebookDraft) {
-    const summary = buildNotebookDraftSummary(notebookDraft);
-    if (summary) {
-      normalized.answer = cleanText(`${normalized.answer}\n\n${summary}`, 12000);
-    }
-  }
-
-  intermediateStates.push(buildIntermediateState('synthesize', 'Generated final user-facing response with decision record.', {
-    evidence: normalized.citations,
-    proposedActions: normalized.proposedWriteActions.map((action) => ({
-      action_type: 'write',
-      tool_name: action?.tool_name,
-      risk_level: 'high',
-      reason: action?.reason
-    })),
-    confidence: normalized.confidence
-  }));
-
-  intermediateStates.push(buildIntermediateState('handoff', 'Prepared response for UI handoff and audit trail.', {
-    assumptions: [
-      allowWriteTools
-        ? 'Write approval flag was enabled for this request.'
-        : 'Any write action remains pending explicit approval.'
-    ],
-    confidence: normalized.confidence
-  }));
+  const finalizedOutput = applyFinalResponseLayerAndValidation({
+    normalized,
+    requiresApproval,
+    notebookDraft,
+    buildNotebookDraftSummary: (draft) => buildNotebookDraftSummary(draft),
+    cleanText,
+    routing: routingInfo,
+    toolTrace,
+    intermediateStates,
+    buildIntermediateState,
+    buildResponseLayerAssumptionRows,
+    applyResponseLayerToOutput,
+    applyValidationGateToOutput,
+    buildValidationAssumptionRows,
+    buildProvenanceAssumptionRows,
+    recordLifecycleEvent,
+    lifecycleRecorder,
+    handoffWriteAssumption: allowWriteTools
+      ? 'Write approval flag was enabled for this request.'
+      : 'Any write action remains pending explicit approval.'
+  });
+  routingInfo = finalizedOutput.routing;
+  normalized = finalizedOutput.normalized;
 
   return {
     ok: true,
@@ -5681,13 +5567,22 @@ async function runCodexAgentController({
     citations: normalized.citations,
     decisionRecord: normalized.decisionRecord,
     routing: routingInfo,
+    response_type: normalized.response_type,
+    confidence_label: normalized.confidence_label,
+    source_summary: normalized.source_summary,
+    unresolved_fields: normalized.unresolved_fields,
+    validation: finalizedOutput.validation,
+    provenance: finalizedOutput.provenance,
     ...(notebookDraft ? { notebookDraft } : {}),
     intermediateStates,
     toolTrace
   };
 }
 
-async function runAgentController(payload) {
+async function runAgentController(payload, runtime = {}) {
+  const lifecycleRecorder = runtime && typeof runtime === 'object'
+    ? runtime.lifecycleRecorder
+    : null;
   const message = cleanText(payload?.message, 3000);
   if (!message) {
     throw new Error('Message is required.');
@@ -5704,7 +5599,24 @@ async function runAgentController(payload) {
   const hasLatestUserInConversation = conversation.length > 0
     && conversation[conversation.length - 1].role === 'user'
     && conversation[conversation.length - 1].text === message;
-  const snapshot = normalizeAgentSnapshot(payload?.stateSnapshot);
+  const rawSnapshot = normalizeJsonPayload(payload?.stateSnapshot, {});
+  const snapshotDataFilePath = cleanText(
+    rawSnapshot?.data_file_path || rawSnapshot?.dataFilePath || payload?.data_file_path || payload?.dataFilePath,
+    1600
+  );
+  const hydratedSnapshot = await hydrateSnapshotFromBundle({
+    dataFilePath: snapshotDataFilePath,
+    snapshot: rawSnapshot,
+    fallbackDataFilePath: getDefaultDataFilePath(),
+    legacyChemicalsPath: CHEMICALS_DATA_FILE_PATH
+  });
+  const snapshot = normalizeAgentSnapshot({
+    ...hydratedSnapshot.snapshot,
+    data_file_path: cleanText(
+      hydratedSnapshot?.bundlePaths?.dataFilePath || snapshotDataFilePath,
+      1600
+    )
+  });
   const allowWriteTools = payload?.allowWriteTools === true;
   const projectId = cleanText(payload?.projectId, 80);
   const projectName = cleanText(payload?.projectName, 180);
@@ -5725,6 +5637,12 @@ async function runAgentController(payload) {
     projectName
   });
   if (!parserResult?.ok || !parserResult?.payload) {
+    recordLifecycleEvent(lifecycleRecorder, {
+      stage: 'parser_completed',
+      status: 'failed',
+      message: cleanText(parserResult?.error || 'Malformed parser output.', 320),
+      failure_reasons: ['intent_parser_failed']
+    });
     return {
       ok: false,
       provider,
@@ -5732,6 +5650,18 @@ async function runAgentController(payload) {
       error: cleanText(`Intent parser failed: ${parserResult?.error || 'Malformed parser output.'}`, 360)
     };
   }
+  recordLifecycleEvent(lifecycleRecorder, {
+    stage: 'parser_completed',
+    status: 'ok',
+    routing_intent: cleanText(parserResult.payload.primary_intent, 80),
+    message: `Intent parser returned primary_intent=${cleanText(parserResult.payload.primary_intent, 80) || 'unknown'}.`,
+    meta: {
+      confidence: Number.isFinite(Number(parserResult.payload.confidence))
+        ? Number(parserResult.payload.confidence)
+        : null,
+      needs_clarification: parserResult.payload.needs_clarification === true
+    }
+  });
 
   const routingDecision = buildRoutingDecisionFromIntentParser({
     parserPayload: parserResult.payload,
@@ -5744,6 +5674,17 @@ async function runAgentController(payload) {
     selectedProjectName: projectName
   });
   let routing = normalizeRoutingPayload(routingDecision);
+  recordLifecycleEvent(lifecycleRecorder, {
+    stage: 'routing_completed',
+    status: 'ok',
+    routing_intent: routing.intent,
+    message: `Routing resolved intent=${routing.intent}.`,
+    meta: {
+      confidence: routing.confidence,
+      needs_clarification: routing.plan?.needs_clarification === true,
+      selected_tool_count: asArray(routing.plan?.selected_tool_names).length
+    }
+  });
 
   if (routing.plan.needs_clarification) {
     const clarification = buildRoutingClarificationQuestion(routing);
@@ -5755,45 +5696,111 @@ async function runAgentController(payload) {
         }
       ]
       : [];
+    const clarificationConfidence = clamp(routing.confidence * 0.92, 0, 1);
+    const responseLayer = finalizeAgentResponse({
+      answer: clarification,
+      confidence: clarificationConfidence,
+      routing,
+      notebookDraft: null,
+      toolTrace: [],
+      citations: []
+    });
+    recordLifecycleEvent(lifecycleRecorder, {
+      stage: 'clarification_gate',
+      status: 'ok',
+      routing_intent: routing.intent,
+      response_type: responseLayer.response_type,
+      message: cleanText(routing.plan.clarification_reason, 320) || 'Routing requested clarification before tool execution.'
+    });
+    const validationGate = applyValidationGateToOutput({
+      routing,
+      normalized: {
+        answer: responseLayer.answer,
+        confidence: clarificationConfidence,
+        requiresApproval: requiresApproval || proposedWriteActions.length > 0,
+        proposedWriteActions,
+        citations: [],
+        decisionRecord: {
+          assumptions: [
+            'Routing plan identified ambiguity and stopped execution before tool calls.',
+            `Intent=${routing.intent} source=${routing.classifier.source}`
+          ],
+          open_questions: [clarification],
+          verification_notes: ['No tools were executed because clarification is required first.']
+        },
+        response_type: responseLayer.response_type,
+        confidence_label: responseLayer.confidence_label,
+        source_summary: responseLayer.source_summary,
+        unresolved_fields: responseLayer.unresolved_fields
+      },
+      notebookDraft: null,
+      toolTrace: []
+    });
+    routing = validationGate.routing;
+    const clarificationIntermediateStates = [
+      buildIntermediateState('intake', message, {
+        assumptions: [
+          ...buildRoutingAssumptionRows(routing),
+          requiresApproval
+            ? 'Write intent detected; approval remains required before execution.'
+            : 'Read-first execution mode is active.'
+        ],
+        openQuestions: [clarification],
+        confidence: routing.confidence
+      }),
+      buildIntermediateState('route', `Resolved routing intent "${routing.intent}" and requested clarification.`, {
+        assumptions: buildRoutingAssumptionRows(routing),
+        openQuestions: [clarification],
+        confidence: routing.confidence
+      }),
+      buildIntermediateState('response_layer', 'Applied deterministic response-layer metadata for clarification response.', {
+        assumptions: buildResponseLayerAssumptionRows(responseLayer),
+        openQuestions: [clarification],
+        confidence: clarificationConfidence
+      }),
+      buildIntermediateState('validation', 'Ran deterministic validation and safety gate.', {
+        assumptions: [
+          ...buildValidationAssumptionRows(validationGate.validation),
+          ...buildProvenanceAssumptionRows(validationGate.provenance)
+        ],
+        openQuestions: [cleanText(routing.plan?.clarification_question, 320) || clarification],
+        confidence: clarificationConfidence
+      }),
+      buildIntermediateState('handoff', 'Prepared clarification response for UI handoff and audit trail.', {
+        assumptions: [
+          'No tool calls executed due to clarification gate.',
+          ...buildResponseLayerAssumptionRows(validationGate.normalized),
+          ...buildValidationAssumptionRows(validationGate.validation)
+        ],
+        confidence: clarificationConfidence
+      })
+    ];
+    recordLifecycleEvent(lifecycleRecorder, {
+      stage: 'validation_completed',
+      status: validationGate.validation.passed ? 'ok' : 'failed',
+      routing_intent: routing.intent,
+      response_type: validationGate.normalized.response_type,
+      failure_reasons: validationGate.validation.failure_reasons,
+      message: buildValidationAssumptionRows(validationGate.validation).join(' ')
+    });
     return {
       ok: true,
       provider,
       model: model || (provider === LLM_PROVIDERS.CODEX ? 'codex-default' : ''),
-      answer: clarification,
-      confidence: clamp(routing.confidence * 0.92, 0, 1),
-      requiresApproval: requiresApproval || proposedWriteActions.length > 0,
-      proposedWriteActions,
+      answer: validationGate.normalized.answer,
+      confidence: clarificationConfidence,
+      requiresApproval: validationGate.normalized.requiresApproval === true,
+      proposedWriteActions: asArray(validationGate.normalized.proposedWriteActions),
       citations: [],
-      decisionRecord: {
-        assumptions: [
-          'Routing plan identified ambiguity and stopped execution before tool calls.',
-          `Intent=${routing.intent} source=${routing.classifier.source}`
-        ],
-        open_questions: [clarification],
-        verification_notes: ['No tools were executed because clarification is required first.']
-      },
+      decisionRecord: validationGate.normalized.decisionRecord,
       routing,
-      intermediateStates: [
-        buildIntermediateState('intake', message, {
-          assumptions: [
-            ...buildRoutingAssumptionRows(routing),
-            requiresApproval
-              ? 'Write intent detected; approval remains required before execution.'
-              : 'Read-first execution mode is active.'
-          ],
-          openQuestions: [clarification],
-          confidence: routing.confidence
-        }),
-        buildIntermediateState('route', `Resolved routing intent "${routing.intent}" and requested clarification.`, {
-          assumptions: buildRoutingAssumptionRows(routing),
-          openQuestions: [clarification],
-          confidence: routing.confidence
-        }),
-        buildIntermediateState('handoff', 'Prepared clarification response for UI handoff and audit trail.', {
-          assumptions: ['No tool calls executed due to clarification gate.'],
-          confidence: routing.confidence
-        })
-      ],
+      response_type: validationGate.normalized.response_type,
+      confidence_label: validationGate.normalized.confidence_label,
+      source_summary: validationGate.normalized.source_summary,
+      unresolved_fields: validationGate.normalized.unresolved_fields,
+      validation: validationGate.validation,
+      provenance: validationGate.provenance,
+      intermediateStates: clarificationIntermediateStates,
       toolTrace: []
     };
   }
@@ -5810,13 +5817,20 @@ async function runAgentController(payload) {
       projectName,
       promptConfig,
       allowWriteTools,
-      routing
+      routing,
+      lifecycleRecorder
     });
   }
 
   const intermediateStates = [];
   const toolTrace = [];
   const evidence = [];
+  const runTrackedTool = createLifecycleToolRunner({
+    snapshot,
+    allowWriteTools,
+    lifecycleRecorder
+  });
+  const notebookToolResults = [];
 
   intermediateStates.push(buildIntermediateState('intake', message, {
     assumptions: [
@@ -5833,7 +5847,8 @@ async function runAgentController(payload) {
 
   intermediateStates.push(buildIntermediateState('context', 'Loaded snapshot context for retrieval tools.', {
     assumptions: [
-      `Context sizes: projects=${snapshot.projects.length}, protocols=${snapshot.protocols.length}, workflows=${snapshot.workflows.length}, notebook_entries=${snapshot.notebookEntries.length}, assays=${snapshot.assays.length}, gel_analyses=${snapshot.gelAnalyses.length}, papers=${snapshot.papers.length}.`
+      `Context sizes: projects=${snapshot.projects.length}, protocols=${snapshot.protocols.length}, workflows=${snapshot.workflows.length}, notebook_entries=${snapshot.notebookEntries.length}, assays=${snapshot.assays.length}, gel_analyses=${snapshot.gelAnalyses.length}, papers=${snapshot.papers.length}.`,
+      ...buildSnapshotBundleAssumptionRows(snapshot)
     ],
     confidence: 0.52
   }));
@@ -5856,47 +5871,47 @@ async function runAgentController(payload) {
     projectId,
     projectName
   });
-  if (projectEvidence) {
-    const assumptions = buildProjectEvidenceAssumptionRows(projectEvidence);
-    intermediateStates.push(buildIntermediateState('project_evidence', 'Collected deterministic project-aware evidence packs.', {
-      assumptions,
-      evidence: asArray(projectEvidence.citations).slice(0, 10),
-      confidence: 0.67
-    }));
-    toolTrace.push({
-      tool: 'project_evidence_aggregator',
-      args: {
-        project_id: cleanText(projectEvidence?.selected_project?.id, 80),
-        project_name: cleanText(projectEvidence?.selected_project?.name, 180)
-      },
-      summary: cleanText(assumptions.join(' '), 240)
-    });
-    evidence.push(...asArray(projectEvidence.citations));
-  }
+  addEvidencePack({
+    pack: projectEvidence,
+    stage: 'project_evidence',
+    stageMessage: 'Collected deterministic project-aware evidence packs.',
+    confidence: 0.67,
+    traceTool: 'project_evidence_aggregator',
+    traceArgs: {
+      project_id: cleanText(projectEvidence?.selected_project?.id, 80),
+      project_name: cleanText(projectEvidence?.selected_project?.name, 180)
+    },
+    buildAssumptions: buildProjectEvidenceAssumptionRows,
+    intermediateStates,
+    toolTrace,
+    evidence,
+    buildIntermediateState,
+    cleanText
+  });
 
   const paperEvidence = maybeCollectPaperEvidence({
     message,
     routing,
     snapshot
   });
-  if (paperEvidence) {
-    const assumptions = buildPaperEvidenceAssumptionRows(paperEvidence);
-    intermediateStates.push(buildIntermediateState('paper_evidence', 'Collected deterministic paper evidence packs.', {
-      assumptions,
-      evidence: asArray(paperEvidence.citations).slice(0, 10),
-      confidence: 0.66
-    }));
-    toolTrace.push({
-      tool: 'paper_evidence_aggregator',
-      args: {
-        mode: cleanText(routing.plan.paper_task_mode, 80),
-        selected_paper_id: cleanText(routing.plan.paper_match?.selected_paper_id, 80),
-        selected_paper_title: cleanText(routing.plan.paper_match?.selected_paper_title, 220)
-      },
-      summary: cleanText(assumptions.join(' '), 240)
-    });
-    evidence.push(...asArray(paperEvidence.citations));
-  }
+  addEvidencePack({
+    pack: paperEvidence,
+    stage: 'paper_evidence',
+    stageMessage: 'Collected deterministic paper evidence packs.',
+    confidence: 0.66,
+    traceTool: 'paper_evidence_aggregator',
+    traceArgs: {
+      mode: cleanText(routing.plan.paper_task_mode, 80),
+      selected_paper_id: cleanText(routing.plan.paper_match?.selected_paper_id, 80),
+      selected_paper_title: cleanText(routing.plan.paper_match?.selected_paper_title, 220)
+    },
+    buildAssumptions: buildPaperEvidenceAssumptionRows,
+    intermediateStates,
+    toolTrace,
+    evidence,
+    buildIntermediateState,
+    cleanText
+  });
 
   const systemPrompt = buildAgentSystemPrompt(projectName, promptConfig);
   const scopedToolDefinitions = routing.plan.needs_tools
@@ -5933,7 +5948,7 @@ async function runAgentController(payload) {
           args
         });
       }
-      let toolResult = await runAgentTool(call.name, args, snapshot, { allowWriteTools });
+      let toolResult = await runTrackedTool(call.name, args, { allowWriteTools });
       if (call.name === 'run_python_sandbox') {
         const pythonPost = await postProcessPythonToolResult({
           toolResult,
@@ -6002,7 +6017,7 @@ async function runAgentController(payload) {
     routing,
     projectName: projectName || routing.plan.project_match?.selected_project_name || routing.entities?.project,
     internalEvidence: evidence,
-    runLiteratureTool: async (toolName, args) => runAgentTool(toolName, args, snapshot, { allowWriteTools: false })
+    runLiteratureTool: async (toolName, args) => runTrackedTool(toolName, args, { allowWriteTools: false })
   });
   routing = applyRoutingPlanPatch(routing, webFallback.plan_patch);
   if (webFallback.triggered) {
@@ -6084,43 +6099,29 @@ async function runAgentController(payload) {
     };
   }
 
-  if (requiresApproval && normalized.proposedWriteActions.length === 0) {
-    normalized.proposedWriteActions = [
-      {
-        tool_name: 'write_operation_pending_approval',
-        reason: 'User intent appears write-oriented; explicit approval is required before execution.'
-      }
-    ];
-  }
-  if (requiresApproval) {
-    normalized.requiresApproval = true;
-  }
-  if (notebookDraft) {
-    const summary = buildNotebookDraftSummary(notebookDraft);
-    if (summary) {
-      normalized.answer = cleanText(`${normalized.answer}\n\n${summary}`, 12000);
-    }
-  }
-
-  intermediateStates.push(buildIntermediateState('synthesize', 'Generated final user-facing response with decision record.', {
-    evidence: normalized.citations,
-    proposedActions: normalized.proposedWriteActions.map((action) => ({
-      action_type: 'write',
-      tool_name: action?.tool_name,
-      risk_level: 'high',
-      reason: action?.reason
-    })),
-    confidence: normalized.confidence
-  }));
-
-  intermediateStates.push(buildIntermediateState('handoff', 'Prepared response for UI handoff and audit trail.', {
-    assumptions: [
-      allowWriteTools
-        ? 'Write tools were allowed for this request via explicit approval.'
-        : 'Any write action remains pending explicit approval.'
-    ],
-    confidence: normalized.confidence
-  }));
+  const finalizedOutput = applyFinalResponseLayerAndValidation({
+    normalized,
+    requiresApproval,
+    notebookDraft,
+    buildNotebookDraftSummary: (draft) => buildNotebookDraftSummary(draft),
+    cleanText,
+    routing,
+    toolTrace,
+    intermediateStates,
+    buildIntermediateState,
+    buildResponseLayerAssumptionRows,
+    applyResponseLayerToOutput,
+    applyValidationGateToOutput,
+    buildValidationAssumptionRows,
+    buildProvenanceAssumptionRows,
+    recordLifecycleEvent,
+    lifecycleRecorder,
+    handoffWriteAssumption: allowWriteTools
+      ? 'Write tools were allowed for this request via explicit approval.'
+      : 'Any write action remains pending explicit approval.'
+  });
+  routing = finalizedOutput.routing;
+  normalized = finalizedOutput.normalized;
 
   return {
     ok: true,
@@ -6133,6 +6134,12 @@ async function runAgentController(payload) {
     citations: normalized.citations,
     decisionRecord: normalized.decisionRecord,
     routing,
+    response_type: normalized.response_type,
+    confidence_label: normalized.confidence_label,
+    source_summary: normalized.source_summary,
+    unresolved_fields: normalized.unresolved_fields,
+    validation: finalizedOutput.validation,
+    provenance: finalizedOutput.provenance,
     ...(notebookDraft ? { notebookDraft } : {}),
     intermediateStates,
     toolTrace
@@ -6143,11 +6150,27 @@ ipcMain.handle('agent:chat', async (_event, payload) => {
   const normalizedPayload = normalizeJsonPayload(payload, {});
   const requestId = buildAgentLogRequestId();
   const logPath = getAgentChatLogPath();
+  const lifecycleRecorder = createLifecycleRecorder({ requestId });
+  recordLifecycleEvent(lifecycleRecorder, {
+    stage: 'request_received',
+    status: 'ok',
+    message: cleanText(normalizedPayload?.message, 320),
+    meta: {
+      project_id: cleanText(normalizedPayload?.projectId, 80),
+      project_name: cleanText(normalizedPayload?.projectName, 180),
+      allow_write_tools: normalizedPayload?.allowWriteTools === true,
+      provider: cleanText(normalizedPayload?.llm?.provider, 80)
+    }
+  });
   await appendAgentChatLogEntry(logPath, formatAgentChatLogEntry({
     type: 'agent-chat-request',
     requestId,
     projectId: cleanText(normalizedPayload?.projectId, 80),
     projectName: cleanText(normalizedPayload?.projectName, 180),
+    dataFilePath: cleanText(
+      normalizedPayload?.stateSnapshot?.data_file_path || normalizedPayload?.stateSnapshot?.dataFilePath,
+      1600
+    ),
     allowWriteTools: normalizedPayload?.allowWriteTools === true,
     message: cleanText(normalizedPayload?.message, 3000),
     conversation: extractConversation(normalizedPayload?.conversation),
@@ -6155,19 +6178,52 @@ ipcMain.handle('agent:chat', async (_event, payload) => {
   }));
 
   try {
-    const result = await runAgentController(normalizedPayload);
+    const result = await runAgentController(normalizedPayload, {
+      requestId,
+      lifecycleRecorder
+    });
+    const failureReasons = classifyFailureReasons({
+      result,
+      routing: result?.routing,
+      validation: result?.validation,
+      lifecycleEvents: lifecycleRecorder.events
+    });
+    recordLifecycleEvent(lifecycleRecorder, {
+      stage: 'response_emitted',
+      status: result?.ok === true ? 'ok' : 'error',
+      response_type: cleanText(result?.response_type, 80),
+      routing_intent: cleanText(result?.routing?.intent, 80),
+      failure_reasons: failureReasons,
+      message: result?.ok === true
+        ? 'Agent response emitted to renderer.'
+        : cleanText(result?.error, 320) || 'Agent response emitted with error.'
+    });
+    await flushLifecycleRecorderEvents(logPath, lifecycleRecorder);
     await appendAgentChatLogEntry(logPath, formatAgentChatLogEntry({
       type: 'agent-chat-result',
       requestId,
+      failure_reasons: failureReasons,
       ...summarizeAgentResultForLog(result)
     }));
     return result;
   } catch (error) {
     const errorMessage = String(error?.message || error);
+    const failureReasons = classifyFailureReasons({
+      error: errorMessage,
+      lifecycleEvents: lifecycleRecorder.events
+    });
+    recordLifecycleEvent(lifecycleRecorder, {
+      stage: 'controller_error',
+      status: 'failed',
+      failure_reasons: failureReasons,
+      message: cleanText(errorMessage, 320)
+    });
+    await flushLifecycleRecorderEvents(logPath, lifecycleRecorder);
     await appendAgentChatLogEntry(logPath, formatAgentChatLogEntry({
       type: 'agent-chat-error',
       requestId,
       ok: false,
+      failure_reasons: failureReasons,
       error: cleanText(errorMessage, 2000)
     }));
     return { ok: false, error: errorMessage };
@@ -6178,6 +6234,116 @@ ipcMain.handle('agent:get-io-contract', async () => ({
   ok: true,
   contract: AGENT_IO_CONTRACT
 }));
+
+ipcMain.handle('agent:logs:list-requests', async () => {
+  try {
+    const rows = await readLifecycleLogs({
+      logPath: getAgentChatLogPath(),
+      limit: 8000
+    });
+    const byRequest = new Map();
+
+    rows.forEach((row) => {
+      const requestId = cleanText(row?.requestId, 80);
+      if (!requestId) {
+        return;
+      }
+      const existing = byRequest.get(requestId) || {
+        requestId,
+        message: '',
+        projectId: '',
+        projectName: '',
+        provider: '',
+        model: '',
+        response_type: '',
+        ok: null,
+        failure_reasons: [],
+        started_at: '',
+        ended_at: '',
+        stages: []
+      };
+      const type = cleanText(row?.type, 80);
+      const timestamp = cleanText(row?.timestamp, 80);
+      if (!existing.started_at && timestamp) {
+        existing.started_at = timestamp;
+      }
+      if (timestamp) {
+        existing.ended_at = timestamp;
+      }
+
+      if (type === 'agent-chat-request') {
+        existing.message = cleanText(row?.message, 320);
+        existing.projectId = cleanText(row?.projectId, 80);
+        existing.projectName = cleanText(row?.projectName, 180);
+        existing.provider = cleanText(row?.llm?.provider, 80);
+      } else if (type === 'agent-chat-result') {
+        existing.ok = row?.ok === true;
+        existing.model = cleanText(row?.model, 120);
+        existing.response_type = cleanText(row?.response_type, 80);
+        existing.failure_reasons = uniqueStrings([
+          ...asArray(existing.failure_reasons),
+          ...asArray(row?.failure_reasons)
+        ]);
+      } else if (type === 'agent-chat-error') {
+        existing.ok = false;
+        existing.failure_reasons = uniqueStrings([
+          ...asArray(existing.failure_reasons),
+          ...asArray(row?.failure_reasons)
+        ]);
+      } else if (type === 'agent-lifecycle') {
+        const stage = cleanText(row?.stage, 40);
+        if (stage && !existing.stages.includes(stage)) {
+          existing.stages.push(stage);
+        }
+        existing.failure_reasons = uniqueStrings([
+          ...asArray(existing.failure_reasons),
+          ...asArray(row?.failure_reasons)
+        ]);
+      }
+      byRequest.set(requestId, existing);
+    });
+
+    const items = Array.from(byRequest.values())
+      .sort((a, b) => {
+        const left = Date.parse(a.ended_at || a.started_at || '') || 0;
+        const right = Date.parse(b.ended_at || b.started_at || '') || 0;
+        return right - left;
+      })
+      .slice(0, 200);
+
+    return {
+      ok: true,
+      items
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error: cleanText(error?.message || error, 2400)
+    };
+  }
+});
+
+ipcMain.handle('agent:logs:replay', async (_event, payload) => {
+  const requestId = cleanText(payload?.requestId, 80);
+  if (!requestId) {
+    return {
+      ok: false,
+      error: 'requestId is required.'
+    };
+  }
+  try {
+    return await replayRequestLifecycle({
+      requestId,
+      logPath: getAgentChatLogPath()
+    });
+  } catch (error) {
+    return {
+      ok: false,
+      requestId,
+      error: cleanText(error?.message || error, 2400)
+    };
+  }
+});
 
 ipcMain.handle('llm:codex-status', async () => {
   const status = await getCodexLoginStatus({ cwd: getCodexCliWorkingDirectory(), forceRefresh: true });

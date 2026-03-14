@@ -461,7 +461,7 @@ export function initProtocolManagement({
       updatedAt,
       purpose: String(rawProtocol.purpose || '').trim(),
       materials: normalizeMaterials(rawProtocol.materials),
-      steps: normalizeImportedProtocolStepEntries(rawProtocol.steps),
+      steps: normalizeImportedProtocolStepEntries(rawProtocol.steps || rawProtocol.procedure),
       troubleshooting: normalizeTroubleshooting(rawProtocol.troubleshooting)
     };
   }
@@ -474,33 +474,62 @@ export function initProtocolManagement({
     return single ? [single] : [];
   }
 
-  function parseProtocolsFromJson(rawInput) {
+  function parseLooseJsonObjectOrArray(rawInput) {
     const text = String(rawInput || '').trim();
     if (!text) {
+      return null;
+    }
+
+    const candidates = [text];
+    const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    if (fenceMatch?.[1]) {
+      candidates.push(String(fenceMatch[1]).trim());
+    }
+
+    const firstBrace = text.indexOf('{');
+    const lastBrace = text.lastIndexOf('}');
+    if (firstBrace >= 0 && lastBrace > firstBrace) {
+      candidates.push(text.slice(firstBrace, lastBrace + 1));
+    }
+
+    const firstBracket = text.indexOf('[');
+    const lastBracket = text.lastIndexOf(']');
+    if (firstBracket >= 0 && lastBracket > firstBracket) {
+      candidates.push(text.slice(firstBracket, lastBracket + 1));
+    }
+
+    for (const candidate of candidates) {
+      try {
+        const parsed = JSON.parse(candidate);
+        if (Array.isArray(parsed) || (parsed && typeof parsed === 'object')) {
+          return parsed;
+        }
+      } catch {
+        // Try next candidate.
+      }
+    }
+    return null;
+  }
+
+  function parseProtocolsFromJson(rawInput) {
+    const parsed = parseLooseJsonObjectOrArray(rawInput);
+    if (!parsed) {
       return [];
     }
 
-    try {
-      const parsed = JSON.parse(text);
-      if (Array.isArray(parsed)) {
-        return sanitizeIncomingProtocols(parsed);
-      }
-      if (!parsed || typeof parsed !== 'object') {
-        return [];
-      }
-      if (Array.isArray(parsed.protocols)) {
-        return sanitizeIncomingProtocols(parsed.protocols);
-      }
-      if (parsed.protocol && typeof parsed.protocol === 'object') {
-        return sanitizeIncomingProtocols(parsed.protocol);
-      }
-      if (parsed.type === 'protocol_share_link') {
-        return sanitizeIncomingProtocols(parsed.protocol || parsed.protocols);
-      }
+    if (Array.isArray(parsed)) {
       return sanitizeIncomingProtocols(parsed);
-    } catch {
-      return [];
     }
+    if (Array.isArray(parsed.protocols)) {
+      return sanitizeIncomingProtocols(parsed.protocols);
+    }
+    if (parsed.protocol && typeof parsed.protocol === 'object') {
+      return sanitizeIncomingProtocols(parsed.protocol);
+    }
+    if (parsed.type === 'protocol_share_link') {
+      return sanitizeIncomingProtocols(parsed.protocol || parsed.protocols);
+    }
+    return sanitizeIncomingProtocols(parsed);
   }
 
   function buildUniqueImportedProtocolName(baseName) {
@@ -574,7 +603,7 @@ export function initProtocolManagement({
     if (!incomingProtocols.length) {
       return {
         ok: false,
-        error: 'Invalid protocol JSON payload. Expected {"protocols":[...]} or a protocol array.'
+        error: 'Invalid protocol JSON payload. Use a protocol object, {"protocols":[...]}, or a protocol array.'
       };
     }
 

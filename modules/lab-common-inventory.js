@@ -49,6 +49,234 @@ export function initLabCommonInventory({ state, persist, createId, safeText }) {
   });
 
   let selectedChemicalId = '';
+  let lastChemicalSqliteSyncKey = '';
+  ensureLabInventoryShape();
+
+  function ensureLabInventoryShape() {
+    if (!state.labInventory || typeof state.labInventory !== 'object') {
+      state.labInventory = {
+        chemicals: [],
+        blocks: [],
+        lastLocationNumber: 0
+      };
+    }
+    if (!Array.isArray(state.labInventory.chemicals)) {
+      state.labInventory.chemicals = [];
+    }
+    if (!Array.isArray(state.labInventory.blocks)) {
+      state.labInventory.blocks = [];
+    }
+    if (!Number.isFinite(Number(state.labInventory.lastLocationNumber))) {
+      state.labInventory.lastLocationNumber = 0;
+    }
+    if (!state.labInventory.locationCodeMap || typeof state.labInventory.locationCodeMap !== 'object') {
+      state.labInventory.locationCodeMap = {};
+    }
+    if (!state.labInventory.locationCodeNextByLocation || typeof state.labInventory.locationCodeNextByLocation !== 'object') {
+      state.labInventory.locationCodeNextByLocation = {};
+    }
+  }
+
+  function normalizeLocationKey(value) {
+    return String(value || '').trim().toLowerCase();
+  }
+
+  function encodeLocationLetter(index) {
+    let value = Number(index) || 0;
+    let out = '';
+    while (value >= 0) {
+      out = String.fromCharCode(65 + (value % 26)) + out;
+      value = Math.floor(value / 26) - 1;
+    }
+    return out;
+  }
+
+  function ensureLocationLetter(location) {
+    ensureLabInventoryShape();
+    const key = normalizeLocationKey(location);
+    if (!key) {
+      return 'X';
+    }
+    const existing = String(state.labInventory.locationCodeMap[key] || '').trim().toUpperCase();
+    if (existing) {
+      return existing;
+    }
+
+    const usedLetters = new Set(
+      Object.values(state.labInventory.locationCodeMap || {})
+        .map((value) => String(value || '').trim().toUpperCase())
+        .filter(Boolean)
+    );
+
+    let index = 0;
+    let candidate = encodeLocationLetter(index);
+    while (usedLetters.has(candidate)) {
+      index += 1;
+      candidate = encodeLocationLetter(index);
+    }
+    state.labInventory.locationCodeMap[key] = candidate;
+    return candidate;
+  }
+
+  function parseLocationCode(value) {
+    const matched = String(value || '').trim().toUpperCase().match(/^([A-Z]+)(\d+)$/);
+    if (!matched) {
+      return null;
+    }
+    return {
+      letter: matched[1],
+      number: Number(matched[2]) || 0
+    };
+  }
+
+  function readMaxLocationCodeNumber(location, letter) {
+    const key = normalizeLocationKey(location);
+    return state.labInventory.chemicals.reduce((max, item) => {
+      if (normalizeLocationKey(item?.location) !== key) {
+        return max;
+      }
+      const parsed = parseLocationCode(item?.locationCode);
+      if (parsed && parsed.letter === letter) {
+        return Math.max(max, parsed.number);
+      }
+      if (!parsed && Number.isFinite(Number(item?.locationNumber))) {
+        return Math.max(max, Number(item.locationNumber));
+      }
+      return max;
+    }, 0);
+  }
+
+  function assignLocationCode(location, existingCode = '') {
+    ensureLabInventoryShape();
+    const key = normalizeLocationKey(location);
+    const parsedExisting = parseLocationCode(existingCode);
+    const existingMappedLetter = String(state.labInventory.locationCodeMap[key] || '').trim().toUpperCase();
+    if (!existingMappedLetter && parsedExisting?.letter) {
+      state.labInventory.locationCodeMap[key] = parsedExisting.letter;
+    }
+    const letter = ensureLocationLetter(location);
+    if (parsedExisting && parsedExisting.letter === letter && parsedExisting.number > 0) {
+      const nextCurrent = Number(state.labInventory.locationCodeNextByLocation[key]) || 1;
+      state.labInventory.locationCodeNextByLocation[key] = Math.max(nextCurrent, parsedExisting.number + 1);
+      return `${letter}${parsedExisting.number}`;
+    }
+
+    const nextSeed = Number(state.labInventory.locationCodeNextByLocation[key]) || 0;
+    const computedMax = readMaxLocationCodeNumber(location, letter);
+    const nextNumber = Math.max(nextSeed, computedMax + 1, 1);
+    state.labInventory.locationCodeNextByLocation[key] = nextNumber + 1;
+    state.labInventory.lastLocationNumber = Math.max(Number(state.labInventory.lastLocationNumber) || 0, nextNumber);
+    return `${letter}${nextNumber}`;
+  }
+
+  function ensureChemicalCodes() {
+    ensureLabInventoryShape();
+    const nextMap = {};
+    state.labInventory.chemicals.forEach((item) => {
+      const locationKey = normalizeLocationKey(item?.location);
+      if (!locationKey) {
+        return;
+      }
+      const parsed = parseLocationCode(item?.locationCode);
+      if (!parsed) {
+        return;
+      }
+      if (!state.labInventory.locationCodeMap[locationKey]) {
+        state.labInventory.locationCodeMap[locationKey] = parsed.letter;
+      }
+      nextMap[locationKey] = Math.max(Number(nextMap[locationKey]) || 1, parsed.number + 1);
+    });
+    Object.entries(nextMap).forEach(([key, value]) => {
+      const current = Number(state.labInventory.locationCodeNextByLocation[key]) || 1;
+      state.labInventory.locationCodeNextByLocation[key] = Math.max(current, Number(value) || 1);
+    });
+
+    let changed = false;
+    let maxLocationNumber = Number(state.labInventory.lastLocationNumber) || 0;
+    state.labInventory.chemicals = state.labInventory.chemicals.map((item) => {
+      const chemical = item && typeof item === 'object' ? { ...item } : {};
+      const location = String(chemical.location || '').trim();
+      if (!location) {
+        return chemical;
+      }
+      const currentCode = String(chemical.locationCode || '').trim().toUpperCase();
+      const nextCode = assignLocationCode(location, currentCode);
+      const parsed = parseLocationCode(nextCode);
+      const nextLocationNumber = Number(parsed?.number || chemical.locationNumber || 0);
+      maxLocationNumber = Math.max(maxLocationNumber, nextLocationNumber);
+      if (nextCode !== currentCode || Number(chemical.locationNumber) !== Number(parsed?.number || 0)) {
+        changed = true;
+      }
+      return {
+        ...chemical,
+        locationCode: nextCode,
+        locationNumber: nextLocationNumber
+      };
+    });
+    if ((Number(state.labInventory.lastLocationNumber) || 0) !== maxLocationNumber) {
+      state.labInventory.lastLocationNumber = maxLocationNumber;
+      changed = true;
+    }
+    return changed;
+  }
+
+  function buildChemicalSqliteSyncKey() {
+    const storagePath = String(state.settings?.storagePath || '').trim();
+    const summary = state.labInventory.chemicals
+      .map((item) => `${item.id}|${item.locationCode || ''}|${item.updatedAt || ''}`)
+      .join('||');
+    const locationCodeMapSummary = Object.entries(state.labInventory.locationCodeMap || {})
+      .map(([location, letter]) => `${location}:${letter}`)
+      .sort()
+      .join('|');
+    const nextByLocationSummary = Object.entries(state.labInventory.locationCodeNextByLocation || {})
+      .map(([location, number]) => `${location}:${Number(number) || 0}`)
+      .sort()
+      .join('|');
+    return `${storagePath}::${summary}::${state.labInventory.blocks.length}::${Number(state.labInventory.lastLocationNumber) || 0}::${locationCodeMapSummary}::${nextByLocationSummary}`;
+  }
+
+  async function syncChemicalSqliteBundle(force = false) {
+    const storagePath = String(state.settings?.storagePath || '').trim();
+    if (!storagePath || !window.enanaApi?.autoSaveDataFile) {
+      return;
+    }
+
+    const syncKey = buildChemicalSqliteSyncKey();
+    if (!force && syncKey === lastChemicalSqliteSyncKey) {
+      return;
+    }
+
+    const normalizedRoot = storagePath.replace(/[\\/]+$/, '');
+    const targetPath = `${normalizedRoot}/enana-chemicals.ena.json`;
+    const inventorySnapshot = {
+      labInventory: {
+        chemicals: Array.isArray(state.labInventory.chemicals) ? state.labInventory.chemicals : [],
+        blocks: Array.isArray(state.labInventory.blocks) ? state.labInventory.blocks : [],
+        lastLocationNumber: Number(state.labInventory.lastLocationNumber) || 0,
+        locationCodeMap: state.labInventory.locationCodeMap || {},
+        locationCodeNextByLocation: state.labInventory.locationCodeNextByLocation || {}
+      },
+      inventory: state.inventory && typeof state.inventory === 'object' ? state.inventory : {},
+      settings: {
+        storagePath,
+        inventoryLocations: Array.isArray(state.settings?.inventoryLocations)
+          ? state.settings.inventoryLocations
+          : []
+      }
+    };
+
+    try {
+      const result = await window.enanaApi.autoSaveDataFile(inventorySnapshot, targetPath);
+      if (result?.ok) {
+        lastChemicalSqliteSyncKey = syncKey;
+      } else {
+        console.warn('Failed to sync chemical sqlite bundle:', result?.error || targetPath);
+      }
+    } catch (error) {
+      console.warn('Failed to sync chemical sqlite bundle:', error);
+    }
+  }
 
   function isUnreadFor(message, email) {
     if (!email) {
@@ -111,6 +339,7 @@ export function initLabCommonInventory({ state, persist, createId, safeText }) {
 
   function onChemicalSubmit(event) {
     event.preventDefault();
+    ensureLabInventoryShape();
 
     const location = chemicalLocation.value.trim();
     const name = chemicalName.value.trim();
@@ -121,16 +350,17 @@ export function initLabCommonInventory({ state, persist, createId, safeText }) {
 
     const existingId = chemicalId.value;
     const existing = state.labInventory.chemicals.find((item) => item.id === existingId);
-    const locationNumber = existing?.locationNumber || (state.labInventory.lastLocationNumber + 1);
-    if (!existing?.locationNumber) {
-      state.labInventory.lastLocationNumber = locationNumber;
-    }
+    const locationCode = assignLocationCode(location, existing?.locationCode || '');
+    const parsedLocationCode = parseLocationCode(locationCode);
+    const locationNumber = Number(parsedLocationCode?.number || existing?.locationNumber || 0);
+    state.labInventory.lastLocationNumber = Math.max(Number(state.labInventory.lastLocationNumber) || 0, locationNumber);
 
     const record = {
       id: existingId || createId(),
       name,
       casNumber,
       location,
+      locationCode,
       locationNumber,
       vendor: chemicalVendor.value.trim(),
       catalogNumber: chemicalCatalogNumber.value.trim(),
@@ -154,11 +384,12 @@ export function initLabCommonInventory({ state, persist, createId, safeText }) {
       chemicalId: record.id,
       name: record.name,
       casNumber: record.casNumber,
-      location: `${record.location}-${record.locationNumber}`
+      location: `${record.location}-${record.locationCode || record.locationNumber}`
     });
 
     broadcastInventoryUpdate(record);
     persist();
+    void syncChemicalSqliteBundle(true);
     resetChemicalForm();
     renderAll();
   }
@@ -191,6 +422,7 @@ export function initLabCommonInventory({ state, persist, createId, safeText }) {
   }
 
   function deleteChemical(id) {
+    ensureLabInventoryShape();
     state.labInventory.chemicals = state.labInventory.chemicals.filter((item) => item.id !== id);
     state.samples = (state.samples || []).map((sample) => {
       const links = Array.isArray(sample.chemicalLinks) ? sample.chemicalLinks : [];
@@ -208,6 +440,7 @@ export function initLabCommonInventory({ state, persist, createId, safeText }) {
     }
     appendBlock('DELETE_CHEMICAL', { chemicalId: id });
     persist();
+    void syncChemicalSqliteBundle(true);
     renderAll();
   }
 
@@ -236,6 +469,21 @@ export function initLabCommonInventory({ state, persist, createId, safeText }) {
   function sortChemicals(list) {
     const sortBy = chemicalSort.value || 'updated_desc';
     const next = [...list];
+    const locationCodeCompare = (left, right) => {
+      const leftParsed = parseLocationCode(left.locationCode);
+      const rightParsed = parseLocationCode(right.locationCode);
+      const leftLetter = (leftParsed?.letter || '').toUpperCase();
+      const rightLetter = (rightParsed?.letter || '').toUpperCase();
+      if (leftLetter !== rightLetter) {
+        return leftLetter.localeCompare(rightLetter);
+      }
+      const leftNumber = Number(leftParsed?.number || left.locationNumber || 0);
+      const rightNumber = Number(rightParsed?.number || right.locationNumber || 0);
+      if (leftNumber !== rightNumber) {
+        return leftNumber - rightNumber;
+      }
+      return String(left.location || '').localeCompare(String(right.location || ''));
+    };
     next.sort((a, b) => {
       switch (sortBy) {
         case 'updated_asc':
@@ -247,9 +495,9 @@ export function initLabCommonInventory({ state, persist, createId, safeText }) {
         case 'name_desc':
           return b.name.localeCompare(a.name);
         case 'location_asc':
-          return (a.locationNumber || 0) - (b.locationNumber || 0);
+          return locationCodeCompare(a, b);
         case 'location_desc':
-          return (b.locationNumber || 0) - (a.locationNumber || 0);
+          return locationCodeCompare(b, a);
         case 'expiration_asc':
           return (a.expirationDate || '9999-12-31').localeCompare(b.expirationDate || '9999-12-31');
         case 'expiration_desc':
@@ -278,6 +526,7 @@ export function initLabCommonInventory({ state, persist, createId, safeText }) {
         item.vendor,
         item.catalogNumber,
         item.location,
+        item.locationCode,
         item.unitSize
       ]
         .filter(Boolean)
@@ -310,6 +559,7 @@ export function initLabCommonInventory({ state, persist, createId, safeText }) {
         <button class="list-main-btn text-list-btn" data-chemical-open="${item.id}">
           ${safeText(item.name)}
         </button>
+        <span>${safeText(item.locationCode || '-')}</span>
         <span>${safeText(item.casNumber)}</span>
       </article>
     `).join('');
@@ -317,6 +567,7 @@ export function initLabCommonInventory({ state, persist, createId, safeText }) {
     chemicalList.innerHTML = `
       <article class="list-row list-row-header">
         <strong>Name</strong>
+        <strong>Code</strong>
         <strong>CAS Number</strong>
       </article>
       ${rows}
@@ -347,11 +598,17 @@ export function initLabCommonInventory({ state, persist, createId, safeText }) {
     const linkedSamples = (state.samples || [])
       .filter((sample) => Array.isArray(sample.chemicalLinks) && sample.chemicalLinks.includes(selected.id))
       .map((sample) => sample.code || sample.name || sample.id);
-    const locationText = selected.locationNumber
-      ? `${selected.location} #${selected.locationNumber}`
-      : (selected.location || '-');
+    const locationText = selected.locationCode
+      ? `${selected.location} (${selected.locationCode})`
+      : (selected.locationNumber
+        ? `${selected.location} #${selected.locationNumber}`
+        : (selected.location || '-'));
+    const locationCodeText = selected.locationCode
+      ? String(selected.locationCode)
+      : '-';
     const details = [
       { label: 'CAS', value: selected.casNumber || '-' },
+      { label: 'Code', value: locationCodeText },
       { label: 'Location', value: locationText },
       { label: 'Updated', value: selected.updatedAt ? new Date(selected.updatedAt).toLocaleString() : '-' },
       { label: 'Vendor', value: selected.vendor || '-' },
@@ -424,6 +681,7 @@ export function initLabCommonInventory({ state, persist, createId, safeText }) {
   }
 
   function importInventoryUpdates() {
+    ensureLabInventoryShape();
     const target = inboxEmail.value;
     if (!target) {
       return;
@@ -440,15 +698,29 @@ export function initLabCommonInventory({ state, persist, createId, safeText }) {
       if (!incoming || !incoming.id) {
         return;
       }
+      const normalizedIncoming = {
+        ...incoming,
+        location: String(incoming.location || '').trim()
+      };
+      if (normalizedIncoming.location) {
+        const nextCode = assignLocationCode(normalizedIncoming.location, normalizedIncoming.locationCode || '');
+        const parsed = parseLocationCode(nextCode);
+        normalizedIncoming.locationCode = nextCode;
+        normalizedIncoming.locationNumber = Number(parsed?.number || normalizedIncoming.locationNumber || 0);
+        state.labInventory.lastLocationNumber = Math.max(
+          Number(state.labInventory.lastLocationNumber) || 0,
+          Number(normalizedIncoming.locationNumber) || 0
+        );
+      }
       const index = state.labInventory.chemicals.findIndex((item) => item.id === incoming.id);
       if (index >= 0) {
-        state.labInventory.chemicals[index] = incoming;
+        state.labInventory.chemicals[index] = normalizedIncoming;
       } else {
-        state.labInventory.chemicals.push(incoming);
+        state.labInventory.chemicals.push(normalizedIncoming);
       }
 
       appendBlock('SYNC_IMPORT', {
-        chemicalId: incoming.id,
+        chemicalId: normalizedIncoming.id,
         from: message.from,
         to: message.to
       });
@@ -462,16 +734,23 @@ export function initLabCommonInventory({ state, persist, createId, safeText }) {
     });
 
     persist();
+    void syncChemicalSqliteBundle(true);
     renderAll();
   }
 
   function renderAll() {
+    ensureLabInventoryShape();
+    const migrated = ensureChemicalCodes();
+    if (migrated) {
+      persist();
+    }
     renderLocationOptions();
     renderChemicalList();
     renderChemicalDetail();
     renderBlockchain();
     renderInboxEmails();
     renderPendingCount();
+    void syncChemicalSqliteBundle(migrated);
   }
 
   return { renderAll, renderLocationOptions };

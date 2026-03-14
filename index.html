@@ -431,21 +431,6 @@
             <option value="">Select project</option>
           </select>
         </label>
-        <div class="stack-form">
-          <h4>Import Protocol JSON</h4>
-          <label>
-            JSON File
-            <input id="synthesis-protocol-json-import-file" type="file" accept=".json,.ena,application/json" />
-          </label>
-          <label>
-            Or Paste JSON
-            <textarea id="synthesis-protocol-json-import-input" rows="3" placeholder='Paste protocol JSON ({"protocols":[...]})'></textarea>
-          </label>
-          <div class="form-actions">
-            <button id="synthesis-import-protocol-json-btn" class="ghost-btn" type="button">Import Protocol JSON</button>
-          </div>
-          <p id="synthesis-import-protocol-json-status" class="small-note">Imported protocols will be available in notebook protocol lists.</p>
-        </div>
       </div>
       <div id="synthesis-notebook-protocol-area" class="panel" hidden>
         <h3 id="synthesis-notebook-protocol-title"></h3>
@@ -583,21 +568,6 @@
               <option value="">Select project</option>
             </select>
           </label>
-          <div class="stack-form">
-            <h4>Import Protocol JSON</h4>
-            <label>
-              JSON File
-              <input id="biology-protocol-json-import-file" type="file" accept=".json,.ena,application/json" />
-            </label>
-            <label>
-              Or Paste JSON
-              <textarea id="biology-protocol-json-import-input" rows="3" placeholder='Paste protocol JSON ({"protocols":[...]})'></textarea>
-            </label>
-            <div class="form-actions">
-              <button id="biology-import-protocol-json-btn" class="ghost-btn" type="button">Import Protocol JSON</button>
-            </div>
-            <p id="biology-import-protocol-json-status" class="small-note">Imported protocols will appear in the protocol selector below.</p>
-          </div>
           <label>
             Search Protocol
             <input id="biology-notebook-protocol-search" type="search" placeholder="Search protocols..." />

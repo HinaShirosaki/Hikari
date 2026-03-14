@@ -5,9 +5,9 @@ const {
   buildPythonRunRequest,
   buildPythonClarificationQuestion,
   validatePythonResult,
-  persistPythonArtifacts
-} = require('./agent-python-orchestration');
-const { sanitizePythonRunRequest } = require('./agent-python-codegen');
+  persistPythonArtifacts,
+  sanitizePythonRunRequest
+} = require('./agent-python');
 const {
   shouldRunWebFallback,
   buildWebQueries,

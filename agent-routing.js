@@ -2,7 +2,7 @@ const { selectToolsForRequest } = require('./agent-tools');
 const { resolveProtocolMatch } = require('./agent-protocol-matching');
 const { resolveProjectScope } = require('./agent-project-retrieval');
 const { resolvePaperRequest } = require('./agent-paper-analysis');
-const { classifyPythonTask, buildPythonRunRequest } = require('./agent-python-orchestration');
+const { classifyPythonTask, buildPythonRunRequest } = require('./agent-python');
 const {
   mapCanonicalIntentToExecutionIntent,
   normalizeParserEntitiesToRoutingEntities

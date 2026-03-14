@@ -15,56 +15,11 @@ function trimText(value, maxLength = 5000) {
   return `${text.slice(0, maxLength)}...`;
 }
 
-function getStepText(step) {
-  if (typeof step === 'string') {
-    return trimText(step, 200);
-  }
-  return trimText(step?.text || step?.instruction || step?.action || step?.description, 200);
-}
-
-function mapProtocolStep(step, index) {
-  if (typeof step === 'string') {
-    return {
-      id: `step_${index + 1}`,
-      text: getStepText(step),
-      placeholders: []
-    };
-  }
-  return {
-    id: String(step?.id || `step_${index + 1}`),
-    text: getStepText(step),
-    placeholders: asArray(step?.placeholders).map((placeholder, placeholderIndex) => ({
-      id: String(placeholder?.id || `placeholder_${placeholderIndex + 1}`),
-      name: trimText(placeholder?.name, 120)
-    })).filter((placeholder) => placeholder.name)
-  };
-}
-
 function getMethodStepText(step) {
   if (typeof step === 'string') {
     return trimText(step, 180);
   }
   return trimText(step?.action || step?.text || step?.instruction || step?.description, 180);
-}
-
-function mapProtocol(protocol) {
-  const protocolSteps = asArray(protocol?.steps);
-  const steps = protocolSteps
-    .slice(0, 30)
-    .map((step) => getStepText(step))
-    .filter(Boolean);
-  const stepEntries = protocolSteps
-    .slice(0, 30)
-    .map((step, index) => mapProtocolStep(step, index))
-    .filter((step) => step.text);
-
-  return {
-    id: String(protocol?.id || ''),
-    name: trimText(protocol?.name, 180),
-    category: trimText(protocol?.category, 80),
-    steps,
-    step_entries: stepEntries
-  };
 }
 
 function mapWorkflow(workflow, protocolsById = new Map(), projectNameById = new Map()) {
@@ -89,17 +44,6 @@ function mapWorkflow(workflow, protocolsById = new Map(), projectNameById = new 
     link_count: asArray(workflow?.links).length,
     steps_preview: stepsPreview,
     updated_at: String(workflow?.updatedAt || workflow?.createdAt || '')
-  };
-}
-
-function mapNotebookEntry(entry) {
-  return {
-    id: String(entry?.id || ''),
-    projectId: String(entry?.projectId || ''),
-    protocolId: String(entry?.protocolId || ''),
-    protocolName: trimText(entry?.protocolName, 180),
-    result: trimText(entry?.result || entry?.body, 900),
-    updatedAt: String(entry?.updatedAt || entry?.createdAt || '')
   };
 }
 
@@ -152,32 +96,6 @@ function mapPaper(paper) {
     ingestion_updated_at: trimText(paper?.ingestionUpdatedAt || paper?.ingestion_updated_at || paper?.updatedAt, 80),
     ingestion_errors: asArray(paper?.ingestionErrors || paper?.ingestion_errors).map((item) => trimText(item, 220)).filter(Boolean).slice(0, 5),
     updated_at: trimText(paper?.updatedAt || paper?.createdAt, 80)
-  };
-}
-
-function mapInventory(state) {
-  const personalInventory = Object.entries(state?.inventory || {}).map(([zone, items]) => ({
-    zone,
-    items: asArray(items).slice(0, 40).map((item) => ({
-      id: String(item?.id || ''),
-      name: trimText(item?.name || item?.itemName, 120),
-      quantity: trimText(item?.quantity || item?.amount, 60),
-      location: trimText(item?.location || item?.position, 80)
-    }))
-  }));
-
-  const chemicalInventory = asArray(state?.labInventory?.chemicals).slice(0, 80).map((item) => ({
-    id: String(item?.id || ''),
-    name: trimText(item?.name, 120),
-    cas: trimText(item?.cas, 80),
-    amount: trimText(item?.amount, 60),
-    location: trimText(item?.locationLabel || item?.location, 100),
-    supplier: trimText(item?.supplier, 120)
-  }));
-
-  return {
-    personal: personalInventory,
-    chemicals: chemicalInventory
   };
 }
 
@@ -456,13 +374,10 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
     const filteredNotebookEntries = asArray(state.notebookEntries)
       .filter((entry) => !projectIds.size || projectIds.has(entry.projectId))
       .slice(-120);
-    const notebookEntries = filteredNotebookEntries.map(mapNotebookEntry);
-
-    const protocolIds = new Set(notebookEntries.map((entry) => entry.protocolId).filter(Boolean));
-    const protocols = asArray(state.protocols)
-      .filter((protocol) => !projectIds.size || protocolIds.has(protocol.id))
-      .slice(0, 80)
-      .map(mapProtocol);
+    const protocolIds = new Set(filteredNotebookEntries.map((entry) => String(entry?.protocolId || '')).filter(Boolean));
+    const protocolCount = projectIds.size
+      ? asArray(state.protocols).filter((protocol) => protocolIds.has(String(protocol?.id || ''))).length
+      : asArray(state.protocols).length;
     const protocolNameById = new Map(asArray(state.protocols).map((protocol) => [String(protocol.id || ''), trimText(protocol.name, 180)]));
 
     const workflows = asArray(state.workflows)
@@ -479,17 +394,38 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
     const experimentData = mapExperimentDataToLlmJson(state, projectId);
     const assays = asArray(experimentData.assay_runs).slice(0, 80);
     const gelAnalyses = asArray(experimentData.gel_runs).slice(0, 80);
+    const personalSections = Object.entries(state?.inventory || {});
+    const personalItemCount = personalSections.reduce((count, [, items]) => count + asArray(items).length, 0);
+    const chemicalCount = asArray(state?.labInventory?.chemicals).length;
+    const dataFilePath = trimText(state?.settings?.enaFilePath, 1600);
 
     return {
       projects,
-      protocols,
       workflows,
-      notebookEntries,
+      protocols: [],
+      notebookEntries: [],
       assays,
       gelAnalyses,
       experimentData,
       papers,
-      inventory: mapInventory(state),
+      inventory: {
+        personal: [],
+        chemicals: []
+      },
+      snapshot_mode: 'thin',
+      context_counts: {
+        projects: projects.length,
+        protocols: protocolCount,
+        workflows: workflows.length,
+        notebookEntries: filteredNotebookEntries.length,
+        assays: assays.length,
+        gelAnalyses: gelAnalyses.length,
+        papers: papers.length,
+        inventory_chemicals: chemicalCount,
+        inventory_personal_sections: personalSections.length,
+        inventory_personal_items: personalItemCount
+      },
+      data_file_path: dataFilePath,
       settings: {
         storagePath: trimText(state.settings?.storagePath, 1200)
       },
@@ -633,15 +569,18 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
   function renderContextSummary() {
     const projectId = state.agentChat?.projectId || '';
     const snapshot = buildStateSnapshot(projectId);
+    const counts = snapshot.context_counts && typeof snapshot.context_counts === 'object'
+      ? snapshot.context_counts
+      : {};
     const summary = [
-      `${snapshot.projects.length} projects`,
-      `${snapshot.protocols.length} protocols`,
-      `${snapshot.workflows.length} workflows`,
-      `${snapshot.notebookEntries.length} notebook entries`,
-      `${snapshot.assays.length} assays`,
-      `${snapshot.gelAnalyses.length} gel analyses`,
-      `${snapshot.papers.length} papers`,
-      `${snapshot.inventory.chemicals.length} chemicals`
+      `${Number(counts.projects) || snapshot.projects.length} projects`,
+      `${Number(counts.protocols) || snapshot.protocols.length} protocols`,
+      `${Number(counts.workflows) || snapshot.workflows.length} workflows`,
+      `${Number(counts.notebookEntries) || snapshot.notebookEntries.length} notebook entries`,
+      `${Number(counts.assays) || snapshot.assays.length} assays`,
+      `${Number(counts.gelAnalyses) || snapshot.gelAnalyses.length} gel analyses`,
+      `${Number(counts.papers) || snapshot.papers.length} papers`,
+      `${Number(counts.inventory_chemicals) || snapshot.inventory.chemicals.length} chemicals`
     ].join(' | ');
     if (contextSummary) {
       contextSummary.value = summary;
@@ -701,6 +640,79 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
       const note = trimText(item?.summary, 220) || '';
       return note ? `${tool}: ${note}` : tool;
     });
+    const responseType = trimText(meta.response_type, 80);
+    const confidenceLabel = trimText(meta.confidence_label, 20);
+    const responseLayerRows = [
+      responseType ? `response_type: ${responseType}` : '',
+      confidenceLabel ? `confidence_label: ${confidenceLabel}` : ''
+    ].filter(Boolean);
+    const sourceSummary = meta.source_summary && typeof meta.source_summary === 'object'
+      ? meta.source_summary
+      : {};
+    const sourceSummaryRows = [];
+    const totalSources = Number(sourceSummary.total_sources);
+    if (Number.isFinite(totalSources)) {
+      sourceSummaryRows.push(`total_sources: ${totalSources}`);
+    }
+    asArray(sourceSummary.groups).forEach((group, groupIndex) => {
+      const sourceType = trimText(group?.source_type, 80) || `group_${groupIndex + 1}`;
+      const label = trimText(group?.label, 80) || sourceType;
+      const count = Number(group?.count);
+      const itemRows = asArray(group?.items).slice(0, 4).map((item) => {
+        const pointer = trimText(item?.pointer, 160) || trimText(item?.source, 160) || '-';
+        const reason = trimText(item?.reason, 120);
+        return reason ? `${pointer} (${reason})` : pointer;
+      });
+      const preview = itemRows.join('; ');
+      sourceSummaryRows.push(`${label} [${sourceType}] count=${Number.isFinite(count) ? count : asArray(group?.items).length}${preview ? `: ${preview}` : ''}`);
+    });
+    const unresolvedFieldRows = asArray(meta.unresolved_fields).map((item) => {
+      const name = trimText(item?.display, 120) || trimText(item?.placeholder_key, 120) || trimText(item?.placeholder_id, 120) || 'placeholder';
+      const reason = trimText(item?.reason, 160) || 'missing_supported_value';
+      return `${name}: ${reason}`;
+    }).filter(Boolean);
+    if (!unresolvedFieldRows.length) {
+      unresolvedFieldRows.push('none');
+    }
+    const validation = meta.validation && typeof meta.validation === 'object'
+      ? meta.validation
+      : {};
+    const validationRows = [
+      `passed: ${validation.passed === true}`,
+      `forced_clarification: ${validation.forced_clarification === true}`
+    ];
+    asArray(validation.failure_reasons).forEach((reason, index) => {
+      const clean = trimText(reason, 120);
+      if (clean) {
+        validationRows.push(`failure_reason_${index + 1}: ${clean}`);
+      }
+    });
+    asArray(validation.violations).slice(0, 8).forEach((violation, index) => {
+      const code = trimText(violation?.code, 80) || `violation_${index + 1}`;
+      const severity = trimText(violation?.severity, 30) || 'blocking';
+      const message = trimText(violation?.message, 180) || '';
+      const detail = trimText(violation?.detail, 120);
+      validationRows.push(`${index + 1}. ${code} [${severity}]${message ? ` ${message}` : ''}${detail ? ` (${detail})` : ''}`);
+    });
+    const provenance = meta.provenance && typeof meta.provenance === 'object'
+      ? meta.provenance
+      : {};
+    const provenanceRows = [];
+    const unsupportedCount = Number(provenance.unsupported_statement_count);
+    if (Number.isFinite(unsupportedCount)) {
+      provenanceRows.push(`unsupported_statement_count: ${unsupportedCount}`);
+    }
+    asArray(provenance.source_evidence).slice(0, 10).forEach((row, index) => {
+      const statement = trimText(row?.statement, 220) || `statement_${index + 1}`;
+      const supportLevel = trimText(row?.support_level, 20) || 'none';
+      const supports = asArray(row?.supports).slice(0, 3).map((support) => (
+        trimText(support?.pointer, 120) || trimText(support?.source, 120) || '-'
+      )).filter(Boolean);
+      provenanceRows.push(`${index + 1}. [${supportLevel}] ${statement}${supports.length ? ` -> ${supports.join('; ')}` : ''}`);
+    });
+    if (!provenanceRows.length) {
+      provenanceRows.push('No provenance rows.');
+    }
     const notebookDraft = normalizeNotebookDraft(meta.notebookDraft);
     const notebookDraftRows = notebookDraft ? [
       `protocol: ${trimText(notebookDraft.protocol?.name, 220) || '-'}`,
@@ -1029,6 +1041,7 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
 
     const confidence = Number(meta.confidence);
     const confidenceText = Number.isFinite(confidence) ? `Confidence: ${confidence.toFixed(2)}` : 'Confidence: n/a';
+    const confidenceLabelText = confidenceLabel ? `Confidence label: ${confidenceLabel}` : '';
     const approvalText = meta.requiresApproval ? 'Requires approval: yes' : 'Requires approval: no';
     const activityRows = collectActivityRows(meta);
 
@@ -1047,7 +1060,7 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
             </ul>
           </section>
         ` : ''}
-        <p class="small-note">${safeText(confidenceText)} | ${safeText(approvalText)}</p>
+        <p class="small-note">${safeText([confidenceText, confidenceLabelText, approvalText].filter(Boolean).join(' | '))}</p>
         ${renderMetaList('Routing', routingRows)}
         ${renderMetaList('Routing Parser', routingParserRows)}
         ${renderMetaList('Routing Parser Entities', routingParserEntityRows)}
@@ -1067,6 +1080,11 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
         ${renderMetaList('Routing Tools', routingToolRows)}
         ${renderMetaList('Routing Tool Selector', routingSelectorRows)}
         ${renderMetaList('Routing Classifier', routingClassifierRows)}
+        ${renderMetaList('Response Layer', responseLayerRows)}
+        ${renderMetaList('Source Summary', sourceSummaryRows)}
+        ${renderMetaList('Unresolved Fields', unresolvedFieldRows)}
+        ${renderMetaList('Validation', validationRows)}
+        ${renderMetaList('Provenance', provenanceRows)}
         ${renderMetaList('Notebook Draft', notebookDraftRows)}
         ${renderMetaList('Notebook Draft Filled Placeholders', notebookDraftFilledRows)}
         ${renderMetaList('Notebook Draft Unresolved Placeholders', notebookDraftUnresolvedRows)}
@@ -1156,12 +1174,27 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
     setStatus('Agent reasoning in progress...');
 
     try {
+      let syncResult = null;
+      if (window.enanaApi?.autoSaveDataFile) {
+        syncResult = await window.enanaApi.autoSaveDataFile(state, state.settings?.enaFilePath || '');
+        if (!syncResult?.ok) {
+          throw new Error(syncResult?.error || 'Failed to sync data before agent request.');
+        }
+        if (syncResult?.filePath && state.settings?.enaFilePath !== syncResult.filePath) {
+          state.settings.enaFilePath = syncResult.filePath;
+        }
+      }
+      const stateSnapshot = buildStateSnapshot(projectId);
+      if (!stateSnapshot.data_file_path) {
+        stateSnapshot.data_file_path = trimText(syncResult?.filePath || state.settings?.enaFilePath, 1600);
+      }
+
       const result = await window.enanaApi.agentChat({
         message: messageText,
         projectId,
         projectName,
         conversation: toConversation(state.agentChat.messages),
-        stateSnapshot: buildStateSnapshot(projectId),
+        stateSnapshot,
         llm: {
           provider: String(state.settings?.llm?.provider || '').trim(),
           model: String(state.settings?.llm?.model || '').trim(),
@@ -1182,6 +1215,18 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
         createdAt: new Date().toISOString(),
         meta: {
           confidence: result.confidence,
+          confidence_label: trimText(result.confidence_label, 20),
+          response_type: trimText(result.response_type, 80),
+          source_summary: result.source_summary && typeof result.source_summary === 'object'
+            ? result.source_summary
+            : null,
+          unresolved_fields: asArray(result.unresolved_fields),
+          validation: result.validation && typeof result.validation === 'object'
+            ? result.validation
+            : null,
+          provenance: result.provenance && typeof result.provenance === 'object'
+            ? result.provenance
+            : null,
           requiresApproval: result.requiresApproval === true,
           citations: asArray(result.citations),
           decisionRecord: result.decisionRecord || {},
@@ -1206,6 +1251,12 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
         createdAt: new Date().toISOString(),
         meta: {
           confidence: 0,
+          confidence_label: 'low',
+          response_type: 'factual_answer',
+          source_summary: null,
+          unresolved_fields: [],
+          validation: null,
+          provenance: null,
           requiresApproval: false,
           citations: [],
           decisionRecord: {},

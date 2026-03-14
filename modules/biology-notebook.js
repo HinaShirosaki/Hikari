@@ -6,8 +6,7 @@ export function initLabNotebook({
   createId,
   safeText,
   onNotebookEntriesChanged,
-  notebookType = 'biology',
-  importProtocolsFromJson = null
+  notebookType = 'biology'
 }) {
   const PLACEHOLDER_TOKEN_REGEX = /\{\{ph:([^}]+)\}\}/g;
   const notebookProjectSelect = document.getElementById('biology-notebook-project-select');
@@ -21,10 +20,6 @@ export function initLabNotebook({
   const saveNotebookBtn = document.getElementById('save-biology-notebook-btn');
   const cancelEditBtn = document.getElementById('cancel-biology-notebook-edit-btn');
   const notebookEntryList = document.getElementById('biology-notebook-entry-list');
-  const protocolJsonImportFileInput = document.getElementById('biology-protocol-json-import-file');
-  const protocolJsonImportInput = document.getElementById('biology-protocol-json-import-input');
-  const importProtocolJsonBtn = document.getElementById('biology-import-protocol-json-btn');
-  const protocolJsonImportStatus = document.getElementById('biology-import-protocol-json-status');
   let editingEntryId = null;
 
   notebookProjectSelect.addEventListener('change', onProjectChange);
@@ -33,86 +28,10 @@ export function initLabNotebook({
   saveNotebookBtn.addEventListener('click', saveEntry);
   cancelEditBtn?.addEventListener('click', cancelEdit);
   notebookEntryList?.addEventListener('click', onEntryListClick);
-  importProtocolJsonBtn?.addEventListener('click', onImportProtocolJson);
   notebookSteps.addEventListener('click', onInlinePlaceholderClick);
   notebookSteps.addEventListener('blur', onInlinePlaceholderBlur, true);
   notebookSteps.addEventListener('keydown', onInlinePlaceholderKeydown);
   updateSaveButtonLabel();
-  if (protocolJsonImportStatus && !String(protocolJsonImportStatus.textContent || '').trim()) {
-    protocolJsonImportStatus.textContent = 'Imported protocols will appear in the protocol selector below.';
-  }
-
-  async function readTextFile(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result || ''));
-      reader.onerror = () => reject(new Error('Failed to read selected JSON file.'));
-      reader.readAsText(file);
-    });
-  }
-
-  async function readProtocolJsonImportInput() {
-    const directText = String(protocolJsonImportInput?.value || '').trim();
-    if (directText) {
-      return directText;
-    }
-    const file = protocolJsonImportFileInput?.files?.[0];
-    if (!file) {
-      return '';
-    }
-    return readTextFile(file);
-  }
-
-  function setProtocolJsonImportStatus(message) {
-    if (!protocolJsonImportStatus) {
-      return;
-    }
-    protocolJsonImportStatus.textContent = String(message || '').trim()
-      || 'Imported protocols will appear in the protocol selector below.';
-  }
-
-  async function onImportProtocolJson() {
-    if (typeof importProtocolsFromJson !== 'function') {
-      setProtocolJsonImportStatus('Protocol JSON import is unavailable.');
-      return;
-    }
-
-    let rawInput = '';
-    try {
-      rawInput = await readProtocolJsonImportInput();
-    } catch (error) {
-      setProtocolJsonImportStatus(String(error?.message || error || 'Failed to read JSON input.'));
-      return;
-    }
-
-    if (!String(rawInput || '').trim()) {
-      setProtocolJsonImportStatus('Paste protocol JSON or choose a JSON file first.');
-      return;
-    }
-
-    const result = importProtocolsFromJson(rawInput, {
-      copySuffixLabel: 'Notebook Import',
-      renderList: false
-    });
-    if (!result?.ok) {
-      setProtocolJsonImportStatus(String(result?.error || 'Failed to import protocol JSON.'));
-      return;
-    }
-
-    if (protocolJsonImportInput) {
-      protocolJsonImportInput.value = '';
-    }
-    if (protocolJsonImportFileInput) {
-      protocolJsonImportFileInput.value = '';
-    }
-    renderProtocolOptions();
-
-    if (result.importedProtocols?.length === 1) {
-      setProtocolJsonImportStatus(`Imported "${result.importedProtocols[0].name}".`);
-      return;
-    }
-    setProtocolJsonImportStatus(`Imported ${result.importedProtocols?.length || 0} protocols.`);
-  }
 
   function onProjectChange() {
     editingEntryId = null;

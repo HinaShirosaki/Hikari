@@ -196,7 +196,7 @@ export function initCollaborationManagement({
     const updatedAt = Number.isFinite(parsedUpdatedAt) ? new Date(parsedUpdatedAt).toISOString() : createdAt;
 
     const materials = normalizeMaterials(raw.materials);
-    const steps = normalizeSteps(raw.steps);
+    const steps = normalizeSteps(raw.steps || raw.procedure);
 
     return {
       id: String(raw.id || createId()),
@@ -317,24 +317,50 @@ export function initCollaborationManagement({
       return [];
     }
 
-    try {
-      const parsed = JSON.parse(value);
-      if (Array.isArray(parsed)) {
-        return sanitizeIncomingProtocols(parsed);
+    const candidates = [value];
+    const fenceMatch = value.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    if (fenceMatch?.[1]) {
+      candidates.push(String(fenceMatch[1]).trim());
+    }
+
+    const firstBrace = value.indexOf('{');
+    const lastBrace = value.lastIndexOf('}');
+    if (firstBrace >= 0 && lastBrace > firstBrace) {
+      candidates.push(value.slice(firstBrace, lastBrace + 1));
+    }
+
+    const firstBracket = value.indexOf('[');
+    const lastBracket = value.lastIndexOf(']');
+    if (firstBracket >= 0 && lastBracket > firstBracket) {
+      candidates.push(value.slice(firstBracket, lastBracket + 1));
+    }
+
+    let parsed = null;
+    for (const candidate of candidates) {
+      try {
+        const next = JSON.parse(candidate);
+        if (Array.isArray(next) || (next && typeof next === 'object')) {
+          parsed = next;
+          break;
+        }
+      } catch {
+        // Try next candidate.
       }
-      if (!parsed || typeof parsed !== 'object') {
-        return [];
-      }
-      if (Array.isArray(parsed.protocols)) {
-        return sanitizeIncomingProtocols(parsed.protocols);
-      }
-      if (parsed.protocol && typeof parsed.protocol === 'object') {
-        return sanitizeIncomingProtocols(parsed.protocol);
-      }
-      return sanitizeIncomingProtocols(parsed);
-    } catch {
+    }
+
+    if (!parsed) {
       return [];
     }
+    if (Array.isArray(parsed)) {
+      return sanitizeIncomingProtocols(parsed);
+    }
+    if (Array.isArray(parsed.protocols)) {
+      return sanitizeIncomingProtocols(parsed.protocols);
+    }
+    if (parsed.protocol && typeof parsed.protocol === 'object') {
+      return sanitizeIncomingProtocols(parsed.protocol);
+    }
+    return sanitizeIncomingProtocols(parsed);
   }
 
   function importSharedProtocol(messageId) {

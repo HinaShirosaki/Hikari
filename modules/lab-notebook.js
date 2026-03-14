@@ -6,8 +6,7 @@ export function initLabNotebook({
   createId,
   safeText,
   onNotebookEntriesChanged,
-  notebookType = 'synthesis',
-  importProtocolsFromJson = null
+  notebookType = 'synthesis'
 }) {
   const PLACEHOLDER_TOKEN_REGEX = /\{\{ph:([^}]+)\}\}/g;
   const SYNTHESIS_ENTRY_PROTOCOL_KEY = '__synthesis__';
@@ -30,10 +29,6 @@ export function initLabNotebook({
   const saveNotebookBtn = document.getElementById('save-synthesis-notebook-btn');
   const cancelEditBtn = document.getElementById('cancel-synthesis-notebook-edit-btn');
   const notebookEntryList = document.getElementById('synthesis-notebook-entry-list');
-  const protocolJsonImportFileInput = document.getElementById('synthesis-protocol-json-import-file');
-  const protocolJsonImportInput = document.getElementById('synthesis-protocol-json-import-input');
-  const importProtocolJsonBtn = document.getElementById('synthesis-import-protocol-json-btn');
-  const protocolJsonImportStatus = document.getElementById('synthesis-import-protocol-json-status');
 
   const notebookKetcherFrame = document.getElementById('synthesis-notebook-ketcher-frame');
   const chemistryEnabledToggle = document.getElementById('synthesis-chem-enabled');
@@ -70,81 +65,7 @@ export function initLabNotebook({
   chemistryResetBtn?.addEventListener('click', onChemistryReset);
   chemistryMwTableBody?.addEventListener('input', onChemistryMwInputChange);
   chemistryProcedureInput?.addEventListener('input', persistChemistryDraft);
-  importProtocolJsonBtn?.addEventListener('click', onImportProtocolJson);
   updateSaveButtonLabel();
-  if (protocolJsonImportStatus && !String(protocolJsonImportStatus.textContent || '').trim()) {
-    protocolJsonImportStatus.textContent = 'Imported protocols will be available in notebook protocol lists.';
-  }
-
-  async function readTextFile(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result || ''));
-      reader.onerror = () => reject(new Error('Failed to read selected JSON file.'));
-      reader.readAsText(file);
-    });
-  }
-
-  async function readProtocolJsonImportInput() {
-    const directText = String(protocolJsonImportInput?.value || '').trim();
-    if (directText) {
-      return directText;
-    }
-    const file = protocolJsonImportFileInput?.files?.[0];
-    if (!file) {
-      return '';
-    }
-    return readTextFile(file);
-  }
-
-  function setProtocolJsonImportStatus(message) {
-    if (!protocolJsonImportStatus) {
-      return;
-    }
-    protocolJsonImportStatus.textContent = String(message || '').trim()
-      || 'Imported protocols will be available in notebook protocol lists.';
-  }
-
-  async function onImportProtocolJson() {
-    if (typeof importProtocolsFromJson !== 'function') {
-      setProtocolJsonImportStatus('Protocol JSON import is unavailable.');
-      return;
-    }
-
-    let rawInput = '';
-    try {
-      rawInput = await readProtocolJsonImportInput();
-    } catch (error) {
-      setProtocolJsonImportStatus(String(error?.message || error || 'Failed to read JSON input.'));
-      return;
-    }
-
-    if (!String(rawInput || '').trim()) {
-      setProtocolJsonImportStatus('Paste protocol JSON or choose a JSON file first.');
-      return;
-    }
-
-    const result = importProtocolsFromJson(rawInput, {
-      copySuffixLabel: 'Notebook Import',
-      renderList: false
-    });
-    if (!result?.ok) {
-      setProtocolJsonImportStatus(String(result?.error || 'Failed to import protocol JSON.'));
-      return;
-    }
-
-    if (protocolJsonImportInput) {
-      protocolJsonImportInput.value = '';
-    }
-    if (protocolJsonImportFileInput) {
-      protocolJsonImportFileInput.value = '';
-    }
-    if (result.importedProtocols?.length === 1) {
-      setProtocolJsonImportStatus(`Imported "${result.importedProtocols[0].name}".`);
-      return;
-    }
-    setProtocolJsonImportStatus(`Imported ${result.importedProtocols?.length || 0} protocols.`);
-  }
 
   function onProjectChange() {
     editingEntryId = null;

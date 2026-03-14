@@ -1,0 +1,442 @@
+{
+  "members": [],
+  "instruments": [],
+  "protocols": [],
+  "projects": [
+    {
+      "id": "1773446973979-1dead4da556a2",
+      "name": "PD-1 Nanobody Binder Discovery",
+      "description": "Construct and screen a synthetic VHH phage-display library to identify nanobody binders against human PD-1 extracellular domain. Includes biopanning, phage ELISA, clone picking, sequencing, and preliminary affinity ranking."
+    },
+    {
+      "id": "1773446992429-e6a278f5f6ba58",
+      "name": "PD-L1 Blocking Clone Validation",
+      "description": "Validate previously identified anti–PD-L1 nanobody clones for blocking activity using cell-based binding assays and competition experiments. Compare expression yield, purity, and functional inhibition across top candidates."
+    },
+    {
+      "id": "1773447052004-86c80b7c5d781",
+      "name": "CD19 CAR Binder Optimization",
+      "description": "Optimize CD19-binding antibody fragments for improved expression, thermal stability, and binding signal. Includes mutagenesis design, small-scale expression, purification, and BLI-based screening."
+    },
+    {
+      "id": "1773447065150-7d5d223c707f8",
+      "name": "SUMO Protease Activity Probe Development",
+      "description": "Design and test covalent or activity-based probes for SUMO protease labeling. Work includes probe synthesis planning, protein expression, labeling assays, SDS-PAGE analysis, and LC-MS confirmation."
+    },
+    {
+      "id": "1773447076333-5be5812660656",
+      "name": "ncAA Incorporation in sfGFP Reporter",
+      "description": "Evaluate noncanonical amino acid incorporation efficiency in an sfGFP amber suppression reporter system using engineered tRNA/synthetase pairs. Measure fluorescence rescue, background readthrough, and expression conditions."
+    }
+  ],
+  "workflows": [],
+  "workflowTemplates": [],
+  "journalClubs": [],
+  "papers": [],
+  "paperExperimentLinks": [],
+  "knowledgeChats": {},
+  "agentChat": {
+    "projectId": "",
+    "messages": []
+  },
+  "messages": [],
+  "growthMetrics": {
+    "counters": {
+      "protocol_share_sent": 0,
+      "protocol_share_imported": 0,
+      "protocol_share_link_copied": 0,
+      "protocol_share_link_imported": 0
+    },
+    "events": []
+  },
+  "notebookEntries": [],
+  "synthesisChemistryDrafts": {},
+  "assays": [],
+  "gelAnalyses": [],
+  "samples": [],
+  "objectGraph": {
+    "nodes": {
+      "project:1773446973979-1dead4da556a2": {
+        "uid": "project:1773446973979-1dead4da556a2",
+        "type": "project",
+        "id": "1773446973979-1dead4da556a2",
+        "label": "PD-1 Nanobody Binder Discovery",
+        "data": {
+          "id": "1773446973979-1dead4da556a2",
+          "name": "PD-1 Nanobody Binder Discovery",
+          "description": "Construct and screen a synthetic VHH phage-display library to identify nanobody binders against human PD-1 extracellular domain. Includes biopanning, phage ELISA, clone picking, sequencing, and preliminary affinity ranking."
+        }
+      },
+      "project:1773446992429-e6a278f5f6ba58": {
+        "uid": "project:1773446992429-e6a278f5f6ba58",
+        "type": "project",
+        "id": "1773446992429-e6a278f5f6ba58",
+        "label": "PD-L1 Blocking Clone Validation",
+        "data": {
+          "id": "1773446992429-e6a278f5f6ba58",
+          "name": "PD-L1 Blocking Clone Validation",
+          "description": "Validate previously identified anti–PD-L1 nanobody clones for blocking activity using cell-based binding assays and competition experiments. Compare expression yield, purity, and functional inhibition across top candidates."
+        }
+      },
+      "project:1773447052004-86c80b7c5d781": {
+        "uid": "project:1773447052004-86c80b7c5d781",
+        "type": "project",
+        "id": "1773447052004-86c80b7c5d781",
+        "label": "CD19 CAR Binder Optimization",
+        "data": {
+          "id": "1773447052004-86c80b7c5d781",
+          "name": "CD19 CAR Binder Optimization",
+          "description": "Optimize CD19-binding antibody fragments for improved expression, thermal stability, and binding signal. Includes mutagenesis design, small-scale expression, purification, and BLI-based screening."
+        }
+      },
+      "project:1773447065150-7d5d223c707f8": {
+        "uid": "project:1773447065150-7d5d223c707f8",
+        "type": "project",
+        "id": "1773447065150-7d5d223c707f8",
+        "label": "SUMO Protease Activity Probe Development",
+        "data": {
+          "id": "1773447065150-7d5d223c707f8",
+          "name": "SUMO Protease Activity Probe Development",
+          "description": "Design and test covalent or activity-based probes for SUMO protease labeling. Work includes probe synthesis planning, protein expression, labeling assays, SDS-PAGE analysis, and LC-MS confirmation."
+        }
+      },
+      "project:1773447076333-5be5812660656": {
+        "uid": "project:1773447076333-5be5812660656",
+        "type": "project",
+        "id": "1773447076333-5be5812660656",
+        "label": "ncAA Incorporation in sfGFP Reporter",
+        "data": {
+          "id": "1773447076333-5be5812660656",
+          "name": "ncAA Incorporation in sfGFP Reporter",
+          "description": "Evaluate noncanonical amino acid incorporation efficiency in an sfGFP amber suppression reporter system using engineered tRNA/synthetase pairs. Measure fluorescence rescue, background readthrough, and expression conditions."
+        }
+      },
+      "chemical:1773447836484-1ebf227e69da9": {
+        "uid": "chemical:1773447836484-1ebf227e69da9",
+        "type": "chemical",
+        "id": "1773447836484-1ebf227e69da9",
+        "label": "Sodium Chloride",
+        "data": {
+          "id": "1773447836484-1ebf227e69da9",
+          "name": "Sodium Chloride",
+          "casNumber": "7647-14-5",
+          "location": "Shelf A1",
+          "locationNumber": 2,
+          "vendor": "",
+          "catalogNumber": "",
+          "unitSize": "",
+          "price": "",
+          "amountInStock": "",
+          "url": "",
+          "expirationDate": "",
+          "updatedAt": "2026-03-14T00:23:56.484Z"
+        }
+      },
+      "chemical:1773447852041-591a6d4e722738": {
+        "uid": "chemical:1773447852041-591a6d4e722738",
+        "type": "chemical",
+        "id": "1773447852041-591a6d4e722738",
+        "label": "Ethanol",
+        "data": {
+          "id": "1773447852041-591a6d4e722738",
+          "name": "Ethanol",
+          "casNumber": "64-17-5",
+          "location": "Flammables Cabinet B2",
+          "locationNumber": 3,
+          "vendor": "",
+          "catalogNumber": "",
+          "unitSize": "",
+          "price": "",
+          "amountInStock": "",
+          "url": "",
+          "expirationDate": "",
+          "updatedAt": "2026-03-14T00:24:12.041Z"
+        }
+      },
+      "chemical:1773447874677-dfc59d46b472a": {
+        "uid": "chemical:1773447874677-dfc59d46b472a",
+        "type": "chemical",
+        "id": "1773447874677-dfc59d46b472a",
+        "label": "Acetic Acid",
+        "data": {
+          "id": "1773447874677-dfc59d46b472a",
+          "name": "Acetic Acid",
+          "casNumber": "64-19-7",
+          "location": "Acid Cabinet C1",
+          "locationNumber": 4,
+          "vendor": "",
+          "catalogNumber": "",
+          "unitSize": "",
+          "price": "",
+          "amountInStock": "",
+          "url": "",
+          "expirationDate": "",
+          "updatedAt": "2026-03-14T00:24:34.677Z"
+        }
+      }
+    },
+    "edges": [],
+    "backlinks": {},
+    "updatedAt": "2026-03-14T00:24:34.677Z"
+  },
+  "labInventory": {
+    "chemicals": [],
+    "blocks": [
+      {
+        "index": 1,
+        "timestamp": "2026-03-11T02:43:02.647Z",
+        "action": "UPSERT_CHEMICAL",
+        "prevHash": "GENESIS",
+        "payload": {
+          "chemicalId": "1773196982647-34b6863fed3618",
+          "name": "deaec",
+          "casNumber": "45-67-89",
+          "location": "Main Storage-1"
+        },
+        "hash": "h30c7852b"
+      },
+      {
+        "index": 2,
+        "timestamp": "2026-03-14T00:22:03.556Z",
+        "action": "DELETE_CHEMICAL",
+        "prevHash": "h30c7852b",
+        "payload": {
+          "chemicalId": "1773196982647-34b6863fed3618"
+        },
+        "hash": "h5ef590f1"
+      },
+      {
+        "index": 3,
+        "timestamp": "2026-03-14T00:23:56.484Z",
+        "action": "UPSERT_CHEMICAL",
+        "prevHash": "h5ef590f1",
+        "payload": {
+          "chemicalId": "1773447836484-1ebf227e69da9",
+          "name": "Sodium Chloride",
+          "casNumber": "7647-14-5",
+          "location": "Shelf A1-2"
+        },
+        "hash": "hbc15dc2"
+      },
+      {
+        "index": 4,
+        "timestamp": "2026-03-14T00:24:12.041Z",
+        "action": "UPSERT_CHEMICAL",
+        "prevHash": "hbc15dc2",
+        "payload": {
+          "chemicalId": "1773447852041-591a6d4e722738",
+          "name": "Ethanol",
+          "casNumber": "64-17-5",
+          "location": "Flammables Cabinet B2-3"
+        },
+        "hash": "h3430da0c"
+      },
+      {
+        "index": 5,
+        "timestamp": "2026-03-14T00:24:34.677Z",
+        "action": "UPSERT_CHEMICAL",
+        "prevHash": "h3430da0c",
+        "payload": {
+          "chemicalId": "1773447874677-dfc59d46b472a",
+          "name": "Acetic Acid",
+          "casNumber": "64-19-7",
+          "location": "Acid Cabinet C1-4"
+        },
+        "hash": "h5e60e4c9"
+      }
+    ],
+    "lastLocationNumber": 4
+  },
+  "settings": {
+    "personalInfo": {
+      "name": "",
+      "position": "",
+      "institutionEmail": "",
+      "enanaEmail": ""
+    },
+    "appearance": {
+      "fontSize": 16,
+      "themeColor": "#2688ff",
+      "mode": "day",
+      "uiStyle": "classic"
+    },
+    "storagePath": "/Users/shiyifan/Projects/Enana/Testdata",
+    "llm": {
+      "provider": "openai",
+      "model": "",
+      "api": "",
+      "apiEndpoint": "https://api.openai.com/v1/responses",
+      "apiKey": ""
+    },
+    "enaFilePath": "/Users/shiyifan/Projects/Enana/Testdata/enana-sample.notebook-pages.json",
+    "autoSaveEna": true,
+    "inventoryLocations": [
+      "Shelf A1",
+      "Flammables Cabinet B2",
+      "Acid Cabinet C1",
+      "Shelf A3",
+      "Shelf A4",
+      "Base Cabinet D1",
+      "Acid Cabinet C2",
+      "Solvent Cabinet B3",
+      "Flammables Cabinet B1",
+      "Shelf A5"
+    ],
+    "dashboard": {
+      "currentWorkflowId": "",
+      "workflowProgress": {}
+    },
+    "startup": {
+      "defaultViewId": "home-view",
+      "rememberLastView": false,
+      "autoLoadDataFileOnLaunch": true
+    }
+  },
+  "inventory": {},
+  "schema_name": "enana_notebook_pages",
+  "schema_version": "1.0.0",
+  "updated_at": "2026-03-10T08:30:00.000Z",
+  "notebookPages": [
+    {
+      "id": "nb-001",
+      "notebookType": "biology",
+      "projectId": "proj-002",
+      "projectName": "mRNA Delivery Optimization",
+      "protocolId": "prt-001",
+      "protocolName": "HEK293T Transient Transfection (6-well)",
+      "values": {
+        "prt-001-step-001:prt-001-step-001-ph-001": "3.0e5",
+        "prt-001-step-001:prt-001-step-001-ph-002": "6-well",
+        "prt-001-step-002:prt-001-step-002-ph-001": "2.0 ug",
+        "prt-001-step-002:prt-001-step-002-ph-002": "3.0 uL",
+        "prt-001-step-003:prt-001-step-003-ph-001": "24"
+      },
+      "result": "Batch TX-0308 reached 78% mCherry positive cells by confocal estimation.",
+      "resultFiles": [],
+      "resultFileRecords": [],
+      "storageFolder": "",
+      "createdAt": "2026-03-08T20:12:00.000Z",
+      "updatedAt": "2026-03-08T22:41:00.000Z",
+      "resultFileAddresses": []
+    },
+    {
+      "id": "nb-002",
+      "notebookType": "biology",
+      "projectId": "proj-002",
+      "projectName": "mRNA Delivery Optimization",
+      "protocolId": "prt-003",
+      "protocolName": "RT-qPCR Relative Expression (SYBR Green)",
+      "values": {
+        "prt-003-step-001:prt-003-step-001-ph-001": "500",
+        "prt-003-step-002:prt-003-step-002-ph-001": "250",
+        "prt-003-step-003:prt-003-step-003-ph-001": "3",
+        "prt-003-step-004:prt-003-step-004-ph-001": "GAPDH"
+      },
+      "result": "EGFR transcript fold-change: LNP-A 1.0x, LNP-B 2.6x, LNP-C 3.1x.",
+      "resultFiles": [],
+      "resultFileRecords": [],
+      "storageFolder": "",
+      "createdAt": "2026-03-09T21:02:00.000Z",
+      "updatedAt": "2026-03-09T22:55:00.000Z",
+      "resultFileAddresses": []
+    },
+    {
+      "id": "nb-003",
+      "notebookType": "biology",
+      "projectId": "proj-001",
+      "projectName": "EGFR Degrader Campaign",
+      "protocolId": "prt-002",
+      "protocolName": "His-tag Protein Purification (Ni-NTA)",
+      "values": {
+        "prt-002-step-001:prt-002-step-001-ph-001": "3",
+        "prt-002-step-002:prt-002-step-002-ph-001": "45",
+        "prt-002-step-002:prt-002-step-002-ph-002": "30",
+        "prt-002-step-003:prt-002-step-003-ph-001": "8",
+        "prt-002-step-004:prt-002-step-004-ph-001": "6"
+      },
+      "result": "Fractions F3-F5 showed strongest A280 and clean 56 kDa band on SDS-PAGE.",
+      "resultFiles": [],
+      "resultFileRecords": [],
+      "storageFolder": "",
+      "createdAt": "2026-03-06T18:20:00.000Z",
+      "updatedAt": "2026-03-06T20:05:00.000Z",
+      "resultFileAddresses": []
+    },
+    {
+      "id": "nb-004",
+      "notebookType": "synthesis",
+      "projectId": "proj-001",
+      "projectName": "EGFR Degrader Campaign",
+      "protocolId": "__synthesis__",
+      "protocolName": "Synthesis Notebook",
+      "values": {},
+      "result": "Final product EGFRd-PROTAC-001 isolated at 43% yield and 96% LCMS purity.",
+      "resultFiles": [],
+      "resultFileRecords": [],
+      "references": {
+        "instrumentId": "inst-002",
+        "peopleIds": [
+          "mem-002",
+          "mem-003"
+        ],
+        "chemicalIds": [
+          "chem-002",
+          "chem-003"
+        ],
+        "sampleIds": [
+          "sample-002"
+        ],
+        "paperIds": [],
+        "reagentLots": [
+          "LOT-IMD-2408",
+          "LOT-TRIS-2502"
+        ]
+      },
+      "synthesisOutcome": {
+        "producedCompoundCode": "PL-EGFRD-PROTAC1",
+        "purityPercent": "96",
+        "usedInAssay": "Cell viability panel VIT-17"
+      },
+      "chemical": null,
+      "synthesisChemistry": {
+        "enabled": true,
+        "phase": "product",
+        "finished": true,
+        "substrates": [
+          {
+            "index": 1,
+            "label": "Substrate 1",
+            "smiles": "CC(=O)Nc1ccc(Cl)cc1",
+            "mw": "169.61",
+            "pngDataUrl": "",
+            "source": "drawn"
+          },
+          {
+            "index": 2,
+            "label": "Substrate 2",
+            "smiles": "NCCO",
+            "mw": "61.08",
+            "pngDataUrl": "",
+            "source": "drawn"
+          }
+        ],
+        "product": {
+          "label": "Product",
+          "smiles": "CC(=O)Nc1ccc(OCCN)cc1",
+          "pngDataUrl": "",
+          "source": "drawn"
+        }
+      },
+      "synthesisProcedure": "Reaction stirred at room temperature for 3 hours, then purified by prep-HPLC.",
+      "storageFolder": "",
+      "createdAt": "2026-03-06T19:40:00.000Z",
+      "updatedAt": "2026-03-06T21:55:00.000Z",
+      "resultFileAddresses": []
+    }
+  ],
+  "assaySequence": 1,
+  "data_bundle": {
+    "mode": "sqlite_indexed",
+    "updated_at": "2026-03-14T00:24:34.678Z"
+  }
+}

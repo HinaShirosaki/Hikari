@@ -151,7 +151,9 @@ export const defaultState = {
   labInventory: {
     chemicals: [],
     blocks: [],
-    lastLocationNumber: 0
+    lastLocationNumber: 0,
+    locationCodeMap: {},
+    locationCodeNextByLocation: {}
   },
   settings: {
     personalInfo: {

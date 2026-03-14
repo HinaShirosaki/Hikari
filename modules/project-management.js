@@ -12,7 +12,7 @@ export function initProjectManagement({ state, persist, createId, safeText, onPr
   projectCancelBtn.addEventListener('click', resetProjectForm);
   projectNotebookFilter.addEventListener('change', renderNotebookPages);
 
-  function onProjectSubmit(event) {
+  async function onProjectSubmit(event) {
     event.preventDefault();
 
     const project = {
@@ -26,6 +26,7 @@ export function initProjectManagement({ state, persist, createId, safeText, onPr
     }
 
     const index = state.projects.findIndex((item) => item.id === project.id);
+    const isNewProject = index < 0;
     if (index >= 0) {
       state.projects[index] = project;
     } else {
@@ -33,10 +34,39 @@ export function initProjectManagement({ state, persist, createId, safeText, onPr
     }
 
     persist();
+    if (isNewProject) {
+      await ensureProjectDirectory(project.name);
+    }
     resetProjectForm();
     render();
     renderNotebookPages();
     onProjectsChanged();
+  }
+
+  function sanitizeFolderName(value) {
+    return String(value || '')
+      .trim()
+      .replace(/[<>:"/\\|?*\x00-\x1F]+/g, '_')
+      .replace(/\s+/g, '_')
+      .replace(/^_+|_+$/g, '');
+  }
+
+  async function ensureProjectDirectory(projectName) {
+    const rootPath = String(state.settings?.storagePath || '').trim();
+    if (!rootPath || !window.enanaApi?.ensureStorageDirectory) {
+      return;
+    }
+
+    const safeProjectName = sanitizeFolderName(projectName) || 'Untitled_Project';
+    const projectFolder = `${rootPath}/Project/${safeProjectName}`;
+    try {
+      const result = await window.enanaApi.ensureStorageDirectory(projectFolder);
+      if (result?.ok !== true) {
+        console.warn('Failed to create project directory:', result?.error || projectFolder);
+      }
+    } catch (error) {
+      console.warn('Failed to create project directory:', error);
+    }
   }
 
   function resetProjectForm() {
@@ -158,22 +188,35 @@ export function initProjectManagement({ state, persist, createId, safeText, onPr
 
   function render() {
     renderProjectFilterOptions();
+    projectList.classList.remove('cards');
+    projectList.classList.add('list-table');
     if (!state.projects.length) {
       projectList.innerHTML = '<p class="small-note">No projects yet.</p>';
       renderNotebookPages();
       return;
     }
 
-    projectList.innerHTML = state.projects.map((project) => `
-      <article class="card">
-        <h3>${safeText(project.name)}</h3>
-        <p>${safeText(project.description || 'No description')}</p>
-        <div class="card-actions">
+    const rows = state.projects.map((project) => `
+      <article class="list-row">
+        <button class="list-main-btn text-list-btn" data-project-edit="${project.id}">
+          ${safeText(project.name)}
+        </button>
+        <span class="small-note">${safeText(project.description || 'No description')}</span>
+        <div class="card-actions list-actions">
           <button class="ghost-btn" data-project-edit="${project.id}">Edit</button>
           <button class="danger-btn" data-project-delete="${project.id}">Delete</button>
         </div>
       </article>
     `).join('');
+
+    projectList.innerHTML = `
+      <article class="list-row list-row-header">
+        <strong>Project</strong>
+        <strong>Description</strong>
+        <strong>Actions</strong>
+      </article>
+      ${rows}
+    `;
 
     projectList.querySelectorAll('[data-project-edit]').forEach((button) => {
       button.addEventListener('click', () => editProject(button.dataset.projectEdit));

@@ -1,0 +1,25 @@
+{
+  "title": "Protocol name",
+  "purpose": "What this protocol is used for",
+  "materials": [
+    "material 1",
+    "material 2"
+  ],
+  "steps": [
+    {
+      "step_number": 1,
+      "action": "Describe the step clearly and concisely."
+    },
+    {
+      "step_number": 2,
+      "action": "Add the next step. Use placeholders like [time] or [volume] where needed."
+    }
+  ],
+  "troubleshooting": [
+    {
+      "problem": "Potential issue",
+      "possible_cause": "Why it may happen",
+      "solution": "How to address it"
+    }
+  ]
+}
