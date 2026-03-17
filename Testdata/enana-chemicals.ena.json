@@ -1,0 +1,102 @@
+{
+  "labInventory": {
+    "chemicals": [],
+    "blocks": [
+      {
+        "index": 1,
+        "timestamp": "2026-03-11T02:43:02.647Z",
+        "action": "UPSERT_CHEMICAL",
+        "prevHash": "GENESIS",
+        "payload": {
+          "chemicalId": "1773196982647-34b6863fed3618",
+          "name": "deaec",
+          "casNumber": "45-67-89",
+          "location": "Main Storage-1"
+        },
+        "hash": "h30c7852b"
+      },
+      {
+        "index": 2,
+        "timestamp": "2026-03-14T00:22:03.556Z",
+        "action": "DELETE_CHEMICAL",
+        "prevHash": "h30c7852b",
+        "payload": {
+          "chemicalId": "1773196982647-34b6863fed3618"
+        },
+        "hash": "h5ef590f1"
+      },
+      {
+        "index": 3,
+        "timestamp": "2026-03-14T00:23:56.484Z",
+        "action": "UPSERT_CHEMICAL",
+        "prevHash": "h5ef590f1",
+        "payload": {
+          "chemicalId": "1773447836484-1ebf227e69da9",
+          "name": "Sodium Chloride",
+          "casNumber": "7647-14-5",
+          "location": "Shelf A1-2"
+        },
+        "hash": "hbc15dc2"
+      },
+      {
+        "index": 4,
+        "timestamp": "2026-03-14T00:24:12.041Z",
+        "action": "UPSERT_CHEMICAL",
+        "prevHash": "hbc15dc2",
+        "payload": {
+          "chemicalId": "1773447852041-591a6d4e722738",
+          "name": "Ethanol",
+          "casNumber": "64-17-5",
+          "location": "Flammables Cabinet B2-3"
+        },
+        "hash": "h3430da0c"
+      },
+      {
+        "index": 5,
+        "timestamp": "2026-03-14T00:24:34.677Z",
+        "action": "UPSERT_CHEMICAL",
+        "prevHash": "h3430da0c",
+        "payload": {
+          "chemicalId": "1773447874677-dfc59d46b472a",
+          "name": "Acetic Acid",
+          "casNumber": "64-19-7",
+          "location": "Acid Cabinet C1-4"
+        },
+        "hash": "h5e60e4c9"
+      }
+    ],
+    "lastLocationNumber": 5,
+    "locationCodeMap": {
+      "acid cabinet c1": "A",
+      "flammables cabinet b2": "B",
+      "shelf a1": "C"
+    },
+    "locationCodeNextByLocation": {
+      "acid cabinet c1": 6,
+      "flammables cabinet b2": 5,
+      "shelf a1": 4
+    }
+  },
+  "inventory": {},
+  "settings": {
+    "storagePath": "/Users/shiyifan/Projects/Enana/Testdata",
+    "inventoryLocations": [
+      "Shelf A1",
+      "Flammables Cabinet B2",
+      "Acid Cabinet C1",
+      "Shelf A3",
+      "Shelf A4",
+      "Base Cabinet D1",
+      "Acid Cabinet C2",
+      "Solvent Cabinet B3",
+      "Flammables Cabinet B1",
+      "Shelf A5"
+    ]
+  },
+  "protocols": [],
+  "notebookEntries": [],
+  "data_bundle": {
+    "mode": "sqlite_indexed",
+    "updated_at": "2026-03-17T22:15:26.942Z"
+  }
+}

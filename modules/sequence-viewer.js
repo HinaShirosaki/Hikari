@@ -1,8 +1,25 @@
 import { escapeHtml } from './tool-box/common.js';
+import { annotatePlasmidSequence } from './plannotate-js.js';
 
 const DEFAULT_MAX_RECORDS = 5000;
-const SEQUENCE_LINE_LENGTH = 70;
+const DEFAULT_SEQUENCE_LINE_LENGTH = 120;
 const DUAL_STRAND_SCROLL_STEP = 44;
+const FALLBACK_CHAR_ADVANCE_PX = 8.8;
+const FALLBACK_SEQUENCE_LINE_HEIGHT_PX = 16;
+const RESTRICTION_LABEL_GAP_PX = 14;
+const STRAND_PAIR_ROW_GAP_PX = 8;
+const DEFAULT_STRAND_MARKER_COLUMN_PX = 28;
+const DEFAULT_STRAND_COLUMN_GAP_PX = 6;
+const LINE_FEATURE_BAR_HEIGHT_PX = 16;
+const LINE_FEATURE_BAR_GAP_PX = 3;
+const LINE_FEATURE_BAR_HORIZONTAL_PADDING_PX = 5;
+const FEATURE_TOOLTIP_OFFSET_PX = 12;
+const PLANNOTATE_DEFAULT_OPTIONS = Object.freeze({
+  detailed: false,
+  minIdentity: 85,
+  minCoverage: 0.25,
+  minHitLength: 24
+});
 const BASE_COMPLEMENT = Object.freeze({
   A: 'T',
   C: 'G',
@@ -23,6 +40,60 @@ const BASE_COMPLEMENT = Object.freeze({
   '*': '*'
 });
 
+const IUPAC_DNA_CLASS = Object.freeze({
+  A: 'A',
+  C: 'C',
+  G: 'G',
+  T: 'T',
+  R: '[AG]',
+  Y: '[CT]',
+  S: '[GC]',
+  W: '[AT]',
+  K: '[GT]',
+  M: '[AC]',
+  B: '[CGT]',
+  D: '[AGT]',
+  H: '[ACT]',
+  V: '[ACG]',
+  N: '[ACGT]'
+});
+
+const NEB_RESTRICTION_ENZYMES = Object.freeze([
+  { name: 'EcoRI', site: 'GAATTC', cut: 'G^AATTC' },
+  { name: 'BamHI', site: 'GGATCC', cut: 'G^GATCC' },
+  { name: 'HindIII', site: 'AAGCTT', cut: 'A^AGCTT' },
+  { name: 'NotI', site: 'GCGGCCGC', cut: 'GC^GGCCGC' },
+  { name: 'XhoI', site: 'CTCGAG', cut: 'C^TCGAG' },
+  { name: 'NheI', site: 'GCTAGC', cut: 'G^CTAGC' },
+  { name: 'XbaI', site: 'TCTAGA', cut: 'T^CTAGA' },
+  { name: 'SpeI', site: 'ACTAGT', cut: 'A^CTAGT' },
+  { name: 'PstI', site: 'CTGCAG', cut: 'CTGCA^G' },
+  { name: 'KpnI', site: 'GGTACC', cut: 'GGTAC^C' },
+  { name: 'SacI', site: 'GAGCTC', cut: 'GAGCT^C' },
+  { name: 'SalI', site: 'GTCGAC', cut: 'G^TCGAC' },
+  { name: 'SmaI', site: 'CCCGGG', cut: 'CCC^GGG' },
+  { name: 'NcoI', site: 'CCATGG', cut: 'C^CATGG' },
+  { name: 'NdeI', site: 'CATATG', cut: 'CA^TATG' },
+  { name: 'BglII', site: 'AGATCT', cut: 'A^GATCT' },
+  { name: 'EcoRV', site: 'GATATC', cut: 'GAT^ATC' },
+  { name: 'PvuII', site: 'CAGCTG', cut: 'CAG^CTG' },
+  { name: 'MluI', site: 'ACGCGT', cut: 'A^CGCGT' },
+  { name: 'ClaI', site: 'ATCGAT', cut: 'AT^CGAT' },
+  { name: 'AgeI', site: 'ACCGGT', cut: 'A^CCGGT' },
+  { name: 'AvrII', site: 'CCTAGG', cut: 'C^CTAGG' },
+  { name: 'ApaI', site: 'GGGCCC', cut: 'GGGCC^C' },
+  { name: 'AflII', site: 'CTTAAG', cut: 'C^TTAAG' },
+  { name: 'AatII', site: 'GACGTC', cut: 'GACGT^C' },
+  { name: 'BlpI', site: 'GCTNAGC', cut: 'GCTN^AGC' },
+  { name: 'BspEI', site: 'TCCGGA', cut: 'T^CCGGA' },
+  { name: 'BsrGI', site: 'TGTACA', cut: 'T^GTACA' },
+  { name: 'BsaI', site: 'GGTCTC', cut: 'GGTCTC (1/5)' },
+  { name: 'BsmBI', site: 'CGTCTC', cut: 'CGTCTC (1/5)' },
+  { name: 'BbsI', site: 'GAAGAC', cut: 'GAAGAC (2/6)' },
+  { name: 'SapI', site: 'GCTCTTC', cut: 'GCTCTTC (1/4)' }
+]);
+const NEB_FEATURE_CACHE = new WeakMap();
+
 function normalizeSequenceText(raw) {
   return String(raw || '')
     .toUpperCase()
@@ -39,12 +110,151 @@ function complementSequence(sequence) {
   return [...normalizeSequenceText(sequence)].map((base) => complementBase(base)).join('');
 }
 
+function reverseComplementIupac(sequence) {
+  const raw = String(sequence || '').toUpperCase().replace(/U/g, 'T');
+  return [...raw].reverse().map((base) => complementBase(base)).join('');
+}
+
+function motifToRegexBody(motif) {
+  const normalized = String(motif || '').toUpperCase().replace(/U/g, 'T').trim();
+  if (!normalized) {
+    return '';
+  }
+  const classes = [...normalized].map((base) => IUPAC_DNA_CLASS[base] || '');
+  if (classes.some((entry) => !entry)) {
+    return '';
+  }
+  return classes.join('');
+}
+
+function findMotifHits(sequence, motif, topology = 'linear') {
+  const text = normalizeSequenceText(sequence);
+  const normalizedMotif = String(motif || '').toUpperCase().replace(/U/g, 'T').trim();
+  const patternBody = motifToRegexBody(normalizedMotif);
+  if (!text.length || !normalizedMotif.length || !patternBody.length) {
+    return [];
+  }
+
+  const sequenceLength = text.length;
+  const motifLength = normalizedMotif.length;
+  const circular = normalizeTopology(topology) === 'circular';
+  const scanText = circular && motifLength > 1
+    ? `${text}${text.slice(0, motifLength - 1)}`
+    : text;
+  const regex = new RegExp(`(?=(${patternBody}))`, 'g');
+  const hits = [];
+
+  let match = regex.exec(scanText);
+  while (match) {
+    const start = match.index;
+    if (start < sequenceLength) {
+      const end = start + motifLength;
+      const segments = end <= sequenceLength
+        ? [{ start, end }]
+        : [
+          { start, end: sequenceLength },
+          { start: 0, end: end - sequenceLength }
+        ];
+
+      hits.push({
+        start,
+        end,
+        segments
+      });
+    }
+    regex.lastIndex = start + 1;
+    match = regex.exec(scanText);
+  }
+
+  return hits;
+}
+
+function buildNebRestrictionFeatures(sequence, topology = 'linear') {
+  const text = normalizeSequenceText(sequence);
+  if (!text.length) {
+    return [];
+  }
+
+  const features = [];
+  const dedupe = new Set();
+
+  NEB_RESTRICTION_ENZYMES.forEach((enzyme) => {
+    const motif = String(enzyme.site || '').toUpperCase().replace(/U/g, 'T').trim();
+    if (!motif.length) {
+      return;
+    }
+
+    const forwardHits = findMotifHits(text, motif, topology);
+    forwardHits.forEach((hit, index) => {
+      const segmentKey = hit.segments.map((segment) => `${segment.start}-${segment.end}`).join(',');
+      const key = `${enzyme.name}|+|${segmentKey}`;
+      if (dedupe.has(key)) {
+        return;
+      }
+      dedupe.add(key);
+      features.push({
+        id: `neb_${enzyme.name.toLowerCase()}_plus_${hit.start}_${index}`,
+        name: enzyme.name,
+        type: 'restriction_site',
+        strand: 1,
+        description: `NEB recognition site ${motif}${enzyme.cut ? ` (${enzyme.cut})` : ''}.`,
+        source: 'neb',
+        mode: 'NEB',
+        site: motif,
+        cut: String(enzyme.cut || ''),
+        segments: hit.segments
+      });
+    });
+
+    const reverseMotif = reverseComplementIupac(motif);
+    if (!reverseMotif || reverseMotif === motif) {
+      return;
+    }
+
+    const reverseHits = findMotifHits(text, reverseMotif, topology);
+    reverseHits.forEach((hit, index) => {
+      const segmentKey = hit.segments.map((segment) => `${segment.start}-${segment.end}`).join(',');
+      const key = `${enzyme.name}|-|${segmentKey}`;
+      if (dedupe.has(key)) {
+        return;
+      }
+      dedupe.add(key);
+      features.push({
+        id: `neb_${enzyme.name.toLowerCase()}_minus_${hit.start}_${index}`,
+        name: enzyme.name,
+        type: 'restriction_site',
+        strand: -1,
+        description: `NEB recognition site ${motif}${enzyme.cut ? ` (${enzyme.cut})` : ''}.`,
+        source: 'neb',
+        mode: 'NEB',
+        site: motif,
+        cut: String(enzyme.cut || ''),
+        segments: hit.segments
+      });
+    });
+  });
+
+  return features.sort((left, right) => {
+    const leftStart = left.segments?.[0]?.start ?? 0;
+    const rightStart = right.segments?.[0]?.start ?? 0;
+    if (leftStart !== rightStart) {
+      return leftStart - rightStart;
+    }
+    return String(left.name || '').localeCompare(String(right.name || ''));
+  });
+}
+
 function clamp(value, min, max) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) {
     return min;
   }
   return Math.min(max, Math.max(min, numeric));
+}
+
+function parseCssPixels(value) {
+  const numeric = Number.parseFloat(String(value || ''));
+  return Number.isFinite(numeric) ? numeric : 0;
 }
 
 function normalizeRecordName(value, fallback = 'record') {
@@ -750,6 +960,27 @@ function assignFeatureLanes(features) {
   });
 }
 
+function getNebRestrictionFeaturesForRecord(record) {
+  if (!record?.sequence) {
+    return [];
+  }
+  const cacheKey = `${record.sequence}|${normalizeTopology(record.topology)}`;
+  const cached = NEB_FEATURE_CACHE.get(record);
+  if (cached?.key === cacheKey && Array.isArray(cached.features)) {
+    return cached.features;
+  }
+
+  const features = buildNebRestrictionFeatures(record.sequence, record.topology);
+  NEB_FEATURE_CACHE.set(record, { key: cacheKey, features });
+  return features;
+}
+
+function getRenderableFeaturesForRecord(record) {
+  const parsedFeatures = Array.isArray(record?.features) ? record.features : [];
+  const nebFeatures = getNebRestrictionFeaturesForRecord(record);
+  return [...parsedFeatures, ...nebFeatures];
+}
+
 function buildHighlightedLineMarkup(sourceText, lineStart, lineEnd, lineHighlights) {
   let body = '';
   if (!lineHighlights.length) {
@@ -771,12 +1002,494 @@ function buildHighlightedLineMarkup(sourceText, lineStart, lineEnd, lineHighligh
   return body;
 }
 
-function renderDualStrandSequenceLinesHtml(sequence, highlightedSegments = []) {
+function doesFeatureOverlapLine(feature, lineStart, lineEnd) {
+  const segments = Array.isArray(feature?.segments) ? feature.segments : [];
+  return segments.some((segment) => (
+    Number(segment?.start) < lineEnd
+    && Number(segment?.end) > lineStart
+  ));
+}
+
+function getEnanaApiBridge() {
+  return globalThis?.window?.enanaApi || globalThis?.enanaApi || null;
+}
+
+function getPlannotateSegmentsFromHit(hit, sequenceLength, topology = 'circular') {
+  const normalizedLength = Math.max(0, Number(sequenceLength) || 0);
+  if (!normalizedLength) {
+    return [];
+  }
+
+  const qstart = clamp(Math.round(Number(hit?.qstart) || 0), 0, normalizedLength);
+  const qendRaw = Number(hit?.qend);
+  const qend = qendRaw === 0
+    ? normalizedLength
+    : clamp(Math.round(qendRaw || 0), 0, normalizedLength);
+
+  if (normalizeTopology(topology) === 'linear') {
+    const left = Math.min(qstart, qend);
+    const right = Math.max(qstart, qend);
+    return right > left ? [{ start: left, end: right }] : [];
+  }
+
+  const wrapsOrigin = Boolean(hit?.crossesOrigin) || qend < qstart;
+  if (!wrapsOrigin) {
+    return qend > qstart ? [{ start: qstart, end: qend }] : [];
+  }
+
+  const segments = [];
+  if (normalizedLength > qstart) {
+    segments.push({ start: qstart, end: normalizedLength });
+  }
+  if (qend > 0) {
+    segments.push({ start: 0, end: qend });
+  }
+  if (!segments.length && qstart === 0 && qend === 0) {
+    segments.push({ start: 0, end: normalizedLength });
+  }
+  return segments;
+}
+
+function formatPlannotateHitLocation(hit, sequenceLength) {
+  const normalizedLength = Math.max(1, Number(sequenceLength) || 1);
+  const start = clamp((Number(hit?.qstart) || 0) + 1, 1, normalizedLength);
+  const rawEnd = Number(hit?.qend);
+  const end = rawEnd === 0 ? normalizedLength : clamp(rawEnd || 0, 1, normalizedLength);
+  if (!hit?.crossesOrigin) {
+    return `${start}..${end}`;
+  }
+  return `${start}..${normalizedLength}, 1..${end}`;
+}
+
+function buildPlannotateFeaturesFromResult(result, fallbackSequenceLength, fallbackTopology = 'linear') {
+  const sequenceLength = Math.max(0, Number(result?.sequenceLength) || Number(fallbackSequenceLength) || 0);
+  const topology = normalizeTopology(result?.topology || fallbackTopology);
+  const hits = Array.isArray(result?.hits) ? result.hits : [];
+
+  return hits
+    .map((hit, index) => {
+      const segments = getPlannotateSegmentsFromHit(hit, sequenceLength, topology);
+      if (!segments.length) {
+        return null;
+      }
+      return {
+        id: `plannotate_${index + 1}`,
+        name: normalizeRecordName(hit?.Feature || `feature_${index + 1}`, `feature_${index + 1}`),
+        type: normalizeRecordName(hit?.Type || 'misc_feature', 'misc_feature').toLowerCase(),
+        strand: Number(hit?.sframe) === -1 ? -1 : 1,
+        description: String(hit?.Description || ''),
+        source: 'plannotate',
+        locationText: formatPlannotateHitLocation(hit, sequenceLength),
+        identity: Number.isFinite(Number(hit?.pident)) ? Number(hit.pident) : null,
+        coverage: Number.isFinite(Number(hit?.percmatch)) ? Number(hit.percmatch) : null,
+        mode: String(hit?.matchMode || ''),
+        segments
+      };
+    })
+    .filter(Boolean);
+}
+
+async function runPlannotateAnnotationForSequence(sequence, topology, options = {}) {
+  const resolvedOptions = {
+    ...PLANNOTATE_DEFAULT_OPTIONS,
+    ...(options && typeof options === 'object' ? options : {}),
+    topology: normalizeTopology(topology || 'linear')
+  };
+
+  const bridge = getEnanaApiBridge();
+  const backend = bridge?.plannotateAnnotate;
+  if (typeof backend === 'function') {
+    const response = await backend({
+      sequenceText: sequence,
+      topology: resolvedOptions.topology,
+      detailed: Boolean(resolvedOptions.detailed),
+      minIdentity: Number(resolvedOptions.minIdentity) || PLANNOTATE_DEFAULT_OPTIONS.minIdentity,
+      minCoverage: Number(resolvedOptions.minCoverage) || PLANNOTATE_DEFAULT_OPTIONS.minCoverage,
+      minHitLength: Math.round(Number(resolvedOptions.minHitLength) || PLANNOTATE_DEFAULT_OPTIONS.minHitLength)
+    });
+    if (!response?.ok) {
+      throw new Error(response?.error || 'pLannotate backend annotation failed.');
+    }
+    return response.result || {
+      sequence,
+      sequenceLength: String(sequence || '').length,
+      topology: resolvedOptions.topology,
+      hits: [],
+      warnings: []
+    };
+  }
+
+  const fallback = annotatePlasmidSequence(sequence, resolvedOptions);
+  fallback.warnings = [
+    'Native blastn/diamond backend unavailable. Displaying JS fallback annotations.',
+    ...(Array.isArray(fallback.warnings) ? fallback.warnings : [])
+  ];
+  return fallback;
+}
+
+function parseRestrictionCutDescriptor(feature) {
+  const cutPattern = String(feature?.cut || '').trim().toUpperCase();
+  if (!cutPattern) {
+    return null;
+  }
+
+  const siteLength = Math.max(1, normalizeSequenceText(feature?.site || '').length);
+
+  if (cutPattern.includes('^')) {
+    const [left = '', right = ''] = cutPattern.split('^');
+    const topOffset = normalizeSequenceText(left).length;
+    const rightLength = normalizeSequenceText(right).length;
+    if (topOffset >= 0) {
+      const bottomOffset = Math.max(0, siteLength - topOffset);
+      return {
+        anchor: 'start',
+        topOffset,
+        bottomOffset,
+        sticky: topOffset !== bottomOffset && rightLength > 0
+      };
+    }
+  }
+
+  const outsideMatch = cutPattern.match(/\(([-+]?\d+)\s*\/\s*([-+]?\d+)\)/);
+  if (outsideMatch) {
+    const topOffset = Number(outsideMatch[1]);
+    const bottomOffset = Number(outsideMatch[2]);
+    if (Number.isFinite(topOffset) && Number.isFinite(bottomOffset)) {
+      return {
+        anchor: 'end',
+        topOffset,
+        bottomOffset,
+        sticky: topOffset !== bottomOffset
+      };
+    }
+  }
+
+  return null;
+}
+
+function resolveRestrictionCutBaseIndices(feature) {
+  const descriptor = parseRestrictionCutDescriptor(feature);
+  if (!descriptor) {
+    return null;
+  }
+
+  const siteStart = Number(feature?.segments?.[0]?.start);
+  if (!Number.isFinite(siteStart)) {
+    return null;
+  }
+
+  if (descriptor.anchor === 'start') {
+    return {
+      top: siteStart + descriptor.topOffset,
+      bottom: siteStart + descriptor.bottomOffset,
+      sticky: Boolean(descriptor.sticky)
+    };
+  }
+
+  const siteLength = Math.max(1, normalizeSequenceText(feature?.site || '').length);
+  const anchor = siteStart + siteLength;
+  return {
+    top: anchor + descriptor.topOffset,
+    bottom: anchor + descriptor.bottomOffset,
+    sticky: Boolean(descriptor.sticky)
+  };
+}
+
+function computeRestrictionAnnotationGeometry(segment, lineStart, lineEnd, charAdvancePx, cutBaseIndex = null) {
+  const segmentStart = Number(segment?.start);
+  const segmentEnd = Number(segment?.end);
+  if (!Number.isFinite(segmentStart) || !Number.isFinite(segmentEnd)) {
+    return null;
+  }
+
+  const overlapStart = Math.max(lineStart, segmentStart);
+  const overlapEnd = Math.min(lineEnd, segmentEnd);
+  if (overlapEnd <= overlapStart) {
+    return null;
+  }
+
+  const safeAdvance = Math.max(1, Number(charAdvancePx) || FALLBACK_CHAR_ADVANCE_PX);
+  const leftPx = Math.max(0, (overlapStart - lineStart) * safeAdvance);
+  const widthPx = Math.max(1, (overlapEnd - overlapStart) * safeAdvance);
+
+  let hasCut = Number.isFinite(cutBaseIndex) && cutBaseIndex >= overlapStart && cutBaseIndex <= overlapEnd;
+  if (hasCut && cutBaseIndex === overlapStart && overlapStart > segmentStart) {
+    hasCut = false;
+  }
+
+  const cutLocalPx = hasCut
+    ? clamp(((cutBaseIndex - lineStart) * safeAdvance) - leftPx, 0, widthPx)
+    : null;
+
+  return {
+    overlapStart,
+    overlapEnd,
+    leftPx,
+    widthPx,
+    hasCut,
+    cutLocalPx
+  };
+}
+
+function resolveRestrictionCutLocalPx(cutBaseIndex, geometry, lineStart, charAdvancePx, segmentStart, segmentEnd) {
+  if (!Number.isFinite(cutBaseIndex)) {
+    return null;
+  }
+  if (cutBaseIndex < geometry.overlapStart || cutBaseIndex > geometry.overlapEnd) {
+    return null;
+  }
+  if (cutBaseIndex === geometry.overlapStart && geometry.overlapStart > segmentStart) {
+    return null;
+  }
+  if (cutBaseIndex === geometry.overlapEnd && geometry.overlapEnd < segmentEnd) {
+    return null;
+  }
+
+  return clamp(((cutBaseIndex - lineStart) * charAdvancePx) - geometry.leftPx, 0, geometry.widthPx);
+}
+
+function buildRestrictionCutPolylinePoints(
+  widthPx,
+  topCutLocalPx,
+  bottomCutLocalPx,
+  boxHeightPx,
+  topRowHeightPx,
+  strandGapPx,
+  labelGapPx = RESTRICTION_LABEL_GAP_PX
+) {
+  if (!Number.isFinite(topCutLocalPx) && !Number.isFinite(bottomCutLocalPx)) {
+    return '';
+  }
+
+  const safeWidth = Math.max(1, Number(widthPx) || 1);
+  const safeTopCutPx = Number.isFinite(topCutLocalPx) ? clamp(topCutLocalPx, 0, safeWidth) : null;
+  const safeBottomCutPx = Number.isFinite(bottomCutLocalPx) ? clamp(bottomCutLocalPx, 0, safeWidth) : null;
+  const topX = Number.isFinite(safeTopCutPx) ? safeTopCutPx : safeBottomCutPx;
+  const bottomX = Number.isFinite(safeBottomCutPx) ? safeBottomCutPx : safeTopCutPx;
+  const safeBoxHeight = Math.max(8, Number(boxHeightPx) || FALLBACK_SEQUENCE_LINE_HEIGHT_PX);
+  const safeTopRowHeight = clamp(
+    Number(topRowHeightPx) || FALLBACK_SEQUENCE_LINE_HEIGHT_PX,
+    6,
+    Math.max(6, safeBoxHeight - 2)
+  );
+  const safeStrandGap = clamp(
+    Number(strandGapPx) || STRAND_PAIR_ROW_GAP_PX,
+    0,
+    Math.max(0, safeBoxHeight - safeTopRowHeight)
+  );
+  const safeLabelGap = Math.max(6, Number(labelGapPx) || RESTRICTION_LABEL_GAP_PX);
+  const boxTopY = safeLabelGap;
+  const topCutStartY = boxTopY + 1;
+  const bridgeY = boxTopY + safeTopRowHeight + (safeStrandGap / 2);
+  const boxBottomY = safeLabelGap + safeBoxHeight - 1;
+
+  return `${topX.toFixed(2)},${topCutStartY.toFixed(2)} ${topX.toFixed(2)},${bridgeY.toFixed(2)} ${bottomX.toFixed(2)},${bridgeY.toFixed(2)} ${bottomX.toFixed(2)},${boxBottomY.toFixed(2)}`;
+}
+
+function renderLineRestrictionAnnotationsHtml(
+  indexedFeatures,
+  lineStart,
+  lineEnd,
+  sequenceLength,
+  selectedFeatureIndex,
+  charAdvancePx,
+  sequenceLineHeightPx
+) {
+  const safeAdvance = Math.max(1, Number(charAdvancePx) || FALLBACK_CHAR_ADVANCE_PX);
+  const safeLineHeight = Math.max(8, Number(sequenceLineHeightPx) || FALLBACK_SEQUENCE_LINE_HEIGHT_PX);
+  const pairBoxHeightPx = Math.max(safeLineHeight + 8, (safeLineHeight * 2) + STRAND_PAIR_ROW_GAP_PX);
+  const lineWidthPx = Math.max(1, (Math.max(lineStart, lineEnd) - lineStart) * safeAdvance);
+  const annotations = indexedFeatures
+    .filter(({ feature }) => String(feature?.type || '').toLowerCase() === 'restriction_site')
+    .flatMap(({ feature, index }) => {
+      const segments = Array.isArray(feature?.segments) ? feature.segments : [];
+      const cutBaseIndices = resolveRestrictionCutBaseIndices(feature);
+      return segments
+        .map((segment) => {
+          const segmentStart = Number(segment?.start) || 0;
+          const segmentEnd = Number(segment?.end) || 0;
+          const geometry = computeRestrictionAnnotationGeometry(
+            segment,
+            lineStart,
+            lineEnd,
+            safeAdvance,
+            Number(cutBaseIndices?.top)
+          );
+          if (!geometry) {
+            return null;
+          }
+
+          const topCutLocalPx = resolveRestrictionCutLocalPx(
+            Number(cutBaseIndices?.top),
+            geometry,
+            lineStart,
+            safeAdvance,
+            segmentStart,
+            segmentEnd
+          );
+          const bottomCutLocalPx = resolveRestrictionCutLocalPx(
+            Number(cutBaseIndices?.bottom),
+            geometry,
+            lineStart,
+            safeAdvance,
+            segmentStart,
+            segmentEnd
+          );
+          const strandGapPx = Math.max(2, pairBoxHeightPx - (safeLineHeight * 2));
+          const cutPoints = (Number.isFinite(topCutLocalPx) || Number.isFinite(bottomCutLocalPx))
+            ? buildRestrictionCutPolylinePoints(
+              geometry.widthPx,
+              topCutLocalPx,
+              bottomCutLocalPx,
+              pairBoxHeightPx,
+              safeLineHeight,
+              strandGapPx,
+              RESTRICTION_LABEL_GAP_PX
+            )
+            : '';
+          const svgWidth = Math.max(1, geometry.widthPx);
+          const svgHeight = RESTRICTION_LABEL_GAP_PX + pairBoxHeightPx;
+          const location = buildFeatureLocationText(feature, sequenceLength);
+          const isActive = index === selectedFeatureIndex;
+          const title = `${feature.name || '-'} (${location})`;
+
+          return `
+            <button
+              type="button"
+              class="sequence-viewer-restriction-annot${isActive ? ' sequence-viewer-restriction-annot-active' : ''}"
+              data-feature-index="${index}"
+              style="left:${geometry.leftPx.toFixed(3)}px;width:${geometry.widthPx.toFixed(3)}px;--sequence-viewer-restriction-label-gap:${RESTRICTION_LABEL_GAP_PX}px;"
+              title="${escapeHtml(title)}"
+            >
+              <span class="sequence-viewer-restriction-label">${escapeHtml(feature.name || `site_${index + 1}`)}</span>
+              <span class="sequence-viewer-restriction-box"></span>
+              ${cutPoints
+    ? `<svg class="sequence-viewer-restriction-cut-svg" viewBox="0 0 ${svgWidth.toFixed(2)} ${svgHeight.toFixed(2)}" preserveAspectRatio="none" aria-hidden="true">
+                <polyline points="${cutPoints}"></polyline>
+              </svg>`
+    : ''}
+            </button>
+          `;
+        })
+        .filter(Boolean);
+    })
+    .join('');
+
+  if (!annotations) {
+    return '';
+  }
+
+  return `<div class="sequence-viewer-line-restriction-track" style="width:${lineWidthPx.toFixed(3)}px;height:${pairBoxHeightPx.toFixed(3)}px;">${annotations}</div>`;
+}
+
+function renderLineFeatureButtonsHtml(
+  indexedFeatures,
+  lineStart,
+  lineEnd,
+  sequenceLength,
+  selectedFeatureIndex,
+  charAdvancePx,
+  lineFeatureOffsetPx = (DEFAULT_STRAND_MARKER_COLUMN_PX + DEFAULT_STRAND_COLUMN_GAP_PX)
+) {
+  const safeAdvance = Math.max(1, Number(charAdvancePx) || FALLBACK_CHAR_ADVANCE_PX);
+  const safeOffset = Math.max(0, Number(lineFeatureOffsetPx) || 0);
+  const lineWidthPx = Math.max(1, (Math.max(lineStart, lineEnd) - lineStart) * safeAdvance);
+
+  const fragments = indexedFeatures
+    .filter(({ feature }) => String(feature?.type || '').toLowerCase() !== 'restriction_site')
+    .flatMap(({ feature, index }) => {
+      const segments = Array.isArray(feature?.segments) ? feature.segments : [];
+      const location = buildFeatureLocationText(feature, sequenceLength);
+      const title = `${feature.name || '-'} (${location})`;
+      const color = hashTypeToColor(String(feature?.type || 'misc_feature'));
+      return segments
+        .map((segment) => {
+          const geometry = computeRestrictionAnnotationGeometry(segment, lineStart, lineEnd, safeAdvance);
+          if (!geometry) {
+            return null;
+          }
+          return {
+            feature,
+            index,
+            title,
+            color,
+            leftPx: geometry.leftPx,
+            widthPx: geometry.widthPx,
+            rightPx: geometry.leftPx + geometry.widthPx
+          };
+        })
+        .filter(Boolean);
+    })
+    .sort((left, right) => {
+      if (left.leftPx !== right.leftPx) {
+        return left.leftPx - right.leftPx;
+      }
+      return right.widthPx - left.widthPx;
+    });
+
+  if (!fragments.length) {
+    return '';
+  }
+
+  const laneRightEdges = [];
+  fragments.forEach((fragment) => {
+    let laneIndex = laneRightEdges.findIndex((rightEdge) => fragment.leftPx >= rightEdge);
+    if (laneIndex < 0) {
+      laneIndex = laneRightEdges.length;
+      laneRightEdges.push(fragment.rightPx);
+    } else {
+      laneRightEdges[laneIndex] = fragment.rightPx;
+    }
+    fragment.lane = laneIndex;
+  });
+
+  const laneCount = Math.max(1, laneRightEdges.length);
+  const trackHeightPx = (laneCount * LINE_FEATURE_BAR_HEIGHT_PX) + ((laneCount - 1) * LINE_FEATURE_BAR_GAP_PX);
+  const bars = fragments
+    .map((fragment) => {
+      const topPx = fragment.lane * (LINE_FEATURE_BAR_HEIGHT_PX + LINE_FEATURE_BAR_GAP_PX);
+      const isActive = fragment.index === selectedFeatureIndex;
+      const label = String(fragment.feature?.name || `feature_${fragment.index + 1}`);
+      const labelWidthPx = (label.length * safeAdvance) + (LINE_FEATURE_BAR_HORIZONTAL_PADDING_PX * 2);
+      const showLabel = fragment.widthPx >= labelWidthPx;
+      return `
+        <button
+          type="button"
+          class="sequence-viewer-line-feature sequence-viewer-line-feature-bar${isActive ? ' sequence-viewer-line-feature-active' : ''}${showLabel ? '' : ' sequence-viewer-line-feature-compact'}"
+          data-feature-index="${fragment.index}"
+          style="left:${fragment.leftPx.toFixed(3)}px;width:${fragment.widthPx.toFixed(3)}px;top:${topPx.toFixed(3)}px;background:${fragment.color};"
+          title="${escapeHtml(fragment.title)}"
+        >${showLabel ? `<span class="sequence-viewer-line-feature-label">${escapeHtml(label)}</span>` : ''}</button>
+      `;
+    })
+    .join('');
+
+  return `<div class="sequence-viewer-line-features" style="width:${lineWidthPx.toFixed(3)}px;height:${trackHeightPx.toFixed(3)}px;margin-left:${safeOffset.toFixed(3)}px;">${bars}</div>`;
+}
+
+function renderDualStrandSequenceLinesHtml(sequence, highlightedSegments = [], options = {}) {
   const text = normalizeSequenceText(sequence);
   if (!text.length) {
     return '<p class="small-note">No sequence loaded.</p>';
   }
 
+  const lineLength = clamp(
+    Math.round(Number(options?.lineLength) || DEFAULT_SEQUENCE_LINE_LENGTH),
+    24,
+    280
+  );
+  const charAdvancePx = Math.max(1, Number(options?.charAdvancePx) || FALLBACK_CHAR_ADVANCE_PX);
+  const sequenceLineHeightPx = Math.max(8, Number(options?.sequenceLineHeightPx) || FALLBACK_SEQUENCE_LINE_HEIGHT_PX);
+  const lineFeatureOffsetPx = Math.max(
+    0,
+    Number(options?.lineFeatureOffsetPx) || (DEFAULT_STRAND_MARKER_COLUMN_PX + DEFAULT_STRAND_COLUMN_GAP_PX)
+  );
+  const selectedFeatureIndex = Number.isFinite(Number(options?.selectedFeatureIndex))
+    ? Number(options.selectedFeatureIndex)
+    : -1;
+  const indexedFeatures = Array.isArray(options?.features)
+    ? options.features.map((feature, index) => ({ feature, index }))
+    : [];
   const complementary = complementSequence(text);
   const sortedHighlights = highlightedSegments
     .map((segment) => ({
@@ -788,8 +1501,8 @@ function renderDualStrandSequenceLinesHtml(sequence, highlightedSegments = []) {
 
   const lines = [];
 
-  for (let lineStart = 0; lineStart < text.length; lineStart += SEQUENCE_LINE_LENGTH) {
-    const lineEnd = Math.min(text.length, lineStart + SEQUENCE_LINE_LENGTH);
+  for (let lineStart = 0; lineStart < text.length; lineStart += lineLength) {
+    const lineEnd = Math.min(text.length, lineStart + lineLength);
     const lineHighlights = sortedHighlights
       .map((segment) => ({
         start: Math.max(lineStart, segment.start),
@@ -800,21 +1513,45 @@ function renderDualStrandSequenceLinesHtml(sequence, highlightedSegments = []) {
 
     const forwardBody = buildHighlightedLineMarkup(text, lineStart, lineEnd, lineHighlights);
     const complementaryBody = buildHighlightedLineMarkup(complementary, lineStart, lineEnd, lineHighlights);
+    const lineRestrictionAnnotations = renderLineRestrictionAnnotationsHtml(
+      indexedFeatures,
+      lineStart,
+      lineEnd,
+      text.length,
+      selectedFeatureIndex,
+      charAdvancePx,
+      sequenceLineHeightPx
+    );
+    const lineFeatureButtons = renderLineFeatureButtonsHtml(
+      indexedFeatures,
+      lineStart,
+      lineEnd,
+      text.length,
+      selectedFeatureIndex,
+      charAdvancePx,
+      lineFeatureOffsetPx
+    );
 
     lines.push(`
       <div class="sequence-viewer-dual-line">
         <span class="sequence-viewer-seq-coord">${(lineStart + 1).toLocaleString()}</span>
-        <div class="sequence-viewer-strand-pair">
-          <div class="sequence-viewer-strand-row sequence-viewer-strand-row-top">
-            <span class="sequence-viewer-strand-end">5'</span>
-            <span class="sequence-viewer-seq-text">${forwardBody}</span>
-            <span class="sequence-viewer-strand-end">3'</span>
+        <div class="sequence-viewer-strand-block">
+          <div class="sequence-viewer-strand-pair">
+            <div class="sequence-viewer-strand-row sequence-viewer-strand-row-top">
+              <span class="sequence-viewer-strand-end">5'</span>
+              <span class="sequence-viewer-seq-text sequence-viewer-seq-text-top">
+                <span class="sequence-viewer-seq-text-content">${forwardBody}</span>
+                ${lineRestrictionAnnotations}
+              </span>
+              <span class="sequence-viewer-strand-end">3'</span>
+            </div>
+            <div class="sequence-viewer-strand-row sequence-viewer-strand-row-bottom">
+              <span class="sequence-viewer-strand-end">3'</span>
+              <span class="sequence-viewer-seq-text"><span class="sequence-viewer-seq-text-content">${complementaryBody}</span></span>
+              <span class="sequence-viewer-strand-end">5'</span>
+            </div>
           </div>
-          <div class="sequence-viewer-strand-row sequence-viewer-strand-row-bottom">
-            <span class="sequence-viewer-strand-end">3'</span>
-            <span class="sequence-viewer-seq-text">${complementaryBody}</span>
-            <span class="sequence-viewer-strand-end">5'</span>
-          </div>
+          ${lineFeatureButtons}
         </div>
       </div>
     `);
@@ -833,12 +1570,15 @@ function formatSelectedFeatureDetailHtml(feature, sequenceLength) {
   const identity = Number.isFinite(feature.identity) ? `${feature.identity.toFixed(2)}%` : 'n/a';
   const coverage = Number.isFinite(feature.coverage) ? `${feature.coverage.toFixed(2)}%` : 'n/a';
   const source = String(feature.mode || feature.source || '-');
+  const recognitionSite = String(feature.site || '').trim();
+  const cutPattern = String(feature.cut || '').trim();
   const description = String(feature.description || '').trim();
 
   return `
     <p><strong>${escapeHtml(feature.name || '-')}</strong></p>
     <p><strong>Type:</strong> ${escapeHtml(feature.type || '-')} · <strong>Strand:</strong> ${strand}</p>
     <p><strong>Location:</strong> ${escapeHtml(location)}</p>
+    ${recognitionSite ? `<p><strong>Recognition Site:</strong> ${escapeHtml(recognitionSite)}${cutPattern ? ` · <strong>Cut:</strong> ${escapeHtml(cutPattern)}` : ''}</p>` : ''}
     <p><strong>Identity:</strong> ${identity} · <strong>Coverage:</strong> ${coverage} · <strong>Source:</strong> ${escapeHtml(source)}</p>
     ${description ? `<p class="small-note">${escapeHtml(description)}</p>` : ''}
   `;
@@ -854,6 +1594,7 @@ export function initSequenceViewer() {
   const fileChooseBtn = document.getElementById('sequence-viewer-file-choose');
   const fileNameLabel = document.getElementById('sequence-viewer-file-name');
   const loadBtn = document.getElementById('sequence-viewer-load-btn');
+  const annotateBtn = document.getElementById('sequence-viewer-annotate-btn');
   const clearBtn = document.getElementById('sequence-viewer-clear-btn');
   const statusNote = document.getElementById('sequence-viewer-status');
   const messageBox = document.getElementById('sequence-viewer-messages');
@@ -866,6 +1607,7 @@ export function initSequenceViewer() {
   const statAmbiguous = document.getElementById('sequence-viewer-stat-ambiguous');
   const statQuality = document.getElementById('sequence-viewer-stat-quality');
   const statFeatures = document.getElementById('sequence-viewer-stat-features');
+  const statRestrictionSites = document.getElementById('sequence-viewer-stat-restriction-sites');
 
   const featureRailHost = document.getElementById('sequence-viewer-feature-rail-host');
   const featureDetail = document.getElementById('sequence-viewer-feature-detail');
@@ -879,8 +1621,185 @@ export function initSequenceViewer() {
     selectedRecordIndex: 0,
     selectedFeatureIndex: -1,
     warnings: [],
-    errors: []
+    errors: [],
+    annotationWarnings: [],
+    isAnnotating: false
   };
+
+  const sequenceHoverTooltip = (() => {
+    if (
+      typeof document === 'undefined'
+      || typeof document.createElement !== 'function'
+      || !document.body
+      || typeof document.body.appendChild !== 'function'
+    ) {
+      return null;
+    }
+    const tooltip = document.createElement('div');
+    tooltip.className = 'sequence-viewer-feature-hover-tooltip';
+    tooltip.hidden = true;
+    document.body.appendChild(tooltip);
+    return tooltip;
+  })();
+
+  function getFeatureByIndexForRecord(record, index) {
+    if (!record || !Number.isFinite(index) || index < 0) {
+      return null;
+    }
+    const features = getRenderableFeaturesForRecord(record);
+    return features[index] || null;
+  }
+
+  function hideSequenceHoverTooltip() {
+    if (!sequenceHoverTooltip) {
+      return;
+    }
+    sequenceHoverTooltip.hidden = true;
+  }
+
+  function buildFeatureHoverTooltipHtml(feature, sequenceLength) {
+    const strand = feature?.strand === -1 ? '-' : '+';
+    const location = buildFeatureLocationText(feature, sequenceLength);
+    const identity = Number.isFinite(feature?.identity) ? `${feature.identity.toFixed(2)}%` : '';
+    const coverage = Number.isFinite(feature?.coverage) ? `${feature.coverage.toFixed(2)}%` : '';
+    const source = String(feature?.mode || feature?.source || '-');
+    const meta = [identity ? `Identity ${identity}` : '', coverage ? `Coverage ${coverage}` : '', source].filter(Boolean).join(' · ');
+
+    return `
+      <p class="sequence-viewer-feature-hover-title">${escapeHtml(feature?.name || '-')}</p>
+      <p>${escapeHtml(feature?.type || '-')} · Strand ${strand}</p>
+      <p>${escapeHtml(location)}</p>
+      <p>${escapeHtml(meta)}</p>
+    `;
+  }
+
+  function showSequenceHoverTooltip(event, feature, sequenceLength) {
+    if (!sequenceHoverTooltip || !feature) {
+      return;
+    }
+
+    sequenceHoverTooltip.innerHTML = buildFeatureHoverTooltipHtml(feature, sequenceLength);
+    sequenceHoverTooltip.hidden = false;
+
+    const rawX = Number(event?.clientX);
+    const rawY = Number(event?.clientY);
+    const startX = Number.isFinite(rawX) ? rawX + FEATURE_TOOLTIP_OFFSET_PX : FEATURE_TOOLTIP_OFFSET_PX;
+    const startY = Number.isFinite(rawY) ? rawY + FEATURE_TOOLTIP_OFFSET_PX : FEATURE_TOOLTIP_OFFSET_PX;
+    const tooltipRect = sequenceHoverTooltip.getBoundingClientRect();
+    const viewportWidth = Number(globalThis?.innerWidth) || 0;
+    const viewportHeight = Number(globalThis?.innerHeight) || 0;
+
+    let left = Math.max(8, startX);
+    let top = Math.max(8, startY);
+
+    if (viewportWidth > 0) {
+      left = Math.min(left, Math.max(8, viewportWidth - tooltipRect.width - 8));
+    }
+    if (viewportHeight > 0) {
+      top = Math.min(top, Math.max(8, viewportHeight - tooltipRect.height - 8));
+    }
+
+    sequenceHoverTooltip.style.left = `${left}px`;
+    sequenceHoverTooltip.style.top = `${top}px`;
+  }
+
+  function measureSequenceTypography() {
+    let charAdvancePx = FALLBACK_CHAR_ADVANCE_PX;
+    let lineHeightPx = FALLBACK_SEQUENCE_LINE_HEIGHT_PX;
+
+    if (typeof document !== 'undefined' && sequenceHost && typeof sequenceHost.appendChild === 'function') {
+      let probe = null;
+      try {
+        probe = document.createElement('span');
+        probe.className = 'sequence-viewer-seq-text';
+        probe.style.position = 'absolute';
+        probe.style.visibility = 'hidden';
+        probe.style.pointerEvents = 'none';
+        probe.style.whiteSpace = 'nowrap';
+        probe.style.display = 'inline-block';
+        probe.style.width = 'auto';
+        const sampleLength = 40;
+        probe.textContent = 'A'.repeat(sampleLength);
+        sequenceHost.appendChild(probe);
+
+        const measuredAdvance = probe.getBoundingClientRect().width / sampleLength;
+        if (Number.isFinite(measuredAdvance) && measuredAdvance > 0) {
+          charAdvancePx = measuredAdvance;
+        }
+
+        if (typeof globalThis.getComputedStyle === 'function') {
+          const computed = globalThis.getComputedStyle(probe);
+          const measuredLineHeight = parseCssPixels(computed?.lineHeight);
+          if (Number.isFinite(measuredLineHeight) && measuredLineHeight > 0) {
+            lineHeightPx = measuredLineHeight;
+          } else {
+            const measuredFontSize = parseCssPixels(computed?.fontSize);
+            if (Number.isFinite(measuredFontSize) && measuredFontSize > 0) {
+              lineHeightPx = measuredFontSize * 1.35;
+            }
+          }
+        }
+      } catch {
+        // Keep fallback typography metrics.
+      } finally {
+        probe?.remove?.();
+      }
+    }
+
+    return {
+      charAdvancePx: Math.max(1, charAdvancePx),
+      lineHeightPx: Math.max(8, lineHeightPx)
+    };
+  }
+
+  function computeSequenceLayoutMetrics() {
+    const typography = measureSequenceTypography();
+    const fallbackFeatureOffsetPx = DEFAULT_STRAND_MARKER_COLUMN_PX + DEFAULT_STRAND_COLUMN_GAP_PX;
+    if (!sequenceHost || typeof sequenceHost.clientWidth !== 'number') {
+      return {
+        lineLength: DEFAULT_SEQUENCE_LINE_LENGTH,
+        charAdvancePx: typography.charAdvancePx,
+        lineHeightPx: typography.lineHeightPx,
+        lineFeatureOffsetPx: fallbackFeatureOffsetPx
+      };
+    }
+
+    const hostWidth = Math.max(0, sequenceHost.clientWidth);
+    if (!hostWidth) {
+      return {
+        lineLength: DEFAULT_SEQUENCE_LINE_LENGTH,
+        charAdvancePx: typography.charAdvancePx,
+        lineHeightPx: typography.lineHeightPx,
+        lineFeatureOffsetPx: fallbackFeatureOffsetPx
+      };
+    }
+
+    const compact = hostWidth <= 640;
+    const coordColumn = compact ? 58 : 74;
+    const dualGap = compact ? 8 : 10;
+    const strandEndColumn = compact ? 24 : 28;
+    const strandEndGap = DEFAULT_STRAND_COLUMN_GAP_PX;
+    const lineFeatureOffsetPx = strandEndColumn + strandEndGap;
+
+    let hostPadding = 0;
+    if (typeof globalThis.getComputedStyle === 'function') {
+      const computed = globalThis.getComputedStyle(sequenceHost);
+      hostPadding = parseCssPixels(computed?.paddingLeft) + parseCssPixels(computed?.paddingRight);
+    }
+
+    const usableWidth = Math.max(
+      120,
+      hostWidth - hostPadding - coordColumn - dualGap - (strandEndColumn * 2) - (strandEndGap * 2) - 12
+    );
+    const lineLength = clamp(Math.floor(usableWidth / Math.max(4.2, typography.charAdvancePx)), 24, 280);
+
+    return {
+      lineLength,
+      charAdvancePx: typography.charAdvancePx,
+      lineHeightPx: typography.lineHeightPx,
+      lineFeatureOffsetPx
+    };
+  }
 
   function setMode(mode) {
     const resolved = mode === 'file' ? 'file' : 'paste';
@@ -914,7 +1833,8 @@ export function initSequenceViewer() {
     }
     const rows = [
       ...state.errors.map((text) => `<p class="small-note" style="color:var(--danger);">${escapeHtml(text)}</p>`),
-      ...state.warnings.map((text) => `<p class="small-note">${escapeHtml(text)}</p>`)
+      ...state.warnings.map((text) => `<p class="small-note">${escapeHtml(text)}</p>`),
+      ...state.annotationWarnings.map((text) => `<p class="small-note">${escapeHtml(text)}</p>`)
     ];
 
     messageBox.innerHTML = rows.length
@@ -925,6 +1845,15 @@ export function initSequenceViewer() {
   function getSelectedRecord() {
     const index = clamp(state.selectedRecordIndex, 0, Math.max(0, state.records.length - 1));
     return state.records[index] || null;
+  }
+
+  function syncAnnotateButtonState() {
+    if (!annotateBtn) {
+      return;
+    }
+    const record = getSelectedRecord();
+    const hasRecord = Boolean(record?.sequence?.length);
+    annotateBtn.disabled = state.isAnnotating || !hasRecord;
   }
 
   function updateRecordSelect() {
@@ -953,7 +1882,7 @@ export function initSequenceViewer() {
       return;
     }
 
-    const features = Array.isArray(record?.features) ? record.features : [];
+    const features = getRenderableFeaturesForRecord(record);
     const sequenceLength = Math.max(1, record?.sequence?.length || 1);
 
     if (!features.length) {
@@ -967,20 +1896,23 @@ export function initSequenceViewer() {
 
     const bars = laidOut
       .map((feature, index) => {
-        const color = hashTypeToColor(feature.type);
+        const colorKey = feature.type === 'restriction_site' ? `${feature.type}:${feature.name}` : feature.type;
+        const color = hashTypeToColor(colorKey);
+        const locationText = buildFeatureLocationText(feature, sequenceLength);
         return (Array.isArray(feature.segments) ? feature.segments : [])
           .map((segment) => {
             const left = ((segment.start / sequenceLength) * 100).toFixed(3);
             const width = Math.max(0.35, ((segment.end - segment.start) / sequenceLength) * 100).toFixed(3);
             const top = (feature.lane * 18) + 8;
             const isActive = index === state.selectedFeatureIndex;
+            const title = `${feature.name || '-'} (${locationText})`;
             return `
               <button
                 class="sequence-viewer-feature-bar${isActive ? ' sequence-viewer-feature-bar-active' : ''}"
                 type="button"
                 data-feature-index="${index}"
                 style="left:${left}%;width:${width}%;top:${top}px;background:${color};"
-                title="${escapeHtml(feature.name)}"
+                title="${escapeHtml(title)}"
               ></button>
             `;
           })
@@ -1007,7 +1939,7 @@ export function initSequenceViewer() {
       return;
     }
 
-    const features = Array.isArray(record?.features) ? record.features : [];
+    const features = getRenderableFeaturesForRecord(record);
     if (!features.length || state.selectedFeatureIndex < 0) {
       featureDetail.innerHTML = '<p class="small-note">Select a feature in the bottom track to view details.</p>';
       return;
@@ -1021,22 +1953,37 @@ export function initSequenceViewer() {
     if (!sequenceHost) {
       return;
     }
+    hideSequenceHoverTooltip();
 
     if (!record) {
       sequenceHost.innerHTML = '<p class="small-note">Load sequence data to begin.</p>';
       return;
     }
 
-    const selectedFeature = (Array.isArray(record.features) && state.selectedFeatureIndex >= 0)
-      ? record.features[state.selectedFeatureIndex] || null
+    const features = getRenderableFeaturesForRecord(record);
+    const selectedFeature = (features.length && state.selectedFeatureIndex >= 0)
+      ? features[state.selectedFeatureIndex] || null
       : null;
 
     const highlights = selectedFeature?.segments || [];
-    sequenceHost.innerHTML = renderDualStrandSequenceLinesHtml(record.sequence, highlights);
+    const {
+      lineLength,
+      charAdvancePx,
+      lineHeightPx,
+      lineFeatureOffsetPx
+    } = computeSequenceLayoutMetrics();
+    sequenceHost.innerHTML = renderDualStrandSequenceLinesHtml(record.sequence, highlights, {
+      lineLength,
+      charAdvancePx,
+      sequenceLineHeightPx: lineHeightPx,
+      lineFeatureOffsetPx,
+      features,
+      selectedFeatureIndex: state.selectedFeatureIndex
+    });
 
     if (highlights.length) {
       const first = highlights[0];
-      const firstLine = Math.max(0, Math.floor(first.start / SEQUENCE_LINE_LENGTH));
+      const firstLine = Math.max(0, Math.floor(first.start / lineLength));
       sequenceHost.scrollTop = Math.max(0, (firstLine * DUAL_STRAND_SCROLL_STEP) - 42);
     } else {
       sequenceHost.scrollTop = 0;
@@ -1052,12 +1999,16 @@ export function initSequenceViewer() {
       if (statAmbiguous) statAmbiguous.textContent = '-';
       if (statQuality) statQuality.textContent = '-';
       if (statFeatures) statFeatures.textContent = '0';
+      if (statRestrictionSites) statRestrictionSites.textContent = '0';
       return;
     }
 
     const gc = computeGcPercent(record.sequence);
     const ambiguous = countAmbiguousBases(record.sequence);
     const qualitySummary = summarizeFastqQuality(record.quality);
+    const parsedFeatures = Array.isArray(record.features) ? record.features : [];
+    const nebFeatures = getNebRestrictionFeaturesForRecord(record);
+    const totalFeatures = parsedFeatures.length + nebFeatures.length;
 
     if (statFormat) {
       statFormat.textContent = String(record.sourceFormat || '-').toUpperCase();
@@ -1075,7 +2026,10 @@ export function initSequenceViewer() {
       statAmbiguous.textContent = ambiguous.toLocaleString();
     }
     if (statFeatures) {
-      statFeatures.textContent = String(Array.isArray(record.features) ? record.features.length : 0);
+      statFeatures.textContent = totalFeatures.toLocaleString();
+    }
+    if (statRestrictionSites) {
+      statRestrictionSites.textContent = nebFeatures.length.toLocaleString();
     }
     if (statQuality) {
       statQuality.textContent = qualitySummary
@@ -1090,6 +2044,7 @@ export function initSequenceViewer() {
     renderSequence(record);
     renderFeatureRail(record);
     renderSelectedFeatureDetail(record);
+    syncAnnotateButtonState();
     updateMessages();
   }
 
@@ -1097,6 +2052,8 @@ export function initSequenceViewer() {
     state.records = Array.isArray(result.records) ? result.records : [];
     state.warnings = Array.isArray(result.warnings) ? result.warnings : [];
     state.errors = Array.isArray(result.errors) ? result.errors : [];
+    state.annotationWarnings = [];
+    state.isAnnotating = false;
     state.selectedRecordIndex = 0;
     state.selectedFeatureIndex = -1;
 
@@ -1135,6 +2092,65 @@ export function initSequenceViewer() {
 
     const parsed = parseInputRecords(raw, { maxRecords: DEFAULT_MAX_RECORDS });
     setRecords(parsed, 'Loaded');
+  }
+
+  async function annotateCurrentRecord() {
+    if (state.isAnnotating) {
+      return;
+    }
+
+    const record = getSelectedRecord();
+    if (!record?.sequence?.length) {
+      setStatus('Load a record before annotation.', true);
+      return;
+    }
+
+    state.isAnnotating = true;
+    state.annotationWarnings = [];
+    syncAnnotateButtonState();
+    updateMessages();
+    setStatus(`Running pLannotate on ${record.name || 'record'}...`);
+
+    try {
+      const recordTopology = normalizeTopology(record.topology || 'linear');
+      const result = await runPlannotateAnnotationForSequence(
+        record.sequence,
+        recordTopology,
+        PLANNOTATE_DEFAULT_OPTIONS
+      );
+      const resultTopology = normalizeTopology(result?.topology || recordTopology);
+      const plannotateFeatures = buildPlannotateFeaturesFromResult(result, record.sequence.length, resultTopology);
+
+      const selectedIndex = clamp(state.selectedRecordIndex, 0, Math.max(0, state.records.length - 1));
+      const nextRecords = [...state.records];
+      const current = nextRecords[selectedIndex];
+      if (!current) {
+        throw new Error('Selected record no longer exists.');
+      }
+
+      const existingFeatures = Array.isArray(current.features) ? current.features : [];
+      const retainedFeatures = existingFeatures.filter(
+        (feature) => String(feature?.source || '').toLowerCase() !== 'plannotate'
+      );
+
+      current.features = [...retainedFeatures, ...plannotateFeatures];
+      current.topology = resultTopology;
+
+      state.records = nextRecords;
+      state.selectedRecordIndex = selectedIndex;
+      state.selectedFeatureIndex = -1;
+      state.annotationWarnings = Array.isArray(result?.warnings)
+        ? result.warnings.map((warning) => `pLannotate: ${String(warning)}`)
+        : [];
+
+      renderActiveRecord();
+      setStatus(`Completed: ${plannotateFeatures.length} pLannotate feature(s) on ${current.name || 'record'}.`);
+    } catch (error) {
+      setStatus(error?.message || 'Annotation failed.', true);
+    } finally {
+      state.isAnnotating = false;
+      syncAnnotateButtonState();
+    }
   }
 
   function clearAll() {
@@ -1195,6 +2211,11 @@ export function initSequenceViewer() {
     void loadCurrentInput();
   });
 
+  annotateBtn?.addEventListener('click', (event) => {
+    event.preventDefault();
+    void annotateCurrentRecord();
+  });
+
   clearBtn?.addEventListener('click', (event) => {
     event.preventDefault();
     clearAll();
@@ -1217,6 +2238,51 @@ export function initSequenceViewer() {
     }
     state.selectedFeatureIndex = index;
     renderActiveRecord();
+  });
+
+  sequenceHost?.addEventListener('mousemove', (event) => {
+    const trigger = event.target?.closest?.('[data-feature-index]') || null;
+    if (!trigger) {
+      hideSequenceHoverTooltip();
+      return;
+    }
+    const index = Number(trigger.dataset.featureIndex);
+    if (!Number.isFinite(index)) {
+      hideSequenceHoverTooltip();
+      return;
+    }
+    const record = getSelectedRecord();
+    const feature = getFeatureByIndexForRecord(record, index);
+    if (!feature || !record) {
+      hideSequenceHoverTooltip();
+      return;
+    }
+    showSequenceHoverTooltip(event, feature, record.sequence.length);
+  });
+
+  sequenceHost?.addEventListener('mouseleave', () => {
+    hideSequenceHoverTooltip();
+  });
+
+  sequenceHost?.addEventListener('scroll', () => {
+    hideSequenceHoverTooltip();
+  });
+
+  sequenceHost?.addEventListener('click', (event) => {
+    const trigger = event.target?.closest?.('[data-feature-index]') || null;
+    if (!trigger) {
+      return;
+    }
+    const index = Number(trigger.dataset.featureIndex);
+    if (!Number.isFinite(index)) {
+      return;
+    }
+    state.selectedFeatureIndex = index;
+    renderActiveRecord();
+  });
+
+  globalThis.addEventListener?.('resize', () => {
+    renderSequence(getSelectedRecord());
   });
 
   function loadFromExternal(payload) {
@@ -1266,6 +2332,8 @@ export {
   normalizeExternalPayload,
   parseGenBankLocationSegments,
   renderDualStrandSequenceLinesHtml,
+  computeRestrictionAnnotationGeometry,
+  buildRestrictionCutPolylinePoints,
   formatSelectedFeatureDetailHtml,
   computeGcPercent,
   countAmbiguousBases,

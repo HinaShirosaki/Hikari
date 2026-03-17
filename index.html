@@ -2425,6 +2425,7 @@
 
           <div class="form-actions">
             <button id="sequence-viewer-load-btn" type="button" class="primary-btn">Load</button>
+            <button id="sequence-viewer-annotate-btn" type="button" class="ghost-btn">Annotate</button>
             <button id="sequence-viewer-clear-btn" type="button" class="ghost-btn">Clear</button>
             <span id="sequence-viewer-status" class="small-note">Idle</span>
           </div>
@@ -2438,24 +2439,6 @@
         </form>
 
         <div class="sequence-viewer-results">
-          <section class="plannotate-result-card">
-            <div class="plannotate-card-head">
-              <h4>Summary</h4>
-            </div>
-            <div class="sequence-viewer-stats">
-              <div><strong>Format:</strong> <span id="sequence-viewer-stat-format">-</span></div>
-              <div><strong>Length:</strong> <span id="sequence-viewer-stat-length">0</span> bp</div>
-              <div><strong>Topology:</strong> <span id="sequence-viewer-stat-topology">-</span></div>
-              <div><strong>GC:</strong> <span id="sequence-viewer-stat-gc">-</span></div>
-              <div><strong>Ambiguous:</strong> <span id="sequence-viewer-stat-ambiguous">-</span></div>
-              <div><strong>Quality (min/mean/max):</strong> <span id="sequence-viewer-stat-quality">-</span></div>
-              <div><strong>Features:</strong> <span id="sequence-viewer-stat-features">0</span></div>
-            </div>
-            <div id="sequence-viewer-messages" class="calc-output sequence-viewer-message-box">
-              <p class="small-note">No parser warnings.</p>
-            </div>
-          </section>
-
           <section class="plannotate-result-card sequence-viewer-sequence-card">
             <div class="plannotate-card-head">
               <h4>Sequence (Dual Strand)</h4>
@@ -2473,6 +2456,25 @@
               <div id="sequence-viewer-feature-detail" class="calc-output sequence-viewer-feature-detail">
                 <p class="small-note">Select a feature in the bottom track to view details.</p>
               </div>
+            </div>
+          </section>
+
+          <section class="plannotate-result-card">
+            <div class="plannotate-card-head">
+              <h4>Summary</h4>
+            </div>
+            <div class="sequence-viewer-stats">
+              <div><strong>Format:</strong> <span id="sequence-viewer-stat-format">-</span></div>
+              <div><strong>Length:</strong> <span id="sequence-viewer-stat-length">0</span> bp</div>
+              <div><strong>Topology:</strong> <span id="sequence-viewer-stat-topology">-</span></div>
+              <div><strong>GC:</strong> <span id="sequence-viewer-stat-gc">-</span></div>
+              <div><strong>Ambiguous:</strong> <span id="sequence-viewer-stat-ambiguous">-</span></div>
+              <div><strong>Quality (min/mean/max):</strong> <span id="sequence-viewer-stat-quality">-</span></div>
+              <div><strong>Features:</strong> <span id="sequence-viewer-stat-features">0</span></div>
+              <div><strong>NEB Restriction Sites:</strong> <span id="sequence-viewer-stat-restriction-sites">0</span></div>
+            </div>
+            <div id="sequence-viewer-messages" class="calc-output sequence-viewer-message-box">
+              <p class="small-note">No parser warnings.</p>
             </div>
           </section>
         </div>

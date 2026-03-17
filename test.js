@@ -421,6 +421,8 @@ const sequenceViewerInternals = loadEsmStyleModule(
     'complementBase',
     'complementSequence',
     'renderDualStrandSequenceLinesHtml',
+    'computeRestrictionAnnotationGeometry',
+    'buildRestrictionCutPolylinePoints',
     'formatSelectedFeatureDetailHtml',
     'computeGcPercent',
     'countAmbiguousBases',
@@ -1591,6 +1593,112 @@ test('papers-management upload triggers background auto-ingestion and deep-read 
   assert.equal(codexResponses.some((prompt) => prompt.includes('METHODS_PROMPT')), true);
   assert.equal(codexResponses.some((prompt) => prompt.includes('REAGENTS_PROMPT')), true);
   assert.equal(persistCalls > 1, true);
+});
+
+test('papers-management open PDF button opens stored file path through bridge API', async () => {
+  const document = createMockDocument([
+    'paper-form',
+    'paper-title',
+    'paper-pdf',
+    'paper-link-type',
+    'paper-link-target',
+    'paper-list',
+    'journal-club-name',
+    'journal-club-description',
+    'journal-club-add-btn',
+    'journal-club-list',
+    'knowledge-project-select',
+    'knowledge-question',
+    'knowledge-ask-btn',
+    'knowledge-answer',
+    'knowledge-chat-history'
+  ]);
+
+  const openedPaths = [];
+  const window = {
+    alert: () => {},
+    open: () => null,
+    enanaApi: {
+      openFilePath: async (targetPath) => {
+        openedPaths.push(String(targetPath || ''));
+        return { ok: true };
+      }
+    }
+  };
+
+  const state = {
+    projects: [{ id: 'p1', name: 'Atlas' }],
+    journalClubs: [],
+    papers: [
+      {
+        id: 'paper-1',
+        title: 'Atlas PDF',
+        fileName: 'atlas.pdf',
+        linkedType: 'project',
+        linkedId: 'p1',
+        linkedName: 'Atlas',
+        summary: '',
+        summaryStatus: 'idle',
+        methodsExtract: [],
+        methodsStatus: 'idle',
+        keyReagents: [],
+        reagentsStatus: 'idle',
+        keyFigures: [],
+        deepReadReady: false,
+        availabilityStatus: 'uploaded_pdf',
+        ingestionStatus: 'ready',
+        ingestionUpdatedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        storedFilePath: '/tmp/enana/atlas.pdf',
+        storedRelativePath: 'Project/Atlas/Papers/atlas.pdf',
+        pdfDataUrl: ''
+      }
+    ],
+    paperExperimentLinks: [],
+    notebookEntries: [],
+    protocols: [],
+    knowledgeChats: {},
+    settings: {
+      storagePath: '/tmp/enana',
+      llm: {
+        provider: 'codex',
+        model: 'codex-default'
+      }
+    }
+  };
+
+  const module = loadEsmStyleModule(path.join(__dirname, 'modules', 'papers-management.js'), {
+    document,
+    window,
+    fetch: async () => ({
+      ok: true,
+      json: async () => ({ papers: {} })
+    })
+  });
+  const papersManager = module.initPapersManagement({
+    state,
+    persist: () => {},
+    createId: () => 'paper-new',
+    safeText: shared.safeText,
+    onCreateProtocolDraft: () => {}
+  });
+  papersManager.render();
+
+  const paperList = document.getElementById('paper-list');
+  trigger(paperList, 'click', {
+    target: {
+      closest(selector) {
+        if (selector === '[data-paper-open]') {
+          return { dataset: { paperOpen: 'paper-1' } };
+        }
+        return null;
+      }
+    }
+  });
+  await flushAsync();
+
+  assert.deepEqual(openedPaths, ['/tmp/enana/atlas.pdf']);
 });
 
 test('normalizeState keeps defaults and migrates legacy LLM API key', () => {
@@ -7272,6 +7380,8 @@ test('[EDGE] sequence-viewer internal functions are exposed for unit tests', () 
     'complementBase',
     'complementSequence',
     'renderDualStrandSequenceLinesHtml',
+    'computeRestrictionAnnotationGeometry',
+    'buildRestrictionCutPolylinePoints',
     'formatSelectedFeatureDetailHtml',
     'computeGcPercent',
     'countAmbiguousBases',
@@ -7380,6 +7490,139 @@ test('[EDGE] sequence-viewer complement mapping handles canonical and ambiguous 
   assert.equal(sequenceViewerInternals.complementSequence('ACGTRYN'), 'TGCAYRN');
 });
 
+test('[EDGE] sequence-viewer restriction geometry helper is deterministic for KpnI', () => {
+  const geometry = sequenceViewerInternals.computeRestrictionAnnotationGeometry(
+    { start: 20, end: 26 },
+    18,
+    32,
+    8,
+    25
+  );
+  assert.equal(Boolean(geometry), true);
+  assert.equal(geometry.overlapStart, 20);
+  assert.equal(geometry.overlapEnd, 26);
+  assert.equal(geometry.leftPx, 16);
+  assert.equal(geometry.widthPx, 48);
+  assert.equal(geometry.hasCut, true);
+  assert.equal(geometry.cutLocalPx, 40);
+
+  const points = sequenceViewerInternals.buildRestrictionCutPolylinePoints(48, 40, 40, 16, 6, 4, 14);
+  const coords = points.split(/\s+/);
+  assert.equal(coords.length, 4);
+  const x1 = Number(coords[0].split(',')[0]);
+  const x2 = Number(coords[1].split(',')[0]);
+  const x3 = Number(coords[2].split(',')[0]);
+  const x4 = Number(coords[3].split(',')[0]);
+  assert.equal(x1, x2);
+  assert.equal(x2, x3);
+  assert.equal(x3, x4);
+});
+
+test('[EDGE] sequence-viewer restriction split-site draws per-line boxes and one cut marker', () => {
+  const html = sequenceViewerInternals.renderDualStrandSequenceLinesHtml('A'.repeat(40), [], {
+    lineLength: 24,
+    charAdvancePx: 10,
+    sequenceLineHeightPx: 16,
+    selectedFeatureIndex: -1,
+    features: [
+      {
+        name: 'SplitSite',
+        type: 'restriction_site',
+        strand: 1,
+        site: 'AAAAA',
+        cut: 'AA^AAA',
+        segments: [{ start: 22, end: 27 }]
+      }
+    ]
+  });
+  const boxCount = (html.match(/sequence-viewer-restriction-box/g) || []).length;
+  const cutCount = (html.match(/sequence-viewer-restriction-cut-svg/g) || []).length;
+  assert.equal(boxCount, 2);
+  assert.equal(cutCount, 1);
+});
+
+test('[EDGE] sequence-viewer restriction renderer emits px-based geometry with label, box, and cut polyline', () => {
+  const html = sequenceViewerInternals.renderDualStrandSequenceLinesHtml('TTTGGTACCTTT', [], {
+    lineLength: 12,
+    charAdvancePx: 9,
+    sequenceLineHeightPx: 16,
+    selectedFeatureIndex: 0,
+    features: [
+      {
+        name: 'KpnI',
+        type: 'restriction_site',
+        strand: 1,
+        site: 'GGTACC',
+        cut: 'GGTAC^C',
+        segments: [{ start: 3, end: 9 }]
+      }
+    ]
+  });
+
+  assert.match(html, /sequence-viewer-restriction-label/);
+  assert.match(html, /sequence-viewer-restriction-box/);
+  assert.match(html, /sequence-viewer-restriction-cut-svg/);
+  assert.match(html, /sequence-viewer-line-restriction-track" style="width:[0-9.]+px;height:[0-9.]+px;"/);
+
+  const styleMatch = html.match(
+    /class="sequence-viewer-restriction-annot[^"]*"\s+data-feature-index="0"\s+style="([^"]+)"/
+  );
+  assert.equal(Boolean(styleMatch), true);
+  assert.match(styleMatch[1], /left:[0-9.]+px;/);
+  assert.match(styleMatch[1], /width:[0-9.]+px;/);
+  assert.equal(styleMatch[1].includes('%'), false);
+
+  const pointsMatch = html.match(/<polyline points="([^"]+)"/);
+  assert.equal(Boolean(pointsMatch), true);
+  const coords = String(pointsMatch[1]).split(/\s+/);
+  assert.equal(coords.length >= 4, true);
+  const topCutX = Number(String(coords[0]).split(',')[0]);
+  const bridgeStartX = Number(String(coords[1]).split(',')[0]);
+  const bridgeEndX = Number(String(coords[2]).split(',')[0]);
+  const bottomCutX = Number(String(coords[3]).split(',')[0]);
+  assert.equal(Number.isFinite(topCutX), true);
+  assert.equal(Number.isFinite(bridgeStartX), true);
+  assert.equal(Number.isFinite(bridgeEndX), true);
+  assert.equal(Number.isFinite(bottomCutX), true);
+  assert.equal(topCutX, bridgeStartX);
+  assert.equal(bridgeEndX, bottomCutX);
+  assert.notEqual(topCutX, bottomCutX);
+});
+
+test('[EDGE] sequence-viewer line feature renderer emits px-based span bars', () => {
+  const html = sequenceViewerInternals.renderDualStrandSequenceLinesHtml('ACGTACGTACGT', [], {
+    lineLength: 12,
+    charAdvancePx: 8,
+    sequenceLineHeightPx: 16,
+    selectedFeatureIndex: 0,
+    features: [
+      {
+        name: 'Feat_A',
+        type: 'promoter',
+        strand: 1,
+        segments: [{ start: 2, end: 10 }]
+      },
+      {
+        name: 'Feat_B',
+        type: 'cds',
+        strand: 1,
+        segments: [{ start: 6, end: 11 }]
+      }
+    ]
+  });
+
+  assert.match(html, /sequence-viewer-line-features" style="width:[0-9.]+px;height:[0-9.]+px;margin-left:[0-9.]+px;"/);
+  const styleMatch = html.match(
+    /class="sequence-viewer-line-feature sequence-viewer-line-feature-bar[^"]*"\s+data-feature-index="0"\s+style="([^"]+)"/
+  );
+  assert.equal(Boolean(styleMatch), true);
+  assert.match(styleMatch[1], /left:[0-9.]+px;/);
+  assert.match(styleMatch[1], /width:[0-9.]+px;/);
+  assert.match(styleMatch[1], /top:[0-9.]+px;/);
+  assert.equal(styleMatch[1].includes('%'), false);
+  assert.match(html, /sequence-viewer-line-feature-label/);
+});
+
 test('[EDGE] sequence-viewer dual-strand renderer shows 5/3 orientation and paired highlights', () => {
   const html = sequenceViewerInternals.renderDualStrandSequenceLinesHtml('ACGTAC', [{ start: 1, end: 4 }]);
   assert.match(html, /sequence-viewer-strand-row-top/);
@@ -7409,6 +7652,242 @@ test('[EDGE] sequence-viewer feature detail formatter includes core metadata', (
   assert.match(html, /87.56%/);
 });
 
+test('[EDGE] sequence-viewer annotate button enables when a record is loaded', () => {
+  const ids = [
+    'sequence-viewer-mode-paste',
+    'sequence-viewer-mode-file',
+    'sequence-viewer-paste-panel',
+    'sequence-viewer-file-panel',
+    'sequence-viewer-textarea',
+    'sequence-viewer-file-input',
+    'sequence-viewer-file-choose',
+    'sequence-viewer-file-name',
+    'sequence-viewer-load-btn',
+    'sequence-viewer-annotate-btn',
+    'sequence-viewer-clear-btn',
+    'sequence-viewer-status',
+    'sequence-viewer-messages',
+    'sequence-viewer-record-select',
+    'sequence-viewer-stat-format',
+    'sequence-viewer-stat-length',
+    'sequence-viewer-stat-topology',
+    'sequence-viewer-stat-gc',
+    'sequence-viewer-stat-ambiguous',
+    'sequence-viewer-stat-quality',
+    'sequence-viewer-stat-features',
+    'sequence-viewer-stat-restriction-sites',
+    'sequence-viewer-feature-rail-host',
+    'sequence-viewer-feature-detail',
+    'sequence-viewer-sequence-host'
+  ];
+  const document = createMockDocument(ids);
+  const moduleWithDom = loadEsmStyleModule(
+    path.join(__dirname, 'modules', 'sequence-viewer.js'),
+    { document }
+  );
+  const viewer = moduleWithDom.initSequenceViewer();
+  const annotateBtn = document.getElementById('sequence-viewer-annotate-btn');
+  assert.equal(Boolean(annotateBtn.disabled), true);
+
+  viewer.loadFromExternal({
+    name: 'test',
+    sequence: 'ACGTACGT',
+    source: 'external',
+    features: []
+  });
+
+  assert.equal(Boolean(annotateBtn.disabled), false);
+});
+
+test('[EDGE] sequence-viewer annotate updates only the selected record', async () => {
+  const ids = [
+    'sequence-viewer-mode-paste',
+    'sequence-viewer-mode-file',
+    'sequence-viewer-paste-panel',
+    'sequence-viewer-file-panel',
+    'sequence-viewer-textarea',
+    'sequence-viewer-file-input',
+    'sequence-viewer-file-choose',
+    'sequence-viewer-file-name',
+    'sequence-viewer-load-btn',
+    'sequence-viewer-annotate-btn',
+    'sequence-viewer-clear-btn',
+    'sequence-viewer-status',
+    'sequence-viewer-messages',
+    'sequence-viewer-record-select',
+    'sequence-viewer-stat-format',
+    'sequence-viewer-stat-length',
+    'sequence-viewer-stat-topology',
+    'sequence-viewer-stat-gc',
+    'sequence-viewer-stat-ambiguous',
+    'sequence-viewer-stat-quality',
+    'sequence-viewer-stat-features',
+    'sequence-viewer-stat-restriction-sites',
+    'sequence-viewer-feature-rail-host',
+    'sequence-viewer-feature-detail',
+    'sequence-viewer-sequence-host'
+  ];
+  const annotateCalls = [];
+  const document = createMockDocument(ids);
+  const window = {
+    enanaApi: {
+      plannotateAnnotate: async (payload) => {
+        annotateCalls.push(payload);
+        return {
+          ok: true,
+          result: {
+            sequence: payload.sequenceText,
+            sequenceLength: String(payload.sequenceText || '').length,
+            topology: payload.topology || 'linear',
+            warnings: [],
+            hits: [
+              {
+                Feature: 'OnlySecond',
+                Type: 'promoter',
+                Description: 'selected record annotation',
+                sframe: 1,
+                qstart: 1,
+                qend: 6,
+                pident: 99.2,
+                percmatch: 50.5,
+                crossesOrigin: false,
+                matchMode: 'exact'
+              }
+            ]
+          }
+        };
+      }
+    }
+  };
+
+  const moduleWithDom = loadEsmStyleModule(
+    path.join(__dirname, 'modules', 'sequence-viewer.js'),
+    { document, window }
+  );
+  moduleWithDom.initSequenceViewer();
+
+  const textarea = document.getElementById('sequence-viewer-textarea');
+  const loadBtn = document.getElementById('sequence-viewer-load-btn');
+  const recordSelect = document.getElementById('sequence-viewer-record-select');
+  const annotateBtn = document.getElementById('sequence-viewer-annotate-btn');
+  const featureRailHost = document.getElementById('sequence-viewer-feature-rail-host');
+
+  textarea.value = '>first\nATATATATATAT\n>second\nGGGGGGGGGGGG\n';
+  trigger(loadBtn, 'click');
+  recordSelect.value = '1';
+  trigger(recordSelect, 'change');
+
+  trigger(annotateBtn, 'click');
+  await flushAsync();
+
+  assert.equal(annotateCalls.length, 1);
+  assert.equal(annotateCalls[0].sequenceText, 'GGGGGGGGGGGG');
+
+  recordSelect.value = '0';
+  trigger(recordSelect, 'change');
+  assert.match(featureRailHost.innerHTML, /No features to display/);
+
+  recordSelect.value = '1';
+  trigger(recordSelect, 'change');
+  assert.match(featureRailHost.innerHTML, /OnlySecond/);
+});
+
+test('[EDGE] sequence-viewer annotate keeps non-plannotate features and refreshes plannotate features', async () => {
+  const ids = [
+    'sequence-viewer-mode-paste',
+    'sequence-viewer-mode-file',
+    'sequence-viewer-paste-panel',
+    'sequence-viewer-file-panel',
+    'sequence-viewer-textarea',
+    'sequence-viewer-file-input',
+    'sequence-viewer-file-choose',
+    'sequence-viewer-file-name',
+    'sequence-viewer-load-btn',
+    'sequence-viewer-annotate-btn',
+    'sequence-viewer-clear-btn',
+    'sequence-viewer-status',
+    'sequence-viewer-messages',
+    'sequence-viewer-record-select',
+    'sequence-viewer-stat-format',
+    'sequence-viewer-stat-length',
+    'sequence-viewer-stat-topology',
+    'sequence-viewer-stat-gc',
+    'sequence-viewer-stat-ambiguous',
+    'sequence-viewer-stat-quality',
+    'sequence-viewer-stat-features',
+    'sequence-viewer-stat-restriction-sites',
+    'sequence-viewer-feature-rail-host',
+    'sequence-viewer-feature-detail',
+    'sequence-viewer-sequence-host'
+  ];
+  const document = createMockDocument(ids);
+  const window = {
+    enanaApi: {
+      plannotateAnnotate: async (payload) => ({
+        ok: true,
+        result: {
+          sequence: payload.sequenceText,
+          sequenceLength: String(payload.sequenceText || '').length,
+          topology: payload.topology || 'linear',
+          warnings: [],
+          hits: [
+            {
+              Feature: 'FreshAnnot',
+              Type: 'cds',
+              Description: 'newly annotated',
+              sframe: 1,
+              qstart: 4,
+              qend: 10,
+              pident: 98.4,
+              percmatch: 44.2,
+              crossesOrigin: false,
+              matchMode: 'exact'
+            }
+          ]
+        }
+      })
+    }
+  };
+
+  const moduleWithDom = loadEsmStyleModule(
+    path.join(__dirname, 'modules', 'sequence-viewer.js'),
+    { document, window }
+  );
+  const viewer = moduleWithDom.initSequenceViewer();
+  viewer.loadFromExternal({
+    name: 'merge_test',
+    sequence: 'ATATATATATATATAT',
+    source: 'external',
+    features: [
+      {
+        id: 'existing_non_plannotate',
+        name: 'KeepMe',
+        type: 'promoter',
+        source: 'genbank',
+        strand: 1,
+        segments: [{ start: 1, end: 5 }]
+      },
+      {
+        id: 'old_plannotate',
+        name: 'OldAnnot',
+        type: 'cds',
+        source: 'plannotate',
+        strand: 1,
+        segments: [{ start: 6, end: 9 }]
+      }
+    ]
+  });
+
+  const annotateBtn = document.getElementById('sequence-viewer-annotate-btn');
+  const featureRailHost = document.getElementById('sequence-viewer-feature-rail-host');
+  trigger(annotateBtn, 'click');
+  await flushAsync();
+
+  assert.match(featureRailHost.innerHTML, /KeepMe/);
+  assert.match(featureRailHost.innerHTML, /FreshAnnot/);
+  assert.equal(featureRailHost.innerHTML.includes('OldAnnot'), false);
+});
+
 test('[EDGE] sequence-viewer bottom-track click updates selected feature detail strip', () => {
   const ids = [
     'sequence-viewer-mode-paste',
@@ -7420,6 +7899,7 @@ test('[EDGE] sequence-viewer bottom-track click updates selected feature detail 
     'sequence-viewer-file-choose',
     'sequence-viewer-file-name',
     'sequence-viewer-load-btn',
+    'sequence-viewer-annotate-btn',
     'sequence-viewer-clear-btn',
     'sequence-viewer-status',
     'sequence-viewer-messages',

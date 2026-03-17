@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('enanaApi', {
   pickStorageDirectory: (currentPath) => ipcRenderer.invoke('storage:pick-directory', { currentPath }),
   ensureStorageDirectory: (path) => ipcRenderer.invoke('storage:ensure-directory', { path }),
   storeImportedFile: (payload) => ipcRenderer.invoke('storage:store-imported-file', payload),
+  openFilePath: (path) => ipcRenderer.invoke('storage:open-file', { path }),
   plannotateCheckEnv: (dbDir = '') => ipcRenderer.invoke('plannotate:check-env', { dbDir }),
   plannotateAnnotate: (payload) => ipcRenderer.invoke('plannotate:annotate', payload),
   plannotateGenerateGbk: (payload) => ipcRenderer.invoke('plannotate:generate-gbk', payload),

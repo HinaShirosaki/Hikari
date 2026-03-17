@@ -1,4 +1,4 @@
-const { app, BrowserWindow, dialog, ipcMain } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron');
 const path = require('path');
 const fs = require('fs/promises');
 const startTelegramBot = require('./telegramBot');
@@ -696,6 +696,28 @@ ipcMain.handle('storage:store-imported-file', async (_event, payload) => {
   } catch (error) {
     return { ok: false, error: String(error?.message || error) };
   }
+});
+
+ipcMain.handle('storage:open-file', async (_event, payload) => {
+  const normalizedPayload = normalizeJsonPayload(payload, {});
+  const targetPath = typeof normalizedPayload?.path === 'string' ? normalizedPayload.path.trim() : '';
+  if (!targetPath) {
+    return { ok: false, error: 'Missing file path.' };
+  }
+
+  const resolvedPath = path.resolve(targetPath);
+  try {
+    await fs.access(resolvedPath);
+  } catch (error) {
+    return { ok: false, error: `File does not exist: ${resolvedPath}` };
+  }
+
+  const error = await shell.openPath(resolvedPath);
+  if (error) {
+    return { ok: false, error: String(error) };
+  }
+
+  return { ok: true, path: resolvedPath };
 });
 
 ipcMain.handle('plannotate:check-env', async (_event, payload) => {
