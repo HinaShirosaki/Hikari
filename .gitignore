@@ -6,3 +6,4 @@ tmp/
 .npm-cache/
 .DS_Store
 *.log
+output/
