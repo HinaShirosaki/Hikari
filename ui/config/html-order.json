@@ -1,0 +1,83 @@
+{
+  "output": "index.html",
+  "shellStart": "ui/html/shell/start.html",
+  "views": [
+    {
+      "id": "home-view",
+      "file": "ui/html/views/home-view.html"
+    },
+    {
+      "id": "lab-management-view",
+      "file": "ui/html/views/lab-management-view.html"
+    },
+    {
+      "id": "instrument-management-view",
+      "file": "ui/html/views/instrument-management-view.html"
+    },
+    {
+      "id": "protocol-management-view",
+      "file": "ui/html/views/protocol-management-view.html"
+    },
+    {
+      "id": "synthesis-notebook-view",
+      "file": "ui/html/views/synthesis-notebook-view.html"
+    },
+    {
+      "id": "biology-notebook-view",
+      "file": "ui/html/views/biology-notebook-view.html"
+    },
+    {
+      "id": "personal-inventory-view",
+      "file": "ui/html/views/personal-inventory-view.html"
+    },
+    {
+      "id": "sample-registry-view",
+      "file": "ui/html/views/sample-registry-view.html"
+    },
+    {
+      "id": "assay-view",
+      "file": "ui/html/views/assay-view.html"
+    },
+    {
+      "id": "gel-view",
+      "file": "ui/html/views/gel-view.html"
+    },
+    {
+      "id": "collaboration-management-view",
+      "file": "ui/html/views/collaboration-management-view.html"
+    },
+    {
+      "id": "lab-common-inventory-view",
+      "file": "ui/html/views/lab-common-inventory-view.html"
+    },
+    {
+      "id": "setting-view",
+      "file": "ui/html/views/setting-view.html"
+    },
+    {
+      "id": "project-management-view",
+      "file": "ui/html/views/project-management-view.html"
+    },
+    {
+      "id": "workflow-management-view",
+      "file": "ui/html/views/workflow-management-view.html"
+    },
+    {
+      "id": "papers-view",
+      "file": "ui/html/views/papers-view.html"
+    },
+    {
+      "id": "agent-view",
+      "file": "ui/html/views/agent-view.html"
+    },
+    {
+      "id": "tool-box-view",
+      "file": "ui/html/views/tool-box-view.html"
+    },
+    {
+      "id": "sequence-viewer-view",
+      "file": "ui/html/views/sequence-viewer-view.html"
+    }
+  ],
+  "shellEnd": "ui/html/shell/end.html"
+}

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, dialog, ipcMain } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron');
 const path = require('path');
 const fs = require('fs/promises');
 const startTelegramBot = require('./telegramBot');
@@ -16,9 +16,9 @@ const {
   getCodexLoginStatus,
   requestCodexCliText
 } = require('./codex-cli-provider');
-const { downloadPaperAndSiPdf } = require('./agent-paper-download');
-const { runPythonSandbox, buildPythonCodegenPrompt } = require('./agent-python');
-const { searchWebResults } = require('./agent-web-fallback');
+const { downloadPaperAndSiPdf } = require('./helpers/agent/agent-paper-download');
+const { runPythonSandbox, buildPythonCodegenPrompt } = require('./helpers/agent/agent-python');
+const { searchWebResults } = require('./helpers/agent/agent-web-fallback');
 const {
   getBundlePaths,
   syncBundleFromSnapshot,
@@ -26,32 +26,32 @@ const {
   searchInventoryIndex,
   searchProtocolsIndex,
   searchNotebookEntriesIndex
-} = require('./agent-sqlite-index');
+} = require('./helpers/agent/agent-sqlite-index');
 const {
   runPlannedPythonTask,
   postProcessPythonToolResult,
   runHybridWebFallback
-} = require('./agent-phase89-runtime');
+} = require('./helpers/agent/agent-phase89-runtime');
 const {
   loadToolContract,
   executeToolCall
-} = require('./agent-tools');
+} = require('./helpers/agent/agent-tools');
 const {
   ROUTING_INTENTS,
   buildRoutingDecisionFromIntentParser,
   buildRoutingClarificationQuestion
-} = require('./agent-routing');
+} = require('./helpers/agent/agent-routing');
 const {
   INTENT_PARSER_RESPONSE_SCHEMA,
   normalizeIntentParserPayload,
   buildIntentParserPrompt,
   buildInventorySearchTerms
-} = require('./agent-intent-parser');
-const { buildNotebookDraft, buildNotebookDraftSummary } = require('./agent-notebook-generation');
-const { buildProjectRecordIndex, retrieveProjectEvidence } = require('./agent-project-retrieval');
-const { buildPaperSearchableDocs, retrievePaperCandidates, resolvePaperRequest } = require('./agent-paper-analysis');
-const { finalizeAgentResponse } = require('./agent-response-layer');
-const { validateAndGateResponse } = require('./agent-validation-safety');
+} = require('./helpers/agent/agent-intent-parser');
+const { buildNotebookDraft, buildNotebookDraftSummary } = require('./helpers/agent/agent-notebook-generation');
+const { buildProjectRecordIndex, retrieveProjectEvidence } = require('./helpers/agent/agent-project-retrieval');
+const { buildPaperSearchableDocs, retrievePaperCandidates, resolvePaperRequest } = require('./helpers/agent/agent-paper-analysis');
+const { finalizeAgentResponse } = require('./helpers/agent/agent-response-layer');
+const { validateAndGateResponse } = require('./helpers/agent/agent-validation-safety');
 const {
   createLifecycleRecorder,
   recordLifecycleEvent,
@@ -59,11 +59,18 @@ const {
   appendLogWithRotation,
   readLifecycleLogs,
   replayRequestLifecycle
-} = require('./agent-observability');
-const { createMainDataHelpers } = require('./main-data-helpers');
-const { addEvidencePack, applyFinalResponseLayerAndValidation } = require('./agent-controller-shared');
-const { createAgentWorkflowHelpers } = require('./agent-workflow-helpers');
-const { createExternalBioSearchHelpers } = require('./agent-external-bio-search');
+} = require('./helpers/agent/agent-observability');
+const { createMainDataHelpers } = require('./helpers/main/data-helpers');
+const {
+  listSequenceEntries,
+  getSequenceEntry,
+  upsertSequenceEntry,
+  promoteSequenceEntry,
+  deleteSequenceEntry
+} = require('./helpers/main/sequence-library');
+const { addEvidencePack, applyFinalResponseLayerAndValidation } = require('./helpers/agent/controller-shared');
+const { createAgentWorkflowHelpers } = require('./helpers/agent/agent-workflow-helpers');
+const { createExternalBioSearchHelpers } = require('./helpers/agent/external-bio-search');
 const {
   toolboxConcentrationToM,
   toolboxConcentrationFromM,
@@ -86,7 +93,7 @@ const {
   scoreCrisprOnTargetForToolbox,
   computeCrisprOffTargetStatsForToolbox,
   reverseTranslateProteinForToolbox
-} = require('./agent-toolbox-helpers');
+} = require('./helpers/agent/toolbox-helpers');
 let AGENT_IO_CONTRACT_RAW = {};
 try {
   AGENT_IO_CONTRACT_RAW = require('./data/agent-io-contract.json');
@@ -693,6 +700,134 @@ ipcMain.handle('storage:store-imported-file', async (_event, payload) => {
   try {
     const stored = await storeImportedFile(normalizeJsonPayload(payload, {}));
     return { ok: true, ...stored };
+  } catch (error) {
+    return { ok: false, error: String(error?.message || error) };
+  }
+});
+
+ipcMain.handle('storage:open-file', async (_event, payload) => {
+  const normalizedPayload = normalizeJsonPayload(payload, {});
+  const targetPath = typeof normalizedPayload?.path === 'string' ? normalizedPayload.path.trim() : '';
+  if (!targetPath) {
+    return { ok: false, error: 'Missing file path.' };
+  }
+
+  const resolvedPath = path.resolve(targetPath);
+  try {
+    await fs.access(resolvedPath);
+  } catch (error) {
+    return { ok: false, error: `File does not exist: ${resolvedPath}` };
+  }
+
+  const error = await shell.openPath(resolvedPath);
+  if (error) {
+    return { ok: false, error: String(error) };
+  }
+
+  return { ok: true, path: resolvedPath };
+});
+
+ipcMain.handle('sequence-library:list', async (_event, payload) => {
+  try {
+    const normalizedPayload = normalizeJsonPayload(payload, {});
+    const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
+    if (!storagePath) {
+      return { ok: false, error: 'Missing storage path.' };
+    }
+    const status = cleanText(normalizedPayload?.status, 40);
+    const result = await listSequenceEntries({ storagePath, status });
+    return { ok: true, ...result };
+  } catch (error) {
+    return { ok: false, error: String(error?.message || error) };
+  }
+});
+
+ipcMain.handle('sequence-library:get', async (_event, payload) => {
+  try {
+    const normalizedPayload = normalizeJsonPayload(payload, {});
+    const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
+    const id = cleanText(normalizedPayload?.id, 200);
+    if (!storagePath) {
+      return { ok: false, error: 'Missing storage path.' };
+    }
+    if (!id) {
+      return { ok: false, error: 'Missing sequence entry id.' };
+    }
+
+    const includeGbk = normalizedPayload?.includeGbk === true;
+    const includeHtml = normalizedPayload?.includeHtml === true;
+    const result = await getSequenceEntry({
+      storagePath,
+      id,
+      includeGbk,
+      includeHtml
+    });
+    return { ok: true, ...result };
+  } catch (error) {
+    return { ok: false, error: String(error?.message || error) };
+  }
+});
+
+ipcMain.handle('sequence-library:upsert', async (_event, payload) => {
+  try {
+    const normalizedPayload = normalizeJsonPayload(payload, {});
+    const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
+    if (!storagePath) {
+      return { ok: false, error: 'Missing storage path.' };
+    }
+    const result = await upsertSequenceEntry({
+      storagePath,
+      id: cleanText(normalizedPayload?.id, 200),
+      name: cleanText(normalizedPayload?.name, 140),
+      status: cleanText(normalizedPayload?.status, 40),
+      sourceFormat: cleanText(normalizedPayload?.sourceFormat, 80),
+      topology: cleanText(normalizedPayload?.topology, 40),
+      sequenceLength: Number(normalizedPayload?.sequenceLength),
+      featureCount: Number(normalizedPayload?.featureCount),
+      gbkText: String(normalizedPayload?.gbkText || ''),
+      htmlText: String(normalizedPayload?.htmlText || '')
+    });
+    return { ok: true, ...result };
+  } catch (error) {
+    return { ok: false, error: String(error?.message || error) };
+  }
+});
+
+ipcMain.handle('sequence-library:promote', async (_event, payload) => {
+  try {
+    const normalizedPayload = normalizeJsonPayload(payload, {});
+    const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
+    const id = cleanText(normalizedPayload?.id, 200);
+    if (!storagePath) {
+      return { ok: false, error: 'Missing storage path.' };
+    }
+    if (!id) {
+      return { ok: false, error: 'Missing sequence entry id.' };
+    }
+    const result = await promoteSequenceEntry({
+      storagePath,
+      id,
+      name: cleanText(normalizedPayload?.name, 140)
+    });
+    return { ok: true, ...result };
+  } catch (error) {
+    return { ok: false, error: String(error?.message || error) };
+  }
+});
+
+ipcMain.handle('sequence-library:delete', async (_event, payload) => {
+  try {
+    const normalizedPayload = normalizeJsonPayload(payload, {});
+    const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
+    const id = cleanText(normalizedPayload?.id, 200);
+    if (!storagePath) {
+      return { ok: false, error: 'Missing storage path.' };
+    }
+    if (!id) {
+      return { ok: false, error: 'Missing sequence entry id.' };
+    }
+    const result = await deleteSequenceEntry({ storagePath, id });
+    return { ok: true, ...result };
   } catch (error) {
     return { ok: false, error: String(error?.message || error) };
   }

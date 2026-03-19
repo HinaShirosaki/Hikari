@@ -423,6 +423,77 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
     renderPaperList();
   }
 
+  function resolveStoredPaperPath(paper) {
+    const directPath = String(paper?.storedFilePath || '').trim();
+    if (directPath) {
+      return directPath;
+    }
+
+    const relativePath = String(paper?.storedRelativePath || '').trim();
+    const storageRoot = String(state.settings?.storagePath || '').trim();
+    if (!relativePath || !storageRoot) {
+      return '';
+    }
+
+    const rootClean = storageRoot.replace(/[\\/]+$/, '');
+    const relativeParts = relativePath.split(/[\\/]+/).filter(Boolean);
+    if (!rootClean || !relativeParts.length) {
+      return '';
+    }
+    const separator = rootClean.includes('\\') ? '\\' : '/';
+    return [rootClean, ...relativeParts].join(separator);
+  }
+
+  function openPdfDataUrl(pdfDataUrl) {
+    const source = String(pdfDataUrl || '').trim();
+    if (!source) {
+      return false;
+    }
+
+    const base64Match = source.match(/^data:application\/pdf(?:;charset=[^;,]+)?;base64,(.+)$/i);
+    if (base64Match?.[1]) {
+      try {
+        const binary = atob(base64Match[1]);
+        const bytes = new Uint8Array(binary.length);
+        for (let index = 0; index < binary.length; index += 1) {
+          bytes[index] = binary.charCodeAt(index);
+        }
+        const blobUrl = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+        const popup = window.open(blobUrl, '_blank', 'noopener,noreferrer');
+        window.setTimeout(() => {
+          URL.revokeObjectURL(blobUrl);
+        }, 60_000);
+        return Boolean(popup);
+      } catch {
+        // Fall through to direct window.open below.
+      }
+    }
+
+    const popup = window.open(source, '_blank', 'noopener,noreferrer');
+    return Boolean(popup);
+  }
+
+  async function openPaperPdf(paperId) {
+    const paper = state.papers.find((item) => item.id === paperId);
+    if (!paper) {
+      return;
+    }
+
+    const candidatePath = resolveStoredPaperPath(paper);
+    if (candidatePath && window.enanaApi?.openFilePath) {
+      const result = await window.enanaApi.openFilePath(candidatePath);
+      if (result?.ok) {
+        return;
+      }
+    }
+
+    if (openPdfDataUrl(paper.pdfDataUrl)) {
+      return;
+    }
+
+    window.alert('Unable to open this PDF. Re-upload the paper to restore the local file path.');
+  }
+
   async function onAskKnowledge() {
     const projectId = knowledgeProjectSelect?.value || '';
     const question = knowledgeQuestionInput?.value.trim() || '';
@@ -559,6 +630,12 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
   }
 
   function onPaperListClick(event) {
+    const openBtn = event.target.closest('[data-paper-open]');
+    if (openBtn) {
+      void openPaperPdf(openBtn.dataset.paperOpen);
+      return;
+    }
+
     const summarizeBtn = event.target.closest('[data-paper-summarize]');
     if (summarizeBtn) {
       summarizePaper(summarizeBtn.dataset.paperSummarize);
@@ -734,7 +811,7 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
             <p><strong>Updated:</strong> ${new Date(paper.updatedAt).toLocaleString()}</p>
             <p><strong>Summary:</strong> ${safeText(paper.summary || 'No summary yet.')}</p>
             <div class="card-actions">
-              <a class="ghost-btn" href="${paper.pdfDataUrl}" target="_blank" rel="noopener noreferrer">Open PDF</a>
+              <button class="ghost-btn" data-paper-open="${paper.id}">Open PDF</button>
               <button class="primary-btn" data-paper-summarize="${paper.id}" ${paper.summaryStatus === 'running' ? 'disabled' : ''}>
                 ${paper.summaryStatus === 'running' ? 'Summarizing...' : 'Summarize'}
               </button>

@@ -1,0 +1,12 @@
+/* setting-view */
+
+/* Extracted from ui/css/base/core.css */
+.setting-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.setting-card {
+  padding: 14px;
+}

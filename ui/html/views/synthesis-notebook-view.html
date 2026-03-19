@@ -1,0 +1,135 @@
+<section id="synthesis-notebook-view" class="view">
+      <div class="panel">
+        <h2>Synthesis Notebook</h2>
+        <label>
+          Select Project
+          <select id="synthesis-notebook-project-select">
+            <option value="">Select project</option>
+          </select>
+        </label>
+      </div>
+      <div id="synthesis-notebook-protocol-area" class="panel" hidden>
+        <h3 id="synthesis-notebook-protocol-title"></h3>
+        <div id="synthesis-notebook-steps" class="notebook-steps"></div>
+        <label>
+          Experiment Results File / Notes
+          <textarea id="synthesis-notebook-result" rows="4" placeholder="Path, summary, or notes"></textarea>
+        </label>
+        <label>
+          Experiment Result Files
+          <input id="synthesis-notebook-result-file" type="file" multiple />
+        </label>
+        <section class="card">
+          <h4>Object Links</h4>
+          <div class="form-grid">
+            <label>
+              Instrument
+              <select id="synthesis-ref-instrument">
+                <option value="">Select instrument</option>
+              </select>
+            </label>
+            <label>
+              People IDs (comma separated)
+              <input id="synthesis-ref-people-ids" placeholder="member-id-1, member-id-2" />
+            </label>
+            <label>
+              Chemical IDs (comma separated)
+              <input id="synthesis-ref-chemical-ids" placeholder="chemical-id-1, chemical-id-2" />
+            </label>
+            <label>
+              Samples (multi-select)
+              <select id="synthesis-ref-sample-ids" multiple size="5"></select>
+            </label>
+            <label>
+              Paper IDs (comma separated)
+              <input id="synthesis-ref-paper-ids" placeholder="paper-id-1, paper-id-2" />
+            </label>
+            <label>
+              Reagent Lots (comma separated)
+              <input id="synthesis-ref-reagent-lots" placeholder="A17, Lot-2026-02" />
+            </label>
+            <label>
+              Produced Compound Code
+              <input id="synthesis-produced-compound" placeholder="e.g. C-021" />
+            </label>
+            <label>
+              Purity (%)
+              <input id="synthesis-purity" type="number" min="0" max="100" step="0.01" placeholder="e.g. 97.5" />
+            </label>
+            <label>
+              Used In Assay
+              <input id="synthesis-used-in-assay" placeholder="e.g. Assay X" />
+            </label>
+          </div>
+        </section>
+        <section class="notebook-chemistry">
+          <div class="inline-row notebook-chemistry-head">
+            <h4>Synthesis Chemistry (Optional)</h4>
+            <span class="small-note">Integrated local editor</span>
+          </div>
+          <label class="inline-row">
+            <input id="synthesis-chem-enabled" type="checkbox" />
+            Add chemicals in this notebook page
+          </label>
+          <div id="synthesis-chem-workflow" hidden>
+            <p class="small-note">
+              Draw a structure or type an abbreviation, then press Next. Use Product mode when ready for product.
+            </p>
+            <div class="inline-row">
+              <input id="synthesis-chem-input" placeholder="Abbreviation (optional, e.g. NaBH4)" />
+              <button id="synthesis-chem-next-btn" class="ghost-btn" type="button">Next</button>
+              <button id="synthesis-chem-product-btn" class="ghost-btn" type="button">Product</button>
+              <button id="synthesis-chem-end-btn" class="ghost-btn" type="button">End</button>
+              <button id="synthesis-chem-reset-btn" class="ghost-btn" type="button">Reset</button>
+            </div>
+            <div id="synthesis-chem-status" class="small-note"></div>
+            <p class="small-note">
+              Use Ketcher canvas for drawing. PNG and hidden SMILES are captured when you press Next.
+            </p>
+            <iframe
+              id="synthesis-notebook-ketcher-frame"
+              class="ketcher-frame"
+              title="Ketcher chemical editor"
+              src="./ketcher-embedded.html"
+              loading="lazy"
+              referrerpolicy="no-referrer"
+            ></iframe>
+            <div class="synthesis-reaction-panel">
+              <h4>Reaction Scheme</h4>
+              <div id="synthesis-reaction-scheme" class="reaction-scheme"></div>
+              <div id="synthesis-substrate-numbering" class="reaction-numbering"></div>
+            </div>
+            <div class="synthesis-mw-panel">
+              <h4>Substrate MW Table</h4>
+              <table class="chem-mw-table">
+                <thead>
+                  <tr>
+                    <th>Substrate #</th>
+                    <th>MW</th>
+                  </tr>
+                </thead>
+                <tbody id="synthesis-mw-table-body">
+                  <tr>
+                    <td colspan="2">No substrates.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="stack-form">
+              <label>
+                Experiment Procedure
+                <textarea id="synthesis-procedure-input" rows="4" placeholder="Type how to do this experiment"></textarea>
+              </label>
+            </div>
+          </div>
+        </section>
+        <div class="form-actions">
+          <button id="save-synthesis-notebook-btn" class="primary-btn" type="button">Save Notebook Entry</button>
+          <button id="cancel-synthesis-notebook-edit-btn" class="ghost-btn" type="button" hidden>Cancel Edit</button>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>Saved Notebook Entries</h3>
+        <div id="synthesis-notebook-entry-list" class="list-table"></div>
+      </div>
+    </section>

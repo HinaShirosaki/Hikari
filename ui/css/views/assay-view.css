@@ -1,0 +1,325 @@
+/* assay-view */
+
+/* Extracted from ui/css/base/core.css */
+.assay-results-actions {
+  margin-top: 8px;
+}
+
+/* Extracted from ui/css/themes/modes.css */
+.assay-plate-preview {
+  display: grid;
+  gap: 8px;
+}
+
+.assay-mode-switch {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.assay-axis-switch {
+  display: grid;
+  gap: 6px;
+  align-content: end;
+}
+
+.assay-axis-actions {
+  align-items: end;
+}
+
+.assay-plate-table-wrap {
+  overflow: auto;
+}
+
+.assay-plate-table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+}
+
+.assay-plate-table th,
+.assay-plate-table td {
+  border: 1px solid rgba(53, 99, 153, 0.2);
+  padding: 4px 6px;
+  text-align: center;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.assay-plate-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: rgba(222, 237, 255, 0.95);
+}
+
+.assay-plate-table tbody th {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+}
+
+.assay-well {
+  width: 78px;
+  min-width: 78px;
+  height: 78px;
+  padding: 4px;
+  vertical-align: top;
+  background: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+}
+
+.assay-well-id {
+  font-weight: 700;
+  font-size: 0.72rem;
+  line-height: 1.1;
+  margin-bottom: 4px;
+}
+
+.assay-well-inline-input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  padding: 2px 4px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  text-align: center;
+  font-size: 0.72rem;
+  line-height: 1.2;
+}
+
+.assay-well-meta {
+  font-size: 0.68rem;
+  line-height: 1.15;
+  color: #334155;
+  margin-top: 4px;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.assay-plate-editor-row th {
+  background: rgba(222, 237, 255, 0.95);
+}
+
+.assay-axis-cell,
+.assay-plate-editor-row td {
+  white-space: normal;
+  padding: 0;
+  width: 72px;
+  min-width: 72px;
+}
+
+.assay-axis-input,
+.assay-plate-editor-row input[data-axis-dimension] {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: 34px;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  text-align: center;
+  font-size: 0.72rem;
+}
+
+.assay-plate-editor-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: end;
+  justify-content: flex-start;
+}
+
+.assay-plate-editor-inline label {
+  display: grid;
+  gap: 4px;
+  min-width: 140px;
+  text-align: left;
+}
+
+.assay-plate-editor-inline input {
+  width: 100%;
+}
+
+.assay-well.is-filled {
+  font-weight: 600;
+  background: color-mix(in srgb, var(--accent) 18%, #ffffff);
+}
+
+.assay-well.is-active {
+  outline: 2px solid color-mix(in srgb, var(--accent) 45%, #ffffff);
+  outline-offset: -2px;
+}
+
+.assay-result-cell {
+  padding: 0;
+}
+
+.assay-result-input {
+  width: 100%;
+  min-width: 62px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: center;
+  font-size: 0.75rem;
+  padding: 6px 4px;
+  box-sizing: border-box;
+}
+
+.assay-result-input:focus {
+  outline: 2px solid color-mix(in srgb, var(--accent) 45%, #ffffff);
+  outline-offset: -2px;
+}
+
+.assay-result-disabled {
+  background: rgba(232, 236, 242, 0.75);
+  color: #6b7280;
+}
+
+.assay-result-paste-target:focus {
+  outline: 2px solid color-mix(in srgb, var(--accent) 40%, #ffffff);
+  outline-offset: 0;
+}
+
+.assay-tabulator {
+  border: 1px solid rgba(53, 99, 153, 0.22);
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.84);
+}
+
+.assay-tabulator .tabulator {
+  border: 0;
+  background: transparent;
+  font-size: 0.78rem;
+}
+
+.assay-tabulator .tabulator-cell {
+  text-align: center;
+}
+
+.assay-tabulator .tabulator-col {
+  text-align: center;
+}
+
+.assay-analysis-controls {
+  display: grid;
+  gap: 8px;
+  margin: 6px 0 4px;
+}
+
+.assay-analysis-controls textarea {
+  resize: vertical;
+  min-height: 52px;
+}
+
+.assay-analysis-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.assay-analysis-checkbox input[type="checkbox"] {
+  width: auto;
+}
+
+.assay-analysis-group-actions {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.assay-analysis-selection-status {
+  min-height: 1.1rem;
+}
+
+.assay-analysis-help code {
+  font-size: 0.82em;
+}
+
+.assay-analysis-results {
+  display: grid;
+  gap: 10px;
+}
+
+.assay-analysis-chart {
+  border: 1px solid rgba(53, 99, 153, 0.22);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.84);
+  padding: 10px;
+}
+
+.assay-analysis-chart-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.assay-analysis-chart-title {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.assay-analysis-chart-plot {
+  overflow-x: auto;
+}
+
+.assay-analysis-chart .rv-xy-plot__grid-lines__line {
+  stroke: rgba(53, 99, 153, 0.2);
+}
+
+.assay-analysis-chart .rv-xy-plot__axis__line,
+.assay-analysis-chart .rv-xy-plot__axis__tick__line {
+  stroke: rgba(53, 99, 153, 0.46);
+}
+
+.assay-analysis-chart .rv-xy-plot__axis__tick__text {
+  fill: var(--primary);
+  font-size: 11px;
+}
+
+body.theme-night .assay-plate-table-wrap {
+  background: transparent;
+}
+
+body.theme-night .assay-plate-table th,
+body.theme-night .assay-plate-table td {
+  border-color: rgba(145, 174, 214, 0.3);
+}
+
+body.theme-night .assay-plate-table th {
+  background: rgba(33, 55, 90, 0.95);
+}
+
+body.theme-night .assay-well {
+  background: rgba(23, 38, 64, 0.92);
+}
+
+body.theme-night .assay-tabulator {
+  border-color: rgba(145, 174, 214, 0.32);
+  background: rgba(20, 33, 57, 0.78);
+}
+
+body.theme-night .assay-analysis-chart {
+  border-color: rgba(145, 174, 214, 0.32);
+  background: rgba(20, 33, 57, 0.78);
+}
+
+body.theme-night .assay-analysis-chart .rv-xy-plot__grid-lines__line {
+  stroke: rgba(145, 174, 214, 0.24);
+}
+
+body.theme-night .assay-analysis-chart .rv-xy-plot__axis__line,
+body.theme-night .assay-analysis-chart .rv-xy-plot__axis__tick__line {
+  stroke: rgba(145, 174, 214, 0.52);
+}
+
+body.theme-night .assay-analysis-chart .rv-xy-plot__axis__tick__text {
+  fill: #d7e5ff;
+}

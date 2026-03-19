@@ -1,0 +1,54 @@
+/* lab-common-inventory-view */
+
+/* Extracted from ui/css/base/core.css */
+.chemical-form-actions {
+  grid-column: 1 / -1;
+  align-self: end;
+  margin-top: 4px;
+}
+
+.chemical-inbox-row {
+  align-items: end;
+}
+
+.chemical-inbox-row label {
+  min-width: 240px;
+}
+
+.chemical-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px 10px;
+}
+
+.chemical-detail-item {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0.45));
+}
+
+.chemical-detail-item-wide {
+  grid-column: 1 / -1;
+}
+
+.chemical-detail-label {
+  color: var(--primary);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.chemical-detail-value {
+  color: var(--text);
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
+/* Extracted from ui/css/overrides/cross-view-fixes.css */
+#lab-common-inventory-view .chemical-inbox-row + .small-note {
+  margin-top: 10px;
+}

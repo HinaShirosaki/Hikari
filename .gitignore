@@ -6,3 +6,7 @@ tmp/
 .npm-cache/
 .DS_Store
 *.log
+output/
+Agent.md
+.codex/
+.vscode/

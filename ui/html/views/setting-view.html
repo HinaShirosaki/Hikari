@@ -1,0 +1,183 @@
+<section id="setting-view" class="view">
+      <div class="panel">
+        <h2>Setting</h2>
+        <div class="setting-grid">
+          <section class="card setting-card">
+            <h3>Personal Information</h3>
+            <form id="personal-info-form" class="stack-form">
+              <label>
+                Name
+                <input id="setting-name" />
+              </label>
+              <label>
+                Position
+                <input id="setting-position" />
+              </label>
+              <label>
+                Institution Email
+                <input id="setting-institution-email" type="email" />
+              </label>
+              <label>
+                Enana Email
+                <input id="setting-enana-email" type="email" />
+              </label>
+              <button type="submit" class="primary-btn">Save Personal Info</button>
+            </form>
+          </section>
+
+          <section class="card setting-card">
+            <h3>Appearance</h3>
+            <form id="appearance-form" class="stack-form">
+              <label>
+                Font Size
+                <select id="setting-font-size">
+                  <option value="14">Small</option>
+                  <option value="16">Medium</option>
+                  <option value="18">Large</option>
+                </select>
+              </label>
+              <label>
+                Theme Color
+                <input id="setting-theme-color" type="color" value="#2688ff" />
+              </label>
+              <label>
+                Day / Night
+                <select id="setting-mode">
+                  <option value="day">Day</option>
+                  <option value="night">Night</option>
+                </select>
+              </label>
+              <div class="inline-row">
+                <button type="button" id="setting-ui-style-toggle" class="ghost-btn">Use Neutral Compact UI</button>
+                <span id="setting-ui-style-label" class="small-note">Current style: Classic</span>
+              </div>
+              <button type="submit" class="primary-btn">Save Appearance</button>
+            </form>
+          </section>
+
+          <section class="card setting-card">
+            <h3>Storage Folder Path</h3>
+            <form id="storage-form" class="stack-form">
+              <label>
+                Root Folder Path
+                <input id="setting-storage-path" placeholder="/path/to/enana-data" readonly />
+              </label>
+              <p class="small-note">Notebook pages will reference individual folders under this path.</p>
+              <div class="form-actions">
+                <button type="button" id="select-storage-path-btn" class="ghost-btn">Select Folder</button>
+                <button type="submit" class="primary-btn">Save Storage Path</button>
+              </div>
+            </form>
+          </section>
+
+          <section class="card setting-card">
+            <h3>Startup &amp; Data</h3>
+            <form id="startup-form" class="stack-form">
+              <label>
+                Default Startup Module
+                <select id="setting-startup-default-view">
+                  <option value="home-view">Home</option>
+                  <option value="lab-management-view">Members</option>
+                  <option value="instrument-management-view">Instruments</option>
+                  <option value="protocol-management-view">Protocols</option>
+                  <option value="collaboration-management-view">Collabrations</option>
+                  <option value="synthesis-notebook-view">Synthesis Notebook</option>
+                  <option value="biology-notebook-view">Biology Notebook</option>
+                  <option value="lab-common-inventory-view">Chemicals</option>
+                  <option value="sample-registry-view">Sample &amp; Inventory</option>
+                  <option value="assay-view">Assay</option>
+                  <option value="gel-view">Gel</option>
+                  <option value="project-management-view">Projects</option>
+                  <option value="workflow-management-view">Workflows</option>
+                  <option value="papers-view">Papers</option>
+                  <option value="agent-view">Agent</option>
+                  <option value="sequence-viewer-view">Sequence Viewer</option>
+                  <option value="tool-box-view">Tools</option>
+                  <option value="setting-view">Setting</option>
+                </select>
+              </label>
+              <label class="inline-row">
+                <input id="setting-startup-remember-last-view" type="checkbox" />
+                Remember last opened module on launch
+              </label>
+              <label class="inline-row">
+                <input id="setting-startup-auto-load-data-file" type="checkbox" />
+                Auto-load current .json data file on launch
+              </label>
+              <p class="small-note">If enabled, “Remember last opened module” overrides the default startup module.</p>
+              <button type="submit" class="primary-btn">Save Startup Settings</button>
+            </form>
+          </section>
+
+          <section class="card setting-card">
+            <h3>Inventory Locations</h3>
+            <div class="stack-form">
+              <div class="inline-row">
+                <input id="setting-location-input" placeholder="Add approximate location" />
+                <button type="button" id="setting-location-add-btn" class="ghost-btn">Add Location</button>
+              </div>
+              <div id="setting-location-list" class="stack-form"></div>
+            </div>
+          </section>
+
+          <section class="card setting-card">
+            <h3>LLM Model & API</h3>
+            <form id="llm-form" class="stack-form">
+              <label>
+                Provider
+                <select id="setting-provider">
+                  <option value="openai">OpenAI</option>
+                  <option value="gemini">Gemini</option>
+                  <option value="claude">Claude</option>
+                  <option value="codex">OpenAI CLI (Codex)</option>
+                </select>
+              </label>
+              <label>
+                Model Name
+                <input id="setting-model" placeholder="e.g. gpt-4.1 / gemini-2.5-pro / claude-sonnet-4-5 / gpt-5" />
+              </label>
+              <label>
+                API Endpoint
+                <input id="setting-api-endpoint" placeholder="https://api.openai.com/v1/responses" />
+              </label>
+              <label>
+                API Key
+                <input id="setting-api-key" type="password" placeholder="sk-... (not required for Codex CLI)" />
+              </label>
+              <button type="submit" class="primary-btn">Save LLM Settings</button>
+            </form>
+          </section>
+
+          <section class="card setting-card">
+            <h3>Telegram Bot</h3>
+            <form id="telegram-form" class="stack-form">
+              <label>
+                Bot Token
+                <input id="setting-telegram-token" type="password" placeholder="123456:ABCDEF..." />
+              </label>
+              <p class="small-note">Enter token to store it in app settings. Clearing saved token falls back to env token if available.</p>
+              <p id="setting-telegram-status" class="small-note">Telegram bot status: loading...</p>
+              <div class="form-actions">
+                <button type="submit" class="primary-btn">Save Telegram Token</button>
+                <button type="button" id="clear-telegram-token-btn" class="ghost-btn">Clear Saved Token</button>
+              </div>
+            </form>
+          </section>
+
+          <section class="card setting-card">
+            <h3>Data File (.json)</h3>
+            <div class="stack-form">
+              <p class="small-note">Current .json file: <span id="setting-ena-path">Not set</span></p>
+              <label class="inline-row">
+                <input id="setting-auto-save-ena" type="checkbox" />
+                Auto-save to current .json file after each change
+              </label>
+              <div class="form-actions">
+                <button type="button" id="save-ena-btn" class="primary-btn">Save .json</button>
+                <button type="button" id="load-ena-btn" class="ghost-btn">Load .json</button>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>

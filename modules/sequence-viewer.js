@@ -1,8 +1,25 @@
 import { escapeHtml } from './tool-box/common.js';
+import { annotatePlasmidSequence } from './plannotate-js.js';
 
 const DEFAULT_MAX_RECORDS = 5000;
-const SEQUENCE_LINE_LENGTH = 70;
+const DEFAULT_SEQUENCE_LINE_LENGTH = 120;
 const DUAL_STRAND_SCROLL_STEP = 44;
+const FALLBACK_CHAR_ADVANCE_PX = 8.8;
+const FALLBACK_SEQUENCE_LINE_HEIGHT_PX = 16;
+const RESTRICTION_LABEL_GAP_PX = 14;
+const STRAND_PAIR_ROW_GAP_PX = 8;
+const DEFAULT_STRAND_MARKER_COLUMN_PX = 28;
+const DEFAULT_STRAND_COLUMN_GAP_PX = 6;
+const LINE_FEATURE_BAR_HEIGHT_PX = 16;
+const LINE_FEATURE_BAR_GAP_PX = 3;
+const LINE_FEATURE_BAR_HORIZONTAL_PADDING_PX = 5;
+const FEATURE_TOOLTIP_OFFSET_PX = 12;
+const PLANNOTATE_DEFAULT_OPTIONS = Object.freeze({
+  detailed: false,
+  minIdentity: 85,
+  minCoverage: 0.25,
+  minHitLength: 24
+});
 const BASE_COMPLEMENT = Object.freeze({
   A: 'T',
   C: 'G',
@@ -23,6 +40,60 @@ const BASE_COMPLEMENT = Object.freeze({
   '*': '*'
 });
 
+const IUPAC_DNA_CLASS = Object.freeze({
+  A: 'A',
+  C: 'C',
+  G: 'G',
+  T: 'T',
+  R: '[AG]',
+  Y: '[CT]',
+  S: '[GC]',
+  W: '[AT]',
+  K: '[GT]',
+  M: '[AC]',
+  B: '[CGT]',
+  D: '[AGT]',
+  H: '[ACT]',
+  V: '[ACG]',
+  N: '[ACGT]'
+});
+
+const NEB_RESTRICTION_ENZYMES = Object.freeze([
+  { name: 'EcoRI', site: 'GAATTC', cut: 'G^AATTC' },
+  { name: 'BamHI', site: 'GGATCC', cut: 'G^GATCC' },
+  { name: 'HindIII', site: 'AAGCTT', cut: 'A^AGCTT' },
+  { name: 'NotI', site: 'GCGGCCGC', cut: 'GC^GGCCGC' },
+  { name: 'XhoI', site: 'CTCGAG', cut: 'C^TCGAG' },
+  { name: 'NheI', site: 'GCTAGC', cut: 'G^CTAGC' },
+  { name: 'XbaI', site: 'TCTAGA', cut: 'T^CTAGA' },
+  { name: 'SpeI', site: 'ACTAGT', cut: 'A^CTAGT' },
+  { name: 'PstI', site: 'CTGCAG', cut: 'CTGCA^G' },
+  { name: 'KpnI', site: 'GGTACC', cut: 'GGTAC^C' },
+  { name: 'SacI', site: 'GAGCTC', cut: 'GAGCT^C' },
+  { name: 'SalI', site: 'GTCGAC', cut: 'G^TCGAC' },
+  { name: 'SmaI', site: 'CCCGGG', cut: 'CCC^GGG' },
+  { name: 'NcoI', site: 'CCATGG', cut: 'C^CATGG' },
+  { name: 'NdeI', site: 'CATATG', cut: 'CA^TATG' },
+  { name: 'BglII', site: 'AGATCT', cut: 'A^GATCT' },
+  { name: 'EcoRV', site: 'GATATC', cut: 'GAT^ATC' },
+  { name: 'PvuII', site: 'CAGCTG', cut: 'CAG^CTG' },
+  { name: 'MluI', site: 'ACGCGT', cut: 'A^CGCGT' },
+  { name: 'ClaI', site: 'ATCGAT', cut: 'AT^CGAT' },
+  { name: 'AgeI', site: 'ACCGGT', cut: 'A^CCGGT' },
+  { name: 'AvrII', site: 'CCTAGG', cut: 'C^CTAGG' },
+  { name: 'ApaI', site: 'GGGCCC', cut: 'GGGCC^C' },
+  { name: 'AflII', site: 'CTTAAG', cut: 'C^TTAAG' },
+  { name: 'AatII', site: 'GACGTC', cut: 'GACGT^C' },
+  { name: 'BlpI', site: 'GCTNAGC', cut: 'GCTN^AGC' },
+  { name: 'BspEI', site: 'TCCGGA', cut: 'T^CCGGA' },
+  { name: 'BsrGI', site: 'TGTACA', cut: 'T^GTACA' },
+  { name: 'BsaI', site: 'GGTCTC', cut: 'GGTCTC (1/5)' },
+  { name: 'BsmBI', site: 'CGTCTC', cut: 'CGTCTC (1/5)' },
+  { name: 'BbsI', site: 'GAAGAC', cut: 'GAAGAC (2/6)' },
+  { name: 'SapI', site: 'GCTCTTC', cut: 'GCTCTTC (1/4)' }
+]);
+const NEB_FEATURE_CACHE = new WeakMap();
+
 function normalizeSequenceText(raw) {
   return String(raw || '')
     .toUpperCase()
@@ -39,12 +110,162 @@ function complementSequence(sequence) {
   return [...normalizeSequenceText(sequence)].map((base) => complementBase(base)).join('');
 }
 
+function reverseComplementIupac(sequence) {
+  const raw = String(sequence || '').toUpperCase().replace(/U/g, 'T');
+  return [...raw].reverse().map((base) => complementBase(base)).join('');
+}
+
+function motifToRegexBody(motif) {
+  const normalized = String(motif || '').toUpperCase().replace(/U/g, 'T').trim();
+  if (!normalized) {
+    return '';
+  }
+  const classes = [...normalized].map((base) => IUPAC_DNA_CLASS[base] || '');
+  if (classes.some((entry) => !entry)) {
+    return '';
+  }
+  return classes.join('');
+}
+
+function findMotifHits(sequence, motif, topology = 'linear') {
+  const text = normalizeSequenceText(sequence);
+  const normalizedMotif = String(motif || '').toUpperCase().replace(/U/g, 'T').trim();
+  const patternBody = motifToRegexBody(normalizedMotif);
+  if (!text.length || !normalizedMotif.length || !patternBody.length) {
+    return [];
+  }
+
+  const sequenceLength = text.length;
+  const motifLength = normalizedMotif.length;
+  const circular = normalizeTopology(topology) === 'circular';
+  const scanText = circular && motifLength > 1
+    ? `${text}${text.slice(0, motifLength - 1)}`
+    : text;
+  const regex = new RegExp(`(?=(${patternBody}))`, 'g');
+  const hits = [];
+
+  let match = regex.exec(scanText);
+  while (match) {
+    const start = match.index;
+    if (start < sequenceLength) {
+      const end = start + motifLength;
+      const segments = end <= sequenceLength
+        ? [{ start, end }]
+        : [
+          { start, end: sequenceLength },
+          { start: 0, end: end - sequenceLength }
+        ];
+
+      hits.push({
+        start,
+        end,
+        segments
+      });
+    }
+    regex.lastIndex = start + 1;
+    match = regex.exec(scanText);
+  }
+
+  return hits;
+}
+
+function buildNebRestrictionFeatures(sequence, topology = 'linear') {
+  const text = normalizeSequenceText(sequence);
+  if (!text.length) {
+    return [];
+  }
+
+  const features = [];
+  const dedupe = new Set();
+
+  NEB_RESTRICTION_ENZYMES.forEach((enzyme) => {
+    const motif = String(enzyme.site || '').toUpperCase().replace(/U/g, 'T').trim();
+    if (!motif.length) {
+      return;
+    }
+
+    const forwardHits = findMotifHits(text, motif, topology);
+    forwardHits.forEach((hit, index) => {
+      const segmentKey = hit.segments.map((segment) => `${segment.start}-${segment.end}`).join(',');
+      const key = `${enzyme.name}|+|${segmentKey}`;
+      if (dedupe.has(key)) {
+        return;
+      }
+      dedupe.add(key);
+      features.push({
+        id: `neb_${enzyme.name.toLowerCase()}_plus_${hit.start}_${index}`,
+        name: enzyme.name,
+        type: 'restriction_site',
+        strand: 1,
+        description: `NEB recognition site ${motif}${enzyme.cut ? ` (${enzyme.cut})` : ''}.`,
+        source: 'neb',
+        mode: 'NEB',
+        site: motif,
+        cut: String(enzyme.cut || ''),
+        segments: hit.segments
+      });
+    });
+
+    const reverseMotif = reverseComplementIupac(motif);
+    if (!reverseMotif || reverseMotif === motif) {
+      return;
+    }
+
+    const reverseHits = findMotifHits(text, reverseMotif, topology);
+    reverseHits.forEach((hit, index) => {
+      const segmentKey = hit.segments.map((segment) => `${segment.start}-${segment.end}`).join(',');
+      const key = `${enzyme.name}|-|${segmentKey}`;
+      if (dedupe.has(key)) {
+        return;
+      }
+      dedupe.add(key);
+      features.push({
+        id: `neb_${enzyme.name.toLowerCase()}_minus_${hit.start}_${index}`,
+        name: enzyme.name,
+        type: 'restriction_site',
+        strand: -1,
+        description: `NEB recognition site ${motif}${enzyme.cut ? ` (${enzyme.cut})` : ''}.`,
+        source: 'neb',
+        mode: 'NEB',
+        site: motif,
+        cut: String(enzyme.cut || ''),
+        segments: hit.segments
+      });
+    });
+  });
+
+  return features.sort((left, right) => {
+    const leftStart = left.segments?.[0]?.start ?? 0;
+    const rightStart = right.segments?.[0]?.start ?? 0;
+    if (leftStart !== rightStart) {
+      return leftStart - rightStart;
+    }
+    return String(left.name || '').localeCompare(String(right.name || ''));
+  });
+}
+
 function clamp(value, min, max) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) {
     return min;
   }
   return Math.min(max, Math.max(min, numeric));
+}
+
+function cleanText(value, maxLength = 500) {
+  const text = String(value || '').trim();
+  if (!text) {
+    return '';
+  }
+  if (!Number.isFinite(Number(maxLength)) || maxLength <= 0) {
+    return text;
+  }
+  return text.length > maxLength ? text.slice(0, maxLength) : text;
+}
+
+function parseCssPixels(value) {
+  const numeric = Number.parseFloat(String(value || ''));
+  return Number.isFinite(numeric) ? numeric : 0;
 }
 
 function normalizeRecordName(value, fallback = 'record') {
@@ -750,6 +971,27 @@ function assignFeatureLanes(features) {
   });
 }
 
+function getNebRestrictionFeaturesForRecord(record) {
+  if (!record?.sequence) {
+    return [];
+  }
+  const cacheKey = `${record.sequence}|${normalizeTopology(record.topology)}`;
+  const cached = NEB_FEATURE_CACHE.get(record);
+  if (cached?.key === cacheKey && Array.isArray(cached.features)) {
+    return cached.features;
+  }
+
+  const features = buildNebRestrictionFeatures(record.sequence, record.topology);
+  NEB_FEATURE_CACHE.set(record, { key: cacheKey, features });
+  return features;
+}
+
+function getRenderableFeaturesForRecord(record) {
+  const parsedFeatures = Array.isArray(record?.features) ? record.features : [];
+  const nebFeatures = getNebRestrictionFeaturesForRecord(record);
+  return [...parsedFeatures, ...nebFeatures];
+}
+
 function buildHighlightedLineMarkup(sourceText, lineStart, lineEnd, lineHighlights) {
   let body = '';
   if (!lineHighlights.length) {
@@ -771,25 +1013,531 @@ function buildHighlightedLineMarkup(sourceText, lineStart, lineEnd, lineHighligh
   return body;
 }
 
-function renderDualStrandSequenceLinesHtml(sequence, highlightedSegments = []) {
+function normalizeHighlightSegments(segments, sequenceLength = null) {
+  const maxLength = Number.isFinite(Number(sequenceLength))
+    ? Math.max(0, Number(sequenceLength))
+    : Number.POSITIVE_INFINITY;
+  const normalized = (Array.isArray(segments) ? segments : [])
+    .map((segment) => ({
+      start: clamp(Math.round(Number(segment?.start) || 0), 0, maxLength),
+      end: clamp(Math.round(Number(segment?.end) || 0), 0, maxLength)
+    }))
+    .filter((segment) => segment.end > segment.start)
+    .sort((left, right) => {
+      if (left.start !== right.start) {
+        return left.start - right.start;
+      }
+      return left.end - right.end;
+    });
+
+  if (!normalized.length) {
+    return [];
+  }
+
+  const merged = [normalized[0]];
+  for (let i = 1; i < normalized.length; i += 1) {
+    const previous = merged[merged.length - 1];
+    const current = normalized[i];
+    if (current.start <= previous.end) {
+      previous.end = Math.max(previous.end, current.end);
+    } else {
+      merged.push(current);
+    }
+  }
+  return merged;
+}
+
+function getEnanaApiBridge() {
+  return globalThis?.window?.enanaApi || globalThis?.enanaApi || null;
+}
+
+function getPlannotateSegmentsFromHit(hit, sequenceLength, topology = 'circular') {
+  const normalizedLength = Math.max(0, Number(sequenceLength) || 0);
+  if (!normalizedLength) {
+    return [];
+  }
+
+  const qstart = clamp(Math.round(Number(hit?.qstart) || 0), 0, normalizedLength);
+  const qendRaw = Number(hit?.qend);
+  const qend = qendRaw === 0
+    ? normalizedLength
+    : clamp(Math.round(qendRaw || 0), 0, normalizedLength);
+
+  if (normalizeTopology(topology) === 'linear') {
+    const left = Math.min(qstart, qend);
+    const right = Math.max(qstart, qend);
+    return right > left ? [{ start: left, end: right }] : [];
+  }
+
+  const wrapsOrigin = Boolean(hit?.crossesOrigin) || qend < qstart;
+  if (!wrapsOrigin) {
+    return qend > qstart ? [{ start: qstart, end: qend }] : [];
+  }
+
+  const segments = [];
+  if (normalizedLength > qstart) {
+    segments.push({ start: qstart, end: normalizedLength });
+  }
+  if (qend > 0) {
+    segments.push({ start: 0, end: qend });
+  }
+  if (!segments.length && qstart === 0 && qend === 0) {
+    segments.push({ start: 0, end: normalizedLength });
+  }
+  return segments;
+}
+
+function formatPlannotateHitLocation(hit, sequenceLength) {
+  const normalizedLength = Math.max(1, Number(sequenceLength) || 1);
+  const start = clamp((Number(hit?.qstart) || 0) + 1, 1, normalizedLength);
+  const rawEnd = Number(hit?.qend);
+  const end = rawEnd === 0 ? normalizedLength : clamp(rawEnd || 0, 1, normalizedLength);
+  if (!hit?.crossesOrigin) {
+    return `${start}..${end}`;
+  }
+  return `${start}..${normalizedLength}, 1..${end}`;
+}
+
+function buildPlannotateFeaturesFromResult(result, fallbackSequenceLength, fallbackTopology = 'linear') {
+  const sequenceLength = Math.max(0, Number(result?.sequenceLength) || Number(fallbackSequenceLength) || 0);
+  const topology = normalizeTopology(result?.topology || fallbackTopology);
+  const hits = Array.isArray(result?.hits) ? result.hits : [];
+
+  return hits
+    .map((hit, index) => {
+      const segments = getPlannotateSegmentsFromHit(hit, sequenceLength, topology);
+      if (!segments.length) {
+        return null;
+      }
+      return {
+        id: `plannotate_${index + 1}`,
+        name: normalizeRecordName(hit?.Feature || `feature_${index + 1}`, `feature_${index + 1}`),
+        type: normalizeRecordName(hit?.Type || 'misc_feature', 'misc_feature').toLowerCase(),
+        strand: Number(hit?.sframe) === -1 ? -1 : 1,
+        description: String(hit?.Description || ''),
+        source: 'plannotate',
+        locationText: formatPlannotateHitLocation(hit, sequenceLength),
+        identity: Number.isFinite(Number(hit?.pident)) ? Number(hit.pident) : null,
+        coverage: Number.isFinite(Number(hit?.percmatch)) ? Number(hit.percmatch) : null,
+        mode: String(hit?.matchMode || ''),
+        segments
+      };
+    })
+    .filter(Boolean);
+}
+
+async function runPlannotateAnnotationForSequence(sequence, topology, options = {}) {
+  const resolvedOptions = {
+    ...PLANNOTATE_DEFAULT_OPTIONS,
+    ...(options && typeof options === 'object' ? options : {}),
+    topology: normalizeTopology(topology || 'linear')
+  };
+
+  const bridge = getEnanaApiBridge();
+  const backend = bridge?.plannotateAnnotate;
+  if (typeof backend === 'function') {
+    const response = await backend({
+      sequenceText: sequence,
+      topology: resolvedOptions.topology,
+      detailed: Boolean(resolvedOptions.detailed),
+      minIdentity: Number(resolvedOptions.minIdentity) || PLANNOTATE_DEFAULT_OPTIONS.minIdentity,
+      minCoverage: Number(resolvedOptions.minCoverage) || PLANNOTATE_DEFAULT_OPTIONS.minCoverage,
+      minHitLength: Math.round(Number(resolvedOptions.minHitLength) || PLANNOTATE_DEFAULT_OPTIONS.minHitLength)
+    });
+    if (!response?.ok) {
+      throw new Error(response?.error || 'pLannotate backend annotation failed.');
+    }
+    return response.result || {
+      sequence,
+      sequenceLength: String(sequence || '').length,
+      topology: resolvedOptions.topology,
+      hits: [],
+      warnings: []
+    };
+  }
+
+  const fallback = annotatePlasmidSequence(sequence, resolvedOptions);
+  fallback.warnings = [
+    'Native blastn/diamond backend unavailable. Displaying JS fallback annotations.',
+    ...(Array.isArray(fallback.warnings) ? fallback.warnings : [])
+  ];
+  return fallback;
+}
+
+function parseRestrictionCutDescriptor(feature) {
+  const cutPattern = String(feature?.cut || '').trim().toUpperCase();
+  if (!cutPattern) {
+    return null;
+  }
+
+  const siteLength = Math.max(1, normalizeSequenceText(feature?.site || '').length);
+
+  if (cutPattern.includes('^')) {
+    const [left = '', right = ''] = cutPattern.split('^');
+    const topOffset = normalizeSequenceText(left).length;
+    const rightLength = normalizeSequenceText(right).length;
+    if (topOffset >= 0) {
+      const bottomOffset = Math.max(0, siteLength - topOffset);
+      return {
+        anchor: 'start',
+        topOffset,
+        bottomOffset,
+        sticky: topOffset !== bottomOffset && rightLength > 0
+      };
+    }
+  }
+
+  const outsideMatch = cutPattern.match(/\(([-+]?\d+)\s*\/\s*([-+]?\d+)\)/);
+  if (outsideMatch) {
+    const topOffset = Number(outsideMatch[1]);
+    const bottomOffset = Number(outsideMatch[2]);
+    if (Number.isFinite(topOffset) && Number.isFinite(bottomOffset)) {
+      return {
+        anchor: 'end',
+        topOffset,
+        bottomOffset,
+        sticky: topOffset !== bottomOffset
+      };
+    }
+  }
+
+  return null;
+}
+
+function resolveRestrictionCutBaseIndices(feature) {
+  const descriptor = parseRestrictionCutDescriptor(feature);
+  if (!descriptor) {
+    return null;
+  }
+
+  const siteStart = Number(feature?.segments?.[0]?.start);
+  if (!Number.isFinite(siteStart)) {
+    return null;
+  }
+
+  if (descriptor.anchor === 'start') {
+    return {
+      top: siteStart + descriptor.topOffset,
+      bottom: siteStart + descriptor.bottomOffset,
+      sticky: Boolean(descriptor.sticky)
+    };
+  }
+
+  const siteLength = Math.max(1, normalizeSequenceText(feature?.site || '').length);
+  const anchor = siteStart + siteLength;
+  return {
+    top: anchor + descriptor.topOffset,
+    bottom: anchor + descriptor.bottomOffset,
+    sticky: Boolean(descriptor.sticky)
+  };
+}
+
+function computeRestrictionAnnotationGeometry(segment, lineStart, lineEnd, charAdvancePx, cutBaseIndex = null) {
+  const segmentStart = Number(segment?.start);
+  const segmentEnd = Number(segment?.end);
+  if (!Number.isFinite(segmentStart) || !Number.isFinite(segmentEnd)) {
+    return null;
+  }
+
+  const overlapStart = Math.max(lineStart, segmentStart);
+  const overlapEnd = Math.min(lineEnd, segmentEnd);
+  if (overlapEnd <= overlapStart) {
+    return null;
+  }
+
+  const safeAdvance = Math.max(1, Number(charAdvancePx) || FALLBACK_CHAR_ADVANCE_PX);
+  const leftPx = Math.max(0, (overlapStart - lineStart) * safeAdvance);
+  const widthPx = Math.max(1, (overlapEnd - overlapStart) * safeAdvance);
+
+  let hasCut = Number.isFinite(cutBaseIndex) && cutBaseIndex >= overlapStart && cutBaseIndex <= overlapEnd;
+  if (hasCut && cutBaseIndex === overlapStart && overlapStart > segmentStart) {
+    hasCut = false;
+  }
+
+  const cutLocalPx = hasCut
+    ? clamp(((cutBaseIndex - lineStart) * safeAdvance) - leftPx, 0, widthPx)
+    : null;
+
+  return {
+    overlapStart,
+    overlapEnd,
+    leftPx,
+    widthPx,
+    hasCut,
+    cutLocalPx
+  };
+}
+
+function resolveRestrictionCutLocalPx(cutBaseIndex, geometry, lineStart, charAdvancePx, segmentStart, segmentEnd) {
+  if (!Number.isFinite(cutBaseIndex)) {
+    return null;
+  }
+  if (cutBaseIndex < geometry.overlapStart || cutBaseIndex > geometry.overlapEnd) {
+    return null;
+  }
+  if (cutBaseIndex === geometry.overlapStart && geometry.overlapStart > segmentStart) {
+    return null;
+  }
+  if (cutBaseIndex === geometry.overlapEnd && geometry.overlapEnd < segmentEnd) {
+    return null;
+  }
+
+  return clamp(((cutBaseIndex - lineStart) * charAdvancePx) - geometry.leftPx, 0, geometry.widthPx);
+}
+
+function buildRestrictionCutPolylinePoints(
+  widthPx,
+  topCutLocalPx,
+  bottomCutLocalPx,
+  boxHeightPx,
+  topRowHeightPx,
+  strandGapPx,
+  labelGapPx = RESTRICTION_LABEL_GAP_PX
+) {
+  if (!Number.isFinite(topCutLocalPx) && !Number.isFinite(bottomCutLocalPx)) {
+    return '';
+  }
+
+  const safeWidth = Math.max(1, Number(widthPx) || 1);
+  const safeTopCutPx = Number.isFinite(topCutLocalPx) ? clamp(topCutLocalPx, 0, safeWidth) : null;
+  const safeBottomCutPx = Number.isFinite(bottomCutLocalPx) ? clamp(bottomCutLocalPx, 0, safeWidth) : null;
+  const topX = Number.isFinite(safeTopCutPx) ? safeTopCutPx : safeBottomCutPx;
+  const bottomX = Number.isFinite(safeBottomCutPx) ? safeBottomCutPx : safeTopCutPx;
+  const safeBoxHeight = Math.max(8, Number(boxHeightPx) || FALLBACK_SEQUENCE_LINE_HEIGHT_PX);
+  const safeTopRowHeight = clamp(
+    Number(topRowHeightPx) || FALLBACK_SEQUENCE_LINE_HEIGHT_PX,
+    6,
+    Math.max(6, safeBoxHeight - 2)
+  );
+  const safeStrandGap = clamp(
+    Number(strandGapPx) || STRAND_PAIR_ROW_GAP_PX,
+    0,
+    Math.max(0, safeBoxHeight - safeTopRowHeight)
+  );
+  const safeLabelGap = Math.max(6, Number(labelGapPx) || RESTRICTION_LABEL_GAP_PX);
+  const boxTopY = safeLabelGap;
+  const topCutStartY = boxTopY + 1;
+  const bridgeY = boxTopY + safeTopRowHeight + (safeStrandGap / 2);
+  const boxBottomY = safeLabelGap + safeBoxHeight - 1;
+
+  return `${topX.toFixed(2)},${topCutStartY.toFixed(2)} ${topX.toFixed(2)},${bridgeY.toFixed(2)} ${bottomX.toFixed(2)},${bridgeY.toFixed(2)} ${bottomX.toFixed(2)},${boxBottomY.toFixed(2)}`;
+}
+
+function renderLineRestrictionAnnotationsHtml(
+  indexedFeatures,
+  lineStart,
+  lineEnd,
+  sequenceLength,
+  selectedFeatureIndex,
+  charAdvancePx,
+  sequenceLineHeightPx
+) {
+  const safeAdvance = Math.max(1, Number(charAdvancePx) || FALLBACK_CHAR_ADVANCE_PX);
+  const safeLineHeight = Math.max(8, Number(sequenceLineHeightPx) || FALLBACK_SEQUENCE_LINE_HEIGHT_PX);
+  const pairBoxHeightPx = Math.max(safeLineHeight + 8, (safeLineHeight * 2) + STRAND_PAIR_ROW_GAP_PX);
+  const lineWidthPx = Math.max(1, (Math.max(lineStart, lineEnd) - lineStart) * safeAdvance);
+  const annotations = indexedFeatures
+    .filter(({ feature }) => String(feature?.type || '').toLowerCase() === 'restriction_site')
+    .flatMap(({ feature, index }) => {
+      const segments = Array.isArray(feature?.segments) ? feature.segments : [];
+      const cutBaseIndices = resolveRestrictionCutBaseIndices(feature);
+      return segments
+        .map((segment) => {
+          const segmentStart = Number(segment?.start) || 0;
+          const segmentEnd = Number(segment?.end) || 0;
+          const geometry = computeRestrictionAnnotationGeometry(
+            segment,
+            lineStart,
+            lineEnd,
+            safeAdvance,
+            Number(cutBaseIndices?.top)
+          );
+          if (!geometry) {
+            return null;
+          }
+
+          const topCutLocalPx = resolveRestrictionCutLocalPx(
+            Number(cutBaseIndices?.top),
+            geometry,
+            lineStart,
+            safeAdvance,
+            segmentStart,
+            segmentEnd
+          );
+          const bottomCutLocalPx = resolveRestrictionCutLocalPx(
+            Number(cutBaseIndices?.bottom),
+            geometry,
+            lineStart,
+            safeAdvance,
+            segmentStart,
+            segmentEnd
+          );
+          const strandGapPx = Math.max(2, pairBoxHeightPx - (safeLineHeight * 2));
+          const cutPoints = (Number.isFinite(topCutLocalPx) || Number.isFinite(bottomCutLocalPx))
+            ? buildRestrictionCutPolylinePoints(
+              geometry.widthPx,
+              topCutLocalPx,
+              bottomCutLocalPx,
+              pairBoxHeightPx,
+              safeLineHeight,
+              strandGapPx,
+              RESTRICTION_LABEL_GAP_PX
+            )
+            : '';
+          const svgWidth = Math.max(1, geometry.widthPx);
+          const svgHeight = RESTRICTION_LABEL_GAP_PX + pairBoxHeightPx;
+          const location = buildFeatureLocationText(feature, sequenceLength);
+          const isActive = index === selectedFeatureIndex;
+          const title = `${feature.name || '-'} (${location})`;
+
+          return `
+            <button
+              type="button"
+              class="sequence-viewer-restriction-annot${isActive ? ' sequence-viewer-restriction-annot-active' : ''}"
+              data-feature-index="${index}"
+              style="left:${geometry.leftPx.toFixed(3)}px;width:${geometry.widthPx.toFixed(3)}px;--sequence-viewer-restriction-label-gap:${RESTRICTION_LABEL_GAP_PX}px;"
+              title="${escapeHtml(title)}"
+            >
+              <span class="sequence-viewer-restriction-label">${escapeHtml(feature.name || `site_${index + 1}`)}</span>
+              <span class="sequence-viewer-restriction-box"></span>
+              ${cutPoints
+    ? `<svg class="sequence-viewer-restriction-cut-svg" viewBox="0 0 ${svgWidth.toFixed(2)} ${svgHeight.toFixed(2)}" preserveAspectRatio="none" aria-hidden="true">
+                <polyline points="${cutPoints}"></polyline>
+              </svg>`
+    : ''}
+            </button>
+          `;
+        })
+        .filter(Boolean);
+    })
+    .join('');
+
+  if (!annotations) {
+    return '';
+  }
+
+  return `<div class="sequence-viewer-line-restriction-track" style="width:${lineWidthPx.toFixed(3)}px;height:${pairBoxHeightPx.toFixed(3)}px;">${annotations}</div>`;
+}
+
+function renderLineFeatureButtonsHtml(
+  indexedFeatures,
+  lineStart,
+  lineEnd,
+  sequenceLength,
+  selectedFeatureIndex,
+  charAdvancePx,
+  lineFeatureOffsetPx = (DEFAULT_STRAND_MARKER_COLUMN_PX + DEFAULT_STRAND_COLUMN_GAP_PX)
+) {
+  const safeAdvance = Math.max(1, Number(charAdvancePx) || FALLBACK_CHAR_ADVANCE_PX);
+  const safeOffset = Math.max(0, Number(lineFeatureOffsetPx) || 0);
+  const lineWidthPx = Math.max(1, (Math.max(lineStart, lineEnd) - lineStart) * safeAdvance);
+
+  const fragments = indexedFeatures
+    .filter(({ feature }) => String(feature?.type || '').toLowerCase() !== 'restriction_site')
+    .flatMap(({ feature, index }) => {
+      const segments = Array.isArray(feature?.segments) ? feature.segments : [];
+      const location = buildFeatureLocationText(feature, sequenceLength);
+      const title = `${feature.name || '-'} (${location})`;
+      const color = hashTypeToColor(String(feature?.type || 'misc_feature'));
+      return segments
+        .map((segment) => {
+          const geometry = computeRestrictionAnnotationGeometry(segment, lineStart, lineEnd, safeAdvance);
+          if (!geometry) {
+            return null;
+          }
+          return {
+            feature,
+            index,
+            title,
+            color,
+            leftPx: geometry.leftPx,
+            widthPx: geometry.widthPx,
+            rightPx: geometry.leftPx + geometry.widthPx
+          };
+        })
+        .filter(Boolean);
+    })
+    .sort((left, right) => {
+      if (left.leftPx !== right.leftPx) {
+        return left.leftPx - right.leftPx;
+      }
+      return right.widthPx - left.widthPx;
+    });
+
+  if (!fragments.length) {
+    return '';
+  }
+
+  const laneRightEdges = [];
+  fragments.forEach((fragment) => {
+    let laneIndex = laneRightEdges.findIndex((rightEdge) => fragment.leftPx >= rightEdge);
+    if (laneIndex < 0) {
+      laneIndex = laneRightEdges.length;
+      laneRightEdges.push(fragment.rightPx);
+    } else {
+      laneRightEdges[laneIndex] = fragment.rightPx;
+    }
+    fragment.lane = laneIndex;
+  });
+
+  const laneCount = Math.max(1, laneRightEdges.length);
+  const trackHeightPx = (laneCount * LINE_FEATURE_BAR_HEIGHT_PX) + ((laneCount - 1) * LINE_FEATURE_BAR_GAP_PX);
+  const bars = fragments
+    .map((fragment) => {
+      const topPx = fragment.lane * (LINE_FEATURE_BAR_HEIGHT_PX + LINE_FEATURE_BAR_GAP_PX);
+      const isActive = fragment.index === selectedFeatureIndex;
+      const label = String(fragment.feature?.name || `feature_${fragment.index + 1}`);
+      const labelWidthPx = (label.length * safeAdvance) + (LINE_FEATURE_BAR_HORIZONTAL_PADDING_PX * 2);
+      const showLabel = fragment.widthPx >= labelWidthPx;
+      return `
+        <button
+          type="button"
+          class="sequence-viewer-line-feature sequence-viewer-line-feature-bar${isActive ? ' sequence-viewer-line-feature-active' : ''}${showLabel ? '' : ' sequence-viewer-line-feature-compact'}"
+          data-feature-index="${fragment.index}"
+          style="left:${fragment.leftPx.toFixed(3)}px;width:${fragment.widthPx.toFixed(3)}px;top:${topPx.toFixed(3)}px;background:${fragment.color};"
+          title="${escapeHtml(fragment.title)}"
+        >${showLabel ? `<span class="sequence-viewer-line-feature-label">${escapeHtml(label)}</span>` : ''}</button>
+      `;
+    })
+    .join('');
+
+  return `<div class="sequence-viewer-line-features" style="width:${lineWidthPx.toFixed(3)}px;height:${trackHeightPx.toFixed(3)}px;margin-left:${safeOffset.toFixed(3)}px;">${bars}</div>`;
+}
+
+function renderDualStrandSequenceLinesHtml(sequence, highlightedSegments = [], options = {}) {
   const text = normalizeSequenceText(sequence);
   if (!text.length) {
     return '<p class="small-note">No sequence loaded.</p>';
   }
 
+  const lineLength = clamp(
+    Math.round(Number(options?.lineLength) || DEFAULT_SEQUENCE_LINE_LENGTH),
+    24,
+    280
+  );
+  const charAdvancePx = Math.max(1, Number(options?.charAdvancePx) || FALLBACK_CHAR_ADVANCE_PX);
+  const sequenceLineHeightPx = Math.max(8, Number(options?.sequenceLineHeightPx) || FALLBACK_SEQUENCE_LINE_HEIGHT_PX);
+  const lineFeatureOffsetPx = Math.max(
+    0,
+    Number(options?.lineFeatureOffsetPx) || (DEFAULT_STRAND_MARKER_COLUMN_PX + DEFAULT_STRAND_COLUMN_GAP_PX)
+  );
+  const selectedFeatureIndex = Number.isFinite(Number(options?.selectedFeatureIndex))
+    ? Number(options.selectedFeatureIndex)
+    : -1;
+  const cursorBaseIndex = Number.isFinite(Number(options?.cursorBaseIndex))
+    ? Number(options.cursorBaseIndex)
+    : null;
+  const indexedFeatures = Array.isArray(options?.features)
+    ? options.features.map((feature, index) => ({ feature, index }))
+    : [];
   const complementary = complementSequence(text);
-  const sortedHighlights = highlightedSegments
-    .map((segment) => ({
-      start: Math.max(0, Number(segment.start) || 0),
-      end: Math.max(0, Number(segment.end) || 0)
-    }))
-    .filter((segment) => segment.end > segment.start)
-    .sort((a, b) => a.start - b.start);
+  const sortedHighlights = normalizeHighlightSegments(highlightedSegments, text.length);
+  const strandPairHeightPx = Math.max(8, (sequenceLineHeightPx * 2) + STRAND_PAIR_ROW_GAP_PX);
 
   const lines = [];
 
-  for (let lineStart = 0; lineStart < text.length; lineStart += SEQUENCE_LINE_LENGTH) {
-    const lineEnd = Math.min(text.length, lineStart + SEQUENCE_LINE_LENGTH);
+  for (let lineStart = 0; lineStart < text.length; lineStart += lineLength) {
+    const lineEnd = Math.min(text.length, lineStart + lineLength);
     const lineHighlights = sortedHighlights
       .map((segment) => ({
         start: Math.max(lineStart, segment.start),
@@ -800,21 +1548,52 @@ function renderDualStrandSequenceLinesHtml(sequence, highlightedSegments = []) {
 
     const forwardBody = buildHighlightedLineMarkup(text, lineStart, lineEnd, lineHighlights);
     const complementaryBody = buildHighlightedLineMarkup(complementary, lineStart, lineEnd, lineHighlights);
+    const lineRestrictionAnnotations = renderLineRestrictionAnnotationsHtml(
+      indexedFeatures,
+      lineStart,
+      lineEnd,
+      text.length,
+      selectedFeatureIndex,
+      charAdvancePx,
+      sequenceLineHeightPx
+    );
+    const lineFeatureButtons = renderLineFeatureButtonsHtml(
+      indexedFeatures,
+      lineStart,
+      lineEnd,
+      text.length,
+      selectedFeatureIndex,
+      charAdvancePx,
+      lineFeatureOffsetPx
+    );
+    const hasCursorOnLine = Number.isFinite(cursorBaseIndex) && cursorBaseIndex >= lineStart && cursorBaseIndex <= lineEnd;
+    const cursorLeftPx = hasCursorOnLine
+      ? lineFeatureOffsetPx + ((cursorBaseIndex - lineStart) * charAdvancePx)
+      : null;
 
     lines.push(`
-      <div class="sequence-viewer-dual-line">
+      <div class="sequence-viewer-dual-line" data-line-start="${lineStart}" data-line-end="${lineEnd}">
         <span class="sequence-viewer-seq-coord">${(lineStart + 1).toLocaleString()}</span>
-        <div class="sequence-viewer-strand-pair">
-          <div class="sequence-viewer-strand-row sequence-viewer-strand-row-top">
-            <span class="sequence-viewer-strand-end">5'</span>
-            <span class="sequence-viewer-seq-text">${forwardBody}</span>
-            <span class="sequence-viewer-strand-end">3'</span>
+        <div class="sequence-viewer-strand-block">
+          <div class="sequence-viewer-strand-pair">
+            ${hasCursorOnLine
+    ? `<span class="sequence-viewer-line-cursor" style="left:${cursorLeftPx.toFixed(3)}px;height:${strandPairHeightPx.toFixed(3)}px;" aria-hidden="true"></span>`
+    : ''}
+            <div class="sequence-viewer-strand-row sequence-viewer-strand-row-top">
+              <span class="sequence-viewer-strand-end">5'</span>
+              <span class="sequence-viewer-seq-text sequence-viewer-seq-text-top">
+                <span class="sequence-viewer-seq-text-content">${forwardBody}</span>
+                ${lineRestrictionAnnotations}
+              </span>
+              <span class="sequence-viewer-strand-end">3'</span>
+            </div>
+            <div class="sequence-viewer-strand-row sequence-viewer-strand-row-bottom">
+              <span class="sequence-viewer-strand-end">3'</span>
+              <span class="sequence-viewer-seq-text"><span class="sequence-viewer-seq-text-content">${complementaryBody}</span></span>
+              <span class="sequence-viewer-strand-end">5'</span>
+            </div>
           </div>
-          <div class="sequence-viewer-strand-row sequence-viewer-strand-row-bottom">
-            <span class="sequence-viewer-strand-end">3'</span>
-            <span class="sequence-viewer-seq-text">${complementaryBody}</span>
-            <span class="sequence-viewer-strand-end">5'</span>
-          </div>
+          ${lineFeatureButtons}
         </div>
       </div>
     `);
@@ -833,18 +1612,350 @@ function formatSelectedFeatureDetailHtml(feature, sequenceLength) {
   const identity = Number.isFinite(feature.identity) ? `${feature.identity.toFixed(2)}%` : 'n/a';
   const coverage = Number.isFinite(feature.coverage) ? `${feature.coverage.toFixed(2)}%` : 'n/a';
   const source = String(feature.mode || feature.source || '-');
+  const recognitionSite = String(feature.site || '').trim();
+  const cutPattern = String(feature.cut || '').trim();
   const description = String(feature.description || '').trim();
 
   return `
     <p><strong>${escapeHtml(feature.name || '-')}</strong></p>
     <p><strong>Type:</strong> ${escapeHtml(feature.type || '-')} · <strong>Strand:</strong> ${strand}</p>
     <p><strong>Location:</strong> ${escapeHtml(location)}</p>
+    ${recognitionSite ? `<p><strong>Recognition Site:</strong> ${escapeHtml(recognitionSite)}${cutPattern ? ` · <strong>Cut:</strong> ${escapeHtml(cutPattern)}` : ''}</p>` : ''}
     <p><strong>Identity:</strong> ${identity} · <strong>Coverage:</strong> ${coverage} · <strong>Source:</strong> ${escapeHtml(source)}</p>
     ${description ? `<p class="small-note">${escapeHtml(description)}</p>` : ''}
   `;
 }
 
+function readStoragePathFromLocalState() {
+  try {
+    const raw = globalThis?.localStorage?.getItem?.('enana_state_v1');
+    if (!raw) {
+      return '';
+    }
+    const parsed = JSON.parse(raw);
+    return String(parsed?.settings?.storagePath || '').trim();
+  } catch {
+    return '';
+  }
+}
+
+function toGenbankDate(value = new Date()) {
+  const date = value instanceof Date ? value : new Date(value);
+  const normalized = Number.isFinite(date.getTime()) ? date : new Date();
+  const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+  const day = String(normalized.getDate()).padStart(2, '0');
+  const month = months[normalized.getMonth()] || 'JAN';
+  const year = String(normalized.getFullYear());
+  return `${day}-${month}-${year}`;
+}
+
+function wrapGenbankLine(value, firstPrefix, continuationPrefix = firstPrefix, width = 80) {
+  const text = String(value ?? '');
+  if (!text.length) {
+    return [firstPrefix];
+  }
+
+  const lines = [];
+  let remaining = text;
+  let prefix = firstPrefix;
+
+  while (remaining.length) {
+    const available = Math.max(1, width - prefix.length);
+    if (remaining.length <= available) {
+      lines.push(`${prefix}${remaining}`);
+      break;
+    }
+
+    let splitAt = remaining.lastIndexOf(' ', available);
+    if (splitAt <= 0 || splitAt < Math.floor(available * 0.35)) {
+      splitAt = available;
+    }
+
+    const chunk = remaining.slice(0, splitAt);
+    lines.push(`${prefix}${chunk}`);
+    remaining = remaining.slice(splitAt).trimStart();
+    prefix = continuationPrefix;
+  }
+
+  return lines;
+}
+
+function sanitizeGenbankToken(value, fallback = 'sequence', maxLength = 16) {
+  const cleaned = String(value || '')
+    .trim()
+    .replace(/\s+/g, '_')
+    .replace(/[^A-Za-z0-9_.-]/g, '_')
+    .slice(0, maxLength);
+  return cleaned || fallback;
+}
+
+function sanitizeGenbankFeatureType(type) {
+  const cleaned = String(type || 'misc_feature')
+    .trim()
+    .replace(/\s+/g, '_')
+    .replace(/[^A-Za-z0-9_]/g, '')
+    .toLowerCase();
+  return cleaned || 'misc_feature';
+}
+
+function sanitizeGenbankQualifierValue(value) {
+  return String(value ?? '')
+    .replace(/\r?\n/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/"/g, '\'');
+}
+
+function buildGenbankFeatureLocation(feature, sequenceLength) {
+  const strand = feature?.strand === -1 ? -1 : 1;
+  const rawSegments = Array.isArray(feature?.segments) ? feature.segments : [];
+  const segments = rawSegments
+    .map((segment) => ({
+      start: clamp(Math.round(Number(segment?.start) || 0), 0, sequenceLength),
+      end: clamp(Math.round(Number(segment?.end) || 0), 0, sequenceLength)
+    }))
+    .filter((segment) => segment.end > segment.start);
+
+  if (!segments.length) {
+    return '';
+  }
+
+  const ordered = strand === -1 ? [...segments].reverse() : segments;
+  const parts = ordered.map((segment) => `${segment.start + 1}..${segment.end}`);
+  const location = parts.length === 1 ? parts[0] : `join(${parts.join(',')})`;
+  return strand === -1 ? `complement(${location})` : location;
+}
+
+function formatGenbankOriginLines(sequence) {
+  const lines = ['ORIGIN'];
+  const lower = String(sequence || '').toLowerCase();
+
+  for (let i = 0; i < lower.length; i += 60) {
+    const chunk = lower.slice(i, i + 60);
+    const groups = [];
+    for (let j = 0; j < chunk.length; j += 10) {
+      groups.push(chunk.slice(j, j + 10));
+    }
+    lines.push(`${String(i + 1).padStart(9, ' ')} ${groups.join(' ')}`);
+  }
+
+  return lines;
+}
+
+function buildRecordGenbankText(record) {
+  const sequence = normalizeSequenceText(record?.sequence || '');
+  if (!sequence.length) {
+    return '';
+  }
+
+  const topology = normalizeTopology(record?.topology || 'linear');
+  const locusName = sanitizeGenbankToken(record?.name || 'sequence', 'sequence', 16);
+  const dateStamp = toGenbankDate(new Date());
+  const sourceFormat = String(record?.sourceFormat || '').trim().toUpperCase() || 'SEQUENCE_VIEWER';
+  const definition = normalizeRecordName(record?.description || record?.name || '.', '.');
+  const features = Array.isArray(record?.features) ? record.features : [];
+  const lines = [
+    `LOCUS       ${locusName.padEnd(16, ' ')}${String(sequence.length).padStart(11, ' ')} bp    DNA     ${topology.padEnd(8, ' ')} SYN ${dateStamp}`,
+    ...wrapGenbankLine(definition, 'DEFINITION  ', '            '),
+    ...wrapGenbankLine('.', 'ACCESSION   ', '            '),
+    ...wrapGenbankLine('.', 'VERSION     ', '            '),
+    'KEYWORDS    .',
+    ...wrapGenbankLine('synthetic DNA construct', 'SOURCE      ', '            '),
+    ...wrapGenbankLine('synthetic DNA construct', '  ORGANISM  ', '            '),
+    '            .',
+    ...wrapGenbankLine(`Exported from Sequence Viewer (${sourceFormat}).`, 'COMMENT     ', '            '),
+    'FEATURES             Location/Qualifiers'
+  ];
+
+  features.forEach((feature) => {
+    const location = buildGenbankFeatureLocation(feature, sequence.length);
+    if (!location) {
+      return;
+    }
+    const type = sanitizeGenbankFeatureType(feature?.type).slice(0, 16);
+    const featurePrefix = `     ${type.padEnd(16, ' ')}`;
+    const qualifierPrefix = '                     ';
+
+    lines.push(...wrapGenbankLine(location, featurePrefix, qualifierPrefix));
+    const qualifiers = [
+      ['label', feature?.name || type],
+      ['note', feature?.description || '']
+    ];
+
+    qualifiers.forEach(([key, rawValue]) => {
+      const value = sanitizeGenbankQualifierValue(rawValue);
+      if (!value) {
+        return;
+      }
+      lines.push(...wrapGenbankLine(`/${key}="${value}"`, qualifierPrefix, qualifierPrefix));
+    });
+  });
+
+  lines.push(...formatGenbankOriginLines(sequence));
+  lines.push('//');
+  return `${lines.join('\n')}\n`;
+}
+
+function ratioToCircularAngle(ratio) {
+  return ((Math.max(0, ratio) * Math.PI * 2) - (Math.PI / 2));
+}
+
+function polarPoint(cx, cy, radius, theta) {
+  return {
+    x: cx + (radius * Math.cos(theta)),
+    y: cy + (radius * Math.sin(theta))
+  };
+}
+
+function buildCircularSegmentPath(cx, cy, innerRadius, outerRadius, startRatio, endRatio) {
+  const safeStart = clamp(Number(startRatio) || 0, 0, 1);
+  const safeEnd = clamp(Number(endRatio) || 0, 0, 1);
+  const span = Math.max(0, safeEnd - safeStart);
+  if (span <= 0) {
+    return '';
+  }
+
+  const startTheta = ratioToCircularAngle(safeStart);
+  const endTheta = ratioToCircularAngle(safeEnd);
+  const outerStart = polarPoint(cx, cy, outerRadius, startTheta);
+  const outerEnd = polarPoint(cx, cy, outerRadius, endTheta);
+  const innerEnd = polarPoint(cx, cy, innerRadius, endTheta);
+  const innerStart = polarPoint(cx, cy, innerRadius, startTheta);
+  const largeArc = span > 0.5 ? 1 : 0;
+
+  return [
+    `M ${outerStart.x.toFixed(2)} ${outerStart.y.toFixed(2)}`,
+    `A ${outerRadius.toFixed(2)} ${outerRadius.toFixed(2)} 0 ${largeArc} 1 ${outerEnd.x.toFixed(2)} ${outerEnd.y.toFixed(2)}`,
+    `L ${innerEnd.x.toFixed(2)} ${innerEnd.y.toFixed(2)}`,
+    `A ${innerRadius.toFixed(2)} ${innerRadius.toFixed(2)} 0 ${largeArc} 0 ${innerStart.x.toFixed(2)} ${innerStart.y.toFixed(2)}`,
+    'Z'
+  ].join(' ');
+}
+
+function buildCircularPreviewHtmlDocument(record) {
+  const sequence = normalizeSequenceText(record?.sequence || '');
+  const sequenceLength = sequence.length;
+  const rawFeatures = Array.isArray(record?.features) ? record.features : [];
+  const previewFeatures = rawFeatures
+    .filter((feature) => String(feature?.type || '').toLowerCase() !== 'restriction_site')
+    .filter((feature) => Array.isArray(feature?.segments) && feature.segments.length);
+  const layoutFeatures = assignFeatureLanes(previewFeatures);
+
+  const cx = 400;
+  const cy = 360;
+  const laneStep = 14;
+  const backboneInner = 192;
+  const featureThickness = 10;
+  const maxLane = Math.max(0, ...layoutFeatures.map((feature) => Number(feature.lane) || 0));
+  const outerRadius = backboneInner + featureThickness + (Math.max(1, maxLane + 1) * laneStep) + 16;
+  const tickPaths = [];
+  const segmentPaths = [];
+
+  const tickCount = sequenceLength > 5000 ? 20 : 12;
+  for (let i = 0; i < tickCount; i += 1) {
+    const ratio = i / tickCount;
+    const theta = ratioToCircularAngle(ratio);
+    const from = polarPoint(cx, cy, backboneInner - 8, theta);
+    const to = polarPoint(cx, cy, backboneInner + 8, theta);
+    tickPaths.push(`<line x1="${from.x.toFixed(2)}" y1="${from.y.toFixed(2)}" x2="${to.x.toFixed(2)}" y2="${to.y.toFixed(2)}" stroke="#8ca5c5" stroke-width="1"></line>`);
+  }
+
+  layoutFeatures.forEach((feature, index) => {
+    const lane = Number(feature?.lane) || 0;
+    const innerRadius = backboneInner + (lane * laneStep);
+    const outerFeatureRadius = innerRadius + featureThickness;
+    const colorKey = feature.type === 'restriction_site' ? `${feature.type}:${feature.name}` : feature.type;
+    const fill = hashTypeToColor(colorKey);
+    const title = `${feature.name || `feature_${index + 1}`} (${buildFeatureLocationText(feature, sequenceLength)})`;
+
+    (Array.isArray(feature?.segments) ? feature.segments : []).forEach((segment) => {
+      const start = clamp(Number(segment?.start) || 0, 0, sequenceLength);
+      const end = clamp(Number(segment?.end) || 0, 0, sequenceLength);
+      if (end <= start || !sequenceLength) {
+        return;
+      }
+      const path = buildCircularSegmentPath(
+        cx,
+        cy,
+        innerRadius,
+        outerFeatureRadius,
+        start / sequenceLength,
+        end / sequenceLength
+      );
+      if (!path) {
+        return;
+      }
+      segmentPaths.push(`<path d="${path}" fill="${fill}" stroke="#284a75" stroke-width="1.4"><title>${escapeHtml(title)}</title></path>`);
+    });
+  });
+
+  const legendRows = layoutFeatures
+    .slice(0, 30)
+    .map((feature, index) => {
+      const colorKey = feature.type === 'restriction_site' ? `${feature.type}:${feature.name}` : feature.type;
+      const color = hashTypeToColor(colorKey);
+      return `<tr><td><span class="swatch" style="background:${color};"></span></td><td>${escapeHtml(feature.name || `feature_${index + 1}`)}</td><td>${escapeHtml(feature.type || '-')}</td></tr>`;
+    })
+    .join('');
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>${escapeHtml(record?.name || 'Sequence')}</title>
+  <style>
+    body { margin:0; padding:12px; font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color:#1e3553; background:#f5f8fc; }
+    .meta { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; gap:8px; }
+    .meta h3 { margin:0; font-size:16px; color:#163760; }
+    .meta p { margin:0; font-size:12px; color:#456385; }
+    .card { border:1px solid #d4deec; border-radius:12px; background:#fff; padding:10px; }
+    svg { width:100%; height:auto; max-height:740px; display:block; }
+    .legend { margin-top:10px; border-collapse:collapse; width:100%; font-size:12px; }
+    .legend td { padding:3px 4px; border-top:1px solid #edf2f9; vertical-align:middle; }
+    .swatch { display:inline-block; width:12px; height:12px; border-radius:3px; border:1px solid rgba(24, 49, 83, 0.25); }
+  </style>
+</head>
+<body>
+  <div class="meta">
+    <h3>${escapeHtml(record?.name || 'Sequence')}</h3>
+    <p>${sequenceLength.toLocaleString()} bp · ${escapeHtml(normalizeTopology(record?.topology || 'linear'))} · ${layoutFeatures.length} feature(s)</p>
+  </div>
+  <div class="card">
+    <svg viewBox="0 0 800 760" role="img" aria-label="Circular plasmid preview">
+      <circle cx="${cx}" cy="${cy}" r="${(backboneInner - 6).toFixed(2)}" fill="#f8fbff" stroke="#dbe6f5" stroke-width="2"></circle>
+      <circle cx="${cx}" cy="${cy}" r="${backboneInner.toFixed(2)}" fill="none" stroke="#96aed0" stroke-width="2.2"></circle>
+      ${tickPaths.join('')}
+      ${segmentPaths.join('')}
+      <text x="${cx}" y="${(cy - 2).toFixed(2)}" text-anchor="middle" font-size="14" fill="#34577f">${sequenceLength.toLocaleString()} bp</text>
+      <text x="${cx}" y="${(cy + 16).toFixed(2)}" text-anchor="middle" font-size="11" fill="#6381a6">${escapeHtml(normalizeTopology(record?.topology || 'linear'))}</text>
+    </svg>
+  </div>
+  ${legendRows ? `<table class="legend">${legendRows}</table>` : '<p style="font-size:12px;color:#5b7799;">No features available.</p>'}
+</body>
+</html>`;
+}
+
 export function initSequenceViewer() {
+  const LIBRARY_STATUS_SAVED = 'saved';
+  const LIBRARY_STATUS_TEMPORARY = 'temporary';
+  const FILE_ACCEPT = '.gbk,.gb,.gbff,.fasta,.fa,.fas,.fna,.fastq,.fq,.txt,.seq';
+
+  const homeWorkspace = document.getElementById('sequence-viewer-home-workspace');
+  const detailWorkspace = document.getElementById('sequence-viewer-detail-workspace');
+  const homePasteBtn = document.getElementById('sequence-viewer-home-paste-btn');
+  const homeOpenBtn = document.getElementById('sequence-viewer-home-open-btn');
+  const homeOpenInput = document.getElementById('sequence-viewer-home-open-input');
+  const homeStatusNote = document.getElementById('sequence-viewer-home-status');
+  const libraryFilterSavedBtn = document.getElementById('sequence-viewer-library-filter-saved');
+  const libraryFilterTemporaryBtn = document.getElementById('sequence-viewer-library-filter-temporary');
+  const libraryList = document.getElementById('sequence-viewer-library-list');
+  const previewHost = document.getElementById('sequence-viewer-preview-host');
+  const previewMeta = document.getElementById('sequence-viewer-preview-meta');
+  const backBtn = document.getElementById('sequence-viewer-back-btn');
+  const saveBtn = document.getElementById('sequence-viewer-save-btn');
+  const saveNameInput = document.getElementById('sequence-viewer-save-name');
+
   const modePasteBtn = document.getElementById('sequence-viewer-mode-paste');
   const modeFileBtn = document.getElementById('sequence-viewer-mode-file');
   const pastePanel = document.getElementById('sequence-viewer-paste-panel');
@@ -854,6 +1965,7 @@ export function initSequenceViewer() {
   const fileChooseBtn = document.getElementById('sequence-viewer-file-choose');
   const fileNameLabel = document.getElementById('sequence-viewer-file-name');
   const loadBtn = document.getElementById('sequence-viewer-load-btn');
+  const annotateBtn = document.getElementById('sequence-viewer-annotate-btn');
   const clearBtn = document.getElementById('sequence-viewer-clear-btn');
   const statusNote = document.getElementById('sequence-viewer-status');
   const messageBox = document.getElementById('sequence-viewer-messages');
@@ -866,12 +1978,14 @@ export function initSequenceViewer() {
   const statAmbiguous = document.getElementById('sequence-viewer-stat-ambiguous');
   const statQuality = document.getElementById('sequence-viewer-stat-quality');
   const statFeatures = document.getElementById('sequence-viewer-stat-features');
+  const statRestrictionSites = document.getElementById('sequence-viewer-stat-restriction-sites');
 
   const featureRailHost = document.getElementById('sequence-viewer-feature-rail-host');
   const featureDetail = document.getElementById('sequence-viewer-feature-detail');
   const sequenceHost = document.getElementById('sequence-viewer-sequence-host');
 
   const state = {
+    workspace: 'home',
     mode: 'paste',
     fileName: '',
     fileText: '',
@@ -879,8 +1993,414 @@ export function initSequenceViewer() {
     selectedRecordIndex: 0,
     selectedFeatureIndex: -1,
     warnings: [],
-    errors: []
+    errors: [],
+    annotationWarnings: [],
+    isAnnotating: false,
+    inputComposerVisible: true,
+    libraryFilter: LIBRARY_STATUS_SAVED,
+    libraryEntries: [],
+    selectedLibraryEntryId: '',
+    activeEntryId: '',
+    activeEntryStatus: '',
+    sequenceSelectionAnchor: null,
+    sequenceSelectionFocus: null,
+    sequenceCursorBase: null,
+    isSelectingSequence: false,
+    sequenceLayout: {
+      lineLength: DEFAULT_SEQUENCE_LINE_LENGTH,
+      charAdvancePx: FALLBACK_CHAR_ADVANCE_PX,
+      lineHeightPx: FALLBACK_SEQUENCE_LINE_HEIGHT_PX,
+      lineFeatureOffsetPx: DEFAULT_STRAND_MARKER_COLUMN_PX + DEFAULT_STRAND_COLUMN_GAP_PX
+    }
   };
+
+  const sequenceHoverTooltip = (() => {
+    if (
+      typeof document === 'undefined'
+      || typeof document.createElement !== 'function'
+      || !document.body
+      || typeof document.body.appendChild !== 'function'
+    ) {
+      return null;
+    }
+    const tooltip = document.createElement('div');
+    tooltip.className = 'sequence-viewer-feature-hover-tooltip';
+    tooltip.hidden = true;
+    document.body.appendChild(tooltip);
+    return tooltip;
+  })();
+
+  function getBridge() {
+    return getEnanaApiBridge();
+  }
+
+  function getStoragePath() {
+    return readStoragePathFromLocalState();
+  }
+
+  function hasStoragePath() {
+    return Boolean(getStoragePath());
+  }
+
+  function setHomeStatus(message, isError = false) {
+    if (!homeStatusNote) {
+      return;
+    }
+    homeStatusNote.textContent = message;
+    homeStatusNote.style.color = isError ? 'var(--danger)' : '';
+  }
+
+  function switchWorkspace(mode) {
+    const next = mode === 'detail' ? 'detail' : 'home';
+    state.workspace = next;
+    if (homeWorkspace) {
+      homeWorkspace.hidden = next !== 'home';
+    }
+    if (detailWorkspace) {
+      detailWorkspace.hidden = next !== 'detail';
+    }
+  }
+
+  function setLibraryFilter(status) {
+    state.libraryFilter = status === LIBRARY_STATUS_TEMPORARY ? LIBRARY_STATUS_TEMPORARY : LIBRARY_STATUS_SAVED;
+    if (libraryFilterSavedBtn) {
+      libraryFilterSavedBtn.classList.toggle('sequence-viewer-library-switch-btn-active', state.libraryFilter === LIBRARY_STATUS_SAVED);
+    }
+    if (libraryFilterTemporaryBtn) {
+      libraryFilterTemporaryBtn.classList.toggle('sequence-viewer-library-switch-btn-active', state.libraryFilter === LIBRARY_STATUS_TEMPORARY);
+    }
+  }
+
+  function syncHomeControlsState() {
+    const hasStorage = hasStoragePath();
+    if (libraryFilterSavedBtn) {
+      libraryFilterSavedBtn.disabled = !hasStorage;
+    }
+    if (libraryFilterTemporaryBtn) {
+      libraryFilterTemporaryBtn.disabled = !hasStorage;
+    }
+    if (saveBtn) {
+      saveBtn.disabled = !getSelectedRecord()?.sequence?.length;
+    }
+  }
+
+  function renderPreviewFromHtml(entry, htmlText) {
+    if (!previewHost) {
+      return;
+    }
+    if (!entry || !String(htmlText || '').trim()) {
+      previewHost.innerHTML = '<p class="small-note">Select a sequence in the library to preview.</p>';
+      if (previewMeta) {
+        previewMeta.textContent = '';
+      }
+      return;
+    }
+
+    const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(String(htmlText))}`;
+    previewHost.innerHTML = `<iframe class="sequence-viewer-preview-frame" src="${dataUrl}" loading="lazy" title="${escapeHtml(entry.name || 'Sequence preview')}"></iframe>`;
+    if (previewMeta) {
+      previewMeta.textContent = `${entry.name || 'sequence'} · ${(Number(entry.sequenceLength) || 0).toLocaleString()} bp · ${entry.status}`;
+    }
+  }
+
+  function renderLibraryList() {
+    if (!libraryList) {
+      return;
+    }
+    const entries = Array.isArray(state.libraryEntries) ? state.libraryEntries : [];
+    if (!entries.length) {
+      const noun = state.libraryFilter === LIBRARY_STATUS_SAVED ? 'saved' : 'unsaved';
+      libraryList.innerHTML = `<p class="small-note">No ${noun} sequence entries.</p>`;
+      return;
+    }
+
+    libraryList.innerHTML = entries
+      .map((entry) => {
+        const active = cleanText(entry.id, 200) === cleanText(state.selectedLibraryEntryId, 200);
+        const lengthLabel = `${Math.max(0, Number(entry.sequenceLength) || 0).toLocaleString()} bp`;
+        const featureLabel = `${Math.max(0, Number(entry.featureCount) || 0).toLocaleString()} features`;
+        const updated = String(entry.updatedAt || '').slice(0, 16).replace('T', ' ');
+        return `
+          <button
+            type="button"
+            class="sequence-viewer-library-item${active ? ' sequence-viewer-library-item-active' : ''}"
+            data-sequence-entry-id="${escapeHtml(entry.id)}"
+            title="${escapeHtml(entry.name || 'sequence')}"
+          >
+            <span class="sequence-viewer-library-item-name">${escapeHtml(entry.name || 'sequence')}</span>
+            <span class="sequence-viewer-library-item-meta">${escapeHtml(lengthLabel)} · ${escapeHtml(entry.topology || 'linear')}</span>
+            <span class="sequence-viewer-library-item-meta">${escapeHtml(featureLabel)} · updated ${escapeHtml(updated || '-')}</span>
+          </button>
+        `;
+      })
+      .join('');
+  }
+
+  async function loadSelectedLibraryPreview() {
+    const entryId = cleanText(state.selectedLibraryEntryId, 200);
+    const storagePath = getStoragePath();
+    if (!entryId || !storagePath) {
+      renderPreviewFromHtml(null, '');
+      return;
+    }
+    const bridge = getBridge();
+    if (!bridge?.sequenceLibraryGet) {
+      renderPreviewFromHtml(null, '');
+      return;
+    }
+
+    try {
+      const response = await bridge.sequenceLibraryGet({
+        storagePath,
+        id: entryId,
+        includeHtml: true
+      });
+      if (!response?.ok || !response?.entry) {
+        throw new Error(response?.error || 'Failed to load preview.');
+      }
+      renderPreviewFromHtml(response.entry, response.htmlText || '');
+    } catch (error) {
+      renderPreviewFromHtml(null, '');
+      setHomeStatus(error?.message || 'Failed to load preview.', true);
+    }
+  }
+
+  async function refreshLibraryEntries(options = {}) {
+    const storagePath = getStoragePath();
+    syncHomeControlsState();
+    if (!storagePath) {
+      state.libraryEntries = [];
+      state.selectedLibraryEntryId = '';
+      renderLibraryList();
+      renderPreviewFromHtml(null, '');
+      setHomeStatus('Use New or Open to continue. Set Storage Folder Path in Settings to enable the saved/unsaved library.');
+      return;
+    }
+
+    const bridge = getBridge();
+    if (!bridge?.sequenceLibraryList) {
+      setHomeStatus('Sequence library storage API unavailable.', true);
+      return;
+    }
+
+    try {
+      const response = await bridge.sequenceLibraryList({
+        storagePath,
+        status: state.libraryFilter
+      });
+      if (!response?.ok) {
+        throw new Error(response?.error || 'Failed to list sequence entries.');
+      }
+      const entries = Array.isArray(response.entries) ? response.entries : [];
+      state.libraryEntries = entries;
+
+      const preferred = cleanText(options.selectedId, 200)
+        || cleanText(state.selectedLibraryEntryId, 200);
+      const nextSelected = entries.some((entry) => cleanText(entry.id, 200) === preferred)
+        ? preferred
+        : (entries[0]?.id || '');
+      state.selectedLibraryEntryId = cleanText(nextSelected, 200);
+
+      renderLibraryList();
+      await loadSelectedLibraryPreview();
+      if (!options.silent) {
+        setHomeStatus(`Loaded ${entries.length} ${state.libraryFilter} sequence entr${entries.length === 1 ? 'y' : 'ies'}.`);
+      }
+    } catch (error) {
+      state.libraryEntries = [];
+      state.selectedLibraryEntryId = '';
+      renderLibraryList();
+      renderPreviewFromHtml(null, '');
+      setHomeStatus(error?.message || 'Failed to load sequence library.', true);
+    }
+  }
+
+  async function setSelectedLibraryEntry(entryId) {
+    state.selectedLibraryEntryId = cleanText(entryId, 200);
+    renderLibraryList();
+    await loadSelectedLibraryPreview();
+  }
+
+  function getFeatureByIndexForRecord(record, index) {
+    if (!record || !Number.isFinite(index) || index < 0) {
+      return null;
+    }
+    const features = getRenderableFeaturesForRecord(record);
+    return features[index] || null;
+  }
+
+  function hideSequenceHoverTooltip() {
+    if (!sequenceHoverTooltip) {
+      return;
+    }
+    sequenceHoverTooltip.hidden = true;
+  }
+
+  function buildFeatureHoverTooltipHtml(feature, sequenceLength) {
+    const strand = feature?.strand === -1 ? '-' : '+';
+    const location = buildFeatureLocationText(feature, sequenceLength);
+    const identity = Number.isFinite(feature?.identity) ? `${feature.identity.toFixed(2)}%` : '';
+    const coverage = Number.isFinite(feature?.coverage) ? `${feature.coverage.toFixed(2)}%` : '';
+    const source = String(feature?.mode || feature?.source || '-');
+    const meta = [identity ? `Identity ${identity}` : '', coverage ? `Coverage ${coverage}` : '', source].filter(Boolean).join(' · ');
+
+    return `
+      <p class="sequence-viewer-feature-hover-title">${escapeHtml(feature?.name || '-')}</p>
+      <p>${escapeHtml(feature?.type || '-')} · Strand ${strand}</p>
+      <p>${escapeHtml(location)}</p>
+      <p>${escapeHtml(meta)}</p>
+    `;
+  }
+
+  function showSequenceHoverTooltip(event, feature, sequenceLength) {
+    if (!sequenceHoverTooltip || !feature) {
+      return;
+    }
+
+    sequenceHoverTooltip.innerHTML = buildFeatureHoverTooltipHtml(feature, sequenceLength);
+    sequenceHoverTooltip.hidden = false;
+
+    const rawX = Number(event?.clientX);
+    const rawY = Number(event?.clientY);
+    const startX = Number.isFinite(rawX) ? rawX + FEATURE_TOOLTIP_OFFSET_PX : FEATURE_TOOLTIP_OFFSET_PX;
+    const startY = Number.isFinite(rawY) ? rawY + FEATURE_TOOLTIP_OFFSET_PX : FEATURE_TOOLTIP_OFFSET_PX;
+    const tooltipRect = sequenceHoverTooltip.getBoundingClientRect();
+    const viewportWidth = Number(globalThis?.innerWidth) || 0;
+    const viewportHeight = Number(globalThis?.innerHeight) || 0;
+
+    let left = Math.max(8, startX);
+    let top = Math.max(8, startY);
+
+    if (viewportWidth > 0) {
+      left = Math.min(left, Math.max(8, viewportWidth - tooltipRect.width - 8));
+    }
+    if (viewportHeight > 0) {
+      top = Math.min(top, Math.max(8, viewportHeight - tooltipRect.height - 8));
+    }
+
+    sequenceHoverTooltip.style.left = `${left}px`;
+    sequenceHoverTooltip.style.top = `${top}px`;
+  }
+
+  function measureSequenceTypography() {
+    let charAdvancePx = FALLBACK_CHAR_ADVANCE_PX;
+    let lineHeightPx = FALLBACK_SEQUENCE_LINE_HEIGHT_PX;
+
+    if (typeof document !== 'undefined' && sequenceHost && typeof sequenceHost.appendChild === 'function') {
+      let probe = null;
+      try {
+        probe = document.createElement('span');
+        probe.className = 'sequence-viewer-seq-text';
+        probe.style.position = 'absolute';
+        probe.style.visibility = 'hidden';
+        probe.style.pointerEvents = 'none';
+        probe.style.whiteSpace = 'nowrap';
+        probe.style.display = 'inline-block';
+        probe.style.width = 'auto';
+        const sampleLength = 40;
+        probe.textContent = 'A'.repeat(sampleLength);
+        sequenceHost.appendChild(probe);
+
+        const measuredAdvance = probe.getBoundingClientRect().width / sampleLength;
+        if (Number.isFinite(measuredAdvance) && measuredAdvance > 0) {
+          charAdvancePx = measuredAdvance;
+        }
+
+        if (typeof globalThis.getComputedStyle === 'function') {
+          const computed = globalThis.getComputedStyle(probe);
+          const measuredLineHeight = parseCssPixels(computed?.lineHeight);
+          if (Number.isFinite(measuredLineHeight) && measuredLineHeight > 0) {
+            lineHeightPx = measuredLineHeight;
+          } else {
+            const measuredFontSize = parseCssPixels(computed?.fontSize);
+            if (Number.isFinite(measuredFontSize) && measuredFontSize > 0) {
+              lineHeightPx = measuredFontSize * 1.35;
+            }
+          }
+        }
+      } catch {
+        // Keep fallback typography metrics.
+      } finally {
+        probe?.remove?.();
+      }
+    }
+
+    return {
+      charAdvancePx: Math.max(1, charAdvancePx),
+      lineHeightPx: Math.max(8, lineHeightPx)
+    };
+  }
+
+  function computeSequenceLayoutMetrics() {
+    const typography = measureSequenceTypography();
+    const fallbackFeatureOffsetPx = DEFAULT_STRAND_MARKER_COLUMN_PX + DEFAULT_STRAND_COLUMN_GAP_PX;
+    if (!sequenceHost || typeof sequenceHost.clientWidth !== 'number') {
+      return {
+        lineLength: DEFAULT_SEQUENCE_LINE_LENGTH,
+        charAdvancePx: typography.charAdvancePx,
+        lineHeightPx: typography.lineHeightPx,
+        lineFeatureOffsetPx: fallbackFeatureOffsetPx
+      };
+    }
+
+    const hostWidth = Math.max(0, sequenceHost.clientWidth);
+    if (!hostWidth) {
+      return {
+        lineLength: DEFAULT_SEQUENCE_LINE_LENGTH,
+        charAdvancePx: typography.charAdvancePx,
+        lineHeightPx: typography.lineHeightPx,
+        lineFeatureOffsetPx: fallbackFeatureOffsetPx
+      };
+    }
+
+    const compact = hostWidth <= 640;
+    const coordColumn = compact ? 58 : 74;
+    const dualGap = compact ? 8 : 10;
+    const strandEndColumn = compact ? 24 : 28;
+    const strandEndGap = DEFAULT_STRAND_COLUMN_GAP_PX;
+    const lineFeatureOffsetPx = strandEndColumn + strandEndGap;
+
+    let hostPadding = 0;
+    if (typeof globalThis.getComputedStyle === 'function') {
+      const computed = globalThis.getComputedStyle(sequenceHost);
+      hostPadding = parseCssPixels(computed?.paddingLeft) + parseCssPixels(computed?.paddingRight);
+    }
+
+    const usableWidth = Math.max(
+      120,
+      hostWidth - hostPadding - coordColumn - dualGap - (strandEndColumn * 2) - (strandEndGap * 2) - 12
+    );
+    const lineLength = clamp(Math.floor(usableWidth / Math.max(4.2, typography.charAdvancePx)), 24, 280);
+
+    return {
+      lineLength,
+      charAdvancePx: typography.charAdvancePx,
+      lineHeightPx: typography.lineHeightPx,
+      lineFeatureOffsetPx
+    };
+  }
+
+  function setInputComposerVisible(visible) {
+    const shouldShow = visible !== false;
+    state.inputComposerVisible = shouldShow;
+
+    if (modePasteBtn) {
+      modePasteBtn.hidden = !shouldShow;
+    }
+    if (modeFileBtn) {
+      modeFileBtn.hidden = !shouldShow;
+    }
+    if (loadBtn) {
+      loadBtn.hidden = !shouldShow;
+    }
+
+    if (pastePanel) {
+      pastePanel.hidden = !shouldShow || state.mode !== 'paste';
+    }
+    if (filePanel) {
+      filePanel.hidden = !shouldShow || state.mode !== 'file';
+    }
+  }
 
   function setMode(mode) {
     const resolved = mode === 'file' ? 'file' : 'paste';
@@ -893,10 +2413,10 @@ export function initSequenceViewer() {
       modeFileBtn.classList.toggle('sequence-viewer-mode-btn-active', resolved === 'file');
     }
     if (pastePanel) {
-      pastePanel.hidden = resolved !== 'paste';
+      pastePanel.hidden = !state.inputComposerVisible || resolved !== 'paste';
     }
     if (filePanel) {
-      filePanel.hidden = resolved !== 'file';
+      filePanel.hidden = !state.inputComposerVisible || resolved !== 'file';
     }
   }
 
@@ -914,7 +2434,8 @@ export function initSequenceViewer() {
     }
     const rows = [
       ...state.errors.map((text) => `<p class="small-note" style="color:var(--danger);">${escapeHtml(text)}</p>`),
-      ...state.warnings.map((text) => `<p class="small-note">${escapeHtml(text)}</p>`)
+      ...state.warnings.map((text) => `<p class="small-note">${escapeHtml(text)}</p>`),
+      ...state.annotationWarnings.map((text) => `<p class="small-note">${escapeHtml(text)}</p>`)
     ];
 
     messageBox.innerHTML = rows.length
@@ -925,6 +2446,94 @@ export function initSequenceViewer() {
   function getSelectedRecord() {
     const index = clamp(state.selectedRecordIndex, 0, Math.max(0, state.records.length - 1));
     return state.records[index] || null;
+  }
+
+  function clearSequenceSelection(options = {}) {
+    const preserveCursor = Boolean(options?.preserveCursor);
+    state.sequenceSelectionAnchor = null;
+    state.sequenceSelectionFocus = null;
+    state.isSelectingSequence = false;
+    if (!preserveCursor) {
+      state.sequenceCursorBase = null;
+    }
+  }
+
+  function getSequenceSelectionSegments(record) {
+    const sequenceLength = Math.max(0, Number(record?.sequence?.length) || 0);
+    if (!sequenceLength) {
+      return [];
+    }
+
+    const anchor = Number(state.sequenceSelectionAnchor);
+    const focus = Number(state.sequenceSelectionFocus);
+    if (!Number.isFinite(anchor) || !Number.isFinite(focus)) {
+      return [];
+    }
+
+    const start = clamp(Math.min(anchor, focus), 0, sequenceLength);
+    const end = clamp(Math.max(anchor, focus), 0, sequenceLength);
+    if (end <= start) {
+      return [];
+    }
+    return [{ start, end }];
+  }
+
+  function resolveSequenceBoundaryFromEvent(event, record) {
+    const sequenceLength = Math.max(0, Number(record?.sequence?.length) || 0);
+    if (!sequenceLength) {
+      return null;
+    }
+
+    const target = event?.target;
+    const lineElement = target?.closest?.('.sequence-viewer-dual-line') || null;
+    if (!lineElement) {
+      return null;
+    }
+
+    const lineStart = Number(lineElement?.dataset?.lineStart);
+    const lineEnd = Number(lineElement?.dataset?.lineEnd);
+    if (!Number.isFinite(lineStart) || !Number.isFinite(lineEnd) || lineEnd <= lineStart) {
+      return null;
+    }
+
+    const lineSpan = lineEnd - lineStart;
+    const seqTextElement = lineElement.querySelector?.('.sequence-viewer-strand-row-top .sequence-viewer-seq-text');
+    const rawX = Number(event?.clientX);
+    const safeAdvance = Math.max(1, Number(state.sequenceLayout?.charAdvancePx) || FALLBACK_CHAR_ADVANCE_PX);
+
+    let relativeX = null;
+    if (seqTextElement && Number.isFinite(rawX) && typeof seqTextElement.getBoundingClientRect === 'function') {
+      const rect = seqTextElement.getBoundingClientRect();
+      if (Number.isFinite(rect?.left) && Number.isFinite(rect?.width) && rect.width > 0) {
+        relativeX = clamp(rawX - rect.left, 0, rect.width);
+      }
+    }
+
+    if (!Number.isFinite(relativeX)) {
+      const fallbackOffsetX = Number(event?.offsetX);
+      if (Number.isFinite(fallbackOffsetX)) {
+        relativeX = Math.max(0, fallbackOffsetX);
+      }
+    }
+
+    if (!Number.isFinite(relativeX)) {
+      return null;
+    }
+
+    const localBoundary = clamp(Math.round(relativeX / safeAdvance), 0, lineSpan);
+    return clamp(lineStart + localBoundary, 0, sequenceLength);
+  }
+
+  function syncAnnotateButtonState() {
+    if (!annotateBtn) {
+      return;
+    }
+    const record = getSelectedRecord();
+    const hasRecord = Boolean(record?.sequence?.length);
+    annotateBtn.disabled = state.isAnnotating || !hasRecord;
+    if (saveBtn) {
+      saveBtn.disabled = !hasRecord || !hasStoragePath();
+    }
   }
 
   function updateRecordSelect() {
@@ -953,7 +2562,7 @@ export function initSequenceViewer() {
       return;
     }
 
-    const features = Array.isArray(record?.features) ? record.features : [];
+    const features = getRenderableFeaturesForRecord(record);
     const sequenceLength = Math.max(1, record?.sequence?.length || 1);
 
     if (!features.length) {
@@ -967,20 +2576,23 @@ export function initSequenceViewer() {
 
     const bars = laidOut
       .map((feature, index) => {
-        const color = hashTypeToColor(feature.type);
+        const colorKey = feature.type === 'restriction_site' ? `${feature.type}:${feature.name}` : feature.type;
+        const color = hashTypeToColor(colorKey);
+        const locationText = buildFeatureLocationText(feature, sequenceLength);
         return (Array.isArray(feature.segments) ? feature.segments : [])
           .map((segment) => {
             const left = ((segment.start / sequenceLength) * 100).toFixed(3);
             const width = Math.max(0.35, ((segment.end - segment.start) / sequenceLength) * 100).toFixed(3);
             const top = (feature.lane * 18) + 8;
             const isActive = index === state.selectedFeatureIndex;
+            const title = `${feature.name || '-'} (${locationText})`;
             return `
               <button
                 class="sequence-viewer-feature-bar${isActive ? ' sequence-viewer-feature-bar-active' : ''}"
                 type="button"
                 data-feature-index="${index}"
                 style="left:${left}%;width:${width}%;top:${top}px;background:${color};"
-                title="${escapeHtml(feature.name)}"
+                title="${escapeHtml(title)}"
               ></button>
             `;
           })
@@ -1007,7 +2619,7 @@ export function initSequenceViewer() {
       return;
     }
 
-    const features = Array.isArray(record?.features) ? record.features : [];
+    const features = getRenderableFeaturesForRecord(record);
     if (!features.length || state.selectedFeatureIndex < 0) {
       featureDetail.innerHTML = '<p class="small-note">Select a feature in the bottom track to view details.</p>';
       return;
@@ -1017,26 +2629,56 @@ export function initSequenceViewer() {
     featureDetail.innerHTML = formatSelectedFeatureDetailHtml(selected, record.sequence.length);
   }
 
-  function renderSequence(record) {
+  function renderSequence(record, options = {}) {
     if (!sequenceHost) {
       return;
     }
+    hideSequenceHoverTooltip();
+
+    const preserveScroll = Boolean(options?.preserveScroll);
+    const previousScrollTop = preserveScroll ? Math.max(0, Number(sequenceHost.scrollTop) || 0) : 0;
 
     if (!record) {
       sequenceHost.innerHTML = '<p class="small-note">Load sequence data to begin.</p>';
       return;
     }
 
-    const selectedFeature = (Array.isArray(record.features) && state.selectedFeatureIndex >= 0)
-      ? record.features[state.selectedFeatureIndex] || null
+    const features = getRenderableFeaturesForRecord(record);
+    const selectedFeature = (features.length && state.selectedFeatureIndex >= 0)
+      ? features[state.selectedFeatureIndex] || null
       : null;
 
-    const highlights = selectedFeature?.segments || [];
-    sequenceHost.innerHTML = renderDualStrandSequenceLinesHtml(record.sequence, highlights);
+    const selectionHighlights = getSequenceSelectionSegments(record);
+    const highlights = selectionHighlights.length
+      ? selectionHighlights
+      : normalizeHighlightSegments(selectedFeature?.segments || [], record.sequence.length);
+    const {
+      lineLength,
+      charAdvancePx,
+      lineHeightPx,
+      lineFeatureOffsetPx
+    } = computeSequenceLayoutMetrics();
+    state.sequenceLayout = {
+      lineLength,
+      charAdvancePx,
+      lineHeightPx,
+      lineFeatureOffsetPx
+    };
+    sequenceHost.innerHTML = renderDualStrandSequenceLinesHtml(record.sequence, highlights, {
+      lineLength,
+      charAdvancePx,
+      sequenceLineHeightPx: lineHeightPx,
+      lineFeatureOffsetPx,
+      features,
+      selectedFeatureIndex: state.selectedFeatureIndex,
+      cursorBaseIndex: state.sequenceCursorBase
+    });
 
-    if (highlights.length) {
+    if (preserveScroll) {
+      sequenceHost.scrollTop = previousScrollTop;
+    } else if (highlights.length) {
       const first = highlights[0];
-      const firstLine = Math.max(0, Math.floor(first.start / SEQUENCE_LINE_LENGTH));
+      const firstLine = Math.max(0, Math.floor(first.start / lineLength));
       sequenceHost.scrollTop = Math.max(0, (firstLine * DUAL_STRAND_SCROLL_STEP) - 42);
     } else {
       sequenceHost.scrollTop = 0;
@@ -1052,12 +2694,16 @@ export function initSequenceViewer() {
       if (statAmbiguous) statAmbiguous.textContent = '-';
       if (statQuality) statQuality.textContent = '-';
       if (statFeatures) statFeatures.textContent = '0';
+      if (statRestrictionSites) statRestrictionSites.textContent = '0';
       return;
     }
 
     const gc = computeGcPercent(record.sequence);
     const ambiguous = countAmbiguousBases(record.sequence);
     const qualitySummary = summarizeFastqQuality(record.quality);
+    const parsedFeatures = Array.isArray(record.features) ? record.features : [];
+    const nebFeatures = getNebRestrictionFeaturesForRecord(record);
+    const totalFeatures = parsedFeatures.length + nebFeatures.length;
 
     if (statFormat) {
       statFormat.textContent = String(record.sourceFormat || '-').toUpperCase();
@@ -1075,7 +2721,10 @@ export function initSequenceViewer() {
       statAmbiguous.textContent = ambiguous.toLocaleString();
     }
     if (statFeatures) {
-      statFeatures.textContent = String(Array.isArray(record.features) ? record.features.length : 0);
+      statFeatures.textContent = totalFeatures.toLocaleString();
+    }
+    if (statRestrictionSites) {
+      statRestrictionSites.textContent = nebFeatures.length.toLocaleString();
     }
     if (statQuality) {
       statQuality.textContent = qualitySummary
@@ -1090,6 +2739,7 @@ export function initSequenceViewer() {
     renderSequence(record);
     renderFeatureRail(record);
     renderSelectedFeatureDetail(record);
+    syncAnnotateButtonState();
     updateMessages();
   }
 
@@ -1097,11 +2747,17 @@ export function initSequenceViewer() {
     state.records = Array.isArray(result.records) ? result.records : [];
     state.warnings = Array.isArray(result.warnings) ? result.warnings : [];
     state.errors = Array.isArray(result.errors) ? result.errors : [];
+    state.annotationWarnings = [];
+    state.isAnnotating = false;
     state.selectedRecordIndex = 0;
     state.selectedFeatureIndex = -1;
+    clearSequenceSelection();
 
     updateRecordSelect();
     renderActiveRecord();
+    if (saveNameInput && state.records.length) {
+      saveNameInput.value = normalizeRecordName(state.records[0].name || 'sequence', 'sequence');
+    }
 
     if (state.records.length) {
       setStatus(`${statusPrefix}: ${state.records.length} record(s).`);
@@ -1134,7 +2790,220 @@ export function initSequenceViewer() {
     }
 
     const parsed = parseInputRecords(raw, { maxRecords: DEFAULT_MAX_RECORDS });
+    state.activeEntryId = '';
+    state.activeEntryStatus = '';
     setRecords(parsed, 'Loaded');
+    setInputComposerVisible(!(Array.isArray(parsed.records) && parsed.records.length > 0));
+  }
+
+  async function persistRecordToLibrary(record, options = {}) {
+    const bridge = getBridge();
+    const storagePath = getStoragePath();
+    if (!storagePath) {
+      throw new Error('Set Storage Folder Path in Settings before saving sequence entries.');
+    }
+    if (!bridge?.sequenceLibraryUpsert) {
+      throw new Error('Sequence library storage API unavailable.');
+    }
+    const safeRecord = record && typeof record === 'object' ? record : null;
+    if (!safeRecord?.sequence?.length) {
+      throw new Error('No sequence record available to persist.');
+    }
+
+    const status = String(options?.status || state.activeEntryStatus || LIBRARY_STATUS_TEMPORARY).toLowerCase() === LIBRARY_STATUS_SAVED
+      ? LIBRARY_STATUS_SAVED
+      : LIBRARY_STATUS_TEMPORARY;
+    const name = normalizeRecordName(
+      options?.name || saveNameInput?.value || safeRecord.name || 'sequence',
+      'sequence'
+    );
+    const gbkText = buildRecordGenbankText(safeRecord);
+    if (!gbkText.trim()) {
+      throw new Error('Failed to generate GenBank text for sequence entry.');
+    }
+    const htmlText = buildCircularPreviewHtmlDocument(safeRecord);
+    const response = await bridge.sequenceLibraryUpsert({
+      storagePath,
+      id: cleanText(options?.id || state.activeEntryId, 200),
+      name,
+      status,
+      sourceFormat: String(safeRecord.sourceFormat || ''),
+      topology: normalizeTopology(safeRecord.topology || 'linear'),
+      sequenceLength: safeRecord.sequence.length,
+      featureCount: Array.isArray(safeRecord.features) ? safeRecord.features.length : 0,
+      gbkText,
+      htmlText
+    });
+    if (!response?.ok || !response?.entry) {
+      throw new Error(response?.error || 'Failed to persist sequence entry.');
+    }
+    state.activeEntryId = cleanText(response.entry.id, 200);
+    state.activeEntryStatus = String(response.entry.status || status).toLowerCase();
+    if (saveNameInput) {
+      saveNameInput.value = response.entry.name || name;
+    }
+    return response.entry;
+  }
+
+  async function persistAfterAnnotation(record) {
+    const storagePath = getStoragePath();
+    if (!storagePath) {
+      state.annotationWarnings.push('pLannotate: Storage path not configured; annotation was not auto-saved.');
+      return null;
+    }
+    const desiredStatus = state.activeEntryStatus === LIBRARY_STATUS_SAVED
+      ? LIBRARY_STATUS_SAVED
+      : LIBRARY_STATUS_TEMPORARY;
+    const entry = await persistRecordToLibrary(record, {
+      id: state.activeEntryId,
+      status: desiredStatus,
+      name: saveNameInput?.value || record.name || 'sequence'
+    });
+    await refreshLibraryEntries({ selectedId: entry.id, silent: true });
+    return entry;
+  }
+
+  async function saveCurrentRecordAsSaved() {
+    const record = getSelectedRecord();
+    if (!record?.sequence?.length) {
+      setStatus('Load a record before saving.', true);
+      return;
+    }
+    try {
+      const entry = await persistRecordToLibrary(record, {
+        id: state.activeEntryId,
+        status: LIBRARY_STATUS_SAVED,
+        name: saveNameInput?.value || record.name || 'sequence'
+      });
+      state.activeEntryId = cleanText(entry.id, 200);
+      state.activeEntryStatus = LIBRARY_STATUS_SAVED;
+      await refreshLibraryEntries({ selectedId: entry.id, silent: true });
+      setStatus(`Saved sequence as ${entry.name}.`);
+      setHomeStatus(`Saved sequence entry: ${entry.name}.`);
+    } catch (error) {
+      setStatus(error?.message || 'Failed to save sequence.', true);
+    }
+  }
+
+  async function openLibraryEntryInDetail(entryId) {
+    const storagePath = getStoragePath();
+    if (!storagePath) {
+      setHomeStatus('Set Storage Folder Path in Settings before opening library entries.', true);
+      return;
+    }
+    const bridge = getBridge();
+    if (!bridge?.sequenceLibraryGet) {
+      setHomeStatus('Sequence library storage API unavailable.', true);
+      return;
+    }
+    try {
+      const response = await bridge.sequenceLibraryGet({
+        storagePath,
+        id: cleanText(entryId, 200),
+        includeGbk: true
+      });
+      if (!response?.ok || !response?.entry) {
+        throw new Error(response?.error || 'Failed to load sequence entry.');
+      }
+      const parsed = parseInputRecords(String(response.gbkText || ''), { maxRecords: DEFAULT_MAX_RECORDS });
+      if (!Array.isArray(parsed.records) || !parsed.records.length) {
+        throw new Error(parsed?.errors?.[0] || 'Stored sequence entry contains no valid records.');
+      }
+
+      state.activeEntryId = cleanText(response.entry.id, 200);
+      state.activeEntryStatus = String(response.entry.status || '').toLowerCase();
+      if (inputTextarea) {
+        inputTextarea.value = String(response.gbkText || '');
+      }
+      if (saveNameInput) {
+        saveNameInput.value = response.entry.name || parsed.records[0].name || 'sequence';
+      }
+      setMode('paste');
+      setInputComposerVisible(false);
+      setRecords(parsed, 'Loaded');
+      switchWorkspace('detail');
+      setStatus(`Opened ${response.entry.name}.`);
+    } catch (error) {
+      setHomeStatus(error?.message || 'Failed to open sequence entry.', true);
+    }
+  }
+
+  function openParsedRecordsInDetail(parsed, rawText = '', statusPrefix = 'Loaded') {
+    const hasRecords = Array.isArray(parsed?.records) && parsed.records.length > 0;
+    state.activeEntryId = '';
+    state.activeEntryStatus = '';
+    if (inputTextarea) {
+      inputTextarea.value = rawText || '';
+    }
+    setMode('paste');
+    setInputComposerVisible(!hasRecords);
+    setRecords(parsed, statusPrefix);
+    switchWorkspace('detail');
+  }
+
+  async function annotateCurrentRecord() {
+    if (state.isAnnotating) {
+      return;
+    }
+
+    const record = getSelectedRecord();
+    if (!record?.sequence?.length) {
+      setStatus('Load a record before annotation.', true);
+      return;
+    }
+
+    state.isAnnotating = true;
+    state.annotationWarnings = [];
+    syncAnnotateButtonState();
+    updateMessages();
+    setStatus(`Running pLannotate on ${record.name || 'record'}...`);
+
+    try {
+      const recordTopology = normalizeTopology(record.topology || 'linear');
+      const result = await runPlannotateAnnotationForSequence(
+        record.sequence,
+        recordTopology,
+        PLANNOTATE_DEFAULT_OPTIONS
+      );
+      const resultTopology = normalizeTopology(result?.topology || recordTopology);
+      const plannotateFeatures = buildPlannotateFeaturesFromResult(result, record.sequence.length, resultTopology);
+
+      const selectedIndex = clamp(state.selectedRecordIndex, 0, Math.max(0, state.records.length - 1));
+      const nextRecords = [...state.records];
+      const current = nextRecords[selectedIndex];
+      if (!current) {
+        throw new Error('Selected record no longer exists.');
+      }
+
+      const existingFeatures = Array.isArray(current.features) ? current.features : [];
+      const retainedFeatures = existingFeatures.filter(
+        (feature) => String(feature?.source || '').toLowerCase() !== 'plannotate'
+      );
+
+      current.features = [...retainedFeatures, ...plannotateFeatures];
+      current.topology = resultTopology;
+
+      state.records = nextRecords;
+      state.selectedRecordIndex = selectedIndex;
+      state.selectedFeatureIndex = -1;
+      state.annotationWarnings = Array.isArray(result?.warnings)
+        ? result.warnings.map((warning) => `pLannotate: ${String(warning)}`)
+        : [];
+
+      renderActiveRecord();
+      try {
+        await persistAfterAnnotation(current);
+      } catch (persistError) {
+        state.annotationWarnings.push(`pLannotate: ${String(persistError?.message || persistError)}`);
+        updateMessages();
+      }
+      setStatus(`Completed: ${plannotateFeatures.length} pLannotate feature(s) on ${current.name || 'record'}.`);
+    } catch (error) {
+      setStatus(error?.message || 'Annotation failed.', true);
+    } finally {
+      state.isAnnotating = false;
+      syncAnnotateButtonState();
+    }
   }
 
   function clearAll() {
@@ -1150,8 +3019,15 @@ export function initSequenceViewer() {
 
     state.fileName = '';
     state.fileText = '';
+    state.activeEntryId = '';
+    state.activeEntryStatus = '';
+    setMode('paste');
+    setInputComposerVisible(true);
     setRecords({ records: [], warnings: [], errors: [] }, 'Cleared');
     setStatus('Idle');
+    if (saveNameInput) {
+      saveNameInput.value = '';
+    }
   }
 
   modePasteBtn?.addEventListener('click', () => {
@@ -1190,9 +3066,50 @@ export function initSequenceViewer() {
     }
   });
 
+  homePasteBtn?.addEventListener('click', () => {
+    clearAll();
+    switchWorkspace('detail');
+    setMode('paste');
+    setInputComposerVisible(true);
+    setStatus('Paste sequence text, then click Load.');
+    inputTextarea?.focus?.();
+    setHomeStatus('Opened a new sequence workspace.');
+  });
+
+  if (homeOpenInput && typeof homeOpenInput.setAttribute === 'function') {
+    homeOpenInput.setAttribute('accept', FILE_ACCEPT);
+  }
+
+  homeOpenBtn?.addEventListener('click', () => {
+    homeOpenInput?.click();
+  });
+
+  homeOpenInput?.addEventListener('change', async () => {
+    const file = homeOpenInput.files?.[0];
+    if (!file) {
+      return;
+    }
+    try {
+      setHomeStatus(`Reading ${file.name}...`);
+      const text = await readFileAsText(file);
+      const parsed = parseInputRecords(text, { maxRecords: DEFAULT_MAX_RECORDS });
+      openParsedRecordsInDetail(parsed, text, 'Loaded');
+      setStatus(`Opened ${file.name} in detail workspace.`);
+    } catch (error) {
+      setHomeStatus(error?.message || 'Failed to open selected file.', true);
+    } finally {
+      homeOpenInput.value = '';
+    }
+  });
+
   loadBtn?.addEventListener('click', (event) => {
     event.preventDefault();
     void loadCurrentInput();
+  });
+
+  annotateBtn?.addEventListener('click', (event) => {
+    event.preventDefault();
+    void annotateCurrentRecord();
   });
 
   clearBtn?.addEventListener('click', (event) => {
@@ -1200,10 +3117,54 @@ export function initSequenceViewer() {
     clearAll();
   });
 
+  saveBtn?.addEventListener('click', (event) => {
+    event.preventDefault();
+    void saveCurrentRecordAsSaved();
+  });
+
+  backBtn?.addEventListener('click', (event) => {
+    event.preventDefault();
+    switchWorkspace('home');
+    void refreshLibraryEntries({ silent: true });
+  });
+
+  libraryFilterSavedBtn?.addEventListener('click', () => {
+    setLibraryFilter(LIBRARY_STATUS_SAVED);
+    void refreshLibraryEntries({ silent: true });
+  });
+
+  libraryFilterTemporaryBtn?.addEventListener('click', () => {
+    setLibraryFilter(LIBRARY_STATUS_TEMPORARY);
+    void refreshLibraryEntries({ silent: true });
+  });
+
+  libraryList?.addEventListener('click', (event) => {
+    const trigger = event.target?.closest?.('[data-sequence-entry-id]') || null;
+    const entryId = cleanText(trigger?.dataset?.sequenceEntryId, 200);
+    if (!entryId) {
+      return;
+    }
+    void setSelectedLibraryEntry(entryId);
+  });
+
+  libraryList?.addEventListener('dblclick', (event) => {
+    const trigger = event.target?.closest?.('[data-sequence-entry-id]') || null;
+    const entryId = cleanText(trigger?.dataset?.sequenceEntryId, 200);
+    if (!entryId) {
+      return;
+    }
+    void openLibraryEntryInDetail(entryId);
+  });
+
   recordSelect?.addEventListener('change', () => {
     state.selectedRecordIndex = clamp(Number(recordSelect.value) || 0, 0, Math.max(0, state.records.length - 1));
     state.selectedFeatureIndex = -1;
+    clearSequenceSelection();
     renderActiveRecord();
+    const selected = getSelectedRecord();
+    if (selected && saveNameInput) {
+      saveNameInput.value = normalizeRecordName(selected.name || 'sequence', 'sequence');
+    }
   });
 
   featureRailHost?.addEventListener('click', (event) => {
@@ -1216,7 +3177,127 @@ export function initSequenceViewer() {
       return;
     }
     state.selectedFeatureIndex = index;
+    clearSequenceSelection();
     renderActiveRecord();
+  });
+
+  sequenceHost?.addEventListener('mousedown', (event) => {
+    const button = Number(event?.button);
+    if (Number.isFinite(button) && button !== 0) {
+      return;
+    }
+    const featureTrigger = event.target?.closest?.('[data-feature-index]') || null;
+    if (featureTrigger) {
+      return;
+    }
+    const record = getSelectedRecord();
+    const boundary = resolveSequenceBoundaryFromEvent(event, record);
+    if (!Number.isFinite(boundary)) {
+      return;
+    }
+    event.preventDefault?.();
+    state.isSelectingSequence = true;
+    state.sequenceSelectionAnchor = boundary;
+    state.sequenceSelectionFocus = boundary;
+    state.sequenceCursorBase = boundary;
+    renderSequence(record, { preserveScroll: true });
+  });
+
+  sequenceHost?.addEventListener('mousemove', (event) => {
+    const record = getSelectedRecord();
+    const featureTrigger = event.target?.closest?.('[data-feature-index]') || null;
+    let rerenderNeeded = false;
+
+    if (state.isSelectingSequence) {
+      const boundary = resolveSequenceBoundaryFromEvent(event, record);
+      if (Number.isFinite(boundary)) {
+        if (state.sequenceSelectionFocus !== boundary) {
+          state.sequenceSelectionFocus = boundary;
+          rerenderNeeded = true;
+        }
+        if (state.sequenceCursorBase !== boundary) {
+          state.sequenceCursorBase = boundary;
+          rerenderNeeded = true;
+        }
+      }
+      hideSequenceHoverTooltip();
+      if (rerenderNeeded) {
+        renderSequence(record, { preserveScroll: true });
+      }
+      return;
+    }
+
+    if (featureTrigger) {
+      const index = Number(featureTrigger.dataset.featureIndex);
+      if (!Number.isFinite(index)) {
+        hideSequenceHoverTooltip();
+        return;
+      }
+      const feature = getFeatureByIndexForRecord(record, index);
+      if (!feature || !record) {
+        hideSequenceHoverTooltip();
+        return;
+      }
+      showSequenceHoverTooltip(event, feature, record.sequence.length);
+      return;
+    }
+
+    hideSequenceHoverTooltip();
+    const boundary = resolveSequenceBoundaryFromEvent(event, record);
+    if (Number.isFinite(boundary)) {
+      if (state.sequenceCursorBase !== boundary) {
+        state.sequenceCursorBase = boundary;
+        rerenderNeeded = true;
+      }
+    } else if (Number.isFinite(state.sequenceCursorBase)) {
+      state.sequenceCursorBase = null;
+      rerenderNeeded = true;
+    }
+
+    if (rerenderNeeded) {
+      renderSequence(record, { preserveScroll: true });
+    }
+  });
+
+  sequenceHost?.addEventListener('mouseleave', () => {
+    hideSequenceHoverTooltip();
+    if (state.isSelectingSequence) {
+      return;
+    }
+    if (Number.isFinite(state.sequenceCursorBase)) {
+      state.sequenceCursorBase = null;
+      renderSequence(getSelectedRecord(), { preserveScroll: true });
+    }
+  });
+
+  sequenceHost?.addEventListener('scroll', () => {
+    hideSequenceHoverTooltip();
+  });
+
+  sequenceHost?.addEventListener('click', (event) => {
+    const trigger = event.target?.closest?.('[data-feature-index]') || null;
+    if (!trigger) {
+      return;
+    }
+    const index = Number(trigger.dataset.featureIndex);
+    if (!Number.isFinite(index)) {
+      return;
+    }
+    state.selectedFeatureIndex = index;
+    clearSequenceSelection({ preserveCursor: true });
+    renderActiveRecord();
+  });
+
+  globalThis.addEventListener?.('mouseup', () => {
+    if (!state.isSelectingSequence) {
+      return;
+    }
+    state.isSelectingSequence = false;
+    renderSequence(getSelectedRecord(), { preserveScroll: true });
+  });
+
+  globalThis.addEventListener?.('resize', () => {
+    renderSequence(getSelectedRecord(), { preserveScroll: true });
   });
 
   function loadFromExternal(payload) {
@@ -1227,14 +3308,21 @@ export function initSequenceViewer() {
     if (inputTextarea) {
       inputTextarea.value = record.sequence;
     }
+    state.activeEntryId = '';
+    state.activeEntryStatus = '';
+    if (saveNameInput) {
+      saveNameInput.value = record.name || 'sequence';
+    }
 
     setRecords({
       records: hasSequence ? [record] : [],
       warnings: hasSequence ? [] : ['External payload had no sequence.'],
       errors: hasSequence ? [] : ['Failed to load external payload.']
     }, 'Imported');
+    setInputComposerVisible(!hasSequence);
 
     if (hasSequence) {
+      switchWorkspace('detail');
       setStatus(`Imported ${record.name} from ${record.sourceFormat || 'external'}.`);
     }
   }
@@ -1242,10 +3330,16 @@ export function initSequenceViewer() {
   function render() {
     updateRecordSelect();
     renderActiveRecord();
+    syncHomeControlsState();
+    void refreshLibraryEntries({ silent: true });
   }
 
+  setLibraryFilter(LIBRARY_STATUS_SAVED);
+  switchWorkspace('home');
   setMode('paste');
-  setStatus('Idle');
+  setInputComposerVisible(true);
+  setStatus('Paste sequence text, then click Load.');
+  setHomeStatus('Choose New or Open to continue.');
   render();
 
   return {
@@ -1266,6 +3360,8 @@ export {
   normalizeExternalPayload,
   parseGenBankLocationSegments,
   renderDualStrandSequenceLinesHtml,
+  computeRestrictionAnnotationGeometry,
+  buildRestrictionCutPolylinePoints,
   formatSelectedFeatureDetailHtml,
   computeGcPercent,
   countAmbiguousBases,

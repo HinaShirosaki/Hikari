@@ -1,0 +1,316 @@
+/* workflow-management-view */
+
+/* Extracted from ui/css/base/core.css */
+#workflow-notebook-pages {
+  min-height: 150px;
+}
+
+.workflow-grid {
+  align-items: end;
+  grid-template-columns: minmax(260px, 1fr) auto;
+}
+
+.workflow-block-grid {
+  grid-template-columns: minmax(170px, 0.65fr) minmax(260px, 1fr) auto;
+}
+
+.workflow-inline-actions {
+  align-self: end;
+}
+
+.workflow-block-row {
+  grid-template-columns: minmax(240px, 1fr) minmax(210px, auto) auto;
+  align-items: end;
+}
+
+.workflow-block-meta p {
+  margin: 2px 0 0;
+}
+
+.workflow-text-block-field {
+  margin-top: 6px;
+  font-size: 0.84rem;
+}
+
+.workflow-text-block-field input {
+  width: 100%;
+}
+
+.workflow-assignee-field {
+  display: grid;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--primary);
+}
+
+.workflow-graph-canvas {
+  margin-top: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  border-radius: 14px;
+  overflow: auto;
+  min-height: 380px;
+  max-height: 540px;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.18) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(255, 255, 255, 0.18) 1px, transparent 1px),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.54), rgba(231, 245, 255, 0.45));
+  background-size: 28px 28px, 28px 28px, auto;
+}
+
+.workflow-graph-board {
+  position: relative;
+  width: 760px;
+  height: 360px;
+}
+
+.workflow-graph-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: auto;
+}
+
+.workflow-graph-nodes {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.workflow-node {
+  position: absolute;
+  width: 244px;
+  min-height: 104px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 14px;
+  background: linear-gradient(155deg, rgba(255, 255, 255, 0.92), rgba(233, 246, 255, 0.82));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 12px 24px rgba(17, 66, 110, 0.18);
+  pointer-events: auto;
+  user-select: none;
+  cursor: grab;
+}
+
+.workflow-node:active {
+  cursor: grabbing;
+}
+
+.workflow-node-connecting {
+  border-color: rgba(82, 154, 231, 0.95);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 0 0 2px rgba(82, 154, 231, 0.24),
+    0 14px 26px rgba(17, 66, 110, 0.2);
+}
+
+.workflow-node-selected {
+  border-color: rgba(60, 134, 219, 0.95);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 0 0 2px rgba(60, 134, 219, 0.3),
+    0 14px 26px rgba(17, 66, 110, 0.22);
+}
+
+.workflow-node-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  cursor: grab;
+  color: var(--primary);
+  font-size: 0.93rem;
+}
+
+.workflow-node-text .workflow-node-header strong {
+  font-size: 0.88rem;
+  line-height: 1.25;
+}
+
+.workflow-node-header:active {
+  cursor: grabbing;
+}
+
+.workflow-node-index {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #0f4f84;
+  background: linear-gradient(140deg, rgba(201, 228, 255, 0.9), rgba(174, 212, 255, 0.64));
+}
+
+.workflow-node-body {
+  padding: 2px 12px 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.workflow-node-body p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.workflow-node-remove {
+  justify-self: start;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+}
+
+.workflow-port {
+  position: absolute;
+  top: 44px;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  background: linear-gradient(140deg, rgba(85, 162, 243, 0.95), rgba(32, 113, 202, 0.92));
+  box-shadow: 0 0 0 2px rgba(74, 135, 201, 0.2);
+  padding: 0;
+}
+
+.workflow-port:hover,
+.workflow-port:focus-visible {
+  transform: scale(1.08);
+}
+
+.workflow-port-in {
+  left: -8px;
+}
+
+.workflow-port-out {
+  right: -8px;
+}
+
+.workflow-graph-link {
+  fill: none;
+  stroke: rgba(37, 113, 194, 0.86);
+  stroke-width: 3;
+  stroke-linecap: round;
+  cursor: pointer;
+}
+
+.workflow-graph-link:hover {
+  stroke: rgba(31, 86, 146, 0.95);
+}
+
+.workflow-graph-link-preview {
+  stroke: rgba(71, 145, 224, 0.8);
+  stroke-dasharray: 8 6;
+  pointer-events: none;
+}
+
+.workflow-graph-selection {
+  position: absolute;
+  border: 1px dashed rgba(49, 122, 210, 0.88);
+  background: rgba(82, 154, 231, 0.18);
+  border-radius: 6px;
+  pointer-events: none;
+}
+
+.workflow-context-menu {
+  position: fixed;
+  z-index: 1000;
+  min-width: 210px;
+  padding: 6px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  background: linear-gradient(155deg, rgba(255, 255, 255, 0.96), rgba(234, 247, 255, 0.88));
+  box-shadow: 0 14px 28px rgba(16, 64, 107, 0.24);
+  display: grid;
+  gap: 4px;
+}
+
+.workflow-context-item {
+  border: 1px solid rgba(207, 225, 244, 0.92);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--primary);
+  text-align: left;
+  padding: 7px 9px;
+  font-size: 0.86rem;
+}
+
+.workflow-context-item:hover {
+  background: rgba(226, 242, 255, 0.9);
+}
+
+.workflow-card {
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+.workflow-card-editing {
+  border-color: color-mix(in srgb, var(--accent) 60%, #ffffff);
+}
+
+body.workflow-dragging {
+  cursor: grabbing;
+}
+
+/* Extracted from ui/css/themes/modes.css */
+body.theme-night .workflow-graph-canvas {
+  border-color: rgba(145, 174, 214, 0.35);
+  background:
+    linear-gradient(90deg, rgba(111, 138, 183, 0.2) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(111, 138, 183, 0.2) 1px, transparent 1px),
+    linear-gradient(145deg, rgba(27, 42, 72, 0.9), rgba(19, 31, 56, 0.84));
+  background-size: 28px 28px, 28px 28px, auto;
+}
+
+body.theme-night .workflow-node {
+  border-color: rgba(142, 174, 217, 0.45);
+  background: linear-gradient(155deg, rgba(39, 57, 92, 0.95), rgba(28, 43, 73, 0.9));
+  box-shadow:
+    inset 0 1px 0 rgba(165, 196, 235, 0.16),
+    0 12px 24px rgba(0, 0, 0, 0.28);
+}
+
+body.theme-night .workflow-node-selected {
+  border-color: rgba(116, 179, 244, 0.95);
+  box-shadow:
+    inset 0 1px 0 rgba(165, 196, 235, 0.16),
+    0 0 0 2px rgba(116, 179, 244, 0.3),
+    0 12px 24px rgba(0, 0, 0, 0.3);
+}
+
+body.theme-night .workflow-node-header {
+  color: var(--text);
+}
+
+body.theme-night .workflow-node-body p {
+  color: #b2c2e0;
+}
+
+body.theme-night .workflow-port {
+  border-color: rgba(171, 204, 246, 0.45);
+  background: linear-gradient(140deg, rgba(83, 162, 248, 0.95), rgba(50, 125, 214, 0.92));
+}
+
+body.theme-night .workflow-graph-link {
+  stroke: rgba(114, 177, 244, 0.88);
+}
+
+body.theme-night .workflow-graph-selection {
+  border-color: rgba(114, 177, 244, 0.95);
+  background: rgba(88, 149, 214, 0.22);
+}
+
+body.theme-night .workflow-context-menu {
+  border-color: rgba(121, 152, 198, 0.6);
+  background: linear-gradient(155deg, rgba(29, 44, 74, 0.96), rgba(23, 35, 59, 0.92));
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.34);
+}
+
+body.theme-night .workflow-context-item {
+  border-color: rgba(85, 115, 162, 0.7);
+  background: rgba(34, 52, 86, 0.9);
+  color: var(--text);
+}
+
+body.theme-night .workflow-context-item:hover {
+  background: rgba(46, 68, 109, 0.94);
+}

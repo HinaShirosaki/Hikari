@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Enana</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="./vendor/cropperjs/cropper.min.css" />
+  <link rel="stylesheet" href="./vendor/tabulator/tabulator.min.css" />
+  <link rel="stylesheet" href="./vendor/react-vis/react-vis.css" />
+</head>
+<body>
+  <script>
+    (() => {
+      const DEFAULT_THEME_COLOR = '#2688ff';
+      const DEFAULT_FONT_SIZE = 16;
+      const STORAGE_KEY = 'enana_state_v1';
+      const root = document.documentElement;
+      const body = document.body;
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : null;
+        const appearance = parsed && parsed.settings ? parsed.settings.appearance || {} : {};
+        const themeColor = String(appearance.themeColor || DEFAULT_THEME_COLOR).trim() || DEFAULT_THEME_COLOR;
+        const fontSize = Number(appearance.fontSize) || DEFAULT_FONT_SIZE;
+        const mode = appearance.mode === 'night' ? 'night' : 'day';
+        const uiStyle = appearance.uiStyle === 'classic' ? 'classic' : 'neutral-compact';
+
+        root.style.setProperty('--accent', themeColor);
+        root.style.setProperty('--focus', themeColor);
+        root.style.setProperty('--app-font-size', `${fontSize}px`);
+        root.style.setProperty('font-size', `${fontSize}px`);
+        body.classList.toggle('theme-night', mode === 'night');
+        body.classList.toggle('ui-neutral-compact', uiStyle === 'neutral-compact');
+      } catch {}
+    })();
+  </script>
+  <main class="app-shell">
+    <header class="topbar">
+      <h1>Enana</h1>
+      <div class="topbar-row">
+        <p id="page-subtitle">Choose a sub-app to continue.</p>
+        <div class="topbar-tools">
+          <input id="topbar-search" type="search" placeholder="Search (e.g. assay: EGFR)" aria-label="Search" />
+          <button id="home-btn" class="ghost-btn" hidden>Back to Home</button>
+        </div>
+      </div>
+    </header>
+    <div class="workspace-shell">
+      <aside class="app-sidebar" aria-label="Applications">
+        <h2 class="app-sidebar-title">Apps</h2>
+        <nav id="app-nav-list" class="app-nav-list">
+          <button class="app-nav-btn" type="button" data-view="lab-management-view">Members</button>
+          <button class="app-nav-btn" type="button" data-view="instrument-management-view">Instruments</button>
+          <button class="app-nav-btn" type="button" data-view="protocol-management-view">Protocols</button>
+          <button class="app-nav-btn" type="button" data-view="collaboration-management-view">Collabrations</button>
+          <button class="app-nav-btn" type="button" data-view="synthesis-notebook-view">Synthesis Notebook</button>
+          <button class="app-nav-btn" type="button" data-view="biology-notebook-view">Biology Notebook</button>
+          <button class="app-nav-btn" type="button" data-view="lab-common-inventory-view">Chemicals</button>
+          <button class="app-nav-btn" type="button" data-view="sample-registry-view">Sample &amp; Inventory</button>
+          <button class="app-nav-btn" type="button" data-view="assay-view">Assay</button>
+          <button class="app-nav-btn" type="button" data-view="gel-view">Gel</button>
+          <button class="app-nav-btn" type="button" data-view="project-management-view">Projects</button>
+          <button class="app-nav-btn" type="button" data-view="workflow-management-view">Workflows</button>
+          <button class="app-nav-btn" type="button" data-view="papers-view">Papers</button>
+          <button class="app-nav-btn" type="button" data-view="agent-view">Agent</button>
+          <button class="app-nav-btn" type="button" data-view="sequence-viewer-view">Sequence Viewer</button>
+          <button class="app-nav-btn" type="button" data-view="tool-box-view">Tools</button>
+          <button class="app-nav-btn" type="button" data-view="setting-view">Setting</button>
+        </nav>
+      </aside>
+      <section class="workspace-main">

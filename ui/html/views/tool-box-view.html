@@ -1,0 +1,721 @@
+<section id="tool-box-view" class="view">
+      <div class="panel">
+        <h2>Tools</h2>
+        <p class="small-note">Quick experimental calculators for day-to-day bench work.</p>
+      </div>
+
+      <div class="grid tool-grid">
+        <button class="tile tool-tile" data-tool-view="tool-molarity-view">
+          <span class="icon" aria-hidden="true">⚗️</span>
+          <span class="label">Molarity Calculator</span>
+        </button>
+        <button class="tile tool-tile" data-tool-view="tool-peptide-view">
+          <span class="icon" aria-hidden="true">🧬</span>
+          <span class="label">Peptide Properties</span>
+        </button>
+        <button class="tile tool-tile" data-tool-view="tool-buffer-view">
+          <span class="icon" aria-hidden="true">🧫</span>
+          <span class="label">Buffer Preparer</span>
+        </button>
+        <button class="tile tool-tile" data-tool-view="tool-dna-protein-view">
+          <span class="icon" aria-hidden="true">🧾</span>
+          <span class="label">DNA to Protein</span>
+        </button>
+        <button class="tile tool-tile" data-tool-view="tool-reverse-translate-view">
+          <span class="icon" aria-hidden="true">🔁</span>
+          <span class="label">Protein to DNA</span>
+        </button>
+        <button class="tile tool-tile" data-tool-view="tool-protein-assembly-view">
+          <span class="icon" aria-hidden="true">🧱</span>
+          <span class="label">Protein Assembler</span>
+        </button>
+        <button class="tile tool-tile" data-tool-view="tool-oligo-view">
+          <span class="icon" aria-hidden="true">🧪</span>
+          <span class="label">DNA/RNA Oligo Properties</span>
+        </button>
+        <button class="tile tool-tile" data-tool-view="tool-extinction-view">
+          <span class="icon" aria-hidden="true">📈</span>
+          <span class="label">Extinction Coefficient</span>
+        </button>
+        <button class="tile tool-tile" data-tool-view="tool-qpcr-view">
+          <span class="icon" aria-hidden="true">📊</span>
+          <span class="label">qPCR Efficiency</span>
+        </button>
+        <button class="tile tool-tile" data-tool-view="tool-plannotate-view">
+          <span class="icon" aria-hidden="true">🧭</span>
+          <span class="label">pLannotate</span>
+        </button>
+        <button class="tile tool-tile" data-tool-view="tool-crispr-view">
+          <span class="icon" aria-hidden="true">✂️</span>
+          <span class="label">CRISPR sgRNA Designer</span>
+        </button>
+        <button class="tile tool-tile" data-tool-view="tool-colony-counter-view">
+          <span class="icon" aria-hidden="true">🧬</span>
+          <span class="label">Colony Counter</span>
+        </button>
+      </div>
+
+      <div id="tool-molarity-view" class="panel tool-subview">
+        <h3>Molarity Calculator</h3>
+        <p class="small-note">GraphPad-style quick calcs with units for concentration, volume, and mass.</p>
+
+        <div class="molarity-block">
+          <h4>1) Find Mass from Concentration and Volume</h4>
+          <form id="molarity-mass-form" class="form-grid" autocomplete="off">
+            <label>
+              Concentration
+              <div class="inline-row">
+                <input id="mass-calc-concentration" type="number" min="0" step="0.000001" placeholder="e.g. 10" />
+                <select id="mass-calc-concentration-unit">
+                  <option value="fM">fM</option>
+                  <option value="pM">pM</option>
+                  <option value="nM">nM</option>
+                  <option value="uM">uM</option>
+                  <option value="mM" selected>mM</option>
+                  <option value="M">M</option>
+                </select>
+              </div>
+            </label>
+            <label>
+              Formula Weight (g/mol)
+              <input id="mass-calc-mw" type="number" min="0" step="0.000001" placeholder="e.g. 58.44" />
+            </label>
+            <label>
+              Volume
+              <div class="inline-row">
+                <input id="mass-calc-volume" type="number" min="0" step="0.000001" placeholder="e.g. 500" />
+                <select id="mass-calc-volume-unit">
+                  <option value="uL">uL</option>
+                  <option value="mL" selected>mL</option>
+                  <option value="L">L</option>
+                </select>
+              </div>
+            </label>
+            <label>
+              Output Mass Unit
+              <select id="mass-calc-output-unit">
+                <option value="ug">ug</option>
+                <option value="mg" selected>mg</option>
+                <option value="g">g</option>
+                <option value="kg">kg</option>
+              </select>
+            </label>
+          </form>
+          <p id="mass-calc-result" class="calc-output"></p>
+        </div>
+
+        <div class="molarity-block">
+          <h4>2) Find Volume from Mass and Concentration</h4>
+          <form id="molarity-volume-form" class="form-grid" autocomplete="off">
+            <label>
+              Mass
+              <div class="inline-row">
+                <input id="volume-calc-mass" type="number" min="0" step="0.000001" placeholder="e.g. 50" />
+                <select id="volume-calc-mass-unit">
+                  <option value="ug">ug</option>
+                  <option value="mg" selected>mg</option>
+                  <option value="g">g</option>
+                  <option value="kg">kg</option>
+                </select>
+              </div>
+            </label>
+            <label>
+              Formula Weight (g/mol)
+              <input id="volume-calc-mw" type="number" min="0" step="0.000001" placeholder="e.g. 58.44" />
+            </label>
+            <label>
+              Concentration
+              <div class="inline-row">
+                <input id="volume-calc-concentration" type="number" min="0" step="0.000001" placeholder="e.g. 10" />
+                <select id="volume-calc-concentration-unit">
+                  <option value="fM">fM</option>
+                  <option value="pM">pM</option>
+                  <option value="nM">nM</option>
+                  <option value="uM">uM</option>
+                  <option value="mM" selected>mM</option>
+                  <option value="M">M</option>
+                </select>
+              </div>
+            </label>
+            <label>
+              Output Volume Unit
+              <select id="volume-calc-output-unit">
+                <option value="uL">uL</option>
+                <option value="mL" selected>mL</option>
+                <option value="L">L</option>
+              </select>
+            </label>
+          </form>
+          <p id="volume-calc-result" class="calc-output"></p>
+        </div>
+
+        <div class="molarity-block">
+          <h4>3) Find Concentration from Mass and Volume</h4>
+          <form id="molarity-concentration-form" class="form-grid" autocomplete="off">
+            <label>
+              Mass
+              <div class="inline-row">
+                <input id="conc-calc-mass" type="number" min="0" step="0.000001" placeholder="e.g. 50" />
+                <select id="conc-calc-mass-unit">
+                  <option value="ug">ug</option>
+                  <option value="mg" selected>mg</option>
+                  <option value="g">g</option>
+                  <option value="kg">kg</option>
+                </select>
+              </div>
+            </label>
+            <label>
+              Formula Weight (g/mol)
+              <input id="conc-calc-mw" type="number" min="0" step="0.000001" placeholder="e.g. 58.44" />
+            </label>
+            <label>
+              Volume
+              <div class="inline-row">
+                <input id="conc-calc-volume" type="number" min="0" step="0.000001" placeholder="e.g. 1" />
+                <select id="conc-calc-volume-unit">
+                  <option value="uL">uL</option>
+                  <option value="mL" selected>mL</option>
+                  <option value="L">L</option>
+                </select>
+              </div>
+            </label>
+            <label>
+              Output Concentration Unit
+              <select id="conc-calc-output-unit">
+                <option value="fM">fM</option>
+                <option value="pM">pM</option>
+                <option value="nM">nM</option>
+                <option value="uM">uM</option>
+                <option value="mM" selected>mM</option>
+                <option value="M">M</option>
+              </select>
+            </label>
+          </form>
+          <p id="conc-calc-result" class="calc-output"></p>
+        </div>
+
+        <div class="molarity-block">
+          <h4>4) Dilute a Stock Solution (C1V1 = C2V2)</h4>
+          <form id="molarity-dilution-form" class="form-grid" autocomplete="off">
+            <label>
+              Stock Concentration
+              <div class="inline-row">
+                <input id="dilution-stock-conc" type="number" min="0" step="0.000001" placeholder="e.g. 100" />
+                <select id="dilution-stock-conc-unit">
+                  <option value="fM">fM</option>
+                  <option value="pM">pM</option>
+                  <option value="nM">nM</option>
+                  <option value="uM">uM</option>
+                  <option value="mM" selected>mM</option>
+                  <option value="M">M</option>
+                </select>
+              </div>
+            </label>
+            <label>
+              Desired Concentration
+              <div class="inline-row">
+                <input id="dilution-target-conc" type="number" min="0" step="0.000001" placeholder="e.g. 10" />
+                <select id="dilution-target-conc-unit">
+                  <option value="fM">fM</option>
+                  <option value="pM">pM</option>
+                  <option value="nM">nM</option>
+                  <option value="uM">uM</option>
+                  <option value="mM" selected>mM</option>
+                  <option value="M">M</option>
+                </select>
+              </div>
+            </label>
+            <label>
+              Final Volume
+              <div class="inline-row">
+                <input id="dilution-target-volume" type="number" min="0" step="0.000001" placeholder="e.g. 1" />
+                <select id="dilution-target-volume-unit">
+                  <option value="uL">uL</option>
+                  <option value="mL" selected>mL</option>
+                  <option value="L">L</option>
+                </select>
+              </div>
+            </label>
+            <label>
+              Output Volume Unit
+              <select id="dilution-output-unit">
+                <option value="uL">uL</option>
+                <option value="mL" selected>mL</option>
+                <option value="L">L</option>
+              </select>
+            </label>
+          </form>
+          <p id="dilution-calc-result" class="calc-output"></p>
+        </div>
+      </div>
+
+      <div id="tool-peptide-view" class="panel tool-subview" hidden>
+        <h3>Peptide Property Calculator</h3>
+        <form id="peptide-form" class="stack-form" autocomplete="off">
+          <label>
+            Amino Acid Sequence
+            <textarea id="peptide-sequence" rows="4" placeholder="e.g. ACDEFGHIKLMNPQRSTVWY"></textarea>
+          </label>
+        </form>
+        <div id="peptide-result" class="calc-output stack-form"></div>
+      </div>
+
+      <div id="tool-buffer-view" class="panel tool-subview" hidden>
+        <h3>Buffer Preparer</h3>
+        <div class="stack-form">
+          <label>
+            Buffer Volume (mL)
+            <input id="buffer-volume-ml" type="number" min="0" step="0.001" value="1000" />
+          </label>
+          <div class="form-actions">
+            <button id="add-buffer-chemical-btn" type="button" class="ghost-btn">Add Chemical</button>
+          </div>
+          <div id="buffer-rows" class="buffer-rows"></div>
+          <p id="buffer-total-result" class="calc-output"></p>
+        </div>
+      </div>
+
+      <div id="tool-dna-protein-view" class="panel tool-subview" hidden>
+        <h3>DNA Sequence to Protein Sequence</h3>
+        <form id="dna-protein-form" class="stack-form" autocomplete="off">
+          <label>
+            DNA / RNA Sequence
+            <textarea id="dna-protein-sequence" rows="5" placeholder="Paste sequence"></textarea>
+          </label>
+          <div class="form-grid">
+            <label>
+              Sequence Type
+              <select id="dna-protein-type">
+                <option value="DNA" selected>DNA</option>
+                <option value="RNA">RNA</option>
+              </select>
+            </label>
+            <label>
+              Reading Frame
+              <select id="dna-protein-frame">
+                <option value="1" selected>Frame +1</option>
+                <option value="2">Frame +2</option>
+                <option value="3">Frame +3</option>
+                <option value="-1">Frame -1</option>
+                <option value="-2">Frame -2</option>
+                <option value="-3">Frame -3</option>
+              </select>
+            </label>
+            <label>
+              Stop Codons
+              <select id="dna-protein-stop-mode">
+                <option value="star" selected>Show as *</option>
+                <option value="trim">Trim at first stop</option>
+              </select>
+            </label>
+          </div>
+        </form>
+        <div id="dna-protein-result" class="calc-output"></div>
+      </div>
+
+      <div id="tool-reverse-translate-view" class="panel tool-subview" hidden>
+        <h3>Protein Sequence to DNA Sequence (Reverse Translation)</h3>
+        <form id="reverse-translate-form" class="stack-form" autocomplete="off">
+          <label>
+            Protein Sequence
+            <textarea id="reverse-translate-protein" rows="5" placeholder="e.g. MKTIIALSYIFCLVFADYKDDD..."></textarea>
+          </label>
+          <div class="form-grid">
+            <label>
+              Codon Usage Profile
+              <select id="reverse-translate-organism"></select>
+            </label>
+            <label class="assay-analysis-checkbox">
+              <input id="reverse-translate-append-stop" type="checkbox" />
+              Append terminal stop codon
+            </label>
+          </div>
+          <label>
+            Restriction Sites to Avoid
+            <textarea id="reverse-translate-sites" rows="3" placeholder="Comma/space/newline separated DNA motifs, e.g. GAATTC AAGCTT GGTCTC"></textarea>
+          </label>
+        </form>
+        <div id="reverse-translate-result" class="calc-output"></div>
+      </div>
+
+      <div id="tool-protein-assembly-view" class="panel tool-subview" hidden>
+        <h3>Protein Construct Assembler</h3>
+        <p class="small-note">Assemble tags, linkers, cleavage sites, and your protein of interest like Lego blocks.</p>
+        <div class="protein-assembly-shell">
+          <form id="protein-assembly-form" class="stack-form protein-assembly-controls" autocomplete="off">
+            <div class="form-grid">
+              <label>
+                Construct Name
+                <input id="protein-assembly-name" placeholder="e.g. N-His6-TEV-POI-TwinStrep" />
+              </label>
+              <label>
+                POI Name
+                <input id="protein-assembly-poi-name" placeholder="e.g. EGFR kinase domain" />
+              </label>
+            </div>
+            <label>
+              Protein of Interest Sequence
+              <textarea id="protein-assembly-poi-sequence" rows="5" placeholder="Paste amino-acid sequence (A-Z, optional *)"></textarea>
+            </label>
+            <div class="form-actions">
+              <button type="button" id="protein-assembly-add-block-btn" class="ghost-btn">Add Block</button>
+              <button type="button" id="protein-assembly-reset-btn" class="ghost-btn">Reset to Default</button>
+            </div>
+            <div id="protein-assembly-rows" class="protein-assembly-rows"></div>
+            <div class="form-actions">
+              <button type="submit" class="primary-btn">Assemble Construct</button>
+            </div>
+          </form>
+
+          <div id="protein-assembly-result" class="calc-output">
+            Add your POI sequence and configure assembly blocks.
+          </div>
+
+          <section class="plannotate-result-card protein-assembly-result-card">
+            <div class="plannotate-card-head">
+              <h4>Assembled Sequence</h4>
+              <span id="protein-assembly-meta" class="small-note">0 aa · 0 blocks</span>
+            </div>
+            <div id="protein-assembly-sequence" class="sequence-block">-</div>
+          </section>
+
+          <section class="plannotate-result-card protein-assembly-result-card">
+            <div class="plannotate-card-head">
+              <h4>Assembly Map</h4>
+              <span id="protein-assembly-map-summary" class="small-note">No blocks assembled.</span>
+            </div>
+            <div class="plannotate-table-wrap protein-assembly-table-wrap">
+              <table class="plannotate-table protein-assembly-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Part</th>
+                    <th>Type</th>
+                    <th>Range</th>
+                    <th>Length (aa)</th>
+                    <th>Sequence</th>
+                  </tr>
+                </thead>
+                <tbody id="protein-assembly-table-body">
+                  <tr>
+                    <td colspan="6" class="small-note">No blocks assembled.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <div id="tool-oligo-view" class="panel tool-subview" hidden>
+        <h3>DNA / RNA Oligo Properties</h3>
+        <form id="oligo-form" class="stack-form" autocomplete="off">
+          <label>
+            Oligo Sequence
+            <textarea id="oligo-sequence" rows="4" placeholder="Enter DNA or RNA oligo"></textarea>
+          </label>
+          <div class="form-grid">
+            <label>
+              Oligo Type
+              <select id="oligo-type">
+                <option value="DNA" selected>DNA</option>
+                <option value="RNA">RNA</option>
+              </select>
+            </label>
+          </div>
+        </form>
+        <div id="oligo-result" class="calc-output"></div>
+      </div>
+
+      <div id="tool-extinction-view" class="panel tool-subview" hidden>
+        <h3>Extinction Coefficient Calculator</h3>
+        <form id="extinction-form" class="stack-form" autocomplete="off">
+          <label>
+            Sequence Type
+            <select id="extinction-type">
+              <option value="protein" selected>Protein / Peptide</option>
+              <option value="DNA">DNA</option>
+              <option value="RNA">RNA</option>
+            </select>
+          </label>
+          <label>
+            Sequence
+            <textarea id="extinction-sequence" rows="4" placeholder="Enter sequence"></textarea>
+          </label>
+        </form>
+        <div id="extinction-result" class="calc-output"></div>
+      </div>
+
+      <div id="tool-qpcr-view" class="panel tool-subview" hidden>
+        <h3>qPCR Efficiency Calculator</h3>
+        <form id="qpcr-form" class="stack-form" autocomplete="off">
+          <label>
+            Slope (optional; from standard curve)
+            <input id="qpcr-slope" type="number" step="0.000001" placeholder="e.g. -3.32" />
+          </label>
+          <label>
+            Standard Curve Points (optional)
+            <textarea id="qpcr-points" rows="5" placeholder="quantity, Ct per line&#10;1, 18.0&#10;0.1, 21.3&#10;0.01, 24.7"></textarea>
+          </label>
+        </form>
+        <div id="qpcr-result" class="calc-output"></div>
+      </div>
+
+      <div id="tool-plannotate-view" class="panel tool-subview" hidden>
+        <h3>pLannotate</h3>
+        <p class="small-note">Use text or file input, then run annotation to render a plasmid map and feature table.</p>
+        <div class="plannotate-ui-shell">
+          <form id="plannotate-form" class="stack-form plannotate-controls" autocomplete="off">
+            <div class="plannotate-mode-switch" role="tablist" aria-label="pLannotate input mode">
+              <button id="plannotate-mode-text" class="plannotate-mode-btn plannotate-mode-btn-active" type="button">Sequence Text</button>
+              <button id="plannotate-mode-file" class="plannotate-mode-btn" type="button">FASTA/GenBank File</button>
+            </div>
+            <p id="plannotate-engine-status" class="small-note">Checking BLAST engine...</p>
+            <div class="inline-row">
+              <button id="plannotate-install-all" type="button" class="ghost-btn">One-Step Install Backend</button>
+            </div>
+
+            <div id="plannotate-text-panel" class="plannotate-input-panel">
+              <label>
+                DNA Sequence
+                <textarea id="plannotate-sequence" rows="8" placeholder=">plasmid&#10;ACGT..."></textarea>
+              </label>
+            </div>
+
+            <div id="plannotate-file-panel" class="plannotate-input-panel" hidden>
+              <input id="plannotate-file-input" type="file" accept=".fa,.fasta,.fas,.fna,.gb,.gbk,.gbff,.gbf,.txt,.seq" hidden />
+              <div class="inline-row">
+                <button id="plannotate-file-choose" type="button" class="ghost-btn">Choose File</button>
+                <span id="plannotate-file-name" class="small-note">No file selected</span>
+              </div>
+            </div>
+
+            <div class="form-grid">
+              <label>
+                Topology
+                <select id="plannotate-topology">
+                  <option value="circular" selected>Circular</option>
+                  <option value="linear">Linear</option>
+                </select>
+              </label>
+              <label>
+                Min Identity (%)
+                <input id="plannotate-min-identity" type="number" min="50" max="100" step="0.1" value="85" />
+              </label>
+              <label>
+                Min Coverage (%)
+                <input id="plannotate-min-coverage" type="number" min="5" max="100" step="1" value="25" />
+              </label>
+              <label>
+                Min Hit Length (bp)
+                <input id="plannotate-min-length" type="number" min="12" max="2000" step="1" value="24" />
+              </label>
+            </div>
+            <label class="inline-row">
+              <input id="plannotate-detailed" type="checkbox" />
+              Detailed (seeded partial matching)
+            </label>
+            <div class="form-actions">
+              <button type="submit" class="primary-btn">Annotate</button>
+              <button id="plannotate-open-sequence-viewer" type="button" class="ghost-btn" disabled>View in Sequence Viewer</button>
+              <button id="plannotate-download-gbk" type="button" class="ghost-btn" disabled>Download GBK</button>
+              <span id="plannotate-run-status" class="small-note">Idle</span>
+            </div>
+          </form>
+
+          <div class="plannotate-results-grid">
+            <section class="plannotate-result-card">
+              <div class="plannotate-card-head">
+                <h4>Plasmid Map</h4>
+                <span id="plannotate-map-meta" class="small-note"></span>
+              </div>
+              <div id="plannotate-map" class="plannotate-map-host">
+                <p class="small-note">Run annotation to display the plasmid map.</p>
+              </div>
+            </section>
+
+            <section class="plannotate-result-card">
+              <div class="plannotate-card-head">
+                <h4>Features</h4>
+                <span id="plannotate-hit-count" class="small-note">0 hits</span>
+              </div>
+              <div class="plannotate-table-wrap">
+                <table class="plannotate-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Feature</th>
+                      <th>Type</th>
+                      <th>Location (1-based)</th>
+                      <th>Strand</th>
+                      <th>Identity</th>
+                      <th>Coverage</th>
+                      <th>Mode</th>
+                    </tr>
+                  </thead>
+                  <tbody id="plannotate-table-body">
+                    <tr>
+                      <td colspan="8" class="small-note">No annotations yet.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+
+          <div id="plannotate-result" class="calc-output"></div>
+        </div>
+      </div>
+
+      <div id="tool-crispr-view" class="panel tool-subview" hidden>
+        <h3>CRISPR sgRNA Designer</h3>
+        <p class="small-note">Choose a reference genome profile, select targets, and generate ranked sgRNA candidates.</p>
+
+        <div class="crispr-designer-shell">
+          <form id="crispr-form" class="stack-form crispr-controls" autocomplete="off">
+            <div class="form-grid">
+              <label>
+                Reference Genome
+                <select id="crispr-reference-genome"></select>
+              </label>
+              <label>
+                PAM Pattern
+                <select id="crispr-pam-pattern">
+                  <option value="NGG" selected>SpCas9 (NGG)</option>
+                  <option value="NAG">SpCas9 (NAG, permissive)</option>
+                </select>
+              </label>
+              <label>
+                Guide Length (nt)
+                <input id="crispr-guide-length" type="number" min="18" max="24" step="1" value="20" />
+              </label>
+              <label>
+                Return Top Candidates
+                <input id="crispr-top-count" type="number" min="1" max="100" step="1" value="12" />
+              </label>
+              <label>
+                Min GC (%)
+                <input id="crispr-min-gc" type="number" min="0" max="100" step="1" value="35" />
+              </label>
+              <label>
+                Max GC (%)
+                <input id="crispr-max-gc" type="number" min="0" max="100" step="1" value="75" />
+              </label>
+            </div>
+            <p id="crispr-reference-note" class="small-note">Genome profile not selected.</p>
+            <label>
+              Target Sequences (FASTA recommended)
+              <textarea id="crispr-target-input" rows="8" placeholder=">Target_A&#10;GAGTCCGAGCAGAAGAAGAAGGG...&#10;>Target_B&#10;ACTG..." spellcheck="false"></textarea>
+            </label>
+
+            <div class="crispr-target-grid">
+              <label>
+                Targets to Process
+                <select id="crispr-target-select" class="crispr-target-select" multiple size="6"></select>
+              </label>
+              <div id="crispr-selection-summary" class="calc-output crispr-selection-box">
+                Add target sequences to begin.
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="primary-btn">Design sgRNAs</button>
+              <button type="button" id="crispr-select-all-btn" class="ghost-btn">Select All Targets</button>
+              <button type="button" id="crispr-clear-btn" class="ghost-btn">Clear</button>
+            </div>
+          </form>
+
+          <div id="crispr-result-summary" class="calc-output">
+            Enter target sequences and run design to view candidate guides.
+          </div>
+
+          <div class="plannotate-table-wrap crispr-table-wrap">
+            <table class="plannotate-table crispr-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Target</th>
+                  <th>Position</th>
+                  <th>Strand</th>
+                  <th>Guide (5'-3')</th>
+                  <th>PAM</th>
+                  <th>GC%</th>
+                  <th>On-target</th>
+                  <th>Off-target rate</th>
+                  <th>Specificity</th>
+                  <th>Off-target hits (0/1/2/3 mm)</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody id="crispr-table-body">
+                <tr>
+                  <td colspan="12" class="small-note">No sgRNA candidates yet.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="tool-colony-counter-view" class="panel tool-subview" hidden>
+        <h3>Colony Counter (Manual Click)</h3>
+        <p class="small-note">Upload a plate image, then click each colony to count manually.</p>
+
+        <div class="colony-counter-shell">
+          <form id="colony-counter-form" class="stack-form colony-counter-controls" autocomplete="off">
+            <label>
+              Plate Image
+              <input id="colony-image-file" type="file" accept="image/*" />
+            </label>
+
+            <div class="form-actions">
+              <button id="colony-start-crop-btn" type="button" class="ghost-btn">Start Crop</button>
+              <button id="colony-apply-crop-btn" type="button" class="ghost-btn" disabled>Apply Crop</button>
+              <button id="colony-cancel-crop-btn" type="button" class="ghost-btn" disabled>Cancel Crop</button>
+              <button id="colony-reset-crop-btn" type="button" class="ghost-btn">Reset to Full Image</button>
+            </div>
+
+            <div class="form-grid">
+              <label>
+                Display Max Size (px)
+                <input id="colony-max-size" type="number" min="300" max="5000" step="50" value="1600" />
+              </label>
+            </div>
+
+            <p class="small-note">Left-click to add a marker, right-click to remove nearest, scroll to zoom, and drag while zoomed to pan.</p>
+
+            <div class="form-actions">
+              <button id="colony-clear-markers-btn" type="button" class="ghost-btn">Clear Markers</button>
+              <button id="colony-run-btn" type="submit" class="primary-btn">Save Manual Count</button>
+              <button id="colony-reset-btn" type="button" class="ghost-btn">Reset</button>
+              <span id="colony-status" class="small-note">Load an image, then click colonies to count manually.</span>
+            </div>
+          </form>
+
+          <div id="colony-summary" class="calc-output">
+            <p class="small-note">Load a plate image, then click each colony to count manually.</p>
+          </div>
+
+          <div id="colony-cropper-shell" class="colony-cropper-shell" hidden>
+            <img id="colony-cropper-image" class="colony-cropper-image" alt="Colony cropper preview" />
+          </div>
+
+          <div class="colony-preview-grid">
+            <section class="plannotate-result-card colony-preview-card">
+              <div class="plannotate-card-head">
+                <h4>Annotated Colonies</h4>
+              </div>
+              <canvas id="colony-preview-canvas" class="colony-preview-canvas"></canvas>
+            </section>
+            <section class="plannotate-result-card colony-preview-card">
+              <div class="plannotate-card-head">
+                <h4>Marker Map</h4>
+              </div>
+              <canvas id="colony-mask-canvas" class="colony-preview-canvas"></canvas>
+            </section>
+          </div>
+        </div>
+
+        <canvas id="colony-source-canvas" hidden></canvas>
+      </div>
+    </section>

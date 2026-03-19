@@ -1,0 +1,42 @@
+/* sample-registry-view */
+
+/* Extracted from ui/css/base/core.css */
+.sample-compound-fields {
+  grid-column: 1 / -1;
+  margin-top: 2px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.58);
+  background: rgba(255, 255, 255, 0.36);
+}
+
+.sample-compound-head {
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.sample-ketcher-frame {
+  min-height: 520px;
+}
+
+.sample-cell-passage-fields {
+  grid-column: 1 / -1;
+  margin-top: 2px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.58);
+  background: rgba(255, 255, 255, 0.36);
+}
+
+.sample-cell-passage-head {
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+/* Extracted from ui/css/overrides/cross-view-fixes.css */
+.sample-top-search {
+  margin-bottom: 10px;
+  max-width: 420px;
+}

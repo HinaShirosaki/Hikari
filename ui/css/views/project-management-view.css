@@ -1,0 +1,23 @@
+/* project-management-view */
+
+/* Extracted from ui/css/base/core.css */
+.project-notebook-list {
+  margin-top: 14px;
+}
+
+.project-notebook-item {
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.project-notebook-item:last-child {
+  border-bottom: 0;
+}
+
+.project-notebook-item h3 {
+  margin: 0 0 6px;
+}
+
+.project-notebook-item p {
+  margin: 0 0 4px;
+}

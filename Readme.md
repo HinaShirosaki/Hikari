@@ -266,6 +266,7 @@ Common Telegram commands:
 ## 9) Build, Package, and Test
 
 ```bash
+npm run build:ui
 npm test
 npm run package:app
 npm run dist
@@ -289,7 +290,13 @@ Generated file:
 - `preload.js`: secure bridge (`window.enanaApi`)
 - `renderer.js`: app bootstrap, navigation, search routing, cross-module refresh
 - `modules/`: feature modules
-- `index.html` + `styles.css`: UI shell and styles
+- `ui/html/**` + `ui/css/**`: source partials for UI composition
+- `ui/config/html-order.json`: source-of-truth order for HTML assembly
+- `ui/config/css-order.json`: source-of-truth order for CSS assembly
+- `scripts/build-ui.mjs`: deterministic UI generator for `index.html` and `styles.css`
+- `scripts/check-dom-ids.mjs`: validates `document.getElementById()` references against generated markup
+- `index.html`: generated runtime HTML (committed)
+- `styles.css`: generated import manifest (committed) that loads `ui/css/**` in deterministic order
 - `data/llm-prompts.json`: configurable prompts for papers/agent
 - `data/agent-io-contract.json`: JSON input/output contract for LLM-facing functions and agent tools
 - `telegramBot.js`: Telegram command handling

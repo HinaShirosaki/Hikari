@@ -1,0 +1,29 @@
+<section id="lab-management-view" class="view">
+      <div class="panel">
+        <h2>Members</h2>
+        <form id="member-form" class="form-grid">
+          <input type="hidden" id="member-id" />
+          <label>
+            Name
+            <input id="member-name" required />
+          </label>
+          <label>
+            Institution Email
+            <input id="member-institution-email" type="email" required />
+          </label>
+          <label>
+            Position
+            <input id="member-position" required />
+          </label>
+          <label>
+            Enana Email
+            <input id="member-enana-email" type="email" required />
+          </label>
+          <div class="form-actions">
+            <button type="submit" class="primary-btn">Save Member</button>
+            <button type="button" id="member-cancel-btn" class="ghost-btn">Cancel Edit</button>
+          </div>
+        </form>
+      </div>
+      <div id="member-cards" class="cards"></div>
+    </section>

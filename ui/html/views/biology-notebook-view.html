@@ -1,0 +1,43 @@
+<section id="biology-notebook-view" class="view">
+      <div class="panel">
+        <h2>Biology Notebook</h2>
+        <div class="stack-form biology-notebook-select-stack">
+          <label>
+            Select Project
+            <select id="biology-notebook-project-select">
+              <option value="">Select project</option>
+            </select>
+          </label>
+          <label>
+            Search Protocol
+            <input id="biology-notebook-protocol-search" type="search" placeholder="Search protocols..." />
+          </label>
+          <label>
+            Select Protocol
+            <select id="biology-notebook-protocol-select">
+              <option value="">Select protocol</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      <div id="biology-notebook-protocol-area" class="panel" hidden>
+        <h3 id="biology-notebook-protocol-title"></h3>
+        <div id="biology-notebook-steps" class="notebook-steps"></div>
+        <label>
+          Experiment Results File / Notes
+          <textarea id="biology-notebook-result" rows="4" placeholder="Path, summary, or notes"></textarea>
+        </label>
+        <label>
+          Experiment Result Files
+          <input id="biology-notebook-result-file" type="file" multiple />
+        </label>
+        <div class="form-actions">
+          <button id="save-biology-notebook-btn" class="primary-btn" type="button">Save Notebook Entry</button>
+          <button id="cancel-biology-notebook-edit-btn" class="ghost-btn" type="button" hidden>Cancel Edit</button>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>Saved Notebook Entries</h3>
+        <div id="biology-notebook-entry-list" class="list-table"></div>
+      </div>
+    </section>
