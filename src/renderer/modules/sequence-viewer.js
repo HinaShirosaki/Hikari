@@ -939,6 +939,50 @@ function hashTypeToColor(type) {
   return colors[Math.abs(hash) % colors.length];
 }
 
+function parseHexColor(color) {
+  const normalized = String(color || '').trim();
+  const match = normalized.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+  if (!match) {
+    return null;
+  }
+
+  const raw = match[1];
+  if (raw.length === 3) {
+    return {
+      r: Number.parseInt(`${raw[0]}${raw[0]}`, 16),
+      g: Number.parseInt(`${raw[1]}${raw[1]}`, 16),
+      b: Number.parseInt(`${raw[2]}${raw[2]}`, 16)
+    };
+  }
+
+  return {
+    r: Number.parseInt(raw.slice(0, 2), 16),
+    g: Number.parseInt(raw.slice(2, 4), 16),
+    b: Number.parseInt(raw.slice(4, 6), 16)
+  };
+}
+
+function getContrastTextColor(backgroundColor) {
+  const rgb = parseHexColor(backgroundColor);
+  if (!rgb) {
+    return '#0f223e';
+  }
+
+  const toLinear = (channel) => {
+    const srgb = clamp(channel, 0, 255) / 255;
+    return srgb <= 0.04045
+      ? srgb / 12.92
+      : ((srgb + 0.055) / 1.055) ** 2.4;
+  };
+  const luminance = (
+    (0.2126 * toLinear(rgb.r))
+    + (0.7152 * toLinear(rgb.g))
+    + (0.0722 * toLinear(rgb.b))
+  );
+
+  return luminance >= 0.42 ? '#0f223e' : '#ffffff';
+}
+
 function segmentsOverlap(left, right) {
   return left.start < right.end && right.start < left.end;
 }
@@ -1439,6 +1483,7 @@ function renderLineFeatureButtonsHtml(
       const location = buildFeatureLocationText(feature, sequenceLength);
       const title = `${feature.name || '-'} (${location})`;
       const color = hashTypeToColor(String(feature?.type || 'misc_feature'));
+      const textColor = getContrastTextColor(color);
       return segments
         .map((segment) => {
           const geometry = computeRestrictionAnnotationGeometry(segment, lineStart, lineEnd, safeAdvance);
@@ -1450,6 +1495,7 @@ function renderLineFeatureButtonsHtml(
             index,
             title,
             color,
+            textColor,
             leftPx: geometry.leftPx,
             widthPx: geometry.widthPx,
             rightPx: geometry.leftPx + geometry.widthPx
@@ -1494,7 +1540,7 @@ function renderLineFeatureButtonsHtml(
           type="button"
           class="sequence-viewer-line-feature sequence-viewer-line-feature-bar${isActive ? ' sequence-viewer-line-feature-active' : ''}${showLabel ? '' : ' sequence-viewer-line-feature-compact'}"
           data-feature-index="${fragment.index}"
-          style="left:${fragment.leftPx.toFixed(3)}px;width:${fragment.widthPx.toFixed(3)}px;top:${topPx.toFixed(3)}px;background:${fragment.color};"
+          style="left:${fragment.leftPx.toFixed(3)}px;width:${fragment.widthPx.toFixed(3)}px;top:${topPx.toFixed(3)}px;background:${fragment.color};color:${fragment.textColor};"
           title="${escapeHtml(fragment.title)}"
         >${showLabel ? `<span class="sequence-viewer-line-feature-label">${escapeHtml(label)}</span>` : ''}</button>
       `;
@@ -1889,15 +1935,6 @@ function buildCircularPreviewHtmlDocument(record) {
     });
   });
 
-  const legendRows = layoutFeatures
-    .slice(0, 30)
-    .map((feature, index) => {
-      const colorKey = feature.type === 'restriction_site' ? `${feature.type}:${feature.name}` : feature.type;
-      const color = hashTypeToColor(colorKey);
-      return `<tr><td><span class="swatch" style="background:${color};"></span></td><td>${escapeHtml(feature.name || `feature_${index + 1}`)}</td><td>${escapeHtml(feature.type || '-')}</td></tr>`;
-    })
-    .join('');
-
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -1906,37 +1943,24 @@ function buildCircularPreviewHtmlDocument(record) {
   <title>${escapeHtml(record?.name || 'Sequence')}</title>
   <style>
     body { margin:0; padding:12px; font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color:#1e3553; background:#f5f8fc; }
-    .meta { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; gap:8px; }
-    .meta h3 { margin:0; font-size:16px; color:#163760; }
-    .meta p { margin:0; font-size:12px; color:#456385; }
     .card { border:1px solid #d4deec; border-radius:12px; background:#fff; padding:10px; }
     svg { width:100%; height:auto; max-height:740px; display:block; }
-    .legend { margin-top:10px; border-collapse:collapse; width:100%; font-size:12px; }
-    .legend td { padding:3px 4px; border-top:1px solid #edf2f9; vertical-align:middle; }
-    .swatch { display:inline-block; width:12px; height:12px; border-radius:3px; border:1px solid rgba(24, 49, 83, 0.25); }
   </style>
 </head>
 <body>
-  <div class="meta">
-    <h3>${escapeHtml(record?.name || 'Sequence')}</h3>
-    <p>${sequenceLength.toLocaleString()} bp · ${escapeHtml(normalizeTopology(record?.topology || 'linear'))} · ${layoutFeatures.length} feature(s)</p>
-  </div>
   <div class="card">
     <svg viewBox="0 0 800 760" role="img" aria-label="Circular plasmid preview">
       <circle cx="${cx}" cy="${cy}" r="${(backboneInner - 6).toFixed(2)}" fill="#f8fbff" stroke="#dbe6f5" stroke-width="2"></circle>
       <circle cx="${cx}" cy="${cy}" r="${backboneInner.toFixed(2)}" fill="none" stroke="#96aed0" stroke-width="2.2"></circle>
       ${tickPaths.join('')}
       ${segmentPaths.join('')}
-      <text x="${cx}" y="${(cy - 2).toFixed(2)}" text-anchor="middle" font-size="14" fill="#34577f">${sequenceLength.toLocaleString()} bp</text>
-      <text x="${cx}" y="${(cy + 16).toFixed(2)}" text-anchor="middle" font-size="11" fill="#6381a6">${escapeHtml(normalizeTopology(record?.topology || 'linear'))}</text>
     </svg>
   </div>
-  ${legendRows ? `<table class="legend">${legendRows}</table>` : '<p style="font-size:12px;color:#5b7799;">No features available.</p>'}
 </body>
 </html>`;
 }
 
-export function initSequenceViewer() {
+export function initSequenceViewer(options = {}) {
   const LIBRARY_STATUS_SAVED = 'saved';
   const LIBRARY_STATUS_TEMPORARY = 'temporary';
   const FILE_ACCEPT = '.gbk,.gb,.gbff,.fasta,.fa,.fas,.fna,.fastq,.fq,.txt,.seq';
@@ -1951,7 +1975,6 @@ export function initSequenceViewer() {
   const libraryFilterTemporaryBtn = document.getElementById('sequence-viewer-library-filter-temporary');
   const libraryList = document.getElementById('sequence-viewer-library-list');
   const previewHost = document.getElementById('sequence-viewer-preview-host');
-  const previewMeta = document.getElementById('sequence-viewer-preview-meta');
   const backBtn = document.getElementById('sequence-viewer-back-btn');
   const saveBtn = document.getElementById('sequence-viewer-save-btn');
   const saveNameInput = document.getElementById('sequence-viewer-save-name');
@@ -1985,7 +2008,6 @@ export function initSequenceViewer() {
   const sequenceHost = document.getElementById('sequence-viewer-sequence-host');
 
   const state = {
-    workspace: 'home',
     mode: 'paste',
     fileName: '',
     fileText: '',
@@ -2052,14 +2074,34 @@ export function initSequenceViewer() {
     homeStatusNote.style.color = isError ? 'var(--danger)' : '';
   }
 
-  function switchWorkspace(mode) {
+  const onNavigateHome = typeof options?.onNavigateHome === 'function'
+    ? options.onNavigateHome
+    : null;
+  const onNavigateDetail = typeof options?.onNavigateDetail === 'function'
+    ? options.onNavigateDetail
+    : null;
+
+  function setLocalWorkspaceVisibility(mode) {
     const next = mode === 'detail' ? 'detail' : 'home';
-    state.workspace = next;
     if (homeWorkspace) {
       homeWorkspace.hidden = next !== 'home';
     }
     if (detailWorkspace) {
       detailWorkspace.hidden = next !== 'detail';
+    }
+  }
+
+  function navigateToHome() {
+    setLocalWorkspaceVisibility('home');
+    if (onNavigateHome) {
+      onNavigateHome();
+    }
+  }
+
+  function navigateToDetail() {
+    setLocalWorkspaceVisibility('detail');
+    if (onNavigateDetail) {
+      onNavigateDetail();
     }
   }
 
@@ -2092,17 +2134,11 @@ export function initSequenceViewer() {
     }
     if (!entry || !String(htmlText || '').trim()) {
       previewHost.innerHTML = '<p class="small-note">Select a sequence in the library to preview.</p>';
-      if (previewMeta) {
-        previewMeta.textContent = '';
-      }
       return;
     }
 
     const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(String(htmlText))}`;
     previewHost.innerHTML = `<iframe class="sequence-viewer-preview-frame" src="${dataUrl}" loading="lazy" title="${escapeHtml(entry.name || 'Sequence preview')}"></iframe>`;
-    if (previewMeta) {
-      previewMeta.textContent = `${entry.name || 'sequence'} · ${(Number(entry.sequenceLength) || 0).toLocaleString()} bp · ${entry.status}`;
-    }
   }
 
   function renderLibraryList() {
@@ -2950,7 +2986,7 @@ export function initSequenceViewer() {
       setMode('paste');
       setInputComposerVisible(false);
       setRecords(parsed, 'Loaded');
-      switchWorkspace('detail');
+      navigateToDetail();
       setStatus(`Opened ${response.entry.name}.`);
     } catch (error) {
       setHomeStatus(error?.message || 'Failed to open sequence entry.', true);
@@ -2967,7 +3003,7 @@ export function initSequenceViewer() {
     setMode('paste');
     setInputComposerVisible(!hasRecords);
     setRecords(parsed, statusPrefix);
-    switchWorkspace('detail');
+    navigateToDetail();
   }
 
   async function annotateCurrentRecord() {
@@ -3097,12 +3133,12 @@ export function initSequenceViewer() {
 
   homePasteBtn?.addEventListener('click', () => {
     clearAll();
-    switchWorkspace('detail');
+    navigateToDetail();
     setMode('paste');
     setInputComposerVisible(true);
     setStatus('Paste sequence text, then click Load.');
     inputTextarea?.focus?.();
-    setHomeStatus('Opened a new sequence workspace.');
+    setHomeStatus('Opened a new sequence detail page.');
   });
 
   if (homeOpenInput && typeof homeOpenInput.setAttribute === 'function') {
@@ -3153,7 +3189,7 @@ export function initSequenceViewer() {
 
   backBtn?.addEventListener('click', (event) => {
     event.preventDefault();
-    switchWorkspace('home');
+    navigateToHome();
     void refreshLibraryEntries({ silent: true });
   });
 
@@ -3172,6 +3208,9 @@ export function initSequenceViewer() {
     if (!entryId) {
       return;
     }
+    if (Number.isFinite(Number(event?.detail)) && Number(event.detail) > 1) {
+      return;
+    }
 
     const now = Date.now();
     const previousEntryId = cleanText(state.lastLibraryClickEntryId, 200);
@@ -3184,6 +3223,15 @@ export function initSequenceViewer() {
     if (isDoubleActivate) {
       void openLibraryEntryInDetail(entryId);
     }
+  });
+
+  libraryList?.addEventListener('dblclick', (event) => {
+    const entryId = resolveLibraryEntryIdFromEvent(event);
+    if (!entryId) {
+      return;
+    }
+    void setSelectedLibraryEntry(entryId);
+    void openLibraryEntryInDetail(entryId);
   });
 
   recordSelect?.addEventListener('change', () => {
@@ -3235,7 +3283,6 @@ export function initSequenceViewer() {
 
   sequenceHost?.addEventListener('mousemove', (event) => {
     const record = getSelectedRecord();
-    const featureTrigger = event.target?.closest?.('[data-feature-index]') || null;
     let rerenderNeeded = false;
 
     if (state.isSelectingSequence) {
@@ -3254,21 +3301,6 @@ export function initSequenceViewer() {
       if (rerenderNeeded) {
         renderSequence(record, { preserveScroll: true });
       }
-      return;
-    }
-
-    if (featureTrigger) {
-      const index = Number(featureTrigger.dataset.featureIndex);
-      if (!Number.isFinite(index)) {
-        hideSequenceHoverTooltip();
-        return;
-      }
-      const feature = getFeatureByIndexForRecord(record, index);
-      if (!feature || !record) {
-        hideSequenceHoverTooltip();
-        return;
-      }
-      showSequenceHoverTooltip(event, feature, record.sequence.length);
       return;
     }
 
@@ -3352,7 +3384,7 @@ export function initSequenceViewer() {
     setInputComposerVisible(!hasSequence);
 
     if (hasSequence) {
-      switchWorkspace('detail');
+      navigateToDetail();
       setStatus(`Imported ${record.name} from ${record.sourceFormat || 'external'}.`);
     }
   }
@@ -3365,7 +3397,7 @@ export function initSequenceViewer() {
   }
 
   setLibraryFilter(LIBRARY_STATUS_SAVED);
-  switchWorkspace('home');
+  setLocalWorkspaceVisibility('home');
   setMode('paste');
   setInputComposerVisible(true);
   setStatus('Paste sequence text, then click Load.');
