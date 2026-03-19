@@ -1,0 +1,31 @@
+<section id="project-management-view" class="view">
+      <div class="panel">
+        <h2>Projects</h2>
+        <form id="project-form" class="stack-form">
+          <input type="hidden" id="project-id" />
+          <label>
+            Project Name
+            <input id="project-name" required />
+          </label>
+          <label>
+            Description
+            <textarea id="project-description" rows="3"></textarea>
+          </label>
+          <div class="form-actions">
+            <button type="submit" class="primary-btn">Save Project</button>
+            <button type="button" id="project-cancel-btn" class="ghost-btn">Cancel Edit</button>
+          </div>
+        </form>
+      </div>
+      <div class="panel">
+        <h3>Project Notebook Pages</h3>
+        <label>
+          Select Project
+          <select id="project-notebook-filter">
+            <option value="">Select project</option>
+          </select>
+        </label>
+        <div id="project-notebook-pages" class="cards"></div>
+      </div>
+      <div id="project-list" class="cards"></div>
+    </section>

@@ -1617,37 +1617,6 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     return { observations, nonNumericCount };
   }
 
-  function describeObservationAxes(observations) {
-    const sampleLabels = new Set();
-    const concentrationLabels = new Set();
-    const numericSampleValues = new Set();
-    const numericConcentrationValues = new Set();
-
-    observations.forEach((item) => {
-      if (item.rawSampleId) {
-        sampleLabels.add(item.rawSampleId);
-      }
-      if (item.rawConcentration) {
-        concentrationLabels.add(item.rawConcentration);
-      }
-      if (Number.isFinite(item.sampleValue)) {
-        numericSampleValues.add(item.sampleValue);
-      }
-      if (Number.isFinite(item.concentrationValue)) {
-        numericConcentrationValues.add(item.concentrationValue);
-      }
-    });
-
-    return {
-      sampleCount: sampleLabels.size,
-      concentrationCount: concentrationLabels.size,
-      numericSampleCount: numericSampleValues.size,
-      numericConcentrationCount: numericConcentrationValues.size,
-      hasSampleFactor: sampleLabels.size > 1,
-      hasConcentrationFactor: concentrationLabels.size > 1
-    };
-  }
-
   function buildAnalysisTable(headers, rows) {
     return `
       <table class="assay-plate-table">

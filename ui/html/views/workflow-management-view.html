@@ -1,0 +1,123 @@
+<section id="workflow-management-view" class="view">
+      <div class="panel">
+        <h2>Workflows</h2>
+        <p class="small-note">Choose how you want to work with workflows.</p>
+        <div id="workflow-entry-panel" class="form-actions">
+          <button type="button" id="workflow-entry-create-btn" class="primary-btn">Create New Workflow</button>
+          <button type="button" id="workflow-entry-template-btn" class="ghost-btn">Create New Workflow Template</button>
+          <button type="button" id="workflow-entry-view-btn" class="ghost-btn">View/Edit Workflow</button>
+        </div>
+        <div id="workflow-entry-back-wrap" class="form-actions" hidden>
+          <button type="button" id="workflow-entry-back-btn" class="ghost-btn">Back to Workflow Actions</button>
+        </div>
+      </div>
+
+      <div class="panel workflow-editor-panel" hidden>
+        <form id="workflow-form" class="stack-form">
+          <input type="hidden" id="workflow-id" />
+          <label>
+            Workflow Name
+            <input id="workflow-name" required placeholder="e.g. Antibody purification pipeline" />
+          </label>
+          <label>
+            Description
+            <textarea id="workflow-description" rows="3" placeholder="Optional notes about this workflow"></textarea>
+          </label>
+          <label id="workflow-project-field">
+            Linked Project
+            <select id="workflow-project">
+              <option value="">Select project</option>
+            </select>
+          </label>
+          <label id="workflow-notebook-pages-field">
+            Linked Notebook Pages (optional)
+            <select id="workflow-notebook-pages" multiple size="6"></select>
+          </label>
+          <div class="form-actions">
+            <button type="submit" class="primary-btn">Save Workflow</button>
+            <button type="button" id="workflow-cancel-btn" class="ghost-btn">Cancel Edit</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="panel workflow-editor-panel" hidden>
+        <h3>Workflow Blocks</h3>
+        <p class="small-note">Add protocol blocks or plain-text blocks. New blocks default assignee to yourself.</p>
+        <div class="form-grid workflow-grid workflow-block-grid">
+          <label>
+            Block Type
+            <select id="workflow-block-type">
+              <option value="protocol">Protocol</option>
+              <option value="text">Plain Text</option>
+            </select>
+          </label>
+          <label id="workflow-block-protocol-search-field">
+            Search Protocol
+            <input id="workflow-block-protocol-search" type="search" placeholder="Search protocols..." />
+          </label>
+          <label id="workflow-block-protocol-field">
+            Protocol
+            <select id="workflow-block-protocol">
+              <option value="">Select protocol</option>
+            </select>
+          </label>
+          <label id="workflow-block-text-field" hidden>
+            Plain Text
+            <input id="workflow-block-text" placeholder="e.g. Incubate at room temperature for 10 minutes" />
+          </label>
+          <div class="form-actions workflow-inline-actions">
+            <button type="button" id="workflow-block-add-btn" class="ghost-btn">Add Protocol Block</button>
+          </div>
+        </div>
+        <div id="workflow-block-list" class="list-table"></div>
+      </div>
+
+      <div class="panel workflow-editor-panel" hidden>
+        <h3>Graph Editor</h3>
+        <p class="small-note">Drag blocks to arrange. Click an output dot, then an input dot to connect. Click a line to remove a connection.</p>
+        <div id="workflow-graph-canvas" class="workflow-graph-canvas">
+          <div id="workflow-graph-board" class="workflow-graph-board">
+            <svg id="workflow-graph-svg" class="workflow-graph-svg" aria-hidden="true"></svg>
+            <div id="workflow-graph-selection" class="workflow-graph-selection" hidden></div>
+            <div id="workflow-graph-nodes" class="workflow-graph-nodes"></div>
+          </div>
+        </div>
+        <p id="workflow-graph-status" class="small-note">Graph is empty. Add a block to start.</p>
+        <div id="workflow-graph-context-menu" class="workflow-context-menu" hidden></div>
+      </div>
+
+      <div class="panel workflow-template-panel" hidden>
+        <h3>Templates</h3>
+        <p class="small-note">Templates save only block + connection structure. Specific notebook page links are never included.</p>
+        <div class="form-grid workflow-grid">
+          <label>
+            Template Name
+            <input id="workflow-template-name" placeholder="e.g. Standard purification flow" />
+          </label>
+          <div class="form-actions workflow-inline-actions">
+            <button type="button" id="workflow-save-template-btn" class="ghost-btn">Save Current as Template</button>
+          </div>
+        </div>
+        <div class="form-grid workflow-grid">
+          <label>
+            Use Template
+            <select id="workflow-template-source">
+              <option value="">Select template</option>
+            </select>
+          </label>
+          <label>
+            New Workflow Name
+            <input id="workflow-template-create-name" placeholder="e.g. Batch 24 purification" />
+          </label>
+          <div class="form-actions workflow-inline-actions">
+            <button type="button" id="workflow-template-create-btn" class="ghost-btn">Create Workflow from Template</button>
+          </div>
+        </div>
+        <div id="workflow-template-list" class="cards"></div>
+      </div>
+
+      <div class="panel workflow-list-panel" hidden>
+        <h3>Saved Workflows</h3>
+        <div id="workflow-list" class="cards"></div>
+      </div>
+    </section>

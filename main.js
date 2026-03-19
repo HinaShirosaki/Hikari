@@ -61,6 +61,13 @@ const {
   replayRequestLifecycle
 } = require('./helpers/agent/agent-observability');
 const { createMainDataHelpers } = require('./helpers/main/data-helpers');
+const {
+  listSequenceEntries,
+  getSequenceEntry,
+  upsertSequenceEntry,
+  promoteSequenceEntry,
+  deleteSequenceEntry
+} = require('./helpers/main/sequence-library');
 const { addEvidencePack, applyFinalResponseLayerAndValidation } = require('./helpers/agent/controller-shared');
 const { createAgentWorkflowHelpers } = require('./helpers/agent/agent-workflow-helpers');
 const { createExternalBioSearchHelpers } = require('./helpers/agent/external-bio-search');
@@ -718,6 +725,112 @@ ipcMain.handle('storage:open-file', async (_event, payload) => {
   }
 
   return { ok: true, path: resolvedPath };
+});
+
+ipcMain.handle('sequence-library:list', async (_event, payload) => {
+  try {
+    const normalizedPayload = normalizeJsonPayload(payload, {});
+    const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
+    if (!storagePath) {
+      return { ok: false, error: 'Missing storage path.' };
+    }
+    const status = cleanText(normalizedPayload?.status, 40);
+    const result = await listSequenceEntries({ storagePath, status });
+    return { ok: true, ...result };
+  } catch (error) {
+    return { ok: false, error: String(error?.message || error) };
+  }
+});
+
+ipcMain.handle('sequence-library:get', async (_event, payload) => {
+  try {
+    const normalizedPayload = normalizeJsonPayload(payload, {});
+    const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
+    const id = cleanText(normalizedPayload?.id, 200);
+    if (!storagePath) {
+      return { ok: false, error: 'Missing storage path.' };
+    }
+    if (!id) {
+      return { ok: false, error: 'Missing sequence entry id.' };
+    }
+
+    const includeGbk = normalizedPayload?.includeGbk === true;
+    const includeHtml = normalizedPayload?.includeHtml === true;
+    const result = await getSequenceEntry({
+      storagePath,
+      id,
+      includeGbk,
+      includeHtml
+    });
+    return { ok: true, ...result };
+  } catch (error) {
+    return { ok: false, error: String(error?.message || error) };
+  }
+});
+
+ipcMain.handle('sequence-library:upsert', async (_event, payload) => {
+  try {
+    const normalizedPayload = normalizeJsonPayload(payload, {});
+    const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
+    if (!storagePath) {
+      return { ok: false, error: 'Missing storage path.' };
+    }
+    const result = await upsertSequenceEntry({
+      storagePath,
+      id: cleanText(normalizedPayload?.id, 200),
+      name: cleanText(normalizedPayload?.name, 140),
+      status: cleanText(normalizedPayload?.status, 40),
+      sourceFormat: cleanText(normalizedPayload?.sourceFormat, 80),
+      topology: cleanText(normalizedPayload?.topology, 40),
+      sequenceLength: Number(normalizedPayload?.sequenceLength),
+      featureCount: Number(normalizedPayload?.featureCount),
+      gbkText: String(normalizedPayload?.gbkText || ''),
+      htmlText: String(normalizedPayload?.htmlText || '')
+    });
+    return { ok: true, ...result };
+  } catch (error) {
+    return { ok: false, error: String(error?.message || error) };
+  }
+});
+
+ipcMain.handle('sequence-library:promote', async (_event, payload) => {
+  try {
+    const normalizedPayload = normalizeJsonPayload(payload, {});
+    const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
+    const id = cleanText(normalizedPayload?.id, 200);
+    if (!storagePath) {
+      return { ok: false, error: 'Missing storage path.' };
+    }
+    if (!id) {
+      return { ok: false, error: 'Missing sequence entry id.' };
+    }
+    const result = await promoteSequenceEntry({
+      storagePath,
+      id,
+      name: cleanText(normalizedPayload?.name, 140)
+    });
+    return { ok: true, ...result };
+  } catch (error) {
+    return { ok: false, error: String(error?.message || error) };
+  }
+});
+
+ipcMain.handle('sequence-library:delete', async (_event, payload) => {
+  try {
+    const normalizedPayload = normalizeJsonPayload(payload, {});
+    const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
+    const id = cleanText(normalizedPayload?.id, 200);
+    if (!storagePath) {
+      return { ok: false, error: 'Missing storage path.' };
+    }
+    if (!id) {
+      return { ok: false, error: 'Missing sequence entry id.' };
+    }
+    const result = await deleteSequenceEntry({ storagePath, id });
+    return { ok: true, ...result };
+  } catch (error) {
+    return { ok: false, error: String(error?.message || error) };
+  }
 });
 
 ipcMain.handle('plannotate:check-env', async (_event, payload) => {

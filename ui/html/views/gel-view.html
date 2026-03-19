@@ -1,0 +1,124 @@
+<section id="gel-view" class="view">
+      <div class="panel">
+        <h2>Gel Analysis</h2>
+        <p class="small-note">Manual workflow only. Crop is optional.</p>
+        <form id="gel-form" class="form-grid">
+          <input type="hidden" id="gel-id" />
+          <label>
+            Analysis Name
+            <input id="gel-name" required placeholder="e.g. WB_RUN_2026_02_19" />
+          </label>
+          <label>
+            Project
+            <select id="gel-project">
+              <option value="">Select project</option>
+            </select>
+          </label>
+          <label>
+            Link Notebook Page
+            <select id="gel-notebook-entry" class="gel-wide-field">
+              <option value="">Not linked</option>
+            </select>
+          </label>
+          <label>
+            Analysis Type
+            <select id="gel-type">
+              <option value="sds-page">SDS-PAGE</option>
+              <option value="western">Western Blot</option>
+              <option value="agarose">DNA/RNA Agarose</option>
+            </select>
+          </label>
+          <label>
+            Gel Image
+            <input id="gel-image-file" class="gel-wide-field" type="file" accept="image/*" />
+          </label>
+          <label>
+            Ladder Lane (1-based)
+            <input id="gel-ladder-lane" type="number" min="1" step="1" value="1" />
+          </label>
+          <label>
+            Ladder Band MW (kDa)
+            <input id="gel-ladder-band-mw" type="number" min="0" step="0.1" placeholder="Use in Step 5, e.g. 50" />
+          </label>
+          <label>
+            Normalization
+            <select id="gel-normalization">
+              <option value="none">None</option>
+              <option value="total-lane">Total Lane Intensity</option>
+            </select>
+          </label>
+          <label class="gel-slider-field">
+            Denoise Strength
+            <input id="gel-denoise-strength" type="range" min="0" max="100" step="1" value="35" />
+            <span id="gel-denoise-strength-value" class="small-note">35%</span>
+          </label>
+          <label class="gel-slider-field">
+            Contrast Boost
+            <input id="gel-contrast-strength" type="range" min="0" max="220" step="1" value="100" />
+            <span id="gel-contrast-strength-value" class="small-note">100%</span>
+          </label>
+          <div class="form-actions">
+            <button type="button" id="gel-reset-overrides-btn" class="ghost-btn">Reset Manual Overrides</button>
+            <span id="gel-override-status" class="small-note" hidden>Manual overrides: none</span>
+          </div>
+          <div class="form-actions">
+            <button type="button" id="gel-start-crop-btn" class="ghost-btn">Start Crop</button>
+            <button type="button" id="gel-apply-crop-btn" class="ghost-btn" disabled>Apply Crop</button>
+            <button type="button" id="gel-cancel-crop-btn" class="ghost-btn" disabled>Cancel Crop</button>
+            <button type="button" id="gel-reset-crop-btn" class="ghost-btn">Reset to Full Image</button>
+          </div>
+          <div id="gel-status" class="small-note"></div>
+          <div class="form-actions">
+            <button type="button" id="gel-run-btn" class="primary-btn">Analyze Gel</button>
+            <button type="submit" class="primary-btn">Save Analysis</button>
+            <button type="button" id="gel-cancel-btn" class="ghost-btn">Cancel Edit</button>
+            <button type="button" id="gel-export-json-btn" class="ghost-btn">Export JSON</button>
+            <button type="button" id="gel-export-csv-btn" class="ghost-btn">Export CSV</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="panel">
+        <h3>Interactive Gel Viewer</h3>
+        <p class="small-note">Lane borders and band calls are overlaid. Re-run analysis after changing parameters.</p>
+        <div class="gel-workbench">
+          <div class="gel-canvas-shell">
+            <canvas id="gel-canvas"></canvas>
+            <img id="gel-cropper-image" alt="Gel cropper" />
+          </div>
+          <aside id="gel-manual-progress" class="gel-manual-progress" hidden>
+            <h4>Manual Steps</h4>
+            <ol class="gel-step-list">
+              <li id="gel-step-left">1. Click left gel border</li>
+              <li id="gel-step-right">2. Click right gel border</li>
+              <li id="gel-step-dividers">3. Click lane dividers</li>
+              <li id="gel-step-ladder">4. Click ladder lane</li>
+              <li id="gel-step-ladder-mw">5. Click ladder band and assign MW</li>
+              <li id="gel-step-band-top">6. Click top line of target band</li>
+              <li id="gel-step-band-bottom">7. Click bottom line of target band</li>
+              <li id="gel-step-bands">8. (Optional) Click bands to add</li>
+            </ol>
+            <div class="form-actions">
+              <button type="button" id="gel-manual-prev-btn" class="ghost-btn">Previous Step</button>
+              <button type="button" id="gel-manual-next-btn" class="ghost-btn">Done Dividers</button>
+              <button type="button" id="gel-manual-reset-btn" class="ghost-btn">Reset Steps</button>
+            </div>
+          </aside>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Analysis Report</h3>
+        <div id="gel-report-summary" class="cards"></div>
+        <pre id="gel-report-json" class="gel-report-json"></pre>
+      </div>
+
+      <div class="panel">
+        <h3>Saved Gel Analyses</h3>
+        <label>
+          Search
+          <input id="gel-search" placeholder="Name, type, project, notebook..." />
+        </label>
+        <div id="gel-list" class="cards"></div>
+      </div>
+    </section>

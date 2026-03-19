@@ -208,14 +208,6 @@ function formatPlannotateHoverInfo(hit, sequenceLength) {
   return `${hit.Feature} | ${hit.Type} | ${location} | Strand ${strand} | Identity ${identity} | Coverage ${coverage}`;
 }
 
-function formatBpCompact(value) {
-  const numeric = Number(value) || 0;
-  if (numeric >= 1000) {
-    return `${(numeric / 1000).toFixed(1).replace(/\.0$/, '')} kb`;
-  }
-  return `${Math.round(numeric)} bp`;
-}
-
 function ratioToCircularAngle(ratio) {
   return (ratio * Math.PI * 2) - (Math.PI / 2);
 }

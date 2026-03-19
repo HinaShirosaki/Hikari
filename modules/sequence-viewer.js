@@ -252,6 +252,17 @@ function clamp(value, min, max) {
   return Math.min(max, Math.max(min, numeric));
 }
 
+function cleanText(value, maxLength = 500) {
+  const text = String(value || '').trim();
+  if (!text) {
+    return '';
+  }
+  if (!Number.isFinite(Number(maxLength)) || maxLength <= 0) {
+    return text;
+  }
+  return text.length > maxLength ? text.slice(0, maxLength) : text;
+}
+
 function parseCssPixels(value) {
   const numeric = Number.parseFloat(String(value || ''));
   return Number.isFinite(numeric) ? numeric : 0;
@@ -1002,14 +1013,6 @@ function buildHighlightedLineMarkup(sourceText, lineStart, lineEnd, lineHighligh
   return body;
 }
 
-function doesFeatureOverlapLine(feature, lineStart, lineEnd) {
-  const segments = Array.isArray(feature?.segments) ? feature.segments : [];
-  return segments.some((segment) => (
-    Number(segment?.start) < lineEnd
-    && Number(segment?.end) > lineStart
-  ));
-}
-
 function getEnanaApiBridge() {
   return globalThis?.window?.enanaApi || globalThis?.enanaApi || null;
 }
@@ -1584,7 +1587,336 @@ function formatSelectedFeatureDetailHtml(feature, sequenceLength) {
   `;
 }
 
+function readStoragePathFromLocalState() {
+  try {
+    const raw = globalThis?.localStorage?.getItem?.('enana_state_v1');
+    if (!raw) {
+      return '';
+    }
+    const parsed = JSON.parse(raw);
+    return String(parsed?.settings?.storagePath || '').trim();
+  } catch {
+    return '';
+  }
+}
+
+function toGenbankDate(value = new Date()) {
+  const date = value instanceof Date ? value : new Date(value);
+  const normalized = Number.isFinite(date.getTime()) ? date : new Date();
+  const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+  const day = String(normalized.getDate()).padStart(2, '0');
+  const month = months[normalized.getMonth()] || 'JAN';
+  const year = String(normalized.getFullYear());
+  return `${day}-${month}-${year}`;
+}
+
+function wrapGenbankLine(value, firstPrefix, continuationPrefix = firstPrefix, width = 80) {
+  const text = String(value ?? '');
+  if (!text.length) {
+    return [firstPrefix];
+  }
+
+  const lines = [];
+  let remaining = text;
+  let prefix = firstPrefix;
+
+  while (remaining.length) {
+    const available = Math.max(1, width - prefix.length);
+    if (remaining.length <= available) {
+      lines.push(`${prefix}${remaining}`);
+      break;
+    }
+
+    let splitAt = remaining.lastIndexOf(' ', available);
+    if (splitAt <= 0 || splitAt < Math.floor(available * 0.35)) {
+      splitAt = available;
+    }
+
+    const chunk = remaining.slice(0, splitAt);
+    lines.push(`${prefix}${chunk}`);
+    remaining = remaining.slice(splitAt).trimStart();
+    prefix = continuationPrefix;
+  }
+
+  return lines;
+}
+
+function sanitizeGenbankToken(value, fallback = 'sequence', maxLength = 16) {
+  const cleaned = String(value || '')
+    .trim()
+    .replace(/\s+/g, '_')
+    .replace(/[^A-Za-z0-9_.-]/g, '_')
+    .slice(0, maxLength);
+  return cleaned || fallback;
+}
+
+function sanitizeGenbankFeatureType(type) {
+  const cleaned = String(type || 'misc_feature')
+    .trim()
+    .replace(/\s+/g, '_')
+    .replace(/[^A-Za-z0-9_]/g, '')
+    .toLowerCase();
+  return cleaned || 'misc_feature';
+}
+
+function sanitizeGenbankQualifierValue(value) {
+  return String(value ?? '')
+    .replace(/\r?\n/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/"/g, '\'');
+}
+
+function buildGenbankFeatureLocation(feature, sequenceLength) {
+  const strand = feature?.strand === -1 ? -1 : 1;
+  const rawSegments = Array.isArray(feature?.segments) ? feature.segments : [];
+  const segments = rawSegments
+    .map((segment) => ({
+      start: clamp(Math.round(Number(segment?.start) || 0), 0, sequenceLength),
+      end: clamp(Math.round(Number(segment?.end) || 0), 0, sequenceLength)
+    }))
+    .filter((segment) => segment.end > segment.start);
+
+  if (!segments.length) {
+    return '';
+  }
+
+  const ordered = strand === -1 ? [...segments].reverse() : segments;
+  const parts = ordered.map((segment) => `${segment.start + 1}..${segment.end}`);
+  const location = parts.length === 1 ? parts[0] : `join(${parts.join(',')})`;
+  return strand === -1 ? `complement(${location})` : location;
+}
+
+function formatGenbankOriginLines(sequence) {
+  const lines = ['ORIGIN'];
+  const lower = String(sequence || '').toLowerCase();
+
+  for (let i = 0; i < lower.length; i += 60) {
+    const chunk = lower.slice(i, i + 60);
+    const groups = [];
+    for (let j = 0; j < chunk.length; j += 10) {
+      groups.push(chunk.slice(j, j + 10));
+    }
+    lines.push(`${String(i + 1).padStart(9, ' ')} ${groups.join(' ')}`);
+  }
+
+  return lines;
+}
+
+function buildRecordGenbankText(record) {
+  const sequence = normalizeSequenceText(record?.sequence || '');
+  if (!sequence.length) {
+    return '';
+  }
+
+  const topology = normalizeTopology(record?.topology || 'linear');
+  const locusName = sanitizeGenbankToken(record?.name || 'sequence', 'sequence', 16);
+  const dateStamp = toGenbankDate(new Date());
+  const sourceFormat = String(record?.sourceFormat || '').trim().toUpperCase() || 'SEQUENCE_VIEWER';
+  const definition = normalizeRecordName(record?.description || record?.name || '.', '.');
+  const features = Array.isArray(record?.features) ? record.features : [];
+  const lines = [
+    `LOCUS       ${locusName.padEnd(16, ' ')}${String(sequence.length).padStart(11, ' ')} bp    DNA     ${topology.padEnd(8, ' ')} SYN ${dateStamp}`,
+    ...wrapGenbankLine(definition, 'DEFINITION  ', '            '),
+    ...wrapGenbankLine('.', 'ACCESSION   ', '            '),
+    ...wrapGenbankLine('.', 'VERSION     ', '            '),
+    'KEYWORDS    .',
+    ...wrapGenbankLine('synthetic DNA construct', 'SOURCE      ', '            '),
+    ...wrapGenbankLine('synthetic DNA construct', '  ORGANISM  ', '            '),
+    '            .',
+    ...wrapGenbankLine(`Exported from Sequence Viewer (${sourceFormat}).`, 'COMMENT     ', '            '),
+    'FEATURES             Location/Qualifiers'
+  ];
+
+  features.forEach((feature) => {
+    const location = buildGenbankFeatureLocation(feature, sequence.length);
+    if (!location) {
+      return;
+    }
+    const type = sanitizeGenbankFeatureType(feature?.type).slice(0, 16);
+    const featurePrefix = `     ${type.padEnd(16, ' ')}`;
+    const qualifierPrefix = '                     ';
+
+    lines.push(...wrapGenbankLine(location, featurePrefix, qualifierPrefix));
+    const qualifiers = [
+      ['label', feature?.name || type],
+      ['note', feature?.description || '']
+    ];
+
+    qualifiers.forEach(([key, rawValue]) => {
+      const value = sanitizeGenbankQualifierValue(rawValue);
+      if (!value) {
+        return;
+      }
+      lines.push(...wrapGenbankLine(`/${key}="${value}"`, qualifierPrefix, qualifierPrefix));
+    });
+  });
+
+  lines.push(...formatGenbankOriginLines(sequence));
+  lines.push('//');
+  return `${lines.join('\n')}\n`;
+}
+
+function ratioToCircularAngle(ratio) {
+  return ((Math.max(0, ratio) * Math.PI * 2) - (Math.PI / 2));
+}
+
+function polarPoint(cx, cy, radius, theta) {
+  return {
+    x: cx + (radius * Math.cos(theta)),
+    y: cy + (radius * Math.sin(theta))
+  };
+}
+
+function buildCircularSegmentPath(cx, cy, innerRadius, outerRadius, startRatio, endRatio) {
+  const safeStart = clamp(Number(startRatio) || 0, 0, 1);
+  const safeEnd = clamp(Number(endRatio) || 0, 0, 1);
+  const span = Math.max(0, safeEnd - safeStart);
+  if (span <= 0) {
+    return '';
+  }
+
+  const startTheta = ratioToCircularAngle(safeStart);
+  const endTheta = ratioToCircularAngle(safeEnd);
+  const outerStart = polarPoint(cx, cy, outerRadius, startTheta);
+  const outerEnd = polarPoint(cx, cy, outerRadius, endTheta);
+  const innerEnd = polarPoint(cx, cy, innerRadius, endTheta);
+  const innerStart = polarPoint(cx, cy, innerRadius, startTheta);
+  const largeArc = span > 0.5 ? 1 : 0;
+
+  return [
+    `M ${outerStart.x.toFixed(2)} ${outerStart.y.toFixed(2)}`,
+    `A ${outerRadius.toFixed(2)} ${outerRadius.toFixed(2)} 0 ${largeArc} 1 ${outerEnd.x.toFixed(2)} ${outerEnd.y.toFixed(2)}`,
+    `L ${innerEnd.x.toFixed(2)} ${innerEnd.y.toFixed(2)}`,
+    `A ${innerRadius.toFixed(2)} ${innerRadius.toFixed(2)} 0 ${largeArc} 0 ${innerStart.x.toFixed(2)} ${innerStart.y.toFixed(2)}`,
+    'Z'
+  ].join(' ');
+}
+
+function buildCircularPreviewHtmlDocument(record) {
+  const sequence = normalizeSequenceText(record?.sequence || '');
+  const sequenceLength = sequence.length;
+  const rawFeatures = Array.isArray(record?.features) ? record.features : [];
+  const previewFeatures = rawFeatures
+    .filter((feature) => String(feature?.type || '').toLowerCase() !== 'restriction_site')
+    .filter((feature) => Array.isArray(feature?.segments) && feature.segments.length);
+  const layoutFeatures = assignFeatureLanes(previewFeatures);
+
+  const cx = 400;
+  const cy = 360;
+  const laneStep = 14;
+  const backboneInner = 192;
+  const featureThickness = 10;
+  const maxLane = Math.max(0, ...layoutFeatures.map((feature) => Number(feature.lane) || 0));
+  const outerRadius = backboneInner + featureThickness + (Math.max(1, maxLane + 1) * laneStep) + 16;
+  const tickPaths = [];
+  const segmentPaths = [];
+
+  const tickCount = sequenceLength > 5000 ? 20 : 12;
+  for (let i = 0; i < tickCount; i += 1) {
+    const ratio = i / tickCount;
+    const theta = ratioToCircularAngle(ratio);
+    const from = polarPoint(cx, cy, backboneInner - 8, theta);
+    const to = polarPoint(cx, cy, backboneInner + 8, theta);
+    tickPaths.push(`<line x1="${from.x.toFixed(2)}" y1="${from.y.toFixed(2)}" x2="${to.x.toFixed(2)}" y2="${to.y.toFixed(2)}" stroke="#8ca5c5" stroke-width="1"></line>`);
+  }
+
+  layoutFeatures.forEach((feature, index) => {
+    const lane = Number(feature?.lane) || 0;
+    const innerRadius = backboneInner + (lane * laneStep);
+    const outerFeatureRadius = innerRadius + featureThickness;
+    const colorKey = feature.type === 'restriction_site' ? `${feature.type}:${feature.name}` : feature.type;
+    const fill = hashTypeToColor(colorKey);
+    const title = `${feature.name || `feature_${index + 1}`} (${buildFeatureLocationText(feature, sequenceLength)})`;
+
+    (Array.isArray(feature?.segments) ? feature.segments : []).forEach((segment) => {
+      const start = clamp(Number(segment?.start) || 0, 0, sequenceLength);
+      const end = clamp(Number(segment?.end) || 0, 0, sequenceLength);
+      if (end <= start || !sequenceLength) {
+        return;
+      }
+      const path = buildCircularSegmentPath(
+        cx,
+        cy,
+        innerRadius,
+        outerFeatureRadius,
+        start / sequenceLength,
+        end / sequenceLength
+      );
+      if (!path) {
+        return;
+      }
+      segmentPaths.push(`<path d="${path}" fill="${fill}" stroke="#284a75" stroke-width="1.4"><title>${escapeHtml(title)}</title></path>`);
+    });
+  });
+
+  const legendRows = layoutFeatures
+    .slice(0, 30)
+    .map((feature, index) => {
+      const colorKey = feature.type === 'restriction_site' ? `${feature.type}:${feature.name}` : feature.type;
+      const color = hashTypeToColor(colorKey);
+      return `<tr><td><span class="swatch" style="background:${color};"></span></td><td>${escapeHtml(feature.name || `feature_${index + 1}`)}</td><td>${escapeHtml(feature.type || '-')}</td></tr>`;
+    })
+    .join('');
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>${escapeHtml(record?.name || 'Sequence')}</title>
+  <style>
+    body { margin:0; padding:12px; font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color:#1e3553; background:#f5f8fc; }
+    .meta { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; gap:8px; }
+    .meta h3 { margin:0; font-size:16px; color:#163760; }
+    .meta p { margin:0; font-size:12px; color:#456385; }
+    .card { border:1px solid #d4deec; border-radius:12px; background:#fff; padding:10px; }
+    svg { width:100%; height:auto; max-height:740px; display:block; }
+    .legend { margin-top:10px; border-collapse:collapse; width:100%; font-size:12px; }
+    .legend td { padding:3px 4px; border-top:1px solid #edf2f9; vertical-align:middle; }
+    .swatch { display:inline-block; width:12px; height:12px; border-radius:3px; border:1px solid rgba(24, 49, 83, 0.25); }
+  </style>
+</head>
+<body>
+  <div class="meta">
+    <h3>${escapeHtml(record?.name || 'Sequence')}</h3>
+    <p>${sequenceLength.toLocaleString()} bp · ${escapeHtml(normalizeTopology(record?.topology || 'linear'))} · ${layoutFeatures.length} feature(s)</p>
+  </div>
+  <div class="card">
+    <svg viewBox="0 0 800 760" role="img" aria-label="Circular plasmid preview">
+      <circle cx="${cx}" cy="${cy}" r="${(backboneInner - 6).toFixed(2)}" fill="#f8fbff" stroke="#dbe6f5" stroke-width="2"></circle>
+      <circle cx="${cx}" cy="${cy}" r="${backboneInner.toFixed(2)}" fill="none" stroke="#96aed0" stroke-width="2.2"></circle>
+      ${tickPaths.join('')}
+      ${segmentPaths.join('')}
+      <text x="${cx}" y="${(cy - 2).toFixed(2)}" text-anchor="middle" font-size="14" fill="#34577f">${sequenceLength.toLocaleString()} bp</text>
+      <text x="${cx}" y="${(cy + 16).toFixed(2)}" text-anchor="middle" font-size="11" fill="#6381a6">${escapeHtml(normalizeTopology(record?.topology || 'linear'))}</text>
+    </svg>
+  </div>
+  ${legendRows ? `<table class="legend">${legendRows}</table>` : '<p style="font-size:12px;color:#5b7799;">No features available.</p>'}
+</body>
+</html>`;
+}
+
 export function initSequenceViewer() {
+  const LIBRARY_STATUS_SAVED = 'saved';
+  const LIBRARY_STATUS_TEMPORARY = 'temporary';
+  const FILE_ACCEPT = '.gbk,.gb,.gbff,.fasta,.fa,.fas,.fna,.fastq,.fq,.txt,.seq';
+
+  const homeWorkspace = document.getElementById('sequence-viewer-home-workspace');
+  const detailWorkspace = document.getElementById('sequence-viewer-detail-workspace');
+  const homePasteBtn = document.getElementById('sequence-viewer-home-paste-btn');
+  const homeOpenBtn = document.getElementById('sequence-viewer-home-open-btn');
+  const homeOpenInput = document.getElementById('sequence-viewer-home-open-input');
+  const homeStatusNote = document.getElementById('sequence-viewer-home-status');
+  const libraryFilterSavedBtn = document.getElementById('sequence-viewer-library-filter-saved');
+  const libraryFilterTemporaryBtn = document.getElementById('sequence-viewer-library-filter-temporary');
+  const libraryList = document.getElementById('sequence-viewer-library-list');
+  const previewHost = document.getElementById('sequence-viewer-preview-host');
+  const previewMeta = document.getElementById('sequence-viewer-preview-meta');
+  const backBtn = document.getElementById('sequence-viewer-back-btn');
+  const saveBtn = document.getElementById('sequence-viewer-save-btn');
+  const saveNameInput = document.getElementById('sequence-viewer-save-name');
+
   const modePasteBtn = document.getElementById('sequence-viewer-mode-paste');
   const modeFileBtn = document.getElementById('sequence-viewer-mode-file');
   const pastePanel = document.getElementById('sequence-viewer-paste-panel');
@@ -1614,6 +1946,7 @@ export function initSequenceViewer() {
   const sequenceHost = document.getElementById('sequence-viewer-sequence-host');
 
   const state = {
+    workspace: 'home',
     mode: 'paste',
     fileName: '',
     fileText: '',
@@ -1623,7 +1956,13 @@ export function initSequenceViewer() {
     warnings: [],
     errors: [],
     annotationWarnings: [],
-    isAnnotating: false
+    isAnnotating: false,
+    inputComposerVisible: true,
+    libraryFilter: LIBRARY_STATUS_SAVED,
+    libraryEntries: [],
+    selectedLibraryEntryId: '',
+    activeEntryId: '',
+    activeEntryStatus: ''
   };
 
   const sequenceHoverTooltip = (() => {
@@ -1641,6 +1980,197 @@ export function initSequenceViewer() {
     document.body.appendChild(tooltip);
     return tooltip;
   })();
+
+  function getBridge() {
+    return getEnanaApiBridge();
+  }
+
+  function getStoragePath() {
+    return readStoragePathFromLocalState();
+  }
+
+  function hasStoragePath() {
+    return Boolean(getStoragePath());
+  }
+
+  function setHomeStatus(message, isError = false) {
+    if (!homeStatusNote) {
+      return;
+    }
+    homeStatusNote.textContent = message;
+    homeStatusNote.style.color = isError ? 'var(--danger)' : '';
+  }
+
+  function switchWorkspace(mode) {
+    const next = mode === 'detail' ? 'detail' : 'home';
+    state.workspace = next;
+    if (homeWorkspace) {
+      homeWorkspace.hidden = next !== 'home';
+    }
+    if (detailWorkspace) {
+      detailWorkspace.hidden = next !== 'detail';
+    }
+  }
+
+  function setLibraryFilter(status) {
+    state.libraryFilter = status === LIBRARY_STATUS_TEMPORARY ? LIBRARY_STATUS_TEMPORARY : LIBRARY_STATUS_SAVED;
+    if (libraryFilterSavedBtn) {
+      libraryFilterSavedBtn.classList.toggle('sequence-viewer-library-switch-btn-active', state.libraryFilter === LIBRARY_STATUS_SAVED);
+    }
+    if (libraryFilterTemporaryBtn) {
+      libraryFilterTemporaryBtn.classList.toggle('sequence-viewer-library-switch-btn-active', state.libraryFilter === LIBRARY_STATUS_TEMPORARY);
+    }
+  }
+
+  function syncHomeControlsState() {
+    const hasStorage = hasStoragePath();
+    if (libraryFilterSavedBtn) {
+      libraryFilterSavedBtn.disabled = !hasStorage;
+    }
+    if (libraryFilterTemporaryBtn) {
+      libraryFilterTemporaryBtn.disabled = !hasStorage;
+    }
+    if (saveBtn) {
+      saveBtn.disabled = !getSelectedRecord()?.sequence?.length;
+    }
+  }
+
+  function renderPreviewFromHtml(entry, htmlText) {
+    if (!previewHost) {
+      return;
+    }
+    if (!entry || !String(htmlText || '').trim()) {
+      previewHost.innerHTML = '<p class="small-note">Select a sequence in the library to preview.</p>';
+      if (previewMeta) {
+        previewMeta.textContent = '';
+      }
+      return;
+    }
+
+    const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(String(htmlText))}`;
+    previewHost.innerHTML = `<iframe class="sequence-viewer-preview-frame" src="${dataUrl}" loading="lazy" title="${escapeHtml(entry.name || 'Sequence preview')}"></iframe>`;
+    if (previewMeta) {
+      previewMeta.textContent = `${entry.name || 'sequence'} · ${(Number(entry.sequenceLength) || 0).toLocaleString()} bp · ${entry.status}`;
+    }
+  }
+
+  function renderLibraryList() {
+    if (!libraryList) {
+      return;
+    }
+    const entries = Array.isArray(state.libraryEntries) ? state.libraryEntries : [];
+    if (!entries.length) {
+      const noun = state.libraryFilter === LIBRARY_STATUS_SAVED ? 'saved' : 'unsaved';
+      libraryList.innerHTML = `<p class="small-note">No ${noun} sequence entries.</p>`;
+      return;
+    }
+
+    libraryList.innerHTML = entries
+      .map((entry) => {
+        const active = cleanText(entry.id, 200) === cleanText(state.selectedLibraryEntryId, 200);
+        const lengthLabel = `${Math.max(0, Number(entry.sequenceLength) || 0).toLocaleString()} bp`;
+        const featureLabel = `${Math.max(0, Number(entry.featureCount) || 0).toLocaleString()} features`;
+        const updated = String(entry.updatedAt || '').slice(0, 16).replace('T', ' ');
+        return `
+          <button
+            type="button"
+            class="sequence-viewer-library-item${active ? ' sequence-viewer-library-item-active' : ''}"
+            data-sequence-entry-id="${escapeHtml(entry.id)}"
+            title="${escapeHtml(entry.name || 'sequence')}"
+          >
+            <span class="sequence-viewer-library-item-name">${escapeHtml(entry.name || 'sequence')}</span>
+            <span class="sequence-viewer-library-item-meta">${escapeHtml(lengthLabel)} · ${escapeHtml(entry.topology || 'linear')}</span>
+            <span class="sequence-viewer-library-item-meta">${escapeHtml(featureLabel)} · updated ${escapeHtml(updated || '-')}</span>
+          </button>
+        `;
+      })
+      .join('');
+  }
+
+  async function loadSelectedLibraryPreview() {
+    const entryId = cleanText(state.selectedLibraryEntryId, 200);
+    const storagePath = getStoragePath();
+    if (!entryId || !storagePath) {
+      renderPreviewFromHtml(null, '');
+      return;
+    }
+    const bridge = getBridge();
+    if (!bridge?.sequenceLibraryGet) {
+      renderPreviewFromHtml(null, '');
+      return;
+    }
+
+    try {
+      const response = await bridge.sequenceLibraryGet({
+        storagePath,
+        id: entryId,
+        includeHtml: true
+      });
+      if (!response?.ok || !response?.entry) {
+        throw new Error(response?.error || 'Failed to load preview.');
+      }
+      renderPreviewFromHtml(response.entry, response.htmlText || '');
+    } catch (error) {
+      renderPreviewFromHtml(null, '');
+      setHomeStatus(error?.message || 'Failed to load preview.', true);
+    }
+  }
+
+  async function refreshLibraryEntries(options = {}) {
+    const storagePath = getStoragePath();
+    syncHomeControlsState();
+    if (!storagePath) {
+      state.libraryEntries = [];
+      state.selectedLibraryEntryId = '';
+      renderLibraryList();
+      renderPreviewFromHtml(null, '');
+      setHomeStatus('Use New or Open to continue. Set Storage Folder Path in Settings to enable the saved/unsaved library.');
+      return;
+    }
+
+    const bridge = getBridge();
+    if (!bridge?.sequenceLibraryList) {
+      setHomeStatus('Sequence library storage API unavailable.', true);
+      return;
+    }
+
+    try {
+      const response = await bridge.sequenceLibraryList({
+        storagePath,
+        status: state.libraryFilter
+      });
+      if (!response?.ok) {
+        throw new Error(response?.error || 'Failed to list sequence entries.');
+      }
+      const entries = Array.isArray(response.entries) ? response.entries : [];
+      state.libraryEntries = entries;
+
+      const preferred = cleanText(options.selectedId, 200)
+        || cleanText(state.selectedLibraryEntryId, 200);
+      const nextSelected = entries.some((entry) => cleanText(entry.id, 200) === preferred)
+        ? preferred
+        : (entries[0]?.id || '');
+      state.selectedLibraryEntryId = cleanText(nextSelected, 200);
+
+      renderLibraryList();
+      await loadSelectedLibraryPreview();
+      if (!options.silent) {
+        setHomeStatus(`Loaded ${entries.length} ${state.libraryFilter} sequence entr${entries.length === 1 ? 'y' : 'ies'}.`);
+      }
+    } catch (error) {
+      state.libraryEntries = [];
+      state.selectedLibraryEntryId = '';
+      renderLibraryList();
+      renderPreviewFromHtml(null, '');
+      setHomeStatus(error?.message || 'Failed to load sequence library.', true);
+    }
+  }
+
+  async function setSelectedLibraryEntry(entryId) {
+    state.selectedLibraryEntryId = cleanText(entryId, 200);
+    renderLibraryList();
+    await loadSelectedLibraryPreview();
+  }
 
   function getFeatureByIndexForRecord(record, index) {
     if (!record || !Number.isFinite(index) || index < 0) {
@@ -1801,6 +2331,28 @@ export function initSequenceViewer() {
     };
   }
 
+  function setInputComposerVisible(visible) {
+    const shouldShow = visible !== false;
+    state.inputComposerVisible = shouldShow;
+
+    if (modePasteBtn) {
+      modePasteBtn.hidden = !shouldShow;
+    }
+    if (modeFileBtn) {
+      modeFileBtn.hidden = !shouldShow;
+    }
+    if (loadBtn) {
+      loadBtn.hidden = !shouldShow;
+    }
+
+    if (pastePanel) {
+      pastePanel.hidden = !shouldShow || state.mode !== 'paste';
+    }
+    if (filePanel) {
+      filePanel.hidden = !shouldShow || state.mode !== 'file';
+    }
+  }
+
   function setMode(mode) {
     const resolved = mode === 'file' ? 'file' : 'paste';
     state.mode = resolved;
@@ -1812,10 +2364,10 @@ export function initSequenceViewer() {
       modeFileBtn.classList.toggle('sequence-viewer-mode-btn-active', resolved === 'file');
     }
     if (pastePanel) {
-      pastePanel.hidden = resolved !== 'paste';
+      pastePanel.hidden = !state.inputComposerVisible || resolved !== 'paste';
     }
     if (filePanel) {
-      filePanel.hidden = resolved !== 'file';
+      filePanel.hidden = !state.inputComposerVisible || resolved !== 'file';
     }
   }
 
@@ -1854,6 +2406,9 @@ export function initSequenceViewer() {
     const record = getSelectedRecord();
     const hasRecord = Boolean(record?.sequence?.length);
     annotateBtn.disabled = state.isAnnotating || !hasRecord;
+    if (saveBtn) {
+      saveBtn.disabled = !hasRecord || !hasStoragePath();
+    }
   }
 
   function updateRecordSelect() {
@@ -2059,6 +2614,9 @@ export function initSequenceViewer() {
 
     updateRecordSelect();
     renderActiveRecord();
+    if (saveNameInput && state.records.length) {
+      saveNameInput.value = normalizeRecordName(state.records[0].name || 'sequence', 'sequence');
+    }
 
     if (state.records.length) {
       setStatus(`${statusPrefix}: ${state.records.length} record(s).`);
@@ -2091,7 +2649,155 @@ export function initSequenceViewer() {
     }
 
     const parsed = parseInputRecords(raw, { maxRecords: DEFAULT_MAX_RECORDS });
+    state.activeEntryId = '';
+    state.activeEntryStatus = '';
     setRecords(parsed, 'Loaded');
+    setInputComposerVisible(!(Array.isArray(parsed.records) && parsed.records.length > 0));
+  }
+
+  async function persistRecordToLibrary(record, options = {}) {
+    const bridge = getBridge();
+    const storagePath = getStoragePath();
+    if (!storagePath) {
+      throw new Error('Set Storage Folder Path in Settings before saving sequence entries.');
+    }
+    if (!bridge?.sequenceLibraryUpsert) {
+      throw new Error('Sequence library storage API unavailable.');
+    }
+    const safeRecord = record && typeof record === 'object' ? record : null;
+    if (!safeRecord?.sequence?.length) {
+      throw new Error('No sequence record available to persist.');
+    }
+
+    const status = String(options?.status || state.activeEntryStatus || LIBRARY_STATUS_TEMPORARY).toLowerCase() === LIBRARY_STATUS_SAVED
+      ? LIBRARY_STATUS_SAVED
+      : LIBRARY_STATUS_TEMPORARY;
+    const name = normalizeRecordName(
+      options?.name || saveNameInput?.value || safeRecord.name || 'sequence',
+      'sequence'
+    );
+    const gbkText = buildRecordGenbankText(safeRecord);
+    if (!gbkText.trim()) {
+      throw new Error('Failed to generate GenBank text for sequence entry.');
+    }
+    const htmlText = buildCircularPreviewHtmlDocument(safeRecord);
+    const response = await bridge.sequenceLibraryUpsert({
+      storagePath,
+      id: cleanText(options?.id || state.activeEntryId, 200),
+      name,
+      status,
+      sourceFormat: String(safeRecord.sourceFormat || ''),
+      topology: normalizeTopology(safeRecord.topology || 'linear'),
+      sequenceLength: safeRecord.sequence.length,
+      featureCount: Array.isArray(safeRecord.features) ? safeRecord.features.length : 0,
+      gbkText,
+      htmlText
+    });
+    if (!response?.ok || !response?.entry) {
+      throw new Error(response?.error || 'Failed to persist sequence entry.');
+    }
+    state.activeEntryId = cleanText(response.entry.id, 200);
+    state.activeEntryStatus = String(response.entry.status || status).toLowerCase();
+    if (saveNameInput) {
+      saveNameInput.value = response.entry.name || name;
+    }
+    return response.entry;
+  }
+
+  async function persistAfterAnnotation(record) {
+    const storagePath = getStoragePath();
+    if (!storagePath) {
+      state.annotationWarnings.push('pLannotate: Storage path not configured; annotation was not auto-saved.');
+      return null;
+    }
+    const desiredStatus = state.activeEntryStatus === LIBRARY_STATUS_SAVED
+      ? LIBRARY_STATUS_SAVED
+      : LIBRARY_STATUS_TEMPORARY;
+    const entry = await persistRecordToLibrary(record, {
+      id: state.activeEntryId,
+      status: desiredStatus,
+      name: saveNameInput?.value || record.name || 'sequence'
+    });
+    await refreshLibraryEntries({ selectedId: entry.id, silent: true });
+    return entry;
+  }
+
+  async function saveCurrentRecordAsSaved() {
+    const record = getSelectedRecord();
+    if (!record?.sequence?.length) {
+      setStatus('Load a record before saving.', true);
+      return;
+    }
+    try {
+      const entry = await persistRecordToLibrary(record, {
+        id: state.activeEntryId,
+        status: LIBRARY_STATUS_SAVED,
+        name: saveNameInput?.value || record.name || 'sequence'
+      });
+      state.activeEntryId = cleanText(entry.id, 200);
+      state.activeEntryStatus = LIBRARY_STATUS_SAVED;
+      await refreshLibraryEntries({ selectedId: entry.id, silent: true });
+      setStatus(`Saved sequence as ${entry.name}.`);
+      setHomeStatus(`Saved sequence entry: ${entry.name}.`);
+    } catch (error) {
+      setStatus(error?.message || 'Failed to save sequence.', true);
+    }
+  }
+
+  async function openLibraryEntryInDetail(entryId) {
+    const storagePath = getStoragePath();
+    if (!storagePath) {
+      setHomeStatus('Set Storage Folder Path in Settings before opening library entries.', true);
+      return;
+    }
+    const bridge = getBridge();
+    if (!bridge?.sequenceLibraryGet) {
+      setHomeStatus('Sequence library storage API unavailable.', true);
+      return;
+    }
+    try {
+      const response = await bridge.sequenceLibraryGet({
+        storagePath,
+        id: cleanText(entryId, 200),
+        includeGbk: true
+      });
+      if (!response?.ok || !response?.entry) {
+        throw new Error(response?.error || 'Failed to load sequence entry.');
+      }
+      const parsed = parseInputRecords(String(response.gbkText || ''), { maxRecords: DEFAULT_MAX_RECORDS });
+      if (!Array.isArray(parsed.records) || !parsed.records.length) {
+        throw new Error(parsed?.errors?.[0] || 'Stored sequence entry contains no valid records.');
+      }
+
+      state.activeEntryId = cleanText(response.entry.id, 200);
+      state.activeEntryStatus = String(response.entry.status || '').toLowerCase();
+      if (inputTextarea) {
+        inputTextarea.value = String(response.gbkText || '');
+      }
+      if (saveNameInput) {
+        saveNameInput.value = response.entry.name || parsed.records[0].name || 'sequence';
+      }
+      setMode('paste');
+      setInputComposerVisible(false);
+      setRecords(parsed, 'Loaded');
+      switchWorkspace('detail');
+      setStatus(`Opened ${response.entry.name}.`);
+    } catch (error) {
+      setHomeStatus(error?.message || 'Failed to open sequence entry.', true);
+    }
+  }
+
+  function openParsedRecordsInDetail(parsed, rawText = '', statusPrefix = 'Loaded') {
+    const hasRecords = Array.isArray(parsed?.records) && parsed.records.length > 0;
+    state.activeEntryId = '';
+    state.activeEntryStatus = '';
+    if (inputTextarea) {
+      inputTextarea.value = rawText || '';
+    }
+    setMode('paste');
+    setInputComposerVisible(!hasRecords);
+    setRecords(parsed, statusPrefix);
+    switchWorkspace('detail');
   }
 
   async function annotateCurrentRecord() {
@@ -2144,6 +2850,12 @@ export function initSequenceViewer() {
         : [];
 
       renderActiveRecord();
+      try {
+        await persistAfterAnnotation(current);
+      } catch (persistError) {
+        state.annotationWarnings.push(`pLannotate: ${String(persistError?.message || persistError)}`);
+        updateMessages();
+      }
       setStatus(`Completed: ${plannotateFeatures.length} pLannotate feature(s) on ${current.name || 'record'}.`);
     } catch (error) {
       setStatus(error?.message || 'Annotation failed.', true);
@@ -2166,8 +2878,15 @@ export function initSequenceViewer() {
 
     state.fileName = '';
     state.fileText = '';
+    state.activeEntryId = '';
+    state.activeEntryStatus = '';
+    setMode('paste');
+    setInputComposerVisible(true);
     setRecords({ records: [], warnings: [], errors: [] }, 'Cleared');
     setStatus('Idle');
+    if (saveNameInput) {
+      saveNameInput.value = '';
+    }
   }
 
   modePasteBtn?.addEventListener('click', () => {
@@ -2206,6 +2925,42 @@ export function initSequenceViewer() {
     }
   });
 
+  homePasteBtn?.addEventListener('click', () => {
+    clearAll();
+    switchWorkspace('detail');
+    setMode('paste');
+    setInputComposerVisible(true);
+    setStatus('Paste sequence text, then click Load.');
+    inputTextarea?.focus?.();
+    setHomeStatus('Opened a new sequence workspace.');
+  });
+
+  if (homeOpenInput && typeof homeOpenInput.setAttribute === 'function') {
+    homeOpenInput.setAttribute('accept', FILE_ACCEPT);
+  }
+
+  homeOpenBtn?.addEventListener('click', () => {
+    homeOpenInput?.click();
+  });
+
+  homeOpenInput?.addEventListener('change', async () => {
+    const file = homeOpenInput.files?.[0];
+    if (!file) {
+      return;
+    }
+    try {
+      setHomeStatus(`Reading ${file.name}...`);
+      const text = await readFileAsText(file);
+      const parsed = parseInputRecords(text, { maxRecords: DEFAULT_MAX_RECORDS });
+      openParsedRecordsInDetail(parsed, text, 'Loaded');
+      setStatus(`Opened ${file.name} in detail workspace.`);
+    } catch (error) {
+      setHomeStatus(error?.message || 'Failed to open selected file.', true);
+    } finally {
+      homeOpenInput.value = '';
+    }
+  });
+
   loadBtn?.addEventListener('click', (event) => {
     event.preventDefault();
     void loadCurrentInput();
@@ -2221,10 +2976,53 @@ export function initSequenceViewer() {
     clearAll();
   });
 
+  saveBtn?.addEventListener('click', (event) => {
+    event.preventDefault();
+    void saveCurrentRecordAsSaved();
+  });
+
+  backBtn?.addEventListener('click', (event) => {
+    event.preventDefault();
+    switchWorkspace('home');
+    void refreshLibraryEntries({ silent: true });
+  });
+
+  libraryFilterSavedBtn?.addEventListener('click', () => {
+    setLibraryFilter(LIBRARY_STATUS_SAVED);
+    void refreshLibraryEntries({ silent: true });
+  });
+
+  libraryFilterTemporaryBtn?.addEventListener('click', () => {
+    setLibraryFilter(LIBRARY_STATUS_TEMPORARY);
+    void refreshLibraryEntries({ silent: true });
+  });
+
+  libraryList?.addEventListener('click', (event) => {
+    const trigger = event.target?.closest?.('[data-sequence-entry-id]') || null;
+    const entryId = cleanText(trigger?.dataset?.sequenceEntryId, 200);
+    if (!entryId) {
+      return;
+    }
+    void setSelectedLibraryEntry(entryId);
+  });
+
+  libraryList?.addEventListener('dblclick', (event) => {
+    const trigger = event.target?.closest?.('[data-sequence-entry-id]') || null;
+    const entryId = cleanText(trigger?.dataset?.sequenceEntryId, 200);
+    if (!entryId) {
+      return;
+    }
+    void openLibraryEntryInDetail(entryId);
+  });
+
   recordSelect?.addEventListener('change', () => {
     state.selectedRecordIndex = clamp(Number(recordSelect.value) || 0, 0, Math.max(0, state.records.length - 1));
     state.selectedFeatureIndex = -1;
     renderActiveRecord();
+    const selected = getSelectedRecord();
+    if (selected && saveNameInput) {
+      saveNameInput.value = normalizeRecordName(selected.name || 'sequence', 'sequence');
+    }
   });
 
   featureRailHost?.addEventListener('click', (event) => {
@@ -2293,14 +3091,21 @@ export function initSequenceViewer() {
     if (inputTextarea) {
       inputTextarea.value = record.sequence;
     }
+    state.activeEntryId = '';
+    state.activeEntryStatus = '';
+    if (saveNameInput) {
+      saveNameInput.value = record.name || 'sequence';
+    }
 
     setRecords({
       records: hasSequence ? [record] : [],
       warnings: hasSequence ? [] : ['External payload had no sequence.'],
       errors: hasSequence ? [] : ['Failed to load external payload.']
     }, 'Imported');
+    setInputComposerVisible(!hasSequence);
 
     if (hasSequence) {
+      switchWorkspace('detail');
       setStatus(`Imported ${record.name} from ${record.sourceFormat || 'external'}.`);
     }
   }
@@ -2308,10 +3113,16 @@ export function initSequenceViewer() {
   function render() {
     updateRecordSelect();
     renderActiveRecord();
+    syncHomeControlsState();
+    void refreshLibraryEntries({ silent: true });
   }
 
+  setLibraryFilter(LIBRARY_STATUS_SAVED);
+  switchWorkspace('home');
   setMode('paste');
-  setStatus('Idle');
+  setInputComposerVisible(true);
+  setStatus('Paste sequence text, then click Load.');
+  setHomeStatus('Choose New or Open to continue.');
   render();
 
   return {

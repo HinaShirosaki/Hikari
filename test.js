@@ -363,6 +363,7 @@ const agentPythonCodegen = agentPython;
 const agentWebFallback = require(path.join(__dirname, 'helpers', 'agent', 'agent-web-fallback.js'));
 const phase89Runtime = require(path.join(__dirname, 'helpers', 'agent', 'agent-phase89-runtime.js'));
 const agentSqliteIndex = require(path.join(__dirname, 'helpers', 'agent', 'agent-sqlite-index.js'));
+const sequenceLibrary = require(path.join(__dirname, 'helpers', 'main', 'sequence-library.js'));
 const objectGraph = loadEsmStyleModule(path.join(__dirname, 'modules', 'object-graph.js'));
 const toolBox = loadEsmStyleModule(
   path.join(__dirname, 'modules', 'tool-box.js'),
@@ -6035,6 +6036,20 @@ test('sequence viewer uses bottom feature track without table dependency', () =>
   assert.equal(viewerSource.includes('featureTableBody'), false);
 });
 
+test('sequence viewer home workspace includes toolbar, library filter, and preview ids', () => {
+  const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  assert.match(html, /id="sequence-viewer-home-workspace"/);
+  assert.match(html, /id="sequence-viewer-home-paste-btn"/);
+  assert.match(html, /id="sequence-viewer-home-open-btn"/);
+  assert.equal(html.includes('id="sequence-viewer-home-import-btn"'), false);
+  assert.match(html, /id="sequence-viewer-library-filter-saved"/);
+  assert.match(html, /id="sequence-viewer-library-filter-temporary"/);
+  assert.match(html, /id="sequence-viewer-library-list"/);
+  assert.match(html, /id="sequence-viewer-preview-host"/);
+  assert.match(html, /id="sequence-viewer-back-btn"/);
+  assert.match(html, /id="sequence-viewer-save-btn"/);
+});
+
 test('ketcher embedded page uses portable static path resolution', () => {
   const html = fs.readFileSync(path.join(__dirname, 'ketcher-embedded.html'), 'utf8');
   assert.equal(html.includes('/Users/'), false);
@@ -6062,6 +6077,20 @@ test('telegram bridge keeps only supported renderer IPC channel', () => {
   const preloadSource = fs.readFileSync(path.join(__dirname, 'preload.js'), 'utf8');
   assert.equal(telegramBotSource.includes('telegram-message'), false);
   assert.equal(preloadSource.includes('onTelegramCommand'), true);
+});
+
+test('main and preload expose sequence library IPC bridge', () => {
+  const mainSource = fs.readFileSync(path.join(__dirname, 'main.js'), 'utf8');
+  const preloadSource = fs.readFileSync(path.join(__dirname, 'preload.js'), 'utf8');
+  assert.match(mainSource, /require\('\.\/helpers\/main\/sequence-library'\)/);
+  assert.match(mainSource, /ipcMain\.handle\('sequence-library:list'/);
+  assert.match(mainSource, /ipcMain\.handle\('sequence-library:get'/);
+  assert.match(mainSource, /ipcMain\.handle\('sequence-library:upsert'/);
+  assert.match(mainSource, /ipcMain\.handle\('sequence-library:promote'/);
+  assert.match(mainSource, /ipcMain\.handle\('sequence-library:delete'/);
+  assert.match(preloadSource, /sequenceLibraryList:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\('sequence-library:list', payload\)/);
+  assert.match(preloadSource, /sequenceLibraryGet:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\('sequence-library:get', payload\)/);
+  assert.match(preloadSource, /sequenceLibraryUpsert:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\('sequence-library:upsert', payload\)/);
 });
 
 test('telegram bot writes events to data/telegram-events.log by default', () => {
@@ -6377,6 +6406,117 @@ test('sqlite index module syncs and retrieves inventory/protocol/notebook search
   await fsPromises.rm(tempDir, { recursive: true, force: true });
 });
 
+test('sequence library helper creates storage folder, sqlite db, and status-filtered entries', async () => {
+  const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'sequence-library-'));
+  try {
+    const firstSaved = await sequenceLibrary.upsertSequenceEntry({
+      storagePath: storageRoot,
+      name: 'VectorA',
+      status: 'saved',
+      sourceFormat: 'fasta',
+      topology: 'circular',
+      sequenceLength: 1200,
+      featureCount: 2,
+      gbkText: 'LOCUS       VectorA           10 bp    DNA     circular SYN 01-JAN-2026\nORIGIN\n        1 acgtacgtac\n//\n',
+      htmlText: '<html><body>preview A</body></html>'
+    });
+
+    const secondSaved = await sequenceLibrary.upsertSequenceEntry({
+      storagePath: storageRoot,
+      name: 'VectorA',
+      status: 'saved',
+      sourceFormat: 'fasta',
+      topology: 'circular',
+      sequenceLength: 1300,
+      featureCount: 3,
+      gbkText: 'LOCUS       VectorB           10 bp    DNA     circular SYN 01-JAN-2026\nORIGIN\n        1 tttttttttt\n//\n',
+      htmlText: '<html><body>preview B</body></html>'
+    });
+
+    const temporary = await sequenceLibrary.upsertSequenceEntry({
+      storagePath: storageRoot,
+      name: 'DraftVector',
+      status: 'temporary',
+      sourceFormat: 'genbank',
+      topology: 'linear',
+      sequenceLength: 900,
+      featureCount: 1,
+      gbkText: 'LOCUS       Draft             10 bp    DNA     linear   SYN 01-JAN-2026\nORIGIN\n        1 gggggggggg\n//\n',
+      htmlText: '<html><body>preview draft</body></html>'
+    });
+
+    assert.equal(firstSaved.entry.name, 'VectorA');
+    assert.equal(secondSaved.entry.name, 'VectorA_2');
+    assert.equal(temporary.entry.status, 'temporary');
+
+    const savedList = await sequenceLibrary.listSequenceEntries({
+      storagePath: storageRoot,
+      status: 'saved'
+    });
+    assert.equal(savedList.entries.length, 2);
+
+    const tempList = await sequenceLibrary.listSequenceEntries({
+      storagePath: storageRoot,
+      status: 'temporary'
+    });
+    assert.equal(tempList.entries.length, 1);
+
+    const sqlitePath = path.join(storageRoot, 'SequenceViewer', 'sequence-library.sqlite');
+    const stat = await fsPromises.stat(sqlitePath);
+    assert.equal(stat.isFile(), true);
+  } finally {
+    await fsPromises.rm(storageRoot, { recursive: true, force: true });
+  }
+});
+
+test('sequence library helper returns stored GBK/HTML and promotes temporary entries to saved names', async () => {
+  const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'sequence-library-promote-'));
+  try {
+    const saved = await sequenceLibrary.upsertSequenceEntry({
+      storagePath: storageRoot,
+      name: 'Reference',
+      status: 'saved',
+      sourceFormat: 'genbank',
+      topology: 'circular',
+      sequenceLength: 1000,
+      featureCount: 0,
+      gbkText: 'LOCUS       Reference         10 bp    DNA     circular SYN 01-JAN-2026\nORIGIN\n        1 acgtacgtac\n//\n',
+      htmlText: '<html><body>reference</body></html>'
+    });
+
+    const temp = await sequenceLibrary.upsertSequenceEntry({
+      storagePath: storageRoot,
+      name: 'Reference',
+      status: 'temporary',
+      sourceFormat: 'genbank',
+      topology: 'linear',
+      sequenceLength: 800,
+      featureCount: 0,
+      gbkText: 'LOCUS       Draft             10 bp    DNA     linear   SYN 01-JAN-2026\nORIGIN\n        1 tttttttttt\n//\n',
+      htmlText: '<html><body>draft</body></html>'
+    });
+
+    const promoted = await sequenceLibrary.promoteSequenceEntry({
+      storagePath: storageRoot,
+      id: temp.entry.id,
+      name: 'Reference'
+    });
+    assert.equal(promoted.entry.status, 'saved');
+    assert.equal(promoted.entry.name, 'Reference_2');
+
+    const fetched = await sequenceLibrary.getSequenceEntry({
+      storagePath: storageRoot,
+      id: saved.entry.id,
+      includeGbk: true,
+      includeHtml: true
+    });
+    assert.match(String(fetched.gbkText || ''), /LOCUS\s+Reference/);
+    assert.match(String(fetched.htmlText || ''), /reference/);
+  } finally {
+    await fsPromises.rm(storageRoot, { recursive: true, force: true });
+  }
+});
+
 test('main wires sqlite index module for save/load and retrieval paths', () => {
   const mainSource = fs.readFileSync(path.join(__dirname, 'main.js'), 'utf8');
   assert.match(mainSource, /require\('\.\/helpers\/agent\/agent-sqlite-index'\)/);
@@ -6444,10 +6584,14 @@ test('telegram bot internals suggest module names for typos', () => {
 });
 
 test('package manifest includes scripts and dependencies required for portable installs', () => {
-  assert.equal(packageManifest.scripts.start, 'electron-forge start');
-  assert.equal(packageManifest.scripts.test, 'node test.js');
-  assert.equal(packageManifest.scripts.dist, 'electron-forge make');
-  assert.equal(packageManifest.scripts['package:app'], 'electron-forge package');
+  assert.equal(packageManifest.scripts['build:ui'], 'node scripts/build-ui.mjs');
+  assert.equal(packageManifest.scripts['check:dom-ids'], 'node scripts/check-dom-ids.mjs');
+  assert.equal(packageManifest.scripts.start, 'npm run build:ui && electron-forge start');
+  assert.equal(packageManifest.scripts.test, 'npm run build:ui && npm run check:dom-ids && node test.js');
+  assert.equal(packageManifest.scripts.dist, 'npm run build:ui && electron-forge make');
+  assert.equal(packageManifest.scripts['package:app'], 'npm run build:ui && electron-forge package');
+  assert.equal(packageManifest.scripts.package, 'npm run build:ui && electron-forge package');
+  assert.equal(packageManifest.scripts.make, 'npm run build:ui && electron-forge make');
   assert.equal(packageManifest.dependencies.telegraf, '^4.16.3');
   assert.equal(packageManifest.dependencies['electron-squirrel-startup'], '^1.0.1');
   assert.equal(packageManifest.devDependencies.electron, '^40.7.0');
@@ -7053,8 +7197,10 @@ const removedCodeGuards = [
   ['index.html', /lab-notebook-view/, false],
   ['renderer.js', /VIEWS\.LAB_NOTEBOOK/, false],
   ['forge.config.js', /enana-data/, true],
-  ['package.json', /"dist": "electron-forge make"/, true],
-  ['package.json', /"package:app": "electron-forge package"/, true],
+  ['package.json', /"build:ui": "node scripts\/build-ui\.mjs"/, true],
+  ['package.json', /"check:dom-ids": "node scripts\/check-dom-ids\.mjs"/, true],
+  ['package.json', /"dist": "npm run build:ui && electron-forge make"/, true],
+  ['package.json', /"package:app": "npm run build:ui && electron-forge package"/, true],
   ['modules/agent-chat.js', /apiKey: String\(state\.settings\?\.llm\?\.apiKey/, true]
 ];
 
@@ -7650,6 +7796,257 @@ test('[EDGE] sequence-viewer feature detail formatter includes core metadata', (
   assert.match(html, /Strand:<\/strong> -/);
   assert.match(html, /99.12%/);
   assert.match(html, /87.56%/);
+});
+
+test('[EDGE] sequence-viewer initializes home workspace and keeps detail workspace hidden by default', () => {
+  const ids = [
+    'sequence-viewer-home-workspace',
+    'sequence-viewer-detail-workspace',
+    'sequence-viewer-home-status',
+    'sequence-viewer-library-filter-saved',
+    'sequence-viewer-library-filter-temporary',
+    'sequence-viewer-library-list',
+    'sequence-viewer-preview-host',
+    'sequence-viewer-preview-meta',
+    'sequence-viewer-home-paste-btn',
+    'sequence-viewer-home-open-btn',
+    'sequence-viewer-home-open-input',
+    'sequence-viewer-back-btn',
+    'sequence-viewer-save-btn',
+    'sequence-viewer-save-name',
+    'sequence-viewer-mode-paste',
+    'sequence-viewer-mode-file',
+    'sequence-viewer-paste-panel',
+    'sequence-viewer-file-panel',
+    'sequence-viewer-textarea',
+    'sequence-viewer-file-input',
+    'sequence-viewer-file-choose',
+    'sequence-viewer-file-name',
+    'sequence-viewer-load-btn',
+    'sequence-viewer-annotate-btn',
+    'sequence-viewer-clear-btn',
+    'sequence-viewer-status',
+    'sequence-viewer-messages',
+    'sequence-viewer-record-select',
+    'sequence-viewer-stat-format',
+    'sequence-viewer-stat-length',
+    'sequence-viewer-stat-topology',
+    'sequence-viewer-stat-gc',
+    'sequence-viewer-stat-ambiguous',
+    'sequence-viewer-stat-quality',
+    'sequence-viewer-stat-features',
+    'sequence-viewer-stat-restriction-sites',
+    'sequence-viewer-feature-rail-host',
+    'sequence-viewer-feature-detail',
+    'sequence-viewer-sequence-host'
+  ];
+  const document = createMockDocument(ids);
+  const moduleWithDom = loadEsmStyleModule(
+    path.join(__dirname, 'modules', 'sequence-viewer.js'),
+    { document }
+  );
+  moduleWithDom.initSequenceViewer();
+
+  const homeWorkspace = document.getElementById('sequence-viewer-home-workspace');
+  const detailWorkspace = document.getElementById('sequence-viewer-detail-workspace');
+  const openBtn = document.getElementById('sequence-viewer-home-open-btn');
+  const homeStatus = document.getElementById('sequence-viewer-home-status');
+
+  assert.equal(Boolean(homeWorkspace.hidden), false);
+  assert.equal(Boolean(detailWorkspace.hidden), true);
+  assert.equal(Boolean(openBtn.disabled), false);
+  assert.match(homeStatus.textContent, /New or Open|Storage Folder Path|storage path|storage/i);
+});
+
+test('[EDGE] sequence-viewer loadFromExternal switches to detail workspace', () => {
+  const ids = [
+    'sequence-viewer-home-workspace',
+    'sequence-viewer-detail-workspace',
+    'sequence-viewer-home-status',
+    'sequence-viewer-home-import-btn',
+    'sequence-viewer-library-filter-saved',
+    'sequence-viewer-library-filter-temporary',
+    'sequence-viewer-library-list',
+    'sequence-viewer-preview-host',
+    'sequence-viewer-preview-meta',
+    'sequence-viewer-home-paste-input',
+    'sequence-viewer-home-paste-btn',
+    'sequence-viewer-home-import-input',
+    'sequence-viewer-home-open-btn',
+    'sequence-viewer-home-open-input',
+    'sequence-viewer-back-btn',
+    'sequence-viewer-save-btn',
+    'sequence-viewer-save-name',
+    'sequence-viewer-mode-paste',
+    'sequence-viewer-mode-file',
+    'sequence-viewer-paste-panel',
+    'sequence-viewer-file-panel',
+    'sequence-viewer-textarea',
+    'sequence-viewer-file-input',
+    'sequence-viewer-file-choose',
+    'sequence-viewer-file-name',
+    'sequence-viewer-load-btn',
+    'sequence-viewer-annotate-btn',
+    'sequence-viewer-clear-btn',
+    'sequence-viewer-status',
+    'sequence-viewer-messages',
+    'sequence-viewer-record-select',
+    'sequence-viewer-stat-format',
+    'sequence-viewer-stat-length',
+    'sequence-viewer-stat-topology',
+    'sequence-viewer-stat-gc',
+    'sequence-viewer-stat-ambiguous',
+    'sequence-viewer-stat-quality',
+    'sequence-viewer-stat-features',
+    'sequence-viewer-stat-restriction-sites',
+    'sequence-viewer-feature-rail-host',
+    'sequence-viewer-feature-detail',
+    'sequence-viewer-sequence-host'
+  ];
+  const document = createMockDocument(ids);
+  const moduleWithDom = loadEsmStyleModule(
+    path.join(__dirname, 'modules', 'sequence-viewer.js'),
+    { document }
+  );
+  const viewer = moduleWithDom.initSequenceViewer();
+  viewer.loadFromExternal({
+    name: 'imported',
+    sequence: 'ACGTACGTACGT',
+    topology: 'circular',
+    source: 'external',
+    features: []
+  });
+
+  const homeWorkspace = document.getElementById('sequence-viewer-home-workspace');
+  const detailWorkspace = document.getElementById('sequence-viewer-detail-workspace');
+  assert.equal(Boolean(homeWorkspace.hidden), true);
+  assert.equal(Boolean(detailWorkspace.hidden), false);
+});
+
+test('[EDGE] sequence-viewer home paste button opens detail workspace even with empty text', () => {
+  const ids = [
+    'sequence-viewer-home-workspace',
+    'sequence-viewer-detail-workspace',
+    'sequence-viewer-home-status',
+    'sequence-viewer-home-import-btn',
+    'sequence-viewer-library-filter-saved',
+    'sequence-viewer-library-filter-temporary',
+    'sequence-viewer-library-list',
+    'sequence-viewer-preview-host',
+    'sequence-viewer-preview-meta',
+    'sequence-viewer-home-paste-input',
+    'sequence-viewer-home-paste-btn',
+    'sequence-viewer-home-import-input',
+    'sequence-viewer-home-open-btn',
+    'sequence-viewer-home-open-input',
+    'sequence-viewer-back-btn',
+    'sequence-viewer-save-btn',
+    'sequence-viewer-save-name',
+    'sequence-viewer-mode-paste',
+    'sequence-viewer-mode-file',
+    'sequence-viewer-paste-panel',
+    'sequence-viewer-file-panel',
+    'sequence-viewer-textarea',
+    'sequence-viewer-file-input',
+    'sequence-viewer-file-choose',
+    'sequence-viewer-file-name',
+    'sequence-viewer-load-btn',
+    'sequence-viewer-annotate-btn',
+    'sequence-viewer-clear-btn',
+    'sequence-viewer-status',
+    'sequence-viewer-messages',
+    'sequence-viewer-record-select',
+    'sequence-viewer-stat-format',
+    'sequence-viewer-stat-length',
+    'sequence-viewer-stat-topology',
+    'sequence-viewer-stat-gc',
+    'sequence-viewer-stat-ambiguous',
+    'sequence-viewer-stat-quality',
+    'sequence-viewer-stat-features',
+    'sequence-viewer-stat-restriction-sites',
+    'sequence-viewer-feature-rail-host',
+    'sequence-viewer-feature-detail',
+    'sequence-viewer-sequence-host'
+  ];
+  const document = createMockDocument(ids);
+  const moduleWithDom = loadEsmStyleModule(
+    path.join(__dirname, 'modules', 'sequence-viewer.js'),
+    { document }
+  );
+  moduleWithDom.initSequenceViewer();
+  trigger(document.getElementById('sequence-viewer-home-paste-btn'), 'click');
+
+  const homeWorkspace = document.getElementById('sequence-viewer-home-workspace');
+  const detailWorkspace = document.getElementById('sequence-viewer-detail-workspace');
+  const status = document.getElementById('sequence-viewer-status');
+  assert.equal(Boolean(homeWorkspace.hidden), true);
+  assert.equal(Boolean(detailWorkspace.hidden), false);
+  assert.match(status.textContent, /Paste sequence text/i);
+});
+
+test('[EDGE] sequence-viewer hides input composer after successful load', () => {
+  const ids = [
+    'sequence-viewer-home-workspace',
+    'sequence-viewer-detail-workspace',
+    'sequence-viewer-home-status',
+    'sequence-viewer-library-filter-saved',
+    'sequence-viewer-library-filter-temporary',
+    'sequence-viewer-library-list',
+    'sequence-viewer-preview-host',
+    'sequence-viewer-preview-meta',
+    'sequence-viewer-home-paste-btn',
+    'sequence-viewer-home-open-btn',
+    'sequence-viewer-home-open-input',
+    'sequence-viewer-back-btn',
+    'sequence-viewer-save-btn',
+    'sequence-viewer-save-name',
+    'sequence-viewer-mode-paste',
+    'sequence-viewer-mode-file',
+    'sequence-viewer-paste-panel',
+    'sequence-viewer-file-panel',
+    'sequence-viewer-textarea',
+    'sequence-viewer-file-input',
+    'sequence-viewer-file-choose',
+    'sequence-viewer-file-name',
+    'sequence-viewer-load-btn',
+    'sequence-viewer-annotate-btn',
+    'sequence-viewer-clear-btn',
+    'sequence-viewer-status',
+    'sequence-viewer-messages',
+    'sequence-viewer-record-select',
+    'sequence-viewer-stat-format',
+    'sequence-viewer-stat-length',
+    'sequence-viewer-stat-topology',
+    'sequence-viewer-stat-gc',
+    'sequence-viewer-stat-ambiguous',
+    'sequence-viewer-stat-quality',
+    'sequence-viewer-stat-features',
+    'sequence-viewer-stat-restriction-sites',
+    'sequence-viewer-feature-rail-host',
+    'sequence-viewer-feature-detail',
+    'sequence-viewer-sequence-host'
+  ];
+  const document = createMockDocument(ids);
+  const moduleWithDom = loadEsmStyleModule(
+    path.join(__dirname, 'modules', 'sequence-viewer.js'),
+    { document }
+  );
+  moduleWithDom.initSequenceViewer();
+
+  trigger(document.getElementById('sequence-viewer-home-paste-btn'), 'click');
+  const textarea = document.getElementById('sequence-viewer-textarea');
+  textarea.value = '>seq1\nACGTACGT\n';
+  trigger(document.getElementById('sequence-viewer-load-btn'), 'click');
+
+  const modePasteBtn = document.getElementById('sequence-viewer-mode-paste');
+  const modeFileBtn = document.getElementById('sequence-viewer-mode-file');
+  const loadBtn = document.getElementById('sequence-viewer-load-btn');
+  const annotateBtn = document.getElementById('sequence-viewer-annotate-btn');
+
+  assert.equal(Boolean(modePasteBtn.hidden), true);
+  assert.equal(Boolean(modeFileBtn.hidden), true);
+  assert.equal(Boolean(loadBtn.hidden), true);
+  assert.equal(Boolean(annotateBtn.disabled), false);
 });
 
 test('[EDGE] sequence-viewer annotate button enables when a record is loaded', () => {
