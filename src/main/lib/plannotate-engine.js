@@ -1,6 +1,7 @@
 const fs = require('fs');
 const fsp = require('fs/promises');
 const path = require('path');
+const PROJECT_ROOT = path.resolve(__dirname, '..', '..', '..');
 const os = require('os');
 const https = require('https');
 const { spawn } = require('child_process');
@@ -22,7 +23,7 @@ function resolveInstallRoot() {
     return path.join(os.homedir(), '.enana', 'plannotate');
   }
 
-  return path.join(__dirname, 'data', 'plannotate');
+  return path.join(PROJECT_ROOT, 'data', 'plannotate');
 }
 
 const PLANNOTATE_INSTALL_ROOT = resolveInstallRoot();
@@ -518,7 +519,7 @@ async function copyDirectory(sourceDir, destinationDir) {
 
 function localMetadataSourceDir() {
   const candidates = [
-    path.join(__dirname, 'tmp', 'pLannotate-src', 'plannotate', 'data', 'data'),
+    path.join(PROJECT_ROOT, 'tmp', 'pLannotate-src', 'plannotate', 'data', 'data'),
     path.join(process.cwd(), 'tmp', 'pLannotate-src', 'plannotate', 'data', 'data')
   ];
   return candidates.find((candidate) => fs.existsSync(path.join(candidate, 'snapgene.csv'))) || '';
@@ -526,7 +527,7 @@ function localMetadataSourceDir() {
 
 function localDbSourceDir() {
   const candidates = [
-    path.join(__dirname, 'tmp', 'pLannotate-src', 'plannotate', 'data', 'BLAST_dbs'),
+    path.join(PROJECT_ROOT, 'tmp', 'pLannotate-src', 'plannotate', 'data', 'BLAST_dbs'),
     path.join(process.cwd(), 'tmp', 'pLannotate-src', 'plannotate', 'data', 'BLAST_dbs')
   ];
   return candidates.find((candidate) => fs.existsSync(path.join(candidate, 'snapgene.nsq'))) || '';
@@ -621,8 +622,8 @@ async function installExecutables(logs) {
 function resolveDataDir() {
   const candidates = [
     PLANNOTATE_INSTALL_DATA_DIR,
-    path.join(__dirname, 'data', 'plannotate', 'data'),
-    path.join(__dirname, 'tmp', 'pLannotate-src', 'plannotate', 'data', 'data'),
+    path.join(PROJECT_ROOT, 'data', 'plannotate', 'data'),
+    path.join(PROJECT_ROOT, 'tmp', 'pLannotate-src', 'plannotate', 'data', 'data'),
     path.join(process.cwd(), 'data', 'plannotate', 'data'),
     path.join(process.cwd(), 'tmp', 'pLannotate-src', 'plannotate', 'data', 'data')
   ];
@@ -641,8 +642,8 @@ function resolveDbDir(preferredDbDir = '') {
     preferredDbDir,
     envDir,
     PLANNOTATE_INSTALL_DB_DIR,
-    path.join(__dirname, 'data', 'plannotate', 'BLAST_dbs'),
-    path.join(__dirname, 'tmp', 'pLannotate-src', 'plannotate', 'data', 'BLAST_dbs'),
+    path.join(PROJECT_ROOT, 'data', 'plannotate', 'BLAST_dbs'),
+    path.join(PROJECT_ROOT, 'tmp', 'pLannotate-src', 'plannotate', 'data', 'BLAST_dbs'),
     path.join(process.cwd(), 'data', 'plannotate', 'BLAST_dbs'),
     path.join(process.cwd(), 'tmp', 'pLannotate-src', 'plannotate', 'data', 'BLAST_dbs')
   ]

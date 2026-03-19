@@ -6,8 +6,8 @@ import path from 'node:path';
 const ROOT_DIR = process.cwd();
 const HTML_PATH = path.join(ROOT_DIR, 'index.html');
 const JS_SCAN_ROOTS = [
-  path.join(ROOT_DIR, 'modules'),
-  path.join(ROOT_DIR, 'renderer.js')
+  path.join(ROOT_DIR, 'src', 'renderer', 'modules'),
+  path.join(ROOT_DIR, 'src', 'renderer', 'renderer.js')
 ];
 const ALLOWED_MISSING_IDS = new Set([
   'exit-btn'

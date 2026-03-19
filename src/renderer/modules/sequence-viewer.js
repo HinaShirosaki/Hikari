@@ -2002,6 +2002,8 @@ export function initSequenceViewer() {
     selectedLibraryEntryId: '',
     activeEntryId: '',
     activeEntryStatus: '',
+    lastLibraryClickEntryId: '',
+    lastLibraryClickAt: 0,
     sequenceSelectionAnchor: null,
     sequenceSelectionFocus: null,
     sequenceCursorBase: null,
@@ -2219,6 +2221,33 @@ export function initSequenceViewer() {
     state.selectedLibraryEntryId = cleanText(entryId, 200);
     renderLibraryList();
     await loadSelectedLibraryPreview();
+  }
+
+  function resolveLibraryEntryIdFromEvent(event) {
+    const target = event?.target;
+    const direct = cleanText(target?.dataset?.sequenceEntryId, 200);
+    if (direct) {
+      return direct;
+    }
+
+    const viaClosest = cleanText(
+      target?.closest?.('[data-sequence-entry-id]')?.dataset?.sequenceEntryId,
+      200
+    );
+    if (viaClosest) {
+      return viaClosest;
+    }
+
+    let cursor = target?.parentElement || target?.parentNode || null;
+    while (cursor) {
+      const resolved = cleanText(cursor?.dataset?.sequenceEntryId, 200);
+      if (resolved) {
+        return resolved;
+      }
+      cursor = cursor.parentElement || cursor.parentNode || null;
+    }
+
+    return '';
   }
 
   function getFeatureByIndexForRecord(record, index) {
@@ -3139,21 +3168,22 @@ export function initSequenceViewer() {
   });
 
   libraryList?.addEventListener('click', (event) => {
-    const trigger = event.target?.closest?.('[data-sequence-entry-id]') || null;
-    const entryId = cleanText(trigger?.dataset?.sequenceEntryId, 200);
+    const entryId = resolveLibraryEntryIdFromEvent(event);
     if (!entryId) {
       return;
     }
-    void setSelectedLibraryEntry(entryId);
-  });
 
-  libraryList?.addEventListener('dblclick', (event) => {
-    const trigger = event.target?.closest?.('[data-sequence-entry-id]') || null;
-    const entryId = cleanText(trigger?.dataset?.sequenceEntryId, 200);
-    if (!entryId) {
-      return;
+    const now = Date.now();
+    const previousEntryId = cleanText(state.lastLibraryClickEntryId, 200);
+    const elapsedMs = now - (Number(state.lastLibraryClickAt) || 0);
+    const isDoubleActivate = previousEntryId === entryId && elapsedMs >= 0 && elapsedMs <= 450;
+    state.lastLibraryClickEntryId = entryId;
+    state.lastLibraryClickAt = now;
+
+    void setSelectedLibraryEntry(entryId);
+    if (isDoubleActivate) {
+      void openLibraryEntryInDetail(entryId);
     }
-    void openLibraryEntryInDetail(entryId);
   });
 
   recordSelect?.addEventListener('change', () => {

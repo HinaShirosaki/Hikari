@@ -1,5 +1,6 @@
 const fs = require('fs/promises');
 const path = require('path');
+const PROJECT_ROOT = path.resolve(__dirname, '..', '..', '..');
 const { app } = require('electron');
 const { Telegraf } = require('telegraf');
 
@@ -316,7 +317,7 @@ function getTelegramLogPathCandidates() {
 
   const candidates = [];
   if (!app.isPackaged) {
-    candidates.push(path.join(__dirname, 'data', 'telegram-events.log'));
+    candidates.push(path.join(PROJECT_ROOT, 'data', 'telegram-events.log'));
     candidates.push(path.join(process.cwd(), 'data', 'telegram-events.log'));
   } else {
     candidates.push(path.join(process.cwd(), 'data', 'telegram-events.log'));

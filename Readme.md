@@ -286,20 +286,25 @@ Generated file:
 
 ## 10) Project Structure
 
-- `main.js`: Electron main process, IPC handlers, LLM agent controller, Telegram lifecycle
-- `preload.js`: secure bridge (`window.enanaApi`)
-- `renderer.js`: app bootstrap, navigation, search routing, cross-module refresh
-- `modules/`: feature modules
+- `src/main/main.js`: Electron main process, IPC handlers, LLM agent controller, Telegram lifecycle
+- `src/main/preload.js`: secure bridge (`window.enanaApi`)
+- `src/renderer/renderer.js`: app bootstrap, navigation, search routing, cross-module refresh
+- `src/renderer/modules/`: renderer feature modules
+- `src/main/helpers/`: main-process helper modules (agent + data + sequence library)
+- `src/main/lib/`: main-process support libraries (`telegramBot`, `plannotate-engine`, `main-utils`, `codex-cli-provider`)
 - `ui/html/**` + `ui/css/**`: source partials for UI composition
 - `ui/config/html-order.json`: source-of-truth order for HTML assembly
 - `ui/config/css-order.json`: source-of-truth order for CSS assembly
 - `scripts/build-ui.mjs`: deterministic UI generator for `index.html` and `styles.css`
 - `scripts/check-dom-ids.mjs`: validates `document.getElementById()` references against generated markup
+- `tests/suites/core/**`: core functional suites (agent flows, module behavior, contracts)
+- `tests/suites/edge/**`: edge/regression suites (state normalization, sequence/tool-box/gel edge cases)
+- `tests/README.md`: test organization and maintenance conventions
 - `index.html`: generated runtime HTML (committed)
 - `styles.css`: generated import manifest (committed) that loads `ui/css/**` in deterministic order
 - `data/llm-prompts.json`: configurable prompts for papers/agent
 - `data/agent-io-contract.json`: JSON input/output contract for LLM-facing functions and agent tools
-- `telegramBot.js`: Telegram command handling
+- `src/main/lib/telegramBot.js`: Telegram command handling
 
 ## 11) Troubleshooting
 
