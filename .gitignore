@@ -8,3 +8,5 @@ tmp/
 *.log
 output/
 Agent.md
+.codex/
+.vscode/
