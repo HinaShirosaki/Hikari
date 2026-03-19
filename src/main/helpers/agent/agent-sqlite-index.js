@@ -1,8 +1,9 @@
 const fs = require('fs/promises');
 const path = require('path');
-const { normalizeDataFilePath } = require('../../main-utils');
+const PROJECT_ROOT = path.resolve(__dirname, '..', '..', '..', '..');
+const { normalizeDataFilePath } = require('../../lib/main-utils');
 
-const SQLJS_WASM_JS_PATH = path.join(__dirname, '..', '..', 'vendor', 'sqljs', 'sql-wasm.js');
+const SQLJS_WASM_JS_PATH = path.join(PROJECT_ROOT, 'vendor', 'sqljs', 'sql-wasm.js');
 const LEGACY_PROTOCOLS_FILE_NAME = 'protocols.json';
 const LEGACY_NOTEBOOK_FILE_NAME = 'notebook-pages.json';
 const PROTOCOLS_SCHEMA_NAME = 'enana_protocols';

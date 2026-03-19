@@ -2,8 +2,9 @@
 
 const fs = require('fs/promises');
 const path = require('path');
+const PROJECT_ROOT = path.resolve(__dirname, '..', '..', '..', '..');
 
-const SQLJS_WASM_JS_PATH = path.join(__dirname, '..', '..', 'vendor', 'sqljs', 'sql-wasm.js');
+const SQLJS_WASM_JS_PATH = path.join(PROJECT_ROOT, 'vendor', 'sqljs', 'sql-wasm.js');
 const LIBRARY_FOLDER_NAME = 'SequenceViewer';
 const DB_FILE_NAME = 'sequence-library.sqlite';
 const STATUS_SAVED = 'saved';

@@ -182,11 +182,11 @@ def main():
 
     page.section("How It Works")
     page.bullet_list([
-        "Electron main process (`main.js`) creates the desktop window, handles file dialogs, auto-save/load, "
+        "Electron main process (`src/main/main.js`) creates the desktop window, handles file dialogs, auto-save/load, "
         "agent requests, and Telegram bot lifecycle.",
-        "A preload bridge (`preload.js`) exposes a narrow IPC API to the renderer for storage, agent chat, and Telegram actions.",
-        "The renderer (`renderer.js`) initializes domain modules from `modules/` and coordinates cross-module refreshes.",
-        "Client state lives in browser `localStorage` via `modules/shared.js`; the app can also persist/load a JSON or `.ena` data file.",
+        "A preload bridge (`src/main/preload.js`) exposes a narrow IPC API to the renderer for storage, agent chat, and Telegram actions.",
+        "The renderer (`src/renderer/renderer.js`) initializes domain modules from `src/renderer/modules/` and coordinates cross-module refreshes.",
+        "Client state lives in browser `localStorage` via `src/renderer/modules/shared.js`; the app can also persist/load a JSON or `.ena` data file.",
         "Optional data flow: renderer sends agent prompts to the main process, which calls an LLM endpoint; Telegram commands are forwarded into the renderer."
     ])
 

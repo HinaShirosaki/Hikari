@@ -2,7 +2,7 @@
   "name": "enana",
   "version": "1.0.0",
   "description": "Electron shell for Enana sub-app launcher",
-  "main": "main.js",
+  "main": "src/main/main.js",
   "scripts": {
     "build:ui": "node scripts/build-ui.mjs",
     "check:dom-ids": "node scripts/check-dom-ids.mjs",
