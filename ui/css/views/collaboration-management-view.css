@@ -1,1 +1,6 @@
-/* collaboration-management-view styles (intentionally empty for initial split) */
+/* collaboration-management-view */
+
+/* Extracted from ui/css/overrides/cross-view-fixes.css */
+#collaboration-management-view #inbox-list {
+  margin-top: 10px;
+}

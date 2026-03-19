@@ -1013,6 +1013,40 @@ function buildHighlightedLineMarkup(sourceText, lineStart, lineEnd, lineHighligh
   return body;
 }
 
+function normalizeHighlightSegments(segments, sequenceLength = null) {
+  const maxLength = Number.isFinite(Number(sequenceLength))
+    ? Math.max(0, Number(sequenceLength))
+    : Number.POSITIVE_INFINITY;
+  const normalized = (Array.isArray(segments) ? segments : [])
+    .map((segment) => ({
+      start: clamp(Math.round(Number(segment?.start) || 0), 0, maxLength),
+      end: clamp(Math.round(Number(segment?.end) || 0), 0, maxLength)
+    }))
+    .filter((segment) => segment.end > segment.start)
+    .sort((left, right) => {
+      if (left.start !== right.start) {
+        return left.start - right.start;
+      }
+      return left.end - right.end;
+    });
+
+  if (!normalized.length) {
+    return [];
+  }
+
+  const merged = [normalized[0]];
+  for (let i = 1; i < normalized.length; i += 1) {
+    const previous = merged[merged.length - 1];
+    const current = normalized[i];
+    if (current.start <= previous.end) {
+      previous.end = Math.max(previous.end, current.end);
+    } else {
+      merged.push(current);
+    }
+  }
+  return merged;
+}
+
 function getEnanaApiBridge() {
   return globalThis?.window?.enanaApi || globalThis?.enanaApi || null;
 }
@@ -1490,17 +1524,15 @@ function renderDualStrandSequenceLinesHtml(sequence, highlightedSegments = [], o
   const selectedFeatureIndex = Number.isFinite(Number(options?.selectedFeatureIndex))
     ? Number(options.selectedFeatureIndex)
     : -1;
+  const cursorBaseIndex = Number.isFinite(Number(options?.cursorBaseIndex))
+    ? Number(options.cursorBaseIndex)
+    : null;
   const indexedFeatures = Array.isArray(options?.features)
     ? options.features.map((feature, index) => ({ feature, index }))
     : [];
   const complementary = complementSequence(text);
-  const sortedHighlights = highlightedSegments
-    .map((segment) => ({
-      start: Math.max(0, Number(segment.start) || 0),
-      end: Math.max(0, Number(segment.end) || 0)
-    }))
-    .filter((segment) => segment.end > segment.start)
-    .sort((a, b) => a.start - b.start);
+  const sortedHighlights = normalizeHighlightSegments(highlightedSegments, text.length);
+  const strandPairHeightPx = Math.max(8, (sequenceLineHeightPx * 2) + STRAND_PAIR_ROW_GAP_PX);
 
   const lines = [];
 
@@ -1534,12 +1566,19 @@ function renderDualStrandSequenceLinesHtml(sequence, highlightedSegments = [], o
       charAdvancePx,
       lineFeatureOffsetPx
     );
+    const hasCursorOnLine = Number.isFinite(cursorBaseIndex) && cursorBaseIndex >= lineStart && cursorBaseIndex <= lineEnd;
+    const cursorLeftPx = hasCursorOnLine
+      ? lineFeatureOffsetPx + ((cursorBaseIndex - lineStart) * charAdvancePx)
+      : null;
 
     lines.push(`
-      <div class="sequence-viewer-dual-line">
+      <div class="sequence-viewer-dual-line" data-line-start="${lineStart}" data-line-end="${lineEnd}">
         <span class="sequence-viewer-seq-coord">${(lineStart + 1).toLocaleString()}</span>
         <div class="sequence-viewer-strand-block">
           <div class="sequence-viewer-strand-pair">
+            ${hasCursorOnLine
+    ? `<span class="sequence-viewer-line-cursor" style="left:${cursorLeftPx.toFixed(3)}px;height:${strandPairHeightPx.toFixed(3)}px;" aria-hidden="true"></span>`
+    : ''}
             <div class="sequence-viewer-strand-row sequence-viewer-strand-row-top">
               <span class="sequence-viewer-strand-end">5'</span>
               <span class="sequence-viewer-seq-text sequence-viewer-seq-text-top">
@@ -1962,7 +2001,17 @@ export function initSequenceViewer() {
     libraryEntries: [],
     selectedLibraryEntryId: '',
     activeEntryId: '',
-    activeEntryStatus: ''
+    activeEntryStatus: '',
+    sequenceSelectionAnchor: null,
+    sequenceSelectionFocus: null,
+    sequenceCursorBase: null,
+    isSelectingSequence: false,
+    sequenceLayout: {
+      lineLength: DEFAULT_SEQUENCE_LINE_LENGTH,
+      charAdvancePx: FALLBACK_CHAR_ADVANCE_PX,
+      lineHeightPx: FALLBACK_SEQUENCE_LINE_HEIGHT_PX,
+      lineFeatureOffsetPx: DEFAULT_STRAND_MARKER_COLUMN_PX + DEFAULT_STRAND_COLUMN_GAP_PX
+    }
   };
 
   const sequenceHoverTooltip = (() => {
@@ -2399,6 +2448,82 @@ export function initSequenceViewer() {
     return state.records[index] || null;
   }
 
+  function clearSequenceSelection(options = {}) {
+    const preserveCursor = Boolean(options?.preserveCursor);
+    state.sequenceSelectionAnchor = null;
+    state.sequenceSelectionFocus = null;
+    state.isSelectingSequence = false;
+    if (!preserveCursor) {
+      state.sequenceCursorBase = null;
+    }
+  }
+
+  function getSequenceSelectionSegments(record) {
+    const sequenceLength = Math.max(0, Number(record?.sequence?.length) || 0);
+    if (!sequenceLength) {
+      return [];
+    }
+
+    const anchor = Number(state.sequenceSelectionAnchor);
+    const focus = Number(state.sequenceSelectionFocus);
+    if (!Number.isFinite(anchor) || !Number.isFinite(focus)) {
+      return [];
+    }
+
+    const start = clamp(Math.min(anchor, focus), 0, sequenceLength);
+    const end = clamp(Math.max(anchor, focus), 0, sequenceLength);
+    if (end <= start) {
+      return [];
+    }
+    return [{ start, end }];
+  }
+
+  function resolveSequenceBoundaryFromEvent(event, record) {
+    const sequenceLength = Math.max(0, Number(record?.sequence?.length) || 0);
+    if (!sequenceLength) {
+      return null;
+    }
+
+    const target = event?.target;
+    const lineElement = target?.closest?.('.sequence-viewer-dual-line') || null;
+    if (!lineElement) {
+      return null;
+    }
+
+    const lineStart = Number(lineElement?.dataset?.lineStart);
+    const lineEnd = Number(lineElement?.dataset?.lineEnd);
+    if (!Number.isFinite(lineStart) || !Number.isFinite(lineEnd) || lineEnd <= lineStart) {
+      return null;
+    }
+
+    const lineSpan = lineEnd - lineStart;
+    const seqTextElement = lineElement.querySelector?.('.sequence-viewer-strand-row-top .sequence-viewer-seq-text');
+    const rawX = Number(event?.clientX);
+    const safeAdvance = Math.max(1, Number(state.sequenceLayout?.charAdvancePx) || FALLBACK_CHAR_ADVANCE_PX);
+
+    let relativeX = null;
+    if (seqTextElement && Number.isFinite(rawX) && typeof seqTextElement.getBoundingClientRect === 'function') {
+      const rect = seqTextElement.getBoundingClientRect();
+      if (Number.isFinite(rect?.left) && Number.isFinite(rect?.width) && rect.width > 0) {
+        relativeX = clamp(rawX - rect.left, 0, rect.width);
+      }
+    }
+
+    if (!Number.isFinite(relativeX)) {
+      const fallbackOffsetX = Number(event?.offsetX);
+      if (Number.isFinite(fallbackOffsetX)) {
+        relativeX = Math.max(0, fallbackOffsetX);
+      }
+    }
+
+    if (!Number.isFinite(relativeX)) {
+      return null;
+    }
+
+    const localBoundary = clamp(Math.round(relativeX / safeAdvance), 0, lineSpan);
+    return clamp(lineStart + localBoundary, 0, sequenceLength);
+  }
+
   function syncAnnotateButtonState() {
     if (!annotateBtn) {
       return;
@@ -2504,11 +2629,14 @@ export function initSequenceViewer() {
     featureDetail.innerHTML = formatSelectedFeatureDetailHtml(selected, record.sequence.length);
   }
 
-  function renderSequence(record) {
+  function renderSequence(record, options = {}) {
     if (!sequenceHost) {
       return;
     }
     hideSequenceHoverTooltip();
+
+    const preserveScroll = Boolean(options?.preserveScroll);
+    const previousScrollTop = preserveScroll ? Math.max(0, Number(sequenceHost.scrollTop) || 0) : 0;
 
     if (!record) {
       sequenceHost.innerHTML = '<p class="small-note">Load sequence data to begin.</p>';
@@ -2520,23 +2648,35 @@ export function initSequenceViewer() {
       ? features[state.selectedFeatureIndex] || null
       : null;
 
-    const highlights = selectedFeature?.segments || [];
+    const selectionHighlights = getSequenceSelectionSegments(record);
+    const highlights = selectionHighlights.length
+      ? selectionHighlights
+      : normalizeHighlightSegments(selectedFeature?.segments || [], record.sequence.length);
     const {
       lineLength,
       charAdvancePx,
       lineHeightPx,
       lineFeatureOffsetPx
     } = computeSequenceLayoutMetrics();
+    state.sequenceLayout = {
+      lineLength,
+      charAdvancePx,
+      lineHeightPx,
+      lineFeatureOffsetPx
+    };
     sequenceHost.innerHTML = renderDualStrandSequenceLinesHtml(record.sequence, highlights, {
       lineLength,
       charAdvancePx,
       sequenceLineHeightPx: lineHeightPx,
       lineFeatureOffsetPx,
       features,
-      selectedFeatureIndex: state.selectedFeatureIndex
+      selectedFeatureIndex: state.selectedFeatureIndex,
+      cursorBaseIndex: state.sequenceCursorBase
     });
 
-    if (highlights.length) {
+    if (preserveScroll) {
+      sequenceHost.scrollTop = previousScrollTop;
+    } else if (highlights.length) {
       const first = highlights[0];
       const firstLine = Math.max(0, Math.floor(first.start / lineLength));
       sequenceHost.scrollTop = Math.max(0, (firstLine * DUAL_STRAND_SCROLL_STEP) - 42);
@@ -2611,6 +2751,7 @@ export function initSequenceViewer() {
     state.isAnnotating = false;
     state.selectedRecordIndex = 0;
     state.selectedFeatureIndex = -1;
+    clearSequenceSelection();
 
     updateRecordSelect();
     renderActiveRecord();
@@ -3018,6 +3159,7 @@ export function initSequenceViewer() {
   recordSelect?.addEventListener('change', () => {
     state.selectedRecordIndex = clamp(Number(recordSelect.value) || 0, 0, Math.max(0, state.records.length - 1));
     state.selectedFeatureIndex = -1;
+    clearSequenceSelection();
     renderActiveRecord();
     const selected = getSelectedRecord();
     if (selected && saveNameInput) {
@@ -3035,31 +3177,97 @@ export function initSequenceViewer() {
       return;
     }
     state.selectedFeatureIndex = index;
+    clearSequenceSelection();
     renderActiveRecord();
   });
 
-  sequenceHost?.addEventListener('mousemove', (event) => {
-    const trigger = event.target?.closest?.('[data-feature-index]') || null;
-    if (!trigger) {
-      hideSequenceHoverTooltip();
+  sequenceHost?.addEventListener('mousedown', (event) => {
+    const button = Number(event?.button);
+    if (Number.isFinite(button) && button !== 0) {
       return;
     }
-    const index = Number(trigger.dataset.featureIndex);
-    if (!Number.isFinite(index)) {
-      hideSequenceHoverTooltip();
+    const featureTrigger = event.target?.closest?.('[data-feature-index]') || null;
+    if (featureTrigger) {
       return;
     }
     const record = getSelectedRecord();
-    const feature = getFeatureByIndexForRecord(record, index);
-    if (!feature || !record) {
-      hideSequenceHoverTooltip();
+    const boundary = resolveSequenceBoundaryFromEvent(event, record);
+    if (!Number.isFinite(boundary)) {
       return;
     }
-    showSequenceHoverTooltip(event, feature, record.sequence.length);
+    event.preventDefault?.();
+    state.isSelectingSequence = true;
+    state.sequenceSelectionAnchor = boundary;
+    state.sequenceSelectionFocus = boundary;
+    state.sequenceCursorBase = boundary;
+    renderSequence(record, { preserveScroll: true });
+  });
+
+  sequenceHost?.addEventListener('mousemove', (event) => {
+    const record = getSelectedRecord();
+    const featureTrigger = event.target?.closest?.('[data-feature-index]') || null;
+    let rerenderNeeded = false;
+
+    if (state.isSelectingSequence) {
+      const boundary = resolveSequenceBoundaryFromEvent(event, record);
+      if (Number.isFinite(boundary)) {
+        if (state.sequenceSelectionFocus !== boundary) {
+          state.sequenceSelectionFocus = boundary;
+          rerenderNeeded = true;
+        }
+        if (state.sequenceCursorBase !== boundary) {
+          state.sequenceCursorBase = boundary;
+          rerenderNeeded = true;
+        }
+      }
+      hideSequenceHoverTooltip();
+      if (rerenderNeeded) {
+        renderSequence(record, { preserveScroll: true });
+      }
+      return;
+    }
+
+    if (featureTrigger) {
+      const index = Number(featureTrigger.dataset.featureIndex);
+      if (!Number.isFinite(index)) {
+        hideSequenceHoverTooltip();
+        return;
+      }
+      const feature = getFeatureByIndexForRecord(record, index);
+      if (!feature || !record) {
+        hideSequenceHoverTooltip();
+        return;
+      }
+      showSequenceHoverTooltip(event, feature, record.sequence.length);
+      return;
+    }
+
+    hideSequenceHoverTooltip();
+    const boundary = resolveSequenceBoundaryFromEvent(event, record);
+    if (Number.isFinite(boundary)) {
+      if (state.sequenceCursorBase !== boundary) {
+        state.sequenceCursorBase = boundary;
+        rerenderNeeded = true;
+      }
+    } else if (Number.isFinite(state.sequenceCursorBase)) {
+      state.sequenceCursorBase = null;
+      rerenderNeeded = true;
+    }
+
+    if (rerenderNeeded) {
+      renderSequence(record, { preserveScroll: true });
+    }
   });
 
   sequenceHost?.addEventListener('mouseleave', () => {
     hideSequenceHoverTooltip();
+    if (state.isSelectingSequence) {
+      return;
+    }
+    if (Number.isFinite(state.sequenceCursorBase)) {
+      state.sequenceCursorBase = null;
+      renderSequence(getSelectedRecord(), { preserveScroll: true });
+    }
   });
 
   sequenceHost?.addEventListener('scroll', () => {
@@ -3076,11 +3284,20 @@ export function initSequenceViewer() {
       return;
     }
     state.selectedFeatureIndex = index;
+    clearSequenceSelection({ preserveCursor: true });
     renderActiveRecord();
   });
 
+  globalThis.addEventListener?.('mouseup', () => {
+    if (!state.isSelectingSequence) {
+      return;
+    }
+    state.isSelectingSequence = false;
+    renderSequence(getSelectedRecord(), { preserveScroll: true });
+  });
+
   globalThis.addEventListener?.('resize', () => {
-    renderSequence(getSelectedRecord());
+    renderSequence(getSelectedRecord(), { preserveScroll: true });
   });
 
   function loadFromExternal(payload) {

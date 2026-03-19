@@ -1,1 +1,131 @@
-/* gel-view styles (intentionally empty for initial split) */
+/* gel-view */
+
+/* Extracted from ui/css/themes/modes.css */
+.gel-canvas-shell {
+  border: 1px solid rgba(53, 99, 153, 0.24);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.74);
+  overflow: visible;
+  min-height: 0;
+  max-height: none;
+  height: auto;
+}
+
+.gel-workbench {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+}
+
+.gel-manual-progress {
+  border: 1px solid rgba(53, 99, 153, 0.24);
+  border-radius: 10px;
+  padding: 10px;
+  background: rgba(247, 251, 255, 0.9);
+}
+
+.gel-step-list {
+  margin: 0 0 8px;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+  font-size: 0.86rem;
+}
+
+.gel-step-list li {
+  color: #5b6f89;
+}
+
+.gel-step-list li.is-active {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.gel-step-list li.is-done {
+  color: #166534;
+}
+
+#gel-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-height: 360px;
+}
+
+#gel-cropper-image {
+  display: none;
+  width: 100%;
+  height: auto;
+  min-height: 360px;
+}
+
+#gel-cropper-image.is-active {
+  display: block;
+  min-height: 70vh;
+}
+
+.gel-report-json {
+  margin: 10px 0 0;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(53, 99, 153, 0.2);
+  background: rgba(247, 251, 255, 0.9);
+  color: var(--text);
+  overflow: auto;
+  max-height: 420px;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+body.theme-night .gel-canvas-shell {
+  border-color: rgba(145, 174, 214, 0.32);
+  background: rgba(20, 33, 57, 0.72);
+}
+
+body.theme-night .gel-manual-progress {
+  border-color: rgba(145, 174, 214, 0.3);
+  background: rgba(22, 36, 62, 0.9);
+}
+
+@media (min-width: 1100px) {
+  .gel-workbench {
+    grid-template-columns: minmax(0, 1fr) 260px;
+    align-items: start;
+  }
+}
+
+body.theme-night .gel-report-json {
+  border-color: rgba(145, 174, 214, 0.3);
+  background: rgba(22, 36, 62, 0.9);
+}
+
+/* Extracted from ui/css/overrides/cross-view-fixes.css */
+#gel-form label {
+  min-width: 0;
+}
+
+#gel-form #gel-image-file,
+#gel-form #gel-notebook-entry {
+  width: 100%;
+}
+
+#gel-form .gel-slider-field input[type='range'] {
+  width: 100%;
+}
+
+#gel-form .gel-slider-field .small-note {
+  display: block;
+  margin-top: 4px;
+}
+
+@media (max-width: 960px) {
+  #gel-form {
+    grid-template-columns: 1fr;
+  }
+
+  #gel-form .form-actions {
+    width: 100%;
+  }
+}

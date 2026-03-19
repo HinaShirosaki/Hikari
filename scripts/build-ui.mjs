@@ -96,23 +96,35 @@ async function buildHtml() {
 
 async function buildCss() {
   const config = await readJson(CSS_CONFIG_PATH);
-  const segments = [];
+  const inputs = config.inputs || [];
+  const seen = new Set();
+  const importLines = [];
 
-  for (const file of config.inputs || []) {
+  for (const file of inputs) {
     if (!file || typeof file !== 'string') {
       throw new Error('Each CSS input entry must be a non-empty string');
     }
-    const contents = await readText(file);
-    segments.push(`/* SOURCE: ${file} */\n${contents.trimEnd()}\n`);
+    if (seen.has(file)) {
+      throw new Error(`Duplicate CSS input entry in css-order.json: ${file}`);
+    }
+    seen.add(file);
+
+    // Validate source CSS exists/readable.
+    await readText(file);
+
+    const relativeImport = toPosix(path.relative(path.dirname(config.output), file));
+    const importPath = relativeImport.startsWith('.') ? relativeImport : `./${relativeImport}`;
+    importLines.push(`@import url("${importPath}");`);
   }
 
   const cssHeader = [
     '/* AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY. */',
     `/* Source config: ${toPosix(path.relative(ROOT_DIR, CSS_CONFIG_PATH))} */`,
+    '/* Intentionally kept as an import manifest to reduce merge conflicts across branches. */',
     ''
   ].join('\n');
 
-  const css = `${cssHeader}${segments.join('\n')}`;
+  const css = `${cssHeader}${importLines.join('\n')}\n`;
   await writeText(config.output, css.endsWith('\n') ? css : `${css}\n`);
   return config.output;
 }

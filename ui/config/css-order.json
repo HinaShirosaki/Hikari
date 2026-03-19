@@ -2,6 +2,7 @@
   "output": "styles.css",
   "inputs": [
     "ui/css/base/core.css",
+    "ui/css/themes/modes.css",
     "ui/css/views/home-view.css",
     "ui/css/views/lab-management-view.css",
     "ui/css/views/instrument-management-view.css",
@@ -21,7 +22,6 @@
     "ui/css/views/agent-view.css",
     "ui/css/views/tool-box-view.css",
     "ui/css/views/sequence-viewer-view.css",
-    "ui/css/themes/modes.css",
     "ui/css/overrides/cross-view-fixes.css"
   ]
 }

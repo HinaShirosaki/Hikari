@@ -1,1 +1,180 @@
-/* synthesis-notebook-view styles (intentionally empty for initial split) */
+/* synthesis-notebook-view */
+
+/* Extracted from ui/css/base/core.css */
+.inline-placeholder-wrap {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: baseline;
+}
+
+.inline-placeholder-token {
+  display: inline-flex;
+  align-items: center;
+  background: linear-gradient(140deg, rgba(201, 228, 255, 0.9), rgba(174, 212, 255, 0.64));
+  color: #0f4f84;
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 0.85rem;
+  cursor: text;
+}
+
+.inline-placeholder-token.is-empty {
+  color: #1f5f93;
+}
+
+.inline-placeholder-editor {
+  min-width: 90px;
+  max-width: 180px;
+  font-size: 0.85rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.notebook-chemistry {
+  margin: 12px 0;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.62);
+  background: linear-gradient(150deg, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0.42));
+}
+
+.notebook-chemistry-head h4 {
+  margin: 0;
+}
+
+.reaction-scheme {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.46);
+}
+
+.reaction-scheme-summary {
+  margin-bottom: 8px;
+}
+
+.reaction-node {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+}
+
+.reaction-structure-image {
+  width: 96px;
+  height: 72px;
+  object-fit: contain;
+  background: #fff;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.reaction-node-label {
+  font-size: 0.78rem;
+  color: var(--text);
+  max-width: 110px;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.reaction-plus,
+.reaction-arrow {
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.reaction-product {
+  font-weight: 700;
+}
+
+.reaction-numbering {
+  margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.reaction-number {
+  min-width: 28px;
+  text-align: center;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-weight: 700;
+  color: #0f4f84;
+  background: linear-gradient(140deg, rgba(201, 228, 255, 0.9), rgba(174, 212, 255, 0.64));
+  border: 1px solid rgba(255, 255, 255, 0.75);
+}
+
+.chem-mw-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.chem-mw-table th,
+.chem-mw-table td {
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  padding: 6px 8px;
+  text-align: left;
+}
+
+.chem-mw-table td input {
+  width: 100%;
+}
+
+.placeholder-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.placeholder-input input {
+  flex: 1;
+}
+
+/* Extracted from ui/css/themes/modes.css */
+body.ui-neutral-compact .chem-mw-table th,
+body.ui-neutral-compact .chem-mw-table td {
+  border: 0;
+  border-bottom: 1px solid #d7dee7;
+  padding: 3px 6px;
+  font-size: 0.84rem;
+}
+
+body.ui-neutral-compact.theme-night .chem-mw-table th,
+body.ui-neutral-compact.theme-night .chem-mw-table td {
+  border-bottom-color: #334155;
+}
+
+body.ui-neutral-compact .chem-mw-table th {
+  color: var(--text);
+  font-weight: 700;
+}
+
+body.ui-neutral-compact .chem-mw-table tr:last-child td {
+  border-bottom: 0;
+}
+
+body.ui-neutral-compact .reaction-number,
+body.ui-neutral-compact .inline-placeholder-token {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #1e293b;
+}
+
+body.ui-neutral-compact.theme-night .reaction-number,
+body.ui-neutral-compact.theme-night .inline-placeholder-token {
+  background: #1e293b;
+  border-color: #475569;
+  color: var(--text);
+}

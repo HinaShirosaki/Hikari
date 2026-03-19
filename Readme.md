@@ -295,7 +295,8 @@ Generated file:
 - `ui/config/css-order.json`: source-of-truth order for CSS assembly
 - `scripts/build-ui.mjs`: deterministic UI generator for `index.html` and `styles.css`
 - `scripts/check-dom-ids.mjs`: validates `document.getElementById()` references against generated markup
-- `index.html` + `styles.css`: generated runtime assets (committed)
+- `index.html`: generated runtime HTML (committed)
+- `styles.css`: generated import manifest (committed) that loads `ui/css/**` in deterministic order
 - `data/llm-prompts.json`: configurable prompts for papers/agent
 - `data/agent-io-contract.json`: JSON input/output contract for LLM-facing functions and agent tools
 - `telegramBot.js`: Telegram command handling

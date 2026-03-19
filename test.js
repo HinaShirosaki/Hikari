@@ -7769,6 +7769,24 @@ test('[EDGE] sequence-viewer line feature renderer emits px-based span bars', ()
   assert.match(html, /sequence-viewer-line-feature-label/);
 });
 
+test('[EDGE] sequence-viewer dual-strand renderer emits a cross-strand cursor at exact base boundary', () => {
+  const html = sequenceViewerInternals.renderDualStrandSequenceLinesHtml('ACGTACGTACGT', [], {
+    lineLength: 12,
+    charAdvancePx: 9,
+    sequenceLineHeightPx: 16,
+    cursorBaseIndex: 5
+  });
+  const cursorCount = (html.match(/sequence-viewer-line-cursor/g) || []).length;
+  assert.equal(cursorCount, 1);
+  const cursorStyle = html.match(/class="sequence-viewer-line-cursor" style="([^"]+)"/);
+  assert.equal(Boolean(cursorStyle), true);
+  assert.match(cursorStyle[1], /left:[0-9.]+px;/);
+  assert.match(cursorStyle[1], /height:[0-9.]+px;/);
+  assert.equal(cursorStyle[1].includes('%'), false);
+  assert.match(html, /data-line-start="0"/);
+  assert.match(html, /data-line-end="12"/);
+});
+
 test('[EDGE] sequence-viewer dual-strand renderer shows 5/3 orientation and paired highlights', () => {
   const html = sequenceViewerInternals.renderDualStrandSequenceLinesHtml('ACGTAC', [{ start: 1, end: 4 }]);
   assert.match(html, /sequence-viewer-strand-row-top/);
