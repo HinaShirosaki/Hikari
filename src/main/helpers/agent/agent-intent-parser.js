@@ -1,6 +1,6 @@
 'use strict';
 
-const PARSER_ALLOWED_INTENTS = Object.freeze([
+const PARSER_CANONICAL_INTENTS = Object.freeze([
   'protocol_to_notebook',
   'inventory_lookup',
   'record_lookup',
@@ -8,10 +8,19 @@ const PARSER_ALLOWED_INTENTS = Object.freeze([
   'general_science_question',
   'paper_analysis',
   'literature_search',
-  'data_analysis_or_coding',
+  'result_analysis',
   'mixed_request',
   'unclear'
 ]);
+
+const PARSER_INTENT_ALIASES = Object.freeze({
+  data_analysis_or_coding: 'result_analysis',
+  coding_data_analysis: 'result_analysis',
+  inventory_loopup: 'inventory_lookup',
+  record_loopup: 'record_lookup'
+});
+
+const PARSER_ALLOWED_INTENTS = PARSER_CANONICAL_INTENTS;
 
 const PARSER_SEARCH_MODES = Object.freeze([
   'exact_then_alias_then_fuzzy',
@@ -32,6 +41,8 @@ const PARSER_ENTITY_KEYS = Object.freeze([
   'requested_output'
 ]);
 
+const PARSER_PROTOCOL_CANDIDATE_LIMIT = 3;
+
 const INTENT_PARSER_PROMPT = `You are an intent and entity parser for a lab assistant app.
 
 Your job is to read the user's message and return JSON only.
@@ -49,7 +60,7 @@ You must:
 - general_science_question
 - paper_analysis
 - literature_search
-- data_analysis_or_coding
+- result_analysis
 - mixed_request
 - unclear
 
@@ -57,8 +68,6 @@ You must:
 
 {
   "primary_intent": "one allowed intent",
-  "secondary_intents": ["zero or more allowed intents"],
-  "confidence": 0.0,
   "needs_clarification": true,
   "clarification_reason": "string or null",
   "entities": {
@@ -79,6 +88,7 @@ You must:
     "aliases": [],
     "search_mode": null
   },
+  "protocol_candidates": [],
   "reasoning_summary": "brief explanation"
 }
 
@@ -86,9 +96,12 @@ You must:
 
 - Return JSON only.
 - Choose exactly one primary intent.
-- Use secondary_intents only when clearly necessary.
 - If the request is about inventory, reagent identity, chemical stock, reagent location, molecular weight in stock, or stored reagent metadata, use inventory_lookup.
+- For coding, data transforms, quantitative fitting, or result interpretation tasks, use result_analysis.
 - For inventory_lookup, populate inventory_search.
+- For protocol_to_notebook, populate protocol_candidates with 1 to 3 likely protocol names from the request.
+- protocol_candidates must include only protocol names and must not exceed 3 values.
+- For intents other than protocol_to_notebook, set protocol_candidates to [].
 - normalized_query should be the best canonical short query for database search.
 - candidate_terms should include likely exact names, normalized names, abbreviations, alternate punctuation, and common aliases.
 - aliases should include common alternate names if they are strongly implied by the user message.
@@ -128,30 +141,17 @@ const INTENT_PARSER_RESPONSE_SCHEMA = {
   additionalProperties: false,
   required: [
     'primary_intent',
-    'secondary_intents',
-    'confidence',
     'needs_clarification',
     'clarification_reason',
     'entities',
     'inventory_search',
+    'protocol_candidates',
     'reasoning_summary'
   ],
   properties: {
     primary_intent: {
       type: 'string',
       enum: PARSER_ALLOWED_INTENTS
-    },
-    secondary_intents: {
-      type: 'array',
-      items: {
-        type: 'string',
-        enum: PARSER_ALLOWED_INTENTS
-      }
-    },
-    confidence: {
-      type: 'number',
-      minimum: 0,
-      maximum: 1
     },
     needs_clarification: {
       type: 'boolean'
@@ -189,6 +189,11 @@ const INTENT_PARSER_RESPONSE_SCHEMA = {
           ]
         }
       }
+    },
+    protocol_candidates: {
+      type: 'array',
+      maxItems: PARSER_PROTOCOL_CANDIDATE_LIMIT,
+      items: { type: 'string' }
     },
     reasoning_summary: { type: 'string' }
   }
@@ -246,6 +251,22 @@ function parseRawPayload(rawValue) {
   }
 }
 
+function normalizeParserIntent(rawIntent) {
+  const normalized = cleanText(rawIntent, 80)
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+  if (!normalized) {
+    return '';
+  }
+  if (PARSER_CANONICAL_INTENTS.includes(normalized)) {
+    return normalized;
+  }
+  if (Object.prototype.hasOwnProperty.call(PARSER_INTENT_ALIASES, normalized)) {
+    return PARSER_INTENT_ALIASES[normalized];
+  }
+  return '';
+}
+
 function normalizeEntityBlock(rawEntities) {
   if (!isObject(rawEntities)) {
     return null;
@@ -279,6 +300,17 @@ function normalizeInventorySearch(rawInventorySearch) {
   };
 }
 
+function normalizeProtocolCandidates(rawCandidates, primaryIntent, entities = {}) {
+  if (primaryIntent !== 'protocol_to_notebook') {
+    return [];
+  }
+  const seed = [
+    ...asArray(rawCandidates),
+    cleanText(entities?.protocol_name, 220)
+  ];
+  return uniqueStrings(seed, PARSER_PROTOCOL_CANDIDATE_LIMIT);
+}
+
 function normalizeIntentParserPayload(rawValue) {
   const parsed = parseRawPayload(rawValue);
   if (!parsed) {
@@ -288,22 +320,27 @@ function normalizeIntentParserPayload(rawValue) {
     };
   }
 
-  const primaryIntent = cleanText(parsed.primary_intent, 80);
-  if (!PARSER_ALLOWED_INTENTS.includes(primaryIntent)) {
+  if (Object.prototype.hasOwnProperty.call(parsed, 'confidence')) {
     return {
       ok: false,
-      error: `Intent parser primary_intent is invalid: ${primaryIntent || 'missing'}`
+      error: 'Intent parser response must not include confidence.'
     };
   }
 
-  const confidenceRaw = Number(parsed.confidence);
-  if (!Number.isFinite(confidenceRaw)) {
+  if (Object.prototype.hasOwnProperty.call(parsed, 'secondary_intents')) {
     return {
       ok: false,
-      error: 'Intent parser confidence is missing or invalid.'
+      error: 'Intent parser response must not include secondary_intents.'
     };
   }
-  const confidence = Math.max(0, Math.min(1, confidenceRaw));
+
+  const primaryIntent = normalizeParserIntent(parsed.primary_intent);
+  if (!primaryIntent) {
+    return {
+      ok: false,
+      error: `Intent parser primary_intent is invalid: ${cleanText(parsed.primary_intent, 80) || 'missing'}`
+    };
+  }
 
   if (parsed.needs_clarification !== true && parsed.needs_clarification !== false) {
     return {
@@ -311,10 +348,6 @@ function normalizeIntentParserPayload(rawValue) {
       error: 'Intent parser needs_clarification must be a boolean.'
     };
   }
-
-  const secondaryIntents = uniqueStrings(parsed.secondary_intents, 5)
-    .filter((intent) => PARSER_ALLOWED_INTENTS.includes(intent))
-    .filter((intent) => intent !== primaryIntent);
 
   const entities = normalizeEntityBlock(parsed.entities);
   if (!entities) {
@@ -329,6 +362,19 @@ function normalizeIntentParserPayload(rawValue) {
     return {
       ok: false,
       error: 'Intent parser inventory_search payload is missing or malformed.'
+    };
+  }
+
+  if (!Array.isArray(parsed.protocol_candidates)) {
+    return {
+      ok: false,
+      error: 'Intent parser protocol_candidates must be an array.'
+    };
+  }
+  if (parsed.protocol_candidates.length > PARSER_PROTOCOL_CANDIDATE_LIMIT) {
+    return {
+      ok: false,
+      error: 'Intent parser protocol_candidates must contain at most 3 candidates.'
     };
   }
 
@@ -350,34 +396,19 @@ function normalizeIntentParserPayload(rawValue) {
     ok: true,
     payload: {
       primary_intent: primaryIntent,
-      secondary_intents: secondaryIntents,
-      confidence: Number(confidence.toFixed(3)),
       needs_clarification: parsed.needs_clarification === true,
       clarification_reason: cleanText(parsed.clarification_reason, 260) || null,
       entities,
       inventory_search: normalizedInventorySearch,
+      protocol_candidates: normalizeProtocolCandidates(parsed.protocol_candidates, primaryIntent, entities),
       reasoning_summary: cleanText(parsed.reasoning_summary, 300) || 'Intent parser returned no reasoning summary.'
     }
   };
 }
 
 function mapCanonicalIntentToExecutionIntent(primaryIntent) {
-  const normalized = cleanText(primaryIntent, 80);
-  if (normalized === 'data_analysis_or_coding') {
-    return 'coding_data_analysis';
-  }
-  if (normalized === 'literature_search') {
-    return 'general_science_question';
-  }
-  if (normalized === 'mixed_request' || normalized === 'unclear') {
-    return 'general_science_question';
-  }
-  if (normalized === 'protocol_to_notebook'
-    || normalized === 'inventory_lookup'
-    || normalized === 'record_lookup'
-    || normalized === 'project_science_question'
-    || normalized === 'paper_analysis'
-    || normalized === 'general_science_question') {
+  const normalized = normalizeParserIntent(primaryIntent);
+  if (normalized) {
     return normalized;
   }
   return 'general_science_question';
@@ -454,11 +485,14 @@ function buildInventorySearchTerms({
 }
 
 module.exports = {
+  PARSER_CANONICAL_INTENTS,
   PARSER_ALLOWED_INTENTS,
+  PARSER_INTENT_ALIASES,
   PARSER_SEARCH_MODES,
   PARSER_ENTITY_KEYS,
   INTENT_PARSER_PROMPT,
   INTENT_PARSER_RESPONSE_SCHEMA,
+  normalizeParserIntent,
   normalizeIntentParserPayload,
   mapCanonicalIntentToExecutionIntent,
   normalizeParserEntitiesToRoutingEntities,

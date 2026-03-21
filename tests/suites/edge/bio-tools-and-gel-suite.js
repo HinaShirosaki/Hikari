@@ -39,6 +39,8 @@ test('[EDGE] sequence-viewer internal functions are exposed for unit tests', () 
     'parseGenBankLocationSegments',
     'complementBase',
     'complementSequence',
+    'buildOrfFeatures',
+    'buildSelectedOrfTranslationContext',
     'renderDualStrandSequenceLinesHtml',
     'computeRestrictionAnnotationGeometry',
     'buildRestrictionCutPolylinePoints',
@@ -148,6 +150,50 @@ test('[EDGE] sequence-viewer complement mapping handles canonical and ambiguous 
   assert.equal(sequenceViewerInternals.complementBase('R'), 'Y');
   assert.equal(sequenceViewerInternals.complementBase('Z'), 'N');
   assert.equal(sequenceViewerInternals.complementSequence('ACGTRYN'), 'TGCAYRN');
+});
+
+test('[EDGE] sequence-viewer buildOrfFeatures enforces default 75-aa minimum threshold', () => {
+  const orf74Aa = `ATG${'AAA'.repeat(73)}TAA`;
+  const orf75Aa = `ATG${'AAA'.repeat(74)}TAA`;
+
+  const shortHits = sequenceViewerInternals.buildOrfFeatures(orf74Aa, 'linear');
+  const thresholdHits = sequenceViewerInternals.buildOrfFeatures(orf75Aa, 'linear');
+
+  assert.equal(shortHits.length, 0);
+  assert.equal(thresholdHits.length > 0, true);
+  assert.equal(thresholdHits.some((feature) => feature.orfLengthAa >= 75), true);
+});
+
+test('[EDGE] sequence-viewer buildOrfFeatures detects forward and reverse ORFs', () => {
+  const forwardFeatures = sequenceViewerInternals.buildOrfFeatures('TTTATGAAATAGTTT', 'linear', { minAaLength: 2 });
+  const reverseFeatures = sequenceViewerInternals.buildOrfFeatures('CTATTTCAT', 'linear', { minAaLength: 2 });
+
+  assert.equal(forwardFeatures.some((feature) => feature.strand === 1), true);
+  assert.equal(forwardFeatures.some((feature) => feature.type === 'open_reading_frame'), true);
+  assert.equal(reverseFeatures.some((feature) => feature.strand === -1), true);
+
+  const reverseOrf = reverseFeatures.find((feature) => feature.strand === -1);
+  assert.equal(reverseOrf.orfLengthNt, 9);
+  assert.equal(reverseOrf.orfLengthAa, 2);
+  assert.equal(reverseOrf.orfFrame, '-1');
+  assert.equal(reverseOrf.startCodon, 'ATG');
+  assert.equal(reverseOrf.stopCodon, 'TAG');
+  assert.equal(
+    JSON.stringify(reverseOrf.segments),
+    JSON.stringify([{ start: 0, end: 9 }])
+  );
+});
+
+test('[EDGE] sequence-viewer buildOrfFeatures collapses nested ORFs in the same frame', () => {
+  const features = sequenceViewerInternals.buildOrfFeatures('ATGAAAATGTAA', 'linear', { minAaLength: 1 });
+  const plusFrameOne = features.filter((feature) => feature.strand === 1 && feature.orfFrame === '+1');
+
+  assert.equal(plusFrameOne.length, 1);
+  assert.equal(
+    JSON.stringify(plusFrameOne[0].segments),
+    JSON.stringify([{ start: 0, end: 12 }])
+  );
+  assert.equal(plusFrameOne[0].orfLengthAa, 3);
 });
 
 test('[EDGE] sequence-viewer restriction geometry helper is deterministic for KpnI', () => {
@@ -284,6 +330,69 @@ test('[EDGE] sequence-viewer line feature renderer emits px-based span bars', ()
   assert.match(html, /sequence-viewer-line-feature-label/);
 });
 
+test('[EDGE] sequence-viewer ORF features render as line-local span bars', () => {
+  const orfFeatures = sequenceViewerInternals.buildOrfFeatures('ATGAAATAGCCC', 'linear', { minAaLength: 2 });
+  const html = sequenceViewerInternals.renderDualStrandSequenceLinesHtml('ATGAAATAGCCC', [], {
+    lineLength: 12,
+    charAdvancePx: 8,
+    sequenceLineHeightPx: 16,
+    selectedFeatureIndex: 0,
+    features: orfFeatures
+  });
+
+  assert.equal(orfFeatures.length > 0, true);
+  assert.match(html, /sequence-viewer-line-feature-bar/);
+  assert.match(html, /ORF \+1/);
+});
+
+test('[EDGE] sequence-viewer selected ORF translation context uses genomic left-to-right anchors on reverse strand', () => {
+  const sequence = 'CTATTTCAT';
+  const reverseOrf = sequenceViewerInternals.buildOrfFeatures(sequence, 'linear', { minAaLength: 2 })
+    .find((feature) => feature.strand === -1);
+  const context = sequenceViewerInternals.buildSelectedOrfTranslationContext(sequence, reverseOrf);
+
+  assert.equal(Boolean(context), true);
+  assert.equal(context.strand, -1);
+  assert.equal(context.anchors.map((anchor) => anchor.aa).join(''), 'KM');
+  assert.equal(context.anchors[0].baseIndex < context.anchors[1].baseIndex, true);
+});
+
+test('[EDGE] sequence-viewer dual-strand renderer places selected ORF amino-acid row by strand', () => {
+  const plusSequence = 'ATGAAATAGCCC';
+  const plusOrf = sequenceViewerInternals.buildOrfFeatures(plusSequence, 'linear', { minAaLength: 2 })[0];
+  const plusContext = sequenceViewerInternals.buildSelectedOrfTranslationContext(plusSequence, plusOrf);
+  const plusHtml = sequenceViewerInternals.renderDualStrandSequenceLinesHtml(plusSequence, [], {
+    lineLength: 12,
+    charAdvancePx: 8,
+    sequenceLineHeightPx: 16,
+    selectedFeatureIndex: 0,
+    features: [plusOrf],
+    orfTranslationContext: plusContext
+  });
+  assert.match(plusHtml, /sequence-viewer-aa-row-plus/);
+  const plusTop = plusHtml.indexOf('sequence-viewer-strand-row-top');
+  const plusAa = plusHtml.indexOf('sequence-viewer-aa-row-plus');
+  const plusBottom = plusHtml.indexOf('sequence-viewer-strand-row-bottom');
+  assert.equal(plusTop < plusAa && plusAa < plusBottom, true);
+
+  const minusSequence = 'CTATTTCATCCC';
+  const minusOrf = sequenceViewerInternals.buildOrfFeatures(minusSequence, 'linear', { minAaLength: 2 })
+    .find((feature) => feature.strand === -1);
+  const minusContext = sequenceViewerInternals.buildSelectedOrfTranslationContext(minusSequence, minusOrf);
+  const minusHtml = sequenceViewerInternals.renderDualStrandSequenceLinesHtml(minusSequence, [], {
+    lineLength: 12,
+    charAdvancePx: 8,
+    sequenceLineHeightPx: 16,
+    selectedFeatureIndex: 0,
+    features: [minusOrf],
+    orfTranslationContext: minusContext
+  });
+  assert.match(minusHtml, /sequence-viewer-aa-row-minus/);
+  const minusBottom = minusHtml.indexOf('sequence-viewer-strand-row-bottom');
+  const minusAa = minusHtml.indexOf('sequence-viewer-aa-row-minus');
+  assert.equal(minusBottom < minusAa, true);
+});
+
 test('[EDGE] sequence-viewer dual-strand renderer emits a cross-strand cursor at exact base boundary', () => {
   const html = sequenceViewerInternals.renderDualStrandSequenceLinesHtml('ACGTACGTACGT', [], {
     lineLength: 12,
@@ -329,6 +438,29 @@ test('[EDGE] sequence-viewer feature detail formatter includes core metadata', (
   assert.match(html, /Strand:<\/strong> -/);
   assert.match(html, /99.12%/);
   assert.match(html, /87.56%/);
+});
+
+test('[EDGE] sequence-viewer feature detail formatter shows ORF metadata when present', () => {
+  const html = sequenceViewerInternals.formatSelectedFeatureDetailHtml({
+    name: 'ORF +1',
+    type: 'open_reading_frame',
+    strand: 1,
+    source: 'orf',
+    mode: 'ORF',
+    orfFrame: '+1',
+    orfLengthNt: 120,
+    orfLengthAa: 39,
+    startCodon: 'ATG',
+    stopCodon: 'TAA',
+    segments: [{ start: 9, end: 129 }]
+  }, 256);
+
+  assert.match(html, /<strong>ORF:<\/strong>/);
+  assert.match(html, /Frame \+1/);
+  assert.match(html, /39 aa/);
+  assert.match(html, /120 nt/);
+  assert.match(html, /Start ATG/);
+  assert.match(html, /Stop TAA/);
 });
 
 test('[EDGE] sequence-viewer initializes home workspace and keeps detail workspace hidden by default', () => {
@@ -833,6 +965,80 @@ test('[EDGE] sequence-viewer annotate button enables when a record is loaded', (
   });
 
   assert.equal(Boolean(annotateBtn.disabled), false);
+});
+
+test('[EDGE] sequence-viewer ORF toggle defaults off and controls ORF bars plus selected translation row', () => {
+  const ids = [
+    'sequence-viewer-home-workspace',
+    'sequence-viewer-detail-workspace',
+    'sequence-viewer-home-paste-btn',
+    'sequence-viewer-mode-paste',
+    'sequence-viewer-mode-file',
+    'sequence-viewer-paste-panel',
+    'sequence-viewer-file-panel',
+    'sequence-viewer-textarea',
+    'sequence-viewer-file-input',
+    'sequence-viewer-file-choose',
+    'sequence-viewer-file-name',
+    'sequence-viewer-load-btn',
+    'sequence-viewer-annotate-btn',
+    'sequence-viewer-orf-toggle',
+    'sequence-viewer-clear-btn',
+    'sequence-viewer-status',
+    'sequence-viewer-messages',
+    'sequence-viewer-record-select',
+    'sequence-viewer-stat-format',
+    'sequence-viewer-stat-length',
+    'sequence-viewer-stat-topology',
+    'sequence-viewer-stat-gc',
+    'sequence-viewer-stat-ambiguous',
+    'sequence-viewer-stat-quality',
+    'sequence-viewer-stat-features',
+    'sequence-viewer-stat-restriction-sites',
+    'sequence-viewer-feature-rail-host',
+    'sequence-viewer-feature-detail',
+    'sequence-viewer-sequence-host'
+  ];
+  const document = createMockDocument(ids);
+  const moduleWithDom = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    { document }
+  );
+  moduleWithDom.initSequenceViewer();
+
+  trigger(document.getElementById('sequence-viewer-home-paste-btn'), 'click');
+  const longOrf = `ATG${'AAA'.repeat(74)}TAA`;
+  const textarea = document.getElementById('sequence-viewer-textarea');
+  textarea.value = `>orf_test\n${longOrf}\n`;
+  trigger(document.getElementById('sequence-viewer-load-btn'), 'click');
+
+  const orfToggle = document.getElementById('sequence-viewer-orf-toggle');
+  const sequenceHost = document.getElementById('sequence-viewer-sequence-host');
+  const statFeatures = document.getElementById('sequence-viewer-stat-features');
+  assert.equal(Boolean(orfToggle.checked), false);
+  assert.equal(statFeatures.textContent, '0');
+  assert.equal(sequenceHost.innerHTML.includes('ORF +1'), false);
+
+  orfToggle.checked = true;
+  trigger(orfToggle, 'change');
+  assert.equal(statFeatures.textContent, '1');
+  assert.equal(sequenceHost.innerHTML.includes('ORF +1'), true);
+  assert.equal(sequenceHost.innerHTML.includes('sequence-viewer-aa-row'), false);
+
+  const firstFeature = sequenceHost.querySelector('[data-feature-index]');
+  const clickTarget = {
+    closest() {
+      return { dataset: { featureIndex: firstFeature?.dataset?.featureIndex || '0' } };
+    }
+  };
+  trigger(sequenceHost, 'click', { target: clickTarget });
+  assert.equal(sequenceHost.innerHTML.includes('sequence-viewer-aa-row-plus'), true);
+
+  orfToggle.checked = false;
+  trigger(orfToggle, 'change');
+  assert.equal(statFeatures.textContent, '0');
+  assert.equal(sequenceHost.innerHTML.includes('ORF +1'), false);
+  assert.equal(sequenceHost.innerHTML.includes('sequence-viewer-aa-row'), false);
 });
 
 test('[EDGE] sequence-viewer annotate updates only the selected record', async () => {

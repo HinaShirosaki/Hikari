@@ -16,6 +16,7 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
 
   const storageForm = document.getElementById('storage-form');
   const settingStoragePath = document.getElementById('setting-storage-path');
+  const settingStorageImportStatus = document.getElementById('setting-storage-import-status');
   const selectStoragePathBtn = document.getElementById('select-storage-path-btn');
   const startupForm = document.getElementById('startup-form');
   const settingStartupDefaultView = document.getElementById('setting-startup-default-view');
@@ -27,6 +28,7 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
   const settingModel = document.getElementById('setting-model');
   const settingApiEndpoint = document.getElementById('setting-api-endpoint');
   const settingApiKey = document.getElementById('setting-api-key');
+  const settingAgentDeveloperMode = document.getElementById('setting-agent-developer-mode');
   const telegramForm = document.getElementById('telegram-form');
   const settingTelegramToken = document.getElementById('setting-telegram-token');
   const settingTelegramStatus = document.getElementById('setting-telegram-status');
@@ -43,6 +45,7 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
     source: 'none',
     hasSavedToken: false
   };
+  let storageImportInFlight = false;
   let activeLlmProvider = 'openai';
   const looksLikeEndpoint = (value) => /^[a-z]+:\/\//i.test(String(value || '').trim());
 
@@ -103,12 +106,16 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
     settingApiKey.placeholder = llmProvider === 'codex'
       ? 'Not required (use `codex login`)'
       : 'sk-...';
+    if (settingAgentDeveloperMode) {
+      settingAgentDeveloperMode.checked = state.settings?.agent?.developerMode === true;
+    }
     settingEnaPath.textContent = state.settings.enaFilePath || 'Not set';
     if (settingAutoSaveEna) {
       settingAutoSaveEna.checked = state.settings.autoSaveEna !== false;
     }
     renderTelegramStatus();
     renderLocationList();
+    renderStorageImportStatus();
   }
 
   function renderLocationList() {
@@ -188,10 +195,9 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
     syncUiStyleControls(next);
   }
 
-  function onSaveStoragePath(event) {
+  async function onSaveStoragePath(event) {
     event.preventDefault();
-
-    saveStoragePath(settingStoragePath.value);
+    await saveStoragePath(settingStoragePath.value);
   }
 
   async function onSelectStoragePath() {
@@ -205,13 +211,29 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
     }
 
     settingStoragePath.value = result.path;
-    saveStoragePath(result.path);
+    await saveStoragePath(result.path);
   }
 
-  function saveStoragePath(path) {
-    state.settings.storagePath = String(path || '').trim();
+  async function saveStoragePath(path) {
+    const nextPath = String(path || '').trim();
+    state.settings.storagePath = nextPath;
     persist();
-    onStoragePathSaved();
+    if (!nextPath) {
+      renderStorageImportStatus();
+      return;
+    }
+    if (typeof onStoragePathSaved !== 'function') {
+      renderStorageImportStatus();
+      return;
+    }
+    storageImportInFlight = true;
+    renderStorageImportStatus();
+    try {
+      await onStoragePathSaved(nextPath);
+    } finally {
+      storageImportInFlight = false;
+      renderStorageImportStatus();
+    }
   }
 
   function onSaveStartupSettings(event) {
@@ -236,6 +258,9 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
       apiEndpoint: endpoint,
       apiKey,
       api: apiKey || endpoint
+    };
+    state.settings.agent = {
+      developerMode: settingAgentDeveloperMode?.checked === true
     };
 
     persist();
@@ -401,6 +426,40 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
     }
 
     settingTelegramStatus.textContent = 'Telegram bot status: not configured.';
+  }
+
+  function renderStorageImportStatus() {
+    if (!settingStorageImportStatus) {
+      return;
+    }
+    if (storageImportInFlight) {
+      settingStorageImportStatus.textContent = 'Storage import: scanning and importing records...';
+      return;
+    }
+    const info = state.settings?.storageImport && typeof state.settings.storageImport === 'object'
+      ? state.settings.storageImport
+      : {};
+    const summary = info.summary && typeof info.summary === 'object' ? info.summary : {};
+    const warningCount = Array.isArray(info.warnings) ? info.warnings.length : 0;
+    if (String(info.error || '').trim()) {
+      settingStorageImportStatus.textContent = `Storage import: ${String(info.error).trim()}`;
+      return;
+    }
+    if (String(info.lastImportedAt || '').trim()) {
+      const parts = [
+        `${Number(summary.protocols) || 0} protocols`,
+        `${Number(summary.notebookEntries) || 0} notebook entries`,
+        `${Number(summary.chemicals) || 0} chemicals`,
+        `${Number(summary.personalInventoryContainers) || 0} inventory containers`,
+        `${Number(summary.sequenceEntries) || 0} sequences`
+      ];
+      const warningText = warningCount ? ` (${warningCount} warnings)` : '';
+      const manifestPath = String(info.manifestPath || '').trim();
+      const suffix = manifestPath ? ` · manifest: ${manifestPath}` : '';
+      settingStorageImportStatus.textContent = `Storage import: ${parts.join(', ')}${warningText}${suffix}`;
+      return;
+    }
+    settingStorageImportStatus.textContent = 'Storage import: not started.';
   }
 
   function escapeHtml(text) {

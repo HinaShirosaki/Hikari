@@ -1,6 +1,53 @@
 {
   "schema_name": "enana_notebook_pages",
   "schema_version": "1.0.0",
-  "updated_at": "2026-03-18T18:21:58.152Z",
-  "notebookPages": []
+  "updated_at": "2026-03-21T21:43:51.840Z",
+  "notebookPages": [
+    {
+      "id": "1774025061643-8e7f8d2afe1198",
+      "notebookType": "biology",
+      "projectId": "1773446973979-1dead4da556a2",
+      "projectName": "PD-1 Nanobody Binder Discovery",
+      "protocolId": "1774024695073-536c18071dd0d",
+      "protocolName": "Ni-NTA Purification of His-Tagged Protein",
+      "values": {
+        "1774024695073-2247d685fa0ba:1774024695073-817215f337dae": "Ni-NTA Purification of His-Tagged Protein"
+      },
+      "result": "Agent-generated notebook draft from request: Ni-NTA",
+      "resultFiles": [],
+      "resultFileRecords": [],
+      "updatedAt": "2026-03-20T16:43:07.684Z",
+      "agentDraftStatus": "needs_review",
+      "agentDraftMeta": {
+        "generatedAt": "2026-03-20T16:43:07.684Z",
+        "unresolvedCount": 12,
+        "source": "agent_phase5",
+        "protocolCategory": "",
+        "savedAt": "2026-03-20T16:44:21.643Z"
+      },
+      "resultFileAddresses": []
+    },
+    {
+      "id": "1774129431833-1ae8e1d6da588",
+      "notebookType": "biology",
+      "projectId": "1774128185432-96a318da61d208",
+      "projectName": "SUMO1",
+      "protocolId": "1774024047007-d137dae96cab78",
+      "protocolName": "BL21(DE3) Chemical Transformation with pET28a",
+      "values": {
+        "1774125436234-5e6cd5beb943b:1774125436234-cac9aa958fe75": "pFuse-SUMO1-PD-1"
+      },
+      "result": "Notebook draft generated from request: I did a pFuse-SUMO1-PD-1 transformation today",
+      "resultFiles": [],
+      "resultFileRecords": [],
+      "updatedAt": "2026-03-21T21:43:51.827Z",
+      "agentDraftStatus": "draft_ready",
+      "agentDraftMeta": {
+        "source": "agent_phase5",
+        "unresolvedCount": 0,
+        "generatedAt": "2026-03-21T21:43:51.827Z",
+        "savedAt": "2026-03-21T21:43:51.833Z"
+      }
+    }
+  ]
 }

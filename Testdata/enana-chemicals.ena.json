@@ -81,22 +81,15 @@
   "settings": {
     "storagePath": "/Users/shiyifan/Projects/Enana/Testdata",
     "inventoryLocations": [
-      "Shelf A1",
-      "Flammables Cabinet B2",
-      "Acid Cabinet C1",
-      "Shelf A3",
-      "Shelf A4",
-      "Base Cabinet D1",
-      "Acid Cabinet C2",
-      "Solvent Cabinet B3",
-      "Flammables Cabinet B1",
-      "Shelf A5"
+      "Main Storage",
+      "Cold Room",
+      "Fume Hood"
     ]
   },
   "protocols": [],
   "notebookEntries": [],
   "data_bundle": {
     "mode": "sqlite_indexed",
-    "updated_at": "2026-03-19T16:54:49.270Z"
+    "updated_at": "2026-03-21T21:42:48.990Z"
   }
 }

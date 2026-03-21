@@ -1304,6 +1304,7 @@
                 <input id="setting-storage-path" placeholder="/path/to/enana-data" readonly />
               </label>
               <p class="small-note">Notebook pages will reference individual folders under this path.</p>
+              <p id="setting-storage-import-status" class="small-note">Storage import: not started.</p>
               <div class="form-actions">
                 <button type="button" id="select-storage-path-btn" class="ghost-btn">Select Folder</button>
                 <button type="submit" class="primary-btn">Save Storage Path</button>
@@ -1384,6 +1385,10 @@
               <label>
                 API Key
                 <input id="setting-api-key" type="password" placeholder="sk-... (not required for Codex CLI)" />
+              </label>
+              <label class="inline-row">
+                <input id="setting-agent-developer-mode" type="checkbox" />
+                Agent Developer Mode (record redacted LLM request/response traces)
               </label>
               <button type="submit" class="primary-btn">Save LLM Settings</button>
             </form>
@@ -2494,6 +2499,10 @@
           <div class="form-actions">
             <button id="sequence-viewer-load-btn" type="button" class="primary-btn">Load</button>
             <button id="sequence-viewer-annotate-btn" type="button" class="ghost-btn">Annotate</button>
+            <label class="sequence-viewer-inline-toggle" title="Show/hide predicted ORFs and selected ORF amino-acid translation.">
+              <input id="sequence-viewer-orf-toggle" type="checkbox" />
+              <span>ORF View</span>
+            </label>
             <button id="sequence-viewer-clear-btn" type="button" class="ghost-btn">Clear</button>
             <span id="sequence-viewer-status" class="small-note">Idle</span>
           </div>

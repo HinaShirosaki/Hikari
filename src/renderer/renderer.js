@@ -207,6 +207,205 @@ function persist() {
   }
 }
 
+function mergeRecordsById(existingRecords, importedRecords, fallbackPrefix) {
+  const byId = new Map();
+  asArray(existingRecords).forEach((record, index) => {
+    const source = record && typeof record === 'object' ? record : {};
+    const id = String(source.id || `${fallbackPrefix}_existing_${index + 1}`).trim();
+    byId.set(id, {
+      ...source,
+      id
+    });
+  });
+  asArray(importedRecords).forEach((record, index) => {
+    const source = record && typeof record === 'object' ? record : {};
+    const id = String(source.id || `${fallbackPrefix}_imported_${index + 1}`).trim();
+    byId.set(id, {
+      ...source,
+      id
+    });
+  });
+  return [...byId.values()];
+}
+
+function mergeInventoryMap(existingInventory, importedInventory) {
+  const merged = {};
+  const mergeZone = (zoneName, containers) => {
+    const zone = String(zoneName || '').trim();
+    if (!zone) {
+      return;
+    }
+    const zoneMap = new Map(
+      asArray(merged[zone]).map((item, index) => {
+        const source = item && typeof item === 'object' ? item : {};
+        const id = String(source.id || `${zone}_existing_${index + 1}`).trim();
+        return [
+          id,
+          {
+            ...source,
+            id
+          }
+        ];
+      })
+    );
+    asArray(containers).forEach((item, index) => {
+      const source = item && typeof item === 'object' ? item : {};
+      const id = String(source.id || `${zone}_imported_${index + 1}`).trim();
+      zoneMap.set(id, {
+        ...source,
+        id
+      });
+    });
+    merged[zone] = [...zoneMap.values()];
+  };
+
+  Object.entries(existingInventory && typeof existingInventory === 'object' ? existingInventory : {})
+    .forEach(([zone, containers]) => mergeZone(zone, containers));
+  Object.entries(importedInventory && typeof importedInventory === 'object' ? importedInventory : {})
+    .forEach(([zone, containers]) => mergeZone(zone, containers));
+
+  return merged;
+}
+
+function mergeStorageImportPatch(statePatch) {
+  const patch = statePatch && typeof statePatch === 'object' ? statePatch : {};
+  state.protocols = mergeRecordsById(state.protocols, patch.protocols, 'protocol');
+  state.notebookEntries = mergeRecordsById(state.notebookEntries, patch.notebookEntries, 'notebook');
+
+  const existingLabInventory = state.labInventory && typeof state.labInventory === 'object'
+    ? state.labInventory
+    : {};
+  const importedLabInventory = patch.labInventory && typeof patch.labInventory === 'object'
+    ? patch.labInventory
+    : {};
+  const mergedBlocksMap = new Map();
+  asArray(existingLabInventory.blocks).forEach((block, index) => {
+    const source = block && typeof block === 'object' ? block : {};
+    const key = String(source.hash || `${source.index || 0}_${source.timestamp || ''}_${index}`).trim();
+    mergedBlocksMap.set(key, source);
+  });
+  asArray(importedLabInventory.blocks).forEach((block, index) => {
+    const source = block && typeof block === 'object' ? block : {};
+    const key = String(source.hash || `${source.index || 0}_${source.timestamp || ''}_${index}`).trim();
+    mergedBlocksMap.set(key, source);
+  });
+  const mergedBlocks = [...mergedBlocksMap.values()].sort((left, right) => {
+    const leftIndex = Number(left?.index) || 0;
+    const rightIndex = Number(right?.index) || 0;
+    if (leftIndex !== rightIndex) {
+      return leftIndex - rightIndex;
+    }
+    return String(left?.timestamp || '').localeCompare(String(right?.timestamp || ''));
+  });
+
+  state.labInventory = {
+    ...existingLabInventory,
+    ...importedLabInventory,
+    chemicals: mergeRecordsById(existingLabInventory.chemicals, importedLabInventory.chemicals, 'chemical'),
+    blocks: mergedBlocks,
+    locationCodeMap: {
+      ...(existingLabInventory.locationCodeMap && typeof existingLabInventory.locationCodeMap === 'object'
+        ? existingLabInventory.locationCodeMap
+        : {}),
+      ...(importedLabInventory.locationCodeMap && typeof importedLabInventory.locationCodeMap === 'object'
+        ? importedLabInventory.locationCodeMap
+        : {})
+    },
+    locationCodeNextByLocation: {
+      ...(existingLabInventory.locationCodeNextByLocation && typeof existingLabInventory.locationCodeNextByLocation === 'object'
+        ? existingLabInventory.locationCodeNextByLocation
+        : {}),
+      ...(importedLabInventory.locationCodeNextByLocation && typeof importedLabInventory.locationCodeNextByLocation === 'object'
+        ? importedLabInventory.locationCodeNextByLocation
+        : {})
+    },
+    lastLocationNumber: Math.max(
+      Number(existingLabInventory.lastLocationNumber) || 0,
+      Number(importedLabInventory.lastLocationNumber) || 0
+    )
+  };
+
+  state.inventory = mergeInventoryMap(state.inventory, patch.inventory);
+}
+
+function updateStorageImportState(payload) {
+  const source = payload && typeof payload === 'object' ? payload : {};
+  const summary = source.summary && typeof source.summary === 'object' ? source.summary : {};
+  state.settings.storageImport = {
+    lastImportedAt: new Date().toISOString(),
+    manifestPath: String(source.manifestPath || '').trim(),
+    summary: {
+      bundles: Number(summary.bundles) || 0,
+      protocols: Number(summary.protocols) || 0,
+      notebookEntries: Number(summary.notebookEntries) || 0,
+      chemicals: Number(summary.chemicals) || 0,
+      personalInventoryContainers: Number(summary.personalInventoryContainers) || 0,
+      sequenceEntries: Number(summary.sequenceEntries) || 0
+    },
+    warnings: Array.isArray(source.warnings) ? source.warnings.map((item) => String(item || '')) : [],
+    error: ''
+  };
+}
+
+function updateStorageImportError(message) {
+  const previous = state.settings.storageImport && typeof state.settings.storageImport === 'object'
+    ? state.settings.storageImport
+    : {};
+  state.settings.storageImport = {
+    ...previous,
+    lastImportedAt: previous.lastImportedAt || '',
+    manifestPath: previous.manifestPath || '',
+    summary: previous.summary && typeof previous.summary === 'object'
+      ? previous.summary
+      : {
+        bundles: 0,
+        protocols: 0,
+        notebookEntries: 0,
+        chemicals: 0,
+        personalInventoryContainers: 0,
+        sequenceEntries: 0
+      },
+    warnings: Array.isArray(previous.warnings) ? previous.warnings : [],
+    error: String(message || '').trim()
+  };
+}
+
+async function runStorageRootImport(storagePath, options = {}) {
+  const resolvedStoragePath = String(storagePath || '').trim();
+  if (!resolvedStoragePath || !window.enanaApi?.importStorageRoot) {
+    return { ok: false, skipped: true };
+  }
+
+  const persistMergedState = options.persistMergedState === true;
+  try {
+    const result = await window.enanaApi.importStorageRoot(resolvedStoragePath);
+    if (!result?.ok) {
+      updateStorageImportError(result?.error || 'Storage import failed.');
+      persistState(state);
+      return { ok: false, error: result?.error || 'Storage import failed.' };
+    }
+
+    mergeStorageImportPatch(result.statePatch);
+    updateStorageImportState(result);
+    if (persistMergedState) {
+      persist();
+    } else {
+      state.objectGraph = rebuildObjectGraph(state);
+      persistState(state);
+    }
+    return {
+      ok: true,
+      summary: result.summary || {},
+      warnings: result.warnings || [],
+      manifestPath: result.manifestPath || ''
+    };
+  } catch (error) {
+    updateStorageImportError(error?.message || 'Storage import failed.');
+    persistState(state);
+    return { ok: false, error: error?.message || 'Storage import failed.' };
+  }
+}
+
 window.enanaGraph = {
   rebuild: () => {
     state.objectGraph = rebuildObjectGraph(state);
@@ -446,9 +645,10 @@ initToolBox({
 const settings = initSettings({
   state,
   persist,
-  onStoragePathSaved: () => {
-    synthesisNotebook.renderEntries();
-    biologyNotebook.renderEntries();
+  onStoragePathSaved: async (storagePath) => {
+    const result = await runStorageRootImport(storagePath, { persistMergedState: true });
+    renderAll();
+    return result;
   },
   onSaveEnaFile: async () => {
     if (!window.enanaApi) {
@@ -1144,8 +1344,17 @@ async function hydrateStateFromDataFile() {
   persistState(state);
 }
 
+async function hydrateStateFromStorageRoot() {
+  const storagePath = String(state.settings?.storagePath || '').trim();
+  if (!storagePath) {
+    return;
+  }
+  await runStorageRootImport(storagePath, { persistMergedState: false });
+}
+
 async function initApp() {
   await hydrateStateFromDataFile();
+  await hydrateStateFromStorageRoot();
   applyAppearanceSnapshot(state.settings?.appearance);
   initNavigation();
   initTelegramCommandBridge();
