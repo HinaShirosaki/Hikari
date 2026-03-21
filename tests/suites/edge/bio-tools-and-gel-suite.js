@@ -279,6 +279,7 @@ test('[EDGE] sequence-viewer line feature renderer emits px-based span bars', ()
   assert.match(styleMatch[1], /left:[0-9.]+px;/);
   assert.match(styleMatch[1], /width:[0-9.]+px;/);
   assert.match(styleMatch[1], /top:[0-9.]+px;/);
+  assert.match(styleMatch[1], /color:#[0-9a-f]{6};/i);
   assert.equal(styleMatch[1].includes('%'), false);
   assert.match(html, /sequence-viewer-line-feature-label/);
 });
@@ -514,6 +515,103 @@ test('[EDGE] sequence-viewer home paste button opens detail workspace even with 
   assert.equal(Boolean(homeWorkspace.hidden), true);
   assert.equal(Boolean(detailWorkspace.hidden), false);
   assert.match(status.textContent, /Paste sequence text/i);
+});
+
+test('[EDGE] sequence-viewer New and Back actions use navigation callbacks', () => {
+  const ids = [
+    'sequence-viewer-home-workspace',
+    'sequence-viewer-detail-workspace',
+    'sequence-viewer-home-paste-btn',
+    'sequence-viewer-back-btn'
+  ];
+  const document = createMockDocument(ids);
+  const transitions = [];
+  const moduleWithDom = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    { document }
+  );
+  moduleWithDom.initSequenceViewer({
+    onNavigateDetail: () => transitions.push('detail'),
+    onNavigateHome: () => transitions.push('home')
+  });
+
+  trigger(document.getElementById('sequence-viewer-home-paste-btn'), 'click');
+  trigger(document.getElementById('sequence-viewer-back-btn'), 'click');
+  assert.deepEqual(transitions, ['detail', 'home']);
+});
+
+test('[EDGE] sequence-viewer library native dblclick opens detail while single click only previews', async () => {
+  const ids = [
+    'sequence-viewer-home-workspace',
+    'sequence-viewer-detail-workspace',
+    'sequence-viewer-home-status',
+    'sequence-viewer-library-filter-saved',
+    'sequence-viewer-library-filter-temporary',
+    'sequence-viewer-library-list',
+    'sequence-viewer-preview-host'
+  ];
+  const entry = {
+    id: 'entry_1',
+    name: 'Entry One',
+    status: 'saved',
+    sourceFormat: 'GENBANK',
+    topology: 'circular',
+    sequenceLength: 8,
+    featureCount: 0,
+    updatedAt: '2026-03-01T00:00:00.000Z'
+  };
+  const gbkText = `
+LOCUS       ENTRYONE         8 bp    DNA     circular SYN 01-JAN-2026
+FEATURES             Location/Qualifiers
+ORIGIN
+        1 acgtacgt
+//
+`;
+  const document = createMockDocument(ids);
+  const transitions = [];
+  const window = {
+    enanaApi: {
+      sequenceLibraryList: async () => ({ ok: true, entries: [entry] }),
+      sequenceLibraryGet: async (payload) => {
+        if (payload?.includeGbk) {
+          return { ok: true, entry, gbkText };
+        }
+        return { ok: true, entry, htmlText: '<html><body>preview</body></html>' };
+      }
+    }
+  };
+  const localStorage = {
+    getItem(key) {
+      if (key === 'enana_state_v1') {
+        return JSON.stringify({ settings: { storagePath: '/tmp/sequence-viewer-tests' } });
+      }
+      return null;
+    }
+  };
+  const moduleWithDom = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    { document, window, localStorage }
+  );
+  moduleWithDom.initSequenceViewer({
+    onNavigateDetail: () => transitions.push('detail')
+  });
+  await flushAsync();
+
+  const libraryList = document.getElementById('sequence-viewer-library-list');
+  const eventTarget = {
+    closest() {
+      return { dataset: { sequenceEntryId: 'entry_1' } };
+    }
+  };
+
+  trigger(libraryList, 'click', { target: eventTarget, detail: 1 });
+  await flushAsync();
+  assert.equal(transitions.length, 0);
+
+  trigger(libraryList, 'dblclick', { target: eventTarget, detail: 2 });
+  await flushAsync();
+  await flushAsync();
+  assert.equal(transitions.length, 1);
 });
 
 test('[EDGE] sequence-viewer opens detail workspace when a library row is double-activated by quick repeated click', async () => {

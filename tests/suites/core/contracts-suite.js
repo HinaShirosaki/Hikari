@@ -51,7 +51,10 @@ test('renderer defines sequence viewer aliases and showView render hook', () => 
   assert.match(source, /\['sequence', VIEWS\.SEQUENCE_VIEWER\]/);
   assert.match(source, /\['seqviewer', VIEWS\.SEQUENCE_VIEWER\]/);
   assert.match(source, /\['sequence-viewer', VIEWS\.SEQUENCE_VIEWER\]/);
-  assert.match(source, /if \(nextView === VIEWS\.SEQUENCE_VIEWER\) \{\s*sequenceViewer\?\.render\?\.\(\);\s*\}/);
+  assert.match(source, /const SEQUENCE_VIEWER_DETAIL_VIEW_ID = 'sequence-viewer-detail-view';/);
+  assert.match(source, /if \(nextView === VIEWS\.SEQUENCE_VIEWER \|\| nextView === SEQUENCE_VIEWER_DETAIL_VIEW_ID\) \{\s*sequenceViewer\?\.render\?\.\(\);\s*\}/);
+  assert.match(source, /sequenceViewer = initSequenceViewer\(\{\s*onNavigateHome:\s*\(\)\s*=>\s*\{\s*showView\(VIEWS\.SEQUENCE_VIEWER\);/);
+  assert.match(source, /onNavigateDetail:\s*\(\)\s*=>\s*\{\s*showView\(SEQUENCE_VIEWER_DETAIL_VIEW_ID\);/);
 });
 
 test('tool-box exposes optional sequence viewer handoff callback contract', () => {
@@ -70,18 +73,38 @@ test('sequence viewer uses bottom feature track without table dependency', () =>
   assert.equal(viewerSource.includes('featureTableBody'), false);
 });
 
-test('sequence viewer home workspace includes toolbar, library filter, and preview ids', () => {
+test('sequence viewer splits home and detail pages and removes home top caption/meta', () => {
   const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
-  assert.match(html, /id="sequence-viewer-home-workspace"/);
-  assert.match(html, /id="sequence-viewer-home-paste-btn"/);
-  assert.match(html, /id="sequence-viewer-home-open-btn"/);
-  assert.equal(html.includes('id="sequence-viewer-home-import-btn"'), false);
-  assert.match(html, /id="sequence-viewer-library-filter-saved"/);
-  assert.match(html, /id="sequence-viewer-library-filter-temporary"/);
-  assert.match(html, /id="sequence-viewer-library-list"/);
-  assert.match(html, /id="sequence-viewer-preview-host"/);
-  assert.match(html, /id="sequence-viewer-back-btn"/);
-  assert.match(html, /id="sequence-viewer-save-btn"/);
+  const homeStart = html.indexOf('<section id="sequence-viewer-view" class="view">');
+  const detailStart = html.indexOf('<section id="sequence-viewer-detail-view" class="view">');
+  assert.equal(homeStart >= 0, true);
+  assert.equal(detailStart > homeStart, true);
+
+  const homeBlock = html.slice(homeStart, detailStart);
+  const detailBlock = html.slice(detailStart);
+
+  assert.match(homeBlock, /id="sequence-viewer-home-workspace"/);
+  assert.match(homeBlock, /id="sequence-viewer-home-paste-btn"/);
+  assert.match(homeBlock, /id="sequence-viewer-home-open-btn"/);
+  assert.equal(homeBlock.includes('id="sequence-viewer-home-import-btn"'), false);
+  assert.match(homeBlock, /id="sequence-viewer-library-filter-saved"/);
+  assert.match(homeBlock, /id="sequence-viewer-library-filter-temporary"/);
+  assert.match(homeBlock, /id="sequence-viewer-library-list"/);
+  assert.match(homeBlock, /id="sequence-viewer-preview-host"/);
+  assert.equal(homeBlock.includes('<h2>Sequence Viewer</h2>'), false);
+  assert.equal(homeBlock.includes('id="sequence-viewer-preview-meta"'), false);
+  assert.equal(homeBlock.includes('id="sequence-viewer-detail-workspace"'), false);
+
+  assert.match(detailBlock, /id="sequence-viewer-detail-workspace"/);
+  assert.match(detailBlock, /id="sequence-viewer-back-btn"/);
+  assert.match(detailBlock, /id="sequence-viewer-save-btn"/);
+});
+
+test('sequence viewer map preview renderer omits metadata text overlays', () => {
+  const source = readSource('src/renderer/modules/sequence-viewer.js');
+  assert.equal(source.includes('sequence-viewer-preview-meta'), false);
+  assert.equal(source.includes('toLocaleString()} bp</text>'), false);
+  assert.equal(source.includes("normalizeTopology(record?.topology || 'linear'))}</text>"), false);
 });
 
 test('ketcher embedded page uses portable static path resolution', () => {

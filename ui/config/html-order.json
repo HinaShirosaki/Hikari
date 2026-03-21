@@ -77,6 +77,10 @@
     {
       "id": "sequence-viewer-view",
       "file": "ui/html/views/sequence-viewer-view.html"
+    },
+    {
+      "id": "sequence-viewer-detail-view",
+      "file": "ui/html/views/sequence-viewer-detail-view.html"
     }
   ],
   "shellEnd": "ui/html/shell/end.html"

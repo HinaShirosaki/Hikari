@@ -1,42 +1,44 @@
 # Enana
 
-Enana is a local Electron desktop app for running lab work in one place: members, instruments, protocols, notebooks, inventory, assays, gel analysis, papers, workflows, and an assistant agent.
+Enana is a local Electron desktop app for managing lab operations in one place: members, instruments, protocols, notebooks, inventory, assays, gel analysis, papers, workflows, and an assistant agent.
 
-This README is a hands-on tutorial for using the app end to end.
+This README is a practical guide for running the app, configuring optional integrations, and understanding the project layout.
 
 ## Table of Contents
 
-- [1) What You Can Do in Enana](#1-what-you-can-do-in-enana)
+- [1) Feature Overview](#1-feature-overview)
 - [2) Install and Run](#2-install-and-run)
 - [3) First-Time Setup (Inside the App)](#3-first-time-setup-inside-the-app)
-- [4) Tutorial: A Full Lab Workflow](#4-tutorial-a-full-lab-workflow)
-- [5) Search and Navigation Tips](#5-search-and-navigation-tips)
-- [6) Save, Load, and Back Up Data](#6-save-load-and-back-up-data)
-- [7) LLM and Agent Setup](#7-llm-and-agent-setup)
-- [8) Telegram Bot Setup](#8-telegram-bot-setup)
-- [9) Build, Package, and Test](#9-build-package-and-test)
+- [4) Typical Lab Workflow](#4-typical-lab-workflow)
+- [5) LLM and Agent Setup](#5-llm-and-agent-setup)
+- [6) Telegram Bot Setup](#6-telegram-bot-setup)
+- [7) Data Save, Load, and Backup](#7-data-save-load-and-backup)
+- [8) Scripts and Commands](#8-scripts-and-commands)
+- [9) Test Suite Structure](#9-test-suite-structure)
 - [10) Project Structure](#10-project-structure)
 - [11) Troubleshooting](#11-troubleshooting)
+- [12) Detailed Module Reference](#12-detailed-module-reference)
 
-## 1) What You Can Do in Enana
+## 1) Feature Overview
 
-Enana includes these modules in one app:
+Enana includes the following modules:
 
-- `Members`: lab people and contact identities (institution + Enana email)
-- `Instruments`: instrument records with reservation calendar
-- `Protocols`: protocol authoring, PDF export, and sharing/import
-- `Collabrations`: internal Enana-style messaging and protocol imports
-- `Synthesis Notebook` and `Biology Notebook`: notebook pages linked to projects/protocols
-- `Chemicals`: shared chemical inventory and sync inbox
-- `Sample & Inventory`: sample registry + personal container tracking
-- `Assay`: plate map setup, CSV import/export, and results analysis
-- `Gel`: manual gel lane/band workflow with report export
-- `Projects`: project registry and linked notebook pages
-- `Workflows`: protocol-block flow editor + reusable templates
-- `Papers`: PDF uploads, LLM summary/extraction, project Q&A
-- `Agent`: read-first lab assistant with citations and decision records
-- `Tools`: bench calculators (molarity, oligo, qPCR, pLannotate, etc.)
-- `Setting`: appearance, storage path, LLM/API, Telegram token, and JSON data file controls
+- `Members`: manage lab people and identities.
+- `Instruments`: track instruments and reservations.
+- `Protocols`: create protocol records and share/import protocol data.
+- `Collabrations`: collaboration inbox and protocol exchange (label follows current UI spelling).
+- `Synthesis Notebook` and `Biology Notebook`: notebook entries linked to projects/protocols.
+- `Chemicals`: shared chemical inventory.
+- `Sample & Inventory`: sample registry and personal container tracking.
+- `Assay`: plate setup, CSV flow, result analysis.
+- `Gel`: lane/band analysis workflow and exports.
+- `Projects`: project registry and linked experimental context.
+- `Workflows`: block-based protocol flow editor and templates.
+- `Papers`: PDF uploads, extraction/summarization, project-scoped Q&A.
+- `Agent`: read-first lab assistant with citations and decision records.
+- `Sequence Viewer`: FASTA/FASTQ/GenBank inspection and sequence library support.
+- `Tools`: bench calculators and utilities (molarity, qPCR, CRISPR, oligo, pLannotate, etc.).
+- `Setting`: appearance, startup defaults, storage path, LLM config, Telegram token, and data file controls.
 
 ## 2) Install and Run
 
@@ -60,152 +62,31 @@ npm test
 
 ## 3) First-Time Setup (Inside the App)
 
-After launch, open `Setting` and configure these first:
+After launching, open `Setting` and configure:
 
-1. `Personal Information`
+1. `Personal Information`: set name, role, and email identities.
+2. `Storage Folder Path`: choose where notebook and project-linked files should live.
+3. `Data File`: keep `Auto-save to current .json file` enabled and use `Save .json` once to set your initial save target.
+4. Optional `LLM Model & API`: required for `Agent` and `Papers` AI features.
+5. Optional `Telegram Bot`: add bot token to enable remote commands.
 
-- Set your name, position, and emails.
-- This helps default assignments and collaboration flows.
+## 4) Typical Lab Workflow
 
-2. `Storage Folder Path`
+A common first workflow:
 
-- Pick a root folder for notebook-related files.
-- Notebook pages can reference files under this path.
+1. Add lab members in `Members`.
+2. Register instruments and reservations in `Instruments`.
+3. Create or import protocols in `Protocols`.
+4. Create a project in `Projects`.
+5. Add notebook records in `Synthesis Notebook` or `Biology Notebook`.
+6. Register chemicals and samples in `Chemicals` and `Sample & Inventory`.
+7. Build assays and analyze results in `Assay`.
+8. Run gel analysis in `Gel`.
+9. Upload papers in `Papers` and ask project questions.
+10. Build repeatable flows in `Workflows`.
+11. Use `Agent` for evidence-grounded retrieval and planning support.
 
-3. `Data File (.json)`
-
-- Keep `Auto-save to current .json file` enabled (recommended).
-- Click `Save .json` once and choose a location (or use default).
-
-4. Optional: `LLM Model & API`
-
-- Required for Agent and Papers AI features.
-- Set model, endpoint, and API key.
-
-5. Optional: `Telegram Bot`
-
-- Paste bot token if you want Telegram remote commands.
-
-## 4) Tutorial: A Full Lab Workflow
-
-Use this sequence for a realistic first project.
-
-### Step A: Add Members
-
-Open `Members`:
-
-- Add each teammate with institution email and Enana email.
-- Enana emails are used in collaboration inbox/message flows.
-
-### Step B: Add Instruments and Reservations
-
-Open `Instruments`:
-
-- Create instruments.
-- Select one instrument and add reservations by date/time.
-- Use Month/Week calendar view to inspect schedule.
-
-### Step C: Create Protocols
-
-Open `Protocols`:
-
-- Create a protocol with purpose, materials, steps, troubleshooting.
-- Use `Insert Interactive Bar` for placeholder-style step variables.
-- Use `Share` to send protocol payloads or copy share links.
-
-### Step D: Create a Project
-
-Open `Projects`:
-
-- Add a project name and description.
-- This project becomes context for notebooks, assays, gel records, papers, and agent scope.
-
-### Step E: Record Notebook Entries
-
-Open `Synthesis Notebook` or `Biology Notebook`:
-
-- Select project and protocol.
-- Record results/notes and attach files.
-- Save entry; it becomes available to Projects/Assay/Gel/Papers contexts.
-
-Synthesis notebook supports an embedded Ketcher workflow for reaction capture and MW tables.
-
-### Step F: Register Chemicals and Samples
-
-Open `Chemicals`:
-
-- Add shared chemicals with CAS, location, vendor, stock, expiration.
-
-Open `Sample & Inventory`:
-
-- Register samples (plasmid/cell line/compound/etc.).
-- Link samples to personal inventory containers/slots.
-
-### Step G: Build and Analyze an Assay
-
-Open `Assay`:
-
-1. In `Create Assay`, choose project, plate type, and axis mode.
-2. Fill mappings directly in plate preview or via CSV import.
-3. Save assay plate (auto assay numbers like `ASY-000001`).
-4. Switch to `View & Results`, load plate, paste/import values.
-5. Save results and run analysis method (grouped, EC50/IC50, regression, etc.).
-
-### Step H: Analyze a Gel
-
-Open `Gel`:
-
-1. Upload image and set basic metadata.
-2. Optionally crop image.
-3. Click `Analyze Gel` and complete manual steps (borders, dividers, ladder, bands).
-4. Save analysis and export JSON/CSV if needed.
-
-### Step I: Add Papers and Ask Questions
-
-Open `Papers`:
-
-- Upload PDFs and link to a project or journal club.
-- Run summarize/method/reagent extraction (requires LLM config).
-- Use `Project Library Q&A` to ask project-scoped literature questions.
-
-### Step J: Plan With Workflows and Agent
-
-Open `Workflows`:
-
-- Create protocol-block workflows.
-- Connect blocks in graph editor.
-- Save templates for repeatable pipelines.
-
-Open `Agent`:
-
-- Ask scoped lab questions.
-- Agent stays read-first, cites retrieved data, and flags write intent as approval-required.
-
-## 5) Search and Navigation Tips
-
-Use top search in header:
-
-- Scoped format: `assay: egfr` or `gel: wb_run_01`
-- Also supports: `<scope> <query>` (for example `chemical dmso`)
-- View shortcuts: `projects`, `protocols`, `papers`, `members`, etc.
-
-If no scope is provided, Enana scores global records and opens the best-matching module.
-
-## 6) Save, Load, and Back Up Data
-
-Enana persistence layers:
-
-- Browser state: `localStorage` (`enana_state_v1`)
-- App JSON save/load: via `Setting > Data File (.json)`
-- Auto-save file default: `enana-data.json` under Electron `userData`
-
-Recommended backup routine:
-
-1. Keep auto-save enabled.
-2. Periodically click `Save .json` to a dated backup filename.
-3. Back up your storage folder path if notebook files are referenced there.
-
-## 7) LLM and Agent Setup
+## 5) LLM and Agent Setup
 
 Configure in `Setting > LLM Model & API`.
 
@@ -230,17 +111,17 @@ Default endpoints:
 
 OpenAI CLI (Codex) setup:
 
-1. Install Codex CLI so the `codex` command is available.
-2. Run `codex login` and sign in with your ChatGPT account.
-3. In `Setting > LLM Model & API`, choose `OpenAI CLI (Codex)`.
-4. API key is optional for this provider.
+1. Install Codex CLI and ensure `codex` is available on `PATH`.
+2. Run `codex login` and sign in.
+3. In `Setting > LLM Model & API`, select `OpenAI CLI (Codex)`.
+4. API key is optional for Codex CLI mode.
 
 Notes:
 
-- `Papers` AI actions and `Agent` both depend on valid LLM settings.
-- Agent responses include confidence, citations, and decision record fields.
+- `Agent` and `Papers` AI features require valid LLM settings.
+- Codex mode checks login state and surfaces an error if the session is not authenticated.
 
-## 8) Telegram Bot Setup
+## 6) Telegram Bot Setup
 
 Set token in either:
 
@@ -251,7 +132,7 @@ Saved token location:
 
 - `<userData>/telegram-bot.json`
 
-Common Telegram commands:
+Common commands:
 
 - `/help`
 - `/modules`
@@ -263,18 +144,38 @@ Common Telegram commands:
 - `/gel <query>`
 - `/status`
 
-## 9) Build, Package, and Test
+## 7) Data Save, Load, and Backup
 
-```bash
-npm run build:ui
-npm test
-npm run package:app
-npm run dist
-```
+Persistence layers:
 
-Output is generated under `out/`.
+- Browser state: `localStorage` key `enana_state_v1`
+- App save/load via `Setting > Data File`
+- Default auto-save filename: `enana-data.json`
 
-Optional summary PDF utility:
+Supported data-file extensions include `.json` and `.ena` (for example `.ena.json` also works).
+
+Recommended backup routine:
+
+1. Keep auto-save enabled.
+2. Periodically save snapshots to dated filenames.
+3. Back up your storage folder path if notebook/project files are referenced there.
+
+## 8) Scripts and Commands
+
+| Command | Purpose |
+| --- | --- |
+| `npm run build:ui` | Build `index.html` and `styles.css` from `ui/html/**` and `ui/css/**`. |
+| `npm run check:dom-ids` | Validate `getElementById` usage against generated markup. |
+| `npm run start` | Build UI and launch Electron in development mode. |
+| `npm test` | Build UI, run DOM ID checks, then run test runner (`node test.js`). |
+| `npm run package:app` | Build UI and package app artifacts. |
+| `npm run dist` | Build UI and generate installer artifacts (`electron-forge make`). |
+| `npm run package` | Alias for packaging. |
+| `npm run make` | Alias for distribution build. |
+
+Build output is generated under `out/`.
+
+Optional utility:
 
 ```bash
 python3 scripts/generate_enana_summary_pdf.py
@@ -284,52 +185,227 @@ Generated file:
 
 - `output/pdf/enana-app-summary.pdf`
 
+## 9) Test Suite Structure
+
+Entrypoint:
+
+- `test.js`
+
+Suites under `tests/suites/`:
+
+- `core/agent-suite.js`: agent routing, tool execution, retrieval, simulation flows.
+- `core/app-modules-suite.js`: module behavior coverage.
+- `core/contracts-suite.js`: UI/IPC contract and wiring checks.
+- `edge/platform-and-regression-suite.js`: regression/static edge checks.
+- `edge/bio-tools-and-gel-suite.js`: sequence/tools/gel edge coverage.
+
+Suite loaders:
+
+- `tests/suites/core-suite.js`
+- `tests/suites/edge-suite.js`
+
 ## 10) Project Structure
 
-- `src/main/main.js`: Electron main process, IPC handlers, LLM agent controller, Telegram lifecycle
-- `src/main/preload.js`: secure bridge (`window.enanaApi`)
-- `src/renderer/renderer.js`: app bootstrap, navigation, search routing, cross-module refresh
-- `src/renderer/modules/`: renderer feature modules
-- `src/main/helpers/`: main-process helper modules (agent + data + sequence library)
-- `src/main/lib/`: main-process support libraries (`telegramBot`, `plannotate-engine`, `main-utils`, `codex-cli-provider`)
-- `ui/html/**` + `ui/css/**`: source partials for UI composition
-- `ui/config/html-order.json`: source-of-truth order for HTML assembly
-- `ui/config/css-order.json`: source-of-truth order for CSS assembly
-- `scripts/build-ui.mjs`: deterministic UI generator for `index.html` and `styles.css`
-- `scripts/check-dom-ids.mjs`: validates `document.getElementById()` references against generated markup
-- `tests/suites/core/**`: core functional suites (agent flows, module behavior, contracts)
-- `tests/suites/edge/**`: edge/regression suites (state normalization, sequence/tool-box/gel edge cases)
-- `tests/README.md`: test organization and maintenance conventions
-- `index.html`: generated runtime HTML (committed)
-- `styles.css`: generated import manifest (committed) that loads `ui/css/**` in deterministic order
-- `data/llm-prompts.json`: configurable prompts for papers/agent
-- `data/agent-io-contract.json`: JSON input/output contract for LLM-facing functions and agent tools
-- `src/main/lib/telegramBot.js`: Telegram command handling
+- `src/main/main.js`: Electron main process, IPC handlers, LLM/agent controller, Telegram lifecycle.
+- `src/main/preload.js`: secure renderer bridge (`window.enanaApi`).
+- `src/main/helpers/`: main-process helpers (agent + data + sequence library).
+- `src/main/lib/`: main-process libraries (`telegramBot`, `plannotate-engine`, `codex-cli-provider`, etc.).
+- `src/renderer/renderer.js`: renderer bootstrap and module wiring.
+- `src/renderer/modules/`: renderer feature modules.
+- `ui/html/**` + `ui/css/**`: source partials for generated UI.
+- `ui/config/html-order.json`: source-of-truth HTML assembly order.
+- `ui/config/css-order.json`: source-of-truth CSS assembly order.
+- `scripts/build-ui.mjs`: deterministic generator for `index.html` and `styles.css`.
+- `scripts/check-dom-ids.mjs`: static DOM ID consistency validation.
+- `tests/README.md`: test maintenance conventions.
+- `data/llm-prompts.json`: configurable prompts for papers/agent.
+- `data/agent-io-contract.json`: tool contract for LLM-facing agent operations.
 
 ## 11) Troubleshooting
 
-### App launches but data is empty
+### App opens but data is missing
 
-- Check `Setting > Data File (.json)` and load the correct file.
-- Confirm auto-save path did not change unexpectedly.
+- Open `Setting > Data File` and load the correct file.
+- Confirm your current auto-save target path.
 
-### Agent or Papers AI says API key missing
+### Agent or Papers says API key is missing
 
-- Set API key in `Setting > LLM Model & API`.
-- Or export `ENANA_LLM_API_KEY` / `LLM_API_KEY` before launch.
+- Set key in `Setting > LLM Model & API`, or
+- export `ENANA_LLM_API_KEY` / `LLM_API_KEY` before launch.
 
-### Telegram bot not running
+### Codex provider does not respond
+
+- Ensure `codex` is installed and on `PATH`.
+- Run `codex login` in your terminal.
+
+### Telegram bot is not running
 
 - Verify token format.
-- Check status text in `Setting > Telegram Bot`.
-- If saved token is cleared, app falls back to `TELEGRAM_BOT_TOKEN`.
+- Check bot status in `Setting > Telegram Bot`.
+- If no saved token exists, app falls back to `TELEGRAM_BOT_TOKEN`.
 
-### Notebook file paths not organizing as expected
+### Notebook imports or paper uploads fail due to path errors
 
-- Set and save `Storage Folder Path` first.
-- Re-open notebook module after changing path.
+- Set `Storage Folder Path` in `Setting`.
+- Re-open the affected module after saving the new path.
 
-### Packaging issues
+### Packaging fails
 
 - Re-run `npm install`.
-- Ensure Electron Forge dependencies are installed.
+- Confirm Electron Forge dependencies are available.
+
+## 12) Detailed Module Reference
+
+### Home Dashboard
+
+- Purpose: landing module for operational awareness and quick navigation.
+- Cell passage reminders: reads `cell_line` sample records and surfaces overdue/soon/unconfigured passage schedules.
+- Workflow progress: shows the next actionable step from the currently selected workflow.
+- Lab timer: built-in countdown timer with presets, custom duration, start/pause/reset, and visual end alert.
+
+### Members
+
+- Purpose: maintain team identity records.
+- Data captured: name, institution email, role/position, and Enana email.
+- Supports create/edit/delete and card-based review.
+- Enana email is reused by collaboration messaging and inventory sync routing.
+
+### Instruments
+
+- Purpose: register instruments and manage reservations.
+- Supports month and week calendar views plus week drag-to-select for quick time block drafts.
+- Reservation conflict detection blocks overlapping reservations.
+- Reservation edit/delete is restricted to the original creator identity.
+- Stores reservation metadata (title, date/time range, notes, owner label).
+
+### Protocols
+
+- Purpose: author, manage, share, and import protocols.
+- Editor supports purpose/materials/steps/troubleshooting with bullet normalization.
+- Step placeholders can be inserted as interactive tokens (for notebook filling).
+- Includes protocol JSON import (file or pasted), list sorting, and PDF export.
+- Supports two share paths: in-app protocol share messages and portable `enana://protocol-share/...` links.
+- Integrates with Papers by accepting extracted-method drafts as new protocol drafts.
+
+### Collabrations
+
+- Purpose: internal Enana-style messaging and protocol exchange.
+- Send/receive messages between member Enana emails.
+- Inbox is scoped per selected Enana email identity.
+- Protocol import supports shared messages, share links, and pasted JSON payloads.
+- Accepts token formats such as `enana://protocol-share/...` and `ENANA_PROTOCOL_SHARE:...`.
+
+### Synthesis Notebook
+
+- Purpose: synthesis-focused experiment logging.
+- Project-scoped entry workflow with inline placeholder editing.
+- Captures outcome metadata: produced compound code, purity, assay usage, and linked references.
+- Reference links include instrument, people, chemicals, samples, papers, and reagent lots.
+- Built-in chemistry workspace integrates Ketcher, reaction scheme progression, substrate MW table, and procedure text.
+- Imported result files are persisted under the configured storage path in project notebook folders.
+
+### Biology Notebook
+
+- Purpose: protocol-driven biology experiment logging.
+- Project + protocol selection with protocol search and placeholder-aware step rendering.
+- Saves structured values, notes, and attached files per entry.
+- Supports editing existing entries and exporting notebook-entry PDFs.
+- Uses the same storage-path-backed import pipeline for result files.
+
+### Chemicals
+
+- Purpose: shared chemical inventory with sync workflows.
+- Tracks CAS, vendor, catalog, size, stock, pricing, location, expiration, and URL.
+- Auto-generates stable location codes (for example `A1`, `A2`) per inventory location.
+- Includes searchable/sortable list and a detail panel with linked sample visibility.
+- Broadcasts inventory updates to members and supports inbox-based import of unread sync updates.
+- Maintains an append-only hash-linked activity log for inventory mutations.
+
+### Sample & Inventory
+
+- Purpose: manage samples and link them to storage/inventory context.
+- Supports types: plasmid, cell line, strain, antibody, purified protein, compound, primer.
+- Dynamic location forms by storage type (freezer/fridge/desiccator/RT cabinet).
+- Links samples to personal inventory containers/slots and related chemical records.
+- Cell line mode captures passage schedule fields used by dashboard reminders.
+- Compound mode embeds Ketcher and stores captured structure data (SMILES/molfile).
+
+### Assay
+
+- Purpose: design assay plates, capture results, and run analyses.
+- Create mode supports multiple plate formats (6/12/24/48/96/384), axis templates, swap axis, and manual well overrides.
+- CSV template export/import is supported for mapping workflows.
+- Result mode loads saved plates, supports spreadsheet-like paste, and persists results.
+- Analysis includes grouped/nested summaries, row/column summaries, regression, EC50/IC50, survival, and standard-curve fitting variants.
+- Supports replicate grouping via manual group text and selection-driven group helpers.
+
+### Gel
+
+- Purpose: manual gel analysis and reporting.
+- Supports optional crop workflow and image enhancement controls.
+- Guided manual sequence includes borders, lane dividers, ladder designation, ladder MW points, and target band boundaries.
+- Generates lane-level summaries with quantification and confidence-like interpretation fields.
+- Saves analysis records linked to project/notebook context.
+- Exports analysis output as JSON or CSV.
+
+### Projects
+
+- Purpose: maintain project registry and connected experiment context.
+- Project CRUD with optional auto-directory creation under configured storage path.
+- Project notebook page view aggregates associated entries and linked assays/gels.
+- Deleting a project cascades removal/detachment across linked notebook entries, assay runs, gel analyses, and workflow bindings.
+
+### Workflows
+
+- Purpose: build repeatable protocol graphs and templates.
+- Supports protocol blocks and plain-text blocks, with assignee and metadata fields.
+- Includes visual graph editor for block layout, connection, disconnection, and multi-select operations.
+- Workflow records can be linked to projects and notebook pages.
+- Template system stores reusable graph structures and instantiates new workflows from templates.
+- Workflow progress state feeds the Home dashboard next-step widget.
+
+### Papers
+
+- Purpose: manage project/journal-club PDFs and AI-assisted extraction.
+- Upload pipeline stores PDFs under the storage path and links them to project or journal club context.
+- Auto-ingestion chain: summarize paper, extract methods, extract reagents.
+- Maintains ingestion status, readiness markers, and extraction artifacts (methods/reagents/key figures).
+- Allows method-to-protocol draft creation and paper-to-experiment linking with notes.
+- Project Library Q&A composes project-scoped context from papers, protocols, notebook entries, and links.
+
+### Agent
+
+- Purpose: evidence-grounded assistant over lab state.
+- Project-scoped chat with context summary counts (projects, protocols, workflows, notebook entries, assays, gels, papers, inventory).
+- Sends thin but structured state snapshots for retrieval-aware agent processing.
+- Renders trace metadata including citations, tool traces, staged activity, routing, validation, and provenance summaries.
+- Supports notebook-draft auto-save behavior when returned by agent responses.
+- Keeps chat history per session and supports chat reset.
+
+### Sequence Viewer
+
+- Purpose: parse, inspect, annotate, and manage sequence records.
+- Home workspace manages saved/unsaved sequence library entries and circular previews.
+- Detail workspace supports pasted text or file input (FASTA, FASTQ, GenBank, raw sequence text).
+- Dual-strand sequence view with feature rail, feature detail panel, and summary metrics.
+- Includes NEB restriction-site annotation overlays and parser warning/error surfaces.
+- Integrates with pLannotate workflows and storage-backed save/reopen flows.
+
+### Tools
+
+- Purpose: consolidate bench calculators and design utilities.
+- Included tools: molarity, peptide properties, buffer preparer, DNA-to-protein, protein-to-DNA reverse translation, protein assembler, oligo properties, extinction coefficient, qPCR efficiency, pLannotate, CRISPR sgRNA designer, colony counter.
+- pLannotate tool supports backend status/install helper, map rendering, feature table, GBK export, and handoff to Sequence Viewer.
+- CRISPR tool provides reference-profile-aware guide design and ranked candidate table output.
+- Colony counter supports crop, zoom/pan, manual marker placement/removal, and saved count output.
+
+### Setting
+
+- Purpose: global app configuration and integrations.
+- Personal info and appearance configuration (font size, accent color, mode, UI style).
+- Storage folder path selection used by notebooks, projects, papers, and sequence persistence.
+- Startup/data behavior controls (default module, remember last module, auto-load data file).
+- Inventory location management used by Chemicals and Sample modules.
+- LLM provider/model/endpoint/key configuration with provider-aware defaults.
+- Telegram token save/clear and live runtime status display.
+- Data file controls for save/load and auto-save toggle.

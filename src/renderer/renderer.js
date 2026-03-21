@@ -36,6 +36,7 @@ import {
 
 const state = loadState();
 const LAST_ACTIVE_VIEW_STORAGE_KEY = 'enana_last_active_view_v1';
+const SEQUENCE_VIEWER_DETAIL_VIEW_ID = 'sequence-viewer-detail-view';
 
 function applyAppearanceSnapshot(appearance) {
   const root = document.documentElement;
@@ -423,7 +424,14 @@ gel = initGelAnalysis({
   }
 });
 
-sequenceViewer = initSequenceViewer();
+sequenceViewer = initSequenceViewer({
+  onNavigateHome: () => {
+    showView(VIEWS.SEQUENCE_VIEWER);
+  },
+  onNavigateDetail: () => {
+    showView(SEQUENCE_VIEWER_DETAIL_VIEW_ID);
+  }
+});
 
 initToolBox({
   onOpenSequenceViewer: (payload) => {
@@ -431,7 +439,7 @@ initToolBox({
       return;
     }
     sequenceViewer.loadFromExternal(payload);
-    showView(VIEWS.SEQUENCE_VIEWER);
+    showView(SEQUENCE_VIEWER_DETAIL_VIEW_ID);
   }
 });
 
@@ -491,12 +499,18 @@ function showView(viewId) {
     const active = view.id === nextView || (showSampleInventoryWorkspace && isSampleInventorySection);
     view.classList.toggle('is-active', active);
   });
+  const activeNavView = nextView === SEQUENCE_VIEWER_DETAIL_VIEW_ID
+    ? VIEWS.SEQUENCE_VIEWER
+    : nextView;
   [...appNavButtons, ...homeTiles].forEach((button) => {
     const buttonView = normalizeViewId(button.dataset.view);
-    button.classList.toggle('is-active', buttonView === nextView);
+    button.classList.toggle('is-active', buttonView === activeNavView);
   });
 
-  pageSubtitle.textContent = TITLES[nextView] || '';
+  const subtitleView = nextView === SEQUENCE_VIEWER_DETAIL_VIEW_ID
+    ? VIEWS.SEQUENCE_VIEWER
+    : nextView;
+  pageSubtitle.textContent = TITLES[subtitleView] || '';
   homeBtn.hidden = nextView === VIEWS.HOME;
 
   if (nextView === VIEWS.HOME) {
@@ -557,7 +571,7 @@ function showView(viewId) {
     agentChat.render();
   }
 
-  if (nextView === VIEWS.SEQUENCE_VIEWER) {
+  if (nextView === VIEWS.SEQUENCE_VIEWER || nextView === SEQUENCE_VIEWER_DETAIL_VIEW_ID) {
     sequenceViewer?.render?.();
   }
 
