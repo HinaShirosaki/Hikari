@@ -1,6 +1,412 @@
 {
   "schema_name": "enana_protocols",
   "schema_version": "1.0.0",
-  "updated_at": "2026-03-18T18:21:58.152Z",
-  "protocols": []
+  "updated_at": "2026-03-21T21:43:51.840Z",
+  "protocols": [
+    {
+      "id": "1774024047007-d137dae96cab78",
+      "name": "BL21(DE3) Chemical Transformation with pET28a",
+      "purpose": "Introduce a plasmid into BL21(DE3) competent E. coli cells for protein expression.",
+      "materials": [
+        "BL21(DE3) competent cells",
+        "Plasmid DNA",
+        "LB agar plate with appropriate antibiotic",
+        "SOC medium",
+        "Ice bucket",
+        "42 C heat block or water bath",
+        "Sterile microcentrifuge tubes",
+        "37 C shaking incubator"
+      ],
+      "steps": [
+        {
+          "id": "1774125436234-8c09146262f048",
+          "text": "Thaw 1 tube of BL21(DE3) competent cells on ice.",
+          "placeholders": []
+        },
+        {
+          "id": "1774125436234-5e6cd5beb943b",
+          "text": "Add 200ng of {{ph:1774125436234-cac9aa958fe75}} DNA to the cells and gently flick to mix.",
+          "placeholders": [
+            {
+              "id": "1774125436234-cac9aa958fe75",
+              "name": "plasmid"
+            }
+          ]
+        },
+        {
+          "id": "1774125436234-15189704d9d308",
+          "text": "Incubate the mixture on ice for 30 min.",
+          "placeholders": []
+        },
+        {
+          "id": "1774125436234-43f81b59a452a",
+          "text": "Heat shock the cells at 42 C for 45 s, then immediately place them back on ice for 1 min.",
+          "placeholders": []
+        },
+        {
+          "id": "1774125436234-b55f8f12ff476",
+          "text": "Add 1 mL of SOC medium and recover the cells at 37 C with shaking for 1 h.",
+          "placeholders": []
+        },
+        {
+          "id": "1774125436234-04fdf2bad48cb8",
+          "text": "Plate 100 uL of the recovery culture onto an LB agar plate containing Kanamycin.",
+          "placeholders": []
+        },
+        {
+          "id": "1774125436234-c8e74cf17602d8",
+          "text": "Incubate the plate at 37 C for overnight until colonies appear.",
+          "placeholders": []
+        }
+      ],
+      "troubleshooting": "Problem: No colonies on plate; Possible cause: Competent cells lost efficiency or antibiotic selection was incorrect; Solution: Use fresh competent cells and verify the plasmid resistance marker matches the plate antibiotic\nProblem: Too many background colonies; Possible cause: Contamination or insufficient antibiotic concentration; Solution: Prepare fresh selective plates and use sterile technique throughout",
+      "createdAt": "2026-03-20T16:27:27.007Z",
+      "updatedAt": "2026-03-21T20:37:16.234Z"
+    },
+    {
+      "id": "1774024647315-74cbb18b4cc37",
+      "name": "Small-Scale Overnight Starter Culture",
+      "createdAt": "2026-03-20T16:37:27.315Z",
+      "updatedAt": "2026-03-20T16:37:27.315Z",
+      "purpose": "Prepare a starter culture from a single bacterial colony for downstream expression or plasmid preparation.",
+      "materials": [
+        "Single bacterial colony",
+        "LB medium",
+        "Appropriate antibiotic",
+        "Sterile culture tube or baffled flask",
+        "37 C shaking incubator",
+        "Pipettes and sterile tips"
+      ],
+      "steps": [
+        {
+          "id": "1774024647315-74a9f88e0f0bf8",
+          "text": "Add {{ph:1774024647315-9f03b8d734f3c}} of LB medium containing {{ph:1774024647315-9ce336955a66c}} antibiotic to a sterile culture tube.",
+          "placeholders": [
+            {
+              "id": "1774024647315-9f03b8d734f3c",
+              "name": "volume"
+            },
+            {
+              "id": "1774024647315-9ce336955a66c",
+              "name": "antibiotic concentration"
+            }
+          ]
+        },
+        {
+          "id": "1774024647315-50fbcf026e31b8",
+          "text": "Pick a single colony from a fresh plate and inoculate the medium.",
+          "placeholders": []
+        },
+        {
+          "id": "1774024647315-b56a957dd49a1",
+          "text": "Incubate the culture at 37 C with shaking at {{ph:1774024647315-09eb7ed8adca9}} for {{ph:1774024647315-82400c92a18e08}}.",
+          "placeholders": [
+            {
+              "id": "1774024647315-09eb7ed8adca9",
+              "name": "rpm"
+            },
+            {
+              "id": "1774024647315-82400c92a18e08",
+              "name": "time"
+            }
+          ]
+        },
+        {
+          "id": "1774024647315-7881c04d4e417",
+          "text": "Inspect the culture for turbidity and record the culture ID, date, and plasmid name in the notebook.",
+          "placeholders": []
+        }
+      ],
+      "troubleshooting": "Problem: Culture does not grow; Possible cause: Colony was not viable or antibiotic concentration was too high; Solution: Restart from a fresh colony and confirm the correct antibiotic and concentration were used\nProblem: Culture appears contaminated; Possible cause: Non-sterile handling during inoculation; Solution: Discard the culture and repeat using stricter sterile technique"
+    },
+    {
+      "id": "1774024680081-6b02b28fd6d39",
+      "name": "IPTG-Induced Recombinant Protein Expression in BL21(DE3)",
+      "createdAt": "2026-03-20T16:38:00.081Z",
+      "updatedAt": "2026-03-20T16:38:00.081Z",
+      "purpose": "Express a recombinant protein in BL21(DE3) cells using IPTG induction.",
+      "materials": [
+        "Starter culture of transformed BL21(DE3)",
+        "LB or terrific broth medium",
+        "Appropriate antibiotic",
+        "IPTG",
+        "Shaking incubator",
+        "Spectrophotometer",
+        "Culture flask"
+      ],
+      "steps": [
+        {
+          "id": "1774024680081-30d1ad296ed458",
+          "text": "Inoculate {{ph:1774024680081-ff5ea222c2b28}} of expression medium containing {{ph:1774024680081-2608acdba053b}} with {{ph:1774024680081-b41278cd1047f8}} of overnight starter culture.",
+          "placeholders": [
+            {
+              "id": "1774024680081-ff5ea222c2b28",
+              "name": "volume"
+            },
+            {
+              "id": "1774024680081-2608acdba053b",
+              "name": "antibiotic"
+            },
+            {
+              "id": "1774024680081-b41278cd1047f8",
+              "name": "volume"
+            }
+          ]
+        },
+        {
+          "id": "1774024680081-8b59fc78ea4ba",
+          "text": "Grow the culture at 37 C with shaking until OD600 reaches {{ph:1774024680081-fab6fafbcf158}}.",
+          "placeholders": [
+            {
+              "id": "1774024680081-fab6fafbcf158",
+              "name": "value"
+            }
+          ]
+        },
+        {
+          "id": "1774024680081-261cf8cde96b5",
+          "text": "Add IPTG to a final concentration of {{ph:1774024680081-587c106fae95a}} to induce protein expression.",
+          "placeholders": [
+            {
+              "id": "1774024680081-587c106fae95a",
+              "name": "concentration"
+            }
+          ]
+        },
+        {
+          "id": "1774024680081-060177ce253a3",
+          "text": "Shift the culture to {{ph:1774024680081-2ce357c07b8e68}} and continue shaking for {{ph:1774024680081-1e13340d6a10c}}.",
+          "placeholders": [
+            {
+              "id": "1774024680081-2ce357c07b8e68",
+              "name": "temperature"
+            },
+            {
+              "id": "1774024680081-1e13340d6a10c",
+              "name": "time"
+            }
+          ]
+        },
+        {
+          "id": "1774024680081-c57e1dcb979b6",
+          "text": "Harvest cells by centrifugation at {{ph:1774024680081-d82f101f8190e8}} for {{ph:1774024680081-ad983f4a2f5b68}} at {{ph:1774024680081-4962dce7ed7eb8}}.",
+          "placeholders": [
+            {
+              "id": "1774024680081-d82f101f8190e8",
+              "name": "speed"
+            },
+            {
+              "id": "1774024680081-ad983f4a2f5b68",
+              "name": "time"
+            },
+            {
+              "id": "1774024680081-4962dce7ed7eb8",
+              "name": "temperature"
+            }
+          ]
+        },
+        {
+          "id": "1774024680081-1476f4cf39052",
+          "text": "Record pellet appearance, culture volume, induction time, and temperature in the notebook.",
+          "placeholders": []
+        }
+      ],
+      "troubleshooting": "Problem: Low protein expression; Possible cause: Induction conditions were suboptimal or plasmid expression burden was too high; Solution: Test different IPTG concentrations, induction temperatures, and induction durations\nProblem: Protein mostly insoluble; Possible cause: Expression temperature was too high or expression was too fast; Solution: Lower the induction temperature and reduce IPTG concentration"
+    },
+    {
+      "id": "1774024695073-536c18071dd0d",
+      "name": "Ni-NTA Purification of His-Tagged Protein",
+      "purpose": "Purify a His-tagged recombinant protein using nickel affinity resin.",
+      "materials": [
+        "Cell pellet or clarified lysate",
+        "Ni-NTA resin",
+        "Lysis buffer",
+        "Wash buffer",
+        "Elution buffer",
+        "Gravity column or chromatography setup",
+        "Centrifuge",
+        "Tube rack",
+        "Optional protease inhibitor"
+      ],
+      "steps": [
+        {
+          "id": "1774125203496-c7d15ebdc641a8",
+          "text": "Resuspend the cell pellet in 100 mL of lysis buffer",
+          "placeholders": []
+        },
+        {
+          "id": "1774125203496-ec7ee810d38748",
+          "text": "Lyse the cells using sonication and clarify the lysate by centrifugation at 10,000 rpm for 30 mins.",
+          "placeholders": []
+        },
+        {
+          "id": "1774125203496-ae0108f167c538",
+          "text": "Equilibrate 5 mL of Ni-NTA resin with 20 mL of lysis buffer.",
+          "placeholders": []
+        },
+        {
+          "id": "1774125203496-404bcf026d9b68",
+          "text": "Load the clarified lysate onto the resin.",
+          "placeholders": []
+        },
+        {
+          "id": "1774125203497-d3a01f7ca5e048",
+          "text": "Wash the resin with 40 mL of wash buffer containing 20 mM imidazole.",
+          "placeholders": []
+        },
+        {
+          "id": "1774125203497-6e6780fa58bd4",
+          "text": "Elute the bound protein using 6 mL of elution buffer containing 300 mM imidazole.",
+          "placeholders": []
+        },
+        {
+          "id": "1774024695073-9ea9a36345d188",
+          "text": "Collect fractions and analyze them by SDS-PAGE.",
+          "placeholders": []
+        }
+      ],
+      "troubleshooting": "Problem: Target protein does not bind resin; Possible cause: His-tag is inaccessible or imidazole concentration in binding buffer is too high; Solution: Reduce imidazole in the binding step and confirm the His-tag is intact\nProblem: High contaminant bands in elution; Possible cause: Wash conditions were too weak; Solution: Increase wash stringency by adjusting imidazole concentration or wash volume",
+      "createdAt": "2026-03-20T16:38:15.073Z",
+      "updatedAt": "2026-03-21T20:33:23.497Z"
+    },
+    {
+      "id": "1774024712936-cdad2f729e908",
+      "name": "TEV Protease Cleavage of Fusion Protein",
+      "createdAt": "2026-03-20T16:38:32.936Z",
+      "updatedAt": "2026-03-20T16:38:32.936Z",
+      "purpose": "Remove an affinity or solubility tag from a fusion protein using TEV protease.",
+      "materials": [
+        "Purified fusion protein",
+        "TEV protease",
+        "Cleavage buffer",
+        "Dialysis tubing or desalting column",
+        "Microcentrifuge tubes",
+        "4 C incubator or cold room",
+        "SDS-PAGE reagents"
+      ],
+      "steps": [
+        {
+          "id": "1774024712936-af15c001f5a85",
+          "text": "Exchange the fusion protein into cleavage buffer using {{ph:1774024712936-7dba43a18d95f8}}.",
+          "placeholders": [
+            {
+              "id": "1774024712936-7dba43a18d95f8",
+              "name": "buffer exchange method"
+            }
+          ]
+        },
+        {
+          "id": "1774024712936-c39e561ac4cc48",
+          "text": "Add TEV protease at an enzyme-to-substrate ratio of {{ph:1774024712936-8060b8a60ca3b}}.",
+          "placeholders": [
+            {
+              "id": "1774024712936-8060b8a60ca3b",
+              "name": "ratio"
+            }
+          ]
+        },
+        {
+          "id": "1774024712936-f707b8e3323d98",
+          "text": "Incubate the reaction at {{ph:1774024712936-51cd47e4df67a}} for {{ph:1774024712936-bf51d65dc5d7e}}.",
+          "placeholders": [
+            {
+              "id": "1774024712936-51cd47e4df67a",
+              "name": "temperature"
+            },
+            {
+              "id": "1774024712936-bf51d65dc5d7e",
+              "name": "time"
+            }
+          ]
+        },
+        {
+          "id": "1774024712936-abdfa557cbbaf",
+          "text": "Remove an aliquot before and after cleavage for SDS-PAGE analysis.",
+          "placeholders": []
+        },
+        {
+          "id": "1774024712936-66e3e948f83488",
+          "text": "Separate the cleaved tag, uncleaved protein, and TEV protease using {{ph:1774024712936-e83fc6a9af4a2}}.",
+          "placeholders": [
+            {
+              "id": "1774024712936-e83fc6a9af4a2",
+              "name": "purification method"
+            }
+          ]
+        }
+      ],
+      "troubleshooting": "Problem: Incomplete cleavage; Possible cause: Insufficient TEV amount or inaccessible cleavage site; Solution: Increase incubation time, increase TEV ratio, or optimize buffer composition\nProblem: Protein precipitates during cleavage; Possible cause: Protein is unstable in cleavage buffer; Solution: Test alternative salt concentration, glycerol level, or lower protein concentration"
+    },
+    {
+      "id": "1774024745003-46df848e78c068",
+      "name": "Avi-Tag Protein Biotinylation",
+      "createdAt": "2026-03-20T16:39:05.003Z",
+      "updatedAt": "2026-03-20T16:39:05.003Z",
+      "purpose": "Biotinylate an Avi-tagged protein for downstream binding assays or immobilization.",
+      "materials": [
+        "Purified Avi-tagged protein",
+        "BirA enzyme",
+        "Biotin",
+        "ATP",
+        "Magnesium-containing biotinylation buffer",
+        "Desalting column or dialysis device",
+        "Microcentrifuge tubes"
+      ],
+      "steps": [
+        {
+          "id": "1774024745003-dd7693fa953ce",
+          "text": "Prepare the biotinylation reaction by combining {{ph:1774024745003-093192d094133}} of Avi-tagged protein, {{ph:1774024745003-fbbbfbaa73e5b}} of BirA, {{ph:1774024745003-d6f73ec6557a1}} of biotin, ATP, and buffer.",
+          "placeholders": [
+            {
+              "id": "1774024745003-093192d094133",
+              "name": "mass or volume"
+            },
+            {
+              "id": "1774024745003-fbbbfbaa73e5b",
+              "name": "amount"
+            },
+            {
+              "id": "1774024745003-d6f73ec6557a1",
+              "name": "amount"
+            }
+          ]
+        },
+        {
+          "id": "1774024745003-d9091ff6a0a69",
+          "text": "Incubate the reaction at {{ph:1774024745003-907ec8f41b1b4}} for {{ph:1774024745003-6d181f4be08878}}.",
+          "placeholders": [
+            {
+              "id": "1774024745003-907ec8f41b1b4",
+              "name": "temperature"
+            },
+            {
+              "id": "1774024745003-6d181f4be08878",
+              "name": "time"
+            }
+          ]
+        },
+        {
+          "id": "1774024745003-5c803a37b8e3a8",
+          "text": "Remove excess free biotin using {{ph:1774024745003-d1b54c3887f0f8}}.",
+          "placeholders": [
+            {
+              "id": "1774024745003-d1b54c3887f0f8",
+              "name": "desalting method"
+            }
+          ]
+        },
+        {
+          "id": "1774024745003-d843fa3ad64918",
+          "text": "Assess biotinylation efficiency using {{ph:1774024745003-0dd0ef09f4b6c}}, such as streptavidin shift or binding assay.",
+          "placeholders": [
+            {
+              "id": "1774024745003-0dd0ef09f4b6c",
+              "name": "analysis method"
+            }
+          ]
+        }
+      ],
+      "troubleshooting": "Problem: Incomplete biotinylation; Possible cause: Insufficient BirA activity or reaction time; Solution: Increase BirA amount, extend incubation time, or confirm buffer contains required cofactors\nProblem: Poor downstream immobilization; Possible cause: Residual free biotin interferes with streptavidin binding; Solution: Thoroughly remove excess biotin after the reaction"
+    }
+  ]
 }

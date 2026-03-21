@@ -258,37 +258,42 @@ function collectActivityRows(meta) {
     }
   };
 
-  asArray(meta.intermediateStates).forEach((stage) => {
-    upsertRow('done', formatStageActivity(stage?.stage, stage?.goal));
-  });
-
-  asArray(meta.toolTrace).forEach((item) => {
-    const toolName = trimText(item?.tool, 120);
-    const action = TOOL_ACTIVITY_LABELS[toolName] || `Running ${toolName || 'tool'}`;
-    const summary = trimText(item?.summary, 200);
-    upsertRow('done', summary ? `${action}: ${summary}` : action);
-  });
-
-  asArray(meta.proposedWriteActions).forEach((action) => {
-    upsertRow('pending', formatWriteActivity(action));
-  });
-
-  inferRequestedActivities(meta.requestText).forEach((activity) => {
-    const status = activity.includes('(pending approval)') ? 'pending' : 'planned';
-    upsertRow(status, activity);
-  });
-
-  const routingIntent = trimText(meta.routing?.intent, 80);
-  if (routingIntent) {
-    upsertRow('done', `Routing intent: ${routingIntent}`);
+  const parser = meta.parser && typeof meta.parser === 'object' ? meta.parser : {};
+  const intent = trimText(parser.primary_intent, 80);
+  if (intent) {
+    upsertRow('done', `Intent parsed: ${intent}`);
   }
-  if (meta.notebookDraft?.save?.mode === 'auto_save_draft') {
-    const status = meta.notebookDraft?.save?.applied === true ? 'done' : 'pending';
-    upsertRow(status, `Notebook draft auto-save: ${trimText(meta.notebookDraft?.save?.status, 80) || 'pending'}`);
+  if (parser.needs_clarification === true) {
+    upsertRow('pending', 'Clarification required before execution');
+  } else {
+    upsertRow('done', 'No clarification required');
   }
-  if (meta.routing?.plan?.needs_clarification) {
-    upsertRow('pending', 'Waiting on routing clarification');
+  const reasoning = trimText(parser.reasoning_summary, 240);
+  if (reasoning) {
+    upsertRow('done', `Parser reasoning: ${reasoning}`);
   }
+  const protocolWorkflow = meta.protocol_to_notebook && typeof meta.protocol_to_notebook === 'object'
+    ? meta.protocol_to_notebook
+    : {};
+  const protocolStatus = trimText(protocolWorkflow.status, 40);
+  if (protocolStatus) {
+    upsertRow(protocolStatus === 'completed' ? 'done' : 'pending', `Protocol notebook status: ${protocolStatus}`);
+  }
+  const selectedProtocolName = trimText(protocolWorkflow?.selected_protocol?.name, 220);
+  if (selectedProtocolName) {
+    upsertRow('done', `Selected protocol: ${selectedProtocolName}`);
+  }
+  const missingCount = asArray(protocolWorkflow.missing_placeholders).length;
+  if (missingCount > 0) {
+    upsertRow('pending', `Missing placeholders: ${missingCount}`);
+  }
+
+  asArray(meta.developer_trace).forEach((trace) => {
+    const stage = trimText(trace?.stage, 120);
+    if (stage) {
+      upsertRow('done', `Trace stage: ${stage}`);
+    }
+  });
 
   return rows.slice(0, 20);
 }
@@ -389,6 +394,25 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
       .filter((paper) => !projectIds.size || (paper.linkedType === 'project' && projectIds.has(paper.linkedId)))
       .slice(0, 60)
       .map(mapPaper);
+    const protocols = asArray(state.protocols)
+      .slice(0, 120)
+      .map((protocol) => ({
+        id: trimText(protocol?.id, 120),
+        name: trimText(protocol?.name, 220),
+        purpose: trimText(protocol?.purpose || protocol?.description, 700),
+        projectId: trimText(protocol?.projectId, 120),
+        projectName: trimText(protocol?.projectName, 220),
+        aliases: asArray(protocol?.aliases).map((alias) => trimText(alias, 120)).filter(Boolean).slice(0, 8),
+        steps: asArray(protocol?.steps).slice(0, 120).map((step, stepIndex) => ({
+          id: trimText(step?.id, 120) || `step-${stepIndex + 1}`,
+          text: trimText(step?.text || step?.instruction || step?.action, 1200),
+          placeholders: asArray(step?.placeholders).slice(0, 40).map((placeholder, placeholderIndex) => ({
+            id: trimText(placeholder?.id, 120) || `ph-${stepIndex + 1}-${placeholderIndex + 1}`,
+            name: trimText(placeholder?.name, 120) || 'value'
+          }))
+        }))
+      }))
+      .filter((protocol) => protocol.id || protocol.name);
 
     const projects = filteredProjects.slice(0, 30).map(mapProject);
     const experimentData = mapExperimentDataToLlmJson(state, projectId);
@@ -402,7 +426,7 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
     return {
       projects,
       workflows,
-      protocols: [],
+      protocols,
       notebookEntries: [],
       assays,
       gelAnalyses,
@@ -613,437 +637,94 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
     if (!meta || typeof meta !== 'object') {
       return '';
     }
-    const decisionRecord = meta.decisionRecord && typeof meta.decisionRecord === 'object'
-      ? meta.decisionRecord
-      : {};
-    const citations = asArray(meta.citations).map((citation) => {
-      const source = trimText(citation?.source, 120) || 'source';
-      const pointer = trimText(citation?.pointer, 120) || '-';
-      const reason = trimText(citation?.reason, 200) || '';
-      return `${source} (${pointer})${reason ? `: ${reason}` : ''}`;
-    });
-    const assumptions = asArray(decisionRecord.assumptions).map((value) => trimText(value, 220)).filter(Boolean);
-    const openQuestions = asArray(decisionRecord.open_questions).map((value) => trimText(value, 220)).filter(Boolean);
-    const verificationNotes = asArray(decisionRecord.verification_notes).map((value) => trimText(value, 220)).filter(Boolean);
-    const writeActions = asArray(meta.proposedWriteActions).map((action) => {
-      const name = trimText(action?.tool_name, 120) || 'write action';
-      const reason = trimText(action?.reason, 240) || '';
-      return reason ? `${name}: ${reason}` : name;
-    });
-    const stageRows = asArray(meta.intermediateStates).map((stage) => {
-      const stageName = trimText(stage?.stage, 50) || 'stage';
-      const goal = trimText(stage?.goal, 200);
-      return goal ? `${stageName}: ${goal}` : stageName;
-    });
-    const toolRows = asArray(meta.toolTrace).map((item) => {
-      const tool = trimText(item?.tool, 80) || 'tool';
-      const note = trimText(item?.summary, 220) || '';
-      return note ? `${tool}: ${note}` : tool;
-    });
-    const responseType = trimText(meta.response_type, 80);
-    const confidenceLabel = trimText(meta.confidence_label, 20);
-    const responseLayerRows = [
-      responseType ? `response_type: ${responseType}` : '',
-      confidenceLabel ? `confidence_label: ${confidenceLabel}` : ''
+    const parser = meta.parser && typeof meta.parser === 'object' ? meta.parser : {};
+    const primaryIntent = trimText(parser.primary_intent, 80) || 'unclear';
+    const parserRows = [
+      `primary_intent: ${primaryIntent}`,
+      `needs_clarification: ${parser.needs_clarification === true}`,
+      trimText(parser.clarification_reason, 260)
+        ? `clarification_reason: ${trimText(parser.clarification_reason, 260)}`
+        : ''
     ].filter(Boolean);
-    const sourceSummary = meta.source_summary && typeof meta.source_summary === 'object'
-      ? meta.source_summary
-      : {};
-    const sourceSummaryRows = [];
-    const totalSources = Number(sourceSummary.total_sources);
-    if (Number.isFinite(totalSources)) {
-      sourceSummaryRows.push(`total_sources: ${totalSources}`);
-    }
-    asArray(sourceSummary.groups).forEach((group, groupIndex) => {
-      const sourceType = trimText(group?.source_type, 80) || `group_${groupIndex + 1}`;
-      const label = trimText(group?.label, 80) || sourceType;
-      const count = Number(group?.count);
-      const itemRows = asArray(group?.items).slice(0, 4).map((item) => {
-        const pointer = trimText(item?.pointer, 160) || trimText(item?.source, 160) || '-';
-        const reason = trimText(item?.reason, 120);
-        return reason ? `${pointer} (${reason})` : pointer;
-      });
-      const preview = itemRows.join('; ');
-      sourceSummaryRows.push(`${label} [${sourceType}] count=${Number.isFinite(count) ? count : asArray(group?.items).length}${preview ? `: ${preview}` : ''}`);
-    });
-    const unresolvedFieldRows = asArray(meta.unresolved_fields).map((item) => {
-      const name = trimText(item?.display, 120) || trimText(item?.placeholder_key, 120) || trimText(item?.placeholder_id, 120) || 'placeholder';
-      const reason = trimText(item?.reason, 160) || 'missing_supported_value';
-      return `${name}: ${reason}`;
+    const protocolCandidateRows = asArray(parser.protocol_candidates).map((candidate, index) => {
+      const clean = trimText(candidate, 220);
+      return clean ? `candidate_${index + 1}: ${clean}` : '';
     }).filter(Boolean);
-    if (!unresolvedFieldRows.length) {
-      unresolvedFieldRows.push('none');
-    }
-    const validation = meta.validation && typeof meta.validation === 'object'
-      ? meta.validation
-      : {};
-    const validationRows = [
-      `passed: ${validation.passed === true}`,
-      `forced_clarification: ${validation.forced_clarification === true}`
-    ];
-    asArray(validation.failure_reasons).forEach((reason, index) => {
-      const clean = trimText(reason, 120);
-      if (clean) {
-        validationRows.push(`failure_reason_${index + 1}: ${clean}`);
-      }
-    });
-    asArray(validation.violations).slice(0, 8).forEach((violation, index) => {
-      const code = trimText(violation?.code, 80) || `violation_${index + 1}`;
-      const severity = trimText(violation?.severity, 30) || 'blocking';
-      const message = trimText(violation?.message, 180) || '';
-      const detail = trimText(violation?.detail, 120);
-      validationRows.push(`${index + 1}. ${code} [${severity}]${message ? ` ${message}` : ''}${detail ? ` (${detail})` : ''}`);
-    });
-    const provenance = meta.provenance && typeof meta.provenance === 'object'
-      ? meta.provenance
-      : {};
-    const provenanceRows = [];
-    const unsupportedCount = Number(provenance.unsupported_statement_count);
-    if (Number.isFinite(unsupportedCount)) {
-      provenanceRows.push(`unsupported_statement_count: ${unsupportedCount}`);
-    }
-    asArray(provenance.source_evidence).slice(0, 10).forEach((row, index) => {
-      const statement = trimText(row?.statement, 220) || `statement_${index + 1}`;
-      const supportLevel = trimText(row?.support_level, 20) || 'none';
-      const supports = asArray(row?.supports).slice(0, 3).map((support) => (
-        trimText(support?.pointer, 120) || trimText(support?.source, 120) || '-'
-      )).filter(Boolean);
-      provenanceRows.push(`${index + 1}. [${supportLevel}] ${statement}${supports.length ? ` -> ${supports.join('; ')}` : ''}`);
-    });
-    if (!provenanceRows.length) {
-      provenanceRows.push('No provenance rows.');
-    }
-    const notebookDraft = normalizeNotebookDraft(meta.notebookDraft);
-    const notebookDraftRows = notebookDraft ? [
-      `protocol: ${trimText(notebookDraft.protocol?.name, 220) || '-'}`,
-      `project: ${trimText(notebookDraft.project?.name, 180) || '-'} (${trimText(notebookDraft.project?.resolution_source, 80) || '-'})`,
-      `type: ${trimText(notebookDraft.notebook_type, 40) || 'biology'}`,
-      `save: mode=${trimText(notebookDraft.save?.mode, 80) || '-'} status=${trimText(notebookDraft.save?.status, 80) || '-'} applied=${notebookDraft.save?.applied === true}`
-    ] : [];
-    const notebookDraftFilledRows = notebookDraft
-      ? asArray(notebookDraft.placeholder_values).map((item) => {
-        const key = trimText(item?.placeholder_key, 120) || trimText(item?.display, 120) || 'placeholder';
-        const value = trimText(item?.value, 220) || '-';
-        const source = trimText(item?.source, 120) || '-';
-        return `${key}: ${value} (${source})`;
-      })
-      : [];
-    const notebookDraftUnresolvedRows = notebookDraft
-      ? asArray(notebookDraft.unresolved_placeholders).map((item) => {
-        const key = trimText(item?.placeholder_key, 120) || trimText(item?.display, 120) || 'placeholder';
-        const reason = trimText(item?.reason, 120) || 'missing_supported_value';
-        return `${key}: ${reason}`;
-      })
-      : [];
-    const notebookDraftStepRows = notebookDraft
-      ? asArray(notebookDraft.rendered_steps).map((step, index) => `${index + 1}. ${trimText(step, 220)}`)
-      : [];
-    const routing = meta.routing && typeof meta.routing === 'object' ? meta.routing : {};
-    const routingIntent = trimText(routing.intent, 80) || '-';
-    const routingConfidence = Number(routing.confidence);
-    const routingConfidenceText = Number.isFinite(routingConfidence) ? routingConfidence.toFixed(2) : 'n/a';
-    const routingSource = trimText(routing.classifier?.source, 80) || 'llm_parser';
-    const routingHeader = `intent=${routingIntent} | confidence=${routingConfidenceText} | source=${routingSource}`;
-    const routingPlan = routing.plan && typeof routing.plan === 'object' ? routing.plan : {};
-    const routingEntityRows = Object.entries(routing.entities && typeof routing.entities === 'object' ? routing.entities : {})
-      .map(([key, value]) => {
-        const clean = trimText(value, 180);
-        return clean ? `${key}: ${clean}` : '';
-      })
-      .filter(Boolean);
-    const routingPlanRows = Object.entries(routingPlan)
-      .filter(([key]) => ![
-        'selected_tool_names',
-        'tool_selection_rationale',
-        'protocol_match',
-        'protocol_candidates',
-        'project_match',
-        'project_candidates',
-        'paper_match',
-        'paper_candidates',
-        'python_task_type',
-        'python_ready',
-        'python_needs_clarification',
-        'python_artifact_count',
-        'web_fallback_triggered',
-        'web_fallback_reason',
-        'web_queries',
-        'web_sources',
-        'inventory_search'
-      ].includes(key))
-      .map(([key, value]) => {
-        if (typeof value === 'boolean') {
-          return `${key}: ${value}`;
-        }
-        const clean = trimText(value, 180);
-        return clean ? `${key}: ${clean}` : '';
-      })
-      .filter(Boolean);
-    const routingProtocolMatch = routingPlan.protocol_match && typeof routingPlan.protocol_match === 'object'
-      ? routingPlan.protocol_match
-      : {};
-    const routingProtocolMatchRows = [
-      trimText(routingProtocolMatch.selected_protocol_id, 80)
-        ? `selected_protocol_id: ${trimText(routingProtocolMatch.selected_protocol_id, 80)}`
-        : '',
-      trimText(routingProtocolMatch.selected_protocol_name, 180)
-        ? `selected_protocol_name: ${trimText(routingProtocolMatch.selected_protocol_name, 180)}`
-        : '',
-      Number.isFinite(Number(routingProtocolMatch.top_score))
-        ? `top_score: ${Number(routingProtocolMatch.top_score).toFixed(3)}`
-        : '',
-      Number.isFinite(Number(routingProtocolMatch.score_delta))
-        ? `score_delta: ${Number(routingProtocolMatch.score_delta).toFixed(3)}`
-        : '',
-      `needs_clarification: ${routingProtocolMatch.needs_clarification === true}`,
-      trimText(routingProtocolMatch.ambiguity_reason, 180)
-        ? `ambiguity_reason: ${trimText(routingProtocolMatch.ambiguity_reason, 180)}`
-        : ''
-    ].filter(Boolean);
-    const routingProtocolCandidateRows = asArray(routingPlan.protocol_candidates).map((candidate, index) => {
-      const name = trimText(candidate?.protocol_name, 180) || trimText(candidate?.protocol_id, 80) || `candidate_${index + 1}`;
-      const score = Number(candidate?.score);
-      const semantic = Number(candidate?.semantic_score);
-      const entity = Number(candidate?.entity_overlap_score);
-      const project = Number(candidate?.project_relevance_score);
-      const recent = Number(candidate?.recent_workflow_relevance_score);
-      const metrics = [
-        Number.isFinite(score) ? `score=${score.toFixed(3)}` : '',
-        Number.isFinite(semantic) ? `semantic=${semantic.toFixed(3)}` : '',
-        Number.isFinite(entity) ? `entity=${entity.toFixed(3)}` : '',
-        Number.isFinite(project) ? `project=${project.toFixed(3)}` : '',
-        Number.isFinite(recent) ? `recent=${recent.toFixed(3)}` : ''
-      ].filter(Boolean).join(' ');
-      const reason = trimText(candidate?.reason, 180);
-      return `${index + 1}. ${name}${metrics ? ` (${metrics})` : ''}${reason ? ` - ${reason}` : ''}`;
-    }).filter(Boolean);
-    const routingProjectMatch = routingPlan.project_match && typeof routingPlan.project_match === 'object'
-      ? routingPlan.project_match
-      : {};
-    const routingProjectMatchRows = [
-      trimText(routingProjectMatch.selected_project_id, 80)
-        ? `selected_project_id: ${trimText(routingProjectMatch.selected_project_id, 80)}`
-        : '',
-      trimText(routingProjectMatch.selected_project_name, 180)
-        ? `selected_project_name: ${trimText(routingProjectMatch.selected_project_name, 180)}`
-        : '',
-      Number.isFinite(Number(routingProjectMatch.top_score))
-        ? `top_score: ${Number(routingProjectMatch.top_score).toFixed(3)}`
-        : '',
-      Number.isFinite(Number(routingProjectMatch.score_delta))
-        ? `score_delta: ${Number(routingProjectMatch.score_delta).toFixed(3)}`
-        : '',
-      trimText(routingProjectMatch.resolution_source, 80)
-        ? `resolution_source: ${trimText(routingProjectMatch.resolution_source, 80)}`
-        : '',
-      `needs_clarification: ${routingProjectMatch.needs_clarification === true}`,
-      trimText(routingProjectMatch.ambiguity_reason, 180)
-        ? `ambiguity_reason: ${trimText(routingProjectMatch.ambiguity_reason, 180)}`
-        : ''
-    ].filter(Boolean);
-    const routingProjectCandidateRows = asArray(routingPlan.project_candidates).map((candidate, index) => {
-      const name = trimText(candidate?.project_name, 180) || trimText(candidate?.project_id, 80) || `candidate_${index + 1}`;
-      const score = Number(candidate?.score);
-      const exact = Number(candidate?.exact_name_score);
-      const partial = Number(candidate?.partial_name_score);
-      const selected = Number(candidate?.selected_bias_score);
-      const linked = Number(candidate?.linked_record_support_score);
-      const metrics = [
-        Number.isFinite(score) ? `score=${score.toFixed(3)}` : '',
-        Number.isFinite(exact) ? `exact=${exact.toFixed(3)}` : '',
-        Number.isFinite(partial) ? `partial=${partial.toFixed(3)}` : '',
-        Number.isFinite(selected) ? `selected=${selected.toFixed(3)}` : '',
-        Number.isFinite(linked) ? `linked=${linked.toFixed(3)}` : ''
-      ].filter(Boolean).join(' ');
-      const reason = trimText(candidate?.reason, 180);
-      return `${index + 1}. ${name}${metrics ? ` (${metrics})` : ''}${reason ? ` - ${reason}` : ''}`;
-    }).filter(Boolean);
-    const routingPaperMatch = routingPlan.paper_match && typeof routingPlan.paper_match === 'object'
-      ? routingPlan.paper_match
-      : {};
-    const routingPaperMatchRows = [
-      trimText(routingPaperMatch.selected_paper_id, 80)
-        ? `selected_paper_id: ${trimText(routingPaperMatch.selected_paper_id, 80)}`
-        : '',
-      trimText(routingPaperMatch.selected_paper_title, 220)
-        ? `selected_paper_title: ${trimText(routingPaperMatch.selected_paper_title, 220)}`
-        : '',
-      trimText(routingPaperMatch.secondary_paper_id, 80)
-        ? `secondary_paper_id: ${trimText(routingPaperMatch.secondary_paper_id, 80)}`
-        : '',
-      trimText(routingPaperMatch.secondary_paper_title, 220)
-        ? `secondary_paper_title: ${trimText(routingPaperMatch.secondary_paper_title, 220)}`
-        : '',
-      Number.isFinite(Number(routingPaperMatch.top_score))
-        ? `top_score: ${Number(routingPaperMatch.top_score).toFixed(3)}`
-        : '',
-      Number.isFinite(Number(routingPaperMatch.score_delta))
-        ? `score_delta: ${Number(routingPaperMatch.score_delta).toFixed(3)}`
-        : '',
-      trimText(routingPaperMatch.availability_status, 80)
-        ? `availability_status: ${trimText(routingPaperMatch.availability_status, 80)}`
-        : '',
-      `deep_read_ready: ${routingPaperMatch.deep_read_ready === true}`,
-      trimText(routingPaperMatch.secondary_availability_status, 80)
-        ? `secondary_availability_status: ${trimText(routingPaperMatch.secondary_availability_status, 80)}`
-        : '',
-      `secondary_deep_read_ready: ${routingPaperMatch.secondary_deep_read_ready === true}`,
-      `needs_clarification: ${routingPaperMatch.needs_clarification === true}`,
-      trimText(routingPaperMatch.ambiguity_reason, 180)
-        ? `ambiguity_reason: ${trimText(routingPaperMatch.ambiguity_reason, 180)}`
-        : ''
-    ].filter(Boolean);
-    const routingPaperCandidateRows = asArray(routingPlan.paper_candidates).map((candidate, index) => {
-      const name = trimText(candidate?.paper_title, 220) || trimText(candidate?.paper_id, 80) || `paper_${index + 1}`;
-      const score = Number(candidate?.score);
-      const semantic = Number(candidate?.semantic_score);
-      const title = Number(candidate?.title_score);
-      const entity = Number(candidate?.entity_overlap_score);
-      const project = Number(candidate?.project_relevance_score);
-      const metrics = [
-        Number.isFinite(score) ? `score=${score.toFixed(3)}` : '',
-        Number.isFinite(semantic) ? `semantic=${semantic.toFixed(3)}` : '',
-        Number.isFinite(title) ? `title=${title.toFixed(3)}` : '',
-        Number.isFinite(entity) ? `entity=${entity.toFixed(3)}` : '',
-        Number.isFinite(project) ? `project=${project.toFixed(3)}` : ''
-      ].filter(Boolean).join(' ');
-      const availability = trimText(candidate?.availability_status, 80);
-      const reason = trimText(candidate?.reason, 180);
-      return `${index + 1}. ${name}${metrics ? ` (${metrics})` : ''}${availability ? ` availability=${availability}` : ''}${reason ? ` - ${reason}` : ''}`;
-    }).filter(Boolean);
-    const paperAvailabilityRows = [
-      trimText(routingPaperMatch.selected_paper_title, 220)
-        ? `${trimText(routingPaperMatch.selected_paper_title, 220)}: ${trimText(routingPaperMatch.availability_status, 80) || 'unknown'} (deep_ready=${routingPaperMatch.deep_read_ready === true})`
-        : '',
-      trimText(routingPaperMatch.secondary_paper_title, 220)
-        ? `${trimText(routingPaperMatch.secondary_paper_title, 220)}: ${trimText(routingPaperMatch.secondary_availability_status, 80) || 'unknown'} (deep_ready=${routingPaperMatch.secondary_deep_read_ready === true})`
-        : ''
-    ].filter(Boolean);
-    if (!paperAvailabilityRows.length) {
-      paperAvailabilityRows.push('No paper availability context.');
-    }
-    const routingPythonRows = [
-      trimText(routingPlan.python_task_type, 80)
-        ? `python_task_type: ${trimText(routingPlan.python_task_type, 80)}`
-        : '',
-      `python_ready: ${routingPlan.python_ready === true}`,
-      `python_needs_clarification: ${routingPlan.python_needs_clarification === true}`,
-      Number.isFinite(Number(routingPlan.python_artifact_count))
-        ? `python_artifact_count: ${Number(routingPlan.python_artifact_count)}`
-        : '',
-      trimText(routingPlan.python_codegen_status, 80)
-        ? `python_codegen_status: ${trimText(routingPlan.python_codegen_status, 80)}`
-        : '',
-      trimText(routingPlan.python_codegen_reason, 180)
-        ? `python_codegen_reason: ${trimText(routingPlan.python_codegen_reason, 180)}`
-        : ''
-    ].filter(Boolean);
-    const routingWebFallbackRows = [
-      `web_fallback_triggered: ${routingPlan.web_fallback_triggered === true}`,
-      trimText(routingPlan.web_fallback_reason, 180)
-        ? `web_fallback_reason: ${trimText(routingPlan.web_fallback_reason, 180)}`
-        : ''
-    ].filter(Boolean);
-    asArray(routingPlan.web_queries).forEach((query, index) => {
-      const clean = trimText(query, 220);
-      if (clean) {
-        routingWebFallbackRows.push(`query_${index + 1}: ${clean}`);
-      }
-    });
-    const webSourceRows = asArray(routingPlan.web_sources).map((item, index) => {
-      const title = trimText(item?.title, 180) || trimText(item?.url, 180) || `web_source_${index + 1}`;
-      const lane = trimText(item?.source_lane, 40);
-      const domain = trimText(item?.source_domain, 120);
-      const tool = trimText(item?.source_tool, 120);
-      const score = Number(item?.score);
-      const metrics = [
-        lane ? `lane=${lane}` : '',
-        domain ? `domain=${domain}` : '',
-        tool ? `tool=${tool}` : '',
-        Number.isFinite(score) ? `score=${score.toFixed(2)}` : ''
-      ].filter(Boolean).join(' ');
-      return `${index + 1}. ${title}${metrics ? ` (${metrics})` : ''}`;
-    }).filter(Boolean);
-    const routingInventorySearch = routingPlan.inventory_search && typeof routingPlan.inventory_search === 'object'
-      ? routingPlan.inventory_search
-      : {};
-    const routingInventorySearchRows = [
-      trimText(routingInventorySearch.normalized_query, 220)
-        ? `normalized_query: ${trimText(routingInventorySearch.normalized_query, 220)}`
-        : '',
-      trimText(routingInventorySearch.search_mode, 80)
-        ? `search_mode: ${trimText(routingInventorySearch.search_mode, 80)}`
-        : ''
-    ].filter(Boolean);
-    asArray(routingInventorySearch.candidate_terms).forEach((term, index) => {
-      const clean = trimText(term, 160);
-      if (clean) {
-        routingInventorySearchRows.push(`candidate_${index + 1}: ${clean}`);
-      }
-    });
-    asArray(routingInventorySearch.aliases).forEach((term, index) => {
-      const clean = trimText(term, 160);
-      if (clean) {
-        routingInventorySearchRows.push(`alias_${index + 1}: ${clean}`);
-      }
-    });
-    const routingToolRows = asArray(routingPlan.selected_tool_names).map((tool) => trimText(tool, 120)).filter(Boolean);
-    const routingSelectorRows = asArray(routingPlan.tool_selection_rationale).map((row, index) => {
-      const tool = trimText(row?.tool, 120) || `tool_${index + 1}`;
-      const score = Number(row?.score);
-      const entity = Number(row?.entityScore);
-      const task = Number(row?.taskScore);
-      const exactness = Number(row?.exactnessScore);
-      const reason = trimText(row?.reason, 180);
-      const metrics = [
-        Number.isFinite(score) ? `score=${score.toFixed(2)}` : '',
-        Number.isFinite(entity) ? `entity=${entity.toFixed(2)}` : '',
-        Number.isFinite(task) ? `task=${task.toFixed(2)}` : '',
-        Number.isFinite(exactness) ? `exactness=${exactness.toFixed(2)}` : ''
-      ].filter(Boolean).join(' ');
-      return `${tool}${metrics ? ` (${metrics})` : ''}${reason ? ` - ${reason}` : ''}`;
-    }).filter(Boolean);
-    const routingClassifierRows = [
-      `fallbackAttempted: ${routing.classifier?.fallbackAttempted === true}`,
-      `fallbackUsed: ${routing.classifier?.fallbackUsed === true}`,
-      `lowConfidence: ${routing.classifier?.lowConfidence === true}`,
-      `tieDetected: ${routing.classifier?.tieDetected === true}`,
-      trimText(routing.classifier?.ruleReason, 220) ? `ruleReason: ${trimText(routing.classifier?.ruleReason, 220)}` : '',
-      trimText(routing.classifier?.fallbackError, 220) ? `fallbackError: ${trimText(routing.classifier?.fallbackError, 220)}` : ''
-    ].filter(Boolean);
-    const routingParserRows = [
-      trimText(routing.classifier?.parserPrimaryIntent, 80)
-        ? `primary_intent: ${trimText(routing.classifier?.parserPrimaryIntent, 80)}`
-        : '',
-      asArray(routing.classifier?.parserSecondaryIntents).length
-        ? `secondary_intents: ${asArray(routing.classifier?.parserSecondaryIntents).join(', ')}`
-        : '',
-      trimText(routing.classifier?.mappedExecutionIntent, 80)
-        ? `mapped_execution_intent: ${trimText(routing.classifier?.mappedExecutionIntent, 80)}`
-        : '',
-      `parser_needs_clarification: ${routing.classifier?.parserNeedsClarification === true}`,
-      trimText(routing.classifier?.parserClarificationReason, 220)
-        ? `clarification_reason: ${trimText(routing.classifier?.parserClarificationReason, 220)}`
-        : '',
-      trimText(routing.classifier?.parserReasoningSummary, 220)
-        ? `reasoning_summary: ${trimText(routing.classifier?.parserReasoningSummary, 220)}`
-        : ''
-    ].filter(Boolean);
-    const routingParserEntityRows = Object.entries(
-      routing.classifier?.parserEntities && typeof routing.classifier.parserEntities === 'object'
-        ? routing.classifier.parserEntities
-        : {}
+    const parserEntityRows = Object.entries(
+      parser.entities && typeof parser.entities === 'object' ? parser.entities : {}
     ).map(([key, value]) => {
-      const clean = trimText(value, 180);
-      return clean ? `${key}: ${clean}` : '';
+      const cleanValue = trimText(value, 220);
+      return cleanValue ? `${key}: ${cleanValue}` : '';
     }).filter(Boolean);
-    const routingRows = [routingHeader];
-
-    const confidence = Number(meta.confidence);
-    const confidenceText = Number.isFinite(confidence) ? `Confidence: ${confidence.toFixed(2)}` : 'Confidence: n/a';
-    const confidenceLabelText = confidenceLabel ? `Confidence label: ${confidenceLabel}` : '';
-    const approvalText = meta.requiresApproval ? 'Requires approval: yes' : 'Requires approval: no';
+    const inventorySearch = parser.inventory_search && typeof parser.inventory_search === 'object'
+      ? parser.inventory_search
+      : {};
+    const inventorySearchRows = [
+      trimText(inventorySearch.normalized_query, 220)
+        ? `normalized_query: ${trimText(inventorySearch.normalized_query, 220)}`
+        : '',
+      trimText(inventorySearch.search_mode, 80)
+        ? `search_mode: ${trimText(inventorySearch.search_mode, 80)}`
+        : ''
+    ].filter(Boolean);
+    asArray(inventorySearch.candidate_terms).forEach((term, index) => {
+      const clean = trimText(term, 180);
+      if (clean) {
+        inventorySearchRows.push(`candidate_${index + 1}: ${clean}`);
+      }
+    });
+    asArray(inventorySearch.aliases).forEach((alias, index) => {
+      const clean = trimText(alias, 180);
+      if (clean) {
+        inventorySearchRows.push(`alias_${index + 1}: ${clean}`);
+      }
+    });
+    const protocolWorkflow = meta.protocol_to_notebook && typeof meta.protocol_to_notebook === 'object'
+      ? meta.protocol_to_notebook
+      : {};
+    const protocolRows = [
+      trimText(protocolWorkflow.status, 60)
+        ? `status: ${trimText(protocolWorkflow.status, 60)}`
+        : '',
+      trimText(protocolWorkflow.project_name, 220)
+        ? `project_name: ${trimText(protocolWorkflow.project_name, 220)}`
+        : '',
+      trimText(protocolWorkflow?.selected_protocol?.name, 220)
+        ? `selected_protocol: ${trimText(protocolWorkflow.selected_protocol.name, 220)}`
+        : '',
+      trimText(protocolWorkflow?.selected_protocol?.selection_method, 80)
+        ? `selection_method: ${trimText(protocolWorkflow.selected_protocol.selection_method, 80)}`
+        : ''
+    ].filter(Boolean);
+    const protocolCandidateMatchRows = asArray(protocolWorkflow.candidate_matches).map((item, index) => {
+      const name = trimText(item?.name, 220);
+      if (!name) {
+        return '';
+      }
+      const score = Number.isFinite(Number(item?.score)) ? Number(item.score).toFixed(1) : '-';
+      return `match_${index + 1}: ${name} (score=${score})`;
+    }).filter(Boolean);
+    const protocolMissingRows = asArray(protocolWorkflow.missing_placeholders).map((item, index) => {
+      const display = trimText(item?.display, 120) || trimText(item?.placeholder_key, 160);
+      const reason = trimText(item?.reason, 220);
+      if (!display) {
+        return '';
+      }
+      return `missing_${index + 1}: ${display}${reason ? ` (${reason})` : ''}`;
+    }).filter(Boolean);
+    const protocolFollowUpRows = asArray(protocolWorkflow.follow_up_questions).map((question) => trimText(question, 260)).filter(Boolean);
+    const reasoningSummaryRows = [trimText(parser.reasoning_summary, 600) || 'No parser reasoning summary returned.'];
     const activityRows = collectActivityRows(meta);
+    const developerTraceRows = asArray(meta.developer_trace).map((trace, index) => {
+      const stage = trimText(trace?.stage, 120) || `trace_${index + 1}`;
+      const provider = trimText(trace?.provider, 80);
+      const summary = trimText(trace?.summary, 220);
+      const timestamp = trimText(trace?.timestamp, 80);
+      const details = [provider ? `provider=${provider}` : '', summary, timestamp].filter(Boolean).join(' | ');
+      return details ? `${stage}: ${details}` : stage;
+    }).filter(Boolean);
+    const showDeveloperTrace = state.settings?.agent?.developerMode === true;
+    const parserSummaryLine = `Intent=${primaryIntent} | needs_clarification=${parser.needs_clarification === true}`;
 
     return `
       <div class="agent-meta-grid">
@@ -1060,42 +741,17 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
             </ul>
           </section>
         ` : ''}
-        <p class="small-note">${safeText([confidenceText, confidenceLabelText, approvalText].filter(Boolean).join(' | '))}</p>
-        ${renderMetaList('Routing', routingRows)}
-        ${renderMetaList('Routing Parser', routingParserRows)}
-        ${renderMetaList('Routing Parser Entities', routingParserEntityRows)}
-        ${renderMetaList('Routing Entities', routingEntityRows)}
-        ${renderMetaList('Routing Plan', routingPlanRows)}
-        ${renderMetaList('Routing Inventory Search', routingInventorySearchRows)}
-        ${renderMetaList('Routing Project Match', routingProjectMatchRows)}
-        ${renderMetaList('Routing Project Candidates', routingProjectCandidateRows)}
-        ${renderMetaList('Routing Paper Match', routingPaperMatchRows)}
-        ${renderMetaList('Routing Paper Candidates', routingPaperCandidateRows)}
-        ${renderMetaList('Paper Availability', paperAvailabilityRows)}
-        ${renderMetaList('Routing Python', routingPythonRows)}
-        ${renderMetaList('Routing Web Fallback', routingWebFallbackRows)}
-        ${renderMetaList('Web Sources', webSourceRows)}
-        ${renderMetaList('Routing Protocol Match', routingProtocolMatchRows)}
-        ${renderMetaList('Routing Protocol Candidates', routingProtocolCandidateRows)}
-        ${renderMetaList('Routing Tools', routingToolRows)}
-        ${renderMetaList('Routing Tool Selector', routingSelectorRows)}
-        ${renderMetaList('Routing Classifier', routingClassifierRows)}
-        ${renderMetaList('Response Layer', responseLayerRows)}
-        ${renderMetaList('Source Summary', sourceSummaryRows)}
-        ${renderMetaList('Unresolved Fields', unresolvedFieldRows)}
-        ${renderMetaList('Validation', validationRows)}
-        ${renderMetaList('Provenance', provenanceRows)}
-        ${renderMetaList('Notebook Draft', notebookDraftRows)}
-        ${renderMetaList('Notebook Draft Filled Placeholders', notebookDraftFilledRows)}
-        ${renderMetaList('Notebook Draft Unresolved Placeholders', notebookDraftUnresolvedRows)}
-        ${renderMetaList('Notebook Draft Steps', notebookDraftStepRows)}
-        ${renderMetaList('Citations', citations)}
-        ${renderMetaList('Assumptions', assumptions)}
-        ${renderMetaList('Open Questions', openQuestions)}
-        ${renderMetaList('Verification Notes', verificationNotes)}
-        ${renderMetaList('Proposed Write Actions', writeActions)}
-        ${renderMetaList('Reasoning Stages', stageRows)}
-        ${renderMetaList('Tool Trace', toolRows)}
+        <p class="small-note">${safeText(parserSummaryLine)}</p>
+        ${renderMetaList('Intent Parser', parserRows)}
+        ${renderMetaList('Protocol Candidates', protocolCandidateRows)}
+        ${renderMetaList('Entities', parserEntityRows)}
+        ${renderMetaList('Inventory Search', inventorySearchRows)}
+        ${renderMetaList('Protocol Workflow', protocolRows)}
+        ${renderMetaList('Protocol Matches', protocolCandidateMatchRows)}
+        ${renderMetaList('Missing Placeholders', protocolMissingRows)}
+        ${renderMetaList('Follow-up Questions', protocolFollowUpRows)}
+        ${renderMetaList('Reasoning Summary', reasoningSummaryRows)}
+        ${showDeveloperTrace ? renderMetaList('Developer Trace', developerTraceRows) : ''}
       </div>
     `;
   }
@@ -1200,41 +856,48 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
           model: String(state.settings?.llm?.model || '').trim(),
           apiEndpoint: String(state.settings?.llm?.apiEndpoint || '').trim(),
           apiKey: String(state.settings?.llm?.apiKey || '').trim()
+        },
+        agent: {
+          developerMode: state.settings?.agent?.developerMode === true
         }
       });
 
       if (!result?.ok) {
         throw new Error(result?.error || 'Agent request failed.');
       }
-      const notebookDraft = applyNotebookDraftAutoSave(result.notebookDraft, messageText);
+      const protocolWorkflow = result.protocol_to_notebook && typeof result.protocol_to_notebook === 'object'
+        ? result.protocol_to_notebook
+        : null;
+      const notebookPayload = protocolWorkflow?.notebook && typeof protocolWorkflow.notebook === 'object'
+        ? protocolWorkflow.notebook
+        : result.notebookDraft;
+      const notebookDraft = applyNotebookDraftAutoSave(notebookPayload, messageText);
+      const parser = result.parser && typeof result.parser === 'object' ? result.parser : {};
+      const protocolStatus = trimText(protocolWorkflow?.status, 40);
+      const followUpQuestions = asArray(protocolWorkflow?.follow_up_questions).map((item) => trimText(item, 320)).filter(Boolean);
+      const completedNotebookText = trimText(
+        protocolWorkflow?.notebook?.entry_template?.result
+          || protocolWorkflow?.notebook?.save?.reason
+          || '',
+        12000
+      );
+      const assistantText = protocolStatus === 'completed'
+        ? (completedNotebookText
+          || `Notebook draft completed using protocol ${trimText(protocolWorkflow?.selected_protocol?.name, 220) || 'selection'}.`)
+        : (protocolStatus === 'needs_more_info'
+          ? (followUpQuestions.join(' ') || 'More details are needed to fill the remaining notebook placeholders.')
+          : (trimText(parser.reasoning_summary, 12000) || 'Intent parsing completed.'));
 
       state.agentChat.messages.push({
         id: createId(),
         role: 'assistant',
-        text: trimText(result.answer, 12000) || 'No answer generated.',
+        text: assistantText,
         createdAt: new Date().toISOString(),
         meta: {
-          confidence: result.confidence,
-          confidence_label: trimText(result.confidence_label, 20),
-          response_type: trimText(result.response_type, 80),
-          source_summary: result.source_summary && typeof result.source_summary === 'object'
-            ? result.source_summary
-            : null,
-          unresolved_fields: asArray(result.unresolved_fields),
-          validation: result.validation && typeof result.validation === 'object'
-            ? result.validation
-            : null,
-          provenance: result.provenance && typeof result.provenance === 'object'
-            ? result.provenance
-            : null,
-          requiresApproval: result.requiresApproval === true,
-          citations: asArray(result.citations),
-          decisionRecord: result.decisionRecord || {},
-          routing: result.routing && typeof result.routing === 'object' ? result.routing : {},
+          parser,
+          protocol_to_notebook: protocolWorkflow,
           notebookDraft: notebookDraft || null,
-          proposedWriteActions: asArray(result.proposedWriteActions),
-          intermediateStates: asArray(result.intermediateStates),
-          toolTrace: asArray(result.toolTrace),
+          developer_trace: asArray(result.developer_trace),
           requestText: messageText
         }
       });
@@ -1250,21 +913,23 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
         text: `Agent failed: ${String(error?.message || error)}`,
         createdAt: new Date().toISOString(),
         meta: {
-          confidence: 0,
-          confidence_label: 'low',
-          response_type: 'factual_answer',
-          source_summary: null,
-          unresolved_fields: [],
-          validation: null,
-          provenance: null,
-          requiresApproval: false,
-          citations: [],
-          decisionRecord: {},
-          routing: {},
+          parser: {
+            primary_intent: 'unclear',
+            needs_clarification: true,
+            clarification_reason: 'agent_error',
+            entities: {},
+            inventory_search: {
+              normalized_query: null,
+              candidate_terms: [],
+              aliases: [],
+              search_mode: null
+            },
+            protocol_candidates: [],
+            reasoning_summary: `Agent failed: ${String(error?.message || error)}`
+          },
+          protocol_to_notebook: null,
           notebookDraft: null,
-          proposedWriteActions: [],
-          intermediateStates: [],
-          toolTrace: [],
+          developer_trace: [],
           requestText: messageText
         }
       });

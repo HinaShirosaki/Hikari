@@ -29,7 +29,12 @@ function createMainDataHelpers(deps = {}) {
     : (async () => ({ bundlePaths: {}, sidecarPaths: {} }));
   const hydrateSnapshotFromBundle = typeof deps.hydrateSnapshotFromBundle === 'function'
     ? deps.hydrateSnapshotFromBundle
-    : (async () => ({ snapshot: {}, bundlePaths: {}, sidecarPaths: {}, migration: null }));
+    : (async ({ snapshot = {} } = {}) => ({
+      snapshot: snapshot && typeof snapshot === 'object' ? snapshot : {},
+      bundlePaths: {},
+      sidecarPaths: {},
+      migration: null
+    }));
   const getDefaultDataFilePath = typeof deps.getDefaultDataFilePath === 'function'
     ? deps.getDefaultDataFilePath
     : (() => '');

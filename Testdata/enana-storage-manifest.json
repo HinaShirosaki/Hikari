@@ -1,0 +1,403 @@
+{
+  "schema_name": "enana_storage_manifest",
+  "schema_version": "1.0.0",
+  "generated_at": "2026-03-21T21:42:48.978Z",
+  "root_path": "/Users/shiyifan/Projects/Enana/Testdata",
+  "discovered_files": [
+    {
+      "relative_path": ".DS_Store",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 6148,
+      "modified_at": "2026-03-21T19:56:19.931Z"
+    },
+    {
+      "relative_path": "enana-chemicals.ena.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 2463,
+      "modified_at": "2026-03-21T21:35:46.356Z"
+    },
+    {
+      "relative_path": "enana-chemicals.index.sqlite",
+      "type": "file",
+      "role": "sqlite_index",
+      "size_bytes": 61440,
+      "modified_at": "2026-03-21T21:35:46.359Z"
+    },
+    {
+      "relative_path": "enana-chemicals.index.sqlite-shm",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 32768,
+      "modified_at": "2026-03-21T20:03:52.227Z"
+    },
+    {
+      "relative_path": "enana-chemicals.index.sqlite-wal",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-03-21T20:02:05.711Z"
+    },
+    {
+      "relative_path": "enana-chemicals.notebook-pages.json",
+      "type": "file",
+      "role": "notebook_sidecar",
+      "size_bytes": 139,
+      "modified_at": "2026-03-21T21:35:46.357Z"
+    },
+    {
+      "relative_path": "enana-chemicals.protocols.json",
+      "type": "file",
+      "role": "protocol_sidecar",
+      "size_bytes": 130,
+      "modified_at": "2026-03-21T21:35:46.357Z"
+    },
+    {
+      "relative_path": "enana-sample.notebook-pages.index.sqlite",
+      "type": "file",
+      "role": "sqlite_index",
+      "size_bytes": 81920,
+      "modified_at": "2026-03-21T21:36:58.916Z"
+    },
+    {
+      "relative_path": "enana-sample.notebook-pages.index.sqlite-shm",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 32768,
+      "modified_at": "2026-03-21T20:05:25.060Z"
+    },
+    {
+      "relative_path": "enana-sample.notebook-pages.index.sqlite-wal",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-03-21T20:02:05.711Z"
+    },
+    {
+      "relative_path": "enana-sample.notebook-pages.json",
+      "type": "file",
+      "role": "notebook_sidecar",
+      "size_bytes": 141224,
+      "modified_at": "2026-03-21T21:36:58.911Z"
+    },
+    {
+      "relative_path": "enana-sample.notebook-pages.notebook-pages.json",
+      "type": "file",
+      "role": "notebook_sidecar",
+      "size_bytes": 1069,
+      "modified_at": "2026-03-21T21:36:58.912Z"
+    },
+    {
+      "relative_path": "enana-sample.notebook-pages.protocols.json",
+      "type": "file",
+      "role": "protocol_sidecar",
+      "size_bytes": 16528,
+      "modified_at": "2026-03-21T21:36:58.912Z"
+    },
+    {
+      "relative_path": "enana-storage-manifest.json",
+      "type": "file",
+      "role": "storage_manifest",
+      "size_bytes": 11780,
+      "modified_at": "2026-03-21T21:35:46.349Z"
+    },
+    {
+      "relative_path": "Project",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-03-21T21:23:05.436Z"
+    },
+    {
+      "relative_path": "Project/.DS_Store",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 6148,
+      "modified_at": "2026-03-17T22:21:57.807Z"
+    },
+    {
+      "relative_path": "Project/CD19_CAR_Binder_Optimization",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-03-14T00:10:52.005Z"
+    },
+    {
+      "relative_path": "Project/ncAA_Incorporation_in_sfGFP_Reporter",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-03-14T00:11:16.335Z"
+    },
+    {
+      "relative_path": "Project/PD-1_Nanobody_Binder_Discovery",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-03-17T22:21:52.050Z"
+    },
+    {
+      "relative_path": "Project/PD-1_Nanobody_Binder_Discovery/.DS_Store",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 6148,
+      "modified_at": "2026-03-17T22:21:52.051Z"
+    },
+    {
+      "relative_path": "Project/PD-1_Nanobody_Binder_Discovery/Papers",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-03-17T22:20:47.917Z"
+    },
+    {
+      "relative_path": "Project/PD-1_Nanobody_Binder_Discovery/Papers/bst0351389.pdf",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 142536,
+      "modified_at": "2026-03-17T22:20:47.918Z"
+    },
+    {
+      "relative_path": "Project/PD-L1_Blocking_Clone_Validation",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-03-14T00:09:52.431Z"
+    },
+    {
+      "relative_path": "Project/SUMO_Protease_Activity_Probe_Development",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-03-14T00:11:05.151Z"
+    },
+    {
+      "relative_path": "Project/SUMO1",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-03-21T21:23:05.436Z"
+    },
+    {
+      "relative_path": "protocol-import-example.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 536,
+      "modified_at": "2026-03-14T00:24:37.304Z"
+    },
+    {
+      "relative_path": "SequenceViewer",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-03-21T19:56:14.280Z"
+    },
+    {
+      "relative_path": "SequenceViewer/.DS_Store",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 6148,
+      "modified_at": "2026-03-21T19:56:19.929Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-03-21T19:56:14.275Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries/.DS_Store",
+      "type": "file",
+      "role": "sequence_entry_file",
+      "size_bytes": 6148,
+      "modified_at": "2026-03-21T19:56:14.277Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries/seq_1773867148163_5a98f139",
+      "type": "directory",
+      "role": "sequence_entry_file",
+      "size_bytes": 0,
+      "modified_at": "2026-03-18T21:20:13.189Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries/seq_1773867148163_5a98f139/sequence_1.gbk",
+      "type": "file",
+      "role": "sequence_entry_file",
+      "size_bytes": 313,
+      "modified_at": "2026-03-18T21:20:13.189Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries/seq_1773867148163_5a98f139/sequence_1.html",
+      "type": "file",
+      "role": "sequence_entry_file",
+      "size_bytes": 187,
+      "modified_at": "2026-03-18T21:20:13.189Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries/seq_1773874425994_e11c888e",
+      "type": "directory",
+      "role": "sequence_entry_file",
+      "size_bytes": 0,
+      "modified_at": "2026-03-18T22:53:45.996Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries/seq_1773874425994_e11c888e/sequence_1.gbk",
+      "type": "file",
+      "role": "sequence_entry_file",
+      "size_bytes": 12117,
+      "modified_at": "2026-03-18T22:53:45.996Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries/seq_1773874425994_e11c888e/sequence_1.html",
+      "type": "file",
+      "role": "sequence_entry_file",
+      "size_bytes": 10848,
+      "modified_at": "2026-03-18T22:53:45.996Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries/seq_1773874586757_605b1bda",
+      "type": "directory",
+      "role": "sequence_entry_file",
+      "size_bytes": 0,
+      "modified_at": "2026-03-18T22:56:26.758Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries/seq_1773874586757_605b1bda/pasted_sequence.gbk",
+      "type": "file",
+      "role": "sequence_entry_file",
+      "size_bytes": 10081,
+      "modified_at": "2026-03-18T22:56:26.758Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries/seq_1773874586757_605b1bda/pasted_sequence.html",
+      "type": "file",
+      "role": "sequence_entry_file",
+      "size_bytes": 11104,
+      "modified_at": "2026-03-18T22:56:26.758Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries/seq_1773939319336_31cfdf21",
+      "type": "directory",
+      "role": "sequence_entry_file",
+      "size_bytes": 0,
+      "modified_at": "2026-03-19T16:55:23.139Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries/seq_1773939319336_31cfdf21/sequence_1.gbk",
+      "type": "file",
+      "role": "sequence_entry_file",
+      "size_bytes": 12117,
+      "modified_at": "2026-03-19T16:55:23.138Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries/seq_1773939319336_31cfdf21/sequence_1.html",
+      "type": "file",
+      "role": "sequence_entry_file",
+      "size_bytes": 7566,
+      "modified_at": "2026-03-19T16:55:23.139Z"
+    },
+    {
+      "relative_path": "SequenceViewer/sequence-library.sqlite",
+      "type": "file",
+      "role": "sequence_library_index",
+      "size_bytes": 20480,
+      "modified_at": "2026-03-19T16:55:23.141Z"
+    }
+  ],
+  "bundles": [
+    {
+      "data_file_path": "enana-chemicals.ena.json",
+      "bundle_paths": {
+        "protocols_path": "enana-chemicals.protocols.json",
+        "notebook_pages_path": "enana-chemicals.notebook-pages.json",
+        "sqlite_path": "enana-chemicals.index.sqlite"
+      },
+      "counts": {
+        "protocols": 0,
+        "notebookEntries": 0,
+        "chemicals": 3,
+        "personalInventoryContainers": 1
+      },
+      "migration": {
+        "applied": [
+          "protocol_sidecar",
+          "notebook_sidecar",
+          "inventory_sqlite"
+        ],
+        "warnings": []
+      }
+    },
+    {
+      "data_file_path": "enana-chemicals.protocols.json",
+      "bundle_paths": {
+        "protocols_path": "enana-chemicals.protocols.protocols.json",
+        "notebook_pages_path": "enana-chemicals.protocols.notebook-pages.json",
+        "sqlite_path": "enana-chemicals.protocols.index.sqlite"
+      },
+      "counts": {
+        "protocols": 0,
+        "notebookEntries": 0,
+        "chemicals": 0,
+        "personalInventoryContainers": 0
+      },
+      "migration": null
+    },
+    {
+      "data_file_path": "enana-sample.notebook-pages.json",
+      "bundle_paths": {
+        "protocols_path": "enana-sample.notebook-pages.protocols.json",
+        "notebook_pages_path": "enana-sample.notebook-pages.notebook-pages.json",
+        "sqlite_path": "enana-sample.notebook-pages.index.sqlite"
+      },
+      "counts": {
+        "protocols": 6,
+        "notebookEntries": 1,
+        "chemicals": 3,
+        "personalInventoryContainers": 1
+      },
+      "migration": {
+        "applied": [
+          "protocol_sidecar",
+          "notebook_sidecar",
+          "inventory_sqlite"
+        ],
+        "warnings": []
+      }
+    },
+    {
+      "data_file_path": "enana-sample.notebook-pages.protocols.json",
+      "bundle_paths": {
+        "protocols_path": "enana-sample.notebook-pages.protocols.protocols.json",
+        "notebook_pages_path": "enana-sample.notebook-pages.protocols.notebook-pages.json",
+        "sqlite_path": "enana-sample.notebook-pages.protocols.index.sqlite"
+      },
+      "counts": {
+        "protocols": 6,
+        "notebookEntries": 0,
+        "chemicals": 0,
+        "personalInventoryContainers": 0
+      },
+      "migration": null
+    }
+  ],
+  "sequence_library": {
+    "relative_path": "SequenceViewer/sequence-library.sqlite",
+    "exists": true,
+    "entry_count": 4,
+    "status_counts": {
+      "saved": 2,
+      "temporary": 2
+    }
+  },
+  "summary": {
+    "bundles": 4,
+    "protocols": 6,
+    "notebookEntries": 1,
+    "chemicals": 3,
+    "personalInventoryContainers": 1,
+    "sequenceEntries": 4
+  },
+  "warnings": []
+}

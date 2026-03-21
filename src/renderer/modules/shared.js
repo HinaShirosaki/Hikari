@@ -169,12 +169,29 @@ export const defaultState = {
       uiStyle: 'neutral-compact'
     },
     storagePath: '',
+    storageImport: {
+      lastImportedAt: '',
+      manifestPath: '',
+      summary: {
+        bundles: 0,
+        protocols: 0,
+        notebookEntries: 0,
+        chemicals: 0,
+        personalInventoryContainers: 0,
+        sequenceEntries: 0
+      },
+      warnings: [],
+      error: ''
+    },
     llm: {
       provider: DEFAULT_LLM_PROVIDER,
       model: '',
       api: '',
       apiEndpoint: LLM_DEFAULT_ENDPOINTS[DEFAULT_LLM_PROVIDER],
       apiKey: ''
+    },
+    agent: {
+      developerMode: false
     },
     enaFilePath: '',
     autoSaveEna: true,
@@ -262,8 +279,14 @@ function normalizeWorkflowProgressMap(rawValue) {
 export function normalizeState(parsed) {
   const source = parsed || {};
   const rawLlm = source.settings?.llm || {};
+  const rawAgent = source.settings?.agent && typeof source.settings.agent === 'object'
+    ? source.settings.agent
+    : {};
   const rawStartup = source.settings?.startup && typeof source.settings.startup === 'object'
     ? source.settings.startup
+    : {};
+  const rawStorageImport = source.settings?.storageImport && typeof source.settings.storageImport === 'object'
+    ? source.settings.storageImport
     : {};
   const rawGrowthMetrics = source.growthMetrics && typeof source.growthMetrics === 'object'
     ? source.growthMetrics
@@ -337,6 +360,22 @@ export function normalizeState(parsed) {
         ...defaultState.settings.appearance,
         ...(source.settings?.appearance || {})
       },
+      storageImport: {
+        ...defaultState.settings.storageImport,
+        ...rawStorageImport,
+        summary: {
+          ...defaultState.settings.storageImport.summary,
+          ...(rawStorageImport.summary && typeof rawStorageImport.summary === 'object'
+            ? rawStorageImport.summary
+            : {})
+        },
+        warnings: Array.isArray(rawStorageImport.warnings)
+          ? rawStorageImport.warnings
+          : defaultState.settings.storageImport.warnings,
+        lastImportedAt: String(rawStorageImport.lastImportedAt || ''),
+        manifestPath: String(rawStorageImport.manifestPath || ''),
+        error: String(rawStorageImport.error || '')
+      },
       dashboard: {
         ...defaultState.settings.dashboard,
         ...(source.settings?.dashboard || {}),
@@ -363,6 +402,11 @@ export function normalizeState(parsed) {
         apiEndpoint: llmEndpoint,
         apiKey: String(rawLlm.apiKey || legacyApiKey).trim(),
         api: legacyApi
+      },
+      agent: {
+        ...defaultState.settings.agent,
+        ...rawAgent,
+        developerMode: rawAgent.developerMode === true
       },
       inventoryLocations: Array.isArray(source.settings?.inventoryLocations)
         ? source.settings.inventoryLocations

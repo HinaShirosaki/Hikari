@@ -1,5 +1,6 @@
 import { escapeHtml } from './tool-box/common.js';
 import { annotatePlasmidSequence } from './plannotate-js.js';
+import { translateDnaSequence } from './tool-box/sequence.js';
 
 const DEFAULT_MAX_RECORDS = 5000;
 const DEFAULT_SEQUENCE_LINE_LENGTH = 120;
@@ -14,6 +15,7 @@ const LINE_FEATURE_BAR_HEIGHT_PX = 16;
 const LINE_FEATURE_BAR_GAP_PX = 3;
 const LINE_FEATURE_BAR_HORIZONTAL_PADDING_PX = 5;
 const FEATURE_TOOLTIP_OFFSET_PX = 12;
+const AMINO_ACID_ROW_LABEL = 'AA';
 const PLANNOTATE_DEFAULT_OPTIONS = Object.freeze({
   detailed: false,
   minIdentity: 85,
@@ -93,6 +95,10 @@ const NEB_RESTRICTION_ENZYMES = Object.freeze([
   { name: 'SapI', site: 'GCTCTTC', cut: 'GCTCTTC (1/4)' }
 ]);
 const NEB_FEATURE_CACHE = new WeakMap();
+const ORF_FEATURE_CACHE = new WeakMap();
+const ORF_START_CODONS = new Set(['ATG']);
+const ORF_STOP_CODONS = new Set(['TAA', 'TAG', 'TGA']);
+const DEFAULT_MIN_ORF_AA_LENGTH = 75;
 
 function normalizeSequenceText(raw) {
   return String(raw || '')
@@ -242,6 +248,294 @@ function buildNebRestrictionFeatures(sequence, topology = 'linear') {
     }
     return String(left.name || '').localeCompare(String(right.name || ''));
   });
+}
+
+function positiveModulo(value, modulo) {
+  if (!Number.isFinite(Number(modulo)) || modulo <= 0) {
+    return 0;
+  }
+  const numeric = Number(value) || 0;
+  return ((numeric % modulo) + modulo) % modulo;
+}
+
+function readCircularCodon(sequence, start) {
+  const text = String(sequence || '');
+  const length = text.length;
+  if (length < 3) {
+    return '';
+  }
+  const first = text[positiveModulo(start, length)] || '';
+  const second = text[positiveModulo(start + 1, length)] || '';
+  const third = text[positiveModulo(start + 2, length)] || '';
+  return `${first}${second}${third}`;
+}
+
+function buildSegmentsFromStartAndLength(start, length, sequenceLength, topology = 'linear') {
+  const normalizedLength = Math.max(0, Number(sequenceLength) || 0);
+  const normalizedSpan = Math.max(0, Number(length) || 0);
+  if (!normalizedLength || normalizedSpan <= 0) {
+    return [];
+  }
+
+  if (normalizeTopology(topology) === 'linear') {
+    const safeStart = clamp(Math.round(Number(start) || 0), 0, normalizedLength);
+    const safeEnd = clamp(safeStart + normalizedSpan, 0, normalizedLength);
+    return safeEnd > safeStart ? [{ start: safeStart, end: safeEnd }] : [];
+  }
+
+  const circularStart = positiveModulo(Math.round(Number(start) || 0), normalizedLength);
+  if (normalizedSpan >= normalizedLength) {
+    if (circularStart === 0) {
+      return [{ start: 0, end: normalizedLength }];
+    }
+    return [
+      { start: circularStart, end: normalizedLength },
+      { start: 0, end: circularStart }
+    ];
+  }
+
+  const circularEnd = (circularStart + normalizedSpan) % normalizedLength;
+  if (circularEnd > circularStart) {
+    return [{ start: circularStart, end: circularEnd }];
+  }
+  if (circularEnd === circularStart) {
+    return [{ start: 0, end: normalizedLength }];
+  }
+  return [
+    { start: circularStart, end: normalizedLength },
+    { start: 0, end: circularEnd }
+  ];
+}
+
+function detectLinearOrfHits(sequence, minNtLength) {
+  const text = String(sequence || '');
+  const sequenceLength = text.length;
+  if (sequenceLength < 6) {
+    return [];
+  }
+
+  const hits = [];
+  for (let frame = 0; frame < 3; frame += 1) {
+    for (let start = frame; start <= sequenceLength - 3; start += 3) {
+      const startCodon = text.slice(start, start + 3);
+      if (!ORF_START_CODONS.has(startCodon)) {
+        continue;
+      }
+
+      for (let position = start + 3; position <= sequenceLength - 3; position += 3) {
+        const stopCodon = text.slice(position, position + 3);
+        if (!ORF_STOP_CODONS.has(stopCodon)) {
+          continue;
+        }
+        const length = (position + 3) - start;
+        if (length >= minNtLength) {
+          hits.push({
+            start,
+            length,
+            frame,
+            stopCodon
+          });
+        }
+        break;
+      }
+    }
+  }
+
+  return hits;
+}
+
+function detectCircularOrfHits(sequence, minNtLength) {
+  const text = String(sequence || '');
+  const sequenceLength = text.length;
+  if (sequenceLength < 6) {
+    return [];
+  }
+
+  const maxCodonSteps = Math.max(0, Math.floor(sequenceLength / 3));
+  if (!maxCodonSteps) {
+    return [];
+  }
+
+  const hits = [];
+  for (let frame = 0; frame < 3; frame += 1) {
+    for (let start = frame; start < sequenceLength; start += 3) {
+      const startCodon = readCircularCodon(text, start);
+      if (!ORF_START_CODONS.has(startCodon)) {
+        continue;
+      }
+
+      for (let step = 1; step <= maxCodonSteps; step += 1) {
+        const length = (step * 3) + 3;
+        if (length > sequenceLength) {
+          break;
+        }
+        const position = (start + (step * 3)) % sequenceLength;
+        const stopCodon = readCircularCodon(text, position);
+        if (!ORF_STOP_CODONS.has(stopCodon)) {
+          continue;
+        }
+        if (length >= minNtLength) {
+          hits.push({
+            start,
+            length,
+            frame,
+            stopCodon
+          });
+        }
+        break;
+      }
+    }
+  }
+
+  return hits;
+}
+
+function detectOrfHitsForSequence(sequence, topology, minNtLength) {
+  const normalizedTopology = normalizeTopology(topology);
+  return normalizedTopology === 'circular'
+    ? detectCircularOrfHits(sequence, minNtLength)
+    : detectLinearOrfHits(sequence, minNtLength);
+}
+
+function buildOrfFeatures(sequence, topology = 'linear', options = {}) {
+  const text = normalizeSequenceText(sequence).replace(/[^ACGT]/g, 'N');
+  const sequenceLength = text.length;
+  if (!sequenceLength) {
+    return [];
+  }
+
+  const minAaLength = Math.max(1, Math.floor(Number(options?.minAaLength) || DEFAULT_MIN_ORF_AA_LENGTH));
+  const minNtLength = Math.max(6, (minAaLength + 1) * 3);
+  const normalizedTopology = normalizeTopology(topology);
+  const forwardHits = detectOrfHitsForSequence(text, normalizedTopology, minNtLength);
+  const reverseSequence = reverseComplementIupac(text).replace(/[^ACGT]/g, 'N');
+  const reverseHits = detectOrfHitsForSequence(reverseSequence, normalizedTopology, minNtLength);
+  const dedupe = new Set();
+  const features = [];
+
+  const pushFeature = (hit, strand) => {
+    const hitLength = Math.max(0, Number(hit?.length) || 0);
+    if (hitLength <= 0) {
+      return;
+    }
+
+    let genomicStart = 0;
+    if (strand === 1) {
+      genomicStart = Number(hit?.start) || 0;
+    } else {
+      genomicStart = positiveModulo(sequenceLength - ((Number(hit?.start) || 0) + hitLength), sequenceLength);
+    }
+
+    const segments = buildSegmentsFromStartAndLength(genomicStart, hitLength, sequenceLength, normalizedTopology);
+    if (!segments.length) {
+      return;
+    }
+
+    const frameIndex = Math.max(0, Math.min(2, Number(hit?.frame) || 0));
+    const frameLabel = `${strand === -1 ? '-' : '+'}${frameIndex + 1}`;
+    const stopCodon = String(hit?.stopCodon || '').toUpperCase();
+    const aaLength = Math.max(0, Math.floor(hitLength / 3) - 1);
+    const segmentKey = segments.map((segment) => `${segment.start}-${segment.end}`).join(',');
+    const dedupeKey = `${strand}|${frameLabel}|${segmentKey}|${stopCodon}`;
+    if (dedupe.has(dedupeKey)) {
+      return;
+    }
+    dedupe.add(dedupeKey);
+
+    features.push({
+      id: `orf_${strand === -1 ? 'minus' : 'plus'}_${frameIndex + 1}_${segments[0].start}_${hitLength}`,
+      name: `ORF ${frameLabel}`,
+      type: 'open_reading_frame',
+      strand,
+      description: `Predicted ORF (${aaLength} aa, ${hitLength} nt, frame ${frameLabel}, start ATG${stopCodon ? `, stop ${stopCodon}` : ''}).`,
+      source: 'orf',
+      mode: 'ORF',
+      orfFrame: frameLabel,
+      orfLengthNt: hitLength,
+      orfLengthAa: aaLength,
+      startCodon: 'ATG',
+      stopCodon,
+      segments
+    });
+  };
+
+  forwardHits.forEach((hit) => pushFeature(hit, 1));
+  reverseHits.forEach((hit) => pushFeature(hit, -1));
+
+  const sorted = features.sort((left, right) => {
+    const leftStart = left.segments?.[0]?.start ?? 0;
+    const rightStart = right.segments?.[0]?.start ?? 0;
+    if (leftStart !== rightStart) {
+      return leftStart - rightStart;
+    }
+    const leftLength = Math.max(0, Number(left.orfLengthNt) || 0);
+    const rightLength = Math.max(0, Number(right.orfLengthNt) || 0);
+    if (leftLength !== rightLength) {
+      return rightLength - leftLength;
+    }
+    return String(left.name || '').localeCompare(String(right.name || ''));
+  });
+
+  return collapseNestedOrfFeatures(sorted, sequenceLength);
+}
+
+function collapseNestedOrfFeatures(features, sequenceLength) {
+  const list = Array.isArray(features) ? features : [];
+  if (list.length < 2) {
+    return list;
+  }
+
+  const annotated = list.map((feature, index) => ({
+    feature,
+    index,
+    strand: feature?.strand === -1 ? -1 : 1,
+    frame: String(feature?.orfFrame || ''),
+    indices: getOrfCodingIndices(feature, sequenceLength)
+  }));
+  const byGroup = new Map();
+  annotated.forEach((entry) => {
+    const key = `${entry.strand}|${entry.frame}`;
+    if (!byGroup.has(key)) {
+      byGroup.set(key, []);
+    }
+    byGroup.get(key).push(entry);
+  });
+
+  const discarded = new Set();
+  const isSubset = (inner, outer) => {
+    if (!inner.length || inner.length > outer.length) {
+      return false;
+    }
+    const outerSet = new Set(outer);
+    return inner.every((index) => outerSet.has(index));
+  };
+
+  byGroup.forEach((entries) => {
+    const ranked = [...entries].sort((left, right) => {
+      if (right.indices.length !== left.indices.length) {
+        return right.indices.length - left.indices.length;
+      }
+      return left.index - right.index;
+    });
+
+    for (let i = 0; i < ranked.length; i += 1) {
+      const outer = ranked[i];
+      if (!outer.indices.length || discarded.has(outer.index)) {
+        continue;
+      }
+      for (let j = i + 1; j < ranked.length; j += 1) {
+        const inner = ranked[j];
+        if (!inner.indices.length || discarded.has(inner.index)) {
+          continue;
+        }
+        if (isSubset(inner.indices, outer.indices)) {
+          discarded.add(inner.index);
+        }
+      }
+    }
+  });
+
+  return list.filter((_feature, index) => !discarded.has(index));
 }
 
 function clamp(value, min, max) {
@@ -1030,10 +1324,123 @@ function getNebRestrictionFeaturesForRecord(record) {
   return features;
 }
 
-function getRenderableFeaturesForRecord(record) {
+function getOrfFeaturesForRecord(record, options = {}) {
+  if (!record?.sequence) {
+    return [];
+  }
+  const minAaLength = Math.max(1, Math.floor(Number(options?.minAaLength) || DEFAULT_MIN_ORF_AA_LENGTH));
+  const cacheKey = `${record.sequence}|${normalizeTopology(record.topology)}|${minAaLength}`;
+  const cached = ORF_FEATURE_CACHE.get(record);
+  if (cached?.key === cacheKey && Array.isArray(cached.features)) {
+    return cached.features;
+  }
+
+  const features = buildOrfFeatures(record.sequence, record.topology, { minAaLength });
+  ORF_FEATURE_CACHE.set(record, { key: cacheKey, features });
+  return features;
+}
+
+function isOrfFeature(feature) {
+  if (!feature || typeof feature !== 'object') {
+    return false;
+  }
+  return String(feature.type || '').toLowerCase() === 'open_reading_frame'
+    || String(feature.source || '').toLowerCase() === 'orf';
+}
+
+function getRenderableFeaturesForRecord(record, options = {}) {
   const parsedFeatures = Array.isArray(record?.features) ? record.features : [];
+  const includeOrf = Boolean(options?.includeOrf);
+  const orfFeatures = includeOrf ? getOrfFeaturesForRecord(record, options) : [];
   const nebFeatures = getNebRestrictionFeaturesForRecord(record);
-  return [...parsedFeatures, ...nebFeatures];
+  return [...parsedFeatures, ...orfFeatures, ...nebFeatures];
+}
+
+function getOrfCodingIndices(feature, sequenceLength) {
+  const safeLength = Math.max(0, Number(sequenceLength) || 0);
+  if (!safeLength || !isOrfFeature(feature)) {
+    return [];
+  }
+
+  const strand = feature?.strand === -1 ? -1 : 1;
+  const segments = (Array.isArray(feature?.segments) ? feature.segments : [])
+    .map((segment) => ({
+      start: clamp(Math.round(Number(segment?.start) || 0), 0, safeLength),
+      end: clamp(Math.round(Number(segment?.end) || 0), 0, safeLength)
+    }))
+    .filter((segment) => segment.end > segment.start);
+  if (!segments.length) {
+    return [];
+  }
+
+  const indices = [];
+  if (strand === 1) {
+    segments.forEach((segment) => {
+      for (let index = segment.start; index < segment.end; index += 1) {
+        indices.push(index);
+      }
+    });
+  } else {
+    for (let segmentIndex = segments.length - 1; segmentIndex >= 0; segmentIndex -= 1) {
+      const segment = segments[segmentIndex];
+      for (let index = segment.end - 1; index >= segment.start; index -= 1) {
+        indices.push(index);
+      }
+    }
+  }
+
+  return indices;
+}
+
+function buildSelectedOrfTranslationContext(sequence, feature) {
+  const text = normalizeSequenceText(sequence);
+  const sequenceLength = text.length;
+  if (!sequenceLength || !isOrfFeature(feature)) {
+    return null;
+  }
+
+  const strand = feature?.strand === -1 ? -1 : 1;
+  const codingIndices = getOrfCodingIndices(feature, sequenceLength);
+  const codonCount = Math.floor(codingIndices.length / 3);
+  if (!codonCount) {
+    return null;
+  }
+
+  const codingSequence = [];
+  for (let i = 0; i < codonCount * 3; i += 1) {
+    const baseIndex = codingIndices[i];
+    const genomicBase = text[baseIndex] || 'N';
+    codingSequence.push(strand === -1 ? complementBase(genomicBase) : genomicBase);
+  }
+  const translated = translateDnaSequence(codingSequence.join(''), 1, 'star');
+  const protein = String(translated?.protein || '');
+  const anchors = [];
+
+  for (let codonIndex = 0; codonIndex < codonCount; codonIndex += 1) {
+    const aa = protein[codonIndex] || 'X';
+    if (aa === '*') {
+      continue;
+    }
+    const codonPositions = codingIndices.slice(codonIndex * 3, (codonIndex + 1) * 3);
+    if (codonPositions.length !== 3) {
+      continue;
+    }
+    const anchorIndex = Math.min(...codonPositions);
+    anchors.push({
+      baseIndex: anchorIndex,
+      aa
+    });
+  }
+
+  if (!anchors.length) {
+    return null;
+  }
+
+  anchors.sort((left, right) => left.baseIndex - right.baseIndex);
+  return {
+    strand,
+    anchors
+  };
 }
 
 function buildHighlightedLineMarkup(sourceText, lineStart, lineEnd, lineHighlights) {
@@ -1550,6 +1957,56 @@ function renderLineFeatureButtonsHtml(
   return `<div class="sequence-viewer-line-features" style="width:${lineWidthPx.toFixed(3)}px;height:${trackHeightPx.toFixed(3)}px;margin-left:${safeOffset.toFixed(3)}px;">${bars}</div>`;
 }
 
+function buildAminoAcidLineMarkup(lineStart, lineEnd, orfTranslationContext) {
+  const lineSpan = Math.max(0, lineEnd - lineStart);
+  if (!lineSpan || !orfTranslationContext || !Array.isArray(orfTranslationContext.anchors)) {
+    return '';
+  }
+
+  const chars = new Array(lineSpan).fill(' ');
+  orfTranslationContext.anchors.forEach((anchor) => {
+    const baseIndex = Number(anchor?.baseIndex);
+    const aa = String(anchor?.aa || '').slice(0, 1);
+    if (!Number.isFinite(baseIndex) || !aa) {
+      return;
+    }
+    if (baseIndex < lineStart || baseIndex >= lineEnd) {
+      return;
+    }
+    const offset = baseIndex - lineStart;
+    chars[offset] = aa;
+  });
+
+  if (chars.every((char) => char === ' ')) {
+    return '';
+  }
+
+  return chars
+    .map((char) => (char === ' ' ? '&nbsp;' : escapeHtml(char)))
+    .join('');
+}
+
+function renderOrfAminoAcidRowHtml(lineStart, lineEnd, orfTranslationContext) {
+  const body = buildAminoAcidLineMarkup(lineStart, lineEnd, orfTranslationContext);
+  if (!body) {
+    return '';
+  }
+
+  const strandClass = orfTranslationContext?.strand === -1
+    ? 'sequence-viewer-aa-row-minus'
+    : 'sequence-viewer-aa-row-plus';
+
+  return `
+    <div class="sequence-viewer-strand-row sequence-viewer-aa-row ${strandClass}">
+      <span class="sequence-viewer-strand-end sequence-viewer-aa-label">${AMINO_ACID_ROW_LABEL}</span>
+      <span class="sequence-viewer-seq-text sequence-viewer-aa-text">
+        <span class="sequence-viewer-seq-text-content sequence-viewer-aa-text-content">${body}</span>
+      </span>
+      <span class="sequence-viewer-strand-end sequence-viewer-aa-label"></span>
+    </div>
+  `;
+}
+
 function renderDualStrandSequenceLinesHtml(sequence, highlightedSegments = [], options = {}) {
   const text = normalizeSequenceText(sequence);
   if (!text.length) {
@@ -1576,6 +2033,9 @@ function renderDualStrandSequenceLinesHtml(sequence, highlightedSegments = [], o
   const indexedFeatures = Array.isArray(options?.features)
     ? options.features.map((feature, index) => ({ feature, index }))
     : [];
+  const orfTranslationContext = options?.orfTranslationContext || null;
+  const isOrfTranslationOnPlusStrand = Boolean(orfTranslationContext && orfTranslationContext.strand !== -1);
+  const isOrfTranslationOnMinusStrand = Boolean(orfTranslationContext && orfTranslationContext.strand === -1);
   const complementary = complementSequence(text);
   const sortedHighlights = normalizeHighlightSegments(highlightedSegments, text.length);
   const strandPairHeightPx = Math.max(8, (sequenceLineHeightPx * 2) + STRAND_PAIR_ROW_GAP_PX);
@@ -1594,6 +2054,7 @@ function renderDualStrandSequenceLinesHtml(sequence, highlightedSegments = [], o
 
     const forwardBody = buildHighlightedLineMarkup(text, lineStart, lineEnd, lineHighlights);
     const complementaryBody = buildHighlightedLineMarkup(complementary, lineStart, lineEnd, lineHighlights);
+    const aminoAcidRow = renderOrfAminoAcidRowHtml(lineStart, lineEnd, orfTranslationContext);
     const lineRestrictionAnnotations = renderLineRestrictionAnnotationsHtml(
       indexedFeatures,
       lineStart,
@@ -1633,11 +2094,13 @@ function renderDualStrandSequenceLinesHtml(sequence, highlightedSegments = [], o
               </span>
               <span class="sequence-viewer-strand-end">3'</span>
             </div>
+            ${isOrfTranslationOnPlusStrand ? aminoAcidRow : ''}
             <div class="sequence-viewer-strand-row sequence-viewer-strand-row-bottom">
               <span class="sequence-viewer-strand-end">3'</span>
               <span class="sequence-viewer-seq-text"><span class="sequence-viewer-seq-text-content">${complementaryBody}</span></span>
               <span class="sequence-viewer-strand-end">5'</span>
             </div>
+            ${isOrfTranslationOnMinusStrand ? aminoAcidRow : ''}
           </div>
           ${lineFeatureButtons}
         </div>
@@ -1661,11 +2124,35 @@ function formatSelectedFeatureDetailHtml(feature, sequenceLength) {
   const recognitionSite = String(feature.site || '').trim();
   const cutPattern = String(feature.cut || '').trim();
   const description = String(feature.description || '').trim();
+  const isOrf = String(feature.type || '').toLowerCase() === 'open_reading_frame'
+    || String(feature.source || '').toLowerCase() === 'orf';
+  const orfFrame = String(feature.orfFrame || '').trim();
+  const orfLengthNt = Math.max(0, Number(feature.orfLengthNt) || 0);
+  const orfLengthAa = Math.max(0, Number(feature.orfLengthAa) || 0);
+  const startCodon = String(feature.startCodon || '').trim();
+  const stopCodon = String(feature.stopCodon || '').trim();
+  const orfSummaryParts = [];
+  if (orfFrame) {
+    orfSummaryParts.push(`Frame ${escapeHtml(orfFrame)}`);
+  }
+  if (orfLengthAa > 0) {
+    orfSummaryParts.push(`${orfLengthAa.toLocaleString()} aa`);
+  }
+  if (orfLengthNt > 0) {
+    orfSummaryParts.push(`${orfLengthNt.toLocaleString()} nt`);
+  }
+  if (startCodon) {
+    orfSummaryParts.push(`Start ${escapeHtml(startCodon)}`);
+  }
+  if (stopCodon) {
+    orfSummaryParts.push(`Stop ${escapeHtml(stopCodon)}`);
+  }
 
   return `
     <p><strong>${escapeHtml(feature.name || '-')}</strong></p>
     <p><strong>Type:</strong> ${escapeHtml(feature.type || '-')} · <strong>Strand:</strong> ${strand}</p>
     <p><strong>Location:</strong> ${escapeHtml(location)}</p>
+    ${isOrf && orfSummaryParts.length ? `<p><strong>ORF:</strong> ${orfSummaryParts.join(' · ')}</p>` : ''}
     ${recognitionSite ? `<p><strong>Recognition Site:</strong> ${escapeHtml(recognitionSite)}${cutPattern ? ` · <strong>Cut:</strong> ${escapeHtml(cutPattern)}` : ''}</p>` : ''}
     <p><strong>Identity:</strong> ${identity} · <strong>Coverage:</strong> ${coverage} · <strong>Source:</strong> ${escapeHtml(source)}</p>
     ${description ? `<p class="small-note">${escapeHtml(description)}</p>` : ''}
@@ -1989,6 +2476,7 @@ export function initSequenceViewer(options = {}) {
   const fileNameLabel = document.getElementById('sequence-viewer-file-name');
   const loadBtn = document.getElementById('sequence-viewer-load-btn');
   const annotateBtn = document.getElementById('sequence-viewer-annotate-btn');
+  const orfToggle = document.getElementById('sequence-viewer-orf-toggle');
   const clearBtn = document.getElementById('sequence-viewer-clear-btn');
   const statusNote = document.getElementById('sequence-viewer-status');
   const messageBox = document.getElementById('sequence-viewer-messages');
@@ -2018,6 +2506,7 @@ export function initSequenceViewer(options = {}) {
     errors: [],
     annotationWarnings: [],
     isAnnotating: false,
+    orfViewEnabled: false,
     inputComposerVisible: true,
     libraryFilter: LIBRARY_STATUS_SAVED,
     libraryEntries: [],
@@ -2290,8 +2779,42 @@ export function initSequenceViewer(options = {}) {
     if (!record || !Number.isFinite(index) || index < 0) {
       return null;
     }
-    const features = getRenderableFeaturesForRecord(record);
+    const features = getVisibleFeaturesForRecord(record);
     return features[index] || null;
+  }
+
+  function findFeatureIndexByIdentity(features, feature) {
+    if (!Array.isArray(features) || !features.length || !feature) {
+      return -1;
+    }
+    const featureId = cleanText(feature.id, 240);
+    if (featureId) {
+      const byId = features.findIndex((item) => cleanText(item?.id, 240) === featureId);
+      if (byId >= 0) {
+        return byId;
+      }
+    }
+
+    const source = cleanText(feature.source, 120);
+    const name = cleanText(feature.name, 240);
+    const type = cleanText(feature.type, 120);
+    const strand = feature?.strand === -1 ? -1 : 1;
+    const segmentKey = (Array.isArray(feature?.segments) ? feature.segments : [])
+      .map((segment) => `${Math.round(Number(segment?.start) || 0)}-${Math.round(Number(segment?.end) || 0)}`)
+      .join(',');
+    return features.findIndex((item) => {
+      if (!item) {
+        return false;
+      }
+      const itemSegmentKey = (Array.isArray(item?.segments) ? item.segments : [])
+        .map((segment) => `${Math.round(Number(segment?.start) || 0)}-${Math.round(Number(segment?.end) || 0)}`)
+        .join(',');
+      return cleanText(item.source, 120) === source
+        && cleanText(item.name, 240) === name
+        && cleanText(item.type, 120) === type
+        && (item?.strand === -1 ? -1 : 1) === strand
+        && itemSegmentKey === segmentKey;
+    });
   }
 
   function hideSequenceHoverTooltip() {
@@ -2513,6 +3036,10 @@ export function initSequenceViewer(options = {}) {
     return state.records[index] || null;
   }
 
+  function getVisibleFeaturesForRecord(record) {
+    return getRenderableFeaturesForRecord(record, { includeOrf: state.orfViewEnabled });
+  }
+
   function clearSequenceSelection(options = {}) {
     const preserveCursor = Boolean(options?.preserveCursor);
     state.sequenceSelectionAnchor = null;
@@ -2601,6 +3128,15 @@ export function initSequenceViewer(options = {}) {
     }
   }
 
+  function syncOrfToggleState() {
+    if (!orfToggle) {
+      return;
+    }
+    const hasRecord = Boolean(getSelectedRecord()?.sequence?.length);
+    orfToggle.checked = Boolean(state.orfViewEnabled);
+    orfToggle.disabled = !hasRecord;
+  }
+
   function updateRecordSelect() {
     if (!recordSelect) {
       return;
@@ -2627,7 +3163,7 @@ export function initSequenceViewer(options = {}) {
       return;
     }
 
-    const features = getRenderableFeaturesForRecord(record);
+    const features = getVisibleFeaturesForRecord(record);
     const sequenceLength = Math.max(1, record?.sequence?.length || 1);
 
     if (!features.length) {
@@ -2684,7 +3220,7 @@ export function initSequenceViewer(options = {}) {
       return;
     }
 
-    const features = getRenderableFeaturesForRecord(record);
+    const features = getVisibleFeaturesForRecord(record);
     if (!features.length || state.selectedFeatureIndex < 0) {
       featureDetail.innerHTML = '<p class="small-note">Select a feature in the bottom track to view details.</p>';
       return;
@@ -2708,9 +3244,12 @@ export function initSequenceViewer(options = {}) {
       return;
     }
 
-    const features = getRenderableFeaturesForRecord(record);
+    const features = getVisibleFeaturesForRecord(record);
     const selectedFeature = (features.length && state.selectedFeatureIndex >= 0)
       ? features[state.selectedFeatureIndex] || null
+      : null;
+    const orfTranslationContext = state.orfViewEnabled
+      ? buildSelectedOrfTranslationContext(record.sequence, selectedFeature)
       : null;
 
     const selectionHighlights = getSequenceSelectionSegments(record);
@@ -2736,7 +3275,8 @@ export function initSequenceViewer(options = {}) {
       lineFeatureOffsetPx,
       features,
       selectedFeatureIndex: state.selectedFeatureIndex,
-      cursorBaseIndex: state.sequenceCursorBase
+      cursorBaseIndex: state.sequenceCursorBase,
+      orfTranslationContext
     });
 
     if (preserveScroll) {
@@ -2766,9 +3306,9 @@ export function initSequenceViewer(options = {}) {
     const gc = computeGcPercent(record.sequence);
     const ambiguous = countAmbiguousBases(record.sequence);
     const qualitySummary = summarizeFastqQuality(record.quality);
-    const parsedFeatures = Array.isArray(record.features) ? record.features : [];
+    const allFeatures = getVisibleFeaturesForRecord(record);
     const nebFeatures = getNebRestrictionFeaturesForRecord(record);
-    const totalFeatures = parsedFeatures.length + nebFeatures.length;
+    const totalFeatures = allFeatures.length;
 
     if (statFormat) {
       statFormat.textContent = String(record.sourceFormat || '-').toUpperCase();
@@ -2805,6 +3345,7 @@ export function initSequenceViewer(options = {}) {
     renderFeatureRail(record);
     renderSelectedFeatureDetail(record);
     syncAnnotateButtonState();
+    syncOrfToggleState();
     updateMessages();
   }
 
@@ -3095,6 +3636,29 @@ export function initSequenceViewer(options = {}) {
     }
   }
 
+  function setOrfViewEnabled(nextEnabled) {
+    const record = getSelectedRecord();
+    const previousFeatures = getVisibleFeaturesForRecord(record);
+    const selectedFeature = (
+      Number.isFinite(state.selectedFeatureIndex)
+      && state.selectedFeatureIndex >= 0
+      && state.selectedFeatureIndex < previousFeatures.length
+    ) ? previousFeatures[state.selectedFeatureIndex] : null;
+
+    state.orfViewEnabled = Boolean(nextEnabled);
+
+    if (!state.orfViewEnabled && isOrfFeature(selectedFeature)) {
+      state.selectedFeatureIndex = -1;
+    } else if (selectedFeature) {
+      const nextFeatures = getVisibleFeaturesForRecord(record);
+      state.selectedFeatureIndex = findFeatureIndexByIdentity(nextFeatures, selectedFeature);
+    } else {
+      state.selectedFeatureIndex = -1;
+    }
+
+    renderActiveRecord();
+  }
+
   modePasteBtn?.addEventListener('click', () => {
     setMode('paste');
   });
@@ -3175,6 +3739,10 @@ export function initSequenceViewer(options = {}) {
   annotateBtn?.addEventListener('click', (event) => {
     event.preventDefault();
     void annotateCurrentRecord();
+  });
+
+  orfToggle?.addEventListener('change', () => {
+    setOrfViewEnabled(Boolean(orfToggle.checked));
   });
 
   clearBtn?.addEventListener('click', (event) => {
@@ -3414,6 +3982,8 @@ export {
   normalizeSequenceText,
   complementBase,
   complementSequence,
+  buildOrfFeatures,
+  buildSelectedOrfTranslationContext,
   detectSequenceFormat,
   parseFastaRecords,
   parseFastqRecords,

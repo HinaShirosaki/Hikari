@@ -257,6 +257,9 @@ function classifyFailureReasons({
     ? validation
     : (resolvedResult.validation && typeof resolvedResult.validation === 'object' ? resolvedResult.validation : {});
   const plan = resolvedRouting.plan && typeof resolvedRouting.plan === 'object' ? resolvedRouting.plan : {};
+  const protocolNotebook = resolvedResult.protocol_to_notebook && typeof resolvedResult.protocol_to_notebook === 'object'
+    ? resolvedResult.protocol_to_notebook
+    : {};
 
   if (resolvedValidation.passed === false || resolvedValidation.forced_clarification === true) {
     reasons.push('validation_failed');
@@ -274,6 +277,14 @@ function classifyFailureReasons({
     }
     if (ambiguity.includes('top_two') || ambiguity.includes('close') || ambiguity.includes('ambiguous')) {
       reasons.push('multiple_close_matches');
+    }
+  }
+  if (cleanText(protocolNotebook.status, 40) === 'needs_more_info') {
+    if (!cleanText(protocolNotebook?.selected_protocol?.id, 120)) {
+      reasons.push('no_protocol_candidates');
+    }
+    if (asArray(protocolNotebook?.missing_placeholders).length > 0) {
+      reasons.push('missing_notebook_placeholders');
     }
   }
   if (plan.needs_deep_paper_reading === true && plan.paper_match?.deep_read_ready !== true) {
@@ -318,6 +329,23 @@ async function replayRequestLifecycle({ requestId, logPath } = {}) {
     limit: 5000
   });
   const events = rows.filter((row) => cleanText(row?.type, 40) === 'agent-lifecycle');
+  const traces = rows
+    .filter((row) => cleanText(row?.type, 40) === 'agent-llm-trace')
+    .map((row) => ({
+      type: 'agent-llm-trace',
+      requestId: cleanText(row?.requestId, 80),
+      stage: cleanText(row?.stage, 120),
+      provider: cleanText(row?.provider, 80),
+      model: cleanText(row?.model, 120),
+      summary: cleanText(row?.summary, 320),
+      timestamp: cleanText(row?.timestamp, 80),
+      request_payload: row?.request_payload && typeof row.request_payload === 'object'
+        ? sanitizeJsonValue(row.request_payload)
+        : sanitizeJsonValue(row?.request_payload),
+      response_payload: row?.response_payload && typeof row.response_payload === 'object'
+        ? sanitizeJsonValue(row.response_payload)
+        : sanitizeJsonValue(row?.response_payload)
+    }));
   const request = rows.find((row) => cleanText(row?.type, 80) === 'agent-chat-request') || null;
   const result = rows.find((row) => cleanText(row?.type, 80) === 'agent-chat-result')
     || rows.find((row) => cleanText(row?.type, 80) === 'agent-chat-error')
@@ -336,10 +364,15 @@ async function replayRequestLifecycle({ requestId, logPath } = {}) {
     request,
     result,
     events,
+    traces,
     summary: {
       request_id: normalizedRequestId,
       event_count: events.length,
+      trace_count: traces.length,
       stages: uniqueStrings(events.map((event) => cleanText(event?.stage, 40))),
+      trace_stages: uniqueStrings(traces.map((trace) => cleanText(trace?.stage, 120))),
+      trace_request_payload_count: traces.reduce((sum, trace) => sum + (trace?.request_payload ? 1 : 0), 0),
+      trace_response_payload_count: traces.reduce((sum, trace) => sum + (trace?.response_payload ? 1 : 0), 0),
       started_at: cleanText(rows[0]?.timestamp, 80),
       ended_at: cleanText(rows[rows.length - 1]?.timestamp, 80),
       failure_reasons: failureReasons

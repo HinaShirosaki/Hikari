@@ -1180,6 +1180,9 @@ test('agent-chat sends settings API key to main process and stores assistant res
         model: 'gpt-5',
         apiEndpoint: 'https://api.openai.com/v1/responses',
         apiKey: 'sk-local-key'
+      },
+      agent: {
+        developerMode: false
       }
     },
     agentChat: { projectId: '', messages: [] }
@@ -1209,207 +1212,93 @@ test('agent-chat sends settings API key to main process and stores assistant res
         payloadSeen = payload;
         return {
           ok: true,
-          answer: 'Use protocol Cell Prep and verify culture viability.',
-          confidence: 0.88,
-          response_type: 'notebook_draft',
-          confidence_label: 'high',
-          source_summary: {
-            total_sources: 2,
-            groups: [
-              {
-                source_type: 'tool_result',
-                label: 'Tool result',
-                count: 1,
-                items: [
-                  { source_type: 'tool_result', source: 'protocol', pointer: 'pr1', reason: 'Matched protocol name.' }
-                ]
-              },
-              {
-                source_type: 'web_search',
-                label: 'Web search',
-                count: 1,
-                items: [
-                  { source_type: 'web_search', source: 'web_source', pointer: 'https://example.org/transfection-review', reason: 'Matched web fallback source.' }
-                ]
-              }
-            ]
-          },
-          unresolved_fields: [],
-          validation: {
-            passed: true,
-            forced_clarification: false,
-            violations: [],
-            failure_reasons: []
-          },
-          provenance: {
-            source_evidence: [
-              {
-                statement: 'Use protocol Cell Prep and verify culture viability.',
-                support_level: 'direct',
-                supports: [
-                  { source: 'protocol', pointer: 'pr1', overlap: 3 }
-                ]
-              }
-            ],
-            unsupported_statement_count: 0
-          },
-          requiresApproval: false,
-          routing: {
-            intent: 'protocol_to_notebook',
-            confidence: 0.81,
+          parser: {
+            primary_intent: 'protocol_to_notebook',
+            needs_clarification: false,
+            clarification_reason: null,
             entities: {
-              activity: 'cell prep',
-              project: 'Cancer Study',
-              protein: '',
-              compound: '',
-              protocol: 'Cell Prep',
+              activity_type: 'cell prep',
+              project_name: 'Cancer Study',
+              protocol_name: 'Cell Prep',
+              protein_name: null,
+              compound_name: null,
+              inventory_item: null,
               cell_line: 'HEK293',
-              paper_title: '',
-              workflow_step: ''
+              paper_title: null,
+              workflow_step: null,
+              requested_output: 'next steps'
             },
-            plan: {
-              needs_tools: true,
-              needs_protocol_search: true,
-              needs_notebook_retrieval: false,
-              needs_project_retrieval: false,
-              needs_workflow_retrieval: false,
-              needs_pdf_reading: false,
-              needs_python: false,
-              needs_web_search: false,
-              python_task_type: 'csv_tsv_descriptive',
-              python_ready: true,
-              python_needs_clarification: false,
-              python_artifact_count: 2,
-              web_fallback_triggered: true,
-              web_fallback_reason: 'planner_requested_web_search',
-              web_queries: ['Cancer Study transfection recovery latest review'],
-              web_sources: [
-                {
-                  title: 'Cancer Study transfection review',
-                  url: 'https://example.org/transfection-review',
-                  source_domain: 'example.org',
-                  source_lane: 'web',
-                  source_tool: 'search_web',
-                  score: 0.91
-                }
-              ],
-              needs_clarification: false,
-              clarification_reason: '',
-              clarification_question: '',
-              selected_tool_names: ['search_protocols'],
-              project_match: {
-                selected_project_id: 'p1',
-                selected_project_name: 'Cancer Study',
-                top_score: 0.91,
-                score_delta: 0.82,
-                needs_clarification: false,
-                ambiguity_reason: '',
-                resolution_source: 'selected_project'
-              },
-              project_candidates: [
-                {
-                  project_id: 'p1',
-                  project_name: 'Cancer Study',
-                  score: 0.91,
-                  exact_name_score: 1,
-                  partial_name_score: 1,
-                  selected_bias_score: 1,
-                  linked_record_support_score: 0.7,
-                  reason: 'selected project bias, exact project name, linked records'
-                }
-              ],
-              protocol_match: {
-                selected_protocol_id: 'pr1',
-                selected_protocol_name: 'Cell Prep',
-                top_score: 0.86,
-                score_delta: 0.2,
-                needs_clarification: false,
-                ambiguity_reason: ''
-              },
-              protocol_candidates: [
-                {
-                  protocol_id: 'pr1',
-                  protocol_name: 'Cell Prep',
-                  category: 'cell',
-                  score: 0.86,
-                  semantic_score: 0.78,
-                  entity_overlap_score: 0.9,
-                  project_relevance_score: 0.8,
-                  recent_workflow_relevance_score: 0.64,
-                  reason: 'semantic=0.78 entity=0.90 project=0.80 recent=0.64'
-                }
-              ],
-              tool_selection_rationale: [
-                {
-                  tool: 'search_protocols',
-                  score: 12,
-                  entityScore: 5,
-                  taskScore: 4,
-                  exactnessScore: 3,
-                  reason: 'entity match, task match, keyword overlap'
-                }
-              ]
+            inventory_search: {
+              normalized_query: null,
+              candidate_terms: [],
+              aliases: [],
+              search_mode: null
             },
-            classifier: {
-              source: 'rules',
-              fallbackAttempted: false,
-              fallbackUsed: false,
-              lowConfidence: false,
-              tieDetected: false,
-              ruleReason: 'Matched protocol terms.',
-              fallbackError: ''
-            }
+            protocol_candidates: ['Cell Prep'],
+            reasoning_summary: 'Use protocol Cell Prep and verify culture viability.'
           },
-          citations: [{ source: 'protocol', pointer: 'pr1', reason: 'Matched protocol name.' }],
-          decisionRecord: {
-            assumptions: ['Test assumption'],
-            open_questions: [],
-            verification_notes: ['Test verification']
-          },
-          proposedWriteActions: [],
-          intermediateStates: [{ stage: 'synthesize', goal: 'Done.' }],
-          toolTrace: [
-            { tool: 'search_protocols', summary: 'Found one protocol.' },
-            { tool: 'search_web', summary: 'Found one web source.' }
-          ],
-          notebookDraft: {
-            protocol: { id: 'pr1', name: 'Cell Prep' },
-            project: { id: 'p1', name: 'Cancer Study', resolution_source: 'selected_project' },
-            notebook_type: 'biology',
-            rendered_steps: ['Harvest HEK293 cells', 'Legacy mix step'],
-            placeholder_values: [
-              {
-                step_id: 's1',
-                placeholder_id: 'p1',
-                placeholder_key: 'cell_line',
-                display: '[cell line]',
-                value: 'HEK293',
-                source: 'user_input',
-                source_type: 'by_type'
-              }
+          protocol_to_notebook: {
+            status: 'completed',
+            candidate_matches: [
+              { id: 'pr1', name: 'Cell Prep', score: 120 }
             ],
-            unresolved_placeholders: [],
-            save: {
-              mode: 'auto_save_draft',
-              applied: false,
-              status: 'pending_client_autosave',
-              reason: 'Renderer will persist notebook draft entry locally.'
+            selected_protocol: {
+              id: 'pr1',
+              name: 'Cell Prep',
+              selection_method: 'deterministic',
+              rationale: 'Exact name match.'
             },
-            entry_template: {
-              notebookType: 'biology',
-              projectId: 'p1',
-              projectName: 'Cancer Study',
-              protocolId: 'pr1',
-              protocolName: 'Cell Prep',
-              values: { 's1:p1': 'HEK293' },
-              result: 'Agent-generated notebook draft from request: Give me next steps for p1.',
-              updatedAt: '2026-03-11T12:00:00.000Z',
-              resultFiles: [],
-              resultFileRecords: [],
-              agentDraftStatus: 'draft_ready',
-              agentDraftMeta: { generatedAt: '2026-03-11T12:00:00.000Z', unresolvedCount: 0 }
+            missing_placeholders: [],
+            follow_up_questions: [],
+            project_name: 'Cancer Study',
+            notebook: {
+              protocol: { id: 'pr1', name: 'Cell Prep' },
+              project: { id: 'p1', name: 'Cancer Study', resolution_source: 'payload_project_id' },
+              notebook_type: 'biology',
+              rendered_steps: ['Harvest HEK293 cells'],
+              placeholder_values: [
+                {
+                  step_id: 's1',
+                  placeholder_id: 'p1',
+                  placeholder_key: 's1:p1',
+                  display: 'cell_line',
+                  value: 'HEK293',
+                  source: 'resolved',
+                  source_type: 'agent_protocol_v2'
+                }
+              ],
+              unresolved_placeholders: [],
+              save: {
+                mode: 'auto_save_draft',
+                applied: false,
+                status: 'ready_for_save',
+                reason: 'Draft is ready for notebook auto-save.'
+              },
+              entry_template: {
+                notebookType: 'biology',
+                projectId: 'p1',
+                projectName: 'Cancer Study',
+                protocolId: 'pr1',
+                protocolName: 'Cell Prep',
+                values: { 's1:p1': 'HEK293' },
+                result: 'Notebook draft completed for Cell Prep.',
+                updatedAt: '2026-03-11T12:00:00.000Z',
+                resultFiles: [],
+                resultFileRecords: [],
+                agentDraftStatus: 'draft_ready',
+                agentDraftMeta: { source: 'agent_protocol_v2', unresolvedCount: 0 }
+              }
             }
-          }
+          },
+          developer_trace: [
+            {
+              stage: 'intent_parser',
+              provider: 'openai',
+              model: 'gpt-5',
+              summary: 'Intent parsed.',
+              timestamp: '2026-03-11T12:00:00.000Z'
+            }
+          ]
         };
       }
     }
@@ -1451,10 +1340,13 @@ test('agent-chat sends settings API key to main process and stores assistant res
   assert.equal(payloadSeen.llm.model, 'gpt-5');
   assert.equal(payloadSeen.llm.apiEndpoint, 'https://api.openai.com/v1/responses');
   assert.equal(payloadSeen.llm.apiKey, 'sk-local-key');
+  assert.equal(payloadSeen.agent.developerMode, false);
   assert.equal(payloadSeen.projectId, 'p1');
   assert.equal(payloadSeen.stateSnapshot.snapshot_mode, 'thin');
   assert.equal(payloadSeen.stateSnapshot.data_file_path, '/tmp/enana-data.ena.json');
-  assert.equal(payloadSeen.stateSnapshot.protocols.length, 0);
+  assert.equal(payloadSeen.stateSnapshot.protocols.length, 1);
+  assert.equal(payloadSeen.stateSnapshot.protocols[0].name, 'Cell Prep');
+  assert.equal(payloadSeen.stateSnapshot.protocols[0].steps.length, 2);
   assert.equal(payloadSeen.stateSnapshot.notebookEntries.length, 0);
   assert.equal(payloadSeen.stateSnapshot.context_counts.protocols, 1);
   assert.equal(payloadSeen.stateSnapshot.context_counts.notebookEntries, 1);
@@ -1477,47 +1369,29 @@ test('agent-chat sends settings API key to main process and stores assistant res
   assert.equal(state.agentChat.messages.length, 2);
   assert.equal(state.agentChat.messages[0].role, 'user');
   assert.equal(state.agentChat.messages[1].role, 'assistant');
-  assert.equal(state.agentChat.messages[1].meta.response_type, 'notebook_draft');
-  assert.equal(state.agentChat.messages[1].meta.confidence_label, 'high');
-  assert.equal(Number(state.agentChat.messages[1].meta.source_summary?.total_sources), 2);
-  assert.equal(state.agentChat.messages[1].meta.validation?.passed, true);
-  assert.equal(Number(state.agentChat.messages[1].meta.provenance?.unsupported_statement_count), 0);
-  assert.equal(state.agentChat.messages[1].meta.notebookDraft.save.applied, true);
-  assert.equal(state.agentChat.messages[1].meta.notebookDraft.save.status, 'saved_draft');
+  assert.equal(state.agentChat.messages[1].meta.parser.primary_intent, 'protocol_to_notebook');
+  assert.equal(state.agentChat.messages[1].meta.parser.needs_clarification, false);
+  assert.equal(state.agentChat.messages[1].meta.parser.protocol_candidates[0], 'Cell Prep');
+  assert.equal(state.agentChat.messages[1].meta.protocol_to_notebook.status, 'completed');
+  assert.match(state.agentChat.messages[1].text, /Notebook draft completed for Cell Prep\./);
   assert.equal(state.notebookEntries.length, 3);
-  const autoSavedEntry = state.notebookEntries[state.notebookEntries.length - 1];
-  assert.equal(autoSavedEntry.notebookType, 'biology');
-  assert.equal(autoSavedEntry.agentDraftStatus, 'draft_ready');
-  assert.equal(autoSavedEntry.protocolId, 'pr1');
-  assert.equal(autoSavedEntry.projectId, 'p1');
-  assert.equal(autoSavedEntry.values['s1:p1'], 'HEK293');
   assert.equal(notebookChangedCalls, 1);
   assert.match(history.innerHTML, /Assistant/);
-  assert.match(history.innerHTML, /Routing/);
+  assert.match(history.innerHTML, /Intent Parser/);
+  assert.match(history.innerHTML, /Protocol Workflow/);
   assert.match(history.innerHTML, /protocol_to_notebook/);
-  assert.match(history.innerHTML, /Routing Project Match/);
-  assert.match(history.innerHTML, /Routing Project Candidates/);
-  assert.match(history.innerHTML, /Routing Paper Match/);
-  assert.match(history.innerHTML, /Paper Availability/);
-  assert.match(history.innerHTML, /Routing Python/);
-  assert.match(history.innerHTML, /Routing Web Fallback/);
-  assert.match(history.innerHTML, /Web Sources/);
-  assert.match(history.innerHTML, /Routing Protocol Match/);
-  assert.match(history.innerHTML, /Routing Protocol Candidates/);
-  assert.match(history.innerHTML, /Response Layer/);
-  assert.match(history.innerHTML, /Source Summary/);
-  assert.match(history.innerHTML, /Unresolved Fields/);
-  assert.match(history.innerHTML, /Validation/);
-  assert.match(history.innerHTML, /Provenance/);
-  assert.match(history.innerHTML, /Notebook Draft/);
-  assert.match(history.innerHTML, /saved_draft/);
-  assert.match(history.innerHTML, /Cell Prep/);
-  assert.match(history.innerHTML, /search_web|Searching web sources/i);
+  assert.match(history.innerHTML, /Entities/);
+  assert.match(history.innerHTML, /Reasoning Summary/);
+  assert.equal(/Developer Trace/.test(history.innerHTML), false);
+
+  state.settings.agent.developerMode = true;
+  agent.render();
+  assert.equal(/Developer Trace/.test(history.innerHTML), true);
   assert.equal(sendBtn.disabled, false);
   assert.equal(clearBtn.disabled, false);
   assert.equal(projectSelect.disabled, false);
   assert.equal(messageInput.disabled, false);
-  assert.equal(status.textContent, 'Complete.');
+  assert.equal(status.textContent, 'Ready.');
   assert.ok(persistCalls >= 3);
 
   trigger(clearBtn, 'click');

@@ -17,42 +17,12 @@ const {
   getCodexLoginStatus,
   requestCodexCliText
 } = require('./lib/codex-cli-provider');
-const { downloadPaperAndSiPdf } = require('./helpers/agent/agent-paper-download');
-const { runPythonSandbox, buildPythonCodegenPrompt } = require('./helpers/agent/agent-python');
-const { searchWebResults } = require('./helpers/agent/agent-web-fallback');
-const {
-  getBundlePaths,
-  syncBundleFromSnapshot,
-  hydrateSnapshotFromBundle,
-  searchInventoryIndex,
-  searchProtocolsIndex,
-  searchNotebookEntriesIndex
-} = require('./helpers/agent/agent-sqlite-index');
-const {
-  runPlannedPythonTask,
-  postProcessPythonToolResult,
-  runHybridWebFallback
-} = require('./helpers/agent/agent-phase89-runtime');
-const {
-  loadToolContract,
-  executeToolCall
-} = require('./helpers/agent/agent-tools');
-const {
-  ROUTING_INTENTS,
-  buildRoutingDecisionFromIntentParser,
-  buildRoutingClarificationQuestion
-} = require('./helpers/agent/agent-routing');
+const { runPythonSandbox } = require('./helpers/agent/agent-python');
 const {
   INTENT_PARSER_RESPONSE_SCHEMA,
   normalizeIntentParserPayload,
-  buildIntentParserPrompt,
-  buildInventorySearchTerms
+  buildIntentParserPrompt
 } = require('./helpers/agent/agent-intent-parser');
-const { buildNotebookDraft, buildNotebookDraftSummary } = require('./helpers/agent/agent-notebook-generation');
-const { buildProjectRecordIndex, retrieveProjectEvidence } = require('./helpers/agent/agent-project-retrieval');
-const { buildPaperSearchableDocs, retrievePaperCandidates, resolvePaperRequest } = require('./helpers/agent/agent-paper-analysis');
-const { finalizeAgentResponse } = require('./helpers/agent/agent-response-layer');
-const { validateAndGateResponse } = require('./helpers/agent/agent-validation-safety');
 const {
   createLifecycleRecorder,
   recordLifecycleEvent,
@@ -61,7 +31,15 @@ const {
   readLifecycleLogs,
   replayRequestLifecycle
 } = require('./helpers/agent/agent-observability');
+const { createAgentControllerUtils } = require('./helpers/agent/agent-controller-utils');
+const { createProtocolNotebookRuntime } = require('./helpers/agent/agent-protocol-notebook');
 const { createMainDataHelpers } = require('./helpers/main/data-helpers');
+const {
+  getBundlePaths,
+  syncBundleFromSnapshot,
+  hydrateSnapshotFromBundle,
+  importStorageRoot
+} = require('./helpers/main/storage-bundle');
 const {
   listSequenceEntries,
   getSequenceEntry,
@@ -69,32 +47,6 @@ const {
   promoteSequenceEntry,
   deleteSequenceEntry
 } = require('./helpers/main/sequence-library');
-const { addEvidencePack, applyFinalResponseLayerAndValidation } = require('./helpers/agent/controller-shared');
-const { createAgentWorkflowHelpers } = require('./helpers/agent/agent-workflow-helpers');
-const { createExternalBioSearchHelpers } = require('./helpers/agent/external-bio-search');
-const {
-  toolboxConcentrationToM,
-  toolboxConcentrationFromM,
-  toolboxVolumeToL,
-  toolboxVolumeFromL,
-  toolboxMassToG,
-  toolboxMassFromG,
-  cleanNucleotideSequenceForToolbox,
-  countNucleotideResidues,
-  translateDnaSequenceForToolbox,
-  cleanProteinSequenceForToolbox,
-  calculatePeptideStatsForToolbox,
-  oligoMolecularWeightForToolbox,
-  oligoExtinctionForToolbox,
-  oligoTmForToolbox,
-  linearRegressionForToolbox,
-  parseCrisprTargetsTextForToolbox,
-  collectCrisprPamSitesForToolbox,
-  calculateGcPercentForToolbox,
-  scoreCrisprOnTargetForToolbox,
-  computeCrisprOffTargetStatsForToolbox,
-  reverseTranslateProteinForToolbox
-} = require('./helpers/agent/toolbox-helpers');
 let AGENT_IO_CONTRACT_RAW = {};
 try {
   AGENT_IO_CONTRACT_RAW = require('../../data/agent-io-contract.json');
@@ -597,11 +549,29 @@ const mainDataHelpers = createMainDataHelpers({
   cleanText,
   hasSupportedDataExtension,
   normalizeDataFilePath,
+  syncBundleFromSnapshot: async ({ dataFilePath, snapshot, fallbackDataFilePath }) => (
+    syncBundleFromSnapshot({
+      dataFilePath,
+      snapshot,
+      fallbackDataFilePath
+    })
+  ),
+  hydrateSnapshotFromBundle: async ({
+    dataFilePath,
+    snapshot,
+    fallbackDataFilePath,
+    legacyChemicalsPath
+  }) => (
+    hydrateSnapshotFromBundle({
+      dataFilePath,
+      snapshot,
+      fallbackDataFilePath,
+      legacyChemicalsPath
+    })
+  ),
   writeSnapshot: async (filePath, snapshot) => {
     await writeEnaFile(filePath, buildCompactIndexedSnapshot(snapshot));
   },
-  syncBundleFromSnapshot: async (payload) => syncBundleFromSnapshot(payload),
-  hydrateSnapshotFromBundle,
   getDefaultDataFilePath,
   legacyChemicalsPath: CHEMICALS_DATA_FILE_PATH
 });
@@ -726,6 +696,26 @@ ipcMain.handle('storage:open-file', async (_event, payload) => {
   }
 
   return { ok: true, path: resolvedPath };
+});
+
+ipcMain.handle('storage:import-root', async (_event, payload) => {
+  const normalizedPayload = normalizeJsonPayload(payload, {});
+  const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
+  if (!storagePath) {
+    return { ok: false, error: 'Missing storage path.' };
+  }
+  try {
+    const imported = await importStorageRoot({ storagePath });
+    return {
+      ok: true,
+      ...imported
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error: String(error?.message || error)
+    };
+  }
 });
 
 ipcMain.handle('sequence-library:list', async (_event, payload) => {
@@ -1224,7 +1214,9 @@ function buildAgentToolContractPrompt(contract) {
 }
 
 const AGENT_IO_CONTRACT = normalizeAgentIoContract(AGENT_IO_CONTRACT_RAW);
-const AGENT_TOOL_REGISTRY = loadToolContract(AGENT_IO_CONTRACT);
+const AGENT_TOOL_REGISTRY = {
+  toolMap: new Map(asArray(AGENT_IO_CONTRACT.tools).map((tool) => [cleanText(tool?.name, 120), tool]))
+};
 const AGENT_TOOL_DEFINITIONS = AGENT_IO_CONTRACT.tools.map((tool) => ({
   type: 'function',
   name: tool.name,
@@ -1355,29 +1347,70 @@ function uniqueStrings(values, max = 50) {
   return out;
 }
 
-const {
-  normalizeRoutingPayload,
-  buildRoutingAssumptionRows,
-  normalizeNotebookDraftPayload,
-  buildNotebookDraftAssumptionRows,
-  maybeBuildNotebookDraft
-} = createAgentWorkflowHelpers({
-  cleanText,
-  asArray,
-  clamp,
-  routingIntents: ROUTING_INTENTS,
-  buildNotebookDraft
-});
+function normalizeRoutingPayload(rawRouting) {
+  const source = rawRouting && typeof rawRouting === 'object' ? rawRouting : {};
+  const confidence = Number(source.confidence);
+  return {
+    intent: cleanText(source.intent, 80) || 'unclear',
+    confidence: Number.isFinite(confidence) ? clamp(confidence, 0, 1) : 0.5,
+    entities: source.entities && typeof source.entities === 'object' ? source.entities : {},
+    plan: source.plan && typeof source.plan === 'object' ? source.plan : {},
+    classifier: source.classifier && typeof source.classifier === 'object'
+      ? source.classifier
+      : {
+        source: 'intent_parser',
+        fallbackAttempted: false,
+        fallbackUsed: false,
+        lowConfidence: false,
+        tieDetected: false,
+        ruleReason: '',
+        fallbackError: ''
+      }
+  };
+}
 
-const {
-  searchUniProtRecords,
-  searchPubMedRecords,
-  searchCrossrefRecords,
-  searchEuropePmcRecords
-} = createExternalBioSearchHelpers({
-  cleanText,
-  clamp
-});
+function buildRoutingAssumptionRows(routing) {
+  const normalized = normalizeRoutingPayload(routing);
+  return [
+    `Intent classified as ${normalized.intent}.`,
+    `Parser confidence proxy=${normalized.confidence.toFixed(2)}.`
+  ];
+}
+
+function normalizeNotebookDraftPayload(rawDraft) {
+  if (!rawDraft || typeof rawDraft !== 'object') {
+    return null;
+  }
+  return rawDraft;
+}
+
+function buildNotebookDraftAssumptionRows(notebookDraft) {
+  const draft = normalizeNotebookDraftPayload(notebookDraft);
+  if (!draft) {
+    return [];
+  }
+  return ['Notebook draft metadata attached.'];
+}
+
+function maybeBuildNotebookDraft() {
+  return null;
+}
+
+async function searchUniProtRecords() {
+  return [];
+}
+
+async function searchPubMedRecords() {
+  return [];
+}
+
+async function searchCrossrefRecords() {
+  return [];
+}
+
+async function searchEuropePmcRecords() {
+  return [];
+}
 
 function safeParseJson(text, fallback) {
   try {
@@ -1852,6 +1885,150 @@ function buildIntermediateState(stage, goal, extras = {}) {
       max_tokens_estimate: 6000
     },
     confidence: Number.isFinite(extras.confidence) ? clamp(Number(extras.confidence), 0, 1) : 0.5
+  };
+}
+
+function buildProjectRecordIndex({ snapshot } = {}) {
+  const source = snapshot && typeof snapshot === 'object' ? snapshot : {};
+  const projects = asArray(source.projects);
+  const protocols = asArray(source.protocols);
+  const workflows = asArray(source.workflows);
+  const notebookEntries = asArray(source.notebookEntries);
+  const papers = asArray(source.papers);
+
+  const byProjectId = {};
+  const byProjectName = {};
+
+  const ensureProjectBucket = (projectId, projectName) => {
+    const normalizedId = cleanText(projectId, 120);
+    const normalizedName = cleanText(projectName, 220);
+    const idKey = normalizedId ? normalizedId.toLowerCase() : '';
+    const nameKey = normalizedName ? normalizedName.toLowerCase() : '';
+
+    if (idKey && !byProjectId[idKey]) {
+      byProjectId[idKey] = {
+        project: {
+          id: normalizedId,
+          name: normalizedName || normalizedId
+        },
+        protocols: [],
+        workflows: [],
+        notebook_entries: [],
+        papers: []
+      };
+    } else if (idKey && normalizedName && !byProjectId[idKey].project.name) {
+      byProjectId[idKey].project.name = normalizedName;
+    }
+
+    if (nameKey && !byProjectName[nameKey]) {
+      byProjectName[nameKey] = {
+        project_name: normalizedName,
+        project_ids: [],
+        protocols: [],
+        workflows: [],
+        notebook_entries: [],
+        papers: []
+      };
+    }
+
+    if (idKey && nameKey) {
+      if (!byProjectName[nameKey]) {
+        byProjectName[nameKey] = {
+          project_name: normalizedName,
+          project_ids: [],
+          protocols: [],
+          workflows: [],
+          notebook_entries: [],
+          papers: []
+        };
+      }
+      if (!byProjectName[nameKey].project_ids.includes(normalizedId)) {
+        byProjectName[nameKey].project_ids.push(normalizedId);
+      }
+    }
+
+    return {
+      idKey,
+      nameKey
+    };
+  };
+
+  const pushUnique = (bucket, key, value) => {
+    const normalized = cleanText(value, 160);
+    if (!normalized) {
+      return;
+    }
+    const target = bucket[key];
+    if (!Array.isArray(target)) {
+      return;
+    }
+    if (!target.includes(normalized)) {
+      target.push(normalized);
+    }
+  };
+
+  const pickEntryId = (entry) => cleanText(
+    entry?.id
+      || entry?.protocolId
+      || entry?.protocol_id
+      || entry?.workflowId
+      || entry?.workflow_id
+      || entry?.entryId
+      || entry?.entry_id
+      || entry?.paperId
+      || entry?.paper_id
+      || entry?.title
+      || entry?.name,
+    220
+  );
+
+  const resolveProjectRef = (entry) => ({
+    id: cleanText(
+      entry?.projectId
+        || entry?.project_id
+        || entry?.project?.id
+        || entry?.project_ref?.id
+        || '',
+      120
+    ),
+    name: cleanText(
+      entry?.projectName
+        || entry?.project_name
+        || entry?.project?.name
+        || entry?.project_ref?.name
+        || '',
+      220
+    )
+  });
+
+  projects.forEach((project) => {
+    const projectId = cleanText(project?.id, 120);
+    const projectName = cleanText(project?.name, 220);
+    ensureProjectBucket(projectId, projectName);
+  });
+
+  const attachRows = (rows, field) => {
+    rows.forEach((row) => {
+      const { id, name } = resolveProjectRef(row);
+      const { idKey, nameKey } = ensureProjectBucket(id, name);
+      const rowId = pickEntryId(row);
+      if (idKey && byProjectId[idKey]) {
+        pushUnique(byProjectId[idKey], field, rowId);
+      }
+      if (nameKey && byProjectName[nameKey]) {
+        pushUnique(byProjectName[nameKey], field, rowId);
+      }
+    });
+  };
+
+  attachRows(protocols, 'protocols');
+  attachRows(workflows, 'workflows');
+  attachRows(notebookEntries, 'notebook_entries');
+  attachRows(papers, 'papers');
+
+  return {
+    by_project_id: byProjectId,
+    by_project_name: byProjectName
   };
 }
 
@@ -3298,295 +3475,49 @@ function buildToolFuzzyVocabulary(snapshot) {
 }
 
 async function runAgentTool(name, args, snapshot, options = {}) {
-  return executeToolCall(name, normalizeToolInvocationArgs(args), {
-    contract: AGENT_TOOL_REGISTRY,
-    allowWriteTools: options?.allowWriteTools === true,
-    fuzzyVocabulary: buildToolFuzzyVocabulary(snapshot),
-    toEnvelope: (toolName, callArgs, rawResult, envelopeOptions = {}) => buildAgentToolOutputEnvelope(
-      toolName,
-      callArgs,
-      rawResult,
-      envelopeOptions
-    ),
-    dispatch: async (toolName, callArgs) => runAgentToolDispatchLegacy(
-      toolName,
-      callArgs,
-      snapshot,
-      options
-    )
-  });
+  return runAgentToolDispatchLegacy(
+    name,
+    normalizeToolInvocationArgs(args),
+    snapshot,
+    options
+  );
 }
 
-function extractConversation(rawConversation) {
-  return asArray(rawConversation)
-    .slice(-10)
-    .map((item) => ({
-      role: item?.role === 'assistant' ? 'assistant' : 'user',
-      text: cleanText(item?.text, 2500)
-    }))
-    .filter((item) => item.text);
-}
-
-function buildAgentLogRequestId() {
-  return `${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
-}
-
-function summarizeLlmForAgentLog(llm) {
-  const source = llm && typeof llm === 'object' ? llm : {};
-  return {
-    provider: cleanText(source.provider, 80),
-    apiEndpoint: cleanText(source.apiEndpoint || source.api, 300),
-    model: cleanText(source.model, 120),
-    apiKeyProvided: Boolean(cleanText(source.apiKey, 12))
-  };
-}
-
-function normalizeDecisionRecordForAgentLog(record) {
-  const source = record && typeof record === 'object' ? record : {};
-  return {
-    assumptions: asArray(source.assumptions).map((item) => cleanText(item, 240)).filter(Boolean),
-    open_questions: asArray(source.open_questions).map((item) => cleanText(item, 240)).filter(Boolean),
-    verification_notes: asArray(source.verification_notes).map((item) => cleanText(item, 240)).filter(Boolean)
-  };
-}
-
-function normalizeIntermediateStatesForAgentLog(states) {
-  return asArray(states).map((state) => ({
-    state_id: cleanText(state?.state_id, 80),
-    created_at: cleanText(state?.created_at, 80),
-    stage: cleanText(state?.stage, 40),
-    goal: cleanText(state?.goal, 800),
-    assumptions: asArray(state?.assumptions).map((item) => cleanText(item, 240)).filter(Boolean),
-    open_questions: asArray(state?.open_questions).map((item) => cleanText(item, 240)).filter(Boolean),
-    evidence: asArray(state?.evidence).map((item) => ({
-      source: cleanText(item?.source, 120),
-      pointer: cleanText(item?.pointer, 180),
-      reason: cleanText(item?.reason, 220)
-    })),
-    proposed_actions: asArray(state?.proposed_actions).map((item) => ({
-      action_type: cleanText(item?.action_type, 40),
-      tool_name: cleanText(item?.tool_name, 120),
-      risk_level: cleanText(item?.risk_level, 20),
-      reason: cleanText(item?.reason, 260)
-    })),
-    confidence: Number.isFinite(Number(state?.confidence))
-      ? clamp(Number(state.confidence), 0, 1)
-      : null
-  }));
-}
-
-function normalizeToolTraceForAgentLog(trace) {
-  return asArray(trace).map((item) => ({
-    tool: cleanText(item?.tool, 120),
-    args: item?.args && typeof item.args === 'object' ? item.args : {},
-    summary: cleanText(item?.summary, 260)
-  }));
-}
-
-function normalizeValidationForAgentLog(validation) {
-  const source = validation && typeof validation === 'object' ? validation : {};
-  return {
-    passed: source.passed === true,
-    forced_clarification: source.forced_clarification === true,
-    failure_reasons: asArray(source.failure_reasons).map((item) => cleanText(item, 80)).filter(Boolean),
-    violations: asArray(source.violations).map((item) => ({
-      code: cleanText(item?.code, 80),
-      severity: cleanText(item?.severity, 20),
-      message: cleanText(item?.message, 280),
-      detail: cleanText(item?.detail, 360)
-    })).filter((item) => item.code || item.message)
-  };
-}
-
-function normalizeProvenanceForAgentLog(provenance) {
-  const source = provenance && typeof provenance === 'object' ? provenance : {};
-  return {
-    unsupported_statement_count: Number.isFinite(Number(source.unsupported_statement_count))
-      ? Number(source.unsupported_statement_count)
-      : 0,
-    source_evidence: asArray(source.source_evidence).map((item) => ({
-      statement: cleanText(item?.statement, 300),
-      support_level: cleanText(item?.support_level, 20),
-      supports: asArray(item?.supports).map((support) => ({
-        source: cleanText(support?.source, 120),
-        pointer: cleanText(support?.pointer, 220),
-        overlap: Number.isFinite(Number(support?.overlap)) ? Number(support.overlap) : 0
-      })).filter((support) => support.source || support.pointer)
-    })).filter((item) => item.statement).slice(0, 24)
-  };
-}
-
-function normalizeRoutingForAgentLog(routing) {
-  const normalized = normalizeRoutingPayload(routing);
-  return {
-    intent: normalized.intent,
-    confidence: normalized.confidence,
-    entities: normalized.entities,
-    plan: normalized.plan,
-    classifier: {
-      source: normalized.classifier.source,
-      fallbackAttempted: normalized.classifier.fallbackAttempted,
-      fallbackUsed: normalized.classifier.fallbackUsed,
-      lowConfidence: normalized.classifier.lowConfidence,
-      tieDetected: normalized.classifier.tieDetected,
-      ruleReason: normalized.classifier.ruleReason,
-      fallbackError: normalized.classifier.fallbackError
-    }
-  };
-}
-
-function summarizeAgentResultForLog(result) {
-  const source = result && typeof result === 'object' ? result : {};
-  const notebookDraft = normalizeNotebookDraftPayload(source.notebookDraft);
-  const sourceSummary = source.source_summary && typeof source.source_summary === 'object'
-    ? source.source_summary
-    : {};
-  const normalizedSourceSummaryGroups = asArray(sourceSummary.groups).map((group) => ({
-    source_type: cleanText(group?.source_type, 80),
-    label: cleanText(group?.label, 80),
-    count: Number.isFinite(Number(group?.count)) ? Number(group.count) : 0,
-    items: asArray(group?.items).map((item) => ({
-      source_type: cleanText(item?.source_type, 80),
-      source: cleanText(item?.source, 120),
-      pointer: cleanText(item?.pointer, 180),
-      reason: cleanText(item?.reason, 220)
-    }))
-  })).filter((group) => group.source_type || group.label || group.count > 0 || group.items.length > 0);
-  const unresolvedFields = asArray(source.unresolved_fields).map((item) => ({
-    step_id: cleanText(item?.step_id, 120),
-    placeholder_id: cleanText(item?.placeholder_id, 120),
-    placeholder_key: cleanText(item?.placeholder_key, 120),
-    display: cleanText(item?.display, 120),
-    reason: cleanText(item?.reason, 180)
-  })).filter((item) => item.placeholder_id || item.placeholder_key || item.display);
-  return {
-    ok: source.ok === true,
-    provider: cleanText(source.provider, 80),
-    model: cleanText(source.model, 120),
-    answer: cleanText(source.answer, 12000),
-    confidence: Number.isFinite(Number(source.confidence))
-      ? clamp(Number(source.confidence), 0, 1)
-      : null,
-    requiresApproval: source.requiresApproval === true,
-    proposedWriteActions: asArray(source.proposedWriteActions).map((item) => ({
-      tool_name: cleanText(item?.tool_name, 120),
-      reason: cleanText(item?.reason, 280)
-    })),
-    citations: asArray(source.citations).map((item) => ({
-      source: cleanText(item?.source, 120),
-      pointer: cleanText(item?.pointer, 180),
-      reason: cleanText(item?.reason, 220)
-    })),
-    decisionRecord: normalizeDecisionRecordForAgentLog(source.decisionRecord),
-    routing: normalizeRoutingForAgentLog(source.routing),
-    response_type: cleanText(source.response_type, 80),
-    confidence_label: cleanText(source.confidence_label, 20),
-    source_summary: {
-      total_sources: Number.isFinite(Number(sourceSummary.total_sources)) ? Number(sourceSummary.total_sources) : 0,
-      groups: normalizedSourceSummaryGroups
-    },
-    unresolved_fields: unresolvedFields,
-    validation: normalizeValidationForAgentLog(source.validation),
-    provenance: normalizeProvenanceForAgentLog(source.provenance),
-    notebookDraft: notebookDraft
-      ? {
-        protocol: notebookDraft.protocol,
-        project: notebookDraft.project,
-        notebook_type: notebookDraft.notebook_type,
-        placeholder_count: notebookDraft.placeholder_values.length,
-        unresolved_count: notebookDraft.unresolved_placeholders.length,
-        save: notebookDraft.save
-      }
-      : null,
-    intermediateStates: normalizeIntermediateStatesForAgentLog(source.intermediateStates),
-    toolTrace: normalizeToolTraceForAgentLog(source.toolTrace),
-    error: cleanText(source.error, 2000)
-  };
-}
-
-function formatAgentChatLogEntry(entry) {
-  return JSON.stringify({
-    timestamp: new Date().toISOString(),
-    ...entry
-  });
-}
-
-function resolveAgentApiKey(llm) {
-  const fromSettings = cleanText(llm?.apiKey, 300);
-  if (fromSettings) {
-    return fromSettings;
-  }
-
-  const explicit = cleanText(process.env.ENANA_LLM_API_KEY, 300);
-  if (explicit) {
-    return explicit;
-  }
-
-  const generic = cleanText(process.env.LLM_API_KEY, 300);
-  if (generic) {
-    return generic;
-  }
-  return '';
-}
-
-function inferProviderFromEndpoint(endpoint) {
-  const value = cleanText(endpoint, 300).toLowerCase();
-  if (!value) {
-    return '';
-  }
-  if (value.startsWith('codex://') || value.includes('codex cli') || value.includes('openai-cli')) {
-    return LLM_PROVIDERS.CODEX;
-  }
-  if (value.includes('anthropic.com')) {
-    return LLM_PROVIDERS.CLAUDE;
-  }
-  if (value.includes('generativelanguage.googleapis.com') || value.includes('ai.google')) {
-    return LLM_PROVIDERS.GEMINI;
-  }
-  if (value.includes('openai.com') || value.includes('/openai/')) {
-    return LLM_PROVIDERS.OPENAI;
-  }
-  return '';
-}
-
-function normalizeLlmProvider(provider, endpoint = '') {
-  const clean = cleanText(provider, 80).toLowerCase();
-  if (Object.values(LLM_PROVIDERS).includes(clean)) {
-    return clean;
-  }
-  return inferProviderFromEndpoint(endpoint) || DEFAULT_LLM_PROVIDER;
-}
-
-function defaultEndpointForProvider(provider) {
-  const resolved = normalizeLlmProvider(provider);
-  return DEFAULT_LLM_ENDPOINTS[resolved] || DEFAULT_LLM_ENDPOINTS[DEFAULT_LLM_PROVIDER];
-}
-
-function resolveAgentProvider(llm) {
-  return normalizeLlmProvider(llm?.provider, llm?.apiEndpoint || llm?.api);
-}
-
-function resolveAgentEndpoint(llm, provider = DEFAULT_LLM_PROVIDER) {
-  const endpoint = cleanText(llm?.apiEndpoint, 300);
-  if (provider === LLM_PROVIDERS.CODEX && endpoint) {
-    return endpoint;
-  }
-  if (endpoint && /^https?:\/\//i.test(endpoint)) {
-    return endpoint;
-  }
-  return defaultEndpointForProvider(provider);
-}
-
-function resolveAgentModel(llm, provider = DEFAULT_LLM_PROVIDER) {
-  const model = cleanText(llm?.model, 120);
-  if (model) {
-    return model;
-  }
-  if (Object.prototype.hasOwnProperty.call(DEFAULT_AGENT_MODELS, provider)) {
-    return DEFAULT_AGENT_MODELS[provider];
-  }
-  return DEFAULT_AGENT_MODELS[DEFAULT_LLM_PROVIDER];
-}
+const {
+  extractConversation,
+  buildAgentLogRequestId,
+  summarizeLlmForAgentLog,
+  resolveAgentExecutionFlags,
+  createAgentLlmTraceContext,
+  recordAgentLlmTrace,
+  summarizeAgentResultForLog,
+  formatAgentChatLogEntry,
+  resolveAgentApiKey,
+  resolveAgentProvider,
+  resolveAgentEndpoint,
+  resolveAgentModel,
+  requestIntentParserPayload
+} = createAgentControllerUtils({
+  LLM_PROVIDERS,
+  DEFAULT_LLM_PROVIDER,
+  DEFAULT_LLM_ENDPOINTS,
+  DEFAULT_AGENT_MODELS,
+  asArray,
+  cleanText,
+  appendAgentChatLogEntry,
+  buildIntentParserPrompt,
+  normalizeIntentParserPayload,
+  INTENT_PARSER_RESPONSE_SCHEMA,
+  toInputText,
+  requestCodexCliText,
+  getCodexCliWorkingDirectory,
+  requestClaudeMessagesWithBackoff,
+  requestGeminiGenerateContentWithBackoff,
+  requestOpenAiResponsesWithBackoff,
+  extractClaudeResponseText,
+  extractGeminiResponseText,
+  extractResponseText
+});
 
 function buildAgentSystemPrompt(projectName, prompts) {
   const projectScope = projectName ? `Scoped project: ${projectName}.` : 'Scope: all projects.';
@@ -3882,7 +3813,8 @@ async function startAgentSession({
   conversation,
   message,
   hasLatestUserInConversation,
-  toolDefinitions = AGENT_TOOL_DEFINITIONS
+  toolDefinitions = AGENT_TOOL_DEFINITIONS,
+  traceContext = null
 }) {
   const scopedToolDefinitions = asArray(toolDefinitions);
   const hasTools = scopedToolDefinitions.length > 0;
@@ -3892,16 +3824,25 @@ async function startAgentSession({
       ...(hasLatestUserInConversation ? [] : [toClaudeMessage('user', message)])
     ];
     const claudeTools = toClaudeToolDefinitions(scopedToolDefinitions);
+    const body = {
+      model,
+      system: systemPrompt,
+      messages,
+      ...(hasTools ? { tools: claudeTools } : {}),
+      max_tokens: 1400
+    };
     const response = await requestClaudeMessagesWithBackoff({
       endpoint,
       apiKey,
-      body: {
-        model,
-        system: systemPrompt,
-        messages,
-        ...(hasTools ? { tools: claudeTools } : {}),
-        max_tokens: 1400
-      }
+      body
+    });
+    await recordAgentLlmTrace(traceContext, {
+      stage: 'agent_round_0',
+      provider,
+      model,
+      summary: 'Started assistant session with tool-enabled prompt.',
+      request_payload: body,
+      response_payload: response
     });
     return {
       provider,
@@ -3922,27 +3863,36 @@ async function startAgentSession({
       ...(hasLatestUserInConversation ? [] : [toGeminiContent('user', message)])
     ];
     const geminiTools = toGeminiToolDefinitions(scopedToolDefinitions);
+    const body = {
+      systemInstruction: {
+        parts: [{ text: systemPrompt }]
+      },
+      contents,
+      ...(hasTools ? { tools: geminiTools } : {}),
+      ...(hasTools ? {
+        toolConfig: {
+          functionCallingConfig: {
+            mode: 'AUTO'
+          }
+        }
+      } : {}),
+      generationConfig: {
+        maxOutputTokens: 1400
+      }
+    };
     const response = await requestGeminiGenerateContentWithBackoff({
       endpoint,
       apiKey,
       model,
-      body: {
-        systemInstruction: {
-          parts: [{ text: systemPrompt }]
-        },
-        contents,
-        ...(hasTools ? { tools: geminiTools } : {}),
-        ...(hasTools ? {
-          toolConfig: {
-            functionCallingConfig: {
-              mode: 'AUTO'
-            }
-          }
-        } : {}),
-        generationConfig: {
-          maxOutputTokens: 1400
-        }
-      }
+      body
+    });
+    await recordAgentLlmTrace(traceContext, {
+      stage: 'agent_round_0',
+      provider,
+      model,
+      summary: 'Started assistant session with tool-enabled prompt.',
+      request_payload: body,
+      response_payload: response
     });
     return {
       provider,
@@ -3957,23 +3907,32 @@ async function startAgentSession({
     };
   }
 
+  const body = {
+    model,
+    input: [
+      toInputText('system', systemPrompt),
+      ...conversation.map((item) => toInputText(item.role, item.text)),
+      ...(hasLatestUserInConversation ? [] : [toInputText('user', message)])
+    ],
+    ...(hasTools ? {
+      tools: scopedToolDefinitions,
+      tool_choice: 'auto',
+      parallel_tool_calls: false
+    } : {}),
+    max_output_tokens: 1400
+  };
   const response = await requestOpenAiResponsesWithBackoff({
     endpoint,
     apiKey,
-    body: {
-      model,
-      input: [
-        toInputText('system', systemPrompt),
-        ...conversation.map((item) => toInputText(item.role, item.text)),
-        ...(hasLatestUserInConversation ? [] : [toInputText('user', message)])
-      ],
-      ...(hasTools ? {
-        tools: scopedToolDefinitions,
-        tool_choice: 'auto',
-        parallel_tool_calls: false
-      } : {}),
-      max_output_tokens: 1400
-    }
+    body
+  });
+  await recordAgentLlmTrace(traceContext, {
+    stage: 'agent_round_0',
+    provider: LLM_PROVIDERS.OPENAI,
+    model,
+    summary: 'Started assistant session with tool-enabled prompt.',
+    request_payload: body,
+    response_payload: response
   });
   return {
     provider: LLM_PROVIDERS.OPENAI,
@@ -4012,7 +3971,7 @@ function extractAgentSessionText(session) {
   return extractResponseText(session.raw);
 }
 
-async function continueAgentSessionWithToolOutputs(session, toolOutputs) {
+async function continueAgentSessionWithToolOutputs(session, toolOutputs, traceContext = null) {
   if (!session) {
     return session;
   }
@@ -4042,16 +4001,25 @@ async function continueAgentSessionWithToolOutputs(session, toolOutputs) {
     ];
 
     const claudeTools = toClaudeToolDefinitions(scopedToolDefinitions);
+    const body = {
+      model: session.model,
+      system: session.systemPrompt,
+      messages: nextMessages,
+      ...(hasTools ? { tools: claudeTools } : {}),
+      max_tokens: 1400
+    };
     const response = await requestClaudeMessagesWithBackoff({
       endpoint: session.endpoint,
       apiKey: session.apiKey,
-      body: {
-        model: session.model,
-        system: session.systemPrompt,
-        messages: nextMessages,
-        ...(hasTools ? { tools: claudeTools } : {}),
-        max_tokens: 1400
-      }
+      body
+    });
+    await recordAgentLlmTrace(traceContext, {
+      stage: `agent_round_${Number(session.round || 0) + 1}`,
+      provider: session.provider,
+      model: session.model,
+      summary: 'Continued session with tool outputs.',
+      request_payload: body,
+      response_payload: response
     });
 
     return {
@@ -4091,27 +4059,36 @@ async function continueAgentSessionWithToolOutputs(session, toolOutputs) {
     }
 
     const geminiTools = toGeminiToolDefinitions(scopedToolDefinitions);
+    const body = {
+      systemInstruction: {
+        parts: [{ text: session.systemPrompt }]
+      },
+      contents: nextContents,
+      ...(hasTools ? { tools: geminiTools } : {}),
+      ...(hasTools ? {
+        toolConfig: {
+          functionCallingConfig: {
+            mode: 'AUTO'
+          }
+        }
+      } : {}),
+      generationConfig: {
+        maxOutputTokens: 1400
+      }
+    };
     const response = await requestGeminiGenerateContentWithBackoff({
       endpoint: session.endpoint,
       apiKey: session.apiKey,
       model: session.model,
-      body: {
-        systemInstruction: {
-          parts: [{ text: session.systemPrompt }]
-        },
-        contents: nextContents,
-        ...(hasTools ? { tools: geminiTools } : {}),
-        ...(hasTools ? {
-          toolConfig: {
-            functionCallingConfig: {
-              mode: 'AUTO'
-            }
-          }
-        } : {}),
-        generationConfig: {
-          maxOutputTokens: 1400
-        }
-      }
+      body
+    });
+    await recordAgentLlmTrace(traceContext, {
+      stage: `agent_round_${Number(session.round || 0) + 1}`,
+      provider: session.provider,
+      model: session.model,
+      summary: 'Continued session with tool outputs.',
+      request_payload: body,
+      response_payload: response
     });
 
     return {
@@ -4122,24 +4099,33 @@ async function continueAgentSessionWithToolOutputs(session, toolOutputs) {
     };
   }
 
+  const body = {
+    model: session.model,
+    previous_response_id: session.raw?.id,
+    input: toolOutputs.map((output) => ({
+      type: 'function_call_output',
+      call_id: output.callId,
+      output: output.output
+    })),
+    ...(hasTools ? {
+      tools: scopedToolDefinitions,
+      tool_choice: 'auto',
+      parallel_tool_calls: false
+    } : {}),
+    max_output_tokens: 1400
+  };
   const response = await requestOpenAiResponsesWithBackoff({
     endpoint: session.endpoint,
     apiKey: session.apiKey,
-    body: {
-      model: session.model,
-      previous_response_id: session.raw?.id,
-      input: toolOutputs.map((output) => ({
-        type: 'function_call_output',
-        call_id: output.callId,
-        output: output.output
-      })),
-      ...(hasTools ? {
-        tools: scopedToolDefinitions,
-        tool_choice: 'auto',
-        parallel_tool_calls: false
-      } : {}),
-      max_output_tokens: 1400
-    }
+    body
+  });
+  await recordAgentLlmTrace(traceContext, {
+    stage: `agent_round_${Number(session.round || 0) + 1}`,
+    provider: session.provider,
+    model: session.model,
+    summary: 'Continued session with tool outputs.',
+    request_payload: body,
+    response_payload: response
   });
 
   return {
@@ -4158,7 +4144,8 @@ async function requestSynthesisPayload({
   message,
   draftAnswer,
   toolTrace,
-  evidence
+  evidence,
+  traceContext = null
 }) {
   const userPrompt = [
     `User request: ${message}`,
@@ -4168,175 +4155,122 @@ async function requestSynthesisPayload({
   ].join('\n\n');
 
   if (provider === LLM_PROVIDERS.CLAUDE) {
+    const body = {
+      model,
+      system: synthesisRequest,
+      max_tokens: 1600,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: userPrompt
+            }
+          ]
+        }
+      ]
+    };
     const response = await requestClaudeMessagesWithBackoff({
       endpoint,
       apiKey,
-      body: {
-        model,
-        system: synthesisRequest,
-        max_tokens: 1600,
-        messages: [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: userPrompt
-              }
-            ]
-          }
-        ]
-      }
+      body
+    });
+    await recordAgentLlmTrace(traceContext, {
+      stage: 'synthesis',
+      provider,
+      model,
+      summary: 'Structured synthesis round completed.',
+      request_payload: body,
+      response_payload: response
     });
     return extractClaudeResponseText(response);
   }
 
   if (provider === LLM_PROVIDERS.GEMINI) {
+    const body = {
+      systemInstruction: {
+        parts: [{ text: synthesisRequest }]
+      },
+      contents: [
+        {
+          role: 'user',
+          parts: [{ text: userPrompt }]
+        }
+      ],
+      generationConfig: {
+        maxOutputTokens: 1600
+      }
+    };
     const response = await requestGeminiGenerateContentWithBackoff({
       endpoint,
       apiKey,
       model,
-      body: {
-        systemInstruction: {
-          parts: [{ text: synthesisRequest }]
-        },
-        contents: [
-          {
-            role: 'user',
-            parts: [{ text: userPrompt }]
-          }
-        ],
-        generationConfig: {
-          maxOutputTokens: 1600
-        }
-      }
+      body
+    });
+    await recordAgentLlmTrace(traceContext, {
+      stage: 'synthesis',
+      provider,
+      model,
+      summary: 'Structured synthesis round completed.',
+      request_payload: body,
+      response_payload: response
     });
     return extractGeminiResponseText(response);
   }
 
+  const body = {
+    model,
+    input: [
+      toInputText('system', synthesisRequest),
+      toInputText('user', userPrompt)
+    ],
+    text: {
+      format: {
+        type: 'json_schema',
+        name: 'agent_result',
+        strict: true,
+        schema: AGENT_RESULT_SCHEMA
+      }
+    },
+    max_output_tokens: 1600
+  };
   const response = await requestOpenAiResponsesWithBackoff({
     endpoint,
     apiKey,
-    body: {
-      model,
-      input: [
-        toInputText('system', synthesisRequest),
-        toInputText('user', userPrompt)
-      ],
-      text: {
-        format: {
-          type: 'json_schema',
-          name: 'agent_result',
-          strict: true,
-          schema: AGENT_RESULT_SCHEMA
-        }
-      },
-      max_output_tokens: 1600
-    }
+    body
+  });
+  await recordAgentLlmTrace(traceContext, {
+    stage: 'synthesis',
+    provider: LLM_PROVIDERS.OPENAI,
+    model,
+    summary: 'Structured synthesis round completed.',
+    request_payload: body,
+    response_payload: response
   });
   return extractResponseText(response);
 }
 
-async function requestIntentParserPayload({
-  provider,
-  endpoint,
-  apiKey,
-  model,
-  message,
-  conversation,
-  projectName
-}) {
-  const prompt = buildIntentParserPrompt({
-    message,
-    conversation,
-    projectName
-  });
-
-  try {
-    if (provider === LLM_PROVIDERS.CODEX) {
-      const raw = await requestCodexCliText({
-        prompt,
-        model,
-        cwd: getCodexCliWorkingDirectory()
-      });
-      return normalizeIntentParserPayload(raw);
-    }
-
-    if (provider === LLM_PROVIDERS.CLAUDE) {
-      const response = await requestClaudeMessagesWithBackoff({
-        endpoint,
-        apiKey,
-        body: {
-          model,
-          system: 'Return valid JSON only.',
-          max_tokens: 1100,
-          messages: [
-            {
-              role: 'user',
-              content: [
-                {
-                  type: 'text',
-                  text: prompt
-                }
-              ]
-            }
-          ]
-        }
-      });
-      return normalizeIntentParserPayload(extractClaudeResponseText(response));
-    }
-
-    if (provider === LLM_PROVIDERS.GEMINI) {
-      const response = await requestGeminiGenerateContentWithBackoff({
-        endpoint,
-        apiKey,
-        model,
-        body: {
-          systemInstruction: {
-            parts: [{ text: 'Return valid JSON only.' }]
-          },
-          contents: [
-            {
-              role: 'user',
-              parts: [{ text: prompt }]
-            }
-          ],
-          generationConfig: {
-            maxOutputTokens: 1100
-          }
-        }
-      });
-      return normalizeIntentParserPayload(extractGeminiResponseText(response));
-    }
-
-    const response = await requestOpenAiResponsesWithBackoff({
-      endpoint,
-      apiKey,
-      body: {
-        model,
-        input: [
-          toInputText('system', 'Return valid JSON only.'),
-          toInputText('user', prompt)
-        ],
-        text: {
-          format: {
-            type: 'json_schema',
-            name: 'intent_parser',
-            strict: true,
-            schema: INTENT_PARSER_RESPONSE_SCHEMA
-          }
-        },
-        max_output_tokens: 1100
-      }
-    });
-    return normalizeIntentParserPayload(extractResponseText(response));
-  } catch (error) {
-    return {
-      ok: false,
-      error: cleanText(error?.message || error, 240) || 'Intent parser request failed.'
-    };
-  }
-}
+const protocolNotebookRuntime = createProtocolNotebookRuntime({
+  LLM_PROVIDERS,
+  asArray,
+  cleanText,
+  uniqueStrings,
+  pickTopMatches,
+  safeParseJson,
+  runTool: runAgentTool,
+  requestCodexCliText,
+  getCodexCliWorkingDirectory,
+  requestClaudeMessagesWithBackoff,
+  requestGeminiGenerateContentWithBackoff,
+  requestOpenAiResponsesWithBackoff,
+  extractClaudeResponseText,
+  extractGeminiResponseText,
+  extractResponseText,
+  toInputText,
+  recordAgentLlmTrace,
+  recordLifecycleEvent
+});
 
 function normalizeAgentOutput(raw, fallbackText) {
   const parsed = safeParseJson(raw, null);
@@ -4449,7 +4383,8 @@ async function runCodexAgentController({
   promptConfig,
   allowWriteTools,
   routing,
-  lifecycleRecorder
+  lifecycleRecorder,
+  traceContext = null
 }) {
   const intermediateStates = [];
   const toolTrace = [];
@@ -4553,15 +4488,30 @@ async function runCodexAgentController({
       selectedProjectId: projectId,
       selectedProjectName: projectName || routingInfo.entities?.project,
       storagePath: cleanText(snapshot?.settings?.storagePath, 1200),
-      generatePythonRunRequest: async ({ taskType, taskContext }) => requestCodexCliText({
-        prompt: buildPythonCodegenPrompt({
+      generatePythonRunRequest: async ({ taskType, taskContext }) => {
+        const prompt = buildPythonCodegenPrompt({
           message,
           taskType,
           taskContext
-        }),
-        model,
-        cwd: getCodexCliWorkingDirectory()
-      }),
+        });
+        const codegen = await requestCodexCliText({
+          prompt,
+          model,
+          cwd: getCodexCliWorkingDirectory()
+        });
+        await recordAgentLlmTrace(traceContext, {
+          stage: 'agent_round_python_codegen',
+          provider,
+          model,
+          summary: 'Generated Python run request via Codex CLI.',
+          request_payload: {
+            model,
+            prompt
+          },
+          response_payload: codegen
+        });
+        return codegen;
+      },
       runTool: async (toolName, args) => runTrackedTool(toolName, args, { allowWriteTools })
     });
     routingInfo = applyRoutingPlanPatch(routingInfo, pythonRun.plan_patch);
@@ -4655,7 +4605,8 @@ async function runCodexAgentController({
         validation: validationGate.validation,
         provenance: validationGate.provenance,
         intermediateStates,
-        toolTrace
+        toolTrace,
+        developer_trace: asArray(traceContext?.rows)
       };
     }
 
@@ -4763,6 +4714,17 @@ async function runCodexAgentController({
     model,
     cwd: getCodexCliWorkingDirectory()
   });
+  await recordAgentLlmTrace(traceContext, {
+    stage: 'agent_round_0',
+    provider,
+    model,
+    summary: 'Generated draft answer from retrieved context via Codex CLI.',
+    request_payload: {
+      model,
+      prompt: draftPrompt
+    },
+    response_payload: draftAnswer
+  });
 
   intermediateStates.push(buildIntermediateState('verify', 'Verified evidence coverage and policy constraints.', {
     assumptions: [
@@ -4789,6 +4751,24 @@ async function runCodexAgentController({
       ].join('\n\n'),
       model,
       cwd: getCodexCliWorkingDirectory()
+    });
+    await recordAgentLlmTrace(traceContext, {
+      stage: 'synthesis',
+      provider,
+      model,
+      summary: 'Structured synthesis round completed via Codex CLI.',
+      request_payload: {
+        model,
+        prompt: [
+          synthesisRequest,
+          'Return valid JSON and include citations only from provided evidence.',
+          `User request: ${message}`,
+          `Draft answer: ${draftAnswer || '-'}`,
+          `Tool trace: ${JSON.stringify(toolTrace.slice(0, 20))}`,
+          `Evidence: ${JSON.stringify(evidence.slice(0, 20))}`
+        ].join('\n\n')
+      },
+      response_payload: structuredRaw
     });
     normalized = normalizeAgentOutput(structuredRaw, draftAnswer);
   } catch {
@@ -4849,11 +4829,12 @@ async function runCodexAgentController({
     provenance: finalizedOutput.provenance,
     ...(notebookDraft ? { notebookDraft } : {}),
     intermediateStates,
-    toolTrace
+    toolTrace,
+    developer_trace: asArray(traceContext?.rows)
   };
 }
 
-async function runAgentController(payload, runtime = {}) {
+async function runAgentControllerCore(payload, runtime = {}) {
   const lifecycleRecorder = runtime && typeof runtime === 'object'
     ? runtime.lifecycleRecorder
     : null;
@@ -4870,36 +4851,32 @@ async function runAgentController(payload, runtime = {}) {
     throw new Error('Missing LLM API key. Set it in Settings > LLM Model & API, or use LLM_API_KEY / ENANA_LLM_API_KEY.');
   }
   const conversation = extractConversation(payload?.conversation);
-  const hasLatestUserInConversation = conversation.length > 0
+  const hasLatestUserInConversation = Boolean(
+    conversation.length > 0
     && conversation[conversation.length - 1].role === 'user'
-    && conversation[conversation.length - 1].text === message;
-  const rawSnapshot = normalizeJsonPayload(payload?.stateSnapshot, {});
-  const snapshotDataFilePath = cleanText(
-    rawSnapshot?.data_file_path || rawSnapshot?.dataFilePath || payload?.data_file_path || payload?.dataFilePath,
-    1600
+    && conversation[conversation.length - 1].text === message
   );
-  const hydratedSnapshot = await hydrateSnapshotFromBundle({
-    dataFilePath: snapshotDataFilePath,
-    snapshot: rawSnapshot,
-    fallbackDataFilePath: getDefaultDataFilePath(),
-    legacyChemicalsPath: CHEMICALS_DATA_FILE_PATH
+  const rawSnapshot = normalizeJsonPayload(payload?.stateSnapshot, {});
+  const snapshot = normalizeAgentSnapshot(rawSnapshot);
+  const executionFlags = resolveAgentExecutionFlags(payload, { settings: rawSnapshot?.settings || {} });
+  const traceContext = createAgentLlmTraceContext({
+    enabled: executionFlags.developerMode === true,
+    requestId: cleanText(runtime?.requestId, 80),
+    logPath: getAgentChatLogPath(),
+    provider,
+    model
   });
-  const snapshot = normalizeAgentSnapshot({
-    ...hydratedSnapshot.snapshot,
-    data_file_path: cleanText(
-      hydratedSnapshot?.bundlePaths?.dataFilePath || snapshotDataFilePath,
-      1600
-    )
-  });
-  const allowWriteTools = payload?.allowWriteTools === true;
   const projectId = cleanText(payload?.projectId, 80);
   const projectName = cleanText(payload?.projectName, 180);
-  const promptConfig = await loadLlmPrompts();
-  const requiresApproval = containsWriteIntent(message) && !allowWriteTools;
-  const availableToolNames = AGENT_IO_CONTRACT.tools.map((tool) => cleanText(tool?.name, 120)).filter(Boolean);
   const promptConversation = hasLatestUserInConversation
     ? conversation
     : [...conversation, { role: 'user', text: message }];
+
+  recordLifecycleEvent(lifecycleRecorder, {
+    stage: 'controller_intent_only',
+    status: 'ok',
+    message: 'Running parser-first intent phraser pipeline.'
+  });
 
   const parserResult = await requestIntentParserPayload({
     provider,
@@ -4908,7 +4885,8 @@ async function runAgentController(payload, runtime = {}) {
     model,
     message,
     conversation: promptConversation,
-    projectName
+    projectName,
+    traceContext
   });
   if (!parserResult?.ok || !parserResult?.payload) {
     recordLifecycleEvent(lifecycleRecorder, {
@@ -4927,501 +4905,135 @@ async function runAgentController(payload, runtime = {}) {
   recordLifecycleEvent(lifecycleRecorder, {
     stage: 'parser_completed',
     status: 'ok',
-    routing_intent: cleanText(parserResult.payload.primary_intent, 80),
+    routing_intent: cleanText(parserResult.payload.primary_intent, 80) || 'unclear',
     message: `Intent parser returned primary_intent=${cleanText(parserResult.payload.primary_intent, 80) || 'unknown'}.`,
     meta: {
-      confidence: Number.isFinite(Number(parserResult.payload.confidence))
-        ? Number(parserResult.payload.confidence)
-        : null,
       needs_clarification: parserResult.payload.needs_clarification === true
     }
   });
 
-  const routingDecision = buildRoutingDecisionFromIntentParser({
-    parserPayload: parserResult.payload,
-    message,
-    snapshot,
-    availableToolNames,
-    toolContract: AGENT_TOOL_REGISTRY,
-    writeIntent: containsWriteIntent(message),
-    selectedProjectId: projectId,
-    selectedProjectName: projectName
-  });
-  let routing = normalizeRoutingPayload(routingDecision);
-  recordLifecycleEvent(lifecycleRecorder, {
-    stage: 'routing_completed',
-    status: 'ok',
-    routing_intent: routing.intent,
-    message: `Routing resolved intent=${routing.intent}.`,
-    meta: {
-      confidence: routing.confidence,
-      needs_clarification: routing.plan?.needs_clarification === true,
-      selected_tool_count: asArray(routing.plan?.selected_tool_names).length
-    }
-  });
-
-  if (routing.plan.needs_clarification) {
-    const clarification = buildRoutingClarificationQuestion(routing);
-    const proposedWriteActions = requiresApproval
-      ? [
-        {
-          tool_name: 'write_operation_pending_approval',
-          reason: 'User intent appears write-oriented; explicit approval is required before execution.'
-        }
-      ]
-      : [];
-    const clarificationConfidence = clamp(routing.confidence * 0.92, 0, 1);
-    const responseLayer = finalizeAgentResponse({
-      answer: clarification,
-      confidence: clarificationConfidence,
-      routing,
-      notebookDraft: null,
-      toolTrace: [],
-      citations: []
-    });
-    recordLifecycleEvent(lifecycleRecorder, {
-      stage: 'clarification_gate',
-      status: 'ok',
-      routing_intent: routing.intent,
-      response_type: responseLayer.response_type,
-      message: cleanText(routing.plan.clarification_reason, 320) || 'Routing requested clarification before tool execution.'
-    });
-    const validationGate = applyValidationGateToOutput({
-      routing,
-      normalized: {
-        answer: responseLayer.answer,
-        confidence: clarificationConfidence,
-        requiresApproval: requiresApproval || proposedWriteActions.length > 0,
-        proposedWriteActions,
-        citations: [],
-        decisionRecord: {
-          assumptions: [
-            'Routing plan identified ambiguity and stopped execution before tool calls.',
-            `Intent=${routing.intent} source=${routing.classifier.source}`
-          ],
-          open_questions: [clarification],
-          verification_notes: ['No tools were executed because clarification is required first.']
-        },
-        response_type: responseLayer.response_type,
-        confidence_label: responseLayer.confidence_label,
-        source_summary: responseLayer.source_summary,
-        unresolved_fields: responseLayer.unresolved_fields
-      },
-      notebookDraft: null,
-      toolTrace: []
-    });
-    routing = validationGate.routing;
-    const clarificationIntermediateStates = [
-      buildIntermediateState('intake', message, {
-        assumptions: [
-          ...buildRoutingAssumptionRows(routing),
-          requiresApproval
-            ? 'Write intent detected; approval remains required before execution.'
-            : 'Read-first execution mode is active.'
-        ],
-        openQuestions: [clarification],
-        confidence: routing.confidence
-      }),
-      buildIntermediateState('route', `Resolved routing intent "${routing.intent}" and requested clarification.`, {
-        assumptions: buildRoutingAssumptionRows(routing),
-        openQuestions: [clarification],
-        confidence: routing.confidence
-      }),
-      buildIntermediateState('response_layer', 'Applied deterministic response-layer metadata for clarification response.', {
-        assumptions: buildResponseLayerAssumptionRows(responseLayer),
-        openQuestions: [clarification],
-        confidence: clarificationConfidence
-      }),
-      buildIntermediateState('validation', 'Ran deterministic validation and safety gate.', {
-        assumptions: [
-          ...buildValidationAssumptionRows(validationGate.validation),
-          ...buildProvenanceAssumptionRows(validationGate.provenance)
-        ],
-        openQuestions: [cleanText(routing.plan?.clarification_question, 320) || clarification],
-        confidence: clarificationConfidence
-      }),
-      buildIntermediateState('handoff', 'Prepared clarification response for UI handoff and audit trail.', {
-        assumptions: [
-          'No tool calls executed due to clarification gate.',
-          ...buildResponseLayerAssumptionRows(validationGate.normalized),
-          ...buildValidationAssumptionRows(validationGate.validation)
-        ],
-        confidence: clarificationConfidence
-      })
-    ];
-    recordLifecycleEvent(lifecycleRecorder, {
-      stage: 'validation_completed',
-      status: validationGate.validation.passed ? 'ok' : 'failed',
-      routing_intent: routing.intent,
-      response_type: validationGate.normalized.response_type,
-      failure_reasons: validationGate.validation.failure_reasons,
-      message: buildValidationAssumptionRows(validationGate.validation).join(' ')
-    });
-    return {
-      ok: true,
-      provider,
-      model: model || (provider === LLM_PROVIDERS.CODEX ? 'codex-default' : ''),
-      answer: validationGate.normalized.answer,
-      confidence: clarificationConfidence,
-      requiresApproval: validationGate.normalized.requiresApproval === true,
-      proposedWriteActions: asArray(validationGate.normalized.proposedWriteActions),
-      citations: [],
-      decisionRecord: validationGate.normalized.decisionRecord,
-      routing,
-      response_type: validationGate.normalized.response_type,
-      confidence_label: validationGate.normalized.confidence_label,
-      source_summary: validationGate.normalized.source_summary,
-      unresolved_fields: validationGate.normalized.unresolved_fields,
-      validation: validationGate.validation,
-      provenance: validationGate.provenance,
-      intermediateStates: clarificationIntermediateStates,
-      toolTrace: []
-    };
-  }
-
-  if (provider === LLM_PROVIDERS.CODEX) {
-    return runCodexAgentController({
-      provider,
-      model,
-      message,
-      conversation,
-      hasLatestUserInConversation,
-      snapshot,
-      projectId,
-      projectName,
-      promptConfig,
-      allowWriteTools,
-      routing,
-      lifecycleRecorder
-    });
-  }
-
-  const intermediateStates = [];
-  const toolTrace = [];
-  const evidence = [];
-  const runTrackedTool = createLifecycleToolRunner({
-    snapshot,
-    allowWriteTools,
-    lifecycleRecorder
-  });
-  const notebookToolResults = [];
-
-  intermediateStates.push(buildIntermediateState('intake', message, {
-    assumptions: [
-      allowWriteTools
-        ? 'Explicit approval flag enabled write tools for this request.'
-        : 'User question is interpreted as read-first unless writes are explicitly requested.',
-      ...buildRoutingAssumptionRows(routing)
-    ],
-    openQuestions: requiresApproval
-      ? ['User may want a write action; approval is required before any write.']
-      : [],
-    confidence: 0.45
-  }));
-
-  intermediateStates.push(buildIntermediateState('context', 'Loaded snapshot context for retrieval tools.', {
-    assumptions: [
-      `Context sizes: projects=${snapshot.projects.length}, protocols=${snapshot.protocols.length}, workflows=${snapshot.workflows.length}, notebook_entries=${snapshot.notebookEntries.length}, assays=${snapshot.assays.length}, gel_analyses=${snapshot.gelAnalyses.length}, papers=${snapshot.papers.length}.`,
-      ...buildSnapshotBundleAssumptionRows(snapshot)
-    ],
-    confidence: 0.52
-  }));
-
-  intermediateStates.push(buildIntermediateState('route', `Resolved routing intent "${routing.intent}".`, {
-    assumptions: buildRoutingAssumptionRows(routing),
-    proposedActions: asArray(routing.plan.tool_selection_rationale).slice(0, 5).map((row) => ({
-      action_type: 'read',
-      tool_name: row.tool,
-      risk_level: 'low',
-      reason: `selector score=${Number(row.score) || 0}; ${cleanText(row.reason, 180)}`
-    })),
-    confidence: routing.confidence
-  }));
-
-  const projectEvidence = maybeCollectProjectEvidence({
-    message,
-    routing,
-    snapshot,
-    projectId,
-    projectName
-  });
-  addEvidencePack({
-    pack: projectEvidence,
-    stage: 'project_evidence',
-    stageMessage: 'Collected deterministic project-aware evidence packs.',
-    confidence: 0.67,
-    traceTool: 'project_evidence_aggregator',
-    traceArgs: {
-      project_id: cleanText(projectEvidence?.selected_project?.id, 80),
-      project_name: cleanText(projectEvidence?.selected_project?.name, 180)
-    },
-    buildAssumptions: buildProjectEvidenceAssumptionRows,
-    intermediateStates,
-    toolTrace,
-    evidence,
-    buildIntermediateState,
-    cleanText
-  });
-
-  const paperEvidence = maybeCollectPaperEvidence({
-    message,
-    routing,
-    snapshot
-  });
-  addEvidencePack({
-    pack: paperEvidence,
-    stage: 'paper_evidence',
-    stageMessage: 'Collected deterministic paper evidence packs.',
-    confidence: 0.66,
-    traceTool: 'paper_evidence_aggregator',
-    traceArgs: {
-      mode: cleanText(routing.plan.paper_task_mode, 80),
-      selected_paper_id: cleanText(routing.plan.paper_match?.selected_paper_id, 80),
-      selected_paper_title: cleanText(routing.plan.paper_match?.selected_paper_title, 220)
-    },
-    buildAssumptions: buildPaperEvidenceAssumptionRows,
-    intermediateStates,
-    toolTrace,
-    evidence,
-    buildIntermediateState,
-    cleanText
-  });
-
-  const systemPrompt = buildAgentSystemPrompt(projectName, promptConfig);
-  const scopedToolDefinitions = routing.plan.needs_tools
-    ? resolveAgentToolDefinitions(routing.plan.selected_tool_names)
-    : [];
-
-  let session = await startAgentSession({
-    provider,
-    endpoint,
-    apiKey,
-    model,
-    systemPrompt,
-    conversation,
-    message,
-    hasLatestUserInConversation,
-    toolDefinitions: scopedToolDefinitions
-  });
-  let round = 0;
-
-  while (round < MAX_AGENT_TOOL_ROUNDS) {
-    const calls = extractAgentSessionFunctionCalls(session);
-    if (!calls.length) {
-      break;
-    }
-
-    const toolOutputs = [];
-    const proposedActions = [];
-    for (const call of calls.slice(0, 4)) {
-      let args = normalizeToolInvocationArgs(call.argsText);
-      if (call.name === 'search_inventory') {
-        args = buildInventoryToolArgs({
-          message,
-          routing,
-          args
-        });
-      }
-      let toolResult = await runTrackedTool(call.name, args, { allowWriteTools });
-      if (call.name === 'run_python_sandbox') {
-        const pythonPost = await postProcessPythonToolResult({
-          toolResult,
-          storagePath: cleanText(snapshot?.settings?.storagePath, 1200),
-          projectName: cleanText(projectName || routing.plan.project_match?.selected_project_name || routing.entities?.project, 180),
-          taskType: cleanText(routing.plan.python_task_type, 80)
-        });
-        toolResult = pythonPost.tool_result;
-        routing = applyRoutingPlanPatch(routing, pythonPost.plan_patch);
-        intermediateStates.push(buildIntermediateState('python_execute', 'Validated Python sandbox output and persisted deterministic artifacts.', {
-          assumptions: asArray(pythonPost.assumption_rows),
-          evidence: asArray(pythonPost.citations).slice(0, 10),
-          confidence: toolResult.ok === true ? 0.71 : 0.57
-        }));
-      }
-      const normalizedInput = toolResult?.input && typeof toolResult.input === 'object' ? toolResult.input : args;
-      toolOutputs.push({
-        callId: call.callId,
-        name: call.name,
-        output: JSON.stringify(toolResult)
-      });
-      toolTrace.push({
-        tool: call.name,
-        args: normalizedInput,
-        summary: cleanText(toolResult.summary, 240)
-      });
-      notebookToolResults.push({
-        tool: call.name,
-        items: asArray(toolResult.items),
-        summary: cleanText(toolResult.summary, 240)
-      });
-      asArray(toolResult.citations).forEach((citation) => {
-        evidence.push({
-          source: cleanText(citation?.source, 120),
-          pointer: cleanText(citation?.pointer, 180),
-          reason: cleanText(citation?.reason, 220)
-        });
-      });
-      proposedActions.push({
-        action_type: isWriteTool(call.name) ? 'write' : (isComputeTool(call.name) ? 'compute' : 'read'),
-        tool_name: call.name,
-        risk_level: isWriteTool(call.name) ? 'high' : (isComputeTool(call.name) ? 'medium' : 'low'),
-        reason: isWriteTool(call.name)
-          ? (allowWriteTools
-            ? 'Model-requested write operation executed with explicit approval.'
-            : 'Model-requested write operation blocked pending explicit approval.')
-          : (isComputeTool(call.name)
-            ? 'Model-requested sandboxed computation.'
-            : 'Model-requested read operation.')
-      });
-    }
-
-    intermediateStates.push(buildIntermediateState('execute', `Executed ${toolOutputs.length} tool calls in round ${round + 1}.`, {
-      evidence: evidence.slice(-10),
-      proposedActions,
-      confidence: 0.62
-    }));
-
-    session = await continueAgentSessionWithToolOutputs(session, toolOutputs);
-
-    round += 1;
-  }
-
-  const webFallback = await runHybridWebFallback({
-    message,
-    routing,
-    projectName: projectName || routing.plan.project_match?.selected_project_name || routing.entities?.project,
-    internalEvidence: evidence,
-    runLiteratureTool: async (toolName, args) => runTrackedTool(toolName, args, { allowWriteTools: false })
-  });
-  routing = applyRoutingPlanPatch(routing, webFallback.plan_patch);
-  if (webFallback.triggered) {
-    intermediateStates.push(buildIntermediateState('web_fallback', 'Executed hybrid web + literature fallback retrieval.', {
-      assumptions: asArray(webFallback.assumption_rows),
-      evidence: asArray(webFallback.citations).slice(0, 10),
-      confidence: asArray(webFallback.merged_items).length ? 0.66 : 0.54
-    }));
-    toolTrace.push(...asArray(webFallback.tool_trace_rows));
-    appendCitations(evidence, webFallback.citations);
-    notebookToolResults.push({
-      tool: 'hybrid_web_fallback',
-      items: asArray(webFallback.merged_items).slice(0, 10),
-      summary: cleanText(
-        asArray(webFallback.assumption_rows).join(' ')
-          || `Collected ${asArray(webFallback.merged_items).length} hybrid web source(s).`,
-        260
-      )
-    });
-  }
-
-  const draftAnswer = extractAgentSessionText(session);
-
-  intermediateStates.push(buildIntermediateState('verify', 'Verified evidence coverage and policy constraints.', {
-    assumptions: [
-      allowWriteTools
-        ? 'Write tools were allowed for this request via explicit approval.'
-        : 'Write tools were blocked by policy; only read or compute tools were executed.'
-    ],
-    openQuestions: evidence.length ? [] : ['No evidence citations were produced by tools.'],
-    evidence: evidence.slice(-12),
-    confidence: evidence.length ? 0.72 : 0.58
-  }));
-
-  const notebookDraft = maybeBuildNotebookDraft({
-    message,
-    conversation: promptConversation,
-    routing,
-    snapshot,
+  const result = {
+    ok: true,
+    parser: parserResult.payload
+  };
+  const sessionKey = protocolNotebookRuntime.buildSessionKey({
     projectId,
     projectName,
-    toolResults: notebookToolResults
+    parserPayload: parserResult.payload
   });
-  if (notebookDraft) {
-    intermediateStates.push(buildIntermediateState('notebook_draft', 'Generated deterministic notebook draft metadata.', {
-      assumptions: buildNotebookDraftAssumptionRows(notebookDraft),
-      confidence: asArray(notebookDraft.unresolved_placeholders).length ? 0.62 : 0.74
-    }));
-  }
+  const hasPendingProtocolSession = protocolNotebookRuntime.hasPendingSession(sessionKey);
+  if (parserResult.payload.primary_intent === 'protocol_to_notebook') {
+    let protocolNotebookResult;
+    if (parserResult.payload.needs_clarification === true) {
+      const clarificationQuestion = cleanText(parserResult.payload.clarification_reason, 280)
+        || 'Please provide more detail so I can match the protocol and fill the notebook placeholders.';
+      protocolNotebookResult = {
+        status: 'needs_more_info',
+        candidate_matches: [],
+        selected_protocol: null,
+        missing_placeholders: [],
+        follow_up_questions: [clarificationQuestion],
+        project_name: cleanText(projectName || parserResult.payload?.entities?.project_name, 220),
+        notebook: null
+      };
+      protocolNotebookRuntime.setPendingSession(sessionKey, {
+        created_at: new Date().toISOString(),
+        selected_protocol: null,
+        project: {
+          id: projectId,
+          name: cleanText(projectName || parserResult.payload?.entities?.project_name, 220),
+          resolution_source: 'clarification'
+        },
+        candidate_matches: [],
+        known_values: {},
+        missing_placeholders: [],
+        follow_up_questions: [clarificationQuestion]
+      });
+    } else {
+      protocolNotebookResult = await protocolNotebookRuntime.runFlow({
+        provider,
+        endpoint,
+        apiKey,
+        model,
+        message,
+        conversation: promptConversation,
+        snapshot,
+        parserPayload: parserResult.payload,
+        projectId,
+        projectName,
+        traceContext,
+        lifecycleRecorder
+      });
+    }
 
-  const synthesisRequest = buildAgentSynthesisPrompt(requiresApproval, promptConfig);
-
-  let normalized;
-  try {
-    const structuredRaw = await requestSynthesisPayload({
+    result.protocol_to_notebook = protocolNotebookResult;
+    recordLifecycleEvent(lifecycleRecorder, {
+      stage: 'protocol_to_notebook_completed',
+      status: cleanText(protocolNotebookResult?.status, 40) === 'completed' ? 'ok' : 'pending',
+      routing_intent: 'protocol_to_notebook',
+      message: `Protocol-to-notebook status=${cleanText(protocolNotebookResult?.status, 40) || 'unknown'}.`,
+      meta: {
+        selected_protocol_id: cleanText(protocolNotebookResult?.selected_protocol?.id, 120),
+        missing_placeholder_count: asArray(protocolNotebookResult?.missing_placeholders).length
+      }
+    });
+  } else if (hasPendingProtocolSession) {
+    recordLifecycleEvent(lifecycleRecorder, {
+      stage: 'protocol_to_notebook_followup',
+      status: 'ok',
+      routing_intent: cleanText(parserResult.payload.primary_intent, 80) || 'unclear',
+      message: 'Continuing protocol-to-notebook session using follow-up message context.'
+    });
+    const protocolNotebookResult = await protocolNotebookRuntime.runFlow({
       provider,
       endpoint,
       apiKey,
       model,
-      synthesisRequest,
       message,
-      draftAnswer,
-      toolTrace,
-      evidence
+      conversation: promptConversation,
+      snapshot,
+      parserPayload: parserResult.payload,
+      projectId,
+      projectName,
+      traceContext,
+      lifecycleRecorder
     });
-    normalized = normalizeAgentOutput(structuredRaw, draftAnswer);
-  } catch {
-    normalized = {
-      answer: draftAnswer || 'No answer generated.',
-      confidence: evidence.length ? 0.66 : 0.52,
-      requiresApproval,
-      proposedWriteActions: [],
-      citations: evidence.slice(0, 12),
-      decisionRecord: {
-        assumptions: ['Structured synthesis was not available for this model/endpoint.'],
-        open_questions: evidence.length ? [] : ['Evidence retrieval returned no direct matches.'],
-        verification_notes: ['Returned fallback draft answer with tool evidence snapshot.']
+    result.protocol_to_notebook = protocolNotebookResult;
+    recordLifecycleEvent(lifecycleRecorder, {
+      stage: 'protocol_to_notebook_completed',
+      status: cleanText(protocolNotebookResult?.status, 40) === 'completed' ? 'ok' : 'pending',
+      routing_intent: 'protocol_to_notebook',
+      message: `Protocol-to-notebook status=${cleanText(protocolNotebookResult?.status, 40) || 'unknown'}.`,
+      meta: {
+        selected_protocol_id: cleanText(protocolNotebookResult?.selected_protocol?.id, 120),
+        missing_placeholder_count: asArray(protocolNotebookResult?.missing_placeholders).length,
+        resumed_from_pending: true
       }
-    };
+    });
+  } else {
+    protocolNotebookRuntime.clearPendingSession(sessionKey);
   }
+  if (executionFlags.developerMode === true) {
+    result.developer_trace = asArray(traceContext?.rows);
+  }
+  return result;
+}
 
-  const finalizedOutput = applyFinalResponseLayerAndValidation({
-    normalized,
-    requiresApproval,
-    notebookDraft,
-    buildNotebookDraftSummary: (draft) => buildNotebookDraftSummary(draft),
-    cleanText,
-    routing,
-    toolTrace,
-    intermediateStates,
-    buildIntermediateState,
-    buildResponseLayerAssumptionRows,
-    applyResponseLayerToOutput,
-    applyValidationGateToOutput,
-    buildValidationAssumptionRows,
-    buildProvenanceAssumptionRows,
-    recordLifecycleEvent,
-    lifecycleRecorder,
-    handoffWriteAssumption: allowWriteTools
-      ? 'Write tools were allowed for this request via explicit approval.'
-      : 'Any write action remains pending explicit approval.'
+async function runAgentController(payload, runtime = {}) {
+  const lifecycleRecorder = runtime && typeof runtime === 'object'
+    ? runtime.lifecycleRecorder
+    : null;
+  recordLifecycleEvent(lifecycleRecorder, {
+    stage: 'controller_intent_only_selected',
+    status: 'ok',
+    message: 'Using intent-only parser controller path.'
   });
-  routing = finalizedOutput.routing;
-  normalized = finalizedOutput.normalized;
-
-  return {
-    ok: true,
-    provider,
-    model,
-    answer: normalized.answer,
-    confidence: normalized.confidence,
-    requiresApproval: normalized.requiresApproval,
-    proposedWriteActions: normalized.proposedWriteActions,
-    citations: normalized.citations,
-    decisionRecord: normalized.decisionRecord,
-    routing,
-    response_type: normalized.response_type,
-    confidence_label: normalized.confidence_label,
-    source_summary: normalized.source_summary,
-    unresolved_fields: normalized.unresolved_fields,
-    validation: finalizedOutput.validation,
-    provenance: finalizedOutput.provenance,
-    ...(notebookDraft ? { notebookDraft } : {}),
-    intermediateStates,
-    toolTrace
-  };
+  return runAgentControllerCore(payload, { ...runtime });
 }
 
 ipcMain.handle('agent:chat', async (_event, payload) => {
   const normalizedPayload = normalizeJsonPayload(payload, {});
+  const executionFlags = resolveAgentExecutionFlags(normalizedPayload, normalizeJsonPayload(normalizedPayload?.stateSnapshot, {}));
   const requestId = buildAgentLogRequestId();
   const logPath = getAgentChatLogPath();
   const lifecycleRecorder = createLifecycleRecorder({ requestId });
@@ -5433,7 +5045,8 @@ ipcMain.handle('agent:chat', async (_event, payload) => {
       project_id: cleanText(normalizedPayload?.projectId, 80),
       project_name: cleanText(normalizedPayload?.projectName, 180),
       allow_write_tools: normalizedPayload?.allowWriteTools === true,
-      provider: cleanText(normalizedPayload?.llm?.provider, 80)
+      provider: cleanText(normalizedPayload?.llm?.provider, 80),
+      developer_mode: executionFlags.developerMode === true
     }
   });
   await appendAgentChatLogEntry(logPath, formatAgentChatLogEntry({
@@ -5448,7 +5061,10 @@ ipcMain.handle('agent:chat', async (_event, payload) => {
     allowWriteTools: normalizedPayload?.allowWriteTools === true,
     message: cleanText(normalizedPayload?.message, 3000),
     conversation: extractConversation(normalizedPayload?.conversation),
-    llm: summarizeLlmForAgentLog(normalizedPayload?.llm)
+    llm: summarizeLlmForAgentLog(normalizedPayload?.llm),
+    agent: {
+      developerMode: executionFlags.developerMode === true
+    }
   }));
 
   try {
@@ -5458,15 +5074,13 @@ ipcMain.handle('agent:chat', async (_event, payload) => {
     });
     const failureReasons = classifyFailureReasons({
       result,
-      routing: result?.routing,
-      validation: result?.validation,
       lifecycleEvents: lifecycleRecorder.events
     });
     recordLifecycleEvent(lifecycleRecorder, {
       stage: 'response_emitted',
       status: result?.ok === true ? 'ok' : 'error',
-      response_type: cleanText(result?.response_type, 80),
-      routing_intent: cleanText(result?.routing?.intent, 80),
+      response_type: result?.protocol_to_notebook ? 'protocol_to_notebook' : 'intent_parser',
+      routing_intent: cleanText(result?.parser?.primary_intent, 80) || 'unclear',
       failure_reasons: failureReasons,
       message: result?.ok === true
         ? 'Agent response emitted to renderer.'

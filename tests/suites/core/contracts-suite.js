@@ -98,6 +98,7 @@ test('sequence viewer splits home and detail pages and removes home top caption/
   assert.match(detailBlock, /id="sequence-viewer-detail-workspace"/);
   assert.match(detailBlock, /id="sequence-viewer-back-btn"/);
   assert.match(detailBlock, /id="sequence-viewer-save-btn"/);
+  assert.match(detailBlock, /id="sequence-viewer-orf-toggle"/);
 });
 
 test('sequence viewer map preview renderer omits metadata text overlays', () => {
@@ -105,6 +106,11 @@ test('sequence viewer map preview renderer omits metadata text overlays', () => 
   assert.equal(source.includes('sequence-viewer-preview-meta'), false);
   assert.equal(source.includes('toLocaleString()} bp</text>'), false);
   assert.equal(source.includes("normalizeTopology(record?.topology || 'linear'))}</text>"), false);
+});
+
+test('sequence viewer input panels force-hide when hidden attribute is set', () => {
+  const css = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'views', 'sequence-viewer-view.css'), 'utf8');
+  assert.match(css, /\.sequence-viewer-input-panel\[hidden\]\s*\{\s*display:\s*none !important;/);
 });
 
 test('ketcher embedded page uses portable static path resolution', () => {
@@ -150,6 +156,185 @@ test('main and preload expose sequence library IPC bridge', () => {
   assert.match(preloadSource, /sequenceLibraryUpsert:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\('sequence-library:upsert', payload\)/);
 });
 
+test('main and preload expose storage root import IPC bridge', () => {
+  const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
+  const preloadSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'preload.js'), 'utf8');
+  assert.match(mainSource, /ipcMain\.handle\('storage:import-root'/);
+  assert.match(mainSource, /importStorageRoot\(\{ storagePath \}\)/);
+  assert.match(preloadSource, /importStorageRoot:\s*\(storagePath\)\s*=>\s*ipcRenderer\.invoke\('storage:import-root', \{ storagePath \}\)/);
+});
+
+test('data-helpers default bundle hydrator preserves parsed snapshot settings', async () => {
+  const { createMainDataHelpers } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'data-helpers.js'));
+  const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'data-helpers-default-hydrate-'));
+  const dataFilePath = path.join(tempDir, 'state.json');
+  try {
+    const snapshot = {
+      settings: {
+        appearance: {
+          uiStyle: 'classic',
+          themeColor: '#123456'
+        }
+      }
+    };
+    await fsPromises.writeFile(dataFilePath, JSON.stringify(snapshot, null, 2), 'utf8');
+    const helpers = createMainDataHelpers({
+      fs: fsPromises,
+      path,
+      hasSupportedDataExtension: mainUtils.hasSupportedDataExtension,
+      normalizeDataFilePath: mainUtils.normalizeDataFilePath,
+      writeSnapshot: async () => {},
+      getDefaultDataFilePath: () => dataFilePath
+    });
+    const result = await helpers.autoLoadDataFile(dataFilePath);
+    assert.equal(result.ok, true);
+    assert.equal(result.data?.settings?.appearance?.uiStyle, 'classic');
+    assert.equal(result.data?.settings?.appearance?.themeColor, '#123456');
+  } finally {
+    await fsPromises.rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('storage bundle helper sync + hydrate roundtrip restores protocols notebook and inventory from sidecars/sqlite', async () => {
+  const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle.js'));
+  const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'storage-bundle-roundtrip-'));
+  const dataFilePath = path.join(tempDir, 'example.ena.json');
+  try {
+    const sourceSnapshot = {
+      protocols: [
+        {
+          id: 'protocol-1',
+          name: 'Protein Purification',
+          purpose: 'Affinity purification flow.',
+          steps: ['Bind sample', 'Wash', 'Elute'],
+          materials: ['Buffer A']
+        }
+      ],
+      notebookEntries: [
+        {
+          id: 'note-1',
+          protocolId: 'protocol-1',
+          protocolName: 'Protein Purification',
+          projectId: 'proj-1',
+          projectName: 'Atlas',
+          result: 'Yield improved by 20%.',
+          updatedAt: '2026-03-20T10:00:00.000Z'
+        }
+      ],
+      labInventory: {
+        chemicals: [
+          {
+            id: 'chem-1',
+            name: 'Imidazole',
+            casNumber: '288-32-4',
+            amountInStock: '500 g',
+            location: 'Shelf 4',
+            vendor: 'TCI'
+          }
+        ],
+        blocks: [
+          {
+            index: 1,
+            timestamp: '2026-03-20T10:00:00.000Z',
+            action: 'UPSERT_CHEMICAL',
+            hash: 'hash-1'
+          }
+        ],
+        lastLocationNumber: 7,
+        locationCodeMap: { shelf4: 'D' },
+        locationCodeNextByLocation: { shelf4: 8 }
+      },
+      inventory: {
+        'Room Temp': [
+          {
+            id: 'box-1',
+            name: 'Plasmid Box',
+            type: 'box81'
+          }
+        ]
+      },
+      settings: {
+        appearance: {
+          uiStyle: 'classic',
+          themeColor: '#336699'
+        }
+      }
+    };
+    await bundleHelpers.syncBundleFromSnapshot({
+      dataFilePath,
+      snapshot: sourceSnapshot
+    });
+
+    const compactSnapshot = {
+      settings: {
+        appearance: {
+          uiStyle: 'classic',
+          themeColor: '#336699'
+        }
+      },
+      protocols: [],
+      notebookEntries: [],
+      labInventory: {
+        chemicals: [],
+        blocks: [],
+        lastLocationNumber: 0,
+        locationCodeMap: {},
+        locationCodeNextByLocation: {}
+      },
+      inventory: {}
+    };
+    const hydrated = await bundleHelpers.hydrateSnapshotFromBundle({
+      dataFilePath,
+      snapshot: compactSnapshot
+    });
+    assert.equal(Array.isArray(hydrated.snapshot?.protocols), true);
+    assert.equal(hydrated.snapshot.protocols.length, 1);
+    assert.equal(Array.isArray(hydrated.snapshot?.notebookEntries), true);
+    assert.equal(hydrated.snapshot.notebookEntries.length, 1);
+    assert.equal(Array.isArray(hydrated.snapshot?.labInventory?.chemicals), true);
+    assert.equal(hydrated.snapshot.labInventory.chemicals.length, 1);
+    assert.equal(Array.isArray(hydrated.snapshot?.inventory?.['Room Temp']), true);
+    assert.equal(hydrated.snapshot.inventory['Room Temp'].length, 1);
+    assert.equal(hydrated.snapshot?.settings?.appearance?.uiStyle, 'classic');
+  } finally {
+    await fsPromises.rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('storage root importer reads Testdata-like bundles and writes manifest with non-zero summary counts', async () => {
+  const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle.js'));
+  const fixtureRoot = path.join(__dirname, 'Testdata');
+  const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'storage-import-fixture-'));
+  try {
+    await fsPromises.cp(fixtureRoot, tempDir, { recursive: true });
+    const result = await bundleHelpers.importStorageRoot({ storagePath: tempDir });
+    assert.equal(result.summary.protocols > 0, true);
+    assert.equal(result.summary.notebookEntries > 0, true);
+    assert.equal(result.summary.chemicals > 0, true);
+    assert.equal(result.summary.sequenceEntries > 0, true);
+    assert.equal(result.summary.personalInventoryContainers > 0, true);
+    assert.equal(Array.isArray(result.statePatch?.protocols), true);
+    assert.equal(result.statePatch.protocols.length > 0, true);
+    const manifestPath = path.join(tempDir, 'enana-storage-manifest.json');
+    const manifestRaw = await fsPromises.readFile(manifestPath, 'utf8');
+    const manifest = JSON.parse(manifestRaw);
+    assert.equal(manifest.summary.sequenceEntries > 0, true);
+    assert.equal(Array.isArray(manifest.discovered_files), true);
+    assert.equal(manifest.discovered_files.length > 0, true);
+  } finally {
+    await fsPromises.rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('renderer storage import wiring runs on save callback and startup hydration path', () => {
+  const rendererSource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'renderer.js'), 'utf8');
+  assert.match(rendererSource, /onStoragePathSaved:\s*async\s*\(storagePath\)\s*=>\s*\{\s*const result = await runStorageRootImport\(storagePath, \{ persistMergedState: true \}\);/);
+  assert.match(rendererSource, /async function hydrateStateFromStorageRoot\(\)/);
+  assert.match(rendererSource, /await hydrateStateFromDataFile\(\);\s*await hydrateStateFromStorageRoot\(\);/);
+  assert.match(rendererSource, /mergeStorageImportPatch\(result\.statePatch\);/);
+  assert.equal(/state\.settings\s*=\s*result\.statePatch\.settings/.test(rendererSource), false);
+});
+
 test('telegram bot writes events to data/telegram-events.log by default', () => {
   const telegramBotSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'lib', 'telegramBot.js'), 'utf8');
   assert.match(telegramBotSource, /data', 'telegram-events\.log'/);
@@ -158,46 +343,58 @@ test('telegram bot writes events to data/telegram-events.log by default', () => 
 
 test('main agent chat logging records request/result/error with redacted API key metadata', () => {
   const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
+  const controllerUtilsSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-controller-utils.js'), 'utf8');
   assert.match(mainSource, /const AGENT_CHAT_LOG_FILE_NAME = 'agent-chat\.log';/);
   assert.match(mainSource, /ENANA_AGENT_CHAT_LOG_PATH/);
   assert.match(mainSource, /void ensureAgentChatLogFile\(getAgentChatLogPath\(\)\);/);
-  assert.match(mainSource, /apiKeyProvided: Boolean\(cleanText\(source\.apiKey, 12\)\)/);
-  assert.equal(mainSource.includes('apiKey: cleanText(source.apiKey'), false);
+  assert.match(controllerUtilsSource, /apiKeyProvided: Boolean\(cleanText\(source\.apiKey, 12\)\)/);
+  assert.equal(controllerUtilsSource.includes('apiKey: cleanText(source.apiKey'), false);
   assert.match(mainSource, /type: 'agent-chat-request'/);
   assert.match(mainSource, /type: 'agent-chat-result'/);
   assert.match(mainSource, /type: 'agent-chat-error'/);
 });
 
-test('main agent chat includes lifecycle recorder, validation gate, and replay IPC handlers', () => {
+test('main agent chat uses intent-only lifecycle stages and replay IPC handlers', () => {
   const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
-  assert.match(mainSource, /const \{ validateAndGateResponse \} = require\('\.\/helpers\/agent\/agent-validation-safety'\)/);
   assert.match(mainSource, /createLifecycleRecorder/);
   assert.match(mainSource, /recordLifecycleEvent/);
   assert.match(mainSource, /appendLogWithRotation/);
-  assert.match(mainSource, /applyValidationGateToOutput\(/);
-  assert.match(mainSource, /stage: 'validation_completed'/);
+  assert.match(mainSource, /stage: 'controller_intent_only_selected'/);
+  assert.match(mainSource, /stage: 'controller_intent_only'/);
+  assert.match(mainSource, /stage: 'parser_completed'/);
   assert.match(mainSource, /ipcMain\.handle\('agent:logs:list-requests'/);
   assert.match(mainSource, /ipcMain\.handle\('agent:logs:replay'/);
-  assert.match(mainSource, /stage: 'tool_call_started'/);
-  assert.match(mainSource, /stage: 'tool_call_completed'/);
-  assert.match(mainSource, /stage: 'tool_call_failed'/);
+  assert.equal(/agent-validation-safety/.test(mainSource), false);
 });
 
-test('agent chat contract exposes optional routing payload', () => {
+test('agent chat contract exposes parser-first output schema', () => {
   const contract = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'agent-io-contract.json'), 'utf8'));
   const agentChat = (contract.functions || []).find((fn) => fn.name === 'agent_chat');
   assert.equal(Boolean(agentChat), true);
+  const inputProps = agentChat.input_schema?.properties || {};
+  assert.equal(Boolean(inputProps.agent), true);
+  assert.equal(inputProps.agent.type, 'object');
+  assert.equal(Boolean(inputProps.agent.properties?.developerMode), true);
+  assert.equal(Boolean(inputProps.agent.properties?.useRefactoredPipeline), false);
   const props = agentChat.output_schema?.properties || {};
-  assert.equal(Boolean(props.routing), true);
-  assert.equal(props.routing.type, 'object');
-  assert.equal(Boolean(props.notebookDraft), true);
-  assert.equal(props.notebookDraft.type, 'object');
-  assert.equal(Boolean(props.response_type), true);
-  assert.equal(Boolean(props.confidence_label), true);
-  assert.equal(Boolean(props.source_summary), true);
-  assert.equal(Boolean(props.unresolved_fields), true);
-  assert.equal(Boolean(props.validation), true);
-  assert.equal(Boolean(props.provenance), true);
+  assert.equal(Boolean(props.parser), true);
+  assert.equal(props.parser.type, 'object');
+  assert.equal(Boolean(props.parser.properties?.primary_intent), true);
+  assert.equal(Boolean(props.parser.properties?.needs_clarification), true);
+  assert.equal(Boolean(props.parser.properties?.clarification_reason), true);
+  assert.equal(Boolean(props.parser.properties?.entities), true);
+  assert.equal(Boolean(props.parser.properties?.inventory_search), true);
+  assert.equal(Boolean(props.parser.properties?.protocol_candidates), true);
+  assert.equal(Boolean(props.parser.properties?.reasoning_summary), true);
+  assert.equal(Boolean(props.protocol_to_notebook), true);
+  assert.equal(props.protocol_to_notebook.type, 'object');
+  assert.equal(Boolean(props.developer_trace), true);
+  assert.equal(props.developer_trace.type, 'array');
+  assert.equal(Boolean(props.routing), false);
+  assert.equal(Boolean(props.validation), false);
+  assert.equal(Boolean(props.provenance), false);
+  assert.equal(Boolean(props.confidence), false);
+  assert.equal(Boolean(props.controller_version), false);
 });
 
 test('agent log replay/list IPC functions are present in contract and preload bridge', () => {
@@ -208,6 +405,7 @@ test('agent log replay/list IPC functions are present in contract and preload br
   assert.equal(Boolean(replayFn), true);
   assert.equal(listFn.channel, 'agent:logs:list-requests');
   assert.equal(replayFn.channel, 'agent:logs:replay');
+  assert.equal(Boolean(replayFn.output_schema?.properties?.traces), true);
   const preloadSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'preload.js'), 'utf8');
   assert.match(preloadSource, /agentLogsListRequests:\s*\(\)\s*=>\s*ipcRenderer\.invoke\('agent:logs:list-requests'\)/);
   assert.match(preloadSource, /agentLogsReplay:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\('agent:logs:replay', payload\)/);
@@ -310,30 +508,51 @@ test('run_python_sandbox contract includes optional artifact fields without brea
   assert.equal(Boolean(outputProps.result_file_records), true);
 });
 
-test('main agent controller output includes routing metadata fields', () => {
+test('main agent controller output returns parser payload and optional developer trace', () => {
   const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
-  assert.match(mainSource, /routing:\s*normalizeRoutingForAgentLog\(source\.routing\)/);
-  assert.match(mainSource, /normalizeNotebookDraftPayload\(source\.notebookDraft\)/);
-  assert.match(mainSource, /const \{ finalizeAgentResponse \} = require\('\.\/helpers\/agent\/agent-response-layer'\)/);
-  assert.match(mainSource, /applyResponseLayerToOutput\(/);
-  assert.match(mainSource, /response_type:\s*normalized\.response_type/);
-  assert.match(mainSource, /confidence_label:\s*normalized\.confidence_label/);
-  assert.match(mainSource, /source_summary:\s*normalized\.source_summary/);
-  assert.match(mainSource, /unresolved_fields:\s*normalized\.unresolved_fields/);
-  assert.match(mainSource, /validation:\s*validationGate\.validation/);
-  assert.match(mainSource, /provenance:\s*validationGate\.provenance/);
-  assert.match(mainSource, /maybeBuildNotebookDraft\(/);
-  assert.match(mainSource, /buildNotebookDraftSummary\(/);
-  assert.match(mainSource, /routing,/);
-  assert.match(mainSource, /intermediateStates,/);
-  assert.match(mainSource, /toolTrace/);
-  assert.match(mainSource, /buildRoutingDecisionFromIntentParser\(/);
+  const controllerUtilsSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-controller-utils.js'), 'utf8');
+  assert.match(mainSource, /const result = \{\s*ok: true,\s*parser: parserResult\.payload\s*\}/);
+  assert.match(mainSource, /if \(parserResult\.payload\.primary_intent === 'protocol_to_notebook'\)/);
+  assert.match(mainSource, /result\.protocol_to_notebook = protocolNotebookResult/);
+  assert.match(mainSource, /protocolNotebookRuntime\.runFlow\(/);
+  assert.match(mainSource, /protocolNotebookRuntime\.hasPendingSession\(/);
+  assert.match(mainSource, /stage: 'protocol_to_notebook_followup'/);
+  assert.match(mainSource, /createProtocolNotebookRuntime/);
+  assert.match(mainSource, /if \(executionFlags\.developerMode === true\) \{\s*result\.developer_trace = asArray\(traceContext\?\.rows\);/);
   assert.match(mainSource, /requestIntentParserPayload\(/);
-  assert.match(mainSource, /normalizeIntentParserPayload\(/);
-  assert.match(mainSource, /executeToolCall\(/);
-  assert.match(mainSource, /runAgentToolDispatchLegacy\(/);
-  assert.match(mainSource, /tool_selection_rationale/);
-  assert.match(mainSource, /selector score=/);
+  assert.match(mainSource, /createAgentControllerUtils/);
+  assert.match(controllerUtilsSource, /normalizeIntentParserPayload/);
+  assert.match(mainSource, /runAgentControllerCore\(/);
+  assert.equal(/controller_intent_only_selected/.test(mainSource), true);
+  assert.equal(/controller_intent_only/.test(mainSource), true);
+});
+
+test('main agent logs persist redacted llm traces and replay wiring', () => {
+  const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
+  const controllerUtilsSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-controller-utils.js'), 'utf8');
+  const observabilitySource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-observability.js'), 'utf8');
+  assert.match(mainSource, /createAgentControllerUtils/);
+  assert.match(controllerUtilsSource, /SENSITIVE_TRACE_KEYS/);
+  assert.match(controllerUtilsSource, /redactTracePayload/);
+  assert.match(controllerUtilsSource, /type: 'agent-llm-trace'/);
+  assert.match(observabilitySource, /const traces = rows/);
+  assert.match(observabilitySource, /trace_stages/);
+  assert.match(observabilitySource, /trace_request_payload_count/);
+  assert.match(observabilitySource, /trace_response_payload_count/);
+});
+
+test('protocol notebook prompts enforce exact placeholder mapping and follow-up completion guidance', () => {
+  const protocolRuntimeSource = fs.readFileSync(
+    path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-protocol-notebook.js'),
+    'utf8'
+  );
+  assert.match(protocolRuntimeSource, /Extract exact value spans from the latest user text/);
+  assert.match(protocolRuntimeSource, /latest user message is a direct answer/);
+  assert.match(protocolRuntimeSource, /filled_values\.placeholder_key must exactly match one of the provided placeholder_key values/);
+  assert.match(protocolRuntimeSource, /Ask follow_up_questions only when ambiguity remains/);
+  assert.match(protocolRuntimeSource, /Example single-turn:/);
+  assert.match(protocolRuntimeSource, /Example follow-up:/);
+  assert.match(protocolRuntimeSource, /do not be over-cautious/);
 });
 
 test('main agent controller hard-errors when intent parser output is invalid', () => {
@@ -343,124 +562,25 @@ test('main agent controller hard-errors when intent parser output is invalid', (
   assert.match(mainSource, /Intent parser failed:/);
 });
 
-test('main search_protocols tool path uses SQLite-backed protocol index ranking', () => {
+test('agent helper cleanup keeps intent parser, protocol notebook runtime, observability, controller utils, and python helpers', () => {
+  const agentDir = path.join(__dirname, 'src', 'main', 'helpers', 'agent');
+  const expected = new Set([
+    'Readme.md',
+    'agent-intent-parser.js',
+    'agent-controller-utils.js',
+    'agent-protocol-notebook.js',
+    'agent-observability.js',
+    'agent-python.js'
+  ]);
+  const entries = fs.readdirSync(agentDir).filter((name) => name.endsWith('.js') || name === 'Readme.md');
+  assert.deepEqual(new Set(entries), expected);
+
   const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
-  assert.match(mainSource, /if \(name === 'search_protocols'\)[\s\S]*searchProtocolsIndex\(/);
-  assert.match(mainSource, /Matched protocol index \(SQLite\) with deterministic JS ranking/);
-});
-
-test('sqlite index module exposes per-data-file bundle naming', () => {
-  const bundle = agentSqliteIndex.getBundlePaths({
-    dataFilePath: '/tmp/enana-data.ena.json'
-  });
-  assert.equal(bundle.sqlitePath, '/tmp/enana-data.index.sqlite');
-  assert.equal(bundle.protocolsPath, '/tmp/enana-data.protocols.json');
-  assert.equal(bundle.notebookPagesPath, '/tmp/enana-data.notebook-pages.json');
-  assert.equal(bundle.legacyProtocolsPath, '/tmp/protocols.json');
-  assert.equal(bundle.legacyNotebookPagesPath, '/tmp/notebook-pages.json');
-});
-
-test('sqlite index module syncs and retrieves inventory/protocol/notebook search rows', async () => {
-  const tempDir = path.join(__dirname, 'tmp', 'sqlite-index-test');
-  await fsPromises.rm(tempDir, { recursive: true, force: true });
-  await fsPromises.mkdir(tempDir, { recursive: true });
-  const dataFilePath = path.join(tempDir, 'bundle.ena.json');
-  const snapshot = {
-    protocols: [
-      {
-        id: 'pr1',
-        name: 'Cell Prep',
-        category: 'cell',
-        steps: [
-          'Seed cells in media',
-          'Harvest [cell line] cells'
-        ]
-      }
-    ],
-    notebookEntries: [
-      {
-        id: 'n1',
-        protocolId: 'pr1',
-        protocolName: 'Cell Prep',
-        projectId: 'p1',
-        projectName: 'Cancer Study',
-        result: 'Observed 85% viability.',
-        updatedAt: '2026-03-01T00:00:00.000Z'
-      }
-    ],
-    labInventory: {
-      chemicals: [
-        {
-          id: 'c1',
-          name: 'Tris-HCl',
-          amount: '250 g',
-          cas: '1185-53-1',
-          supplier: 'Sigma',
-          location: 'Shelf A'
-        }
-      ],
-      blocks: [],
-      lastLocationNumber: 0
-    },
-    inventory: {
-      'Room Temp': [
-        {
-          id: 'p1',
-          name: 'PEI',
-          quantity: '2 bottles',
-          location: 'Cabinet 4'
-        }
-      ]
-    }
-  };
-
-  await agentSqliteIndex.syncBundleFromSnapshot({
-    dataFilePath,
-    snapshot,
-    fallbackDataFilePath: dataFilePath
-  });
-
-  const protocolSearch = await agentSqliteIndex.searchProtocolsIndex({
-    dataFilePath,
-    query: 'cell prep',
-    limit: 3,
-    snapshot: {}
-  });
-  assert.equal(protocolSearch.usedSqlite, true);
-  assert.equal(protocolSearch.items.length > 0, true);
-  assert.equal(protocolSearch.items[0].name, 'Cell Prep');
-
-  const notebookSearch = await agentSqliteIndex.searchNotebookEntriesIndex({
-    dataFilePath,
-    query: 'viability',
-    limit: 3,
-    snapshot: {}
-  });
-  assert.equal(notebookSearch.usedSqlite, true);
-  assert.equal(notebookSearch.items.length > 0, true);
-  assert.equal(notebookSearch.items[0].id, 'n1');
-
-  const inventorySearch = await agentSqliteIndex.searchInventoryIndex({
-    dataFilePath,
-    query: 'tris',
-    limit: 3,
-    searchTerms: ['Tris-HCl'],
-    snapshot: {}
-  });
-  assert.equal(inventorySearch.usedSqlite, true);
-  assert.equal(inventorySearch.items.some((item) => item.name === 'Tris-HCl'), true);
-
-  const hydrated = await agentSqliteIndex.hydrateSnapshotFromBundle({
-    dataFilePath,
-    snapshot: {},
-    fallbackDataFilePath: dataFilePath,
-    legacyChemicalsPath: ''
-  });
-  assert.equal(Array.isArray(hydrated.snapshot.protocols), true);
-  assert.equal(hydrated.snapshot.protocols.length, 1);
-  assert.equal(hydrated.snapshot.labInventory.chemicals.length, 1);
-
-  await fsPromises.rm(tempDir, { recursive: true, force: true });
+  assert.equal(/agent-routing/.test(mainSource), false);
+  assert.equal(/agent-response-layer/.test(mainSource), false);
+  assert.equal(/agent-validation-safety/.test(mainSource), false);
+  assert.equal(/agent-sqlite-index/.test(mainSource), false);
+  assert.equal(/agent-phase89-runtime/.test(mainSource), false);
 });
 
 test('sequence library helper creates storage folder, sqlite db, and status-filtered entries', async () => {
@@ -574,43 +694,25 @@ test('sequence library helper returns stored GBK/HTML and promotes temporary ent
   }
 });
 
-test('main wires sqlite index module for save/load and retrieval paths', () => {
+test('main wires intent parser + observability paths for parser-only controller', () => {
   const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
-  assert.match(mainSource, /require\('\.\/helpers\/agent\/agent-sqlite-index'\)/);
-  assert.match(mainSource, /syncBundleFromSnapshot\(/);
-  assert.match(mainSource, /hydrateSnapshotFromBundle\(/);
-  assert.match(mainSource, /searchInventoryIndex\(/);
-  assert.match(mainSource, /searchNotebookEntriesIndex\(/);
-  assert.match(mainSource, /searchProtocolsIndex\(/);
+  assert.match(mainSource, /require\('\.\/helpers\/agent\/agent-intent-parser'\)/);
+  assert.match(mainSource, /require\('\.\/helpers\/agent\/agent-observability'\)/);
+  assert.match(mainSource, /require\('\.\/helpers\/agent\/agent-controller-utils'\)/);
+  assert.match(mainSource, /requestIntentParserPayload\(/);
+  assert.match(mainSource, /recordAgentLlmTrace\(/);
+  assert.equal(/agent-sqlite-index/.test(mainSource), false);
+  assert.equal(/agent-phase89-runtime/.test(mainSource), false);
 });
 
-test('main search_workflows tool path and project evidence hook use Phase 6 module', () => {
+test('main no longer wires legacy routing and phase orchestration helpers', () => {
   const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
-  assert.match(mainSource, /if \(name === 'search_workflows'\)[\s\S]*retrieveProjectEvidence\(/);
-  assert.match(mainSource, /maybeCollectProjectEvidence\(/);
-  assert.match(mainSource, /buildProjectRecordIndex\(/);
-  assert.match(mainSource, /project_evidence/);
-});
-
-test('main search_papers tool path and paper evidence hook use Phase 7 module', () => {
-  const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
-  assert.match(mainSource, /if \(name === 'search_papers'\)[\s\S]*buildPaperSearchableDocs\(/);
-  assert.match(mainSource, /if \(name === 'search_papers'\)[\s\S]*retrievePaperCandidates\(/);
-  assert.match(mainSource, /maybeCollectPaperEvidence\(/);
-  assert.match(mainSource, /paper_evidence/);
-});
-
-test('main Phase 8+9 wiring keeps orchestration in helper modules and adds search_web dispatch', () => {
-  const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
-  assert.match(mainSource, /require\('\.\/helpers\/agent\/agent-phase89-runtime'\)/);
-  assert.match(mainSource, /require\('\.\/helpers\/agent\/agent-python'\)/);
-  assert.match(mainSource, /buildPythonCodegenPrompt\(/);
-  assert.match(mainSource, /runPlannedPythonTask\(/);
-  assert.match(mainSource, /postProcessPythonToolResult\(/);
-  assert.match(mainSource, /runHybridWebFallback\(/);
-  assert.match(mainSource, /if \(name === 'search_web'\)/);
-  assert.match(mainSource, /searchWebResults\(/);
-  assert.match(mainSource, /'search_web'/);
+  assert.equal(/require\('\.\/helpers\/agent\/agent-routing'/.test(mainSource), false);
+  assert.equal(/require\('\.\/helpers\/agent\/agent-paper-analysis'/.test(mainSource), false);
+  assert.equal(/require\('\.\/helpers\/agent\/agent-project-retrieval'/.test(mainSource), false);
+  assert.equal(/require\('\.\/helpers\/agent\/agent-response-layer'/.test(mainSource), false);
+  assert.equal(/require\('\.\/helpers\/agent\/agent-validation-safety'/.test(mainSource), false);
+  assert.equal(/require\('\.\/helpers\/agent\/agent-phase89-runtime'/.test(mainSource), false);
 });
 
 test('telegram bot internals normalize search and module parsing', () => {

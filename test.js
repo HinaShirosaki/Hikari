@@ -347,22 +347,31 @@ const memoryStorage = createMemoryStorage();
 const shared = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'shared.js'), {
   localStorage: memoryStorage
 });
-const agentRouting = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-routing.js'));
+
+function optionalRequire(modulePath, fallback = {}) {
+  try {
+    return require(modulePath);
+  } catch {
+    return fallback;
+  }
+}
+
+const agentRouting = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-routing.js'));
 const agentIntentParser = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-intent-parser.js'));
-const agentTools = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-tools.js'));
-const agentProtocolMatching = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-protocol-matching.js'));
-const agentNotebookGeneration = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-notebook-generation.js'));
-const agentProjectRetrieval = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-project-retrieval.js'));
-const agentPaperAnalysis = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-paper-analysis.js'));
-const agentResponseLayer = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-response-layer.js'));
-const agentValidationSafety = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-validation-safety.js'));
+const agentTools = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-tools.js'));
+const agentProtocolMatching = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-protocol-matching.js'));
+const agentNotebookGeneration = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-notebook-generation.js'));
+const agentProjectRetrieval = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-project-retrieval.js'));
+const agentPaperAnalysis = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-paper-analysis.js'));
+const agentResponseLayer = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-response-layer.js'));
+const agentValidationSafety = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-validation-safety.js'));
 const agentObservability = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-observability.js'));
 const agentPython = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-python.js'));
 const agentPythonOrchestration = agentPython;
 const agentPythonCodegen = agentPython;
-const agentWebFallback = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-web-fallback.js'));
-const phase89Runtime = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-phase89-runtime.js'));
-const agentSqliteIndex = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-sqlite-index.js'));
+const agentWebFallback = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-web-fallback.js'));
+const phase89Runtime = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-phase89-runtime.js'));
+const agentSqliteIndex = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-sqlite-index.js'));
 const sequenceLibrary = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'sequence-library.js'));
 const objectGraph = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'object-graph.js'));
 const toolBox = loadEsmStyleModule(
@@ -471,7 +480,11 @@ const packageManifest = JSON.parse(fs.readFileSync(path.join(__dirname, 'package
 const AGENT_IO_CONTRACT_RAW = JSON.parse(
   fs.readFileSync(path.join(__dirname, 'data', 'agent-io-contract.json'), 'utf8')
 );
-const AGENT_IO_CONTRACT = agentTools.loadToolContract(AGENT_IO_CONTRACT_RAW);
+const AGENT_IO_CONTRACT = typeof agentTools.loadToolContract === 'function'
+  ? agentTools.loadToolContract(AGENT_IO_CONTRACT_RAW)
+  : {
+    tools: Array.isArray(AGENT_IO_CONTRACT_RAW.tools) ? AGENT_IO_CONTRACT_RAW.tools : []
+  };
 const AGENT_IO_TOOL_NAMES = AGENT_IO_CONTRACT.tools.map((tool) => tool.name);
 const AGENT_SIMULATION_DISPATCH_TOOL_NAMES = new Set([
   'search_projects',
@@ -1213,7 +1226,7 @@ async function runSimulatedAgentTurn({
       return 'paper_analysis';
     }
     if (/\bpython|csv|plot|compute|code|script\b/.test(source)) {
-      return 'data_analysis_or_coding';
+      return 'result_analysis';
     }
     if (/\b(i grew|i did|i ran|transfection|protocol|notebook)\b/.test(source)) {
       return 'protocol_to_notebook';
@@ -1276,8 +1289,6 @@ async function runSimulatedAgentTurn({
   }
   const fallbackParserPayload = {
     primary_intent: primaryIntent,
-    secondary_intents: [],
-    confidence: 0.8,
     needs_clarification: false,
     clarification_reason: null,
     entities: inferredEntities,
@@ -1287,6 +1298,9 @@ async function runSimulatedAgentTurn({
       aliases: [],
       search_mode: null
     },
+    protocol_candidates: primaryIntent === 'protocol_to_notebook'
+      ? [inferredEntities.protocol_name || 'General Protocol']
+      : [],
     reasoning_summary: 'test parser payload'
   };
   const parserResult = agentIntentParser.normalizeIntentParserPayload(parserPayload || fallbackParserPayload);
