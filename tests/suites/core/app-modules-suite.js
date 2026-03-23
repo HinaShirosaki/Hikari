@@ -1396,7 +1396,317 @@ test('agent-chat sends settings API key to main process and stores assistant res
 
   trigger(clearBtn, 'click');
   assert.equal(state.agentChat.messages.length, 0);
-  assert.equal(status.textContent, 'Chat history cleared.');
+  assert.equal(status.textContent, 'New chat ready.');
+});
+
+test('agent-chat loads saved sessions from chat logs and switches sessions from the sidebar', async () => {
+  const document = createMockDocument([
+    'agent-project-select',
+    'agent-context-summary',
+    'agent-session-status',
+    'agent-session-list',
+    'agent-new-chat-btn',
+    'agent-chat-history',
+    'agent-message-input',
+    'agent-send-btn',
+    'agent-clear-btn',
+    'agent-status'
+  ]);
+  const sessionList = document.getElementById('agent-session-list');
+  const history = document.getElementById('agent-chat-history');
+  const status = document.getElementById('agent-status');
+
+  const state = {
+    projects: [{ id: 'p1', name: 'Cancer Study' }],
+    protocols: [],
+    notebookEntries: [],
+    assays: [],
+    gelAnalyses: [],
+    workflows: [],
+    papers: [],
+    inventory: {},
+    labInventory: { chemicals: [] },
+    settings: {
+      storagePath: '/tmp/enana-storage',
+      llm: {
+        provider: 'openai',
+        model: 'gpt-5',
+        apiEndpoint: 'https://api.openai.com/v1/responses',
+        apiKey: 'sk-local-key'
+      },
+      agent: {
+        developerMode: false
+      }
+    },
+    agentChat: {
+      projectId: '',
+      currentSessionId: '',
+      sessions: [],
+      messages: []
+    }
+  };
+
+  const window = {
+    enanaApi: {
+      agentChatLogListSessions: async () => ({
+        ok: true,
+        items: [
+          {
+            id: 'chat-2',
+            title: 'Recent literature search',
+            project_id: '',
+            project_name: '',
+            updated_at: '2026-03-22T18:00:00.000Z',
+            created_at: '2026-03-22T18:00:00.000Z',
+            message_count: 2,
+            last_message_preview: 'Found 3 recent papers.'
+          },
+          {
+            id: 'chat-1',
+            title: 'Atlas notebook question',
+            project_id: 'p1',
+            project_name: 'Cancer Study',
+            updated_at: '2026-03-22T17:00:00.000Z',
+            created_at: '2026-03-22T17:00:00.000Z',
+            message_count: 2,
+            last_message_preview: 'I found the notebook entry.'
+          }
+        ]
+      }),
+      agentChatLogGetSession: async ({ sessionId }) => ({
+        ok: true,
+        session: {
+          id: sessionId,
+          project_id: sessionId === 'chat-1' ? 'p1' : '',
+          project_name: sessionId === 'chat-1' ? 'Cancer Study' : '',
+          title: sessionId === 'chat-1' ? 'Atlas notebook question' : 'Recent literature search'
+        },
+        messages: sessionId === 'chat-1'
+          ? [
+            {
+              id: 'u1',
+              role: 'user',
+              text: 'Where is the Atlas notebook entry?',
+              createdAt: '2026-03-22T17:00:00.000Z'
+            },
+            {
+              id: 'a1',
+              role: 'assistant',
+              text: 'I found the notebook entry.',
+              createdAt: '2026-03-22T17:00:05.000Z',
+              meta: {
+                parser: {
+                  primary_intent: 'record_lookup',
+                  needs_clarification: false,
+                  entities: {},
+                  inventory_search: {
+                    normalized_query: null,
+                    candidate_terms: [],
+                    aliases: [],
+                    search_mode: null
+                  },
+                  protocol_candidates: [],
+                  reasoning_summary: 'Loaded from disk.'
+                },
+                record_lookup: {
+                  status: 'matched',
+                  query: 'Atlas notebook'
+                }
+              }
+            }
+          ]
+          : [
+            {
+              id: 'u2',
+              role: 'user',
+              text: 'Find recent kinase papers.',
+              createdAt: '2026-03-22T18:00:00.000Z'
+            },
+            {
+              id: 'a2',
+              role: 'assistant',
+              text: 'Found 3 recent papers.',
+              createdAt: '2026-03-22T18:00:05.000Z',
+              meta: {
+                parser: {
+                  primary_intent: 'general_science_question',
+                  needs_clarification: false,
+                  entities: {},
+                  inventory_search: {
+                    normalized_query: null,
+                    candidate_terms: [],
+                    aliases: [],
+                    search_mode: null
+                  },
+                  protocol_candidates: [],
+                  reasoning_summary: 'Loaded from disk.'
+                },
+                general_science_question: {
+                  status: 'answered',
+                  answer: 'Found 3 recent papers.'
+                }
+              }
+            }
+          ]
+      })
+    }
+  };
+
+  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat.js'), {
+    document,
+    window
+  });
+  const agent = agentModule.initAgentChat({
+    state,
+    persist: () => {},
+    createId: (() => {
+      let idx = 0;
+      return () => `agent-msg-${idx += 1}`;
+    })(),
+    safeText: shared.safeText,
+    onNotebookEntriesChanged: () => {}
+  });
+
+  agent.render();
+  await flushAsync();
+  await flushAsync();
+
+  assert.equal(state.agentChat.currentSessionId, 'chat-2');
+  assert.equal(state.agentChat.messages.length, 2);
+  assert.match(sessionList.innerHTML, /Recent literature search/);
+  assert.match(sessionList.innerHTML, /Atlas notebook question/);
+  assert.match(history.innerHTML, /Found 3 recent papers/);
+
+  const sessionButtons = sessionList.querySelectorAll('[data-session-id]');
+  const atlasSessionButton = sessionButtons.find((item) => item.dataset.sessionId === 'chat-1');
+  trigger(sessionList, 'click', { target: atlasSessionButton });
+  await flushAsync();
+  await flushAsync();
+
+  assert.equal(state.agentChat.currentSessionId, 'chat-1');
+  assert.equal(state.agentChat.projectId, 'p1');
+  assert.match(history.innerHTML, /Atlas notebook entry/);
+  assert.equal(status.textContent, 'Ready.');
+});
+
+test('agent-chat exposes developer-only manual tool smoke test action and renders results', async () => {
+  const document = createMockDocument([
+    'agent-project-select',
+    'agent-context-summary',
+    'agent-developer-tools',
+    'agent-dev-test-tools-btn',
+    'agent-chat-history',
+    'agent-message-input',
+    'agent-send-btn',
+    'agent-clear-btn',
+    'agent-status'
+  ]);
+  const developerTools = document.getElementById('agent-developer-tools');
+  const developerTestBtn = document.getElementById('agent-dev-test-tools-btn');
+  const history = document.getElementById('agent-chat-history');
+  const status = document.getElementById('agent-status');
+
+  let payloadSeen = null;
+  const state = {
+    projects: [{ id: 'p1', name: 'Cancer Study' }],
+    protocols: [],
+    notebookEntries: [],
+    assays: [],
+    gelAnalyses: [],
+    workflows: [],
+    papers: [],
+    inventory: {},
+    labInventory: { chemicals: [] },
+    settings: {
+      llm: {
+        provider: 'openai',
+        model: 'gpt-5',
+        apiEndpoint: 'https://api.openai.com/v1/responses',
+        apiKey: 'sk-local-key'
+      },
+      agent: {
+        developerMode: false
+      }
+    },
+    agentChat: { projectId: 'p1', messages: [] }
+  };
+
+  const window = {
+    enanaApi: {
+      autoSaveDataFile: async () => ({
+        ok: true,
+        filePath: '/tmp/enana-data.ena.json'
+      }),
+      agentDeveloperTestTools: async (payload) => {
+        payloadSeen = payload;
+        return {
+          ok: true,
+          status: 'completed',
+          tool_count: 2,
+          passed_count: 2,
+          failed_count: 0,
+          summary: 'Manual tool smoke test completed: 2/2 tools passed.',
+          items: [
+            {
+              tool_name: 'inventory-lookup',
+              ok: true,
+              status: 'matched',
+              summary: 'Inventory lookup smoke test passed.',
+              preview: 'Atlas construct sample',
+              duration_ms: 8
+            },
+            {
+              tool_name: 'python-sandbox',
+              ok: true,
+              status: 'ok',
+              summary: 'Python sandbox smoke test passed.',
+              preview: 'out.json',
+              duration_ms: 12
+            }
+          ]
+        };
+      }
+    }
+  };
+
+  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat.js'), {
+    document,
+    window
+  });
+  const agent = agentModule.initAgentChat({
+    state,
+    persist: () => {},
+    createId: (() => {
+      let idx = 0;
+      return () => `agent-msg-${idx += 1}`;
+    })(),
+    safeText: shared.safeText,
+    onNotebookEntriesChanged: () => {}
+  });
+
+  agent.render();
+  assert.equal(Boolean(developerTools.hidden), true);
+
+  state.settings.agent.developerMode = true;
+  agent.render();
+  assert.equal(Boolean(developerTools.hidden), false);
+
+  trigger(developerTestBtn, 'click');
+  await flushAsync();
+  await flushAsync();
+
+  assert.equal(payloadSeen.projectId, 'p1');
+  assert.equal(payloadSeen.projectName, 'Cancer Study');
+  assert.equal(payloadSeen.agent.developerMode, true);
+  assert.equal(payloadSeen.stateSnapshot.snapshot_mode, 'thin');
+  assert.equal(state.agentChat.messages.length, 1);
+  assert.equal(state.agentChat.messages[0].role, 'assistant');
+  assert.equal(state.agentChat.messages[0].meta.tool_test.tool_count, 2);
+  assert.match(history.innerHTML, /Tool Smoke Test/);
+  assert.match(history.innerHTML, /inventory-lookup/);
+  assert.match(history.innerHTML, /python-sandbox/);
+  assert.match(history.innerHTML, /Passed=2/);
+  assert.equal(status.textContent, 'Manual tool smoke test complete.');
 });
 
 test('agent-chat prioritizes inventory lookup summary text and renders lookup metadata panels', async () => {

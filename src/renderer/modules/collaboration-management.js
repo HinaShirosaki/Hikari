@@ -1,3 +1,10 @@
+// Collaboration and in-app messaging controller.
+//
+// Responsibilities:
+// - render Enana email selectors for sending and viewing messages
+// - normalize and import shared protocols from inbox messages, links, or JSON
+// - decode portable protocol-share payloads
+// - track share/import growth events and keep collaboration UI in sync
 export function initCollaborationManagement({
   state,
   persist,
@@ -6,6 +13,7 @@ export function initCollaborationManagement({
   onProtocolsImported,
   trackGrowthEvent
 }) {
+  // Constants and DOM references for the messaging form, inbox, and protocol-link import UI.
   const PROTOCOL_SHARE_LINK_PREFIX = 'enana://protocol-share/';
   const PROTOCOL_SHARE_TOKEN_PREFIX = 'ENANA_PROTOCOL_SHARE:';
   const messageForm = document.getElementById('message-form');
@@ -20,20 +28,24 @@ export function initCollaborationManagement({
   const protocolLinkStatus = document.getElementById('protocol-link-status');
   const defaultProtocolLinkStatus = 'Paste a shared protocol link or protocol JSON, then click Import Link.';
 
+  // Wire up collaboration UI interactions once DOM references are available.
   messageForm.addEventListener('submit', onSendMessage);
   inboxEmailSelect.addEventListener('change', renderInbox);
   importProtocolLinkBtn?.addEventListener('click', importProtocolFromLink);
 
+  // Split multi-line text while normalizing Windows and Unix newline styles.
   function splitTextLines(rawText) {
     return String(rawText || '').replace(/\r\n?/g, '\n').split('\n');
   }
 
+  // Remove bullet or ordered-list prefixes from one line of pasted text.
   function stripBulletPrefix(rawLine) {
     return String(rawLine || '')
       .replace(/^\s*(?:[-*•]|\d+[.)])\s*/, '')
       .trim();
   }
 
+  // Normalize materials into a clean string array from either arrays or textarea-style text.
   function normalizeMaterials(rawMaterials) {
     if (Array.isArray(rawMaterials)) {
       return rawMaterials
@@ -46,6 +58,7 @@ export function initCollaborationManagement({
       .filter(Boolean);
   }
 
+  // Normalize troubleshooting content into the app's plain multi-line string format.
   function normalizeTroubleshooting(rawTroubleshooting) {
     if (Array.isArray(rawTroubleshooting)) {
       return rawTroubleshooting
@@ -73,6 +86,7 @@ export function initCollaborationManagement({
     return String(rawTroubleshooting || '').trim();
   }
 
+  // Convert bracket placeholders like [time] into internal placeholder tokens plus metadata.
   function extractPlaceholdersFromText(rawText) {
     const placeholders = [];
     const cleanedText = String(rawText || '')
@@ -87,6 +101,7 @@ export function initCollaborationManagement({
     return { cleanedText, placeholders };
   }
 
+  // Normalize imported step data into the protocol step shape used by the app.
   function normalizeSteps(rawSteps) {
     if (!Array.isArray(rawSteps)) {
       return [];
@@ -147,6 +162,7 @@ export function initCollaborationManagement({
       .filter(Boolean);
   }
 
+  // Collect the unique Enana email addresses defined in the Members section.
   function getEnanaEmails() {
     const emails = state.members
       .map((member) => member.enanaEmail)
@@ -154,6 +170,7 @@ export function initCollaborationManagement({
     return Array.from(new Set(emails));
   }
 
+  // Populate sender, recipient, and inbox selectors and keep the inbox view up to date.
   function renderEmailSelectors() {
     const emails = getEnanaEmails();
     const options = emails.map((email) => `<option value="${safeText(email)}">${safeText(email)}</option>`).join('');
@@ -169,6 +186,7 @@ export function initCollaborationManagement({
     }
   }
 
+  // Update the helper text shown below the protocol-link import controls.
   function setProtocolLinkStatus(message) {
     if (!protocolLinkStatus) {
       return;
@@ -176,6 +194,7 @@ export function initCollaborationManagement({
     protocolLinkStatus.textContent = message;
   }
 
+  // Validate and normalize one imported protocol object before adding it to app state.
   function sanitizeIncomingProtocol(raw) {
     if (!raw || typeof raw !== 'object') {
       return null;
@@ -210,6 +229,7 @@ export function initCollaborationManagement({
     };
   }
 
+  // Normalize either a single protocol payload or an array of protocols.
   function sanitizeIncomingProtocols(raw) {
     if (Array.isArray(raw)) {
       return raw.map((item) => sanitizeIncomingProtocol(item)).filter(Boolean);
@@ -218,6 +238,7 @@ export function initCollaborationManagement({
     return single ? [single] : [];
   }
 
+  // Avoid protocol name collisions when importing shared copies.
   function buildUniqueProtocolCopyName(baseName) {
     const taken = new Set(
       state.protocols
@@ -234,6 +255,7 @@ export function initCollaborationManagement({
     return candidate;
   }
 
+  // Add an imported protocol, cloning identifiers or names only when conflicts exist.
   function addImportedProtocol(incoming) {
     const hasIdConflict = state.protocols.some((item) => item.id === incoming.id);
     const hasNameConflict = state.protocols.some((item) => String(item.name || '').trim().toLowerCase() === incoming.name.toLowerCase());
@@ -249,6 +271,7 @@ export function initCollaborationManagement({
     return importedProtocol;
   }
 
+  // Decode a URL-safe base64 token into its original UTF-8 JSON text.
   function decodeBase64Url(value) {
     const normalized = String(value || '').replace(/-/g, '+').replace(/_/g, '/');
     const padLength = normalized.length % 4;
@@ -258,6 +281,7 @@ export function initCollaborationManagement({
     return new TextDecoder().decode(bytes);
   }
 
+  // Extract the encoded share token from a deep link, prefixed share string, or raw token input.
   function extractProtocolShareToken(raw) {
     const value = String(raw || '').trim();
     if (!value) {
@@ -289,6 +313,7 @@ export function initCollaborationManagement({
     return '';
   }
 
+  // Decode and validate a protocol-share payload from pasted link text.
   function parseProtocolSharePayload(raw) {
     const token = extractProtocolShareToken(raw);
     if (!token) {
@@ -311,6 +336,7 @@ export function initCollaborationManagement({
     }
   }
 
+  // Parse protocol JSON from raw text, fenced code blocks, or wrapped object/array payloads.
   function parseProtocolsFromJson(raw) {
     const value = String(raw || '').trim();
     if (!value) {
@@ -363,6 +389,7 @@ export function initCollaborationManagement({
     return sanitizeIncomingProtocols(parsed);
   }
 
+  // Import a protocol attached to an inbox message into local protocol state for the selected inbox.
   function importSharedProtocol(messageId) {
     const inboxEmail = String(inboxEmailSelect.value || '').trim();
     if (!inboxEmail) {
@@ -409,6 +436,7 @@ export function initCollaborationManagement({
     renderInbox();
   }
 
+  // Import one or more protocols from a pasted share link or raw JSON payload.
   function importProtocolFromLink() {
     const rawInput = String(protocolLinkInput?.value || '').trim();
     if (!rawInput) {
@@ -449,6 +477,7 @@ export function initCollaborationManagement({
     setProtocolLinkStatus(`Imported ${importedProtocols.length} protocols.`);
   }
 
+  // Render inbox actions and helper text for messages that contain shared protocols.
   function renderProtocolShareActions(message, inboxEmail) {
     if (message.type !== 'protocol_share') {
       return '';
@@ -469,6 +498,7 @@ export function initCollaborationManagement({
     `;
   }
 
+  // Validate the message form and append a new in-app message to collaboration state.
   function onSendMessage(event) {
     event.preventDefault();
 
@@ -498,6 +528,7 @@ export function initCollaborationManagement({
     toSelect.value = to;
   }
 
+  // Render the selected inbox, newest message first, including any protocol-import actions.
   function renderInbox() {
     const inboxEmail = inboxEmailSelect.value;
     if (!inboxEmail) {
@@ -529,5 +560,6 @@ export function initCollaborationManagement({
     });
   }
 
+  // Public API exposed to the rest of the app.
   return { renderEmailSelectors, renderInbox };
 }

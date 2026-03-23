@@ -332,11 +332,16 @@ function validateAgentToolCallCatalog(toolCallCatalog, toolCatalog = []) {
       throw new Error(`Tool-call catalog includes unknown tool "${toolName}".`);
     }
     const entry = defaultEnsureObject(source[toolName]);
+    const description = defaultCleanText(entry.description, 2400);
     const inputSchema = defaultEnsureObject(entry.input_schema);
+    if (!description) {
+      throw new Error(`Tool-call schema for "${toolName}" is missing description.`);
+    }
     if (inputSchema.type !== 'object') {
       throw new Error(`Tool-call schema for "${toolName}" must declare type "object".`);
     }
     normalized[toolName] = {
+      description,
       input_schema: cloneJson(inputSchema, {})
     };
   });
@@ -365,6 +370,11 @@ function getToolCatalogEntry(toolName) {
   return AGENT_TOOL_CATALOG.find((entry) => entry.name === canonicalName) || null;
 }
 
+function getToolCallCatalogEntry(toolName) {
+  const canonicalName = resolveCanonicalToolName(toolName);
+  return canonicalName ? defaultEnsureObject(AGENT_TOOL_CALL_CATALOG[canonicalName]) : null;
+}
+
 function normalizeRequestedToolNames(selectedToolNames) {
   if (!Array.isArray(selectedToolNames)) {
     return AGENT_TOOL_CATALOG.map((entry) => entry.name);
@@ -391,6 +401,7 @@ function getToolInputSchemas(selectedToolNames = null) {
     return {
       name: entry.name,
       description: entry.description,
+      detailed_description: defaultCleanText(schemaEntry.description, 2400),
       input_schema: cloneJson(schemaEntry.input_schema, {})
     };
   });
@@ -414,9 +425,14 @@ function buildToolSelectionPrompt({
   parserPayload = {},
   projectName = ''
 } = {}) {
-  const toolRows = AGENT_TOOL_CATALOG.map((tool) => (
-    `- ${tool.name}: ${tool.description}`
-  )).join('\n');
+  const toolRows = AGENT_TOOL_CATALOG.map((tool) => {
+    const schemaEntry = getToolCallCatalogEntry(tool.name);
+    const detailedDescription = defaultCleanText(schemaEntry?.description, 2400);
+    return [
+      `- ${tool.name}: ${tool.description}`,
+      detailedDescription ? `  Usage: ${detailedDescription}` : ''
+    ].filter(Boolean).join('\n');
+  }).join('\n');
   const conversationBlock = buildConversationPromptBlock(conversation);
   const promptRows = [
     'Select the minimum ordered list of agent tools needed to satisfy the current request.',
@@ -485,7 +501,12 @@ function buildToolArgumentsPrompt({
   const selectedSchemas = getToolInputSchemas(selectedToolNames);
   const conversationBlock = buildConversationPromptBlock(conversation);
   const schemaRows = selectedSchemas.map((tool) => (
-    `Tool: ${tool.name}\nDescription: ${tool.description}\nInput schema JSON:\n${JSON.stringify(tool.input_schema, null, 2)}`
+    [
+      `Tool: ${tool.name}`,
+      `Short description: ${tool.description}`,
+      tool.detailed_description ? `Detailed usage: ${tool.detailed_description}` : '',
+      `Input schema JSON:\n${JSON.stringify(tool.input_schema, null, 2)}`
+    ].filter(Boolean).join('\n')
   )).join('\n\n');
   const toolNameRows = selectedSchemas.map((tool) => tool.name).join(', ');
   const promptRows = [

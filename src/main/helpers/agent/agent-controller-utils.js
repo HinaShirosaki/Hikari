@@ -252,6 +252,15 @@ function createAgentControllerUtils(deps = {}) {
     const recordLookup = source.record_lookup && typeof source.record_lookup === 'object'
       ? source.record_lookup
       : null;
+    const generalScienceQuestion = source.general_science_question && typeof source.general_science_question === 'object'
+      ? source.general_science_question
+      : null;
+    const projectScienceQuestion = source.project_science_question && typeof source.project_science_question === 'object'
+      ? source.project_science_question
+      : null;
+    const resultAnalysis = source.result_analysis && typeof source.result_analysis === 'object'
+      ? source.result_analysis
+      : null;
     const notebook = protocolNotebook?.notebook && typeof protocolNotebook.notebook === 'object'
       ? protocolNotebook.notebook
       : null;
@@ -334,6 +343,45 @@ function createAgentControllerUtils(deps = {}) {
           source: cleanText(recordLookup.source, 80),
           backfilled_sql: recordLookup.backfilled_sql === true,
           item_count: asArray(recordLookup.items).length
+        }
+        : null,
+      general_science_question: generalScienceQuestion
+        ? {
+          status: cleanText(generalScienceQuestion.status, 40),
+          answer: cleanText(generalScienceQuestion.answer, 500),
+          confidence: Number.isFinite(Number(generalScienceQuestion.confidence))
+            ? Number(generalScienceQuestion.confidence)
+            : null,
+          citation_count: asArray(generalScienceQuestion.citations).length,
+          rounds_executed: Number.isFinite(Number(generalScienceQuestion.rounds_executed))
+            ? Number(generalScienceQuestion.rounds_executed)
+            : 0
+        }
+        : null,
+      project_science_question: projectScienceQuestion
+        ? {
+          status: cleanText(projectScienceQuestion.status, 40),
+          answer: cleanText(projectScienceQuestion.answer, 500),
+          confidence: Number.isFinite(Number(projectScienceQuestion.confidence))
+            ? Number(projectScienceQuestion.confidence)
+            : null,
+          citation_count: asArray(projectScienceQuestion.citations).length,
+          rounds_executed: Number.isFinite(Number(projectScienceQuestion.rounds_executed))
+            ? Number(projectScienceQuestion.rounds_executed)
+            : 0
+        }
+        : null,
+      result_analysis: resultAnalysis
+        ? {
+          status: cleanText(resultAnalysis.status, 40),
+          answer: cleanText(resultAnalysis.answer, 500),
+          confidence: Number.isFinite(Number(resultAnalysis.confidence))
+            ? Number(resultAnalysis.confidence)
+            : null,
+          citation_count: asArray(resultAnalysis.citations).length,
+          rounds_executed: Number.isFinite(Number(resultAnalysis.rounds_executed))
+            ? Number(resultAnalysis.rounds_executed)
+            : 0
         }
         : null,
       developer_trace: normalizeDeveloperTraceForAgentLog(source.developer_trace),

@@ -142,25 +142,44 @@ test('telegram bridge keeps only supported renderer IPC channel', () => {
   assert.equal(preloadSource.includes('onTelegramCommand'), true);
 });
 
-test('main and preload expose sequence library IPC bridge', () => {
+test('main composes dedicated IPC registrars and agent registry runtimes', () => {
   const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
+  const dataRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-data-ipc.js'), 'utf8');
+  const agentRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc.js'), 'utf8');
+  const systemRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-system-ipc.js'), 'utf8');
+  const toolRegistrySource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-main-tool-registry.js'), 'utf8');
+  const codexRuntimeSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-codex-runtime.js'), 'utf8');
+
+  assert.match(mainSource, /createMainAgentToolRegistry/);
+  assert.match(mainSource, /createCodexAgentRuntime/);
+  assert.match(mainSource, /registerDataIpc/);
+  assert.match(mainSource, /registerAgentIpc/);
+  assert.match(mainSource, /registerSystemIpc/);
+  assert.match(dataRegistrarSource, /function registerDataIpc\(deps = \{\}\)/);
+  assert.match(agentRegistrarSource, /function registerAgentIpc\(deps = \{\}\)/);
+  assert.match(systemRegistrarSource, /function registerSystemIpc\(deps = \{\}\)/);
+  assert.match(toolRegistrySource, /function createMainAgentToolRegistry\(deps = \{\}\)/);
+  assert.match(codexRuntimeSource, /function createCodexAgentRuntime\(deps = \{\}\)/);
+});
+
+test('main and preload expose sequence library IPC bridge through the data registrar', () => {
+  const dataRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-data-ipc.js'), 'utf8');
   const preloadSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'preload.js'), 'utf8');
-  assert.match(mainSource, /require\('\.\/helpers\/main\/sequence-library'\)/);
-  assert.match(mainSource, /ipcMain\.handle\('sequence-library:list'/);
-  assert.match(mainSource, /ipcMain\.handle\('sequence-library:get'/);
-  assert.match(mainSource, /ipcMain\.handle\('sequence-library:upsert'/);
-  assert.match(mainSource, /ipcMain\.handle\('sequence-library:promote'/);
-  assert.match(mainSource, /ipcMain\.handle\('sequence-library:delete'/);
+  assert.match(dataRegistrarSource, /ipcMain\.handle\('sequence-library:list'/);
+  assert.match(dataRegistrarSource, /ipcMain\.handle\('sequence-library:get'/);
+  assert.match(dataRegistrarSource, /ipcMain\.handle\('sequence-library:upsert'/);
+  assert.match(dataRegistrarSource, /ipcMain\.handle\('sequence-library:promote'/);
+  assert.match(dataRegistrarSource, /ipcMain\.handle\('sequence-library:delete'/);
   assert.match(preloadSource, /sequenceLibraryList:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\('sequence-library:list', payload\)/);
   assert.match(preloadSource, /sequenceLibraryGet:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\('sequence-library:get', payload\)/);
   assert.match(preloadSource, /sequenceLibraryUpsert:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\('sequence-library:upsert', payload\)/);
 });
 
-test('main and preload expose storage root import IPC bridge', () => {
-  const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
+test('main and preload expose storage root import IPC bridge through the data registrar', () => {
+  const dataRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-data-ipc.js'), 'utf8');
   const preloadSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'preload.js'), 'utf8');
-  assert.match(mainSource, /ipcMain\.handle\('storage:import-root'/);
-  assert.match(mainSource, /importStorageRoot\(\{ storagePath \}\)/);
+  assert.match(dataRegistrarSource, /ipcMain\.handle\('storage:import-root'/);
+  assert.match(dataRegistrarSource, /importStorageRoot\(\{ storagePath \}\)/);
   assert.match(preloadSource, /importStorageRoot:\s*\(storagePath\)\s*=>\s*ipcRenderer\.invoke\('storage:import-root', \{ storagePath \}\)/);
 });
 
@@ -396,200 +415,113 @@ test('telegram bot writes events to data/telegram-events.log by default', () => 
 
 test('main agent chat logging records request/result/error with redacted API key metadata', () => {
   const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
+  const agentRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc.js'), 'utf8');
   const controllerUtilsSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-controller-utils.js'), 'utf8');
   assert.match(mainSource, /const AGENT_CHAT_LOG_FILE_NAME = 'agent-chat\.log';/);
   assert.match(mainSource, /ENANA_AGENT_CHAT_LOG_PATH/);
   assert.match(mainSource, /void ensureAgentChatLogFile\(getAgentChatLogPath\(\)\);/);
   assert.match(controllerUtilsSource, /apiKeyProvided: Boolean\(cleanText\(source\.apiKey, 12\)\)/);
   assert.equal(controllerUtilsSource.includes('apiKey: cleanText(source.apiKey'), false);
-  assert.match(mainSource, /type: 'agent-chat-request'/);
-  assert.match(mainSource, /type: 'agent-chat-result'/);
-  assert.match(mainSource, /type: 'agent-chat-error'/);
+  assert.match(agentRegistrarSource, /type: 'agent-chat-request'/);
+  assert.match(agentRegistrarSource, /type: 'agent-chat-result'/);
+  assert.match(agentRegistrarSource, /type: 'agent-chat-error'/);
 });
 
-test('main agent chat uses intent-only lifecycle stages and replay IPC handlers', () => {
+test('agent registrar keeps intent-only lifecycle stages and replay IPC handlers', () => {
+  const agentRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc.js'), 'utf8');
+  assert.match(agentRegistrarSource, /createLifecycleRecorder/);
+  assert.match(agentRegistrarSource, /recordLifecycleEvent/);
+  assert.match(agentRegistrarSource, /appendAgentChatLogEntry/);
+  assert.match(agentRegistrarSource, /stage: 'controller_intent_only_selected'/);
+  assert.match(agentRegistrarSource, /stage: 'controller_intent_only'/);
+  assert.match(agentRegistrarSource, /stage: 'parser_completed'/);
+  assert.match(agentRegistrarSource, /ipcMain\.handle\('agent:logs:list-requests'/);
+  assert.match(agentRegistrarSource, /ipcMain\.handle\('agent:logs:replay'/);
+  assert.equal(/agent-validation-safety/.test(agentRegistrarSource), false);
+});
+
+test('agent no longer depends on a serialized io contract file', () => {
   const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
-  assert.match(mainSource, /createLifecycleRecorder/);
-  assert.match(mainSource, /recordLifecycleEvent/);
-  assert.match(mainSource, /appendLogWithRotation/);
-  assert.match(mainSource, /stage: 'controller_intent_only_selected'/);
-  assert.match(mainSource, /stage: 'controller_intent_only'/);
-  assert.match(mainSource, /stage: 'parser_completed'/);
-  assert.match(mainSource, /ipcMain\.handle\('agent:logs:list-requests'/);
-  assert.match(mainSource, /ipcMain\.handle\('agent:logs:replay'/);
-  assert.equal(/agent-validation-safety/.test(mainSource), false);
-});
-
-test('agent chat contract exposes parser-first output schema', () => {
-  const contract = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'agent-io-contract.json'), 'utf8'));
-  const agentChat = (contract.functions || []).find((fn) => fn.name === 'agent_chat');
-  assert.equal(Boolean(agentChat), true);
-  const inputProps = agentChat.input_schema?.properties || {};
-  assert.equal(Boolean(inputProps.agent), true);
-  assert.equal(inputProps.agent.type, 'object');
-  assert.equal(Boolean(inputProps.agent.properties?.developerMode), true);
-  assert.equal(Boolean(inputProps.agent.properties?.useRefactoredPipeline), false);
-  const props = agentChat.output_schema?.properties || {};
-  assert.equal(Boolean(props.parser), true);
-  assert.equal(props.parser.type, 'object');
-  assert.equal(Boolean(props.parser.properties?.primary_intent), true);
-  assert.equal(Boolean(props.parser.properties?.needs_clarification), true);
-  assert.equal(Boolean(props.parser.properties?.clarification_reason), true);
-  assert.equal(Boolean(props.parser.properties?.entities), true);
-  assert.equal(Boolean(props.parser.properties?.inventory_search), true);
-  assert.equal(Boolean(props.parser.properties?.protocol_candidates), true);
-  assert.equal(Boolean(props.parser.properties?.reasoning_summary), true);
-  assert.equal(Boolean(props.protocol_to_notebook), true);
-  assert.equal(props.protocol_to_notebook.type, 'object');
-  assert.equal(Boolean(props.inventory_lookup), true);
-  assert.equal(props.inventory_lookup.type, 'object');
-  assert.equal(Boolean(props.record_lookup), true);
-  assert.equal(props.record_lookup.type, 'object');
-  assert.equal(Boolean(props.developer_trace), true);
-  assert.equal(props.developer_trace.type, 'array');
-  assert.equal(Boolean(props.routing), false);
-  assert.equal(Boolean(props.validation), false);
-  assert.equal(Boolean(props.provenance), false);
-  assert.equal(Boolean(props.confidence), false);
-  assert.equal(Boolean(props.controller_version), false);
-});
-
-test('agent log replay/list IPC functions are present in contract and preload bridge', () => {
-  const contract = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'agent-io-contract.json'), 'utf8'));
-  const listFn = (contract.functions || []).find((fn) => fn.name === 'agent_logs_list_requests');
-  const replayFn = (contract.functions || []).find((fn) => fn.name === 'agent_logs_replay');
-  assert.equal(Boolean(listFn), true);
-  assert.equal(Boolean(replayFn), true);
-  assert.equal(listFn.channel, 'agent:logs:list-requests');
-  assert.equal(replayFn.channel, 'agent:logs:replay');
-  assert.equal(Boolean(replayFn.output_schema?.properties?.traces), true);
   const preloadSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'preload.js'), 'utf8');
+  const promptsSource = fs.readFileSync(path.join(__dirname, 'data', 'llm-prompts.json'), 'utf8');
+  assert.equal(mainSource.includes('agent-io-contract.json'), false);
+  assert.equal(mainSource.includes("agent:get-io-contract"), false);
+  assert.equal(preloadSource.includes('getAgentIoContract'), false);
+  assert.equal(promptsSource.includes('agent-io-contract.json'), false);
+});
+
+test('agent tool registry defines local agent tool metadata and output schema', () => {
+  const registrySource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-main-tool-registry.js'), 'utf8');
+  assert.match(registrySource, /function buildMainAgentToolMetadata\(\)/);
+  assert.match(registrySource, /const AGENT_TOOL_DEFINITIONS = AGENT_TOOL_METADATA\.map/);
+  assert.match(registrySource, /const AGENT_TOOL_OUTPUT_SCHEMA_NAME = 'enana_agent_tool_output';/);
+  assert.match(registrySource, /const AGENT_TOOL_OUTPUT_SCHEMA_VERSION = '1\.0\.0';/);
+});
+
+test('agent tool registry keeps key retrieval and execution tools', () => {
+  const registrySource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-main-tool-registry.js'), 'utf8');
+  assert.match(registrySource, /makeTool\('search_workflows'/);
+  assert.match(registrySource, /makeTool\('search_inventory'/);
+  assert.match(registrySource, /makeTool\('search_papers'/);
+  assert.match(registrySource, /makeTool\('search_web'/);
+  assert.match(registrySource, /name: 'toolbox_plannotate'/);
+  assert.match(registrySource, /name: 'run_python_sandbox'/);
+});
+
+test('agent log replay and developer tool smoke-test IPC bridges remain wired without contract file', () => {
+  const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
+  const agentRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc.js'), 'utf8');
+  const preloadSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'preload.js'), 'utf8');
+  assert.match(mainSource, /createAgentToolSmokeTestRuntime/);
+  assert.match(mainSource, /registerAgentIpc/);
+  assert.match(agentRegistrarSource, /ipcMain\.handle\('agent:developer:test-tools'/);
+  assert.match(agentRegistrarSource, /ipcMain\.handle\('agent:logs:list-requests'/);
+  assert.match(agentRegistrarSource, /ipcMain\.handle\('agent:logs:replay'/);
+  assert.match(preloadSource, /agentDeveloperTestTools:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\('agent:developer:test-tools', payload\)/);
   assert.match(preloadSource, /agentLogsListRequests:\s*\(\)\s*=>\s*ipcRenderer\.invoke\('agent:logs:list-requests'\)/);
   assert.match(preloadSource, /agentLogsReplay:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\('agent:logs:replay', payload\)/);
 });
 
-test('toolbox_plannotate contract enforces plain-text sequence input for LLM tool calls', () => {
-  const contract = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'agent-io-contract.json'), 'utf8'));
-  const tool = (contract.tools || []).find((entry) => entry.name === 'toolbox_plannotate');
-  assert.equal(Boolean(tool), true);
-  const schema = tool.input_schema || {};
-  assert.equal(Array.isArray(schema.required), true);
-  assert.equal(schema.required.includes('sequence_text'), true);
-  const props = schema.properties || {};
-  assert.equal(Boolean(props.sequence_text), true);
-  assert.equal(props.sequence_text.type, 'string');
-  assert.equal(Boolean(props.file_path), false);
-  assert.equal(Boolean(props.file_text), false);
-  assert.equal(Boolean(props.file_bytes_base64), false);
-});
-
-test('search_workflows contract exposes workflow retrieval schema', () => {
-  const contract = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'agent-io-contract.json'), 'utf8'));
-  const tool = (contract.tools || []).find((entry) => entry.name === 'search_workflows');
-  assert.equal(Boolean(tool), true);
-  assert.equal(Array.isArray(tool.input_schema?.required), true);
-  assert.equal(tool.input_schema.required.includes('query'), true);
-  const itemSchema = tool.output_schema?.properties?.items?.items || {};
-  const required = Array.isArray(itemSchema.required) ? itemSchema.required : [];
-  assert.equal(required.includes('id'), true);
-  assert.equal(required.includes('name'), true);
-  assert.equal(required.includes('project_name'), true);
-  assert.equal(required.includes('block_count'), true);
-  assert.equal(required.includes('link_count'), true);
-  assert.equal(required.includes('steps_preview'), true);
-  assert.equal(required.includes('updated_at'), true);
-});
-
-test('search_inventory contract preserves required query and supports parser search metadata fields', () => {
-  const contract = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'agent-io-contract.json'), 'utf8'));
-  const tool = (contract.tools || []).find((entry) => entry.name === 'search_inventory');
-  assert.equal(Boolean(tool), true);
-  assert.equal(Array.isArray(tool.input_schema?.required), true);
-  assert.equal(tool.input_schema.required.includes('query'), true);
-  const inputProps = tool.input_schema?.properties || {};
-  assert.equal(Boolean(inputProps.normalized_query), true);
-  assert.equal(Boolean(inputProps.candidate_terms), true);
-  assert.equal(Boolean(inputProps.aliases), true);
-  assert.equal(Boolean(inputProps.search_mode), true);
-  assert.equal(Boolean(inputProps.search_terms), true);
-});
-
-test('search_papers contract preserves required fields and exposes Phase 7 optional metadata', () => {
-  const contract = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'agent-io-contract.json'), 'utf8'));
-  const tool = (contract.tools || []).find((entry) => entry.name === 'search_papers');
-  assert.equal(Boolean(tool), true);
-  const itemSchema = tool.output_schema?.properties?.items?.items || {};
-  const required = Array.isArray(itemSchema.required) ? itemSchema.required : [];
-  assert.equal(required.includes('id'), true);
-  assert.equal(required.includes('title'), true);
-  assert.equal(required.includes('summary'), true);
-  assert.equal(required.includes('methods'), true);
-  const properties = itemSchema.properties || {};
-  assert.equal(Boolean(properties.availability_status), true);
-  assert.equal(Boolean(properties.deep_read_ready), true);
-  assert.equal(Boolean(properties.ingestion_status), true);
-  assert.equal(Boolean(properties.key_figures), true);
-  assert.equal(Boolean(properties.linked_project_name), true);
-  assert.equal(Boolean(properties.updated_at), true);
-});
-
-test('search_web contract exposes hybrid web fallback schema', () => {
-  const contract = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'agent-io-contract.json'), 'utf8'));
-  const tool = (contract.tools || []).find((entry) => entry.name === 'search_web');
-  assert.equal(Boolean(tool), true);
-  assert.equal(Array.isArray(tool.input_schema?.required), true);
-  assert.equal(tool.input_schema.required.includes('query'), true);
-  const itemSchema = tool.output_schema?.properties?.items?.items || {};
-  const required = Array.isArray(itemSchema.required) ? itemSchema.required : [];
-  assert.equal(required.includes('title'), true);
-  assert.equal(required.includes('url'), true);
-  assert.equal(required.includes('snippet'), true);
-  assert.equal(required.includes('source_domain'), true);
-});
-
-test('run_python_sandbox contract includes optional artifact fields without breaking required base fields', () => {
-  const contract = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'agent-io-contract.json'), 'utf8'));
-  const tool = (contract.tools || []).find((entry) => entry.name === 'run_python_sandbox');
-  assert.equal(Boolean(tool), true);
-  const inputProps = tool.input_schema?.properties || {};
-  assert.equal(Boolean(inputProps.code), true);
-  assert.equal(Boolean(inputProps.artifact_paths), true);
-  assert.equal(Boolean(inputProps.persist_artifacts), true);
-  const itemSchema = tool.output_schema?.properties?.items?.items || {};
-  const required = Array.isArray(itemSchema.required) ? itemSchema.required : [];
-  assert.equal(required.includes('run_id'), true);
-  assert.equal(required.includes('status'), true);
-  const outputProps = itemSchema.properties || {};
-  assert.equal(Boolean(outputProps.artifact_count), true);
-  assert.equal(Boolean(outputProps.result_files), true);
-  assert.equal(Boolean(outputProps.result_file_records), true);
-});
-
-test('main agent controller output returns parser payload and optional developer trace', () => {
+test('agent chat session log IPC bridges are wired through agent registrar and preload', () => {
   const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
+  const agentRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc.js'), 'utf8');
+  const preloadSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'preload.js'), 'utf8');
+  assert.match(mainSource, /createAgentChatLogRuntime/);
+  assert.match(mainSource, /registerAgentIpc/);
+  assert.match(agentRegistrarSource, /ipcMain\.handle\('agent:chat-log:create-session'/);
+  assert.match(agentRegistrarSource, /ipcMain\.handle\('agent:chat-log:list-sessions'/);
+  assert.match(agentRegistrarSource, /ipcMain\.handle\('agent:chat-log:get-session'/);
+  assert.match(preloadSource, /agentChatLogCreateSession:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\('agent:chat-log:create-session', payload\)/);
+  assert.match(preloadSource, /agentChatLogListSessions:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\('agent:chat-log:list-sessions', payload\)/);
+  assert.match(preloadSource, /agentChatLogGetSession:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\('agent:chat-log:get-session', payload\)/);
+});
+
+test('agent registrar controller output returns parser payload and optional developer trace', () => {
+  const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
+  const agentRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc.js'), 'utf8');
   const controllerUtilsSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-controller-utils.js'), 'utf8');
-  assert.match(mainSource, /const result = \{\s*ok: true,\s*parser: parserResult\.payload\s*\}/);
-  assert.match(mainSource, /if \(parserResult\.payload\.primary_intent === 'protocol_to_notebook'\)/);
-  assert.match(mainSource, /result\.protocol_to_notebook = protocolNotebookResult/);
-  assert.match(mainSource, /if \(parserResult\.payload\.primary_intent === 'inventory_lookup'\)/);
-  assert.match(mainSource, /result\.inventory_lookup = inventoryLookupResult/);
-  assert.match(mainSource, /else if \(parserResult\.payload\.primary_intent === 'record_lookup'\)/);
-  assert.match(mainSource, /result\.record_lookup = recordLookupResult/);
-  assert.match(mainSource, /protocolNotebookRuntime\.runFlow\(/);
-  assert.match(mainSource, /protocolNotebookRuntime\.hasPendingSession\(/);
-  assert.match(mainSource, /stage: 'protocol_to_notebook_followup'/);
-  assert.match(mainSource, /stage: 'inventory_lookup_completed'/);
-  assert.match(mainSource, /stage: 'record_lookup_completed'/);
+  assert.match(agentRegistrarSource, /const result = \{\s*ok: true,\s*parser: parserResult\.payload\s*\}/);
+  assert.match(agentRegistrarSource, /if \(parserResult\.payload\.primary_intent === 'protocol_to_notebook'\)/);
+  assert.match(agentRegistrarSource, /result\.protocol_to_notebook = protocolNotebookResult/);
+  assert.match(agentRegistrarSource, /if \(parserResult\.payload\.primary_intent === 'inventory_lookup'\)/);
+  assert.match(agentRegistrarSource, /result\.inventory_lookup = inventoryLookupResult/);
+  assert.match(agentRegistrarSource, /else if \(parserResult\.payload\.primary_intent === 'record_lookup'\)/);
+  assert.match(agentRegistrarSource, /result\.record_lookup = recordLookupResult/);
+  assert.match(agentRegistrarSource, /protocolNotebookRuntime\.runFlow\(/);
+  assert.match(agentRegistrarSource, /protocolNotebookRuntime\.hasPendingSession\(/);
+  assert.match(agentRegistrarSource, /stage: 'protocol_to_notebook_followup'/);
+  assert.match(agentRegistrarSource, /stage: 'inventory_lookup_completed'/);
+  assert.match(agentRegistrarSource, /stage: 'record_lookup_completed'/);
   assert.match(mainSource, /createAgentLookupRuntime/);
   assert.match(mainSource, /buildInventorySearchTerms/);
   assert.match(mainSource, /createProtocolNotebookRuntime/);
-  assert.match(mainSource, /if \(executionFlags\.developerMode === true\) \{\s*result\.developer_trace = asArray\(traceContext\?\.rows\);/);
-  assert.match(mainSource, /requestIntentParserPayload\(/);
+  assert.match(agentRegistrarSource, /if \(executionFlags\.developerMode === true\) \{\s*result\.developer_trace = asArray\(traceContext\?\.rows\);/);
+  assert.match(agentRegistrarSource, /requestIntentParserPayload\(/);
   assert.match(mainSource, /createAgentControllerUtils/);
   assert.match(controllerUtilsSource, /normalizeIntentParserPayload/);
-  assert.match(mainSource, /runAgentControllerCore\(/);
-  assert.equal(/controller_intent_only_selected/.test(mainSource), true);
-  assert.equal(/controller_intent_only/.test(mainSource), true);
+  assert.match(agentRegistrarSource, /runAgentControllerCore\(/);
+  assert.equal(/controller_intent_only_selected/.test(agentRegistrarSource), true);
+  assert.equal(/controller_intent_only/.test(agentRegistrarSource), true);
 });
 
 test('main agent logs persist redacted llm traces and replay wiring', () => {
@@ -630,11 +562,24 @@ test('protocol runtimes preserve placeholder-fill and tie-break prompt guidance 
   assert.match(protocolMatchingSource, /do not be over-cautious/);
 });
 
-test('main agent controller hard-errors when intent parser output is invalid', () => {
+test('agent registrar hard-errors when intent parser output is invalid', () => {
+  const agentRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc.js'), 'utf8');
+  assert.match(agentRegistrarSource, /if \(!parserResult\?\.ok \|\| !parserResult\?\.payload\)/);
+  assert.match(agentRegistrarSource, /ok:\s*false/);
+  assert.match(agentRegistrarSource, /Intent parser failed:/);
+});
+
+test('science controller path is wired through the agent registrar and shared reasoning loop', () => {
   const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
-  assert.match(mainSource, /if \(!parserResult\?\.ok \|\| !parserResult\?\.payload\)/);
-  assert.match(mainSource, /ok:\s*false/);
-  assert.match(mainSource, /Intent parser failed:/);
+  const agentRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc.js'), 'utf8');
+  assert.match(mainSource, /createScienceReasoningLoopRuntime/);
+  assert.match(mainSource, /continueAgentSessionWithUserMessage/);
+  assert.match(agentRegistrarSource, /buildScienceRoutingFromParser/);
+  assert.match(agentRegistrarSource, /result\.general_science_question\s*=\s*await scienceReasoningLoopRuntime\.runGeneralScienceQuestion/);
+  assert.match(agentRegistrarSource, /result\.project_science_question\s*=\s*await scienceReasoningLoopRuntime\.runProjectScienceQuestion/);
+  assert.match(agentRegistrarSource, /result\.result_analysis\s*=\s*await scienceReasoningLoopRuntime\.runResultAnalysis/);
+  assert.match(agentRegistrarSource, /stage:\s*'science_intent_start'/);
+  assert.match(agentRegistrarSource, /stage:\s*'science_intent_completed'/);
 });
 
 test('agent tool-call helper exposes catalogs and generic executor registry', () => {
@@ -654,11 +599,27 @@ test('agent tool-call helper exposes catalogs and generic executor registry', ()
   assert.equal(Boolean(toolCallCatalog.$defs), true);
   assert.equal(toolsCatalog.some((entry) => entry?.name === 'python-sandbox'), true);
   assert.equal(toolsCatalog.some((entry) => entry?.name === 'sub-agent'), true);
+  assert.equal(toolsCatalog.some((entry) => entry?.name === 'memory'), true);
+  assert.equal(toolsCatalog.some((entry) => entry?.name === 'literature-search'), true);
+  assert.equal(toolsCatalog.some((entry) => entry?.name === 'paper-download'), true);
+  assert.equal(toolsCatalog.some((entry) => entry?.name === 'paper-analysis'), true);
+  assert.equal(toolsCatalog.some((entry) => entry?.name === 'protocol-generation'), true);
   assert.equal(Boolean(toolCallCatalog['python-sandbox']?.input_schema), true);
   assert.equal(Boolean(toolCallCatalog['sub-agent']?.input_schema), true);
+  assert.equal(Boolean(toolCallCatalog.memory?.input_schema), true);
+  assert.equal(Boolean(toolCallCatalog['literature-search']?.input_schema), true);
+  assert.equal(Boolean(toolCallCatalog['paper-download']?.input_schema), true);
+  assert.equal(Boolean(toolCallCatalog['paper-analysis']?.input_schema), true);
+  assert.equal(Boolean(toolCallCatalog['protocol-generation']?.input_schema), true);
+  assert.equal(typeof toolCallCatalog['inventory-lookup']?.description, 'string');
+  assert.equal(typeof toolCallCatalog.memory?.description, 'string');
+  assert.equal(typeof toolCallCatalog['literature-search']?.description, 'string');
+  assert.equal(typeof toolCallCatalog['paper-download']?.description, 'string');
+  assert.equal(typeof toolCallCatalog['protocol-generation']?.description, 'string');
   assert.match(source, /const toolExecutors = new Map\(\);/);
   assert.match(source, /function registerToolExecutor\(toolName, executor\)/);
   assert.match(source, /function getToolExecutor\(toolName\)/);
+  assert.match(source, /Detailed usage:/);
   assert.match(source, /Object\.entries\(ensureObject\(deps\.toolExecutors\)\)/);
   assert.equal(source.includes('createDefaultAgentToolBindingBundle'), false);
   assert.equal(/["']inventory-lookup["']/.test(source), false);
@@ -667,6 +628,11 @@ test('agent tool-call helper exposes catalogs and generic executor registry', ()
   assert.equal(/["']notebook-generation["']/.test(source), false);
   assert.equal(/["']python-sandbox["']/.test(source), false);
   assert.equal(/["']sub-agent["']/.test(source), false);
+  assert.equal(/["']memory["']/.test(source), false);
+  assert.equal(/["']literature-search["']/.test(source), false);
+  assert.equal(/["']paper-download["']/.test(source), false);
+  assert.equal(/["']paper-analysis["']/.test(source), false);
+  assert.equal(/["']protocol-generation["']/.test(source), false);
 });
 
 test('agent helper cleanup keeps intent parser, protocol notebook runtime, observability, controller utils, and python helpers', () => {
@@ -676,12 +642,21 @@ test('agent helper cleanup keeps intent parser, protocol notebook runtime, obser
     'Tools.json',
     'Tool-call.json',
     'agent-intent-parser.js',
+    'agent-llm-utils.js',
     'agent-controller-utils.js',
     'agent-lookup-runtime.js',
     'agent-tool-call.js',
+    'agent-context-management.js',
+    'agent-memory.js',
     'agent-notebook-generation.js',
     'agent-protocol-notebook.js',
     'agent-protocol-matching.js',
+    'agent-protocol-generation.js',
+    'agent-science-reasoning-loop.js',
+    'agent-literature-search.js',
+    'agent-paper-download.js',
+    'agent-paper-analysis.js',
+    'agent-chat-log.js',
     'agent-observability.js',
     'agent-python.js',
     'agent-python-sandbox.js',
@@ -700,6 +675,30 @@ test('agent helper cleanup keeps intent parser, protocol notebook runtime, obser
   assert.equal(/agent-phase89-runtime/.test(mainSource), false);
 });
 
+test('science reasoning helper exports shared loop runtime and renderer consumes science payloads', () => {
+  const helperSource = fs.readFileSync(
+    path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-science-reasoning-loop.js'),
+    'utf8'
+  );
+  const rendererSource = fs.readFileSync(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat.js'),
+    'utf8'
+  );
+  assert.match(helperSource, /const SCIENCE_REASONING_INTENTS = Object\.freeze/);
+  assert.match(helperSource, /const SCIENCE_REASONING_POLICIES = Object\.freeze/);
+  assert.match(helperSource, /const SCIENCE_RESULT_EVALUATION_SCHEMA =/);
+  assert.match(helperSource, /function createScienceReasoningLoopRuntime\(deps = \{\}\)/);
+  assert.match(helperSource, /async function runIntentLoop\(input = \{\}\)/);
+  assert.match(helperSource, /async function runGeneralScienceQuestion\(input = \{\}\)/);
+  assert.match(helperSource, /async function runProjectScienceQuestion\(input = \{\}\)/);
+  assert.match(helperSource, /async function runResultAnalysis\(input = \{\}\)/);
+  assert.match(rendererSource, /summarizeScienceResult/);
+  assert.match(rendererSource, /general_science_question/);
+  assert.match(rendererSource, /project_science_question/);
+  assert.match(rendererSource, /result_analysis/);
+  assert.match(rendererSource, /const scienceAnswerText = summarizeScienceResult\(generalScienceQuestion\)/);
+});
+
 test('sub-agent helper exports reusable runtime and action contract', () => {
   const source = fs.readFileSync(
     path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-sub-agent.js'),
@@ -715,6 +714,120 @@ test('sub-agent helper exports reusable runtime and action contract', () => {
   assert.match(source, /async function sendSubAgentMessage\(input = \{\}\)/);
   assert.match(source, /function deleteSubAgent\(input = \{\}\)/);
   assert.deepEqual(toolCallCatalog['sub-agent']?.input_schema?.properties?.action?.enum, ['create', 'message', 'delete', 'get', 'list']);
+});
+
+test('context management and memory helpers export reusable runtimes with layered and action-based contracts', () => {
+  const contextSource = fs.readFileSync(
+    path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-context-management.js'),
+    'utf8'
+  );
+  const memorySource = fs.readFileSync(
+    path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-memory.js'),
+    'utf8'
+  );
+  const toolsCatalog = JSON.parse(fs.readFileSync(
+    path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'Tools.json'),
+    'utf8'
+  ));
+  const toolCallCatalog = JSON.parse(fs.readFileSync(
+    path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'Tool-call.json'),
+    'utf8'
+  ));
+
+  assert.match(contextSource, /const CONTEXT_LAYER_IDS = Object\.freeze/);
+  assert.match(contextSource, /const CONTEXT_MODES = Object\.freeze/);
+  assert.match(contextSource, /function createAgentContextManagementRuntime\(deps = \{\}\)/);
+  assert.match(contextSource, /function startTask\(input = \{\}\)/);
+  assert.match(contextSource, /function completeTask\(input = \{\}\)/);
+  assert.match(contextSource, /function buildContextEnvelope\(input = \{\}\)/);
+  assert.match(memorySource, /const MEMORY_ACTIONS = Object\.freeze/);
+  assert.match(memorySource, /function createAgentMemoryRuntime\(deps = \{\}\)/);
+  assert.match(memorySource, /async function remember\(input = \{\}\)/);
+  assert.match(memorySource, /async function recall\(input = \{\}\)/);
+  assert.match(memorySource, /async function forget\(input = \{\}\)/);
+  assert.match(memorySource, /async function list\(input = \{\}\)/);
+  assert.equal(toolsCatalog.some((entry) => entry?.name === 'memory'), true);
+  assert.deepEqual(toolCallCatalog.memory?.input_schema?.properties?.action?.enum, ['recall', 'remember', 'forget', 'list']);
+});
+
+test('agent chat log helper exports reusable session log runtime and renderer consumes session UI ids', () => {
+  const helperSource = fs.readFileSync(
+    path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-chat-log.js'),
+    'utf8'
+  );
+  const rendererSource = fs.readFileSync(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat.js'),
+    'utf8'
+  );
+  const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  assert.match(helperSource, /const CHAT_LOG_FOLDER_NAME = 'chat_log';/);
+  assert.match(helperSource, /const CHAT_LOG_INDEX_FILE_NAME = 'index\.json';/);
+  assert.match(helperSource, /const CHAT_LOG_EVENT_TYPES = Object\.freeze/);
+  assert.match(helperSource, /function createAgentChatLogRuntime\(deps = \{\}\)/);
+  assert.match(helperSource, /async function createSession\(input = \{\}\)/);
+  assert.match(helperSource, /async function listSessions\(input = \{\}\)/);
+  assert.match(helperSource, /async function getSession\(input = \{\}\)/);
+  assert.match(rendererSource, /agentChatLogListSessions/);
+  assert.match(rendererSource, /agentChatLogGetSession/);
+  assert.match(rendererSource, /agentChatLogCreateSession/);
+  assert.match(rendererSource, /function renderSessionList\(\)/);
+  assert.match(html, /id="agent-session-list"/);
+  assert.match(html, /id="agent-new-chat-btn"/);
+});
+
+test('literature, paper analysis, and protocol generation helpers expose reusable runtimes and registered tools', () => {
+  const literatureSource = fs.readFileSync(
+    path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-literature-search.js'),
+    'utf8'
+  );
+  const paperDownloadSource = fs.readFileSync(
+    path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-paper-download.js'),
+    'utf8'
+  );
+  const paperSource = fs.readFileSync(
+    path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-paper-analysis.js'),
+    'utf8'
+  );
+  const protocolSource = fs.readFileSync(
+    path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-protocol-generation.js'),
+    'utf8'
+  );
+  const toolsCatalog = JSON.parse(fs.readFileSync(
+    path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'Tools.json'),
+    'utf8'
+  ));
+  const toolCallCatalog = JSON.parse(fs.readFileSync(
+    path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'Tool-call.json'),
+    'utf8'
+  ));
+
+  assert.match(literatureSource, /const LITERATURE_SOURCES = Object\.freeze/);
+  assert.match(literatureSource, /function createLiteratureSearchRuntime\(deps = \{\}\)/);
+  assert.match(literatureSource, /function buildLiteratureQuery\(input = \{\}\)/);
+  assert.match(literatureSource, /async function searchLiterature\(input = \{\}\)/);
+  assert.equal(readSource('src/main/helpers/agent/agent-literature-search.js').includes("require('./agent-llm-utils.js')"), true);
+  assert.match(paperDownloadSource, /const PAPER_DOWNLOAD_ACTIONS = Object\.freeze/);
+  assert.match(paperDownloadSource, /function createPaperDownloadRuntime\(deps = \{\}\)/);
+  assert.match(paperDownloadSource, /function extractPaperDownloadTargets\(input = \{\}\)/);
+  assert.match(paperDownloadSource, /async function downloadPaper\(input = \{\}\)/);
+  assert.match(paperDownloadSource, /browser-assisted download session/i);
+  assert.match(paperSource, /function createPaperAnalysisRuntime\(deps = \{\}\)/);
+  assert.match(paperSource, /createProtocolGenerationRuntime/);
+  assert.match(paperSource, /async function analyzePaper\(input = \{\}\)/);
+  assert.match(protocolSource, /function createProtocolGenerationRuntime\(deps = \{\}\)/);
+  assert.match(protocolSource, /async function generateProtocol\(input = \{\}\)/);
+  assert.match(protocolSource, /troubleshooting/);
+  assert.match(protocolSource, /\{\{ph:/);
+  assert.equal(readSource('src/main/helpers/agent/agent-paper-analysis.js').includes("require('./agent-llm-utils.js')"), true);
+  assert.equal(readSource('src/main/helpers/agent/agent-protocol-generation.js').includes("require('./agent-llm-utils.js')"), true);
+  assert.equal(toolsCatalog.some((entry) => entry?.name === 'literature-search'), true);
+  assert.equal(toolsCatalog.some((entry) => entry?.name === 'paper-download'), true);
+  assert.equal(toolsCatalog.some((entry) => entry?.name === 'paper-analysis'), true);
+  assert.equal(toolsCatalog.some((entry) => entry?.name === 'protocol-generation'), true);
+  assert.equal(Boolean(toolCallCatalog['literature-search']?.input_schema), true);
+  assert.equal(Boolean(toolCallCatalog['paper-download']?.input_schema), true);
+  assert.equal(Boolean(toolCallCatalog['paper-analysis']?.input_schema), true);
+  assert.equal(Boolean(toolCallCatalog['protocol-generation']?.input_schema), true);
 });
 
 test('sequence library helper creates storage folder, sqlite db, and status-filtered entries', async () => {
@@ -830,11 +943,16 @@ test('sequence library helper returns stored GBK/HTML and promotes temporary ent
 
 test('main wires intent parser + observability paths for parser-only controller', () => {
   const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
+  const agentRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc.js'), 'utf8');
+  const controllerUtilsSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-controller-utils.js'), 'utf8');
+  const sessionRuntimeSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-session-runtime.js'), 'utf8');
   assert.match(mainSource, /require\('\.\/helpers\/agent\/agent-intent-parser'\)/);
   assert.match(mainSource, /require\('\.\/helpers\/agent\/agent-observability'\)/);
   assert.match(mainSource, /require\('\.\/helpers\/agent\/agent-controller-utils'\)/);
-  assert.match(mainSource, /requestIntentParserPayload\(/);
-  assert.match(mainSource, /recordAgentLlmTrace\(/);
+  assert.match(mainSource, /registerAgentIpc/);
+  assert.match(agentRegistrarSource, /requestIntentParserPayload\(/);
+  assert.match(controllerUtilsSource, /recordAgentLlmTrace/);
+  assert.match(sessionRuntimeSource, /recordAgentLlmTrace\(/);
   assert.equal(/agent-sqlite-index/.test(mainSource), false);
   assert.equal(/agent-phase89-runtime/.test(mainSource), false);
 });
@@ -857,6 +975,8 @@ test('main no longer wires legacy routing and phase orchestration helpers', () =
   assert.equal(/require\('\.\/helpers\/agent\/agent-response-layer'/.test(mainSource), false);
   assert.equal(/require\('\.\/helpers\/agent\/agent-validation-safety'/.test(mainSource), false);
   assert.equal(/require\('\.\/helpers\/agent\/agent-phase89-runtime'/.test(mainSource), false);
+  assert.equal(/requestIntentParserPayload\(/.test(mainSource), false);
+  assert.equal(/runAgentToolDispatchLegacy\(/.test(mainSource), false);
 });
 
 test('telegram bot internals normalize search and module parsing', () => {

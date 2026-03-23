@@ -22,5 +22,25 @@
   {
     "name": "sub-agent",
     "description": "Create, message, inspect, list, and delete helper sub-agent sessions managed outside the main agent."
+  },
+  {
+    "name": "memory",
+    "description": "Recall, remember, forget, and list sparse long-term user memory records across sessions."
+  },
+  {
+    "name": "literature-search",
+    "description": "Search literature across PubMed, Crossref, UniProt, Europe PMC, or generic web results with scholarly-first auto fallback."
+  },
+  {
+    "name": "paper-download",
+    "description": "Extract a downloadable paper PDF URL, stream the file into app storage with progress tracking, and fall back to a browser-assisted download session when sites block automated fetches."
+  },
+  {
+    "name": "paper-analysis",
+    "description": "Summarize a paper briefly, extract protocol-relevant methods, and optionally draft a generated protocol from the paper."
+  },
+  {
+    "name": "protocol-generation",
+    "description": "Generate a concise reusable protocol from extracted paper methods, step seeds, or other structured method evidence."
   }
 ]

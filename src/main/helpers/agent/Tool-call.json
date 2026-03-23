@@ -190,9 +190,140 @@
           "maxItems": 12
         }
       }
+    },
+    "memory_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "category": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "key": {
+          "type": "string",
+          "maxLength": 220
+        },
+        "summary": {
+          "type": "string",
+          "maxLength": 600
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "object"
+            },
+            {
+              "type": "array"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "project_name": {
+          "type": "string",
+          "maxLength": 220
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 12
+        },
+        "source": {
+          "type": "string",
+          "maxLength": 120
+        }
+      }
+    },
+    "paper_record": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "paper_title": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "abstract": {
+          "type": "string"
+        },
+        "content": {
+          "type": "string"
+        },
+        "full_text": {
+          "type": "string"
+        },
+        "methods": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "additionalProperties": true
+              }
+            ]
+          },
+          "maxItems": 40
+        },
+        "key_findings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 20
+        }
+      }
+    },
+    "protocol_generation_step": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "instruction": {
+          "type": "string"
+        },
+        "action": {
+          "type": "string"
+        }
+      }
+    },
+    "literature_source": {
+      "type": "string",
+      "enum": ["auto", "web", "pubmed", "crossref", "uniprot", "europe_pmc"]
     }
   },
   "inventory-lookup": {
+    "description": "Use this tool when the user needs to know whether a reagent, consumable, or personal inventory item exists locally, where it is stored, or how much is available. Prefer it for stock, location, container, quantity, and alias-based reagent lookup. Provide `query` for the main search text, and include `inventory_search` when the parser already extracted normalized candidate terms or search hints.",
     "input_schema": {
       "type": "object",
       "additionalProperties": false,
@@ -215,6 +346,7 @@
     }
   },
   "record-lookup": {
+    "description": "Use this tool when the user is asking about stored lab records beyond raw inventory, such as projects, protocols, notebook entries, workflows, assays, gels, or linked historical context. Prefer it for 'what did we do last time', 'find the protocol record', or project-specific evidence retrieval. Provide `query` for the entity or topic to search, and pass `parser_payload` when parser entities can help narrow record matching.",
     "input_schema": {
       "type": "object",
       "additionalProperties": false,
@@ -234,6 +366,7 @@
     }
   },
   "protocol-matching": {
+    "description": "Use this tool to choose the best local protocol for a user-described activity before generating a notebook entry or protocol-driven draft. It ranks candidate protocols against parser hints, protocol names, aliases, purposes, and step overlap. Provide `protocol_candidates` when the parser or caller already identified likely names, and optionally provide `fallback_protocol` only when there is one specific protocol record that should be considered if ranked candidates are weak.",
     "input_schema": {
       "type": "object",
       "additionalProperties": false,
@@ -252,6 +385,7 @@
     }
   },
   "notebook-generation": {
+    "description": "Use this tool after protocol selection to generate a structured notebook draft from a selected protocol, project context, and known placeholder values. It fills placeholders conservatively, keeps unresolved placeholders visible, and can return follow-up questions when key details are missing. Provide `selected_protocol` when already known, `project` when a project has been resolved, and `pending_values` for explicit user-supplied placeholder answers.",
     "input_schema": {
       "type": "object",
       "additionalProperties": false,
@@ -269,6 +403,7 @@
     }
   },
   "python-sandbox": {
+    "description": "Use this tool when the agent needs to write and run Python code to compute, transform, inspect, or generate artifacts in a controlled sandbox. The agent should supply complete runnable code in `code`, optionally stage input files in `files`, and request outputs through `readback_paths`. Prefer this for deterministic analysis or file generation, not for calling local lab records that already have dedicated lookup tools.",
     "input_schema": {
       "type": "object",
       "additionalProperties": false,
@@ -304,6 +439,7 @@
     }
   },
   "sub-agent": {
+    "description": "Use this tool to manage helper sub-agent sessions for multi-step or delegated work that should persist across turns. `create` starts a managed sub-agent with a system prompt and initial message, `message` sends a follow-up, `get` inspects one session, `list` shows active sessions, and `delete` removes a session. Use it when the agent needs a reusable delegated workspace rather than a one-shot tool execution.",
     "input_schema": {
       "type": "object",
       "additionalProperties": false,
@@ -336,6 +472,300 @@
         },
         "metadata": {
           "$ref": "#/$defs/sub_agent_metadata"
+        }
+      }
+    }
+  },
+  "memory": {
+    "description": "Use this tool to manage sparse long-term user memory across sessions. `recall` searches previously stored preferences, project names, workflow habits, or other stable context. `remember` stores or updates a structured memory record with `key`, `summary`, and optional `value`. `forget` removes matching memory entries. `list` enumerates stored memory, optionally filtered by category, project, or tags. Use it only for durable facts or preferences, not for replaying whole conversations.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action"],
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": ["recall", "remember", "forget", "list"]
+        },
+        "id": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "query": {
+          "type": "string",
+          "maxLength": 320
+        },
+        "category": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "key": {
+          "type": "string",
+          "maxLength": 220
+        },
+        "summary": {
+          "type": "string",
+          "maxLength": 600
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "object"
+            },
+            {
+              "type": "array"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "project_name": {
+          "type": "string",
+          "maxLength": 220
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 12
+        },
+        "source": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50
+        },
+        "record": {
+          "$ref": "#/$defs/memory_record"
+        }
+      }
+    }
+  },
+  "literature-search": {
+    "description": "Use this tool when the user wants papers, references, recent literature, external evidence, or protein knowledgebase entries rather than a summary of one already-identified paper. Provide `query` when possible. Use `source` for one source, `sources` for an explicit multi-source batch, or leave them empty for scholarly-first auto mode. Auto mode searches literature sources first and only falls back to generic web search when those sources do not produce results. Prefer `pubmed`, `crossref`, and `europe_pmc` for papers, `uniprot` for protein/gene knowledge, and `web` for generic recency-aware external search.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "query": {
+          "type": "string",
+          "maxLength": 600
+        },
+        "topic": {
+          "type": "string",
+          "maxLength": 240
+        },
+        "message": {
+          "type": "string",
+          "maxLength": 1200
+        },
+        "source": {
+          "$ref": "#/$defs/literature_source"
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/literature_source"
+          },
+          "maxItems": 6
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 25
+        },
+        "max_per_source": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10
+        },
+        "allow_web_fallback": {
+          "type": "boolean"
+        },
+        "prefer_recent": {
+          "type": "boolean"
+        },
+        "parser_payload": {
+          "$ref": "#/$defs/parser_payload"
+        }
+      }
+    }
+  },
+  "paper-download": {
+    "description": "Use this tool when the user wants a paper PDF downloaded into app storage. `download` performs the full flow in one call, first extracting candidate PDF URLs from the provided fields and then streaming the PDF with progress tracking. `start` begins the download in the background so the caller can poll with `status`. When direct bot fetching is blocked, the tool should fall back to a browser-assisted session, optionally simulate a one-click download, let the user click the site download button if needed, and close the browser session after the file is saved.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": ["download", "start", "status"]
+        },
+        "download_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "paper_pdf_url": {
+          "type": "string"
+        },
+        "pdf_url": {
+          "type": "string"
+        },
+        "page_url": {
+          "type": "string"
+        },
+        "candidate_urls": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 24
+        },
+        "page_html": {
+          "type": "string",
+          "maxLength": 400000
+        },
+        "message": {
+          "type": "string",
+          "maxLength": 12000
+        },
+        "paper_title": {
+          "type": "string"
+        },
+        "file_name": {
+          "type": "string",
+          "maxLength": 240
+        },
+        "linked_type": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "linked_name": {
+          "type": "string",
+          "maxLength": 220
+        },
+        "storage_path": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "timeout_ms": {
+          "type": "integer",
+          "minimum": 1000,
+          "maximum": 120000
+        },
+        "use_browser_fallback": {
+          "type": "boolean"
+        },
+        "simulate_one_click": {
+          "type": "boolean"
+        },
+        "request_headers": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "paper-analysis": {
+    "description": "Use this tool when the user asks to summarize a paper, extract the important findings, explain methods, or pull a protocol candidate out of paper text. Provide the richest available paper context through `paper`, `paper_summary`, `paper_abstract`, or `paper_text`. Set `extract_protocol` when the user explicitly wants procedural extraction, and set `generate_protocol` when the extracted methods should also be converted into an import-ready protocol JSON record.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "paper": {
+          "$ref": "#/$defs/paper_record"
+        },
+        "paper_title": {
+          "type": "string"
+        },
+        "paper_summary": {
+          "type": "string"
+        },
+        "paper_abstract": {
+          "type": "string"
+        },
+        "paper_text": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "extract_protocol": {
+          "type": "boolean"
+        },
+        "generate_protocol": {
+          "type": "boolean"
+        },
+        "protocol_title_hint": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "protocol-generation": {
+    "description": "Use this tool when the agent already has method evidence and needs to synthesize it into the app's import-ready protocol JSON format. It is best for converting extracted paper methods, structured step seeds, or summarized procedures into a protocol with materials, steps, placeholders, timestamps, and troubleshooting text. Provide `method_text`, `steps`, and `materials` when available, plus `title` or `protocol_title_hint` to guide the resulting protocol name.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "protocol_title_hint": {
+          "type": "string"
+        },
+        "purpose": {
+          "type": "string"
+        },
+        "method_text": {
+          "type": "string"
+        },
+        "source_paper_title": {
+          "type": "string"
+        },
+        "source_summary": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "materials": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 40
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/$defs/protocol_generation_step"
+              }
+            ]
+          },
+          "maxItems": 40
         }
       }
     }

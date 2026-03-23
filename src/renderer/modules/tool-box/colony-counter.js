@@ -1,8 +1,16 @@
+// Manual colony counter tool.
+//
+// Responsibilities:
+// - load and display colony plate images on layered canvases
+// - support crop, zoom, and pan interactions before manual counting
+// - let users add or remove colony markers directly on the preview
+// - keep a synchronized marker mask and manual count summary
 import {
   clampNumber,
   escapeHtml
 } from './common.js';
 
+// Convert a pointer event into canvas pixel coordinates, accounting for CSS scaling and letterboxing.
 function getCanvasPointerPosition(canvas, event) {
   if (!canvas || !event) {
     return null;
@@ -45,6 +53,7 @@ function getCanvasPointerPosition(canvas, event) {
   return { x, y };
 }
 
+// Resize one canvas from another while optionally constraining the maximum display dimension.
 function setCanvasFromSource(targetCanvas, sourceCanvas, maxDimension = 0) {
   if (!targetCanvas || !sourceCanvas) {
     return { width: 0, height: 0, scale: 1 };
@@ -75,6 +84,7 @@ function setCanvasFromSource(targetCanvas, sourceCanvas, maxDimension = 0) {
   return { width, height, scale };
 }
 
+// Clear an entire canvas if a 2D context is available.
 function clearCanvas(canvas) {
   if (!canvas) {
     return;
@@ -86,6 +96,7 @@ function clearCanvas(canvas) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
+// Load a browser File object into an Image element so it can be drawn onto canvases.
 function loadImageElementFromFile(file) {
   return new Promise((resolve, reject) => {
     if (!file) {
@@ -106,6 +117,7 @@ function loadImageElementFromFile(file) {
   });
 }
 
+// Load a data URL into the cropper image host before initializing CropperJS.
 function loadImageElementFromSrc(imgElement, src) {
   return new Promise((resolve, reject) => {
     if (!imgElement) {
@@ -118,7 +130,9 @@ function loadImageElementFromSrc(imgElement, src) {
   });
 }
 
+// Initialize the colony counter tool and wire it to the toolbox UI.
 export function initColonyCounterTool() {
+  // Core DOM nodes for image loading, crop controls, canvases, and summary output.
   const colonyCounterForm = document.getElementById('colony-counter-form');
   if (!colonyCounterForm) {
     return;
@@ -141,10 +155,12 @@ export function initColonyCounterTool() {
   const colonyCropperImage = document.getElementById('colony-cropper-image');
   const colonySourceCanvas = document.getElementById('colony-source-canvas');
 
+  // Offscreen/original canvases hold source pixels separately from the zoomed display canvases.
   const colonySourceCtx = colonySourceCanvas?.getContext('2d', { willReadFrequently: true }) || null;
   const colonyOriginalCanvas = document.createElement('canvas');
   const colonyOriginalCtx = colonyOriginalCanvas.getContext('2d', { willReadFrequently: true });
 
+  // In-memory interaction state for the current image, cropper session, markers, and viewport.
   const colonyState = {
     imageName: '',
     sourceWidth: 0,
@@ -162,6 +178,7 @@ export function initColonyCounterTool() {
     suppressNextClick: false
   };
 
+  // Update the status line and optionally switch it into an error color.
   function setColonyStatus(message, isError = false) {
     if (!colonyStatus) {
       return;
@@ -170,6 +187,7 @@ export function initColonyCounterTool() {
     colonyStatus.style.color = isError ? 'var(--danger)' : '';
   }
 
+  // Restore the summary panel to its default instructional text.
   function resetColonySummary() {
     if (!colonySummary) {
       return;
@@ -177,6 +195,7 @@ export function initColonyCounterTool() {
     colonySummary.innerHTML = '<p class="small-note">Load a plate image, then click each colony to count manually.</p>';
   }
 
+  // Render the current manual colony count and interaction hints.
   function renderColonySummary() {
     if (!colonySummary) {
       return;
@@ -188,16 +207,19 @@ export function initColonyCounterTool() {
     `;
   }
 
+  // Check whether CropperJS is currently active on the loaded image.
   function isCropModeActive() {
     return Boolean(colonyState.cropper);
   }
 
+  // Read and clamp display-related settings from the form inputs.
   function getDisplaySettings() {
     return {
       maxProcessSize: Math.round(clampNumber(colonyMaxSizeInput?.value, 300, 5000, 1600))
     };
   }
 
+  // Reset zoom and pan state back to the full-image view.
   function resetViewport() {
     colonyState.zoom = 1;
     colonyState.viewX = 0;
@@ -209,6 +231,7 @@ export function initColonyCounterTool() {
     colonyState.suppressNextClick = false;
   }
 
+  // Apply a new viewport while clamping zoom and pan to the image bounds.
   function setViewport(nextState = {}) {
     const sourceWidth = colonyState.sourceWidth || 0;
     const sourceHeight = colonyState.sourceHeight || 0;
@@ -230,6 +253,7 @@ export function initColonyCounterTool() {
     colonyState.viewY = nextY;
   }
 
+  // Compute the current visible source rectangle and preview-canvas geometry.
   function getViewport() {
     const sourceWidth = colonyState.sourceWidth || 0;
     const sourceHeight = colonyState.sourceHeight || 0;
@@ -260,6 +284,7 @@ export function initColonyCounterTool() {
     };
   }
 
+  // Map a marker from source-image coordinates into the currently visible preview canvas.
   function sourceToPreviewPoint(sourcePoint) {
     const viewport = getViewport();
     if (!sourcePoint || !viewport) {
@@ -271,6 +296,7 @@ export function initColonyCounterTool() {
     };
   }
 
+  // Map a click on the preview canvas back into source-image coordinates.
   function previewToSourcePoint(previewPoint) {
     const viewport = getViewport();
     if (!previewPoint || !viewport) {
@@ -292,6 +318,7 @@ export function initColonyCounterTool() {
     };
   }
 
+  // Draw numbered marker circles onto the visible preview canvas.
   function drawMarkers(ctx) {
     if (!ctx) {
       return;
@@ -337,6 +364,7 @@ export function initColonyCounterTool() {
     ctx.restore();
   }
 
+  // Render the simplified marker-only mask canvas used alongside the preview.
   function renderMarkerCanvas() {
     if (!colonyMaskCanvas) {
       return;
@@ -380,6 +408,7 @@ export function initColonyCounterTool() {
     ctx.restore();
   }
 
+  // Render the currently visible image region, then overlay manual markers.
   function renderPreviewCanvas() {
     if (!colonyPreviewCanvas || !colonySourceCanvas) {
       return;
@@ -414,6 +443,7 @@ export function initColonyCounterTool() {
     renderMarkerCanvas();
   }
 
+  // Enable or disable buttons and cursors based on image availability, crop mode, and marker state.
   function updateControlState() {
     const hasImage = colonyState.hasImage;
     const cropActive = isCropModeActive();
@@ -449,6 +479,7 @@ export function initColonyCounterTool() {
     }
   }
 
+  // Remove the cropper image source so the host element is fully reset.
   function clearCropperImage() {
     if (!colonyCropperImage) {
       return;
@@ -456,6 +487,7 @@ export function initColonyCounterTool() {
     colonyCropperImage.removeAttribute('src');
   }
 
+  // Tear down any active CropperJS instance and hide the crop UI.
   function destroyCropper() {
     if (colonyState.cropper) {
       colonyState.cropper.destroy();
@@ -468,6 +500,7 @@ export function initColonyCounterTool() {
     updateControlState();
   }
 
+  // Remove all manual colony markers from the current image.
   function clearMarkers() {
     if (!colonyState.markers.length) {
       return;
@@ -479,11 +512,13 @@ export function initColonyCounterTool() {
     updateControlState();
   }
 
+  // Clear markers silently when the loaded image or crop region changes.
   function clearMarkersForImageChange() {
     colonyState.markers = [];
     renderColonySummary();
   }
 
+  // Load a selected image file into both the original backing canvas and the editable source canvas.
   async function loadColonyImage(file) {
     if (!colonySourceCanvas || !colonySourceCtx || !colonyOriginalCtx) {
       return;
@@ -516,6 +551,7 @@ export function initColonyCounterTool() {
     updateControlState();
   }
 
+  // Enter crop mode by copying the current source canvas into the CropperJS host image.
   async function startCropMode() {
     if (!colonyState.hasImage || !colonySourceCanvas) {
       setColonyStatus('Load an image before cropping.', true);
@@ -547,6 +583,7 @@ export function initColonyCounterTool() {
     updateControlState();
   }
 
+  // Replace the current source image with the cropper's selected region.
   function applyCrop() {
     if (!colonyState.cropper || !colonySourceCanvas || !colonySourceCtx) {
       return;
@@ -578,6 +615,7 @@ export function initColonyCounterTool() {
     updateControlState();
   }
 
+  // Restore the uncropped original image back into the active source canvas.
   function resetToOriginalImage() {
     if (!colonyState.hasImage || !colonyOriginalCanvas || !colonySourceCanvas || !colonySourceCtx) {
       return;
@@ -605,6 +643,7 @@ export function initColonyCounterTool() {
     updateControlState();
   }
 
+  // Add a marker at the clicked colony unless one already exists nearby.
   function addManualMarkerFromCanvasPoint(point) {
     if (!point || !colonyState.hasImage) {
       return;
@@ -638,6 +677,7 @@ export function initColonyCounterTool() {
     updateControlState();
   }
 
+  // Remove the nearest marker when the user right-clicks close enough to it.
   function removeNearestMarkerFromCanvasPoint(point) {
     if (!point || !colonyState.markers.length) {
       return;
@@ -677,6 +717,7 @@ export function initColonyCounterTool() {
     updateControlState();
   }
 
+  // Zoom around the pointer location while preserving the anchored source point under the cursor.
   function zoomPreviewAtPoint(point, requestedZoom) {
     const viewport = getViewport();
     if (!viewport || !point) {
@@ -708,6 +749,7 @@ export function initColonyCounterTool() {
     updateControlState();
   }
 
+  // Pan the viewport in source-image space using preview-canvas drag deltas.
   function panPreviewByCanvasDelta(deltaX, deltaY) {
     const viewport = getViewport();
     if (!viewport || viewport.zoom <= 1.001) {
@@ -723,6 +765,7 @@ export function initColonyCounterTool() {
     renderPreviewCanvas();
   }
 
+  // End an active pan gesture and suppress the follow-up click when a drag occurred.
   function finishPanning() {
     if (!colonyState.isPanning) {
       return;
@@ -735,6 +778,7 @@ export function initColonyCounterTool() {
     updateControlState();
   }
 
+  // Finalize the current manual count into the status and summary display.
   function renderManualCountResult() {
     if (!colonyState.hasImage) {
       setColonyStatus('Load a plate image first.', true);
@@ -746,6 +790,7 @@ export function initColonyCounterTool() {
     renderColonySummary();
   }
 
+  // Fully reset the tool state, canvases, cropper, inputs, and marker list.
   function resetColonyCounter() {
     destroyCropper();
     colonyState.imageName = '';
@@ -777,6 +822,7 @@ export function initColonyCounterTool() {
     updateControlState();
   }
 
+  // Handle left-click counting on the preview canvas when crop mode is inactive.
   function handlePreviewClick(event) {
     if (colonyState.suppressNextClick) {
       colonyState.suppressNextClick = false;
@@ -794,6 +840,7 @@ export function initColonyCounterTool() {
     addManualMarkerFromCanvasPoint(point);
   }
 
+  // Start a pan gesture when the user presses on a zoomed preview.
   function handlePreviewMouseDown(event) {
     if (!colonyState.hasImage || isCropModeActive() || event.button !== 0) {
       return;
@@ -813,6 +860,7 @@ export function initColonyCounterTool() {
     event.preventDefault();
   }
 
+  // Continue an active pan gesture as the pointer moves across the preview.
   function handlePreviewMouseMove(event) {
     if (!colonyState.isPanning) {
       return;
@@ -832,6 +880,7 @@ export function initColonyCounterTool() {
     event.preventDefault();
   }
 
+  // Zoom in or out around the wheel pointer position.
   function handlePreviewWheel(event) {
     if (!colonyState.hasImage || isCropModeActive()) {
       return;
@@ -849,6 +898,7 @@ export function initColonyCounterTool() {
     event.preventDefault();
   }
 
+  // Use right-click on the preview canvas to remove the nearest marker.
   function handlePreviewContextMenu(event) {
     event.preventDefault();
     if (!colonyState.hasImage || isCropModeActive()) {
@@ -863,6 +913,7 @@ export function initColonyCounterTool() {
   setColonyStatus('Load an image, then click colonies to count manually.');
   updateControlState();
 
+  // Clamp the max-size display input so preview rendering stays within supported bounds.
   function syncDisplayInput() {
     if (!colonyMaxSizeInput) {
       return;
@@ -871,6 +922,7 @@ export function initColonyCounterTool() {
     colonyMaxSizeInput.value = String(value);
   }
 
+  // Re-render the preview when the configured display size changes.
   colonyMaxSizeInput?.addEventListener('change', () => {
     syncDisplayInput();
     if (colonyState.hasImage) {
@@ -878,6 +930,7 @@ export function initColonyCounterTool() {
     }
   });
 
+  // Load a newly selected image file into the tool.
   colonyImageInput?.addEventListener('change', async () => {
     const file = colonyImageInput.files?.[0];
     if (!file) {
@@ -895,6 +948,7 @@ export function initColonyCounterTool() {
     }
   });
 
+  // Enter crop mode.
   colonyStartCropBtn?.addEventListener('click', async () => {
     try {
       await startCropMode();
@@ -904,60 +958,74 @@ export function initColonyCounterTool() {
     }
   });
 
+  // Apply the current crop selection.
   colonyApplyCropBtn?.addEventListener('click', () => {
     applyCrop();
   });
 
+  // Exit crop mode without changing the current source image.
   colonyCancelCropBtn?.addEventListener('click', () => {
     destroyCropper();
     setColonyStatus('Crop cancelled.');
   });
 
+  // Restore the original uncropped image.
   colonyResetCropBtn?.addEventListener('click', () => {
     resetToOriginalImage();
   });
 
+  // Count colonies with left-click on the preview.
   colonyPreviewCanvas?.addEventListener('click', (event) => {
     handlePreviewClick(event);
   });
 
+  // Begin panning on mouse down when zoomed in.
   colonyPreviewCanvas?.addEventListener('mousedown', (event) => {
     handlePreviewMouseDown(event);
   });
 
+  // Continue panning while the pointer moves.
   colonyPreviewCanvas?.addEventListener('mousemove', (event) => {
     handlePreviewMouseMove(event);
   });
 
+  // Finish panning when the mouse button is released over the preview.
   colonyPreviewCanvas?.addEventListener('mouseup', () => {
     finishPanning();
   });
 
+  // Finish panning when the pointer leaves the preview canvas.
   colonyPreviewCanvas?.addEventListener('mouseleave', () => {
     finishPanning();
   });
 
+  // Zoom with the mouse wheel.
   colonyPreviewCanvas?.addEventListener('wheel', (event) => {
     handlePreviewWheel(event);
   }, { passive: false });
 
+  // Remove markers with right-click.
   colonyPreviewCanvas?.addEventListener('contextmenu', (event) => {
     handlePreviewContextMenu(event);
   });
 
+  // Ensure pan state is cleared even if the mouse is released outside the canvas.
   window.addEventListener('mouseup', () => {
     finishPanning();
   });
 
+  // Treat form submission as confirmation of the current manual count.
   colonyCounterForm.addEventListener('submit', (event) => {
     event.preventDefault();
     renderManualCountResult();
   });
 
+  // Clear all current markers.
   colonyClearMarkersBtn?.addEventListener('click', () => {
     clearMarkers();
   });
 
+  // Fully reset the tool.
   colonyResetBtn?.addEventListener('click', () => {
     resetColonyCounter();
   });

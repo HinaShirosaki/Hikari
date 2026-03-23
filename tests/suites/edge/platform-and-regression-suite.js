@@ -143,14 +143,26 @@ test('[P0] normalizeState resets invalid knowledgeChats object', () => {
 test('[P0] normalizeState normalizes agentChat defaults', () => {
   const normalized = shared.normalizeState({ agentChat: { projectId: 123, messages: 'bad' } });
   assert.equal(normalized.agentChat.projectId, '123');
+  assert.equal(normalized.agentChat.currentSessionId, '');
+  assert.equal(Array.isArray(normalized.agentChat.sessions), true);
+  assert.equal(normalized.agentChat.sessions.length, 0);
   assert.equal(Array.isArray(normalized.agentChat.messages), true);
   assert.equal(normalized.agentChat.messages.length, 0);
 });
 
 test('[P1] normalizeState preserves provided agentChat messages array', () => {
   const payload = [{ id: 'm1', role: 'user', text: 'hello' }];
-  const normalized = shared.normalizeState({ agentChat: { projectId: 'p1', messages: payload } });
+  const normalized = shared.normalizeState({
+    agentChat: {
+      projectId: 'p1',
+      currentSessionId: 'chat-1',
+      sessions: [{ id: 'chat-1', title: 'Saved Chat' }],
+      messages: payload
+    }
+  });
   assert.equal(normalized.agentChat.projectId, 'p1');
+  assert.equal(normalized.agentChat.currentSessionId, 'chat-1');
+  assert.equal(normalized.agentChat.sessions.length, 1);
   assert.deepEqual(normalized.agentChat.messages, payload);
 });
 

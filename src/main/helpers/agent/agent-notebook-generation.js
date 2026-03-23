@@ -1,81 +1,15 @@
 'use strict';
 
+const { createAgentLlmRuntimeHelpers } = require('./agent-llm-utils.js');
+
 function createNotebookGenerationRuntime(deps = {}) {
-  const LLM_PROVIDERS = deps.LLM_PROVIDERS && typeof deps.LLM_PROVIDERS === 'object'
-    ? deps.LLM_PROVIDERS
-    : {};
-  const asArray = typeof deps.asArray === 'function'
-    ? deps.asArray
-    : ((value) => (Array.isArray(value) ? value : []));
-  const cleanText = typeof deps.cleanText === 'function'
-    ? deps.cleanText
-    : ((value, maxLength = 2000) => {
-      const text = String(value || '').trim();
-      if (!text) {
-        return '';
-      }
-      if (text.length <= maxLength) {
-        return text;
-      }
-      return `${text.slice(0, maxLength)}...`;
-    });
-  const uniqueStrings = typeof deps.uniqueStrings === 'function'
-    ? deps.uniqueStrings
-    : ((values, max = 50) => {
-      const seen = new Set();
-      const out = [];
-      asArray(values).forEach((value) => {
-        const normalized = cleanText(value, 220);
-        if (!normalized) {
-          return;
-        }
-        const key = normalized.toLowerCase();
-        if (seen.has(key) || out.length >= max) {
-          return;
-        }
-        seen.add(key);
-        out.push(normalized);
-      });
-      return out;
-    });
-  const safeParseJson = typeof deps.safeParseJson === 'function'
-    ? deps.safeParseJson
-    : ((text, fallback = null) => {
-      try {
-        const parsed = JSON.parse(String(text || ''));
-        if (parsed && typeof parsed === 'object') {
-          return parsed;
-        }
-      } catch {
-        // Fallback below.
-      }
-      return fallback;
-    });
-  const requestCodexCliText = deps.requestCodexCliText;
-  const getCodexCliWorkingDirectory = typeof deps.getCodexCliWorkingDirectory === 'function'
-    ? deps.getCodexCliWorkingDirectory
-    : (() => process.cwd());
-  const requestClaudeMessagesWithBackoff = deps.requestClaudeMessagesWithBackoff;
-  const requestGeminiGenerateContentWithBackoff = deps.requestGeminiGenerateContentWithBackoff;
-  const requestOpenAiResponsesWithBackoff = deps.requestOpenAiResponsesWithBackoff;
-  const extractClaudeResponseText = typeof deps.extractClaudeResponseText === 'function'
-    ? deps.extractClaudeResponseText
-    : (() => '');
-  const extractGeminiResponseText = typeof deps.extractGeminiResponseText === 'function'
-    ? deps.extractGeminiResponseText
-    : (() => '');
-  const extractResponseText = typeof deps.extractResponseText === 'function'
-    ? deps.extractResponseText
-    : (() => '');
-  const toInputText = typeof deps.toInputText === 'function'
-    ? deps.toInputText
-    : ((role, text) => ({
-      role,
-      content: [{ type: 'input_text', text: String(text || '') }]
-    }));
-  const recordAgentLlmTrace = typeof deps.recordAgentLlmTrace === 'function'
-    ? deps.recordAgentLlmTrace
-    : (async () => {});
+  const {
+    asArray,
+    cleanText,
+    uniqueStrings,
+    recordAgentLlmTrace,
+    requestStructuredJsonPayload
+  } = createAgentLlmRuntimeHelpers(deps);
   const recordLifecycleEvent = typeof deps.recordLifecycleEvent === 'function'
     ? deps.recordLifecycleEvent
     : (() => {});
@@ -155,211 +89,6 @@ function createNotebookGenerationRuntime(deps = {}) {
       'treat this as a direct answer and return that exact value for the unresolved placeholder_key.'
     ].join(' ')
   ];
-
-  function parseJsonObjectFromText(raw) {
-    if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
-      return raw;
-    }
-    if (typeof raw !== 'string') {
-      return null;
-    }
-    const parsed = safeParseJson(raw, null);
-    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-      return parsed;
-    }
-    return null;
-  }
-
-  async function requestStructuredJsonPayload({
-    provider,
-    endpoint,
-    apiKey,
-    model,
-    stage,
-    systemPrompt,
-    userPrompt,
-    schema,
-    traceContext = null
-  }) {
-    const system = cleanText(systemPrompt, 12000);
-    const user = cleanText(userPrompt, 48000);
-    const normalizedStage = cleanText(stage, 120) || 'agent_stage';
-    try {
-      if (provider === LLM_PROVIDERS.CODEX) {
-        const prompt = [
-          system,
-          user,
-          'Return JSON only.'
-        ].filter(Boolean).join('\n\n');
-        const raw = await requestCodexCliText({
-          prompt,
-          model,
-          cwd: getCodexCliWorkingDirectory()
-        });
-        await recordAgentLlmTrace(traceContext, {
-          stage: normalizedStage,
-          provider,
-          model,
-          summary: `${normalizedStage} completed via Codex CLI.`,
-          request_payload: {
-            model,
-            prompt
-          },
-          response_payload: raw
-        });
-        const parsed = parseJsonObjectFromText(raw);
-        if (!parsed) {
-          return {
-            ok: false,
-            error: `${normalizedStage} response was not valid JSON.`,
-            raw
-          };
-        }
-        return {
-          ok: true,
-          payload: parsed,
-          raw
-        };
-      }
-
-      if (provider === LLM_PROVIDERS.CLAUDE) {
-        const body = {
-          model,
-          system: system || 'Return valid JSON only.',
-          max_tokens: 1300,
-          messages: [
-            {
-              role: 'user',
-              content: [
-                {
-                  type: 'text',
-                  text: `${user}\n\nReturn JSON only.`
-                }
-              ]
-            }
-          ]
-        };
-        const response = await requestClaudeMessagesWithBackoff({
-          endpoint,
-          apiKey,
-          body
-        });
-        await recordAgentLlmTrace(traceContext, {
-          stage: normalizedStage,
-          provider,
-          model,
-          summary: `${normalizedStage} completed via Claude.`,
-          request_payload: body,
-          response_payload: response
-        });
-        const parsed = parseJsonObjectFromText(extractClaudeResponseText(response));
-        if (!parsed) {
-          return {
-            ok: false,
-            error: `${normalizedStage} response was not valid JSON.`,
-            raw: response
-          };
-        }
-        return {
-          ok: true,
-          payload: parsed,
-          raw: response
-        };
-      }
-
-      if (provider === LLM_PROVIDERS.GEMINI) {
-        const body = {
-          systemInstruction: {
-            parts: [{ text: system || 'Return valid JSON only.' }]
-          },
-          contents: [
-            {
-              role: 'user',
-              parts: [{ text: `${user}\n\nReturn JSON only.` }]
-            }
-          ],
-          generationConfig: {
-            maxOutputTokens: 1300
-          }
-        };
-        const response = await requestGeminiGenerateContentWithBackoff({
-          endpoint,
-          apiKey,
-          model,
-          body
-        });
-        await recordAgentLlmTrace(traceContext, {
-          stage: normalizedStage,
-          provider,
-          model,
-          summary: `${normalizedStage} completed via Gemini.`,
-          request_payload: body,
-          response_payload: response
-        });
-        const parsed = parseJsonObjectFromText(extractGeminiResponseText(response));
-        if (!parsed) {
-          return {
-            ok: false,
-            error: `${normalizedStage} response was not valid JSON.`,
-            raw: response
-          };
-        }
-        return {
-          ok: true,
-          payload: parsed,
-          raw: response
-        };
-      }
-
-      const body = {
-        model,
-        input: [
-          toInputText('system', system || 'Return valid JSON only.'),
-          toInputText('user', user)
-        ],
-        text: {
-          format: {
-            type: 'json_schema',
-            name: normalizedStage.replace(/[^a-z0-9_]+/gi, '_').toLowerCase() || 'stage_result',
-            strict: true,
-            schema
-          }
-        },
-        max_output_tokens: 1300
-      };
-      const response = await requestOpenAiResponsesWithBackoff({
-        endpoint,
-        apiKey,
-        body
-      });
-      await recordAgentLlmTrace(traceContext, {
-        stage: normalizedStage,
-        provider: LLM_PROVIDERS.OPENAI,
-        model,
-        summary: `${normalizedStage} completed via OpenAI Responses.`,
-        request_payload: body,
-        response_payload: response
-      });
-      const parsed = parseJsonObjectFromText(extractResponseText(response));
-      if (!parsed) {
-        return {
-          ok: false,
-          error: `${normalizedStage} response was not valid JSON.`,
-          raw: response
-        };
-      }
-      return {
-        ok: true,
-        payload: parsed,
-        raw: response
-      };
-    } catch (error) {
-      return {
-        ok: false,
-        error: cleanText(error?.message || error, 320) || `${normalizedStage} request failed.`
-      };
-    }
-  }
 
   function buildProtocolPlaceholderRows(protocolRecord = {}) {
     const rows = [];
@@ -726,7 +455,11 @@ function createNotebookGenerationRuntime(deps = {}) {
         `Unresolved placeholders JSON:\n${JSON.stringify(unresolvedPlaceholders, null, 2)}`
       ].filter(Boolean).join('\n\n'),
       schema: PROTOCOL_NOTEBOOK_FILL_RESPONSE_SCHEMA,
-      traceContext
+      traceContext,
+      maxOutputTokens: 1300,
+      openAiStrict: true,
+      openAiAsDefaultProvider: true,
+      defaultError: 'Notebook generation provider is not configured.'
     });
   }
 
