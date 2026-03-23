@@ -1,5 +1,7 @@
 'use strict';
 
+const RAW_INTENT_CATALOG = require('./agent-intent.json');
+
 const PARSER_CANONICAL_INTENTS = Object.freeze([
   'protocol_to_notebook',
   'inventory_lookup',
@@ -43,98 +45,23 @@ const PARSER_ENTITY_KEYS = Object.freeze([
 
 const PARSER_PROTOCOL_CANDIDATE_LIMIT = 3;
 
-const INTENT_PARSER_PROMPT = `You are an intent and entity parser for a lab assistant app.
-
-Your job is to read the user's message and return JSON only.
-
-You must:
-1. classify the user's intent
-2. extract key entities
-3. if the request involves inventory or chemical lookup, generate multiple candidate search terms for database search
-
-## Allowed intents
-- protocol_to_notebook
-- inventory_lookup
-- record_lookup
-- project_science_question
-- general_science_question
-- paper_analysis
-- literature_search
-- result_analysis
-- mixed_request
-- unclear
-
-## Output schema
-
-{
-  "primary_intent": "one allowed intent",
-  "needs_clarification": true,
-  "clarification_reason": "string or null",
-  "entities": {
-    "activity_type": null,
-    "project_name": null,
-    "protocol_name": null,
-    "protein_name": null,
-    "compound_name": null,
-    "inventory_item": null,
-    "cell_line": null,
-    "paper_title": null,
-    "workflow_step": null,
-    "requested_output": null
+const INTENT_PARSER_OUTPUT_TEMPLATE = Object.freeze({
+  primary_intent: 'one allowed intent',
+  needs_clarification: true,
+  clarification_reason: 'string or null',
+  entities: PARSER_ENTITY_KEYS.reduce((acc, key) => {
+    acc[key] = null;
+    return acc;
+  }, {}),
+  inventory_search: {
+    normalized_query: null,
+    candidate_terms: [],
+    aliases: [],
+    search_mode: null
   },
-  "inventory_search": {
-    "normalized_query": null,
-    "candidate_terms": [],
-    "aliases": [],
-    "search_mode": null
-  },
-  "protocol_candidates": [],
-  "reasoning_summary": "brief explanation"
-}
-
-## Rules
-
-- Return JSON only.
-- Choose exactly one primary intent.
-- If the request is about inventory, reagent identity, chemical stock, reagent location, molecular weight in stock, or stored reagent metadata, use inventory_lookup.
-- For coding, data transforms, quantitative fitting, or result interpretation tasks, use result_analysis.
-- For inventory_lookup, populate inventory_search.
-- For protocol_to_notebook, populate protocol_candidates with 1 to 3 likely protocol names from the request.
-- protocol_candidates must include only protocol names and must not exceed 3 values.
-- For intents other than protocol_to_notebook, set protocol_candidates to [].
-- normalized_query should be the best canonical short query for database search.
-- candidate_terms should include likely exact names, normalized names, abbreviations, alternate punctuation, and common aliases.
-- aliases should include common alternate names if they are strongly implied by the user message.
-- search_mode should usually be:
-  - "exact_then_alias_then_fuzzy"
-  - "exact_only"
-  - "alias_then_fuzzy"
-- Do not invent obscure aliases unless they are common and likely useful.
-- If the user asks for a non-inventory scientific property not clearly tied to lab stock, do not populate inventory_search unless inventory is explicitly involved.
-
-## Examples
-
-User: "Do we have PEI?"
-Return inventory_lookup and candidate terms such as:
-- PEI
-- polyethylenimine
-- linear PEI
-
-User: "What is the MW of sulfo-SMCC in stock?"
-Return inventory_lookup and candidate terms such as:
-- sulfo-SMCC
-- Sulfo-SMCC
-- SMCC
-- sulfosuccinimidyl 4-(N-maleimidomethyl)cyclohexane-1-carboxylate
-
-User: "Where is tris?"
-Return inventory_lookup and candidate terms such as:
-- Tris
-- tris
-- Tris-HCl
-- tris(hydroxymethyl)aminomethane
-
-Return JSON only.`;
+  protocol_candidates: [],
+  reasoning_summary: 'brief explanation'
+});
 
 const INTENT_PARSER_RESPONSE_SCHEMA = {
   type: 'object',
@@ -406,6 +333,109 @@ function normalizeIntentParserPayload(rawValue) {
   };
 }
 
+function assertCatalog(condition, message) {
+  if (!condition) {
+    throw new Error(message);
+  }
+}
+
+function validateCatalogString(value, path, maxLength = 1200) {
+  const normalized = cleanText(value, maxLength);
+  assertCatalog(Boolean(normalized), `${path} must be a non-empty string.`);
+  return normalized;
+}
+
+function validateCatalogRule(value, path) {
+  return validateCatalogString(value, path, 1000);
+}
+
+function validateCatalogSpecificOutputAppend(value, path) {
+  assertCatalog(isObject(value), `${path} must be an object.`);
+  const entries = Object.entries(value).map(([key, description]) => ({
+    key: validateCatalogString(key, `${path}.<key>`, 120),
+    description: validateCatalogString(description, `${path}.${key}`, 500)
+  }));
+  assertCatalog(entries.length > 0, `${path} must contain at least one entry.`);
+  return entries;
+}
+
+function validateIntentCatalog(rawCatalog) {
+  assertCatalog(isObject(rawCatalog), 'Intent catalog must be an object.');
+  const namesSeen = new Set();
+  const normalizedEntries = Object.entries(rawCatalog).map(([key, rawEntry]) => {
+    const path = `agent-intent.json.${key}`;
+    assertCatalog(isObject(rawEntry), `${path} must be an object.`);
+    const name = validateCatalogString(rawEntry.name, `${path}.name`, 80);
+    assertCatalog(name === key, `${path}.name must match the top-level key.`);
+    const normalizedIntent = normalizeParserIntent(name);
+    assertCatalog(Boolean(normalizedIntent), `${path}.name must be one of the allowed canonical intents.`);
+    assertCatalog(!namesSeen.has(normalizedIntent), `${path}.name duplicates the intent ${normalizedIntent}.`);
+    namesSeen.add(normalizedIntent);
+    return {
+      name: normalizedIntent,
+      description: validateCatalogString(rawEntry.description, `${path}.description`, 800),
+      rules: validateCatalogRule(rawEntry.rules, `${path}.rules`),
+      example_input: validateCatalogString(rawEntry.example_input, `${path}.example_input`, 1400),
+      specific_output_append: validateCatalogSpecificOutputAppend(rawEntry.specific_output_append, `${path}.specific_output_append`)
+    };
+  });
+
+  const byName = new Map(normalizedEntries.map((entry) => [entry.name, entry]));
+  const missing = PARSER_CANONICAL_INTENTS.filter((name) => !byName.has(name));
+  assertCatalog(missing.length === 0, `Intent catalog is missing canonical intents: ${missing.join(', ')}`);
+  const unexpected = normalizedEntries
+    .map((entry) => entry.name)
+    .filter((name) => !PARSER_CANONICAL_INTENTS.includes(name));
+  assertCatalog(unexpected.length === 0, `Intent catalog contains unexpected intents: ${unexpected.join(', ')}`);
+
+  return Object.freeze(PARSER_CANONICAL_INTENTS.map((name) => byName.get(name)));
+}
+
+function formatIntentSpecificOutputAppend(rows = []) {
+  return asArray(rows)
+    .map((row) => `- ${cleanText(row?.key, 120)}: ${cleanText(row?.description, 500)}`)
+    .filter(Boolean)
+    .join('\n');
+}
+
+function buildIntentCatalogPrompt(catalog = []) {
+  const normalizedCatalog = asArray(catalog).length ? asArray(catalog) : INTENT_PARSER_CATALOG;
+  const allowedIntents = normalizedCatalog.map((entry) => `- ${entry.name}`).join('\n');
+  const descriptions = normalizedCatalog.map((entry) => [
+    `### ${entry.name}`,
+    entry.description,
+    `Intent-specific rule: ${entry.rules}`,
+    'Intent-specific output append:',
+    formatIntentSpecificOutputAppend(entry.specific_output_append)
+  ].join('\n')).join('\n\n');
+  const examples = normalizedCatalog.map((entry) => `User: "${entry.example_input}"`).join('\n');
+
+  return [
+    'You are an intent and entity parser for a lab assistant app.',
+    "Your job is to read the user's message and return JSON only.",
+    'You must classify the user intent, extract key entities, and prepare inventory search hints when inventory is involved.',
+    '## Allowed intents',
+    allowedIntents,
+    '## Output schema',
+    JSON.stringify(INTENT_PARSER_OUTPUT_TEMPLATE, null, 2),
+    '## Rules',
+    '- Return JSON only.',
+    '- Choose exactly one primary intent.',
+    '- Populate entities only when they are supported by the user message or recent conversation.',
+    '- For intents other than inventory_lookup, set inventory_search to nulls and empty arrays.',
+    '- For intents other than protocol_to_notebook, set protocol_candidates to [].',
+    '- Do not invent obscure aliases or unsupported protocol names.',
+    '## Intent descriptions',
+    descriptions,
+    '## Examples',
+    examples,
+    'Return JSON only.'
+  ].join('\n\n');
+}
+
+const INTENT_PARSER_CATALOG = validateIntentCatalog(RAW_INTENT_CATALOG);
+const INTENT_PARSER_PROMPT = buildIntentCatalogPrompt(INTENT_PARSER_CATALOG);
+
 function mapCanonicalIntentToExecutionIntent(primaryIntent) {
   const normalized = normalizeParserIntent(primaryIntent);
   if (normalized) {
@@ -490,8 +520,12 @@ module.exports = {
   PARSER_INTENT_ALIASES,
   PARSER_SEARCH_MODES,
   PARSER_ENTITY_KEYS,
+  INTENT_PARSER_CATALOG,
+  INTENT_PARSER_OUTPUT_TEMPLATE,
   INTENT_PARSER_PROMPT,
   INTENT_PARSER_RESPONSE_SCHEMA,
+  validateIntentCatalog,
+  buildIntentCatalogPrompt,
   normalizeParserIntent,
   normalizeIntentParserPayload,
   mapCanonicalIntentToExecutionIntent,

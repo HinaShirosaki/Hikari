@@ -289,6 +289,99 @@
               }
             }
           },
+          "inventory_lookup": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "status",
+              "query",
+              "terms_used",
+              "source",
+              "backfilled_sql",
+              "items"
+            ],
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "matched",
+                  "no_match",
+                  "needs_more_info"
+                ]
+              },
+              "query": {
+                "type": "string"
+              },
+              "terms_used": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "source": {
+                "type": "string"
+              },
+              "backfilled_sql": {
+                "type": "boolean"
+              },
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              },
+              "follow_up_questions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "record_lookup": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "status",
+              "query",
+              "source",
+              "backfilled_sql",
+              "items"
+            ],
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "matched",
+                  "no_match",
+                  "needs_more_info"
+                ]
+              },
+              "query": {
+                "type": "string"
+              },
+              "source": {
+                "type": "string"
+              },
+              "backfilled_sql": {
+                "type": "boolean"
+              },
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              },
+              "follow_up_questions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
           "developer_trace": {
             "type": "array",
             "items": {

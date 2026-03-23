@@ -1,0 +1,26 @@
+[
+  {
+    "name": "inventory-lookup",
+    "description": "Look up chemical and personal inventory records using query overrides and inventory search hints."
+  },
+  {
+    "name": "record-lookup",
+    "description": "Look up project, protocol, notebook, workflow, assay, and gel-related records from local agent data."
+  },
+  {
+    "name": "protocol-matching",
+    "description": "Rank local protocols against protocol candidates and select the best protocol for notebook generation."
+  },
+  {
+    "name": "notebook-generation",
+    "description": "Generate a protocol-based notebook draft using a selected protocol, project context, and placeholder values."
+  },
+  {
+    "name": "python-sandbox",
+    "description": "Run agent-authored Python code in an isolated sandbox with optional input files and readback artifacts."
+  },
+  {
+    "name": "sub-agent",
+    "description": "Create, message, inspect, list, and delete helper sub-agent sessions managed outside the main agent."
+  }
+]

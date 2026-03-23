@@ -23,6 +23,7 @@ contextBridge.exposeInMainWorld('enanaApi', {
   setTelegramBotToken: (token) => ipcRenderer.invoke('telegram:set-token', { token }),
   clearTelegramBotToken: () => ipcRenderer.invoke('telegram:clear-token'),
   getCodexLlmStatus: () => ipcRenderer.invoke('llm:codex-status'),
+  setCodexLlmModel: (model) => ipcRenderer.invoke('llm:codex-set-model', { model }),
   runCodexLlmPrompt: (payload) => ipcRenderer.invoke('llm:codex-generate', payload),
   agentChat: (payload) => ipcRenderer.invoke('agent:chat', payload),
   getAgentIoContract: () => ipcRenderer.invoke('agent:get-io-contract'),

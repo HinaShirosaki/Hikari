@@ -1399,6 +1399,242 @@ test('agent-chat sends settings API key to main process and stores assistant res
   assert.equal(status.textContent, 'Chat history cleared.');
 });
 
+test('agent-chat prioritizes inventory lookup summary text and renders lookup metadata panels', async () => {
+  const document = createMockDocument([
+    'agent-project-select',
+    'agent-context-summary',
+    'agent-chat-history',
+    'agent-message-input',
+    'agent-send-btn',
+    'agent-clear-btn',
+    'agent-status'
+  ]);
+  const history = document.getElementById('agent-chat-history');
+  const messageInput = document.getElementById('agent-message-input');
+  const sendBtn = document.getElementById('agent-send-btn');
+
+  const state = {
+    projects: [{ id: 'p1', name: 'Cancer Study' }],
+    protocols: [],
+    notebookEntries: [],
+    assays: [],
+    gelAnalyses: [],
+    workflows: [],
+    papers: [],
+    inventory: {},
+    labInventory: { chemicals: [] },
+    settings: {
+      llm: {
+        provider: 'openai',
+        model: 'gpt-5',
+        apiEndpoint: 'https://api.openai.com/v1/responses',
+        apiKey: 'sk-local-key'
+      },
+      agent: {
+        developerMode: false
+      }
+    },
+    agentChat: { projectId: '', messages: [] }
+  };
+
+  const window = {
+    enanaApi: {
+      autoSaveDataFile: async () => ({
+        ok: true,
+        filePath: '/tmp/enana-data.ena.json'
+      }),
+      agentChat: async () => ({
+        ok: true,
+        parser: {
+          primary_intent: 'inventory_lookup',
+          needs_clarification: false,
+          clarification_reason: null,
+          entities: {
+            inventory_item: 'pET28a-SUMO1'
+          },
+          inventory_search: {
+            normalized_query: 'pet28a-sumo1',
+            candidate_terms: ['pet28a-sumo1'],
+            aliases: [],
+            search_mode: 'mixed'
+          },
+          protocol_candidates: [],
+          reasoning_summary: 'Fallback parser reasoning.'
+        },
+        inventory_lookup: {
+          status: 'matched',
+          query: 'pet28a-sumo1',
+          terms_used: ['pet28a-sumo1'],
+          source: 'sqlite',
+          backfilled_sql: false,
+          items: [
+            {
+              kind: 'personal_sample',
+              zone: '-20 Degree',
+              id: 'sample-1',
+              name: 'pET28a-SUMO1',
+              location: 'Box A1'
+            },
+            {
+              kind: 'chemical',
+              zone: 'Lab Inventory',
+              id: 'chem-2',
+              name: 'IPTG',
+              location: 'Shelf 4'
+            }
+          ]
+        },
+        record_lookup: {
+          status: 'matched',
+          query: 'transformation',
+          source: 'sqlite',
+          backfilled_sql: false,
+          items: [
+            {
+              record_type: 'notebook',
+              id: 'note-1',
+              title: 'Transformation Run'
+            }
+          ]
+        },
+        developer_trace: []
+      })
+    }
+  };
+
+  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat.js'), {
+    document,
+    window
+  });
+  const agent = agentModule.initAgentChat({
+    state,
+    persist: () => {},
+    createId: (() => {
+      let idx = 0;
+      return () => `agent-msg-${idx += 1}`;
+    })(),
+    safeText: shared.safeText,
+    onNotebookEntriesChanged: () => {}
+  });
+
+  agent.render();
+  messageInput.value = 'Where is pET28a-SUMO1?';
+  trigger(sendBtn, 'click');
+  await flushAsync();
+  await flushAsync();
+
+  assert.equal(state.agentChat.messages.length, 2);
+  assert.equal(state.agentChat.messages[1].meta.inventory_lookup.status, 'matched');
+  assert.equal(state.agentChat.messages[1].meta.record_lookup.status, 'matched');
+  assert.match(state.agentChat.messages[1].text, /Found 2 inventory matches/);
+  assert.equal(/record match/i.test(state.agentChat.messages[1].text), false);
+  assert.match(history.innerHTML, /Inventory Lookup/);
+  assert.match(history.innerHTML, /Inventory Items/);
+  assert.match(history.innerHTML, /Record Lookup/);
+});
+
+test('agent-chat uses record lookup summary when inventory lookup payload is absent', async () => {
+  const document = createMockDocument([
+    'agent-project-select',
+    'agent-context-summary',
+    'agent-chat-history',
+    'agent-message-input',
+    'agent-send-btn',
+    'agent-clear-btn',
+    'agent-status'
+  ]);
+  const history = document.getElementById('agent-chat-history');
+  const messageInput = document.getElementById('agent-message-input');
+  const sendBtn = document.getElementById('agent-send-btn');
+
+  const state = {
+    projects: [{ id: 'p1', name: 'Cancer Study' }],
+    protocols: [],
+    notebookEntries: [],
+    assays: [],
+    gelAnalyses: [],
+    workflows: [],
+    papers: [],
+    inventory: {},
+    labInventory: { chemicals: [] },
+    settings: {
+      llm: {
+        provider: 'openai',
+        model: 'gpt-5',
+        apiEndpoint: 'https://api.openai.com/v1/responses',
+        apiKey: 'sk-local-key'
+      },
+      agent: {
+        developerMode: false
+      }
+    },
+    agentChat: { projectId: '', messages: [] }
+  };
+
+  const window = {
+    enanaApi: {
+      autoSaveDataFile: async () => ({
+        ok: true,
+        filePath: '/tmp/enana-data.ena.json'
+      }),
+      agentChat: async () => ({
+        ok: true,
+        parser: {
+          primary_intent: 'record_lookup',
+          needs_clarification: false,
+          clarification_reason: null,
+          entities: {
+            requested_output: 'transformation record'
+          },
+          inventory_search: {
+            normalized_query: null,
+            candidate_terms: [],
+            aliases: [],
+            search_mode: null
+          },
+          protocol_candidates: [],
+          reasoning_summary: 'Fallback parser reasoning.'
+        },
+        record_lookup: {
+          status: 'no_match',
+          query: 'transformation record',
+          source: 'sqlite',
+          backfilled_sql: false,
+          items: []
+        },
+        developer_trace: []
+      })
+    }
+  };
+
+  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat.js'), {
+    document,
+    window
+  });
+  const agent = agentModule.initAgentChat({
+    state,
+    persist: () => {},
+    createId: (() => {
+      let idx = 0;
+      return () => `agent-msg-${idx += 1}`;
+    })(),
+    safeText: shared.safeText,
+    onNotebookEntriesChanged: () => {}
+  });
+
+  agent.render();
+  messageInput.value = 'Find my transformation record.';
+  trigger(sendBtn, 'click');
+  await flushAsync();
+  await flushAsync();
+
+  assert.equal(state.agentChat.messages.length, 2);
+  assert.equal(state.agentChat.messages[1].meta.record_lookup.status, 'no_match');
+  assert.match(state.agentChat.messages[1].text, /No record matches found/);
+  assert.match(history.innerHTML, /Record Lookup/);
+  assert.equal(/Inventory Lookup/.test(history.innerHTML), false);
+});
+
 function buildStandardCurveObservations({
   sampleId = 'Std',
   concentrations = [0.1, 0.3, 1, 3, 10, 30],

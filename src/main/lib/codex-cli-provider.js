@@ -10,6 +10,7 @@ const LOGIN_STATUS_CACHE_TTL_MS = 30000;
 const CODEX_TMP_DIR_NAME = 'codex-cli';
 
 let loginStatusCache = null;
+let configuredCodexModel = '';
 
 function cleanText(value, maxLength = 1200) {
   const text = String(value || '').trim();
@@ -173,6 +174,45 @@ function isMissingBinaryError(error) {
     return true;
   }
   return /not found|enoent/i.test(String(error.message || ''));
+}
+
+function normalizeCodexCliModel(model = '') {
+  return cleanText(model, 120);
+}
+
+function getCodexCliModel() {
+  return configuredCodexModel;
+}
+
+function setCodexCliModel(model = '') {
+  configuredCodexModel = normalizeCodexCliModel(model);
+  return configuredCodexModel;
+}
+
+function resolveCodexCliModel(model = '') {
+  const explicitModel = normalizeCodexCliModel(model);
+  if (explicitModel) {
+    configuredCodexModel = explicitModel;
+    return explicitModel;
+  }
+  return configuredCodexModel;
+}
+
+function buildCodexCliExecArgs({ outputFile = '', model = '' } = {}) {
+  const args = [
+    '-a', 'never',
+    '-s', 'read-only',
+    'exec',
+    '--skip-git-repo-check',
+    '--output-last-message', outputFile,
+    '--color', 'never'
+  ];
+  const resolvedModel = resolveCodexCliModel(model);
+  if (resolvedModel) {
+    args.push('-m', resolvedModel);
+  }
+  args.push('-');
+  return args;
 }
 
 async function runCodexCommand({ args, cwd, input = '', timeoutMs = DEFAULT_TIMEOUT_MS }) {
@@ -345,19 +385,10 @@ async function requestCodexCliText({
       ].join('\n\n');
     }
 
-    const args = [
-      '-a', 'never',
-      '-s', 'read-only',
-      'exec',
-      '--skip-git-repo-check',
-      '--output-last-message', outputFile,
-      '--color', 'never'
-    ];
-    const cleanModel = String(model || '').trim();
-    if (cleanModel) {
-      args.push('-m', cleanModel);
-    }
-    args.push('-');
+    const args = buildCodexCliExecArgs({
+      outputFile,
+      model
+    });
 
     await runCodexCommand({
       args,
@@ -377,6 +408,9 @@ async function requestCodexCliText({
 }
 
 module.exports = {
+  buildCodexCliExecArgs,
+  getCodexCliModel,
   getCodexLoginStatus,
+  setCodexCliModel,
   requestCodexCliText
 };
