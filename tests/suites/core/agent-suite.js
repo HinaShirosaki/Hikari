@@ -174,16 +174,26 @@ module.exports = function registerAgentSuite(context = {}) {
 
     test('intent parser prompt includes recent transcript and active project context', () => {
       const prompt = agentIntentParser.buildIntentParserPrompt({
-        message: 'Do we have PEI in stock?',
+        message: 'Do we have PEI in stock for Atlas lot 7?',
         conversation: [
-          { role: 'user', text: 'Hello' },
-          { role: 'assistant', text: 'Hi there' }
+          { role: 'user', text: 'Too old and should be dropped.' },
+          { role: 'assistant', text: 'First retained assistant note.' },
+          { role: 'user', text: 'We are in the Cancer Study workspace.' },
+          { role: 'assistant', text: 'Last week we checked Tris.' },
+          { role: 'user', text: 'Need the latest PEI stock and location.' },
+          { role: 'assistant', text: 'I can look at recent inventory.' },
+          { role: 'user', text: 'Focus on Atlas lot 7.' },
+          { role: 'assistant', text: 'I will use the current project context.' },
+          { role: 'user', text: 'Please include whether it is reserved.' }
         ],
         projectName: 'Cancer Study'
       });
-      assert.match(prompt, /Active project context: Cancer Study/);
-      assert.match(prompt, /Recent conversation:/);
-      assert.match(prompt, /User message:/);
+      assert.equal(prompt.includes('Active project context: Cancer Study'), true);
+      assert.equal(prompt.includes('Recent conversation:'), true);
+      assert.equal(prompt.includes('1. assistant: First retained assistant note.'), true);
+      assert.equal(prompt.includes('8. user: Please include whether it is reserved.'), true);
+      assert.equal(prompt.includes('Too old and should be dropped.'), false);
+      assert.equal(prompt.includes('User message:\nDo we have PEI in stock for Atlas lot 7?'), true);
     });
 
     test('intent parser catalog stays in sync with allowed intents and rendered prompt', () => {
@@ -191,10 +201,40 @@ module.exports = function registerAgentSuite(context = {}) {
       assert.deepEqual(catalog.map((entry) => entry.name), agentIntentParser.PARSER_ALLOWED_INTENTS);
       assert.equal(typeof catalog[0].rules, 'string');
       assert.match(agentIntentParser.INTENT_PARSER_PROMPT, /## Allowed intents/);
-      assert.match(agentIntentParser.INTENT_PARSER_PROMPT, /### inventory_lookup/);
       assert.match(agentIntentParser.INTENT_PARSER_PROMPT, /Intent-specific output append:/);
-      assert.match(agentIntentParser.INTENT_PARSER_PROMPT, /Do we have PEI in stock, and where is it\?/);
       assert.equal(/Output:\n\{/.test(agentIntentParser.INTENT_PARSER_PROMPT), false);
+
+      let previousHeadingIndex = -1;
+      agentIntentParser.PARSER_ALLOWED_INTENTS.forEach((intentName) => {
+        const heading = `### ${intentName}`;
+        const headingIndex = agentIntentParser.INTENT_PARSER_PROMPT.indexOf(heading);
+        assert.notEqual(headingIndex, -1);
+        assert.equal(headingIndex > previousHeadingIndex, true);
+        previousHeadingIndex = headingIndex;
+      });
+
+      const customCatalog = catalog.map((entry) => ({
+        ...entry,
+        specific_output_append: Array.isArray(entry.specific_output_append)
+          ? entry.specific_output_append.map((row) => ({ ...row }))
+          : []
+      }));
+      const inventoryEntry = customCatalog.find((entry) => entry.name === 'inventory_lookup');
+      inventoryEntry.description = 'Custom inventory description.';
+      inventoryEntry.rules = 'Custom inventory rule.';
+      inventoryEntry.example_input = 'Where is the custom PEI bottle?';
+      inventoryEntry.specific_output_append = [
+        {
+          key: 'custom_inventory_field',
+          description: 'Custom inventory append description.'
+        }
+      ];
+      const renderedPrompt = agentIntentParser.buildIntentCatalogPrompt(customCatalog);
+      assert.equal(renderedPrompt.includes('### inventory_lookup'), true);
+      assert.equal(renderedPrompt.includes('Custom inventory description.'), true);
+      assert.equal(renderedPrompt.includes('Intent-specific rule: Custom inventory rule.'), true);
+      assert.equal(renderedPrompt.includes('- custom_inventory_field: Custom inventory append description.'), true);
+      assert.equal(renderedPrompt.includes('User: "Where is the custom PEI bottle?"'), true);
     });
 
     test('intent parser catalog validation rejects malformed entries', () => {
@@ -521,6 +561,10 @@ module.exports = function registerAgentSuite(context = {}) {
       const schemaNames = Object.keys(agentToolCall.AGENT_TOOL_CALL_CATALOG).filter((name) => name !== '$defs');
       assert.deepEqual(toolNames, ['inventory-lookup', 'record-lookup', 'protocol-matching', 'notebook-generation', 'python-sandbox', 'sub-agent', 'memory', 'literature-search', 'paper-download', 'paper-analysis', 'protocol-generation']);
       assert.deepEqual(schemaNames, toolNames);
+      const inventoryEntry = agentToolCall.AGENT_TOOL_CATALOG.find((entry) => entry.name === 'inventory-lookup');
+      const protocolEntry = agentToolCall.AGENT_TOOL_CATALOG.find((entry) => entry.name === 'protocol-matching');
+      const inventorySchema = agentToolCall.AGENT_TOOL_CALL_CATALOG['inventory-lookup'];
+      const pythonSchema = agentToolCall.AGENT_TOOL_CALL_CATALOG['python-sandbox'];
 
       const selectionPrompt = agentToolCall.buildToolSelectionPrompt({
         message: 'Find the right protocol and draft the notebook.',
@@ -533,26 +577,36 @@ module.exports = function registerAgentSuite(context = {}) {
         },
         projectName: 'Atlas'
       });
-      assert.match(selectionPrompt, /inventory-lookup/);
-      assert.match(selectionPrompt, /protocol-matching/);
-      assert.match(selectionPrompt, /python-sandbox/);
-      assert.match(selectionPrompt, /sub-agent/);
-      assert.match(selectionPrompt, /memory/);
-      assert.match(selectionPrompt, /literature-search/);
-      assert.match(selectionPrompt, /paper-download/);
-      assert.match(selectionPrompt, /paper-analysis/);
-      assert.match(selectionPrompt, /protocol-generation/);
-      assert.match(selectionPrompt, /Use this tool when the user needs to know whether a reagent/);
-      assert.match(selectionPrompt, /Active project context: Atlas/);
+      assert.equal(selectionPrompt.includes(`- ${inventoryEntry.name}: ${inventoryEntry.description}`), true);
+      assert.equal(selectionPrompt.includes(`- ${protocolEntry.name}: ${protocolEntry.description}`), true);
+      assert.equal(selectionPrompt.includes(`Usage: ${inventorySchema.description}`), true);
+      assert.equal(selectionPrompt.includes('Active project context: Atlas'), true);
+      assert.equal(selectionPrompt.includes('Recent conversation:\n1. user: I ran the HEK293 transfection.'), true);
+      assert.equal(selectionPrompt.includes('User message: Find the right protocol and draft the notebook.'), true);
+      assert.equal(selectionPrompt.includes('"primary_intent": "protocol_to_notebook"'), true);
+      assert.equal(selectionPrompt.includes('"protocol_candidates": [\n    "HEK293 Transfection"\n  ]'), true);
 
       const argumentsPrompt = agentToolCall.buildToolArgumentsPrompt({
         message: 'Use inventory lookup first, then run python if needed.',
+        conversation: [
+          { role: 'assistant', text: 'Protocol was likely HEK293 Transfection.' }
+        ],
+        parserPayload: {
+          primary_intent: 'protocol_to_notebook',
+          protocol_candidates: ['HEK293 Transfection']
+        },
         selectedToolNames: ['inventory-lookup', 'python-sandbox']
       });
-      assert.match(argumentsPrompt, /Selected tools in order: inventory-lookup, python-sandbox/);
-      assert.match(argumentsPrompt, /Input schema JSON:/);
-      assert.match(argumentsPrompt, /Detailed usage:/);
-      assert.match(argumentsPrompt, /readback_paths/);
+      assert.equal(argumentsPrompt.includes('Selected tools in order: inventory-lookup, python-sandbox'), true);
+      assert.equal(argumentsPrompt.includes('Tool: inventory-lookup'), true);
+      assert.equal(argumentsPrompt.includes('Tool: python-sandbox'), true);
+      assert.equal(argumentsPrompt.includes(`Detailed usage: ${inventorySchema.description}`), true);
+      assert.equal(argumentsPrompt.includes(`Detailed usage: ${pythonSchema.description}`), true);
+      assert.equal(argumentsPrompt.includes('Input schema JSON:'), true);
+      assert.equal(argumentsPrompt.includes('"readback_paths"'), true);
+      assert.equal(argumentsPrompt.includes('Recent conversation:\n1. assistant: Protocol was likely HEK293 Transfection.'), true);
+      assert.equal(argumentsPrompt.includes('"primary_intent": "protocol_to_notebook"'), true);
+      assert.equal(argumentsPrompt.includes('Tool: protocol-matching'), false);
     });
 
     test('agent tool-call catalog validators reject malformed catalog data', () => {
@@ -1148,11 +1202,21 @@ module.exports = function registerAgentSuite(context = {}) {
 
     test('science reasoning loop returns partial answer when the tool budget is exhausted', async () => {
       const runtime = agentScienceReasoningLoop.createScienceReasoningLoopRuntime({
+        requestStructuredJsonPayload: async () => ({
+          ok: false,
+          error: 'LLM disabled for deterministic fallback testing.'
+        }),
         startAgentSession: async () => ({ step: 0 }),
-        extractAgentSessionFunctionCalls: () => [
-          { callId: 'call-1', name: 'run_python_sandbox', argsText: JSON.stringify({ code: 'print(1)' }) }
-        ],
-        extractAgentSessionText: () => 'I started a computation.',
+        extractAgentSessionFunctionCalls: (session) => (
+          session.step === 0
+            ? [{ callId: 'call-1', name: 'run_python_sandbox', argsText: JSON.stringify({ code: 'print(1)' }) }]
+            : []
+        ),
+        extractAgentSessionText: (session) => (
+          session.step === 0
+            ? 'I started a computation.'
+            : 'Computation completed, but I still need historical context for the outliers.'
+        ),
         continueAgentSessionWithToolOutputs: async () => ({ step: 1 }),
         continueAgentSessionWithUserMessage: async (session) => session,
         resolveToolDefinitions: (selectedToolNames) => selectedToolNames.map((name) => ({
@@ -1178,18 +1242,6 @@ module.exports = function registerAgentSuite(context = {}) {
             reason: 'Need contextual interpretation.'
           },
           can_answer_with_limitations: true
-        }),
-        synthesizeScienceFinal: async ({ partial, evaluator }) => ({
-          answer: partial
-            ? `Partial answer. Remaining gaps: ${evaluator.missing_requirements.join('; ')}.`
-            : 'Complete answer.',
-          confidence: 0.49,
-          decision_record: {
-            assumptions: ['Budget exhausted before additional context retrieval.'],
-            open_questions: evaluator.missing_requirements,
-            verification_notes: ['Returned best-effort output.']
-          },
-          follow_up_questions: ['Could you share the expected interpretation target?']
         })
       });
 
@@ -1231,8 +1283,12 @@ module.exports = function registerAgentSuite(context = {}) {
 
       assert.equal(result.status, 'partial');
       assert.equal(result.rounds_executed, 1);
-      assert.match(result.answer, /Remaining gaps/i);
-      assert.equal(result.follow_up_questions.length >= 1, true);
+      assert.match(result.answer, /Computation completed, but I still need historical context for the outliers\./);
+      assert.match(result.answer, /Remaining gaps: A clearer interpretation is still needed\./);
+      assert.match(result.answer, /Latest tool summary: Python sandbox execution completed\./);
+      assert.equal(result.citations.length, 1);
+      assert.equal(result.citations[0].source, 'python_sandbox');
+      assert.equal(result.follow_up_questions.some((question) => /A clearer interpretation is still needed/.test(question)), true);
     });
 
     test('science reasoning loop turns invalid tool arguments into a failed tool result', async () => {
@@ -1346,34 +1402,64 @@ module.exports = function registerAgentSuite(context = {}) {
 
     test('science reasoning loop exposes the expected result-analysis tool priority including python first', async () => {
       let capturedToolNames = [];
+      const feedbackMessages = [];
+      const executedTools = [];
+      const scriptedTurns = [
+        {
+          calls: [],
+          text: 'I can probably answer without running a computation.'
+        },
+        {
+          calls: [
+            { callId: 'call-1', name: 'run_python_sandbox', argsText: JSON.stringify({ code: 'print("trend")' }) }
+          ],
+          text: 'I should quantify the trend first.'
+        },
+        {
+          calls: [],
+          text: 'Now I have computation evidence.'
+        }
+      ];
       const runtime = agentScienceReasoningLoop.createScienceReasoningLoopRuntime({
         startAgentSession: async ({ toolDefinitions }) => {
           capturedToolNames = toolDefinitions.map((tool) => tool.name);
           return { step: 0 };
         },
-        extractAgentSessionFunctionCalls: () => [],
-        extractAgentSessionText: () => 'Enough information already.',
-        continueAgentSessionWithToolOutputs: async (session) => session,
-        continueAgentSessionWithUserMessage: async (session) => session,
+        extractAgentSessionFunctionCalls: (session) => scriptedTurns[session.step].calls,
+        extractAgentSessionText: (session) => scriptedTurns[session.step].text,
+        continueAgentSessionWithToolOutputs: async (session) => ({ step: session.step + 1 }),
+        continueAgentSessionWithUserMessage: async (session, feedback) => {
+          feedbackMessages.push(String(feedback || ''));
+          return { step: session.step + 1 };
+        },
         resolveToolDefinitions: (selectedToolNames) => selectedToolNames.map((name) => ({
           name,
           description: name,
-          parameters: {
-            type: 'object',
-            additionalProperties: false,
-            properties: {}
-          }
+          parameters: name === 'run_python_sandbox'
+            ? {
+              type: 'object',
+              additionalProperties: false,
+              required: ['code'],
+              properties: {
+                code: { type: 'string' }
+              }
+            }
+            : {
+              type: 'object',
+              additionalProperties: false,
+              properties: {}
+            }
         })),
         evaluateScienceRound: async () => ({
           satisfied: true,
-          reason: 'No extra tool was needed for this test harness.',
+          reason: 'Harness evaluator thinks the current evidence is already sufficient.',
           missing_requirements: [],
           should_continue: false,
           next_tool_hint: null,
           can_answer_with_limitations: true
         }),
-        synthesizeScienceFinal: async () => ({
-          answer: 'Ready.',
+        synthesizeScienceFinal: async ({ toolTrace }) => ({
+          answer: `Ready after ${toolTrace.length} computation step.`,
           confidence: 0.6,
           decision_record: {
             assumptions: [],
@@ -1384,12 +1470,12 @@ module.exports = function registerAgentSuite(context = {}) {
         })
       });
 
-      await runtime.runResultAnalysis({
+      const result = await runtime.runResultAnalysis({
         provider: 'openai',
         endpoint: 'https://example.test',
         apiKey: 'key',
         model: 'gpt-test',
-        message: 'Quantify the assay trend.',
+        message: 'Compute the assay trend.',
         conversation: [],
         parserPayload: {
           primary_intent: 'result_analysis',
@@ -1404,17 +1490,34 @@ module.exports = function registerAgentSuite(context = {}) {
           plan: {},
           classifier: {}
         },
-        runTool: async () => ({
-          ok: true,
-          tool_name: 'run_python_sandbox',
-          input: {},
-          result: { items: [], citations: [], summary: 'ok' },
-          items: [],
-          citations: [],
-          summary: 'ok'
-        })
+        runTool: async (toolName, args) => {
+          executedTools.push({ toolName, args });
+          return {
+            ok: true,
+            tool_name: toolName,
+            input: args,
+            result: {
+              items: [{ run_id: 'py-1' }],
+              citations: [{ source: 'python_sandbox', pointer: 'py-1', reason: 'Computed the assay trend.' }],
+              summary: 'Python sandbox execution completed.'
+            },
+            items: [{ run_id: 'py-1' }],
+            citations: [{ source: 'python_sandbox', pointer: 'py-1', reason: 'Computed the assay trend.' }],
+            summary: 'Python sandbox execution completed.'
+          };
+        }
       });
 
+      assert.equal(result.status, 'completed');
+      assert.equal(result.tool_trace.length, 1);
+      assert.equal(result.tool_trace[0].tool_name, 'run_python_sandbox');
+      assert.equal(result.citations[0].source, 'python_sandbox');
+      assert.equal(feedbackMessages.length, 1);
+      assert.match(feedbackMessages[0], /Suggested next tool: run_python_sandbox\./i);
+      assert.equal(executedTools.length, 1);
+      assert.equal(executedTools[0].toolName, 'run_python_sandbox');
+      assert.equal(executedTools[0].args.code, 'print("trend")');
+      assert.match(result.answer, /Ready after 1 computation step/i);
       assert.equal(capturedToolNames[0], 'run_python_sandbox');
       assert.equal(capturedToolNames.includes('search_notebook_entries'), true);
       assert.equal(capturedToolNames.includes('search_web'), true);

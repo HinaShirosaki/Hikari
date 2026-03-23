@@ -142,15 +142,17 @@ test('telegram bridge keeps only supported renderer IPC channel', () => {
   assert.equal(preloadSource.includes('onTelegramCommand'), true);
 });
 
-test('main composes dedicated IPC registrars and agent registry runtimes', () => {
+test('main composes dedicated IPC registrars with generic tool runtime support', () => {
   const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
   const dataRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-data-ipc.js'), 'utf8');
   const agentRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc.js'), 'utf8');
   const systemRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-system-ipc.js'), 'utf8');
-  const toolRegistrySource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-main-tool-registry.js'), 'utf8');
+  const toolCallSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-tool-call.js'), 'utf8');
+  const runtimeSupportSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-runtime-support.js'), 'utf8');
   const codexRuntimeSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-codex-runtime.js'), 'utf8');
 
-  assert.match(mainSource, /createMainAgentToolRegistry/);
+  assert.match(mainSource, /createAgentToolCallRuntime/);
+  assert.match(mainSource, /createAgentRuntimeSupport/);
   assert.match(mainSource, /createCodexAgentRuntime/);
   assert.match(mainSource, /registerDataIpc/);
   assert.match(mainSource, /registerAgentIpc/);
@@ -158,7 +160,8 @@ test('main composes dedicated IPC registrars and agent registry runtimes', () =>
   assert.match(dataRegistrarSource, /function registerDataIpc\(deps = \{\}\)/);
   assert.match(agentRegistrarSource, /function registerAgentIpc\(deps = \{\}\)/);
   assert.match(systemRegistrarSource, /function registerSystemIpc\(deps = \{\}\)/);
-  assert.match(toolRegistrySource, /function createMainAgentToolRegistry\(deps = \{\}\)/);
+  assert.match(toolCallSource, /function createAgentToolCallRuntime\(deps = \{\}\)/);
+  assert.match(runtimeSupportSource, /function createAgentRuntimeSupport\(deps = \{\}\)/);
   assert.match(codexRuntimeSource, /function createCodexAgentRuntime\(deps = \{\}\)/);
 });
 
@@ -450,22 +453,25 @@ test('agent no longer depends on a serialized io contract file', () => {
   assert.equal(promptsSource.includes('agent-io-contract.json'), false);
 });
 
-test('agent tool registry defines local agent tool metadata and output schema', () => {
-  const registrySource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-main-tool-registry.js'), 'utf8');
-  assert.match(registrySource, /function buildMainAgentToolMetadata\(\)/);
-  assert.match(registrySource, /const AGENT_TOOL_DEFINITIONS = AGENT_TOOL_METADATA\.map/);
-  assert.match(registrySource, /const AGENT_TOOL_OUTPUT_SCHEMA_NAME = 'enana_agent_tool_output';/);
-  assert.match(registrySource, /const AGENT_TOOL_OUTPUT_SCHEMA_VERSION = '1\.0\.0';/);
+test('agent runtime support keeps snapshot normalization and synthesis helpers outside main', () => {
+  const runtimeSupportSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-runtime-support.js'), 'utf8');
+  assert.match(runtimeSupportSource, /function normalizeAgentSnapshot\(rawSnapshot\)/);
+  assert.match(runtimeSupportSource, /function buildAgentSystemPrompt\(projectName, prompts\)/);
+  assert.match(runtimeSupportSource, /function buildAgentSynthesisPrompt\(_requiresApproval, prompts\)/);
+  assert.match(runtimeSupportSource, /function normalizeAgentOutput\(raw, fallbackText\)/);
 });
 
-test('agent tool registry keeps key retrieval and execution tools', () => {
-  const registrySource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-main-tool-registry.js'), 'utf8');
-  assert.match(registrySource, /makeTool\('search_workflows'/);
-  assert.match(registrySource, /makeTool\('search_inventory'/);
-  assert.match(registrySource, /makeTool\('search_papers'/);
-  assert.match(registrySource, /makeTool\('search_web'/);
-  assert.match(registrySource, /name: 'toolbox_plannotate'/);
-  assert.match(registrySource, /name: 'run_python_sandbox'/);
+test('generic agent tool catalog keeps key retrieval and execution tools', () => {
+  const toolsCatalog = JSON.parse(fs.readFileSync(
+    path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'Tools.json'),
+    'utf8'
+  ));
+  assert.equal(toolsCatalog.some((entry) => entry?.name === 'inventory-lookup'), true);
+  assert.equal(toolsCatalog.some((entry) => entry?.name === 'record-lookup'), true);
+  assert.equal(toolsCatalog.some((entry) => entry?.name === 'python-sandbox'), true);
+  assert.equal(toolsCatalog.some((entry) => entry?.name === 'literature-search'), true);
+  assert.equal(toolsCatalog.some((entry) => entry?.name === 'paper-download'), true);
+  assert.equal(toolsCatalog.some((entry) => entry?.name === 'protocol-generation'), true);
 });
 
 test('agent log replay and developer tool smoke-test IPC bridges remain wired without contract file', () => {
