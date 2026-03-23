@@ -246,7 +246,7 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
     persist();
   }
 
-  function onSaveLlmSettings(event) {
+  async function onSaveLlmSettings(event) {
     event.preventDefault();
     const provider = normalizeLlmProvider(settingProvider?.value, settingApiEndpoint.value);
     const endpoint = settingApiEndpoint.value.trim() || defaultLlmEndpointForProvider(provider);
@@ -264,6 +264,14 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
     };
 
     persist();
+
+    if (provider === 'codex' && window.enanaApi?.setCodexLlmModel) {
+      try {
+        await window.enanaApi.setCodexLlmModel(state.settings.llm.model);
+      } catch {
+        // Keep settings save non-blocking if the desktop bridge is unavailable.
+      }
+    }
   }
 
   function onProviderChanged() {

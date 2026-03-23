@@ -195,8 +195,9 @@ test('data-helpers default bundle hydrator preserves parsed snapshot settings', 
   }
 });
 
-test('storage bundle helper sync + hydrate roundtrip restores protocols notebook and inventory from sidecars/sqlite', async () => {
+test('storage bundle helper sync + hydrate roundtrip restores protocols notebook inventory and samples from sidecars/sqlite', async () => {
   const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle.js'));
+  const { createAgentLookupRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-lookup-runtime.js'));
   const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'storage-bundle-roundtrip-'));
   const dataFilePath = path.join(tempDir, 'example.ena.json');
   try {
@@ -253,6 +254,29 @@ test('storage bundle helper sync + hydrate roundtrip restores protocols notebook
           }
         ]
       },
+      samples: [
+        {
+          id: 'sample-1',
+          code: 'S-001',
+          name: 'Atlas construct',
+          type: 'plasmid',
+          lot: 'L1',
+          concentration: '1 mg/mL',
+          notes: 'seed stock',
+          location: {
+            storageType: 'room',
+            box: 'Plasmid Box',
+            position: 'A1'
+          },
+          inventoryLink: {
+            section: 'Room Temp',
+            containerId: 'box-1',
+            wellIndex: 0
+          },
+          chemicalLinks: ['chem-1'],
+          updatedAt: '2026-03-20T11:00:00.000Z'
+        }
+      ],
       settings: {
         appearance: {
           uiStyle: 'classic',
@@ -295,7 +319,36 @@ test('storage bundle helper sync + hydrate roundtrip restores protocols notebook
     assert.equal(hydrated.snapshot.labInventory.chemicals.length, 1);
     assert.equal(Array.isArray(hydrated.snapshot?.inventory?.['Room Temp']), true);
     assert.equal(hydrated.snapshot.inventory['Room Temp'].length, 1);
+    assert.equal(Array.isArray(hydrated.snapshot?.samples), true);
+    assert.equal(hydrated.snapshot.samples.length, 1);
+    assert.equal(hydrated.snapshot.samples[0].id, 'sample-1');
     assert.equal(hydrated.snapshot?.settings?.appearance?.uiStyle, 'classic');
+
+    const lookupRuntime = createAgentLookupRuntime({
+      getBundlePaths: bundleHelpers.getBundlePaths,
+      hydrateSnapshotFromBundle: bundleHelpers.hydrateSnapshotFromBundle,
+      syncBundleFromSnapshot: bundleHelpers.syncBundleFromSnapshot
+    });
+    const inventorySearch = await lookupRuntime.searchInventoryIndex({
+      dataFilePath,
+      snapshot: compactSnapshot,
+      query: 'Atlas construct',
+      searchTerms: ['atlas', 'construct'],
+      limit: 6
+    });
+    assert.equal(inventorySearch.usedSqlite, true);
+    assert.equal(inventorySearch.items.some((item) => item.kind === 'personal_sample'), true);
+
+    const recordSearch = await lookupRuntime.searchRecordIndex({
+      dataFilePath,
+      snapshot: compactSnapshot,
+      query: 'Protein Purification',
+      searchTerms: ['protein', 'purification'],
+      limit: 6
+    });
+    assert.equal(recordSearch.usedSqlite, true);
+    assert.equal(recordSearch.items.length > 0, true);
+    assert.equal(recordSearch.items.some((item) => item.record_type === 'protocol'), true);
   } finally {
     await fsPromises.rm(tempDir, { recursive: true, force: true });
   }
@@ -388,6 +441,10 @@ test('agent chat contract exposes parser-first output schema', () => {
   assert.equal(Boolean(props.parser.properties?.reasoning_summary), true);
   assert.equal(Boolean(props.protocol_to_notebook), true);
   assert.equal(props.protocol_to_notebook.type, 'object');
+  assert.equal(Boolean(props.inventory_lookup), true);
+  assert.equal(props.inventory_lookup.type, 'object');
+  assert.equal(Boolean(props.record_lookup), true);
+  assert.equal(props.record_lookup.type, 'object');
   assert.equal(Boolean(props.developer_trace), true);
   assert.equal(props.developer_trace.type, 'array');
   assert.equal(Boolean(props.routing), false);
@@ -514,9 +571,17 @@ test('main agent controller output returns parser payload and optional developer
   assert.match(mainSource, /const result = \{\s*ok: true,\s*parser: parserResult\.payload\s*\}/);
   assert.match(mainSource, /if \(parserResult\.payload\.primary_intent === 'protocol_to_notebook'\)/);
   assert.match(mainSource, /result\.protocol_to_notebook = protocolNotebookResult/);
+  assert.match(mainSource, /if \(parserResult\.payload\.primary_intent === 'inventory_lookup'\)/);
+  assert.match(mainSource, /result\.inventory_lookup = inventoryLookupResult/);
+  assert.match(mainSource, /else if \(parserResult\.payload\.primary_intent === 'record_lookup'\)/);
+  assert.match(mainSource, /result\.record_lookup = recordLookupResult/);
   assert.match(mainSource, /protocolNotebookRuntime\.runFlow\(/);
   assert.match(mainSource, /protocolNotebookRuntime\.hasPendingSession\(/);
   assert.match(mainSource, /stage: 'protocol_to_notebook_followup'/);
+  assert.match(mainSource, /stage: 'inventory_lookup_completed'/);
+  assert.match(mainSource, /stage: 'record_lookup_completed'/);
+  assert.match(mainSource, /createAgentLookupRuntime/);
+  assert.match(mainSource, /buildInventorySearchTerms/);
   assert.match(mainSource, /createProtocolNotebookRuntime/);
   assert.match(mainSource, /if \(executionFlags\.developerMode === true\) \{\s*result\.developer_trace = asArray\(traceContext\?\.rows\);/);
   assert.match(mainSource, /requestIntentParserPayload\(/);
@@ -541,18 +606,28 @@ test('main agent logs persist redacted llm traces and replay wiring', () => {
   assert.match(observabilitySource, /trace_response_payload_count/);
 });
 
-test('protocol notebook prompts enforce exact placeholder mapping and follow-up completion guidance', () => {
-  const protocolRuntimeSource = fs.readFileSync(
+test('protocol runtimes preserve placeholder-fill and tie-break prompt guidance after extraction', () => {
+  const protocolNotebookSource = fs.readFileSync(
     path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-protocol-notebook.js'),
     'utf8'
   );
-  assert.match(protocolRuntimeSource, /Extract exact value spans from the latest user text/);
-  assert.match(protocolRuntimeSource, /latest user message is a direct answer/);
-  assert.match(protocolRuntimeSource, /filled_values\.placeholder_key must exactly match one of the provided placeholder_key values/);
-  assert.match(protocolRuntimeSource, /Ask follow_up_questions only when ambiguity remains/);
-  assert.match(protocolRuntimeSource, /Example single-turn:/);
-  assert.match(protocolRuntimeSource, /Example follow-up:/);
-  assert.match(protocolRuntimeSource, /do not be over-cautious/);
+  const protocolMatchingSource = fs.readFileSync(
+    path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-protocol-matching.js'),
+    'utf8'
+  );
+  const notebookGenerationSource = fs.readFileSync(
+    path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-notebook-generation.js'),
+    'utf8'
+  );
+  assert.match(protocolNotebookSource, /createProtocolMatchingRuntime/);
+  assert.match(protocolNotebookSource, /createNotebookGenerationRuntime/);
+  assert.match(notebookGenerationSource, /Extract exact value spans from the latest user text/);
+  assert.match(notebookGenerationSource, /latest user message is a direct answer/);
+  assert.match(notebookGenerationSource, /filled_values\.placeholder_key must exactly match one of the provided placeholder_key values/);
+  assert.match(notebookGenerationSource, /Ask follow_up_questions only when ambiguity remains/);
+  assert.match(notebookGenerationSource, /Example single-turn:/);
+  assert.match(notebookGenerationSource, /Example follow-up:/);
+  assert.match(protocolMatchingSource, /do not be over-cautious/);
 });
 
 test('main agent controller hard-errors when intent parser output is invalid', () => {
@@ -562,18 +637,60 @@ test('main agent controller hard-errors when intent parser output is invalid', (
   assert.match(mainSource, /Intent parser failed:/);
 });
 
+test('agent tool-call helper exposes catalogs and generic executor registry', () => {
+  const source = fs.readFileSync(
+    path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-tool-call.js'),
+    'utf8'
+  );
+  const toolsCatalog = JSON.parse(fs.readFileSync(
+    path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'Tools.json'),
+    'utf8'
+  ));
+  const toolCallCatalog = JSON.parse(fs.readFileSync(
+    path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'Tool-call.json'),
+    'utf8'
+  ));
+  assert.equal(Array.isArray(toolsCatalog), true);
+  assert.equal(Boolean(toolCallCatalog.$defs), true);
+  assert.equal(toolsCatalog.some((entry) => entry?.name === 'python-sandbox'), true);
+  assert.equal(toolsCatalog.some((entry) => entry?.name === 'sub-agent'), true);
+  assert.equal(Boolean(toolCallCatalog['python-sandbox']?.input_schema), true);
+  assert.equal(Boolean(toolCallCatalog['sub-agent']?.input_schema), true);
+  assert.match(source, /const toolExecutors = new Map\(\);/);
+  assert.match(source, /function registerToolExecutor\(toolName, executor\)/);
+  assert.match(source, /function getToolExecutor\(toolName\)/);
+  assert.match(source, /Object\.entries\(ensureObject\(deps\.toolExecutors\)\)/);
+  assert.equal(source.includes('createDefaultAgentToolBindingBundle'), false);
+  assert.equal(/["']inventory-lookup["']/.test(source), false);
+  assert.equal(/["']record-lookup["']/.test(source), false);
+  assert.equal(/["']protocol-matching["']/.test(source), false);
+  assert.equal(/["']notebook-generation["']/.test(source), false);
+  assert.equal(/["']python-sandbox["']/.test(source), false);
+  assert.equal(/["']sub-agent["']/.test(source), false);
+});
+
 test('agent helper cleanup keeps intent parser, protocol notebook runtime, observability, controller utils, and python helpers', () => {
   const agentDir = path.join(__dirname, 'src', 'main', 'helpers', 'agent');
-  const expected = new Set([
+  const expected = [
     'Readme.md',
+    'Tools.json',
+    'Tool-call.json',
     'agent-intent-parser.js',
     'agent-controller-utils.js',
+    'agent-lookup-runtime.js',
+    'agent-tool-call.js',
+    'agent-notebook-generation.js',
     'agent-protocol-notebook.js',
+    'agent-protocol-matching.js',
     'agent-observability.js',
-    'agent-python.js'
-  ]);
-  const entries = fs.readdirSync(agentDir).filter((name) => name.endsWith('.js') || name === 'Readme.md');
-  assert.deepEqual(new Set(entries), expected);
+    'agent-python.js',
+    'agent-python-sandbox.js',
+    'agent-sub-agent.js'
+  ];
+  const entries = fs.readdirSync(agentDir).filter((name) => name.endsWith('.js') || name.endsWith('.json') || name === 'Readme.md');
+  expected.forEach((name) => {
+    assert.equal(entries.includes(name), true, `Expected ${name} to remain in agent helpers.`);
+  });
 
   const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
   assert.equal(/agent-routing/.test(mainSource), false);
@@ -581,6 +698,23 @@ test('agent helper cleanup keeps intent parser, protocol notebook runtime, obser
   assert.equal(/agent-validation-safety/.test(mainSource), false);
   assert.equal(/agent-sqlite-index/.test(mainSource), false);
   assert.equal(/agent-phase89-runtime/.test(mainSource), false);
+});
+
+test('sub-agent helper exports reusable runtime and action contract', () => {
+  const source = fs.readFileSync(
+    path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-sub-agent.js'),
+    'utf8'
+  );
+  const toolCallCatalog = JSON.parse(fs.readFileSync(
+    path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'Tool-call.json'),
+    'utf8'
+  ));
+  assert.match(source, /const SUB_AGENT_ACTIONS = Object\.freeze/);
+  assert.match(source, /function createAgentSubAgentRuntime\(deps = \{\}\)/);
+  assert.match(source, /async function createSubAgent\(input = \{\}\)/);
+  assert.match(source, /async function sendSubAgentMessage\(input = \{\}\)/);
+  assert.match(source, /function deleteSubAgent\(input = \{\}\)/);
+  assert.deepEqual(toolCallCatalog['sub-agent']?.input_schema?.properties?.action?.enum, ['create', 'message', 'delete', 'get', 'list']);
 });
 
 test('sequence library helper creates storage folder, sqlite db, and status-filtered entries', async () => {
@@ -703,6 +837,16 @@ test('main wires intent parser + observability paths for parser-only controller'
   assert.match(mainSource, /recordAgentLlmTrace\(/);
   assert.equal(/agent-sqlite-index/.test(mainSource), false);
   assert.equal(/agent-phase89-runtime/.test(mainSource), false);
+});
+
+test('agent lookup runtime composes reusable inventory and record helpers', () => {
+  const source = readSource('src/main/helpers/agent/agent-lookup-runtime.js');
+  assert.match(source, /require\('\.\/agent-inventory-lookup'\)/);
+  assert.match(source, /require\('\.\/agent-record-lookup\.js'\)/);
+  assert.match(source, /createAgentInventoryLookupRuntime\(\{/);
+  assert.match(source, /createAgentRecordLookupRuntime\(sharedLookupDeps\)/);
+  assert.match(source, /searchInventoryIndex:\s*inventoryLookupRuntime\.searchInventoryIndex/);
+  assert.match(source, /searchRecordIndex:\s*recordLookupRuntime\.searchRecordIndex/);
 });
 
 test('main no longer wires legacy routing and phase orchestration helpers', () => {

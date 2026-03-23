@@ -1,7 +1,7 @@
 {
   "schema_name": "enana_storage_manifest",
   "schema_version": "1.0.0",
-  "generated_at": "2026-03-21T21:42:48.978Z",
+  "generated_at": "2026-03-23T00:47:04.870Z",
   "root_path": "/Users/shiyifan/Projects/Enana/Testdata",
   "discovered_files": [
     {
@@ -16,14 +16,14 @@
       "type": "file",
       "role": "data_file",
       "size_bytes": 2463,
-      "modified_at": "2026-03-21T21:35:46.356Z"
+      "modified_at": "2026-03-21T22:01:57.658Z"
     },
     {
       "relative_path": "enana-chemicals.index.sqlite",
       "type": "file",
       "role": "sqlite_index",
       "size_bytes": 61440,
-      "modified_at": "2026-03-21T21:35:46.359Z"
+      "modified_at": "2026-03-21T22:01:57.664Z"
     },
     {
       "relative_path": "enana-chemicals.index.sqlite-shm",
@@ -44,21 +44,21 @@
       "type": "file",
       "role": "notebook_sidecar",
       "size_bytes": 139,
-      "modified_at": "2026-03-21T21:35:46.357Z"
+      "modified_at": "2026-03-21T22:01:57.659Z"
     },
     {
       "relative_path": "enana-chemicals.protocols.json",
       "type": "file",
       "role": "protocol_sidecar",
       "size_bytes": 130,
-      "modified_at": "2026-03-21T21:35:46.357Z"
+      "modified_at": "2026-03-21T22:01:57.659Z"
     },
     {
       "relative_path": "enana-sample.notebook-pages.index.sqlite",
       "type": "file",
       "role": "sqlite_index",
       "size_bytes": 81920,
-      "modified_at": "2026-03-21T21:36:58.916Z"
+      "modified_at": "2026-03-21T21:43:51.846Z"
     },
     {
       "relative_path": "enana-sample.notebook-pages.index.sqlite-shm",
@@ -78,29 +78,29 @@
       "relative_path": "enana-sample.notebook-pages.json",
       "type": "file",
       "role": "notebook_sidecar",
-      "size_bytes": 141224,
-      "modified_at": "2026-03-21T21:36:58.911Z"
+      "size_bytes": 153195,
+      "modified_at": "2026-03-21T21:43:51.841Z"
     },
     {
       "relative_path": "enana-sample.notebook-pages.notebook-pages.json",
       "type": "file",
       "role": "notebook_sidecar",
-      "size_bytes": 1069,
-      "modified_at": "2026-03-21T21:36:58.912Z"
+      "size_bytes": 1918,
+      "modified_at": "2026-03-21T21:43:51.842Z"
     },
     {
       "relative_path": "enana-sample.notebook-pages.protocols.json",
       "type": "file",
       "role": "protocol_sidecar",
       "size_bytes": 16528,
-      "modified_at": "2026-03-21T21:36:58.912Z"
+      "modified_at": "2026-03-21T21:43:51.841Z"
     },
     {
       "relative_path": "enana-storage-manifest.json",
       "type": "file",
       "role": "storage_manifest",
       "size_bytes": 11780,
-      "modified_at": "2026-03-21T21:35:46.349Z"
+      "modified_at": "2026-03-21T22:01:57.650Z"
     },
     {
       "relative_path": "Project",
@@ -308,6 +308,43 @@
   ],
   "bundles": [
     {
+      "data_file_path": "enana-sample.notebook-pages.json",
+      "bundle_paths": {
+        "protocols_path": "enana-sample.notebook-pages.protocols.json",
+        "notebook_pages_path": "enana-sample.notebook-pages.notebook-pages.json",
+        "sqlite_path": "enana-sample.notebook-pages.index.sqlite"
+      },
+      "counts": {
+        "protocols": 6,
+        "notebookEntries": 2,
+        "chemicals": 3,
+        "personalInventoryContainers": 1
+      },
+      "migration": {
+        "applied": [
+          "protocol_sidecar",
+          "notebook_sidecar",
+          "inventory_sqlite"
+        ],
+        "warnings": []
+      }
+    },
+    {
+      "data_file_path": "enana-sample.notebook-pages.protocols.json",
+      "bundle_paths": {
+        "protocols_path": "enana-sample.notebook-pages.protocols.protocols.json",
+        "notebook_pages_path": "enana-sample.notebook-pages.protocols.notebook-pages.json",
+        "sqlite_path": "enana-sample.notebook-pages.protocols.index.sqlite"
+      },
+      "counts": {
+        "protocols": 6,
+        "notebookEntries": 0,
+        "chemicals": 0,
+        "personalInventoryContainers": 0
+      },
+      "migration": null
+    },
+    {
       "data_file_path": "enana-chemicals.ena.json",
       "bundle_paths": {
         "protocols_path": "enana-chemicals.protocols.json",
@@ -343,43 +380,6 @@
         "personalInventoryContainers": 0
       },
       "migration": null
-    },
-    {
-      "data_file_path": "enana-sample.notebook-pages.json",
-      "bundle_paths": {
-        "protocols_path": "enana-sample.notebook-pages.protocols.json",
-        "notebook_pages_path": "enana-sample.notebook-pages.notebook-pages.json",
-        "sqlite_path": "enana-sample.notebook-pages.index.sqlite"
-      },
-      "counts": {
-        "protocols": 6,
-        "notebookEntries": 1,
-        "chemicals": 3,
-        "personalInventoryContainers": 1
-      },
-      "migration": {
-        "applied": [
-          "protocol_sidecar",
-          "notebook_sidecar",
-          "inventory_sqlite"
-        ],
-        "warnings": []
-      }
-    },
-    {
-      "data_file_path": "enana-sample.notebook-pages.protocols.json",
-      "bundle_paths": {
-        "protocols_path": "enana-sample.notebook-pages.protocols.protocols.json",
-        "notebook_pages_path": "enana-sample.notebook-pages.protocols.notebook-pages.json",
-        "sqlite_path": "enana-sample.notebook-pages.protocols.index.sqlite"
-      },
-      "counts": {
-        "protocols": 6,
-        "notebookEntries": 0,
-        "chemicals": 0,
-        "personalInventoryContainers": 0
-      },
-      "migration": null
     }
   ],
   "sequence_library": {
@@ -394,7 +394,7 @@
   "summary": {
     "bundles": 4,
     "protocols": 6,
-    "notebookEntries": 1,
+    "notebookEntries": 2,
     "chemicals": 3,
     "personalInventoryContainers": 1,
     "sequenceEntries": 4

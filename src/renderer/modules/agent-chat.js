@@ -287,6 +287,34 @@ function collectActivityRows(meta) {
   if (missingCount > 0) {
     upsertRow('pending', `Missing placeholders: ${missingCount}`);
   }
+  const inventoryLookup = meta.inventory_lookup && typeof meta.inventory_lookup === 'object'
+    ? meta.inventory_lookup
+    : {};
+  const inventoryStatus = trimText(inventoryLookup.status, 40);
+  if (inventoryStatus) {
+    upsertRow(inventoryStatus === 'matched' ? 'done' : 'pending', `Inventory lookup status: ${inventoryStatus}`);
+  }
+  const inventoryItemCount = asArray(inventoryLookup.items).length;
+  if (inventoryItemCount > 0) {
+    upsertRow('done', `Inventory matches: ${inventoryItemCount}`);
+  }
+  if (inventoryLookup.backfilled_sql === true) {
+    upsertRow('done', 'Inventory SQL index backfilled');
+  }
+  const recordLookup = meta.record_lookup && typeof meta.record_lookup === 'object'
+    ? meta.record_lookup
+    : {};
+  const recordStatus = trimText(recordLookup.status, 40);
+  if (recordStatus) {
+    upsertRow(recordStatus === 'matched' ? 'done' : 'pending', `Record lookup status: ${recordStatus}`);
+  }
+  const recordItemCount = asArray(recordLookup.items).length;
+  if (recordItemCount > 0) {
+    upsertRow('done', `Record matches: ${recordItemCount}`);
+  }
+  if (recordLookup.backfilled_sql === true) {
+    upsertRow('done', 'Record SQL index backfilled');
+  }
 
   asArray(meta.developer_trace).forEach((trace) => {
     const stage = trimText(trace?.stage, 120);
@@ -296,6 +324,58 @@ function collectActivityRows(meta) {
   });
 
   return rows.slice(0, 20);
+}
+
+function summarizeInventoryLookup(lookup) {
+  const payload = lookup && typeof lookup === 'object' ? lookup : {};
+  const status = trimText(payload.status, 40);
+  if (!status) {
+    return '';
+  }
+  if (status === 'needs_more_info') {
+    const followUps = asArray(payload.follow_up_questions).map((item) => trimText(item, 280)).filter(Boolean);
+    return followUps.join(' ') || 'I need more details to run inventory lookup.';
+  }
+  const query = trimText(payload.query, 220);
+  const items = asArray(payload.items);
+  if (status === 'matched' && items.length) {
+    const names = items
+      .slice(0, 3)
+      .map((item) => trimText(item?.name || item?.id, 140))
+      .filter(Boolean);
+    const preview = names.length ? ` Top matches: ${names.join(', ')}.` : '';
+    return `Found ${items.length} inventory match${items.length === 1 ? '' : 'es'}${query ? ` for "${query}"` : ''}.${preview}`;
+  }
+  if (status === 'no_match') {
+    return `No inventory matches found${query ? ` for "${query}"` : ''}.`;
+  }
+  return '';
+}
+
+function summarizeRecordLookup(lookup) {
+  const payload = lookup && typeof lookup === 'object' ? lookup : {};
+  const status = trimText(payload.status, 40);
+  if (!status) {
+    return '';
+  }
+  if (status === 'needs_more_info') {
+    const followUps = asArray(payload.follow_up_questions).map((item) => trimText(item, 280)).filter(Boolean);
+    return followUps.join(' ') || 'I need more details to run record lookup.';
+  }
+  const query = trimText(payload.query, 220);
+  const items = asArray(payload.items);
+  if (status === 'matched' && items.length) {
+    const names = items
+      .slice(0, 3)
+      .map((item) => trimText(item?.title || item?.id, 140))
+      .filter(Boolean);
+    const preview = names.length ? ` Top hits: ${names.join(', ')}.` : '';
+    return `Found ${items.length} record match${items.length === 1 ? '' : 'es'}${query ? ` for "${query}"` : ''}.${preview}`;
+  }
+  if (status === 'no_match') {
+    return `No record matches found${query ? ` for "${query}"` : ''}.`;
+  }
+  return '';
 }
 
 export function initAgentChat({ state, persist, createId, safeText, onNotebookEntriesChanged }) {
@@ -713,6 +793,63 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
       return `missing_${index + 1}: ${display}${reason ? ` (${reason})` : ''}`;
     }).filter(Boolean);
     const protocolFollowUpRows = asArray(protocolWorkflow.follow_up_questions).map((question) => trimText(question, 260)).filter(Boolean);
+    const hasInventoryLookup = meta.inventory_lookup && typeof meta.inventory_lookup === 'object';
+    const inventoryLookup = hasInventoryLookup
+      ? meta.inventory_lookup
+      : {};
+    const inventoryRows = [
+      trimText(inventoryLookup.status, 40)
+        ? `status: ${trimText(inventoryLookup.status, 40)}`
+        : '',
+      trimText(inventoryLookup.query, 240)
+        ? `query: ${trimText(inventoryLookup.query, 240)}`
+        : '',
+      trimText(inventoryLookup.source, 80)
+        ? `source: ${trimText(inventoryLookup.source, 80)}`
+        : '',
+      `backfilled_sql: ${inventoryLookup.backfilled_sql === true}`,
+      `item_count: ${asArray(inventoryLookup.items).length}`
+    ].filter(Boolean);
+    const inventoryItemRows = asArray(inventoryLookup.items).slice(0, 10).map((item, index) => {
+      const name = trimText(item?.name || item?.id, 220);
+      const kind = trimText(item?.kind, 80);
+      const zone = trimText(item?.zone, 120);
+      const location = trimText(item?.location, 160);
+      if (!name) {
+        return '';
+      }
+      const parts = [kind, zone, location].filter(Boolean).join(' | ');
+      return `item_${index + 1}: ${name}${parts ? ` (${parts})` : ''}`;
+    }).filter(Boolean);
+    const inventoryFollowUpRows = asArray(inventoryLookup.follow_up_questions).map((question) => trimText(question, 260)).filter(Boolean);
+    const hasRecordLookup = meta.record_lookup && typeof meta.record_lookup === 'object';
+    const recordLookup = hasRecordLookup
+      ? meta.record_lookup
+      : {};
+    const recordRows = [
+      trimText(recordLookup.status, 40)
+        ? `status: ${trimText(recordLookup.status, 40)}`
+        : '',
+      trimText(recordLookup.query, 240)
+        ? `query: ${trimText(recordLookup.query, 240)}`
+        : '',
+      trimText(recordLookup.source, 80)
+        ? `source: ${trimText(recordLookup.source, 80)}`
+        : '',
+      `backfilled_sql: ${recordLookup.backfilled_sql === true}`,
+      `item_count: ${asArray(recordLookup.items).length}`
+    ].filter(Boolean);
+    const recordItemRows = asArray(recordLookup.items).slice(0, 10).map((item, index) => {
+      const title = trimText(item?.title || item?.id, 220);
+      const type = trimText(item?.record_type, 80);
+      const project = trimText(item?.project_name, 180);
+      if (!title) {
+        return '';
+      }
+      const parts = [type, project].filter(Boolean).join(' | ');
+      return `item_${index + 1}: ${title}${parts ? ` (${parts})` : ''}`;
+    }).filter(Boolean);
+    const recordFollowUpRows = asArray(recordLookup.follow_up_questions).map((question) => trimText(question, 260)).filter(Boolean);
     const reasoningSummaryRows = [trimText(parser.reasoning_summary, 600) || 'No parser reasoning summary returned.'];
     const activityRows = collectActivityRows(meta);
     const developerTraceRows = asArray(meta.developer_trace).map((trace, index) => {
@@ -750,6 +887,12 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
         ${renderMetaList('Protocol Matches', protocolCandidateMatchRows)}
         ${renderMetaList('Missing Placeholders', protocolMissingRows)}
         ${renderMetaList('Follow-up Questions', protocolFollowUpRows)}
+        ${hasInventoryLookup ? renderMetaList('Inventory Lookup', inventoryRows) : ''}
+        ${hasInventoryLookup ? renderMetaList('Inventory Items', inventoryItemRows) : ''}
+        ${hasInventoryLookup ? renderMetaList('Inventory Follow-up', inventoryFollowUpRows) : ''}
+        ${hasRecordLookup ? renderMetaList('Record Lookup', recordRows) : ''}
+        ${hasRecordLookup ? renderMetaList('Record Items', recordItemRows) : ''}
+        ${hasRecordLookup ? renderMetaList('Record Follow-up', recordFollowUpRows) : ''}
         ${renderMetaList('Reasoning Summary', reasoningSummaryRows)}
         ${showDeveloperTrace ? renderMetaList('Developer Trace', developerTraceRows) : ''}
       </div>
@@ -881,12 +1024,23 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
           || '',
         12000
       );
+      const inventoryLookup = result.inventory_lookup && typeof result.inventory_lookup === 'object'
+        ? result.inventory_lookup
+        : null;
+      const recordLookup = result.record_lookup && typeof result.record_lookup === 'object'
+        ? result.record_lookup
+        : null;
+      const inventorySummaryText = summarizeInventoryLookup(inventoryLookup);
+      const recordSummaryText = summarizeRecordLookup(recordLookup);
       const assistantText = protocolStatus === 'completed'
         ? (completedNotebookText
           || `Notebook draft completed using protocol ${trimText(protocolWorkflow?.selected_protocol?.name, 220) || 'selection'}.`)
         : (protocolStatus === 'needs_more_info'
           ? (followUpQuestions.join(' ') || 'More details are needed to fill the remaining notebook placeholders.')
-          : (trimText(parser.reasoning_summary, 12000) || 'Intent parsing completed.'));
+          : (inventorySummaryText
+            || recordSummaryText
+            || trimText(parser.reasoning_summary, 12000)
+            || 'Intent parsing completed.'));
 
       state.agentChat.messages.push({
         id: createId(),
@@ -896,6 +1050,8 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
         meta: {
           parser,
           protocol_to_notebook: protocolWorkflow,
+          inventory_lookup: inventoryLookup,
+          record_lookup: recordLookup,
           notebookDraft: notebookDraft || null,
           developer_trace: asArray(result.developer_trace),
           requestText: messageText
@@ -928,6 +1084,8 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
             reasoning_summary: `Agent failed: ${String(error?.message || error)}`
           },
           protocol_to_notebook: null,
+          inventory_lookup: null,
+          record_lookup: null,
           notebookDraft: null,
           developer_trace: [],
           requestText: messageText

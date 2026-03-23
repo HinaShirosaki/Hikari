@@ -1,0 +1,343 @@
+{
+  "$defs": {
+    "inventory_search": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "normalized_query": {
+          "type": "string"
+        },
+        "candidate_terms": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 10
+        },
+        "aliases": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 10
+        },
+        "search_mode": {
+          "type": "string"
+        }
+      }
+    },
+    "parser_payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "primary_intent": {
+          "type": "string"
+        },
+        "needs_clarification": {
+          "type": "boolean"
+        },
+        "clarification_reason": {
+          "type": "string"
+        },
+        "reasoning_summary": {
+          "type": "string"
+        },
+        "entities": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "inventory_search": {
+          "$ref": "#/$defs/inventory_search"
+        },
+        "protocol_candidates": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 8
+        }
+      }
+    },
+    "protocol_step": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "instruction": {
+          "type": "string"
+        },
+        "action": {
+          "type": "string"
+        },
+        "placeholders": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              }
+            }
+          },
+          "maxItems": 60
+        }
+      }
+    },
+    "protocol_record": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "purpose": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "aliases": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 12
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/protocol_step"
+          },
+          "maxItems": 160
+        },
+        "project_id": {
+          "type": "string"
+        },
+        "project_name": {
+          "type": "string"
+        },
+        "projectId": {
+          "type": "string"
+        },
+        "projectName": {
+          "type": "string"
+        }
+      }
+    },
+    "project_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "resolution_source": {
+          "type": "string"
+        }
+      }
+    },
+    "pending_values": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "python_sandbox_file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 240
+        },
+        "content": {
+          "type": "string"
+        }
+      }
+    },
+    "sub_agent_metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "task_type": {
+          "type": "string"
+        },
+        "parent_request_id": {
+          "type": "string"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 12
+        }
+      }
+    }
+  },
+  "inventory-lookup": {
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "query": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 25
+        },
+        "inventory_search": {
+          "$ref": "#/$defs/inventory_search"
+        },
+        "parser_payload": {
+          "$ref": "#/$defs/parser_payload"
+        }
+      }
+    }
+  },
+  "record-lookup": {
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "query": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 25
+        },
+        "parser_payload": {
+          "$ref": "#/$defs/parser_payload"
+        }
+      }
+    }
+  },
+  "protocol-matching": {
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "protocol_candidates": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 5
+        },
+        "fallback_protocol": {
+          "$ref": "#/$defs/protocol_record"
+        }
+      }
+    }
+  },
+  "notebook-generation": {
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "selected_protocol": {
+          "$ref": "#/$defs/protocol_record"
+        },
+        "project": {
+          "$ref": "#/$defs/project_record"
+        },
+        "pending_values": {
+          "$ref": "#/$defs/pending_values"
+        }
+      }
+    }
+  },
+  "python-sandbox": {
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code"],
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40000
+        },
+        "timeout_ms": {
+          "type": "integer",
+          "minimum": 500,
+          "maximum": 15000
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/python_sandbox_file"
+          },
+          "maxItems": 32
+        },
+        "readback_paths": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "maxItems": 20
+        }
+      }
+    }
+  },
+  "sub-agent": {
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action"],
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": ["create", "message", "delete", "get", "list"]
+        },
+        "agent_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "system_prompt": {
+          "type": "string",
+          "maxLength": 40000
+        },
+        "message": {
+          "type": "string",
+          "maxLength": 40000
+        },
+        "reason": {
+          "type": "string",
+          "maxLength": 240
+        },
+        "metadata": {
+          "$ref": "#/$defs/sub_agent_metadata"
+        }
+      }
+    }
+  }
+}

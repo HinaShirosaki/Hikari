@@ -14,14 +14,17 @@ const {
   installPlannotateAssets
 } = require('./lib/plannotate-engine');
 const {
+  getCodexCliModel,
   getCodexLoginStatus,
+  setCodexCliModel,
   requestCodexCliText
 } = require('./lib/codex-cli-provider');
-const { runPythonSandbox } = require('./helpers/agent/agent-python');
+const { runPythonSandbox } = require('./helpers/agent/agent-python-sandbox.js');
 const {
   INTENT_PARSER_RESPONSE_SCHEMA,
   normalizeIntentParserPayload,
-  buildIntentParserPrompt
+  buildIntentParserPrompt,
+  buildInventorySearchTerms
 } = require('./helpers/agent/agent-intent-parser');
 const {
   createLifecycleRecorder,
@@ -33,6 +36,7 @@ const {
 } = require('./helpers/agent/agent-observability');
 const { createAgentControllerUtils } = require('./helpers/agent/agent-controller-utils');
 const { createProtocolNotebookRuntime } = require('./helpers/agent/agent-protocol-notebook');
+const { createAgentLookupRuntime } = require('./helpers/agent/agent-lookup-runtime');
 const { createMainDataHelpers } = require('./helpers/main/data-helpers');
 const {
   getBundlePaths,
@@ -3519,6 +3523,23 @@ const {
   extractResponseText
 });
 
+const agentLookupRuntime = createAgentLookupRuntime({
+  asArray,
+  cleanText,
+  uniqueStrings,
+  getBundlePaths,
+  hydrateSnapshotFromBundle,
+  syncBundleFromSnapshot,
+  buildInventorySearchTerms
+});
+const {
+  searchInventoryIndex,
+  searchNotebookEntriesIndex,
+  searchProtocolsIndex,
+  executeInventoryLookup,
+  executeRecordLookup
+} = agentLookupRuntime;
+
 function buildAgentSystemPrompt(projectName, prompts) {
   const projectScope = projectName ? `Scoped project: ${projectName}.` : 'Scope: all projects.';
   const template = String(prompts?.agent?.systemPromptTemplate || '').trim() || DEFAULT_AGENT_SYSTEM_PROMPT_TEMPLATE;
@@ -5012,6 +5033,106 @@ async function runAgentControllerCore(payload, runtime = {}) {
     });
   } else {
     protocolNotebookRuntime.clearPendingSession(sessionKey);
+    if (parserResult.payload.primary_intent === 'inventory_lookup') {
+      recordLifecycleEvent(lifecycleRecorder, {
+        stage: 'inventory_lookup_started',
+        status: 'started',
+        routing_intent: 'inventory_lookup',
+        message: 'Executing inventory lookup runtime.'
+      });
+      if (parserResult.payload.needs_clarification === true) {
+        result.inventory_lookup = {
+          status: 'needs_more_info',
+          query: '',
+          terms_used: [],
+          source: 'parser_only',
+          backfilled_sql: false,
+          items: [],
+          follow_up_questions: [
+            cleanText(parserResult.payload.clarification_reason, 280)
+              || 'Please provide the sample/reagent name so I can run inventory lookup.'
+          ]
+        };
+      } else {
+        const inventoryLookupResult = await executeInventoryLookup({
+          message,
+          parserPayload: parserResult.payload,
+          snapshot,
+          dataFilePath: cleanText(snapshot?.data_file_path, 1600),
+          fallbackDataFilePath: getDefaultDataFilePath(),
+          limit: 8
+        });
+        result.inventory_lookup = inventoryLookupResult;
+        if (inventoryLookupResult.backfilled_sql === true) {
+          recordLifecycleEvent(lifecycleRecorder, {
+            stage: 'inventory_lookup_backfilled',
+            status: 'ok',
+            routing_intent: 'inventory_lookup',
+            message: 'SQLite inventory index was backfilled from hydrated snapshot.'
+          });
+        }
+      }
+      recordLifecycleEvent(lifecycleRecorder, {
+        stage: 'inventory_lookup_completed',
+        status: cleanText(result.inventory_lookup?.status, 40) === 'matched' ? 'ok' : 'pending',
+        routing_intent: 'inventory_lookup',
+        message: `Inventory lookup status=${cleanText(result.inventory_lookup?.status, 40) || 'unknown'}.`,
+        meta: {
+          source: cleanText(result.inventory_lookup?.source, 80),
+          item_count: asArray(result.inventory_lookup?.items).length,
+          backfilled_sql: result.inventory_lookup?.backfilled_sql === true
+        }
+      });
+    } else if (parserResult.payload.primary_intent === 'record_lookup') {
+      recordLifecycleEvent(lifecycleRecorder, {
+        stage: 'record_lookup_started',
+        status: 'started',
+        routing_intent: 'record_lookup',
+        message: 'Executing project record lookup runtime.'
+      });
+      if (parserResult.payload.needs_clarification === true) {
+        result.record_lookup = {
+          status: 'needs_more_info',
+          query: '',
+          source: 'parser_only',
+          backfilled_sql: false,
+          items: [],
+          follow_up_questions: [
+            cleanText(parserResult.payload.clarification_reason, 280)
+              || 'Please provide what record you want to search (project/protocol/notebook/assay/gel).'
+          ]
+        };
+      } else {
+        const recordLookupResult = await executeRecordLookup({
+          message,
+          parserPayload: parserResult.payload,
+          snapshot,
+          dataFilePath: cleanText(snapshot?.data_file_path, 1600),
+          fallbackDataFilePath: getDefaultDataFilePath(),
+          limit: 8
+        });
+        result.record_lookup = recordLookupResult;
+        if (recordLookupResult.backfilled_sql === true) {
+          recordLifecycleEvent(lifecycleRecorder, {
+            stage: 'record_lookup_backfilled',
+            status: 'ok',
+            routing_intent: 'record_lookup',
+            message: 'SQLite record index was backfilled from hydrated snapshot.'
+          });
+        }
+      }
+      recordLifecycleEvent(lifecycleRecorder, {
+        stage: 'record_lookup_completed',
+        status: cleanText(result.record_lookup?.status, 40) === 'matched' ? 'ok' : 'pending',
+        routing_intent: 'record_lookup',
+        message: `Record lookup status=${cleanText(result.record_lookup?.status, 40) || 'unknown'}.`,
+        meta: {
+          source: cleanText(result.record_lookup?.source, 80),
+          item_count: asArray(result.record_lookup?.items).length,
+          backfilled_sql: result.record_lookup?.backfilled_sql === true
+        }
+      });
+    }
   }
   if (executionFlags.developerMode === true) {
     result.developer_trace = asArray(traceContext?.rows);
@@ -5079,7 +5200,11 @@ ipcMain.handle('agent:chat', async (_event, payload) => {
     recordLifecycleEvent(lifecycleRecorder, {
       stage: 'response_emitted',
       status: result?.ok === true ? 'ok' : 'error',
-      response_type: result?.protocol_to_notebook ? 'protocol_to_notebook' : 'intent_parser',
+      response_type: result?.protocol_to_notebook
+        ? 'protocol_to_notebook'
+        : (result?.inventory_lookup
+          ? 'inventory_lookup'
+          : (result?.record_lookup ? 'record_lookup' : 'intent_parser')),
       routing_intent: cleanText(result?.parser?.primary_intent, 80) || 'unclear',
       failure_reasons: failureReasons,
       message: result?.ok === true
@@ -5239,6 +5364,17 @@ ipcMain.handle('llm:codex-status', async () => {
     ok: status.ok === true,
     loggedIn: status.loggedIn === true,
     message: status.message || ''
+  };
+});
+
+ipcMain.handle('llm:codex-set-model', async (_event, payload) => {
+  const normalizedPayload = normalizeJsonPayload(payload, {});
+  const previousModel = getCodexCliModel();
+  const model = setCodexCliModel(cleanText(normalizedPayload?.model, 120));
+  return {
+    ok: true,
+    model,
+    previousModel
   };
 });
 

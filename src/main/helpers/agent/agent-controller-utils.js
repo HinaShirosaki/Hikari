@@ -246,6 +246,12 @@ function createAgentControllerUtils(deps = {}) {
     const protocolNotebook = source.protocol_to_notebook && typeof source.protocol_to_notebook === 'object'
       ? source.protocol_to_notebook
       : null;
+    const inventoryLookup = source.inventory_lookup && typeof source.inventory_lookup === 'object'
+      ? source.inventory_lookup
+      : null;
+    const recordLookup = source.record_lookup && typeof source.record_lookup === 'object'
+      ? source.record_lookup
+      : null;
     const notebook = protocolNotebook?.notebook && typeof protocolNotebook.notebook === 'object'
       ? protocolNotebook.notebook
       : null;
@@ -310,6 +316,24 @@ function createAgentControllerUtils(deps = {}) {
               unresolved_placeholder_count: asArray(notebook.unresolved_placeholders).length
             }
             : null
+        }
+        : null,
+      inventory_lookup: inventoryLookup
+        ? {
+          status: cleanText(inventoryLookup.status, 40),
+          query: cleanText(inventoryLookup.query, 320),
+          source: cleanText(inventoryLookup.source, 80),
+          backfilled_sql: inventoryLookup.backfilled_sql === true,
+          item_count: asArray(inventoryLookup.items).length
+        }
+        : null,
+      record_lookup: recordLookup
+        ? {
+          status: cleanText(recordLookup.status, 40),
+          query: cleanText(recordLookup.query, 320),
+          source: cleanText(recordLookup.source, 80),
+          backfilled_sql: recordLookup.backfilled_sql === true,
+          item_count: asArray(recordLookup.items).length
         }
         : null,
       developer_trace: normalizeDeveloperTraceForAgentLog(source.developer_trace),

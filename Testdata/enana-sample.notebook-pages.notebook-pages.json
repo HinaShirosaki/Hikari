@@ -1,7 +1,7 @@
 {
   "schema_name": "enana_notebook_pages",
   "schema_version": "1.0.0",
-  "updated_at": "2026-03-21T21:43:51.840Z",
+  "updated_at": "2026-03-23T00:48:32.942Z",
   "notebookPages": [
     {
       "id": "1774025061643-8e7f8d2afe1198",
@@ -47,6 +47,28 @@
         "unresolvedCount": 0,
         "generatedAt": "2026-03-21T21:43:51.827Z",
         "savedAt": "2026-03-21T21:43:51.833Z"
+      }
+    },
+    {
+      "id": "1774226912932-85bb211fc546a",
+      "notebookType": "biology",
+      "projectId": "1774128185432-96a318da61d208",
+      "projectName": "SUMO1",
+      "protocolId": "1774024047007-d137dae96cab78",
+      "protocolName": "BL21(DE3) Chemical Transformation with pET28a",
+      "values": {
+        "1774125436234-5e6cd5beb943b:1774125436234-cac9aa958fe75": "pFuse-SUMO1-PD-1"
+      },
+      "result": "Notebook draft generated from request: I did a pFuse-SUMO1-PD-1 transformation today",
+      "resultFiles": [],
+      "resultFileRecords": [],
+      "updatedAt": "2026-03-23T00:48:32.928Z",
+      "agentDraftStatus": "draft_ready",
+      "agentDraftMeta": {
+        "source": "agent_phase5",
+        "unresolvedCount": 0,
+        "generatedAt": "2026-03-23T00:48:32.928Z",
+        "savedAt": "2026-03-23T00:48:32.932Z"
       }
     }
   ]

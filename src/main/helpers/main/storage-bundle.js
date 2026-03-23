@@ -210,6 +210,23 @@ function applySqliteSchema(db) {
       raw_json TEXT,
       PRIMARY KEY (zone, id)
     );
+    CREATE TABLE IF NOT EXISTS inventory_samples (
+      id TEXT PRIMARY KEY,
+      code TEXT,
+      name TEXT,
+      sample_type TEXT,
+      lot TEXT,
+      concentration TEXT,
+      section TEXT,
+      container_id TEXT,
+      container_name TEXT,
+      well_index INTEGER,
+      location_text TEXT,
+      notes TEXT,
+      chemical_links_json TEXT,
+      search_text TEXT,
+      raw_json TEXT
+    );
     CREATE TABLE IF NOT EXISTS protocol_index (
       id TEXT PRIMARY KEY,
       name TEXT,
@@ -234,10 +251,28 @@ function applySqliteSchema(db) {
       linked_refs_json TEXT,
       search_text TEXT
     );
+    CREATE TABLE IF NOT EXISTS record_index (
+      record_type TEXT NOT NULL,
+      record_id TEXT NOT NULL,
+      title TEXT,
+      project_id TEXT,
+      project_name TEXT,
+      summary TEXT,
+      linked_protocol_id TEXT,
+      linked_protocol_name TEXT,
+      updated_at TEXT,
+      search_text TEXT,
+      raw_json TEXT,
+      PRIMARY KEY (record_type, record_id)
+    );
     CREATE INDEX IF NOT EXISTS idx_inventory_chemicals_search ON inventory_chemicals(search_text);
     CREATE INDEX IF NOT EXISTS idx_inventory_personal_search ON inventory_personal(search_text);
+    CREATE INDEX IF NOT EXISTS idx_inventory_samples_search ON inventory_samples(search_text);
     CREATE INDEX IF NOT EXISTS idx_protocol_index_search ON protocol_index(search_text);
     CREATE INDEX IF NOT EXISTS idx_notebook_index_search ON notebook_index(search_text);
+    CREATE INDEX IF NOT EXISTS idx_record_index_search ON record_index(search_text);
+    CREATE INDEX IF NOT EXISTS idx_record_index_project ON record_index(project_id, project_name);
+    CREATE INDEX IF NOT EXISTS idx_record_index_type ON record_index(record_type);
   `);
 }
 
@@ -338,6 +373,273 @@ function writeSqlInventoryPersonal(db, snapshot) {
         ]
       );
     });
+  });
+}
+
+function resolvePersonalInventorySections(inventoryPayload) {
+  const inventory = ensureObject(inventoryPayload);
+  if (Array.isArray(inventory.personal)) {
+    return asArray(inventory.personal).map((zone) => ({
+      zone: cleanText(zone?.zone, 200),
+      items: asArray(zone?.items)
+    })).filter((zone) => zone.zone || zone.items.length > 0);
+  }
+  if (inventory.personal && typeof inventory.personal === 'object') {
+    return Object.entries(inventory.personal).map(([zoneName, rawItems]) => ({
+      zone: cleanText(zoneName, 200),
+      items: asArray(rawItems)
+    })).filter((zone) => zone.zone || zone.items.length > 0);
+  }
+  return Object.entries(inventory)
+    .filter(([zoneName, rawItems]) => zoneName !== 'chemicals' && zoneName !== 'personal' && Array.isArray(rawItems))
+    .map(([zoneName, rawItems]) => ({
+      zone: cleanText(zoneName, 200),
+      items: asArray(rawItems)
+    }));
+}
+
+function buildPersonalContainerLookup(snapshot) {
+  const out = new Map();
+  const sections = resolvePersonalInventorySections(ensureObject(snapshot).inventory);
+  sections.forEach((section) => {
+    asArray(section.items).forEach((container) => {
+      const normalizedContainer = ensureObject(container);
+      const containerId = cleanText(normalizedContainer.id, 220);
+      if (!containerId) {
+        return;
+      }
+      const key = `${cleanText(section.zone, 200).toLowerCase()}::${containerId.toLowerCase()}`;
+      out.set(key, {
+        zone: cleanText(section.zone, 200),
+        id: containerId,
+        name: cleanText(normalizedContainer.name, 320),
+        location: cleanText(normalizedContainer.location, 240)
+      });
+    });
+  });
+  return out;
+}
+
+function formatSampleLocationText(rawLocation) {
+  const location = ensureObject(rawLocation);
+  return Object.entries(location)
+    .filter(([key]) => key !== 'storageType')
+    .map(([, value]) => cleanText(value, 120))
+    .filter(Boolean)
+    .join(' / ');
+}
+
+function writeSqlInventorySamples(db, snapshot) {
+  const samples = asArray(snapshot.samples);
+  const containerLookup = buildPersonalContainerLookup(snapshot);
+  samples.forEach((rawSample, index) => {
+    const sample = ensureObject(rawSample);
+    const id = cleanText(sample.id, 220) || `sample_${index + 1}`;
+    const code = cleanText(sample.code, 180);
+    const name = cleanText(sample.name, 320);
+    const sampleType = cleanText(sample.type, 80);
+    const lot = cleanText(sample.lot, 160);
+    const concentration = cleanText(sample.concentration, 160);
+    const notes = cleanText(sample.notes, 4000);
+    const link = ensureObject(sample.inventoryLink);
+    const section = cleanText(link.section, 200);
+    const containerId = cleanText(link.containerId, 220);
+    const containerKey = `${section.toLowerCase()}::${containerId.toLowerCase()}`;
+    const linkedContainer = containerLookup.get(containerKey);
+    const containerName = cleanText(linkedContainer?.name, 320);
+    const wellIndex = Number.isFinite(Number(link.wellIndex)) ? Number(link.wellIndex) : null;
+    const locationText = formatSampleLocationText(sample.location) || cleanText(linkedContainer?.location, 240);
+    const searchText = buildSearchText([
+      id,
+      code,
+      name,
+      sampleType,
+      lot,
+      concentration,
+      notes,
+      section,
+      containerId,
+      containerName,
+      Number.isFinite(wellIndex) ? String(wellIndex) : '',
+      locationText,
+      asArray(sample.chemicalLinks).join(' ')
+    ]);
+    db.run(
+      `INSERT OR REPLACE INTO inventory_samples
+        (id, code, name, sample_type, lot, concentration, section, container_id, container_name, well_index, location_text, notes, chemical_links_json, search_text, raw_json)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        id,
+        code,
+        name,
+        sampleType,
+        lot,
+        concentration,
+        section,
+        containerId,
+        containerName,
+        Number.isFinite(wellIndex) ? wellIndex : null,
+        locationText,
+        notes,
+        JSON.stringify(asArray(sample.chemicalLinks).map((value) => cleanText(value, 120)).filter(Boolean)),
+        searchText,
+        JSON.stringify(sample)
+      ]
+    );
+  });
+}
+
+function collectRecordIndexRows(snapshot, updatedAtDefault) {
+  const rows = [];
+  const pushRow = (recordType, recordId, payload = {}) => {
+    const normalizedType = cleanText(recordType, 60);
+    const normalizedId = cleanText(recordId, 220);
+    if (!normalizedType || !normalizedId) {
+      return;
+    }
+    const title = cleanText(payload.title, 320) || `${normalizedType}:${normalizedId}`;
+    const projectId = cleanText(payload.projectId, 220);
+    const projectName = cleanText(payload.projectName, 320);
+    const summary = cleanText(payload.summary, 6000);
+    const linkedProtocolId = cleanText(payload.linkedProtocolId, 220);
+    const linkedProtocolName = cleanText(payload.linkedProtocolName, 320);
+    const updatedAt = cleanText(payload.updatedAt, 80) || updatedAtDefault;
+    const searchText = buildSearchText([
+      normalizedType,
+      normalizedId,
+      title,
+      projectId,
+      projectName,
+      summary,
+      linkedProtocolId,
+      linkedProtocolName,
+      updatedAt,
+      payload.searchHints
+    ]);
+    rows.push({
+      record_type: normalizedType,
+      record_id: normalizedId,
+      title,
+      project_id: projectId,
+      project_name: projectName,
+      summary,
+      linked_protocol_id: linkedProtocolId,
+      linked_protocol_name: linkedProtocolName,
+      updated_at: updatedAt,
+      search_text: searchText,
+      raw_json: JSON.stringify(payload.raw || {})
+    });
+  };
+
+  asArray(snapshot.notebookEntries).forEach((rawEntry) => {
+    const entry = ensureObject(rawEntry);
+    pushRow('notebook', entry.id, {
+      title: entry.protocolName || entry.id,
+      projectId: entry.projectId,
+      projectName: entry.projectName,
+      summary: entry.result,
+      linkedProtocolId: entry.protocolId,
+      linkedProtocolName: entry.protocolName,
+      updatedAt: entry.updatedAt || entry.createdAt,
+      searchHints: [
+        asArray(entry.resultFiles).join(' '),
+        JSON.stringify(entry.values || {})
+      ].join(' '),
+      raw: entry
+    });
+  });
+
+  asArray(snapshot.workflows).forEach((rawWorkflow) => {
+    const workflow = ensureObject(rawWorkflow);
+    pushRow('workflow', workflow.id, {
+      title: workflow.name || workflow.id,
+      projectId: workflow.projectId,
+      projectName: workflow.projectName,
+      summary: workflow.description,
+      updatedAt: workflow.updatedAt || workflow.createdAt,
+      searchHints: asArray(workflow.blocks).map((block) => block?.text || block?.protocolId || '').join(' '),
+      raw: workflow
+    });
+  });
+
+  asArray(snapshot.assays).forEach((rawAssay) => {
+    const assay = ensureObject(rawAssay);
+    pushRow('assay', assay.id || assay.assay_number, {
+      title: assay.name || assay.assay_number || assay.id,
+      projectId: assay.project_id || assay.projectId,
+      projectName: assay.project_name || assay.projectName,
+      summary: assay.notes || assay.notebook_entry_protocol_name || assay.name,
+      linkedProtocolId: assay.notebook_entry_protocol_id || assay.protocolId,
+      linkedProtocolName: assay.notebook_entry_protocol_name || assay.protocolName,
+      updatedAt: assay.updated_at || assay.updatedAt || assay.created_at,
+      searchHints: [
+        assay.assay_number,
+        assay.sample_axis,
+        assay.concentration_axis
+      ].join(' '),
+      raw: assay
+    });
+  });
+
+  asArray(snapshot.gelAnalyses).forEach((rawGel) => {
+    const gel = ensureObject(rawGel);
+    pushRow('gel', gel.id, {
+      title: gel.name || gel.id,
+      projectId: gel.project_id || gel.projectId,
+      projectName: gel.project_name || gel.projectName,
+      summary: gel.analysis_type || gel.notebook_entry_protocol_name || gel.name,
+      linkedProtocolId: gel.notebook_entry_protocol_id || gel.protocolId,
+      linkedProtocolName: gel.notebook_entry_protocol_name || gel.protocolName,
+      updatedAt: gel.updated_at || gel.updatedAt || gel.created_at,
+      searchHints: asArray(gel.warnings).join(' '),
+      raw: gel
+    });
+  });
+
+  asArray(snapshot.protocols).forEach((rawProtocol) => {
+    const protocol = ensureObject(rawProtocol);
+    const stepHints = asArray(protocol.steps).map((step) => (
+      typeof step === 'string'
+        ? cleanText(step, 220)
+        : cleanText(ensureObject(step).text || ensureObject(step).instruction || ensureObject(step).action, 220)
+    )).filter(Boolean).join(' ');
+    pushRow('protocol', protocol.id, {
+      title: protocol.name || protocol.id,
+      projectId: protocol.projectId,
+      projectName: protocol.projectName || protocol.linkedProject,
+      summary: protocol.purpose || protocol.description || protocol.category,
+      linkedProtocolId: protocol.id,
+      linkedProtocolName: protocol.name,
+      updatedAt: protocol.updatedAt || protocol.createdAt,
+      searchHints: stepHints,
+      raw: protocol
+    });
+  });
+
+  return rows;
+}
+
+function writeSqlRecordIndex(db, snapshot, updatedAtDefault) {
+  const rows = collectRecordIndexRows(snapshot, updatedAtDefault);
+  rows.forEach((row) => {
+    db.run(
+      `INSERT OR REPLACE INTO record_index
+        (record_type, record_id, title, project_id, project_name, summary, linked_protocol_id, linked_protocol_name, updated_at, search_text, raw_json)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        row.record_type,
+        row.record_id,
+        row.title,
+        row.project_id,
+        row.project_name,
+        row.summary,
+        row.linked_protocol_id,
+        row.linked_protocol_name,
+        row.updated_at,
+        row.search_text,
+        row.raw_json
+      ]
+    );
   });
 }
 
@@ -455,8 +757,10 @@ async function writeSqliteBundleIndex(sqlitePath, snapshot) {
     applySqliteSchema(db);
     writeSqlInventoryChemicals(db, snapshot);
     writeSqlInventoryPersonal(db, snapshot);
+    writeSqlInventorySamples(db, snapshot);
     writeSqlProtocolIndex(db, snapshot, updatedAtDefault);
     writeSqlNotebookIndex(db, snapshot, updatedAtDefault);
+    writeSqlRecordIndex(db, snapshot, updatedAtDefault);
     writeSqlInventoryMeta(db, snapshot);
     const bytes = db.export();
     await fs.mkdir(path.dirname(sqlitePath), { recursive: true });
@@ -518,36 +822,71 @@ async function readSqliteBundleIndex(sqlitePath) {
         exists: true,
         inventoryChemicals: [],
         inventoryPersonal: [],
+        inventorySamples: [],
         protocolRows: [],
         notebookRows: [],
+        recordRows: [],
         inventoryMeta: {}
       };
     }
     const SQL = await loadSqlJs();
     const db = new SQL.Database(new Uint8Array(bytes));
     try {
-      const inventoryChemicals = readSqlRows(db, 'SELECT * FROM inventory_chemicals', [])
-        .map((row) => parseJsonObject(row.raw_json) || {
+      const tableRows = readSqlRows(db, "SELECT name FROM sqlite_master WHERE type='table'", []);
+      const tableNames = new Set(asArray(tableRows).map((row) => cleanText(row?.name, 220).toLowerCase()).filter(Boolean));
+      const inventoryChemicalRows = tableNames.has('inventory_chemicals')
+        ? readSqlRows(db, 'SELECT * FROM inventory_chemicals', [])
+        : [];
+      const inventoryChemicals = inventoryChemicalRows.map((row) => parseJsonObject(row.raw_json) || {
+        id: cleanText(row.id, 220),
+        name: cleanText(row.name, 320),
+        amount: cleanText(row.amount, 120),
+        cas: cleanText(row.cas, 120),
+        location: cleanText(row.location, 280),
+        supplier: cleanText(row.supplier, 240)
+      });
+      const inventoryPersonalRows = tableNames.has('inventory_personal')
+        ? readSqlRows(db, 'SELECT * FROM inventory_personal', [])
+        : [];
+      const inventoryPersonal = inventoryPersonalRows.map((row) => ({
+        zone: cleanText(row.zone, 200),
+        item: parseJsonObject(row.raw_json) || {
           id: cleanText(row.id, 220),
           name: cleanText(row.name, 320),
-          amount: cleanText(row.amount, 120),
-          cas: cleanText(row.cas, 120),
-          location: cleanText(row.location, 280),
-          supplier: cleanText(row.supplier, 240)
+          quantity: cleanText(row.quantity, 120),
+          location: cleanText(row.location, 240)
+        }
+      }));
+      const inventorySampleRows = tableNames.has('inventory_samples')
+        ? readSqlRows(db, 'SELECT * FROM inventory_samples', [])
+        : [];
+      const inventorySamples = inventorySampleRows.map((row) => parseJsonObject(row.raw_json) || {
+          id: cleanText(row.id, 220),
+          code: cleanText(row.code, 180),
+          name: cleanText(row.name, 320),
+          type: cleanText(row.sample_type, 80),
+          concentration: cleanText(row.concentration, 160),
+          lot: cleanText(row.lot, 160),
+          inventoryLink: {
+            section: cleanText(row.section, 200),
+            containerId: cleanText(row.container_id, 220),
+            wellIndex: Number.isFinite(Number(row.well_index)) ? Number(row.well_index) : null
+          },
+          notes: cleanText(row.notes, 4000),
+          updatedAt: cleanText(row.updated_at, 80)
         });
-      const inventoryPersonal = readSqlRows(db, 'SELECT * FROM inventory_personal', [])
-        .map((row) => ({
-          zone: cleanText(row.zone, 200),
-          item: parseJsonObject(row.raw_json) || {
-            id: cleanText(row.id, 220),
-            name: cleanText(row.name, 320),
-            quantity: cleanText(row.quantity, 120),
-            location: cleanText(row.location, 240)
-          }
-        }));
-      const protocolRows = readSqlRows(db, 'SELECT * FROM protocol_index', []);
-      const notebookRows = readSqlRows(db, 'SELECT * FROM notebook_index', []);
-      const inventoryMetaRows = readSqlRows(db, 'SELECT * FROM inventory_meta', []);
+      const protocolRows = tableNames.has('protocol_index')
+        ? readSqlRows(db, 'SELECT * FROM protocol_index', [])
+        : [];
+      const notebookRows = tableNames.has('notebook_index')
+        ? readSqlRows(db, 'SELECT * FROM notebook_index', [])
+        : [];
+      const recordRows = tableNames.has('record_index')
+        ? readSqlRows(db, 'SELECT * FROM record_index', [])
+        : [];
+      const inventoryMetaRows = tableNames.has('inventory_meta')
+        ? readSqlRows(db, 'SELECT * FROM inventory_meta', [])
+        : [];
       const inventoryMeta = {};
       inventoryMetaRows.forEach((row) => {
         const key = cleanText(row.key, 220);
@@ -564,8 +903,10 @@ async function readSqliteBundleIndex(sqlitePath) {
         exists: true,
         inventoryChemicals,
         inventoryPersonal,
+        inventorySamples,
         protocolRows,
         notebookRows,
+        recordRows,
         inventoryMeta
       };
     } finally {
@@ -577,8 +918,10 @@ async function readSqliteBundleIndex(sqlitePath) {
         exists: false,
         inventoryChemicals: [],
         inventoryPersonal: [],
+        inventorySamples: [],
         protocolRows: [],
         notebookRows: [],
+        recordRows: [],
         inventoryMeta: {}
       };
     }
@@ -654,8 +997,9 @@ function hydrateInventoryFromSqliteSnapshot(nextSnapshot, sqliteData) {
 
   const hasSqlChemicals = asArray(sqliteData.inventoryChemicals).length > 0;
   const hasSqlPersonal = Object.keys(inventoryPersonalMap).length > 0;
+  const hasSqlSamples = asArray(sqliteData.inventorySamples).length > 0;
   const hasSqlMeta = Object.keys(ensureObject(sqliteData.inventoryMeta)).length > 0;
-  if (!hasSqlChemicals && !hasSqlPersonal && !hasSqlMeta) {
+  if (!hasSqlChemicals && !hasSqlPersonal && !hasSqlSamples && !hasSqlMeta) {
     return false;
   }
 
@@ -677,6 +1021,9 @@ function hydrateInventoryFromSqliteSnapshot(nextSnapshot, sqliteData) {
 
   if (hasSqlPersonal) {
     nextSnapshot.inventory = inventoryPersonalMap;
+  }
+  if ((!Array.isArray(nextSnapshot.samples) || !nextSnapshot.samples.length) && hasSqlSamples) {
+    nextSnapshot.samples = asArray(sqliteData.inventorySamples);
   }
 
   return true;

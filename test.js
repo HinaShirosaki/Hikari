@@ -361,11 +361,16 @@ const agentIntentParser = require(path.join(__dirname, 'src', 'main', 'helpers',
 const agentTools = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-tools.js'));
 const agentProtocolMatching = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-protocol-matching.js'));
 const agentNotebookGeneration = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-notebook-generation.js'));
+const agentInventoryLookup = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-inventory-lookup.js'));
+const agentRecordLookup = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-record-lookup.js'));
+const agentSubAgent = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-sub-agent.js'));
+const agentToolCall = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-tool-call.js'));
 const agentProjectRetrieval = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-project-retrieval.js'));
 const agentPaperAnalysis = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-paper-analysis.js'));
 const agentResponseLayer = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-response-layer.js'));
 const agentValidationSafety = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-validation-safety.js'));
 const agentObservability = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-observability.js'));
+const agentPythonSandbox = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-python-sandbox.js'));
 const agentPython = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-python.js'));
 const agentPythonOrchestration = agentPython;
 const agentPythonCodegen = agentPython;
@@ -1412,11 +1417,16 @@ const suiteScope = {
   agentTools,
   agentProtocolMatching,
   agentNotebookGeneration,
+  agentInventoryLookup,
+  agentRecordLookup,
+  agentSubAgent,
+  agentToolCall,
   agentProjectRetrieval,
   agentPaperAnalysis,
   agentResponseLayer,
   agentValidationSafety,
   agentObservability,
+  agentPythonSandbox,
   agentPython,
   agentPythonOrchestration,
   agentPythonCodegen,
