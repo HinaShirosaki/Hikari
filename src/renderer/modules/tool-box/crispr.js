@@ -1,6 +1,14 @@
+// CRISPR guide-design helpers.
+//
+// Responsibilities:
+// - normalize CRISPR target input from free text, FASTA, or named sequence lists
+// - scan sequences for PAM-compatible guide windows on both strands
+// - estimate simple on-target and off-target scoring heuristics
+// - rank and return the best candidate guides for the selected background genome
 import { clampNumber } from './common.js';
 import { nucleotideCounts, reverseComplementDna } from './sequence.js';
 
+// IUPAC ambiguity code lookup used for PAM matching and normalization.
 const IUPAC_BASE_MAP = Object.freeze({
   A: 'A',
   C: 'C',
@@ -19,6 +27,7 @@ const IUPAC_BASE_MAP = Object.freeze({
   N: 'ACGT'
 });
 
+// Complement mapping for IUPAC ambiguity codes when scanning the reverse strand.
 const IUPAC_COMPLEMENT_MAP = Object.freeze({
   A: 'T',
   C: 'G',
@@ -37,6 +46,7 @@ const IUPAC_COMPLEMENT_MAP = Object.freeze({
   N: 'N'
 });
 
+// Supported reference-genome presets used to scale simple off-target risk estimates.
 export const CRISPR_REFERENCE_GENOMES = Object.freeze([
   {
     id: 'human-hg38',
@@ -76,6 +86,7 @@ export const CRISPR_REFERENCE_GENOMES = Object.freeze([
   }
 ]);
 
+// Normalize arbitrary DNA/RNA-like text into uppercase DNA letters, optionally preserving unknown bases as N.
 function normalizeDnaInput(raw, preserveUnknown = false) {
   const letters = String(raw || '')
     .toUpperCase()
@@ -87,6 +98,7 @@ function normalizeDnaInput(raw, preserveUnknown = false) {
   return letters.replace(/[^ACGT]/g, 'N');
 }
 
+// Normalize a user-supplied PAM string into valid IUPAC symbols, defaulting to NGG.
 export function normalizeIupacPattern(raw) {
   const pattern = String(raw || '')
     .toUpperCase()
@@ -99,6 +111,7 @@ export function normalizeIupacPattern(raw) {
     .join('');
 }
 
+// Reverse-complement an IUPAC pattern so reverse-strand PAMs can be matched directly.
 function reverseComplementIupac(pattern) {
   return [...String(pattern || '').toUpperCase()]
     .reverse()
@@ -106,6 +119,7 @@ function reverseComplementIupac(pattern) {
     .join('');
 }
 
+// Check whether a concrete DNA sequence satisfies an IUPAC ambiguity pattern position by position.
 export function matchesIupacPattern(sequence, pattern) {
   if (sequence.length !== pattern.length) {
     return false;
@@ -120,6 +134,7 @@ export function matchesIupacPattern(sequence, pattern) {
   return true;
 }
 
+// Count mismatches between two equal-length guide sequences, stopping early after the requested threshold.
 function countSequenceMismatches(left, right, maxMismatch = Infinity) {
   if (left.length !== right.length) {
     return maxMismatch + 1;
@@ -136,6 +151,7 @@ function countSequenceMismatches(left, right, maxMismatch = Infinity) {
   return mismatches;
 }
 
+// Calculate GC percentage for one guide or sequence window.
 function calculateGcPercent(sequence) {
   if (!sequence.length) {
     return 0;
@@ -145,6 +161,7 @@ function calculateGcPercent(sequence) {
   return (gc / sequence.length) * 100;
 }
 
+// Apply a lightweight heuristic on-target score based on GC balance and common sequence motifs.
 function scoreCrisprOnTarget(guideSequence) {
   if (!guideSequence.length) {
     return 0;
@@ -179,6 +196,7 @@ function scoreCrisprOnTarget(guideSequence) {
   return clampNumber(score, 0, 100, 0);
 }
 
+// Clean a user-supplied target name into a compact display label.
 function sanitizeCrisprTargetName(rawName, fallbackName) {
   const clean = String(rawName || '')
     .replace(/[\t\r\n]+/g, ' ')
@@ -189,6 +207,7 @@ function sanitizeCrisprTargetName(rawName, fallbackName) {
   return clean.slice(0, 80);
 }
 
+// Build one normalized target entry from a name/sequence pair.
 function buildCrisprTargetEntry(name, sequenceText, index) {
   const sequence = normalizeDnaInput(sequenceText, true);
   if (!sequence.length) {
@@ -201,6 +220,7 @@ function buildCrisprTargetEntry(name, sequenceText, index) {
   };
 }
 
+// Parse a single named target line in formats like "name: sequence" or "name | sequence".
 function parseCrisprLineTarget(line, index) {
   const namedMatch = String(line).match(/^([^:|]{1,80})\s*[:|]\s*([A-Za-z\-\s]+)$/);
   if (!namedMatch) {
@@ -209,6 +229,7 @@ function parseCrisprLineTarget(line, index) {
   return buildCrisprTargetEntry(namedMatch[1], namedMatch[2], index);
 }
 
+// Parse CRISPR targets from FASTA, named lines, multi-line sequence lists, or one raw sequence block.
 export function parseCrisprTargetsInput(rawInput) {
   const raw = String(rawInput || '').trim();
   if (!raw) {
@@ -270,6 +291,7 @@ export function parseCrisprTargetsInput(rawInput) {
   return parsed;
 }
 
+// Scan one target sequence for guide-plus-PAM windows on both forward and reverse strands.
 export function collectCrisprPamSites(target, guideLength, pamPattern) {
   const sequence = String(target.sequence || '').toUpperCase();
   const pamLength = pamPattern.length;
@@ -312,6 +334,7 @@ export function collectCrisprPamSites(target, guideLength, pamPattern) {
   return sites;
 }
 
+// Collect PAM-compatible candidate sites across a list of targets.
 function collectCrisprPamSitesFromTargets(targets, guideLength, pamPattern) {
   const allSites = [];
   targets.forEach((target) => {
@@ -320,6 +343,7 @@ function collectCrisprPamSitesFromTargets(targets, guideLength, pamPattern) {
   return allSites;
 }
 
+// Estimate off-target mismatch counts and derive a simple specificity score for one candidate guide.
 export function computeCrisprOffTargetStats(candidate, backgroundSites, genomeMultiplier = 1) {
   const mismatchCounts = {
     exact: 0,
@@ -364,6 +388,7 @@ export function computeCrisprOffTargetStats(candidate, backgroundSites, genomeMu
   };
 }
 
+// Main CRISPR guide-design entry point that filters, scores, and ranks candidate guides.
 export function designCrisprGuides({
   selectedTargets,
   backgroundTargets,

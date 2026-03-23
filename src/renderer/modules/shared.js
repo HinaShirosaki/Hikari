@@ -125,6 +125,8 @@ export const defaultState = {
   knowledgeChats: {},
   agentChat: {
     projectId: '',
+    currentSessionId: '',
+    sessions: [],
     messages: []
   },
   messages: [],
@@ -317,6 +319,8 @@ export function normalizeState(parsed) {
       ...defaultState.agentChat,
       ...(source.agentChat && typeof source.agentChat === 'object' ? source.agentChat : {}),
       projectId: String(source.agentChat?.projectId || ''),
+      currentSessionId: String(source.agentChat?.currentSessionId || ''),
+      sessions: Array.isArray(source.agentChat?.sessions) ? source.agentChat.sessions : [],
       messages: Array.isArray(source.agentChat?.messages) ? source.agentChat.messages : []
     },
     notebookEntries: Array.isArray(source.notebookEntries) ? source.notebookEntries : [],

@@ -315,6 +315,25 @@ function collectActivityRows(meta) {
   if (recordLookup.backfilled_sql === true) {
     upsertRow('done', 'Record SQL index backfilled');
   }
+  [
+    ['General science', meta.general_science_question],
+    ['Project science', meta.project_science_question],
+    ['Result analysis', meta.result_analysis]
+  ].forEach(([label, payload]) => {
+    const source = payload && typeof payload === 'object' ? payload : {};
+    const status = trimText(source.status, 40);
+    if (status) {
+      upsertRow(status === 'completed' ? 'done' : 'pending', `${label} status: ${status}`);
+    }
+    const roundsExecuted = Number(source.rounds_executed) || 0;
+    if (roundsExecuted > 0) {
+      upsertRow('done', `${label} rounds: ${roundsExecuted}`);
+    }
+    const citationCount = asArray(source.citations).length;
+    if (citationCount > 0) {
+      upsertRow('done', `${label} citations: ${citationCount}`);
+    }
+  });
 
   asArray(meta.developer_trace).forEach((trace) => {
     const stage = trimText(trace?.stage, 120);
@@ -378,15 +397,42 @@ function summarizeRecordLookup(lookup) {
   return '';
 }
 
+function summarizeScienceResult(payload) {
+  const source = payload && typeof payload === 'object' ? payload : {};
+  const status = trimText(source.status, 40);
+  if (!status) {
+    return '';
+  }
+  if (status === 'needs_more_info') {
+    return asArray(source.follow_up_questions).map((item) => trimText(item, 280)).filter(Boolean).join(' ')
+      || 'I need more detail before I can continue.';
+  }
+  const answer = trimText(source.answer, 12000);
+  if (answer) {
+    return answer;
+  }
+  const followUps = asArray(source.follow_up_questions).map((item) => trimText(item, 280)).filter(Boolean);
+  return followUps.join(' ');
+}
+
 export function initAgentChat({ state, persist, createId, safeText, onNotebookEntriesChanged }) {
   const projectSelect = document.getElementById('agent-project-select');
   const contextSummary = document.getElementById('agent-context-summary');
+  const sessionStatus = document.getElementById('agent-session-status');
+  const sessionList = document.getElementById('agent-session-list');
+  const newChatBtn = document.getElementById('agent-new-chat-btn');
+  const developerTools = document.getElementById('agent-developer-tools');
+  const developerTestToolsBtn = document.getElementById('agent-dev-test-tools-btn');
   const historyNode = document.getElementById('agent-chat-history');
   const input = document.getElementById('agent-message-input');
   const sendBtn = document.getElementById('agent-send-btn');
   const clearBtn = document.getElementById('agent-clear-btn');
   const status = document.getElementById('agent-status');
   let inFlight = false;
+  let sessionStoragePath = '';
+  let sessionsLoaded = false;
+  let sessionListPromise = null;
+  let sessionLoadPromise = null;
 
   if (!projectSelect || !historyNode || !input || !sendBtn || !clearBtn || !status) {
     return { render: () => {} };
@@ -403,12 +449,24 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
     void sendMessage();
   });
 
+  developerTestToolsBtn?.addEventListener('click', () => {
+    void runDeveloperToolSmokeTest();
+  });
+
+  newChatBtn?.addEventListener('click', () => {
+    void startNewChatSession();
+  });
+
   clearBtn.addEventListener('click', () => {
-    ensureAgentState();
-    state.agentChat.messages = [];
-    persist();
-    render();
-    setStatus('Chat history cleared.');
+    void startNewChatSession();
+  });
+
+  sessionList?.addEventListener('click', (event) => {
+    const sessionId = trimText(event?.target?.dataset?.sessionId, 120);
+    if (!sessionId || inFlight) {
+      return;
+    }
+    void loadChatSession(sessionId);
   });
 
   input.addEventListener('keydown', (event) => {
@@ -421,15 +479,28 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
 
   function ensureAgentState() {
     if (!state.agentChat || typeof state.agentChat !== 'object') {
-      state.agentChat = { projectId: '', messages: [] };
+      state.agentChat = { projectId: '', currentSessionId: '', sessions: [], messages: [] };
       return;
     }
     state.agentChat.projectId = String(state.agentChat.projectId || '');
+    state.agentChat.currentSessionId = String(state.agentChat.currentSessionId || '');
+    state.agentChat.sessions = asArray(state.agentChat.sessions);
     state.agentChat.messages = asArray(state.agentChat.messages);
   }
 
   function setStatus(text) {
     status.textContent = text;
+  }
+
+  function setSessionStatus(text) {
+    if (!sessionStatus) {
+      return;
+    }
+    sessionStatus.textContent = text;
+  }
+
+  function getStoragePath() {
+    return trimText(state.settings?.storagePath, 1200);
   }
 
   function renderProjectOptions() {
@@ -446,6 +517,256 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
     } else if (selected) {
       state.agentChat.projectId = '';
       persist();
+    }
+  }
+
+  function upsertSessionSummary(summary) {
+    const source = summary && typeof summary === 'object' ? summary : null;
+    const sessionId = trimText(source?.id || source?.session_id, 120);
+    if (!sessionId) {
+      return;
+    }
+    const normalized = {
+      id: sessionId,
+      title: trimText(source?.title, 220) || 'New Chat',
+      project_id: trimText(source?.project_id || source?.projectId, 120),
+      project_name: trimText(source?.project_name || source?.projectName, 220),
+      updated_at: trimText(source?.updated_at || source?.updatedAt, 80),
+      created_at: trimText(source?.created_at || source?.createdAt, 80),
+      message_count: Number(source?.message_count) || 0,
+      last_message_preview: trimText(source?.last_message_preview, 320),
+      response_type: trimText(source?.response_type, 80),
+      last_error: trimText(source?.last_error, 320)
+    };
+    const nextSessions = asArray(state.agentChat.sessions)
+      .filter((item) => trimText(item?.id, 120) !== sessionId);
+    nextSessions.unshift(normalized);
+    state.agentChat.sessions = nextSessions.sort((left, right) => {
+      const leftTime = Date.parse(left?.updated_at || left?.created_at || '') || 0;
+      const rightTime = Date.parse(right?.updated_at || right?.created_at || '') || 0;
+      return rightTime - leftTime;
+    });
+  }
+
+  function renderSessionList() {
+    if (!sessionList) {
+      return;
+    }
+    const storagePath = getStoragePath();
+    const sessions = asArray(state.agentChat.sessions);
+    if (!storagePath) {
+      sessionList.innerHTML = '<p class="small-note">Set Storage Folder Path in Settings to save and reload chat sessions.</p>';
+      return;
+    }
+    if (!window.enanaApi?.agentChatLogListSessions || !window.enanaApi?.agentChatLogGetSession) {
+      sessionList.innerHTML = '<p class="small-note">Persistent chat sessions are unavailable in this build.</p>';
+      return;
+    }
+    if (!sessions.length) {
+      sessionList.innerHTML = '<p class="small-note">No saved chats yet. Start a new chat to create the first session.</p>';
+      return;
+    }
+
+    const activeSessionId = trimText(state.agentChat.currentSessionId, 120);
+    sessionList.innerHTML = sessions.map((session) => {
+      const sessionId = trimText(session?.id, 120);
+      const isActive = activeSessionId && sessionId === activeSessionId;
+      const preview = trimText(session?.last_message_preview, 180) || 'No messages yet.';
+      const meta = [
+        trimText(session?.project_name, 120),
+        Number.isFinite(Number(session?.message_count)) ? `${Number(session.message_count)} msgs` : '',
+        trimText(session?.updated_at, 80)
+      ].filter(Boolean).join(' | ');
+      return `
+        <button
+          type="button"
+          class="agent-session-card${isActive ? ' is-active' : ''}"
+          data-session-id="${safeText(sessionId)}"
+        >
+          <strong>${safeText(trimText(session?.title, 160) || 'New Chat')}</strong>
+          <span>${safeText(preview)}</span>
+          <span class="agent-session-meta">${safeText(meta || 'Saved chat')}</span>
+        </button>
+      `;
+    }).join('');
+  }
+
+  async function loadChatSession(sessionId, options = {}) {
+    ensureAgentState();
+    const targetSessionId = trimText(sessionId, 120);
+    const storagePath = getStoragePath();
+    if (!targetSessionId || !storagePath || !window.enanaApi?.agentChatLogGetSession) {
+      return;
+    }
+    if (sessionLoadPromise) {
+      return sessionLoadPromise;
+    }
+    if (options.silent !== true) {
+      setStatus('Loading chat history...');
+    }
+    sessionLoadPromise = window.enanaApi.agentChatLogGetSession({
+      storagePath,
+      sessionId: targetSessionId
+    }).then((result) => {
+      if (!result?.ok) {
+        throw new Error(result?.error || 'Failed to load chat session.');
+      }
+      state.agentChat.currentSessionId = targetSessionId;
+      state.agentChat.messages = asArray(result.messages);
+      state.agentChat.projectId = trimText(result?.session?.project_id, 120);
+      upsertSessionSummary(result.session);
+      persist();
+      renderProjectOptions();
+      renderContextSummary();
+      renderSessionList();
+      renderHistory();
+      setSessionStatus('Loaded chats from disk.');
+      if (options.silent !== true) {
+        setStatus('Ready.');
+      }
+    }).catch((error) => {
+      setSessionStatus(`Chat load failed: ${String(error?.message || error)}`);
+      if (options.silent !== true) {
+        setStatus('Error.');
+      }
+    }).finally(() => {
+      sessionLoadPromise = null;
+    });
+    return sessionLoadPromise;
+  }
+
+  async function refreshPersistentSessions(options = {}) {
+    ensureAgentState();
+    const force = options.force === true;
+    const storagePath = getStoragePath();
+    if (storagePath !== sessionStoragePath) {
+      sessionStoragePath = storagePath;
+      sessionsLoaded = false;
+      state.agentChat.sessions = [];
+      if (!storagePath) {
+        state.agentChat.currentSessionId = '';
+      }
+    }
+    if (!storagePath) {
+      renderSessionList();
+      setSessionStatus('Set Storage Folder Path in Settings to save and browse agent chats.');
+      return [];
+    }
+    if (!window.enanaApi?.agentChatLogListSessions || !window.enanaApi?.agentChatLogGetSession) {
+      renderSessionList();
+      setSessionStatus('Persistent chat sessions are unavailable in this build.');
+      return [];
+    }
+    if (!force && sessionsLoaded) {
+      renderSessionList();
+      return asArray(state.agentChat.sessions);
+    }
+    if (sessionListPromise) {
+      return sessionListPromise;
+    }
+    setSessionStatus('Loading saved chats...');
+    sessionListPromise = window.enanaApi.agentChatLogListSessions({
+      storagePath,
+      limit: 200
+    }).then(async (result) => {
+      if (!result?.ok) {
+        throw new Error(result?.error || 'Failed to load saved chats.');
+      }
+      state.agentChat.sessions = asArray(result.items);
+      sessionsLoaded = true;
+      renderSessionList();
+      if (!state.agentChat.currentSessionId && state.agentChat.sessions.length) {
+        await loadChatSession(state.agentChat.sessions[0].id, { silent: true });
+      } else if (
+        state.agentChat.currentSessionId
+        && !state.agentChat.sessions.some((item) => trimText(item?.id, 120) === state.agentChat.currentSessionId)
+      ) {
+        state.agentChat.currentSessionId = '';
+        state.agentChat.messages = [];
+        persist();
+        renderHistory();
+      } else if (state.agentChat.currentSessionId && options.loadCurrent !== false) {
+        await loadChatSession(state.agentChat.currentSessionId, { silent: true });
+      } else {
+        setSessionStatus(state.agentChat.sessions.length ? 'Saved chats ready.' : 'No saved chats yet.');
+      }
+      return state.agentChat.sessions;
+    }).catch((error) => {
+      state.agentChat.sessions = [];
+      renderSessionList();
+      setSessionStatus(`Chat list failed: ${String(error?.message || error)}`);
+      return [];
+    }).finally(() => {
+      sessionListPromise = null;
+    });
+    return sessionListPromise;
+  }
+
+  async function ensureCurrentChatSession(messageText = '') {
+    ensureAgentState();
+    if (trimText(state.agentChat.currentSessionId, 120)) {
+      return state.agentChat.currentSessionId;
+    }
+    const storagePath = getStoragePath();
+    if (!storagePath || !window.enanaApi?.agentChatLogCreateSession) {
+      return '';
+    }
+    const projectId = state.agentChat.projectId || '';
+    const projectName = asArray(state.projects).find((item) => item.id === projectId)?.name || '';
+    const result = await window.enanaApi.agentChatLogCreateSession({
+      storagePath,
+      projectId,
+      projectName,
+      title: messageText
+    });
+    if (!result?.ok || !result?.session?.id) {
+      throw new Error(result?.error || 'Failed to create chat session.');
+    }
+    state.agentChat.currentSessionId = trimText(result.session.id, 120);
+    upsertSessionSummary(result.session);
+    persist();
+    renderSessionList();
+    setSessionStatus('New chat session created.');
+    return state.agentChat.currentSessionId;
+  }
+
+  async function startNewChatSession() {
+    ensureAgentState();
+    state.agentChat.messages = [];
+    const storagePath = getStoragePath();
+    if (!storagePath || !window.enanaApi?.agentChatLogCreateSession) {
+      state.agentChat.currentSessionId = '';
+      persist();
+      renderSessionList();
+      renderHistory();
+      setSessionStatus(storagePath
+        ? 'Persistent chat sessions are unavailable in this build.'
+        : 'Started a new local chat draft. Set Storage Folder Path to persist it.');
+      setStatus('New chat ready.');
+      return;
+    }
+    try {
+      const projectId = state.agentChat.projectId || '';
+      const projectName = asArray(state.projects).find((item) => item.id === projectId)?.name || '';
+      const result = await window.enanaApi.agentChatLogCreateSession({
+        storagePath,
+        projectId,
+        projectName,
+        title: 'New Chat'
+      });
+      if (!result?.ok || !result?.session?.id) {
+        throw new Error(result?.error || 'Failed to create chat session.');
+      }
+      state.agentChat.currentSessionId = trimText(result.session.id, 120);
+      upsertSessionSummary(result.session);
+      persist();
+      renderSessionList();
+      renderHistory();
+      setSessionStatus('New chat session created.');
+      setStatus('New chat ready.');
+    } catch (error) {
+      setSessionStatus(`New chat failed: ${String(error?.message || error)}`);
+      setStatus('Error.');
     }
   }
 
@@ -717,6 +1038,53 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
     if (!meta || typeof meta !== 'object') {
       return '';
     }
+    const toolTest = meta.tool_test && typeof meta.tool_test === 'object'
+      ? meta.tool_test
+      : null;
+    if (toolTest) {
+      const toolRows = asArray(toolTest.items).map((item) => ({
+        status: item?.ok === true ? 'done' : 'error',
+        text: `${trimText(item?.tool_name, 120) || 'tool'}: ${trimText(item?.summary || item?.error, 220) || 'No summary returned.'}`
+      }));
+      const failureRows = asArray(toolTest.items)
+        .filter((item) => item?.ok !== true)
+        .map((item) => {
+          const toolName = trimText(item?.tool_name, 120) || 'tool';
+          const error = trimText(item?.error || item?.summary, 260);
+          return error ? `${toolName}: ${error}` : toolName;
+        })
+        .filter(Boolean);
+      const detailRows = asArray(toolTest.items).map((item) => {
+        const toolName = trimText(item?.tool_name, 120) || 'tool';
+        const parts = [
+          trimText(item?.status, 80),
+          trimText(item?.preview, 180),
+          Number.isFinite(Number(item?.duration_ms)) ? `${Number(item.duration_ms)}ms` : ''
+        ].filter(Boolean);
+        return `${toolName}: ${parts.join(' | ') || 'completed'}`;
+      });
+      const summaryLine = `Passed=${Number(toolTest.passed_count) || 0} | Failed=${Number(toolTest.failed_count) || 0} | Tools=${Number(toolTest.tool_count) || asArray(toolTest.items).length}`;
+      return `
+        <div class="agent-meta-grid">
+          ${toolRows.length ? `
+            <section class="agent-activity" aria-label="Tool smoke test activity">
+              <h4>Tool Smoke Test</h4>
+              <ul class="agent-activity-list">
+                ${toolRows.map((row) => `
+                  <li class="agent-activity-item">
+                    <span class="agent-activity-badge agent-activity-badge-${safeText(row.status)}">${safeText(row.status)}</span>
+                    <span>${safeText(row.text)}</span>
+                  </li>
+                `).join('')}
+              </ul>
+            </section>
+          ` : ''}
+          <p class="small-note">${safeText(summaryLine)}</p>
+          ${renderMetaList('Tool Details', detailRows)}
+          ${failureRows.length ? renderMetaList('Failures', failureRows) : ''}
+        </div>
+      `;
+    }
     const parser = meta.parser && typeof meta.parser === 'object' ? meta.parser : {};
     const primaryIntent = trimText(parser.primary_intent, 80) || 'unclear';
     const parserRows = [
@@ -850,6 +1218,40 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
       return `item_${index + 1}: ${title}${parts ? ` (${parts})` : ''}`;
     }).filter(Boolean);
     const recordFollowUpRows = asArray(recordLookup.follow_up_questions).map((question) => trimText(question, 260)).filter(Boolean);
+    const generalScience = meta.general_science_question && typeof meta.general_science_question === 'object'
+      ? meta.general_science_question
+      : {};
+    const projectScience = meta.project_science_question && typeof meta.project_science_question === 'object'
+      ? meta.project_science_question
+      : {};
+    const resultAnalysis = meta.result_analysis && typeof meta.result_analysis === 'object'
+      ? meta.result_analysis
+      : {};
+    const buildScienceRows = (payload) => [
+      trimText(payload.status, 40) ? `status: ${trimText(payload.status, 40)}` : '',
+      trimText(payload.confidence_label, 40) ? `confidence_label: ${trimText(payload.confidence_label, 40)}` : '',
+      Number.isFinite(Number(payload.confidence)) ? `confidence: ${Number(payload.confidence).toFixed(2)}` : '',
+      `rounds_executed: ${Number(payload.rounds_executed) || 0}`,
+      `citation_count: ${asArray(payload.citations).length}`
+    ].filter(Boolean);
+    const buildCitationRows = (payload) => asArray(payload.citations).slice(0, 10).map((item, index) => {
+      const source = trimText(item?.source, 120);
+      const pointer = trimText(item?.pointer, 220);
+      const reason = trimText(item?.reason, 220);
+      if (!source && !pointer) {
+        return '';
+      }
+      return `citation_${index + 1}: ${[source, pointer, reason].filter(Boolean).join(' | ')}`;
+    }).filter(Boolean);
+    const generalScienceRows = buildScienceRows(generalScience);
+    const projectScienceRows = buildScienceRows(projectScience);
+    const resultAnalysisRows = buildScienceRows(resultAnalysis);
+    const generalScienceCitationRows = buildCitationRows(generalScience);
+    const projectScienceCitationRows = buildCitationRows(projectScience);
+    const resultAnalysisCitationRows = buildCitationRows(resultAnalysis);
+    const generalScienceFollowUps = asArray(generalScience.follow_up_questions).map((question) => trimText(question, 260)).filter(Boolean);
+    const projectScienceFollowUps = asArray(projectScience.follow_up_questions).map((question) => trimText(question, 260)).filter(Boolean);
+    const resultAnalysisFollowUps = asArray(resultAnalysis.follow_up_questions).map((question) => trimText(question, 260)).filter(Boolean);
     const reasoningSummaryRows = [trimText(parser.reasoning_summary, 600) || 'No parser reasoning summary returned.'];
     const activityRows = collectActivityRows(meta);
     const developerTraceRows = asArray(meta.developer_trace).map((trace, index) => {
@@ -893,6 +1295,15 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
         ${hasRecordLookup ? renderMetaList('Record Lookup', recordRows) : ''}
         ${hasRecordLookup ? renderMetaList('Record Items', recordItemRows) : ''}
         ${hasRecordLookup ? renderMetaList('Record Follow-up', recordFollowUpRows) : ''}
+        ${generalScienceRows.length ? renderMetaList('General Science', generalScienceRows) : ''}
+        ${generalScienceCitationRows.length ? renderMetaList('General Science Citations', generalScienceCitationRows) : ''}
+        ${generalScienceFollowUps.length ? renderMetaList('General Science Follow-up', generalScienceFollowUps) : ''}
+        ${projectScienceRows.length ? renderMetaList('Project Science', projectScienceRows) : ''}
+        ${projectScienceCitationRows.length ? renderMetaList('Project Science Citations', projectScienceCitationRows) : ''}
+        ${projectScienceFollowUps.length ? renderMetaList('Project Science Follow-up', projectScienceFollowUps) : ''}
+        ${resultAnalysisRows.length ? renderMetaList('Result Analysis', resultAnalysisRows) : ''}
+        ${resultAnalysisCitationRows.length ? renderMetaList('Result Analysis Citations', resultAnalysisCitationRows) : ''}
+        ${resultAnalysisFollowUps.length ? renderMetaList('Result Analysis Follow-up', resultAnalysisFollowUps) : ''}
         ${renderMetaList('Reasoning Summary', reasoningSummaryRows)}
         ${showDeveloperTrace ? renderMetaList('Developer Trace', developerTraceRows) : ''}
       </div>
@@ -932,9 +1343,30 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
   function updateInFlightState(nextInFlight) {
     inFlight = nextInFlight;
     sendBtn.disabled = inFlight;
+    if (developerTestToolsBtn) {
+      developerTestToolsBtn.disabled = inFlight;
+    }
     clearBtn.disabled = inFlight;
     projectSelect.disabled = inFlight;
     input.disabled = inFlight;
+  }
+
+  async function buildSyncedStateSnapshot(projectId) {
+    let syncResult = null;
+    if (window.enanaApi?.autoSaveDataFile) {
+      syncResult = await window.enanaApi.autoSaveDataFile(state, state.settings?.enaFilePath || '');
+      if (!syncResult?.ok) {
+        throw new Error(syncResult?.error || 'Failed to sync data before agent request.');
+      }
+      if (syncResult?.filePath && state.settings?.enaFilePath !== syncResult.filePath) {
+        state.settings.enaFilePath = syncResult.filePath;
+      }
+    }
+    const stateSnapshot = buildStateSnapshot(projectId);
+    if (!stateSnapshot.data_file_path) {
+      stateSnapshot.data_file_path = trimText(syncResult?.filePath || state.settings?.enaFilePath, 1600);
+    }
+    return stateSnapshot;
   }
 
   async function sendMessage() {
@@ -956,6 +1388,7 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
 
     const projectId = state.agentChat.projectId || '';
     const projectName = asArray(state.projects).find((item) => item.id === projectId)?.name || '';
+    const currentSessionId = await ensureCurrentChatSession(messageText);
     const userMessage = {
       id: createId(),
       role: 'user',
@@ -973,23 +1406,11 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
     setStatus('Agent reasoning in progress...');
 
     try {
-      let syncResult = null;
-      if (window.enanaApi?.autoSaveDataFile) {
-        syncResult = await window.enanaApi.autoSaveDataFile(state, state.settings?.enaFilePath || '');
-        if (!syncResult?.ok) {
-          throw new Error(syncResult?.error || 'Failed to sync data before agent request.');
-        }
-        if (syncResult?.filePath && state.settings?.enaFilePath !== syncResult.filePath) {
-          state.settings.enaFilePath = syncResult.filePath;
-        }
-      }
-      const stateSnapshot = buildStateSnapshot(projectId);
-      if (!stateSnapshot.data_file_path) {
-        stateSnapshot.data_file_path = trimText(syncResult?.filePath || state.settings?.enaFilePath, 1600);
-      }
+      const stateSnapshot = await buildSyncedStateSnapshot(projectId);
 
       const result = await window.enanaApi.agentChat({
         message: messageText,
+        chatSessionId: currentSessionId,
         projectId,
         projectName,
         conversation: toConversation(state.agentChat.messages),
@@ -1007,6 +1428,13 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
 
       if (!result?.ok) {
         throw new Error(result?.error || 'Agent request failed.');
+      }
+      if (result.chat_session && typeof result.chat_session === 'object') {
+        const sessionId = trimText(result.chat_session.id || result.chat_session.session_id, 120);
+        if (sessionId) {
+          state.agentChat.currentSessionId = sessionId;
+          upsertSessionSummary(result.chat_session);
+        }
       }
       const protocolWorkflow = result.protocol_to_notebook && typeof result.protocol_to_notebook === 'object'
         ? result.protocol_to_notebook
@@ -1030,14 +1458,27 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
       const recordLookup = result.record_lookup && typeof result.record_lookup === 'object'
         ? result.record_lookup
         : null;
+      const generalScienceQuestion = result.general_science_question && typeof result.general_science_question === 'object'
+        ? result.general_science_question
+        : null;
+      const projectScienceQuestion = result.project_science_question && typeof result.project_science_question === 'object'
+        ? result.project_science_question
+        : null;
+      const resultAnalysis = result.result_analysis && typeof result.result_analysis === 'object'
+        ? result.result_analysis
+        : null;
       const inventorySummaryText = summarizeInventoryLookup(inventoryLookup);
       const recordSummaryText = summarizeRecordLookup(recordLookup);
+      const scienceAnswerText = summarizeScienceResult(generalScienceQuestion)
+        || summarizeScienceResult(projectScienceQuestion)
+        || summarizeScienceResult(resultAnalysis);
       const assistantText = protocolStatus === 'completed'
         ? (completedNotebookText
           || `Notebook draft completed using protocol ${trimText(protocolWorkflow?.selected_protocol?.name, 220) || 'selection'}.`)
         : (protocolStatus === 'needs_more_info'
           ? (followUpQuestions.join(' ') || 'More details are needed to fill the remaining notebook placeholders.')
-          : (inventorySummaryText
+          : (scienceAnswerText
+            || inventorySummaryText
             || recordSummaryText
             || trimText(parser.reasoning_summary, 12000)
             || 'Intent parsing completed.'));
@@ -1052,6 +1493,9 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
           protocol_to_notebook: protocolWorkflow,
           inventory_lookup: inventoryLookup,
           record_lookup: recordLookup,
+          general_science_question: generalScienceQuestion,
+          project_science_question: projectScienceQuestion,
+          result_analysis: resultAnalysis,
           notebookDraft: notebookDraft || null,
           developer_trace: asArray(result.developer_trace),
           requestText: messageText
@@ -1060,7 +1504,11 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
 
       state.agentChat.messages = state.agentChat.messages.slice(-40);
       persist();
+      renderSessionList();
       renderHistory();
+      if (state.agentChat.currentSessionId) {
+        void refreshPersistentSessions({ force: true });
+      }
       setStatus('Complete.');
     } catch (error) {
       state.agentChat.messages.push({
@@ -1086,9 +1534,96 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
           protocol_to_notebook: null,
           inventory_lookup: null,
           record_lookup: null,
+          general_science_question: null,
+          project_science_question: null,
+          result_analysis: null,
           notebookDraft: null,
           developer_trace: [],
           requestText: messageText
+        }
+      });
+      state.agentChat.messages = state.agentChat.messages.slice(-40);
+      persist();
+      renderSessionList();
+      renderHistory();
+      setStatus('Error.');
+    } finally {
+      updateInFlightState(false);
+    }
+  }
+
+  async function runDeveloperToolSmokeTest() {
+    if (inFlight) {
+      return;
+    }
+    if (state.settings?.agent?.developerMode !== true) {
+      setStatus('Enable Agent Developer Mode to run manual tool smoke tests.');
+      return;
+    }
+    if (!window.enanaApi?.agentDeveloperTestTools) {
+      setStatus('Developer tool test IPC is unavailable.');
+      return;
+    }
+
+    ensureAgentState();
+
+    const projectId = state.agentChat.projectId || '';
+    const projectName = asArray(state.projects).find((item) => item.id === projectId)?.name || '';
+    updateInFlightState(true);
+    setStatus('Running manual tool smoke tests...');
+
+    try {
+      const stateSnapshot = await buildSyncedStateSnapshot(projectId);
+      const result = await window.enanaApi.agentDeveloperTestTools({
+        projectId,
+        projectName,
+        stateSnapshot,
+        agent: {
+          developerMode: state.settings?.agent?.developerMode === true
+        }
+      });
+
+      if (!result?.ok && !asArray(result?.items).length) {
+        throw new Error(result?.error || 'Manual tool smoke test failed.');
+      }
+
+      state.agentChat.messages.push({
+        id: createId(),
+        role: 'assistant',
+        text: trimText(result?.summary, 12000) || 'Manual tool smoke test completed.',
+        createdAt: new Date().toISOString(),
+        meta: {
+          tool_test: {
+            ok: result?.ok === true,
+            status: trimText(result?.status, 80),
+            tool_count: Number(result?.tool_count) || asArray(result?.items).length,
+            passed_count: Number(result?.passed_count) || 0,
+            failed_count: Number(result?.failed_count) || 0,
+            summary: trimText(result?.summary, 320),
+            items: asArray(result?.items)
+          }
+        }
+      });
+      state.agentChat.messages = state.agentChat.messages.slice(-40);
+      persist();
+      renderHistory();
+      setStatus(result?.ok === true ? 'Manual tool smoke test complete.' : 'Manual tool smoke test completed with failures.');
+    } catch (error) {
+      state.agentChat.messages.push({
+        id: createId(),
+        role: 'assistant',
+        text: `Manual tool smoke test failed: ${String(error?.message || error)}`,
+        createdAt: new Date().toISOString(),
+        meta: {
+          tool_test: {
+            ok: false,
+            status: 'error',
+            tool_count: 0,
+            passed_count: 0,
+            failed_count: 0,
+            summary: `Manual tool smoke test failed: ${String(error?.message || error)}`,
+            items: []
+          }
         }
       });
       state.agentChat.messages = state.agentChat.messages.slice(-40);
@@ -1104,6 +1639,11 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
     ensureAgentState();
     renderProjectOptions();
     renderContextSummary();
+    renderSessionList();
+    void refreshPersistentSessions();
+    if (developerTools) {
+      developerTools.hidden = !(state.settings?.agent?.developerMode === true && window.enanaApi?.agentDeveloperTestTools);
+    }
     renderHistory();
     if (!inFlight) {
       setStatus('Ready.');

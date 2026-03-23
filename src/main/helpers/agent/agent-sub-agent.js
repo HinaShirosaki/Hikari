@@ -27,6 +27,24 @@ function cloneJson(value, fallback) {
   }
 }
 
+function safeTimestampMs(value) {
+  const parsed = Date.parse(String(value || '').trim());
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function defaultIsProcessAlive(processId) {
+  const pid = Number(processId);
+  if (!Number.isFinite(pid) || pid <= 0) {
+    return false;
+  }
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return error?.code === 'EPERM' || error?.code === 'EACCES';
+  }
+}
+
 function createSubAgentId() {
   return `subagent-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
 }
@@ -68,13 +86,132 @@ function normalizeTurnResult(rawResult) {
   };
 }
 
+function normalizeTaskState(value) {
+  const normalized = defaultCleanText(value, 40).toLowerCase();
+  return ['running', 'completed', 'failed'].includes(normalized) ? normalized : '';
+}
+
 function createAgentSubAgentRuntime(deps = {}) {
   const asArray = typeof deps.asArray === 'function' ? deps.asArray : defaultAsArray;
   const cleanText = typeof deps.cleanText === 'function' ? deps.cleanText : defaultCleanText;
   const now = typeof deps.now === 'function' ? deps.now : (() => new Date().toISOString());
   const createId = typeof deps.createId === 'function' ? deps.createId : createSubAgentId;
   const runSubAgentTurn = typeof deps.runSubAgentTurn === 'function' ? deps.runSubAgentTurn : (async () => ({}));
+  const isProcessAlive = typeof deps.isProcessAlive === 'function' ? deps.isProcessAlive : defaultIsProcessAlive;
   const store = deps.store instanceof Map ? deps.store : new Map();
+
+  function normalizeTask(rawTask) {
+    const source = ensureObject(rawTask);
+    const processId = Number(source.process_id ?? source.processId);
+    return {
+      state: normalizeTaskState(source.state),
+      task_type: cleanText(source.task_type || source.taskType, 120),
+      summary: cleanText(source.summary, 500),
+      started_at: cleanText(source.started_at || source.startedAt, 80),
+      last_heartbeat_at: cleanText(source.last_heartbeat_at || source.lastHeartbeatAt, 80),
+      last_progress_at: cleanText(source.last_progress_at || source.lastProgressAt, 80),
+      finished_at: cleanText(source.finished_at || source.finishedAt, 80),
+      process_id: Number.isFinite(processId) && processId > 0 ? processId : null,
+      heartbeat_count: Number.isFinite(Number(source.heartbeat_count ?? source.heartbeatCount))
+        ? Math.max(0, Number(source.heartbeat_count ?? source.heartbeatCount))
+        : 0,
+      progress_count: Number.isFinite(Number(source.progress_count ?? source.progressCount))
+        ? Math.max(0, Number(source.progress_count ?? source.progressCount))
+        : 0,
+      exit_code: Number.isFinite(Number(source.exit_code ?? source.exitCode))
+        ? Number(source.exit_code ?? source.exitCode)
+        : null,
+      signal: cleanText(source.signal, 40),
+      timed_out: source.timed_out === true,
+      metadata: cloneJson(ensureObject(source.metadata), {})
+    };
+  }
+
+  function buildTaskPayload(task) {
+    const normalized = normalizeTask(task);
+    const hasValues = normalized.state
+      || normalized.task_type
+      || normalized.summary
+      || normalized.started_at
+      || normalized.last_heartbeat_at
+      || normalized.last_progress_at
+      || normalized.finished_at
+      || normalized.process_id
+      || normalized.heartbeat_count > 0
+      || normalized.progress_count > 0
+      || normalized.exit_code !== null
+      || normalized.signal
+      || normalized.timed_out === true
+      || Object.keys(normalized.metadata).length > 0;
+    return hasValues ? normalized : null;
+  }
+
+  function computeLiveness(agent) {
+    const source = ensureObject(agent);
+    const status = cleanText(source.status, 40).toLowerCase();
+    const task = normalizeTask(source.task);
+    if (status !== 'active') {
+      return {
+        live: false,
+        state: 'inactive',
+        reason: 'agent_inactive'
+      };
+    }
+
+    if (task.state === 'running') {
+      if (task.process_id) {
+        const alive = isProcessAlive(task.process_id);
+        return {
+          live: alive,
+          state: alive ? 'running' : 'dead',
+          reason: alive ? 'process_alive' : 'process_exited',
+          process_id: task.process_id,
+          last_heartbeat_at: task.last_heartbeat_at,
+          last_progress_at: task.last_progress_at
+        };
+      }
+
+      if (safeTimestampMs(task.last_progress_at) || safeTimestampMs(task.last_heartbeat_at)) {
+        return {
+          live: true,
+          state: 'running',
+          reason: safeTimestampMs(task.last_progress_at) ? 'progress_observed' : 'heartbeat_observed',
+          last_heartbeat_at: task.last_heartbeat_at,
+          last_progress_at: task.last_progress_at
+        };
+      }
+
+      return {
+        live: true,
+        state: 'running',
+        reason: 'running_without_process_monitor'
+      };
+    }
+
+    if (task.state === 'completed') {
+      return {
+        live: true,
+        state: 'idle',
+        reason: 'task_completed',
+        finished_at: task.finished_at
+      };
+    }
+
+    if (task.state === 'failed') {
+      return {
+        live: true,
+        state: 'idle',
+        reason: 'task_failed',
+        finished_at: task.finished_at
+      };
+    }
+
+    return {
+      live: true,
+      state: 'idle',
+      reason: 'agent_ready'
+    };
+  }
 
   function getStoredAgent(agentId) {
     const key = cleanText(agentId, 160);
@@ -104,8 +241,21 @@ function createAgentSubAgentRuntime(deps = {}) {
       created_at: cleanText(source.created_at, 80),
       updated_at: cleanText(source.updated_at, 80),
       message_count: asArray(source.messages).length,
-      metadata: cloneJson(ensureObject(source.metadata), {})
+      metadata: cloneJson(ensureObject(source.metadata), {}),
+      task: buildTaskPayload(source.task),
+      liveness: computeLiveness(source)
     };
+  }
+
+  function updateStoredAgent(agentId, updater) {
+    const key = cleanText(agentId, 160);
+    const current = getStoredAgent(key);
+    if (!current) {
+      return null;
+    }
+    const updated = ensureObject(typeof updater === 'function' ? updater(cloneJson(current, {})) : current);
+    updated.updated_at = now();
+    return saveAgent(updated);
   }
 
   async function createSubAgent(input = {}) {
@@ -139,7 +289,8 @@ function createAgentSubAgentRuntime(deps = {}) {
       messages: [
         normalizeMessage('user', firstMessage, createdAt)
       ],
-      last_response: null
+      last_response: null,
+      task: null
     };
 
     const turnResult = normalizeTurnResult(await runSubAgentTurn({
@@ -260,7 +411,11 @@ function createAgentSubAgentRuntime(deps = {}) {
     return {
       ok: true,
       status: 'found',
-      agent
+      agent: {
+        ...agent,
+        task: buildTaskPayload(agent.task),
+        liveness: computeLiveness(agent)
+      }
     };
   }
 
@@ -302,6 +457,210 @@ function createAgentSubAgentRuntime(deps = {}) {
     };
   }
 
+  function startSubAgentTask(input = {}) {
+    const source = ensureObject(input);
+    const agentId = cleanText(source.agent_id || source.agentId, 160);
+    if (!agentId) {
+      return {
+        ok: false,
+        status: 'error',
+        error: 'startSubAgentTask requires agent_id.'
+      };
+    }
+    const startedAt = cleanText(source.started_at || source.startedAt, 80) || now();
+    const processId = Number(source.process_id ?? source.processId);
+    const updated = updateStoredAgent(agentId, (agent) => {
+      agent.task = {
+        state: 'running',
+        task_type: cleanText(source.task_type || source.taskType, 120)
+          || cleanText(agent?.metadata?.task_type, 120),
+        summary: cleanText(source.summary, 500),
+        started_at: startedAt,
+        last_heartbeat_at: startedAt,
+        last_progress_at: '',
+        finished_at: '',
+        process_id: Number.isFinite(processId) && processId > 0 ? processId : null,
+        heartbeat_count: 1,
+        progress_count: 0,
+        exit_code: null,
+        signal: '',
+        timed_out: false,
+        metadata: cloneJson(ensureObject(source.metadata), {})
+      };
+      return agent;
+    });
+    if (!updated) {
+      return {
+        ok: false,
+        status: 'missing',
+        error: `Sub-agent "${agentId}" was not found.`
+      };
+    }
+    return {
+      ok: true,
+      status: 'running',
+      agent: {
+        ...updated,
+        task: buildTaskPayload(updated.task),
+        liveness: computeLiveness(updated)
+      },
+      summary: cleanText(source.summary, 240) || `Started task for sub-agent ${agentId}.`
+    };
+  }
+
+  function recordSubAgentHeartbeat(input = {}) {
+    const source = ensureObject(input);
+    const agentId = cleanText(source.agent_id || source.agentId, 160);
+    if (!agentId) {
+      return {
+        ok: false,
+        status: 'error',
+        error: 'recordSubAgentHeartbeat requires agent_id.'
+      };
+    }
+    const timestamp = cleanText(source.timestamp, 80) || now();
+    const processId = Number(source.process_id ?? source.processId);
+    const progress = source.progress === true;
+    const updated = updateStoredAgent(agentId, (agent) => {
+      const currentTask = normalizeTask(agent.task);
+      agent.task = {
+        ...currentTask,
+        state: currentTask.state || 'running',
+        last_heartbeat_at: timestamp,
+        last_progress_at: progress
+          ? timestamp
+          : currentTask.last_progress_at,
+        summary: cleanText(source.summary, 500) || currentTask.summary,
+        process_id: Number.isFinite(processId) && processId > 0 ? processId : currentTask.process_id,
+        heartbeat_count: currentTask.heartbeat_count + 1,
+        progress_count: progress ? currentTask.progress_count + 1 : currentTask.progress_count,
+        metadata: {
+          ...cloneJson(ensureObject(currentTask.metadata), {}),
+          ...cloneJson(ensureObject(source.metadata), {})
+        }
+      };
+      return agent;
+    });
+    if (!updated) {
+      return {
+        ok: false,
+        status: 'missing',
+        error: `Sub-agent "${agentId}" was not found.`
+      };
+    }
+    return {
+      ok: true,
+      status: 'running',
+      agent: {
+        ...updated,
+        task: buildTaskPayload(updated.task),
+        liveness: computeLiveness(updated)
+      }
+    };
+  }
+
+  function completeSubAgentTask(input = {}) {
+    const source = ensureObject(input);
+    const agentId = cleanText(source.agent_id || source.agentId, 160);
+    if (!agentId) {
+      return {
+        ok: false,
+        status: 'error',
+        error: 'completeSubAgentTask requires agent_id.'
+      };
+    }
+    const finishedAt = cleanText(source.finished_at || source.finishedAt, 80) || now();
+    const updated = updateStoredAgent(agentId, (agent) => {
+      const currentTask = normalizeTask(agent.task);
+      agent.task = {
+        ...currentTask,
+        state: 'completed',
+        summary: cleanText(source.summary, 500) || currentTask.summary,
+        last_heartbeat_at: finishedAt,
+        last_progress_at: cleanText(source.last_progress_at || source.lastProgressAt, 80) || currentTask.last_progress_at,
+        finished_at: finishedAt,
+        exit_code: Number.isFinite(Number(source.exit_code ?? source.exitCode))
+          ? Number(source.exit_code ?? source.exitCode)
+          : currentTask.exit_code,
+        signal: cleanText(source.signal, 40) || currentTask.signal,
+        timed_out: source.timed_out === true || currentTask.timed_out === true,
+        metadata: {
+          ...cloneJson(ensureObject(currentTask.metadata), {}),
+          ...cloneJson(ensureObject(source.metadata), {})
+        }
+      };
+      return agent;
+    });
+    if (!updated) {
+      return {
+        ok: false,
+        status: 'missing',
+        error: `Sub-agent "${agentId}" was not found.`
+      };
+    }
+    return {
+      ok: true,
+      status: 'completed',
+      agent: {
+        ...updated,
+        task: buildTaskPayload(updated.task),
+        liveness: computeLiveness(updated)
+      },
+      summary: cleanText(source.summary, 240) || `Completed task for sub-agent ${agentId}.`
+    };
+  }
+
+  function failSubAgentTask(input = {}) {
+    const source = ensureObject(input);
+    const agentId = cleanText(source.agent_id || source.agentId, 160);
+    if (!agentId) {
+      return {
+        ok: false,
+        status: 'error',
+        error: 'failSubAgentTask requires agent_id.'
+      };
+    }
+    const finishedAt = cleanText(source.finished_at || source.finishedAt, 80) || now();
+    const updated = updateStoredAgent(agentId, (agent) => {
+      const currentTask = normalizeTask(agent.task);
+      agent.task = {
+        ...currentTask,
+        state: 'failed',
+        summary: cleanText(source.summary || source.error, 500) || currentTask.summary,
+        last_heartbeat_at: finishedAt,
+        last_progress_at: cleanText(source.last_progress_at || source.lastProgressAt, 80) || currentTask.last_progress_at,
+        finished_at: finishedAt,
+        exit_code: Number.isFinite(Number(source.exit_code ?? source.exitCode))
+          ? Number(source.exit_code ?? source.exitCode)
+          : currentTask.exit_code,
+        signal: cleanText(source.signal, 40) || currentTask.signal,
+        timed_out: source.timed_out === true || currentTask.timed_out === true,
+        metadata: {
+          ...cloneJson(ensureObject(currentTask.metadata), {}),
+          ...cloneJson(ensureObject(source.metadata), {})
+        }
+      };
+      return agent;
+    });
+    if (!updated) {
+      return {
+        ok: false,
+        status: 'missing',
+        error: `Sub-agent "${agentId}" was not found.`
+      };
+    }
+    return {
+      ok: true,
+      status: 'failed',
+      agent: {
+        ...updated,
+        task: buildTaskPayload(updated.task),
+        liveness: computeLiveness(updated)
+      },
+      summary: cleanText(source.summary || source.error, 240) || `Marked task failed for sub-agent ${agentId}.`
+    };
+  }
+
   async function execute(input = {}) {
     const source = ensureObject(input);
     const action = normalizeAction(source.action);
@@ -334,6 +693,11 @@ function createAgentSubAgentRuntime(deps = {}) {
     getSubAgent,
     listSubAgents,
     deleteSubAgent,
+    startSubAgentTask,
+    recordSubAgentHeartbeat,
+    completeSubAgentTask,
+    failSubAgentTask,
+    computeLiveness,
     execute
   };
 }

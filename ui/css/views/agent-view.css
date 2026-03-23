@@ -1,6 +1,68 @@
 /* agent-view */
 
 /* Extracted from ui/css/base/core.css */
+.agent-chat-layout {
+  display: grid;
+  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.agent-session-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.agent-session-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.agent-session-toolbar h3 {
+  margin: 0 0 4px;
+}
+
+.agent-session-list {
+  display: grid;
+  gap: 8px;
+  max-height: 520px;
+  overflow-y: auto;
+}
+
+.agent-session-card {
+  width: 100%;
+  text-align: left;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.86), rgba(245, 249, 255, 0.72));
+  padding: 10px 12px;
+  display: grid;
+  gap: 6px;
+}
+
+.agent-session-card.is-active {
+  border-color: rgba(105, 174, 237, 0.9);
+  box-shadow: 0 0 0 1px rgba(105, 174, 237, 0.18);
+}
+
+.agent-session-card strong {
+  display: block;
+  font-size: 0.92rem;
+  color: var(--primary);
+}
+
+.agent-session-card span {
+  display: block;
+  line-height: 1.35;
+}
+
+.agent-session-meta {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
 .agent-chat-panel {
   display: grid;
   gap: 12px;
@@ -134,7 +196,17 @@
   border-color: rgba(105, 174, 237, 0.56);
 }
 
+.agent-activity-badge-error {
+  color: #8b1f1f;
+  background: rgba(255, 184, 184, 0.34);
+  border-color: rgba(226, 107, 107, 0.58);
+}
+
 @media (max-width: 720px) {
+  .agent-chat-layout {
+    grid-template-columns: 1fr;
+  }
+
   .agent-chat-item {
     width: 100%;
   }
@@ -186,6 +258,16 @@ body.theme-night .agent-activity {
   background: rgba(18, 30, 46, 0.58);
 }
 
+body.theme-night .agent-session-card {
+  border-color: rgba(186, 218, 255, 0.3);
+  background: linear-gradient(160deg, rgba(34, 52, 78, 0.65), rgba(20, 31, 48, 0.56));
+}
+
+body.theme-night .agent-session-card.is-active {
+  border-color: rgba(106, 172, 244, 0.74);
+  box-shadow: 0 0 0 1px rgba(106, 172, 244, 0.24);
+}
+
 body.theme-night .agent-activity-badge-done {
   color: #aaf4cf;
   border-color: rgba(80, 184, 139, 0.65);
@@ -202,6 +284,12 @@ body.theme-night .agent-activity-badge-planned {
   color: #9ed5ff;
   border-color: rgba(87, 155, 215, 0.65);
   background: rgba(29, 53, 89, 0.58);
+}
+
+body.theme-night .agent-activity-badge-error {
+  color: #ffb8b8;
+  border-color: rgba(208, 96, 96, 0.66);
+  background: rgba(96, 36, 36, 0.54);
 }
 
 body.ui-neutral-compact .agent-chat-item {

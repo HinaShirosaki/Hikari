@@ -2008,6 +2008,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     renderAnalysisChart(result, method);
   }
 
+  // Reset derived analysis output when the selected method changes.
   function onAnalysisMethodChange() {
     if (!assayAnalysisSummary || !assayAnalysisTable) {
       return;
@@ -2021,6 +2022,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     }
   }
 
+  // Re-run analysis when row/column grouping options change.
   function onAnalysisConfigChange() {
     if (!assayAnalysisSummary || !assayAnalysisTable) {
       return;
@@ -2032,16 +2034,19 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     renderAnalysis();
   }
 
+  // Explicit analyze button handler.
   function onAnalyzeResults() {
     renderAnalysis();
   }
 
+  // Return assays sorted from most recently updated to oldest.
   function sortedAssaysByUpdated() {
     return (state.assays || [])
       .slice()
       .sort((a, b) => Date.parse(b.updatedAt || '') - Date.parse(a.updatedAt || ''));
   }
 
+  // Render the results-mode assay dropdown and restore the best selection.
   function renderResultsAssayOptions(preferredId = '') {
     if (!assayResultsAssaySelect) {
       return;
@@ -2063,6 +2068,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     }
   }
 
+  // Load a saved assay record into results mode and restore its working state.
   function loadAssayForResults(assayId) {
     const assay = getAssayById(assayId);
     if (!assay) {
@@ -2095,6 +2101,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     setResultStatus(`Loaded ${getResultValueCount()} result value(s) for ${assay.assayNumber || assay.id}.`);
   }
 
+  // React to results-mode assay selection changes.
   function onResultsAssaySelected() {
     const assayId = assayResultsAssaySelect?.value || '';
     if (!assayId) {
@@ -2106,6 +2113,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     loadAssayForResults(assayId);
   }
 
+  // Explicit load button handler for results mode.
   function onResultsAssayLoad() {
     const assayId = assayResultsAssaySelect?.value || '';
     if (!assayId) {
@@ -2115,6 +2123,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     loadAssayForResults(assayId);
   }
 
+  // Persist the current working result values back onto the loaded assay.
   function onSaveResults() {
     ensureState();
     const assayId = activeResultsAssayId || assayResultsAssaySelect?.value || '';
@@ -2141,6 +2150,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     setResultStatus(`Saved ${Object.keys(assay.resultValues || {}).length} result value(s) for ${assay.assayNumber || assay.id}.`);
   }
 
+  // Render the textual list of mapped wells and their sample/concentration assignments.
   function renderLayoutList() {
     if (!assayLayoutList) {
       return;
@@ -2162,6 +2172,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     `).join('');
   }
 
+  // Handle live typing in plate-preview axis fields and inline well editors.
   function onPlatePreviewInput(event) {
     const axisInput = event.target.closest('[data-axis-dimension]');
     if (axisInput) {
@@ -2181,6 +2192,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     );
   }
 
+  // Commit plate-preview axis or inline-well changes and refresh dependent UI.
   function onPlatePreviewChange(event) {
     const axisInput = event.target.closest('[data-axis-dimension]');
     if (axisInput) {
@@ -2210,6 +2222,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     setCsvStatus(`Mapped wells: ${currentLayout.length}.`);
   }
 
+  // Track which well editor received focus inside the plate preview.
   function onPlatePreviewFocusIn(event) {
     const inlineInput = event.target.closest('[data-well-inline-field]');
     if (!inlineInput) {
@@ -2218,6 +2231,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     setActiveWellSelection(inlineInput.dataset.well);
   }
 
+  // Support clicking a well cell to focus its inline editor.
   function onPlatePreviewClick(event) {
     if (event.target.closest('[data-axis-dimension]')) {
       return;
@@ -2241,6 +2255,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     cell.querySelector('[data-well-inline-field]')?.focus();
   }
 
+  // Clear all axis values, manual overrides, suppressed wells, and mapped results.
   function onClearWellMappings() {
     manualWellOverrides = {};
     suppressedWells = new Set();
@@ -2256,6 +2271,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     updateActiveWellPreviewState();
   }
 
+  // Focus the active inline editor for one specific well.
   function focusPlateWellInput(wellId) {
     const normalizedWell = String(wellId || '').trim().toUpperCase();
     if (!normalizedWell || !assayPlatePreview) {
@@ -2265,6 +2281,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     assayPlatePreview.querySelector(selector)?.focus();
   }
 
+  // Handle edit/delete actions triggered from the textual mapped-well list.
   function onLayoutListClick(event) {
     const editBtn = event.target.closest('[data-layout-edit]');
     if (editBtn) {

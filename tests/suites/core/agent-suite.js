@@ -519,7 +519,7 @@ module.exports = function registerAgentSuite(context = {}) {
     test('agent tool-call catalog stays in sync and prompt builders render tool metadata', () => {
       const toolNames = agentToolCall.AGENT_TOOL_CATALOG.map((entry) => entry.name);
       const schemaNames = Object.keys(agentToolCall.AGENT_TOOL_CALL_CATALOG).filter((name) => name !== '$defs');
-      assert.deepEqual(toolNames, ['inventory-lookup', 'record-lookup', 'protocol-matching', 'notebook-generation', 'python-sandbox', 'sub-agent']);
+      assert.deepEqual(toolNames, ['inventory-lookup', 'record-lookup', 'protocol-matching', 'notebook-generation', 'python-sandbox', 'sub-agent', 'memory', 'literature-search', 'paper-download', 'paper-analysis', 'protocol-generation']);
       assert.deepEqual(schemaNames, toolNames);
 
       const selectionPrompt = agentToolCall.buildToolSelectionPrompt({
@@ -537,6 +537,12 @@ module.exports = function registerAgentSuite(context = {}) {
       assert.match(selectionPrompt, /protocol-matching/);
       assert.match(selectionPrompt, /python-sandbox/);
       assert.match(selectionPrompt, /sub-agent/);
+      assert.match(selectionPrompt, /memory/);
+      assert.match(selectionPrompt, /literature-search/);
+      assert.match(selectionPrompt, /paper-download/);
+      assert.match(selectionPrompt, /paper-analysis/);
+      assert.match(selectionPrompt, /protocol-generation/);
+      assert.match(selectionPrompt, /Use this tool when the user needs to know whether a reagent/);
       assert.match(selectionPrompt, /Active project context: Atlas/);
 
       const argumentsPrompt = agentToolCall.buildToolArgumentsPrompt({
@@ -545,6 +551,7 @@ module.exports = function registerAgentSuite(context = {}) {
       });
       assert.match(argumentsPrompt, /Selected tools in order: inventory-lookup, python-sandbox/);
       assert.match(argumentsPrompt, /Input schema JSON:/);
+      assert.match(argumentsPrompt, /Detailed usage:/);
       assert.match(argumentsPrompt, /readback_paths/);
     });
 
@@ -568,6 +575,7 @@ module.exports = function registerAgentSuite(context = {}) {
         () => agentToolCall.validateAgentToolCallCatalog({
           $defs: {},
           'inventory-lookup': {
+            description: 'inventory usage',
             input_schema: {
               type: 'object',
               additionalProperties: false,
@@ -589,6 +597,7 @@ module.exports = function registerAgentSuite(context = {}) {
             }
           },
           'record-lookup': {
+            description: 'record usage',
             input_schema: {
               type: 'object',
               additionalProperties: false,
@@ -596,6 +605,7 @@ module.exports = function registerAgentSuite(context = {}) {
             }
           },
           'protocol-matching': {
+            description: 'matching usage',
             input_schema: {
               type: 'object',
               additionalProperties: false,
@@ -603,6 +613,7 @@ module.exports = function registerAgentSuite(context = {}) {
             }
           },
           'notebook-generation': {
+            description: 'notebook usage',
             input_schema: {
               type: 'object',
               additionalProperties: false,
@@ -610,6 +621,7 @@ module.exports = function registerAgentSuite(context = {}) {
             }
           },
           'python-sandbox': {
+            description: 'python usage',
             input_schema: {
               type: 'object',
               additionalProperties: false,
@@ -617,6 +629,142 @@ module.exports = function registerAgentSuite(context = {}) {
             }
           },
           'sub-agent': {
+            description: 'sub-agent usage',
+            input_schema: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {}
+            }
+          },
+          memory: {
+            description: 'memory usage',
+            input_schema: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {}
+            }
+          },
+          'literature-search': {
+            description: 'literature search usage',
+            input_schema: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {}
+            }
+          },
+          'paper-download': {
+            description: 'paper download usage',
+            input_schema: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {}
+            }
+          },
+          'paper-analysis': {
+            description: 'paper usage',
+            input_schema: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {}
+            }
+          },
+          'protocol-generation': {
+            description: 'protocol generation usage',
+            input_schema: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {}
+            }
+          }
+        }, agentToolCall.AGENT_TOOL_CATALOG),
+        /missing description/i
+      );
+
+      assert.throws(
+        () => agentToolCall.validateAgentToolCallCatalog({
+          $defs: {},
+          'inventory-lookup': {
+            description: 'inventory usage',
+            input_schema: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {}
+            }
+          },
+          'record-lookup': {
+            description: 'record usage',
+            input_schema: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {}
+            }
+          },
+          'protocol-matching': {
+            description: 'matching usage',
+            input_schema: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {}
+            }
+          },
+          'notebook-generation': {
+            description: 'notebook usage',
+            input_schema: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {}
+            }
+          },
+          'python-sandbox': {
+            description: 'python usage',
+            input_schema: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {}
+            }
+          },
+          'sub-agent': {
+            description: 'sub-agent usage',
+            input_schema: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {}
+            }
+          },
+          memory: {
+            description: 'memory usage',
+            input_schema: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {}
+            }
+          },
+          'literature-search': {
+            description: 'literature search usage',
+            input_schema: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {}
+            }
+          },
+          'paper-download': {
+            description: 'paper download usage',
+            input_schema: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {}
+            }
+          },
+          'paper-analysis': {
+            description: 'paper usage',
+            input_schema: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {}
+            }
+          },
+          'protocol-generation': {
+            description: 'protocol generation usage',
             input_schema: {
               type: 'object',
               additionalProperties: false,
@@ -624,6 +772,7 @@ module.exports = function registerAgentSuite(context = {}) {
             }
           },
           'made-up-tool': {
+            description: 'made-up usage',
             input_schema: {
               type: 'object',
               additionalProperties: false,
@@ -848,6 +997,934 @@ module.exports = function registerAgentSuite(context = {}) {
       assert.match(String(result.error || ''), /No tool executor is registered/i);
     });
 
+    test('science reasoning loop enforces one tool per round and continues from evaluator feedback', async () => {
+      const scriptedTurns = [
+        {
+          calls: [
+            { callId: 'call-1', name: 'search_pubmed', argsText: JSON.stringify({ query: 'MAPK inhibitor resistance', limit: 3 }) },
+            { callId: 'call-2', name: 'search_web', argsText: JSON.stringify({ query: 'ignore this extra call', limit: 3 }) }
+          ],
+          text: 'I will start with PubMed.'
+        },
+        {
+          calls: [],
+          text: 'PubMed returned one paper, but I still need a broader review source.'
+        },
+        {
+          calls: [
+            { callId: 'call-3', name: 'search_web', argsText: JSON.stringify({ query: 'MAPK inhibitor resistance review', limit: 3 }) }
+          ],
+          text: 'I will use a broader web-backed retrieval next.'
+        },
+        {
+          calls: [],
+          text: 'Now I have enough evidence to answer.'
+        }
+      ];
+      const feedbackMessages = [];
+      const runtime = agentScienceReasoningLoop.createScienceReasoningLoopRuntime({
+        startAgentSession: async ({ toolDefinitions }) => {
+          assert.deepEqual(toolDefinitions.map((tool) => tool.name), [
+            'search_pubmed',
+            'search_europe_pmc',
+            'search_crossref',
+            'search_uniprot',
+            'search_web'
+          ]);
+          return { step: 0 };
+        },
+        extractAgentSessionFunctionCalls: (session) => scriptedTurns[session.step].calls,
+        extractAgentSessionText: (session) => scriptedTurns[session.step].text,
+        continueAgentSessionWithToolOutputs: async (session) => ({ step: session.step + 1 }),
+        continueAgentSessionWithUserMessage: async (session, feedback) => {
+          feedbackMessages.push(String(feedback || ''));
+          return { step: session.step + 1 };
+        },
+        resolveToolDefinitions: (selectedToolNames) => selectedToolNames.map((name) => ({
+          name,
+          description: name,
+          parameters: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['query'],
+            properties: {
+              query: { type: 'string' },
+              limit: { type: 'integer' }
+            }
+          }
+        })),
+        evaluateScienceRound: async ({ roundsExecuted }) => (
+          roundsExecuted >= 2
+            ? {
+              satisfied: true,
+              reason: 'Evidence is sufficient now.',
+              missing_requirements: [],
+              should_continue: false,
+              next_tool_hint: null,
+              can_answer_with_limitations: true
+            }
+            : {
+              satisfied: false,
+              reason: 'Need one broader review-style source.',
+              missing_requirements: ['A broader source is still needed.'],
+              should_continue: true,
+              next_tool_hint: {
+                tool_name: 'search_web',
+                query: 'MAPK inhibitor resistance review',
+                reason: 'Broaden beyond the first paper.'
+              },
+              can_answer_with_limitations: true
+            }
+        ),
+        synthesizeScienceFinal: async () => ({
+          answer: 'Resistance often involves pathway reactivation and compensatory signaling, supported by both the paper hit and broader review retrieval.',
+          confidence: 0.77,
+          decision_record: {
+            assumptions: ['Only retrieved sources were used.'],
+            open_questions: [],
+            verification_notes: ['Two retrieval rounds completed.']
+          },
+          follow_up_questions: []
+        })
+      });
+
+      const result = await runtime.runGeneralScienceQuestion({
+        provider: 'openai',
+        endpoint: 'https://example.test',
+        apiKey: 'key',
+        model: 'gpt-test',
+        message: 'What causes MAPK inhibitor resistance?',
+        conversation: [],
+        parserPayload: {
+          primary_intent: 'general_science_question',
+          needs_clarification: false,
+          clarification_reason: null,
+          entities: {}
+        },
+        routing: {
+          intent: 'general_science_question',
+          confidence: 0.64,
+          entities: {},
+          plan: {},
+          classifier: {}
+        },
+        runTool: async (toolName, args) => ({
+          ok: true,
+          tool_name: toolName,
+          input: args,
+          result: {
+            items: [{ id: `${toolName}-1` }],
+            citations: [
+              {
+                source: toolName === 'search_pubmed' ? 'pubmed' : 'web_source',
+                pointer: `${toolName}-pointer`,
+                reason: `Retrieved from ${toolName}.`
+              }
+            ],
+            summary: `${toolName} completed.`
+          },
+          items: [{ id: `${toolName}-1` }],
+          citations: [
+            {
+              source: toolName === 'search_pubmed' ? 'pubmed' : 'web_source',
+              pointer: `${toolName}-pointer`,
+              reason: `Retrieved from ${toolName}.`
+            }
+          ],
+          summary: `${toolName} completed.`
+        })
+      });
+
+      assert.equal(result.status, 'completed');
+      assert.equal(result.rounds_executed, 2);
+      assert.equal(result.tool_trace.length, 2);
+      assert.equal(result.tool_trace[0].tool_name, 'search_pubmed');
+      assert.equal(result.tool_trace[0].truncated_multi_call, true);
+      assert.equal(result.tool_trace[1].tool_name, 'search_web');
+      assert.equal(feedbackMessages.length, 1);
+      assert.match(feedbackMessages[0], /Need one broader review-style source/i);
+      assert.match(result.answer, /pathway reactivation/i);
+    });
+
+    test('science reasoning loop returns partial answer when the tool budget is exhausted', async () => {
+      const runtime = agentScienceReasoningLoop.createScienceReasoningLoopRuntime({
+        startAgentSession: async () => ({ step: 0 }),
+        extractAgentSessionFunctionCalls: () => [
+          { callId: 'call-1', name: 'run_python_sandbox', argsText: JSON.stringify({ code: 'print(1)' }) }
+        ],
+        extractAgentSessionText: () => 'I started a computation.',
+        continueAgentSessionWithToolOutputs: async () => ({ step: 1 }),
+        continueAgentSessionWithUserMessage: async (session) => session,
+        resolveToolDefinitions: (selectedToolNames) => selectedToolNames.map((name) => ({
+          name,
+          description: name,
+          parameters: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['code'],
+            properties: {
+              code: { type: 'string' }
+            }
+          }
+        })),
+        evaluateScienceRound: async () => ({
+          satisfied: false,
+          reason: 'The computation finished, but interpretation is still incomplete.',
+          missing_requirements: ['A clearer interpretation is still needed.'],
+          should_continue: true,
+          next_tool_hint: {
+            tool_name: 'search_notebook_entries',
+            query: 'previous similar assay',
+            reason: 'Need contextual interpretation.'
+          },
+          can_answer_with_limitations: true
+        }),
+        synthesizeScienceFinal: async ({ partial, evaluator }) => ({
+          answer: partial
+            ? `Partial answer. Remaining gaps: ${evaluator.missing_requirements.join('; ')}.`
+            : 'Complete answer.',
+          confidence: 0.49,
+          decision_record: {
+            assumptions: ['Budget exhausted before additional context retrieval.'],
+            open_questions: evaluator.missing_requirements,
+            verification_notes: ['Returned best-effort output.']
+          },
+          follow_up_questions: ['Could you share the expected interpretation target?']
+        })
+      });
+
+      const result = await runtime.runResultAnalysis({
+        provider: 'openai',
+        endpoint: 'https://example.test',
+        apiKey: 'key',
+        model: 'gpt-test',
+        message: 'Fit this assay and explain any outliers.',
+        conversation: [],
+        parserPayload: {
+          primary_intent: 'result_analysis',
+          needs_clarification: false,
+          clarification_reason: null,
+          entities: {}
+        },
+        routing: {
+          intent: 'result_analysis',
+          confidence: 0.64,
+          entities: {},
+          plan: {},
+          classifier: {}
+        },
+        maxRounds: 1,
+        runTool: async () => ({
+          ok: true,
+          tool_name: 'run_python_sandbox',
+          input: { code: 'print(1)' },
+          result: {
+            items: [{ run_id: 'py-1', status: 'ok' }],
+            citations: [{ source: 'python_sandbox', pointer: 'py-1', reason: 'Computation completed.' }],
+            summary: 'Python sandbox execution completed.'
+          },
+          items: [{ run_id: 'py-1', status: 'ok' }],
+          citations: [{ source: 'python_sandbox', pointer: 'py-1', reason: 'Computation completed.' }],
+          summary: 'Python sandbox execution completed.'
+        })
+      });
+
+      assert.equal(result.status, 'partial');
+      assert.equal(result.rounds_executed, 1);
+      assert.match(result.answer, /Remaining gaps/i);
+      assert.equal(result.follow_up_questions.length >= 1, true);
+    });
+
+    test('science reasoning loop turns invalid tool arguments into a failed tool result', async () => {
+      const runtime = agentScienceReasoningLoop.createScienceReasoningLoopRuntime({
+        startAgentSession: async () => ({ step: 0 }),
+        extractAgentSessionFunctionCalls: () => [
+          { callId: 'call-1', name: 'search_pubmed', argsText: JSON.stringify({ limit: 'five' }) }
+        ],
+        extractAgentSessionText: () => 'Trying PubMed.',
+        continueAgentSessionWithToolOutputs: async () => ({ step: 1 }),
+        continueAgentSessionWithUserMessage: async (session) => session,
+        resolveToolDefinitions: (selectedToolNames) => selectedToolNames.map((name) => ({
+          name,
+          description: name,
+          parameters: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['query'],
+            properties: {
+              query: { type: 'string' },
+              limit: { type: 'integer' }
+            }
+          }
+        })),
+        evaluateScienceRound: async () => ({
+          satisfied: false,
+          reason: 'The tool call itself failed schema validation.',
+          missing_requirements: ['A valid PubMed query is still required.'],
+          should_continue: false,
+          next_tool_hint: null,
+          can_answer_with_limitations: true
+        }),
+        synthesizeScienceFinal: async ({ partial }) => ({
+          answer: partial ? 'Partial answer after tool-validation failure.' : 'Complete answer.',
+          confidence: 0.41,
+          decision_record: {
+            assumptions: ['The tool request failed validation before execution.'],
+            open_questions: ['A valid query is still required.'],
+            verification_notes: ['Returned a best-effort answer without executing the invalid tool call.']
+          },
+          follow_up_questions: ['What specific PubMed query should I use?']
+        })
+      });
+
+      const result = await runtime.runGeneralScienceQuestion({
+        provider: 'openai',
+        endpoint: 'https://example.test',
+        apiKey: 'key',
+        model: 'gpt-test',
+        message: 'Find recent papers on CRISPR base editing.',
+        conversation: [],
+        parserPayload: {
+          primary_intent: 'general_science_question',
+          needs_clarification: false,
+          clarification_reason: null,
+          entities: {}
+        },
+        routing: {
+          intent: 'general_science_question',
+          confidence: 0.64,
+          entities: {},
+          plan: {},
+          classifier: {}
+        },
+        maxRounds: 1,
+        runTool: async () => {
+          throw new Error('This executor should not run when args are invalid.');
+        }
+      });
+
+      assert.equal(result.status, 'partial');
+      assert.equal(result.tool_trace.length, 1);
+      assert.equal(result.tool_trace[0].ok, false);
+      assert.match(String(result.tool_trace[0].summary || ''), /required|type integer/i);
+    });
+
+    test('science reasoning loop requests clarification for project science when no project can be resolved', async () => {
+      const runtime = agentScienceReasoningLoop.createScienceReasoningLoopRuntime({
+        startAgentSession: async () => {
+          throw new Error('Session should not start when project preflight fails.');
+        }
+      });
+
+      const result = await runtime.runProjectScienceQuestion({
+        provider: 'openai',
+        endpoint: 'https://example.test',
+        apiKey: 'key',
+        model: 'gpt-test',
+        message: 'Why did expression drop in this project?',
+        conversation: [],
+        parserPayload: {
+          primary_intent: 'project_science_question',
+          needs_clarification: false,
+          clarification_reason: null,
+          entities: {}
+        },
+        routing: {
+          intent: 'project_science_question',
+          confidence: 0.64,
+          entities: {},
+          plan: {},
+          classifier: {}
+        }
+      });
+
+      assert.equal(result.status, 'needs_more_info');
+      assert.equal(result.rounds_executed, 0);
+      assert.equal(result.follow_up_questions.length >= 1, true);
+      assert.match(result.follow_up_questions[0], /Which project/i);
+    });
+
+    test('science reasoning loop exposes the expected result-analysis tool priority including python first', async () => {
+      let capturedToolNames = [];
+      const runtime = agentScienceReasoningLoop.createScienceReasoningLoopRuntime({
+        startAgentSession: async ({ toolDefinitions }) => {
+          capturedToolNames = toolDefinitions.map((tool) => tool.name);
+          return { step: 0 };
+        },
+        extractAgentSessionFunctionCalls: () => [],
+        extractAgentSessionText: () => 'Enough information already.',
+        continueAgentSessionWithToolOutputs: async (session) => session,
+        continueAgentSessionWithUserMessage: async (session) => session,
+        resolveToolDefinitions: (selectedToolNames) => selectedToolNames.map((name) => ({
+          name,
+          description: name,
+          parameters: {
+            type: 'object',
+            additionalProperties: false,
+            properties: {}
+          }
+        })),
+        evaluateScienceRound: async () => ({
+          satisfied: true,
+          reason: 'No extra tool was needed for this test harness.',
+          missing_requirements: [],
+          should_continue: false,
+          next_tool_hint: null,
+          can_answer_with_limitations: true
+        }),
+        synthesizeScienceFinal: async () => ({
+          answer: 'Ready.',
+          confidence: 0.6,
+          decision_record: {
+            assumptions: [],
+            open_questions: [],
+            verification_notes: []
+          },
+          follow_up_questions: []
+        })
+      });
+
+      await runtime.runResultAnalysis({
+        provider: 'openai',
+        endpoint: 'https://example.test',
+        apiKey: 'key',
+        model: 'gpt-test',
+        message: 'Quantify the assay trend.',
+        conversation: [],
+        parserPayload: {
+          primary_intent: 'result_analysis',
+          needs_clarification: false,
+          clarification_reason: null,
+          entities: {}
+        },
+        routing: {
+          intent: 'result_analysis',
+          confidence: 0.64,
+          entities: {},
+          plan: {},
+          classifier: {}
+        },
+        runTool: async () => ({
+          ok: true,
+          tool_name: 'run_python_sandbox',
+          input: {},
+          result: { items: [], citations: [], summary: 'ok' },
+          items: [],
+          citations: [],
+          summary: 'ok'
+        })
+      });
+
+      assert.equal(capturedToolNames[0], 'run_python_sandbox');
+      assert.equal(capturedToolNames.includes('search_notebook_entries'), true);
+      assert.equal(capturedToolNames.includes('search_web'), true);
+    });
+
+    test('protocol generation runtime emits import-ready protocol records with placeholders and troubleshooting', async () => {
+      let createIdCounter = 0;
+      const runtime = agentProtocolGeneration.createProtocolGenerationRuntime({
+        now: () => '2026-03-22T12:00:00.000Z',
+        createId: () => `generated-${++createIdCounter}`,
+        requestStructuredJsonPayload: async () => ({
+          ok: true,
+          payload: {
+            protocol: {
+              name: 'PD-1 Nanobody Purification',
+              purpose: 'Purify the expressed PD-1 nanobody from lysate.',
+              materials: ['Ni-NTA resin', 'imidazole buffer'],
+              steps: [
+                'Clarify lysate.',
+                'Bind clarified lysate to Ni-NTA resin for [time].',
+                'Elute bound protein with imidazole.'
+              ],
+              troubleshooting: [
+                {
+                  problem: 'Low yield',
+                  possible_cause: 'Insufficient binding time',
+                  solution: 'Extend resin contact time.'
+                }
+              ]
+            },
+            result_summary: 'Generated a purification protocol.'
+          }
+        })
+      });
+
+      const result = await runtime.generateProtocol({
+        title: 'PD-1 Nanobody Purification',
+        method_text: 'Clarify lysate, bind it to Ni-NTA resin, then elute with imidazole.'
+      });
+
+      assert.equal(result.ok, true);
+      assert.equal(result.status, 'generated');
+      assert.equal(result.protocol.name, 'PD-1 Nanobody Purification');
+      assert.equal(result.protocol.createdAt, '2026-03-22T12:00:00.000Z');
+      assert.equal(result.protocol.updatedAt, '2026-03-22T12:00:00.000Z');
+      assert.equal(Array.isArray(result.protocol.materials), true);
+      assert.equal(result.protocol.materials[0], 'Ni-NTA resin');
+      assert.equal(Array.isArray(result.protocol.steps), true);
+      assert.equal(result.protocol.steps.length, 3);
+      assert.match(String(result.protocol.steps[1].text || ''), /\{\{ph:/);
+      assert.equal(result.protocol.steps[1].placeholders[0].name, 'time');
+      assert.match(String(result.protocol.troubleshooting || ''), /Low yield/);
+      assert.equal(result.summary, 'Generated a purification protocol.');
+    });
+
+    test('literature search runtime aggregates scholarly sources and builds query from parser payload', async () => {
+      const runtime = agentLiteratureSearch.createLiteratureSearchRuntime({
+        fetch: async (url) => {
+          const normalizedUrl = String(url || '');
+          if (normalizedUrl.includes('esearch.fcgi')) {
+            return {
+              ok: true,
+              json: async () => ({
+                esearchresult: {
+                  idlist: ['12345']
+                }
+              })
+            };
+          }
+          if (normalizedUrl.includes('esummary.fcgi')) {
+            return {
+              ok: true,
+              json: async () => ({
+                result: {
+                  uids: ['12345'],
+                  '12345': {
+                    uid: '12345',
+                    title: 'PD-1 stability study',
+                    fulljournalname: 'Nature Biotechnology',
+                    pubdate: '2024-01-15',
+                    authors: [{ name: 'Lee A' }],
+                    articleids: [{ idtype: 'doi', value: '10.1000/pd1' }]
+                  }
+                }
+              })
+            };
+          }
+          if (normalizedUrl.includes('api.crossref.org/works')) {
+            return {
+              ok: true,
+              json: async () => ({
+                message: {
+                  items: [
+                    {
+                      DOI: '10.1000/cross',
+                      title: ['Crossref PD-1 review'],
+                      URL: 'https://doi.org/10.1000/cross',
+                      author: [{ given: 'Mia', family: 'Chen' }],
+                      issued: { 'date-parts': [[2023, 10, 1]] },
+                      'container-title': ['Science']
+                    }
+                  ]
+                }
+              })
+            };
+          }
+          if (normalizedUrl.includes('europepmc')) {
+            return {
+              ok: true,
+              json: async () => ({
+                resultList: {
+                  result: [
+                    {
+                      id: 'PMC123',
+                      pmid: '321',
+                      pmcid: 'PMC123',
+                      doi: '10.1000/eupmc',
+                      title: 'Europe PMC PD-1 methods',
+                      authorString: 'Pat Doe',
+                      journalTitle: 'Cell',
+                      pubYear: '2022'
+                    }
+                  ]
+                }
+              })
+            };
+          }
+          if (normalizedUrl.includes('rest.uniprot.org')) {
+            return {
+              ok: true,
+              json: async () => ({
+                results: [
+                  {
+                    primaryAccession: 'Q99999',
+                    uniProtkbId: 'PD1_HUMAN',
+                    proteinDescription: {
+                      recommendedName: {
+                        fullName: {
+                          value: 'Programmed cell death protein 1'
+                        }
+                      }
+                    },
+                    genes: [
+                      {
+                        geneName: {
+                          value: 'PDCD1'
+                        }
+                      }
+                    ],
+                    organism: {
+                      scientificName: 'Homo sapiens'
+                    },
+                    sequence: {
+                      length: 288
+                    },
+                    entryType: 'Reviewed'
+                  }
+                ]
+              })
+            };
+          }
+          throw new Error(`Unexpected URL ${normalizedUrl}`);
+        }
+      });
+
+      const result = await runtime.searchLiterature({
+        parser_payload: {
+          primary_intent: 'literature_search',
+          entities: {
+            protein_name: 'PD-1',
+            requested_output: 'recent papers',
+            paper_title: null,
+            project_name: null,
+            activity_type: null,
+            protocol_name: null,
+            compound_name: null,
+            inventory_item: null,
+            cell_line: null,
+            workflow_step: null
+          }
+        },
+        sources: ['pubmed', 'crossref', 'europe_pmc', 'uniprot'],
+        limit: 6
+      });
+
+      assert.equal(result.ok, true);
+      assert.equal(result.status, 'completed');
+      assert.match(String(result.query || ''), /PD-1/i);
+      assert.deepEqual(result.sources, ['pubmed', 'crossref', 'europe_pmc', 'uniprot']);
+      assert.equal(result.items.some((item) => item.source === 'pubmed' && item.pmid === '12345'), true);
+      assert.equal(result.items.some((item) => item.source === 'crossref' && item.doi === '10.1000/cross'), true);
+      assert.equal(result.items.some((item) => item.source === 'europe_pmc' && item.pmcid === 'PMC123'), true);
+      assert.equal(result.items.some((item) => item.source === 'uniprot' && item.accession === 'Q99999'), true);
+      assert.equal(result.citations.some((item) => item.source === 'pubmed' && item.pointer === '10.1000/pd1'), true);
+      assert.equal(result.source_counts.pubmed, 1);
+      assert.equal(result.source_counts.crossref, 1);
+      assert.equal(result.source_counts.europe_pmc, 1);
+      assert.equal(result.source_counts.uniprot, 1);
+    });
+
+    test('literature search runtime falls back to web search when scholarly sources are empty', async () => {
+      const runtime = agentLiteratureSearch.createLiteratureSearchRuntime({
+        searchPubMedRecords: async () => [],
+        searchCrossrefRecords: async () => [],
+        searchEuropePmcRecords: async () => [],
+        searchUniProtRecords: async () => [],
+        searchWebResults: async () => ({
+          items: [
+            {
+              title: 'Review of PD-1 binders',
+              url: 'https://example.org/review',
+              snippet: 'A recent external review of PD-1 binders.'
+            }
+          ]
+        })
+      });
+
+      const result = await runtime.execute({
+        query: 'PD-1 binder review',
+        source: 'auto',
+        limit: 5
+      });
+
+      assert.equal(result.ok, true);
+      assert.equal(result.status, 'completed');
+      assert.equal(result.sources.includes('web'), true);
+      assert.equal(result.items.length, 1);
+      assert.equal(result.items[0].source, 'web');
+      assert.equal(result.items[0].source_domain, 'example.org');
+      assert.match(String(result.summary || ''), /web: 1/i);
+    });
+
+    test('paper download runtime extracts PDF candidates and streams direct download progress into paper storage', async () => {
+      const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'paper-download-direct-'));
+      const progressEvents = [];
+      let releaseSecondChunk = null;
+      try {
+        const runtime = agentPaperDownload.createPaperDownloadRuntime({
+          createId: () => 'paper-download-direct-1',
+          onJobUpdate: (job) => {
+            progressEvents.push({
+              status: job.status,
+              progress_ratio: job.progress_ratio,
+              received_bytes: job.received_bytes,
+              total_bytes: job.total_bytes
+            });
+          },
+          fetch: async () => ({
+            ok: true,
+            status: 200,
+            headers: {
+              get(name) {
+                const normalized = String(name || '').toLowerCase();
+                if (normalized === 'content-type') {
+                  return 'application/pdf';
+                }
+                if (normalized === 'content-length') {
+                  return '21';
+                }
+                return '';
+              }
+            },
+            body: {
+              async *[Symbol.asyncIterator]() {
+                yield Buffer.from('%PDF-1.7\n123');
+                await new Promise((resolve) => {
+                  releaseSecondChunk = resolve;
+                });
+                yield Buffer.from('4567890tail');
+              }
+            }
+          })
+        });
+
+        const extraction = agentPaperDownload.extractPaperDownloadTargets({
+          page_url: 'https://example.org/article',
+          page_html: '<a href="/downloads/paper.pdf">Download PDF</a>',
+          message: 'Mirror link: https://cdn.example.org/paper-copy.pdf'
+        });
+        assert.equal(extraction.selected_pdf_url, 'https://example.org/downloads/paper.pdf');
+        assert.equal(extraction.candidate_pdf_urls.includes('https://cdn.example.org/paper-copy.pdf'), true);
+
+        const started = await runtime.startDownload({
+          action: 'start',
+          page_url: 'https://example.org/article',
+          page_html: '<a href="/downloads/paper.pdf">Download PDF</a>',
+          linked_type: 'project',
+          linked_name: 'Atlas',
+          storage_path: storageRoot,
+          paper_title: 'PD-1 paper'
+        });
+
+        assert.equal(started.ok, true);
+        assert.equal(started.status, 'started');
+        await new Promise((resolve) => setTimeout(resolve, 10));
+
+        const inFlight = runtime.getDownloadStatus({
+          download_id: 'paper-download-direct-1'
+        });
+        assert.equal(inFlight.status, 'downloading');
+        assert.equal(inFlight.method, 'direct');
+        assert.equal(inFlight.selected_pdf_url, 'https://example.org/downloads/paper.pdf');
+        assert.equal(inFlight.progress_ratio > 0 && inFlight.progress_ratio < 1, true);
+
+        releaseSecondChunk();
+        const completed = await runtime.waitForDownload({
+          download_id: 'paper-download-direct-1'
+        });
+        assert.equal(completed.ok, true);
+        assert.equal(completed.status, 'completed');
+        assert.equal(completed.method, 'direct');
+        assert.equal(completed.relative_path.includes('Project/Atlas/Papers/'), true);
+        assert.equal(completed.file_name.endsWith('.pdf'), true);
+        const saved = await fsPromises.readFile(completed.file_path);
+        assert.equal(saved.subarray(0, 5).toString('utf8'), '%PDF-');
+        assert.equal(progressEvents.some((entry) => entry.status === 'downloading' && entry.progress_ratio > 0 && entry.progress_ratio < 1), true);
+      } finally {
+        if (typeof releaseSecondChunk === 'function') {
+          releaseSecondChunk();
+        }
+        await fsPromises.rm(storageRoot, { recursive: true, force: true });
+      }
+    });
+
+    test('paper download runtime falls back to a browser session and terminates it after completion', async () => {
+      const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'paper-download-browser-'));
+      let terminatedSession = null;
+      try {
+        const runtime = agentPaperDownload.createPaperDownloadRuntime({
+          createId: () => 'paper-download-browser-1',
+          fetch: async () => ({
+            ok: false,
+            status: 403,
+            headers: {
+              get(name) {
+                return String(name || '').toLowerCase() === 'content-type'
+                  ? 'text/html'
+                  : '';
+              }
+            },
+            text: async () => '<html><body>Access denied. Verify you are human.</body></html>'
+          }),
+          startBrowserDownloadSession: async ({ targetFilePath, updateProgress }) => {
+            updateProgress({
+              status: 'browser_downloading',
+              browser_session_active: true,
+              browser_session_id: 'browser-session-1',
+              received_bytes: 32,
+              total_bytes: 64
+            });
+            await fsPromises.mkdir(path.dirname(targetFilePath), { recursive: true });
+            await fsPromises.writeFile(targetFilePath, Buffer.from('%PDF-1.7 browser-session'));
+            updateProgress({
+              status: 'browser_downloading',
+              browser_session_active: true,
+              browser_session_id: 'browser-session-1',
+              received_bytes: 64,
+              total_bytes: 64
+            });
+            return {
+              ok: true,
+              session_id: 'browser-session-1',
+              file_path: targetFilePath,
+              file_name: path.basename(targetFilePath),
+              relative_path: path.relative(storageRoot, targetFilePath).split(path.sep).join('/'),
+              received_bytes: 64,
+              total_bytes: 64,
+              summary: 'Browser download completed.'
+            };
+          },
+          terminateBrowserDownloadSession: async ({ session_id }) => {
+            terminatedSession = session_id;
+          }
+        });
+
+        const result = await runtime.downloadPaper({
+          paper_pdf_url: 'https://blocked.example.org/paper.pdf',
+          page_url: 'https://blocked.example.org/article',
+          linked_type: 'project',
+          linked_name: 'Atlas',
+          storage_path: storageRoot
+        });
+
+        assert.equal(result.ok, true);
+        assert.equal(result.status, 'completed');
+        assert.equal(result.method, 'browser');
+        assert.equal(result.browser_session_id, 'browser-session-1');
+        assert.equal(result.browser_session_terminated, true);
+        assert.equal(terminatedSession, 'browser-session-1');
+        const saved = await fsPromises.readFile(result.file_path);
+        assert.equal(saved.subarray(0, 5).toString('utf8'), '%PDF-');
+      } finally {
+        await fsPromises.rm(storageRoot, { recursive: true, force: true });
+      }
+    });
+
+    test('paper analysis runtime summarizes a paper and extracts a protocol candidate', async () => {
+      const runtime = agentPaperAnalysis.createPaperAnalysisRuntime({
+        requestStructuredJsonPayload: async () => ({
+          ok: true,
+          payload: {
+            brief_summary: 'This paper describes engineered PD-1 nanobodies and reports improved expression after purification optimization.',
+            key_findings: [
+              'Engineered nanobodies retained target binding.',
+              'Purification changes improved recovered material.'
+            ],
+            method_overview: 'The authors expressed the nanobody in E. coli and purified it by Ni-NTA affinity chromatography.',
+            protocol_candidate: {
+              title: 'PD-1 Nanobody Purification',
+              purpose: 'Purify engineered PD-1 nanobodies.',
+              method_text: 'Clarify lysate, bind to Ni-NTA resin, wash, and elute with imidazole.',
+              materials: ['Ni-NTA resin', 'imidazole buffer'],
+              steps: ['Clarify lysate', 'Bind to resin', 'Elute with imidazole'],
+              notes: 'Exact buffer composition was not fully specified.'
+            },
+            result_summary: 'Summarized the paper and extracted one purification procedure.'
+          }
+        })
+      });
+
+      const result = await runtime.analyzePaper({
+        paper: {
+          title: 'Engineered PD-1 Nanobodies',
+          summary: 'Expression rescue and purification optimization for PD-1 nanobodies.',
+          methods: [
+            'Express nanobody in E. coli.',
+            'Purify using Ni-NTA affinity chromatography.'
+          ]
+        },
+        message: 'Summarize the paper and extract the protocol.',
+        extract_protocol: true
+      });
+
+      assert.equal(result.ok, true);
+      assert.equal(result.status, 'completed');
+      assert.equal(result.paper_title, 'Engineered PD-1 Nanobodies');
+      assert.match(String(result.brief_summary || ''), /engineered PD-1 nanobodies/i);
+      assert.equal(Array.isArray(result.key_findings), true);
+      assert.equal(result.protocol_extraction.title, 'PD-1 Nanobody Purification');
+      assert.equal(result.generated_protocol, null);
+      assert.match(String(result.summary || ''), /extracted one purification procedure/i);
+    });
+
+    test('paper analysis runtime can generate an import-ready protocol from extracted methods', async () => {
+      let capturedProtocolInput = null;
+      const runtime = agentPaperAnalysis.createPaperAnalysisRuntime({
+        requestStructuredJsonPayload: async () => ({
+          ok: true,
+          payload: {
+            brief_summary: 'The paper presents a practical purification workflow for a PD-1 nanobody construct.',
+            key_findings: ['Affinity purification was central to the workflow.'],
+            method_overview: 'Cells were lysed and the tagged nanobody was purified on Ni-NTA resin.',
+            protocol_candidate: {
+              title: 'PD-1 Nanobody Purification',
+              purpose: 'Purify a tagged PD-1 nanobody.',
+              method_text: 'Clarify lysate, bind to Ni-NTA resin for [time], wash, and elute.',
+              materials: ['Ni-NTA resin', 'wash buffer', 'elution buffer'],
+              steps: ['Clarify lysate', 'Bind to Ni-NTA resin for [time]', 'Elute bound protein'],
+              notes: 'Binding duration was not explicitly stated.'
+            },
+            result_summary: 'Paper analysis completed and protocol candidate prepared.'
+          }
+        }),
+        protocolGenerationRuntime: {
+          generateProtocol: async (input) => {
+            capturedProtocolInput = input;
+            return {
+              ok: true,
+              status: 'generated',
+              protocol: {
+                id: 'protocol-generated-1',
+                name: 'PD-1 Nanobody Purification',
+                createdAt: '2026-03-22T12:05:00.000Z',
+                updatedAt: '2026-03-22T12:05:00.000Z',
+                purpose: 'Purify a tagged PD-1 nanobody.',
+                materials: ['Ni-NTA resin', 'wash buffer', 'elution buffer'],
+                steps: [
+                  {
+                    id: 'step-1',
+                    text: 'Clarify lysate',
+                    placeholders: []
+                  }
+                ],
+                troubleshooting: 'Problem: Low binding; Possible cause: Short incubation; Solution: Increase contact time.'
+              },
+              summary: 'Generated protocol from paper analysis.'
+            };
+          }
+        }
+      });
+
+      const result = await runtime.analyzePaper({
+        paper: {
+          title: 'Engineered PD-1 Nanobodies',
+          summary: 'Purification-focused workflow for PD-1 nanobody constructs.',
+          methods: ['Clarify lysate', 'Bind to Ni-NTA resin', 'Elute protein']
+        },
+        message: 'Extract the protocol and generate an importable protocol JSON.',
+        extract_protocol: true,
+        generate_protocol: true
+      });
+
+      assert.equal(result.ok, true);
+      assert.equal(result.generated_protocol.name, 'PD-1 Nanobody Purification');
+      assert.equal(result.generated_protocol.troubleshooting.includes('Low binding'), true);
+      assert.equal(capturedProtocolInput.source_paper_title, 'Engineered PD-1 Nanobodies');
+      assert.equal(capturedProtocolInput.title, 'PD-1 Nanobody Purification');
+      assert.match(String(capturedProtocolInput.method_text || ''), /Ni-NTA resin/i);
+    });
+
     test('sub-agent runtime creates, messages, lists, and deletes managed sub-agents', async () => {
       const runtime = agentSubAgent.createAgentSubAgentRuntime({
         now: (() => {
@@ -927,6 +2004,548 @@ module.exports = function registerAgentSuite(context = {}) {
       assert.match(String(invalidAction.error || ''), /must be one of create, message, delete, get, or list/i);
     });
 
+    test('sub-agent runtime tracks liveness from process state instead of timeout-only age checks', async () => {
+      let createIndex = 0;
+      const runtime = agentSubAgent.createAgentSubAgentRuntime({
+        now: () => '2026-03-22T10:10:00.000Z',
+        createId: () => {
+          createIndex += 1;
+          return `subagent-live-${createIndex}`;
+        },
+        isProcessAlive: (processId) => Number(processId) === 4312,
+        runSubAgentTurn: async ({ phase }) => ({
+          assistant_message: `${phase} ok`,
+          summary: `${phase} ok`
+        })
+      });
+
+      await runtime.createSubAgent({
+        system_prompt: 'Track one task.',
+        message: 'Start tracking.'
+      });
+      runtime.startSubAgentTask({
+        agent_id: 'subagent-live-1',
+        task_type: 'python-sandbox',
+        started_at: '2026-03-22T08:00:00.000Z',
+        process_id: 4312,
+        summary: 'Python still running.'
+      });
+      const processBacked = runtime.getSubAgent({
+        agent_id: 'subagent-live-1'
+      });
+      assert.equal(processBacked.ok, true);
+      assert.equal(processBacked.agent.liveness.live, true);
+      assert.equal(processBacked.agent.liveness.state, 'running');
+      assert.equal(processBacked.agent.liveness.reason, 'process_alive');
+
+      await runtime.createSubAgent({
+        system_prompt: 'Track one task.',
+        message: 'Start tracking.'
+      });
+      runtime.startSubAgentTask({
+        agent_id: 'subagent-live-2',
+        task_type: 'python-sandbox',
+        started_at: '2026-03-22T08:00:00.000Z',
+        summary: 'Long run with no OS pid exposed yet.'
+      });
+      const noPid = runtime.getSubAgent({
+        agent_id: 'subagent-live-2'
+      });
+      assert.equal(noPid.ok, true);
+      assert.equal(noPid.agent.liveness.live, true);
+      assert.equal(noPid.agent.liveness.state, 'running');
+      assert.equal(noPid.agent.liveness.reason, 'heartbeat_observed');
+
+      await runtime.createSubAgent({
+        system_prompt: 'Track one task.',
+        message: 'Start tracking.'
+      });
+      runtime.startSubAgentTask({
+        agent_id: 'subagent-live-3',
+        task_type: 'python-sandbox',
+        started_at: '2026-03-22T08:00:00.000Z',
+        process_id: 9999,
+        summary: 'This worker exited unexpectedly.'
+      });
+      const dead = runtime.getSubAgent({
+        agent_id: 'subagent-live-3'
+      });
+      assert.equal(dead.ok, true);
+      assert.equal(dead.agent.liveness.live, false);
+      assert.equal(dead.agent.liveness.state, 'dead');
+      assert.equal(dead.agent.liveness.reason, 'process_exited');
+    });
+
+    test('context management runtime builds layered envelopes with prompt blocks and memory candidates', () => {
+      const runtime = agentContextManagement.createAgentContextManagementRuntime({
+        now: (() => {
+          let index = 0;
+          const values = [
+            '2026-03-22T10:00:00.000Z',
+            '2026-03-22T10:00:01.000Z',
+            '2026-03-22T10:00:02.000Z',
+            '2026-03-22T10:00:03.000Z'
+          ];
+          return () => values[Math.min(index++, values.length - 1)];
+        })(),
+        createId: () => 'task-fixed-1'
+      });
+
+      runtime.startTask({
+        session_id: 'thread-1',
+        task_type: 'protocol_notebook',
+        intent: 'protocol_to_notebook',
+        status: 'needs_more_info',
+        project: {
+          id: 'proj-1',
+          name: 'Atlas',
+          resolution_source: 'payload'
+        },
+        selected_protocol: {
+          id: 'prot-1',
+          name: 'HEK293 Transfection'
+        },
+        missing_fields: [
+          {
+            placeholder_key: 'sample_name',
+            display: 'sample name',
+            reason: 'The sample label was not provided.'
+          }
+        ],
+        known_values: {
+          cell_line: 'HEK293'
+        },
+        follow_up_questions: ['Which sample name did you use?'],
+        goals: ['Finish the notebook draft'],
+        constraints: ['Do not invent values']
+      });
+
+      runtime.recordToolRound({
+        session_id: 'thread-1',
+        tool_name: 'protocol-matching',
+        summary: 'Selected HEK293 Transfection.',
+        result: {
+          selected_protocol: {
+            id: 'prot-1',
+            name: 'HEK293 Transfection'
+          }
+        }
+      });
+
+      const envelope = runtime.buildContextEnvelope({
+        session_id: 'thread-1',
+        message: 'The sample name was TUBE42.',
+        conversation: [
+          { role: 'user', text: 'Draft the transfection notebook.' },
+          { role: 'assistant', text: 'Which sample name did you use?' },
+          { role: 'user', text: 'The sample name was TUBE42.' }
+        ],
+        tool_outputs: [
+          {
+            tool_name: 'protocol-matching',
+            summary: 'Selected HEK293 Transfection.',
+            result: {
+              selected_protocol: {
+                id: 'prot-1',
+                name: 'HEK293 Transfection'
+              }
+            }
+          }
+        ],
+        long_term_memory: [
+          {
+            id: 'mem-1',
+            category: 'preference',
+            key: 'output_format',
+            summary: 'Use concise bullet points.',
+            value: 'concise bullets'
+          }
+        ]
+      });
+
+      assert.equal(envelope.session_id, 'thread-1');
+      assert.equal(envelope.mode, agentContextManagement.CONTEXT_MODES.ACTIVE_TASK);
+      assert.equal(envelope.active_task.selected_protocol.name, 'HEK293 Transfection');
+      assert.equal(envelope.layers.immediate.current_user_request, 'The sample name was TUBE42.');
+      assert.equal(envelope.layers.immediate.recent_conversation.length, 3);
+      assert.equal(envelope.layers.session_memory.current_project_state.name, 'Atlas');
+      assert.equal(envelope.layers.long_term_memory.length, 1);
+      assert.equal(envelope.memory_candidates.some((item) => item.category === 'project_name' && item.key === 'Atlas'), true);
+      assert.match(String(envelope.prompt_blocks.immediate || ''), /Immediate working context:/);
+      assert.match(String(envelope.prompt_blocks.session_memory || ''), /Session memory summary:/);
+      assert.match(String(envelope.prompt_blocks.long_term_memory || ''), /Long-term memory:/);
+    });
+
+    test('context management runtime preserves follow-up answers and returns to ready mode after completion', () => {
+      const runtime = agentContextManagement.createAgentContextManagementRuntime({
+        now: (() => {
+          let index = 0;
+          const values = [
+            '2026-03-22T11:00:00.000Z',
+            '2026-03-22T11:00:01.000Z',
+            '2026-03-22T11:00:02.000Z',
+            '2026-03-22T11:00:03.000Z',
+            '2026-03-22T11:00:04.000Z'
+          ];
+          return () => values[Math.min(index++, values.length - 1)];
+        })(),
+        createId: () => 'task-fixed-2'
+      });
+
+      runtime.startTask({
+        session_id: 'thread-2',
+        task_type: 'protocol_notebook',
+        intent: 'protocol_to_notebook',
+        selected_protocol: {
+          id: 'prot-2',
+          name: 'Binder Purification'
+        },
+        missing_fields: [
+          {
+            key: 'sample_name',
+            display: 'sample name',
+            reason: 'Still needed.'
+          }
+        ],
+        known_values: {
+          operator: 'Shiyifan'
+        }
+      });
+      runtime.recordFollowUpQuestion({
+        session_id: 'thread-2',
+        question: 'Which sample name did you purify?'
+      });
+      runtime.recordFollowUpAnswer({
+        session_id: 'thread-2',
+        answer: 'Sample was Atlas-7.',
+        provided_values: {
+          sample_name: 'Atlas-7'
+        },
+        resolved_fields: ['sample_name']
+      });
+
+      const activeEnvelope = runtime.buildContextEnvelope({
+        session_id: 'thread-2',
+        message: 'Sample was Atlas-7.'
+      });
+      assert.equal(activeEnvelope.mode, agentContextManagement.CONTEXT_MODES.ACTIVE_TASK);
+      assert.equal(activeEnvelope.active_task.known_values.sample_name, 'Atlas-7');
+      assert.equal(activeEnvelope.active_task.selected_protocol.name, 'Binder Purification');
+      assert.equal(activeEnvelope.active_task.missing_fields.some((item) => item.key === 'sample_name'), false);
+      assert.equal(activeEnvelope.active_task.follow_up_questions.includes('Which sample name did you purify?'), true);
+
+      runtime.completeTask({
+        session_id: 'thread-2',
+        status: 'completed',
+        completion_summary: 'Notebook draft completed for Atlas-7.'
+      });
+
+      const readyEnvelope = runtime.buildContextEnvelope({
+        session_id: 'thread-2',
+        message: 'Thanks.'
+      });
+      assert.equal(readyEnvelope.mode, agentContextManagement.CONTEXT_MODES.READY);
+      assert.equal(readyEnvelope.active_task, null);
+      assert.equal(readyEnvelope.layers.immediate.current_task_state, null);
+      assert.equal(readyEnvelope.layers.session_memory.recent_completed_tasks[0].summary, 'Notebook draft completed for Atlas-7.');
+    });
+
+    test('context management runtime prunes expired sessions by idle time', () => {
+      let currentTime = '2026-03-22T12:00:00.000Z';
+      const runtime = agentContextManagement.createAgentContextManagementRuntime({
+        now: () => currentTime,
+        sessionTtlMs: 1000
+      });
+
+      runtime.startTask({
+        session_id: 'thread-expire',
+        task_type: 'science_loop',
+        intent: 'general_science_question'
+      });
+      currentTime = '2026-03-22T12:00:02.500Z';
+
+      const removed = runtime.pruneExpiredSessions();
+      assert.deepEqual(removed, ['thread-expire']);
+      assert.equal(runtime.getSession('thread-expire'), null);
+    });
+
+    test('memory runtime remembers, updates, recalls, lists, and forgets long-term memory', async () => {
+      const runtime = agentMemory.createAgentMemoryRuntime({
+        now: (() => {
+          let index = 0;
+          const values = [
+            '2026-03-22T13:00:00.000Z',
+            '2026-03-22T13:00:01.000Z',
+            '2026-03-22T13:00:02.000Z',
+            '2026-03-22T13:00:03.000Z'
+          ];
+          return () => values[Math.min(index++, values.length - 1)];
+        })(),
+        createId: () => 'memory-fixed-1'
+      });
+
+      const stored = await runtime.execute({
+        action: 'remember',
+        category: 'preference',
+        key: 'output_format',
+        summary: 'User prefers concise summaries.',
+        value: 'concise',
+        tags: ['format']
+      });
+      assert.equal(stored.ok, true);
+      assert.equal(stored.status, 'stored');
+      assert.equal(stored.item.id, 'memory-fixed-1');
+
+      const updated = await runtime.execute({
+        action: 'remember',
+        category: 'preference',
+        key: 'output_format',
+        summary: 'User prefers concise bullet summaries.',
+        value: 'bullet list',
+        tags: ['format', 'concise']
+      });
+      assert.equal(updated.ok, true);
+      assert.equal(updated.status, 'updated');
+      assert.equal(updated.item.id, 'memory-fixed-1');
+
+      const recalled = await runtime.execute({
+        action: 'recall',
+        query: 'bullet',
+        limit: 5
+      });
+      assert.equal(recalled.ok, true);
+      assert.equal(recalled.status, 'matched');
+      assert.equal(recalled.items.length, 1);
+      assert.equal(recalled.items[0].summary, 'User prefers concise bullet summaries.');
+
+      const listed = await runtime.execute({
+        action: 'list',
+        limit: 5
+      });
+      assert.equal(listed.ok, true);
+      assert.equal(listed.items.length, 1);
+
+      const forgotten = await runtime.execute({
+        action: 'forget',
+        category: 'preference',
+        key: 'output_format'
+      });
+      assert.equal(forgotten.ok, true);
+      assert.equal(forgotten.removed_count, 1);
+
+      const missing = await runtime.execute({
+        action: 'recall',
+        query: 'bullet'
+      });
+      assert.equal(missing.status, 'empty');
+    });
+
+    test('memory runtime persists JSON records when memoryFilePath is provided', async () => {
+      const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'agent-memory-'));
+      const memoryFilePath = path.join(tempDir, 'memory.json');
+      try {
+        const runtime = agentMemory.createAgentMemoryRuntime({
+          memoryFilePath,
+          now: (() => {
+            let index = 0;
+            const values = [
+              '2026-03-22T14:00:00.000Z',
+              '2026-03-22T14:00:01.000Z'
+            ];
+            return () => values[Math.min(index++, values.length - 1)];
+          })(),
+          createId: () => 'memory-file-1'
+        });
+
+        await runtime.remember({
+          category: 'project_name',
+          key: 'Atlas',
+          summary: 'Atlas is the current binder optimization project.',
+          value: {
+            project_id: 'proj-1'
+          }
+        });
+
+        const raw = JSON.parse(await fsPromises.readFile(memoryFilePath, 'utf8'));
+        assert.equal(Array.isArray(raw.items), true);
+        assert.equal(raw.items.length, 1);
+        assert.equal(raw.items[0].id, 'memory-file-1');
+
+        const secondRuntime = agentMemory.createAgentMemoryRuntime({
+          memoryFilePath
+        });
+        const recalled = await secondRuntime.recall({
+          query: 'binder optimization'
+        });
+        assert.equal(recalled.ok, true);
+        assert.equal(recalled.items.length, 1);
+        assert.equal(recalled.items[0].key, 'Atlas');
+      } finally {
+        await fsPromises.rm(tempDir, { recursive: true, force: true });
+      }
+    });
+
+    test('agent chat log runtime creates session files, updates index summaries, and reconstructs renderer messages', async () => {
+      const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'agent-chat-log-'));
+      try {
+        const runtime = agentChatLog.createAgentChatLogRuntime({
+          now: (() => {
+            let index = 0;
+            const values = [
+              '2026-03-22T15:00:00.000Z',
+              '2026-03-22T15:00:01.000Z',
+              '2026-03-22T15:00:02.000Z',
+              '2026-03-22T15:00:03.000Z'
+            ];
+            return () => values[Math.min(index++, values.length - 1)];
+          })(),
+          createId: (() => {
+            let index = 0;
+            return () => `chat-fixed-${index += 1}`;
+          })()
+        });
+
+        const created = await runtime.createSession({
+          storagePath: tempDir,
+          projectId: 'proj-1',
+          projectName: 'Atlas'
+        });
+        assert.equal(created.ok, true);
+        assert.equal(created.session.id, 'chat-fixed-1');
+
+        await runtime.appendUserMessage({
+          storagePath: tempDir,
+          sessionId: created.session.id,
+          text: 'Where is the Atlas binder notebook?',
+          projectId: 'proj-1',
+          projectName: 'Atlas',
+          timestamp: '2026-03-22T15:00:01.000Z'
+        });
+
+        const assistantMessage = runtime.buildAssistantMessageFromResult({
+          result: {
+            ok: true,
+            parser: {
+              primary_intent: 'record_lookup',
+              needs_clarification: false,
+              reasoning_summary: 'Matched record lookup.'
+            },
+            record_lookup: {
+              status: 'matched',
+              query: 'Atlas binder',
+              items: [
+                {
+                  record_type: 'notebook',
+                  id: 'note-1',
+                  title: 'Atlas Binder Notebook'
+                }
+              ]
+            },
+            developer_trace: []
+          },
+          requestText: 'Where is the Atlas binder notebook?',
+          messageId: 'assistant-fixed-1',
+          timestamp: '2026-03-22T15:00:02.000Z'
+        });
+
+        await runtime.appendRows(tempDir, created.session.id, [
+          {
+            type: 'agent-chat-request',
+            session_id: created.session.id,
+            requestId: 'req-1',
+            timestamp: '2026-03-22T15:00:01.500Z',
+            projectId: 'proj-1',
+            projectName: 'Atlas',
+            message: 'Where is the Atlas binder notebook?'
+          },
+          {
+            type: 'agent-lifecycle',
+            session_id: created.session.id,
+            requestId: 'req-1',
+            stage: 'parser_completed',
+            timestamp: '2026-03-22T15:00:01.700Z'
+          },
+          {
+            type: 'agent-chat-result',
+            session_id: created.session.id,
+            requestId: 'req-1',
+            timestamp: '2026-03-22T15:00:01.900Z',
+            response_type: 'record_lookup',
+            ok: true
+          },
+          {
+            type: 'assistant-message',
+            session_id: created.session.id,
+            message_id: assistantMessage.id,
+            timestamp: assistantMessage.createdAt,
+            text: assistantMessage.text,
+            meta: assistantMessage.meta
+          }
+        ]);
+
+        const listed = await runtime.listSessions({
+          storagePath: tempDir
+        });
+        assert.equal(listed.ok, true);
+        assert.equal(listed.items.length, 1);
+        assert.equal(listed.items[0].title, 'Where is the Atlas binder notebook?');
+        assert.equal(listed.items[0].message_count, 2);
+        assert.equal(listed.items[0].request_count, 1);
+        assert.equal(listed.items[0].project_name, 'Atlas');
+
+        const loaded = await runtime.getSession({
+          storagePath: tempDir,
+          sessionId: created.session.id,
+          includeRows: true
+        });
+        assert.equal(loaded.ok, true);
+        assert.equal(loaded.messages.length, 2);
+        assert.equal(loaded.messages[0].role, 'user');
+        assert.equal(loaded.messages[1].role, 'assistant');
+        assert.match(String(loaded.messages[1].text || ''), /Found 1 record match/);
+        assert.equal(loaded.messages[1].meta.record_lookup.status, 'matched');
+        assert.equal(loaded.rows.some((row) => row.type === 'agent-lifecycle'), true);
+
+        const indexPath = path.join(tempDir, 'chat_log', 'index.json');
+        const index = JSON.parse(await fsPromises.readFile(indexPath, 'utf8'));
+        assert.equal(Array.isArray(index.sessions), true);
+        assert.equal(index.sessions[0].id, created.session.id);
+      } finally {
+        await fsPromises.rm(tempDir, { recursive: true, force: true });
+      }
+    });
+
+    test('agent chat log runtime builds fallback assistant message for controller errors', () => {
+      const runtime = agentChatLog.createAgentChatLogRuntime();
+      const assistantMessage = runtime.buildAssistantMessageFromError({
+        errorMessage: 'Provider timeout.',
+        requestText: 'Analyze the latest assay.'
+      });
+
+      assert.equal(assistantMessage.role, 'assistant');
+      assert.match(String(assistantMessage.text || ''), /Provider timeout/);
+      assert.equal(assistantMessage.meta.parser.needs_clarification, true);
+      assert.equal(assistantMessage.meta.parser.clarification_reason, 'agent_error');
+      assert.equal(assistantMessage.meta.requestText, 'Analyze the latest assay.');
+    });
+
+    test('agent tool smoke-test runtime manually exercises every registered tool', async () => {
+      const runtime = agentToolSmokeTest.createAgentToolSmokeTestRuntime();
+      const result = await runtime.runAllTools();
+
+      assert.equal(result.ok, true);
+      assert.equal(result.status, 'completed');
+      assert.equal(result.tool_count, runtime.toolNames.length);
+      assert.equal(result.failed_count, 0);
+      assert.equal(result.passed_count, result.tool_count);
+      assert.deepEqual(result.items.map((item) => item.tool_name), runtime.toolNames);
+      assert.equal(result.items.every((item) => item.ok === true), true);
+      assert.equal(result.items.every((item) => Number.isFinite(Number(item.duration_ms))), true);
+      assert.equal(result.items.some((item) => item.tool_name === 'python-sandbox' && /out\.json/.test(String(item.preview || ''))), true);
+      assert.equal(result.items.some((item) => item.tool_name === 'paper-download' && /\.pdf/i.test(String(item.preview || ''))), true);
+      assert.match(String(result.summary || ''), /tools passed/i);
+    });
+
     test('agent observability replays lifecycle and llm traces in order', async () => {
       const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'agent-observability-'));
       const logPath = path.join(tempDir, 'agent-chat.log');
@@ -992,17 +2611,80 @@ module.exports = function registerAgentSuite(context = {}) {
       }
     });
 
-    test('python sandbox executes deterministic readback payload', async () => {
+    test('python sandbox executes deterministic readback payload and emits lifecycle callbacks', async () => {
+      const lifecycle = {
+        started: 0,
+        heartbeats: 0,
+        completed: 0
+      };
       const result = await agentPython.runPythonSandbox({
-        code: 'import json\nopen("out.json", "w", encoding="utf-8").write(json.dumps({"ok": True, "value": 42}))',
+        code: [
+          'import json',
+          'import time',
+          'open("out.json", "w", encoding="utf-8").write(json.dumps({"ok": True, "value": 42}))',
+          'print("sandbox-start")',
+          'time.sleep(0.15)',
+          'print("sandbox-end")'
+        ].join('\n'),
         readback_paths: ['out.json'],
         timeout_ms: 4000
+      }, {
+        heartbeatIntervalMs: 25,
+        onTaskStarted: async ({ process_id }) => {
+          lifecycle.started += 1;
+          assert.equal(Number(process_id) > 0, true);
+        },
+        onHeartbeat: async ({ elapsed_ms }) => {
+          lifecycle.heartbeats += 1;
+          assert.equal(Number.isFinite(Number(elapsed_ms)), true);
+        },
+        onTaskCompleted: async ({ process_id, exit_code }) => {
+          lifecycle.completed += 1;
+          assert.equal(Number(process_id) > 0, true);
+          assert.equal(exit_code, 0);
+        }
       });
       assert.equal(result.ok, true);
       assert.equal(result.status, 'ok');
       assert.equal(Array.isArray(result.readback_files), true);
       assert.equal(result.readback_files.length, 1);
       assert.match(String(result.readback_files[0].content || ''), /"value": 42/);
+      assert.equal(Number(result.process_id) > 0, true);
+      assert.equal(lifecycle.started, 1);
+      assert.equal(lifecycle.completed, 1);
+      assert.equal(lifecycle.heartbeats >= 1, true);
+    });
+
+    test('managed python sandbox runtime supervises runs with sub-agents and sends failures for debugging', async () => {
+      const runtime = agentPython.createManagedPythonSandboxRuntime();
+
+      const success = await runtime.execute({
+        code: 'print(42)',
+        timeout_ms: 4000,
+        task_type: 'calculation'
+      }, {
+        name: 'python-success'
+      });
+      assert.equal(success.ok, true);
+      assert.equal(success.sandbox.ok, true);
+      assert.equal(typeof success.sub_agent?.id, 'string');
+      assert.equal(success.sub_agent?.task?.state, 'completed');
+      assert.equal(success.sub_agent?.liveness?.state, 'idle');
+      assert.equal(Number(success.sandbox.process_id) > 0, true);
+
+      const failure = await runtime.execute({
+        code: 'import module_that_does_not_exist_anywhere',
+        timeout_ms: 4000,
+        task_type: 'calculation'
+      }, {
+        name: 'python-failure'
+      });
+      assert.equal(failure.ok, false);
+      assert.equal(failure.sandbox.ok, false);
+      assert.equal(failure.sub_agent?.task?.state, 'failed');
+      assert.equal(failure.sub_agent?.liveness?.state, 'idle');
+      assert.match(String(failure.debug?.assistant_message || ''), /Suggested next step/i);
+      assert.match(String(failure.debug?.assistant_message || ''), /standard library|vendor/i);
     });
   }
 };

@@ -359,14 +359,22 @@ function optionalRequire(modulePath, fallback = {}) {
 const agentRouting = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-routing.js'));
 const agentIntentParser = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-intent-parser.js'));
 const agentTools = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-tools.js'));
+const agentProtocolGeneration = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-protocol-generation.js'));
 const agentProtocolMatching = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-protocol-matching.js'));
 const agentNotebookGeneration = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-notebook-generation.js'));
 const agentInventoryLookup = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-inventory-lookup.js'));
 const agentRecordLookup = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-record-lookup.js'));
 const agentSubAgent = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-sub-agent.js'));
+const agentChatLog = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-chat-log.js'));
+const agentContextManagement = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-context-management.js'));
+const agentMemory = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-memory.js'));
 const agentToolCall = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-tool-call.js'));
 const agentProjectRetrieval = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-project-retrieval.js'));
+const agentLiteratureSearch = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-literature-search.js'));
+const agentPaperDownload = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-paper-download.js'));
 const agentPaperAnalysis = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-paper-analysis.js'));
+const agentScienceReasoningLoop = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-science-reasoning-loop.js'));
+const agentToolSmokeTest = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-tool-smoke-test.js'));
 const agentResponseLayer = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-response-layer.js'));
 const agentValidationSafety = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-validation-safety.js'));
 const agentObservability = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-observability.js'));
@@ -482,15 +490,6 @@ const telegramBot = require(path.join(__dirname, 'src', 'main', 'lib', 'telegram
 const { generatePlannotateGbk } = require(path.join(__dirname, 'src', 'main', 'lib', 'plannotate-engine.js'));
 const forgeConfig = require(path.join(__dirname, 'forge.config.js'));
 const packageManifest = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
-const AGENT_IO_CONTRACT_RAW = JSON.parse(
-  fs.readFileSync(path.join(__dirname, 'data', 'agent-io-contract.json'), 'utf8')
-);
-const AGENT_IO_CONTRACT = typeof agentTools.loadToolContract === 'function'
-  ? agentTools.loadToolContract(AGENT_IO_CONTRACT_RAW)
-  : {
-    tools: Array.isArray(AGENT_IO_CONTRACT_RAW.tools) ? AGENT_IO_CONTRACT_RAW.tools : []
-  };
-const AGENT_IO_TOOL_NAMES = AGENT_IO_CONTRACT.tools.map((tool) => tool.name);
 const AGENT_SIMULATION_DISPATCH_TOOL_NAMES = new Set([
   'search_projects',
   'search_protocols',
@@ -1212,7 +1211,7 @@ async function runSimulatedAgentTurn({
   writeIntent = false,
   parserPayload = null
 }) {
-  const availableToolNames = AGENT_IO_TOOL_NAMES.slice();
+  const availableToolNames = [...AGENT_SIMULATION_DISPATCH_TOOL_NAMES];
   const inferPrimaryIntent = (text) => {
     const source = String(text || '').toLowerCase();
     if (/\b(compare .+ vs|extract methods?|extract reagents?|key figures?)\b/.test(source)) {
@@ -1315,7 +1314,6 @@ async function runSimulatedAgentTurn({
     message,
     snapshot,
     availableToolNames,
-    toolContract: AGENT_IO_CONTRACT,
     writeIntent
   });
 
@@ -1344,7 +1342,6 @@ async function runSimulatedAgentTurn({
   for (const toolName of toolNames) {
     const args = buildMockToolArgs(toolName, message, snapshot);
     const result = await agentTools.executeToolCall(toolName, args, {
-      contract: AGENT_IO_CONTRACT,
       allowWriteTools,
       dispatch,
       fuzzyVocabulary: ['atlas', 'biotin', 'pd-1', 'transfection', 'assay', 'elisa']
@@ -1415,14 +1412,22 @@ const suiteScope = {
   agentRouting,
   agentIntentParser,
   agentTools,
+  agentProtocolGeneration,
   agentProtocolMatching,
   agentNotebookGeneration,
   agentInventoryLookup,
   agentRecordLookup,
   agentSubAgent,
+  agentChatLog,
+  agentContextManagement,
+  agentMemory,
   agentToolCall,
   agentProjectRetrieval,
+  agentLiteratureSearch,
+  agentPaperDownload,
   agentPaperAnalysis,
+  agentScienceReasoningLoop,
+  agentToolSmokeTest,
   agentResponseLayer,
   agentValidationSafety,
   agentObservability,
@@ -1445,9 +1450,6 @@ const suiteScope = {
   generatePlannotateGbk,
   forgeConfig,
   packageManifest,
-  AGENT_IO_CONTRACT_RAW,
-  AGENT_IO_CONTRACT,
-  AGENT_IO_TOOL_NAMES,
   AGENT_SIMULATION_DISPATCH_TOOL_NAMES,
   LEGACY_CHEMISTRY_DRAFT_KEY,
   buildAgentSimulationSnapshot,

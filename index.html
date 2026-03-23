@@ -1680,17 +1680,34 @@
         </div>
       </div>
 
-      <div class="panel agent-chat-panel">
-        <div id="agent-chat-history" class="agent-chat-history" aria-live="polite"></div>
-        <p id="agent-status" class="small-note">Ready.</p>
-        <div class="stack-form">
-          <label>
-            Message
-            <textarea id="agent-message-input" rows="4" placeholder="Ask for protocol guidance, inventory checks, literature-grounded suggestions, or planning support."></textarea>
-          </label>
-          <div class="form-actions">
-            <button type="button" id="agent-send-btn" class="primary-btn">Send</button>
-            <button type="button" id="agent-clear-btn" class="ghost-btn">Clear Chat</button>
+      <div class="agent-chat-layout">
+        <div class="panel agent-session-panel">
+          <div class="agent-session-toolbar">
+            <div>
+              <h3>Saved Chats</h3>
+              <p id="agent-session-status" class="small-note">Set Storage Folder Path in Settings to save and browse agent chats.</p>
+            </div>
+            <button type="button" id="agent-new-chat-btn" class="ghost-btn">New Chat</button>
+          </div>
+          <div id="agent-session-list" class="agent-session-list" aria-live="polite"></div>
+        </div>
+
+        <div class="panel agent-chat-panel">
+          <div id="agent-developer-tools" class="form-actions" hidden>
+            <button type="button" id="agent-dev-test-tools-btn" class="ghost-btn">Test All Tools</button>
+            <span class="small-note">Developer mode only. Runs deterministic smoke tests for all agent tools.</span>
+          </div>
+          <div id="agent-chat-history" class="agent-chat-history" aria-live="polite"></div>
+          <p id="agent-status" class="small-note">Ready.</p>
+          <div class="stack-form">
+            <label>
+              Message
+              <textarea id="agent-message-input" rows="4" placeholder="Ask for protocol guidance, inventory checks, literature-grounded suggestions, or planning support."></textarea>
+            </label>
+            <div class="form-actions">
+              <button type="button" id="agent-send-btn" class="primary-btn">Send</button>
+              <button type="button" id="agent-clear-btn" class="ghost-btn">Clear Chat</button>
+            </div>
           </div>
         </div>
       </div>
