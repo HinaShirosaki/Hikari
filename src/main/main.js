@@ -31,31 +31,31 @@ const {
   requestOpenAiResponsesWithBackoff,
   requestClaudeMessagesWithBackoff,
   requestGeminiGenerateContentWithBackoff
-} = require('./helpers/agent/agent-llm-utils.js');
+} = require('./helpers/agent/shared/agent-llm-utils.js');
 const {
   runPythonSandbox
-} = require('./helpers/agent/agent-python-sandbox.js');
+} = require('./helpers/agent/tools/agent-python-sandbox.js');
 const {
   INTENT_PARSER_RESPONSE_SCHEMA,
   normalizeIntentParserPayload,
   buildIntentParserPrompt,
   buildInventorySearchTerms
-} = require('./helpers/agent/agent-intent-parser');
-const observability = require('./helpers/agent/agent-observability');
-const { createAgentControllerUtils } = require('./helpers/agent/agent-controller-utils');
-const { createProtocolNotebookRuntime } = require('./helpers/agent/agent-protocol-notebook');
-const { createAgentLookupRuntime } = require('./helpers/agent/agent-lookup-runtime');
-const { createScienceReasoningLoopRuntime } = require('./helpers/agent/agent-science-reasoning-loop.js');
-const { createAgentSessionRuntime } = require('./helpers/agent/agent-session-runtime.js');
-const { createAgentScienceMainUtils } = require('./helpers/agent/agent-science-main-utils.js');
-const { createAgentToolSmokeTestRuntime } = require('./helpers/agent/agent-tool-smoke-test');
-const { createAgentChatLogRuntime } = require('./helpers/agent/agent-chat-log.js');
+} = require('./helpers/agent/intent/agent-intent-parser');
+const observability = require('./helpers/agent/shared/agent-observability');
+const { createAgentControllerUtils } = require('./helpers/agent/shared/agent-controller-utils');
+const { createProtocolNotebookRuntime } = require('./helpers/agent/runtime/agent-protocol-notebook');
+const { createAgentLookupRuntime } = require('./helpers/agent/runtime/agent-lookup-runtime');
+const { createScienceReasoningLoopRuntime } = require('./helpers/agent/runtime/agent-science-reasoning-loop.js');
+const { createAgentSessionRuntime } = require('./helpers/agent/runtime/agent-session-runtime.js');
+const { createAgentScienceMainUtils } = require('./helpers/agent/runtime/agent-science-main-utils.js');
+const { createAgentToolSmokeTestRuntime } = require('./helpers/agent/tools/agent-tool-smoke-test');
+const { createAgentChatLogRuntime } = require('./helpers/agent/context/agent-chat-log.js');
 const {
   createAgentToolCallRuntime,
   normalizeToolInvocationArgs
-} = require('./helpers/agent/agent-tool-call.js');
-const { createAgentRuntimeSupport } = require('./helpers/agent/agent-runtime-support.js');
-const { createCodexAgentRuntime } = require('./helpers/agent/agent-codex-runtime.js');
+} = require('./helpers/agent/tools/agent-tool-call.js');
+const { createAgentRuntimeSupport } = require('./helpers/agent/runtime/agent-runtime-support.js');
+const { createCodexAgentRuntime } = require('./helpers/agent/runtime/agent-codex-runtime.js');
 const { createMainDataHelpers } = require('./helpers/main/data-helpers');
 const {
   getBundlePaths,

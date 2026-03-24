@@ -2,14 +2,14 @@
 
 const fs = require('fs/promises');
 const path = require('path');
-const { createAgentInventoryLookupRuntime } = require('./agent-inventory-lookup');
-const { createAgentRecordLookupRuntime } = require('./agent-record-lookup.js');
+const { createAgentInventoryLookupRuntime } = require('../tools/agent-inventory-lookup');
+const { createAgentRecordLookupRuntime } = require('../tools/agent-record-lookup.js');
 
 let SQLJS_WASM_JS_PATH = '';
 try {
   SQLJS_WASM_JS_PATH = require.resolve('sql.js/dist/sql-wasm.js');
 } catch {
-  const projectRoot = path.resolve(__dirname, '..', '..', '..', '..');
+  const projectRoot = path.resolve(__dirname, '..', '..', '..', '..', '..');
   SQLJS_WASM_JS_PATH = path.join(projectRoot, 'vendor', 'sqljs', 'sql-wasm.js');
 }
 let sqlJsInitPromise = null;

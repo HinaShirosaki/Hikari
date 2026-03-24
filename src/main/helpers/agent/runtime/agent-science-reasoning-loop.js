@@ -1,6 +1,6 @@
 'use strict';
 
-const { createAgentLlmRuntimeHelpers } = require('./agent-llm-utils.js');
+const { createAgentLlmRuntimeHelpers } = require('../shared/agent-llm-utils.js');
 
 const SCIENCE_REASONING_INTENTS = Object.freeze([
   'general_science_question',

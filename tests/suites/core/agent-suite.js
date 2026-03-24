@@ -238,7 +238,7 @@ module.exports = function registerAgentSuite(context = {}) {
     });
 
     test('intent parser catalog validation rejects malformed entries', () => {
-      const catalogPath = path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-intent.json');
+      const catalogPath = path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'intent', 'agent-intent.json');
       const invalidCatalog = JSON.parse(fs.readFileSync(catalogPath, 'utf8'));
       delete invalidCatalog.inventory_lookup.specific_output_append;
       assert.throws(
@@ -2647,6 +2647,27 @@ module.exports = function registerAgentSuite(context = {}) {
       assert.equal(result.items.some((item) => item.tool_name === 'python-sandbox' && /out\.json/.test(String(item.preview || ''))), true);
       assert.equal(result.items.some((item) => item.tool_name === 'paper-download' && /\.pdf/i.test(String(item.preview || ''))), true);
       assert.match(String(result.summary || ''), /tools passed/i);
+    });
+
+    test('agent tool smoke-test runtime supports single-tool manual messages with inspectable raw output', async () => {
+      const runtime = agentToolSmokeTest.createAgentToolSmokeTestRuntime();
+      const result = await runtime.runTool({
+        toolName: 'python-sandbox',
+        message: 'Write a JSON file noting this manual tool test.'
+      });
+
+      assert.equal(result.ok, true);
+      assert.equal(result.run_mode, 'single');
+      assert.equal(result.status, 'completed');
+      assert.equal(result.tool_count, 1);
+      assert.equal(result.passed_count, 1);
+      assert.equal(result.failed_count, 0);
+      assert.equal(result.items.length, 1);
+      assert.equal(result.items[0].tool_name, 'python-sandbox');
+      assert.equal(result.items[0].request_message, 'Write a JSON file noting this manual tool test.');
+      assert.equal(typeof result.items[0].raw_result, 'object');
+      assert.match(JSON.stringify(result.items[0].raw_result || {}), /manual tool test/i);
+      assert.match(String(result.summary || ''), /python-sandbox/i);
     });
 
     test('agent observability replays lifecycle and llm traces in order', async () => {

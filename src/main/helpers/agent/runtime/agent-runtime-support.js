@@ -1,7 +1,7 @@
 'use strict';
 
-const { createAgentLlmRuntimeHelpers } = require('./agent-llm-utils.js');
-const { normalizeChemicalStorePayload } = require('../main/data-snapshot-utils.js');
+const { createAgentLlmRuntimeHelpers } = require('../shared/agent-llm-utils.js');
+const { normalizeChemicalStorePayload } = require('../../main/data-snapshot-utils.js');
 
 const DEFAULT_AGENT_SYSTEM_PROMPT_TEMPLATE =
   'You are Lab Agent, an AI assistant for a research lab app. Help users retrieve lab information, reason carefully about scientific questions, and stay explicit about uncertainty.\n\n{{projectScope}}\n\nUse only tools that are explicitly available in the current runtime. If a needed tool is unavailable, say so clearly instead of pretending it succeeded.';

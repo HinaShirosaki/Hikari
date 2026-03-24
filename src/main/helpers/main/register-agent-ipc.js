@@ -828,6 +828,17 @@ function registerAgentIpc(deps = {}) {
     }
 
     try {
+      const toolName = cleanText(normalizedPayload?.toolName || normalizedPayload?.tool_name, 120);
+      const requestMessage = cleanText(normalizedPayload?.message, 3000);
+      if (toolName) {
+        return await agentToolSmokeTestRuntime.runTool({
+          toolName,
+          message: requestMessage,
+          stateSnapshot: agentToolRuntime.normalizeAgentSnapshot(normalizeJsonPayload(normalizedPayload?.stateSnapshot, {})),
+          projectId: cleanText(normalizedPayload?.projectId, 80),
+          projectName: cleanText(normalizedPayload?.projectName, 180)
+        });
+      }
       return await agentToolSmokeTestRuntime.runAllTools({
         stateSnapshot: agentToolRuntime.normalizeAgentSnapshot(normalizeJsonPayload(normalizedPayload?.stateSnapshot, {})),
         projectId: cleanText(normalizedPayload?.projectId, 80),

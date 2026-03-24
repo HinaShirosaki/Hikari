@@ -11,7 +11,7 @@ const { createProtocolMatchingRuntime } = require('./agent-protocol-matching.js'
 const { createNotebookGenerationRuntime } = require('./agent-notebook-generation.js');
 const { runPythonSandbox } = require('./agent-python-sandbox.js');
 const { createAgentSubAgentRuntime } = require('./agent-sub-agent.js');
-const { createAgentMemoryRuntime } = require('./agent-memory.js');
+const { createAgentMemoryRuntime } = require('../context/agent-memory.js');
 const { createLiteratureSearchRuntime } = require('./agent-literature-search.js');
 const { createPaperDownloadRuntime } = require('./agent-paper-download.js');
 const { createPaperAnalysisRuntime } = require('./agent-paper-analysis.js');
@@ -60,6 +60,29 @@ function uniqueStrings(values, max = 20) {
     out.push(normalized);
   });
   return out;
+}
+
+function countWords(value) {
+  return cleanText(value, 400)
+    .split(/\s+/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .length;
+}
+
+function resolveToolMessage(message, fallback) {
+  return cleanText(message, 3000) || cleanText(fallback, 3000);
+}
+
+function resolveFocusedToolText(message, fallback, maxWords = 6) {
+  const normalizedMessage = cleanText(message, 300);
+  if (!normalizedMessage) {
+    return cleanText(fallback, 300);
+  }
+  if (countWords(normalizedMessage) <= maxWords) {
+    return normalizedMessage;
+  }
+  return cleanText(fallback, 300);
 }
 
 function buildSmokeSnapshot() {
@@ -315,6 +338,9 @@ function buildPreview(toolName, result) {
   if (toolName === 'sub-agent') {
     return cleanText(source.agent_id, 220);
   }
+  if (toolName === 'memory') {
+    return cleanText(source.items?.[0]?.summary || source.items?.[0]?.key, 220);
+  }
   if (toolName === 'literature-search') {
     return cleanText(source.items?.[0]?.title || source.items?.[0]?.accession, 220);
   }
@@ -330,17 +356,42 @@ function buildPreview(toolName, result) {
   return '';
 }
 
-function normalizeToolSmokeItem(toolName, result, durationMs) {
+function buildResultMessage(toolName, result, fallbackSummary = '') {
+  const source = ensureObject(result);
+  const candidates = [];
+  if (toolName === 'memory') {
+    candidates.push(source.items?.[0]?.summary);
+  }
+  if (toolName === 'literature-search') {
+    candidates.push(source.items?.[0]?.summary);
+  }
+  candidates.push(
+    source.summary,
+    source.result_summary,
+    source.message,
+    source.answer,
+    source.rationale,
+    source.error,
+    fallbackSummary
+  );
+  return cleanText(candidates.find((value) => cleanText(value, 6000)), 6000);
+}
+
+function normalizeToolSmokeItem(toolName, result, durationMs, options = {}) {
   const source = ensureObject(result);
   const summary = cleanText(source.summary || source.error || `${toolName} smoke test completed.`, 320);
+  const requestMessage = cleanText(options.requestMessage, 3000);
   return {
     tool_name: cleanText(toolName, 120),
     ok: source.ok !== false,
     status: cleanText(source.status, 80) || (source.ok === false ? 'error' : 'ok'),
     summary,
+    request_message: requestMessage,
+    result_message: buildResultMessage(toolName, source, summary),
     preview: buildPreview(toolName, source),
     error: source.ok === false ? cleanText(source.error, 600) : '',
-    duration_ms: Math.max(0, Number(durationMs) || 0)
+    duration_ms: Math.max(0, Number(durationMs) || 0),
+    raw_result: cloneJson(source, {})
   };
 }
 
@@ -351,19 +402,21 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
     || path.join(os.tmpdir(), 'enana-agent-tool-smoke-python');
   const structuredResponder = createStructuredJsonResponder();
 
-  async function smokeInventoryLookup(snapshot) {
+  async function smokeInventoryLookup(snapshot, options = {}) {
     const runtime = createAgentInventoryLookupRuntime();
+    const requestMessage = resolveToolMessage(options.message, 'Where is the Atlas construct sample?');
+    const focusedQuery = resolveFocusedToolText(options.message, 'Atlas construct sample');
     const result = await runtime.executeInventoryLookup({
-      message: 'Where is the Atlas construct sample?',
+      message: requestMessage,
       parserPayload: {
         entities: {
-          inventory_item: 'Atlas construct sample',
+          inventory_item: focusedQuery,
           requested_output: 'location',
           compound_name: null
         },
         inventory_search: {
-          normalized_query: 'Atlas construct sample',
-          candidate_terms: ['Atlas construct sample', 'atlas'],
+          normalized_query: focusedQuery,
+          candidate_terms: uniqueStrings([focusedQuery, requestMessage, 'Atlas construct sample', 'atlas'], 5),
           aliases: ['construct'],
           search_mode: 'exact_then_alias_then_fuzzy'
         }
@@ -371,66 +424,80 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
       snapshot,
       limit: 5
     });
+    const itemCount = asArray(result.items).length;
     return {
       ...result,
-      ok: asArray(result.items).length > 0
+      ok: options.strict === true ? itemCount > 0 : cleanText(result.status, 80) !== 'error',
+      summary: itemCount > 0
+        ? `Found ${itemCount} inventory match${itemCount === 1 ? '' : 'es'} for ${cleanText(result.query || focusedQuery, 220)}.`
+        : `No inventory matches found for ${cleanText(result.query || focusedQuery, 220)}.`
     };
   }
 
-  async function smokeRecordLookup(snapshot) {
+  async function smokeRecordLookup(snapshot, options = {}) {
     const runtime = createAgentRecordLookupRuntime();
+    const requestMessage = resolveToolMessage(options.message, 'Find the Cell Prep protocol.');
+    const focusedQuery = resolveFocusedToolText(options.message, 'Cell Prep');
     const result = await runtime.executeRecordLookup({
-      message: 'Find the Cell Prep protocol.',
+      message: requestMessage,
       parserPayload: {
         entities: {
-          protocol_name: 'Cell Prep',
-          requested_output: 'protocol'
+          protocol_name: focusedQuery,
+          requested_output: null
         }
       },
       snapshot,
       limit: 5
     });
+    const itemCount = asArray(result.items).length;
     return {
       ...result,
-      ok: asArray(result.items).length > 0
+      ok: options.strict === true ? itemCount > 0 : cleanText(result.status, 80) !== 'error',
+      summary: itemCount > 0
+        ? `Found ${itemCount} record match${itemCount === 1 ? '' : 'es'} for ${cleanText(result.query || focusedQuery, 220)}.`
+        : `No record matches found for ${cleanText(result.query || focusedQuery, 220)}.`
     };
   }
 
-  async function smokeProtocolMatching(snapshot) {
+  async function smokeProtocolMatching(snapshot, options = {}) {
     const runtime = createProtocolMatchingRuntime({
       requestStructuredJsonPayload: structuredResponder
     });
+    const requestMessage = resolveToolMessage(options.message, 'I ran the Cell Prep workflow.');
+    const focusedQuery = resolveFocusedToolText(options.message, 'Cell Prep');
     const result = await runtime.selectProtocol({
       protocols: asArray(snapshot.protocols),
-      protocolCandidates: ['Cell Prep'],
-      message: 'I ran the Cell Prep workflow.',
+      protocolCandidates: uniqueStrings([focusedQuery, 'Cell Prep'], 3),
+      message: requestMessage,
       conversation: [],
       parserPayload: {
         entities: {
           activity_type: 'cell prep',
-          protocol_name: 'Cell Prep'
+          protocol_name: focusedQuery
         }
       }
     });
+    const selectedProtocolName = cleanText(result.selected_protocol?.name, 220);
     return {
-      ok: Boolean(result.selected_protocol?.id),
-      status: cleanText(result.selection_method, 80) || 'ok',
-      summary: result.selected_protocol
-        ? `Selected ${cleanText(result.selected_protocol.name, 220)} during protocol matching smoke test.`
-        : 'Protocol matching smoke test did not select a protocol.',
+      ok: options.strict === true ? Boolean(result.selected_protocol?.id) : true,
+      status: cleanText(result.selection_method, 80) || (selectedProtocolName ? 'matched' : 'no_match'),
+      summary: selectedProtocolName
+        ? `Selected ${selectedProtocolName} during protocol matching.`
+        : 'Protocol matching completed without selecting a protocol.',
       selected_protocol: result.selected_protocol,
       rationale: cleanText(result.rationale, 260)
     };
   }
 
-  async function smokeNotebookGeneration(snapshot) {
+  async function smokeNotebookGeneration(snapshot, options = {}) {
     const runtime = createNotebookGenerationRuntime({
       requestStructuredJsonPayload: structuredResponder
     });
     const protocol = cloneJson(asArray(snapshot.protocols)[0], {});
     const project = cloneJson(asArray(snapshot.projects)[0], {});
+    const requestMessage = resolveToolMessage(options.message, 'I completed Cell Prep on HEK293 sample TUBE42.');
     const result = await runtime.generateNotebook({
-      message: 'I completed Cell Prep on HEK293 sample TUBE42.',
+      message: requestMessage,
       conversation: [],
       snapshot,
       parserPayload: {
@@ -452,24 +519,36 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
       project
     });
     return {
-      ok: cleanText(result.status, 80) === 'completed',
+      ok: options.strict === true
+        ? cleanText(result.status, 80) === 'completed'
+        : cleanText(result.status, 80) !== 'error',
       status: cleanText(result.status, 80),
       summary: cleanText(result.notebook?.entry_template?.result, 320) || 'Notebook generation smoke test completed.',
       rendered_step_preview: cleanText(asArray(result.notebook?.rendered_steps)[0], 220)
     };
   }
 
-  async function smokePythonSandbox() {
-    return pythonSandboxFn({
-      code: 'import json\nopen("out.json", "w", encoding="utf-8").write(json.dumps({"ok": True, "value": 42}))',
+  async function smokePythonSandbox(options = {}) {
+    const requestMessage = resolveToolMessage(options.message, 'Write a JSON file with an ok flag and a test value.');
+    const escapedMessage = JSON.stringify(requestMessage);
+    const result = await pythonSandboxFn({
+      code: `import json\nopen("out.json", "w", encoding="utf-8").write(json.dumps({"ok": True, "value": 42, "request_message": ${escapedMessage}}))`,
       readback_paths: ['out.json'],
       timeout_ms: 4000
     }, {
       sandboxRoot: pythonSandboxRoot
     });
+    return {
+      ...result,
+      ok: result?.ok !== false,
+      summary: result?.ok === false
+        ? cleanText(result?.error, 320) || 'Python sandbox smoke test failed.'
+        : 'Python sandbox completed and wrote out.json.'
+    };
   }
 
-  async function smokeSubAgent() {
+  async function smokeSubAgent(options = {}) {
+    const requestMessage = resolveToolMessage(options.message, 'Ping');
     const runtime = createAgentSubAgentRuntime({
       now,
       runSubAgentTurn: async ({ phase, message }) => ({
@@ -481,7 +560,7 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
       action: 'create',
       name: 'Smoke Helper',
       system_prompt: 'You are a smoke-test helper agent.',
-      message: 'Ping'
+      message: requestMessage
     });
     if (!created?.ok || !created.agent?.id) {
       return {
@@ -495,7 +574,7 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
     const updated = await runtime.execute({
       action: 'message',
       agent_id: agentId,
-      message: 'Follow-up ping'
+      message: `Follow-up: ${requestMessage}`
     });
     const listed = await runtime.execute({
       action: 'list'
@@ -522,7 +601,8 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
     };
   }
 
-  async function smokeMemory() {
+  async function smokeMemory(options = {}) {
+    const requestMessage = resolveToolMessage(options.message, 'User prefers concise summaries.');
     const runtime = createAgentMemoryRuntime({
       now: (() => {
         let index = 0;
@@ -534,21 +614,31 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
       })(),
       createId: () => 'memory-smoke-1'
     });
-    await runtime.execute({
+    const rememberResult = await runtime.execute({
       action: 'remember',
       category: 'preference',
       key: 'output_format',
-      summary: 'User prefers concise summaries.',
-      value: 'concise'
+      summary: requestMessage,
+      value: requestMessage
     });
-    return runtime.execute({
+    const recallResult = await runtime.execute({
       action: 'recall',
-      query: 'concise',
+      query: requestMessage,
       limit: 5
     });
+    const itemCount = asArray(recallResult?.items).length;
+    return {
+      ...recallResult,
+      ok: options.strict === true
+        ? itemCount > 0
+        : rememberResult?.ok !== false && recallResult?.ok !== false,
+      summary: itemCount > 0
+        ? `Recalled ${itemCount} memory record${itemCount === 1 ? '' : 's'}.`
+        : 'No memory records matched the recall query.'
+    };
   }
 
-  async function smokeLiteratureSearch() {
+  async function smokeLiteratureSearch(options = {}) {
     const runtime = createLiteratureSearchRuntime({
       searchPubMedRecords: async () => ([
         {
@@ -597,14 +687,23 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
         }
       ])
     });
-    return runtime.searchLiterature({
-      query: 'PD-1 binder methods',
+    const requestMessage = resolveToolMessage(options.message, 'PD-1 binder methods');
+    const result = await runtime.searchLiterature({
+      query: requestMessage,
       sources: ['pubmed', 'crossref', 'europe_pmc', 'uniprot'],
       limit: 6
     });
+    const itemCount = asArray(result?.items).length;
+    return {
+      ...result,
+      ok: options.strict === true ? itemCount > 0 : result?.ok !== false,
+      summary: itemCount > 0
+        ? `Literature search returned ${itemCount} result${itemCount === 1 ? '' : 's'}.`
+        : 'Literature search returned no results.'
+    };
   }
 
-  async function smokePaperDownload() {
+  async function smokePaperDownload(options = {}) {
     const storageRoot = await fsPromises.mkdtemp(path.join(os.tmpdir(), 'enana-agent-tool-smoke-download-'));
     try {
       const runtime = createPaperDownloadRuntime({
@@ -631,6 +730,7 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
           }
         })
       });
+      const requestMessage = resolveToolMessage(options.message, 'Smoke Test Paper');
       const result = await runtime.downloadPaper({
         action: 'download',
         page_url: 'https://example.org/article',
@@ -638,19 +738,26 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
         linked_type: 'project',
         linked_name: 'Atlas',
         storage_path: storageRoot,
-        paper_title: 'Smoke Test Paper'
+        paper_title: requestMessage
       });
-      return result;
+      return {
+        ...result,
+        ok: result?.ok !== false,
+        summary: result?.ok === false
+          ? cleanText(result?.error, 320) || 'Paper download smoke test failed.'
+          : `Downloaded PDF to ${cleanText(result?.relative_path || result?.file_name, 220) || 'storage'}.`
+      };
     } finally {
       await fsPromises.rm(storageRoot, { recursive: true, force: true }).catch(() => {});
     }
   }
 
-  async function smokePaperAnalysis() {
+  async function smokePaperAnalysis(options = {}) {
     const runtime = createPaperAnalysisRuntime({
       requestStructuredJsonPayload: structuredResponder
     });
-    return runtime.analyzePaper({
+    const requestMessage = resolveToolMessage(options.message, 'Extract a protocol from this paper.');
+    const result = await runtime.analyzePaper({
       paper: {
         title: 'PD-1 Binder Methods',
         summary: 'A short paper summary for smoke testing.',
@@ -660,38 +767,49 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
           'Elute with imidazole.'
         ]
       },
-      message: 'Extract a protocol from this paper.',
+      message: requestMessage,
       extract_protocol: true,
       generate_protocol: true
     });
+    return {
+      ...result,
+      ok: result?.ok !== false,
+      summary: cleanText(result?.result_summary || result?.brief_summary, 320) || 'Paper analysis smoke test completed.'
+    };
   }
 
-  async function smokeProtocolGeneration() {
+  async function smokeProtocolGeneration(options = {}) {
     const runtime = createProtocolGenerationRuntime({
       requestStructuredJsonPayload: structuredResponder
     });
-    return runtime.generateProtocol({
+    const requestMessage = resolveToolMessage(options.message, 'Generate a concise purification protocol from this summary.');
+    const result = await runtime.generateProtocol({
       title: 'Atlas Binder Purification',
       purpose: 'Purify the Atlas binder from clarified lysate.',
       method_text: 'Clarify lysate, bind it to Ni-NTA resin for [time], then elute with imidazole.',
       materials: ['Ni-NTA resin', 'imidazole buffer'],
       steps: ['Clarify lysate.', 'Bind to Ni-NTA resin.', 'Elute with imidazole.'],
-      source_summary: 'Smoke-test summary.'
+      source_summary: requestMessage
     });
+    return {
+      ...result,
+      ok: result?.ok !== false,
+      summary: cleanText(result?.result_summary, 320) || 'Protocol generation smoke test completed.'
+    };
   }
 
   const smokeRunners = {
-    'inventory-lookup': async () => smokeInventoryLookup(buildSmokeSnapshot()),
-    'record-lookup': async () => smokeRecordLookup(buildSmokeSnapshot()),
-    'protocol-matching': async () => smokeProtocolMatching(buildSmokeSnapshot()),
-    'notebook-generation': async () => smokeNotebookGeneration(buildSmokeSnapshot()),
-    'python-sandbox': async () => smokePythonSandbox(),
-    'sub-agent': async () => smokeSubAgent(),
-    memory: async () => smokeMemory(),
-    'literature-search': async () => smokeLiteratureSearch(),
-    'paper-download': async () => smokePaperDownload(),
-    'paper-analysis': async () => smokePaperAnalysis(),
-    'protocol-generation': async () => smokeProtocolGeneration()
+    'inventory-lookup': async (options = {}) => smokeInventoryLookup(buildSmokeSnapshot(), options),
+    'record-lookup': async (options = {}) => smokeRecordLookup(buildSmokeSnapshot(), options),
+    'protocol-matching': async (options = {}) => smokeProtocolMatching(buildSmokeSnapshot(), options),
+    'notebook-generation': async (options = {}) => smokeNotebookGeneration(buildSmokeSnapshot(), options),
+    'python-sandbox': async (options = {}) => smokePythonSandbox(options),
+    'sub-agent': async (options = {}) => smokeSubAgent(options),
+    memory: async (options = {}) => smokeMemory(options),
+    'literature-search': async (options = {}) => smokeLiteratureSearch(options),
+    'paper-download': async (options = {}) => smokePaperDownload(options),
+    'paper-analysis': async (options = {}) => smokePaperAnalysis(options),
+    'protocol-generation': async (options = {}) => smokeProtocolGeneration(options)
   };
 
   const missingSmokeTests = AGENT_TOOL_CATALOG
@@ -702,22 +820,64 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
     throw new Error(`Missing smoke tests for agent tools: ${missingSmokeTests.join(', ')}.`);
   }
 
+  async function runToolEntry(toolName, options = {}) {
+    const normalizedToolName = cleanText(toolName, 120);
+    const startedAt = Date.now();
+    if (!normalizedToolName || typeof smokeRunners[normalizedToolName] !== 'function') {
+      return normalizeToolSmokeItem(normalizedToolName || 'unknown-tool', {
+        ok: false,
+        status: 'error',
+        error: `Unknown agent tool "${normalizedToolName || 'unknown-tool'}".`,
+        summary: `Unknown agent tool "${normalizedToolName || 'unknown-tool'}".`
+      }, 0, {
+        requestMessage: options.message
+      });
+    }
+    try {
+      const result = await smokeRunners[normalizedToolName](options);
+      return normalizeToolSmokeItem(normalizedToolName, result, Date.now() - startedAt, {
+        requestMessage: options.message
+      });
+    } catch (error) {
+      return normalizeToolSmokeItem(normalizedToolName, {
+        ok: false,
+        status: 'error',
+        error: cleanText(error?.message || error, 600) || `${normalizedToolName} smoke test failed.`,
+        summary: `${normalizedToolName} smoke test failed.`
+      }, Date.now() - startedAt, {
+        requestMessage: options.message
+      });
+    }
+  }
+
+  async function runTool(options = {}) {
+    const toolName = cleanText(options?.toolName, 120);
+    const requestMessage = cleanText(options?.message, 3000);
+    const item = await runToolEntry(toolName, {
+      message: requestMessage,
+      strict: false
+    });
+    return {
+      ok: item.ok === true,
+      run_mode: 'single',
+      status: item.ok === true ? 'completed' : 'completed_with_failures',
+      tool_name: toolName || item.tool_name,
+      request_message: requestMessage,
+      tool_count: 1,
+      passed_count: item.ok === true ? 1 : 0,
+      failed_count: item.ok === true ? 0 : 1,
+      items: [item],
+      summary: item.ok === true
+        ? `Manual tool test completed for ${item.tool_name}: ${item.result_message || item.summary}`
+        : `Manual tool test failed for ${item.tool_name}: ${item.error || item.summary}`
+    };
+  }
+
   async function runAllTools() {
     const items = [];
     for (const entry of AGENT_TOOL_CATALOG) {
       const toolName = cleanText(entry?.name, 120);
-      const startedAt = Date.now();
-      try {
-        const result = await smokeRunners[toolName]();
-        items.push(normalizeToolSmokeItem(toolName, result, Date.now() - startedAt));
-      } catch (error) {
-        items.push(normalizeToolSmokeItem(toolName, {
-          ok: false,
-          status: 'error',
-          error: cleanText(error?.message || error, 600) || `${toolName} smoke test failed.`,
-          summary: `${toolName} smoke test failed.`
-        }, Date.now() - startedAt));
-      }
+      items.push(await runToolEntry(toolName, { strict: true }));
     }
 
     const failedItems = items.filter((item) => item.ok !== true);
@@ -725,6 +885,7 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
     const failedNames = failedItems.map((item) => item.tool_name);
     return {
       ok: failedItems.length === 0,
+      run_mode: 'all',
       status: failedItems.length === 0 ? 'completed' : 'completed_with_failures',
       tool_count: items.length,
       passed_count: passedCount,
@@ -738,6 +899,7 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
 
   return {
     toolNames: AGENT_TOOL_CATALOG.map((entry) => cleanText(entry?.name, 120)).filter(Boolean),
+    runTool,
     runAllTools
   };
 }

@@ -1595,6 +1595,10 @@ test('agent-chat exposes developer-only manual tool smoke test action and render
     'agent-context-summary',
     'agent-developer-tools',
     'agent-dev-test-tools-btn',
+    'agent-dev-tool-select',
+    'agent-dev-tool-message',
+    'agent-dev-run-tool-btn',
+    'agent-dev-tool-hint',
     'agent-chat-history',
     'agent-message-input',
     'agent-send-btn',
@@ -1707,6 +1711,140 @@ test('agent-chat exposes developer-only manual tool smoke test action and render
   assert.match(history.innerHTML, /python-sandbox/);
   assert.match(history.innerHTML, /Passed=2/);
   assert.equal(status.textContent, 'Manual tool smoke test complete.');
+});
+
+test('agent-chat lets developers run one tool with a manual message and inspect the raw result', async () => {
+  const document = createMockDocument([
+    'agent-project-select',
+    'agent-context-summary',
+    'agent-developer-tools',
+    'agent-dev-test-tools-btn',
+    'agent-dev-tool-select',
+    'agent-dev-tool-message',
+    'agent-dev-run-tool-btn',
+    'agent-dev-tool-hint',
+    'agent-chat-history',
+    'agent-message-input',
+    'agent-send-btn',
+    'agent-clear-btn',
+    'agent-status'
+  ]);
+  const developerToolSelect = document.getElementById('agent-dev-tool-select');
+  const developerToolMessage = document.getElementById('agent-dev-tool-message');
+  const developerRunToolBtn = document.getElementById('agent-dev-run-tool-btn');
+  const developerToolHint = document.getElementById('agent-dev-tool-hint');
+  const history = document.getElementById('agent-chat-history');
+  const status = document.getElementById('agent-status');
+
+  let payloadSeen = null;
+  const state = {
+    projects: [{ id: 'p1', name: 'Cancer Study' }],
+    protocols: [],
+    notebookEntries: [],
+    assays: [],
+    gelAnalyses: [],
+    workflows: [],
+    papers: [],
+    inventory: {},
+    labInventory: { chemicals: [] },
+    settings: {
+      llm: {
+        provider: 'openai',
+        model: 'gpt-5',
+        apiEndpoint: 'https://api.openai.com/v1/responses',
+        apiKey: 'sk-local-key'
+      },
+      agent: {
+        developerMode: true
+      }
+    },
+    agentChat: { projectId: 'p1', messages: [] }
+  };
+
+  const window = {
+    enanaApi: {
+      autoSaveDataFile: async () => ({
+        ok: true,
+        filePath: '/tmp/enana-data.ena.json'
+      }),
+      agentDeveloperTestTools: async (payload) => {
+        payloadSeen = payload;
+        return {
+          ok: true,
+          run_mode: 'single',
+          status: 'completed',
+          tool_name: payload.toolName,
+          request_message: payload.message,
+          tool_count: 1,
+          passed_count: 1,
+          failed_count: 0,
+          summary: `Manual tool test completed for ${payload.toolName}: Python sandbox completed and wrote out.json.`,
+          items: [
+            {
+              tool_name: payload.toolName,
+              ok: true,
+              status: 'ok',
+              request_message: payload.message,
+              result_message: 'Python sandbox completed and wrote out.json.',
+              summary: 'Python sandbox completed and wrote out.json.',
+              preview: 'out.json',
+              duration_ms: 9,
+              raw_result: {
+                ok: true,
+                readback_files: [
+                  {
+                    path: 'out.json',
+                    content: JSON.stringify({ request_message: payload.message })
+                  }
+                ]
+              }
+            }
+          ]
+        };
+      }
+    }
+  };
+
+  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat.js'), {
+    document,
+    window
+  });
+  const agent = agentModule.initAgentChat({
+    state,
+    persist: () => {},
+    createId: (() => {
+      let idx = 0;
+      return () => `agent-msg-${idx += 1}`;
+    })(),
+    safeText: shared.safeText,
+    onNotebookEntriesChanged: () => {}
+  });
+
+  agent.render();
+  assert.match(developerToolHint.textContent, /inventory lookup output/i);
+
+  developerToolSelect.value = 'python-sandbox';
+  trigger(developerToolSelect, 'change');
+  developerToolMessage.value = 'Write a JSON file noting this manual tool test.';
+  trigger(developerRunToolBtn, 'click');
+  await flushAsync();
+  await flushAsync();
+
+  assert.equal(payloadSeen.toolName, 'python-sandbox');
+  assert.equal(payloadSeen.message, 'Write a JSON file noting this manual tool test.');
+  assert.equal(payloadSeen.projectId, 'p1');
+  assert.equal(payloadSeen.projectName, 'Cancer Study');
+  assert.equal(state.agentChat.messages.length, 2);
+  assert.equal(state.agentChat.messages[0].role, 'user');
+  assert.match(state.agentChat.messages[0].text, /Tool test \(python-sandbox\)/);
+  assert.equal(state.agentChat.messages[1].role, 'assistant');
+  assert.equal(state.agentChat.messages[1].meta.tool_test.run_mode, 'single');
+  assert.equal(state.agentChat.messages[1].meta.tool_test.request_message, 'Write a JSON file noting this manual tool test.');
+  assert.match(history.innerHTML, /Manual Tool Test/);
+  assert.match(history.innerHTML, /Input Message/);
+  assert.match(history.innerHTML, /Raw Result/);
+  assert.match(history.innerHTML, /request_message/);
+  assert.equal(status.textContent, 'Manual tool test complete for python-sandbox.');
 });
 
 test('agent-chat prioritizes inventory lookup summary text and renders lookup metadata panels', async () => {

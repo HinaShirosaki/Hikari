@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "updated_at": "2026-03-24T04:08:26.601Z",
+  "sessions": [
+    {
+      "id": "chat-mn43hxya-yw2nl1ru",
+      "title": "New Chat",
+      "project_id": "1774128185432-96a318da61d208",
+      "project_name": "SUMO1",
+      "log_file": "chat-mn43hxya-yw2nl1ru.log",
+      "created_at": "2026-03-24T04:09:04.546Z",
+      "updated_at": "2026-03-24T04:09:04.546Z",
+      "status": "ready",
+      "message_count": 0,
+      "request_count": 0,
+      "last_message_preview": "",
+      "last_user_message_preview": "",
+      "response_type": "",
+      "last_request_id": "",
+      "last_error": ""
+    },
+    {
+      "id": "chat-mn43h8fd-z3lkxqpu",
+      "title": "New Chat",
+      "project_id": "1774128185432-96a318da61d208",
+      "project_name": "SUMO1",
+      "log_file": "chat-mn43h8fd-z3lkxqpu.log",
+      "created_at": "2026-03-24T04:08:31.465Z",
+      "updated_at": "2026-03-24T04:08:31.465Z",
+      "status": "ready",
+      "message_count": 0,
+      "request_count": 0,
+      "last_message_preview": "",
+      "last_user_message_preview": "",
+      "response_type": "",
+      "last_request_id": "",
+      "last_error": ""
+    },
+    {
+      "id": "chat-mn43h4o8-ly51chzo",
+      "title": "New Chat",
+      "project_id": "1774128185432-96a318da61d208",
+      "project_name": "SUMO1",
+      "log_file": "chat-mn43h4o8-ly51chzo.log",
+      "created_at": "2026-03-24T04:08:26.600Z",
+      "updated_at": "2026-03-24T04:08:26.600Z",
+      "status": "ready",
+      "message_count": 0,
+      "request_count": 0,
+      "last_message_preview": "",
+      "last_user_message_preview": "",
+      "response_type": "",
+      "last_request_id": "",
+      "last_error": ""
+    }
+  ]
+}

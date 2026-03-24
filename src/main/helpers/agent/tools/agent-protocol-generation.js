@@ -1,6 +1,6 @@
 'use strict';
 
-const { createAgentLlmRuntimeHelpers } = require('./agent-llm-utils.js');
+const { createAgentLlmRuntimeHelpers } = require('../shared/agent-llm-utils.js');
 
 function createProtocolGenerationRuntime(deps = {}) {
   const createId = typeof deps.createId === 'function'

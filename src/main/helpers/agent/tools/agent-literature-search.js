@@ -1,6 +1,6 @@
 'use strict';
 
-const { createAgentLlmRuntimeHelpers } = require('./agent-llm-utils.js');
+const { createAgentLlmRuntimeHelpers } = require('../shared/agent-llm-utils.js');
 
 const LITERATURE_SOURCES = Object.freeze({
   AUTO: 'auto',

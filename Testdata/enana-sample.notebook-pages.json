@@ -17,1244 +17,56 @@
   "knowledgeChats": {},
   "agentChat": {
     "projectId": "1774128185432-96a318da61d208",
-    "messages": [
+    "currentSessionId": "chat-mn43hxya-yw2nl1ru",
+    "sessions": [
       {
-        "id": "1774124688043-80a18ab123f5d8",
-        "role": "user",
-        "text": "I purified SUMO1 with NINTA",
-        "createdAt": "2026-03-21T20:24:48.043Z"
+        "id": "chat-mn43hxya-yw2nl1ru",
+        "title": "New Chat",
+        "project_id": "1774128185432-96a318da61d208",
+        "project_name": "SUMO1",
+        "updated_at": "2026-03-24T04:09:04.546Z",
+        "created_at": "2026-03-24T04:09:04.546Z",
+        "message_count": 0,
+        "last_message_preview": "",
+        "response_type": "",
+        "last_error": ""
       },
       {
-        "id": "1774124688069-4265ec89a8335",
-        "role": "assistant",
-        "text": "Agent failed: Missing LLM API key. Set it in Settings > LLM Model & API, or use LLM_API_KEY / ENANA_LLM_API_KEY.",
-        "createdAt": "2026-03-21T20:24:48.069Z",
-        "meta": {
-          "parser": {
-            "primary_intent": "unclear",
-            "needs_clarification": true,
-            "clarification_reason": "agent_error",
-            "entities": {},
-            "inventory_search": {
-              "normalized_query": null,
-              "candidate_terms": [],
-              "aliases": [],
-              "search_mode": null
-            },
-            "reasoning_summary": "Agent failed: Missing LLM API key. Set it in Settings > LLM Model & API, or use LLM_API_KEY / ENANA_LLM_API_KEY."
-          },
-          "notebookDraft": null,
-          "developer_trace": [],
-          "requestText": "I purified SUMO1 with NINTA"
-        }
+        "id": "chat-mn43h8fd-z3lkxqpu",
+        "title": "New Chat",
+        "project_id": "1774128185432-96a318da61d208",
+        "project_name": "SUMO1",
+        "log_file": "chat-mn43h8fd-z3lkxqpu.log",
+        "created_at": "2026-03-24T04:08:31.465Z",
+        "updated_at": "2026-03-24T04:08:31.465Z",
+        "status": "ready",
+        "message_count": 0,
+        "request_count": 0,
+        "last_message_preview": "",
+        "last_user_message_preview": "",
+        "response_type": "",
+        "last_request_id": "",
+        "last_error": ""
       },
       {
-        "id": "1774124716649-b83af20d0aa1b8",
-        "role": "user",
-        "text": "I purified SUMO1 with NINTA",
-        "createdAt": "2026-03-21T20:25:16.649Z"
-      },
-      {
-        "id": "1774124733502-eda6d4ef60ef6",
-        "role": "assistant",
-        "text": "The user states a completed experimental action (purified SUMO1 using Ni-NTA), which is best handled as a lab activity/protocol note for notebook logging.",
-        "createdAt": "2026-03-21T20:25:33.502Z",
-        "meta": {
-          "parser": {
-            "primary_intent": "protocol_to_notebook",
-            "needs_clarification": false,
-            "clarification_reason": null,
-            "entities": {
-              "activity_type": "protein purification",
-              "project_name": null,
-              "protocol_name": "Ni-NTA purification",
-              "protein_name": "SUMO1",
-              "compound_name": "Ni-NTA",
-              "inventory_item": null,
-              "cell_line": null,
-              "paper_title": null,
-              "workflow_step": "affinity purification",
-              "requested_output": "notebook entry"
-            },
-            "inventory_search": {
-              "normalized_query": null,
-              "candidate_terms": [],
-              "aliases": [],
-              "search_mode": null
-            },
-            "reasoning_summary": "The user states a completed experimental action (purified SUMO1 using Ni-NTA), which is best handled as a lab activity/protocol note for notebook logging."
-          },
-          "notebookDraft": null,
-          "developer_trace": [
-            {
-              "stage": "intent_parser",
-              "provider": "codex",
-              "model": "",
-              "summary": "Intent parser round completed via Codex CLI.",
-              "timestamp": "2026-03-21T20:25:33.496Z"
-            }
-          ],
-          "requestText": "I purified SUMO1 with NINTA"
-        }
-      },
-      {
-        "id": "1774127245063-5ccc897f951ea",
-        "role": "user",
-        "text": "I did a pET28a-SUMO1 transformation today",
-        "createdAt": "2026-03-21T21:07:25.063Z"
-      },
-      {
-        "id": "1774127245101-7787a64d774b2",
-        "role": "assistant",
-        "text": "Agent failed: buildProjectRecordIndex is not defined",
-        "createdAt": "2026-03-21T21:07:25.101Z",
-        "meta": {
-          "parser": {
-            "primary_intent": "unclear",
-            "needs_clarification": true,
-            "clarification_reason": "agent_error",
-            "entities": {},
-            "inventory_search": {
-              "normalized_query": null,
-              "candidate_terms": [],
-              "aliases": [],
-              "search_mode": null
-            },
-            "protocol_candidates": [],
-            "reasoning_summary": "Agent failed: buildProjectRecordIndex is not defined"
-          },
-          "protocol_to_notebook": null,
-          "notebookDraft": null,
-          "developer_trace": [],
-          "requestText": "I did a pET28a-SUMO1 transformation today"
-        }
-      },
-      {
-        "id": "1774127377210-88426ea47d96a",
-        "role": "user",
-        "text": "I did a pET28a-SUMO1 transformation today",
-        "createdAt": "2026-03-21T21:09:37.210Z"
-      },
-      {
-        "id": "1774127410128-38adf1bd0d0008",
-        "role": "assistant",
-        "text": "Please provide plasmid. Please provide project name.",
-        "createdAt": "2026-03-21T21:10:10.128Z",
-        "meta": {
-          "parser": {
-            "primary_intent": "protocol_to_notebook",
-            "needs_clarification": false,
-            "clarification_reason": null,
-            "entities": {
-              "activity_type": "transformation",
-              "project_name": "pET28a-SUMO1",
-              "protocol_name": "pET28a-SUMO1 transformation",
-              "protein_name": "SUMO1",
-              "compound_name": null,
-              "inventory_item": null,
-              "cell_line": null,
-              "paper_title": null,
-              "workflow_step": "transformation",
-              "requested_output": "log protocol activity to notebook"
-            },
-            "inventory_search": {
-              "normalized_query": null,
-              "candidate_terms": [],
-              "aliases": [],
-              "search_mode": null
-            },
-            "protocol_candidates": [
-              "pET28a-SUMO1 transformation",
-              "Plasmid transformation",
-              "Bacterial transformation"
-            ],
-            "reasoning_summary": "The user reports a completed lab action (a transformation), which maps to recording an experimental protocol/activity in the notebook."
-          },
-          "protocol_to_notebook": {
-            "status": "needs_more_info",
-            "candidate_matches": [
-              {
-                "id": "1774024047007-d137dae96cab78",
-                "name": "BL21(DE3) Chemical Transformation with pET28a",
-                "score": 72
-              },
-              {
-                "id": "1774024647315-74cbb18b4cc37",
-                "name": "Small-Scale Overnight Starter Culture",
-                "score": 24
-              }
-            ],
-            "selected_protocol": {
-              "id": "1774024047007-d137dae96cab78",
-              "name": "BL21(DE3) Chemical Transformation with pET28a",
-              "selection_method": "deterministic",
-              "rationale": "Deterministic score margin selected the protocol."
-            },
-            "missing_placeholders": [
-              {
-                "step_id": "1774125436234-5e6cd5beb943b",
-                "placeholder_id": "1774125436234-cac9aa958fe75",
-                "placeholder_key": "1774125436234-5e6cd5beb943b:1774125436234-cac9aa958fe75",
-                "display": "plasmid",
-                "reason": "Missing information from user request."
-              },
-              {
-                "step_id": "project",
-                "placeholder_id": "project_name",
-                "placeholder_key": "project_name",
-                "display": "project name",
-                "reason": "Project could not be resolved from the request."
-              }
-            ],
-            "follow_up_questions": [
-              "Please provide plasmid.",
-              "Please provide project name."
-            ],
-            "project_name": "",
-            "notebook": null
-          },
-          "notebookDraft": null,
-          "developer_trace": [
-            {
-              "stage": "intent_parser",
-              "provider": "codex",
-              "model": "",
-              "summary": "Intent parser round completed via Codex CLI.",
-              "timestamp": "2026-03-21T21:09:53.343Z"
-            },
-            {
-              "stage": "protocol_match_lookup",
-              "provider": "codex",
-              "model": "",
-              "summary": "Protocol lookup candidates=3 local_protocols=6.",
-              "timestamp": "2026-03-21T21:09:53.345Z"
-            },
-            {
-              "stage": "protocol_ranker",
-              "provider": "codex",
-              "model": "",
-              "summary": "Ranked 2 protocol matches.",
-              "timestamp": "2026-03-21T21:09:53.347Z"
-            },
-            {
-              "stage": "notebook_fill",
-              "provider": "codex",
-              "model": "",
-              "summary": "notebook_fill completed via Codex CLI.",
-              "timestamp": "2026-03-21T21:10:10.120Z"
-            }
-          ],
-          "requestText": "I did a pET28a-SUMO1 transformation today"
-        }
-      },
-      {
-        "id": "1774128193250-6cd268644108a",
-        "role": "user",
-        "text": "I did a pET28a-SUMO1 transformation today",
-        "createdAt": "2026-03-21T21:23:13.250Z"
-      },
-      {
-        "id": "1774128213253-f2f435d579bee8",
-        "role": "assistant",
-        "text": "Project name is not explicitly provided.",
-        "createdAt": "2026-03-21T21:23:33.253Z",
-        "meta": {
-          "parser": {
-            "primary_intent": "protocol_to_notebook",
-            "needs_clarification": true,
-            "clarification_reason": "Project name is not explicitly provided.",
-            "entities": {
-              "activity_type": "transformation",
-              "project_name": null,
-              "protocol_name": "pET28a-SUMO1 transformation",
-              "protein_name": "SUMO1",
-              "compound_name": null,
-              "inventory_item": null,
-              "cell_line": null,
-              "paper_title": null,
-              "workflow_step": "transformation",
-              "requested_output": "notebook entry"
-            },
-            "inventory_search": {
-              "normalized_query": null,
-              "candidate_terms": [],
-              "aliases": [],
-              "search_mode": null
-            },
-            "protocol_candidates": [
-              "pET28a-SUMO1 transformation",
-              "Bacterial transformation",
-              "Plasmid transformation"
-            ],
-            "reasoning_summary": "The user is reporting a completed lab action suitable for notebook logging, with a clear transformation activity and construct/protein context, but no explicit project name."
-          },
-          "protocol_to_notebook": {
-            "status": "needs_more_info",
-            "candidate_matches": [],
-            "selected_protocol": null,
-            "missing_placeholders": [],
-            "follow_up_questions": [
-              "Project name is not explicitly provided."
-            ],
-            "project_name": "",
-            "notebook": null
-          },
-          "notebookDraft": null,
-          "developer_trace": [
-            {
-              "stage": "intent_parser",
-              "provider": "codex",
-              "model": "",
-              "summary": "Intent parser round completed via Codex CLI.",
-              "timestamp": "2026-03-21T21:23:33.247Z"
-            }
-          ],
-          "requestText": "I did a pET28a-SUMO1 transformation today"
-        }
-      },
-      {
-        "id": "1774128251962-5e78cc4f867e48",
-        "role": "user",
-        "text": "I did a pET28a-SUMO1 transformation today",
-        "createdAt": "2026-03-21T21:24:11.962Z"
-      },
-      {
-        "id": "1774128310194-76687415b8b078",
-        "role": "assistant",
-        "text": "Please provide plasmid.",
-        "createdAt": "2026-03-21T21:25:10.194Z",
-        "meta": {
-          "parser": {
-            "primary_intent": "protocol_to_notebook",
-            "needs_clarification": false,
-            "clarification_reason": null,
-            "entities": {
-              "activity_type": "transformation",
-              "project_name": "SUMO1",
-              "protocol_name": "pET28a-SUMO1 transformation",
-              "protein_name": "SUMO1",
-              "compound_name": null,
-              "inventory_item": null,
-              "cell_line": null,
-              "paper_title": null,
-              "workflow_step": "transformation",
-              "requested_output": "notebook entry"
-            },
-            "inventory_search": {
-              "normalized_query": null,
-              "candidate_terms": [],
-              "aliases": [],
-              "search_mode": null
-            },
-            "protocol_candidates": [
-              "pET28a-SUMO1 transformation",
-              "bacterial transformation"
-            ],
-            "reasoning_summary": "The user is reporting a completed transformation activity to be logged, which maps to protocol-to-notebook intent in the active SUMO1 project context."
-          },
-          "protocol_to_notebook": {
-            "status": "needs_more_info",
-            "candidate_matches": [
-              {
-                "id": "1774024047007-d137dae96cab78",
-                "name": "BL21(DE3) Chemical Transformation with pET28a",
-                "score": 48
-              },
-              {
-                "id": "1774024647315-74cbb18b4cc37",
-                "name": "Small-Scale Overnight Starter Culture",
-                "score": 12
-              }
-            ],
-            "selected_protocol": {
-              "id": "1774024047007-d137dae96cab78",
-              "name": "BL21(DE3) Chemical Transformation with pET28a",
-              "selection_method": "deterministic_fallback",
-              "rationale": "LLM tie-break did not map to a known candidate; selected highest deterministic rank."
-            },
-            "missing_placeholders": [
-              {
-                "step_id": "1774125436234-5e6cd5beb943b",
-                "placeholder_id": "1774125436234-cac9aa958fe75",
-                "placeholder_key": "1774125436234-5e6cd5beb943b:1774125436234-cac9aa958fe75",
-                "display": "plasmid",
-                "reason": "Missing information from user request."
-              }
-            ],
-            "follow_up_questions": [
-              "Please provide plasmid."
-            ],
-            "project_name": "SUMO1",
-            "notebook": null
-          },
-          "notebookDraft": null,
-          "developer_trace": [
-            {
-              "stage": "intent_parser",
-              "provider": "codex",
-              "model": "",
-              "summary": "Intent parser round completed via Codex CLI.",
-              "timestamp": "2026-03-21T21:24:33.413Z"
-            },
-            {
-              "stage": "protocol_match_lookup",
-              "provider": "codex",
-              "model": "",
-              "summary": "Protocol lookup candidates=2 local_protocols=6.",
-              "timestamp": "2026-03-21T21:24:33.415Z"
-            },
-            {
-              "stage": "protocol_ranker",
-              "provider": "codex",
-              "model": "",
-              "summary": "Ranked 2 protocol matches.",
-              "timestamp": "2026-03-21T21:24:33.418Z"
-            },
-            {
-              "stage": "protocol_tiebreak_llm",
-              "provider": "codex",
-              "model": "",
-              "summary": "protocol_tiebreak_llm completed via Codex CLI.",
-              "timestamp": "2026-03-21T21:24:44.277Z"
-            },
-            {
-              "stage": "protocol_placeholder_tool_lookup",
-              "provider": "codex",
-              "model": "",
-              "summary": "searchInventoryIndex is not defined",
-              "timestamp": "2026-03-21T21:24:44.282Z"
-            },
-            {
-              "stage": "notebook_fill",
-              "provider": "codex",
-              "model": "",
-              "summary": "notebook_fill completed via Codex CLI.",
-              "timestamp": "2026-03-21T21:25:10.188Z"
-            }
-          ],
-          "requestText": "I did a pET28a-SUMO1 transformation today"
-        }
-      },
-      {
-        "id": "1774128483854-073e8cad42407",
-        "role": "user",
-        "text": "pET28a-SUMO1",
-        "createdAt": "2026-03-21T21:28:03.854Z"
-      },
-      {
-        "id": "1774128559737-f9b344946128d8",
-        "role": "assistant",
-        "text": "Please provide plasmid.",
-        "createdAt": "2026-03-21T21:29:19.737Z",
-        "meta": {
-          "parser": {
-            "primary_intent": "protocol_to_notebook",
-            "needs_clarification": false,
-            "clarification_reason": null,
-            "entities": {
-              "activity_type": "transformation",
-              "project_name": "SUMO1",
-              "protocol_name": null,
-              "protein_name": "SUMO1",
-              "compound_name": null,
-              "inventory_item": "pET28a-SUMO1",
-              "cell_line": null,
-              "paper_title": null,
-              "workflow_step": "plasmid specification",
-              "requested_output": "update notebook record"
-            },
-            "inventory_search": {
-              "normalized_query": null,
-              "candidate_terms": [],
-              "aliases": [],
-              "search_mode": null
-            },
-            "protocol_candidates": [
-              "Bacterial transformation"
-            ],
-            "reasoning_summary": "The user message provides a plasmid name in an ongoing context about logging a transformation, so this is a continuation of a protocol-to-notebook workflow."
-          },
-          "protocol_to_notebook": {
-            "status": "needs_more_info",
-            "candidate_matches": [
-              {
-                "id": "1774024047007-d137dae96cab78",
-                "name": "BL21(DE3) Chemical Transformation with pET28a",
-                "score": 28
-              },
-              {
-                "id": "1774024647315-74cbb18b4cc37",
-                "name": "Small-Scale Overnight Starter Culture",
-                "score": 19
-              }
-            ],
-            "selected_protocol": {
-              "id": "1774024047007-d137dae96cab78",
-              "name": "BL21(DE3) Chemical Transformation with pET28a",
-              "selection_method": "llm_tiebreak",
-              "rationale": "This is the best match for 'pET28a-SUMO1' with activity type 'transformation': it explicitly covers pET28a plasmid transformation steps and is consistent with the parsed plasmid/entity context, unlike the starter culture protocol."
-            },
-            "missing_placeholders": [
-              {
-                "step_id": "1774125436234-5e6cd5beb943b",
-                "placeholder_id": "1774125436234-cac9aa958fe75",
-                "placeholder_key": "1774125436234-5e6cd5beb943b:1774125436234-cac9aa958fe75",
-                "display": "plasmid",
-                "reason": "Missing information from user request."
-              }
-            ],
-            "follow_up_questions": [
-              "Please provide plasmid."
-            ],
-            "project_name": "SUMO1",
-            "notebook": null
-          },
-          "notebookDraft": null,
-          "developer_trace": [
-            {
-              "stage": "intent_parser",
-              "provider": "codex",
-              "model": "",
-              "summary": "Intent parser round completed via Codex CLI.",
-              "timestamp": "2026-03-21T21:28:28.386Z"
-            },
-            {
-              "stage": "protocol_match_lookup",
-              "provider": "codex",
-              "model": "",
-              "summary": "Protocol lookup candidates=1 local_protocols=6.",
-              "timestamp": "2026-03-21T21:28:28.388Z"
-            },
-            {
-              "stage": "protocol_ranker",
-              "provider": "codex",
-              "model": "",
-              "summary": "Ranked 2 protocol matches.",
-              "timestamp": "2026-03-21T21:28:28.390Z"
-            },
-            {
-              "stage": "protocol_tiebreak_llm",
-              "provider": "codex",
-              "model": "",
-              "summary": "protocol_tiebreak_llm completed via Codex CLI.",
-              "timestamp": "2026-03-21T21:28:39.019Z"
-            },
-            {
-              "stage": "protocol_placeholder_tool_lookup",
-              "provider": "codex",
-              "model": "",
-              "summary": "searchInventoryIndex is not defined",
-              "timestamp": "2026-03-21T21:28:39.023Z"
-            },
-            {
-              "stage": "notebook_fill",
-              "provider": "codex",
-              "model": "",
-              "summary": "notebook_fill completed via Codex CLI.",
-              "timestamp": "2026-03-21T21:29:19.731Z"
-            }
-          ],
-          "requestText": "pET28a-SUMO1"
-        }
-      },
-      {
-        "id": "1774128806356-96d99e092cee58",
-        "role": "user",
-        "text": "I did a pET28a-SUMO1 transformation today",
-        "createdAt": "2026-03-21T21:33:26.356Z"
-      },
-      {
-        "id": "1774128874912-3919d49f3674a",
-        "role": "assistant",
-        "text": "Please provide plasmid.",
-        "createdAt": "2026-03-21T21:34:34.912Z",
-        "meta": {
-          "parser": {
-            "primary_intent": "protocol_to_notebook",
-            "needs_clarification": false,
-            "clarification_reason": null,
-            "entities": {
-              "activity_type": "transformation",
-              "project_name": "SUMO1",
-              "protocol_name": "Bacterial transformation",
-              "protein_name": "SUMO1",
-              "compound_name": null,
-              "inventory_item": "pET28a-SUMO1",
-              "cell_line": null,
-              "paper_title": null,
-              "workflow_step": "transformation",
-              "requested_output": "notebook entry"
-            },
-            "inventory_search": {
-              "normalized_query": null,
-              "candidate_terms": [],
-              "aliases": [],
-              "search_mode": null
-            },
-            "protocol_candidates": [
-              "Bacterial transformation",
-              "Plasmid transformation"
-            ],
-            "reasoning_summary": "The user reports completing a pET28a-SUMO1 transformation today, which indicates logging a protocol activity to the notebook under the SUMO1 project context."
-          },
-          "protocol_to_notebook": {
-            "status": "needs_more_info",
-            "candidate_matches": [
-              {
-                "id": "1774024047007-d137dae96cab78",
-                "name": "BL21(DE3) Chemical Transformation with pET28a",
-                "score": 48
-              },
-              {
-                "id": "1774024647315-74cbb18b4cc37",
-                "name": "Small-Scale Overnight Starter Culture",
-                "score": 24
-              }
-            ],
-            "selected_protocol": {
-              "id": "1774024047007-d137dae96cab78",
-              "name": "BL21(DE3) Chemical Transformation with pET28a",
-              "selection_method": "llm_tiebreak",
-              "rationale": "Best match to the user’s stated activity (transformation) and entity/plasmid context (pET28a-SUMO1, aligning with pET28a). The protocol steps are explicitly a bacterial chemical transformation workflow."
-            },
-            "missing_placeholders": [
-              {
-                "step_id": "1774125436234-5e6cd5beb943b",
-                "placeholder_id": "1774125436234-cac9aa958fe75",
-                "placeholder_key": "1774125436234-5e6cd5beb943b:1774125436234-cac9aa958fe75",
-                "display": "plasmid",
-                "reason": "Missing information from user request."
-              }
-            ],
-            "follow_up_questions": [
-              "Please provide plasmid."
-            ],
-            "project_name": "SUMO1",
-            "notebook": null
-          },
-          "notebookDraft": null,
-          "developer_trace": [
-            {
-              "stage": "intent_parser",
-              "provider": "codex",
-              "model": "",
-              "summary": "Intent parser round completed via Codex CLI.",
-              "timestamp": "2026-03-21T21:33:50.162Z"
-            },
-            {
-              "stage": "protocol_match_lookup",
-              "provider": "codex",
-              "model": "",
-              "summary": "Protocol lookup candidates=2 local_protocols=6.",
-              "timestamp": "2026-03-21T21:33:50.165Z"
-            },
-            {
-              "stage": "protocol_ranker",
-              "provider": "codex",
-              "model": "",
-              "summary": "Ranked 2 protocol matches.",
-              "timestamp": "2026-03-21T21:33:50.167Z"
-            },
-            {
-              "stage": "protocol_tiebreak_llm",
-              "provider": "codex",
-              "model": "",
-              "summary": "protocol_tiebreak_llm completed via Codex CLI.",
-              "timestamp": "2026-03-21T21:34:01.090Z"
-            },
-            {
-              "stage": "protocol_placeholder_tool_lookup",
-              "provider": "codex",
-              "model": "",
-              "summary": "searchInventoryIndex is not defined",
-              "timestamp": "2026-03-21T21:34:01.094Z"
-            },
-            {
-              "stage": "notebook_fill",
-              "provider": "codex",
-              "model": "",
-              "summary": "notebook_fill completed via Codex CLI.",
-              "timestamp": "2026-03-21T21:34:34.902Z"
-            }
-          ],
-          "requestText": "I did a pET28a-SUMO1 transformation today"
-        }
-      },
-      {
-        "id": "1774128954073-1fdc6d32470e88",
-        "role": "user",
-        "text": "pET28a-SUMO1",
-        "createdAt": "2026-03-21T21:35:54.073Z"
-      },
-      {
-        "id": "1774129018904-9a43a6700f577",
-        "role": "assistant",
-        "text": "Please provide plasmid.",
-        "createdAt": "2026-03-21T21:36:58.904Z",
-        "meta": {
-          "parser": {
-            "primary_intent": "protocol_to_notebook",
-            "needs_clarification": false,
-            "clarification_reason": null,
-            "entities": {
-              "activity_type": "transformation",
-              "project_name": "SUMO1",
-              "protocol_name": "Bacterial transformation",
-              "protein_name": "SUMO1",
-              "compound_name": null,
-              "inventory_item": "pET28a-SUMO1",
-              "cell_line": null,
-              "paper_title": null,
-              "workflow_step": "plasmid specification",
-              "requested_output": "record transformation with plasmid pET28a-SUMO1"
-            },
-            "inventory_search": {
-              "normalized_query": null,
-              "candidate_terms": [],
-              "aliases": [],
-              "search_mode": null
-            },
-            "protocol_candidates": [
-              "Bacterial transformation"
-            ],
-            "reasoning_summary": "The message provides a plasmid name as follow-up context for documenting a transformation entry in the active SUMO1 project."
-          },
-          "protocol_to_notebook": {
-            "status": "needs_more_info",
-            "candidate_matches": [
-              {
-                "id": "1774024047007-d137dae96cab78",
-                "name": "BL21(DE3) Chemical Transformation with pET28a",
-                "score": 28
-              },
-              {
-                "id": "1774024647315-74cbb18b4cc37",
-                "name": "Small-Scale Overnight Starter Culture",
-                "score": 19
-              }
-            ],
-            "selected_protocol": {
-              "id": "1774024047007-d137dae96cab78",
-              "name": "BL21(DE3) Chemical Transformation with pET28a",
-              "selection_method": "llm_tiebreak",
-              "rationale": "Matches the requested transformation activity and directly aligns with the plasmid context (pET28a-SUMO1 via pET28a). Its steps are a full transformation workflow, while the other candidate is for starter culture, not transformation."
-            },
-            "missing_placeholders": [
-              {
-                "step_id": "1774125436234-5e6cd5beb943b",
-                "placeholder_id": "1774125436234-cac9aa958fe75",
-                "placeholder_key": "1774125436234-5e6cd5beb943b:1774125436234-cac9aa958fe75",
-                "display": "plasmid",
-                "reason": "Missing information from user request."
-              }
-            ],
-            "follow_up_questions": [
-              "Please provide plasmid."
-            ],
-            "project_name": "SUMO1",
-            "notebook": null
-          },
-          "notebookDraft": null,
-          "developer_trace": [
-            {
-              "stage": "intent_parser",
-              "provider": "codex",
-              "model": "",
-              "summary": "Intent parser round completed via Codex CLI.",
-              "timestamp": "2026-03-21T21:36:18.140Z"
-            },
-            {
-              "stage": "protocol_match_lookup",
-              "provider": "codex",
-              "model": "",
-              "summary": "Protocol lookup candidates=1 local_protocols=6.",
-              "timestamp": "2026-03-21T21:36:18.141Z"
-            },
-            {
-              "stage": "protocol_ranker",
-              "provider": "codex",
-              "model": "",
-              "summary": "Ranked 2 protocol matches.",
-              "timestamp": "2026-03-21T21:36:18.142Z"
-            },
-            {
-              "stage": "protocol_tiebreak_llm",
-              "provider": "codex",
-              "model": "",
-              "summary": "protocol_tiebreak_llm completed via Codex CLI.",
-              "timestamp": "2026-03-21T21:36:29.758Z"
-            },
-            {
-              "stage": "protocol_placeholder_tool_lookup",
-              "provider": "codex",
-              "model": "",
-              "summary": "searchInventoryIndex is not defined",
-              "timestamp": "2026-03-21T21:36:29.760Z"
-            },
-            {
-              "stage": "notebook_fill",
-              "provider": "codex",
-              "model": "",
-              "summary": "notebook_fill completed via Codex CLI.",
-              "timestamp": "2026-03-21T21:36:58.890Z"
-            }
-          ],
-          "requestText": "pET28a-SUMO1"
-        }
-      },
-      {
-        "id": "1774129391892-1d94a2dd4a142",
-        "role": "user",
-        "text": "I did a pFuse-SUMO1-PD-1 transformation today",
-        "createdAt": "2026-03-21T21:43:11.892Z"
-      },
-      {
-        "id": "1774129431835-d253546a05eaa8",
-        "role": "assistant",
-        "text": "Notebook draft generated from request: I did a pFuse-SUMO1-PD-1 transformation today",
-        "createdAt": "2026-03-21T21:43:51.835Z",
-        "meta": {
-          "parser": {
-            "primary_intent": "protocol_to_notebook",
-            "needs_clarification": false,
-            "clarification_reason": null,
-            "entities": {
-              "activity_type": "transformation",
-              "project_name": "SUMO1",
-              "protocol_name": "Transformation",
-              "protein_name": "SUMO1-PD-1",
-              "compound_name": null,
-              "inventory_item": "pFuse-SUMO1-PD-1",
-              "cell_line": null,
-              "paper_title": null,
-              "workflow_step": "transformation",
-              "requested_output": "record today's transformation in notebook"
-            },
-            "inventory_search": {
-              "normalized_query": null,
-              "candidate_terms": [],
-              "aliases": [],
-              "search_mode": null
-            },
-            "protocol_candidates": [
-              "Bacterial transformation",
-              "Plasmid transformation",
-              "Transformation"
-            ],
-            "reasoning_summary": "The user is reporting completion of an experimental transformation step with a specific plasmid, which maps to logging protocol activity in the notebook."
-          },
-          "protocol_to_notebook": {
-            "status": "completed",
-            "candidate_matches": [
-              {
-                "id": "1774024047007-d137dae96cab78",
-                "name": "BL21(DE3) Chemical Transformation with pET28a",
-                "score": 134
-              },
-              {
-                "id": "1774024647315-74cbb18b4cc37",
-                "name": "Small-Scale Overnight Starter Culture",
-                "score": 24
-              }
-            ],
-            "selected_protocol": {
-              "id": "1774024047007-d137dae96cab78",
-              "name": "BL21(DE3) Chemical Transformation with pET28a",
-              "selection_method": "deterministic",
-              "rationale": "Deterministic score margin selected the protocol."
-            },
-            "missing_placeholders": [],
-            "follow_up_questions": [],
-            "project_name": "SUMO1",
-            "notebook": {
-              "protocol": {
-                "id": "1774024047007-d137dae96cab78",
-                "name": "BL21(DE3) Chemical Transformation with pET28a"
-              },
-              "project": {
-                "id": "1774128185432-96a318da61d208",
-                "name": "SUMO1",
-                "resolution_source": "payload_project_id"
-              },
-              "notebook_type": "biology",
-              "rendered_steps": [
-                "Thaw 1 tube of BL21(DE3) competent cells on ice.",
-                "Add 200ng of pFuse-SUMO1-PD-1 DNA to the cells and gently flick to mix.",
-                "Incubate the mixture on ice for 30 min.",
-                "Heat shock the cells at 42 C for 45 s, then immediately place them back on ice for 1 min.",
-                "Add 1 mL of SOC medium and recover the cells at 37 C with shaking for 1 h.",
-                "Plate 100 uL of the recovery culture onto an LB agar plate containing Kanamycin.",
-                "Incubate the plate at 37 C for overnight until colonies appear."
-              ],
-              "placeholder_values": [
-                {
-                  "step_id": "1774125436234-5e6cd5beb943b",
-                  "placeholder_id": "1774125436234-cac9aa958fe75",
-                  "placeholder_key": "1774125436234-5e6cd5beb943b:1774125436234-cac9aa958fe75",
-                  "display": "plasmid",
-                  "value": "pFuse-SUMO1-PD-1",
-                  "source": "resolved",
-                  "source_type": "agent_protocol_v2"
-                }
-              ],
-              "unresolved_placeholders": [],
-              "save": {
-                "mode": "auto_save_draft",
-                "applied": false,
-                "status": "ready_for_save",
-                "reason": "Draft is ready for notebook auto-save."
-              },
-              "entry_template": {
-                "notebookType": "biology",
-                "projectId": "1774128185432-96a318da61d208",
-                "projectName": "SUMO1",
-                "protocolId": "1774024047007-d137dae96cab78",
-                "protocolName": "BL21(DE3) Chemical Transformation with pET28a",
-                "values": {
-                  "1774125436234-5e6cd5beb943b:1774125436234-cac9aa958fe75": "pFuse-SUMO1-PD-1"
-                },
-                "result": "Notebook draft generated from request: I did a pFuse-SUMO1-PD-1 transformation today",
-                "updatedAt": "2026-03-21T21:43:51.827Z",
-                "resultFiles": [],
-                "resultFileRecords": [],
-                "agentDraftStatus": "draft_ready",
-                "agentDraftMeta": {
-                  "source": "agent_protocol_v2",
-                  "unresolvedCount": 0,
-                  "generatedAt": "2026-03-21T21:43:51.827Z"
-                }
-              }
-            }
-          },
-          "notebookDraft": {
-            "protocol": {
-              "id": "1774024047007-d137dae96cab78",
-              "name": "BL21(DE3) Chemical Transformation with pET28a"
-            },
-            "project": {
-              "id": "1774128185432-96a318da61d208",
-              "name": "SUMO1",
-              "resolution_source": "payload_project_id"
-            },
-            "notebook_type": "biology",
-            "rendered_steps": [
-              "Thaw 1 tube of BL21(DE3) competent cells on ice.",
-              "Add 200ng of pFuse-SUMO1-PD-1 DNA to the cells and gently flick to mix.",
-              "Incubate the mixture on ice for 30 min.",
-              "Heat shock the cells at 42 C for 45 s, then immediately place them back on ice for 1 min.",
-              "Add 1 mL of SOC medium and recover the cells at 37 C with shaking for 1 h.",
-              "Plate 100 uL of the recovery culture onto an LB agar plate containing Kanamycin.",
-              "Incubate the plate at 37 C for overnight until colonies appear."
-            ],
-            "placeholder_values": [
-              {
-                "step_id": "1774125436234-5e6cd5beb943b",
-                "placeholder_id": "1774125436234-cac9aa958fe75",
-                "placeholder_key": "1774125436234-5e6cd5beb943b:1774125436234-cac9aa958fe75",
-                "display": "plasmid",
-                "value": "pFuse-SUMO1-PD-1",
-                "source": "resolved",
-                "source_type": "agent_protocol_v2"
-              }
-            ],
-            "unresolved_placeholders": [],
-            "save": {
-              "mode": "auto_save_draft",
-              "applied": true,
-              "status": "saved_draft",
-              "reason": "Draft auto-saved to notebook entries."
-            },
-            "entry_template": {
-              "notebookType": "biology",
-              "projectId": "1774128185432-96a318da61d208",
-              "projectName": "SUMO1",
-              "protocolId": "1774024047007-d137dae96cab78",
-              "protocolName": "BL21(DE3) Chemical Transformation with pET28a",
-              "values": {
-                "1774125436234-5e6cd5beb943b:1774125436234-cac9aa958fe75": "pFuse-SUMO1-PD-1"
-              },
-              "result": "Notebook draft generated from request: I did a pFuse-SUMO1-PD-1 transformation today",
-              "updatedAt": "2026-03-21T21:43:51.827Z",
-              "resultFiles": [],
-              "resultFileRecords": [],
-              "agentDraftStatus": "draft_ready",
-              "agentDraftMeta": {
-                "source": "agent_phase5",
-                "unresolvedCount": 0,
-                "generatedAt": "2026-03-21T21:43:51.827Z",
-                "savedAt": "2026-03-21T21:43:51.833Z"
-              },
-              "id": "1774129431833-1ae8e1d6da588"
-            }
-          },
-          "developer_trace": [
-            {
-              "stage": "intent_parser",
-              "provider": "codex",
-              "model": "",
-              "summary": "Intent parser round completed via Codex CLI.",
-              "timestamp": "2026-03-21T21:43:34.718Z"
-            },
-            {
-              "stage": "protocol_match_lookup",
-              "provider": "codex",
-              "model": "",
-              "summary": "Protocol lookup candidates=3 local_protocols=6.",
-              "timestamp": "2026-03-21T21:43:34.721Z"
-            },
-            {
-              "stage": "protocol_ranker",
-              "provider": "codex",
-              "model": "",
-              "summary": "Ranked 2 protocol matches.",
-              "timestamp": "2026-03-21T21:43:34.723Z"
-            },
-            {
-              "stage": "protocol_placeholder_tool_lookup",
-              "provider": "codex",
-              "model": "",
-              "summary": "searchInventoryIndex is not defined",
-              "timestamp": "2026-03-21T21:43:34.726Z"
-            },
-            {
-              "stage": "notebook_fill",
-              "provider": "codex",
-              "model": "",
-              "summary": "notebook_fill completed via Codex CLI.",
-              "timestamp": "2026-03-21T21:43:51.825Z"
-            }
-          ],
-          "requestText": "I did a pFuse-SUMO1-PD-1 transformation today"
-        }
-      },
-      {
-        "id": "1774226879449-b4c2fe8c163a38",
-        "role": "user",
-        "text": "I did a pFuse-SUMO1-PD-1 transformation today",
-        "createdAt": "2026-03-23T00:47:59.449Z"
-      },
-      {
-        "id": "1774226912936-24a4876798688",
-        "role": "assistant",
-        "text": "Notebook draft generated from request: I did a pFuse-SUMO1-PD-1 transformation today",
-        "createdAt": "2026-03-23T00:48:32.936Z",
-        "meta": {
-          "parser": {
-            "primary_intent": "protocol_to_notebook",
-            "needs_clarification": false,
-            "clarification_reason": null,
-            "entities": {
-              "activity_type": "transformation",
-              "project_name": "SUMO1",
-              "protocol_name": null,
-              "protein_name": "SUMO1-PD-1",
-              "compound_name": null,
-              "inventory_item": null,
-              "cell_line": null,
-              "paper_title": null,
-              "workflow_step": null,
-              "requested_output": "notebook draft"
-            },
-            "inventory_search": {
-              "normalized_query": null,
-              "candidate_terms": [],
-              "aliases": [],
-              "search_mode": null
-            },
-            "protocol_candidates": [
-              "Bacterial transformation",
-              "Plasmid transformation",
-              "Competent cell transformation"
-            ],
-            "reasoning_summary": "The user reports completed lab work and recent conversation shows this message is being used to generate a notebook draft. The activity is a transformation involving the pFuse-SUMO1-PD-1 construct under the active SUMO1 project context."
-          },
-          "protocol_to_notebook": {
-            "status": "completed",
-            "candidate_matches": [
-              {
-                "id": "1774024047007-d137dae96cab78",
-                "name": "BL21(DE3) Chemical Transformation with pET28a",
-                "score": 66
-              },
-              {
-                "id": "1774024647315-74cbb18b4cc37",
-                "name": "Small-Scale Overnight Starter Culture",
-                "score": 24
-              }
-            ],
-            "selected_protocol": {
-              "id": "1774024047007-d137dae96cab78",
-              "name": "BL21(DE3) Chemical Transformation with pET28a",
-              "selection_method": "deterministic",
-              "rationale": "Deterministic score margin selected the protocol."
-            },
-            "missing_placeholders": [],
-            "follow_up_questions": [],
-            "project_name": "SUMO1",
-            "notebook": {
-              "protocol": {
-                "id": "1774024047007-d137dae96cab78",
-                "name": "BL21(DE3) Chemical Transformation with pET28a"
-              },
-              "project": {
-                "id": "1774128185432-96a318da61d208",
-                "name": "SUMO1",
-                "resolution_source": "payload_project_id"
-              },
-              "notebook_type": "biology",
-              "rendered_steps": [
-                "Thaw 1 tube of BL21(DE3) competent cells on ice.",
-                "Add 200ng of pFuse-SUMO1-PD-1 DNA to the cells and gently flick to mix.",
-                "Incubate the mixture on ice for 30 min.",
-                "Heat shock the cells at 42 C for 45 s, then immediately place them back on ice for 1 min.",
-                "Add 1 mL of SOC medium and recover the cells at 37 C with shaking for 1 h.",
-                "Plate 100 uL of the recovery culture onto an LB agar plate containing Kanamycin.",
-                "Incubate the plate at 37 C for overnight until colonies appear."
-              ],
-              "placeholder_values": [
-                {
-                  "step_id": "1774125436234-5e6cd5beb943b",
-                  "placeholder_id": "1774125436234-cac9aa958fe75",
-                  "placeholder_key": "1774125436234-5e6cd5beb943b:1774125436234-cac9aa958fe75",
-                  "display": "plasmid",
-                  "value": "pFuse-SUMO1-PD-1",
-                  "source": "resolved",
-                  "source_type": "agent_protocol_v2"
-                }
-              ],
-              "unresolved_placeholders": [],
-              "save": {
-                "mode": "auto_save_draft",
-                "applied": false,
-                "status": "ready_for_save",
-                "reason": "Draft is ready for notebook auto-save."
-              },
-              "entry_template": {
-                "notebookType": "biology",
-                "projectId": "1774128185432-96a318da61d208",
-                "projectName": "SUMO1",
-                "protocolId": "1774024047007-d137dae96cab78",
-                "protocolName": "BL21(DE3) Chemical Transformation with pET28a",
-                "values": {
-                  "1774125436234-5e6cd5beb943b:1774125436234-cac9aa958fe75": "pFuse-SUMO1-PD-1"
-                },
-                "result": "Notebook draft generated from request: I did a pFuse-SUMO1-PD-1 transformation today",
-                "updatedAt": "2026-03-23T00:48:32.928Z",
-                "resultFiles": [],
-                "resultFileRecords": [],
-                "agentDraftStatus": "draft_ready",
-                "agentDraftMeta": {
-                  "source": "agent_protocol_v2",
-                  "unresolvedCount": 0,
-                  "generatedAt": "2026-03-23T00:48:32.928Z"
-                }
-              }
-            }
-          },
-          "inventory_lookup": null,
-          "record_lookup": null,
-          "notebookDraft": {
-            "protocol": {
-              "id": "1774024047007-d137dae96cab78",
-              "name": "BL21(DE3) Chemical Transformation with pET28a"
-            },
-            "project": {
-              "id": "1774128185432-96a318da61d208",
-              "name": "SUMO1",
-              "resolution_source": "payload_project_id"
-            },
-            "notebook_type": "biology",
-            "rendered_steps": [
-              "Thaw 1 tube of BL21(DE3) competent cells on ice.",
-              "Add 200ng of pFuse-SUMO1-PD-1 DNA to the cells and gently flick to mix.",
-              "Incubate the mixture on ice for 30 min.",
-              "Heat shock the cells at 42 C for 45 s, then immediately place them back on ice for 1 min.",
-              "Add 1 mL of SOC medium and recover the cells at 37 C with shaking for 1 h.",
-              "Plate 100 uL of the recovery culture onto an LB agar plate containing Kanamycin.",
-              "Incubate the plate at 37 C for overnight until colonies appear."
-            ],
-            "placeholder_values": [
-              {
-                "step_id": "1774125436234-5e6cd5beb943b",
-                "placeholder_id": "1774125436234-cac9aa958fe75",
-                "placeholder_key": "1774125436234-5e6cd5beb943b:1774125436234-cac9aa958fe75",
-                "display": "plasmid",
-                "value": "pFuse-SUMO1-PD-1",
-                "source": "resolved",
-                "source_type": "agent_protocol_v2"
-              }
-            ],
-            "unresolved_placeholders": [],
-            "save": {
-              "mode": "auto_save_draft",
-              "applied": true,
-              "status": "saved_draft",
-              "reason": "Draft auto-saved to notebook entries."
-            },
-            "entry_template": {
-              "notebookType": "biology",
-              "projectId": "1774128185432-96a318da61d208",
-              "projectName": "SUMO1",
-              "protocolId": "1774024047007-d137dae96cab78",
-              "protocolName": "BL21(DE3) Chemical Transformation with pET28a",
-              "values": {
-                "1774125436234-5e6cd5beb943b:1774125436234-cac9aa958fe75": "pFuse-SUMO1-PD-1"
-              },
-              "result": "Notebook draft generated from request: I did a pFuse-SUMO1-PD-1 transformation today",
-              "updatedAt": "2026-03-23T00:48:32.928Z",
-              "resultFiles": [],
-              "resultFileRecords": [],
-              "agentDraftStatus": "draft_ready",
-              "agentDraftMeta": {
-                "source": "agent_phase5",
-                "unresolvedCount": 0,
-                "generatedAt": "2026-03-23T00:48:32.928Z",
-                "savedAt": "2026-03-23T00:48:32.932Z"
-              },
-              "id": "1774226912932-85bb211fc546a"
-            }
-          },
-          "developer_trace": [
-            {
-              "stage": "intent_parser",
-              "provider": "codex",
-              "model": "",
-              "summary": "Intent parser round completed via Codex CLI.",
-              "timestamp": "2026-03-23T00:48:15.181Z"
-            },
-            {
-              "stage": "protocol_match_lookup",
-              "provider": "codex",
-              "model": "",
-              "summary": "Protocol lookup candidates=3 local_protocols=6.",
-              "timestamp": "2026-03-23T00:48:15.183Z"
-            },
-            {
-              "stage": "protocol_ranker",
-              "provider": "codex",
-              "model": "",
-              "summary": "Ranked 2 protocol matches.",
-              "timestamp": "2026-03-23T00:48:15.185Z"
-            },
-            {
-              "stage": "protocol_placeholder_tool_lookup",
-              "provider": "codex",
-              "model": "",
-              "summary": "Found 0 matching inventory records. Terms tried: SUMO1-PD-1. Source: SQLite index.",
-              "timestamp": "2026-03-23T00:48:15.194Z"
-            },
-            {
-              "stage": "notebook_fill",
-              "provider": "codex",
-              "model": "",
-              "summary": "notebook_fill completed via Codex CLI.",
-              "timestamp": "2026-03-23T00:48:32.925Z"
-            }
-          ],
-          "requestText": "I did a pFuse-SUMO1-PD-1 transformation today"
-        }
+        "id": "chat-mn43h4o8-ly51chzo",
+        "title": "New Chat",
+        "project_id": "1774128185432-96a318da61d208",
+        "project_name": "SUMO1",
+        "log_file": "chat-mn43h4o8-ly51chzo.log",
+        "created_at": "2026-03-24T04:08:26.600Z",
+        "updated_at": "2026-03-24T04:08:26.600Z",
+        "status": "ready",
+        "message_count": 0,
+        "request_count": 0,
+        "last_message_preview": "",
+        "last_user_message_preview": "",
+        "response_type": "",
+        "last_request_id": "",
+        "last_error": ""
       }
-    ]
+    ],
+    "messages": []
   },
   "messages": [],
   "growthMetrics": {
@@ -3049,7 +1861,7 @@
         "from": "sample:1773785896224-4964991c061528:well:1",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3058,7 +1870,7 @@
         "from": "sample:1773785896224-4964991c061528:well:2",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3067,7 +1879,7 @@
         "from": "sample:1773785896224-4964991c061528:well:3",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3076,7 +1888,7 @@
         "from": "sample:1773785896224-4964991c061528:well:4",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3085,7 +1897,7 @@
         "from": "sample:1773785896224-4964991c061528:well:5",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3094,7 +1906,7 @@
         "from": "sample:1773785896224-4964991c061528:well:6",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3103,7 +1915,7 @@
         "from": "sample:1773785896224-4964991c061528:well:7",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3112,7 +1924,7 @@
         "from": "sample:1773785896224-4964991c061528:well:8",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3121,7 +1933,7 @@
         "from": "sample:1773785896224-4964991c061528:well:9",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3130,7 +1942,7 @@
         "from": "sample:1773785896224-4964991c061528:well:10",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3139,7 +1951,7 @@
         "from": "sample:1773785896224-4964991c061528:well:11",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3148,7 +1960,7 @@
         "from": "sample:1773785896224-4964991c061528:well:12",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3157,7 +1969,7 @@
         "from": "sample:1773785896224-4964991c061528:well:13",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3166,7 +1978,7 @@
         "from": "sample:1773785896224-4964991c061528:well:14",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3175,7 +1987,7 @@
         "from": "sample:1773785896224-4964991c061528:well:15",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3184,7 +1996,7 @@
         "from": "sample:1773785896224-4964991c061528:well:16",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3193,7 +2005,7 @@
         "from": "sample:1773785896224-4964991c061528:well:17",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3202,7 +2014,7 @@
         "from": "sample:1773785896224-4964991c061528:well:18",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3211,7 +2023,7 @@
         "from": "sample:1773785896224-4964991c061528:well:19",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3220,7 +2032,7 @@
         "from": "sample:1773785896224-4964991c061528:well:20",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3229,7 +2041,7 @@
         "from": "sample:1773785896224-4964991c061528:well:21",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3238,7 +2050,7 @@
         "from": "sample:1773785896224-4964991c061528:well:22",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3247,7 +2059,7 @@
         "from": "sample:1773785896224-4964991c061528:well:23",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3256,7 +2068,7 @@
         "from": "sample:1773785896224-4964991c061528:well:24",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3265,7 +2077,7 @@
         "from": "sample:1773785896224-4964991c061528:well:25",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3274,7 +2086,7 @@
         "from": "sample:1773785896224-4964991c061528:well:26",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3283,7 +2095,7 @@
         "from": "sample:1773785896224-4964991c061528:well:27",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3292,7 +2104,7 @@
         "from": "sample:1773785896224-4964991c061528:well:28",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3301,7 +2113,7 @@
         "from": "sample:1773785896224-4964991c061528:well:29",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3310,7 +2122,7 @@
         "from": "sample:1773785896224-4964991c061528:well:30",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3319,7 +2131,7 @@
         "from": "sample:1773785896224-4964991c061528:well:31",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3328,7 +2140,7 @@
         "from": "sample:1773785896224-4964991c061528:well:32",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3337,7 +2149,7 @@
         "from": "sample:1773785896224-4964991c061528:well:33",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3346,7 +2158,7 @@
         "from": "sample:1773785896224-4964991c061528:well:34",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3355,7 +2167,7 @@
         "from": "sample:1773785896224-4964991c061528:well:35",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3364,7 +2176,7 @@
         "from": "sample:1773785896224-4964991c061528:well:36",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3373,7 +2185,7 @@
         "from": "sample:1773785896224-4964991c061528:well:37",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3382,7 +2194,7 @@
         "from": "sample:1773785896224-4964991c061528:well:38",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3391,7 +2203,7 @@
         "from": "sample:1773785896224-4964991c061528:well:39",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3400,7 +2212,7 @@
         "from": "sample:1773785896224-4964991c061528:well:40",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3409,7 +2221,7 @@
         "from": "sample:1773785896224-4964991c061528:well:41",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3418,7 +2230,7 @@
         "from": "sample:1773785896224-4964991c061528:well:42",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3427,7 +2239,7 @@
         "from": "sample:1773785896224-4964991c061528:well:43",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3436,7 +2248,7 @@
         "from": "sample:1773785896224-4964991c061528:well:44",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3445,7 +2257,7 @@
         "from": "sample:1773785896224-4964991c061528:well:45",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3454,7 +2266,7 @@
         "from": "sample:1773785896224-4964991c061528:well:46",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3463,7 +2275,7 @@
         "from": "sample:1773785896224-4964991c061528:well:47",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3472,7 +2284,7 @@
         "from": "sample:1773785896224-4964991c061528:well:48",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3481,7 +2293,7 @@
         "from": "sample:1773785896224-4964991c061528:well:49",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3490,7 +2302,7 @@
         "from": "sample:1773785896224-4964991c061528:well:50",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3499,7 +2311,7 @@
         "from": "sample:1773785896224-4964991c061528:well:51",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3508,7 +2320,7 @@
         "from": "sample:1773785896224-4964991c061528:well:52",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3517,7 +2329,7 @@
         "from": "sample:1773785896224-4964991c061528:well:53",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3526,7 +2338,7 @@
         "from": "sample:1773785896224-4964991c061528:well:54",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3535,7 +2347,7 @@
         "from": "sample:1773785896224-4964991c061528:well:55",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3544,7 +2356,7 @@
         "from": "sample:1773785896224-4964991c061528:well:56",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3553,7 +2365,7 @@
         "from": "sample:1773785896224-4964991c061528:well:57",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3562,7 +2374,7 @@
         "from": "sample:1773785896224-4964991c061528:well:58",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3571,7 +2383,7 @@
         "from": "sample:1773785896224-4964991c061528:well:59",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3580,7 +2392,7 @@
         "from": "sample:1773785896224-4964991c061528:well:60",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3589,7 +2401,7 @@
         "from": "sample:1773785896224-4964991c061528:well:61",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3598,7 +2410,7 @@
         "from": "sample:1773785896224-4964991c061528:well:62",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3607,7 +2419,7 @@
         "from": "sample:1773785896224-4964991c061528:well:63",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3616,7 +2428,7 @@
         "from": "sample:1773785896224-4964991c061528:well:64",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3625,7 +2437,7 @@
         "from": "sample:1773785896224-4964991c061528:well:65",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3634,7 +2446,7 @@
         "from": "sample:1773785896224-4964991c061528:well:66",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3643,7 +2455,7 @@
         "from": "sample:1773785896224-4964991c061528:well:67",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3652,7 +2464,7 @@
         "from": "sample:1773785896224-4964991c061528:well:68",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3661,7 +2473,7 @@
         "from": "sample:1773785896224-4964991c061528:well:69",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3670,7 +2482,7 @@
         "from": "sample:1773785896224-4964991c061528:well:70",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3679,7 +2491,7 @@
         "from": "sample:1773785896224-4964991c061528:well:71",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3688,7 +2500,7 @@
         "from": "sample:1773785896224-4964991c061528:well:72",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3697,7 +2509,7 @@
         "from": "sample:1773785896224-4964991c061528:well:73",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3706,7 +2518,7 @@
         "from": "sample:1773785896224-4964991c061528:well:74",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3715,7 +2527,7 @@
         "from": "sample:1773785896224-4964991c061528:well:75",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3724,7 +2536,7 @@
         "from": "sample:1773785896224-4964991c061528:well:76",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3733,7 +2545,7 @@
         "from": "sample:1773785896224-4964991c061528:well:77",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3742,7 +2554,7 @@
         "from": "sample:1773785896224-4964991c061528:well:78",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3751,7 +2563,7 @@
         "from": "sample:1773785896224-4964991c061528:well:79",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3760,7 +2572,7 @@
         "from": "sample:1773785896224-4964991c061528:well:80",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3769,7 +2581,7 @@
         "from": "sample:1773785896224-4964991c061528:well:81",
         "to": "container:1773785896224-4964991c061528",
         "relation": "stored_in",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {
           "section": "Room Temp"
         }
@@ -3778,42 +2590,42 @@
         "from": "notebook_entry:1774025061643-8e7f8d2afe1198",
         "to": "project:1773446973979-1dead4da556a2",
         "relation": "uses_project",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {}
       },
       {
         "from": "notebook_entry:1774025061643-8e7f8d2afe1198",
         "to": "protocol:1774024695073-536c18071dd0d",
         "relation": "uses_protocol",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {}
       },
       {
         "from": "notebook_entry:1774129431833-1ae8e1d6da588",
         "to": "project:1774128185432-96a318da61d208",
         "relation": "uses_project",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {}
       },
       {
         "from": "notebook_entry:1774129431833-1ae8e1d6da588",
         "to": "protocol:1774024047007-d137dae96cab78",
         "relation": "uses_protocol",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {}
       },
       {
         "from": "notebook_entry:1774226912932-85bb211fc546a",
         "to": "project:1774128185432-96a318da61d208",
         "relation": "uses_project",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {}
       },
       {
         "from": "notebook_entry:1774226912932-85bb211fc546a",
         "to": "protocol:1774024047007-d137dae96cab78",
         "relation": "uses_protocol",
-        "at": "2026-03-23T00:48:32.937Z",
+        "at": "2026-03-24T04:10:21.565Z",
         "meta": {}
       }
     ],
@@ -3823,7 +2635,7 @@
           "from": "sample:1773785896224-4964991c061528:well:1",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -3832,7 +2644,7 @@
           "from": "sample:1773785896224-4964991c061528:well:2",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -3841,7 +2653,7 @@
           "from": "sample:1773785896224-4964991c061528:well:3",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -3850,7 +2662,7 @@
           "from": "sample:1773785896224-4964991c061528:well:4",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -3859,7 +2671,7 @@
           "from": "sample:1773785896224-4964991c061528:well:5",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -3868,7 +2680,7 @@
           "from": "sample:1773785896224-4964991c061528:well:6",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -3877,7 +2689,7 @@
           "from": "sample:1773785896224-4964991c061528:well:7",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -3886,7 +2698,7 @@
           "from": "sample:1773785896224-4964991c061528:well:8",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -3895,7 +2707,7 @@
           "from": "sample:1773785896224-4964991c061528:well:9",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -3904,7 +2716,7 @@
           "from": "sample:1773785896224-4964991c061528:well:10",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -3913,7 +2725,7 @@
           "from": "sample:1773785896224-4964991c061528:well:11",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -3922,7 +2734,7 @@
           "from": "sample:1773785896224-4964991c061528:well:12",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -3931,7 +2743,7 @@
           "from": "sample:1773785896224-4964991c061528:well:13",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -3940,7 +2752,7 @@
           "from": "sample:1773785896224-4964991c061528:well:14",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -3949,7 +2761,7 @@
           "from": "sample:1773785896224-4964991c061528:well:15",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -3958,7 +2770,7 @@
           "from": "sample:1773785896224-4964991c061528:well:16",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -3967,7 +2779,7 @@
           "from": "sample:1773785896224-4964991c061528:well:17",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -3976,7 +2788,7 @@
           "from": "sample:1773785896224-4964991c061528:well:18",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -3985,7 +2797,7 @@
           "from": "sample:1773785896224-4964991c061528:well:19",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -3994,7 +2806,7 @@
           "from": "sample:1773785896224-4964991c061528:well:20",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4003,7 +2815,7 @@
           "from": "sample:1773785896224-4964991c061528:well:21",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4012,7 +2824,7 @@
           "from": "sample:1773785896224-4964991c061528:well:22",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4021,7 +2833,7 @@
           "from": "sample:1773785896224-4964991c061528:well:23",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4030,7 +2842,7 @@
           "from": "sample:1773785896224-4964991c061528:well:24",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4039,7 +2851,7 @@
           "from": "sample:1773785896224-4964991c061528:well:25",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4048,7 +2860,7 @@
           "from": "sample:1773785896224-4964991c061528:well:26",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4057,7 +2869,7 @@
           "from": "sample:1773785896224-4964991c061528:well:27",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4066,7 +2878,7 @@
           "from": "sample:1773785896224-4964991c061528:well:28",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4075,7 +2887,7 @@
           "from": "sample:1773785896224-4964991c061528:well:29",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4084,7 +2896,7 @@
           "from": "sample:1773785896224-4964991c061528:well:30",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4093,7 +2905,7 @@
           "from": "sample:1773785896224-4964991c061528:well:31",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4102,7 +2914,7 @@
           "from": "sample:1773785896224-4964991c061528:well:32",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4111,7 +2923,7 @@
           "from": "sample:1773785896224-4964991c061528:well:33",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4120,7 +2932,7 @@
           "from": "sample:1773785896224-4964991c061528:well:34",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4129,7 +2941,7 @@
           "from": "sample:1773785896224-4964991c061528:well:35",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4138,7 +2950,7 @@
           "from": "sample:1773785896224-4964991c061528:well:36",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4147,7 +2959,7 @@
           "from": "sample:1773785896224-4964991c061528:well:37",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4156,7 +2968,7 @@
           "from": "sample:1773785896224-4964991c061528:well:38",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4165,7 +2977,7 @@
           "from": "sample:1773785896224-4964991c061528:well:39",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4174,7 +2986,7 @@
           "from": "sample:1773785896224-4964991c061528:well:40",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4183,7 +2995,7 @@
           "from": "sample:1773785896224-4964991c061528:well:41",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4192,7 +3004,7 @@
           "from": "sample:1773785896224-4964991c061528:well:42",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4201,7 +3013,7 @@
           "from": "sample:1773785896224-4964991c061528:well:43",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4210,7 +3022,7 @@
           "from": "sample:1773785896224-4964991c061528:well:44",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4219,7 +3031,7 @@
           "from": "sample:1773785896224-4964991c061528:well:45",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4228,7 +3040,7 @@
           "from": "sample:1773785896224-4964991c061528:well:46",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4237,7 +3049,7 @@
           "from": "sample:1773785896224-4964991c061528:well:47",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4246,7 +3058,7 @@
           "from": "sample:1773785896224-4964991c061528:well:48",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4255,7 +3067,7 @@
           "from": "sample:1773785896224-4964991c061528:well:49",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4264,7 +3076,7 @@
           "from": "sample:1773785896224-4964991c061528:well:50",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4273,7 +3085,7 @@
           "from": "sample:1773785896224-4964991c061528:well:51",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4282,7 +3094,7 @@
           "from": "sample:1773785896224-4964991c061528:well:52",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4291,7 +3103,7 @@
           "from": "sample:1773785896224-4964991c061528:well:53",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4300,7 +3112,7 @@
           "from": "sample:1773785896224-4964991c061528:well:54",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4309,7 +3121,7 @@
           "from": "sample:1773785896224-4964991c061528:well:55",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4318,7 +3130,7 @@
           "from": "sample:1773785896224-4964991c061528:well:56",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4327,7 +3139,7 @@
           "from": "sample:1773785896224-4964991c061528:well:57",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4336,7 +3148,7 @@
           "from": "sample:1773785896224-4964991c061528:well:58",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4345,7 +3157,7 @@
           "from": "sample:1773785896224-4964991c061528:well:59",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4354,7 +3166,7 @@
           "from": "sample:1773785896224-4964991c061528:well:60",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4363,7 +3175,7 @@
           "from": "sample:1773785896224-4964991c061528:well:61",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4372,7 +3184,7 @@
           "from": "sample:1773785896224-4964991c061528:well:62",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4381,7 +3193,7 @@
           "from": "sample:1773785896224-4964991c061528:well:63",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4390,7 +3202,7 @@
           "from": "sample:1773785896224-4964991c061528:well:64",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4399,7 +3211,7 @@
           "from": "sample:1773785896224-4964991c061528:well:65",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4408,7 +3220,7 @@
           "from": "sample:1773785896224-4964991c061528:well:66",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4417,7 +3229,7 @@
           "from": "sample:1773785896224-4964991c061528:well:67",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4426,7 +3238,7 @@
           "from": "sample:1773785896224-4964991c061528:well:68",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4435,7 +3247,7 @@
           "from": "sample:1773785896224-4964991c061528:well:69",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4444,7 +3256,7 @@
           "from": "sample:1773785896224-4964991c061528:well:70",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4453,7 +3265,7 @@
           "from": "sample:1773785896224-4964991c061528:well:71",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4462,7 +3274,7 @@
           "from": "sample:1773785896224-4964991c061528:well:72",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4471,7 +3283,7 @@
           "from": "sample:1773785896224-4964991c061528:well:73",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4480,7 +3292,7 @@
           "from": "sample:1773785896224-4964991c061528:well:74",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4489,7 +3301,7 @@
           "from": "sample:1773785896224-4964991c061528:well:75",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4498,7 +3310,7 @@
           "from": "sample:1773785896224-4964991c061528:well:76",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4507,7 +3319,7 @@
           "from": "sample:1773785896224-4964991c061528:well:77",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4516,7 +3328,7 @@
           "from": "sample:1773785896224-4964991c061528:well:78",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4525,7 +3337,7 @@
           "from": "sample:1773785896224-4964991c061528:well:79",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4534,7 +3346,7 @@
           "from": "sample:1773785896224-4964991c061528:well:80",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4543,7 +3355,7 @@
           "from": "sample:1773785896224-4964991c061528:well:81",
           "to": "container:1773785896224-4964991c061528",
           "relation": "stored_in",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {
             "section": "Room Temp"
           }
@@ -4554,7 +3366,7 @@
           "from": "notebook_entry:1774025061643-8e7f8d2afe1198",
           "to": "project:1773446973979-1dead4da556a2",
           "relation": "uses_project",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {}
         }
       ],
@@ -4563,7 +3375,7 @@
           "from": "notebook_entry:1774025061643-8e7f8d2afe1198",
           "to": "protocol:1774024695073-536c18071dd0d",
           "relation": "uses_protocol",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {}
         }
       ],
@@ -4572,14 +3384,14 @@
           "from": "notebook_entry:1774129431833-1ae8e1d6da588",
           "to": "project:1774128185432-96a318da61d208",
           "relation": "uses_project",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {}
         },
         {
           "from": "notebook_entry:1774226912932-85bb211fc546a",
           "to": "project:1774128185432-96a318da61d208",
           "relation": "uses_project",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {}
         }
       ],
@@ -4588,19 +3400,19 @@
           "from": "notebook_entry:1774129431833-1ae8e1d6da588",
           "to": "protocol:1774024047007-d137dae96cab78",
           "relation": "uses_protocol",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {}
         },
         {
           "from": "notebook_entry:1774226912932-85bb211fc546a",
           "to": "protocol:1774024047007-d137dae96cab78",
           "relation": "uses_protocol",
-          "at": "2026-03-23T00:48:32.937Z",
+          "at": "2026-03-24T04:10:21.565Z",
           "meta": {}
         }
       ]
     },
-    "updatedAt": "2026-03-23T00:48:32.937Z"
+    "updatedAt": "2026-03-24T04:10:21.565Z"
   },
   "labInventory": {
     "chemicals": [],
@@ -4695,12 +3507,12 @@
     },
     "storagePath": "/Users/shiyifan/Projects/Enana/Testdata",
     "storageImport": {
-      "lastImportedAt": "2026-03-23T00:47:04.871Z",
+      "lastImportedAt": "2026-03-24T04:10:21.541Z",
       "manifestPath": "/Users/shiyifan/Projects/Enana/Testdata/enana-storage-manifest.json",
       "summary": {
         "bundles": 4,
         "protocols": 6,
-        "notebookEntries": 2,
+        "notebookEntries": 3,
         "chemicals": 3,
         "personalInventoryContainers": 1,
         "sequenceEntries": 4
@@ -4739,6 +3551,6 @@
   "assaySequence": 1,
   "data_bundle": {
     "mode": "sqlite_indexed",
-    "updated_at": "2026-03-23T00:48:32.940Z"
+    "updated_at": "2026-03-24T04:10:21.567Z"
   }
 }

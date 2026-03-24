@@ -1,7 +1,7 @@
 'use strict';
 
-const { createProtocolMatchingRuntime } = require('./agent-protocol-matching');
-const { createNotebookGenerationRuntime } = require('./agent-notebook-generation');
+const { createProtocolMatchingRuntime } = require('../tools/agent-protocol-matching');
+const { createNotebookGenerationRuntime } = require('../tools/agent-notebook-generation');
 
 function createProtocolNotebookRuntime(deps = {}) {
   const asArray = typeof deps.asArray === 'function'

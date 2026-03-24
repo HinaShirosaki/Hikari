@@ -3,7 +3,7 @@
 const {
   defaultAsArray,
   defaultCleanText
-} = require('./agent-llm-utils.js');
+} = require('../shared/agent-llm-utils.js');
 
 const CONTEXT_LAYER_IDS = Object.freeze({
   IMMEDIATE: 'immediate',
