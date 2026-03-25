@@ -37,6 +37,14 @@
               <input id="sequence-viewer-orf-toggle" type="checkbox" />
               <span>ORF View</span>
             </label>
+            <label class="sequence-viewer-inline-select" title="Choose how stop codons are displayed in the selected ORF translation row.">
+              <span>ORF Stops</span>
+              <select id="sequence-viewer-orf-stop-mode">
+                <option value="trim" selected>Hide</option>
+                <option value="star">Show *</option>
+                <option value="codon">Show TAG/TAA/TGA</option>
+              </select>
+            </label>
             <div class="sequence-viewer-inline-toggle-group" role="group" aria-label="Restriction enzyme vendors">
               <span class="sequence-viewer-inline-toggle-group-label">Cutters</span>
               <label class="sequence-viewer-inline-toggle" title="Show unique cutters sold by New England Biolabs.">

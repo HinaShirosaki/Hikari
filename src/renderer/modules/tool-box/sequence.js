@@ -398,6 +398,16 @@ export function reverseComplementDna(sequence) {
     .join('');
 }
 
+export function translateDnaCodon(codon) {
+  const normalized = cleanNucleotideSequence(codon, 'DNA')
+    .replace(/U/g, 'T')
+    .slice(0, 3);
+  if (normalized.length !== 3) {
+    return '';
+  }
+  return CODON_TABLE[normalized] || 'X';
+}
+
 export function translateDnaSequence(sequence, frame = 1, stopMode = 'star') {
   const numericFrame = Number(frame);
   const isNegativeStrand = numericFrame < 0;
@@ -410,7 +420,7 @@ export function translateDnaSequence(sequence, frame = 1, stopMode = 'star') {
 
   for (let i = 0; i + 2 < coding.length; i += 3) {
     const codon = coding.slice(i, i + 3);
-    const aa = CODON_TABLE[codon] || 'X';
+    const aa = translateDnaCodon(codon) || 'X';
     codons += 1;
     if (aa === '*' && stopMode === 'trim') {
       break;

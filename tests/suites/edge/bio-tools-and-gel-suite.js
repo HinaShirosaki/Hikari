@@ -427,9 +427,9 @@ test('[EDGE] sequence-viewer dual-strand renderer places selected ORF amino-acid
   });
   assert.match(plusHtml, /sequence-viewer-aa-row-plus/);
   const plusTop = plusHtml.indexOf('sequence-viewer-strand-row-top');
-  const plusAa = plusHtml.indexOf('sequence-viewer-aa-row-plus');
   const plusBottom = plusHtml.indexOf('sequence-viewer-strand-row-bottom');
-  assert.equal(plusTop < plusAa && plusAa < plusBottom, true);
+  const plusAa = plusHtml.indexOf('sequence-viewer-aa-row-plus');
+  assert.equal(plusTop < plusBottom && plusBottom < plusAa, true);
 
   const minusSequence = 'CTATTTCATCCC';
   const minusOrf = sequenceViewerInternals.buildOrfFeatures(minusSequence, 'linear', { minAaLength: 2 })
@@ -447,6 +447,39 @@ test('[EDGE] sequence-viewer dual-strand renderer places selected ORF amino-acid
   const minusBottom = minusHtml.indexOf('sequence-viewer-strand-row-bottom');
   const minusAa = minusHtml.indexOf('sequence-viewer-aa-row-minus');
   assert.equal(minusBottom < minusAa, true);
+});
+
+test('[EDGE] sequence-viewer ORF translation context can show stop codons as TAG/TAA/TGA labels', () => {
+  const sequence = 'ATGAAATAGCCC';
+  const feature = sequenceViewerInternals.buildOrfFeatures(sequence, 'linear', { minAaLength: 2 })[0];
+  const context = sequenceViewerInternals.buildSelectedOrfTranslationContext(sequence, feature, {
+    stopMode: 'codon'
+  });
+
+  assert.equal(Boolean(context), true);
+  assert.equal(context.anchors.map((anchor) => anchor.displayText).join('|'), 'M|K|TAG');
+  assert.equal(context.anchors[2].isStop, true);
+  assert.equal(context.anchors[2].colorKey, 'TAG');
+});
+
+test('[EDGE] sequence-viewer dual-strand renderer color-codes amino-acid cells and can render stop codon labels', () => {
+  const sequence = 'ATGAAATAGCCC';
+  const feature = sequenceViewerInternals.buildOrfFeatures(sequence, 'linear', { minAaLength: 2 })[0];
+  const context = sequenceViewerInternals.buildSelectedOrfTranslationContext(sequence, feature, {
+    stopMode: 'codon'
+  });
+  const html = sequenceViewerInternals.renderDualStrandSequenceLinesHtml(sequence, [], {
+    lineLength: 12,
+    charAdvancePx: 8,
+    sequenceLineHeightPx: 16,
+    selectedFeatureIndex: 0,
+    features: [feature],
+    orfTranslationContext: context
+  });
+
+  assert.match(html, /sequence-viewer-aa-chip/);
+  assert.match(html, /data-aa-display="TAG"/);
+  assert.match(html, /--sequence-viewer-aa-chip-color:#[0-9a-f]{6};/i);
 });
 
 test('[EDGE] sequence-viewer dual-strand renderer emits a cross-strand cursor at exact base boundary', () => {
@@ -1060,6 +1093,7 @@ test('[EDGE] sequence-viewer ORF toggle defaults off and controls ORF bars plus 
     'sequence-viewer-load-btn',
     'sequence-viewer-annotate-btn',
     'sequence-viewer-orf-toggle',
+    'sequence-viewer-orf-stop-mode',
     'sequence-viewer-restriction-neb-toggle',
     'sequence-viewer-restriction-thermo-toggle',
     'sequence-viewer-clear-btn',
@@ -1092,9 +1126,11 @@ test('[EDGE] sequence-viewer ORF toggle defaults off and controls ORF bars plus 
   trigger(document.getElementById('sequence-viewer-load-btn'), 'click');
 
   const orfToggle = document.getElementById('sequence-viewer-orf-toggle');
+  const orfStopMode = document.getElementById('sequence-viewer-orf-stop-mode');
   const sequenceHost = document.getElementById('sequence-viewer-sequence-host');
   const statFeatures = document.getElementById('sequence-viewer-stat-features');
   assert.equal(Boolean(orfToggle.checked), false);
+  assert.equal(String(orfStopMode.value || 'trim'), 'trim');
   assert.equal(statFeatures.textContent, '0');
   assert.equal(sequenceHost.innerHTML.includes('ORF +1'), false);
 
@@ -1112,6 +1148,11 @@ test('[EDGE] sequence-viewer ORF toggle defaults off and controls ORF bars plus 
   };
   trigger(sequenceHost, 'click', { target: clickTarget });
   assert.equal(sequenceHost.innerHTML.includes('sequence-viewer-aa-row-plus'), true);
+  assert.equal(sequenceHost.innerHTML.indexOf('sequence-viewer-strand-row-bottom') < sequenceHost.innerHTML.indexOf('sequence-viewer-aa-row-plus'), true);
+
+  orfStopMode.value = 'codon';
+  trigger(orfStopMode, 'change');
+  assert.equal(sequenceHost.innerHTML.includes('data-aa-display="TAA"'), true);
 
   orfToggle.checked = false;
   trigger(orfToggle, 'change');
