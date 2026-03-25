@@ -101,6 +101,8 @@ test('sequence viewer splits home and detail pages and removes home top caption/
   assert.match(detailBlock, /id="sequence-viewer-back-btn"/);
   assert.match(detailBlock, /id="sequence-viewer-save-btn"/);
   assert.match(detailBlock, /id="sequence-viewer-orf-toggle"/);
+  assert.match(detailBlock, /id="sequence-viewer-restriction-neb-toggle"/);
+  assert.match(detailBlock, /id="sequence-viewer-restriction-thermo-toggle"/);
 });
 
 test('sequence viewer map preview renderer omits metadata text overlays', () => {

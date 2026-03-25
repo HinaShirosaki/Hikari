@@ -2536,6 +2536,17 @@
               <input id="sequence-viewer-orf-toggle" type="checkbox" />
               <span>ORF View</span>
             </label>
+            <div class="sequence-viewer-inline-toggle-group" role="group" aria-label="Restriction enzyme vendors">
+              <span class="sequence-viewer-inline-toggle-group-label">Cutters</span>
+              <label class="sequence-viewer-inline-toggle" title="Show unique cutters sold by New England Biolabs.">
+                <input id="sequence-viewer-restriction-neb-toggle" type="checkbox" checked />
+                <span>NEB</span>
+              </label>
+              <label class="sequence-viewer-inline-toggle" title="Show unique cutters sold by Thermo Fisher Scientific.">
+                <input id="sequence-viewer-restriction-thermo-toggle" type="checkbox" checked />
+                <span>Thermo</span>
+              </label>
+            </div>
             <button id="sequence-viewer-clear-btn" type="button" class="ghost-btn">Clear</button>
             <span id="sequence-viewer-status" class="small-note">Idle</span>
           </div>
@@ -2581,7 +2592,7 @@
               <div><strong>Ambiguous:</strong> <span id="sequence-viewer-stat-ambiguous">-</span></div>
               <div><strong>Quality (min/mean/max):</strong> <span id="sequence-viewer-stat-quality">-</span></div>
               <div><strong>Features:</strong> <span id="sequence-viewer-stat-features">0</span></div>
-              <div><strong>NEB Restriction Sites:</strong> <span id="sequence-viewer-stat-restriction-sites">0</span></div>
+              <div><strong>Unique NEB/Thermo Sites:</strong> <span id="sequence-viewer-stat-restriction-sites">0</span></div>
             </div>
             <div id="sequence-viewer-messages" class="calc-output sequence-viewer-message-box">
               <p class="small-note">No parser warnings.</p>

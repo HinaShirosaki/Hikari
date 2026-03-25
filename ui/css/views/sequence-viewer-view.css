@@ -225,6 +225,20 @@
   accent-color: var(--accent);
 }
 
+.sequence-viewer-inline-toggle-group {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.sequence-viewer-inline-toggle-group-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #36567e;
+  letter-spacing: 0.02em;
+}
+
 .sequence-viewer-results {
   display: grid;
   gap: 12px;
@@ -672,6 +686,10 @@ body.theme-night .sequence-viewer-mode-btn {
 
 body.theme-night .sequence-viewer-inline-toggle {
   color: rgba(213, 234, 255, 0.9);
+}
+
+body.theme-night .sequence-viewer-inline-toggle-group-label {
+  color: rgba(213, 234, 255, 0.82);
 }
 
 body.theme-night .sequence-viewer-aa-text {

@@ -1,6 +1,7 @@
 import { escapeHtml } from './tool-box/common.js';
 import { annotatePlasmidSequence } from './plannotate-js.js';
 import { translateDnaSequence } from './tool-box/sequence.js';
+import { COMMERCIAL_RESTRICTION_ENZYMES } from './commercial-restriction-enzymes.js';
 
 const DEFAULT_MAX_RECORDS = 5000;
 const DEFAULT_SEQUENCE_LINE_LENGTH = 120;
@@ -60,45 +61,19 @@ const IUPAC_DNA_CLASS = Object.freeze({
   N: '[ACGT]'
 });
 
-const NEB_RESTRICTION_ENZYMES = Object.freeze([
-  { name: 'EcoRI', site: 'GAATTC', cut: 'G^AATTC' },
-  { name: 'BamHI', site: 'GGATCC', cut: 'G^GATCC' },
-  { name: 'HindIII', site: 'AAGCTT', cut: 'A^AGCTT' },
-  { name: 'NotI', site: 'GCGGCCGC', cut: 'GC^GGCCGC' },
-  { name: 'XhoI', site: 'CTCGAG', cut: 'C^TCGAG' },
-  { name: 'NheI', site: 'GCTAGC', cut: 'G^CTAGC' },
-  { name: 'XbaI', site: 'TCTAGA', cut: 'T^CTAGA' },
-  { name: 'SpeI', site: 'ACTAGT', cut: 'A^CTAGT' },
-  { name: 'PstI', site: 'CTGCAG', cut: 'CTGCA^G' },
-  { name: 'KpnI', site: 'GGTACC', cut: 'GGTAC^C' },
-  { name: 'SacI', site: 'GAGCTC', cut: 'GAGCT^C' },
-  { name: 'SalI', site: 'GTCGAC', cut: 'G^TCGAC' },
-  { name: 'SmaI', site: 'CCCGGG', cut: 'CCC^GGG' },
-  { name: 'NcoI', site: 'CCATGG', cut: 'C^CATGG' },
-  { name: 'NdeI', site: 'CATATG', cut: 'CA^TATG' },
-  { name: 'BglII', site: 'AGATCT', cut: 'A^GATCT' },
-  { name: 'EcoRV', site: 'GATATC', cut: 'GAT^ATC' },
-  { name: 'PvuII', site: 'CAGCTG', cut: 'CAG^CTG' },
-  { name: 'MluI', site: 'ACGCGT', cut: 'A^CGCGT' },
-  { name: 'ClaI', site: 'ATCGAT', cut: 'AT^CGAT' },
-  { name: 'AgeI', site: 'ACCGGT', cut: 'A^CCGGT' },
-  { name: 'AvrII', site: 'CCTAGG', cut: 'C^CTAGG' },
-  { name: 'ApaI', site: 'GGGCCC', cut: 'GGGCC^C' },
-  { name: 'AflII', site: 'CTTAAG', cut: 'C^TTAAG' },
-  { name: 'AatII', site: 'GACGTC', cut: 'GACGT^C' },
-  { name: 'BlpI', site: 'GCTNAGC', cut: 'GCTN^AGC' },
-  { name: 'BspEI', site: 'TCCGGA', cut: 'T^CCGGA' },
-  { name: 'BsrGI', site: 'TGTACA', cut: 'T^GTACA' },
-  { name: 'BsaI', site: 'GGTCTC', cut: 'GGTCTC (1/5)' },
-  { name: 'BsmBI', site: 'CGTCTC', cut: 'CGTCTC (1/5)' },
-  { name: 'BbsI', site: 'GAAGAC', cut: 'GAAGAC (2/6)' },
-  { name: 'SapI', site: 'GCTCTTC', cut: 'GCTCTTC (1/4)' }
-]);
-const NEB_FEATURE_CACHE = new WeakMap();
+const COMMERCIAL_RESTRICTION_FEATURE_CACHE = new WeakMap();
 const ORF_FEATURE_CACHE = new WeakMap();
 const ORF_START_CODONS = new Set(['ATG']);
 const ORF_STOP_CODONS = new Set(['TAA', 'TAG', 'TGA']);
 const DEFAULT_MIN_ORF_AA_LENGTH = 75;
+const RESTRICTION_VENDOR_CODE_BY_KEY = Object.freeze({
+  neb: 'N',
+  thermo: 'B'
+});
+const DEFAULT_RESTRICTION_VENDOR_FILTER = Object.freeze({
+  neb: true,
+  thermo: true
+});
 
 function normalizeSequenceText(raw) {
   return String(raw || '')
@@ -175,68 +150,127 @@ function findMotifHits(sequence, motif, topology = 'linear') {
   return hits;
 }
 
-function buildNebRestrictionFeatures(sequence, topology = 'linear') {
+function normalizeRestrictionVendorFilter(filter) {
+  return {
+    neb: filter?.neb !== false,
+    thermo: filter?.thermo !== false
+  };
+}
+
+function getSelectedRestrictionVendorCodes(filter) {
+  const normalized = normalizeRestrictionVendorFilter(filter);
+  return Object.entries(RESTRICTION_VENDOR_CODE_BY_KEY)
+    .filter(([key]) => Boolean(normalized[key]))
+    .map(([, code]) => code);
+}
+
+function pickRestrictionRepresentativeEnzyme(enzymes) {
+  const list = Array.isArray(enzymes) ? enzymes.filter(Boolean) : [];
+  return [...list].sort((left, right) => {
+    const leftVendorScore = Array.isArray(left?.vendorCodes) ? left.vendorCodes.length : 0;
+    const rightVendorScore = Array.isArray(right?.vendorCodes) ? right.vendorCodes.length : 0;
+    if (rightVendorScore !== leftVendorScore) {
+      return rightVendorScore - leftVendorScore;
+    }
+    const leftName = String(left?.name || '');
+    const rightName = String(right?.name || '');
+    if (leftName.length !== rightName.length) {
+      return leftName.length - rightName.length;
+    }
+    return leftName.localeCompare(rightName);
+  })[0] || null;
+}
+
+function summarizeRestrictionVendorSelection(vendorCodes) {
+  const codes = Array.isArray(vendorCodes) ? vendorCodes : [];
+  const hasNeb = codes.includes(RESTRICTION_VENDOR_CODE_BY_KEY.neb);
+  const hasThermo = codes.includes(RESTRICTION_VENDOR_CODE_BY_KEY.thermo);
+  if (hasNeb && hasThermo) {
+    return 'NEB/Thermo';
+  }
+  if (hasNeb) {
+    return 'NEB';
+  }
+  if (hasThermo) {
+    return 'Thermo';
+  }
+  return 'selected vendors';
+}
+
+function describeRestrictionFeature(vendorCodes, enzymeCount, enzymeName) {
+  const vendorLabel = summarizeRestrictionVendorSelection(vendorCodes);
+  if (enzymeCount > 1) {
+    return `Unique ${vendorLabel} restriction site shared by ${enzymeCount} commercial enzymes.`;
+  }
+  return `Unique ${vendorLabel} restriction site recognized by ${String(enzymeName || '-')}.`;
+}
+
+function buildCommercialRestrictionBaseFeatures(sequence, topology = 'linear') {
   const text = normalizeSequenceText(sequence);
   if (!text.length) {
     return [];
   }
 
   const features = [];
-  const dedupe = new Set();
-
-  NEB_RESTRICTION_ENZYMES.forEach((enzyme) => {
-    const motif = String(enzyme.site || '').toUpperCase().replace(/U/g, 'T').trim();
+  COMMERCIAL_RESTRICTION_ENZYMES.forEach((entry, entryIndex) => {
+    const motif = String(entry?.site || '').toUpperCase().replace(/U/g, 'T').trim();
     if (!motif.length) {
       return;
     }
 
-    const forwardHits = findMotifHits(text, motif, topology);
-    forwardHits.forEach((hit, index) => {
-      const segmentKey = hit.segments.map((segment) => `${segment.start}-${segment.end}`).join(',');
-      const key = `${enzyme.name}|+|${segmentKey}`;
-      if (dedupe.has(key)) {
-        return;
-      }
-      dedupe.add(key);
-      features.push({
-        id: `neb_${enzyme.name.toLowerCase()}_plus_${hit.start}_${index}`,
-        name: enzyme.name,
-        type: 'restriction_site',
-        strand: 1,
-        description: `NEB recognition site ${motif}${enzyme.cut ? ` (${enzyme.cut})` : ''}.`,
-        source: 'neb',
-        mode: 'NEB',
-        site: motif,
-        cut: String(enzyme.cut || ''),
-        segments: hit.segments
-      });
-    });
-
     const reverseMotif = reverseComplementIupac(motif);
-    if (!reverseMotif || reverseMotif === motif) {
+    const hitsBySegmentKey = new Map();
+
+    const collectHits = (scanMotif, strand) => {
+      findMotifHits(text, scanMotif, topology).forEach((hit) => {
+        const segmentKey = hit.segments.map((segment) => `${segment.start}-${segment.end}`).join(',');
+        if (!hitsBySegmentKey.has(segmentKey)) {
+          hitsBySegmentKey.set(segmentKey, {
+            start: hit.start,
+            strand,
+            segments: hit.segments
+          });
+        }
+      });
+    };
+
+    collectHits(motif, 1);
+    if (reverseMotif && reverseMotif !== motif) {
+      collectHits(reverseMotif, -1);
+    }
+
+    if (hitsBySegmentKey.size !== 1) {
       return;
     }
 
-    const reverseHits = findMotifHits(text, reverseMotif, topology);
-    reverseHits.forEach((hit, index) => {
-      const segmentKey = hit.segments.map((segment) => `${segment.start}-${segment.end}`).join(',');
-      const key = `${enzyme.name}|-|${segmentKey}`;
-      if (dedupe.has(key)) {
-        return;
-      }
-      dedupe.add(key);
-      features.push({
-        id: `neb_${enzyme.name.toLowerCase()}_minus_${hit.start}_${index}`,
-        name: enzyme.name,
-        type: 'restriction_site',
-        strand: -1,
-        description: `NEB recognition site ${motif}${enzyme.cut ? ` (${enzyme.cut})` : ''}.`,
-        source: 'neb',
-        mode: 'NEB',
-        site: motif,
-        cut: String(enzyme.cut || ''),
-        segments: hit.segments
-      });
+    const hit = [...hitsBySegmentKey.values()][0];
+    const allEnzymes = Array.isArray(entry?.enzymes) ? entry.enzymes.filter(Boolean) : [];
+    const representative = pickRestrictionRepresentativeEnzyme(allEnzymes);
+    const enzymeNames = Array.isArray(entry?.enzymeNames)
+      ? entry.enzymeNames.filter(Boolean)
+      : allEnzymes.map((enzyme) => String(enzyme?.name || '').trim()).filter(Boolean);
+    const cutPatterns = (Array.isArray(entry?.cutPatterns) ? entry.cutPatterns : [])
+      .map((pattern) => String(pattern || '').trim().toUpperCase())
+      .filter((pattern) => pattern && !pattern.includes('?'));
+    const vendorCodes = Array.isArray(entry?.vendorCodes) ? entry.vendorCodes : [];
+    const vendors = Array.isArray(entry?.vendors) ? entry.vendors : [];
+
+    features.push({
+      id: `commercial_restriction_${entryIndex}_${hit.start}_${hit.strand === -1 ? 'minus' : 'plus'}`,
+      name: String(representative?.name || entry?.name || motif),
+      type: 'restriction_site',
+      strand: hit.strand,
+      description: describeRestrictionFeature(vendorCodes, enzymeNames.length, representative?.name || entry?.name || motif),
+      source: 'commercial_restriction',
+      mode: 'NEB/Thermo',
+      site: motif,
+      cut: cutPatterns.length === 1 ? cutPatterns[0] : '',
+      cutPatterns,
+      enzymeNames,
+      vendorCodes,
+      vendors,
+      enzymes: allEnzymes,
+      segments: hit.segments
     });
   });
 
@@ -248,6 +282,58 @@ function buildNebRestrictionFeatures(sequence, topology = 'linear') {
     }
     return String(left.name || '').localeCompare(String(right.name || ''));
   });
+}
+
+function filterCommercialRestrictionFeatures(features, vendorFilter) {
+  const selectedVendorCodes = getSelectedRestrictionVendorCodes(vendorFilter);
+  if (!selectedVendorCodes.length) {
+    return [];
+  }
+  const selectedVendorCodeSet = new Set(selectedVendorCodes);
+  return (Array.isArray(features) ? features : [])
+    .map((feature) => {
+      if (String(feature?.type || '').toLowerCase() !== 'restriction_site') {
+        return feature;
+      }
+      const filteredEnzymes = (Array.isArray(feature?.enzymes) ? feature.enzymes : [])
+        .filter((enzyme) => (Array.isArray(enzyme?.vendorCodes) ? enzyme.vendorCodes : [])
+          .some((code) => selectedVendorCodeSet.has(code)));
+      if (!filteredEnzymes.length) {
+        return null;
+      }
+
+      const representative = pickRestrictionRepresentativeEnzyme(filteredEnzymes);
+      const enzymeNames = filteredEnzymes
+        .map((enzyme) => String(enzyme?.name || '').trim())
+        .filter(Boolean);
+      const cutPatterns = [...new Set(filteredEnzymes
+        .map((enzyme) => String(enzyme?.cut || '').trim().toUpperCase())
+        .filter((pattern) => pattern && !pattern.includes('?')))];
+      const vendorCodes = [...new Set(filteredEnzymes.flatMap((enzyme) => (
+        Array.isArray(enzyme?.vendorCodes) ? enzyme.vendorCodes : []
+      )))].sort();
+      const vendors = [...new Set(filteredEnzymes.flatMap((enzyme) => (
+        Array.isArray(enzyme?.vendors) ? enzyme.vendors : []
+      )))];
+
+      return {
+        ...feature,
+        name: String(representative?.name || feature.name || feature.site || 'restriction_site'),
+        cut: cutPatterns.length === 1 ? cutPatterns[0] : '',
+        cutPatterns,
+        enzymeNames,
+        vendorCodes,
+        vendors,
+        enzymes: filteredEnzymes,
+        description: describeRestrictionFeature(vendorCodes, enzymeNames.length, representative?.name || feature.name)
+      };
+    })
+    .filter(Boolean);
+}
+
+function buildCommercialRestrictionFeatures(sequence, topology = 'linear', options = {}) {
+  const baseFeatures = buildCommercialRestrictionBaseFeatures(sequence, topology);
+  return filterCommercialRestrictionFeatures(baseFeatures, options?.vendorFilter);
 }
 
 function positiveModulo(value, modulo) {
@@ -1309,21 +1395,6 @@ function assignFeatureLanes(features) {
   });
 }
 
-function getNebRestrictionFeaturesForRecord(record) {
-  if (!record?.sequence) {
-    return [];
-  }
-  const cacheKey = `${record.sequence}|${normalizeTopology(record.topology)}`;
-  const cached = NEB_FEATURE_CACHE.get(record);
-  if (cached?.key === cacheKey && Array.isArray(cached.features)) {
-    return cached.features;
-  }
-
-  const features = buildNebRestrictionFeatures(record.sequence, record.topology);
-  NEB_FEATURE_CACHE.set(record, { key: cacheKey, features });
-  return features;
-}
-
 function getOrfFeaturesForRecord(record, options = {}) {
   if (!record?.sequence) {
     return [];
@@ -1352,8 +1423,10 @@ function getRenderableFeaturesForRecord(record, options = {}) {
   const parsedFeatures = Array.isArray(record?.features) ? record.features : [];
   const includeOrf = Boolean(options?.includeOrf);
   const orfFeatures = includeOrf ? getOrfFeaturesForRecord(record, options) : [];
-  const nebFeatures = getNebRestrictionFeaturesForRecord(record);
-  return [...parsedFeatures, ...orfFeatures, ...nebFeatures];
+  const restrictionFeatures = getCommercialRestrictionFeaturesForRecord(record, {
+    vendorFilter: options?.restrictionVendorFilter
+  });
+  return [...parsedFeatures, ...orfFeatures, ...restrictionFeatures];
 }
 
 function getOrfCodingIndices(feature, sequenceLength) {
@@ -1622,15 +1695,19 @@ function parseRestrictionCutDescriptor(feature) {
   }
 
   const siteLength = Math.max(1, normalizeSequenceText(feature?.site || '').length);
+  const outsideDescriptors = [...cutPattern.matchAll(/\(([-+]?\d+)\s*\/\s*([-+]?\d+)\)/g)];
 
   if (cutPattern.includes('^')) {
+    if ((cutPattern.match(/\^/g) || []).length !== 1 || outsideDescriptors.length) {
+      return null;
+    }
     const [left = '', right = ''] = cutPattern.split('^');
     const topOffset = normalizeSequenceText(left).length;
     const rightLength = normalizeSequenceText(right).length;
     if (topOffset >= 0) {
       const bottomOffset = Math.max(0, siteLength - topOffset);
       return {
-        anchor: 'start',
+        siteLength,
         topOffset,
         bottomOffset,
         sticky: topOffset !== bottomOffset && rightLength > 0
@@ -1638,15 +1715,14 @@ function parseRestrictionCutDescriptor(feature) {
     }
   }
 
-  const outsideMatch = cutPattern.match(/\(([-+]?\d+)\s*\/\s*([-+]?\d+)\)/);
-  if (outsideMatch) {
-    const topOffset = Number(outsideMatch[1]);
-    const bottomOffset = Number(outsideMatch[2]);
+  if (outsideDescriptors.length === 1) {
+    const topOffset = Number(outsideDescriptors[0][1]);
+    const bottomOffset = Number(outsideDescriptors[0][2]);
     if (Number.isFinite(topOffset) && Number.isFinite(bottomOffset)) {
       return {
-        anchor: 'end',
-        topOffset,
-        bottomOffset,
+        siteLength,
+        topOffset: siteLength + topOffset,
+        bottomOffset: siteLength + bottomOffset,
         sticky: topOffset !== bottomOffset
       };
     }
@@ -1666,21 +1742,61 @@ function resolveRestrictionCutBaseIndices(feature) {
     return null;
   }
 
-  if (descriptor.anchor === 'start') {
+  const strand = feature?.strand === -1 ? -1 : 1;
+  if (strand === -1) {
     return {
-      top: siteStart + descriptor.topOffset,
-      bottom: siteStart + descriptor.bottomOffset,
+      top: siteStart + (descriptor.siteLength - descriptor.bottomOffset),
+      bottom: siteStart + (descriptor.siteLength - descriptor.topOffset),
       sticky: Boolean(descriptor.sticky)
     };
   }
 
-  const siteLength = Math.max(1, normalizeSequenceText(feature?.site || '').length);
-  const anchor = siteStart + siteLength;
   return {
-    top: anchor + descriptor.topOffset,
-    bottom: anchor + descriptor.bottomOffset,
+    top: siteStart + descriptor.topOffset,
+    bottom: siteStart + descriptor.bottomOffset,
     sticky: Boolean(descriptor.sticky)
   };
+}
+
+function getCommercialRestrictionFeaturesForRecord(record, options = {}) {
+  if (!record?.sequence) {
+    return [];
+  }
+  const cacheKey = `${record.sequence}|${normalizeTopology(record.topology)}`;
+  const cached = COMMERCIAL_RESTRICTION_FEATURE_CACHE.get(record);
+  if (cached?.key === cacheKey && Array.isArray(cached.features)) {
+    return filterCommercialRestrictionFeatures(cached.features, options?.vendorFilter);
+  }
+
+  const features = buildCommercialRestrictionBaseFeatures(record.sequence, record.topology);
+  COMMERCIAL_RESTRICTION_FEATURE_CACHE.set(record, { key: cacheKey, features });
+  return filterCommercialRestrictionFeatures(features, options?.vendorFilter);
+}
+
+function formatRestrictionCutSummary(feature) {
+  const cutPatterns = (Array.isArray(feature?.cutPatterns) ? feature.cutPatterns : [])
+    .map((pattern) => String(pattern || '').trim())
+    .filter((pattern) => pattern && !pattern.includes('?'));
+  const singleCut = String(feature?.cut || '').trim();
+  if (singleCut && !singleCut.includes('?')) {
+    return {
+      label: 'Cut',
+      text: singleCut
+    };
+  }
+  if (cutPatterns.length === 1) {
+    return {
+      label: 'Cut',
+      text: cutPatterns[0]
+    };
+  }
+  if (cutPatterns.length > 1) {
+    return {
+      label: 'Cut Patterns',
+      text: cutPatterns.join(' · ')
+    };
+  }
+  return null;
 }
 
 function computeRestrictionAnnotationGeometry(segment, lineStart, lineEnd, charAdvancePx, cutBaseIndex = null) {
@@ -2122,8 +2238,14 @@ function formatSelectedFeatureDetailHtml(feature, sequenceLength) {
   const coverage = Number.isFinite(feature.coverage) ? `${feature.coverage.toFixed(2)}%` : 'n/a';
   const source = String(feature.mode || feature.source || '-');
   const recognitionSite = String(feature.site || '').trim();
-  const cutPattern = String(feature.cut || '').trim();
+  const cutSummary = formatRestrictionCutSummary(feature);
   const description = String(feature.description || '').trim();
+  const enzymeNames = (Array.isArray(feature.enzymeNames) ? feature.enzymeNames : [])
+    .map((name) => String(name || '').trim())
+    .filter(Boolean);
+  const vendors = (Array.isArray(feature.vendors) ? feature.vendors : [])
+    .map((vendor) => String(vendor || '').trim())
+    .filter(Boolean);
   const isOrf = String(feature.type || '').toLowerCase() === 'open_reading_frame'
     || String(feature.source || '').toLowerCase() === 'orf';
   const orfFrame = String(feature.orfFrame || '').trim();
@@ -2153,7 +2275,10 @@ function formatSelectedFeatureDetailHtml(feature, sequenceLength) {
     <p><strong>Type:</strong> ${escapeHtml(feature.type || '-')} · <strong>Strand:</strong> ${strand}</p>
     <p><strong>Location:</strong> ${escapeHtml(location)}</p>
     ${isOrf && orfSummaryParts.length ? `<p><strong>ORF:</strong> ${orfSummaryParts.join(' · ')}</p>` : ''}
-    ${recognitionSite ? `<p><strong>Recognition Site:</strong> ${escapeHtml(recognitionSite)}${cutPattern ? ` · <strong>Cut:</strong> ${escapeHtml(cutPattern)}` : ''}</p>` : ''}
+    ${recognitionSite ? `<p><strong>Recognition Site:</strong> ${escapeHtml(recognitionSite)}</p>` : ''}
+    ${cutSummary ? `<p><strong>${escapeHtml(cutSummary.label)}:</strong> ${escapeHtml(cutSummary.text)}</p>` : ''}
+    ${enzymeNames.length ? `<p><strong>Enzymes:</strong> ${escapeHtml(enzymeNames.join(', '))}</p>` : ''}
+    ${vendors.length ? `<p><strong>Vendors:</strong> ${escapeHtml(vendors.join(', '))}</p>` : ''}
     <p><strong>Identity:</strong> ${identity} · <strong>Coverage:</strong> ${coverage} · <strong>Source:</strong> ${escapeHtml(source)}</p>
     ${description ? `<p class="small-note">${escapeHtml(description)}</p>` : ''}
   `;
@@ -2477,6 +2602,8 @@ export function initSequenceViewer(options = {}) {
   const loadBtn = document.getElementById('sequence-viewer-load-btn');
   const annotateBtn = document.getElementById('sequence-viewer-annotate-btn');
   const orfToggle = document.getElementById('sequence-viewer-orf-toggle');
+  const restrictionNebToggle = document.getElementById('sequence-viewer-restriction-neb-toggle');
+  const restrictionThermoToggle = document.getElementById('sequence-viewer-restriction-thermo-toggle');
   const clearBtn = document.getElementById('sequence-viewer-clear-btn');
   const statusNote = document.getElementById('sequence-viewer-status');
   const messageBox = document.getElementById('sequence-viewer-messages');
@@ -2507,6 +2634,9 @@ export function initSequenceViewer(options = {}) {
     annotationWarnings: [],
     isAnnotating: false,
     orfViewEnabled: false,
+    restrictionVendorFilter: {
+      ...DEFAULT_RESTRICTION_VENDOR_FILTER
+    },
     inputComposerVisible: true,
     libraryFilter: LIBRARY_STATUS_SAVED,
     libraryEntries: [],
@@ -3037,7 +3167,10 @@ export function initSequenceViewer(options = {}) {
   }
 
   function getVisibleFeaturesForRecord(record) {
-    return getRenderableFeaturesForRecord(record, { includeOrf: state.orfViewEnabled });
+    return getRenderableFeaturesForRecord(record, {
+      includeOrf: state.orfViewEnabled,
+      restrictionVendorFilter: state.restrictionVendorFilter
+    });
   }
 
   function clearSequenceSelection(options = {}) {
@@ -3135,6 +3268,15 @@ export function initSequenceViewer(options = {}) {
     const hasRecord = Boolean(getSelectedRecord()?.sequence?.length);
     orfToggle.checked = Boolean(state.orfViewEnabled);
     orfToggle.disabled = !hasRecord;
+  }
+
+  function syncRestrictionVendorToggleState() {
+    if (restrictionNebToggle) {
+      restrictionNebToggle.checked = Boolean(state.restrictionVendorFilter?.neb);
+    }
+    if (restrictionThermoToggle) {
+      restrictionThermoToggle.checked = Boolean(state.restrictionVendorFilter?.thermo);
+    }
   }
 
   function updateRecordSelect() {
@@ -3307,7 +3449,8 @@ export function initSequenceViewer(options = {}) {
     const ambiguous = countAmbiguousBases(record.sequence);
     const qualitySummary = summarizeFastqQuality(record.quality);
     const allFeatures = getVisibleFeaturesForRecord(record);
-    const nebFeatures = getNebRestrictionFeaturesForRecord(record);
+    const restrictionFeatures = allFeatures
+      .filter((feature) => String(feature?.type || '').toLowerCase() === 'restriction_site');
     const totalFeatures = allFeatures.length;
 
     if (statFormat) {
@@ -3329,7 +3472,7 @@ export function initSequenceViewer(options = {}) {
       statFeatures.textContent = totalFeatures.toLocaleString();
     }
     if (statRestrictionSites) {
-      statRestrictionSites.textContent = nebFeatures.length.toLocaleString();
+      statRestrictionSites.textContent = restrictionFeatures.length.toLocaleString();
     }
     if (statQuality) {
       statQuality.textContent = qualitySummary
@@ -3346,6 +3489,7 @@ export function initSequenceViewer(options = {}) {
     renderSelectedFeatureDetail(record);
     syncAnnotateButtonState();
     syncOrfToggleState();
+    syncRestrictionVendorToggleState();
     updateMessages();
   }
 
@@ -3659,6 +3803,27 @@ export function initSequenceViewer(options = {}) {
     renderActiveRecord();
   }
 
+  function setRestrictionVendorFilter(nextFilter) {
+    const record = getSelectedRecord();
+    const previousFeatures = getVisibleFeaturesForRecord(record);
+    const selectedFeature = (
+      Number.isFinite(state.selectedFeatureIndex)
+      && state.selectedFeatureIndex >= 0
+      && state.selectedFeatureIndex < previousFeatures.length
+    ) ? previousFeatures[state.selectedFeatureIndex] : null;
+
+    state.restrictionVendorFilter = normalizeRestrictionVendorFilter(nextFilter);
+
+    if (selectedFeature) {
+      const nextFeatures = getVisibleFeaturesForRecord(record);
+      state.selectedFeatureIndex = findFeatureIndexByIdentity(nextFeatures, selectedFeature);
+    } else {
+      state.selectedFeatureIndex = -1;
+    }
+
+    renderActiveRecord();
+  }
+
   modePasteBtn?.addEventListener('click', () => {
     setMode('paste');
   });
@@ -3743,6 +3908,20 @@ export function initSequenceViewer(options = {}) {
 
   orfToggle?.addEventListener('change', () => {
     setOrfViewEnabled(Boolean(orfToggle.checked));
+  });
+
+  restrictionNebToggle?.addEventListener('change', () => {
+    setRestrictionVendorFilter({
+      ...state.restrictionVendorFilter,
+      neb: Boolean(restrictionNebToggle.checked)
+    });
+  });
+
+  restrictionThermoToggle?.addEventListener('change', () => {
+    setRestrictionVendorFilter({
+      ...state.restrictionVendorFilter,
+      thermo: Boolean(restrictionThermoToggle.checked)
+    });
   });
 
   clearBtn?.addEventListener('click', (event) => {
@@ -3982,6 +4161,7 @@ export {
   normalizeSequenceText,
   complementBase,
   complementSequence,
+  buildCommercialRestrictionFeatures,
   buildOrfFeatures,
   buildSelectedOrfTranslationContext,
   detectSequenceFormat,
