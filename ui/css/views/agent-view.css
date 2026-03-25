@@ -68,6 +68,29 @@
   gap: 12px;
 }
 
+.agent-developer-tools {
+  display: grid;
+  gap: 10px;
+}
+
+.agent-developer-tools-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.agent-developer-tool-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(200px, 240px) minmax(0, 1fr);
+  align-items: start;
+}
+
+.agent-developer-tool-message {
+  grid-column: 1 / -1;
+}
+
 .agent-chat-history {
   display: flex;
   flex-direction: column;
@@ -207,6 +230,10 @@
     grid-template-columns: 1fr;
   }
 
+  .agent-developer-tool-grid {
+    grid-template-columns: 1fr;
+  }
+
   .agent-chat-item {
     width: 100%;
   }
@@ -238,6 +265,17 @@
 
 .agent-meta-grid li {
   line-height: 1.4;
+}
+
+.agent-meta-json {
+  margin: 8px 0 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  max-height: 320px;
+  overflow: auto;
 }
 
 body.theme-night .agent-chat-item {

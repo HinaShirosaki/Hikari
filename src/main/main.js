@@ -31,30 +31,31 @@ const {
   requestOpenAiResponsesWithBackoff,
   requestClaudeMessagesWithBackoff,
   requestGeminiGenerateContentWithBackoff
-} = require('./helpers/agent/agent-llm-utils.js');
+} = require('./helpers/agent/shared/agent-llm-utils.js');
 const {
-  runPythonSandbox,
-  createManagedPythonSandboxRuntime
-} = require('./helpers/agent/agent-python-sandbox.js');
+  runPythonSandbox
+} = require('./helpers/agent/tools/agent-python-sandbox.js');
 const {
   INTENT_PARSER_RESPONSE_SCHEMA,
   normalizeIntentParserPayload,
   buildIntentParserPrompt,
   buildInventorySearchTerms
-} = require('./helpers/agent/agent-intent-parser');
-const observability = require('./helpers/agent/agent-observability');
-const { createAgentControllerUtils } = require('./helpers/agent/agent-controller-utils');
-const { createProtocolNotebookRuntime } = require('./helpers/agent/agent-protocol-notebook');
-const { createAgentLookupRuntime } = require('./helpers/agent/agent-lookup-runtime');
-const { createScienceReasoningLoopRuntime } = require('./helpers/agent/agent-science-reasoning-loop.js');
-const { createAgentSessionRuntime } = require('./helpers/agent/agent-session-runtime.js');
-const { createAgentScienceMainUtils } = require('./helpers/agent/agent-science-main-utils.js');
-const { createAgentToolSmokeTestRuntime } = require('./helpers/agent/agent-tool-smoke-test');
-const { createAgentChatLogRuntime } = require('./helpers/agent/agent-chat-log.js');
-const { createLiteratureSearchRuntime } = require('./helpers/agent/agent-literature-search.js');
-const { createPaperDownloadRuntime } = require('./helpers/agent/agent-paper-download.js');
-const { createMainAgentToolRegistry } = require('./helpers/agent/agent-main-tool-registry.js');
-const { createCodexAgentRuntime } = require('./helpers/agent/agent-codex-runtime.js');
+} = require('./helpers/agent/intent/agent-intent-parser');
+const observability = require('./helpers/agent/shared/agent-observability');
+const { createAgentControllerUtils } = require('./helpers/agent/shared/agent-controller-utils');
+const { createProtocolNotebookRuntime } = require('./helpers/agent/runtime/agent-protocol-notebook');
+const { createAgentLookupRuntime } = require('./helpers/agent/runtime/agent-lookup-runtime');
+const { createScienceReasoningLoopRuntime } = require('./helpers/agent/runtime/agent-science-reasoning-loop.js');
+const { createAgentSessionRuntime } = require('./helpers/agent/runtime/agent-session-runtime.js');
+const { createAgentScienceMainUtils } = require('./helpers/agent/runtime/agent-science-main-utils.js');
+const { createAgentToolSmokeTestRuntime } = require('./helpers/agent/tools/agent-tool-smoke-test');
+const { createAgentChatLogRuntime } = require('./helpers/agent/context/agent-chat-log.js');
+const {
+  createAgentToolCallRuntime,
+  normalizeToolInvocationArgs
+} = require('./helpers/agent/tools/agent-tool-call.js');
+const { createAgentRuntimeSupport } = require('./helpers/agent/runtime/agent-runtime-support.js');
+const { createCodexAgentRuntime } = require('./helpers/agent/runtime/agent-codex-runtime.js');
 const { createMainDataHelpers } = require('./helpers/main/data-helpers');
 const {
   getBundlePaths,
@@ -399,36 +400,43 @@ const agentLookupRuntime = createAgentLookupRuntime({
   buildInventorySearchTerms
 });
 
-const literatureSearchRuntime = createLiteratureSearchRuntime();
-const paperDownloadRuntime = createPaperDownloadRuntime({
-  BrowserWindow
+const agentRuntimeSupport = createAgentRuntimeSupport({
+  renderPromptTemplate
 });
-const managedPythonSandboxRuntime = createManagedPythonSandboxRuntime({
-  sandboxRoot: getAgentPythonSandboxRoot(),
-  preferredPythonBin: cleanText(process.env.ENANA_AGENT_PYTHON_BIN, 220)
+const genericAgentToolRuntime = createAgentToolCallRuntime({
+  asArray: (value) => (Array.isArray(value) ? value : []),
+  cleanText
 });
-
-const agentToolRegistry = createMainAgentToolRegistry({
-  LLM_PROVIDERS,
-  buildInventorySearchTerms,
-  getDefaultDataFilePath,
-  searchInventoryIndex: agentLookupRuntime.searchInventoryIndex,
-  searchNotebookEntriesIndex: agentLookupRuntime.searchNotebookEntriesIndex,
-  searchProtocolsIndex: agentLookupRuntime.searchProtocolsIndex,
-  managedPythonSandboxRuntime,
-  annotateWithBlast,
-  literatureSearchRuntime,
-  paperDownloadRuntime,
-  renderPromptTemplate,
-  requestCodexCliText,
-  getCodexCliWorkingDirectory,
-  requestClaudeMessagesWithBackoff,
-  requestGeminiGenerateContentWithBackoff,
-  requestOpenAiResponsesWithBackoff,
-  extractClaudeResponseText,
-  extractGeminiResponseText,
-  extractResponseText
-});
+const agentToolRuntime = {
+  normalizeToolInvocationArgs,
+  normalizeAgentSnapshot: agentRuntimeSupport.normalizeAgentSnapshot,
+  buildAgentSystemPrompt: agentRuntimeSupport.buildAgentSystemPrompt,
+  async runAgentTool(toolName, args, rawSnapshot, options = {}) {
+    const normalizedArgs = normalizeToolInvocationArgs(args);
+    const snapshot = agentRuntimeSupport.normalizeAgentSnapshot(rawSnapshot);
+    const envelope = await genericAgentToolRuntime.executeToolCall(
+      {
+        tool_name: toolName,
+        arguments: normalizedArgs
+      },
+      {
+        ...options,
+        snapshot,
+        dataFilePath: cleanText(snapshot?.data_file_path, 1600),
+        fallbackDataFilePath: getDefaultDataFilePath()
+      }
+    );
+    const normalizedResult = envelope?.result && typeof envelope.result === 'object'
+      ? envelope.result
+      : {};
+    return {
+      ...envelope,
+      result: normalizedResult,
+      items: Array.isArray(envelope?.items) ? envelope.items : [],
+      citations: Array.isArray(normalizedResult?.citations) ? normalizedResult.citations : []
+    };
+  }
+};
 
 const scienceMainUtils = createAgentScienceMainUtils({
   asArray: (value) => (Array.isArray(value) ? value : []),
@@ -451,18 +459,18 @@ const scienceMainUtils = createAgentScienceMainUtils({
     return out;
   },
   clamp: (value, min, max) => Math.max(min, Math.min(max, Number.isFinite(Number(value)) ? Number(value) : min)),
-  normalizeRoutingPayload: agentToolRegistry.normalizeRoutingPayload,
+  normalizeRoutingPayload: agentRuntimeSupport.normalizeRoutingPayload,
   normalizeNotebookDraftPayload: (value) => value && typeof value === 'object' ? value : null,
   applyRoutingPlanPatch: (routing, patch = {}) => ({
-    ...agentToolRegistry.normalizeRoutingPayload(routing),
+    ...agentRuntimeSupport.normalizeRoutingPayload(routing),
     plan: {
-      ...(agentToolRegistry.normalizeRoutingPayload(routing).plan || {}),
+      ...(agentRuntimeSupport.normalizeRoutingPayload(routing).plan || {}),
       ...(patch && typeof patch === 'object' ? patch : {})
     }
   }),
-  pickTopMatches: agentToolRegistry.pickTopMatches,
-  scoreByQuery: agentToolRegistry.scoreByQuery,
-  normalizeQuery: agentToolRegistry.normalizeQuery
+  pickTopMatches: agentRuntimeSupport.pickTopMatches,
+  scoreByQuery: agentRuntimeSupport.scoreByQuery,
+  normalizeQuery: agentRuntimeSupport.normalizeQuery
 });
 
 const agentSessionRuntime = createAgentSessionRuntime({
@@ -500,9 +508,9 @@ const protocolNotebookRuntime = createProtocolNotebookRuntime({
     });
     return out;
   },
-  pickTopMatches: agentToolRegistry.pickTopMatches,
+  pickTopMatches: agentRuntimeSupport.pickTopMatches,
   safeParseJson,
-  runTool: agentToolRegistry.runAgentTool,
+  runTool: agentToolRuntime.runAgentTool,
   requestCodexCliText,
   getCodexCliWorkingDirectory,
   requestClaudeMessagesWithBackoff,
@@ -554,7 +562,6 @@ const scienceReasoningLoopRuntime = createScienceReasoningLoopRuntime({
   extractAgentSessionText: agentSessionRuntime.extractAgentSessionText,
   continueAgentSessionWithToolOutputs: agentSessionRuntime.continueAgentSessionWithToolOutputs,
   continueAgentSessionWithUserMessage: agentSessionRuntime.continueAgentSessionWithUserMessage,
-  resolveToolDefinitions: agentToolRegistry.resolveAgentToolDefinitions,
   applyResponseLayerToOutput: scienceMainUtils.applyResponseLayerToOutput,
   applyValidationGateToOutput: scienceMainUtils.applyValidationGateToOutput,
   recordLifecycleEvent: observability.recordLifecycleEvent
@@ -564,15 +571,14 @@ const codexRuntime = createCodexAgentRuntime({
   requestCodexCliText,
   getCodexCliWorkingDirectory,
   recordAgentLlmTrace: controllerUtils.recordAgentLlmTrace,
-  runAgentTool: agentToolRegistry.runAgentTool,
-  buildInventoryToolArgs: agentToolRegistry.buildInventoryToolArgs,
-  buildAgentSystemPrompt: agentToolRegistry.buildAgentSystemPrompt,
-  buildAgentSynthesisPrompt: agentToolRegistry.buildAgentSynthesisPrompt,
-  normalizeAgentOutput: agentToolRegistry.normalizeAgentOutput,
-  toPromptConversationTranscript: agentToolRegistry.toPromptConversationTranscript,
+  runAgentTool: agentToolRuntime.runAgentTool,
+  buildAgentSystemPrompt: agentRuntimeSupport.buildAgentSystemPrompt,
+  buildAgentSynthesisPrompt: agentRuntimeSupport.buildAgentSynthesisPrompt,
+  normalizeAgentOutput: agentRuntimeSupport.normalizeAgentOutput,
+  toPromptConversationTranscript: agentRuntimeSupport.toPromptConversationTranscript,
   applyResponseLayerToOutput: scienceMainUtils.applyResponseLayerToOutput,
   applyValidationGateToOutput: scienceMainUtils.applyValidationGateToOutput,
-  normalizeRoutingPayload: agentToolRegistry.normalizeRoutingPayload
+  normalizeRoutingPayload: agentRuntimeSupport.normalizeRoutingPayload
 });
 void codexRuntime;
 
@@ -612,7 +618,7 @@ registerAgentIpc({
   protocolNotebookRuntime,
   scienceReasoningLoopRuntime,
   scienceMainUtils,
-  agentToolRegistry,
+  agentToolRuntime,
   agentChatLogRuntime,
   agentToolSmokeTestRuntime,
   executeInventoryLookup: agentLookupRuntime.executeInventoryLookup,

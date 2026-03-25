@@ -7,7 +7,7 @@ function registerAgentIpc(deps = {}) {
   const protocolNotebookRuntime = deps.protocolNotebookRuntime;
   const scienceReasoningLoopRuntime = deps.scienceReasoningLoopRuntime;
   const scienceMainUtils = deps.scienceMainUtils || {};
-  const agentToolRegistry = deps.agentToolRegistry || {};
+  const agentToolRuntime = deps.agentToolRuntime || {};
   const agentChatLogRuntime = deps.agentChatLogRuntime;
   const agentToolSmokeTestRuntime = deps.agentToolSmokeTestRuntime;
   const executeInventoryLookup = deps.executeInventoryLookup;
@@ -50,8 +50,8 @@ function registerAgentIpc(deps = {}) {
     lifecycleRecorder
   }) {
     return async (toolName, args, options = {}) => {
-      const normalizedArgs = typeof agentToolRegistry.normalizeToolInvocationArgs === 'function'
-        ? agentToolRegistry.normalizeToolInvocationArgs(args)
+      const normalizedArgs = typeof agentToolRuntime.normalizeToolInvocationArgs === 'function'
+        ? agentToolRuntime.normalizeToolInvocationArgs(args)
         : args;
       const effectiveAllowWrite = options?.allowWriteTools === true || allowWriteTools === true;
       observability.recordLifecycleEvent(lifecycleRecorder, {
@@ -62,7 +62,7 @@ function registerAgentIpc(deps = {}) {
         message: `Started tool call for ${cleanText(toolName, 120) || 'unknown_tool'}.`
       });
       try {
-        const result = await agentToolRegistry.runAgentTool(toolName, normalizedArgs, snapshot, {
+        const result = await agentToolRuntime.runAgentTool(toolName, normalizedArgs, snapshot, {
           ...options,
           allowWriteTools: effectiveAllowWrite,
           requestId: cleanText(lifecycleRecorder?.requestId, 80)
@@ -141,7 +141,7 @@ function registerAgentIpc(deps = {}) {
       && conversation[conversation.length - 1].text === message
     );
     const rawSnapshot = normalizeJsonPayload(payload?.stateSnapshot, {});
-    const snapshot = agentToolRegistry.normalizeAgentSnapshot(rawSnapshot);
+    const snapshot = agentToolRuntime.normalizeAgentSnapshot(rawSnapshot);
     const executionFlags = controllerUtils.resolveAgentExecutionFlags(payload, { settings: rawSnapshot?.settings || {} });
     const traceContext = controllerUtils.createAgentLlmTraceContext({
       enabled: executionFlags.developerMode === true,
@@ -454,7 +454,7 @@ function registerAgentIpc(deps = {}) {
           snapshot,
           traceContext,
           lifecycleRecorder,
-          baseSystemPrompt: agentToolRegistry.buildAgentSystemPrompt(
+          baseSystemPrompt: agentToolRuntime.buildAgentSystemPrompt(
             projectName
               || resolvedProject?.name
               || parserResult.payload?.entities?.project_name,
@@ -828,8 +828,19 @@ function registerAgentIpc(deps = {}) {
     }
 
     try {
+      const toolName = cleanText(normalizedPayload?.toolName || normalizedPayload?.tool_name, 120);
+      const requestMessage = cleanText(normalizedPayload?.message, 3000);
+      if (toolName) {
+        return await agentToolSmokeTestRuntime.runTool({
+          toolName,
+          message: requestMessage,
+          stateSnapshot: agentToolRuntime.normalizeAgentSnapshot(normalizeJsonPayload(normalizedPayload?.stateSnapshot, {})),
+          projectId: cleanText(normalizedPayload?.projectId, 80),
+          projectName: cleanText(normalizedPayload?.projectName, 180)
+        });
+      }
       return await agentToolSmokeTestRuntime.runAllTools({
-        stateSnapshot: agentToolRegistry.normalizeAgentSnapshot(normalizeJsonPayload(normalizedPayload?.stateSnapshot, {})),
+        stateSnapshot: agentToolRuntime.normalizeAgentSnapshot(normalizeJsonPayload(normalizedPayload?.stateSnapshot, {})),
         projectId: cleanText(normalizedPayload?.projectId, 80),
         projectName: cleanText(normalizedPayload?.projectName, 180)
       });

@@ -1693,9 +1693,25 @@
         </div>
 
         <div class="panel agent-chat-panel">
-          <div id="agent-developer-tools" class="form-actions" hidden>
-            <button type="button" id="agent-dev-test-tools-btn" class="ghost-btn">Test All Tools</button>
-            <span class="small-note">Developer mode only. Runs deterministic smoke tests for all agent tools.</span>
+          <div id="agent-developer-tools" class="agent-developer-tools" hidden>
+            <div class="agent-developer-tools-actions">
+              <button type="button" id="agent-dev-test-tools-btn" class="ghost-btn">Test All Tools</button>
+              <span class="small-note">Developer mode only. Run the full smoke suite or target one tool with a manual message and inspect the raw result in chat.</span>
+            </div>
+            <div class="agent-developer-tool-grid">
+              <label>
+                Tool
+                <select id="agent-dev-tool-select"></select>
+              </label>
+              <label class="agent-developer-tool-message">
+                Manual Test Message
+                <textarea id="agent-dev-tool-message" rows="3" placeholder="Enter a tool-directed test message."></textarea>
+              </label>
+              <div class="form-actions">
+                <button type="button" id="agent-dev-run-tool-btn" class="ghost-btn">Run Selected Tool</button>
+                <span id="agent-dev-tool-hint" class="small-note"></span>
+              </div>
+            </div>
           </div>
           <div id="agent-chat-history" class="agent-chat-history" aria-live="polite"></div>
           <p id="agent-status" class="small-note">Ready.</p>
@@ -2520,6 +2536,17 @@
               <input id="sequence-viewer-orf-toggle" type="checkbox" />
               <span>ORF View</span>
             </label>
+            <div class="sequence-viewer-inline-toggle-group" role="group" aria-label="Restriction enzyme vendors">
+              <span class="sequence-viewer-inline-toggle-group-label">Cutters</span>
+              <label class="sequence-viewer-inline-toggle" title="Show unique cutters sold by New England Biolabs.">
+                <input id="sequence-viewer-restriction-neb-toggle" type="checkbox" checked />
+                <span>NEB</span>
+              </label>
+              <label class="sequence-viewer-inline-toggle" title="Show unique cutters sold by Thermo Fisher Scientific.">
+                <input id="sequence-viewer-restriction-thermo-toggle" type="checkbox" checked />
+                <span>Thermo</span>
+              </label>
+            </div>
             <button id="sequence-viewer-clear-btn" type="button" class="ghost-btn">Clear</button>
             <span id="sequence-viewer-status" class="small-note">Idle</span>
           </div>
@@ -2565,7 +2592,7 @@
               <div><strong>Ambiguous:</strong> <span id="sequence-viewer-stat-ambiguous">-</span></div>
               <div><strong>Quality (min/mean/max):</strong> <span id="sequence-viewer-stat-quality">-</span></div>
               <div><strong>Features:</strong> <span id="sequence-viewer-stat-features">0</span></div>
-              <div><strong>NEB Restriction Sites:</strong> <span id="sequence-viewer-stat-restriction-sites">0</span></div>
+              <div><strong>Unique NEB/Thermo Sites:</strong> <span id="sequence-viewer-stat-restriction-sites">0</span></div>
             </div>
             <div id="sequence-viewer-messages" class="calc-output sequence-viewer-message-box">
               <p class="small-note">No parser warnings.</p>

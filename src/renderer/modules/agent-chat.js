@@ -1,4 +1,5 @@
 import { mapExperimentDataToLlmJson } from './experiment-llm-mapper.js';
+import { collectAgentActivityRows, normalizeAgentResponse } from './agent-chat-response.js';
 
 function asArray(value) {
   return Array.isArray(value) ? value : [];
@@ -142,6 +143,79 @@ const TOOL_ACTIVITY_LABELS = {
   download_paper_pdf: 'Downloading papers'
 };
 
+const DEVELOPER_TOOL_TEST_OPTIONS = [
+  {
+    name: 'inventory-lookup',
+    label: 'Inventory Lookup',
+    description: 'Pass a sample or reagent name to inspect inventory lookup output.',
+    example: 'Atlas construct sample'
+  },
+  {
+    name: 'record-lookup',
+    label: 'Record Lookup',
+    description: 'Pass a protocol, workflow, or record title to inspect record retrieval output.',
+    example: 'Cell Prep'
+  },
+  {
+    name: 'protocol-matching',
+    label: 'Protocol Matching',
+    description: 'Pass a protocol-like name or activity so you can inspect the selected protocol payload.',
+    example: 'Cell Prep'
+  },
+  {
+    name: 'notebook-generation',
+    label: 'Notebook Generation',
+    description: 'Pass a notebook-style completion message to inspect the drafted notebook payload.',
+    example: 'I completed Cell Prep on HEK293 sample TUBE42.'
+  },
+  {
+    name: 'python-sandbox',
+    label: 'Python Sandbox',
+    description: 'Pass a short instruction and inspect the sandbox readback payload.',
+    example: 'Write a JSON file with an ok flag and a test value.'
+  },
+  {
+    name: 'sub-agent',
+    label: 'Sub-Agent',
+    description: 'Pass the seed message used to create and message the helper sub-agent.',
+    example: 'Ping'
+  },
+  {
+    name: 'memory',
+    label: 'Memory',
+    description: 'Pass the memory text to remember and recall during the manual test.',
+    example: 'User prefers concise summaries.'
+  },
+  {
+    name: 'literature-search',
+    label: 'Literature Search',
+    description: 'Pass a literature query and inspect the ranked stubbed source results.',
+    example: 'PD-1 binder methods'
+  },
+  {
+    name: 'paper-download',
+    label: 'Paper Download',
+    description: 'Pass the paper title used during the download smoke test.',
+    example: 'Smoke Test Paper'
+  },
+  {
+    name: 'paper-analysis',
+    label: 'Paper Analysis',
+    description: 'Pass the extraction request used during paper analysis.',
+    example: 'Extract a protocol from this paper.'
+  },
+  {
+    name: 'protocol-generation',
+    label: 'Protocol Generation',
+    description: 'Pass a concise free-text method summary and inspect the generated protocol payload.',
+    example: 'Generate a concise purification protocol from this summary.'
+  }
+];
+
+const DEVELOPER_TOOL_TEST_OPTION_BY_NAME = new Map(
+  DEVELOPER_TOOL_TEST_OPTIONS.map((item) => [item.name, item])
+);
+
 function inferRequestedActivities(requestText) {
   const text = String(requestText || '').toLowerCase();
   if (!text) {
@@ -174,16 +248,6 @@ function inferRequestedActivities(requestText) {
     rows.push('Running Python sandbox');
   }
   return rows;
-}
-
-function activityStatusRank(status) {
-  if (status === 'done') {
-    return 3;
-  }
-  if (status === 'pending') {
-    return 2;
-  }
-  return 1;
 }
 
 function formatStageActivity(stage, goal) {
@@ -234,187 +298,6 @@ function formatWriteActivity(action) {
   return `Write action pending approval: ${toolName || 'unspecified action'}`;
 }
 
-function collectActivityRows(meta) {
-  if (!meta || typeof meta !== 'object') {
-    return [];
-  }
-
-  const rows = [];
-  const rowIndexByKey = new Map();
-  const upsertRow = (status, text) => {
-    const clean = trimText(text, 260);
-    if (!clean) {
-      return;
-    }
-    const key = clean.toLowerCase();
-    const existingIndex = rowIndexByKey.get(key);
-    if (existingIndex === undefined) {
-      rowIndexByKey.set(key, rows.length);
-      rows.push({ status, text: clean });
-      return;
-    }
-    if (activityStatusRank(status) > activityStatusRank(rows[existingIndex].status)) {
-      rows[existingIndex].status = status;
-    }
-  };
-
-  const parser = meta.parser && typeof meta.parser === 'object' ? meta.parser : {};
-  const intent = trimText(parser.primary_intent, 80);
-  if (intent) {
-    upsertRow('done', `Intent parsed: ${intent}`);
-  }
-  if (parser.needs_clarification === true) {
-    upsertRow('pending', 'Clarification required before execution');
-  } else {
-    upsertRow('done', 'No clarification required');
-  }
-  const reasoning = trimText(parser.reasoning_summary, 240);
-  if (reasoning) {
-    upsertRow('done', `Parser reasoning: ${reasoning}`);
-  }
-  const protocolWorkflow = meta.protocol_to_notebook && typeof meta.protocol_to_notebook === 'object'
-    ? meta.protocol_to_notebook
-    : {};
-  const protocolStatus = trimText(protocolWorkflow.status, 40);
-  if (protocolStatus) {
-    upsertRow(protocolStatus === 'completed' ? 'done' : 'pending', `Protocol notebook status: ${protocolStatus}`);
-  }
-  const selectedProtocolName = trimText(protocolWorkflow?.selected_protocol?.name, 220);
-  if (selectedProtocolName) {
-    upsertRow('done', `Selected protocol: ${selectedProtocolName}`);
-  }
-  const missingCount = asArray(protocolWorkflow.missing_placeholders).length;
-  if (missingCount > 0) {
-    upsertRow('pending', `Missing placeholders: ${missingCount}`);
-  }
-  const inventoryLookup = meta.inventory_lookup && typeof meta.inventory_lookup === 'object'
-    ? meta.inventory_lookup
-    : {};
-  const inventoryStatus = trimText(inventoryLookup.status, 40);
-  if (inventoryStatus) {
-    upsertRow(inventoryStatus === 'matched' ? 'done' : 'pending', `Inventory lookup status: ${inventoryStatus}`);
-  }
-  const inventoryItemCount = asArray(inventoryLookup.items).length;
-  if (inventoryItemCount > 0) {
-    upsertRow('done', `Inventory matches: ${inventoryItemCount}`);
-  }
-  if (inventoryLookup.backfilled_sql === true) {
-    upsertRow('done', 'Inventory SQL index backfilled');
-  }
-  const recordLookup = meta.record_lookup && typeof meta.record_lookup === 'object'
-    ? meta.record_lookup
-    : {};
-  const recordStatus = trimText(recordLookup.status, 40);
-  if (recordStatus) {
-    upsertRow(recordStatus === 'matched' ? 'done' : 'pending', `Record lookup status: ${recordStatus}`);
-  }
-  const recordItemCount = asArray(recordLookup.items).length;
-  if (recordItemCount > 0) {
-    upsertRow('done', `Record matches: ${recordItemCount}`);
-  }
-  if (recordLookup.backfilled_sql === true) {
-    upsertRow('done', 'Record SQL index backfilled');
-  }
-  [
-    ['General science', meta.general_science_question],
-    ['Project science', meta.project_science_question],
-    ['Result analysis', meta.result_analysis]
-  ].forEach(([label, payload]) => {
-    const source = payload && typeof payload === 'object' ? payload : {};
-    const status = trimText(source.status, 40);
-    if (status) {
-      upsertRow(status === 'completed' ? 'done' : 'pending', `${label} status: ${status}`);
-    }
-    const roundsExecuted = Number(source.rounds_executed) || 0;
-    if (roundsExecuted > 0) {
-      upsertRow('done', `${label} rounds: ${roundsExecuted}`);
-    }
-    const citationCount = asArray(source.citations).length;
-    if (citationCount > 0) {
-      upsertRow('done', `${label} citations: ${citationCount}`);
-    }
-  });
-
-  asArray(meta.developer_trace).forEach((trace) => {
-    const stage = trimText(trace?.stage, 120);
-    if (stage) {
-      upsertRow('done', `Trace stage: ${stage}`);
-    }
-  });
-
-  return rows.slice(0, 20);
-}
-
-function summarizeInventoryLookup(lookup) {
-  const payload = lookup && typeof lookup === 'object' ? lookup : {};
-  const status = trimText(payload.status, 40);
-  if (!status) {
-    return '';
-  }
-  if (status === 'needs_more_info') {
-    const followUps = asArray(payload.follow_up_questions).map((item) => trimText(item, 280)).filter(Boolean);
-    return followUps.join(' ') || 'I need more details to run inventory lookup.';
-  }
-  const query = trimText(payload.query, 220);
-  const items = asArray(payload.items);
-  if (status === 'matched' && items.length) {
-    const names = items
-      .slice(0, 3)
-      .map((item) => trimText(item?.name || item?.id, 140))
-      .filter(Boolean);
-    const preview = names.length ? ` Top matches: ${names.join(', ')}.` : '';
-    return `Found ${items.length} inventory match${items.length === 1 ? '' : 'es'}${query ? ` for "${query}"` : ''}.${preview}`;
-  }
-  if (status === 'no_match') {
-    return `No inventory matches found${query ? ` for "${query}"` : ''}.`;
-  }
-  return '';
-}
-
-function summarizeRecordLookup(lookup) {
-  const payload = lookup && typeof lookup === 'object' ? lookup : {};
-  const status = trimText(payload.status, 40);
-  if (!status) {
-    return '';
-  }
-  if (status === 'needs_more_info') {
-    const followUps = asArray(payload.follow_up_questions).map((item) => trimText(item, 280)).filter(Boolean);
-    return followUps.join(' ') || 'I need more details to run record lookup.';
-  }
-  const query = trimText(payload.query, 220);
-  const items = asArray(payload.items);
-  if (status === 'matched' && items.length) {
-    const names = items
-      .slice(0, 3)
-      .map((item) => trimText(item?.title || item?.id, 140))
-      .filter(Boolean);
-    const preview = names.length ? ` Top hits: ${names.join(', ')}.` : '';
-    return `Found ${items.length} record match${items.length === 1 ? '' : 'es'}${query ? ` for "${query}"` : ''}.${preview}`;
-  }
-  if (status === 'no_match') {
-    return `No record matches found${query ? ` for "${query}"` : ''}.`;
-  }
-  return '';
-}
-
-function summarizeScienceResult(payload) {
-  const source = payload && typeof payload === 'object' ? payload : {};
-  const status = trimText(source.status, 40);
-  if (!status) {
-    return '';
-  }
-  if (status === 'needs_more_info') {
-    return asArray(source.follow_up_questions).map((item) => trimText(item, 280)).filter(Boolean).join(' ')
-      || 'I need more detail before I can continue.';
-  }
-  const answer = trimText(source.answer, 12000);
-  if (answer) {
-    return answer;
-  }
-  const followUps = asArray(source.follow_up_questions).map((item) => trimText(item, 280)).filter(Boolean);
-  return followUps.join(' ');
-}
-
 export function initAgentChat({ state, persist, createId, safeText, onNotebookEntriesChanged }) {
   const projectSelect = document.getElementById('agent-project-select');
   const contextSummary = document.getElementById('agent-context-summary');
@@ -423,6 +306,10 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
   const newChatBtn = document.getElementById('agent-new-chat-btn');
   const developerTools = document.getElementById('agent-developer-tools');
   const developerTestToolsBtn = document.getElementById('agent-dev-test-tools-btn');
+  const developerToolSelect = document.getElementById('agent-dev-tool-select');
+  const developerToolMessageInput = document.getElementById('agent-dev-tool-message');
+  const developerRunToolBtn = document.getElementById('agent-dev-run-tool-btn');
+  const developerToolHint = document.getElementById('agent-dev-tool-hint');
   const historyNode = document.getElementById('agent-chat-history');
   const input = document.getElementById('agent-message-input');
   const sendBtn = document.getElementById('agent-send-btn');
@@ -451,6 +338,14 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
 
   developerTestToolsBtn?.addEventListener('click', () => {
     void runDeveloperToolSmokeTest();
+  });
+
+  developerRunToolBtn?.addEventListener('click', () => {
+    void runDeveloperSingleToolTest();
+  });
+
+  developerToolSelect?.addEventListener('change', () => {
+    renderDeveloperToolHint();
   });
 
   newChatBtn?.addEventListener('click', () => {
@@ -517,6 +412,34 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
     } else if (selected) {
       state.agentChat.projectId = '';
       persist();
+    }
+  }
+
+  function renderDeveloperToolOptions() {
+    if (!developerToolSelect) {
+      return;
+    }
+    const selected = trimText(developerToolSelect.value, 120);
+    developerToolSelect.innerHTML = DEVELOPER_TOOL_TEST_OPTIONS.map((item) => (
+      `<option value="${safeText(item.name)}">${safeText(item.label)}</option>`
+    )).join('');
+    const fallbackName = DEVELOPER_TOOL_TEST_OPTIONS[0]?.name || '';
+    developerToolSelect.value = DEVELOPER_TOOL_TEST_OPTION_BY_NAME.has(selected) ? selected : fallbackName;
+    renderDeveloperToolHint();
+  }
+
+  function renderDeveloperToolHint() {
+    const toolName = trimText(developerToolSelect?.value, 120);
+    const option = DEVELOPER_TOOL_TEST_OPTION_BY_NAME.get(toolName) || null;
+    if (developerToolHint) {
+      developerToolHint.textContent = option
+        ? `${option.description} Example: ${option.example}`
+        : 'Select a tool and provide a manual test message.';
+    }
+    if (developerToolMessageInput && !trimText(developerToolMessageInput.value, 3000)) {
+      developerToolMessageInput.placeholder = option
+        ? `Example: ${option.example}`
+        : 'Enter a tool-directed test message.';
     }
   }
 
@@ -1020,6 +943,17 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
     return date.toLocaleString();
   }
 
+  function formatJsonForDisplay(value) {
+    if (value === undefined) {
+      return '';
+    }
+    try {
+      return trimText(JSON.stringify(value, null, 2), 24000);
+    } catch {
+      return trimText(String(value || ''), 24000);
+    }
+  }
+
   function renderMetaList(title, rows) {
     if (!rows.length) {
       return '';
@@ -1034,6 +968,19 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
     `;
   }
 
+  function renderMetaJson(title, value) {
+    const formatted = formatJsonForDisplay(value);
+    if (!formatted) {
+      return '';
+    }
+    return `
+      <details>
+        <summary>${safeText(title)}</summary>
+        <pre class="agent-meta-json">${safeText(formatted)}</pre>
+      </details>
+    `;
+  }
+
   function renderAssistantMeta(meta) {
     if (!meta || typeof meta !== 'object') {
       return '';
@@ -1042,6 +989,9 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
       ? meta.tool_test
       : null;
     if (toolTest) {
+      const toolItems = asArray(toolTest.items);
+      const runMode = trimText(toolTest.run_mode, 40) || (toolItems.length === 1 ? 'single' : 'all');
+      const primaryItem = runMode === 'single' ? (toolItems[0] && typeof toolItems[0] === 'object' ? toolItems[0] : null) : null;
       const toolRows = asArray(toolTest.items).map((item) => ({
         status: item?.ok === true ? 'done' : 'error',
         text: `${trimText(item?.tool_name, 120) || 'tool'}: ${trimText(item?.summary || item?.error, 220) || 'No summary returned.'}`
@@ -1063,12 +1013,14 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
         ].filter(Boolean);
         return `${toolName}: ${parts.join(' | ') || 'completed'}`;
       });
-      const summaryLine = `Passed=${Number(toolTest.passed_count) || 0} | Failed=${Number(toolTest.failed_count) || 0} | Tools=${Number(toolTest.tool_count) || asArray(toolTest.items).length}`;
+      const summaryLine = primaryItem
+        ? `Tool=${trimText(primaryItem.tool_name, 120) || 'tool'} | Status=${trimText(primaryItem.status, 80) || (primaryItem.ok === true ? 'ok' : 'error')} | OK=${primaryItem.ok === true}`
+        : `Passed=${Number(toolTest.passed_count) || 0} | Failed=${Number(toolTest.failed_count) || 0} | Tools=${Number(toolTest.tool_count) || toolItems.length}`;
       return `
         <div class="agent-meta-grid">
           ${toolRows.length ? `
             <section class="agent-activity" aria-label="Tool smoke test activity">
-              <h4>Tool Smoke Test</h4>
+              <h4>${primaryItem ? 'Manual Tool Test' : 'Tool Smoke Test'}</h4>
               <ul class="agent-activity-list">
                 ${toolRows.map((row) => `
                   <li class="agent-activity-item">
@@ -1080,7 +1032,14 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
             </section>
           ` : ''}
           <p class="small-note">${safeText(summaryLine)}</p>
+          ${primaryItem && trimText(toolTest.request_message || primaryItem.request_message, 6000)
+            ? renderMetaList('Input Message', [trimText(toolTest.request_message || primaryItem.request_message, 6000)])
+            : ''}
+          ${primaryItem && trimText(primaryItem.result_message, 6000)
+            ? renderMetaList('Result Message', [trimText(primaryItem.result_message, 6000)])
+            : ''}
           ${renderMetaList('Tool Details', detailRows)}
+          ${primaryItem ? renderMetaJson('Raw Result', primaryItem.raw_result) : ''}
           ${failureRows.length ? renderMetaList('Failures', failureRows) : ''}
         </div>
       `;
@@ -1253,7 +1212,7 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
     const projectScienceFollowUps = asArray(projectScience.follow_up_questions).map((question) => trimText(question, 260)).filter(Boolean);
     const resultAnalysisFollowUps = asArray(resultAnalysis.follow_up_questions).map((question) => trimText(question, 260)).filter(Boolean);
     const reasoningSummaryRows = [trimText(parser.reasoning_summary, 600) || 'No parser reasoning summary returned.'];
-    const activityRows = collectActivityRows(meta);
+    const activityRows = collectAgentActivityRows(meta);
     const developerTraceRows = asArray(meta.developer_trace).map((trace, index) => {
       const stage = trimText(trace?.stage, 120) || `trace_${index + 1}`;
       const provider = trimText(trace?.provider, 80);
@@ -1346,6 +1305,15 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
     if (developerTestToolsBtn) {
       developerTestToolsBtn.disabled = inFlight;
     }
+    if (developerRunToolBtn) {
+      developerRunToolBtn.disabled = inFlight;
+    }
+    if (developerToolSelect) {
+      developerToolSelect.disabled = inFlight;
+    }
+    if (developerToolMessageInput) {
+      developerToolMessageInput.disabled = inFlight;
+    }
     clearBtn.disabled = inFlight;
     projectSelect.disabled = inFlight;
     input.disabled = inFlight;
@@ -1367,6 +1335,32 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
       stateSnapshot.data_file_path = trimText(syncResult?.filePath || state.settings?.enaFilePath, 1600);
     }
     return stateSnapshot;
+  }
+
+  function appendToolTestAssistantMessage(result, fallbackText, requestMessage = '') {
+    state.agentChat.messages.push({
+      id: createId(),
+      role: 'assistant',
+      text: trimText(result?.summary, 12000) || fallbackText,
+      createdAt: new Date().toISOString(),
+      meta: {
+        tool_test: {
+          ok: result?.ok === true,
+          run_mode: trimText(result?.run_mode, 40) || 'all',
+          tool_name: trimText(result?.tool_name, 120),
+          request_message: trimText(requestMessage || result?.request_message, 3000),
+          status: trimText(result?.status, 80),
+          tool_count: Number(result?.tool_count) || asArray(result?.items).length,
+          passed_count: Number(result?.passed_count) || 0,
+          failed_count: Number(result?.failed_count) || 0,
+          summary: trimText(result?.summary, 320),
+          items: asArray(result?.items)
+        }
+      }
+    });
+    state.agentChat.messages = state.agentChat.messages.slice(-40);
+    persist();
+    renderHistory();
   }
 
   async function sendMessage() {
@@ -1436,68 +1430,24 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
           upsertSessionSummary(result.chat_session);
         }
       }
-      const protocolWorkflow = result.protocol_to_notebook && typeof result.protocol_to_notebook === 'object'
-        ? result.protocol_to_notebook
-        : null;
-      const notebookPayload = protocolWorkflow?.notebook && typeof protocolWorkflow.notebook === 'object'
-        ? protocolWorkflow.notebook
-        : result.notebookDraft;
-      const notebookDraft = applyNotebookDraftAutoSave(notebookPayload, messageText);
-      const parser = result.parser && typeof result.parser === 'object' ? result.parser : {};
-      const protocolStatus = trimText(protocolWorkflow?.status, 40);
-      const followUpQuestions = asArray(protocolWorkflow?.follow_up_questions).map((item) => trimText(item, 320)).filter(Boolean);
-      const completedNotebookText = trimText(
-        protocolWorkflow?.notebook?.entry_template?.result
-          || protocolWorkflow?.notebook?.save?.reason
-          || '',
-        12000
-      );
-      const inventoryLookup = result.inventory_lookup && typeof result.inventory_lookup === 'object'
-        ? result.inventory_lookup
-        : null;
-      const recordLookup = result.record_lookup && typeof result.record_lookup === 'object'
-        ? result.record_lookup
-        : null;
-      const generalScienceQuestion = result.general_science_question && typeof result.general_science_question === 'object'
-        ? result.general_science_question
-        : null;
-      const projectScienceQuestion = result.project_science_question && typeof result.project_science_question === 'object'
-        ? result.project_science_question
-        : null;
-      const resultAnalysis = result.result_analysis && typeof result.result_analysis === 'object'
-        ? result.result_analysis
-        : null;
-      const inventorySummaryText = summarizeInventoryLookup(inventoryLookup);
-      const recordSummaryText = summarizeRecordLookup(recordLookup);
-      const scienceAnswerText = summarizeScienceResult(generalScienceQuestion)
-        || summarizeScienceResult(projectScienceQuestion)
-        || summarizeScienceResult(resultAnalysis);
-      const assistantText = protocolStatus === 'completed'
-        ? (completedNotebookText
-          || `Notebook draft completed using protocol ${trimText(protocolWorkflow?.selected_protocol?.name, 220) || 'selection'}.`)
-        : (protocolStatus === 'needs_more_info'
-          ? (followUpQuestions.join(' ') || 'More details are needed to fill the remaining notebook placeholders.')
-          : (scienceAnswerText
-            || inventorySummaryText
-            || recordSummaryText
-            || trimText(parser.reasoning_summary, 12000)
-            || 'Intent parsing completed.'));
+      const response = normalizeAgentResponse(result);
+      const notebookDraft = applyNotebookDraftAutoSave(response.notebookPayload, messageText);
 
       state.agentChat.messages.push({
         id: createId(),
         role: 'assistant',
-        text: assistantText,
+        text: response.assistantText,
         createdAt: new Date().toISOString(),
         meta: {
-          parser,
-          protocol_to_notebook: protocolWorkflow,
-          inventory_lookup: inventoryLookup,
-          record_lookup: recordLookup,
-          general_science_question: generalScienceQuestion,
-          project_science_question: projectScienceQuestion,
-          result_analysis: resultAnalysis,
+          parser: response.parser,
+          protocol_to_notebook: response.protocolWorkflow,
+          inventory_lookup: response.inventoryLookup,
+          record_lookup: response.recordLookup,
+          general_science_question: response.generalScienceQuestion,
+          project_science_question: response.projectScienceQuestion,
+          result_analysis: response.resultAnalysis,
           notebookDraft: notebookDraft || null,
-          developer_trace: asArray(result.developer_trace),
+          developer_trace: response.developerTrace,
           requestText: messageText
         }
       });
@@ -1552,6 +1502,100 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
     }
   }
 
+  async function runDeveloperSingleToolTest() {
+    if (inFlight) {
+      return;
+    }
+    if (state.settings?.agent?.developerMode !== true) {
+      setStatus('Enable Agent Developer Mode to run manual tool tests.');
+      return;
+    }
+    if (!window.enanaApi?.agentDeveloperTestTools) {
+      setStatus('Developer tool test IPC is unavailable.');
+      return;
+    }
+
+    ensureAgentState();
+
+    const toolName = trimText(developerToolSelect?.value, 120);
+    const requestMessage = trimText(developerToolMessageInput?.value, 3000);
+    if (!toolName) {
+      setStatus('Select a tool to test.');
+      return;
+    }
+    if (!requestMessage) {
+      setStatus('Add a manual test message for the selected tool.');
+      return;
+    }
+
+    const projectId = state.agentChat.projectId || '';
+    const projectName = asArray(state.projects).find((item) => item.id === projectId)?.name || '';
+    state.agentChat.messages.push({
+      id: createId(),
+      role: 'user',
+      text: `Tool test (${toolName})\n${requestMessage}`,
+      createdAt: new Date().toISOString()
+    });
+    state.agentChat.messages = state.agentChat.messages.slice(-40);
+    persist();
+    renderHistory();
+
+    updateInFlightState(true);
+    setStatus(`Running manual test for ${toolName}...`);
+
+    try {
+      const stateSnapshot = await buildSyncedStateSnapshot(projectId);
+      const result = await window.enanaApi.agentDeveloperTestTools({
+        toolName,
+        message: requestMessage,
+        projectId,
+        projectName,
+        stateSnapshot,
+        agent: {
+          developerMode: state.settings?.agent?.developerMode === true
+        }
+      });
+
+      if (!result?.ok && !asArray(result?.items).length) {
+        throw new Error(result?.error || `Manual tool test failed for ${toolName}.`);
+      }
+
+      appendToolTestAssistantMessage(result, `Manual tool test completed for ${toolName}.`, requestMessage);
+      setStatus(result?.ok === true
+        ? `Manual tool test complete for ${toolName}.`
+        : `Manual tool test completed with failures for ${toolName}.`);
+    } catch (error) {
+      appendToolTestAssistantMessage({
+        ok: false,
+        run_mode: 'single',
+        tool_name: toolName,
+        request_message: requestMessage,
+        status: 'error',
+        tool_count: 1,
+        passed_count: 0,
+        failed_count: 1,
+        summary: `Manual tool test failed for ${toolName}: ${String(error?.message || error)}`,
+        items: [
+          {
+            tool_name: toolName,
+            ok: false,
+            status: 'error',
+            request_message: requestMessage,
+            result_message: `Manual tool test failed for ${toolName}: ${String(error?.message || error)}`,
+            summary: `Manual tool test failed for ${toolName}: ${String(error?.message || error)}`,
+            error: String(error?.message || error),
+            preview: '',
+            duration_ms: 0,
+            raw_result: {}
+          }
+        ]
+      }, `Manual tool test failed for ${toolName}: ${String(error?.message || error)}`, requestMessage);
+      setStatus('Error.');
+    } finally {
+      updateInFlightState(false);
+    }
+  }
+
   async function runDeveloperToolSmokeTest() {
     if (inFlight) {
       return;
@@ -1587,48 +1631,19 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
         throw new Error(result?.error || 'Manual tool smoke test failed.');
       }
 
-      state.agentChat.messages.push({
-        id: createId(),
-        role: 'assistant',
-        text: trimText(result?.summary, 12000) || 'Manual tool smoke test completed.',
-        createdAt: new Date().toISOString(),
-        meta: {
-          tool_test: {
-            ok: result?.ok === true,
-            status: trimText(result?.status, 80),
-            tool_count: Number(result?.tool_count) || asArray(result?.items).length,
-            passed_count: Number(result?.passed_count) || 0,
-            failed_count: Number(result?.failed_count) || 0,
-            summary: trimText(result?.summary, 320),
-            items: asArray(result?.items)
-          }
-        }
-      });
-      state.agentChat.messages = state.agentChat.messages.slice(-40);
-      persist();
-      renderHistory();
+      appendToolTestAssistantMessage(result, 'Manual tool smoke test completed.');
       setStatus(result?.ok === true ? 'Manual tool smoke test complete.' : 'Manual tool smoke test completed with failures.');
     } catch (error) {
-      state.agentChat.messages.push({
-        id: createId(),
-        role: 'assistant',
-        text: `Manual tool smoke test failed: ${String(error?.message || error)}`,
-        createdAt: new Date().toISOString(),
-        meta: {
-          tool_test: {
-            ok: false,
-            status: 'error',
-            tool_count: 0,
-            passed_count: 0,
-            failed_count: 0,
-            summary: `Manual tool smoke test failed: ${String(error?.message || error)}`,
-            items: []
-          }
-        }
-      });
-      state.agentChat.messages = state.agentChat.messages.slice(-40);
-      persist();
-      renderHistory();
+      appendToolTestAssistantMessage({
+        ok: false,
+        run_mode: 'all',
+        status: 'error',
+        tool_count: 0,
+        passed_count: 0,
+        failed_count: 0,
+        summary: `Manual tool smoke test failed: ${String(error?.message || error)}`,
+        items: []
+      }, `Manual tool smoke test failed: ${String(error?.message || error)}`);
       setStatus('Error.');
     } finally {
       updateInFlightState(false);
@@ -1638,6 +1653,7 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
   function render() {
     ensureAgentState();
     renderProjectOptions();
+    renderDeveloperToolOptions();
     renderContextSummary();
     renderSessionList();
     void refreshPersistentSessions();

@@ -39,6 +39,7 @@ test('[EDGE] sequence-viewer internal functions are exposed for unit tests', () 
     'parseGenBankLocationSegments',
     'complementBase',
     'complementSequence',
+    'buildCommercialRestrictionFeatures',
     'buildOrfFeatures',
     'buildSelectedOrfTranslationContext',
     'renderDualStrandSequenceLinesHtml',
@@ -194,6 +195,61 @@ test('[EDGE] sequence-viewer buildOrfFeatures collapses nested ORFs in the same 
     JSON.stringify([{ start: 0, end: 12 }])
   );
   assert.equal(plusFrameOne[0].orfLengthAa, 3);
+});
+
+test('[EDGE] sequence-viewer commercial restriction builder keeps only unique cutter sites and groups same-site enzymes once', () => {
+  const features = sequenceViewerInternals.buildCommercialRestrictionFeatures('GAATTCAAAAGAATTCGGATCCGACGTC', 'linear');
+  const bamhiSite = features.find((feature) => feature.site === 'GGATCC');
+  const aatiiSite = features.find((feature) => feature.site === 'GACGTC');
+
+  assert.equal(features.some((feature) => feature.site === 'GAATTC'), false);
+  assert.equal(Boolean(bamhiSite), true);
+  assert.equal(features.filter((feature) => feature.site === 'GGATCC').length, 1);
+  assert.equal(Boolean(aatiiSite), true);
+  assert.equal(features.filter((feature) => feature.site === 'GACGTC').length, 1);
+  assert.equal(aatiiSite.enzymeNames.includes('AatII'), true);
+  assert.equal(aatiiSite.enzymeNames.includes('ZraI'), true);
+  assert.equal(Array.isArray(aatiiSite.cutPatterns), true);
+  assert.equal(aatiiSite.cutPatterns.length >= 2, true);
+  assert.equal(aatiiSite.cut, '');
+});
+
+test('[EDGE] sequence-viewer commercial restriction builder detects reverse-oriented unique sites once', () => {
+  const features = sequenceViewerInternals.buildCommercialRestrictionFeatures('TTTGAGACCAAA', 'linear');
+  const bsaSite = features.find((feature) => feature.site === 'GGTCTC');
+
+  assert.equal(Boolean(bsaSite), true);
+  assert.equal(features.filter((feature) => feature.site === 'GGTCTC').length, 1);
+  assert.equal(bsaSite.strand, -1);
+  assert.equal(bsaSite.enzymeNames.includes('BsaI'), true);
+});
+
+test('[EDGE] sequence-viewer commercial restriction builder filters by selected vendors', () => {
+  const sequence = 'TTATAAGAACAAAAAATCCCCATC';
+  const both = sequenceViewerInternals.buildCommercialRestrictionFeatures(sequence, 'linear', {
+    vendorFilter: { neb: true, thermo: true }
+  });
+  const nebOnly = sequenceViewerInternals.buildCommercialRestrictionFeatures(sequence, 'linear', {
+    vendorFilter: { neb: true, thermo: false }
+  });
+  const thermoOnly = sequenceViewerInternals.buildCommercialRestrictionFeatures(sequence, 'linear', {
+    vendorFilter: { neb: false, thermo: true }
+  });
+  const neither = sequenceViewerInternals.buildCommercialRestrictionFeatures(sequence, 'linear', {
+    vendorFilter: { neb: false, thermo: false }
+  });
+
+  assert.equal(both.length, 3);
+  assert.equal(nebOnly.length, 2);
+  assert.equal(thermoOnly.length, 2);
+  assert.equal(neither.length, 0);
+  assert.equal(both.some((feature) => feature.name === 'AanI'), true);
+  assert.equal(both.some((feature) => feature.name === 'AloI'), true);
+  assert.equal(both.some((feature) => feature.name === 'BccI'), true);
+  assert.equal(nebOnly.some((feature) => feature.name === 'PsiI'), true);
+  assert.equal(thermoOnly.some((feature) => feature.name === 'AloI'), true);
+  assert.equal(nebOnly.some((feature) => feature.name === 'AloI'), false);
+  assert.equal(thermoOnly.some((feature) => feature.name === 'BccI'), false);
 });
 
 test('[EDGE] sequence-viewer restriction geometry helper is deterministic for KpnI', () => {
@@ -438,6 +494,27 @@ test('[EDGE] sequence-viewer feature detail formatter includes core metadata', (
   assert.match(html, /Strand:<\/strong> -/);
   assert.match(html, /99.12%/);
   assert.match(html, /87.56%/);
+});
+
+test('[EDGE] sequence-viewer feature detail formatter shows grouped restriction-site enzymes and cut patterns', () => {
+  const html = sequenceViewerInternals.formatSelectedFeatureDetailHtml({
+    name: 'AatII',
+    type: 'restriction_site',
+    strand: 1,
+    source: 'commercial_restriction',
+    mode: 'NEB/Thermo',
+    site: 'GACGTC',
+    cut: '',
+    cutPatterns: ['GACGT^C', 'GAC^GTC'],
+    enzymeNames: ['AatII', 'ZraI'],
+    vendors: ['Thermo Fisher Scientific', 'New England Biolabs'],
+    segments: [{ start: 12, end: 18 }]
+  }, 40);
+
+  assert.match(html, /Recognition Site:/);
+  assert.match(html, /Cut Patterns:/);
+  assert.match(html, /AatII, ZraI/);
+  assert.match(html, /Thermo Fisher Scientific, New England Biolabs/);
 });
 
 test('[EDGE] sequence-viewer feature detail formatter shows ORF metadata when present', () => {
@@ -983,6 +1060,8 @@ test('[EDGE] sequence-viewer ORF toggle defaults off and controls ORF bars plus 
     'sequence-viewer-load-btn',
     'sequence-viewer-annotate-btn',
     'sequence-viewer-orf-toggle',
+    'sequence-viewer-restriction-neb-toggle',
+    'sequence-viewer-restriction-thermo-toggle',
     'sequence-viewer-clear-btn',
     'sequence-viewer-status',
     'sequence-viewer-messages',
@@ -1039,6 +1118,84 @@ test('[EDGE] sequence-viewer ORF toggle defaults off and controls ORF bars plus 
   assert.equal(statFeatures.textContent, '0');
   assert.equal(sequenceHost.innerHTML.includes('ORF +1'), false);
   assert.equal(sequenceHost.innerHTML.includes('sequence-viewer-aa-row'), false);
+});
+
+test('[EDGE] sequence-viewer restriction vendor checkboxes filter visible unique cutters', () => {
+  const ids = [
+    'sequence-viewer-home-workspace',
+    'sequence-viewer-detail-workspace',
+    'sequence-viewer-home-paste-btn',
+    'sequence-viewer-mode-paste',
+    'sequence-viewer-mode-file',
+    'sequence-viewer-paste-panel',
+    'sequence-viewer-file-panel',
+    'sequence-viewer-textarea',
+    'sequence-viewer-file-input',
+    'sequence-viewer-file-choose',
+    'sequence-viewer-file-name',
+    'sequence-viewer-load-btn',
+    'sequence-viewer-annotate-btn',
+    'sequence-viewer-orf-toggle',
+    'sequence-viewer-restriction-neb-toggle',
+    'sequence-viewer-restriction-thermo-toggle',
+    'sequence-viewer-clear-btn',
+    'sequence-viewer-status',
+    'sequence-viewer-messages',
+    'sequence-viewer-record-select',
+    'sequence-viewer-stat-format',
+    'sequence-viewer-stat-length',
+    'sequence-viewer-stat-topology',
+    'sequence-viewer-stat-gc',
+    'sequence-viewer-stat-ambiguous',
+    'sequence-viewer-stat-quality',
+    'sequence-viewer-stat-features',
+    'sequence-viewer-stat-restriction-sites',
+    'sequence-viewer-feature-rail-host',
+    'sequence-viewer-feature-detail',
+    'sequence-viewer-sequence-host'
+  ];
+  const document = createMockDocument(ids);
+  const moduleWithDom = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    { document }
+  );
+  moduleWithDom.initSequenceViewer();
+
+  trigger(document.getElementById('sequence-viewer-home-paste-btn'), 'click');
+  const textarea = document.getElementById('sequence-viewer-textarea');
+  textarea.value = '>vendor_filter\nTTATAAGAACAAAAAATCCCCATC\n';
+  trigger(document.getElementById('sequence-viewer-load-btn'), 'click');
+
+  const nebToggle = document.getElementById('sequence-viewer-restriction-neb-toggle');
+  const thermoToggle = document.getElementById('sequence-viewer-restriction-thermo-toggle');
+  const statRestrictionSites = document.getElementById('sequence-viewer-stat-restriction-sites');
+  const sequenceHost = document.getElementById('sequence-viewer-sequence-host');
+
+  assert.equal(Boolean(nebToggle.checked), true);
+  assert.equal(Boolean(thermoToggle.checked), true);
+  assert.equal(statRestrictionSites.textContent, '3');
+  assert.equal(sequenceHost.innerHTML.includes('AanI'), true);
+  assert.equal(sequenceHost.innerHTML.includes('AloI'), true);
+  assert.equal(sequenceHost.innerHTML.includes('BccI'), true);
+
+  thermoToggle.checked = false;
+  trigger(thermoToggle, 'change');
+  assert.equal(statRestrictionSites.textContent, '2');
+  assert.equal(sequenceHost.innerHTML.includes('PsiI'), true);
+  assert.equal(sequenceHost.innerHTML.includes('AloI'), false);
+  assert.equal(sequenceHost.innerHTML.includes('BccI'), true);
+
+  nebToggle.checked = false;
+  trigger(nebToggle, 'change');
+  assert.equal(statRestrictionSites.textContent, '0');
+  assert.equal((sequenceHost.innerHTML.match(/sequence-viewer-restriction-annot/g) || []).length, 0);
+
+  thermoToggle.checked = true;
+  trigger(thermoToggle, 'change');
+  assert.equal(statRestrictionSites.textContent, '2');
+  assert.equal(sequenceHost.innerHTML.includes('AanI'), true);
+  assert.equal(sequenceHost.innerHTML.includes('AloI'), true);
+  assert.equal(sequenceHost.innerHTML.includes('BccI'), false);
 });
 
 test('[EDGE] sequence-viewer annotate updates only the selected record', async () => {

@@ -1,0 +1,1 @@
+The agent chat control does not record anything. Also I cannot switch between different chat.

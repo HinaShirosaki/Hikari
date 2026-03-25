@@ -1,0 +1,121 @@
+export function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+export function round(value, digits = 4) {
+  if (!Number.isFinite(value)) {
+    return null;
+  }
+  const factor = 10 ** digits;
+  return Math.round(value * factor) / factor;
+}
+
+export function mean(values) {
+  if (!values.length) {
+    return 0;
+  }
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+export function confidenceLabel(score) {
+  if (score >= 0.75) {
+    return 'high';
+  }
+  if (score >= 0.5) {
+    return 'medium';
+  }
+  return 'low';
+}
+
+export function createEmptyManualOverrides() {
+  return {
+    laneSegmentation: {
+      gelLeft: null,
+      gelRight: null,
+      dividers: [],
+      dividerDone: false,
+      bandTop: null,
+      bandBottom: null
+    },
+    addedBands: [],
+    ladderLane: null,
+    ladderBands: [],
+    ladderBandsDone: false
+  };
+}
+
+export function normalizeManualOverrides(raw) {
+  const input = raw && typeof raw === 'object' ? raw : {};
+  const normalized = createEmptyManualOverrides();
+
+  const rawSegmentation = input.laneSegmentation && typeof input.laneSegmentation === 'object'
+    ? input.laneSegmentation
+    : {};
+  const rawGelLeft = rawSegmentation.gelLeft;
+  const rawGelRight = rawSegmentation.gelRight;
+  const rawBandTop = rawSegmentation.bandTop;
+  const rawBandBottom = rawSegmentation.bandBottom;
+  const gelLeft = (rawGelLeft === null || rawGelLeft === undefined || rawGelLeft === '')
+    ? NaN
+    : Number(rawGelLeft);
+  const gelRight = (rawGelRight === null || rawGelRight === undefined || rawGelRight === '')
+    ? NaN
+    : Number(rawGelRight);
+  const bandTop = (rawBandTop === null || rawBandTop === undefined || rawBandTop === '')
+    ? NaN
+    : Number(rawBandTop);
+  const bandBottom = (rawBandBottom === null || rawBandBottom === undefined || rawBandBottom === '')
+    ? NaN
+    : Number(rawBandBottom);
+  normalized.laneSegmentation = {
+    gelLeft: Number.isFinite(gelLeft) ? Math.max(0, Math.floor(gelLeft)) : null,
+    gelRight: Number.isFinite(gelRight) ? Math.max(0, Math.floor(gelRight)) : null,
+    dividers: (Array.isArray(rawSegmentation.dividers) ? rawSegmentation.dividers : [])
+      .map((value) => Math.floor(Number(value)))
+      .filter((value) => Number.isFinite(value) && value >= 0)
+      .sort((a, b) => a - b)
+      .filter((value, index, all) => index === 0 || value !== all[index - 1]),
+    dividerDone: Boolean(rawSegmentation.dividerDone),
+    bandTop: Number.isFinite(bandTop) ? Math.max(0, Math.floor(bandTop)) : null,
+    bandBottom: Number.isFinite(bandBottom) ? Math.max(0, Math.floor(bandBottom)) : null
+  };
+
+  normalized.addedBands = (Array.isArray(input.addedBands) ? input.addedBands : [])
+    .map((item) => ({
+      laneIndex: Math.max(1, Math.floor(Number(item?.laneIndex) || 0)),
+      pixelY: Math.max(0, Math.floor(Number(item?.pixelY) || 0))
+    }))
+    .filter((item) => item.laneIndex > 0);
+
+  const ladderLaneValue = Number(input.ladderLane);
+  normalized.ladderLane = Number.isFinite(ladderLaneValue) && ladderLaneValue >= 1
+    ? Math.floor(ladderLaneValue)
+    : null;
+  normalized.ladderBands = (Array.isArray(input.ladderBands) ? input.ladderBands : [])
+    .map((item) => ({
+      pixelY: Math.max(0, Math.floor(Number(item?.pixelY) || 0)),
+      mw: Number(item?.mw)
+    }))
+    .filter((item) => Number.isFinite(item.mw) && item.mw > 0)
+    .sort((a, b) => a.pixelY - b.pixelY);
+  normalized.ladderBandsDone = Boolean(input.ladderBandsDone);
+
+  return normalized;
+}
+
+export function safeFilePart(raw, fallback) {
+  const cleaned = String(raw || '')
+    .trim()
+    .replace(/[^a-zA-Z0-9._-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return cleaned || fallback;
+}
+
+export function escapeCsv(value) {
+  const text = String(value ?? '');
+  if (/[",\r\n]/.test(text)) {
+    return `"${text.replace(/"/g, '""')}"`;
+  }
+  return text;
+}
