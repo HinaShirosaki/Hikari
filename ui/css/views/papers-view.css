@@ -1,1 +1,117 @@
-/* papers-view: no dedicated selectors yet; uses shared base/theme styles. */
+#papers-view.view.is-active {
+  display: grid;
+  gap: 16px;
+}
+
+.papers-viewer-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.papers-viewer-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.papers-viewer-summary {
+  display: grid;
+  gap: 4px;
+}
+
+.papers-viewer-title {
+  margin: 0;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.papers-viewer-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.papers-viewer-page-field {
+  display: inline-grid;
+  gap: 4px;
+  min-width: 72px;
+}
+
+.papers-viewer-page-field input {
+  width: 80px;
+  min-width: 0;
+}
+
+.papers-viewer-shell {
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.72), rgba(222, 236, 255, 0.38) 48%, rgba(203, 224, 255, 0.22) 100%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(226, 239, 255, 0.22));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    0 18px 38px rgba(26, 66, 112, 0.12);
+  min-height: 420px;
+  overflow: hidden;
+}
+
+.papers-viewer-shell.is-empty {
+  display: grid;
+  place-items: center;
+}
+
+.papers-viewer-empty {
+  display: grid;
+  place-items: center;
+  text-align: center;
+  min-height: 420px;
+  padding: 32px 24px;
+  color: var(--muted);
+}
+
+.papers-viewer-empty p {
+  margin: 0;
+  max-width: 28rem;
+  line-height: 1.6;
+}
+
+.papers-viewer-stage {
+  max-height: min(78vh, 1100px);
+  overflow: auto;
+  padding: 18px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.papers-viewer-canvas {
+  display: block;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow:
+    0 0 0 1px rgba(18, 48, 84, 0.08),
+    0 18px 38px rgba(19, 47, 84, 0.18);
+}
+
+#paper-viewer-status.is-error {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+@media (max-width: 720px) {
+  .papers-viewer-head {
+    flex-direction: column;
+  }
+
+  .papers-viewer-toolbar {
+    justify-content: flex-start;
+  }
+
+  .papers-viewer-stage {
+    padding: 12px;
+  }
+}

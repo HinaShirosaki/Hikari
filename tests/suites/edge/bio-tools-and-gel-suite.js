@@ -1491,6 +1491,257 @@ test('[EDGE] sequence-viewer bottom-track click updates selected feature detail 
   assert.match(detail.innerHTML, /promoter/);
 });
 
+test('[EDGE] sequence-viewer drag selection context menu can add a feature', async () => {
+  const ids = [
+    'sequence-viewer-mode-paste',
+    'sequence-viewer-mode-file',
+    'sequence-viewer-paste-panel',
+    'sequence-viewer-file-panel',
+    'sequence-viewer-textarea',
+    'sequence-viewer-file-input',
+    'sequence-viewer-file-choose',
+    'sequence-viewer-file-name',
+    'sequence-viewer-load-btn',
+    'sequence-viewer-annotate-btn',
+    'sequence-viewer-clear-btn',
+    'sequence-viewer-status',
+    'sequence-viewer-messages',
+    'sequence-viewer-record-select',
+    'sequence-viewer-stat-format',
+    'sequence-viewer-stat-length',
+    'sequence-viewer-stat-topology',
+    'sequence-viewer-stat-gc',
+    'sequence-viewer-stat-ambiguous',
+    'sequence-viewer-stat-quality',
+    'sequence-viewer-stat-features',
+    'sequence-viewer-feature-rail-host',
+    'sequence-viewer-feature-detail',
+    'sequence-viewer-sequence-host',
+    'sequence-viewer-feature-context-menu',
+    'sequence-viewer-feature-editor-overlay',
+    'sequence-viewer-feature-editor-form',
+    'sequence-viewer-feature-editor-title',
+    'sequence-viewer-feature-editor-note',
+    'sequence-viewer-feature-editor-name',
+    'sequence-viewer-feature-editor-type',
+    'sequence-viewer-feature-editor-strand',
+    'sequence-viewer-feature-editor-start',
+    'sequence-viewer-feature-editor-end',
+    'sequence-viewer-feature-editor-description',
+    'sequence-viewer-feature-editor-close',
+    'sequence-viewer-feature-editor-cancel'
+  ];
+  const document = createMockDocument(ids);
+  const moduleWithDom = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    { document }
+  );
+  const viewer = moduleWithDom.initSequenceViewer();
+  viewer.loadFromExternal({
+    name: 'selection_add',
+    sequence: 'ACGTACGTACGT',
+    source: 'external',
+    features: []
+  });
+
+  const sequenceHost = document.getElementById('sequence-viewer-sequence-host');
+  const contextMenu = document.getElementById('sequence-viewer-feature-context-menu');
+  const featureEditorForm = document.getElementById('sequence-viewer-feature-editor-form');
+  const featureEditorName = document.getElementById('sequence-viewer-feature-editor-name');
+  const featureEditorType = document.getElementById('sequence-viewer-feature-editor-type');
+  const featureEditorDescription = document.getElementById('sequence-viewer-feature-editor-description');
+  const featureRailHost = document.getElementById('sequence-viewer-feature-rail-host');
+  const featureDetail = document.getElementById('sequence-viewer-feature-detail');
+  const statFeatures = document.getElementById('sequence-viewer-stat-features');
+  const initialFeatureCount = Number(statFeatures.textContent || 0);
+
+  const lineElement = {
+    dataset: { lineStart: '0', lineEnd: '12' },
+    querySelector() {
+      return {
+        getBoundingClientRect() {
+          return { left: 20, width: 96 };
+        }
+      };
+    }
+  };
+  const lineTarget = {
+    closest(selector) {
+      if (selector === '.sequence-viewer-dual-line') {
+        return lineElement;
+      }
+      return null;
+    }
+  };
+
+  trigger(sequenceHost, 'mousedown', { button: 0, clientX: 20, target: lineTarget });
+  trigger(sequenceHost, 'mousemove', { clientX: 52, target: lineTarget });
+  trigger(sequenceHost, 'mouseup', { target: lineTarget });
+  trigger(sequenceHost, 'contextmenu', { clientX: 52, clientY: 84, target: lineTarget });
+
+  assert.match(contextMenu.innerHTML, /Add Feature/);
+
+  trigger(contextMenu, 'click', {
+    target: {
+      closest(selector) {
+        if (selector === '[data-sequence-feature-action]') {
+          return { dataset: { sequenceFeatureAction: 'add' } };
+        }
+        return null;
+      }
+    }
+  });
+
+  featureEditorName.value = 'Manual_A';
+  featureEditorType.value = 'promoter';
+  featureEditorDescription.value = 'added from selection';
+  trigger(featureEditorForm, 'submit');
+  await flushAsync();
+
+  assert.equal(Number(statFeatures.textContent || 0), initialFeatureCount + 1);
+  assert.match(featureRailHost.innerHTML, /Manual_A/);
+  assert.match(featureDetail.innerHTML, /Manual_A/);
+  assert.match(featureDetail.innerHTML, /promoter/);
+});
+
+test('[EDGE] sequence-viewer drag selection context menu can edit and delete an overlapping feature', async () => {
+  const ids = [
+    'sequence-viewer-mode-paste',
+    'sequence-viewer-mode-file',
+    'sequence-viewer-paste-panel',
+    'sequence-viewer-file-panel',
+    'sequence-viewer-textarea',
+    'sequence-viewer-file-input',
+    'sequence-viewer-file-choose',
+    'sequence-viewer-file-name',
+    'sequence-viewer-load-btn',
+    'sequence-viewer-annotate-btn',
+    'sequence-viewer-clear-btn',
+    'sequence-viewer-status',
+    'sequence-viewer-messages',
+    'sequence-viewer-record-select',
+    'sequence-viewer-stat-format',
+    'sequence-viewer-stat-length',
+    'sequence-viewer-stat-topology',
+    'sequence-viewer-stat-gc',
+    'sequence-viewer-stat-ambiguous',
+    'sequence-viewer-stat-quality',
+    'sequence-viewer-stat-features',
+    'sequence-viewer-feature-rail-host',
+    'sequence-viewer-feature-detail',
+    'sequence-viewer-sequence-host',
+    'sequence-viewer-feature-context-menu',
+    'sequence-viewer-feature-editor-overlay',
+    'sequence-viewer-feature-editor-form',
+    'sequence-viewer-feature-editor-title',
+    'sequence-viewer-feature-editor-note',
+    'sequence-viewer-feature-editor-name',
+    'sequence-viewer-feature-editor-type',
+    'sequence-viewer-feature-editor-strand',
+    'sequence-viewer-feature-editor-start',
+    'sequence-viewer-feature-editor-end',
+    'sequence-viewer-feature-editor-description',
+    'sequence-viewer-feature-editor-close',
+    'sequence-viewer-feature-editor-cancel'
+  ];
+  const document = createMockDocument(ids);
+  const moduleWithDom = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    { document }
+  );
+  const viewer = moduleWithDom.initSequenceViewer();
+  viewer.loadFromExternal({
+    name: 'selection_edit_delete',
+    sequence: 'ACGTACGTACGT',
+    source: 'external',
+    features: [
+      {
+        id: 'feature_manual_1',
+        name: 'Feature_A',
+        type: 'promoter',
+        strand: 1,
+        source: 'manual',
+        segments: [{ start: 1, end: 5 }]
+      }
+    ]
+  });
+
+  const sequenceHost = document.getElementById('sequence-viewer-sequence-host');
+  const contextMenu = document.getElementById('sequence-viewer-feature-context-menu');
+  const featureEditorForm = document.getElementById('sequence-viewer-feature-editor-form');
+  const featureEditorName = document.getElementById('sequence-viewer-feature-editor-name');
+  const featureRailHost = document.getElementById('sequence-viewer-feature-rail-host');
+  const featureDetail = document.getElementById('sequence-viewer-feature-detail');
+  const statFeatures = document.getElementById('sequence-viewer-stat-features');
+  const initialFeatureCount = Number(statFeatures.textContent || 0);
+
+  const lineElement = {
+    dataset: { lineStart: '0', lineEnd: '12' },
+    querySelector() {
+      return {
+        getBoundingClientRect() {
+          return { left: 20, width: 96 };
+        }
+      };
+    }
+  };
+  const lineTarget = {
+    closest(selector) {
+      if (selector === '.sequence-viewer-dual-line') {
+        return lineElement;
+      }
+      return null;
+    }
+  };
+
+  trigger(sequenceHost, 'mousedown', { button: 0, clientX: 28, target: lineTarget });
+  trigger(sequenceHost, 'mousemove', { clientX: 60, target: lineTarget });
+  trigger(sequenceHost, 'mouseup', { target: lineTarget });
+  trigger(sequenceHost, 'contextmenu', { clientX: 60, clientY: 84, target: lineTarget });
+
+  assert.match(contextMenu.innerHTML, /Edit Feature_A/);
+
+  trigger(contextMenu, 'click', {
+    target: {
+      closest(selector) {
+        if (selector === '[data-sequence-feature-action]') {
+          return { dataset: { sequenceFeatureAction: 'edit' } };
+        }
+        return null;
+      }
+    }
+  });
+
+  featureEditorName.value = 'Feature_B';
+  trigger(featureEditorForm, 'submit');
+  await flushAsync();
+
+  assert.equal(Number(statFeatures.textContent || 0), initialFeatureCount);
+  assert.match(featureRailHost.innerHTML, /Feature_B/);
+  assert.match(featureDetail.innerHTML, /Feature_B/);
+
+  trigger(sequenceHost, 'mousedown', { button: 0, clientX: 28, target: lineTarget });
+  trigger(sequenceHost, 'mousemove', { clientX: 60, target: lineTarget });
+  trigger(sequenceHost, 'mouseup', { target: lineTarget });
+  trigger(sequenceHost, 'contextmenu', { clientX: 60, clientY: 84, target: lineTarget });
+
+  trigger(contextMenu, 'click', {
+    target: {
+      closest(selector) {
+        if (selector === '[data-sequence-feature-action]') {
+          return { dataset: { sequenceFeatureAction: 'delete' } };
+        }
+        return null;
+      }
+    }
+  });
+  await flushAsync();
+
+  assert.equal(Number(statFeatures.textContent || 0), initialFeatureCount - 1);
+  assert.equal(featureRailHost.innerHTML.includes('Feature_B'), false);
+  assert.equal(featureDetail.innerHTML.includes('Feature_B'), false);
+});
+
 [
   ['0', 0],
   ['1', 1],

@@ -267,6 +267,30 @@ function registerDataIpc(deps = {}) {
     return { ok: true, path: resolvedPath };
   });
 
+  ipcMain.handle('storage:read-file-base64', async (_event, payload) => {
+    const normalizedPayload = normalizeJsonPayload(payload, {});
+    const targetPath = typeof normalizedPayload?.path === 'string' ? normalizedPayload.path.trim() : '';
+    if (!targetPath) {
+      return { ok: false, error: 'Missing file path.' };
+    }
+
+    const resolvedPath = path.resolve(targetPath);
+    try {
+      const bytes = await fs.readFile(resolvedPath);
+      return {
+        ok: true,
+        path: resolvedPath,
+        dataBase64: bytes.toString('base64')
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        error: String(error?.message || error),
+        path: resolvedPath
+      };
+    }
+  });
+
   ipcMain.handle('storage:import-root', async (_event, payload) => {
     const normalizedPayload = normalizeJsonPayload(payload, {});
     const storagePath = cleanText(normalizedPayload?.storagePath, 2000);

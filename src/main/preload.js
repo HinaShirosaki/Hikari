@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('enanaApi', {
   importStorageRoot: (storagePath) => ipcRenderer.invoke('storage:import-root', { storagePath }),
   storeImportedFile: (payload) => ipcRenderer.invoke('storage:store-imported-file', payload),
   openFilePath: (path) => ipcRenderer.invoke('storage:open-file', { path }),
+  readFileBase64: (path) => ipcRenderer.invoke('storage:read-file-base64', { path }),
   sequenceLibraryList: (payload) => ipcRenderer.invoke('sequence-library:list', payload),
   sequenceLibraryGet: (payload) => ipcRenderer.invoke('sequence-library:get', payload),
   sequenceLibraryUpsert: (payload) => ipcRenderer.invoke('sequence-library:upsert', payload),
