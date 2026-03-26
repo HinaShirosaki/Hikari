@@ -1,3 +1,5 @@
+import { createPapersPdfViewer } from './papers-pdf-viewer.js';
+
 export function initPapersManagement({ state, persist, createId, safeText, onCreateProtocolDraft }) {
   const paperForm = document.getElementById('paper-form');
   const paperTitleInput = document.getElementById('paper-title');
@@ -5,6 +7,27 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
   const paperLinkTypeSelect = document.getElementById('paper-link-type');
   const paperLinkTargetSelect = document.getElementById('paper-link-target');
   const paperList = document.getElementById('paper-list');
+  const paperViewer = createPapersPdfViewer({
+    shell: document.getElementById('paper-viewer-shell'),
+    emptyState: document.getElementById('paper-viewer-empty'),
+    stage: document.getElementById('paper-viewer-stage'),
+    canvas: document.getElementById('paper-viewer-canvas'),
+    title: document.getElementById('paper-viewer-title'),
+    meta: document.getElementById('paper-viewer-meta'),
+    status: document.getElementById('paper-viewer-status'),
+    toolbar: document.getElementById('paper-viewer-toolbar'),
+    prevBtn: document.getElementById('paper-viewer-prev-btn'),
+    nextBtn: document.getElementById('paper-viewer-next-btn'),
+    pageInput: document.getElementById('paper-viewer-page-input'),
+    pageCount: document.getElementById('paper-viewer-page-count'),
+    zoomOutBtn: document.getElementById('paper-viewer-zoom-out-btn'),
+    zoomInBtn: document.getElementById('paper-viewer-zoom-in-btn'),
+    zoomResetBtn: document.getElementById('paper-viewer-zoom-reset-btn'),
+    fitWidthBtn: document.getElementById('paper-viewer-fit-width-btn'),
+    zoomLabel: document.getElementById('paper-viewer-zoom-label'),
+    openExternalBtn: document.getElementById('paper-viewer-open-btn'),
+    closeBtn: document.getElementById('paper-viewer-close-btn')
+  });
 
   const journalClubNameInput = document.getElementById('journal-club-name');
   const journalClubDescriptionInput = document.getElementById('journal-club-description');
@@ -252,6 +275,9 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
   function deletePaper(paperId) {
     state.papers = state.papers.filter((item) => item.id !== paperId);
     state.paperExperimentLinks = (state.paperExperimentLinks || []).filter((item) => item.paperId !== paperId);
+    if (paperViewer.getActivePaperId() === paperId) {
+      void paperViewer.resetViewer('The open paper was deleted.');
+    }
     persist();
     renderPaperList();
     renderKnowledgeSection();
@@ -494,6 +520,51 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
     window.alert('Unable to open this PDF. Re-upload the paper to restore the local file path.');
   }
 
+  async function resolvePaperPdfBytes(paper) {
+    const embeddedBase64 = parsePdfDataUrl(paper?.pdfDataUrl);
+    if (embeddedBase64) {
+      return decodeBase64Pdf(embeddedBase64);
+    }
+
+    const candidatePath = resolveStoredPaperPath(paper);
+    if (candidatePath && window.enanaApi?.readFileBase64) {
+      const result = await window.enanaApi.readFileBase64(candidatePath);
+      const dataBase64 = String(result?.dataBase64 || '').trim();
+      if (result?.ok && dataBase64) {
+        return decodeBase64Pdf(dataBase64);
+      }
+    }
+
+    throw new Error('Unable to load this PDF from app storage.');
+  }
+
+  function buildPaperViewerSummary(paper) {
+    const details = [
+      String(paper?.fileName || '').trim(),
+      formatLinkedTarget(paper),
+      paper?.updatedAt ? `Updated ${new Date(paper.updatedAt).toLocaleString()}` : ''
+    ].filter(Boolean);
+    return details.join(' | ');
+  }
+
+  async function viewPaperPdf(paperId) {
+    const paper = state.papers.find((item) => item.id === paperId);
+    if (!paper) {
+      return;
+    }
+
+    try {
+      await paperViewer.openPaper({
+        paper,
+        summary: buildPaperViewerSummary(paper),
+        resolveBytes: resolvePaperPdfBytes,
+        onOpenExternal: openPaperPdf
+      });
+    } catch (error) {
+      window.alert(String(error?.message || error || 'Failed to load the PDF viewer.'));
+    }
+  }
+
   async function onAskKnowledge() {
     const projectId = knowledgeProjectSelect?.value || '';
     const question = knowledgeQuestionInput?.value.trim() || '';
@@ -630,6 +701,12 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
   }
 
   function onPaperListClick(event) {
+    const viewBtn = event.target.closest('[data-paper-view]');
+    if (viewBtn) {
+      void viewPaperPdf(viewBtn.dataset.paperView);
+      return;
+    }
+
     const openBtn = event.target.closest('[data-paper-open]');
     if (openBtn) {
       void openPaperPdf(openBtn.dataset.paperOpen);
@@ -811,7 +888,8 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
             <p><strong>Updated:</strong> ${new Date(paper.updatedAt).toLocaleString()}</p>
             <p><strong>Summary:</strong> ${safeText(paper.summary || 'No summary yet.')}</p>
             <div class="card-actions">
-              <button class="ghost-btn" data-paper-open="${paper.id}">Open PDF</button>
+              <button class="primary-btn" data-paper-view="${paper.id}">View PDF</button>
+              <button class="ghost-btn" data-paper-open="${paper.id}">Open Externally</button>
               <button class="primary-btn" data-paper-summarize="${paper.id}" ${paper.summaryStatus === 'running' ? 'disabled' : ''}>
                 ${paper.summaryStatus === 'running' ? 'Summarizing...' : 'Summarize'}
               </button>
@@ -1256,6 +1334,15 @@ function parsePdfDataUrl(pdfDataUrl) {
     return '';
   }
   return match[1];
+}
+
+function decodeBase64Pdf(base64) {
+  const binary = atob(String(base64 || '').trim());
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return bytes;
 }
 
 async function requestOpenAi({ endpoint, token, model, prompt, fileName, pdfDataUrl }) {

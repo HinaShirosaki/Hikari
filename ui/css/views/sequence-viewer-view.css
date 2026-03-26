@@ -225,6 +225,26 @@
   accent-color: var(--accent);
 }
 
+.sequence-viewer-inline-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 0.86rem;
+  font-weight: 650;
+  color: #1f3553;
+}
+
+.sequence-viewer-inline-select select {
+  border-radius: 999px;
+  border: 1px solid rgba(109, 141, 183, 0.34);
+  background: rgba(255, 255, 255, 0.88);
+  color: inherit;
+  font: inherit;
+  padding: 4px 10px;
+}
+
 .sequence-viewer-inline-toggle-group {
   display: inline-flex;
   align-items: center;
@@ -417,10 +437,42 @@
 
 .sequence-viewer-aa-row {
   pointer-events: none;
+  align-items: center;
 }
 
 .sequence-viewer-aa-text {
-  color: #355a8a;
+  color: inherit;
+}
+
+.sequence-viewer-aa-track {
+  position: relative;
+  display: block;
+  min-height: 24px;
+}
+
+.sequence-viewer-aa-chip {
+  position: absolute;
+  top: 0;
+  min-height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+  border-radius: 6px;
+  border: 1px solid var(--sequence-viewer-aa-chip-border, rgba(92, 132, 191, 0.28));
+  background: var(--sequence-viewer-aa-chip-background, rgba(92, 132, 191, 0.14));
+  color: var(--sequence-viewer-aa-chip-color, #355a8a);
+  font-size: 0.67rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
+  text-align: center;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+
+.sequence-viewer-aa-chip-stop {
+  font-size: 0.6rem;
 }
 
 .sequence-viewer-aa-text-content {
@@ -595,6 +647,106 @@
   font-weight: 700;
 }
 
+.sequence-viewer-context-menu {
+  position: fixed;
+  z-index: 2600;
+  min-width: 210px;
+  padding: 6px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.74);
+  background: linear-gradient(155deg, rgba(255, 255, 255, 0.97), rgba(234, 247, 255, 0.9));
+  box-shadow: 0 14px 28px rgba(16, 64, 107, 0.24);
+  display: grid;
+  gap: 4px;
+}
+
+.sequence-viewer-context-menu[hidden] {
+  display: none !important;
+}
+
+.sequence-viewer-context-item {
+  border: 1px solid rgba(207, 225, 244, 0.92);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.84);
+  color: var(--primary);
+  text-align: left;
+  padding: 7px 9px;
+  font-size: 0.86rem;
+  cursor: pointer;
+}
+
+.sequence-viewer-context-item:hover:not(:disabled),
+.sequence-viewer-context-item:focus-visible:not(:disabled) {
+  background: rgba(226, 242, 255, 0.92);
+}
+
+.sequence-viewer-context-item:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.sequence-viewer-feature-editor-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2550;
+  background: rgba(18, 34, 55, 0.18);
+  display: grid;
+  place-items: center;
+  padding: 18px;
+}
+
+.sequence-viewer-feature-editor-overlay[hidden] {
+  display: none !important;
+}
+
+.sequence-viewer-feature-editor {
+  width: min(100%, 560px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.96), rgba(240, 249, 255, 0.94));
+  box-shadow: 0 20px 44px rgba(16, 64, 107, 0.24);
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.sequence-viewer-feature-editor-head {
+  align-items: center;
+}
+
+.sequence-viewer-feature-editor-head h4 {
+  margin: 0;
+}
+
+.sequence-viewer-feature-editor-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.sequence-viewer-feature-editor-grid label {
+  display: grid;
+  gap: 5px;
+  font-size: 0.84rem;
+  color: #36567e;
+}
+
+.sequence-viewer-feature-editor-grid input,
+.sequence-viewer-feature-editor-grid select,
+.sequence-viewer-feature-editor-grid textarea {
+  border-radius: 10px;
+  border: 1px solid rgba(109, 141, 183, 0.34);
+  background: rgba(255, 255, 255, 0.92);
+  color: #163760;
+  font: inherit;
+  padding: 8px 10px;
+  resize: vertical;
+}
+
+.sequence-viewer-feature-editor-field-wide {
+  grid-column: 1 / -1;
+}
+
 @media (max-width: 1260px) {
   .sequence-viewer-results {
     grid-template-columns: 1fr;
@@ -617,6 +769,10 @@
   }
 
   .sequence-viewer-results {
+    grid-template-columns: 1fr;
+  }
+
+  .sequence-viewer-feature-editor-grid {
     grid-template-columns: 1fr;
   }
 
@@ -688,12 +844,22 @@ body.theme-night .sequence-viewer-inline-toggle {
   color: rgba(213, 234, 255, 0.9);
 }
 
+body.theme-night .sequence-viewer-inline-select {
+  color: rgba(213, 234, 255, 0.9);
+}
+
+body.theme-night .sequence-viewer-inline-select select {
+  border-color: rgba(186, 218, 255, 0.32);
+  background: rgba(27, 40, 61, 0.72);
+  color: rgba(236, 246, 255, 0.96);
+}
+
 body.theme-night .sequence-viewer-inline-toggle-group-label {
   color: rgba(213, 234, 255, 0.82);
 }
 
-body.theme-night .sequence-viewer-aa-text {
-  color: rgba(204, 229, 255, 0.95);
+body.theme-night .sequence-viewer-aa-chip {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
 body.theme-night .sequence-viewer-feature-rail-host,
@@ -755,4 +921,43 @@ body.theme-night .sequence-viewer-feature-hover-tooltip {
   background: rgba(23, 38, 57, 0.96);
   box-shadow: 0 10px 24px rgba(6, 10, 18, 0.48);
   color: rgba(236, 246, 255, 0.97);
+}
+
+body.theme-night .sequence-viewer-context-menu {
+  border-color: rgba(171, 205, 245, 0.36);
+  background: linear-gradient(160deg, rgba(28, 43, 73, 0.97), rgba(20, 31, 48, 0.94));
+  box-shadow: 0 14px 28px rgba(6, 10, 18, 0.48);
+}
+
+body.theme-night .sequence-viewer-context-item {
+  border-color: rgba(171, 205, 245, 0.34);
+  background: rgba(39, 57, 92, 0.9);
+  color: rgba(236, 246, 255, 0.96);
+}
+
+body.theme-night .sequence-viewer-context-item:hover:not(:disabled),
+body.theme-night .sequence-viewer-context-item:focus-visible:not(:disabled) {
+  background: rgba(60, 85, 126, 0.96);
+}
+
+body.theme-night .sequence-viewer-feature-editor-overlay {
+  background: rgba(3, 8, 18, 0.44);
+}
+
+body.theme-night .sequence-viewer-feature-editor {
+  border-color: rgba(171, 205, 245, 0.34);
+  background: linear-gradient(160deg, rgba(28, 43, 73, 0.97), rgba(20, 31, 48, 0.94));
+  box-shadow: 0 20px 40px rgba(3, 8, 18, 0.58);
+}
+
+body.theme-night .sequence-viewer-feature-editor-grid label {
+  color: rgba(213, 234, 255, 0.82);
+}
+
+body.theme-night .sequence-viewer-feature-editor-grid input,
+body.theme-night .sequence-viewer-feature-editor-grid select,
+body.theme-night .sequence-viewer-feature-editor-grid textarea {
+  border-color: rgba(171, 205, 245, 0.32);
+  background: rgba(18, 30, 49, 0.9);
+  color: rgba(236, 246, 255, 0.96);
 }

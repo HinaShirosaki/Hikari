@@ -49,6 +49,41 @@
         <div id="paper-list" class="cards"></div>
       </div>
 
+      <div class="panel papers-viewer-panel">
+        <div class="papers-viewer-head">
+          <div class="papers-viewer-summary">
+            <h3>Paper Viewer</h3>
+            <p id="paper-viewer-title" class="papers-viewer-title">No paper selected</p>
+            <p id="paper-viewer-meta" class="small-note">Select a paper from the list to preview it here.</p>
+          </div>
+          <div id="paper-viewer-toolbar" class="papers-viewer-toolbar" hidden>
+            <button type="button" id="paper-viewer-prev-btn" class="ghost-btn">Prev</button>
+            <label class="papers-viewer-page-field">
+              Page
+              <input id="paper-viewer-page-input" type="number" min="1" value="1" />
+            </label>
+            <span id="paper-viewer-page-count" class="small-note">/ 0</span>
+            <button type="button" id="paper-viewer-next-btn" class="ghost-btn">Next</button>
+            <button type="button" id="paper-viewer-zoom-out-btn" class="ghost-btn">-</button>
+            <span id="paper-viewer-zoom-label" class="small-note">100%</span>
+            <button type="button" id="paper-viewer-zoom-in-btn" class="ghost-btn">+</button>
+            <button type="button" id="paper-viewer-zoom-reset-btn" class="ghost-btn">100%</button>
+            <button type="button" id="paper-viewer-fit-width-btn" class="ghost-btn">Fit Width</button>
+            <button type="button" id="paper-viewer-open-btn" class="ghost-btn">Open Externally</button>
+            <button type="button" id="paper-viewer-close-btn" class="danger-btn">Close</button>
+          </div>
+        </div>
+        <p id="paper-viewer-status" class="small-note">Choose "View PDF" on a paper to open it here.</p>
+        <div id="paper-viewer-shell" class="papers-viewer-shell is-empty">
+          <div id="paper-viewer-empty" class="papers-viewer-empty">
+            <p>Scientific PDFs open here with page navigation and zoom.</p>
+          </div>
+          <div id="paper-viewer-stage" class="papers-viewer-stage" hidden>
+            <canvas id="paper-viewer-canvas" class="papers-viewer-canvas"></canvas>
+          </div>
+        </div>
+      </div>
+
       <div class="panel">
         <h3>Project Library Q&A</h3>
         <div class="stack-form">

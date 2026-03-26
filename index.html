@@ -1638,6 +1638,41 @@
         <div id="paper-list" class="cards"></div>
       </div>
 
+      <div class="panel papers-viewer-panel">
+        <div class="papers-viewer-head">
+          <div class="papers-viewer-summary">
+            <h3>Paper Viewer</h3>
+            <p id="paper-viewer-title" class="papers-viewer-title">No paper selected</p>
+            <p id="paper-viewer-meta" class="small-note">Select a paper from the list to preview it here.</p>
+          </div>
+          <div id="paper-viewer-toolbar" class="papers-viewer-toolbar" hidden>
+            <button type="button" id="paper-viewer-prev-btn" class="ghost-btn">Prev</button>
+            <label class="papers-viewer-page-field">
+              Page
+              <input id="paper-viewer-page-input" type="number" min="1" value="1" />
+            </label>
+            <span id="paper-viewer-page-count" class="small-note">/ 0</span>
+            <button type="button" id="paper-viewer-next-btn" class="ghost-btn">Next</button>
+            <button type="button" id="paper-viewer-zoom-out-btn" class="ghost-btn">-</button>
+            <span id="paper-viewer-zoom-label" class="small-note">100%</span>
+            <button type="button" id="paper-viewer-zoom-in-btn" class="ghost-btn">+</button>
+            <button type="button" id="paper-viewer-zoom-reset-btn" class="ghost-btn">100%</button>
+            <button type="button" id="paper-viewer-fit-width-btn" class="ghost-btn">Fit Width</button>
+            <button type="button" id="paper-viewer-open-btn" class="ghost-btn">Open Externally</button>
+            <button type="button" id="paper-viewer-close-btn" class="danger-btn">Close</button>
+          </div>
+        </div>
+        <p id="paper-viewer-status" class="small-note">Choose "View PDF" on a paper to open it here.</p>
+        <div id="paper-viewer-shell" class="papers-viewer-shell is-empty">
+          <div id="paper-viewer-empty" class="papers-viewer-empty">
+            <p>Scientific PDFs open here with page navigation and zoom.</p>
+          </div>
+          <div id="paper-viewer-stage" class="papers-viewer-stage" hidden>
+            <canvas id="paper-viewer-canvas" class="papers-viewer-canvas"></canvas>
+          </div>
+        </div>
+      </div>
+
       <div class="panel">
         <h3>Project Library Q&A</h3>
         <div class="stack-form">
@@ -2536,6 +2571,14 @@
               <input id="sequence-viewer-orf-toggle" type="checkbox" />
               <span>ORF View</span>
             </label>
+            <label class="sequence-viewer-inline-select" title="Choose how stop codons are displayed in the selected ORF translation row.">
+              <span>ORF Stops</span>
+              <select id="sequence-viewer-orf-stop-mode">
+                <option value="trim" selected>Hide</option>
+                <option value="star">Show *</option>
+                <option value="codon">Show TAG/TAA/TGA</option>
+              </select>
+            </label>
             <div class="sequence-viewer-inline-toggle-group" role="group" aria-label="Restriction enzyme vendors">
               <span class="sequence-viewer-inline-toggle-group-label">Cutters</span>
               <label class="sequence-viewer-inline-toggle" title="Show unique cutters sold by New England Biolabs.">
@@ -2598,6 +2641,53 @@
               <p class="small-note">No parser warnings.</p>
             </div>
           </section>
+        </div>
+
+        <div id="sequence-viewer-feature-context-menu" class="sequence-viewer-context-menu" hidden></div>
+
+        <div id="sequence-viewer-feature-editor-overlay" class="sequence-viewer-feature-editor-overlay" hidden>
+          <form id="sequence-viewer-feature-editor-form" class="sequence-viewer-feature-editor" autocomplete="off">
+            <div class="plannotate-card-head sequence-viewer-feature-editor-head">
+              <h4 id="sequence-viewer-feature-editor-title">Add Feature</h4>
+              <button id="sequence-viewer-feature-editor-close" type="button" class="ghost-btn">Close</button>
+            </div>
+            <p id="sequence-viewer-feature-editor-note" class="small-note">Choose the feature metadata for the selected range.</p>
+
+            <div class="sequence-viewer-feature-editor-grid">
+              <label>
+                Name
+                <input id="sequence-viewer-feature-editor-name" placeholder="e.g. promoter_1" />
+              </label>
+              <label>
+                Type
+                <input id="sequence-viewer-feature-editor-type" placeholder="e.g. promoter" />
+              </label>
+              <label>
+                Strand
+                <select id="sequence-viewer-feature-editor-strand">
+                  <option value="1">Forward (+)</option>
+                  <option value="-1">Reverse (-)</option>
+                </select>
+              </label>
+              <label>
+                Start
+                <input id="sequence-viewer-feature-editor-start" type="number" min="1" step="1" />
+              </label>
+              <label>
+                End
+                <input id="sequence-viewer-feature-editor-end" type="number" min="1" step="1" />
+              </label>
+              <label class="sequence-viewer-feature-editor-field-wide">
+                Description
+                <textarea id="sequence-viewer-feature-editor-description" rows="3" placeholder="Optional feature note"></textarea>
+              </label>
+            </div>
+
+            <div class="form-actions">
+              <button id="sequence-viewer-feature-editor-save" type="submit" class="primary-btn">Save Feature</button>
+              <button id="sequence-viewer-feature-editor-cancel" type="button" class="ghost-btn">Cancel</button>
+            </div>
+          </form>
         </div>
       </div>
     </section>
