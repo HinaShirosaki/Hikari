@@ -28,6 +28,8 @@ function registerDataIpc(deps = {}) {
   const upsertSequenceEntry = deps.upsertSequenceEntry;
   const promoteSequenceEntry = deps.promoteSequenceEntry;
   const deleteSequenceEntry = deps.deleteSequenceEntry;
+  const searchSequenceFeatures = deps.searchSequenceFeatures;
+  const recognizeSequenceBackbone = deps.recognizeSequenceBackbone;
   const checkPlannotateEnvironment = deps.checkPlannotateEnvironment;
   const annotateWithBlast = deps.annotateWithBlast;
   const installPlannotateAssets = deps.installPlannotateAssets;
@@ -359,6 +361,8 @@ function registerDataIpc(deps = {}) {
         topology: cleanText(normalizedPayload?.topology, 40),
         sequenceLength: Number(normalizedPayload?.sequenceLength),
         featureCount: Number(normalizedPayload?.featureCount),
+        sequence: String(normalizedPayload?.sequence || ''),
+        features: Array.isArray(normalizedPayload?.features) ? normalizedPayload.features : [],
         gbkText: String(normalizedPayload?.gbkText || ''),
         htmlText: String(normalizedPayload?.htmlText || '')
       });
@@ -402,6 +406,45 @@ function registerDataIpc(deps = {}) {
         return { ok: false, error: 'Missing sequence entry id.' };
       }
       const result = await deleteSequenceEntry({ storagePath, id });
+      return { ok: true, ...result };
+    } catch (error) {
+      return { ok: false, error: String(error?.message || error) };
+    }
+  });
+
+  ipcMain.handle('sequence-library:search-features', async (_event, payload) => {
+    try {
+      const normalizedPayload = normalizeJsonPayload(payload, {});
+      const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
+      if (!storagePath) {
+        return { ok: false, error: 'Missing storage path.' };
+      }
+      const result = await searchSequenceFeatures({
+        storagePath,
+        query: cleanText(normalizedPayload?.query, 600),
+        limit: Number(normalizedPayload?.limit)
+      });
+      return { ok: true, ...result };
+    } catch (error) {
+      return { ok: false, error: String(error?.message || error) };
+    }
+  });
+
+  ipcMain.handle('sequence-library:recognize-backbone', async (_event, payload) => {
+    try {
+      const normalizedPayload = normalizeJsonPayload(payload, {});
+      const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
+      if (!storagePath) {
+        return { ok: false, error: 'Missing storage path.' };
+      }
+      if (typeof recognizeSequenceBackbone !== 'function') {
+        throw new Error('Backbone recognition API unavailable.');
+      }
+      const result = await recognizeSequenceBackbone({
+        storagePath,
+        sequence: String(normalizedPayload?.sequence || ''),
+        excludeEntryId: cleanText(normalizedPayload?.excludeEntryId, 200)
+      });
       return { ok: true, ...result };
     } catch (error) {
       return { ok: false, error: String(error?.message || error) };

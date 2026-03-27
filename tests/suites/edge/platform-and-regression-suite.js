@@ -129,8 +129,83 @@ normalizedArrayKeys.forEach((key) => {
   test(`[P1] normalizeState preserves valid array for "${key}"`, () => {
     const payload = [{ id: `${key}-1` }];
     const normalized = shared.normalizeState({ [key]: payload });
+    if (key === 'papers') {
+      assert.equal(normalized[key].length, 1);
+      assert.equal(normalized[key][0].id, 'papers-1');
+      assert.equal(Array.isArray(normalized[key][0].comments), true);
+      assert.equal(normalized[key][0].comments.length, 0);
+      return;
+    }
     assert.deepEqual(normalized[key], payload);
   });
+});
+
+test('[P1] normalizeState adds empty comments array to papers missing comment data', () => {
+  const normalized = shared.normalizeState({
+    papers: [
+      {
+        id: 'paper-1',
+        title: 'Atlas'
+      }
+    ]
+  });
+  assert.equal(Array.isArray(normalized.papers[0].comments), true);
+  assert.equal(normalized.papers[0].comments.length, 0);
+});
+
+test('[P0] normalizeState drops malformed nested paper comments', () => {
+  const normalized = shared.normalizeState({
+    papers: [
+      {
+        id: 'paper-1',
+        title: 'Atlas',
+        comments: [
+          null,
+          { id: '', pageNumber: 1, anchorX: 0.5, anchorY: 0.5, text: 'missing id' },
+          { id: 'bad-page', pageNumber: 0, anchorX: 0.5, anchorY: 0.5, text: 'bad page' },
+          { id: 'good', pageNumber: 2, anchorX: 1.7, anchorY: -1, text: 'valid after clamp', author: '' }
+        ]
+      }
+    ]
+  });
+  assert.equal(normalized.papers[0].comments.length, 1);
+  assert.equal(normalized.papers[0].comments[0].id, 'good');
+  assert.equal(normalized.papers[0].comments[0].pageNumber, 2);
+  assert.equal(normalized.papers[0].comments[0].anchorX, 1);
+  assert.equal(normalized.papers[0].comments[0].anchorY, 0);
+  assert.equal(normalized.papers[0].comments[0].author, 'Local user');
+});
+
+test('[P1] pdf viewer comment anchors normalize to unit coordinates and percent positions', () => {
+  const anchor = papersPdfViewerInternals.computePdfAnchorFromClientPoint({
+    clientX: 60,
+    clientY: 45,
+    rect: {
+      left: 10,
+      top: 20,
+      width: 200,
+      height: 100
+    }
+  });
+  assertClose(anchor.anchorX, 0.25);
+  assertClose(anchor.anchorY, 0.25);
+
+  const clamped = papersPdfViewerInternals.computePdfAnchorFromClientPoint({
+    clientX: 999,
+    clientY: -50,
+    rect: {
+      left: 10,
+      top: 20,
+      width: 200,
+      height: 100
+    }
+  });
+  assert.equal(clamped.anchorX, 1);
+  assert.equal(clamped.anchorY, 0);
+
+  const position = papersPdfViewerInternals.getPdfCommentPinPosition(0.25, 0.75);
+  assert.equal(position.left, '25.000%');
+  assert.equal(position.top, '75.000%');
 });
 
 test('[P0] normalizeState resets invalid knowledgeChats object', () => {
@@ -620,6 +695,15 @@ normalizedArrayKeys.forEach((key) => {
   ].forEach((value, idx) => {
     test(`[EDGE] normalizeState valid array matrix ${key} case ${idx + 1}`, () => {
       const normalized = shared.normalizeState({ [key]: value });
+      if (key === 'papers' && idx < 2) {
+        assert.equal(normalized[key].length, value.length);
+        normalized[key].forEach((item, itemIndex) => {
+          assert.equal(item.id, value[itemIndex].id);
+          assert.equal(Array.isArray(item.comments), true);
+          assert.equal(item.comments.length, 0);
+        });
+        return;
+      }
       assert.deepEqual(normalized[key], value);
     });
   });

@@ -1,8 +1,14 @@
 import { AMINO_ACID_ROW_LABEL } from './constants.js';
 
 export const DEFAULT_ORF_STOP_DISPLAY_MODE = 'trim';
+export const DEFAULT_ORF_STOP_CODON_VISIBILITY = Object.freeze({
+  TAG: false,
+  TAA: false,
+  TGA: false
+});
 
 const ORF_STOP_DISPLAY_MODE_SET = new Set(['trim', 'star', 'codon']);
+const ORF_STOP_CODON_KEYS = ['TAG', 'TAA', 'TGA'];
 
 const FALLBACK_AMINO_ACID_STYLE = Object.freeze({
   color: '#355a8a',
@@ -141,25 +147,57 @@ export function normalizeOrfStopDisplayMode(value) {
     : DEFAULT_ORF_STOP_DISPLAY_MODE;
 }
 
-export function resolveOrfTranslationDisplay(aminoAcid, codon, stopMode = DEFAULT_ORF_STOP_DISPLAY_MODE) {
-  const normalizedMode = normalizeOrfStopDisplayMode(stopMode);
+export function normalizeOrfStopCodonVisibility(value) {
+  if (typeof value === 'string') {
+    const normalizedMode = normalizeOrfStopDisplayMode(value);
+    if (normalizedMode === 'codon') {
+      return {
+        TAG: true,
+        TAA: true,
+        TGA: true
+      };
+    }
+    return { ...DEFAULT_ORF_STOP_CODON_VISIBILITY };
+  }
+
+  const source = value && typeof value === 'object' ? value : {};
+  return ORF_STOP_CODON_KEYS.reduce((next, codon) => {
+    next[codon] = source[codon] === true || source[codon.toLowerCase()] === true;
+    return next;
+  }, {});
+}
+
+export function resolveOrfTranslationDisplay(aminoAcid, codon, stopDisplay = DEFAULT_ORF_STOP_CODON_VISIBILITY) {
   const aa = String(aminoAcid || '').trim().slice(0, 1).toUpperCase() || 'X';
   const normalizedCodon = String(codon || '').trim().toUpperCase();
 
   if (aa === '*') {
-    if (normalizedMode === 'trim') {
-      return null;
-    }
-    if (normalizedMode === 'codon' && normalizedCodon.length === 3) {
+    if (typeof stopDisplay === 'string') {
+      const normalizedMode = normalizeOrfStopDisplayMode(stopDisplay);
+      if (normalizedMode === 'trim') {
+        return null;
+      }
+      if (normalizedMode === 'codon' && normalizedCodon.length === 3) {
+        return {
+          text: normalizedCodon,
+          colorKey: normalizedCodon,
+          isStop: true
+        };
+      }
       return {
-        text: normalizedCodon,
-        colorKey: normalizedCodon,
+        text: '*',
+        colorKey: '*',
         isStop: true
       };
     }
+
+    const stopVisibility = normalizeOrfStopCodonVisibility(stopDisplay);
+    if (normalizedCodon.length !== 3 || stopVisibility[normalizedCodon] !== true) {
+      return null;
+    }
     return {
-      text: '*',
-      colorKey: '*',
+      text: normalizedCodon,
+      colorKey: normalizedCodon,
       isStop: true
     };
   }

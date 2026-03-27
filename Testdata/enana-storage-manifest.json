@@ -1,7 +1,7 @@
 {
   "schema_name": "enana_storage_manifest",
   "schema_version": "1.0.0",
-  "generated_at": "2026-03-25T22:57:58.565Z",
+  "generated_at": "2026-03-27T19:42:47.546Z",
   "root_path": "/Users/shiyifan/Projects/Enana/Testdata",
   "discovered_files": [
     {
@@ -51,14 +51,14 @@
       "type": "file",
       "role": "data_file",
       "size_bytes": 2463,
-      "modified_at": "2026-03-25T22:54:43.756Z"
+      "modified_at": "2026-03-27T17:32:43.157Z"
     },
     {
       "relative_path": "enana-chemicals.index.sqlite",
       "type": "file",
       "role": "sqlite_index",
       "size_bytes": 94208,
-      "modified_at": "2026-03-25T22:54:43.760Z"
+      "modified_at": "2026-03-27T17:32:43.161Z"
     },
     {
       "relative_path": "enana-chemicals.index.sqlite-shm",
@@ -79,21 +79,21 @@
       "type": "file",
       "role": "notebook_sidecar",
       "size_bytes": 139,
-      "modified_at": "2026-03-25T22:54:43.757Z"
+      "modified_at": "2026-03-27T17:32:43.158Z"
     },
     {
       "relative_path": "enana-chemicals.protocols.json",
       "type": "file",
       "role": "protocol_sidecar",
       "size_bytes": 130,
-      "modified_at": "2026-03-25T22:54:43.757Z"
+      "modified_at": "2026-03-27T17:32:43.158Z"
     },
     {
       "relative_path": "enana-sample.notebook-pages.index.sqlite",
       "type": "file",
       "role": "sqlite_index",
       "size_bytes": 155648,
-      "modified_at": "2026-03-25T22:54:43.785Z"
+      "modified_at": "2026-03-27T17:32:43.189Z"
     },
     {
       "relative_path": "enana-sample.notebook-pages.index.sqlite-shm",
@@ -113,29 +113,29 @@
       "relative_path": "enana-sample.notebook-pages.json",
       "type": "file",
       "role": "notebook_sidecar",
-      "size_bytes": 117126,
-      "modified_at": "2026-03-25T22:54:43.779Z"
+      "size_bytes": 117160,
+      "modified_at": "2026-03-27T17:32:43.183Z"
     },
     {
       "relative_path": "enana-sample.notebook-pages.notebook-pages.json",
       "type": "file",
       "role": "notebook_sidecar",
       "size_bytes": 2767,
-      "modified_at": "2026-03-25T22:54:43.780Z"
+      "modified_at": "2026-03-27T17:32:43.184Z"
     },
     {
       "relative_path": "enana-sample.notebook-pages.protocols.json",
       "type": "file",
       "role": "protocol_sidecar",
       "size_bytes": 16528,
-      "modified_at": "2026-03-25T22:54:43.780Z"
+      "modified_at": "2026-03-27T17:32:43.183Z"
     },
     {
       "relative_path": "enana-storage-manifest.json",
       "type": "file",
       "role": "storage_manifest",
-      "size_bytes": 13102,
-      "modified_at": "2026-03-25T22:54:43.749Z"
+      "size_bytes": 13802,
+      "modified_at": "2026-03-27T17:32:43.150Z"
     },
     {
       "relative_path": "Project",
@@ -254,7 +254,7 @@
       "type": "directory",
       "role": "other",
       "size_bytes": 0,
-      "modified_at": "2026-03-23T16:43:22.546Z"
+      "modified_at": "2026-03-26T15:49:25.098Z"
     },
     {
       "relative_path": "SequenceViewer/entries/.DS_Store",
@@ -348,11 +348,32 @@
       "modified_at": "2026-03-23T16:43:22.546Z"
     },
     {
+      "relative_path": "SequenceViewer/entries/seq_1774540165097_6f6b5f24",
+      "type": "directory",
+      "role": "sequence_entry_file",
+      "size_bytes": 0,
+      "modified_at": "2026-03-26T15:49:25.098Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries/seq_1774540165097_6f6b5f24/sequence_1.gbk",
+      "type": "file",
+      "role": "sequence_entry_file",
+      "size_bytes": 12117,
+      "modified_at": "2026-03-26T15:49:25.098Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries/seq_1774540165097_6f6b5f24/sequence_1.html",
+      "type": "file",
+      "role": "sequence_entry_file",
+      "size_bytes": 7566,
+      "modified_at": "2026-03-26T15:49:25.098Z"
+    },
+    {
       "relative_path": "SequenceViewer/sequence-library.sqlite",
       "type": "file",
       "role": "sequence_library_index",
       "size_bytes": 20480,
-      "modified_at": "2026-03-23T16:43:22.547Z"
+      "modified_at": "2026-03-26T15:49:25.099Z"
     }
   ],
   "bundles": [
@@ -434,10 +455,10 @@
   "sequence_library": {
     "relative_path": "SequenceViewer/sequence-library.sqlite",
     "exists": true,
-    "entry_count": 4,
+    "entry_count": 5,
     "status_counts": {
       "saved": 2,
-      "temporary": 2
+      "temporary": 3
     }
   },
   "summary": {
@@ -446,7 +467,7 @@
     "notebookEntries": 3,
     "chemicals": 3,
     "personalInventoryContainers": 1,
-    "sequenceEntries": 4
+    "sequenceEntries": 5
   },
   "warnings": []
 }

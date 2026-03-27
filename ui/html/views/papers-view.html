@@ -78,8 +78,32 @@
           <div id="paper-viewer-empty" class="papers-viewer-empty">
             <p>Scientific PDFs open here with page navigation and zoom.</p>
           </div>
-          <div id="paper-viewer-stage" class="papers-viewer-stage" hidden>
-            <canvas id="paper-viewer-canvas" class="papers-viewer-canvas"></canvas>
+          <div id="paper-viewer-workspace" class="papers-viewer-workspace" hidden>
+            <div id="paper-viewer-stage" class="papers-viewer-stage" hidden>
+              <div id="paper-viewer-page-layer" class="papers-viewer-page-layer">
+                <canvas id="paper-viewer-canvas" class="papers-viewer-canvas"></canvas>
+                <div id="paper-viewer-overlay" class="papers-viewer-overlay" aria-label="Paper comment pins"></div>
+              </div>
+            </div>
+            <aside id="paper-comment-sidebar" class="papers-comment-sidebar">
+              <div class="papers-comment-meta">
+                <h4>Comments</h4>
+                <p id="paper-comment-page" class="small-note">Page 0</p>
+                <p id="paper-comment-count" class="small-note">0 comments on this page</p>
+              </div>
+              <div class="papers-comment-actions">
+                <button type="button" id="paper-comment-add-btn" class="primary-btn">Add Comment</button>
+                <button type="button" id="paper-comment-save-btn" class="ghost-btn">Save</button>
+                <button type="button" id="paper-comment-cancel-btn" class="ghost-btn">Cancel</button>
+                <button type="button" id="paper-comment-delete-btn" class="danger-btn">Delete</button>
+              </div>
+              <label class="papers-comment-input">
+                Comment
+                <textarea id="paper-comment-text" rows="5" placeholder="Click &quot;Add Comment&quot;, place a pin on the page, then write your note."></textarea>
+              </label>
+              <p id="paper-comment-status" class="small-note">Open a paper to review or add page comments.</p>
+              <div id="paper-comment-list" class="papers-comment-list"></div>
+            </aside>
           </div>
         </div>
       </div>

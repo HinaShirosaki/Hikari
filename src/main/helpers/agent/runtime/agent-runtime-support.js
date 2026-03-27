@@ -172,6 +172,15 @@ function createAgentRuntimeSupport(deps = {}) {
     if (!normalizedExperimentData.gel_runs.length && gelAnalyses.length) {
       normalizedExperimentData.gel_runs = gelAnalyses;
     }
+    const normalizedPapers = asArray(snapshot.papers)
+      .slice(0, 80)
+      .map((paper) => {
+        if (!paper || typeof paper !== 'object' || Array.isArray(paper)) {
+          return paper;
+        }
+        const { comments, ...rest } = paper;
+        return rest;
+      });
     const normalizedSnapshot = {
       projects: asArray(snapshot.projects).slice(0, 40),
       protocols: asArray(snapshot.protocols).slice(0, 100),
@@ -180,7 +189,7 @@ function createAgentRuntimeSupport(deps = {}) {
       assays,
       gelAnalyses,
       experimentData: normalizedExperimentData,
-      papers: asArray(snapshot.papers).slice(0, 80),
+      papers: normalizedPapers,
       inventory: snapshot.inventory && typeof snapshot.inventory === 'object'
         ? {
           personal: normalizedPersonalInventory,

@@ -1667,8 +1667,32 @@
           <div id="paper-viewer-empty" class="papers-viewer-empty">
             <p>Scientific PDFs open here with page navigation and zoom.</p>
           </div>
-          <div id="paper-viewer-stage" class="papers-viewer-stage" hidden>
-            <canvas id="paper-viewer-canvas" class="papers-viewer-canvas"></canvas>
+          <div id="paper-viewer-workspace" class="papers-viewer-workspace" hidden>
+            <div id="paper-viewer-stage" class="papers-viewer-stage" hidden>
+              <div id="paper-viewer-page-layer" class="papers-viewer-page-layer">
+                <canvas id="paper-viewer-canvas" class="papers-viewer-canvas"></canvas>
+                <div id="paper-viewer-overlay" class="papers-viewer-overlay" aria-label="Paper comment pins"></div>
+              </div>
+            </div>
+            <aside id="paper-comment-sidebar" class="papers-comment-sidebar">
+              <div class="papers-comment-meta">
+                <h4>Comments</h4>
+                <p id="paper-comment-page" class="small-note">Page 0</p>
+                <p id="paper-comment-count" class="small-note">0 comments on this page</p>
+              </div>
+              <div class="papers-comment-actions">
+                <button type="button" id="paper-comment-add-btn" class="primary-btn">Add Comment</button>
+                <button type="button" id="paper-comment-save-btn" class="ghost-btn">Save</button>
+                <button type="button" id="paper-comment-cancel-btn" class="ghost-btn">Cancel</button>
+                <button type="button" id="paper-comment-delete-btn" class="danger-btn">Delete</button>
+              </div>
+              <label class="papers-comment-input">
+                Comment
+                <textarea id="paper-comment-text" rows="5" placeholder="Click &quot;Add Comment&quot;, place a pin on the page, then write your note."></textarea>
+              </label>
+              <p id="paper-comment-status" class="small-note">Open a paper to review or add page comments.</p>
+              <div id="paper-comment-list" class="papers-comment-list"></div>
+            </aside>
           </div>
         </div>
       </div>
@@ -1756,6 +1780,7 @@
               <textarea id="agent-message-input" rows="4" placeholder="Ask for protocol guidance, inventory checks, literature-grounded suggestions, or planning support."></textarea>
             </label>
             <div class="form-actions">
+              <button type="button" id="agent-deep-research-toggle-btn" class="ghost-btn">Deep Research: Off</button>
               <button type="button" id="agent-send-btn" class="primary-btn">Send</button>
               <button type="button" id="agent-clear-btn" class="ghost-btn">Clear Chat</button>
             </div>
@@ -2526,6 +2551,25 @@
                 <p class="small-note">Select a sequence in the library to preview.</p>
               </div>
             </section>
+
+            <section class="plannotate-result-card sequence-viewer-feature-search-card">
+              <div class="plannotate-card-head">
+                <h4>Feature Search</h4>
+              </div>
+              <div class="sequence-viewer-feature-search-controls">
+                <input
+                  id="sequence-viewer-feature-search-input"
+                  type="search"
+                  placeholder="Search by feature name or sequence"
+                  autocomplete="off"
+                />
+                <button id="sequence-viewer-feature-search-btn" type="button" class="ghost-btn">Search</button>
+                <span id="sequence-viewer-feature-search-status" class="small-note">Search stored features and open the host vector directly.</span>
+              </div>
+              <div id="sequence-viewer-feature-search-results" class="sequence-viewer-feature-search-results">
+                <p class="small-note">Search by feature name, full sequence, or partial sequence.</p>
+              </div>
+            </section>
           </div>
         </section>
       </div>
@@ -2567,18 +2611,26 @@
           <div class="form-actions">
             <button id="sequence-viewer-load-btn" type="button" class="primary-btn">Load</button>
             <button id="sequence-viewer-annotate-btn" type="button" class="ghost-btn">Annotate</button>
+            <button id="sequence-viewer-recognize-backbone-btn" type="button" class="ghost-btn">Recognize Backbone/Insert</button>
             <label class="sequence-viewer-inline-toggle" title="Show/hide predicted ORFs and selected ORF amino-acid translation.">
               <input id="sequence-viewer-orf-toggle" type="checkbox" />
               <span>ORF View</span>
             </label>
-            <label class="sequence-viewer-inline-select" title="Choose how stop codons are displayed in the selected ORF translation row.">
-              <span>ORF Stops</span>
-              <select id="sequence-viewer-orf-stop-mode">
-                <option value="trim" selected>Hide</option>
-                <option value="star">Show *</option>
-                <option value="codon">Show TAG/TAA/TGA</option>
-              </select>
-            </label>
+            <div class="sequence-viewer-inline-toggle-group" role="group" aria-label="ORF stop codons">
+              <span class="sequence-viewer-inline-toggle-group-label">ORF Stops</span>
+              <label class="sequence-viewer-inline-toggle" title="Show TAG stop codons in the selected ORF translation row.">
+                <input id="sequence-viewer-orf-stop-tag-toggle" type="checkbox" />
+                <span>TAG</span>
+              </label>
+              <label class="sequence-viewer-inline-toggle" title="Show TAA stop codons in the selected ORF translation row.">
+                <input id="sequence-viewer-orf-stop-taa-toggle" type="checkbox" />
+                <span>TAA</span>
+              </label>
+              <label class="sequence-viewer-inline-toggle" title="Show TGA stop codons in the selected ORF translation row.">
+                <input id="sequence-viewer-orf-stop-tga-toggle" type="checkbox" />
+                <span>TGA</span>
+              </label>
+            </div>
             <div class="sequence-viewer-inline-toggle-group" role="group" aria-label="Restriction enzyme vendors">
               <span class="sequence-viewer-inline-toggle-group-label">Cutters</span>
               <label class="sequence-viewer-inline-toggle" title="Show unique cutters sold by New England Biolabs.">

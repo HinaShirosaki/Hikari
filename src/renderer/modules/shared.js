@@ -125,6 +125,7 @@ export const defaultState = {
   knowledgeChats: {},
   agentChat: {
     projectId: '',
+    deepResearchEnabled: false,
     currentSessionId: '',
     sessions: [],
     messages: []
@@ -278,6 +279,57 @@ function normalizeWorkflowProgressMap(rawValue) {
   return normalized;
 }
 
+function clampUnitInterval(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return Number.NaN;
+  }
+  return Math.min(Math.max(numeric, 0), 1);
+}
+
+export function normalizePaperComment(rawComment) {
+  if (!rawComment || typeof rawComment !== 'object' || Array.isArray(rawComment)) {
+    return null;
+  }
+
+  const id = String(rawComment.id || '').trim();
+  const pageNumber = Math.round(Number(rawComment.pageNumber));
+  const anchorX = clampUnitInterval(rawComment.anchorX);
+  const anchorY = clampUnitInterval(rawComment.anchorY);
+  const text = String(rawComment.text || '').trim();
+  if (!id || !Number.isFinite(pageNumber) || pageNumber < 1 || !Number.isFinite(anchorX) || !Number.isFinite(anchorY) || !text) {
+    return null;
+  }
+
+  const createdAt = String(rawComment.createdAt || rawComment.updatedAt || '').trim();
+  const updatedAt = String(rawComment.updatedAt || rawComment.createdAt || '').trim();
+
+  return {
+    ...rawComment,
+    id,
+    pageNumber,
+    anchorX,
+    anchorY,
+    text,
+    author: String(rawComment.author || 'Local user').trim() || 'Local user',
+    createdAt,
+    updatedAt
+  };
+}
+
+export function normalizePaperRecord(rawPaper) {
+  if (!rawPaper || typeof rawPaper !== 'object' || Array.isArray(rawPaper)) {
+    return rawPaper;
+  }
+
+  return {
+    ...rawPaper,
+    comments: Array.isArray(rawPaper.comments)
+      ? rawPaper.comments.map((comment) => normalizePaperComment(comment)).filter(Boolean)
+      : []
+  };
+}
+
 export function normalizeState(parsed) {
   const source = parsed || {};
   const rawLlm = source.settings?.llm || {};
@@ -312,13 +364,14 @@ export function normalizeState(parsed) {
     workflows: Array.isArray(source.workflows) ? source.workflows : [],
     workflowTemplates: Array.isArray(source.workflowTemplates) ? source.workflowTemplates : [],
     journalClubs: Array.isArray(source.journalClubs) ? source.journalClubs : [],
-    papers: Array.isArray(source.papers) ? source.papers : [],
+    papers: Array.isArray(source.papers) ? source.papers.map((paper) => normalizePaperRecord(paper)) : [],
     paperExperimentLinks: Array.isArray(source.paperExperimentLinks) ? source.paperExperimentLinks : [],
     knowledgeChats: source.knowledgeChats && typeof source.knowledgeChats === 'object' ? source.knowledgeChats : {},
     agentChat: {
       ...defaultState.agentChat,
       ...(source.agentChat && typeof source.agentChat === 'object' ? source.agentChat : {}),
       projectId: String(source.agentChat?.projectId || ''),
+      deepResearchEnabled: source.agentChat?.deepResearchEnabled === true,
       currentSessionId: String(source.agentChat?.currentSessionId || ''),
       sessions: Array.isArray(source.agentChat?.sessions) ? source.agentChat.sessions : [],
       messages: Array.isArray(source.agentChat?.messages) ? source.agentChat.messages : []

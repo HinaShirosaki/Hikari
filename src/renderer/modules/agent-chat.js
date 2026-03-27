@@ -312,6 +312,7 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
   const developerToolHint = document.getElementById('agent-dev-tool-hint');
   const historyNode = document.getElementById('agent-chat-history');
   const input = document.getElementById('agent-message-input');
+  const deepResearchToggleBtn = document.getElementById('agent-deep-research-toggle-btn');
   const sendBtn = document.getElementById('agent-send-btn');
   const clearBtn = document.getElementById('agent-clear-btn');
   const status = document.getElementById('agent-status');
@@ -352,6 +353,16 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
     void startNewChatSession();
   });
 
+  deepResearchToggleBtn?.addEventListener('click', () => {
+    ensureAgentState();
+    state.agentChat.deepResearchEnabled = !(state.agentChat.deepResearchEnabled === true);
+    persist();
+    renderDeepResearchToggle();
+    setStatus(state.agentChat.deepResearchEnabled === true
+      ? 'Deep research enabled.'
+      : 'Deep research disabled.');
+  });
+
   clearBtn.addEventListener('click', () => {
     void startNewChatSession();
   });
@@ -374,10 +385,11 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
 
   function ensureAgentState() {
     if (!state.agentChat || typeof state.agentChat !== 'object') {
-      state.agentChat = { projectId: '', currentSessionId: '', sessions: [], messages: [] };
+      state.agentChat = { projectId: '', deepResearchEnabled: false, currentSessionId: '', sessions: [], messages: [] };
       return;
     }
     state.agentChat.projectId = String(state.agentChat.projectId || '');
+    state.agentChat.deepResearchEnabled = state.agentChat.deepResearchEnabled === true;
     state.agentChat.currentSessionId = String(state.agentChat.currentSessionId || '');
     state.agentChat.sessions = asArray(state.agentChat.sessions);
     state.agentChat.messages = asArray(state.agentChat.messages);
@@ -413,6 +425,16 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
       state.agentChat.projectId = '';
       persist();
     }
+  }
+
+  function renderDeepResearchToggle() {
+    if (!deepResearchToggleBtn) {
+      return;
+    }
+    ensureAgentState();
+    deepResearchToggleBtn.textContent = state.agentChat.deepResearchEnabled === true
+      ? 'Deep Research: On'
+      : 'Deep Research: Off';
   }
 
   function renderDeveloperToolOptions() {
@@ -1314,6 +1336,9 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
     if (developerToolMessageInput) {
       developerToolMessageInput.disabled = inFlight;
     }
+    if (deepResearchToggleBtn) {
+      deepResearchToggleBtn.disabled = inFlight;
+    }
     clearBtn.disabled = inFlight;
     projectSelect.disabled = inFlight;
     input.disabled = inFlight;
@@ -1416,7 +1441,8 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
           apiKey: String(state.settings?.llm?.apiKey || '').trim()
         },
         agent: {
-          developerMode: state.settings?.agent?.developerMode === true
+          developerMode: state.settings?.agent?.developerMode === true,
+          deepResearchEnabled: state.agentChat.deepResearchEnabled === true
         }
       });
 
@@ -1653,6 +1679,7 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
   function render() {
     ensureAgentState();
     renderProjectOptions();
+    renderDeepResearchToggle();
     renderDeveloperToolOptions();
     renderContextSummary();
     renderSessionList();

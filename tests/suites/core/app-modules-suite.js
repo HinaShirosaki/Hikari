@@ -1341,6 +1341,7 @@ test('agent-chat sends settings API key to main process and stores assistant res
   assert.equal(payloadSeen.llm.apiEndpoint, 'https://api.openai.com/v1/responses');
   assert.equal(payloadSeen.llm.apiKey, 'sk-local-key');
   assert.equal(payloadSeen.agent.developerMode, false);
+  assert.equal(payloadSeen.agent.deepResearchEnabled, false);
   assert.equal(payloadSeen.projectId, 'p1');
   assert.equal(payloadSeen.stateSnapshot.snapshot_mode, 'thin');
   assert.equal(payloadSeen.stateSnapshot.data_file_path, '/tmp/enana-data.ena.json');
@@ -1397,6 +1398,125 @@ test('agent-chat sends settings API key to main process and stores assistant res
   trigger(clearBtn, 'click');
   assert.equal(state.agentChat.messages.length, 0);
   assert.equal(status.textContent, 'New chat ready.');
+});
+
+test('agent-chat toggles deep research mode and sends it in the chat payload', async () => {
+  const document = createMockDocument([
+    'agent-project-select',
+    'agent-context-summary',
+    'agent-chat-history',
+    'agent-message-input',
+    'agent-deep-research-toggle-btn',
+    'agent-send-btn',
+    'agent-clear-btn',
+    'agent-status'
+  ]);
+  const messageInput = document.getElementById('agent-message-input');
+  const toggleBtn = document.getElementById('agent-deep-research-toggle-btn');
+  const sendBtn = document.getElementById('agent-send-btn');
+
+  let payloadSeen = null;
+  const state = {
+    projects: [],
+    protocols: [],
+    notebookEntries: [],
+    assays: [],
+    gelAnalyses: [],
+    workflows: [],
+    papers: [],
+    inventory: {},
+    labInventory: { chemicals: [] },
+    settings: {
+      llm: {
+        model: 'gpt-5',
+        apiEndpoint: 'https://api.openai.com/v1/responses',
+        apiKey: 'sk-local-key'
+      },
+      agent: {
+        developerMode: false
+      }
+    },
+    agentChat: {
+      projectId: '',
+      deepResearchEnabled: false,
+      messages: []
+    }
+  };
+
+  const window = {
+    enanaApi: {
+      autoSaveDataFile: async () => ({
+        ok: true,
+        filePath: '/tmp/enana-data.ena.json'
+      }),
+      agentChat: async (payload) => {
+        payloadSeen = payload;
+        return {
+          ok: true,
+          parser: {
+            primary_intent: 'general_science_question',
+            needs_clarification: false,
+            clarification_reason: null,
+            entities: {},
+            inventory_search: {
+              normalized_query: null,
+              candidate_terms: [],
+              aliases: [],
+              search_mode: null
+            },
+            protocol_candidates: [],
+            reasoning_summary: 'Use deep research.'
+          },
+          general_science_question: {
+            status: 'completed',
+            answer: 'Deep research answer.',
+            execution_mode: 'deep_research',
+            citations: [],
+            decision_record: {
+              assumptions: [],
+              open_questions: [],
+              verification_notes: []
+            },
+            rounds_executed: 1,
+            follow_up_questions: []
+          },
+          developer_trace: []
+        };
+      }
+    }
+  };
+
+  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat.js'), {
+    document,
+    window
+  });
+  const agent = agentModule.initAgentChat({
+    state,
+    persist: () => {},
+    createId: (() => {
+      let idx = 0;
+      return () => `agent-msg-${idx += 1}`;
+    })(),
+    safeText: shared.safeText,
+    onNotebookEntriesChanged: () => {}
+  });
+
+  agent.render();
+  assert.equal(toggleBtn.textContent, 'Deep Research: Off');
+
+  trigger(toggleBtn, 'click');
+  assert.equal(state.agentChat.deepResearchEnabled, true);
+  assert.equal(toggleBtn.textContent, 'Deep Research: On');
+
+  messageInput.value = 'Why did the yield drop?';
+  trigger(sendBtn, 'click');
+  await flushAsync();
+  await flushAsync();
+
+  assert.equal(payloadSeen.agent.developerMode, false);
+  assert.equal(payloadSeen.agent.deepResearchEnabled, true);
+  assert.equal(state.agentChat.messages.length, 2);
+  assert.equal(state.agentChat.messages[1].meta.general_science_question.execution_mode, 'deep_research');
 });
 
 test('agent-chat loads saved sessions from chat logs and switches sessions from the sidebar', async () => {
@@ -2081,6 +2201,373 @@ test('agent-chat uses record lookup summary when inventory lookup payload is abs
   assert.match(state.agentChat.messages[1].text, /No record matches found/);
   assert.match(history.innerHTML, /Record Lookup/);
   assert.equal(/Inventory Lookup/.test(history.innerHTML), false);
+});
+
+function buildFakePapersViewerFactory() {
+  const controller = {
+    activePaperId: '',
+    currentPageNumber: 1,
+    comments: [],
+    selectedCommentId: '',
+    placementMode: false,
+    callbacks: {}
+  };
+
+  return {
+    controller,
+    create(elements = {}) {
+      controller.callbacks = {
+        onPageChange: elements.onPageChange,
+        onPlacement: elements.onPlacement,
+        onPinSelect: elements.onPinSelect,
+        onClose: elements.onClose
+      };
+      return {
+        async openPaper({ paper }) {
+          controller.activePaperId = paper.id;
+          controller.currentPageNumber = 1;
+          controller.callbacks.onPageChange?.(1);
+          return true;
+        },
+        async resetViewer() {
+          controller.activePaperId = '';
+          controller.currentPageNumber = 1;
+          controller.callbacks.onClose?.();
+          return true;
+        },
+        getActivePaperId() {
+          return controller.activePaperId;
+        },
+        getCurrentPageNumber() {
+          return controller.currentPageNumber;
+        },
+        hasActiveDocument() {
+          return Boolean(controller.activePaperId);
+        },
+        setComments(comments) {
+          controller.comments = Array.isArray(comments) ? comments.slice() : [];
+        },
+        setSelectedCommentId(commentId) {
+          controller.selectedCommentId = String(commentId || '');
+        },
+        setPlacementMode(enabled) {
+          controller.placementMode = Boolean(enabled) && Boolean(controller.activePaperId);
+        }
+      };
+    },
+    emitPlacement(payload) {
+      controller.callbacks.onPlacement?.(payload);
+    },
+    emitPageChange(pageNumber) {
+      controller.currentPageNumber = pageNumber;
+      controller.callbacks.onPageChange?.(pageNumber);
+    },
+    selectPin(comment) {
+      controller.callbacks.onPinSelect?.(comment);
+    }
+  };
+}
+
+function buildPapersManagementHarness({ comments = [] } = {}) {
+  const ids = [
+    'paper-form',
+    'paper-title',
+    'paper-pdf',
+    'paper-link-type',
+    'paper-link-target',
+    'paper-list',
+    'paper-viewer-shell',
+    'paper-viewer-empty',
+    'paper-viewer-workspace',
+    'paper-viewer-stage',
+    'paper-viewer-page-layer',
+    'paper-viewer-canvas',
+    'paper-viewer-overlay',
+    'paper-viewer-title',
+    'paper-viewer-meta',
+    'paper-viewer-status',
+    'paper-viewer-toolbar',
+    'paper-viewer-prev-btn',
+    'paper-viewer-next-btn',
+    'paper-viewer-page-input',
+    'paper-viewer-page-count',
+    'paper-viewer-zoom-out-btn',
+    'paper-viewer-zoom-in-btn',
+    'paper-viewer-zoom-reset-btn',
+    'paper-viewer-fit-width-btn',
+    'paper-viewer-zoom-label',
+    'paper-viewer-open-btn',
+    'paper-viewer-close-btn',
+    'paper-comment-sidebar',
+    'paper-comment-page',
+    'paper-comment-count',
+    'paper-comment-add-btn',
+    'paper-comment-save-btn',
+    'paper-comment-cancel-btn',
+    'paper-comment-delete-btn',
+    'paper-comment-text',
+    'paper-comment-status',
+    'paper-comment-list',
+    'journal-club-name',
+    'journal-club-description',
+    'journal-club-add-btn',
+    'journal-club-list',
+    'knowledge-project-select',
+    'knowledge-question',
+    'knowledge-ask-btn',
+    'knowledge-answer',
+    'knowledge-chat-history'
+  ];
+  const document = createMockDocument(ids);
+  const paperForm = document.getElementById('paper-form');
+  const paperTitle = document.getElementById('paper-title');
+  const paperPdf = document.getElementById('paper-pdf');
+  const paperLinkType = document.getElementById('paper-link-type');
+  wireFormReset(paperForm, [paperTitle, paperPdf]);
+  paperLinkType.value = 'project';
+
+  const viewerFactory = buildFakePapersViewerFactory();
+  let persistCalls = 0;
+  let idCounter = 0;
+  const state = {
+    journalClubs: [],
+    projects: [{ id: 'p1', name: 'Cancer Study' }],
+    papers: [
+      {
+        id: 'paper-1',
+        title: 'Atlas Uploaded Paper',
+        fileName: 'atlas.pdf',
+        linkedType: 'project',
+        linkedId: 'p1',
+        linkedName: 'Cancer Study',
+        summary: 'Paper summary text.',
+        summaryStatus: 'idle',
+        methodsExtract: [],
+        methodsStatus: 'idle',
+        keyReagents: [],
+        reagentsStatus: 'idle',
+        keyFigures: [],
+        comments: comments.slice(),
+        deepReadReady: false,
+        availabilityStatus: 'uploaded_pdf',
+        ingestionStatus: 'ready',
+        ingestionUpdatedAt: '2026-02-01T00:00:00.000Z',
+        ingestionErrors: [],
+        updatedAt: '2026-02-01T00:00:00.000Z',
+        pdfDataUrl: 'data:application/pdf;base64,AAAA'
+      }
+    ],
+    notebookEntries: [],
+    protocols: [],
+    paperExperimentLinks: [],
+    knowledgeChats: {},
+    settings: {
+      personalInfo: {
+        name: 'Alice Scientist',
+        enanaEmail: 'alice@enana.test'
+      },
+      llm: {}
+    }
+  };
+  const window = {
+    alert() {},
+    enanaApi: {}
+  };
+  const papersModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'papers-management.js'), {
+    document,
+    window
+  });
+  const papers = papersModule.initPapersManagement({
+    state,
+    persist: () => {
+      persistCalls += 1;
+    },
+    createId: () => `comment-${idCounter += 1}`,
+    safeText: shared.safeText,
+    onCreateProtocolDraft: () => {},
+    createPdfViewer: (elements) => viewerFactory.create(elements)
+  });
+  papers.render();
+
+  return {
+    document,
+    state,
+    papers,
+    viewerFactory,
+    get persistCalls() {
+      return persistCalls;
+    }
+  };
+}
+
+async function openPaperInHarness(harness) {
+  const paperList = harness.document.getElementById('paper-list');
+  trigger(paperList, 'click', {
+    target: {
+      closest(selector) {
+        if (selector === '[data-paper-view]') {
+          return {
+            dataset: {
+              paperView: 'paper-1'
+            }
+          };
+        }
+        return null;
+      }
+    }
+  });
+  await flushAsync();
+  await flushAsync();
+}
+
+test('papers module renders total comment counts in uploaded paper cards', () => {
+  const harness = buildPapersManagementHarness({
+    comments: [
+      {
+        id: 'comment-1',
+        pageNumber: 1,
+        anchorX: 0.25,
+        anchorY: 0.75,
+        text: 'Figure 2 drives the conclusion.',
+        author: 'Alice Scientist',
+        createdAt: '2026-03-22T17:00:00.000Z',
+        updatedAt: '2026-03-22T17:00:00.000Z'
+      }
+    ]
+  });
+  const paperList = harness.document.getElementById('paper-list');
+
+  assert.match(paperList.innerHTML, /Comments:<\/strong>\s*1/);
+});
+
+test('papers module creates a pinned page comment after placement and save', async () => {
+  const harness = buildPapersManagementHarness();
+  const addBtn = harness.document.getElementById('paper-comment-add-btn');
+  const saveBtn = harness.document.getElementById('paper-comment-save-btn');
+  const commentInput = harness.document.getElementById('paper-comment-text');
+  const commentStatus = harness.document.getElementById('paper-comment-status');
+
+  await openPaperInHarness(harness);
+
+  trigger(addBtn, 'click');
+  assert.equal(harness.viewerFactory.controller.placementMode, true);
+  assert.match(commentStatus.textContent, /place a comment pin/i);
+
+  harness.viewerFactory.emitPlacement({
+    pageNumber: 1,
+    anchorX: 0.25,
+    anchorY: 0.75
+  });
+  commentInput.value = 'Important result near panel C.';
+  trigger(commentInput, 'input');
+  trigger(saveBtn, 'click');
+
+  assert.equal(harness.state.papers[0].comments.length, 1);
+  assert.equal(harness.state.papers[0].comments[0].pageNumber, 1);
+  assert.equal(harness.state.papers[0].comments[0].anchorX, 0.25);
+  assert.equal(harness.state.papers[0].comments[0].anchorY, 0.75);
+  assert.equal(harness.state.papers[0].comments[0].text, 'Important result near panel C.');
+  assert.equal(harness.state.papers[0].comments[0].author, 'Alice Scientist');
+  assert.equal(harness.viewerFactory.controller.comments.length, 1);
+  assert.equal(harness.persistCalls >= 1, true);
+});
+
+test('papers module edits an existing pinned page comment from pin selection', async () => {
+  const existingComment = {
+    id: 'comment-1',
+    pageNumber: 1,
+    anchorX: 0.15,
+    anchorY: 0.45,
+    text: 'Original note.',
+    author: 'Alice Scientist',
+    createdAt: '2026-03-22T17:00:00.000Z',
+    updatedAt: '2026-03-22T17:00:00.000Z'
+  };
+  const harness = buildPapersManagementHarness({
+    comments: [existingComment]
+  });
+  const commentInput = harness.document.getElementById('paper-comment-text');
+  const saveBtn = harness.document.getElementById('paper-comment-save-btn');
+
+  await openPaperInHarness(harness);
+  harness.viewerFactory.selectPin(existingComment);
+
+  assert.equal(commentInput.value, 'Original note.');
+  commentInput.value = 'Updated note from reviewer.';
+  trigger(commentInput, 'input');
+  trigger(saveBtn, 'click');
+
+  assert.equal(harness.state.papers[0].comments.length, 1);
+  assert.equal(harness.state.papers[0].comments[0].text, 'Updated note from reviewer.');
+  assert.equal(harness.viewerFactory.controller.selectedCommentId, 'comment-1');
+});
+
+test('papers module deletes the selected pinned page comment', async () => {
+  const existingComment = {
+    id: 'comment-1',
+    pageNumber: 1,
+    anchorX: 0.15,
+    anchorY: 0.45,
+    text: 'Delete me.',
+    author: 'Alice Scientist',
+    createdAt: '2026-03-22T17:00:00.000Z',
+    updatedAt: '2026-03-22T17:00:00.000Z'
+  };
+  const harness = buildPapersManagementHarness({
+    comments: [existingComment]
+  });
+  const deleteBtn = harness.document.getElementById('paper-comment-delete-btn');
+
+  await openPaperInHarness(harness);
+  harness.viewerFactory.selectPin(existingComment);
+  trigger(deleteBtn, 'click');
+
+  assert.equal(harness.state.papers[0].comments.length, 0);
+  assert.equal(harness.viewerFactory.controller.comments.length, 0);
+  assert.match(harness.document.getElementById('paper-comment-list').innerHTML, /No comments on page 1 yet/);
+});
+
+test('papers module scopes sidebar comments to the active PDF page', async () => {
+  const harness = buildPapersManagementHarness({
+    comments: [
+      {
+        id: 'comment-1',
+        pageNumber: 1,
+        anchorX: 0.15,
+        anchorY: 0.45,
+        text: 'Page one note.',
+        author: 'Alice Scientist',
+        createdAt: '2026-03-22T17:00:00.000Z',
+        updatedAt: '2026-03-22T17:00:00.000Z'
+      },
+      {
+        id: 'comment-2',
+        pageNumber: 2,
+        anchorX: 0.55,
+        anchorY: 0.65,
+        text: 'Page two note.',
+        author: 'Alice Scientist',
+        createdAt: '2026-03-22T18:00:00.000Z',
+        updatedAt: '2026-03-22T18:00:00.000Z'
+      }
+    ]
+  });
+  const commentPage = harness.document.getElementById('paper-comment-page');
+  const commentCount = harness.document.getElementById('paper-comment-count');
+  const commentList = harness.document.getElementById('paper-comment-list');
+
+  await openPaperInHarness(harness);
+  assert.equal(commentPage.textContent, 'Page 1');
+  assert.equal(commentCount.textContent, '1 comment on this page');
+  assert.match(commentList.innerHTML, /Page one note/);
+  assert.equal(/Page two note/.test(commentList.innerHTML), false);
+
+  harness.viewerFactory.emitPageChange(2);
+
+  assert.equal(commentPage.textContent, 'Page 2');
+  assert.equal(commentCount.textContent, '1 comment on this page');
+  assert.match(commentList.innerHTML, /Page two note/);
+  assert.equal(/Page one note/.test(commentList.innerHTML), false);
 });
 
 function buildStandardCurveObservations({

@@ -61,6 +61,11 @@
   margin: 0;
 }
 
+.sequence-viewer-feature-search-card {
+  margin: 0;
+  grid-column: 1 / -1;
+}
+
 .sequence-viewer-library-switch {
   display: inline-flex;
   border: 1px solid rgba(160, 189, 223, 0.55);
@@ -139,6 +144,101 @@
   border: 0;
   border-radius: 8px;
   background: #ffffff;
+}
+
+.sequence-viewer-feature-search-controls {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.sequence-viewer-feature-search-controls input[type="search"] {
+  min-width: min(420px, 100%);
+  flex: 1 1 320px;
+}
+
+.sequence-viewer-feature-search-results {
+  margin-top: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.sequence-viewer-feature-search-item {
+  border: 1px solid rgba(114, 141, 182, 0.38);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.76);
+  padding: 10px 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.sequence-viewer-feature-search-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 10px;
+}
+
+.sequence-viewer-feature-search-name {
+  font-weight: 700;
+  color: #17385f;
+}
+
+.sequence-viewer-feature-search-type {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(54, 86, 126, 0.1);
+  color: #36567e;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.sequence-viewer-feature-search-sequence {
+  margin: 0;
+  font-family: var(--font-mono, "SFMono-Regular", "Consolas", monospace);
+  font-size: 0.8rem;
+  color: #36567e;
+  word-break: break-all;
+}
+
+.sequence-viewer-feature-search-hosts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sequence-viewer-feature-search-host {
+  min-width: 180px;
+  border: 1px solid rgba(98, 127, 166, 0.38);
+  border-radius: 10px;
+  background: rgba(244, 249, 255, 0.88);
+  padding: 8px 10px;
+  display: grid;
+  gap: 3px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sequence-viewer-feature-search-host:hover {
+  border-color: rgba(43, 87, 154, 0.72);
+}
+
+.sequence-viewer-feature-search-host-name {
+  font-weight: 650;
+  color: #17385f;
+}
+
+.sequence-viewer-feature-search-host-meta {
+  font-size: 0.72rem;
+  color: #4b617e;
 }
 
 .sequence-viewer-detail-workspace {

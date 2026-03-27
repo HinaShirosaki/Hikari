@@ -1,17 +1,45 @@
 import { createPapersPdfViewer } from './papers-pdf-viewer.js';
 
-export function initPapersManagement({ state, persist, createId, safeText, onCreateProtocolDraft }) {
+export function initPapersManagement({
+  state,
+  persist,
+  createId,
+  safeText,
+  onCreateProtocolDraft,
+  createPdfViewer = createPapersPdfViewer
+}) {
   const paperForm = document.getElementById('paper-form');
   const paperTitleInput = document.getElementById('paper-title');
   const paperPdfInput = document.getElementById('paper-pdf');
   const paperLinkTypeSelect = document.getElementById('paper-link-type');
   const paperLinkTargetSelect = document.getElementById('paper-link-target');
   const paperList = document.getElementById('paper-list');
-  const paperViewer = createPapersPdfViewer({
+  const paperCommentSidebar = document.getElementById('paper-comment-sidebar');
+  const paperCommentPage = document.getElementById('paper-comment-page');
+  const paperCommentCount = document.getElementById('paper-comment-count');
+  const paperCommentAddBtn = document.getElementById('paper-comment-add-btn');
+  const paperCommentSaveBtn = document.getElementById('paper-comment-save-btn');
+  const paperCommentCancelBtn = document.getElementById('paper-comment-cancel-btn');
+  const paperCommentDeleteBtn = document.getElementById('paper-comment-delete-btn');
+  const paperCommentText = document.getElementById('paper-comment-text');
+  const paperCommentStatus = document.getElementById('paper-comment-status');
+  const paperCommentList = document.getElementById('paper-comment-list');
+  const commentState = {
+    currentPageNumber: 1,
+    mode: 'idle',
+    selectedCommentId: '',
+    draftPageNumber: 0,
+    draftAnchorX: Number.NaN,
+    draftAnchorY: Number.NaN
+  };
+  const paperViewer = createPdfViewer({
     shell: document.getElementById('paper-viewer-shell'),
     emptyState: document.getElementById('paper-viewer-empty'),
+    workspace: document.getElementById('paper-viewer-workspace'),
     stage: document.getElementById('paper-viewer-stage'),
+    pageLayer: document.getElementById('paper-viewer-page-layer'),
     canvas: document.getElementById('paper-viewer-canvas'),
+    overlay: document.getElementById('paper-viewer-overlay'),
     title: document.getElementById('paper-viewer-title'),
     meta: document.getElementById('paper-viewer-meta'),
     status: document.getElementById('paper-viewer-status'),
@@ -26,7 +54,11 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
     fitWidthBtn: document.getElementById('paper-viewer-fit-width-btn'),
     zoomLabel: document.getElementById('paper-viewer-zoom-label'),
     openExternalBtn: document.getElementById('paper-viewer-open-btn'),
-    closeBtn: document.getElementById('paper-viewer-close-btn')
+    closeBtn: document.getElementById('paper-viewer-close-btn'),
+    onPageChange: onViewerPageChange,
+    onPlacement: onViewerPlacement,
+    onPinSelect: onViewerPinSelect,
+    onClose: onViewerClose
   });
 
   const journalClubNameInput = document.getElementById('journal-club-name');
@@ -46,6 +78,11 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
   knowledgeAskBtn?.addEventListener('click', onAskKnowledge);
   knowledgeProjectSelect?.addEventListener('change', renderKnowledgeSection);
   paperList.addEventListener('click', onPaperListClick);
+  paperCommentAddBtn?.addEventListener('click', beginCommentPlacement);
+  paperCommentSaveBtn?.addEventListener('click', savePaperComment);
+  paperCommentCancelBtn?.addEventListener('click', cancelPaperComment);
+  paperCommentDeleteBtn?.addEventListener('click', deleteSelectedPaperComment);
+  paperCommentText?.addEventListener('input', renderCommentSidebar);
 
   function getCurrentLinkOptions() {
     if (paperLinkTypeSelect.value === 'journal-club') {
@@ -59,6 +96,337 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
       id: project.id,
       name: project.name
     }));
+  }
+
+  function getActivePaper() {
+    const activePaperId = paperViewer.getActivePaperId();
+    return state.papers.find((paper) => paper.id === activePaperId) || null;
+  }
+
+  function getPaperById(paperId) {
+    return state.papers.find((paper) => paper.id === paperId) || null;
+  }
+
+  function ensurePaperComments(paper) {
+    if (!paper || typeof paper !== 'object') {
+      return [];
+    }
+    if (!Array.isArray(paper.comments)) {
+      paper.comments = [];
+    }
+    return paper.comments;
+  }
+
+  function getPaperCommentCount(paper) {
+    return ensurePaperComments(paper).length;
+  }
+
+  function getCommentsForPage(paper, pageNumber) {
+    return ensurePaperComments(paper)
+      .filter((comment) => comment.pageNumber === pageNumber)
+      .slice()
+      .sort((left, right) => {
+        const updatedLeft = Date.parse(left.updatedAt || left.createdAt || '');
+        const updatedRight = Date.parse(right.updatedAt || right.createdAt || '');
+        if (Number.isFinite(updatedLeft) && Number.isFinite(updatedRight) && updatedLeft !== updatedRight) {
+          return updatedRight - updatedLeft;
+        }
+        return String(left.id || '').localeCompare(String(right.id || ''));
+      });
+  }
+
+  function getCommentAuthorLabel() {
+    return String(
+      state.settings?.personalInfo?.name
+      || state.settings?.personalInfo?.enanaEmail
+      || 'Local user'
+    ).trim() || 'Local user';
+  }
+
+  function clearCommentDraft({ keepText = false } = {}) {
+    commentState.mode = 'idle';
+    commentState.selectedCommentId = '';
+    commentState.draftPageNumber = 0;
+    commentState.draftAnchorX = Number.NaN;
+    commentState.draftAnchorY = Number.NaN;
+    if (!keepText && paperCommentText) {
+      paperCommentText.value = '';
+    }
+  }
+
+  function syncViewerComments() {
+    const activePaper = getActivePaper();
+    paperViewer.setComments(activePaper ? ensurePaperComments(activePaper) : []);
+    paperViewer.setSelectedCommentId(commentState.selectedCommentId);
+    paperViewer.setPlacementMode(commentState.mode === 'placing');
+  }
+
+  function setCommentStatus(message) {
+    if (!paperCommentStatus) {
+      return;
+    }
+    paperCommentStatus.textContent = String(message || '').trim();
+  }
+
+  function resetCommentComposer(options = {}) {
+    clearCommentDraft({ keepText: options.keepText === true });
+    syncViewerComments();
+    if (options.message) {
+      setCommentStatus(options.message);
+    }
+    renderCommentSidebar();
+  }
+
+  function onViewerClose() {
+    commentState.currentPageNumber = 1;
+    resetCommentComposer({
+      message: 'Open a paper to review or add page comments.'
+    });
+  }
+
+  function onViewerPageChange(pageNumber) {
+    commentState.currentPageNumber = Math.max(1, Math.round(Number(pageNumber) || 1));
+    if (
+      (commentState.mode === 'editing' || commentState.mode === 'draft')
+      && commentState.draftPageNumber
+      && commentState.draftPageNumber !== commentState.currentPageNumber
+    ) {
+      resetCommentComposer({
+        message: `Moved to page ${commentState.currentPageNumber}. Select a comment on this page or place a new pin.`
+      });
+      return;
+    }
+    if (commentState.mode === 'placing') {
+      setCommentStatus(`Click page ${commentState.currentPageNumber} to place a comment pin.`);
+    }
+    renderCommentSidebar();
+  }
+
+  function onViewerPlacement({ pageNumber, anchorX, anchorY } = {}) {
+    const activePaper = getActivePaper();
+    if (!activePaper) {
+      return;
+    }
+    commentState.mode = 'draft';
+    commentState.selectedCommentId = '';
+    commentState.draftPageNumber = Math.max(1, Math.round(Number(pageNumber) || commentState.currentPageNumber || 1));
+    commentState.draftAnchorX = Number(anchorX);
+    commentState.draftAnchorY = Number(anchorY);
+    paperViewer.setPlacementMode(false);
+    paperViewer.setSelectedCommentId('');
+    if (paperCommentText) {
+      paperCommentText.value = '';
+      paperCommentText.disabled = false;
+      paperCommentText.focus?.();
+    }
+    setCommentStatus(`Pin placed on page ${commentState.draftPageNumber}. Add your note and save it.`);
+    renderCommentSidebar();
+  }
+
+  function onViewerPinSelect(comment) {
+    selectCommentForEdit(comment?.id || '');
+  }
+
+  function beginCommentPlacement() {
+    const activePaper = getActivePaper();
+    if (!activePaper) {
+      setCommentStatus('Open a paper before adding comments.');
+      return;
+    }
+    commentState.mode = 'placing';
+    commentState.selectedCommentId = '';
+    commentState.draftPageNumber = 0;
+    commentState.draftAnchorX = Number.NaN;
+    commentState.draftAnchorY = Number.NaN;
+    if (paperCommentText) {
+      paperCommentText.value = '';
+    }
+    syncViewerComments();
+    setCommentStatus(`Click page ${commentState.currentPageNumber} to place a comment pin.`);
+    renderCommentSidebar();
+  }
+
+  function selectCommentForEdit(commentId) {
+    const activePaper = getActivePaper();
+    if (!activePaper) {
+      return;
+    }
+    const comment = ensurePaperComments(activePaper).find((item) => item.id === commentId);
+    if (!comment) {
+      return;
+    }
+    commentState.mode = 'editing';
+    commentState.selectedCommentId = comment.id;
+    commentState.draftPageNumber = comment.pageNumber;
+    commentState.draftAnchorX = Number(comment.anchorX);
+    commentState.draftAnchorY = Number(comment.anchorY);
+    if (paperCommentText) {
+      paperCommentText.value = String(comment.text || '');
+      paperCommentText.disabled = false;
+      paperCommentText.focus?.();
+    }
+    syncViewerComments();
+    setCommentStatus(`Editing comment on page ${comment.pageNumber}.`);
+    renderCommentSidebar();
+  }
+
+  function savePaperComment() {
+    const activePaper = getActivePaper();
+    const text = String(paperCommentText?.value || '').trim();
+    if (!activePaper) {
+      setCommentStatus('Open a paper before saving comments.');
+      return;
+    }
+    if (!text) {
+      setCommentStatus('Write a comment before saving.');
+      renderCommentSidebar();
+      return;
+    }
+    if (!Number.isFinite(commentState.draftAnchorX) || !Number.isFinite(commentState.draftAnchorY) || !commentState.draftPageNumber) {
+      setCommentStatus('Place a comment pin before saving.');
+      renderCommentSidebar();
+      return;
+    }
+
+    const comments = ensurePaperComments(activePaper);
+    const now = new Date().toISOString();
+    let savedComment = null;
+    if (commentState.mode === 'editing' && commentState.selectedCommentId) {
+      savedComment = comments.find((comment) => comment.id === commentState.selectedCommentId) || null;
+      if (!savedComment) {
+        setCommentStatus('The selected comment no longer exists.');
+        resetCommentComposer();
+        return;
+      }
+      savedComment.pageNumber = commentState.draftPageNumber;
+      savedComment.anchorX = commentState.draftAnchorX;
+      savedComment.anchorY = commentState.draftAnchorY;
+      savedComment.text = text;
+      savedComment.author = getCommentAuthorLabel();
+      savedComment.updatedAt = now;
+    } else {
+      savedComment = {
+        id: createId(),
+        pageNumber: commentState.draftPageNumber,
+        anchorX: commentState.draftAnchorX,
+        anchorY: commentState.draftAnchorY,
+        text,
+        author: getCommentAuthorLabel(),
+        createdAt: now,
+        updatedAt: now
+      };
+      comments.push(savedComment);
+    }
+
+    activePaper.updatedAt = now;
+    persist();
+    renderPaperList();
+    syncViewerComments();
+    selectCommentForEdit(savedComment.id);
+    setCommentStatus(`Saved comment on page ${savedComment.pageNumber}.`);
+    renderCommentSidebar();
+  }
+
+  function cancelPaperComment() {
+    const activePaper = getActivePaper();
+    resetCommentComposer({
+      message: activePaper
+        ? `Viewing page ${commentState.currentPageNumber}. Select a comment or place a new pin.`
+        : 'Open a paper to review or add page comments.'
+    });
+  }
+
+  function deleteSelectedPaperComment() {
+    const activePaper = getActivePaper();
+    if (!activePaper || !commentState.selectedCommentId) {
+      setCommentStatus('Select a saved comment before deleting.');
+      renderCommentSidebar();
+      return;
+    }
+    const previousCount = getPaperCommentCount(activePaper);
+    activePaper.comments = ensurePaperComments(activePaper).filter((comment) => comment.id !== commentState.selectedCommentId);
+    if (activePaper.comments.length === previousCount) {
+      setCommentStatus('The selected comment no longer exists.');
+      resetCommentComposer();
+      return;
+    }
+    activePaper.updatedAt = new Date().toISOString();
+    persist();
+    renderPaperList();
+    resetCommentComposer({
+      message: `Deleted comment from page ${commentState.currentPageNumber}.`
+    });
+  }
+
+  function renderCommentSidebar() {
+    const activePaper = getActivePaper();
+    const currentPageNumber = activePaper ? Math.max(1, paperViewer.getCurrentPageNumber() || commentState.currentPageNumber || 1) : 0;
+    const currentPageComments = activePaper ? getCommentsForPage(activePaper, currentPageNumber) : [];
+    commentState.currentPageNumber = currentPageNumber || 1;
+
+    if (paperCommentSidebar) {
+      paperCommentSidebar.classList.toggle('is-disabled', !activePaper);
+    }
+    if (paperCommentPage) {
+      paperCommentPage.textContent = activePaper ? `Page ${currentPageNumber}` : 'Page 0';
+    }
+    if (paperCommentCount) {
+      const count = currentPageComments.length;
+      paperCommentCount.textContent = activePaper
+        ? `${count} comment${count === 1 ? '' : 's'} on this page`
+        : '0 comments on this page';
+    }
+    if (paperCommentAddBtn) {
+      paperCommentAddBtn.disabled = !activePaper;
+    }
+    if (paperCommentSaveBtn) {
+      const hasDraftLocation = Number.isFinite(commentState.draftAnchorX) && Number.isFinite(commentState.draftAnchorY) && commentState.draftPageNumber > 0;
+      paperCommentSaveBtn.disabled = !activePaper || !hasDraftLocation || !String(paperCommentText?.value || '').trim();
+    }
+    if (paperCommentCancelBtn) {
+      paperCommentCancelBtn.disabled = commentState.mode === 'idle';
+    }
+    if (paperCommentDeleteBtn) {
+      paperCommentDeleteBtn.disabled = commentState.mode !== 'editing' || !commentState.selectedCommentId;
+    }
+    if (paperCommentText) {
+      paperCommentText.disabled = !activePaper || commentState.mode === 'idle' || commentState.mode === 'placing';
+    }
+
+    if (!activePaper) {
+      paperCommentList.innerHTML = '<p class="small-note">Open a paper to see page comments.</p>';
+      if (!String(paperCommentStatus?.textContent || '').trim()) {
+        setCommentStatus('Open a paper to review or add page comments.');
+      }
+      return;
+    }
+
+    if (!String(paperCommentStatus?.textContent || '').trim()) {
+      setCommentStatus(`Viewing page ${currentPageNumber}. Select a comment or place a new pin.`);
+    }
+
+    if (!currentPageComments.length) {
+      paperCommentList.innerHTML = `<p class="small-note">No comments on page ${safeText(String(currentPageNumber))} yet.</p>`;
+      return;
+    }
+
+    paperCommentList.innerHTML = currentPageComments.map((comment) => `
+      <button
+        type="button"
+        class="papers-comment-card${comment.id === commentState.selectedCommentId ? ' is-active' : ''}"
+        data-paper-comment-select="${safeText(comment.id)}"
+      >
+        <p><strong>${safeText(comment.author || 'Local user')}</strong></p>
+        <p>${safeText(comment.text || '')}</p>
+        <p class="small-note">${safeText(new Date(comment.updatedAt || comment.createdAt || '').toLocaleString() || 'Saved comment')}</p>
+      </button>
+    `).join('');
+
+    paperCommentList.querySelectorAll('[data-paper-comment-select]').forEach((button) => {
+      button.addEventListener('click', () => {
+        selectCommentForEdit(button.dataset.paperCommentSelect);
+      });
+    });
   }
 
   function normalizeKeyFigures(paper) {
@@ -227,6 +595,7 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
       keyReagents: [],
       reagentsStatus: 'idle',
       keyFigures: [],
+      comments: [],
       deepReadReady: false,
       availabilityStatus: 'uploaded_pdf',
       ingestionStatus: 'queued',
@@ -268,6 +637,12 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
   function deleteJournalClub(journalClubId) {
     state.journalClubs = state.journalClubs.filter((item) => item.id !== journalClubId);
     state.papers = state.papers.filter((paper) => !(paper.linkedType === 'journal-club' && paper.linkedId === journalClubId));
+    if (paperViewer.getActivePaperId() && !getActivePaper()) {
+      resetCommentComposer({
+        message: 'Open a paper to review or add page comments.'
+      });
+      void paperViewer.resetViewer('The open paper was removed.');
+    }
     persist();
     render();
   }
@@ -276,10 +651,14 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
     state.papers = state.papers.filter((item) => item.id !== paperId);
     state.paperExperimentLinks = (state.paperExperimentLinks || []).filter((item) => item.paperId !== paperId);
     if (paperViewer.getActivePaperId() === paperId) {
+      resetCommentComposer({
+        message: 'Open a paper to review or add page comments.'
+      });
       void paperViewer.resetViewer('The open paper was deleted.');
     }
     persist();
     renderPaperList();
+    renderCommentSidebar();
     renderKnowledgeSection();
   }
 
@@ -554,12 +933,23 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
     }
 
     try {
-      await paperViewer.openPaper({
+      clearCommentDraft();
+      commentState.currentPageNumber = 1;
+      if (paperCommentText) {
+        paperCommentText.value = '';
+      }
+      const opened = await paperViewer.openPaper({
         paper,
         summary: buildPaperViewerSummary(paper),
         resolveBytes: resolvePaperPdfBytes,
         onOpenExternal: openPaperPdf
       });
+      if (!opened) {
+        return;
+      }
+      syncViewerComments();
+      setCommentStatus('Viewing page 1. Select a comment or place a new pin.');
+      renderCommentSidebar();
     } catch (error) {
       window.alert(String(error?.message || error || 'Failed to load the PDF viewer.'));
     }
@@ -845,6 +1235,7 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
       .slice()
       .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
       .map((paper) => {
+        const commentCount = getPaperCommentCount(paper);
         const methodsHtml = (paper.methodsExtract || []).map((method, index) => `
           <article class="card">
             <p><strong>${safeText(method.title || `Method ${index + 1}`)}</strong></p>
@@ -886,6 +1277,7 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
             <p><strong>Ingestion Updated:</strong> ${safeText(paper.ingestionUpdatedAt ? new Date(paper.ingestionUpdatedAt).toLocaleString() : '-')}</p>
             ${ingestionErrors.length ? `<p><strong>Ingestion Errors:</strong> ${safeText(ingestionErrors.join(', '))}</p>` : ''}
             <p><strong>Updated:</strong> ${new Date(paper.updatedAt).toLocaleString()}</p>
+            <p><strong>Comments:</strong> ${safeText(String(commentCount))}</p>
             <p><strong>Summary:</strong> ${safeText(paper.summary || 'No summary yet.')}</p>
             <div class="card-actions">
               <button class="primary-btn" data-paper-view="${paper.id}">View PDF</button>
@@ -973,6 +1365,7 @@ export function initPapersManagement({ state, persist, createId, safeText, onCre
     renderJournalClubList();
     renderLinkTargets();
     renderPaperList();
+    renderCommentSidebar();
     renderKnowledgeSection();
   }
 
