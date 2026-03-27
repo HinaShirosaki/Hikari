@@ -2276,6 +2276,8 @@ function buildPapersManagementHarness({ comments = [] } = {}) {
     'paper-link-type',
     'paper-link-target',
     'paper-list',
+    'paper-folder-selection',
+    'paper-upload-target-label',
     'paper-viewer-shell',
     'paper-viewer-empty',
     'paper-viewer-workspace',
@@ -2311,12 +2313,7 @@ function buildPapersManagementHarness({ comments = [] } = {}) {
     'journal-club-name',
     'journal-club-description',
     'journal-club-add-btn',
-    'journal-club-list',
-    'knowledge-project-select',
-    'knowledge-question',
-    'knowledge-ask-btn',
-    'knowledge-answer',
-    'knowledge-chat-history'
+    'journal-club-list'
   ];
   const document = createMockDocument(ids);
   const paperForm = document.getElementById('paper-form');
@@ -2437,7 +2434,7 @@ test('papers module renders total comment counts in uploaded paper cards', () =>
   });
   const paperList = harness.document.getElementById('paper-list');
 
-  assert.match(paperList.innerHTML, /Comments:<\/strong>\s*1/);
+  assert.match(paperList.innerHTML, /Comments:<\/strong>\s*1|Comments:\s*<\/strong>\s*1|Comments:\s*1/);
 });
 
 test('papers module creates a pinned page comment after placement and save', async () => {

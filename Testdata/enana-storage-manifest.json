@@ -1,7 +1,7 @@
 {
   "schema_name": "enana_storage_manifest",
   "schema_version": "1.0.0",
-  "generated_at": "2026-03-27T19:42:47.546Z",
+  "generated_at": "2026-03-27T21:17:17.749Z",
   "root_path": "/Users/shiyifan/Projects/Enana/Testdata",
   "discovered_files": [
     {
@@ -51,14 +51,14 @@
       "type": "file",
       "role": "data_file",
       "size_bytes": 2463,
-      "modified_at": "2026-03-27T17:32:43.157Z"
+      "modified_at": "2026-03-27T21:15:16.938Z"
     },
     {
       "relative_path": "enana-chemicals.index.sqlite",
       "type": "file",
       "role": "sqlite_index",
       "size_bytes": 94208,
-      "modified_at": "2026-03-27T17:32:43.161Z"
+      "modified_at": "2026-03-27T21:15:16.941Z"
     },
     {
       "relative_path": "enana-chemicals.index.sqlite-shm",
@@ -79,21 +79,21 @@
       "type": "file",
       "role": "notebook_sidecar",
       "size_bytes": 139,
-      "modified_at": "2026-03-27T17:32:43.158Z"
+      "modified_at": "2026-03-27T21:15:16.939Z"
     },
     {
       "relative_path": "enana-chemicals.protocols.json",
       "type": "file",
       "role": "protocol_sidecar",
       "size_bytes": 130,
-      "modified_at": "2026-03-27T17:32:43.158Z"
+      "modified_at": "2026-03-27T21:15:16.938Z"
     },
     {
       "relative_path": "enana-sample.notebook-pages.index.sqlite",
       "type": "file",
       "role": "sqlite_index",
       "size_bytes": 155648,
-      "modified_at": "2026-03-27T17:32:43.189Z"
+      "modified_at": "2026-03-27T21:15:16.961Z"
     },
     {
       "relative_path": "enana-sample.notebook-pages.index.sqlite-shm",
@@ -113,29 +113,29 @@
       "relative_path": "enana-sample.notebook-pages.json",
       "type": "file",
       "role": "notebook_sidecar",
-      "size_bytes": 117160,
-      "modified_at": "2026-03-27T17:32:43.183Z"
+      "size_bytes": 117168,
+      "modified_at": "2026-03-27T21:15:16.958Z"
     },
     {
       "relative_path": "enana-sample.notebook-pages.notebook-pages.json",
       "type": "file",
       "role": "notebook_sidecar",
       "size_bytes": 2767,
-      "modified_at": "2026-03-27T17:32:43.184Z"
+      "modified_at": "2026-03-27T21:15:16.958Z"
     },
     {
       "relative_path": "enana-sample.notebook-pages.protocols.json",
       "type": "file",
       "role": "protocol_sidecar",
       "size_bytes": 16528,
-      "modified_at": "2026-03-27T17:32:43.183Z"
+      "modified_at": "2026-03-27T21:15:16.958Z"
     },
     {
       "relative_path": "enana-storage-manifest.json",
       "type": "file",
       "role": "storage_manifest",
       "size_bytes": 13802,
-      "modified_at": "2026-03-27T17:32:43.150Z"
+      "modified_at": "2026-03-27T21:15:16.934Z"
     },
     {
       "relative_path": "Project",
