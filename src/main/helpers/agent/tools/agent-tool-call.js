@@ -1,12 +1,20 @@
+/**
+ * Utilities for validating the agent tool catalog, building LLM prompts for
+ * tool selection/argument generation, normalizing returned payloads, and
+ * executing registered tool handlers through a small runtime wrapper.
+ */
 'use strict';
 
+// Static catalog definitions loaded from JSON files.
 const RAW_AGENT_TOOL_CATALOG = require('./Tools.json');
 const RAW_AGENT_TOOL_CALL_CATALOG = require('./Tool-call.json');
 
+// Return the input only when it is already an array; otherwise use an empty array fallback.
 function defaultAsArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
+// Convert unknown input to a trimmed string and cap its length for safe prompt/error usage.
 function defaultCleanText(value, maxLength = 500) {
   const text = String(value || '').trim();
   if (!text) {
@@ -18,10 +26,12 @@ function defaultCleanText(value, maxLength = 500) {
   return `${text.slice(0, maxLength)}...`;
 }
 
+// Keep only plain object-like values; everything else becomes an empty object.
 function defaultEnsureObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 }
 
+// Parse JSON safely and return a fallback instead of throwing on invalid payloads.
 function safeParseJson(value, fallback = null) {
   if (value && typeof value === 'object') {
     return value;
@@ -37,6 +47,7 @@ function safeParseJson(value, fallback = null) {
   }
 }
 
+// Deep-clone JSON-safe data structures so downstream mutations do not affect source data.
 function cloneJson(value, fallback) {
   try {
     return JSON.parse(JSON.stringify(value));
@@ -45,6 +56,7 @@ function cloneJson(value, fallback) {
   }
 }
 
+// Normalize a value into an object payload, accepting either raw objects or JSON strings.
 function normalizeJsonPayload(value, fallback = {}) {
   if (value && typeof value === 'object') {
     return value;
@@ -58,6 +70,7 @@ function normalizeJsonPayload(value, fallback = {}) {
   return fallback;
 }
 
+// Accept several common argument wrapper shapes and extract the actual tool input object.
 function normalizeToolInvocationArgs(rawArgs) {
   const payload = normalizeJsonPayload(rawArgs, {});
   if (payload.input && typeof payload.input === 'object' && !Array.isArray(payload.input)) {
@@ -75,6 +88,7 @@ function normalizeToolInvocationArgs(rawArgs) {
   return payload;
 }
 
+// When arguments are embedded directly on the tool call object, strip metadata fields away.
 function extractInlineToolArguments(source) {
   const payload = defaultEnsureObject(source);
   const inline = { ...payload };
@@ -84,10 +98,12 @@ function extractInlineToolArguments(source) {
   return inline;
 }
 
+// Check whether a value is a non-array object.
 function isPlainObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value);
 }
 
+// Resolve local JSON-schema $ref pointers such as `#/...` against the root schema object.
 function resolveSchemaRef(ref, rootSchema) {
   if (typeof ref !== 'string' || !ref.startsWith('#/')) {
     return null;
@@ -104,12 +120,15 @@ function resolveSchemaRef(ref, rootSchema) {
     }, rootSchema);
 }
 
+// Format a readable schema path for validation error messages.
 function formatSchemaPath(path, fallback = 'value') {
   const normalized = String(path || '').trim();
   return normalized || fallback;
 }
 
+// Perform lightweight recursive validation against the JSON schema shapes used by tool calls.
 function validateValueAgainstSchema(value, schema, rootSchema, path = 'value') {
+  // Resolve references first so nested definitions can be validated like inline schemas.
   const resolvedSchema = isPlainObject(schema) && typeof schema.$ref === 'string'
     ? resolveSchemaRef(schema.$ref, rootSchema)
     : schema;
@@ -120,6 +139,7 @@ function validateValueAgainstSchema(value, schema, rootSchema, path = 'value') {
     };
   }
 
+  // Support union-like schemas by allowing any candidate branch to validate successfully.
   if (Array.isArray(resolvedSchema.anyOf) && resolvedSchema.anyOf.length) {
     const matches = resolvedSchema.anyOf.some((candidate) => validateValueAgainstSchema(value, candidate, rootSchema, path).ok);
     return matches
@@ -127,6 +147,7 @@ function validateValueAgainstSchema(value, schema, rootSchema, path = 'value') {
       : { ok: false, error: `${formatSchemaPath(path)} did not match any allowed schema.` };
   }
 
+  // Normalize the schema type field into an array for consistent checking.
   const allowedTypes = Array.isArray(resolvedSchema.type)
     ? resolvedSchema.type
     : (typeof resolvedSchema.type === 'string' ? [resolvedSchema.type] : []);
@@ -164,6 +185,7 @@ function validateValueAgainstSchema(value, schema, rootSchema, path = 'value') {
     }
   }
 
+  // Enforce enum constraints when the schema lists explicit allowed values.
   if (Array.isArray(resolvedSchema.enum) && resolvedSchema.enum.length) {
     const matchesEnum = resolvedSchema.enum.some((candidate) => JSON.stringify(candidate) === JSON.stringify(value));
     if (!matchesEnum) {
@@ -174,6 +196,7 @@ function validateValueAgainstSchema(value, schema, rootSchema, path = 'value') {
     }
   }
 
+  // Apply string length constraints.
   if (typeof value === 'string') {
     if (Number.isFinite(Number(resolvedSchema.minLength)) && value.length < Number(resolvedSchema.minLength)) {
       return {
@@ -189,6 +212,7 @@ function validateValueAgainstSchema(value, schema, rootSchema, path = 'value') {
     }
   }
 
+  // Apply numeric range constraints.
   if (typeof value === 'number') {
     if (Number.isFinite(Number(resolvedSchema.minimum)) && value < Number(resolvedSchema.minimum)) {
       return {
@@ -204,6 +228,7 @@ function validateValueAgainstSchema(value, schema, rootSchema, path = 'value') {
     }
   }
 
+  // Validate array size and recursively validate each item when an item schema exists.
   if (Array.isArray(value)) {
     if (Number.isFinite(Number(resolvedSchema.minItems)) && value.length < Number(resolvedSchema.minItems)) {
       return {
@@ -233,6 +258,7 @@ function validateValueAgainstSchema(value, schema, rootSchema, path = 'value') {
     return { ok: true };
   }
 
+  // Validate required object fields, declared properties, and additionalProperties behavior.
   if (isPlainObject(value)) {
     const properties = isPlainObject(resolvedSchema.properties) ? resolvedSchema.properties : {};
     const required = defaultAsArray(resolvedSchema.required);
@@ -283,6 +309,7 @@ function validateValueAgainstSchema(value, schema, rootSchema, path = 'value') {
   return { ok: true };
 }
 
+// Validate and normalize the basic tool catalog loaded from `Tools.json`.
 function validateAgentToolCatalog(catalog) {
   if (!Array.isArray(catalog)) {
     throw new Error('Agent tool catalog must be an array.');
@@ -311,6 +338,7 @@ function validateAgentToolCatalog(catalog) {
   });
 }
 
+// Validate per-tool call schemas and ensure they stay aligned with the main tool catalog.
 function validateAgentToolCallCatalog(toolCallCatalog, toolCatalog = []) {
   const source = defaultEnsureObject(toolCallCatalog);
   const defs = defaultEnsureObject(source.$defs);
@@ -349,6 +377,7 @@ function validateAgentToolCallCatalog(toolCallCatalog, toolCatalog = []) {
   return normalized;
 }
 
+// Frozen validated catalogs exposed to the rest of the app.
 const AGENT_TOOL_CATALOG = Object.freeze(
   validateAgentToolCatalog(cloneJson(RAW_AGENT_TOOL_CATALOG, []))
 );
@@ -356,25 +385,30 @@ const AGENT_TOOL_CALL_CATALOG = Object.freeze(
   validateAgentToolCallCatalog(cloneJson(RAW_AGENT_TOOL_CALL_CATALOG, {}), AGENT_TOOL_CATALOG)
 );
 
+// Case-insensitive lookup map so callers can resolve canonical tool names reliably.
 const AGENT_TOOL_NAME_MAP = new Map(
   AGENT_TOOL_CATALOG.map((entry) => [entry.name.toLowerCase(), entry.name])
 );
 
+// Map a user/model-provided tool name to the canonical catalog entry.
 function resolveCanonicalToolName(value) {
   const normalized = defaultCleanText(value, 120).toLowerCase();
   return normalized ? (AGENT_TOOL_NAME_MAP.get(normalized) || '') : '';
 }
 
+// Retrieve the normalized tool metadata entry for a tool name.
 function getToolCatalogEntry(toolName) {
   const canonicalName = resolveCanonicalToolName(toolName);
   return AGENT_TOOL_CATALOG.find((entry) => entry.name === canonicalName) || null;
 }
 
+// Retrieve the normalized tool-call schema entry for a tool name.
 function getToolCallCatalogEntry(toolName) {
   const canonicalName = resolveCanonicalToolName(toolName);
   return canonicalName ? defaultEnsureObject(AGENT_TOOL_CALL_CATALOG[canonicalName]) : null;
 }
 
+// Normalize requested tool names, defaulting to the full catalog when none are supplied.
 function normalizeRequestedToolNames(selectedToolNames) {
   if (!Array.isArray(selectedToolNames)) {
     return AGENT_TOOL_CATALOG.map((entry) => entry.name);
@@ -391,6 +425,7 @@ function normalizeRequestedToolNames(selectedToolNames) {
   });
 }
 
+// Return prompt-friendly tool metadata plus deep-cloned input schemas for selected tools.
 function getToolInputSchemas(selectedToolNames = null) {
   return normalizeRequestedToolNames(selectedToolNames).map((toolName) => {
     const entry = getToolCatalogEntry(toolName);
@@ -407,6 +442,7 @@ function getToolInputSchemas(selectedToolNames = null) {
   });
 }
 
+// Convert the recent conversation window into a compact numbered prompt block.
 function buildConversationPromptBlock(conversation) {
   return defaultAsArray(conversation)
     .slice(-8)
@@ -419,6 +455,7 @@ function buildConversationPromptBlock(conversation) {
     .join('\n');
 }
 
+// Build the prompt that asks the model to choose the minimum ordered tool list.
 function buildToolSelectionPrompt({
   message = '',
   conversation = [],
@@ -448,6 +485,7 @@ function buildToolSelectionPrompt({
   return promptRows.join('\n\n');
 }
 
+// Validate the model's tool-selection response and normalize it into canonical tool names.
 function normalizeToolSelectionPayload(rawPayload) {
   const payload = normalizeJsonPayload(rawPayload, {});
   const rawToolCalls = defaultAsArray(payload.tool_calls);
@@ -492,6 +530,7 @@ function normalizeToolSelectionPayload(rawPayload) {
   };
 }
 
+// Build the prompt that asks the model to generate validated argument objects for each tool.
 function buildToolArgumentsPrompt({
   message = '',
   conversation = [],
@@ -522,6 +561,7 @@ function buildToolArgumentsPrompt({
   return promptRows.join('\n\n');
 }
 
+// Normalize and schema-validate the model's generated tool arguments payload.
 function normalizeToolArgumentsPayload(rawPayload, options = {}) {
   const payload = normalizeJsonPayload(rawPayload, {});
   const rawToolCalls = defaultAsArray(payload.tool_calls);
@@ -608,6 +648,7 @@ function normalizeToolArgumentsPayload(rawPayload, options = {}) {
   };
 }
 
+// Deep-merge plain objects, replacing non-object branches with cloned override values.
 function mergeObjects(baseValue, overrideValue) {
   const base = defaultEnsureObject(baseValue);
   const override = defaultEnsureObject(overrideValue);
@@ -622,6 +663,7 @@ function mergeObjects(baseValue, overrideValue) {
   return out;
 }
 
+// Deduplicate a list of strings while preserving order and enforcing a maximum output size.
 function uniqueStrings(values, max = 20) {
   const seen = new Set();
   const out = [];
@@ -640,6 +682,7 @@ function uniqueStrings(values, max = 20) {
   return out;
 }
 
+// Generate a short human-readable summary from a tool execution result.
 function summarizeToolResult(toolName, result) {
   const source = defaultEnsureObject(result);
   if (defaultCleanText(source.summary, 320)) {
@@ -666,6 +709,7 @@ function summarizeToolResult(toolName, result) {
   return `${toolName} completed.`;
 }
 
+// Wrap a tool execution result in a consistent envelope consumed by the runtime.
 function buildExecutionEnvelope(toolName, input, result, options = {}) {
   const normalizedResult = cloneJson(result, result);
   const ok = options.ok !== false;
@@ -685,7 +729,9 @@ function buildExecutionEnvelope(toolName, input, result, options = {}) {
   };
 }
 
+// Create a runtime that can register tool executors, validate tool calls, and execute them safely.
 function createAgentToolCallRuntime(deps = {}) {
+  // Allow core helpers to be dependency-injected while keeping sensible defaults.
   const asArray = typeof deps.asArray === 'function' ? deps.asArray : defaultAsArray;
   const cleanText = typeof deps.cleanText === 'function' ? deps.cleanText : defaultCleanText;
   const ensureObject = typeof deps.ensureObject === 'function' ? deps.ensureObject : defaultEnsureObject;
@@ -717,12 +763,15 @@ function createAgentToolCallRuntime(deps = {}) {
     : (() => {});
   const runtimeServices = ensureObject(deps.services);
 
+  // Normalize executor lookup keys so registration and retrieval use the same naming rules.
   function resolveExecutorKey(toolName) {
     return resolveCanonicalToolName(toolName) || cleanText(toolName, 120);
   }
 
+  // Registry of concrete tool handler implementations.
   const toolExecutors = new Map();
 
+  // Register or replace a callable executor for a canonical tool name.
   function registerToolExecutor(toolName, executor) {
     const key = resolveExecutorKey(toolName);
     if (!key || typeof executor !== 'function') {
@@ -732,6 +781,7 @@ function createAgentToolCallRuntime(deps = {}) {
     return true;
   }
 
+  // Remove an executor from the runtime registry.
   function unregisterToolExecutor(toolName) {
     const key = resolveExecutorKey(toolName);
     if (!key) {
@@ -740,15 +790,18 @@ function createAgentToolCallRuntime(deps = {}) {
     return toolExecutors.delete(key);
   }
 
+  // Look up the executor currently associated with a tool.
   function getToolExecutor(toolName) {
     const key = resolveExecutorKey(toolName);
     return key ? (toolExecutors.get(key) || null) : null;
   }
 
+  // Pre-register any executors supplied during runtime construction.
   Object.entries(ensureObject(deps.toolExecutors)).forEach(([toolName, executor]) => {
     registerToolExecutor(toolName, executor);
   });
 
+  // Validate and execute a single tool call, returning a normalized envelope even on failure.
   async function executeToolCall(rawToolCall, context = {}, state = {}) {
     const normalized = normalizeToolArgumentsPayload({
       tool_calls: [rawToolCall]
@@ -811,6 +864,7 @@ function createAgentToolCallRuntime(deps = {}) {
     }
   }
 
+  // Execute a validated batch of tool calls sequentially so state can accumulate across tools.
   async function executeToolCalls(rawToolCalls, context = {}) {
     const normalized = normalizeToolArgumentsPayload({
       tool_calls: asArray(rawToolCalls)
@@ -843,6 +897,7 @@ function createAgentToolCallRuntime(deps = {}) {
   };
 }
 
+// Public API exported for prompt building, payload normalization, validation, and runtime execution.
 module.exports = {
   AGENT_TOOL_CATALOG,
   AGENT_TOOL_CALL_CATALOG,

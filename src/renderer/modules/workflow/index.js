@@ -1,0 +1,124 @@
+import { getWorkflowElements } from './dom.js';
+import {
+  createWorkflowModel,
+  formatTimestamp,
+  getBlockType,
+  normalizePlainTextBlock,
+  parseTimestamp,
+  uniqueStrings
+} from './model.js';
+import { createWorkflowRenderer } from './renderer.js';
+import { createWorkflowGraphController } from './graph-controller.js';
+import { createWorkflowActions } from './actions.js';
+import { createWorkflowRuntime, resolveDefaultAssigneeId } from './state.js';
+
+export function initWorkflowManagement({
+  state,
+  persist,
+  createId,
+  safeText,
+  onWorkflowsChanged = () => {}
+}) {
+  const elements = getWorkflowElements(document);
+
+  if (
+    !elements.workflowForm
+    || !elements.workflowList
+    || !elements.workflowTemplateList
+    || !elements.workflowGraphCanvas
+    || !elements.workflowGraphBoard
+    || !elements.workflowGraphSvg
+    || !elements.workflowGraphSelection
+    || !elements.workflowGraphNodes
+    || !elements.workflowGraphStatus
+    || !elements.workflowGraphContextMenu
+  ) {
+    return {
+      render: () => {},
+      renderProjectOptions: () => {},
+      renderNotebookOptions: () => {},
+      renderProtocolOptions: () => {}
+    };
+  }
+
+  const runtime = createWorkflowRuntime();
+  const workflowModel = createWorkflowModel({
+    createId,
+    resolveDefaultAssigneeId: () => resolveDefaultAssigneeId(state)
+  });
+  const {
+    normalizeBlocks,
+    normalizeLinks,
+    normalizeWorkflow,
+    normalizeTemplate,
+    instantiateTemplate
+  } = workflowModel;
+
+  let graphController = null;
+
+  const renderer = createWorkflowRenderer({
+    state,
+    runtime,
+    elements,
+    safeText,
+    getBlockType,
+    normalizePlainTextBlock,
+    uniqueStrings,
+    parseTimestamp,
+    formatTimestamp,
+    getRenderGraphEditor: () => graphController?.renderGraphEditor
+  });
+
+  graphController = createWorkflowGraphController({
+    runtime,
+    elements,
+    safeText,
+    createId,
+    normalizeBlocks,
+    normalizeLinks,
+    titleForBlock: renderer.titleForBlock,
+    labelForBlockType: renderer.labelForBlockType,
+    labelForAssignee: renderer.labelForAssignee,
+    displayLabelForBlock: renderer.displayLabelForBlock,
+    getBlockType,
+    renderBlockList: renderer.renderBlockList,
+    document
+  });
+
+  const actions = createWorkflowActions({
+    state,
+    runtime,
+    elements,
+    renderer,
+    graphController,
+    normalizeBlocks,
+    normalizeLinks,
+    normalizeWorkflow,
+    normalizeTemplate,
+    instantiateTemplate,
+    persist,
+    createId,
+    onWorkflowsChanged
+  });
+
+  function render() {
+    actions.ensureStateShape();
+    actions.normalizeDraft();
+    graphController.pruneSelectedBlockIds();
+    renderer.applyDraftToForm();
+    renderer.renderTemplateSourceOptions();
+    renderer.renderTemplateList();
+    renderer.renderWorkflowList();
+    renderer.setWorkflowEntryMode(runtime.workflowEntryMode);
+  }
+
+  actions.bindEvents();
+  render();
+
+  return {
+    render,
+    renderProjectOptions: renderer.renderProjectOptions,
+    renderNotebookOptions: renderer.renderNotebookOptions,
+    renderProtocolOptions: renderer.renderProtocolOptions
+  };
+}

@@ -1,7 +1,14 @@
+/**
+ * Intent parsing helpers for classifying user requests, validating the intent
+ * catalog, normalizing model JSON output, and preparing parser-driven routing
+ * hints such as entities, protocol candidates, and inventory search terms.
+ */
 'use strict';
 
+// Raw intent definitions loaded from the catalog JSON file.
 const RAW_INTENT_CATALOG = require('./agent-intent.json');
 
+// Canonical intent names accepted by the parser and downstream routing layers.
 const PARSER_CANONICAL_INTENTS = Object.freeze([
   'protocol_to_notebook',
   'inventory_lookup',
@@ -15,6 +22,7 @@ const PARSER_CANONICAL_INTENTS = Object.freeze([
   'unclear'
 ]);
 
+// Common misspellings or alternate labels that should resolve to canonical intents.
 const PARSER_INTENT_ALIASES = Object.freeze({
   data_analysis_or_coding: 'result_analysis',
   coding_data_analysis: 'result_analysis',
@@ -22,14 +30,17 @@ const PARSER_INTENT_ALIASES = Object.freeze({
   record_loopup: 'record_lookup'
 });
 
+// Alias retained so schema/config code can refer to the allowed parser intents explicitly.
 const PARSER_ALLOWED_INTENTS = PARSER_CANONICAL_INTENTS;
 
+// Supported strategies for ordering inventory search terms during lookup.
 const PARSER_SEARCH_MODES = Object.freeze([
   'exact_then_alias_then_fuzzy',
   'exact_only',
   'alias_then_fuzzy'
 ]);
 
+// Entity slots the parser may populate from the user message or recent conversation.
 const PARSER_ENTITY_KEYS = Object.freeze([
   'activity_type',
   'project_name',
@@ -43,8 +54,10 @@ const PARSER_ENTITY_KEYS = Object.freeze([
   'requested_output'
 ]);
 
+// Maximum number of protocol name candidates the parser may return.
 const PARSER_PROTOCOL_CANDIDATE_LIMIT = 3;
 
+// Prompt-visible JSON template showing the exact response structure expected from the model.
 const INTENT_PARSER_OUTPUT_TEMPLATE = Object.freeze({
   primary_intent: 'one allowed intent',
   needs_clarification: true,
@@ -63,6 +76,7 @@ const INTENT_PARSER_OUTPUT_TEMPLATE = Object.freeze({
   reasoning_summary: 'brief explanation'
 });
 
+// JSON-schema-like validation shape for normalized parser responses.
 const INTENT_PARSER_RESPONSE_SCHEMA = {
   type: 'object',
   additionalProperties: false,
@@ -126,10 +140,12 @@ const INTENT_PARSER_RESPONSE_SCHEMA = {
   }
 };
 
+// Return the input only when it is already an array; otherwise use an empty array.
 function asArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
+// Normalize unknown input into trimmed text and cap it to a safe maximum length.
 function cleanText(value, maxLength = 500) {
   const text = String(value || '').trim();
   if (!text) {
@@ -141,6 +157,7 @@ function cleanText(value, maxLength = 500) {
   return `${text.slice(0, maxLength)}...`;
 }
 
+// Deduplicate normalized strings while preserving order and limiting output size.
 function uniqueStrings(values, max = 20) {
   const seen = new Set();
   const output = [];
@@ -159,10 +176,12 @@ function uniqueStrings(values, max = 20) {
   return output;
 }
 
+// Check whether a value is a non-array object.
 function isObject(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
+// Accept either an object or a JSON string and return a parsed object payload when possible.
 function parseRawPayload(rawValue) {
   if (isObject(rawValue)) {
     return rawValue;
@@ -178,6 +197,7 @@ function parseRawPayload(rawValue) {
   }
 }
 
+// Normalize raw intent names, including alias correction, into canonical parser intents.
 function normalizeParserIntent(rawIntent) {
   const normalized = cleanText(rawIntent, 80)
     .toLowerCase()
@@ -194,6 +214,7 @@ function normalizeParserIntent(rawIntent) {
   return '';
 }
 
+// Normalize the parser's entity block so every supported entity key is present.
 function normalizeEntityBlock(rawEntities) {
   if (!isObject(rawEntities)) {
     return null;
@@ -211,6 +232,7 @@ function normalizeEntityBlock(rawEntities) {
   return entities;
 }
 
+// Normalize inventory search hints returned by the parser.
 function normalizeInventorySearch(rawInventorySearch) {
   if (!isObject(rawInventorySearch)) {
     return null;
@@ -227,6 +249,7 @@ function normalizeInventorySearch(rawInventorySearch) {
   };
 }
 
+// Keep protocol candidates only for notebook requests and seed them from explicit protocol entities.
 function normalizeProtocolCandidates(rawCandidates, primaryIntent, entities = {}) {
   if (primaryIntent !== 'protocol_to_notebook') {
     return [];
@@ -238,7 +261,9 @@ function normalizeProtocolCandidates(rawCandidates, primaryIntent, entities = {}
   return uniqueStrings(seed, PARSER_PROTOCOL_CANDIDATE_LIMIT);
 }
 
+// Validate and normalize the model's parser JSON response into the runtime payload shape.
 function normalizeIntentParserPayload(rawValue) {
+  // Parse the raw model output first so later checks can assume an object payload.
   const parsed = parseRawPayload(rawValue);
   if (!parsed) {
     return {
@@ -247,6 +272,7 @@ function normalizeIntentParserPayload(rawValue) {
     };
   }
 
+  // Reject deprecated or unsupported fields so the parser output stays minimal and predictable.
   if (Object.prototype.hasOwnProperty.call(parsed, 'confidence')) {
     return {
       ok: false,
@@ -261,6 +287,7 @@ function normalizeIntentParserPayload(rawValue) {
     };
   }
 
+  // Canonicalize the chosen intent before validating intent-specific branches.
   const primaryIntent = normalizeParserIntent(parsed.primary_intent);
   if (!primaryIntent) {
     return {
@@ -305,6 +332,7 @@ function normalizeIntentParserPayload(rawValue) {
     };
   }
 
+  // Only preserve inventory hints when the chosen intent is actually an inventory lookup.
   const normalizedInventorySearch = primaryIntent === 'inventory_lookup'
     ? {
       normalized_query: inventorySearchRaw.normalized_query,
@@ -319,6 +347,7 @@ function normalizeIntentParserPayload(rawValue) {
       search_mode: null
     };
 
+  // Return the final normalized payload consumed by routing and downstream helpers.
   return {
     ok: true,
     payload: {
@@ -333,22 +362,26 @@ function normalizeIntentParserPayload(rawValue) {
   };
 }
 
+// Small assertion helper used while validating the static intent catalog.
 function assertCatalog(condition, message) {
   if (!condition) {
     throw new Error(message);
   }
 }
 
+// Validate one required catalog string field and include its path in any thrown error.
 function validateCatalogString(value, path, maxLength = 1200) {
   const normalized = cleanText(value, maxLength);
   assertCatalog(Boolean(normalized), `${path} must be a non-empty string.`);
   return normalized;
 }
 
+// Validate the free-form per-intent rule text in the catalog.
 function validateCatalogRule(value, path) {
   return validateCatalogString(value, path, 1000);
 }
 
+// Validate the intent-specific output appendix block used in the parser prompt.
 function validateCatalogSpecificOutputAppend(value, path) {
   assertCatalog(isObject(value), `${path} must be an object.`);
   const entries = Object.entries(value).map(([key, description]) => ({
@@ -359,9 +392,12 @@ function validateCatalogSpecificOutputAppend(value, path) {
   return entries;
 }
 
+// Validate the full intent catalog and return it in canonical parser-intent order.
 function validateIntentCatalog(rawCatalog) {
+  // Validate the top-level JSON shape before iterating through each intent entry.
   assertCatalog(isObject(rawCatalog), 'Intent catalog must be an object.');
   const namesSeen = new Set();
+  // Normalize each entry and verify that names, descriptions, rules, and prompt appendices are valid.
   const normalizedEntries = Object.entries(rawCatalog).map(([key, rawEntry]) => {
     const path = `agent-intent.json.${key}`;
     assertCatalog(isObject(rawEntry), `${path} must be an object.`);
@@ -380,6 +416,7 @@ function validateIntentCatalog(rawCatalog) {
     };
   });
 
+  // Ensure the catalog covers every canonical intent exactly once and contains no unexpected extras.
   const byName = new Map(normalizedEntries.map((entry) => [entry.name, entry]));
   const missing = PARSER_CANONICAL_INTENTS.filter((name) => !byName.has(name));
   assertCatalog(missing.length === 0, `Intent catalog is missing canonical intents: ${missing.join(', ')}`);
@@ -391,6 +428,7 @@ function validateIntentCatalog(rawCatalog) {
   return Object.freeze(PARSER_CANONICAL_INTENTS.map((name) => byName.get(name)));
 }
 
+// Render one intent's output-append rows as bullet points for the prompt.
 function formatIntentSpecificOutputAppend(rows = []) {
   return asArray(rows)
     .map((row) => `- ${cleanText(row?.key, 120)}: ${cleanText(row?.description, 500)}`)
@@ -398,7 +436,9 @@ function formatIntentSpecificOutputAppend(rows = []) {
     .join('\n');
 }
 
+// Build the base instruction prompt that teaches the model the allowed intents and schema.
 function buildIntentCatalogPrompt(catalog = []) {
+  // Fall back to the validated static catalog unless a test/custom catalog is supplied.
   const normalizedCatalog = asArray(catalog).length ? asArray(catalog) : INTENT_PARSER_CATALOG;
   const allowedIntents = normalizedCatalog.map((entry) => `- ${entry.name}`).join('\n');
   const descriptions = normalizedCatalog.map((entry) => [
@@ -410,6 +450,7 @@ function buildIntentCatalogPrompt(catalog = []) {
   ].join('\n')).join('\n\n');
   const examples = normalizedCatalog.map((entry) => `User: "${entry.example_input}"`).join('\n');
 
+  // Assemble one reusable instruction block that defines intents, schema, rules, and examples.
   return [
     'You are an intent and entity parser for a lab assistant app.',
     "Your job is to read the user's message and return JSON only.",
@@ -433,9 +474,11 @@ function buildIntentCatalogPrompt(catalog = []) {
   ].join('\n\n');
 }
 
+// Validated static catalog and prebuilt prompt shared by all parser calls.
 const INTENT_PARSER_CATALOG = validateIntentCatalog(RAW_INTENT_CATALOG);
 const INTENT_PARSER_PROMPT = buildIntentCatalogPrompt(INTENT_PARSER_CATALOG);
 
+// Map parser output intents to execution-layer intents, defaulting safely when unknown.
 function mapCanonicalIntentToExecutionIntent(primaryIntent) {
   const normalized = normalizeParserIntent(primaryIntent);
   if (normalized) {
@@ -444,7 +487,9 @@ function mapCanonicalIntentToExecutionIntent(primaryIntent) {
   return 'general_science_question';
 }
 
+// Convert parser entity keys into the flatter routing entity shape used elsewhere in the app.
 function normalizeParserEntitiesToRoutingEntities(parserEntities, primaryIntent = '') {
+  // Map the parser's richer entity block into the smaller routing entity shape.
   const source = isObject(parserEntities) ? parserEntities : {};
   const mapped = {
     activity: cleanText(source.activity_type, 180),
@@ -457,16 +502,20 @@ function normalizeParserEntitiesToRoutingEntities(parserEntities, primaryIntent 
     workflow_step: cleanText(source.workflow_step, 180)
   };
 
+  // Inventory requests may surface the compound under `inventory_item` instead of `compound_name`.
   if (!mapped.compound && cleanText(primaryIntent, 80) === 'inventory_lookup') {
     mapped.compound = cleanText(source.inventory_item, 120);
   }
+  // Fall back to the requested output when no explicit activity type was extracted.
   if (!mapped.activity) {
     mapped.activity = cleanText(source.requested_output, 180);
   }
   return mapped;
 }
 
+// Combine the base parser prompt with project context, recent conversation, and the latest message.
 function buildIntentParserPrompt({ message, conversation = [], projectName = '' }) {
+  // Keep only the most recent turns and compress them into a numbered transcript block.
   const transcript = asArray(conversation)
     .slice(-8)
     .map((turn, index) => {
@@ -478,6 +527,7 @@ function buildIntentParserPrompt({ message, conversation = [], projectName = '' 
     .join('\n');
   const project = cleanText(projectName, 180);
   const latestMessage = cleanText(message, 4000);
+  // Append dynamic context to the static parser instructions for the current user request.
   return [
     INTENT_PARSER_PROMPT,
     project ? `Active project context: ${project}` : '',
@@ -487,11 +537,13 @@ function buildIntentParserPrompt({ message, conversation = [], projectName = '' 
   ].filter(Boolean).join('\n\n');
 }
 
+// Build the ordered list of inventory search terms according to the parser-selected search mode.
 function buildInventorySearchTerms({
   inventorySearch = {},
   fallbackQuery = '',
   maxTerms = 10
 }) {
+  // Normalize all inventory-search ingredients before ordering them by search strategy.
   const normalizedQuery = cleanText(inventorySearch?.normalized_query, 220);
   const candidateTerms = uniqueStrings(inventorySearch?.candidate_terms, maxTerms);
   const aliases = uniqueStrings(inventorySearch?.aliases, maxTerms);
@@ -505,6 +557,7 @@ function buildInventorySearchTerms({
   ], maxTerms);
   const aliasTerms = uniqueStrings(aliases, maxTerms);
 
+  // Respect the parser-selected search order when combining exact terms and aliases.
   if (searchMode === 'exact_only') {
     return uniqueStrings(exactTerms, maxTerms);
   }
@@ -514,6 +567,7 @@ function buildInventorySearchTerms({
   return uniqueStrings([...exactTerms, ...aliasTerms], maxTerms);
 }
 
+// Public module export exposing parser constants, prompt builders, and normalization helpers.
 module.exports = {
   PARSER_CANONICAL_INTENTS,
   PARSER_ALLOWED_INTENTS,

@@ -21,25 +21,25 @@ export const VIEWS = {
 };
 
 export const TITLES = {
-  [VIEWS.HOME]: 'Dashboard overview, reminders, and app launcher.',
-  [VIEWS.LAB_MANAGEMENT]: 'Manage members in card view.',
-  [VIEWS.INSTRUMENT_MANAGEMENT]: 'Manage instruments and reservations by calendar.',
-  [VIEWS.PROTOCOL_MANAGEMENT]: 'Create and edit protocols step by step.',
-  [VIEWS.COLLABORATION_MANAGEMENT]: 'Collabrations module.',
-  [VIEWS.SYNTHESIS_NOTEBOOK]: 'Synthesis notebook for chemistry workflows.',
-  [VIEWS.BIOLOGY_NOTEBOOK]: 'Biology notebook for wet lab workflows.',
-  [VIEWS.LAB_COMMON_INVENTORY]: 'Chemicals module.',
-  [VIEWS.SAMPLE_REGISTRY]: 'Manage sample registry and personal inventory containers in one workspace.',
-  [VIEWS.ASSAY]: 'Create assay plates or open existing assay numbers to paste spreadsheet results and analyze.',
-  [VIEWS.GEL]: 'Analyze SDS-PAGE or Western blot gels with lane/band quantification and interpretation.',
-  [VIEWS.PERSONAL_INVENTORY]: 'Manage sample registry and personal inventory containers in one workspace.',
-  [VIEWS.SETTING]: 'Settings module.',
-  [VIEWS.PROJECT_MANAGEMENT]: 'Manage projects for notebook context.',
-  [VIEWS.WORKFLOW_MANAGEMENT]: 'Build editable workflows with protocol/text blocks and reusable templates.',
-  [VIEWS.PAPERS]: 'Upload papers, link them to projects or journal clubs, and summarize with LLM.',
-  [VIEWS.AGENT]: 'Ask the lab assistant agent with evidence-grounded context and decision records.',
-  [VIEWS.SEQUENCE_VIEWER]: 'Load FASTA/FASTQ/GenBank or pasted sequence and inspect records with feature overlays.',
-  [VIEWS.TOOL_BOX]: 'Tools: molarity calculator, peptide properties, and buffer preparer.'
+  [VIEWS.HOME]: 'Bench overview, reminders, workflow progress, and a lab timer.',
+  [VIEWS.LAB_MANAGEMENT]: 'Directory of members, roles, and lab contacts.',
+  [VIEWS.INSTRUMENT_MANAGEMENT]: 'Instrument schedules, availability, and reservations.',
+  [VIEWS.PROTOCOL_MANAGEMENT]: 'Protocol library for drafting, editing, and reuse.',
+  [VIEWS.COLLABORATION_MANAGEMENT]: 'Collaboration records, contacts, and shared threads.',
+  [VIEWS.SYNTHESIS_NOTEBOOK]: 'Chemistry notebook entries and linked project context.',
+  [VIEWS.BIOLOGY_NOTEBOOK]: 'Biology notebook entries and wet-lab context.',
+  [VIEWS.LAB_COMMON_INVENTORY]: 'Chemical inventory, locations, and stock records.',
+  [VIEWS.SAMPLE_REGISTRY]: 'Samples, storage containers, and personal inventory in one workspace.',
+  [VIEWS.ASSAY]: 'Plate setup, pasted results, and assay analysis.',
+  [VIEWS.GEL]: 'Gel and blot analysis with band-level review.',
+  [VIEWS.PERSONAL_INVENTORY]: 'Samples, storage containers, and personal inventory in one workspace.',
+  [VIEWS.SETTING]: 'Workspace appearance, startup, storage, and model settings.',
+  [VIEWS.PROJECT_MANAGEMENT]: 'Projects that organize notebook and paper context.',
+  [VIEWS.WORKFLOW_MANAGEMENT]: 'Workflow templates, reusable blocks, and next-step planning.',
+  [VIEWS.PAPERS]: 'Paper library, linked projects, comments, and summaries.',
+  [VIEWS.AGENT]: 'Assistant sessions with project context and evidence-grounded responses.',
+  [VIEWS.SEQUENCE_VIEWER]: 'Sequence records, annotations, overlays, and detail views.',
+  [VIEWS.TOOL_BOX]: 'Bench calculators, sequence utilities, and quick analysis tools.'
 };
 
 export const STORAGE_KEY = 'enana_state_v1';
@@ -125,6 +125,7 @@ export const defaultState = {
   knowledgeChats: {},
   agentChat: {
     projectId: '',
+    deepResearchEnabled: false,
     currentSessionId: '',
     sessions: [],
     messages: []
@@ -278,6 +279,57 @@ function normalizeWorkflowProgressMap(rawValue) {
   return normalized;
 }
 
+function clampUnitInterval(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return Number.NaN;
+  }
+  return Math.min(Math.max(numeric, 0), 1);
+}
+
+export function normalizePaperComment(rawComment) {
+  if (!rawComment || typeof rawComment !== 'object' || Array.isArray(rawComment)) {
+    return null;
+  }
+
+  const id = String(rawComment.id || '').trim();
+  const pageNumber = Math.round(Number(rawComment.pageNumber));
+  const anchorX = clampUnitInterval(rawComment.anchorX);
+  const anchorY = clampUnitInterval(rawComment.anchorY);
+  const text = String(rawComment.text || '').trim();
+  if (!id || !Number.isFinite(pageNumber) || pageNumber < 1 || !Number.isFinite(anchorX) || !Number.isFinite(anchorY) || !text) {
+    return null;
+  }
+
+  const createdAt = String(rawComment.createdAt || rawComment.updatedAt || '').trim();
+  const updatedAt = String(rawComment.updatedAt || rawComment.createdAt || '').trim();
+
+  return {
+    ...rawComment,
+    id,
+    pageNumber,
+    anchorX,
+    anchorY,
+    text,
+    author: String(rawComment.author || 'Local user').trim() || 'Local user',
+    createdAt,
+    updatedAt
+  };
+}
+
+export function normalizePaperRecord(rawPaper) {
+  if (!rawPaper || typeof rawPaper !== 'object' || Array.isArray(rawPaper)) {
+    return rawPaper;
+  }
+
+  return {
+    ...rawPaper,
+    comments: Array.isArray(rawPaper.comments)
+      ? rawPaper.comments.map((comment) => normalizePaperComment(comment)).filter(Boolean)
+      : []
+  };
+}
+
 export function normalizeState(parsed) {
   const source = parsed || {};
   const rawLlm = source.settings?.llm || {};
@@ -312,13 +364,14 @@ export function normalizeState(parsed) {
     workflows: Array.isArray(source.workflows) ? source.workflows : [],
     workflowTemplates: Array.isArray(source.workflowTemplates) ? source.workflowTemplates : [],
     journalClubs: Array.isArray(source.journalClubs) ? source.journalClubs : [],
-    papers: Array.isArray(source.papers) ? source.papers : [],
+    papers: Array.isArray(source.papers) ? source.papers.map((paper) => normalizePaperRecord(paper)) : [],
     paperExperimentLinks: Array.isArray(source.paperExperimentLinks) ? source.paperExperimentLinks : [],
     knowledgeChats: source.knowledgeChats && typeof source.knowledgeChats === 'object' ? source.knowledgeChats : {},
     agentChat: {
       ...defaultState.agentChat,
       ...(source.agentChat && typeof source.agentChat === 'object' ? source.agentChat : {}),
       projectId: String(source.agentChat?.projectId || ''),
+      deepResearchEnabled: source.agentChat?.deepResearchEnabled === true,
       currentSessionId: String(source.agentChat?.currentSessionId || ''),
       sessions: Array.isArray(source.agentChat?.sessions) ? source.agentChat.sessions : [],
       messages: Array.isArray(source.agentChat?.messages) ? source.agentChat.messages : []

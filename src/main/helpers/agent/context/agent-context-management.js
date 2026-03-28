@@ -1,25 +1,35 @@
+/**
+ * Context-layer state management for agent sessions, including active task
+ * tracking, short-lived session memory, prompt block assembly, and pruning of
+ * expired in-memory session records.
+ */
 'use strict';
 
+// Shared list/text normalization helpers reused across the agent runtime.
 const {
   defaultAsArray,
   defaultCleanText
 } = require('../shared/agent-llm-utils.js');
 
+// Stable identifiers for the context layers that may be exposed to other modules.
 const CONTEXT_LAYER_IDS = Object.freeze({
   IMMEDIATE: 'immediate',
   SESSION_MEMORY: 'session_memory',
   LONG_TERM_MEMORY: 'long_term_memory'
 });
 
+// High-level session modes indicating whether a task is currently in progress.
 const CONTEXT_MODES = Object.freeze({
   READY: 'ready',
   ACTIVE_TASK: 'active_task'
 });
 
+// Keep only plain object-like values; everything else becomes an empty object.
 function ensureObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 }
 
+// Deep-clone JSON-safe values so callers do not mutate stored session state by reference.
 function cloneJson(value, fallback = null) {
   try {
     return JSON.parse(JSON.stringify(value));
@@ -28,11 +38,14 @@ function cloneJson(value, fallback = null) {
   }
 }
 
+// Generate a lightweight identifier for newly created active-task records.
 function createTaskId() {
   return `task-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
 }
 
+// Create the in-memory session runtime used to track active tasks and layered context.
 function createAgentContextManagementRuntime(deps = {}) {
+  // Allow core helpers, time functions, and storage to be injected for testing or customization.
   const asArray = typeof deps.asArray === 'function' ? deps.asArray : defaultAsArray;
   const cleanText = typeof deps.cleanText === 'function' ? deps.cleanText : defaultCleanText;
   const now = typeof deps.now === 'function' ? deps.now : (() => new Date().toISOString());
@@ -40,6 +53,7 @@ function createAgentContextManagementRuntime(deps = {}) {
   const sessionTtlMs = Number.isFinite(Number(deps.sessionTtlMs)) ? Number(deps.sessionTtlMs) : (6 * 60 * 60 * 1000);
   const store = deps.store instanceof Map ? deps.store : new Map();
 
+  // Deduplicate normalized strings while preserving order and enforcing a maximum list size.
   function uniqueStrings(values, max = 12) {
     const seen = new Set();
     const out = [];
@@ -58,6 +72,7 @@ function createAgentContextManagementRuntime(deps = {}) {
     return out;
   }
 
+  // Ensure every public session mutation operates on a valid normalized session id.
   function requireSessionId(sessionId) {
     const normalized = cleanText(sessionId, 160);
     if (!normalized) {
@@ -66,6 +81,7 @@ function createAgentContextManagementRuntime(deps = {}) {
     return normalized;
   }
 
+  // Normalize project metadata that may arrive from parser output or tool resolution.
   function normalizeProject(project) {
     const source = ensureObject(project);
     const id = cleanText(source.id, 120);
@@ -81,6 +97,7 @@ function createAgentContextManagementRuntime(deps = {}) {
     };
   }
 
+  // Normalize selected protocol metadata while preserving any extra structured fields.
   function normalizeSelectedProtocol(protocol) {
     const source = ensureObject(protocol);
     const id = cleanText(source.id, 120);
@@ -95,6 +112,7 @@ function createAgentContextManagementRuntime(deps = {}) {
     }, null);
   }
 
+  // Normalize unresolved placeholders into consistent `{ key, display, reason }` objects.
   function normalizeMissingFields(values, max = 20) {
     return asArray(values).slice(0, max).map((value) => {
       if (typeof value === 'string') {
@@ -119,6 +137,7 @@ function createAgentContextManagementRuntime(deps = {}) {
     }).filter(Boolean);
   }
 
+  // Normalize one recorded tool execution so task traces stay consistent across updates.
   function normalizeToolTraceEntry(source) {
     const raw = ensureObject(source);
     const toolName = cleanText(raw.tool_name || raw.toolName, 120);
@@ -132,12 +151,15 @@ function createAgentContextManagementRuntime(deps = {}) {
     };
   }
 
+  // Merge incoming task updates with any prior task state into one normalized active-task record.
   function normalizeTask(source = {}, previousTask = null) {
+    // Start from the incoming partial update plus any previous task so omitted fields can be preserved.
     const raw = ensureObject(source);
     const previous = ensureObject(previousTask);
     const taskId = cleanText(raw.task_id || raw.taskId, 160)
       || cleanText(previous.task_id, 160)
       || createId();
+    // Normalize every task subfield into stable shapes used by prompt builders and follow-up logic.
     return {
       task_id: taskId,
       task_type: cleanText(raw.task_type || raw.taskType, 120) || cleanText(previous.task_type, 120),
@@ -167,6 +189,7 @@ function createAgentContextManagementRuntime(deps = {}) {
     };
   }
 
+  // Build a compact one-line summary of the active task for prompt/session-memory use.
   function buildTaskSummary(task) {
     const source = ensureObject(task);
     const parts = [
@@ -178,6 +201,7 @@ function createAgentContextManagementRuntime(deps = {}) {
     return cleanText(parts.join(' | '), 600);
   }
 
+  // Create the default layered-memory structure for a brand-new session.
   function createEmptySession(sessionId) {
     const timestamp = now();
     return {
@@ -201,6 +225,7 @@ function createAgentContextManagementRuntime(deps = {}) {
     };
   }
 
+  // Refresh the session timestamp whenever it is accessed or modified.
   function touchSession(session) {
     return {
       ...session,
@@ -208,6 +233,7 @@ function createAgentContextManagementRuntime(deps = {}) {
     };
   }
 
+  // Retrieve a session from the store, optionally creating an empty one on first access.
   function getSessionRecord(sessionId, createIfMissing = true) {
     const normalizedId = requireSessionId(sessionId);
     let session = store.get(normalizedId);
@@ -218,12 +244,14 @@ function createAgentContextManagementRuntime(deps = {}) {
     return session ? touchSession(session) : null;
   }
 
+  // Persist a cloned snapshot of the session back into the store and return a detached copy.
   function saveSession(session) {
     const normalized = cloneJson(session, {});
     store.set(requireSessionId(normalized.session_id), normalized);
     return cloneJson(normalized, {});
   }
 
+  // Append normalized items into one session-memory list while deduplicating older values.
   function appendSessionMemoryList(session, field, values, max = 12) {
     session.session_memory[field] = uniqueStrings([
       ...asArray(session.session_memory[field]),
@@ -231,11 +259,14 @@ function createAgentContextManagementRuntime(deps = {}) {
     ], max);
   }
 
+  // Promote the session into active-task mode and synchronize summary/project fields from the task.
   function updateSessionFromTask(session, task) {
+    // Always re-normalize task updates before storing them back on the session.
     const normalizedTask = normalizeTask(task, session.active_task);
     session.mode = CONTEXT_MODES.ACTIVE_TASK;
     session.active_task = normalizedTask;
     session.session_memory.active_task_summary = buildTaskSummary(normalizedTask);
+    // Keep the latest active project visible in session memory for future requests.
     if (normalizedTask.project) {
       session.session_memory.current_project_state = cloneJson(normalizedTask.project, null);
     }
@@ -243,6 +274,7 @@ function createAgentContextManagementRuntime(deps = {}) {
     return normalizedTask;
   }
 
+  // Start a new task (or overwrite the current one) and seed session memory from the request.
   function startTask(input = {}) {
     const source = ensureObject(input);
     const session = getSessionRecord(source.session_id);
@@ -255,9 +287,11 @@ function createAgentContextManagementRuntime(deps = {}) {
     return saveSession(session);
   }
 
+  // Merge partial task progress into the current active task while preserving prior known values.
   function mergeTaskUpdate(input = {}) {
     const source = ensureObject(input);
     const session = getSessionRecord(source.session_id);
+    // Merge incremental fields carefully so known values, questions, and tool traces accumulate.
     const nextTask = normalizeTask({
       ...ensureObject(session.active_task),
       ...source,
@@ -282,9 +316,11 @@ function createAgentContextManagementRuntime(deps = {}) {
     return saveSession(session);
   }
 
+  // Record one tool execution round and expose its result in both task trace and immediate context.
   function recordToolRound(input = {}) {
     const source = ensureObject(input);
     const session = getSessionRecord(source.session_id);
+    // Normalize the current tool execution into the canonical trace entry shape.
     const toolEntry = normalizeToolTraceEntry({
       tool_name: source.tool_name,
       ok: source.ok,
@@ -293,6 +329,7 @@ function createAgentContextManagementRuntime(deps = {}) {
       result: source.result,
       recorded_at: source.recorded_at
     });
+    // Attach the tool result to the current task, or create a minimal tool-loop task if none exists yet.
     const activeTask = session.active_task
       ? normalizeTask({
         ...session.active_task,
@@ -307,6 +344,7 @@ function createAgentContextManagementRuntime(deps = {}) {
         tool_trace: [toolEntry]
       });
     updateSessionFromTask(session, activeTask);
+    // Mirror a shorter version of the latest tool results into the immediate context layer.
     session.latest_tool_outputs = [
       {
         tool_name: toolEntry.tool_name,
@@ -320,6 +358,7 @@ function createAgentContextManagementRuntime(deps = {}) {
     return saveSession(session);
   }
 
+  // Track clarification questions in both the active task and session unresolved-question memory.
   function recordFollowUpQuestion(input = {}) {
     const source = ensureObject(input);
     const session = getSessionRecord(source.session_id);
@@ -337,14 +376,17 @@ function createAgentContextManagementRuntime(deps = {}) {
     return saveSession(session);
   }
 
+  // Apply user-provided answers to known values and remove any resolved missing-field placeholders.
   function recordFollowUpAnswer(input = {}) {
     const source = ensureObject(input);
     const session = getSessionRecord(source.session_id);
+    // Collect structured values provided by the user so they can be merged into task state.
     const providedValues = ensureObject(source.provided_values || source.known_values);
     const resolvedKeys = uniqueStrings([
       ...asArray(source.resolved_fields),
       ...Object.keys(providedValues)
     ], 24).map((item) => item.toLowerCase());
+    // Remove any missing-field placeholders that were resolved by the new answer payload.
     const nextMissingFields = normalizeMissingFields(asArray(session.active_task?.missing_fields))
       .filter((item) => !resolvedKeys.includes(cleanText(item.key || item.display, 160).toLowerCase()));
     const activeTask = normalizeTask({
@@ -358,6 +400,7 @@ function createAgentContextManagementRuntime(deps = {}) {
     }, session.active_task);
     updateSessionFromTask(session, activeTask);
     session.latest_user_request = cleanText(source.answer || source.message, 4000) || session.latest_user_request;
+    // Best-effort cleanup of session-level unresolved questions that reference the resolved keys.
     session.session_memory.unresolved_questions = uniqueStrings(
       asArray(session.session_memory.unresolved_questions).filter((question) => {
         const normalized = question.toLowerCase();
@@ -368,6 +411,7 @@ function createAgentContextManagementRuntime(deps = {}) {
     return saveSession(session);
   }
 
+  // Clear the active task and return the session to ready mode without erasing broader session memory.
   function resetActiveTask(input = {}) {
     const source = ensureObject(input);
     const session = getSessionRecord(source.session_id);
@@ -379,15 +423,18 @@ function createAgentContextManagementRuntime(deps = {}) {
     return saveSession(session);
   }
 
+  // Finalize the active task, archive a short completion summary, and reset task-scoped context.
   function completeTask(input = {}) {
     const source = ensureObject(input);
     const session = getSessionRecord(source.session_id);
+    // Snapshot the final task state before archiving a compact completion record.
     const activeTask = normalizeTask({
       ...ensureObject(session.active_task),
       ...source,
       status: cleanText(source.status, 80) || 'completed',
       updated_at: now()
     }, session.active_task);
+    // Store a short recent-history entry so future prompts can reference recently finished work.
     const completedEntry = {
       task_id: cleanText(activeTask.task_id, 160),
       task_type: cleanText(activeTask.task_type, 120),
@@ -396,6 +443,7 @@ function createAgentContextManagementRuntime(deps = {}) {
       summary: cleanText(source.completion_summary, 320) || buildTaskSummary(activeTask),
       completed_at: now()
     };
+    // Keep only the most recent completed tasks in session memory.
     session.session_memory.recent_completed_tasks = [
       completedEntry,
       ...asArray(session.session_memory.recent_completed_tasks)
@@ -409,11 +457,13 @@ function createAgentContextManagementRuntime(deps = {}) {
     return saveSession(session);
   }
 
+  // Return a detached snapshot of one session record without creating it implicitly.
   function getSession(sessionId) {
     const record = getSessionRecord(sessionId, false);
     return record ? cloneJson(record, {}) : null;
   }
 
+  // Normalize the recent conversation window into short role/text entries for prompt assembly.
   function normalizeConversation(conversation, max = 8) {
     return asArray(conversation)
       .slice(-max)
@@ -424,6 +474,7 @@ function createAgentContextManagementRuntime(deps = {}) {
       .filter((entry) => entry.text);
   }
 
+  // Normalize recent tool outputs that should remain visible in the immediate working context.
   function normalizeImmediateToolOutputs(toolOutputs, max = 6) {
     return asArray(toolOutputs)
       .slice(-max)
@@ -436,6 +487,7 @@ function createAgentContextManagementRuntime(deps = {}) {
       }));
   }
 
+  // Normalize recalled long-term-memory items before they are embedded into prompt context.
   function normalizeLongTermMemoryItems(items, max = 12) {
     return asArray(items).slice(0, max).map((item) => {
       const source = ensureObject(item);
@@ -453,6 +505,7 @@ function createAgentContextManagementRuntime(deps = {}) {
     }).filter((item) => item.id || item.key || item.summary);
   }
 
+  // Derive candidate facts from session memory that may be worth promoting to long-term memory.
   function deriveMemoryCandidates(session) {
     const candidates = [];
     const project = normalizeProject(session.session_memory?.current_project_state);
@@ -492,7 +545,9 @@ function createAgentContextManagementRuntime(deps = {}) {
     return candidates.slice(0, 8);
   }
 
+  // Render each context layer into human-readable prompt sections plus one combined block.
   function buildPromptBlocks(layers) {
+    // Immediate context focuses on the current request, recent dialogue, and fresh tool outputs.
     const immediate = [
       'Immediate working context:',
       layers.immediate.current_user_request
@@ -509,6 +564,7 @@ function createAgentContextManagementRuntime(deps = {}) {
         : ''
     ].filter(Boolean).join('\n\n');
 
+    // Session memory captures medium-term information accumulated during this chat session.
     const sessionMemory = [
       'Session memory summary:',
       layers.session_memory.goals.length ? `Goals: ${layers.session_memory.goals.join(' | ')}` : '',
@@ -526,6 +582,7 @@ function createAgentContextManagementRuntime(deps = {}) {
         : ''
     ].filter(Boolean).join('\n\n');
 
+    // Long-term memory lists recalled durable facts supplied by external memory retrieval.
     const longTermMemory = [
       'Long-term memory:',
       layers.long_term_memory.length
@@ -541,9 +598,12 @@ function createAgentContextManagementRuntime(deps = {}) {
     };
   }
 
+  // Build the full layered context envelope returned to the agent orchestration layer.
   function buildContextEnvelope(input = {}) {
+    // Combine current request data with persisted session state to assemble the layered envelope.
     const source = ensureObject(input);
     const session = getSessionRecord(source.session_id);
+    // Build the three context layers: immediate working state, session memory, and recalled memory.
     const layers = {
       immediate: {
         current_user_request: cleanText(source.current_user_request || source.message, 4000) || session.latest_user_request,
@@ -570,10 +630,12 @@ function createAgentContextManagementRuntime(deps = {}) {
         source.long_term_memory !== undefined ? source.long_term_memory : source.recalled_memory
       )
     };
+    // Persist the latest immediate-layer values back onto the session for subsequent turns.
     session.latest_user_request = layers.immediate.current_user_request || session.latest_user_request;
     session.recent_conversation = cloneJson(layers.immediate.recent_conversation, []);
     session.latest_tool_outputs = cloneJson(layers.immediate.latest_tool_outputs, []);
     saveSession(session);
+    // Return both structured layers and ready-to-insert prompt blocks for the orchestrator.
     return {
       session_id: session.session_id,
       mode: session.active_task ? CONTEXT_MODES.ACTIVE_TASK : CONTEXT_MODES.READY,
@@ -584,9 +646,12 @@ function createAgentContextManagementRuntime(deps = {}) {
     };
   }
 
+  // Remove stale sessions whose last update exceeds the configured in-memory TTL.
   function pruneExpiredSessions() {
+    // Track which session ids were removed so callers can inspect cleanup behavior.
     const removed = [];
     const nowMs = Date.now();
+    // Expire sessions based on their most recent timestamp, discarding malformed timestamps as well.
     store.forEach((session, key) => {
       const updatedAt = Date.parse(session?.updated_at || session?.created_at || '');
       if (!Number.isFinite(updatedAt)) {
@@ -602,6 +667,7 @@ function createAgentContextManagementRuntime(deps = {}) {
     return removed;
   }
 
+  // Expose the public runtime operations used by the higher-level agent orchestrator.
   return {
     startTask,
     mergeTaskUpdate,
@@ -616,6 +682,7 @@ function createAgentContextManagementRuntime(deps = {}) {
   };
 }
 
+// Public module export exposing the context constants and runtime factory.
 module.exports = {
   CONTEXT_LAYER_IDS,
   CONTEXT_MODES,

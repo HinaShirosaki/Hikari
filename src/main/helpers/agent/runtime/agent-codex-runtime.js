@@ -1,12 +1,21 @@
+/**
+ * Codex-backed agent runtime for gathering retrieval context, drafting an
+ * answer with the Codex CLI, running a structured synthesis pass, and
+ * returning a validated response payload with trace metadata.
+ */
 'use strict';
 
+// Shared text/list normalization helpers used across the runtime.
 const { createAgentLlmRuntimeHelpers } = require('../shared/agent-llm-utils.js');
 
+// Create the Codex-specific runtime with injectable dependencies for tools, prompts, and tracing.
 function createCodexAgentRuntime(deps = {}) {
+  // Reuse the shared runtime helper factory so local utilities match the rest of the agent stack.
   const {
     asArray,
     cleanText
   } = createAgentLlmRuntimeHelpers(deps);
+  // Dependency injection keeps tool execution, Codex calls, and prompt assembly customizable for tests.
   const runTool = typeof deps.runAgentTool === 'function' ? deps.runAgentTool : null;
   const requestCodexCliText = deps.requestCodexCliText;
   const getCodexCliWorkingDirectory = typeof deps.getCodexCliWorkingDirectory === 'function'
@@ -43,7 +52,9 @@ function createCodexAgentRuntime(deps = {}) {
     ? deps.containsWriteIntent
     : ((text) => /\b(create|update|edit|delete|remove|reserve|consume|commit|save|download|fetch|import|upload|store)\b/i.test(String(text || '')));
 
+  // Build a normalized trace snapshot describing one reasoning stage for downstream inspection.
   function buildIntermediateState(stage, goal, extras = {}) {
+    // Store the stage summary in a stable shape so the UI/debuggers can render it consistently.
     return {
       state_id: `${Date.now()}-${Math.random().toString(16).slice(2, 10)}`,
       created_at: new Date().toISOString(),
@@ -60,7 +71,9 @@ function createCodexAgentRuntime(deps = {}) {
     };
   }
 
+  // Retrieve supporting context slices from allowed read-only tools before asking Codex to answer.
   async function buildCodexAgentContext(message, snapshot, selectedToolNames = null, routing = null) {
+    // Restrict Codex prefetching to read-oriented retrieval tools only.
     const allowedRetrievalTools = [
       'search_projects',
       'search_protocols',
@@ -72,6 +85,7 @@ function createCodexAgentRuntime(deps = {}) {
       'search_papers',
       'search_web'
     ];
+    // When routing preselects tools, intersect that list with the allowed retrieval set.
     const retrievalTools = Array.isArray(selectedToolNames)
       ? asArray(selectedToolNames)
         .map((name) => cleanText(name, 120))
@@ -80,11 +94,14 @@ function createCodexAgentRuntime(deps = {}) {
     const contextSlices = [];
     const toolTrace = [];
     const evidence = [];
+    // If no tool runner is available, return an empty context bundle rather than failing.
     if (typeof runTool !== 'function') {
       return { contextSlices, toolTrace, evidence };
     }
 
+    // Query each selected retrieval tool and keep only a small slice of its top results.
     for (const toolName of retrievalTools) {
+      // Inventory lookups may need parser-aware query shaping, while other tools share a simple query form.
       const toolArgs = toolName === 'search_inventory'
         ? buildInventoryToolArgs({
           message,
@@ -94,6 +111,7 @@ function createCodexAgentRuntime(deps = {}) {
         : { query: message, limit: 5 };
       const result = await runTool(toolName, toolArgs, snapshot, { allowWriteTools: false });
       const items = asArray(result?.items).slice(0, 5);
+      // Skip tools that returned no useful context.
       if (!items.length) {
         continue;
       }
@@ -106,6 +124,7 @@ function createCodexAgentRuntime(deps = {}) {
         args: result?.input && typeof result.input === 'object' ? result.input : toolArgs,
         summary: cleanText(result?.summary || `Collected ${items.length} records.`, 240)
       });
+      // Collect citation-like evidence so later synthesis can ground its answer.
       asArray(result?.citations).slice(0, 8).forEach((citation) => {
         evidence.push({
           source: cleanText(citation?.source, 120),
@@ -115,6 +134,7 @@ function createCodexAgentRuntime(deps = {}) {
       });
     }
 
+    // Return the collected context slices, a compact tool trace, and synthesized evidence rows.
     return {
       contextSlices,
       toolTrace,
@@ -122,6 +142,7 @@ function createCodexAgentRuntime(deps = {}) {
     };
   }
 
+  // Orchestrate retrieval, Codex drafting, structured synthesis, and final validation.
   async function runCodexAgentController({
     provider,
     model,
@@ -135,10 +156,12 @@ function createCodexAgentRuntime(deps = {}) {
     routing,
     traceContext = null
   } = {}) {
+    // Normalize upstream routing/planning output before using it to guide retrieval and response shaping.
     const normalizedRouting = normalizeRoutingPayload(routing);
     const intermediateStates = [];
     const requiresApproval = containsWriteIntent(message) && !allowWriteTools;
 
+    // Record an intake-stage trace entry before any retrieval or Codex calls happen.
     intermediateStates.push(buildIntermediateState('intake', message, {
       assumptions: [
         'Codex CLI provider selected for retrieved-context synthesis.'
@@ -149,6 +172,7 @@ function createCodexAgentRuntime(deps = {}) {
       confidence: 0.45
     }));
 
+    // Gather read-only context first so Codex can answer from Enana data instead of guessing.
     const collected = await buildCodexAgentContext(
       message,
       snapshot,
@@ -156,14 +180,17 @@ function createCodexAgentRuntime(deps = {}) {
       normalizedRouting
     );
 
+    // Record a second trace entry summarizing how much retrieval context was assembled.
     intermediateStates.push(buildIntermediateState('context', `Prepared ${collected.contextSlices.length} retrieval context slices for Codex CLI.`, {
       evidence: collected.evidence,
       confidence: collected.contextSlices.length ? 0.64 : 0.5
     }));
 
+    // Ensure the latest user request is present in the transcript passed to Codex.
     const promptConversation = hasLatestUserInConversation
       ? asArray(conversation)
       : [...asArray(conversation), { role: 'user', text: message }];
+    // Build the first-pass drafting prompt from system rules, routing info, and retrieved context.
     const systemPrompt = buildAgentSystemPrompt(projectName, promptConfig);
     const draftPrompt = [
       systemPrompt,
@@ -174,11 +201,13 @@ function createCodexAgentRuntime(deps = {}) {
       'Respond as concise assistant text.'
     ].join('\n\n');
 
+    // Ask Codex CLI for a plain-text draft grounded in the collected context.
     const draftAnswer = await requestCodexCliText({
       prompt: draftPrompt,
       model,
       cwd: getCodexCliWorkingDirectory()
     });
+    // Persist the first-round request/response pair for observability.
     await recordAgentLlmTrace(traceContext, {
       stage: 'agent_round_0',
       provider,
@@ -191,8 +220,10 @@ function createCodexAgentRuntime(deps = {}) {
       response_payload: draftAnswer
     });
 
+    // Run a second Codex pass that converts the draft into the app's structured response schema.
     let normalized;
     try {
+      // Supply the draft, tool trace, and evidence so the structured pass can stay grounded.
       const synthesisPrompt = [
         buildAgentSynthesisPrompt(requiresApproval, promptConfig),
         'Return valid JSON and include citations only from provided evidence.',
@@ -201,11 +232,13 @@ function createCodexAgentRuntime(deps = {}) {
         `Tool trace: ${JSON.stringify(collected.toolTrace.slice(0, 20))}`,
         `Evidence: ${JSON.stringify(collected.evidence.slice(0, 20))}`
       ].join('\n\n');
+      // Ask Codex CLI for structured JSON-like output suitable for normalization.
       const structuredRaw = await requestCodexCliText({
         prompt: synthesisPrompt,
         model,
         cwd: getCodexCliWorkingDirectory()
       });
+      // Persist the synthesis round for later debugging.
       await recordAgentLlmTrace(traceContext, {
         stage: 'synthesis',
         provider,
@@ -217,11 +250,14 @@ function createCodexAgentRuntime(deps = {}) {
         },
         response_payload: structuredRaw
       });
+      // Normalize the structured response, falling back to the text draft if needed.
       normalized = normalizeAgentOutput(structuredRaw, draftAnswer);
     } catch {
+      // If synthesis fails, still recover by normalizing the original draft answer.
       normalized = normalizeAgentOutput(null, draftAnswer);
     }
 
+    // Apply response-layer policy such as approval gating and default write-action placeholders.
     normalized = applyResponseLayerToOutput({
       normalized: {
         ...normalized,
@@ -240,6 +276,7 @@ function createCodexAgentRuntime(deps = {}) {
       toolTrace: collected.toolTrace
     });
 
+    // Run the validation/provenance gate before returning the final payload.
     const validated = applyValidationGateToOutput({
       routing: normalizedRouting,
       normalized: {
@@ -250,11 +287,13 @@ function createCodexAgentRuntime(deps = {}) {
       toolTrace: collected.toolTrace
     });
 
+    // Record the final response-stage trace entry after validation is complete.
     intermediateStates.push(buildIntermediateState('response', 'Applied response-layer metadata and validation gate.', {
       evidence: collected.evidence,
       confidence: Number(validated?.normalized?.confidence) || 0.55
     }));
 
+    // Return the fully assembled response payload expected by the surrounding agent runtime.
     return {
       ok: true,
       provider,
@@ -294,12 +333,14 @@ function createCodexAgentRuntime(deps = {}) {
     };
   }
 
+  // Expose the retrieval helper and the full controller entry point.
   return {
     buildCodexAgentContext,
     runCodexAgentController
   };
 }
 
+// Public module export exposing the Codex runtime factory.
 module.exports = {
   createCodexAgentRuntime
 };

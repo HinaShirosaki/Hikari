@@ -136,3 +136,18 @@ Possible future improvements:
 - dynamic replanning when evidence is weak
 - source credibility ranking
 - reusable research memory across sessions
+
+agent/
+  deep-research/
+    research-brief.js
+    success-criteria.js
+    research-planner.js
+    research-executor.js
+    evidence-store.js
+    completeness-evaluator.js
+    research-replanner.js
+    answer-outline.js
+    final-synthesizer.js
+    research-session-state.js
+    source-ranking.js
+    claim-linker.js

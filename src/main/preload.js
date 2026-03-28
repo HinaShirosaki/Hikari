@@ -16,6 +16,8 @@ contextBridge.exposeInMainWorld('enanaApi', {
   sequenceLibraryUpsert: (payload) => ipcRenderer.invoke('sequence-library:upsert', payload),
   sequenceLibraryPromote: (payload) => ipcRenderer.invoke('sequence-library:promote', payload),
   sequenceLibraryDelete: (payload) => ipcRenderer.invoke('sequence-library:delete', payload),
+  sequenceLibrarySearchFeatures: (payload) => ipcRenderer.invoke('sequence-library:search-features', payload),
+  sequenceLibraryRecognizeBackbone: (payload) => ipcRenderer.invoke('sequence-library:recognize-backbone', payload),
   plannotateCheckEnv: (dbDir = '') => ipcRenderer.invoke('plannotate:check-env', { dbDir }),
   plannotateAnnotate: (payload) => ipcRenderer.invoke('plannotate:annotate', payload),
   plannotateGenerateGbk: (payload) => ipcRenderer.invoke('plannotate:generate-gbk', payload),

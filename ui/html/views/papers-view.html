@@ -1,107 +1,145 @@
 <section id="papers-view" class="view">
-      <div class="panel">
-        <h2>Papers</h2>
-        <form id="paper-form" class="stack-form">
-          <label>
-            Paper Title (Optional)
-            <input id="paper-title" placeholder="Defaults to PDF filename" />
-          </label>
-          <label>
-            PDF File
-            <input id="paper-pdf" type="file" accept="application/pdf,.pdf" required />
-          </label>
-          <label>
-            Link Type
-            <select id="paper-link-type">
-              <option value="project">Project</option>
-              <option value="journal-club">Journal Club</option>
-            </select>
-          </label>
-          <label>
-            Link To
-            <select id="paper-link-target">
-              <option value="">Select target</option>
-            </select>
-          </label>
-          <button type="submit" class="primary-btn">Upload Paper</button>
-        </form>
-      </div>
+      <div class="papers-layout">
+        <div class="papers-left-column">
+          <div class="panel papers-library-panel">
+            <div class="papers-library-head">
+              <div>
+                <h2>Papers</h2>
+                <p class="small-note">Folders, uploads, and reader state stay in one place.</p>
+              </div>
+            </div>
 
-      <div class="panel">
-        <h3>Journal Clubs</h3>
-        <div class="stack-form">
-          <label>
-            Journal Club Name
-            <input id="journal-club-name" placeholder="e.g. Weekly Biochem JC" />
-          </label>
-          <label>
-            Description
-            <input id="journal-club-description" placeholder="Optional description" />
-          </label>
-          <button type="button" id="journal-club-add-btn" class="ghost-btn">Add Journal Club</button>
-        </div>
-        <div id="journal-club-list" class="cards"></div>
-      </div>
+            <section class="papers-library-section">
+              <div class="papers-library-section-head">
+                <h3>Folders</h3>
+                <p id="paper-folder-selection" class="small-note">No folder selected</p>
+              </div>
+              <div id="journal-club-list" class="papers-folder-list"></div>
+            </section>
 
-      <div class="panel">
-        <h3>Uploaded Papers</h3>
-        <p class="small-note">To summarize, configure LLM model + API endpoint/key in Setting.</p>
-        <div id="paper-list" class="cards"></div>
-      </div>
+            <section class="papers-library-section">
+              <div class="papers-library-section-head">
+                <h3>New Journal Club Folder</h3>
+              </div>
+              <div class="papers-folder-create">
+                <label>
+                  Folder Name
+                  <input id="journal-club-name" placeholder="e.g. Weekly Biochem JC" />
+                </label>
+                <label>
+                  Description (Optional)
+                  <input id="journal-club-description" placeholder="Optional description" />
+                </label>
+                <button type="button" id="journal-club-add-btn" class="ghost-btn">Create Folder</button>
+              </div>
+            </section>
 
-      <div class="panel papers-viewer-panel">
-        <div class="papers-viewer-head">
-          <div class="papers-viewer-summary">
-            <h3>Paper Viewer</h3>
-            <p id="paper-viewer-title" class="papers-viewer-title">No paper selected</p>
-            <p id="paper-viewer-meta" class="small-note">Select a paper from the list to preview it here.</p>
+            <section class="papers-library-section">
+              <div class="papers-library-section-head">
+                <h3>Upload Paper</h3>
+                <p id="paper-upload-target-label" class="small-note">Select a folder to file new papers.</p>
+              </div>
+              <form id="paper-form" class="stack-form papers-upload-form">
+                <label>
+                  Paper Title (Optional)
+                  <input id="paper-title" placeholder="Defaults to PDF filename" />
+                </label>
+                <label>
+                  PDF File
+                  <input id="paper-pdf" type="file" accept="application/pdf,.pdf" required />
+                </label>
+                <div class="papers-hidden-link-controls" hidden>
+                  <label>
+                    Link Type
+                    <select id="paper-link-type">
+                      <option value="project">Project</option>
+                      <option value="journal-club">Journal Club</option>
+                    </select>
+                  </label>
+                  <label>
+                    Link To
+                    <select id="paper-link-target">
+                      <option value="">Select target</option>
+                    </select>
+                  </label>
+                </div>
+                <button type="submit" class="primary-btn">Upload Paper</button>
+              </form>
+            </section>
+
+            <section class="papers-library-section papers-library-papers">
+              <div class="papers-library-section-head">
+                <h3>Folder Papers</h3>
+                <p class="small-note">Open a paper to focus it in the viewer.</p>
+              </div>
+              <div id="paper-list" class="papers-paper-list"></div>
+            </section>
           </div>
-          <div id="paper-viewer-toolbar" class="papers-viewer-toolbar" hidden>
-            <button type="button" id="paper-viewer-prev-btn" class="ghost-btn">Prev</button>
-            <label class="papers-viewer-page-field">
-              Page
-              <input id="paper-viewer-page-input" type="number" min="1" value="1" />
+        </div>
+
+        <div class="papers-center-column">
+          <div class="panel papers-viewer-panel">
+            <div class="papers-viewer-head">
+              <div class="papers-viewer-summary">
+                <h3>Paper Viewer</h3>
+                <p id="paper-viewer-title" class="papers-viewer-title">No paper selected</p>
+                <p id="paper-viewer-meta" class="small-note">Select a paper from the list to preview it here.</p>
+              </div>
+              <div id="paper-viewer-toolbar" class="papers-viewer-toolbar" hidden>
+                <button type="button" id="paper-viewer-prev-btn" class="ghost-btn">Prev</button>
+                <label class="papers-viewer-page-field">
+                  Page
+                  <input id="paper-viewer-page-input" type="number" min="1" value="1" />
+                </label>
+                <span id="paper-viewer-page-count" class="small-note">/ 0</span>
+                <button type="button" id="paper-viewer-next-btn" class="ghost-btn">Next</button>
+                <button type="button" id="paper-viewer-zoom-out-btn" class="ghost-btn">-</button>
+                <span id="paper-viewer-zoom-label" class="small-note">100%</span>
+                <button type="button" id="paper-viewer-zoom-in-btn" class="ghost-btn">+</button>
+                <button type="button" id="paper-viewer-zoom-reset-btn" class="ghost-btn">100%</button>
+                <button type="button" id="paper-viewer-fit-width-btn" class="ghost-btn">Fit Width</button>
+                <button type="button" id="paper-viewer-open-btn" class="ghost-btn">Open Externally</button>
+                <button type="button" id="paper-viewer-close-btn" class="danger-btn">Close</button>
+              </div>
+            </div>
+            <p id="paper-viewer-status" class="small-note">Choose "View PDF" on a paper to open it here.</p>
+            <div id="paper-viewer-shell" class="papers-viewer-shell is-empty">
+              <div id="paper-viewer-empty" class="papers-viewer-empty">
+                <p>Scientific PDFs open here with page navigation and zoom.</p>
+              </div>
+              <div id="paper-viewer-workspace" class="papers-viewer-workspace" hidden>
+                <div id="paper-viewer-stage" class="papers-viewer-stage" hidden>
+                  <div id="paper-viewer-page-layer" class="papers-viewer-page-layer">
+                    <canvas id="paper-viewer-canvas" class="papers-viewer-canvas"></canvas>
+                    <div id="paper-viewer-overlay" class="papers-viewer-overlay" aria-label="Paper comment pins"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="papers-right-column">
+          <aside id="paper-comment-sidebar" class="panel papers-comment-sidebar">
+            <div class="papers-comment-meta">
+              <h4>Comments</h4>
+              <p id="paper-comment-page" class="small-note">Page 0</p>
+              <p id="paper-comment-count" class="small-note">0 comments on this page</p>
+            </div>
+            <div class="papers-comment-actions">
+              <button type="button" id="paper-comment-add-btn" class="primary-btn">Add Comment</button>
+              <button type="button" id="paper-comment-save-btn" class="ghost-btn">Save</button>
+              <button type="button" id="paper-comment-cancel-btn" class="ghost-btn">Cancel</button>
+              <button type="button" id="paper-comment-delete-btn" class="danger-btn">Delete</button>
+            </div>
+            <label class="papers-comment-input">
+              Comment
+              <textarea id="paper-comment-text" rows="5" placeholder="Click &quot;Add Comment&quot;, place a pin on the page, then write your note."></textarea>
             </label>
-            <span id="paper-viewer-page-count" class="small-note">/ 0</span>
-            <button type="button" id="paper-viewer-next-btn" class="ghost-btn">Next</button>
-            <button type="button" id="paper-viewer-zoom-out-btn" class="ghost-btn">-</button>
-            <span id="paper-viewer-zoom-label" class="small-note">100%</span>
-            <button type="button" id="paper-viewer-zoom-in-btn" class="ghost-btn">+</button>
-            <button type="button" id="paper-viewer-zoom-reset-btn" class="ghost-btn">100%</button>
-            <button type="button" id="paper-viewer-fit-width-btn" class="ghost-btn">Fit Width</button>
-            <button type="button" id="paper-viewer-open-btn" class="ghost-btn">Open Externally</button>
-            <button type="button" id="paper-viewer-close-btn" class="danger-btn">Close</button>
-          </div>
-        </div>
-        <p id="paper-viewer-status" class="small-note">Choose "View PDF" on a paper to open it here.</p>
-        <div id="paper-viewer-shell" class="papers-viewer-shell is-empty">
-          <div id="paper-viewer-empty" class="papers-viewer-empty">
-            <p>Scientific PDFs open here with page navigation and zoom.</p>
-          </div>
-          <div id="paper-viewer-stage" class="papers-viewer-stage" hidden>
-            <canvas id="paper-viewer-canvas" class="papers-viewer-canvas"></canvas>
-          </div>
+            <p id="paper-comment-status" class="small-note">Open a paper to review or add page comments.</p>
+            <div id="paper-comment-list" class="papers-comment-list"></div>
+          </aside>
         </div>
       </div>
 
-      <div class="panel">
-        <h3>Project Library Q&A</h3>
-        <div class="stack-form">
-          <label>
-            Project
-            <select id="knowledge-project-select">
-              <option value="">Select project</option>
-            </select>
-          </label>
-          <label>
-            Question
-            <textarea id="knowledge-question" rows="3" placeholder="Ask about papers, protocols, and notebook notes in this project"></textarea>
-          </label>
-          <div class="form-actions">
-            <button type="button" id="knowledge-ask-btn" class="primary-btn">Ask</button>
-          </div>
-          <div id="knowledge-answer" class="card"></div>
-          <div id="knowledge-chat-history" class="stack-form"></div>
-        </div>
-      </div>
     </section>

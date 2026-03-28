@@ -1,7 +1,9 @@
 'use strict';
 
+const crypto = require('crypto');
 const fs = require('fs/promises');
 const path = require('path');
+const { recognizeSequenceBackboneInLibrary } = require('./sequence-backbone-recognition');
 const PROJECT_ROOT = path.resolve(__dirname, '..', '..', '..', '..');
 
 const SQLJS_WASM_JS_PATH = path.join(PROJECT_ROOT, 'vendor', 'sqljs', 'sql-wasm.js');
@@ -9,8 +11,29 @@ const LIBRARY_FOLDER_NAME = 'SequenceViewer';
 const DB_FILE_NAME = 'sequence-library.sqlite';
 const STATUS_SAVED = 'saved';
 const STATUS_TEMPORARY = 'temporary';
+const FEATURE_SOURCE_BACKBONE_RECOGNITION = 'backbone_recognition';
 
 let sqlJsInitPromise = null;
+
+const BASE_COMPLEMENT = Object.freeze({
+  A: 'T',
+  C: 'G',
+  G: 'C',
+  T: 'A',
+  U: 'A',
+  R: 'Y',
+  Y: 'R',
+  S: 'S',
+  W: 'W',
+  K: 'M',
+  M: 'K',
+  B: 'V',
+  D: 'H',
+  H: 'D',
+  V: 'B',
+  N: 'N',
+  X: 'N'
+});
 
 function cleanText(value, maxLength = 300) {
   const text = String(value || '').trim();
@@ -44,6 +67,36 @@ function normalizeName(value, fallback = 'sequence') {
     .replace(/\s+/g, ' ')
     .slice(0, 140);
   return normalized || fallback;
+}
+
+function clamp(value, min, max) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return min;
+  }
+  return Math.min(max, Math.max(min, numeric));
+}
+
+function normalizeSequenceText(raw) {
+  return String(raw || '')
+    .toUpperCase()
+    .replace(/U/g, 'T')
+    .replace(/[^A-Z*]/g, '');
+}
+
+function reverseComplementIupac(sequence) {
+  return [...String(sequence || '').toUpperCase()]
+    .reverse()
+    .map((base) => BASE_COMPLEMENT[base] || 'N')
+    .join('');
+}
+
+function buildStableId(prefix, input) {
+  const digest = crypto
+    .createHash('sha1')
+    .update(String(input || ''))
+    .digest('hex');
+  return `${prefix}_${digest.slice(0, 24)}`;
 }
 
 function buildEntryId() {
@@ -101,6 +154,7 @@ async function loadSqlJs() {
 
 function applySchema(db) {
   db.run(`
+    PRAGMA foreign_keys = ON;
     CREATE TABLE IF NOT EXISTS sequence_entries (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -119,6 +173,41 @@ function applySchema(db) {
       ON sequence_entries(status, updated_at DESC);
     CREATE INDEX IF NOT EXISTS idx_sequence_entries_name
       ON sequence_entries(normalized_name);
+    CREATE TABLE IF NOT EXISTS sequence_features (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      normalized_name TEXT NOT NULL,
+      feature_type TEXT NOT NULL DEFAULT '',
+      sequence TEXT NOT NULL,
+      sequence_length INTEGER NOT NULL DEFAULT 0,
+      dedupe_key TEXT NOT NULL UNIQUE,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_sequence_features_name
+      ON sequence_features(normalized_name);
+    CREATE INDEX IF NOT EXISTS idx_sequence_features_type
+      ON sequence_features(feature_type);
+    CREATE TABLE IF NOT EXISTS sequence_feature_occurrences (
+      id TEXT PRIMARY KEY,
+      feature_id TEXT NOT NULL,
+      host_vector_id TEXT NOT NULL,
+      host_vector_name TEXT NOT NULL,
+      host_vector_status TEXT NOT NULL DEFAULT '',
+      host_topology TEXT NOT NULL DEFAULT 'linear',
+      host_sequence_length INTEGER NOT NULL DEFAULT 0,
+      source_format TEXT NOT NULL DEFAULT '',
+      annotation_source TEXT NOT NULL DEFAULT '',
+      strand INTEGER NOT NULL DEFAULT 1,
+      start_pos INTEGER NOT NULL DEFAULT 1,
+      end_pos INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_sequence_feature_occurrences_feature
+      ON sequence_feature_occurrences(feature_id, updated_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_sequence_feature_occurrences_host
+      ON sequence_feature_occurrences(host_vector_id, updated_at DESC);
   `);
 }
 
@@ -192,6 +281,287 @@ function normalizeEntryRow(row) {
     htmlRelPath: cleanText(row.html_rel_path, 1200),
     createdAt: cleanText(row.created_at, 60),
     updatedAt: cleanText(row.updated_at, 60)
+  };
+}
+
+function normalizeFeatureSegments(rawSegments, sequenceLength) {
+  const safeLength = Math.max(0, Number(sequenceLength) || 0);
+  if (!safeLength) {
+    return [];
+  }
+  return (Array.isArray(rawSegments) ? rawSegments : [])
+    .map((segment) => {
+      const start = clamp(Math.round(Number(segment?.start) || 0), 0, safeLength);
+      const end = clamp(Math.round(Number(segment?.end) || 0), 0, safeLength);
+      if (end <= start) {
+        return null;
+      }
+      return { start, end };
+    })
+    .filter(Boolean)
+    .sort((left, right) => {
+      if (left.start !== right.start) {
+        return left.start - right.start;
+      }
+      return left.end - right.end;
+    });
+}
+
+function normalizeFeaturePayload(feature, sequenceLength, index = 0) {
+  if (!feature || typeof feature !== 'object') {
+    return null;
+  }
+
+  const source = cleanText(feature?.source || feature?.mode || '', 120).toLowerCase();
+  if (source === FEATURE_SOURCE_BACKBONE_RECOGNITION) {
+    return null;
+  }
+
+  const strand = Number(feature?.strand) === -1 ? -1 : 1;
+  const segments = normalizeFeatureSegments(feature?.segments, sequenceLength);
+  if (!segments.length) {
+    return null;
+  }
+
+  return {
+    name: normalizeName(feature?.name || feature?.label || `feature_${index + 1}`, `feature_${index + 1}`),
+    type: cleanText(feature?.type || 'misc_feature', 120).toLowerCase() || 'misc_feature',
+    strand,
+    source,
+    segments
+  };
+}
+
+function extractFeatureSequence(sequence, feature) {
+  const text = normalizeSequenceText(sequence);
+  if (!text.length || !feature) {
+    return '';
+  }
+
+  const orderedSegments = normalizeFeatureSegments(feature.segments, text.length);
+  if (!orderedSegments.length) {
+    return '';
+  }
+
+  const raw = orderedSegments
+    .map((segment) => text.slice(segment.start, segment.end))
+    .join('');
+
+  return feature.strand === -1
+    ? reverseComplementIupac(raw)
+    : raw;
+}
+
+function buildFeatureDedupeKey(name, type, sequence) {
+  return crypto
+    .createHash('sha1')
+    .update(`${String(name || '').toLowerCase()}\n${String(type || '').toLowerCase()}\n${String(sequence || '')}`)
+    .digest('hex');
+}
+
+function extractFeatureBounds(segments) {
+  const list = Array.isArray(segments) ? segments : [];
+  if (!list.length) {
+    return { startPos: 1, endPos: 0 };
+  }
+
+  const minStart = list.reduce((min, segment) => Math.min(min, Number(segment?.start) || 0), Number.POSITIVE_INFINITY);
+  const maxEnd = list.reduce((max, segment) => Math.max(max, Number(segment?.end) || 0), 0);
+  return {
+    startPos: Math.max(1, minStart + 1),
+    endPos: Math.max(0, maxEnd)
+  };
+}
+
+function deleteOrphanFeatures(db) {
+  db.run(`
+    DELETE FROM sequence_features
+    WHERE id NOT IN (
+      SELECT DISTINCT feature_id
+      FROM sequence_feature_occurrences
+    )
+  `);
+}
+
+function replaceFeatureOccurrencesForEntry(db, entryRow, payload = {}) {
+  const hostVectorId = cleanText(entryRow?.id, 200);
+  if (!hostVectorId) {
+    return;
+  }
+
+  db.run('DELETE FROM sequence_feature_occurrences WHERE host_vector_id = ?', [hostVectorId]);
+
+  const sequence = normalizeSequenceText(payload.sequence);
+  const normalizedFeatures = (Array.isArray(payload.features) ? payload.features : [])
+    .map((feature, index) => normalizeFeaturePayload(feature, sequence.length, index))
+    .filter(Boolean);
+
+  if (!sequence.length || !normalizedFeatures.length) {
+    deleteOrphanFeatures(db);
+    return;
+  }
+
+  const now = new Date().toISOString();
+
+  normalizedFeatures.forEach((feature) => {
+    const featureSequence = extractFeatureSequence(sequence, feature);
+    if (!featureSequence) {
+      return;
+    }
+
+    const dedupeKey = buildFeatureDedupeKey(feature.name, feature.type, featureSequence);
+    const featureId = buildStableId('feature', dedupeKey);
+    const bounds = extractFeatureBounds(feature.segments);
+    const occurrenceId = buildStableId(
+      'feature_occurrence',
+      [
+        featureId,
+        hostVectorId,
+        bounds.startPos,
+        bounds.endPos,
+        feature.strand,
+        feature.source
+      ].join('|')
+    );
+
+    db.run(
+      `INSERT INTO sequence_features (
+         id, name, normalized_name, feature_type, sequence, sequence_length, dedupe_key, created_at, updated_at
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET
+         name = excluded.name,
+         normalized_name = excluded.normalized_name,
+         feature_type = excluded.feature_type,
+         sequence = excluded.sequence,
+         sequence_length = excluded.sequence_length,
+         updated_at = excluded.updated_at`,
+      [
+        featureId,
+        feature.name,
+        feature.name.toLowerCase(),
+        feature.type,
+        featureSequence,
+        featureSequence.length,
+        dedupeKey,
+        now,
+        now
+      ]
+    );
+
+    db.run(
+      `INSERT INTO sequence_feature_occurrences (
+         id, feature_id, host_vector_id, host_vector_name, host_vector_status, host_topology,
+         host_sequence_length, source_format, annotation_source, strand, start_pos, end_pos,
+         created_at, updated_at
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET
+         feature_id = excluded.feature_id,
+         host_vector_name = excluded.host_vector_name,
+         host_vector_status = excluded.host_vector_status,
+         host_topology = excluded.host_topology,
+         host_sequence_length = excluded.host_sequence_length,
+         source_format = excluded.source_format,
+         annotation_source = excluded.annotation_source,
+         strand = excluded.strand,
+         start_pos = excluded.start_pos,
+         end_pos = excluded.end_pos,
+         updated_at = excluded.updated_at`,
+      [
+        occurrenceId,
+        featureId,
+        hostVectorId,
+        cleanText(entryRow?.name, 140),
+        normalizeStatus(entryRow?.status),
+        cleanText(entryRow?.topology, 40) || 'linear',
+        Math.max(0, Number(entryRow?.sequenceLength) || 0),
+        cleanText(entryRow?.sourceFormat, 80),
+        feature.source,
+        feature.strand,
+        bounds.startPos,
+        bounds.endPos,
+        now,
+        now
+      ]
+    );
+  });
+
+  deleteOrphanFeatures(db);
+}
+
+function normalizeFeatureOccurrenceRow(row) {
+  if (!row || typeof row !== 'object') {
+    return null;
+  }
+
+  return {
+    id: cleanText(row.id, 200),
+    featureId: cleanText(row.feature_id, 200),
+    hostVectorId: cleanText(row.host_vector_id, 200),
+    hostVectorName: cleanText(row.host_vector_name, 140),
+    hostVectorStatus: normalizeStatus(row.host_vector_status),
+    topology: cleanText(row.host_topology, 40) || 'linear',
+    sequenceLength: Math.max(0, Number(row.host_sequence_length) || 0),
+    sourceFormat: cleanText(row.source_format, 80),
+    annotationSource: cleanText(row.annotation_source, 120),
+    strand: Number(row.strand) === -1 ? -1 : 1,
+    startPos: Math.max(1, Number(row.start_pos) || 1),
+    endPos: Math.max(0, Number(row.end_pos) || 0),
+    createdAt: cleanText(row.created_at, 60),
+    updatedAt: cleanText(row.updated_at, 60)
+  };
+}
+
+function buildFeatureSearchResult(db, row) {
+  const featureId = cleanText(row?.id, 200);
+  const occurrenceRows = readRows(
+    db,
+    `SELECT *
+     FROM sequence_feature_occurrences
+     WHERE feature_id = ?
+     ORDER BY updated_at DESC, host_vector_name COLLATE NOCASE ASC, start_pos ASC`,
+    [featureId]
+  );
+
+  const hostsById = new Map();
+  occurrenceRows.forEach((occurrenceRow) => {
+    const occurrence = normalizeFeatureOccurrenceRow(occurrenceRow);
+    if (!occurrence) {
+      return;
+    }
+
+    const key = occurrence.hostVectorId;
+    if (!hostsById.has(key)) {
+      hostsById.set(key, {
+        hostVectorId: occurrence.hostVectorId,
+        hostVectorName: occurrence.hostVectorName,
+        hostVectorStatus: occurrence.hostVectorStatus,
+        topology: occurrence.topology,
+        sequenceLength: occurrence.sequenceLength,
+        sourceFormat: occurrence.sourceFormat,
+        updatedAt: occurrence.updatedAt,
+        locations: []
+      });
+    }
+
+    hostsById.get(key).locations.push({
+      startPos: occurrence.startPos,
+      endPos: occurrence.endPos,
+      strand: occurrence.strand,
+      annotationSource: occurrence.annotationSource
+    });
+  });
+
+  const hosts = [...hostsById.values()];
+  return {
+    id: featureId,
+    name: cleanText(row?.name, 140),
+    normalizedName: cleanText(row?.normalized_name, 200),
+    type: cleanText(row?.feature_type, 120),
+    sequence: normalizeSequenceText(row?.sequence),
+    sequenceLength: Math.max(0, Number(row?.sequence_length) || 0),
+    hostCount: hosts.length,
+    updatedAt: cleanText(row?.updated_at, 60),
+    hosts
   };
 }
 
@@ -373,6 +743,8 @@ async function upsertSequenceEntry(payload = {}) {
       ]
     );
 
+    replaceFeatureOccurrencesForEntry(db, row, payload);
+
     await persistDatabase(paths.sqlitePath, db);
     return {
       rootPath: paths.libraryRoot,
@@ -422,7 +794,9 @@ async function deleteSequenceEntry({ storagePath, id }) {
   await ensureLibraryDirectories(paths);
   const db = await openDatabase(paths.sqlitePath);
   try {
+    db.run('DELETE FROM sequence_feature_occurrences WHERE host_vector_id = ?', [safeId]);
     db.run('DELETE FROM sequence_entries WHERE id = ?', [safeId]);
+    deleteOrphanFeatures(db);
     await persistDatabase(paths.sqlitePath, db);
   } finally {
     db.close();
@@ -430,6 +804,80 @@ async function deleteSequenceEntry({ storagePath, id }) {
   const entryDir = path.join(paths.entriesRoot, safeId);
   await fs.rm(entryDir, { recursive: true, force: true });
   return { ok: true, id: safeId };
+}
+
+async function searchSequenceFeatures({ storagePath, query = '', limit = 30 }) {
+  const safeQuery = cleanText(query, 600);
+  const normalizedNameQuery = safeQuery.toLowerCase();
+  const normalizedSequenceQuery = normalizeSequenceText(safeQuery);
+  if (normalizedNameQuery.length < 2 && normalizedSequenceQuery.length < 3) {
+    return {
+      query: safeQuery,
+      results: []
+    };
+  }
+
+  const paths = resolveLibraryPaths(storagePath);
+  await ensureLibraryDirectories(paths);
+  const db = await openDatabase(paths.sqlitePath);
+  try {
+    const safeLimit = clamp(Math.round(Number(limit) || 30), 1, 100);
+    const namePattern = normalizedNameQuery ? `%${normalizedNameQuery}%` : '';
+    const sequencePattern = normalizedSequenceQuery ? `%${normalizedSequenceQuery}%` : '';
+    const rows = readRows(
+      db,
+      `SELECT DISTINCT f.*
+       FROM sequence_features f
+       WHERE (? <> '' AND f.normalized_name LIKE ?)
+          OR (? <> '' AND f.sequence LIKE ?)
+       ORDER BY
+         CASE WHEN ? <> '' AND f.normalized_name = ? THEN 0 ELSE 1 END,
+         CASE WHEN ? <> '' AND f.sequence = ? THEN 0 ELSE 1 END,
+         f.updated_at DESC,
+         f.name COLLATE NOCASE ASC
+       LIMIT ?`,
+      [
+        normalizedNameQuery,
+        namePattern,
+        normalizedSequenceQuery,
+        sequencePattern,
+        normalizedNameQuery,
+        normalizedNameQuery,
+        normalizedSequenceQuery,
+        normalizedSequenceQuery,
+        safeLimit
+      ]
+    );
+
+    return {
+      query: safeQuery,
+      results: rows.map((row) => buildFeatureSearchResult(db, row)).filter(Boolean)
+    };
+  } finally {
+    db.close();
+  }
+}
+async function recognizeSequenceBackbone({ storagePath, sequence = '', excludeEntryId = '' }) {
+  return recognizeSequenceBackboneInLibrary({
+    fs,
+    cleanText,
+    normalizeSequenceText,
+    normalizeStatus,
+    clamp,
+    reverseComplementIupac,
+    resolveLibraryPaths,
+    ensureLibraryDirectories,
+    openDatabase,
+    readRows,
+    normalizeEntryRow,
+    ensurePathWithinRoot,
+    STATUS_SAVED,
+    STATUS_TEMPORARY
+  }, {
+    storagePath,
+    sequence,
+    excludeEntryId
+  });
 }
 
 module.exports = {
@@ -442,6 +890,7 @@ module.exports = {
   upsertSequenceEntry,
   promoteSequenceEntry,
   deleteSequenceEntry,
+  searchSequenceFeatures,
+  recognizeSequenceBackbone,
   sanitizeFileName
 };
-

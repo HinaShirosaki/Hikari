@@ -484,6 +484,9 @@ const papersManagementInternals = loadEsmStyleModule(
     'normalizePaperSummary'
   ]
 );
+const papersPdfViewerInternals = loadEsmStyleModule(
+  path.join(__dirname, 'src', 'renderer', 'modules', 'papers-pdf-viewer.js')
+);
 const assayAnalysis = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'assay-analysis.js'));
 const mainUtils = require(path.join(__dirname, 'src', 'main', 'lib', 'main-utils.js'));
 const telegramBot = require(path.join(__dirname, 'src', 'main', 'lib', 'telegramBot.js'));
@@ -1444,6 +1447,7 @@ const suiteScope = {
   sequenceViewerInternals,
   gelAnalysisInternals,
   papersManagementInternals,
+  papersPdfViewerInternals,
   assayAnalysis,
   mainUtils,
   telegramBot,

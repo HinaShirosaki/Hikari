@@ -5,7 +5,7 @@ import {
   ORF_STOP_CODONS
 } from './constants.js';
 import {
-  normalizeOrfStopDisplayMode,
+  normalizeOrfStopCodonVisibility,
   resolveOrfTranslationDisplay
 } from './translation-style.js';
 import {
@@ -358,7 +358,8 @@ export function buildSelectedOrfTranslationContext(sequence, feature, options = 
   }
 
   const strand = feature?.strand === -1 ? -1 : 1;
-  const stopMode = normalizeOrfStopDisplayMode(options?.stopMode);
+  const stopDisplay = options?.stopVisibility ?? options?.stopMode;
+  const stopVisibility = normalizeOrfStopCodonVisibility(stopDisplay);
   const codingIndices = getOrfCodingIndices(feature, sequenceLength);
   const codonCount = Math.floor(codingIndices.length / 3);
   if (!codonCount) {
@@ -379,7 +380,7 @@ export function buildSelectedOrfTranslationContext(sequence, feature, options = 
       })
       .join('');
     const aa = translateDnaCodon(codon) || 'X';
-    const display = resolveOrfTranslationDisplay(aa, codon, stopMode);
+    const display = resolveOrfTranslationDisplay(aa, codon, stopDisplay);
     if (!display) {
       continue;
     }
@@ -404,7 +405,7 @@ export function buildSelectedOrfTranslationContext(sequence, feature, options = 
   anchors.sort((left, right) => left.baseIndex - right.baseIndex);
   return {
     strand,
-    stopMode,
+    stopVisibility,
     anchors
   };
 }

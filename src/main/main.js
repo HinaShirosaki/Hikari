@@ -46,13 +46,15 @@ const { createAgentControllerUtils } = require('./helpers/agent/shared/agent-con
 const { createProtocolNotebookRuntime } = require('./helpers/agent/runtime/agent-protocol-notebook');
 const { createAgentLookupRuntime } = require('./helpers/agent/runtime/agent-lookup-runtime');
 const { createScienceReasoningLoopRuntime } = require('./helpers/agent/runtime/agent-science-reasoning-loop.js');
+const { createDeepResearchRuntime } = require('./helpers/agent/deep-research/index.js');
 const { createAgentSessionRuntime } = require('./helpers/agent/runtime/agent-session-runtime.js');
 const { createAgentScienceMainUtils } = require('./helpers/agent/runtime/agent-science-main-utils.js');
 const { createAgentToolSmokeTestRuntime } = require('./helpers/agent/tools/agent-tool-smoke-test');
 const { createAgentChatLogRuntime } = require('./helpers/agent/context/agent-chat-log.js');
 const {
   createAgentToolCallRuntime,
-  normalizeToolInvocationArgs
+  normalizeToolInvocationArgs,
+  getToolInputSchemas
 } = require('./helpers/agent/tools/agent-tool-call.js');
 const { createAgentRuntimeSupport } = require('./helpers/agent/runtime/agent-runtime-support.js');
 const { createCodexAgentRuntime } = require('./helpers/agent/runtime/agent-codex-runtime.js');
@@ -68,7 +70,9 @@ const {
   getSequenceEntry,
   upsertSequenceEntry,
   promoteSequenceEntry,
-  deleteSequenceEntry
+  deleteSequenceEntry,
+  searchSequenceFeatures,
+  recognizeSequenceBackbone
 } = require('./helpers/main/sequence-library');
 const {
   buildCompactIndexedSnapshot
@@ -567,6 +571,34 @@ const scienceReasoningLoopRuntime = createScienceReasoningLoopRuntime({
   recordLifecycleEvent: observability.recordLifecycleEvent
 });
 
+const deepResearchRuntime = createDeepResearchRuntime({
+  asArray: (value) => (Array.isArray(value) ? value : []),
+  cleanText,
+  safeParseJson,
+  clamp: (value, min, max) => Math.max(min, Math.min(max, Number.isFinite(Number(value)) ? Number(value) : min)),
+  LLM_PROVIDERS,
+  requestCodexCliText,
+  getCodexCliWorkingDirectory,
+  requestClaudeMessagesWithBackoff,
+  requestGeminiGenerateContentWithBackoff,
+  requestOpenAiResponsesWithBackoff,
+  extractClaudeResponseText,
+  extractGeminiResponseText,
+  extractResponseText,
+  toInputText,
+  recordAgentLlmTrace: controllerUtils.recordAgentLlmTrace,
+  resolveToolDefinitions: (selectedToolNames = []) => getToolInputSchemas(selectedToolNames).map((tool) => ({
+    name: cleanText(tool?.name, 120),
+    description: cleanText(tool?.detailed_description || tool?.description, 2400),
+    parameters: tool?.input_schema && typeof tool.input_schema === 'object'
+      ? tool.input_schema
+      : { type: 'object', additionalProperties: true, properties: {} }
+  })),
+  applyResponseLayerToOutput: scienceMainUtils.applyResponseLayerToOutput,
+  applyValidationGateToOutput: scienceMainUtils.applyValidationGateToOutput,
+  recordLifecycleEvent: observability.recordLifecycleEvent
+});
+
 const codexRuntime = createCodexAgentRuntime({
   requestCodexCliText,
   getCodexCliWorkingDirectory,
@@ -603,6 +635,8 @@ registerDataIpc({
   upsertSequenceEntry,
   promoteSequenceEntry,
   deleteSequenceEntry,
+  searchSequenceFeatures,
+  recognizeSequenceBackbone,
   checkPlannotateEnvironment,
   annotateWithBlast,
   installPlannotateAssets,
@@ -617,6 +651,7 @@ registerAgentIpc({
   observability,
   protocolNotebookRuntime,
   scienceReasoningLoopRuntime,
+  deepResearchRuntime,
   scienceMainUtils,
   agentToolRuntime,
   agentChatLogRuntime,

@@ -49,3 +49,5 @@ Possible follow-up improvements:
 - highlighting hydrophobic, polar, acidic, and basic residue classes
 - frame-specific color overlays
 - exportable ORF visualization for figures or reports
+
+**Finished**

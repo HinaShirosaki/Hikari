@@ -33,98 +33,97 @@ import {
   queryNotebookEntriesByRelation,
   queryInstrumentUsageInRange
 } from './modules/object-graph.js';
+import { APP_DOCK_ORDER, APP_REGISTRY } from './modules/app-registry.generated.js';
 
 const state = loadState();
 const LAST_ACTIVE_VIEW_STORAGE_KEY = 'enana_last_active_view_v1';
 const SEQUENCE_VIEWER_DETAIL_VIEW_ID = 'sequence-viewer-detail-view';
+const FIXED_ACCENT = '#647255';
+const FIXED_FOCUS = '#7a8a69';
+
+function normalizeViewId(viewId) {
+  return viewId === VIEWS.PERSONAL_INVENTORY ? VIEWS.SAMPLE_REGISTRY : viewId;
+}
+
+function buildViewAliasMap(apps) {
+  const map = new Map();
+  apps.forEach((app) => {
+    [
+      app.id,
+      app.label,
+      ...(Array.isArray(app.aliases) ? app.aliases : [])
+    ].forEach((token) => {
+      const normalized = normalizeSearchToken(token);
+      if (!normalized || map.has(normalized)) {
+        return;
+      }
+      map.set(normalized, normalizeViewId(app.viewId));
+    });
+  });
+  return map;
+}
+
+function buildSearchScopeMap(apps) {
+  const map = new Map();
+  apps.forEach((app) => {
+    const target = {
+      viewId: normalizeViewId(app.viewId),
+      inputId: String(app.searchInputId || '').trim(),
+      label: app.label
+    };
+    [
+      app.id,
+      app.label,
+      ...(Array.isArray(app.aliases) ? app.aliases : [])
+    ].forEach((token) => {
+      const normalized = normalizeSearchToken(token);
+      if (!normalized || map.has(normalized)) {
+        return;
+      }
+      map.set(normalized, target);
+    });
+  });
+  return map;
+}
+
+const APPS_BY_ID = new Map(APP_REGISTRY.map((app) => [app.id, app]));
+const APPS_BY_VIEW_ID = new Map(APP_REGISTRY.map((app) => [normalizeViewId(app.viewId), app]));
+const GLOBAL_VIEW_ALIASES = buildViewAliasMap(APP_REGISTRY);
+const SEARCH_SCOPE_TARGETS = buildSearchScopeMap(APP_REGISTRY);
+const VALID_STARTUP_VIEW_IDS = new Set(APP_REGISTRY.map((app) => normalizeViewId(app.viewId)));
+const DOCK_APPS = APP_DOCK_ORDER
+  .map((id) => APPS_BY_ID.get(id))
+  .filter(Boolean);
+const MORE_APPS = APP_REGISTRY.filter((app) => !APP_DOCK_ORDER.includes(app.id));
 
 function applyAppearanceSnapshot(appearance) {
   const root = document.documentElement;
   const resolved = appearance && typeof appearance === 'object' ? appearance : {};
-  const themeColor = String(resolved.themeColor || '#2688ff').trim() || '#2688ff';
   const fontSize = Number(resolved.fontSize) || 16;
   const mode = resolved.mode === 'night' ? 'night' : 'day';
-  const uiStyle = resolved.uiStyle === 'classic' ? 'classic' : 'neutral-compact';
 
-  root.style.setProperty('--accent', themeColor);
-  root.style.setProperty('--focus', themeColor);
+  root.style.setProperty('--accent', FIXED_ACCENT);
+  root.style.setProperty('--focus', FIXED_FOCUS);
   root.style.setProperty('--app-font-size', `${fontSize}px`);
   root.style.setProperty('font-size', `${fontSize}px`);
   document.body.classList.toggle('theme-night', mode === 'night');
-  document.body.classList.toggle('ui-neutral-compact', uiStyle === 'neutral-compact');
+  document.body.classList.add('ui-neutral-compact');
 }
 
 applyAppearanceSnapshot(state.settings?.appearance);
 
+const pageTitle = document.getElementById('page-title');
 const pageSubtitle = document.getElementById('page-subtitle');
 const homeBtn = document.getElementById('home-btn');
+const topbarSettingsBtn = document.getElementById('topbar-settings-btn');
 const exitBtn = document.getElementById('exit-btn');
 const topbarSearchInput = document.getElementById('topbar-search');
+const dockNav = document.getElementById('app-dock-nav');
+const moreBtn = document.getElementById('app-more-btn');
+const moreMenu = document.getElementById('app-more-menu');
 const views = [...document.querySelectorAll('.view')];
-const appNavButtons = [...document.querySelectorAll('.app-nav-btn[data-view]')];
-const homeTiles = [...document.querySelectorAll('.tile[data-view]')];
-
-const GLOBAL_VIEW_ALIASES = new Map([
-  ['home', VIEWS.HOME],
-  ['members', VIEWS.LAB_MANAGEMENT],
-  ['member', VIEWS.LAB_MANAGEMENT],
-  ['instruments', VIEWS.INSTRUMENT_MANAGEMENT],
-  ['instrument', VIEWS.INSTRUMENT_MANAGEMENT],
-  ['protocols', VIEWS.PROTOCOL_MANAGEMENT],
-  ['protocol', VIEWS.PROTOCOL_MANAGEMENT],
-  ['collaborations', VIEWS.COLLABORATION_MANAGEMENT],
-  ['collaboration', VIEWS.COLLABORATION_MANAGEMENT],
-  ['synthesis', VIEWS.SYNTHESIS_NOTEBOOK],
-  ['biology', VIEWS.BIOLOGY_NOTEBOOK],
-  ['chemicals', VIEWS.LAB_COMMON_INVENTORY],
-  ['chemical', VIEWS.LAB_COMMON_INVENTORY],
-  ['samples', VIEWS.SAMPLE_REGISTRY],
-  ['sample', VIEWS.SAMPLE_REGISTRY],
-  ['sample-inventory', VIEWS.SAMPLE_REGISTRY],
-  ['sampleinventory', VIEWS.SAMPLE_REGISTRY],
-  ['assay', VIEWS.ASSAY],
-  ['assays', VIEWS.ASSAY],
-  ['gel', VIEWS.GEL],
-  ['gels', VIEWS.GEL],
-  ['inventory', VIEWS.SAMPLE_REGISTRY],
-  ['projects', VIEWS.PROJECT_MANAGEMENT],
-  ['project', VIEWS.PROJECT_MANAGEMENT],
-  ['workflows', VIEWS.WORKFLOW_MANAGEMENT],
-  ['workflow', VIEWS.WORKFLOW_MANAGEMENT],
-  ['papers', VIEWS.PAPERS],
-  ['paper', VIEWS.PAPERS],
-  ['agent', VIEWS.AGENT],
-  ['sequence', VIEWS.SEQUENCE_VIEWER],
-  ['seqviewer', VIEWS.SEQUENCE_VIEWER],
-  ['sequence-viewer', VIEWS.SEQUENCE_VIEWER],
-  ['tools', VIEWS.TOOL_BOX],
-  ['tool', VIEWS.TOOL_BOX],
-  ['toolbox', VIEWS.TOOL_BOX],
-  ['settings', VIEWS.SETTING],
-  ['setting', VIEWS.SETTING]
-]);
-
-const SEARCH_SCOPE_TARGETS = new Map([
-  ['chemical', { viewId: VIEWS.LAB_COMMON_INVENTORY, inputId: 'chemical-search', label: 'Chemicals' }],
-  ['chemicals', { viewId: VIEWS.LAB_COMMON_INVENTORY, inputId: 'chemical-search', label: 'Chemicals' }],
-  ['inventory', { viewId: VIEWS.SAMPLE_REGISTRY, inputId: 'sample-search', label: 'Sample & Inventory' }],
-  ['sample', { viewId: VIEWS.SAMPLE_REGISTRY, inputId: 'sample-search', label: 'Sample & Inventory' }],
-  ['samples', { viewId: VIEWS.SAMPLE_REGISTRY, inputId: 'sample-search', label: 'Sample & Inventory' }],
-  ['assay', { viewId: VIEWS.ASSAY, inputId: 'assay-search', label: 'Assay' }],
-  ['assays', { viewId: VIEWS.ASSAY, inputId: 'assay-search', label: 'Assay' }],
-  ['gel', { viewId: VIEWS.GEL, inputId: 'gel-search', label: 'Gel' }],
-  ['gels', { viewId: VIEWS.GEL, inputId: 'gel-search', label: 'Gel' }],
-  ['project', { viewId: VIEWS.PROJECT_MANAGEMENT, inputId: '', label: 'Projects' }],
-  ['projects', { viewId: VIEWS.PROJECT_MANAGEMENT, inputId: '', label: 'Projects' }],
-  ['protocol', { viewId: VIEWS.PROTOCOL_MANAGEMENT, inputId: '', label: 'Protocols' }],
-  ['protocols', { viewId: VIEWS.PROTOCOL_MANAGEMENT, inputId: '', label: 'Protocols' }],
-  ['paper', { viewId: VIEWS.PAPERS, inputId: '', label: 'Papers' }],
-  ['papers', { viewId: VIEWS.PAPERS, inputId: '', label: 'Papers' }],
-  ['member', { viewId: VIEWS.LAB_MANAGEMENT, inputId: '', label: 'Members' }],
-  ['members', { viewId: VIEWS.LAB_MANAGEMENT, inputId: '', label: 'Members' }],
-  ['instrument', { viewId: VIEWS.INSTRUMENT_MANAGEMENT, inputId: '', label: 'Instruments' }],
-  ['instruments', { viewId: VIEWS.INSTRUMENT_MANAGEMENT, inputId: '', label: 'Instruments' }]
-]);
+let appNavButtons = [];
+let moreMenuButtons = [];
 
 let assay = null;
 let gel = null;
@@ -134,15 +133,6 @@ let homeDashboard = null;
 let protocol = null;
 let lastViewPersistenceEnabled = false;
 let sequenceViewer = null;
-
-function normalizeViewId(viewId) {
-  return viewId === VIEWS.PERSONAL_INVENTORY ? VIEWS.SAMPLE_REGISTRY : viewId;
-}
-
-const VALID_STARTUP_VIEW_IDS = new Set([
-  VIEWS.HOME,
-  ...appNavButtons.map((button) => normalizeViewId(button.dataset.view))
-]);
 
 function isValidStartupViewId(viewId) {
   return VALID_STARTUP_VIEW_IDS.has(normalizeViewId(String(viewId || '').trim()));
@@ -182,6 +172,80 @@ function resolveStartupViewId() {
     }
   }
   return defaultViewId;
+}
+
+function getAppForView(viewId) {
+  return APPS_BY_VIEW_ID.get(normalizeViewId(viewId)) || null;
+}
+
+function createInlineIcon(iconMarkup) {
+  const icon = document.createElement('span');
+  icon.className = 'app-nav-icon';
+  icon.setAttribute('aria-hidden', 'true');
+  if (iconMarkup) {
+    const template = document.createElement('template');
+    template.innerHTML = iconMarkup.trim();
+    const svg = template.content.firstElementChild;
+    if (svg) {
+      svg.setAttribute('aria-hidden', 'true');
+      svg.setAttribute('focusable', 'false');
+      icon.append(svg);
+    }
+  }
+  return icon;
+}
+
+function createNavButton(app, options = {}) {
+  const menu = options.menu === true;
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = menu ? 'app-nav-btn app-more-item' : 'app-nav-btn app-dock-btn';
+  button.dataset.view = app.viewId;
+  button.dataset.appId = app.id;
+  button.title = app.label;
+  button.setAttribute('aria-label', app.label);
+  if (menu) {
+    button.setAttribute('role', 'menuitem');
+  }
+
+  const icon = createInlineIcon(app.iconMarkup);
+  button.append(icon);
+
+  const label = document.createElement('span');
+  label.className = menu ? 'app-more-label' : 'sr-only';
+  label.textContent = app.label;
+  button.append(label);
+  return button;
+}
+
+function closeMoreMenu() {
+  if (!moreMenu || !moreBtn) {
+    return;
+  }
+  moreMenu.hidden = true;
+  moreBtn.setAttribute('aria-expanded', 'false');
+  moreBtn.classList.remove('is-open');
+}
+
+function toggleMoreMenu(forceOpen) {
+  if (!moreMenu || !moreBtn) {
+    return;
+  }
+  const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : moreMenu.hidden;
+  moreMenu.hidden = !shouldOpen;
+  moreBtn.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+  moreBtn.classList.toggle('is-open', shouldOpen);
+}
+
+function renderAppNavigation() {
+  if (dockNav) {
+    dockNav.replaceChildren(...DOCK_APPS.map((app) => createNavButton(app)));
+  }
+  if (moreMenu) {
+    moreMenu.replaceChildren(...MORE_APPS.map((app) => createNavButton(app, { menu: true })));
+  }
+  appNavButtons = [...document.querySelectorAll('.app-nav-btn[data-view]')];
+  moreMenuButtons = [...document.querySelectorAll('.app-more-item[data-view]')];
 }
 
 function replaceState(nextState) {
@@ -702,16 +766,28 @@ function showView(viewId) {
   const activeNavView = nextView === SEQUENCE_VIEWER_DETAIL_VIEW_ID
     ? VIEWS.SEQUENCE_VIEWER
     : nextView;
-  [...appNavButtons, ...homeTiles].forEach((button) => {
+  const activeApp = getAppForView(activeNavView);
+  appNavButtons.forEach((button) => {
     const buttonView = normalizeViewId(button.dataset.view);
     button.classList.toggle('is-active', buttonView === activeNavView);
   });
+  if (moreBtn) {
+    moreBtn.classList.toggle('is-active', Boolean(activeApp && activeApp.placement === 'more'));
+  }
+  if (topbarSettingsBtn) {
+    topbarSettingsBtn.classList.toggle('is-active', activeNavView === VIEWS.SETTING);
+  }
+  document.body.dataset.activeView = activeNavView;
 
   const subtitleView = nextView === SEQUENCE_VIEWER_DETAIL_VIEW_ID
     ? VIEWS.SEQUENCE_VIEWER
     : nextView;
+  if (pageTitle) {
+    pageTitle.textContent = activeApp?.label || 'Home';
+  }
   pageSubtitle.textContent = TITLES[subtitleView] || '';
   homeBtn.hidden = nextView === VIEWS.HOME;
+  closeMoreMenu();
 
   if (nextView === VIEWS.HOME) {
     homeDashboard?.render();
@@ -1260,13 +1336,22 @@ function initTelegramCommandBridge() {
 }
 
 function initNavigation() {
-  [...homeTiles, ...appNavButtons].forEach((entry) => {
+  appNavButtons.forEach((entry) => {
     entry.addEventListener('click', () => {
       showView(entry.dataset.view);
     });
   });
 
   homeBtn.addEventListener('click', () => showView(VIEWS.HOME));
+  if (topbarSettingsBtn) {
+    topbarSettingsBtn.addEventListener('click', () => showView(VIEWS.SETTING));
+  }
+  if (moreBtn) {
+    moreBtn.addEventListener('click', (event) => {
+      event.stopPropagation();
+      toggleMoreMenu();
+    });
+  }
   if (exitBtn) {
     exitBtn.addEventListener('click', () => window.close());
   }
@@ -1283,6 +1368,21 @@ function initNavigation() {
       }
     });
   }
+  document.addEventListener('click', (event) => {
+    if (moreMenu?.hidden !== false) {
+      return;
+    }
+    const target = event.target;
+    if (target instanceof Node && (moreMenu.contains(target) || moreBtn?.contains(target))) {
+      return;
+    }
+    closeMoreMenu();
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      closeMoreMenu();
+    }
+  });
 }
 
 window.addEventListener('enana:appearance-changed', () => {
@@ -1356,6 +1456,7 @@ async function initApp() {
   await hydrateStateFromDataFile();
   await hydrateStateFromStorageRoot();
   applyAppearanceSnapshot(state.settings?.appearance);
+  renderAppNavigation();
   initNavigation();
   initTelegramCommandBridge();
   renderAll();

@@ -1,8 +1,8 @@
 <section id="agent-view" class="view">
       <div class="panel">
-        <h2>Lab Assistant Agent</h2>
-        <p class="small-note">Read-only agent loop: intake, context, plan, execute, verify, synthesize. Write actions are proposed only and require approval.</p>
-        <p class="small-note">Set the API key in Settings, or provide <code>LLM_API_KEY</code> / <code>ENANA_LLM_API_KEY</code> in the app environment.</p>
+        <h2>Assistant</h2>
+        <p class="small-note">Read-only assistant workspace. Any write action is proposed before approval.</p>
+        <p class="small-note">Set the API key in Settings, or provide <code>LLM_API_KEY</code> or <code>ENANA_LLM_API_KEY</code> in the app environment.</p>
         <div class="form-grid">
           <label>
             Project Scope (Optional)
@@ -58,6 +58,7 @@
               <textarea id="agent-message-input" rows="4" placeholder="Ask for protocol guidance, inventory checks, literature-grounded suggestions, or planning support."></textarea>
             </label>
             <div class="form-actions">
+              <button type="button" id="agent-deep-research-toggle-btn" class="ghost-btn">Deep Research: Off</button>
               <button type="button" id="agent-send-btn" class="primary-btn">Send</button>
               <button type="button" id="agent-clear-btn" class="ghost-btn">Clear Chat</button>
             </div>

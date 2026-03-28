@@ -56,9 +56,9 @@
 
 .calendar-day {
   min-height: 122px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.72);
-  background: linear-gradient(150deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.5));
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface);
   display: grid;
   align-content: start;
   gap: 6px;
@@ -104,15 +104,15 @@
 }
 
 .week-corner {
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  background: rgba(255, 255, 255, 0.38);
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface);
 }
 
 .week-day-heading {
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.72);
-  background: linear-gradient(150deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.58));
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface);
   color: var(--primary);
   font-weight: 700;
   padding: 10px 8px;
@@ -152,17 +152,17 @@
 .week-day-column {
   position: relative;
   height: 1152px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 8px;
+  border: 1px solid var(--line);
   background:
     repeating-linear-gradient(
       to bottom,
-      rgba(255, 255, 255, 0.05),
-      rgba(255, 255, 255, 0.05) 47px,
-      rgba(97, 128, 161, 0.22) 47px,
-      rgba(97, 128, 161, 0.22) 48px
+      transparent,
+      transparent 47px,
+      color-mix(in srgb, var(--line-soft) 80%, transparent) 47px,
+      color-mix(in srgb, var(--line-soft) 80%, transparent) 48px
     ),
-    linear-gradient(150deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.5));
+    var(--surface);
   overflow: hidden;
 }
 
@@ -178,9 +178,9 @@
   position: absolute;
   left: 4px;
   right: 4px;
-  border-radius: 9px;
-  border: 1px dashed rgba(255, 255, 255, 0.88);
-  background: rgba(31, 129, 255, 0.35);
+  border-radius: 8px;
+  border: 1px dashed var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
   z-index: 3;
   pointer-events: none;
 }
@@ -189,10 +189,10 @@
   position: absolute;
   left: 4px;
   right: 4px;
-  border-radius: 9px;
-  border: 1px solid rgba(255, 255, 255, 0.78);
-  background: linear-gradient(150deg, rgba(67, 148, 255, 0.92), rgba(39, 120, 231, 0.82));
-  color: #fff;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--surface-subtle);
+  color: var(--strong);
   padding: 5px 6px;
   display: grid;
   gap: 1px;
@@ -211,26 +211,27 @@
 
 .week-event span {
   font-size: 0.67rem;
-  opacity: 0.92;
+  opacity: 1;
+  color: var(--muted);
 }
 
 .week-event-own {
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.45) inset;
+  box-shadow: none;
   cursor: pointer;
 }
 
 .week-event-conflict {
-  background: linear-gradient(150deg, rgba(217, 67, 67, 0.95), rgba(174, 34, 34, 0.88));
-  border-color: rgba(255, 228, 228, 0.95);
+  background: color-mix(in srgb, var(--danger) 10%, var(--surface));
+  border-color: color-mix(in srgb, var(--danger) 35%, var(--line));
 }
 
 .week-event-draft {
   border-style: dashed;
-  background: linear-gradient(150deg, rgba(66, 132, 214, 0.48), rgba(28, 92, 171, 0.4));
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
 }
 
 .week-event-draft-conflict {
-  background: linear-gradient(150deg, rgba(217, 67, 67, 0.55), rgba(174, 34, 34, 0.46));
+  background: color-mix(in srgb, var(--danger) 10%, var(--surface));
 }
 
 /* Extracted from ui/css/themes/modes.css */

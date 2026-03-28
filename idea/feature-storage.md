@@ -29,6 +29,8 @@ extract the feature information and write it into SQL.
 
 Each stored feature record should remain linked to its source vector.
 
+- deduplicate identical features across multiple vectors
+
 ### 2. Support feature search
 Add a search function that allows users to search for stored features by:
 - feature name

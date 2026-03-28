@@ -1,0 +1,257 @@
+/* App-wide compliance pass for idea/SKILL.md */
+
+#agent-view .agent-session-card,
+#agent-view .agent-chat-item,
+#agent-view .agent-activity,
+#agent-view .agent-meta-grid details,
+#personal-inventory-view .inventory-section,
+#personal-inventory-view .container-inline-detail,
+#lab-common-inventory-view .chemical-detail-item,
+#instrument-management-view .calendar-day,
+#instrument-management-view .week-corner,
+#instrument-management-view .week-day-heading,
+#instrument-management-view .week-day-column,
+#instrument-management-view .week-drag-preview,
+#instrument-management-view .week-event,
+#synthesis-notebook-view .notebook-chemistry,
+#synthesis-notebook-view .reaction-scheme,
+#synthesis-notebook-view .reaction-node {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+#agent-view .agent-session-card.is-active,
+#personal-inventory-view .well-selected,
+#instrument-management-view .week-day-column-dragging,
+#instrument-management-view .instrument-card-selected {
+  border-color: color-mix(in srgb, var(--accent) 75%, var(--line));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+#agent-view .agent-chat-item-user,
+#agent-view .agent-chat-item-assistant,
+#instrument-management-view .week-event-own {
+  border-color: var(--line);
+  background: var(--surface-elevated);
+  box-shadow: none;
+}
+
+#agent-view .agent-chat-header,
+#agent-view .agent-session-card strong,
+#agent-view .agent-meta-grid summary,
+#lab-common-inventory-view .chemical-detail-label,
+#instrument-management-view .calendar-day-number,
+#instrument-management-view .week-day-heading,
+#synthesis-notebook-view .reaction-plus,
+#synthesis-notebook-view .reaction-arrow {
+  color: var(--strong);
+}
+
+#agent-view .agent-activity-badge,
+#synthesis-notebook-view .inline-placeholder-token,
+#synthesis-notebook-view .reaction-number {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 2px 7px;
+  background: var(--surface-subtle);
+  color: var(--strong);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+#agent-view .agent-activity-badge-done {
+  color: #45533a;
+}
+
+#agent-view .agent-activity-badge-pending {
+  color: #72562b;
+}
+
+#agent-view .agent-activity-badge-planned {
+  color: var(--strong);
+}
+
+#agent-view .agent-activity-badge-error {
+  color: var(--danger);
+}
+
+#lab-common-inventory-view .chemical-detail-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+#personal-inventory-view .panel,
+#personal-inventory-view .card,
+#personal-inventory-view .inventory-section {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+#personal-inventory-view .container-items,
+#personal-inventory-view .well-inline-editor,
+#personal-inventory-view .well-side-editor hr {
+  border-top-color: var(--line-soft);
+}
+
+#personal-inventory-view .well-number,
+#personal-inventory-view .well-sample-legend-item,
+#personal-inventory-view .well-editor-status {
+  color: var(--muted);
+}
+
+#personal-inventory-view .well-sample-dot,
+#personal-inventory-view .well-sample-legend-dot,
+#personal-inventory-view .well-sample-count {
+  box-shadow: none;
+}
+
+#personal-inventory-view .well-sample-dot {
+  border-color: var(--line);
+  background: var(--surface-subtle);
+}
+
+#personal-inventory-view .well-sample-count {
+  border-radius: 6px;
+  background: var(--strong);
+}
+
+#personal-inventory-view .well:hover .well-sample-dot,
+#workflow-management-view .workflow-port:hover,
+#workflow-management-view .workflow-port:focus-visible {
+  transform: none;
+}
+
+#personal-inventory-view .well-selected {
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface-elevated));
+}
+
+#instrument-management-view .calendar-weekdays span,
+#instrument-management-view .week-time-label {
+  color: var(--muted);
+}
+
+#instrument-management-view .calendar-day,
+#instrument-management-view .week-day-heading,
+#instrument-management-view .week-day-column {
+  background: var(--surface);
+}
+
+#instrument-management-view .calendar-day-has-events,
+#instrument-management-view .week-day-column-today {
+  border-color: color-mix(in srgb, var(--accent) 75%, var(--line));
+}
+
+#instrument-management-view .week-day-column {
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      transparent,
+      transparent 47px,
+      color-mix(in srgb, var(--line-soft) 80%, transparent) 47px,
+      color-mix(in srgb, var(--line-soft) 80%, transparent) 48px
+    ),
+    var(--surface);
+}
+
+#instrument-management-view .week-drag-preview {
+  border-style: dashed;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+#instrument-management-view .week-event {
+  border-radius: 6px;
+  background: var(--surface-subtle);
+  border-color: var(--line);
+  color: var(--strong);
+}
+
+#instrument-management-view .week-event span {
+  opacity: 1;
+  color: var(--muted);
+}
+
+#instrument-management-view .week-event-conflict,
+#instrument-management-view .week-event-draft-conflict {
+  border-color: color-mix(in srgb, var(--danger) 35%, var(--line));
+  background: color-mix(in srgb, var(--danger) 10%, var(--surface));
+  color: var(--strong);
+}
+
+#instrument-management-view .week-event-draft {
+  border-style: dashed;
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+}
+
+#synthesis-notebook-view .inline-placeholder-editor,
+#synthesis-notebook-view .reaction-number,
+#synthesis-notebook-view .inline-placeholder-token {
+  border-radius: 6px;
+}
+
+#synthesis-notebook-view .inline-placeholder-token.is-empty,
+#synthesis-notebook-view .reaction-node-label {
+  color: var(--text);
+}
+
+#synthesis-notebook-view .inline-placeholder-token,
+#synthesis-notebook-view .reaction-number {
+  background: var(--surface-subtle);
+  border-color: var(--line);
+}
+
+#synthesis-notebook-view .inline-placeholder-editor {
+  border: 1px solid var(--line);
+  background: var(--surface-elevated);
+}
+
+#synthesis-notebook-view .reaction-structure-image {
+  border-color: var(--line-soft);
+}
+
+#synthesis-notebook-view .chem-mw-table th,
+#synthesis-notebook-view .chem-mw-table td {
+  border-color: var(--line);
+}
+
+#papers-view .papers-library-label,
+#sequence-viewer-view .sequence-viewer-home-nav-copy strong {
+  display: none;
+}
+
+#papers-view .papers-folder-item,
+#papers-view .papers-paper-row-main,
+#sequence-viewer-view .sequence-viewer-library-item,
+#sequence-viewer-view .sequence-viewer-feature-search-item,
+#sequence-viewer-view .sequence-viewer-feature-search-host,
+#sequence-viewer-detail-view .sequence-viewer-inline-toggle,
+#sequence-viewer-detail-view .sequence-viewer-inline-toggle-group,
+#sequence-viewer-detail-view .sequence-viewer-context-item,
+#workflow-management-view .workflow-node-index,
+#workflow-management-view .workflow-port,
+#tool-box-view .crispr-risk-badge,
+#protocol-management-view .placeholder-chip,
+#protocol-management-view .step-badge {
+  border-radius: 6px;
+}
+
+#tool-box-view .crispr-guide-seq,
+#tool-box-view .protein-assembly-cell-seq,
+#sequence-viewer-view .sequence-viewer-feature-search-sequence {
+  letter-spacing: 0;
+}
+
+#sequence-viewer-view .sequence-viewer-feature-search-type,
+#sequence-viewer-detail-view .sequence-viewer-inline-toggle-group-label {
+  text-transform: none;
+  letter-spacing: 0;
+}

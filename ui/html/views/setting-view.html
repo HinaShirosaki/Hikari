@@ -1,9 +1,43 @@
 <section id="setting-view" class="view">
-      <div class="panel">
-        <h2>Setting</h2>
-        <div class="setting-grid">
-          <section class="card setting-card">
-            <h3>Personal Information</h3>
+      <div class="panel settings-shell">
+        <div class="settings-head">
+          <h2>Settings</h2>
+          <p class="small-note">Workspace appearance, storage, startup, and model configuration.</p>
+        </div>
+
+        <div class="settings-stack">
+          <section class="settings-section">
+            <div class="settings-section-head">
+              <h3>Appearance</h3>
+              <p class="small-note">Keep the workspace legible and consistent.</p>
+            </div>
+            <form id="appearance-form" class="stack-form">
+              <label>
+                Font Size
+                <select id="setting-font-size">
+                  <option value="14">Small</option>
+                  <option value="16">Medium</option>
+                  <option value="18">Large</option>
+                </select>
+              </label>
+              <label>
+                Mode
+                <select id="setting-mode">
+                  <option value="day">Day</option>
+                  <option value="night">Night</option>
+                </select>
+              </label>
+              <div class="form-actions">
+                <button type="submit" class="primary-btn">Save Appearance</button>
+              </div>
+            </form>
+          </section>
+
+          <section class="settings-section">
+            <div class="settings-section-head">
+              <h3>Personal Information</h3>
+              <p class="small-note">Name and contact details used across the workspace.</p>
+            </div>
             <form id="personal-info-form" class="stack-form">
               <label>
                 Name
@@ -21,42 +55,17 @@
                 Enana Email
                 <input id="setting-enana-email" type="email" />
               </label>
-              <button type="submit" class="primary-btn">Save Personal Info</button>
-            </form>
-          </section>
-
-          <section class="card setting-card">
-            <h3>Appearance</h3>
-            <form id="appearance-form" class="stack-form">
-              <label>
-                Font Size
-                <select id="setting-font-size">
-                  <option value="14">Small</option>
-                  <option value="16">Medium</option>
-                  <option value="18">Large</option>
-                </select>
-              </label>
-              <label>
-                Theme Color
-                <input id="setting-theme-color" type="color" value="#2688ff" />
-              </label>
-              <label>
-                Day / Night
-                <select id="setting-mode">
-                  <option value="day">Day</option>
-                  <option value="night">Night</option>
-                </select>
-              </label>
-              <div class="inline-row">
-                <button type="button" id="setting-ui-style-toggle" class="ghost-btn">Use Neutral Compact UI</button>
-                <span id="setting-ui-style-label" class="small-note">Current style: Classic</span>
+              <div class="form-actions">
+                <button type="submit" class="primary-btn">Save Personal Info</button>
               </div>
-              <button type="submit" class="primary-btn">Save Appearance</button>
             </form>
           </section>
 
-          <section class="card setting-card">
-            <h3>Storage Folder Path</h3>
+          <section class="settings-section">
+            <div class="settings-section-head">
+              <h3>Storage</h3>
+              <p class="small-note">Pick the root folder for imported lab data and linked notebook content.</p>
+            </div>
             <form id="storage-form" class="stack-form">
               <label>
                 Root Folder Path
@@ -71,8 +80,11 @@
             </form>
           </section>
 
-          <section class="card setting-card">
-            <h3>Startup &amp; Data</h3>
+          <section class="settings-section">
+            <div class="settings-section-head">
+              <h3>Startup &amp; Data</h3>
+              <p class="small-note">Control which module opens first and how data loads and saves.</p>
+            </div>
             <form id="startup-form" class="stack-form">
               <label>
                 Default Startup Module
@@ -81,7 +93,7 @@
                   <option value="lab-management-view">Members</option>
                   <option value="instrument-management-view">Instruments</option>
                   <option value="protocol-management-view">Protocols</option>
-                  <option value="collaboration-management-view">Collabrations</option>
+                  <option value="collaboration-management-view">Collaborations</option>
                   <option value="synthesis-notebook-view">Synthesis Notebook</option>
                   <option value="biology-notebook-view">Biology Notebook</option>
                   <option value="lab-common-inventory-view">Chemicals</option>
@@ -94,7 +106,7 @@
                   <option value="agent-view">Agent</option>
                   <option value="sequence-viewer-view">Sequence Viewer</option>
                   <option value="tool-box-view">Tools</option>
-                  <option value="setting-view">Setting</option>
+                  <option value="setting-view">Settings</option>
                 </select>
               </label>
               <label class="inline-row">
@@ -106,12 +118,32 @@
                 Auto-load current .json data file on launch
               </label>
               <p class="small-note">If enabled, “Remember last opened module” overrides the default startup module.</p>
-              <button type="submit" class="primary-btn">Save Startup Settings</button>
+              <div class="form-actions">
+                <button type="submit" class="primary-btn">Save Startup Settings</button>
+              </div>
             </form>
+
+            <div class="settings-subsection">
+              <h4>Data File (.json)</h4>
+              <div class="stack-form">
+                <p class="small-note">Current .json file: <span id="setting-ena-path">Not set</span></p>
+                <label class="inline-row">
+                  <input id="setting-auto-save-ena" type="checkbox" />
+                  Auto-save to current .json file after each change
+                </label>
+                <div class="form-actions">
+                  <button type="button" id="save-ena-btn" class="primary-btn">Save .json</button>
+                  <button type="button" id="load-ena-btn" class="ghost-btn">Load .json</button>
+                </div>
+              </div>
+            </div>
           </section>
 
-          <section class="card setting-card">
-            <h3>Inventory Locations</h3>
+          <section class="settings-section">
+            <div class="settings-section-head">
+              <h3>Inventory Locations</h3>
+              <p class="small-note">Keep the storage vocabulary consistent across samples and chemicals.</p>
+            </div>
             <div class="stack-form">
               <div class="inline-row">
                 <input id="setting-location-input" placeholder="Add approximate location" />
@@ -121,8 +153,11 @@
             </div>
           </section>
 
-          <section class="card setting-card">
-            <h3>LLM Model & API</h3>
+          <section class="settings-section">
+            <div class="settings-section-head">
+              <h3>LLM Model &amp; API</h3>
+              <p class="small-note">Configure the provider and endpoint used by the assistant features.</p>
+            </div>
             <form id="llm-form" class="stack-form">
               <label>
                 Provider
@@ -149,12 +184,17 @@
                 <input id="setting-agent-developer-mode" type="checkbox" />
                 Agent Developer Mode (record redacted LLM request/response traces)
               </label>
-              <button type="submit" class="primary-btn">Save LLM Settings</button>
+              <div class="form-actions">
+                <button type="submit" class="primary-btn">Save LLM Settings</button>
+              </div>
             </form>
           </section>
 
-          <section class="card setting-card">
-            <h3>Telegram Bot</h3>
+          <section class="settings-section">
+            <div class="settings-section-head">
+              <h3>Telegram Bot</h3>
+              <p class="small-note">Store a token for Telegram automation and status reporting.</p>
+            </div>
             <form id="telegram-form" class="stack-form">
               <label>
                 Bot Token
@@ -167,21 +207,6 @@
                 <button type="button" id="clear-telegram-token-btn" class="ghost-btn">Clear Saved Token</button>
               </div>
             </form>
-          </section>
-
-          <section class="card setting-card">
-            <h3>Data File (.json)</h3>
-            <div class="stack-form">
-              <p class="small-note">Current .json file: <span id="setting-ena-path">Not set</span></p>
-              <label class="inline-row">
-                <input id="setting-auto-save-ena" type="checkbox" />
-                Auto-save to current .json file after each change
-              </label>
-              <div class="form-actions">
-                <button type="button" id="save-ena-btn" class="primary-btn">Save .json</button>
-                <button type="button" id="load-ena-btn" class="ghost-btn">Load .json</button>
-              </div>
-            </div>
           </section>
         </div>
       </div>

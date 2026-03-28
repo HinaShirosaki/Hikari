@@ -6,6 +6,7 @@ function registerAgentIpc(deps = {}) {
   const observability = deps.observability || {};
   const protocolNotebookRuntime = deps.protocolNotebookRuntime;
   const scienceReasoningLoopRuntime = deps.scienceReasoningLoopRuntime;
+  const deepResearchRuntime = deps.deepResearchRuntime;
   const scienceMainUtils = deps.scienceMainUtils || {};
   const agentToolRuntime = deps.agentToolRuntime || {};
   const agentChatLogRuntime = deps.agentChatLogRuntime;
@@ -143,6 +144,7 @@ function registerAgentIpc(deps = {}) {
     const rawSnapshot = normalizeJsonPayload(payload?.stateSnapshot, {});
     const snapshot = agentToolRuntime.normalizeAgentSnapshot(rawSnapshot);
     const executionFlags = controllerUtils.resolveAgentExecutionFlags(payload, { settings: rawSnapshot?.settings || {} });
+    const deepResearchEnabled = payload?.agent?.deepResearchEnabled === true;
     const traceContext = controllerUtils.createAgentLlmTraceContext({
       enabled: executionFlags.developerMode === true,
       requestId: cleanText(runtime?.requestId, 80),
@@ -435,7 +437,9 @@ function registerAgentIpc(deps = {}) {
           stage: 'science_intent_start',
           status: 'started',
           routing_intent: scienceIntent,
-          message: `Dispatching ${scienceIntent} into the shared science reasoning loop.`
+          message: deepResearchEnabled === true && deepResearchRuntime
+            ? `Dispatching ${scienceIntent} into the deep research pipeline.`
+            : `Dispatching ${scienceIntent} into the shared science reasoning loop.`
         });
 
         const scienceInput = {
@@ -460,10 +464,19 @@ function registerAgentIpc(deps = {}) {
               || parserResult.payload?.entities?.project_name,
             null
           ),
-          runTool: async (toolName, args, options = {}) => runTrackedTool(toolName, args, options)
+          runTool: async (toolName, args, options = {}) => runTrackedTool(toolName, args, options),
+          deepResearchEnabled
         };
 
-        if (scienceIntent === 'general_science_question') {
+        if (deepResearchEnabled === true && deepResearchRuntime) {
+          if (scienceIntent === 'general_science_question') {
+            result.general_science_question = await deepResearchRuntime.runGeneralScienceQuestion(scienceInput);
+          } else if (scienceIntent === 'project_science_question') {
+            result.project_science_question = await deepResearchRuntime.runProjectScienceQuestion(scienceInput);
+          } else {
+            result.result_analysis = await deepResearchRuntime.runResultAnalysis(scienceInput);
+          }
+        } else if (scienceIntent === 'general_science_question') {
           result.general_science_question = await scienceReasoningLoopRuntime.runGeneralScienceQuestion(scienceInput);
         } else if (scienceIntent === 'project_science_question') {
           result.project_science_question = await scienceReasoningLoopRuntime.runProjectScienceQuestion(scienceInput);
@@ -565,7 +578,8 @@ function registerAgentIpc(deps = {}) {
         project_name: cleanText(normalizedPayload?.projectName, 180),
         allow_write_tools: normalizedPayload?.allowWriteTools === true,
         provider: cleanText(normalizedPayload?.llm?.provider, 80),
-        developer_mode: executionFlags.developerMode === true
+        developer_mode: executionFlags.developerMode === true,
+        deep_research_enabled: normalizedPayload?.agent?.deepResearchEnabled === true
       }
     });
     const requestLogEntry = controllerUtils.formatAgentChatLogEntry({
@@ -583,7 +597,8 @@ function registerAgentIpc(deps = {}) {
       conversation: controllerUtils.extractConversation(normalizedPayload?.conversation),
       llm: controllerUtils.summarizeLlmForAgentLog(normalizedPayload?.llm),
       agent: {
-        developerMode: executionFlags.developerMode === true
+        developerMode: executionFlags.developerMode === true,
+        deepResearchEnabled: normalizedPayload?.agent?.deepResearchEnabled === true
       }
     });
     await deps.appendAgentChatLogEntry(logPath, requestLogEntry);
