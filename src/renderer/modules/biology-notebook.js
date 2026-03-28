@@ -531,13 +531,11 @@ export function initLabNotebook({
       if (!placeholders.length) {
         return safeText(source);
       }
-
-      const trailingValues = placeholders.map((placeholder) => {
+      return replaceBracketPlaceholders(source, placeholders, (placeholder) => {
         const key = `${step.id}:${placeholder.id}`;
         const rawValue = String(values[key] || '').trim();
         return safeText(rawValue || `[${placeholder.name}]`);
-      }).join(' ');
-      return `${safeText(source)} ${trailingValues}`.trim();
+      });
     }
 
     let cursor = 0;
@@ -573,11 +571,10 @@ export function initLabNotebook({
       if (!placeholders.length) {
         return safeText(source);
       }
-      const trailing = placeholders.map((item) => {
+      return replaceBracketPlaceholders(source, placeholders, (item) => {
         const key = `${step.id}:${item.id}`;
         return buildInlinePlaceholderHtml(key, item.name, values[key] || '');
-      }).join(' ');
-      return `${safeText(source)} ${trailing}`.trim();
+      });
     }
 
     let cursor = 0;
@@ -595,6 +592,27 @@ export function initLabNotebook({
 
     html += safeText(source.slice(cursor));
     return html;
+  }
+
+  function replaceBracketPlaceholders(source, placeholders, renderPlaceholder) {
+    let placeholderIndex = 0;
+    let replaced = false;
+    const rendered = String(source || '').replace(/\[([^[\]]+)\]/g, (match) => {
+      const placeholder = placeholders[placeholderIndex];
+      if (!placeholder) {
+        return match;
+      }
+      placeholderIndex += 1;
+      replaced = true;
+      return renderPlaceholder(placeholder);
+    });
+
+    if (replaced) {
+      return rendered;
+    }
+
+    const trailing = placeholders.map((placeholder) => renderPlaceholder(placeholder)).join(' ');
+    return `${safeText(source)} ${trailing}`.trim();
   }
 
   function buildInlinePlaceholderHtml(key, name, value) {
