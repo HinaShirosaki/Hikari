@@ -1,21 +1,52 @@
 /* tool-box-view */
 
-/* Extracted from ui/css/base/core.css */
 .tool-grid {
-  margin-top: 16px;
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0 18px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
 }
 
-.tool-tile-active .icon {
-  outline: 2px solid rgba(130, 186, 255, 0.85);
-  outline-offset: 3px;
+.tool-tile {
+  width: 100%;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  min-height: 44px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line-soft);
+  border-radius: 0;
+  text-align: left;
+  background: transparent;
+}
+
+.tool-tile .label {
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.tool-tile:hover,
+.tool-tile:focus-visible {
+  background: transparent;
+  color: var(--strong);
+}
+
+.tool-tile-active {
+  color: var(--strong);
+}
+
+.tool-tile-active .label {
+  font-weight: 650;
 }
 
 .calc-output {
   margin-top: 10px;
   padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.72);
-  background: linear-gradient(150deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.52));
+  border: 1px solid var(--line);
+  background: var(--surface-subtle);
   color: var(--text);
 }
 
@@ -24,9 +55,8 @@
   word-break: break-all;
   line-height: 1.4;
   padding: 8px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid var(--line);
+  background: var(--surface-subtle);
 }
 
 .buffer-rows {
@@ -40,9 +70,8 @@
   grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   align-items: end;
   padding: 12px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.65);
-  background: linear-gradient(150deg, rgba(255, 255, 255, 0.64), rgba(255, 255, 255, 0.42));
+  border: 1px solid var(--line);
+  background: var(--surface-subtle);
 }
 
 .buffer-output {
@@ -50,9 +79,8 @@
   display: flex;
   align-items: center;
   padding: 9px 10px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  background: rgba(255, 255, 255, 0.4);
+  border: 1px solid var(--line);
+  background: var(--surface);
 }
 
 .buffer-weight {
@@ -65,9 +93,8 @@
 }
 
 .plannotate-controls {
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  background: linear-gradient(156deg, rgba(255, 255, 255, 0.68), rgba(236, 248, 255, 0.48));
+  border: 1px solid var(--line);
+  background: var(--surface-subtle);
   padding: 12px;
 }
 
@@ -76,15 +103,13 @@
   grid-auto-flow: column;
   gap: 6px;
   align-self: start;
-  padding: 5px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.72);
-  background: rgba(243, 248, 255, 0.72);
+  padding: 4px;
+  border: 1px solid var(--line);
+  background: var(--surface);
 }
 
 .plannotate-mode-btn {
   border: 0;
-  border-radius: 8px;
   padding: 8px 11px;
   font: inherit;
   font-weight: 650;
@@ -94,8 +119,8 @@
 }
 
 .plannotate-mode-btn-active {
-  color: #fff;
-  background: var(--accent);
+  color: var(--strong);
+  background: var(--surface-subtle);
 }
 
 .plannotate-mode-btn:focus-visible {
@@ -115,9 +140,8 @@
 }
 
 .plannotate-result-card {
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  background: linear-gradient(156deg, rgba(255, 255, 255, 0.68), rgba(236, 248, 255, 0.48));
+  border: 1px solid var(--line);
+  background: var(--surface-subtle);
   padding: 12px;
 }
 
@@ -136,9 +160,8 @@
 
 .plannotate-map-host {
   min-height: 700px;
-  border: 1px solid #d9d9d9;
-  border-radius: 12px;
-  background: #ffffff;
+  border: 1px solid var(--line);
+  background: var(--surface);
   padding: 12px;
   display: grid;
   gap: 10px;
@@ -152,9 +175,8 @@
 
 .plannotate-table-wrap {
   margin-top: 0;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid var(--line);
+  background: var(--surface);
   overflow: auto;
   max-height: 458px;
 }
@@ -177,7 +199,7 @@
   position: sticky;
   top: 0;
   z-index: 1;
-  background: rgba(238, 248, 255, 0.92);
+  background: var(--surface-subtle);
   color: var(--primary);
 }
 
@@ -402,9 +424,9 @@
 }
 
 .crispr-controls {
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  background: linear-gradient(156deg, rgba(255, 255, 255, 0.68), rgba(236, 248, 255, 0.48));
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface);
   padding: 12px;
 }
 
@@ -435,7 +457,7 @@
 
 .crispr-guide-seq {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-  letter-spacing: 0.015em;
+  letter-spacing: 0;
 }
 
 .crispr-risk-badge {
@@ -444,7 +466,7 @@
   justify-content: center;
   min-width: 74px;
   padding: 2px 8px;
-  border-radius: 999px;
+  border-radius: 6px;
   border: 1px solid transparent;
   font-size: 0.78rem;
   font-weight: 650;
@@ -484,9 +506,9 @@
 }
 
 .colony-counter-controls {
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  background: linear-gradient(156deg, rgba(255, 255, 255, 0.68), rgba(236, 248, 255, 0.48));
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface);
   padding: 12px;
 }
 
@@ -536,9 +558,9 @@
 }
 
 .protein-assembly-controls {
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  background: linear-gradient(156deg, rgba(255, 255, 255, 0.68), rgba(236, 248, 255, 0.48));
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface);
   padding: 12px;
 }
 
@@ -553,9 +575,9 @@
   grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   align-items: end;
   padding: 12px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.65);
-  background: linear-gradient(150deg, rgba(255, 255, 255, 0.64), rgba(255, 255, 255, 0.42));
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface);
 }
 
 .protein-assembly-row-actions {
@@ -583,7 +605,7 @@
 
 .protein-assembly-cell-seq {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-  letter-spacing: 0.012em;
+  letter-spacing: 0;
 }
 
 @media (max-width: 920px) {
@@ -609,7 +631,7 @@ body.theme-night .buffer-row,
 body.theme-night .buffer-output {
   color: #e2edf9;
   border-color: rgba(186, 218, 255, 0.3);
-  background: linear-gradient(160deg, rgba(34, 52, 78, 0.65), rgba(20, 31, 48, 0.56));
+  background: var(--surface);
 }
 
 body.theme-night .sequence-block {
@@ -634,7 +656,7 @@ body.theme-night .plannotate-table th {
 body.theme-night .plannotate-controls,
 body.theme-night .plannotate-result-card {
   border-color: rgba(186, 218, 255, 0.3);
-  background: linear-gradient(160deg, rgba(34, 52, 78, 0.7), rgba(20, 31, 48, 0.6));
+  background: var(--surface);
 }
 
 body.theme-night .plannotate-mode-switch {
@@ -702,12 +724,12 @@ body.theme-night .plannotate-legend-item {
 
 body.theme-night .crispr-controls {
   border-color: rgba(186, 218, 255, 0.3);
-  background: linear-gradient(160deg, rgba(34, 52, 78, 0.7), rgba(20, 31, 48, 0.6));
+  background: var(--surface);
 }
 
 body.theme-night .colony-counter-controls {
   border-color: rgba(186, 218, 255, 0.3);
-  background: linear-gradient(160deg, rgba(34, 52, 78, 0.7), rgba(20, 31, 48, 0.6));
+  background: var(--surface);
 }
 
 body.theme-night .colony-preview-canvas {
@@ -723,7 +745,7 @@ body.theme-night .colony-cropper-shell {
 body.theme-night .protein-assembly-controls,
 body.theme-night .protein-assembly-row {
   border-color: rgba(186, 218, 255, 0.3);
-  background: linear-gradient(160deg, rgba(34, 52, 78, 0.7), rgba(20, 31, 48, 0.6));
+  background: var(--surface);
 }
 
 body.theme-night .crispr-risk-low {

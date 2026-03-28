@@ -652,8 +652,9 @@ removedCodeGuards.forEach(([relativePath, pattern, shouldMatch], idx) => {
 });
 
 const indexHtmlSource = readSource('index.html');
+const appRegistry = JSON.parse(fs.readFileSync(path.join(__dirname, 'ui', 'config', 'app-registry.json'), 'utf8'));
 const sectionViews = new Set([...indexHtmlSource.matchAll(/<section id=\"([^\"]+)\" class=\"view\"/g)].map((match) => match[1]));
-const navViews = new Set([...indexHtmlSource.matchAll(/data-view=\"([^\"]+)\"/g)].map((match) => match[1]));
+const navViews = new Set((appRegistry.apps || []).map((app) => app.viewId));
 const nonHomeViews = Object.values(shared.VIEWS).filter((viewId) => viewId !== shared.VIEWS.HOME);
 
 nonHomeViews.forEach((viewId) => {
@@ -664,7 +665,7 @@ nonHomeViews.forEach((viewId) => {
 
 const navExpectedViews = nonHomeViews.filter((viewId) => viewId !== shared.VIEWS.PERSONAL_INVENTORY);
 navExpectedViews.forEach((viewId) => {
-  test(`[P0] index nav entry exists for ${viewId}`, () => {
+  test(`[P0] app registry entry exists for ${viewId}`, () => {
     assert.equal(navViews.has(viewId), true);
   });
 });

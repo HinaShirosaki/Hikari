@@ -14,8 +14,9 @@
 <body>
   <script>
     (() => {
-      const DEFAULT_THEME_COLOR = '#2688ff';
       const DEFAULT_FONT_SIZE = 16;
+      const FIXED_ACCENT = '#647255';
+      const FIXED_FOCUS = '#7a8a69';
       const STORAGE_KEY = 'enana_state_v1';
       const root = document.documentElement;
       const body = document.body;
@@ -23,208 +24,105 @@
         const raw = localStorage.getItem(STORAGE_KEY);
         const parsed = raw ? JSON.parse(raw) : null;
         const appearance = parsed && parsed.settings ? parsed.settings.appearance || {} : {};
-        const themeColor = String(appearance.themeColor || DEFAULT_THEME_COLOR).trim() || DEFAULT_THEME_COLOR;
         const fontSize = Number(appearance.fontSize) || DEFAULT_FONT_SIZE;
         const mode = appearance.mode === 'night' ? 'night' : 'day';
-        const uiStyle = appearance.uiStyle === 'classic' ? 'classic' : 'neutral-compact';
 
-        root.style.setProperty('--accent', themeColor);
-        root.style.setProperty('--focus', themeColor);
+        root.style.setProperty('--accent', FIXED_ACCENT);
+        root.style.setProperty('--focus', FIXED_FOCUS);
         root.style.setProperty('--app-font-size', `${fontSize}px`);
         root.style.setProperty('font-size', `${fontSize}px`);
         body.classList.toggle('theme-night', mode === 'night');
-        body.classList.toggle('ui-neutral-compact', uiStyle === 'neutral-compact');
+        body.classList.add('ui-neutral-compact');
       } catch {}
     })();
   </script>
   <main class="app-shell">
     <header class="topbar">
-      <h1>Enana</h1>
-      <div class="topbar-row">
-        <p id="page-subtitle">Choose a sub-app to continue.</p>
-        <div class="topbar-tools">
-          <input id="topbar-search" type="search" placeholder="Search (e.g. assay: EGFR)" aria-label="Search" />
-          <button id="home-btn" class="ghost-btn" hidden>Back to Home</button>
+      <div class="topbar-brand">
+        <h1>Enana</h1>
+        <div class="topbar-context">
+          <p id="page-title" class="topbar-page-title">Home</p>
+          <p id="page-subtitle">Reminders and active work.</p>
         </div>
+      </div>
+      <div class="topbar-tools">
+        <input id="topbar-search" type="search" placeholder="Search modules or use sample: EGFR" aria-label="Search modules and records" />
+        <button id="home-btn" class="ghost-btn" hidden>Home</button>
+        <button id="topbar-settings-btn" class="topbar-icon-btn ghost-btn" type="button" aria-label="Open settings" title="Settings">
+          <span class="app-nav-icon" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="2.75" />
+              <path d="M12 4.5v2M12 17.5v2M19.5 12h-2M6.5 12h-2M17.3 6.7l-1.4 1.4M8.1 15.9l-1.4 1.4M17.3 17.3l-1.4-1.4M8.1 8.1 6.7 6.7" />
+            </svg>
+          </span>
+        </button>
       </div>
     </header>
     <div class="workspace-shell">
-      <aside class="app-sidebar" aria-label="Applications">
-        <h2 class="app-sidebar-title">Apps</h2>
-        <nav id="app-nav-list" class="app-nav-list">
-          <button class="app-nav-btn" type="button" data-view="lab-management-view">Members</button>
-          <button class="app-nav-btn" type="button" data-view="instrument-management-view">Instruments</button>
-          <button class="app-nav-btn" type="button" data-view="protocol-management-view">Protocols</button>
-          <button class="app-nav-btn" type="button" data-view="collaboration-management-view">Collabrations</button>
-          <button class="app-nav-btn" type="button" data-view="synthesis-notebook-view">Synthesis Notebook</button>
-          <button class="app-nav-btn" type="button" data-view="biology-notebook-view">Biology Notebook</button>
-          <button class="app-nav-btn" type="button" data-view="lab-common-inventory-view">Chemicals</button>
-          <button class="app-nav-btn" type="button" data-view="sample-registry-view">Sample &amp; Inventory</button>
-          <button class="app-nav-btn" type="button" data-view="assay-view">Assay</button>
-          <button class="app-nav-btn" type="button" data-view="gel-view">Gel</button>
-          <button class="app-nav-btn" type="button" data-view="project-management-view">Projects</button>
-          <button class="app-nav-btn" type="button" data-view="workflow-management-view">Workflows</button>
-          <button class="app-nav-btn" type="button" data-view="papers-view">Papers</button>
-          <button class="app-nav-btn" type="button" data-view="agent-view">Agent</button>
-          <button class="app-nav-btn" type="button" data-view="sequence-viewer-view">Sequence Viewer</button>
-          <button class="app-nav-btn" type="button" data-view="tool-box-view">Tools</button>
-          <button class="app-nav-btn" type="button" data-view="setting-view">Setting</button>
-        </nav>
-      </aside>
       <section class="workspace-main">
 <!-- SOURCE: ui/html/views/home-view.html -->
-<section id="home-view" class="view is-active" aria-label="Sub applications">
+<section id="home-view" class="view is-active" aria-label="Home">
       <div class="home-layout">
-        <aside class="home-dashboard panel" aria-label="Dashboard">
-          <h2>Dashboard</h2>
-          <p class="small-note">Live reminders, workflow progress, and timing tools.</p>
-
-          <section class="dashboard-widget" aria-labelledby="dashboard-passage-heading">
-            <h3 id="dashboard-passage-heading">Cell Passage Reminders</h3>
+        <section class="home-section home-section-wide" aria-labelledby="dashboard-passage-heading">
+          <div class="home-section-head">
+            <h2 id="dashboard-passage-heading">Cell Passage Reminders</h2>
             <p id="dashboard-passage-summary" class="small-note">No cell line reminders yet.</p>
-            <div class="dashboard-split-grid">
-              <div class="dashboard-list-group">
-                <h4>Overdue</h4>
-                <div id="dashboard-passage-overdue-list" class="dashboard-list"></div>
-              </div>
-              <div class="dashboard-list-group">
-                <h4>Due in 3 Days</h4>
-                <div id="dashboard-passage-soon-list" class="dashboard-list"></div>
-              </div>
-              <div class="dashboard-list-group">
-                <h4>Unconfigured</h4>
-                <div id="dashboard-passage-unconfigured-list" class="dashboard-list"></div>
-              </div>
-            </div>
-          </section>
-
-          <section class="dashboard-widget" aria-labelledby="dashboard-workflow-heading">
-            <div class="dashboard-widget-head">
-              <h3 id="dashboard-workflow-heading">Current Workflow Next Step</h3>
-            </div>
-            <label class="dashboard-field">
-              Current Workflow
-              <select id="dashboard-workflow-select"></select>
-            </label>
-            <p id="dashboard-workflow-next-step" class="small-note">No workflow selected.</p>
-            <div id="dashboard-workflow-progress-list" class="dashboard-list"></div>
-          </section>
-
-          <section class="dashboard-widget" aria-labelledby="dashboard-timer-heading">
-            <h3 id="dashboard-timer-heading">Lab Countdown Timer</h3>
-            <p id="dashboard-timer-display" class="dashboard-timer-display">15:00</p>
-            <p id="dashboard-timer-status" class="small-note">Ready</p>
-            <div class="dashboard-inline-row">
-              <button type="button" class="ghost-btn" data-dashboard-preset-minutes="5">5m</button>
-              <button type="button" class="ghost-btn" data-dashboard-preset-minutes="10">10m</button>
-              <button type="button" class="ghost-btn" data-dashboard-preset-minutes="15">15m</button>
-              <button type="button" class="ghost-btn" data-dashboard-preset-minutes="30">30m</button>
-            </div>
-            <div class="dashboard-inline-row">
-              <label class="dashboard-field">
-                Custom Minutes
-                <input id="dashboard-timer-custom-minutes" type="number" min="1" step="1" value="15" />
-              </label>
-              <button type="button" id="dashboard-timer-set-btn" class="ghost-btn">Set</button>
-            </div>
-            <div class="dashboard-inline-row">
-              <button type="button" id="dashboard-timer-start-btn" class="primary-btn">Start</button>
-              <button type="button" id="dashboard-timer-pause-btn" class="ghost-btn">Pause</button>
-              <button type="button" id="dashboard-timer-reset-btn" class="ghost-btn">Reset</button>
-            </div>
-            <p class="small-note">Visual alert only when countdown reaches zero.</p>
-          </section>
-        </aside>
-
-        <div class="home-apps">
-          <h2 class="home-apps-title">Applications</h2>
-          <div class="grid">
-            <button class="tile" data-view="lab-management-view">
-              <span class="icon" aria-hidden="true">🧪</span>
-              <span class="label">Members</span>
-            </button>
-
-            <button class="tile" data-view="instrument-management-view">
-              <span class="icon" aria-hidden="true">🗓️</span>
-              <span class="label">Instruments</span>
-            </button>
-
-            <button class="tile" data-view="protocol-management-view">
-              <span class="icon" aria-hidden="true">📋</span>
-              <span class="label">Protocols</span>
-            </button>
-
-            <button class="tile" data-view="collaboration-management-view">
-              <span class="icon" aria-hidden="true">🤝</span>
-              <span class="label">Collabrations</span>
-            </button>
-
-            <button class="tile" data-view="synthesis-notebook-view">
-              <span class="icon" aria-hidden="true">📓</span>
-              <span class="label">Synthesis Notebook</span>
-            </button>
-
-            <button class="tile" data-view="biology-notebook-view">
-              <span class="icon" aria-hidden="true">🧫</span>
-              <span class="label">Biology Notebook</span>
-            </button>
-
-            <button class="tile" data-view="lab-common-inventory-view">
-              <span class="icon" aria-hidden="true">📦</span>
-              <span class="label">Chemicals</span>
-            </button>
-
-            <button class="tile" data-view="sample-registry-view">
-              <span class="icon" aria-hidden="true">🧬</span>
-              <span class="label">Sample &amp; Inventory</span>
-            </button>
-
-            <button class="tile" data-view="assay-view">
-              <span class="icon" aria-hidden="true">🧪</span>
-              <span class="label">Assay</span>
-            </button>
-
-            <button class="tile" data-view="gel-view">
-              <span class="icon" aria-hidden="true">🧬</span>
-              <span class="label">Gel</span>
-            </button>
-
-            <button class="tile" data-view="project-management-view">
-              <span class="icon" aria-hidden="true">🗂️</span>
-              <span class="label">Projects</span>
-            </button>
-
-            <button class="tile" data-view="workflow-management-view">
-              <span class="icon" aria-hidden="true">🔀</span>
-              <span class="label">Workflows</span>
-            </button>
-
-            <button class="tile" data-view="papers-view">
-              <span class="icon" aria-hidden="true">📄</span>
-              <span class="label">Papers</span>
-            </button>
-
-            <button class="tile" data-view="agent-view">
-              <span class="icon" aria-hidden="true">🤖</span>
-              <span class="label">Agent</span>
-            </button>
-
-            <button class="tile" data-view="sequence-viewer-view">
-              <span class="icon" aria-hidden="true">🧬</span>
-              <span class="label">Sequence Viewer</span>
-            </button>
-
-            <button class="tile" data-view="tool-box-view">
-              <span class="icon" aria-hidden="true">🧮</span>
-              <span class="label">Tools</span>
-            </button>
-
-            <button class="tile" data-view="setting-view">
-              <span class="icon" aria-hidden="true">⚙️</span>
-              <span class="label">Setting</span>
-            </button>
           </div>
-        </div>
+          <div class="dashboard-split-grid">
+            <div class="dashboard-list-group">
+              <h3>Overdue</h3>
+              <div id="dashboard-passage-overdue-list" class="dashboard-list"></div>
+            </div>
+            <div class="dashboard-list-group">
+              <h3>Due in 3 Days</h3>
+              <div id="dashboard-passage-soon-list" class="dashboard-list"></div>
+            </div>
+            <div class="dashboard-list-group">
+              <h3>Unconfigured</h3>
+              <div id="dashboard-passage-unconfigured-list" class="dashboard-list"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="home-section" aria-labelledby="dashboard-workflow-heading">
+          <div class="home-section-head">
+            <h2 id="dashboard-workflow-heading">Current Workflow</h2>
+            <p class="small-note">Track the next action without leaving the workspace.</p>
+          </div>
+          <label class="dashboard-field">
+            Workflow
+            <select id="dashboard-workflow-select"></select>
+          </label>
+          <p id="dashboard-workflow-next-step" class="small-note">No workflow selected.</p>
+          <div id="dashboard-workflow-progress-list" class="dashboard-list"></div>
+        </section>
+
+        <section class="home-section home-section-compact" aria-labelledby="dashboard-timer-heading">
+          <div class="home-section-head">
+            <h2 id="dashboard-timer-heading">Lab Timer</h2>
+            <p id="dashboard-timer-status" class="small-note">Ready</p>
+          </div>
+          <p id="dashboard-timer-display" class="dashboard-timer-display">15:00</p>
+          <div class="dashboard-inline-row">
+            <button type="button" class="ghost-btn" data-dashboard-preset-minutes="5">5m</button>
+            <button type="button" class="ghost-btn" data-dashboard-preset-minutes="10">10m</button>
+            <button type="button" class="ghost-btn" data-dashboard-preset-minutes="15">15m</button>
+            <button type="button" class="ghost-btn" data-dashboard-preset-minutes="30">30m</button>
+          </div>
+          <div class="dashboard-inline-row">
+            <label class="dashboard-field dashboard-field-inline">
+              Custom Minutes
+              <input id="dashboard-timer-custom-minutes" type="number" min="1" step="1" value="15" />
+            </label>
+            <button type="button" id="dashboard-timer-set-btn" class="ghost-btn">Set</button>
+          </div>
+          <div class="dashboard-inline-row">
+            <button type="button" id="dashboard-timer-start-btn" class="primary-btn">Start</button>
+            <button type="button" id="dashboard-timer-pause-btn" class="ghost-btn">Pause</button>
+            <button type="button" id="dashboard-timer-reset-btn" class="ghost-btn">Reset</button>
+          </div>
+          <p class="small-note">A visual alert appears when the countdown reaches zero.</p>
+        </section>
       </div>
     </section>
 
@@ -1240,11 +1138,45 @@
 
 <!-- SOURCE: ui/html/views/setting-view.html -->
 <section id="setting-view" class="view">
-      <div class="panel">
-        <h2>Setting</h2>
-        <div class="setting-grid">
-          <section class="card setting-card">
-            <h3>Personal Information</h3>
+      <div class="panel settings-shell">
+        <div class="settings-head">
+          <h2>Settings</h2>
+          <p class="small-note">Workspace appearance, storage, startup, and model configuration.</p>
+        </div>
+
+        <div class="settings-stack">
+          <section class="settings-section">
+            <div class="settings-section-head">
+              <h3>Appearance</h3>
+              <p class="small-note">Keep the workspace legible and consistent.</p>
+            </div>
+            <form id="appearance-form" class="stack-form">
+              <label>
+                Font Size
+                <select id="setting-font-size">
+                  <option value="14">Small</option>
+                  <option value="16">Medium</option>
+                  <option value="18">Large</option>
+                </select>
+              </label>
+              <label>
+                Mode
+                <select id="setting-mode">
+                  <option value="day">Day</option>
+                  <option value="night">Night</option>
+                </select>
+              </label>
+              <div class="form-actions">
+                <button type="submit" class="primary-btn">Save Appearance</button>
+              </div>
+            </form>
+          </section>
+
+          <section class="settings-section">
+            <div class="settings-section-head">
+              <h3>Personal Information</h3>
+              <p class="small-note">Name and contact details used across the workspace.</p>
+            </div>
             <form id="personal-info-form" class="stack-form">
               <label>
                 Name
@@ -1262,42 +1194,17 @@
                 Enana Email
                 <input id="setting-enana-email" type="email" />
               </label>
-              <button type="submit" class="primary-btn">Save Personal Info</button>
-            </form>
-          </section>
-
-          <section class="card setting-card">
-            <h3>Appearance</h3>
-            <form id="appearance-form" class="stack-form">
-              <label>
-                Font Size
-                <select id="setting-font-size">
-                  <option value="14">Small</option>
-                  <option value="16">Medium</option>
-                  <option value="18">Large</option>
-                </select>
-              </label>
-              <label>
-                Theme Color
-                <input id="setting-theme-color" type="color" value="#2688ff" />
-              </label>
-              <label>
-                Day / Night
-                <select id="setting-mode">
-                  <option value="day">Day</option>
-                  <option value="night">Night</option>
-                </select>
-              </label>
-              <div class="inline-row">
-                <button type="button" id="setting-ui-style-toggle" class="ghost-btn">Use Neutral Compact UI</button>
-                <span id="setting-ui-style-label" class="small-note">Current style: Classic</span>
+              <div class="form-actions">
+                <button type="submit" class="primary-btn">Save Personal Info</button>
               </div>
-              <button type="submit" class="primary-btn">Save Appearance</button>
             </form>
           </section>
 
-          <section class="card setting-card">
-            <h3>Storage Folder Path</h3>
+          <section class="settings-section">
+            <div class="settings-section-head">
+              <h3>Storage</h3>
+              <p class="small-note">Pick the root folder for imported lab data and linked notebook content.</p>
+            </div>
             <form id="storage-form" class="stack-form">
               <label>
                 Root Folder Path
@@ -1312,8 +1219,11 @@
             </form>
           </section>
 
-          <section class="card setting-card">
-            <h3>Startup &amp; Data</h3>
+          <section class="settings-section">
+            <div class="settings-section-head">
+              <h3>Startup &amp; Data</h3>
+              <p class="small-note">Control which module opens first and how data loads and saves.</p>
+            </div>
             <form id="startup-form" class="stack-form">
               <label>
                 Default Startup Module
@@ -1322,7 +1232,7 @@
                   <option value="lab-management-view">Members</option>
                   <option value="instrument-management-view">Instruments</option>
                   <option value="protocol-management-view">Protocols</option>
-                  <option value="collaboration-management-view">Collabrations</option>
+                  <option value="collaboration-management-view">Collaborations</option>
                   <option value="synthesis-notebook-view">Synthesis Notebook</option>
                   <option value="biology-notebook-view">Biology Notebook</option>
                   <option value="lab-common-inventory-view">Chemicals</option>
@@ -1335,7 +1245,7 @@
                   <option value="agent-view">Agent</option>
                   <option value="sequence-viewer-view">Sequence Viewer</option>
                   <option value="tool-box-view">Tools</option>
-                  <option value="setting-view">Setting</option>
+                  <option value="setting-view">Settings</option>
                 </select>
               </label>
               <label class="inline-row">
@@ -1347,12 +1257,32 @@
                 Auto-load current .json data file on launch
               </label>
               <p class="small-note">If enabled, “Remember last opened module” overrides the default startup module.</p>
-              <button type="submit" class="primary-btn">Save Startup Settings</button>
+              <div class="form-actions">
+                <button type="submit" class="primary-btn">Save Startup Settings</button>
+              </div>
             </form>
+
+            <div class="settings-subsection">
+              <h4>Data File (.json)</h4>
+              <div class="stack-form">
+                <p class="small-note">Current .json file: <span id="setting-ena-path">Not set</span></p>
+                <label class="inline-row">
+                  <input id="setting-auto-save-ena" type="checkbox" />
+                  Auto-save to current .json file after each change
+                </label>
+                <div class="form-actions">
+                  <button type="button" id="save-ena-btn" class="primary-btn">Save .json</button>
+                  <button type="button" id="load-ena-btn" class="ghost-btn">Load .json</button>
+                </div>
+              </div>
+            </div>
           </section>
 
-          <section class="card setting-card">
-            <h3>Inventory Locations</h3>
+          <section class="settings-section">
+            <div class="settings-section-head">
+              <h3>Inventory Locations</h3>
+              <p class="small-note">Keep the storage vocabulary consistent across samples and chemicals.</p>
+            </div>
             <div class="stack-form">
               <div class="inline-row">
                 <input id="setting-location-input" placeholder="Add approximate location" />
@@ -1362,8 +1292,11 @@
             </div>
           </section>
 
-          <section class="card setting-card">
-            <h3>LLM Model & API</h3>
+          <section class="settings-section">
+            <div class="settings-section-head">
+              <h3>LLM Model &amp; API</h3>
+              <p class="small-note">Configure the provider and endpoint used by the assistant features.</p>
+            </div>
             <form id="llm-form" class="stack-form">
               <label>
                 Provider
@@ -1390,12 +1323,17 @@
                 <input id="setting-agent-developer-mode" type="checkbox" />
                 Agent Developer Mode (record redacted LLM request/response traces)
               </label>
-              <button type="submit" class="primary-btn">Save LLM Settings</button>
+              <div class="form-actions">
+                <button type="submit" class="primary-btn">Save LLM Settings</button>
+              </div>
             </form>
           </section>
 
-          <section class="card setting-card">
-            <h3>Telegram Bot</h3>
+          <section class="settings-section">
+            <div class="settings-section-head">
+              <h3>Telegram Bot</h3>
+              <p class="small-note">Store a token for Telegram automation and status reporting.</p>
+            </div>
             <form id="telegram-form" class="stack-form">
               <label>
                 Bot Token
@@ -1408,21 +1346,6 @@
                 <button type="button" id="clear-telegram-token-btn" class="ghost-btn">Clear Saved Token</button>
               </div>
             </form>
-          </section>
-
-          <section class="card setting-card">
-            <h3>Data File (.json)</h3>
-            <div class="stack-form">
-              <p class="small-note">Current .json file: <span id="setting-ena-path">Not set</span></p>
-              <label class="inline-row">
-                <input id="setting-auto-save-ena" type="checkbox" />
-                Auto-save to current .json file after each change
-              </label>
-              <div class="form-actions">
-                <button type="button" id="save-ena-btn" class="primary-btn">Save .json</button>
-                <button type="button" id="load-ena-btn" class="ghost-btn">Load .json</button>
-              </div>
-            </div>
           </section>
         </div>
       </div>
@@ -1593,9 +1516,8 @@
           <div class="panel papers-library-panel">
             <div class="papers-library-head">
               <div>
-                <p class="papers-library-label">Library</p>
                 <h2>Papers</h2>
-                <p class="small-note">Projects become folders automatically. Create journal club folders for reading groups.</p>
+                <p class="small-note">Folders, uploads, and reader state stay in one place.</p>
               </div>
             </div>
 
@@ -1737,9 +1659,9 @@
 <!-- SOURCE: ui/html/views/agent-view.html -->
 <section id="agent-view" class="view">
       <div class="panel">
-        <h2>Lab Assistant Agent</h2>
-        <p class="small-note">Read-only agent loop: intake, context, plan, execute, verify, synthesize. Write actions are proposed only and require approval.</p>
-        <p class="small-note">Set the API key in Settings, or provide <code>LLM_API_KEY</code> / <code>ENANA_LLM_API_KEY</code> in the app environment.</p>
+        <h2>Assistant</h2>
+        <p class="small-note">Read-only assistant workspace. Any write action is proposed before approval.</p>
+        <p class="small-note">Set the API key in Settings, or provide <code>LLM_API_KEY</code> or <code>ENANA_LLM_API_KEY</code> in the app environment.</p>
         <div class="form-grid">
           <label>
             Project Scope (Optional)
@@ -1808,56 +1730,44 @@
 <section id="tool-box-view" class="view">
       <div class="panel">
         <h2>Tools</h2>
-        <p class="small-note">Quick experimental calculators for day-to-day bench work.</p>
+        <p class="small-note">Bench calculators, sequence utilities, and quick analysis helpers.</p>
       </div>
 
       <div class="grid tool-grid">
         <button class="tile tool-tile" data-tool-view="tool-molarity-view">
-          <span class="icon" aria-hidden="true">⚗️</span>
           <span class="label">Molarity Calculator</span>
         </button>
         <button class="tile tool-tile" data-tool-view="tool-peptide-view">
-          <span class="icon" aria-hidden="true">🧬</span>
           <span class="label">Peptide Properties</span>
         </button>
         <button class="tile tool-tile" data-tool-view="tool-buffer-view">
-          <span class="icon" aria-hidden="true">🧫</span>
           <span class="label">Buffer Preparer</span>
         </button>
         <button class="tile tool-tile" data-tool-view="tool-dna-protein-view">
-          <span class="icon" aria-hidden="true">🧾</span>
           <span class="label">DNA to Protein</span>
         </button>
         <button class="tile tool-tile" data-tool-view="tool-reverse-translate-view">
-          <span class="icon" aria-hidden="true">🔁</span>
           <span class="label">Protein to DNA</span>
         </button>
         <button class="tile tool-tile" data-tool-view="tool-protein-assembly-view">
-          <span class="icon" aria-hidden="true">🧱</span>
           <span class="label">Protein Assembler</span>
         </button>
         <button class="tile tool-tile" data-tool-view="tool-oligo-view">
-          <span class="icon" aria-hidden="true">🧪</span>
           <span class="label">DNA/RNA Oligo Properties</span>
         </button>
         <button class="tile tool-tile" data-tool-view="tool-extinction-view">
-          <span class="icon" aria-hidden="true">📈</span>
           <span class="label">Extinction Coefficient</span>
         </button>
         <button class="tile tool-tile" data-tool-view="tool-qpcr-view">
-          <span class="icon" aria-hidden="true">📊</span>
           <span class="label">qPCR Efficiency</span>
         </button>
         <button class="tile tool-tile" data-tool-view="tool-plannotate-view">
-          <span class="icon" aria-hidden="true">🧭</span>
           <span class="label">pLannotate</span>
         </button>
         <button class="tile tool-tile" data-tool-view="tool-crispr-view">
-          <span class="icon" aria-hidden="true">✂️</span>
           <span class="label">CRISPR sgRNA Designer</span>
         </button>
         <button class="tile tool-tile" data-tool-view="tool-colony-counter-view">
-          <span class="icon" aria-hidden="true">🧬</span>
           <span class="label">Colony Counter</span>
         </button>
       </div>
@@ -2533,8 +2443,8 @@
         <section id="sequence-viewer-home-workspace" class="sequence-viewer-home-workspace">
           <div class="sequence-viewer-home-toolbar">
             <div class="sequence-viewer-home-nav-copy">
-              <strong>Navigation</strong>
-              <p class="small-note">Start a new sequence session or open an existing GBK/FASTA file.</p>
+              <h2>Open Sequence</h2>
+              <p class="small-note">Start a sequence session or open a stored GBK or FASTA file.</p>
             </div>
             <div class="form-actions sequence-viewer-home-nav-actions">
               <button id="sequence-viewer-home-paste-btn" type="button" class="primary-btn">New</button>
@@ -2758,7 +2668,23 @@
         </div>
       </div>
     </section>
-</div>
+</section>
+    </div>
+    <nav class="app-dock" aria-label="Primary navigation">
+      <div id="app-dock-nav" class="app-dock-nav"></div>
+      <div class="app-dock-divider" aria-hidden="true"></div>
+      <button id="app-more-btn" class="app-dock-btn app-dock-btn-more" type="button" aria-label="More apps" title="More apps" aria-haspopup="menu" aria-expanded="false" aria-controls="app-more-menu">
+        <span class="app-nav-icon" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="6.5" cy="12" r="1.7" />
+            <circle cx="12" cy="12" r="1.7" />
+            <circle cx="17.5" cy="12" r="1.7" />
+          </svg>
+        </span>
+        <span class="sr-only">More apps</span>
+      </button>
+      <div id="app-more-menu" class="app-more-menu" role="menu" hidden></div>
+    </nav>
   </main>
 
   <script src="./vendor/cropperjs/cropper.min.js"></script>

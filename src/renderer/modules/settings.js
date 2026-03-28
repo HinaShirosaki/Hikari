@@ -1,5 +1,8 @@
 import { defaultLlmEndpointForProvider, normalizeLlmProvider } from './shared.js';
 
+const FIXED_ACCENT = '#647255';
+const FIXED_FOCUS = '#7a8a69';
+
 export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile, onLoadEnaFile }) {
   const personalInfoForm = document.getElementById('personal-info-form');
   const settingNameInput = document.getElementById('setting-name');
@@ -9,10 +12,7 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
 
   const appearanceForm = document.getElementById('appearance-form');
   const settingFontSize = document.getElementById('setting-font-size');
-  const settingThemeColor = document.getElementById('setting-theme-color');
   const settingMode = document.getElementById('setting-mode');
-  const settingUiStyleToggle = document.getElementById('setting-ui-style-toggle');
-  const settingUiStyleLabel = document.getElementById('setting-ui-style-label');
 
   const storageForm = document.getElementById('storage-form');
   const settingStoragePath = document.getElementById('setting-storage-path');
@@ -51,7 +51,6 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
 
   personalInfoForm.addEventListener('submit', onSavePersonalInfo);
   appearanceForm.addEventListener('submit', onSaveAppearance);
-  settingUiStyleToggle?.addEventListener('click', onToggleUiStyle);
   storageForm.addEventListener('submit', onSaveStoragePath);
   selectStoragePathBtn?.addEventListener('click', onSelectStoragePath);
   startupForm?.addEventListener('submit', onSaveStartupSettings);
@@ -76,9 +75,7 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
     settingEnanaEmailInput.value = personal.enanaEmail || '';
 
     settingFontSize.value = String(appearance.fontSize || 16);
-    settingThemeColor.value = appearance.themeColor || '#2688ff';
     settingMode.value = appearance.mode || 'day';
-    syncUiStyleControls(appearance.uiStyle || 'neutral-compact');
 
     settingStoragePath.value = state.settings.storagePath || '';
     if (settingStartupDefaultView) {
@@ -146,13 +143,13 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
     const appearance = state.settings.appearance;
     const root = document.documentElement;
 
-    root.style.setProperty('--accent', appearance.themeColor || '#2688ff');
-    root.style.setProperty('--focus', appearance.themeColor || '#2688ff');
+    root.style.setProperty('--accent', FIXED_ACCENT);
+    root.style.setProperty('--focus', FIXED_FOCUS);
     root.style.setProperty('--app-font-size', `${appearance.fontSize || 16}px`);
     root.style.setProperty('font-size', `${appearance.fontSize || 16}px`);
 
     document.body.classList.toggle('theme-night', appearance.mode === 'night');
-    document.body.classList.toggle('ui-neutral-compact', (appearance.uiStyle || 'neutral-compact') === 'neutral-compact');
+    document.body.classList.add('ui-neutral-compact');
     window.dispatchEvent(new CustomEvent('enana:appearance-changed'));
   }
 
@@ -173,26 +170,13 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
     event.preventDefault();
 
     state.settings.appearance = {
-      fontSize: Number(settingFontSize.value) || 16,
-      themeColor: settingThemeColor.value || '#2688ff',
-      mode: settingMode.value === 'night' ? 'night' : 'day',
-      uiStyle: state.settings.appearance?.uiStyle === 'classic' ? 'classic' : 'neutral-compact'
-    };
-
-    persist();
-    applyAppearance();
-  }
-
-  function onToggleUiStyle() {
-    const current = state.settings.appearance?.uiStyle === 'classic' ? 'classic' : 'neutral-compact';
-    const next = current === 'neutral-compact' ? 'classic' : 'neutral-compact';
-    state.settings.appearance = {
       ...state.settings.appearance,
-      uiStyle: next
+      fontSize: Number(settingFontSize.value) || 16,
+      mode: settingMode.value === 'night' ? 'night' : 'day'
     };
+
     persist();
     applyAppearance();
-    syncUiStyleControls(next);
   }
 
   async function onSaveStoragePath(event) {
@@ -481,15 +465,6 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
       };
       return entityMap[char] || char;
     });
-  }
-
-  function syncUiStyleControls(uiStyle) {
-    if (!settingUiStyleLabel || !settingUiStyleToggle) {
-      return;
-    }
-    const isNeutral = uiStyle === 'neutral-compact';
-    settingUiStyleLabel.textContent = `Current style: ${isNeutral ? 'Neutral Compact' : 'Classic'}`;
-    settingUiStyleToggle.textContent = isNeutral ? 'Switch to Classic UI' : 'Use Neutral Compact UI';
   }
 
   function modelPlaceholderForProvider(provider) {

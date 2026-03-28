@@ -6,6 +6,8 @@ import path from 'node:path';
 const ROOT_DIR = process.cwd();
 const HTML_CONFIG_PATH = path.join(ROOT_DIR, 'ui', 'config', 'html-order.json');
 const CSS_CONFIG_PATH = path.join(ROOT_DIR, 'ui', 'config', 'css-order.json');
+const APP_REGISTRY_PATH = path.join(ROOT_DIR, 'ui', 'config', 'app-registry.json');
+const APP_REGISTRY_MODULE_OUTPUT = 'src/renderer/modules/app-registry.generated.js';
 
 function toPosix(filePath) {
   return filePath.split(path.sep).join('/');
@@ -23,7 +25,125 @@ async function readText(relativePath) {
 
 async function writeText(relativePath, contents) {
   const absolutePath = path.join(ROOT_DIR, relativePath);
+  await fs.mkdir(path.dirname(absolutePath), { recursive: true });
   await fs.writeFile(absolutePath, contents.replace(/\r\n/g, '\n'), 'utf8');
+}
+
+function ensureAppRegistryShape(registry) {
+  if (!registry || typeof registry !== 'object' || Array.isArray(registry)) {
+    throw new Error('app-registry.json must export an object');
+  }
+  if (!Array.isArray(registry.apps) || !registry.apps.length) {
+    throw new Error('app-registry.json requires a non-empty "apps" array');
+  }
+  if (!Array.isArray(registry.dockOrder) || !registry.dockOrder.length) {
+    throw new Error('app-registry.json requires a non-empty "dockOrder" array');
+  }
+}
+
+async function buildAppRegistry(validViewIds) {
+  const registry = await readJson(APP_REGISTRY_PATH);
+  ensureAppRegistryShape(registry);
+
+  const seenIds = new Set();
+  const seenViewIds = new Set();
+  const seenIcons = new Set();
+  const dockApps = [];
+  const normalizedApps = [];
+
+  for (const [index, rawApp] of registry.apps.entries()) {
+    if (!rawApp || typeof rawApp !== 'object' || Array.isArray(rawApp)) {
+      throw new Error(`Invalid app entry at index ${index} in app-registry.json`);
+    }
+    const id = String(rawApp.id || '').trim();
+    const label = String(rawApp.label || '').trim();
+    const viewId = String(rawApp.viewId || '').trim();
+    const icon = String(rawApp.icon || '').trim();
+    const placement = String(rawApp.placement || '').trim();
+    const aliases = Array.isArray(rawApp.aliases)
+      ? rawApp.aliases.map((value) => String(value || '').trim()).filter(Boolean)
+      : [];
+    const searchInputId = String(rawApp.searchInputId || '').trim();
+
+    if (!id || !label || !viewId || !icon || !placement) {
+      throw new Error(`App entry "${id || `index ${index}`}" is missing a required field`);
+    }
+    if (placement !== 'dock' && placement !== 'more') {
+      throw new Error(`App "${id}" has unsupported placement "${placement}"`);
+    }
+    if (seenIds.has(id)) {
+      throw new Error(`Duplicate app id in app-registry.json: ${id}`);
+    }
+    if (seenViewIds.has(viewId)) {
+      throw new Error(`Duplicate app viewId in app-registry.json: ${viewId}`);
+    }
+    if (seenIcons.has(icon)) {
+      throw new Error(`Duplicate app icon in app-registry.json: ${icon}`);
+    }
+    if (!validViewIds.has(viewId)) {
+      throw new Error(`App "${id}" references unknown viewId "${viewId}"`);
+    }
+
+    const iconPath = path.join(ROOT_DIR, 'assets', 'icons', icon);
+    let iconMarkup = '';
+    try {
+      await fs.access(iconPath);
+      iconMarkup = (await fs.readFile(iconPath, 'utf8')).trim();
+    } catch {
+      throw new Error(`App "${id}" references missing icon "${iconPath}"`);
+    }
+
+    seenIds.add(id);
+    seenViewIds.add(viewId);
+    seenIcons.add(icon);
+
+    const app = {
+      id,
+      label,
+      viewId,
+      icon,
+      iconMarkup,
+      placement,
+      aliases,
+      searchInputId
+    };
+    if (placement === 'dock') {
+      dockApps.push(id);
+    }
+    normalizedApps.push(app);
+  }
+
+  const dockOrder = registry.dockOrder.map((value) => String(value || '').trim()).filter(Boolean);
+  if (dockOrder.length !== dockApps.length) {
+    throw new Error('dockOrder length must match the number of apps with placement "dock"');
+  }
+  const dockAppSet = new Set(dockApps);
+  dockOrder.forEach((id) => {
+    if (!seenIds.has(id)) {
+      throw new Error(`dockOrder references unknown app id "${id}"`);
+    }
+    if (!dockAppSet.has(id)) {
+      throw new Error(`dockOrder references app "${id}" but its placement is not "dock"`);
+    }
+  });
+  dockApps.forEach((id) => {
+    if (!dockOrder.includes(id)) {
+      throw new Error(`App "${id}" is placed in the dock but missing from dockOrder`);
+    }
+  });
+
+  const generated = [
+    '/* AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY. */',
+    `/* Source config: ${toPosix(path.relative(ROOT_DIR, APP_REGISTRY_PATH))} */`,
+    '',
+    `export const APP_REGISTRY = ${JSON.stringify(normalizedApps, null, 2)};`,
+    '',
+    `export const APP_DOCK_ORDER = ${JSON.stringify(dockOrder, null, 2)};`,
+    ''
+  ].join('\n');
+
+  await writeText(APP_REGISTRY_MODULE_OUTPUT, generated);
+  return normalizedApps;
 }
 
 function collectHtmlIds(htmlText) {
@@ -47,6 +167,8 @@ function ensureViewBlock({ id, file, contents }) {
 
 async function buildHtml() {
   const config = await readJson(HTML_CONFIG_PATH);
+  const validViewIds = new Set((config.views || []).map((entry) => String(entry?.id || '').trim()).filter(Boolean));
+  await buildAppRegistry(validViewIds);
   const shellStart = await readText(config.shellStart);
   const shellEnd = await readText(config.shellEnd);
 

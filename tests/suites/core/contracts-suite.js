@@ -4,11 +4,12 @@ module.exports = function registerContractsSuite(context = {}) {
   with (scope) {
 const agentDir = path.join(__dirname, 'src', 'main', 'helpers', 'agent');
 const agentPath = (...parts) => path.join(agentDir, ...parts);
-test('view constants and index navigation stay in sync', () => {
+test('view constants, index sections, and app registry stay in sync', () => {
   const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const registry = JSON.parse(fs.readFileSync(path.join(__dirname, 'ui', 'config', 'app-registry.json'), 'utf8'));
   const viewValues = Object.values(shared.VIEWS);
   const sectionViews = new Set([...html.matchAll(/<section id=\"([^\"]+)\" class=\"view\"/g)].map((match) => match[1]));
-  const navViews = new Set([...html.matchAll(/data-view=\"([^\"]+)\"/g)].map((match) => match[1]));
+  const navViews = new Set((registry.apps || []).map((app) => app.viewId));
 
   const nonHomeViews = viewValues.filter((value) => value !== shared.VIEWS.HOME);
   const navRequiredViews = nonHomeViews.filter((value) => value !== shared.VIEWS.PERSONAL_INVENTORY);
@@ -19,28 +20,32 @@ test('view constants and index navigation stay in sync', () => {
   assert.deepEqual(missingSections, []);
   assert.deepEqual(missingNav, []);
   assert.deepEqual(unknownNav, []);
+  assert.match(html, /id="app-dock-nav"/);
+  assert.match(html, /id="app-more-menu"/);
 });
 
 test('sample and inventory use a merged navigation entry', () => {
-  const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
-  assert.match(
-    html,
-    /<button class="app-nav-btn" type="button" data-view="sample-registry-view">Sample &amp; Inventory<\/button>/
-  );
-  assert.equal(/<button[^>]+data-view="personal-inventory-view"/.test(html), false);
-  assert.match(
-    html,
-    /<button class="tile" data-view="sample-registry-view">[\s\S]*?<span class="label">Sample &amp; Inventory<\/span>[\s\S]*?<\/button>/
-  );
+  const registry = JSON.parse(fs.readFileSync(path.join(__dirname, 'ui', 'config', 'app-registry.json'), 'utf8'));
+  const sampleEntry = registry.apps.find((app) => app.id === 'sample-inventory');
+  assert.ok(sampleEntry);
+  assert.equal(sampleEntry.viewId, 'sample-registry-view');
+  assert.equal(sampleEntry.label, 'Sample & Inventory');
+  assert.equal(sampleEntry.placement, 'dock');
+  assert.equal(registry.apps.some((app) => app.viewId === 'personal-inventory-view'), false);
 });
 
 test('renderer routes personal inventory aliases to merged sample workspace', () => {
   const source = readSource('src/renderer/renderer.js');
+  const registry = JSON.parse(fs.readFileSync(path.join(__dirname, 'ui', 'config', 'app-registry.json'), 'utf8'));
+  const sampleEntry = registry.apps.find((app) => app.id === 'sample-inventory');
   assert.match(
     source,
     /function normalizeViewId\(viewId\)\s*\{\s*return viewId === VIEWS\.PERSONAL_INVENTORY \? VIEWS\.SAMPLE_REGISTRY : viewId;\s*\}/
   );
-  assert.match(source, /\['inventory', \{ viewId: VIEWS\.SAMPLE_REGISTRY, inputId: 'sample-search', label: 'Sample & Inventory' \}\]/);
+  assert.ok(sampleEntry);
+  assert.ok(sampleEntry.aliases.includes('inventory'));
+  assert.equal(sampleEntry.searchInputId, 'sample-search');
+  assert.match(source, /const SEARCH_SCOPE_TARGETS = buildSearchScopeMap\(APP_REGISTRY\);/);
   assert.match(source, /const showSampleInventoryWorkspace = nextView === VIEWS\.SAMPLE_REGISTRY;/);
   assert.match(
     source,
@@ -50,9 +55,11 @@ test('renderer routes personal inventory aliases to merged sample workspace', ()
 
 test('renderer defines sequence viewer aliases and showView render hook', () => {
   const source = readSource('src/renderer/renderer.js');
-  assert.match(source, /\['sequence', VIEWS\.SEQUENCE_VIEWER\]/);
-  assert.match(source, /\['seqviewer', VIEWS\.SEQUENCE_VIEWER\]/);
-  assert.match(source, /\['sequence-viewer', VIEWS\.SEQUENCE_VIEWER\]/);
+  const registry = JSON.parse(fs.readFileSync(path.join(__dirname, 'ui', 'config', 'app-registry.json'), 'utf8'));
+  const sequenceEntry = registry.apps.find((app) => app.id === 'sequence-viewer');
+  assert.ok(sequenceEntry);
+  assert.ok(sequenceEntry.aliases.includes('sequence'));
+  assert.ok(sequenceEntry.aliases.includes('seqviewer'));
   assert.match(source, /const SEQUENCE_VIEWER_DETAIL_VIEW_ID = 'sequence-viewer-detail-view';/);
   assert.match(source, /if \(nextView === VIEWS\.SEQUENCE_VIEWER \|\| nextView === SEQUENCE_VIEWER_DETAIL_VIEW_ID\) \{\s*sequenceViewer\?\.render\?\.\(\);\s*\}/);
   assert.match(source, /sequenceViewer = initSequenceViewer\(\{\s*onNavigateHome:\s*\(\)\s*=>\s*\{\s*showView\(VIEWS\.SEQUENCE_VIEWER\);/);

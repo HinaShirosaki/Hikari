@@ -66,27 +66,27 @@
 }
 
 .protocol-view-btn {
-  color: #0f4f84;
-  border-color: rgba(157, 207, 255, 0.95);
-  background: linear-gradient(145deg, rgba(238, 248, 255, 0.95), rgba(224, 241, 255, 0.85));
+  color: var(--text);
+  border-color: var(--line);
+  background: var(--surface);
 }
 
 .protocol-edit-btn {
-  color: #7d4a0e;
-  border-color: rgba(255, 216, 162, 0.95);
-  background: linear-gradient(145deg, rgba(255, 248, 236, 0.95), rgba(255, 238, 210, 0.9));
+  color: var(--text);
+  border-color: var(--line);
+  background: var(--surface);
 }
 
 .protocol-share-btn {
-  color: #1f6f49;
-  border-color: rgba(170, 231, 202, 0.95);
-  background: linear-gradient(145deg, rgba(236, 255, 245, 0.95), rgba(220, 248, 233, 0.9));
+  color: var(--text);
+  border-color: var(--line);
+  background: var(--surface);
 }
 
 .protocol-delete-btn {
-  color: #9b2238;
-  border-color: rgba(255, 192, 196, 0.95);
-  background: linear-gradient(145deg, rgba(255, 248, 249, 0.95), rgba(255, 236, 240, 0.9));
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 35%, var(--line));
+  background: var(--surface);
 }
 
 .protocol-panel-head {
@@ -99,10 +99,10 @@
 }
 
 .protocol-preview-block {
-  border: 1px solid rgba(255, 255, 255, 0.65);
-  border-radius: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
   padding: 10px 12px;
-  background: linear-gradient(150deg, rgba(255, 255, 255, 0.6), rgba(236, 248, 255, 0.44));
+  background: var(--surface);
 }
 
 .protocol-preview-block h4 {
@@ -146,10 +146,10 @@
 .placeholder-chip {
   display: inline-flex;
   align-items: center;
-  background: linear-gradient(140deg, rgba(201, 228, 255, 0.9), rgba(174, 212, 255, 0.64));
-  color: #0f4f84;
-  border: 1px solid rgba(255, 255, 255, 0.75);
-  border-radius: 999px;
+  background: var(--surface-subtle);
+  color: var(--strong);
+  border: 1px solid var(--line);
+  border-radius: 6px;
   padding: 3px 8px;
   font-size: 0.85rem;
   cursor: pointer;
@@ -175,60 +175,13 @@
 .step-badge {
   display: inline-block;
   padding: 4px 10px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.75);
-  background: linear-gradient(145deg, rgba(196, 225, 255, 0.9), rgba(173, 208, 255, 0.72));
-  color: #0f4876;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--surface-subtle);
+  color: var(--strong);
   font-weight: 700;
   font-size: 0.84rem;
   white-space: nowrap;
 }
 
 /* Extracted from ui/css/themes/modes.css */
-body.ui-neutral-compact .protocol-view-btn {
-  color: #144a74;
-  border-color: #c6dbf4;
-  background: #eef4fc;
-}
-
-body.ui-neutral-compact .protocol-edit-btn {
-  color: #7d4a0e;
-  border-color: #ecd8b7;
-  background: #fcf5e9;
-}
-
-body.ui-neutral-compact .protocol-share-btn {
-  color: #1f6f49;
-  border-color: #c8e7d9;
-  background: #edf8f2;
-}
-
-body.ui-neutral-compact .protocol-delete-btn {
-  color: #9b2238;
-  border-color: #efc9d2;
-  background: #fff5f7;
-}
-
-body.ui-neutral-compact.theme-night .protocol-view-btn {
-  border-color: #3f5b89;
-  background: #223457;
-  color: #d3e7ff;
-}
-
-body.ui-neutral-compact.theme-night .protocol-edit-btn {
-  border-color: #6f5a3a;
-  background: #33291c;
-  color: #ffe0b2;
-}
-
-body.ui-neutral-compact.theme-night .protocol-share-btn {
-  border-color: #2c654c;
-  background: #1f3d31;
-  color: #c9f6dd;
-}
-
-body.ui-neutral-compact.theme-night .protocol-delete-btn {
-  border-color: #7f4552;
-  background: #3f1f2a;
-  color: #ffd8df;
-}

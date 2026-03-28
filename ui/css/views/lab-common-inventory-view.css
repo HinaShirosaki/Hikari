@@ -25,9 +25,9 @@
   display: grid;
   gap: 2px;
   padding: 8px 10px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0.45));
+  border-radius: 8px;
+  border: 1px solid var(--line-soft);
+  background: var(--surface-elevated);
 }
 
 .chemical-detail-item-wide {
@@ -35,11 +35,9 @@
 }
 
 .chemical-detail-label {
-  color: var(--primary);
-  font-size: 0.74rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 600;
 }
 
 .chemical-detail-value {

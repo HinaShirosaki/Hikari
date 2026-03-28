@@ -1,12 +1,57 @@
 /* setting-view */
 
-/* Extracted from ui/css/base/core.css */
-.setting-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 12px;
+#setting-view .settings-shell {
+  margin-top: 0;
+  padding: 0;
 }
 
-.setting-card {
-  padding: 14px;
+#setting-view .settings-head {
+  display: grid;
+  gap: 6px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+#setting-view .settings-stack {
+  display: grid;
+  gap: 0;
+}
+
+#setting-view .settings-section {
+  display: grid;
+  gap: 14px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+#setting-view .settings-section:last-child {
+  border-bottom: 0;
+}
+
+#setting-view .settings-section-head {
+  display: grid;
+  gap: 4px;
+  max-width: 720px;
+}
+
+#setting-view .settings-section-head h3,
+#setting-view .settings-subsection h4 {
+  margin: 0;
+}
+
+#setting-view .settings-subsection {
+  display: grid;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line-soft);
+}
+
+#setting-view #setting-location-list .card-actions {
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+#setting-view #setting-location-list .card-actions:last-child {
+  border-bottom: 0;
 }
