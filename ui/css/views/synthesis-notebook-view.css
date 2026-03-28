@@ -178,3 +178,59 @@ body.ui-neutral-compact.theme-night .inline-placeholder-token {
   border-color: #475569;
   color: var(--text);
 }
+
+.notebook-chemistry,
+.reaction-scheme,
+.reaction-node {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.reaction-plus,
+.reaction-arrow,
+.reaction-node-label,
+.inline-placeholder-token.is-empty {
+  color: var(--strong);
+}
+
+.reaction-number,
+.inline-placeholder-token {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 2px 7px;
+  background: var(--surface-subtle);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.inline-placeholder-editor {
+  border: 1px solid var(--line);
+  background: var(--surface-elevated);
+}
+
+.reaction-structure-image {
+  border-color: var(--line-soft);
+}
+
+.chem-mw-table th,
+.chem-mw-table td {
+  border-color: var(--line);
+}
+
+#synthesis-notebook-view .panel,
+#synthesis-notebook-view .card,
+#synthesis-notebook-view .cards,
+#synthesis-notebook-view .list-table,
+#synthesis-notebook-view .list-row,
+.notebook-chemistry,
+.reaction-scheme,
+.reaction-node {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}

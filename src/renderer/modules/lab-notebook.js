@@ -17,15 +17,6 @@ export function initLabNotebook({
   const notebookSteps = document.getElementById('synthesis-notebook-steps');
   const notebookResult = document.getElementById('synthesis-notebook-result');
   const notebookResultFile = document.getElementById('synthesis-notebook-result-file');
-  const refInstrument = document.getElementById('synthesis-ref-instrument');
-  const refPeopleIds = document.getElementById('synthesis-ref-people-ids');
-  const refChemicalIds = document.getElementById('synthesis-ref-chemical-ids');
-  const refSampleIds = document.getElementById('synthesis-ref-sample-ids');
-  const refPaperIds = document.getElementById('synthesis-ref-paper-ids');
-  const refReagentLots = document.getElementById('synthesis-ref-reagent-lots');
-  const synthesisProducedCompound = document.getElementById('synthesis-produced-compound');
-  const synthesisPurity = document.getElementById('synthesis-purity');
-  const synthesisUsedInAssay = document.getElementById('synthesis-used-in-assay');
   const saveNotebookBtn = document.getElementById('save-synthesis-notebook-btn');
   const cancelEditBtn = document.getElementById('cancel-synthesis-notebook-edit-btn');
   const notebookEntryList = document.getElementById('synthesis-notebook-entry-list');
@@ -70,7 +61,6 @@ export function initLabNotebook({
   function onProjectChange() {
     editingEntryId = null;
     updateSaveButtonLabel();
-    renderReferenceOptions();
     renderProtocolOptions();
   }
 
@@ -101,15 +91,6 @@ export function initLabNotebook({
       notebookSteps.innerHTML = '';
       notebookResult.value = '';
       notebookResultFile.value = '';
-      refInstrument.value = '';
-      refPeopleIds.value = '';
-      refChemicalIds.value = '';
-      setMultiSelectValues(refSampleIds, []);
-      refPaperIds.value = '';
-      refReagentLots.value = '';
-      synthesisProducedCompound.value = '';
-      synthesisPurity.value = '';
-      synthesisUsedInAssay.value = '';
       synthesisChemistryState = createEmptyChemistryState();
       renderSynthesisChemistry();
       return;
@@ -135,16 +116,6 @@ export function initLabNotebook({
 
     notebookResult.value = existingEntry?.result || '';
     notebookResultFile.value = '';
-    renderReferenceOptions();
-    refInstrument.value = existingEntry?.references?.instrumentId || '';
-    refPeopleIds.value = formatRefList(existingEntry?.references?.peopleIds);
-    refChemicalIds.value = formatRefList(existingEntry?.references?.chemicalIds);
-    setMultiSelectValues(refSampleIds, existingEntry?.references?.sampleIds || []);
-    refPaperIds.value = formatRefList(existingEntry?.references?.paperIds);
-    refReagentLots.value = formatRefList(existingEntry?.references?.reagentLots);
-    synthesisProducedCompound.value = existingEntry?.synthesisOutcome?.producedCompoundCode || '';
-    synthesisPurity.value = existingEntry?.synthesisOutcome?.purityPercent || '';
-    synthesisUsedInAssay.value = existingEntry?.synthesisOutcome?.usedInAssay || '';
 
     const draft = loadChemistryDraft(project.id, SYNTHESIS_ENTRY_PROTOCOL_KEY);
     synthesisChemistryState = normalizeChemistryState(existingEntry?.synthesisChemistry || draft?.synthesisChemistry);
@@ -209,19 +180,6 @@ export function initLabNotebook({
       result: notebookResult.value.trim(),
       resultFiles,
       resultFileRecords,
-      references: {
-        instrumentId: refInstrument.value || '',
-        peopleIds: readRefValues(refPeopleIds),
-        chemicalIds: readRefValues(refChemicalIds),
-        sampleIds: readRefValues(refSampleIds),
-        paperIds: readRefValues(refPaperIds),
-        reagentLots: readRefValues(refReagentLots)
-      },
-      synthesisOutcome: {
-        producedCompoundCode: synthesisProducedCompound.value.trim(),
-        purityPercent: synthesisPurity.value.trim(),
-        usedInAssay: synthesisUsedInAssay.value.trim()
-      },
       chemical: null,
       synthesisChemistry: synthesisChemistryState.enabled
         ? {
@@ -375,11 +333,6 @@ export function initLabNotebook({
             ${procedureHtml}
             <p><strong>Result File / Notes:</strong> ${safeText(entry.result || '-')}</p>
             <p><strong>Result Files:</strong> ${safeText((entry.resultFiles || []).join(', ') || '-')}</p>
-            <p><strong>Linked Instrument:</strong> ${safeText(entry.references?.instrumentId || '-')}</p>
-            <p><strong>Linked Reagent Lots:</strong> ${safeText((entry.references?.reagentLots || []).join(', ') || '-')}</p>
-            <p><strong>Produced Compound:</strong> ${safeText(entry.synthesisOutcome?.producedCompoundCode || '-')}</p>
-            <p><strong>Purity (%):</strong> ${safeText(entry.synthesisOutcome?.purityPercent || '-')}</p>
-            <p><strong>Used In Assay:</strong> ${safeText(entry.synthesisOutcome?.usedInAssay || '-')}</p>
           </div>
         </details>
       `;
@@ -436,76 +389,6 @@ export function initLabNotebook({
     editingEntryId = null;
     updateSaveButtonLabel();
     onProtocolChange();
-  }
-
-  function parseRefList(raw) {
-    return String(raw || '')
-      .split(',')
-      .map((item) => item.trim())
-      .filter(Boolean);
-  }
-
-  function readRefValues(field) {
-    if (!field) {
-      return [];
-    }
-    if (field.tagName === 'SELECT' && field.multiple) {
-      return Array.from(field.selectedOptions || [])
-        .map((option) => String(option.value || '').trim())
-        .filter(Boolean);
-    }
-    return parseRefList(field.value);
-  }
-
-  function formatRefList(list) {
-    if (!Array.isArray(list) || !list.length) {
-      return '';
-    }
-    return list.join(', ');
-  }
-
-  function renderReferenceOptions() {
-    if (!refInstrument) {
-      return;
-    }
-    const selected = refInstrument.value;
-    const selectedSamples = readRefValues(refSampleIds);
-    const options = ['<option value="">Select instrument</option>'];
-    (state.instruments || []).forEach((instrument) => {
-      const isSelected = selected === instrument.id ? ' selected' : '';
-      options.push(`<option value="${safeText(instrument.id)}"${isSelected}>${safeText(instrument.name || instrument.id)}</option>`);
-    });
-    refInstrument.innerHTML = options.join('');
-    if (selected && (state.instruments || []).some((item) => item.id === selected)) {
-      refInstrument.value = selected;
-    }
-
-    if (refSampleIds) {
-      refSampleIds.innerHTML = (state.samples || []).map((sample) => {
-        const sampleKey = sample.code || sample.id;
-        const label = sample.name ? `${sampleKey} - ${sample.name}` : sampleKey;
-        return `<option value="${safeText(sampleKey)}">${safeText(label)}</option>`;
-      }).join('');
-      setMultiSelectValues(refSampleIds, selectedSamples);
-    }
-  }
-
-  function setMultiSelectValues(selectEl, values) {
-    if (!selectEl) {
-      return;
-    }
-    const selectedValues = Array.isArray(values) ? values.map((item) => String(item || '').trim()).filter(Boolean) : [];
-    selectedValues.forEach((value) => {
-      if (!Array.from(selectEl.options).some((option) => option.value === value)) {
-        const option = document.createElement('option');
-        option.value = value;
-        option.textContent = `${value} (missing)`;
-        selectEl.append(option);
-      }
-    });
-    Array.from(selectEl.options).forEach((option) => {
-      option.selected = selectedValues.includes(option.value);
-    });
   }
 
   function buildChemistrySummaryHtml(entry) {

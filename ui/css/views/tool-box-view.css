@@ -822,3 +822,27 @@ body.ui-neutral-compact input[id*="api-key"] {
 #tool-buffer-view .buffer-concentration {
   width: 100%;
 }
+
+.crispr-guide-seq,
+.protein-assembly-cell-seq {
+  letter-spacing: 0;
+}
+
+#tool-box-view .panel,
+#tool-box-view .card,
+#tool-box-view .cards,
+.tool-grid,
+.tool-subview,
+.calc-output,
+.sequence-block,
+.buffer-row,
+.buffer-output,
+.plannotate-controls,
+.plannotate-result-card,
+.plannotate-map-host,
+.plannotate-table-wrap {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}

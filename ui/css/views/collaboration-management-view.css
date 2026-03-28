@@ -4,3 +4,12 @@
 #collaboration-management-view #inbox-list {
   margin-top: 10px;
 }
+
+#collaboration-management-view .panel,
+#collaboration-management-view .card,
+#collaboration-management-view .list-row {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}

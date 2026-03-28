@@ -26,6 +26,7 @@ export function initProtocolManagement({
   const protocolViewContent = document.getElementById('protocol-view-content');
 
   const protocolForm = document.getElementById('protocol-form');
+  const protocolJsonImportPanel = document.getElementById('protocol-json-import-panel');
   const protocolNameInput = document.getElementById('protocol-name');
   const protocolPurposeInput = document.getElementById('protocol-purpose');
   const protocolMaterialsInput = document.getElementById('protocol-materials');
@@ -55,6 +56,7 @@ export function initProtocolManagement({
   let protocolSortField = 'time';
   let protocolSortOrder = 'asc';
   let activeViewedProtocolId = '';
+  let isCreateEditorMode = true;
 
   createProtocolBtn?.addEventListener('click', onCreateProtocol);
   protocolEditorBackBtn?.addEventListener('click', () => showListPanel({ resetEditor: true }));
@@ -598,6 +600,23 @@ export function initProtocolManagement({
     protocolJsonImportStatus.textContent = String(message || '').trim() || defaultProtocolJsonImportStatus;
   }
 
+  function resetProtocolJsonImportUi() {
+    if (protocolJsonImportInput) {
+      protocolJsonImportInput.value = '';
+    }
+    if (protocolJsonImportFileInput) {
+      protocolJsonImportFileInput.value = '';
+    }
+    setProtocolJsonImportStatus(defaultProtocolJsonImportStatus);
+  }
+
+  function syncProtocolImportPanelVisibility() {
+    if (!protocolJsonImportPanel) {
+      return;
+    }
+    protocolJsonImportPanel.hidden = !isCreateEditorMode;
+  }
+
   function importProtocolsFromJson(rawInput, options = {}) {
     const incomingProtocols = parseProtocolsFromJson(rawInput);
     if (!incomingProtocols.length) {
@@ -998,6 +1017,7 @@ export function initProtocolManagement({
   function resetEditorDraft() {
     currentProtocolDraft = createEmptyDraft();
     protocolForm?.reset();
+    resetProtocolJsonImportUi();
   }
 
   function showListPanel({ resetEditor = false } = {}) {
@@ -1027,6 +1047,7 @@ export function initProtocolManagement({
     if (protocolViewPanel) {
       protocolViewPanel.hidden = true;
     }
+    syncProtocolImportPanelVisibility();
   }
 
   function showViewPanel() {
@@ -1041,8 +1062,13 @@ export function initProtocolManagement({
     }
   }
 
-  function openEditorWithDraft(protocol, headingText) {
+  function openEditorWithDraft(protocol, headingText, options = {}) {
+    isCreateEditorMode = options.isCreateMode !== false;
     currentProtocolDraft = cloneDraftFromProtocol(protocol);
+
+    if (isCreateEditorMode) {
+      resetProtocolJsonImportUi();
+    }
 
     if (protocolEditorHeading) {
       protocolEditorHeading.textContent = headingText;
@@ -1069,7 +1095,7 @@ export function initProtocolManagement({
   }
 
   function onCreateProtocol() {
-    openEditorWithDraft(createEmptyDraft(), 'Create Protocol');
+    openEditorWithDraft(createEmptyDraft(), 'Create Protocol', { isCreateMode: true });
   }
 
   function editProtocol(protocolId) {
@@ -1078,7 +1104,7 @@ export function initProtocolManagement({
       return;
     }
 
-    openEditorWithDraft(protocol, 'Edit Protocol');
+    openEditorWithDraft(protocol, 'Edit Protocol', { isCreateMode: false });
   }
 
   function renderProtocolView(protocol) {
@@ -1425,7 +1451,7 @@ export function initProtocolManagement({
       materials,
       steps: convertedSteps,
       troubleshooting
-    }, 'Create Protocol');
+    }, 'Create Protocol', { isCreateMode: true });
 
     return true;
   }

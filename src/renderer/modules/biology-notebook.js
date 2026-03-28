@@ -16,48 +16,50 @@ export function initLabNotebook({
   onNotebookEntriesChanged,
   notebookType = 'biology'
 }) {
-  // Internal token format used inside saved protocol step text for placeholders.
   const PLACEHOLDER_TOKEN_REGEX = /\{\{ph:([^}]+)\}\}/g;
-  // Core notebook DOM nodes for project/protocol selection, step rendering, and entry list actions.
+
   const notebookProjectSelect = document.getElementById('biology-notebook-project-select');
   const notebookProtocolSearchInput = document.getElementById('biology-notebook-protocol-search');
   const notebookProtocolSelect = document.getElementById('biology-notebook-protocol-select');
+  const notebookEmptyState = document.getElementById('biology-notebook-empty-state');
   const notebookProtocolArea = document.getElementById('biology-notebook-protocol-area');
   const notebookProtocolTitle = document.getElementById('biology-notebook-protocol-title');
+  const notebookProtocolMeta = document.getElementById('biology-notebook-protocol-meta');
+  const notebookExportBtn = document.getElementById('biology-notebook-export-btn');
+  const notebookPageListStatus = document.getElementById('biology-notebook-page-list-status');
   const notebookSteps = document.getElementById('biology-notebook-steps');
   const notebookResult = document.getElementById('biology-notebook-result');
   const notebookResultFile = document.getElementById('biology-notebook-result-file');
   const saveNotebookBtn = document.getElementById('save-biology-notebook-btn');
   const cancelEditBtn = document.getElementById('cancel-biology-notebook-edit-btn');
   const notebookEntryList = document.getElementById('biology-notebook-entry-list');
-  // Track whether the user is editing an existing notebook entry or creating a new one.
+
   let editingEntryId = null;
 
-  // Wire up notebook UI interactions once DOM references are available.
   notebookProjectSelect.addEventListener('change', onProjectChange);
   notebookProtocolSearchInput?.addEventListener('input', onProtocolSearchInput);
   notebookProtocolSelect.addEventListener('change', onProtocolChange);
   saveNotebookBtn.addEventListener('click', saveEntry);
   cancelEditBtn?.addEventListener('click', cancelEdit);
   notebookEntryList?.addEventListener('click', onEntryListClick);
+  notebookExportBtn?.addEventListener('click', onExportButtonClick);
   notebookSteps.addEventListener('click', onInlinePlaceholderClick);
   notebookSteps.addEventListener('blur', onInlinePlaceholderBlur, true);
   notebookSteps.addEventListener('keydown', onInlinePlaceholderKeydown);
   updateSaveButtonLabel();
+  syncViewerVisibility();
 
-  // Reset edit state when the selected project changes and refresh protocol options.
   function onProjectChange() {
     editingEntryId = null;
     updateSaveButtonLabel();
     renderProtocolOptions();
+    renderEntries();
   }
 
-  // Filter the protocol dropdown as the user types in the search box.
   function onProtocolSearchInput() {
     renderProtocolOptions();
   }
 
-  // Build the storage folder path for a notebook entry using the configured storage root and current timestamp.
   function buildNotebookFolderPath(projectName) {
     const rootPath = state.settings.storagePath.trim();
     if (!rootPath) {
@@ -68,7 +70,6 @@ export function initLabNotebook({
     return `${rootPath}/Project/${safeProject || 'Untitled_Project'}/Notebook/${experimentDateTime}`;
   }
 
-  // Sanitize user-facing project names into safe filesystem path segments.
   function sanitizeFolderName(value) {
     return String(value || '')
       .trim()
@@ -77,7 +78,6 @@ export function initLabNotebook({
       .replace(/^_+|_+$/g, '');
   }
 
-  // Load the selected protocol into the notebook step view and hydrate any matching saved entry values.
   function onProtocolChange() {
     const projectId = notebookProjectSelect.value;
     const protocolId = notebookProtocolSelect.value;
@@ -85,15 +85,10 @@ export function initLabNotebook({
     const protocol = state.protocols.find((item) => item.id === protocolId);
 
     if (!project || !protocol) {
-      notebookProtocolArea.hidden = true;
-      notebookSteps.innerHTML = '';
-      notebookResult.value = '';
-      notebookResultFile.value = '';
+      clearViewer();
+      renderEntries();
       return;
     }
-
-    notebookProtocolArea.hidden = false;
-    notebookProtocolTitle.textContent = protocol.name;
 
     const editingEntry = editingEntryId
       ? state.notebookEntries.find((entry) => entry.id === editingEntryId && matchesNotebookType(entry))
@@ -103,27 +98,20 @@ export function initLabNotebook({
       : state.notebookEntries.find(
         (entry) => entry.protocolId === protocol.id && entry.projectId === project.id && matchesNotebookType(entry)
       );
+
     if (!editingEntry || existingEntry?.id !== editingEntry.id) {
-      editingEntryId = null;
+      editingEntryId = existingEntry?.id || null;
     }
-    const values = existingEntry?.values || {};
 
-    notebookSteps.innerHTML = protocol.steps.map((step, index) => {
-      const sentenceHtml = renderStepSentence(step, values);
-
-      return `
-        <article class="card">
-          <p class="notebook-step-line"><strong>Step ${index + 1}:</strong> ${sentenceHtml}</p>
-        </article>
-      `;
-    }).join('');
-
-    notebookResult.value = existingEntry?.result || '';
-    notebookResultFile.value = '';
-    updateSaveButtonLabel();
+    renderProtocolViewer({
+      project,
+      protocol,
+      entry: existingEntry || null,
+      isSavedEntry: Boolean(existingEntry)
+    });
+    renderEntries();
   }
 
-  // Collect placeholder values, persist imported files, and save or update the notebook entry in app state.
   async function saveEntry() {
     const projectId = notebookProjectSelect.value;
     const protocolId = notebookProtocolSelect.value;
@@ -194,18 +182,24 @@ export function initLabNotebook({
     } else {
       state.notebookEntries.push(entry);
     }
+
     editingEntryId = entry.id;
     updateSaveButtonLabel();
 
     persist();
     notebookResultFile.value = '';
     renderEntries();
+    renderProtocolViewer({
+      project,
+      protocol,
+      entry,
+      isSavedEntry: true
+    });
     if (typeof onNotebookEntriesChanged === 'function') {
       onNotebookEntriesChanged();
     }
   }
 
-  // Ensure the notebook storage folder exists before writing imported result files.
   async function ensureStorageFolderExists(storageFolder) {
     if (!storageFolder || !window.enanaApi?.ensureStorageDirectory) {
       return;
@@ -213,7 +207,6 @@ export function initLabNotebook({
     await window.enanaApi.ensureStorageDirectory(storageFolder);
   }
 
-  // Store selected result files into the notebook storage folder and return metadata records for the saved files.
   async function persistImportedNotebookFiles({ files, storageFolder }) {
     const selectedFiles = Array.isArray(files) ? files.filter(Boolean) : [];
     if (!selectedFiles.length) {
@@ -263,7 +256,6 @@ export function initLabNotebook({
     return records;
   }
 
-  // Convert a browser File/Blob object into a data URL so it can be passed through the preload API.
   function blobToDataUrl(blob) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -273,7 +265,6 @@ export function initLabNotebook({
     });
   }
 
-  // Extract the base64 payload from a data URL produced by FileReader.
   function extractBase64Payload(dataUrl) {
     const source = String(dataUrl || '');
     const commaIndex = source.indexOf(',');
@@ -283,7 +274,6 @@ export function initLabNotebook({
     return source.slice(commaIndex + 1).trim();
   }
 
-  // Populate the project dropdown and preserve the current selection when possible.
   function renderProjectOptions() {
     const selected = notebookProjectSelect.value;
     const options = ['<option value="">Select project</option>'];
@@ -300,9 +290,10 @@ export function initLabNotebook({
     } else if (state.projects.length) {
       notebookProjectSelect.value = state.projects[0].id;
     }
+
+    updatePageListStatus();
   }
 
-  // Populate the protocol dropdown for the selected project and apply the active search filter.
   function renderProtocolOptions(preferredProtocolId = '') {
     const projectId = notebookProjectSelect.value;
     const selected = preferredProtocolId || notebookProtocolSelect.value;
@@ -334,62 +325,101 @@ export function initLabNotebook({
       notebookProtocolSelect.value = selected;
     }
 
+    updatePageListStatus();
     onProtocolChange();
   }
 
-  // Render the saved notebook entry list for the current notebook type.
   function renderEntries() {
-    const entries = state.notebookEntries.filter((entry) => matchesNotebookType(entry));
+    const entries = state.notebookEntries
+      .filter((entry) => matchesNotebookType(entry))
+      .slice()
+      .sort((left, right) => {
+        const projectCompare = String(left.projectName || '').localeCompare(String(right.projectName || ''));
+        if (projectCompare !== 0) {
+          return projectCompare;
+        }
+        return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime();
+      });
+
+    updatePageListStatus(entries);
 
     if (!entries.length) {
-      notebookEntryList.innerHTML = '<p class="small-note">No notebook entries saved.</p>';
+      notebookEntryList.innerHTML = '<p class="biology-notebook-page-list-empty">No notebook pages saved yet.</p>';
       return;
     }
 
-    notebookEntryList.innerHTML = entries.map((entry) => {
-      const protocol = state.protocols.find((item) => item.id === entry.protocolId);
-      const fullProtocol = (protocol?.steps || []).map((step, index) => {
-        return `<li><strong>Step ${index + 1}:</strong> ${renderFilledStepText(step, entry.values || {})}</li>`;
+    const groups = new Map();
+    entries.forEach((entry) => {
+      const key = entry.projectId || '__unknown__';
+      if (!groups.has(key)) {
+        groups.set(key, {
+          projectName: entry.projectName || 'Untitled Project',
+          entries: []
+        });
+      }
+      groups.get(key).entries.push(entry);
+    });
+
+    notebookEntryList.innerHTML = Array.from(groups.values()).map((group) => {
+      const itemsHtml = group.entries.map((entry) => {
+        const isActive = entry.id === editingEntryId ? ' is-active' : '';
+        const updatedAt = entry.updatedAt ? new Date(entry.updatedAt).toLocaleString() : 'Not saved yet';
+        return `
+          <button type="button" class="biology-notebook-page-item${isActive}" data-notebook-entry-id="${safeText(entry.id)}">
+            <span class="biology-notebook-page-name">${safeText(entry.protocolName || 'Untitled Page')}</span>
+            <span class="biology-notebook-page-meta">${safeText(updatedAt)}</span>
+          </button>
+        `;
       }).join('');
 
       return `
-        <details class="list-row list-row-details">
-          <summary class="list-main-text">
-            ${safeText(entry.projectName || '-')} / ${safeText(entry.protocolName)}
-            <span class="small-note">Updated: ${new Date(entry.updatedAt).toLocaleString()}</span>
-          </summary>
-          <div class="stack-form list-detail-content">
-            <div class="card-actions">
-              <button type="button" class="ghost-btn" data-notebook-edit="${entry.id}">Edit</button>
-              <button type="button" class="ghost-btn" data-notebook-export="${entry.id}">Export PDF</button>
-            </div>
-            <p><strong>Notebook Folder:</strong> ${safeText(entry.storageFolder || '-')}</p>
-            <p><strong>Complete Protocol:</strong></p>
-            <ol>${fullProtocol || '<li>No protocol steps found.</li>'}</ol>
-            <p><strong>Result File / Notes:</strong> ${safeText(entry.result || '-')}</p>
-            <p><strong>Result Files:</strong> ${safeText((entry.resultFiles || []).join(', ') || '-')}</p>
-          </div>
-        </details>
+        <section class="biology-notebook-project-group">
+          <p class="biology-notebook-project-name">${safeText(group.projectName)}</p>
+          <div class="biology-notebook-project-pages">${itemsHtml}</div>
+        </section>
       `;
     }).join('');
   }
 
-  // Handle edit and PDF export actions triggered from the notebook entry list.
-  function onEntryListClick(event) {
-    const exportBtn = event.target.closest('[data-notebook-export]');
-    if (exportBtn) {
-      exportEntryPdf(exportBtn.dataset.notebookExport);
+  function updatePageListStatus(entries = null) {
+    if (!notebookPageListStatus) {
       return;
     }
 
-    const editBtn = event.target.closest('[data-notebook-edit]');
-    if (!editBtn) {
+    const savedEntries = Array.isArray(entries)
+      ? entries
+      : state.notebookEntries.filter((entry) => matchesNotebookType(entry));
+    const project = state.projects.find((item) => item.id === notebookProjectSelect.value);
+    const protocol = state.protocols.find((item) => item.id === notebookProtocolSelect.value);
+
+    if (project && protocol) {
+      notebookPageListStatus.textContent = `Working in ${project.name} / ${protocol.name}`;
       return;
     }
-    editEntry(editBtn.dataset.notebookEdit);
+    if (project) {
+      notebookPageListStatus.textContent = `Viewing pages for ${project.name}`;
+      return;
+    }
+    notebookPageListStatus.textContent = savedEntries.length
+      ? 'Select a notebook page or choose a project and protocol to start a new one.'
+      : 'Select a project and protocol to start a page.';
   }
 
-  // Export one saved notebook entry and its linked protocol details as a PDF.
+  function onEntryListClick(event) {
+    const entryButton = event.target.closest('[data-notebook-entry-id]');
+    if (!entryButton) {
+      return;
+    }
+    editEntry(entryButton.dataset.notebookEntryId);
+  }
+
+  function onExportButtonClick() {
+    if (!editingEntryId) {
+      return;
+    }
+    exportEntryPdf(editingEntryId);
+  }
+
   function exportEntryPdf(entryId) {
     const entry = state.notebookEntries.find((item) => item.id === entryId && matchesNotebookType(item));
     if (!entry) {
@@ -399,7 +429,6 @@ export function initLabNotebook({
     exportNotebookEntryPdf({ entry, protocol });
   }
 
-  // Load an existing notebook entry back into the editor for updating.
   function editEntry(entryId) {
     const entry = state.notebookEntries.find((item) => item.id === entryId && matchesNotebookType(item));
     if (!entry) {
@@ -412,7 +441,70 @@ export function initLabNotebook({
     onProtocolChange();
   }
 
-  // Keep the primary save button and cancel button aligned with the current edit state.
+  function renderProtocolViewer({ project, protocol, entry, isSavedEntry }) {
+    notebookProtocolArea.hidden = false;
+    if (notebookEmptyState) {
+      notebookEmptyState.hidden = true;
+    }
+
+    notebookProtocolTitle.textContent = protocol.name;
+    notebookProtocolMeta.textContent = buildViewerMeta(project, entry, isSavedEntry);
+    if (notebookExportBtn) {
+      notebookExportBtn.hidden = !entry;
+    }
+
+    const values = entry?.values || {};
+    notebookSteps.innerHTML = protocol.steps.map((step, index) => {
+      const sentenceHtml = renderStepSentence(step, values);
+      return `
+        <article class="card">
+          <p class="notebook-step-line"><strong>Step ${index + 1}:</strong> ${sentenceHtml}</p>
+        </article>
+      `;
+    }).join('');
+
+    notebookResult.value = entry?.result || '';
+    notebookResultFile.value = '';
+    updateSaveButtonLabel();
+    syncViewerVisibility();
+  }
+
+  function buildViewerMeta(project, entry, isSavedEntry) {
+    if (entry) {
+      const updatedAt = entry.updatedAt ? new Date(entry.updatedAt).toLocaleString() : 'Unknown time';
+      const resultFiles = Array.isArray(entry.resultFiles) && entry.resultFiles.length
+        ? ` Result files: ${entry.resultFiles.join(', ')}.`
+        : '';
+      return `${project.name} notebook page. Updated ${updatedAt}.${resultFiles}`;
+    }
+    if (isSavedEntry) {
+      return `${project.name} notebook page.`;
+    }
+    return `${project.name} protocol draft. Fill placeholders and results, then save this notebook page.`;
+  }
+
+  function clearViewer() {
+    notebookProtocolArea.hidden = true;
+    notebookSteps.innerHTML = '';
+    notebookResult.value = '';
+    notebookResultFile.value = '';
+    notebookProtocolTitle.textContent = '';
+    notebookProtocolMeta.textContent = 'Select a notebook page or start a new one.';
+    if (notebookExportBtn) {
+      notebookExportBtn.hidden = true;
+    }
+    editingEntryId = null;
+    updateSaveButtonLabel();
+    syncViewerVisibility();
+  }
+
+  function syncViewerVisibility() {
+    const hasViewer = !notebookProtocolArea.hidden;
+    if (notebookEmptyState) {
+      notebookEmptyState.hidden = hasViewer;
+    }
+  }
+
   function updateSaveButtonLabel() {
     if (!saveNotebookBtn) {
       return;
@@ -424,14 +516,12 @@ export function initLabNotebook({
     }
   }
 
-  // Exit edit mode and revert the editor back to the currently selected protocol state.
   function cancelEdit() {
     editingEntryId = null;
     updateSaveButtonLabel();
     onProtocolChange();
   }
 
-  // Render a read-only step sentence with saved placeholder values substituted into the text.
   function renderFilledStepText(step, values) {
     const source = String(step?.text || '');
     const placeholders = Array.isArray(step?.placeholders) ? step.placeholders : [];
@@ -467,7 +557,6 @@ export function initLabNotebook({
     return text;
   }
 
-  // Filter notebook entries so this module only handles entries for its configured notebook type.
   function matchesNotebookType(entry) {
     if (entry?.notebookType) {
       return entry.notebookType === notebookType;
@@ -475,7 +564,6 @@ export function initLabNotebook({
     return notebookType === 'synthesis';
   }
 
-  // Render one editable notebook step sentence with inline placeholder controls.
   function renderStepSentence(step, values) {
     const source = String(step?.text || '');
     const placeholders = Array.isArray(step?.placeholders) ? step.placeholders : [];
@@ -509,7 +597,6 @@ export function initLabNotebook({
     return html;
   }
 
-  // Build the inline placeholder token, editor, and hidden field trio used in notebook step editing.
   function buildInlinePlaceholderHtml(key, name, value) {
     const cleanName = safeText(name || 'value');
     const cleanValue = safeText(value || '');
@@ -525,7 +612,6 @@ export function initLabNotebook({
     `;
   }
 
-  // Open an inline placeholder editor when the user clicks its token button.
   function onInlinePlaceholderClick(event) {
     const token = event.target.closest('[data-inline-token]');
     if (!token) {
@@ -550,7 +636,6 @@ export function initLabNotebook({
     editor.select();
   }
 
-  // Commit inline placeholder edits when the editor loses focus.
   function onInlinePlaceholderBlur(event) {
     const editor = event.target.closest('[data-inline-input]');
     if (!editor) {
@@ -559,7 +644,6 @@ export function initLabNotebook({
     commitInlinePlaceholder(editor);
   }
 
-  // Support Enter to save and Escape to cancel while editing an inline placeholder.
   function onInlinePlaceholderKeydown(event) {
     const editor = event.target.closest('[data-inline-input]');
     if (!editor) {
@@ -583,7 +667,6 @@ export function initLabNotebook({
     }
   }
 
-  // Persist the inline placeholder editor value back into the hidden form field.
   function commitInlinePlaceholder(editor) {
     const wrap = editor.closest('[data-inline-placeholder]');
     const hiddenValue = wrap?.querySelector('[data-nb-key]');
@@ -597,7 +680,6 @@ export function initLabNotebook({
     closeInlinePlaceholderEditor(editor);
   }
 
-  // Close the inline placeholder editor and restore the token button label from the saved value.
   function closeInlinePlaceholderEditor(editor) {
     const wrap = editor.closest('[data-inline-placeholder]');
     const hiddenValue = wrap?.querySelector('[data-nb-key]');
@@ -614,6 +696,5 @@ export function initLabNotebook({
     token.hidden = false;
   }
 
-  // Public API exposed to the rest of the app.
   return { renderProjectOptions, renderProtocolOptions, renderEntries, onProtocolChange };
 }

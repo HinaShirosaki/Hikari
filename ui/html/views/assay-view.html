@@ -10,9 +10,12 @@
 
       <div class="panel assay-mode-create-panel">
         <h3>Create Assay Plate</h3>
-        <form id="assay-form" class="form-grid">
+        <form id="assay-form" class="form-grid assay-form-grid">
           <input type="hidden" id="assay-id" />
-          <div id="assay-number-display" class="small-note"></div>
+          <div class="assay-number-card">
+            <span class="assay-number-label">Assay Number</span>
+            <div id="assay-number-display" class="assay-number-value small-note" aria-live="polite"></div>
+          </div>
           <label>
             Assay Name
             <input id="assay-name" required placeholder="e.g. Cell viability run 2026-02-19" />
@@ -50,22 +53,15 @@
             Concentration Axis
             <input id="assay-concentration-axis-display" readonly />
           </label>
-          <div class="form-actions assay-axis-actions">
-            <button type="button" id="assay-swap-axis-btn" class="ghost-btn">Switch Axes</button>
-          </div>
           <label>
             Link Notebook Page
             <select id="assay-notebook-entry">
               <option value="">Not linked</option>
             </select>
           </label>
-          <div id="assay-plate-definition" class="small-note" hidden></div>
-          <div id="assay-csv-status" class="small-note"></div>
-          <label hidden>
-            Notes
-            <textarea id="assay-notes" rows="3" placeholder="Optional assay notes"></textarea>
-          </label>
-          <div class="form-actions">
+          <div id="assay-plate-definition" class="small-note assay-form-note" hidden></div>
+          <div id="assay-csv-status" class="small-note assay-form-note"></div>
+          <div class="form-actions assay-form-actions">
             <button type="button" id="assay-export-template-btn" class="ghost-btn">Export CSV Template</button>
             <button type="button" id="assay-import-template-btn" class="ghost-btn">Import CSV</button>
             <input id="assay-import-file" type="file" accept=".csv,text/csv" hidden />

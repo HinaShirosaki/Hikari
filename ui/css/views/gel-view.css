@@ -1,5 +1,53 @@
 /* gel-view */
 
+.gel-layout {
+  display: grid;
+  gap: 28px;
+}
+
+.gel-workspace {
+  display: grid;
+  gap: 24px;
+  align-items: start;
+}
+
+.gel-secondary-panels {
+  display: grid;
+  gap: 28px;
+}
+
+.gel-workspace > .panel,
+.gel-secondary-panels > .panel {
+  margin-top: 0;
+}
+
+.gel-setup-panel,
+.gel-viewer-panel {
+  padding: 0;
+}
+
+.gel-setup-panel,
+.gel-viewer-panel,
+.gel-manual-panel {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.gel-setup-panel > p,
+.gel-viewer-panel > p {
+  margin: 0;
+}
+
+.gel-setup-panel #gel-form {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+}
+
+.gel-viewer-panel {
+  min-width: 0;
+}
+
 /* Extracted from ui/css/themes/modes.css */
 .gel-canvas-shell {
   border: 1px solid rgba(53, 99, 153, 0.24);
@@ -11,16 +59,12 @@
   height: auto;
 }
 
-.gel-workbench {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 10px;
-}
-
 .gel-manual-progress {
+  display: grid;
+  gap: 12px;
   border: 1px solid rgba(53, 99, 153, 0.24);
   border-radius: 10px;
-  padding: 10px;
+  padding: 14px;
   background: rgba(247, 251, 255, 0.9);
 }
 
@@ -49,14 +93,14 @@
   display: block;
   width: 100%;
   height: auto;
-  min-height: 360px;
+  min-height: 420px;
 }
 
 #gel-cropper-image {
   display: none;
   width: 100%;
   height: auto;
-  min-height: 360px;
+  min-height: 420px;
 }
 
 #gel-cropper-image.is-active {
@@ -90,8 +134,21 @@ body.theme-night .gel-manual-progress {
 }
 
 @media (min-width: 1100px) {
-  .gel-workbench {
-    grid-template-columns: minmax(0, 1fr) 260px;
+  .gel-workspace {
+    grid-template-columns: minmax(280px, 340px) minmax(0, 1fr) minmax(240px, 300px);
+    align-items: start;
+  }
+
+  .gel-setup-panel {
+    max-height: calc(100vh - 190px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+    padding-right: 8px;
+  }
+
+  .gel-secondary-panels {
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
     align-items: start;
   }
 }
@@ -128,4 +185,15 @@ body.theme-night .gel-report-json {
   #gel-form .form-actions {
     width: 100%;
   }
+}
+
+#gel-view .panel,
+#gel-view .card,
+.gel-canvas-shell,
+.gel-manual-progress,
+.gel-report-json {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }

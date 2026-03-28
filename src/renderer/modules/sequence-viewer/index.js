@@ -47,6 +47,7 @@ export function initSequenceViewer(options = {}) {
     errors: [],
     annotationWarnings: [],
     isAnnotating: false,
+    isInstallingPlannotateBackend: false,
     isRecognizingBackbone: false,
     orfViewEnabled: false,
     orfStopVisibility: normalizeOrfStopCodonVisibility({
@@ -217,6 +218,102 @@ export function initSequenceViewer(options = {}) {
     }
     elements.statusNote.textContent = message;
     elements.statusNote.style.color = isError ? 'var(--danger)' : '';
+  }
+
+  function getPlannotateBackendMissingParts(status) {
+    const missing = [];
+    if (!status?.dataDir) {
+      missing.push('metadata');
+    }
+    if (!status?.dbDir || !status?.databases?.snapgene || !status?.databases?.fpbase || !status?.databases?.swissprot) {
+      missing.push('BLAST_dbs');
+    }
+    if (!status?.executables?.blastn) {
+      missing.push('blastn');
+    }
+    if (!status?.executables?.diamond) {
+      missing.push('diamond');
+    }
+    return missing;
+  }
+
+  function setPlannotateEngineStatus(message, isError = false) {
+    if (!elements.plannotateEngineStatus) {
+      return;
+    }
+    elements.plannotateEngineStatus.textContent = message;
+    elements.plannotateEngineStatus.style.color = isError ? 'var(--danger)' : '';
+  }
+
+  function syncPlannotateInstallButton() {
+    if (!elements.plannotateInstallBtn) {
+      return;
+    }
+    elements.plannotateInstallBtn.disabled = Boolean(state.isInstallingPlannotateBackend);
+  }
+
+  async function refreshPlannotateBackendStatus() {
+    setPlannotateEngineStatus('Checking pLannotate backend...');
+    const checker = getBridge()?.plannotateCheckEnv;
+    if (typeof checker !== 'function') {
+      setPlannotateEngineStatus('Native backend bridge unavailable.', true);
+      return;
+    }
+
+    try {
+      const response = await checker();
+      if (!response?.ok) {
+        setPlannotateEngineStatus(`Backend check failed: ${response?.error || 'unknown error'}`, true);
+        return;
+      }
+
+      const backendStatus = response.status || {};
+      if (backendStatus.ok) {
+        setPlannotateEngineStatus('pLannotate backend ready.');
+        return;
+      }
+
+      const missing = getPlannotateBackendMissingParts(backendStatus);
+      const detail = missing.length ? `Missing: ${missing.join(', ')}` : 'Missing backend components.';
+      setPlannotateEngineStatus(`Backend not ready. ${detail}`, true);
+    } catch (error) {
+      setPlannotateEngineStatus(`Backend check failed: ${error?.message || error}`, true);
+    }
+  }
+
+  async function installPlannotateBackend() {
+    const installer = getBridge()?.plannotateInstallAll;
+    if (typeof installer !== 'function') {
+      setStatus('pLannotate installer bridge unavailable.', true);
+      setPlannotateEngineStatus('Installer bridge unavailable.', true);
+      return;
+    }
+
+    state.isInstallingPlannotateBackend = true;
+    syncPlannotateInstallButton();
+    setStatus('Installing pLannotate backend assets...');
+    setPlannotateEngineStatus('Installing pLannotate backend assets...');
+
+    try {
+      const response = await installer();
+      if (!response?.ok) {
+        throw new Error(response?.error || 'Installation failed.');
+      }
+
+      const installStatus = response.result?.status || {};
+      const missing = getPlannotateBackendMissingParts(installStatus);
+      if (missing.length) {
+        setStatus(`Install finished, still missing: ${missing.join(', ')}`, true);
+      } else {
+        setStatus('pLannotate backend install completed.');
+      }
+    } catch (error) {
+      setStatus(error?.message || 'pLannotate backend install failed.', true);
+    } finally {
+      state.isInstallingPlannotateBackend = false;
+      syncPlannotateInstallButton();
+      await refreshPlannotateBackendStatus();
+    }
   }
 
   function updateMessages() {
@@ -758,6 +855,11 @@ export function initSequenceViewer(options = {}) {
     void loadCurrentInput();
   });
 
+  elements.plannotateInstallBtn?.addEventListener('click', (event) => {
+    event.preventDefault();
+    void installPlannotateBackend();
+  });
+
   homeController.bindEvents();
   detailController.bindEvents();
 
@@ -767,6 +869,8 @@ export function initSequenceViewer(options = {}) {
   setInputComposerVisible(true);
   setStatus('Paste sequence text, then click Load.');
   homeController.setHomeStatus('Choose New or Open to continue.');
+  syncPlannotateInstallButton();
+  void refreshPlannotateBackendStatus();
   render();
 
   return {

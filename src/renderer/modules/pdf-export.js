@@ -357,19 +357,6 @@ export function exportNotebookEntryPdf({ entry, protocol }) {
   writeParagraph(ctx, safeValue(entry.result));
   writeKeyValue(ctx, 'Result Files', Array.isArray(entry.resultFiles) && entry.resultFiles.length ? entry.resultFiles.join(', ') : '-');
 
-  if (entry.notebookType === 'synthesis') {
-    writeHeading(ctx, 'Synthesis References');
-    writeKeyValue(ctx, 'Instrument', entry.references?.instrumentId || '-');
-    writeKeyValue(ctx, 'People', Array.isArray(entry.references?.peopleIds) ? entry.references.peopleIds.join(', ') : '-');
-    writeKeyValue(ctx, 'Chemicals', Array.isArray(entry.references?.chemicalIds) ? entry.references.chemicalIds.join(', ') : '-');
-    writeKeyValue(ctx, 'Samples', Array.isArray(entry.references?.sampleIds) ? entry.references.sampleIds.join(', ') : '-');
-    writeKeyValue(ctx, 'Papers', Array.isArray(entry.references?.paperIds) ? entry.references.paperIds.join(', ') : '-');
-    writeKeyValue(ctx, 'Reagent Lots', Array.isArray(entry.references?.reagentLots) ? entry.references.reagentLots.join(', ') : '-');
-    writeKeyValue(ctx, 'Produced Compound', entry.synthesisOutcome?.producedCompoundCode || '-');
-    writeKeyValue(ctx, 'Purity (%)', entry.synthesisOutcome?.purityPercent || '-');
-    writeKeyValue(ctx, 'Used In Assay', entry.synthesisOutcome?.usedInAssay || '-');
-  }
-
   finishAndSave(ctx, `notebook-${entry.projectName || 'project'}-${entry.protocolName || entry.id || 'entry'}`);
   return true;
 }

@@ -34,6 +34,7 @@ import {
   queryInstrumentUsageInRange
 } from './modules/object-graph.js';
 import { APP_DOCK_ORDER, APP_REGISTRY } from './modules/app-registry.generated.js';
+import { createModuleRegistry, createRendererServices } from './services/index.js';
 
 const state = loadState();
 const LAST_ACTIVE_VIEW_STORAGE_KEY = 'enana_last_active_view_v1';
@@ -42,7 +43,13 @@ const FIXED_ACCENT = '#647255';
 const FIXED_FOCUS = '#7a8a69';
 
 function normalizeViewId(viewId) {
-  return viewId === VIEWS.PERSONAL_INVENTORY ? VIEWS.SAMPLE_REGISTRY : viewId;
+  if (viewId === VIEWS.PERSONAL_INVENTORY) {
+    return VIEWS.SAMPLE_REGISTRY;
+  }
+  if (viewId === VIEWS.COLLABORATION_MANAGEMENT) {
+    return VIEWS.LAB_MANAGEMENT;
+  }
+  return viewId;
 }
 
 function buildViewAliasMap(apps) {
@@ -118,12 +125,15 @@ const homeBtn = document.getElementById('home-btn');
 const topbarSettingsBtn = document.getElementById('topbar-settings-btn');
 const exitBtn = document.getElementById('exit-btn');
 const topbarSearchInput = document.getElementById('topbar-search');
+const appDock = document.querySelector('.app-dock');
 const dockNav = document.getElementById('app-dock-nav');
 const moreBtn = document.getElementById('app-more-btn');
 const moreMenu = document.getElementById('app-more-menu');
 const views = [...document.querySelectorAll('.view')];
 let appNavButtons = [];
 let moreMenuButtons = [];
+let renderedDockApps = DOCK_APPS;
+let renderedOverflowApps = MORE_APPS;
 
 let assay = null;
 let gel = null;
@@ -133,6 +143,13 @@ let homeDashboard = null;
 let protocol = null;
 let lastViewPersistenceEnabled = false;
 let sequenceViewer = null;
+const moduleRegistry = createModuleRegistry({
+  showView,
+  setSearchInputValue,
+  VIEWS,
+  sequenceViewerDetailViewId: SEQUENCE_VIEWER_DETAIL_VIEW_ID
+});
+const rendererServices = createRendererServices(moduleRegistry);
 
 function isValidStartupViewId(viewId) {
   return VALID_STARTUP_VIEW_IDS.has(normalizeViewId(String(viewId || '').trim()));
@@ -202,6 +219,7 @@ function createNavButton(app, options = {}) {
   button.className = menu ? 'app-nav-btn app-more-item' : 'app-nav-btn app-dock-btn';
   button.dataset.view = app.viewId;
   button.dataset.appId = app.id;
+  button.dataset.label = app.label;
   button.title = app.label;
   button.setAttribute('aria-label', app.label);
   if (menu) {
@@ -216,6 +234,55 @@ function createNavButton(app, options = {}) {
   label.textContent = app.label;
   button.append(label);
   return button;
+}
+
+function getDockCapacity() {
+  const viewportWidth = window.innerWidth || document.documentElement?.clientWidth || 0;
+  if (!viewportWidth) {
+    return DOCK_APPS.length;
+  }
+  if (viewportWidth >= 1280) {
+    return Math.min(DOCK_APPS.length, 8);
+  }
+  if (viewportWidth >= 1180) {
+    return Math.min(DOCK_APPS.length, 7);
+  }
+  if (viewportWidth >= 1060) {
+    return Math.min(DOCK_APPS.length, 6);
+  }
+  if (viewportWidth >= 940) {
+    return Math.min(DOCK_APPS.length, 5);
+  }
+  if (viewportWidth >= 820) {
+    return Math.min(DOCK_APPS.length, 4);
+  }
+  if (viewportWidth >= 700) {
+    return Math.min(DOCK_APPS.length, 3);
+  }
+  if (viewportWidth >= 580) {
+    return Math.min(DOCK_APPS.length, 2);
+  }
+  return 1;
+}
+
+function getRenderedDockState() {
+  const capacity = getDockCapacity();
+  const activeViewId = getActiveViewId();
+  const activeApp = getAppForView(activeViewId);
+  let visibleApps = DOCK_APPS.slice(0, capacity);
+  if (capacity < DOCK_APPS.length && activeApp && APP_DOCK_ORDER.includes(activeApp.id)) {
+    const alreadyVisible = visibleApps.some((app) => app.id === activeApp.id);
+    if (!alreadyVisible && visibleApps.length) {
+      visibleApps = [...visibleApps.slice(0, -1), activeApp]
+        .sort((left, right) => APP_DOCK_ORDER.indexOf(left.id) - APP_DOCK_ORDER.indexOf(right.id));
+    }
+  }
+  const visibleIds = new Set(visibleApps.map((app) => app.id));
+  const overflowPrimaryApps = DOCK_APPS.filter((app) => !visibleIds.has(app.id));
+  return {
+    visibleApps,
+    overflowApps: [...overflowPrimaryApps, ...MORE_APPS]
+  };
 }
 
 function closeMoreMenu() {
@@ -238,14 +305,44 @@ function toggleMoreMenu(forceOpen) {
 }
 
 function renderAppNavigation() {
+  const { visibleApps, overflowApps } = getRenderedDockState();
+  renderedDockApps = visibleApps;
+  renderedOverflowApps = overflowApps;
   if (dockNav) {
-    dockNav.replaceChildren(...DOCK_APPS.map((app) => createNavButton(app)));
+    dockNav.replaceChildren(...visibleApps.map((app) => createNavButton(app)));
   }
   if (moreMenu) {
-    moreMenu.replaceChildren(...MORE_APPS.map((app) => createNavButton(app, { menu: true })));
+    moreMenu.replaceChildren(...overflowApps.map((app) => createNavButton(app, { menu: true })));
   }
   appNavButtons = [...document.querySelectorAll('.app-nav-btn[data-view]')];
   moreMenuButtons = [...document.querySelectorAll('.app-more-item[data-view]')];
+  if (moreBtn) {
+    const hasOverflowApps = overflowApps.length > 0;
+    moreBtn.hidden = !hasOverflowApps;
+  }
+}
+
+function syncNavigationState(activeViewId) {
+  const activeNavView = activeViewId === SEQUENCE_VIEWER_DETAIL_VIEW_ID
+    ? VIEWS.SEQUENCE_VIEWER
+    : activeViewId;
+  const activeApp = getAppForView(activeNavView);
+  appNavButtons.forEach((button) => {
+    const buttonView = normalizeViewId(button.dataset.view);
+    button.classList.toggle('is-active', buttonView === activeNavView);
+  });
+  if (moreBtn) {
+    const isOverflowActive = Boolean(activeApp && renderedOverflowApps.some((app) => app.id === activeApp.id));
+    moreBtn.classList.toggle('is-active', isOverflowActive);
+  }
+  if (topbarSettingsBtn) {
+    topbarSettingsBtn.classList.toggle('is-active', activeNavView === VIEWS.SETTING);
+  }
+  document.body.dataset.activeView = activeNavView;
+  if (pageTitle) {
+    pageTitle.textContent = activeApp?.label || 'Home';
+  }
+  pageSubtitle.textContent = TITLES[activeNavView] || '';
 }
 
 function replaceState(nextState) {
@@ -495,6 +592,7 @@ const labManagement = initLabManagement({
   createId,
   safeText
 });
+moduleRegistry.register('labManagement', labManagement);
 
 const instrumentManagement = initInstrumentManagement({
   state,
@@ -502,6 +600,7 @@ const instrumentManagement = initInstrumentManagement({
   createId,
   safeText
 });
+moduleRegistry.register('instrumentManagement', instrumentManagement);
 
 const synthesisNotebook = initLabNotebook({
   state,
@@ -509,21 +608,10 @@ const synthesisNotebook = initLabNotebook({
   createId,
   safeText,
   notebookType: 'synthesis',
-  importProtocolsFromJson: (rawInput, options = {}) => {
-    if (!protocol?.importProtocolsFromJson) {
-      return { ok: false, error: 'Protocol import is not ready.' };
-    }
-    return protocol.importProtocolsFromJson(rawInput, options);
-  },
-  onNotebookEntriesChanged: () => {
-    projectManagement.renderNotebookPages();
-    workflowManagement?.render();
-    assay?.renderNotebookOptions();
-    assay?.renderList();
-    gel?.renderNotebookOptions();
-    gel?.renderList();
-  }
+  importProtocolsFromJson: rendererServices.protocol.importProtocolsFromJson,
+  onNotebookEntriesChanged: rendererServices.notebook.handleNotebookEntriesChanged
 });
+moduleRegistry.register('synthesisNotebook', synthesisNotebook);
 
 const biologyNotebook = initBiologyNotebook({
   state,
@@ -531,83 +619,38 @@ const biologyNotebook = initBiologyNotebook({
   createId,
   safeText,
   notebookType: 'biology',
-  importProtocolsFromJson: (rawInput, options = {}) => {
-    if (!protocol?.importProtocolsFromJson) {
-      return { ok: false, error: 'Protocol import is not ready.' };
-    }
-    return protocol.importProtocolsFromJson(rawInput, options);
-  },
-  onNotebookEntriesChanged: () => {
-    projectManagement.renderNotebookPages();
-    workflowManagement?.render();
-    assay?.renderNotebookOptions();
-    assay?.renderList();
-    gel?.renderNotebookOptions();
-    gel?.renderList();
-  }
+  importProtocolsFromJson: rendererServices.protocol.importProtocolsFromJson,
+  onNotebookEntriesChanged: rendererServices.notebook.handleNotebookEntriesChanged
 });
-
-function refreshProtocolDependents() {
-  synthesisNotebook.renderProtocolOptions();
-  synthesisNotebook.renderEntries();
-  biologyNotebook.renderProtocolOptions();
-  biologyNotebook.renderEntries();
-  workflowManagement?.render();
-  assay?.renderNotebookOptions();
-  assay?.renderList();
-  gel?.renderNotebookOptions();
-  gel?.renderList();
-}
+moduleRegistry.register('biologyNotebook', biologyNotebook);
 
 protocol = initProtocolManagement({
   state,
   persist,
   createId,
   safeText,
-  onProtocolsChanged: refreshProtocolDependents,
+  onProtocolsChanged: rendererServices.protocol.handleProtocolsChanged,
   trackGrowthEvent
 });
+moduleRegistry.register('protocol', protocol);
 
 const projectManagement = initProjectManagement({
   state,
   persist,
   createId,
   safeText,
-  onProjectsChanged: () => {
-    synthesisNotebook.renderProjectOptions();
-    synthesisNotebook.renderProtocolOptions();
-    synthesisNotebook.renderEntries();
-    biologyNotebook.renderProjectOptions();
-    biologyNotebook.renderProtocolOptions();
-    biologyNotebook.renderEntries();
-    workflowManagement?.render();
-    assay?.renderProjectOptions();
-    assay?.renderNotebookOptions();
-    assay?.renderList();
-    gel?.renderProjectOptions();
-    gel?.renderNotebookOptions();
-    gel?.renderList();
-    papers.render();
-    agentChat?.render();
-  }
+  onProjectsChanged: rendererServices.project.handleProjectsChanged
 });
+moduleRegistry.register('projectManagement', projectManagement);
 
 agentChat = initAgentChat({
   state,
   persist,
   createId,
   safeText,
-  onNotebookEntriesChanged: () => {
-    synthesisNotebook.renderEntries();
-    biologyNotebook.renderEntries();
-    projectManagement.renderNotebookPages();
-    workflowManagement?.render();
-    assay?.renderNotebookOptions();
-    assay?.renderList();
-    gel?.renderNotebookOptions();
-    gel?.renderList();
-  }
+  onNotebookEntriesChanged: rendererServices.notebook.handleAgentNotebookEntriesChanged
 });
+moduleRegistry.register('agentChat', agentChat);
 
 workflowManagement = initWorkflowManagement({
   state,
@@ -616,31 +659,26 @@ workflowManagement = initWorkflowManagement({
   safeText,
   onWorkflowsChanged: () => {}
 });
+moduleRegistry.register('workflowManagement', workflowManagement);
 
 const papers = initPapersManagement({
   state,
   persist,
   createId,
   safeText,
-  onCreateProtocolDraft: ({ method, paper }) => {
-    const ok = protocol.addDraftFromExtractedMethod(method, paper);
-    if (ok) {
-      showView(VIEWS.PROTOCOL_MANAGEMENT);
-    }
-  }
+  onCreateProtocolDraft: rendererServices.protocol.createDraftFromPaper
 });
+moduleRegistry.register('papers', papers);
 
 const collaboration = initCollaborationManagement({
   state,
   persist,
   createId,
   safeText,
-  onProtocolsImported: () => {
-    refreshProtocolDependents();
-    protocol.renderList();
-  },
+  onProtocolsImported: rendererServices.protocol.handleProtocolsImported,
   trackGrowthEvent
 });
+moduleRegistry.register('collaboration', collaboration);
 
 const labCommonInventory = initLabCommonInventory({
   state,
@@ -648,6 +686,7 @@ const labCommonInventory = initLabCommonInventory({
   createId,
   safeText
 });
+moduleRegistry.register('labCommonInventory', labCommonInventory);
 
 let sampleRegistry = null;
 const personalInventory = initPersonalInventory({
@@ -656,36 +695,34 @@ const personalInventory = initPersonalInventory({
   createId,
   safeText,
   cssEscape,
-  onSamplesChanged: () => {
-    sampleRegistry?.render();
-  }
+  onSamplesChanged: rendererServices.inventory.handleSamplesChanged
 });
+moduleRegistry.register('personalInventory', personalInventory);
 
 sampleRegistry = initSampleRegistry({
   state,
   persist,
   safeText
 });
+moduleRegistry.register('sampleRegistry', sampleRegistry);
 
 assay = initAssay({
   state,
   persist,
   createId,
   safeText,
-  onAssaysChanged: () => {
-    projectManagement.renderNotebookPages();
-  }
+  onAssaysChanged: rendererServices.analysis.handleAssaysChanged
 });
+moduleRegistry.register('assay', assay);
 
 gel = initGelAnalysis({
   state,
   persist,
   createId,
   safeText,
-  onGelAnalysesChanged: () => {
-    projectManagement.renderNotebookPages();
-  }
+  onGelAnalysesChanged: rendererServices.analysis.handleGelAnalysesChanged
 });
+moduleRegistry.register('gel', gel);
 
 sequenceViewer = initSequenceViewer({
   onNavigateHome: () => {
@@ -695,16 +732,12 @@ sequenceViewer = initSequenceViewer({
     showView(SEQUENCE_VIEWER_DETAIL_VIEW_ID);
   }
 });
+moduleRegistry.register('sequenceViewer', sequenceViewer);
 
-initToolBox({
-  onOpenSequenceViewer: (payload) => {
-    if (!sequenceViewer?.loadFromExternal) {
-      return;
-    }
-    sequenceViewer.loadFromExternal(payload);
-    showView(SEQUENCE_VIEWER_DETAIL_VIEW_ID);
-  }
+const toolBox = initToolBox({
+  onOpenSequenceViewer: rendererServices.sequence.openFromToolBox
 });
+moduleRegistry.register('toolBox', toolBox);
 
 const settings = initSettings({
   state,
@@ -740,16 +773,15 @@ const settings = initSettings({
     showView(VIEWS.HOME);
   }
 });
+moduleRegistry.register('settings', settings);
 
 homeDashboard = initHomeDashboard({
   state,
   persist,
   safeText,
-  onOpenSampleSearch: (query) => {
-    showView(VIEWS.SAMPLE_REGISTRY);
-    setSearchInputValue('sample-search', query);
-  }
+  onOpenSampleSearch: rendererServices.inventory.openSampleSearch
 });
+moduleRegistry.register('homeDashboard', homeDashboard);
 
 function showView(viewId) {
   const nextView = normalizeViewId(viewId);
@@ -759,25 +791,21 @@ function showView(viewId) {
 
   const showSampleInventoryWorkspace = nextView === VIEWS.SAMPLE_REGISTRY;
   views.forEach((view) => {
-    const isSampleInventorySection = view.id === VIEWS.SAMPLE_REGISTRY || view.id === VIEWS.PERSONAL_INVENTORY;
-    const active = view.id === nextView || (showSampleInventoryWorkspace && isSampleInventorySection);
+    const active = showSampleInventoryWorkspace
+      ? view.id === VIEWS.PERSONAL_INVENTORY
+      : view.id === nextView;
     view.classList.toggle('is-active', active);
   });
   const activeNavView = nextView === SEQUENCE_VIEWER_DETAIL_VIEW_ID
     ? VIEWS.SEQUENCE_VIEWER
     : nextView;
   const activeApp = getAppForView(activeNavView);
-  appNavButtons.forEach((button) => {
-    const buttonView = normalizeViewId(button.dataset.view);
-    button.classList.toggle('is-active', buttonView === activeNavView);
-  });
-  if (moreBtn) {
-    moreBtn.classList.toggle('is-active', Boolean(activeApp && activeApp.placement === 'more'));
+  const dockCapacity = getDockCapacity();
+  const activeVisibleInDock = Boolean(activeApp && renderedDockApps.some((app) => app.id === activeApp.id));
+  if (activeApp && APP_DOCK_ORDER.includes(activeApp.id) && !activeVisibleInDock && dockCapacity < DOCK_APPS.length) {
+    renderAppNavigation();
   }
-  if (topbarSettingsBtn) {
-    topbarSettingsBtn.classList.toggle('is-active', activeNavView === VIEWS.SETTING);
-  }
-  document.body.dataset.activeView = activeNavView;
+  syncNavigationState(activeNavView);
 
   const subtitleView = nextView === SEQUENCE_VIEWER_DETAIL_VIEW_ID
     ? VIEWS.SEQUENCE_VIEWER
@@ -827,7 +855,8 @@ function showView(viewId) {
     labCommonInventory.renderAll();
   }
 
-  if (nextView === VIEWS.COLLABORATION_MANAGEMENT) {
+  if (nextView === VIEWS.LAB_MANAGEMENT) {
+    labManagement.render();
     collaboration.renderEmailSelectors();
   }
 
@@ -1336,11 +1365,26 @@ function initTelegramCommandBridge() {
 }
 
 function initNavigation() {
-  appNavButtons.forEach((entry) => {
-    entry.addEventListener('click', () => {
-      showView(entry.dataset.view);
+  if (dockNav) {
+    dockNav.addEventListener('click', (event) => {
+      const target = event.target;
+      const button = target instanceof Element ? target.closest('.app-nav-btn[data-view]') : null;
+      if (!(button instanceof HTMLElement)) {
+        return;
+      }
+      showView(button.dataset.view);
     });
-  });
+  }
+  if (moreMenu) {
+    moreMenu.addEventListener('click', (event) => {
+      const target = event.target;
+      const button = target instanceof Element ? target.closest('.app-nav-btn[data-view]') : null;
+      if (!(button instanceof HTMLElement)) {
+        return;
+      }
+      showView(button.dataset.view);
+    });
+  }
 
   homeBtn.addEventListener('click', () => showView(VIEWS.HOME));
   if (topbarSettingsBtn) {
@@ -1383,6 +1427,17 @@ function initNavigation() {
       closeMoreMenu();
     }
   });
+  const syncResponsiveDock = () => {
+    renderAppNavigation();
+    syncNavigationState(getActiveViewId());
+  };
+  window.addEventListener('resize', syncResponsiveDock);
+  if (typeof ResizeObserver === 'function') {
+    const responsiveDockObserver = new ResizeObserver(() => {
+      syncResponsiveDock();
+    });
+    responsiveDockObserver.observe(document.documentElement);
+  }
 }
 
 window.addEventListener('enana:appearance-changed', () => {

@@ -50,3 +50,31 @@
 #lab-common-inventory-view .chemical-inbox-row + .small-note {
   margin-top: 10px;
 }
+
+#lab-common-inventory-view .panel,
+#lab-common-inventory-view .card,
+#lab-common-inventory-view .list-table,
+#lab-common-inventory-view .list-row,
+#lab-common-inventory-view .list-detail-content {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.chemical-detail-item {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.chemical-detail-label {
+  color: var(--strong);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+}

@@ -69,21 +69,22 @@ div {
   gap: 0;
   max-width: none;
   margin: 0;
-  padding: 16px 20px 14px;
+  padding: 8px 20px 88px;
 }
 
 .topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid var(--line);
+  gap: 12px;
+  padding-bottom: 4px;
+  border-bottom: 0;
 }
 
 .topbar-brand {
   display: grid;
-  gap: 4px;
+  gap: 0;
+  min-width: 0;
 }
 
 .topbar h1 {
@@ -102,8 +103,8 @@ div {
 .topbar-page-title {
   margin: 0;
   color: var(--strong);
-  font-size: 0.95rem;
-  font-weight: 600;
+  font-size: 1rem;
+  font-weight: 650;
 }
 
 #page-subtitle {
@@ -113,16 +114,18 @@ div {
 }
 
 .topbar-tools {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(220px, 420px) auto auto;
   align-items: center;
   justify-content: flex-end;
   gap: 6px;
-  flex-wrap: wrap;
+  width: auto;
+  margin-left: auto;
 }
 
 #topbar-search {
-  width: min(360px, 100%);
-  min-width: 240px;
+  width: 100%;
+  min-width: 0;
 }
 
 .workspace-shell {
@@ -131,35 +134,44 @@ div {
 
 .workspace-main {
   min-width: 0;
-  padding: 18px 0 24px;
+  padding: 2px 0 24px;
   font-size: var(--app-font-size);
 }
 
 .app-dock {
-  position: sticky;
-  bottom: 0;
-  z-index: 5;
+  position: fixed;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  z-index: 100;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  padding-top: 12px;
-  border-top: 1px solid var(--line);
-  background: var(--bg);
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg) 90%, var(--surface-elevated) 10%);
+  isolation: isolate;
 }
 
 .app-dock-nav {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   min-width: 0;
-  overflow-x: auto;
-  padding-bottom: 2px;
+  overflow: visible;
+  padding-bottom: 0;
 }
 
 .app-dock-divider {
   flex: 0 0 1px;
-  align-self: stretch;
+  align-self: center;
+  height: 26px;
   background: var(--line);
 }
 
@@ -168,8 +180,8 @@ div {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 38px;
-  height: 38px;
+  width: 46px;
+  height: 46px;
   padding: 0;
   border-radius: 8px;
 }
@@ -179,6 +191,7 @@ div {
   border-color: transparent;
   background: transparent;
   color: var(--muted);
+  overflow: visible;
 }
 
 .app-dock-btn:hover,
@@ -192,15 +205,44 @@ div {
   border-color: var(--line);
 }
 
+.app-dock-btn::before {
+  content: attr(data-label);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 14px);
+  transform: translate(-50%, 6px);
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-elevated);
+  color: var(--strong);
+  font-size: 0.77rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.app-dock-btn:hover::before,
+.app-dock-btn:focus-visible::before {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
 .app-dock-btn.is-active::after {
   content: '';
   position: absolute;
-  left: 9px;
-  right: 9px;
-  bottom: 3px;
+  left: 11px;
+  right: 11px;
+  bottom: 4px;
   height: 2px;
   border-radius: 2px;
   background: var(--accent);
+}
+
+.app-dock-btn-more {
+  width: 36px;
 }
 
 .app-dock-btn-more.is-open {
@@ -213,15 +255,19 @@ div {
   position: absolute;
   right: 0;
   bottom: calc(100% + 10px);
+  z-index: 101;
   min-width: 260px;
   padding: 6px;
   border-radius: 8px;
   border: 1px solid var(--line);
   background: var(--surface-elevated);
   box-shadow: 0 2px 8px rgba(27, 20, 14, 0.1);
+  transform: none;
 }
 
 .app-more-item {
+  display: flex;
+  align-items: center;
   width: 100%;
   justify-content: flex-start;
   gap: 10px;
@@ -240,17 +286,19 @@ div {
 }
 
 .app-more-label {
+  flex: 1 1 auto;
   font-size: 0.9rem;
   font-weight: 500;
+  text-align: left;
 }
 
 .app-nav-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
-  flex: 0 0 18px;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
 }
 
 .app-nav-icon svg {
@@ -271,12 +319,45 @@ div {
   border: 0;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 .view {
   display: none;
 }
 
 .view.is-active {
   display: block;
+}
+
+#lab-management-view > .panel:first-child > h2,
+#instrument-management-view > .panel:first-child > h2,
+#protocol-management-view > .panel:first-child > h2,
+#collaboration-management-view > .panel:first-child > h2,
+#synthesis-notebook-view > .panel:first-child > h2,
+#biology-notebook-view > .panel:first-child > h2,
+#lab-common-inventory-view > .panel:first-child > h2,
+#sample-registry-view > .panel:first-child > h2,
+#assay-view > .panel:first-child > h2,
+#gel-view > .panel:first-child > h2,
+#setting-view > .panel:first-child > h2,
+#project-management-view > .panel:first-child > h2,
+#workflow-management-view > .panel:first-child > h2,
+#agent-view > .panel:first-child > h2,
+#tool-box-view > .panel:first-child > h2,
+#papers-view .papers-library-topbar h2 {
+  display: none;
+}
+
+#tool-box-view > .panel:first-child > .small-note,
+#agent-view > .panel:first-child > .small-note,
+#papers-view .papers-library-topbar .small-note {
+  display: none;
+}
+
+#papers-view .papers-library-topbar {
+  padding-top: 0;
 }
 
 .panel,
@@ -598,15 +679,18 @@ button:disabled {
 
 @media (max-width: 960px) {
   .app-shell {
-    padding: 14px 14px 12px;
+    padding: 8px 14px 84px;
   }
 
   .topbar {
     align-items: stretch;
     flex-direction: column;
+    gap: 8px;
+    padding-bottom: 4px;
   }
 
   .topbar-tools {
+    grid-template-columns: minmax(0, 1fr) auto auto;
     justify-content: flex-start;
   }
 
@@ -616,5 +700,21 @@ button:disabled {
 
   .app-dock-nav {
     gap: 6px;
+  }
+
+  .app-dock {
+    bottom: 10px;
+    max-width: calc(100vw - 20px);
+    padding: 8px 10px;
+  }
+
+  .app-dock-btn,
+  .topbar-icon-btn {
+    width: 42px;
+    height: 42px;
+  }
+
+  .app-dock-btn-more {
+    width: 34px;
   }
 }

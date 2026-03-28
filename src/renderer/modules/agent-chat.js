@@ -321,6 +321,8 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
   let sessionsLoaded = false;
   let sessionListPromise = null;
   let sessionLoadPromise = null;
+  let activeSessionLoadId = '';
+  let queuedSessionLoadId = '';
 
   if (!projectSelect || !historyNode || !input || !sendBtn || !clearBtn || !status) {
     return { render: () => {} };
@@ -368,7 +370,8 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
   });
 
   sessionList?.addEventListener('click', (event) => {
-    const sessionId = trimText(event?.target?.dataset?.sessionId, 120);
+    const sessionCard = findSessionCard(event?.target);
+    const sessionId = trimText(sessionCard?.dataset?.sessionId, 120);
     if (!sessionId || inFlight) {
       return;
     }
@@ -404,6 +407,18 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
       return;
     }
     sessionStatus.textContent = text;
+  }
+
+  function findSessionCard(target) {
+    let current = target && typeof target === 'object' ? target : null;
+    while (current) {
+      const sessionId = trimText(current?.dataset?.sessionId, 120);
+      if (sessionId) {
+        return current;
+      }
+      current = current.parentElement || current.parentNode || null;
+    }
+    return null;
   }
 
   function getStoragePath() {
@@ -544,8 +559,13 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
       return;
     }
     if (sessionLoadPromise) {
+      if (targetSessionId !== activeSessionLoadId) {
+        queuedSessionLoadId = targetSessionId;
+      }
       return sessionLoadPromise;
     }
+    activeSessionLoadId = targetSessionId;
+    queuedSessionLoadId = '';
     if (options.silent !== true) {
       setStatus('Loading chat history...');
     }
@@ -575,7 +595,13 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
         setStatus('Error.');
       }
     }).finally(() => {
+      const nextSessionId = queuedSessionLoadId;
       sessionLoadPromise = null;
+      activeSessionLoadId = '';
+      queuedSessionLoadId = '';
+      if (nextSessionId && nextSessionId !== targetSessionId) {
+        void loadChatSession(nextSessionId, options);
+      }
     });
     return sessionLoadPromise;
   }

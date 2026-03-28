@@ -21,3 +21,12 @@
 .project-notebook-item p {
   margin: 0 0 4px;
 }
+
+#project-management-view .panel,
+#project-management-view .card,
+#project-management-view .cards {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}

@@ -25,7 +25,7 @@
       "viewId": "lab-management-view",
       "icon": "members.svg",
       "placement": "more",
-      "aliases": ["member", "people", "team"],
+      "aliases": ["member", "people", "team", "collaboration", "collaborations", "partners"],
       "searchInputId": ""
     },
     {
@@ -44,15 +44,6 @@
       "icon": "protocols.svg",
       "placement": "dock",
       "aliases": ["protocol", "procedure"],
-      "searchInputId": ""
-    },
-    {
-      "id": "collaborations",
-      "label": "Collaborations",
-      "viewId": "collaboration-management-view",
-      "icon": "collaborations.svg",
-      "placement": "more",
-      "aliases": ["collaboration", "partners"],
       "searchInputId": ""
     },
     {

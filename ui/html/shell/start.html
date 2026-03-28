@@ -37,15 +37,23 @@
   <main class="app-shell">
     <header class="topbar">
       <div class="topbar-brand">
-        <h1>Enana</h1>
+        <h1 class="sr-only">Enana</h1>
         <div class="topbar-context">
           <p id="page-title" class="topbar-page-title">Home</p>
-          <p id="page-subtitle">Reminders and active work.</p>
+          <p id="page-subtitle" class="sr-only">Reminders and active work.</p>
         </div>
       </div>
       <div class="topbar-tools">
         <input id="topbar-search" type="search" placeholder="Search modules or use sample: EGFR" aria-label="Search modules and records" />
-        <button id="home-btn" class="ghost-btn" hidden>Home</button>
+        <button id="home-btn" class="topbar-icon-btn ghost-btn" type="button" aria-label="Go home" title="Home" hidden>
+          <span class="app-nav-icon" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 10.5 12 4l8 6.5" />
+              <path d="M6.5 9.5V20h11V9.5" />
+              <path d="M10 20v-5h4v5" />
+            </svg>
+          </span>
+        </button>
         <button id="topbar-settings-btn" class="topbar-icon-btn ghost-btn" type="button" aria-label="Open settings" title="Settings">
           <span class="app-nav-icon" aria-hidden="true">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">

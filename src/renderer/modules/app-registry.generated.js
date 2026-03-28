@@ -25,7 +25,10 @@ export const APP_REGISTRY = [
     "aliases": [
       "member",
       "people",
-      "team"
+      "team",
+      "collaboration",
+      "collaborations",
+      "partners"
     ],
     "searchInputId": ""
   },
@@ -53,19 +56,6 @@ export const APP_REGISTRY = [
     "aliases": [
       "protocol",
       "procedure"
-    ],
-    "searchInputId": ""
-  },
-  {
-    "id": "collaborations",
-    "label": "Collaborations",
-    "viewId": "collaboration-management-view",
-    "icon": "collaborations.svg",
-    "iconMarkup": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\n  <circle cx=\"7\" cy=\"12\" r=\"2.5\" />\n  <circle cx=\"17\" cy=\"12\" r=\"2.5\" />\n  <path d=\"M9.5 12h5\" />\n  <path d=\"M6 18c.8-1.6 2.2-2.5 4-2.5M18 18c-.8-1.6-2.2-2.5-4-2.5\" />\n</svg>",
-    "placement": "more",
-    "aliases": [
-      "collaboration",
-      "partners"
     ],
     "searchInputId": ""
   },

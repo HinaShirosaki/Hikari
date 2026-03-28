@@ -13,7 +13,6 @@
 @import url("./ui/css/views/sample-registry-view.css");
 @import url("./ui/css/views/assay-view.css");
 @import url("./ui/css/views/gel-view.css");
-@import url("./ui/css/views/collaboration-management-view.css");
 @import url("./ui/css/views/lab-common-inventory-view.css");
 @import url("./ui/css/views/setting-view.css");
 @import url("./ui/css/views/project-management-view.css");
@@ -24,4 +23,3 @@
 @import url("./ui/css/views/sequence-viewer-view.css");
 @import url("./ui/css/overrides/cross-view-fixes.css");
 @import url("./ui/css/overrides/shell-first-remake.css");
-@import url("./ui/css/overrides/uncodixify-compliance.css");
