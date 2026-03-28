@@ -37,7 +37,6 @@ export function getWorkflowElements(rootDocument) {
     workflowEntryCreateBtn: rootDocument?.getElementById?.('workflow-entry-create-btn'),
     workflowEntryTemplateBtn: rootDocument?.getElementById?.('workflow-entry-template-btn'),
     workflowEntryViewBtn: rootDocument?.getElementById?.('workflow-entry-view-btn'),
-    workflowEntryBackWrap: rootDocument?.getElementById?.('workflow-entry-back-wrap'),
     workflowEntryBackBtn: rootDocument?.getElementById?.('workflow-entry-back-btn'),
     workflowEditorPanels: [...(rootDocument?.querySelectorAll?.('#workflow-management-view .workflow-editor-panel') || [])],
     workflowTemplatePanels: [...(rootDocument?.querySelectorAll?.('#workflow-management-view .workflow-template-panel') || [])],

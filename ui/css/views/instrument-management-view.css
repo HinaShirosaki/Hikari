@@ -373,3 +373,40 @@
     min-height: 320px;
   }
 }
+
+#instrument-management-view .panel,
+#instrument-management-view .card,
+.calendar-day,
+.week-corner,
+.week-day-heading,
+.week-day-column,
+.week-event {
+  border: 0;
+  box-shadow: none;
+}
+
+.calendar-weekdays span,
+.week-time-label {
+  color: var(--muted);
+}
+
+.calendar-day,
+.week-day-heading,
+.week-day-column {
+  background: var(--surface);
+}
+
+.calendar-day-has-events,
+.week-day-column-today {
+  border-color: color-mix(in srgb, var(--accent) 75%, var(--line));
+}
+
+.week-drag-preview {
+  border-style: dashed;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.week-event span {
+  opacity: 1;
+  color: var(--muted);
+}

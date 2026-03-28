@@ -1249,7 +1249,7 @@ async function annotateWithBlast(payload = {}) {
   const env = await checkPlannotateEnvironment(payload.dbDir || '');
   const warnings = [...normalizeWarnings];
   if (!env.dataDir) {
-    throw new Error('pLannotate metadata files were not found. Click One-Step Install Backend to download them.');
+    throw new Error('pLannotate metadata files were not found. Open Sequence Viewer and click One-Step Install Backend.');
   }
   if (!env.executables.blastn) {
     throw new Error('blastn was not found on PATH. Install NCBI BLAST+ before annotating.');
@@ -1258,7 +1258,7 @@ async function annotateWithBlast(payload = {}) {
     throw new Error('diamond was not found on PATH. Install diamond before annotating.');
   }
   if (!env.dbDir) {
-    throw new Error('BLAST database folder was not found. Click One-Step Install Backend to download BLAST_dbs.');
+    throw new Error('BLAST database folder was not found. Open Sequence Viewer and click One-Step Install Backend.');
   }
   if (!env.databases.snapgene || !env.databases.fpbase || !env.databases.swissprot) {
     throw new Error('Required pLannotate databases are missing (need snapgene BLAST and fpbase/swissprot diamond DBs).');

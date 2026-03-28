@@ -8,50 +8,83 @@
 #setting-view .settings-head {
   display: grid;
   gap: 6px;
-  padding-bottom: 18px;
-  border-bottom: 1px solid var(--line);
+  padding-bottom: 8px;
 }
 
-#setting-view .settings-stack {
+#setting-view .settings-grid {
   display: grid;
-  gap: 0;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 18px;
+  align-items: start;
 }
 
-#setting-view .settings-section {
+#setting-view .settings-card {
   display: grid;
   gap: 14px;
-  padding: 20px 0;
-  border-bottom: 1px solid var(--line);
+  margin-top: 0;
+  padding: 18px;
 }
 
-#setting-view .settings-section:last-child {
-  border-bottom: 0;
+#setting-view .settings-card-wide {
+  grid-column: 1 / -1;
 }
 
 #setting-view .settings-section-head {
   display: grid;
   gap: 4px;
-  max-width: 720px;
 }
 
 #setting-view .settings-section-head h3,
-#setting-view .settings-subsection h4 {
+#setting-view .settings-subcard h4 {
   margin: 0;
 }
 
-#setting-view .settings-subsection {
+#setting-view .settings-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+#setting-view .settings-subcard {
   display: grid;
   gap: 12px;
-  padding-top: 16px;
-  border-top: 1px solid var(--line-soft);
+  min-height: 100%;
+  padding: 16px;
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface-elevated) 86%, transparent);
+}
+
+#setting-view .settings-subcard h4 {
+  margin: 0;
+}
+
+#setting-view .inline-row {
+  align-items: flex-start;
+}
+
+#setting-view .inline-row input[type="checkbox"] {
+  margin-top: 2px;
 }
 
 #setting-view #setting-location-list .card-actions {
   justify-content: space-between;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--line-soft);
+  padding: 12px 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface-elevated) 86%, transparent);
 }
 
-#setting-view #setting-location-list .card-actions:last-child {
-  border-bottom: 0;
+#setting-view #setting-location-list {
+  gap: 10px;
+}
+
+@media (max-width: 720px) {
+  #setting-view .settings-grid {
+    grid-template-columns: 1fr;
+  }
+
+  #setting-view .settings-card-grid {
+    grid-template-columns: 1fr;
+  }
 }

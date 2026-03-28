@@ -22,10 +22,10 @@ export const VIEWS = {
 
 export const TITLES = {
   [VIEWS.HOME]: 'Bench overview, reminders, workflow progress, and a lab timer.',
-  [VIEWS.LAB_MANAGEMENT]: 'Directory of members, roles, and lab contacts.',
+  [VIEWS.LAB_MANAGEMENT]: 'Directory of members, roles, Enana inboxes, and collaboration threads.',
   [VIEWS.INSTRUMENT_MANAGEMENT]: 'Instrument schedules, availability, and reservations.',
   [VIEWS.PROTOCOL_MANAGEMENT]: 'Protocol library for drafting, editing, and reuse.',
-  [VIEWS.COLLABORATION_MANAGEMENT]: 'Collaboration records, contacts, and shared threads.',
+  [VIEWS.COLLABORATION_MANAGEMENT]: 'Directory of members, roles, Enana inboxes, and collaboration threads.',
   [VIEWS.SYNTHESIS_NOTEBOOK]: 'Chemistry notebook entries and linked project context.',
   [VIEWS.BIOLOGY_NOTEBOOK]: 'Biology notebook entries and wet-lab context.',
   [VIEWS.LAB_COMMON_INVENTORY]: 'Chemical inventory, locations, and stock records.',

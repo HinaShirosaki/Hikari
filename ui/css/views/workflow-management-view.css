@@ -304,3 +304,34 @@ body.theme-night .workflow-context-item {
 body.theme-night .workflow-context-item:hover {
   background: rgba(46, 68, 109, 0.94);
 }
+
+#workflow-management-view .panel,
+#workflow-management-view .card,
+.workflow-graph-canvas,
+.workflow-node,
+.workflow-context-menu {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.workflow-graph-canvas {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--line-soft) 80%, transparent) 1px, transparent 1px),
+    linear-gradient(0deg, color-mix(in srgb, var(--line-soft) 80%, transparent) 1px, transparent 1px),
+    transparent;
+  background-size: 28px 28px, 28px 28px, auto;
+}
+
+.workflow-node {
+  background: transparent;
+}
+
+.workflow-context-menu {
+  background: var(--surface-elevated);
+}
+
+.workflow-node-selected,
+.workflow-node-connecting {
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--accent) 55%, transparent);
+}

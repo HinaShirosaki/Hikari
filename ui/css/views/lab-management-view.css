@@ -1,1 +1,14 @@
-/* lab-management-view: no dedicated selectors yet; uses shared base/theme styles. */
+/* lab-management-view */
+
+#lab-management-view .panel,
+#lab-management-view .card,
+#lab-management-view .list-row {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+#lab-management-view #inbox-list {
+  margin-top: 10px;
+}

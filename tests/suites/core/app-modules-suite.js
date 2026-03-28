@@ -693,6 +693,99 @@ test('protocol-management supports draft creation, sharing, link copy, and delet
   assert.ok(importedCalls >= 2);
 });
 
+test('protocol-management shows JSON import on create and hides it on edit', async () => {
+  const document = createMockDocument([
+    'protocol-list-panel',
+    'protocol-editor-panel',
+    'protocol-view-panel',
+    'create-protocol-btn',
+    'protocol-editor-back-btn',
+    'protocol-cancel-btn',
+    'protocol-view-back-btn',
+    'protocol-editor-heading',
+    'protocol-view-title',
+    'protocol-view-content',
+    'protocol-form',
+    'protocol-json-import-panel',
+    'protocol-json-import-file',
+    'protocol-json-import-input',
+    'import-protocol-json-btn',
+    'protocol-json-import-status',
+    'protocol-name',
+    'protocol-purpose',
+    'protocol-materials',
+    'protocol-steps',
+    'protocol-troubleshooting',
+    'add-placeholder-btn',
+    'placeholder-name',
+    'protocol-share-status',
+    'protocol-share-link-panel',
+    'protocol-share-link-output',
+    'protocol-list',
+    'protocol-sort-field-btn',
+    'protocol-sort-order-btn'
+  ]);
+
+  const protocolForm = document.getElementById('protocol-form');
+  wireFormReset(protocolForm, [
+    document.getElementById('protocol-name'),
+    document.getElementById('protocol-purpose'),
+    document.getElementById('protocol-materials'),
+    document.getElementById('protocol-steps'),
+    document.getElementById('protocol-troubleshooting')
+  ]);
+
+  const state = {
+    protocols: [],
+    notebookEntries: [],
+    workflows: [],
+    workflowTemplates: [],
+    assays: [],
+    gelAnalyses: [],
+    messages: [],
+    members: [],
+    settings: { personalInfo: { enanaEmail: '' } }
+  };
+
+  let nextId = 0;
+  const protocolModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'protocol-management.js'), {
+    document,
+    TextEncoder,
+    btoa: btoaPolyfill,
+    navigator: {
+      clipboard: {
+        writeText: async () => {}
+      }
+    }
+  });
+
+  const protocol = protocolModule.initProtocolManagement({
+    state,
+    persist: () => {},
+    createId: () => `generated-id-${nextId += 1}`,
+    safeText: shared.safeText,
+    onProtocolsChanged: () => {},
+    trackGrowthEvent: () => {}
+  });
+
+  trigger(document.getElementById('create-protocol-btn'), 'click');
+  assert.equal(document.getElementById('protocol-json-import-panel').hidden, false);
+
+  document.getElementById('protocol-json-import-input').value = '{"name":"Imported From Create","steps":["Add buffer"]}';
+  trigger(document.getElementById('import-protocol-json-btn'), 'click');
+  await flushAsync();
+
+  assert.equal(state.protocols.length, 1);
+  assert.equal(state.protocols[0].name, 'Imported From Create');
+  assert.match(document.getElementById('protocol-json-import-status').textContent, /Imported "Imported From Create"/);
+
+  protocol.renderList();
+  const editBtn = document.getElementById('protocol-list').querySelectorAll('[data-protocol-edit]')[0];
+  trigger(editBtn, 'click');
+
+  assert.equal(document.getElementById('protocol-json-import-panel').hidden, true);
+});
+
 test('protocol-management import accepts external title/action schema without ids (including fenced LLM JSON)', () => {
   const document = createMockDocument([
     'protocol-list-panel',
@@ -1709,6 +1802,202 @@ test('agent-chat loads saved sessions from chat logs and switches sessions from 
   assert.equal(status.textContent, 'Ready.');
 });
 
+test('agent-chat session switching honors nested click targets and replays the latest click after an in-flight load', async () => {
+  const document = createMockDocument([
+    'agent-project-select',
+    'agent-context-summary',
+    'agent-session-status',
+    'agent-session-list',
+    'agent-new-chat-btn',
+    'agent-chat-history',
+    'agent-message-input',
+    'agent-send-btn',
+    'agent-clear-btn',
+    'agent-status'
+  ]);
+  const sessionList = document.getElementById('agent-session-list');
+  const history = document.getElementById('agent-chat-history');
+  const status = document.getElementById('agent-status');
+
+  const state = {
+    projects: [{ id: 'p1', name: 'Cancer Study' }],
+    protocols: [],
+    notebookEntries: [],
+    assays: [],
+    gelAnalyses: [],
+    workflows: [],
+    papers: [],
+    inventory: {},
+    labInventory: { chemicals: [] },
+    settings: {
+      storagePath: '/tmp/enana-storage',
+      llm: {
+        provider: 'openai',
+        model: 'gpt-5',
+        apiEndpoint: 'https://api.openai.com/v1/responses',
+        apiKey: 'sk-local-key'
+      },
+      agent: {
+        developerMode: false
+      }
+    },
+    agentChat: {
+      projectId: '',
+      currentSessionId: '',
+      sessions: [],
+      messages: []
+    }
+  };
+
+  let releaseChat2Load = null;
+  const window = {
+    enanaApi: {
+      agentChatLogListSessions: async () => ({
+        ok: true,
+        items: [
+          {
+            id: 'chat-2',
+            title: 'Initially loaded',
+            project_id: '',
+            project_name: '',
+            updated_at: '2026-03-22T19:00:00.000Z',
+            created_at: '2026-03-22T19:00:00.000Z',
+            message_count: 2,
+            last_message_preview: 'Second session preview.'
+          },
+          {
+            id: 'chat-1',
+            title: 'Nested click target',
+            project_id: 'p1',
+            project_name: 'Cancer Study',
+            updated_at: '2026-03-22T18:00:00.000Z',
+            created_at: '2026-03-22T18:00:00.000Z',
+            message_count: 2,
+            last_message_preview: 'First session preview.'
+          },
+          {
+            id: 'chat-3',
+            title: 'Queued target',
+            project_id: '',
+            project_name: '',
+            updated_at: '2026-03-22T17:00:00.000Z',
+            created_at: '2026-03-22T17:00:00.000Z',
+            message_count: 2,
+            last_message_preview: 'Third session preview.'
+          }
+        ]
+      }),
+      agentChatLogGetSession: ({ sessionId }) => {
+        if (sessionId === 'chat-2') {
+          return new Promise((resolve) => {
+            releaseChat2Load = () => resolve({
+              ok: true,
+              session: {
+                id: 'chat-2',
+                project_id: '',
+                project_name: '',
+                title: 'Initially loaded'
+              },
+              messages: [
+                {
+                  id: 'u2',
+                  role: 'user',
+                  text: 'Load the second session.',
+                  createdAt: '2026-03-22T18:00:00.000Z'
+                },
+                {
+                  id: 'a2',
+                  role: 'assistant',
+                  text: 'Second session loaded.',
+                  createdAt: '2026-03-22T18:00:05.000Z'
+                }
+              ]
+            });
+          });
+        }
+        return Promise.resolve({
+          ok: true,
+          session: {
+            id: sessionId,
+            project_id: sessionId === 'chat-1' ? 'p1' : '',
+            project_name: sessionId === 'chat-1' ? 'Cancer Study' : '',
+            title: sessionId === 'chat-1' ? 'Nested click target' : 'Queued target'
+          },
+          messages: sessionId === 'chat-1'
+            ? [
+              {
+                id: 'u1',
+                role: 'user',
+                text: 'Open the first session.',
+                createdAt: '2026-03-22T17:00:00.000Z'
+              },
+              {
+                id: 'a1',
+                role: 'assistant',
+                text: 'First session opened.',
+                createdAt: '2026-03-22T17:00:05.000Z'
+              }
+            ]
+            : [
+              {
+                id: 'u3',
+                role: 'user',
+                text: 'Open the queued third session.',
+                createdAt: '2026-03-22T19:00:00.000Z'
+              },
+              {
+                id: 'a3',
+                role: 'assistant',
+                text: 'Third session opened.',
+                createdAt: '2026-03-22T19:00:05.000Z'
+              }
+            ]
+        });
+      }
+    }
+  };
+
+  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat.js'), {
+    document,
+    window
+  });
+  const agent = agentModule.initAgentChat({
+    state,
+    persist: () => {},
+    createId: (() => {
+      let idx = 0;
+      return () => `agent-msg-${idx += 1}`;
+    })(),
+    safeText: shared.safeText,
+    onNotebookEntriesChanged: () => {}
+  });
+
+  agent.render();
+  await flushAsync();
+  await flushAsync();
+  assert.equal(typeof releaseChat2Load, 'function');
+
+  const sessionButtons = sessionList.querySelectorAll('[data-session-id]');
+  const nestedTargetSession = sessionButtons.find((item) => item.dataset.sessionId === 'chat-1');
+  const queuedTargetSession = sessionButtons.find((item) => item.dataset.sessionId === 'chat-3');
+  const nestedTitle = nestedTargetSession.querySelector('strong');
+
+  trigger(sessionList, 'click', { target: nestedTitle });
+  trigger(sessionList, 'click', { target: queuedTargetSession });
+
+  await flushAsync();
+  assert.equal(state.agentChat.currentSessionId, '');
+
+  releaseChat2Load();
+  await flushAsync();
+  await flushAsync();
+  await flushAsync();
+
+  assert.equal(state.agentChat.currentSessionId, 'chat-3');
+  assert.match(history.innerHTML, /Third session opened/);
+  assert.equal(status.textContent, 'Ready.');
+});
+
 test('agent-chat exposes developer-only manual tool smoke test action and renders results', async () => {
   const document = createMockDocument([
     'agent-project-select',
@@ -2268,14 +2557,19 @@ function buildFakePapersViewerFactory() {
   };
 }
 
-function buildPapersManagementHarness({ comments = [] } = {}) {
+function buildPapersManagementHarness({ comments = [], promptResponses = [], confirmResult = true } = {}) {
   const ids = [
     'paper-form',
     'paper-title',
     'paper-pdf',
     'paper-link-type',
     'paper-link-target',
+    'paper-upload-trigger',
     'paper-list',
+    'papers-library-rail',
+    'papers-library-context-menu',
+    'papers-context-new-folder',
+    'papers-context-delete-folder',
     'paper-folder-selection',
     'paper-upload-target-label',
     'paper-viewer-shell',
@@ -2297,9 +2591,9 @@ function buildPapersManagementHarness({ comments = [] } = {}) {
     'paper-viewer-zoom-in-btn',
     'paper-viewer-zoom-reset-btn',
     'paper-viewer-fit-width-btn',
+    'paper-viewer-summarize-btn',
     'paper-viewer-zoom-label',
     'paper-viewer-open-btn',
-    'paper-viewer-close-btn',
     'paper-comment-sidebar',
     'paper-comment-page',
     'paper-comment-count',
@@ -2310,9 +2604,6 @@ function buildPapersManagementHarness({ comments = [] } = {}) {
     'paper-comment-text',
     'paper-comment-status',
     'paper-comment-list',
-    'journal-club-name',
-    'journal-club-description',
-    'journal-club-add-btn',
     'journal-club-list'
   ];
   const document = createMockDocument(ids);
@@ -2326,6 +2617,7 @@ function buildPapersManagementHarness({ comments = [] } = {}) {
   const viewerFactory = buildFakePapersViewerFactory();
   let persistCalls = 0;
   let idCounter = 0;
+  const promptQueue = promptResponses.slice();
   const state = {
     journalClubs: [],
     projects: [{ id: 'p1', name: 'Cancer Study' }],
@@ -2368,7 +2660,13 @@ function buildPapersManagementHarness({ comments = [] } = {}) {
   };
   const window = {
     alert() {},
-    enanaApi: {}
+    enanaApi: {},
+    prompt() {
+      return promptQueue.length ? promptQueue.shift() : '';
+    },
+    confirm() {
+      return confirmResult;
+    }
   };
   const papersModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'papers-management.js'), {
     document,
@@ -2398,8 +2696,8 @@ function buildPapersManagementHarness({ comments = [] } = {}) {
 }
 
 async function openPaperInHarness(harness) {
-  const paperList = harness.document.getElementById('paper-list');
-  trigger(paperList, 'click', {
+  const journalClubList = harness.document.getElementById('journal-club-list');
+  trigger(journalClubList, 'click', {
     target: {
       closest(selector) {
         if (selector === '[data-paper-view]') {
@@ -2417,7 +2715,7 @@ async function openPaperInHarness(harness) {
   await flushAsync();
 }
 
-test('papers module renders total comment counts in uploaded paper cards', () => {
+test('papers module renders folder rows with nested paper titles in the library list', () => {
   const harness = buildPapersManagementHarness({
     comments: [
       {
@@ -2432,9 +2730,38 @@ test('papers module renders total comment counts in uploaded paper cards', () =>
       }
     ]
   });
-  const paperList = harness.document.getElementById('paper-list');
+  const journalClubList = harness.document.getElementById('journal-club-list');
 
-  assert.match(paperList.innerHTML, /Comments:<\/strong>\s*1|Comments:\s*<\/strong>\s*1|Comments:\s*1/);
+  assert.match(journalClubList.innerHTML, /Cancer Study/);
+  assert.match(journalClubList.innerHTML, /Atlas Uploaded Paper/);
+});
+
+test('papers module creates a journal club folder from the library context menu', () => {
+  const harness = buildPapersManagementHarness({
+    promptResponses: ['Weekly Biochem JC']
+  });
+  const journalClubList = harness.document.getElementById('journal-club-list');
+  const papersLibraryRail = harness.document.getElementById('papers-library-rail');
+  const contextMenu = harness.document.getElementById('papers-library-context-menu');
+  const newFolderBtn = harness.document.getElementById('papers-context-new-folder');
+
+  trigger(papersLibraryRail, 'contextmenu', {
+    clientX: 24,
+    clientY: 40,
+    target: {
+      closest() {
+        return null;
+      }
+    }
+  });
+  assert.equal(contextMenu.hidden, false);
+
+  trigger(newFolderBtn, 'click');
+
+  assert.equal(harness.state.journalClubs.length, 1);
+  assert.equal(harness.state.journalClubs[0].name, 'Weekly Biochem JC');
+  assert.equal(harness.state.journalClubs[0].description, '');
+  assert.match(journalClubList.innerHTML, /Weekly Biochem JC/);
 });
 
 test('papers module creates a pinned page comment after placement and save', async () => {

@@ -371,11 +371,8 @@ export function createWorkflowRenderer(config = {}) {
       setSelectedValues(elements.workflowNotebookPagesInput, runtime.draft.notebookEntryIds);
     }
 
-    if (elements.workflowEntryPanel) {
-      elements.workflowEntryPanel.hidden = !showHome;
-    }
-    if (elements.workflowEntryBackWrap) {
-      elements.workflowEntryBackWrap.hidden = showHome;
+    if (elements.workflowEntryBackBtn) {
+      elements.workflowEntryBackBtn.hidden = showHome;
     }
     (elements.workflowEditorPanels || []).forEach((panel) => {
       panel.hidden = !showEditor;

@@ -1,0 +1,325 @@
+module.exports = function registerModuleServicesSuite(context = {}) {
+  const scope = context.scope || {};
+  const __dirname = context.__dirname || process.cwd();
+  with (scope) {
+    function loadServicesModule() {
+      return loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'services', 'index.js'));
+    }
+
+    function createSpy(label = 'spy') {
+      const calls = [];
+      const fn = (...args) => {
+        calls.push(args);
+      };
+      fn.calls = calls;
+      fn.label = label;
+      return fn;
+    }
+
+    function createRegistryWithUi(servicesModule, overrides = {}) {
+      return servicesModule.createModuleRegistry({
+        showView: overrides.showView || createSpy('showView'),
+        setSearchInputValue: overrides.setSearchInputValue || createSpy('setSearchInputValue'),
+        VIEWS: overrides.VIEWS || {
+          PROTOCOL_MANAGEMENT: 'protocol-management-view',
+          SAMPLE_REGISTRY: 'sample-registry-view'
+        },
+        sequenceViewerDetailViewId: overrides.sequenceViewerDetailViewId || 'sequence-viewer-detail-view'
+      });
+    }
+
+    test('module registry keeps missing module lookups safe for service fan-out', () => {
+      const servicesModule = loadServicesModule();
+      const registry = createRegistryWithUi(servicesModule);
+      const services = servicesModule.createRendererServices(registry);
+
+      assert.doesNotThrow(() => {
+        services.protocol.handleProtocolsChanged();
+        services.protocol.handleProtocolsImported();
+        services.notebook.handleNotebookEntriesChanged();
+        services.notebook.handleAgentNotebookEntriesChanged();
+        services.project.handleProjectsChanged();
+        services.inventory.handleSamplesChanged();
+        services.analysis.handleAssaysChanged();
+        services.analysis.handleGelAnalysesChanged();
+        services.sequence.openFromToolBox({ sequence: 'ATGC' });
+      });
+    });
+
+    test('protocol service refreshes notebook workflow assay and gel dependents', () => {
+      const servicesModule = loadServicesModule();
+      const registry = createRegistryWithUi(servicesModule);
+      const services = servicesModule.createRendererServices(registry);
+
+      const synthesisProtocolOptions = createSpy('synthesisProtocolOptions');
+      const synthesisEntries = createSpy('synthesisEntries');
+      const biologyProtocolOptions = createSpy('biologyProtocolOptions');
+      const biologyEntries = createSpy('biologyEntries');
+      const workflowRender = createSpy('workflowRender');
+      const assayNotebookOptions = createSpy('assayNotebookOptions');
+      const assayList = createSpy('assayList');
+      const gelNotebookOptions = createSpy('gelNotebookOptions');
+      const gelList = createSpy('gelList');
+      const protocolList = createSpy('protocolList');
+
+      registry.register('synthesisNotebook', {
+        renderProtocolOptions: synthesisProtocolOptions,
+        renderEntries: synthesisEntries
+      });
+      registry.register('biologyNotebook', {
+        renderProtocolOptions: biologyProtocolOptions,
+        renderEntries: biologyEntries
+      });
+      registry.register('workflowManagement', { render: workflowRender });
+      registry.register('assay', {
+        renderNotebookOptions: assayNotebookOptions,
+        renderList: assayList
+      });
+      registry.register('gel', {
+        renderNotebookOptions: gelNotebookOptions,
+        renderList: gelList
+      });
+      registry.register('protocol', { renderList: protocolList });
+
+      services.protocol.handleProtocolsChanged();
+      assert.equal(synthesisProtocolOptions.calls.length, 1);
+      assert.equal(synthesisEntries.calls.length, 1);
+      assert.equal(biologyProtocolOptions.calls.length, 1);
+      assert.equal(biologyEntries.calls.length, 1);
+      assert.equal(workflowRender.calls.length, 1);
+      assert.equal(assayNotebookOptions.calls.length, 1);
+      assert.equal(assayList.calls.length, 1);
+      assert.equal(gelNotebookOptions.calls.length, 1);
+      assert.equal(gelList.calls.length, 1);
+      assert.equal(protocolList.calls.length, 0);
+
+      services.protocol.handleProtocolsImported();
+      assert.equal(protocolList.calls.length, 1);
+      assert.equal(synthesisProtocolOptions.calls.length, 2);
+      assert.equal(synthesisEntries.calls.length, 2);
+      assert.equal(biologyProtocolOptions.calls.length, 2);
+      assert.equal(biologyEntries.calls.length, 2);
+      assert.equal(workflowRender.calls.length, 2);
+      assert.equal(assayNotebookOptions.calls.length, 2);
+      assert.equal(assayList.calls.length, 2);
+      assert.equal(gelNotebookOptions.calls.length, 2);
+      assert.equal(gelList.calls.length, 2);
+    });
+
+    test('protocol service delegates protocol JSON import and keeps fallback when protocol is not ready', () => {
+      const servicesModule = loadServicesModule();
+      const registry = createRegistryWithUi(servicesModule);
+      const services = servicesModule.createRendererServices(registry);
+
+      const fallback = services.protocol.importProtocolsFromJson('{"name":"A"}');
+      assert.equal(fallback.ok, false);
+      assert.equal(fallback.error, 'Protocol import is not ready.');
+
+      const importCalls = [];
+      registry.register('protocol', {
+        importProtocolsFromJson(rawInput, options) {
+          importCalls.push([rawInput, options]);
+          return { ok: true, importedProtocols: [{ id: 'protocol-1' }] };
+        }
+      });
+
+      const result = services.protocol.importProtocolsFromJson('{"name":"B"}', { source: 'test' });
+      assert.equal(result.ok, true);
+      assert.deepEqual(importCalls, [['{"name":"B"}', { source: 'test' }]]);
+    });
+
+    test('protocol service opens protocol view only when paper draft creation succeeds', () => {
+      const servicesModule = loadServicesModule();
+      const showView = createSpy('showView');
+      const registry = createRegistryWithUi(servicesModule, { showView });
+      const services = servicesModule.createRendererServices(registry);
+
+      const addDraft = createSpy('addDraft');
+      registry.register('protocol', {
+        addDraftFromExtractedMethod(method, paper) {
+          addDraft(method, paper);
+          return true;
+        }
+      });
+
+      const paperPayload = { method: { title: 'Steps' }, paper: { id: 'paper-1' } };
+      const ok = services.protocol.createDraftFromPaper(paperPayload);
+      assert.equal(ok, true);
+      assert.equal(addDraft.calls.length, 1);
+      assert.deepEqual(addDraft.calls[0], [paperPayload.method, paperPayload.paper]);
+      assert.deepEqual(showView.calls, [['protocol-management-view']]);
+
+      showView.calls.length = 0;
+      registry.register('protocol', {
+        addDraftFromExtractedMethod() {
+          return false;
+        }
+      });
+      const notOk = services.protocol.createDraftFromPaper(paperPayload);
+      assert.equal(notOk, false);
+      assert.equal(showView.calls.length, 0);
+    });
+
+    test('notebook services refresh dependents for notebook and agent chat updates', () => {
+      const servicesModule = loadServicesModule();
+      const registry = createRegistryWithUi(servicesModule);
+      const services = servicesModule.createRendererServices(registry);
+
+      const projectNotebookPages = createSpy('projectNotebookPages');
+      const workflowRender = createSpy('workflowRender');
+      const assayNotebookOptions = createSpy('assayNotebookOptions');
+      const assayList = createSpy('assayList');
+      const gelNotebookOptions = createSpy('gelNotebookOptions');
+      const gelList = createSpy('gelList');
+      const synthesisEntries = createSpy('synthesisEntries');
+      const biologyEntries = createSpy('biologyEntries');
+
+      registry.register('projectManagement', { renderNotebookPages: projectNotebookPages });
+      registry.register('workflowManagement', { render: workflowRender });
+      registry.register('assay', {
+        renderNotebookOptions: assayNotebookOptions,
+        renderList: assayList
+      });
+      registry.register('gel', {
+        renderNotebookOptions: gelNotebookOptions,
+        renderList: gelList
+      });
+      registry.register('synthesisNotebook', { renderEntries: synthesisEntries });
+      registry.register('biologyNotebook', { renderEntries: biologyEntries });
+
+      services.notebook.handleNotebookEntriesChanged();
+      assert.equal(projectNotebookPages.calls.length, 1);
+      assert.equal(workflowRender.calls.length, 1);
+      assert.equal(assayNotebookOptions.calls.length, 1);
+      assert.equal(assayList.calls.length, 1);
+      assert.equal(gelNotebookOptions.calls.length, 1);
+      assert.equal(gelList.calls.length, 1);
+      assert.equal(synthesisEntries.calls.length, 0);
+      assert.equal(biologyEntries.calls.length, 0);
+
+      services.notebook.handleAgentNotebookEntriesChanged();
+      assert.equal(projectNotebookPages.calls.length, 2);
+      assert.equal(workflowRender.calls.length, 2);
+      assert.equal(assayNotebookOptions.calls.length, 2);
+      assert.equal(assayList.calls.length, 2);
+      assert.equal(gelNotebookOptions.calls.length, 2);
+      assert.equal(gelList.calls.length, 2);
+      assert.equal(synthesisEntries.calls.length, 1);
+      assert.equal(biologyEntries.calls.length, 1);
+    });
+
+    test('project service refreshes notebooks workflow assay gel papers and agent chat', () => {
+      const servicesModule = loadServicesModule();
+      const registry = createRegistryWithUi(servicesModule);
+      const services = servicesModule.createRendererServices(registry);
+
+      const synthesisProjectOptions = createSpy('synthesisProjectOptions');
+      const synthesisProtocolOptions = createSpy('synthesisProtocolOptions');
+      const synthesisEntries = createSpy('synthesisEntries');
+      const biologyProjectOptions = createSpy('biologyProjectOptions');
+      const biologyProtocolOptions = createSpy('biologyProtocolOptions');
+      const biologyEntries = createSpy('biologyEntries');
+      const workflowRender = createSpy('workflowRender');
+      const assayProjectOptions = createSpy('assayProjectOptions');
+      const assayNotebookOptions = createSpy('assayNotebookOptions');
+      const assayList = createSpy('assayList');
+      const gelProjectOptions = createSpy('gelProjectOptions');
+      const gelNotebookOptions = createSpy('gelNotebookOptions');
+      const gelList = createSpy('gelList');
+      const papersRender = createSpy('papersRender');
+      const agentRender = createSpy('agentRender');
+
+      registry.register('synthesisNotebook', {
+        renderProjectOptions: synthesisProjectOptions,
+        renderProtocolOptions: synthesisProtocolOptions,
+        renderEntries: synthesisEntries
+      });
+      registry.register('biologyNotebook', {
+        renderProjectOptions: biologyProjectOptions,
+        renderProtocolOptions: biologyProtocolOptions,
+        renderEntries: biologyEntries
+      });
+      registry.register('workflowManagement', { render: workflowRender });
+      registry.register('assay', {
+        renderProjectOptions: assayProjectOptions,
+        renderNotebookOptions: assayNotebookOptions,
+        renderList: assayList
+      });
+      registry.register('gel', {
+        renderProjectOptions: gelProjectOptions,
+        renderNotebookOptions: gelNotebookOptions,
+        renderList: gelList
+      });
+      registry.register('papers', { render: papersRender });
+      registry.register('agentChat', { render: agentRender });
+
+      services.project.handleProjectsChanged();
+      assert.equal(synthesisProjectOptions.calls.length, 1);
+      assert.equal(synthesisProtocolOptions.calls.length, 1);
+      assert.equal(synthesisEntries.calls.length, 1);
+      assert.equal(biologyProjectOptions.calls.length, 1);
+      assert.equal(biologyProtocolOptions.calls.length, 1);
+      assert.equal(biologyEntries.calls.length, 1);
+      assert.equal(workflowRender.calls.length, 1);
+      assert.equal(assayProjectOptions.calls.length, 1);
+      assert.equal(assayNotebookOptions.calls.length, 1);
+      assert.equal(assayList.calls.length, 1);
+      assert.equal(gelProjectOptions.calls.length, 1);
+      assert.equal(gelNotebookOptions.calls.length, 1);
+      assert.equal(gelList.calls.length, 1);
+      assert.equal(papersRender.calls.length, 1);
+      assert.equal(agentRender.calls.length, 1);
+    });
+
+    test('inventory service refreshes sample registry and opens sample search', () => {
+      const servicesModule = loadServicesModule();
+      const showView = createSpy('showView');
+      const setSearchInputValue = createSpy('setSearchInputValue');
+      const registry = createRegistryWithUi(servicesModule, {
+        showView,
+        setSearchInputValue
+      });
+      const services = servicesModule.createRendererServices(registry);
+
+      const sampleRegistryRender = createSpy('sampleRegistryRender');
+      registry.register('sampleRegistry', { render: sampleRegistryRender });
+
+      services.inventory.handleSamplesChanged();
+      assert.equal(sampleRegistryRender.calls.length, 1);
+
+      services.inventory.openSampleSearch('HEK293');
+      assert.deepEqual(showView.calls, [['sample-registry-view']]);
+      assert.deepEqual(setSearchInputValue.calls, [['sample-search', 'HEK293']]);
+    });
+
+    test('analysis service refreshes project notebook pages for assay and gel changes', () => {
+      const servicesModule = loadServicesModule();
+      const registry = createRegistryWithUi(servicesModule);
+      const services = servicesModule.createRendererServices(registry);
+
+      const renderNotebookPages = createSpy('renderNotebookPages');
+      registry.register('projectManagement', { renderNotebookPages });
+
+      services.analysis.handleAssaysChanged();
+      services.analysis.handleGelAnalysesChanged();
+
+      assert.equal(renderNotebookPages.calls.length, 2);
+    });
+
+    test('sequence service loads payload into sequence viewer and opens detail view', () => {
+      const servicesModule = loadServicesModule();
+      const showView = createSpy('showView');
+      const registry = createRegistryWithUi(servicesModule, { showView });
+      const services = servicesModule.createRendererServices(registry);
+
+      const loadFromExternal = createSpy('loadFromExternal');
+      const payload = { sequence: 'ATGC', name: 'Example' };
+      registry.register('sequenceViewer', { loadFromExternal });
+
+      services.sequence.openFromToolBox(payload);
+
+      assert.deepEqual(loadFromExternal.calls, [[payload]]);
+      assert.deepEqual(showView.calls, [['sequence-viewer-detail-view']]);
+    });
+  }
+};

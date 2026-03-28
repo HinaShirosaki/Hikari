@@ -1,43 +1,70 @@
 <section id="biology-notebook-view" class="view">
-      <div class="panel">
-        <h2>Biology Notebook</h2>
-        <div class="stack-form biology-notebook-select-stack">
-          <label>
-            Select Project
-            <select id="biology-notebook-project-select">
-              <option value="">Select project</option>
-            </select>
-          </label>
-          <label>
-            Search Protocol
-            <input id="biology-notebook-protocol-search" type="search" placeholder="Search protocols..." />
-          </label>
-          <label>
-            Select Protocol
-            <select id="biology-notebook-protocol-select">
-              <option value="">Select protocol</option>
-            </select>
-          </label>
+      <div class="biology-notebook-layout">
+        <aside class="biology-notebook-rail">
+          <div class="biology-notebook-rail-head">
+            <h2>Biology Notebook</h2>
+            <p class="small-note">Projects and notebook pages</p>
+          </div>
+
+          <div class="stack-form biology-notebook-select-stack">
+            <label>
+              Select Project
+              <select id="biology-notebook-project-select">
+                <option value="">Select project</option>
+              </select>
+            </label>
+            <label>
+              Search Protocol
+              <input id="biology-notebook-protocol-search" type="search" placeholder="Search protocols..." />
+            </label>
+            <label>
+              Select Protocol
+              <select id="biology-notebook-protocol-select">
+                <option value="">Select protocol</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="biology-notebook-page-list-head">
+            <h3>Notebook Pages</h3>
+            <p id="biology-notebook-page-list-status" class="small-note">Select a project and protocol to start a page.</p>
+          </div>
+          <div id="biology-notebook-entry-list" class="biology-notebook-page-list"></div>
+        </aside>
+
+        <div class="biology-notebook-viewer-column">
+          <div id="biology-notebook-empty-state" class="panel biology-notebook-empty-state">
+            <h3>Protocol / Result Viewer</h3>
+            <p>Select a project and protocol to create a notebook page, or choose an existing page from the left panel.</p>
+          </div>
+
+          <div id="biology-notebook-protocol-area" class="panel biology-notebook-viewer" hidden>
+            <div class="biology-notebook-viewer-head">
+              <div class="biology-notebook-viewer-copy">
+                <p class="small-note biology-notebook-viewer-kicker">Filled protocol and results</p>
+                <h3 id="biology-notebook-protocol-title"></h3>
+                <p id="biology-notebook-protocol-meta" class="small-note">Select a notebook page or start a new one.</p>
+              </div>
+              <div class="biology-notebook-viewer-actions">
+                <button id="biology-notebook-export-btn" class="ghost-btn" type="button" hidden>Export PDF</button>
+              </div>
+            </div>
+
+            <div id="biology-notebook-steps" class="notebook-steps"></div>
+
+            <label>
+              Experiment Results File / Notes
+              <textarea id="biology-notebook-result" rows="4" placeholder="Path, summary, or notes"></textarea>
+            </label>
+            <label>
+              Experiment Result Files
+              <input id="biology-notebook-result-file" type="file" multiple />
+            </label>
+            <div class="form-actions">
+              <button id="save-biology-notebook-btn" class="primary-btn" type="button">Save Notebook Entry</button>
+              <button id="cancel-biology-notebook-edit-btn" class="ghost-btn" type="button" hidden>Cancel Edit</button>
+            </div>
+          </div>
         </div>
-      </div>
-      <div id="biology-notebook-protocol-area" class="panel" hidden>
-        <h3 id="biology-notebook-protocol-title"></h3>
-        <div id="biology-notebook-steps" class="notebook-steps"></div>
-        <label>
-          Experiment Results File / Notes
-          <textarea id="biology-notebook-result" rows="4" placeholder="Path, summary, or notes"></textarea>
-        </label>
-        <label>
-          Experiment Result Files
-          <input id="biology-notebook-result-file" type="file" multiple />
-        </label>
-        <div class="form-actions">
-          <button id="save-biology-notebook-btn" class="primary-btn" type="button">Save Notebook Entry</button>
-          <button id="cancel-biology-notebook-edit-btn" class="ghost-btn" type="button" hidden>Cancel Edit</button>
-        </div>
-      </div>
-      <div class="panel">
-        <h3>Saved Notebook Entries</h3>
-        <div id="biology-notebook-entry-list" class="list-table"></div>
       </div>
     </section>

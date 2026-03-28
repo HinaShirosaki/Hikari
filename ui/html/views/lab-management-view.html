@@ -1,6 +1,6 @@
 <section id="lab-management-view" class="view">
       <div class="panel">
-        <h2>Members</h2>
+        <h2>Members &amp; Collaborations</h2>
         <form id="member-form" class="form-grid">
           <input type="hidden" id="member-id" />
           <label>
@@ -26,4 +26,51 @@
         </form>
       </div>
       <div id="member-cards" class="cards"></div>
+      <div class="panel">
+        <h2>Collaborations</h2>
+        <div class="setting-grid">
+          <section class="card setting-card">
+            <h3>Send Enana Email</h3>
+            <form id="message-form" class="stack-form">
+              <label>
+                From (Enana Email)
+                <select id="message-from"></select>
+              </label>
+              <label>
+                To (Enana Email)
+                <select id="message-to"></select>
+              </label>
+              <label>
+                Subject
+                <input id="message-subject" />
+              </label>
+              <label>
+                Message
+                <textarea id="message-body" rows="4"></textarea>
+              </label>
+              <button type="submit" class="primary-btn">Send Message</button>
+            </form>
+          </section>
+
+          <section class="card setting-card">
+            <h3>Check Enana Email Inbox</h3>
+            <label>
+              Inbox For
+              <select id="inbox-email"></select>
+            </label>
+            <div id="inbox-list" class="stack-form"></div>
+            <div class="stack-form">
+              <h4>Import Shared Protocol Link / JSON</h4>
+              <label>
+                Share Link
+                <textarea id="protocol-link-input" rows="3" placeholder="Paste enana://protocol-share/... or ENANA_PROTOCOL_SHARE:... or JSON"></textarea>
+              </label>
+              <div class="form-actions">
+                <button type="button" id="import-protocol-link-btn" class="ghost-btn">Import Link</button>
+              </div>
+              <p id="protocol-link-status" class="small-note">Paste a shared protocol link or protocol JSON, then click Import Link.</p>
+            </div>
+          </section>
+        </div>
+      </div>
     </section>

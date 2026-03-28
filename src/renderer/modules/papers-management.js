@@ -15,8 +15,13 @@ export function initPapersManagement({
   const paperLinkTargetSelect = document.getElementById('paper-link-target');
   const paperList = document.getElementById('paper-list');
   const papersView = document.getElementById('papers-view');
+  const papersLibraryRail = document.getElementById('papers-library-rail');
+  const paperUploadTrigger = document.getElementById('paper-upload-trigger');
   const paperFolderSelection = document.getElementById('paper-folder-selection');
   const paperUploadTargetLabel = document.getElementById('paper-upload-target-label');
+  const papersLibraryContextMenu = document.getElementById('papers-library-context-menu');
+  const papersContextNewFolderBtn = document.getElementById('papers-context-new-folder');
+  const papersContextDeleteFolderBtn = document.getElementById('papers-context-delete-folder');
   const paperCommentSidebar = document.getElementById('paper-comment-sidebar');
   const paperCommentPage = document.getElementById('paper-comment-page');
   const paperCommentCount = document.getElementById('paper-comment-count');
@@ -27,6 +32,7 @@ export function initPapersManagement({
   const paperCommentText = document.getElementById('paper-comment-text');
   const paperCommentStatus = document.getElementById('paper-comment-status');
   const paperCommentList = document.getElementById('paper-comment-list');
+  const paperViewerSummarizeBtn = document.getElementById('paper-viewer-summarize-btn');
   const commentState = {
     currentPageNumber: 1,
     mode: 'idle',
@@ -37,6 +43,12 @@ export function initPapersManagement({
   };
   const libraryState = {
     selectedFolderKey: ''
+  };
+  const libraryContextState = {
+    folderKey: '',
+    folderId: '',
+    folderType: '',
+    paperId: ''
   };
   const paperViewer = createPdfViewer({
     shell: document.getElementById('paper-viewer-shell'),
@@ -60,23 +72,26 @@ export function initPapersManagement({
     fitWidthBtn: document.getElementById('paper-viewer-fit-width-btn'),
     zoomLabel: document.getElementById('paper-viewer-zoom-label'),
     openExternalBtn: document.getElementById('paper-viewer-open-btn'),
-    closeBtn: document.getElementById('paper-viewer-close-btn'),
     onPageChange: onViewerPageChange,
     onPlacement: onViewerPlacement,
     onPinSelect: onViewerPinSelect,
     onClose: onViewerClose
   });
 
-  const journalClubNameInput = document.getElementById('journal-club-name');
-  const journalClubDescriptionInput = document.getElementById('journal-club-description');
-  const journalClubAddBtn = document.getElementById('journal-club-add-btn');
   const journalClubList = document.getElementById('journal-club-list');
 
-  paperForm.addEventListener('submit', onPaperSubmit);
-  paperLinkTypeSelect.addEventListener('change', renderLinkTargets);
-  journalClubAddBtn.addEventListener('click', onAddJournalClub);
+  paperForm?.addEventListener('submit', onPaperSubmit);
+  paperLinkTypeSelect?.addEventListener('change', renderLinkTargets);
+  paperUploadTrigger?.addEventListener('click', onUploadTriggerClick);
+  paperPdfInput?.addEventListener('change', onPaperFileChange);
   journalClubList?.addEventListener('click', onFolderListClick);
-  paperList.addEventListener('click', onPaperListClick);
+  journalClubList?.addEventListener('click', onPaperListClick);
+  papersLibraryRail?.addEventListener('contextmenu', onLibraryContextMenu);
+  papersLibraryContextMenu?.addEventListener('click', onLibraryContextMenuClick);
+  paperList?.addEventListener('click', onPaperListClick);
+  paperViewerSummarizeBtn?.addEventListener('click', onViewerSummarizeClick);
+  papersContextNewFolderBtn?.addEventListener('click', onCreateJournalClubFromMenuClick);
+  papersContextDeleteFolderBtn?.addEventListener('click', onDeleteJournalClubFromMenuClick);
   paperCommentAddBtn?.addEventListener('click', beginCommentPlacement);
   paperCommentSaveBtn?.addEventListener('click', savePaperComment);
   paperCommentCancelBtn?.addEventListener('click', cancelPaperComment);
@@ -84,6 +99,11 @@ export function initPapersManagement({
   paperCommentText?.addEventListener('input', renderCommentSidebar);
   if (typeof window?.addEventListener === 'function') {
     window.addEventListener('resize', schedulePapersEdgeBleedSync);
+    window.addEventListener('resize', hideLibraryContextMenu);
+  }
+  if (typeof document?.addEventListener === 'function') {
+    document.addEventListener('click', hideLibraryContextMenu);
+    document.addEventListener('keydown', onGlobalKeydown);
   }
   if (papersView && typeof MutationObserver === 'function') {
     const papersViewObserver = new MutationObserver(() => {
@@ -109,6 +129,149 @@ export function initPapersManagement({
       id: project.id,
       name: project.name
     }));
+  }
+
+  function onGlobalKeydown(event) {
+    if (event?.key === 'Escape') {
+      hideLibraryContextMenu();
+    }
+  }
+
+  function onLibraryContextMenuClick(event) {
+    event?.stopPropagation?.();
+  }
+
+  function hideLibraryContextMenu() {
+    if (!papersLibraryContextMenu) {
+      return;
+    }
+    papersLibraryContextMenu.hidden = true;
+    libraryContextState.folderKey = '';
+    libraryContextState.folderId = '';
+    libraryContextState.folderType = '';
+    libraryContextState.paperId = '';
+  }
+
+  function onUploadTriggerClick() {
+    const selectedFolder = getSelectedFolder();
+    if (!selectedFolder) {
+      window.alert?.('Create or select a folder before uploading a paper.');
+      return;
+    }
+    if (paperTitleInput) {
+      paperTitleInput.value = '';
+    }
+    paperPdfInput?.click?.();
+  }
+
+  function onPaperFileChange() {
+    if (!paperPdfInput?.files?.length) {
+      return;
+    }
+    if (typeof paperForm?.requestSubmit === 'function') {
+      paperForm.requestSubmit();
+      return;
+    }
+    onPaperSubmit({
+      preventDefault() {}
+    });
+  }
+
+  function onViewerSummarizeClick() {
+    const activePaper = getActivePaper();
+    if (!activePaper) {
+      return;
+    }
+    summarizePaper(activePaper.id);
+  }
+
+  function onLibraryContextMenu(event) {
+    if (!papersLibraryContextMenu) {
+      return;
+    }
+    event.preventDefault?.();
+
+    const folderTarget = event.target?.closest?.('[data-folder-select]');
+    const folderKey = String(folderTarget?.dataset?.folderSelect || libraryState.selectedFolderKey || '').trim();
+    const folder = getLibraryFolders().find((item) => item.key === folderKey) || null;
+
+    libraryContextState.folderKey = folder?.key || '';
+    libraryContextState.folderId = folder?.id || '';
+    libraryContextState.folderType = folder?.type || '';
+    libraryContextState.paperId = '';
+
+    if (papersContextDeleteFolderBtn) {
+      papersContextDeleteFolderBtn.hidden = !(folder && folder.type === 'journal-club');
+    }
+
+    const clientX = Number(event?.clientX) || 0;
+    const clientY = Number(event?.clientY) || 0;
+    papersLibraryContextMenu.style.left = `${clientX}px`;
+    papersLibraryContextMenu.style.top = `${clientY}px`;
+    papersLibraryContextMenu.hidden = false;
+  }
+
+  function createJournalClubFolder({ name, description = '' } = {}) {
+    const normalizedName = String(name || '').trim();
+    if (!normalizedName) {
+      return false;
+    }
+
+    const journalClub = {
+      id: createId(),
+      name: normalizedName,
+      description: String(description || '').trim()
+    };
+    state.journalClubs.push(journalClub);
+
+    persist();
+    libraryState.selectedFolderKey = buildFolderKey('journal-club', journalClub.id);
+    renderLibrarySidebar();
+    return true;
+  }
+
+  function onCreateJournalClubFromMenuClick(event) {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    onCreateJournalClubFromMenu();
+  }
+
+  function onDeleteJournalClubFromMenuClick(event) {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    onDeleteJournalClubFromMenu();
+  }
+
+  function onCreateJournalClubFromMenu() {
+    hideLibraryContextMenu();
+    const promptFn = typeof window?.prompt === 'function' ? window.prompt.bind(window) : null;
+    if (!promptFn) {
+      window.alert?.('Folder naming prompt is unavailable.');
+      return;
+    }
+
+    const name = String(promptFn('Journal club folder name') || '').trim();
+    if (!name) {
+      return;
+    }
+    createJournalClubFolder({ name });
+  }
+
+  function onDeleteJournalClubFromMenu() {
+    const folderId = String(libraryContextState.folderId || '').trim();
+    const folderType = String(libraryContextState.folderType || '').trim();
+    hideLibraryContextMenu();
+    if (!folderId || folderType !== 'journal-club') {
+      return;
+    }
+
+    const canDelete = typeof window?.confirm !== 'function'
+      || window.confirm('Delete this journal club folder and its papers?');
+    if (!canDelete) {
+      return;
+    }
+
+    deleteJournalClub(folderId);
   }
 
   function syncPapersEdgeBleed() {
@@ -272,62 +435,115 @@ export function initPapersManagement({
     return (state.papers || []).filter((paper) => paper.linkedType === folder.type && paper.linkedId === folder.id).length;
   }
 
+  function getVisiblePapersForFolder(selectedFolder = getSelectedFolder()) {
+    return (state.papers || [])
+      .filter((paper) => {
+        if (!selectedFolder) {
+          return true;
+        }
+        return paper.linkedType === selectedFolder.type && paper.linkedId === selectedFolder.id;
+      })
+      .slice()
+      .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+  }
+
+  function buildPaperTreeListHtml(selectedFolder = getSelectedFolder()) {
+    const visiblePapers = getVisiblePapersForFolder(selectedFolder);
+    if (!visiblePapers.length) {
+      return selectedFolder
+        ? `<p class="papers-library-empty">No papers in ${safeText(selectedFolder.name)} yet.</p>`
+        : '<p class="papers-library-empty">No papers uploaded yet.</p>';
+    }
+
+    const activePaperId = paperViewer.getActivePaperId();
+    return visiblePapers.map((paper) => `
+      <button
+        type="button"
+        class="papers-paper-row${activePaperId === paper.id ? ' is-active' : ''}"
+        data-paper-view="${paper.id}"
+      >
+        <span class="papers-paper-title">${safeText(paper.title)}</span>
+        <span class="papers-paper-time">${safeText(formatRelativePaperTime(paper.updatedAt))}</span>
+      </button>
+    `).join('');
+  }
+
   function renderFolderList(selectedFolder = getSelectedFolder()) {
     if (!journalClubList) {
       return;
     }
 
     const folders = getLibraryFolders();
+    const paperTreeHtml = buildPaperTreeListHtml(selectedFolder);
+    if (paperList) {
+      paperList.innerHTML = paperTreeHtml;
+    }
     if (paperFolderSelection) {
       paperFolderSelection.textContent = selectedFolder
         ? `${selectedFolder.type === 'journal-club' ? 'Journal Club' : 'Project'} folder`
         : 'No folder selected';
     }
     if (!folders.length) {
-      journalClubList.innerHTML = '<p class="small-note">No project or journal club folders yet.</p>';
+      journalClubList.innerHTML = '<p class="papers-library-empty">No project or journal club folders yet.</p>';
       return;
     }
 
-    journalClubList.innerHTML = folders.map((folder) => {
-      const paperCount = getFolderPaperCount(folder);
-      return `
-        <div class="papers-folder-row">
-          <button
-            type="button"
-            class="papers-folder-item${folder.key === selectedFolder?.key ? ' is-active' : ''}"
-            data-folder-select="${safeText(folder.key)}"
-          >
-            <span class="papers-folder-glyph" aria-hidden="true"></span>
-            <span class="papers-folder-copy">
-              <span class="papers-folder-name">${safeText(folder.name)}</span>
-              <span class="papers-folder-kind">${folder.type === 'journal-club' ? 'Journal club' : 'Project'}</span>
-            </span>
-            <span class="papers-folder-meta">${safeText(String(paperCount))}</span>
-          </button>
-          ${folder.removable ? `<button type="button" class="ghost-btn papers-folder-delete" data-journal-club-delete="${safeText(folder.id)}">Delete</button>` : ''}
-        </div>
-      `;
-    }).join('');
+    journalClubList.innerHTML = folders.map((folder) => `
+      <div class="papers-folder-group${folder.key === selectedFolder?.key ? ' is-active' : ''}">
+        <button
+          type="button"
+          class="papers-folder-item${folder.key === selectedFolder?.key ? ' is-active' : ''}"
+          data-folder-select="${safeText(folder.key)}"
+        >
+          <span class="papers-folder-glyph" aria-hidden="true"></span>
+          <span class="papers-folder-name">${safeText(folder.name)}</span>
+        </button>
+        ${folder.key === selectedFolder?.key ? `<div class="papers-folder-children">${paperTreeHtml}</div>` : ''}
+      </div>
+    `).join('');
   }
 
   function renderUploadTargetSummary(selectedFolder = getSelectedFolder()) {
+    if (paperFolderSelection) {
+      paperFolderSelection.textContent = selectedFolder
+        ? `${selectedFolder.type === 'journal-club' ? 'Journal club' : 'Project'}: ${selectedFolder.name}`
+        : 'No folder selected';
+    }
     if (!paperUploadTargetLabel) {
       return;
     }
     if (!selectedFolder) {
       paperUploadTargetLabel.textContent = 'Select a folder to file new papers.';
+      if (paperUploadTrigger) {
+        paperUploadTrigger.disabled = true;
+      }
       return;
     }
     const prefix = selectedFolder.type === 'journal-club' ? 'Journal club' : 'Project';
     paperUploadTargetLabel.textContent = `New uploads go to ${prefix}: ${selectedFolder.name}`;
+    if (paperUploadTrigger) {
+      paperUploadTrigger.disabled = false;
+    }
   }
 
   function renderLibrarySidebar(preferredFolderKey = '') {
     const selectedFolder = syncSelectedFolder(preferredFolderKey);
-    renderFolderList(selectedFolder);
+    hideLibraryContextMenu();
     renderUploadTargetSummary(selectedFolder);
-    renderPaperList(selectedFolder);
+    renderFolderList(selectedFolder);
+    renderViewerToolbarState();
     schedulePapersEdgeBleedSync();
+  }
+
+  function renderViewerToolbarState() {
+    if (!paperViewerSummarizeBtn) {
+      return;
+    }
+    const activePaper = getActivePaper();
+    paperViewerSummarizeBtn.disabled = !activePaper || activePaper.summaryStatus === 'running';
+    paperViewerSummarizeBtn.textContent = activePaper?.summaryStatus === 'running'
+      ? 'Summarizing...'
+      : 'Summarize';
   }
 
   function getCommentsForPage(paper, pageNumber) {
@@ -391,7 +607,7 @@ export function initPapersManagement({
     resetCommentComposer({
       message: 'Open a paper to review or add page comments.'
     });
-    renderPaperList(getSelectedFolder());
+    renderLibrarySidebar(libraryState.selectedFolderKey);
   }
 
   function onViewerPageChange(pageNumber) {
@@ -808,7 +1024,7 @@ export function initPapersManagement({
       comments: [],
       deepReadReady: false,
       availabilityStatus: 'uploaded_pdf',
-      ingestionStatus: 'queued',
+      ingestionStatus: 'uploaded',
       ingestionUpdatedAt: new Date().toISOString(),
       ingestionErrors: [],
       createdAt: new Date().toISOString(),
@@ -822,27 +1038,6 @@ export function initPapersManagement({
     paperForm.reset();
     libraryState.selectedFolderKey = buildFolderKey(paper.linkedType, paper.linkedId);
     render();
-    void startPaperAutoIngest(paper.id);
-  }
-
-  function onAddJournalClub() {
-    const name = journalClubNameInput.value.trim();
-    if (!name) {
-      return;
-    }
-
-    const journalClub = {
-      id: createId(),
-      name,
-      description: journalClubDescriptionInput.value.trim()
-    };
-    state.journalClubs.push(journalClub);
-
-    persist();
-    journalClubNameInput.value = '';
-    journalClubDescriptionInput.value = '';
-    libraryState.selectedFolderKey = buildFolderKey('journal-club', journalClub.id);
-    renderLibrarySidebar();
   }
 
   function deleteJournalClub(journalClubId) {
@@ -1161,7 +1356,7 @@ export function initPapersManagement({
       }
       syncViewerComments();
       setCommentStatus('Viewing page 1. Select a comment or place a new pin.');
-      renderPaperList(getSelectedFolder());
+      renderLibrarySidebar(libraryState.selectedFolderKey);
       renderCommentSidebar();
     } catch (error) {
       window.alert(String(error?.message || error || 'Failed to load the PDF viewer.'));
@@ -1171,14 +1366,9 @@ export function initPapersManagement({
   function onFolderListClick(event) {
     const selectBtn = event.target.closest('[data-folder-select]');
     if (selectBtn) {
+      hideLibraryContextMenu();
       libraryState.selectedFolderKey = selectBtn.dataset.folderSelect;
       renderLibrarySidebar(libraryState.selectedFolderKey);
-      return;
-    }
-
-    const deleteBtn = event.target.closest('[data-journal-club-delete]');
-    if (deleteBtn) {
-      deleteJournalClub(deleteBtn.dataset.journalClubDelete);
     }
   }
 
@@ -1230,28 +1420,6 @@ export function initPapersManagement({
       return;
     }
 
-    const linkBtn = event.target.closest('[data-paper-link-entry]');
-    if (linkBtn) {
-      const paperId = linkBtn.dataset.paperId;
-      const card = linkBtn.closest('[data-paper-card]');
-      if (!card) {
-        return;
-      }
-      const projectId = card.querySelector('[data-link-project]')?.value || '';
-      const entryId = card.querySelector('[data-link-entry]')?.value || '';
-      const note = card.querySelector('[data-link-note]')?.value || '';
-      linkExperimentToPaper(paperId, projectId, entryId, note);
-      return;
-    }
-
-    const projectSelect = event.target.closest('[data-link-project]');
-    if (projectSelect) {
-      const card = projectSelect.closest('[data-paper-card]');
-      const entrySelect = card?.querySelector('[data-link-entry]');
-      if (entrySelect) {
-        entrySelect.innerHTML = renderEntryOptionsForProject(projectSelect.value || '', '');
-      }
-    }
   }
 
   function renderLinkTargets() {
@@ -1280,126 +1448,6 @@ export function initPapersManagement({
       options.push(`<option value="${project.id}"${isSelected}>${safeText(project.name)}</option>`);
     });
     return options.join('');
-  }
-
-  function renderPaperList(selectedFolder = getSelectedFolder()) {
-    const visiblePapers = (state.papers || [])
-      .filter((paper) => {
-        if (!selectedFolder) {
-          return true;
-        }
-        return paper.linkedType === selectedFolder.type && paper.linkedId === selectedFolder.id;
-      })
-      .slice()
-      .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
-
-    if (!visiblePapers.length) {
-      paperList.innerHTML = selectedFolder
-        ? `<p class="small-note">No papers in ${safeText(selectedFolder.name)} yet.</p>`
-        : '<p class="small-note">No papers uploaded yet.</p>';
-      return;
-    }
-
-    const activePaperId = paperViewer.getActivePaperId();
-
-    paperList.innerHTML = visiblePapers
-      .map((paper) => {
-        const isActive = activePaperId === paper.id;
-        const commentCount = getPaperCommentCount(paper);
-        const methodsHtml = (paper.methodsExtract || []).map((method, index) => `
-          <article class="card">
-            <p><strong>${safeText(method.title || `Method ${index + 1}`)}</strong></p>
-            <p>${safeText(formatMethodStepTexts(method.steps).join(' | ') || '-')}</p>
-            <p><strong>Citations:</strong> ${safeText((method.citations || []).join('; ') || '-')}</p>
-            <button class="ghost-btn" data-paper-method-to-protocol data-paper-id="${paper.id}" data-method-index="${index}">Create Protocol Draft</button>
-          </article>
-        `).join('');
-
-        const reagentsHtml = (paper.keyReagents || []).map((item) => `
-          <article class="card">
-            <p><strong>${safeText(item.name)}</strong> <span class="small-note">(${safeText(item.type)})</span></p>
-            <p><strong>ID:</strong> ${safeText(item.identifier || '-')}</p>
-            <p><strong>Notes:</strong> ${safeText(item.notes || '-')}</p>
-            <p><strong>Citation:</strong> ${safeText(item.citation || '-')}</p>
-          </article>
-        `).join('');
-        const keyFiguresHtml = (paper.keyFigures || []).map((item) => `
-          <article class="card">
-            <p>${safeText(item)}</p>
-          </article>
-        `).join('');
-        const ingestionErrors = Array.isArray(paper.ingestionErrors) ? paper.ingestionErrors : [];
-
-        const projectIdDefault = paper.linkedType === 'project' ? paper.linkedId : '';
-        const links = (state.paperExperimentLinks || []).filter((item) => item.paperId === paper.id);
-        const linksHtml = links.map((link) => `
-          <p class="small-note">Experiment link: project=${safeText(link.projectId)} entry=${safeText(link.entryId)} note=${safeText(link.note || '-')}</p>
-        `).join('');
-
-        return `
-          <article class="papers-paper-row${isActive ? ' is-active' : ''}" data-paper-card="${paper.id}">
-            <button type="button" class="papers-paper-row-main" data-paper-view="${paper.id}">
-              <span class="papers-paper-title">${safeText(paper.title)}</span>
-              <span class="papers-paper-time">${safeText(formatRelativePaperTime(paper.updatedAt))}</span>
-            </button>
-            <div class="papers-paper-meta">
-              <span>${safeText(paper.fileName)}</span>
-              <span><strong>Comments:</strong> ${safeText(String(commentCount))}</span>
-              <span><strong>Ingestion:</strong> ${safeText(statusLabel(paper.ingestionStatus || 'idle'))}</span>
-            </div>
-            ${isActive ? `
-              <div class="papers-paper-detail">
-                <p class="papers-paper-summary">${safeText(paper.summary || 'No summary yet.')}</p>
-                <p class="small-note"><strong>Linked To:</strong> ${safeText(formatLinkedTarget(paper))}</p>
-                <p class="small-note"><strong>Status:</strong> <span class="status-badge ${statusClass(paper.summaryStatus)}">${safeText(statusLabel(paper.summaryStatus))}</span></p>
-                <p class="small-note"><strong>Availability:</strong> ${safeText(paper.availabilityStatus || 'unknown')} | deep-ready=${paper.deepReadReady === true ? 'yes' : 'no'}</p>
-                <p class="small-note"><strong>Updated:</strong> ${safeText(paper.updatedAt ? new Date(paper.updatedAt).toLocaleString() : '-')}</p>
-                ${ingestionErrors.length ? `<p class="small-note"><strong>Ingestion Errors:</strong> ${safeText(ingestionErrors.join(', '))}</p>` : ''}
-                <div class="card-actions">
-                  <button class="primary-btn" data-paper-view="${paper.id}">View PDF</button>
-                  <button class="ghost-btn" data-paper-open="${paper.id}">Open Externally</button>
-                  <button class="primary-btn" data-paper-summarize="${paper.id}" ${paper.summaryStatus === 'running' ? 'disabled' : ''}>
-                    ${paper.summaryStatus === 'running' ? 'Summarizing...' : 'Summarize'}
-                  </button>
-                  <button class="ghost-btn" data-paper-extract-methods="${paper.id}" ${paper.methodsStatus === 'running' ? 'disabled' : ''}>
-                    ${paper.methodsStatus === 'running' ? 'Extracting Methods...' : 'Extract Methods'}
-                  </button>
-                  <button class="ghost-btn" data-paper-extract-reagents="${paper.id}" ${paper.reagentsStatus === 'running' ? 'disabled' : ''}>
-                    ${paper.reagentsStatus === 'running' ? 'Extracting Reagents...' : 'Extract Reagents'}
-                  </button>
-                  <button class="danger-btn" data-paper-delete="${paper.id}">Delete</button>
-                </div>
-                <div class="stack-form">
-                  <p><strong>Methods Extraction</strong></p>
-                  ${methodsHtml || '<p class="small-note">No methods extracted yet.</p>'}
-                  <p><strong>Key Reagents</strong></p>
-                  ${reagentsHtml || '<p class="small-note">No key reagents extracted yet.</p>'}
-                  <p><strong>Key Figures</strong></p>
-                  ${keyFiguresHtml || '<p class="small-note">No key figures extracted yet.</p>'}
-                </div>
-                <div class="stack-form">
-                  <p><strong>Link to Experiment</strong></p>
-                  <label>
-                    Project
-                    <select data-link-project>${renderProjectOptions(projectIdDefault)}</select>
-                  </label>
-                  <label>
-                    Experiment Entry
-                    <select data-link-entry>${renderEntryOptionsForProject(projectIdDefault, '')}</select>
-                  </label>
-                  <label>
-                    Inspiration Note
-                    <input data-link-note placeholder="e.g. Inspired by Fig 2 panel C" />
-                  </label>
-                  <button class="ghost-btn" data-paper-link-entry data-paper-id="${paper.id}">Save Paper-Experiment Link</button>
-                  ${linksHtml || '<p class="small-note">No experiment links yet.</p>'}
-                </div>
-              </div>
-            ` : ''}
-          </article>
-        `;
-      })
-      .join('');
   }
 
   function formatLinkedTarget(paper) {
@@ -1448,19 +1496,6 @@ export function initPapersManagement({
       return 'Uploaded';
     }
     return 'Idle';
-  }
-
-  function statusClass(status) {
-    if (status === 'queued') {
-      return 'status-running';
-    }
-    if (status === 'running') {
-      return 'status-running';
-    }
-    if (status === 'error') {
-      return 'status-error';
-    }
-    return 'status-idle';
   }
 
   function render() {

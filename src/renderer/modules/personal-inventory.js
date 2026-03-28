@@ -488,7 +488,7 @@ export function initPersonalInventory({ state, persist, createId, safeText, cssE
       `).join('');
 
       return `
-        <section class="inventory-section">
+        <section class="inventory-section${selectedContainer && selectedContainer.section === section ? ' inventory-section-active' : ''}">
           <h3>${safeText(section)}</h3>
           <div class="stack-form container-items">${items || '<p class="small-note">No containers.</p>'}</div>
         </section>

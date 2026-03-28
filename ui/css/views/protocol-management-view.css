@@ -109,6 +109,10 @@
   margin-top: 0;
 }
 
+.protocol-json-import-panel {
+  margin-bottom: 16px;
+}
+
 #protocol-editor-panel #protocol-name {
   font-size: 1.08rem;
 }
@@ -185,3 +189,16 @@
 }
 
 /* Extracted from ui/css/themes/modes.css */
+
+#protocol-management-view .panel,
+#protocol-management-view .card,
+.protocol-preview-block {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.protocol-share-inline {
+  border-top: 0;
+}

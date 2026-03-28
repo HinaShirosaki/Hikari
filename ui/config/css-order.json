@@ -13,7 +13,6 @@
     "ui/css/views/sample-registry-view.css",
     "ui/css/views/assay-view.css",
     "ui/css/views/gel-view.css",
-    "ui/css/views/collaboration-management-view.css",
     "ui/css/views/lab-common-inventory-view.css",
     "ui/css/views/setting-view.css",
     "ui/css/views/project-management-view.css",
@@ -23,7 +22,6 @@
     "ui/css/views/tool-box-view.css",
     "ui/css/views/sequence-viewer-view.css",
     "ui/css/overrides/cross-view-fixes.css",
-    "ui/css/overrides/shell-first-remake.css",
-    "ui/css/overrides/uncodixify-compliance.css"
+    "ui/css/overrides/shell-first-remake.css"
   ]
 }

@@ -43,10 +43,6 @@
       "file": "ui/html/views/gel-view.html"
     },
     {
-      "id": "collaboration-management-view",
-      "file": "ui/html/views/collaboration-management-view.html"
-    },
-    {
       "id": "lab-common-inventory-view",
       "file": "ui/html/views/lab-common-inventory-view.html"
     },

@@ -39,15 +39,23 @@
   <main class="app-shell">
     <header class="topbar">
       <div class="topbar-brand">
-        <h1>Enana</h1>
+        <h1 class="sr-only">Enana</h1>
         <div class="topbar-context">
           <p id="page-title" class="topbar-page-title">Home</p>
-          <p id="page-subtitle">Reminders and active work.</p>
+          <p id="page-subtitle" class="sr-only">Reminders and active work.</p>
         </div>
       </div>
       <div class="topbar-tools">
         <input id="topbar-search" type="search" placeholder="Search modules or use sample: EGFR" aria-label="Search modules and records" />
-        <button id="home-btn" class="ghost-btn" hidden>Home</button>
+        <button id="home-btn" class="topbar-icon-btn ghost-btn" type="button" aria-label="Go home" title="Home" hidden>
+          <span class="app-nav-icon" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 10.5 12 4l8 6.5" />
+              <path d="M6.5 9.5V20h11V9.5" />
+              <path d="M10 20v-5h4v5" />
+            </svg>
+          </span>
+        </button>
         <button id="topbar-settings-btn" class="topbar-icon-btn ghost-btn" type="button" aria-label="Open settings" title="Settings">
           <span class="app-nav-icon" aria-hidden="true">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
@@ -129,7 +137,7 @@
 <!-- SOURCE: ui/html/views/lab-management-view.html -->
 <section id="lab-management-view" class="view">
       <div class="panel">
-        <h2>Members</h2>
+        <h2>Members &amp; Collaborations</h2>
         <form id="member-form" class="form-grid">
           <input type="hidden" id="member-id" />
           <label>
@@ -155,6 +163,53 @@
         </form>
       </div>
       <div id="member-cards" class="cards"></div>
+      <div class="panel">
+        <h2>Collaborations</h2>
+        <div class="setting-grid">
+          <section class="card setting-card">
+            <h3>Send Enana Email</h3>
+            <form id="message-form" class="stack-form">
+              <label>
+                From (Enana Email)
+                <select id="message-from"></select>
+              </label>
+              <label>
+                To (Enana Email)
+                <select id="message-to"></select>
+              </label>
+              <label>
+                Subject
+                <input id="message-subject" />
+              </label>
+              <label>
+                Message
+                <textarea id="message-body" rows="4"></textarea>
+              </label>
+              <button type="submit" class="primary-btn">Send Message</button>
+            </form>
+          </section>
+
+          <section class="card setting-card">
+            <h3>Check Enana Email Inbox</h3>
+            <label>
+              Inbox For
+              <select id="inbox-email"></select>
+            </label>
+            <div id="inbox-list" class="stack-form"></div>
+            <div class="stack-form">
+              <h4>Import Shared Protocol Link / JSON</h4>
+              <label>
+                Share Link
+                <textarea id="protocol-link-input" rows="3" placeholder="Paste enana://protocol-share/... or ENANA_PROTOCOL_SHARE:... or JSON"></textarea>
+              </label>
+              <div class="form-actions">
+                <button type="button" id="import-protocol-link-btn" class="ghost-btn">Import Link</button>
+              </div>
+              <p id="protocol-link-status" class="small-note">Paste a shared protocol link or protocol JSON, then click Import Link.</p>
+            </div>
+          </section>
+        </div>
+      </div>
     </section>
 
 <!-- SOURCE: ui/html/views/instrument-management-view.html -->
@@ -252,21 +307,6 @@
             <button type="button" id="protocol-sort-order-btn" class="ghost-btn">Order: Low to High</button>
           </div>
         </div>
-        <div class="stack-form">
-          <h4>Import Protocol JSON</h4>
-          <label>
-            JSON File
-            <input id="protocol-json-import-file" type="file" accept=".json,.ena,application/json" />
-          </label>
-          <label>
-            Or Paste JSON
-            <textarea id="protocol-json-import-input" rows="4" placeholder='Paste protocol JSON, e.g. {"protocols":[...]} or [...]'></textarea>
-          </label>
-          <div class="form-actions">
-            <button type="button" id="import-protocol-json-btn" class="ghost-btn">Import Protocol JSON</button>
-          </div>
-          <p id="protocol-json-import-status" class="small-note">Import one or more protocols from JSON.</p>
-        </div>
         <p id="protocol-share-status" class="small-note">Click Share on a protocol to send it to a teammate or copy a portable share link.</p>
         <div id="protocol-share-link-panel" class="protocol-preview-block" hidden>
           <h4>Portable Share Link</h4>
@@ -280,6 +320,21 @@
         <div class="protocol-panel-head">
           <h3 id="protocol-editor-heading">Protocol Editor</h3>
           <button type="button" id="protocol-editor-back-btn" class="ghost-btn">Back to List</button>
+        </div>
+        <div id="protocol-json-import-panel" class="stack-form protocol-json-import-panel">
+          <h4>Import Protocol JSON</h4>
+          <label>
+            JSON File
+            <input id="protocol-json-import-file" type="file" accept=".json,.ena,application/json" />
+          </label>
+          <label>
+            Or Paste JSON
+            <textarea id="protocol-json-import-input" rows="4" placeholder='Paste protocol JSON, e.g. {"protocols":[...]} or [...]'></textarea>
+          </label>
+          <div class="form-actions">
+            <button type="button" id="import-protocol-json-btn" class="ghost-btn">Import Protocol JSON</button>
+          </div>
+          <p id="protocol-json-import-status" class="small-note">Import one or more protocols from JSON.</p>
         </div>
         <form id="protocol-form" class="stack-form">
           <label>
@@ -347,49 +402,6 @@
           Experiment Result Files
           <input id="synthesis-notebook-result-file" type="file" multiple />
         </label>
-        <section class="card">
-          <h4>Object Links</h4>
-          <div class="form-grid">
-            <label>
-              Instrument
-              <select id="synthesis-ref-instrument">
-                <option value="">Select instrument</option>
-              </select>
-            </label>
-            <label>
-              People IDs (comma separated)
-              <input id="synthesis-ref-people-ids" placeholder="member-id-1, member-id-2" />
-            </label>
-            <label>
-              Chemical IDs (comma separated)
-              <input id="synthesis-ref-chemical-ids" placeholder="chemical-id-1, chemical-id-2" />
-            </label>
-            <label>
-              Samples (multi-select)
-              <select id="synthesis-ref-sample-ids" multiple size="5"></select>
-            </label>
-            <label>
-              Paper IDs (comma separated)
-              <input id="synthesis-ref-paper-ids" placeholder="paper-id-1, paper-id-2" />
-            </label>
-            <label>
-              Reagent Lots (comma separated)
-              <input id="synthesis-ref-reagent-lots" placeholder="A17, Lot-2026-02" />
-            </label>
-            <label>
-              Produced Compound Code
-              <input id="synthesis-produced-compound" placeholder="e.g. C-021" />
-            </label>
-            <label>
-              Purity (%)
-              <input id="synthesis-purity" type="number" min="0" max="100" step="0.01" placeholder="e.g. 97.5" />
-            </label>
-            <label>
-              Used In Assay
-              <input id="synthesis-used-in-assay" placeholder="e.g. Assay X" />
-            </label>
-          </div>
-        </section>
         <section class="notebook-chemistry">
           <div class="inline-row notebook-chemistry-head">
             <h4>Synthesis Chemistry (Optional)</h4>
@@ -464,46 +476,73 @@
 
 <!-- SOURCE: ui/html/views/biology-notebook-view.html -->
 <section id="biology-notebook-view" class="view">
-      <div class="panel">
-        <h2>Biology Notebook</h2>
-        <div class="stack-form biology-notebook-select-stack">
-          <label>
-            Select Project
-            <select id="biology-notebook-project-select">
-              <option value="">Select project</option>
-            </select>
-          </label>
-          <label>
-            Search Protocol
-            <input id="biology-notebook-protocol-search" type="search" placeholder="Search protocols..." />
-          </label>
-          <label>
-            Select Protocol
-            <select id="biology-notebook-protocol-select">
-              <option value="">Select protocol</option>
-            </select>
-          </label>
+      <div class="biology-notebook-layout">
+        <aside class="biology-notebook-rail">
+          <div class="biology-notebook-rail-head">
+            <h2>Biology Notebook</h2>
+            <p class="small-note">Projects and notebook pages</p>
+          </div>
+
+          <div class="stack-form biology-notebook-select-stack">
+            <label>
+              Select Project
+              <select id="biology-notebook-project-select">
+                <option value="">Select project</option>
+              </select>
+            </label>
+            <label>
+              Search Protocol
+              <input id="biology-notebook-protocol-search" type="search" placeholder="Search protocols..." />
+            </label>
+            <label>
+              Select Protocol
+              <select id="biology-notebook-protocol-select">
+                <option value="">Select protocol</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="biology-notebook-page-list-head">
+            <h3>Notebook Pages</h3>
+            <p id="biology-notebook-page-list-status" class="small-note">Select a project and protocol to start a page.</p>
+          </div>
+          <div id="biology-notebook-entry-list" class="biology-notebook-page-list"></div>
+        </aside>
+
+        <div class="biology-notebook-viewer-column">
+          <div id="biology-notebook-empty-state" class="panel biology-notebook-empty-state">
+            <h3>Protocol / Result Viewer</h3>
+            <p>Select a project and protocol to create a notebook page, or choose an existing page from the left panel.</p>
+          </div>
+
+          <div id="biology-notebook-protocol-area" class="panel biology-notebook-viewer" hidden>
+            <div class="biology-notebook-viewer-head">
+              <div class="biology-notebook-viewer-copy">
+                <p class="small-note biology-notebook-viewer-kicker">Filled protocol and results</p>
+                <h3 id="biology-notebook-protocol-title"></h3>
+                <p id="biology-notebook-protocol-meta" class="small-note">Select a notebook page or start a new one.</p>
+              </div>
+              <div class="biology-notebook-viewer-actions">
+                <button id="biology-notebook-export-btn" class="ghost-btn" type="button" hidden>Export PDF</button>
+              </div>
+            </div>
+
+            <div id="biology-notebook-steps" class="notebook-steps"></div>
+
+            <label>
+              Experiment Results File / Notes
+              <textarea id="biology-notebook-result" rows="4" placeholder="Path, summary, or notes"></textarea>
+            </label>
+            <label>
+              Experiment Result Files
+              <input id="biology-notebook-result-file" type="file" multiple />
+            </label>
+            <div class="form-actions">
+              <button id="save-biology-notebook-btn" class="primary-btn" type="button">Save Notebook Entry</button>
+              <button id="cancel-biology-notebook-edit-btn" class="ghost-btn" type="button" hidden>Cancel Edit</button>
+            </div>
+          </div>
         </div>
-      </div>
-      <div id="biology-notebook-protocol-area" class="panel" hidden>
-        <h3 id="biology-notebook-protocol-title"></h3>
-        <div id="biology-notebook-steps" class="notebook-steps"></div>
-        <label>
-          Experiment Results File / Notes
-          <textarea id="biology-notebook-result" rows="4" placeholder="Path, summary, or notes"></textarea>
-        </label>
-        <label>
-          Experiment Result Files
-          <input id="biology-notebook-result-file" type="file" multiple />
-        </label>
-        <div class="form-actions">
-          <button id="save-biology-notebook-btn" class="primary-btn" type="button">Save Notebook Entry</button>
-          <button id="cancel-biology-notebook-edit-btn" class="ghost-btn" type="button" hidden>Cancel Edit</button>
-        </div>
-      </div>
-      <div class="panel">
-        <h3>Saved Notebook Entries</h3>
-        <div id="biology-notebook-entry-list" class="list-table"></div>
       </div>
     </section>
 
@@ -511,8 +550,8 @@
 <section id="personal-inventory-view" class="view">
       <div class="panel">
         <div class="inventory-toolbar">
-          <h2>Inventory</h2>
           <button id="inventory-add-container-btn" type="button" class="primary-btn">Add Container</button>
+          <h2 class="sr-only">Inventory</h2>
         </div>
         <form id="inventory-add-container-form" class="form-grid inventory-add-form" hidden>
           <label>
@@ -688,9 +727,12 @@
 
       <div class="panel assay-mode-create-panel">
         <h3>Create Assay Plate</h3>
-        <form id="assay-form" class="form-grid">
+        <form id="assay-form" class="form-grid assay-form-grid">
           <input type="hidden" id="assay-id" />
-          <div id="assay-number-display" class="small-note"></div>
+          <div class="assay-number-card">
+            <span class="assay-number-label">Assay Number</span>
+            <div id="assay-number-display" class="assay-number-value small-note" aria-live="polite"></div>
+          </div>
           <label>
             Assay Name
             <input id="assay-name" required placeholder="e.g. Cell viability run 2026-02-19" />
@@ -728,22 +770,15 @@
             Concentration Axis
             <input id="assay-concentration-axis-display" readonly />
           </label>
-          <div class="form-actions assay-axis-actions">
-            <button type="button" id="assay-swap-axis-btn" class="ghost-btn">Switch Axes</button>
-          </div>
           <label>
             Link Notebook Page
             <select id="assay-notebook-entry">
               <option value="">Not linked</option>
             </select>
           </label>
-          <div id="assay-plate-definition" class="small-note" hidden></div>
-          <div id="assay-csv-status" class="small-note"></div>
-          <label hidden>
-            Notes
-            <textarea id="assay-notes" rows="3" placeholder="Optional assay notes"></textarea>
-          </label>
-          <div class="form-actions">
+          <div id="assay-plate-definition" class="small-note assay-form-note" hidden></div>
+          <div id="assay-csv-status" class="small-note assay-form-note"></div>
+          <div class="form-actions assay-form-actions">
             <button type="button" id="assay-export-template-btn" class="ghost-btn">Export CSV Template</button>
             <button type="button" id="assay-import-template-btn" class="ghost-btn">Import CSV</button>
             <input id="assay-import-file" type="file" accept=".csv,text/csv" hidden />
@@ -855,95 +890,98 @@
 
 <!-- SOURCE: ui/html/views/gel-view.html -->
 <section id="gel-view" class="view">
-      <div class="panel">
-        <h2>Gel Analysis</h2>
-        <p class="small-note">Manual workflow only. Crop is optional.</p>
-        <form id="gel-form" class="form-grid">
-          <input type="hidden" id="gel-id" />
-          <label>
-            Analysis Name
-            <input id="gel-name" required placeholder="e.g. WB_RUN_2026_02_19" />
-          </label>
-          <label>
-            Project
-            <select id="gel-project">
-              <option value="">Select project</option>
-            </select>
-          </label>
-          <label>
-            Link Notebook Page
-            <select id="gel-notebook-entry" class="gel-wide-field">
-              <option value="">Not linked</option>
-            </select>
-          </label>
-          <label>
-            Analysis Type
-            <select id="gel-type">
-              <option value="sds-page">SDS-PAGE</option>
-              <option value="western">Western Blot</option>
-              <option value="agarose">DNA/RNA Agarose</option>
-            </select>
-          </label>
-          <label>
-            Gel Image
-            <input id="gel-image-file" class="gel-wide-field" type="file" accept="image/*" />
-          </label>
-          <label>
-            Ladder Lane (1-based)
-            <input id="gel-ladder-lane" type="number" min="1" step="1" value="1" />
-          </label>
-          <label>
-            Ladder Band MW (kDa)
-            <input id="gel-ladder-band-mw" type="number" min="0" step="0.1" placeholder="Use in Step 5, e.g. 50" />
-          </label>
-          <label>
-            Normalization
-            <select id="gel-normalization">
-              <option value="none">None</option>
-              <option value="total-lane">Total Lane Intensity</option>
-            </select>
-          </label>
-          <label class="gel-slider-field">
-            Denoise Strength
-            <input id="gel-denoise-strength" type="range" min="0" max="100" step="1" value="35" />
-            <span id="gel-denoise-strength-value" class="small-note">35%</span>
-          </label>
-          <label class="gel-slider-field">
-            Contrast Boost
-            <input id="gel-contrast-strength" type="range" min="0" max="220" step="1" value="100" />
-            <span id="gel-contrast-strength-value" class="small-note">100%</span>
-          </label>
-          <div class="form-actions">
-            <button type="button" id="gel-reset-overrides-btn" class="ghost-btn">Reset Manual Overrides</button>
-            <span id="gel-override-status" class="small-note" hidden>Manual overrides: none</span>
+      <div class="gel-layout">
+        <div class="gel-workspace">
+          <div class="panel gel-setup-panel">
+            <h3>Setup</h3>
+            <p class="small-note">Manual workflow only. Crop is optional.</p>
+            <form id="gel-form" class="form-grid">
+              <input type="hidden" id="gel-id" />
+              <label>
+                Analysis Name
+                <input id="gel-name" required placeholder="e.g. WB_RUN_2026_02_19" />
+              </label>
+              <label>
+                Project
+                <select id="gel-project">
+                  <option value="">Select project</option>
+                </select>
+              </label>
+              <label>
+                Link Notebook Page
+                <select id="gel-notebook-entry" class="gel-wide-field">
+                  <option value="">Not linked</option>
+                </select>
+              </label>
+              <label>
+                Analysis Type
+                <select id="gel-type">
+                  <option value="sds-page">SDS-PAGE</option>
+                  <option value="western">Western Blot</option>
+                  <option value="agarose">DNA/RNA Agarose</option>
+                </select>
+              </label>
+              <label>
+                Gel Image
+                <input id="gel-image-file" class="gel-wide-field" type="file" accept="image/*" />
+              </label>
+              <label>
+                Ladder Lane (1-based)
+                <input id="gel-ladder-lane" type="number" min="1" step="1" value="1" />
+              </label>
+              <label>
+                Ladder Band MW (kDa)
+                <input id="gel-ladder-band-mw" type="number" min="0" step="0.1" placeholder="Use in Step 5, e.g. 50" />
+              </label>
+              <label>
+                Normalization
+                <select id="gel-normalization">
+                  <option value="none">None</option>
+                  <option value="total-lane">Total Lane Intensity</option>
+                </select>
+              </label>
+              <label class="gel-slider-field">
+                Denoise Strength
+                <input id="gel-denoise-strength" type="range" min="0" max="100" step="1" value="35" />
+                <span id="gel-denoise-strength-value" class="small-note">35%</span>
+              </label>
+              <label class="gel-slider-field">
+                Contrast Boost
+                <input id="gel-contrast-strength" type="range" min="0" max="220" step="1" value="100" />
+                <span id="gel-contrast-strength-value" class="small-note">100%</span>
+              </label>
+              <div class="form-actions">
+                <button type="button" id="gel-reset-overrides-btn" class="ghost-btn">Reset Manual Overrides</button>
+                <span id="gel-override-status" class="small-note" hidden>Manual overrides: none</span>
+              </div>
+              <div class="form-actions">
+                <button type="button" id="gel-start-crop-btn" class="ghost-btn">Start Crop</button>
+                <button type="button" id="gel-apply-crop-btn" class="ghost-btn" disabled>Apply Crop</button>
+                <button type="button" id="gel-cancel-crop-btn" class="ghost-btn" disabled>Cancel Crop</button>
+                <button type="button" id="gel-reset-crop-btn" class="ghost-btn">Reset to Full Image</button>
+              </div>
+              <div id="gel-status" class="small-note"></div>
+              <div class="form-actions">
+                <button type="button" id="gel-run-btn" class="primary-btn">Analyze Gel</button>
+                <button type="submit" class="primary-btn">Save Analysis</button>
+                <button type="button" id="gel-cancel-btn" class="ghost-btn">Cancel Edit</button>
+                <button type="button" id="gel-export-json-btn" class="ghost-btn">Export JSON</button>
+                <button type="button" id="gel-export-csv-btn" class="ghost-btn">Export CSV</button>
+              </div>
+            </form>
           </div>
-          <div class="form-actions">
-            <button type="button" id="gel-start-crop-btn" class="ghost-btn">Start Crop</button>
-            <button type="button" id="gel-apply-crop-btn" class="ghost-btn" disabled>Apply Crop</button>
-            <button type="button" id="gel-cancel-crop-btn" class="ghost-btn" disabled>Cancel Crop</button>
-            <button type="button" id="gel-reset-crop-btn" class="ghost-btn">Reset to Full Image</button>
-          </div>
-          <div id="gel-status" class="small-note"></div>
-          <div class="form-actions">
-            <button type="button" id="gel-run-btn" class="primary-btn">Analyze Gel</button>
-            <button type="submit" class="primary-btn">Save Analysis</button>
-            <button type="button" id="gel-cancel-btn" class="ghost-btn">Cancel Edit</button>
-            <button type="button" id="gel-export-json-btn" class="ghost-btn">Export JSON</button>
-            <button type="button" id="gel-export-csv-btn" class="ghost-btn">Export CSV</button>
-          </div>
-        </form>
-      </div>
 
-      <div class="panel">
-        <h3>Interactive Gel Viewer</h3>
-        <p class="small-note">Lane borders and band calls are overlaid. Re-run analysis after changing parameters.</p>
-        <div class="gel-workbench">
-          <div class="gel-canvas-shell">
-            <canvas id="gel-canvas"></canvas>
-            <img id="gel-cropper-image" alt="Gel cropper" />
+          <div class="panel gel-viewer-panel">
+            <h3>Gel Viewer</h3>
+            <p class="small-note">Lane borders and band calls are overlaid. Re-run analysis after changing parameters.</p>
+            <div class="gel-canvas-shell">
+              <canvas id="gel-canvas"></canvas>
+              <img id="gel-cropper-image" alt="Gel cropper" />
+            </div>
           </div>
-          <aside id="gel-manual-progress" class="gel-manual-progress" hidden>
-            <h4>Manual Steps</h4>
+
+          <aside id="gel-manual-progress" class="panel gel-manual-progress gel-manual-panel" hidden>
+            <h3>Manual Steps</h3>
             <ol class="gel-step-list">
               <li id="gel-step-left">1. Click left gel border</li>
               <li id="gel-step-right">2. Click right gel border</li>
@@ -961,71 +999,22 @@
             </div>
           </aside>
         </div>
-      </div>
 
-      <div class="panel">
-        <h3>Analysis Report</h3>
-        <div id="gel-report-summary" class="cards"></div>
-        <pre id="gel-report-json" class="gel-report-json"></pre>
-      </div>
+        <div class="gel-secondary-panels">
+          <div class="panel gel-report-panel">
+            <h3>Analysis Report</h3>
+            <div id="gel-report-summary" class="cards"></div>
+            <pre id="gel-report-json" class="gel-report-json"></pre>
+          </div>
 
-      <div class="panel">
-        <h3>Saved Gel Analyses</h3>
-        <label>
-          Search
-          <input id="gel-search" placeholder="Name, type, project, notebook..." />
-        </label>
-        <div id="gel-list" class="cards"></div>
-      </div>
-    </section>
-
-<!-- SOURCE: ui/html/views/collaboration-management-view.html -->
-<section id="collaboration-management-view" class="view">
-      <div class="panel">
-        <h2>Collabrations</h2>
-        <div class="setting-grid">
-          <section class="card setting-card">
-            <h3>Send Enana Email</h3>
-            <form id="message-form" class="stack-form">
-              <label>
-                From (Enana Email)
-                <select id="message-from"></select>
-              </label>
-              <label>
-                To (Enana Email)
-                <select id="message-to"></select>
-              </label>
-              <label>
-                Subject
-                <input id="message-subject" />
-              </label>
-              <label>
-                Message
-                <textarea id="message-body" rows="4"></textarea>
-              </label>
-              <button type="submit" class="primary-btn">Send Message</button>
-            </form>
-          </section>
-
-          <section class="card setting-card">
-            <h3>Check Enana Email Inbox</h3>
+          <div class="panel gel-library-panel">
+            <h3>Saved Gel Analyses</h3>
             <label>
-              Inbox For
-              <select id="inbox-email"></select>
+              Search
+              <input id="gel-search" placeholder="Name, type, project, notebook..." />
             </label>
-            <div id="inbox-list" class="stack-form"></div>
-            <div class="stack-form">
-              <h4>Import Shared Protocol Link / JSON</h4>
-              <label>
-                Share Link
-                <textarea id="protocol-link-input" rows="3" placeholder="Paste enana://protocol-share/... or ENANA_PROTOCOL_SHARE:... or JSON"></textarea>
-              </label>
-              <div class="form-actions">
-                <button type="button" id="import-protocol-link-btn" class="ghost-btn">Import Link</button>
-              </div>
-              <p id="protocol-link-status" class="small-note">Paste a shared protocol link or protocol JSON, then click Import Link.</p>
-            </div>
-          </section>
+            <div id="gel-list" class="cards"></div>
+          </div>
         </div>
       </div>
     </section>
@@ -1130,7 +1119,7 @@
           <button type="button" id="chemical-detail-delete-btn" class="danger-btn">Delete</button>
         </div>
       </div>
-      <div class="panel">
+      <div class="panel" hidden>
         <h3>Blockchain Records</h3>
         <div id="inventory-blockchain-list" class="stack-form"></div>
       </div>
@@ -1232,7 +1221,6 @@
                   <option value="lab-management-view">Members</option>
                   <option value="instrument-management-view">Instruments</option>
                   <option value="protocol-management-view">Protocols</option>
-                  <option value="collaboration-management-view">Collaborations</option>
                   <option value="synthesis-notebook-view">Synthesis Notebook</option>
                   <option value="biology-notebook-view">Biology Notebook</option>
                   <option value="lab-common-inventory-view">Chemicals</option>
@@ -1388,14 +1376,11 @@
 <section id="workflow-management-view" class="view">
       <div class="panel">
         <h2>Workflows</h2>
-        <p class="small-note">Choose how you want to work with workflows.</p>
         <div id="workflow-entry-panel" class="form-actions">
           <button type="button" id="workflow-entry-create-btn" class="primary-btn">Create New Workflow</button>
           <button type="button" id="workflow-entry-template-btn" class="ghost-btn">Create New Workflow Template</button>
           <button type="button" id="workflow-entry-view-btn" class="ghost-btn">View/Edit Workflow</button>
-        </div>
-        <div id="workflow-entry-back-wrap" class="form-actions" hidden>
-          <button type="button" id="workflow-entry-back-btn" class="ghost-btn">Back to Workflow Actions</button>
+          <button type="button" id="workflow-entry-back-btn" class="ghost-btn" hidden>Back to Work Flow</button>
         </div>
       </div>
 
@@ -1513,108 +1498,73 @@
 <section id="papers-view" class="view">
       <div class="papers-layout">
         <div class="papers-left-column">
-          <div class="panel papers-library-panel">
-            <div class="papers-library-head">
-              <div>
-                <h2>Papers</h2>
-                <p class="small-note">Folders, uploads, and reader state stay in one place.</p>
+          <aside id="papers-library-rail" class="papers-library-rail">
+            <div class="papers-library-topbar">
+              <h2>Papers</h2>
+              <div class="papers-library-actions">
+                <button type="button" id="paper-upload-trigger" class="ghost-btn papers-library-upload-btn">Upload PDF</button>
               </div>
             </div>
+            <p id="paper-folder-selection" class="papers-library-status" hidden>No folder selected</p>
+            <p id="paper-upload-target-label" class="papers-library-status" hidden>Select a folder to file new papers.</p>
+            <div id="journal-club-list" class="papers-thread-list"></div>
+            <div id="paper-list" class="papers-paper-list" hidden></div>
 
-            <section class="papers-library-section">
-              <div class="papers-library-section-head">
-                <h3>Folders</h3>
-                <p id="paper-folder-selection" class="small-note">No folder selected</p>
-              </div>
-              <div id="journal-club-list" class="papers-folder-list"></div>
-            </section>
-
-            <section class="papers-library-section">
-              <div class="papers-library-section-head">
-                <h3>New Journal Club Folder</h3>
-              </div>
-              <div class="papers-folder-create">
+            <form id="paper-form" class="papers-hidden-upload-form" hidden>
+              <input id="paper-title" type="hidden" />
+              <input id="paper-pdf" type="file" accept="application/pdf,.pdf" required hidden />
+              <div class="papers-hidden-link-controls" hidden>
                 <label>
-                  Folder Name
-                  <input id="journal-club-name" placeholder="e.g. Weekly Biochem JC" />
+                  Link Type
+                  <select id="paper-link-type">
+                    <option value="project">Project</option>
+                    <option value="journal-club">Journal Club</option>
+                  </select>
                 </label>
                 <label>
-                  Description (Optional)
-                  <input id="journal-club-description" placeholder="Optional description" />
+                  Link To
+                  <select id="paper-link-target">
+                    <option value="">Select target</option>
+                  </select>
                 </label>
-                <button type="button" id="journal-club-add-btn" class="ghost-btn">Create Folder</button>
               </div>
-            </section>
+              <button type="submit" class="primary-btn">Upload Paper</button>
+            </form>
 
-            <section class="papers-library-section">
-              <div class="papers-library-section-head">
-                <h3>Upload Paper</h3>
-                <p id="paper-upload-target-label" class="small-note">Select a folder to file new papers.</p>
-              </div>
-              <form id="paper-form" class="stack-form papers-upload-form">
-                <label>
-                  Paper Title (Optional)
-                  <input id="paper-title" placeholder="Defaults to PDF filename" />
-                </label>
-                <label>
-                  PDF File
-                  <input id="paper-pdf" type="file" accept="application/pdf,.pdf" required />
-                </label>
-                <div class="papers-hidden-link-controls" hidden>
-                  <label>
-                    Link Type
-                    <select id="paper-link-type">
-                      <option value="project">Project</option>
-                      <option value="journal-club">Journal Club</option>
-                    </select>
-                  </label>
-                  <label>
-                    Link To
-                    <select id="paper-link-target">
-                      <option value="">Select target</option>
-                    </select>
-                  </label>
-                </div>
-                <button type="submit" class="primary-btn">Upload Paper</button>
-              </form>
-            </section>
-
-            <section class="papers-library-section papers-library-papers">
-              <div class="papers-library-section-head">
-                <h3>Folder Papers</h3>
-                <p class="small-note">Open a paper to focus it in the viewer.</p>
-              </div>
-              <div id="paper-list" class="papers-paper-list"></div>
-            </section>
-          </div>
+            <div id="papers-library-context-menu" class="papers-context-menu" hidden>
+              <button type="button" id="papers-context-new-folder" class="papers-context-item">New Journal Club Folder</button>
+              <button type="button" id="papers-context-delete-folder" class="papers-context-item papers-context-item-danger" hidden>Delete Journal Club Folder</button>
+            </div>
+          </aside>
         </div>
 
         <div class="papers-center-column">
           <div class="panel papers-viewer-panel">
             <div class="papers-viewer-head">
-              <div class="papers-viewer-summary">
-                <h3>Paper Viewer</h3>
-                <p id="paper-viewer-title" class="papers-viewer-title">No paper selected</p>
-                <p id="paper-viewer-meta" class="small-note">Select a paper from the list to preview it here.</p>
-              </div>
               <div id="paper-viewer-toolbar" class="papers-viewer-toolbar" hidden>
-                <button type="button" id="paper-viewer-prev-btn" class="ghost-btn">Prev</button>
-                <label class="papers-viewer-page-field">
-                  Page
-                  <input id="paper-viewer-page-input" type="number" min="1" value="1" />
-                </label>
-                <span id="paper-viewer-page-count" class="small-note">/ 0</span>
-                <button type="button" id="paper-viewer-next-btn" class="ghost-btn">Next</button>
+                <div class="papers-viewer-page-cluster">
+                  <button type="button" id="paper-viewer-prev-btn" class="ghost-btn">Prev</button>
+                  <label class="papers-viewer-page-field">
+                    <span class="papers-viewer-page-label">Page</span>
+                    <input id="paper-viewer-page-input" type="number" min="1" value="1" />
+                  </label>
+                  <span id="paper-viewer-page-count" class="small-note">/ 0</span>
+                  <button type="button" id="paper-viewer-next-btn" class="ghost-btn">Next</button>
+                </div>
                 <button type="button" id="paper-viewer-zoom-out-btn" class="ghost-btn">-</button>
                 <span id="paper-viewer-zoom-label" class="small-note">100%</span>
                 <button type="button" id="paper-viewer-zoom-in-btn" class="ghost-btn">+</button>
                 <button type="button" id="paper-viewer-zoom-reset-btn" class="ghost-btn">100%</button>
                 <button type="button" id="paper-viewer-fit-width-btn" class="ghost-btn">Fit Width</button>
+                <button type="button" id="paper-viewer-summarize-btn" class="ghost-btn">Summarize</button>
                 <button type="button" id="paper-viewer-open-btn" class="ghost-btn">Open Externally</button>
-                <button type="button" id="paper-viewer-close-btn" class="danger-btn">Close</button>
+              </div>
+              <div class="papers-viewer-summary">
+                <p id="paper-viewer-title" class="papers-viewer-title">No paper selected</p>
+                <p id="paper-viewer-meta" class="small-note">Select a paper from the list to preview it here.</p>
+                <p id="paper-viewer-status" class="small-note">Choose "View PDF" on a paper to open it here.</p>
               </div>
             </div>
-            <p id="paper-viewer-status" class="small-note">Choose "View PDF" on a paper to open it here.</p>
             <div id="paper-viewer-shell" class="papers-viewer-shell is-empty">
               <div id="paper-viewer-empty" class="papers-viewer-empty">
                 <p>Scientific PDFs open here with page navigation and zoom.</p>
@@ -1760,9 +1710,6 @@
         </button>
         <button class="tile tool-tile" data-tool-view="tool-qpcr-view">
           <span class="label">qPCR Efficiency</span>
-        </button>
-        <button class="tile tool-tile" data-tool-view="tool-plannotate-view">
-          <span class="label">pLannotate</span>
         </button>
         <button class="tile tool-tile" data-tool-view="tool-crispr-view">
           <span class="label">CRISPR sgRNA Designer</span>
@@ -2178,112 +2125,6 @@
         <div id="qpcr-result" class="calc-output"></div>
       </div>
 
-      <div id="tool-plannotate-view" class="panel tool-subview" hidden>
-        <h3>pLannotate</h3>
-        <p class="small-note">Use text or file input, then run annotation to render a plasmid map and feature table.</p>
-        <div class="plannotate-ui-shell">
-          <form id="plannotate-form" class="stack-form plannotate-controls" autocomplete="off">
-            <div class="plannotate-mode-switch" role="tablist" aria-label="pLannotate input mode">
-              <button id="plannotate-mode-text" class="plannotate-mode-btn plannotate-mode-btn-active" type="button">Sequence Text</button>
-              <button id="plannotate-mode-file" class="plannotate-mode-btn" type="button">FASTA/GenBank File</button>
-            </div>
-            <p id="plannotate-engine-status" class="small-note">Checking BLAST engine...</p>
-            <div class="inline-row">
-              <button id="plannotate-install-all" type="button" class="ghost-btn">One-Step Install Backend</button>
-            </div>
-
-            <div id="plannotate-text-panel" class="plannotate-input-panel">
-              <label>
-                DNA Sequence
-                <textarea id="plannotate-sequence" rows="8" placeholder=">plasmid&#10;ACGT..."></textarea>
-              </label>
-            </div>
-
-            <div id="plannotate-file-panel" class="plannotate-input-panel" hidden>
-              <input id="plannotate-file-input" type="file" accept=".fa,.fasta,.fas,.fna,.gb,.gbk,.gbff,.gbf,.txt,.seq" hidden />
-              <div class="inline-row">
-                <button id="plannotate-file-choose" type="button" class="ghost-btn">Choose File</button>
-                <span id="plannotate-file-name" class="small-note">No file selected</span>
-              </div>
-            </div>
-
-            <div class="form-grid">
-              <label>
-                Topology
-                <select id="plannotate-topology">
-                  <option value="circular" selected>Circular</option>
-                  <option value="linear">Linear</option>
-                </select>
-              </label>
-              <label>
-                Min Identity (%)
-                <input id="plannotate-min-identity" type="number" min="50" max="100" step="0.1" value="85" />
-              </label>
-              <label>
-                Min Coverage (%)
-                <input id="plannotate-min-coverage" type="number" min="5" max="100" step="1" value="25" />
-              </label>
-              <label>
-                Min Hit Length (bp)
-                <input id="plannotate-min-length" type="number" min="12" max="2000" step="1" value="24" />
-              </label>
-            </div>
-            <label class="inline-row">
-              <input id="plannotate-detailed" type="checkbox" />
-              Detailed (seeded partial matching)
-            </label>
-            <div class="form-actions">
-              <button type="submit" class="primary-btn">Annotate</button>
-              <button id="plannotate-open-sequence-viewer" type="button" class="ghost-btn" disabled>View in Sequence Viewer</button>
-              <button id="plannotate-download-gbk" type="button" class="ghost-btn" disabled>Download GBK</button>
-              <span id="plannotate-run-status" class="small-note">Idle</span>
-            </div>
-          </form>
-
-          <div class="plannotate-results-grid">
-            <section class="plannotate-result-card">
-              <div class="plannotate-card-head">
-                <h4>Plasmid Map</h4>
-                <span id="plannotate-map-meta" class="small-note"></span>
-              </div>
-              <div id="plannotate-map" class="plannotate-map-host">
-                <p class="small-note">Run annotation to display the plasmid map.</p>
-              </div>
-            </section>
-
-            <section class="plannotate-result-card">
-              <div class="plannotate-card-head">
-                <h4>Features</h4>
-                <span id="plannotate-hit-count" class="small-note">0 hits</span>
-              </div>
-              <div class="plannotate-table-wrap">
-                <table class="plannotate-table">
-                  <thead>
-                    <tr>
-                      <th>#</th>
-                      <th>Feature</th>
-                      <th>Type</th>
-                      <th>Location (1-based)</th>
-                      <th>Strand</th>
-                      <th>Identity</th>
-                      <th>Coverage</th>
-                      <th>Mode</th>
-                    </tr>
-                  </thead>
-                  <tbody id="plannotate-table-body">
-                    <tr>
-                      <td colspan="8" class="small-note">No annotations yet.</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          </div>
-
-          <div id="plannotate-result" class="calc-output"></div>
-        </div>
-      </div>
-
       <div id="tool-crispr-view" class="panel tool-subview" hidden>
         <h3>CRISPR sgRNA Designer</h3>
         <p class="small-note">Choose a reference genome profile, select targets, and generate ranked sgRNA candidates.</p>
@@ -2536,6 +2377,8 @@
           <div class="form-actions">
             <button id="sequence-viewer-load-btn" type="button" class="primary-btn">Load</button>
             <button id="sequence-viewer-annotate-btn" type="button" class="ghost-btn">Annotate</button>
+            <span id="sequence-viewer-plannotate-engine-status" class="small-note">Checking pLannotate backend...</span>
+            <button id="sequence-viewer-plannotate-install-btn" type="button" class="ghost-btn">One-Step Install Backend</button>
             <button id="sequence-viewer-recognize-backbone-btn" type="button" class="ghost-btn">Recognize Backbone/Insert</button>
             <label class="sequence-viewer-inline-toggle" title="Show/hide predicted ORFs and selected ORF amino-acid translation.">
               <input id="sequence-viewer-orf-toggle" type="checkbox" />

@@ -73,10 +73,10 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
   function renderAssayNumberDisplay() {
     const editingAssay = getAssayById(elements.assayIdInput?.value || '');
     if (editingAssay) {
-      elements.assayNumberDisplay.textContent = `Assay Number: ${editingAssay.assayNumber || '-'}`;
+      elements.assayNumberDisplay.textContent = editingAssay.assayNumber || '-';
       return;
     }
-    elements.assayNumberDisplay.textContent = `Assay Number (auto): ${previewNextAssayNumber(state)}`;
+    elements.assayNumberDisplay.textContent = previewNextAssayNumber(state);
   }
 
   function renderActiveAssayInfo(assay) {
@@ -398,7 +398,6 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
       notebookEntryType: notebookEntry?.notebookType || '',
       wellLayout: normalizeLayout(runtime.currentLayout, plateDef),
       resultValues: layoutManager.filterMappedResults(normalizeResults(runtime.currentResults, plateDef)),
-      notes: elements.assayNotesInput?.value.trim() || '',
       updatedAt: new Date().toISOString()
     };
 
@@ -503,9 +502,6 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
       elements.assayNotebookEntryInput.append(option);
       elements.assayNotebookEntryInput.value = assay.notebookEntryId;
     }
-    if (elements.assayNotesInput) {
-      elements.assayNotesInput.value = assay.notes || '';
-    }
     setCsvStatus(assay.wellLayout?.length ? `Loaded ${assay.wellLayout.length} mapped wells from saved assay.` : '');
     setResultStatus(`Loaded ${Object.keys(runtime.currentResults).length} result value(s) from saved assay.`);
     setLayoutStatus('');
@@ -605,7 +601,6 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
   });
   elements.assaySampleAxisRowBtn?.addEventListener('click', () => layoutManager.setSampleAxis('row'));
   elements.assaySampleAxisColumnBtn?.addEventListener('click', () => layoutManager.setSampleAxis('column'));
-  elements.assaySwapAxisBtn?.addEventListener('click', layoutManager.onSwapAxes);
   elements.assayPlateFieldSampleBtn?.addEventListener('click', () => layoutManager.setPlateEditField('sampleId'));
   elements.assayPlateFieldConcentrationBtn?.addEventListener('click', () => layoutManager.setPlateEditField('concentration'));
   elements.assayClearMappingsBtn?.addEventListener('click', layoutManager.onClearWellMappings);
