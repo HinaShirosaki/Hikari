@@ -140,6 +140,16 @@
   align-content: start;
 }
 
+#biology-notebook-view .notebook-steps {
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+#biology-notebook-view .notebook-step-line {
+  margin: 0;
+  line-height: 1.45;
+}
+
 .biology-notebook-viewer-head {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
