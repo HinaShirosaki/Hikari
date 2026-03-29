@@ -1269,6 +1269,102 @@ ORIGIN
   assert.equal(Boolean(detailWorkspace.hidden), false);
 });
 
+test('[EDGE] sequence-viewer protein builder searches stored features and adds translated blocks to the chain', async () => {
+  const ids = [
+    'sequence-viewer-home-workspace',
+    'sequence-viewer-protein-builder-workspace',
+    'sequence-viewer-detail-workspace',
+    'sequence-viewer-home-protein-builder-btn',
+    'sequence-viewer-protein-builder-back-btn',
+    'sequence-viewer-protein-builder-status',
+    'sequence-viewer-protein-builder-form',
+    'sequence-viewer-protein-builder-name',
+    'sequence-viewer-protein-builder-poi-name',
+    'sequence-viewer-protein-builder-poi-sequence',
+    'sequence-viewer-protein-builder-reset-btn',
+    'sequence-viewer-protein-builder-add-custom-btn',
+    'sequence-viewer-protein-builder-add-poi-btn',
+    'sequence-viewer-protein-builder-common-blocks',
+    'sequence-viewer-protein-builder-feature-search-input',
+    'sequence-viewer-protein-builder-feature-search-btn',
+    'sequence-viewer-protein-builder-feature-search-status',
+    'sequence-viewer-protein-builder-feature-search-results',
+    'sequence-viewer-protein-builder-meta',
+    'sequence-viewer-protein-builder-workflow',
+    'sequence-viewer-protein-builder-sequence',
+    'sequence-viewer-home-status',
+    'sequence-viewer-library-filter-saved',
+    'sequence-viewer-library-filter-temporary',
+    'sequence-viewer-save-btn'
+  ];
+  const searchCalls = [];
+  const document = createMockDocument(ids);
+  const window = {
+    enanaApi: {
+      sequenceLibrarySearchFeatures: async (payload) => {
+        searchCalls.push(payload);
+        return {
+          ok: true,
+          results: [
+            {
+              id: 'feature_protein_tag',
+              name: 'stored_affinity_tag',
+              type: 'cds',
+              sequence: 'ATGGCCGAA',
+              sequenceLength: 9,
+              hostCount: 2,
+              hosts: []
+            }
+          ]
+        };
+      }
+    }
+  };
+  const localStorage = {
+    getItem(key) {
+      if (key === 'enana_state_v1') {
+        return JSON.stringify({ settings: { storagePath: '/tmp/sequence-viewer-tests' } });
+      }
+      return null;
+    }
+  };
+  const moduleWithDom = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    { document, window, localStorage }
+  );
+  moduleWithDom.initSequenceViewer();
+  await flushAsync();
+
+  trigger(document.getElementById('sequence-viewer-home-protein-builder-btn'), 'click');
+  assert.equal(Boolean(document.getElementById('sequence-viewer-protein-builder-workspace').hidden), false);
+
+  const searchInput = document.getElementById('sequence-viewer-protein-builder-feature-search-input');
+  searchInput.value = 'stored_affinity_tag';
+  trigger(document.getElementById('sequence-viewer-protein-builder-feature-search-btn'), 'click');
+  await flushAsync();
+  await flushAsync();
+
+  assert.equal(searchCalls.length, 1);
+  assert.equal(searchCalls[0].query, 'stored_affinity_tag');
+  assert.equal(document.getElementById('sequence-viewer-protein-builder-feature-search-results').innerHTML.includes('stored_affinity_tag'), true);
+
+  const addFeatureTarget = {
+    closest(selector) {
+      if (selector === '[data-protein-builder-feature-add-id]') {
+        return { dataset: { proteinBuilderFeatureAddId: 'feature_protein_tag' } };
+      }
+      return null;
+    }
+  };
+  trigger(document.getElementById('sequence-viewer-protein-builder-feature-search-results'), 'click', { target: addFeatureTarget });
+  await flushAsync();
+
+  const workflowHtml = document.getElementById('sequence-viewer-protein-builder-workflow').innerHTML;
+  const sequenceHtml = document.getElementById('sequence-viewer-protein-builder-sequence').innerHTML;
+  assert.equal(workflowHtml.includes('stored_affinity_tag'), true);
+  assert.equal(sequenceHtml.includes('MAE'), true);
+});
+
 test('[EDGE] sequence-viewer backbone recognition adds backbone and insert features to the current record', async () => {
   const ids = [
     'sequence-viewer-recognize-backbone-btn',

@@ -26,6 +26,7 @@ export function initLabNotebook({
   const notebookProtocolTitle = document.getElementById('biology-notebook-protocol-title');
   const notebookProtocolMeta = document.getElementById('biology-notebook-protocol-meta');
   const notebookExportBtn = document.getElementById('biology-notebook-export-btn');
+  const notebookMarkExecutedBtn = document.getElementById('biology-notebook-mark-executed-btn');
   const notebookPageListStatus = document.getElementById('biology-notebook-page-list-status');
   const notebookSteps = document.getElementById('biology-notebook-steps');
   const notebookResult = document.getElementById('biology-notebook-result');
@@ -43,6 +44,7 @@ export function initLabNotebook({
   cancelEditBtn?.addEventListener('click', cancelEdit);
   notebookEntryList?.addEventListener('click', onEntryListClick);
   notebookExportBtn?.addEventListener('click', onExportButtonClick);
+  notebookMarkExecutedBtn?.addEventListener('click', markEntryExecuted);
   notebookSteps.addEventListener('click', onInlinePlaceholderClick);
   notebookSteps.addEventListener('blur', onInlinePlaceholderBlur, true);
   notebookSteps.addEventListener('keydown', onInlinePlaceholderKeydown);
@@ -78,6 +80,35 @@ export function initLabNotebook({
       .replace(/^_+|_+$/g, '');
   }
 
+  function normalizeNotebookState(value) {
+    return String(value || '').trim().toLowerCase() === 'planned' ? 'planned' : 'executed';
+  }
+
+  function notebookStateLabel(entry) {
+    return normalizeNotebookState(entry?.notebookState) === 'planned' ? 'Planned' : 'Executed';
+  }
+
+  function resolveEntryNotebookState(entry) {
+    return normalizeNotebookState(entry?.notebookState);
+  }
+
+  function resolveEntryExecutedAt(entry, fallbackTimestamp = '') {
+    if (resolveEntryNotebookState(entry) === 'planned') {
+      return '';
+    }
+    return String(entry?.executedAt || '').trim()
+      || String(entry?.updatedAt || '').trim()
+      || String(fallbackTimestamp || '').trim();
+  }
+
+  function formatEntryTimestamp(rawValue) {
+    const date = new Date(String(rawValue || '').trim());
+    if (Number.isNaN(date.getTime())) {
+      return 'Unknown time';
+    }
+    return date.toLocaleString();
+  }
+
   function onProtocolChange() {
     const projectId = notebookProjectSelect.value;
     const protocolId = notebookProtocolSelect.value;
@@ -93,21 +124,19 @@ export function initLabNotebook({
     const editingEntry = editingEntryId
       ? state.notebookEntries.find((entry) => entry.id === editingEntryId && matchesNotebookType(entry))
       : null;
-    const existingEntry = editingEntry && editingEntry.protocolId === protocol.id && editingEntry.projectId === project.id
+    const selectedEntry = editingEntry && editingEntry.protocolId === protocol.id && editingEntry.projectId === project.id
       ? editingEntry
-      : state.notebookEntries.find(
-        (entry) => entry.protocolId === protocol.id && entry.projectId === project.id && matchesNotebookType(entry)
-      );
+      : null;
 
-    if (!editingEntry || existingEntry?.id !== editingEntry.id) {
-      editingEntryId = existingEntry?.id || null;
+    if (!selectedEntry) {
+      editingEntryId = null;
     }
 
     renderProtocolViewer({
       project,
       protocol,
-      entry: existingEntry || null,
-      isSavedEntry: Boolean(existingEntry)
+      entry: selectedEntry,
+      isSavedEntry: Boolean(selectedEntry)
     });
     renderEntries();
   }
@@ -159,6 +188,8 @@ export function initLabNotebook({
       existingResultFiles.concat(recordNames, recordNames.length ? [] : fallbackSelectedNames)
     ));
 
+    const nowIso = new Date().toISOString();
+    const notebookState = resolveEntryNotebookState(editingEntry);
     const entry = {
       id: editingEntry?.id || createId(),
       notebookType,
@@ -171,7 +202,14 @@ export function initLabNotebook({
       resultFiles,
       resultFileRecords,
       storageFolder,
-      updatedAt: new Date().toISOString()
+      updatedAt: nowIso,
+      createdAt: String(editingEntry?.createdAt || '').trim() || nowIso,
+      notebookState,
+      executedAt: resolveEntryExecutedAt(editingEntry, nowIso),
+      agentDraftStatus: String(editingEntry?.agentDraftStatus || '').trim(),
+      agentDraftMeta: editingEntry?.agentDraftMeta && typeof editingEntry.agentDraftMeta === 'object'
+        ? { ...editingEntry.agentDraftMeta }
+        : {}
     };
 
     const index = editingEntry
@@ -321,7 +359,7 @@ export function initLabNotebook({
     notebookProtocolSelect.innerHTML = options.join('');
     notebookProtocolSelect.disabled = !hasProject;
 
-    if (hasProject && selected && Array.from(notebookProtocolSelect.options).some((option) => option.value === selected)) {
+    if (hasProject && selected && filteredProtocols.some((protocol) => protocol.id === selected)) {
       notebookProtocolSelect.value = selected;
     }
 
@@ -363,11 +401,13 @@ export function initLabNotebook({
     notebookEntryList.innerHTML = Array.from(groups.values()).map((group) => {
       const itemsHtml = group.entries.map((entry) => {
         const isActive = entry.id === editingEntryId ? ' is-active' : '';
-        const updatedAt = entry.updatedAt ? new Date(entry.updatedAt).toLocaleString() : 'Not saved yet';
+        const stateLabel = notebookStateLabel(entry);
+        const stateClass = normalizeNotebookState(entry?.notebookState) === 'planned' ? ' is-planned' : ' is-executed';
+        const updatedAt = entry.updatedAt ? formatEntryTimestamp(entry.updatedAt) : 'Not saved yet';
         return `
-          <button type="button" class="biology-notebook-page-item${isActive}" data-notebook-entry-id="${safeText(entry.id)}">
+          <button type="button" class="biology-notebook-page-item${isActive}${stateClass}" data-notebook-entry-id="${safeText(entry.id)}">
             <span class="biology-notebook-page-name">${safeText(entry.protocolName || 'Untitled Page')}</span>
-            <span class="biology-notebook-page-meta">${safeText(updatedAt)}</span>
+            <span class="biology-notebook-page-meta${normalizeNotebookState(entry?.notebookState) === 'planned' ? ' is-planned' : ''}">${safeText(`${stateLabel} | ${updatedAt}`)}</span>
           </button>
         `;
       }).join('');
@@ -406,7 +446,8 @@ export function initLabNotebook({
   }
 
   function onEntryListClick(event) {
-    const entryButton = event.target.closest('[data-notebook-entry-id]');
+    const entryButton = event?.target?.closest?.('[data-notebook-entry-id]')
+      || (event?.target?.dataset?.notebookEntryId ? event.target : null);
     if (!entryButton) {
       return;
     }
@@ -452,6 +493,9 @@ export function initLabNotebook({
     if (notebookExportBtn) {
       notebookExportBtn.hidden = !entry;
     }
+    if (notebookMarkExecutedBtn) {
+      notebookMarkExecutedBtn.hidden = !entry || normalizeNotebookState(entry?.notebookState) !== 'planned';
+    }
 
     const values = entry?.values || {};
     notebookSteps.innerHTML = protocol.steps.map((step, index) => {
@@ -471,11 +515,15 @@ export function initLabNotebook({
 
   function buildViewerMeta(project, entry, isSavedEntry) {
     if (entry) {
-      const updatedAt = entry.updatedAt ? new Date(entry.updatedAt).toLocaleString() : 'Unknown time';
+      const updatedAt = entry.updatedAt ? formatEntryTimestamp(entry.updatedAt) : 'Unknown time';
+      const stateLabel = notebookStateLabel(entry);
+      const executedAt = resolveEntryExecutedAt(entry)
+        ? ` Executed at ${formatEntryTimestamp(resolveEntryExecutedAt(entry))}.`
+        : '';
       const resultFiles = Array.isArray(entry.resultFiles) && entry.resultFiles.length
         ? ` Result files: ${entry.resultFiles.join(', ')}.`
         : '';
-      return `${project.name} notebook page. Updated ${updatedAt}.${resultFiles}`;
+      return `${project.name} notebook page. State: ${stateLabel}. Updated ${updatedAt}.${executedAt}${resultFiles}`;
     }
     if (isSavedEntry) {
       return `${project.name} notebook page.`;
@@ -492,6 +540,9 @@ export function initLabNotebook({
     notebookProtocolMeta.textContent = 'Select a notebook page or start a new one.';
     if (notebookExportBtn) {
       notebookExportBtn.hidden = true;
+    }
+    if (notebookMarkExecutedBtn) {
+      notebookMarkExecutedBtn.hidden = true;
     }
     editingEntryId = null;
     updateSaveButtonLabel();
@@ -520,6 +571,45 @@ export function initLabNotebook({
     editingEntryId = null;
     updateSaveButtonLabel();
     onProtocolChange();
+  }
+
+  function markEntryExecuted() {
+    if (!editingEntryId) {
+      return;
+    }
+    const index = state.notebookEntries.findIndex((item) => item.id === editingEntryId && matchesNotebookType(item));
+    if (index < 0) {
+      return;
+    }
+    const currentEntry = state.notebookEntries[index];
+    if (normalizeNotebookState(currentEntry?.notebookState) !== 'planned') {
+      return;
+    }
+
+    const timestamp = new Date().toISOString();
+    const nextEntry = {
+      ...currentEntry,
+      notebookState: 'executed',
+      executedAt: timestamp,
+      updatedAt: timestamp
+    };
+    state.notebookEntries[index] = nextEntry;
+    persist();
+    renderEntries();
+
+    const project = state.projects.find((item) => item.id === nextEntry.projectId);
+    const protocol = state.protocols.find((item) => item.id === nextEntry.protocolId);
+    if (project && protocol) {
+      renderProtocolViewer({
+        project,
+        protocol,
+        entry: nextEntry,
+        isSavedEntry: true
+      });
+    }
+    if (typeof onNotebookEntriesChanged === 'function') {
+      onNotebookEntriesChanged();
+    }
   }
 
   function renderFilledStepText(step, values) {

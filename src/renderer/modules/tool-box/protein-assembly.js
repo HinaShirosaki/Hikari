@@ -56,6 +56,36 @@ export const PROTEIN_ASSEMBLY_TAGS = Object.freeze([
     label: 'V5',
     sequence: 'GKPIPNPLLGLDST',
     note: 'Short V5 epitope tag.'
+  },
+  {
+    id: 'avitag',
+    label: 'AviTag',
+    sequence: 'GLNDIFEAQKIEWHE',
+    note: 'Biotin ligase recognition tag.'
+  },
+  {
+    id: 'alfa',
+    label: 'ALFA',
+    sequence: 'PSRLEEELRRRLTEP',
+    note: 'Compact nanobody-compatible epitope tag.'
+  },
+  {
+    id: 'spytag',
+    label: 'SpyTag',
+    sequence: 'AHIVMVDAYKPTK',
+    note: 'Covalent ligation peptide tag.'
+  },
+  {
+    id: 'stag',
+    label: 'S-tag',
+    sequence: 'KETAAAKFERQHMDS',
+    note: 'RNase S-protein binding peptide tag.'
+  },
+  {
+    id: 'ctag',
+    label: 'C-tag',
+    sequence: 'EPEA',
+    note: 'Minimal four-residue C-terminal tag.'
   }
 ]);
 

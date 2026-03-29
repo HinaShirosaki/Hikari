@@ -41,9 +41,28 @@ function mapWorkflow(workflow, protocolsById = new Map(), projectNameById = new 
     description: trimText(workflow?.description, 400),
     projectId,
     project_name: trimText(projectNameById.get(projectId), 180),
+    notebookEntryIds: asArray(workflow?.notebookEntryIds).map((id) => trimText(id, 120)).filter(Boolean).slice(0, 40),
     block_count: blocks.length,
     link_count: asArray(workflow?.links).length,
     steps_preview: stepsPreview,
+    blocks: blocks.slice(0, 40).map((block, index) => {
+      const type = String(block?.type || '').trim().toLowerCase() === 'text' ? 'text' : (String(block?.protocolId || '').trim() ? 'protocol' : 'text');
+      const protocolId = trimText(block?.protocolId, 120);
+      const protocolName = protocolId ? trimText(protocolsById.get(protocolId), 180) : '';
+      return {
+        id: trimText(block?.id, 120) || `block-${index + 1}`,
+        type,
+        protocolId,
+        protocolName,
+        text: type === 'text' ? trimText(block?.text, 220) : '',
+        assigneeId: trimText(block?.assigneeId, 120)
+      };
+    }),
+    links: asArray(workflow?.links).slice(0, 60).map((link, index) => ({
+      id: trimText(link?.id, 120) || `link-${index + 1}`,
+      fromBlockId: trimText(link?.fromBlockId, 120),
+      toBlockId: trimText(link?.toBlockId, 120)
+    })).filter((link) => link.fromBlockId && link.toBlockId),
     updated_at: String(workflow?.updatedAt || workflow?.createdAt || '')
   };
 }
@@ -169,6 +188,12 @@ const DEVELOPER_TOOL_TEST_OPTIONS = [
     example: 'I completed Cell Prep on HEK293 sample TUBE42.'
   },
   {
+    name: 'notebook-draft',
+    label: 'Notebook Draft',
+    description: 'Pass a planning-style message to inspect the proposed next experiment and confirm-first notebook payload.',
+    example: 'Draft tomorrow’s next experiment for Atlas.'
+  },
+  {
     name: 'python-sandbox',
     label: 'Python Sandbox',
     description: 'Pass a short instruction and inspect the sandbox readback payload.',
@@ -190,7 +215,7 @@ const DEVELOPER_TOOL_TEST_OPTIONS = [
     name: 'literature-search',
     label: 'Literature Search',
     description: 'Pass a literature query and inspect the ranked stubbed source results.',
-    example: 'PD-1 binder methods'
+    example: 'binder stability methods'
   },
   {
     name: 'paper-download',
@@ -367,6 +392,10 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
 
   clearBtn.addEventListener('click', () => {
     void startNewChatSession();
+  });
+
+  historyNode.addEventListener('click', (event) => {
+    void onHistoryClick(event);
   });
 
   sessionList?.addEventListener('click', (event) => {
@@ -829,6 +858,28 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
     };
   }
 
+  function normalizeNotebookState(value) {
+    return trimText(value, 40).toLowerCase() === 'planned' ? 'planned' : 'executed';
+  }
+
+  function resolveNotebookDraftProposalId(draft) {
+    return trimText(
+      draft?.proposal?.proposal_id
+        || draft?.entry_template?.agentDraftMeta?.proposalId,
+      160
+    );
+  }
+
+  function findNotebookEntryByProposalId(proposalId) {
+    const normalizedProposalId = trimText(proposalId, 160);
+    if (!normalizedProposalId) {
+      return null;
+    }
+    return asArray(state.notebookEntries).find((entry) => (
+      trimText(entry?.agentDraftMeta?.proposalId, 160) === normalizedProposalId
+    )) || null;
+  }
+
   function normalizeNotebookDraft(rawDraft) {
     if (!rawDraft || typeof rawDraft !== 'object') {
       return null;
@@ -854,6 +905,9 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
     const entryTemplate = rawDraft.entry_template && typeof rawDraft.entry_template === 'object'
       ? rawDraft.entry_template
       : {};
+    const proposal = rawDraft.proposal && typeof rawDraft.proposal === 'object'
+      ? rawDraft.proposal
+      : {};
 
     return {
       protocol: {
@@ -866,6 +920,22 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
         resolution_source: trimText(rawDraft?.project?.resolution_source, 80)
       },
       notebook_type: trimText(rawDraft?.notebook_type, 40) || 'biology',
+      proposal: {
+        proposal_id: trimText(proposal.proposal_id, 160),
+        title: trimText(proposal.title, 220),
+        purpose: trimText(proposal.purpose, 500),
+        rationale: trimText(proposal.rationale, 700),
+        planned_materials: asArray(proposal.planned_materials).map((item) => trimText(item, 220)).filter(Boolean),
+        checkpoints: asArray(proposal.checkpoints).map((item) => trimText(item, 220)).filter(Boolean),
+        workflow: proposal.workflow && typeof proposal.workflow === 'object'
+          ? {
+            id: trimText(proposal.workflow.id, 120),
+            name: trimText(proposal.workflow.name, 220),
+            block_id: trimText(proposal.workflow.block_id, 120),
+            block_title: trimText(proposal.workflow.block_title, 220)
+          }
+          : null
+      },
       rendered_steps: asArray(rawDraft.rendered_steps).map((step) => trimText(step, 300)).filter(Boolean),
       placeholder_values: placeholderValues,
       unresolved_placeholders: unresolvedPlaceholders,
@@ -884,12 +954,54 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
         values: entryTemplate.values && typeof entryTemplate.values === 'object' ? entryTemplate.values : {},
         result: trimText(entryTemplate.result, 900),
         updatedAt: trimText(entryTemplate.updatedAt, 80),
+        notebookState: normalizeNotebookState(entryTemplate.notebookState),
+        executedAt: trimText(entryTemplate.executedAt, 80),
         resultFiles: asArray(entryTemplate.resultFiles).map((value) => trimText(value, 220)).filter(Boolean),
         resultFileRecords: asArray(entryTemplate.resultFileRecords),
         agentDraftStatus: trimText(entryTemplate.agentDraftStatus, 80),
         agentDraftMeta: entryTemplate.agentDraftMeta && typeof entryTemplate.agentDraftMeta === 'object'
           ? entryTemplate.agentDraftMeta
           : {}
+      }
+    };
+  }
+
+  function buildNotebookEntryFromDraft(draft, requestText = '', options = {}) {
+    const template = draft?.entry_template && typeof draft.entry_template === 'object'
+      ? draft.entry_template
+      : {};
+    const nowIso = new Date().toISOString();
+    const unresolvedCount = asArray(draft?.unresolved_placeholders).length;
+    const proposalId = resolveNotebookDraftProposalId(draft);
+    const notebookState = normalizeNotebookState(
+      template.notebookState || (draft?.save?.mode === 'confirm_before_save' ? 'planned' : 'executed')
+    );
+    const updatedAt = trimText(template.updatedAt, 80) || nowIso;
+    const executedAt = notebookState === 'planned'
+      ? ''
+      : (trimText(template.executedAt, 80) || updatedAt);
+    return {
+      id: createId(),
+      notebookType: trimText(template.notebookType, 40) || trimText(draft?.notebook_type, 40) || 'biology',
+      projectId: trimText(template.projectId, 80) || trimText(draft?.project?.id, 80),
+      projectName: trimText(template.projectName, 180) || trimText(draft?.project?.name, 180),
+      protocolId: trimText(template.protocolId, 120) || trimText(draft?.protocol?.id, 120),
+      protocolName: trimText(template.protocolName, 220) || trimText(draft?.protocol?.name, 220),
+      values: template.values && typeof template.values === 'object' ? template.values : {},
+      result: trimText(template.result, 900) || `Agent-generated notebook draft from request: ${trimText(requestText, 220)}`,
+      resultFiles: asArray(template.resultFiles),
+      resultFileRecords: asArray(template.resultFileRecords),
+      updatedAt,
+      notebookState,
+      executedAt,
+      agentDraftStatus: trimText(template.agentDraftStatus, 80) || (unresolvedCount > 0 ? 'needs_review' : 'draft_ready'),
+      agentDraftMeta: {
+        ...(template.agentDraftMeta && typeof template.agentDraftMeta === 'object' ? template.agentDraftMeta : {}),
+        proposalId,
+        savedAt: trimText(options.savedAt, 80) || nowIso,
+        unresolvedCount,
+        source: trimText(template?.agentDraftMeta?.source, 80)
+          || (draft?.save?.mode === 'confirm_before_save' ? 'agent_notebook_draft_v1' : 'agent_phase5')
       }
     };
   }
@@ -915,28 +1027,7 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
       };
     }
 
-    const unresolvedCount = asArray(draft.unresolved_placeholders).length;
-    const nowIso = new Date().toISOString();
-    const entry = {
-      id: createId(),
-      notebookType: 'biology',
-      projectId,
-      projectName: template.projectName || draft.project.name,
-      protocolId,
-      protocolName: template.protocolName || draft.protocol.name,
-      values: template.values && typeof template.values === 'object' ? template.values : {},
-      result: template.result || `Agent-generated notebook draft from request: ${trimText(requestText, 220)}`,
-      resultFiles: asArray(template.resultFiles),
-      resultFileRecords: asArray(template.resultFileRecords),
-      updatedAt: template.updatedAt || nowIso,
-      agentDraftStatus: unresolvedCount > 0 ? 'needs_review' : 'draft_ready',
-      agentDraftMeta: {
-        ...(template.agentDraftMeta && typeof template.agentDraftMeta === 'object' ? template.agentDraftMeta : {}),
-        savedAt: nowIso,
-        unresolvedCount,
-        source: 'agent_phase5'
-      }
-    };
+    const entry = buildNotebookEntryFromDraft(draft, requestText);
 
     state.notebookEntries = asArray(state.notebookEntries);
     state.notebookEntries.push(entry);
@@ -960,6 +1051,96 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
         ...entry
       }
     };
+  }
+
+  function updateAssistantNotebookDraftMessage(messageId, updater) {
+    const normalizedMessageId = trimText(messageId, 120);
+    if (!normalizedMessageId || typeof updater !== 'function') {
+      return null;
+    }
+    const message = asArray(state.agentChat.messages).find((item) => trimText(item?.id, 120) === normalizedMessageId);
+    if (!message || message.role !== 'assistant' || !message.meta || typeof message.meta !== 'object') {
+      return null;
+    }
+    const currentDraft = normalizeNotebookDraft(message.meta.notebookDraft);
+    if (!currentDraft) {
+      return null;
+    }
+    const nextDraft = updater(currentDraft);
+    if (!nextDraft || typeof nextDraft !== 'object') {
+      return null;
+    }
+    message.meta = {
+      ...message.meta,
+      notebookDraft: nextDraft
+    };
+    return nextDraft;
+  }
+
+  async function onHistoryClick(event) {
+    const createButton = event?.target?.closest?.('[data-agent-create-planned-page]')
+      || (event?.target?.dataset?.agentCreatePlannedPage ? event.target : null);
+    if (!createButton) {
+      return;
+    }
+    const messageId = trimText(createButton.dataset.agentCreatePlannedPage, 120);
+    if (!messageId) {
+      return;
+    }
+    const message = asArray(state.agentChat.messages).find((item) => trimText(item?.id, 120) === messageId);
+    const draft = normalizeNotebookDraft(message?.meta?.notebookDraft);
+    if (!draft || draft.save.mode !== 'confirm_before_save') {
+      setStatus('Planned notebook draft is unavailable for creation.');
+      return;
+    }
+    const proposalId = resolveNotebookDraftProposalId(draft);
+    const existingEntry = proposalId ? findNotebookEntryByProposalId(proposalId) : null;
+    if (existingEntry) {
+      updateAssistantNotebookDraftMessage(messageId, (currentDraft) => ({
+        ...currentDraft,
+        save: {
+          ...currentDraft.save,
+          applied: true,
+          status: 'already_created',
+          reason: 'Planned page already exists for this proposal.'
+        }
+      }));
+      persist();
+      renderHistory();
+      setStatus('Planned notebook page already exists.');
+      return;
+    }
+
+    const entry = buildNotebookEntryFromDraft(draft, trimText(message?.meta?.requestText, 3000));
+    if (!entry.projectId || !entry.protocolId) {
+      setStatus('Planned notebook draft is missing a project or protocol binding.');
+      return;
+    }
+
+    state.notebookEntries = asArray(state.notebookEntries);
+    state.notebookEntries.push(entry);
+    updateAssistantNotebookDraftMessage(messageId, (currentDraft) => ({
+      ...currentDraft,
+      save: {
+        ...currentDraft.save,
+        applied: true,
+        status: 'planned_page_created',
+        reason: 'Planned page created from assistant proposal.'
+      },
+      entry_template: {
+        ...currentDraft.entry_template,
+        ...entry
+      }
+    }));
+    persist();
+    renderContextSummary();
+    renderHistory();
+    try {
+      onNotebookEntriesChanged?.();
+    } catch {
+      // Keep chat actions resilient even if downstream render hooks fail.
+    }
+    setStatus('Planned notebook page created.');
   }
 
   function renderContextSummary() {
@@ -1029,7 +1210,7 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
     `;
   }
 
-  function renderAssistantMeta(meta) {
+  function renderAssistantMeta(meta, messageId = '') {
     if (!meta || typeof meta !== 'object') {
       return '';
     }
@@ -1137,6 +1318,10 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
     const protocolWorkflow = meta.protocol_to_notebook && typeof meta.protocol_to_notebook === 'object'
       ? meta.protocol_to_notebook
       : {};
+    const notebookDraftWorkflow = meta.notebook_draft && typeof meta.notebook_draft === 'object'
+      ? meta.notebook_draft
+      : {};
+    const notebookDraft = normalizeNotebookDraft(meta.notebookDraft);
     const protocolRows = [
       trimText(protocolWorkflow.status, 60)
         ? `status: ${trimText(protocolWorkflow.status, 60)}`
@@ -1168,6 +1353,61 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
       return `missing_${index + 1}: ${display}${reason ? ` (${reason})` : ''}`;
     }).filter(Boolean);
     const protocolFollowUpRows = asArray(protocolWorkflow.follow_up_questions).map((question) => trimText(question, 260)).filter(Boolean);
+    const notebookDraftRows = [
+      trimText(notebookDraftWorkflow.status, 60)
+        ? `status: ${trimText(notebookDraftWorkflow.status, 60)}`
+        : '',
+      trimText(notebookDraftWorkflow.project_name, 220)
+        ? `project_name: ${trimText(notebookDraftWorkflow.project_name, 220)}`
+        : '',
+      trimText(notebookDraftWorkflow?.selected_protocol?.name, 220)
+        ? `selected_protocol: ${trimText(notebookDraftWorkflow.selected_protocol.name, 220)}`
+        : '',
+      trimText(notebookDraftWorkflow?.source_workflow?.name, 220)
+        ? `workflow: ${trimText(notebookDraftWorkflow.source_workflow.name, 220)}`
+        : '',
+      trimText(notebookDraft?.save?.status, 120)
+        ? `save_status: ${trimText(notebookDraft.save.status, 120)}`
+        : ''
+    ].filter(Boolean);
+    const notebookDraftProposalRows = [
+      trimText(notebookDraft?.proposal?.title, 220)
+        ? `title: ${trimText(notebookDraft.proposal.title, 220)}`
+        : '',
+      trimText(notebookDraft?.proposal?.purpose, 260)
+        ? `purpose: ${trimText(notebookDraft.proposal.purpose, 260)}`
+        : '',
+      trimText(notebookDraft?.proposal?.rationale, 260)
+        ? `rationale: ${trimText(notebookDraft.proposal.rationale, 260)}`
+        : '',
+      trimText(notebookDraft?.proposal?.proposal_id, 180)
+        ? `proposal_id: ${trimText(notebookDraft.proposal.proposal_id, 180)}`
+        : ''
+    ].filter(Boolean);
+    const notebookDraftMaterialRows = asArray(notebookDraft?.proposal?.planned_materials).map((item) => trimText(item, 220)).filter(Boolean);
+    const notebookDraftCheckpointRows = asArray(notebookDraft?.proposal?.checkpoints).map((item) => trimText(item, 220)).filter(Boolean);
+    const notebookDraftMissingRows = asArray(notebookDraftWorkflow.missing_placeholders).map((item, index) => {
+      const display = trimText(item?.display, 120) || trimText(item?.placeholder_key, 160);
+      const reason = trimText(item?.reason, 220);
+      if (!display) {
+        return '';
+      }
+      return `missing_${index + 1}: ${display}${reason ? ` (${reason})` : ''}`;
+    }).filter(Boolean);
+    const notebookDraftFollowUpRows = asArray(notebookDraftWorkflow.follow_up_questions).map((question) => trimText(question, 260)).filter(Boolean);
+    const notebookDraftProposalId = resolveNotebookDraftProposalId(notebookDraft);
+    const existingPlannedEntry = notebookDraftProposalId ? findNotebookEntryByProposalId(notebookDraftProposalId) : null;
+    const showCreatePlannedPageButton = Boolean(
+      notebookDraft
+      && notebookDraft.save.mode === 'confirm_before_save'
+      && trimText(messageId, 120)
+    );
+    const plannedPageButtonDisabled = Boolean(
+      existingPlannedEntry
+      || notebookDraft?.save?.applied === true
+      || ['planned_page_created', 'already_created'].includes(trimText(notebookDraft?.save?.status, 120))
+    );
+    const plannedPageButtonLabel = plannedPageButtonDisabled ? 'Planned Page Created' : 'Create Planned Page';
     const hasInventoryLookup = meta.inventory_lookup && typeof meta.inventory_lookup === 'object';
     const inventoryLookup = hasInventoryLookup
       ? meta.inventory_lookup
@@ -1296,6 +1536,24 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
         ${renderMetaList('Protocol Matches', protocolCandidateMatchRows)}
         ${renderMetaList('Missing Placeholders', protocolMissingRows)}
         ${renderMetaList('Follow-up Questions', protocolFollowUpRows)}
+        ${notebookDraftRows.length ? renderMetaList('Planned Notebook Draft', notebookDraftRows) : ''}
+        ${notebookDraftProposalRows.length ? renderMetaList('Draft Proposal', notebookDraftProposalRows) : ''}
+        ${notebookDraftMaterialRows.length ? renderMetaList('Planned Materials', notebookDraftMaterialRows) : ''}
+        ${notebookDraftCheckpointRows.length ? renderMetaList('Checkpoints', notebookDraftCheckpointRows) : ''}
+        ${notebookDraftMissingRows.length ? renderMetaList('Draft Missing Placeholders', notebookDraftMissingRows) : ''}
+        ${notebookDraftFollowUpRows.length ? renderMetaList('Draft Follow-up', notebookDraftFollowUpRows) : ''}
+        ${showCreatePlannedPageButton ? `
+          <section class="agent-draft-actions">
+            <button
+              type="button"
+              class="primary-btn"
+              data-agent-create-planned-page="${safeText(trimText(messageId, 120))}"
+              ${plannedPageButtonDisabled ? 'disabled' : ''}
+            >
+              ${safeText(plannedPageButtonLabel)}
+            </button>
+          </section>
+        ` : ''}
         ${hasInventoryLookup ? renderMetaList('Inventory Lookup', inventoryRows) : ''}
         ${hasInventoryLookup ? renderMetaList('Inventory Items', inventoryItemRows) : ''}
         ${hasInventoryLookup ? renderMetaList('Inventory Follow-up', inventoryFollowUpRows) : ''}
@@ -1338,7 +1596,7 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
               <span>${safeText(formatTime(message.createdAt))}</span>
             </header>
             <p class="agent-chat-body">${safeText(message.text || '')}</p>
-            ${role === 'assistant' ? renderAssistantMeta(message.meta) : ''}
+            ${role === 'assistant' ? renderAssistantMeta(message.meta, message.id) : ''}
           </article>
         </div>
       `;
@@ -1484,6 +1742,9 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
       }
       const response = normalizeAgentResponse(result);
       const notebookDraft = applyNotebookDraftAutoSave(response.notebookPayload, messageText);
+      if (notebookDraft?.save?.applied === true) {
+        renderContextSummary();
+      }
 
       state.agentChat.messages.push({
         id: createId(),
@@ -1493,6 +1754,7 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
         meta: {
           parser: response.parser,
           protocol_to_notebook: response.protocolWorkflow,
+          notebook_draft: response.notebookDraftWorkflow,
           inventory_lookup: response.inventoryLookup,
           record_lookup: response.recordLookup,
           general_science_question: response.generalScienceQuestion,
@@ -1534,6 +1796,7 @@ export function initAgentChat({ state, persist, createId, safeText, onNotebookEn
             reasoning_summary: `Agent failed: ${String(error?.message || error)}`
           },
           protocol_to_notebook: null,
+          notebook_draft: null,
           inventory_lookup: null,
           record_lookup: null,
           general_science_question: null,

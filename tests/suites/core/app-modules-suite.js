@@ -327,6 +327,209 @@ test('project-management deletes projects with linked notebook and workflow clea
   assert.ok(projectsChangedCalls >= 1);
 });
 
+test('project-management renders notebook state labels for project pages', () => {
+  const document = createMockDocument([
+    'project-form',
+    'project-id',
+    'project-name',
+    'project-description',
+    'project-cancel-btn',
+    'project-list',
+    'project-notebook-filter',
+    'project-notebook-pages'
+  ]);
+  const projectForm = document.getElementById('project-form');
+  wireFormReset(projectForm, [
+    document.getElementById('project-name'),
+    document.getElementById('project-description'),
+    document.getElementById('project-id')
+  ]);
+
+  const state = {
+    projects: [
+      { id: 'p1', name: 'Atlas', description: 'Primary' }
+    ],
+    notebookEntries: [
+      {
+        id: 'n1',
+        projectId: 'p1',
+        protocolName: 'Viability Assay',
+        notebookState: 'planned',
+        updatedAt: '2026-03-01T00:00:00.000Z',
+        resultFiles: []
+      }
+    ],
+    assays: [],
+    gelAnalyses: [],
+    workflows: []
+  };
+
+  const projectManagementModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'project-management.js'), {
+    document
+  });
+  const projectManagement = projectManagementModule.initProjectManagement({
+    state,
+    persist: () => {},
+    createId: () => 'project-new',
+    safeText: shared.safeText,
+    onProjectsChanged: () => {}
+  });
+
+  projectManagement.render();
+  assert.match(document.getElementById('project-notebook-pages').innerHTML, /State:<\/strong> Planned/);
+});
+
+test('biology-notebook keeps planned pages distinct, marks them executed, and preserves metadata on save', async () => {
+  const document = createMockDocument([
+    'biology-notebook-project-select',
+    'biology-notebook-protocol-search',
+    'biology-notebook-protocol-select',
+    'biology-notebook-empty-state',
+    'biology-notebook-protocol-area',
+    'biology-notebook-protocol-title',
+    'biology-notebook-protocol-meta',
+    'biology-notebook-export-btn',
+    'biology-notebook-mark-executed-btn',
+    'biology-notebook-page-list-status',
+    'biology-notebook-steps',
+    'biology-notebook-result',
+    'biology-notebook-result-file',
+    'save-biology-notebook-btn',
+    'cancel-biology-notebook-edit-btn',
+    'biology-notebook-entry-list'
+  ]);
+
+  let persistCalls = 0;
+  let notebookChangedCalls = 0;
+  const state = {
+    projects: [
+      { id: 'p1', name: 'Atlas' }
+    ],
+    protocols: [
+      {
+        id: 'pr1',
+        name: 'Viability Assay',
+        steps: [
+          { id: 's1', text: 'Measure viability.', placeholders: [] }
+        ]
+      }
+    ],
+    notebookEntries: [
+      {
+        id: 'n1',
+        notebookType: 'biology',
+        projectId: 'p1',
+        projectName: 'Atlas',
+        protocolId: 'pr1',
+        protocolName: 'Viability Assay',
+        values: {},
+        result: 'Planned page',
+        resultFiles: [],
+        resultFileRecords: [],
+        updatedAt: '2026-03-20T00:00:00.000Z',
+        notebookState: 'planned',
+        executedAt: '',
+        agentDraftStatus: 'needs_review',
+        agentDraftMeta: {
+          proposalId: 'proposal-1',
+          workflowId: 'w1',
+          source: 'agent_notebook_draft_v1'
+        }
+      },
+      {
+        id: 'n2',
+        notebookType: 'biology',
+        projectId: 'p1',
+        projectName: 'Atlas',
+        protocolId: 'pr1',
+        protocolName: 'Viability Assay',
+        values: {},
+        result: 'Executed page',
+        resultFiles: [],
+        resultFileRecords: [],
+        updatedAt: '2026-03-19T00:00:00.000Z',
+        notebookState: 'executed',
+        executedAt: '2026-03-19T00:00:00.000Z',
+        agentDraftStatus: '',
+        agentDraftMeta: {}
+      }
+    ],
+    settings: {
+      storagePath: ''
+    }
+  };
+
+  const notebookModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook.js'), {
+    document,
+    window: {
+      enanaApi: {}
+    }
+  });
+  const notebook = notebookModule.initLabNotebook({
+    state,
+    persist: () => {
+      persistCalls += 1;
+    },
+    createId: (() => {
+      let index = 0;
+      return () => `n-new-${index += 1}`;
+    })(),
+    safeText: shared.safeText,
+    onNotebookEntriesChanged: () => {
+      notebookChangedCalls += 1;
+    }
+  });
+
+  notebook.renderProjectOptions();
+  notebook.renderProtocolOptions('pr1');
+
+  assert.match(document.getElementById('biology-notebook-entry-list').innerHTML, /Planned/);
+  assert.match(document.getElementById('biology-notebook-entry-list').innerHTML, /Executed/);
+  assert.match(document.getElementById('biology-notebook-protocol-meta').textContent, /protocol draft/i);
+  assert.equal(document.getElementById('save-biology-notebook-btn').textContent, 'Save Notebook Entry');
+
+  trigger(document.getElementById('biology-notebook-entry-list'), 'click', {
+    target: {
+      dataset: { notebookEntryId: 'n1' }
+    }
+  });
+
+  assert.equal(document.getElementById('biology-notebook-mark-executed-btn').hidden, false);
+  trigger(document.getElementById('biology-notebook-mark-executed-btn'), 'click');
+  assert.equal(state.notebookEntries.find((entry) => entry.id === 'n1').notebookState, 'executed');
+  assert.equal(Boolean(state.notebookEntries.find((entry) => entry.id === 'n1').executedAt), true);
+  assert.equal(document.getElementById('biology-notebook-mark-executed-btn').hidden, true);
+
+  document.getElementById('biology-notebook-result').value = 'Updated executed notes.';
+  trigger(document.getElementById('save-biology-notebook-btn'), 'click');
+  await flushAsync();
+  assert.equal(state.notebookEntries.find((entry) => entry.id === 'n1').result, 'Updated executed notes.');
+  assert.equal(state.notebookEntries.find((entry) => entry.id === 'n1').agentDraftMeta.proposalId, 'proposal-1');
+
+  trigger(document.getElementById('cancel-biology-notebook-edit-btn'), 'click');
+  document.getElementById('biology-notebook-result').value = 'Fresh manual page.';
+  trigger(document.getElementById('save-biology-notebook-btn'), 'click');
+  await flushAsync();
+
+  assert.equal(state.notebookEntries.length, 3);
+  assert.equal(state.notebookEntries.some((entry) => entry.id === 'n1'), true);
+  assert.equal(state.notebookEntries.some((entry) => entry.id === 'n-new-1'), true);
+  assert.equal(state.notebookEntries.find((entry) => entry.id === 'n-new-1').notebookState, 'executed');
+  assert.ok(persistCalls >= 2);
+  assert.ok(notebookChangedCalls >= 2);
+});
+
+test('workflow presentation labels include notebook execution state', () => {
+  const workflowPresentation = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'workflow', 'presentation.js'));
+  const label = workflowPresentation.notebookEntryLabel({
+    notebookType: 'biology',
+    notebookState: 'planned',
+    protocolName: 'Viability Assay',
+    updatedAt: '2026-03-01T00:00:00.000Z'
+  }, () => 'Mar 1');
+  assert.equal(label, 'Biology | Planned | Viability Assay | Mar 1');
+});
+
 test('collaboration-management sends messages and imports protocol share links', () => {
   const document = createMockDocument([
     'message-form',
@@ -1446,6 +1649,11 @@ test('agent-chat sends settings API key to main process and stores assistant res
   assert.equal(payloadSeen.stateSnapshot.context_counts.notebookEntries, 1);
   assert.equal(payloadSeen.stateSnapshot.workflows.length, 1);
   assert.equal(payloadSeen.stateSnapshot.workflows[0].projectId, 'p1');
+  assert.equal(payloadSeen.stateSnapshot.workflows[0].notebookEntryIds[0], 'n1');
+  assert.equal(payloadSeen.stateSnapshot.workflows[0].blocks.length, 2);
+  assert.equal(payloadSeen.stateSnapshot.workflows[0].blocks[0].protocolId, 'pr1');
+  assert.equal(payloadSeen.stateSnapshot.workflows[0].links.length, 1);
+  assert.equal(payloadSeen.stateSnapshot.workflows[0].links[0].toBlockId, 'b2');
   assert.equal(payloadSeen.stateSnapshot.papers.length, 1);
   assert.equal(payloadSeen.stateSnapshot.papers[0].availability_status, 'deep_ready');
   assert.equal(payloadSeen.stateSnapshot.papers[0].deep_read_ready, true);
@@ -1456,6 +1664,9 @@ test('agent-chat sends settings API key to main process and stores assistant res
   assert.equal(payloadSeen.stateSnapshot.gelAnalyses.length, 1);
   assert.equal(payloadSeen.stateSnapshot.gelAnalyses[0].project_id, 'p1');
   assert.equal(payloadSeen.stateSnapshot.experimentData.schema_name, 'enana_experiment_json');
+  assert.equal(payloadSeen.stateSnapshot.experimentData.notebook_runs[0].notebook_state, 'executed');
+  assert.equal(payloadSeen.stateSnapshot.experimentData.notebook_runs[0].executed_at, '');
+  assert.equal(payloadSeen.stateSnapshot.experimentData.notebook_runs[0].agent_draft_status, '');
   assert.equal(payloadSeen.stateSnapshot.experimentData.assay_runs.length, 1);
   assert.equal(payloadSeen.stateSnapshot.experimentData.gel_runs.length, 1);
   assert.equal(autoSaveCalls.length, 1);
@@ -1491,6 +1702,295 @@ test('agent-chat sends settings API key to main process and stores assistant res
   trigger(clearBtn, 'click');
   assert.equal(state.agentChat.messages.length, 0);
   assert.equal(status.textContent, 'New chat ready.');
+});
+
+test('agent-chat keeps notebook-draft proposals confirm-first and creates one planned page on click', async () => {
+  const document = createMockDocument([
+    'agent-project-select',
+    'agent-context-summary',
+    'agent-chat-history',
+    'agent-message-input',
+    'agent-deep-research-toggle-btn',
+    'agent-send-btn',
+    'agent-clear-btn',
+    'agent-status'
+  ]);
+  const projectSelect = document.getElementById('agent-project-select');
+  const history = document.getElementById('agent-chat-history');
+  const messageInput = document.getElementById('agent-message-input');
+  const sendBtn = document.getElementById('agent-send-btn');
+  const status = document.getElementById('agent-status');
+
+  const state = {
+    projects: [
+      { id: 'p1', name: 'Atlas', description: 'Planning project' }
+    ],
+    protocols: [
+      {
+        id: 'pr1',
+        name: 'Viability Assay',
+        projectId: 'p1',
+        projectName: 'Atlas',
+        steps: [
+          {
+            id: 's1',
+            text: 'Measure viability for {{ph:sample_name}}.',
+            placeholders: [{ id: 'sample_name', name: 'sample name' }]
+          }
+        ]
+      }
+    ],
+    notebookEntries: [],
+    assays: [],
+    gelAnalyses: [],
+    workflows: [
+      {
+        id: 'w1',
+        name: 'Atlas Workflow',
+        description: 'Next step planning',
+        projectId: 'p1',
+        notebookEntryIds: [],
+        blocks: [{ id: 'b1', protocolId: 'pr1' }],
+        links: [],
+        updatedAt: '2026-03-20T00:00:00.000Z'
+      }
+    ],
+    papers: [],
+    inventory: {},
+    labInventory: { chemicals: [] },
+    settings: {
+      llm: {
+        model: 'gpt-5',
+        apiEndpoint: 'https://api.openai.com/v1/responses',
+        apiKey: 'sk-local-key'
+      },
+      agent: {
+        developerMode: false
+      }
+    },
+    agentChat: { projectId: '', messages: [] }
+  };
+
+  const window = {
+    enanaApi: {
+      autoSaveDataFile: async () => ({
+        ok: true,
+        filePath: '/tmp/enana-data.ena.json'
+      }),
+      agentChat: async () => ({
+        ok: true,
+        parser: {
+          primary_intent: 'notebook_draft',
+          needs_clarification: false,
+          clarification_reason: null,
+          entities: {
+            project_name: 'Atlas',
+            workflow_step: 'next experiment'
+          },
+          inventory_search: {
+            normalized_query: null,
+            candidate_terms: [],
+            aliases: [],
+            search_mode: null
+          },
+          protocol_candidates: ['Viability Assay'],
+          reasoning_summary: 'Plan the next notebook page.'
+        },
+        notebook_draft: {
+          status: 'proposal_ready',
+          project_name: 'Atlas',
+          selected_protocol: {
+            id: 'pr1',
+            name: 'Viability Assay',
+            selection_method: 'workflow'
+          },
+          source_workflow: {
+            id: 'w1',
+            name: 'Atlas Workflow',
+            block_id: 'b1',
+            block_title: 'Viability Assay'
+          },
+          missing_placeholders: [
+            {
+              placeholder_key: 's1:sample_name',
+              display: 'sample name',
+              reason: 'Leave visible for the planned draft.'
+            }
+          ],
+          follow_up_questions: ['Please provide sample name.'],
+          proposal_summary: 'Viability Assay After Cell Prep',
+          proposal: {
+            proposal_id: 'proposal-1',
+            title: 'Viability Assay After Cell Prep',
+            purpose: 'Measure whether the prepared cells remain viable.',
+            rationale: 'This is the next workflow step.',
+            planned_materials: ['Prepared cells', 'Viability plate'],
+            checkpoints: ['Confirm cells are ready.', 'Record viability observations.'],
+            workflow: {
+              id: 'w1',
+              name: 'Atlas Workflow',
+              block_id: 'b1',
+              block_title: 'Viability Assay'
+            }
+          },
+          notebook: {
+            protocol: { id: 'pr1', name: 'Viability Assay' },
+            project: { id: 'p1', name: 'Atlas', resolution_source: 'tool_project_id' },
+            notebook_type: 'biology',
+            rendered_steps: ['Measure viability for [sample name].'],
+            unresolved_placeholders: [
+              {
+                step_id: 's1',
+                placeholder_id: 'sample_name',
+                placeholder_key: 's1:sample_name',
+                display: 'sample name',
+                reason: 'Leave visible for the planned draft.'
+              }
+            ],
+            save: {
+              mode: 'confirm_before_save',
+              applied: false,
+              status: 'awaiting_user_confirmation',
+              reason: 'Planned notebook draft is ready to create after confirmation.'
+            },
+            proposal: {
+              proposal_id: 'proposal-1',
+              title: 'Viability Assay After Cell Prep',
+              purpose: 'Measure whether the prepared cells remain viable.',
+              rationale: 'This is the next workflow step.',
+              planned_materials: ['Prepared cells', 'Viability plate'],
+              checkpoints: ['Confirm cells are ready.', 'Record viability observations.'],
+              workflow: {
+                id: 'w1',
+                name: 'Atlas Workflow',
+                block_id: 'b1',
+                block_title: 'Viability Assay'
+              }
+            },
+            entry_template: {
+              notebookType: 'biology',
+              projectId: 'p1',
+              projectName: 'Atlas',
+              protocolId: 'pr1',
+              protocolName: 'Viability Assay',
+              values: {},
+              result: 'Planned Experiment: Viability Assay After Cell Prep',
+              updatedAt: '2026-03-21T12:00:00.000Z',
+              notebookState: 'planned',
+              executedAt: '',
+              resultFiles: [],
+              resultFileRecords: [],
+              agentDraftStatus: 'needs_review',
+              agentDraftMeta: {
+                source: 'agent_notebook_draft_v1',
+                proposalId: 'proposal-1',
+                workflowId: 'w1'
+              }
+            }
+          }
+        },
+        notebookDraft: {
+          protocol: { id: 'pr1', name: 'Viability Assay' },
+          project: { id: 'p1', name: 'Atlas', resolution_source: 'tool_project_id' },
+          notebook_type: 'biology',
+          rendered_steps: ['Measure viability for [sample name].'],
+          unresolved_placeholders: [
+            {
+              step_id: 's1',
+              placeholder_id: 'sample_name',
+              placeholder_key: 's1:sample_name',
+              display: 'sample name',
+              reason: 'Leave visible for the planned draft.'
+            }
+          ],
+          save: {
+            mode: 'confirm_before_save',
+            applied: false,
+            status: 'awaiting_user_confirmation',
+            reason: 'Planned notebook draft is ready to create after confirmation.'
+          },
+          proposal: {
+            proposal_id: 'proposal-1',
+            title: 'Viability Assay After Cell Prep',
+            purpose: 'Measure whether the prepared cells remain viable.',
+            rationale: 'This is the next workflow step.',
+            planned_materials: ['Prepared cells', 'Viability plate'],
+            checkpoints: ['Confirm cells are ready.', 'Record viability observations.'],
+            workflow: {
+              id: 'w1',
+              name: 'Atlas Workflow',
+              block_id: 'b1',
+              block_title: 'Viability Assay'
+            }
+          },
+          entry_template: {
+            notebookType: 'biology',
+            projectId: 'p1',
+            projectName: 'Atlas',
+            protocolId: 'pr1',
+            protocolName: 'Viability Assay',
+            values: {},
+            result: 'Planned Experiment: Viability Assay After Cell Prep',
+            updatedAt: '2026-03-21T12:00:00.000Z',
+            notebookState: 'planned',
+            executedAt: '',
+            resultFiles: [],
+            resultFileRecords: [],
+            agentDraftStatus: 'needs_review',
+            agentDraftMeta: {
+              source: 'agent_notebook_draft_v1',
+              proposalId: 'proposal-1',
+              workflowId: 'w1'
+            }
+          }
+        }
+      })
+    }
+  };
+
+  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat.js'), {
+    document,
+    window
+  });
+  const agent = agentModule.initAgentChat({
+    state,
+    persist: () => {},
+    createId: (() => {
+      let idx = 0;
+      return () => `agent-msg-${idx += 1}`;
+    })(),
+    safeText: shared.safeText,
+    onNotebookEntriesChanged: () => {}
+  });
+
+  agent.render();
+  projectSelect.value = 'p1';
+  trigger(projectSelect, 'change');
+  messageInput.value = 'Draft tomorrow’s next experiment.';
+  trigger(sendBtn, 'click');
+  await flushAsync();
+  await flushAsync();
+
+  assert.equal(state.agentChat.messages.length, 2);
+  assert.equal(state.agentChat.messages[1].meta.parser.primary_intent, 'notebook_draft');
+  assert.equal(state.agentChat.messages[1].meta.notebook_draft.status, 'proposal_ready');
+  assert.equal(state.notebookEntries.length, 0);
+  assert.match(history.innerHTML, /Create Planned Page/);
+  assert.match(history.innerHTML, /Planned Notebook Draft/);
+
+  const createButtons = history.querySelectorAll('[data-agent-create-planned-page]');
+  assert.equal(createButtons.length, 1);
+  trigger(history, 'click', { target: createButtons[0] });
+
+  assert.equal(state.notebookEntries.length, 1);
+  assert.equal(state.notebookEntries[0].notebookState, 'planned');
+  assert.equal(state.notebookEntries[0].executedAt, '');
+  assert.equal(state.notebookEntries[0].agentDraftMeta.proposalId, 'proposal-1');
+  assert.match(history.innerHTML, /Planned Page Created/);
+  assert.equal(status.textContent, 'Planned notebook page created.');
+
+  trigger(history, 'click', { target: createButtons[0] });
+  assert.equal(state.notebookEntries.length, 1);
 });
 
 test('agent-chat toggles deep research mode and sends it in the chat payload', async () => {

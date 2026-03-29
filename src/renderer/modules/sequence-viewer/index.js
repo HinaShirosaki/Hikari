@@ -27,6 +27,7 @@ import {
 import { getSequenceViewerElements } from './dom.js';
 import { createSequenceViewerHomeController } from './home-controller.js';
 import { createSequenceViewerDetailController } from './detail-controller.js';
+import { createSequenceViewerProteinBuilderController } from './protein-builder.js';
 
 export function initSequenceViewer(options = {}) {
   const LIBRARY_STATUS_SAVED = 'saved';
@@ -338,6 +339,16 @@ export function initSequenceViewer(options = {}) {
 
   let detailController = null;
   let homeController = null;
+  let proteinBuilderController = null;
+
+  function showProteinBuilderWorkspace() {
+    detailController?.hideFeatureContextMenu();
+    detailController?.hideFeatureEditor();
+    homeController?.setLocalWorkspaceVisibility('builder');
+    if (onNavigateHome) {
+      onNavigateHome();
+    }
+  }
 
   function setRecords(result, statusPrefix = 'Loaded') {
     state.records = Array.isArray(result.records) ? result.records : [];
@@ -354,6 +365,7 @@ export function initSequenceViewer(options = {}) {
 
     detailController?.updateRecordSelect();
     detailController?.renderActiveRecord();
+    proteinBuilderController?.render();
     if (elements.saveNameInput && state.records.length) {
       elements.saveNameInput.value = normalizeRecordName(state.records[0].name || 'sequence', 'sequence');
     }
@@ -780,6 +792,16 @@ export function initSequenceViewer(options = {}) {
     onRefreshLibraryEntries: homeController.refreshLibraryEntries
   });
 
+  proteinBuilderController = createSequenceViewerProteinBuilderController({
+    elements,
+    getBridge,
+    getStoragePath,
+    hasStoragePath,
+    setStatus,
+    onNavigateHome: homeController.navigateToHome,
+    onNavigateBuilder: showProteinBuilderWorkspace
+  });
+
   function loadFromExternal(payload) {
     const record = normalizeExternalPayload(payload);
     const hasSequence = Boolean(record.sequence.length);
@@ -810,6 +832,7 @@ export function initSequenceViewer(options = {}) {
   function render() {
     detailController.updateRecordSelect();
     detailController.renderActiveRecord();
+    proteinBuilderController?.render();
     homeController.syncHomeControlsState();
     void homeController.refreshLibraryEntries({ silent: true });
   }
@@ -862,6 +885,7 @@ export function initSequenceViewer(options = {}) {
 
   homeController.bindEvents();
   detailController.bindEvents();
+  proteinBuilderController?.bindEvents?.();
 
   homeController.setLibraryFilter(LIBRARY_STATUS_SAVED);
   homeController.setLocalWorkspaceVisibility('home');

@@ -9,6 +9,17 @@
       "inventory_search": "Leave empty unless inventory lookup is explicitly part of the request."
     }
   },
+  "notebook_draft": {
+    "name": "notebook_draft",
+    "description": "Use when the user wants the likely next experiment proposed in advance and wants a future planned notebook page drafted before the work is executed.",
+    "rules": "Infer up to three likely protocol names when possible, capture project and workflow entities when they are present, and keep inventory search empty unless the request explicitly asks about stock.",
+    "example_input": "What should I do next for Atlas, and can you draft tomorrow's notebook page for it?",
+    "specific_output_append": {
+      "protocol_candidates": "Populate with 1 to 3 likely protocol names inferred from the next-step planning request.",
+      "entities.workflow_step": "Populate when the user refers to a workflow stage, next step, or continuation point.",
+      "inventory_search": "Leave empty unless inventory lookup is explicitly part of the request."
+    }
+  },
   "inventory_lookup": {
     "name": "inventory_lookup",
     "description": "Use when the user asks about stock availability, reagent identity, location, supplier metadata, or lab-stored chemical records.",
@@ -23,7 +34,7 @@
     "name": "record_lookup",
     "description": "Use when the user asks for stored project, workflow, notebook, assay, gel, or other lab records that are not inventory items.",
     "rules": "Use project, workflow, paper, or protocol entities when present, keep inventory_search empty, and keep protocol_candidates empty unless notebook generation is explicitly requested.",
-    "example_input": "What did we use last time for the PD-1 conjugation workflow?",
+    "example_input": "What did we use last time for the antibody conjugation workflow?",
     "specific_output_append": {
       "inventory_search": "Keep empty for record lookups.",
       "protocol_candidates": "Set to [] because this is not notebook generation."
@@ -33,7 +44,7 @@
     "name": "project_science_question",
     "description": "Use when the user asks a scientific question tied to a specific project, experiment, workflow, or project record.",
     "rules": "Capture the project and other routing entities when they are present or strongly implied, and keep inventory_search empty unless the question is explicitly about stock.",
-    "example_input": "Why did the Atlas PD-1 binder lose expression after transfection?",
+    "example_input": "Why did the Atlas binder lose expression after transfection?",
     "specific_output_append": {
       "entities.project_name": "Populate when a project is named or clearly implied.",
       "inventory_search": "Keep empty unless the question is specifically about stock."
@@ -53,7 +64,7 @@
     "name": "paper_analysis",
     "description": "Use when the user asks to analyze, summarize, extract methods from, or interpret a specific paper or PDF already identified in the conversation.",
     "rules": "Populate paper_title when it is named or strongly implied, capture the requested analysis output, and keep inventory_search and protocol_candidates empty.",
-    "example_input": "Summarize the paper 'Engineered PD-1 Nanobodies' and pull out the methods.",
+    "example_input": "Summarize the paper 'Engineered Nanobody Constructs' and pull out the methods.",
     "specific_output_append": {
       "entities.paper_title": "Populate when the paper title is provided or strongly implied.",
       "protocol_candidates": "Set to [] for paper analysis."
@@ -63,7 +74,7 @@
     "name": "literature_search",
     "description": "Use when the user asks to find papers, references, recent literature, or external sources rather than analyze a specific paper already identified.",
     "rules": "Use topic-defining scientific entities and requested_output to describe the literature task, and keep inventory_search and protocol_candidates empty.",
-    "example_input": "Find recent papers on PD-1 binder stability in mammalian expression systems.",
+    "example_input": "Find recent papers on binder stability in mammalian expression systems.",
     "specific_output_append": {
       "entities.requested_output": "Use to capture the desired literature output such as papers, references, or recent findings.",
       "inventory_search": "Keep empty for literature searches."
@@ -83,7 +94,7 @@
     "name": "mixed_request",
     "description": "Use when the user combines materially different tasks in a single message and the app should clarify or separate them before execution.",
     "rules": "Set needs_clarification to true, explain the minimum clarification needed, and populate only the entities that are explicit in the mixed request.",
-    "example_input": "Check if we have PEI, summarize the latest PD-1 paper, and build a notebook page for yesterday's transfection.",
+    "example_input": "Check if we have PEI, summarize the latest binder paper, and build a notebook page for yesterday's transfection.",
     "specific_output_append": {
       "needs_clarification": "Usually true when the user combines multiple materially different tasks.",
       "clarification_reason": "Explain what must be clarified before safe execution."

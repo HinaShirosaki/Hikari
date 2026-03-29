@@ -42,7 +42,10 @@ export function projectNameById(state, projectId) {
 export function notebookEntryLabel(entry, formatTimestamp) {
   const notebookTypeLabel = entry.notebookType === 'biology' ? 'Biology' : 'Synthesis';
   const protocolLabel = String(entry.protocolName || entry.protocolId || 'Notebook Page').trim();
-  return `${notebookTypeLabel} | ${protocolLabel} | ${formatTimestamp(entry.updatedAt)}`;
+  const notebookStateLabel = String(entry?.notebookState || '').trim().toLowerCase() === 'planned'
+    ? 'Planned'
+    : 'Executed';
+  return `${notebookTypeLabel} | ${notebookStateLabel} | ${protocolLabel} | ${formatTimestamp(entry.updatedAt)}`;
 }
 
 export function buildAssigneeOptions(state, safeText, selectedAssigneeId = '') {

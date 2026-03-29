@@ -240,6 +240,311 @@
   color: #4b617e;
 }
 
+.sequence-viewer-protein-builder-workspace {
+  display: grid;
+  gap: 12px;
+}
+
+.sequence-viewer-protein-builder-toolbar {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  padding: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px 16px;
+}
+
+.sequence-viewer-protein-builder-toolbar-copy {
+  display: grid;
+  gap: 4px;
+  max-width: 720px;
+}
+
+.sequence-viewer-protein-builder-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.sequence-viewer-protein-builder-grid-wrap {
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.sequence-viewer-protein-builder-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(300px, 340px) minmax(640px, 1fr);
+  align-items: start;
+  min-width: 980px;
+}
+
+.sequence-viewer-protein-builder-sidebar,
+.sequence-viewer-protein-builder-main {
+  display: grid;
+  gap: 12px;
+}
+
+.sequence-viewer-protein-builder-panel {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  padding: 12px;
+}
+
+.sequence-viewer-protein-builder-controls {
+  gap: 12px;
+}
+
+.sequence-viewer-protein-builder-common-blocks {
+  display: grid;
+  gap: 12px;
+}
+
+.sequence-viewer-protein-builder-common-group {
+  display: grid;
+  gap: 8px;
+}
+
+.sequence-viewer-protein-builder-common-fold {
+  border: 1px solid var(--line-soft);
+  background: var(--surface-subtle);
+  padding: 8px 10px 10px;
+}
+
+.sequence-viewer-protein-builder-common-fold summary {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  color: var(--strong);
+  font-size: 0.86rem;
+  font-weight: 650;
+}
+
+.sequence-viewer-protein-builder-common-fold-meta {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.sequence-viewer-protein-builder-common-fold .sequence-viewer-protein-builder-common-list {
+  margin-top: 10px;
+}
+
+.sequence-viewer-protein-builder-common-group h5 {
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--primary);
+}
+
+.sequence-viewer-protein-builder-common-list {
+  display: grid;
+  gap: 6px;
+}
+
+.sequence-viewer-protein-builder-common-item {
+  border: 1px solid var(--line-soft);
+  background: var(--surface-subtle);
+  padding: 8px 10px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  text-align: left;
+}
+
+.sequence-viewer-protein-builder-common-item:hover,
+.sequence-viewer-protein-builder-common-item:focus-visible {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
+  background: color-mix(in srgb, var(--surface-subtle) 82%, var(--accent));
+}
+
+.sequence-viewer-protein-builder-common-item-name {
+  color: var(--strong);
+  font-weight: 650;
+}
+
+.sequence-viewer-protein-builder-common-item-meta {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.sequence-viewer-protein-builder-feature-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.sequence-viewer-protein-builder-feature-search-results {
+  margin-top: 12px;
+  display: grid;
+  gap: 8px;
+  max-height: 420px;
+  overflow: auto;
+}
+
+.sequence-viewer-protein-builder-feature-item {
+  border: 1px solid var(--line-soft);
+  background: var(--surface-subtle);
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.sequence-viewer-protein-builder-feature-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.sequence-viewer-protein-builder-feature-head strong {
+  color: var(--strong);
+}
+
+.sequence-viewer-protein-builder-feature-head .small-note {
+  margin: 2px 0 0;
+}
+
+.sequence-viewer-protein-builder-feature-sequence,
+.sequence-viewer-protein-builder-cell-seq {
+  margin: 0;
+  font-family: var(--font-mono, "SFMono-Regular", "Consolas", monospace);
+  font-size: 0.79rem;
+  letter-spacing: 0;
+  word-break: break-all;
+}
+
+.sequence-viewer-protein-builder-workflow-panel {
+  min-height: 100%;
+}
+
+.sequence-viewer-protein-builder-workflow {
+  margin-top: 10px;
+  min-height: 420px;
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 12px 2px 12px 0;
+}
+
+.sequence-viewer-protein-builder-link {
+  flex: 0 0 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+}
+
+.sequence-viewer-protein-builder-link span {
+  width: 100%;
+  min-width: 34px;
+  height: 2px;
+  background: color-mix(in srgb, var(--accent) 28%, var(--line));
+}
+
+.sequence-viewer-protein-builder-block {
+  position: relative;
+  flex: 0 0 264px;
+  min-width: 264px;
+  border: 1px solid var(--line);
+  background: var(--surface-subtle);
+  padding-top: 10px;
+}
+
+.sequence-viewer-protein-builder-block-body {
+  border-top: 4px solid var(--builder-block-accent, var(--accent));
+  padding: 12px 12px 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.sequence-viewer-protein-builder-block-tag {
+  --builder-block-accent: #7a8060;
+}
+
+.sequence-viewer-protein-builder-block-linker {
+  --builder-block-accent: #8f7f62;
+}
+
+.sequence-viewer-protein-builder-block-cleavage {
+  --builder-block-accent: #936c5e;
+}
+
+.sequence-viewer-protein-builder-block-feature {
+  --builder-block-accent: #6a725c;
+}
+
+.sequence-viewer-protein-builder-block-custom {
+  --builder-block-accent: #6d6456;
+}
+
+.sequence-viewer-protein-builder-block-poi {
+  --builder-block-accent: var(--accent);
+}
+
+.sequence-viewer-protein-builder-block-studs {
+  position: absolute;
+  top: -1px;
+  left: 14px;
+  display: flex;
+  gap: 10px;
+}
+
+.sequence-viewer-protein-builder-block-studs span {
+  width: 20px;
+  height: 8px;
+  border: 1px solid var(--line);
+  border-bottom: 0;
+  background: var(--surface);
+}
+
+.sequence-viewer-protein-builder-block-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sequence-viewer-protein-builder-block-head strong {
+  color: var(--strong);
+}
+
+.sequence-viewer-protein-builder-block-head .small-note {
+  margin: 2px 0 0;
+}
+
+.sequence-viewer-protein-builder-block-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.sequence-viewer-protein-builder-block-sequence {
+  margin: 0;
+  font-family: var(--font-mono, "SFMono-Regular", "Consolas", monospace);
+  font-size: 0.8rem;
+  color: var(--muted);
+  word-break: break-all;
+}
+
+.sequence-viewer-protein-builder-custom-fields {
+  display: grid;
+  gap: 8px;
+}
+
+.sequence-viewer-protein-builder-sequence-panel .sequence-block {
+  min-height: 136px;
+}
+
 .sequence-viewer-detail-workspace {
   display: grid;
   gap: 12px;
@@ -251,7 +556,7 @@
   background: var(--surface);
   padding: 12px;
   display: grid;
-  grid-template-columns: auto minmax(190px, 320px) auto;
+  grid-template-columns: auto auto minmax(190px, 320px) auto;
   gap: 10px;
   align-items: end;
 }
@@ -847,6 +1152,10 @@
 }
 
 @media (max-width: 1260px) {
+  .sequence-viewer-protein-builder-workflow {
+    min-height: 0;
+  }
+
   .sequence-viewer-results {
     grid-template-columns: 1fr;
   }
@@ -875,6 +1184,10 @@
     grid-template-columns: 1fr;
   }
 
+  .sequence-viewer-protein-builder-feature-controls {
+    grid-template-columns: 1fr;
+  }
+
   .sequence-viewer-dual-line {
     grid-template-columns: 58px 1fr;
     gap: 8px;
@@ -888,12 +1201,24 @@
   .sequence-viewer-seq-text {
     font-size: 0.74rem;
   }
+
+  .sequence-viewer-protein-builder-toolbar,
+  .sequence-viewer-protein-builder-block-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .sequence-viewer-protein-builder-block-actions {
+    justify-content: flex-start;
+  }
 }
 
 /* Extracted from ui/css/themes/modes.css */
 body.theme-night .sequence-viewer-home-toolbar,
+body.theme-night .sequence-viewer-protein-builder-toolbar,
 body.theme-night .sequence-viewer-detail-topbar,
-body.theme-night .sequence-viewer-controls {
+body.theme-night .sequence-viewer-controls,
+body.theme-night .sequence-viewer-protein-builder-panel {
   border-color: rgba(186, 218, 255, 0.3);
   background: var(--surface);
 }
@@ -928,6 +1253,19 @@ body.theme-night .sequence-viewer-library-item-name {
 
 body.theme-night .sequence-viewer-library-item-meta {
   color: rgba(198, 221, 248, 0.85);
+}
+
+body.theme-night .sequence-viewer-protein-builder-common-item,
+body.theme-night .sequence-viewer-protein-builder-feature-item,
+body.theme-night .sequence-viewer-protein-builder-block,
+body.theme-night .sequence-viewer-protein-builder-common-fold {
+  border-color: rgba(171, 205, 245, 0.32);
+  background: rgba(20, 31, 48, 0.5);
+}
+
+body.theme-night .sequence-viewer-protein-builder-block-studs span {
+  border-color: rgba(171, 205, 245, 0.32);
+  background: rgba(27, 40, 61, 0.76);
 }
 
 body.theme-night .sequence-viewer-preview-host {

@@ -11,6 +11,7 @@ const RAW_INTENT_CATALOG = require('./agent-intent.json');
 // Canonical intent names accepted by the parser and downstream routing layers.
 const PARSER_CANONICAL_INTENTS = Object.freeze([
   'protocol_to_notebook',
+  'notebook_draft',
   'inventory_lookup',
   'record_lookup',
   'project_science_question',
@@ -251,7 +252,7 @@ function normalizeInventorySearch(rawInventorySearch) {
 
 // Keep protocol candidates only for notebook requests and seed them from explicit protocol entities.
 function normalizeProtocolCandidates(rawCandidates, primaryIntent, entities = {}) {
-  if (primaryIntent !== 'protocol_to_notebook') {
+  if (!['protocol_to_notebook', 'notebook_draft'].includes(primaryIntent)) {
     return [];
   }
   const seed = [
@@ -464,7 +465,7 @@ function buildIntentCatalogPrompt(catalog = []) {
     '- Choose exactly one primary intent.',
     '- Populate entities only when they are supported by the user message or recent conversation.',
     '- For intents other than inventory_lookup, set inventory_search to nulls and empty arrays.',
-    '- For intents other than protocol_to_notebook, set protocol_candidates to [].',
+    '- For intents other than protocol_to_notebook and notebook_draft, set protocol_candidates to [].',
     '- Do not invent obscure aliases or unsupported protocol names.',
     '## Intent descriptions',
     descriptions,

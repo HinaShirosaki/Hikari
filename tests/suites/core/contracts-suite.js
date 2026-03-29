@@ -93,8 +93,10 @@ test('sequence viewer splits home and detail pages and removes home top caption/
   const detailBlock = html.slice(detailStart);
 
   assert.match(homeBlock, /id="sequence-viewer-home-workspace"/);
+  assert.match(homeBlock, /id="sequence-viewer-protein-builder-workspace"/);
   assert.match(homeBlock, /id="sequence-viewer-home-paste-btn"/);
   assert.match(homeBlock, /id="sequence-viewer-home-open-btn"/);
+  assert.match(homeBlock, /id="sequence-viewer-home-protein-builder-btn"/);
   assert.equal(homeBlock.includes('id="sequence-viewer-home-import-btn"'), false);
   assert.match(homeBlock, /id="sequence-viewer-library-filter-saved"/);
   assert.match(homeBlock, /id="sequence-viewer-library-filter-temporary"/);
@@ -106,11 +108,20 @@ test('sequence viewer splits home and detail pages and removes home top caption/
 
   assert.match(detailBlock, /id="sequence-viewer-detail-workspace"/);
   assert.match(detailBlock, /id="sequence-viewer-back-btn"/);
+  assert.match(detailBlock, /id="sequence-viewer-detail-protein-builder-btn"/);
   assert.match(detailBlock, /id="sequence-viewer-save-btn"/);
   assert.match(detailBlock, /id="sequence-viewer-recognize-backbone-btn"/);
   assert.match(detailBlock, /id="sequence-viewer-orf-toggle"/);
   assert.match(detailBlock, /id="sequence-viewer-restriction-neb-toggle"/);
   assert.match(detailBlock, /id="sequence-viewer-restriction-thermo-toggle"/);
+});
+
+test('tool box no longer exposes the protein builder subview', () => {
+  const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const source = readSource('src/renderer/modules/tool-box.js');
+  assert.equal(html.includes('tool-protein-assembly-view'), false);
+  assert.equal(html.includes('Protein Assembler'), false);
+  assert.equal(source.includes('initProteinAssemblyTool'), false);
 });
 
 test('sequence viewer map preview renderer omits metadata text overlays', () => {
@@ -487,6 +498,7 @@ test('generic agent tool catalog keeps key retrieval and execution tools', () =>
   assert.equal(toolsCatalog.some((entry) => entry?.name === 'python-sandbox'), true);
   assert.equal(toolsCatalog.some((entry) => entry?.name === 'literature-search'), true);
   assert.equal(toolsCatalog.some((entry) => entry?.name === 'paper-download'), true);
+  assert.equal(toolsCatalog.some((entry) => entry?.name === 'notebook-draft'), true);
   assert.equal(toolsCatalog.some((entry) => entry?.name === 'protocol-generation'), true);
 });
 
@@ -527,6 +539,9 @@ test('agent registrar controller output returns parser payload and optional deve
   assert.match(agentRegistrarSource, /const result = \{\s*ok: true,\s*parser: parserResult\.payload\s*\}/);
   assert.match(agentRegistrarSource, /if \(parserResult\.payload\.primary_intent === 'protocol_to_notebook'\)/);
   assert.match(agentRegistrarSource, /result\.protocol_to_notebook = protocolNotebookResult/);
+  assert.match(agentRegistrarSource, /else if \(parserResult\.payload\.primary_intent === 'notebook_draft'\)/);
+  assert.match(agentRegistrarSource, /result\.notebook_draft =/);
+  assert.match(agentRegistrarSource, /runTrackedTool\('notebook-draft'/);
   assert.match(agentRegistrarSource, /if \(parserResult\.payload\.primary_intent === 'inventory_lookup'\)/);
   assert.match(agentRegistrarSource, /result\.inventory_lookup = inventoryLookupResult/);
   assert.match(agentRegistrarSource, /else if \(parserResult\.payload\.primary_intent === 'record_lookup'\)/);
@@ -539,6 +554,7 @@ test('agent registrar controller output returns parser payload and optional deve
   assert.match(mainSource, /createAgentLookupRuntime/);
   assert.match(mainSource, /buildInventorySearchTerms/);
   assert.match(mainSource, /createProtocolNotebookRuntime/);
+  assert.match(mainSource, /createNotebookDraftRuntime/);
   assert.match(agentRegistrarSource, /if \(executionFlags\.developerMode === true\) \{\s*result\.developer_trace = asArray\(traceContext\?\.rows\);/);
   assert.match(agentRegistrarSource, /requestIntentParserPayload\(/);
   assert.match(mainSource, /createAgentControllerUtils/);
@@ -627,6 +643,7 @@ test('agent tool-call helper exposes catalogs and generic executor registry', ()
   assert.equal(toolsCatalog.some((entry) => entry?.name === 'literature-search'), true);
   assert.equal(toolsCatalog.some((entry) => entry?.name === 'paper-download'), true);
   assert.equal(toolsCatalog.some((entry) => entry?.name === 'paper-analysis'), true);
+  assert.equal(toolsCatalog.some((entry) => entry?.name === 'notebook-draft'), true);
   assert.equal(toolsCatalog.some((entry) => entry?.name === 'protocol-generation'), true);
   assert.equal(Boolean(toolCallCatalog['python-sandbox']?.input_schema), true);
   assert.equal(Boolean(toolCallCatalog['sub-agent']?.input_schema), true);
@@ -634,11 +651,13 @@ test('agent tool-call helper exposes catalogs and generic executor registry', ()
   assert.equal(Boolean(toolCallCatalog['literature-search']?.input_schema), true);
   assert.equal(Boolean(toolCallCatalog['paper-download']?.input_schema), true);
   assert.equal(Boolean(toolCallCatalog['paper-analysis']?.input_schema), true);
+  assert.equal(Boolean(toolCallCatalog['notebook-draft']?.input_schema), true);
   assert.equal(Boolean(toolCallCatalog['protocol-generation']?.input_schema), true);
   assert.equal(typeof toolCallCatalog['inventory-lookup']?.description, 'string');
   assert.equal(typeof toolCallCatalog.memory?.description, 'string');
   assert.equal(typeof toolCallCatalog['literature-search']?.description, 'string');
   assert.equal(typeof toolCallCatalog['paper-download']?.description, 'string');
+  assert.equal(typeof toolCallCatalog['notebook-draft']?.description, 'string');
   assert.equal(typeof toolCallCatalog['protocol-generation']?.description, 'string');
   assert.match(source, /const toolExecutors = new Map\(\);/);
   assert.match(source, /function registerToolExecutor\(toolName, executor\)/);
@@ -684,6 +703,7 @@ test('agent helper cleanup keeps the categorized folder structure and core modul
     ['tools', 'Tool-call.json'],
     ['tools', 'agent-tool-call.js'],
     ['tools', 'agent-notebook-generation.js'],
+    ['tools', 'agent-notebook-draft.js'],
     ['tools', 'agent-protocol-matching.js'],
     ['tools', 'agent-protocol-generation.js'],
     ['tools', 'agent-literature-search.js'],
@@ -898,10 +918,12 @@ test('literature, paper analysis, and protocol generation helpers expose reusabl
   assert.equal(toolsCatalog.some((entry) => entry?.name === 'literature-search'), true);
   assert.equal(toolsCatalog.some((entry) => entry?.name === 'paper-download'), true);
   assert.equal(toolsCatalog.some((entry) => entry?.name === 'paper-analysis'), true);
+  assert.equal(toolsCatalog.some((entry) => entry?.name === 'notebook-draft'), true);
   assert.equal(toolsCatalog.some((entry) => entry?.name === 'protocol-generation'), true);
   assert.equal(Boolean(toolCallCatalog['literature-search']?.input_schema), true);
   assert.equal(Boolean(toolCallCatalog['paper-download']?.input_schema), true);
   assert.equal(Boolean(toolCallCatalog['paper-analysis']?.input_schema), true);
+  assert.equal(Boolean(toolCallCatalog['notebook-draft']?.input_schema), true);
   assert.equal(Boolean(toolCallCatalog['protocol-generation']?.input_schema), true);
 });
 
@@ -1205,6 +1227,13 @@ test('telegram bot internals suggest module names for typos', () => {
   assert.ok(internals.getModuleCatalog().some((entry) => entry.token === 'projects'));
   assert.ok(internals.getModuleSuggestions('protcols').includes('protocols'));
   assert.equal(internals.levenshteinDistance('assay', 'asay'), 1);
+});
+
+test('telegram bot project parsing avoids hardcoded target shorthands', () => {
+  const internals = telegramBot._internals || {};
+  assert.equal(typeof internals.parseProjectFromText, 'function');
+  assert.equal(internals.parseProjectFromText('run this for project Atlas'), 'Atlas');
+  assert.equal(internals.parseProjectFromText('run this on EGFR'), null);
 });
 
 test('package manifest includes scripts and dependencies required for portable installs', () => {

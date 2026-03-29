@@ -1,9 +1,11 @@
 export function getSequenceViewerElements(rootDocument) {
   return {
     homeWorkspace: rootDocument?.getElementById?.('sequence-viewer-home-workspace'),
+    proteinBuilderWorkspace: rootDocument?.getElementById?.('sequence-viewer-protein-builder-workspace'),
     detailWorkspace: rootDocument?.getElementById?.('sequence-viewer-detail-workspace'),
     homePasteBtn: rootDocument?.getElementById?.('sequence-viewer-home-paste-btn'),
     homeOpenBtn: rootDocument?.getElementById?.('sequence-viewer-home-open-btn'),
+    homeProteinBuilderBtn: rootDocument?.getElementById?.('sequence-viewer-home-protein-builder-btn'),
     homeOpenInput: rootDocument?.getElementById?.('sequence-viewer-home-open-input'),
     homeStatusNote: rootDocument?.getElementById?.('sequence-viewer-home-status'),
     libraryFilterSavedBtn: rootDocument?.getElementById?.('sequence-viewer-library-filter-saved'),
@@ -15,6 +17,7 @@ export function getSequenceViewerElements(rootDocument) {
     featureSearchStatus: rootDocument?.getElementById?.('sequence-viewer-feature-search-status'),
     featureSearchResults: rootDocument?.getElementById?.('sequence-viewer-feature-search-results'),
     backBtn: rootDocument?.getElementById?.('sequence-viewer-back-btn'),
+    detailProteinBuilderBtn: rootDocument?.getElementById?.('sequence-viewer-detail-protein-builder-btn'),
     saveBtn: rootDocument?.getElementById?.('sequence-viewer-save-btn'),
     saveNameInput: rootDocument?.getElementById?.('sequence-viewer-save-name'),
     modePasteBtn: rootDocument?.getElementById?.('sequence-viewer-mode-paste'),
@@ -63,6 +66,23 @@ export function getSequenceViewerElements(rootDocument) {
     featureEditorEndInput: rootDocument?.getElementById?.('sequence-viewer-feature-editor-end'),
     featureEditorDescriptionInput: rootDocument?.getElementById?.('sequence-viewer-feature-editor-description'),
     featureEditorCloseBtn: rootDocument?.getElementById?.('sequence-viewer-feature-editor-close'),
-    featureEditorCancelBtn: rootDocument?.getElementById?.('sequence-viewer-feature-editor-cancel')
+    featureEditorCancelBtn: rootDocument?.getElementById?.('sequence-viewer-feature-editor-cancel'),
+    proteinBuilderBackBtn: rootDocument?.getElementById?.('sequence-viewer-protein-builder-back-btn'),
+    proteinBuilderStatus: rootDocument?.getElementById?.('sequence-viewer-protein-builder-status'),
+    proteinBuilderForm: rootDocument?.getElementById?.('sequence-viewer-protein-builder-form'),
+    proteinBuilderNameInput: rootDocument?.getElementById?.('sequence-viewer-protein-builder-name'),
+    proteinBuilderPoiNameInput: rootDocument?.getElementById?.('sequence-viewer-protein-builder-poi-name'),
+    proteinBuilderPoiSequenceInput: rootDocument?.getElementById?.('sequence-viewer-protein-builder-poi-sequence'),
+    proteinBuilderResetBtn: rootDocument?.getElementById?.('sequence-viewer-protein-builder-reset-btn'),
+    proteinBuilderAddCustomBtn: rootDocument?.getElementById?.('sequence-viewer-protein-builder-add-custom-btn'),
+    proteinBuilderAddPoiBtn: rootDocument?.getElementById?.('sequence-viewer-protein-builder-add-poi-btn'),
+    proteinBuilderCommonBlocks: rootDocument?.getElementById?.('sequence-viewer-protein-builder-common-blocks'),
+    proteinBuilderFeatureSearchInput: rootDocument?.getElementById?.('sequence-viewer-protein-builder-feature-search-input'),
+    proteinBuilderFeatureSearchBtn: rootDocument?.getElementById?.('sequence-viewer-protein-builder-feature-search-btn'),
+    proteinBuilderFeatureSearchStatus: rootDocument?.getElementById?.('sequence-viewer-protein-builder-feature-search-status'),
+    proteinBuilderFeatureSearchResults: rootDocument?.getElementById?.('sequence-viewer-protein-builder-feature-search-results'),
+    proteinBuilderMeta: rootDocument?.getElementById?.('sequence-viewer-protein-builder-meta'),
+    proteinBuilderWorkflow: rootDocument?.getElementById?.('sequence-viewer-protein-builder-workflow'),
+    proteinBuilderSequence: rootDocument?.getElementById?.('sequence-viewer-protein-builder-sequence')
   };
 }

@@ -2,7 +2,6 @@ import { initToolBoxViewManager } from './tool-box/view-manager.js';
 import { initMolarityTool } from './tool-box/molarity-ui.js';
 import { initPeptideTool } from './tool-box/peptide-ui.js';
 import { initTranslationTool } from './tool-box/translation-ui.js';
-import { initProteinAssemblyTool } from './tool-box/protein-assembly-ui.js';
 import { initOligoTool } from './tool-box/oligo-ui.js';
 import { initExtinctionTool } from './tool-box/extinction-ui.js';
 import { initQpcrTool } from './tool-box/qpcr-ui.js';
@@ -100,6 +99,7 @@ export function initToolBox(options = {}) {
     defaultViewId: 'tool-molarity-view'
   });
 
+  // Keep the Sequence Viewer handoff contract for toolbox plannotate-open-sequence-viewer flows.
   void onOpenSequenceViewer;
 
   const sharedOptions = {
@@ -109,7 +109,6 @@ export function initToolBox(options = {}) {
   initMolarityTool(sharedOptions);
   initPeptideTool(sharedOptions);
   initTranslationTool(sharedOptions);
-  initProteinAssemblyTool(sharedOptions);
   initOligoTool(sharedOptions);
   initExtinctionTool(sharedOptions);
   initQpcrTool(sharedOptions);

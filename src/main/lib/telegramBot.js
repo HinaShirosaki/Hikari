@@ -506,8 +506,7 @@ function parseProjectFromText(text, fallback = '') {
     return explicit;
   }
   const shorthand = firstRegexValue(text, [
-    /\b(PD\d{1,4}[A-Za-z0-9-]*)\b/,
-    /\b(EGFR|HER2|PDL1|PD1)\b/i
+    /\b(PD\d{1,4}[A-Za-z0-9-]*)\b/
   ]);
   if (shorthand) {
     return shorthand;
@@ -3063,7 +3062,7 @@ function startTelegramBot(getMainWindow, tokenOverride = '') {
       'I can help with lookup, logging, draft creation, protocol steps, and timers.',
       'Try:',
       '- "Do we have imidazole?"',
-      '- "I expressed PD1-His in BL21"',
+      '- "I expressed a His-tagged construct in BL21"',
       '- "set timer 45 min harvest culture"',
       '- "summarize today"'
     ].join('\n'));
@@ -3112,6 +3111,7 @@ startTelegramBot._internals = {
   parseDurationToMs,
   splitDurationAndLabel,
   parseTimerRequest,
+  parseProjectFromText,
   parseNaturalLanguageIntent,
   parseLookupSubintent,
   parseLabEvent,

@@ -362,6 +362,7 @@ const agentTools = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers'
 const agentProtocolGeneration = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-protocol-generation.js'));
 const agentProtocolMatching = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-protocol-matching.js'));
 const agentNotebookGeneration = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-notebook-generation.js'));
+const agentNotebookDraft = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-notebook-draft.js'));
 const agentInventoryLookup = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-inventory-lookup.js'));
 const agentRecordLookup = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-record-lookup.js'));
 const agentSubAgent = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-sub-agent.js'));
@@ -1418,6 +1419,7 @@ const suiteScope = {
   agentProtocolGeneration,
   agentProtocolMatching,
   agentNotebookGeneration,
+  agentNotebookDraft,
   agentInventoryLookup,
   agentRecordLookup,
   agentSubAgent,

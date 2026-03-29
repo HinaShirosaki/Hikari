@@ -1,16 +1,48 @@
 /* agent-view */
 
+body.agent-view-fixed-scroll {
+  overflow: hidden;
+}
+
+body.agent-view-fixed-scroll .app-shell {
+  height: 100vh;
+}
+
+body.agent-view-fixed-scroll .workspace-shell {
+  height: 100%;
+  min-height: 0;
+}
+
+body.agent-view-fixed-scroll .workspace-main {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+#agent-view.view.is-active {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 18px;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
 /* Extracted from ui/css/base/core.css */
 .agent-chat-layout {
   display: grid;
   grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
   gap: 14px;
-  align-items: start;
+  align-items: stretch;
+  min-height: 0;
 }
 
 .agent-session-panel {
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   gap: 10px;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .agent-session-toolbar {
@@ -27,7 +59,7 @@
 .agent-session-list {
   display: grid;
   gap: 8px;
-  max-height: 520px;
+  min-height: 0;
   overflow-y: auto;
 }
 
@@ -65,7 +97,10 @@
 
 .agent-chat-panel {
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
   gap: 12px;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .agent-developer-tools {
@@ -95,8 +130,7 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  min-height: 280px;
-  max-height: 520px;
+  min-height: 0;
   overflow-y: auto;
   padding-right: 4px;
 }
@@ -221,6 +255,7 @@
 @media (max-width: 720px) {
   .agent-chat-layout {
     grid-template-columns: 1fr;
+    grid-template-rows: minmax(180px, 240px) minmax(0, 1fr);
   }
 
   .agent-developer-tool-grid {

@@ -398,6 +398,79 @@ function registerAgentIpc(deps = {}) {
             backfilled_sql: result.record_lookup?.backfilled_sql === true
           }
         });
+      } else if (parserResult.payload.primary_intent === 'notebook_draft') {
+        observability.recordLifecycleEvent(lifecycleRecorder, {
+          stage: 'notebook_draft_started',
+          status: 'started',
+          routing_intent: 'notebook_draft',
+          message: 'Executing planned notebook draft runtime.'
+        });
+        if (parserResult.payload.needs_clarification === true) {
+          result.notebook_draft = {
+            status: 'needs_more_info',
+            project_name: '',
+            selected_protocol: null,
+            source_workflow: null,
+            missing_placeholders: [],
+            follow_up_questions: [
+              cleanText(parserResult.payload.clarification_reason, 280)
+                || 'Please tell me which project or workflow should receive the planned notebook draft.'
+            ],
+            proposal_summary: '',
+            proposal: null,
+            notebook: null,
+            summary: 'More detail is required before planning the next notebook draft.'
+          };
+          result.notebookDraft = null;
+        } else {
+          const runTrackedTool = createLifecycleToolRunner({
+            snapshot,
+            allowWriteTools: false,
+            lifecycleRecorder
+          });
+          const notebookDraftTool = await runTrackedTool('notebook-draft', {
+            project: {
+              id: cleanText(projectId, 120),
+              name: cleanText(projectName, 220)
+            },
+            protocol_candidates: asArray(parserResult.payload.protocol_candidates)
+          }, {
+            allowWriteTools: false
+          });
+          const toolResult = notebookDraftTool?.result && typeof notebookDraftTool.result === 'object'
+            ? notebookDraftTool.result
+            : {};
+          result.notebook_draft = notebookDraftTool?.ok === false
+            ? {
+              status: 'needs_more_info',
+              project_name: '',
+              selected_protocol: null,
+              source_workflow: null,
+              missing_placeholders: [],
+              follow_up_questions: [
+                cleanText(notebookDraftTool?.error, 280) || 'The planned notebook draft could not be prepared.'
+              ],
+              proposal_summary: '',
+              proposal: null,
+              notebook: null,
+              summary: cleanText(notebookDraftTool?.error, 320) || 'The planned notebook draft could not be prepared.'
+            }
+            : toolResult;
+          result.notebookDraft = result.notebook_draft?.notebook && typeof result.notebook_draft.notebook === 'object'
+            ? result.notebook_draft.notebook
+            : null;
+        }
+        observability.recordLifecycleEvent(lifecycleRecorder, {
+          stage: 'notebook_draft_completed',
+          status: cleanText(result.notebook_draft?.status, 40) === 'proposal_ready' ? 'ok' : 'pending',
+          routing_intent: 'notebook_draft',
+          message: `Notebook-draft status=${cleanText(result.notebook_draft?.status, 40) || 'unknown'}.`,
+          meta: {
+            selected_protocol_id: cleanText(result.notebook_draft?.selected_protocol?.id, 120),
+            missing_placeholder_count: asArray(result.notebook_draft?.missing_placeholders).length,
+            proposal_id: cleanText(result.notebook_draft?.proposal?.proposal_id, 160)
+          }
+        });
       } else if ([
         'general_science_question',
         'project_science_question',
@@ -632,7 +705,9 @@ function registerAgentIpc(deps = {}) {
       observability.recordLifecycleEvent(lifecycleRecorder, {
         stage: 'response_emitted',
         status: result?.ok === true ? 'ok' : 'error',
-        response_type: result?.protocol_to_notebook
+        response_type: result?.notebook_draft
+          ? 'notebook_draft'
+          : (result?.protocol_to_notebook
           ? 'protocol_to_notebook'
           : (result?.inventory_lookup
             ? 'inventory_lookup'
@@ -642,7 +717,7 @@ function registerAgentIpc(deps = {}) {
                 ? 'general_science_question'
                 : (result?.project_science_question
                   ? 'project_science_question'
-                  : (result?.result_analysis ? 'result_analysis' : 'intent_parser'))))),
+                  : (result?.result_analysis ? 'result_analysis' : 'intent_parser')))))),
         routing_intent: cleanText(result?.parser?.primary_intent, 80) || 'unclear',
         failure_reasons: failureReasons,
         message: result?.ok === true

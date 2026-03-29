@@ -50,9 +50,9 @@
   gap: 12px;
   min-height: 100%;
   padding: 16px;
-  border: 1px solid var(--line-soft);
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--surface-elevated) 86%, transparent);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 #setting-view .settings-subcard h4 {
@@ -70,9 +70,9 @@
 #setting-view #setting-location-list .card-actions {
   justify-content: space-between;
   padding: 12px 14px;
-  border: 1px solid var(--line-soft);
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--surface-elevated) 86%, transparent);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 #setting-view #setting-location-list {
@@ -87,4 +87,16 @@
   #setting-view .settings-card-grid {
     grid-template-columns: 1fr;
   }
+}
+
+#setting-view .panel,
+#setting-view .card,
+#setting-view .cards,
+#setting-view .settings-shell,
+#setting-view .settings-subcard,
+#setting-view #setting-location-list .card-actions {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }

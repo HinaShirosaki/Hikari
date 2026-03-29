@@ -102,6 +102,7 @@ const DOCK_APPS = APP_DOCK_ORDER
   .map((id) => APPS_BY_ID.get(id))
   .filter(Boolean);
 const MORE_APPS = APP_REGISTRY.filter((app) => !APP_DOCK_ORDER.includes(app.id));
+const EXPANDED_DOCK_APPS = [...DOCK_APPS, ...MORE_APPS];
 
 function applyAppearanceSnapshot(appearance) {
   const root = document.documentElement;
@@ -127,6 +128,7 @@ const exitBtn = document.getElementById('exit-btn');
 const topbarSearchInput = document.getElementById('topbar-search');
 const appDock = document.querySelector('.app-dock');
 const dockNav = document.getElementById('app-dock-nav');
+const appDockDivider = document.querySelector('.app-dock-divider');
 const moreBtn = document.getElementById('app-more-btn');
 const moreMenu = document.getElementById('app-more-menu');
 const views = [...document.querySelectorAll('.view')];
@@ -237,31 +239,34 @@ function createNavButton(app, options = {}) {
 }
 
 function getDockCapacity() {
+  const dockWidth = appDock?.clientWidth || 0;
   const viewportWidth = window.innerWidth || document.documentElement?.clientWidth || 0;
-  if (!viewportWidth) {
+  const effectiveWidth = dockWidth || Math.max(240, Math.floor(viewportWidth * 0.618));
+  if (!effectiveWidth) {
     return DOCK_APPS.length;
   }
-  if (viewportWidth >= 1280) {
-    return Math.min(DOCK_APPS.length, 8);
+  const dockHorizontalPadding = viewportWidth <= 720 ? 20 : 24;
+  const dividerWidth = 1;
+  const moreButtonWidth = viewportWidth <= 720 ? 34 : 36;
+  const dockButtonWidth = viewportWidth <= 720 ? 42 : 46;
+  const dockGap = 6;
+  const navGapCountFor = (count) => Math.max(0, count - 1);
+  const navWidthFor = (count) => (count * dockButtonWidth) + (navGapCountFor(count) * dockGap);
+  const fullWidthWithoutMore = navWidthFor(EXPANDED_DOCK_APPS.length) + dockHorizontalPadding;
+
+  if (fullWidthWithoutMore <= effectiveWidth) {
+    return EXPANDED_DOCK_APPS.length;
   }
-  if (viewportWidth >= 1180) {
-    return Math.min(DOCK_APPS.length, 7);
+
+  let count = EXPANDED_DOCK_APPS.length;
+  while (count > 1) {
+    const requiredWidth = navWidthFor(count) + dockHorizontalPadding + dividerWidth + moreButtonWidth + (dockGap * 2);
+    if (requiredWidth <= effectiveWidth) {
+      return count;
+    }
+    count -= 1;
   }
-  if (viewportWidth >= 1060) {
-    return Math.min(DOCK_APPS.length, 6);
-  }
-  if (viewportWidth >= 940) {
-    return Math.min(DOCK_APPS.length, 5);
-  }
-  if (viewportWidth >= 820) {
-    return Math.min(DOCK_APPS.length, 4);
-  }
-  if (viewportWidth >= 700) {
-    return Math.min(DOCK_APPS.length, 3);
-  }
-  if (viewportWidth >= 580) {
-    return Math.min(DOCK_APPS.length, 2);
-  }
+
   return 1;
 }
 
@@ -269,19 +274,19 @@ function getRenderedDockState() {
   const capacity = getDockCapacity();
   const activeViewId = getActiveViewId();
   const activeApp = getAppForView(activeViewId);
-  let visibleApps = DOCK_APPS.slice(0, capacity);
-  if (capacity < DOCK_APPS.length && activeApp && APP_DOCK_ORDER.includes(activeApp.id)) {
+  let visibleApps = EXPANDED_DOCK_APPS.slice(0, capacity);
+  if (capacity < EXPANDED_DOCK_APPS.length && activeApp && EXPANDED_DOCK_APPS.some((app) => app.id === activeApp.id)) {
     const alreadyVisible = visibleApps.some((app) => app.id === activeApp.id);
     if (!alreadyVisible && visibleApps.length) {
       visibleApps = [...visibleApps.slice(0, -1), activeApp]
-        .sort((left, right) => APP_DOCK_ORDER.indexOf(left.id) - APP_DOCK_ORDER.indexOf(right.id));
+        .sort((left, right) => EXPANDED_DOCK_APPS.indexOf(left) - EXPANDED_DOCK_APPS.indexOf(right));
     }
   }
   const visibleIds = new Set(visibleApps.map((app) => app.id));
-  const overflowPrimaryApps = DOCK_APPS.filter((app) => !visibleIds.has(app.id));
+  const overflowPrimaryApps = EXPANDED_DOCK_APPS.filter((app) => !visibleIds.has(app.id));
   return {
     visibleApps,
-    overflowApps: [...overflowPrimaryApps, ...MORE_APPS]
+    overflowApps: overflowPrimaryApps
   };
 }
 
@@ -319,6 +324,9 @@ function renderAppNavigation() {
   if (moreBtn) {
     const hasOverflowApps = overflowApps.length > 0;
     moreBtn.hidden = !hasOverflowApps;
+  }
+  if (appDockDivider) {
+    appDockDivider.hidden = overflowApps.length === 0;
   }
 }
 
@@ -788,6 +796,7 @@ function showView(viewId) {
   if (lastViewPersistenceEnabled) {
     rememberLastActiveView(nextView);
   }
+  document.body.classList.toggle('agent-view-fixed-scroll', nextView === VIEWS.AGENT);
 
   const showSampleInventoryWorkspace = nextView === VIEWS.SAMPLE_REGISTRY;
   views.forEach((view) => {

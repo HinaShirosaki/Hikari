@@ -20,9 +20,6 @@
         <button class="tile tool-tile" data-tool-view="tool-reverse-translate-view">
           <span class="label">Protein to DNA</span>
         </button>
-        <button class="tile tool-tile" data-tool-view="tool-protein-assembly-view">
-          <span class="label">Protein Assembler</span>
-        </button>
         <button class="tile tool-tile" data-tool-view="tool-oligo-view">
           <span class="label">DNA/RNA Oligo Properties</span>
         </button>
@@ -321,75 +318,6 @@
           </label>
         </form>
         <div id="reverse-translate-result" class="calc-output"></div>
-      </div>
-
-      <div id="tool-protein-assembly-view" class="panel tool-subview" hidden>
-        <h3>Protein Construct Assembler</h3>
-        <p class="small-note">Assemble tags, linkers, cleavage sites, and your protein of interest like Lego blocks.</p>
-        <div class="protein-assembly-shell">
-          <form id="protein-assembly-form" class="stack-form protein-assembly-controls" autocomplete="off">
-            <div class="form-grid">
-              <label>
-                Construct Name
-                <input id="protein-assembly-name" placeholder="e.g. N-His6-TEV-POI-TwinStrep" />
-              </label>
-              <label>
-                POI Name
-                <input id="protein-assembly-poi-name" placeholder="e.g. EGFR kinase domain" />
-              </label>
-            </div>
-            <label>
-              Protein of Interest Sequence
-              <textarea id="protein-assembly-poi-sequence" rows="5" placeholder="Paste amino-acid sequence (A-Z, optional *)"></textarea>
-            </label>
-            <div class="form-actions">
-              <button type="button" id="protein-assembly-add-block-btn" class="ghost-btn">Add Block</button>
-              <button type="button" id="protein-assembly-reset-btn" class="ghost-btn">Reset to Default</button>
-            </div>
-            <div id="protein-assembly-rows" class="protein-assembly-rows"></div>
-            <div class="form-actions">
-              <button type="submit" class="primary-btn">Assemble Construct</button>
-            </div>
-          </form>
-
-          <div id="protein-assembly-result" class="calc-output">
-            Add your POI sequence and configure assembly blocks.
-          </div>
-
-          <section class="plannotate-result-card protein-assembly-result-card">
-            <div class="plannotate-card-head">
-              <h4>Assembled Sequence</h4>
-              <span id="protein-assembly-meta" class="small-note">0 aa · 0 blocks</span>
-            </div>
-            <div id="protein-assembly-sequence" class="sequence-block">-</div>
-          </section>
-
-          <section class="plannotate-result-card protein-assembly-result-card">
-            <div class="plannotate-card-head">
-              <h4>Assembly Map</h4>
-              <span id="protein-assembly-map-summary" class="small-note">No blocks assembled.</span>
-            </div>
-            <div class="plannotate-table-wrap protein-assembly-table-wrap">
-              <table class="plannotate-table protein-assembly-table">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Part</th>
-                    <th>Type</th>
-                    <th>Range</th>
-                    <th>Length (aa)</th>
-                    <th>Sequence</th>
-                  </tr>
-                </thead>
-                <tbody id="protein-assembly-table-body">
-                  <tr>
-                    <td colspan="6" class="small-note">No blocks assembled.</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </section>
-        </div>
       </div>
 
       <div id="tool-oligo-view" class="panel tool-subview" hidden>

@@ -14,32 +14,29 @@
   min-width: 0;
 }
 
-.assay-number-card {
+.assay-display-field {
   display: grid;
   gap: 6px;
-  padding: 0;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface);
   align-content: start;
-  overflow: hidden;
 }
 
-.assay-number-label {
+.assay-display-label {
   color: var(--strong);
   font-size: 0.94rem;
   font-weight: 500;
-  padding: 9px 11px 0;
 }
 
-.assay-number-value {
-  min-height: 0;
+.assay-display-value {
+  min-height: 41px;
   display: flex;
   align-items: center;
   color: var(--strong);
   font-size: 1rem;
   font-weight: 650;
-  padding: 0 11px 9px;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
 }
 
 .assay-form-note,
@@ -62,9 +59,17 @@
   display: grid;
   gap: 6px;
   align-content: stretch;
+  justify-items: start;
+}
+
+.assay-axis-switch .assay-mode-switch {
+  justify-self: start;
 }
 
 .assay-plate-table-wrap {
+  width: fit-content;
+  max-width: 100%;
+  justify-self: start;
   overflow: auto;
 }
 

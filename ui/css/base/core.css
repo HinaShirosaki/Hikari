@@ -148,7 +148,8 @@ div {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  width: max-content;
+  width: min(61.8vw, calc(100vw - 32px));
+  min-width: 320px;
   max-width: calc(100vw - 32px);
   padding: 10px 12px;
   border: 1px solid var(--line);
@@ -158,13 +159,13 @@ div {
 }
 
 .app-dock-nav {
-  flex: 0 1 auto;
+  flex: 1 1 auto;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
   min-width: 0;
-  overflow: visible;
+  overflow: hidden;
   padding-bottom: 0;
 }
 
@@ -228,6 +229,10 @@ div {
 .app-dock-btn:focus-visible::before {
   opacity: 1;
   transform: translate(-50%, 0);
+}
+
+.app-dock-btn-more::before {
+  content: 'More';
 }
 
 .app-dock-btn.is-active::after {
@@ -704,6 +709,8 @@ button:disabled {
 
   .app-dock {
     bottom: 10px;
+    width: min(61.8vw, calc(100vw - 20px));
+    min-width: 0;
     max-width: calc(100vw - 20px);
     padding: 8px 10px;
   }
