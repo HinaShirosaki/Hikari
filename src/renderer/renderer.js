@@ -43,13 +43,7 @@ const FIXED_ACCENT = '#647255';
 const FIXED_FOCUS = '#7a8a69';
 
 function normalizeViewId(viewId) {
-  if (viewId === VIEWS.PERSONAL_INVENTORY) {
-    return VIEWS.SAMPLE_REGISTRY;
-  }
-  if (viewId === VIEWS.COLLABORATION_MANAGEMENT) {
-    return VIEWS.LAB_MANAGEMENT;
-  }
-  return viewId;
+  return viewId === VIEWS.PERSONAL_INVENTORY ? VIEWS.SAMPLE_REGISTRY : viewId;
 }
 
 function buildViewAliasMap(apps) {

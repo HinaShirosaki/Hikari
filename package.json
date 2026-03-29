@@ -6,6 +6,7 @@
   "scripts": {
     "build:ui": "node scripts/build-ui.mjs",
     "check:dom-ids": "node scripts/check-dom-ids.mjs",
+    "report:modules": "node scripts/report-module-relationships.mjs",
     "start": "npm run build:ui && electron-forge start",
     "test": "npm run build:ui && npm run check:dom-ids && node test.js",
     "dist": "npm run build:ui && electron-forge make",

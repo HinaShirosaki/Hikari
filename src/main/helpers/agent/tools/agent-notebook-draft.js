@@ -1,6 +1,7 @@
 'use strict';
 
 const { createAgentLlmRuntimeHelpers } = require('../shared/agent-llm-utils.js');
+const { resolveAgentRuntimeFactory } = require('../shared/agent-runtime-registry.js');
 const { createProtocolMatchingRuntime } = require('./agent-protocol-matching.js');
 const { createNotebookGenerationRuntime } = require('./agent-notebook-generation.js');
 
@@ -35,15 +36,28 @@ function createNotebookDraftRuntime(deps = {}) {
     ? deps.createProposalId
     : (() => `proposal-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
 
-  const protocolMatchingRuntime = createProtocolMatchingRuntime({
-    ...deps,
-    ensureObject
-  });
-  const notebookGenerationRuntime = createNotebookGenerationRuntime({
-    ...deps,
-    ensureObject,
-    runTool: null
-  });
+  const protocolMatchingFactory = resolveAgentRuntimeFactory(deps, 'protocol-matching');
+  const notebookGenerationFactory = resolveAgentRuntimeFactory(deps, 'notebook-generation');
+  const protocolMatchingRuntime = typeof protocolMatchingFactory === 'function'
+    ? protocolMatchingFactory({
+      ...deps,
+      ensureObject
+    })
+    : createProtocolMatchingRuntime({
+      ...deps,
+      ensureObject
+    });
+  const notebookGenerationRuntime = typeof notebookGenerationFactory === 'function'
+    ? notebookGenerationFactory({
+      ...deps,
+      ensureObject,
+      runTool: null
+    })
+    : createNotebookGenerationRuntime({
+      ...deps,
+      ensureObject,
+      runTool: null
+    });
 
   const NOTEBOOK_DRAFT_SELECTION_SCHEMA = {
     type: 'object',

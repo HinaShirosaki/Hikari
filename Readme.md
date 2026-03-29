@@ -193,11 +193,14 @@ Entrypoint:
 
 Suites under `tests/suites/`:
 
-- `core/agent-suite.js`: agent routing, tool execution, retrieval, simulation flows.
-- `core/app-modules-suite.js`: module behavior coverage.
+- `core/agent-suite.js`: loader for agent-focused suites under `core/agent-suite/`.
+- `core/agent-suite/*.js`: intent parsing, notebook flows, tool calls, science loops, paper flows, runtime state, and deep-research coverage.
+- `core/app-modules-suite.js`: loader for renderer module suites under `core/app-modules-suite/`.
+- `core/app-modules-suite/*.js`: renderer module behavior coverage.
 - `core/contracts-suite.js`: UI/IPC contract and wiring checks.
 - `edge/platform-and-regression-suite.js`: regression/static edge checks.
-- `edge/bio-tools-and-gel-suite.js`: sequence/tools/gel edge coverage.
+- `edge/bio-tools-and-gel-suite.js`: loader for edge suites under `edge/bio-tools-and-gel-suite/`.
+- `edge/bio-tools-and-gel-suite/*.js`: sequence/tools/gel edge coverage.
 
 Suite loaders:
 
