@@ -78,6 +78,26 @@ export function collectAgentActivityRows(meta) {
     upsertRow('pending', `Missing placeholders: ${missingCount}`);
   }
 
+  const notebookDraftWorkflow = meta.notebook_draft && typeof meta.notebook_draft === 'object'
+    ? meta.notebook_draft
+    : {};
+  const notebookDraftStatus = trimText(notebookDraftWorkflow.status, 40);
+  if (notebookDraftStatus) {
+    upsertRow(notebookDraftStatus === 'proposal_ready' ? 'done' : 'pending', `Notebook draft status: ${notebookDraftStatus}`);
+  }
+  const notebookDraftProtocolName = trimText(notebookDraftWorkflow?.selected_protocol?.name, 220);
+  if (notebookDraftProtocolName) {
+    upsertRow('done', `Planned protocol: ${notebookDraftProtocolName}`);
+  }
+  const proposalTitle = trimText(notebookDraftWorkflow?.proposal?.title, 220);
+  if (proposalTitle) {
+    upsertRow('done', `Proposal: ${proposalTitle}`);
+  }
+  const notebookDraftMissingCount = asArray(notebookDraftWorkflow.missing_placeholders).length;
+  if (notebookDraftMissingCount > 0) {
+    upsertRow('pending', `Planned draft missing placeholders: ${notebookDraftMissingCount}`);
+  }
+
   const inventoryLookup = meta.inventory_lookup && typeof meta.inventory_lookup === 'object'
     ? meta.inventory_lookup
     : {};
@@ -208,9 +228,34 @@ export function summarizeScienceResult(payload) {
   return followUps.join(' ');
 }
 
+export function summarizeNotebookDraft(payload) {
+  const source = payload && typeof payload === 'object' ? payload : {};
+  const status = trimText(source.status, 40);
+  if (!status) {
+    return '';
+  }
+  if (status === 'needs_more_info') {
+    return asArray(source.follow_up_questions).map((item) => trimText(item, 280)).filter(Boolean).join(' ')
+      || 'I need more detail before I can plan the next notebook page.';
+  }
+  const proposal = source.proposal && typeof source.proposal === 'object' ? source.proposal : {};
+  const title = trimText(proposal.title, 220);
+  const purpose = trimText(proposal.purpose, 320);
+  const protocolName = trimText(source?.selected_protocol?.name, 220);
+  if (status === 'proposal_ready') {
+    return title && purpose
+      ? `Planned notebook draft ready: ${title}. ${purpose}`
+      : `Planned notebook draft ready${protocolName ? ` using protocol ${protocolName}` : ''}.`;
+  }
+  return '';
+}
+
 export function normalizeAgentResponse(result) {
   const protocolWorkflow = result?.protocol_to_notebook && typeof result.protocol_to_notebook === 'object'
     ? result.protocol_to_notebook
+    : null;
+  const notebookDraftWorkflow = result?.notebook_draft && typeof result.notebook_draft === 'object'
+    ? result.notebook_draft
     : null;
   const notebookPayload = protocolWorkflow?.notebook && typeof protocolWorkflow.notebook === 'object'
     ? protocolWorkflow.notebook
@@ -241,23 +286,26 @@ export function normalizeAgentResponse(result) {
     : null;
   const inventorySummaryText = summarizeInventoryLookup(inventoryLookup);
   const recordSummaryText = summarizeRecordLookup(recordLookup);
+  const notebookDraftText = summarizeNotebookDraft(notebookDraftWorkflow);
   const scienceAnswerText = summarizeScienceResult(generalScienceQuestion)
     || summarizeScienceResult(projectScienceQuestion)
     || summarizeScienceResult(resultAnalysis);
-  const assistantText = protocolStatus === 'completed'
-    ? (completedNotebookText
-      || `Notebook draft completed using protocol ${trimText(protocolWorkflow?.selected_protocol?.name, 220) || 'selection'}.`)
-    : (protocolStatus === 'needs_more_info'
-      ? (followUpQuestions.join(' ') || 'More details are needed to fill the remaining notebook placeholders.')
-      : (scienceAnswerText
-        || inventorySummaryText
-        || recordSummaryText
-        || trimText(parser.reasoning_summary, 12000)
-        || 'Intent parsing completed.'));
+  const assistantText = notebookDraftText
+    || (protocolStatus === 'completed'
+      ? (completedNotebookText
+        || `Notebook draft completed using protocol ${trimText(protocolWorkflow?.selected_protocol?.name, 220) || 'selection'}.`)
+      : (protocolStatus === 'needs_more_info'
+        ? (followUpQuestions.join(' ') || 'More details are needed to fill the remaining notebook placeholders.')
+        : (scienceAnswerText
+          || inventorySummaryText
+          || recordSummaryText
+          || trimText(parser.reasoning_summary, 12000)
+          || 'Intent parsing completed.')));
 
   return {
     parser,
     protocolWorkflow,
+    notebookDraftWorkflow,
     notebookPayload,
     inventoryLookup,
     recordLookup,

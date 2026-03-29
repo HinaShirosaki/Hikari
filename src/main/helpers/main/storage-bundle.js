@@ -246,6 +246,11 @@ function applySqliteSchema(db) {
       project_id TEXT,
       project_name TEXT,
       result TEXT,
+      notebook_state TEXT,
+      executed_at TEXT,
+      agent_draft_status TEXT,
+      workflow_id TEXT,
+      proposal_id TEXT,
       updated_at TEXT,
       created_at TEXT,
       linked_refs_json TEXT,
@@ -697,6 +702,11 @@ function writeSqlNotebookIndex(db, snapshot, updatedAtDefault) {
     const projectId = cleanText(entry.projectId, 220);
     const projectName = cleanText(entry.projectName, 320);
     const result = cleanText(entry.result, 12000);
+    const notebookState = cleanText(entry.notebookState, 40).toLowerCase() === 'planned' ? 'planned' : 'executed';
+    const executedAt = cleanText(entry.executedAt, 80);
+    const agentDraftStatus = cleanText(entry.agentDraftStatus, 80);
+    const workflowId = cleanText(entry?.agentDraftMeta?.workflowId, 120);
+    const proposalId = cleanText(entry?.agentDraftMeta?.proposalId, 160);
     const updatedAt = cleanText(entry.updatedAt, 80) || updatedAtDefault;
     const createdAt = cleanText(entry.createdAt, 80);
     const linkedRefs = {
@@ -715,8 +725,8 @@ function writeSqlNotebookIndex(db, snapshot, updatedAtDefault) {
     ]);
     db.run(
       `INSERT OR REPLACE INTO notebook_index
-        (id, protocol_id, protocol_name, project_id, project_name, result, updated_at, created_at, linked_refs_json, search_text)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        (id, protocol_id, protocol_name, project_id, project_name, result, notebook_state, executed_at, agent_draft_status, workflow_id, proposal_id, updated_at, created_at, linked_refs_json, search_text)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         protocolId,
@@ -724,6 +734,11 @@ function writeSqlNotebookIndex(db, snapshot, updatedAtDefault) {
         projectId,
         projectName,
         result,
+        notebookState,
+        executedAt,
+        agentDraftStatus,
+        workflowId,
+        proposalId,
         updatedAt,
         createdAt,
         JSON.stringify(linkedRefs),
@@ -798,6 +813,8 @@ function readProtocolRowsFromSqlite(rows) {
 function readNotebookRowsFromSqlite(rows) {
   return asArray(rows).map((row, index) => {
     const source = ensureObject(row);
+    const workflowId = cleanText(source.workflow_id, 120);
+    const proposalId = cleanText(source.proposal_id, 160);
     return {
       id: cleanText(source.id, 220) || `notebook_${index + 1}`,
       protocolId: cleanText(source.protocol_id, 220),
@@ -808,6 +825,13 @@ function readNotebookRowsFromSqlite(rows) {
       resultFiles: [],
       resultFileRecords: [],
       resultFileAddresses: [],
+      notebookState: cleanText(source.notebook_state, 40).toLowerCase() === 'planned' ? 'planned' : 'executed',
+      executedAt: cleanText(source.executed_at, 80),
+      agentDraftStatus: cleanText(source.agent_draft_status, 80),
+      agentDraftMeta: {
+        workflowId,
+        proposalId
+      },
       updatedAt: cleanText(source.updated_at, 80),
       createdAt: cleanText(source.created_at, 80)
     };

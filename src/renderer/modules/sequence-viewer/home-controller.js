@@ -44,9 +44,16 @@ export function createSequenceViewerHomeController(config = {}) {
   }
 
   function setLocalWorkspaceVisibility(mode) {
-    const next = mode === 'detail' ? 'detail' : 'home';
+    const next = mode === 'detail'
+      ? 'detail'
+      : mode === 'builder'
+        ? 'builder'
+        : 'home';
     if (elements.homeWorkspace) {
       elements.homeWorkspace.hidden = next !== 'home';
+    }
+    if (elements.proteinBuilderWorkspace) {
+      elements.proteinBuilderWorkspace.hidden = next !== 'builder';
     }
     if (elements.detailWorkspace) {
       elements.detailWorkspace.hidden = next !== 'detail';

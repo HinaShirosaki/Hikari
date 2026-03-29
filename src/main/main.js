@@ -56,6 +56,7 @@ const {
   normalizeToolInvocationArgs,
   getToolInputSchemas
 } = require('./helpers/agent/tools/agent-tool-call.js');
+const { createNotebookDraftRuntime } = require('./helpers/agent/tools/agent-notebook-draft.js');
 const { createAgentRuntimeSupport } = require('./helpers/agent/runtime/agent-runtime-support.js');
 const { createCodexAgentRuntime } = require('./helpers/agent/runtime/agent-codex-runtime.js');
 const { createMainDataHelpers } = require('./helpers/main/data-helpers');
@@ -527,6 +528,57 @@ const protocolNotebookRuntime = createProtocolNotebookRuntime({
   recordAgentLlmTrace: controllerUtils.recordAgentLlmTrace,
   recordLifecycleEvent: observability.recordLifecycleEvent
 });
+const notebookDraftRuntime = createNotebookDraftRuntime({
+  LLM_PROVIDERS,
+  asArray: (value) => (Array.isArray(value) ? value : []),
+  cleanText,
+  uniqueStrings: (values, max = 50) => {
+    const seen = new Set();
+    const out = [];
+    (Array.isArray(values) ? values : []).forEach((value) => {
+      const normalized = cleanText(value, 220);
+      if (!normalized) {
+        return;
+      }
+      const key = normalized.toLowerCase();
+      if (seen.has(key) || out.length >= max) {
+        return;
+      }
+      seen.add(key);
+      out.push(normalized);
+    });
+    return out;
+  },
+  safeParseJson,
+  requestCodexCliText,
+  getCodexCliWorkingDirectory,
+  requestClaudeMessagesWithBackoff,
+  requestGeminiGenerateContentWithBackoff,
+  requestOpenAiResponsesWithBackoff,
+  extractClaudeResponseText,
+  extractGeminiResponseText,
+  extractResponseText,
+  toInputText,
+  recordAgentLlmTrace: controllerUtils.recordAgentLlmTrace,
+  recordLifecycleEvent: observability.recordLifecycleEvent
+});
+genericAgentToolRuntime.registerToolExecutor('notebook-draft', async ({ args, context }) => notebookDraftRuntime.generateNotebookDraft({
+  provider: cleanText(context?.provider, 80),
+  endpoint: cleanText(context?.endpoint, 1600),
+  apiKey: cleanText(context?.apiKey, 400),
+  model: cleanText(context?.model, 120),
+  message: cleanText(context?.message, 3200),
+  conversation: Array.isArray(context?.conversation) ? context.conversation : [],
+  snapshot: context?.snapshot && typeof context.snapshot === 'object' ? context.snapshot : {},
+  parserPayload: context?.parserPayload && typeof context.parserPayload === 'object' ? context.parserPayload : {},
+  project: args?.project && typeof args.project === 'object'
+    ? args.project
+    : (context?.project && typeof context.project === 'object' ? context.project : {}),
+  workflowId: cleanText(args?.workflow_id, 120),
+  protocolCandidates: Array.isArray(args?.protocol_candidates) ? args.protocol_candidates : [],
+  traceContext: context?.traceContext || null,
+  lifecycleRecorder: context?.lifecycleRecorder || null
+}));
 
 const scienceReasoningLoopRuntime = createScienceReasoningLoopRuntime({
   asArray: (value) => (Array.isArray(value) ? value : []),

@@ -246,6 +246,9 @@ function createAgentControllerUtils(deps = {}) {
     const protocolNotebook = source.protocol_to_notebook && typeof source.protocol_to_notebook === 'object'
       ? source.protocol_to_notebook
       : null;
+    const notebookDraft = source.notebook_draft && typeof source.notebook_draft === 'object'
+      ? source.notebook_draft
+      : null;
     const inventoryLookup = source.inventory_lookup && typeof source.inventory_lookup === 'object'
       ? source.inventory_lookup
       : null;
@@ -323,6 +326,40 @@ function createAgentControllerUtils(deps = {}) {
               },
               rendered_step_count: asArray(notebook.rendered_steps).length,
               unresolved_placeholder_count: asArray(notebook.unresolved_placeholders).length
+            }
+            : null
+        }
+        : null,
+      notebook_draft: notebookDraft
+        ? {
+          status: cleanText(notebookDraft.status, 40),
+          project_name: cleanText(notebookDraft.project_name, 200),
+          selected_protocol: notebookDraft.selected_protocol && typeof notebookDraft.selected_protocol === 'object'
+            ? {
+              id: cleanText(notebookDraft.selected_protocol.id, 120),
+              name: cleanText(notebookDraft.selected_protocol.name, 220),
+              selection_method: cleanText(notebookDraft.selected_protocol.selection_method, 80)
+            }
+            : null,
+          source_workflow: notebookDraft.source_workflow && typeof notebookDraft.source_workflow === 'object'
+            ? {
+              id: cleanText(notebookDraft.source_workflow.id, 120),
+              name: cleanText(notebookDraft.source_workflow.name, 220),
+              block_id: cleanText(notebookDraft.source_workflow.block_id, 120),
+              block_title: cleanText(notebookDraft.source_workflow.block_title, 220)
+            }
+            : null,
+          missing_placeholders: asArray(notebookDraft.missing_placeholders).map((item) => ({
+            placeholder_key: cleanText(item?.placeholder_key, 160),
+            display: cleanText(item?.display, 160),
+            reason: cleanText(item?.reason, 220)
+          })).filter((item) => item.placeholder_key || item.display),
+          follow_up_questions: asArray(notebookDraft.follow_up_questions).map((item) => cleanText(item, 260)).filter(Boolean),
+          proposal: notebookDraft.proposal && typeof notebookDraft.proposal === 'object'
+            ? {
+              proposal_id: cleanText(notebookDraft.proposal.proposal_id, 160),
+              title: cleanText(notebookDraft.proposal.title, 220),
+              purpose: cleanText(notebookDraft.proposal.purpose, 500)
             }
             : null
         }

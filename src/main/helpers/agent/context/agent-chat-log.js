@@ -143,11 +143,37 @@ function summarizeScienceResult(payload) {
   return asArray(source.follow_up_questions).map((item) => cleanText(item, 280)).filter(Boolean).join(' ');
 }
 
+// Build a concise assistant-facing summary from notebook draft proposal results.
+function summarizeNotebookDraft(payload) {
+  const source = payload && typeof payload === 'object' ? payload : {};
+  const status = cleanText(source.status, 40);
+  if (!status) {
+    return '';
+  }
+  if (status === 'needs_more_info') {
+    return asArray(source.follow_up_questions).map((item) => cleanText(item, 280)).filter(Boolean).join(' ')
+      || 'I need more detail before I can plan the next notebook page.';
+  }
+  const proposal = source.proposal && typeof source.proposal === 'object' ? source.proposal : {};
+  const title = cleanText(proposal.title, 220);
+  const purpose = cleanText(proposal.purpose, 320);
+  const protocolName = cleanText(source?.selected_protocol?.name, 220);
+  if (status === 'proposal_ready') {
+    return title && purpose
+      ? `Planned notebook draft ready: ${title}. ${purpose}`
+      : `Planned notebook draft ready${protocolName ? ` using protocol ${protocolName}` : ''}.`;
+  }
+  return '';
+}
+
 // Preserve structured agent output in assistant message metadata for later UI use.
 function buildAssistantMetaFromResult(result, requestText = '') {
   const payload = result && typeof result === 'object' ? result : {};
   const protocolWorkflow = payload.protocol_to_notebook && typeof payload.protocol_to_notebook === 'object'
     ? payload.protocol_to_notebook
+    : null;
+  const notebookDraftWorkflow = payload.notebook_draft && typeof payload.notebook_draft === 'object'
+    ? payload.notebook_draft
     : null;
   const notebookPayload = protocolWorkflow?.notebook && typeof protocolWorkflow.notebook === 'object'
     ? protocolWorkflow.notebook
@@ -155,6 +181,7 @@ function buildAssistantMetaFromResult(result, requestText = '') {
   return {
     parser: payload.parser && typeof payload.parser === 'object' ? cloneJson(payload.parser, {}) : {},
     protocol_to_notebook: protocolWorkflow ? cloneJson(protocolWorkflow, null) : null,
+    notebook_draft: notebookDraftWorkflow ? cloneJson(notebookDraftWorkflow, null) : null,
     inventory_lookup: payload.inventory_lookup && typeof payload.inventory_lookup === 'object'
       ? cloneJson(payload.inventory_lookup, null)
       : null,
@@ -183,6 +210,9 @@ function buildAssistantTextFromResult(result) {
   const protocolWorkflow = payload.protocol_to_notebook && typeof payload.protocol_to_notebook === 'object'
     ? payload.protocol_to_notebook
     : null;
+  const notebookDraftWorkflow = payload.notebook_draft && typeof payload.notebook_draft === 'object'
+    ? payload.notebook_draft
+    : null;
   const parser = payload.parser && typeof payload.parser === 'object' ? payload.parser : {};
   const inventoryLookup = payload.inventory_lookup && typeof payload.inventory_lookup === 'object'
     ? payload.inventory_lookup
@@ -209,9 +239,13 @@ function buildAssistantTextFromResult(result) {
   );
   const inventorySummaryText = summarizeInventoryLookup(inventoryLookup);
   const recordSummaryText = summarizeRecordLookup(recordLookup);
+  const notebookDraftText = summarizeNotebookDraft(notebookDraftWorkflow);
   const scienceAnswerText = summarizeScienceResult(generalScienceQuestion)
     || summarizeScienceResult(projectScienceQuestion)
     || summarizeScienceResult(resultAnalysis);
+  if (notebookDraftText) {
+    return notebookDraftText;
+  }
   // Prefer notebook completion text when a protocol-to-notebook workflow succeeded.
   if (protocolStatus === 'completed') {
     return completedNotebookText
@@ -266,6 +300,7 @@ function buildAssistantMessageFromError({ errorMessage = '', requestText = '', m
         reasoning_summary: `Agent failed: ${message}`
       },
       protocol_to_notebook: null,
+      notebook_draft: null,
       inventory_lookup: null,
       record_lookup: null,
       general_science_question: null,

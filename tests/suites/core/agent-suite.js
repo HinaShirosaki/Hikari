@@ -75,6 +75,39 @@ module.exports = function registerAgentSuite(context = {}) {
       assert.equal(result.payload.protocol_candidates[0], 'HEK293 Transfection');
     });
 
+    test('intent parser keeps protocol candidates for notebook_draft intent', () => {
+      const raw = {
+        primary_intent: 'notebook_draft',
+        needs_clarification: false,
+        clarification_reason: null,
+        entities: {
+          activity_type: 'planning',
+          project_name: 'Atlas',
+          protocol_name: null,
+          protein_name: null,
+          compound_name: null,
+          inventory_item: null,
+          cell_line: null,
+          paper_title: null,
+          workflow_step: 'next experiment',
+          requested_output: 'planned notebook page'
+        },
+        inventory_search: {
+          normalized_query: null,
+          candidate_terms: [],
+          aliases: [],
+          search_mode: null
+        },
+        protocol_candidates: ['Viability Assay', 'cell viability assay'],
+        reasoning_summary: 'Propose the next notebook page from the workflow.'
+      };
+
+      const result = agentIntentParser.normalizeIntentParserPayload(raw);
+      assert.equal(result.ok, true);
+      assert.equal(result.payload.primary_intent, 'notebook_draft');
+      assert.deepEqual(result.payload.protocol_candidates, ['Viability Assay', 'cell viability assay']);
+    });
+
     test('intent parser rejects legacy confidence and secondary_intents fields', () => {
       const withConfidence = agentIntentParser.normalizeIntentParserPayload({
         primary_intent: 'general_science_question',
@@ -387,6 +420,8 @@ module.exports = function registerAgentSuite(context = {}) {
       });
       assert.equal(result.status, 'completed');
       assert.equal(result.notebook.save.status, 'ready_for_save');
+      assert.equal(result.notebook.entry_template.notebookState, 'executed');
+      assert.equal(Boolean(result.notebook.entry_template.executedAt), true);
       assert.equal(result.notebook.entry_template.agentDraftStatus, 'draft_ready');
       assert.equal(result.notebook.rendered_steps.some((step) => step.includes('HEK293')), true);
       assert.equal(result.notebook.rendered_steps.some((step) => step.includes('TUBE42')), true);
@@ -437,9 +472,144 @@ module.exports = function registerAgentSuite(context = {}) {
       });
       assert.equal(result.status, 'needs_more_info');
       assert.equal(result.notebook.save.status, 'needs_more_info');
+      assert.equal(result.notebook.entry_template.notebookState, 'executed');
       assert.equal(result.notebook.entry_template.agentDraftStatus, 'needs_review');
       assert.equal(result.missing_placeholders.length, 1);
       assert.equal(result.follow_up_questions[0], 'Please provide sample name.');
+    });
+
+    test('notebook draft runtime selects downstream workflow candidate and keeps unresolved placeholders visible', async () => {
+      const runtime = agentNotebookDraft.createNotebookDraftRuntime({
+        requestStructuredJsonPayload: async (options = {}) => {
+          if (options.stage === 'notebook_draft_selection') {
+            return {
+              ok: true,
+              payload: {
+                selected_candidate_id: 'wf-1::block-3::prot-2::Viability Assay',
+                title: 'Viability Assay After Cell Prep',
+                purpose: 'Measure viability after the completed cell prep run.',
+                rationale: 'The workflow places the viability assay directly after cell prep.',
+                planned_materials: ['Prepared cells', 'Assay plate'],
+                checkpoints: ['Confirm cells are ready.', 'Record viability observations.']
+              }
+            };
+          }
+          if (options.stage === 'notebook_fill') {
+            return {
+              ok: true,
+              payload: {
+                filled_values: [],
+                missing_placeholders: [
+                  {
+                    step_id: 'step-1',
+                    placeholder_id: 'sample_name',
+                    placeholder_key: 'step-1:sample_name',
+                    display: 'sample name',
+                    reason: 'Leave visible for planned draft.'
+                  }
+                ],
+                follow_up_questions: ['Please provide sample name.'],
+                result_summary: 'Notebook fill test completed.'
+              }
+            };
+          }
+          return {
+            ok: false,
+            error: `Unhandled stage ${String(options.stage || '')}`
+          };
+        }
+      });
+      const result = await runtime.generateNotebookDraft({
+        provider: 'openai',
+        endpoint: 'https://api.openai.com/v1/responses',
+        apiKey: 'test-key',
+        model: 'gpt-5',
+        message: 'Draft tomorrow’s next experiment for Atlas.',
+        conversation: [],
+        snapshot: {
+          projects: [
+            { id: 'proj-1', name: 'Atlas' }
+          ],
+          protocols: [
+            {
+              id: 'prot-1',
+              name: 'Cell Prep',
+              projectId: 'proj-1',
+              projectName: 'Atlas',
+              steps: [
+                { id: 'step-0', text: 'Prepare cells.', placeholders: [] }
+              ]
+            },
+            {
+              id: 'prot-2',
+              name: 'Viability Assay',
+              projectId: 'proj-1',
+              projectName: 'Atlas',
+              steps: [
+                {
+                  id: 'step-1',
+                  text: 'Measure viability for {{ph:sample_name}}.',
+                  placeholders: [{ id: 'sample_name', name: 'sample name' }]
+                }
+              ]
+            }
+          ],
+          workflows: [
+            {
+              id: 'wf-1',
+              name: 'Atlas Workflow',
+              projectId: 'proj-1',
+              notebookEntryIds: ['note-1'],
+              blocks: [
+                { id: 'block-1', protocolId: 'prot-1' },
+                { id: 'block-2', type: 'text', text: 'Then assess viability.' },
+                { id: 'block-3', protocolId: 'prot-2' }
+              ],
+              links: [
+                { id: 'link-1', fromBlockId: 'block-1', toBlockId: 'block-2' },
+                { id: 'link-2', fromBlockId: 'block-2', toBlockId: 'block-3' }
+              ]
+            }
+          ],
+          experimentData: {
+            notebook_runs: [
+              {
+                id: 'note-1',
+                project_id: 'proj-1',
+                protocol_id: 'prot-1',
+                protocol_name: 'Cell Prep',
+                workflow_id: 'wf-1',
+                notebook_state: 'executed',
+                executed_at: '2026-03-22T12:00:00.000Z',
+                updated_at: '2026-03-22T12:00:00.000Z'
+              }
+            ]
+          }
+        },
+        parserPayload: {
+          primary_intent: 'notebook_draft',
+          entities: {
+            project_name: 'Atlas',
+            workflow_step: 'next experiment'
+          },
+          protocol_candidates: ['Viability Assay']
+        },
+        project: {
+          id: 'proj-1',
+          name: 'Atlas'
+        }
+      });
+      assert.equal(result.status, 'proposal_ready');
+      assert.equal(result.selected_protocol.name, 'Viability Assay');
+      assert.equal(result.proposal.title, 'Viability Assay After Cell Prep');
+      assert.equal(result.notebook.save.mode, 'confirm_before_save');
+      assert.equal(result.notebook.save.status, 'awaiting_user_confirmation');
+      assert.equal(result.notebook.entry_template.notebookState, 'planned');
+      assert.equal(result.notebook.entry_template.executedAt, '');
+      assert.equal(result.notebook.entry_template.agentDraftMeta.source, 'agent_notebook_draft_v1');
+      assert.equal(typeof result.notebook.entry_template.agentDraftMeta.proposalId, 'string');
+      assert.equal(result.missing_placeholders.length, 1);
+      assert.equal(result.notebook.unresolved_placeholders.length, 1);
     });
 
     test('inventory lookup runtime is reusable with fallback snapshot search', async () => {
@@ -559,7 +729,7 @@ module.exports = function registerAgentSuite(context = {}) {
     test('agent tool-call catalog stays in sync and prompt builders render tool metadata', () => {
       const toolNames = agentToolCall.AGENT_TOOL_CATALOG.map((entry) => entry.name);
       const schemaNames = Object.keys(agentToolCall.AGENT_TOOL_CALL_CATALOG).filter((name) => name !== '$defs');
-      assert.deepEqual(toolNames, ['inventory-lookup', 'record-lookup', 'protocol-matching', 'notebook-generation', 'python-sandbox', 'sub-agent', 'memory', 'literature-search', 'paper-download', 'paper-analysis', 'protocol-generation']);
+      assert.deepEqual(toolNames, ['inventory-lookup', 'record-lookup', 'protocol-matching', 'notebook-generation', 'notebook-draft', 'python-sandbox', 'sub-agent', 'memory', 'literature-search', 'paper-download', 'paper-analysis', 'protocol-generation']);
       assert.deepEqual(schemaNames, toolNames);
       const inventoryEntry = agentToolCall.AGENT_TOOL_CATALOG.find((entry) => entry.name === 'inventory-lookup');
       const protocolEntry = agentToolCall.AGENT_TOOL_CATALOG.find((entry) => entry.name === 'protocol-matching');
@@ -674,6 +844,14 @@ module.exports = function registerAgentSuite(context = {}) {
               properties: {}
             }
           },
+          'notebook-draft': {
+            description: 'notebook draft usage',
+            input_schema: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {}
+            }
+          },
           'python-sandbox': {
             description: 'python usage',
             input_schema: {
@@ -763,6 +941,14 @@ module.exports = function registerAgentSuite(context = {}) {
           },
           'notebook-generation': {
             description: 'notebook usage',
+            input_schema: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {}
+            }
+          },
+          'notebook-draft': {
+            description: 'notebook draft usage',
             input_schema: {
               type: 'object',
               additionalProperties: false,
@@ -1744,6 +1930,7 @@ module.exports = function registerAgentSuite(context = {}) {
       assert.equal(result.ok, true);
       assert.equal(result.status, 'completed');
       assert.equal(result.sources.includes('web'), true);
+      assert.equal(result.sources.includes('uniprot'), false);
       assert.equal(result.items.length, 1);
       assert.equal(result.items[0].source, 'web');
       assert.equal(result.items[0].source_domain, 'example.org');
@@ -2644,6 +2831,7 @@ module.exports = function registerAgentSuite(context = {}) {
       assert.deepEqual(result.items.map((item) => item.tool_name), runtime.toolNames);
       assert.equal(result.items.every((item) => item.ok === true), true);
       assert.equal(result.items.every((item) => Number.isFinite(Number(item.duration_ms))), true);
+      assert.equal(result.items.some((item) => item.tool_name === 'notebook-draft' && /Viability Assay/i.test(String(item.preview || ''))), true);
       assert.equal(result.items.some((item) => item.tool_name === 'python-sandbox' && /out\.json/.test(String(item.preview || ''))), true);
       assert.equal(result.items.some((item) => item.tool_name === 'paper-download' && /\.pdf/i.test(String(item.preview || ''))), true);
       assert.match(String(result.summary || ''), /tools passed/i);

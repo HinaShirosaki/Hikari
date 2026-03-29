@@ -571,6 +571,8 @@ function createNotebookGenerationRuntime(deps = {}) {
         values,
         result: notebookResult,
         updatedAt,
+        notebookState: 'executed',
+        executedAt: updatedAt,
         resultFiles: [],
         resultFileRecords: [],
         agentDraftStatus: unresolvedRows.length ? 'needs_review' : 'draft_ready',

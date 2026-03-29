@@ -9,6 +9,7 @@
             <div class="form-actions sequence-viewer-home-nav-actions">
               <button id="sequence-viewer-home-paste-btn" type="button" class="primary-btn">New</button>
               <button id="sequence-viewer-home-open-btn" type="button" class="ghost-btn">Open GBK/FASTA</button>
+              <button id="sequence-viewer-home-protein-builder-btn" type="button" class="ghost-btn">Protein Builder</button>
               <span id="sequence-viewer-home-status" class="small-note">Choose New or Open to continue.</span>
             </div>
             <input id="sequence-viewer-home-open-input" type="file" accept=".gbk,.gb,.gbff,.fasta,.fa,.fas,.fna,.fastq,.fq,.txt,.seq" hidden />
@@ -55,6 +56,102 @@
                 <p class="small-note">Search by feature name, full sequence, or partial sequence.</p>
               </div>
             </section>
+          </div>
+        </section>
+
+        <section id="sequence-viewer-protein-builder-workspace" class="sequence-viewer-protein-builder-workspace" hidden>
+          <div class="sequence-viewer-protein-builder-toolbar">
+            <div class="sequence-viewer-protein-builder-toolbar-copy">
+              <h2>Protein Builder</h2>
+              <p class="small-note">Build a linear fusion from tags, stored features, linkers, cleavage sites, and a POI block.</p>
+            </div>
+            <div class="form-actions sequence-viewer-protein-builder-toolbar-actions">
+              <button id="sequence-viewer-protein-builder-back-btn" type="button" class="ghost-btn">Back to Sequence Library</button>
+              <span id="sequence-viewer-protein-builder-status" class="small-note">Linear chain: each block accepts one upstream and one downstream connection.</span>
+            </div>
+          </div>
+
+          <div class="sequence-viewer-protein-builder-grid-wrap">
+            <div class="sequence-viewer-protein-builder-grid">
+              <div class="sequence-viewer-protein-builder-sidebar">
+                <section class="sequence-viewer-protein-builder-panel">
+                  <form id="sequence-viewer-protein-builder-form" class="stack-form sequence-viewer-protein-builder-controls" autocomplete="off">
+                    <div class="form-grid">
+                      <label>
+                        Construct Name
+                        <input id="sequence-viewer-protein-builder-name" placeholder="e.g. His6-TEV-POI-TwinStrep" />
+                      </label>
+                      <label>
+                        POI Name
+                        <input id="sequence-viewer-protein-builder-poi-name" placeholder="e.g. EGFR kinase domain" />
+                      </label>
+                    </div>
+                    <label>
+                      Protein of Interest Sequence
+                      <textarea
+                        id="sequence-viewer-protein-builder-poi-sequence"
+                        rows="5"
+                        placeholder="Paste amino-acid sequence (A-Z, optional *)"
+                      ></textarea>
+                    </label>
+                    <div class="form-actions">
+                      <button id="sequence-viewer-protein-builder-reset-btn" type="button" class="ghost-btn">Reset Default Chain</button>
+                      <button id="sequence-viewer-protein-builder-add-custom-btn" type="button" class="ghost-btn">Add Custom Block</button>
+                      <button id="sequence-viewer-protein-builder-add-poi-btn" type="button" class="ghost-btn">Add POI Block</button>
+                    </div>
+                  </form>
+                </section>
+
+                <section class="sequence-viewer-protein-builder-panel">
+                  <div class="plannotate-card-head">
+                    <h4>Common Blocks</h4>
+                  </div>
+                  <div id="sequence-viewer-protein-builder-common-blocks" class="sequence-viewer-protein-builder-common-blocks">
+                    <p class="small-note">Loading block library.</p>
+                  </div>
+                </section>
+
+                <section class="sequence-viewer-protein-builder-panel">
+                  <div class="plannotate-card-head">
+                    <h4>Feature Database</h4>
+                  </div>
+                  <div class="sequence-viewer-protein-builder-feature-controls">
+                    <input
+                      id="sequence-viewer-protein-builder-feature-search-input"
+                      type="search"
+                      placeholder="Search stored features"
+                      autocomplete="off"
+                    />
+                    <button id="sequence-viewer-protein-builder-feature-search-btn" type="button" class="ghost-btn">Search</button>
+                  </div>
+                  <span id="sequence-viewer-protein-builder-feature-search-status" class="small-note">
+                    Search stored features and convert them into protein blocks.
+                  </span>
+                  <div id="sequence-viewer-protein-builder-feature-search-results" class="sequence-viewer-protein-builder-feature-search-results">
+                    <p class="small-note">Search by feature name or stored sequence.</p>
+                  </div>
+                </section>
+              </div>
+
+              <div class="sequence-viewer-protein-builder-main">
+                <section class="sequence-viewer-protein-builder-panel sequence-viewer-protein-builder-workflow-panel">
+                  <div class="plannotate-card-head">
+                    <h4>Assembly Chain</h4>
+                    <span id="sequence-viewer-protein-builder-meta" class="small-note">0 aa | 0 blocks</span>
+                  </div>
+                  <div id="sequence-viewer-protein-builder-workflow" class="sequence-viewer-protein-builder-workflow">
+                    <p class="small-note">Add a block to start the chain.</p>
+                  </div>
+                </section>
+
+                <section class="sequence-viewer-protein-builder-panel sequence-viewer-protein-builder-sequence-panel">
+                  <div class="plannotate-card-head">
+                    <h4>Assembled Sequence</h4>
+                  </div>
+                  <div id="sequence-viewer-protein-builder-sequence" class="sequence-block">-</div>
+                </section>
+              </div>
+            </div>
           </div>
         </section>
       </div>

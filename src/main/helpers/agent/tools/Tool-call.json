@@ -402,6 +402,29 @@
       }
     }
   },
+  "notebook-draft": {
+    "description": "Use this tool to propose a likely next experiment and prepare a planned biology notebook draft for explicit confirmation. It should prefer workflow-downstream experiments and recent executed notebook progress, tolerate unresolved placeholders, and return a confirm-before-save draft instead of auto-creating the page.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "project": {
+          "$ref": "#/$defs/project_record"
+        },
+        "workflow_id": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "protocol_candidates": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 5
+        }
+      }
+    }
+  },
   "python-sandbox": {
     "description": "Use this tool when the agent needs to write and run Python code to compute, transform, inspect, or generate artifacts in a controlled sandbox. The agent should supply complete runnable code in `code`, optionally stage input files in `files`, and request outputs through `readback_paths`. Prefer this for deterministic analysis or file generation, not for calling local lab records that already have dedicated lookup tools.",
     "input_schema": {

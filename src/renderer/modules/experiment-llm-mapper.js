@@ -29,11 +29,19 @@ function toFiniteNumber(value) {
 }
 
 function mapNotebookRun(entry) {
+  const notebookState = String(entry?.notebookState || '').trim().toLowerCase() === 'planned'
+    ? 'planned'
+    : 'executed';
   return {
     id: String(entry?.id || ''),
     project_id: String(entry?.projectId || ''),
     protocol_id: String(entry?.protocolId || ''),
     protocol_name: trimText(entry?.protocolName, 180),
+    workflow_id: trimText(entry?.agentDraftMeta?.workflowId, 120),
+    notebook_state: notebookState,
+    executed_at: trimText(entry?.executedAt, 80),
+    agent_draft_status: trimText(entry?.agentDraftStatus, 80),
+    proposal_id: trimText(entry?.agentDraftMeta?.proposalId, 160),
     result: trimText(entry?.result || entry?.body, 900),
     updated_at: String(entry?.updatedAt || entry?.createdAt || '')
   };

@@ -278,7 +278,7 @@ function createLiteratureSearchRuntime(deps = {}) {
     if (cleanText(input.protein_name || input.proteinName || entities.protein_name, 180)) {
       return true;
     }
-    return /\b(uniprot|protein|gene|receptor|kinase|enzyme|antibody|nanobody|accession|pd-1|pd1)\b/i.test(text);
+    return /\b(uniprot|protein|gene|receptor|kinase|enzyme|antibody|nanobody|accession)\b/i.test(text);
   }
 
   function resolveLiteratureSources(input = {}) {

@@ -12,9 +12,9 @@
         <h3>Create Assay Plate</h3>
         <form id="assay-form" class="form-grid assay-form-grid">
           <input type="hidden" id="assay-id" />
-          <div class="assay-number-card">
-            <span class="assay-number-label">Assay Number</span>
-            <div id="assay-number-display" class="assay-number-value small-note" aria-live="polite"></div>
+          <div class="assay-display-field">
+            <span class="assay-display-label">Assay Number</span>
+            <div id="assay-number-display" class="assay-display-value" aria-live="polite"></div>
           </div>
           <label>
             Assay Name
@@ -39,7 +39,7 @@
             </select>
           </label>
           <div class="assay-axis-switch">
-            <span class="small-note">Sample ID Axis</span>
+            <span class="assay-display-label">Sample ID Axis</span>
             <div class="calendar-view-switch assay-mode-switch" role="group" aria-label="Sample ID axis switch">
               <button type="button" id="assay-sample-axis-row-btn" class="ghost-btn calendar-view-active">Row</button>
               <button type="button" id="assay-sample-axis-column-btn" class="ghost-btn">Column</button>

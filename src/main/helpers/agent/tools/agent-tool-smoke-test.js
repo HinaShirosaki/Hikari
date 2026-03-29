@@ -9,6 +9,7 @@ const { createAgentInventoryLookupRuntime } = require('./agent-inventory-lookup.
 const { createAgentRecordLookupRuntime } = require('./agent-record-lookup.js');
 const { createProtocolMatchingRuntime } = require('./agent-protocol-matching.js');
 const { createNotebookGenerationRuntime } = require('./agent-notebook-generation.js');
+const { createNotebookDraftRuntime } = require('./agent-notebook-draft.js');
 const { runPythonSandbox } = require('./agent-python-sandbox.js');
 const { createAgentSubAgentRuntime } = require('./agent-sub-agent.js');
 const { createAgentMemoryRuntime } = require('../context/agent-memory.js');
@@ -92,7 +93,7 @@ function buildSmokeSnapshot() {
       {
         id: 'proj-1',
         name: 'Atlas',
-        summary: 'PD-1 binder optimization project.'
+        summary: 'Binder optimization project.'
       }
     ],
     protocols: [
@@ -121,6 +122,28 @@ function buildSmokeSnapshot() {
             ]
           }
         ]
+      },
+      {
+        id: 'prot-2',
+        name: 'Viability Assay',
+        purpose: 'Measure post-prep viability for Atlas samples.',
+        aliases: ['atlas viability'],
+        projectId: 'proj-1',
+        projectName: 'Atlas',
+        steps: [
+          {
+            id: 'step-1',
+            text: 'Label assay plate for {{ph:sample_name}}.',
+            placeholders: [
+              { id: 'sample_name', name: 'sample name' }
+            ]
+          },
+          {
+            id: 'step-2',
+            text: 'Measure viability and record observations.',
+            placeholders: []
+          }
+        ]
       }
     ],
     notebookEntries: [
@@ -131,6 +154,8 @@ function buildSmokeSnapshot() {
         protocolId: 'prot-1',
         protocolName: 'Cell Prep',
         result: 'Prepared HEK293 cells for the Atlas assay.',
+        notebookState: 'executed',
+        executedAt: timestamp,
         updatedAt: timestamp
       }
     ],
@@ -141,9 +166,15 @@ function buildSmokeSnapshot() {
         description: 'Run cell prep before viability assay.',
         projectId: 'proj-1',
         blocks: [
-          { id: 'block-1', protocolId: 'prot-1' }
+          { id: 'block-1', protocolId: 'prot-1' },
+          { id: 'block-2', type: 'text', text: 'Move prepared cells into the viability assay.' },
+          { id: 'block-3', protocolId: 'prot-2' }
         ],
-        links: [],
+        links: [
+          { id: 'link-1', fromBlockId: 'block-1', toBlockId: 'block-2' },
+          { id: 'link-2', fromBlockId: 'block-2', toBlockId: 'block-3' }
+        ],
+        notebookEntryIds: ['note-1'],
         updatedAt: timestamp
       }
     ],
@@ -168,7 +199,7 @@ function buildSmokeSnapshot() {
     papers: [
       {
         id: 'paper-1',
-        title: 'PD-1 Binder Methods',
+        title: 'Binder Methods',
         linkedType: 'project',
         linkedId: 'proj-1',
         linkedName: 'Atlas',
@@ -206,7 +237,7 @@ function buildSmokeSnapshot() {
         code: 'ATLAS-1',
         name: 'Atlas construct sample',
         type: 'plasmid',
-        notes: 'PD-1 construct',
+        notes: 'Binder construct',
         location: {
           storageType: 'freezer',
           freezer: '-20 Degree',
@@ -311,6 +342,19 @@ function createStructuredJsonResponder() {
         }
       };
     }
+    if (stage === 'notebook_draft_selection') {
+      return {
+        ok: true,
+        payload: {
+          selected_candidate_id: 'wf-1::block-3::prot-2::Viability Assay',
+          title: 'Viability Assay After Cell Prep',
+          purpose: 'Measure whether the prepared Atlas cells remain viable for the next workflow step.',
+          rationale: 'The workflow places the viability assay immediately after completed cell prep.',
+          planned_materials: ['Cell Prep output', 'Viability assay plate'],
+          checkpoints: ['Confirm cells are ready from Cell Prep.', 'Record viability readout and observations.']
+        }
+      };
+    }
     return {
       ok: false,
       error: `Unhandled smoke-test stage "${stage || 'unknown'}".`
@@ -331,6 +375,9 @@ function buildPreview(toolName, result) {
   }
   if (toolName === 'notebook-generation') {
     return cleanText(source.rendered_step_preview || source.summary, 220);
+  }
+  if (toolName === 'notebook-draft') {
+    return cleanText(source.proposal?.title || source.selected_protocol?.name || source.summary, 220);
   }
   if (toolName === 'python-sandbox') {
     return cleanText(source.readback_files?.[0]?.path, 220);
@@ -528,6 +575,42 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
     };
   }
 
+  async function smokeNotebookDraft(snapshot, options = {}) {
+    const runtime = createNotebookDraftRuntime({
+      requestStructuredJsonPayload: structuredResponder
+    });
+    const requestMessage = resolveToolMessage(options.message, 'Draft tomorrow’s next experiment for Atlas.');
+    const result = await runtime.generateNotebookDraft({
+      provider: 'openai',
+      endpoint: 'https://api.openai.com/v1/responses',
+      apiKey: 'smoke-test-key',
+      model: 'gpt-5',
+      message: requestMessage,
+      conversation: [],
+      snapshot,
+      parserPayload: {
+        primary_intent: 'notebook_draft',
+        entities: {
+          project_name: 'Atlas',
+          workflow_step: 'next experiment',
+          requested_output: 'planned notebook page'
+        },
+        protocol_candidates: ['Viability Assay']
+      },
+      project: {
+        id: 'proj-1',
+        name: 'Atlas'
+      }
+    });
+    return {
+      ...result,
+      ok: options.strict === true
+        ? cleanText(result.status, 80) === 'proposal_ready'
+        : cleanText(result.status, 80) !== 'error',
+      summary: cleanText(result.summary, 320) || 'Notebook draft smoke test completed.'
+    };
+  }
+
   async function smokePythonSandbox(options = {}) {
     const requestMessage = resolveToolMessage(options.message, 'Write a JSON file with an ok flag and a test value.');
     const escapedMessage = JSON.stringify(requestMessage);
@@ -644,7 +727,7 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
         {
           pmid: '12345',
           doi: '10.1000/smoke-pubmed',
-          title: 'PD-1 Smoke Test Paper',
+          title: 'Smoke Test Paper',
           summary: 'PubMed smoke-test entry.',
           journal: 'Nature',
           published_at: '2024-01-10',
@@ -678,16 +761,16 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
       ]),
       searchUniProtRecords: async () => ([
         {
-          accession: 'Q99999',
-          protein_name: 'Programmed cell death protein 1',
-          gene_name: 'PDCD1',
+          accession: 'Q9TEST',
+          protein_name: 'Example receptor protein',
+          gene_name: 'EXR1',
           organism: 'Homo sapiens',
           summary: 'UniProt smoke-test entry.',
-          url: 'https://www.uniprot.org/uniprotkb/Q99999'
+          url: 'https://www.uniprot.org/uniprotkb/Q9TEST'
         }
       ])
     });
-    const requestMessage = resolveToolMessage(options.message, 'PD-1 binder methods');
+    const requestMessage = resolveToolMessage(options.message, 'binder methods');
     const result = await runtime.searchLiterature({
       query: requestMessage,
       sources: ['pubmed', 'crossref', 'europe_pmc', 'uniprot'],
@@ -759,7 +842,7 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
     const requestMessage = resolveToolMessage(options.message, 'Extract a protocol from this paper.');
     const result = await runtime.analyzePaper({
       paper: {
-        title: 'PD-1 Binder Methods',
+        title: 'Binder Methods',
         summary: 'A short paper summary for smoke testing.',
         methods: [
           'Clarify lysate.',
@@ -803,6 +886,7 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
     'record-lookup': async (options = {}) => smokeRecordLookup(buildSmokeSnapshot(), options),
     'protocol-matching': async (options = {}) => smokeProtocolMatching(buildSmokeSnapshot(), options),
     'notebook-generation': async (options = {}) => smokeNotebookGeneration(buildSmokeSnapshot(), options),
+    'notebook-draft': async (options = {}) => smokeNotebookDraft(buildSmokeSnapshot(), options),
     'python-sandbox': async (options = {}) => smokePythonSandbox(options),
     'sub-agent': async (options = {}) => smokeSubAgent(options),
     memory: async (options = {}) => smokeMemory(options),

@@ -12,6 +12,10 @@ export function initProjectManagement({ state, persist, createId, safeText, onPr
   projectCancelBtn.addEventListener('click', resetProjectForm);
   projectNotebookFilter.addEventListener('change', renderNotebookPages);
 
+  function notebookStateLabel(entry) {
+    return String(entry?.notebookState || '').trim().toLowerCase() === 'planned' ? 'Planned' : 'Executed';
+  }
+
   async function onProjectSubmit(event) {
     event.preventDefault();
 
@@ -144,6 +148,7 @@ export function initProjectManagement({ state, persist, createId, safeText, onPr
     projectNotebookPages.innerHTML = entries.map((entry) => `
       <article class="project-notebook-item">
         <h3>${safeText(entry.protocolName || '-')}</h3>
+        <p><strong>State:</strong> ${safeText(notebookStateLabel(entry))}</p>
         <p><strong>Updated:</strong> ${safeText(formatTimestamp(entry.updatedAt))}</p>
         <p><strong>Result:</strong> ${safeText(entry.result || '-')}</p>
         <p><strong>Files:</strong> ${safeText((entry.resultFiles || []).join(', ') || '-')}</p>
