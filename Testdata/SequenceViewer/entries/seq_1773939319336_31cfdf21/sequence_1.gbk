@@ -1,4 +1,4 @@
-LOCUS       sequence_1             5625 bp    DNA     linear   SYN 19-MAR-2026
+LOCUS       sequence_1             5625 bp    DNA     linear   SYN 29-MAR-2026
 DEFINITION  sequence_1
 ACCESSION   .
 VERSION     .
@@ -6,7 +6,7 @@ KEYWORDS    .
 SOURCE      synthetic DNA construct
   ORGANISM  synthetic DNA construct
             .
-COMMENT     Exported from Sequence Viewer (RAW).
+COMMENT     Exported from Sequence Viewer (GENBANK).
 FEATURES             Location/Qualifiers
      rep_origin      2227..2815
                      /label="ori"
@@ -24,13 +24,12 @@ FEATURES             Location/Qualifiers
                      /label="lacI"
                      /note="lac repressor; lacI; The lac repressor binds to the
                      lac operator to inhibit transcription in E. coli. This
-                     inhibition can be relieved by adding lactose or
-                     isopropyl-β-D-thiogalactopyranoside (IPTG)."
+                     inhibition ca"
      cds             complement(1290..2105)
                      /label="KanR"
                      /note="aminoglycoside phosphotransferase; aph(3')-Ia;
                      confers resistance to kanamycin in bacteria or G418
-                     (Geneticin®) in eukaryotes"
+                     (Geneticin®) in eukar"
      promoter        complement(5325..5402)
                      /label="lacI promoter"
                      /note="lacI"
@@ -42,9 +41,7 @@ FEATURES             Location/Qualifiers
                      /label="lac operator"
                      /note="The lac repressor binds to the lac operator to
                      inhibit transcription in E. coli. This inhibition can be
-                     relieved by adding lactose or
-                     isopropyl-β-D-thiogalactopyranoside (IPTG). lac repressor
-                     encoded by lacI"
+                     relieved by addi"
      rbs             144..166
                      /label="RBS"
                      /note="efficient ribosome binding site from bacteriophage
@@ -89,17 +86,22 @@ FEATURES             Location/Qualifiers
                      /label="CloDF13 ori"
                      /note="Plasmids containing the CloDF13 (CDF) origin of
                      replication can be propagated in E. coli cells that contain
-                     additional plasmids with compatible origins."
+                     additional p"
      rep_origin      2793..2822
                      /label="CloDF13 ori"
                      /note="Plasmids containing the CloDF13 (CDF) origin of
                      replication can be propagated in E. coli cells that contain
-                     additional plasmids with compatible origins."
+                     additional p"
      rep_origin      2271..2297
                      /label="RSF ori"
                      /note="Plasmids containing the RSF 1030 origin of
                      replication can be propagated in E. coli cells that contain
-                     additional plasmids with compatible origins."
+                     additional plasmi"
+     backbone        1..5625
+                     /label="Backbone (pasted_sequence)"
+                     /note="pasted_sequence saved vector recognized with 5,625
+                     bp exact backbone coverage (100.0% of host, forward
+                     orientation)."
 ORIGIN
         1 ggcgccagca accgcacctg tggcgccggt gatgccggcc acgatgcgtc cggcgtagag
        61 gatcgagatc tcgatcccgc gaaattaata cgactcacta taggggaatt gtgagcggat

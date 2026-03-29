@@ -1165,6 +1165,72 @@ test('sequence library helper recognizes stored backbone and insert from a deriv
   }
 });
 
+test('sequence library helper exposes Gibson and restriction variants for promoter-anchored expression inserts', async () => {
+  const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'sequence-library-expression-backbone-'));
+  try {
+    const promoter = 'TAATACGACTCACTATAGG';
+    const upstreamSite = 'CATATG';
+    const downstreamSite = 'CTCGAG';
+    const suffix = 'GCGTACCGGATCCGTTAAACCGGATCA';
+    const hostSequence = `${promoter}${upstreamSite}${downstreamSite}${suffix}`;
+    const querySequence = `${promoter}${upstreamSite}AAACCCGGGTAA${downstreamSite}${suffix}`;
+    const gibsonInsert = 'ATGAAACCCGGGTAA';
+    const restrictionInsert = `${upstreamSite}AAACCCGGGTAA${downstreamSite}`;
+    const promoterLength = promoter.length;
+
+    await sequenceLibrary.upsertSequenceEntry({
+      storagePath: storageRoot,
+      name: 'T7ExpressionHost',
+      status: 'saved',
+      sourceFormat: 'genbank',
+      topology: 'circular',
+      sequence: hostSequence,
+      sequenceLength: hostSequence.length,
+      featureCount: 1,
+      features: [],
+      gbkText: `LOCUS       T7ExpressionHost ${String(hostSequence.length).padStart(8, ' ')} bp    DNA     circular SYN 01-JAN-2026
+FEATURES             Location/Qualifiers
+     promoter        1..${promoterLength}
+                     /label="T7 promoter"
+                     /note="promoter for recombinant protein expression"
+ORIGIN
+        1 ${hostSequence.toLowerCase()}
+//
+`,
+      htmlText: '<html><body>host</body></html>'
+    });
+
+    const result = await sequenceLibrary.recognizeSequenceBackbone({
+      storagePath: storageRoot,
+      sequence: querySequence
+    });
+
+    assert.equal(result.match?.hostVectorName, 'T7ExpressionHost');
+    assert.equal(result.match?.insertLength, 12);
+    assert.equal(result.match?.promoter?.name, 'T7 promoter');
+    assert.equal(result.match?.variants?.gibson?.source, 'promoter_orf');
+    assert.equal(result.match?.variants?.gibson?.insertSequence, gibsonInsert);
+    assert.equal(
+      result.match?.variants?.gibson?.backboneSequence,
+      `${promoter}CAT${downstreamSite}${suffix}`
+    );
+    assert.equal(
+      JSON.stringify(result.match?.variants?.gibson?.insertSegments),
+      JSON.stringify([{ start: promoterLength + 3, end: promoterLength + 18 }])
+    );
+    assert.equal(result.match?.variants?.restriction?.insertSequence, restrictionInsert);
+    assert.equal(result.match?.variants?.restriction?.backboneSequence, hostSequence);
+    assert.equal(result.match?.variants?.restriction?.upstreamSite?.name, 'NdeI');
+    assert.equal(result.match?.variants?.restriction?.downstreamSite?.name, 'XhoI');
+    assert.equal(
+      JSON.stringify(result.match?.variants?.restriction?.insertSegments),
+      JSON.stringify([{ start: promoterLength, end: promoterLength + restrictionInsert.length }])
+    );
+  } finally {
+    await fsPromises.rm(storageRoot, { recursive: true, force: true });
+  }
+});
+
 test('main wires intent parser + observability paths for parser-only controller', () => {
   const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
   const agentRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc.js'), 'utf8');

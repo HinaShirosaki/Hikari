@@ -791,6 +791,9 @@ function showView(viewId) {
     rememberLastActiveView(nextView);
   }
   document.body.classList.toggle('agent-view-fixed-scroll', nextView === VIEWS.AGENT);
+  if (nextView !== VIEWS.SEQUENCE_VIEWER) {
+    document.body.classList.remove('sequence-viewer-fixed-scroll');
+  }
 
   const showSampleInventoryWorkspace = nextView === VIEWS.SAMPLE_REGISTRY;
   views.forEach((view) => {

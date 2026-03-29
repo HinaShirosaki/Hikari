@@ -15,7 +15,7 @@ import {
   getEnanaApiBridge,
   runPlannotateAnnotationForSequence
 } from './plannotate.js';
-import { cleanText, clamp, normalizeRecordName, normalizeTopology } from './shared.js';
+import { buildSequenceSignature, cleanText, clamp, normalizeRecordName, normalizeTopology } from './shared.js';
 import {
   buildCircularPreviewHtmlDocument,
   buildRecordGenbankText,
@@ -66,6 +66,12 @@ export function initSequenceViewer(options = {}) {
     selectedLibraryEntryId: '',
     activeEntryId: '',
     activeEntryStatus: '',
+    alignmentSessions: [],
+    activeAlignmentSessionId: '',
+    activeAlignmentSessionName: '',
+    activeAlignmentResult: null,
+    activeAlignmentQueryRecord: null,
+    alignmentViewEnabled: false,
     featureSearchQuery: '',
     featureSearchResults: [],
     isSearchingFeatures: false,
@@ -102,6 +108,36 @@ export function initSequenceViewer(options = {}) {
     return Boolean(getStoragePath());
   }
 
+  function resetAlignmentState(options = {}) {
+    const preserveSessions = options?.preserveSessions === true;
+    if (!preserveSessions) {
+      state.alignmentSessions = [];
+    }
+    state.activeAlignmentSessionId = '';
+    state.activeAlignmentSessionName = '';
+    state.activeAlignmentResult = null;
+    state.activeAlignmentQueryRecord = null;
+    state.alignmentViewEnabled = false;
+  }
+
+  function setAlignmentSessions(sessions) {
+    state.alignmentSessions = Array.isArray(sessions) ? sessions : [];
+    if (!state.activeAlignmentSessionId) {
+      detailController?.syncAlignmentControlsState?.();
+      return;
+    }
+
+    const activeSession = state.alignmentSessions.find((session) => String(session?.id || '') === String(state.activeAlignmentSessionId));
+    if (!activeSession) {
+      resetAlignmentState({ preserveSessions: true });
+    } else {
+      state.activeAlignmentSessionName = String(activeSession?.name || activeSession?.queryRecord?.name || '').trim();
+      state.activeAlignmentResult = activeSession?.result || state.activeAlignmentResult;
+      state.activeAlignmentQueryRecord = activeSession?.queryRecord || state.activeAlignmentQueryRecord;
+    }
+    detailController?.syncAlignmentControlsState?.();
+  }
+
   function isBackboneRecognitionFeature(feature) {
     return String(feature?.source || '').toLowerCase() === FEATURE_SOURCE_BACKBONE_RECOGNITION;
   }
@@ -130,8 +166,32 @@ export function initSequenceViewer(options = {}) {
       .filter(Boolean);
   }
 
-  function buildBackboneRecognitionFeatures(match, sequenceLength) {
+  function getRecognitionDisplayMatch(match) {
     const safeMatch = match && typeof match === 'object' ? match : null;
+    if (!safeMatch) {
+      return null;
+    }
+
+    const gibsonVariant = safeMatch.variants?.gibson;
+    if (!gibsonVariant || typeof gibsonVariant !== 'object') {
+      return safeMatch;
+    }
+
+    return {
+      ...safeMatch,
+      backboneLength: Math.max(0, Number(gibsonVariant.backboneLength) || 0),
+      insertLength: Math.max(0, Number(gibsonVariant.insertLength) || 0),
+      backboneSegments: Array.isArray(gibsonVariant.backboneSegments)
+        ? gibsonVariant.backboneSegments
+        : safeMatch.backboneSegments,
+      insertSegments: Array.isArray(gibsonVariant.insertSegments)
+        ? gibsonVariant.insertSegments
+        : safeMatch.insertSegments
+    };
+  }
+
+  function buildBackboneRecognitionFeatures(match, sequenceLength) {
+    const safeMatch = getRecognitionDisplayMatch(match);
     if (!safeMatch) {
       return [];
     }
@@ -361,6 +421,7 @@ export function initSequenceViewer(options = {}) {
     state.isRecognizingBackbone = false;
     state.selectedRecordIndex = 0;
     state.selectedFeatureIndex = -1;
+    resetAlignmentState();
     detailController?.clearSequenceSelection();
     detailController?.hideFeatureContextMenu();
     detailController?.hideFeatureEditor();
@@ -475,7 +536,10 @@ export function initSequenceViewer(options = {}) {
       sequence: safeRecord.sequence,
       features: Array.isArray(safeRecord.features) ? safeRecord.features : [],
       gbkText,
-      htmlText
+      htmlText,
+      alignmentSessions: Array.isArray(persistOptions?.alignmentSessions)
+        ? persistOptions.alignmentSessions
+        : undefined
     });
     if (!response?.ok || !response?.entry) {
       throw new Error(response?.error || 'Failed to persist sequence entry.');
@@ -483,10 +547,84 @@ export function initSequenceViewer(options = {}) {
 
     state.activeEntryId = cleanText(response.entry.id, 200);
     state.activeEntryStatus = String(response.entry.status || status).toLowerCase();
+    if (Array.isArray(response.alignments)) {
+      setAlignmentSessions(response.alignments);
+    }
     if (elements.saveNameInput) {
       elements.saveNameInput.value = response.entry.name || name;
     }
-    return response.entry;
+    return {
+      ...response.entry,
+      alignments: Array.isArray(response.alignments) ? response.alignments : []
+    };
+  }
+
+  async function persistAlignmentSession(payload = {}) {
+    const referenceRecord = payload?.referenceRecord;
+    const session = payload?.session;
+    const safeReferenceRecord = referenceRecord && typeof referenceRecord === 'object' ? referenceRecord : null;
+    if (!safeReferenceRecord?.sequence?.length || !session || typeof session !== 'object') {
+      return {
+        session: null,
+        sessions: Array.isArray(state.alignmentSessions) ? state.alignmentSessions : []
+      };
+    }
+
+    if (!hasStoragePath()) {
+      const scopedSession = {
+        ...session,
+        referenceRecordKey: buildSequenceSignature(safeReferenceRecord.sequence, 'ref'),
+        referenceRecordName: normalizeRecordName(safeReferenceRecord.name || 'reference', 'reference')
+      };
+      const nextSessions = [
+        scopedSession,
+        ...(Array.isArray(state.alignmentSessions) ? state.alignmentSessions.filter((item) => String(item?.id || '') !== String(session?.id || '')) : [])
+      ];
+      setAlignmentSessions(nextSessions);
+      return {
+        session: scopedSession,
+        sessions: nextSessions
+      };
+    }
+
+    let entryId = cleanText(state.activeEntryId, 200);
+    if (!entryId) {
+      const entry = await persistRecordToLibrary(safeReferenceRecord, {
+        status: LIBRARY_STATUS_TEMPORARY,
+        name: elements.saveNameInput?.value || safeReferenceRecord.name || 'sequence',
+        alignmentSessions: []
+      });
+      entryId = cleanText(entry.id, 200);
+      await homeController?.refreshLibraryEntries({ selectedId: entryId, silent: true });
+    }
+
+    const scopedSession = {
+      ...session,
+      referenceRecordKey: buildSequenceSignature(safeReferenceRecord.sequence, 'ref'),
+      referenceRecordName: normalizeRecordName(safeReferenceRecord.name || 'reference', 'reference')
+    };
+    const existingSessions = Array.isArray(state.alignmentSessions) ? state.alignmentSessions : [];
+    const nextSessions = [
+      scopedSession,
+      ...existingSessions.filter((item) => String(item?.id || '') !== String(scopedSession?.id || ''))
+    ];
+    const entry = await persistRecordToLibrary(safeReferenceRecord, {
+      id: entryId,
+      status: state.activeEntryStatus || LIBRARY_STATUS_TEMPORARY,
+      name: elements.saveNameInput?.value || safeReferenceRecord.name || 'sequence',
+      alignmentSessions: nextSessions
+    });
+    await homeController?.refreshLibraryEntries({ selectedId: entry.id, silent: true });
+
+    const resolvedSessions = Array.isArray(entry.alignments) ? entry.alignments : nextSessions;
+    const resolvedSession = resolvedSessions.find((item) => String(item?.id || '') === String(scopedSession?.id || ''))
+      || resolvedSessions[0]
+      || scopedSession;
+
+    return {
+      session: resolvedSession,
+      sessions: resolvedSessions
+    };
   }
 
   async function persistFeatureMutation(record, actionLabel) {
@@ -729,8 +867,9 @@ export function initSequenceViewer(options = {}) {
 
       detailController?.renderActiveRecord();
 
-      const matchedHostName = cleanText(response.match?.hostVectorName, 140) || 'vector';
-      const insertLength = Math.max(0, Number(response.match?.insertLength) || 0);
+      const displayMatch = getRecognitionDisplayMatch(response.match);
+      const matchedHostName = cleanText(displayMatch?.hostVectorName, 140) || 'vector';
+      const insertLength = Math.max(0, Number(displayMatch?.insertLength) || 0);
       const summary = insertLength > 0
         ? `Recognized ${matchedHostName} backbone with a ${insertLength.toLocaleString()} bp insert.`
         : `Recognized ${matchedHostName} backbone.`;
@@ -792,6 +931,10 @@ export function initSequenceViewer(options = {}) {
     setStatus,
     readFileAsText,
     onParsedRecordsOpened: maybePersistImportedFeatureRecord,
+    onLibraryEntryLoaded: ({ alignments }) => {
+      setAlignmentSessions(alignments);
+      alignmentController?.handleReferenceRecordChanged?.();
+    },
     hideFeatureContextMenu: () => detailController?.hideFeatureContextMenu(),
     hideFeatureEditor: () => detailController?.hideFeatureEditor(),
     onNavigateHome,
@@ -812,15 +955,25 @@ export function initSequenceViewer(options = {}) {
     onRequestRecognizeBackbone: recognizeCurrentBackboneInsert,
     onRequestClear: clearAll,
     onRequestSave: saveCurrentRecordAsSaved,
+    onRequestAlignment: () => alignmentController?.openSequencingAlignmentWorkspace?.(),
+    onSelectAlignmentSession: (sessionId) => alignmentController?.selectSavedAlignmentSession?.(sessionId, { enableView: true }),
     onNavigateHome: homeController.navigateToHome,
-    onRefreshLibraryEntries: homeController.refreshLibraryEntries
+    onRefreshLibraryEntries: homeController.refreshLibraryEntries,
+    onReferenceRecordChanged: () => {
+      resetAlignmentState({ preserveSessions: true });
+      alignmentController?.handleReferenceRecordChanged?.();
+    }
   });
 
   alignmentController = createSequenceViewerAlignmentController({
     elements,
+    viewerState: state,
     setStatus,
     setLocalWorkspaceVisibility: homeController.setLocalWorkspaceVisibility,
     onNavigateDetail,
+    onAlignmentStateChange: () => detailController?.renderActiveRecord?.(),
+    getSelectedReferenceRecord: getSelectedRecord,
+    persistAlignmentSession,
     readFileAsText,
     readFileAsArrayBuffer
   });

@@ -26,6 +26,9 @@ export function createSequenceViewerHomeController(config = {}) {
   const onNavigateDetail = typeof config?.onNavigateDetail === 'function' ? config.onNavigateDetail : null;
   const onClearAll = config?.onClearAll || (() => {});
   const onParsedRecordsOpened = config?.onParsedRecordsOpened || (async () => null);
+  const onLibraryEntryLoaded = typeof config?.onLibraryEntryLoaded === 'function'
+    ? config.onLibraryEntryLoaded
+    : () => {};
 
   function setHomeStatus(message, isError = false) {
     if (!elements.homeStatusNote) {
@@ -51,6 +54,7 @@ export function createSequenceViewerHomeController(config = {}) {
       : mode === 'builder'
         ? 'builder'
         : 'home';
+    rootDocument?.body?.classList?.toggle?.('sequence-viewer-fixed-scroll', next === 'builder' || next === 'alignment');
     if (elements.homeWorkspace) {
       elements.homeWorkspace.hidden = next !== 'home';
     }
@@ -58,7 +62,7 @@ export function createSequenceViewerHomeController(config = {}) {
       elements.proteinBuilderWorkspace.hidden = next !== 'builder';
     }
     if (elements.detailWorkspace) {
-      elements.detailWorkspace.hidden = next !== 'detail';
+      elements.detailWorkspace.hidden = next !== 'detail' && next !== 'alignment';
     }
     if (elements.alignmentWorkspace) {
       elements.alignmentWorkspace.hidden = next !== 'alignment';
@@ -458,7 +462,8 @@ export function createSequenceViewerHomeController(config = {}) {
       const response = await bridge.sequenceLibraryGet({
         storagePath,
         id: cleanText(entryId, 200),
-        includeGbk: true
+        includeGbk: true,
+        includeAlignments: true
       });
       if (!response?.ok || !response?.entry) {
         throw new Error(response?.error || 'Failed to load sequence entry.');
@@ -480,6 +485,10 @@ export function createSequenceViewerHomeController(config = {}) {
       setMode('paste');
       setInputComposerVisible(false);
       setRecords(parsed, 'Loaded');
+      onLibraryEntryLoaded({
+        entry: response.entry,
+        alignments: Array.isArray(response.alignments) ? response.alignments : []
+      });
       navigateToDetail();
       setStatus(`Opened ${response.entry.name}.`);
     } catch (error) {

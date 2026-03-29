@@ -38,7 +38,7 @@ function writeAscii(view, offset, text) {
 }
 
 function parseAbifTagKey(key) {
-  const match = String(key || '').trim().match(/^([A-Z0-9]{4})(\d+)$/);
+  const match = String(key || '').trim().match(/^([A-Z0-9_]{4})(\d+)$/);
   if (!match) {
     throw new Error(`Invalid ABIF key: ${key}`);
   }
@@ -53,15 +53,27 @@ function buildSyntheticAbif(options = {}) {
   if (options.baseKey && typeof options.baseSequence === 'string') {
     entries.push({
       key: options.baseKey,
-      bytes: Uint8Array.from(String(options.baseSequence).split('').map((char) => char.charCodeAt(0)))
+      bytes: Uint8Array.from(String(options.baseSequence).split('').map((char) => char.charCodeAt(0))),
+      elementSize: 1,
+      elementCount: String(options.baseSequence).length
     });
   }
   if (options.qualityKey && Array.isArray(options.qualityValues)) {
     entries.push({
       key: options.qualityKey,
-      bytes: Uint8Array.from(options.qualityValues)
+      bytes: Uint8Array.from(options.qualityValues),
+      elementSize: 1,
+      elementCount: options.qualityValues.length
     });
   }
+  (Array.isArray(options.extraEntries) ? options.extraEntries : []).forEach((entry) => {
+    entries.push({
+      key: entry.key,
+      bytes: entry.bytes instanceof Uint8Array ? entry.bytes : Uint8Array.from(entry.bytes || []),
+      elementSize: Math.max(1, Number(entry.elementSize) || 1),
+      elementCount: Math.max(0, Number(entry.elementCount) || Math.floor((entry.bytes?.length || 0) / Math.max(1, Number(entry.elementSize) || 1)))
+    });
+  });
 
   const directoryOffset = 64;
   const directorySize = entries.length * 28;
@@ -87,8 +99,8 @@ function buildSyntheticAbif(options = {}) {
     writeAscii(view, entryOffset, tag);
     view.setUint32(entryOffset + 4, number, false);
     view.setUint16(entryOffset + 8, 2, false);
-    view.setUint16(entryOffset + 10, 1, false);
-    view.setUint32(entryOffset + 12, entry.bytes.length, false);
+    view.setUint16(entryOffset + 10, entry.elementSize || 1, false);
+    view.setUint32(entryOffset + 12, entry.elementCount || entry.bytes.length, false);
     view.setUint32(entryOffset + 16, entry.bytes.length, false);
     if (entry.bytes.length <= 4) {
       entry.bytes.forEach((value, byteIndex) => {
@@ -103,6 +115,17 @@ function buildSyntheticAbif(options = {}) {
   });
 
   return buffer;
+}
+
+function encodeUint16Be(values) {
+  const list = Array.isArray(values) ? values : [];
+  const bytes = new Uint8Array(list.length * 2);
+  list.forEach((value, index) => {
+    const safeValue = Math.max(0, Math.round(Number(value) || 0));
+    bytes[index * 2] = (safeValue >> 8) & 0xff;
+    bytes[(index * 2) + 1] = safeValue & 0xff;
+  });
+  return bytes;
 }
 
 function makeAlignmentRecord(sequence, options = {}) {
@@ -220,6 +243,64 @@ test('[EDGE] sequence-viewer parseAb1Record keeps the record and warns when qual
   assert.equal(parsed.records[0].quality, '');
   assert.equal(parsed.warnings.length > 0, true);
   assert.equal(parsed.errors.length, 0);
+});
+
+test('[EDGE] sequence-viewer parseAb1Record captures chromatogram traces and base-call positions when available', () => {
+  const parsed = sequenceViewerInternals.parseAb1Record(
+    buildSyntheticAbif({
+      baseKey: 'PBAS2',
+      baseSequence: 'ACGT',
+      extraEntries: [
+        {
+          key: 'FWO_1',
+          bytes: Uint8Array.from('GATC'.split('').map((char) => char.charCodeAt(0))),
+          elementSize: 1,
+          elementCount: 4
+        },
+        {
+          key: 'PLOC2',
+          bytes: encodeUint16Be([5, 15, 25, 35]),
+          elementSize: 2,
+          elementCount: 4
+        },
+        {
+          key: 'DATA9',
+          bytes: encodeUint16Be([1, 4, 2, 1]),
+          elementSize: 2,
+          elementCount: 4
+        },
+        {
+          key: 'DATA10',
+          bytes: encodeUint16Be([7, 9, 12, 8]),
+          elementSize: 2,
+          elementCount: 4
+        },
+        {
+          key: 'DATA11',
+          bytes: encodeUint16Be([2, 1, 8, 10]),
+          elementSize: 2,
+          elementCount: 4
+        },
+        {
+          key: 'DATA12',
+          bytes: encodeUint16Be([6, 3, 2, 1]),
+          elementSize: 2,
+          elementCount: 4
+        }
+      ]
+    }),
+    { name: 'trace_with_channels.ab1' }
+  );
+
+  assert.equal(parsed.errors.length, 0);
+  assert.equal(parsed.records.length, 1);
+  assert.equal(Array.isArray(parsed.records[0].trace.channels), true);
+  assert.deepEqual(Array.from(parsed.records[0].trace.positions), [5, 15, 25, 35]);
+  assert.equal(parsed.records[0].trace.channels.length, 4);
+  const aChannel = parsed.records[0].trace.channels.find((channel) => channel.base === 'A');
+  const gChannel = parsed.records[0].trace.channels.find((channel) => channel.base === 'G');
+  assert.deepEqual(Array.from(aChannel.values), [7, 9, 12, 8]);
+  assert.deepEqual(Array.from(gChannel.values), [1, 4, 2, 1]);
 });
 
 test('[EDGE] sequence-viewer alignSequenceToReference finds an exact forward hit', () => {

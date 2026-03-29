@@ -337,7 +337,8 @@ function registerDataIpc(deps = {}) {
         storagePath,
         id,
         includeGbk: normalizedPayload?.includeGbk === true,
-        includeHtml: normalizedPayload?.includeHtml === true
+        includeHtml: normalizedPayload?.includeHtml === true,
+        includeAlignments: normalizedPayload?.includeAlignments === true
       });
       return { ok: true, ...result };
     } catch (error) {
@@ -364,7 +365,10 @@ function registerDataIpc(deps = {}) {
         sequence: String(normalizedPayload?.sequence || ''),
         features: Array.isArray(normalizedPayload?.features) ? normalizedPayload.features : [],
         gbkText: String(normalizedPayload?.gbkText || ''),
-        htmlText: String(normalizedPayload?.htmlText || '')
+        htmlText: String(normalizedPayload?.htmlText || ''),
+        alignmentSessions: Array.isArray(normalizedPayload?.alignmentSessions)
+          ? normalizedPayload.alignmentSessions
+          : null
       });
       return { ok: true, ...result };
     } catch (error) {

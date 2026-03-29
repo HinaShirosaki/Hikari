@@ -12,6 +12,8 @@ const DB_FILE_NAME = 'sequence-library.sqlite';
 const STATUS_SAVED = 'saved';
 const STATUS_TEMPORARY = 'temporary';
 const FEATURE_SOURCE_BACKBONE_RECOGNITION = 'backbone_recognition';
+const ALIGNMENTS_DIR_NAME = 'alignments';
+const ALIGNMENTS_MANIFEST_FILE_NAME = 'alignment-sessions.json';
 
 let sqlJsInitPromise = null;
 
@@ -84,6 +86,22 @@ function normalizeSequenceText(raw) {
     .replace(/[^A-Z*]/g, '');
 }
 
+function coerceBinaryBuffer(value) {
+  if (!value) {
+    return null;
+  }
+  if (Buffer.isBuffer(value)) {
+    return value;
+  }
+  if (value instanceof ArrayBuffer) {
+    return Buffer.from(value);
+  }
+  if (ArrayBuffer.isView(value)) {
+    return Buffer.from(value.buffer, value.byteOffset, value.byteLength);
+  }
+  return null;
+}
+
 function reverseComplementIupac(sequence) {
   return [...String(sequence || '').toUpperCase()]
     .reverse()
@@ -101,6 +119,20 @@ function buildStableId(prefix, input) {
 
 function buildEntryId() {
   return `seq_${Date.now()}_${Math.random().toString(16).slice(2, 10)}`;
+}
+
+function buildSequenceSignature(sequence, prefix = 'seq') {
+  const normalized = normalizeSequenceText(sequence);
+  if (!normalized.length) {
+    return '';
+  }
+
+  let hash = 5381;
+  for (let index = 0; index < normalized.length; index += 1) {
+    hash = ((hash << 5) + hash) ^ normalized.charCodeAt(index);
+  }
+
+  return `${prefix}_${normalized.length}_${(hash >>> 0).toString(16)}`;
 }
 
 function ensureStoragePath(storagePath) {
@@ -282,6 +314,364 @@ function normalizeEntryRow(row) {
     createdAt: cleanText(row.created_at, 60),
     updatedAt: cleanText(row.updated_at, 60)
   };
+}
+
+function stripExtension(name) {
+  const text = String(name || '').trim();
+  if (!text) {
+    return '';
+  }
+  return text.replace(/\.[^.]+$/u, '');
+}
+
+function resolveAlignmentStoragePaths(entryDir) {
+  const alignmentsDir = path.join(entryDir, ALIGNMENTS_DIR_NAME);
+  return {
+    alignmentsDir,
+    manifestPath: path.join(alignmentsDir, ALIGNMENTS_MANIFEST_FILE_NAME)
+  };
+}
+
+function normalizeAlignmentSourceKind(value) {
+  return String(value || '').toLowerCase().trim() === 'paste' ? 'paste' : 'file';
+}
+
+function normalizeAlignmentTimestamp(value, fallbackValue = '') {
+  const raw = String(value || fallbackValue || '').trim();
+  if (!raw) {
+    return new Date().toISOString();
+  }
+  const parsed = new Date(raw);
+  return Number.isFinite(parsed.getTime()) ? parsed.toISOString() : new Date().toISOString();
+}
+
+function normalizeAlignmentTracePayload(trace) {
+  const safeTrace = trace && typeof trace === 'object' ? trace : null;
+  if (!safeTrace) {
+    return null;
+  }
+
+  const positions = (Array.isArray(safeTrace.positions) ? safeTrace.positions : [])
+    .map((value) => Math.max(0, Math.round(Number(value) || 0)))
+    .slice(0, 50000);
+  const channels = (Array.isArray(safeTrace.channels) ? safeTrace.channels : [])
+    .map((channel) => {
+      const base = cleanText(channel?.base, 1).toUpperCase();
+      if (!base || !['A', 'C', 'G', 'T'].includes(base)) {
+        return null;
+      }
+      const values = (Array.isArray(channel?.values) ? channel.values : [])
+        .map((value) => Math.max(0, Math.round(Number(value) || 0)))
+        .slice(0, 50000);
+      if (!values.length) {
+        return null;
+      }
+      return { base, values };
+    })
+    .filter(Boolean);
+
+  if (!channels.length) {
+    return null;
+  }
+
+  return {
+    baseOrder: cleanText(safeTrace.baseOrder, 16).toUpperCase(),
+    positions,
+    channels
+  };
+}
+
+function normalizeAlignmentQueryRecord(record, index = 0) {
+  const safeRecord = record && typeof record === 'object' ? record : {};
+  const sequence = normalizeSequenceText(safeRecord.sequence);
+  if (!sequence.length) {
+    return null;
+  }
+
+  return {
+    name: normalizeName(safeRecord.name || `alignment_query_${index + 1}`, `alignment_query_${index + 1}`),
+    sourceFormat: cleanText(safeRecord.sourceFormat, 80).toLowerCase() || 'raw',
+    topology: String(safeRecord.topology || '').toLowerCase() === 'circular' ? 'circular' : 'linear',
+    sequence,
+    quality: String(safeRecord.quality || '').slice(0, 500000),
+    trace: normalizeAlignmentTracePayload(safeRecord.trace)
+  };
+}
+
+function normalizeAlignmentDifferencePayload(difference, index = 0) {
+  const safeDifference = difference && typeof difference === 'object' ? difference : {};
+  return {
+    type: cleanText(safeDifference.type, 40).toLowerCase() || `difference_${index + 1}`,
+    referenceStart: Math.max(0, Math.round(Number(safeDifference.referenceStart) || 0)),
+    referenceEnd: Math.max(0, Math.round(Number(safeDifference.referenceEnd) || 0)),
+    queryStart: Math.max(0, Math.round(Number(safeDifference.queryStart) || 0)),
+    queryEnd: Math.max(0, Math.round(Number(safeDifference.queryEnd) || 0)),
+    referenceBases: String(safeDifference.referenceBases || '').slice(0, 20000),
+    queryBases: String(safeDifference.queryBases || '').slice(0, 20000)
+  };
+}
+
+function normalizeAlignmentResultPayload(result) {
+  const safeResult = result && typeof result === 'object' ? result : null;
+  if (!safeResult) {
+    return null;
+  }
+
+  return {
+    referenceName: cleanText(safeResult.referenceName, 140),
+    queryName: cleanText(safeResult.queryName, 140),
+    referenceFormat: cleanText(safeResult.referenceFormat, 80),
+    queryFormat: cleanText(safeResult.queryFormat, 80),
+    orientation: cleanText(safeResult.orientation, 40),
+    score: Number(safeResult.score) || 0,
+    identityPercent: Number(safeResult.identityPercent) || 0,
+    queryCoveragePercent: Number(safeResult.queryCoveragePercent) || 0,
+    mismatchCount: Math.max(0, Math.round(Number(safeResult.mismatchCount) || 0)),
+    insertionCount: Math.max(0, Math.round(Number(safeResult.insertionCount) || 0)),
+    deletionCount: Math.max(0, Math.round(Number(safeResult.deletionCount) || 0)),
+    referenceSpan: {
+      start: Math.max(0, Math.round(Number(safeResult.referenceSpan?.start) || 0)),
+      end: Math.max(0, Math.round(Number(safeResult.referenceSpan?.end) || 0)),
+      wraps: safeResult.referenceSpan?.wraps === true
+    },
+    alignedReference: String(safeResult.alignedReference || '').slice(0, 600000),
+    alignedMarkers: String(safeResult.alignedMarkers || '').slice(0, 600000),
+    alignedQuery: String(safeResult.alignedQuery || '').slice(0, 600000),
+    differences: (Array.isArray(safeResult.differences) ? safeResult.differences : [])
+      .map((difference, index) => normalizeAlignmentDifferencePayload(difference, index))
+  };
+}
+
+function resolveAlignmentSourceFileExtension(session) {
+  const originalExtension = path.extname(String(session?.originalFileName || '').trim()).replace(/[^\.\w-]+/g, '').slice(0, 16);
+  if (originalExtension) {
+    return originalExtension.toLowerCase();
+  }
+
+  const sourceFormat = cleanText(session?.sourceFormat || session?.queryRecord?.sourceFormat, 40).toLowerCase();
+  if (sourceFormat === 'ab1') {
+    return '.ab1';
+  }
+  if (sourceFormat === 'genbank') {
+    return '.gbk';
+  }
+  if (sourceFormat === 'fasta') {
+    return '.fasta';
+  }
+  return '.txt';
+}
+
+function normalizeAlignmentSessionPayload(session, index = 0, existingSession = null) {
+  const safeSession = session && typeof session === 'object' ? session : {};
+  const queryRecord = normalizeAlignmentQueryRecord(safeSession.queryRecord || safeSession.query, index);
+  if (!queryRecord) {
+    return null;
+  }
+
+  const result = normalizeAlignmentResultPayload(safeSession.result);
+  const now = new Date().toISOString();
+  const sourceText = typeof safeSession.rawText === 'string'
+    ? safeSession.rawText
+    : (typeof safeSession.sourceText === 'string' ? safeSession.sourceText : '');
+  const sourceBytes = coerceBinaryBuffer(
+    safeSession.rawBinary
+      ?? safeSession.sourceBytes
+      ?? safeSession.sourceBuffer
+      ?? safeSession.sourceArrayBuffer
+  );
+  const baseName = sanitizeFileName(
+    stripExtension(safeSession.originalFileName || safeSession.name || queryRecord.name) || 'alignment_query',
+    'alignment_query'
+  );
+  const id = cleanText(safeSession.id, 200)
+    || cleanText(existingSession?.id, 200)
+    || `align_${Date.now()}_${Math.random().toString(16).slice(2, 10)}`;
+
+  return {
+    id,
+    name: normalizeName(safeSession.name || queryRecord.name || `alignment_${index + 1}`, `alignment_${index + 1}`),
+    referenceRecordKey: cleanText(
+      safeSession.referenceRecordKey
+        || safeSession.referenceKey
+        || existingSession?.referenceRecordKey
+        || buildSequenceSignature(safeSession.referenceRecord?.sequence || '', 'ref'),
+      200
+    ),
+    referenceRecordName: normalizeName(
+      safeSession.referenceRecordName
+        || safeSession.referenceRecord?.name
+        || existingSession?.referenceRecordName
+        || 'reference',
+      'reference'
+    ),
+    sourceKind: normalizeAlignmentSourceKind(safeSession.sourceKind),
+    sourceFormat: cleanText(safeSession.sourceFormat || queryRecord.sourceFormat, 80).toLowerCase() || 'raw',
+    originalFileName: cleanText(safeSession.originalFileName, 240),
+    storedSourceRelPath: cleanText(safeSession.storedSourceRelPath || existingSession?.storedSourceRelPath, 1200),
+    queryRecord,
+    result,
+    createdAt: normalizeAlignmentTimestamp(safeSession.createdAt, existingSession?.createdAt || now),
+    updatedAt: normalizeAlignmentTimestamp(safeSession.updatedAt, now),
+    _sourceText: sourceText,
+    _sourceBytes: sourceBytes,
+    _sourceBaseName: baseName,
+    _sourceExtension: resolveAlignmentSourceFileExtension({
+      ...safeSession,
+      queryRecord
+    })
+  };
+}
+
+function normalizeStoredAlignmentSession(session) {
+  const safeSession = session && typeof session === 'object' ? session : null;
+  if (!safeSession?.id || !safeSession?.queryRecord) {
+    return null;
+  }
+
+  return {
+    id: cleanText(safeSession.id, 200),
+    name: normalizeName(safeSession.name || safeSession.queryRecord?.name || 'alignment', 'alignment'),
+    referenceRecordKey: cleanText(safeSession.referenceRecordKey || safeSession.referenceKey, 200),
+    referenceRecordName: normalizeName(safeSession.referenceRecordName || 'reference', 'reference'),
+    sourceKind: normalizeAlignmentSourceKind(safeSession.sourceKind),
+    sourceFormat: cleanText(safeSession.sourceFormat || safeSession.queryRecord?.sourceFormat, 80).toLowerCase() || 'raw',
+    originalFileName: cleanText(safeSession.originalFileName, 240),
+    storedSourceRelPath: cleanText(safeSession.storedSourceRelPath, 1200),
+    queryRecord: normalizeAlignmentQueryRecord(safeSession.queryRecord),
+    result: normalizeAlignmentResultPayload(safeSession.result),
+    createdAt: normalizeAlignmentTimestamp(safeSession.createdAt),
+    updatedAt: normalizeAlignmentTimestamp(safeSession.updatedAt)
+  };
+}
+
+async function readAlignmentManifest(entryDir) {
+  const paths = resolveAlignmentStoragePaths(entryDir);
+  try {
+    const raw = await fs.readFile(paths.manifestPath, 'utf8');
+    const parsed = JSON.parse(raw);
+    const sessions = Array.isArray(parsed?.sessions) ? parsed.sessions : [];
+    return sessions.map((session) => normalizeStoredAlignmentSession(session)).filter(Boolean);
+  } catch (error) {
+    if (error?.code === 'ENOENT') {
+      return [];
+    }
+    throw error;
+  }
+}
+
+async function clearDirectoryContents(targetDir, options = {}) {
+  const preserveNames = new Set((Array.isArray(options.preserveNames) ? options.preserveNames : []).map((value) => String(value)));
+  try {
+    const items = await fs.readdir(targetDir);
+    await Promise.all(items.map(async (itemName) => {
+      if (preserveNames.has(itemName)) {
+        return;
+      }
+      await fs.rm(path.join(targetDir, itemName), { recursive: true, force: true });
+    }));
+  } catch (error) {
+    if (error?.code !== 'ENOENT') {
+      throw error;
+    }
+  }
+}
+
+async function writeAlignmentManifest(entryDir, inputSessions = [], libraryRoot) {
+  const paths = resolveAlignmentStoragePaths(entryDir);
+  const existingSessions = await readAlignmentManifest(entryDir);
+  const existingById = new Map(existingSessions.map((session) => [session.id, session]));
+  const nextSessions = [];
+
+  if (!Array.isArray(inputSessions) || !inputSessions.length) {
+    await fs.rm(paths.alignmentsDir, { recursive: true, force: true });
+    return [];
+  }
+
+  await fs.mkdir(paths.alignmentsDir, { recursive: true });
+
+  for (let index = 0; index < inputSessions.length; index += 1) {
+    const inputSession = inputSessions[index];
+    const existingSession = existingById.get(cleanText(inputSession?.id, 200)) || null;
+    const normalized = normalizeAlignmentSessionPayload(inputSession, index, existingSession);
+    if (!normalized) {
+      continue;
+    }
+
+    const sessionDirName = sanitizeFileName(normalized.id, `alignment_${index + 1}`);
+    const sessionDir = path.join(paths.alignmentsDir, sessionDirName);
+    await fs.mkdir(sessionDir, { recursive: true });
+
+    let storedSourceRelPath = normalized.storedSourceRelPath;
+    if (normalized._sourceText || normalized._sourceBytes) {
+      await clearDirectoryContents(sessionDir);
+      const sourceFileName = `${normalized._sourceBaseName}${normalized._sourceExtension}`;
+      const sourceAbsPath = path.join(sessionDir, sourceFileName);
+      if (normalized._sourceBytes) {
+        await fs.writeFile(sourceAbsPath, normalized._sourceBytes);
+      } else {
+        await fs.writeFile(sourceAbsPath, normalized._sourceText, 'utf8');
+      }
+      storedSourceRelPath = toPosixRelative(libraryRoot, sourceAbsPath);
+    }
+
+    nextSessions.push({
+      id: normalized.id,
+      name: normalized.name,
+      referenceRecordKey: normalized.referenceRecordKey,
+      referenceRecordName: normalized.referenceRecordName,
+      sourceKind: normalized.sourceKind,
+      sourceFormat: normalized.sourceFormat,
+      originalFileName: normalized.originalFileName,
+      storedSourceRelPath,
+      queryRecord: normalized.queryRecord,
+      result: normalized.result,
+      createdAt: normalized.createdAt,
+      updatedAt: normalized.updatedAt
+    });
+  }
+
+  const keepSessionDirs = new Set(nextSessions.map((session) => sanitizeFileName(session.id, session.id)));
+  try {
+    const entries = await fs.readdir(paths.alignmentsDir, { withFileTypes: true });
+    await Promise.all(entries.map(async (entry) => {
+      if (!entry.isDirectory()) {
+        return;
+      }
+      if (keepSessionDirs.has(entry.name)) {
+        return;
+      }
+      await fs.rm(path.join(paths.alignmentsDir, entry.name), { recursive: true, force: true });
+    }));
+  } catch (error) {
+    if (error?.code !== 'ENOENT') {
+      throw error;
+    }
+  }
+
+  await fs.writeFile(
+    paths.manifestPath,
+    JSON.stringify({ sessions: nextSessions }, null, 2),
+    'utf8'
+  );
+  return nextSessions;
+}
+
+function attachAlignmentSourcePaths(sessions, libraryRoot) {
+  return (Array.isArray(sessions) ? sessions : [])
+    .map((session) => {
+      const safeSession = normalizeStoredAlignmentSession(session);
+      if (!safeSession) {
+        return null;
+      }
+      const storedSourcePath = safeSession.storedSourceRelPath
+        ? ensurePathWithinRoot(libraryRoot, safeSession.storedSourceRelPath)
+        : '';
+      return {
+        ...safeSession,
+        storedSourcePath
+      };
+    })
+    .filter(Boolean);
 }
 
 function normalizeFeatureSegments(rawSegments, sequenceLength) {
@@ -565,18 +955,8 @@ function buildFeatureSearchResult(db, row) {
   };
 }
 
-async function clearEntryFiles(entryDir) {
-  try {
-    const files = await fs.readdir(entryDir);
-    await Promise.all(files.map(async (fileName) => {
-      const target = path.join(entryDir, fileName);
-      await fs.rm(target, { recursive: true, force: true });
-    }));
-  } catch (error) {
-    if (error?.code !== 'ENOENT') {
-      throw error;
-    }
-  }
+async function clearEntryFiles(entryDir, options = {}) {
+  await clearDirectoryContents(entryDir, options);
 }
 
 function findNextSavedName(db, requestedName, selfId = '') {
@@ -627,7 +1007,7 @@ async function listSequenceEntries({ storagePath, status = '' }) {
   }
 }
 
-async function getSequenceEntry({ storagePath, id, includeGbk = false, includeHtml = false }) {
+async function getSequenceEntry({ storagePath, id, includeGbk = false, includeHtml = false, includeAlignments = false }) {
   const safeId = cleanText(id, 200);
   if (!safeId) {
     throw new Error('Missing sequence entry id.');
@@ -651,6 +1031,11 @@ async function getSequenceEntry({ storagePath, id, includeGbk = false, includeHt
       const htmlPath = ensurePathWithinRoot(paths.libraryRoot, entry.htmlRelPath);
       result.htmlText = await fs.readFile(htmlPath, 'utf8');
     }
+    if (includeAlignments) {
+      const entryDir = path.join(paths.entriesRoot, entry.id);
+      const sessions = await readAlignmentManifest(entryDir);
+      result.alignments = attachAlignmentSourcePaths(sessions, paths.libraryRoot);
+    }
     return result;
   } finally {
     db.close();
@@ -661,6 +1046,7 @@ async function upsertSequenceEntry(payload = {}) {
   const storagePath = cleanText(payload.storagePath, 2000);
   const gbkText = String(payload.gbkText || '');
   const htmlText = String(payload.htmlText || '');
+  const alignmentSessions = Array.isArray(payload.alignmentSessions) ? payload.alignmentSessions : null;
   if (!gbkText.trim()) {
     throw new Error('GBK content is required.');
   }
@@ -687,7 +1073,7 @@ async function upsertSequenceEntry(payload = {}) {
     const fileSafeName = sanitizeFileName(resolvedName, 'sequence');
     const entryDir = path.join(paths.entriesRoot, entryId);
     await fs.mkdir(entryDir, { recursive: true });
-    await clearEntryFiles(entryDir);
+    await clearEntryFiles(entryDir, { preserveNames: [ALIGNMENTS_DIR_NAME] });
 
     const gbkAbsPath = path.join(entryDir, `${fileSafeName}.gbk`);
     const htmlAbsPath = path.join(entryDir, `${fileSafeName}.html`);
@@ -745,11 +1131,19 @@ async function upsertSequenceEntry(payload = {}) {
 
     replaceFeatureOccurrencesForEntry(db, row, payload);
 
+    const nextAlignmentSessions = alignmentSessions === null
+      ? attachAlignmentSourcePaths(await readAlignmentManifest(entryDir), paths.libraryRoot)
+      : attachAlignmentSourcePaths(
+        await writeAlignmentManifest(entryDir, alignmentSessions, paths.libraryRoot),
+        paths.libraryRoot
+      );
+
     await persistDatabase(paths.sqlitePath, db);
     return {
       rootPath: paths.libraryRoot,
       sqlitePath: paths.sqlitePath,
-      entry: row
+      entry: row,
+      alignments: nextAlignmentSessions
     };
   } finally {
     db.close();

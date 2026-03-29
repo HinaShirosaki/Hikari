@@ -165,7 +165,7 @@ div {
   justify-content: center;
   gap: 6px;
   min-width: 0;
-  overflow: hidden;
+  overflow: visible;
   padding-bottom: 0;
 }
 

@@ -112,6 +112,106 @@ function getAbifEntryByPreference(directoryMap, ...keys) {
   return null;
 }
 
+function readNumericSeriesFromEntry(buffer, view, entry, options = {}) {
+  const bytes = getAbifEntryData(buffer, view, entry);
+  const elementSize = Math.max(1, Number(entry?.elementSize) || 1);
+  const elementCount = Math.max(0, Number(entry?.elementCount) || 0);
+  const availableCount = Math.floor(bytes.byteLength / elementSize);
+  const count = elementCount > 0 ? Math.min(elementCount, availableCount) : availableCount;
+  const dataView = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const signed = options?.signed === true;
+  const values = [];
+
+  for (let index = 0; index < count; index += 1) {
+    const offset = index * elementSize;
+    let value = 0;
+    if (elementSize === 1) {
+      value = signed ? dataView.getInt8(offset) : dataView.getUint8(offset);
+    } else if (elementSize === 2) {
+      value = signed ? dataView.getInt16(offset, false) : dataView.getUint16(offset, false);
+    } else if (elementSize === 4) {
+      value = signed ? dataView.getInt32(offset, false) : dataView.getUint32(offset, false);
+    } else {
+      for (let byteIndex = 0; byteIndex < elementSize; byteIndex += 1) {
+        value = (value * 256) + dataView.getUint8(offset + byteIndex);
+      }
+    }
+    values.push(value);
+  }
+
+  return values;
+}
+
+function normalizeAb1BaseOrder(rawValue) {
+  const cleaned = String(rawValue || '')
+    .toUpperCase()
+    .replace(/[^ACGT]/g, '')
+    .slice(0, 4);
+  if (cleaned.length !== 4) {
+    return ['G', 'A', 'T', 'C'];
+  }
+  const unique = new Set(cleaned.split(''));
+  if (unique.size !== 4) {
+    return ['G', 'A', 'T', 'C'];
+  }
+  return cleaned.split('');
+}
+
+function buildAb1TracePayload(buffer, view, directoryMap, sequenceLength, warnings) {
+  const baseOrderEntry = getAbifEntryByPreference(directoryMap, 'FWO_1', 'FWO_2');
+  const baseOrder = normalizeAb1BaseOrder(
+    baseOrderEntry ? readAsciiString(getAbifEntryData(buffer, view, baseOrderEntry)) : ''
+  );
+  const canonicalBases = ['A', 'C', 'G', 'T'];
+  const preferredTraceEntries = [9, 10, 11, 12].map((index) => directoryMap.get(`DATA${index}`) || null);
+  const fallbackTraceEntries = [1, 2, 3, 4].map((index) => directoryMap.get(`DATA${index}`) || null);
+  const selectedTraceEntries = preferredTraceEntries.every(Boolean)
+    ? preferredTraceEntries
+    : (fallbackTraceEntries.every(Boolean) ? fallbackTraceEntries : []);
+
+  if (!selectedTraceEntries.length) {
+    return null;
+  }
+
+  const rawChannelsByBase = new Map();
+  selectedTraceEntries.forEach((entry, index) => {
+    const base = baseOrder[index] || canonicalBases[index] || '';
+    if (!base) {
+      return;
+    }
+    const values = readNumericSeriesFromEntry(buffer, view, entry)
+      .map((value) => Math.max(0, Math.round(Number(value) || 0)));
+    rawChannelsByBase.set(base, values);
+  });
+
+  const positionsEntry = getAbifEntryByPreference(directoryMap, 'PLOC2', 'PLOC1');
+  let positions = positionsEntry
+    ? readNumericSeriesFromEntry(buffer, view, positionsEntry).map((value) => Math.max(0, Math.round(Number(value) || 0)))
+    : [];
+
+  if (positions.length && sequenceLength && positions.length > sequenceLength) {
+    warnings.push('AB1 base-call positions were longer than the sequence and were truncated.');
+    positions = positions.slice(0, sequenceLength);
+  }
+
+  const channels = canonicalBases
+    .map((base) => ({
+      base,
+      values: rawChannelsByBase.get(base) || []
+    }))
+    .filter((channel) => channel.values.length > 0);
+
+  if (!channels.length) {
+    return null;
+  }
+
+  return {
+    baseOrder,
+    positions,
+    channels
+  };
+}
+
 function sanitizeAb1QualityBytes(bytes, sequenceLength, warnings) {
   const safeBytes = bytes instanceof Uint8Array ? bytes : new Uint8Array(0);
   if (!safeBytes.length || !sequenceLength) {
@@ -177,6 +277,7 @@ export function parseAb1Record(rawInput, options = {}) {
     } else {
       warnings.push('AB1 quality values were not present (PCON2/PCON1 missing).');
     }
+    const trace = buildAb1TracePayload(buffer, view, directoryMap, sequence.length, warnings);
 
     const fallbackName = String(options?.name || options?.fileName || 'sequencing_trace')
       .replace(/\.[^.]+$/u, '')
@@ -192,6 +293,7 @@ export function parseAb1Record(rawInput, options = {}) {
         topology: 'linear',
         sequence,
         quality,
+        trace,
         features: []
       }],
       warnings,

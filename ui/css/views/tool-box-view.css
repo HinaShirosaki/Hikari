@@ -16,6 +16,7 @@
   align-items: center;
   min-height: 44px;
   padding: 9px 0;
+  border: 0;
   border-bottom: 1px solid var(--line-soft);
   border-radius: 0;
   text-align: left;
@@ -23,14 +24,26 @@
 }
 
 .tool-tile .label {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 8px;
   color: var(--text);
   font-size: 0.9rem;
   font-weight: 500;
+  transition: background-color 140ms ease, color 140ms ease;
 }
 
 .tool-tile:hover,
 .tool-tile:focus-visible {
   background: transparent;
+  color: var(--strong);
+}
+
+.tool-tile:hover .label,
+.tool-tile:focus-visible .label,
+.tool-tile-active .label {
+  background: var(--surface-subtle);
   color: var(--strong);
 }
 

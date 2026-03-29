@@ -51,20 +51,35 @@
               </div>
             </div>
 
-            <div id="biology-notebook-steps" class="notebook-steps"></div>
+            <details class="biology-notebook-viewer-section" open>
+              <summary class="biology-notebook-viewer-section-summary">
+                <span>Protocol</span>
+                <span class="biology-notebook-viewer-section-chevron" aria-hidden="true"></span>
+              </summary>
+              <div class="biology-notebook-viewer-section-body">
+                <div id="biology-notebook-steps" class="notebook-steps"></div>
+              </div>
+            </details>
 
-            <label>
-              Experiment Results File / Notes
-              <textarea id="biology-notebook-result" rows="4" placeholder="Path, summary, or notes"></textarea>
-            </label>
-            <label>
-              Experiment Result Files
-              <input id="biology-notebook-result-file" type="file" multiple />
-            </label>
-            <div class="form-actions">
-              <button id="save-biology-notebook-btn" class="primary-btn" type="button">Save Notebook Entry</button>
-              <button id="cancel-biology-notebook-edit-btn" class="ghost-btn" type="button" hidden>Cancel Edit</button>
-            </div>
+            <section class="biology-notebook-viewer-section biology-notebook-viewer-section-static">
+              <div class="biology-notebook-viewer-section-summary biology-notebook-viewer-section-summary-static">
+                <span>Notes / Results</span>
+              </div>
+              <div class="biology-notebook-viewer-section-body">
+                <label>
+                  Experiment Results File / Notes
+                  <textarea id="biology-notebook-result" rows="4" placeholder="Path, summary, or notes"></textarea>
+                </label>
+                <label>
+                  Experiment Result Files
+                  <input id="biology-notebook-result-file" type="file" multiple />
+                </label>
+                <div class="form-actions">
+                  <button id="save-biology-notebook-btn" class="primary-btn" type="button">Save Notebook Entry</button>
+                  <button id="cancel-biology-notebook-edit-btn" class="ghost-btn" type="button" hidden>Cancel Edit</button>
+                </div>
+              </div>
+            </section>
           </div>
         </div>
       </div>
