@@ -173,7 +173,7 @@ export const APP_REGISTRY = [
     "label": "Papers",
     "viewId": "papers-view",
     "icon": "papers.svg",
-    "iconMarkup": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\n  <path d=\"M8 4.5h6l4 4V19a1.5 1.5 0 0 1-1.5 1.5H8A1.5 1.5 0 0 1 6.5 19V6A1.5 1.5 0 0 1 8 4.5Z\" />\n  <path d=\"M14 4.5V9h4\" />\n  <path d=\"M9.5 12h5M9.5 15h5M9.5 18h3.5\" />\n</svg>",
+    "iconMarkup": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\n  <path d=\"M8 4.75h8.25A1.75 1.75 0 0 1 18 6.5V15\" />\n  <path d=\"M6 8.25h8.25A1.75 1.75 0 0 1 16 10v7.5A1.75 1.75 0 0 1 14.25 19.25H6A1.75 1.75 0 0 1 4.25 17.5V10A1.75 1.75 0 0 1 6 8.25Z\" />\n  <path d=\"M7.75 11.5h4.75M7.75 14.25h4.75M7.75 17h3\" />\n</svg>",
     "placement": "dock",
     "aliases": [
       "paper",

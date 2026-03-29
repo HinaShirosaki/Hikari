@@ -28,6 +28,16 @@ import {
 } from './tool-box/sequence.js';
 import { oligoMolecularWeight, oligoExtinction, oligoTm } from './tool-box/oligo.js';
 import {
+  CLONING_PRIMER_TM_THRESHOLDS,
+  DEFAULT_CLONING_PREFERENCES,
+  assembleCloningPlan,
+  evaluateOverlapPcr,
+  evaluateGibsonAssembly,
+  evaluateRestrictionLigation,
+  evaluateSiteDirectedMutagenesis,
+  designCloningPrimers
+} from './tool-box/cloning-assembly.js';
+import {
   cleanSequence,
   countResidues,
   calculatePeptideMass,
@@ -69,6 +79,14 @@ export {
   oligoMolecularWeight,
   oligoExtinction,
   oligoTm,
+  CLONING_PRIMER_TM_THRESHOLDS,
+  DEFAULT_CLONING_PREFERENCES,
+  assembleCloningPlan,
+  evaluateOverlapPcr,
+  evaluateGibsonAssembly,
+  evaluateRestrictionLigation,
+  evaluateSiteDirectedMutagenesis,
+  designCloningPrimers,
   linearRegression,
   cleanSequence,
   countResidues,

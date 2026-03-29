@@ -5,208 +5,241 @@
           <p class="small-note">Workspace appearance, storage, startup, and model configuration.</p>
         </div>
 
-        <div class="settings-stack">
-          <section class="settings-section">
-            <div class="settings-section-head">
-              <h3>Appearance</h3>
-              <p class="small-note">Keep the workspace legible and consistent.</p>
-            </div>
-            <form id="appearance-form" class="stack-form">
-              <label>
-                Font Size
-                <select id="setting-font-size">
-                  <option value="14">Small</option>
-                  <option value="16">Medium</option>
-                  <option value="18">Large</option>
-                </select>
-              </label>
-              <label>
-                Mode
-                <select id="setting-mode">
-                  <option value="day">Day</option>
-                  <option value="night">Night</option>
-                </select>
-              </label>
-              <div class="form-actions">
-                <button type="submit" class="primary-btn">Save Appearance</button>
-              </div>
-            </form>
-          </section>
+        <div class="settings-layout">
+          <aside class="settings-nav" aria-label="Settings sections">
+            <button type="button" class="settings-nav-item" data-settings-target="appearance" aria-pressed="true">
+              <span>Appearance</span>
+              <small>Font size and theme</small>
+            </button>
+            <button type="button" class="settings-nav-item" data-settings-target="personal">
+              <span>Personal Info</span>
+              <small>Name and contact details</small>
+            </button>
+            <button type="button" class="settings-nav-item" data-settings-target="storage">
+              <span>Storage</span>
+              <small>Root folder and imports</small>
+            </button>
+            <button type="button" class="settings-nav-item" data-settings-target="startup">
+              <span>Startup &amp; Data</span>
+              <small>Launch behavior and .json file</small>
+            </button>
+            <button type="button" class="settings-nav-item" data-settings-target="locations">
+              <span>Inventory Locations</span>
+              <small>Shared location vocabulary</small>
+            </button>
+            <button type="button" class="settings-nav-item" data-settings-target="llm">
+              <span>LLM Model &amp; API</span>
+              <small>Provider, model, endpoint</small>
+            </button>
+            <button type="button" class="settings-nav-item" data-settings-target="telegram">
+              <span>Telegram Bot</span>
+              <small>Bot token and status</small>
+            </button>
+          </aside>
 
-          <section class="settings-section">
-            <div class="settings-section-head">
-              <h3>Personal Information</h3>
-              <p class="small-note">Name and contact details used across the workspace.</p>
-            </div>
-            <form id="personal-info-form" class="stack-form">
-              <label>
-                Name
-                <input id="setting-name" />
-              </label>
-              <label>
-                Position
-                <input id="setting-position" />
-              </label>
-              <label>
-                Institution Email
-                <input id="setting-institution-email" type="email" />
-              </label>
-              <label>
-                Enana Email
-                <input id="setting-enana-email" type="email" />
-              </label>
-              <div class="form-actions">
-                <button type="submit" class="primary-btn">Save Personal Info</button>
+          <div class="settings-detail">
+            <section class="settings-section" data-settings-panel="appearance">
+              <div class="settings-section-head">
+                <h3>Appearance</h3>
+                <p class="small-note">Keep the workspace legible and consistent.</p>
               </div>
-            </form>
-          </section>
-
-          <section class="settings-section">
-            <div class="settings-section-head">
-              <h3>Storage</h3>
-              <p class="small-note">Pick the root folder for imported lab data and linked notebook content.</p>
-            </div>
-            <form id="storage-form" class="stack-form">
-              <label>
-                Root Folder Path
-                <input id="setting-storage-path" placeholder="/path/to/enana-data" readonly />
-              </label>
-              <p class="small-note">Notebook pages will reference individual folders under this path.</p>
-              <p id="setting-storage-import-status" class="small-note">Storage import: not started.</p>
-              <div class="form-actions">
-                <button type="button" id="select-storage-path-btn" class="ghost-btn">Select Folder</button>
-                <button type="submit" class="primary-btn">Save Storage Path</button>
-              </div>
-            </form>
-          </section>
-
-          <section class="settings-section">
-            <div class="settings-section-head">
-              <h3>Startup &amp; Data</h3>
-              <p class="small-note">Control which module opens first and how data loads and saves.</p>
-            </div>
-            <form id="startup-form" class="stack-form">
-              <label>
-                Default Startup Module
-                <select id="setting-startup-default-view">
-                  <option value="home-view">Home</option>
-                  <option value="lab-management-view">Members</option>
-                  <option value="instrument-management-view">Instruments</option>
-                  <option value="protocol-management-view">Protocols</option>
-                  <option value="synthesis-notebook-view">Synthesis Notebook</option>
-                  <option value="biology-notebook-view">Biology Notebook</option>
-                  <option value="lab-common-inventory-view">Chemicals</option>
-                  <option value="sample-registry-view">Sample &amp; Inventory</option>
-                  <option value="assay-view">Assay</option>
-                  <option value="gel-view">Gel</option>
-                  <option value="project-management-view">Projects</option>
-                  <option value="workflow-management-view">Workflows</option>
-                  <option value="papers-view">Papers</option>
-                  <option value="agent-view">Agent</option>
-                  <option value="sequence-viewer-view">Sequence Viewer</option>
-                  <option value="tool-box-view">Tools</option>
-                  <option value="setting-view">Settings</option>
-                </select>
-              </label>
-              <label class="inline-row">
-                <input id="setting-startup-remember-last-view" type="checkbox" />
-                Remember last opened module on launch
-              </label>
-              <label class="inline-row">
-                <input id="setting-startup-auto-load-data-file" type="checkbox" />
-                Auto-load current .json data file on launch
-              </label>
-              <p class="small-note">If enabled, “Remember last opened module” overrides the default startup module.</p>
-              <div class="form-actions">
-                <button type="submit" class="primary-btn">Save Startup Settings</button>
-              </div>
-            </form>
-
-            <div class="settings-subsection">
-              <h4>Data File (.json)</h4>
-              <div class="stack-form">
-                <p class="small-note">Current .json file: <span id="setting-ena-path">Not set</span></p>
-                <label class="inline-row">
-                  <input id="setting-auto-save-ena" type="checkbox" />
-                  Auto-save to current .json file after each change
+              <form id="appearance-form" class="stack-form">
+                <label>
+                  Font Size
+                  <select id="setting-font-size">
+                    <option value="14">Small</option>
+                    <option value="16">Medium</option>
+                    <option value="18">Large</option>
+                  </select>
+                </label>
+                <label>
+                  Mode
+                  <select id="setting-mode">
+                    <option value="day">Day</option>
+                    <option value="night">Night</option>
+                  </select>
                 </label>
                 <div class="form-actions">
-                  <button type="button" id="save-ena-btn" class="primary-btn">Save .json</button>
-                  <button type="button" id="load-ena-btn" class="ghost-btn">Load .json</button>
+                  <button type="submit" class="primary-btn">Save Appearance</button>
+                </div>
+              </form>
+            </section>
+
+            <section class="settings-section" data-settings-panel="personal" hidden>
+              <div class="settings-section-head">
+                <h3>Personal Information</h3>
+                <p class="small-note">Name and contact details used across the workspace.</p>
+              </div>
+              <form id="personal-info-form" class="stack-form">
+                <label>
+                  Name
+                  <input id="setting-name" />
+                </label>
+                <label>
+                  Position
+                  <input id="setting-position" />
+                </label>
+                <label>
+                  Institution Email
+                  <input id="setting-institution-email" type="email" />
+                </label>
+                <label>
+                  Enana Email
+                  <input id="setting-enana-email" type="email" />
+                </label>
+                <div class="form-actions">
+                  <button type="submit" class="primary-btn">Save Personal Info</button>
+                </div>
+              </form>
+            </section>
+
+            <section class="settings-section" data-settings-panel="storage" hidden>
+              <div class="settings-section-head">
+                <h3>Storage</h3>
+                <p class="small-note">Pick the root folder for imported lab data and linked notebook content.</p>
+              </div>
+              <form id="storage-form" class="stack-form">
+                <label>
+                  Root Folder Path
+                  <input id="setting-storage-path" placeholder="/path/to/enana-data" readonly />
+                </label>
+                <p class="small-note">Notebook pages will reference individual folders under this path.</p>
+                <p id="setting-storage-import-status" class="small-note">Storage import: not started.</p>
+                <div class="form-actions">
+                  <button type="button" id="select-storage-path-btn" class="ghost-btn">Select Folder</button>
+                  <button type="submit" class="primary-btn">Save Storage Path</button>
+                </div>
+              </form>
+            </section>
+
+            <section class="settings-section" data-settings-panel="startup" hidden>
+              <div class="settings-section-head">
+                <h3>Startup &amp; Data</h3>
+                <p class="small-note">Control which module opens first and how data loads and saves.</p>
+              </div>
+              <form id="startup-form" class="stack-form">
+                <label>
+                  Default Startup Module
+                  <select id="setting-startup-default-view">
+                    <option value="home-view">Home</option>
+                    <option value="lab-management-view">Members</option>
+                    <option value="instrument-management-view">Instruments</option>
+                    <option value="protocol-management-view">Protocols</option>
+                    <option value="synthesis-notebook-view">Synthesis Notebook</option>
+                    <option value="biology-notebook-view">Biology Notebook</option>
+                    <option value="lab-common-inventory-view">Chemicals</option>
+                    <option value="sample-registry-view">Sample &amp; Inventory</option>
+                    <option value="assay-view">Assay</option>
+                    <option value="gel-view">Gel</option>
+                    <option value="project-management-view">Projects</option>
+                    <option value="workflow-management-view">Workflows</option>
+                    <option value="papers-view">Papers</option>
+                    <option value="agent-view">Agent</option>
+                    <option value="sequence-viewer-view">Sequence Viewer</option>
+                    <option value="tool-box-view">Tools</option>
+                    <option value="setting-view">Settings</option>
+                  </select>
+                </label>
+                <label class="inline-row">
+                  <input id="setting-startup-remember-last-view" type="checkbox" />
+                  Remember last opened module on launch
+                </label>
+                <label class="inline-row">
+                  <input id="setting-startup-auto-load-data-file" type="checkbox" />
+                  Auto-load current .json data file on launch
+                </label>
+                <p class="small-note">If enabled, “Remember last opened module” overrides the default startup module.</p>
+                <div class="form-actions">
+                  <button type="submit" class="primary-btn">Save Startup Settings</button>
+                </div>
+              </form>
+
+              <div class="settings-subsection">
+                <h4>Data File (.json)</h4>
+                <div class="stack-form">
+                  <p class="small-note">Current .json file: <span id="setting-ena-path">Not set</span></p>
+                  <label class="inline-row">
+                    <input id="setting-auto-save-ena" type="checkbox" />
+                    Auto-save to current .json file after each change
+                  </label>
+                  <div class="form-actions">
+                    <button type="button" id="save-ena-btn" class="primary-btn">Save .json</button>
+                    <button type="button" id="load-ena-btn" class="ghost-btn">Load .json</button>
+                  </div>
                 </div>
               </div>
-            </div>
-          </section>
+            </section>
 
-          <section class="settings-section">
-            <div class="settings-section-head">
-              <h3>Inventory Locations</h3>
-              <p class="small-note">Keep the storage vocabulary consistent across samples and chemicals.</p>
-            </div>
-            <div class="stack-form">
-              <div class="inline-row">
-                <input id="setting-location-input" placeholder="Add approximate location" />
-                <button type="button" id="setting-location-add-btn" class="ghost-btn">Add Location</button>
+            <section class="settings-section" data-settings-panel="locations" hidden>
+              <div class="settings-section-head">
+                <h3>Inventory Locations</h3>
+                <p class="small-note">Keep the storage vocabulary consistent across samples and chemicals.</p>
               </div>
-              <div id="setting-location-list" class="stack-form"></div>
-            </div>
-          </section>
+              <div class="stack-form">
+                <div class="inline-row settings-location-entry">
+                  <input id="setting-location-input" placeholder="Add approximate location" />
+                  <button type="button" id="setting-location-add-btn" class="ghost-btn">Add Location</button>
+                </div>
+                <div id="setting-location-list" class="stack-form"></div>
+              </div>
+            </section>
 
-          <section class="settings-section">
-            <div class="settings-section-head">
-              <h3>LLM Model &amp; API</h3>
-              <p class="small-note">Configure the provider and endpoint used by the assistant features.</p>
-            </div>
-            <form id="llm-form" class="stack-form">
-              <label>
-                Provider
-                <select id="setting-provider">
-                  <option value="openai">OpenAI</option>
-                  <option value="gemini">Gemini</option>
-                  <option value="claude">Claude</option>
-                  <option value="codex">OpenAI CLI (Codex)</option>
-                </select>
-              </label>
-              <label>
-                Model Name
-                <input id="setting-model" placeholder="e.g. gpt-4.1 / gemini-2.5-pro / claude-sonnet-4-5 / gpt-5" />
-              </label>
-              <label>
-                API Endpoint
-                <input id="setting-api-endpoint" placeholder="https://api.openai.com/v1/responses" />
-              </label>
-              <label>
-                API Key
-                <input id="setting-api-key" type="password" placeholder="sk-... (not required for Codex CLI)" />
-              </label>
-              <label class="inline-row">
-                <input id="setting-agent-developer-mode" type="checkbox" />
-                Agent Developer Mode (record redacted LLM request/response traces)
-              </label>
-              <div class="form-actions">
-                <button type="submit" class="primary-btn">Save LLM Settings</button>
+            <section class="settings-section" data-settings-panel="llm" hidden>
+              <div class="settings-section-head">
+                <h3>LLM Model &amp; API</h3>
+                <p class="small-note">Configure the provider and endpoint used by the assistant features.</p>
               </div>
-            </form>
-          </section>
+              <form id="llm-form" class="stack-form">
+                <label>
+                  Provider
+                  <select id="setting-provider">
+                    <option value="openai">OpenAI</option>
+                    <option value="gemini">Gemini</option>
+                    <option value="claude">Claude</option>
+                    <option value="codex">OpenAI CLI (Codex)</option>
+                  </select>
+                </label>
+                <label>
+                  Model Name
+                  <input id="setting-model" placeholder="e.g. gpt-4.1 / gemini-2.5-pro / claude-sonnet-4-5 / gpt-5" />
+                </label>
+                <label>
+                  API Endpoint
+                  <input id="setting-api-endpoint" placeholder="https://api.openai.com/v1/responses" />
+                </label>
+                <label>
+                  API Key
+                  <input id="setting-api-key" type="password" placeholder="sk-... (not required for Codex CLI)" />
+                </label>
+                <label class="inline-row">
+                  <input id="setting-agent-developer-mode" type="checkbox" />
+                  Agent Developer Mode (record redacted LLM request/response traces)
+                </label>
+                <div class="form-actions">
+                  <button type="submit" class="primary-btn">Save LLM Settings</button>
+                </div>
+              </form>
+            </section>
 
-          <section class="settings-section">
-            <div class="settings-section-head">
-              <h3>Telegram Bot</h3>
-              <p class="small-note">Store a token for Telegram automation and status reporting.</p>
-            </div>
-            <form id="telegram-form" class="stack-form">
-              <label>
-                Bot Token
-                <input id="setting-telegram-token" type="password" placeholder="123456:ABCDEF..." />
-              </label>
-              <p class="small-note">Enter token to store it in app settings. Clearing saved token falls back to env token if available.</p>
-              <p id="setting-telegram-status" class="small-note">Telegram bot status: loading...</p>
-              <div class="form-actions">
-                <button type="submit" class="primary-btn">Save Telegram Token</button>
-                <button type="button" id="clear-telegram-token-btn" class="ghost-btn">Clear Saved Token</button>
+            <section class="settings-section" data-settings-panel="telegram" hidden>
+              <div class="settings-section-head">
+                <h3>Telegram Bot</h3>
+                <p class="small-note">Store a token for Telegram automation and status reporting.</p>
               </div>
-            </form>
-          </section>
+              <form id="telegram-form" class="stack-form">
+                <label>
+                  Bot Token
+                  <input id="setting-telegram-token" type="password" placeholder="123456:ABCDEF..." />
+                </label>
+                <p class="small-note">Enter token to store it in app settings. Clearing saved token falls back to env token if available.</p>
+                <p id="setting-telegram-status" class="small-note">Telegram bot status: loading...</p>
+                <div class="form-actions">
+                  <button type="submit" class="primary-btn">Save Telegram Token</button>
+                  <button type="button" id="clear-telegram-token-btn" class="ghost-btn">Clear Saved Token</button>
+                </div>
+              </form>
+            </section>
+          </div>
         </div>
       </div>
     </section>

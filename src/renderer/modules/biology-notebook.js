@@ -404,11 +404,21 @@ export function initLabNotebook({
         const stateLabel = notebookStateLabel(entry);
         const stateClass = normalizeNotebookState(entry?.notebookState) === 'planned' ? ' is-planned' : ' is-executed';
         const updatedAt = entry.updatedAt ? formatEntryTimestamp(entry.updatedAt) : 'Not saved yet';
+        const resultText = String(entry.result || '').trim() || 'No result notes yet.';
+        const resultFiles = Array.isArray(entry.resultFiles) && entry.resultFiles.length
+          ? entry.resultFiles.join(', ')
+          : 'No result files attached.';
         return `
-          <button type="button" class="biology-notebook-page-item${isActive}${stateClass}" data-notebook-entry-id="${safeText(entry.id)}">
-            <span class="biology-notebook-page-name">${safeText(entry.protocolName || 'Untitled Page')}</span>
-            <span class="biology-notebook-page-meta${normalizeNotebookState(entry?.notebookState) === 'planned' ? ' is-planned' : ''}">${safeText(`${stateLabel} | ${updatedAt}`)}</span>
-          </button>
+          <details class="biology-notebook-page-card${isActive}${stateClass}"${isActive ? ' open' : ''}>
+            <summary class="biology-notebook-page-item" data-notebook-entry-id="${safeText(entry.id)}">
+              <span class="biology-notebook-page-name">${safeText(entry.protocolName || 'Untitled Page')}</span>
+              <span class="biology-notebook-page-meta${normalizeNotebookState(entry?.notebookState) === 'planned' ? ' is-planned' : ''}">${safeText(`${stateLabel} | ${updatedAt}`)}</span>
+            </summary>
+            <div class="biology-notebook-page-detail">
+              <p class="biology-notebook-page-detail-line"><strong>Notes:</strong> ${safeText(resultText)}</p>
+              <p class="biology-notebook-page-detail-line"><strong>Files:</strong> ${safeText(resultFiles)}</p>
+            </div>
+          </details>
         `;
       }).join('');
 

@@ -53,6 +53,20 @@ export function normalizeRecordName(value, fallback = 'record') {
   return cleaned || fallback;
 }
 
+export function buildSequenceSignature(sequence, prefix = 'seq') {
+  const normalized = normalizeSequenceText(sequence);
+  if (!normalized.length) {
+    return '';
+  }
+
+  let hash = 5381;
+  for (let index = 0; index < normalized.length; index += 1) {
+    hash = ((hash << 5) + hash) ^ normalized.charCodeAt(index);
+  }
+
+  return `${prefix}_${normalized.length}_${(hash >>> 0).toString(16)}`;
+}
+
 export function detectSequenceFormat(rawText) {
   const text = String(rawText || '').trim();
   if (!text) {

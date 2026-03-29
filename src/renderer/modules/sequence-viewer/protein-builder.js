@@ -1,4 +1,4 @@
-import { escapeHtml, formatSequenceLines } from '../tool-box/common.js';
+import { escapeHtml } from '../tool-box/common.js';
 import { cleanProteinSequence, translateDnaSequence } from '../tool-box/sequence.js';
 import {
   PROTEIN_ASSEMBLY_CLEAVAGE_SITES,
@@ -495,6 +495,11 @@ export function createSequenceViewerProteinBuilderController(config = {}) {
       const note = row.type === 'poi'
         ? `Uses the POI sequence from the left column. ${sequence.length ? `${sequence.length} aa.` : 'Sequence required.'}`
         : (row.note || 'No annotation.');
+      const blockTitle = [
+        getBlockTypeLabel(row.type),
+        `${sequence.length} aa`,
+        note
+      ].filter(Boolean).join(' | ');
 
       const customFields = row.kind === 'custom'
         ? `
@@ -523,30 +528,55 @@ export function createSequenceViewerProteinBuilderController(config = {}) {
       const connector = index > 0
         ? '<div class="sequence-viewer-protein-builder-link" aria-hidden="true"><span></span></div>'
         : '';
+      const canMoveLeft = index > 0;
+      const canMoveRight = index < state.rows.length - 1;
 
       return `
         ${connector}
         <article class="sequence-viewer-protein-builder-block sequence-viewer-protein-builder-block-${escapeAttribute(row.type)}" data-protein-builder-row-id="${escapeAttribute(row.id)}">
-          <div class="sequence-viewer-protein-builder-block-studs" aria-hidden="true">
-            <span></span>
-            <span></span>
+          <div
+            class="sequence-viewer-protein-builder-block-shape"
+            title="${escapeAttribute(blockTitle)}"
+          >
+            <span class="sequence-viewer-protein-builder-block-label">${escapeHtml(label || `Block ${index + 1}`)}</span>
           </div>
-          <div class="sequence-viewer-protein-builder-block-body">
-            <div class="sequence-viewer-protein-builder-block-head">
-              <div>
-                <strong>${escapeHtml(label || `Block ${index + 1}`)}</strong>
-                <p class="small-note">${escapeHtml(getBlockTypeLabel(row.type))} | ${escapeHtml(`${sequence.length} aa`)}</p>
-              </div>
-              <div class="form-actions sequence-viewer-protein-builder-block-actions">
-                <button type="button" class="ghost-btn" data-protein-builder-row-up="${escapeAttribute(row.id)}">Up</button>
-                <button type="button" class="ghost-btn" data-protein-builder-row-down="${escapeAttribute(row.id)}">Down</button>
-                <button type="button" class="ghost-btn" data-protein-builder-row-remove="${escapeAttribute(row.id)}">Remove</button>
-              </div>
-            </div>
-            ${customFields}
-            <p class="small-note">${escapeHtml(note)}</p>
-            <p class="sequence-viewer-protein-builder-block-sequence">${escapeHtml(previewSequence(sequence))}</p>
+          <div class="form-actions sequence-viewer-protein-builder-block-actions">
+            ${canMoveLeft ? `
+              <button
+                type="button"
+                class="ghost-btn sequence-viewer-protein-builder-icon-btn"
+                data-protein-builder-row-up="${escapeAttribute(row.id)}"
+                aria-label="Move block left"
+                title="Move block left"
+              >
+                <span aria-hidden="true">&larr;</span>
+                <span class="sr-only">Move block left</span>
+              </button>
+            ` : ''}
+            ${canMoveRight ? `
+              <button
+                type="button"
+                class="ghost-btn sequence-viewer-protein-builder-icon-btn"
+                data-protein-builder-row-down="${escapeAttribute(row.id)}"
+                aria-label="Move block right"
+                title="Move block right"
+              >
+                <span aria-hidden="true">&rarr;</span>
+                <span class="sr-only">Move block right</span>
+              </button>
+            ` : ''}
+            <button
+              type="button"
+              class="ghost-btn sequence-viewer-protein-builder-icon-btn sequence-viewer-protein-builder-icon-btn-remove"
+              data-protein-builder-row-remove="${escapeAttribute(row.id)}"
+              aria-label="Remove block"
+              title="Remove block"
+            >
+              <span aria-hidden="true">&times;</span>
+              <span class="sr-only">Remove block</span>
+            </button>
           </div>
+          ${customFields}
         </article>
       `;
     }).join('');
@@ -566,7 +596,7 @@ export function createSequenceViewerProteinBuilderController(config = {}) {
 
     if (elements.proteinBuilderSequence) {
       elements.proteinBuilderSequence.innerHTML = construct.sequence
-        ? formatSequenceLines(construct.sequence, 70)
+        ? `<span class="sequence-viewer-protein-builder-sequence-text">${escapeHtml(construct.sequence)}</span>`
         : '-';
     }
   }

@@ -7,56 +7,91 @@
 
 #setting-view .settings-head {
   display: grid;
-  gap: 6px;
-  padding-bottom: 8px;
+  gap: 4px;
+  padding-bottom: 10px;
 }
 
-#setting-view .settings-grid {
+#setting-view .settings-layout {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 18px;
+  grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
+  gap: 20px;
   align-items: start;
 }
 
-#setting-view .settings-card {
+#setting-view .settings-nav {
+  display: grid;
+  gap: 6px;
+  position: sticky;
+  top: 0;
+  align-self: start;
+}
+
+#setting-view .settings-nav-item {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--line, rgba(100, 114, 85, 0.2)) 80%, transparent);
+  background: color-mix(in srgb, var(--panel, rgba(255, 255, 255, 0.75)) 92%, transparent);
+  color: inherit;
+  text-align: left;
+  transition: border-color 160ms ease, background-color 160ms ease, transform 160ms ease;
+}
+
+#setting-view .settings-nav-item span {
+  font-weight: 600;
+}
+
+#setting-view .settings-nav-item small {
+  color: var(--muted);
+}
+
+#setting-view .settings-nav-item:hover {
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+  transform: translateX(2px);
+}
+
+#setting-view .settings-nav-item.is-active {
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--panel, rgba(255, 255, 255, 0.75)));
+}
+
+#setting-view .settings-detail {
+  min-width: 0;
+}
+
+#setting-view .settings-section {
   display: grid;
   gap: 14px;
   margin-top: 0;
-  padding: 18px;
+  padding: 16px 18px;
+  border: 1px solid color-mix(in srgb, var(--line, rgba(100, 114, 85, 0.18)) 78%, transparent);
+  background: color-mix(in srgb, var(--panel, rgba(255, 255, 255, 0.78)) 94%, transparent);
 }
 
-#setting-view .settings-card-wide {
-  grid-column: 1 / -1;
+#setting-view .settings-section[hidden] {
+  display: none;
 }
 
 #setting-view .settings-section-head {
   display: grid;
-  gap: 4px;
+  gap: 3px;
 }
 
 #setting-view .settings-section-head h3,
-#setting-view .settings-subcard h4 {
+#setting-view .settings-subsection h4 {
   margin: 0;
 }
 
-#setting-view .settings-card-grid {
+#setting-view .settings-subsection {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 14px;
+  gap: 10px;
+  padding-top: 2px;
+  border-top: 1px solid color-mix(in srgb, var(--line, rgba(100, 114, 85, 0.14)) 70%, transparent);
 }
 
-#setting-view .settings-subcard {
-  display: grid;
-  gap: 12px;
-  min-height: 100%;
-  padding: 16px;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-}
-
-#setting-view .settings-subcard h4 {
-  margin: 0;
+#setting-view .settings-location-entry {
+  align-items: stretch;
 }
 
 #setting-view .inline-row {
@@ -67,34 +102,37 @@
   margin-top: 2px;
 }
 
+#setting-view #setting-location-list {
+  gap: 8px;
+}
+
 #setting-view #setting-location-list .card-actions {
   justify-content: space-between;
-  padding: 12px 14px;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--line, rgba(100, 114, 85, 0.14)) 70%, transparent);
+  background: color-mix(in srgb, var(--panel, rgba(255, 255, 255, 0.72)) 90%, transparent);
 }
 
-#setting-view #setting-location-list {
-  gap: 10px;
-}
-
-@media (max-width: 720px) {
-  #setting-view .settings-grid {
+@media (max-width: 840px) {
+  #setting-view .settings-layout {
     grid-template-columns: 1fr;
+    gap: 14px;
   }
 
-  #setting-view .settings-card-grid {
-    grid-template-columns: 1fr;
+  #setting-view .settings-nav {
+    position: static;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+
+  #setting-view .settings-nav-item:hover {
+    transform: none;
   }
 }
 
 #setting-view .panel,
 #setting-view .card,
 #setting-view .cards,
-#setting-view .settings-shell,
-#setting-view .settings-subcard,
-#setting-view #setting-location-list .card-actions {
+#setting-view .settings-shell {
   border: 0;
   border-radius: 0;
   background: transparent;

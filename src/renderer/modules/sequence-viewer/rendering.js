@@ -45,7 +45,11 @@ function buildHighlightedLineMarkup(sourceText, lineStart, lineEnd, lineHighligh
     if (segment.start > cursor) {
       body += escapeHtml(sourceText.slice(cursor, segment.start));
     }
-    body += `<span class="sequence-viewer-seq-highlight">${escapeHtml(sourceText.slice(segment.start, segment.end))}</span>`;
+    const kind = String(segment?.kind || '').toLowerCase();
+    const highlightClass = kind === 'alignment'
+      ? 'sequence-viewer-seq-highlight sequence-viewer-seq-highlight-alignment'
+      : 'sequence-viewer-seq-highlight';
+    body += `<span class="${highlightClass}">${escapeHtml(sourceText.slice(segment.start, segment.end))}</span>`;
     cursor = segment.end;
   });
 
@@ -62,12 +66,16 @@ export function normalizeHighlightSegments(segments, sequenceLength = null) {
   const normalized = (Array.isArray(segments) ? segments : [])
     .map((segment) => ({
       start: clamp(Math.round(Number(segment?.start) || 0), 0, maxLength),
-      end: clamp(Math.round(Number(segment?.end) || 0), 0, maxLength)
+      end: clamp(Math.round(Number(segment?.end) || 0), 0, maxLength),
+      kind: String(segment?.kind || '').toLowerCase() === 'alignment' ? 'alignment' : ''
     }))
     .filter((segment) => segment.end > segment.start)
     .sort((left, right) => {
       if (left.start !== right.start) {
         return left.start - right.start;
+      }
+      if (left.kind !== right.kind) {
+        return left.kind.localeCompare(right.kind);
       }
       return left.end - right.end;
     });
@@ -80,7 +88,7 @@ export function normalizeHighlightSegments(segments, sequenceLength = null) {
   for (let i = 1; i < normalized.length; i += 1) {
     const previous = merged[merged.length - 1];
     const current = normalized[i];
-    if (current.start <= previous.end) {
+    if (current.kind === previous.kind && current.start <= previous.end) {
       previous.end = Math.max(previous.end, current.end);
     } else {
       merged.push(current);
@@ -382,7 +390,8 @@ export function renderDualStrandSequenceLinesHtml(sequence, highlightedSegments 
     const lineHighlights = sortedHighlights
       .map((segment) => ({
         start: Math.max(lineStart, segment.start),
-        end: Math.min(lineEnd, segment.end)
+        end: Math.min(lineEnd, segment.end),
+        kind: segment.kind
       }))
       .filter((segment) => segment.end > segment.start)
       .sort((a, b) => a.start - b.start);

@@ -270,6 +270,231 @@ test('[EDGE] tool-box reverseTranslateProteinSequence rejects unsupported amino 
   });
 });
 
+test('[EDGE] tool-box evaluateOverlapPcr recognizes strong existing terminal overlaps', () => {
+  const overlap = 'GCGCGCGCGCGCGCGCG';
+  const result = toolBox.evaluateOverlapPcr([
+    { id: 'frag-a', name: 'Fragment A', sequence: `AAATTT${overlap}` },
+    { id: 'frag-b', name: 'Fragment B', sequence: `${overlap}TTTAAA` }
+  ]);
+
+  assert.equal(result.feasible, true);
+  assert.equal(result.junctions.length, 1);
+  assert.equal(result.junctions[0].mode, 'existing');
+  assert.equal(result.junctions[0].overlapSequence, overlap);
+});
+
+test('[EDGE] tool-box evaluateOverlapPcr can propose primer-introduced overlaps', () => {
+  const result = toolBox.evaluateOverlapPcr([
+    { id: 'frag-a', name: 'Fragment A', sequence: 'ATATATATATATGGGGGGGGGGGGGGAAAA' },
+    { id: 'frag-b', name: 'Fragment B', sequence: 'GCGCGCGCGCGCGCGCGTTTAAAATTTAAA' }
+  ]);
+
+  assert.equal(result.feasible, true);
+  assert.equal(result.junctions.length, 1);
+  assert.equal(result.junctions[0].mode, 'primer-introduced');
+  assert.equal(result.junctions[0].overlapLength >= 12, true);
+});
+
+test('[EDGE] tool-box evaluateGibsonAssembly supports multi-fragment junction analysis', () => {
+  const overlapOne = 'GCGCGCGCGCGCGCGCG';
+  const overlapTwo = 'CGCGCGCGCGCGCGCGC';
+  const result = toolBox.evaluateGibsonAssembly([
+    { id: 'frag-a', name: 'Fragment A', sequence: `AAA${overlapOne}` },
+    { id: 'frag-b', name: 'Fragment B', sequence: `${overlapOne}TTT${overlapTwo}` },
+    { id: 'frag-c', name: 'Fragment C', sequence: `${overlapTwo}GGGAAA` }
+  ]);
+
+  assert.equal(result.feasible, true);
+  assert.equal(result.junctions.length, 2);
+  assert.equal(result.junctions.every((junction) => junction.feasible), true);
+});
+
+test('[EDGE] tool-box evaluateRestrictionLigation selects a clean unique cutter pair', () => {
+  const result = toolBox.evaluateRestrictionLigation({
+    host: {
+      id: 'host-1',
+      name: 'Host Backbone',
+      topology: 'circular',
+      sequence: 'TTTGGATCCAAAAAAGGTACCTTT'
+    },
+    fragments: [
+      {
+        id: 'insert-1',
+        name: 'Insert 1',
+        type: 'insert',
+        sequence: 'GCGCGCGCGCGCGATTTTTTTTTTGCGCGCGCGCGCGAT'
+      }
+    ]
+  });
+
+  assert.equal(result.feasible, true);
+  assert.equal(Array.isArray(result.selectedSites), true);
+  assert.equal(result.selectedSites.length, 2);
+  assert.equal(new Set(result.selectedSites.map((site) => site.segments[0].start)).size, 2);
+  assert.equal(result.selectedSites.every((site) => (
+    !'GCGCGCGCGCGCGATTTTTTTTTTGCGCGCGCGCGCGAT'.includes(String(site.site || '').replace(/[^ACGT]/g, ''))
+  )), true);
+});
+
+test('[EDGE] tool-box evaluateRestrictionLigation rejects insert-conflicting site pairs', () => {
+  const result = toolBox.evaluateRestrictionLigation({
+    host: {
+      id: 'host-1',
+      name: 'Host Backbone',
+      topology: 'circular',
+      sequence: 'TTTGGATCCAAAAAAGGTACCTTT'
+    },
+    fragments: [
+      {
+        id: 'insert-1',
+        name: 'Insert 1',
+        type: 'insert',
+        sequence: 'AAAGGATCCGGGGGTACC'
+      }
+    ]
+  });
+
+  assert.equal(result.feasible, false);
+  assert.equal(result.selectedSites, null);
+});
+
+test('[EDGE] tool-box evaluateSiteDirectedMutagenesis supports point mutation requests', () => {
+  const result = toolBox.evaluateSiteDirectedMutagenesis({
+    host: {
+      id: 'host-1',
+      name: 'Template',
+      sequence: 'ATGAAACCCGGGTTTAAACCCGGG'
+    },
+    editRequest: {
+      type: 'point-mutation',
+      start: 4,
+      end: 6,
+      originalSequence: 'AAA',
+      editedSequence: 'GAA'
+    }
+  });
+
+  assert.equal(result.feasible, true);
+  assert.equal(result.editType, 'point-mutation');
+});
+
+test('[EDGE] tool-box evaluateSiteDirectedMutagenesis supports short insertion requests', () => {
+  const result = toolBox.evaluateSiteDirectedMutagenesis({
+    host: {
+      id: 'host-1',
+      name: 'Template',
+      sequence: 'ATGAAACCCGGGTTTAAACCCGGG'
+    },
+    editRequest: {
+      type: 'insertion',
+      position: 10,
+      editedSequence: 'GCGCGC'
+    }
+  });
+
+  assert.equal(result.feasible, true);
+  assert.equal(result.editType, 'insertion');
+});
+
+test('[EDGE] tool-box designCloningPrimers falls back to relaxed thresholds when needed', () => {
+  const primerPlan = toolBox.designCloningPrimers({
+    strategy: 'restriction-ligation',
+    preferences: {
+      maxPrimerLength: 25
+    },
+    fragmentMap: {
+      fragments: [
+        {
+          id: 'insert-1',
+          name: 'Insert 1',
+          role: 'insert',
+          sequence: 'GCGCGCGCGCGCGATTTTTTTTTTGCGCGCGCGCGCGAT'
+        }
+      ]
+    },
+    routeEvaluations: {
+      restrictionLigation: {
+        selectedSites: [
+          { name: 'BamHI', site: 'GGATCC' },
+          { name: 'KpnI', site: 'GGTACC' }
+        ]
+      }
+    }
+  });
+
+  assert.equal(primerPlan.feasible, true);
+  assert.equal(primerPlan.selectedThresholdLevel, 'relaxed');
+  assert.equal(primerPlan.primers.length, 2);
+});
+
+test('[EDGE] tool-box designCloningPrimers supports multi-primer tiling for long insertions', () => {
+  const primerPlan = toolBox.designCloningPrimers({
+    strategy: 'site-directed-mutagenesis',
+    selectedHost: {
+      id: 'host-1',
+      name: 'Template',
+      sequence: 'GCGCGCGCGCGCGATATATATATATATATATATAGCGCGCGCGCGCGAT'
+    },
+    editRequest: {
+      type: 'insertion',
+      position: 25,
+      editedSequence: 'GCGCGCGCGCGCGATGCGCGCGCGCGCGATGCGCGCGCGCGCGATGCGCGCGCGCGCGATGCGCGCGCGCGCGAT'
+    }
+  });
+
+  assert.equal(primerPlan.feasible, true);
+  assert.equal(primerPlan.primerCount > 2, true);
+  assert.equal(primerPlan.primerOrder.includes('tile_outer_left'), true);
+});
+
+test('[EDGE] tool-box assembleCloningPlan prefers restriction-ligation for simple host-plus-insert cases', () => {
+  const plan = toolBox.assembleCloningPlan({
+    hostVectors: [
+      {
+        id: 'host-1',
+        name: 'Host Backbone',
+        topology: 'circular',
+        sequence: 'TTTGGATCCAAAAAAGGTACCTTT'
+      }
+    ],
+    hostVectorId: 'host-1',
+    fragments: [
+      {
+        id: 'insert-1',
+        name: 'Insert 1',
+        type: 'insert',
+        sequence: 'GCGCGCGCGCGCGATTTTTTTTTTGCGCGCGCGCGCGAT'
+      }
+    ]
+  });
+
+  assert.equal(plan.feasible, true);
+  assert.equal(plan.recommendedAssemblyStrategy, 'restriction-ligation');
+  assert.equal(Array.isArray(plan.stepByStepProcedure), true);
+  assert.equal(plan.stepByStepProcedure.length >= 4, true);
+  assert.equal(Array.isArray(plan.validationPlan), true);
+  assert.equal(plan.primerOligoPlan.feasible, true);
+});
+
+test('[EDGE] tool-box assembleCloningPlan reports infeasible inputs with alternate guidance', () => {
+  const plan = toolBox.assembleCloningPlan({
+    fragments: [
+      {
+        id: 'insert-1',
+        name: 'Insert 1',
+        type: 'insert',
+        sequence: 'ATGC'
+      }
+    ]
+  });
+
+  assert.equal(plan.feasible, false);
+  assert.equal(typeof plan.alternateStrategyRecommendation, 'string');
+  assert.equal(plan.alternateStrategyRecommendation.length > 0, true);
+  assert.equal(Array.isArray(plan.warnings), true);
+  assert.equal(plan.warnings.length > 0, true);
+});
+
 [
   [[1, 2, 3], [2, 4, 6], { slope: 2, intercept: 0, rSquared: 1 }],
   [[1, 2, 3], [3, 2, 1], { slope: -1, intercept: 4, rSquared: 1 }],

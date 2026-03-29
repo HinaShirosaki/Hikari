@@ -1,4 +1,5 @@
 import * as indexModule from './sequence-viewer/index.js';
+import * as alignmentModule from './sequence-viewer/alignment.js';
 import * as orfAnalysisModule from './sequence-viewer/orf-analysis.js';
 import * as parsingModule from './sequence-viewer/parsing.js';
 import * as renderingModule from './sequence-viewer/rendering.js';
@@ -47,6 +48,10 @@ export function parseFastaRecords(rawInput, options = {}) {
 
 export function parseFastqRecords(rawInput, options = {}) {
   return parsingModule.parseFastqRecords(rawInput, options);
+}
+
+export function parseAb1Record(rawInput, options = {}) {
+  return parsingModule.parseAb1Record(rawInput, options);
 }
 
 export function parseGenBankRecords(rawInput) {
@@ -127,4 +132,8 @@ export function countAmbiguousBases(sequence) {
 
 export function summarizeFastqQuality(qualityText) {
   return parsingModule.summarizeFastqQuality(qualityText);
+}
+
+export function alignSequenceToReference(referenceRecord, queryRecord, options = {}) {
+  return alignmentModule.alignSequenceToReference(referenceRecord, queryRecord, options);
 }

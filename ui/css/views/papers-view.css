@@ -128,25 +128,25 @@
 }
 
 .papers-folder-glyph {
-  width: 18px;
-  height: 12px;
+  width: 16px;
+  height: 11px;
   position: relative;
-  border: 2px solid currentColor;
-  border-radius: 4px;
-  opacity: 0.72;
+  border: 1.5px solid currentColor;
+  border-radius: 3px;
+  opacity: 0.68;
 }
 
 .papers-folder-glyph::before {
   content: '';
   position: absolute;
-  left: 1px;
-  top: -6px;
-  width: 8px;
-  height: 5px;
-  border: 2px solid currentColor;
+  left: 0.5px;
+  top: -4.5px;
+  width: 7px;
+  height: 4px;
+  border: 1.5px solid currentColor;
   border-bottom: 0;
-  border-radius: 4px 4px 0 0;
-  background: transparent;
+  border-radius: 3px 3px 0 0;
+  background: var(--bg);
 }
 
 .papers-folder-name {

@@ -4,6 +4,8 @@ const FIXED_ACCENT = '#647255';
 const FIXED_FOCUS = '#7a8a69';
 
 export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile, onLoadEnaFile }) {
+  const settingsNavItems = [...document.querySelectorAll('#setting-view [data-settings-target]')];
+  const settingsPanels = [...document.querySelectorAll('#setting-view [data-settings-panel]')];
   const personalInfoForm = document.getElementById('personal-info-form');
   const settingNameInput = document.getElementById('setting-name');
   const settingPositionInput = document.getElementById('setting-position');
@@ -47,8 +49,14 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
   };
   let storageImportInFlight = false;
   let activeLlmProvider = 'openai';
+  let activeSettingsPanel = settingsNavItems[0]?.dataset.settingsTarget || 'appearance';
   const looksLikeEndpoint = (value) => /^[a-z]+:\/\//i.test(String(value || '').trim());
 
+  settingsNavItems.forEach((item) => {
+    item.addEventListener('click', () => {
+      activateSettingsPanel(item.dataset.settingsTarget);
+    });
+  });
   personalInfoForm.addEventListener('submit', onSavePersonalInfo);
   appearanceForm.addEventListener('submit', onSaveAppearance);
   storageForm.addEventListener('submit', onSaveStoragePath);
@@ -63,6 +71,23 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
   settingAutoSaveEna?.addEventListener('change', onToggleAutoSaveEna);
   locationAddBtn.addEventListener('click', onAddLocation);
   void refreshTelegramBotStatus();
+  activateSettingsPanel(activeSettingsPanel);
+
+  function activateSettingsPanel(panelId) {
+    activeSettingsPanel = settingsPanels.some((panel) => panel.dataset.settingsPanel === panelId)
+      ? panelId
+      : activeSettingsPanel;
+
+    settingsNavItems.forEach((item) => {
+      const isActive = item.dataset.settingsTarget === activeSettingsPanel;
+      item.classList.toggle('is-active', isActive);
+      item.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    });
+
+    settingsPanels.forEach((panel) => {
+      panel.hidden = panel.dataset.settingsPanel !== activeSettingsPanel;
+    });
+  }
 
   function renderForms() {
     const personal = state.settings.personalInfo;
