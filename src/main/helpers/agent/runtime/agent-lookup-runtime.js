@@ -2,6 +2,7 @@
 
 const fs = require('fs/promises');
 const path = require('path');
+const { resolveAgentRuntimeFactory } = require('../shared/agent-runtime-registry.js');
 const { createAgentInventoryLookupRuntime } = require('../tools/agent-inventory-lookup');
 const { createAgentRecordLookupRuntime } = require('../tools/agent-record-lookup.js');
 
@@ -1619,11 +1620,20 @@ function createAgentLookupRuntime(deps = {}) {
     querySqlRows
   };
 
-  const inventoryLookupRuntime = createAgentInventoryLookupRuntime({
-    ...sharedLookupDeps,
-    buildInventorySearchTerms
-  });
-  const recordLookupRuntime = createAgentRecordLookupRuntime(sharedLookupDeps);
+  const inventoryLookupFactory = resolveAgentRuntimeFactory(deps, 'inventory-lookup');
+  const recordLookupFactory = resolveAgentRuntimeFactory(deps, 'record-lookup');
+  const inventoryLookupRuntime = typeof inventoryLookupFactory === 'function'
+    ? inventoryLookupFactory({
+      ...sharedLookupDeps,
+      buildInventorySearchTerms
+    })
+    : createAgentInventoryLookupRuntime({
+      ...sharedLookupDeps,
+      buildInventorySearchTerms
+    });
+  const recordLookupRuntime = typeof recordLookupFactory === 'function'
+    ? recordLookupFactory(sharedLookupDeps)
+    : createAgentRecordLookupRuntime(sharedLookupDeps);
 
   return {
     searchInventoryIndex: inventoryLookupRuntime.searchInventoryIndex,

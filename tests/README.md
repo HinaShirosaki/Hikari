@@ -4,11 +4,14 @@ The test runner entrypoint remains `test.js`.
 
 Suites are organized by domain under `tests/suites/`:
 
-- `core/agent-suite.js`: agent routing, tool execution, paper/protocol/project retrieval, and simulation flows
-- `core/app-modules-suite.js`: module behavior tests for lab/project/protocol/inventory/assay/gel/chat workflows
+- `core/agent-suite.js`: loader for agent-focused suites under `core/agent-suite/`
+- `core/agent-suite/*.js`: intent parsing, notebook flows, tool calls, science loops, paper flows, runtime state, and deep-research coverage
+- `core/app-modules-suite.js`: loader for renderer module suites under `core/app-modules-suite/`
+- `core/app-modules-suite/*.js`: renderer module behavior tests for lab/project/protocol/inventory/assay/gel/chat workflows
 - `core/contracts-suite.js`: UI/IPC contract checks, wiring checks, and packaging/config assertions
 - `edge/platform-and-regression-suite.js`: state normalization, object-graph regressions, export contracts, and static guards
-- `edge/bio-tools-and-gel-suite.js`: sequence-viewer, tool-box calculators, and gel-analysis edge coverage
+- `edge/bio-tools-and-gel-suite.js`: loader for edge suites under `edge/bio-tools-and-gel-suite/`
+- `edge/bio-tools-and-gel-suite/*.js`: sequence-viewer, tool-box calculators, and gel-analysis edge coverage
 
 Loader files:
 

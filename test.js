@@ -7,6 +7,8 @@ const path = require('node:path');
 const { TextDecoder, TextEncoder } = require('node:util');
 const vm = require('node:vm');
 
+fs.mkdirSync(path.join(__dirname, 'tmp'), { recursive: true });
+
 function createMemoryStorage() {
   const store = new Map();
   return {

@@ -43,6 +43,7 @@ const {
 } = require('./helpers/agent/intent/agent-intent-parser');
 const observability = require('./helpers/agent/shared/agent-observability');
 const { createAgentControllerUtils } = require('./helpers/agent/shared/agent-controller-utils');
+const { createAgentRuntimeRegistry } = require('./helpers/agent/shared/agent-runtime-registry.js');
 const { createProtocolNotebookRuntime } = require('./helpers/agent/runtime/agent-protocol-notebook');
 const { createAgentLookupRuntime } = require('./helpers/agent/runtime/agent-lookup-runtime');
 const { createScienceReasoningLoopRuntime } = require('./helpers/agent/runtime/agent-science-reasoning-loop.js');
@@ -57,6 +58,10 @@ const {
   getToolInputSchemas
 } = require('./helpers/agent/tools/agent-tool-call.js');
 const { createNotebookDraftRuntime } = require('./helpers/agent/tools/agent-notebook-draft.js');
+const { createProtocolMatchingRuntime } = require('./helpers/agent/tools/agent-protocol-matching.js');
+const { createNotebookGenerationRuntime } = require('./helpers/agent/tools/agent-notebook-generation.js');
+const { createAgentInventoryLookupRuntime } = require('./helpers/agent/tools/agent-inventory-lookup.js');
+const { createAgentRecordLookupRuntime } = require('./helpers/agent/tools/agent-record-lookup.js');
 const { createAgentRuntimeSupport } = require('./helpers/agent/runtime/agent-runtime-support.js');
 const { createCodexAgentRuntime } = require('./helpers/agent/runtime/agent-codex-runtime.js');
 const { createMainDataHelpers } = require('./helpers/main/data-helpers');
@@ -379,6 +384,14 @@ const controllerUtils = createAgentControllerUtils({
   extractResponseText
 });
 
+const agentRuntimeRegistry = createAgentRuntimeRegistry({
+  cleanText
+});
+agentRuntimeRegistry.registerRuntimeFactory('inventory-lookup', createAgentInventoryLookupRuntime);
+agentRuntimeRegistry.registerRuntimeFactory('record-lookup', createAgentRecordLookupRuntime);
+agentRuntimeRegistry.registerRuntimeFactory('protocol-matching', createProtocolMatchingRuntime);
+agentRuntimeRegistry.registerRuntimeFactory('notebook-generation', createNotebookGenerationRuntime);
+
 const agentLookupRuntime = createAgentLookupRuntime({
   asArray: (value) => (Array.isArray(value) ? value : []),
   cleanText,
@@ -402,7 +415,8 @@ const agentLookupRuntime = createAgentLookupRuntime({
   getBundlePaths,
   hydrateSnapshotFromBundle,
   syncBundleFromSnapshot,
-  buildInventorySearchTerms
+  buildInventorySearchTerms,
+  getAgentRuntimeFactory: agentRuntimeRegistry.getRuntimeFactory
 });
 
 const agentRuntimeSupport = createAgentRuntimeSupport({
@@ -526,7 +540,8 @@ const protocolNotebookRuntime = createProtocolNotebookRuntime({
   extractResponseText,
   toInputText,
   recordAgentLlmTrace: controllerUtils.recordAgentLlmTrace,
-  recordLifecycleEvent: observability.recordLifecycleEvent
+  recordLifecycleEvent: observability.recordLifecycleEvent,
+  getAgentRuntimeFactory: agentRuntimeRegistry.getRuntimeFactory
 });
 const notebookDraftRuntime = createNotebookDraftRuntime({
   LLM_PROVIDERS,
@@ -560,7 +575,8 @@ const notebookDraftRuntime = createNotebookDraftRuntime({
   extractResponseText,
   toInputText,
   recordAgentLlmTrace: controllerUtils.recordAgentLlmTrace,
-  recordLifecycleEvent: observability.recordLifecycleEvent
+  recordLifecycleEvent: observability.recordLifecycleEvent,
+  getAgentRuntimeFactory: agentRuntimeRegistry.getRuntimeFactory
 });
 genericAgentToolRuntime.registerToolExecutor('notebook-draft', async ({ args, context }) => notebookDraftRuntime.generateNotebookDraft({
   provider: cleanText(context?.provider, 80),

@@ -1,5 +1,6 @@
 'use strict';
 
+const { resolveAgentRuntimeFactory } = require('../shared/agent-runtime-registry.js');
 const { createProtocolMatchingRuntime } = require('../tools/agent-protocol-matching');
 const { createNotebookGenerationRuntime } = require('../tools/agent-notebook-generation');
 
@@ -60,8 +61,14 @@ function createProtocolNotebookRuntime(deps = {}) {
     recordAgentLlmTrace,
     recordLifecycleEvent
   };
-  const protocolMatchingRuntime = createProtocolMatchingRuntime(runtimeDeps);
-  const notebookGenerationRuntime = createNotebookGenerationRuntime(runtimeDeps);
+  const protocolMatchingFactory = resolveAgentRuntimeFactory(deps, 'protocol-matching');
+  const notebookGenerationFactory = resolveAgentRuntimeFactory(deps, 'notebook-generation');
+  const protocolMatchingRuntime = typeof protocolMatchingFactory === 'function'
+    ? protocolMatchingFactory(runtimeDeps)
+    : createProtocolMatchingRuntime(runtimeDeps);
+  const notebookGenerationRuntime = typeof notebookGenerationFactory === 'function'
+    ? notebookGenerationFactory(runtimeDeps)
+    : createNotebookGenerationRuntime(runtimeDeps);
 
   function buildProtocolNotebookSessionKey({
     projectId = '',

@@ -600,6 +600,7 @@ test('protocol runtimes preserve placeholder-fill and tie-break prompt guidance 
   assert.match(notebookGenerationSource, /Example single-turn:/);
   assert.match(notebookGenerationSource, /Example follow-up:/);
   assert.match(protocolMatchingSource, /do not be over-cautious/);
+  assert.match(protocolNotebookSource, /resolveAgentRuntimeFactory/);
 });
 
 test('agent registrar hard-errors when intent parser output is invalid', () => {
@@ -1182,12 +1183,95 @@ test('main wires intent parser + observability paths for parser-only controller'
 
 test('agent lookup runtime composes reusable inventory and record helpers', () => {
   const source = readSource('src/main/helpers/agent/runtime/agent-lookup-runtime.js');
+  assert.match(source, /resolveAgentRuntimeFactory/);
   assert.match(source, /require\('\.\.\/tools\/agent-inventory-lookup'\)/);
   assert.match(source, /require\('\.\.\/tools\/agent-record-lookup\.js'\)/);
   assert.match(source, /createAgentInventoryLookupRuntime\(\{/);
   assert.match(source, /createAgentRecordLookupRuntime\(sharedLookupDeps\)/);
   assert.match(source, /searchInventoryIndex:\s*inventoryLookupRuntime\.searchInventoryIndex/);
   assert.match(source, /searchRecordIndex:\s*recordLookupRuntime\.searchRecordIndex/);
+});
+
+test('agent runtime registry registers and resolves named runtime factories', () => {
+  const {
+    createAgentRuntimeRegistry,
+    resolveAgentRuntimeFactory
+  } = require(agentPath('shared', 'agent-runtime-registry.js'));
+  const registry = createAgentRuntimeRegistry();
+  const sentinel = () => ({ ok: true });
+
+  assert.equal(registry.registerRuntimeFactory('Notebook-Generation', sentinel), true);
+  assert.equal(registry.hasRuntimeFactory('notebook-generation'), true);
+  assert.equal(registry.getRuntimeFactory('notebook-generation'), sentinel);
+  assert.equal(resolveAgentRuntimeFactory({ runtimeRegistry: registry }, 'NOTEBOOK-GENERATION'), sentinel);
+  assert.equal(registry.unregisterRuntimeFactory('notebook-generation'), true);
+  assert.equal(registry.hasRuntimeFactory('notebook-generation'), false);
+});
+
+test('agent lookup runtime can use registry-provided helper factories', async () => {
+  const { createAgentLookupRuntime } = require(agentPath('runtime', 'agent-lookup-runtime.js'));
+  const requestedFactories = [];
+  const lookupRuntime = createAgentLookupRuntime({
+    getAgentRuntimeFactory: (runtimeName) => {
+      requestedFactories.push(runtimeName);
+      if (runtimeName === 'inventory-lookup') {
+        return () => ({
+          async searchInventoryIndex({ query } = {}) {
+            return {
+              status: 'matched',
+              source: 'registry_inventory',
+              items: [{ id: 'inv-1', name: String(query || '') }]
+            };
+          },
+          async executeInventoryLookup() {
+            return {
+              status: 'matched',
+              items: []
+            };
+          }
+        });
+      }
+      if (runtimeName === 'record-lookup') {
+        return () => ({
+          async searchRecordIndex({ query } = {}) {
+            return {
+              status: 'matched',
+              source: 'registry_record',
+              items: [{ id: 'rec-1', name: String(query || '') }]
+            };
+          },
+          async executeRecordLookup() {
+            return {
+              status: 'matched',
+              items: []
+            };
+          }
+        });
+      }
+      return null;
+    }
+  });
+
+  const inventorySearch = await lookupRuntime.searchInventoryIndex({
+    query: 'Atlas construct'
+  });
+  const recordSearch = await lookupRuntime.searchRecordIndex({
+    query: 'Protein Purification'
+  });
+
+  assert.deepEqual(requestedFactories, ['inventory-lookup', 'record-lookup']);
+  assert.equal(inventorySearch.source, 'registry_inventory');
+  assert.equal(recordSearch.source, 'registry_record');
+});
+
+test('main registers shared agent runtime factories before composing higher-level runtimes', () => {
+  const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
+  assert.match(mainSource, /createAgentRuntimeRegistry/);
+  assert.match(mainSource, /registerRuntimeFactory\('inventory-lookup', createAgentInventoryLookupRuntime\)/);
+  assert.match(mainSource, /registerRuntimeFactory\('record-lookup', createAgentRecordLookupRuntime\)/);
+  assert.match(mainSource, /registerRuntimeFactory\('protocol-matching', createProtocolMatchingRuntime\)/);
+  assert.match(mainSource, /registerRuntimeFactory\('notebook-generation', createNotebookGenerationRuntime\)/);
+  assert.match(mainSource, /getAgentRuntimeFactory:\s*agentRuntimeRegistry\.getRuntimeFactory/);
 });
 
 test('main no longer wires legacy routing and phase orchestration helpers', () => {
