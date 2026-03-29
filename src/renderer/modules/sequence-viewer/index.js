@@ -27,6 +27,7 @@ import {
 import { getSequenceViewerElements } from './dom.js';
 import { createSequenceViewerHomeController } from './home-controller.js';
 import { createSequenceViewerDetailController } from './detail-controller.js';
+import { createSequenceViewerAlignmentController } from './alignment-controller.js';
 import { createSequenceViewerProteinBuilderController } from './protein-builder.js';
 
 export function initSequenceViewer(options = {}) {
@@ -339,6 +340,7 @@ export function initSequenceViewer(options = {}) {
 
   let detailController = null;
   let homeController = null;
+  let alignmentController = null;
   let proteinBuilderController = null;
 
   function showProteinBuilderWorkspace() {
@@ -388,6 +390,28 @@ export function initSequenceViewer(options = {}) {
       reader.onload = () => resolve(String(reader.result || ''));
       reader.onerror = () => reject(new Error('Failed to read selected file.'));
       reader.readAsText(file);
+    });
+  }
+
+  async function readFileAsArrayBuffer(file) {
+    if (!file) {
+      throw new Error('No file selected.');
+    }
+    if (typeof file.arrayBuffer === 'function') {
+      return await file.arrayBuffer();
+    }
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result;
+        if (result instanceof ArrayBuffer) {
+          resolve(result);
+          return;
+        }
+        reject(new Error('Failed to read selected file as binary data.'));
+      };
+      reader.onerror = () => reject(new Error('Failed to read selected file as binary data.'));
+      reader.readAsArrayBuffer(file);
     });
   }
 
@@ -792,6 +816,15 @@ export function initSequenceViewer(options = {}) {
     onRefreshLibraryEntries: homeController.refreshLibraryEntries
   });
 
+  alignmentController = createSequenceViewerAlignmentController({
+    elements,
+    setStatus,
+    setLocalWorkspaceVisibility: homeController.setLocalWorkspaceVisibility,
+    onNavigateDetail,
+    readFileAsText,
+    readFileAsArrayBuffer
+  });
+
   proteinBuilderController = createSequenceViewerProteinBuilderController({
     elements,
     getBridge,
@@ -832,6 +865,7 @@ export function initSequenceViewer(options = {}) {
   function render() {
     detailController.updateRecordSelect();
     detailController.renderActiveRecord();
+    alignmentController?.render?.();
     proteinBuilderController?.render();
     homeController.syncHomeControlsState();
     void homeController.refreshLibraryEntries({ silent: true });
@@ -885,6 +919,7 @@ export function initSequenceViewer(options = {}) {
 
   homeController.bindEvents();
   detailController.bindEvents();
+  alignmentController?.bindEvents?.();
   proteinBuilderController?.bindEvents?.();
 
   homeController.setLibraryFilter(LIBRARY_STATUS_SAVED);
@@ -899,6 +934,11 @@ export function initSequenceViewer(options = {}) {
 
   return {
     render,
-    loadFromExternal
+    loadFromExternal,
+    openSequencingAlignmentWorkspace: () => alignmentController?.openSequencingAlignmentWorkspace?.(),
+    closeSequencingAlignmentWorkspace: () => alignmentController?.closeSequencingAlignmentWorkspace?.(),
+    loadSequencingAlignmentReference: async (input) => await alignmentController?.loadSequencingAlignmentReference?.(input),
+    loadSequencingAlignmentQuery: async (input) => await alignmentController?.loadSequencingAlignmentQuery?.(input),
+    runSequencingAlignment: async () => await alignmentController?.runSequencingAlignment?.()
   };
 }

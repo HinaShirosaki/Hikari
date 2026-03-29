@@ -167,4 +167,99 @@
           </form>
         </div>
       </div>
+
+      <div id="sequence-viewer-alignment-workspace" class="sequence-viewer-alignment-workspace" hidden>
+        <div class="sequence-viewer-alignment-toolbar">
+          <div class="sequence-viewer-alignment-toolbar-copy">
+            <h2>Sequencing Alignment</h2>
+            <p class="small-note">Compare one sequencing read against one reference record. Query supports AB1, FASTA, GenBank, or plain sequence text.</p>
+          </div>
+          <div class="form-actions sequence-viewer-alignment-toolbar-actions">
+            <button id="sequence-viewer-alignment-close-btn" type="button" class="ghost-btn">Back to Sequence Detail</button>
+            <span id="sequence-viewer-alignment-status" class="small-note">Load a reference and a query to begin.</span>
+          </div>
+        </div>
+
+        <div class="sequence-viewer-alignment-grid">
+          <section class="plannotate-result-card sequence-viewer-alignment-panel">
+            <div class="plannotate-card-head">
+              <h4>Reference</h4>
+            </div>
+            <p class="small-note">Load one FASTA, GenBank, or plain sequence reference.</p>
+            <input
+              id="sequence-viewer-alignment-reference-input"
+              type="file"
+              accept=".gbk,.gb,.gbff,.fasta,.fa,.fas,.fna,.txt,.seq"
+              hidden
+            />
+            <div class="inline-row">
+              <button id="sequence-viewer-alignment-reference-choose" type="button" class="ghost-btn">Choose Reference File</button>
+              <span id="sequence-viewer-alignment-reference-file-name" class="small-note">No reference file selected</span>
+            </div>
+            <div id="sequence-viewer-alignment-reference-summary" class="small-note">No reference loaded.</div>
+            <label id="sequence-viewer-alignment-reference-record-wrap" class="sequence-viewer-alignment-record-wrap" hidden>
+              Reference Record
+              <select id="sequence-viewer-alignment-reference-record-select"></select>
+            </label>
+            <span id="sequence-viewer-alignment-reference-status" class="small-note">Reference parser idle.</span>
+          </section>
+
+          <section class="plannotate-result-card sequence-viewer-alignment-panel">
+            <div class="plannotate-card-head">
+              <h4>Query</h4>
+            </div>
+            <p class="small-note">Load one AB1, FASTA, GenBank, or plain sequence query.</p>
+            <input
+              id="sequence-viewer-alignment-query-input"
+              type="file"
+              accept=".ab1,.abi,.gbk,.gb,.gbff,.fasta,.fa,.fas,.fna,.txt,.seq"
+              hidden
+            />
+            <div class="inline-row">
+              <button id="sequence-viewer-alignment-query-choose" type="button" class="ghost-btn">Choose Query File</button>
+              <span id="sequence-viewer-alignment-query-file-name" class="small-note">No query file selected</span>
+            </div>
+            <div id="sequence-viewer-alignment-query-summary" class="small-note">No query loaded.</div>
+            <label id="sequence-viewer-alignment-query-record-wrap" class="sequence-viewer-alignment-record-wrap" hidden>
+              Query Record
+              <select id="sequence-viewer-alignment-query-record-select"></select>
+            </label>
+            <span id="sequence-viewer-alignment-query-status" class="small-note">Query parser idle.</span>
+          </section>
+        </div>
+
+        <div class="form-actions sequence-viewer-alignment-actions">
+          <button id="sequence-viewer-alignment-run-btn" type="button" class="primary-btn">Run Alignment</button>
+          <button id="sequence-viewer-alignment-reset-btn" type="button" class="ghost-btn">Reset Inputs</button>
+        </div>
+
+        <div class="sequence-viewer-alignment-results">
+          <section class="plannotate-result-card sequence-viewer-alignment-panel">
+            <div class="plannotate-card-head">
+              <h4>Summary</h4>
+            </div>
+            <div id="sequence-viewer-alignment-summary" class="sequence-viewer-alignment-summary">
+              <p class="small-note">Run an alignment to inspect orientation, coverage, and differences.</p>
+            </div>
+          </section>
+
+          <section class="plannotate-result-card sequence-viewer-alignment-panel">
+            <div class="plannotate-card-head">
+              <h4>Aligned Blocks</h4>
+            </div>
+            <div id="sequence-viewer-alignment-pretty" class="sequence-viewer-alignment-pretty">
+              <p class="small-note">Aligned reference/query blocks will appear here.</p>
+            </div>
+          </section>
+
+          <section class="plannotate-result-card sequence-viewer-alignment-panel">
+            <div class="plannotate-card-head">
+              <h4>Differences</h4>
+            </div>
+            <div id="sequence-viewer-alignment-differences" class="sequence-viewer-alignment-differences">
+              <p class="small-note">Mismatch and indel calls will appear here.</p>
+            </div>
+          </section>
+        </div>
+      </div>
     </section>

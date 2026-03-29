@@ -46,6 +46,8 @@ export function createSequenceViewerHomeController(config = {}) {
   function setLocalWorkspaceVisibility(mode) {
     const next = mode === 'detail'
       ? 'detail'
+      : mode === 'alignment'
+        ? 'alignment'
       : mode === 'builder'
         ? 'builder'
         : 'home';
@@ -57,6 +59,9 @@ export function createSequenceViewerHomeController(config = {}) {
     }
     if (elements.detailWorkspace) {
       elements.detailWorkspace.hidden = next !== 'detail';
+    }
+    if (elements.alignmentWorkspace) {
+      elements.alignmentWorkspace.hidden = next !== 'alignment';
     }
   }
 
