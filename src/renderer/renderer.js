@@ -9,16 +9,13 @@ import {
   safeText,
   cssEscape
 } from './modules/shared.js';
-import { initLabManagement } from './modules/lab-management.js';
 import { initInstrumentManagement } from './modules/instrument-management.js';
 import { initProtocolManagement } from './modules/protocol-management.js';
-import { initLabNotebook } from './modules/lab-notebook.js';
 import { initLabNotebook as initBiologyNotebook } from './modules/biology-notebook.js';
 import { initPersonalInventory } from './modules/personal-inventory.js';
 import { initSettings } from './modules/settings.js';
 import { initProjectManagement } from './modules/project-management.js';
 import { initWorkflowManagement } from './modules/workflow-management.js';
-import { initCollaborationManagement } from './modules/collaboration-management.js';
 import { initLabCommonInventory } from './modules/lab-common-inventory.js';
 import { initSampleRegistry } from './modules/sample-registry.js';
 import { initAssay } from './modules/assay.js';
@@ -116,6 +113,7 @@ applyAppearanceSnapshot(state.settings?.appearance);
 
 const pageTitle = document.getElementById('page-title');
 const pageSubtitle = document.getElementById('page-subtitle');
+const topbarViewActions = document.getElementById('topbar-view-actions');
 const homeBtn = document.getElementById('home-btn');
 const topbarSettingsBtn = document.getElementById('topbar-settings-btn');
 const exitBtn = document.getElementById('exit-btn');
@@ -588,14 +586,6 @@ window.enanaGraph = {
   }
 };
 
-const labManagement = initLabManagement({
-  state,
-  persist,
-  createId,
-  safeText
-});
-moduleRegistry.register('labManagement', labManagement);
-
 const instrumentManagement = initInstrumentManagement({
   state,
   persist,
@@ -603,17 +593,6 @@ const instrumentManagement = initInstrumentManagement({
   safeText
 });
 moduleRegistry.register('instrumentManagement', instrumentManagement);
-
-const synthesisNotebook = initLabNotebook({
-  state,
-  persist,
-  createId,
-  safeText,
-  notebookType: 'synthesis',
-  importProtocolsFromJson: rendererServices.protocol.importProtocolsFromJson,
-  onNotebookEntriesChanged: rendererServices.notebook.handleNotebookEntriesChanged
-});
-moduleRegistry.register('synthesisNotebook', synthesisNotebook);
 
 const biologyNotebook = initBiologyNotebook({
   state,
@@ -671,16 +650,6 @@ const papers = initPapersManagement({
   onCreateProtocolDraft: rendererServices.protocol.createDraftFromPaper
 });
 moduleRegistry.register('papers', papers);
-
-const collaboration = initCollaborationManagement({
-  state,
-  persist,
-  createId,
-  safeText,
-  onProtocolsImported: rendererServices.protocol.handleProtocolsImported,
-  trackGrowthEvent
-});
-moduleRegistry.register('collaboration', collaboration);
 
 const labCommonInventory = initLabCommonInventory({
   state,
@@ -820,17 +789,14 @@ function showView(viewId) {
     pageTitle.textContent = activeApp?.label || 'Home';
   }
   pageSubtitle.textContent = TITLES[subtitleView] || '';
+  if (topbarViewActions) {
+    topbarViewActions.hidden = nextView !== VIEWS.ASSAY;
+  }
   homeBtn.hidden = nextView === VIEWS.HOME;
   closeMoreMenu();
 
   if (nextView === VIEWS.HOME) {
     homeDashboard?.render();
-  }
-
-  if (nextView === VIEWS.SYNTHESIS_NOTEBOOK) {
-    synthesisNotebook.renderProjectOptions();
-    synthesisNotebook.renderProtocolOptions();
-    synthesisNotebook.renderEntries();
   }
 
   if (nextView === VIEWS.BIOLOGY_NOTEBOOK) {
@@ -859,11 +825,6 @@ function showView(viewId) {
 
   if (nextView === VIEWS.LAB_COMMON_INVENTORY) {
     labCommonInventory.renderAll();
-  }
-
-  if (nextView === VIEWS.LAB_MANAGEMENT) {
-    labManagement.render();
-    collaboration.renderEmailSelectors();
   }
 
   if (nextView === VIEWS.PROJECT_MANAGEMENT) {
@@ -1157,18 +1118,16 @@ function buildGlobalSearchCandidates() {
     addCandidate(workflowTarget, [workflow?.name, workflow?.description].join(' '));
   });
 
-  const synthesisNotebookTarget = {
-    viewId: VIEWS.SYNTHESIS_NOTEBOOK,
-    inputId: '',
-    label: 'Synthesis Notebook'
-  };
   const biologyNotebookTarget = {
     viewId: VIEWS.BIOLOGY_NOTEBOOK,
     inputId: '',
     label: 'Biology Notebook'
   };
   asArray(state.notebookEntries).forEach((entry) => {
-    const target = entry?.notebookType === 'biology' ? biologyNotebookTarget : synthesisNotebookTarget;
+    if (entry?.notebookType !== 'biology') {
+      return;
+    }
+    const target = biologyNotebookTarget;
     addCandidate(target, [
       entry?.projectName,
       entry?.protocolName,
@@ -1453,17 +1412,12 @@ window.addEventListener('enana:appearance-changed', () => {
 
 function renderAll() {
   state.objectGraph = rebuildObjectGraph(state);
-  labManagement.render();
   instrumentManagement.render();
   protocol.renderShareTargets();
   protocol.renderList();
   projectManagement.render();
   workflowManagement.render();
-  collaboration.renderEmailSelectors();
   labCommonInventory.renderAll();
-  synthesisNotebook.renderProjectOptions();
-  synthesisNotebook.renderProtocolOptions();
-  synthesisNotebook.renderEntries();
   biologyNotebook.renderProjectOptions();
   biologyNotebook.renderProtocolOptions();
   biologyNotebook.renderEntries();

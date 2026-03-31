@@ -1,6 +1,5 @@
 /* sample-registry-view */
 
-/* Extracted from ui/css/base/core.css */
 .sample-compound-fields {
   grid-column: 1 / -1;
   margin-top: 2px;
@@ -35,7 +34,6 @@
   margin-bottom: 6px;
 }
 
-/* Extracted from ui/css/overrides/cross-view-fixes.css */
 .sample-top-search {
   margin-bottom: 10px;
   max-width: 420px;

@@ -20,15 +20,6 @@
       "searchInputId": ""
     },
     {
-      "id": "members",
-      "label": "Members",
-      "viewId": "lab-management-view",
-      "icon": "members.svg",
-      "placement": "more",
-      "aliases": ["member", "people", "team", "collaboration", "collaborations", "partners"],
-      "searchInputId": ""
-    },
-    {
       "id": "instruments",
       "label": "Instruments",
       "viewId": "instrument-management-view",
@@ -44,15 +35,6 @@
       "icon": "protocols.svg",
       "placement": "dock",
       "aliases": ["protocol", "procedure"],
-      "searchInputId": ""
-    },
-    {
-      "id": "synthesis-notebook",
-      "label": "Synthesis Notebook",
-      "viewId": "synthesis-notebook-view",
-      "icon": "synthesis-notebook.svg",
-      "placement": "more",
-      "aliases": ["synthesis", "chemistry notebook", "chemistry"],
       "searchInputId": ""
     },
     {

@@ -12,10 +12,13 @@ export function initProtocolManagement({
   const PROTOCOL_SHARE_LINK_PREFIX = 'enana://protocol-share/';
 
   const protocolListPanel = document.getElementById('protocol-list-panel');
+  const protocolDetailPanel = document.getElementById('protocol-detail-panel');
+  const protocolEmptyPanel = document.getElementById('protocol-empty-panel');
   const protocolEditorPanel = document.getElementById('protocol-editor-panel');
   const protocolViewPanel = document.getElementById('protocol-view-panel');
 
   const createProtocolBtn = document.getElementById('create-protocol-btn');
+  const emptyCreateProtocolBtn = document.querySelector?.('[data-protocol-empty-create]') || null;
   const protocolEditorBackBtn = document.getElementById('protocol-editor-back-btn');
   const protocolCancelBtn = document.getElementById('protocol-cancel-btn');
   const protocolViewBackBtn = document.getElementById('protocol-view-back-btn');
@@ -51,17 +54,20 @@ export function initProtocolManagement({
   const defaultProtocolJsonImportStatus = 'Import one or more protocols from JSON.';
 
   let currentProtocolDraft = createEmptyDraft();
+  let activeMenuProtocolId = '';
   let activeShareProtocolId = '';
   let activeShareTargetEmail = '';
   let protocolSortField = 'time';
   let protocolSortOrder = 'asc';
-  let activeViewedProtocolId = '';
+  let activeProtocolId = '';
+  let protocolDetailMode = 'empty';
   let isCreateEditorMode = true;
 
   createProtocolBtn?.addEventListener('click', onCreateProtocol);
-  protocolEditorBackBtn?.addEventListener('click', () => showListPanel({ resetEditor: true }));
-  protocolCancelBtn?.addEventListener('click', () => showListPanel({ resetEditor: true }));
-  protocolViewBackBtn?.addEventListener('click', () => showListPanel({ resetEditor: false }));
+  emptyCreateProtocolBtn?.addEventListener('click', onCreateProtocol);
+  protocolEditorBackBtn?.addEventListener('click', () => showEmptyPanel({ resetEditor: true }));
+  protocolCancelBtn?.addEventListener('click', onCancelEditor);
+  protocolViewBackBtn?.addEventListener('click', () => showEmptyPanel({ resetEditor: false }));
 
   protocolForm?.addEventListener('submit', onProtocolSubmit);
   protocolMaterialsInput?.addEventListener('focus', () => ensureLeadingBullet(protocolMaterialsInput));
@@ -84,13 +90,37 @@ export function initProtocolManagement({
   protocolExportPdfBtn?.addEventListener('click', onExportViewedProtocolPdf);
   importProtocolJsonBtn?.addEventListener('click', onImportProtocolJson);
 
-  if (protocolShareStatus && !String(protocolShareStatus.textContent || '').trim()) {
-    setShareStatus(defaultShareStatus);
-  }
+  setShareStatus(defaultShareStatus);
   if (protocolJsonImportStatus && !String(protocolJsonImportStatus.textContent || '').trim()) {
     protocolJsonImportStatus.textContent = defaultProtocolJsonImportStatus;
   }
   updateSortButtonLabels();
+  applyDetailMode('empty');
+
+  document.addEventListener?.('click', (event) => {
+    if (!activeMenuProtocolId) {
+      return;
+    }
+    const target = event.target;
+    const hasNode = typeof Node !== 'undefined';
+    const hasElement = typeof Element !== 'undefined';
+    if (hasNode && target instanceof Node && protocolList?.contains?.(target)) {
+      const trigger = hasElement && target instanceof Element
+        ? target.closest('[data-protocol-menu-trigger], .protocol-action-menu')
+        : null;
+      if (trigger) {
+        return;
+      }
+    }
+    activeMenuProtocolId = '';
+    renderList();
+  });
+  document.addEventListener?.('keydown', (event) => {
+    if (event.key === 'Escape' && activeMenuProtocolId) {
+      activeMenuProtocolId = '';
+      renderList();
+    }
+  });
 
   function createEmptyDraft() {
     return {
@@ -727,7 +757,9 @@ export function initProtocolManagement({
     if (!protocolShareStatus) {
       return;
     }
-    protocolShareStatus.textContent = message;
+    const normalized = String(message || '').trim();
+    protocolShareStatus.textContent = normalized;
+    protocolShareStatus.hidden = !normalized || normalized === defaultShareStatus;
   }
 
   function setShareLinkOutput(link = '', options = {}) {
@@ -842,6 +874,18 @@ export function initProtocolManagement({
     }
 
     return protocolSortOrder === 'asc' ? result : (result * -1);
+  }
+
+  function formatProtocolTimestamp(protocol) {
+    const timestamp = getProtocolSortTimestamp(protocol);
+    if (!timestamp) {
+      return 'No timestamp';
+    }
+    return new Date(timestamp).toLocaleString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
   }
 
   function serializeProtocol(protocol) {
@@ -1020,46 +1064,84 @@ export function initProtocolManagement({
     resetProtocolJsonImportUi();
   }
 
-  function showListPanel({ resetEditor = false } = {}) {
+  function setSelectedProtocol(protocolId = '') {
+    activeProtocolId = String(protocolId || '').trim();
+  }
+
+  function getSelectedProtocol() {
+    if (!activeProtocolId) {
+      return null;
+    }
+    return state.protocols.find((item) => String(item?.id || '') === activeProtocolId) || null;
+  }
+
+  function applyDetailMode(nextMode) {
+    protocolDetailMode = nextMode;
+    if (protocolDetailPanel) {
+      protocolDetailPanel.dataset.mode = nextMode;
+    }
+    if (protocolEmptyPanel) {
+      protocolEmptyPanel.hidden = nextMode !== 'empty';
+    }
+    if (protocolEditorPanel) {
+      protocolEditorPanel.hidden = nextMode !== 'edit';
+    }
+    if (protocolViewPanel) {
+      protocolViewPanel.hidden = nextMode !== 'view';
+    }
+  }
+
+  function showEmptyPanel({ resetEditor = false } = {}) {
     if (resetEditor) {
       resetEditorDraft();
     }
-
-    if (protocolListPanel) {
-      protocolListPanel.hidden = false;
-    }
-    if (protocolEditorPanel) {
-      protocolEditorPanel.hidden = true;
-    }
-    if (protocolViewPanel) {
-      protocolViewPanel.hidden = true;
-    }
-    activeViewedProtocolId = '';
+    applyDetailMode('empty');
   }
 
   function showEditorPanel() {
-    if (protocolListPanel) {
-      protocolListPanel.hidden = true;
-    }
-    if (protocolEditorPanel) {
-      protocolEditorPanel.hidden = false;
-    }
-    if (protocolViewPanel) {
-      protocolViewPanel.hidden = true;
-    }
+    applyDetailMode('edit');
     syncProtocolImportPanelVisibility();
   }
 
   function showViewPanel() {
-    if (protocolListPanel) {
-      protocolListPanel.hidden = true;
+    applyDetailMode('view');
+  }
+
+  function syncSelectionAfterMutation() {
+    if (protocolDetailMode === 'edit' && !currentProtocolDraft.id) {
+      return;
     }
-    if (protocolEditorPanel) {
-      protocolEditorPanel.hidden = true;
+
+    const selectedProtocol = getSelectedProtocol();
+    if (selectedProtocol) {
+      if (protocolDetailMode === 'view') {
+        renderProtocolView(selectedProtocol);
+      }
+      return;
     }
-    if (protocolViewPanel) {
-      protocolViewPanel.hidden = false;
+
+    if (!state.protocols.length) {
+      setSelectedProtocol('');
+      showEmptyPanel({ resetEditor: protocolDetailMode === 'edit' });
+      return;
     }
+
+    const firstProtocol = [...state.protocols].sort(compareProtocols)[0];
+    if (firstProtocol) {
+      setSelectedProtocol(firstProtocol.id);
+      renderProtocolView(firstProtocol);
+      showViewPanel();
+    }
+  }
+
+  function onCancelEditor() {
+    const selectedProtocol = getSelectedProtocol();
+    if (selectedProtocol) {
+      renderProtocolView(selectedProtocol);
+      showViewPanel();
+      return;
+    }
+    showEmptyPanel({ resetEditor: true });
   }
 
   function openEditorWithDraft(protocol, headingText, options = {}) {
@@ -1095,6 +1177,7 @@ export function initProtocolManagement({
   }
 
   function onCreateProtocol() {
+    setSelectedProtocol('');
     openEditorWithDraft(createEmptyDraft(), 'Create Protocol', { isCreateMode: true });
   }
 
@@ -1104,6 +1187,7 @@ export function initProtocolManagement({
       return;
     }
 
+    setSelectedProtocol(protocol.id);
     openEditorWithDraft(protocol, 'Edit Protocol', { isCreateMode: false });
   }
 
@@ -1156,16 +1240,13 @@ export function initProtocolManagement({
       return;
     }
 
-    activeViewedProtocolId = protocol.id;
+    setSelectedProtocol(protocol.id);
     renderProtocolView(protocol);
     showViewPanel();
   }
 
   function onExportViewedProtocolPdf() {
-    if (!activeViewedProtocolId) {
-      return;
-    }
-    const protocol = state.protocols.find((item) => item.id === activeViewedProtocolId);
+    const protocol = getSelectedProtocol();
     if (!protocol) {
       return;
     }
@@ -1250,7 +1331,10 @@ export function initProtocolManagement({
     persist();
     renderList();
     setShareLinkOutput('');
-    showListPanel({ resetEditor: true });
+    if (activeProtocolId === protocolId) {
+      setSelectedProtocol('');
+    }
+    syncSelectionAfterMutation();
     onProtocolsChanged();
   }
 
@@ -1302,9 +1386,12 @@ export function initProtocolManagement({
     }
 
     persist();
+    setSelectedProtocol(protocol.id);
+    renderProtocolView(protocol);
     renderList();
     onProtocolsChanged();
-    showListPanel({ resetEditor: true });
+    resetEditorDraft();
+    showViewPanel();
   }
 
   function renderList() {
@@ -1317,6 +1404,7 @@ export function initProtocolManagement({
 
     if (!state.protocols.length) {
       protocolList.innerHTML = '<p class="small-note">No saved protocols yet.</p>';
+      syncSelectionAfterMutation();
       return;
     }
 
@@ -1329,14 +1417,40 @@ export function initProtocolManagement({
     const sortedProtocols = [...state.protocols].sort(compareProtocols);
 
     protocolList.innerHTML = sortedProtocols.map((protocol) => `
-      <article class="list-row protocol-list-row${activeShareProtocolId === protocol.id ? ' protocol-list-row-share-open' : ''}">
-        <span class="protocol-name-text">${safeText(protocol.name)}</span>
+      <article
+        class="list-row protocol-list-row${activeShareProtocolId === protocol.id ? ' protocol-list-row-share-open' : ''}${activeProtocolId === protocol.id ? ' protocol-list-row-selected list-row-selected' : ''}"
+        data-protocol-select="${protocol.id}"
+        tabindex="0"
+      >
+        <div class="protocol-name-text-wrap">
+          <span class="protocol-name-text">${safeText(protocol.name)}</span>
+          <span class="protocol-row-meta">Updated ${safeText(formatProtocolTimestamp(protocol))}</span>
+        </div>
         <div class="card-actions list-actions protocol-list-actions">
-          <button type="button" class="ghost-btn protocol-view-btn" data-protocol-view="${protocol.id}">View</button>
-          <button type="button" class="ghost-btn protocol-view-btn" data-protocol-export="${protocol.id}">Export PDF</button>
-          <button type="button" class="ghost-btn protocol-edit-btn" data-protocol-edit="${protocol.id}">Edit</button>
-          <button type="button" class="ghost-btn protocol-share-btn" data-protocol-share="${protocol.id}">Share</button>
-          <button type="button" class="danger-btn protocol-delete-btn" data-protocol-delete="${protocol.id}">Delete</button>
+          <div class="protocol-legacy-actions" hidden>
+            <button type="button" class="ghost-btn protocol-view-btn" data-protocol-view="${protocol.id}">View</button>
+            <button type="button" class="ghost-btn protocol-view-btn" data-protocol-export="${protocol.id}">Export PDF</button>
+            <button type="button" class="ghost-btn protocol-edit-btn" data-protocol-edit="${protocol.id}">Edit</button>
+            <button type="button" class="ghost-btn protocol-share-btn" data-protocol-share="${protocol.id}">Share</button>
+            <button type="button" class="danger-btn protocol-delete-btn" data-protocol-delete="${protocol.id}">Delete</button>
+          </div>
+          <button
+            type="button"
+            class="ghost-btn protocol-menu-btn${activeMenuProtocolId === protocol.id ? ' is-open' : ''}"
+            data-protocol-menu-trigger="${protocol.id}"
+            aria-haspopup="menu"
+            aria-expanded="${activeMenuProtocolId === protocol.id ? 'true' : 'false'}"
+            aria-label="Protocol actions"
+            title="Protocol actions"
+          >...</button>
+          ${activeMenuProtocolId === protocol.id ? `
+            <div class="protocol-action-menu protocol-preview-block" role="menu">
+              <button type="button" class="ghost-btn protocol-action-item" data-protocol-action="edit" data-protocol-id="${protocol.id}">Edit</button>
+              <button type="button" class="ghost-btn protocol-action-item" data-protocol-action="export" data-protocol-id="${protocol.id}">Export PDF</button>
+              <button type="button" class="ghost-btn protocol-action-item" data-protocol-action="share" data-protocol-id="${protocol.id}">Share</button>
+              <button type="button" class="ghost-btn protocol-action-item protocol-action-item-danger" data-protocol-action="delete" data-protocol-id="${protocol.id}">Delete</button>
+            </div>
+          ` : ''}
         </div>
         ${activeShareProtocolId === protocol.id ? `
           <div class="protocol-share-inline">
@@ -1353,6 +1467,33 @@ export function initProtocolManagement({
 
     protocolList.querySelectorAll('[data-protocol-view]').forEach((button) => {
       button.addEventListener('click', () => viewProtocol(button.dataset.protocolView));
+    });
+
+    protocolList.querySelectorAll('[data-protocol-select]').forEach((row) => {
+      row.addEventListener('click', (event) => {
+        const target = event.target;
+        const interactive = typeof target?.closest === 'function'
+          ? target.closest('button, select, textarea, input, .protocol-share-inline, .protocol-action-menu')
+          : null;
+        if (interactive) {
+          return;
+        }
+        viewProtocol(row.dataset.protocolSelect);
+      });
+      row.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') {
+          return;
+        }
+        const target = event.target;
+        const interactive = typeof target?.closest === 'function'
+          ? target.closest('button, select, textarea, input, .protocol-share-inline, .protocol-action-menu')
+          : null;
+        if (interactive) {
+          return;
+        }
+        event.preventDefault?.();
+        viewProtocol(row.dataset.protocolSelect);
+      });
     });
 
     protocolList.querySelectorAll('[data-protocol-edit]').forEach((button) => {
@@ -1372,6 +1513,7 @@ export function initProtocolManagement({
     protocolList.querySelectorAll('[data-protocol-share]').forEach((button) => {
       button.addEventListener('click', () => {
         const protocolId = String(button.dataset.protocolShare || '');
+        activeMenuProtocolId = '';
         if (activeShareProtocolId === protocolId) {
           activeShareProtocolId = '';
           activeShareTargetEmail = '';
@@ -1414,6 +1556,47 @@ export function initProtocolManagement({
         renderList();
       });
     });
+
+    protocolList.querySelectorAll('[data-protocol-menu-trigger]').forEach((button) => {
+      button.addEventListener('click', (event) => {
+        event.stopPropagation?.();
+        const protocolId = String(button.dataset.protocolMenuTrigger || '');
+        activeMenuProtocolId = activeMenuProtocolId === protocolId ? '' : protocolId;
+        renderList();
+      });
+    });
+
+    protocolList.querySelectorAll('[data-protocol-action]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const action = String(button.dataset.protocolAction || '');
+        const protocolId = String(button.dataset.protocolId || '');
+        activeMenuProtocolId = '';
+        if (action === 'edit') {
+          renderList();
+          editProtocol(protocolId);
+          return;
+        }
+        if (action === 'export') {
+          const protocol = state.protocols.find((item) => item.id === protocolId);
+          if (protocol) {
+            exportProtocolPdf(protocol);
+          }
+          renderList();
+          return;
+        }
+        if (action === 'share') {
+          activeShareProtocolId = activeShareProtocolId === protocolId ? '' : protocolId;
+          activeShareTargetEmail = '';
+          renderList();
+          return;
+        }
+        if (action === 'delete') {
+          deleteProtocol(protocolId);
+        }
+      });
+    });
+
+    syncSelectionAfterMutation();
   }
 
   function addDraftFromExtractedMethod(method, source) {

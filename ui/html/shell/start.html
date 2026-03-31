@@ -39,7 +39,15 @@
       <div class="topbar-brand">
         <h1 class="sr-only">Enana</h1>
         <div class="topbar-context">
-          <p id="page-title" class="topbar-page-title">Home</p>
+          <div class="topbar-heading-row">
+            <p id="page-title" class="topbar-page-title">Home</p>
+            <div id="topbar-view-actions" class="topbar-view-actions" hidden>
+              <div id="topbar-assay-mode-switch" class="calendar-view-switch assay-mode-switch" role="group" aria-label="Assay mode">
+                <button type="button" id="assay-mode-create-btn" class="ghost-btn calendar-view-active">Create Assay</button>
+                <button type="button" id="assay-mode-results-btn" class="ghost-btn">View &amp; Results</button>
+              </div>
+            </div>
+          </div>
           <p id="page-subtitle" class="sr-only">Reminders and active work.</p>
         </div>
       </div>

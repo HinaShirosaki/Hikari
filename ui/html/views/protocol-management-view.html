@@ -1,82 +1,102 @@
 <section id="protocol-management-view" class="view">
-      <div id="protocol-list-panel" class="panel">
-        <h2>Protocols</h2>
-        <div class="protocol-list-top">
-          <button type="button" id="create-protocol-btn" class="primary-btn">Create a New Protocol</button>
-          <div class="inline-row protocol-sort-controls">
-            <button type="button" id="protocol-sort-field-btn" class="ghost-btn">Sort: Time</button>
-            <button type="button" id="protocol-sort-order-btn" class="ghost-btn">Order: Low to High</button>
+      <div class="protocol-workspace">
+        <div id="protocol-list-panel" class="panel protocol-list-panel">
+          <div class="protocol-list-head">
+            <div class="inline-row protocol-sort-controls">
+              <button type="button" id="create-protocol-btn" class="primary-btn">Create Protocol</button>
+              <button type="button" id="protocol-sort-field-btn" class="ghost-btn">Sort: Time</button>
+              <button type="button" id="protocol-sort-order-btn" class="ghost-btn">Order: Low to High</button>
+            </div>
           </div>
+          <p id="protocol-share-status" class="small-note" hidden></p>
+          <div id="protocol-share-link-panel" class="protocol-preview-block" hidden>
+            <h4>Portable Share Link</h4>
+            <p class="small-note">Paste this link into chat or email. Recipients can import it from Collaborations.</p>
+            <textarea id="protocol-share-link-output" rows="3" readonly></textarea>
+          </div>
+          <div id="protocol-list" class="list-table"></div>
         </div>
-        <p id="protocol-share-status" class="small-note">Click Share on a protocol to send it to a teammate or copy a portable share link.</p>
-        <div id="protocol-share-link-panel" class="protocol-preview-block" hidden>
-          <h4>Portable Share Link</h4>
-          <p class="small-note">Paste this link into chat or email. Recipients can import it from Collaborations.</p>
-          <textarea id="protocol-share-link-output" rows="3" readonly></textarea>
-        </div>
-        <div id="protocol-list" class="list-table"></div>
-      </div>
 
-      <div id="protocol-editor-panel" class="panel" hidden>
-        <div class="protocol-panel-head">
-          <h3 id="protocol-editor-heading">Protocol Editor</h3>
-          <button type="button" id="protocol-editor-back-btn" class="ghost-btn">Back to List</button>
-        </div>
-        <div id="protocol-json-import-panel" class="stack-form protocol-json-import-panel">
-          <h4>Import Protocol JSON</h4>
-          <label>
-            JSON File
-            <input id="protocol-json-import-file" type="file" accept=".json,.ena,application/json" />
-          </label>
-          <label>
-            Or Paste JSON
-            <textarea id="protocol-json-import-input" rows="4" placeholder='Paste protocol JSON, e.g. {"protocols":[...]} or [...]'></textarea>
-          </label>
-          <div class="form-actions">
-            <button type="button" id="import-protocol-json-btn" class="ghost-btn">Import Protocol JSON</button>
+        <div id="protocol-detail-panel" class="panel protocol-detail-panel">
+          <div id="protocol-empty-panel" class="protocol-empty-panel">
+            <span class="protocol-empty-eyebrow">Protocol Workspace</span>
+            <h3>Select a protocol</h3>
+            <p class="small-note">Choose a protocol from the list to view it here, or start a new one to begin editing right away.</p>
+            <div class="form-actions">
+              <button type="button" class="primary-btn" data-protocol-empty-create>Create Protocol</button>
+            </div>
           </div>
-          <p id="protocol-json-import-status" class="small-note">Import one or more protocols from JSON.</p>
-        </div>
-        <form id="protocol-form" class="stack-form">
-          <label>
-            Protocol Name
-            <input id="protocol-name" required placeholder="Protocol name" />
-          </label>
-          <label>
-            Purpose
-            <textarea id="protocol-purpose" rows="3" placeholder="Describe the purpose"></textarea>
-          </label>
-          <label>
-            Materials (start each material with a bullet point)
-            <textarea id="protocol-materials" rows="5" placeholder="• Material 1&#10;• Material 2"></textarea>
-          </label>
-          <label>
-            Steps (start each step with a bullet point)
-            <textarea id="protocol-steps" rows="7" placeholder="• Step 1&#10;• Step 2"></textarea>
-          </label>
-          <div class="inline-row">
-            <button type="button" id="add-placeholder-btn" class="ghost-btn">Insert Interactive Bar</button>
-            <input id="placeholder-name" placeholder="Interactive bar name (e.g. volume)" />
-          </div>
-          <label>
-            Troubleshooting
-            <textarea id="protocol-troubleshooting" rows="4" placeholder="Common issues and solutions"></textarea>
-          </label>
-          <div class="form-actions protocol-save-actions">
-            <button type="submit" class="primary-btn">Save Protocol</button>
-            <button type="button" id="protocol-cancel-btn" class="ghost-btn">Cancel</button>
-          </div>
-        </form>
-      </div>
 
-      <div id="protocol-view-panel" class="panel" hidden>
-        <div class="protocol-panel-head">
-          <h3 id="protocol-view-title">Protocol</h3>
-          <div class="form-actions">
-            <button type="button" id="protocol-export-pdf-btn" class="ghost-btn">Export PDF</button>
-            <button type="button" id="protocol-view-back-btn" class="ghost-btn">Back to List</button>
+          <div id="protocol-editor-panel" hidden>
+            <div class="protocol-panel-head">
+              <div>
+                <span class="protocol-detail-mode">Editor</span>
+                <h3 id="protocol-editor-heading">Protocol Editor</h3>
+              </div>
+              <div class="form-actions">
+                <button type="button" id="protocol-editor-back-btn" class="ghost-btn" hidden>Back to List</button>
+                <button type="button" id="protocol-cancel-btn" class="ghost-btn">Cancel</button>
+              </div>
+            </div>
+            <div id="protocol-json-import-panel" class="stack-form protocol-json-import-panel">
+              <h4>Import Protocol JSON</h4>
+              <label>
+                JSON File
+                <input id="protocol-json-import-file" type="file" accept=".json,.ena,application/json" />
+              </label>
+              <label>
+                Or Paste JSON
+                <textarea id="protocol-json-import-input" rows="4" placeholder='Paste protocol JSON, e.g. {"protocols":[...]} or [...]'></textarea>
+              </label>
+              <div class="form-actions">
+                <button type="button" id="import-protocol-json-btn" class="ghost-btn">Import Protocol JSON</button>
+              </div>
+              <p id="protocol-json-import-status" class="small-note">Import one or more protocols from JSON.</p>
+            </div>
+            <form id="protocol-form" class="stack-form">
+              <label>
+                Protocol Name
+                <input id="protocol-name" required placeholder="Protocol name" />
+              </label>
+              <label>
+                Purpose
+                <textarea id="protocol-purpose" rows="3" placeholder="Describe the purpose"></textarea>
+              </label>
+              <label>
+                Materials (start each material with a bullet point)
+                <textarea id="protocol-materials" rows="5" placeholder="• Material 1&#10;• Material 2"></textarea>
+              </label>
+              <label>
+                Steps (start each step with a bullet point)
+                <textarea id="protocol-steps" rows="7" placeholder="• Step 1&#10;• Step 2"></textarea>
+              </label>
+              <div class="inline-row">
+                <button type="button" id="add-placeholder-btn" class="ghost-btn">Insert Interactive Bar</button>
+                <input id="placeholder-name" placeholder="Interactive bar name (e.g. volume)" />
+              </div>
+              <label>
+                Troubleshooting
+                <textarea id="protocol-troubleshooting" rows="4" placeholder="Common issues and solutions"></textarea>
+              </label>
+              <div class="form-actions protocol-save-actions">
+                <button type="submit" class="primary-btn">Save Protocol</button>
+              </div>
+            </form>
+          </div>
+
+          <div id="protocol-view-panel" hidden>
+            <div class="protocol-panel-head">
+              <div>
+                <span class="protocol-detail-mode">Viewer</span>
+                <h3 id="protocol-view-title">Protocol</h3>
+              </div>
+              <div class="form-actions">
+                <button type="button" id="protocol-export-pdf-btn" class="ghost-btn">Export PDF</button>
+                <button type="button" id="protocol-view-back-btn" class="ghost-btn" hidden>Back to List</button>
+              </div>
+            </div>
+            <div id="protocol-view-content" class="stack-form"></div>
           </div>
         </div>
-        <div id="protocol-view-content" class="stack-form"></div>
       </div>
     </section>

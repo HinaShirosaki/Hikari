@@ -20,8 +20,11 @@ export function initHomeDashboard({
   const workflowNextStep = document.getElementById('dashboard-workflow-next-step');
   const workflowProgressList = document.getElementById('dashboard-workflow-progress-list');
 
+  const localTimeDisplay = document.getElementById('dashboard-local-time');
+  const localDateDisplay = document.getElementById('dashboard-local-date');
   const timerDisplay = document.getElementById('dashboard-timer-display');
   const timerStatus = document.getElementById('dashboard-timer-status');
+  const timerSavedList = document.getElementById('dashboard-timer-saved-list');
   const timerCustomMinutesInput = document.getElementById('dashboard-timer-custom-minutes');
   const timerSetBtn = document.getElementById('dashboard-timer-set-btn');
   const timerStartBtn = document.getElementById('dashboard-timer-start-btn');
@@ -38,8 +41,11 @@ export function initHomeDashboard({
     || !workflowSelect
     || !workflowNextStep
     || !workflowProgressList
+    || !localTimeDisplay
+    || !localDateDisplay
     || !timerDisplay
     || !timerStatus
+    || !timerSavedList
     || !timerCustomMinutesInput
     || !timerSetBtn
     || !timerStartBtn
@@ -57,9 +63,11 @@ export function initHomeDashboard({
     remainingMs: 15 * 60 * 1000,
     running: false,
     endAtMs: 0,
-    alert: false
+    alert: false,
+    savedDurations: [15, 10, 30, 5]
   };
   let timerTickHandle = 0;
+  let localClockHandle = 0;
   let timerHint = '';
 
   // Wire up dashboard interactions once all DOM references are available.
@@ -68,6 +76,7 @@ export function initHomeDashboard({
   unconfiguredList.addEventListener('click', onPassageListClick);
   workflowSelect.addEventListener('change', onWorkflowSelected);
   workflowProgressList.addEventListener('click', onWorkflowProgressClick);
+  timerSavedList.addEventListener('click', onSavedTimerClick);
   timerSetBtn.addEventListener('click', onTimerSet);
   timerStartBtn.addEventListener('click', onTimerStart);
   timerPauseBtn.addEventListener('click', onTimerPause);
@@ -85,6 +94,8 @@ export function initHomeDashboard({
       setTimerDuration(minutes);
     });
   });
+  renderLocalClock();
+  localClockHandle = window.setInterval(renderLocalClock, 1000);
 
   // Ensure persisted dashboard settings exist and have the expected shape.
   function ensureDashboardState() {
@@ -438,6 +449,34 @@ export function initHomeDashboard({
     return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
   }
 
+  // Format durations for compact list labels such as "8m 23s left".
+  function formatTimerSummary(ms) {
+    const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    if (hours > 0) {
+      return `${hours}h ${minutes}m left`;
+    }
+    return `${minutes}m ${String(seconds).padStart(2, '0')}s left`;
+  }
+
+  // Render the live local time and date shown at the top of the timer card.
+  function renderLocalClock() {
+    const now = new Date();
+    localTimeDisplay.textContent = now.toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+    localDateDisplay.textContent = now.toLocaleDateString([], {
+      weekday: 'long',
+      month: 'short',
+      day: 'numeric'
+    });
+  }
+
   // Stop the repeating timer tick interval when the timer is paused or reset.
   function stopTimerTick() {
     if (!timerTickHandle) {
@@ -471,6 +510,10 @@ export function initHomeDashboard({
       renderTimerWidget();
       return;
     }
+    timerState.savedDurations = [
+      rounded,
+      ...timerState.savedDurations.filter((value) => value !== rounded)
+    ].slice(0, 4);
     const durationMs = rounded * 60 * 1000;
     timerState.durationMs = durationMs;
     timerState.remainingMs = durationMs;
@@ -483,6 +526,42 @@ export function initHomeDashboard({
       timerCustomMinutesInput.value = String(rounded);
     }
     renderTimerWidget();
+  }
+
+  // Render the user's recently used timer durations as quick-load rows.
+  function renderSavedTimers() {
+    const currentMinutes = Math.max(1, Math.round(timerState.durationMs / 60000));
+    const rows = [
+      {
+        minutes: currentMinutes,
+        title: timerState.running
+          ? 'Current countdown'
+          : (timerState.remainingMs < timerState.durationMs ? 'Paused timer' : 'Loaded timer'),
+        value: timerState.running
+          ? formatTimerSummary(timerState.remainingMs)
+          : `${currentMinutes}m ready`,
+        active: true
+      },
+      ...timerState.savedDurations
+        .filter((minutes) => minutes !== currentMinutes)
+        .map((minutes) => ({
+          minutes,
+          title: `${minutes} minute timer`,
+          value: 'Tap to load',
+          active: false
+        }))
+    ];
+
+    timerSavedList.innerHTML = rows.map((row) => `
+      <button
+        type="button"
+        class="dashboard-timer-row${row.active ? ' is-active' : ''}"
+        data-dashboard-saved-minutes="${row.minutes}"
+      >
+        <span class="dashboard-timer-row-title">${safeText(row.title)}</span>
+        <span class="dashboard-timer-row-value">${safeText(row.value)}</span>
+      </button>
+    `).join('');
   }
 
   // Render the timer display, status text, and button enabled states.
@@ -505,6 +584,7 @@ export function initHomeDashboard({
 
     timerStartBtn.disabled = timerState.running;
     timerPauseBtn.disabled = !timerState.running;
+    renderSavedTimers();
   }
 
   // Advance the timer, detect completion, and trigger the alert state when time expires.
@@ -568,6 +648,16 @@ export function initHomeDashboard({
     renderTimerWidget();
   }
 
+  // Load one of the saved timer durations from the timer card list.
+  function onSavedTimerClick(event) {
+    const button = event.target.closest('[data-dashboard-saved-minutes]');
+    if (!button) {
+      return;
+    }
+    const minutes = Number(button.dataset.dashboardSavedMinutes);
+    setTimerDuration(minutes);
+  }
+
   // Open sample search when a passage reminder row requests a specific sample.
   function onPassageListClick(event) {
     const button = event.target.closest('[data-dashboard-open-sample]');
@@ -621,6 +711,10 @@ export function initHomeDashboard({
   function render() {
     if (ensureDashboardState()) {
       persist();
+    }
+    if (!localClockHandle) {
+      renderLocalClock();
+      localClockHandle = window.setInterval(renderLocalClock, 1000);
     }
     renderPassageWidget();
     renderWorkflowWidget();

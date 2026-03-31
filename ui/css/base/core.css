@@ -100,11 +100,26 @@ div {
   gap: 2px;
 }
 
+.topbar-heading-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
 .topbar-page-title {
   margin: 0;
   color: var(--strong);
   font-size: 1rem;
   font-weight: 650;
+}
+
+.topbar-view-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
 }
 
 #page-subtitle {
@@ -697,6 +712,10 @@ button:disabled {
   .topbar-tools {
     grid-template-columns: minmax(0, 1fr) auto auto;
     justify-content: flex-start;
+  }
+
+  .topbar-heading-row {
+    width: 100%;
   }
 
   .topbar-tools input {

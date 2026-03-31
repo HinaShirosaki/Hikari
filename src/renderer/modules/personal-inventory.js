@@ -1,6 +1,15 @@
-export function initPersonalInventory({ state, persist, createId, safeText, cssEscape, onSamplesChanged }) {
+export function initPersonalInventory({
+  state,
+  persist,
+  createId,
+  safeText,
+  cssEscape,
+  onSamplesChanged,
+  onInventoryChanged
+}) {
   const inventorySections = document.getElementById('inventory-sections');
-  const containerDetail = document.getElementById('container-detail');
+  const inventoryLocationNav = document.getElementById('inventory-location-nav');
+  const inventorySummaryCard = document.getElementById('inventory-summary-card');
   const addContainerBtn = document.getElementById('inventory-add-container-btn');
   const addContainerForm = document.getElementById('inventory-add-container-form');
   const addContainerNameInput = document.getElementById('inventory-add-container-name');
@@ -9,10 +18,12 @@ export function initPersonalInventory({ state, persist, createId, safeText, cssE
   const addContainerCancelBtn = document.getElementById('inventory-add-container-cancel');
 
   let selectedContainer = null;
+  let selectedSectionName = '';
   let editingWellIndex = null;
   let editingSampleId = '';
   let wellEditorStatus = '';
   let isAddContainerFormOpen = false;
+  let shouldAutoOpenContainer = true;
   const SAMPLE_TYPE_COLORS = {
     plasmid: '#2f6fec',
     cell_line: '#e8871a',
@@ -33,17 +44,66 @@ export function initPersonalInventory({ state, persist, createId, safeText, cssE
     primer: 'Primer',
     other: 'Other'
   };
-
-  if (containerDetail) {
-    containerDetail.hidden = true;
+  const SECTION_DISPLAY = {
+    'Room Temp': { short: 'RT', title: 'Room Temp', note: 'Bench and cabinet storage' },
+    '4 Degree': { short: '4C', title: '4 C', note: 'Cold shelf storage' },
+    '-20 Degree': { short: '-20', title: '-20 C', note: 'Short-term freezer storage' },
+    '-80 Degree': { short: '-80', title: '-80 C', note: 'Long-term freezer storage' },
+    'Liquid Nitrogen': { short: 'LN2', title: 'Liquid Nitrogen', note: 'Cryogenic storage' }
+  };
+  function getContainerTypeLabel(type) {
+    if (type === 'single') {
+      return 'Single container';
+    }
+    if (type === 'plate96') {
+      return '96-well plate';
+    }
+    return '81-well cube box';
   }
 
-  function getContainerTypeLabel(type) {
-    return type === 'single' ? 'Single container' : '81-well cube box';
+  function getContainerLayout(type) {
+    if (type === 'plate96') {
+      return {
+        rows: 8,
+        cols: 12,
+        className: 'plate96',
+        helperText: '96-well microplate with SBS footprint. Click a well to assign or edit linked samples.'
+      };
+    }
+    return {
+      rows: 9,
+      cols: 9,
+      className: 'box81',
+      helperText: '9 x 9 square box (81 wells). Click a cell to set samples on the right side.'
+    };
+  }
+
+  function createDefaultWells(type) {
+    if (type === 'single') {
+      return [];
+    }
+    const layout = getContainerLayout(type);
+    return Array.from({ length: layout.rows * layout.cols }, (_item, index) => ({
+      name: getWellName(type, index),
+      content: ''
+    }));
+  }
+
+  function getWellName(type, index) {
+    if (type === 'plate96') {
+      const rowLabel = String.fromCharCode(65 + Math.floor(index / 12));
+      const columnLabel = (index % 12) + 1;
+      return `${rowLabel}${columnLabel}`;
+    }
+    return `W${index + 1}`;
   }
 
   function getSectionNames() {
     return ['Room Temp', '4 Degree', '-20 Degree', '-80 Degree', 'Liquid Nitrogen'];
+  }
+
+  function getSectionDisplay(section) {
+    return SECTION_DISPLAY[section] || { short: '--', title: section || 'Unknown', note: '' };
   }
 
   function getContainer(section, containerId) {
@@ -64,6 +124,42 @@ export function initPersonalInventory({ state, persist, createId, safeText, cssE
       }
       return Number(link.wellIndex) === Number(wellIndex);
     });
+  }
+
+  function getContainerSampleCount(section, containerId) {
+    const container = getContainer(section, containerId);
+    if (!container) {
+      return 0;
+    }
+    const directCount = getLinkedSamples(section, containerId, null).length;
+    if (container.type === 'single') {
+      return directCount;
+    }
+    return directCount + (container.wells || []).reduce((count, _well, index) => {
+      return count + getLinkedSamples(section, containerId, index).length;
+    }, 0);
+  }
+
+  function getSectionContainerCount(section) {
+    return Array.isArray(state.inventory?.[section]) ? state.inventory[section].length : 0;
+  }
+
+  function getSectionSampleCount(section) {
+    return (state.inventory?.[section] || []).reduce((count, container) => {
+      return count + getContainerSampleCount(section, container.id);
+    }, 0);
+  }
+
+  function getPreferredSection() {
+    const sections = getSectionNames();
+    if (selectedContainer?.section && sections.includes(selectedContainer.section)) {
+      return selectedContainer.section;
+    }
+    if (selectedSectionName && sections.includes(selectedSectionName)) {
+      return selectedSectionName;
+    }
+    const firstWithContainers = sections.find((section) => getSectionContainerCount(section) > 0);
+    return firstWithContainers || sections[0];
   }
 
   function ensureSamples() {
@@ -144,6 +240,24 @@ export function initPersonalInventory({ state, persist, createId, safeText, cssE
       .join('');
   }
 
+  function getInventorySummaryCounts() {
+    const counts = {
+      total: Array.isArray(state.samples) ? state.samples.length : 0,
+      plasmid: 0,
+      cell_line: 0,
+      protein: 0
+    };
+
+    (state.samples || []).forEach((sample) => {
+      const type = normalizeSampleType(sample?.type);
+      if (Object.prototype.hasOwnProperty.call(counts, type)) {
+        counts[type] += 1;
+      }
+    });
+
+    return counts;
+  }
+
   function buildSampleDotFill(sampleTypes) {
     const unique = Array.from(new Set((sampleTypes || []).map((type) => normalizeSampleType(type))));
     if (!unique.length) {
@@ -191,7 +305,22 @@ export function initPersonalInventory({ state, persist, createId, safeText, cssE
   }
 
   function getWellData(rawWell, index) {
-    const fallbackName = `W${index + 1}`;
+    const fallbackName = getWellName(selectedContainer?.section ? getContainer(selectedContainer.section, selectedContainer.containerId)?.type : 'box81', index);
+    if (rawWell && typeof rawWell === 'object') {
+      return {
+        name: String(rawWell.name || '').trim() || fallbackName,
+        content: String(rawWell.content || '').trim()
+      };
+    }
+
+    return {
+      name: fallbackName,
+      content: String(rawWell || '').trim()
+    };
+  }
+
+  function getWellDataForType(type, rawWell, index) {
+    const fallbackName = getWellName(type, index);
     if (rawWell && typeof rawWell === 'object') {
       return {
         name: String(rawWell.name || '').trim() || fallbackName,
@@ -214,7 +343,7 @@ export function initPersonalInventory({ state, persist, createId, safeText, cssE
       `;
     }
 
-    const well = getWellData(container.wells[index], index);
+    const well = getWellDataForType(container.type || 'box81', container.wells[index], index);
     const linkedSamples = getLinkedSamples(section, container.id, index);
     const activeSample = linkedSamples.find((item) => item.id === editingSampleId) || linkedSamples[0] || null;
     const statusMarkup = wellEditorStatus ? `<p class="small-note well-editor-status">${safeText(wellEditorStatus)}</p>` : '';
@@ -317,7 +446,7 @@ export function initPersonalInventory({ state, persist, createId, safeText, cssE
       return '';
     }
 
-    if ((container.type || 'box81') !== 'box81') {
+    if (container.type === 'single') {
       const linkedSamples = getLinkedSamples(section, container.id, null);
       return `
         <div class="container-inline-detail">
@@ -331,13 +460,22 @@ export function initPersonalInventory({ state, persist, createId, safeText, cssE
             </label>
             <button type="button" class="primary-btn" data-single-container-save="${safeText(container.id)}">Save Content</button>
           </div>
+          <div class="container-detail-actions">
+            <button
+              type="button"
+              class="danger-btn"
+              data-container-delete="${safeText(container.id)}"
+              data-section="${safeText(section)}"
+            >Delete</button>
+          </div>
         </div>
       `;
     }
 
+    const layout = getContainerLayout(container.type || 'box81');
     const wells = Array.isArray(container.wells) ? container.wells : [];
     const grid = wells.map((rawWell, index) => {
-      const well = getWellData(rawWell, index);
+      const well = getWellDataForType(container.type || 'box81', rawWell, index);
       const linkedSamples = getLinkedSamples(section, container.id, index);
       const linkedTypeLabels = Array.from(new Set(linkedSamples.map((item) => getSampleTypeLabel(item.type))));
       const linkedText = linkedSamples.length
@@ -350,7 +488,7 @@ export function initPersonalInventory({ state, persist, createId, safeText, cssE
       return `
         <button
           type="button"
-          class="well${editingWellIndex === index ? ' well-selected' : ''}"
+          class="well well-${safeText(layout.className)}${editingWellIndex === index ? ' well-selected' : ''}"
           data-well-index="${index}"
           data-section="${safeText(section)}"
           data-container-id="${safeText(container.id)}"
@@ -366,13 +504,134 @@ export function initPersonalInventory({ state, persist, createId, safeText, cssE
     return `
       <div class="container-inline-detail">
         <h4>${safeText(section)} / ${safeText(container.name)} (${getContainerTypeLabel(container.type)})</h4>
-        <p class="small-note">9 x 9 square box (81 wells). Click a cell to set samples on the right side.</p>
+        <p class="small-note">${safeText(layout.helperText)}</p>
         <div class="well-editor-shell">
-          <div class="well-grid-panel">
-            <div class="well-grid">${grid}</div>
+          <div class="well-grid-panel well-grid-panel-${safeText(layout.className)}">
+            <div
+              class="well-grid well-grid-${safeText(layout.className)}"
+              style="--well-grid-cols:${safeText(String(layout.cols))}; --well-grid-rows:${safeText(String(layout.rows))};"
+            >${grid}</div>
             ${renderSampleLegendForContainer(section, container)}
           </div>
           ${renderWellEditor(section, container, editingWellIndex)}
+        </div>
+        <div class="container-detail-actions">
+          <button
+            type="button"
+            class="danger-btn"
+            data-container-delete="${safeText(container.id)}"
+            data-section="${safeText(section)}"
+          >Delete</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderSectionNavigation(activeSection) {
+    if (!inventoryLocationNav) {
+      return;
+    }
+
+    inventoryLocationNav.innerHTML = getSectionNames().map((section) => {
+      const display = getSectionDisplay(section);
+      const containerCount = getSectionContainerCount(section);
+      const sampleCount = getSectionSampleCount(section);
+      const containerLabel = `${containerCount} container${containerCount === 1 ? '' : 's'}`;
+      const containers = state.inventory?.[section] || [];
+      const containerMarkup = section === activeSection
+        ? `
+          <div class="inventory-container-nav">
+            ${containers.length ? containers.map((container) => {
+      const isActive = selectedContainer && selectedContainer.section === section && selectedContainer.containerId === container.id;
+      return `
+                <div class="inventory-container-item">
+                  <button
+                    type="button"
+                    class="inventory-container-btn${isActive ? ' active' : ''}"
+                    data-container-open="${safeText(container.id)}"
+                    data-section="${safeText(section)}"
+                  >
+                    <span class="inventory-container-name">${safeText(container.name)}</span>
+                  </button>
+                </div>
+              `;
+    }).join('') : '<p class="small-note inventory-container-nav-empty">No containers in this section yet.</p>'}
+          </div>
+        `
+        : '';
+      return `
+        <div class="inventory-location-group">
+          <button
+            type="button"
+            class="inventory-location-btn${section === activeSection ? ' active' : ''}"
+            data-inventory-section="${safeText(section)}"
+          >
+            <span class="inventory-location-icon">${safeText(display.short)}</span>
+            <span class="inventory-location-copy">
+              <span class="inventory-location-title">${safeText(display.title)}</span>
+              <span class="inventory-location-meta">${safeText(containerLabel)}</span>
+            </span>
+            <span class="inventory-location-count">${safeText(String(sampleCount))}</span>
+          </button>
+          ${containerMarkup}
+        </div>
+      `;
+    }).join('');
+
+    inventoryLocationNav.querySelectorAll('[data-inventory-section]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const section = button.dataset.inventorySection || getPreferredSection();
+        selectedSectionName = section;
+        editingWellIndex = -1;
+        editingSampleId = '';
+        wellEditorStatus = '';
+        const firstContainer = (state.inventory?.[section] || [])[0];
+        if (firstContainer) {
+          openContainer(section, firstContainer.id);
+          return;
+        }
+        selectedContainer = null;
+        renderSections();
+      });
+    });
+
+    inventoryLocationNav.querySelectorAll('[data-container-open]').forEach((button) => {
+      button.addEventListener('click', () => {
+        openContainer(button.dataset.section, button.dataset.containerOpen);
+      });
+    });
+
+  }
+
+  function renderSummaryCard(activeSection) {
+    if (!inventorySummaryCard) {
+      return;
+    }
+
+    const summary = getInventorySummaryCounts();
+    const activeDisplay = getSectionDisplay(activeSection);
+
+    inventorySummaryCard.innerHTML = `
+      <div class="inventory-summary-head">
+        <h3>Inventory Summary</h3>
+        <p class="small-note">${safeText(activeDisplay.title)} has ${safeText(String(getSectionContainerCount(activeSection)))} container(s) and ${safeText(String(getSectionSampleCount(activeSection)))} linked sample(s).</p>
+      </div>
+      <div class="inventory-summary-stats">
+        <div class="inventory-summary-row">
+          <span class="inventory-summary-label"><span class="inventory-summary-dot inventory-summary-dot-total"></span>Total Samples</span>
+          <strong>${safeText(String(summary.total))}</strong>
+        </div>
+        <div class="inventory-summary-row">
+          <span class="inventory-summary-label"><span class="inventory-summary-dot inventory-summary-dot-plasmid"></span>Plasmids</span>
+          <strong>${safeText(String(summary.plasmid))}</strong>
+        </div>
+        <div class="inventory-summary-row">
+          <span class="inventory-summary-label"><span class="inventory-summary-dot inventory-summary-dot-cell"></span>Cells</span>
+          <strong>${safeText(String(summary.cell_line))}</strong>
+        </div>
+        <div class="inventory-summary-row">
+          <span class="inventory-summary-label"><span class="inventory-summary-dot inventory-summary-dot-protein"></span>Proteins</span>
+          <strong>${safeText(String(summary.protein))}</strong>
         </div>
       </div>
     `;
@@ -384,16 +643,24 @@ export function initPersonalInventory({ state, persist, createId, safeText, cssE
       return;
     }
 
+    selectedSectionName = section;
     selectedContainer = { section, containerId };
     editingWellIndex = -1;
     editingSampleId = '';
     wellEditorStatus = '';
+    shouldAutoOpenContainer = false;
     renderSections();
   }
 
   function notifySamplesChanged() {
     if (typeof onSamplesChanged === 'function') {
       onSamplesChanged();
+    }
+  }
+
+  function notifyInventoryChanged() {
+    if (typeof onInventoryChanged === 'function') {
+      onInventoryChanged();
     }
   }
 
@@ -425,12 +692,12 @@ export function initPersonalInventory({ state, persist, createId, safeText, cssE
       return;
     }
 
-    const type = addContainerTypeSelect?.value === 'single' ? 'single' : 'box81';
+    const type = ['single', 'plate96'].includes(addContainerTypeSelect?.value) ? addContainerTypeSelect.value : 'box81';
     const container = {
       id: createId(),
       name,
       type,
-      wells: type === 'box81' ? Array.from({ length: 81 }, () => '') : [],
+      wells: createDefaultWells(type),
       singleContent: type === 'single' ? '' : undefined
     };
 
@@ -438,14 +705,17 @@ export function initPersonalInventory({ state, persist, createId, safeText, cssE
     state.inventory[section].push(container);
     persist();
 
+    selectedSectionName = section;
     selectedContainer = { section, containerId: container.id };
     editingWellIndex = -1;
     editingSampleId = '';
     wellEditorStatus = '';
+    shouldAutoOpenContainer = true;
     if (addContainerNameInput) {
       addContainerNameInput.value = '';
     }
     setAddContainerFormOpen(false);
+    notifyInventoryChanged();
     renderSections();
   }
 
@@ -468,49 +738,54 @@ export function initPersonalInventory({ state, persist, createId, safeText, cssE
 
   function renderSections() {
     renderAddContainerLocationOptions();
-    inventorySections.innerHTML = getSectionNames().map((section) => {
-      const containers = state.inventory[section] || [];
-      const items = containers.map((container) => `
-        <div class="container-item-row">
-          <button
-            class="list-main-btn text-list-btn${selectedContainer && selectedContainer.section === section && selectedContainer.containerId === container.id ? ' active' : ''}"
-            data-container-open="${container.id}"
-            data-section="${safeText(section)}"
-          >
-            ${safeText(container.name)}
-          </button>
-          <span class="small-note">Samples: ${getLinkedSamples(section, container.id, null).length + ((container.type || 'box81') === 'box81' ? (container.wells || []).reduce((count, _w, index) => count + getLinkedSamples(section, container.id, index).length, 0) : 0)}</span>
-          <button class="danger-btn container-delete-btn" data-container-delete="${container.id}" data-section="${safeText(section)}">Delete</button>
-        </div>
-        ${selectedContainer && selectedContainer.section === section && selectedContainer.containerId === container.id
-    ? renderContainerDetail(section, container)
-    : ''}
-      `).join('');
+    const activeSection = selectedContainer?.section || getPreferredSection();
+    const activeContainers = state.inventory?.[activeSection] || [];
+    if (
+      (!selectedContainer || selectedContainer.section !== activeSection || !getContainer(activeSection, selectedContainer.containerId))
+      && activeContainers.length
+      && shouldAutoOpenContainer
+    ) {
+      selectedContainer = { section: activeSection, containerId: activeContainers[0].id };
+    }
+    selectedSectionName = activeSection;
+    renderSectionNavigation(activeSection);
+    renderSummaryCard(activeSection);
 
-      return `
-        <section class="inventory-section${selectedContainer && selectedContainer.section === section ? ' inventory-section-active' : ''}">
-          <h3>${safeText(section)}</h3>
-          <div class="stack-form container-items">${items || '<p class="small-note">No containers.</p>'}</div>
+    const activeContainer = selectedContainer?.section === activeSection
+      ? getContainer(activeSection, selectedContainer.containerId)
+      : null;
+    const hiddenContainerOpeners = activeContainers.length
+      ? `
+        <div class="sr-only" aria-hidden="true">
+          ${activeContainers.map((container) => `
+            <button
+              type="button"
+              data-container-open="${safeText(container.id)}"
+              data-section="${safeText(activeSection)}"
+            >${safeText(container.name)}</button>
+          `).join('')}
+        </div>
+      `
+      : '';
+
+    inventorySections.innerHTML = activeContainer
+      ? `
+        <section class="inventory-section inventory-section-active">
+          ${hiddenContainerOpeners}
+          ${renderContainerDetail(activeSection, activeContainer)}
+        </section>
+      `
+      : `
+        <section class="inventory-section inventory-section-active">
+          ${hiddenContainerOpeners}
+          <p class="small-note inventory-empty-state">Select a container from the left panel to open its box view.</p>
         </section>
       `;
-    }).join('');
 
     inventorySections.querySelectorAll('[data-container-open]').forEach((button) => {
       button.addEventListener('click', () => {
         const section = button.dataset.section;
         const containerId = button.dataset.containerOpen;
-        if (
-          selectedContainer &&
-          selectedContainer.section === section &&
-          selectedContainer.containerId === containerId
-        ) {
-          selectedContainer = null;
-          editingWellIndex = -1;
-          editingSampleId = '';
-          wellEditorStatus = '';
-          renderSections();
-          return;
-        }
         openContainer(section, containerId);
       });
     });
@@ -538,10 +813,12 @@ export function initPersonalInventory({ state, persist, createId, safeText, cssE
           editingWellIndex = -1;
           editingSampleId = '';
           wellEditorStatus = '';
+          shouldAutoOpenContainer = true;
         }
 
+        selectedSectionName = section;
         persist();
-        notifySamplesChanged();
+        notifyInventoryChanged();
         renderSections();
       });
     });
@@ -549,7 +826,7 @@ export function initPersonalInventory({ state, persist, createId, safeText, cssE
     inventorySections.querySelectorAll('[data-single-container-save]').forEach((button) => {
       button.addEventListener('click', () => {
         const containerId = button.dataset.singleContainerSave;
-        const section = selectedContainer?.section;
+        const section = selectedContainer?.section || activeSection;
         if (!section) {
           return;
         }

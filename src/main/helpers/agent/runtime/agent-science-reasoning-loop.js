@@ -1,14 +1,28 @@
+/**
+ * Shared science-reasoning runtime for agent flows that need iterative evidence gathering.
+ *
+ * This module centralizes three related science intents:
+ * - general_science_question: literature/web-grounded science Q&A
+ * - project_science_question: project-aware reasoning that prefers internal records first
+ * - result_analysis: deterministic analysis that prefers computation before interpretation
+ *
+ * The runtime enforces a single-tool-per-round loop, evaluates whether evidence is
+ * sufficient after each round, and then synthesizes a final grounded answer.
+ */
 'use strict';
 
 const { createAgentLlmRuntimeHelpers } = require('../shared/agent-llm-utils.js');
 
+// Supported science intents that can be routed into the shared reasoning loop.
 const SCIENCE_REASONING_INTENTS = Object.freeze([
   'general_science_question',
   'project_science_question',
   'result_analysis'
 ]);
 
+// Per-intent execution policies controlling tool scope, retrieval order, and evidence requirements.
 const SCIENCE_REASONING_POLICIES = Object.freeze({
+  // General science Q&A prefers external literature retrieval before broad web search.
   general_science_question: Object.freeze({
     intent: 'general_science_question',
     description: 'Use literature and web retrieval to answer general science questions with grounded citations.',
@@ -24,6 +38,7 @@ const SCIENCE_REASONING_POLICIES = Object.freeze({
     require_retrieval_attempt: true,
     answer_with_limitations_after_attempt: true
   }),
+  // Project science reasoning must ground answers in project-linked records before external sources.
   project_science_question: Object.freeze({
     intent: 'project_science_question',
     description: 'Use project-linked records first, then external literature only when internal evidence is insufficient.',
@@ -45,6 +60,7 @@ const SCIENCE_REASONING_POLICIES = Object.freeze({
     require_project_resolution: true,
     distinguish_internal_vs_external: true
   }),
+  // Result analysis emphasizes deterministic computation before internal/external interpretation.
   result_analysis: Object.freeze({
     intent: 'result_analysis',
     description: 'Use deterministic computation plus local records, then add literature only for interpretation.',
@@ -68,6 +84,7 @@ const SCIENCE_REASONING_POLICIES = Object.freeze({
   })
 });
 
+// Structured schema for the evaluator that decides whether another loop round is required.
 const SCIENCE_RESULT_EVALUATION_SCHEMA = {
   type: 'object',
   additionalProperties: false,
@@ -106,6 +123,7 @@ const SCIENCE_RESULT_EVALUATION_SCHEMA = {
   }
 };
 
+// Structured schema for the final synthesis step that converts gathered evidence into an answer.
 const SCIENCE_FINAL_SYNTHESIS_SCHEMA = {
   type: 'object',
   additionalProperties: false,
@@ -130,7 +148,18 @@ const SCIENCE_FINAL_SYNTHESIS_SCHEMA = {
   }
 };
 
+/**
+ * Build the shared science reasoning runtime.
+ *
+ * The runtime is dependency-injected so the surrounding app can provide:
+ * - LLM helpers for structured JSON generation
+ * - agent session lifecycle methods
+ * - tool execution hooks
+ * - response shaping / validation layers
+ * - lifecycle logging hooks
+ */
 function createScienceReasoningLoopRuntime(deps = {}) {
+  // Shared helper utilities used throughout normalization, validation, and structured LLM calls.
   const {
     asArray,
     cleanText,
@@ -138,6 +167,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
     safeParseJson,
     requestStructuredJsonPayload
   } = createAgentLlmRuntimeHelpers(deps);
+  // Optional dependency overrides with deterministic fallbacks for testability.
   const clamp = typeof deps.clamp === 'function'
     ? deps.clamp
     : ((value, min, max) => Math.max(min, Math.min(max, Number.isFinite(Number(value)) ? Number(value) : min)));
@@ -200,15 +230,18 @@ function createScienceReasoningLoopRuntime(deps = {}) {
     : null;
   const now = typeof deps.now === 'function' ? deps.now : (() => new Date().toISOString());
 
+  // Normalize an incoming intent and reject unsupported science routes.
   function normalizeIntent(intent) {
     const normalized = cleanText(intent, 80);
     return SCIENCE_REASONING_INTENTS.includes(normalized) ? normalized : '';
   }
 
+  // Create lightweight unique IDs for intermediate state snapshots captured during the loop.
   function buildStateId(prefix) {
     return `${cleanText(prefix, 40) || 'science'}-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
   }
 
+  // Record a structured checkpoint so the caller can inspect how reasoning evolved across rounds.
   function buildIntermediateState(stage, goal, extras = {}) {
     return {
       state_id: buildStateId(stage),
@@ -234,6 +267,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
     };
   }
 
+  // Resolve the policy object for a validated intent.
   function getIntentPolicy(intent) {
     const normalized = normalizeIntent(intent);
     if (!normalized) {
@@ -242,6 +276,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
     return SCIENCE_REASONING_POLICIES[normalized];
   }
 
+  // Reduce project metadata to the minimal fields the loop needs for grounded project reasoning.
   function normalizeProject(project) {
     const source = project && typeof project === 'object' ? project : {};
     const id = cleanText(source.id, 120);
@@ -256,6 +291,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
     };
   }
 
+  // Classify citation sources by how directly they support claims inside the app.
   function citationSupportLevel(source) {
     const normalized = cleanText(source, 120).toLowerCase();
     if (!normalized) {
@@ -276,6 +312,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
     return 'indirect';
   }
 
+  // Deduplicate and sanitize citation objects so downstream layers receive a stable format.
   function normalizeCitations(citations, max = 20) {
     const seen = new Set();
     const out = [];
@@ -296,6 +333,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
     return out;
   }
 
+  // Merge model-produced decision records with deterministic fallback notes.
   function normalizeDecisionRecord(record, fallback = {}) {
     const source = record && typeof record === 'object' ? record : {};
     return {
@@ -314,6 +352,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
     };
   }
 
+  // Build a consistent early-exit payload when clarification is required before any safe retrieval.
   function buildNeedsMoreInfoResult({
     intent,
     routing,
@@ -385,6 +424,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
     };
   }
 
+  // Convert tool definitions into a quick lookup map for per-call argument validation.
   function buildToolSchemaMap(toolDefinitions) {
     const out = new Map();
     asArray(toolDefinitions).forEach((tool) => {
@@ -399,6 +439,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
     return out;
   }
 
+  // Minimal JSON-schema-like primitive type check used by the local argument validator.
   function validatePrimitiveByType(value, schemaType) {
     if (schemaType === 'string') {
       return typeof value === 'string';
@@ -421,6 +462,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
     return true;
   }
 
+  // Recursively validate tool arguments against the resolved tool parameter schema.
   function validateArgumentsAgainstSchema(schema, value, path = 'arguments') {
     const targetSchema = schema && typeof schema === 'object' ? schema : {};
     if (Array.isArray(targetSchema.anyOf) && targetSchema.anyOf.length) {
@@ -485,6 +527,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
     return { ok: true };
   }
 
+  // Normalize raw function-call payloads from the agent session into a stable local shape.
   function normalizeToolCall(call) {
     const source = call && typeof call === 'object' ? call : {};
     return {
@@ -494,16 +537,19 @@ function createScienceReasoningLoopRuntime(deps = {}) {
     };
   }
 
+  // Heuristic: detect requests that should not be satisfied without recent/reference-backed sources.
   function messageRequestsRecentSources(message) {
     return /\b(latest|recent|current|today|newest|papers|references|citations|study|studies|findings)\b/i
       .test(String(message || ''));
   }
 
+  // Heuristic: detect prompts that imply deterministic numeric or transformation work.
   function messageRequestsComputation(message) {
     return /\b(fit|curve|transform|quantif|outlier|calculate|compute|regression|normalize|analy[sz]e data)\b/i
       .test(String(message || ''));
   }
 
+  // Check whether any accumulated citation came from an external evidence source.
   function hasExternalCitation(citations) {
     return asArray(citations).some((citation) => {
       const source = cleanText(citation?.source, 120).toLowerCase();
@@ -511,6 +557,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
     });
   }
 
+  // Check whether any accumulated citation came from internal/project-linked evidence.
   function hasInternalCitation(citations) {
     return asArray(citations).some((citation) => {
       const source = cleanText(citation?.source, 120).toLowerCase();
@@ -518,6 +565,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
     });
   }
 
+  // Assemble the evaluator prompt that judges whether the current evidence is sufficient.
   function buildEvaluationPrompt({
     intent,
     policy,
@@ -549,6 +597,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
     ].filter(Boolean).join('\n\n');
   }
 
+  // Sanitize evaluator output so the loop can continue safely even with imperfect model responses.
   function normalizeEvaluationPayload(rawPayload, fallbackReason = '') {
     const source = rawPayload && typeof rawPayload === 'object' ? rawPayload : {};
     const nextToolHint = source.next_tool_hint && typeof source.next_tool_hint === 'object'
@@ -568,6 +617,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
     };
   }
 
+  // Run the sufficiency evaluator after each round, or delegate to a caller-provided override.
   async function evaluateScienceRound(payload = {}) {
     if (evaluateScienceRoundOverride) {
       const overridden = await evaluateScienceRoundOverride(payload);
@@ -601,6 +651,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
     return normalizeEvaluationPayload(llmResult.payload);
   }
 
+  // Assemble the final synthesis prompt using only evidence already collected by the loop.
   function buildSynthesisPrompt({
     intent,
     policy,
@@ -634,6 +685,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
     ].filter(Boolean).join('\n\n');
   }
 
+  // Produce the final answer payload, or fall back deterministically if synthesis is unavailable.
   async function synthesizeScienceFinal(payload = {}) {
     if (synthesizeScienceFinalOverride) {
       const overridden = await synthesizeScienceFinalOverride(payload);
@@ -686,6 +738,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
     };
   }
 
+  // Construct the agent session system prompt that constrains the loop to one tool per turn.
   function buildScienceSessionSystemPrompt({
     baseSystemPrompt = '',
     intent,
@@ -722,6 +775,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
     ].filter(Boolean).join('\n\n');
   }
 
+  // Turn evaluator output into a follow-up user-style message that nudges the agent forward.
   function buildEvaluatorFeedback(evaluation, intent) {
     const missing = uniqueStrings(asArray(evaluation?.missing_requirements), 6);
     const nextTool = evaluation?.next_tool_hint && typeof evaluation.next_tool_hint === 'object'
@@ -738,6 +792,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
     ].filter(Boolean).join('\n');
   }
 
+  // Create a last-resort textual answer from the latest assistant/tool state when synthesis fails.
   function buildFallbackAnswer({
     latestAssistantText,
     evaluator,
@@ -753,6 +808,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
     return parts.join('\n\n') || 'I could not gather enough evidence to produce a confident answer.';
   }
 
+  // Wrap validation or execution failures in the same shape as real tool outputs.
   function buildSyntheticToolEnvelope(toolName, args, roundIndex, errorMessage) {
     return {
       ok: false,
@@ -771,6 +827,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
     };
   }
 
+  // Enforce deterministic policy checks on top of evaluator output before deciding to stop.
   function mergePolicyEvaluationHints(intent, policy, message, evaluation, citations, toolTrace) {
     const next = {
       ...evaluation,
@@ -837,6 +894,16 @@ function createScienceReasoningLoopRuntime(deps = {}) {
     return next;
   }
 
+  /**
+   * Core multi-round execution loop shared by all science intents.
+   *
+   * Flow:
+   * 1. Normalize routing/context.
+   * 2. Start an agent session constrained by the selected policy.
+   * 3. Execute at most one valid tool per round.
+   * 4. Re-evaluate sufficiency after each tool result.
+   * 5. Synthesize a final answer once evidence is sufficient or the budget is exhausted.
+   */
   async function runIntentLoop(input = {}) {
     const intent = normalizeIntent(input.intent);
     if (!intent) {
@@ -874,6 +941,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
     let roundsExecuted = 0;
     let feedbackTurnsWithoutTool = 0;
 
+    // Capture the initial reasoning snapshot before any clarification or tool execution occurs.
     intermediateStates.push(buildIntermediateState('science_intake', `Start ${intent} reasoning loop.`, {
       assumptions: [
         `Intent policy=${policy.retrieval_priority}.`,
@@ -885,6 +953,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
       confidence: 0.52
     }));
 
+    // Stop early when the parser has already identified missing information.
     if (parserPayload.needs_clarification === true) {
       return buildNeedsMoreInfoResult({
         intent,
@@ -896,6 +965,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
       });
     }
 
+    // Project-grounded science questions cannot proceed until a single project is resolved.
     if (intent === 'project_science_question' && policy.require_project_resolution === true && !project) {
       const followUpQuestion = cleanText(input.projectResolutionQuestion, 320)
         || 'Which project should I use for this science question?';
@@ -921,6 +991,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
       throw new Error('Science reasoning loop requires startAgentSession and runTool dependencies.');
     }
 
+    // Notify lifecycle observers that the shared science loop has started.
     recordLifecycleEvent(lifecycleRecorder, {
       stage: 'science_intent_started',
       status: 'started',
@@ -928,6 +999,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
       message: `Started shared science reasoning loop for ${intent}.`
     });
 
+    // Start the constrained agent session that will iteratively propose tool calls.
     let currentSession = await startAgentSession({
       provider: cleanText(input.provider, 80),
       endpoint: cleanText(input.endpoint, 2000),
@@ -951,10 +1023,12 @@ function createScienceReasoningLoopRuntime(deps = {}) {
     let latestAssistantText = cleanText(extractAgentSessionText(currentSession), 12000);
     let finalEvaluation = null;
 
+    // Continue until evidence is sufficient or the tool / feedback budget is exhausted.
     while (roundsExecuted < maxRounds || feedbackTurnsWithoutTool < maxRounds) {
       const rawCalls = asArray(extractAgentSessionFunctionCalls(currentSession)).map(normalizeToolCall);
       const validCalls = rawCalls.filter((call) => toolSchemaMap.has(call.name));
 
+      // No valid tool was proposed, so ask the evaluator whether the loop can stop anyway.
       if (!validCalls.length) {
         finalEvaluation = mergePolicyEvaluationHints(
           intent,
@@ -1001,6 +1075,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
           break;
         }
 
+        // Feed evaluator guidance back into the session to steer the next single-tool proposal.
         feedbackTurnsWithoutTool += 1;
         recordLifecycleEvent(lifecycleRecorder, {
           stage: 'science_evaluator_continue',
@@ -1017,7 +1092,9 @@ function createScienceReasoningLoopRuntime(deps = {}) {
         continue;
       }
 
+      // A valid tool call resets the no-tool feedback counter.
       feedbackTurnsWithoutTool = 0;
+      // Only the first valid call is executed to preserve deterministic one-tool-per-round behavior.
       const selectedCall = validCalls[0];
       const parsedArgs = safeParseJson(selectedCall.argsText || '{}', {});
       const argsObject = parsedArgs && typeof parsedArgs === 'object' ? parsedArgs : {};
@@ -1036,6 +1113,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
         }
       });
 
+      // Validate and execute the selected tool, normalizing any failure into a synthetic envelope.
       let toolEnvelope;
       if (!validation.ok) {
         toolEnvelope = buildSyntheticToolEnvelope(
@@ -1068,6 +1146,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
         }
       }
 
+      // Persist a compact trace row for observability and downstream answer synthesis.
       const normalizedTraceRow = {
         round: roundsExecuted,
         call_id: selectedCall.callId,
@@ -1105,6 +1184,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
         confidence: toolEnvelope?.ok === true ? 0.66 : 0.42
       }));
 
+      // Return the tool output to the session so the agent can continue from fresh evidence.
       currentSession = await continueAgentSessionWithToolOutputs(currentSession, [
         {
           callId: selectedCall.callId,
@@ -1114,6 +1194,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
       ], traceContext);
       latestAssistantText = cleanText(extractAgentSessionText(currentSession), 12000);
 
+      // Re-run sufficiency evaluation now that a new tool result has been incorporated.
       finalEvaluation = mergePolicyEvaluationHints(
         intent,
         policy,
@@ -1177,6 +1258,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
       latestAssistantText = cleanText(extractAgentSessionText(currentSession), 12000);
     }
 
+    // If the evaluator never marked the loop satisfied, return a best-effort partial answer.
     const partial = !(finalEvaluation?.satisfied === true);
     const synthesis = await synthesizeScienceFinal({
       provider: input.provider,
@@ -1218,6 +1300,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
       ]
     });
 
+    // Pass the synthesized answer through the app's response-layer normalizer.
     const responseLayer = applyResponseLayerToOutput({
       normalized: {
         answer: cleanText(synthesis.answer, 12000)
@@ -1233,6 +1316,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
       toolTrace
     });
 
+    // Run the final answer through validation/provenance gates before returning it.
     const validated = applyValidationGateToOutput({
       routing,
       normalized: responseLayer,
@@ -1267,6 +1351,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
       }
     });
 
+    // Return the fully normalized result object consumed by higher-level agent orchestration.
     return {
       status: partial ? 'partial' : 'completed',
       answer: cleanText(validated.normalized.answer, 12000),
@@ -1296,6 +1381,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
     };
   }
 
+  // Convenience wrapper for the general-science intent.
   async function runGeneralScienceQuestion(input = {}) {
     return runIntentLoop({
       ...input,
@@ -1303,6 +1389,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
     });
   }
 
+  // Convenience wrapper for the project-science intent.
   async function runProjectScienceQuestion(input = {}) {
     return runIntentLoop({
       ...input,
@@ -1310,6 +1397,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
     });
   }
 
+  // Convenience wrapper for the result-analysis intent.
   async function runResultAnalysis(input = {}) {
     return runIntentLoop({
       ...input,
@@ -1328,6 +1416,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
   };
 }
 
+// Export both runtime builders and policy constants for reuse in other agent modules and tests.
 module.exports = {
   SCIENCE_REASONING_INTENTS,
   SCIENCE_REASONING_POLICIES,

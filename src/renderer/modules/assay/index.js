@@ -149,6 +149,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     TabulatorLib,
     isMappedWell: layoutManager.isMappedWell,
     getCurrentDefinition: layoutManager.getCurrentDefinition,
+    getSampleAxis: layoutManager.getSampleAxis,
     filterAndNormalizeResults: (results) => layoutManager.filterMappedResults(
       normalizeResults(results, layoutManager.getCurrentDefinition())
     ),

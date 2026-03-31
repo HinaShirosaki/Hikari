@@ -6,15 +6,10 @@ const { Telegraf } = require('telegraf');
 
 const TELEGRAM_MODULE_MAP = new Map([
   ['home', { type: 'open-view', viewId: 'home-view', label: 'Home' }],
-  ['members', { type: 'open-view', viewId: 'lab-management-view', label: 'Members' }],
-  ['member', { type: 'open-view', viewId: 'lab-management-view', label: 'Members' }],
-  ['collaborations', { type: 'open-view', viewId: 'lab-management-view', label: 'Members' }],
-  ['collaboration', { type: 'open-view', viewId: 'lab-management-view', label: 'Members' }],
   ['instruments', { type: 'open-view', viewId: 'instrument-management-view', label: 'Instruments' }],
   ['instrument', { type: 'open-view', viewId: 'instrument-management-view', label: 'Instruments' }],
   ['protocols', { type: 'open-view', viewId: 'protocol-management-view', label: 'Protocols' }],
   ['protocol', { type: 'open-view', viewId: 'protocol-management-view', label: 'Protocols' }],
-  ['synthesis', { type: 'open-view', viewId: 'synthesis-notebook-view', label: 'Synthesis Notebook' }],
   ['biology', { type: 'open-view', viewId: 'biology-notebook-view', label: 'Biology Notebook' }],
   ['chemicals', { type: 'open-view', viewId: 'lab-common-inventory-view', label: 'Chemicals' }],
   ['samples', { type: 'open-view', viewId: 'sample-registry-view', label: 'Samples' }],
