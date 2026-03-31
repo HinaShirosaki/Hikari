@@ -16,23 +16,6 @@ export const APP_REGISTRY = [
     "searchInputId": ""
   },
   {
-    "id": "members",
-    "label": "Members",
-    "viewId": "lab-management-view",
-    "icon": "members.svg",
-    "iconMarkup": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\n  <circle cx=\"9\" cy=\"8\" r=\"2.5\" />\n  <circle cx=\"16\" cy=\"9\" r=\"2\" />\n  <path d=\"M4.5 18c.7-2.2 2.8-3.5 4.5-3.5s3.8 1.3 4.5 3.5\" />\n  <path d=\"M14 17.5c.5-1.6 2-2.5 3.2-2.5 1.1 0 2.4.8 2.8 2.3\" />\n</svg>",
-    "placement": "more",
-    "aliases": [
-      "member",
-      "people",
-      "team",
-      "collaboration",
-      "collaborations",
-      "partners"
-    ],
-    "searchInputId": ""
-  },
-  {
     "id": "instruments",
     "label": "Instruments",
     "viewId": "instrument-management-view",
@@ -56,20 +39,6 @@ export const APP_REGISTRY = [
     "aliases": [
       "protocol",
       "procedure"
-    ],
-    "searchInputId": ""
-  },
-  {
-    "id": "synthesis-notebook",
-    "label": "Synthesis Notebook",
-    "viewId": "synthesis-notebook-view",
-    "icon": "synthesis-notebook.svg",
-    "iconMarkup": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\n  <path d=\"M7 4.5h9a3 3 0 0 1 3 3v12H10a3 3 0 0 0-3 0Z\" />\n  <path d=\"M7 4.5H6a2 2 0 0 0-2 2v13h3\" />\n  <path d=\"M11 9h5M11 12.5h5M11 16h4\" />\n</svg>",
-    "placement": "more",
-    "aliases": [
-      "synthesis",
-      "chemistry notebook",
-      "chemistry"
     ],
     "searchInputId": ""
   },

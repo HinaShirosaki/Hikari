@@ -40,6 +40,10 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
     gelCancelBtn,
     gelExportJsonBtn,
     gelExportCsvBtn,
+    gelToolLeftBorderBtn,
+    gelToolRightBorderBtn,
+    gelToolDividersBtn,
+    gelToolLadderLaneBtn,
     gelCanvas,
     gelCropperImage,
     gelReportSummary,
@@ -69,6 +73,7 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
   let cropperActive = false;
   let cropDisplaySize = null;
   let manualDividerConfirmed = false;
+  let selectedViewerTool = '';
   let imageRevision = 0;
   let preprocessedCache = null;
   let enhancementRerunTimer = null;
@@ -87,6 +92,10 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
   gelCancelBtn?.addEventListener('click', resetForm);
   gelExportJsonBtn?.addEventListener('click', onExportJson);
   gelExportCsvBtn?.addEventListener('click', onExportCsv);
+  gelToolLeftBorderBtn?.addEventListener('click', () => onViewerToolSelected('left'));
+  gelToolRightBorderBtn?.addEventListener('click', () => onViewerToolSelected('right'));
+  gelToolDividersBtn?.addEventListener('click', () => onViewerToolSelected('dividers'));
+  gelToolLadderLaneBtn?.addEventListener('click', () => onViewerToolSelected('ladder'));
   gelForm?.addEventListener('submit', onSaveAnalysis);
   gelSearchInput?.addEventListener('input', renderList);
   gelList?.addEventListener('click', onListClick);
@@ -104,6 +113,40 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
     if (gelStatus) {
       gelStatus.textContent = message || '';
     }
+  }
+
+  function getViewerToolLabel(tool = selectedViewerTool) {
+    if (tool === 'left') {
+      return 'Set left border';
+    }
+    if (tool === 'right') {
+      return 'Set right border';
+    }
+    if (tool === 'dividers') {
+      return 'Set dividers';
+    }
+    if (tool === 'ladder') {
+      return 'Set ladder lane';
+    }
+    return '';
+  }
+
+  function renderViewerToolbar() {
+    gelToolLeftBorderBtn?.classList.toggle('is-active', selectedViewerTool === 'left');
+    gelToolRightBorderBtn?.classList.toggle('is-active', selectedViewerTool === 'right');
+    gelToolDividersBtn?.classList.toggle('is-active', selectedViewerTool === 'dividers');
+    gelToolLadderLaneBtn?.classList.toggle('is-active', selectedViewerTool === 'ladder');
+  }
+
+  function onViewerToolSelected(tool) {
+    selectedViewerTool = selectedViewerTool === tool ? '' : tool;
+    renderViewerToolbar();
+    const label = getViewerToolLabel();
+    if (label) {
+      setStatus(`${label} selected. Click the gel image to apply it.`);
+      return;
+    }
+    setStatus('Viewer tool cleared. Manual workflow will follow the current step.');
   }
 
   function setCurrentImage(nextImage) {
@@ -214,6 +257,13 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
     return 'bands';
   }
 
+  function getCanvasInteractionStep() {
+    if (selectedViewerTool) {
+      return selectedViewerTool;
+    }
+    return getManualStep();
+  }
+
   function updateStepClass(element, state) {
     if (!element) {
       return;
@@ -246,6 +296,7 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
       gelManualNextBtn.disabled = !(activeStep === 'dividers' || activeStep === 'ladder-mw');
       gelManualNextBtn.textContent = activeStep === 'ladder-mw' ? 'Done Ladder MW' : 'Done Dividers';
     }
+    renderViewerToolbar();
   }
 
   function copyNormalizedImage(image) {
@@ -465,6 +516,7 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
   function onResetManualOverrides() {
     manualOverrides = createEmptyManualOverrides();
     manualDividerConfirmed = false;
+    selectedViewerTool = '';
     currentReport = null;
     renderOverrideStatus();
     renderReport();
@@ -530,6 +582,7 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
     currentReport = null;
     manualOverrides = createEmptyManualOverrides();
     manualDividerConfirmed = false;
+    selectedViewerTool = '';
     renderOverrideStatus();
     renderReport();
     leaveCropMode();
@@ -547,6 +600,7 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
     currentReport = null;
     manualOverrides = createEmptyManualOverrides();
     manualDividerConfirmed = false;
+    selectedViewerTool = '';
     renderOverrideStatus();
     renderReport();
     leaveCropMode();
@@ -730,6 +784,7 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
         addedBands: []
       };
     }
+    selectedViewerTool = '';
     currentReport = null;
     renderOverrideStatus();
     renderCanvas();
@@ -740,6 +795,7 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
   function onManualResetSteps() {
     manualOverrides = createEmptyManualOverrides();
     manualDividerConfirmed = false;
+    selectedViewerTool = '';
     currentReport = null;
     renderOverrideStatus();
     renderManualProgress();
@@ -798,7 +854,7 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
       return;
     }
 
-    const step = getManualStep();
+    const step = getCanvasInteractionStep();
     if (step === 'left') {
       updateLaneSegmentation({ gelLeft: point.x, dividers: [], dividerDone: false, bandTop: null, bandBottom: null });
       manualDividerConfirmed = false;
@@ -935,6 +991,7 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
       currentReport = null;
       manualOverrides = createEmptyManualOverrides();
       manualDividerConfirmed = false;
+      selectedViewerTool = '';
       leaveCropMode();
       renderOverrideStatus();
       renderCanvas();
@@ -953,6 +1010,7 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
       currentReport = null;
       manualOverrides = createEmptyManualOverrides();
       manualDividerConfirmed = false;
+      selectedViewerTool = '';
       leaveCropMode();
       renderOverrideStatus();
       renderCanvas();
@@ -1307,6 +1365,7 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
     cropApplied = false;
     leaveCropMode();
     manualDividerConfirmed = false;
+    selectedViewerTool = '';
 
     renderProjectOptions();
     renderNotebookOptions();
@@ -1342,6 +1401,7 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
     renderEnhancementValues();
     manualOverrides = normalizeManualOverrides(record.manualOverrides || parameters.manualOverrides);
     manualDividerConfirmed = Boolean(manualOverrides.laneSegmentation?.dividerDone);
+    selectedViewerTool = '';
     renderOverrideStatus();
 
     currentReport = record.report || null;
@@ -1464,6 +1524,7 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
     setCropUiState();
     renderOverrideStatus();
     renderManualProgress();
+    renderViewerToolbar();
     renderReport();
     renderList();
     if (!currentImage) {

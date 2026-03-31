@@ -3,6 +3,7 @@ import {
   toRowLabel,
   wellIdFor
 } from './plate-model.js';
+import { oppositeAxis } from './shared.js';
 
 function toResultField(columnIndex) {
   return `c${columnIndex + 1}`;
@@ -22,6 +23,7 @@ export function createAssayResultsManager({
   TabulatorLib,
   isMappedWell,
   getCurrentDefinition,
+  getSampleAxis,
   filterAndNormalizeResults,
   setResultStatus,
   clearAnalysisOutput,
@@ -41,26 +43,103 @@ export function createAssayResultsManager({
   let resultGrid = null;
   let resultGridSignature = '';
 
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function axisDisplayLabel(axisKey) {
+    return axisKey === 'sampleId' ? 'Sample ID' : 'Concentration';
+  }
+
+  function buildLayoutMap() {
+    const map = {};
+    (Array.isArray(runtime.currentLayout) ? runtime.currentLayout : []).forEach((item) => {
+      const well = String(item?.well || '').trim().toUpperCase();
+      if (!well) {
+        return;
+      }
+      map[well] = {
+        sampleId: String(item?.sampleId || '').trim(),
+        concentration: String(item?.concentration || '').trim()
+      };
+    });
+    return map;
+  }
+
+  function buildAxisMetadata(def) {
+    const sampleAxis = typeof getSampleAxis === 'function' ? getSampleAxis() : 'row';
+    const rowField = sampleAxis === 'row' ? 'sampleId' : 'concentration';
+    const columnField = oppositeAxis(sampleAxis) === 'column' ? 'concentration' : 'sampleId';
+    const layoutMap = buildLayoutMap();
+    const rowValues = new Array(def.rows).fill('');
+    const columnValues = new Array(def.columns).fill('');
+
+    for (let rowIndex = 0; rowIndex < def.rows; rowIndex += 1) {
+      for (let columnIndex = 0; columnIndex < def.columns; columnIndex += 1) {
+        const mapping = layoutMap[wellIdFor(rowIndex, columnIndex)];
+        if (!mapping) {
+          continue;
+        }
+        if (!rowValues[rowIndex] && mapping[rowField]) {
+          rowValues[rowIndex] = mapping[rowField];
+        }
+        if (!columnValues[columnIndex] && mapping[columnField]) {
+          columnValues[columnIndex] = mapping[columnField];
+        }
+      }
+    }
+
+    return {
+      rowField,
+      columnField,
+      rowValues,
+      columnValues
+    };
+  }
+
   function getResultValueCount() {
     return Object.keys(runtime.currentResults || {}).length;
   }
 
   function buildResultGridColumns(def) {
+    const metadata = buildAxisMetadata(def);
     const columns = [
       {
         title: '',
         field: 'rowLabel',
-        width: 62,
-        minWidth: 62,
+        width: 54,
+        minWidth: 54,
         headerSort: false,
         hozAlign: 'center',
         frozen: true,
         editable: false
+      },
+      {
+        title: axisDisplayLabel(metadata.rowField),
+        field: 'rowMeta',
+        width: 92,
+        minWidth: 92,
+        headerSort: false,
+        hozAlign: 'center',
+        frozen: true,
+        editable: false,
+        formatter: (cell) => String(cell.getValue() || '—')
       }
     ];
     for (let columnIndex = 0; columnIndex < def.columns; columnIndex += 1) {
+      const metaValue = String(metadata.columnValues[columnIndex] || '').trim();
       columns.push({
-        title: String(columnIndex + 1),
+        title: `
+          <div class="assay-result-col-head">
+            <span class="assay-result-col-index">${columnIndex + 1}</span>
+            <span class="assay-result-col-meta">${escapeHtml(metaValue || '—')}</span>
+          </div>
+        `,
         field: toResultField(columnIndex),
         editor: 'input',
         editable: (cell) => {
@@ -95,11 +174,13 @@ export function createAssayResultsManager({
   }
 
   function buildResultGridData(def) {
+    const metadata = buildAxisMetadata(def);
     const rows = [];
     for (let rowIndex = 0; rowIndex < def.rows; rowIndex += 1) {
       const row = {
         __rowIndex: rowIndex,
-        rowLabel: toRowLabel(rowIndex)
+        rowLabel: toRowLabel(rowIndex),
+        rowMeta: metadata.rowValues[rowIndex] || '—'
       };
       for (let columnIndex = 0; columnIndex < def.columns; columnIndex += 1) {
         const well = wellIdFor(rowIndex, columnIndex);

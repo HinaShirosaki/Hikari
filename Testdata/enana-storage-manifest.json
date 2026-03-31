@@ -1,7 +1,7 @@
 {
   "schema_name": "enana_storage_manifest",
   "schema_version": "1.0.0",
-  "generated_at": "2026-03-29T20:31:25.895Z",
+  "generated_at": "2026-03-31T16:22:00.098Z",
   "root_path": "/Users/shiyifan/Projects/Enana/Testdata",
   "discovered_files": [
     {
@@ -86,14 +86,14 @@
       "type": "file",
       "role": "data_file",
       "size_bytes": 2463,
-      "modified_at": "2026-03-29T20:25:28.456Z"
+      "modified_at": "2026-03-31T16:21:21.994Z"
     },
     {
       "relative_path": "enana-chemicals.index.sqlite",
       "type": "file",
       "role": "sqlite_index",
       "size_bytes": 94208,
-      "modified_at": "2026-03-29T20:25:28.462Z"
+      "modified_at": "2026-03-31T16:21:22.001Z"
     },
     {
       "relative_path": "enana-chemicals.index.sqlite-shm",
@@ -114,21 +114,21 @@
       "type": "file",
       "role": "notebook_sidecar",
       "size_bytes": 139,
-      "modified_at": "2026-03-29T20:25:28.457Z"
+      "modified_at": "2026-03-31T16:21:21.995Z"
     },
     {
       "relative_path": "enana-chemicals.protocols.json",
       "type": "file",
       "role": "protocol_sidecar",
       "size_bytes": 130,
-      "modified_at": "2026-03-29T20:25:28.457Z"
+      "modified_at": "2026-03-31T16:21:21.995Z"
     },
     {
       "relative_path": "enana-sample.notebook-pages.index.sqlite",
       "type": "file",
       "role": "sqlite_index",
       "size_bytes": 155648,
-      "modified_at": "2026-03-29T20:25:28.655Z"
+      "modified_at": "2026-03-31T16:21:22.188Z"
     },
     {
       "relative_path": "enana-sample.notebook-pages.index.sqlite-shm",
@@ -148,29 +148,29 @@
       "relative_path": "enana-sample.notebook-pages.json",
       "type": "file",
       "role": "notebook_sidecar",
-      "size_bytes": 11385086,
-      "modified_at": "2026-03-29T20:25:28.648Z"
+      "size_bytes": 11479391,
+      "modified_at": "2026-03-31T16:21:22.181Z"
     },
     {
       "relative_path": "enana-sample.notebook-pages.notebook-pages.json",
       "type": "file",
       "role": "notebook_sidecar",
       "size_bytes": 2767,
-      "modified_at": "2026-03-29T20:25:28.650Z"
+      "modified_at": "2026-03-31T16:21:22.181Z"
     },
     {
       "relative_path": "enana-sample.notebook-pages.protocols.json",
       "type": "file",
       "role": "protocol_sidecar",
       "size_bytes": 16528,
-      "modified_at": "2026-03-29T20:25:28.649Z"
+      "modified_at": "2026-03-31T16:21:22.181Z"
     },
     {
       "relative_path": "enana-storage-manifest.json",
       "type": "file",
       "role": "storage_manifest",
       "size_bytes": 15707,
-      "modified_at": "2026-03-29T20:25:28.243Z"
+      "modified_at": "2026-03-31T16:21:21.798Z"
     },
     {
       "relative_path": "Project",
@@ -387,7 +387,7 @@
       "type": "directory",
       "role": "sequence_entry_file",
       "size_bytes": 0,
-      "modified_at": "2026-03-29T20:29:41.527Z"
+      "modified_at": "2026-03-30T02:41:17.258Z"
     },
     {
       "relative_path": "SequenceViewer/entries/seq_1773939319336_31cfdf21/alignments",
@@ -400,15 +400,15 @@
       "relative_path": "SequenceViewer/entries/seq_1773939319336_31cfdf21/sequence_1.gbk",
       "type": "file",
       "role": "sequence_entry_file",
-      "size_bytes": 12069,
-      "modified_at": "2026-03-29T20:29:41.527Z"
+      "size_bytes": 12343,
+      "modified_at": "2026-03-30T02:41:17.257Z"
     },
     {
       "relative_path": "SequenceViewer/entries/seq_1773939319336_31cfdf21/sequence_1.html",
       "type": "file",
       "role": "sequence_entry_file",
-      "size_bytes": 7899,
-      "modified_at": "2026-03-29T20:29:41.527Z"
+      "size_bytes": 8124,
+      "modified_at": "2026-03-30T02:41:17.258Z"
     },
     {
       "relative_path": "SequenceViewer/entries/seq_1774540165097_6f6b5f24",
@@ -436,7 +436,7 @@
       "type": "file",
       "role": "sequence_library_index",
       "size_bytes": 81920,
-      "modified_at": "2026-03-29T20:29:41.588Z"
+      "modified_at": "2026-03-30T02:41:17.282Z"
     }
   ],
   "bundles": [
@@ -451,7 +451,7 @@
         "protocols": 0,
         "notebookEntries": 0,
         "chemicals": 3,
-        "personalInventoryContainers": 5
+        "personalInventoryContainers": 6
       },
       "migration": {
         "applied": [
@@ -488,7 +488,7 @@
         "protocols": 6,
         "notebookEntries": 3,
         "chemicals": 3,
-        "personalInventoryContainers": 5
+        "personalInventoryContainers": 6
       },
       "migration": {
         "applied": [
@@ -529,7 +529,7 @@
     "protocols": 6,
     "notebookEntries": 3,
     "chemicals": 3,
-    "personalInventoryContainers": 5,
+    "personalInventoryContainers": 6,
     "sequenceEntries": 5
   },
   "warnings": []

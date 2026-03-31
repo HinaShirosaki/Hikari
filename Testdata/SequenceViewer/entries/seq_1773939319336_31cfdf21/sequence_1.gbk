@@ -102,6 +102,11 @@ FEATURES             Location/Qualifiers
                      /note="pasted_sequence saved vector recognized with 5,625
                      bp exact backbone coverage (100.0% of host, forward
                      orientation)."
+     backbone        1..5625
+                     /label="Backbone (pasted_sequence)"
+                     /note="pasted_sequence saved vector recognized with 5,625
+                     bp exact backbone coverage (100.0% of host, forward
+                     orientation)."
 ORIGIN
         1 ggcgccagca accgcacctg tggcgccggt gatgccggcc acgatgcgtc cggcgtagag
        61 gatcgagatc tcgatcccgc gaaattaata cgactcacta taggggaatt gtgagcggat

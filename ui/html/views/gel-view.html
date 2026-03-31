@@ -83,6 +83,12 @@
           <div class="panel gel-viewer-panel">
             <h3>Gel Viewer</h3>
             <p class="small-note">Lane borders and band calls are overlaid. Re-run analysis after changing parameters.</p>
+            <div class="gel-viewer-toolbar" role="toolbar" aria-label="Gel viewer tools">
+              <button type="button" id="gel-tool-left-border-btn" class="ghost-btn">Set left border</button>
+              <button type="button" id="gel-tool-right-border-btn" class="ghost-btn">Set right border</button>
+              <button type="button" id="gel-tool-dividers-btn" class="ghost-btn">Set dividers</button>
+              <button type="button" id="gel-tool-ladder-lane-btn" class="ghost-btn">Set ladder lane</button>
+            </div>
             <div class="gel-canvas-shell">
               <canvas id="gel-canvas"></canvas>
               <img id="gel-cropper-image" alt="Gel cropper" />

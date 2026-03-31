@@ -1,164 +1,159 @@
 <section id="assay-view" class="view">
-      <div class="panel">
-        <h2>Assay</h2>
-        <div class="calendar-view-switch assay-mode-switch" role="group" aria-label="Assay mode">
-          <button type="button" id="assay-mode-create-btn" class="ghost-btn calendar-view-active">Create Assay</button>
-          <button type="button" id="assay-mode-results-btn" class="ghost-btn">View &amp; Results</button>
-        </div>
-        <p id="assay-mode-note" class="small-note" hidden></p>
-      </div>
-
-      <div class="panel assay-mode-create-panel">
-        <h3>Create Assay Plate</h3>
-        <form id="assay-form" class="form-grid assay-form-grid">
-          <input type="hidden" id="assay-id" />
-          <div class="assay-display-field">
-            <span class="assay-display-label">Assay Number</span>
-            <div id="assay-number-display" class="assay-display-value" aria-live="polite"></div>
-          </div>
-          <label>
-            Assay Name
-            <input id="assay-name" required placeholder="e.g. Cell viability run 2026-02-19" />
-          </label>
-          <label>
-            Project
-            <select id="assay-project">
-              <option value="">Select project</option>
-            </select>
-          </label>
-          <label>
-            Plate Type
-            <select id="assay-plate-type">
-              <option value="6">6 well</option>
-              <option value="12">12 well</option>
-              <option value="24">24 well</option>
-              <option value="48">48 well</option>
-              <option value="96" selected>96 well</option>
-              <option value="384">384 well</option>
-              <option value="1536">1536 well</option>
-            </select>
-          </label>
-          <div class="assay-axis-switch">
-            <span class="assay-display-label">Sample ID Axis</span>
-            <div class="calendar-view-switch assay-mode-switch" role="group" aria-label="Sample ID axis switch">
-              <button type="button" id="assay-sample-axis-row-btn" class="ghost-btn calendar-view-active">Row</button>
-              <button type="button" id="assay-sample-axis-column-btn" class="ghost-btn">Column</button>
+      <div class="assay-create-layout">
+        <div class="panel assay-mode-create-panel assay-create-sidebar">
+          <form id="assay-form" class="form-grid assay-form-grid">
+            <input type="hidden" id="assay-id" />
+            <div class="assay-display-field">
+              <span class="assay-display-label">Assay Number</span>
+              <div id="assay-number-display" class="assay-display-value" aria-live="polite"></div>
             </div>
-            <select id="assay-sample-axis" hidden>
-              <option value="row" selected>Row</option>
-              <option value="column">Column</option>
-            </select>
+            <label>
+              Assay Name
+              <input id="assay-name" required placeholder="e.g. Cell viability run 2026-02-19" />
+            </label>
+            <label>
+              Project
+              <select id="assay-project">
+                <option value="">Select project</option>
+              </select>
+            </label>
+            <label>
+              Plate Type
+              <select id="assay-plate-type">
+                <option value="6">6 well</option>
+                <option value="12">12 well</option>
+                <option value="24">24 well</option>
+                <option value="48">48 well</option>
+                <option value="96" selected>96 well</option>
+                <option value="384">384 well</option>
+                <option value="1536">1536 well</option>
+              </select>
+            </label>
+            <div class="assay-axis-switch">
+              <span class="assay-display-label">Sample ID Axis</span>
+              <div class="calendar-view-switch assay-mode-switch" role="group" aria-label="Sample ID axis switch">
+                <button type="button" id="assay-sample-axis-row-btn" class="ghost-btn calendar-view-active">Row</button>
+                <button type="button" id="assay-sample-axis-column-btn" class="ghost-btn">Column</button>
+              </div>
+              <select id="assay-sample-axis" hidden>
+                <option value="row" selected>Row</option>
+                <option value="column">Column</option>
+              </select>
+            </div>
+            <label>
+              Concentration Axis
+              <input id="assay-concentration-axis-display" readonly />
+            </label>
+            <label>
+              Link Notebook Page
+              <select id="assay-notebook-entry">
+                <option value="">Not linked</option>
+              </select>
+            </label>
+            <div id="assay-plate-definition" class="small-note assay-form-note" hidden></div>
+            <div id="assay-csv-status" class="small-note assay-form-note"></div>
+            <div class="form-actions assay-form-actions">
+              <button type="button" id="assay-export-template-btn" class="ghost-btn">Export CSV Template</button>
+              <button type="button" id="assay-import-template-btn" class="ghost-btn">Import CSV</button>
+              <input id="assay-import-file" type="file" accept=".csv,text/csv" hidden />
+              <button type="submit" class="primary-btn">Save Assay</button>
+              <button type="button" id="assay-cancel-btn" class="ghost-btn">Cancel Edit</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="panel assay-mode-create-panel assay-create-preview-panel">
+          <p class="small-note">Click a well and edit directly on this plate. Use switch to choose Sample ID or Concentration field.</p>
+          <div class="form-actions">
+            <div class="calendar-view-switch assay-mode-switch" role="group" aria-label="Plate edit field">
+              <button type="button" id="assay-plate-field-sample-btn" class="ghost-btn calendar-view-active">Edit Sample ID</button>
+              <button type="button" id="assay-plate-field-concentration-btn" class="ghost-btn">Edit Concentration</button>
+            </div>
+            <button type="button" id="assay-clear-mappings-btn" class="ghost-btn">Clear All Mappings</button>
           </div>
-          <label>
-            Concentration Axis
-            <input id="assay-concentration-axis-display" readonly />
-          </label>
-          <label>
-            Link Notebook Page
-            <select id="assay-notebook-entry">
-              <option value="">Not linked</option>
-            </select>
-          </label>
-          <div id="assay-plate-definition" class="small-note assay-form-note" hidden></div>
-          <div id="assay-csv-status" class="small-note assay-form-note"></div>
-          <div class="form-actions assay-form-actions">
-            <button type="button" id="assay-export-template-btn" class="ghost-btn">Export CSV Template</button>
-            <button type="button" id="assay-import-template-btn" class="ghost-btn">Import CSV</button>
-            <input id="assay-import-file" type="file" accept=".csv,text/csv" hidden />
-            <button type="submit" class="primary-btn">Save Assay</button>
-            <button type="button" id="assay-cancel-btn" class="ghost-btn">Cancel Edit</button>
-          </div>
-        </form>
+          <div id="assay-layout-status" class="small-note"></div>
+          <div id="assay-plate-preview" class="assay-plate-preview"></div>
+        </div>
       </div>
 
-      <div class="panel assay-mode-create-panel">
-        <h3>Plate Preview</h3>
-        <p class="small-note">Click a well and edit directly on this plate. Use switch to choose Sample ID or Concentration field.</p>
-        <div class="form-actions">
-          <div class="calendar-view-switch assay-mode-switch" role="group" aria-label="Plate edit field">
-            <button type="button" id="assay-plate-field-sample-btn" class="ghost-btn calendar-view-active">Edit Sample ID</button>
-            <button type="button" id="assay-plate-field-concentration-btn" class="ghost-btn">Edit Concentration</button>
+      <div class="assay-results-layout assay-mode-results-panel" hidden>
+        <div class="panel assay-results-sheet-panel">
+          <p class="small-note">Open a saved assay plate, paste values from spreadsheet, then save and analyze.</p>
+          <label>
+            Assay Plate
+            <select id="assay-results-assay-select">
+              <option value="">Select assay plate</option>
+            </select>
+          </label>
+          <div class="form-actions assay-results-actions">
+            <button type="button" id="assay-results-load-btn" class="ghost-btn">Load Plate</button>
+            <button type="button" id="assay-save-results-btn" class="primary-btn">Save Results</button>
+            <button type="button" id="assay-clear-results-btn" class="ghost-btn">Clear Results</button>
           </div>
-          <button type="button" id="assay-clear-mappings-btn" class="ghost-btn">Clear All Mappings</button>
+          <div id="assay-active-assay-info" class="small-note"></div>
+          <div id="assay-result-status" class="small-note"></div>
+          <div id="assay-result-table" class="assay-plate-preview"></div>
         </div>
-        <div id="assay-layout-status" class="small-note"></div>
-        <div id="assay-plate-preview" class="assay-plate-preview"></div>
-        <h4>Mapped Wells</h4>
-        <div id="assay-layout-list" class="list-table"></div>
-      </div>
 
-      <div class="panel assay-mode-results-panel" hidden>
-        <h3>View &amp; Results</h3>
-        <p class="small-note">Open a saved assay plate, paste values from spreadsheet, then save and analyze.</p>
-        <label>
-          Assay Plate
-          <select id="assay-results-assay-select">
-            <option value="">Select assay plate</option>
-          </select>
-        </label>
-        <label>
-          Analysis Method
-          <select id="assay-analysis-method">
-            <option value="grouped_summary" selected>Grouped Summary</option>
-            <option value="nested_summary">Nested Summary</option>
-            <option value="row_summary">Row Summary</option>
-            <option value="column_summary">Column Summary</option>
-            <option value="linear_regression">Linear Regression</option>
-            <option value="ec50">EC50 (4PL Fit)</option>
-            <option value="ic50">IC50 (4PL Fit)</option>
-            <option value="survival">Survival %</option>
-            <optgroup label="Standard curves to interpolate">
-              <option value="standard_curve_line">Line</option>
-              <option value="standard_curve_4pl_log_concentration">Sigmoidal, 4PL, X is log(concentration)</option>
-              <option value="standard_curve_4pl_concentration">Sigmoidal, 4PL, X is concentration</option>
-              <option value="standard_curve_5pl_log_concentration">Asymmetric Sigmoidal, 5PL, X is log(concentration)</option>
-              <option value="standard_curve_5pl_concentration">Asymmetric Sigmoidal, 5PL, X is concentration</option>
-              <option value="standard_curve_semilog_line">Semilog line</option>
-              <option value="standard_curve_hyperbola">Hyperbola (X is concentration)</option>
-              <option value="standard_curve_quadratic">Second order polynomial (quadratic)</option>
-              <option value="standard_curve_cubic">Third order polynomial (cubic)</option>
-              <option value="standard_curve_pade_11">Pade (1,1) approximant</option>
-            </optgroup>
-          </select>
-        </label>
-        <div class="assay-analysis-controls">
+        <div class="panel assay-results-analysis-panel">
           <label>
-            Row Groups (optional)
-            <textarea id="assay-analysis-row-groups" rows="2" placeholder="Control: A,B; Treated: C,D"></textarea>
+            Analysis Method
+            <select id="assay-analysis-method">
+              <option value="grouped_summary" selected>Grouped Summary</option>
+              <option value="nested_summary">Nested Summary</option>
+              <option value="row_summary">Row Summary</option>
+              <option value="column_summary">Column Summary</option>
+              <option value="linear_regression">Linear Regression</option>
+              <option value="ec50">EC50 (4PL Fit)</option>
+              <option value="ic50">IC50 (4PL Fit)</option>
+              <option value="survival">Survival %</option>
+              <optgroup label="Standard curves to interpolate">
+                <option value="standard_curve_line">Line</option>
+                <option value="standard_curve_4pl_log_concentration">Sigmoidal, 4PL, X is log(concentration)</option>
+                <option value="standard_curve_4pl_concentration">Sigmoidal, 4PL, X is concentration</option>
+                <option value="standard_curve_5pl_log_concentration">Asymmetric Sigmoidal, 5PL, X is log(concentration)</option>
+                <option value="standard_curve_5pl_concentration">Asymmetric Sigmoidal, 5PL, X is concentration</option>
+                <option value="standard_curve_semilog_line">Semilog line</option>
+                <option value="standard_curve_hyperbola">Hyperbola (X is concentration)</option>
+                <option value="standard_curve_quadratic">Second order polynomial (quadratic)</option>
+                <option value="standard_curve_cubic">Third order polynomial (cubic)</option>
+                <option value="standard_curve_pade_11">Pade (1,1) approximant</option>
+              </optgroup>
+            </select>
           </label>
-          <label>
-            Column Groups (optional)
-            <textarea id="assay-analysis-column-groups" rows="2" placeholder="Early: 1,2; Late: 3,4"></textarea>
-          </label>
-          <label class="assay-analysis-checkbox">
-            <input id="assay-analysis-error-bars" type="checkbox" />
-            Show SD error bars (for Row/Column Summary)
-          </label>
-          <label>
-            Replicate Group Name (optional)
-            <input id="assay-analysis-group-name" placeholder="e.g. Control replicate" />
-          </label>
-          <div class="form-actions assay-analysis-group-actions">
-            <button type="button" id="assay-analysis-add-row-group-btn" class="ghost-btn">Add Selected as Row Group</button>
-            <button type="button" id="assay-analysis-add-column-group-btn" class="ghost-btn">Add Selected as Column Group</button>
-            <button type="button" id="assay-analysis-clear-groups-btn" class="ghost-btn">Clear Groups</button>
+          <div class="assay-analysis-controls">
+            <label>
+              Row Groups (optional)
+              <textarea id="assay-analysis-row-groups" rows="2" placeholder="Control: A,B; Treated: C,D"></textarea>
+            </label>
+            <label>
+              Column Groups (optional)
+              <textarea id="assay-analysis-column-groups" rows="2" placeholder="Early: 1,2; Late: 3,4"></textarea>
+            </label>
+            <label class="assay-analysis-checkbox">
+              <input id="assay-analysis-error-bars" type="checkbox" />
+              Show SD error bars (for Row/Column Summary)
+            </label>
+            <label>
+              Replicate Group Name (optional)
+              <input id="assay-analysis-group-name" placeholder="e.g. Control replicate" />
+            </label>
+            <div class="form-actions assay-analysis-group-actions">
+              <button type="button" id="assay-analysis-add-row-group-btn" class="ghost-btn">Add Selected as Row Group</button>
+              <button type="button" id="assay-analysis-add-column-group-btn" class="ghost-btn">Add Selected as Column Group</button>
+              <button type="button" id="assay-analysis-clear-groups-btn" class="ghost-btn">Clear Groups</button>
+            </div>
+            <div id="assay-analysis-selection-status" class="small-note"></div>
+            <p class="small-note assay-analysis-help">
+              Drag-select replicate wells in the result table, then add as row or column group. Manual format also works: <code>Group: item1,item2</code>; ranges: <code>A-C</code> or <code>1-3</code>.
+            </p>
           </div>
-          <div id="assay-analysis-selection-status" class="small-note"></div>
-          <p class="small-note assay-analysis-help">
-            Drag-select replicate wells in the result table, then add as row or column group. Manual format also works: <code>Group: item1,item2</code>; ranges: <code>A-C</code> or <code>1-3</code>.
-          </p>
+          <div class="form-actions assay-results-actions">
+            <button type="button" id="assay-analyze-results-btn" class="ghost-btn">Analyze Results</button>
+          </div>
+          <div id="assay-analysis-summary" class="small-note"></div>
+          <div id="assay-analysis-table" class="list-table"></div>
         </div>
-        <div class="form-actions assay-results-actions">
-          <button type="button" id="assay-results-load-btn" class="ghost-btn">Load Plate</button>
-          <button type="button" id="assay-save-results-btn" class="primary-btn">Save Results</button>
-          <button type="button" id="assay-clear-results-btn" class="ghost-btn">Clear Results</button>
-          <button type="button" id="assay-analyze-results-btn" class="ghost-btn">Analyze Results</button>
-        </div>
-        <div id="assay-active-assay-info" class="small-note"></div>
-        <div id="assay-result-status" class="small-note"></div>
-        <div id="assay-result-table" class="assay-plate-preview"></div>
-        <div id="assay-analysis-summary" class="small-note"></div>
-        <div id="assay-analysis-table" class="list-table"></div>
       </div>
 
       <div class="panel assay-mode-results-panel" hidden>

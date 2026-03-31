@@ -21,10 +21,8 @@ export const VIEWS = {
 
 export const TITLES = {
   [VIEWS.HOME]: 'Bench overview, reminders, workflow progress, and a lab timer.',
-  [VIEWS.LAB_MANAGEMENT]: 'Directory of members, roles, Enana inboxes, and collaboration threads.',
   [VIEWS.INSTRUMENT_MANAGEMENT]: 'Instrument schedules, availability, and reservations.',
   [VIEWS.PROTOCOL_MANAGEMENT]: 'Protocol library for drafting, editing, and reuse.',
-  [VIEWS.SYNTHESIS_NOTEBOOK]: 'Chemistry notebook entries and linked project context.',
   [VIEWS.BIOLOGY_NOTEBOOK]: 'Biology notebook entries and wet-lab context.',
   [VIEWS.LAB_COMMON_INVENTORY]: 'Chemical inventory, locations, and stock records.',
   [VIEWS.SAMPLE_REGISTRY]: 'Samples, storage containers, and personal inventory in one workspace.',
@@ -91,10 +89,8 @@ export function defaultLlmEndpointForProvider(provider) {
 
 const STARTUP_DEFAULT_VIEW_IDS = new Set([
   VIEWS.HOME,
-  VIEWS.LAB_MANAGEMENT,
   VIEWS.INSTRUMENT_MANAGEMENT,
   VIEWS.PROTOCOL_MANAGEMENT,
-  VIEWS.SYNTHESIS_NOTEBOOK,
   VIEWS.BIOLOGY_NOTEBOOK,
   VIEWS.LAB_COMMON_INVENTORY,
   VIEWS.SAMPLE_REGISTRY,

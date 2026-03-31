@@ -7,20 +7,12 @@
       "file": "ui/html/views/home-view.html"
     },
     {
-      "id": "lab-management-view",
-      "file": "ui/html/views/lab-management-view.html"
-    },
-    {
       "id": "instrument-management-view",
       "file": "ui/html/views/instrument-management-view.html"
     },
     {
       "id": "protocol-management-view",
       "file": "ui/html/views/protocol-management-view.html"
-    },
-    {
-      "id": "synthesis-notebook-view",
-      "file": "ui/html/views/synthesis-notebook-view.html"
     },
     {
       "id": "biology-notebook-view",

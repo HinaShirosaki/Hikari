@@ -86,7 +86,7 @@ export function initSampleRegistry({ state, persist, safeText }) {
     const linked = findLinkedContainer(sampleLinkContainerInput?.value);
     const options = ['<option value="">Auto / none</option>'];
     if (linked) {
-      if ((linked.container.type || 'box81') === 'box81') {
+      if ((linked.container.type || 'box81') !== 'single') {
         (linked.container.wells || []).forEach((rawWell, index) => {
           const wellName = rawWell && typeof rawWell === 'object'
             ? String(rawWell.name || `W${index + 1}`)

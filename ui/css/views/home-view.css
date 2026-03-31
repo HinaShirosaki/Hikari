@@ -13,6 +13,10 @@
   align-content: start;
 }
 
+#home-view .home-section-primary {
+  min-height: 100%;
+}
+
 #home-view .home-section-wide {
   grid-column: 1 / -1;
   padding-bottom: 18px;
@@ -23,14 +27,117 @@
   align-self: start;
 }
 
+#home-view .home-timer-card {
+  gap: 16px;
+  padding: 22px;
+  border: 1px solid color-mix(in srgb, var(--line) 72%, white 28%);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--surface-elevated) 74%, var(--bg) 26%), transparent 55%),
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-elevated) 88%, var(--bg) 12%), color-mix(in srgb, var(--surface) 82%, white 18%));
+  box-shadow: 0 18px 45px rgba(42, 36, 29, 0.08);
+}
+
 #home-view .home-section-head {
   display: grid;
   gap: 4px;
 }
 
+#home-view .dashboard-eyebrow {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
 #home-view .home-section-head h2,
 #home-view .dashboard-list-group h3 {
   margin: 0;
+}
+
+#home-view .home-timer-card-top {
+  display: grid;
+  gap: 10px;
+}
+
+#home-view .dashboard-local-time {
+  margin: 6px 0 0;
+  font-size: clamp(3rem, 6vw, 4.8rem);
+  line-height: 0.92;
+  font-weight: 650;
+  letter-spacing: -0.05em;
+  color: var(--accent);
+}
+
+#home-view .dashboard-local-date {
+  margin: 0;
+  font-size: 1.02rem;
+  color: var(--muted);
+}
+
+#home-view .dashboard-timer-divider {
+  height: 1px;
+  background: color-mix(in srgb, var(--line) 76%, transparent 24%);
+}
+
+#home-view .dashboard-timer-saved-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+#home-view .dashboard-timer-saved-head h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+#home-view .dashboard-timer-saved-list {
+  display: grid;
+  gap: 10px;
+}
+
+#home-view .dashboard-timer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 0;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--surface-subtle) 82%, white 18%);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 140ms ease, background 140ms ease, box-shadow 140ms ease;
+}
+
+#home-view .dashboard-timer-row:hover,
+#home-view .dashboard-timer-row:focus-visible {
+  transform: translateY(-1px);
+  background: color-mix(in srgb, var(--surface-subtle) 68%, white 32%);
+  box-shadow: 0 10px 24px rgba(42, 36, 29, 0.06);
+}
+
+#home-view .dashboard-timer-row.is-active {
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface-subtle) 84%);
+}
+
+#home-view .dashboard-timer-row-title,
+#home-view .dashboard-timer-row-value {
+  display: block;
+}
+
+#home-view .dashboard-timer-row-title {
+  font-weight: 600;
+}
+
+#home-view .dashboard-timer-row-value {
+  color: var(--muted);
+  white-space: nowrap;
 }
 
 #home-view .dashboard-split-grid {
@@ -92,12 +199,17 @@
 
 #home-view .dashboard-timer-display {
   margin: 0;
-  font-size: 2rem;
+  font-size: 2.3rem;
   font-weight: 600;
+  letter-spacing: -0.04em;
 }
 
 #home-view .dashboard-timer-display.is-alert {
   color: var(--danger);
+}
+
+#home-view .dashboard-timer-presets .ghost-btn {
+  min-width: 56px;
 }
 
 @media (max-width: 960px) {
@@ -111,5 +223,15 @@
 
   #home-view .home-section-wide {
     grid-column: auto;
+  }
+
+  #home-view .dashboard-timer-saved-head,
+  #home-view .dashboard-timer-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  #home-view .dashboard-local-time {
+    font-size: clamp(2.7rem, 16vw, 4rem);
   }
 }

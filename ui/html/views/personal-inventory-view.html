@@ -1,9 +1,11 @@
 <section id="personal-inventory-view" class="view">
-      <div class="panel">
-        <div class="inventory-toolbar">
-          <button id="inventory-add-container-btn" type="button" class="primary-btn">Add Container</button>
-          <h2 class="sr-only">Inventory</h2>
-        </div>
+      <aside class="panel inventory-rail-panel">
+        <button id="inventory-add-container-btn" type="button" class="primary-btn">Add Container</button>
+        <div id="inventory-location-nav" class="inventory-location-nav"></div>
+        <div id="inventory-summary-card" class="inventory-summary-card"></div>
+      </aside>
+
+      <div class="panel inventory-main-panel">
         <form id="inventory-add-container-form" class="form-grid inventory-add-form" hidden>
           <label>
             Container Name
@@ -19,6 +21,7 @@
             Type
             <select id="inventory-add-container-type">
               <option value="box81">81-well cube box</option>
+              <option value="plate96">96-well plate</option>
               <option value="single">Single container (tube/bottle)</option>
             </select>
           </label>
@@ -28,17 +31,5 @@
           </div>
         </form>
         <div id="inventory-sections" class="inventory-sections"></div>
-      </div>
-      <div id="container-detail" class="panel" hidden>
-        <h3 id="container-title"></h3>
-        <p id="container-detail-note" class="small-note">9 x 9 box (81 wells). Click each well to edit content.</p>
-        <div id="well-grid" class="well-grid"></div>
-        <div id="single-container-editor" class="stack-form" hidden>
-          <label>
-            Container Content
-            <textarea id="single-container-content" rows="4" placeholder="Describe content in tube or bottle"></textarea>
-          </label>
-          <button id="single-container-save-btn" type="button" class="primary-btn">Save Content</button>
-        </div>
       </div>
     </section>
