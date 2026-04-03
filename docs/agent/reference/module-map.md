@@ -43,7 +43,9 @@ This file is a quick lookup index for `src/main/helpers/agent`.
 | --- | --- | --- |
 | `tools/Tools.json` | Support | short tool catalog |
 | `tools/Tool-call.json` | Support | input schemas and long descriptions |
-| `tools/agent-tool-call.js` | Main path | shared schema-driven tool wrapper used by the controller |
+| `tools/agent-tool-loading.js` | Main path | loads tool catalog JSON, validates schemas, and builds model-facing prompts |
+| `tools/agent-tool-execution.js` | Main path | executor registry and normalized tool execution wrapper |
+| `tools/agent-tool-call.js` | Support | compatibility wrapper that re-exports the split loading/execution helpers |
 | `tools/agent-inventory-lookup.js` | Main path | concrete inventory lookup logic |
 | `tools/agent-record-lookup.js` | Main path | concrete record lookup logic |
 | `tools/agent-protocol-matching.js` | Support | protocol ranking and tie-break selection |

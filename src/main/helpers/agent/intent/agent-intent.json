@@ -43,20 +43,22 @@
   "project_science_question": {
     "name": "project_science_question",
     "description": "Use when the user asks a scientific question tied to a specific project, experiment, workflow, or project record.",
-    "rules": "Capture the project and other routing entities when they are present or strongly implied, and keep inventory_search empty unless the question is explicitly about stock.",
+    "rules": "Capture the project and other routing entities when they are present or strongly implied. Set reasoning_effort to 0 when the project-science question is straightforward enough to answer directly once the intent is recognized. Set reasoning_effort to 1 when the request should enter a targeted reasoning loop with a small number of internal/external evidence steps. Set reasoning_effort to 2 when the request needs broader multi-step synthesis across project evidence and external literature. Keep inventory_search empty unless the question is explicitly about stock.",
     "example_input": "Why did the Atlas binder lose expression after transfection?",
     "specific_output_append": {
-      "entities.project_name": "Populate when a project is named or clearly implied.",
+      "reasoning_effort": "Use 0 for direct answer after intent recognition, 1 for a focused reasoning loop, and 2 for a deeper multi-step reasoning loop.",
+      "direct_answer": "When reasoning_effort is 0, provide the actual user-facing answer here. Otherwise set to null.",
       "inventory_search": "Keep empty unless the question is specifically about stock."
     }
   },
   "general_science_question": {
     "name": "general_science_question",
     "description": "Use when the user asks a general science question that is not tied to a specific project or stored lab record.",
-    "rules": "Do not force project entities without project context, use requested_output when helpful, and keep inventory_search empty unless the user explicitly asks about inventory.",
+    "rules": "Do not force project entities without project context. Set reasoning_effort to 0 when the question is straightforward, stable, and can be answered directly once the intent is recognized. Set reasoning_effort to 1 when the request should enter a targeted reasoning loop with limited retrieval or tool use. Set reasoning_effort to 2 when the request needs broader synthesis, comparison, or recent-source grounding across multiple steps. Use requested_output when helpful, and keep inventory_search empty unless the user explicitly asks about inventory.",
     "example_input": "Why does imidazole help elute His-tagged proteins?",
     "specific_output_append": {
-      "entities.project_name": "Leave null unless the user clearly ties the question to a specific project.",
+      "reasoning_effort": "Use 0 for direct answer after intent recognition, 1 for a focused reasoning loop, and 2 for a deeper multi-step reasoning loop.",
+      "direct_answer": "When reasoning_effort is 0, provide the actual user-facing answer here. Otherwise set to null.",
       "protocol_candidates": "Set to [] for general science questions."
     }
   },

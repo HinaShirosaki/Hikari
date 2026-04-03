@@ -100,6 +100,93 @@
   font-size: 0.9rem;
 }
 
+.reaction-mix-shell {
+  gap: 14px;
+}
+
+.reaction-mix-table,
+.reaction-mix-rows {
+  display: grid;
+  gap: 10px;
+}
+
+.reaction-mix-row {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(160px, 1.2fr) repeat(3, minmax(170px, 1fr)) minmax(92px, auto);
+  align-items: start;
+  padding: 12px 0;
+  border-top: 1px solid var(--line-soft);
+}
+
+.reaction-mix-row-special:last-child {
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.reaction-mix-cell {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.reaction-mix-cell-label {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.reaction-mix-static {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  background: var(--surface-subtle);
+}
+
+.reaction-mix-static-warning {
+  color: var(--danger);
+}
+
+.reaction-mix-volume-cell .inline-row,
+#tool-fixed-reaction-view .inline-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.reaction-mix-volume-cell .inline-row input,
+.reaction-mix-volume-cell .inline-row select,
+#tool-fixed-reaction-view .inline-row input,
+#tool-fixed-reaction-view .inline-row select {
+  height: 38px;
+}
+
+.reaction-mix-row-note {
+  min-height: 1.2em;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.reaction-mix-row-note.is-ok {
+  color: var(--text);
+}
+
+.reaction-mix-row-note.is-warning {
+  color: var(--danger);
+}
+
+.reaction-mix-action-cell {
+  align-self: end;
+}
+
+.reaction-mix-action-cell .ghost-btn {
+  width: 100%;
+}
+
 .plannotate-ui-shell {
   display: grid;
   gap: 12px;
@@ -827,6 +914,18 @@ body.ui-neutral-compact input[id*="api-key"] {
 .buffer-row .buffer-output,
 .buffer-row .buffer-remove-btn {
   min-width: 0;
+}
+
+@media (max-width: 1080px) {
+  .reaction-mix-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .reaction-mix-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 #tool-buffer-view .buffer-chemical-select,

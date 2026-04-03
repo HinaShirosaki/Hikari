@@ -1,12 +1,11 @@
 import { parseJsonFromText } from './normalizers.js';
 import { parsePdfDataUrl } from './storage.js';
-
-const LLM_PROVIDER_ENDPOINTS = {
-  openai: 'https://api.openai.com/v1/responses',
-  gemini: 'https://generativelanguage.googleapis.com/v1beta',
-  claude: 'https://api.anthropic.com/v1/messages',
-  codex: 'codex://cli'
-};
+import {
+  LLM_PROVIDERS,
+  defaultLlmEndpointForProvider,
+  normalizeLlmProvider,
+  providerRequiresApiKey
+} from '../shared.js';
 
 const LLM_PROMPTS_PATH = './data/llm-prompts.json';
 const DEFAULT_LLM_PROMPTS = {
@@ -17,48 +16,15 @@ const DEFAULT_LLM_PROMPTS = {
   paperTitleSuffix: ''
 };
 
-function inferProviderFromEndpoint(endpoint) {
-  const value = String(endpoint || '').trim().toLowerCase();
-  if (!value) {
-    return '';
-  }
-  if (value.startsWith('codex://') || value.includes('codex cli') || value.includes('openai-cli')) {
-    return 'codex';
-  }
-  if (value.includes('anthropic.com')) {
-    return 'claude';
-  }
-  if (value.includes('generativelanguage.googleapis.com') || value.includes('ai.google')) {
-    return 'gemini';
-  }
-  if (value.includes('openai.com') || value.includes('/openai/')) {
-    return 'openai';
-  }
-  return '';
-}
-
-function normalizeLlmProvider(provider, endpoint = '') {
-  const clean = String(provider || '').trim().toLowerCase();
-  if (clean === 'openai' || clean === 'gemini' || clean === 'claude' || clean === 'codex') {
-    return clean;
-  }
-  return inferProviderFromEndpoint(endpoint) || 'openai';
-}
-
-function defaultEndpointForProvider(provider) {
-  const resolved = normalizeLlmProvider(provider);
-  return LLM_PROVIDER_ENDPOINTS[resolved] || LLM_PROVIDER_ENDPOINTS.openai;
-}
-
 function getLlmRequestConfig(llm) {
   const legacySetting = String(llm?.api || '').trim();
   const legacyLooksLikeEndpoint = /^[a-z]+:\/\//i.test(legacySetting);
   const endpointCandidate = String(llm?.apiEndpoint || '').trim() || (legacyLooksLikeEndpoint ? legacySetting : '');
   const provider = normalizeLlmProvider(llm?.provider, endpointCandidate);
-  const endpoint = endpointCandidate || defaultEndpointForProvider(provider);
+  const endpoint = endpointCandidate || defaultLlmEndpointForProvider(provider);
   const token = String(llm?.apiKey || '').trim() || (legacySetting && !legacyLooksLikeEndpoint ? legacySetting : '');
 
-  if (provider !== 'codex' && !token) {
+  if (providerRequiresApiKey(provider) && !token) {
     throw new Error('Missing API key in Settings > LLM Model & API.');
   }
 
@@ -86,11 +52,11 @@ function renderPromptTemplate(template, vars = {}) {
 async function requestResponses({ llm, modelFallbackPrompt, fileName, pdfDataUrl, prompt }) {
   const { provider, endpoint, token } = getLlmRequestConfig(llm);
   const model = String(llm?.model || '').trim();
-  if (!model && provider !== 'codex') {
+  if (!model && provider !== LLM_PROVIDERS.CODEX) {
     throw new Error('Missing model in Settings > LLM Model & API.');
   }
 
-  if (provider === 'claude') {
+  if (provider === LLM_PROVIDERS.CLAUDE) {
     return requestClaude({
       endpoint,
       token,
@@ -99,7 +65,7 @@ async function requestResponses({ llm, modelFallbackPrompt, fileName, pdfDataUrl
       pdfDataUrl
     });
   }
-  if (provider === 'gemini') {
+  if (provider === LLM_PROVIDERS.GEMINI) {
     return requestGemini({
       endpoint,
       token,
@@ -108,9 +74,10 @@ async function requestResponses({ llm, modelFallbackPrompt, fileName, pdfDataUrl
       pdfDataUrl
     });
   }
-  if (provider === 'codex') {
+  if (provider === LLM_PROVIDERS.CODEX) {
     return requestCodex({
       model,
+      reasoningEffort: String(llm?.reasoningEffort || '').trim().toLowerCase(),
       prompt: prompt || modelFallbackPrompt || '',
       fileName,
       pdfDataUrl
@@ -226,7 +193,7 @@ async function requestClaude({ endpoint, token, model, prompt, pdfDataUrl }) {
 }
 
 function buildGeminiGenerateContentUrl(endpoint, model, token) {
-  const cleanEndpoint = String(endpoint || '').trim() || LLM_PROVIDER_ENDPOINTS.gemini;
+  const cleanEndpoint = String(endpoint || '').trim() || defaultLlmEndpointForProvider(LLM_PROVIDERS.GEMINI);
   let url = cleanEndpoint.replace(/\/+$/, '');
   if (!url.includes(':generateContent')) {
     if (/\/models\/[^/?#]+$/i.test(url)) {
@@ -290,12 +257,13 @@ async function requestGemini({ endpoint, token, model, prompt, pdfDataUrl }) {
     .trim();
 }
 
-async function requestCodex({ model, prompt, fileName, pdfDataUrl }) {
+async function requestCodex({ model, reasoningEffort, prompt, fileName, pdfDataUrl }) {
   if (!window.enanaApi?.runCodexLlmPrompt) {
     throw new Error('Codex CLI bridge is unavailable in this build.');
   }
   const result = await window.enanaApi.runCodexLlmPrompt({
     model,
+    reasoningEffort,
     prompt,
     fileName,
     pdfDataUrl

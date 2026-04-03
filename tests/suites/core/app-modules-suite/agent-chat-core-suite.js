@@ -529,6 +529,342 @@ test('agent-chat sends settings API key to main process and stores assistant res
   assert.equal(status.textContent, 'New chat ready.');
 });
 
+test('agent-chat shows live progress ephemerally in the chat history and locks session switching until success', async () => {
+  const document = createMockDocument([
+    'agent-project-select',
+    'agent-context-summary',
+    'agent-session-status',
+    'agent-session-list',
+    'agent-new-chat-btn',
+    'agent-chat-history',
+    'agent-message-input',
+    'agent-send-btn',
+    'agent-clear-btn',
+    'agent-status'
+  ]);
+  const sessionList = document.getElementById('agent-session-list');
+  const newChatBtn = document.getElementById('agent-new-chat-btn');
+  const history = document.getElementById('agent-chat-history');
+  const messageInput = document.getElementById('agent-message-input');
+  const sendBtn = document.getElementById('agent-send-btn');
+  const status = document.getElementById('agent-status');
+
+  let payloadSeen = null;
+  let progressHandler = null;
+  let resolveAgentRequest = null;
+  const sessionLoads = [];
+  const state = {
+    projects: [],
+    protocols: [],
+    notebookEntries: [],
+    assays: [],
+    gelAnalyses: [],
+    workflows: [],
+    papers: [],
+    inventory: {},
+    labInventory: { chemicals: [] },
+    settings: {
+      storagePath: '/tmp/enana-storage',
+      llm: {
+        model: 'gpt-5',
+        apiEndpoint: 'https://api.openai.com/v1/responses',
+        apiKey: 'sk-local-key'
+      },
+      agent: {
+        developerMode: false
+      }
+    },
+    agentChat: {
+      projectId: '',
+      currentSessionId: 'chat-2',
+      sessions: [],
+      messages: []
+    }
+  };
+
+  const window = {
+    enanaApi: {
+      onAgentProgress: (handler) => {
+        progressHandler = handler;
+        return () => {};
+      },
+      agentChatLogListSessions: async () => ({
+        ok: true,
+        items: [
+          {
+            id: 'chat-2',
+            title: 'Current chat',
+            project_id: '',
+            project_name: '',
+            updated_at: '2026-03-23T09:00:00.000Z',
+            created_at: '2026-03-23T09:00:00.000Z',
+            message_count: 0,
+            last_message_preview: ''
+          },
+          {
+            id: 'chat-1',
+            title: 'Other chat',
+            project_id: '',
+            project_name: '',
+            updated_at: '2026-03-23T08:00:00.000Z',
+            created_at: '2026-03-23T08:00:00.000Z',
+            message_count: 0,
+            last_message_preview: ''
+          }
+        ]
+      }),
+      agentChatLogGetSession: async ({ sessionId }) => {
+        sessionLoads.push(sessionId);
+        return {
+          ok: true,
+          session: {
+            id: sessionId,
+            project_id: '',
+            project_name: '',
+            title: sessionId === 'chat-2' ? 'Current chat' : 'Other chat'
+          },
+          messages: []
+        };
+      },
+      autoSaveDataFile: async () => ({
+        ok: true,
+        filePath: '/tmp/enana-data.ena.json'
+      }),
+      agentChat: async (payload) => {
+        payloadSeen = payload;
+        return await new Promise((resolve) => {
+          resolveAgentRequest = resolve;
+        });
+      }
+    }
+  };
+
+  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat.js'), {
+    document,
+    window
+  });
+  const agent = agentModule.initAgentChat({
+    state,
+    persist: () => {},
+    createId: (() => {
+      let idx = 0;
+      return () => `agent-msg-${idx += 1}`;
+    })(),
+    safeText: shared.safeText,
+    onNotebookEntriesChanged: () => {}
+  });
+
+  agent.render();
+  await flushAsync();
+  await flushAsync();
+
+  assert.equal(state.agentChat.currentSessionId, 'chat-2');
+  assert.equal(sessionLoads.includes('chat-2'), true);
+
+  messageInput.value = 'Why did the yield drop?';
+  trigger(sendBtn, 'click');
+  await flushAsync();
+  await flushAsync();
+
+  assert.equal(typeof payloadSeen?.clientRequestId, 'string');
+  assert.equal(state.agentChat.messages.length, 1);
+  assert.match(history.innerHTML, /Working on this/);
+  assert.match(history.innerHTML, /Request received/);
+  assert.equal(sendBtn.disabled, true);
+  assert.equal(newChatBtn.disabled, true);
+  assert.match(sessionList.innerHTML, /disabled/);
+
+  const sessionButtons = sessionList.querySelectorAll('[data-session-id]');
+  const otherChatButton = sessionButtons.find((item) => item.dataset.sessionId === 'chat-1');
+  trigger(sessionList, 'click', { target: otherChatButton });
+  await flushAsync();
+  assert.equal(state.agentChat.currentSessionId, 'chat-2');
+
+  progressHandler({
+    client_request_id: payloadSeen.clientRequestId,
+    request_id: 'req-live-1',
+    chat_session_id: 'chat-2',
+    routing_intent: 'general_science_question',
+    stage: 'parser_completed',
+    status: 'ok',
+    message: 'Intent parsed.',
+    meta: {}
+  });
+  assert.match(history.innerHTML, /Intent parsed/);
+
+  progressHandler({
+    client_request_id: payloadSeen.clientRequestId,
+    request_id: 'req-live-1',
+    chat_session_id: 'chat-2',
+    routing_intent: 'general_science_question',
+    stage: 'tool_call_started',
+    status: 'started',
+    tool_name: 'literature-search',
+    message: 'Started tool call for literature-search.',
+    meta: {
+      round: 1
+    }
+  });
+  assert.match(history.innerHTML, /Searching literature sources/);
+
+  resolveAgentRequest({
+    ok: true,
+    request_id: 'req-live-1',
+    client_request_id: payloadSeen.clientRequestId,
+    chat_session: {
+      id: 'chat-2',
+      title: 'Current chat'
+    },
+    parser: {
+      primary_intent: 'general_science_question',
+      needs_clarification: false,
+      clarification_reason: null,
+      entities: {},
+      inventory_search: {
+        normalized_query: null,
+        candidate_terms: [],
+        aliases: [],
+        search_mode: null
+      },
+      protocol_candidates: [],
+      reasoning_summary: 'Working through the literature.'
+    },
+    general_science_question: {
+      status: 'completed',
+      answer: 'Literature-backed answer.',
+      execution_mode: 'science_loop',
+      citations: [],
+      decision_record: {
+        assumptions: [],
+        open_questions: [],
+        verification_notes: []
+      },
+      rounds_executed: 1,
+      follow_up_questions: []
+    },
+    developer_trace: []
+  });
+  await flushAsync();
+  await flushAsync();
+
+  assert.equal(state.agentChat.messages.length, 2);
+  assert.match(history.innerHTML, /Literature-backed answer/);
+  assert.equal(/Working on this/.test(history.innerHTML), false);
+  assert.equal(sendBtn.disabled, false);
+  assert.equal(newChatBtn.disabled, false);
+  assert.equal(status.textContent, 'Complete.');
+});
+
+test('agent-chat replaces the live placeholder with a persisted error response on failure', async () => {
+  const document = createMockDocument([
+    'agent-project-select',
+    'agent-context-summary',
+    'agent-chat-history',
+    'agent-message-input',
+    'agent-send-btn',
+    'agent-clear-btn',
+    'agent-status'
+  ]);
+  const history = document.getElementById('agent-chat-history');
+  const messageInput = document.getElementById('agent-message-input');
+  const sendBtn = document.getElementById('agent-send-btn');
+  const status = document.getElementById('agent-status');
+
+  let payloadSeen = null;
+  let progressHandler = null;
+  let rejectAgentRequest = null;
+  const state = {
+    projects: [],
+    protocols: [],
+    notebookEntries: [],
+    assays: [],
+    gelAnalyses: [],
+    workflows: [],
+    papers: [],
+    inventory: {},
+    labInventory: { chemicals: [] },
+    settings: {
+      llm: {
+        model: 'gpt-5',
+        apiEndpoint: 'https://api.openai.com/v1/responses',
+        apiKey: 'sk-local-key'
+      },
+      agent: {
+        developerMode: false
+      }
+    },
+    agentChat: {
+      projectId: '',
+      messages: []
+    }
+  };
+
+  const window = {
+    enanaApi: {
+      onAgentProgress: (handler) => {
+        progressHandler = handler;
+        return () => {};
+      },
+      autoSaveDataFile: async () => ({
+        ok: true,
+        filePath: '/tmp/enana-data.ena.json'
+      }),
+      agentChat: async (payload) => {
+        payloadSeen = payload;
+        return await new Promise((_resolve, reject) => {
+          rejectAgentRequest = reject;
+        });
+      }
+    }
+  };
+
+  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat.js'), {
+    document,
+    window
+  });
+  const agent = agentModule.initAgentChat({
+    state,
+    persist: () => {},
+    createId: (() => {
+      let idx = 0;
+      return () => `agent-msg-${idx += 1}`;
+    })(),
+    safeText: shared.safeText,
+    onNotebookEntriesChanged: () => {}
+  });
+
+  agent.render();
+  messageInput.value = 'Analyze the failed run.';
+  trigger(sendBtn, 'click');
+  await flushAsync();
+  await flushAsync();
+
+  assert.equal(state.agentChat.messages.length, 1);
+  assert.match(history.innerHTML, /Working on this/);
+
+  progressHandler({
+    client_request_id: payloadSeen.clientRequestId,
+    request_id: 'req-live-error',
+    chat_session_id: '',
+    routing_intent: 'general_science_question',
+    stage: 'parser_completed',
+    status: 'ok',
+    message: 'Intent parsed.',
+    meta: {}
+  });
+  assert.match(history.innerHTML, /Intent parsed/);
+
+  rejectAgentRequest(new Error('Network timeout'));
+  await flushAsync();
+  await flushAsync();
+
+  assert.equal(state.agentChat.messages.length, 2);
+  assert.match(history.innerHTML, /Agent failed: Network timeout/);
+  assert.equal(/Working on this/.test(history.innerHTML), false);
+  assert.equal(sendBtn.disabled, false);
+  assert.equal(status.textContent, 'Error.');
+});
+
 test('agent-chat keeps notebook-draft proposals confirm-first and creates one planned page on click', async () => {
   const document = createMockDocument([
     'agent-project-select',

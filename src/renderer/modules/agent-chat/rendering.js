@@ -55,9 +55,46 @@ function renderMetaJson(title, value, safeText) {
   `;
 }
 
+function renderLiveProgressMeta(progress, safeText) {
+  const activityRows = asArray(progress?.activity_rows).map((row) => ({
+    status: trimText(row?.status, 40) || 'pending',
+    text: trimText(row?.text, 260)
+  })).filter((row) => row.text);
+  const summaryLine = [
+    trimText(progress?.routing_intent, 80) ? `Intent=${trimText(progress.routing_intent, 80)}` : '',
+    trimText(progress?.stage, 80) ? `Stage=${trimText(progress.stage, 80)}` : '',
+    trimText(progress?.request_id, 120) ? `Request=${trimText(progress.request_id, 120)}` : ''
+  ].filter(Boolean).join(' | ');
+
+  return `
+    <div class="agent-meta-grid">
+      ${activityRows.length ? `
+        <section class="agent-activity" aria-label="Live agent activity">
+          <h4>Working</h4>
+          <ul class="agent-activity-list">
+            ${activityRows.map((row) => `
+              <li class="agent-activity-item">
+                <span class="agent-activity-badge agent-activity-badge-${safeText(row.status)}">${safeText(row.status)}</span>
+                <span>${safeText(row.text)}</span>
+              </li>
+            `).join('')}
+          </ul>
+        </section>
+      ` : ''}
+      ${summaryLine ? `<p class="small-note">${safeText(summaryLine)}</p>` : ''}
+    </div>
+  `;
+}
+
 function renderAssistantMeta(meta, messageId = '', { state, safeText }) {
   if (!meta || typeof meta !== 'object') {
     return '';
+  }
+  const liveProgress = meta.live_progress && typeof meta.live_progress === 'object'
+    ? meta.live_progress
+    : null;
+  if (liveProgress) {
+    return renderLiveProgressMeta(liveProgress, safeText);
   }
   const toolTest = meta.tool_test && typeof meta.tool_test === 'object'
     ? meta.tool_test

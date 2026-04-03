@@ -3,8 +3,17 @@
 function registerSystemIpc(deps = {}) {
   const ipcMain = deps.ipcMain;
   const getCodexLoginStatus = deps.getCodexLoginStatus;
+  const getCodexCliCatalog = typeof deps.getCodexCliCatalog === 'function'
+    ? deps.getCodexCliCatalog
+    : (() => ({ ok: false, models: [], defaultModel: '', defaultReasoningEffort: '' }));
   const setCodexCliModel = deps.setCodexCliModel;
   const getCodexCliModel = deps.getCodexCliModel;
+  const setCodexCliReasoningEffort = typeof deps.setCodexCliReasoningEffort === 'function'
+    ? deps.setCodexCliReasoningEffort
+    : (() => '');
+  const getCodexCliReasoningEffort = typeof deps.getCodexCliReasoningEffort === 'function'
+    ? deps.getCodexCliReasoningEffort
+    : (() => '');
   const requestCodexCliText = deps.requestCodexCliText;
   const getCodexCliWorkingDirectory = deps.getCodexCliWorkingDirectory;
   const restartTelegramBot = deps.restartTelegramBot;
@@ -49,6 +58,27 @@ function registerSystemIpc(deps = {}) {
     };
   });
 
+  ipcMain.handle('llm:codex-catalog', async () => {
+    const catalog = getCodexCliCatalog();
+    return {
+      ok: catalog.ok !== false,
+      defaultModel: cleanText(catalog.defaultModel, 120),
+      defaultReasoningEffort: cleanText(catalog.defaultReasoningEffort, 40),
+      currentModel: cleanText(getCodexCliModel(), 120),
+      currentReasoningEffort: cleanText(getCodexCliReasoningEffort(), 40),
+      models: Array.isArray(catalog.models)
+        ? catalog.models.map((entry) => ({
+          id: cleanText(entry?.id, 120),
+          label: cleanText(entry?.label, 160) || cleanText(entry?.id, 120),
+          reasoningEfforts: Array.isArray(entry?.reasoningEfforts)
+            ? entry.reasoningEfforts.map((effort) => cleanText(effort, 40).toLowerCase()).filter(Boolean)
+            : [],
+          defaultReasoningEffort: cleanText(entry?.defaultReasoningEffort, 40).toLowerCase()
+        })).filter((entry) => entry.id)
+        : []
+    };
+  });
+
   ipcMain.handle('llm:codex-set-model', async (_event, payload) => {
     const normalizedPayload = normalizeJsonPayload(payload, {});
     const previousModel = getCodexCliModel();
@@ -57,6 +87,17 @@ function registerSystemIpc(deps = {}) {
       ok: true,
       model,
       previousModel
+    };
+  });
+
+  ipcMain.handle('llm:codex-set-reasoning-effort', async (_event, payload) => {
+    const normalizedPayload = normalizeJsonPayload(payload, {});
+    const previousReasoningEffort = getCodexCliReasoningEffort();
+    const reasoningEffort = setCodexCliReasoningEffort(cleanText(normalizedPayload?.reasoningEffort, 40));
+    return {
+      ok: true,
+      reasoningEffort,
+      previousReasoningEffort
     };
   });
 
@@ -70,12 +111,14 @@ function registerSystemIpc(deps = {}) {
 
       const prompt = promptRaw.length > 120000 ? `${promptRaw.slice(0, 120000)}...` : promptRaw;
       const model = cleanText(normalizedPayload?.model, 120);
+      const reasoningEffort = cleanText(normalizedPayload?.reasoningEffort, 40);
       const fileName = cleanText(normalizedPayload?.fileName, 220);
       const pdfDataUrl = typeof normalizedPayload?.pdfDataUrl === 'string' ? normalizedPayload.pdfDataUrl.trim() : '';
 
       const text = await requestCodexCliText({
         prompt,
         model,
+        reasoningEffort,
         cwd: getCodexCliWorkingDirectory(),
         fileName,
         pdfDataUrl

@@ -38,6 +38,7 @@ export function initProtocolManagement({
 
   const addPlaceholderBtn = document.getElementById('add-placeholder-btn');
   const placeholderNameInput = document.getElementById('placeholder-name');
+  const placeholderPresetButtons = [...(document.querySelectorAll?.('[data-protocol-placeholder-preset]') || [])];
 
   const protocolShareStatus = document.getElementById('protocol-share-status');
   const protocolShareLinkPanel = document.getElementById('protocol-share-link-panel');
@@ -77,6 +78,15 @@ export function initProtocolManagement({
   protocolStepsInput?.addEventListener('keydown', onBulletTextareaKeydown);
   protocolStepsInput?.addEventListener('blur', () => normalizeBulletTextarea(protocolStepsInput));
   addPlaceholderBtn?.addEventListener('click', addInteractivePlaceholderToken);
+  placeholderPresetButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      const placeholder = String(button.dataset.protocolPlaceholderPreset || '').trim();
+      if (!placeholder) {
+        return;
+      }
+      addInteractivePlaceholderToken(placeholder);
+    });
+  });
   protocolSortFieldBtn?.addEventListener('click', () => {
     protocolSortField = protocolSortField === 'time' ? 'name' : 'time';
     updateSortButtonLabels();
@@ -1338,8 +1348,8 @@ export function initProtocolManagement({
     onProtocolsChanged();
   }
 
-  function addInteractivePlaceholderToken() {
-    const placeholder = String(placeholderNameInput?.value || '').trim();
+  function addInteractivePlaceholderToken(placeholderName = '') {
+    const placeholder = String(placeholderName || placeholderNameInput?.value || '').trim();
     if (!placeholder || !protocolStepsInput) {
       return;
     }

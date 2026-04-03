@@ -52,6 +52,108 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     return (state.assays || []).find((item) => item.id === assayId);
   }
 
+  function arraysEqual(left, right) {
+    if (left.length !== right.length) {
+      return false;
+    }
+    return left.every((value, index) => value === right[index]);
+  }
+
+  function syncNotebookAssayLinks() {
+    if (!Array.isArray(state.notebookEntries)) {
+      return;
+    }
+
+    const linkedIdsByEntry = new Map();
+    (state.assays || []).forEach((assay) => {
+      const entryId = String(assay?.notebookEntryId || '').trim();
+      const assayId = String(assay?.id || '').trim();
+      if (!entryId || !assayId) {
+        return;
+      }
+      if (!linkedIdsByEntry.has(entryId)) {
+        linkedIdsByEntry.set(entryId, []);
+      }
+      linkedIdsByEntry.get(entryId).push(assayId);
+    });
+
+    state.notebookEntries = state.notebookEntries.map((entry) => {
+      const nextIds = linkedIdsByEntry.get(String(entry?.id || '').trim()) || [];
+      const currentIds = Array.isArray(entry?.assayIds)
+        ? entry.assayIds.map((value) => String(value || '').trim()).filter(Boolean)
+        : [];
+      if (arraysEqual(currentIds, nextIds)) {
+        return entry;
+      }
+      return {
+        ...entry,
+        assayIds: nextIds
+      };
+    });
+  }
+
+  function selectNotebookOption(value) {
+    if (!elements.assayNotebookEntryInput) {
+      return;
+    }
+    const targetValue = String(value || '').trim();
+    if (!targetValue) {
+      elements.assayNotebookEntryInput.value = '';
+      return;
+    }
+    if (!Array.from(elements.assayNotebookEntryInput.options).some((option) => option.value === targetValue)) {
+      const option = document.createElement('option');
+      option.value = targetValue;
+      option.textContent = `${targetValue} (missing notebook page)`;
+      elements.assayNotebookEntryInput.append(option);
+    }
+    elements.assayNotebookEntryInput.value = targetValue;
+  }
+
+  function assayDefinitionChanged(existing, nextRecord) {
+    if (!existing) {
+      return false;
+    }
+    const fieldsToCompare = [
+      'plateType',
+      'sampleAxis',
+      'projectId',
+      'notebookEntryId'
+    ];
+    if (fieldsToCompare.some((field) => String(existing?.[field] || '') !== String(nextRecord?.[field] || ''))) {
+      return true;
+    }
+    return JSON.stringify(existing?.sampleAxisValues || []) !== JSON.stringify(nextRecord?.sampleAxisValues || [])
+      || JSON.stringify(existing?.concentrationAxisValues || []) !== JSON.stringify(nextRecord?.concentrationAxisValues || [])
+      || JSON.stringify(existing?.manualWellOverrides || {}) !== JSON.stringify(nextRecord?.manualWellOverrides || {})
+      || JSON.stringify(existing?.suppressedWells || []) !== JSON.stringify(nextRecord?.suppressedWells || [])
+      || JSON.stringify(existing?.wellLayout || []) !== JSON.stringify(nextRecord?.wellLayout || [])
+      || JSON.stringify(existing?.resultValues || {}) !== JSON.stringify(nextRecord?.resultValues || {});
+  }
+
+  function saveAssayAnalysisPreview(preview) {
+    const assayId = runtime.activeResultsAssayId || elements.assayResultsAssaySelect?.value || '';
+    if (!assayId) {
+      return;
+    }
+    const assay = getAssayById(assayId);
+    if (!assay) {
+      return;
+    }
+    assay.latestAnalysis = preview && typeof preview === 'object'
+      ? { ...preview }
+      : null;
+    assay.updatedAt = new Date().toISOString();
+    syncNotebookAssayLinks();
+    persist();
+    renderResultsAssayOptions(assay.id);
+    renderActiveAssayInfo(assay);
+    renderList();
+    if (typeof onAssaysChanged === 'function') {
+      onAssaysChanged();
+    }
+  }
+
   function setCsvStatus(message) {
     if (elements.assayCsvStatus) {
       elements.assayCsvStatus.textContent = message || '';
@@ -136,6 +238,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     runtime,
     elements,
     safeText,
+    getInventorySamples: () => (Array.isArray(state.samples) ? state.samples : []),
     setCsvStatus,
     setLayoutStatus,
     setResultStatus,
@@ -167,7 +270,8 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     safeText,
     getCurrentDefinition: layoutManager.getCurrentDefinition,
     syncCurrentResultsFromGrid: resultsManager.syncCurrentResultsFromGrid,
-    getResultValueCount: resultsManager.getResultValueCount
+    getResultValueCount: resultsManager.getResultValueCount,
+    onAnalysisRendered: saveAssayAnalysisPreview
   });
 
   function sortedAssaysByUpdated() {
@@ -346,7 +450,9 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     const def = getPlateDefinition(assay.plateType || elements.assayPlateTypeInput?.value || '96');
     resultsManager.syncCurrentResultsFromGrid();
     assay.resultValues = layoutManager.filterMappedResults(normalizeResults(runtime.currentResults, def));
+    assay.latestAnalysis = null;
     assay.updatedAt = new Date().toISOString();
+    syncNotebookAssayLinks();
     persist();
     renderResultsAssayOptions(assay.id);
     renderActiveAssayInfo(assay);
@@ -401,6 +507,11 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
       resultValues: layoutManager.filterMappedResults(normalizeResults(runtime.currentResults, plateDef)),
       updatedAt: new Date().toISOString()
     };
+    record.latestAnalysis = assayDefinitionChanged(existing, record)
+      ? null
+      : (existing?.latestAnalysis && typeof existing.latestAnalysis === 'object'
+          ? { ...existing.latestAnalysis }
+          : null);
 
     const index = state.assays.findIndex((item) => item.id === record.id);
     if (index >= 0) {
@@ -409,6 +520,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
       state.assays.push(record);
     }
 
+    syncNotebookAssayLinks();
     persist();
     renderResultsAssayOptions(record.id);
     resetForm();
@@ -519,6 +631,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
       renderActiveAssayInfo(null);
       analysisView.clearOutput();
     }
+    syncNotebookAssayLinks();
     persist();
     renderResultsAssayOptions();
     renderList();
@@ -584,6 +697,29 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     setAssayMode(runtime.assayMode);
   }
 
+  function startLinkedAssay({ notebookEntryId = '', projectId = '' } = {}) {
+    resetForm();
+    setAssayMode('create');
+
+    const linkedEntry = (state.notebookEntries || []).find((entry) => entry.id === notebookEntryId);
+    const resolvedProjectId = String(projectId || linkedEntry?.projectId || '').trim();
+    if (resolvedProjectId && elements.assayProjectInput) {
+      elements.assayProjectInput.value = resolvedProjectId;
+      renderProjectOptions();
+      elements.assayProjectInput.value = resolvedProjectId;
+    }
+
+    renderNotebookOptions();
+    selectNotebookOption(notebookEntryId);
+    renderAssayNumberDisplay();
+    if (elements.assayNameInput) {
+      elements.assayNameInput.focus();
+    }
+    setResultStatus(notebookEntryId
+      ? `New assay will be linked to notebook page ${notebookEntryId}.`
+      : 'Create a new linked assay.');
+  }
+
   elements.assayForm?.addEventListener('submit', onSubmit);
   elements.assayCancelBtn?.addEventListener('click', resetForm);
   elements.assayModeCreateBtn?.addEventListener('click', () => setAssayMode('create'));
@@ -605,6 +741,10 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
   elements.assayPlateFieldSampleBtn?.addEventListener('click', () => layoutManager.setPlateEditField('sampleId'));
   elements.assayPlateFieldConcentrationBtn?.addEventListener('click', () => layoutManager.setPlateEditField('concentration'));
   elements.assayClearMappingsBtn?.addEventListener('click', layoutManager.onClearWellMappings);
+  elements.assaySerialDilutionBtn?.addEventListener('click', layoutManager.openSerialDilutionDialog);
+  elements.assaySerialDilutionCloseBtn?.addEventListener('click', layoutManager.closeSerialDilutionDialog);
+  elements.assaySerialDilutionOverlay?.addEventListener('click', layoutManager.onSerialDilutionOverlayClick);
+  elements.assaySerialDilutionOverlay?.addEventListener('input', layoutManager.onSerialDilutionDialogInput);
   elements.assaySearchInput?.addEventListener('input', renderList);
   elements.assayExportTemplateBtn?.addEventListener('click', layoutManager.exportCsvTemplate);
   elements.assayImportTemplateBtn?.addEventListener('click', () => elements.assayImportFile?.click());
@@ -626,13 +766,18 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
   elements.assayPlatePreview?.addEventListener('change', layoutManager.onPlatePreviewChange);
   elements.assayPlatePreview?.addEventListener('focusin', layoutManager.onPlatePreviewFocusIn);
   elements.assayPlatePreview?.addEventListener('click', layoutManager.onPlatePreviewClick);
+  elements.assayPlatePreview?.addEventListener('contextmenu', layoutManager.onPlatePreviewContextMenu);
+  elements.assayPlatePreview?.addEventListener('scroll', layoutManager.onPlatePreviewScroll, true);
   elements.assayLayoutList?.addEventListener('click', layoutManager.onLayoutListClick);
   elements.assayList?.addEventListener('click', onListClick);
+  globalThis.addEventListener?.('pointerdown', layoutManager.onGlobalPointerDown);
+  globalThis.addEventListener?.('keydown', layoutManager.onGlobalKeyDown);
 
   return {
     render,
     renderProjectOptions,
     renderNotebookOptions,
-    renderList
+    renderList,
+    startLinkedAssay
   };
 }

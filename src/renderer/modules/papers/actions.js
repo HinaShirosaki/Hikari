@@ -148,6 +148,7 @@ export function createPapersActions(context) {
       keyReagents: [],
       reagentsStatus: 'idle',
       keyFigures: [],
+      highlights: [],
       comments: [],
       deepReadReady: false,
       availabilityStatus: 'uploaded_pdf',

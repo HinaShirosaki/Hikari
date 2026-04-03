@@ -13,6 +13,18 @@ function createAgentControllerUtils(deps = {}) {
   const DEFAULT_AGENT_MODELS = deps.DEFAULT_AGENT_MODELS && typeof deps.DEFAULT_AGENT_MODELS === 'object'
     ? deps.DEFAULT_AGENT_MODELS
     : {};
+  const inferLlmProviderFromEndpointOverride = typeof deps.inferLlmProviderFromEndpoint === 'function'
+    ? deps.inferLlmProviderFromEndpoint
+    : null;
+  const normalizeLlmProviderOverride = typeof deps.normalizeLlmProvider === 'function'
+    ? deps.normalizeLlmProvider
+    : null;
+  const defaultLlmEndpointForProviderOverride = typeof deps.defaultLlmEndpointForProvider === 'function'
+    ? deps.defaultLlmEndpointForProvider
+    : null;
+  const defaultAgentModelForProviderOverride = typeof deps.defaultAgentModelForProvider === 'function'
+    ? deps.defaultAgentModelForProvider
+    : null;
   const asArray = typeof deps.asArray === 'function'
     ? deps.asArray
     : ((value) => (Array.isArray(value) ? value : []));
@@ -179,7 +191,8 @@ function createAgentControllerUtils(deps = {}) {
       logPath: cleanText(logPath, 1600),
       provider: cleanText(provider, 80),
       model: cleanText(model, 120),
-      rows: []
+      rows: [],
+      entries: []
     };
   }
 
@@ -192,7 +205,7 @@ function createAgentControllerUtils(deps = {}) {
 
   async function recordAgentLlmTrace(traceContext, event = {}) {
     const trace = traceContext && typeof traceContext === 'object' ? traceContext : null;
-    if (!trace || trace.enabled !== true) {
+    if (!trace) {
       return;
     }
     const stage = cleanText(event.stage, 120) || 'llm';
@@ -209,21 +222,29 @@ function createAgentControllerUtils(deps = {}) {
       summary,
       timestamp
     });
-    const logPath = cleanText(trace.logPath, 1600);
     const requestId = cleanText(trace.requestId, 80);
-    if (!logPath || !requestId) {
-      return;
-    }
-    await appendAgentChatLogEntry(logPath, formatAgentChatLogEntry({
+    const logEntry = {
       type: 'agent-llm-trace',
       requestId,
       stage,
       provider,
       model,
       summary,
+      timestamp,
+      request_direction: 'app->llm',
+      response_direction: 'llm->app',
       request_payload: requestPayload,
       response_payload: responsePayload
-    }));
+    };
+    trace.entries.push(logEntry);
+    if (trace.enabled !== true) {
+      return;
+    }
+    const logPath = cleanText(trace.logPath, 1600);
+    if (!logPath || !requestId) {
+      return;
+    }
+    await appendAgentChatLogEntry(logPath, formatAgentChatLogEntry(logEntry));
   }
 
   function normalizeDeveloperTraceForAgentLog(traceRows) {
@@ -277,6 +298,8 @@ function createAgentControllerUtils(deps = {}) {
       ok: source.ok === true,
       parser: {
         primary_intent: cleanText(parser.primary_intent, 80),
+        reasoning_effort: Number.isFinite(Number(parser.reasoning_effort)) ? Number(parser.reasoning_effort) : 0,
+        direct_answer: cleanText(parser.direct_answer, 12000) || null,
         needs_clarification: parser.needs_clarification === true,
         clarification_reason: cleanText(parser.clarification_reason, 260) || null,
         entities: Object.entries(entities).reduce((acc, [key, value]) => {
@@ -445,6 +468,9 @@ function createAgentControllerUtils(deps = {}) {
   }
 
   function inferProviderFromEndpoint(endpoint) {
+    if (inferLlmProviderFromEndpointOverride) {
+      return cleanText(inferLlmProviderFromEndpointOverride(endpoint), 80).toLowerCase();
+    }
     const value = cleanText(endpoint, 300).toLowerCase();
     if (!value) {
       return '';
@@ -465,6 +491,9 @@ function createAgentControllerUtils(deps = {}) {
   }
 
   function normalizeLlmProvider(provider, endpoint = '') {
+    if (normalizeLlmProviderOverride) {
+      return cleanText(normalizeLlmProviderOverride(provider, endpoint), 80).toLowerCase() || DEFAULT_LLM_PROVIDER;
+    }
     const clean = cleanText(provider, 80).toLowerCase();
     if (Object.values(LLM_PROVIDERS).includes(clean)) {
       return clean;
@@ -473,6 +502,11 @@ function createAgentControllerUtils(deps = {}) {
   }
 
   function defaultEndpointForProvider(provider) {
+    if (defaultLlmEndpointForProviderOverride) {
+      return cleanText(defaultLlmEndpointForProviderOverride(provider), 300)
+        || DEFAULT_LLM_ENDPOINTS[DEFAULT_LLM_PROVIDER]
+        || '';
+    }
     const resolved = normalizeLlmProvider(provider);
     return DEFAULT_LLM_ENDPOINTS[resolved] || DEFAULT_LLM_ENDPOINTS[DEFAULT_LLM_PROVIDER];
   }
@@ -496,6 +530,11 @@ function createAgentControllerUtils(deps = {}) {
     const model = cleanText(llm?.model, 120);
     if (model) {
       return model;
+    }
+    if (defaultAgentModelForProviderOverride) {
+      return cleanText(defaultAgentModelForProviderOverride(provider), 120)
+        || cleanText(defaultAgentModelForProviderOverride(DEFAULT_LLM_PROVIDER), 120)
+        || '';
     }
     if (Object.prototype.hasOwnProperty.call(DEFAULT_AGENT_MODELS, provider)) {
       return DEFAULT_AGENT_MODELS[provider];

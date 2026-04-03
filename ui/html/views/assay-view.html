@@ -70,6 +70,7 @@
               <button type="button" id="assay-plate-field-concentration-btn" class="ghost-btn">Edit Concentration</button>
             </div>
             <button type="button" id="assay-clear-mappings-btn" class="ghost-btn">Clear All Mappings</button>
+            <button type="button" id="assay-serial-dilution-btn" class="ghost-btn">Serial Dilution</button>
           </div>
           <div id="assay-layout-status" class="small-note"></div>
           <div id="assay-plate-preview" class="assay-plate-preview"></div>
@@ -163,5 +164,23 @@
           <input id="assay-search" placeholder="Assay number, assay, project, plate, notebook..." />
         </label>
         <div id="assay-list" class="cards"></div>
+      </div>
+
+      <div id="assay-serial-dilution-overlay" class="assay-serial-dilution-overlay" hidden>
+        <div class="assay-serial-dilution-dialog" role="dialog" aria-modal="true" aria-labelledby="assay-serial-dilution-title">
+          <div class="assay-header-row assay-serial-dilution-head">
+            <h3 id="assay-serial-dilution-title">Serial Dilution</h3>
+            <button type="button" id="assay-serial-dilution-close-btn" class="ghost-btn" aria-label="Close serial dilution dialog">Close</button>
+          </div>
+          <p class="small-note">Use the current mapped plate to calculate a constant final volume per well, with the last active dilution well discarding the final carryover volume.</p>
+          <div class="assay-serial-dilution-controls">
+            <label>
+              Volume per well (uL)
+              <input id="assay-serial-dilution-volume" type="number" min="0" step="0.1" value="100" />
+            </label>
+          </div>
+          <div id="assay-serial-dilution-summary" class="small-note"></div>
+          <div id="assay-serial-dilution-content" class="assay-serial-dilution-content"></div>
+        </div>
       </div>
     </section>

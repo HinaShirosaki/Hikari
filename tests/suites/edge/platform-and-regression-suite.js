@@ -344,6 +344,32 @@ test('[P1] normalizeState infers llm.provider from codex endpoint', () => {
   assert.equal(normalized.settings.llm.provider, 'codex');
 });
 
+test('[P1] normalizeState preserves supported llm reasoning effort values', () => {
+  const normalized = shared.normalizeState({
+    settings: {
+      llm: {
+        provider: 'codex',
+        model: 'gpt-5.4',
+        reasoningEffort: 'xhigh'
+      }
+    }
+  });
+  assert.equal(normalized.settings.llm.reasoningEffort, 'xhigh');
+});
+
+test('[P1] normalizeState clears unsupported llm reasoning effort values for the selected model', () => {
+  const normalized = shared.normalizeState({
+    settings: {
+      llm: {
+        provider: 'codex',
+        model: 'gpt-5.1-codex-mini',
+        reasoningEffort: 'xhigh'
+      }
+    }
+  });
+  assert.equal(normalized.settings.llm.reasoningEffort, '');
+});
+
 test('[P1] normalizeState does not mutate defaultState arrays', () => {
   const normalized = shared.normalizeState({});
   normalized.members.push({ id: 'm1' });

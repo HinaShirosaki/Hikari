@@ -115,7 +115,10 @@ After the controller returns, `agent:chat`:
 - converts the result into a human-readable assistant message with `agent-chat-log.js`
 - appends that assistant message into the session log
 
-So the chat session log is not a raw replay of internal objects. It is a renderer-friendly projection layered on top of the lower-level lifecycle log.
+So the chat session log serves two purposes:
+
+- `messages` stays a renderer-friendly projection of what the user saw
+- `rows` keeps the raw request/result/lifecycle/LLM-trace history for that session
 
 ## Related IPC endpoints
 

@@ -13,7 +13,8 @@ export function createAgentChatSessionManager(deps = {}) {
     renderContextSummary,
     renderHistory,
     setStatus,
-    setSessionStatus
+    setSessionStatus,
+    isInteractionLocked
   } = deps;
 
   let sessionStoragePath = '';
@@ -67,6 +68,7 @@ export function createAgentChatSessionManager(deps = {}) {
     if (!sessionList) {
       return;
     }
+    const interactionLocked = typeof isInteractionLocked === 'function' && isInteractionLocked() === true;
     const storagePath = getStoragePath();
     const sessions = asArray(state.agentChat.sessions);
     if (!storagePath) {
@@ -97,6 +99,7 @@ export function createAgentChatSessionManager(deps = {}) {
           type="button"
           class="agent-session-card${isActive ? ' is-active' : ''}"
           data-session-id="${safeText(sessionId)}"
+          ${interactionLocked ? 'disabled' : ''}
         >
           <strong>${safeText(trimText(session?.title, 160) || 'New Chat')}</strong>
           <span>${safeText(preview)}</span>
@@ -130,6 +133,18 @@ export function createAgentChatSessionManager(deps = {}) {
     }).then((result) => {
       if (!result?.ok) {
         throw new Error(result?.error || 'Failed to load chat session.');
+      }
+      const preserveLocalMessages = options.preserveLocalMessages === true
+        && trimText(state.agentChat.currentSessionId, 120) === targetSessionId
+        && asArray(state.agentChat.messages).length > 0;
+      if (preserveLocalMessages) {
+        upsertSessionSummary(result.session);
+        renderSessionList();
+        setSessionStatus('Loaded chats from disk.');
+        if (options.silent !== true) {
+          setStatus('Ready.');
+        }
+        return;
       }
       state.agentChat.currentSessionId = targetSessionId;
       state.agentChat.messages = asArray(result.messages);
@@ -202,7 +217,7 @@ export function createAgentChatSessionManager(deps = {}) {
       sessionsLoaded = true;
       renderSessionList();
       if (!state.agentChat.currentSessionId && state.agentChat.sessions.length) {
-        await loadChatSession(state.agentChat.sessions[0].id, { silent: true });
+        await loadChatSession(state.agentChat.sessions[0].id, { silent: true, preserveLocalMessages: true });
       } else if (
         state.agentChat.currentSessionId
         && !state.agentChat.sessions.some((item) => trimText(item?.id, 120) === state.agentChat.currentSessionId)
@@ -212,7 +227,7 @@ export function createAgentChatSessionManager(deps = {}) {
         persist();
         renderHistory();
       } else if (state.agentChat.currentSessionId && options.loadCurrent !== false) {
-        await loadChatSession(state.agentChat.currentSessionId, { silent: true });
+        await loadChatSession(state.agentChat.currentSessionId, { silent: true, preserveLocalMessages: true });
       } else {
         setSessionStatus(state.agentChat.sessions.length ? 'Saved chats ready.' : 'No saved chats yet.');
       }

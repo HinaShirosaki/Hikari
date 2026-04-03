@@ -6,6 +6,7 @@ import { initOligoTool } from './tool-box/oligo-ui.js';
 import { initExtinctionTool } from './tool-box/extinction-ui.js';
 import { initQpcrTool } from './tool-box/qpcr-ui.js';
 import { initBufferTool } from './tool-box/buffer-ui.js';
+import { initFixedReactionTool } from './tool-box/fixed-reaction-ui.js';
 import { initCrisprTool } from './tool-box/crispr-ui.js';
 import { toNumber, formatSequenceLines } from './tool-box/common.js';
 import {
@@ -131,6 +132,7 @@ export function initToolBox(options = {}) {
   initExtinctionTool(sharedOptions);
   initQpcrTool(sharedOptions);
   initBufferTool(sharedOptions);
+  initFixedReactionTool(sharedOptions);
   initCrisprTool(sharedOptions);
 
   return viewManager;

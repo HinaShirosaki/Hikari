@@ -380,6 +380,9 @@ function buildSubAgentArguments(input = {}, existingArgs = {}) {
 }
 
 async function runStep4ExecutePlan(input = {}, deps = {}) {
+  const toolProvider = input.toolProvider && typeof input.toolProvider === 'object'
+    ? input.toolProvider
+    : (deps.toolProvider && typeof deps.toolProvider === 'object' ? deps.toolProvider : null);
   const resolveToolDefinitions = typeof deps.resolveToolDefinitions === 'function'
     ? deps.resolveToolDefinitions
     : ((toolNames = []) => asArray(toolNames).map((toolName) => ({
@@ -424,9 +427,18 @@ async function runStep4ExecutePlan(input = {}, deps = {}) {
   }
 
   const maxRounds = Math.max(1, Number(input.maxRounds) || 4);
+  const requestedToolNames = Array.isArray(input.researchPlan?.possible_tools_or_sources) && input.researchPlan.possible_tools_or_sources.length
+    ? asArray(input.researchPlan.possible_tools_or_sources)
+    : null;
   const toolDefinitions = asArray(input.toolDefinitions).length
     ? asArray(input.toolDefinitions)
-    : resolveToolDefinitions(asArray(input.researchPlan?.possible_tools_or_sources));
+    : (typeof toolProvider?.provideToolDefinitions === 'function'
+      ? toolProvider.provideToolDefinitions({
+        entryPoint: 'deep_research_entry',
+        intent: cleanText(input.intent, 80),
+        requestedToolNames
+      })
+      : resolveToolDefinitions(asArray(input.researchPlan?.possible_tools_or_sources)));
   const toolSchemaMap = buildToolSchemaMap(toolDefinitions);
   const allowedToolNames = toolDefinitions.map((tool) => cleanText(tool?.name, 120)).filter(Boolean);
   let contextState = typeof createContextControlState === 'function'

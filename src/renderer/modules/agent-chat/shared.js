@@ -132,6 +132,11 @@ export function toConversation(messages) {
 }
 
 export const TOOL_ACTIVITY_LABELS = {
+  'inventory-lookup': 'Checking inventory records',
+  'record-lookup': 'Checking lab records',
+  'notebook-draft': 'Preparing notebook draft',
+  'python-sandbox': 'Running Python sandbox',
+  'literature-search': 'Searching literature sources',
   search_projects: 'Checking project records',
   search_protocols: 'Checking stored protocols',
   search_notebook_entries: 'Checking lab notebook pages',

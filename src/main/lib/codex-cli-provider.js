@@ -8,9 +8,12 @@ const DEFAULT_TIMEOUT_MS = 180000;
 const LOGIN_STATUS_TIMEOUT_MS = 12000;
 const LOGIN_STATUS_CACHE_TTL_MS = 30000;
 const CODEX_TMP_DIR_NAME = 'codex-cli';
+const CODEX_MODELS_CACHE_FILE = 'models_cache.json';
+const CODEX_CONFIG_FILE = 'config.toml';
 
 let loginStatusCache = null;
 let configuredCodexModel = '';
+let configuredCodexReasoningEffort = '';
 
 function cleanText(value, maxLength = 1200) {
   const text = String(value || '').trim();
@@ -180,25 +183,207 @@ function normalizeCodexCliModel(model = '') {
   return cleanText(model, 120);
 }
 
+function normalizeCodexCliReasoningEffort(reasoningEffort = '') {
+  return cleanText(reasoningEffort, 40).toLowerCase();
+}
+
+function getCodexCliHomeDirectory() {
+  const configuredHome = String(process.env.CODEX_HOME || '').trim();
+  if (configuredHome) {
+    return configuredHome;
+  }
+  return path.join(os.homedir(), '.codex');
+}
+
+function parseCodexCliModelsCache(rawValue = '') {
+  try {
+    const parsed = JSON.parse(String(rawValue || ''));
+    const models = Array.isArray(parsed?.models)
+      ? parsed.models.map((entry) => {
+        const id = cleanText(entry?.slug, 120);
+        const label = cleanText(entry?.display_name, 160) || id;
+        const reasoningEfforts = Array.isArray(entry?.supported_reasoning_levels)
+          ? entry.supported_reasoning_levels
+            .map((level) => normalizeCodexCliReasoningEffort(level?.effort))
+            .filter(Boolean)
+          : [];
+        const defaultReasoningEffort = normalizeCodexCliReasoningEffort(entry?.default_reasoning_level);
+        if (!id) {
+          return null;
+        }
+        return {
+          id,
+          label,
+          reasoningEfforts,
+          defaultReasoningEffort: reasoningEfforts.includes(defaultReasoningEffort) ? defaultReasoningEffort : ''
+        };
+      }).filter(Boolean)
+      : [];
+    return {
+      models,
+      fetchedAt: cleanText(parsed?.fetched_at, 80),
+      clientVersion: cleanText(parsed?.client_version, 80)
+    };
+  } catch {
+    return {
+      models: [],
+      fetchedAt: '',
+      clientVersion: ''
+    };
+  }
+}
+
+function parseCodexCliConfigDefaults(rawValue = '') {
+  const source = String(rawValue || '');
+  const modelMatch = source.match(/^\s*model\s*=\s*"([^"]+)"/m);
+  const reasoningMatch = source.match(/^\s*model_reasoning_effort\s*=\s*"([^"]+)"/m);
+  return {
+    defaultModel: normalizeCodexCliModel(modelMatch?.[1] || ''),
+    defaultReasoningEffort: normalizeCodexCliReasoningEffort(reasoningMatch?.[1] || '')
+  };
+}
+
+function findCodexCliModelConfig(model = '', catalog = null) {
+  const resolvedCatalog = catalog && typeof catalog === 'object' ? catalog : null;
+  const models = Array.isArray(resolvedCatalog?.models) ? resolvedCatalog.models : [];
+  const target = normalizeCodexCliModel(model);
+  if (!target) {
+    return null;
+  }
+  return models.find((entry) => entry.id === target) || null;
+}
+
+function getCodexCliCatalog() {
+  const codexHome = getCodexCliHomeDirectory();
+  const modelsCachePath = path.join(codexHome, CODEX_MODELS_CACHE_FILE);
+  const configPath = path.join(codexHome, CODEX_CONFIG_FILE);
+
+  let cacheInfo = {
+    models: [],
+    fetchedAt: '',
+    clientVersion: ''
+  };
+  try {
+    cacheInfo = parseCodexCliModelsCache(fsSync.readFileSync(modelsCachePath, 'utf8'));
+  } catch {
+    // Fall back to config defaults when the model cache is unavailable.
+  }
+
+  let configDefaults = {
+    defaultModel: '',
+    defaultReasoningEffort: ''
+  };
+  try {
+    configDefaults = parseCodexCliConfigDefaults(fsSync.readFileSync(configPath, 'utf8'));
+  } catch {
+    // Keep defaults empty when config.toml is unavailable.
+  }
+
+  const models = cacheInfo.models;
+  const fallbackModel = models[0]?.id || '';
+  const defaultModel = findCodexCliModelConfig(configDefaults.defaultModel, { models })?.id
+    || findCodexCliModelConfig(configuredCodexModel, { models })?.id
+    || fallbackModel
+    || configDefaults.defaultModel
+    || configuredCodexModel
+    || '';
+  const defaultModelConfig = findCodexCliModelConfig(defaultModel, { models });
+  const defaultReasoningEffort = defaultModelConfig?.reasoningEfforts?.includes(configDefaults.defaultReasoningEffort)
+    ? configDefaults.defaultReasoningEffort
+    : defaultModelConfig?.reasoningEfforts?.includes(configuredCodexReasoningEffort)
+      ? configuredCodexReasoningEffort
+      : defaultModelConfig?.defaultReasoningEffort
+        || defaultModelConfig?.reasoningEfforts?.[0]
+        || configDefaults.defaultReasoningEffort
+        || configuredCodexReasoningEffort
+        || '';
+
+  return {
+    ok: models.length > 0,
+    codexHome,
+    modelsCachePath,
+    configPath,
+    fetchedAt: cacheInfo.fetchedAt,
+    clientVersion: cacheInfo.clientVersion,
+    defaultModel,
+    defaultReasoningEffort,
+    models
+  };
+}
+
 function getCodexCliModel() {
   return configuredCodexModel;
 }
 
 function setCodexCliModel(model = '') {
-  configuredCodexModel = normalizeCodexCliModel(model);
-  return configuredCodexModel;
-}
-
-function resolveCodexCliModel(model = '') {
-  const explicitModel = normalizeCodexCliModel(model);
-  if (explicitModel) {
-    configuredCodexModel = explicitModel;
-    return explicitModel;
+  const cleanModel = normalizeCodexCliModel(model);
+  if (!cleanModel) {
+    configuredCodexModel = '';
+    return configuredCodexModel;
   }
+  const catalog = getCodexCliCatalog();
+  configuredCodexModel = findCodexCliModelConfig(cleanModel, catalog)?.id
+    || normalizeCodexCliModel(catalog.defaultModel)
+    || cleanModel;
   return configuredCodexModel;
 }
 
-function buildCodexCliExecArgs({ outputFile = '', model = '' } = {}) {
+function getCodexCliReasoningEffort() {
+  return configuredCodexReasoningEffort;
+}
+
+function setCodexCliReasoningEffort(reasoningEffort = '') {
+  configuredCodexReasoningEffort = normalizeCodexCliReasoningEffort(reasoningEffort);
+  return configuredCodexReasoningEffort;
+}
+
+function resolveCodexCliModel(model = '', catalog = null) {
+  const resolvedCatalog = catalog && typeof catalog === 'object'
+    ? catalog
+    : getCodexCliCatalog();
+  const explicitModel = normalizeCodexCliModel(model);
+  const explicitConfig = findCodexCliModelConfig(explicitModel, resolvedCatalog);
+  if (explicitConfig?.id) {
+    configuredCodexModel = explicitConfig.id;
+    return explicitConfig.id;
+  }
+  const configuredConfig = findCodexCliModelConfig(configuredCodexModel, resolvedCatalog);
+  if (configuredConfig?.id) {
+    return configuredConfig.id;
+  }
+  const fallbackModel = normalizeCodexCliModel(resolvedCatalog.defaultModel);
+  if (fallbackModel) {
+    return fallbackModel;
+  }
+  return explicitModel || configuredCodexModel;
+}
+
+function resolveCodexCliReasoningEffort(reasoningEffort = '', model = '', catalog = null) {
+  const resolvedCatalog = catalog && typeof catalog === 'object'
+    ? catalog
+    : getCodexCliCatalog();
+  const resolvedModel = resolveCodexCliModel(model, resolvedCatalog);
+  const modelConfig = findCodexCliModelConfig(resolvedModel, resolvedCatalog);
+  const explicitEffort = normalizeCodexCliReasoningEffort(reasoningEffort);
+
+  if (modelConfig?.reasoningEfforts?.length) {
+    if (modelConfig.reasoningEfforts.includes(explicitEffort)) {
+      return explicitEffort;
+    }
+    if (modelConfig.reasoningEfforts.includes(configuredCodexReasoningEffort)) {
+      return configuredCodexReasoningEffort;
+    }
+    if (modelConfig.reasoningEfforts.includes(resolvedCatalog.defaultReasoningEffort)) {
+      return resolvedCatalog.defaultReasoningEffort;
+    }
+    return modelConfig.defaultReasoningEffort || modelConfig.reasoningEfforts[0] || '';
+  }
+
+  return explicitEffort || configuredCodexReasoningEffort || normalizeCodexCliReasoningEffort(resolvedCatalog.defaultReasoningEffort);
+}
+
+function buildCodexCliExecArgs({ outputFile = '', model = '', reasoningEffort = '' } = {}) {
+  const catalog = getCodexCliCatalog();
   const args = [
     '-a', 'never',
     '-s', 'read-only',
@@ -207,9 +392,13 @@ function buildCodexCliExecArgs({ outputFile = '', model = '' } = {}) {
     '--output-last-message', outputFile,
     '--color', 'never'
   ];
-  const resolvedModel = resolveCodexCliModel(model);
+  const resolvedModel = resolveCodexCliModel(model, catalog);
   if (resolvedModel) {
     args.push('-m', resolvedModel);
+  }
+  const resolvedReasoningEffort = resolveCodexCliReasoningEffort(reasoningEffort, resolvedModel, catalog);
+  if (resolvedReasoningEffort) {
+    args.push('-c', `model_reasoning_effort=${resolvedReasoningEffort}`);
   }
   args.push('-');
   return args;
@@ -343,6 +532,7 @@ async function getCodexLoginStatus({ cwd = process.cwd(), forceRefresh = false }
 async function requestCodexCliText({
   prompt,
   model = '',
+  reasoningEffort = '',
   cwd = process.cwd(),
   timeoutMs = DEFAULT_TIMEOUT_MS,
   fileName = '',
@@ -387,7 +577,8 @@ async function requestCodexCliText({
 
     const args = buildCodexCliExecArgs({
       outputFile,
-      model
+      model,
+      reasoningEffort
     });
 
     await runCodexCommand({
@@ -409,8 +600,11 @@ async function requestCodexCliText({
 
 module.exports = {
   buildCodexCliExecArgs,
+  getCodexCliCatalog,
   getCodexCliModel,
+  getCodexCliReasoningEffort,
   getCodexLoginStatus,
   setCodexCliModel,
+  setCodexCliReasoningEffort,
   requestCodexCliText
 };

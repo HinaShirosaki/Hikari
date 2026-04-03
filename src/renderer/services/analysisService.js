@@ -1,14 +1,36 @@
 export function createAnalysisService(registry) {
   function handleAssaysChanged() {
     registry.get('projectManagement').renderNotebookPages?.();
+    registry.get('biologyNotebook').renderLinkedPreviews?.();
   }
 
   function handleGelAnalysesChanged() {
     registry.get('projectManagement').renderNotebookPages?.();
+    registry.get('biologyNotebook').renderLinkedPreviews?.();
+  }
+
+  function openAssayForNotebook(payload = {}) {
+    const showView = registry.get('showView');
+    const views = registry.get('VIEWS');
+    if (typeof showView === 'function' && views?.ASSAY) {
+      showView(views.ASSAY);
+    }
+    registry.get('assay').startLinkedAssay?.(payload);
+  }
+
+  function openGelForNotebook(payload = {}) {
+    const showView = registry.get('showView');
+    const views = registry.get('VIEWS');
+    if (typeof showView === 'function' && views?.GEL) {
+      showView(views.GEL);
+    }
+    registry.get('gel').startLinkedGel?.(payload);
   }
 
   return {
     handleAssaysChanged,
-    handleGelAnalysesChanged
+    handleGelAnalysesChanged,
+    openAssayForNotebook,
+    openGelForNotebook
   };
 }

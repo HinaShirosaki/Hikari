@@ -190,20 +190,20 @@
               <form id="llm-form" class="stack-form">
                 <label>
                   Provider
-                  <select id="setting-provider">
-                    <option value="openai">OpenAI</option>
-                    <option value="gemini">Gemini</option>
-                    <option value="claude">Claude</option>
-                    <option value="codex">OpenAI CLI (Codex)</option>
-                  </select>
+                  <select id="setting-provider"></select>
                 </label>
                 <label>
                   Model Name
-                  <input id="setting-model" placeholder="e.g. gpt-4.1 / gemini-2.5-pro / claude-sonnet-4-5 / gpt-5" />
+                  <input id="setting-model" list="setting-model-options" placeholder="Provider model name" />
+                </label>
+                <datalist id="setting-model-options"></datalist>
+                <label>
+                  Reasoning Effort
+                  <select id="setting-reasoning-effort"></select>
                 </label>
                 <label>
                   API Endpoint
-                  <input id="setting-api-endpoint" placeholder="https://api.openai.com/v1/responses" />
+                  <input id="setting-api-endpoint" placeholder="Provider default fills automatically" />
                 </label>
                 <label>
                   API Key

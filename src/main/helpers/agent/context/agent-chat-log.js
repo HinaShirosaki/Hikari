@@ -19,7 +19,8 @@ const CHAT_LOG_EVENT_TYPES = Object.freeze({
   AGENT_CHAT_REQUEST: 'agent-chat-request',
   AGENT_CHAT_RESULT: 'agent-chat-result',
   AGENT_CHAT_ERROR: 'agent-chat-error',
-  AGENT_LIFECYCLE: 'agent-lifecycle'
+  AGENT_LIFECYCLE: 'agent-lifecycle',
+  AGENT_LLM_TRACE: 'agent-llm-trace'
 });
 
 // Return the input only when it is already an array; otherwise fall back to an empty array.
@@ -287,6 +288,8 @@ function buildAssistantMessageFromError({ errorMessage = '', requestText = '', m
     meta: {
       parser: {
         primary_intent: 'unclear',
+        reasoning_effort: 0,
+        direct_answer: null,
         needs_clarification: true,
         clarification_reason: 'agent_error',
         entities: {},

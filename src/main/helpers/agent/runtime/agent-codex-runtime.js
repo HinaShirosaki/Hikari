@@ -75,15 +75,9 @@ function createCodexAgentRuntime(deps = {}) {
   async function buildCodexAgentContext(message, snapshot, selectedToolNames = null, routing = null) {
     // Restrict Codex prefetching to read-oriented retrieval tools only.
     const allowedRetrievalTools = [
-      'search_projects',
-      'search_protocols',
-      'search_notebook_entries',
-      'search_workflows',
-      'search_assays',
-      'search_gel_analyses',
-      'search_inventory',
-      'search_papers',
-      'search_web'
+      'record-lookup',
+      'inventory-lookup',
+      'literature-search'
     ];
     // When routing preselects tools, intersect that list with the allowed retrieval set.
     const retrievalTools = Array.isArray(selectedToolNames)
@@ -102,13 +96,20 @@ function createCodexAgentRuntime(deps = {}) {
     // Query each selected retrieval tool and keep only a small slice of its top results.
     for (const toolName of retrievalTools) {
       // Inventory lookups may need parser-aware query shaping, while other tools share a simple query form.
-      const toolArgs = toolName === 'search_inventory'
+      const toolArgs = toolName === 'inventory-lookup'
         ? buildInventoryToolArgs({
           message,
           routing,
           args: { query: message, limit: 5 }
         })
-        : { query: message, limit: 5 };
+        : (toolName === 'literature-search'
+          ? {
+            query: message,
+            message,
+            limit: 5,
+            allow_web_fallback: true
+          }
+          : { query: message, limit: 5 });
       const result = await runTool(toolName, toolArgs, snapshot, { allowWriteTools: false });
       const items = asArray(result?.items).slice(0, 5);
       // Skip tools that returned no useful context.

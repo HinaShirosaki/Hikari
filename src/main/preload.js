@@ -26,7 +26,9 @@ contextBridge.exposeInMainWorld('enanaApi', {
   setTelegramBotToken: (token) => ipcRenderer.invoke('telegram:set-token', { token }),
   clearTelegramBotToken: () => ipcRenderer.invoke('telegram:clear-token'),
   getCodexLlmStatus: () => ipcRenderer.invoke('llm:codex-status'),
+  getCodexLlmCatalog: () => ipcRenderer.invoke('llm:codex-catalog'),
   setCodexLlmModel: (model) => ipcRenderer.invoke('llm:codex-set-model', { model }),
+  setCodexLlmReasoningEffort: (reasoningEffort) => ipcRenderer.invoke('llm:codex-set-reasoning-effort', { reasoningEffort }),
   runCodexLlmPrompt: (payload) => ipcRenderer.invoke('llm:codex-generate', payload),
   agentChat: (payload) => ipcRenderer.invoke('agent:chat', payload),
   agentChatLogCreateSession: (payload) => ipcRenderer.invoke('agent:chat-log:create-session', payload),
@@ -35,6 +37,18 @@ contextBridge.exposeInMainWorld('enanaApi', {
   agentDeveloperTestTools: (payload) => ipcRenderer.invoke('agent:developer:test-tools', payload),
   agentLogsListRequests: () => ipcRenderer.invoke('agent:logs:list-requests'),
   agentLogsReplay: (payload) => ipcRenderer.invoke('agent:logs:replay', payload),
+  onAgentProgress: (handler) => {
+    if (typeof handler !== 'function') {
+      return () => {};
+    }
+    const listener = (_event, payload) => {
+      handler(payload);
+    };
+    ipcRenderer.on('agent-progress', listener);
+    return () => {
+      ipcRenderer.removeListener('agent-progress', listener);
+    };
+  },
   onTelegramCommand: (handler) => {
     if (typeof handler !== 'function') {
       return;

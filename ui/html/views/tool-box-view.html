@@ -14,6 +14,9 @@
         <button class="tile tool-tile" data-tool-view="tool-buffer-view">
           <span class="label">Buffer Preparer</span>
         </button>
+        <button class="tile tool-tile" data-tool-view="tool-fixed-reaction-view">
+          <span class="label">Fixed Volume Reaction</span>
+        </button>
         <button class="tile tool-tile" data-tool-view="tool-dna-protein-view">
           <span class="label">DNA to Protein</span>
         </button>
@@ -254,6 +257,74 @@
           </div>
           <div id="buffer-rows" class="buffer-rows"></div>
           <p id="buffer-total-result" class="calc-output"></p>
+        </div>
+      </div>
+
+      <div id="tool-fixed-reaction-view" class="panel tool-subview" hidden>
+        <h3>Fixed Volume Reaction</h3>
+        <div class="stack-form reaction-mix-shell">
+          <p class="small-note">Leave a reagent volume blank to calculate it from stock and final concentration. Enter a volume directly when you want to override the concentration-based calculation. Use <code>x</code> for stock solutions like 10x or 5x.</p>
+          <div class="form-actions">
+            <button id="fixed-reaction-add-row-btn" type="button" class="ghost-btn">Add Reagent</button>
+          </div>
+          <div class="reaction-mix-table">
+            <div id="fixed-reaction-rows" class="reaction-mix-rows"></div>
+
+            <div class="reaction-mix-row reaction-mix-row-special">
+              <label class="reaction-mix-cell">
+                <span class="reaction-mix-cell-label">Fill Solution</span>
+                <input id="fixed-reaction-fill-name" type="text" value="Water / buffer" placeholder="e.g. Water" />
+              </label>
+              <div class="reaction-mix-cell">
+                <span class="reaction-mix-cell-label">Stock Conc</span>
+                <div class="reaction-mix-static">Auto</div>
+              </div>
+              <div class="reaction-mix-cell">
+                <span class="reaction-mix-cell-label">Final Conc</span>
+                <div class="reaction-mix-static">Auto</div>
+              </div>
+              <div class="reaction-mix-cell reaction-mix-volume-cell">
+                <span class="reaction-mix-cell-label">Volume</span>
+                <div id="fixed-reaction-fill-volume" class="reaction-mix-static">0 uL</div>
+                <div id="fixed-reaction-fill-note" class="reaction-mix-row-note">Auto-calculated to reach the total volume.</div>
+              </div>
+              <div class="reaction-mix-cell reaction-mix-action-cell">
+                <span class="reaction-mix-cell-label">Action</span>
+                <div class="reaction-mix-static">Locked</div>
+              </div>
+            </div>
+
+            <div class="reaction-mix-row reaction-mix-row-special">
+              <div class="reaction-mix-cell">
+                <span class="reaction-mix-cell-label">Total Volume</span>
+                <div class="reaction-mix-static">Reaction total</div>
+              </div>
+              <div class="reaction-mix-cell">
+                <span class="reaction-mix-cell-label">Stock Conc</span>
+                <div class="reaction-mix-static">-</div>
+              </div>
+              <div class="reaction-mix-cell">
+                <span class="reaction-mix-cell-label">Final Conc</span>
+                <div class="reaction-mix-static">-</div>
+              </div>
+              <label class="reaction-mix-cell reaction-mix-volume-cell">
+                <span class="reaction-mix-cell-label">Volume</span>
+                <div class="inline-row">
+                  <input id="fixed-reaction-total-volume" type="number" min="0" step="0.000001" value="100" placeholder="e.g. 100" />
+                  <select id="fixed-reaction-total-unit">
+                    <option value="uL" selected>uL</option>
+                    <option value="mL">mL</option>
+                    <option value="L">L</option>
+                  </select>
+                </div>
+              </label>
+              <div class="reaction-mix-cell reaction-mix-action-cell">
+                <span class="reaction-mix-cell-label">Action</span>
+                <div class="reaction-mix-static">Locked</div>
+              </div>
+            </div>
+          </div>
+          <p id="fixed-reaction-summary" class="calc-output"></p>
         </div>
       </div>
 

@@ -601,6 +601,8 @@ const biologyNotebook = initBiologyNotebook({
   safeText,
   notebookType: 'biology',
   importProtocolsFromJson: rendererServices.protocol.importProtocolsFromJson,
+  onCreateLinkedAssay: rendererServices.analysis.openAssayForNotebook,
+  onCreateLinkedGel: rendererServices.analysis.openGelForNotebook,
   onNotebookEntriesChanged: rendererServices.notebook.handleNotebookEntriesChanged
 });
 moduleRegistry.register('biologyNotebook', biologyNotebook);

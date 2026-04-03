@@ -1,4 +1,14 @@
-import { defaultLlmEndpointForProvider, normalizeLlmProvider } from './shared.js';
+import {
+  DEFAULT_LLM_PROVIDER,
+  LLM_PROVIDER_OPTIONS,
+  apiKeyPlaceholderForProvider,
+  defaultLlmEndpointForProvider,
+  getLlmModelConfig,
+  getLlmProviderModelOptions,
+  modelPlaceholderForProvider,
+  normalizeLlmProvider,
+  normalizeReasoningEffort
+} from './shared.js';
 
 const FIXED_ACCENT = '#647255';
 const FIXED_FOCUS = '#7a8a69';
@@ -28,6 +38,8 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
   const llmForm = document.getElementById('llm-form');
   const settingProvider = document.getElementById('setting-provider');
   const settingModel = document.getElementById('setting-model');
+  const settingModelOptions = document.getElementById('setting-model-options');
+  const settingReasoningEffort = document.getElementById('setting-reasoning-effort');
   const settingApiEndpoint = document.getElementById('setting-api-endpoint');
   const settingApiKey = document.getElementById('setting-api-key');
   const settingAgentDeveloperMode = document.getElementById('setting-agent-developer-mode');
@@ -48,9 +60,12 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
     hasSavedToken: false
   };
   let storageImportInFlight = false;
-  let activeLlmProvider = 'openai';
+  let activeLlmProvider = DEFAULT_LLM_PROVIDER;
+  let codexCatalog = null;
   let activeSettingsPanel = settingsNavItems[0]?.dataset.settingsTarget || 'appearance';
   const looksLikeEndpoint = (value) => /^[a-z]+:\/\//i.test(String(value || '').trim());
+
+  populateLlmProviderOptions();
 
   settingsNavItems.forEach((item) => {
     item.addEventListener('click', () => {
@@ -64,6 +79,8 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
   startupForm?.addEventListener('submit', onSaveStartupSettings);
   llmForm.addEventListener('submit', onSaveLlmSettings);
   settingProvider?.addEventListener('change', onProviderChanged);
+  settingModel?.addEventListener('input', onModelChanged);
+  settingModel?.addEventListener('change', onModelChanged);
   telegramForm?.addEventListener('submit', onSaveTelegramToken);
   clearTelegramTokenBtn?.addEventListener('click', onClearTelegramToken);
   saveEnaBtn.addEventListener('click', onSaveEnaClick);
@@ -71,6 +88,7 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
   settingAutoSaveEna?.addEventListener('change', onToggleAutoSaveEna);
   locationAddBtn.addEventListener('click', onAddLocation);
   void refreshTelegramBotStatus();
+  void refreshCodexCatalog();
   activateSettingsPanel(activeSettingsPanel);
 
   function activateSettingsPanel(panelId) {
@@ -89,7 +107,159 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
     });
   }
 
+  function normalizeCodexCatalog(rawCatalog) {
+    const source = rawCatalog && typeof rawCatalog === 'object' ? rawCatalog : {};
+    return {
+      defaultModel: String(source.defaultModel || '').trim(),
+      defaultReasoningEffort: String(source.defaultReasoningEffort || '').trim().toLowerCase(),
+      models: Array.isArray(source.models)
+        ? source.models.map((entry) => ({
+          id: String(entry?.id || '').trim(),
+          label: String(entry?.label || entry?.id || '').trim(),
+          reasoningEfforts: Array.isArray(entry?.reasoningEfforts)
+            ? entry.reasoningEfforts.map((effort) => String(effort || '').trim().toLowerCase()).filter(Boolean)
+            : [],
+          defaultReasoningEffort: String(entry?.defaultReasoningEffort || '').trim().toLowerCase()
+        })).filter((entry) => entry.id)
+        : []
+    };
+  }
+
+  function getCodexModelConfig(model = '') {
+    const target = String(model || '').trim();
+    if (!codexCatalog?.models?.length || !target) {
+      return null;
+    }
+    return codexCatalog.models.find((entry) => entry.id === target) || null;
+  }
+
+  function getModelConfigForProvider(provider, model = '') {
+    if (provider === 'codex' && codexCatalog?.models?.length) {
+      return getCodexModelConfig(model);
+    }
+    return getLlmModelConfig(provider, model);
+  }
+
+  function getModelOptionsForProvider(provider) {
+    if (provider === 'codex' && codexCatalog?.models?.length) {
+      return codexCatalog.models.map((entry) => ({
+        value: entry.id,
+        label: entry.label || entry.id
+      }));
+    }
+    return getLlmProviderModelOptions(provider);
+  }
+
+  function normalizeModelForProvider(provider, model = '') {
+    const cleanModel = String(model || '').trim();
+    if (!cleanModel) {
+      return '';
+    }
+    if (provider === 'codex' && codexCatalog?.models?.length) {
+      return getCodexModelConfig(cleanModel)?.id || String(codexCatalog.defaultModel || '').trim() || cleanModel;
+    }
+    return cleanModel;
+  }
+
+  function normalizeReasoningForProvider(provider, model = '', reasoningEffort = '') {
+    const cleanEffort = String(reasoningEffort || '').trim().toLowerCase();
+    const modelConfig = getModelConfigForProvider(provider, model);
+    const supported = Array.isArray(modelConfig?.reasoningEfforts) ? modelConfig.reasoningEfforts : [];
+    if (!supported.length) {
+      return normalizeReasoningEffort(provider, model, cleanEffort);
+    }
+    return supported.includes(cleanEffort) ? cleanEffort : '';
+  }
+
+  function syncCodexSettingsFromCatalog() {
+    if (!codexCatalog?.models?.length) {
+      return false;
+    }
+    const llm = state.settings?.llm && typeof state.settings.llm === 'object'
+      ? state.settings.llm
+      : {};
+    const provider = normalizeLlmProvider(llm.provider, llm.apiEndpoint || llm.api);
+    if (provider !== 'codex') {
+      return false;
+    }
+
+    const currentModel = String(llm.model || '').trim();
+    const nextModel = currentModel
+      ? normalizeModelForProvider(provider, currentModel)
+      : currentModel;
+    const nextReasoningEffort = normalizeReasoningForProvider(
+      provider,
+      nextModel,
+      llm.reasoningEffort
+    );
+    if (nextModel === currentModel && nextReasoningEffort === String(llm.reasoningEffort || '').trim().toLowerCase()) {
+      return false;
+    }
+
+    state.settings.llm = {
+      ...state.settings.llm,
+      provider,
+      model: nextModel,
+      reasoningEffort: nextReasoningEffort
+    };
+    return true;
+  }
+
+  function renderModelOptions(provider) {
+    if (!settingModelOptions) {
+      return;
+    }
+    const modelOptions = getModelOptionsForProvider(provider);
+    settingModelOptions.textContent = '';
+    modelOptions.forEach((entry) => {
+      const option = document.createElement('option');
+      option.value = entry.value;
+      if (entry.label && entry.label !== entry.value) {
+        option.label = entry.label;
+      }
+      settingModelOptions.append(option);
+    });
+  }
+
+  function renderReasoningEffortOptions(provider, model, selectedReasoningEffort = '') {
+    if (!settingReasoningEffort) {
+      return;
+    }
+
+    const modelConfig = getModelConfigForProvider(provider, model);
+    const supported = Array.isArray(modelConfig?.reasoningEfforts) ? modelConfig.reasoningEfforts : [];
+    const normalizedSelected = normalizeReasoningForProvider(provider, model, selectedReasoningEffort);
+    settingReasoningEffort.textContent = '';
+
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    if (supported.length) {
+      const fallbackLabel = String(modelConfig?.defaultReasoningEffort || supported[0] || '').trim();
+      defaultOption.textContent = fallbackLabel ? `Default (${fallbackLabel})` : 'Default';
+    } else {
+      defaultOption.textContent = 'Not configurable for this model';
+    }
+    settingReasoningEffort.append(defaultOption);
+
+    supported.forEach((effort) => {
+      const option = document.createElement('option');
+      option.value = effort;
+      option.textContent = effort;
+      settingReasoningEffort.append(option);
+    });
+
+    settingReasoningEffort.disabled = supported.length === 0;
+    settingReasoningEffort.value = normalizedSelected;
+  }
+
+  function refreshLlmModelAndReasoningFields(provider, selectedReasoningEffort = '') {
+    const resolvedProvider = normalizeLlmProvider(provider, settingApiEndpoint?.value || '');
+    renderModelOptions(resolvedProvider);
+    renderReasoningEffortOptions(resolvedProvider, settingModel?.value || '', selectedReasoningEffort);
+  }
+
   function renderForms() {
+    const didSyncCodexSettings = syncCodexSettingsFromCatalog();
     const personal = state.settings.personalInfo;
     const appearance = state.settings.appearance;
     const llm = state.settings.llm;
@@ -121,13 +291,12 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
     }
     settingModel.value = llm.model || '';
     settingModel.placeholder = modelPlaceholderForProvider(llmProvider);
+    refreshLlmModelAndReasoningFields(llmProvider, llm.reasoningEffort);
     settingApiEndpoint.value = llm.apiEndpoint
       || (llm.api && looksLikeEndpoint(llm.api) ? llm.api : defaultLlmEndpointForProvider(llmProvider));
     settingApiEndpoint.placeholder = defaultLlmEndpointForProvider(llmProvider);
     settingApiKey.value = llm.apiKey || (llm.api && !looksLikeEndpoint(llm.api) ? llm.api : '');
-    settingApiKey.placeholder = llmProvider === 'codex'
-      ? 'Not required (use `codex login`)'
-      : 'sk-...';
+    settingApiKey.placeholder = apiKeyPlaceholderForProvider(llmProvider);
     if (settingAgentDeveloperMode) {
       settingAgentDeveloperMode.checked = state.settings?.agent?.developerMode === true;
     }
@@ -138,6 +307,9 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
     renderTelegramStatus();
     renderLocationList();
     renderStorageImportStatus();
+    if (didSyncCodexSettings) {
+      persist();
+    }
   }
 
   function renderLocationList() {
@@ -258,25 +430,36 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
   async function onSaveLlmSettings(event) {
     event.preventDefault();
     const provider = normalizeLlmProvider(settingProvider?.value, settingApiEndpoint.value);
+    const model = normalizeModelForProvider(provider, settingModel?.value);
+    const reasoningEffort = normalizeReasoningForProvider(provider, model, settingReasoningEffort?.value);
     const endpoint = settingApiEndpoint.value.trim() || defaultLlmEndpointForProvider(provider);
     const apiKey = settingApiKey.value.trim();
 
     state.settings.llm = {
       provider,
-      model: settingModel.value.trim(),
+      model,
+      reasoningEffort,
       apiEndpoint: endpoint,
       apiKey,
       api: apiKey || endpoint
     };
     state.settings.agent = {
+      ...state.settings.agent,
       developerMode: settingAgentDeveloperMode?.checked === true
     };
 
     persist();
 
-    if (provider === 'codex' && window.enanaApi?.setCodexLlmModel) {
+    if (provider === 'codex') {
       try {
-        await window.enanaApi.setCodexLlmModel(state.settings.llm.model);
+        await Promise.all([
+          window.enanaApi?.setCodexLlmModel
+            ? window.enanaApi.setCodexLlmModel(state.settings.llm.model)
+            : Promise.resolve(),
+          window.enanaApi?.setCodexLlmReasoningEffort
+            ? window.enanaApi.setCodexLlmReasoningEffort(state.settings.llm.reasoningEffort)
+            : Promise.resolve()
+        ]);
       } catch {
         // Keep settings save non-blocking if the desktop bridge is unavailable.
       }
@@ -294,10 +477,30 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
     }
     settingApiEndpoint.placeholder = nextDefault;
     settingModel.placeholder = modelPlaceholderForProvider(provider);
-    settingApiKey.placeholder = provider === 'codex'
-      ? 'Not required (use `codex login`)'
-      : 'sk-...';
+    settingApiKey.placeholder = apiKeyPlaceholderForProvider(provider);
     activeLlmProvider = provider;
+    refreshLlmModelAndReasoningFields(provider, settingReasoningEffort?.value);
+  }
+
+  function onModelChanged() {
+    const provider = normalizeLlmProvider(settingProvider?.value, settingApiEndpoint.value);
+    renderReasoningEffortOptions(provider, settingModel?.value || '', settingReasoningEffort?.value);
+  }
+
+  async function refreshCodexCatalog() {
+    if (!window.enanaApi?.getCodexLlmCatalog) {
+      return;
+    }
+    try {
+      const result = await window.enanaApi.getCodexLlmCatalog();
+      if (!result?.ok) {
+        return;
+      }
+      codexCatalog = normalizeCodexCatalog(result);
+      renderForms();
+    } catch {
+      // Keep settings available even when the desktop bridge cannot inspect Codex CLI.
+    }
   }
 
   async function onSaveTelegramToken(event) {
@@ -492,17 +695,19 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
     });
   }
 
-  function modelPlaceholderForProvider(provider) {
-    if (provider === 'gemini') {
-      return 'e.g. gemini-2.5-pro';
+  function populateLlmProviderOptions() {
+    if (!settingProvider) {
+      return;
     }
-    if (provider === 'claude') {
-      return 'e.g. claude-sonnet-4-5';
-    }
-    if (provider === 'codex') {
-      return 'optional, e.g. gpt-5';
-    }
-    return 'e.g. gpt-4.1';
+    const selectedProvider = normalizeLlmProvider(settingProvider.value);
+    settingProvider.textContent = '';
+    LLM_PROVIDER_OPTIONS.forEach((provider) => {
+      const option = document.createElement('option');
+      option.value = provider.value;
+      option.textContent = provider.label;
+      settingProvider.append(option);
+    });
+    settingProvider.value = selectedProvider || DEFAULT_LLM_PROVIDER;
   }
 
   return { renderForms, applyAppearance };

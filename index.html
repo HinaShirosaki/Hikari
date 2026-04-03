@@ -48,6 +48,7 @@
                 <button type="button" id="assay-mode-create-btn" class="ghost-btn calendar-view-active">Create Assay</button>
                 <button type="button" id="assay-mode-results-btn" class="ghost-btn">View &amp; Results</button>
               </div>
+              <p id="assay-mode-note" class="small-note" aria-live="polite"></p>
             </div>
           </div>
           <p id="page-subtitle" class="sr-only">Reminders and active work.</p>
@@ -308,6 +309,17 @@
               </label>
               <label>
                 Steps (start each step with a bullet point)
+                <div class="protocol-steps-toolbar">
+                  <span class="protocol-steps-toolbar-label">Interactive bars</span>
+                  <div class="protocol-placeholder-presets" role="toolbar" aria-label="Protocol step placeholder presets">
+                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="plasmid">plasmid</button>
+                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="protein">protein</button>
+                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="volume">volume</button>
+                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="buffer">buffer</button>
+                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="temperature">temperature</button>
+                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="time">time</button>
+                  </div>
+                </div>
                 <textarea id="protocol-steps" rows="7" placeholder="• Step 1&#10;• Step 2"></textarea>
               </label>
               <div class="inline-row">
@@ -410,6 +422,13 @@
                 <span>Notes / Results</span>
               </div>
               <div class="biology-notebook-viewer-section-body">
+                <div class="biology-notebook-linked-toolbar">
+                  <button id="biology-notebook-add-gel-btn" class="ghost-btn" type="button">Add Gel</button>
+                  <button id="biology-notebook-add-assay-btn" class="ghost-btn" type="button">Add Assay</button>
+                </div>
+                <div id="biology-notebook-linked-results" class="biology-notebook-linked-results">
+                  <p class="small-note">Linked gel, assay, and plot previews will appear here.</p>
+                </div>
                 <label>
                   Experiment Results File / Notes
                   <textarea id="biology-notebook-result" rows="4" placeholder="Path, summary, or notes"></textarea>
@@ -661,6 +680,7 @@
               <button type="button" id="assay-plate-field-concentration-btn" class="ghost-btn">Edit Concentration</button>
             </div>
             <button type="button" id="assay-clear-mappings-btn" class="ghost-btn">Clear All Mappings</button>
+            <button type="button" id="assay-serial-dilution-btn" class="ghost-btn">Serial Dilution</button>
           </div>
           <div id="assay-layout-status" class="small-note"></div>
           <div id="assay-plate-preview" class="assay-plate-preview"></div>
@@ -754,6 +774,24 @@
           <input id="assay-search" placeholder="Assay number, assay, project, plate, notebook..." />
         </label>
         <div id="assay-list" class="cards"></div>
+      </div>
+
+      <div id="assay-serial-dilution-overlay" class="assay-serial-dilution-overlay" hidden>
+        <div class="assay-serial-dilution-dialog" role="dialog" aria-modal="true" aria-labelledby="assay-serial-dilution-title">
+          <div class="assay-header-row assay-serial-dilution-head">
+            <h3 id="assay-serial-dilution-title">Serial Dilution</h3>
+            <button type="button" id="assay-serial-dilution-close-btn" class="ghost-btn" aria-label="Close serial dilution dialog">Close</button>
+          </div>
+          <p class="small-note">Use the current mapped plate to calculate a constant final volume per well, with the last active dilution well discarding the final carryover volume.</p>
+          <div class="assay-serial-dilution-controls">
+            <label>
+              Volume per well (uL)
+              <input id="assay-serial-dilution-volume" type="number" min="0" step="0.1" value="100" />
+            </label>
+          </div>
+          <div id="assay-serial-dilution-summary" class="small-note"></div>
+          <div id="assay-serial-dilution-content" class="assay-serial-dilution-content"></div>
+        </div>
       </div>
     </section>
 
@@ -1193,20 +1231,20 @@
               <form id="llm-form" class="stack-form">
                 <label>
                   Provider
-                  <select id="setting-provider">
-                    <option value="openai">OpenAI</option>
-                    <option value="gemini">Gemini</option>
-                    <option value="claude">Claude</option>
-                    <option value="codex">OpenAI CLI (Codex)</option>
-                  </select>
+                  <select id="setting-provider"></select>
                 </label>
                 <label>
                   Model Name
-                  <input id="setting-model" placeholder="e.g. gpt-4.1 / gemini-2.5-pro / claude-sonnet-4-5 / gpt-5" />
+                  <input id="setting-model" list="setting-model-options" placeholder="Provider model name" />
+                </label>
+                <datalist id="setting-model-options"></datalist>
+                <label>
+                  Reasoning Effort
+                  <select id="setting-reasoning-effort"></select>
                 </label>
                 <label>
                   API Endpoint
-                  <input id="setting-api-endpoint" placeholder="https://api.openai.com/v1/responses" />
+                  <input id="setting-api-endpoint" placeholder="Provider default fills automatically" />
                 </label>
                 <label>
                   API Key
@@ -1402,7 +1440,7 @@
 
 <!-- SOURCE: ui/html/views/papers-view.html -->
 <section id="papers-view" class="view">
-      <div class="papers-layout">
+      <div id="papers-layout" class="papers-layout">
         <div class="papers-left-column">
           <aside id="papers-library-rail" class="papers-library-rail">
             <div class="papers-library-topbar">
@@ -1462,6 +1500,7 @@
                 <button type="button" id="paper-viewer-zoom-in-btn" class="ghost-btn">+</button>
                 <button type="button" id="paper-viewer-zoom-reset-btn" class="ghost-btn">100%</button>
                 <button type="button" id="paper-viewer-fit-width-btn" class="ghost-btn">Fit Width</button>
+                <button type="button" id="paper-viewer-highlight-btn" class="ghost-btn">Highlight Selection</button>
                 <button type="button" id="paper-viewer-summarize-btn" class="ghost-btn">Summarize</button>
                 <button type="button" id="paper-viewer-open-btn" class="ghost-btn">Open Externally</button>
               </div>
@@ -1487,26 +1526,39 @@
           </div>
         </div>
 
-        <div class="papers-right-column">
-          <aside id="paper-comment-sidebar" class="panel papers-comment-sidebar">
-            <div class="papers-comment-meta">
-              <h4>Comments</h4>
-              <p id="paper-comment-page" class="small-note">Page 0</p>
-              <p id="paper-comment-count" class="small-note">0 comments on this page</p>
-            </div>
-            <div class="papers-comment-actions">
-              <button type="button" id="paper-comment-add-btn" class="primary-btn">Add Comment</button>
-              <button type="button" id="paper-comment-save-btn" class="ghost-btn">Save</button>
-              <button type="button" id="paper-comment-cancel-btn" class="ghost-btn">Cancel</button>
-              <button type="button" id="paper-comment-delete-btn" class="danger-btn">Delete</button>
-            </div>
-            <label class="papers-comment-input">
-              Comment
-              <textarea id="paper-comment-text" rows="5" placeholder="Click &quot;Add Comment&quot;, place a pin on the page, then write your note."></textarea>
-            </label>
-            <p id="paper-comment-status" class="small-note">Open a paper to review or add page comments.</p>
-            <div id="paper-comment-list" class="papers-comment-list"></div>
-          </aside>
+        <div id="papers-right-column" class="papers-right-column">
+          <div id="paper-comment-panel" class="papers-comment-panel">
+            <button
+              type="button"
+              id="paper-comment-toggle-btn"
+              class="papers-comment-toggle"
+              aria-controls="paper-comment-sidebar"
+              aria-expanded="true"
+              aria-label="Fold comments panel to the right"
+              title="Fold comments panel to the right"
+            >
+              <span class="papers-comment-toggle-icon" aria-hidden="true"></span>
+            </button>
+            <aside id="paper-comment-sidebar" class="panel papers-comment-sidebar">
+              <div class="papers-comment-meta">
+                <h4>Comments</h4>
+                <p id="paper-comment-page" class="small-note">Page 0</p>
+                <p id="paper-comment-count" class="small-note">0 comments on this page</p>
+              </div>
+              <div class="papers-comment-actions">
+                <button type="button" id="paper-comment-add-btn" class="primary-btn">Add Comment</button>
+                <button type="button" id="paper-comment-save-btn" class="ghost-btn">Save</button>
+                <button type="button" id="paper-comment-cancel-btn" class="ghost-btn">Cancel</button>
+                <button type="button" id="paper-comment-delete-btn" class="danger-btn">Delete</button>
+              </div>
+              <label class="papers-comment-input">
+                Comment
+                <textarea id="paper-comment-text" rows="5" placeholder="Click &quot;Add Comment&quot;, place a pin on the page, then write your note."></textarea>
+              </label>
+              <p id="paper-comment-status" class="small-note">Open a paper to review or add page comments.</p>
+              <div id="paper-comment-list" class="papers-comment-list"></div>
+            </aside>
+          </div>
         </div>
       </div>
 
@@ -1598,6 +1650,9 @@
         </button>
         <button class="tile tool-tile" data-tool-view="tool-buffer-view">
           <span class="label">Buffer Preparer</span>
+        </button>
+        <button class="tile tool-tile" data-tool-view="tool-fixed-reaction-view">
+          <span class="label">Fixed Volume Reaction</span>
         </button>
         <button class="tile tool-tile" data-tool-view="tool-dna-protein-view">
           <span class="label">DNA to Protein</span>
@@ -1839,6 +1894,74 @@
           </div>
           <div id="buffer-rows" class="buffer-rows"></div>
           <p id="buffer-total-result" class="calc-output"></p>
+        </div>
+      </div>
+
+      <div id="tool-fixed-reaction-view" class="panel tool-subview" hidden>
+        <h3>Fixed Volume Reaction</h3>
+        <div class="stack-form reaction-mix-shell">
+          <p class="small-note">Leave a reagent volume blank to calculate it from stock and final concentration. Enter a volume directly when you want to override the concentration-based calculation. Use <code>x</code> for stock solutions like 10x or 5x.</p>
+          <div class="form-actions">
+            <button id="fixed-reaction-add-row-btn" type="button" class="ghost-btn">Add Reagent</button>
+          </div>
+          <div class="reaction-mix-table">
+            <div id="fixed-reaction-rows" class="reaction-mix-rows"></div>
+
+            <div class="reaction-mix-row reaction-mix-row-special">
+              <label class="reaction-mix-cell">
+                <span class="reaction-mix-cell-label">Fill Solution</span>
+                <input id="fixed-reaction-fill-name" type="text" value="Water / buffer" placeholder="e.g. Water" />
+              </label>
+              <div class="reaction-mix-cell">
+                <span class="reaction-mix-cell-label">Stock Conc</span>
+                <div class="reaction-mix-static">Auto</div>
+              </div>
+              <div class="reaction-mix-cell">
+                <span class="reaction-mix-cell-label">Final Conc</span>
+                <div class="reaction-mix-static">Auto</div>
+              </div>
+              <div class="reaction-mix-cell reaction-mix-volume-cell">
+                <span class="reaction-mix-cell-label">Volume</span>
+                <div id="fixed-reaction-fill-volume" class="reaction-mix-static">0 uL</div>
+                <div id="fixed-reaction-fill-note" class="reaction-mix-row-note">Auto-calculated to reach the total volume.</div>
+              </div>
+              <div class="reaction-mix-cell reaction-mix-action-cell">
+                <span class="reaction-mix-cell-label">Action</span>
+                <div class="reaction-mix-static">Locked</div>
+              </div>
+            </div>
+
+            <div class="reaction-mix-row reaction-mix-row-special">
+              <div class="reaction-mix-cell">
+                <span class="reaction-mix-cell-label">Total Volume</span>
+                <div class="reaction-mix-static">Reaction total</div>
+              </div>
+              <div class="reaction-mix-cell">
+                <span class="reaction-mix-cell-label">Stock Conc</span>
+                <div class="reaction-mix-static">-</div>
+              </div>
+              <div class="reaction-mix-cell">
+                <span class="reaction-mix-cell-label">Final Conc</span>
+                <div class="reaction-mix-static">-</div>
+              </div>
+              <label class="reaction-mix-cell reaction-mix-volume-cell">
+                <span class="reaction-mix-cell-label">Volume</span>
+                <div class="inline-row">
+                  <input id="fixed-reaction-total-volume" type="number" min="0" step="0.000001" value="100" placeholder="e.g. 100" />
+                  <select id="fixed-reaction-total-unit">
+                    <option value="uL" selected>uL</option>
+                    <option value="mL">mL</option>
+                    <option value="L">L</option>
+                  </select>
+                </div>
+              </label>
+              <div class="reaction-mix-cell reaction-mix-action-cell">
+                <span class="reaction-mix-cell-label">Action</span>
+                <div class="reaction-mix-static">Locked</div>
+              </div>
+            </div>
+          </div>
+          <p id="fixed-reaction-summary" class="calc-output"></p>
         </div>
       </div>
 

@@ -29,6 +29,10 @@ const {
   mapEvidenceToOutlineSections,
   validateSynthesisSections
 } = require('./final-synthesis-quality.js');
+const {
+  REASONING_ENTRY_TOOL_SCOPES,
+  createAgentToolProviderRuntime
+} = require('../tools/agent-tool-provide.js');
 
 const DEEP_RESEARCH_INTENTS = Object.freeze([
   'general_science_question',
@@ -39,17 +43,17 @@ const DEEP_RESEARCH_INTENTS = Object.freeze([
 const DEEP_RESEARCH_POLICIES = Object.freeze({
   general_science_question: Object.freeze({
     intent: 'general_science_question',
-    tool_scope: Object.freeze(['literature-search', 'sub-agent']),
+    tool_scope: REASONING_ENTRY_TOOL_SCOPES.deep_research_entry.general_science_question,
     require_project_resolution: false
   }),
   project_science_question: Object.freeze({
     intent: 'project_science_question',
-    tool_scope: Object.freeze(['record-lookup', 'literature-search', 'sub-agent']),
+    tool_scope: REASONING_ENTRY_TOOL_SCOPES.deep_research_entry.project_science_question,
     require_project_resolution: true
   }),
   result_analysis: Object.freeze({
     intent: 'result_analysis',
-    tool_scope: Object.freeze(['python-sandbox', 'record-lookup', 'literature-search', 'sub-agent']),
+    tool_scope: REASONING_ENTRY_TOOL_SCOPES.deep_research_entry.result_analysis,
     require_project_resolution: false
   })
 });
@@ -236,13 +240,14 @@ function createDeepResearchRuntime(deps = {}) {
     ...deps,
     requestStructuredJsonPayload: llmHelpers.requestStructuredJsonPayload
   };
-  const resolveToolDefinitions = typeof deps.resolveToolDefinitions === 'function'
-    ? deps.resolveToolDefinitions
-    : ((toolNames = []) => asArray(toolNames).map((toolName) => ({
-      name: cleanText(toolName, 120),
-      description: '',
-      parameters: { type: 'object', additionalProperties: true, properties: {} }
-    })));
+  const toolProvider = deps.toolProvider && typeof deps.toolProvider === 'object'
+    ? deps.toolProvider
+    : createAgentToolProviderRuntime({
+      ...deps,
+      getModelToolDefinitions: typeof deps.resolveToolDefinitions === 'function'
+        ? deps.resolveToolDefinitions
+        : null
+    });
   const applyResponseLayerToOutput = typeof deps.applyResponseLayerToOutput === 'function'
     ? deps.applyResponseLayerToOutput
     : (({ normalized }) => normalized);
@@ -290,6 +295,16 @@ function createDeepResearchRuntime(deps = {}) {
       message: `Started deep research pipeline for ${intent}.`
     });
 
+    recordLifecycleEvent(input.lifecycleRecorder, {
+      stage: 'deep_research_step_started',
+      status: 'started',
+      routing_intent: intent,
+      message: 'Clarifying the research objective.',
+      meta: {
+        step: 1,
+        title: 'Clarify objective'
+      }
+    });
     const researchObjective = await runStep1ClarifyQuestion({
       ...input,
       intent,
@@ -298,7 +313,27 @@ function createDeepResearchRuntime(deps = {}) {
       project
     }, runtimeDeps);
     intermediateStates.push(buildIntermediateState('step_1_clarify', 'Clarified the research objective.', researchObjective));
+    recordLifecycleEvent(input.lifecycleRecorder, {
+      stage: 'deep_research_step_completed',
+      status: 'ok',
+      routing_intent: intent,
+      message: 'Research objective clarified.',
+      meta: {
+        step: 1,
+        title: 'Clarify objective'
+      }
+    });
 
+    recordLifecycleEvent(input.lifecycleRecorder, {
+      stage: 'deep_research_step_started',
+      status: 'started',
+      routing_intent: intent,
+      message: 'Checking whether a blocking follow-up question is still needed.',
+      meta: {
+        step: 2,
+        title: 'Follow-up check'
+      }
+    });
     const followUp = await runStep2AskTargetedFollowUp({
       ...input,
       intent,
@@ -308,6 +343,18 @@ function createDeepResearchRuntime(deps = {}) {
       clarifyResult: researchObjective
     }, runtimeDeps);
     intermediateStates.push(buildIntermediateState('step_2_follow_up', 'Checked whether one blocking follow-up question is still needed.', followUp));
+    recordLifecycleEvent(input.lifecycleRecorder, {
+      stage: 'deep_research_step_completed',
+      status: followUp.needs_follow_up === true ? 'pending' : 'ok',
+      routing_intent: intent,
+      message: followUp.needs_follow_up === true
+        ? 'Deep research is waiting on one blocking follow-up answer.'
+        : 'No blocking follow-up is needed.',
+      meta: {
+        step: 2,
+        title: 'Follow-up check'
+      }
+    });
 
     if (followUp.needs_follow_up === true) {
       return buildNeedsMoreInfoResult({
@@ -322,6 +369,16 @@ function createDeepResearchRuntime(deps = {}) {
       });
     }
 
+    recordLifecycleEvent(input.lifecycleRecorder, {
+      stage: 'deep_research_step_started',
+      status: 'started',
+      routing_intent: intent,
+      message: 'Drafting the structured research plan.',
+      meta: {
+        step: 3,
+        title: 'Research plan'
+      }
+    });
     const researchPlan = await runStep3DraftResearchPlan({
       ...input,
       intent,
@@ -333,7 +390,31 @@ function createDeepResearchRuntime(deps = {}) {
       toolScope: policy.tool_scope
     }, runtimeDeps);
     intermediateStates.push(buildIntermediateState('step_3_plan', 'Drafted the structured research plan.', researchPlan));
+    recordLifecycleEvent(input.lifecycleRecorder, {
+      stage: 'deep_research_step_completed',
+      status: 'ok',
+      routing_intent: intent,
+      message: 'Research plan drafted.',
+      meta: {
+        step: 3,
+        title: 'Research plan',
+        section_count: asArray(researchPlan?.answer_sections).length
+      }
+    });
+    const requestedToolNames = Array.isArray(researchPlan?.possible_tools_or_sources) && researchPlan.possible_tools_or_sources.length
+      ? asArray(researchPlan.possible_tools_or_sources)
+      : null;
 
+    recordLifecycleEvent(input.lifecycleRecorder, {
+      stage: 'deep_research_step_started',
+      status: 'started',
+      routing_intent: intent,
+      message: 'Executing the research plan and gathering evidence.',
+      meta: {
+        step: 4,
+        title: 'Execute plan'
+      }
+    });
     const executionResult = await runStep4ExecutePlan({
       ...input,
       intent,
@@ -343,7 +424,14 @@ function createDeepResearchRuntime(deps = {}) {
       policy,
       researchObjective,
       researchPlan,
-      toolDefinitions: resolveToolDefinitions(researchPlan.possible_tools_or_sources),
+      toolDefinitions: typeof toolProvider?.provideToolDefinitions === 'function'
+        ? toolProvider.provideToolDefinitions({
+          entryPoint: 'deep_research_entry',
+          intent,
+          requestedToolNames
+        })
+        : [],
+      toolProvider,
       createContextControlState,
       recordSectionBuffer,
       updateContextControlState,
@@ -356,7 +444,31 @@ function createDeepResearchRuntime(deps = {}) {
       runCompletionCheck
     }, runtimeDeps);
     intermediateStates.push(...asArray(executionResult.intermediate_states));
+    recordLifecycleEvent(input.lifecycleRecorder, {
+      stage: 'deep_research_step_completed',
+      status: executionResult.completion_check?.satisfied === true ? 'ok' : 'pending',
+      routing_intent: intent,
+      message: executionResult.completion_check?.satisfied === true
+        ? 'Research plan execution gathered enough evidence.'
+        : 'Research plan execution completed with remaining gaps.',
+      meta: {
+        step: 4,
+        title: 'Execute plan',
+        rounds_executed: Number(executionResult.rounds_executed) || 0,
+        citation_count: asArray(executionResult.citations).length
+      }
+    });
 
+    recordLifecycleEvent(input.lifecycleRecorder, {
+      stage: 'deep_research_step_started',
+      status: 'started',
+      routing_intent: intent,
+      message: 'Drafting the final answer from the gathered evidence.',
+      meta: {
+        step: 5,
+        title: 'Assemble answer'
+      }
+    });
     const synthesisResult = await runStep5AssembleFinalAnswer({
       ...input,
       intent,
@@ -375,6 +487,16 @@ function createDeepResearchRuntime(deps = {}) {
       outline: synthesisResult.answer_outline,
       validation: synthesisResult.synthesis_validation
     }));
+    recordLifecycleEvent(input.lifecycleRecorder, {
+      stage: 'deep_research_step_completed',
+      status: 'ok',
+      routing_intent: intent,
+      message: 'Final deep research answer drafted.',
+      meta: {
+        step: 5,
+        title: 'Assemble answer'
+      }
+    });
 
     const citations = normalizeCitations(executionResult.citations, 20);
     const partial = !(executionResult.completion_check?.satisfied === true);

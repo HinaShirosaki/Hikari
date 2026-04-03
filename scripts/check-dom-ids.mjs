@@ -5,10 +5,7 @@ import path from 'node:path';
 
 const ROOT_DIR = process.cwd();
 const HTML_PATH = path.join(ROOT_DIR, 'index.html');
-const JS_SCAN_ROOTS = [
-  path.join(ROOT_DIR, 'src', 'renderer', 'modules'),
-  path.join(ROOT_DIR, 'src', 'renderer', 'renderer.js')
-];
+const RENDERER_ENTRYPOINT = path.join(ROOT_DIR, 'src', 'renderer', 'renderer.js');
 const ALLOWED_MISSING_IDS = new Set([
   'exit-btn'
 ]);
@@ -25,23 +22,54 @@ async function fileExists(targetPath) {
   }
 }
 
-async function collectJsFiles(targetPath) {
-  const stats = await fs.stat(targetPath);
-  if (stats.isFile()) {
-    return targetPath.endsWith('.js') ? [targetPath] : [];
+function resolveLocalImport(fromPath, specifier) {
+  const raw = String(specifier || '').trim();
+  if (!raw.startsWith('.')) {
+    return '';
   }
 
-  const entries = await fs.readdir(targetPath, { withFileTypes: true });
-  const files = [];
-  for (const entry of entries) {
-    const entryPath = path.join(targetPath, entry.name);
-    if (entry.isDirectory()) {
-      files.push(...await collectJsFiles(entryPath));
+  const candidate = path.resolve(path.dirname(fromPath), raw);
+  if (path.extname(candidate)) {
+    return candidate;
+  }
+  return `${candidate}.js`;
+}
+
+function collectLocalImportSpecifiers(jsText) {
+  const specifiers = new Set();
+  const importRegex = /^\s*import\s+(?:.+?\s+from\s+)?['"]([^'"]+)['"]\s*;?\s*$/gm;
+  let match = importRegex.exec(jsText);
+  while (match) {
+    const specifier = String(match[1] || '').trim();
+    if (specifier.startsWith('.')) {
+      specifiers.add(specifier);
+    }
+    match = importRegex.exec(jsText);
+  }
+  return [...specifiers];
+}
+
+async function collectReachableJsFiles(entryPath, visited = new Set()) {
+  if (!entryPath || visited.has(entryPath)) {
+    return [];
+  }
+  if (!await fileExists(entryPath)) {
+    return [];
+  }
+  if (!entryPath.endsWith('.js')) {
+    return [];
+  }
+
+  visited.add(entryPath);
+  const jsText = await fs.readFile(entryPath, 'utf8');
+  const files = [entryPath];
+  const imports = collectLocalImportSpecifiers(jsText);
+  for (const specifier of imports) {
+    const resolvedPath = resolveLocalImport(entryPath, specifier);
+    if (!resolvedPath) {
       continue;
     }
-    if (entry.isFile() && entry.name.endsWith('.js')) {
-      files.push(entryPath);
-    }
+    files.push(...await collectReachableJsFiles(resolvedPath, visited));
   }
   return files;
 }
@@ -95,29 +123,24 @@ async function main() {
   const htmlIds = collectHtmlIds(htmlText);
   const missing = new Map();
 
-  for (const scanRoot of JS_SCAN_ROOTS) {
-    if (!await fileExists(scanRoot)) {
-      continue;
-    }
-    const files = await collectJsFiles(scanRoot);
-    for (const filePath of files) {
-      const jsText = await fs.readFile(filePath, 'utf8');
-      const calls = collectDocumentGetElementByIdCalls(jsText);
-      for (const call of calls) {
-        if (htmlIds.has(call.id)) {
-          continue;
-        }
-        if (isAllowedMissingId(call.id)) {
-          continue;
-        }
-        const rel = path.relative(ROOT_DIR, filePath).split(path.sep).join('/');
-        const line = lineNumberForIndex(jsText, call.index);
-        const key = call.id;
-        if (!missing.has(key)) {
-          missing.set(key, []);
-        }
-        missing.get(key).push(`${rel}:${line}`);
+  const files = await collectReachableJsFiles(RENDERER_ENTRYPOINT);
+  for (const filePath of files) {
+    const jsText = await fs.readFile(filePath, 'utf8');
+    const calls = collectDocumentGetElementByIdCalls(jsText);
+    for (const call of calls) {
+      if (htmlIds.has(call.id)) {
+        continue;
       }
+      if (isAllowedMissingId(call.id)) {
+        continue;
+      }
+      const rel = path.relative(ROOT_DIR, filePath).split(path.sep).join('/');
+      const line = lineNumberForIndex(jsText, call.index);
+      const key = call.id;
+      if (!missing.has(key)) {
+        missing.set(key, []);
+      }
+      missing.get(key).push(`${rel}:${line}`);
     }
   }
 

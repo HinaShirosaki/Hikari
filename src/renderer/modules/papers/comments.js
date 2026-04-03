@@ -34,6 +34,7 @@ export function createPapersCommentController(context) {
   function syncViewerComments() {
     const activePaper = getActivePaper();
     paperViewer.setComments(activePaper ? ensurePaperComments(activePaper) : []);
+    context.syncViewerHighlights?.();
     paperViewer.setSelectedCommentId(commentState.selectedCommentId);
     paperViewer.setPlacementMode(commentState.mode === 'placing');
   }

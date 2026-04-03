@@ -16,17 +16,16 @@ Two JSON files define the model-facing tool surface:
 | `tools/Tools.json` | short catalog of tool names and high-level descriptions |
 | `tools/Tool-call.json` | input schemas and richer descriptions for each tool |
 
-`agent-tool-call.js` loads both files, validates them, and exposes helpers for:
+`agent-tool-loading.js` loads both files, validates them, and exposes helpers for:
 
 - canonical tool-name resolution
 - tool selection prompt building
 - tool argument prompt building
 - schema validation
-- execution envelope construction
 
 ## Layer 2: the generic tool runtime
 
-`createAgentToolCallRuntime()` is an executor registry plus validator. It can:
+`agent-tool-execution.js` exposes `createAgentToolCallRuntime()`, an executor registry plus validator. It can:
 
 - register an executor for a canonical tool name
 - validate tool-call payloads against the catalog schema
@@ -34,6 +33,8 @@ Two JSON files define the model-facing tool surface:
 - wrap outputs in a consistent envelope with `ok`, `summary`, `items`, and `error`
 
 It does not know how to run any concrete tool by itself. It only runs what has been registered.
+
+`agent-tool-call.js` now exists as a thin compatibility wrapper that re-exports both modules.
 
 ## Current wiring in `main.js`
 

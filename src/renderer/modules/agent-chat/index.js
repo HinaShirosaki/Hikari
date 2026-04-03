@@ -1,6 +1,7 @@
 import { normalizeAgentResponse } from './response.js';
 import {
   asArray,
+  TOOL_ACTIVITY_LABELS,
   toConversation,
   trimText
 } from './shared.js';
@@ -47,9 +48,229 @@ export function initAgentChat({
   const clearBtn = rootDocument?.getElementById?.('agent-clear-btn') || null;
   const status = rootDocument?.getElementById?.('agent-status') || null;
   let inFlight = false;
+  let liveAssistantMessage = null;
+  let activeClientRequestId = '';
 
   if (!projectSelect || !historyNode || !input || !sendBtn || !clearBtn || !status) {
     return { render: () => {} };
+  }
+
+  function progressBadgeStatus(statusText = '') {
+    const normalized = trimText(statusText, 40).toLowerCase();
+    if (normalized === 'ok' || normalized === 'completed' || normalized === 'done' || normalized === 'matched') {
+      return 'done';
+    }
+    if (normalized === 'failed' || normalized === 'error' || normalized === 'no_match') {
+      return 'error';
+    }
+    return 'pending';
+  }
+
+  function progressStatusRank(statusText = '') {
+    const normalized = progressBadgeStatus(statusText);
+    if (normalized === 'error') {
+      return 4;
+    }
+    if (normalized === 'done') {
+      return 3;
+    }
+    return 2;
+  }
+
+  function humanizeToken(value) {
+    const text = trimText(value, 120);
+    if (!text) {
+      return '';
+    }
+    return text
+      .replace(/[_-]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+  }
+
+  function getToolActivityLabel(toolName = '') {
+    const normalized = trimText(toolName, 120);
+    return TOOL_ACTIVITY_LABELS[normalized] || humanizeToken(normalized) || 'Running tool';
+  }
+
+  function getProgressRowKey(eventPayload = {}) {
+    const stage = trimText(eventPayload?.stage, 80);
+    const toolName = trimText(eventPayload?.tool_name, 120);
+    const round = trimText(eventPayload?.meta?.round, 40);
+    const step = trimText(eventPayload?.meta?.step, 40);
+    if (stage === 'tool_call_started' || stage === 'tool_call_completed' || stage === 'tool_call_failed') {
+      return `tool:${toolName}`;
+    }
+    if (stage === 'science_round_started') {
+      return `science-round:${round || '0'}:${toolName}`;
+    }
+    if (stage === 'science_evaluator_continue' || stage === 'science_evaluator_satisfied') {
+      return `science-evaluator:${round || '0'}`;
+    }
+    if (stage === 'deep_research_step_started' || stage === 'deep_research_step_completed') {
+      return `deep-research-step:${step || '0'}`;
+    }
+    return stage;
+  }
+
+  function getProgressRowText(eventPayload = {}) {
+    const stage = trimText(eventPayload?.stage, 80);
+    const round = trimText(eventPayload?.meta?.round, 40);
+    const step = trimText(eventPayload?.meta?.step, 40);
+    const stepTitle = trimText(eventPayload?.meta?.title, 160);
+    const toolLabel = getToolActivityLabel(eventPayload?.tool_name);
+    const stageLabels = {
+      request_received: 'Request received',
+      controller_intent_only_selected: 'Preparing parser-first request',
+      controller_intent_only: 'Running parser-first controller',
+      parser_completed: 'Intent parsed',
+      protocol_to_notebook_followup: 'Continuing notebook follow-up',
+      protocol_to_notebook_completed: 'Notebook draft status updated',
+      inventory_lookup_started: 'Checking inventory records',
+      inventory_lookup_completed: 'Inventory lookup updated',
+      record_lookup_started: 'Checking lab records',
+      record_lookup_completed: 'Record lookup updated',
+      notebook_draft_started: getToolActivityLabel('notebook-draft'),
+      notebook_draft_completed: 'Notebook draft updated',
+      science_intent_start: 'Starting reasoning loop',
+      science_intent_started: 'Reasoning loop ready',
+      science_clarification_started: 'Clarifying the request',
+      science_clarification_completed: 'Request clarified',
+      science_exit_criteria_started: 'Defining stopping criteria',
+      science_exit_criteria_completed: 'Stopping criteria ready',
+      science_evaluator_continue: round ? `Round ${round}: More evidence needed` : 'More evidence needed',
+      science_evaluator_satisfied: round ? `Round ${round}: Evidence is sufficient` : 'Evidence is sufficient',
+      science_budget_exhausted: round ? `Round ${round}: Reasoning budget exhausted` : 'Reasoning budget exhausted',
+      science_intent_completed: 'Reasoning completed',
+      deep_research_started: 'Starting deep research',
+      deep_research_completed: 'Deep research completed',
+      response_emitted: 'Final answer ready',
+      controller_error: 'Request failed'
+    };
+    if (stage === 'tool_call_started' || stage === 'tool_call_completed' || stage === 'tool_call_failed') {
+      return toolLabel;
+    }
+    if (stage === 'science_round_started') {
+      return round ? `Round ${round}: ${toolLabel}` : toolLabel;
+    }
+    if (stage === 'deep_research_step_started' || stage === 'deep_research_step_completed') {
+      if (step && stepTitle) {
+        return `Step ${step}: ${stepTitle}`;
+      }
+      if (step) {
+        return `Step ${step}`;
+      }
+    }
+    return stageLabels[stage] || trimText(eventPayload?.message, 240) || humanizeToken(stage) || 'Working on this';
+  }
+
+  function buildLiveProgressSummary(eventPayload = {}) {
+    const stage = trimText(eventPayload?.stage, 80);
+    const toolName = trimText(eventPayload?.tool_name, 120);
+    if (stage === 'tool_call_started') {
+      return `${getToolActivityLabel(toolName)}...`;
+    }
+    if (stage === 'tool_call_completed') {
+      return trimText(eventPayload?.message, 600) || `${getToolActivityLabel(toolName)} complete.`;
+    }
+    if (stage === 'tool_call_failed') {
+      return trimText(eventPayload?.message, 600) || `${getToolActivityLabel(toolName)} failed.`;
+    }
+    if (stage === 'deep_research_step_started' || stage === 'deep_research_step_completed') {
+      const step = trimText(eventPayload?.meta?.step, 40);
+      const title = trimText(eventPayload?.meta?.title, 160);
+      if (step && title) {
+        return `Step ${step}: ${title}`;
+      }
+    }
+    return trimText(eventPayload?.message, 600) || getProgressRowText(eventPayload) || 'Working on this...';
+  }
+
+  function upsertLiveProgressRows(rows = [], eventPayload = {}) {
+    const nextRows = asArray(rows).map((row) => ({ ...row }));
+    const key = getProgressRowKey(eventPayload);
+    const nextStatus = progressBadgeStatus(eventPayload?.status);
+    const nextText = getProgressRowText(eventPayload);
+    if (!key || !nextText) {
+      return nextRows;
+    }
+    const existingIndex = nextRows.findIndex((row) => trimText(row?.key, 160) === key);
+    if (existingIndex === -1) {
+      nextRows.push({
+        key,
+        status: nextStatus,
+        text: nextText
+      });
+      return nextRows.slice(-12);
+    }
+    const existingRow = nextRows[existingIndex];
+    nextRows[existingIndex] = {
+      ...existingRow,
+      status: progressStatusRank(nextStatus) >= progressStatusRank(existingRow?.status)
+        ? nextStatus
+        : existingRow?.status,
+      text: nextText || existingRow?.text
+    };
+    return nextRows.slice(-12);
+  }
+
+  function buildLiveAssistantPlaceholder(clientRequestId, requestText) {
+    return {
+      id: `live-${trimText(clientRequestId, 120) || createId()}`,
+      role: 'assistant',
+      text: 'Working on this...',
+      createdAt: new Date().toISOString(),
+      meta: {
+        live_progress: {
+          client_request_id: trimText(clientRequestId, 120),
+          request_text: trimText(requestText, 3000),
+          activity_rows: [
+            {
+              key: 'request_received',
+              status: 'pending',
+              text: 'Request received'
+            }
+          ],
+          stage: 'request_received',
+          status: 'started',
+          message: 'Working on this...'
+        }
+      }
+    };
+  }
+
+  function clearLiveAssistantState() {
+    liveAssistantMessage = null;
+    activeClientRequestId = '';
+  }
+
+  function applyLiveProgressEvent(eventPayload = {}) {
+    if (!liveAssistantMessage) {
+      return;
+    }
+    const currentMeta = liveAssistantMessage.meta?.live_progress || {};
+    const activityRows = upsertLiveProgressRows(currentMeta.activity_rows, eventPayload);
+    liveAssistantMessage = {
+      ...liveAssistantMessage,
+      text: buildLiveProgressSummary(eventPayload),
+      meta: {
+        ...liveAssistantMessage.meta,
+        live_progress: {
+          ...currentMeta,
+          client_request_id: trimText(eventPayload?.client_request_id, 120) || currentMeta.client_request_id,
+          request_id: trimText(eventPayload?.request_id, 120) || currentMeta.request_id,
+          chat_session_id: trimText(eventPayload?.chat_session_id, 120) || currentMeta.chat_session_id,
+          routing_intent: trimText(eventPayload?.routing_intent, 120) || currentMeta.routing_intent,
+          stage: trimText(eventPayload?.stage, 80) || currentMeta.stage,
+          status: trimText(eventPayload?.status, 40) || currentMeta.status,
+          message: buildLiveProgressSummary(eventPayload),
+          meta: eventPayload?.meta && typeof eventPayload.meta === 'object' ? eventPayload.meta : currentMeta.meta,
+          activity_rows: activityRows,
+          updated_at: trimText(eventPayload?.timestamp, 80) || new Date().toISOString()
+        }
+      }
+    };
   }
 
   function ensureAgentState() {
@@ -83,7 +304,9 @@ export function initAgentChat({
     ensureAgentState();
     renderingModule.renderHistory({
       historyNode,
-      messages: state.agentChat.messages,
+      messages: liveAssistantMessage
+        ? [...state.agentChat.messages, liveAssistantMessage]
+        : state.agentChat.messages,
       state,
       safeText
     });
@@ -165,12 +388,16 @@ export function initAgentChat({
     renderContextSummary,
     renderHistory: renderHistoryView,
     setStatus,
-    setSessionStatus
+    setSessionStatus,
+    isInteractionLocked: () => inFlight
   });
 
   function updateInFlightState(nextInFlight) {
     inFlight = nextInFlight;
     sendBtn.disabled = inFlight;
+    if (newChatBtn) {
+      newChatBtn.disabled = inFlight;
+    }
     if (developerTestToolsBtn) {
       developerTestToolsBtn.disabled = inFlight;
     }
@@ -189,6 +416,7 @@ export function initAgentChat({
     clearBtn.disabled = inFlight;
     projectSelect.disabled = inFlight;
     input.disabled = inFlight;
+    sessionManager.renderSessionList();
   }
 
   async function buildSyncedStateSnapshot(projectId) {
@@ -308,13 +536,18 @@ export function initAgentChat({
     input.value = '';
     renderHistoryView();
 
+    const clientRequestId = `agent-request-${trimText(createId(), 120) || Date.now().toString(36)}`;
+    activeClientRequestId = clientRequestId;
+    liveAssistantMessage = buildLiveAssistantPlaceholder(clientRequestId, messageText);
+    renderHistoryView();
     updateInFlightState(true);
-    setStatus('Agent reasoning in progress...');
+    setStatus('Working on this...');
 
     try {
       const stateSnapshot = await buildSyncedStateSnapshot(projectId);
 
       const result = await api.agentChat({
+        clientRequestId,
         message: messageText,
         chatSessionId: currentSessionId,
         projectId,
@@ -324,6 +557,7 @@ export function initAgentChat({
         llm: {
           provider: String(state.settings?.llm?.provider || '').trim(),
           model: String(state.settings?.llm?.model || '').trim(),
+          reasoningEffort: String(state.settings?.llm?.reasoningEffort || '').trim().toLowerCase(),
           apiEndpoint: String(state.settings?.llm?.apiEndpoint || '').trim(),
           apiKey: String(state.settings?.llm?.apiKey || '').trim()
         },
@@ -353,6 +587,7 @@ export function initAgentChat({
         renderContextSummary();
       }
 
+      clearLiveAssistantState();
       state.agentChat.messages.push({
         id: createId(),
         role: 'assistant',
@@ -378,10 +613,11 @@ export function initAgentChat({
       sessionManager.renderSessionList();
       renderHistoryView();
       if (state.agentChat.currentSessionId) {
-        void sessionManager.refreshPersistentSessions({ force: true });
+        void sessionManager.refreshPersistentSessions({ force: true, loadCurrent: false });
       }
       setStatus('Complete.');
     } catch (error) {
+      clearLiveAssistantState();
       state.agentChat.messages.push({
         id: createId(),
         role: 'assistant',
@@ -390,6 +626,8 @@ export function initAgentChat({
         meta: {
           parser: {
             primary_intent: 'unclear',
+            reasoning_effort: 0,
+            direct_answer: null,
             needs_clarification: true,
             clarification_reason: 'agent_error',
             entities: {},
@@ -668,6 +906,16 @@ export function initAgentChat({
       setStatus('Ready.');
     }
   }
+
+  api?.onAgentProgress?.((payload) => {
+    const clientRequestId = trimText(payload?.client_request_id, 120);
+    if (!clientRequestId || clientRequestId !== activeClientRequestId || !liveAssistantMessage) {
+      return;
+    }
+    applyLiveProgressEvent(payload);
+    renderHistoryView();
+    setStatus(trimText(liveAssistantMessage?.text, 320) || 'Working on this...');
+  });
 
   return {
     render

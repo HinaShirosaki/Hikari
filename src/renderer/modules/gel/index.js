@@ -13,6 +13,10 @@ import {
   safeFilePart
 } from './shared.js';
 
+export function selectViewerBaseImageData(currentImage, _preprocessed = null) {
+  return currentImage?.imageData || null;
+}
+
 export function initGelAnalysis({ state, persist, createId, safeText, onGelAnalysesChanged }) {
   const {
     gelForm,
@@ -107,6 +111,64 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
     if (!Array.isArray(state.gelAnalyses)) {
       state.gelAnalyses = [];
     }
+  }
+
+  function arraysEqual(left, right) {
+    if (left.length !== right.length) {
+      return false;
+    }
+    return left.every((value, index) => value === right[index]);
+  }
+
+  function syncNotebookGelLinks() {
+    if (!Array.isArray(state.notebookEntries)) {
+      return;
+    }
+
+    const linkedIdsByEntry = new Map();
+    (state.gelAnalyses || []).forEach((analysis) => {
+      const entryId = String(analysis?.notebookEntryId || '').trim();
+      const analysisId = String(analysis?.id || '').trim();
+      if (!entryId || !analysisId) {
+        return;
+      }
+      if (!linkedIdsByEntry.has(entryId)) {
+        linkedIdsByEntry.set(entryId, []);
+      }
+      linkedIdsByEntry.get(entryId).push(analysisId);
+    });
+
+    state.notebookEntries = state.notebookEntries.map((entry) => {
+      const nextIds = linkedIdsByEntry.get(String(entry?.id || '').trim()) || [];
+      const currentIds = Array.isArray(entry?.gelIds)
+        ? entry.gelIds.map((value) => String(value || '').trim()).filter(Boolean)
+        : [];
+      if (arraysEqual(currentIds, nextIds)) {
+        return entry;
+      }
+      return {
+        ...entry,
+        gelIds: nextIds
+      };
+    });
+  }
+
+  function selectNotebookOption(value) {
+    if (!gelNotebookEntryInput) {
+      return;
+    }
+    const targetValue = String(value || '').trim();
+    if (!targetValue) {
+      gelNotebookEntryInput.value = '';
+      return;
+    }
+    if (!Array.from(gelNotebookEntryInput.options).some((option) => option.value === targetValue)) {
+      const option = document.createElement('option');
+      option.value = targetValue;
+      option.textContent = `${targetValue} (missing notebook page)`;
+      gelNotebookEntryInput.append(option);
+    }
+    gelNotebookEntryInput.value = targetValue;
   }
 
   function setStatus(message) {
@@ -317,6 +379,69 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
     const context = canvas.getContext('2d', { willReadFrequently: true });
     context.putImageData(imageData, 0, 0);
     return canvas.toDataURL('image/png');
+  }
+
+  function captureNotebookPreviewImage(fallback = '') {
+    try {
+      if (gelCanvas?.width && gelCanvas?.height) {
+        return gelCanvas.toDataURL('image/png');
+      }
+    } catch {}
+    if (currentImage?.imageData) {
+      return imageDataToDataUrl(currentImage.imageData);
+    }
+    return String(fallback || '').trim();
+  }
+
+  function extractBase64Payload(dataUrl) {
+    const source = String(dataUrl || '');
+    const commaIndex = source.indexOf(',');
+    if (commaIndex < 0) {
+      return '';
+    }
+    return source.slice(commaIndex + 1).trim();
+  }
+
+  async function persistNotebookPreviewImage(existingRecord = null) {
+    const existingPath = String(existingRecord?.previewImagePath || '').trim();
+    const existingRelativePath = String(existingRecord?.previewImageRelativePath || '').trim();
+    const previewDataUrl = captureNotebookPreviewImage(String(existingRecord?.previewImageDataUrl || '').trim());
+    if (!previewDataUrl) {
+      return {
+        previewImagePath: existingPath,
+        previewImageRelativePath: existingRelativePath,
+        previewImageDataUrl: String(existingRecord?.previewImageDataUrl || '').trim()
+      };
+    }
+
+    const linkedEntry = (state.notebookEntries || []).find((entry) => entry.id === gelNotebookEntryInput?.value);
+    const storagePath = String(state.settings?.storagePath || '').trim();
+    const storageFolder = String(linkedEntry?.storageFolder || '').trim();
+    const dataBase64 = extractBase64Payload(previewDataUrl);
+
+    if (storagePath && storageFolder && dataBase64 && window.enanaApi?.storeImportedFile) {
+      try {
+        const stored = await window.enanaApi.storeImportedFile({
+          storagePath,
+          targetFolder: `${storageFolder}/LinkedPreviews/Gels`,
+          fileName: `${safeFilePart(gelNameInput?.value || currentReport?.image?.name, 'gel-preview')}.png`,
+          dataBase64
+        });
+        if (stored?.filePath) {
+          return {
+            previewImagePath: stored.filePath,
+            previewImageRelativePath: stored.relativePath || '',
+            previewImageDataUrl: ''
+          };
+        }
+      } catch {}
+    }
+
+    return {
+      previewImagePath: existingPath,
+      previewImageRelativePath: existingRelativePath,
+      previewImageDataUrl: previewDataUrl
+    };
   }
 
   function destroyCropper() {
@@ -1034,8 +1159,7 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
 
     gelCanvas.width = currentImage.width;
     gelCanvas.height = currentImage.height;
-    const preprocessed = getPreprocessedImageForCurrentSettings();
-    const baseImageData = preprocessed?.previewImageData || currentImage.imageData;
+    const baseImageData = selectViewerBaseImageData(currentImage);
     context.putImageData(baseImageData, 0, 0);
 
     const overrides = normalizeManualOverrides(manualOverrides);
@@ -1279,7 +1403,7 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
     };
   }
 
-  function onSaveAnalysis(event) {
+  async function onSaveAnalysis(event) {
     event.preventDefault();
     ensureState();
 
@@ -1298,6 +1422,7 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
     const existing = state.gelAnalyses.find((item) => item.id === editingId);
     const record = buildRecordFromCurrentReport(existing?.id || '');
     record.name = name;
+    Object.assign(record, await persistNotebookPreviewImage(existing));
 
     const index = state.gelAnalyses.findIndex((item) => item.id === record.id);
     if (index >= 0) {
@@ -1306,6 +1431,7 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
       state.gelAnalyses.push(record);
     }
 
+    syncNotebookGelLinks();
     persist();
     renderList();
     if (typeof onGelAnalysesChanged === 'function') {
@@ -1417,6 +1543,7 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
 
   function deleteRecord(recordId) {
     state.gelAnalyses = (state.gelAnalyses || []).filter((item) => item.id !== recordId);
+    syncNotebookGelLinks();
     persist();
     renderList();
     if (typeof onGelAnalysesChanged === 'function') {
@@ -1532,10 +1659,32 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
     }
   }
 
+  function startLinkedGel({ notebookEntryId = '', projectId = '' } = {}) {
+    resetForm();
+
+    const linkedEntry = (state.notebookEntries || []).find((entry) => entry.id === notebookEntryId);
+    const resolvedProjectId = String(projectId || linkedEntry?.projectId || '').trim();
+    if (resolvedProjectId && gelProjectInput) {
+      gelProjectInput.value = resolvedProjectId;
+      renderProjectOptions();
+      gelProjectInput.value = resolvedProjectId;
+    }
+
+    renderNotebookOptions();
+    selectNotebookOption(notebookEntryId);
+    if (gelNameInput) {
+      gelNameInput.focus();
+    }
+    setStatus(notebookEntryId
+      ? `New gel analysis will be linked to notebook page ${notebookEntryId}.`
+      : 'Create a new linked gel analysis.');
+  }
+
   return {
     render,
     renderProjectOptions,
     renderNotebookOptions,
-    renderList
+    renderList,
+    startLinkedGel
   };
 }

@@ -256,6 +256,44 @@
   line-height: 1.6;
 }
 
+.protocol-steps-toolbar {
+  display: grid;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.protocol-steps-toolbar-label {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.protocol-placeholder-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.protocol-placeholder-preset {
+  min-height: 32px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border-color: var(--line);
+  background: var(--surface-subtle);
+  color: var(--strong);
+  font-size: 0.88rem;
+}
+
+.protocol-placeholder-preset:hover,
+.protocol-placeholder-preset:focus-visible {
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface-subtle));
+}
+
+#placeholder-name {
+  width: min(260px, 100%);
+  flex: 0 1 260px;
+}
+
 .protocol-view-section {
   margin-top: 8px;
 }

@@ -2,6 +2,7 @@ import { createPapersPdfViewer } from './pdf-viewer.js';
 import { createPapersActions } from './actions.js';
 import { createPapersCommentController } from './comments.js';
 import { createPapersLibraryController } from './library.js';
+import { ensurePaperHighlights } from './model.js';
 import { normalizePaperSummary } from './normalizers.js';
 
 function getPapersElements(doc = null) {
@@ -12,6 +13,8 @@ function getPapersElements(doc = null) {
     paperPdfInput: getById('paper-pdf'),
     paperLinkTypeSelect: getById('paper-link-type'),
     paperLinkTargetSelect: getById('paper-link-target'),
+    papersLayout: getById('papers-layout'),
+    papersRightColumn: getById('papers-right-column'),
     paperList: getById('paper-list'),
     papersView: getById('papers-view'),
     papersLibraryRail: getById('papers-library-rail'),
@@ -21,6 +24,8 @@ function getPapersElements(doc = null) {
     papersLibraryContextMenu: getById('papers-library-context-menu'),
     papersContextNewFolderBtn: getById('papers-context-new-folder'),
     papersContextDeleteFolderBtn: getById('papers-context-delete-folder'),
+    paperCommentPanel: getById('paper-comment-panel'),
+    paperCommentToggleBtn: getById('paper-comment-toggle-btn'),
     paperCommentSidebar: getById('paper-comment-sidebar'),
     paperCommentPage: getById('paper-comment-page'),
     paperCommentCount: getById('paper-comment-count'),
@@ -52,6 +57,7 @@ function getPapersElements(doc = null) {
     paperViewerZoomInBtn: getById('paper-viewer-zoom-in-btn'),
     paperViewerZoomResetBtn: getById('paper-viewer-zoom-reset-btn'),
     paperViewerFitWidthBtn: getById('paper-viewer-fit-width-btn'),
+    paperViewerHighlightBtn: getById('paper-viewer-highlight-btn'),
     paperViewerZoomLabel: getById('paper-viewer-zoom-label'),
     paperViewerOpenExternalBtn: getById('paper-viewer-open-btn')
   };
@@ -87,6 +93,9 @@ export function initPapersManagement({
     folderType: '',
     paperId: ''
   };
+  const uiState = {
+    commentsCollapsed: false
+  };
 
   const context = {
     state,
@@ -100,12 +109,27 @@ export function initPapersManagement({
     commentState,
     libraryState,
     libraryContextState,
+    uiState,
     comments: null,
     actions: null,
     library: null,
     renderLibrarySidebar() {},
     renderCommentSidebar() {},
+    renderCommentPanelState() {},
+    syncViewerHighlights() {},
     render() {},
+    setCommentsCollapsed(collapsed) {
+      const nextValue = Boolean(collapsed);
+      if (uiState.commentsCollapsed === nextValue) {
+        return;
+      }
+      uiState.commentsCollapsed = nextValue;
+      context.renderCommentPanelState();
+      context.library?.schedulePapersEdgeBleedSync?.();
+    },
+    toggleCommentsCollapsed() {
+      context.setCommentsCollapsed(!uiState.commentsCollapsed);
+    },
     getPaperById(paperId) {
       return (state.papers || []).find((paper) => paper.id === paperId) || null;
     },
@@ -135,11 +159,13 @@ export function initPapersManagement({
     zoomInBtn: elements.paperViewerZoomInBtn,
     zoomResetBtn: elements.paperViewerZoomResetBtn,
     fitWidthBtn: elements.paperViewerFitWidthBtn,
+    highlightBtn: elements.paperViewerHighlightBtn,
     zoomLabel: elements.paperViewerZoomLabel,
     openExternalBtn: elements.paperViewerOpenExternalBtn,
     onPageChange: (...args) => context.comments?.onViewerPageChange(...args),
     onPlacement: (...args) => context.comments?.onViewerPlacement(...args),
     onPinSelect: (...args) => context.comments?.onViewerPinSelect(...args),
+    onHighlightSelection: (...args) => context.createPaperHighlight?.(...args),
     onClose: (...args) => context.comments?.onViewerClose(...args)
   });
 
@@ -156,16 +182,83 @@ export function initPapersManagement({
 
   context.renderLibrarySidebar = (...args) => library.renderLibrarySidebar(...args);
   context.renderCommentSidebar = (...args) => comments.renderCommentSidebar(...args);
+  context.syncViewerHighlights = () => {
+    const activePaper = context.getActivePaper?.() || null;
+    paperViewer.setHighlights(activePaper ? ensurePaperHighlights(activePaper) : []);
+  };
+  context.createPaperHighlight = ({ pageNumber, text, boxes } = {}) => {
+    const activePaper = context.getActivePaper?.() || null;
+    const normalizedText = String(text || '').trim();
+    const normalizedPageNumber = Math.max(1, Math.round(Number(pageNumber) || 1));
+    const normalizedBoxes = (Array.isArray(boxes) ? boxes : [])
+      .map((box) => {
+        if (!box || typeof box !== 'object') {
+          return null;
+        }
+        const x = Number(box.x);
+        const y = Number(box.y);
+        const width = Number(box.width);
+        const height = Number(box.height);
+        if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+          return null;
+        }
+        return { x, y, width, height };
+      })
+      .filter(Boolean);
+
+    if (!activePaper || !normalizedText || !normalizedBoxes.length) {
+      return false;
+    }
+
+    const now = new Date().toISOString();
+    ensurePaperHighlights(activePaper).push({
+      id: createId(),
+      pageNumber: normalizedPageNumber,
+      text: normalizedText,
+      boxes: normalizedBoxes,
+      createdAt: now,
+      updatedAt: now
+    });
+    activePaper.updatedAt = now;
+    persist();
+    context.syncViewerHighlights();
+    context.renderLibrarySidebar?.(libraryState.selectedFolderKey);
+    return true;
+  };
+  context.renderCommentPanelState = () => {
+    const collapsed = Boolean(uiState.commentsCollapsed);
+    elements.papersLayout?.classList?.toggle('is-comments-collapsed', collapsed);
+    elements.papersRightColumn?.classList?.toggle('is-collapsed', collapsed);
+    if (elements.paperCommentSidebar) {
+      elements.paperCommentSidebar.hidden = collapsed;
+    }
+    if (elements.paperCommentToggleBtn) {
+      const label = collapsed
+        ? 'Unfold comments panel from the right'
+        : 'Fold comments panel to the right';
+      elements.paperCommentToggleBtn.classList?.toggle('is-collapsed', collapsed);
+      elements.paperCommentToggleBtn.setAttribute?.('aria-expanded', String(!collapsed));
+      elements.paperCommentToggleBtn.setAttribute?.('aria-label', label);
+      elements.paperCommentToggleBtn.title = label;
+    }
+  };
   context.render = () => {
+    context.renderCommentPanelState();
     library.renderLibrarySidebar();
+    context.syncViewerHighlights();
     comments.renderCommentSidebar();
     library.schedulePapersEdgeBleedSync();
   };
+
+  elements.paperCommentToggleBtn?.addEventListener('click', () => {
+    context.toggleCommentsCollapsed();
+  });
 
   actions.bindEvents();
   comments.bindEvents();
   library.bindEvents();
   library.observeViewActivation();
+  context.renderCommentPanelState();
 
   return {
     render: context.render,
