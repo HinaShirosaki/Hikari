@@ -106,6 +106,17 @@ export function createAssayResultsManager({
     return Object.keys(runtime.currentResults || {}).length;
   }
 
+  function buildResultGridSignature(def) {
+    const metadata = buildAxisMetadata(def);
+    return JSON.stringify({
+      rows: def.rows,
+      columns: def.columns,
+      rowField: metadata.rowField,
+      columnField: metadata.columnField,
+      columnValues: metadata.columnValues
+    });
+  }
+
   function buildResultGridColumns(def) {
     const metadata = buildAxisMetadata(def);
     const columns = [
@@ -395,7 +406,7 @@ export function createAssayResultsManager({
       assayResultTable.innerHTML = '<p class="small-note">Spreadsheet component failed to load (Tabulator).</p>';
       return false;
     }
-    const signature = `${def.rows}x${def.columns}`;
+    const signature = buildResultGridSignature(def);
     if (!resultGrid || resultGridSignature !== signature) {
       clearResultGrid();
       assayResultTable.innerHTML = '';

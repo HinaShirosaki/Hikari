@@ -76,8 +76,6 @@ This is a quick lookup map for `src/renderer`.
 | File | Status | Notes |
 | --- | --- | --- |
 | `modules/experiment-llm-mapper.js` | Support | compresses notebook, assay, and gel data into LLM-friendly JSON |
-| `modules/plannotate-js.js` | Support | local annotation engine backed by bundled feature references |
-| `modules/plannotate-reference-db.js` | Support | bundled reference features used by local plannotate logic |
 | `modules/commercial-restriction-enzymes.js` | Support | generated enzyme catalog used by sequence analysis |
 | `modules/buffer-compounds.js` | Support | buffer-compound constants for toolbox calculations |
 | `modules/papers-pdfjs-compat.js` | Support | compatibility layer for the PDF viewer runtime |

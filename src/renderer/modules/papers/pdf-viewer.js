@@ -492,10 +492,16 @@ export function createPapersPdfViewer(elements = {}) {
     state.pageRecords.forEach((record) => {
       const width = Math.max(Math.ceil((record.metric?.width || 1) * scale), 1);
       const height = Math.max(Math.ceil((record.metric?.height || 1) * scale), 1);
+      record.element.style.setProperty('--total-scale-factor', String(scale));
+      record.element.style.setProperty('--scale-round-x', '1px');
+      record.element.style.setProperty('--scale-round-y', '1px');
       record.element.style.width = `${width}px`;
       record.element.style.height = `${height}px`;
       record.canvas.style.width = `${width}px`;
       record.canvas.style.height = `${height}px`;
+      if (record.textLayer) {
+        record.textLayer.style.setProperty('--total-scale-factor', String(scale));
+      }
     });
 
     if (resetScroll) {

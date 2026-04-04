@@ -30,10 +30,6 @@ function registerDataIpc(deps = {}) {
   const deleteSequenceEntry = deps.deleteSequenceEntry;
   const searchSequenceFeatures = deps.searchSequenceFeatures;
   const recognizeSequenceBackbone = deps.recognizeSequenceBackbone;
-  const checkPlannotateEnvironment = deps.checkPlannotateEnvironment;
-  const annotateWithBlast = deps.annotateWithBlast;
-  const installPlannotateAssets = deps.installPlannotateAssets;
-  const generatePlannotateGbk = deps.generatePlannotateGbk;
 
   function safeParseJson(value, fallback = null) {
     try {
@@ -455,42 +451,6 @@ function registerDataIpc(deps = {}) {
     }
   });
 
-  ipcMain.handle('plannotate:check-env', async (_event, payload) => {
-    try {
-      const normalizedPayload = normalizeJsonPayload(payload, {});
-      const status = await checkPlannotateEnvironment(normalizedPayload?.dbDir || '');
-      return { ok: true, status };
-    } catch (error) {
-      return { ok: false, error: String(error) };
-    }
-  });
-
-  ipcMain.handle('plannotate:annotate', async (_event, payload) => {
-    try {
-      const result = await annotateWithBlast(normalizeJsonPayload(payload, {}));
-      return { ok: true, result };
-    } catch (error) {
-      return { ok: false, error: String(error?.message || error) };
-    }
-  });
-
-  ipcMain.handle('plannotate:install-all', async () => {
-    try {
-      const result = await installPlannotateAssets();
-      return { ok: true, result };
-    } catch (error) {
-      return { ok: false, error: String(error?.message || error) };
-    }
-  });
-
-  ipcMain.handle('plannotate:generate-gbk', async (_event, payload) => {
-    try {
-      const gbk = generatePlannotateGbk(normalizeJsonPayload(payload, {}));
-      return { ok: true, gbk };
-    } catch (error) {
-      return { ok: false, error: String(error?.message || error) };
-    }
-  });
 }
 
 module.exports = {

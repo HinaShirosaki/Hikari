@@ -451,12 +451,10 @@ test('[EDGE] sequence-viewer hides input composer after successful load', () => 
   const modePasteBtn = document.getElementById('sequence-viewer-mode-paste');
   const modeFileBtn = document.getElementById('sequence-viewer-mode-file');
   const loadBtn = document.getElementById('sequence-viewer-load-btn');
-  const annotateBtn = document.getElementById('sequence-viewer-annotate-btn');
 
   assert.equal(Boolean(modePasteBtn.hidden), true);
   assert.equal(Boolean(modeFileBtn.hidden), true);
   assert.equal(Boolean(loadBtn.hidden), true);
-  assert.equal(Boolean(annotateBtn.disabled), false);
 });
 
 test('[EDGE] sequence-viewer importing GenBank with features stores a temporary library entry for feature indexing', async () => {
@@ -1005,9 +1003,6 @@ test('[EDGE] sequence-viewer alignment button opens the workspace, auto-loads th
     'sequence-viewer-file-choose',
     'sequence-viewer-file-name',
     'sequence-viewer-load-btn',
-    'sequence-viewer-annotate-btn',
-    'sequence-viewer-plannotate-engine-status',
-    'sequence-viewer-plannotate-install-btn',
     'sequence-viewer-recognize-backbone-btn',
     'sequence-viewer-alignment-open-btn',
     'sequence-viewer-alignment-toggle',

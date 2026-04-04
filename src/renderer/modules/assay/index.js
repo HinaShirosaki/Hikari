@@ -766,6 +766,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
   elements.assayPlatePreview?.addEventListener('change', layoutManager.onPlatePreviewChange);
   elements.assayPlatePreview?.addEventListener('focusin', layoutManager.onPlatePreviewFocusIn);
   elements.assayPlatePreview?.addEventListener('click', layoutManager.onPlatePreviewClick);
+  elements.assayPlatePreview?.addEventListener('keydown', layoutManager.onPlatePreviewKeyDown);
   elements.assayPlatePreview?.addEventListener('contextmenu', layoutManager.onPlatePreviewContextMenu);
   elements.assayPlatePreview?.addEventListener('scroll', layoutManager.onPlatePreviewScroll, true);
   elements.assayLayoutList?.addEventListener('click', layoutManager.onLayoutListClick);

@@ -23,7 +23,6 @@ export function bindSequenceViewerDetailEvents(config = {}) {
   const deleteFeatureFromContext = config?.deleteFeatureFromContext || (async () => {});
   const applyFeatureEditorChanges = config?.applyFeatureEditorChanges || (async () => {});
   const getActiveFeatureActionContext = config?.getActiveFeatureActionContext || (() => null);
-  const onRequestAnnotation = config?.onRequestAnnotation || (() => {});
   const onRequestRecognizeBackbone = config?.onRequestRecognizeBackbone || (() => {});
   const onRequestClear = config?.onRequestClear || (() => {});
   const onRequestSave = config?.onRequestSave || (() => {});
@@ -32,11 +31,6 @@ export function bindSequenceViewerDetailEvents(config = {}) {
   const onNavigateHome = config?.onNavigateHome || (() => {});
   const onRefreshLibraryEntries = config?.onRefreshLibraryEntries || (() => {});
   const onReferenceRecordChanged = config?.onReferenceRecordChanged || (() => {});
-
-  elements.annotateBtn?.addEventListener('click', (event) => {
-    event.preventDefault();
-    void onRequestAnnotation();
-  });
 
   elements.recognizeBackboneBtn?.addEventListener('click', (event) => {
     event.preventDefault();

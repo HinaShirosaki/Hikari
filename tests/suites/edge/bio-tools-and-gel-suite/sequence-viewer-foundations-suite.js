@@ -449,13 +449,13 @@ test('[EDGE] sequence-viewer normalizeExternalPayload clamps segments and keeps 
     name: 'Example payload',
     sequence: 'acgtacgt',
     topology: 'circular',
-    source: 'plannotate',
+    source: 'legacy_annotation',
     features: [
       {
         name: 'hit1',
         type: 'CDS',
         strand: -1,
-        source: 'plannotate',
+        source: 'legacy_annotation',
         segments: [{ start: -5, end: 4 }, { start: 6, end: 999 }]
       }
     ]
@@ -846,7 +846,7 @@ test('[EDGE] sequence-viewer feature detail formatter includes core metadata', (
     strand: -1,
     identity: 99.12,
     coverage: 87.56,
-    source: 'plannotate',
+    source: 'legacy_annotation',
     segments: [{ start: 0, end: 4 }]
   }, 8);
   assert.match(html, /ori/);

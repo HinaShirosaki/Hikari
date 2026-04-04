@@ -2,53 +2,6 @@ module.exports = function registerEdgeSequenceViewerInteractionsSuite(context = 
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
   with (scope) {
-test('[EDGE] sequence-viewer annotate button enables when a record is loaded', () => {
-  const ids = [
-    'sequence-viewer-mode-paste',
-    'sequence-viewer-mode-file',
-    'sequence-viewer-paste-panel',
-    'sequence-viewer-file-panel',
-    'sequence-viewer-textarea',
-    'sequence-viewer-file-input',
-    'sequence-viewer-file-choose',
-    'sequence-viewer-file-name',
-    'sequence-viewer-load-btn',
-    'sequence-viewer-annotate-btn',
-    'sequence-viewer-clear-btn',
-    'sequence-viewer-status',
-    'sequence-viewer-messages',
-    'sequence-viewer-record-select',
-    'sequence-viewer-stat-format',
-    'sequence-viewer-stat-length',
-    'sequence-viewer-stat-topology',
-    'sequence-viewer-stat-gc',
-    'sequence-viewer-stat-ambiguous',
-    'sequence-viewer-stat-quality',
-    'sequence-viewer-stat-features',
-    'sequence-viewer-stat-restriction-sites',
-    'sequence-viewer-feature-rail-host',
-    'sequence-viewer-feature-detail',
-    'sequence-viewer-sequence-host'
-  ];
-  const document = createMockDocument(ids);
-  const moduleWithDom = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
-    { document }
-  );
-  const viewer = moduleWithDom.initSequenceViewer();
-  const annotateBtn = document.getElementById('sequence-viewer-annotate-btn');
-  assert.equal(Boolean(annotateBtn.disabled), true);
-
-  viewer.loadFromExternal({
-    name: 'test',
-    sequence: 'ACGTACGT',
-    source: 'external',
-    features: []
-  });
-
-  assert.equal(Boolean(annotateBtn.disabled), false);
-});
-
 test('[EDGE] sequence-viewer ORF toggle defaults off and controls ORF bars plus selected translation row', () => {
   const ids = [
     'sequence-viewer-home-workspace',
@@ -217,195 +170,6 @@ test('[EDGE] sequence-viewer restriction vendor checkboxes filter visible unique
   assert.equal(sequenceHost.innerHTML.includes('BccI'), false);
 });
 
-test('[EDGE] sequence-viewer annotate updates only the selected record', async () => {
-  const ids = [
-    'sequence-viewer-mode-paste',
-    'sequence-viewer-mode-file',
-    'sequence-viewer-paste-panel',
-    'sequence-viewer-file-panel',
-    'sequence-viewer-textarea',
-    'sequence-viewer-file-input',
-    'sequence-viewer-file-choose',
-    'sequence-viewer-file-name',
-    'sequence-viewer-load-btn',
-    'sequence-viewer-annotate-btn',
-    'sequence-viewer-clear-btn',
-    'sequence-viewer-status',
-    'sequence-viewer-messages',
-    'sequence-viewer-record-select',
-    'sequence-viewer-stat-format',
-    'sequence-viewer-stat-length',
-    'sequence-viewer-stat-topology',
-    'sequence-viewer-stat-gc',
-    'sequence-viewer-stat-ambiguous',
-    'sequence-viewer-stat-quality',
-    'sequence-viewer-stat-features',
-    'sequence-viewer-stat-restriction-sites',
-    'sequence-viewer-feature-rail-host',
-    'sequence-viewer-feature-detail',
-    'sequence-viewer-sequence-host'
-  ];
-  const annotateCalls = [];
-  const document = createMockDocument(ids);
-  const window = {
-    enanaApi: {
-      plannotateAnnotate: async (payload) => {
-        annotateCalls.push(payload);
-        return {
-          ok: true,
-          result: {
-            sequence: payload.sequenceText,
-            sequenceLength: String(payload.sequenceText || '').length,
-            topology: payload.topology || 'linear',
-            warnings: [],
-            hits: [
-              {
-                Feature: 'OnlySecond',
-                Type: 'promoter',
-                Description: 'selected record annotation',
-                sframe: 1,
-                qstart: 1,
-                qend: 6,
-                pident: 99.2,
-                percmatch: 50.5,
-                crossesOrigin: false,
-                matchMode: 'exact'
-              }
-            ]
-          }
-        };
-      }
-    }
-  };
-
-  const moduleWithDom = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
-    { document, window }
-  );
-  moduleWithDom.initSequenceViewer();
-
-  const textarea = document.getElementById('sequence-viewer-textarea');
-  const loadBtn = document.getElementById('sequence-viewer-load-btn');
-  const recordSelect = document.getElementById('sequence-viewer-record-select');
-  const annotateBtn = document.getElementById('sequence-viewer-annotate-btn');
-  const featureRailHost = document.getElementById('sequence-viewer-feature-rail-host');
-
-  textarea.value = '>first\nATATATATATAT\n>second\nGGGGGGGGGGGG\n';
-  trigger(loadBtn, 'click');
-  recordSelect.value = '1';
-  trigger(recordSelect, 'change');
-
-  trigger(annotateBtn, 'click');
-  await flushAsync();
-
-  assert.equal(annotateCalls.length, 1);
-  assert.equal(annotateCalls[0].sequenceText, 'GGGGGGGGGGGG');
-
-  recordSelect.value = '0';
-  trigger(recordSelect, 'change');
-  assert.match(featureRailHost.innerHTML, /No features to display/);
-
-  recordSelect.value = '1';
-  trigger(recordSelect, 'change');
-  assert.match(featureRailHost.innerHTML, /OnlySecond/);
-});
-
-test('[EDGE] sequence-viewer annotate keeps non-plannotate features and refreshes plannotate features', async () => {
-  const ids = [
-    'sequence-viewer-mode-paste',
-    'sequence-viewer-mode-file',
-    'sequence-viewer-paste-panel',
-    'sequence-viewer-file-panel',
-    'sequence-viewer-textarea',
-    'sequence-viewer-file-input',
-    'sequence-viewer-file-choose',
-    'sequence-viewer-file-name',
-    'sequence-viewer-load-btn',
-    'sequence-viewer-annotate-btn',
-    'sequence-viewer-clear-btn',
-    'sequence-viewer-status',
-    'sequence-viewer-messages',
-    'sequence-viewer-record-select',
-    'sequence-viewer-stat-format',
-    'sequence-viewer-stat-length',
-    'sequence-viewer-stat-topology',
-    'sequence-viewer-stat-gc',
-    'sequence-viewer-stat-ambiguous',
-    'sequence-viewer-stat-quality',
-    'sequence-viewer-stat-features',
-    'sequence-viewer-stat-restriction-sites',
-    'sequence-viewer-feature-rail-host',
-    'sequence-viewer-feature-detail',
-    'sequence-viewer-sequence-host'
-  ];
-  const document = createMockDocument(ids);
-  const window = {
-    enanaApi: {
-      plannotateAnnotate: async (payload) => ({
-        ok: true,
-        result: {
-          sequence: payload.sequenceText,
-          sequenceLength: String(payload.sequenceText || '').length,
-          topology: payload.topology || 'linear',
-          warnings: [],
-          hits: [
-            {
-              Feature: 'FreshAnnot',
-              Type: 'cds',
-              Description: 'newly annotated',
-              sframe: 1,
-              qstart: 4,
-              qend: 10,
-              pident: 98.4,
-              percmatch: 44.2,
-              crossesOrigin: false,
-              matchMode: 'exact'
-            }
-          ]
-        }
-      })
-    }
-  };
-
-  const moduleWithDom = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
-    { document, window }
-  );
-  const viewer = moduleWithDom.initSequenceViewer();
-  viewer.loadFromExternal({
-    name: 'merge_test',
-    sequence: 'ATATATATATATATAT',
-    source: 'external',
-    features: [
-      {
-        id: 'existing_non_plannotate',
-        name: 'KeepMe',
-        type: 'promoter',
-        source: 'genbank',
-        strand: 1,
-        segments: [{ start: 1, end: 5 }]
-      },
-      {
-        id: 'old_plannotate',
-        name: 'OldAnnot',
-        type: 'cds',
-        source: 'plannotate',
-        strand: 1,
-        segments: [{ start: 6, end: 9 }]
-      }
-    ]
-  });
-
-  const annotateBtn = document.getElementById('sequence-viewer-annotate-btn');
-  const featureRailHost = document.getElementById('sequence-viewer-feature-rail-host');
-  trigger(annotateBtn, 'click');
-  await flushAsync();
-
-  assert.match(featureRailHost.innerHTML, /KeepMe/);
-  assert.match(featureRailHost.innerHTML, /FreshAnnot/);
-  assert.equal(featureRailHost.innerHTML.includes('OldAnnot'), false);
-});
-
 test('[EDGE] sequence-viewer bottom-track click updates selected feature detail strip', () => {
   const ids = [
     'sequence-viewer-mode-paste',
@@ -442,13 +206,13 @@ test('[EDGE] sequence-viewer bottom-track click updates selected feature detail 
   viewer.loadFromExternal({
     name: 'test',
     sequence: 'ACGTACGT',
-    source: 'plannotate',
+    source: 'legacy_annotation',
     features: [
       {
         name: 'Feature_A',
         type: 'promoter',
         strand: 1,
-        source: 'plannotate',
+        source: 'legacy_annotation',
         segments: [{ start: 1, end: 5 }]
       }
     ]

@@ -123,9 +123,8 @@ The folder has several layers:
   - `detail-hover.js`
   - `detail-feature-editing.js`
   - `detail-alignment.js`
-- storage and annotation support
+- storage and shared support
   - `storage.js`
-  - `plannotate.js`
   - `translation-style.js`
   - `shared.js`
 
@@ -134,11 +133,10 @@ This is the largest renderer subsystem by a wide margin. Read it as several coop
 - import/paste sequence records
 - manage a local sequence library
 - inspect one record in detail
-- annotate features and ORFs
+- inspect features and ORFs
 - run restriction analysis
 - align sequences
 - build proteins
-- hand off to local or bridge-backed annotation helpers
 
 `modules/sequence-viewer.js` is also a wrapper layer. It injects the `window.enanaApi` bridge and re-exports many pure helpers for parsing, rendering, ORF generation, restriction analysis, and alignment.
 
@@ -170,5 +168,3 @@ Two details matter here:
 
 - `view-manager.js` controls which tool subview is visible and lazy-loads `colony-counter.js`
 - `tool-box.js` eagerly mounts only a subset of the available UI modules
-
-That means the folder contains more capability than the default toolbox boot path immediately activates. In particular, `plannotate-ui.js` and `protein-assembly-ui.js` exist, but `initToolBox()` does not currently call them.

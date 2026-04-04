@@ -10,12 +10,6 @@ const {
   normalizeDataFilePath
 } = require('./lib/main-utils');
 const {
-  annotateWithBlast,
-  checkPlannotateEnvironment,
-  generatePlannotateGbk,
-  installPlannotateAssets
-} = require('./lib/plannotate-engine');
-const {
   getCodexCliCatalog,
   getCodexCliModel,
   getCodexCliReasoningEffort,
@@ -307,11 +301,7 @@ registerDataIpc({
   promoteSequenceEntry,
   deleteSequenceEntry,
   searchSequenceFeatures,
-  recognizeSequenceBackbone,
-  checkPlannotateEnvironment,
-  annotateWithBlast,
-  installPlannotateAssets,
-  generatePlannotateGbk
+  recognizeSequenceBackbone
 });
 
 registerAgentIpc({

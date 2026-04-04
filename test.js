@@ -495,7 +495,6 @@ const papersPdfViewerInternals = loadEsmStyleModule(
 const assayAnalysis = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'assay-analysis.js'));
 const mainUtils = require(path.join(__dirname, 'src', 'main', 'lib', 'main-utils.js'));
 const telegramBot = require(path.join(__dirname, 'src', 'main', 'lib', 'telegramBot.js'));
-const { generatePlannotateGbk } = require(path.join(__dirname, 'src', 'main', 'lib', 'plannotate-engine.js'));
 const forgeConfig = require(path.join(__dirname, 'forge.config.js'));
 const packageManifest = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
 const AGENT_SIMULATION_DISPATCH_TOOL_NAMES = new Set([
@@ -520,7 +519,6 @@ const AGENT_SIMULATION_DISPATCH_TOOL_NAMES = new Set([
   'toolbox_oligo_properties',
   'toolbox_extinction_coefficient',
   'toolbox_qpcr_efficiency',
-  'toolbox_plannotate',
   'toolbox_crispr_sgrna_designer',
   'run_python_sandbox',
   'download_paper_pdf'
@@ -729,18 +727,6 @@ function buildMockToolArgs(toolName, message, snapshot) {
         { quantity: 0.1, ct: 21.3 },
         { quantity: 0.01, ct: 24.7 }
       ]
-    };
-  }
-  if (toolName === 'toolbox_plannotate') {
-    return {
-      sequence_text: '>plasmid\\nATGCGTACGTAGCTAGCTAGCTAGCATCGATCGATCGATCGATCGATCG',
-      topology: 'circular',
-      detailed: false,
-      min_identity: 85,
-      min_coverage: 0.25,
-      min_hit_length: 24,
-      max_hits: 10,
-      record_name: 'mock_plasmid'
     };
   }
   if (toolName === 'toolbox_crispr_sgrna_designer') {
@@ -1114,22 +1100,6 @@ function buildMockToolDispatch(snapshot) {
       citations: [{ source: 'toolbox_qpcr', pointer: 'points:3', reason: 'Computed qPCR efficiency from standard curve points.' }],
       summary: 'Computed qPCR efficiency as 100.40%.'
     }),
-    toolbox_plannotate: () => ({
-      items: [
-        {
-          id: 'mock_hit_1',
-          feature: 'CMV promoter',
-          type: 'promoter',
-          start: 1,
-          end: 600,
-          strand: '+',
-          identity_percent: 99.5,
-          coverage_percent: 100
-        }
-      ],
-      citations: [{ source: 'plannotate', pointer: 'mock_hit_1', reason: 'Annotated pLannotate feature hit from plain-text sequence.' }],
-      summary: 'Annotated 1 feature hit from plain-text sequence.'
-    }),
     toolbox_crispr_sgrna_designer: () => ({
       items: [
         {
@@ -1459,7 +1429,6 @@ const suiteScope = {
   assayAnalysis,
   mainUtils,
   telegramBot,
-  generatePlannotateGbk,
   forgeConfig,
   packageManifest,
   AGENT_SIMULATION_DISPATCH_TOOL_NAMES,

@@ -109,17 +109,11 @@ export {
 
 export function initToolBox(options = {}) {
   const rootDocument = options?.document || globalThis?.document || null;
-  const onOpenSequenceViewer = typeof options?.onOpenSequenceViewer === 'function'
-    ? options.onOpenSequenceViewer
-    : null;
 
   const viewManager = initToolBoxViewManager({
     document: rootDocument,
     defaultViewId: 'tool-molarity-view'
   });
-
-  // Keep the Sequence Viewer handoff contract for toolbox plannotate-open-sequence-viewer flows.
-  void onOpenSequenceViewer;
 
   const sharedOptions = {
     document: rootDocument

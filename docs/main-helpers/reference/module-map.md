@@ -15,7 +15,7 @@ This is a quick lookup map for `src/main/helpers/main`.
 | `data-helpers.js` | Main path | compact facade for selected/auto save and load |
 | `data-snapshot-utils.js` | Support | creates the compact snapshot written to disk |
 | `storage-bundle.js` | Main path | sidecar path derivation, bundle sync, hydration, storage-root import, manifest generation |
-| `register-data-ipc.js` | Main path | renderer data/storage/sequence/plannotate endpoints |
+| `register-data-ipc.js` | Main path | renderer data/storage/sequence endpoints |
 | `register-system-ipc.js` | Main path | renderer Codex CLI and Telegram configuration endpoints |
 | `register-agent-ipc.js` | Main path | renderer agent endpoints; detailed flow is documented in `doc/agent/` |
 | `sequence-library.js` | Specialized | `SequenceViewer` SQLite/file storage plus entry CRUD and feature search |

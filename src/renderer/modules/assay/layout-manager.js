@@ -1039,40 +1039,6 @@ export function createAssayLayoutManager({
       return (hashSampleId(sampleId) + 18) % 360;
     }
 
-    function parseConcentrationMagnitude(value) {
-      const text = String(value || '').trim();
-      if (!text) {
-        return null;
-      }
-      const match = text.match(/([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)\s*([a-zA-Zµμ]*)/);
-      if (!match) {
-        return null;
-      }
-      const numeric = Number(match[1]);
-      if (!Number.isFinite(numeric)) {
-        return null;
-      }
-      const rawUnit = String(match[2] || '').toLowerCase().replace('μ', 'u').replace('µ', 'u');
-      const scaleMap = {
-        pm: 1e-12,
-        nm: 1e-9,
-        um: 1e-6,
-        mm: 1e-3,
-        cm: 1e-2,
-        m: 1,
-        fm: 1e-15,
-        gm: 1,
-        mg: 1e-3,
-        ug: 1e-6,
-        ng: 1e-9,
-        pg: 1e-12,
-        kg: 1e3
-      };
-      const unit = rawUnit.replace(/\/.*$/, '');
-      const scale = scaleMap[unit] || 1;
-      return numeric * scale;
-    }
-
     const rankedConcentrations = (() => {
       const rawValues = filledLayouts
         .map((item) => String(item.concentration || '').trim())
@@ -1160,10 +1126,17 @@ export function createAssayLayoutManager({
           : 'Sample ID: - | Concentration: -';
         const hue = sampleValue ? sampleHue(sampleValue) : 210;
         const intensity = concentrationValue
-          ? (rankedConcentrations.get(concentrationValue) || 0.52)
-          : (sampleValue ? 0.3 : 0);
+          ? (rankedConcentrations.get(concentrationValue) || 0.58)
+          : (sampleValue ? 0.36 : 0);
+        const topAlpha = Math.min(0.92, 0.18 + (intensity * 0.68));
+        const bottomAlpha = Math.min(0.98, 0.28 + (intensity * 0.78));
+        const topLightness = Math.max(76, 96 - (intensity * 18));
+        const bottomLightness = Math.max(54, 88 - (intensity * 30));
+        const borderAlpha = Math.min(0.72, 0.24 + (intensity * 0.5));
+        const highlightAlpha = Math.min(0.42, 0.12 + (intensity * 0.18));
+        const shadowAlpha = Math.min(0.3, 0.08 + (intensity * 0.22));
         const cellStyle = sampleValue || concentrationValue
-          ? ` style="background: hsla(${hue}, 72%, 74%, ${intensity}); border-color: hsla(${hue}, 45%, 52%, 0.42);"`
+          ? ` style="background: linear-gradient(180deg, hsla(${hue}, 86%, ${topLightness}%, ${topAlpha}) 0%, hsla(${hue}, 92%, ${bottomLightness}%, ${bottomAlpha}) 100%); border-color: hsla(${hue}, 58%, 42%, ${borderAlpha}); box-shadow: inset 0 1px 0 hsla(${hue}, 90%, 98%, ${highlightAlpha}), inset 0 -10px 18px hsla(${hue}, 74%, 48%, ${shadowAlpha});"`
           : '';
         cells.push(`
           <td class="assay-well${filled}${active}" data-well="${well}" title="${safeText(`${well} • ${meta} • Click to edit ${editable}`)}"${cellStyle}>
@@ -1307,6 +1280,39 @@ export function createAssayLayoutManager({
     cell.querySelector('[data-well-inline-field]')?.focus();
   }
 
+  function onPlatePreviewKeyDown(event) {
+    if (String(event?.key || '') !== 'Enter') {
+      return;
+    }
+
+    const axisInput = event.target.closest('[data-axis-dimension]');
+    if (axisInput) {
+      event.preventDefault();
+      const nextTarget = getNextAxisInputTarget(
+        axisInput.dataset.axisDimension,
+        axisInput.dataset.axisIndex
+      );
+      if (nextTarget) {
+        focusAxisInput(nextTarget.dimension, nextTarget.index);
+      }
+      return;
+    }
+
+    const inlineInput = event.target.closest('[data-well-inline-field]');
+    if (!inlineInput) {
+      return;
+    }
+
+    event.preventDefault();
+    const nextWell = getNextWellTarget(
+      inlineInput.dataset.well,
+      inlineInput.dataset.wellInlineField
+    );
+    if (nextWell) {
+      focusPlateWellField(nextWell, inlineInput.dataset.wellInlineField);
+    }
+  }
+
   function onPlatePreviewContextMenu(event) {
     const cell = event.target.closest('[data-well]');
     if (!cell || event.target.closest('[data-axis-dimension]')) {
@@ -1368,6 +1374,73 @@ export function createAssayLayoutManager({
     }
     const selector = `[data-well="${normalizedWell}"] [data-well-inline-field="${runtime.plateEditField}"]`;
     assayPlatePreview.querySelector(selector)?.focus();
+  }
+
+  function focusPlateWellField(wellId, field) {
+    const normalizedWell = String(wellId || '').trim().toUpperCase();
+    const normalizedField = field === 'concentration' ? 'concentration' : 'sampleId';
+    if (!normalizedWell || !assayPlatePreview) {
+      return;
+    }
+    const input = assayPlatePreview.querySelector(`[data-well="${normalizedWell}"] [data-well-inline-field="${normalizedField}"]`);
+    input?.focus();
+    input?.select?.();
+  }
+
+  function focusAxisInput(dimension, index) {
+    const normalizedDimension = dimension === 'column' ? 'column' : 'row';
+    const normalizedIndex = Number(index);
+    if (!assayPlatePreview || !Number.isFinite(normalizedIndex) || normalizedIndex < 0) {
+      return;
+    }
+    const input = assayPlatePreview.querySelector(`[data-axis-dimension="${normalizedDimension}"][data-axis-index="${normalizedIndex}"]`);
+    input?.focus();
+    input?.select?.();
+  }
+
+  function getNextAxisInputTarget(dimension, index) {
+    const def = getCurrentDefinition();
+    const max = dimension === 'column' ? def.columns : def.rows;
+    const nextIndex = Number(index) + 1;
+    if (!Number.isFinite(nextIndex) || nextIndex < 0 || nextIndex >= max) {
+      return null;
+    }
+    return { dimension, index: nextIndex };
+  }
+
+  function getWellEntryDirection(field) {
+    return field === 'concentration' ? oppositeAxis(getSampleAxis()) : getSampleAxis();
+  }
+
+  function getNextWellTarget(wellId, field) {
+    const parsed = parseWellId(wellId);
+    const def = getCurrentDefinition();
+    if (!parsed) {
+      return '';
+    }
+
+    let nextRow = parsed.rowIndex;
+    let nextColumn = parsed.columnIndex;
+
+    if (getWellEntryDirection(field) === 'column') {
+      if (parsed.rowIndex + 1 < def.rows) {
+        nextRow = parsed.rowIndex + 1;
+      } else if (parsed.columnIndex + 1 < def.columns) {
+        nextRow = 0;
+        nextColumn = parsed.columnIndex + 1;
+      } else {
+        return '';
+      }
+    } else if (parsed.columnIndex + 1 < def.columns) {
+      nextColumn = parsed.columnIndex + 1;
+    } else if (parsed.rowIndex + 1 < def.rows) {
+      nextRow = parsed.rowIndex + 1;
+      nextColumn = 0;
+    } else {
+      return '';
+    }
+
+    return wellIdFor(nextRow, nextColumn);
   }
 
   function onLayoutListClick(event) {
@@ -1546,6 +1619,7 @@ export function createAssayLayoutManager({
     onPlatePreviewChange,
     onPlatePreviewFocusIn,
     onPlatePreviewClick,
+    onPlatePreviewKeyDown,
     onPlatePreviewContextMenu,
     onClearWellMappings,
     openSerialDilutionDialog,

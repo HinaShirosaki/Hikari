@@ -66,13 +66,6 @@ test('renderer defines sequence viewer aliases and showView render hook', () => 
   assert.match(source, /onNavigateDetail:\s*\(\)\s*=>\s*\{\s*showView\(SEQUENCE_VIEWER_DETAIL_VIEW_ID\);/);
 });
 
-test('tool-box exposes optional sequence viewer handoff callback contract', () => {
-  const source = readSource('src/renderer/modules/tool-box.js');
-  assert.match(source, /export function initToolBox\(options = \{\}\)/);
-  assert.match(source, /const onOpenSequenceViewer = typeof options\?\.onOpenSequenceViewer === 'function'/);
-  assert.match(source, /plannotate-open-sequence-viewer/);
-});
-
 test('sequence viewer uses bottom feature track without table dependency', () => {
   const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
   const viewerSource = readSource('src/renderer/modules/sequence-viewer.js');

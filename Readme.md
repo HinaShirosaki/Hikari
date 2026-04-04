@@ -37,7 +37,7 @@ Enana includes the following modules:
 - `Papers`: PDF uploads, extraction/summarization, project-scoped Q&A.
 - `Agent`: read-first lab assistant with citations and decision records.
 - `Sequence Viewer`: FASTA/FASTQ/GenBank inspection and sequence library support.
-- `Tools`: bench calculators and utilities (molarity, qPCR, CRISPR, oligo, pLannotate, etc.).
+- `Tools`: bench calculators and utilities (molarity, qPCR, CRISPR, oligo, etc.).
 - `Setting`: appearance, startup defaults, storage path, LLM config, Telegram token, and data file controls.
 
 ## 2) Install and Run
@@ -212,7 +212,7 @@ Suite loaders:
 - `src/main/main.js`: Electron main process, IPC handlers, LLM/agent controller, Telegram lifecycle.
 - `src/main/preload.js`: secure renderer bridge (`window.enanaApi`).
 - `src/main/helpers/`: main-process helpers (agent + data + sequence library).
-- `src/main/lib/`: main-process libraries (`telegramBot`, `plannotate-engine`, `codex-cli-provider`, etc.).
+- `src/main/lib/`: main-process libraries (`telegramBot`, `codex-cli-provider`, etc.).
 - `src/renderer/renderer.js`: renderer bootstrap and module wiring.
 - `src/renderer/modules/`: renderer feature modules.
 - `ui/html/**` + `ui/css/**`: source partials for generated UI.
@@ -392,13 +392,12 @@ Suite loaders:
 - Detail workspace supports pasted text or file input (FASTA, FASTQ, GenBank, raw sequence text).
 - Dual-strand sequence view with feature rail, feature detail panel, and summary metrics.
 - Includes NEB restriction-site annotation overlays and parser warning/error surfaces.
-- Integrates with pLannotate workflows and storage-backed save/reopen flows.
+- Integrates with storage-backed save/reopen flows.
 
 ### Tools
 
 - Purpose: consolidate bench calculators and design utilities.
-- Included tools: molarity, peptide properties, buffer preparer, DNA-to-protein, protein-to-DNA reverse translation, protein assembler, oligo properties, extinction coefficient, qPCR efficiency, pLannotate, CRISPR sgRNA designer, colony counter.
-- pLannotate tool supports backend status/install helper, map rendering, feature table, GBK export, and handoff to Sequence Viewer.
+- Included tools: molarity, peptide properties, buffer preparer, DNA-to-protein, protein-to-DNA reverse translation, protein assembler, oligo properties, extinction coefficient, qPCR efficiency, CRISPR sgRNA designer, colony counter.
 - CRISPR tool provides reference-profile-aware guide design and ranked candidate table output.
 - Colony counter supports crop, zoom/pan, manual marker placement/removal, and saved count output.
 

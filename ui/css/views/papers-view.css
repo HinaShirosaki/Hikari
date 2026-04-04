@@ -421,8 +421,10 @@
   overflow: hidden;
   z-index: 3;
   line-height: 1;
+  -webkit-text-size-adjust: none;
   text-size-adjust: none;
   forced-color-adjust: none;
+  user-select: text;
 }
 
 .papers-viewer-text-layer span,
@@ -432,10 +434,11 @@
   white-space: pre;
   cursor: text;
   transform-origin: 0 0;
+  user-select: text;
 }
 
 .papers-viewer-text-layer span {
-  font-size: var(--font-height, 1px);
+  font-size: calc(var(--font-height, 1px) * var(--total-scale-factor, 1));
   font-family: sans-serif;
   transform: scaleX(var(--scale-x, 1)) rotate(var(--rotate, 0deg));
 }

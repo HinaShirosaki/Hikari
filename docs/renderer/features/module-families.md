@@ -50,10 +50,8 @@ Some top-level module files are not primary views. They are wrappers, adapters, 
 | `assay-analysis.js` | stable re-export layer for assay analysis functions |
 | `papers-pdf-viewer.js` | stable re-export layer for the papers PDF viewer helpers |
 | `experiment-llm-mapper.js` | compact LLM-facing mapper for notebook, assay, and gel data |
-| `plannotate-js.js` | local sequence-annotation engine based on bundled reference features |
 | `buffer-compounds.js` | reference list for buffer calculations |
 | `commercial-restriction-enzymes.js` | generated restriction-enzyme catalog for sequence analysis |
-| `plannotate-reference-db.js` | bundled reference-feature database used by local plannotate logic |
 | `app-registry.generated.js` | generated shell configuration for labels, aliases, and dock placement |
 
 ## Reading advice
