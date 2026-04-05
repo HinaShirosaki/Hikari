@@ -3,8 +3,8 @@
 const fs = require('fs/promises');
 const path = require('path');
 const { hydrateSnapshotFromBundle } = require('./storage-hydration');
-const { collectManifestEntries, isBundleCandidateName, looksLikeEnanaSnapshot, normalizeBundleSummary, STORAGE_MANIFEST_FILE_NAME, toPosixRelative } = require('./storage-manifest');
-const { getBundlePaths } = require('./storage-paths');
+const { collectManifestEntries, isBundleCandidateName, isSqliteBundleCandidateName, looksLikeEnanaSnapshot, normalizeBundleSummary, STORAGE_MANIFEST_FILE_NAME, toPosixRelative } = require('./storage-manifest');
+const { getBundlePaths, getBundlePathsFromSqlitePath } = require('./storage-paths');
 const { summarizeSequenceLibrary } = require('./sequence-library-summary');
 const { asArray, cleanText, ensureObject, parseJsonObject } = require('./storage-utils');
 
@@ -54,6 +54,7 @@ async function importStorageRoot({ storagePath = '' } = {}) {
   const warnings = [];
   const dirEntries = await fs.readdir(resolvedStoragePath, { withFileTypes: true });
   const candidateFiles = [];
+  const discoveredBundleBases = new Set();
 
   for (const entry of dirEntries) {
     if (!entry.isFile()) {
@@ -64,10 +65,38 @@ async function importStorageRoot({ storagePath = '' } = {}) {
     }
     const absPath = path.join(resolvedStoragePath, entry.name);
     const stat = await fs.stat(absPath);
+    const bundlePaths = getBundlePaths({ dataFilePath: absPath });
     candidateFiles.push({
+      kind: 'data_bundle',
       path: absPath,
-      modifiedAt: Number(stat.mtimeMs) || 0
+      modifiedAt: Number(stat.mtimeMs) || 0,
+      bundlePaths
     });
+    if (bundlePaths.basePath) {
+      discoveredBundleBases.add(bundlePaths.basePath);
+    }
+  }
+
+  for (const entry of dirEntries) {
+    if (!entry.isFile()) {
+      continue;
+    }
+    if (!isSqliteBundleCandidateName(entry.name)) {
+      continue;
+    }
+    const absPath = path.join(resolvedStoragePath, entry.name);
+    const bundlePaths = getBundlePathsFromSqlitePath(absPath);
+    if (!bundlePaths.basePath || discoveredBundleBases.has(bundlePaths.basePath)) {
+      continue;
+    }
+    const stat = await fs.stat(absPath);
+    candidateFiles.push({
+      kind: 'sqlite_only_bundle',
+      path: absPath,
+      modifiedAt: Number(stat.mtimeMs) || 0,
+      bundlePaths
+    });
+    discoveredBundleBases.add(bundlePaths.basePath);
   }
 
   candidateFiles.sort((left, right) => left.modifiedAt - right.modifiedAt);
@@ -84,34 +113,40 @@ async function importStorageRoot({ storagePath = '' } = {}) {
 
   for (const candidate of candidateFiles) {
     const candidatePath = candidate.path;
-    let parsed = null;
-    try {
-      const raw = await fs.readFile(candidatePath, 'utf8');
-      parsed = parseJsonObject(raw);
-    } catch (error) {
-      warnings.push(`Failed to read ${toPosixRelative(resolvedStoragePath, candidatePath)}: ${String(error?.message || error)}`);
-      continue;
+    const bundlePaths = candidate.bundlePaths || getBundlePaths({ dataFilePath: candidatePath });
+    let parsed = {};
+    if (candidate.kind === 'data_bundle') {
+      try {
+        const raw = await fs.readFile(candidatePath, 'utf8');
+        parsed = parseJsonObject(raw);
+      } catch (error) {
+        warnings.push(`Failed to read ${toPosixRelative(resolvedStoragePath, candidatePath)}: ${String(error?.message || error)}`);
+        continue;
+      }
+
+      if (!parsed) {
+        warnings.push(`Skipped ${toPosixRelative(resolvedStoragePath, candidatePath)} because JSON payload is invalid.`);
+        continue;
+      }
     }
 
-    if (!parsed) {
-      warnings.push(`Skipped ${toPosixRelative(resolvedStoragePath, candidatePath)} because JSON payload is invalid.`);
-      continue;
-    }
-
-    const bundlePaths = getBundlePaths({ dataFilePath: candidatePath });
     const sidecarExists = await Promise.all([
       fs.access(bundlePaths.protocolsPath).then(() => true).catch(() => false),
       fs.access(bundlePaths.notebookPagesPath).then(() => true).catch(() => false),
       fs.access(bundlePaths.sqlitePath).then(() => true).catch(() => false)
     ]);
 
-    if (!looksLikeEnanaSnapshot(parsed) && !sidecarExists.some(Boolean)) {
+    if (candidate.kind === 'data_bundle' && !looksLikeEnanaSnapshot(parsed) && !sidecarExists.some(Boolean)) {
+      continue;
+    }
+    if (candidate.kind !== 'data_bundle' && !sidecarExists.some(Boolean)) {
       continue;
     }
 
     const hydrated = await hydrateSnapshotFromBundle({
-      dataFilePath: candidatePath,
-      snapshot: parsed
+      dataFilePath: candidate.kind === 'data_bundle' ? candidatePath : '',
+      snapshot: parsed,
+      bundlePaths
     });
     const hydratedSnapshot = ensureObject(hydrated.snapshot);
     const summary = normalizeBundleSummary(hydratedSnapshot);
@@ -140,7 +175,10 @@ async function importStorageRoot({ storagePath = '' } = {}) {
     };
 
     bundleSummaries.push({
-      data_file_path: toPosixRelative(resolvedStoragePath, candidatePath),
+      bundle_type: candidate.kind,
+      data_file_path: candidate.kind === 'data_bundle'
+        ? toPosixRelative(resolvedStoragePath, candidatePath)
+        : '',
       bundle_paths: {
         protocols_path: toPosixRelative(resolvedStoragePath, hydrated.bundlePaths.protocolsPath),
         notebook_pages_path: toPosixRelative(resolvedStoragePath, hydrated.bundlePaths.notebookPagesPath),

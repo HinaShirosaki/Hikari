@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('enanaApi', {
   loadEnaFile: () => ipcRenderer.invoke('ena:load'),
   autoSaveDataFile: (data, filePath) => ipcRenderer.invoke('data:auto-save', { data, filePath }),
   autoLoadDataFile: (filePath) => ipcRenderer.invoke('data:auto-load', { filePath }),
+  syncSqliteBundle: (payload) => ipcRenderer.invoke('storage:sync-sqlite-bundle', payload),
   pickStorageDirectory: (currentPath) => ipcRenderer.invoke('storage:pick-directory', { currentPath }),
   ensureStorageDirectory: (path) => ipcRenderer.invoke('storage:ensure-directory', { path }),
   importStorageRoot: (storagePath) => ipcRenderer.invoke('storage:import-root', { storagePath }),

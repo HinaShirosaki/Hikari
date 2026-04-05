@@ -1,102 +1,129 @@
 <section id="lab-common-inventory-view" class="view">
-      <div class="panel">
-        <h2>Chemicals</h2>
-        <form id="chemical-form" class="form-grid">
-          <input type="hidden" id="chemical-id" />
-          <label>
-            Name (Required)
-            <input id="chemical-name" required />
-          </label>
-          <label>
-            CAS Number (Required)
-            <input id="chemical-cas" required />
-          </label>
-          <label>
-            Location (Required)
-            <select id="chemical-location" required></select>
-          </label>
-          <label>
-            Vendor
-            <input id="chemical-vendor" />
-          </label>
-          <label>
-            Catalog Number
-            <input id="chemical-catalog-number" />
-          </label>
-          <label>
-            Unit Size
-            <input id="chemical-unit-size" />
-          </label>
-          <label>
-            Price
-            <input id="chemical-price" />
-          </label>
-          <label>
-            Amount in Stock
-            <input id="chemical-stock" />
-          </label>
-          <label>
-            URL
-            <input id="chemical-url" />
-          </label>
-          <label>
-            Expiration Date
-            <input id="chemical-expiration" type="date" />
-          </label>
-          <div class="form-actions chemical-form-actions">
-            <button type="submit" class="primary-btn">Save Chemical</button>
-            <button type="button" id="chemical-cancel-btn" class="ghost-btn">Cancel Edit</button>
+      <div class="chemical-layout">
+        <aside class="panel chemical-sidebar">
+          <div class="chemical-sidebar-stack">
+            <button type="button" id="chemical-open-add-btn" class="primary-btn chemical-add-btn">Add Chemical</button>
+            <label class="chemical-search-field">
+              Search
+              <input id="chemical-search" type="search" placeholder="Name, CAS, vendor, catalog, location" />
+            </label>
           </div>
-        </form>
-      </div>
-      <div class="panel">
-        <h3>Enana Sync Inbox</h3>
-        <div class="inline-row chemical-inbox-row">
-          <label>
-            Inbox Email
-            <select id="inventory-inbox-email"></select>
-          </label>
-          <button type="button" id="inventory-import-btn" class="ghost-btn">Import Chemical Update</button>
+        </aside>
+
+        <div class="chemical-main">
+          <div class="panel chemical-list-panel">
+            <div class="chemical-panel-head">
+              <div class="chemical-panel-copy">
+                <h2>Chemicals</h2>
+                <p id="chemical-results-summary" class="small-note">Showing 0 chemicals.</p>
+              </div>
+            </div>
+
+            <div class="chemical-toolbar-grid">
+              <label>
+                Filter Location
+                <select id="chemical-filter-location">
+                  <option value="">All locations</option>
+                </select>
+              </label>
+              <label>
+                Sort By
+                <select id="chemical-sort">
+                  <option value="updated_desc">Updated (Newest)</option>
+                  <option value="updated_asc">Updated (Oldest)</option>
+                  <option value="name_asc">Name (A-Z)</option>
+                  <option value="name_desc">Name (Z-A)</option>
+                  <option value="location_asc">Location Number (Low-High)</option>
+                  <option value="location_desc">Location Number (High-Low)</option>
+                  <option value="expiration_asc">Expiration (Soonest)</option>
+                  <option value="expiration_desc">Expiration (Latest)</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="chemical-sync-strip">
+              <label>
+                Inbox Email
+                <select id="inventory-inbox-email"></select>
+              </label>
+              <button type="button" id="inventory-import-btn" class="ghost-btn">Import Chemical Update</button>
+              <p class="small-note chemical-pending-note">Pending inventory updates: <span id="inventory-pending-count">0</span></p>
+            </div>
+
+            <div id="chemical-list" class="list-table"></div>
+          </div>
+
+          <div id="chemical-detail-panel" class="panel chemical-detail-panel" hidden>
+            <h3 id="chemical-detail-title">Chemical Details</h3>
+            <div id="chemical-detail-content" class="stack-form"></div>
+            <div class="card-actions">
+              <button type="button" id="chemical-detail-edit-btn" class="ghost-btn">Edit</button>
+              <button type="button" id="chemical-detail-delete-btn" class="danger-btn">Delete</button>
+            </div>
+          </div>
         </div>
-        <p class="small-note">Pending inventory updates: <span id="inventory-pending-count">0</span></p>
       </div>
-      <div class="panel">
-        <h3>Chemical List</h3>
-        <div class="form-grid">
-          <label>
-            Search
-            <input id="chemical-search" placeholder="Name, CAS, vendor, catalog, location" />
-          </label>
-          <label>
-            Filter Location
-            <select id="chemical-filter-location">
-              <option value="">All locations</option>
-            </select>
-          </label>
-          <label>
-            Sort By
-            <select id="chemical-sort">
-              <option value="updated_desc">Updated (Newest)</option>
-              <option value="updated_asc">Updated (Oldest)</option>
-              <option value="name_asc">Name (A-Z)</option>
-              <option value="name_desc">Name (Z-A)</option>
-              <option value="location_asc">Location Number (Low-High)</option>
-              <option value="location_desc">Location Number (High-Low)</option>
-              <option value="expiration_asc">Expiration (Soonest)</option>
-              <option value="expiration_desc">Expiration (Latest)</option>
-            </select>
-          </label>
+
+      <div id="chemical-dialog-overlay" class="chemical-dialog-overlay" hidden>
+        <div class="chemical-dialog" role="dialog" aria-modal="true" aria-labelledby="chemical-dialog-title">
+          <div class="chemical-dialog-head">
+            <div>
+              <h3 id="chemical-dialog-title">Add Chemical</h3>
+              <p class="small-note">Create or update a chemical record.</p>
+            </div>
+            <button type="button" id="chemical-dialog-close-btn" class="ghost-btn" aria-label="Close chemical dialog">Close</button>
+          </div>
+
+          <form id="chemical-form" class="form-grid">
+            <input type="hidden" id="chemical-id" />
+            <label>
+              Name (Required)
+              <input id="chemical-name" required />
+            </label>
+            <label>
+              CAS Number (Required)
+              <input id="chemical-cas" required />
+            </label>
+            <label>
+              Location (Required)
+              <select id="chemical-location" required></select>
+            </label>
+            <label>
+              Vendor
+              <input id="chemical-vendor" />
+            </label>
+            <label>
+              Catalog Number
+              <input id="chemical-catalog-number" />
+            </label>
+            <label>
+              Unit Size
+              <input id="chemical-unit-size" />
+            </label>
+            <label>
+              Price
+              <input id="chemical-price" />
+            </label>
+            <label>
+              Amount in Stock
+              <input id="chemical-stock" />
+            </label>
+            <label class="chemical-form-field-wide">
+              URL
+              <input id="chemical-url" />
+            </label>
+            <label>
+              Expiration Date
+              <input id="chemical-expiration" type="date" />
+            </label>
+            <div class="form-actions chemical-form-actions">
+              <button type="submit" class="primary-btn">Save Chemical</button>
+              <button type="button" id="chemical-cancel-btn" class="ghost-btn">Cancel</button>
+            </div>
+          </form>
         </div>
-        <div id="chemical-list" class="list-table"></div>
       </div>
-      <div id="chemical-detail-panel" class="panel" hidden>
-        <h3 id="chemical-detail-title">Chemical Details</h3>
-        <div id="chemical-detail-content" class="stack-form"></div>
-        <div class="card-actions">
-          <button type="button" id="chemical-detail-edit-btn" class="ghost-btn">Edit</button>
-          <button type="button" id="chemical-detail-delete-btn" class="danger-btn">Delete</button>
-        </div>
-      </div>
+
       <div class="panel" hidden>
         <h3>Blockchain Records</h3>
         <div id="inventory-blockchain-list" class="stack-form"></div>

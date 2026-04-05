@@ -109,6 +109,14 @@ function isBundleCandidateName(fileName) {
   return hasSupportedDataExtension(lower);
 }
 
+function isSqliteBundleCandidateName(fileName) {
+  const lower = String(fileName || '').toLowerCase();
+  if (!lower || lower === STORAGE_MANIFEST_FILE_NAME.toLowerCase()) {
+    return false;
+  }
+  return lower.endsWith('.index.sqlite');
+}
+
 function looksLikeEnanaSnapshot(payload) {
   const source = ensureObject(payload);
   return [
@@ -129,6 +137,7 @@ module.exports = {
   collectManifestEntries,
   detectManifestRole,
   isBundleCandidateName,
+  isSqliteBundleCandidateName,
   looksLikeEnanaSnapshot,
   normalizeBundleSummary,
   toPosixRelative

@@ -1,4 +1,6 @@
 import { exportProtocolPdf } from './pdf-export.js';
+import { requestLlmText } from './papers/llm.js';
+import { parseJsonFromText } from './papers/normalizers.js';
 
 export function initProtocolManagement({
   state,
@@ -35,6 +37,14 @@ export function initProtocolManagement({
   const protocolMaterialsInput = document.getElementById('protocol-materials');
   const protocolStepsInput = document.getElementById('protocol-steps');
   const protocolTroubleshootingInput = document.getElementById('protocol-troubleshooting');
+  const protocolPolishBtn = document.getElementById('protocol-polish-btn');
+  const protocolPolishOverlay = document.getElementById('protocol-polish-overlay');
+  const protocolPolishCloseBtn = document.getElementById('protocol-polish-close-btn');
+  const protocolPolishKeepEditingBtn = document.getElementById('protocol-polish-keep-editing-btn');
+  const protocolPolishApplyBtn = document.getElementById('protocol-polish-apply-btn');
+  const protocolPolishOriginalPreview = document.getElementById('protocol-polish-original-preview');
+  const protocolPolishResultPreview = document.getElementById('protocol-polish-result-preview');
+  const protocolPolishStatus = document.getElementById('protocol-polish-status');
 
   const addPlaceholderBtn = document.getElementById('add-placeholder-btn');
   const placeholderNameInput = document.getElementById('placeholder-name');
@@ -63,12 +73,27 @@ export function initProtocolManagement({
   let activeProtocolId = '';
   let protocolDetailMode = 'empty';
   let isCreateEditorMode = true;
+  let polishedProtocolDraft = null;
+  let protocolPolishSourceDraft = null;
+  let protocolPolishRequestToken = 0;
+  let isProtocolPolishPending = false;
 
   createProtocolBtn?.addEventListener('click', onCreateProtocol);
   emptyCreateProtocolBtn?.addEventListener('click', onCreateProtocol);
   protocolEditorBackBtn?.addEventListener('click', () => showEmptyPanel({ resetEditor: true }));
   protocolCancelBtn?.addEventListener('click', onCancelEditor);
   protocolViewBackBtn?.addEventListener('click', () => showEmptyPanel({ resetEditor: false }));
+  protocolPolishBtn?.addEventListener('click', () => {
+    void onPolishProtocol();
+  });
+  protocolPolishCloseBtn?.addEventListener('click', closeProtocolPolishOverlay);
+  protocolPolishKeepEditingBtn?.addEventListener('click', closeProtocolPolishOverlay);
+  protocolPolishApplyBtn?.addEventListener('click', applyPolishedProtocolToEditor);
+  protocolPolishOverlay?.addEventListener('click', (event) => {
+    if (event.target === protocolPolishOverlay) {
+      closeProtocolPolishOverlay();
+    }
+  });
 
   protocolForm?.addEventListener('submit', onProtocolSubmit);
   protocolMaterialsInput?.addEventListener('focus', () => ensureLeadingBullet(protocolMaterialsInput));
@@ -126,6 +151,10 @@ export function initProtocolManagement({
     renderList();
   });
   document.addEventListener?.('keydown', (event) => {
+    if (event.key === 'Escape' && protocolPolishOverlay && !protocolPolishOverlay.hidden) {
+      closeProtocolPolishOverlay();
+      return;
+    }
     if (event.key === 'Escape' && activeMenuProtocolId) {
       activeMenuProtocolId = '';
       renderList();
@@ -187,6 +216,21 @@ export function initProtocolManagement({
       .filter(Boolean)
       .map((line) => `• ${line}`)
       .join('\n');
+  }
+
+  function buildDraftFromEditorInputs() {
+    const nowIso = new Date().toISOString();
+    return {
+      id: currentProtocolDraft.id || null,
+      name: String(protocolNameInput?.value || '').trim(),
+      purpose: String(protocolPurposeInput?.value || '').trim(),
+      materials: parseBulletLines(protocolMaterialsInput?.value || ''),
+      steps: buildStepEntriesFromText(protocolStepsInput?.value || '', currentProtocolDraft.steps)
+        .map((entry) => cloneStep(entry.step)),
+      troubleshooting: String(protocolTroubleshootingInput?.value || '').trim(),
+      createdAt: normalizeIsoTimestamp(currentProtocolDraft.createdAt, nowIso),
+      updatedAt: normalizeIsoTimestamp(currentProtocolDraft.updatedAt, currentProtocolDraft.createdAt || nowIso)
+    };
   }
 
   function ensureLeadingBullet(textarea) {
@@ -1068,7 +1112,336 @@ export function initProtocolManagement({
     return html;
   }
 
+  function populateEditorFormFromDraft(draft) {
+    if (protocolNameInput) {
+      protocolNameInput.value = String(draft?.name || '').trim();
+    }
+    if (protocolPurposeInput) {
+      protocolPurposeInput.value = String(draft?.purpose || '').trim();
+    }
+    if (protocolMaterialsInput) {
+      protocolMaterialsInput.value = formatBulletLines(draft?.materials);
+    }
+    if (protocolStepsInput) {
+      protocolStepsInput.value = formatStepLines(draft?.steps);
+    }
+    if (protocolTroubleshootingInput) {
+      protocolTroubleshootingInput.value = String(draft?.troubleshooting || '').trim();
+    }
+  }
+
+  function buildProtocolPreviewMarkup(protocol, options = {}) {
+    const includeNameSection = options.includeNameSection === true;
+    const name = String(protocol?.name || '').trim();
+    const purpose = String(protocol?.purpose || '').trim();
+    const materials = normalizeMaterials(protocol?.materials);
+    const troubleshooting = String(protocol?.troubleshooting || '').trim();
+    const steps = Array.isArray(protocol?.steps) ? protocol.steps : [];
+
+    const sections = [];
+    if (includeNameSection) {
+      sections.push(`
+        <section class="protocol-view-section">
+          <h4>Protocol Name</h4>
+          ${name ? `<p>${safeText(name)}</p>` : '<p class="small-note">No protocol name provided.</p>'}
+        </section>
+      `);
+    }
+
+    sections.push(`
+      <section class="protocol-view-section">
+        <h4>Purpose</h4>
+        ${purpose ? `<p>${safeText(purpose)}</p>` : '<p class="small-note">No purpose provided.</p>'}
+      </section>
+    `);
+
+    sections.push(`
+      <section class="protocol-view-section">
+        <h4>Materials</h4>
+        ${materials.length
+          ? `<ul>${materials.map((item) => `<li>${safeText(item)}</li>`).join('')}</ul>`
+          : '<p class="small-note">No materials provided.</p>'}
+      </section>
+    `);
+
+    sections.push(`
+      <section class="protocol-view-section">
+        <h4>Steps</h4>
+        ${steps.length
+          ? `<ol class="protocol-view-steps">${steps.map((step) => `
+              <li>
+                ${renderReadonlyStepSentence(step)}
+              </li>
+            `).join('')}</ol>`
+          : '<p class="small-note">No steps provided.</p>'}
+      </section>
+    `);
+
+    sections.push(`
+      <section class="protocol-view-section">
+        <h4>Troubleshooting</h4>
+        ${troubleshooting ? `<p>${safeText(troubleshooting)}</p>` : '<p class="small-note">No troubleshooting notes.</p>'}
+      </section>
+    `);
+
+    return sections.join('');
+  }
+
+  function renderProtocolPreviewInto(node, protocol, options = {}) {
+    if (!node) {
+      return;
+    }
+    node.innerHTML = buildProtocolPreviewMarkup(protocol, options);
+  }
+
+  function renderProtocolPolishEmptyState(node, message, options = {}) {
+    if (!node) {
+      return;
+    }
+    const stateLabel = String(options.state || '').trim();
+    const stateAttr = stateLabel ? ` data-state="${safeText(stateLabel)}"` : '';
+    node.innerHTML = `
+      <div class="protocol-polish-preview-empty"${stateAttr}>
+        <p>${safeText(message || 'Nothing to preview yet.')}</p>
+      </div>
+    `;
+  }
+
+  function renderProtocolPolishLoadingState() {
+    if (!protocolPolishResultPreview) {
+      return;
+    }
+    protocolPolishResultPreview.innerHTML = `
+      <div class="protocol-polish-loading">
+        <div class="protocol-polish-loading-dots" aria-label="Loading polished protocol">
+          <span>.</span>
+          <span>.</span>
+          <span>.</span>
+        </div>
+        <p>Polishing the current protocol draft while preserving its structure.</p>
+      </div>
+    `;
+  }
+
+  function setProtocolPolishPendingState(nextPending) {
+    isProtocolPolishPending = nextPending === true;
+    if (protocolPolishBtn) {
+      protocolPolishBtn.disabled = isProtocolPolishPending;
+      protocolPolishBtn.textContent = isProtocolPolishPending ? 'Polishing...' : 'Polish Protocol';
+    }
+    if (protocolPolishApplyBtn) {
+      protocolPolishApplyBtn.disabled = isProtocolPolishPending || !polishedProtocolDraft;
+    }
+  }
+
+  function setProtocolPolishStatus(message = '', options = {}) {
+    if (!protocolPolishStatus) {
+      return;
+    }
+    const normalized = String(message || '').trim();
+    const stateLabel = String(options.state || '').trim();
+    protocolPolishStatus.textContent = normalized;
+    protocolPolishStatus.hidden = !normalized;
+    if (stateLabel) {
+      protocolPolishStatus.dataset.state = stateLabel;
+    } else {
+      delete protocolPolishStatus.dataset.state;
+    }
+  }
+
+  function resetProtocolPolishState() {
+    polishedProtocolDraft = null;
+    protocolPolishSourceDraft = null;
+    setProtocolPolishPendingState(false);
+    setProtocolPolishStatus('');
+    if (protocolPolishOriginalPreview) {
+      protocolPolishOriginalPreview.innerHTML = '';
+    }
+    if (protocolPolishResultPreview) {
+      protocolPolishResultPreview.innerHTML = '';
+    }
+  }
+
+  function closeProtocolPolishOverlay() {
+    protocolPolishRequestToken += 1;
+    if (protocolPolishOverlay) {
+      protocolPolishOverlay.hidden = true;
+    }
+    resetProtocolPolishState();
+  }
+
+  function hasDraftContent(draft) {
+    return Boolean(
+      String(draft?.name || '').trim()
+      || String(draft?.purpose || '').trim()
+      || String(draft?.troubleshooting || '').trim()
+      || normalizeMaterials(draft?.materials).length
+      || (Array.isArray(draft?.steps) ? draft.steps.length : 0)
+    );
+  }
+
+  function buildProtocolPolishPrompt(draft) {
+    return [
+      'You are polishing a lab protocol draft for readability.',
+      'Improve grammar, clarity, consistency, and wording while preserving the exact protocol structure.',
+      'Keep the same five fields: name, purpose, materials, steps, troubleshooting.',
+      'Keep the same scientific meaning, placeholder markers like [volume] and [temperature], and the step order unless a wording-only cleanup requires tiny local rephrasing.',
+      'If the name is blank, create a concise protocol name from the existing content.',
+      'Do not invent measurements, times, temperatures, reagents, troubleshooting details, or conclusions that are not already present.',
+      'Return JSON only with this exact shape:',
+      '{"name":"","purpose":"","materials":[""],"steps":[""],"troubleshooting":""}',
+      '',
+      'Protocol draft to polish:',
+      JSON.stringify({
+        name: draft?.name || '',
+        purpose: draft?.purpose || '',
+        materials: normalizeMaterials(draft?.materials),
+        steps: Array.isArray(draft?.steps) ? draft.steps.map((step) => stepToEditableLine(step)) : [],
+        troubleshooting: draft?.troubleshooting || ''
+      }, null, 2)
+    ].join('\n');
+  }
+
+  function resolvePolishedProtocolPayload(parsed) {
+    if (Array.isArray(parsed)) {
+      return parsed[0] || null;
+    }
+    if (!parsed || typeof parsed !== 'object') {
+      return null;
+    }
+    if (Array.isArray(parsed.protocols) && parsed.protocols.length) {
+      return parsed.protocols[0];
+    }
+    if (parsed.protocol && typeof parsed.protocol === 'object') {
+      return parsed.protocol;
+    }
+    if (parsed.polishedProtocol && typeof parsed.polishedProtocol === 'object') {
+      return parsed.polishedProtocol;
+    }
+    if (parsed.polished_protocol && typeof parsed.polished_protocol === 'object') {
+      return parsed.polished_protocol;
+    }
+    return parsed;
+  }
+
+  function normalizePolishedProtocolResponse(rawText, sourceDraft) {
+    const parsed = parseJsonFromText(rawText);
+    const candidate = resolvePolishedProtocolPayload(parsed);
+    if (!candidate || typeof candidate !== 'object') {
+      return null;
+    }
+
+    const mergedCandidate = {
+      id: sourceDraft?.id || null,
+      name: String(candidate.name || candidate.title || sourceDraft?.name || 'Protocol Draft').trim(),
+      purpose: Object.prototype.hasOwnProperty.call(candidate, 'purpose')
+        ? candidate.purpose
+        : sourceDraft?.purpose,
+      materials: Object.prototype.hasOwnProperty.call(candidate, 'materials')
+        ? candidate.materials
+        : sourceDraft?.materials,
+      steps: Array.isArray(candidate.steps)
+        ? candidate.steps
+        : (Array.isArray(candidate.procedure) ? candidate.procedure : sourceDraft?.steps),
+      troubleshooting: Object.prototype.hasOwnProperty.call(candidate, 'troubleshooting')
+        ? candidate.troubleshooting
+        : sourceDraft?.troubleshooting,
+      createdAt: sourceDraft?.createdAt,
+      updatedAt: sourceDraft?.updatedAt
+    };
+
+    const normalized = sanitizeIncomingProtocol(mergedCandidate);
+    if (!normalized || !Array.isArray(normalized.steps) || !normalized.steps.length) {
+      return null;
+    }
+
+    return {
+      ...normalized,
+      id: sourceDraft?.id || normalized.id,
+      createdAt: sourceDraft?.createdAt || normalized.createdAt,
+      updatedAt: sourceDraft?.updatedAt || normalized.updatedAt
+    };
+  }
+
+  async function onPolishProtocol() {
+    if (isProtocolPolishPending) {
+      return;
+    }
+
+    const editorDraft = buildDraftFromEditorInputs();
+    protocolPolishSourceDraft = cloneDraftFromProtocol(editorDraft);
+    polishedProtocolDraft = null;
+    setProtocolPolishPendingState(false);
+
+    if (protocolPolishOverlay) {
+      protocolPolishOverlay.hidden = false;
+    }
+
+    renderProtocolPreviewInto(protocolPolishOriginalPreview, protocolPolishSourceDraft, { includeNameSection: true });
+
+    if (!hasDraftContent(protocolPolishSourceDraft)) {
+      const message = 'Add some protocol content first, then try polishing again.';
+      renderProtocolPolishEmptyState(protocolPolishResultPreview, message, { state: 'error' });
+      setProtocolPolishStatus(message, { state: 'error' });
+      return;
+    }
+
+    renderProtocolPolishLoadingState();
+    setProtocolPolishStatus('Generating a polished version from the current editor draft.');
+    setProtocolPolishPendingState(true);
+
+    const requestToken = ++protocolPolishRequestToken;
+
+    try {
+      const rawResponse = await requestLlmText({
+        llm: state.settings?.llm,
+        prompt: buildProtocolPolishPrompt(protocolPolishSourceDraft)
+      });
+
+      if (requestToken !== protocolPolishRequestToken || protocolPolishOverlay?.hidden) {
+        return;
+      }
+
+      const nextPolishedDraft = normalizePolishedProtocolResponse(rawResponse, protocolPolishSourceDraft);
+      if (!nextPolishedDraft) {
+        throw new Error('The model response could not be converted into a polished protocol.');
+      }
+
+      polishedProtocolDraft = nextPolishedDraft;
+      renderProtocolPreviewInto(protocolPolishResultPreview, polishedProtocolDraft, { includeNameSection: true });
+      setProtocolPolishStatus('Review the polished version on the right, then apply it if you want to replace the editor draft.');
+    } catch (error) {
+      if (requestToken !== protocolPolishRequestToken || protocolPolishOverlay?.hidden) {
+        return;
+      }
+      const message = String(error?.message || error || 'Failed to polish this protocol.');
+      renderProtocolPolishEmptyState(protocolPolishResultPreview, message, { state: 'error' });
+      setProtocolPolishStatus(message, { state: 'error' });
+    } finally {
+      if (requestToken === protocolPolishRequestToken) {
+        setProtocolPolishPendingState(false);
+      }
+    }
+  }
+
+  function applyPolishedProtocolToEditor() {
+    if (!polishedProtocolDraft) {
+      return;
+    }
+
+    currentProtocolDraft = cloneDraftFromProtocol({
+      ...polishedProtocolDraft,
+      id: currentProtocolDraft.id,
+      createdAt: currentProtocolDraft.createdAt || polishedProtocolDraft.createdAt,
+      updatedAt: currentProtocolDraft.updatedAt || polishedProtocolDraft.updatedAt
+    });
+    populateEditorFormFromDraft(currentProtocolDraft);
+    closeProtocolPolishOverlay();
+    protocolNameInput?.focus();
+  }
+
   function resetEditorDraft() {
+    closeProtocolPolishOverlay();
     currentProtocolDraft = createEmptyDraft();
     protocolForm?.reset();
     resetProtocolJsonImportUi();
@@ -1166,21 +1539,7 @@ export function initProtocolManagement({
       protocolEditorHeading.textContent = headingText;
     }
 
-    if (protocolNameInput) {
-      protocolNameInput.value = currentProtocolDraft.name;
-    }
-    if (protocolPurposeInput) {
-      protocolPurposeInput.value = currentProtocolDraft.purpose;
-    }
-    if (protocolMaterialsInput) {
-      protocolMaterialsInput.value = formatBulletLines(currentProtocolDraft.materials);
-    }
-    if (protocolStepsInput) {
-      protocolStepsInput.value = formatStepLines(currentProtocolDraft.steps);
-    }
-    if (protocolTroubleshootingInput) {
-      protocolTroubleshootingInput.value = currentProtocolDraft.troubleshooting;
-    }
+    populateEditorFormFromDraft(currentProtocolDraft);
 
     showEditorPanel();
     protocolNameInput?.focus();
@@ -1206,42 +1565,8 @@ export function initProtocolManagement({
       return;
     }
 
-    const purpose = String(protocol?.purpose || '').trim();
-    const materials = normalizeMaterials(protocol?.materials);
-    const troubleshooting = String(protocol?.troubleshooting || '').trim();
-    const steps = Array.isArray(protocol?.steps) ? protocol.steps : [];
-
-    const materialsHtml = materials.length
-      ? `<ul>${materials.map((item) => `<li>${safeText(item)}</li>`).join('')}</ul>`
-      : '<p class="small-note">No materials provided.</p>';
-
-    const stepsHtml = steps.length
-      ? `<ol class="protocol-view-steps">${steps.map((step) => `
-          <li>
-            ${renderReadonlyStepSentence(step)}
-          </li>
-        `).join('')}</ol>`
-      : '<p class="small-note">No steps provided.</p>';
-
     protocolViewTitle.textContent = protocol.name || 'Protocol';
-    protocolViewContent.innerHTML = `
-      <section class="protocol-view-section">
-        <h4>Purpose</h4>
-        ${purpose ? `<p>${safeText(purpose)}</p>` : '<p class="small-note">No purpose provided.</p>'}
-      </section>
-      <section class="protocol-view-section">
-        <h4>Materials</h4>
-        ${materialsHtml}
-      </section>
-      <section class="protocol-view-section">
-        <h4>Steps</h4>
-        ${stepsHtml}
-      </section>
-      <section class="protocol-view-section">
-        <h4>Troubleshooting</h4>
-        ${troubleshooting ? `<p>${safeText(troubleshooting)}</p>` : '<p class="small-note">No troubleshooting notes.</p>'}
-      </section>
-    `;
+    protocolViewContent.innerHTML = buildProtocolPreviewMarkup(protocol);
   }
 
   function viewProtocol(protocolId) {
@@ -1363,12 +1688,12 @@ export function initProtocolManagement({
   function onProtocolSubmit(event) {
     event.preventDefault();
 
-    const protocolName = String(protocolNameInput?.value || '').trim();
-    const purpose = String(protocolPurposeInput?.value || '').trim();
-    const materials = parseBulletLines(protocolMaterialsInput?.value || '');
-    const troubleshooting = String(protocolTroubleshootingInput?.value || '').trim();
-    const steps = buildStepEntriesFromText(protocolStepsInput?.value || '', currentProtocolDraft.steps)
-      .map((entry) => cloneStep(entry.step));
+    const editorDraft = buildDraftFromEditorInputs();
+    const protocolName = editorDraft.name;
+    const purpose = editorDraft.purpose;
+    const materials = editorDraft.materials;
+    const troubleshooting = editorDraft.troubleshooting;
+    const steps = editorDraft.steps;
 
     if (!protocolName || !steps.length) {
       return;

@@ -80,51 +80,81 @@
 <!-- SOURCE: ui/html/views/home-view.html -->
 <section id="home-view" class="view is-active" aria-label="Home">
       <div class="home-layout">
-        <section class="home-section home-section-primary" aria-labelledby="dashboard-passage-heading">
-          <div class="home-section-head">
-            <h2 id="dashboard-passage-heading">Cell Passage Reminders</h2>
+        <section class="home-tile home-tile-today" aria-labelledby="dashboard-today-heading">
+          <div class="home-tile-head">
+            <h2 id="dashboard-today-heading">Today To Do</h2>
+            <p id="dashboard-today-summary" class="small-note">No urgent items right now.</p>
+          </div>
+          <div class="home-today-grid">
+            <div class="home-summary-strip" aria-label="Today's overview">
+              <div class="home-summary-cell">
+                <span class="home-summary-label">Overdue</span>
+                <strong id="dashboard-today-overdue-count">0</strong>
+              </div>
+              <div class="home-summary-cell">
+                <span class="home-summary-label">Open Steps</span>
+                <strong id="dashboard-today-workflow-count">0</strong>
+              </div>
+              <div class="home-summary-cell">
+                <span class="home-summary-label">Follow-ups</span>
+                <strong id="dashboard-today-incubation-count">0</strong>
+              </div>
+            </div>
+            <div id="dashboard-today-list" class="dashboard-list dashboard-list-compact"></div>
+          </div>
+        </section>
+
+        <section class="home-tile home-tile-passage" aria-labelledby="dashboard-passage-heading">
+          <div class="home-tile-head">
+            <h2 id="dashboard-passage-heading">Cell Passage Reminder</h2>
             <p id="dashboard-passage-summary" class="small-note">No cell line reminders yet.</p>
           </div>
-          <div class="dashboard-split-grid">
-            <div class="dashboard-list-group">
-              <h3>Overdue</h3>
-              <div id="dashboard-passage-overdue-list" class="dashboard-list"></div>
-            </div>
-            <div class="dashboard-list-group">
-              <h3>Due in 3 Days</h3>
-              <div id="dashboard-passage-soon-list" class="dashboard-list"></div>
-            </div>
-            <div class="dashboard-list-group">
-              <h3>Unconfigured</h3>
-              <div id="dashboard-passage-unconfigured-list" class="dashboard-list"></div>
+          <div class="home-tile-scroll">
+            <div class="dashboard-split-grid">
+              <div class="dashboard-list-group">
+                <h3>Overdue</h3>
+                <div id="dashboard-passage-overdue-list" class="dashboard-list"></div>
+              </div>
+              <div class="dashboard-list-group">
+                <h3>Due in 3 Days</h3>
+                <div id="dashboard-passage-soon-list" class="dashboard-list"></div>
+              </div>
+              <div class="dashboard-list-group">
+                <h3>Unconfigured</h3>
+                <div id="dashboard-passage-unconfigured-list" class="dashboard-list"></div>
+              </div>
             </div>
           </div>
         </section>
 
-        <section class="home-section home-section-compact home-timer-card" aria-labelledby="dashboard-timer-heading">
-          <div class="home-timer-card-top">
-            <div class="home-section-head">
-              <p class="dashboard-eyebrow">Lab Timers</p>
-              <h2 id="dashboard-timer-heading">Local bench time</h2>
-              <p id="dashboard-timer-status" class="small-note">Ready</p>
-            </div>
+        <section class="home-tile home-tile-workflow" aria-labelledby="dashboard-workflow-heading">
+          <div class="home-tile-head">
+            <h2 id="dashboard-workflow-heading">Current Workflow</h2>
+            <p id="dashboard-workflow-next-step" class="small-note">No workflow selected.</p>
+          </div>
+          <label class="dashboard-field">
+            Workflow
+            <select id="dashboard-workflow-select"></select>
+          </label>
+          <div class="home-tile-scroll">
+            <div id="dashboard-workflow-progress-list" class="dashboard-list"></div>
+          </div>
+        </section>
+
+        <section class="home-tile home-tile-timer" aria-labelledby="dashboard-timer-heading">
+          <div class="home-tile-head">
+            <h2 id="dashboard-timer-heading">Timer</h2>
+            <p id="dashboard-timer-status" class="small-note">Ready</p>
+          </div>
+          <div class="home-timer-clock">
             <p id="dashboard-local-time" class="dashboard-local-time">--:--:--</p>
             <p id="dashboard-local-date" class="dashboard-local-date">Loading local date</p>
           </div>
-          <div class="dashboard-timer-divider" aria-hidden="true"></div>
-          <div class="dashboard-timer-saved-head">
-            <h3>Your set timers</h3>
-            <p class="small-note">Tap a row to load it.</p>
-          </div>
-          <div id="dashboard-timer-saved-list" class="dashboard-timer-saved-list"></div>
           <p id="dashboard-timer-display" class="dashboard-timer-display">15:00</p>
-          <div class="dashboard-inline-row">
-            <label class="dashboard-field dashboard-field-inline">
-              Custom Minutes
-              <input id="dashboard-timer-custom-minutes" type="number" min="1" step="1" value="15" />
-            </label>
-            <button type="button" id="dashboard-timer-set-btn" class="ghost-btn">Set</button>
-          </div>
+          <label class="dashboard-field">
+            Custom Minutes
+            <input id="dashboard-timer-custom-minutes" type="number" min="1" step="1" value="15" />
+          </label>
           <div class="dashboard-inline-row dashboard-timer-presets">
             <button type="button" class="ghost-btn" data-dashboard-preset-minutes="5">5m</button>
             <button type="button" class="ghost-btn" data-dashboard-preset-minutes="10">10m</button>
@@ -132,109 +162,61 @@
             <button type="button" class="ghost-btn" data-dashboard-preset-minutes="30">30m</button>
           </div>
           <div class="dashboard-inline-row">
+            <button type="button" id="dashboard-timer-set-btn" class="ghost-btn">Set</button>
             <button type="button" id="dashboard-timer-start-btn" class="primary-btn">Start</button>
             <button type="button" id="dashboard-timer-pause-btn" class="ghost-btn">Pause</button>
             <button type="button" id="dashboard-timer-reset-btn" class="ghost-btn">Reset</button>
           </div>
-          <p class="small-note">A visual alert appears when the countdown reaches zero.</p>
+          <div class="home-tile-divider" aria-hidden="true"></div>
+          <div class="dashboard-timer-saved-head">
+            <h3>Your Timers</h3>
+            <p class="small-note">Tap a row to load it.</p>
+          </div>
+          <div id="dashboard-timer-saved-list" class="dashboard-timer-saved-list"></div>
         </section>
 
-        <section class="home-section home-section-wide" aria-labelledby="dashboard-workflow-heading">
-          <div class="home-section-head">
-            <h2 id="dashboard-workflow-heading">Current Workflow</h2>
-            <p class="small-note">Track the next action without leaving the workspace.</p>
+        <section class="home-tile home-tile-incubation" aria-labelledby="dashboard-incubation-heading">
+          <div class="home-tile-head">
+            <h2 id="dashboard-incubation-heading">Long Incubation Reminder</h2>
+            <p id="dashboard-incubation-summary" class="small-note">No planned follow-ups waiting.</p>
           </div>
-          <label class="dashboard-field">
-            Workflow
-            <select id="dashboard-workflow-select"></select>
-          </label>
-          <p id="dashboard-workflow-next-step" class="small-note">No workflow selected.</p>
-          <div id="dashboard-workflow-progress-list" class="dashboard-list"></div>
+          <div class="home-tile-scroll">
+            <div id="dashboard-incubation-list" class="dashboard-list"></div>
+          </div>
         </section>
-      </div>
-    </section>
 
-<!-- SOURCE: ui/html/views/instrument-management-view.html -->
-<section id="instrument-management-view" class="view">
-      <div class="panel">
-        <h3>Instruments</h3>
-        <div id="instrument-list" class="list-table"></div>
-      </div>
-
-      <div id="instrument-detail-panel" class="panel" hidden>
-        <div class="inline-row">
-          <div>
-            <h3 id="instrument-detail-title">Instrument</h3>
-            <p id="instrument-detail-subtitle" class="small-note"></p>
+        <section class="home-tile home-tile-quick-log" aria-labelledby="dashboard-quick-log-heading">
+          <div class="home-tile-head">
+            <h2 id="dashboard-quick-log-heading">Quick Log Notebook</h2>
+            <p id="dashboard-quick-log-status" class="small-note">Type a bench note to keep it handy on this screen.</p>
           </div>
-          <div class="inline-row calendar-toolbar">
-            <div class="calendar-view-switch" role="group" aria-label="Calendar view mode">
-              <button id="calendar-month-view-btn" class="ghost-btn" type="button">Month</button>
-              <button id="calendar-week-view-btn" class="ghost-btn" type="button">Week</button>
-            </div>
-            <div class="inline-row">
-              <button id="calendar-prev-btn" class="ghost-btn" type="button">Previous</button>
-              <button id="calendar-today-btn" class="ghost-btn" type="button">Today</button>
-              <button id="calendar-next-btn" class="ghost-btn" type="button">Next</button>
-            </div>
-          </div>
-        </div>
-        <h3 id="calendar-month-label"></h3>
-        <div id="instrument-calendar" class="instrument-calendar"></div>
-
-        <form id="reservation-form" class="stack-form">
-          <input type="hidden" id="reservation-id" />
-          <label>
-            Reservation Title
-            <input id="reservation-title" required placeholder="e.g. Sample run" />
+          <label class="dashboard-field dashboard-field-grow">
+            Bench Note
+            <textarea
+              id="dashboard-quick-log-input"
+              rows="6"
+              placeholder="Summarize what happened, what is incubating, or what you want the assistant to help with next."
+            ></textarea>
           </label>
-          <div class="form-grid">
-            <label>
-              Date
-              <input id="reservation-date" type="date" required />
-            </label>
-            <label>
-              Start Time
-              <input id="reservation-start-time" type="time" />
-            </label>
-            <label>
-              End Time
-              <input id="reservation-end-time" type="time" />
-            </label>
+          <div class="dashboard-inline-row">
+            <button type="button" id="dashboard-quick-log-agent-btn" class="primary-btn">Send to Assistant</button>
+            <button type="button" id="dashboard-quick-log-notebook-btn" class="ghost-btn">Open Notebook</button>
+            <button type="button" id="dashboard-quick-log-clear-btn" class="ghost-btn">Clear</button>
           </div>
-          <label>
-            Notes
-            <textarea id="reservation-notes" rows="3" placeholder="Optional reservation details"></textarea>
-          </label>
-          <div class="form-actions">
-            <button type="submit" class="primary-btn">Save Reservation</button>
-            <button type="button" id="reservation-cancel-btn" class="ghost-btn">Cancel Edit</button>
-          </div>
-        </form>
+        </section>
 
-        <div class="panel">
-          <h3>Reservations</h3>
-          <div id="reservation-list" class="cards"></div>
-        </div>
-      </div>
-
-      <div class="panel">
-        <h3>Create / Edit Instrument</h3>
-        <form id="instrument-form" class="form-grid instrument-create-form">
-          <input type="hidden" id="instrument-id" />
-          <label>
-            Instrument Name (Required)
-            <input id="instrument-name" required />
-          </label>
-          <label>
-            Nickname (Optional)
-            <input id="instrument-nickname" />
-          </label>
-          <div class="form-actions instrument-create-actions">
-            <button type="submit" class="primary-btn">Save Instrument</button>
-            <button type="button" id="instrument-cancel-btn" class="ghost-btn">Cancel Edit</button>
+        <section class="home-tile home-tile-actions" aria-labelledby="dashboard-actions-heading">
+          <div class="home-tile-head">
+            <h2 id="dashboard-actions-heading">Quick Actions</h2>
+            <p class="small-note">Jump into the modules you use most.</p>
           </div>
-        </form>
+          <div class="home-action-grid">
+            <button type="button" class="home-action-btn" data-dashboard-action="samples">Open Samples</button>
+            <button type="button" class="home-action-btn" data-dashboard-action="workflow">Open Workflow</button>
+            <button type="button" class="home-action-btn" data-dashboard-action="notebook">Open Notebook</button>
+            <button type="button" class="home-action-btn" data-dashboard-action="assistant">Open Assistant</button>
+          </div>
+        </section>
       </div>
     </section>
 
@@ -331,6 +313,7 @@
                 <textarea id="protocol-troubleshooting" rows="4" placeholder="Common issues and solutions"></textarea>
               </label>
               <div class="form-actions protocol-save-actions">
+                <button type="button" id="protocol-polish-btn" class="ghost-btn">Polish Protocol</button>
                 <button type="submit" class="primary-btn">Save Protocol</button>
               </div>
             </form>
@@ -348,6 +331,39 @@
               </div>
             </div>
             <div id="protocol-view-content" class="stack-form"></div>
+          </div>
+
+          <div id="protocol-polish-overlay" class="protocol-polish-overlay" hidden>
+            <div class="protocol-polish-dialog-shell" role="dialog" aria-modal="true" aria-labelledby="protocol-polish-title">
+              <div class="protocol-polish-dialog-stack">
+                <section class="protocol-polish-dialog protocol-polish-dialog-source" aria-labelledby="protocol-polish-source-title">
+                  <div class="protocol-polish-dialog-head">
+                    <div>
+                      <span class="protocol-detail-mode">Before</span>
+                      <h3 id="protocol-polish-source-title">Your Input</h3>
+                    </div>
+                  </div>
+                  <div id="protocol-polish-original-preview" class="protocol-polish-preview stack-form"></div>
+                </section>
+
+                <section class="protocol-polish-dialog protocol-polish-dialog-result" aria-labelledby="protocol-polish-title">
+                  <div class="protocol-polish-dialog-head">
+                    <div>
+                      <span class="protocol-detail-mode">After</span>
+                      <h3 id="protocol-polish-title">Polished Protocol</h3>
+                    </div>
+                    <button type="button" id="protocol-polish-close-btn" class="ghost-btn">Close</button>
+                  </div>
+                  <div id="protocol-polish-result-preview" class="protocol-polish-preview stack-form"></div>
+                  <p id="protocol-polish-status" class="small-note" hidden></p>
+                </section>
+              </div>
+
+              <div class="form-actions protocol-polish-actions">
+                <button type="button" id="protocol-polish-apply-btn" class="primary-btn" disabled>Use Polished Version</button>
+                <button type="button" id="protocol-polish-keep-editing-btn" class="ghost-btn">Keep Editing</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -673,7 +689,6 @@
         </div>
 
         <div class="panel assay-mode-create-panel assay-create-preview-panel">
-          <p class="small-note">Click a well and edit directly on this plate. Use switch to choose Sample ID or Concentration field.</p>
           <div class="form-actions">
             <div class="calendar-view-switch assay-mode-switch" role="group" aria-label="Plate edit field">
               <button type="button" id="assay-plate-field-sample-btn" class="ghost-btn calendar-view-active">Edit Sample ID</button>
@@ -801,7 +816,6 @@
         <div class="gel-workspace">
           <div class="panel gel-setup-panel">
             <h3>Setup</h3>
-            <p class="small-note">Manual workflow only. Crop is optional.</p>
             <form id="gel-form" class="form-grid">
               <input type="hidden" id="gel-id" />
               <label>
@@ -880,7 +894,6 @@
 
           <div class="panel gel-viewer-panel">
             <h3>Gel Viewer</h3>
-            <p class="small-note">Lane borders and band calls are overlaid. Re-run analysis after changing parameters.</p>
             <div class="gel-viewer-toolbar" role="toolbar" aria-label="Gel viewer tools">
               <button type="button" id="gel-tool-left-border-btn" class="ghost-btn">Set left border</button>
               <button type="button" id="gel-tool-right-border-btn" class="ghost-btn">Set right border</button>
@@ -934,104 +947,131 @@
 
 <!-- SOURCE: ui/html/views/lab-common-inventory-view.html -->
 <section id="lab-common-inventory-view" class="view">
-      <div class="panel">
-        <h2>Chemicals</h2>
-        <form id="chemical-form" class="form-grid">
-          <input type="hidden" id="chemical-id" />
-          <label>
-            Name (Required)
-            <input id="chemical-name" required />
-          </label>
-          <label>
-            CAS Number (Required)
-            <input id="chemical-cas" required />
-          </label>
-          <label>
-            Location (Required)
-            <select id="chemical-location" required></select>
-          </label>
-          <label>
-            Vendor
-            <input id="chemical-vendor" />
-          </label>
-          <label>
-            Catalog Number
-            <input id="chemical-catalog-number" />
-          </label>
-          <label>
-            Unit Size
-            <input id="chemical-unit-size" />
-          </label>
-          <label>
-            Price
-            <input id="chemical-price" />
-          </label>
-          <label>
-            Amount in Stock
-            <input id="chemical-stock" />
-          </label>
-          <label>
-            URL
-            <input id="chemical-url" />
-          </label>
-          <label>
-            Expiration Date
-            <input id="chemical-expiration" type="date" />
-          </label>
-          <div class="form-actions chemical-form-actions">
-            <button type="submit" class="primary-btn">Save Chemical</button>
-            <button type="button" id="chemical-cancel-btn" class="ghost-btn">Cancel Edit</button>
+      <div class="chemical-layout">
+        <aside class="panel chemical-sidebar">
+          <div class="chemical-sidebar-stack">
+            <button type="button" id="chemical-open-add-btn" class="primary-btn chemical-add-btn">Add Chemical</button>
+            <label class="chemical-search-field">
+              Search
+              <input id="chemical-search" type="search" placeholder="Name, CAS, vendor, catalog, location" />
+            </label>
           </div>
-        </form>
-      </div>
-      <div class="panel">
-        <h3>Enana Sync Inbox</h3>
-        <div class="inline-row chemical-inbox-row">
-          <label>
-            Inbox Email
-            <select id="inventory-inbox-email"></select>
-          </label>
-          <button type="button" id="inventory-import-btn" class="ghost-btn">Import Chemical Update</button>
+        </aside>
+
+        <div class="chemical-main">
+          <div class="panel chemical-list-panel">
+            <div class="chemical-panel-head">
+              <div class="chemical-panel-copy">
+                <h2>Chemicals</h2>
+                <p id="chemical-results-summary" class="small-note">Showing 0 chemicals.</p>
+              </div>
+            </div>
+
+            <div class="chemical-toolbar-grid">
+              <label>
+                Filter Location
+                <select id="chemical-filter-location">
+                  <option value="">All locations</option>
+                </select>
+              </label>
+              <label>
+                Sort By
+                <select id="chemical-sort">
+                  <option value="updated_desc">Updated (Newest)</option>
+                  <option value="updated_asc">Updated (Oldest)</option>
+                  <option value="name_asc">Name (A-Z)</option>
+                  <option value="name_desc">Name (Z-A)</option>
+                  <option value="location_asc">Location Number (Low-High)</option>
+                  <option value="location_desc">Location Number (High-Low)</option>
+                  <option value="expiration_asc">Expiration (Soonest)</option>
+                  <option value="expiration_desc">Expiration (Latest)</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="chemical-sync-strip">
+              <label>
+                Inbox Email
+                <select id="inventory-inbox-email"></select>
+              </label>
+              <button type="button" id="inventory-import-btn" class="ghost-btn">Import Chemical Update</button>
+              <p class="small-note chemical-pending-note">Pending inventory updates: <span id="inventory-pending-count">0</span></p>
+            </div>
+
+            <div id="chemical-list" class="list-table"></div>
+          </div>
+
+          <div id="chemical-detail-panel" class="panel chemical-detail-panel" hidden>
+            <h3 id="chemical-detail-title">Chemical Details</h3>
+            <div id="chemical-detail-content" class="stack-form"></div>
+            <div class="card-actions">
+              <button type="button" id="chemical-detail-edit-btn" class="ghost-btn">Edit</button>
+              <button type="button" id="chemical-detail-delete-btn" class="danger-btn">Delete</button>
+            </div>
+          </div>
         </div>
-        <p class="small-note">Pending inventory updates: <span id="inventory-pending-count">0</span></p>
       </div>
-      <div class="panel">
-        <h3>Chemical List</h3>
-        <div class="form-grid">
-          <label>
-            Search
-            <input id="chemical-search" placeholder="Name, CAS, vendor, catalog, location" />
-          </label>
-          <label>
-            Filter Location
-            <select id="chemical-filter-location">
-              <option value="">All locations</option>
-            </select>
-          </label>
-          <label>
-            Sort By
-            <select id="chemical-sort">
-              <option value="updated_desc">Updated (Newest)</option>
-              <option value="updated_asc">Updated (Oldest)</option>
-              <option value="name_asc">Name (A-Z)</option>
-              <option value="name_desc">Name (Z-A)</option>
-              <option value="location_asc">Location Number (Low-High)</option>
-              <option value="location_desc">Location Number (High-Low)</option>
-              <option value="expiration_asc">Expiration (Soonest)</option>
-              <option value="expiration_desc">Expiration (Latest)</option>
-            </select>
-          </label>
+
+      <div id="chemical-dialog-overlay" class="chemical-dialog-overlay" hidden>
+        <div class="chemical-dialog" role="dialog" aria-modal="true" aria-labelledby="chemical-dialog-title">
+          <div class="chemical-dialog-head">
+            <div>
+              <h3 id="chemical-dialog-title">Add Chemical</h3>
+              <p class="small-note">Create or update a chemical record.</p>
+            </div>
+            <button type="button" id="chemical-dialog-close-btn" class="ghost-btn" aria-label="Close chemical dialog">Close</button>
+          </div>
+
+          <form id="chemical-form" class="form-grid">
+            <input type="hidden" id="chemical-id" />
+            <label>
+              Name (Required)
+              <input id="chemical-name" required />
+            </label>
+            <label>
+              CAS Number (Required)
+              <input id="chemical-cas" required />
+            </label>
+            <label>
+              Location (Required)
+              <select id="chemical-location" required></select>
+            </label>
+            <label>
+              Vendor
+              <input id="chemical-vendor" />
+            </label>
+            <label>
+              Catalog Number
+              <input id="chemical-catalog-number" />
+            </label>
+            <label>
+              Unit Size
+              <input id="chemical-unit-size" />
+            </label>
+            <label>
+              Price
+              <input id="chemical-price" />
+            </label>
+            <label>
+              Amount in Stock
+              <input id="chemical-stock" />
+            </label>
+            <label class="chemical-form-field-wide">
+              URL
+              <input id="chemical-url" />
+            </label>
+            <label>
+              Expiration Date
+              <input id="chemical-expiration" type="date" />
+            </label>
+            <div class="form-actions chemical-form-actions">
+              <button type="submit" class="primary-btn">Save Chemical</button>
+              <button type="button" id="chemical-cancel-btn" class="ghost-btn">Cancel</button>
+            </div>
+          </form>
         </div>
-        <div id="chemical-list" class="list-table"></div>
       </div>
-      <div id="chemical-detail-panel" class="panel" hidden>
-        <h3 id="chemical-detail-title">Chemical Details</h3>
-        <div id="chemical-detail-content" class="stack-form"></div>
-        <div class="card-actions">
-          <button type="button" id="chemical-detail-edit-btn" class="ghost-btn">Edit</button>
-          <button type="button" id="chemical-detail-delete-btn" class="danger-btn">Delete</button>
-        </div>
-      </div>
+
       <div class="panel" hidden>
         <h3>Blockchain Records</h3>
         <div id="inventory-blockchain-list" class="stack-form"></div>
@@ -1163,7 +1203,6 @@
                   Default Startup Module
                   <select id="setting-startup-default-view">
                     <option value="home-view">Home</option>
-                    <option value="instrument-management-view">Instruments</option>
                     <option value="protocol-management-view">Protocols</option>
                     <option value="biology-notebook-view">Biology Notebook</option>
                     <option value="lab-common-inventory-view">Chemicals</option>
@@ -1322,114 +1361,89 @@
         <h2>Workflows</h2>
         <div id="workflow-entry-panel" class="form-actions">
           <button type="button" id="workflow-entry-create-btn" class="primary-btn">Create New Workflow</button>
-          <button type="button" id="workflow-entry-template-btn" class="ghost-btn">Create New Workflow Template</button>
           <button type="button" id="workflow-entry-view-btn" class="ghost-btn">View/Edit Workflow</button>
           <button type="button" id="workflow-entry-back-btn" class="ghost-btn" hidden>Back to Work Flow</button>
         </div>
       </div>
 
-      <div class="panel workflow-editor-panel" hidden>
-        <form id="workflow-form" class="stack-form">
-          <input type="hidden" id="workflow-id" />
-          <label>
-            Workflow Name
-            <input id="workflow-name" required placeholder="e.g. Antibody purification pipeline" />
-          </label>
-          <label>
-            Description
-            <textarea id="workflow-description" rows="3" placeholder="Optional notes about this workflow"></textarea>
-          </label>
-          <label id="workflow-project-field">
-            Linked Project
-            <select id="workflow-project">
-              <option value="">Select project</option>
-            </select>
-          </label>
-          <label id="workflow-notebook-pages-field">
-            Linked Notebook Pages (optional)
-            <select id="workflow-notebook-pages" multiple size="6"></select>
-          </label>
-          <div class="form-actions">
-            <button type="submit" class="primary-btn">Save Workflow</button>
-            <button type="button" id="workflow-cancel-btn" class="ghost-btn">Cancel Edit</button>
+      <div class="workflow-editor-layout">
+        <div class="workflow-editor-sidebar">
+          <div class="panel workflow-editor-panel" hidden>
+            <form id="workflow-form" class="stack-form">
+              <input type="hidden" id="workflow-id" />
+              <label>
+                Workflow Name
+                <input id="workflow-name" required placeholder="e.g. Antibody purification pipeline" />
+              </label>
+              <label>
+                Description
+                <textarea id="workflow-description" rows="3" placeholder="Optional notes about this workflow"></textarea>
+              </label>
+              <label id="workflow-project-field">
+                Linked Project
+                <select id="workflow-project">
+                  <option value="">Select project</option>
+                </select>
+              </label>
+              <label id="workflow-notebook-pages-field">
+                Linked Notebook Pages (optional)
+                <select id="workflow-notebook-pages" multiple size="6"></select>
+              </label>
+              <div class="form-actions">
+                <button type="submit" class="primary-btn">Save Workflow</button>
+                <button type="button" id="workflow-cancel-btn" class="ghost-btn">Cancel Edit</button>
+              </div>
+            </form>
           </div>
-        </form>
-      </div>
+        </div>
 
-      <div class="panel workflow-editor-panel" hidden>
-        <h3>Workflow Blocks</h3>
-        <p class="small-note">Add protocol blocks or plain-text blocks. New blocks default assignee to yourself.</p>
-        <div class="form-grid workflow-grid workflow-block-grid">
-          <label>
-            Block Type
-            <select id="workflow-block-type">
-              <option value="protocol">Protocol</option>
-              <option value="text">Plain Text</option>
-            </select>
-          </label>
-          <label id="workflow-block-protocol-search-field">
-            Search Protocol
-            <input id="workflow-block-protocol-search" type="search" placeholder="Search protocols..." />
-          </label>
-          <label id="workflow-block-protocol-field">
-            Protocol
-            <select id="workflow-block-protocol">
-              <option value="">Select protocol</option>
-            </select>
-          </label>
-          <label id="workflow-block-text-field" hidden>
-            Plain Text
-            <input id="workflow-block-text" placeholder="e.g. Incubate at room temperature for 10 minutes" />
-          </label>
-          <div class="form-actions workflow-inline-actions">
-            <button type="button" id="workflow-block-add-btn" class="ghost-btn">Add Protocol Block</button>
+        <div class="workflow-editor-main">
+          <div class="panel workflow-editor-panel" hidden>
+            <h3>Workflow Blocks</h3>
+            <p class="small-note">Add protocol blocks or plain-text blocks. New blocks default assignee to yourself.</p>
+            <div class="form-grid workflow-grid workflow-block-grid">
+              <label>
+                Block Type
+                <select id="workflow-block-type">
+                  <option value="protocol">Protocol</option>
+                  <option value="text">Plain Text</option>
+                </select>
+              </label>
+              <label id="workflow-block-protocol-search-field">
+                Search Protocol
+                <input id="workflow-block-protocol-search" type="search" placeholder="Search protocols..." />
+              </label>
+              <label id="workflow-block-protocol-field">
+                Protocol
+                <select id="workflow-block-protocol">
+                  <option value="">Select protocol</option>
+                </select>
+              </label>
+              <label id="workflow-block-text-field" hidden>
+                Plain Text
+                <input id="workflow-block-text" placeholder="e.g. Incubate at room temperature for 10 minutes" />
+              </label>
+              <div class="form-actions workflow-inline-actions">
+                <button type="button" id="workflow-block-add-btn" class="ghost-btn">Add Protocol Block</button>
+              </div>
+            </div>
+            <div id="workflow-block-list" class="list-table"></div>
           </div>
-        </div>
-        <div id="workflow-block-list" class="list-table"></div>
-      </div>
 
-      <div class="panel workflow-editor-panel" hidden>
-        <h3>Graph Editor</h3>
-        <p class="small-note">Drag blocks to arrange. Click an output dot, then an input dot to connect. Click a line to remove a connection.</p>
-        <div id="workflow-graph-canvas" class="workflow-graph-canvas">
-          <div id="workflow-graph-board" class="workflow-graph-board">
-            <svg id="workflow-graph-svg" class="workflow-graph-svg" aria-hidden="true"></svg>
-            <div id="workflow-graph-selection" class="workflow-graph-selection" hidden></div>
-            <div id="workflow-graph-nodes" class="workflow-graph-nodes"></div>
+          <div class="panel workflow-editor-panel" hidden>
+            <h3>Graph Editor</h3>
+            <p class="small-note">Drag blocks to arrange. Click an output dot, then an input dot to connect. Click a line to remove a connection.</p>
+            <div id="workflow-graph-canvas" class="workflow-graph-canvas">
+              <div id="workflow-graph-board" class="workflow-graph-board">
+                <svg id="workflow-graph-svg" class="workflow-graph-svg" aria-hidden="true"></svg>
+                <div id="workflow-graph-selection" class="workflow-graph-selection" hidden></div>
+                <div id="workflow-graph-nodes" class="workflow-graph-nodes"></div>
+              </div>
+            </div>
+            <p id="workflow-graph-status" class="small-note">Graph is empty. Add a block to start.</p>
+            <div id="workflow-graph-context-menu" class="workflow-context-menu" hidden></div>
           </div>
         </div>
-        <p id="workflow-graph-status" class="small-note">Graph is empty. Add a block to start.</p>
-        <div id="workflow-graph-context-menu" class="workflow-context-menu" hidden></div>
-      </div>
-
-      <div class="panel workflow-template-panel" hidden>
-        <h3>Templates</h3>
-        <p class="small-note">Templates save only block + connection structure. Specific notebook page links are never included.</p>
-        <div class="form-grid workflow-grid">
-          <label>
-            Template Name
-            <input id="workflow-template-name" placeholder="e.g. Standard purification flow" />
-          </label>
-          <div class="form-actions workflow-inline-actions">
-            <button type="button" id="workflow-save-template-btn" class="ghost-btn">Save Current as Template</button>
-          </div>
-        </div>
-        <div class="form-grid workflow-grid">
-          <label>
-            Use Template
-            <select id="workflow-template-source">
-              <option value="">Select template</option>
-            </select>
-          </label>
-          <label>
-            New Workflow Name
-            <input id="workflow-template-create-name" placeholder="e.g. Batch 24 purification" />
-          </label>
-          <div class="form-actions workflow-inline-actions">
-            <button type="button" id="workflow-template-create-btn" class="ghost-btn">Create Workflow from Template</button>
-          </div>
-        </div>
-        <div id="workflow-template-list" class="cards"></div>
       </div>
 
       <div class="panel workflow-list-panel" hidden>
@@ -1506,8 +1520,8 @@
               </div>
               <div class="papers-viewer-summary">
                 <p id="paper-viewer-title" class="papers-viewer-title">No paper selected</p>
-                <p id="paper-viewer-meta" class="small-note">Select a paper from the list to preview it here.</p>
-                <p id="paper-viewer-status" class="small-note">Choose "View PDF" on a paper to open it here.</p>
+                <p id="paper-viewer-meta" class="small-note"></p>
+                <p id="paper-viewer-status" class="small-note"></p>
               </div>
             </div>
             <div id="paper-viewer-shell" class="papers-viewer-shell is-empty">
@@ -1555,7 +1569,7 @@
                 Comment
                 <textarea id="paper-comment-text" rows="5" placeholder="Click &quot;Add Comment&quot;, place a pin on the page, then write your note."></textarea>
               </label>
-              <p id="paper-comment-status" class="small-note">Open a paper to review or add page comments.</p>
+              <p id="paper-comment-status" class="small-note"></p>
               <div id="paper-comment-list" class="papers-comment-list"></div>
             </aside>
           </div>
@@ -1641,45 +1655,48 @@
         <p class="small-note">Bench calculators, sequence utilities, and quick analysis helpers.</p>
       </div>
 
-      <div class="grid tool-grid">
-        <button class="tile tool-tile" data-tool-view="tool-molarity-view">
-          <span class="label">Molarity Calculator</span>
-        </button>
-        <button class="tile tool-tile" data-tool-view="tool-peptide-view">
-          <span class="label">Peptide Properties</span>
-        </button>
-        <button class="tile tool-tile" data-tool-view="tool-buffer-view">
-          <span class="label">Buffer Preparer</span>
-        </button>
-        <button class="tile tool-tile" data-tool-view="tool-fixed-reaction-view">
-          <span class="label">Fixed Volume Reaction</span>
-        </button>
-        <button class="tile tool-tile" data-tool-view="tool-dna-protein-view">
-          <span class="label">DNA to Protein</span>
-        </button>
-        <button class="tile tool-tile" data-tool-view="tool-reverse-translate-view">
-          <span class="label">Protein to DNA</span>
-        </button>
-        <button class="tile tool-tile" data-tool-view="tool-oligo-view">
-          <span class="label">DNA/RNA Oligo Properties</span>
-        </button>
-        <button class="tile tool-tile" data-tool-view="tool-extinction-view">
-          <span class="label">Extinction Coefficient</span>
-        </button>
-        <button class="tile tool-tile" data-tool-view="tool-qpcr-view">
-          <span class="label">qPCR Efficiency</span>
-        </button>
-        <button class="tile tool-tile" data-tool-view="tool-crispr-view">
-          <span class="label">CRISPR sgRNA Designer</span>
-        </button>
-        <button class="tile tool-tile" data-tool-view="tool-colony-counter-view">
-          <span class="label">Colony Counter</span>
-        </button>
-      </div>
+      <div class="tool-layout">
+        <aside class="panel tool-sidebar" aria-label="Tool selection">
+          <div class="tool-grid" role="tablist" aria-orientation="vertical">
+            <button class="tile tool-tile" data-tool-view="tool-molarity-view" role="tab" aria-controls="tool-molarity-view">
+              <span class="label">Molarity Calculator</span>
+            </button>
+            <button class="tile tool-tile" data-tool-view="tool-peptide-view" role="tab" aria-controls="tool-peptide-view">
+              <span class="label">Peptide Properties</span>
+            </button>
+            <button class="tile tool-tile" data-tool-view="tool-buffer-view" role="tab" aria-controls="tool-buffer-view">
+              <span class="label">Buffer Preparer</span>
+            </button>
+            <button class="tile tool-tile" data-tool-view="tool-fixed-reaction-view" role="tab" aria-controls="tool-fixed-reaction-view">
+              <span class="label">Fixed Volume Reaction</span>
+            </button>
+            <button class="tile tool-tile" data-tool-view="tool-dna-protein-view" role="tab" aria-controls="tool-dna-protein-view">
+              <span class="label">DNA to Protein</span>
+            </button>
+            <button class="tile tool-tile" data-tool-view="tool-reverse-translate-view" role="tab" aria-controls="tool-reverse-translate-view">
+              <span class="label">Protein to DNA</span>
+            </button>
+            <button class="tile tool-tile" data-tool-view="tool-oligo-view" role="tab" aria-controls="tool-oligo-view">
+              <span class="label">DNA/RNA Oligo Properties</span>
+            </button>
+            <button class="tile tool-tile" data-tool-view="tool-extinction-view" role="tab" aria-controls="tool-extinction-view">
+              <span class="label">Extinction Coefficient</span>
+            </button>
+            <button class="tile tool-tile" data-tool-view="tool-qpcr-view" role="tab" aria-controls="tool-qpcr-view">
+              <span class="label">qPCR Efficiency</span>
+            </button>
+            <button class="tile tool-tile" data-tool-view="tool-crispr-view" role="tab" aria-controls="tool-crispr-view">
+              <span class="label">CRISPR sgRNA Designer</span>
+            </button>
+            <button class="tile tool-tile" data-tool-view="tool-colony-counter-view" role="tab" aria-controls="tool-colony-counter-view">
+              <span class="label">Colony Counter</span>
+            </button>
+          </div>
+        </aside>
 
+        <div class="tool-content">
       <div id="tool-molarity-view" class="panel tool-subview">
         <h3>Molarity Calculator</h3>
-        <p class="small-note">GraphPad-style quick calcs with units for concentration, volume, and mass.</p>
 
         <div class="molarity-block">
           <h4>1) Find Mass from Concentration and Volume</h4>
@@ -1900,7 +1917,6 @@
       <div id="tool-fixed-reaction-view" class="panel tool-subview" hidden>
         <h3>Fixed Volume Reaction</h3>
         <div class="stack-form reaction-mix-shell">
-          <p class="small-note">Leave a reagent volume blank to calculate it from stock and final concentration. Enter a volume directly when you want to override the concentration-based calculation. Use <code>x</code> for stock solutions like 10x or 5x.</p>
           <div class="form-actions">
             <button id="fixed-reaction-add-row-btn" type="button" class="ghost-btn">Add Reagent</button>
           </div>
@@ -1961,7 +1977,6 @@
               </div>
             </div>
           </div>
-          <p id="fixed-reaction-summary" class="calc-output"></p>
         </div>
       </div>
 
@@ -2084,7 +2099,6 @@
 
       <div id="tool-crispr-view" class="panel tool-subview" hidden>
         <h3>CRISPR sgRNA Designer</h3>
-        <p class="small-note">Choose a reference genome profile, select targets, and generate ranked sgRNA candidates.</p>
 
         <div class="crispr-designer-shell">
           <form id="crispr-form" class="stack-form crispr-controls" autocomplete="off">
@@ -2174,7 +2188,6 @@
 
       <div id="tool-colony-counter-view" class="panel tool-subview" hidden>
         <h3>Colony Counter (Manual Click)</h3>
-        <p class="small-note">Upload a plate image, then click each colony to count manually.</p>
 
         <div class="colony-counter-shell">
           <form id="colony-counter-form" class="stack-form colony-counter-controls" autocomplete="off">
@@ -2197,13 +2210,11 @@
               </label>
             </div>
 
-            <p class="small-note">Left-click to add a marker, right-click to remove nearest, scroll to zoom, and drag while zoomed to pan.</p>
-
             <div class="form-actions">
               <button id="colony-clear-markers-btn" type="button" class="ghost-btn">Clear Markers</button>
               <button id="colony-run-btn" type="submit" class="primary-btn">Save Manual Count</button>
               <button id="colony-reset-btn" type="button" class="ghost-btn">Reset</button>
-              <span id="colony-status" class="small-note">Load an image, then click colonies to count manually.</span>
+              <span id="colony-status" class="small-note"></span>
             </div>
           </form>
 
@@ -2232,6 +2243,8 @@
         </div>
 
         <canvas id="colony-source-canvas" hidden></canvas>
+      </div>
+        </div>
       </div>
     </section>
 

@@ -1,4 +1,8 @@
 export function initLabCommonInventory({ state, persist, createId, safeText }) {
+  const chemicalOpenAddBtn = document.getElementById('chemical-open-add-btn');
+  const chemicalDialogOverlay = document.getElementById('chemical-dialog-overlay');
+  const chemicalDialogTitle = document.getElementById('chemical-dialog-title');
+  const chemicalDialogCloseBtn = document.getElementById('chemical-dialog-close-btn');
   const chemicalForm = document.getElementById('chemical-form');
   const chemicalId = document.getElementById('chemical-id');
   const chemicalName = document.getElementById('chemical-name');
@@ -14,6 +18,7 @@ export function initLabCommonInventory({ state, persist, createId, safeText }) {
   const chemicalCancelBtn = document.getElementById('chemical-cancel-btn');
   const chemicalList = document.getElementById('chemical-list');
   const chemicalSearch = document.getElementById('chemical-search');
+  const chemicalResultsSummary = document.getElementById('chemical-results-summary');
   const chemicalFilterLocation = document.getElementById('chemical-filter-location');
   const chemicalSort = document.getElementById('chemical-sort');
   const chemicalDetailPanel = document.getElementById('chemical-detail-panel');
@@ -27,6 +32,10 @@ export function initLabCommonInventory({ state, persist, createId, safeText }) {
   const pendingCount = document.getElementById('inventory-pending-count');
   const blockchainList = document.getElementById('inventory-blockchain-list');
 
+  chemicalOpenAddBtn.addEventListener('click', startNewChemical);
+  chemicalDialogCloseBtn.addEventListener('click', resetChemicalForm);
+  chemicalDialogOverlay.addEventListener('click', onChemicalDialogOverlayClick);
+  document.addEventListener('keydown', onChemicalDialogKeydown);
   chemicalForm.addEventListener('submit', onChemicalSubmit);
   chemicalCancelBtn.addEventListener('click', resetChemicalForm);
   importBtn.addEventListener('click', importInventoryUpdates);
@@ -79,6 +88,56 @@ export function initLabCommonInventory({ state, persist, createId, safeText }) {
 
   function normalizeLocationKey(value) {
     return String(value || '').trim().toLowerCase();
+  }
+
+  function updateChemicalDialogTitle() {
+    if (!chemicalDialogTitle) {
+      return;
+    }
+    chemicalDialogTitle.textContent = chemicalId.value ? 'Edit Chemical' : 'Add Chemical';
+  }
+
+  function openChemicalDialog() {
+    if (!chemicalDialogOverlay) {
+      return;
+    }
+    updateChemicalDialogTitle();
+    chemicalDialogOverlay.hidden = false;
+    requestAnimationFrame(() => {
+      chemicalName.focus();
+    });
+  }
+
+  function clearChemicalForm() {
+    chemicalId.value = '';
+    chemicalForm.reset();
+    renderLocationOptions();
+    updateChemicalDialogTitle();
+  }
+
+  function startNewChemical() {
+    clearChemicalForm();
+    openChemicalDialog();
+  }
+
+  function resetChemicalForm() {
+    clearChemicalForm();
+    if (chemicalDialogOverlay) {
+      chemicalDialogOverlay.hidden = true;
+    }
+  }
+
+  function onChemicalDialogOverlayClick(event) {
+    if (event.target === chemicalDialogOverlay) {
+      resetChemicalForm();
+    }
+  }
+
+  function onChemicalDialogKeydown(event) {
+    if (event.key === 'Escape' && chemicalDialogOverlay && !chemicalDialogOverlay.hidden) {
+      event.preventDefault();
+      resetChemicalForm();
+    }
   }
 
   function encodeLocationLetter(index) {
@@ -238,7 +297,7 @@ export function initLabCommonInventory({ state, persist, createId, safeText }) {
 
   async function syncChemicalSqliteBundle(force = false) {
     const storagePath = String(state.settings?.storagePath || '').trim();
-    if (!storagePath || !window.enanaApi?.autoSaveDataFile) {
+    if (!storagePath || !window.enanaApi?.syncSqliteBundle) {
       return;
     }
 
@@ -248,7 +307,7 @@ export function initLabCommonInventory({ state, persist, createId, safeText }) {
     }
 
     const normalizedRoot = storagePath.replace(/[\\/]+$/, '');
-    const targetPath = `${normalizedRoot}/enana-chemicals.ena.json`;
+    const targetPath = `${normalizedRoot}/enana-chemicals.index.sqlite`;
     const inventorySnapshot = {
       labInventory: {
         chemicals: Array.isArray(state.labInventory.chemicals) ? state.labInventory.chemicals : [],
@@ -267,7 +326,10 @@ export function initLabCommonInventory({ state, persist, createId, safeText }) {
     };
 
     try {
-      const result = await window.enanaApi.autoSaveDataFile(inventorySnapshot, targetPath);
+      const result = await window.enanaApi.syncSqliteBundle({
+        snapshot: inventorySnapshot,
+        sqlitePath: targetPath
+      });
       if (result?.ok) {
         lastChemicalSqliteSyncKey = syncKey;
       } else {
@@ -394,12 +456,6 @@ export function initLabCommonInventory({ state, persist, createId, safeText }) {
     renderAll();
   }
 
-  function resetChemicalForm() {
-    chemicalId.value = '';
-    chemicalForm.reset();
-    renderLocationOptions();
-  }
-
   function editChemical(id) {
     const item = state.labInventory.chemicals.find((chemical) => chemical.id === id);
     if (!item) {
@@ -418,6 +474,8 @@ export function initLabCommonInventory({ state, persist, createId, safeText }) {
     chemicalUrl.value = item.url || '';
     chemicalExpiration.value = item.expirationDate || '';
     selectedChemicalId = id;
+    updateChemicalDialogTitle();
+    openChemicalDialog();
     renderChemicalDetail();
   }
 
@@ -540,13 +598,23 @@ export function initLabCommonInventory({ state, persist, createId, safeText }) {
   function renderChemicalList() {
     const allChemicals = state.labInventory.chemicals;
     if (!allChemicals.length) {
+      selectedChemicalId = '';
+      if (chemicalResultsSummary) {
+        chemicalResultsSummary.textContent = 'No chemicals recorded yet.';
+      }
       chemicalList.innerHTML = '<p class="small-note">No chemicals recorded.</p>';
+      renderChemicalDetail();
       return;
     }
 
     const chemicals = getVisibleChemicals();
+    if (chemicalResultsSummary) {
+      chemicalResultsSummary.textContent = `Showing ${chemicals.length} of ${allChemicals.length} chemicals.`;
+    }
     if (!chemicals.length) {
+      selectedChemicalId = '';
       chemicalList.innerHTML = '<p class="small-note">No chemicals match current search/filter.</p>';
+      renderChemicalDetail();
       return;
     }
 

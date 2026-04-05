@@ -36,6 +36,7 @@ const { createMainDataHelpers } = require('./helpers/main/data-helpers');
 const {
   getBundlePaths,
   syncBundleFromSnapshot,
+  syncSqliteBundleFromSnapshot,
   hydrateSnapshotFromBundle,
   importStorageRoot
 } = require('./helpers/main/storage-bundle');
@@ -60,7 +61,6 @@ const cleanText = defaultCleanText;
 const appIconPath = path.join(PROJECT_ROOT, 'image.png');
 const DEFAULT_DATA_FILE_NAME = 'enana-data.json';
 const TELEGRAM_CONFIG_FILE_NAME = 'telegram-bot.json';
-const CHEMICALS_DATA_FILE_PATH = path.join(PROJECT_ROOT, 'data', 'chemicals.json');
 const AGENT_CHAT_LOG_FILE_NAME = 'agent-chat.log';
 const LLM_PROMPTS_FILE_PATH = path.join(PROJECT_ROOT, 'data', 'llm-prompts.json');
 
@@ -237,21 +237,18 @@ const mainDataHelpers = createMainDataHelpers({
   hydrateSnapshotFromBundle: async ({
     dataFilePath,
     snapshot,
-    fallbackDataFilePath,
-    legacyChemicalsPath
+    fallbackDataFilePath
   }) => (
     hydrateSnapshotFromBundle({
       dataFilePath,
       snapshot,
-      fallbackDataFilePath,
-      legacyChemicalsPath
+      fallbackDataFilePath
     })
   ),
   writeSnapshot: async (filePath, snapshot) => {
     await fs.writeFile(filePath, JSON.stringify(buildCompactIndexedSnapshot(snapshot), null, 2), 'utf8');
   },
-  getDefaultDataFilePath,
-  legacyChemicalsPath: CHEMICALS_DATA_FILE_PATH
+  getDefaultDataFilePath
 });
 
 const {
@@ -294,6 +291,7 @@ registerDataIpc({
   DEFAULT_DATA_FILE_NAME,
   hasSupportedDataExtension,
   mainDataHelpers,
+  syncSqliteBundleFromSnapshot,
   importStorageRoot,
   listSequenceEntries,
   getSequenceEntry,

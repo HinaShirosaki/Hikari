@@ -274,6 +274,15 @@ async function requestCodex({ model, reasoningEffort, prompt, fileName, pdfDataU
   return String(result?.text || '').trim();
 }
 
+export function requestLlmText({ llm, prompt, fileName = '', pdfDataUrl = '' }) {
+  return requestResponses({
+    llm,
+    prompt,
+    fileName,
+    pdfDataUrl
+  });
+}
+
 export function getLlmPrompts() {
   return (async () => {
     try {

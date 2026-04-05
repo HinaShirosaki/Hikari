@@ -38,7 +38,6 @@ function createMainDataHelpers(deps = {}) {
   const getDefaultDataFilePath = typeof deps.getDefaultDataFilePath === 'function'
     ? deps.getDefaultDataFilePath
     : (() => '');
-  const legacyChemicalsPath = cleanText(deps.legacyChemicalsPath, 1600);
 
   function withSqlitePath(source) {
     return {
@@ -92,8 +91,7 @@ function createMainDataHelpers(deps = {}) {
       const hydrated = await hydrateSnapshotFromBundle({
         dataFilePath: targetPath,
         snapshot: parsed,
-        fallbackDataFilePath: getDefaultDataFilePath(),
-        legacyChemicalsPath: legacyChemicalsPath || undefined
+        fallbackDataFilePath: getDefaultDataFilePath()
       });
       return {
         ok: true,

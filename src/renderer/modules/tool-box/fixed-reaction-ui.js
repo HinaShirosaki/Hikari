@@ -106,9 +106,7 @@ export function initFixedReactionTool(options = {}) {
   const fillNote = rootDocument.getElementById('fixed-reaction-fill-note');
   const totalVolumeInput = rootDocument.getElementById('fixed-reaction-total-volume');
   const totalUnitSelect = rootDocument.getElementById('fixed-reaction-total-unit');
-  const summaryOutput = rootDocument.getElementById('fixed-reaction-summary');
-
-  if (!rowsHost || !addRowBtn || !fillNameInput || !fillVolumeOutput || !fillNote || !totalVolumeInput || !totalUnitSelect || !summaryOutput) {
+  if (!rowsHost || !addRowBtn || !fillNameInput || !fillVolumeOutput || !fillNote || !totalVolumeInput || !totalUnitSelect) {
     return;
   }
 
@@ -201,18 +199,10 @@ export function initFixedReactionTool(options = {}) {
     const rows = [...rowsHost.querySelectorAll('.reaction-mix-row')];
 
     let assignedVolumeL = 0;
-    let warnings = 0;
-    let completedRows = 0;
 
     rows.forEach((row) => {
       const result = calculateRowVolume(row, totalVolumeL);
       assignedVolumeL += result.liters;
-      if (result.status === 'warning') {
-        warnings += 1;
-      }
-      if (result.status === 'ok' && result.liters > 0) {
-        completedRows += 1;
-      }
       applyRowFeedback(row, result);
     });
 
@@ -230,20 +220,6 @@ export function initFixedReactionTool(options = {}) {
       fillNote.classList.add('is-ok');
     }
 
-    if (!(totalVolumeL > 0)) {
-      summaryOutput.textContent = 'Enter the total reaction volume to calculate row volumes.';
-      return;
-    }
-
-    const assignedText = describeVolume(assignedVolumeL, totalUnit);
-    const fillText = describeVolume(Math.max(fillVolumeL, 0), totalUnit);
-    if (fillVolumeL < -VOLUME_EPSILON_L) {
-      summaryOutput.textContent = `Assigned volume is ${assignedText}, which is larger than the total ${describeVolume(totalVolumeL, totalUnit)}. Reduce one or more reagent volumes.`;
-      return;
-    }
-
-    const warningSuffix = warnings ? ` ${warnings} row${warnings === 1 ? '' : 's'} still need attention.` : '';
-    summaryOutput.textContent = `Assigned reagents: ${assignedText}. ${String(fillNameInput.value || 'Fill solution').trim() || 'Fill solution'}: ${fillText}. ${completedRows} row${completedRows === 1 ? '' : 's'} contributing volume.${warningSuffix}`;
   }
 
   addRowBtn.addEventListener('click', () => {

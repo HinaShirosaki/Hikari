@@ -338,6 +338,7 @@
 .well-grid-panel {
   min-width: 0;
   width: 100%;
+  min-height: 520px;
 }
 
 .falcon-grid-panel {
@@ -633,7 +634,7 @@
 .well-inline-editor {
   margin-top: 12px;
   padding-top: 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.55);
+  border-top: 0;
 }
 
 .well-inline-editor strong {

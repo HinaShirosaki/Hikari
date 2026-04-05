@@ -63,11 +63,29 @@ async function syncBundleFromSnapshot({
   };
 }
 
+async function syncSqliteBundleFromSnapshot({
+  sqlitePath,
+  snapshot
+} = {}) {
+  const targetSqlitePath = String(sqlitePath || '').trim();
+  if (!targetSqlitePath) {
+    return {
+      sqlitePath: ''
+    };
+  }
+  await fs.mkdir(path.dirname(targetSqlitePath), { recursive: true });
+  await writeSqliteBundleIndex(targetSqlitePath, ensureObject(snapshot));
+  return {
+    sqlitePath: targetSqlitePath
+  };
+}
+
 module.exports = {
   NOTEBOOK_SIDECAR_SCHEMA,
   PROTOCOL_SIDECAR_SCHEMA,
   SIDECAR_SCHEMA_VERSION,
   buildNotebookPagesSidecar,
   buildProtocolsSidecar,
-  syncBundleFromSnapshot
+  syncBundleFromSnapshot,
+  syncSqliteBundleFromSnapshot
 };

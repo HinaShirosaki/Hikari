@@ -6,8 +6,6 @@ const { Telegraf } = require('telegraf');
 
 const TELEGRAM_MODULE_MAP = new Map([
   ['home', { type: 'open-view', viewId: 'home-view', label: 'Home' }],
-  ['instruments', { type: 'open-view', viewId: 'instrument-management-view', label: 'Instruments' }],
-  ['instrument', { type: 'open-view', viewId: 'instrument-management-view', label: 'Instruments' }],
   ['protocols', { type: 'open-view', viewId: 'protocol-management-view', label: 'Protocols' }],
   ['protocol', { type: 'open-view', viewId: 'protocol-management-view', label: 'Protocols' }],
   ['biology', { type: 'open-view', viewId: 'biology-notebook-view', label: 'Biology Notebook' }],
@@ -43,7 +41,6 @@ const LOOKUP_ACTIONS = new Map([
   ['construct', { label: 'Construct', moduleToken: 'samples', searchToken: 'samples', globalScope: 'sample' }],
   ['protocol', { label: 'Protocol', moduleToken: 'protocols', globalScope: 'protocol' }],
   ['project', { label: 'Project', moduleToken: 'projects', globalScope: 'project' }],
-  ['instrument', { label: 'Instrument', moduleToken: 'instruments', globalScope: 'instrument' }],
   ['paper', { label: 'Paper', moduleToken: 'papers', globalScope: 'papers' }],
   ['lot', { label: 'Lot', moduleToken: 'chemicals', searchToken: 'chemicals', globalScope: 'chemical' }],
   ['location', { label: 'Location', moduleToken: 'samples', searchToken: 'samples', globalScope: 'sample' }],
@@ -62,8 +59,6 @@ const SEARCH_SCOPE_TO_LOOKUP_SUBINTENT = new Map([
   ['protocols', 'protocol'],
   ['project', 'project'],
   ['projects', 'project'],
-  ['instrument', 'instrument'],
-  ['instruments', 'instrument'],
   ['paper', 'paper'],
   ['papers', 'paper'],
   ['library', 'paper'],
@@ -1210,9 +1205,6 @@ function parseLookupSubintent(text) {
   if (/\bproject\b/.test(lower)) {
     return 'project';
   }
-  if (/\binstrument\b|\bbooked\b|\bfplc\b/.test(lower)) {
-    return 'instrument';
-  }
   if (/\bpaper\b|\blibrary\b|\bjournal\b/.test(lower)) {
     return 'paper';
   }
@@ -1229,7 +1221,7 @@ function extractLookupQuery(text, subintent = '') {
   let query = String(text || '').trim();
   query = query
     .replace(/^(do\s+we\s+have|where\s+is|find|show|lookup|look\s+up|what(?:'s|\s+is)\s+booked\s+(?:on|for)|any)\s+/i, '')
-    .replace(/^(inventory|sample|samples|construct|constructs|protocol|project|instrument|paper|papers|lots?|expiry|expiring)\s+/i, '')
+    .replace(/^(inventory|sample|samples|construct|constructs|protocol|project|paper|papers|lots?|expiry|expiring)\s+/i, '')
     .replace(/[?.!]+$/g, '')
     .trim();
 
@@ -1302,7 +1294,7 @@ function parseNaturalLanguageIntent(text, context = {}) {
   }
 
   const lookupSubintent = parseLookupSubintent(source);
-  if (lookupSubintent && (/\?|\bdo\s+we\s+have\b|\bwhere\s+is\b|\bshow\b|\bfind\b|\bexpir|\bbooked\b|\blow\s+stock\b/.test(lower) || ['protocol', 'project', 'instrument', 'paper'].includes(lookupSubintent))) {
+  if (lookupSubintent && (/\?|\bdo\s+we\s+have\b|\bwhere\s+is\b|\bshow\b|\bfind\b|\bexpir|\blow\s+stock\b/.test(lower) || ['protocol', 'project', 'paper'].includes(lookupSubintent))) {
     result.intent = 'lookup';
     result.subintent = lookupSubintent;
     result.entities = {
@@ -2015,8 +2007,6 @@ function startTelegramBot(getMainWindow, tokenOverride = '') {
       moduleToken = 'chemicals';
     } else if (draft.content.event_type === 'sample_registration') {
       moduleToken = 'samples';
-    } else if (draft.draft_type === 'reservation') {
-      moduleToken = 'instruments';
     }
 
     const target = getModuleTarget(moduleToken);
@@ -2284,7 +2274,6 @@ function startTelegramBot(getMainWindow, tokenOverride = '') {
       '/construct <query>',
       '/protocol <query>',
       '/project <query>',
-      '/instrument <query>',
       '/papers <query>',
       '/expiring | /lowstock | /today',
       '/log <message> | /note <message> | /decision <message> | /task <message>',
@@ -2490,12 +2479,6 @@ function startTelegramBot(getMainWindow, tokenOverride = '') {
     ctx.reply(result.message);
   });
 
-  registerCommandAlias('instrument', [], (ctx) => {
-    const query = getCommandArgs(ctx.message?.text);
-    const result = performLookupAction(ctx, 'instrument', query);
-    ctx.reply(result.message);
-  });
-
   registerCommandAlias('papers', [], (ctx) => {
     const query = getCommandArgs(ctx.message?.text);
     const result = performLookupAction(ctx, 'paper', query);
@@ -2517,7 +2500,7 @@ function startTelegramBot(getMainWindow, tokenOverride = '') {
   registerCommandAlias('search', [], (ctx) => {
     const { first: scopeArg, rest: query } = splitFirstToken(getCommandArgs(ctx.message?.text));
     if (!scopeArg || !query) {
-      ctx.reply('Usage: /search <scope> <query>. Scopes: chemicals, samples, assay, gel, protocol, project, instrument, papers');
+      ctx.reply('Usage: /search <scope> <query>. Scopes: chemicals, samples, assay, gel, protocol, project, papers');
       return;
     }
     const result = performSearchScope(ctx, scopeArg, query);
@@ -2931,7 +2914,6 @@ function startTelegramBot(getMainWindow, tokenOverride = '') {
       'gel',
       'protocol',
       'project',
-      'instrument',
       'papers'
     ].includes(cmd)) {
       return;

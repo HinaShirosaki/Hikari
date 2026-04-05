@@ -1,12 +1,29 @@
 /* tool-box-view */
 
-.tool-grid {
-  margin-top: 14px;
+.tool-layout {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 0 18px;
-  border-top: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
+  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.tool-sidebar {
+  position: sticky;
+  top: 0;
+  display: grid;
+  align-self: start;
+  padding-right: 20px;
+  border-right: 1px solid var(--line);
+}
+
+.tool-content {
+  min-width: 0;
+}
+
+.tool-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
 }
 
 .tool-tile {
@@ -15,18 +32,19 @@
   justify-content: flex-start;
   align-items: center;
   min-height: 44px;
-  padding: 9px 0;
+  padding: 0;
   border: 0;
-  border-bottom: 1px solid var(--line-soft);
-  border-radius: 0;
+  border-radius: 10px;
   text-align: left;
   background: transparent;
 }
 
 .tool-tile .label {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  padding: 6px 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
   border-radius: 8px;
   color: var(--text);
   font-size: 0.9rem;
@@ -53,6 +71,10 @@
 
 .tool-tile-active .label {
   font-weight: 650;
+}
+
+.tool-subview {
+  margin-top: 0;
 }
 
 .calc-output {
@@ -917,12 +939,30 @@ body.ui-neutral-compact input[id*="api-key"] {
 }
 
 @media (max-width: 1080px) {
+  .tool-layout {
+    grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
+    gap: 20px;
+  }
+
   .reaction-mix-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 640px) {
+  .tool-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+
+  .tool-sidebar {
+    position: static;
+    padding-right: 0;
+    padding-bottom: 18px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
   .reaction-mix-row {
     grid-template-columns: minmax(0, 1fr);
   }

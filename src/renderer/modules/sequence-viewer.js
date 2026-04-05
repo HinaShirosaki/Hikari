@@ -5,6 +5,7 @@ import * as parsingModule from './sequence-viewer/parsing.js';
 import * as renderingModule from './sequence-viewer/rendering.js';
 import * as restrictionAnalysisModule from './sequence-viewer/restriction-analysis.js';
 import * as sharedModule from './sequence-viewer/shared.js';
+import * as storageModule from './sequence-viewer/storage.js';
 
 function readWrapperStoragePath() {
   try {
@@ -136,4 +137,8 @@ export function summarizeFastqQuality(qualityText) {
 
 export function alignSequenceToReference(referenceRecord, queryRecord, options = {}) {
   return alignmentModule.alignSequenceToReference(referenceRecord, queryRecord, options);
+}
+
+export function buildCircularPreviewHtmlDocument(record) {
+  return storageModule.buildCircularPreviewHtmlDocument(record);
 }

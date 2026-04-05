@@ -7,10 +7,6 @@
       "file": "ui/html/views/home-view.html"
     },
     {
-      "id": "instrument-management-view",
-      "file": "ui/html/views/instrument-management-view.html"
-    },
-    {
       "id": "protocol-management-view",
       "file": "ui/html/views/protocol-management-view.html"
     },

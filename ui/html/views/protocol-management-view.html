@@ -90,6 +90,7 @@
                 <textarea id="protocol-troubleshooting" rows="4" placeholder="Common issues and solutions"></textarea>
               </label>
               <div class="form-actions protocol-save-actions">
+                <button type="button" id="protocol-polish-btn" class="ghost-btn">Polish Protocol</button>
                 <button type="submit" class="primary-btn">Save Protocol</button>
               </div>
             </form>
@@ -107,6 +108,39 @@
               </div>
             </div>
             <div id="protocol-view-content" class="stack-form"></div>
+          </div>
+
+          <div id="protocol-polish-overlay" class="protocol-polish-overlay" hidden>
+            <div class="protocol-polish-dialog-shell" role="dialog" aria-modal="true" aria-labelledby="protocol-polish-title">
+              <div class="protocol-polish-dialog-stack">
+                <section class="protocol-polish-dialog protocol-polish-dialog-source" aria-labelledby="protocol-polish-source-title">
+                  <div class="protocol-polish-dialog-head">
+                    <div>
+                      <span class="protocol-detail-mode">Before</span>
+                      <h3 id="protocol-polish-source-title">Your Input</h3>
+                    </div>
+                  </div>
+                  <div id="protocol-polish-original-preview" class="protocol-polish-preview stack-form"></div>
+                </section>
+
+                <section class="protocol-polish-dialog protocol-polish-dialog-result" aria-labelledby="protocol-polish-title">
+                  <div class="protocol-polish-dialog-head">
+                    <div>
+                      <span class="protocol-detail-mode">After</span>
+                      <h3 id="protocol-polish-title">Polished Protocol</h3>
+                    </div>
+                    <button type="button" id="protocol-polish-close-btn" class="ghost-btn">Close</button>
+                  </div>
+                  <div id="protocol-polish-result-preview" class="protocol-polish-preview stack-form"></div>
+                  <p id="protocol-polish-status" class="small-note" hidden></p>
+                </section>
+              </div>
+
+              <div class="form-actions protocol-polish-actions">
+                <button type="button" id="protocol-polish-apply-btn" class="primary-btn" disabled>Use Polished Version</button>
+                <button type="button" id="protocol-polish-keep-editing-btn" class="ghost-btn">Keep Editing</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>

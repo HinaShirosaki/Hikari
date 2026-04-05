@@ -151,6 +151,13 @@ test('forge config prunes dev deps and ignores build artifacts', () => {
   assert.match(ignoreAsText, /enana-data\(\?:\\\.ena\)\?\\\.json/);
 });
 
+test('main sql.js helpers resolve the bundled vendor asset from package-safe paths', () => {
+  const { resolveSqlJsWasmJsPath } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'sqljs-path.js'));
+  const resolved = resolveSqlJsWasmJsPath(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle'));
+  assert.equal(resolved.endsWith(path.join('vendor', 'sqljs', 'sql-wasm.js')), true);
+  assert.equal(fs.existsSync(resolved), true);
+});
+
 test('telegram bridge keeps only supported renderer IPC channel', () => {
   const telegramBotSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'lib', 'telegramBot.js'), 'utf8');
   const preloadSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'preload.js'), 'utf8');
@@ -429,6 +436,29 @@ test('storage root importer reads Testdata-like bundles and writes manifest with
   } finally {
     await fsPromises.rm(tempDir, { recursive: true, force: true });
   }
+});
+
+test('chemical inventory sync uses sqlite-only bundle writes instead of a chemical json file', () => {
+  const preloadSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'preload.js'), 'utf8');
+  const dataRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-data-ipc.js'), 'utf8');
+  const chemicalInventorySource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'lab-common-inventory.js'), 'utf8');
+  assert.match(preloadSource, /syncSqliteBundle:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\('storage:sync-sqlite-bundle', payload\)/);
+  assert.match(dataRegistrarSource, /ipcMain\.handle\('storage:sync-sqlite-bundle'/);
+  assert.match(chemicalInventorySource, /window\.enanaApi\?\.syncSqliteBundle/);
+  assert.match(chemicalInventorySource, /const targetPath = `\$\{normalizedRoot\}\/enana-chemicals\.index\.sqlite`;/);
+  assert.equal(chemicalInventorySource.includes('enana-chemicals.ena.json'), false);
+});
+
+test('chemical bundle hydration/import no longer depends on legacy chemical json fallback', () => {
+  const hydrationSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'storage-hydration.js'), 'utf8');
+  const importSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'storage-import.js'), 'utf8');
+  const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
+  assert.equal(hydrationSource.includes('legacyChemicalsPath'), false);
+  assert.equal(hydrationSource.includes('hydrateFromLegacyChemicals'), false);
+  assert.equal(mainSource.includes('CHEMICALS_DATA_FILE_PATH'), false);
+  assert.match(importSource, /isSqliteBundleCandidateName/);
+  assert.match(importSource, /getBundlePathsFromSqlitePath/);
+  assert.match(importSource, /kind:\s*'sqlite_only_bundle'/);
 });
 
 test('renderer storage import wiring runs on save callback and startup hydration path', () => {

@@ -1,6 +1,5 @@
 'use strict';
 
-const fs = require('fs/promises');
 const { getBundlePaths } = require('./storage-paths');
 const { readNotebookRowsFromSqlite, readProtocolRowsFromSqlite, readSqliteBundleIndex } = require('./storage-sql-read');
 const { asArray, cleanText, cloneJson, ensureObject, readJsonFile } = require('./storage-utils');
@@ -52,22 +51,6 @@ function hydrateInventoryFromSqliteSnapshot(nextSnapshot, sqliteData) {
   return true;
 }
 
-function hydrateFromLegacyChemicals(nextSnapshot, legacyChemicals) {
-  const source = asArray(legacyChemicals);
-  if (!source.length) {
-    return false;
-  }
-  const currentLabInventory = ensureObject(nextSnapshot.labInventory);
-  if (asArray(currentLabInventory.chemicals).length > 0) {
-    return false;
-  }
-  nextSnapshot.labInventory = {
-    ...currentLabInventory,
-    chemicals: source
-  };
-  return true;
-}
-
 function readProtocolsFromSidecar(payload) {
   if (!payload || typeof payload !== 'object') {
     return [];
@@ -86,9 +69,11 @@ async function hydrateSnapshotFromBundle({
   dataFilePath,
   snapshot,
   fallbackDataFilePath = '',
-  legacyChemicalsPath = ''
+  bundlePaths: explicitBundlePaths = null
 } = {}) {
-  const bundlePaths = getBundlePaths({ dataFilePath, fallbackDataFilePath });
+  const bundlePaths = explicitBundlePaths && typeof explicitBundlePaths === 'object'
+    ? explicitBundlePaths
+    : getBundlePaths({ dataFilePath, fallbackDataFilePath });
   const sourceSnapshot = cloneJson(snapshot, {});
   const nextSnapshot = cloneJson(sourceSnapshot, {});
   const migration = {
@@ -96,7 +81,7 @@ async function hydrateSnapshotFromBundle({
     warnings: []
   };
 
-  if (!bundlePaths.dataFilePath) {
+  if (!bundlePaths.basePath && !bundlePaths.sqlitePath && !bundlePaths.protocolsPath && !bundlePaths.notebookPagesPath) {
     return {
       snapshot: nextSnapshot,
       bundlePaths,
@@ -137,21 +122,6 @@ async function hydrateSnapshotFromBundle({
     }
   }
 
-  if (legacyChemicalsPath) {
-    try {
-      const legacyRaw = await fs.readFile(legacyChemicalsPath, 'utf8');
-      const legacyPayload = JSON.parse(legacyRaw);
-      const hydratedLegacy = hydrateFromLegacyChemicals(nextSnapshot, legacyPayload);
-      if (hydratedLegacy) {
-        migration.applied.push('legacy_chemicals_fallback');
-      }
-    } catch (error) {
-      if (error?.code !== 'ENOENT') {
-        migration.warnings.push(String(error?.message || error));
-      }
-    }
-  }
-
   return {
     snapshot: nextSnapshot,
     bundlePaths,
@@ -164,7 +134,6 @@ async function hydrateSnapshotFromBundle({
 }
 
 module.exports = {
-  hydrateFromLegacyChemicals,
   hydrateInventoryFromSqliteSnapshot,
   hydrateSnapshotFromBundle
 };

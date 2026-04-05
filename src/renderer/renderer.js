@@ -9,7 +9,6 @@ import {
   safeText,
   cssEscape
 } from './modules/shared.js';
-import { initInstrumentManagement } from './modules/instrument-management.js';
 import { initProtocolManagement } from './modules/protocol-management.js';
 import { initLabNotebook as initBiologyNotebook } from './modules/biology-notebook.js';
 import { initPersonalInventory } from './modules/personal-inventory.js';
@@ -27,8 +26,7 @@ import { initHomeDashboard } from './modules/home-dashboard.js';
 import { initSequenceViewer } from './modules/sequence-viewer.js';
 import {
   rebuildObjectGraph,
-  queryNotebookEntriesByRelation,
-  queryInstrumentUsageInRange
+  queryNotebookEntriesByRelation
 } from './modules/object-graph.js';
 import { APP_DOCK_ORDER, APP_REGISTRY } from './modules/app-registry.generated.js';
 import { createModuleRegistry, createRendererServices } from './services/index.js';
@@ -577,22 +575,8 @@ window.enanaGraph = {
     relation: 'uses_reagent_lot',
     targetType: 'reagent_lot',
     targetId: lot
-  }),
-  entriesUsingInstrumentLastMonth: (instrumentId) => {
-    const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
-    const end = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999).toISOString();
-    return queryInstrumentUsageInRange(state, instrumentId, start, end);
-  }
+  })
 };
-
-const instrumentManagement = initInstrumentManagement({
-  state,
-  persist,
-  createId,
-  safeText
-});
-moduleRegistry.register('instrumentManagement', instrumentManagement);
 
 const biologyNotebook = initBiologyNotebook({
   state,
@@ -752,7 +736,26 @@ homeDashboard = initHomeDashboard({
   state,
   persist,
   safeText,
-  onOpenSampleSearch: rendererServices.inventory.openSampleSearch
+  onOpenSampleSearch: rendererServices.inventory.openSampleSearch,
+  onOpenSamples: () => rendererServices.inventory.openSampleSearch(''),
+  onOpenNotebook: () => showView(VIEWS.BIOLOGY_NOTEBOOK),
+  onOpenWorkflow: () => showView(VIEWS.WORKFLOW_MANAGEMENT),
+  onOpenAssistant: () => showView(VIEWS.AGENT),
+  onSendQuickLogToAgent: (message) => {
+    const draft = String(message || '').trim();
+    if (!draft) {
+      return false;
+    }
+    showView(VIEWS.AGENT);
+    const agentInput = document.getElementById('agent-message-input');
+    const sendButton = document.getElementById('agent-send-btn');
+    if (!(agentInput instanceof HTMLTextAreaElement) || !(sendButton instanceof HTMLButtonElement)) {
+      return false;
+    }
+    agentInput.value = draft;
+    sendButton.click();
+    return true;
+  }
 });
 moduleRegistry.register('homeDashboard', homeDashboard);
 
@@ -849,9 +852,6 @@ function showView(viewId) {
     sequenceViewer?.render?.();
   }
 
-  if (nextView === VIEWS.INSTRUMENT_MANAGEMENT) {
-    instrumentManagement.render();
-  }
 }
 
 function asArray(value) {
@@ -1097,17 +1097,6 @@ function buildGlobalSearchCandidates() {
       member?.position,
       member?.institutionEmail,
       member?.enanaEmail
-    ].join(' '));
-  });
-
-  const instrumentTarget = getScopeTarget('instruments');
-  asArray(state.instruments).forEach((instrument) => {
-    addCandidate(instrumentTarget, [
-      instrument?.name,
-      instrument?.nickname,
-      asArray(instrument?.reservations)
-        .map((reservation) => [reservation?.title, reservation?.date, reservation?.notes].join(' '))
-        .join(' ')
     ].join(' '));
   });
 
@@ -1414,7 +1403,6 @@ window.addEventListener('enana:appearance-changed', () => {
 
 function renderAll() {
   state.objectGraph = rebuildObjectGraph(state);
-  instrumentManagement.render();
   protocol.renderShareTargets();
   protocol.renderList();
   projectManagement.render();

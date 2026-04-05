@@ -23,6 +23,7 @@ function registerDataIpc(deps = {}) {
   const hasSupportedDataExtension = deps.hasSupportedDataExtension;
   const defaultDataFileName = String(deps.DEFAULT_DATA_FILE_NAME || 'enana-data.json');
   const importStorageRoot = deps.importStorageRoot;
+  const syncSqliteBundleFromSnapshot = deps.syncSqliteBundleFromSnapshot;
   const listSequenceEntries = deps.listSequenceEntries;
   const getSequenceEntry = deps.getSequenceEntry;
   const upsertSequenceEntry = deps.upsertSequenceEntry;
@@ -202,6 +203,30 @@ function registerDataIpc(deps = {}) {
   ipcMain.handle('data:auto-load', async (_event, payload) => {
     const normalizedPayload = normalizeJsonPayload(payload, {});
     return mainDataHelpers.autoLoadDataFile(normalizedPayload?.filePath);
+  });
+
+  ipcMain.handle('storage:sync-sqlite-bundle', async (_event, payload) => {
+    const normalizedPayload = normalizeJsonPayload(payload, {});
+    const sqlitePath = cleanText(normalizedPayload?.sqlitePath || normalizedPayload?.filePath, 2400);
+    const snapshot = normalizedPayload?.snapshot || normalizedPayload?.data;
+    if (!sqlitePath) {
+      return { ok: false, error: 'Missing sqlite path.' };
+    }
+    if (!snapshot || typeof snapshot !== 'object' || Array.isArray(snapshot)) {
+      return { ok: false, error: 'Missing snapshot payload.' };
+    }
+    if (typeof syncSqliteBundleFromSnapshot !== 'function') {
+      return { ok: false, error: 'SQLite bundle sync is unavailable.' };
+    }
+    try {
+      const result = await syncSqliteBundleFromSnapshot({ sqlitePath, snapshot });
+      return {
+        ok: true,
+        sqlitePath: result?.sqlitePath || sqlitePath
+      };
+    } catch (error) {
+      return { ok: false, error: String(error?.message || error) };
+    }
   });
 
   ipcMain.handle('storage:pick-directory', async (_event, payload) => {

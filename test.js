@@ -454,7 +454,8 @@ const sequenceViewerInternals = loadEsmStyleModule(
     'formatSelectedFeatureDetailHtml',
     'computeGcPercent',
     'countAmbiguousBases',
-    'summarizeFastqQuality'
+    'summarizeFastqQuality',
+    'buildCircularPreviewHtmlDocument'
   ]
 );
 const gelAnalysisInternals = loadEsmStyleModule(

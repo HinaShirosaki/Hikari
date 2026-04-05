@@ -632,7 +632,6 @@ const moduleExportContracts = [
   ['src/renderer/modules/buffer-compounds.js', /export const BUFFER_COMPOUNDS/],
   ['src/renderer/modules/collaboration-management.js', /export function initCollaborationManagement/],
   ['src/renderer/modules/gel-analysis.js', /export function initGelAnalysis/],
-  ['src/renderer/modules/instrument-management.js', /export function initInstrumentManagement/],
   ['src/renderer/modules/lab-common-inventory.js', /export function initLabCommonInventory/],
   ['src/renderer/modules/lab-management.js', /export function initLabManagement/],
   ['src/renderer/modules/lab-notebook.js', /export function initLabNotebook/],

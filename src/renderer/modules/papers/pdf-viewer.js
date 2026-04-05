@@ -263,7 +263,7 @@ export function createPapersPdfViewer(elements = {}) {
 
   function setMeta(text) {
     if (meta) {
-      meta.textContent = text || 'Select a paper from the list to preview it here.';
+      meta.textContent = text || '';
     }
   }
 
@@ -697,8 +697,8 @@ export function createPapersPdfViewer(elements = {}) {
     state.placementMode = false;
     setStageScrollTop(0);
     setTitle('No paper selected');
-    setMeta('Select a paper from the list to preview it here.');
-    setStatus(message || 'Choose "View PDF" on a paper to open it here.', false);
+    setMeta('');
+    setStatus(message || '', false);
     refreshToolbar();
   }
 

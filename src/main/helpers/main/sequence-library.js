@@ -4,9 +4,9 @@ const crypto = require('crypto');
 const fs = require('fs/promises');
 const path = require('path');
 const { recognizeSequenceBackboneInLibrary } = require('./sequence-backbone-recognition');
-const PROJECT_ROOT = path.resolve(__dirname, '..', '..', '..', '..');
+const { resolveSqlJsWasmJsPath } = require('./sqljs-path.js');
 
-const SQLJS_WASM_JS_PATH = path.join(PROJECT_ROOT, 'vendor', 'sqljs', 'sql-wasm.js');
+const SQLJS_WASM_JS_PATH = resolveSqlJsWasmJsPath(__dirname);
 const LIBRARY_FOLDER_NAME = 'SequenceViewer';
 const DB_FILE_NAME = 'sequence-library.sqlite';
 const STATUS_SAVED = 'saved';

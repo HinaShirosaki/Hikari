@@ -1,7 +1,7 @@
 {
   "schema_name": "enana_storage_manifest",
   "schema_version": "1.0.0",
-  "generated_at": "2026-04-03T01:22:29.367Z",
+  "generated_at": "2026-04-04T02:57:18.039Z",
   "root_path": "/Users/shiyifan/Projects/Enana/Testdata",
   "discovered_files": [
     {
@@ -86,14 +86,14 @@
       "type": "file",
       "role": "data_file",
       "size_bytes": 2463,
-      "modified_at": "2026-04-03T01:08:17.239Z"
+      "modified_at": "2026-04-04T02:47:20.394Z"
     },
     {
       "relative_path": "enana-chemicals.index.sqlite",
       "type": "file",
       "role": "sqlite_index",
       "size_bytes": 102400,
-      "modified_at": "2026-04-03T01:08:17.247Z"
+      "modified_at": "2026-04-04T02:54:48.915Z"
     },
     {
       "relative_path": "enana-chemicals.index.sqlite-shm",
@@ -114,14 +114,14 @@
       "type": "file",
       "role": "notebook_sidecar",
       "size_bytes": 139,
-      "modified_at": "2026-04-03T01:08:17.240Z"
+      "modified_at": "2026-04-04T02:47:20.396Z"
     },
     {
       "relative_path": "enana-chemicals.protocols.json",
       "type": "file",
       "role": "protocol_sidecar",
       "size_bytes": 130,
-      "modified_at": "2026-04-03T01:08:17.240Z"
+      "modified_at": "2026-04-04T02:47:20.395Z"
     },
     {
       "relative_path": "enana-sample.notebook-pages.index.sqlite",
@@ -148,29 +148,29 @@
       "relative_path": "enana-sample.notebook-pages.json",
       "type": "file",
       "role": "notebook_sidecar",
-      "size_bytes": 11499556,
-      "modified_at": "2026-04-03T01:08:47.458Z"
+      "size_bytes": 11887626,
+      "modified_at": "2026-04-04T02:41:09.451Z"
     },
     {
       "relative_path": "enana-sample.notebook-pages.notebook-pages.json",
       "type": "file",
       "role": "notebook_sidecar",
       "size_bytes": 2767,
-      "modified_at": "2026-04-03T01:08:47.458Z"
+      "modified_at": "2026-04-04T02:41:09.451Z"
     },
     {
       "relative_path": "enana-sample.notebook-pages.protocols.json",
       "type": "file",
       "role": "protocol_sidecar",
       "size_bytes": 16528,
-      "modified_at": "2026-04-03T01:08:47.458Z"
+      "modified_at": "2026-04-04T02:41:09.451Z"
     },
     {
       "relative_path": "enana-storage-manifest.json",
       "type": "file",
       "role": "storage_manifest",
-      "size_bytes": 15897,
-      "modified_at": "2026-04-03T01:08:17.069Z"
+      "size_bytes": 16268,
+      "modified_at": "2026-04-04T02:54:48.755Z"
     },
     {
       "relative_path": "Project",
@@ -261,7 +261,7 @@
       "type": "directory",
       "role": "other",
       "size_bytes": 0,
-      "modified_at": "2026-03-29T20:18:21.100Z"
+      "modified_at": "2026-04-03T14:49:49.609Z"
     },
     {
       "relative_path": "Project/SUMO1/Papers/02_IR_ILN_Rubric_SP26_v2_2.pdf",
@@ -290,6 +290,13 @@
       "role": "other",
       "size_bytes": 3317632,
       "modified_at": "2026-03-29T20:18:21.102Z"
+    },
+    {
+      "relative_path": "Project/SUMO1/Papers/Q857029_V1_TEXAS_A&M_UNIV_20260402_111311.pdf",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 66940,
+      "modified_at": "2026-04-03T14:49:49.610Z"
     },
     {
       "relative_path": "protocol-import-example.json",
@@ -448,43 +455,7 @@
   ],
   "bundles": [
     {
-      "data_file_path": "enana-chemicals.ena.json",
-      "bundle_paths": {
-        "protocols_path": "enana-chemicals.protocols.json",
-        "notebook_pages_path": "enana-chemicals.notebook-pages.json",
-        "sqlite_path": "enana-chemicals.index.sqlite"
-      },
-      "counts": {
-        "protocols": 0,
-        "notebookEntries": 0,
-        "chemicals": 3,
-        "personalInventoryContainers": 8
-      },
-      "migration": {
-        "applied": [
-          "protocol_sidecar",
-          "notebook_sidecar",
-          "inventory_sqlite"
-        ],
-        "warnings": []
-      }
-    },
-    {
-      "data_file_path": "enana-chemicals.protocols.json",
-      "bundle_paths": {
-        "protocols_path": "enana-chemicals.protocols.protocols.json",
-        "notebook_pages_path": "enana-chemicals.protocols.notebook-pages.json",
-        "sqlite_path": "enana-chemicals.protocols.index.sqlite"
-      },
-      "counts": {
-        "protocols": 0,
-        "notebookEntries": 0,
-        "chemicals": 0,
-        "personalInventoryContainers": 0
-      },
-      "migration": null
-    },
-    {
+      "bundle_type": "data_bundle",
       "data_file_path": "enana-sample.notebook-pages.json",
       "bundle_paths": {
         "protocols_path": "enana-sample.notebook-pages.protocols.json",
@@ -507,6 +478,7 @@
       }
     },
     {
+      "bundle_type": "data_bundle",
       "data_file_path": "enana-sample.notebook-pages.protocols.json",
       "bundle_paths": {
         "protocols_path": "enana-sample.notebook-pages.protocols.protocols.json",
@@ -515,6 +487,45 @@
       },
       "counts": {
         "protocols": 6,
+        "notebookEntries": 0,
+        "chemicals": 0,
+        "personalInventoryContainers": 0
+      },
+      "migration": null
+    },
+    {
+      "bundle_type": "data_bundle",
+      "data_file_path": "enana-chemicals.ena.json",
+      "bundle_paths": {
+        "protocols_path": "enana-chemicals.protocols.json",
+        "notebook_pages_path": "enana-chemicals.notebook-pages.json",
+        "sqlite_path": "enana-chemicals.index.sqlite"
+      },
+      "counts": {
+        "protocols": 0,
+        "notebookEntries": 0,
+        "chemicals": 3,
+        "personalInventoryContainers": 8
+      },
+      "migration": {
+        "applied": [
+          "protocol_sidecar",
+          "notebook_sidecar",
+          "inventory_sqlite"
+        ],
+        "warnings": []
+      }
+    },
+    {
+      "bundle_type": "data_bundle",
+      "data_file_path": "enana-chemicals.protocols.json",
+      "bundle_paths": {
+        "protocols_path": "enana-chemicals.protocols.protocols.json",
+        "notebook_pages_path": "enana-chemicals.protocols.notebook-pages.json",
+        "sqlite_path": "enana-chemicals.protocols.index.sqlite"
+      },
+      "counts": {
+        "protocols": 0,
         "notebookEntries": 0,
         "chemicals": 0,
         "personalInventoryContainers": 0

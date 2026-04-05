@@ -88,9 +88,9 @@ export function createPapersCommentController(context) {
     }
 
     if (!activePaper) {
-      elements.paperCommentList.innerHTML = '<p class="small-note">Open a paper to see page comments.</p>';
+      elements.paperCommentList.innerHTML = '';
       if (!String(elements.paperCommentStatus?.textContent || '').trim()) {
-        setCommentStatus('Open a paper to review or add page comments.');
+        setCommentStatus('');
       }
       return;
     }
@@ -135,7 +135,7 @@ export function createPapersCommentController(context) {
   function onViewerClose() {
     commentState.currentPageNumber = 1;
     resetCommentComposer({
-      message: 'Open a paper to review or add page comments.'
+      message: ''
     });
     context.renderLibrarySidebar?.(context.libraryState.selectedFolderKey);
   }
@@ -288,7 +288,7 @@ export function createPapersCommentController(context) {
     resetCommentComposer({
       message: activePaper
         ? `Viewing page ${commentState.currentPageNumber}. Select a comment or place a new pin.`
-        : 'Open a paper to review or add page comments.'
+        : ''
     });
   }
 

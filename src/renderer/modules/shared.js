@@ -21,7 +21,6 @@ import {
 
 export const VIEWS = {
   HOME: 'home-view',
-  INSTRUMENT_MANAGEMENT: 'instrument-management-view',
   PROTOCOL_MANAGEMENT: 'protocol-management-view',
   BIOLOGY_NOTEBOOK: 'biology-notebook-view',
   LAB_COMMON_INVENTORY: 'lab-common-inventory-view',
@@ -40,7 +39,6 @@ export const VIEWS = {
 
 export const TITLES = {
   [VIEWS.HOME]: 'Bench overview, reminders, workflow progress, and a lab timer.',
-  [VIEWS.INSTRUMENT_MANAGEMENT]: 'Instrument schedules, availability, and reservations.',
   [VIEWS.PROTOCOL_MANAGEMENT]: 'Protocol library for drafting, editing, and reuse.',
   [VIEWS.BIOLOGY_NOTEBOOK]: 'Biology notebook entries and wet-lab context.',
   [VIEWS.LAB_COMMON_INVENTORY]: 'Chemical inventory, locations, and stock records.',
@@ -84,7 +82,6 @@ export const LLM_DEFAULT_ENDPOINTS = DEFAULT_LLM_ENDPOINTS;
 
 const STARTUP_DEFAULT_VIEW_IDS = new Set([
   VIEWS.HOME,
-  VIEWS.INSTRUMENT_MANAGEMENT,
   VIEWS.PROTOCOL_MANAGEMENT,
   VIEWS.BIOLOGY_NOTEBOOK,
   VIEWS.LAB_COMMON_INVENTORY,
@@ -190,7 +187,8 @@ export const defaultState = {
     inventoryLocations: ['Main Storage', 'Cold Room', 'Fume Hood'],
     dashboard: {
       currentWorkflowId: '',
-      workflowProgress: {}
+      workflowProgress: {},
+      quickLogDraft: ''
     },
     startup: {
       defaultViewId: VIEWS.HOME,
@@ -488,7 +486,8 @@ export function normalizeState(parsed) {
         ...defaultState.settings.dashboard,
         ...(source.settings?.dashboard || {}),
         currentWorkflowId: String(source.settings?.dashboard?.currentWorkflowId || ''),
-        workflowProgress: normalizeWorkflowProgressMap(source.settings?.dashboard?.workflowProgress)
+        workflowProgress: normalizeWorkflowProgressMap(source.settings?.dashboard?.workflowProgress),
+        quickLogDraft: String(source.settings?.dashboard?.quickLogDraft || '')
       },
       startup: {
         ...defaultState.settings.startup,

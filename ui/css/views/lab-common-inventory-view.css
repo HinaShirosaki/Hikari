@@ -1,18 +1,106 @@
 /* lab-common-inventory-view */
 
-/* Extracted from ui/css/base/core.css */
-.chemical-form-actions {
-  grid-column: 1 / -1;
-  align-self: end;
-  margin-top: 4px;
+.chemical-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
 }
 
-.chemical-inbox-row {
+.chemical-layout > * {
+  min-width: 0;
+}
+
+#lab-common-inventory-view .chemical-sidebar,
+#lab-common-inventory-view .chemical-main,
+#lab-common-inventory-view .chemical-list-panel,
+#lab-common-inventory-view .chemical-detail-panel {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.chemical-sidebar {
+  position: sticky;
+  top: 0;
+}
+
+.chemical-sidebar-stack,
+.chemical-main {
+  display: grid;
+  gap: 18px;
+}
+
+.chemical-add-btn {
+  width: 100%;
+  min-height: 46px;
+}
+
+.chemical-search-field {
+  align-content: start;
+}
+
+.chemical-panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.chemical-panel-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.chemical-panel-copy h2 {
+  margin-bottom: 0;
+}
+
+.chemical-toolbar-grid {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.chemical-toolbar-grid > * {
+  min-width: 0;
+}
+
+.chemical-sync-strip {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line-soft);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
   align-items: end;
 }
 
-.chemical-inbox-row label {
-  min-width: 240px;
+.chemical-sync-strip label {
+  flex: 1 1 260px;
+  min-width: 220px;
+}
+
+.chemical-pending-note {
+  margin-left: auto;
+  align-self: center;
+}
+
+#lab-common-inventory-view #chemical-list {
+  margin-top: 18px;
+}
+
+#lab-common-inventory-view #chemical-list .small-note {
+  padding: 14px 0;
+}
+
+.chemical-detail-panel {
+  display: grid;
+  gap: 14px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
 }
 
 .chemical-detail-grid {
@@ -24,10 +112,8 @@
 .chemical-detail-item {
   display: grid;
   gap: 2px;
-  padding: 8px 10px;
-  border-radius: 8px;
-  border: 1px solid var(--line-soft);
-  background: var(--surface-elevated);
+  padding: 10px 0;
+  border-top: 1px solid var(--line-soft);
 }
 
 .chemical-detail-item-wide {
@@ -35,46 +121,116 @@
 }
 
 .chemical-detail-label {
-  color: var(--muted);
+  color: var(--strong);
   font-size: 0.8rem;
   font-weight: 600;
 }
 
 .chemical-detail-value {
   color: var(--text);
-  font-size: 0.9rem;
+  font-size: 0.92rem;
   overflow-wrap: anywhere;
 }
 
-/* Extracted from ui/css/overrides/cross-view-fixes.css */
-#lab-common-inventory-view .chemical-inbox-row + .small-note {
-  margin-top: 10px;
+.chemical-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2550;
+  background: rgba(18, 34, 55, 0.22);
+  display: grid;
+  place-items: center;
+  padding: 18px;
 }
 
-#lab-common-inventory-view .panel,
-#lab-common-inventory-view .card,
-#lab-common-inventory-view .list-table,
-#lab-common-inventory-view .list-row,
-#lab-common-inventory-view .list-detail-content {
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
+.chemical-dialog-overlay[hidden] {
+  display: none !important;
 }
 
-.chemical-detail-item {
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+.chemical-dialog {
+  width: min(920px, calc(100vw - 32px));
+  max-height: calc(100vh - 36px);
+  overflow: auto;
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid rgba(53, 99, 153, 0.22);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--surface-elevated, #ffffff) 95%, #f5efe5 5%);
+  box-shadow: 0 22px 54px rgba(27, 20, 14, 0.18);
 }
 
-.chemical-detail-label {
-  color: var(--strong);
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-transform: none;
-  letter-spacing: 0;
+.chemical-dialog-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.chemical-dialog-head h3 {
+  margin-bottom: 4px;
+}
+
+.chemical-dialog .form-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 12px;
+}
+
+.chemical-dialog .form-grid > * {
+  min-width: 0;
+}
+
+.chemical-dialog .chemical-form-field-wide,
+.chemical-dialog .chemical-form-actions {
+  grid-column: 1 / -1;
+}
+
+.chemical-form-actions {
+  justify-content: flex-start;
+  align-self: end;
+  margin-top: 4px;
+}
+
+@media (max-width: 980px) {
+  .chemical-layout {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+
+  .chemical-sidebar {
+    position: static;
+  }
+
+  .chemical-sidebar-stack {
+    gap: 12px;
+  }
+
+  .chemical-toolbar-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .chemical-pending-note {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+
+@media (max-width: 720px) {
+  .chemical-dialog {
+    width: min(100vw - 20px, 920px);
+    padding: 16px;
+  }
+
+  .chemical-dialog .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+body.theme-night .chemical-dialog-overlay {
+  background: rgba(9, 18, 33, 0.52);
+}
+
+body.theme-night .chemical-dialog {
+  border-color: rgba(145, 174, 214, 0.32);
+  background: rgba(20, 33, 57, 0.98);
 }
