@@ -46,6 +46,12 @@ export function getAssayElements(root = document) {
     assayPlateFieldSampleBtn: root.getElementById('assay-plate-field-sample-btn'),
     assayPlateFieldConcentrationBtn: root.getElementById('assay-plate-field-concentration-btn'),
     assayClearMappingsBtn: root.getElementById('assay-clear-mappings-btn'),
+    assaySerialDilutionBtn: root.getElementById('assay-serial-dilution-btn'),
+    assaySerialDilutionOverlay: root.getElementById('assay-serial-dilution-overlay'),
+    assaySerialDilutionCloseBtn: root.getElementById('assay-serial-dilution-close-btn'),
+    assaySerialDilutionVolumeInput: root.getElementById('assay-serial-dilution-volume'),
+    assaySerialDilutionSummary: root.getElementById('assay-serial-dilution-summary'),
+    assaySerialDilutionContent: root.getElementById('assay-serial-dilution-content'),
     assayLayoutStatus: root.getElementById('assay-layout-status'),
     assayLayoutList: root.getElementById('assay-layout-list'),
     assayList: root.getElementById('assay-list')

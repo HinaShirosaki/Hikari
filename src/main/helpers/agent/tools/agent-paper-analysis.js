@@ -238,6 +238,8 @@ function createPaperAnalysisRuntime(deps = {}) {
   return {
     PAPER_ANALYSIS_RESPONSE_SCHEMA,
     PAPER_ANALYSIS_SYSTEM_PROMPT,
+    PAPER_ANALYSIS_RULES,
+    buildPrompt,
     analyzePaper
   };
 }

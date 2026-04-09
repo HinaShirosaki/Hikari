@@ -68,6 +68,17 @@
               </label>
               <label>
                 Steps (start each step with a bullet point)
+                <div class="protocol-steps-toolbar">
+                  <span class="protocol-steps-toolbar-label">Interactive bars</span>
+                  <div class="protocol-placeholder-presets" role="toolbar" aria-label="Protocol step placeholder presets">
+                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="plasmid">plasmid</button>
+                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="protein">protein</button>
+                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="volume">volume</button>
+                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="buffer">buffer</button>
+                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="temperature">temperature</button>
+                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="time">time</button>
+                  </div>
+                </div>
                 <textarea id="protocol-steps" rows="7" placeholder="• Step 1&#10;• Step 2"></textarea>
               </label>
               <div class="inline-row">
@@ -79,6 +90,7 @@
                 <textarea id="protocol-troubleshooting" rows="4" placeholder="Common issues and solutions"></textarea>
               </label>
               <div class="form-actions protocol-save-actions">
+                <button type="button" id="protocol-polish-btn" class="ghost-btn">Polish Protocol</button>
                 <button type="submit" class="primary-btn">Save Protocol</button>
               </div>
             </form>
@@ -96,6 +108,39 @@
               </div>
             </div>
             <div id="protocol-view-content" class="stack-form"></div>
+          </div>
+
+          <div id="protocol-polish-overlay" class="protocol-polish-overlay" hidden>
+            <div class="protocol-polish-dialog-shell" role="dialog" aria-modal="true" aria-labelledby="protocol-polish-title">
+              <div class="protocol-polish-dialog-stack">
+                <section class="protocol-polish-dialog protocol-polish-dialog-source" aria-labelledby="protocol-polish-source-title">
+                  <div class="protocol-polish-dialog-head">
+                    <div>
+                      <span class="protocol-detail-mode">Before</span>
+                      <h3 id="protocol-polish-source-title">Your Input</h3>
+                    </div>
+                  </div>
+                  <div id="protocol-polish-original-preview" class="protocol-polish-preview stack-form"></div>
+                </section>
+
+                <section class="protocol-polish-dialog protocol-polish-dialog-result" aria-labelledby="protocol-polish-title">
+                  <div class="protocol-polish-dialog-head">
+                    <div>
+                      <span class="protocol-detail-mode">After</span>
+                      <h3 id="protocol-polish-title">Polished Protocol</h3>
+                    </div>
+                    <button type="button" id="protocol-polish-close-btn" class="ghost-btn">Close</button>
+                  </div>
+                  <div id="protocol-polish-result-preview" class="protocol-polish-preview stack-form"></div>
+                  <p id="protocol-polish-status" class="small-note" hidden></p>
+                </section>
+              </div>
+
+              <div class="form-actions protocol-polish-actions">
+                <button type="button" id="protocol-polish-apply-btn" class="primary-btn" disabled>Use Polished Version</button>
+                <button type="button" id="protocol-polish-keep-editing-btn" class="ghost-btn">Keep Editing</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>

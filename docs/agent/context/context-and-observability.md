@@ -78,7 +78,7 @@ That gives the package two levels of history:
 - a renderer-facing chat session log
 - a lower-level request/lifecycle trace log
 
-The lifecycle log is the better source when debugging routing or tool failures. The chat log is the better source when reconstructing the conversation as the user saw it.
+The lifecycle log is still the better source when debugging routing or tool failures at the request level, but the per-session chat log now also persists the internal request/result/lifecycle/LLM-trace rows for each chat. The `messages` projection remains user-facing; the raw `rows` payload is the full hop-by-hop history.
 
 ## How the pieces fit during `agent:chat`
 
@@ -93,7 +93,7 @@ For a normal request:
 This split is intentional:
 
 - lifecycle rows are detailed and diagnostic
-- session rows are stable and UI-friendly
+- session rows are stable and UI-friendly for `messages`, while still retaining the raw internal rows for replay/debugging
 
 ## Practical onboarding note
 

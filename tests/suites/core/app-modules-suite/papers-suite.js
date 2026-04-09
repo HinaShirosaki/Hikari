@@ -7,6 +7,7 @@ function buildFakePapersViewerFactory() {
     activePaperId: '',
     currentPageNumber: 1,
     comments: [],
+    highlights: [],
     selectedCommentId: '',
     placementMode: false,
     callbacks: {}
@@ -19,6 +20,7 @@ function buildFakePapersViewerFactory() {
         onPageChange: elements.onPageChange,
         onPlacement: elements.onPlacement,
         onPinSelect: elements.onPinSelect,
+        onHighlightSelection: elements.onHighlightSelection,
         onClose: elements.onClose
       };
       return {
@@ -46,6 +48,9 @@ function buildFakePapersViewerFactory() {
         setComments(comments) {
           controller.comments = Array.isArray(comments) ? comments.slice() : [];
         },
+        setHighlights(highlights) {
+          controller.highlights = Array.isArray(highlights) ? highlights.slice() : [];
+        },
         setSelectedCommentId(commentId) {
           controller.selectedCommentId = String(commentId || '');
         },
@@ -69,6 +74,8 @@ function buildFakePapersViewerFactory() {
 
 function buildPapersManagementHarness({ comments = [], promptResponses = [], confirmResult = true } = {}) {
   const ids = [
+    'papers-layout',
+    'papers-right-column',
     'paper-form',
     'paper-title',
     'paper-pdf',
@@ -101,9 +108,12 @@ function buildPapersManagementHarness({ comments = [], promptResponses = [], con
     'paper-viewer-zoom-in-btn',
     'paper-viewer-zoom-reset-btn',
     'paper-viewer-fit-width-btn',
+    'paper-viewer-highlight-btn',
     'paper-viewer-summarize-btn',
     'paper-viewer-zoom-label',
     'paper-viewer-open-btn',
+    'paper-comment-panel',
+    'paper-comment-toggle-btn',
     'paper-comment-sidebar',
     'paper-comment-page',
     'paper-comment-count',
@@ -147,6 +157,7 @@ function buildPapersManagementHarness({ comments = [], promptResponses = [], con
         reagentsStatus: 'idle',
         keyFigures: [],
         comments: comments.slice(),
+        highlights: [],
         deepReadReady: false,
         availabilityStatus: 'uploaded_pdf',
         ingestionStatus: 'ready',
@@ -402,6 +413,49 @@ test('papers module scopes sidebar comments to the active PDF page', async () =>
   assert.equal(commentCount.textContent, '1 comment on this page');
   assert.match(commentList.innerHTML, /Page two note/);
   assert.equal(/Page one note/.test(commentList.innerHTML), false);
+});
+
+test('papers module syncs stored highlights into the PDF viewer when a paper opens', async () => {
+  const harness = buildPapersManagementHarness();
+  harness.state.papers[0].highlights = [
+    {
+      id: 'highlight-1',
+      pageNumber: 1,
+      text: 'Important selected sentence',
+      boxes: [
+        { x: 0.1, y: 0.2, width: 0.3, height: 0.04 }
+      ],
+      createdAt: '2026-03-22T18:00:00.000Z',
+      updatedAt: '2026-03-22T18:00:00.000Z'
+    }
+  ];
+
+  await openPaperInHarness(harness);
+
+  assert.equal(harness.viewerFactory.controller.highlights.length, 1);
+  assert.equal(harness.viewerFactory.controller.highlights[0].id, 'highlight-1');
+});
+
+test('papers module folds and unfolds the comment sidebar from the right rail', () => {
+  const harness = buildPapersManagementHarness();
+  const layout = harness.document.getElementById('papers-layout');
+  const toggleBtn = harness.document.getElementById('paper-comment-toggle-btn');
+  const sidebar = harness.document.getElementById('paper-comment-sidebar');
+
+  assert.equal(layout.classList.contains('is-comments-collapsed'), false);
+  assert.equal(sidebar.hidden, false);
+
+  trigger(toggleBtn, 'click');
+
+  assert.equal(layout.classList.contains('is-comments-collapsed'), true);
+  assert.equal(toggleBtn.classList.contains('is-collapsed'), true);
+  assert.equal(sidebar.hidden, true);
+
+  trigger(toggleBtn, 'click');
+
+  assert.equal(layout.classList.contains('is-comments-collapsed'), false);
+  assert.equal(toggleBtn.classList.contains('is-collapsed'), false);
+  assert.equal(sidebar.hidden, false);
 });
 
   }

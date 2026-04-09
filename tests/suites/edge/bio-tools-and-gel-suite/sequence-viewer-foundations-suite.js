@@ -25,7 +25,8 @@ test('[EDGE] sequence-viewer internal functions are exposed for unit tests', () 
     'formatSelectedFeatureDetailHtml',
     'computeGcPercent',
     'countAmbiguousBases',
-    'summarizeFastqQuality'
+    'summarizeFastqQuality',
+    'buildCircularPreviewHtmlDocument'
   ].forEach((name) => {
     assert.equal(typeof sequenceViewerInternals[name], 'function');
   });
@@ -449,13 +450,13 @@ test('[EDGE] sequence-viewer normalizeExternalPayload clamps segments and keeps 
     name: 'Example payload',
     sequence: 'acgtacgt',
     topology: 'circular',
-    source: 'plannotate',
+    source: 'legacy_annotation',
     features: [
       {
         name: 'hit1',
         type: 'CDS',
         strand: -1,
-        source: 'plannotate',
+        source: 'legacy_annotation',
         segments: [{ start: -5, end: 4 }, { start: 6, end: 999 }]
       }
     ]
@@ -846,7 +847,7 @@ test('[EDGE] sequence-viewer feature detail formatter includes core metadata', (
     strand: -1,
     identity: 99.12,
     coverage: 87.56,
-    source: 'plannotate',
+    source: 'legacy_annotation',
     segments: [{ start: 0, end: 4 }]
   }, 8);
   assert.match(html, /ori/);
@@ -898,6 +899,53 @@ test('[EDGE] sequence-viewer feature detail formatter shows ORF metadata when pr
   assert.match(html, /120 nt/);
   assert.match(html, /Start ATG/);
   assert.match(html, /Stop TAA/);
+});
+
+test('[EDGE] sequence-viewer buildCircularPreviewHtmlDocument emits standalone DNAfeatureviewer-style circular HTML', () => {
+  const html = sequenceViewerInternals.buildCircularPreviewHtmlDocument({
+    name: 'pPreview',
+    topology: 'circular',
+    sequence: 'A'.repeat(3200),
+    features: [
+      {
+        name: 'AmpR',
+        type: 'cds',
+        strand: 1,
+        segments: [{ start: 140, end: 980 }]
+      },
+      {
+        name: 'pUC origin',
+        type: 'rep_origin',
+        strand: 0,
+        segments: [{ start: 2100, end: 2780 }]
+      },
+      {
+        name: 'MCS insert',
+        type: 'misc_feature',
+        strand: -1,
+        segments: [{ start: 1080, end: 1355 }]
+      }
+    ]
+  });
+
+  assert.match(html, /data-renderer="dna-feature-viewer-js"/);
+  assert.match(html, /Circular plasmid preview/i);
+  assert.match(html, /AmpR/);
+  assert.match(html, /pUC origin/);
+  assert.match(html, /circular-preview__leader/);
+  assert.match(html, /data-feature-index="1"/);
+});
+
+test('[EDGE] sequence-viewer buildCircularPreviewHtmlDocument returns an empty-state HTML shell without sequence', () => {
+  const html = sequenceViewerInternals.buildCircularPreviewHtmlDocument({
+    name: 'empty_preview',
+    sequence: '',
+    features: []
+  });
+
+  assert.match(html, /data-renderer="dna-feature-viewer-js"/);
+  assert.match(html, /No sequence is available/i);
+  assert.doesNotMatch(html, /<svg/i);
 });
   }
 };

@@ -19,7 +19,8 @@ export function createAssayAnalysisView({
   safeText,
   getCurrentDefinition,
   syncCurrentResultsFromGrid,
-  getResultValueCount
+  getResultValueCount,
+  onAnalysisRendered
 }) {
   const {
     assayAnalysisColumnGroupsInput,
@@ -92,6 +93,25 @@ export function createAssayAnalysisView({
       ReactDOMLib.unmountComponentAtNode(analysisChartHost);
     }
     analysisChartHost = null;
+  }
+
+  function serializeSvgToDataUrl(svgElement) {
+    if (!svgElement || String(svgElement.tagName || '').toLowerCase() !== 'svg') {
+      return '';
+    }
+    const clone = svgElement.cloneNode(true);
+    if (!clone.getAttribute('xmlns')) {
+      clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    }
+    if (!clone.getAttribute('xmlns:xlink')) {
+      clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+    }
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(clone.outerHTML)}`;
+  }
+
+  function captureRenderedChartDataUrl() {
+    const svg = analysisChartHost?.querySelector?.('svg');
+    return serializeSvgToDataUrl(svg);
   }
 
   function parseAnalysisCellNumber(value) {
@@ -456,6 +476,12 @@ export function createAssayAnalysisView({
     assayAnalysisSummary.textContent = `${result.summary}${rowCountNote}${ignoredNote}`;
     if (!result.rows.length) {
       assayAnalysisTable.innerHTML = '<p class="small-note">No analyzable rows for this method.</p>';
+      onAnalysisRendered?.({
+        method,
+        summary: assayAnalysisSummary.textContent,
+        chartDataUrl: '',
+        analyzedAt: new Date().toISOString()
+      });
       return;
     }
 
@@ -469,6 +495,12 @@ export function createAssayAnalysisView({
       `
       : tableHtml;
     renderAnalysisChart(result, method);
+    onAnalysisRendered?.({
+      method,
+      summary: assayAnalysisSummary.textContent,
+      chartDataUrl: captureRenderedChartDataUrl(),
+      analyzedAt: new Date().toISOString()
+    });
   }
 
   function onAnalysisMethodChange() {

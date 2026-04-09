@@ -21,6 +21,7 @@ import {
   normalizeLayout,
   normalizeManualWellOverrideMap,
   normalizeResults,
+  parseWellId,
   removeSuppressedWellsFromLayout,
   sortLayout,
   toRowLabel,
@@ -31,6 +32,7 @@ export function createAssayLayoutManager({
   runtime,
   elements,
   safeText,
+  getInventorySamples,
   setCsvStatus,
   setLayoutStatus,
   setResultStatus,
@@ -46,12 +48,27 @@ export function createAssayLayoutManager({
     assayPlateFieldConcentrationBtn,
     assayPlateFieldSampleBtn,
     assayPlatePreview,
+    assaySerialDilutionContent,
+    assaySerialDilutionOverlay,
+    assaySerialDilutionSummary,
+    assaySerialDilutionVolumeInput,
     assaySampleAxisColumnBtn,
     assaySampleAxisInput,
     assaySampleAxisRowBtn,
     assayNameInput,
     assayPlateTypeInput
   } = elements;
+  const samplePickerState = {
+    wellId: '',
+    query: ''
+  };
+  const serialDilutionState = {
+    stockConcentrations: Object.create(null)
+  };
+  const assaySamplePicker = document.createElement('div');
+  assaySamplePicker.className = 'assay-sample-picker';
+  assaySamplePicker.hidden = true;
+  document.body.append(assaySamplePicker);
 
   function getCurrentDefinition() {
     return getPlateDefinition(assayPlateTypeInput?.value);
@@ -222,6 +239,579 @@ export function createAssayLayoutManager({
   function setActiveWellSelection(wellId) {
     runtime.activeWellEditorId = String(wellId || '').trim().toUpperCase();
     updateActiveWellPreviewState();
+  }
+
+  function inventorySampleDisplayValue(sample) {
+    return String(sample?.code || sample?.name || sample?.id || '').trim();
+  }
+
+  function getInventorySampleOptions() {
+    return (typeof getInventorySamples === 'function' ? getInventorySamples() : [])
+      .map((sample) => {
+        const code = String(sample?.code || '').trim();
+        const name = String(sample?.name || '').trim();
+        const type = String(sample?.type || '').trim();
+        const concentration = String(sample?.concentration || '').trim();
+        const value = inventorySampleDisplayValue(sample);
+        if (!value) {
+          return null;
+        }
+        return {
+          id: String(sample?.id || '').trim(),
+          value,
+          code,
+          name,
+          type,
+          concentration,
+          searchText: [
+            value,
+            code,
+            name,
+            type,
+            concentration,
+            sample?.lot,
+            sample?.notes
+          ].join(' ').toLowerCase()
+        };
+      })
+      .filter(Boolean)
+      .sort((left, right) => left.value.localeCompare(right.value, undefined, { sensitivity: 'base' }));
+  }
+
+  function findInventorySampleRecordBySampleId(sampleId) {
+    const target = String(sampleId || '').trim();
+    if (!target) {
+      return null;
+    }
+    return (typeof getInventorySamples === 'function' ? getInventorySamples() : []).find((sample) => {
+      const candidates = [
+        inventorySampleDisplayValue(sample),
+        sample?.code,
+        sample?.name,
+        sample?.id
+      ]
+        .map((value) => String(value || '').trim())
+        .filter(Boolean);
+      return candidates.includes(target);
+    }) || null;
+  }
+
+  function parseConcentrationMagnitude(value) {
+    const text = String(value || '').trim();
+    if (!text) {
+      return null;
+    }
+    const match = text.match(/([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)\s*([a-zA-Zµμ]*)/);
+    if (!match) {
+      return null;
+    }
+    const numeric = Number(match[1]);
+    if (!Number.isFinite(numeric)) {
+      return null;
+    }
+    const rawUnit = String(match[2] || '').toLowerCase().replace('μ', 'u').replace('µ', 'u');
+    const scaleMap = {
+      fm: 1e-15,
+      pm: 1e-12,
+      nm: 1e-9,
+      um: 1e-6,
+      mm: 1e-3,
+      cm: 1e-2,
+      m: 1,
+      gm: 1,
+      mg: 1e-3,
+      ug: 1e-6,
+      ng: 1e-9,
+      pg: 1e-12,
+      kg: 1e3
+    };
+    const unit = rawUnit.replace(/\/.*$/, '');
+    const scale = scaleMap[unit] || 1;
+    return numeric * scale;
+  }
+
+  function formatDecimal(value) {
+    if (!Number.isFinite(value)) {
+      return '';
+    }
+    const absolute = Math.abs(value);
+    const decimals = absolute >= 100 ? 1 : absolute >= 10 ? 2 : absolute >= 1 ? 3 : 4;
+    return value.toFixed(decimals).replace(/\.?0+$/, '');
+  }
+
+  function formatVolumeText(value) {
+    return Number.isFinite(value) ? `${formatDecimal(value)} uL` : '-';
+  }
+
+  function hideInventorySamplePicker() {
+    samplePickerState.wellId = '';
+    samplePickerState.query = '';
+    assaySamplePicker.hidden = true;
+    assaySamplePicker.innerHTML = '';
+  }
+
+  function positionInventorySamplePicker(clientX, clientY) {
+    const margin = 12;
+    const rect = assaySamplePicker.getBoundingClientRect();
+    const maxLeft = Math.max(margin, window.innerWidth - rect.width - margin);
+    const maxTop = Math.max(margin, window.innerHeight - rect.height - margin);
+    assaySamplePicker.style.left = `${Math.min(Math.max(margin, clientX), maxLeft)}px`;
+    assaySamplePicker.style.top = `${Math.min(Math.max(margin, clientY), maxTop)}px`;
+  }
+
+  function applyInventorySampleToWell(wellId, sampleValue) {
+    updateInlineWellOverride(wellId, 'sampleId', sampleValue);
+    renderLayoutList();
+    renderPlatePreview();
+    renderResultTable();
+    setLayoutStatus(`Updated ${wellId} from inventory.`);
+    setCsvStatus(`Mapped wells: ${runtime.currentLayout.length}.`);
+    requestAnimationFrame(() => {
+      assayPlatePreview
+        ?.querySelector(`[data-well="${wellId}"] [data-well-inline-field="sampleId"]`)
+        ?.focus();
+    });
+  }
+
+  function renderInventorySamplePicker() {
+    if (!samplePickerState.wellId) {
+      hideInventorySamplePicker();
+      return;
+    }
+
+    const options = getInventorySampleOptions();
+    const query = samplePickerState.query.trim().toLowerCase();
+    const filtered = query
+      ? options.filter((item) => item.searchText.includes(query))
+      : options;
+    const currentValue = getEffectiveWellMapping(samplePickerState.wellId).sampleId;
+
+    assaySamplePicker.innerHTML = `
+      <div class="assay-sample-picker-head">
+        <strong>Select Sample</strong>
+        <span>${safeText(samplePickerState.wellId)}</span>
+      </div>
+      <div class="assay-sample-picker-search">
+        <input
+          type="search"
+          class="assay-sample-picker-search-input"
+          value="${safeText(samplePickerState.query)}"
+          placeholder="Search inventory samples"
+          aria-label="Search inventory samples"
+        />
+      </div>
+      <div class="assay-sample-picker-list">
+        ${currentValue ? `
+          <button type="button" class="assay-sample-picker-item assay-sample-picker-clear" data-assay-sample-picker-clear="true">
+            <span class="assay-sample-picker-item-title">Clear Sample</span>
+            <span class="assay-sample-picker-item-meta">Remove the Sample ID for ${safeText(samplePickerState.wellId)}</span>
+          </button>
+        ` : ''}
+        ${filtered.length ? filtered.map((item) => `
+          <button
+            type="button"
+            class="assay-sample-picker-item${item.value === currentValue ? ' is-current' : ''}"
+            data-assay-sample-picker-value="${safeText(item.value)}"
+            title="${safeText(item.name || item.value)}"
+          >
+            <span class="assay-sample-picker-item-title">${safeText(item.value)}</span>
+            <span class="assay-sample-picker-item-meta">${safeText([
+              item.name && item.name !== item.value ? item.name : '',
+              item.type || '',
+              item.concentration || ''
+            ].filter(Boolean).join(' • ') || 'Inventory sample')}</span>
+          </button>
+        `).join('') : '<p class="small-note assay-sample-picker-empty">No inventory samples match this search.</p>'}
+      </div>
+    `;
+    assaySamplePicker.hidden = false;
+
+    const searchInput = assaySamplePicker.querySelector('.assay-sample-picker-search-input');
+    searchInput?.addEventListener('input', (event) => {
+      samplePickerState.query = String(event.target?.value || '');
+      renderInventorySamplePicker();
+      const nextInput = assaySamplePicker.querySelector('.assay-sample-picker-search-input');
+      nextInput?.focus();
+      nextInput?.setSelectionRange(samplePickerState.query.length, samplePickerState.query.length);
+    });
+
+    assaySamplePicker.querySelectorAll('[data-assay-sample-picker-value]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const wellId = samplePickerState.wellId;
+        const nextValue = String(button.getAttribute('data-assay-sample-picker-value') || '').trim();
+        hideInventorySamplePicker();
+        if (!wellId) {
+          return;
+        }
+        applyInventorySampleToWell(wellId, nextValue);
+      });
+    });
+
+    assaySamplePicker.querySelector('[data-assay-sample-picker-clear="true"]')?.addEventListener('click', () => {
+      const wellId = samplePickerState.wellId;
+      hideInventorySamplePicker();
+      if (!wellId) {
+        return;
+      }
+      applyInventorySampleToWell(wellId, '');
+    });
+  }
+
+  function showInventorySamplePicker(wellId, clientX, clientY) {
+    const normalizedWell = String(wellId || '').trim().toUpperCase();
+    if (!normalizedWell) {
+      return;
+    }
+    samplePickerState.wellId = normalizedWell;
+    samplePickerState.query = '';
+    setActiveWellSelection(normalizedWell);
+    renderInventorySamplePicker();
+    positionInventorySamplePicker(clientX, clientY);
+    assaySamplePicker.querySelector('.assay-sample-picker-search-input')?.focus();
+  }
+
+  function getSerialDilutionStockValue(sampleId) {
+    if (Object.prototype.hasOwnProperty.call(serialDilutionState.stockConcentrations, sampleId)) {
+      return serialDilutionState.stockConcentrations[sampleId];
+    }
+    const inventorySample = findInventorySampleRecordBySampleId(sampleId);
+    const nextValue = String(inventorySample?.concentration || '').trim();
+    serialDilutionState.stockConcentrations[sampleId] = nextValue;
+    return nextValue;
+  }
+
+  function buildSerialDilutionGroups() {
+    const sampleAxis = getSampleAxis();
+    const groupsBySample = new Map();
+
+    sortLayout(runtime.currentLayout).forEach((item) => {
+      const sampleId = String(item?.sampleId || '').trim();
+      const concentration = String(item?.concentration || '').trim();
+      if (!sampleId || !concentration) {
+        return;
+      }
+      const parsed = parseWellId(item.well);
+      if (!parsed) {
+        return;
+      }
+      const sampleOrder = sampleAxis === 'row' ? parsed.rowIndex : parsed.columnIndex;
+      const concentrationIndex = sampleAxis === 'row' ? parsed.columnIndex : parsed.rowIndex;
+      if (!groupsBySample.has(sampleId)) {
+        groupsBySample.set(sampleId, {
+          sampleId,
+          sampleOrder,
+          entriesByIndex: new Map(),
+          hasConflict: false
+        });
+      }
+      const group = groupsBySample.get(sampleId);
+      const existing = group.entriesByIndex.get(concentrationIndex);
+      if (!existing) {
+        group.entriesByIndex.set(concentrationIndex, {
+          concentrationIndex,
+          concentrationLabel: concentration,
+          magnitude: parseConcentrationMagnitude(concentration),
+          wells: [item.well]
+        });
+        return;
+      }
+      existing.wells.push(item.well);
+      if (!existing.concentrationLabel && concentration) {
+        existing.concentrationLabel = concentration;
+        existing.magnitude = parseConcentrationMagnitude(concentration);
+        return;
+      }
+      if (existing.concentrationLabel !== concentration) {
+        group.hasConflict = true;
+      }
+    });
+
+    return [...groupsBySample.values()]
+      .sort((left, right) => {
+        if (left.sampleOrder !== right.sampleOrder) {
+          return left.sampleOrder - right.sampleOrder;
+        }
+        return left.sampleId.localeCompare(right.sampleId, undefined, { sensitivity: 'base' });
+      })
+      .map((group) => {
+        const entries = [...group.entriesByIndex.values()]
+          .sort((left, right) => left.concentrationIndex - right.concentrationIndex)
+          .map((entry) => ({
+            ...entry,
+            wellLabel: entry.wells.join(', ')
+          }));
+        let lastNonZeroIndex = -1;
+        for (let index = entries.length - 1; index >= 0; index -= 1) {
+          if (Number.isFinite(entries[index].magnitude) && entries[index].magnitude > 0) {
+            lastNonZeroIndex = index;
+            break;
+          }
+        }
+        return {
+          sampleId: group.sampleId,
+          sampleOrder: group.sampleOrder,
+          hasConflict: group.hasConflict,
+          inventorySample: findInventorySampleRecordBySampleId(group.sampleId),
+          entries,
+          chainEntries: lastNonZeroIndex >= 0 ? entries.slice(0, lastNonZeroIndex + 1) : [],
+          trailingEntries: lastNonZeroIndex >= 0 ? entries.slice(lastNonZeroIndex + 1) : entries.slice()
+        };
+      });
+  }
+
+  function calculateSerialDilutionPlan({ group, volumePerWellUl, stockConcentrationText }) {
+    const notes = [];
+    const trailingZeroEntries = group.trailingEntries.filter((entry) => entry.magnitude === 0);
+    const trailingOtherEntries = group.trailingEntries.filter((entry) => entry.magnitude !== 0);
+
+    if (group.hasConflict) {
+      notes.push('Multiple mapped wells for one concentration position had different concentration labels. Using the first one.');
+    }
+    if (trailingZeroEntries.length) {
+      notes.push(`Skipped trailing 0 concentration well${trailingZeroEntries.length === 1 ? '' : 's'}: ${trailingZeroEntries.map((entry) => entry.wellLabel).join('; ')}.`);
+    }
+    if (trailingOtherEntries.length) {
+      notes.push(`Ignored trailing wells without a positive concentration: ${trailingOtherEntries.map((entry) => entry.wellLabel).join('; ')}.`);
+    }
+    if (!(Number.isFinite(volumePerWellUl) && volumePerWellUl > 0)) {
+      return {
+        rows: [],
+        notes,
+        error: 'Enter a positive volume per well to calculate the dilution recipe.'
+      };
+    }
+    if (!group.chainEntries.length) {
+      return {
+        rows: [],
+        notes,
+        error: 'Add at least one mapped well with a positive concentration for this sample.'
+      };
+    }
+    if (group.chainEntries.some((entry) => !(Number.isFinite(entry.magnitude) && entry.magnitude > 0))) {
+      return {
+        rows: [],
+        notes,
+        error: 'Concentrations must stay positive until the last active dilution well.'
+      };
+    }
+
+    const stockMagnitude = parseConcentrationMagnitude(stockConcentrationText);
+    if (!(Number.isFinite(stockMagnitude) && stockMagnitude > 0)) {
+      return {
+        rows: [],
+        notes,
+        error: 'Enter a valid stock concentration for this sample.'
+      };
+    }
+
+    const rows = group.chainEntries.map((entry) => ({
+      ...entry,
+      inputLabel: '',
+      inputVolume: null,
+      bufferVolume: null,
+      prepVolume: null,
+      outputLabel: '-',
+      outputVolume: 0,
+      discardVolume: 0,
+      finalVolume: volumePerWellUl
+    }));
+
+    if (!(stockMagnitude > rows[0].magnitude)) {
+      return {
+        rows: [],
+        notes,
+        error: 'Stock concentration must be higher than the first target concentration.'
+      };
+    }
+
+    if (rows.length > 1) {
+      for (let index = rows.length - 1; index >= 1; index -= 1) {
+        const current = rows[index];
+        const previous = rows[index - 1];
+        const ratio = current.magnitude / previous.magnitude;
+        if (!(ratio > 0 && ratio < 1)) {
+          return {
+            rows: [],
+            notes,
+            error: `Concentrations must decrease in dilution order (${previous.wellLabel} -> ${current.wellLabel}).`
+          };
+        }
+
+        const outputVolume = index === rows.length - 1
+          ? ((ratio * volumePerWellUl) / (1 - ratio))
+          : rows[index + 1].inputVolume;
+
+        if (!(Number.isFinite(outputVolume) && outputVolume > 0)) {
+          return {
+            rows: [],
+            notes,
+            error: `Could not calculate the carryover volume for ${current.wellLabel}.`
+          };
+        }
+
+        const prepVolume = volumePerWellUl + outputVolume;
+        const inputVolume = ratio * prepVolume;
+        const bufferVolume = prepVolume - inputVolume;
+        if (!(Number.isFinite(inputVolume) && inputVolume > 0 && inputVolume < prepVolume)) {
+          return {
+            rows: [],
+            notes,
+            error: `Could not calculate a valid transfer volume into ${current.wellLabel}.`
+          };
+        }
+
+        current.inputLabel = `From ${previous.wellLabel}`;
+        current.inputVolume = inputVolume;
+        current.bufferVolume = bufferVolume;
+        current.prepVolume = prepVolume;
+        current.outputLabel = index === rows.length - 1 ? 'Discard' : `To ${rows[index + 1].wellLabel}`;
+        current.outputVolume = outputVolume;
+        current.discardVolume = index === rows.length - 1 ? outputVolume : 0;
+      }
+    }
+
+    const firstOutputVolume = rows.length > 1 ? rows[1].inputVolume : 0;
+    const firstPrepVolume = volumePerWellUl + firstOutputVolume;
+    const stockVolume = (rows[0].magnitude / stockMagnitude) * firstPrepVolume;
+    const firstBufferVolume = firstPrepVolume - stockVolume;
+    if (!(Number.isFinite(stockVolume) && stockVolume > 0 && stockVolume < firstPrepVolume)) {
+      return {
+        rows: [],
+        notes,
+        error: `Could not calculate a valid stock dilution volume for ${rows[0].wellLabel}.`
+      };
+    }
+
+    rows[0].inputLabel = 'From stock';
+    rows[0].inputVolume = stockVolume;
+    rows[0].bufferVolume = firstBufferVolume;
+    rows[0].prepVolume = firstPrepVolume;
+    rows[0].outputLabel = rows.length > 1 ? `To ${rows[1].wellLabel}` : '-';
+    rows[0].outputVolume = firstOutputVolume;
+    rows[0].discardVolume = 0;
+
+    return { rows, notes, error: '' };
+  }
+
+  function renderSerialDilutionDialog() {
+    if (!assaySerialDilutionContent || !assaySerialDilutionSummary) {
+      return;
+    }
+
+    const groups = buildSerialDilutionGroups();
+    const volumePerWellUl = Number(assaySerialDilutionVolumeInput?.value);
+    const concentrationAxisName = axisLabel(oppositeAxis(getSampleAxis()));
+
+    if (!groups.length) {
+      assaySerialDilutionSummary.textContent = 'Map sample IDs and concentrations on the plate first.';
+      assaySerialDilutionContent.innerHTML = '<p class="small-note">No mapped sample dilution series are available yet.</p>';
+      return;
+    }
+
+    assaySerialDilutionSummary.textContent = `Calculated from the current ${concentrationAxisName} order. Trailing 0 concentration control wells are skipped from the serial dilution chain.`;
+
+    assaySerialDilutionContent.innerHTML = groups.map((group) => {
+      const stockValue = getSerialDilutionStockValue(group.sampleId);
+      const stockSource = String(group.inventorySample?.concentration || '').trim();
+      const plan = calculateSerialDilutionPlan({
+        group,
+        volumePerWellUl,
+        stockConcentrationText: stockValue
+      });
+
+      return `
+        <section class="assay-serial-dilution-sample">
+          <div class="assay-serial-dilution-sample-head">
+            <div>
+              <h4>${safeText(group.sampleId)}</h4>
+              <p class="small-note">${safeText(stockSource ? 'Stock concentration loaded from inventory when available. You can override it here.' : 'Enter the stock concentration for this sample to calculate the dilution recipe.')}</p>
+            </div>
+            <label>
+              Stock Concentration
+              <input
+                type="text"
+                value="${safeText(stockValue)}"
+                placeholder="e.g. 10 mM"
+                data-assay-serial-stock-sample="${safeText(group.sampleId)}"
+              />
+            </label>
+          </div>
+          ${plan.error ? `<p class="small-note assay-serial-dilution-error">${safeText(plan.error)}</p>` : ''}
+          ${plan.notes.map((note) => `<p class="small-note assay-serial-dilution-note">${safeText(note)}</p>`).join('')}
+          ${plan.rows.length ? `
+            <div class="assay-serial-dilution-table-wrap">
+              <table class="assay-serial-dilution-table">
+                <thead>
+                  <tr>
+                    <th>Well</th>
+                    <th>Target Conc.</th>
+                    <th>Source</th>
+                    <th>Source Vol.</th>
+                    <th>Buffer Vol.</th>
+                    <th>Transfer / Discard</th>
+                    <th>Final Vol.</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${plan.rows.map((row) => `
+                    <tr>
+                      <td>${safeText(row.wellLabel)}</td>
+                      <td>${safeText(row.concentrationLabel)}</td>
+                      <td>${safeText(row.inputLabel)}</td>
+                      <td>${safeText(formatVolumeText(row.inputVolume))}</td>
+                      <td>${safeText(formatVolumeText(row.bufferVolume))}</td>
+                      <td>${safeText(row.outputLabel === '-' ? '-' : `${row.outputLabel}: ${formatVolumeText(row.outputVolume)}`)}</td>
+                      <td>${safeText(formatVolumeText(row.finalVolume))}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          ` : ''}
+        </section>
+      `;
+    }).join('');
+  }
+
+  function openSerialDilutionDialog() {
+    if (!assaySerialDilutionOverlay) {
+      return;
+    }
+    hideInventorySamplePicker();
+    assaySerialDilutionOverlay.hidden = false;
+    renderSerialDilutionDialog();
+    assaySerialDilutionVolumeInput?.focus();
+    assaySerialDilutionVolumeInput?.select?.();
+  }
+
+  function closeSerialDilutionDialog() {
+    if (!assaySerialDilutionOverlay) {
+      return;
+    }
+    assaySerialDilutionOverlay.hidden = true;
+  }
+
+  function onSerialDilutionOverlayClick(event) {
+    if (event?.target === assaySerialDilutionOverlay) {
+      closeSerialDilutionDialog();
+    }
+  }
+
+  function onSerialDilutionDialogInput(event) {
+    const stockInput = event.target.closest('[data-assay-serial-stock-sample]');
+    if (stockInput) {
+      const sampleId = String(stockInput.dataset.assaySerialStockSample || '').trim();
+      serialDilutionState.stockConcentrations[sampleId] = String(stockInput.value || '');
+      renderSerialDilutionDialog();
+      const nextInput = [...(assaySerialDilutionContent?.querySelectorAll('[data-assay-serial-stock-sample]') || [])]
+        .find((input) => String(input.dataset.assaySerialStockSample || '').trim() === sampleId);
+      nextInput?.focus();
+      nextInput?.setSelectionRange?.(serialDilutionState.stockConcentrations[sampleId].length, serialDilutionState.stockConcentrations[sampleId].length);
+      return;
+    }
+    if (event.target === assaySerialDilutionVolumeInput) {
+      renderSerialDilutionDialog();
+    }
   }
 
   function updateInlineWellOverride(wellId, field, rawValue) {
@@ -417,6 +1007,7 @@ export function createAssayLayoutManager({
     if (!assayPlatePreview) {
       return;
     }
+    hideInventorySamplePicker();
     const def = getCurrentDefinition();
     const sampleAxis = getSampleAxis();
     const cellMap = layoutToMap(runtime.currentLayout);
@@ -446,40 +1037,6 @@ export function createAssayLayoutManager({
 
     function sampleHue(sampleId) {
       return (hashSampleId(sampleId) + 18) % 360;
-    }
-
-    function parseConcentrationMagnitude(value) {
-      const text = String(value || '').trim();
-      if (!text) {
-        return null;
-      }
-      const match = text.match(/([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)\s*([a-zA-Zµμ]*)/);
-      if (!match) {
-        return null;
-      }
-      const numeric = Number(match[1]);
-      if (!Number.isFinite(numeric)) {
-        return null;
-      }
-      const rawUnit = String(match[2] || '').toLowerCase().replace('μ', 'u').replace('µ', 'u');
-      const scaleMap = {
-        pm: 1e-12,
-        nm: 1e-9,
-        um: 1e-6,
-        mm: 1e-3,
-        cm: 1e-2,
-        m: 1,
-        fm: 1e-15,
-        gm: 1,
-        mg: 1e-3,
-        ug: 1e-6,
-        ng: 1e-9,
-        pg: 1e-12,
-        kg: 1e3
-      };
-      const unit = rawUnit.replace(/\/.*$/, '');
-      const scale = scaleMap[unit] || 1;
-      return numeric * scale;
     }
 
     const rankedConcentrations = (() => {
@@ -569,10 +1126,17 @@ export function createAssayLayoutManager({
           : 'Sample ID: - | Concentration: -';
         const hue = sampleValue ? sampleHue(sampleValue) : 210;
         const intensity = concentrationValue
-          ? (rankedConcentrations.get(concentrationValue) || 0.52)
-          : (sampleValue ? 0.3 : 0);
+          ? (rankedConcentrations.get(concentrationValue) || 0.58)
+          : (sampleValue ? 0.36 : 0);
+        const topAlpha = Math.min(0.92, 0.18 + (intensity * 0.68));
+        const bottomAlpha = Math.min(0.98, 0.28 + (intensity * 0.78));
+        const topLightness = Math.max(76, 96 - (intensity * 18));
+        const bottomLightness = Math.max(54, 88 - (intensity * 30));
+        const borderAlpha = Math.min(0.72, 0.24 + (intensity * 0.5));
+        const highlightAlpha = Math.min(0.42, 0.12 + (intensity * 0.18));
+        const shadowAlpha = Math.min(0.3, 0.08 + (intensity * 0.22));
         const cellStyle = sampleValue || concentrationValue
-          ? ` style="background: hsla(${hue}, 72%, 74%, ${intensity}); border-color: hsla(${hue}, 45%, 52%, 0.42);"`
+          ? ` style="background: linear-gradient(180deg, hsla(${hue}, 86%, ${topLightness}%, ${topAlpha}) 0%, hsla(${hue}, 92%, ${bottomLightness}%, ${bottomAlpha}) 100%); border-color: hsla(${hue}, 58%, 42%, ${borderAlpha}); box-shadow: inset 0 1px 0 hsla(${hue}, 90%, 98%, ${highlightAlpha}), inset 0 -10px 18px hsla(${hue}, 74%, 48%, ${shadowAlpha});"`
           : '';
         cells.push(`
           <td class="assay-well${filled}${active}" data-well="${well}" title="${safeText(`${well} • ${meta} • Click to edit ${editable}`)}"${cellStyle}>
@@ -608,6 +1172,9 @@ export function createAssayLayoutManager({
         </table>
       </div>
     `;
+    if (!assaySerialDilutionOverlay?.hidden) {
+      renderSerialDilutionDialog();
+    }
   }
 
   function renderLayoutList() {
@@ -688,6 +1255,9 @@ export function createAssayLayoutManager({
   }
 
   function onPlatePreviewClick(event) {
+    if (event.target.closest('.assay-sample-picker')) {
+      return;
+    }
     if (event.target.closest('[data-axis-dimension]')) {
       return;
     }
@@ -708,6 +1278,75 @@ export function createAssayLayoutManager({
     }
     setActiveWellSelection(wellId);
     cell.querySelector('[data-well-inline-field]')?.focus();
+  }
+
+  function onPlatePreviewKeyDown(event) {
+    if (String(event?.key || '') !== 'Enter') {
+      return;
+    }
+
+    const axisInput = event.target.closest('[data-axis-dimension]');
+    if (axisInput) {
+      event.preventDefault();
+      const nextTarget = getNextAxisInputTarget(
+        axisInput.dataset.axisDimension,
+        axisInput.dataset.axisIndex
+      );
+      if (nextTarget) {
+        focusAxisInput(nextTarget.dimension, nextTarget.index);
+      }
+      return;
+    }
+
+    const inlineInput = event.target.closest('[data-well-inline-field]');
+    if (!inlineInput) {
+      return;
+    }
+
+    event.preventDefault();
+    const nextWell = getNextWellTarget(
+      inlineInput.dataset.well,
+      inlineInput.dataset.wellInlineField
+    );
+    if (nextWell) {
+      focusPlateWellField(nextWell, inlineInput.dataset.wellInlineField);
+    }
+  }
+
+  function onPlatePreviewContextMenu(event) {
+    const cell = event.target.closest('[data-well]');
+    if (!cell || event.target.closest('[data-axis-dimension]')) {
+      hideInventorySamplePicker();
+      return;
+    }
+    const wellId = String(cell.dataset.well || '').trim().toUpperCase();
+    if (!wellId) {
+      hideInventorySamplePicker();
+      return;
+    }
+    event.preventDefault();
+    showInventorySamplePicker(wellId, event.clientX, event.clientY);
+  }
+
+  function onGlobalPointerDown(event) {
+    if (assaySamplePicker.hidden) {
+      return;
+    }
+    if (event.target.closest('.assay-sample-picker')) {
+      return;
+    }
+    hideInventorySamplePicker();
+  }
+
+  function onGlobalKeyDown(event) {
+    if (String(event?.key || '') === 'Escape') {
+      hideInventorySamplePicker();
+      closeSerialDilutionDialog();
+    }
+  }
+
+  function onPlatePreviewScroll() {
+    hideInventorySamplePicker();
   }
 
   function onClearWellMappings() {
@@ -735,6 +1374,73 @@ export function createAssayLayoutManager({
     }
     const selector = `[data-well="${normalizedWell}"] [data-well-inline-field="${runtime.plateEditField}"]`;
     assayPlatePreview.querySelector(selector)?.focus();
+  }
+
+  function focusPlateWellField(wellId, field) {
+    const normalizedWell = String(wellId || '').trim().toUpperCase();
+    const normalizedField = field === 'concentration' ? 'concentration' : 'sampleId';
+    if (!normalizedWell || !assayPlatePreview) {
+      return;
+    }
+    const input = assayPlatePreview.querySelector(`[data-well="${normalizedWell}"] [data-well-inline-field="${normalizedField}"]`);
+    input?.focus();
+    input?.select?.();
+  }
+
+  function focusAxisInput(dimension, index) {
+    const normalizedDimension = dimension === 'column' ? 'column' : 'row';
+    const normalizedIndex = Number(index);
+    if (!assayPlatePreview || !Number.isFinite(normalizedIndex) || normalizedIndex < 0) {
+      return;
+    }
+    const input = assayPlatePreview.querySelector(`[data-axis-dimension="${normalizedDimension}"][data-axis-index="${normalizedIndex}"]`);
+    input?.focus();
+    input?.select?.();
+  }
+
+  function getNextAxisInputTarget(dimension, index) {
+    const def = getCurrentDefinition();
+    const max = dimension === 'column' ? def.columns : def.rows;
+    const nextIndex = Number(index) + 1;
+    if (!Number.isFinite(nextIndex) || nextIndex < 0 || nextIndex >= max) {
+      return null;
+    }
+    return { dimension, index: nextIndex };
+  }
+
+  function getWellEntryDirection(field) {
+    return field === 'concentration' ? oppositeAxis(getSampleAxis()) : getSampleAxis();
+  }
+
+  function getNextWellTarget(wellId, field) {
+    const parsed = parseWellId(wellId);
+    const def = getCurrentDefinition();
+    if (!parsed) {
+      return '';
+    }
+
+    let nextRow = parsed.rowIndex;
+    let nextColumn = parsed.columnIndex;
+
+    if (getWellEntryDirection(field) === 'column') {
+      if (parsed.rowIndex + 1 < def.rows) {
+        nextRow = parsed.rowIndex + 1;
+      } else if (parsed.columnIndex + 1 < def.columns) {
+        nextRow = 0;
+        nextColumn = parsed.columnIndex + 1;
+      } else {
+        return '';
+      }
+    } else if (parsed.columnIndex + 1 < def.columns) {
+      nextColumn = parsed.columnIndex + 1;
+    } else if (parsed.rowIndex + 1 < def.rows) {
+      nextRow = parsed.rowIndex + 1;
+      nextColumn = 0;
+    } else {
+      return '';
+    }
+
+    return wellIdFor(nextRow, nextColumn);
   }
 
   function onLayoutListClick(event) {
@@ -913,7 +1619,13 @@ export function createAssayLayoutManager({
     onPlatePreviewChange,
     onPlatePreviewFocusIn,
     onPlatePreviewClick,
+    onPlatePreviewKeyDown,
+    onPlatePreviewContextMenu,
     onClearWellMappings,
+    openSerialDilutionDialog,
+    closeSerialDilutionDialog,
+    onSerialDilutionOverlayClick,
+    onSerialDilutionDialogInput,
     focusPlateWellInput,
     onLayoutListClick,
     renderPlateDefinition,
@@ -921,6 +1633,10 @@ export function createAssayLayoutManager({
     updateActiveWellPreviewState,
     onPlateTypeChange,
     exportCsvTemplate,
-    onImportCsv
+    onImportCsv,
+    hideInventorySamplePicker,
+    onGlobalPointerDown,
+    onGlobalKeyDown,
+    onPlatePreviewScroll
   };
 }

@@ -9,20 +9,18 @@ function registerDataIpc(deps = {}) {
   const fs = deps.fs;
   const cleanText = typeof deps.cleanText === 'function'
     ? deps.cleanText
-    : ((value, maxLength = 2000) => {
+    : ((value, _maxLength = 2000) => {
       const text = String(value || '').trim();
       if (!text) {
         return '';
       }
-      if (text.length <= maxLength) {
-        return text;
-      }
-      return `${text.slice(0, maxLength)}...`;
+      return text;
     });
   const mainDataHelpers = deps.mainDataHelpers;
   const hasSupportedDataExtension = deps.hasSupportedDataExtension;
   const defaultDataFileName = String(deps.DEFAULT_DATA_FILE_NAME || 'enana-data.json');
   const importStorageRoot = deps.importStorageRoot;
+  const syncSqliteBundleFromSnapshot = deps.syncSqliteBundleFromSnapshot;
   const listSequenceEntries = deps.listSequenceEntries;
   const getSequenceEntry = deps.getSequenceEntry;
   const upsertSequenceEntry = deps.upsertSequenceEntry;
@@ -30,10 +28,6 @@ function registerDataIpc(deps = {}) {
   const deleteSequenceEntry = deps.deleteSequenceEntry;
   const searchSequenceFeatures = deps.searchSequenceFeatures;
   const recognizeSequenceBackbone = deps.recognizeSequenceBackbone;
-  const checkPlannotateEnvironment = deps.checkPlannotateEnvironment;
-  const annotateWithBlast = deps.annotateWithBlast;
-  const installPlannotateAssets = deps.installPlannotateAssets;
-  const generatePlannotateGbk = deps.generatePlannotateGbk;
 
   function safeParseJson(value, fallback = null) {
     try {
@@ -206,6 +200,30 @@ function registerDataIpc(deps = {}) {
   ipcMain.handle('data:auto-load', async (_event, payload) => {
     const normalizedPayload = normalizeJsonPayload(payload, {});
     return mainDataHelpers.autoLoadDataFile(normalizedPayload?.filePath);
+  });
+
+  ipcMain.handle('storage:sync-sqlite-bundle', async (_event, payload) => {
+    const normalizedPayload = normalizeJsonPayload(payload, {});
+    const sqlitePath = cleanText(normalizedPayload?.sqlitePath || normalizedPayload?.filePath, 2400);
+    const snapshot = normalizedPayload?.snapshot || normalizedPayload?.data;
+    if (!sqlitePath) {
+      return { ok: false, error: 'Missing sqlite path.' };
+    }
+    if (!snapshot || typeof snapshot !== 'object' || Array.isArray(snapshot)) {
+      return { ok: false, error: 'Missing snapshot payload.' };
+    }
+    if (typeof syncSqliteBundleFromSnapshot !== 'function') {
+      return { ok: false, error: 'SQLite bundle sync is unavailable.' };
+    }
+    try {
+      const result = await syncSqliteBundleFromSnapshot({ sqlitePath, snapshot });
+      return {
+        ok: true,
+        sqlitePath: result?.sqlitePath || sqlitePath
+      };
+    } catch (error) {
+      return { ok: false, error: String(error?.message || error) };
+    }
   });
 
   ipcMain.handle('storage:pick-directory', async (_event, payload) => {
@@ -455,42 +473,6 @@ function registerDataIpc(deps = {}) {
     }
   });
 
-  ipcMain.handle('plannotate:check-env', async (_event, payload) => {
-    try {
-      const normalizedPayload = normalizeJsonPayload(payload, {});
-      const status = await checkPlannotateEnvironment(normalizedPayload?.dbDir || '');
-      return { ok: true, status };
-    } catch (error) {
-      return { ok: false, error: String(error) };
-    }
-  });
-
-  ipcMain.handle('plannotate:annotate', async (_event, payload) => {
-    try {
-      const result = await annotateWithBlast(normalizeJsonPayload(payload, {}));
-      return { ok: true, result };
-    } catch (error) {
-      return { ok: false, error: String(error?.message || error) };
-    }
-  });
-
-  ipcMain.handle('plannotate:install-all', async () => {
-    try {
-      const result = await installPlannotateAssets();
-      return { ok: true, result };
-    } catch (error) {
-      return { ok: false, error: String(error?.message || error) };
-    }
-  });
-
-  ipcMain.handle('plannotate:generate-gbk', async (_event, payload) => {
-    try {
-      const gbk = generatePlannotateGbk(normalizeJsonPayload(payload, {}));
-      return { ok: true, gbk };
-    } catch (error) {
-      return { ok: false, error: String(error?.message || error) };
-    }
-  });
 }
 
 module.exports = {

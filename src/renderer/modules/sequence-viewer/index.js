@@ -6,15 +6,9 @@ import {
   FALLBACK_SEQUENCE_LINE_HEIGHT_PX,
   DEFAULT_STRAND_MARKER_COLUMN_PX,
   DEFAULT_STRAND_COLUMN_GAP_PX,
-  DEFAULT_RESTRICTION_VENDOR_FILTER,
-  PLANNOTATE_DEFAULT_OPTIONS
+  DEFAULT_RESTRICTION_VENDOR_FILTER
 } from './constants.js';
 import { normalizeExternalPayload, parseInputRecords } from './parsing.js';
-import {
-  buildPlannotateFeaturesFromResult,
-  getEnanaApiBridge,
-  runPlannotateAnnotationForSequence
-} from './plannotate.js';
 import { buildSequenceSignature, cleanText, clamp, normalizeRecordName, normalizeTopology } from './shared.js';
 import {
   buildCircularPreviewHtmlDocument,
@@ -47,9 +41,6 @@ export function initSequenceViewer(options = {}) {
     selectedFeatureIndex: -1,
     warnings: [],
     errors: [],
-    annotationWarnings: [],
-    isAnnotating: false,
-    isInstallingPlannotateBackend: false,
     isRecognizingBackbone: false,
     orfViewEnabled: false,
     orfStopVisibility: normalizeOrfStopCodonVisibility({
@@ -97,7 +88,11 @@ export function initSequenceViewer(options = {}) {
     : null;
 
   function getBridge() {
-    return options?.apiBridge || options?.bridge || getEnanaApiBridge();
+    return options?.apiBridge
+      || options?.bridge
+      || globalThis?.window?.enanaApi
+      || globalThis?.enanaApi
+      || null;
   }
 
   function getStoragePath() {
@@ -282,110 +277,13 @@ export function initSequenceViewer(options = {}) {
     elements.statusNote.style.color = isError ? 'var(--danger)' : '';
   }
 
-  function getPlannotateBackendMissingParts(status) {
-    const missing = [];
-    if (!status?.dataDir) {
-      missing.push('metadata');
-    }
-    if (!status?.dbDir || !status?.databases?.snapgene || !status?.databases?.fpbase || !status?.databases?.swissprot) {
-      missing.push('BLAST_dbs');
-    }
-    if (!status?.executables?.blastn) {
-      missing.push('blastn');
-    }
-    if (!status?.executables?.diamond) {
-      missing.push('diamond');
-    }
-    return missing;
-  }
-
-  function setPlannotateEngineStatus(message, isError = false) {
-    if (!elements.plannotateEngineStatus) {
-      return;
-    }
-    elements.plannotateEngineStatus.textContent = message;
-    elements.plannotateEngineStatus.style.color = isError ? 'var(--danger)' : '';
-  }
-
-  function syncPlannotateInstallButton() {
-    if (!elements.plannotateInstallBtn) {
-      return;
-    }
-    elements.plannotateInstallBtn.disabled = Boolean(state.isInstallingPlannotateBackend);
-  }
-
-  async function refreshPlannotateBackendStatus() {
-    setPlannotateEngineStatus('Checking pLannotate backend...');
-    const checker = getBridge()?.plannotateCheckEnv;
-    if (typeof checker !== 'function') {
-      setPlannotateEngineStatus('Native backend bridge unavailable.', true);
-      return;
-    }
-
-    try {
-      const response = await checker();
-      if (!response?.ok) {
-        setPlannotateEngineStatus(`Backend check failed: ${response?.error || 'unknown error'}`, true);
-        return;
-      }
-
-      const backendStatus = response.status || {};
-      if (backendStatus.ok) {
-        setPlannotateEngineStatus('pLannotate backend ready.');
-        return;
-      }
-
-      const missing = getPlannotateBackendMissingParts(backendStatus);
-      const detail = missing.length ? `Missing: ${missing.join(', ')}` : 'Missing backend components.';
-      setPlannotateEngineStatus(`Backend not ready. ${detail}`, true);
-    } catch (error) {
-      setPlannotateEngineStatus(`Backend check failed: ${error?.message || error}`, true);
-    }
-  }
-
-  async function installPlannotateBackend() {
-    const installer = getBridge()?.plannotateInstallAll;
-    if (typeof installer !== 'function') {
-      setStatus('pLannotate installer bridge unavailable.', true);
-      setPlannotateEngineStatus('Installer bridge unavailable.', true);
-      return;
-    }
-
-    state.isInstallingPlannotateBackend = true;
-    syncPlannotateInstallButton();
-    setStatus('Installing pLannotate backend assets...');
-    setPlannotateEngineStatus('Installing pLannotate backend assets...');
-
-    try {
-      const response = await installer();
-      if (!response?.ok) {
-        throw new Error(response?.error || 'Installation failed.');
-      }
-
-      const installStatus = response.result?.status || {};
-      const missing = getPlannotateBackendMissingParts(installStatus);
-      if (missing.length) {
-        setStatus(`Install finished, still missing: ${missing.join(', ')}`, true);
-      } else {
-        setStatus('pLannotate backend install completed.');
-      }
-    } catch (error) {
-      setStatus(error?.message || 'pLannotate backend install failed.', true);
-    } finally {
-      state.isInstallingPlannotateBackend = false;
-      syncPlannotateInstallButton();
-      await refreshPlannotateBackendStatus();
-    }
-  }
-
   function updateMessages() {
     if (!elements.messageBox) {
       return;
     }
     const rows = [
       ...state.errors.map((text) => `<p class="small-note" style="color:var(--danger);">${escapeHtml(text)}</p>`),
-      ...state.warnings.map((text) => `<p class="small-note">${escapeHtml(text)}</p>`),
-      ...state.annotationWarnings.map((text) => `<p class="small-note">${escapeHtml(text)}</p>`)
+      ...state.warnings.map((text) => `<p class="small-note">${escapeHtml(text)}</p>`)
     ];
 
     elements.messageBox.innerHTML = rows.length
@@ -416,8 +314,6 @@ export function initSequenceViewer(options = {}) {
     state.records = Array.isArray(result.records) ? result.records : [];
     state.warnings = Array.isArray(result.warnings) ? result.warnings : [];
     state.errors = Array.isArray(result.errors) ? result.errors : [];
-    state.annotationWarnings = [];
-    state.isAnnotating = false;
     state.isRecognizingBackbone = false;
     state.selectedRecordIndex = 0;
     state.selectedFeatureIndex = -1;
@@ -680,25 +576,6 @@ export function initSequenceViewer(options = {}) {
     }
   }
 
-  async function persistAfterAnnotation(record) {
-    const storagePath = getStoragePath();
-    if (!storagePath) {
-      state.annotationWarnings.push('pLannotate: Storage path not configured; annotation was not auto-saved.');
-      return null;
-    }
-
-    const desiredStatus = state.activeEntryStatus === LIBRARY_STATUS_SAVED
-      ? LIBRARY_STATUS_SAVED
-      : LIBRARY_STATUS_TEMPORARY;
-    const entry = await persistRecordToLibrary(record, {
-      id: state.activeEntryId,
-      status: desiredStatus,
-      name: elements.saveNameInput?.value || record.name || 'sequence'
-    });
-    await homeController?.refreshLibraryEntries({ selectedId: entry.id, silent: true });
-    return entry;
-  }
-
   async function saveCurrentRecordAsSaved() {
     const record = getSelectedRecord();
     if (!record?.sequence?.length) {
@@ -719,78 +596,6 @@ export function initSequenceViewer(options = {}) {
       homeController?.setHomeStatus(`Saved sequence entry: ${entry.name}.`);
     } catch (error) {
       setStatus(error?.message || 'Failed to save sequence.', true);
-    }
-  }
-
-  async function annotateCurrentRecord() {
-    if (state.isAnnotating) {
-      return;
-    }
-
-    const record = getSelectedRecord();
-    if (!record?.sequence?.length) {
-      setStatus('Load a record before annotation.', true);
-      return;
-    }
-
-    state.isAnnotating = true;
-    state.annotationWarnings = [];
-    detailController?.syncAnnotateButtonState();
-    updateMessages();
-    setStatus(`Running pLannotate on ${record.name || 'record'}...`);
-
-    try {
-      const recordTopology = normalizeTopology(record.topology || 'linear');
-      const result = await runPlannotateAnnotationForSequence(
-        record.sequence,
-        recordTopology,
-        {
-          ...PLANNOTATE_DEFAULT_OPTIONS,
-          apiBridge: getBridge()
-        }
-      );
-      const resultTopology = normalizeTopology(result?.topology || recordTopology);
-      const plannotateFeatures = buildPlannotateFeaturesFromResult(
-        result,
-        record.sequence.length,
-        resultTopology
-      );
-
-      const selectedIndex = clamp(state.selectedRecordIndex, 0, Math.max(0, state.records.length - 1));
-      const nextRecords = [...state.records];
-      const current = nextRecords[selectedIndex];
-      if (!current) {
-        throw new Error('Selected record no longer exists.');
-      }
-
-      const existingFeatures = Array.isArray(current.features) ? current.features : [];
-      const retainedFeatures = existingFeatures.filter(
-        (feature) => String(feature?.source || '').toLowerCase() !== 'plannotate'
-      );
-
-      current.features = [...retainedFeatures, ...plannotateFeatures];
-      current.topology = resultTopology;
-
-      state.records = nextRecords;
-      state.selectedRecordIndex = selectedIndex;
-      state.selectedFeatureIndex = -1;
-      state.annotationWarnings = Array.isArray(result?.warnings)
-        ? result.warnings.map((warning) => `pLannotate: ${String(warning)}`)
-        : [];
-
-      detailController?.renderActiveRecord();
-      try {
-        await persistAfterAnnotation(current);
-      } catch (persistError) {
-        state.annotationWarnings.push(`pLannotate: ${String(persistError?.message || persistError)}`);
-        updateMessages();
-      }
-      setStatus(`Completed: ${plannotateFeatures.length} pLannotate feature(s) on ${current.name || 'record'}.`);
-    } catch (error) {
-      setStatus(error?.message || 'Annotation failed.', true);
-    } finally {
-      state.isAnnotating = false;
-      detailController?.syncAnnotateButtonState();
     }
   }
 
@@ -818,7 +623,7 @@ export function initSequenceViewer(options = {}) {
     }
 
     state.isRecognizingBackbone = true;
-    detailController?.syncAnnotateButtonState();
+    detailController?.syncActionButtonsState();
     setStatus(`Recognizing vector backbone for ${record.name || 'record'}...`);
 
     try {
@@ -883,7 +688,7 @@ export function initSequenceViewer(options = {}) {
       setStatus(error?.message || 'Backbone recognition failed.', true);
     } finally {
       state.isRecognizingBackbone = false;
-      detailController?.syncAnnotateButtonState();
+      detailController?.syncActionButtonsState();
     }
   }
 
@@ -951,7 +756,6 @@ export function initSequenceViewer(options = {}) {
     setStatus,
     hasStoragePath,
     persistFeatureMutation,
-    onRequestAnnotation: annotateCurrentRecord,
     onRequestRecognizeBackbone: recognizeCurrentBackboneInsert,
     onRequestClear: clearAll,
     onRequestSave: saveCurrentRecordAsSaved,
@@ -1065,11 +869,6 @@ export function initSequenceViewer(options = {}) {
     void loadCurrentInput();
   });
 
-  elements.plannotateInstallBtn?.addEventListener('click', (event) => {
-    event.preventDefault();
-    void installPlannotateBackend();
-  });
-
   homeController.bindEvents();
   detailController.bindEvents();
   alignmentController?.bindEvents?.();
@@ -1081,8 +880,6 @@ export function initSequenceViewer(options = {}) {
   setInputComposerVisible(true);
   setStatus('Paste sequence text, then click Load.');
   homeController.setHomeStatus('Choose New or Open to continue.');
-  syncPlannotateInstallButton();
-  void refreshPlannotateBackendStatus();
   render();
 
   return {

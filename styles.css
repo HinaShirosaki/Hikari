@@ -4,7 +4,6 @@
 @import url("./ui/css/base/core.css");
 @import url("./ui/css/themes/modes.css");
 @import url("./ui/css/views/home-view.css");
-@import url("./ui/css/views/instrument-management-view.css");
 @import url("./ui/css/views/protocol-management-view.css");
 @import url("./ui/css/views/biology-notebook-view.css");
 @import url("./ui/css/views/personal-inventory-view.css");

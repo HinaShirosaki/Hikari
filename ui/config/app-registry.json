@@ -20,15 +20,6 @@
       "searchInputId": ""
     },
     {
-      "id": "instruments",
-      "label": "Instruments",
-      "viewId": "instrument-management-view",
-      "icon": "instruments.svg",
-      "placement": "more",
-      "aliases": ["instrument", "calendar", "booking"],
-      "searchInputId": ""
-    },
-    {
       "id": "protocols",
       "label": "Protocols",
       "viewId": "protocol-management-view",

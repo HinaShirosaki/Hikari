@@ -1,16 +1,27 @@
 // Home dashboard controller.
 //
 // Responsibilities:
-// - summarize upcoming cell-passage tasks from stored sample metadata
-// - surface the next actionable workflow step and track completion progress
+// - summarize urgent bench work for the home screen
+// - surface cell-passage reminders, planned notebook follow-ups, and workflow progress
 // - provide a lightweight dashboard timer with presets, pause, and reset support
+// - bridge quick-log notes into the assistant or notebook workspace
 export function initHomeDashboard({
   state,
   persist,
   safeText,
-  onOpenSampleSearch = () => {}
+  onOpenSampleSearch = () => {},
+  onOpenSamples = () => onOpenSampleSearch(''),
+  onOpenNotebook = () => {},
+  onOpenWorkflow = () => {},
+  onOpenAssistant = () => {},
+  onSendQuickLogToAgent = () => false
 }) {
-  // Core dashboard DOM nodes for passage reminders, workflow progress, and the timer widget.
+  const todaySummary = document.getElementById('dashboard-today-summary');
+  const todayOverdueCount = document.getElementById('dashboard-today-overdue-count');
+  const todayWorkflowCount = document.getElementById('dashboard-today-workflow-count');
+  const todayIncubationCount = document.getElementById('dashboard-today-incubation-count');
+  const todayList = document.getElementById('dashboard-today-list');
+
   const passageSummary = document.getElementById('dashboard-passage-summary');
   const overdueList = document.getElementById('dashboard-passage-overdue-list');
   const soonList = document.getElementById('dashboard-passage-soon-list');
@@ -19,6 +30,15 @@ export function initHomeDashboard({
   const workflowSelect = document.getElementById('dashboard-workflow-select');
   const workflowNextStep = document.getElementById('dashboard-workflow-next-step');
   const workflowProgressList = document.getElementById('dashboard-workflow-progress-list');
+
+  const incubationSummary = document.getElementById('dashboard-incubation-summary');
+  const incubationList = document.getElementById('dashboard-incubation-list');
+
+  const quickLogInput = document.getElementById('dashboard-quick-log-input');
+  const quickLogStatus = document.getElementById('dashboard-quick-log-status');
+  const quickLogAgentBtn = document.getElementById('dashboard-quick-log-agent-btn');
+  const quickLogNotebookBtn = document.getElementById('dashboard-quick-log-notebook-btn');
+  const quickLogClearBtn = document.getElementById('dashboard-quick-log-clear-btn');
 
   const localTimeDisplay = document.getElementById('dashboard-local-time');
   const localDateDisplay = document.getElementById('dashboard-local-date');
@@ -31,16 +51,28 @@ export function initHomeDashboard({
   const timerPauseBtn = document.getElementById('dashboard-timer-pause-btn');
   const timerResetBtn = document.getElementById('dashboard-timer-reset-btn');
   const presetButtons = [...document.querySelectorAll('[data-dashboard-preset-minutes]')];
+  const quickActionButtons = [...document.querySelectorAll('[data-dashboard-action]')];
 
-  // Fail safely if the dashboard UI is not mounted on the current screen.
   if (
-    !passageSummary
+    !todaySummary
+    || !todayOverdueCount
+    || !todayWorkflowCount
+    || !todayIncubationCount
+    || !todayList
+    || !passageSummary
     || !overdueList
     || !soonList
     || !unconfiguredList
     || !workflowSelect
     || !workflowNextStep
     || !workflowProgressList
+    || !incubationSummary
+    || !incubationList
+    || !quickLogInput
+    || !quickLogStatus
+    || !quickLogAgentBtn
+    || !quickLogNotebookBtn
+    || !quickLogClearBtn
     || !localTimeDisplay
     || !localDateDisplay
     || !timerDisplay
@@ -57,7 +89,6 @@ export function initHomeDashboard({
     };
   }
 
-  // In-memory timer state used only by the dashboard widget.
   const timerState = {
     durationMs: 15 * 60 * 1000,
     remainingMs: 15 * 60 * 1000,
@@ -70,12 +101,24 @@ export function initHomeDashboard({
   let localClockHandle = 0;
   let timerHint = '';
 
-  // Wire up dashboard interactions once all DOM references are available.
   overdueList.addEventListener('click', onPassageListClick);
   soonList.addEventListener('click', onPassageListClick);
   unconfiguredList.addEventListener('click', onPassageListClick);
+  todayList.addEventListener('click', onDashboardActionClick);
   workflowSelect.addEventListener('change', onWorkflowSelected);
   workflowProgressList.addEventListener('click', onWorkflowProgressClick);
+  incubationList.addEventListener('click', onDashboardActionClick);
+  quickActionButtons.forEach((button) => {
+    button.addEventListener('click', onQuickActionClick);
+  });
+  quickLogInput.addEventListener('input', onQuickLogInput);
+  quickLogInput.addEventListener('keydown', onQuickLogKeydown);
+  quickLogAgentBtn.addEventListener('click', onQuickLogSendToAgent);
+  quickLogNotebookBtn.addEventListener('click', () => {
+    onOpenNotebook();
+    setQuickLogStatus('Notebook opened.');
+  });
+  quickLogClearBtn.addEventListener('click', onQuickLogClear);
   timerSavedList.addEventListener('click', onSavedTimerClick);
   timerSetBtn.addEventListener('click', onTimerSet);
   timerStartBtn.addEventListener('click', onTimerStart);
@@ -94,10 +137,10 @@ export function initHomeDashboard({
       setTimerDuration(minutes);
     });
   });
+
   renderLocalClock();
   localClockHandle = window.setInterval(renderLocalClock, 1000);
 
-  // Ensure persisted dashboard settings exist and have the expected shape.
   function ensureDashboardState() {
     if (!state.settings || typeof state.settings !== 'object') {
       state.settings = {};
@@ -105,7 +148,8 @@ export function initHomeDashboard({
     if (!state.settings.dashboard || typeof state.settings.dashboard !== 'object') {
       state.settings.dashboard = {
         currentWorkflowId: '',
-        workflowProgress: {}
+        workflowProgress: {},
+        quickLogDraft: ''
       };
       return true;
     }
@@ -122,22 +166,32 @@ export function initHomeDashboard({
       state.settings.dashboard.workflowProgress = {};
       changed = true;
     }
+    if (typeof state.settings.dashboard.quickLogDraft !== 'string') {
+      state.settings.dashboard.quickLogDraft = '';
+      changed = true;
+    }
     return changed;
   }
 
-  // Parse the best available workflow timestamp for recency-based sorting.
+  function sampleLabel(sample) {
+    const code = String(sample?.code || '').trim();
+    const name = String(sample?.name || '').trim();
+    if (code && name) {
+      return `${code} - ${name}`;
+    }
+    return code || name || String(sample?.id || 'Unnamed sample');
+  }
+
   function parseWorkflowTimestamp(workflow) {
     const parsed = Date.parse(String(workflow?.updatedAt || workflow?.createdAt || '').trim());
     return Number.isFinite(parsed) ? parsed : 0;
   }
 
-  // Return workflows ordered from most recently updated to oldest.
   function workflowsSortedByRecent() {
     return [...(Array.isArray(state.workflows) ? state.workflows : [])]
       .sort((a, b) => parseWorkflowTimestamp(b) - parseWorkflowTimestamp(a));
   }
 
-  // Remove invalid or duplicate completed-block ids from persisted workflow progress.
   function normalizeWorkflowProgress(workflow) {
     const dashboard = state.settings.dashboard;
     const map = dashboard.workflowProgress;
@@ -161,7 +215,6 @@ export function initHomeDashboard({
     return false;
   }
 
-  // Drop saved workflow-progress entries for workflows that no longer exist.
   function pruneWorkflowProgress(workflows) {
     const known = new Set(workflows.map((workflow) => String(workflow?.id || '')).filter(Boolean));
     const progressMap = state.settings.dashboard.workflowProgress;
@@ -176,7 +229,6 @@ export function initHomeDashboard({
     return changed;
   }
 
-  // Ensure the selected workflow id always points to a valid dashboard workflow.
   function normalizeCurrentWorkflowId(workflows) {
     const dashboard = state.settings.dashboard;
     const currentId = String(dashboard.currentWorkflowId || '');
@@ -192,7 +244,6 @@ export function initHomeDashboard({
     return true;
   }
 
-  // Parse a YYYY-MM-DD string into a local midnight Date object.
   function parseLocalDate(dateString) {
     const raw = String(dateString || '').trim();
     const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -214,7 +265,6 @@ export function initHomeDashboard({
     return date;
   }
 
-  // Format a Date object as a local YYYY-MM-DD string.
   function formatDateLocal(date) {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -222,7 +272,6 @@ export function initHomeDashboard({
     return `${year}-${month}-${day}`;
   }
 
-  // Convert a day offset into a short human-readable due-date label.
   function formatRelativeDays(dayDelta) {
     if (dayDelta === 0) {
       return 'due today';
@@ -233,16 +282,33 @@ export function initHomeDashboard({
     return `overdue by ${Math.abs(dayDelta)} day(s)`;
   }
 
-  // Render one dashboard passage section with open-sample buttons.
+  function parseTimestamp(rawValue) {
+    const parsed = Date.parse(String(rawValue || '').trim());
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  function formatWaitingAge(timestampMs) {
+    if (!Number.isFinite(timestampMs) || timestampMs <= 0) {
+      return 'waiting';
+    }
+    const elapsedMs = Math.max(0, Date.now() - timestampMs);
+    const elapsedHours = Math.floor(elapsedMs / 3600000);
+    const elapsedDays = Math.floor(elapsedMs / 86400000);
+    if (elapsedDays >= 1) {
+      return `${elapsedDays} day(s) waiting`;
+    }
+    if (elapsedHours >= 1) {
+      return `${elapsedHours} hour(s) waiting`;
+    }
+    return 'started today';
+  }
+
   function renderPassageRows(host, rows, { section }) {
     if (!rows.length) {
       host.innerHTML = '<p class="small-note">None.</p>';
       return;
     }
     host.innerHTML = rows.map((row) => {
-      const mainLabel = row.sample.code
-        ? `${row.sample.code} - ${row.sample.name || ''}`
-        : (row.sample.name || row.sample.id || 'Unnamed sample');
       const detail = section === 'unconfigured'
         ? 'Missing passage date or interval.'
         : `${formatDateLocal(row.dueDate)} (${formatRelativeDays(row.daysFromToday)})`;
@@ -250,7 +316,7 @@ export function initHomeDashboard({
       return `
         <article class="dashboard-item">
           <div>
-            <strong>${safeText(mainLabel)}</strong>
+            <strong>${safeText(sampleLabel(row.sample))}</strong>
             <p class="small-note">${safeText(detail)}</p>
           </div>
           <button
@@ -263,8 +329,7 @@ export function initHomeDashboard({
     }).join('');
   }
 
-  // Compute overdue, upcoming, and unconfigured cell-passage reminders from samples.
-  function renderPassageWidget() {
+  function collectPassageRows() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const soonLimit = new Date(today);
@@ -301,20 +366,26 @@ export function initHomeDashboard({
     soon.sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
     unconfigured.sort((a, b) => String(a.sample?.updatedAt || '').localeCompare(String(b.sample?.updatedAt || '')));
 
-    passageSummary.textContent = `Overdue: ${overdue.length} | Due in 3 days: ${soon.length} | Unconfigured: ${unconfigured.length}`;
-    renderPassageRows(overdueList, overdue, { section: 'overdue' });
-    renderPassageRows(soonList, soon, { section: 'soon' });
-    renderPassageRows(unconfiguredList, unconfigured, { section: 'unconfigured' });
+    return {
+      overdue,
+      soon,
+      unconfigured
+    };
   }
 
-  // Resolve a workflow protocol block to its current protocol name.
+  function renderPassageWidget(passageRows) {
+    passageSummary.textContent = `Overdue: ${passageRows.overdue.length} | Due in 3 days: ${passageRows.soon.length} | Unconfigured: ${passageRows.unconfigured.length}`;
+    renderPassageRows(overdueList, passageRows.overdue, { section: 'overdue' });
+    renderPassageRows(soonList, passageRows.soon, { section: 'soon' });
+    renderPassageRows(unconfiguredList, passageRows.unconfigured, { section: 'unconfigured' });
+  }
+
   function protocolNameById(protocolId) {
     const protocol = (Array.isArray(state.protocols) ? state.protocols : [])
       .find((item) => item.id === protocolId);
     return protocol?.name || 'Missing protocol';
   }
 
-  // Resolve an assignee id to a displayable member name.
   function memberNameById(memberId) {
     if (!memberId) {
       return 'Unassigned';
@@ -324,7 +395,6 @@ export function initHomeDashboard({
     return member?.name || memberId;
   }
 
-  // Build a readable label for one workflow block in dashboard progress lists.
   function blockLabel(block, index) {
     const type = String(block?.type || '').trim().toLowerCase();
     if (type === 'protocol') {
@@ -334,7 +404,6 @@ export function initHomeDashboard({
     return `Block ${index + 1}: ${text || 'Text block'}`;
   }
 
-  // Build a lookup of upstream dependencies for each workflow block.
   function buildUpstreamMap(workflow) {
     const map = new Map();
     (workflow?.blocks || []).forEach((block) => {
@@ -351,7 +420,6 @@ export function initHomeDashboard({
     return map;
   }
 
-  // Determine the next actionable workflow block based on finished dependencies.
   function computeNextStep(workflow, finishedSet) {
     const blocks = Array.isArray(workflow?.blocks) ? workflow.blocks : [];
     const unfinished = blocks.filter((block) => !finishedSet.has(block.id));
@@ -368,39 +436,49 @@ export function initHomeDashboard({
     return { block: unfinished[0], complete: false, fallback: true };
   }
 
-  // Render workflow selection, next-step guidance, and block completion toggles.
-  function renderWorkflowWidget() {
+  function buildWorkflowContext() {
     const workflows = workflowsSortedByRecent();
     let changed = false;
     changed = pruneWorkflowProgress(workflows) || changed;
     changed = normalizeCurrentWorkflowId(workflows) || changed;
 
     const currentWorkflowId = String(state.settings.dashboard.currentWorkflowId || '');
+    const workflow = workflows.find((item) => item.id === currentWorkflowId) || null;
+    let finished = new Set();
+    let next = { block: null, complete: false, fallback: false };
+
+    if (workflow) {
+      changed = normalizeWorkflowProgress(workflow) || changed;
+      finished = new Set(state.settings.dashboard.workflowProgress[workflow.id] || []);
+      next = computeNextStep(workflow, finished);
+    }
+
+    return {
+      workflows,
+      currentWorkflowId,
+      workflow,
+      finished,
+      next,
+      changed
+    };
+  }
+
+  function renderWorkflowWidget(context) {
+    const { workflows, currentWorkflowId, workflow, finished, next } = context;
     workflowSelect.innerHTML = workflows.length
-      ? workflows.map((workflow) => (
-        `<option value="${safeText(workflow.id)}">${safeText(workflow.name || 'Untitled workflow')}</option>`
+      ? workflows.map((item) => (
+        `<option value="${safeText(item.id)}">${safeText(item.name || 'Untitled workflow')}</option>`
       )).join('')
       : '<option value="">No workflows available</option>';
     workflowSelect.disabled = !workflows.length;
-    if (workflows.length) {
-      workflowSelect.value = currentWorkflowId;
-    } else {
-      workflowSelect.value = '';
-    }
+    workflowSelect.value = workflows.length ? currentWorkflowId : '';
 
-    const workflow = workflows.find((item) => item.id === currentWorkflowId);
     if (!workflow) {
       workflowNextStep.textContent = 'No workflow selected. Create a workflow to track next steps.';
       workflowProgressList.innerHTML = '<p class="small-note">No workflow progress to display.</p>';
-      if (changed) {
-        persist();
-      }
       return;
     }
 
-    changed = normalizeWorkflowProgress(workflow) || changed;
-    const finished = new Set(state.settings.dashboard.workflowProgress[workflow.id] || []);
-    const next = computeNextStep(workflow, finished);
     const total = workflow.blocks.length;
     const doneCount = finished.size;
     if (next.complete) {
@@ -431,13 +509,144 @@ export function initHomeDashboard({
         `;
       }).join('')
       : '<p class="small-note">This workflow has no blocks yet.</p>';
+  }
 
-    if (changed) {
-      persist();
+  function collectIncubationRows() {
+    return (Array.isArray(state.notebookEntries) ? state.notebookEntries : [])
+      .filter((entry) => String(entry?.notebookState || '').trim().toLowerCase() === 'planned')
+      .map((entry) => ({
+        entry,
+        timestampMs: parseTimestamp(entry?.updatedAt || entry?.createdAt || '')
+      }))
+      .sort((a, b) => a.timestampMs - b.timestampMs);
+  }
+
+  function renderIncubationWidget(rows) {
+    incubationSummary.textContent = rows.length
+      ? `${rows.length} planned notebook follow-up(s) still waiting.`
+      : 'No planned follow-ups waiting.';
+    if (!rows.length) {
+      incubationList.innerHTML = '<p class="small-note">Nothing is parked in a planned state right now.</p>';
+      return;
+    }
+    incubationList.innerHTML = rows.map(({ entry, timestampMs }) => `
+      <article class="dashboard-item">
+        <div>
+          <strong>${safeText(String(entry?.protocolName || 'Untitled notebook page'))}</strong>
+          <p class="small-note">${safeText(String(entry?.projectName || 'Unassigned project'))} | ${safeText(formatWaitingAge(timestampMs))}</p>
+        </div>
+        <button
+          type="button"
+          class="ghost-btn"
+          data-dashboard-action="notebook"
+        >Open</button>
+      </article>
+    `).join('');
+  }
+
+  function buildTodayItems({ passageRows, workflowContext, incubationRows }) {
+    const items = [];
+    const workflow = workflowContext.workflow;
+    const workflowOpenCount = workflow
+      ? Math.max(0, workflow.blocks.length - workflowContext.finished.size)
+      : 0;
+
+    if (workflow && !workflowContext.next.complete && workflowContext.next.block) {
+      const nextIndex = workflow.blocks.findIndex((block) => block.id === workflowContext.next.block.id);
+      items.push({
+        title: blockLabel(workflowContext.next.block, nextIndex),
+        detail: `${workflowContext.finished.size}/${workflow.blocks.length} blocks complete`,
+        action: 'workflow',
+        actionLabel: 'Workflow'
+      });
+    }
+
+    passageRows.overdue.slice(0, 2).forEach((row) => {
+      items.push({
+        title: sampleLabel(row.sample),
+        detail: `Cell passage ${formatRelativeDays(row.daysFromToday)}`,
+        action: 'samples',
+        actionLabel: 'Samples'
+      });
+    });
+
+    if (!passageRows.overdue.length) {
+      passageRows.soon.slice(0, 1).forEach((row) => {
+        items.push({
+          title: sampleLabel(row.sample),
+          detail: `Cell passage ${formatRelativeDays(row.daysFromToday)}`,
+          action: 'samples',
+          actionLabel: 'Samples'
+        });
+      });
+    }
+
+    incubationRows.slice(0, 2).forEach(({ entry, timestampMs }) => {
+      items.push({
+        title: String(entry?.protocolName || 'Planned notebook follow-up'),
+        detail: `${String(entry?.projectName || 'Unassigned project')} | ${formatWaitingAge(timestampMs)}`,
+        action: 'notebook',
+        actionLabel: 'Notebook'
+      });
+    });
+
+    return {
+      items: items.slice(0, 4),
+      counts: {
+        overdue: passageRows.overdue.length,
+        workflowOpen: workflowOpenCount,
+        incubation: incubationRows.length
+      }
+    };
+  }
+
+  function renderTodayWidget(todayData) {
+    todayOverdueCount.textContent = String(todayData.counts.overdue);
+    todayWorkflowCount.textContent = String(todayData.counts.workflowOpen);
+    todayIncubationCount.textContent = String(todayData.counts.incubation);
+
+    if (!todayData.items.length) {
+      todaySummary.textContent = 'Nothing urgent is waiting on the bench right now.';
+      todayList.innerHTML = '<p class="small-note">The dashboard is clear. Use Quick Actions to jump into a workspace.</p>';
+      return;
+    }
+
+    todaySummary.textContent = `${todayData.items.length} active item(s) need attention today.`;
+    todayList.innerHTML = todayData.items.map((item) => `
+      <article class="dashboard-item">
+        <div>
+          <strong>${safeText(item.title)}</strong>
+          <p class="small-note">${safeText(item.detail)}</p>
+        </div>
+        <button
+          type="button"
+          class="ghost-btn"
+          data-dashboard-action="${safeText(item.action)}"
+        >${safeText(item.actionLabel)}</button>
+      </article>
+    `).join('');
+  }
+
+  function syncQuickLogInput() {
+    const draft = String(state.settings.dashboard.quickLogDraft || '');
+    if (quickLogInput.value !== draft) {
+      quickLogInput.value = draft;
     }
   }
 
-  // Format remaining timer milliseconds as MM:SS or HH:MM:SS.
+  function setQuickLogStatus(message) {
+    quickLogStatus.textContent = String(message || '').trim() || 'Type a bench note to keep it handy on this screen.';
+  }
+
+  function renderQuickLogWidget() {
+    syncQuickLogInput();
+    if (String(state.settings.dashboard.quickLogDraft || '').trim()) {
+      setQuickLogStatus('Draft saved locally. Press Command/Ctrl+Enter to send it to the Assistant.');
+      return;
+    }
+    setQuickLogStatus('Type a bench note to keep it handy on this screen.');
+  }
+
   function formatTimer(ms) {
     const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
     const hours = Math.floor(totalSeconds / 3600);
@@ -449,7 +658,6 @@ export function initHomeDashboard({
     return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
   }
 
-  // Format durations for compact list labels such as "8m 23s left".
   function formatTimerSummary(ms) {
     const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
     const hours = Math.floor(totalSeconds / 3600);
@@ -461,7 +669,6 @@ export function initHomeDashboard({
     return `${minutes}m ${String(seconds).padStart(2, '0')}s left`;
   }
 
-  // Render the live local time and date shown at the top of the timer card.
   function renderLocalClock() {
     const now = new Date();
     localTimeDisplay.textContent = now.toLocaleTimeString([], {
@@ -477,7 +684,6 @@ export function initHomeDashboard({
     });
   }
 
-  // Stop the repeating timer tick interval when the timer is paused or reset.
   function stopTimerTick() {
     if (!timerTickHandle) {
       return;
@@ -486,7 +692,6 @@ export function initHomeDashboard({
     timerTickHandle = 0;
   }
 
-  // Start the repeating timer tick interval if it is not already running.
   function startTimerTick() {
     if (timerTickHandle) {
       return;
@@ -494,7 +699,6 @@ export function initHomeDashboard({
     timerTickHandle = window.setInterval(onTimerTick, 250);
   }
 
-  // Recompute the remaining timer duration from the stored end timestamp.
   function syncRemainingFromNow() {
     if (!timerState.running) {
       return;
@@ -502,7 +706,6 @@ export function initHomeDashboard({
     timerState.remainingMs = Math.max(0, timerState.endAtMs - Date.now());
   }
 
-  // Apply a new timer duration from a preset or custom minute value.
   function setTimerDuration(minutes) {
     const rounded = Math.round(Number(minutes));
     if (!Number.isFinite(rounded) || rounded <= 0) {
@@ -522,13 +725,10 @@ export function initHomeDashboard({
     timerState.alert = false;
     timerHint = '';
     stopTimerTick();
-    if (timerCustomMinutesInput) {
-      timerCustomMinutesInput.value = String(rounded);
-    }
+    timerCustomMinutesInput.value = String(rounded);
     renderTimerWidget();
   }
 
-  // Render the user's recently used timer durations as quick-load rows.
   function renderSavedTimers() {
     const currentMinutes = Math.max(1, Math.round(timerState.durationMs / 60000));
     const rows = [
@@ -564,7 +764,6 @@ export function initHomeDashboard({
     `).join('');
   }
 
-  // Render the timer display, status text, and button enabled states.
   function renderTimerWidget() {
     syncRemainingFromNow();
     timerDisplay.textContent = formatTimer(timerState.remainingMs);
@@ -587,7 +786,6 @@ export function initHomeDashboard({
     renderSavedTimers();
   }
 
-  // Advance the timer, detect completion, and trigger the alert state when time expires.
   function onTimerTick() {
     syncRemainingFromNow();
     if (timerState.remainingMs > 0) {
@@ -603,12 +801,10 @@ export function initHomeDashboard({
     renderTimerWidget();
   }
 
-  // Read the custom minute input and apply it to the timer.
   function onTimerSet() {
     setTimerDuration(timerCustomMinutesInput.value);
   }
 
-  // Start or resume the dashboard timer from its current remaining duration.
   function onTimerStart() {
     if (timerState.running) {
       return;
@@ -624,7 +820,6 @@ export function initHomeDashboard({
     renderTimerWidget();
   }
 
-  // Pause the timer while preserving the remaining time.
   function onTimerPause() {
     if (!timerState.running) {
       return;
@@ -637,7 +832,6 @@ export function initHomeDashboard({
     renderTimerWidget();
   }
 
-  // Reset the timer back to its configured full duration.
   function onTimerReset() {
     timerState.running = false;
     timerState.endAtMs = 0;
@@ -648,7 +842,6 @@ export function initHomeDashboard({
     renderTimerWidget();
   }
 
-  // Load one of the saved timer durations from the timer card list.
   function onSavedTimerClick(event) {
     const button = event.target.closest('[data-dashboard-saved-minutes]');
     if (!button) {
@@ -658,7 +851,6 @@ export function initHomeDashboard({
     setTimerDuration(minutes);
   }
 
-  // Open sample search when a passage reminder row requests a specific sample.
   function onPassageListClick(event) {
     const button = event.target.closest('[data-dashboard-open-sample]');
     if (!button) {
@@ -668,15 +860,91 @@ export function initHomeDashboard({
     onOpenSampleSearch(query);
   }
 
-  // Persist the selected workflow and refresh the workflow dashboard widget.
+  function runDashboardAction(action) {
+    const normalized = String(action || '').trim().toLowerCase();
+    if (!normalized) {
+      return;
+    }
+    if (normalized === 'samples') {
+      onOpenSamples();
+      return;
+    }
+    if (normalized === 'workflow') {
+      onOpenWorkflow();
+      return;
+    }
+    if (normalized === 'notebook') {
+      onOpenNotebook();
+      return;
+    }
+    if (normalized === 'assistant') {
+      onOpenAssistant();
+    }
+  }
+
+  function onDashboardActionClick(event) {
+    const button = event.target.closest('[data-dashboard-action]');
+    if (!button) {
+      return;
+    }
+    runDashboardAction(button.dataset.dashboardAction);
+  }
+
+  function onQuickActionClick(event) {
+    const button = event.currentTarget;
+    runDashboardAction(button?.dataset?.dashboardAction);
+  }
+
+  function onQuickLogInput() {
+    ensureDashboardState();
+    state.settings.dashboard.quickLogDraft = quickLogInput.value;
+    persist();
+    if (quickLogInput.value.trim()) {
+      setQuickLogStatus('Draft saved locally. Press Command/Ctrl+Enter to send it to the Assistant.');
+      return;
+    }
+    setQuickLogStatus('Type a bench note to keep it handy on this screen.');
+  }
+
+  function onQuickLogKeydown(event) {
+    if (event.key !== 'Enter' || !(event.metaKey || event.ctrlKey)) {
+      return;
+    }
+    event.preventDefault();
+    onQuickLogSendToAgent();
+  }
+
+  function onQuickLogSendToAgent() {
+    const value = quickLogInput.value.trim();
+    if (!value) {
+      setQuickLogStatus('Add a bench note before sending it to the Assistant.');
+      return;
+    }
+    const sent = onSendQuickLogToAgent(value);
+    if (sent === false) {
+      setQuickLogStatus('Unable to hand the note to the Assistant from this screen.');
+      return;
+    }
+    state.settings.dashboard.quickLogDraft = '';
+    quickLogInput.value = '';
+    persist();
+    setQuickLogStatus('Sent to Assistant.');
+  }
+
+  function onQuickLogClear() {
+    state.settings.dashboard.quickLogDraft = '';
+    quickLogInput.value = '';
+    persist();
+    setQuickLogStatus('Quick log cleared.');
+  }
+
   function onWorkflowSelected() {
     ensureDashboardState();
     state.settings.dashboard.currentWorkflowId = String(workflowSelect.value || '');
     persist();
-    renderWorkflowWidget();
+    render();
   }
 
-  // Toggle one workflow block between complete and incomplete in persisted dashboard progress.
   function onWorkflowProgressClick(event) {
     const button = event.target.closest('[data-dashboard-workflow-toggle]');
     if (!button) {
@@ -704,24 +972,38 @@ export function initHomeDashboard({
       .map((block) => block.id)
       .filter((id) => current.has(id));
     persist();
-    renderWorkflowWidget();
+    render();
   }
 
-  // Refresh all dashboard widgets from current app state.
   function render() {
-    if (ensureDashboardState()) {
-      persist();
-    }
+    let changed = ensureDashboardState();
     if (!localClockHandle) {
       renderLocalClock();
       localClockHandle = window.setInterval(renderLocalClock, 1000);
     }
-    renderPassageWidget();
-    renderWorkflowWidget();
+
+    const passageRows = collectPassageRows();
+    const workflowContext = buildWorkflowContext();
+    const incubationRows = collectIncubationRows();
+    const todayData = buildTodayItems({
+      passageRows,
+      workflowContext,
+      incubationRows
+    });
+
+    changed = workflowContext.changed || changed;
+    if (changed) {
+      persist();
+    }
+
+    renderTodayWidget(todayData);
+    renderPassageWidget(passageRows);
+    renderWorkflowWidget(workflowContext);
+    renderIncubationWidget(incubationRows);
+    renderQuickLogWidget();
     renderTimerWidget();
   }
 
-  // Public API exposed to the rest of the app.
   return {
     render
   };

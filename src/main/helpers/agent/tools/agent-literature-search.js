@@ -1,6 +1,9 @@
 'use strict';
 
+const { isAgentRequestAbortError } = require('../shared/agent-request-context.js');
+
 const { createAgentLlmRuntimeHelpers } = require('../shared/agent-llm-utils.js');
+const { buildKeywordStyleLiteratureQuery, extractKeywordPhrases } = require('../shared/agent-literature-query-utils.js');
 
 const LITERATURE_SOURCES = Object.freeze({
   AUTO: 'auto',
@@ -201,6 +204,9 @@ function createLiteratureSearchRuntime(deps = {}) {
   const searchCrossrefRecordsOverride = typeof deps.searchCrossrefRecords === 'function' ? deps.searchCrossrefRecords : null;
   const searchUniProtRecordsOverride = typeof deps.searchUniProtRecords === 'function' ? deps.searchUniProtRecords : null;
   const searchEuropePmcRecordsOverride = typeof deps.searchEuropePmcRecords === 'function' ? deps.searchEuropePmcRecords : null;
+  const paperContextLoaderRuntime = deps.paperContextLoaderRuntime && typeof deps.paperContextLoaderRuntime === 'object'
+    ? deps.paperContextLoaderRuntime
+    : null;
 
   function requireFetch(sourceName) {
     if (!fetchImpl) {
@@ -244,31 +250,13 @@ function createLiteratureSearchRuntime(deps = {}) {
   }
 
   function normalizeQueryTerms(input = {}) {
-    const source = ensureObject(input);
-    const parserPayload = ensureObject(source.parser_payload || source.parserPayload);
-    const entities = ensureObject(parserPayload.entities);
-    return uniqueStrings([
-      cleanText(source.query, 400),
-      cleanText(source.topic, 240),
-      cleanText(source.message, 800),
-      cleanText(source.paper_title || source.paperTitle || entities.paper_title, 240),
-      cleanText(source.protein_name || source.proteinName || entities.protein_name, 180),
-      cleanText(source.compound_name || source.compoundName || entities.compound_name, 180),
-      cleanText(source.activity_type || source.activityType || entities.activity_type, 180),
-      cleanText(source.requested_output || entities.requested_output, 180)
-    ], 8);
+    return uniqueStrings(extractKeywordPhrases(buildLiteratureQuery(input), 50), 50);
   }
 
   function buildLiteratureQuery(input = {}) {
-    const terms = normalizeQueryTerms(input);
-    if (!terms.length) {
-      return '';
-    }
-    const first = cleanText(terms[0], 600);
-    if (first && cleanText(input.query || input.topic || input.message, 20)) {
-      return first;
-    }
-    return cleanText(terms.join(' '), 600);
+    return cleanText(buildKeywordStyleLiteratureQuery(input, {
+      maxLength: 600
+    }), 600);
   }
 
   function queryLooksProteinFocused(query, input = {}) {
@@ -632,6 +620,9 @@ function createLiteratureSearchRuntime(deps = {}) {
         sourceCounts[sourceName] = items.length;
         results.push(...items);
       } catch (error) {
+        if (isAgentRequestAbortError(error)) {
+          throw error;
+        }
         sourceCounts[sourceName] = 0;
         sourceErrors[sourceName] = cleanText(error?.message, 600) || `${SOURCE_LABELS[sourceName] || sourceName} search failed.`;
       }
@@ -649,6 +640,9 @@ function createLiteratureSearchRuntime(deps = {}) {
         sourceCounts[LITERATURE_SOURCES.WEB] = webItems.length;
         results.push(...webItems);
       } catch (error) {
+        if (isAgentRequestAbortError(error)) {
+          throw error;
+        }
         sourceCounts[LITERATURE_SOURCES.WEB] = 0;
         sourceErrors[LITERATURE_SOURCES.WEB] = cleanText(error?.message, 600) || 'Web search failed.';
       }
@@ -660,6 +654,42 @@ function createLiteratureSearchRuntime(deps = {}) {
       const count = toFiniteInteger(sourceCounts[sourceName], 0);
       return `${SOURCE_LABELS[sourceName] || sourceName}: ${count}`;
     }).join(', ');
+    let loadedContextBlocks = [];
+    let paperContextSummary = '';
+    let papersReadCount = 0;
+
+    if (paperContextLoaderRuntime && typeof paperContextLoaderRuntime.loadPaperContexts === 'function' && items.length) {
+      try {
+        const paperContextResult = await paperContextLoaderRuntime.loadPaperContexts({
+          provider: cleanText(source.provider, 80),
+          endpoint: cleanText(source.endpoint, 2000),
+          apiKey: cleanText(source.apiKey, 400),
+          model: cleanText(source.model, 120),
+          traceContext: source.traceContext || null,
+          message: cleanText(source.message, 1600),
+          topic: cleanText(source.topic, 240),
+          query,
+          max_papers: clampInteger(source.max_papers, 8, 1, 8),
+          figure_policy: cleanText(source.figure_policy, 40) || 'when_needed',
+          items
+        });
+        loadedContextBlocks = asArray(paperContextResult?.loaded_context_blocks)
+          .map((block) => ({
+            paper_id: cleanText(block?.paper_id, 120),
+            paper_title: cleanText(block?.paper_title, 320),
+            section_label: cleanText(block?.section_label, 160),
+            excerpt: cleanText(block?.excerpt, 1800),
+            relevance_reason: cleanText(block?.relevance_reason, 260),
+            source: cleanText(block?.source, 80),
+            evidence_kind: cleanText(block?.evidence_kind, 40)
+          }))
+          .filter((block) => block.paper_id && block.excerpt);
+        papersReadCount = toFiniteInteger(paperContextResult?.papers_read_count, 0);
+        paperContextSummary = cleanText(paperContextResult?.summary, 320);
+      } catch (error) {
+        paperContextSummary = cleanText(error?.message, 320) || 'Paper context loading failed.';
+      }
+    }
 
     return {
       ok: true,
@@ -668,10 +698,12 @@ function createLiteratureSearchRuntime(deps = {}) {
       sources: executedSources,
       items,
       citations,
+      loaded_context_blocks: loadedContextBlocks,
+      papers_read_count: papersReadCount,
       source_counts: cloneJson(sourceCounts, {}),
       source_errors: cloneJson(sourceErrors, {}),
       summary: items.length
-        ? `Found ${items.length} literature result${items.length === 1 ? '' : 's'} (${sourceSummary}).`
+        ? `Found ${items.length} literature result${items.length === 1 ? '' : 's'} (${sourceSummary}).${paperContextSummary ? ` ${paperContextSummary}` : ''}`
         : `No literature results found (${sourceSummary || 'no sources executed'}).`
     };
   }

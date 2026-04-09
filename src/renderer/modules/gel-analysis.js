@@ -7,6 +7,10 @@ export function initGelAnalysis(options) {
   return gelIndexModule.initGelAnalysis(options);
 }
 
+export function selectViewerBaseImageData(currentImage, preprocessed = null) {
+  return gelIndexModule.selectViewerBaseImageData(currentImage, preprocessed);
+}
+
 export function clamp(value, min, max) {
   return gelSharedModule.clamp(value, min, max);
 }

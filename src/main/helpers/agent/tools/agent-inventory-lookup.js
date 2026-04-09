@@ -4,15 +4,12 @@ function defaultAsArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
-function defaultCleanText(value, maxLength = 500) {
+function defaultCleanText(value, _maxLength = 500) {
   const text = String(value || '').trim();
   if (!text) {
     return '';
   }
-  if (text.length <= maxLength) {
-    return text;
-  }
-  return `${text.slice(0, maxLength)}...`;
+  return text;
 }
 
 function defaultEnsureObject(value) {
@@ -598,8 +595,8 @@ function createAgentInventoryLookupRuntime(deps = {}) {
       inventorySearch.normalized_query
       || entities.inventory_item
       || entities.compound_name
-      || entities.requested_output
-      || message,
+      || message
+      || entities.requested_output,
       300
     );
   }

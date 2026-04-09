@@ -10,15 +10,12 @@ function asArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
-function cleanText(value, maxLength = 2000) {
+function cleanText(value, _maxLength = 2000) {
   const text = String(value || '').trim();
   if (!text) {
     return '';
   }
-  if (text.length <= maxLength) {
-    return text;
-  }
-  return `${text.slice(0, maxLength)}...`;
+  return text;
 }
 
 function uniqueStrings(values) {
@@ -85,12 +82,13 @@ function truncateToolOutput(toolOutput) {
   };
 }
 
-function createLifecycleRecorder({ requestId } = {}) {
+function createLifecycleRecorder({ requestId, onEvent = null } = {}) {
   return {
     requestId: cleanText(requestId, 80),
     created_at: new Date().toISOString(),
     events: [],
-    flushed_count: 0
+    flushed_count: 0,
+    onEvent: typeof onEvent === 'function' ? onEvent : null
   };
 }
 
@@ -109,6 +107,11 @@ function recordLifecycleEvent(recorder, rawEvent = {}) {
   };
   if (!normalized.stage) {
     return null;
+  }
+  if (normalized.stage === 'tool_call_started') {
+    normalized.direction = 'llm->app';
+  } else if (normalized.stage === 'tool_call_completed' || normalized.stage === 'tool_call_failed') {
+    normalized.direction = 'app->llm';
   }
 
   const toolName = cleanText(event.tool_name || event.toolName, 120);
@@ -148,6 +151,13 @@ function recordLifecycleEvent(recorder, rawEvent = {}) {
     normalized.meta = sanitizeJsonValue(event.meta);
   }
   recorder.events.push(normalized);
+  if (typeof recorder.onEvent === 'function') {
+    try {
+      recorder.onEvent(normalized);
+    } catch {
+      // Keep lifecycle recording resilient even if live progress publishing fails.
+    }
+  }
   return normalized;
 }
 
@@ -301,7 +311,7 @@ function classifyFailureReasons({
       reasons.push('tool_not_found');
       return;
     }
-    if (toolName === 'run_python_sandbox' || message.includes('python')) {
+    if (toolName === 'run_python_sandbox' || toolName === 'python-sandbox' || message.includes('python')) {
       reasons.push('python_exception');
       return;
     }

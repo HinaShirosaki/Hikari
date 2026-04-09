@@ -1,7 +1,7 @@
 {
   "schema_name": "enana_storage_manifest",
   "schema_version": "1.0.0",
-  "generated_at": "2026-03-31T16:22:00.098Z",
+  "generated_at": "2026-04-09T01:06:41.096Z",
   "root_path": "/Users/shiyifan/Projects/Enana/Testdata",
   "discovered_files": [
     {
@@ -9,91 +9,154 @@
       "type": "file",
       "role": "other",
       "size_bytes": 6148,
-      "modified_at": "2026-03-24T16:09:08.855Z"
+      "modified_at": "2026-04-03T00:18:47.000Z"
     },
     {
       "relative_path": "chat_log",
       "type": "directory",
       "role": "other",
       "size_bytes": 0,
-      "modified_at": "2026-03-28T23:37:01.470Z"
+      "modified_at": "2026-04-09T00:59:30.143Z"
     },
     {
       "relative_path": "chat_log/chat-mn43h4o8-ly51chzo.log",
       "type": "file",
       "role": "other",
-      "size_bytes": 190,
-      "modified_at": "2026-03-24T04:08:26.606Z"
+      "size_bytes": 172900,
+      "modified_at": "2026-04-08T03:45:10.491Z"
     },
     {
       "relative_path": "chat_log/chat-mn43h8fd-z3lkxqpu.log",
       "type": "file",
       "role": "other",
-      "size_bytes": 190,
-      "modified_at": "2026-03-24T04:08:31.468Z"
+      "size_bytes": 24358,
+      "modified_at": "2026-04-08T03:32:19.250Z"
     },
     {
       "relative_path": "chat_log/chat-mn43hxya-yw2nl1ru.log",
       "type": "file",
       "role": "other",
-      "size_bytes": 190,
-      "modified_at": "2026-03-24T04:09:04.549Z"
+      "size_bytes": 20117,
+      "modified_at": "2026-04-08T03:28:16.886Z"
     },
     {
       "relative_path": "chat_log/chat-mnayzbm9-mhkem8h7.log",
       "type": "file",
       "role": "other",
-      "size_bytes": 190,
-      "modified_at": "2026-03-28T23:37:00.569Z"
+      "size_bytes": 20615,
+      "modified_at": "2026-04-08T03:28:52.329Z"
     },
     {
       "relative_path": "chat_log/chat-mnayzbx3-5la1li8q.log",
       "type": "file",
       "role": "other",
-      "size_bytes": 190,
-      "modified_at": "2026-03-28T23:37:00.956Z"
+      "size_bytes": 23126,
+      "modified_at": "2026-04-03T01:08:47.385Z"
     },
     {
       "relative_path": "chat_log/chat-mnayzc2r-flqt8iaz.log",
       "type": "file",
       "role": "other",
-      "size_bytes": 190,
-      "modified_at": "2026-03-28T23:37:01.161Z"
+      "size_bytes": 18339,
+      "modified_at": "2026-04-01T20:57:12.603Z"
     },
     {
       "relative_path": "chat_log/chat-mnayzc75-qwlr7732.log",
       "type": "file",
       "role": "other",
-      "size_bytes": 190,
-      "modified_at": "2026-03-28T23:37:01.316Z"
+      "size_bytes": 104749,
+      "modified_at": "2026-04-01T19:23:10.256Z"
     },
     {
       "relative_path": "chat_log/chat-mnayzcbf-zp2bp4k0.log",
       "type": "file",
       "role": "other",
+      "size_bytes": 8240,
+      "modified_at": "2026-04-01T16:51:13.467Z"
+    },
+    {
+      "relative_path": "chat_log/chat-mnq5usuy-v0xbj1as.log",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 16309,
+      "modified_at": "2026-04-08T14:46:56.254Z"
+    },
+    {
+      "relative_path": "chat_log/chat-mnqfnks6-bq150md8.log",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 211482,
+      "modified_at": "2026-04-08T19:23:56.219Z"
+    },
+    {
+      "relative_path": "chat_log/chat-mnqfsq43-xn35aboy.log",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 25474,
+      "modified_at": "2026-04-08T19:24:47.268Z"
+    },
+    {
+      "relative_path": "chat_log/chat-mnqfvngy-5ebt2fmf.log",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 16986,
+      "modified_at": "2026-04-08T19:26:53.004Z"
+    },
+    {
+      "relative_path": "chat_log/chat-mnqfx9nu-l446ivk9.log",
+      "type": "file",
+      "role": "other",
       "size_bytes": 190,
-      "modified_at": "2026-03-28T23:37:01.471Z"
+      "modified_at": "2026-04-08T19:27:50.834Z"
+    },
+    {
+      "relative_path": "chat_log/chat-mnqg1xqu-fqhhvn1a.log",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 340104,
+      "modified_at": "2026-04-08T19:37:08.823Z"
+    },
+    {
+      "relative_path": "chat_log/chat-mnqm21fy-8spv15yf.log",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 293636,
+      "modified_at": "2026-04-08T22:23:26.790Z"
+    },
+    {
+      "relative_path": "chat_log/chat-mnqq9x1c-jic3fywk.log",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 21254,
+      "modified_at": "2026-04-09T00:17:53.628Z"
+    },
+    {
+      "relative_path": "chat_log/chat-mnqrrs2j-hrkmfrmh.log",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 26008,
+      "modified_at": "2026-04-09T00:59:43.865Z"
     },
     {
       "relative_path": "chat_log/index.json",
       "type": "file",
       "role": "data_file",
-      "size_bytes": 4354,
-      "modified_at": "2026-03-28T23:37:01.473Z"
+      "size_bytes": 16345,
+      "modified_at": "2026-04-09T00:59:43.866Z"
     },
     {
       "relative_path": "enana-chemicals.ena.json",
       "type": "file",
       "role": "data_file",
       "size_bytes": 2463,
-      "modified_at": "2026-03-31T16:21:21.994Z"
+      "modified_at": "2026-04-04T02:47:20.394Z"
     },
     {
       "relative_path": "enana-chemicals.index.sqlite",
       "type": "file",
       "role": "sqlite_index",
-      "size_bytes": 94208,
-      "modified_at": "2026-03-31T16:21:22.001Z"
+      "size_bytes": 102400,
+      "modified_at": "2026-04-09T00:59:27.847Z"
     },
     {
       "relative_path": "enana-chemicals.index.sqlite-shm",
@@ -114,21 +177,21 @@
       "type": "file",
       "role": "notebook_sidecar",
       "size_bytes": 139,
-      "modified_at": "2026-03-31T16:21:21.995Z"
+      "modified_at": "2026-04-04T02:47:20.396Z"
     },
     {
       "relative_path": "enana-chemicals.protocols.json",
       "type": "file",
       "role": "protocol_sidecar",
       "size_bytes": 130,
-      "modified_at": "2026-03-31T16:21:21.995Z"
+      "modified_at": "2026-04-04T02:47:20.395Z"
     },
     {
       "relative_path": "enana-sample.notebook-pages.index.sqlite",
       "type": "file",
       "role": "sqlite_index",
-      "size_bytes": 155648,
-      "modified_at": "2026-03-31T16:21:22.188Z"
+      "size_bytes": 176128,
+      "modified_at": "2026-04-09T00:59:44.002Z"
     },
     {
       "relative_path": "enana-sample.notebook-pages.index.sqlite-shm",
@@ -148,29 +211,29 @@
       "relative_path": "enana-sample.notebook-pages.json",
       "type": "file",
       "role": "notebook_sidecar",
-      "size_bytes": 11479391,
-      "modified_at": "2026-03-31T16:21:22.181Z"
+      "size_bytes": 11895983,
+      "modified_at": "2026-04-09T00:59:43.997Z"
     },
     {
       "relative_path": "enana-sample.notebook-pages.notebook-pages.json",
       "type": "file",
       "role": "notebook_sidecar",
       "size_bytes": 2767,
-      "modified_at": "2026-03-31T16:21:22.181Z"
+      "modified_at": "2026-04-09T00:59:43.998Z"
     },
     {
       "relative_path": "enana-sample.notebook-pages.protocols.json",
       "type": "file",
       "role": "protocol_sidecar",
       "size_bytes": 16528,
-      "modified_at": "2026-03-31T16:21:22.181Z"
+      "modified_at": "2026-04-09T00:59:43.998Z"
     },
     {
       "relative_path": "enana-storage-manifest.json",
       "type": "file",
       "role": "storage_manifest",
-      "size_bytes": 15707,
-      "modified_at": "2026-03-31T16:21:21.798Z"
+      "size_bytes": 17839,
+      "modified_at": "2026-04-09T00:59:27.712Z"
     },
     {
       "relative_path": "Project",
@@ -184,7 +247,7 @@
       "type": "file",
       "role": "other",
       "size_bytes": 6148,
-      "modified_at": "2026-03-17T22:21:57.807Z"
+      "modified_at": "2026-04-03T00:18:52.830Z"
     },
     {
       "relative_path": "Project/CD19_CAR_Binder_Optimization",
@@ -247,14 +310,21 @@
       "type": "directory",
       "role": "other",
       "size_bytes": 0,
-      "modified_at": "2026-03-25T22:38:27.224Z"
+      "modified_at": "2026-04-03T00:18:52.834Z"
+    },
+    {
+      "relative_path": "Project/SUMO1/.DS_Store",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 6148,
+      "modified_at": "2026-04-03T00:18:52.835Z"
     },
     {
       "relative_path": "Project/SUMO1/Papers",
       "type": "directory",
       "role": "other",
       "size_bytes": 0,
-      "modified_at": "2026-03-29T20:18:21.100Z"
+      "modified_at": "2026-04-03T14:49:49.609Z"
     },
     {
       "relative_path": "Project/SUMO1/Papers/02_IR_ILN_Rubric_SP26_v2_2.pdf",
@@ -283,6 +353,13 @@
       "role": "other",
       "size_bytes": 3317632,
       "modified_at": "2026-03-29T20:18:21.102Z"
+    },
+    {
+      "relative_path": "Project/SUMO1/Papers/Q857029_V1_TEXAS_A&M_UNIV_20260402_111311.pdf",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 66940,
+      "modified_at": "2026-04-03T14:49:49.610Z"
     },
     {
       "relative_path": "protocol-import-example.json",
@@ -441,6 +518,7 @@
   ],
   "bundles": [
     {
+      "bundle_type": "data_bundle",
       "data_file_path": "enana-chemicals.ena.json",
       "bundle_paths": {
         "protocols_path": "enana-chemicals.protocols.json",
@@ -451,7 +529,7 @@
         "protocols": 0,
         "notebookEntries": 0,
         "chemicals": 3,
-        "personalInventoryContainers": 6
+        "personalInventoryContainers": 8
       },
       "migration": {
         "applied": [
@@ -463,6 +541,7 @@
       }
     },
     {
+      "bundle_type": "data_bundle",
       "data_file_path": "enana-chemicals.protocols.json",
       "bundle_paths": {
         "protocols_path": "enana-chemicals.protocols.protocols.json",
@@ -478,6 +557,7 @@
       "migration": null
     },
     {
+      "bundle_type": "data_bundle",
       "data_file_path": "enana-sample.notebook-pages.json",
       "bundle_paths": {
         "protocols_path": "enana-sample.notebook-pages.protocols.json",
@@ -488,7 +568,7 @@
         "protocols": 6,
         "notebookEntries": 3,
         "chemicals": 3,
-        "personalInventoryContainers": 6
+        "personalInventoryContainers": 8
       },
       "migration": {
         "applied": [
@@ -500,6 +580,7 @@
       }
     },
     {
+      "bundle_type": "data_bundle",
       "data_file_path": "enana-sample.notebook-pages.protocols.json",
       "bundle_paths": {
         "protocols_path": "enana-sample.notebook-pages.protocols.protocols.json",
@@ -529,7 +610,7 @@
     "protocols": 6,
     "notebookEntries": 3,
     "chemicals": 3,
-    "personalInventoryContainers": 6,
+    "personalInventoryContainers": 8,
     "sequenceEntries": 5
   },
   "warnings": []

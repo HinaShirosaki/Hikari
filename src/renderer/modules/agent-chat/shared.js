@@ -132,6 +132,11 @@ export function toConversation(messages) {
 }
 
 export const TOOL_ACTIVITY_LABELS = {
+  'inventory-lookup': 'Checking inventory records',
+  'record-lookup': 'Checking lab records',
+  'notebook-draft': 'Preparing notebook draft',
+  'python-sandbox': 'Running Python sandbox',
+  'literature-search': 'Searching literature sources',
   search_projects: 'Checking project records',
   search_protocols: 'Checking stored protocols',
   search_notebook_entries: 'Checking lab notebook pages',
@@ -149,7 +154,6 @@ export const TOOL_ACTIVITY_LABELS = {
   toolbox_oligo_properties: 'Computing oligo properties',
   toolbox_extinction_coefficient: 'Computing extinction coefficient',
   toolbox_qpcr_efficiency: 'Computing qPCR efficiency',
-  toolbox_plannotate: 'Running pLannotate annotation',
   toolbox_crispr_sgrna_designer: 'Designing CRISPR sgRNAs',
   run_python_sandbox: 'Running Python sandbox',
   hybrid_web_fallback: 'Merging web and literature evidence',

@@ -6,6 +6,11 @@
 // - save notebook entries plus imported result files into app state
 // - support editing existing entries and exporting them to PDF
 import { exportNotebookEntryPdf } from './pdf-export.js';
+import {
+  buildNotebookAssayPlatePreviewHtml,
+  findLatestLinkedRecord,
+  formatLinkedPreviewTimestamp
+} from './notebook-linked-previews.js';
 
 // Initialize the biology notebook module and wire it to app state plus DOM controls.
 export function initLabNotebook({
@@ -14,6 +19,8 @@ export function initLabNotebook({
   createId,
   safeText,
   onNotebookEntriesChanged,
+  onCreateLinkedAssay,
+  onCreateLinkedGel,
   notebookType = 'biology'
 }) {
   const PLACEHOLDER_TOKEN_REGEX = /\{\{ph:([^}]+)\}\}/g;
@@ -31,16 +38,29 @@ export function initLabNotebook({
   const notebookSteps = document.getElementById('biology-notebook-steps');
   const notebookResult = document.getElementById('biology-notebook-result');
   const notebookResultFile = document.getElementById('biology-notebook-result-file');
+  const notebookAddGelBtn = document.getElementById('biology-notebook-add-gel-btn');
+  const notebookAddAssayBtn = document.getElementById('biology-notebook-add-assay-btn');
+  const notebookLinkedResults = document.getElementById('biology-notebook-linked-results');
   const saveNotebookBtn = document.getElementById('save-biology-notebook-btn');
   const cancelEditBtn = document.getElementById('cancel-biology-notebook-edit-btn');
   const notebookEntryList = document.getElementById('biology-notebook-entry-list');
 
   let editingEntryId = null;
+  const linkedPreviewCache = new Map();
+  let linkedPreviewRenderToken = 0;
 
   notebookProjectSelect.addEventListener('change', onProjectChange);
   notebookProtocolSearchInput?.addEventListener('input', onProtocolSearchInput);
   notebookProtocolSelect.addEventListener('change', onProtocolChange);
-  saveNotebookBtn.addEventListener('click', saveEntry);
+  saveNotebookBtn.addEventListener('click', () => {
+    void saveEntry();
+  });
+  notebookAddGelBtn?.addEventListener('click', () => {
+    void onAddGelClick();
+  });
+  notebookAddAssayBtn?.addEventListener('click', () => {
+    void onAddAssayClick();
+  });
   cancelEditBtn?.addEventListener('click', cancelEdit);
   notebookEntryList?.addEventListener('click', onEntryListClick);
   notebookExportBtn?.addEventListener('click', onExportButtonClick);
@@ -50,6 +70,7 @@ export function initLabNotebook({
   notebookSteps.addEventListener('keydown', onInlinePlaceholderKeydown);
   updateSaveButtonLabel();
   syncViewerVisibility();
+  renderLinkedPreviews(null);
 
   function onProjectChange() {
     editingEntryId = null;
@@ -147,7 +168,7 @@ export function initLabNotebook({
     const project = state.projects.find((item) => item.id === projectId);
     const protocol = state.protocols.find((item) => item.id === protocolId);
     if (!project || !protocol) {
-      return;
+      return null;
     }
 
     const values = {};
@@ -178,7 +199,7 @@ export function initLabNotebook({
       });
     } catch (error) {
       window.alert(String(error?.message || error || 'Failed to store notebook files.'));
-      return;
+      return null;
     }
 
     const resultFileRecords = existingResultFileRecords.concat(importedResultFileRecords);
@@ -236,6 +257,7 @@ export function initLabNotebook({
     if (typeof onNotebookEntriesChanged === 'function') {
       onNotebookEntriesChanged();
     }
+    return entry;
   }
 
   async function ensureStorageFolderExists(storageFolder) {
@@ -455,6 +477,183 @@ export function initLabNotebook({
       : 'Select a project and protocol to start a page.';
   }
 
+  function formatGelAnalysisTypeLabel(type) {
+    if (type === 'western') {
+      return 'Western Blot';
+    }
+    if (type === 'agarose') {
+      return 'DNA/RNA Agarose';
+    }
+    return 'SDS-PAGE';
+  }
+
+  function formatAssayAnalysisMethodLabel(method) {
+    const source = String(method || '').trim();
+    if (!source) {
+      return 'Analysis plot';
+    }
+    return source
+      .split('_')
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
+  }
+
+  function getActiveEntry() {
+    if (!editingEntryId) {
+      return null;
+    }
+    return state.notebookEntries.find((entry) => entry.id === editingEntryId && matchesNotebookType(entry)) || null;
+  }
+
+  async function resolveLinkedGelPreviewImage(analysis) {
+    const previewImagePath = String(analysis?.previewImagePath || '').trim();
+    if (previewImagePath) {
+      if (linkedPreviewCache.has(previewImagePath)) {
+        return linkedPreviewCache.get(previewImagePath);
+      }
+      if (window.enanaApi?.readFileBase64) {
+        const response = await window.enanaApi.readFileBase64(previewImagePath);
+        if (response?.ok && response.dataBase64) {
+          const dataUrl = `data:image/png;base64,${response.dataBase64}`;
+          linkedPreviewCache.set(previewImagePath, dataUrl);
+          return dataUrl;
+        }
+      }
+    }
+    return String(analysis?.previewImageDataUrl || '').trim();
+  }
+
+  function buildLinkedGelPreviewHtml(analysis, previewImage) {
+    const updatedAt = formatLinkedPreviewTimestamp(analysis?.updatedAt);
+    const imageHtml = previewImage
+      ? `
+        <figure class="biology-notebook-linked-preview-figure">
+          <img src="${safeText(previewImage)}" alt="${safeText(analysis?.name || 'Linked gel preview')}" />
+          <figcaption class="biology-notebook-linked-preview-caption small-note">
+            ${safeText(`${formatGelAnalysisTypeLabel(analysis?.analysisType)} · Updated ${updatedAt}`)}
+          </figcaption>
+        </figure>
+      `
+      : '<p class="small-note">Save a gel image to show its linked preview here.</p>';
+
+    return `
+      <article class="biology-notebook-linked-preview">
+        <div class="biology-notebook-linked-preview-head">
+          <div class="biology-notebook-linked-preview-copy">
+            <h4>${safeText(analysis?.name || 'Linked Gel')}</h4>
+            <p class="biology-notebook-linked-preview-meta">${safeText(`${formatGelAnalysisTypeLabel(analysis?.analysisType)} · ${analysis?.projectName || 'No project'}`)}</p>
+          </div>
+          <span class="small-note">${safeText(updatedAt)}</span>
+        </div>
+        <div class="biology-notebook-linked-preview-media">
+          ${imageHtml}
+        </div>
+      </article>
+    `;
+  }
+
+  function buildLinkedAssayPreviewHtml(assay) {
+    const latestAnalysis = assay?.latestAnalysis && typeof assay.latestAnalysis === 'object'
+      ? assay.latestAnalysis
+      : null;
+    const plotImage = String(latestAnalysis?.chartDataUrl || '').trim();
+    const plateHtml = buildNotebookAssayPlatePreviewHtml(assay, safeText);
+    const plotHtml = plotImage
+      ? `
+        <figure class="biology-notebook-linked-preview-figure">
+          <img src="${safeText(plotImage)}" alt="${safeText(`${assay?.name || 'Assay'} analysis plot`)}" />
+          <figcaption class="biology-notebook-linked-preview-caption small-note">
+            ${safeText(`${formatAssayAnalysisMethodLabel(latestAnalysis?.method)} · ${latestAnalysis?.summary || 'Saved analysis plot'}`)}
+          </figcaption>
+        </figure>
+      `
+      : '';
+
+    return `
+      <article class="biology-notebook-linked-preview">
+        <div class="biology-notebook-linked-preview-head">
+          <div class="biology-notebook-linked-preview-copy">
+            <h4>${safeText(assay?.name || 'Linked Assay')}</h4>
+            <p class="biology-notebook-linked-preview-meta">${safeText(`${assay?.assayNumber || assay?.id || '-'} · ${assay?.plateLabel || `${assay?.wellCount || '-'} well plate`}`)}</p>
+          </div>
+          <span class="small-note">${safeText(formatLinkedPreviewTimestamp(assay?.updatedAt))}</span>
+        </div>
+        <div class="biology-notebook-linked-preview-media">
+          <div class="biology-notebook-linked-assay-grid">
+            ${plateHtml}
+          </div>
+          ${plotHtml}
+        </div>
+      </article>
+    `;
+  }
+
+  async function renderLinkedPreviews(entry = null) {
+    if (!notebookLinkedResults) {
+      return;
+    }
+
+    const renderToken = ++linkedPreviewRenderToken;
+
+    const activeEntry = entry || getActiveEntry();
+    if (!activeEntry?.id) {
+      notebookLinkedResults.innerHTML = '<p class="small-note biology-notebook-linked-empty">Save this notebook page to attach gel and assay records.</p>';
+      return;
+    }
+
+    const linkedGel = findLatestLinkedRecord(state.gelAnalyses, activeEntry.id);
+    const linkedAssay = findLatestLinkedRecord(state.assays, activeEntry.id);
+    const parts = [];
+
+    if (linkedGel) {
+      parts.push(buildLinkedGelPreviewHtml(linkedGel, await resolveLinkedGelPreviewImage(linkedGel)));
+    }
+    if (linkedAssay) {
+      parts.push(buildLinkedAssayPreviewHtml(linkedAssay));
+    }
+
+    if (renderToken !== linkedPreviewRenderToken) {
+      return;
+    }
+
+    notebookLinkedResults.innerHTML = parts.length
+      ? parts.join('')
+      : '<p class="small-note biology-notebook-linked-empty">Linked gel, assay, and plot previews will appear here after you save them to this page.</p>';
+  }
+
+  async function ensureNotebookEntryForLinkedWork() {
+    const existingEntry = getActiveEntry();
+    if (existingEntry) {
+      return existingEntry;
+    }
+    return saveEntry();
+  }
+
+  async function onAddGelClick() {
+    const entry = await ensureNotebookEntryForLinkedWork();
+    if (!entry || typeof onCreateLinkedGel !== 'function') {
+      return;
+    }
+    onCreateLinkedGel({
+      notebookEntryId: entry.id,
+      projectId: entry.projectId,
+      notebookType: entry.notebookType || notebookType
+    });
+  }
+
+  async function onAddAssayClick() {
+    const entry = await ensureNotebookEntryForLinkedWork();
+    if (!entry || typeof onCreateLinkedAssay !== 'function') {
+      return;
+    }
+    onCreateLinkedAssay({
+      notebookEntryId: entry.id,
+      projectId: entry.projectId,
+      notebookType: entry.notebookType || notebookType
+    });
+  }
+
   function onEntryListClick(event) {
     const entryButton = event?.target?.closest?.('[data-notebook-entry-id]')
       || (event?.target?.dataset?.notebookEntryId ? event.target : null);
@@ -519,6 +718,7 @@ export function initLabNotebook({
 
     notebookResult.value = entry?.result || '';
     notebookResultFile.value = '';
+    renderLinkedPreviews(entry);
     updateSaveButtonLabel();
     syncViewerVisibility();
   }
@@ -555,6 +755,7 @@ export function initLabNotebook({
       notebookMarkExecutedBtn.hidden = true;
     }
     editingEntryId = null;
+    renderLinkedPreviews(null);
     updateSaveButtonLabel();
     syncViewerVisibility();
   }
@@ -814,5 +1015,11 @@ export function initLabNotebook({
     token.hidden = false;
   }
 
-  return { renderProjectOptions, renderProtocolOptions, renderEntries, onProtocolChange };
+  return {
+    renderProjectOptions,
+    renderProtocolOptions,
+    renderEntries,
+    renderLinkedPreviews,
+    onProtocolChange
+  };
 }

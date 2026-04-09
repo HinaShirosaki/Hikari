@@ -28,7 +28,6 @@ export function createSequenceViewerDetailController(config = {}) {
   const setStatus = config?.setStatus || (() => {});
   const hasStoragePath = config?.hasStoragePath || (() => false);
   const persistFeatureMutation = config?.persistFeatureMutation || (async () => {});
-  const onRequestAnnotation = config?.onRequestAnnotation || (() => {});
   const onRequestRecognizeBackbone = config?.onRequestRecognizeBackbone || (() => {});
   const onRequestClear = config?.onRequestClear || (() => {});
   const onRequestSave = config?.onRequestSave || (() => {});
@@ -222,11 +221,8 @@ export function createSequenceViewerDetailController(config = {}) {
     return clamp(lineStart + localBoundary, 0, sequenceLength);
   }
 
-  function syncAnnotateButtonState() {
+  function syncActionButtonsState() {
     const hasRecord = Boolean(getSelectedRecord()?.sequence?.length);
-    if (elements.annotateBtn) {
-      elements.annotateBtn.disabled = state.isAnnotating || !hasRecord;
-    }
     if (elements.recognizeBackboneBtn) {
       elements.recognizeBackboneBtn.disabled = !hasRecord || !hasStoragePath() || Boolean(state.isRecognizingBackbone);
     }
@@ -330,7 +326,7 @@ export function createSequenceViewerDetailController(config = {}) {
     renderSequence(record);
     renderFeatureRail(record);
     renderSelectedFeatureDetail(record);
-    syncAnnotateButtonState();
+    syncActionButtonsState();
     syncAlignmentControlsState();
     syncOrfToggleState();
     syncRestrictionVendorToggleState();
@@ -419,7 +415,6 @@ export function createSequenceViewerDetailController(config = {}) {
       deleteFeatureFromContext,
       applyFeatureEditorChanges,
       getActiveFeatureActionContext: () => activeFeatureActionContext,
-      onRequestAnnotation,
       onRequestRecognizeBackbone,
       onRequestClear,
       onRequestSave,
@@ -443,7 +438,7 @@ export function createSequenceViewerDetailController(config = {}) {
     renderSequence,
     setOrfViewEnabled,
     setRestrictionVendorFilter,
-    syncAnnotateButtonState,
+    syncActionButtonsState,
     syncAlignmentControlsState,
     syncOrfToggleState,
     syncRestrictionVendorToggleState,

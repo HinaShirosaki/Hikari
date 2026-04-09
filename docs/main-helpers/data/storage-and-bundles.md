@@ -47,6 +47,8 @@ Given a base data file, it derives:
 
 `getBundlePaths(...)` is the shared path builder used throughout the rest of the file.
 
+For the standalone Chemicals workspace, the app now also supports a SQLite-only bundle at `enana-chemicals.index.sqlite` without requiring a sibling `enana-chemicals.ena.json`.
+
 ## Write path
 
 `syncBundleFromSnapshot(...)` writes:
@@ -73,7 +75,6 @@ So the bundle sync step is not just archival. It also builds fast lookup state u
 1. protocol sidecar JSON
 2. notebook-page sidecar JSON
 3. SQLite inventory/record data
-4. legacy chemicals fallback, when configured
 
 It also returns a `migration` summary that reports which fallback or hydration sources were used.
 
@@ -86,6 +87,7 @@ That means a load can succeed even when the primary JSON is intentionally missin
 It:
 
 - scans a storage root for bundle candidate files
+- also recognizes standalone `*.index.sqlite` bundle indexes when no base data file exists
 - hydrates each discovered bundle
 - merges protocols, notebook entries, chemicals, and inventory across bundles
 - summarizes the `SequenceViewer` SQLite library

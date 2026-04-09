@@ -1,50 +1,80 @@
 <section id="home-view" class="view is-active" aria-label="Home">
       <div class="home-layout">
-        <section class="home-section home-section-primary" aria-labelledby="dashboard-passage-heading">
-          <div class="home-section-head">
-            <h2 id="dashboard-passage-heading">Cell Passage Reminders</h2>
+        <section class="home-tile home-tile-today" aria-labelledby="dashboard-today-heading">
+          <div class="home-tile-head">
+            <h2 id="dashboard-today-heading">Today To Do</h2>
+            <p id="dashboard-today-summary" class="small-note">No urgent items right now.</p>
+          </div>
+          <div class="home-today-grid">
+            <div class="home-summary-strip" aria-label="Today's overview">
+              <div class="home-summary-cell">
+                <span class="home-summary-label">Overdue</span>
+                <strong id="dashboard-today-overdue-count">0</strong>
+              </div>
+              <div class="home-summary-cell">
+                <span class="home-summary-label">Open Steps</span>
+                <strong id="dashboard-today-workflow-count">0</strong>
+              </div>
+              <div class="home-summary-cell">
+                <span class="home-summary-label">Follow-ups</span>
+                <strong id="dashboard-today-incubation-count">0</strong>
+              </div>
+            </div>
+            <div id="dashboard-today-list" class="dashboard-list dashboard-list-compact"></div>
+          </div>
+        </section>
+
+        <section class="home-tile home-tile-passage" aria-labelledby="dashboard-passage-heading">
+          <div class="home-tile-head">
+            <h2 id="dashboard-passage-heading">Cell Passage Reminder</h2>
             <p id="dashboard-passage-summary" class="small-note">No cell line reminders yet.</p>
           </div>
-          <div class="dashboard-split-grid">
-            <div class="dashboard-list-group">
-              <h3>Overdue</h3>
-              <div id="dashboard-passage-overdue-list" class="dashboard-list"></div>
-            </div>
-            <div class="dashboard-list-group">
-              <h3>Due in 3 Days</h3>
-              <div id="dashboard-passage-soon-list" class="dashboard-list"></div>
-            </div>
-            <div class="dashboard-list-group">
-              <h3>Unconfigured</h3>
-              <div id="dashboard-passage-unconfigured-list" class="dashboard-list"></div>
+          <div class="home-tile-scroll">
+            <div class="dashboard-split-grid">
+              <div class="dashboard-list-group">
+                <h3>Overdue</h3>
+                <div id="dashboard-passage-overdue-list" class="dashboard-list"></div>
+              </div>
+              <div class="dashboard-list-group">
+                <h3>Due in 3 Days</h3>
+                <div id="dashboard-passage-soon-list" class="dashboard-list"></div>
+              </div>
+              <div class="dashboard-list-group">
+                <h3>Unconfigured</h3>
+                <div id="dashboard-passage-unconfigured-list" class="dashboard-list"></div>
+              </div>
             </div>
           </div>
         </section>
 
-        <section class="home-section home-section-compact home-timer-card" aria-labelledby="dashboard-timer-heading">
-          <div class="home-timer-card-top">
-            <div class="home-section-head">
-              <p class="dashboard-eyebrow">Lab Timers</p>
-              <h2 id="dashboard-timer-heading">Local bench time</h2>
-              <p id="dashboard-timer-status" class="small-note">Ready</p>
-            </div>
+        <section class="home-tile home-tile-workflow" aria-labelledby="dashboard-workflow-heading">
+          <div class="home-tile-head">
+            <h2 id="dashboard-workflow-heading">Current Workflow</h2>
+            <p id="dashboard-workflow-next-step" class="small-note">No workflow selected.</p>
+          </div>
+          <label class="dashboard-field">
+            Workflow
+            <select id="dashboard-workflow-select"></select>
+          </label>
+          <div class="home-tile-scroll">
+            <div id="dashboard-workflow-progress-list" class="dashboard-list"></div>
+          </div>
+        </section>
+
+        <section class="home-tile home-tile-timer" aria-labelledby="dashboard-timer-heading">
+          <div class="home-tile-head">
+            <h2 id="dashboard-timer-heading">Timer</h2>
+            <p id="dashboard-timer-status" class="small-note">Ready</p>
+          </div>
+          <div class="home-timer-clock">
             <p id="dashboard-local-time" class="dashboard-local-time">--:--:--</p>
             <p id="dashboard-local-date" class="dashboard-local-date">Loading local date</p>
           </div>
-          <div class="dashboard-timer-divider" aria-hidden="true"></div>
-          <div class="dashboard-timer-saved-head">
-            <h3>Your set timers</h3>
-            <p class="small-note">Tap a row to load it.</p>
-          </div>
-          <div id="dashboard-timer-saved-list" class="dashboard-timer-saved-list"></div>
           <p id="dashboard-timer-display" class="dashboard-timer-display">15:00</p>
-          <div class="dashboard-inline-row">
-            <label class="dashboard-field dashboard-field-inline">
-              Custom Minutes
-              <input id="dashboard-timer-custom-minutes" type="number" min="1" step="1" value="15" />
-            </label>
-            <button type="button" id="dashboard-timer-set-btn" class="ghost-btn">Set</button>
-          </div>
+          <label class="dashboard-field">
+            Custom Minutes
+            <input id="dashboard-timer-custom-minutes" type="number" min="1" step="1" value="15" />
+          </label>
           <div class="dashboard-inline-row dashboard-timer-presets">
             <button type="button" class="ghost-btn" data-dashboard-preset-minutes="5">5m</button>
             <button type="button" class="ghost-btn" data-dashboard-preset-minutes="10">10m</button>
@@ -52,24 +82,60 @@
             <button type="button" class="ghost-btn" data-dashboard-preset-minutes="30">30m</button>
           </div>
           <div class="dashboard-inline-row">
+            <button type="button" id="dashboard-timer-set-btn" class="ghost-btn">Set</button>
             <button type="button" id="dashboard-timer-start-btn" class="primary-btn">Start</button>
             <button type="button" id="dashboard-timer-pause-btn" class="ghost-btn">Pause</button>
             <button type="button" id="dashboard-timer-reset-btn" class="ghost-btn">Reset</button>
           </div>
-          <p class="small-note">A visual alert appears when the countdown reaches zero.</p>
+          <div class="home-tile-divider" aria-hidden="true"></div>
+          <div class="dashboard-timer-saved-head">
+            <h3>Your Timers</h3>
+            <p class="small-note">Tap a row to load it.</p>
+          </div>
+          <div id="dashboard-timer-saved-list" class="dashboard-timer-saved-list"></div>
         </section>
 
-        <section class="home-section home-section-wide" aria-labelledby="dashboard-workflow-heading">
-          <div class="home-section-head">
-            <h2 id="dashboard-workflow-heading">Current Workflow</h2>
-            <p class="small-note">Track the next action without leaving the workspace.</p>
+        <section class="home-tile home-tile-incubation" aria-labelledby="dashboard-incubation-heading">
+          <div class="home-tile-head">
+            <h2 id="dashboard-incubation-heading">Long Incubation Reminder</h2>
+            <p id="dashboard-incubation-summary" class="small-note">No planned follow-ups waiting.</p>
           </div>
-          <label class="dashboard-field">
-            Workflow
-            <select id="dashboard-workflow-select"></select>
+          <div class="home-tile-scroll">
+            <div id="dashboard-incubation-list" class="dashboard-list"></div>
+          </div>
+        </section>
+
+        <section class="home-tile home-tile-quick-log" aria-labelledby="dashboard-quick-log-heading">
+          <div class="home-tile-head">
+            <h2 id="dashboard-quick-log-heading">Quick Log Notebook</h2>
+            <p id="dashboard-quick-log-status" class="small-note">Type a bench note to keep it handy on this screen.</p>
+          </div>
+          <label class="dashboard-field dashboard-field-grow">
+            Bench Note
+            <textarea
+              id="dashboard-quick-log-input"
+              rows="6"
+              placeholder="Summarize what happened, what is incubating, or what you want the assistant to help with next."
+            ></textarea>
           </label>
-          <p id="dashboard-workflow-next-step" class="small-note">No workflow selected.</p>
-          <div id="dashboard-workflow-progress-list" class="dashboard-list"></div>
+          <div class="dashboard-inline-row">
+            <button type="button" id="dashboard-quick-log-agent-btn" class="primary-btn">Send to Assistant</button>
+            <button type="button" id="dashboard-quick-log-notebook-btn" class="ghost-btn">Open Notebook</button>
+            <button type="button" id="dashboard-quick-log-clear-btn" class="ghost-btn">Clear</button>
+          </div>
+        </section>
+
+        <section class="home-tile home-tile-actions" aria-labelledby="dashboard-actions-heading">
+          <div class="home-tile-head">
+            <h2 id="dashboard-actions-heading">Quick Actions</h2>
+            <p class="small-note">Jump into the modules you use most.</p>
+          </div>
+          <div class="home-action-grid">
+            <button type="button" class="home-action-btn" data-dashboard-action="samples">Open Samples</button>
+            <button type="button" class="home-action-btn" data-dashboard-action="workflow">Open Workflow</button>
+            <button type="button" class="home-action-btn" data-dashboard-action="notebook">Open Notebook</button>
+            <button type="button" class="home-action-btn" data-dashboard-action="assistant">Open Assistant</button>
+          </div>
         </section>
       </div>
     </section>

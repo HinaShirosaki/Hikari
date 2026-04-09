@@ -1,14 +1,11 @@
 'use strict';
 
-function defaultCleanText(value, maxLength = 2000) {
+function defaultCleanText(value, _maxLength = 2000) {
   const text = String(value || '').trim();
   if (!text) {
     return '';
   }
-  if (text.length <= maxLength) {
-    return text;
-  }
-  return `${text.slice(0, maxLength)}...`;
+  return text;
 }
 
 function createMainDataHelpers(deps = {}) {
@@ -38,7 +35,6 @@ function createMainDataHelpers(deps = {}) {
   const getDefaultDataFilePath = typeof deps.getDefaultDataFilePath === 'function'
     ? deps.getDefaultDataFilePath
     : (() => '');
-  const legacyChemicalsPath = cleanText(deps.legacyChemicalsPath, 1600);
 
   function withSqlitePath(source) {
     return {
@@ -92,8 +88,7 @@ function createMainDataHelpers(deps = {}) {
       const hydrated = await hydrateSnapshotFromBundle({
         dataFilePath: targetPath,
         snapshot: parsed,
-        fallbackDataFilePath: getDefaultDataFilePath(),
-        legacyChemicalsPath: legacyChemicalsPath || undefined
+        fallbackDataFilePath: getDefaultDataFilePath()
       });
       return {
         ok: true,

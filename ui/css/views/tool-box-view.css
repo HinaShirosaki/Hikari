@@ -1,12 +1,29 @@
 /* tool-box-view */
 
-.tool-grid {
-  margin-top: 14px;
+.tool-layout {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 0 18px;
-  border-top: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
+  grid-template-columns: var(--layout-left-panel-width) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.tool-sidebar {
+  position: sticky;
+  top: 0;
+  display: grid;
+  align-self: start;
+  padding-right: 20px;
+  border-right: 1px solid var(--line);
+}
+
+.tool-content {
+  min-width: 0;
+}
+
+.tool-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
 }
 
 .tool-tile {
@@ -15,18 +32,19 @@
   justify-content: flex-start;
   align-items: center;
   min-height: 44px;
-  padding: 9px 0;
+  padding: 0;
   border: 0;
-  border-bottom: 1px solid var(--line-soft);
-  border-radius: 0;
+  border-radius: 10px;
   text-align: left;
   background: transparent;
 }
 
 .tool-tile .label {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  padding: 6px 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
   border-radius: 8px;
   color: var(--text);
   font-size: 0.9rem;
@@ -53,6 +71,10 @@
 
 .tool-tile-active .label {
   font-weight: 650;
+}
+
+.tool-subview {
+  margin-top: 0;
 }
 
 .calc-output {
@@ -98,6 +120,93 @@
 
 .buffer-weight {
   font-size: 0.9rem;
+}
+
+.reaction-mix-shell {
+  gap: 14px;
+}
+
+.reaction-mix-table,
+.reaction-mix-rows {
+  display: grid;
+  gap: 10px;
+}
+
+.reaction-mix-row {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(160px, 1.2fr) repeat(3, minmax(170px, 1fr)) minmax(92px, auto);
+  align-items: start;
+  padding: 12px 0;
+  border-top: 1px solid var(--line-soft);
+}
+
+.reaction-mix-row-special:last-child {
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.reaction-mix-cell {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.reaction-mix-cell-label {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.reaction-mix-static {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  background: var(--surface-subtle);
+}
+
+.reaction-mix-static-warning {
+  color: var(--danger);
+}
+
+.reaction-mix-volume-cell .inline-row,
+#tool-fixed-reaction-view .inline-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.reaction-mix-volume-cell .inline-row input,
+.reaction-mix-volume-cell .inline-row select,
+#tool-fixed-reaction-view .inline-row input,
+#tool-fixed-reaction-view .inline-row select {
+  height: 38px;
+}
+
+.reaction-mix-row-note {
+  min-height: 1.2em;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.reaction-mix-row-note.is-ok {
+  color: var(--text);
+}
+
+.reaction-mix-row-note.is-warning {
+  color: var(--danger);
+}
+
+.reaction-mix-action-cell {
+  align-self: end;
+}
+
+.reaction-mix-action-cell .ghost-btn {
+  width: 100%;
 }
 
 .plannotate-ui-shell {
@@ -827,6 +936,36 @@ body.ui-neutral-compact input[id*="api-key"] {
 .buffer-row .buffer-output,
 .buffer-row .buffer-remove-btn {
   min-width: 0;
+}
+
+@media (max-width: 1080px) {
+  .tool-layout {
+    grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
+    gap: 20px;
+  }
+
+  .reaction-mix-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .tool-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+
+  .tool-sidebar {
+    position: static;
+    padding-right: 0;
+    padding-bottom: 18px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .reaction-mix-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 #tool-buffer-view .buffer-chemical-select,

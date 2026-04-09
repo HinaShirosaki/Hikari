@@ -6,15 +6,12 @@ function createAgentScienceMainUtils(deps = {}) {
     : ((value) => (Array.isArray(value) ? value : []));
   const cleanText = typeof deps.cleanText === 'function'
     ? deps.cleanText
-    : ((value, maxLength = 2000) => {
+    : ((value, _maxLength = 2000) => {
       const text = String(value || '').trim();
       if (!text) {
         return '';
       }
-      if (text.length <= maxLength) {
-        return text;
-      }
-      return `${text.slice(0, maxLength)}...`;
+      return text;
     });
   const uniqueStrings = typeof deps.uniqueStrings === 'function'
     ? deps.uniqueStrings
@@ -175,7 +172,7 @@ function createAgentScienceMainUtils(deps = {}) {
       ? [{
         statement: answerExcerpt,
         support_level: normalizedCitations.length
-          ? (normalizedCitations.some((citation) => ['project', 'protocol', 'notebook_entry', 'workflow', 'assay', 'gel_analysis', 'paper', 'python_sandbox'].includes(cleanText(citation?.source, 120).toLowerCase()))
+          ? (normalizedCitations.some((citation) => ['project', 'protocol', 'notebook_entry', 'workflow', 'assay', 'gel_analysis', 'paper', 'python_sandbox', 'python-sandbox', 'record-lookup'].includes(cleanText(citation?.source, 120).toLowerCase()))
             ? 'direct'
             : 'indirect')
           : 'none',
@@ -599,21 +596,31 @@ function createAgentScienceMainUtils(deps = {}) {
   }
 
   function buildScienceRoutingFromParser(parserPayload = {}) {
+    const parserIntent = cleanText(parserPayload?.primary_intent, 80);
+    const intent = mapCanonicalIntentToExecutionIntent(parserIntent);
+    const remappedUnclearIntent = parserIntent === 'unclear' && intent === 'general_science_question';
+    const reasoningEffort = ['general_science_question', 'project_science_question'].includes(intent)
+      ? (remappedUnclearIntent
+        ? 2
+        : ([0, 1, 2].includes(Number(parserPayload?.reasoning_effort)) ? Number(parserPayload.reasoning_effort) : 1))
+      : 0;
     return normalizeRoutingPayload({
-      intent: mapCanonicalIntentToExecutionIntent(parserPayload?.primary_intent),
+      intent,
       confidence: parserPayload?.needs_clarification === true ? 0.35 : 0.64,
       entities: normalizeParserEntitiesToRoutingEntities(parserPayload?.entities, parserPayload?.primary_intent),
       plan: {
         needs_clarification: parserPayload?.needs_clarification === true,
         clarification_reason: cleanText(parserPayload?.clarification_reason, 260),
-        clarification_question: cleanText(parserPayload?.clarification_reason, 320)
+        clarification_question: cleanText(parserPayload?.clarification_reason, 320),
+        reasoning_effort: reasoningEffort
       },
       classifier: {
         source: 'intent_parser',
-        fallbackAttempted: false,
-        fallbackUsed: false,
-        lowConfidence: parserPayload?.needs_clarification === true,
+        fallbackAttempted: remappedUnclearIntent,
+        fallbackUsed: remappedUnclearIntent,
+        lowConfidence: parserPayload?.needs_clarification === true || remappedUnclearIntent,
         tieDetected: false,
+        reasoning_effort: reasoningEffort,
         ruleReason: cleanText(parserPayload?.reasoning_summary, 220),
         fallbackError: ''
       }

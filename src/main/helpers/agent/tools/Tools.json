@@ -21,7 +21,7 @@
   },
   {
     "name": "python-sandbox",
-    "description": "Run agent-authored Python code in an isolated sandbox with optional input files and readback artifacts."
+    "description": "Run agent-authored Python code in an isolated sandbox with staged input files, chat-visible text/image outputs, and readback artifacts. Inside the sandbox, import enana_sandbox to read files and emit renderable outputs."
   },
   {
     "name": "sub-agent",
@@ -33,7 +33,7 @@
   },
   {
     "name": "literature-search",
-    "description": "Search literature across PubMed, Crossref, UniProt, Europe PMC, or generic web results with scholarly-first auto fallback."
+    "description": "Search literature across PubMed, Crossref, UniProt, Europe PMC, or generic web results with scholarly-first auto fallback. Prefer compact keyword or entity-style queries such as `MAPK inhibitor resistance mechanism` instead of full-sentence prompts."
   },
   {
     "name": "paper-download",

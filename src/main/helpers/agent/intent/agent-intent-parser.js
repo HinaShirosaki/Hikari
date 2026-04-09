@@ -41,19 +41,8 @@ const PARSER_SEARCH_MODES = Object.freeze([
   'alias_then_fuzzy'
 ]);
 
-// Entity slots the parser may populate from the user message or recent conversation.
-const PARSER_ENTITY_KEYS = Object.freeze([
-  'activity_type',
-  'project_name',
-  'protocol_name',
-  'protein_name',
-  'compound_name',
-  'inventory_item',
-  'cell_line',
-  'paper_title',
-  'workflow_step',
-  'requested_output'
-]);
+// Science-question intents classify how much routing effort is needed before answering.
+const PARSER_REASONING_EFFORT_LEVELS = Object.freeze([0, 1, 2]);
 
 // Maximum number of protocol name candidates the parser may return.
 const PARSER_PROTOCOL_CANDIDATE_LIMIT = 3;
@@ -61,12 +50,11 @@ const PARSER_PROTOCOL_CANDIDATE_LIMIT = 3;
 // Prompt-visible JSON template showing the exact response structure expected from the model.
 const INTENT_PARSER_OUTPUT_TEMPLATE = Object.freeze({
   primary_intent: 'one allowed intent',
+  reasoning_effort: 1,
+  direct_answer: 'string or null',
   needs_clarification: true,
   clarification_reason: 'string or null',
-  entities: PARSER_ENTITY_KEYS.reduce((acc, key) => {
-    acc[key] = null;
-    return acc;
-  }, {}),
+  entities: {},
   inventory_search: {
     normalized_query: null,
     candidate_terms: [],
@@ -83,6 +71,7 @@ const INTENT_PARSER_RESPONSE_SCHEMA = {
   additionalProperties: false,
   required: [
     'primary_intent',
+    'reasoning_effort',
     'needs_clarification',
     'clarification_reason',
     'entities',
@@ -95,6 +84,13 @@ const INTENT_PARSER_RESPONSE_SCHEMA = {
       type: 'string',
       enum: PARSER_ALLOWED_INTENTS
     },
+    reasoning_effort: {
+      type: 'integer',
+      enum: PARSER_REASONING_EFFORT_LEVELS
+    },
+    direct_answer: {
+      anyOf: [{ type: 'string' }, { type: 'null' }]
+    },
     needs_clarification: {
       type: 'boolean'
     },
@@ -103,12 +99,9 @@ const INTENT_PARSER_RESPONSE_SCHEMA = {
     },
     entities: {
       type: 'object',
-      additionalProperties: false,
-      required: PARSER_ENTITY_KEYS,
-      properties: PARSER_ENTITY_KEYS.reduce((acc, key) => {
-        acc[key] = { anyOf: [{ type: 'string' }, { type: 'null' }] };
-        return acc;
-      }, {})
+      additionalProperties: {
+        anyOf: [{ type: 'string' }, { type: 'null' }]
+      }
     },
     inventory_search: {
       type: 'object',
@@ -146,16 +139,13 @@ function asArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
-// Normalize unknown input into trimmed text and cap it to a safe maximum length.
-function cleanText(value, maxLength = 500) {
+// Normalize unknown input into trimmed text without silently clipping content.
+function cleanText(value, _maxLength = 500) {
   const text = String(value || '').trim();
   if (!text) {
     return '';
   }
-  if (text.length <= maxLength) {
-    return text;
-  }
-  return `${text.slice(0, maxLength)}...`;
+  return text;
 }
 
 // Deduplicate normalized strings while preserving order and limiting output size.
@@ -215,14 +205,34 @@ function normalizeParserIntent(rawIntent) {
   return '';
 }
 
+// Only science-question intents use multi-level routing effort; everything else stays at level 0.
+function normalizeReasoningEffort(rawReasoningEffort, primaryIntent = '') {
+  const intent = cleanText(primaryIntent, 80);
+  const numeric = Number(rawReasoningEffort);
+  if (!['project_science_question', 'general_science_question'].includes(intent)) {
+    return 0;
+  }
+  return PARSER_REASONING_EFFORT_LEVELS.includes(numeric) ? numeric : 1;
+}
+
+// Preserve only string/null entity pairs without requiring a fixed schema block.
+function normalizeEntityKey(rawKey) {
+  return cleanText(rawKey, 80)
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+}
+
 // Normalize the parser's entity block so every supported entity key is present.
 function normalizeEntityBlock(rawEntities) {
   if (!isObject(rawEntities)) {
     return null;
   }
   const entities = {};
-  for (const key of PARSER_ENTITY_KEYS) {
-    const raw = rawEntities[key];
+  for (const [rawKey, raw] of Object.entries(rawEntities).slice(0, 24)) {
+    const key = normalizeEntityKey(rawKey);
+    if (!key) {
+      continue;
+    }
     if (raw == null) {
       entities[key] = null;
       continue;
@@ -231,6 +241,20 @@ function normalizeEntityBlock(rawEntities) {
     entities[key] = text || null;
   }
   return entities;
+}
+
+// Only reasoning-effort 0 science intents may carry a direct answer from the parser itself.
+function normalizeDirectAnswer(rawDirectAnswer, primaryIntent = '', reasoningEffort = 0, needsClarification = false) {
+  if (needsClarification === true) {
+    return null;
+  }
+  if (!['project_science_question', 'general_science_question'].includes(cleanText(primaryIntent, 80))) {
+    return null;
+  }
+  if (Number(reasoningEffort) !== 0) {
+    return null;
+  }
+  return cleanText(rawDirectAnswer, 12000) || null;
 }
 
 // Normalize inventory search hints returned by the parser.
@@ -304,6 +328,8 @@ function normalizeIntentParserPayload(rawValue) {
     };
   }
 
+  const reasoningEffort = normalizeReasoningEffort(parsed.reasoning_effort, primaryIntent);
+
   const entities = normalizeEntityBlock(parsed.entities);
   if (!entities) {
     return {
@@ -353,6 +379,13 @@ function normalizeIntentParserPayload(rawValue) {
     ok: true,
     payload: {
       primary_intent: primaryIntent,
+      reasoning_effort: reasoningEffort,
+      direct_answer: normalizeDirectAnswer(
+        parsed.direct_answer,
+        primaryIntent,
+        reasoningEffort,
+        parsed.needs_clarification === true
+      ),
       needs_clarification: parsed.needs_clarification === true,
       clarification_reason: cleanText(parsed.clarification_reason, 260) || null,
       entities,
@@ -437,6 +470,16 @@ function formatIntentSpecificOutputAppend(rows = []) {
     .join('\n');
 }
 
+function buildScienceReasoningEffortRubric() {
+  return [
+    '- For science intents, default to reasoning_effort 1 unless the request clearly belongs at 0 or 2.',
+    '- Use reasoning_effort 0 only for stable background questions you can answer directly without retrieval, recent-source checking, project-record inspection, or multi-step analysis.',
+    '- Use reasoning_effort 1 for the typical science question that needs a targeted reasoning loop, light retrieval, project lookup, or a careful explanation.',
+    '- Use reasoning_effort 2 when the user wants broad synthesis, comparison of multiple explanations, recent literature, or multi-step evidence gathering.',
+    '- If you are unsure whether a science question should be 0 or 1, choose 1.'
+  ].join('\n');
+}
+
 // Build the base instruction prompt that teaches the model the allowed intents and schema.
 function buildIntentCatalogPrompt(catalog = []) {
   // Fall back to the validated static catalog unless a test/custom catalog is supplied.
@@ -463,10 +506,15 @@ function buildIntentCatalogPrompt(catalog = []) {
     '## Rules',
     '- Return JSON only.',
     '- Choose exactly one primary intent.',
+    '- Always return reasoning_effort as 0, 1, or 2. For non-science intents, set reasoning_effort to 0.',
+    '- For science intents with reasoning_effort 0, provide the final user-facing answer in direct_answer.',
+    '- For all other cases, set direct_answer to null.',
     '- Populate entities only when they are supported by the user message or recent conversation.',
     '- For intents other than inventory_lookup, set inventory_search to nulls and empty arrays.',
     '- For intents other than protocol_to_notebook and notebook_draft, set protocol_candidates to [].',
     '- Do not invent obscure aliases or unsupported protocol names.',
+    '## Science reasoning_effort rubric',
+    buildScienceReasoningEffortRubric(),
     '## Intent descriptions',
     descriptions,
     '## Examples',
@@ -482,6 +530,9 @@ const INTENT_PARSER_PROMPT = buildIntentCatalogPrompt(INTENT_PARSER_CATALOG);
 // Map parser output intents to execution-layer intents, defaulting safely when unknown.
 function mapCanonicalIntentToExecutionIntent(primaryIntent) {
   const normalized = normalizeParserIntent(primaryIntent);
+  if (normalized === 'unclear') {
+    return 'general_science_question';
+  }
   if (normalized) {
     return normalized;
   }
@@ -493,11 +544,11 @@ function normalizeParserEntitiesToRoutingEntities(parserEntities, primaryIntent 
   // Map the parser's richer entity block into the smaller routing entity shape.
   const source = isObject(parserEntities) ? parserEntities : {};
   const mapped = {
-    activity: cleanText(source.activity_type, 180),
-    project: cleanText(source.project_name, 180),
-    protein: cleanText(source.protein_name, 100),
-    compound: cleanText(source.compound_name, 120),
-    protocol: cleanText(source.protocol_name, 220),
+    activity: cleanText(source.activity_type || source.activity, 180),
+    project: cleanText(source.project_name || source.project, 180),
+    protein: cleanText(source.protein_name || source.protein, 100),
+    compound: cleanText(source.compound_name || source.compound, 120),
+    protocol: cleanText(source.protocol_name || source.protocol, 220),
     cell_line: cleanText(source.cell_line, 80),
     paper_title: cleanText(source.paper_title, 220),
     workflow_step: cleanText(source.workflow_step, 180)
@@ -509,7 +560,7 @@ function normalizeParserEntitiesToRoutingEntities(parserEntities, primaryIntent 
   }
   // Fall back to the requested output when no explicit activity type was extracted.
   if (!mapped.activity) {
-    mapped.activity = cleanText(source.requested_output, 180);
+    mapped.activity = cleanText(source.requested_output || source.output, 180);
   }
   return mapped;
 }
@@ -574,7 +625,7 @@ module.exports = {
   PARSER_ALLOWED_INTENTS,
   PARSER_INTENT_ALIASES,
   PARSER_SEARCH_MODES,
-  PARSER_ENTITY_KEYS,
+  PARSER_REASONING_EFFORT_LEVELS,
   INTENT_PARSER_CATALOG,
   INTENT_PARSER_OUTPUT_TEMPLATE,
   INTENT_PARSER_PROMPT,

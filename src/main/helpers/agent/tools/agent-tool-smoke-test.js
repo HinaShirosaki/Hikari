@@ -4,7 +4,7 @@ const fsPromises = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
 
-const { AGENT_TOOL_CATALOG } = require('./agent-tool-call.js');
+const { AGENT_TOOL_CATALOG } = require('./agent-tool-loading.js');
 const { createAgentInventoryLookupRuntime } = require('./agent-inventory-lookup.js');
 const { createAgentRecordLookupRuntime } = require('./agent-record-lookup.js');
 const { createProtocolMatchingRuntime } = require('./agent-protocol-matching.js');
@@ -22,15 +22,12 @@ function asArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
-function cleanText(value, maxLength = 500) {
+function cleanText(value, _maxLength = 500) {
   const text = String(value || '').trim();
   if (!text) {
     return '';
   }
-  if (text.length <= maxLength) {
-    return text;
-  }
-  return `${text.slice(0, maxLength)}...`;
+  return text;
 }
 
 function ensureObject(value) {

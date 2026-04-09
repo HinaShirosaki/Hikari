@@ -372,11 +372,14 @@ const agentChatLog = optionalRequire(path.join(__dirname, 'src', 'main', 'helper
 const agentContextManagement = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'context', 'agent-context-management.js'));
 const agentMemory = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'context', 'agent-memory.js'));
 const agentToolCall = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-tool-call.js'));
+const agentToolLoading = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-tool-loading.js'));
+const agentToolExecution = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-tool-execution.js'));
 const agentProjectRetrieval = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-project-retrieval.js'));
 const agentLiteratureSearch = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-literature-search.js'));
+const agentPaperContextLoader = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-paper-context-loader.js'));
 const agentPaperDownload = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-paper-download.js'));
 const agentPaperAnalysis = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-paper-analysis.js'));
-const agentScienceReasoningLoop = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'runtime', 'agent-science-reasoning-loop.js'));
+const agentScienceReasoningLoop = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'runtime', 'science-reasoning-loop', 'index.js'));
 const agentToolSmokeTest = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-tool-smoke-test.js'));
 const agentResponseLayer = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-response-layer.js'));
 const agentValidationSafety = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-validation-safety.js'));
@@ -452,7 +455,8 @@ const sequenceViewerInternals = loadEsmStyleModule(
     'formatSelectedFeatureDetailHtml',
     'computeGcPercent',
     'countAmbiguousBases',
-    'summarizeFastqQuality'
+    'summarizeFastqQuality',
+    'buildCircularPreviewHtmlDocument'
   ]
 );
 const gelAnalysisInternals = loadEsmStyleModule(
@@ -493,7 +497,6 @@ const papersPdfViewerInternals = loadEsmStyleModule(
 const assayAnalysis = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'assay-analysis.js'));
 const mainUtils = require(path.join(__dirname, 'src', 'main', 'lib', 'main-utils.js'));
 const telegramBot = require(path.join(__dirname, 'src', 'main', 'lib', 'telegramBot.js'));
-const { generatePlannotateGbk } = require(path.join(__dirname, 'src', 'main', 'lib', 'plannotate-engine.js'));
 const forgeConfig = require(path.join(__dirname, 'forge.config.js'));
 const packageManifest = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
 const AGENT_SIMULATION_DISPATCH_TOOL_NAMES = new Set([
@@ -518,7 +521,6 @@ const AGENT_SIMULATION_DISPATCH_TOOL_NAMES = new Set([
   'toolbox_oligo_properties',
   'toolbox_extinction_coefficient',
   'toolbox_qpcr_efficiency',
-  'toolbox_plannotate',
   'toolbox_crispr_sgrna_designer',
   'run_python_sandbox',
   'download_paper_pdf'
@@ -727,18 +729,6 @@ function buildMockToolArgs(toolName, message, snapshot) {
         { quantity: 0.1, ct: 21.3 },
         { quantity: 0.01, ct: 24.7 }
       ]
-    };
-  }
-  if (toolName === 'toolbox_plannotate') {
-    return {
-      sequence_text: '>plasmid\\nATGCGTACGTAGCTAGCTAGCTAGCATCGATCGATCGATCGATCGATCG',
-      topology: 'circular',
-      detailed: false,
-      min_identity: 85,
-      min_coverage: 0.25,
-      min_hit_length: 24,
-      max_hits: 10,
-      record_name: 'mock_plasmid'
     };
   }
   if (toolName === 'toolbox_crispr_sgrna_designer') {
@@ -1112,22 +1102,6 @@ function buildMockToolDispatch(snapshot) {
       citations: [{ source: 'toolbox_qpcr', pointer: 'points:3', reason: 'Computed qPCR efficiency from standard curve points.' }],
       summary: 'Computed qPCR efficiency as 100.40%.'
     }),
-    toolbox_plannotate: () => ({
-      items: [
-        {
-          id: 'mock_hit_1',
-          feature: 'CMV promoter',
-          type: 'promoter',
-          start: 1,
-          end: 600,
-          strand: '+',
-          identity_percent: 99.5,
-          coverage_percent: 100
-        }
-      ],
-      citations: [{ source: 'plannotate', pointer: 'mock_hit_1', reason: 'Annotated pLannotate feature hit from plain-text sequence.' }],
-      summary: 'Annotated 1 feature hit from plain-text sequence.'
-    }),
     toolbox_crispr_sgrna_designer: () => ({
       items: [
         {
@@ -1429,8 +1403,11 @@ const suiteScope = {
   agentContextManagement,
   agentMemory,
   agentToolCall,
+  agentToolLoading,
+  agentToolExecution,
   agentProjectRetrieval,
   agentLiteratureSearch,
+  agentPaperContextLoader,
   agentPaperDownload,
   agentPaperAnalysis,
   agentScienceReasoningLoop,
@@ -1455,7 +1432,6 @@ const suiteScope = {
   assayAnalysis,
   mainUtils,
   telegramBot,
-  generatePlannotateGbk,
   forgeConfig,
   packageManifest,
   AGENT_SIMULATION_DISPATCH_TOOL_NAMES,

@@ -148,6 +148,7 @@ export function createPapersActions(context) {
       keyReagents: [],
       reagentsStatus: 'idle',
       keyFigures: [],
+      highlights: [],
       comments: [],
       deepReadReady: false,
       availabilityStatus: 'uploaded_pdf',
@@ -172,7 +173,7 @@ export function createPapersActions(context) {
     state.papers = (state.papers || []).filter((paper) => !(paper.linkedType === 'journal-club' && paper.linkedId === journalClubId));
     if (paperViewer.getActivePaperId() && !context.getActivePaper?.()) {
       context.comments?.resetCommentComposer({
-        message: 'Open a paper to review or add page comments.'
+        message: ''
       });
       void paperViewer.resetViewer('The open paper was removed.');
     }
@@ -185,7 +186,7 @@ export function createPapersActions(context) {
     state.paperExperimentLinks = (state.paperExperimentLinks || []).filter((item) => item.paperId !== paperId);
     if (paperViewer.getActivePaperId() === paperId) {
       context.comments?.resetCommentComposer({
-        message: 'Open a paper to review or add page comments.'
+        message: ''
       });
       void paperViewer.resetViewer('The open paper was deleted.');
     }

@@ -1,0 +1,928 @@
+'use strict';
+
+const { Buffer } = require('node:buffer');
+
+const { createAgentLlmRuntimeHelpers } = require('../shared/agent-llm-utils.js');
+
+const PAPER_CONTEXT_SOURCE_ORDER = Object.freeze([
+  'europe_pmc_full_text',
+  'pubmed_abstract',
+  'europe_pmc_abstract',
+  'crossref_abstract',
+  'search_result_summary'
+]);
+
+const DEFAULT_MAX_PAPERS = 8;
+const DEFAULT_MAX_BLOCKS = 6;
+const DEFAULT_MAX_BLOCKS_PER_PAPER = 2;
+const DEFAULT_MAX_FIGURE_REVIEWS = 2;
+const DEFAULT_CHUNK_SIZE = 1500;
+const DEFAULT_CHUNK_OVERLAP = 200;
+
+const QUERY_STOP_WORDS = new Set([
+  'a', 'an', 'and', 'are', 'as', 'at', 'be', 'but', 'by', 'for', 'from', 'has', 'have', 'if',
+  'in', 'into', 'is', 'it', 'its', 'of', 'on', 'or', 'that', 'the', 'their', 'then', 'there',
+  'these', 'this', 'to', 'was', 'were', 'what', 'when', 'where', 'which', 'why', 'with'
+]);
+
+const PAPER_CONTEXT_SELECTION_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['selected_blocks', 'figure_review_requests'],
+  properties: {
+    selected_blocks: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['block_id', 'relevance_reason'],
+        properties: {
+          block_id: { type: 'string' },
+          relevance_reason: { type: 'string' }
+        }
+      }
+    },
+    figure_review_requests: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['paper_id', 'reason'],
+        properties: {
+          paper_id: { type: 'string' },
+          reason: { type: 'string' }
+        }
+      }
+    }
+  }
+};
+
+const PAPER_FIGURE_REVIEW_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['useful', 'figure_summary', 'relevance_reason'],
+  properties: {
+    useful: { type: 'boolean' },
+    figure_summary: { type: 'string' },
+    relevance_reason: { type: 'string' }
+  }
+};
+
+function ensureObject(value) {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+
+function decodeXmlEntities(value) {
+  return String(value || '')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, '\'')
+    .replace(/&amp;/g, '&')
+    .replace(/&#(\d+);/g, (_match, code) => {
+      const parsed = Number(code);
+      return Number.isFinite(parsed) ? String.fromCharCode(parsed) : '';
+    });
+}
+
+function stripHtml(value) {
+  return decodeXmlEntities(String(value || '').replace(/<[^>]+>/g, ' '))
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function safeUrl(value, baseUrl = '') {
+  const raw = String(value || '').trim();
+  if (!raw) {
+    return '';
+  }
+  try {
+    return new URL(raw, baseUrl || undefined).toString();
+  } catch {
+    return '';
+  }
+}
+
+function looksLikePdfUrl(value) {
+  return /(?:\.pdf(?:$|[?#])|\/pdf(?:\/|$)|[?&](?:format|type|download|pdf)=(?:1|true|pdf)?\b|[?&][^=#]*pdf\b)/i
+    .test(String(value || '').trim());
+}
+
+function createPaperContextLoaderRuntime(deps = {}) {
+  const {
+    asArray,
+    cleanText,
+    uniqueStrings,
+    requestStructuredJsonPayload
+  } = createAgentLlmRuntimeHelpers(deps);
+  const fetchImpl = typeof deps.fetch === 'function'
+    ? deps.fetch
+    : (typeof globalThis.fetch === 'function' ? globalThis.fetch.bind(globalThis) : null);
+
+  function requireFetch() {
+    if (!fetchImpl) {
+      throw new Error('Paper context loading requires fetch support.');
+    }
+    return fetchImpl;
+  }
+
+  async function readResponseText(response) {
+    if (typeof response?.text === 'function') {
+      return String(await response.text());
+    }
+    if (typeof response?.json === 'function') {
+      return JSON.stringify(await response.json());
+    }
+    return '';
+  }
+
+  async function fetchJson(url, options = {}) {
+    const response = await requireFetch()(url, options);
+    const failed = response?.ok === false || Number(response?.status) >= 400;
+    if (failed) {
+      const body = await readResponseText(response);
+      throw new Error(`Paper context request failed (${Number(response?.status) || 'request'}): ${cleanText(body, 300) || 'no response body'}`);
+    }
+    if (typeof response?.json === 'function') {
+      return response.json();
+    }
+    const raw = await readResponseText(response);
+    return JSON.parse(String(raw || '{}'));
+  }
+
+  async function fetchText(url, options = {}) {
+    const response = await requireFetch()(url, options);
+    const failed = response?.ok === false || Number(response?.status) >= 400;
+    if (failed) {
+      const body = await readResponseText(response);
+      throw new Error(`Paper context request failed (${Number(response?.status) || 'request'}): ${cleanText(body, 300) || 'no response body'}`);
+    }
+    return readResponseText(response);
+  }
+
+  async function fetchBuffer(url, options = {}) {
+    const response = await requireFetch()(url, options);
+    const failed = response?.ok === false || Number(response?.status) >= 400;
+    if (failed) {
+      const body = await readResponseText(response);
+      throw new Error(`Paper PDF request failed (${Number(response?.status) || 'request'}): ${cleanText(body, 300) || 'no response body'}`);
+    }
+    if (typeof response?.arrayBuffer === 'function') {
+      return Buffer.from(await response.arrayBuffer());
+    }
+    const raw = await readResponseText(response);
+    return Buffer.from(String(raw || ''), 'utf8');
+  }
+
+  function tokenizeQuery(value) {
+    return cleanText(value, 1200)
+      .toLowerCase()
+      .split(/[^a-z0-9]+/i)
+      .map((token) => token.trim())
+      .filter((token) => token.length > 2 && !QUERY_STOP_WORDS.has(token));
+  }
+
+  function scoreTextAgainstQuery(query, text, sectionLabel = '') {
+    const queryTokens = tokenizeQuery(query);
+    if (!queryTokens.length) {
+      return 0;
+    }
+    const haystack = `${cleanText(sectionLabel, 160)}\n${cleanText(text, 8000)}`.toLowerCase();
+    let score = 0;
+    queryTokens.forEach((token) => {
+      if (haystack.includes(token)) {
+        score += 2;
+      }
+      if (cleanText(sectionLabel, 160).toLowerCase().includes(token)) {
+        score += 1;
+      }
+    });
+    const normalizedQuery = cleanText(query, 600).toLowerCase();
+    if (normalizedQuery && haystack.includes(normalizedQuery)) {
+      score += 5;
+    }
+    if (/\b(result|finding|mechanism|conclusion|discussion)\b/i.test(sectionLabel)) {
+      score += 1.5;
+    }
+    if (/\b(method|materials)\b/i.test(sectionLabel)) {
+      score += 0.5;
+    }
+    return score;
+  }
+
+  function chunkSectionText(text, maxChars = DEFAULT_CHUNK_SIZE, overlap = DEFAULT_CHUNK_OVERLAP) {
+    const normalized = cleanText(text, 40000);
+    if (!normalized) {
+      return [];
+    }
+    if (normalized.length <= maxChars) {
+      return [normalized];
+    }
+    const chunks = [];
+    let start = 0;
+    while (start < normalized.length && chunks.length < 16) {
+      let end = Math.min(normalized.length, start + maxChars);
+      if (end < normalized.length) {
+        const breakIndex = normalized.lastIndexOf(' ', end);
+        if (breakIndex > start + 600) {
+          end = breakIndex;
+        }
+      }
+      const chunk = normalized.slice(start, end).trim();
+      if (chunk) {
+        chunks.push(chunk);
+      }
+      if (end >= normalized.length) {
+        break;
+      }
+      start = Math.max(end - overlap, start + 1);
+      while (normalized[start] === ' ') {
+        start += 1;
+      }
+    }
+    return chunks;
+  }
+
+  function linesToSections(lines, defaultLabel = 'Full text') {
+    const sections = [];
+    let currentLabel = defaultLabel;
+    let currentLines = [];
+    const flush = () => {
+      const text = cleanText(currentLines.join(' '), 20000);
+      if (text) {
+        sections.push({
+          label: cleanText(currentLabel, 160) || defaultLabel,
+          text
+        });
+      }
+      currentLines = [];
+    };
+    lines.forEach((line) => {
+      const normalized = cleanText(line, 1600);
+      if (!normalized) {
+        return;
+      }
+      if (normalized.startsWith('## ')) {
+        flush();
+        currentLabel = cleanText(normalized.slice(3), 160) || defaultLabel;
+        return;
+      }
+      currentLines.push(normalized);
+    });
+    flush();
+    return sections.filter((section) => section.text);
+  }
+
+  function xmlFragmentToLines(fragment) {
+    const expanded = String(fragment || '')
+      .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
+      .replace(/<(?:\/)?(?:italic|bold|sup|sub|xref|ext-link|inline-formula|disp-formula|named-content|sc)\b[^>]*>/gi, ' ')
+      .replace(/<title\b[^>]*>/gi, '\n## ')
+      .replace(/<\/title>/gi, '\n')
+      .replace(/<label\b[^>]*>/gi, '\n## ')
+      .replace(/<\/label>/gi, '\n')
+      .replace(/<(?:p|sec|abstract|body|caption|fig|table-wrap|list-item|item)\b[^>]*>/gi, '\n')
+      .replace(/<\/(?:p|sec|abstract|body|caption|fig|table-wrap|list-item|item)>/gi, '\n')
+      .replace(/<[^>]+>/g, ' ');
+    return decodeXmlEntities(expanded)
+      .split('\n')
+      .map((line) => line.replace(/\s+/g, ' ').trim())
+      .filter(Boolean);
+  }
+
+  function parseEuropePmcFullTextSections(xml) {
+    const source = String(xml || '');
+    if (!source.trim()) {
+      return [];
+    }
+    const abstractBlocks = [];
+    const abstractPattern = /<abstract\b[^>]*>([\s\S]*?)<\/abstract>/gi;
+    let abstractMatch = abstractPattern.exec(source);
+    while (abstractMatch) {
+      abstractBlocks.push(...linesToSections(xmlFragmentToLines(abstractMatch[1]), 'Abstract'));
+      abstractMatch = abstractPattern.exec(source);
+    }
+    const bodyMatch = source.match(/<body\b[^>]*>([\s\S]*?)<\/body>/i);
+    const bodySections = linesToSections(
+      xmlFragmentToLines(bodyMatch?.[1] || source),
+      'Full text'
+    );
+    return [...abstractBlocks, ...bodySections]
+      .filter((section) => cleanText(section.text, 20000))
+      .slice(0, 40);
+  }
+
+  function parsePubMedAbstractSections(xml) {
+    const sections = [];
+    const pattern = /<AbstractText\b([^>]*)>([\s\S]*?)<\/AbstractText>/gi;
+    let match = pattern.exec(String(xml || ''));
+    while (match) {
+      const attrs = String(match[1] || '');
+      const label = cleanText(
+        attrs.match(/\bLabel="([^"]+)"/i)?.[1] || attrs.match(/\bNlmCategory="([^"]+)"/i)?.[1],
+        160
+      ) || 'Abstract';
+      const text = stripHtml(match[2]);
+      if (text) {
+        sections.push({ label, text: cleanText(text, 12000) });
+      }
+      match = pattern.exec(String(xml || ''));
+    }
+    if (!sections.length) {
+      const abstractMatch = String(xml || '').match(/<Abstract\b[^>]*>([\s\S]*?)<\/Abstract>/i);
+      const fallback = stripHtml(abstractMatch?.[1] || '');
+      if (fallback) {
+        sections.push({ label: 'Abstract', text: cleanText(fallback, 12000) });
+      }
+    }
+    return sections.slice(0, 12);
+  }
+
+  function parseEuropePmcMetadata(payload = {}) {
+    const source = ensureObject(payload);
+    const abstractText = cleanText(stripHtml(source.abstractText || source.abstract || ''), 12000);
+    const fullTextEntries = asArray(source.fullTextUrlList?.fullTextUrl || source.fullTextUrls || source.fullTextUrl);
+    const pdfUrls = uniqueStrings([
+      safeUrl(source.pdfUrl || source.pdf_url),
+      ...fullTextEntries.map((entry) => {
+        const item = ensureObject(entry);
+        const url = safeUrl(item.url || item.href);
+        const style = cleanText(item.documentStyle || item.availability || item.format, 80).toLowerCase();
+        return style.includes('pdf') || looksLikePdfUrl(url) ? url : '';
+      })
+    ].filter(Boolean), 8);
+    return {
+      pmid: cleanText(source.pmid, 120),
+      pmcid: cleanText(source.pmcid, 120),
+      doi: cleanText(source.doi, 180),
+      abstract_sections: abstractText
+        ? [{ label: 'Abstract', text: abstractText }]
+        : [],
+      pdf_urls: pdfUrls
+    };
+  }
+
+  function normalizePaperItem(item = {}) {
+    const source = ensureObject(item);
+    const paperId = cleanText(
+      source.id || source.paper_id || source.pmid || source.pmcid || source.doi || source.url || source.title,
+      220
+    );
+    return {
+      paper_id: paperId,
+      paper_title: cleanText(source.title || source.paper_title, 320) || paperId || 'Untitled paper',
+      summary: cleanText(source.summary || source.snippet, 12000),
+      url: safeUrl(source.url),
+      doi: cleanText(source.doi, 180),
+      pmid: cleanText(source.pmid, 120),
+      pmcid: cleanText(source.pmcid, 120),
+      source: cleanText(source.source, 80),
+      pdf_urls: uniqueStrings(asArray(source.pdf_urls).map((entry) => safeUrl(entry)).filter(Boolean), 8)
+    };
+  }
+
+  function buildPaperPdfUrls(record = {}) {
+    const source = ensureObject(record);
+    const pmcid = cleanText(source.pmcid, 120);
+    const directUrl = safeUrl(source.url);
+    return uniqueStrings([
+      ...asArray(source.pdf_urls).map((entry) => safeUrl(entry)).filter(Boolean),
+      looksLikePdfUrl(directUrl) ? directUrl : '',
+      pmcid ? `https://europepmc.org/articles/${encodeURIComponent(pmcid)}?pdf=render` : '',
+      pmcid ? `https://pmc.ncbi.nlm.nih.gov/articles/${encodeURIComponent(pmcid)}/pdf` : ''
+    ].filter(Boolean), 8);
+  }
+
+  async function fetchEuropePmcArticle(sourceName, identifier) {
+    const source = cleanText(sourceName, 20).toUpperCase();
+    const id = cleanText(identifier, 240);
+    if (!source || !id) {
+      return {};
+    }
+    return fetchJson(
+      `https://www.ebi.ac.uk/europepmc/webservices/rest/article/${encodeURIComponent(source)}/${encodeURIComponent(id)}?format=json`
+    );
+  }
+
+  async function fetchEuropePmcMetadataForItem(item = {}) {
+    const normalized = normalizePaperItem(item);
+    try {
+      if (normalized.pmcid) {
+        return parseEuropePmcMetadata(await fetchEuropePmcArticle('PMC', normalized.pmcid));
+      }
+      if (normalized.pmid) {
+        return parseEuropePmcMetadata(await fetchEuropePmcArticle('MED', normalized.pmid));
+      }
+      if (normalized.doi) {
+        return parseEuropePmcMetadata(await fetchEuropePmcArticle('DOI', normalized.doi));
+      }
+    } catch {
+      return {};
+    }
+    return {};
+  }
+
+  async function fetchEuropePmcFullTextByPmcid(pmcid) {
+    const normalized = cleanText(pmcid, 120);
+    if (!normalized) {
+      return [];
+    }
+    try {
+      const xml = await fetchText(
+        `https://www.ebi.ac.uk/europepmc/webservices/rest/${encodeURIComponent(normalized)}/fullTextXML`
+      );
+      return parseEuropePmcFullTextSections(xml);
+    } catch {
+      return [];
+    }
+  }
+
+  async function fetchPubMedAbstractByPmid(pmid) {
+    const normalized = cleanText(pmid, 120);
+    if (!normalized) {
+      return [];
+    }
+    try {
+      const xml = await fetchText(
+        `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&retmode=xml&id=${encodeURIComponent(normalized)}`
+      );
+      return parsePubMedAbstractSections(xml);
+    } catch {
+      return [];
+    }
+  }
+
+  async function fetchCrossrefAbstractByDoi(doi) {
+    const normalized = cleanText(doi, 180);
+    if (!normalized) {
+      return [];
+    }
+    try {
+      const payload = await fetchJson(
+        `https://api.crossref.org/works/${encodeURIComponent(normalized)}`
+      );
+      const abstractText = cleanText(stripHtml(payload?.message?.abstract || ''), 12000);
+      return abstractText
+        ? [{ label: 'Abstract', text: abstractText }]
+        : [];
+    } catch {
+      return [];
+    }
+  }
+
+  async function readPaperContext(item = {}) {
+    const normalized = normalizePaperItem(item);
+    const europePmcMetadata = await fetchEuropePmcMetadataForItem(normalized);
+    const merged = {
+      ...normalized,
+      pmid: cleanText(europePmcMetadata.pmid, 120) || normalized.pmid,
+      pmcid: cleanText(europePmcMetadata.pmcid, 120) || normalized.pmcid,
+      doi: cleanText(europePmcMetadata.doi, 180) || normalized.doi,
+      pdf_urls: buildPaperPdfUrls({
+        ...normalized,
+        ...europePmcMetadata
+      })
+    };
+
+    const fullTextSections = await fetchEuropePmcFullTextByPmcid(merged.pmcid);
+    if (fullTextSections.length) {
+      return {
+        ...merged,
+        read_source: 'europe_pmc_full_text',
+        sections: fullTextSections
+      };
+    }
+
+    const pubMedAbstractSections = await fetchPubMedAbstractByPmid(merged.pmid);
+    if (pubMedAbstractSections.length) {
+      return {
+        ...merged,
+        read_source: 'pubmed_abstract',
+        sections: pubMedAbstractSections
+      };
+    }
+
+    const europePmcAbstractSections = asArray(europePmcMetadata.abstract_sections)
+      .map((section) => ({
+        label: cleanText(section?.label, 160) || 'Abstract',
+        text: cleanText(section?.text, 12000)
+      }))
+      .filter((section) => section.text);
+    if (europePmcAbstractSections.length) {
+      return {
+        ...merged,
+        read_source: 'europe_pmc_abstract',
+        sections: europePmcAbstractSections
+      };
+    }
+
+    const crossrefAbstractSections = await fetchCrossrefAbstractByDoi(merged.doi);
+    if (crossrefAbstractSections.length) {
+      return {
+        ...merged,
+        read_source: 'crossref_abstract',
+        sections: crossrefAbstractSections
+      };
+    }
+
+    const fallbackText = cleanText(merged.summary, 12000);
+    return {
+      ...merged,
+      read_source: 'search_result_summary',
+      sections: fallbackText
+        ? [{ label: 'Summary', text: fallbackText }]
+        : []
+    };
+  }
+
+  function buildCandidateBlocks(papers = [], query = '') {
+    const candidates = [];
+    asArray(papers).forEach((paper) => {
+      const sectionCandidates = [];
+      asArray(paper.sections).forEach((section, sectionIndex) => {
+        const sectionLabel = cleanText(section?.label, 160) || 'Section';
+        chunkSectionText(section?.text, DEFAULT_CHUNK_SIZE, DEFAULT_CHUNK_OVERLAP).forEach((chunk, chunkIndex) => {
+          sectionCandidates.push({
+            block_id: `${cleanText(paper.paper_id, 160)}::${sectionIndex + 1}-${chunkIndex + 1}`,
+            paper_id: cleanText(paper.paper_id, 160),
+            paper_title: cleanText(paper.paper_title, 320),
+            section_label: sectionLabel,
+            excerpt: cleanText(chunk, DEFAULT_CHUNK_SIZE + 120),
+            relevance_reason: '',
+            source: cleanText(paper.read_source, 80),
+            evidence_kind: 'text',
+            rank_score: scoreTextAgainstQuery(query, chunk, sectionLabel),
+            pdf_urls: asArray(paper.pdf_urls)
+          });
+        });
+      });
+      sectionCandidates
+        .sort((left, right) => {
+          if (right.rank_score !== left.rank_score) {
+            return right.rank_score - left.rank_score;
+          }
+          return left.block_id.localeCompare(right.block_id);
+        })
+        .slice(0, 3)
+        .forEach((candidate) => candidates.push(candidate));
+    });
+    return candidates.sort((left, right) => {
+      if (right.rank_score !== left.rank_score) {
+        return right.rank_score - left.rank_score;
+      }
+      return left.block_id.localeCompare(right.block_id);
+    });
+  }
+
+  function buildSelectionPrompt(input = {}) {
+    const query = cleanText(input.query || input.message, 1200);
+    const candidates = asArray(input.candidate_blocks).slice(0, 24);
+    return [
+      'Select the most relevant paper excerpts for the clarified request.',
+      'Return up to 6 selected blocks total and no more than 2 blocks from the same paper.',
+      'Use only the provided block IDs. Do not rewrite excerpts.',
+      'Request figure review only when the text evidence is still insufficient and the paper PDF is likely to add relevant figure-level evidence.',
+      `Clarified request:\n${query}`,
+      'Candidate blocks:',
+      ...candidates.map((block) => [
+        `Block ID: ${cleanText(block.block_id, 120)}`,
+        `Paper ID: ${cleanText(block.paper_id, 120)}`,
+        `Paper title: ${cleanText(block.paper_title, 220)}`,
+        `Section: ${cleanText(block.section_label, 120)}`,
+        `Source: ${cleanText(block.source, 80)}`,
+        `Excerpt:\n${cleanText(block.excerpt, 1800)}`
+      ].join('\n'))
+    ].join('\n\n');
+  }
+
+  function buildFallbackSelection(candidateBlocks = [], query = '') {
+    const selected = [];
+    const perPaperCounts = new Map();
+    asArray(candidateBlocks)
+      .slice()
+      .sort((left, right) => {
+        if (right.rank_score !== left.rank_score) {
+          return right.rank_score - left.rank_score;
+        }
+        return left.block_id.localeCompare(right.block_id);
+      })
+      .forEach((block) => {
+        if (selected.length >= DEFAULT_MAX_BLOCKS) {
+          return;
+        }
+        const paperId = cleanText(block.paper_id, 120);
+        const count = perPaperCounts.get(paperId) || 0;
+        if (count >= DEFAULT_MAX_BLOCKS_PER_PAPER) {
+          return;
+        }
+        perPaperCounts.set(paperId, count + 1);
+        selected.push({
+          block_id: cleanText(block.block_id, 120),
+          relevance_reason: cleanText(
+            `Selected because it matches the clarified request about ${cleanText(query, 180) || 'the paper topic'}.`,
+            240
+          )
+        });
+      });
+    return {
+      selected_blocks: selected,
+      figure_review_requests: []
+    };
+  }
+
+  function normalizeSelectionResult(rawPayload, candidateBlocks = [], query = '') {
+    const source = ensureObject(rawPayload);
+    const candidateMap = new Map(
+      asArray(candidateBlocks).map((block) => [cleanText(block.block_id, 120), block])
+    );
+    const selected = [];
+    const seenBlocks = new Set();
+    const perPaperCounts = new Map();
+    asArray(source.selected_blocks).forEach((entry) => {
+      const blockId = cleanText(entry?.block_id, 120);
+      const block = candidateMap.get(blockId);
+      if (!block || seenBlocks.has(blockId) || selected.length >= DEFAULT_MAX_BLOCKS) {
+        return;
+      }
+      const paperId = cleanText(block.paper_id, 120);
+      const count = perPaperCounts.get(paperId) || 0;
+      if (count >= DEFAULT_MAX_BLOCKS_PER_PAPER) {
+        return;
+      }
+      seenBlocks.add(blockId);
+      perPaperCounts.set(paperId, count + 1);
+      selected.push({
+        ...block,
+        relevance_reason: cleanText(entry?.relevance_reason, 260)
+          || cleanText(`Selected because it directly supports the clarified request about ${cleanText(query, 180) || 'the topic'}.`, 260)
+      });
+    });
+    const reviewedPaperIds = new Set(selected.map((block) => cleanText(block.paper_id, 120)));
+    const figureReviewRequests = asArray(source.figure_review_requests)
+      .map((entry) => ({
+        paper_id: cleanText(entry?.paper_id, 120),
+        reason: cleanText(entry?.reason, 260)
+      }))
+      .filter((entry) => entry.paper_id && reviewedPaperIds.has(entry.paper_id))
+      .slice(0, DEFAULT_MAX_FIGURE_REVIEWS);
+    return {
+      selected_blocks: selected,
+      figure_review_requests: figureReviewRequests
+    };
+  }
+
+  async function selectContextBlocks(input = {}) {
+    const candidateBlocks = asArray(input.candidate_blocks);
+    const fallback = buildFallbackSelection(candidateBlocks, input.query || input.message);
+    if (!candidateBlocks.length || typeof requestStructuredJsonPayload !== 'function') {
+      return normalizeSelectionResult(fallback, candidateBlocks, input.query || input.message);
+    }
+    const result = await requestStructuredJsonPayload({
+      provider: cleanText(input.provider, 80),
+      endpoint: cleanText(input.endpoint, 2000),
+      apiKey: cleanText(input.apiKey, 400),
+      model: cleanText(input.model, 120),
+      stage: 'paper_context_selection',
+      systemPrompt: 'Return valid JSON only.',
+      userPrompt: buildSelectionPrompt(input),
+      schema: PAPER_CONTEXT_SELECTION_SCHEMA,
+      traceContext: input.traceContext || null,
+      maxOutputTokens: 1600,
+      openAiStrict: true,
+      openAiAsDefaultProvider: true,
+      defaultError: 'Paper context selection is not configured.'
+    });
+    if (!result?.ok || !result.payload) {
+      return normalizeSelectionResult(fallback, candidateBlocks, input.query || input.message);
+    }
+    return normalizeSelectionResult(result.payload, candidateBlocks, input.query || input.message);
+  }
+
+  async function fetchPaperPdfDataUrl(paper = {}) {
+    const urls = buildPaperPdfUrls(paper);
+    for (const url of urls) {
+      try {
+        const buffer = await fetchBuffer(url, {
+          headers: {
+            Accept: 'application/pdf,application/octet-stream;q=0.9,*/*;q=0.1'
+          }
+        });
+        if (!buffer.length) {
+          continue;
+        }
+        if (buffer.subarray(0, 5).toString('utf8') !== '%PDF-') {
+          continue;
+        }
+        return {
+          pdfDataUrl: `data:application/pdf;base64,${buffer.toString('base64')}`,
+          fileName: `${cleanText(paper.paper_title, 180).replace(/[^a-z0-9]+/gi, '_') || 'paper'}.pdf`,
+          resolvedUrl: url
+        };
+      } catch {
+        // Try the next URL.
+      }
+    }
+    return null;
+  }
+
+  function messageLikelyNeedsFigureReview(value) {
+    return /\b(figure|fig\.|image|images|microscopy|blot|band|gel|stain|structure|localization|plot|plots|spectrum)\b/i
+      .test(String(value || ''));
+  }
+
+  async function reviewFigureEvidence(input = {}) {
+    const papersById = input.papers_by_id instanceof Map ? input.papers_by_id : new Map();
+    const figureRequests = asArray(input.figure_review_requests).slice(0, DEFAULT_MAX_FIGURE_REVIEWS);
+    const blocks = [];
+    if (!figureRequests.length || typeof requestStructuredJsonPayload !== 'function') {
+      return blocks;
+    }
+    for (const request of figureRequests) {
+      const paperId = cleanText(request?.paper_id, 120);
+      const paper = papersById.get(paperId);
+      if (!paper) {
+        continue;
+      }
+      const pdfInput = await fetchPaperPdfDataUrl(paper);
+      if (!pdfInput) {
+        continue;
+      }
+      const result = await requestStructuredJsonPayload({
+        provider: cleanText(input.provider, 80),
+        endpoint: cleanText(input.endpoint, 2000),
+        apiKey: cleanText(input.apiKey, 400),
+        model: cleanText(input.model, 120),
+        stage: 'paper_figure_review',
+        systemPrompt: 'Return valid JSON only.',
+        userPrompt: [
+          'Review the paper PDF only for figure-level evidence relevant to the clarified request.',
+          'If the figures do not materially improve the answer beyond the selected text evidence, set useful=false.',
+          `Clarified request:\n${cleanText(input.query || input.message, 1200)}`,
+          `Paper title: ${cleanText(paper.paper_title, 220)}`,
+          `Why figure review was requested: ${cleanText(request?.reason, 260) || 'Potential figure-level evidence.'}`
+        ].join('\n\n'),
+        schema: PAPER_FIGURE_REVIEW_SCHEMA,
+        traceContext: input.traceContext || null,
+        maxOutputTokens: 1000,
+        openAiStrict: true,
+        openAiAsDefaultProvider: true,
+        pdfDataUrl: pdfInput.pdfDataUrl,
+        fileName: pdfInput.fileName,
+        defaultError: 'Paper figure review is not configured.'
+      });
+      if (!result?.ok || !result.payload || result.payload.useful !== true) {
+        continue;
+      }
+      const figureSummary = cleanText(result.payload.figure_summary, 1400);
+      if (!figureSummary) {
+        continue;
+      }
+      blocks.push({
+        block_id: `${paperId}::figure-review`,
+        paper_id: paperId,
+        paper_title: cleanText(paper.paper_title, 320),
+        section_label: 'Figures',
+        excerpt: figureSummary,
+        relevance_reason: cleanText(result.payload.relevance_reason, 260) || cleanText(request?.reason, 260),
+        source: 'figure_review',
+        evidence_kind: 'figure_review',
+        rank_score: 10000
+      });
+    }
+    return blocks;
+  }
+
+  function mergeFigureBlocks(selectedBlocks = [], figureBlocks = []) {
+    const merged = asArray(selectedBlocks).slice(0, DEFAULT_MAX_BLOCKS);
+    asArray(figureBlocks).forEach((figureBlock) => {
+      if (!figureBlock?.paper_id || !figureBlock?.excerpt) {
+        return;
+      }
+      const samePaperIndexes = merged
+        .map((block, index) => ({ block, index }))
+        .filter((entry) => cleanText(entry.block?.paper_id, 120) === cleanText(figureBlock.paper_id, 120));
+      if (samePaperIndexes.length >= DEFAULT_MAX_BLOCKS_PER_PAPER) {
+        const replaceTarget = samePaperIndexes
+          .filter((entry) => cleanText(entry.block?.evidence_kind, 40) !== 'figure_review')
+          .sort((left, right) => Number(left.block?.rank_score || 0) - Number(right.block?.rank_score || 0))[0];
+        if (!replaceTarget) {
+          return;
+        }
+        merged.splice(replaceTarget.index, 1, figureBlock);
+        return;
+      }
+      if (merged.length < DEFAULT_MAX_BLOCKS) {
+        merged.push(figureBlock);
+        return;
+      }
+      const replaceIndex = merged
+        .map((block, index) => ({ block, index }))
+        .filter((entry) => cleanText(entry.block?.evidence_kind, 40) !== 'figure_review')
+        .sort((left, right) => Number(left.block?.rank_score || 0) - Number(right.block?.rank_score || 0))[0]?.index;
+      if (Number.isInteger(replaceIndex)) {
+        merged.splice(replaceIndex, 1, figureBlock);
+      }
+    });
+    return merged.slice(0, DEFAULT_MAX_BLOCKS);
+  }
+
+  function normalizeLoadedContextBlocks(blocks = []) {
+    return asArray(blocks)
+      .slice(0, DEFAULT_MAX_BLOCKS)
+      .map((block) => ({
+        paper_id: cleanText(block?.paper_id, 120),
+        paper_title: cleanText(block?.paper_title, 320),
+        section_label: cleanText(block?.section_label, 160) || 'Excerpt',
+        excerpt: cleanText(block?.excerpt, 1800),
+        relevance_reason: cleanText(block?.relevance_reason, 260),
+        source: cleanText(block?.source, 80),
+        evidence_kind: cleanText(block?.evidence_kind, 40) || 'text'
+      }))
+      .filter((block) => block.paper_id && block.excerpt);
+  }
+
+  async function loadPaperContexts(input = {}) {
+    const maxPapers = Math.max(1, Math.min(DEFAULT_MAX_PAPERS, Number(input.max_papers) || DEFAULT_MAX_PAPERS));
+    const items = asArray(input.items).slice(0, maxPapers).map((item) => normalizePaperItem(item));
+    const query = cleanText(input.query || input.message || input.topic, 1200);
+    const papers = [];
+    for (const item of items) {
+      const paper = await readPaperContext(item);
+      papers.push(paper);
+    }
+    const candidateBlocks = buildCandidateBlocks(papers, query);
+    const selection = await selectContextBlocks({
+      ...input,
+      query,
+      candidate_blocks: candidateBlocks
+    });
+    const papersById = new Map(papers.map((paper) => [cleanText(paper.paper_id, 120), paper]));
+    const selectedBlocks = asArray(selection.selected_blocks);
+    const figureReviewRequests = asArray(selection.figure_review_requests).length
+      ? asArray(selection.figure_review_requests)
+      : (
+        messageLikelyNeedsFigureReview(query)
+          ? selectedBlocks
+            .filter((block) => asArray(papersById.get(cleanText(block?.paper_id, 120))?.pdf_urls).length > 0)
+            .slice(0, DEFAULT_MAX_FIGURE_REVIEWS)
+            .map((block) => ({
+              paper_id: cleanText(block?.paper_id, 120),
+              reason: 'The clarified request appears to depend on figure-level evidence.'
+            }))
+          : []
+      );
+    const figureBlocks = figureReviewRequests.length
+      ? await reviewFigureEvidence({
+        ...input,
+        query,
+        papers_by_id: papersById,
+        figure_review_requests: figureReviewRequests
+      })
+      : [];
+    const loadedContextBlocks = normalizeLoadedContextBlocks(
+      mergeFigureBlocks(selectedBlocks, figureBlocks)
+    );
+    return {
+      ok: true,
+      status: 'completed',
+      papers_read_count: papers.filter((paper) => asArray(paper.sections).length > 0).length,
+      selected_context_block_count: loadedContextBlocks.length,
+      figure_review_count: figureBlocks.length,
+      papers: papers.map((paper) => ({
+        paper_id: cleanText(paper.paper_id, 120),
+        paper_title: cleanText(paper.paper_title, 320),
+        read_source: cleanText(paper.read_source, 80),
+        section_count: asArray(paper.sections).length
+      })),
+      loaded_context_blocks: loadedContextBlocks,
+      summary: loadedContextBlocks.length
+        ? `Read ${papers.length} paper(s) and loaded ${loadedContextBlocks.length} context block(s).`
+        : (papers.length
+          ? `Read ${papers.length} paper(s) but did not load any bounded context blocks.`
+          : 'No paper context could be loaded from the literature results.')
+    };
+  }
+
+  return {
+    PAPER_CONTEXT_SOURCE_ORDER,
+    PAPER_CONTEXT_SELECTION_SCHEMA,
+    PAPER_FIGURE_REVIEW_SCHEMA,
+    chunkSectionText,
+    parseEuropePmcFullTextSections,
+    parsePubMedAbstractSections,
+    fetchEuropePmcMetadataForItem,
+    fetchEuropePmcFullTextByPmcid,
+    fetchPubMedAbstractByPmid,
+    fetchCrossrefAbstractByDoi,
+    readPaperContext,
+    buildCandidateBlocks,
+    loadPaperContexts
+  };
+}
+
+module.exports = {
+  PAPER_CONTEXT_SOURCE_ORDER,
+  PAPER_CONTEXT_SELECTION_SCHEMA,
+  PAPER_FIGURE_REVIEW_SCHEMA,
+  createPaperContextLoaderRuntime
+};

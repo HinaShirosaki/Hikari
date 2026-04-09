@@ -1,9 +1,27 @@
+import {
+  LLM_PROVIDER_CONFIGS,
+  LLM_PROVIDER_OPTIONS,
+  LLM_MODEL_OPTIONS_BY_PROVIDER,
+  LLM_PROVIDERS,
+  DEFAULT_LLM_PROVIDER,
+  DEFAULT_LLM_ENDPOINTS,
+  DEFAULT_AGENT_MODELS,
+  inferLlmProviderFromEndpoint,
+  normalizeLlmProvider,
+  getLlmProviderModelOptions,
+  getLlmModelConfig,
+  defaultLlmEndpointForProvider,
+  defaultAgentModelForProvider,
+  defaultReasoningEffortForModel,
+  normalizeReasoningEffort,
+  modelPlaceholderForProvider,
+  apiKeyPlaceholderForProvider,
+  providerRequiresApiKey
+} from './llm-provider-config.generated.js';
+
 export const VIEWS = {
   HOME: 'home-view',
-  LAB_MANAGEMENT: 'lab-management-view',
-  INSTRUMENT_MANAGEMENT: 'instrument-management-view',
   PROTOCOL_MANAGEMENT: 'protocol-management-view',
-  SYNTHESIS_NOTEBOOK: 'synthesis-notebook-view',
   BIOLOGY_NOTEBOOK: 'biology-notebook-view',
   LAB_COMMON_INVENTORY: 'lab-common-inventory-view',
   SAMPLE_REGISTRY: 'sample-registry-view',
@@ -21,7 +39,6 @@ export const VIEWS = {
 
 export const TITLES = {
   [VIEWS.HOME]: 'Bench overview, reminders, workflow progress, and a lab timer.',
-  [VIEWS.INSTRUMENT_MANAGEMENT]: 'Instrument schedules, availability, and reservations.',
   [VIEWS.PROTOCOL_MANAGEMENT]: 'Protocol library for drafting, editing, and reuse.',
   [VIEWS.BIOLOGY_NOTEBOOK]: 'Biology notebook entries and wet-lab context.',
   [VIEWS.LAB_COMMON_INVENTORY]: 'Chemical inventory, locations, and stock records.',
@@ -40,56 +57,31 @@ export const TITLES = {
 
 export const STORAGE_KEY = 'enana_state_v1';
 const LEGACY_CHEMISTRY_DRAFT_KEY = 'enana_synthesis_chemistry_draft_v1';
-export const LLM_PROVIDERS = Object.freeze({
-  OPENAI: 'openai',
-  GEMINI: 'gemini',
-  CLAUDE: 'claude',
-  CODEX: 'codex'
-});
-export const DEFAULT_LLM_PROVIDER = LLM_PROVIDERS.OPENAI;
-export const LLM_DEFAULT_ENDPOINTS = Object.freeze({
-  [LLM_PROVIDERS.OPENAI]: 'https://api.openai.com/v1/responses',
-  [LLM_PROVIDERS.GEMINI]: 'https://generativelanguage.googleapis.com/v1beta',
-  [LLM_PROVIDERS.CLAUDE]: 'https://api.anthropic.com/v1/messages',
-  [LLM_PROVIDERS.CODEX]: 'codex://cli'
-});
+export {
+  LLM_PROVIDER_CONFIGS,
+  LLM_PROVIDER_OPTIONS,
+  LLM_MODEL_OPTIONS_BY_PROVIDER,
+  LLM_PROVIDERS,
+  DEFAULT_LLM_PROVIDER,
+  DEFAULT_LLM_ENDPOINTS,
+  DEFAULT_AGENT_MODELS,
+  inferLlmProviderFromEndpoint,
+  normalizeLlmProvider,
+  getLlmProviderModelOptions,
+  getLlmModelConfig,
+  defaultLlmEndpointForProvider,
+  defaultAgentModelForProvider,
+  defaultReasoningEffortForModel,
+  normalizeReasoningEffort,
+  modelPlaceholderForProvider,
+  apiKeyPlaceholderForProvider,
+  providerRequiresApiKey
+};
 
-export function inferLlmProviderFromEndpoint(endpoint) {
-  const value = String(endpoint || '').trim().toLowerCase();
-  if (!value) {
-    return '';
-  }
-  if (value.startsWith('codex://') || value.includes('codex cli') || value.includes('openai-cli')) {
-    return LLM_PROVIDERS.CODEX;
-  }
-  if (value.includes('anthropic.com')) {
-    return LLM_PROVIDERS.CLAUDE;
-  }
-  if (value.includes('generativelanguage.googleapis.com') || value.includes('ai.google')) {
-    return LLM_PROVIDERS.GEMINI;
-  }
-  if (value.includes('openai.com') || value.includes('/openai/')) {
-    return LLM_PROVIDERS.OPENAI;
-  }
-  return '';
-}
-
-export function normalizeLlmProvider(provider, endpoint = '') {
-  const clean = String(provider || '').trim().toLowerCase();
-  if (Object.values(LLM_PROVIDERS).includes(clean)) {
-    return clean;
-  }
-  return inferLlmProviderFromEndpoint(endpoint) || DEFAULT_LLM_PROVIDER;
-}
-
-export function defaultLlmEndpointForProvider(provider) {
-  const resolved = normalizeLlmProvider(provider);
-  return LLM_DEFAULT_ENDPOINTS[resolved] || LLM_DEFAULT_ENDPOINTS[DEFAULT_LLM_PROVIDER];
-}
+export const LLM_DEFAULT_ENDPOINTS = DEFAULT_LLM_ENDPOINTS;
 
 const STARTUP_DEFAULT_VIEW_IDS = new Set([
   VIEWS.HOME,
-  VIEWS.INSTRUMENT_MANAGEMENT,
   VIEWS.PROTOCOL_MANAGEMENT,
   VIEWS.BIOLOGY_NOTEBOOK,
   VIEWS.LAB_COMMON_INVENTORY,
@@ -182,6 +174,7 @@ export const defaultState = {
     llm: {
       provider: DEFAULT_LLM_PROVIDER,
       model: '',
+      reasoningEffort: '',
       api: '',
       apiEndpoint: LLM_DEFAULT_ENDPOINTS[DEFAULT_LLM_PROVIDER],
       apiKey: ''
@@ -194,7 +187,8 @@ export const defaultState = {
     inventoryLocations: ['Main Storage', 'Cold Room', 'Fume Hood'],
     dashboard: {
       currentWorkflowId: '',
-      workflowProgress: {}
+      workflowProgress: {},
+      quickLogDraft: ''
     },
     startup: {
       defaultViewId: VIEWS.HOME,
@@ -310,6 +304,58 @@ export function normalizePaperComment(rawComment) {
   };
 }
 
+export function normalizePaperHighlight(rawHighlight) {
+  if (!rawHighlight || typeof rawHighlight !== 'object' || Array.isArray(rawHighlight)) {
+    return null;
+  }
+
+  const id = String(rawHighlight.id || '').trim();
+  const pageNumber = Math.round(Number(rawHighlight.pageNumber));
+  const text = String(rawHighlight.text || '').trim();
+  const boxes = (Array.isArray(rawHighlight.boxes) ? rawHighlight.boxes : [])
+    .map((box) => {
+      if (!box || typeof box !== 'object' || Array.isArray(box)) {
+        return null;
+      }
+      const x = clampUnitInterval(box.x);
+      const y = clampUnitInterval(box.y);
+      const width = clampUnitInterval(box.width);
+      const height = clampUnitInterval(box.height);
+      if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(width) || !Number.isFinite(height)) {
+        return null;
+      }
+      const normalizedWidth = Math.max(Math.min(width, 1 - x), 0);
+      const normalizedHeight = Math.max(Math.min(height, 1 - y), 0);
+      if (normalizedWidth <= 0 || normalizedHeight <= 0) {
+        return null;
+      }
+      return {
+        x,
+        y,
+        width: normalizedWidth,
+        height: normalizedHeight
+      };
+    })
+    .filter(Boolean);
+
+  if (!id || !Number.isFinite(pageNumber) || pageNumber < 1 || !text || !boxes.length) {
+    return null;
+  }
+
+  const createdAt = String(rawHighlight.createdAt || rawHighlight.updatedAt || '').trim();
+  const updatedAt = String(rawHighlight.updatedAt || rawHighlight.createdAt || '').trim();
+
+  return {
+    ...rawHighlight,
+    id,
+    pageNumber,
+    text,
+    boxes,
+    createdAt,
+    updatedAt
+  };
+}
+
 export function normalizePaperRecord(rawPaper) {
   if (!rawPaper || typeof rawPaper !== 'object' || Array.isArray(rawPaper)) {
     return rawPaper;
@@ -317,6 +363,9 @@ export function normalizePaperRecord(rawPaper) {
 
   return {
     ...rawPaper,
+    highlights: Array.isArray(rawPaper.highlights)
+      ? rawPaper.highlights.map((highlight) => normalizePaperHighlight(highlight)).filter(Boolean)
+      : [],
     comments: Array.isArray(rawPaper.comments)
       ? rawPaper.comments.map((comment) => normalizePaperComment(comment)).filter(Boolean)
       : []
@@ -346,8 +395,15 @@ export function normalizeState(parsed) {
   const legacyEndpoint = legacyApiLooksLikeEndpoint ? legacyApi : '';
   const legacyApiKey = legacyApi && !legacyApiLooksLikeEndpoint ? legacyApi : '';
   const llmProvider = normalizeLlmProvider(rawLlm.provider, rawLlm.apiEndpoint || legacyEndpoint);
+  const llmModel = String(rawLlm.model || '').trim();
   const llmEndpoint = String(rawLlm.apiEndpoint || legacyEndpoint || '').trim()
     || defaultLlmEndpointForProvider(llmProvider);
+  const llmReasoningEffort = normalizeReasoningEffort(
+    llmProvider,
+    llmModel,
+    rawLlm.reasoningEffort,
+    llmEndpoint
+  );
 
   return {
     ...structuredClone(defaultState),
@@ -430,7 +486,8 @@ export function normalizeState(parsed) {
         ...defaultState.settings.dashboard,
         ...(source.settings?.dashboard || {}),
         currentWorkflowId: String(source.settings?.dashboard?.currentWorkflowId || ''),
-        workflowProgress: normalizeWorkflowProgressMap(source.settings?.dashboard?.workflowProgress)
+        workflowProgress: normalizeWorkflowProgressMap(source.settings?.dashboard?.workflowProgress),
+        quickLogDraft: String(source.settings?.dashboard?.quickLogDraft || '')
       },
       startup: {
         ...defaultState.settings.startup,
@@ -449,6 +506,8 @@ export function normalizeState(parsed) {
         ...defaultState.settings.llm,
         ...rawLlm,
         provider: llmProvider,
+        model: llmModel,
+        reasoningEffort: llmReasoningEffort,
         apiEndpoint: llmEndpoint,
         apiKey: String(rawLlm.apiKey || legacyApiKey).trim(),
         api: legacyApi

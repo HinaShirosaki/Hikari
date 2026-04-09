@@ -6,7 +6,7 @@
 
 .protocol-workspace {
   display: grid;
-  grid-template-columns: minmax(280px, 38.2%) minmax(0, 61.8%);
+  grid-template-columns: var(--layout-left-panel-width) minmax(0, 1fr);
   gap: 28px;
   align-items: start;
 }
@@ -51,6 +51,7 @@
 }
 
 #create-protocol-btn,
+#protocol-polish-btn,
 #protocol-sort-field-btn,
 #protocol-sort-order-btn {
   min-height: 36px;
@@ -256,6 +257,44 @@
   line-height: 1.6;
 }
 
+.protocol-steps-toolbar {
+  display: grid;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.protocol-steps-toolbar-label {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.protocol-placeholder-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.protocol-placeholder-preset {
+  min-height: 32px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border-color: var(--line);
+  background: var(--surface-subtle);
+  color: var(--strong);
+  font-size: 0.88rem;
+}
+
+.protocol-placeholder-preset:hover,
+.protocol-placeholder-preset:focus-visible {
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface-subtle));
+}
+
+#placeholder-name {
+  width: min(260px, 100%);
+  flex: 0 1 260px;
+}
+
 .protocol-view-section {
   margin-top: 8px;
 }
@@ -277,6 +316,146 @@
 
 .protocol-save-actions {
   margin-top: 12px;
+}
+
+.protocol-polish-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 220;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(16px, 3vw, 30px);
+  background: color-mix(in srgb, var(--strong) 20%, transparent);
+  backdrop-filter: blur(10px);
+}
+
+.protocol-polish-overlay[hidden] {
+  display: none;
+}
+
+.protocol-polish-dialog-shell {
+  width: min(1180px, 100%);
+  max-height: calc(100vh - 32px);
+  display: grid;
+  gap: 16px;
+}
+
+.protocol-polish-dialog-stack {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 18px;
+}
+
+.protocol-polish-dialog {
+  position: relative;
+  display: grid;
+  gap: 14px;
+  padding: clamp(18px, 2.5vw, 24px);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-elevated) 95%, transparent), color-mix(in srgb, var(--surface) 96%, transparent)),
+    radial-gradient(circle at top right, color-mix(in srgb, var(--accent) 10%, transparent), transparent 38%);
+  box-shadow: 0 28px 72px rgba(27, 20, 14, 0.16);
+  overflow: auto;
+  max-height: calc(100vh - 130px);
+}
+
+.protocol-polish-dialog-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.protocol-polish-dialog-head h3 {
+  margin: 8px 0 0;
+}
+
+.protocol-polish-preview {
+  display: grid;
+  gap: 0;
+  min-height: 280px;
+}
+
+.protocol-polish-preview .protocol-view-section:first-child {
+  margin-top: 0;
+}
+
+.protocol-polish-actions {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  padding: 0 6px;
+}
+
+#protocol-polish-status[data-state="error"] {
+  color: var(--danger);
+}
+
+.protocol-polish-preview-empty,
+.protocol-polish-loading {
+  min-height: 280px;
+  display: grid;
+  place-items: center;
+  gap: 12px;
+  padding: 28px 20px;
+  border: 1px dashed var(--line);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  text-align: center;
+}
+
+.protocol-polish-preview-empty p,
+.protocol-polish-loading p {
+  margin: 0;
+  max-width: 30ch;
+}
+
+.protocol-polish-preview-empty[data-state="error"] {
+  border-color: color-mix(in srgb, var(--danger) 28%, var(--line));
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 6%, var(--surface));
+}
+
+.protocol-polish-loading-dots {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  color: var(--strong);
+}
+
+.protocol-polish-loading-dots span {
+  display: inline-block;
+  transform-origin: center bottom;
+  animation: protocol-polish-dot-jump 0.96s ease-in-out infinite;
+}
+
+.protocol-polish-loading-dots span:nth-child(2) {
+  animation-delay: 0.14s;
+}
+
+.protocol-polish-loading-dots span:nth-child(3) {
+  animation-delay: 0.28s;
+}
+
+@keyframes protocol-polish-dot-jump {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.36;
+  }
+
+  30% {
+    transform: translateY(-7px);
+    opacity: 1;
+  }
 }
 
 .protocol-empty-panel {
@@ -398,5 +577,32 @@
 
   .protocol-empty-panel {
     min-height: 240px;
+  }
+
+  .protocol-polish-overlay {
+    padding: 12px;
+  }
+
+  .protocol-polish-dialog-shell {
+    max-height: calc(100vh - 24px);
+  }
+
+  .protocol-polish-dialog-stack {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .protocol-polish-dialog {
+    max-height: min(44vh, 460px);
+  }
+
+  .protocol-polish-actions {
+    padding: 0;
+    justify-content: stretch;
+  }
+
+  .protocol-polish-actions .primary-btn,
+  .protocol-polish-actions .ghost-btn {
+    flex: 1 1 200px;
   }
 }

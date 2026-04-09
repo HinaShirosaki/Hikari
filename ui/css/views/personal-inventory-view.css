@@ -2,7 +2,7 @@
 
 #personal-inventory-view.is-active {
   display: grid;
-  grid-template-columns: minmax(172px, 19.1%) minmax(0, 80.9%);
+  grid-template-columns: var(--layout-left-panel-width) minmax(0, 1fr);
   gap: 18px;
   align-items: start;
 }
@@ -338,6 +338,23 @@
 .well-grid-panel {
   min-width: 0;
   width: 100%;
+  min-height: 520px;
+}
+
+.falcon-grid-panel {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+}
+
+.well-grid-panel-plate96 {
+  border-radius: 26px;
+  border: 1px solid rgba(32, 36, 41, 0.78);
+  background: #fff;
+  box-shadow:
+    inset 0 0 0 1px rgba(32, 36, 41, 0.24),
+    0 10px 24px rgba(26, 31, 39, 0.08);
+  padding: 14px 16px 16px;
 }
 
 .well-grid {
@@ -353,49 +370,192 @@
 }
 
 .well-grid-plate96 {
+  box-sizing: border-box;
+  width: 100%;
   aspect-ratio: 12 / 8;
-  border-radius: 28px;
-  padding: 12px 14px;
-  border: 1px solid rgba(53, 88, 132, 0.5);
-  background:
-    linear-gradient(180deg, rgba(232, 240, 251, 0.92), rgba(210, 224, 243, 0.96)),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0));
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.8),
-    inset 0 -10px 24px rgba(63, 93, 131, 0.08),
-    0 12px 28px rgba(67, 90, 121, 0.08);
-  gap: 8px;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  grid-template-columns: repeat(12, 1fr);
+  grid-template-rows: repeat(8, 1fr);
+  column-gap: 8px;
+  row-gap: 8px;
+  align-content: start;
+  justify-content: start;
+  overflow: visible;
 }
 
 .well-plate96 {
   border: 0;
   border-radius: 999px;
-  background: radial-gradient(circle at 50% 42%, #f8fbff 0%, #edf3fa 45%, #d5e0ec 100%);
-  box-shadow:
-    inset 0 0 0 1px rgba(85, 108, 136, 0.18),
-    inset 0 -2px 6px rgba(81, 102, 128, 0.12);
+  background: #fff;
+  box-shadow: inset 0 0 0 1.5px rgba(25, 29, 34, 0.82);
 }
 
 .well-plate96 .well-number {
-  top: -16px;
-  left: 50%;
-  transform: translateX(-50%);
-  color: rgba(59, 80, 105, 0.82);
-  font-size: 0.58rem;
+  display: none;
 }
 
 .well-plate96 .well-sample-dot {
-  width: 44%;
-  height: 44%;
+  width: 48%;
+  height: 48%;
   border-radius: 999px;
-  background: rgba(219, 229, 240, 0.72);
+  background: rgba(228, 232, 237, 0.9);
+  border: 0;
 }
 
 .well-plate96.well-selected {
-  background: radial-gradient(circle at 50% 42%, #fffdf5 0%, #f4ead0 52%, #e4c98f 100%);
-  box-shadow:
-    inset 0 0 0 2px rgba(177, 133, 54, 0.34),
-    0 0 0 2px rgba(214, 182, 115, 0.18);
+  background: #fff7e2;
+  box-shadow: inset 0 0 0 2px rgba(188, 146, 58, 0.55);
+}
+
+.well-grid-plate96 .well-sample-dot.has-sample {
+  border: 1px solid rgba(255, 255, 255, 0.82);
+}
+
+.well-grid-plate96 .well-sample-count {
+  right: -3px;
+  bottom: -4px;
+}
+
+.well-editor-shell-single {
+  align-items: center;
+}
+
+.falcon-preview-shell {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding: 8px 0 2px;
+}
+
+.falcon-preview {
+  position: relative;
+  width: min(100%, 220px);
+  aspect-ratio: 0.54 / 1;
+}
+
+.falcon-cap {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 42%;
+  height: 11%;
+  transform: translateX(-50%);
+  border-radius: 10px 10px 7px 7px;
+  background: linear-gradient(180deg, #3f8ecb, #1f5f95);
+  box-shadow: inset 0 -2px 0 rgba(10, 27, 48, 0.16);
+}
+
+.falcon-body {
+  position: absolute;
+  top: 8%;
+  left: 50%;
+  width: 50%;
+  height: 86%;
+  transform: translateX(-50%);
+  border: 2px solid rgba(108, 121, 137, 0.92);
+  border-radius: 18px 18px 44px 44px / 14px 14px 72px 72px;
+  background: linear-gradient(180deg, rgba(252, 253, 255, 0.96), rgba(236, 241, 247, 0.92));
+  overflow: hidden;
+}
+
+.falcon-body::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -16%;
+  width: 28%;
+  height: 26%;
+  transform: translateX(-50%);
+  border: 2px solid rgba(108, 121, 137, 0.92);
+  border-top: 0;
+  border-radius: 0 0 40px 40px / 0 0 100% 100%;
+  background: inherit;
+  clip-path: polygon(12% 0, 88% 0, 58% 100%, 42% 100%);
+}
+
+.falcon-liquid {
+  position: absolute;
+  left: 9%;
+  right: 9%;
+  bottom: 10%;
+  height: 0;
+  border-radius: 0 0 30px 30px / 0 0 90% 90%;
+  background: transparent;
+  transition: height 140ms ease;
+}
+
+.falcon-liquid.has-sample {
+  height: 33%;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--falcon-fill, #718096) 86%, white) 0%, var(--falcon-fill, #718096) 100%);
+}
+
+.falcon-highlight {
+  position: absolute;
+  left: 16%;
+  top: 8%;
+  width: 12%;
+  height: 68%;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.12));
+}
+
+.falcon-mark {
+  position: absolute;
+  right: 14%;
+  width: 16%;
+  height: 1.5%;
+  background: rgba(102, 115, 130, 0.5);
+  border-radius: 999px;
+}
+
+.falcon-mark-1 { top: 26%; }
+.falcon-mark-2 { top: 38%; }
+.falcon-mark-3 { top: 50%; }
+.falcon-mark-4 { top: 62%; }
+
+.plate96-shell {
+  display: grid;
+  gap: 10px;
+}
+
+.plate96-top-labels {
+  display: grid;
+  grid-template-columns: 26px repeat(12, 1fr);
+  align-items: center;
+  gap: 8px;
+  padding: 0 4px 0 2px;
+  color: rgba(33, 38, 43, 0.82);
+  font-size: 0.7rem;
+  font-weight: 650;
+}
+
+.plate96-top-labels::before {
+  content: "";
+}
+
+.plate96-top-labels span,
+.plate96-side-labels span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.plate96-body {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: 8px;
+  align-items: stretch;
+}
+
+.plate96-side-labels {
+  display: grid;
+  grid-template-rows: repeat(8, 1fr);
+  gap: 8px;
+  color: rgba(33, 38, 43, 0.82);
+  font-size: 0.7rem;
+  font-weight: 650;
 }
 
 .well-number {
@@ -474,12 +634,36 @@
 .well-inline-editor {
   margin-top: 12px;
   padding-top: 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.55);
+  border-top: 0;
 }
 
 .well-inline-editor strong {
   display: block;
   margin-bottom: 8px;
+}
+
+.well-editor-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.well-editor-title-group {
+  min-width: 0;
+}
+
+.well-editor-title-group strong:last-child {
+  margin-bottom: 0;
+}
+
+.well-editor-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
 }
 
 .well-side-editor {

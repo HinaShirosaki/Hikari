@@ -201,6 +201,55 @@ function createAgentContextManagementRuntime(deps = {}) {
     return cleanText(parts.join(' | '), 600);
   }
 
+  function buildPromptTaskSummary(task) {
+    const source = ensureObject(task);
+    const lines = [
+      cleanText(source.task_type, 120) ? `Task type: ${cleanText(source.task_type, 120)}` : '',
+      cleanText(source.intent, 120) ? `Intent: ${cleanText(source.intent, 120)}` : '',
+      cleanText(source.status, 80) ? `Status: ${cleanText(source.status, 80)}` : '',
+      cleanText(source.project?.name, 220) ? `Project: ${cleanText(source.project.name, 220)}` : '',
+      cleanText(source.selected_protocol?.name, 220) ? `Protocol: ${cleanText(source.selected_protocol.name, 220)}` : ''
+    ].filter(Boolean);
+    const knownValues = Object.entries(ensureObject(source.known_values))
+      .slice(0, 4)
+      .map(([key, value]) => {
+        const normalizedKey = cleanText(key, 80);
+        const normalizedValue = cleanText(
+          typeof value === 'string'
+            ? value
+            : JSON.stringify(value),
+          160
+        );
+        if (!normalizedKey || !normalizedValue) {
+          return '';
+        }
+        return `${normalizedKey}=${normalizedValue}`;
+      })
+      .filter(Boolean);
+    const missingFields = normalizeMissingFields(source.missing_fields)
+      .slice(0, 4)
+      .map((item) => cleanText(item.display || item.key, 120))
+      .filter(Boolean);
+    const followUps = uniqueStrings(source.follow_up_questions, 3);
+    const hasMeaningfulDetail = Boolean(
+      cleanText(source.project?.name, 220)
+      || cleanText(source.selected_protocol?.name, 220)
+      || knownValues.length
+      || missingFields.length
+      || followUps.length
+    );
+    if (!hasMeaningfulDetail) {
+      return '';
+    }
+    return [
+      'Task summary:',
+      ...lines,
+      knownValues.length ? `Known values: ${knownValues.join(' | ')}` : '',
+      missingFields.length ? `Missing fields: ${missingFields.join(' | ')}` : '',
+      followUps.length ? `Follow-up questions: ${followUps.join(' | ')}` : ''
+    ].filter(Boolean).join('\n');
+  }
+
   // Create the default layered-memory structure for a brand-new session.
   function createEmptySession(sessionId) {
     const timestamp = now();
@@ -547,6 +596,7 @@ function createAgentContextManagementRuntime(deps = {}) {
 
   // Render each context layer into human-readable prompt sections plus one combined block.
   function buildPromptBlocks(layers) {
+    const taskSummary = buildPromptTaskSummary(layers.immediate.current_task_state);
     // Immediate context focuses on the current request, recent dialogue, and fresh tool outputs.
     const immediate = [
       'Immediate working context:',
@@ -557,11 +607,14 @@ function createAgentContextManagementRuntime(deps = {}) {
         ? `Recent conversation:\n${layers.immediate.recent_conversation.map((entry, index) => `${index + 1}. ${entry.role}: ${entry.text}`).join('\n')}`
         : '',
       layers.immediate.latest_tool_outputs.length
-        ? `Latest tool outputs:\n${layers.immediate.latest_tool_outputs.map((entry, index) => `${index + 1}. ${entry.tool_name || 'tool'}: ${entry.summary || '[result available]'}`).join('\n')}`
+        ? `Latest tool outputs:\n${layers.immediate.latest_tool_outputs.map((entry) => {
+          const toolName = cleanText(entry?.tool_name, 120) || 'tool';
+          const okLabel = entry?.ok === false ? 'failed' : 'ok';
+          const summary = cleanText(entry?.summary, 220) || '[result available]';
+          return `- ${toolName} (${okLabel}) | summary: ${summary}`;
+        }).join('\n')}`
         : '',
-      layers.immediate.current_task_state
-        ? `Current task state JSON:\n${JSON.stringify(layers.immediate.current_task_state, null, 2)}`
-        : ''
+      taskSummary
     ].filter(Boolean).join('\n\n');
 
     // Session memory captures medium-term information accumulated during this chat session.
@@ -573,9 +626,6 @@ function createAgentContextManagementRuntime(deps = {}) {
       layers.session_memory.unresolved_questions.length ? `Unresolved questions: ${layers.session_memory.unresolved_questions.join(' | ')}` : '',
       layers.session_memory.current_project_state?.name
         ? `Current project: ${layers.session_memory.current_project_state.name}`
-        : '',
-      layers.session_memory.active_task_summary
-        ? `Active task summary: ${layers.session_memory.active_task_summary}`
         : '',
       layers.session_memory.recent_completed_tasks.length
         ? `Recent completed tasks: ${layers.session_memory.recent_completed_tasks.map((item) => item.summary).join(' | ')}`

@@ -38,7 +38,9 @@ export function initToolBoxViewManager(options = {}) {
     });
 
     toolTiles.forEach((tile) => {
-      tile.classList.toggle('tool-tile-active', tile.dataset.toolView === viewId);
+      const isActive = tile.dataset.toolView === viewId;
+      tile.classList.toggle('tool-tile-active', isActive);
+      tile.setAttribute('aria-selected', isActive ? 'true' : 'false');
     });
 
     if (viewId === 'tool-colony-counter-view') {

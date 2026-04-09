@@ -89,6 +89,8 @@ It keeps:
 
 - `tool_trace`
 - `intermediate_states`
+- `thinking_trace`
+- `final_synthesized_question`
 - accumulated citations
 - evaluator state
 - round budgets

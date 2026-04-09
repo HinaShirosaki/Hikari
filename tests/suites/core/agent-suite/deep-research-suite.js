@@ -268,12 +268,13 @@ module.exports = function registerAgentDeepResearchSuite(context = {}) {
       });
       assert.equal(result.answer_outline.sections.length >= 3, true);
       assert.equal(result.rendered_sections.length, result.answer_outline.sections.length);
-      assert.match(String(result.answer || ''), /Direct Answer|Recommendation/);
+      assert.match(String(result.answer || ''), /##\s+(Direct Answer|Recommendation)/);
       assert.equal(result.section_evidence_map.length, result.answer_outline.sections.length);
     });
 
     test('deep research runtime runs step 3 before step 4 and returns a compatible response envelope', async () => {
       const { createDeepResearchRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'deep-research', 'index.js'));
+      const lifecycleEvents = [];
       const runtime = createDeepResearchRuntime({
         resolveToolDefinitions: () => [{
           name: 'literature-search',
@@ -330,7 +331,10 @@ module.exports = function registerAgentDeepResearchSuite(context = {}) {
             source_evidence: [],
             unsupported_statement_count: 0
           }
-        })
+        }),
+        recordLifecycleEvent: (_recorder, event) => {
+          lifecycleEvents.push(event);
+        }
       });
 
       const result = await runtime.runGeneralScienceQuestion({
@@ -371,6 +375,16 @@ module.exports = function registerAgentDeepResearchSuite(context = {}) {
       assert.equal(result.execution_mode, 'deep_research');
       assert.equal(Array.isArray(result.citations), true);
       assert.equal(typeof result.answer, 'string');
+      assert.deepEqual(
+        lifecycleEvents
+          .filter((event) => event.stage === 'deep_research_step_started')
+          .map((event) => Number(event.meta.step)),
+        [1, 2, 3, 4, 5]
+      );
+      assert.equal(
+        lifecycleEvents.some((event) => event.stage === 'deep_research_step_completed' && Number(event.meta.step) === 4),
+        true
+      );
     });
   }
 };

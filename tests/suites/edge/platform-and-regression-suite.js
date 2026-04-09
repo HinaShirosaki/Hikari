@@ -344,6 +344,32 @@ test('[P1] normalizeState infers llm.provider from codex endpoint', () => {
   assert.equal(normalized.settings.llm.provider, 'codex');
 });
 
+test('[P1] normalizeState preserves supported llm reasoning effort values', () => {
+  const normalized = shared.normalizeState({
+    settings: {
+      llm: {
+        provider: 'codex',
+        model: 'gpt-5.4',
+        reasoningEffort: 'xhigh'
+      }
+    }
+  });
+  assert.equal(normalized.settings.llm.reasoningEffort, 'xhigh');
+});
+
+test('[P1] normalizeState clears unsupported llm reasoning effort values for the selected model', () => {
+  const normalized = shared.normalizeState({
+    settings: {
+      llm: {
+        provider: 'codex',
+        model: 'gpt-5.1-codex-mini',
+        reasoningEffort: 'xhigh'
+      }
+    }
+  });
+  assert.equal(normalized.settings.llm.reasoningEffort, '');
+});
+
 test('[P1] normalizeState does not mutate defaultState arrays', () => {
   const normalized = shared.normalizeState({});
   normalized.members.push({ id: 'm1' });
@@ -606,7 +632,6 @@ const moduleExportContracts = [
   ['src/renderer/modules/buffer-compounds.js', /export const BUFFER_COMPOUNDS/],
   ['src/renderer/modules/collaboration-management.js', /export function initCollaborationManagement/],
   ['src/renderer/modules/gel-analysis.js', /export function initGelAnalysis/],
-  ['src/renderer/modules/instrument-management.js', /export function initInstrumentManagement/],
   ['src/renderer/modules/lab-common-inventory.js', /export function initLabCommonInventory/],
   ['src/renderer/modules/lab-management.js', /export function initLabManagement/],
   ['src/renderer/modules/lab-notebook.js', /export function initLabNotebook/],

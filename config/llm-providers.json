@@ -1,0 +1,213 @@
+{
+  "defaultProvider": "openai",
+  "providers": [
+    {
+      "id": "openai",
+      "label": "OpenAI",
+      "defaultEndpoint": "https://api.openai.com/v1/responses",
+      "defaultModel": "gpt-5-mini",
+      "modelPlaceholder": "e.g. gpt-5-mini",
+      "apiKeyPlaceholder": "sk-...",
+      "requiresApiKey": true,
+      "endpointHints": [
+        "openai.com",
+        "/openai/"
+      ],
+      "models": [
+        {
+          "id": "gpt-5.2",
+          "label": "GPT-5.2"
+        },
+        {
+          "id": "gpt-5.1",
+          "label": "GPT-5.1"
+        },
+        {
+          "id": "gpt-5",
+          "label": "GPT-5"
+        },
+        {
+          "id": "gpt-5-mini",
+          "label": "GPT-5 mini"
+        },
+        {
+          "id": "gpt-5-nano",
+          "label": "GPT-5 nano"
+        },
+        {
+          "id": "gpt-5-pro",
+          "label": "GPT-5 pro"
+        },
+        {
+          "id": "gpt-4.1",
+          "label": "GPT-4.1"
+        },
+        {
+          "id": "gpt-4.1-mini",
+          "label": "GPT-4.1 mini"
+        },
+        {
+          "id": "gpt-4.1-nano",
+          "label": "GPT-4.1 nano"
+        }
+      ]
+    },
+    {
+      "id": "gemini",
+      "label": "Gemini",
+      "defaultEndpoint": "https://generativelanguage.googleapis.com/v1beta",
+      "defaultModel": "gemini-2.5-flash",
+      "modelPlaceholder": "e.g. gemini-2.5-pro",
+      "apiKeyPlaceholder": "sk-...",
+      "requiresApiKey": true,
+      "endpointHints": [
+        "generativelanguage.googleapis.com",
+        "ai.google"
+      ],
+      "models": [
+        {
+          "id": "gemini-2.5-pro",
+          "label": "Gemini 2.5 Pro"
+        },
+        {
+          "id": "gemini-2.5-flash",
+          "label": "Gemini 2.5 Flash"
+        },
+        {
+          "id": "gemini-2.5-flash-lite",
+          "label": "Gemini 2.5 Flash-Lite"
+        }
+      ]
+    },
+    {
+      "id": "claude",
+      "label": "Claude",
+      "defaultEndpoint": "https://api.anthropic.com/v1/messages",
+      "defaultModel": "claude-sonnet-4-5",
+      "modelPlaceholder": "e.g. claude-sonnet-4-5",
+      "apiKeyPlaceholder": "sk-...",
+      "requiresApiKey": true,
+      "endpointHints": [
+        "anthropic.com"
+      ],
+      "models": [
+        {
+          "id": "claude-opus-4-1",
+          "label": "Claude Opus 4.1"
+        },
+        {
+          "id": "claude-opus-4",
+          "label": "Claude Opus 4"
+        },
+        {
+          "id": "claude-sonnet-4-5",
+          "label": "Claude Sonnet 4.5"
+        },
+        {
+          "id": "claude-sonnet-4",
+          "label": "Claude Sonnet 4"
+        },
+        {
+          "id": "claude-3-7-sonnet-latest",
+          "label": "Claude 3.7 Sonnet (latest)"
+        },
+        {
+          "id": "claude-3-5-sonnet-latest",
+          "label": "Claude 3.5 Sonnet (latest)"
+        },
+        {
+          "id": "claude-3-5-haiku-latest",
+          "label": "Claude 3.5 Haiku (latest)"
+        }
+      ]
+    },
+    {
+      "id": "codex",
+      "label": "OpenAI CLI (Codex)",
+      "defaultEndpoint": "codex://cli",
+      "defaultModel": "",
+      "modelPlaceholder": "optional, e.g. gpt-5.4",
+      "apiKeyPlaceholder": "Not required (use `codex login`)",
+      "requiresApiKey": false,
+      "endpointHints": [
+        "codex://",
+        "codex cli",
+        "openai-cli"
+      ],
+      "models": [
+        {
+          "id": "gpt-5.4",
+          "label": "gpt-5.4",
+          "reasoningEfforts": ["low", "medium", "high", "xhigh"],
+          "defaultReasoningEffort": "medium"
+        },
+        {
+          "id": "gpt-5.4-mini",
+          "label": "gpt-5.4-mini",
+          "reasoningEfforts": ["low", "medium", "high", "xhigh"],
+          "defaultReasoningEffort": "medium"
+        },
+        {
+          "id": "gpt-5.3-codex",
+          "label": "gpt-5.3-codex",
+          "reasoningEfforts": ["low", "medium", "high", "xhigh"],
+          "defaultReasoningEffort": "medium"
+        },
+        {
+          "id": "gpt-5.2-codex",
+          "label": "gpt-5.2-codex",
+          "reasoningEfforts": ["low", "medium", "high", "xhigh"],
+          "defaultReasoningEffort": "medium"
+        },
+        {
+          "id": "gpt-5.2",
+          "label": "gpt-5.2",
+          "reasoningEfforts": ["low", "medium", "high", "xhigh"],
+          "defaultReasoningEffort": "medium"
+        },
+        {
+          "id": "gpt-5.1-codex-max",
+          "label": "gpt-5.1-codex-max",
+          "reasoningEfforts": ["low", "medium", "high", "xhigh"],
+          "defaultReasoningEffort": "medium"
+        },
+        {
+          "id": "gpt-5.1-codex",
+          "label": "gpt-5.1-codex",
+          "reasoningEfforts": ["low", "medium", "high"],
+          "defaultReasoningEffort": "medium"
+        },
+        {
+          "id": "gpt-5.1",
+          "label": "gpt-5.1",
+          "reasoningEfforts": ["low", "medium", "high"],
+          "defaultReasoningEffort": "medium"
+        },
+        {
+          "id": "gpt-5-codex",
+          "label": "gpt-5-codex",
+          "reasoningEfforts": ["low", "medium", "high"],
+          "defaultReasoningEffort": "medium"
+        },
+        {
+          "id": "gpt-5",
+          "label": "gpt-5",
+          "reasoningEfforts": ["minimal", "low", "medium", "high"],
+          "defaultReasoningEffort": "medium"
+        },
+        {
+          "id": "gpt-5.1-codex-mini",
+          "label": "gpt-5.1-codex-mini",
+          "reasoningEfforts": ["medium", "high"],
+          "defaultReasoningEffort": "medium"
+        },
+        {
+          "id": "gpt-5-codex-mini",
+          "label": "gpt-5-codex-mini",
+          "reasoningEfforts": ["medium", "high"],
+          "defaultReasoningEffort": "medium"
+        }
+      ]
+    }
+  ]
+}

@@ -5,6 +5,7 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
     test('intent parser normalizes canonical parser payload', () => {
       const raw = {
         primary_intent: 'inventory_lookup',
+        reasoning_effort: 2,
         needs_clarification: false,
         clarification_reason: null,
         entities: {
@@ -32,6 +33,7 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
       const result = agentIntentParser.normalizeIntentParserPayload(raw);
       assert.equal(result.ok, true);
       assert.equal(result.payload.primary_intent, 'inventory_lookup');
+      assert.equal(result.payload.reasoning_effort, 0);
       assert.equal(result.payload.needs_clarification, false);
       assert.equal(result.payload.inventory_search.normalized_query, 'Tris-HCl');
       assert.equal(Array.isArray(result.payload.inventory_search.candidate_terms), true);
@@ -73,6 +75,109 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
       assert.equal(Array.isArray(result.payload.protocol_candidates), true);
       assert.equal(result.payload.protocol_candidates.length <= 3, true);
       assert.equal(result.payload.protocol_candidates[0], 'HEK293 Transfection');
+    });
+
+    test('intent parser preserves science reasoning effort and defaults missing science effort to level 1', () => {
+      const explicit = agentIntentParser.normalizeIntentParserPayload({
+        primary_intent: 'general_science_question',
+        reasoning_effort: 2,
+        needs_clarification: false,
+        clarification_reason: null,
+        entities: {
+          activity_type: null,
+          project_name: null,
+          protocol_name: null,
+          protein_name: null,
+          compound_name: null,
+          inventory_item: null,
+          cell_line: null,
+          paper_title: null,
+          workflow_step: null,
+          requested_output: 'mechanistic explanation'
+        },
+        inventory_search: {
+          normalized_query: null,
+          candidate_terms: [],
+          aliases: [],
+          search_mode: null
+        },
+        protocol_candidates: [],
+        reasoning_summary: 'Needs deeper multi-step science reasoning.'
+      });
+      assert.equal(explicit.ok, true);
+      assert.equal(explicit.payload.reasoning_effort, 2);
+
+      const defaulted = agentIntentParser.normalizeIntentParserPayload({
+        primary_intent: 'project_science_question',
+        needs_clarification: false,
+        clarification_reason: null,
+        entities: {
+          activity_type: null,
+          project_name: 'Atlas',
+          protocol_name: null,
+          protein_name: null,
+          compound_name: null,
+          inventory_item: null,
+          cell_line: null,
+          paper_title: null,
+          workflow_step: null,
+          requested_output: null
+        },
+        inventory_search: {
+          normalized_query: null,
+          candidate_terms: [],
+          aliases: [],
+          search_mode: null
+        },
+        protocol_candidates: [],
+        reasoning_summary: 'Project science question.'
+      });
+      assert.equal(defaulted.ok, true);
+      assert.equal(defaulted.payload.reasoning_effort, 1);
+    });
+
+    test('intent parser keeps direct_answer only for reasoning-effort 0 science intents', () => {
+      const direct = agentIntentParser.normalizeIntentParserPayload({
+        primary_intent: 'general_science_question',
+        reasoning_effort: 0,
+        direct_answer: 'Imidazole competes with histidines for nickel binding sites on the resin.',
+        needs_clarification: false,
+        clarification_reason: null,
+        entities: {
+          output: 'mechanistic explanation'
+        },
+        inventory_search: {
+          normalized_query: null,
+          candidate_terms: [],
+          aliases: [],
+          search_mode: null
+        },
+        protocol_candidates: [],
+        reasoning_summary: 'Direct science answer.'
+      });
+      assert.equal(direct.ok, true);
+      assert.match(String(direct.payload.direct_answer || ''), /nickel binding sites/i);
+
+      const routed = agentIntentParser.normalizeIntentParserPayload({
+        primary_intent: 'project_science_question',
+        reasoning_effort: 1,
+        direct_answer: 'This should be ignored because the request should enter the loop.',
+        needs_clarification: false,
+        clarification_reason: null,
+        entities: {
+          project: 'Atlas'
+        },
+        inventory_search: {
+          normalized_query: null,
+          candidate_terms: [],
+          aliases: [],
+          search_mode: null
+        },
+        protocol_candidates: [],
+        reasoning_summary: 'Needs project evidence.'
+      });
+      assert.equal(routed.ok, true);
+      assert.equal(routed.payload.direct_answer, null);
     });
 
     test('intent parser keeps protocol candidates for notebook_draft intent', () => {
@@ -205,6 +310,157 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
       assert.equal(agentIntentParser.normalizeParserIntent('record_loopup'), 'record_lookup');
     });
 
+    test('science routing promotes unclear parser intent into deep general science reasoning', () => {
+      const { createAgentScienceMainUtils } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'runtime', 'agent-science-main-utils.js'));
+      const utils = createAgentScienceMainUtils({
+        asArray: (value) => (Array.isArray(value) ? value : []),
+        cleanText: (value, _maxLength = 2000) => {
+          const text = String(value || '').trim();
+          return text || '';
+        },
+        uniqueStrings: (values, max = 50) => {
+          const seen = new Set();
+          const output = [];
+          (Array.isArray(values) ? values : []).forEach((value) => {
+            const text = String(value || '').trim();
+            if (!text) {
+              return;
+            }
+            const key = text.toLowerCase();
+            if (seen.has(key) || output.length >= max) {
+              return;
+            }
+            seen.add(key);
+            output.push(text);
+          });
+          return output;
+        },
+        clamp: (value, min, max) => Math.max(min, Math.min(max, Number.isFinite(Number(value)) ? Number(value) : min)),
+        normalizeRoutingPayload: (value) => (value && typeof value === 'object' ? value : {}),
+        mapCanonicalIntentToExecutionIntent: agentIntentParser.mapCanonicalIntentToExecutionIntent,
+        normalizeParserEntitiesToRoutingEntities: agentIntentParser.normalizeParserEntitiesToRoutingEntities
+      });
+
+      const routing = utils.buildScienceRoutingFromParser({
+        primary_intent: 'unclear',
+        reasoning_effort: 0,
+        needs_clarification: true,
+        clarification_reason: 'The request is too vague to route directly.',
+        entities: {
+          requested_output: 'mechanistic explanation'
+        },
+        reasoning_summary: 'The user asked an intentless science question.'
+      });
+
+      assert.equal(routing.intent, 'general_science_question');
+      assert.equal(routing.plan.reasoning_effort, 2);
+      assert.equal(routing.plan.needs_clarification, true);
+      assert.equal(routing.classifier.fallbackAttempted, true);
+      assert.equal(routing.classifier.fallbackUsed, true);
+    });
+
+    test('intent dispatcher routes unclear parser intents into general science execution', async () => {
+      const { createAgentIntentDispatcher } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc', 'agent-intent-dispatcher.js'));
+      let receivedScienceInput = null;
+      const dispatcher = createAgentIntentDispatcher({
+        cleanText: (value, _maxLength = 2000) => {
+          const text = String(value || '').trim();
+          return text || '';
+        },
+        observability: {
+          recordLifecycleEvent: () => {}
+        },
+        protocolNotebookRuntime: {
+          buildSessionKey: () => 'session',
+          hasPendingSession: () => false,
+          clearPendingSession: () => {}
+        },
+        scienceReasoningLoopRuntime: {
+          runGeneralScienceQuestion: async (input) => {
+            receivedScienceInput = input;
+            return {
+              status: 'completed',
+              answer: 'Fallback science answer.'
+            };
+          },
+          runProjectScienceQuestion: async () => {
+            throw new Error('Project science runtime should not run for unclear fallback.');
+          },
+          runResultAnalysis: async () => {
+            throw new Error('Result-analysis runtime should not run for unclear fallback.');
+          }
+        },
+        deepResearchRuntime: null,
+        scienceMainUtils: {
+          buildScienceRoutingFromParser: () => ({
+            intent: 'general_science_question',
+            entities: {},
+            plan: {
+              reasoning_effort: 2,
+              needs_clarification: true,
+              clarification_reason: 'The question needs broader reasoning.'
+            }
+          })
+        },
+        agentToolRuntime: {
+          buildAgentSystemPrompt: () => 'system prompt'
+        },
+        executeInventoryLookup: async () => {
+          throw new Error('Inventory lookup should not run for unclear fallback.');
+        },
+        executeRecordLookup: async () => {
+          throw new Error('Record lookup should not run for unclear fallback.');
+        },
+        getDefaultDataFilePath: () => '',
+        lifecycleService: {
+          asArray: (value) => (Array.isArray(value) ? value : []),
+          createLifecycleToolRunner: () => async () => ({
+            ok: false,
+            error: 'No tool should run in this test.'
+          })
+        }
+      });
+
+      const result = {
+        ok: true,
+        parser: {
+          primary_intent: 'unclear'
+        }
+      };
+
+      await dispatcher.dispatchIntent({
+        payload: {},
+        context: {
+          provider: 'openai',
+          endpoint: 'https://example.test',
+          apiKey: 'key',
+          model: 'gpt-test',
+          message: 'Help with that science thing from earlier.',
+          promptConversation: [],
+          snapshot: {},
+          projectId: '',
+          projectName: '',
+          parserPayload: {
+            primary_intent: 'unclear',
+            reasoning_effort: 0,
+            direct_answer: null,
+            needs_clarification: true,
+            clarification_reason: 'The question needs broader reasoning.',
+            entities: {}
+          },
+          traceContext: null,
+          lifecycleRecorder: null,
+          deepResearchEnabled: false
+        },
+        result
+      });
+
+      assert.equal(receivedScienceInput !== null, true);
+      assert.equal(receivedScienceInput.routing.intent, 'general_science_question');
+      assert.equal(receivedScienceInput.routing.plan.reasoning_effort, 2);
+      assert.equal(result.general_science_question.status, 'completed');
+    });
+
     test('intent parser prompt includes recent transcript and active project context', () => {
       const prompt = agentIntentParser.buildIntentParserPrompt({
         message: 'Do we have PEI in stock for Atlas lot 7?',
@@ -234,7 +490,11 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
       assert.deepEqual(catalog.map((entry) => entry.name), agentIntentParser.PARSER_ALLOWED_INTENTS);
       assert.equal(typeof catalog[0].rules, 'string');
       assert.match(agentIntentParser.INTENT_PARSER_PROMPT, /## Allowed intents/);
+      assert.match(agentIntentParser.INTENT_PARSER_PROMPT, /## Science reasoning_effort rubric/);
+      assert.match(agentIntentParser.INTENT_PARSER_PROMPT, /If you are unsure whether a science question should be 0 or 1, choose 1\./);
       assert.match(agentIntentParser.INTENT_PARSER_PROMPT, /Intent-specific output append:/);
+      assert.match(agentIntentParser.INTENT_PARSER_PROMPT, /"reasoning_effort": 1/);
+      assert.equal(/entities\.project_name/.test(agentIntentParser.INTENT_PARSER_PROMPT), false);
       assert.equal(/Output:\n\{/.test(agentIntentParser.INTENT_PARSER_PROMPT), false);
 
       let previousHeadingIndex = -1;

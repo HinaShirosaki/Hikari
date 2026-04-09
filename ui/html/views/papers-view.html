@@ -1,5 +1,5 @@
 <section id="papers-view" class="view">
-      <div class="papers-layout">
+      <div id="papers-layout" class="papers-layout">
         <div class="papers-left-column">
           <aside id="papers-library-rail" class="papers-library-rail">
             <div class="papers-library-topbar">
@@ -59,13 +59,14 @@
                 <button type="button" id="paper-viewer-zoom-in-btn" class="ghost-btn">+</button>
                 <button type="button" id="paper-viewer-zoom-reset-btn" class="ghost-btn">100%</button>
                 <button type="button" id="paper-viewer-fit-width-btn" class="ghost-btn">Fit Width</button>
+                <button type="button" id="paper-viewer-highlight-btn" class="ghost-btn">Highlight Selection</button>
                 <button type="button" id="paper-viewer-summarize-btn" class="ghost-btn">Summarize</button>
                 <button type="button" id="paper-viewer-open-btn" class="ghost-btn">Open Externally</button>
               </div>
               <div class="papers-viewer-summary">
                 <p id="paper-viewer-title" class="papers-viewer-title">No paper selected</p>
-                <p id="paper-viewer-meta" class="small-note">Select a paper from the list to preview it here.</p>
-                <p id="paper-viewer-status" class="small-note">Choose "View PDF" on a paper to open it here.</p>
+                <p id="paper-viewer-meta" class="small-note"></p>
+                <p id="paper-viewer-status" class="small-note"></p>
               </div>
             </div>
             <div id="paper-viewer-shell" class="papers-viewer-shell is-empty">
@@ -84,26 +85,39 @@
           </div>
         </div>
 
-        <div class="papers-right-column">
-          <aside id="paper-comment-sidebar" class="panel papers-comment-sidebar">
-            <div class="papers-comment-meta">
-              <h4>Comments</h4>
-              <p id="paper-comment-page" class="small-note">Page 0</p>
-              <p id="paper-comment-count" class="small-note">0 comments on this page</p>
-            </div>
-            <div class="papers-comment-actions">
-              <button type="button" id="paper-comment-add-btn" class="primary-btn">Add Comment</button>
-              <button type="button" id="paper-comment-save-btn" class="ghost-btn">Save</button>
-              <button type="button" id="paper-comment-cancel-btn" class="ghost-btn">Cancel</button>
-              <button type="button" id="paper-comment-delete-btn" class="danger-btn">Delete</button>
-            </div>
-            <label class="papers-comment-input">
-              Comment
-              <textarea id="paper-comment-text" rows="5" placeholder="Click &quot;Add Comment&quot;, place a pin on the page, then write your note."></textarea>
-            </label>
-            <p id="paper-comment-status" class="small-note">Open a paper to review or add page comments.</p>
-            <div id="paper-comment-list" class="papers-comment-list"></div>
-          </aside>
+        <div id="papers-right-column" class="papers-right-column">
+          <div id="paper-comment-panel" class="papers-comment-panel">
+            <button
+              type="button"
+              id="paper-comment-toggle-btn"
+              class="papers-comment-toggle"
+              aria-controls="paper-comment-sidebar"
+              aria-expanded="true"
+              aria-label="Fold comments panel to the right"
+              title="Fold comments panel to the right"
+            >
+              <span class="papers-comment-toggle-icon" aria-hidden="true"></span>
+            </button>
+            <aside id="paper-comment-sidebar" class="panel papers-comment-sidebar">
+              <div class="papers-comment-meta">
+                <h4>Comments</h4>
+                <p id="paper-comment-page" class="small-note">Page 0</p>
+                <p id="paper-comment-count" class="small-note">0 comments on this page</p>
+              </div>
+              <div class="papers-comment-actions">
+                <button type="button" id="paper-comment-add-btn" class="primary-btn">Add Comment</button>
+                <button type="button" id="paper-comment-save-btn" class="ghost-btn">Save</button>
+                <button type="button" id="paper-comment-cancel-btn" class="ghost-btn">Cancel</button>
+                <button type="button" id="paper-comment-delete-btn" class="danger-btn">Delete</button>
+              </div>
+              <label class="papers-comment-input">
+                Comment
+                <textarea id="paper-comment-text" rows="5" placeholder="Click &quot;Add Comment&quot;, place a pin on the page, then write your note."></textarea>
+              </label>
+              <p id="paper-comment-status" class="small-note"></p>
+              <div id="paper-comment-list" class="papers-comment-list"></div>
+            </aside>
+          </div>
         </div>
       </div>
 

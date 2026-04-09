@@ -212,7 +212,7 @@ export function initPersonalInventory({
       freezer: section,
       rack: '',
       box: container.name || '',
-      position: String(Number(index) + 1)
+      position: Number.isInteger(index) && index >= 0 ? String(Number(index) + 1) : ''
     };
   }
 
@@ -345,7 +345,7 @@ export function initPersonalInventory({
 
     const well = getWellDataForType(container.type || 'box81', container.wells[index], index);
     const linkedSamples = getLinkedSamples(section, container.id, index);
-    const activeSample = linkedSamples.find((item) => item.id === editingSampleId) || linkedSamples[0] || null;
+    const activeSample = linkedSamples.find((item) => item.id === editingSampleId) || null;
     const statusMarkup = wellEditorStatus ? `<p class="small-note well-editor-status">${safeText(wellEditorStatus)}</p>` : '';
     const sampleSelector = linkedSamples.length > 1
       ? `
@@ -363,6 +363,16 @@ export function initPersonalInventory({
       : '';
     const sampleSection = activeSample
       ? `
+        <div class="well-editor-head">
+          <div class="well-editor-title-group">
+            <strong>${safeText(well.name)} (Cell ${index + 1})</strong>
+            <strong>Set Samples</strong>
+          </div>
+          <div class="well-editor-actions">
+            <button type="button" class="primary-btn" data-well-sample-save="${safeText(activeSample.id)}">Save Sample</button>
+            <button type="button" class="ghost-btn" data-well-sample-unlink="${safeText(activeSample.id)}">Delete Sample</button>
+          </div>
+        </div>
         ${sampleSelector}
         <label>
           Sample Code
@@ -390,12 +400,17 @@ export function initPersonalInventory({
           Notes
           <textarea data-well-sample-notes rows="3">${safeText(activeSample.notes || '')}</textarea>
         </label>
-        <div class="inline-row">
-          <button type="button" class="primary-btn" data-well-sample-save="${safeText(activeSample.id)}">Save Sample</button>
-          <button type="button" class="ghost-btn" data-well-sample-unlink="${safeText(activeSample.id)}">Unlink Sample</button>
-        </div>
       `
       : `
+        <div class="well-editor-head">
+          <div class="well-editor-title-group">
+            <strong>${safeText(well.name)} (Cell ${index + 1})</strong>
+            <strong>Set Samples</strong>
+          </div>
+          <div class="well-editor-actions">
+            <button type="button" class="primary-btn" data-well-sample-create="${index}">Add Sample</button>
+          </div>
+        </div>
         <p class="small-note">No sample linked to this cell yet.</p>
         <label>
           Sample Code
@@ -423,20 +438,140 @@ export function initPersonalInventory({
           Notes
           <textarea data-well-sample-new-notes rows="3"></textarea>
         </label>
-        <div class="inline-row">
-          <button type="button" class="primary-btn" data-well-sample-create="${index}">Create Linked Sample</button>
-        </div>
       `;
 
     return `
       <div class="well-inline-editor well-side-editor">
-        <strong>${safeText(well.name)} (Cell ${index + 1})</strong>
-        <strong>Set Samples</strong>
         ${sampleSection}
-        <div class="inline-row">
-          <button type="button" class="ghost-btn" data-well-cancel>Clear Selection</button>
-        </div>
         ${statusMarkup}
+      </div>
+    `;
+  }
+
+  function renderSingleContainerEditor(section, container) {
+    const linkedSamples = getLinkedSamples(section, container.id, null);
+    const activeSample = linkedSamples.find((item) => item.id === editingSampleId) || linkedSamples[0] || null;
+    const statusMarkup = wellEditorStatus ? `<p class="small-note well-editor-status">${safeText(wellEditorStatus)}</p>` : '';
+    const sampleSelector = linkedSamples.length > 1
+      ? `
+        <label>
+          Linked Sample
+          <select data-single-sample-select="true">
+            ${linkedSamples.map((item) => `
+              <option value="${safeText(item.id)}"${activeSample && item.id === activeSample.id ? ' selected' : ''}>
+                ${safeText(item.code || item.name || item.id)}
+              </option>
+            `).join('')}
+          </select>
+        </label>
+      `
+      : '';
+
+    const sampleSection = activeSample
+      ? `
+        <div class="well-editor-head">
+          <div class="well-editor-title-group">
+            <strong>Falcon Tube</strong>
+            <strong>Set Samples</strong>
+          </div>
+          <div class="well-editor-actions">
+            <button type="button" class="primary-btn" data-single-sample-save="${safeText(activeSample.id)}">Save Sample</button>
+            <button type="button" class="ghost-btn" data-single-sample-unlink="${safeText(activeSample.id)}">Delete Sample</button>
+          </div>
+        </div>
+        ${sampleSelector}
+        <label>
+          Sample Code
+          <input data-single-sample-code value="${safeText(activeSample.code || '')}" placeholder="e.g. S-001" />
+        </label>
+        <label>
+          Sample Name
+          <input data-single-sample-name value="${safeText(activeSample.name || '')}" required />
+        </label>
+        <label>
+          Type
+          <select data-single-sample-type>
+            ${renderSampleTypeOptions(activeSample.type || 'plasmid')}
+          </select>
+        </label>
+        <label>
+          Lot / Batch
+          <input data-single-sample-lot value="${safeText(activeSample.lot || '')}" />
+        </label>
+        <label>
+          Concentration
+          <input data-single-sample-concentration value="${safeText(activeSample.concentration || '')}" placeholder="e.g. 2 mg/mL" />
+        </label>
+        <label>
+          Notes
+          <textarea data-single-sample-notes rows="3">${safeText(activeSample.notes || '')}</textarea>
+        </label>
+      `
+      : `
+        <div class="well-editor-head">
+          <div class="well-editor-title-group">
+            <strong>Falcon Tube</strong>
+            <strong>Set Samples</strong>
+          </div>
+          <div class="well-editor-actions">
+            <button type="button" class="primary-btn" data-single-sample-create="true">Add Sample</button>
+          </div>
+        </div>
+        <p class="small-note">No sample linked to this tube yet.</p>
+        <label>
+          Sample Code
+          <input data-single-sample-new-code placeholder="e.g. S-001" />
+        </label>
+        <label>
+          Sample Name
+          <input data-single-sample-new-name placeholder="Required" />
+        </label>
+        <label>
+          Type
+          <select data-single-sample-new-type>
+            ${renderSampleTypeOptions('plasmid')}
+          </select>
+        </label>
+        <label>
+          Lot / Batch
+          <input data-single-sample-new-lot />
+        </label>
+        <label>
+          Concentration
+          <input data-single-sample-new-concentration placeholder="e.g. 2 mg/mL" />
+        </label>
+        <label>
+          Notes
+          <textarea data-single-sample-new-notes rows="3"></textarea>
+        </label>
+      `;
+
+    return `
+      <div class="well-inline-editor well-side-editor">
+        ${sampleSection}
+        ${statusMarkup}
+      </div>
+    `;
+  }
+
+  function renderSingleContainerPreview(section, container) {
+    const linkedSamples = getLinkedSamples(section, container.id, null);
+    const primarySample = linkedSamples.find((item) => item.id === editingSampleId) || linkedSamples[0] || null;
+    const fillColor = primarySample ? getSampleTypeColor(primarySample.type) : '';
+    const fillLabel = primarySample ? `${getSampleTypeLabel(primarySample.type)} sample fill` : 'Empty tube';
+    return `
+      <div class="falcon-preview-shell">
+        <div class="falcon-preview" aria-label="${safeText(fillLabel)}">
+          <div class="falcon-cap"></div>
+          <div class="falcon-body">
+            <div class="falcon-liquid${primarySample ? ' has-sample' : ''}"${fillColor ? ` style="--falcon-fill:${fillColor};"` : ''}></div>
+            <div class="falcon-mark falcon-mark-1"></div>
+            <div class="falcon-mark falcon-mark-2"></div>
+            <div class="falcon-mark falcon-mark-3"></div>
+            <div class="falcon-mark falcon-mark-4"></div>
+            <div class="falcon-highlight"></div>
+          </div>
+        </div>
       </div>
     `;
   }
@@ -451,14 +586,13 @@ export function initPersonalInventory({
       return `
         <div class="container-inline-detail">
           <h4>${safeText(section)} / ${safeText(container.name)} (${getContainerTypeLabel(container.type)})</h4>
-          <p class="small-note">Single container (tube or bottle).</p>
-          <p class="small-note">Linked samples: ${safeText(linkedSamples.map((item) => item.code || item.name || item.id).join(', ') || '-')}</p>
-          <div class="stack-form">
-            <label>
-              Container Content
-              <textarea data-single-container-content="${safeText(container.id)}" rows="4" placeholder="Describe content in tube or bottle">${safeText(container.singleContent || '')}</textarea>
-            </label>
-            <button type="button" class="primary-btn" data-single-container-save="${safeText(container.id)}">Save Content</button>
+          <p class="small-note">50 mL Falcon tube. Linked samples fill about one-third of the visible volume.</p>
+          <div class="well-editor-shell well-editor-shell-single">
+            <div class="well-grid-panel falcon-grid-panel">
+              ${renderSingleContainerPreview(section, container)}
+              ${linkedSamples.length ? renderSampleLegendForContainer(section, container) : ''}
+            </div>
+            ${renderSingleContainerEditor(section, container)}
           </div>
           <div class="container-detail-actions">
             <button
@@ -474,6 +608,12 @@ export function initPersonalInventory({
 
     const layout = getContainerLayout(container.type || 'box81');
     const wells = Array.isArray(container.wells) ? container.wells : [];
+    const rowLabels = layout.className === 'plate96'
+      ? Array.from({ length: layout.rows }, (_item, index) => String.fromCharCode(65 + index))
+      : [];
+    const columnLabels = layout.className === 'plate96'
+      ? Array.from({ length: layout.cols }, (_item, index) => String(index + 1))
+      : [];
     const grid = wells.map((rawWell, index) => {
       const well = getWellDataForType(container.type || 'box81', rawWell, index);
       const linkedSamples = getLinkedSamples(section, container.id, index);
@@ -507,10 +647,27 @@ export function initPersonalInventory({
         <p class="small-note">${safeText(layout.helperText)}</p>
         <div class="well-editor-shell">
           <div class="well-grid-panel well-grid-panel-${safeText(layout.className)}">
-            <div
-              class="well-grid well-grid-${safeText(layout.className)}"
-              style="--well-grid-cols:${safeText(String(layout.cols))}; --well-grid-rows:${safeText(String(layout.rows))};"
-            >${grid}</div>
+            ${layout.className === 'plate96' ? `
+              <div class="plate96-shell">
+                <div class="plate96-top-labels" aria-hidden="true">
+                  ${columnLabels.map((label) => `<span>${safeText(label)}</span>`).join('')}
+                </div>
+                <div class="plate96-body">
+                  <div class="plate96-side-labels" aria-hidden="true">
+                    ${rowLabels.map((label) => `<span>${safeText(label)}</span>`).join('')}
+                  </div>
+                  <div
+                    class="well-grid well-grid-${safeText(layout.className)}"
+                    style="--well-grid-cols:${safeText(String(layout.cols))}; --well-grid-rows:${safeText(String(layout.rows))};"
+                  >${grid}</div>
+                </div>
+              </div>
+            ` : `
+              <div
+                class="well-grid well-grid-${safeText(layout.className)}"
+                style="--well-grid-cols:${safeText(String(layout.cols))}; --well-grid-rows:${safeText(String(layout.rows))};"
+              >${grid}</div>
+            `}
             ${renderSampleLegendForContainer(section, container)}
           </div>
           ${renderWellEditor(section, container, editingWellIndex)}
@@ -823,27 +980,6 @@ export function initPersonalInventory({
       });
     });
 
-    inventorySections.querySelectorAll('[data-single-container-save]').forEach((button) => {
-      button.addEventListener('click', () => {
-        const containerId = button.dataset.singleContainerSave;
-        const section = selectedContainer?.section || activeSection;
-        if (!section) {
-          return;
-        }
-
-        const container = getContainer(section, containerId);
-        if (!container) {
-          return;
-        }
-
-        const contentInput = inventorySections.querySelector(
-          `[data-single-container-content="${cssEscape(containerId)}"]`
-        );
-        container.singleContent = contentInput?.value.trim() || '';
-        persist();
-      });
-    });
-
     inventorySections.querySelectorAll('[data-well-index]').forEach((button) => {
       button.addEventListener('click', () => {
         const section = button.dataset.section;
@@ -1001,6 +1137,144 @@ export function initPersonalInventory({
             containerId,
             wellIndex: index
           },
+          chemicalLinks: [],
+          updatedAt: new Date().toISOString()
+        };
+
+        state.samples.push(sample);
+        editingSampleId = sample.id;
+        wellEditorStatus = `Created sample ${sample.code}.`;
+        persist();
+        notifySamplesChanged();
+        renderSections();
+      });
+    });
+
+    inventorySections.querySelectorAll('[data-single-sample-select]').forEach((select) => {
+      select.addEventListener('change', () => {
+        editingSampleId = String(select.value || '');
+        wellEditorStatus = '';
+        renderSections();
+      });
+    });
+
+    inventorySections.querySelectorAll('[data-single-sample-save]').forEach((button) => {
+      button.addEventListener('click', () => {
+        ensureSamples();
+        const section = selectedContainer?.section;
+        const containerId = selectedContainer?.containerId;
+        if (!section || !containerId) {
+          return;
+        }
+        const container = getContainer(section, containerId);
+        const sample = getSampleById(button.dataset.singleSampleSave);
+        if (!container || !sample) {
+          return;
+        }
+
+        const codeInput = inventorySections.querySelector('[data-single-sample-code]');
+        const nameInput = inventorySections.querySelector('[data-single-sample-name]');
+        const typeInput = inventorySections.querySelector('[data-single-sample-type]');
+        const lotInput = inventorySections.querySelector('[data-single-sample-lot]');
+        const concentrationInput = inventorySections.querySelector('[data-single-sample-concentration]');
+        const notesInput = inventorySections.querySelector('[data-single-sample-notes]');
+
+        const name = String(nameInput?.value || '').trim();
+        if (!name) {
+          wellEditorStatus = 'Sample name is required.';
+          renderSections();
+          return;
+        }
+
+        const code = normalizeSampleCode(codeInput?.value) || sample.code || makeDefaultSampleCode();
+        const duplicate = (state.samples || []).find((item) => item.code === code && item.id !== sample.id);
+        if (duplicate) {
+          wellEditorStatus = `Sample code ${code} already exists.`;
+          renderSections();
+          return;
+        }
+
+        const autoLocation = buildAutoLocationFromLink(section, container, null);
+        sample.code = code;
+        sample.name = name;
+        sample.type = normalizeSampleType(typeInput?.value || sample.type || 'plasmid');
+        sample.lot = String(lotInput?.value || '').trim();
+        sample.concentration = String(concentrationInput?.value || '').trim();
+        sample.notes = String(notesInput?.value || '').trim();
+        sample.inventoryLink = { section, containerId, wellIndex: null };
+        sample.location = isLocationEmpty(sample.location) ? autoLocation : sample.location;
+        sample.updatedAt = new Date().toISOString();
+
+        editingSampleId = sample.id;
+        wellEditorStatus = `Saved sample ${sample.code || sample.name}.`;
+        persist();
+        notifySamplesChanged();
+        renderSections();
+      });
+    });
+
+    inventorySections.querySelectorAll('[data-single-sample-unlink]').forEach((button) => {
+      button.addEventListener('click', () => {
+        ensureSamples();
+        const sample = getSampleById(button.dataset.singleSampleUnlink);
+        if (!sample) {
+          return;
+        }
+        sample.inventoryLink = null;
+        sample.updatedAt = new Date().toISOString();
+        editingSampleId = '';
+        wellEditorStatus = `Unlinked sample ${sample.code || sample.name || sample.id}.`;
+        persist();
+        notifySamplesChanged();
+        renderSections();
+      });
+    });
+
+    inventorySections.querySelectorAll('[data-single-sample-create]').forEach((button) => {
+      button.addEventListener('click', () => {
+        ensureSamples();
+        const section = selectedContainer?.section;
+        const containerId = selectedContainer?.containerId;
+        if (!section || !containerId) {
+          return;
+        }
+        const container = getContainer(section, containerId);
+        if (!container) {
+          return;
+        }
+
+        const codeInput = inventorySections.querySelector('[data-single-sample-new-code]');
+        const nameInput = inventorySections.querySelector('[data-single-sample-new-name]');
+        const typeInput = inventorySections.querySelector('[data-single-sample-new-type]');
+        const lotInput = inventorySections.querySelector('[data-single-sample-new-lot]');
+        const concentrationInput = inventorySections.querySelector('[data-single-sample-new-concentration]');
+        const notesInput = inventorySections.querySelector('[data-single-sample-new-notes]');
+
+        const name = String(nameInput?.value || '').trim();
+        if (!name) {
+          wellEditorStatus = 'Sample name is required.';
+          renderSections();
+          return;
+        }
+
+        const code = normalizeSampleCode(codeInput?.value) || makeDefaultSampleCode();
+        const duplicate = (state.samples || []).find((item) => item.code === code);
+        if (duplicate) {
+          wellEditorStatus = `Sample code ${code} already exists.`;
+          renderSections();
+          return;
+        }
+
+        const sample = {
+          id: `sample-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`,
+          code,
+          name,
+          type: normalizeSampleType(typeInput?.value || 'plasmid'),
+          lot: String(lotInput?.value || '').trim(),
+          concentration: String(concentrationInput?.value || '').trim(),
+          notes: String(notesInput?.value || '').trim(),
+          location: buildAutoLocationFromLink(section, container, null),
+          inventoryLink: { section, containerId, wellIndex: null },
           chemicalLinks: [],
           updatedAt: new Date().toISOString()
         };

@@ -46,17 +46,6 @@ These are the `SequenceViewer`-specific APIs:
 
 This is a clean example of the registrar pattern: the IPC file itself mostly validates payloads, while the real domain logic lives in `sequence-library.js` and `sequence-backbone-recognition.js`.
 
-## Plannotate endpoints
-
-The registrar also exposes a small Plannotate bridge:
-
-- `plannotate:check-env`
-- `plannotate:annotate`
-- `plannotate:install-all`
-- `plannotate:generate-gbk`
-
-That makes `register-data-ipc.js` the general “data tools” boundary, not just snapshot save/load.
-
 ## `register-system-ipc.js`
 
 This file is much smaller and is split between two concerns.
@@ -95,6 +84,6 @@ When adding a new renderer-facing capability in this area of the app, the first 
 
 That usually narrows the search quickly:
 
-- data/storage/sequence/plannotate -> `register-data-ipc.js`
+- data/storage/sequence -> `register-data-ipc.js`
 - chat/assistant/log replay -> `register-agent-ipc.js`
 - Codex CLI or Telegram settings -> `register-system-ipc.js`

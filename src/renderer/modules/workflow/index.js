@@ -24,7 +24,6 @@ export function initWorkflowManagement({
   if (
     !elements.workflowForm
     || !elements.workflowList
-    || !elements.workflowTemplateList
     || !elements.workflowGraphCanvas
     || !elements.workflowGraphBoard
     || !elements.workflowGraphSvg

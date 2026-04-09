@@ -4,6 +4,7 @@ module.exports = function registerEdgeGelAnalysisSuite(context = {}) {
   with (scope) {
 test('[EDGE] gel-analysis internal functions are exposed for unit tests', () => {
   [
+    'selectViewerBaseImageData',
     'clamp',
     'round',
     'mean',
@@ -24,6 +25,20 @@ test('[EDGE] gel-analysis internal functions are exposed for unit tests', () => 
   ].forEach((name) => {
     assert.equal(typeof gelAnalysisInternals[name], 'function');
   });
+});
+
+test('[EDGE] gel-analysis viewer keeps imported color image data when preprocessing exists', () => {
+  const originalImageData = { tag: 'original' };
+  const previewImageData = { tag: 'preview' };
+  const selected = gelAnalysisInternals.selectViewerBaseImageData(
+    { imageData: originalImageData },
+    { previewImageData }
+  );
+  assert.equal(selected, originalImageData);
+});
+
+test('[EDGE] gel-analysis viewer image selection handles empty input', () => {
+  assert.equal(gelAnalysisInternals.selectViewerBaseImageData(null, { previewImageData: { tag: 'preview' } }), null);
 });
 
 [

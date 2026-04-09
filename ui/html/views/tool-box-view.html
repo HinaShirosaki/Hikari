@@ -4,42 +4,48 @@
         <p class="small-note">Bench calculators, sequence utilities, and quick analysis helpers.</p>
       </div>
 
-      <div class="grid tool-grid">
-        <button class="tile tool-tile" data-tool-view="tool-molarity-view">
-          <span class="label">Molarity Calculator</span>
-        </button>
-        <button class="tile tool-tile" data-tool-view="tool-peptide-view">
-          <span class="label">Peptide Properties</span>
-        </button>
-        <button class="tile tool-tile" data-tool-view="tool-buffer-view">
-          <span class="label">Buffer Preparer</span>
-        </button>
-        <button class="tile tool-tile" data-tool-view="tool-dna-protein-view">
-          <span class="label">DNA to Protein</span>
-        </button>
-        <button class="tile tool-tile" data-tool-view="tool-reverse-translate-view">
-          <span class="label">Protein to DNA</span>
-        </button>
-        <button class="tile tool-tile" data-tool-view="tool-oligo-view">
-          <span class="label">DNA/RNA Oligo Properties</span>
-        </button>
-        <button class="tile tool-tile" data-tool-view="tool-extinction-view">
-          <span class="label">Extinction Coefficient</span>
-        </button>
-        <button class="tile tool-tile" data-tool-view="tool-qpcr-view">
-          <span class="label">qPCR Efficiency</span>
-        </button>
-        <button class="tile tool-tile" data-tool-view="tool-crispr-view">
-          <span class="label">CRISPR sgRNA Designer</span>
-        </button>
-        <button class="tile tool-tile" data-tool-view="tool-colony-counter-view">
-          <span class="label">Colony Counter</span>
-        </button>
-      </div>
+      <div class="tool-layout">
+        <aside class="panel tool-sidebar" aria-label="Tool selection">
+          <div class="tool-grid" role="tablist" aria-orientation="vertical">
+            <button class="tile tool-tile" data-tool-view="tool-molarity-view" role="tab" aria-controls="tool-molarity-view">
+              <span class="label">Molarity Calculator</span>
+            </button>
+            <button class="tile tool-tile" data-tool-view="tool-peptide-view" role="tab" aria-controls="tool-peptide-view">
+              <span class="label">Peptide Properties</span>
+            </button>
+            <button class="tile tool-tile" data-tool-view="tool-buffer-view" role="tab" aria-controls="tool-buffer-view">
+              <span class="label">Buffer Preparer</span>
+            </button>
+            <button class="tile tool-tile" data-tool-view="tool-fixed-reaction-view" role="tab" aria-controls="tool-fixed-reaction-view">
+              <span class="label">Fixed Volume Reaction</span>
+            </button>
+            <button class="tile tool-tile" data-tool-view="tool-dna-protein-view" role="tab" aria-controls="tool-dna-protein-view">
+              <span class="label">DNA to Protein</span>
+            </button>
+            <button class="tile tool-tile" data-tool-view="tool-reverse-translate-view" role="tab" aria-controls="tool-reverse-translate-view">
+              <span class="label">Protein to DNA</span>
+            </button>
+            <button class="tile tool-tile" data-tool-view="tool-oligo-view" role="tab" aria-controls="tool-oligo-view">
+              <span class="label">DNA/RNA Oligo Properties</span>
+            </button>
+            <button class="tile tool-tile" data-tool-view="tool-extinction-view" role="tab" aria-controls="tool-extinction-view">
+              <span class="label">Extinction Coefficient</span>
+            </button>
+            <button class="tile tool-tile" data-tool-view="tool-qpcr-view" role="tab" aria-controls="tool-qpcr-view">
+              <span class="label">qPCR Efficiency</span>
+            </button>
+            <button class="tile tool-tile" data-tool-view="tool-crispr-view" role="tab" aria-controls="tool-crispr-view">
+              <span class="label">CRISPR sgRNA Designer</span>
+            </button>
+            <button class="tile tool-tile" data-tool-view="tool-colony-counter-view" role="tab" aria-controls="tool-colony-counter-view">
+              <span class="label">Colony Counter</span>
+            </button>
+          </div>
+        </aside>
 
+        <div class="tool-content">
       <div id="tool-molarity-view" class="panel tool-subview">
         <h3>Molarity Calculator</h3>
-        <p class="small-note">GraphPad-style quick calcs with units for concentration, volume, and mass.</p>
 
         <div class="molarity-block">
           <h4>1) Find Mass from Concentration and Volume</h4>
@@ -257,6 +263,72 @@
         </div>
       </div>
 
+      <div id="tool-fixed-reaction-view" class="panel tool-subview" hidden>
+        <h3>Fixed Volume Reaction</h3>
+        <div class="stack-form reaction-mix-shell">
+          <div class="form-actions">
+            <button id="fixed-reaction-add-row-btn" type="button" class="ghost-btn">Add Reagent</button>
+          </div>
+          <div class="reaction-mix-table">
+            <div id="fixed-reaction-rows" class="reaction-mix-rows"></div>
+
+            <div class="reaction-mix-row reaction-mix-row-special">
+              <label class="reaction-mix-cell">
+                <span class="reaction-mix-cell-label">Fill Solution</span>
+                <input id="fixed-reaction-fill-name" type="text" value="Water / buffer" placeholder="e.g. Water" />
+              </label>
+              <div class="reaction-mix-cell">
+                <span class="reaction-mix-cell-label">Stock Conc</span>
+                <div class="reaction-mix-static">Auto</div>
+              </div>
+              <div class="reaction-mix-cell">
+                <span class="reaction-mix-cell-label">Final Conc</span>
+                <div class="reaction-mix-static">Auto</div>
+              </div>
+              <div class="reaction-mix-cell reaction-mix-volume-cell">
+                <span class="reaction-mix-cell-label">Volume</span>
+                <div id="fixed-reaction-fill-volume" class="reaction-mix-static">0 uL</div>
+                <div id="fixed-reaction-fill-note" class="reaction-mix-row-note">Auto-calculated to reach the total volume.</div>
+              </div>
+              <div class="reaction-mix-cell reaction-mix-action-cell">
+                <span class="reaction-mix-cell-label">Action</span>
+                <div class="reaction-mix-static">Locked</div>
+              </div>
+            </div>
+
+            <div class="reaction-mix-row reaction-mix-row-special">
+              <div class="reaction-mix-cell">
+                <span class="reaction-mix-cell-label">Total Volume</span>
+                <div class="reaction-mix-static">Reaction total</div>
+              </div>
+              <div class="reaction-mix-cell">
+                <span class="reaction-mix-cell-label">Stock Conc</span>
+                <div class="reaction-mix-static">-</div>
+              </div>
+              <div class="reaction-mix-cell">
+                <span class="reaction-mix-cell-label">Final Conc</span>
+                <div class="reaction-mix-static">-</div>
+              </div>
+              <label class="reaction-mix-cell reaction-mix-volume-cell">
+                <span class="reaction-mix-cell-label">Volume</span>
+                <div class="inline-row">
+                  <input id="fixed-reaction-total-volume" type="number" min="0" step="0.000001" value="100" placeholder="e.g. 100" />
+                  <select id="fixed-reaction-total-unit">
+                    <option value="uL" selected>uL</option>
+                    <option value="mL">mL</option>
+                    <option value="L">L</option>
+                  </select>
+                </div>
+              </label>
+              <div class="reaction-mix-cell reaction-mix-action-cell">
+                <span class="reaction-mix-cell-label">Action</span>
+                <div class="reaction-mix-static">Locked</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div id="tool-dna-protein-view" class="panel tool-subview" hidden>
         <h3>DNA Sequence to Protein Sequence</h3>
         <form id="dna-protein-form" class="stack-form" autocomplete="off">
@@ -376,7 +448,6 @@
 
       <div id="tool-crispr-view" class="panel tool-subview" hidden>
         <h3>CRISPR sgRNA Designer</h3>
-        <p class="small-note">Choose a reference genome profile, select targets, and generate ranked sgRNA candidates.</p>
 
         <div class="crispr-designer-shell">
           <form id="crispr-form" class="stack-form crispr-controls" autocomplete="off">
@@ -466,7 +537,6 @@
 
       <div id="tool-colony-counter-view" class="panel tool-subview" hidden>
         <h3>Colony Counter (Manual Click)</h3>
-        <p class="small-note">Upload a plate image, then click each colony to count manually.</p>
 
         <div class="colony-counter-shell">
           <form id="colony-counter-form" class="stack-form colony-counter-controls" autocomplete="off">
@@ -489,13 +559,11 @@
               </label>
             </div>
 
-            <p class="small-note">Left-click to add a marker, right-click to remove nearest, scroll to zoom, and drag while zoomed to pan.</p>
-
             <div class="form-actions">
               <button id="colony-clear-markers-btn" type="button" class="ghost-btn">Clear Markers</button>
               <button id="colony-run-btn" type="submit" class="primary-btn">Save Manual Count</button>
               <button id="colony-reset-btn" type="button" class="ghost-btn">Reset</button>
-              <span id="colony-status" class="small-note">Load an image, then click colonies to count manually.</span>
+              <span id="colony-status" class="small-note"></span>
             </div>
           </form>
 
@@ -524,5 +592,7 @@
         </div>
 
         <canvas id="colony-source-canvas" hidden></canvas>
+      </div>
+        </div>
       </div>
     </section>

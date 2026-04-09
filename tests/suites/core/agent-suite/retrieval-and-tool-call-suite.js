@@ -1,5 +1,11 @@
 module.exports = function registerAgentRetrievalAndToolCallSuite(context = {}) {
   const scope = context.scope || {};
+  const toolLoading = scope.agentToolLoading && Object.keys(scope.agentToolLoading).length
+    ? scope.agentToolLoading
+    : (scope.agentToolCall || {});
+  const toolExecution = scope.agentToolExecution && Object.keys(scope.agentToolExecution).length
+    ? scope.agentToolExecution
+    : (scope.agentToolCall || {});
   const __dirname = context.__dirname || process.cwd();
   with (scope) {
     test('inventory lookup runtime is reusable with fallback snapshot search', async () => {
@@ -59,6 +65,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuite(context = {}) {
       assert.equal(result.source, 'fallback_json');
       assert.equal(result.items.some((item) => item.kind === 'personal_sample'), true);
       assert.equal(result.items.some((item) => item.name === 'Atlas construct'), true);
+      assert.equal(result.items.find((item) => item.name === 'Atlas construct')?.location, 'Shelf 3 / A7');
       assert.equal(result.terms_used.includes('Atlas construct'), true);
     });
 
@@ -116,17 +123,49 @@ module.exports = function registerAgentRetrievalAndToolCallSuite(context = {}) {
       assert.equal(result.items.some((item) => item.linked_protocol_name === 'Protein Purification'), true);
     });
 
+    test('lookup query derivation prefers the searched entity over requested output hints', () => {
+      const inventoryRuntime = agentInventoryLookup.createAgentInventoryLookupRuntime();
+      const recordRuntime = agentRecordLookup.createAgentRecordLookupRuntime();
+
+      assert.equal(
+        inventoryRuntime.deriveInventoryLookupQuery({
+          message: 'Do we have acetic acid?',
+          parserPayload: {
+            entities: {
+              requested_output: 'location'
+            },
+            inventory_search: {}
+          }
+        }),
+        'Do we have acetic acid?'
+      );
+
+      assert.equal(
+        recordRuntime.deriveRecordLookupQuery({
+          message: 'Find protein purification records for Atlas.',
+          parserPayload: {
+            entities: {
+              protocol_name: 'Protein Purification',
+              project_name: 'Atlas',
+              requested_output: 'yield'
+            }
+          }
+        }),
+        'Protein Purification'
+      );
+    });
+
     test('agent tool-call catalog stays in sync and prompt builders render tool metadata', () => {
-      const toolNames = agentToolCall.AGENT_TOOL_CATALOG.map((entry) => entry.name);
-      const schemaNames = Object.keys(agentToolCall.AGENT_TOOL_CALL_CATALOG).filter((name) => name !== '$defs');
+      const toolNames = toolLoading.AGENT_TOOL_CATALOG.map((entry) => entry.name);
+      const schemaNames = Object.keys(toolLoading.AGENT_TOOL_CALL_CATALOG).filter((name) => name !== '$defs');
       assert.deepEqual(toolNames, ['inventory-lookup', 'record-lookup', 'protocol-matching', 'notebook-generation', 'notebook-draft', 'python-sandbox', 'sub-agent', 'memory', 'literature-search', 'paper-download', 'paper-analysis', 'protocol-generation']);
       assert.deepEqual(schemaNames, toolNames);
-      const inventoryEntry = agentToolCall.AGENT_TOOL_CATALOG.find((entry) => entry.name === 'inventory-lookup');
-      const protocolEntry = agentToolCall.AGENT_TOOL_CATALOG.find((entry) => entry.name === 'protocol-matching');
-      const inventorySchema = agentToolCall.AGENT_TOOL_CALL_CATALOG['inventory-lookup'];
-      const pythonSchema = agentToolCall.AGENT_TOOL_CALL_CATALOG['python-sandbox'];
+      const inventoryEntry = toolLoading.AGENT_TOOL_CATALOG.find((entry) => entry.name === 'inventory-lookup');
+      const protocolEntry = toolLoading.AGENT_TOOL_CATALOG.find((entry) => entry.name === 'protocol-matching');
+      const inventorySchema = toolLoading.AGENT_TOOL_CALL_CATALOG['inventory-lookup'];
+      const pythonSchema = toolLoading.AGENT_TOOL_CALL_CATALOG['python-sandbox'];
 
-      const selectionPrompt = agentToolCall.buildToolSelectionPrompt({
+      const selectionPrompt = toolLoading.buildToolSelectionPrompt({
         message: 'Find the right protocol and draft the notebook.',
         conversation: [
           { role: 'user', text: 'I ran the HEK293 transfection.' }
@@ -139,14 +178,14 @@ module.exports = function registerAgentRetrievalAndToolCallSuite(context = {}) {
       });
       assert.equal(selectionPrompt.includes(`- ${inventoryEntry.name}: ${inventoryEntry.description}`), true);
       assert.equal(selectionPrompt.includes(`- ${protocolEntry.name}: ${protocolEntry.description}`), true);
-      assert.equal(selectionPrompt.includes(`Usage: ${inventorySchema.description}`), true);
+      assert.equal(selectionPrompt.includes(`Usage: ${inventorySchema.description}`), false);
       assert.equal(selectionPrompt.includes('Active project context: Atlas'), true);
       assert.equal(selectionPrompt.includes('Recent conversation:\n1. user: I ran the HEK293 transfection.'), true);
       assert.equal(selectionPrompt.includes('User message: Find the right protocol and draft the notebook.'), true);
       assert.equal(selectionPrompt.includes('"primary_intent": "protocol_to_notebook"'), true);
       assert.equal(selectionPrompt.includes('"protocol_candidates": [\n    "HEK293 Transfection"\n  ]'), true);
 
-      const argumentsPrompt = agentToolCall.buildToolArgumentsPrompt({
+      const argumentsPrompt = toolLoading.buildToolArgumentsPrompt({
         message: 'Use inventory lookup first, then run python if needed.',
         conversation: [
           { role: 'assistant', text: 'Protocol was likely HEK293 Transfection.' }
@@ -169,9 +208,42 @@ module.exports = function registerAgentRetrievalAndToolCallSuite(context = {}) {
       assert.equal(argumentsPrompt.includes('Tool: protocol-matching'), false);
     });
 
+    test('agent tool provider resolves reasoning entry tools from the catalog schemas', () => {
+      const toolProvider = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-tool-provide.js'));
+      const runtime = toolProvider.createAgentToolProviderRuntime();
+
+      const scienceTools = runtime.provideTools({
+        entryPoint: 'science_reasoning_entry',
+        intent: 'general_science_question'
+      });
+      assert.equal(scienceTools.tool_names.includes('literature-search'), true);
+      assert.equal(scienceTools.tool_names.includes('record-lookup'), true);
+      assert.equal(scienceTools.tool_names.includes('python-sandbox'), true);
+      assert.equal(scienceTools.tool_definitions.some((tool) => tool.name === 'literature-search'), true);
+      assert.equal(
+        scienceTools.tool_definitions.find((tool) => tool.name === 'literature-search').parameters.properties.source.$ref,
+        '#/$defs/literature_source'
+      );
+
+      const deepResearchTools = runtime.provideTools({
+        entryPoint: 'deep_research_entry',
+        intent: 'result_analysis'
+      });
+      assert.equal(deepResearchTools.tool_names.includes('python-sandbox'), true);
+      assert.equal(deepResearchTools.tool_names.includes('record-lookup'), true);
+      assert.equal(deepResearchTools.tool_names.includes('literature-search'), true);
+      assert.equal(deepResearchTools.tool_names.includes('sub-agent'), true);
+      assert.deepEqual(deepResearchTools.tool_definitions.map((tool) => tool.name), deepResearchTools.tool_names);
+
+      const catalogTools = runtime.provideTools();
+      assert.equal(catalogTools.tool_names.includes('inventory-lookup'), true);
+      assert.equal(catalogTools.tool_names.includes('literature-search'), true);
+      assert.equal(catalogTools.tool_names.includes('protocol-generation'), true);
+    });
+
     test('agent tool-call catalog validators reject malformed catalog data', () => {
       assert.throws(
-        () => agentToolCall.validateAgentToolCatalog([
+        () => toolLoading.validateAgentToolCatalog([
           { name: 'inventory-lookup', description: 'first' },
           { name: 'inventory-lookup', description: 'second' }
         ]),
@@ -179,14 +251,14 @@ module.exports = function registerAgentRetrievalAndToolCallSuite(context = {}) {
       );
 
       assert.throws(
-        () => agentToolCall.validateAgentToolCatalog([
+        () => toolLoading.validateAgentToolCatalog([
           { name: 'inventory-lookup' }
         ]),
         /missing description/i
       );
 
       assert.throws(
-        () => agentToolCall.validateAgentToolCallCatalog({
+        () => toolLoading.validateAgentToolCallCatalog({
           $defs: {},
           'inventory-lookup': {
             description: 'inventory usage',
@@ -196,12 +268,12 @@ module.exports = function registerAgentRetrievalAndToolCallSuite(context = {}) {
               properties: {}
             }
           }
-        }, agentToolCall.AGENT_TOOL_CATALOG),
+        }, toolLoading.AGENT_TOOL_CATALOG),
         /missing schema for "record-lookup"/i
       );
 
       assert.throws(
-        () => agentToolCall.validateAgentToolCallCatalog({
+        () => toolLoading.validateAgentToolCallCatalog({
           $defs: {},
           'inventory-lookup': {
             input_schema: {
@@ -298,12 +370,12 @@ module.exports = function registerAgentRetrievalAndToolCallSuite(context = {}) {
               properties: {}
             }
           }
-        }, agentToolCall.AGENT_TOOL_CATALOG),
+        }, toolLoading.AGENT_TOOL_CATALOG),
         /missing description/i
       );
 
       assert.throws(
-        () => agentToolCall.validateAgentToolCallCatalog({
+        () => toolLoading.validateAgentToolCallCatalog({
           $defs: {},
           'inventory-lookup': {
             description: 'inventory usage',
@@ -409,13 +481,13 @@ module.exports = function registerAgentRetrievalAndToolCallSuite(context = {}) {
               properties: {}
             }
           }
-        }, agentToolCall.AGENT_TOOL_CATALOG),
+        }, toolLoading.AGENT_TOOL_CATALOG),
         /unknown tool "made-up-tool"/i
       );
     });
 
     test('agent tool-call normalizes selection and arguments payloads and rejects invalid input', () => {
-      const selection = agentToolCall.normalizeToolSelectionPayload({
+      const selection = toolLoading.normalizeToolSelectionPayload({
         tool_calls: [
           { tool_name: 'Inventory-Lookup', rationale: 'Need to find stock.' },
           { tool_name: 'protocol-matching', rationale: 'Need protocol choice.' }
@@ -428,7 +500,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuite(context = {}) {
         ['inventory-lookup', 'protocol-matching']
       );
 
-      const invalidSelection = agentToolCall.normalizeToolSelectionPayload({
+      const invalidSelection = toolLoading.normalizeToolSelectionPayload({
         tool_calls: [
           { tool_name: 'inventory-lookup' },
           { tool_name: 'inventory-lookup' }
@@ -437,7 +509,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuite(context = {}) {
       assert.equal(invalidSelection.ok, false);
       assert.match(String(invalidSelection.error || ''), /duplicate tool/i);
 
-      const argsPayload = agentToolCall.normalizeToolArgumentsPayload({
+      const argsPayload = toolLoading.normalizeToolArgumentsPayload({
         tool_calls: [
           {
             tool_name: 'inventory-lookup',
@@ -458,8 +530,14 @@ module.exports = function registerAgentRetrievalAndToolCallSuite(context = {}) {
       });
       assert.equal(argsPayload.ok, true);
       assert.equal(argsPayload.payload.tool_calls[0].arguments.limit, 5);
+      assert.deepEqual(
+        toolLoading.normalizeToolInvocationArgs({
+          input_json: JSON.stringify({ query: 'PEI', limit: 5 })
+        }),
+        { query: 'PEI', limit: 5 }
+      );
 
-      const invalidArgs = agentToolCall.normalizeToolArgumentsPayload({
+      const invalidArgs = toolLoading.normalizeToolArgumentsPayload({
         tool_calls: [
           {
             tool_name: 'inventory-lookup',
@@ -477,7 +555,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuite(context = {}) {
     });
 
     test('agent tool-call runtime supports generic executor registration without changing core dispatch logic', async () => {
-      const runtime = agentToolCall.createAgentToolCallRuntime({
+      const runtime = toolExecution.createAgentToolCallRuntime({
         toolExecutors: {
           'inventory-lookup': async ({ toolName, args }) => ({
             status: 'custom',
@@ -507,7 +585,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuite(context = {}) {
     });
 
     test('agent tool-call runtime reports missing executors for schema-valid tools', async () => {
-      const runtime = agentToolCall.createAgentToolCallRuntime();
+      const runtime = toolExecution.createAgentToolCallRuntime();
       const result = await runtime.executeToolCall({
         tool_name: 'inventory-lookup',
         arguments: {
@@ -524,7 +602,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuite(context = {}) {
     });
 
     test('agent tool-call runtime passes normalized context and helper services into injected executors', async () => {
-      const runtime = agentToolCall.createAgentToolCallRuntime({
+      const runtime = toolExecution.createAgentToolCallRuntime({
         toolExecutors: {
           'record-lookup': async ({ toolName, args, context, services }) => ({
             status: 'handled',
@@ -562,7 +640,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuite(context = {}) {
     });
 
     test('agent tool-call runtime supports sequential batches through injected state hooks', async () => {
-      const runtime = agentToolCall.createAgentToolCallRuntime({
+      const runtime = toolExecution.createAgentToolCallRuntime({
         toolExecutors: {
           'protocol-matching': async () => ({
             status: 'selected',
@@ -615,7 +693,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuite(context = {}) {
     });
 
     test('agent tool-call runtime surfaces executor failures without built-in fallback behavior', async () => {
-      const runtime = agentToolCall.createAgentToolCallRuntime();
+      const runtime = toolExecution.createAgentToolCallRuntime();
       const result = await runtime.executeToolCall({
         tool_name: 'python-sandbox',
         arguments: {

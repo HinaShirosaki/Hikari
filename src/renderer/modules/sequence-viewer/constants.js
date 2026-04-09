@@ -13,13 +13,6 @@ export const LINE_FEATURE_BAR_HORIZONTAL_PADDING_PX = 5;
 export const FEATURE_TOOLTIP_OFFSET_PX = 12;
 export const AMINO_ACID_ROW_LABEL = 'AA';
 
-export const PLANNOTATE_DEFAULT_OPTIONS = Object.freeze({
-  detailed: false,
-  minIdentity: 85,
-  minCoverage: 0.25,
-  minHitLength: 24
-});
-
 export const BASE_COMPLEMENT = Object.freeze({
   A: 'T',
   C: 'G',
