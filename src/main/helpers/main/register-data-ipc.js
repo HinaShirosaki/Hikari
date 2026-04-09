@@ -9,15 +9,12 @@ function registerDataIpc(deps = {}) {
   const fs = deps.fs;
   const cleanText = typeof deps.cleanText === 'function'
     ? deps.cleanText
-    : ((value, maxLength = 2000) => {
+    : ((value, _maxLength = 2000) => {
       const text = String(value || '').trim();
       if (!text) {
         return '';
       }
-      if (text.length <= maxLength) {
-        return text;
-      }
-      return `${text.slice(0, maxLength)}...`;
+      return text;
     });
   const mainDataHelpers = deps.mainDataHelpers;
   const hasSupportedDataExtension = deps.hasSupportedDataExtension;

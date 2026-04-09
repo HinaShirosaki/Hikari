@@ -10,6 +10,7 @@ This doc set explains how `src/main/helpers/agent` is assembled, how requests mo
 4. [Context and observability](./context/context-and-observability.md)
 5. [Deep research pipeline](./deep-research/pipeline.md)
 6. [Module map](./reference/module-map.md)
+7. [Reading the context debug export](./reference/agent-context-debug-guide.md)
 
 ## What this package owns
 

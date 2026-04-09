@@ -36,6 +36,38 @@ function createProtocolMatchingRuntime(deps = {}) {
     'Return a concise rationale.'
   ];
 
+  function buildProtocolTieBreakPrompt({
+    message = '',
+    conversation = [],
+    parserPayload = {},
+    rankedMatches = []
+  } = {}) {
+    const promptConversation = asArray(conversation).slice(-8).map((row, index) => {
+      const role = row?.role === 'assistant' ? 'assistant' : 'user';
+      const text = cleanText(row?.text, 1200);
+      return text ? `${index + 1}. ${role}: ${text}` : '';
+    }).filter(Boolean).join('\n');
+    const rankedPreview = asArray(rankedMatches).slice(0, 3).map((item) => ({
+      id: item?.id,
+      name: item?.name,
+      purpose: item?.purpose,
+      steps: asArray(item?.steps).slice(0, 8).map((step) => ({
+        id: step?.id,
+        text: step?.text
+      }))
+    }));
+    const parserEntities = parserPayload?.entities && typeof parserPayload.entities === 'object'
+      ? parserPayload.entities
+      : {};
+    return [
+      ...PROTOCOL_TO_NOTEBOOK_SELECTION_RULES,
+      `User message: ${cleanText(message, 3000)}`,
+      promptConversation ? `Recent conversation:\n${promptConversation}` : '',
+      `Parser entities JSON:\n${JSON.stringify(parserEntities, null, 2)}`,
+      `Detailed protocol candidates JSON:\n${JSON.stringify(rankedPreview, null, 2)}`
+    ].filter(Boolean).join('\n\n');
+  }
+
   function normalizeProtocolStep(step, index = 0) {
     const source = step && typeof step === 'object' ? step : {};
     const stepId = cleanText(source.id, 120) || `step-${index + 1}`;
@@ -242,23 +274,6 @@ function createProtocolMatchingRuntime(deps = {}) {
       };
     }
 
-    const promptConversation = asArray(conversation).slice(-8).map((row, index) => {
-      const role = row?.role === 'assistant' ? 'assistant' : 'user';
-      const text = cleanText(row?.text, 1200);
-      return text ? `${index + 1}. ${role}: ${text}` : '';
-    }).filter(Boolean).join('\n');
-    const rankedPreview = ranked.slice(0, 3).map((item) => ({
-      id: item.id,
-      name: item.name,
-      purpose: item.purpose,
-      steps: asArray(item.steps).slice(0, 8).map((step) => ({
-        id: step.id,
-        text: step.text
-      }))
-    }));
-    const parserEntities = parserPayload?.entities && typeof parserPayload.entities === 'object'
-      ? parserPayload.entities
-      : {};
     const llmResult = await requestStructuredJsonPayload({
       provider,
       endpoint,
@@ -266,13 +281,12 @@ function createProtocolMatchingRuntime(deps = {}) {
       model,
       stage: 'protocol_tiebreak_llm',
       systemPrompt: PROTOCOL_TO_NOTEBOOK_SELECTION_SYSTEM_PROMPT,
-      userPrompt: [
-        ...PROTOCOL_TO_NOTEBOOK_SELECTION_RULES,
-        `User message: ${cleanText(message, 3000)}`,
-        promptConversation ? `Recent conversation:\n${promptConversation}` : '',
-        `Parser entities JSON:\n${JSON.stringify(parserEntities, null, 2)}`,
-        `Detailed protocol candidates JSON:\n${JSON.stringify(rankedPreview, null, 2)}`
-      ].filter(Boolean).join('\n\n'),
+      userPrompt: buildProtocolTieBreakPrompt({
+        message,
+        conversation,
+        parserPayload,
+        rankedMatches: ranked
+      }),
       schema: PROTOCOL_TIEBREAK_RESPONSE_SCHEMA,
       traceContext,
       maxOutputTokens: 1300,
@@ -375,12 +389,15 @@ function createProtocolMatchingRuntime(deps = {}) {
   }
 
   return {
+    PROTOCOL_TO_NOTEBOOK_SELECTION_SYSTEM_PROMPT,
+    PROTOCOL_TO_NOTEBOOK_SELECTION_RULES,
     normalizeProtocolStep,
     normalizeProtocolRecord,
     rankProtocolMatches,
     hasDeterministicProtocolWinner,
     findProtocolBySelection,
     mapCandidateMatchesForOutput,
+    buildProtocolTieBreakPrompt,
     resolveProtocolWinner,
     selectProtocol
   };

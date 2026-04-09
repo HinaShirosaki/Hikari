@@ -135,6 +135,7 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
       assert.equal(result.ok, true);
       assert.equal(result.status, 'completed');
       assert.match(String(result.query || ''), /PD-1/i);
+      assert.doesNotMatch(String(result.query || ''), /recent papers/i);
       assert.deepEqual(result.sources, ['pubmed', 'crossref', 'europe_pmc', 'uniprot']);
       assert.equal(result.items.some((item) => item.source === 'pubmed' && item.pmid === '12345'), true);
       assert.equal(result.items.some((item) => item.source === 'crossref' && item.doi === '10.1000/cross'), true);
@@ -145,6 +146,42 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
       assert.equal(result.source_counts.crossref, 1);
       assert.equal(result.source_counts.europe_pmc, 1);
       assert.equal(result.source_counts.uniprot, 1);
+    });
+
+    test('literature search runtime compresses sentence prompts into keyword-style paper queries', async () => {
+      const capturedQueries = [];
+      const runtime = agentLiteratureSearch.createLiteratureSearchRuntime({
+        searchPubMedRecords: async ({ query }) => {
+          capturedQueries.push(String(query || ''));
+          return [];
+        }
+      });
+
+      const builtQuery = runtime.buildLiteratureQuery({
+        message: 'Explain the whole antigen processing procedure to me.'
+      });
+      const result = await runtime.execute({
+        message: 'Explain the whole antigen processing procedure to me.',
+        source: 'pubmed',
+        limit: 3
+      });
+
+      assert.equal(builtQuery, 'antigen processing');
+      assert.equal(result.query, 'antigen processing');
+      assert.deepEqual(capturedQueries, ['antigen processing']);
+      assert.doesNotMatch(String(result.query || ''), /\b(?:explain|whole)\b/i);
+    });
+
+    test('literature search runtime keeps later technical terms instead of truncating the keyword query early', async () => {
+      const runtime = agentLiteratureSearch.createLiteratureSearchRuntime({});
+      const query = runtime.buildLiteratureQuery({
+        message: 'Explain antigen processing MHC class I MHC class II TAP tapasin calreticulin ERAP HLA-DM cross-presentation proteasome invariant chain procedure to me.'
+      });
+
+      assert.match(String(query || ''), /MHC class II/i);
+      assert.match(String(query || ''), /HLA-DM/i);
+      assert.match(String(query || ''), /invariant chain/i);
+      assert.doesNotMatch(String(query || ''), /\b(?:explain|procedure)\b/i);
     });
 
     test('literature search runtime falls back to web search when scholarly sources are empty', async () => {
@@ -178,6 +215,292 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
       assert.equal(result.items[0].source, 'web');
       assert.equal(result.items[0].source_domain, 'example.org');
       assert.match(String(result.summary || ''), /web: 1/i);
+    });
+
+    test('paper context loader reads papers in precedence order before falling back to search summaries', async () => {
+      const runtime = agentPaperContextLoader.createPaperContextLoaderRuntime({
+        fetch: async (url) => {
+          const normalizedUrl = String(url || '');
+          if (normalizedUrl.includes('/article/PMC/PMC111?format=json')) {
+            return {
+              ok: true,
+              json: async () => ({
+                pmcid: 'PMC111',
+                pmid: '111',
+                doi: '10.1000/fulltext'
+              })
+            };
+          }
+          if (normalizedUrl.includes('/PMC111/fullTextXML')) {
+            return {
+              ok: true,
+              text: async () => [
+                '<article>',
+                '<abstract><p>Abstract overview for the mechanism study.</p></abstract>',
+                '<body>',
+                '<sec><title>Results</title><p>MAPK resistance increased after pathway reactivation.</p></sec>',
+                '<sec><title>Discussion</title><p>Compensatory signaling sustained survival.</p></sec>',
+                '</body>',
+                '</article>'
+              ].join('')
+            };
+          }
+          if (normalizedUrl.includes('/article/MED/222?format=json')) {
+            return {
+              ok: true,
+              json: async () => ({
+                pmid: '222'
+              })
+            };
+          }
+          if (normalizedUrl.includes('efetch.fcgi') && normalizedUrl.includes('id=222')) {
+            return {
+              ok: true,
+              text: async () => [
+                '<PubmedArticleSet>',
+                '<PubmedArticle>',
+                '<Abstract>',
+                '<AbstractText Label="Results">PubMed abstract about adaptive resistance.</AbstractText>',
+                '</Abstract>',
+                '</PubmedArticle>',
+                '</PubmedArticleSet>'
+              ].join('')
+            };
+          }
+          if (normalizedUrl.includes('/article/DOI/10.1000%2Feupmc?format=json')) {
+            return {
+              ok: true,
+              json: async () => ({
+                doi: '10.1000/eupmc',
+                abstractText: 'Europe PMC abstract about resistance adaptation.'
+              })
+            };
+          }
+          if (normalizedUrl.includes('/article/DOI/10.1000%2Fcross?format=json')) {
+            return {
+              ok: true,
+              json: async () => ({
+                doi: '10.1000/cross'
+              })
+            };
+          }
+          if (normalizedUrl.includes('api.crossref.org/works/10.1000%2Fcross')) {
+            return {
+              ok: true,
+              json: async () => ({
+                message: {
+                  abstract: '<jats:p>Crossref abstract about acquired resistance.</jats:p>'
+                }
+              })
+            };
+          }
+          throw new Error(`Unexpected URL ${normalizedUrl}`);
+        }
+      });
+
+      const fullTextPaper = await runtime.readPaperContext({
+        pmcid: 'PMC111',
+        title: 'Full text paper'
+      });
+      const pubMedAbstractPaper = await runtime.readPaperContext({
+        pmid: '222',
+        title: 'PubMed abstract paper'
+      });
+      const europePmcAbstractPaper = await runtime.readPaperContext({
+        doi: '10.1000/eupmc',
+        title: 'Europe PMC metadata paper'
+      });
+      const crossrefAbstractPaper = await runtime.readPaperContext({
+        doi: '10.1000/cross',
+        title: 'Crossref paper'
+      });
+      const fallbackPaper = await runtime.readPaperContext({
+        id: 'fallback-paper',
+        title: 'Fallback paper',
+        summary: 'Search result summary about resistance markers.'
+      });
+
+      assert.deepEqual(agentPaperContextLoader.PAPER_CONTEXT_SOURCE_ORDER, [
+        'europe_pmc_full_text',
+        'pubmed_abstract',
+        'europe_pmc_abstract',
+        'crossref_abstract',
+        'search_result_summary'
+      ]);
+      assert.equal(fullTextPaper.read_source, 'europe_pmc_full_text');
+      assert.equal(fullTextPaper.sections.some((section) => section.label === 'Results'), true);
+      assert.equal(fullTextPaper.sections.some((section) => /pathway reactivation/i.test(String(section.text || ''))), true);
+      assert.equal(pubMedAbstractPaper.read_source, 'pubmed_abstract');
+      assert.equal(pubMedAbstractPaper.sections[0].label, 'Results');
+      assert.equal(europePmcAbstractPaper.read_source, 'europe_pmc_abstract');
+      assert.match(String(europePmcAbstractPaper.sections[0]?.text || ''), /Europe PMC abstract/i);
+      assert.equal(crossrefAbstractPaper.read_source, 'crossref_abstract');
+      assert.match(String(crossrefAbstractPaper.sections[0]?.text || ''), /Crossref abstract/i);
+      assert.equal(fallbackPaper.read_source, 'search_result_summary');
+      assert.equal(fallbackPaper.sections[0].label, 'Summary');
+      assert.match(String(fallbackPaper.sections[0]?.text || ''), /Search result summary/i);
+    });
+
+    test('paper context loader caps reads, ranks chunks, and reviews figures only for selected papers', async () => {
+      const figureReviewCalls = [];
+      const runtime = agentPaperContextLoader.createPaperContextLoaderRuntime({
+        fetch: async (url) => {
+          const normalizedUrl = String(url || '');
+          if (normalizedUrl === 'https://example.org/paper-1.pdf' || normalizedUrl === 'https://example.org/paper-2.pdf') {
+            return {
+              ok: true,
+              arrayBuffer: async () => Buffer.from('%PDF-1.7 figure-review')
+            };
+          }
+          throw new Error(`Unexpected URL ${normalizedUrl}`);
+        },
+        requestStructuredJsonPayload: async (options = {}) => {
+          if (options.stage === 'paper_context_selection') {
+            return {
+              ok: true,
+              payload: {
+                selected_blocks: [
+                  { block_id: 'paper-1::1-1', relevance_reason: 'Most directly answers the mechanism question.' },
+                  { block_id: 'paper-2::1-1', relevance_reason: 'Adds a complementary angle.' },
+                  { block_id: 'paper-3::1-1', relevance_reason: 'Useful supporting context.' }
+                ],
+                figure_review_requests: [
+                  { paper_id: 'paper-1', reason: 'Figure 2 appears central.' },
+                  { paper_id: 'paper-2', reason: 'Figure review might clarify localization.' },
+                  { paper_id: 'paper-9', reason: 'This should be ignored because it was not selected.' }
+                ]
+              }
+            };
+          }
+          if (options.stage === 'paper_figure_review') {
+            const paperTitle = String(options.userPrompt || '').match(/Paper title:\s*(.+)/)?.[1] || '';
+            figureReviewCalls.push({
+              paperTitle,
+              pdfDataUrl: String(options.pdfDataUrl || ''),
+              fileName: String(options.fileName || '')
+            });
+            return paperTitle.includes('Selected paper 1')
+              ? {
+                ok: true,
+                payload: {
+                  useful: true,
+                  figure_summary: 'Figure 2 shows ERK signaling returning after inhibitor escape.',
+                  relevance_reason: 'The figure directly visualizes pathway reactivation.'
+                }
+              }
+              : {
+                ok: true,
+                payload: {
+                  useful: false,
+                  figure_summary: '',
+                  relevance_reason: 'The selected text already covers the point.'
+                }
+              };
+          }
+          return {
+            ok: false,
+            error: `Unexpected stage ${options.stage}`
+          };
+        }
+      });
+
+      const chunks = runtime.chunkSectionText('MAPK pathway resistance '.repeat(220));
+      const rankedBlocks = runtime.buildCandidateBlocks([
+        {
+          paper_id: 'paper-low',
+          paper_title: 'Low signal paper',
+          read_source: 'search_result_summary',
+          sections: [{ label: 'Methods', text: 'Prepared buffer and incubated cells overnight.' }]
+        },
+        {
+          paper_id: 'paper-high',
+          paper_title: 'High signal paper',
+          read_source: 'search_result_summary',
+          sections: [{ label: 'Results', text: 'MAPK resistance mechanisms converged on ERK pathway reactivation.' }]
+        }
+      ], 'MAPK resistance mechanisms');
+
+      const result = await runtime.loadPaperContexts({
+        query: 'Which figures support MAPK resistance mechanisms?',
+        items: Array.from({ length: 9 }, (_value, index) => ({
+          id: `paper-${index + 1}`,
+          title: `Selected paper ${index + 1}`,
+          summary: index < 3
+            ? `MAPK resistance summary ${index + 1} with pathway reactivation evidence.`
+            : `Background summary ${index + 1} about unrelated controls.`,
+          pdf_urls: index < 2 ? [`https://example.org/paper-${index + 1}.pdf`] : []
+        }))
+      });
+
+      assert.equal(chunks.length > 1, true);
+      assert.equal(rankedBlocks[0].paper_id, 'paper-high');
+      assert.equal(result.ok, true);
+      assert.equal(result.papers.length, 8);
+      assert.equal(result.papers_read_count, 8);
+      assert.equal(result.loaded_context_blocks.length <= 6, true);
+      assert.equal(result.loaded_context_blocks.some((block) => block.paper_id === 'paper-1' && block.evidence_kind === 'figure_review'), true);
+      assert.equal(result.loaded_context_blocks.some((block) => block.paper_id === 'paper-9'), false);
+      assert.equal(result.loaded_context_blocks.some((block) => /ERK signaling returning/i.test(String(block.excerpt || ''))), true);
+      assert.deepEqual(figureReviewCalls.map((call) => call.paperTitle), ['Selected paper 1', 'Selected paper 2']);
+      assert.equal(figureReviewCalls.every((call) => call.pdfDataUrl.startsWith('data:application/pdf;base64,')), true);
+      assert.equal(figureReviewCalls.every((call) => call.fileName.endsWith('.pdf')), true);
+      assert.match(String(result.summary || ''), /Read 8 paper\(s\) and loaded/i);
+    });
+
+    test('literature search runtime returns loaded paper context blocks without writing paper files', async () => {
+      const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'literature-context-no-write-'));
+      try {
+        const runtime = agentLiteratureSearch.createLiteratureSearchRuntime({
+          searchPubMedRecords: async () => [
+            {
+              id: 'paper-1',
+              source: 'pubmed',
+              pmid: '12345',
+              title: 'Mechanism paper',
+              summary: 'Abstract summary about ERK reactivation.',
+              published_at: '2025-01-01'
+            }
+          ],
+          paperContextLoaderRuntime: {
+            loadPaperContexts: async ({ items, query }) => {
+              assert.equal(items.length, 1);
+              assert.match(String(query || ''), /MAPK resistance/i);
+              return {
+                ok: true,
+                papers_read_count: 1,
+                loaded_context_blocks: [
+                  {
+                    paper_id: 'paper-1',
+                    paper_title: 'Mechanism paper',
+                    section_label: 'Results',
+                    excerpt: 'ERK reactivation restored signaling after inhibitor escape.',
+                    relevance_reason: 'Directly addresses the resistance mechanism.',
+                    source: 'pubmed_abstract',
+                    evidence_kind: 'text'
+                  }
+                ],
+                summary: 'Read 1 paper(s) and loaded 1 context block(s).'
+              };
+            }
+          }
+        });
+
+        const result = await runtime.execute({
+          query: 'MAPK resistance mechanism',
+          source: 'pubmed',
+          limit: 3,
+          storage_path: tempDir
+        });
+
+        assert.equal(result.ok, true);
+        assert.equal(result.papers_read_count, 1);
+        assert.equal(result.loaded_context_blocks.length, 1);
+        assert.match(String(result.loaded_context_blocks[0]?.excerpt || ''), /ERK reactivation/i);
+        assert.match(String(result.summary || ''), /loaded 1 context block/i);
+        assert.deepEqual(await fsPromises.readdir(tempDir), []);
+      } finally {
+        await fsPromises.rm(tempDir, { recursive: true, force: true });
+      }
     });
 
     test('paper download runtime extracts PDF candidates and streams direct download progress into paper storage', async () => {

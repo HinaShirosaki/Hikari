@@ -5,6 +5,11 @@ const os = require('os');
 const path = require('path');
 const { execFile, spawn } = require('child_process');
 const { promisify } = require('util');
+const {
+  createAgentRequestAbortError,
+  getAgentRequestAbortSignal,
+  throwIfAgentRequestAborted
+} = require('../shared/agent-request-context.js');
 
 const { createAgentSubAgentRuntime } = require('./agent-sub-agent.js');
 
@@ -19,6 +24,18 @@ const SANDBOX_MAX_READBACK_FILES = 20;
 const SANDBOX_MAX_INPUT_FILES = 32;
 const SANDBOX_CAPTURE_MAX_CHARS = 1024 * 1024 * 4;
 const SANDBOX_DEFAULT_HEARTBEAT_INTERVAL_MS = 1000;
+const SANDBOX_HELPER_MODULE_NAME = 'enana_sandbox.py';
+const SANDBOX_RENDER_OUTPUT_FILE_NAME = '.enana_sandbox_render_outputs.json';
+const SANDBOX_MAX_RENDER_OUTPUTS = 12;
+const SANDBOX_MAX_RENDER_TEXT_CHARS = 24000;
+const SANDBOX_MAX_RENDER_IMAGE_BASE64_CHARS = 1024 * 1024;
+const SANDBOX_ALLOWED_IMAGE_MIME_TYPES = new Set([
+  'image/png',
+  'image/jpeg',
+  'image/gif',
+  'image/webp',
+  'image/svg+xml'
+]);
 
 function asArray(value) {
   return Array.isArray(value) ? value : [];
@@ -36,15 +53,12 @@ function cloneJson(value, fallback) {
   }
 }
 
-function cleanText(value, maxLength = 5000) {
+function cleanText(value, _maxLength = 5000) {
   const text = String(value || '').trim();
   if (!text) {
     return '';
   }
-  if (text.length <= maxLength) {
-    return text;
-  }
-  return `${text.slice(0, maxLength)}...`;
+  return text;
 }
 
 function clamp(number, min, max) {
@@ -111,6 +125,205 @@ function appendChunkText(state, chunk, maxLength) {
 
 function buildRunId() {
   return `py-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
+}
+
+function inferImageMimeType(filePath = '') {
+  const extension = path.extname(cleanText(filePath, 260)).toLowerCase();
+  if (extension === '.png') {
+    return 'image/png';
+  }
+  if (extension === '.jpg' || extension === '.jpeg') {
+    return 'image/jpeg';
+  }
+  if (extension === '.gif') {
+    return 'image/gif';
+  }
+  if (extension === '.webp') {
+    return 'image/webp';
+  }
+  if (extension === '.svg') {
+    return 'image/svg+xml';
+  }
+  return '';
+}
+
+function normalizeRenderOutputTextContent(value, warnings, label = 'text output') {
+  const limited = truncateText(String(value || ''), SANDBOX_MAX_RENDER_TEXT_CHARS);
+  if (limited.truncated) {
+    asArray(warnings).push(`${label} truncated to ${SANDBOX_MAX_RENDER_TEXT_CHARS} chars.`);
+  }
+  return limited.text;
+}
+
+function normalizePythonSandboxRenderOutputs(rawOutputs, warnings = []) {
+  const outputs = [];
+  asArray(rawOutputs).slice(0, SANDBOX_MAX_RENDER_OUTPUTS).forEach((entry, index) => {
+    const source = ensureObject(entry);
+    const type = cleanText(source.type, 40).toLowerCase();
+    if (type === 'text') {
+      const content = normalizeRenderOutputTextContent(
+        source.content !== undefined ? source.content : source.text,
+        warnings,
+        `render_outputs[${index}]`
+      );
+      if (!content) {
+        return;
+      }
+      const format = cleanText(source.format || source.mime_type, 80).toLowerCase() || 'text/plain';
+      outputs.push({
+        type: 'text',
+        title: cleanText(source.title, 160),
+        format,
+        content
+      });
+      return;
+    }
+
+    if (type === 'image') {
+      const mimeType = cleanText(source.mime_type, 120).toLowerCase()
+        || inferImageMimeType(source.path)
+        || 'image/png';
+      if (!SANDBOX_ALLOWED_IMAGE_MIME_TYPES.has(mimeType)) {
+        warnings.push(`Skipped render_outputs[${index}] due to unsupported mime_type ${mimeType || 'unknown'}.`);
+        return;
+      }
+      const dataBase64 = String(source.data_base64 || source.dataBase64 || '').replace(/\s+/g, '');
+      if (!dataBase64) {
+        warnings.push(`Skipped render_outputs[${index}] because image data was empty.`);
+        return;
+      }
+      if (dataBase64.length > SANDBOX_MAX_RENDER_IMAGE_BASE64_CHARS) {
+        warnings.push(`Skipped render_outputs[${index}] because image data exceeded ${SANDBOX_MAX_RENDER_IMAGE_BASE64_CHARS} chars.`);
+        return;
+      }
+      if (!/^[A-Za-z0-9+/=]+$/.test(dataBase64)) {
+        warnings.push(`Skipped render_outputs[${index}] because image data was not valid base64.`);
+        return;
+      }
+      outputs.push({
+        type: 'image',
+        title: cleanText(source.title, 160),
+        alt: cleanText(source.alt, 200) || cleanText(source.title, 160) || 'Python sandbox image output',
+        mime_type: mimeType,
+        data_base64: dataBase64,
+        path: normalizeRelativePath(source.path)
+      });
+      return;
+    }
+
+    warnings.push(`Skipped render_outputs[${index}] due to unsupported type.`);
+  });
+  if (asArray(rawOutputs).length > SANDBOX_MAX_RENDER_OUTPUTS) {
+    warnings.push(`render_outputs capped at ${SANDBOX_MAX_RENDER_OUTPUTS} entries.`);
+  }
+  return outputs;
+}
+
+function buildPythonSandboxHelperModule() {
+  return [
+    'import atexit',
+    'import base64',
+    'import json',
+    'import os',
+    '',
+    '_ROOT = os.path.abspath(os.environ.get("ENANA_SANDBOX_ROOT") or os.getcwd())',
+    '_OUTPUT_PATH = os.path.abspath(os.environ.get("ENANA_SANDBOX_OUTPUT_PATH") or os.path.join(_ROOT, ".enana_sandbox_render_outputs.json"))',
+    '_RENDER_OUTPUTS = []',
+    '',
+    'def _resolve_path(relative_path):',
+    '    text = str(relative_path or "").replace("\\\\", "/").strip()',
+    '    if not text:',
+    '        raise ValueError("Path is required.")',
+    '    target = os.path.abspath(os.path.join(_ROOT, text))',
+    '    root_prefix = _ROOT if _ROOT.endswith(os.sep) else _ROOT + os.sep',
+    '    if target != _ROOT and not target.startswith(root_prefix):',
+    '        raise ValueError("Path must stay inside sandbox root.")',
+    '    return target',
+    '',
+    'def read_text(relative_path, encoding="utf-8"):',
+    '    with open(_resolve_path(relative_path), "r", encoding=encoding) as handle:',
+    '        return handle.read()',
+    '',
+    'def read_bytes(relative_path):',
+    '    with open(_resolve_path(relative_path), "rb") as handle:',
+    '        return handle.read()',
+    '',
+    'def read_json(relative_path, encoding="utf-8"):',
+    '    return json.loads(read_text(relative_path, encoding=encoding))',
+    '',
+    'def emit_text(content, title=None, format="text/plain"):',
+    '    _RENDER_OUTPUTS.append({',
+    '        "type": "text",',
+    '        "title": str(title or ""),',
+    '        "format": str(format or "text/plain"),',
+    '        "content": str(content or "")',
+    '    })',
+    '',
+    'def emit_markdown(content, title=None):',
+    '    emit_text(content, title=title, format="text/markdown")',
+    '',
+    'def emit_json(value, title=None):',
+    '    emit_text(json.dumps(value, indent=2, ensure_ascii=False), title=title, format="application/json")',
+    '',
+    'def emit_image(relative_path, title=None, mime_type=None, alt=None):',
+    '    image_path = _resolve_path(relative_path)',
+    '    with open(image_path, "rb") as handle:',
+    '        encoded = base64.b64encode(handle.read()).decode("ascii")',
+    '    _RENDER_OUTPUTS.append({',
+    '        "type": "image",',
+    '        "title": str(title or ""),',
+    '        "mime_type": str(mime_type or ""),',
+    '        "alt": str(alt or title or ""),',
+    '        "path": str(relative_path or ""),',
+    '        "data_base64": encoded',
+    '    })',
+    '',
+    'def emit_image_bytes(data, mime_type="image/png", title=None, alt=None):',
+    '    encoded = base64.b64encode(bytes(data or b"")).decode("ascii")',
+    '    _RENDER_OUTPUTS.append({',
+    '        "type": "image",',
+    '        "title": str(title or ""),',
+    '        "mime_type": str(mime_type or "image/png"),',
+    '        "alt": str(alt or title or ""),',
+    '        "data_base64": encoded',
+    '    })',
+    '',
+    'def list_outputs():',
+    '    return list(_RENDER_OUTPUTS)',
+    '',
+    'def clear_outputs():',
+    '    _RENDER_OUTPUTS.clear()',
+    '',
+    'def _persist_outputs():',
+    '    payload = {',
+    '        "version": 1,',
+    '        "outputs": _RENDER_OUTPUTS',
+    '    }',
+    '    parent = os.path.dirname(_OUTPUT_PATH)',
+    '    if parent:',
+    '        os.makedirs(parent, exist_ok=True)',
+    '    temp_path = _OUTPUT_PATH + ".tmp"',
+    '    with open(temp_path, "w", encoding="utf-8") as handle:',
+    '        json.dump(payload, handle)',
+    '    os.replace(temp_path, _OUTPUT_PATH)',
+    '',
+    'atexit.register(_persist_outputs)'
+  ].join('\n');
+}
+
+async function readPythonSandboxRenderOutputs(renderOutputPath, warnings = []) {
+  try {
+    const raw = await fs.readFile(renderOutputPath, 'utf8');
+    const payload = JSON.parse(raw);
+    const source = ensureObject(payload);
+    return normalizePythonSandboxRenderOutputs(source.outputs, warnings);
+  } catch (error) {
+    if (error?.code === 'ENOENT') {
+      return [];
+    }
+    warnings.push(`Failed to load sandbox render outputs: ${String(error?.message || error)}.`);
+    return [];
+  }
 }
 
 async function resolvePythonExecutable(explicit = '', preferred = '') {
@@ -307,6 +520,7 @@ function buildManagedPythonDebugMessage(source, sandboxResult) {
 }
 
 async function runPythonSandbox(input, options = {}) {
+  throwIfAgentRequestAborted('Agent request stopped before starting Python sandbox.');
   const source = ensureObject(input);
   const runId = buildRunId();
   const timeoutMs = clamp(Number(source.timeout_ms) || SANDBOX_DEFAULT_TIMEOUT_MS, SANDBOX_MIN_TIMEOUT_MS, SANDBOX_MAX_TIMEOUT_MS);
@@ -323,6 +537,7 @@ async function runPythonSandbox(input, options = {}) {
   const onHeartbeat = typeof options.onHeartbeat === 'function' ? options.onHeartbeat : null;
   const onTaskCompleted = typeof options.onTaskCompleted === 'function' ? options.onTaskCompleted : null;
   const onTaskFailed = typeof options.onTaskFailed === 'function' ? options.onTaskFailed : null;
+  const abortSignal = options.signal || getAgentRequestAbortSignal();
 
   const code = typeof source.code === 'string' ? source.code : '';
   if (!code.trim()) {
@@ -358,6 +573,7 @@ async function runPythonSandbox(input, options = {}) {
   const sandboxRoot = cleanText(options.sandboxRoot, 1200)
     || path.join(os.tmpdir(), 'enana-agent-python-sandbox');
   const sandboxDir = path.join(sandboxRoot, runId);
+  const renderOutputPath = path.join(sandboxDir, SANDBOX_RENDER_OUTPUT_FILE_NAME);
 
   try {
     await fs.mkdir(sandboxDir, { recursive: true });
@@ -377,12 +593,15 @@ async function runPythonSandbox(input, options = {}) {
     }
 
     const entryPath = path.join(sandboxDir, 'main.py');
+    const helperModulePath = path.join(sandboxDir, SANDBOX_HELPER_MODULE_NAME);
     await fs.writeFile(entryPath, code, 'utf8');
+    await fs.writeFile(helperModulePath, buildPythonSandboxHelperModule(), 'utf8');
 
     const pythonExecutable = await resolvePythonExecutable(
       options.pythonExecutable,
       options.preferredPythonBin
     );
+    throwIfAgentRequestAborted('Agent request stopped before launching Python sandbox.');
 
     let stdoutState = { text: '', overflow: false };
     let stderrState = { text: '', overflow: false };
@@ -390,10 +609,17 @@ async function runPythonSandbox(input, options = {}) {
     let signal = null;
     let timedOut = false;
     let processId = null;
+    let aborted = false;
+    let abortReason = null;
 
     const startedAtMs = Date.now();
     const child = spawn(pythonExecutable, [entryPath], {
       cwd: sandboxDir,
+      env: {
+        ...process.env,
+        ENANA_SANDBOX_ROOT: sandboxDir,
+        ENANA_SANDBOX_OUTPUT_PATH: renderOutputPath
+      },
       windowsHide: true,
       stdio: ['ignore', 'pipe', 'pipe']
     });
@@ -434,6 +660,7 @@ async function runPythonSandbox(input, options = {}) {
       let timeoutHandle = null;
       let killHandle = null;
       let heartbeatHandle = null;
+      let abortKillHandle = null;
 
       const finish = (callback, payload) => {
         if (settled) {
@@ -448,6 +675,12 @@ async function runPythonSandbox(input, options = {}) {
         }
         if (heartbeatHandle) {
           clearInterval(heartbeatHandle);
+        }
+        if (abortKillHandle) {
+          clearTimeout(abortKillHandle);
+        }
+        if (abortSignal) {
+          abortSignal.removeEventListener('abort', onAbort);
         }
         callback(payload);
       };
@@ -474,11 +707,40 @@ async function runPythonSandbox(input, options = {}) {
         void emitHeartbeat(false, 'process alive');
       }, heartbeatIntervalMs);
 
+      const onAbort = () => {
+        aborted = true;
+        abortReason = createAgentRequestAbortError(abortSignal?.reason || 'Agent request stopped.');
+        try {
+          child.kill('SIGTERM');
+        } catch {
+          // Ignore abort kill failures during shutdown.
+        }
+        abortKillHandle = setTimeout(() => {
+          if (isProcessAlive(processId)) {
+            try {
+              child.kill('SIGKILL');
+            } catch {
+              // Ignore force-kill failures after abort.
+            }
+          }
+        }, 1000);
+      };
+
+      if (abortSignal?.aborted) {
+        onAbort();
+      } else if (abortSignal) {
+        abortSignal.addEventListener('abort', onAbort, { once: true });
+      }
+
       child.on('error', (error) => {
         finish(reject, error);
       });
 
       child.on('close', (code, closeSignal) => {
+        if (aborted || abortSignal?.aborted) {
+          finish(reject, abortReason || createAgentRequestAbortError('Agent request stopped.'));
+          return;
+        }
         finish(resolve, {
           code,
           signal: closeSignal
@@ -533,10 +795,13 @@ async function runPythonSandbox(input, options = {}) {
         warnings.push(`Failed readback for ${relativePath}: ${String(error?.message || error)}.`);
       }
     }
+    const renderOutputs = await readPythonSandboxRenderOutputs(renderOutputPath, warnings);
 
     const status = timedOut ? 'timed_out' : exitCode === 0 ? 'ok' : 'error';
     const summary = status === 'ok'
-      ? 'Python sandbox execution completed successfully.'
+      ? (renderOutputs.length
+        ? `Python sandbox execution completed successfully and emitted ${renderOutputs.length} render output${renderOutputs.length === 1 ? '' : 's'}.`
+        : 'Python sandbox execution completed successfully.')
       : status === 'timed_out'
         ? 'Python sandbox execution timed out.'
         : 'Python sandbox execution failed.';
@@ -556,6 +821,7 @@ async function runPythonSandbox(input, options = {}) {
       stderr: stderrLimited.text,
       files_written: filesWritten,
       readback_files: readbackFiles,
+      render_outputs: renderOutputs,
       warnings,
       summary
     };
@@ -602,6 +868,7 @@ async function runPythonSandbox(input, options = {}) {
       stderr: '',
       files_written: filesWritten,
       readback_files: [],
+      render_outputs: [],
       warnings,
       summary: 'Python sandbox execution failed before launch.'
     };

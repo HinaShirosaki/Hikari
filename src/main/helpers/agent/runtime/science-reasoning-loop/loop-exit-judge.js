@@ -10,6 +10,11 @@ const {
   SCIENCE_LOOP_PRE_SYNTHESIZED_QUESTION_SCHEMA,
   createScienceLoopPreSynthesizedQuestionRuntime
 } = require('./pre-synthesized-question.js');
+const {
+  buildLogicalVerificationSection,
+  getUnstableScienceInferenceChecks,
+  formatScienceInferenceStabilityIssue
+} = require('./logical-verification.js');
 
 const SCIENCE_LOOP_EXIT_JUDGEMENT_SCHEMA = {
   type: 'object',
@@ -20,7 +25,8 @@ const SCIENCE_LOOP_EXIT_JUDGEMENT_SCHEMA = {
     'missing_requirements',
     'should_continue',
     'next_tool_hint',
-    'can_answer_with_limitations'
+    'can_answer_with_limitations',
+    'trace_sentence'
   ],
   properties: {
     satisfied: { type: 'boolean' },
@@ -45,7 +51,8 @@ const SCIENCE_LOOP_EXIT_JUDGEMENT_SCHEMA = {
         }
       ]
     },
-    can_answer_with_limitations: { type: 'boolean' }
+    can_answer_with_limitations: { type: 'boolean' },
+    trace_sentence: { type: 'string' }
   }
 };
 
@@ -74,114 +81,249 @@ function createScienceLoopExitJudgeRuntime(deps = {}) {
     buildCurrentScientificState
   } = currentScientificStateRuntime;
 
-  function messageRequestsRecentSources(message) {
-    return /\b(latest|recent|current|today|newest|papers|references|citations|study|studies|findings)\b/i
-      .test(String(message || ''));
+  const MATCH_STOP_WORDS = new Set([
+    'a', 'an', 'and', 'are', 'as', 'at', 'be', 'before', 'by', 'for', 'from', 'has', 'have',
+    'if', 'in', 'into', 'is', 'it', 'its', 'of', 'on', 'or', 'that', 'the', 'their', 'then',
+    'there', 'these', 'this', 'to', 'when', 'with'
+  ]);
+
+  function normalizeForMatching(value, maxLength = 400) {
+    return cleanText(value, maxLength)
+      .toLowerCase()
+      .replace(/[_-]+/g, ' ')
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
-  function messageRequestsComputation(message) {
-    return /\b(fit|curve|transform|quantif|outlier|calculate|compute|regression|normalize|analy[sz]e data)\b/i
-      .test(String(message || ''));
+  function tokenizeForMatching(value, maxLength = 400) {
+    return normalizeForMatching(value, maxLength)
+      .split(' ')
+      .filter((token) => token.length > 2 && !MATCH_STOP_WORDS.has(token));
   }
 
-  function hasExternalCitation(citations) {
-    return asArray(citations).some((citation) => {
-      const source = cleanText(citation?.source, 120).toLowerCase();
-      return ['pubmed', 'crossref', 'europe_pmc', 'uniprot', 'web_source', 'literature-search'].includes(source);
+  function collectCriteriaEvaluationContext(input = {}, preSynthesizedQuestion = null) {
+    const normalizedPreSynthesizedQuestion = normalizePreSynthesizedQuestion(
+      preSynthesizedQuestion || input.preSynthesizedQuestion,
+      buildFallbackPreSynthesizedQuestion(input)
+    );
+    const currentScientificState = input.currentScientificState && typeof input.currentScientificState === 'object'
+      ? input.currentScientificState
+      : null;
+    const latestToolResult = input.latestToolResult && typeof input.latestToolResult === 'object'
+      ? input.latestToolResult
+      : {};
+    const toolTrace = asArray(input.toolTrace);
+    const citations = [
+      ...asArray(latestToolResult?.citations),
+      ...asArray(latestToolResult?.result?.citations),
+      ...asArray(input.citations)
+    ];
+    const loadedContextBlocks = [
+      ...asArray(latestToolResult?.loaded_context_blocks),
+      ...asArray(latestToolResult?.result?.loaded_context_blocks),
+      ...toolTrace.flatMap((row) => asArray(row?.loaded_context_blocks))
+    ];
+    const evidenceTexts = uniqueStrings([
+      normalizedPreSynthesizedQuestion?.tentative_answer?.current_best_answer,
+      ...asArray(normalizedPreSynthesizedQuestion?.supporting_basis),
+      ...asArray(currentScientificState?.supported_now),
+      cleanText(input.latestAssistantText, 1200),
+      cleanText(latestToolResult?.summary || latestToolResult?.result?.summary, 320),
+      ...loadedContextBlocks.map((block) => [
+        cleanText(block?.paper_title, 160),
+        cleanText(block?.section_label, 80),
+        cleanText(block?.excerpt, 260),
+        cleanText(block?.relevance_reason, 180)
+      ].filter(Boolean).join(' - ')),
+      ...toolTrace.map((row) => [
+        cleanText(row?.tool_name, 120),
+        cleanText(row?.summary, 220),
+        cleanText(row?.assistant_after_tool, 320)
+      ].filter(Boolean).join(': ')),
+      ...citations.map((citation) => [
+        cleanText(citation?.source, 120),
+        cleanText(citation?.pointer, 220),
+        cleanText(citation?.reason, 220)
+      ].filter(Boolean).join(': '))
+    ], 24);
+    const gapTexts = uniqueStrings([
+      ...asArray(normalizedPreSynthesizedQuestion?.unresolved_issues),
+      ...asArray(currentScientificState?.remains_unknown),
+      ...asArray(currentScientificState?.contradicted),
+      latestToolResult && latestToolResult.ok === false
+        ? cleanText(latestToolResult?.error || latestToolResult?.result?.error, 320)
+        : '',
+      ...toolTrace.filter((row) => row?.ok === false).map((row) => [
+        cleanText(row?.tool_name, 120),
+        cleanText(row?.error, 220),
+        cleanText(row?.summary, 220)
+      ].filter(Boolean).join(': '))
+    ], 24);
+    const hasSuccessfulToolStep = toolTrace.some((row) => row?.ok === true);
+    const hasGroundedEvidence = evidenceTexts.length > 0
+      && (
+        citations.length > 0
+        || hasSuccessfulToolStep
+        || asArray(currentScientificState?.supported_now).length > 0
+      );
+    const answerText = cleanText(normalizedPreSynthesizedQuestion?.tentative_answer?.current_best_answer, 1200);
+    const hasTentativeAnswer = Boolean(answerText)
+      && !/^no grounded tentative answer is available yet\.?$/i.test(answerText);
+
+    return {
+      preSynthesizedQuestion: normalizedPreSynthesizedQuestion,
+      evidenceTexts,
+      gapTexts,
+      hasGroundedEvidence,
+      hasSuccessfulToolStep,
+      hasTentativeAnswer
+    };
+  }
+
+  function matchesTexts(targetText, texts) {
+    const normalizedTarget = normalizeForMatching(targetText);
+    if (!normalizedTarget) {
+      return false;
+    }
+    const targetTokens = tokenizeForMatching(targetText);
+    return asArray(texts).some((text) => {
+      const normalizedText = normalizeForMatching(text);
+      if (!normalizedText) {
+        return false;
+      }
+      if (normalizedText.includes(normalizedTarget) || normalizedTarget.includes(normalizedText)) {
+        return true;
+      }
+      const textTokens = new Set(tokenizeForMatching(text));
+      if (!targetTokens.length || !textTokens.size) {
+        return false;
+      }
+      let overlap = 0;
+      targetTokens.forEach((token) => {
+        if (textTokens.has(token)) {
+          overlap += 1;
+        }
+      });
+      const minimumOverlap = targetTokens.length >= 5
+        ? 3
+        : Math.min(2, targetTokens.length);
+      return overlap >= minimumOverlap
+        || (targetTokens.length >= 4 && overlap / targetTokens.length >= 0.6);
     });
   }
 
-  function hasInternalCitation(citations) {
-    return asArray(citations).some((citation) => {
-      const source = cleanText(citation?.source, 120).toLowerCase();
-      return ['project', 'protocol', 'notebook_entry', 'workflow', 'assay', 'gel_analysis', 'paper', 'python_sandbox', 'python-sandbox', 'record-lookup'].includes(source);
-    });
+  function criterionIsSatisfied(criterion, context) {
+    const criterionText = cleanText(criterion, 220);
+    if (!criterionText) {
+      return true;
+    }
+    if (/\bevidence[-\s]?gathering round\b/i.test(criterionText)) {
+      return context.hasSuccessfulToolStep;
+    }
+    if (/\bgrounded\b/i.test(criterionText) && /\banswer|evidence\b/i.test(criterionText)) {
+      return context.hasGroundedEvidence && context.hasTentativeAnswer;
+    }
+    return matchesTexts(criterionText, context.evidenceTexts);
   }
 
-  function hasComputeEvidence(toolTrace) {
-    return asArray(toolTrace).some((row) => cleanText(row?.tool_name, 120) === 'python-sandbox' && row?.ok === true);
+  function continueConditionIsActive(condition, context) {
+    const conditionText = cleanText(condition, 220);
+    if (!conditionText) {
+      return false;
+    }
+    if (!context.hasGroundedEvidence && /\bgrounded\b|\bevidence gap\b|\bmissing evidence\b/i.test(conditionText)) {
+      return true;
+    }
+    return matchesTexts(conditionText, context.gapTexts);
   }
 
-  function collectBlockingRequirementTexts(exitCriteria = {}) {
-    return uniqueStrings([
-      ...asArray(exitCriteria.required_evidence),
-      ...asArray(exitCriteria.continue_when)
-    ], 16);
-  }
-
-  function matchesBlockingRequirement(exitCriteria = {}, patterns = []) {
-    const rows = collectBlockingRequirementTexts(exitCriteria);
-    return rows.some((row) => patterns.some((pattern) => pattern.test(String(row || ''))));
-  }
-
-  function requiresExternalCitation(exitCriteria = {}) {
-    return matchesBlockingRequirement(exitCriteria, [
-      /\bexternal citation\b/i,
-      /\bcitation-backed source\b/i,
-      /\bexternal source\b/i,
-      /\bexternal literature\b/i
-    ]);
-  }
-
-  function requiresProjectLinkedEvidence(exitCriteria = {}) {
-    return matchesBlockingRequirement(exitCriteria, [
-      /\binternal project\b/i,
-      /\bproject-linked\b/i,
-      /\bproject citation\b/i,
-      /\binternal evidence\b/i,
-      /\bproject record\b/i
-    ]);
-  }
-
-  function requiresDeterministicComputation(exitCriteria = {}) {
-    return matchesBlockingRequirement(exitCriteria, [
-      /\bdeterministic computation\b/i,
-      /\bpython sandbox\b/i,
-      /\bpython-sandbox\b/i,
-      /\bcomputation step\b/i,
-      /\bquantitative step\b/i
-    ]);
+  function limitationRuleIsSatisfied(rule, context) {
+    const ruleText = cleanText(rule, 220);
+    if (!ruleText) {
+      return false;
+    }
+    if (matchesTexts(ruleText, [
+      ...context.evidenceTexts,
+      ...context.gapTexts
+    ])) {
+      return true;
+    }
+    if (/\bexplicit|state|noted|disclose/i.test(ruleText)
+      && /\buncertaint|limitation|missing|gap/i.test(ruleText)) {
+      const answerText = cleanText(
+        context.preSynthesizedQuestion?.tentative_answer?.current_best_answer,
+        1200
+      );
+      if (!answerText) {
+        return false;
+      }
+      return context.gapTexts.some((gap) => matchesTexts(gap, [answerText]));
+    }
+    return false;
   }
 
   function buildFallbackEvaluation(input = {}) {
-    const citations = asArray(input.citations);
-    const toolTrace = asArray(input.toolTrace);
+    const context = collectCriteriaEvaluationContext(input, input.preSynthesizedQuestion);
     const roundsExecuted = Number(input.roundsExecuted) || 0;
     const maxRounds = Math.max(1, Number(input.maxRounds) || 4);
     const clarifiedInput = cleanText(input.message || input.clarifiedInput || input.originalMessage, 3200);
     const exitCriteria = input.exitCriteria && typeof input.exitCriteria === 'object' ? input.exitCriteria : {};
+    const unstableInferenceChecks = getUnstableScienceInferenceChecks(
+      context.preSynthesizedQuestion?.logical_verification,
+      { asArray, cleanText, uniqueStrings }
+    );
     const missing = [];
-    const hasGroundedEvidence = citations.length > 0 || toolTrace.some((row) => row?.ok === true);
 
-    if (!hasGroundedEvidence) {
-      missing.push('The current answer is not yet grounded in completed evidence.');
+    if (!context.hasGroundedEvidence) {
+      missing.push('The pre-synthesized answer is not grounded in completed evidence yet.');
+    } else if (!context.hasTentativeAnswer) {
+      missing.push('The pre-synthesized answer is still too incomplete to judge against the exit criteria.');
     }
 
-    if (requiresExternalCitation(exitCriteria) && !hasExternalCitation(citations)) {
-      missing.push('At least one external citation-backed source is still missing.');
-    }
+    asArray(exitCriteria.required_evidence).forEach((criterion) => {
+      const criterionText = cleanText(criterion, 220);
+      if (!criterionText || criterionIsSatisfied(criterionText, context)) {
+        return;
+      }
+      missing.push(criterionText);
+    });
 
-    if (requiresProjectLinkedEvidence(exitCriteria) && !hasInternalCitation(citations)) {
-      missing.push('At least one internal project citation is still missing.');
-    }
+    asArray(exitCriteria.exit_conditions).forEach((criterion) => {
+      const criterionText = cleanText(criterion, 220);
+      if (!criterionText || criterionIsSatisfied(criterionText, context)) {
+        return;
+      }
+      missing.push(criterionText);
+    });
 
-    if (requiresDeterministicComputation(exitCriteria) && !hasComputeEvidence(toolTrace)) {
-      missing.push('A Python sandbox computation step is still required.');
-    }
+    asArray(exitCriteria.continue_when).forEach((condition) => {
+      const conditionText = cleanText(condition, 220);
+      if (!conditionText || !continueConditionIsActive(conditionText, context)) {
+        return;
+      }
+      missing.push(conditionText);
+    });
+    unstableInferenceChecks.forEach((row) => {
+      missing.push(formatScienceInferenceStabilityIssue(row, { asArray, cleanText, uniqueStrings }));
+    });
 
-    const preferredTools = asArray(exitCriteria.preferred_next_tools)
-      .map((item) => cleanText(item, 120))
+    const toolTrace = asArray(input.toolTrace);
+    const limitationRules = asArray(exitCriteria.can_exit_with_limitations_when)
+      .map((item) => cleanText(item, 220))
       .filter(Boolean);
-    const nextTool = preferredTools.find((toolName) => (
-      !toolTrace.some((row) => cleanText(row?.tool_name, 120) === toolName && row?.ok === true)
-    )) || preferredTools[0] || null;
-    const satisfied = missing.length === 0 && hasGroundedEvidence;
+    const satisfied = missing.length === 0 && context.hasGroundedEvidence && context.hasTentativeAnswer;
     const shouldContinue = satisfied === false && roundsExecuted < maxRounds;
+    const canAnswerWithLimitations = unstableInferenceChecks.length === 0 && context.hasGroundedEvidence && (
+      satisfied
+      || limitationRules.some((rule) => limitationRuleIsSatisfied(rule, context))
+      || (roundsExecuted >= maxRounds && limitationRules.length > 0)
+    );
 
     return {
       satisfied,
       reason: satisfied
-        ? 'The exit criteria are satisfied by the current evidence.'
+        ? 'The pre-synthesized answer satisfies the current exit criteria.'
         : (missing[0]
           || (roundsExecuted >= maxRounds
             ? 'The reasoning loop has exhausted its round budget.'
@@ -190,12 +332,15 @@ function createScienceLoopExitJudgeRuntime(deps = {}) {
       should_continue: shouldContinue,
       next_tool_hint: shouldContinue
         ? {
-          tool_name: nextTool,
+          tool_name: null,
           query: clarifiedInput || null,
           reason: missing[0] || 'Gather one more targeted evidence step that satisfies the exit criteria.'
         }
         : null,
-      can_answer_with_limitations: hasGroundedEvidence
+      can_answer_with_limitations: canAnswerWithLimitations,
+      trace_sentence: satisfied
+        ? 'I am confirming that the current evidence is sufficient for the loop to stop.'
+        : 'I am checking whether the current evidence is sufficient or whether a blocking gap remains.'
     };
   }
 
@@ -223,16 +368,71 @@ function createScienceLoopExitJudgeRuntime(deps = {}) {
       ], 8),
       should_continue: source.should_continue === true || (fallback.should_continue === true && source.satisfied !== true),
       next_tool_hint: nextToolHint,
-      can_answer_with_limitations: source.can_answer_with_limitations === true || fallback.can_answer_with_limitations === true
+      can_answer_with_limitations: source.can_answer_with_limitations === true || fallback.can_answer_with_limitations === true,
+      trace_sentence: cleanText(source.trace_sentence, 240)
+        || cleanText(fallback.trace_sentence, 240)
+        || 'I am judging whether the reasoning loop has enough evidence to stop.'
     };
+  }
+
+  function buildCompactList(title, values, max = 4) {
+    const rows = uniqueStrings(asArray(values), max)
+      .map((item) => cleanText(item, 260))
+      .filter(Boolean);
+    if (!rows.length) {
+      return '';
+    }
+    return `${title}:\n${rows.map((item) => `- ${item}`).join('\n')}`;
+  }
+
+  function buildExitCriteriaSection(exitCriteria = {}) {
+    const source = exitCriteria && typeof exitCriteria === 'object' ? exitCriteria : {};
+    return [
+      'Exit criteria:',
+      cleanText(source.objective_summary, 320) ? `Objective: ${cleanText(source.objective_summary, 320)}` : '',
+      buildCompactList('Exit conditions', source.exit_conditions, 4),
+      buildCompactList('Required evidence', source.required_evidence, 4),
+      buildCompactList('Continue when', source.continue_when, 4),
+      buildCompactList('Can exit with limitations when', source.can_exit_with_limitations_when, 3),
+      uniqueStrings(source.preferred_next_tools, 3).length
+        ? `Preferred next tools: ${uniqueStrings(source.preferred_next_tools, 3).join(' | ')}`
+        : ''
+    ].filter(Boolean).join('\n');
+  }
+
+  function buildPreSynthesizedQuestionSection(question = {}) {
+    const source = question && typeof question === 'object' ? question : {};
+    return [
+      'Pre-synthesized question:',
+      cleanText(source?.tentative_answer?.current_best_answer, 600)
+        ? `Current best answer: ${cleanText(source.tentative_answer.current_best_answer, 600)}`
+        : '',
+      buildCompactList('Supporting basis', source.supporting_basis, 4),
+      buildCompactList('Unresolved issues', source.unresolved_issues, 4),
+      buildLogicalVerificationSection(source.logical_verification, { asArray, cleanText, uniqueStrings })
+    ].filter(Boolean).join('\n');
+  }
+
+  function buildLoadedContextSection(blocks = []) {
+    const rows = uniqueStrings(asArray(blocks).map((block) => {
+      const paperTitle = cleanText(block?.paper_title, 160);
+      const sectionLabel = cleanText(block?.section_label, 80);
+      const excerpt = cleanText(block?.excerpt, 180);
+      const reason = cleanText(block?.relevance_reason, 180);
+      return [[paperTitle, sectionLabel].filter(Boolean).join(' | '), excerpt, reason].filter(Boolean).join(' - ');
+    }), 4);
+    if (!rows.length) {
+      return '';
+    }
+    return `Loaded context blocks:\n${rows.map((item) => `- ${item}`).join('\n')}`;
   }
 
   function buildJudgeSystemPrompt() {
     return [
       'You are a specialized sub-agent that judges whether a science reasoning loop should exit.',
-      'A lightweight pre-synthesized question is provided first so you can see the current best answer, supporting basis, and unresolved issues before judging.',
-      'A compact current scientific state is provided to summarize what is supported, contradicted, still unknown, and whether the uncertainty is decision-relevant.',
-      'Use the provided exit criteria to decide whether the loop already has enough evidence.',
+      'A lightweight pre-synthesized question is provided so you can see the current best answer, supporting basis, and unresolved issues before judging.',
+      'Judge the pre-synthesized answer only against the provided exit criteria and clarified request.',
+      'Do not impose any citation, source, or tool-specific requirement unless it is explicitly stated in the exit criteria.',
       'Be conservative: continue when a blocking evidence requirement is still missing.',
       'Return JSON only and do not invent evidence.'
     ].join('\n\n');
@@ -240,22 +440,18 @@ function createScienceLoopExitJudgeRuntime(deps = {}) {
 
   function buildJudgeMessage(input = {}) {
     const preSynthesizedQuestion = buildPreSynthesizedQuestion(input);
+    const clarifiedRequest = cleanText(input.message || input.clarifiedInput || input.originalMessage, 3200);
     return [
       'Judge whether the reasoning loop should stop now or continue.',
-      `Intent: ${cleanText(input.intent, 80) || 'unknown'}`,
-      `Exit criteria JSON:\n${JSON.stringify(input.exitCriteria || {}, null, 2)}`,
-      `Pre-synthesized question JSON:\n${JSON.stringify(preSynthesizedQuestion, null, 2)}`,
-      input.currentScientificState
-        ? `Current scientific state JSON:\n${JSON.stringify(input.currentScientificState, null, 2)}`
-        : '',
-      input.project ? `Resolved project JSON:\n${JSON.stringify(input.project, null, 2)}` : '',
-      input.clarification ? `Clarification JSON:\n${JSON.stringify(input.clarification, null, 2)}` : '',
-      `Original user message:\n${cleanText(input.originalMessage, 3200)}`,
-      `Clarified request:\n${cleanText(input.message || input.clarifiedInput, 3200)}`,
-      `Latest assistant text:\n${cleanText(input.latestAssistantText, 4000) || '-'}`,
-      `Latest tool result JSON:\n${JSON.stringify(input.latestToolResult || null, null, 2)}`,
-      `Tool trace JSON:\n${JSON.stringify(asArray(input.toolTrace).slice(-8), null, 2)}`,
-      `Citations JSON:\n${JSON.stringify(asArray(input.citations).slice(0, 16), null, 2)}`,
+      'Include trace_sentence as one short sentence describing what you are doing at this step.',
+      `Clarified request:\n${clarifiedRequest}`,
+      buildExitCriteriaSection(input.exitCriteria),
+      buildPreSynthesizedQuestionSection(preSynthesizedQuestion),
+      buildLoadedContextSection([
+        ...asArray(input.latestToolResult?.loaded_context_blocks),
+        ...asArray(input.latestToolResult?.result?.loaded_context_blocks),
+        ...asArray(input.toolTrace).flatMap((row) => asArray(row?.loaded_context_blocks))
+      ]),
       `Rounds executed: ${Number(input.roundsExecuted) || 0}/${Number(input.maxRounds) || 0}`,
       'Return JSON only.'
     ].filter(Boolean).join('\n\n');
@@ -422,6 +618,7 @@ function createScienceLoopExitJudgeRuntime(deps = {}) {
     SCIENCE_LOOP_EXIT_JUDGEMENT_SCHEMA,
     buildFallbackEvaluation,
     buildCurrentScientificStatePrompt,
+    buildJudgeSystemPrompt,
     buildJudgeMessage,
     buildCurrentScientificState,
     judgeExit

@@ -268,7 +268,7 @@ module.exports = function registerAgentDeepResearchSuite(context = {}) {
       });
       assert.equal(result.answer_outline.sections.length >= 3, true);
       assert.equal(result.rendered_sections.length, result.answer_outline.sections.length);
-      assert.match(String(result.answer || ''), /Direct Answer|Recommendation/);
+      assert.match(String(result.answer || ''), /##\s+(Direct Answer|Recommendation)/);
       assert.equal(result.section_evidence_map.length, result.answer_outline.sections.length);
     });
 

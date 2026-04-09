@@ -1,5 +1,7 @@
 'use strict';
 
+const { isAgentRequestAbortError } = require('../shared/agent-request-context.js');
+
 const {
   normalizeToolArgumentsPayload,
   normalizeToolInvocationArgs,
@@ -11,16 +13,13 @@ function defaultAsArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
-// Convert unknown input to a trimmed string and cap its length for safe prompt/error usage.
-function defaultCleanText(value, maxLength = 500) {
+// Convert unknown input to a trimmed string without silently clipping payloads.
+function defaultCleanText(value, _maxLength = 500) {
   const text = String(value || '').trim();
   if (!text) {
     return '';
   }
-  if (text.length <= maxLength) {
-    return text;
-  }
-  return `${text.slice(0, maxLength)}...`;
+  return text;
 }
 
 // Keep only plain object-like values; everything else becomes an empty object.
@@ -261,6 +260,9 @@ function createAgentToolCallRuntime(deps = {}) {
         summary: cleanText(result?.summary, 320)
       });
     } catch (error) {
+      if (isAgentRequestAbortError(error)) {
+        throw error;
+      }
       return buildExecutionEnvelope(toolName, args, null, {
         ok: false,
         error: cleanText(error?.message || error, 600) || `Tool "${toolName}" failed.`

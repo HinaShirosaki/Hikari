@@ -158,12 +158,34 @@ export function summarizeInventoryLookup(lookup) {
   const query = trimText(payload.query, 220);
   const items = asArray(payload.items);
   if (status === 'matched' && items.length) {
-    const names = items
+    const previewLines = items
       .slice(0, 3)
-      .map((item) => trimText(item?.name || item?.id, 140))
+      .map((item, index) => {
+        const source = item && typeof item === 'object' ? item : {};
+        const label = trimText(source.name || source.id, 140);
+        if (!label) {
+          return '';
+        }
+        const details = [
+          trimText(source.location, 180) ? `location ${trimText(source.location, 180)}` : '',
+          trimText(source.container_name, 180) ? `container ${trimText(source.container_name, 180)}` : '',
+          Number.isFinite(Number(source.well_index)) ? `well ${Number(source.well_index)}` : '',
+          trimText(source.quantity, 80)
+            ? `${trimText(source.kind, 40) === 'personal_sample' ? 'concentration' : 'quantity'} ${trimText(source.quantity, 80)}`
+            : '',
+          trimText(source.amount, 80) ? `amount ${trimText(source.amount, 80)}` : '',
+          trimText(source.supplier, 160) ? `supplier ${trimText(source.supplier, 160)}` : '',
+          !trimText(source.location, 180) && trimText(source.zone, 120) ? `zone ${trimText(source.zone, 120)}` : ''
+        ].filter(Boolean).slice(0, 4);
+        return `${index + 1}. ${label}${details.length ? ` (${details.join('; ')})` : ''}`;
+      })
       .filter(Boolean);
-    const preview = names.length ? ` Top matches: ${names.join(', ')}.` : '';
-    return `Found ${items.length} inventory match${items.length === 1 ? '' : 'es'}${query ? ` for "${query}"` : ''}.${preview}`;
+    const extraCount = Math.max(0, items.length - previewLines.length);
+    return [
+      `Found ${items.length} inventory match${items.length === 1 ? '' : 'es'}${query ? ` for "${query}"` : ''}.`,
+      ...previewLines,
+      extraCount ? `${extraCount} more match${extraCount === 1 ? '' : 'es'} not shown.` : ''
+    ].filter(Boolean).join('\n');
   }
   if (status === 'no_match') {
     return `No inventory matches found${query ? ` for "${query}"` : ''}.`;
@@ -184,12 +206,29 @@ export function summarizeRecordLookup(lookup) {
   const query = trimText(payload.query, 220);
   const items = asArray(payload.items);
   if (status === 'matched' && items.length) {
-    const names = items
+    const previewLines = items
       .slice(0, 3)
-      .map((item) => trimText(item?.title || item?.id, 140))
+      .map((item, index) => {
+        const source = item && typeof item === 'object' ? item : {};
+        const label = trimText(source.title || source.id, 140);
+        if (!label) {
+          return '';
+        }
+        const recordType = trimText(source.record_type, 40).replace(/_/g, ' ');
+        const details = [
+          trimText(source.project_name, 180) ? `project ${trimText(source.project_name, 180)}` : '',
+          trimText(source.linked_protocol_name, 180) ? `protocol ${trimText(source.linked_protocol_name, 180)}` : '',
+          trimText(source.updated_at, 80) ? `updated ${trimText(source.updated_at, 80)}` : ''
+        ].filter(Boolean).slice(0, 3);
+        return `${index + 1}. ${recordType ? `${recordType}: ` : ''}${label}${details.length ? ` (${details.join('; ')})` : ''}`;
+      })
       .filter(Boolean);
-    const preview = names.length ? ` Top hits: ${names.join(', ')}.` : '';
-    return `Found ${items.length} record match${items.length === 1 ? '' : 'es'}${query ? ` for "${query}"` : ''}.${preview}`;
+    const extraCount = Math.max(0, items.length - previewLines.length);
+    return [
+      `Found ${items.length} record match${items.length === 1 ? '' : 'es'}${query ? ` for "${query}"` : ''}.`,
+      ...previewLines,
+      extraCount ? `${extraCount} more match${extraCount === 1 ? '' : 'es'} not shown.` : ''
+    ].filter(Boolean).join('\n');
   }
   if (status === 'no_match') {
     return `No record matches found${query ? ` for "${query}"` : ''}.`;

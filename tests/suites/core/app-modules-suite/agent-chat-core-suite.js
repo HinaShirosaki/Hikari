@@ -143,6 +143,181 @@ test('agent-chat maps gel experiment data with confidence, calibration, and warn
   assert.equal(gelRun.manual_override_summary.ladder_bands_done, true);
 });
 
+test('agent-chat renders assistant markdown with emphasis, tables, and escaped HTML', () => {
+  const renderingModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'rendering.js'));
+  const document = createMockDocument(['agent-chat-history']);
+  const history = document.getElementById('agent-chat-history');
+
+  renderingModule.renderHistory({
+    historyNode: history,
+    messages: [
+      {
+        id: 'assistant-1',
+        role: 'assistant',
+        text: [
+          '## Summary',
+          '',
+          'Use **bold** and *italic* safely.',
+          '',
+          '| Sample | Value |',
+          '| --- | ---: |',
+          '| A1 | 42 |',
+          '',
+          '<script>alert("xss")</script>'
+        ].join('\n'),
+        createdAt: '2026-03-22T17:00:05.000Z'
+      }
+    ],
+    state: {
+      settings: {
+        agent: {
+          developerMode: false
+        }
+      }
+    },
+    safeText: shared.safeText
+  });
+
+  assert.match(history.innerHTML, /<h2>Summary<\/h2>/);
+  assert.match(history.innerHTML, /<strong>bold<\/strong>/);
+  assert.match(history.innerHTML, /<em>italic<\/em>/);
+  assert.match(history.innerHTML, /<table class="agent-chat-table">/);
+  assert.match(history.innerHTML, /data-align="right">42<\/td>/);
+  assert.match(history.innerHTML, /&lt;script&gt;alert\(&quot;xss&quot;\)&lt;\/script&gt;/);
+  assert.doesNotMatch(history.innerHTML, /<script>/);
+});
+
+test('agent-chat renders completed science thinking trace details in assistant metadata', () => {
+  const renderingModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'rendering.js'));
+  const document = createMockDocument(['agent-chat-history']);
+  const history = document.getElementById('agent-chat-history');
+
+  renderingModule.renderHistory({
+    historyNode: history,
+    messages: [
+      {
+        id: 'assistant-thinking-1',
+        role: 'assistant',
+        text: 'MAPK resistance commonly involves pathway reactivation.',
+        createdAt: '2026-03-22T17:00:05.000Z',
+        meta: {
+          parser: {
+            primary_intent: 'general_science_question',
+            needs_clarification: false,
+            reasoning_summary: 'This is a general science question.'
+          },
+          general_science_question: {
+            status: 'completed',
+            confidence: 0.77,
+            confidence_label: 'medium',
+            rounds_executed: 1,
+            citations: [],
+            follow_up_questions: [],
+            thinking_trace: {
+              intent_parse_question: 'This is a general science question.',
+              question_clarifier: 'I am clarifying which resistance mechanism the user wants explained.',
+              criteria_generate: 'I am defining what evidence would be enough to answer safely.',
+              tool_rounds: [
+                {
+                  round: 1,
+                  tool_selection: 'I am choosing the most targeted literature step first.',
+                  tool_call: 'I want to use literature-search to investigate "MAPK inhibitor resistance".',
+                  tool_results: 'Based on the tool result, it seems pathway reactivation is a common explanation.'
+                }
+              ],
+              pre_synthesize_answer: 'Based on the evidence so far, pathway reactivation is the leading answer.',
+              judge: 'I am checking whether the current evidence is sufficient.',
+              final_synthesize: 'I am synthesizing the final grounded answer from the evidence collected so far.',
+              final_synthesized_question: 'What causes MAPK inhibitor resistance?'
+            }
+          }
+        }
+      }
+    ],
+    state: {
+      settings: {
+        agent: {
+          developerMode: false
+        }
+      }
+    },
+    safeText: shared.safeText
+  });
+
+  assert.match(history.innerHTML, /Thinking Trace/);
+  assert.match(history.innerHTML, /Intent parse: This is a general science question/);
+  assert.match(history.innerHTML, /Round 1 call: I want to use literature-search to investigate/);
+  assert.match(history.innerHTML, /Final synthesis: I am synthesizing the final grounded answer/);
+});
+
+test('agent-chat renders python sandbox text and image outputs inline from result analysis metadata', () => {
+  const renderingModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'rendering.js'));
+  const document = createMockDocument(['agent-chat-history']);
+  const history = document.getElementById('agent-chat-history');
+
+  renderingModule.renderHistory({
+    historyNode: history,
+    messages: [
+      {
+        id: 'assistant-python-1',
+        role: 'assistant',
+        text: 'I plotted the assay trend and summarized the result.',
+        createdAt: '2026-03-22T17:00:05.000Z',
+        meta: {
+          parser: {
+            primary_intent: 'result_analysis',
+            needs_clarification: false,
+            reasoning_summary: 'This request needed a computation step.'
+          },
+          result_analysis: {
+            status: 'completed',
+            confidence: 0.88,
+            confidence_label: 'high',
+            rounds_executed: 1,
+            citations: [],
+            follow_up_questions: [],
+            tool_trace: [
+              {
+                round: 1,
+                tool_name: 'python-sandbox',
+                status: 'ok',
+                run_id: 'py-123',
+                render_outputs: [
+                  {
+                    type: 'text',
+                    title: 'Summary',
+                    format: 'text/plain',
+                    content: 'Best-fit trend increased 2.3x over baseline.'
+                  },
+                  {
+                    type: 'image',
+                    title: 'Trend Plot',
+                    mime_type: 'image/png',
+                    data_base64: Buffer.from('fake-image').toString('base64')
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      }
+    ],
+    state: {
+      settings: {
+        agent: {
+          developerMode: false
+        }
+      }
+    },
+    safeText: shared.safeText
+  });
+
+  assert.match(history.innerHTML, /Python Sandbox Output/);
+  assert.match(history.innerHTML, /Best-fit trend increased 2\.3x over baseline\./);
+  assert.match(history.innerHTML, /Trend Plot/);
+  assert.match(history.innerHTML, /data:image\/png;base64,ZmFrZS1pbWFnZQ==/);
+});
+
 test('agent-chat sends settings API key to main process and stores assistant response', async () => {
   const document = createMockDocument([
     'agent-project-select',
@@ -697,14 +872,31 @@ test('agent-chat shows live progress ephemerally in the chat history and locks s
     request_id: 'req-live-1',
     chat_session_id: 'chat-2',
     routing_intent: 'general_science_question',
+    stage: 'science_clarification_completed',
+    status: 'ok',
+    message: 'Science input was clarified and is ready for reasoning.',
+    meta: {
+      thinking_trace: 'I am clarifying the exact question before I search for evidence.'
+    }
+  });
+  assert.match(history.innerHTML, /I am clarifying the exact question before I search for evidence/);
+  assert.match(history.innerHTML, /Thinking/);
+
+  progressHandler({
+    client_request_id: payloadSeen.clientRequestId,
+    request_id: 'req-live-1',
+    chat_session_id: 'chat-2',
+    routing_intent: 'general_science_question',
     stage: 'tool_call_started',
     status: 'started',
     tool_name: 'literature-search',
     message: 'Started tool call for literature-search.',
     meta: {
-      round: 1
+      round: 1,
+      thinking_trace: 'I want to use literature-search to investigate "yield drop causes".'
     }
   });
+  assert.match(history.innerHTML, /I want to use literature-search to investigate &quot;yield drop causes&quot;/);
   assert.match(history.innerHTML, /Searching literature sources/);
 
   resolveAgentRequest({

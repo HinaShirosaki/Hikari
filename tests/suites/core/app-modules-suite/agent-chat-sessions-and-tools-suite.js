@@ -590,6 +590,22 @@ test('agent-chat lets developers run one tool with a manual message and inspect 
               duration_ms: 9,
               raw_result: {
                 ok: true,
+                status: 'ok',
+                run_id: 'py-manual-1',
+                render_outputs: [
+                  {
+                    type: 'text',
+                    title: 'Summary',
+                    format: 'text/plain',
+                    content: 'Manual sandbox output is visible in chat.'
+                  },
+                  {
+                    type: 'image',
+                    title: 'Preview',
+                    mime_type: 'image/png',
+                    data_base64: Buffer.from('manual-image').toString('base64')
+                  }
+                ],
                 readback_files: [
                   {
                     path: 'out.json',
@@ -643,6 +659,8 @@ test('agent-chat lets developers run one tool with a manual message and inspect 
   assert.match(history.innerHTML, /Input Message/);
   assert.match(history.innerHTML, /Raw Result/);
   assert.match(history.innerHTML, /request_message/);
+  assert.match(history.innerHTML, /Manual sandbox output is visible in chat\./);
+  assert.match(history.innerHTML, /data:image\/png;base64,bWFudWFsLWltYWdl/);
   assert.equal(status.textContent, 'Manual tool test complete for python-sandbox.');
 });
 
@@ -774,6 +792,8 @@ test('agent-chat prioritizes inventory lookup summary text and renders lookup me
   assert.equal(state.agentChat.messages[1].meta.inventory_lookup.status, 'matched');
   assert.equal(state.agentChat.messages[1].meta.record_lookup.status, 'matched');
   assert.match(state.agentChat.messages[1].text, /Found 2 inventory matches/);
+  assert.match(state.agentChat.messages[1].text, /location Box A1/i);
+  assert.match(state.agentChat.messages[1].text, /location Shelf 4/i);
   assert.equal(/record match/i.test(state.agentChat.messages[1].text), false);
   assert.match(history.innerHTML, /Inventory Lookup/);
   assert.match(history.innerHTML, /Inventory Items/);

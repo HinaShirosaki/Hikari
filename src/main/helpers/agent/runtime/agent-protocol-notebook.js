@@ -10,15 +10,12 @@ function createProtocolNotebookRuntime(deps = {}) {
     : ((value) => (Array.isArray(value) ? value : []));
   const cleanText = typeof deps.cleanText === 'function'
     ? deps.cleanText
-    : ((value, maxLength = 2000) => {
+    : ((value, _maxLength = 2000) => {
       const text = String(value || '').trim();
       if (!text) {
         return '';
       }
-      if (text.length <= maxLength) {
-        return text;
-      }
-      return `${text.slice(0, maxLength)}...`;
+      return text;
     });
   const uniqueStrings = typeof deps.uniqueStrings === 'function'
     ? deps.uniqueStrings

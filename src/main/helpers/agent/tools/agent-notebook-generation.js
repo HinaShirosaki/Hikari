@@ -1,5 +1,7 @@
 'use strict';
 
+const { isAgentRequestAbortError } = require('../shared/agent-request-context.js');
+
 const { createAgentLlmRuntimeHelpers } = require('../shared/agent-llm-utils.js');
 
 function createNotebookGenerationRuntime(deps = {}) {
@@ -89,6 +91,40 @@ function createNotebookGenerationRuntime(deps = {}) {
       'treat this as a direct answer and return that exact value for the unresolved placeholder_key.'
     ].join(' ')
   ];
+
+  function buildNotebookPlaceholderFillPrompt({
+    message,
+    conversation,
+    parserPayload,
+    selectedProtocol,
+    project,
+    placeholders,
+    unresolvedPlaceholders,
+    toolContext = null
+  } = {}) {
+    const promptConversation = asArray(conversation).slice(-8).map((row, index) => {
+      const role = row?.role === 'assistant' ? 'assistant' : 'user';
+      const text = cleanText(row?.text, 1200);
+      return text ? `${index + 1}. ${role}: ${text}` : '';
+    }).filter(Boolean).join('\n');
+    return [
+      ...PROTOCOL_TO_NOTEBOOK_FILL_RULES,
+      ...PROTOCOL_TO_NOTEBOOK_FILL_EXAMPLES,
+      `User message: ${cleanText(message, 3200)}`,
+      promptConversation ? `Recent conversation:\n${promptConversation}` : '',
+      `Parser JSON:\n${JSON.stringify(parserPayload || {}, null, 2)}`,
+      `Selected protocol JSON:\n${JSON.stringify({
+        id: selectedProtocol?.id,
+        name: selectedProtocol?.name,
+        purpose: selectedProtocol?.purpose,
+        steps: asArray(selectedProtocol?.steps).slice(0, 40)
+      }, null, 2)}`,
+      `Resolved project JSON:\n${JSON.stringify(project || {}, null, 2)}`,
+      toolContext ? `Optional tool context JSON:\n${JSON.stringify(toolContext, null, 2)}` : '',
+      `All placeholders JSON:\n${JSON.stringify(placeholders, null, 2)}`,
+      `Unresolved placeholders JSON:\n${JSON.stringify(unresolvedPlaceholders, null, 2)}`
+    ].filter(Boolean).join('\n\n');
+  }
 
   function buildProtocolPlaceholderRows(protocolRecord = {}) {
     const rows = [];
@@ -385,6 +421,9 @@ function createNotebookGenerationRuntime(deps = {}) {
         items
       };
     } catch (error) {
+      if (isAgentRequestAbortError(error)) {
+        throw error;
+      }
       const errorMessage = cleanText(error?.message || error, 320) || 'Placeholder tool lookup failed.';
       await recordAgentLlmTrace(traceContext, {
         stage: 'protocol_placeholder_tool_lookup',
@@ -425,11 +464,6 @@ function createNotebookGenerationRuntime(deps = {}) {
     toolContext = null,
     traceContext = null
   }) {
-    const promptConversation = asArray(conversation).slice(-8).map((row, index) => {
-      const role = row?.role === 'assistant' ? 'assistant' : 'user';
-      const text = cleanText(row?.text, 1200);
-      return text ? `${index + 1}. ${role}: ${text}` : '';
-    }).filter(Boolean).join('\n');
     return requestStructuredJsonPayload({
       provider,
       endpoint,
@@ -437,23 +471,16 @@ function createNotebookGenerationRuntime(deps = {}) {
       model,
       stage: 'notebook_fill',
       systemPrompt: PROTOCOL_TO_NOTEBOOK_FILL_SYSTEM_PROMPT,
-      userPrompt: [
-        ...PROTOCOL_TO_NOTEBOOK_FILL_RULES,
-        ...PROTOCOL_TO_NOTEBOOK_FILL_EXAMPLES,
-        `User message: ${cleanText(message, 3200)}`,
-        promptConversation ? `Recent conversation:\n${promptConversation}` : '',
-        `Parser JSON:\n${JSON.stringify(parserPayload || {}, null, 2)}`,
-        `Selected protocol JSON:\n${JSON.stringify({
-          id: selectedProtocol?.id,
-          name: selectedProtocol?.name,
-          purpose: selectedProtocol?.purpose,
-          steps: asArray(selectedProtocol?.steps).slice(0, 40)
-        }, null, 2)}`,
-        `Resolved project JSON:\n${JSON.stringify(project || {}, null, 2)}`,
-        toolContext ? `Optional tool context JSON:\n${JSON.stringify(toolContext, null, 2)}` : '',
-        `All placeholders JSON:\n${JSON.stringify(placeholders, null, 2)}`,
-        `Unresolved placeholders JSON:\n${JSON.stringify(unresolvedPlaceholders, null, 2)}`
-      ].filter(Boolean).join('\n\n'),
+      userPrompt: buildNotebookPlaceholderFillPrompt({
+        message,
+        conversation,
+        parserPayload,
+        selectedProtocol,
+        project,
+        placeholders,
+        unresolvedPlaceholders,
+        toolContext
+      }),
       schema: PROTOCOL_NOTEBOOK_FILL_RESPONSE_SCHEMA,
       traceContext,
       maxOutputTokens: 1300,
@@ -755,11 +782,15 @@ function createNotebookGenerationRuntime(deps = {}) {
   }
 
   return {
+    PROTOCOL_TO_NOTEBOOK_FILL_SYSTEM_PROMPT,
+    PROTOCOL_TO_NOTEBOOK_FILL_RULES,
+    PROTOCOL_TO_NOTEBOOK_FILL_EXAMPLES,
     buildProtocolPlaceholderRows,
     inferDeterministicPlaceholderValue,
     normalizeNotebookFillPayload,
     buildProtocolPlaceholderToolQuery,
     maybeLookupProtocolPlaceholderToolContext,
+    buildNotebookPlaceholderFillPrompt,
     requestNotebookPlaceholderFill,
     renderProtocolStepText,
     buildProtocolNotebookPayload,

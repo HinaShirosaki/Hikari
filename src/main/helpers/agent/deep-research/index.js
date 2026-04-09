@@ -62,15 +62,12 @@ function asArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
-function cleanText(value, maxLength = 2000) {
+function cleanText(value, _maxLength = 2000) {
   const text = String(value || '').trim();
   if (!text) {
     return '';
   }
-  if (text.length <= maxLength) {
-    return text;
-  }
-  return `${text.slice(0, maxLength)}...`;
+  return text;
 }
 
 function uniqueStrings(values, max = 20) {
@@ -387,7 +384,12 @@ function createDeepResearchRuntime(deps = {}) {
       project,
       clarifyResult: researchObjective,
       policy,
-      toolScope: policy.tool_scope
+      toolScope: typeof toolProvider?.resolveEntryToolNames === 'function'
+        ? toolProvider.resolveEntryToolNames({
+          entryPoint: 'deep_research_entry',
+          intent
+        })
+        : asArray(policy.tool_scope)
     }, runtimeDeps);
     intermediateStates.push(buildIntermediateState('step_3_plan', 'Drafted the structured research plan.', researchPlan));
     recordLifecycleEvent(input.lifecycleRecorder, {

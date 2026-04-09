@@ -1,14 +1,11 @@
 'use strict';
 
-function defaultCleanText(value, maxLength = 2000) {
+function defaultCleanText(value, _maxLength = 2000) {
   const text = String(value || '').trim();
   if (!text) {
     return '';
   }
-  if (text.length <= maxLength) {
-    return text;
-  }
-  return `${text.slice(0, maxLength)}...`;
+  return text;
 }
 
 function createMainDataHelpers(deps = {}) {

@@ -9,16 +9,13 @@ function defaultAsArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
-// Convert unknown input to a trimmed string and cap its length for safe prompt/error usage.
-function defaultCleanText(value, maxLength = 500) {
+// Convert unknown input to a trimmed string without silently clipping payloads.
+function defaultCleanText(value, _maxLength = 500) {
   const text = String(value || '').trim();
   if (!text) {
     return '';
   }
-  if (text.length <= maxLength) {
-    return text;
-  }
-  return `${text.slice(0, maxLength)}...`;
+  return text;
 }
 
 // Keep only plain object-like values; everything else becomes an empty object.
@@ -457,14 +454,7 @@ function buildToolSelectionPrompt({
   parserPayload = {},
   projectName = ''
 } = {}) {
-  const toolRows = AGENT_TOOL_CATALOG.map((tool) => {
-    const schemaEntry = getToolCallCatalogEntry(tool.name);
-    const detailedDescription = defaultCleanText(schemaEntry?.description, 2400);
-    return [
-      `- ${tool.name}: ${tool.description}`,
-      detailedDescription ? `  Usage: ${detailedDescription}` : ''
-    ].filter(Boolean).join('\n');
-  }).join('\n');
+  const toolRows = AGENT_TOOL_CATALOG.map((tool) => `- ${tool.name}: ${tool.description}`).join('\n');
   const conversationBlock = buildConversationPromptBlock(conversation);
   const promptRows = [
     'Select the minimum ordered list of agent tools needed to satisfy the current request.',

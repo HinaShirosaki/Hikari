@@ -45,11 +45,14 @@ export function initAgentChat({
   const input = rootDocument?.getElementById?.('agent-message-input') || null;
   const deepResearchToggleBtn = rootDocument?.getElementById?.('agent-deep-research-toggle-btn') || null;
   const sendBtn = rootDocument?.getElementById?.('agent-send-btn') || null;
+  const stopBtn = rootDocument?.getElementById?.('agent-stop-btn') || null;
   const clearBtn = rootDocument?.getElementById?.('agent-clear-btn') || null;
   const status = rootDocument?.getElementById?.('agent-status') || null;
   let inFlight = false;
   let liveAssistantMessage = null;
   let activeClientRequestId = '';
+  let stopRequested = false;
+  let stopInProgress = false;
 
   if (!projectSelect || !historyNode || !input || !sendBtn || !clearBtn || !status) {
     return { render: () => {} };
@@ -59,6 +62,9 @@ export function initAgentChat({
     const normalized = trimText(statusText, 40).toLowerCase();
     if (normalized === 'ok' || normalized === 'completed' || normalized === 'done' || normalized === 'matched') {
       return 'done';
+    }
+    if (normalized === 'aborted' || normalized === 'stopped' || normalized === 'canceled' || normalized === 'cancelled') {
+      return 'aborted';
     }
     if (normalized === 'failed' || normalized === 'error' || normalized === 'no_match') {
       return 'error';
@@ -71,10 +77,13 @@ export function initAgentChat({
     if (normalized === 'error') {
       return 4;
     }
-    if (normalized === 'done') {
+    if (normalized === 'aborted') {
       return 3;
     }
-    return 2;
+    if (normalized === 'done') {
+      return 2;
+    }
+    return 1;
   }
 
   function humanizeToken(value) {
@@ -122,6 +131,7 @@ export function initAgentChat({
     const toolLabel = getToolActivityLabel(eventPayload?.tool_name);
     const stageLabels = {
       request_received: 'Request received',
+      request_aborted: 'Request stopped',
       controller_intent_only_selected: 'Preparing parser-first request',
       controller_intent_only: 'Running parser-first controller',
       parser_completed: 'Intent parsed',
@@ -137,6 +147,8 @@ export function initAgentChat({
       science_intent_started: 'Reasoning loop ready',
       science_clarification_started: 'Clarifying the request',
       science_clarification_completed: 'Request clarified',
+      science_route_planner_started: 'Drafting route plan',
+      science_route_planner_completed: 'Route plan ready',
       science_exit_criteria_started: 'Defining stopping criteria',
       science_exit_criteria_completed: 'Stopping criteria ready',
       science_evaluator_continue: round ? `Round ${round}: More evidence needed` : 'More evidence needed',
@@ -166,10 +178,17 @@ export function initAgentChat({
   }
 
   function buildLiveProgressSummary(eventPayload = {}) {
+    const thinkingTrace = extractLiveThinkingTrace(eventPayload);
+    if (thinkingTrace) {
+      return thinkingTrace;
+    }
     const stage = trimText(eventPayload?.stage, 80);
     const toolName = trimText(eventPayload?.tool_name, 120);
     if (stage === 'tool_call_started') {
       return `${getToolActivityLabel(toolName)}...`;
+    }
+    if (stage === 'request_aborted') {
+      return trimText(eventPayload?.message, 600) || 'Agent request stopped.';
     }
     if (stage === 'tool_call_completed') {
       return trimText(eventPayload?.message, 600) || `${getToolActivityLabel(toolName)} complete.`;
@@ -185,6 +204,23 @@ export function initAgentChat({
       }
     }
     return trimText(eventPayload?.message, 600) || getProgressRowText(eventPayload) || 'Working on this...';
+  }
+
+  function extractLiveThinkingTrace(eventPayload = {}) {
+    const meta = eventPayload?.meta && typeof eventPayload.meta === 'object'
+      ? eventPayload.meta
+      : {};
+    return trimText(
+      eventPayload?.thinking_trace
+      || eventPayload?.thinkingTrace
+      || eventPayload?.trace_sentence
+      || eventPayload?.traceSentence
+      || meta.thinking_trace
+      || meta.thinkingTrace
+      || meta.trace_sentence
+      || meta.traceSentence,
+      420
+    );
   }
 
   function upsertLiveProgressRows(rows = [], eventPayload = {}) {
@@ -215,6 +251,23 @@ export function initAgentChat({
     return nextRows.slice(-12);
   }
 
+  function upsertLiveThinkingRows(rows = [], eventPayload = {}) {
+    const nextRows = asArray(rows).map((row) => ({ ...row }));
+    const text = extractLiveThinkingTrace(eventPayload);
+    if (!text) {
+      return nextRows;
+    }
+    const stage = trimText(eventPayload?.stage, 80);
+    const toolName = trimText(eventPayload?.tool_name, 120);
+    const round = trimText(eventPayload?.meta?.round, 40);
+    const key = [stage, round, toolName, text.toLowerCase()].filter(Boolean).join(':') || text.toLowerCase();
+    if (nextRows.some((row) => trimText(row?.key, 620) === key)) {
+      return nextRows.slice(-12);
+    }
+    nextRows.push({ key, text });
+    return nextRows.slice(-12);
+  }
+
   function buildLiveAssistantPlaceholder(clientRequestId, requestText) {
     return {
       id: `live-${trimText(clientRequestId, 120) || createId()}`,
@@ -232,6 +285,7 @@ export function initAgentChat({
               text: 'Request received'
             }
           ],
+          thinking_rows: [],
           stage: 'request_received',
           status: 'started',
           message: 'Working on this...'
@@ -245,12 +299,48 @@ export function initAgentChat({
     activeClientRequestId = '';
   }
 
+  function createLocalStopError(message = 'Agent request stopped.') {
+    const error = new Error(message);
+    error.code = 'AGENT_STOP_REQUESTED';
+    return error;
+  }
+
+  function isLocalStopError(error) {
+    return error?.code === 'AGENT_STOP_REQUESTED';
+  }
+
+  function buildStoppedAssistantMessage(requestText, message = 'Agent request stopped.') {
+    return {
+      id: createId(),
+      role: 'assistant',
+      text: 'Agent stopped.',
+      createdAt: new Date().toISOString(),
+      meta: {
+        cancellation: {
+          stopped: true,
+          message: trimText(message, 600) || 'Agent request stopped.'
+        },
+        requestText: trimText(requestText, 3000)
+      }
+    };
+  }
+
+  function appendStoppedAssistantMessage(requestText, message = 'Agent request stopped.') {
+    clearLiveAssistantState();
+    state.agentChat.messages.push(buildStoppedAssistantMessage(requestText, message));
+    state.agentChat.messages = state.agentChat.messages.slice(-40);
+    persist();
+    sessionManager.renderSessionList();
+    renderHistoryView();
+  }
+
   function applyLiveProgressEvent(eventPayload = {}) {
     if (!liveAssistantMessage) {
       return;
     }
     const currentMeta = liveAssistantMessage.meta?.live_progress || {};
     const activityRows = upsertLiveProgressRows(currentMeta.activity_rows, eventPayload);
+    const thinkingRows = upsertLiveThinkingRows(currentMeta.thinking_rows, eventPayload);
     liveAssistantMessage = {
       ...liveAssistantMessage,
       text: buildLiveProgressSummary(eventPayload),
@@ -267,6 +357,7 @@ export function initAgentChat({
           message: buildLiveProgressSummary(eventPayload),
           meta: eventPayload?.meta && typeof eventPayload.meta === 'object' ? eventPayload.meta : currentMeta.meta,
           activity_rows: activityRows,
+          thinking_rows: thinkingRows,
           updated_at: trimText(eventPayload?.timestamp, 80) || new Date().toISOString()
         }
       }
@@ -394,7 +485,16 @@ export function initAgentChat({
 
   function updateInFlightState(nextInFlight) {
     inFlight = nextInFlight;
+    if (!inFlight) {
+      stopRequested = false;
+      stopInProgress = false;
+    }
     sendBtn.disabled = inFlight;
+    if (stopBtn) {
+      stopBtn.hidden = !inFlight;
+      stopBtn.disabled = !inFlight || stopInProgress;
+      stopBtn.textContent = stopInProgress ? 'Stopping...' : 'Stop';
+    }
     if (newChatBtn) {
       newChatBtn.disabled = inFlight;
     }
@@ -519,6 +619,8 @@ export function initAgentChat({
     }
 
     ensureAgentState();
+    stopRequested = false;
+    stopInProgress = false;
 
     const projectId = state.agentChat.projectId || '';
     const projectName = asArray(state.projects).find((item) => item.id === projectId)?.name || '';
@@ -545,6 +647,9 @@ export function initAgentChat({
 
     try {
       const stateSnapshot = await buildSyncedStateSnapshot(projectId);
+      if (stopRequested) {
+        throw createLocalStopError('Agent request stopped before thinking began.');
+      }
 
       const result = await api.agentChat({
         clientRequestId,
@@ -568,6 +673,11 @@ export function initAgentChat({
       });
 
       if (!result?.ok) {
+        if (result?.canceled === true) {
+          appendStoppedAssistantMessage(messageText, result?.error || 'Agent request stopped.');
+          setStatus('Stopped.');
+          return;
+        }
         throw new Error(result?.error || 'Agent request failed.');
       }
       if (result.chat_session && typeof result.chat_session === 'object') {
@@ -617,6 +727,11 @@ export function initAgentChat({
       }
       setStatus('Complete.');
     } catch (error) {
+      if (isLocalStopError(error)) {
+        appendStoppedAssistantMessage(messageText, error?.message || 'Agent request stopped.');
+        setStatus('Stopped.');
+        return;
+      }
       clearLiveAssistantState();
       state.agentChat.messages.push({
         id: createId(),
@@ -659,6 +774,29 @@ export function initAgentChat({
       setStatus('Error.');
     } finally {
       updateInFlightState(false);
+    }
+  }
+
+  async function stopMessage() {
+    if (!inFlight) {
+      return;
+    }
+    stopRequested = true;
+    stopInProgress = true;
+    if (stopBtn) {
+      stopBtn.disabled = true;
+      stopBtn.textContent = 'Stopping...';
+    }
+    setStatus('Stopping...');
+    if (!api?.agentChatCancel || !activeClientRequestId) {
+      return;
+    }
+    try {
+      await api.agentChatCancel({
+        clientRequestId: activeClientRequestId
+      });
+    } catch {
+      // The active request will still unwind locally once the current step completes.
     }
   }
 
@@ -837,6 +975,10 @@ export function initAgentChat({
 
   sendBtn.addEventListener('click', () => {
     void sendMessage();
+  });
+
+  stopBtn?.addEventListener('click', () => {
+    void stopMessage();
   });
 
   developerTestToolsBtn?.addEventListener('click', () => {

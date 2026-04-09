@@ -312,7 +312,7 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 .sequence-viewer-protein-builder-grid {
   display: grid;
   gap: 12px;
-  grid-template-columns: minmax(300px, 340px) minmax(640px, 1fr);
+  grid-template-columns: var(--layout-left-panel-width) minmax(640px, 1fr);
   align-items: stretch;
   height: 100%;
   min-height: 0;

@@ -16,13 +16,13 @@
   --papers-comments-width: 336px;
   --papers-comments-collapsed-width: 30px;
   display: grid;
-  grid-template-columns: 248px minmax(0, 1fr) var(--papers-comments-width);
+  grid-template-columns: var(--layout-left-panel-width) minmax(0, 1fr) var(--papers-comments-width);
   gap: 22px;
   align-items: start;
 }
 
 .papers-layout.is-comments-collapsed {
-  grid-template-columns: 248px minmax(0, 1fr) var(--papers-comments-collapsed-width);
+  grid-template-columns: var(--layout-left-panel-width) minmax(0, 1fr) var(--papers-comments-collapsed-width);
 }
 
 .papers-left-column,
@@ -622,11 +622,11 @@
 
 @media (max-width: 1280px) {
   .papers-layout {
-    grid-template-columns: 248px minmax(0, 1fr);
+    grid-template-columns: var(--layout-left-panel-width) minmax(0, 1fr);
   }
 
   .papers-layout.is-comments-collapsed {
-    grid-template-columns: 248px minmax(0, 1fr);
+    grid-template-columns: var(--layout-left-panel-width) minmax(0, 1fr);
   }
 
   .papers-right-column {

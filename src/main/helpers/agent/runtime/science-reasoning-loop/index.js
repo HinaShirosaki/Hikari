@@ -12,12 +12,21 @@
 'use strict';
 
 const { createAgentLlmRuntimeHelpers } = require('../../shared/agent-llm-utils.js');
+const { createAgentRoutePlannerRuntime } = require('./agent-route-planner.js');
 const { createScienceInputClarificationRuntime } = require('./input-clarification.js');
 const { createScienceFinalSynthesisRuntime } = require('./final-synthesis.js');
 const { createScienceLoopExitCriteriaRuntime } = require('./loop-exit-criteria.js');
 const { createScienceLoopExitJudgeRuntime } = require('./loop-exit-judge.js');
 const { createScienceLoopPreSynthesizedQuestionRuntime } = require('./pre-synthesized-question.js');
+const {
+  createScienceLoopLogicalVerificationRuntime,
+  normalizeScienceLogicalVerification,
+  getUnstableScienceInferenceChecks,
+  formatScienceInferenceStabilityIssue
+} = require('./logical-verification.js');
+const { createScienceThinkingTraceRuntime } = require('./thinking-trace.js');
 const { createScienceLoopSupport } = require('./support.js');
+const { isAgentRequestAbortError } = require('../../shared/agent-request-context.js');
 const {
   REASONING_ENTRY_TOOL_SCOPES,
   createAgentToolProviderRuntime
@@ -73,7 +82,8 @@ const SCIENCE_RESULT_EVALUATION_SCHEMA = {
     'missing_requirements',
     'should_continue',
     'next_tool_hint',
-    'can_answer_with_limitations'
+    'can_answer_with_limitations',
+    'trace_sentence'
   ],
   properties: {
     satisfied: { type: 'boolean' },
@@ -98,7 +108,8 @@ const SCIENCE_RESULT_EVALUATION_SCHEMA = {
         }
       ]
     },
-    can_answer_with_limitations: { type: 'boolean' }
+    can_answer_with_limitations: { type: 'boolean' },
+    trace_sentence: { type: 'string' }
   }
 };
 
@@ -178,6 +189,9 @@ function createScienceReasoningLoopRuntime(deps = {}) {
   const clarifyScienceInput = typeof deps.clarifyScienceInput === 'function'
     ? deps.clarifyScienceInput
     : createScienceInputClarificationRuntime(deps).clarifyInput;
+  const draftScienceRoutePlan = typeof deps.draftScienceRoutePlan === 'function'
+    ? deps.draftScienceRoutePlan
+    : createAgentRoutePlannerRuntime(deps).draftRoutePlan;
   const generateScienceLoopExitCriteria = typeof deps.generateScienceLoopExitCriteria === 'function'
     ? deps.generateScienceLoopExitCriteria
     : createScienceLoopExitCriteriaRuntime(deps).generateExitCriteria;
@@ -187,6 +201,19 @@ function createScienceReasoningLoopRuntime(deps = {}) {
   const buildSciencePreSynthesizedQuestion = typeof deps.buildSciencePreSynthesizedQuestion === 'function'
     ? deps.buildSciencePreSynthesizedQuestion
     : createScienceLoopPreSynthesizedQuestionRuntime(deps).buildPreSynthesizedQuestion;
+  const scienceLogicalVerificationRuntime = createScienceLoopLogicalVerificationRuntime({
+    ...deps,
+    now: typeof deps.now === 'function' ? deps.now : (() => new Date().toISOString())
+  });
+  const verifySciencePreSynthesizedQuestionLogic = typeof deps.verifySciencePreSynthesizedQuestionLogic === 'function'
+    ? deps.verifySciencePreSynthesizedQuestionLogic
+    : scienceLogicalVerificationRuntime.verifyPreSynthesizedQuestion;
+  const buildScienceInferenceRetryFeedback = typeof deps.buildScienceInferenceRetryFeedback === 'function'
+    ? deps.buildScienceInferenceRetryFeedback
+    : scienceLogicalVerificationRuntime.buildInferenceRetryFeedback;
+  const generateScienceThinkingTrace = typeof deps.generateScienceThinkingTrace === 'function'
+    ? deps.generateScienceThinkingTrace
+    : createScienceThinkingTraceRuntime(deps).generateThinkingTrace;
   const now = typeof deps.now === 'function' ? deps.now : (() => new Date().toISOString());
   const scienceLoopSupport = createScienceLoopSupport({
     ...deps,
@@ -198,6 +225,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
   const {
     normalizeProject,
     normalizeCitations,
+    normalizeLoadedContextBlocks,
     normalizeDecisionRecord,
     buildIntermediateState,
     buildNeedsMoreInfoResult,
@@ -263,8 +291,69 @@ function createScienceReasoningLoopRuntime(deps = {}) {
       missing_requirements: uniqueStrings(asArray(source.missing_requirements), 6),
       should_continue: source.should_continue === true,
       next_tool_hint: nextToolHint,
-      can_answer_with_limitations: source.can_answer_with_limitations === true
+      can_answer_with_limitations: source.can_answer_with_limitations === true,
+      trace_sentence: cleanText(source.trace_sentence, 240)
+        || 'I am checking whether the current evidence is sufficient.'
     };
+  }
+
+  function buildToolCallThinkingTrace(toolName = '', args = {}) {
+    const cleanToolName = cleanText(toolName, 120) || 'the next tool';
+    const safeArgs = args && typeof args === 'object' ? args : {};
+    const query = cleanText(safeArgs.query, 320);
+    const code = cleanText(safeArgs.code, 160);
+    const targetId = cleanText(
+      safeArgs.paper_id
+      || safeArgs.record_id
+      || safeArgs.project_id
+      || safeArgs.protocol_id,
+      160
+    );
+    if (query) {
+      return `I want to use ${cleanToolName} to investigate "${query}".`;
+    }
+    if (code) {
+      return `I want to use ${cleanToolName} to run the required computation.`;
+    }
+    if (targetId) {
+      return `I want to use ${cleanToolName} to inspect ${targetId}.`;
+    }
+    return `I want to use ${cleanToolName} for the next evidence step.`;
+  }
+
+  function buildToolTraceRenderOutputs(rawOutputs = []) {
+    return asArray(rawOutputs).slice(0, 6).map((output) => {
+      const source = output && typeof output === 'object' ? output : {};
+      const type = cleanText(source.type, 40).toLowerCase();
+      if (type === 'text') {
+        return {
+          type: 'text',
+          title: cleanText(source.title, 160),
+          format: cleanText(source.format, 80).toLowerCase() || 'text/plain',
+          content: cleanText(source.content, 24000)
+        };
+      }
+      if (type === 'image') {
+        const dataBase64 = String(source.data_base64 || '').replace(/\s+/g, '');
+        return {
+          type: 'image',
+          title: cleanText(source.title, 160),
+          alt: cleanText(source.alt, 200),
+          mime_type: cleanText(source.mime_type, 120).toLowerCase() || 'image/png',
+          data_base64: dataBase64.length <= 1024 * 1024 ? dataBase64 : '',
+          path: cleanText(source.path, 240)
+        };
+      }
+      return null;
+    }).filter((entry) => {
+      if (!entry) {
+        return false;
+      }
+      if (entry.type === 'text') {
+        return Boolean(entry.content);
+      }
+      return Boolean(entry.data_base64);
+    });
   }
 
   // Run the sufficiency evaluator after each round, or delegate to a caller-provided override.
@@ -284,7 +373,6 @@ function createScienceReasoningLoopRuntime(deps = {}) {
       message: cleanText(payload.message, 3200),
       clarifiedInput: cleanText(payload.message, 3200),
       clarification: payload.clarification && typeof payload.clarification === 'object' ? payload.clarification : null,
-      parserPayload: payload.parserPayload && typeof payload.parserPayload === 'object' ? payload.parserPayload : {},
       project: payload.project && typeof payload.project === 'object' ? payload.project : null,
       exitCriteria: payload.exitCriteria && typeof payload.exitCriteria === 'object' ? payload.exitCriteria : {},
       citations: asArray(payload.accumulatedCitations),
@@ -294,7 +382,6 @@ function createScienceReasoningLoopRuntime(deps = {}) {
         ? payload.preSynthesizedQuestion
         : buildSciencePreSynthesizedQuestion({
           intent: cleanText(payload.intent, 80),
-          originalMessage: cleanText(payload.originalMessage, 3200),
           message: cleanText(payload.message, 3200),
           clarification: payload.clarification && typeof payload.clarification === 'object' ? payload.clarification : null,
           project: payload.project && typeof payload.project === 'object' ? payload.project : null,
@@ -317,7 +404,8 @@ function createScienceReasoningLoopRuntime(deps = {}) {
         missing_requirements: ['Exit judgement was unavailable.'],
         should_continue: true,
         next_tool_hint: null,
-        can_answer_with_limitations: true
+        can_answer_with_limitations: true,
+        trace_sentence: 'I am checking whether the current evidence is sufficient, but the exit judge was unavailable.'
       };
     }
     return normalizeEvaluationPayload(judgeResult?.evaluation || judgeResult, 'Science reasoning exit judge returned no explicit reason.');
@@ -377,8 +465,14 @@ function createScienceReasoningLoopRuntime(deps = {}) {
       1,
       8
     );
+    const maxInferenceRetries = clamp(
+      Number(input.maxInferenceRetries ?? deps.maxInferenceRetries ?? 2),
+      0,
+      3
+    );
     const lifecycleRecorder = input.lifecycleRecorder || null;
     const toolTrace = [];
+    const toolRoundArtifacts = [];
     const intermediateStates = [];
     const accumulatedCitations = [];
     const conversation = asArray(input.conversation);
@@ -386,9 +480,187 @@ function createScienceReasoningLoopRuntime(deps = {}) {
     let roundsExecuted = 0;
     let feedbackTurnsWithoutTool = 0;
     let clarification = null;
+    let routePlan = null;
     let exitCriteria = null;
     let message = originalMessage;
     let requestSignalText = originalMessage;
+    let latestAssistantText = '';
+    let latestPreSynthesizedQuestion = null;
+    let finalEvaluation = null;
+    const requestedToolNames = Array.isArray(input.selectedToolNames) ? input.selectedToolNames : null;
+    const preselectedToolNames = asArray(input.toolDefinitions).length
+      ? asArray(input.toolDefinitions).map((tool) => cleanText(tool?.name, 120)).filter(Boolean)
+      : (typeof toolProvider?.resolveEntryToolNames === 'function'
+        ? toolProvider.resolveEntryToolNames({
+          entryPoint: 'science_reasoning_entry',
+          intent,
+          requestedToolNames
+        })
+        : []);
+
+    async function attachThinkingTrace(resultPayload = {}, overrides = {}) {
+      const thinkingTrace = await generateScienceThinkingTrace({
+        provider: cleanText(input.provider, 80),
+        endpoint: cleanText(input.endpoint, 2000),
+        apiKey: cleanText(input.apiKey, 400),
+        model: cleanText(input.model, 120),
+        intent,
+        originalMessage,
+        message: cleanText(overrides.message !== undefined ? overrides.message : message, 3200),
+        clarifiedInput: cleanText(
+          overrides.clarifiedInput !== undefined
+            ? overrides.clarifiedInput
+            : (resultPayload?.clarified_input || message || originalMessage),
+          3200
+        ),
+        parserPayload,
+        clarification: overrides.clarification !== undefined ? overrides.clarification : clarification,
+        routePlan: overrides.routePlan !== undefined ? overrides.routePlan : routePlan,
+        exitCriteria: overrides.exitCriteria !== undefined ? overrides.exitCriteria : exitCriteria,
+        toolRounds: overrides.toolRounds !== undefined ? overrides.toolRounds : toolRoundArtifacts,
+        preSynthesizedQuestion: overrides.preSynthesizedQuestion !== undefined
+          ? overrides.preSynthesizedQuestion
+          : latestPreSynthesizedQuestion,
+        evaluation: overrides.evaluation !== undefined ? overrides.evaluation : finalEvaluation,
+        finalSynthesis: overrides.finalSynthesis,
+        finalSynthesizedQuestion: cleanText(
+          overrides.finalSynthesizedQuestion !== undefined
+            ? overrides.finalSynthesizedQuestion
+            : resultPayload?.final_synthesized_question,
+          3200
+        ),
+        finalAnswer: cleanText(overrides.finalAnswer !== undefined ? overrides.finalAnswer : resultPayload?.answer, 12000),
+        answer: cleanText(resultPayload?.answer, 12000),
+        status: cleanText(overrides.status !== undefined ? overrides.status : resultPayload?.status, 40),
+        partial: overrides.partial === true || cleanText(resultPayload?.status, 40) === 'partial',
+        latestAssistantText,
+        traceContext
+      });
+      return {
+        ...resultPayload,
+        thinking_trace: thinkingTrace,
+        final_synthesized_question: cleanText(thinkingTrace?.final_synthesized_question, 3200)
+          || cleanText(resultPayload?.clarified_input || message || originalMessage, 3200)
+      };
+    }
+
+    async function buildVerifiedPreSynthesizedQuestion({
+      session,
+      latestToolResult = null,
+      rounds = roundsExecuted
+    } = {}) {
+      let workingSession = session || null;
+      let workingAssistantText = cleanText(latestAssistantText, 12000);
+      let preSynthesizedQuestion = null;
+      let retryCount = 0;
+
+      while (retryCount <= maxInferenceRetries) {
+        preSynthesizedQuestion = buildSciencePreSynthesizedQuestion({
+          intent,
+          policy,
+          message,
+          clarification,
+          project,
+          citations: accumulatedCitations,
+          toolTrace,
+          latestToolResult,
+          latestAssistantText: workingAssistantText,
+          roundsExecuted: rounds,
+          maxRounds
+        });
+        preSynthesizedQuestion = {
+          ...preSynthesizedQuestion,
+          logical_verification: normalizeScienceLogicalVerification(
+            await verifySciencePreSynthesizedQuestionLogic({
+              provider: input.provider,
+              endpoint: input.endpoint,
+              apiKey: input.apiKey,
+              model: input.model,
+              intent,
+              policy,
+              message,
+              clarification,
+              project,
+              preSynthesizedQuestion,
+              latestAssistantText: workingAssistantText,
+              latestToolResult,
+              toolTrace,
+              citations: accumulatedCitations,
+              roundsExecuted: rounds,
+              maxRounds,
+              traceContext
+            }),
+            {},
+            { asArray, cleanText, uniqueStrings }
+          )
+        };
+        const unstableChecks = getUnstableScienceInferenceChecks(
+          preSynthesizedQuestion.logical_verification,
+          { asArray, cleanText, uniqueStrings }
+        );
+        if (!unstableChecks.length || retryCount >= maxInferenceRetries || !workingSession) {
+          return {
+            preSynthesizedQuestion,
+            session: workingSession,
+            latestAssistantText: workingAssistantText,
+            retryCount
+          };
+        }
+
+        const retryFeedback = cleanText(
+          buildScienceInferenceRetryFeedback(preSynthesizedQuestion.logical_verification),
+          4000
+        );
+        if (!retryFeedback) {
+          return {
+            preSynthesizedQuestion,
+            session: workingSession,
+            latestAssistantText: workingAssistantText,
+            retryCount
+          };
+        }
+
+        retryCount += 1;
+        intermediateStates.push(buildIntermediateState(
+          'science_inference_retry',
+          'Retried the tentative inference because a logic stability check failed.',
+          {
+            assumptions: unstableChecks
+              .map((row) => formatScienceInferenceStabilityIssue(row, { asArray, cleanText, uniqueStrings }))
+              .filter(Boolean),
+            open_questions: asArray(preSynthesizedQuestion?.unresolved_issues),
+            confidence: 0.44
+          }
+        ));
+        recordLifecycleEvent(lifecycleRecorder, {
+          stage: 'science_inference_retry',
+          status: 'started',
+          routing_intent: intent,
+          message: 'Retrying the tentative inference after an unstable logic check.',
+          meta: {
+            round: rounds,
+            retry_count: retryCount,
+            failed_reasons: unstableChecks
+              .map((row) => formatScienceInferenceStabilityIssue(row, { asArray, cleanText, uniqueStrings }))
+              .filter(Boolean)
+          }
+        });
+
+        workingSession = await continueAgentSessionWithUserMessage(
+          workingSession,
+          retryFeedback,
+          traceContext
+        );
+        workingAssistantText = cleanText(extractAgentSessionText(workingSession), 12000);
+      }
+
+      return {
+        preSynthesizedQuestion,
+        session: workingSession,
+        latestAssistantText: workingAssistantText,
+        retryCount
+      };
+    }
 
     // Capture the initial reasoning snapshot before any clarification or tool execution occurs.
     intermediateStates.push(buildIntermediateState('science_intake', `Start ${intent} handling.`, {
@@ -410,13 +682,16 @@ function createScienceReasoningLoopRuntime(deps = {}) {
         throw new Error('Science direct-answer path requires startAgentSession.');
       }
       if (parserPayload.needs_clarification === true) {
-        return buildNeedsMoreInfoResult({
+        return attachThinkingTrace(buildNeedsMoreInfoResult({
           intent,
           routing,
           reason: cleanText(parserPayload?.clarification_reason, 280) || 'Clarification is required before answering directly.',
           question: cleanText(parserPayload?.clarification_reason, 320),
           toolTrace,
           intermediateStates
+        }), {
+          clarifiedInput: originalMessage,
+          status: 'needs_more_info'
         });
       }
       if (intent === 'project_science_question' && policy.require_project_resolution === true && !project) {
@@ -432,13 +707,16 @@ function createScienceReasoningLoopRuntime(deps = {}) {
           ], 3),
           confidence: 0.36
         }));
-        return buildNeedsMoreInfoResult({
+        return attachThinkingTrace(buildNeedsMoreInfoResult({
           intent,
           routing,
           reason: 'Project resolution was missing or ambiguous.',
           question: followUpQuestion,
           toolTrace,
           intermediateStates
+        }), {
+          clarifiedInput: originalMessage,
+          status: 'needs_more_info'
         });
       }
 
@@ -462,6 +740,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
           project,
           originalMessage,
           clarification: null,
+          routePlan: null,
           exitCriteria: null,
           message: originalMessage,
           reasoningEffort,
@@ -473,6 +752,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
         toolDefinitions: [],
         traceContext
       });
+      latestAssistantText = cleanText(extractAgentSessionText(directSession), 12000);
 
       const directDecisionRecord = normalizeDecisionRecord(null, {
         assumptions: [
@@ -484,7 +764,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
       });
       const responseLayer = applyResponseLayerToOutput({
         normalized: {
-          answer: cleanText(extractAgentSessionText(directSession), 12000)
+          answer: latestAssistantText
             || 'I could not generate a direct science answer.',
           confidence: intent === 'general_science_question' ? 0.68 : 0.62,
           citations: [],
@@ -518,11 +798,12 @@ function createScienceReasoningLoopRuntime(deps = {}) {
         message: 'Science direct-answer path completed successfully.',
         meta: {
           rounds_executed: 0,
-          citation_count: 0
+          citation_count: 0,
+          thinking_trace: 'I can answer this request directly without running the evidence loop.'
         }
       });
 
-      return {
+      return attachThinkingTrace({
         status: 'completed',
         answer: cleanText(validated.normalized.answer, 12000),
         confidence: Number.isFinite(Number(validated.normalized.confidence))
@@ -540,13 +821,17 @@ function createScienceReasoningLoopRuntime(deps = {}) {
         provenance: validated.provenance,
         clarified_input: originalMessage,
         input_clarification: null,
+        route_plan: null,
         exit_criteria: null,
         tool_trace: [],
         intermediate_states: intermediateStates,
         rounds_executed: 0,
         follow_up_questions: [],
         reasoning_effort: reasoningEffort
-      };
+      }, {
+        clarifiedInput: originalMessage,
+        status: 'completed'
+      });
     }
 
     recordLifecycleEvent(lifecycleRecorder, {
@@ -567,7 +852,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
       traceContext
     });
     message = cleanText(clarification?.clarified_input, 3200) || originalMessage;
-    requestSignalText = [originalMessage, message].filter(Boolean).join('\n').trim();
+    requestSignalText = message;
 
     intermediateStates.push(buildIntermediateState('science_clarification', 'Clarified the user request before reasoning.', {
       assumptions: uniqueStrings([
@@ -588,15 +873,23 @@ function createScienceReasoningLoopRuntime(deps = {}) {
         stage: 'science_clarification_completed',
         status: 'pending',
         routing_intent: intent,
-        message: cleanText(clarification?.follow_up_reason, 320) || 'Clarification requested more information before reasoning.'
+        message: cleanText(clarification?.follow_up_reason, 320) || 'Clarification requested more information before reasoning.',
+        meta: {
+          thinking_trace: cleanText(clarification?.trace_sentence, 420),
+          follow_up_question: cleanText(clarification?.follow_up_question, 320)
+        }
       });
-      return buildNeedsMoreInfoResult({
+      return attachThinkingTrace(buildNeedsMoreInfoResult({
         intent,
         routing,
         reason: cleanText(clarification?.follow_up_reason, 280) || 'Clarification is required before reasoning.',
         question: cleanText(clarification?.follow_up_question, 320),
         toolTrace,
         intermediateStates
+      }), {
+        clarifiedInput: message,
+        clarification,
+        status: 'needs_more_info'
       });
     }
 
@@ -604,7 +897,10 @@ function createScienceReasoningLoopRuntime(deps = {}) {
       stage: 'science_clarification_completed',
       status: 'ok',
       routing_intent: intent,
-      message: 'Science input was clarified and is ready for reasoning.'
+      message: 'Science input was clarified and is ready for reasoning.',
+      meta: {
+        thinking_trace: cleanText(clarification?.trace_sentence, 420)
+      }
     });
 
     // Project-grounded science questions cannot proceed until a single project is resolved.
@@ -621,13 +917,62 @@ function createScienceReasoningLoopRuntime(deps = {}) {
         ], 3),
         confidence: 0.36
       }));
-      return buildNeedsMoreInfoResult({
+      return attachThinkingTrace(buildNeedsMoreInfoResult({
         intent,
         routing,
         reason: 'Project resolution was missing or ambiguous.',
         question: followUpQuestion,
         toolTrace,
         intermediateStates
+      }), {
+        clarifiedInput: message,
+        clarification,
+        status: 'needs_more_info'
+      });
+    }
+
+    if (reasoningEffort >= 1 && reasoningEffort <= 2) {
+      recordLifecycleEvent(lifecycleRecorder, {
+        stage: 'science_route_planner_started',
+        status: 'started',
+        routing_intent: intent,
+        message: `Drafting a reference route plan for ${intent}.`
+      });
+      routePlan = await draftScienceRoutePlan({
+        ...input,
+        intent,
+        policy,
+        allowedToolNames: preselectedToolNames,
+        routing,
+        project,
+        message,
+        clarifiedInput: message,
+        clarification,
+        reasoningEffort,
+        traceContext
+      });
+      intermediateStates.push(buildIntermediateState('science_route_plan', 'Drafted a reference route plan for the reasoning loop.', {
+        assumptions: uniqueStrings([
+          cleanText(routePlan?.route_summary, 260),
+          ...asArray(routePlan?.decision_points)
+        ], 8),
+        open_questions: asArray(routePlan?.adaptation_notes),
+        proposed_actions: asArray(routePlan?.tool_call_suggestions).slice(0, 5).map((item) => ({
+          action_type: 'read',
+          tool_name: cleanText(item?.tool_name, 120),
+          risk_level: 'low',
+          reason: cleanText(item?.reason, 260) || cleanText(item?.when_to_use, 220)
+        })),
+        confidence: 0.64
+      }));
+      recordLifecycleEvent(lifecycleRecorder, {
+        stage: 'science_route_planner_completed',
+        status: 'ok',
+        routing_intent: intent,
+        message: 'Reference route plan is ready.',
+        meta: {
+          thinking_trace: cleanText(routePlan?.trace_sentence, 420)
+        }
       });
     }
 
@@ -641,10 +986,9 @@ function createScienceReasoningLoopRuntime(deps = {}) {
       ...input,
       intent,
       policy,
-      parserPayload,
+      allowedToolNames: preselectedToolNames,
       routing,
       project,
-      originalMessage,
       clarifiedInput: message,
       clarification,
       traceContext
@@ -661,10 +1005,12 @@ function createScienceReasoningLoopRuntime(deps = {}) {
       stage: 'science_exit_criteria_completed',
       status: 'ok',
       routing_intent: intent,
-      message: 'Science loop exit criteria are ready.'
+      message: 'Science loop exit criteria are ready.',
+      meta: {
+        thinking_trace: cleanText(exitCriteria?.trace_sentence, 420)
+      }
     });
 
-    const requestedToolNames = Array.isArray(input.selectedToolNames) ? input.selectedToolNames : null;
     const providedTools = asArray(input.toolDefinitions).length
       ? {
         tool_names: asArray(input.toolDefinitions).map((tool) => cleanText(tool?.name, 120)).filter(Boolean),
@@ -716,6 +1062,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
         project,
         originalMessage,
         clarification,
+        routePlan,
         exitCriteria,
         message,
         reasoningEffort
@@ -727,8 +1074,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
       traceContext
     });
 
-    let latestAssistantText = cleanText(extractAgentSessionText(currentSession), 12000);
-    let finalEvaluation = null;
+    latestAssistantText = cleanText(extractAgentSessionText(currentSession), 12000);
 
     // Continue until evidence is sufficient or the tool / feedback budget is exhausted.
     while (roundsExecuted < maxRounds || feedbackTurnsWithoutTool < maxRounds) {
@@ -737,21 +1083,15 @@ function createScienceReasoningLoopRuntime(deps = {}) {
 
       // No valid tool was proposed, so ask the evaluator whether the loop can stop anyway.
       if (!validCalls.length) {
-        const preSynthesizedQuestion = buildSciencePreSynthesizedQuestion({
-          intent,
-          policy,
-          originalMessage,
-          message,
-          clarification,
-          parserPayload,
-          project,
-          citations: accumulatedCitations,
-          toolTrace,
+        const preSynthesisState = await buildVerifiedPreSynthesizedQuestion({
+          session: currentSession,
           latestToolResult: null,
-          latestAssistantText,
-          roundsExecuted,
-          maxRounds
+          rounds: roundsExecuted
         });
+        currentSession = preSynthesisState.session || currentSession;
+        latestAssistantText = cleanText(preSynthesisState.latestAssistantText, 12000);
+        const preSynthesizedQuestion = preSynthesisState.preSynthesizedQuestion;
+        latestPreSynthesizedQuestion = preSynthesizedQuestion;
         finalEvaluation = mergePolicyEvaluationHints(
           intent,
           policy,
@@ -764,10 +1104,8 @@ function createScienceReasoningLoopRuntime(deps = {}) {
             intent,
             policy,
             exitCriteria,
-            originalMessage,
             message,
             clarification,
-            parserPayload,
             project,
             accumulatedCitations,
             toolTrace,
@@ -789,7 +1127,8 @@ function createScienceReasoningLoopRuntime(deps = {}) {
             routing_intent: intent,
             message: cleanText(finalEvaluation.reason, 320) || 'Evaluator marked current evidence as sufficient.',
             meta: {
-              round: roundsExecuted
+              round: roundsExecuted,
+              thinking_trace: cleanText(finalEvaluation?.trace_sentence, 420)
             }
           });
           break;
@@ -815,7 +1154,8 @@ function createScienceReasoningLoopRuntime(deps = {}) {
           routing_intent: intent,
           message: cleanText(finalEvaluation.reason, 320) || 'Evaluator requested another tool step.',
           meta: {
-            round: roundsExecuted
+            round: roundsExecuted,
+            thinking_trace: cleanText(finalEvaluation?.trace_sentence, 420)
           }
         });
         currentSession = await continueAgentSessionWithUserMessage(
@@ -835,6 +1175,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
       const argsObject = parsedArgs && typeof parsedArgs === 'object' ? parsedArgs : {};
       const validation = validateArgumentsAgainstSchema(toolSchemaMap.get(selectedCall.name), argsObject);
       const truncatedMultiCall = rawCalls.length > 1;
+      const assistantBeforeTool = cleanText(latestAssistantText, 4000);
       roundsExecuted += 1;
 
       recordLifecycleEvent(lifecycleRecorder, {
@@ -845,7 +1186,8 @@ function createScienceReasoningLoopRuntime(deps = {}) {
         message: `Science reasoning round ${roundsExecuted} started with ${selectedCall.name}.`,
         meta: {
           round: roundsExecuted,
-          truncated_multi_call: truncatedMultiCall
+          truncated_multi_call: truncatedMultiCall,
+          thinking_trace: buildToolCallThinkingTrace(selectedCall.name, argsObject)
         }
       });
 
@@ -873,6 +1215,9 @@ function createScienceReasoningLoopRuntime(deps = {}) {
             lifecycleRecorder
           });
         } catch (error) {
+          if (isAgentRequestAbortError(error)) {
+            throw error;
+          }
           toolEnvelope = buildSyntheticToolEnvelope(
             selectedCall.name,
             argsObject,
@@ -889,12 +1234,21 @@ function createScienceReasoningLoopRuntime(deps = {}) {
         tool_name: cleanText(selectedCall.name, 120),
         input: argsObject,
         ok: toolEnvelope?.ok === true,
+        status: cleanText(toolEnvelope?.result?.status, 40),
+        run_id: cleanText(toolEnvelope?.result?.run_id, 120),
         summary: cleanText(toolEnvelope?.summary, 320)
           || cleanText(toolEnvelope?.error, 320)
           || 'No summary was generated.',
         truncated_multi_call: truncatedMultiCall,
-        error: cleanText(toolEnvelope?.error, 600),
-        citations: normalizeCitations(toolEnvelope?.citations, 8)
+        error: cleanText(toolEnvelope?.error || toolEnvelope?.result?.error, 1200),
+        stdout: cleanText(toolEnvelope?.result?.stdout, 12000),
+        stderr: cleanText(toolEnvelope?.result?.stderr, 12000),
+        render_outputs: buildToolTraceRenderOutputs(toolEnvelope?.result?.render_outputs),
+        citations: normalizeCitations(toolEnvelope?.citations, 8),
+        loaded_context_blocks: normalizeLoadedContextBlocks(
+          toolEnvelope?.loaded_context_blocks || toolEnvelope?.result?.loaded_context_blocks,
+          6
+        )
       };
       toolTrace.push(normalizedTraceRow);
       normalizeCitations(toolEnvelope?.citations, 10).forEach((citation) => accumulatedCitations.push(citation));
@@ -929,21 +1283,27 @@ function createScienceReasoningLoopRuntime(deps = {}) {
         }
       ], traceContext);
       latestAssistantText = cleanText(extractAgentSessionText(currentSession), 12000);
-      const preSynthesizedQuestion = buildSciencePreSynthesizedQuestion({
-        intent,
-        policy,
-        originalMessage,
-        message,
-        clarification,
-        parserPayload,
-        project,
-        citations: accumulatedCitations,
-        toolTrace,
-        latestToolResult: toolEnvelope,
-        latestAssistantText,
-        roundsExecuted,
-        maxRounds
+      toolRoundArtifacts.push({
+        round: roundsExecuted,
+        tool_name: cleanText(selectedCall.name, 120),
+        tool_arguments: argsObject,
+        assistant_before_tool: assistantBeforeTool,
+        tool_summary: cleanText(toolEnvelope?.summary, 600),
+        tool_error: cleanText(toolEnvelope?.error || toolEnvelope?.result?.error, 1200),
+        assistant_after_tool: cleanText(latestAssistantText, 4000)
       });
+      const preSynthesisState = await buildVerifiedPreSynthesizedQuestion({
+        session: currentSession,
+        latestToolResult: toolEnvelope,
+        rounds: roundsExecuted
+      });
+      currentSession = preSynthesisState.session || currentSession;
+      latestAssistantText = cleanText(preSynthesisState.latestAssistantText, 12000);
+      if (toolRoundArtifacts.length) {
+        toolRoundArtifacts[toolRoundArtifacts.length - 1].assistant_after_tool = cleanText(latestAssistantText, 4000);
+      }
+      const preSynthesizedQuestion = preSynthesisState.preSynthesizedQuestion;
+      latestPreSynthesizedQuestion = preSynthesizedQuestion;
       intermediateStates.push(buildIntermediateState('science_pre_synthesis', 'Prepared a lightweight pre-synthesized question before exit judgement.', {
         assumptions: [
           cleanText(preSynthesizedQuestion?.tentative_answer?.current_best_answer, 320)
@@ -951,7 +1311,13 @@ function createScienceReasoningLoopRuntime(deps = {}) {
             : 'No grounded tentative answer was available yet.'
         ],
         evidence: normalizeCitations(toolEnvelope?.citations, 8),
-        open_questions: asArray(preSynthesizedQuestion?.unresolved_issues),
+        open_questions: uniqueStrings([
+          ...asArray(preSynthesizedQuestion?.unresolved_issues),
+          ...getUnstableScienceInferenceChecks(
+            preSynthesizedQuestion?.logical_verification,
+            { asArray, cleanText, uniqueStrings }
+          ).map((row) => formatScienceInferenceStabilityIssue(row, { asArray, cleanText, uniqueStrings }))
+        ], 8),
         confidence: toolEnvelope?.ok === true ? 0.64 : 0.4
       }));
 
@@ -968,10 +1334,8 @@ function createScienceReasoningLoopRuntime(deps = {}) {
           intent,
           policy,
           exitCriteria,
-          originalMessage,
           message,
           clarification,
-          parserPayload,
           project,
           accumulatedCitations,
           toolTrace,
@@ -994,7 +1358,8 @@ function createScienceReasoningLoopRuntime(deps = {}) {
           tool_name: selectedCall.name,
           message: cleanText(finalEvaluation.reason, 320) || 'Evaluator marked current evidence as sufficient.',
           meta: {
-            round: roundsExecuted
+            round: roundsExecuted,
+            thinking_trace: cleanText(finalEvaluation?.trace_sentence, 420)
           }
         });
         break;
@@ -1021,7 +1386,8 @@ function createScienceReasoningLoopRuntime(deps = {}) {
         tool_name: selectedCall.name,
         message: cleanText(finalEvaluation.reason, 320) || 'Evaluator requested another retrieval/tool round.',
         meta: {
-          round: roundsExecuted
+          round: roundsExecuted,
+          thinking_trace: cleanText(finalEvaluation?.trace_sentence, 420)
         }
       });
       currentSession = await continueAgentSessionWithUserMessage(
@@ -1041,10 +1407,8 @@ function createScienceReasoningLoopRuntime(deps = {}) {
       model: input.model,
       intent,
       policy,
-      originalMessage,
       message,
       clarification,
-      parserPayload,
       project,
       roundsExecuted,
       maxRounds,
@@ -1123,12 +1487,13 @@ function createScienceReasoningLoopRuntime(deps = {}) {
         : 'Science reasoning loop completed successfully.',
       meta: {
         rounds_executed: roundsExecuted,
-        citation_count: citations.length
+        citation_count: citations.length,
+        thinking_trace: cleanText(synthesis?.trace_sentence, 420)
       }
     });
 
     // Return the fully normalized result object consumed by higher-level agent orchestration.
-    return {
+    return attachThinkingTrace({
       status: partial ? 'partial' : 'completed',
       answer: cleanText(validated.normalized.answer, 12000),
       confidence: Number.isFinite(Number(validated.normalized.confidence))
@@ -1146,6 +1511,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
       provenance: validated.provenance,
       clarified_input: message,
       input_clarification: clarification,
+      route_plan: routePlan,
       exit_criteria: exitCriteria,
       tool_trace: toolTrace,
       intermediate_states: intermediateStates,
@@ -1158,7 +1524,17 @@ function createScienceReasoningLoopRuntime(deps = {}) {
           return clean ? `Could you clarify: ${clean}` : '';
         })
       ], 6)
-    };
+    }, {
+      clarifiedInput: message,
+      clarification,
+      routePlan,
+      exitCriteria,
+      preSynthesizedQuestion: latestPreSynthesizedQuestion,
+      evaluation: finalEvaluation,
+      finalSynthesis: synthesis,
+      status: partial ? 'partial' : 'completed',
+      partial
+    });
   }
 
   // Convenience wrapper for the general-science intent.

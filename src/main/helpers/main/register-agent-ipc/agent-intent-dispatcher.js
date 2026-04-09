@@ -19,8 +19,11 @@ function createAgentIntentDispatcher({
   function buildParserDirectScienceResult({
     parserPayload = {},
     routing = {},
-    intent = ''
+    intent = '',
+    message = ''
   } = {}) {
+    const finalSynthesizedQuestion = cleanText(message, 3200)
+      || 'What is the best direct answer to this science question?';
     const fallbackDecisionRecord = {
       assumptions: [
         `${cleanText(intent, 80) || 'science'} was answered directly by the intent parser at reasoning_effort=0.`
@@ -111,7 +114,20 @@ function createAgentIntentDispatcher({
       follow_up_questions: [],
       reasoning_effort: Number.isFinite(Number(parserPayload?.reasoning_effort))
         ? Number(parserPayload.reasoning_effort)
-        : 0
+        : 0,
+      thinking_trace: {
+        intent_parse_question: cleanText(parserPayload?.reasoning_summary, 420)
+          || `This is a ${cleanText(intent, 80).replace(/_/g, ' ') || 'science question'}.`,
+        question_clarifier: `The user wants to understand: ${finalSynthesizedQuestion}`,
+        criteria_generate: 'I do not need a separate evidence loop for this direct-answer request.',
+        tool_rounds: [],
+        pre_synthesize_answer: cleanText(parserPayload?.direct_answer, 420)
+          || 'I can answer this request directly.',
+        judge: 'I can answer this directly without additional tool evidence.',
+        final_synthesize: 'I am returning the direct answer without tool use.',
+        final_synthesized_question: finalSynthesizedQuestion
+      },
+      final_synthesized_question: finalSynthesizedQuestion
     };
   }
 
@@ -427,14 +443,16 @@ function createAgentIntentDispatcher({
       return result;
     }
 
+    const routing = scienceMainUtils.buildScienceRoutingFromParser(parserPayload);
+    const scienceIntent = cleanText(routing?.intent, 80) || cleanText(parserPayload.primary_intent, 80);
     if ([
       'general_science_question',
       'project_science_question',
       'result_analysis'
-    ].includes(parserPayload.primary_intent)) {
-      const scienceIntent = cleanText(parserPayload.primary_intent, 80);
-      const routing = scienceMainUtils.buildScienceRoutingFromParser(parserPayload);
-      const parserDirectScienceAnswer = Number(parserPayload?.reasoning_effort) === 0
+    ].includes(scienceIntent)) {
+      const parserIntent = cleanText(parserPayload.primary_intent, 80);
+      const routingReasoningEffort = Number(routing?.plan?.reasoning_effort);
+      const parserDirectScienceAnswer = routingReasoningEffort === 0
         ? cleanText(parserPayload?.direct_answer, 12000)
         : '';
       const runTrackedTool = createLifecycleToolRunner({
@@ -449,9 +467,12 @@ function createAgentIntentDispatcher({
         routing_intent: scienceIntent,
         message: parserDirectScienceAnswer
           ? `Using parser-direct answer path for ${scienceIntent}.`
-          : (deepResearchEnabled === true && deepResearchRuntime
-            ? `Dispatching ${scienceIntent} into the deep research pipeline.`
-            : `Dispatching ${scienceIntent} into the shared science reasoning loop.`)
+          : (parserIntent && parserIntent !== scienceIntent
+            ? `Routing ${parserIntent} through ${scienceIntent} with reasoning_effort=${routingReasoningEffort || 0}.`
+            : '')
+            || (deepResearchEnabled === true && deepResearchRuntime
+              ? `Dispatching ${scienceIntent} into the deep research pipeline.`
+              : `Dispatching ${scienceIntent} into the shared science reasoning loop.`)
       });
 
       if (parserDirectScienceAnswer) {
@@ -459,13 +480,15 @@ function createAgentIntentDispatcher({
           result.general_science_question = buildParserDirectScienceResult({
             parserPayload,
             routing,
-            intent: scienceIntent
+            intent: scienceIntent,
+            message
           });
         } else {
           result.project_science_question = buildParserDirectScienceResult({
             parserPayload,
             routing,
-            intent: scienceIntent
+            intent: scienceIntent,
+            message
           });
         }
       } else {

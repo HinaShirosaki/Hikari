@@ -1,14 +1,11 @@
 'use strict';
 
-function defaultCleanText(value, maxLength = 120) {
+function defaultCleanText(value, _maxLength = 120) {
   const text = String(value || '').trim();
   if (!text) {
     return '';
   }
-  if (text.length <= maxLength) {
-    return text;
-  }
-  return `${text.slice(0, maxLength)}...`;
+  return text;
 }
 
 function createAgentRuntimeRegistry(deps = {}) {

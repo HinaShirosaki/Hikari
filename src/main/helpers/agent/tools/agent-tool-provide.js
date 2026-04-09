@@ -6,32 +6,29 @@ const {
   resolveCanonicalToolName
 } = require('./agent-tool-loading.js');
 
+function buildUnrestrictedIntentToolScope() {
+  return Object.freeze({
+    general_science_question: null,
+    project_science_question: null,
+    result_analysis: null
+  });
+}
+
 const REASONING_ENTRY_TOOL_SCOPES = Object.freeze({
-  science_reasoning_entry: Object.freeze({
-    general_science_question: Object.freeze(['literature-search']),
-    project_science_question: Object.freeze(['record-lookup', 'literature-search']),
-    result_analysis: Object.freeze(['python-sandbox', 'record-lookup', 'literature-search'])
-  }),
-  deep_research_entry: Object.freeze({
-    general_science_question: Object.freeze(['literature-search', 'sub-agent']),
-    project_science_question: Object.freeze(['record-lookup', 'literature-search', 'sub-agent']),
-    result_analysis: Object.freeze(['python-sandbox', 'record-lookup', 'literature-search', 'sub-agent'])
-  })
+  science_reasoning_entry: buildUnrestrictedIntentToolScope(),
+  deep_research_entry: buildUnrestrictedIntentToolScope()
 });
 
 function defaultAsArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
-function defaultCleanText(value, maxLength = 500) {
+function defaultCleanText(value, _maxLength = 500) {
   const text = String(value || '').trim();
   if (!text) {
     return '';
   }
-  if (text.length <= maxLength) {
-    return text;
-  }
-  return `${text.slice(0, maxLength)}...`;
+  return text;
 }
 
 function defaultUniqueStrings(values, max = 20) {

@@ -1,6 +1,7 @@
 'use strict';
 
 const { createAgentIntentDispatcher } = require('./agent-intent-dispatcher');
+const { throwIfAgentRequestAborted } = require('../../agent/shared/agent-request-context.js');
 
 function createAgentControllerCore({
   deps,
@@ -37,6 +38,7 @@ function createAgentControllerCore({
   });
 
   async function runAgentControllerCore(payload, runtime = {}) {
+    throwIfAgentRequestAborted('Agent request stopped before controller startup.');
     const lifecycleRecorder = runtime && typeof runtime === 'object'
       ? runtime.lifecycleRecorder
       : null;
@@ -99,6 +101,7 @@ function createAgentControllerCore({
       projectName,
       traceContext
     });
+    throwIfAgentRequestAborted('Agent request stopped after intent parsing.');
     if (!parserResult?.ok || !parserResult?.payload) {
       observability.recordLifecycleEvent(lifecycleRecorder, {
         stage: 'parser_completed',
@@ -148,6 +151,7 @@ function createAgentControllerCore({
       },
       result
     });
+    throwIfAgentRequestAborted('Agent request stopped before finalizing agent response.');
 
     if (executionFlags.developerMode === true) {
       result.developer_trace = asArray(traceContext?.rows);

@@ -1,5 +1,10 @@
 'use strict';
 
+const {
+  SCIENCE_LOOP_LOGICAL_VERIFICATION_SCHEMA,
+  normalizeScienceLogicalVerification
+} = require('./logical-verification.js');
+
 const SCIENCE_LOOP_PRE_SYNTHESIZED_QUESTION_SCHEMA = {
   type: 'object',
   additionalProperties: false,
@@ -20,7 +25,8 @@ const SCIENCE_LOOP_PRE_SYNTHESIZED_QUESTION_SCHEMA = {
     unresolved_issues: {
       type: 'array',
       items: { type: 'string' }
-    }
+    },
+    logical_verification: SCIENCE_LOOP_LOGICAL_VERIFICATION_SCHEMA
   }
 };
 
@@ -30,15 +36,12 @@ function createScienceLoopPreSynthesizedQuestionRuntime(deps = {}) {
     : ((value) => (Array.isArray(value) ? value : []));
   const cleanText = typeof deps.cleanText === 'function'
     ? deps.cleanText
-    : ((value, maxLength = 2000) => {
+    : ((value, _maxLength = 2000) => {
       const text = String(value || '').trim();
       if (!text) {
         return '';
       }
-      if (text.length <= maxLength) {
-        return text;
-      }
-      return `${text.slice(0, maxLength)}...`;
+      return text;
     });
   const uniqueStrings = typeof deps.uniqueStrings === 'function'
     ? deps.uniqueStrings
@@ -88,6 +91,17 @@ function createScienceLoopPreSynthesizedQuestionRuntime(deps = {}) {
     }).filter(Boolean);
   }
 
+  function buildLoadedContextBasis(blocks) {
+    return asArray(blocks).slice(0, 4).map((block) => {
+      const paperTitle = cleanText(block?.paper_title, 160);
+      const sectionLabel = cleanText(block?.section_label, 80);
+      const excerpt = cleanText(block?.excerpt, 180);
+      const reason = cleanText(block?.relevance_reason, 180);
+      const header = [paperTitle, sectionLabel].filter(Boolean).join(' | ');
+      return [header, excerpt, reason].filter(Boolean).join(' - ');
+    }).filter(Boolean);
+  }
+
   function buildFallbackPreSynthesizedQuestion(input = {}) {
     const latestToolResult = input.latestToolResult && typeof input.latestToolResult === 'object'
       ? input.latestToolResult
@@ -108,6 +122,11 @@ function createScienceLoopPreSynthesizedQuestionRuntime(deps = {}) {
       asArray(latestToolResult?.result?.items).length
     );
     const hasSuccessfulToolStep = asArray(input.toolTrace).some((row) => row?.ok === true);
+    const loadedContextBasis = buildLoadedContextBasis([
+      ...asArray(latestToolResult?.loaded_context_blocks),
+      ...asArray(latestToolResult?.result?.loaded_context_blocks),
+      ...asArray(input.toolTrace).flatMap((row) => asArray(row?.loaded_context_blocks))
+    ]);
     const citationBasis = buildCitationBasis([
       ...asArray(latestToolResult?.citations),
       ...asArray(latestToolResult?.result?.citations),
@@ -118,6 +137,7 @@ function createScienceLoopPreSynthesizedQuestionRuntime(deps = {}) {
       latestToolName && latestItems > 0
         ? `${latestToolName} returned ${latestItems} item(s).`
         : '',
+      ...loadedContextBasis,
       ...citationBasis,
       ...asArray(input.toolTrace).slice(-3).map((row) => {
         const toolName = cleanText(row?.tool_name, 120);
@@ -182,7 +202,12 @@ function createScienceLoopPreSynthesizedQuestionRuntime(deps = {}) {
       unresolved_issues: uniqueStrings([
         ...asArray(source.unresolved_issues),
         ...asArray(fallbackSource.unresolved_issues)
-      ], 6)
+      ], 6),
+      logical_verification: normalizeScienceLogicalVerification(
+        source.logical_verification,
+        fallbackSource.logical_verification,
+        { asArray, cleanText, uniqueStrings }
+      )
     };
   }
 

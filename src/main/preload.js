@@ -28,6 +28,7 @@ contextBridge.exposeInMainWorld('enanaApi', {
   setCodexLlmReasoningEffort: (reasoningEffort) => ipcRenderer.invoke('llm:codex-set-reasoning-effort', { reasoningEffort }),
   runCodexLlmPrompt: (payload) => ipcRenderer.invoke('llm:codex-generate', payload),
   agentChat: (payload) => ipcRenderer.invoke('agent:chat', payload),
+  agentChatCancel: (payload) => ipcRenderer.invoke('agent:chat:cancel', payload),
   agentChatLogCreateSession: (payload) => ipcRenderer.invoke('agent:chat-log:create-session', payload),
   agentChatLogListSessions: (payload) => ipcRenderer.invoke('agent:chat-log:list-sessions', payload),
   agentChatLogGetSession: (payload) => ipcRenderer.invoke('agent:chat-log:get-session', payload),

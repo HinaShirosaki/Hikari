@@ -1,5 +1,8 @@
 'use strict';
 
+const { isAgentRequestAbortError } = require('./agent-request-context.js');
+const { createAgentLlmRuntimeHelpers } = require('./agent-llm-utils.js');
+
 function createAgentControllerUtils(deps = {}) {
   const LLM_PROVIDERS = deps.LLM_PROVIDERS && typeof deps.LLM_PROVIDERS === 'object'
     ? deps.LLM_PROVIDERS
@@ -30,15 +33,12 @@ function createAgentControllerUtils(deps = {}) {
     : ((value) => (Array.isArray(value) ? value : []));
   const cleanText = typeof deps.cleanText === 'function'
     ? deps.cleanText
-    : ((value, maxLength = 2000) => {
+    : ((value, _maxLength = 2000) => {
       const text = String(value || '').trim();
       if (!text) {
         return '';
       }
-      if (text.length <= maxLength) {
-        return text;
-      }
-      return `${text.slice(0, maxLength)}...`;
+      return text;
     });
   const appendAgentChatLogEntry = typeof deps.appendAgentChatLogEntry === 'function'
     ? deps.appendAgentChatLogEntry
@@ -52,29 +52,6 @@ function createAgentControllerUtils(deps = {}) {
   const INTENT_PARSER_RESPONSE_SCHEMA = deps.INTENT_PARSER_RESPONSE_SCHEMA && typeof deps.INTENT_PARSER_RESPONSE_SCHEMA === 'object'
     ? deps.INTENT_PARSER_RESPONSE_SCHEMA
     : {};
-  const toInputText = typeof deps.toInputText === 'function'
-    ? deps.toInputText
-    : ((role, text) => ({
-      type: 'message',
-      role,
-      content: [{ type: 'input_text', text: cleanText(text, 60000) }]
-    }));
-  const requestCodexCliText = deps.requestCodexCliText;
-  const getCodexCliWorkingDirectory = typeof deps.getCodexCliWorkingDirectory === 'function'
-    ? deps.getCodexCliWorkingDirectory
-    : (() => process.cwd());
-  const requestClaudeMessagesWithBackoff = deps.requestClaudeMessagesWithBackoff;
-  const requestGeminiGenerateContentWithBackoff = deps.requestGeminiGenerateContentWithBackoff;
-  const requestOpenAiResponsesWithBackoff = deps.requestOpenAiResponsesWithBackoff;
-  const extractClaudeResponseText = typeof deps.extractClaudeResponseText === 'function'
-    ? deps.extractClaudeResponseText
-    : (() => '');
-  const extractGeminiResponseText = typeof deps.extractGeminiResponseText === 'function'
-    ? deps.extractGeminiResponseText
-    : (() => '');
-  const extractResponseText = typeof deps.extractResponseText === 'function'
-    ? deps.extractResponseText
-    : (() => '');
 
   function extractConversation(rawConversation) {
     return asArray(rawConversation)
@@ -246,6 +223,15 @@ function createAgentControllerUtils(deps = {}) {
     }
     await appendAgentChatLogEntry(logPath, formatAgentChatLogEntry(logEntry));
   }
+
+  const llmHelpers = createAgentLlmRuntimeHelpers({
+    ...deps,
+    LLM_PROVIDERS,
+    asArray,
+    cleanText,
+    safeParseJson: typeof deps.safeParseJson === 'function' ? deps.safeParseJson : undefined,
+    recordAgentLlmTrace
+  });
 
   function normalizeDeveloperTraceForAgentLog(traceRows) {
     return asArray(traceRows).map((row) => ({
@@ -559,122 +545,32 @@ function createAgentControllerUtils(deps = {}) {
     });
 
     try {
-      if (provider === LLM_PROVIDERS.CODEX) {
-        const raw = await requestCodexCliText({
-          prompt,
-          model,
-          cwd: getCodexCliWorkingDirectory()
-        });
-        await recordAgentLlmTrace(traceContext, {
-          stage: 'intent_parser',
-          provider,
-          model,
-          summary: 'Intent parser round completed via Codex CLI.',
-          request_payload: {
-            model,
-            prompt
-          },
-          response_payload: raw
-        });
-        return normalizeIntentParserPayload(raw);
-      }
-
-      if (provider === LLM_PROVIDERS.CLAUDE) {
-        const body = {
-          model,
-          system: 'Return valid JSON only.',
-          max_tokens: 1100,
-          messages: [
-            {
-              role: 'user',
-              content: [
-                {
-                  type: 'text',
-                  text: prompt
-                }
-              ]
-            }
-          ]
-        };
-        const response = await requestClaudeMessagesWithBackoff({
-          endpoint,
-          apiKey,
-          body
-        });
-        await recordAgentLlmTrace(traceContext, {
-          stage: 'intent_parser',
-          provider,
-          model,
-          summary: 'Intent parser round completed via Claude.',
-          request_payload: body,
-          response_payload: response
-        });
-        return normalizeIntentParserPayload(extractClaudeResponseText(response));
-      }
-
-      if (provider === LLM_PROVIDERS.GEMINI) {
-        const body = {
-          systemInstruction: {
-            parts: [{ text: 'Return valid JSON only.' }]
-          },
-          contents: [
-            {
-              role: 'user',
-              parts: [{ text: prompt }]
-            }
-          ],
-          generationConfig: {
-            maxOutputTokens: 1100
-          }
-        };
-        const response = await requestGeminiGenerateContentWithBackoff({
-          endpoint,
-          apiKey,
-          model,
-          body
-        });
-        await recordAgentLlmTrace(traceContext, {
-          stage: 'intent_parser',
-          provider,
-          model,
-          summary: 'Intent parser round completed via Gemini.',
-          request_payload: body,
-          response_payload: response
-        });
-        return normalizeIntentParserPayload(extractGeminiResponseText(response));
-      }
-
-      const body = {
-        model,
-        input: [
-          toInputText('system', 'Return valid JSON only.'),
-          toInputText('user', prompt)
-        ],
-        text: {
-          format: {
-            type: 'json_schema',
-            name: 'intent_parser',
-            strict: true,
-            schema: INTENT_PARSER_RESPONSE_SCHEMA
-          }
-        },
-        max_output_tokens: 1100
-      };
-      const response = await requestOpenAiResponsesWithBackoff({
+      const result = await llmHelpers.requestStructuredJsonPayload({
+        provider,
         endpoint,
         apiKey,
-        body
-      });
-      await recordAgentLlmTrace(traceContext, {
-        stage: 'intent_parser',
-        provider: LLM_PROVIDERS.OPENAI,
         model,
-        summary: 'Intent parser round completed via OpenAI Responses.',
-        request_payload: body,
-        response_payload: response
+        stage: 'intent_parser',
+        systemPrompt: 'Return valid JSON only.',
+        userPrompt: prompt,
+        schema: INTENT_PARSER_RESPONSE_SCHEMA,
+        traceContext,
+        maxOutputTokens: 1100,
+        openAiStrict: true,
+        openAiAsDefaultProvider: true,
+        defaultError: 'Intent parser provider is not configured.'
       });
-      return normalizeIntentParserPayload(extractResponseText(response));
+      if (!result?.ok) {
+        return {
+          ok: false,
+          error: cleanText(result?.error, 240) || 'Intent parser request failed.'
+        };
+      }
+      return normalizeIntentParserPayload(result.payload || result.raw);
     } catch (error) {
+      if (isAgentRequestAbortError(error)) {
+        throw error;
+      }
       return {
         ok: false,
         error: cleanText(error?.message || error, 240) || 'Intent parser request failed.'

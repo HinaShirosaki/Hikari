@@ -1435,6 +1435,7 @@ Source group:
 - `src/main/helpers/agent/runtime/agent-science-loop-exit-criteria.js`
 - `src/main/helpers/agent/runtime/agent-science-loop-exit-judge.js`
 - `src/main/helpers/agent/runtime/agent-science-final-synthesis.js`
+- `src/main/helpers/agent/runtime/science-reasoning-loop/thinking-trace.js`
 - `src/main/helpers/agent/runtime/agent-science-reasoning-loop.js`
 
 #### `SCIENCE_INPUT_CLARIFICATION_SCHEMA`
@@ -1672,6 +1673,75 @@ Source group:
       "items": {
         "type": "string"
       }
+    }
+  }
+}
+```
+
+#### `SCIENCE_THINKING_TRACE_SCHEMA`
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "intent_parse_question",
+    "question_clarifier",
+    "criteria_generate",
+    "tool_rounds",
+    "pre_synthesize_answer",
+    "judge",
+    "final_synthesize",
+    "final_synthesized_question"
+  ],
+  "properties": {
+    "intent_parse_question": {
+      "type": "string"
+    },
+    "question_clarifier": {
+      "type": "string"
+    },
+    "criteria_generate": {
+      "type": "string"
+    },
+    "tool_rounds": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "round",
+          "tool_selection",
+          "tool_call",
+          "tool_results"
+        ],
+        "properties": {
+          "round": {
+            "type": "integer"
+          },
+          "tool_selection": {
+            "type": "string"
+          },
+          "tool_call": {
+            "type": "string"
+          },
+          "tool_results": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "pre_synthesize_answer": {
+      "type": "string"
+    },
+    "judge": {
+      "type": "string"
+    },
+    "final_synthesize": {
+      "type": "string"
+    },
+    "final_synthesized_question": {
+      "type": "string"
     }
   }
 }

@@ -3,6 +3,13 @@ const fsSync = require('node:fs');
 const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
+const {
+  createAgentRequestAbortError,
+  getAgentRequestAbortSignal,
+  isAgentRequestAbortError,
+  onAgentRequestAbort,
+  throwIfAgentRequestAborted
+} = require('../helpers/agent/shared/agent-request-context.js');
 
 const DEFAULT_TIMEOUT_MS = 180000;
 const LOGIN_STATUS_TIMEOUT_MS = 12000;
@@ -406,6 +413,7 @@ function buildCodexCliExecArgs({ outputFile = '', model = '', reasoningEffort = 
 
 async function runCodexCommand({ args, cwd, input = '', timeoutMs = DEFAULT_TIMEOUT_MS }) {
   return new Promise((resolve, reject) => {
+    throwIfAgentRequestAborted('Agent request stopped before starting Codex CLI.');
     const safeCwd = resolveWorkingDirectory(cwd);
     const child = spawn(resolveCodexBinary(), args, {
       cwd: safeCwd,
@@ -417,6 +425,8 @@ async function runCodexCommand({ args, cwd, input = '', timeoutMs = DEFAULT_TIME
     let stderr = '';
     let finished = false;
     let timedOut = false;
+    let aborted = false;
+    const abortSignal = getAgentRequestAbortSignal();
 
     const timeout = setTimeout(() => {
       timedOut = true;
@@ -429,6 +439,7 @@ async function runCodexCommand({ args, cwd, input = '', timeoutMs = DEFAULT_TIME
       }
       finished = true;
       clearTimeout(timeout);
+      unsubscribeAbort();
       reject(error);
     };
 
@@ -438,8 +449,28 @@ async function runCodexCommand({ args, cwd, input = '', timeoutMs = DEFAULT_TIME
       }
       finished = true;
       clearTimeout(timeout);
+      unsubscribeAbort();
       resolve(value);
     };
+
+    const unsubscribeAbort = onAgentRequestAbort((reason) => {
+      aborted = true;
+      try {
+        child.kill('SIGTERM');
+      } catch {
+        // Ignore kill failures during shutdown.
+      }
+      setTimeout(() => {
+        try {
+          child.kill('SIGKILL');
+        } catch {
+          // Ignore force-kill failures after abort.
+        }
+      }, 1000);
+      if (!child.killed && abortSignal?.aborted) {
+        finishReject(reason || createAgentRequestAbortError('Agent request stopped.'));
+      }
+    });
 
     child.stdout.on('data', (chunk) => {
       stdout += String(chunk || '');
@@ -454,6 +485,16 @@ async function runCodexCommand({ args, cwd, input = '', timeoutMs = DEFAULT_TIME
     });
 
     child.on('close', (code, signal) => {
+      if (aborted || abortSignal?.aborted) {
+        const abortError = isAgentRequestAbortError(abortSignal?.reason)
+          ? abortSignal.reason
+          : createAgentRequestAbortError('Agent request stopped.');
+        abortError.stdout = stdout;
+        abortError.stderr = stderr;
+        abortError.signal = signal;
+        finishReject(abortError);
+        return;
+      }
       if (timedOut) {
         const timeoutError = new Error(`Codex CLI timed out after ${Math.round((Number(timeoutMs) || DEFAULT_TIMEOUT_MS) / 1000)}s.`);
         timeoutError.code = 'ETIMEDOUT';
@@ -538,6 +579,7 @@ async function requestCodexCliText({
   fileName = '',
   pdfDataUrl = ''
 }) {
+  throwIfAgentRequestAborted('Agent request stopped before starting Codex CLI prompt.');
   const cleanPrompt = String(prompt || '').trim();
   if (!cleanPrompt) {
     throw new Error('Prompt is required for Codex CLI request.');
@@ -562,6 +604,7 @@ async function requestCodexCliText({
 
   try {
     if (pdfDataUrl) {
+      throwIfAgentRequestAborted('Agent request stopped before preparing Codex CLI PDF input.');
       const pdfBuffer = parsePdfDataUrl(pdfDataUrl);
       if (!pdfBuffer) {
         throw new Error('Failed to parse PDF data for Codex CLI request.');
@@ -588,6 +631,7 @@ async function requestCodexCliText({
       timeoutMs
     });
 
+    throwIfAgentRequestAborted('Agent request stopped before reading Codex CLI output.');
     const resultText = cleanText(await fs.readFile(outputFile, 'utf8'), 120000);
     if (!resultText) {
       throw new Error('Codex CLI returned an empty response.');

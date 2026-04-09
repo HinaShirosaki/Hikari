@@ -9,26 +9,12 @@ import {
   safeText,
   cssEscape
 } from './modules/shared.js';
-import { initProtocolManagement } from './modules/protocol-management.js';
-import { initLabNotebook as initBiologyNotebook } from './modules/biology-notebook.js';
-import { initPersonalInventory } from './modules/personal-inventory.js';
-import { initSettings } from './modules/settings.js';
-import { initProjectManagement } from './modules/project-management.js';
-import { initWorkflowManagement } from './modules/workflow-management.js';
-import { initLabCommonInventory } from './modules/lab-common-inventory.js';
-import { initSampleRegistry } from './modules/sample-registry.js';
-import { initAssay } from './modules/assay.js';
-import { initGelAnalysis } from './modules/gel-analysis.js';
-import { initPapersManagement } from './modules/papers-management.js';
-import { initToolBox } from './modules/tool-box.js';
-import { initAgentChat } from './modules/agent-chat.js';
-import { initHomeDashboard } from './modules/home-dashboard.js';
-import { initSequenceViewer } from './modules/sequence-viewer.js';
 import {
   rebuildObjectGraph,
   queryNotebookEntriesByRelation
 } from './modules/object-graph.js';
 import { APP_DOCK_ORDER, APP_REGISTRY } from './modules/app-registry.generated.js';
+import { createRendererModuleRuntime } from './module-runtime.js';
 import { createModuleRegistry, createRendererServices } from './services/index.js';
 
 const state = loadState();
@@ -127,14 +113,7 @@ let moreMenuButtons = [];
 let renderedDockApps = DOCK_APPS;
 let renderedOverflowApps = MORE_APPS;
 
-let assay = null;
-let gel = null;
-let workflowManagement = null;
-let agentChat = null;
-let homeDashboard = null;
-let protocol = null;
 let lastViewPersistenceEnabled = false;
-let sequenceViewer = null;
 const moduleRegistry = createModuleRegistry({
   showView,
   setSearchInputValue,
@@ -578,127 +557,19 @@ window.enanaGraph = {
   })
 };
 
-const biologyNotebook = initBiologyNotebook({
-  state,
-  persist,
-  createId,
-  safeText,
-  notebookType: 'biology',
-  importProtocolsFromJson: rendererServices.protocol.importProtocolsFromJson,
-  onCreateLinkedAssay: rendererServices.analysis.openAssayForNotebook,
-  onCreateLinkedGel: rendererServices.analysis.openGelForNotebook,
-  onNotebookEntriesChanged: rendererServices.notebook.handleNotebookEntriesChanged
-});
-moduleRegistry.register('biologyNotebook', biologyNotebook);
-
-protocol = initProtocolManagement({
-  state,
-  persist,
-  createId,
-  safeText,
-  onProtocolsChanged: rendererServices.protocol.handleProtocolsChanged,
-  trackGrowthEvent
-});
-moduleRegistry.register('protocol', protocol);
-
-const projectManagement = initProjectManagement({
-  state,
-  persist,
-  createId,
-  safeText,
-  onProjectsChanged: rendererServices.project.handleProjectsChanged
-});
-moduleRegistry.register('projectManagement', projectManagement);
-
-agentChat = initAgentChat({
-  state,
-  persist,
-  createId,
-  safeText,
-  onNotebookEntriesChanged: rendererServices.notebook.handleAgentNotebookEntriesChanged
-});
-moduleRegistry.register('agentChat', agentChat);
-
-workflowManagement = initWorkflowManagement({
-  state,
-  persist,
-  createId,
-  safeText,
-  onWorkflowsChanged: () => {}
-});
-moduleRegistry.register('workflowManagement', workflowManagement);
-
-const papers = initPapersManagement({
-  state,
-  persist,
-  createId,
-  safeText,
-  onCreateProtocolDraft: rendererServices.protocol.createDraftFromPaper
-});
-moduleRegistry.register('papers', papers);
-
-const labCommonInventory = initLabCommonInventory({
-  state,
-  persist,
-  createId,
-  safeText
-});
-moduleRegistry.register('labCommonInventory', labCommonInventory);
-
-let sampleRegistry = null;
-const personalInventory = initPersonalInventory({
+const moduleRuntime = createRendererModuleRuntime({
   state,
   persist,
   createId,
   safeText,
   cssEscape,
-  onSamplesChanged: rendererServices.inventory.handleSamplesChanged
-});
-moduleRegistry.register('personalInventory', personalInventory);
-
-sampleRegistry = initSampleRegistry({
-  state,
-  persist,
-  safeText
-});
-moduleRegistry.register('sampleRegistry', sampleRegistry);
-
-assay = initAssay({
-  state,
-  persist,
-  createId,
-  safeText,
-  onAssaysChanged: rendererServices.analysis.handleAssaysChanged
-});
-moduleRegistry.register('assay', assay);
-
-gel = initGelAnalysis({
-  state,
-  persist,
-  createId,
-  safeText,
-  onGelAnalysesChanged: rendererServices.analysis.handleGelAnalysesChanged
-});
-moduleRegistry.register('gel', gel);
-
-sequenceViewer = initSequenceViewer({
-  onNavigateHome: () => {
-    showView(VIEWS.SEQUENCE_VIEWER);
-  },
-  onNavigateDetail: () => {
-    showView(SEQUENCE_VIEWER_DETAIL_VIEW_ID);
-  }
-});
-moduleRegistry.register('sequenceViewer', sequenceViewer);
-
-const toolBox = initToolBox({
-  onOpenSequenceViewer: rendererServices.sequence.openFromToolBox
-});
-moduleRegistry.register('toolBox', toolBox);
-
-const settings = initSettings({
-  state,
-  persist,
+  rendererServices,
+  moduleRegistry,
+  trackGrowthEvent,
+  showView,
+  views: VIEWS,
+  sequenceViewerDetailViewId: SEQUENCE_VIEWER_DETAIL_VIEW_ID,
+  rootDocument: document,
   onStoragePathSaved: async (storagePath) => {
     const result = await runStorageRootImport(storagePath, { persistMergedState: true });
     renderAll();
@@ -730,34 +601,6 @@ const settings = initSettings({
     showView(VIEWS.HOME);
   }
 });
-moduleRegistry.register('settings', settings);
-
-homeDashboard = initHomeDashboard({
-  state,
-  persist,
-  safeText,
-  onOpenSampleSearch: rendererServices.inventory.openSampleSearch,
-  onOpenSamples: () => rendererServices.inventory.openSampleSearch(''),
-  onOpenNotebook: () => showView(VIEWS.BIOLOGY_NOTEBOOK),
-  onOpenWorkflow: () => showView(VIEWS.WORKFLOW_MANAGEMENT),
-  onOpenAssistant: () => showView(VIEWS.AGENT),
-  onSendQuickLogToAgent: (message) => {
-    const draft = String(message || '').trim();
-    if (!draft) {
-      return false;
-    }
-    showView(VIEWS.AGENT);
-    const agentInput = document.getElementById('agent-message-input');
-    const sendButton = document.getElementById('agent-send-btn');
-    if (!(agentInput instanceof HTMLTextAreaElement) || !(sendButton instanceof HTMLButtonElement)) {
-      return false;
-    }
-    agentInput.value = draft;
-    sendButton.click();
-    return true;
-  }
-});
-moduleRegistry.register('homeDashboard', homeDashboard);
 
 function showView(viewId) {
   const nextView = normalizeViewId(viewId);
@@ -799,59 +642,7 @@ function showView(viewId) {
   }
   homeBtn.hidden = nextView === VIEWS.HOME;
   closeMoreMenu();
-
-  if (nextView === VIEWS.HOME) {
-    homeDashboard?.render();
-  }
-
-  if (nextView === VIEWS.BIOLOGY_NOTEBOOK) {
-    biologyNotebook.renderProjectOptions();
-    biologyNotebook.renderProtocolOptions();
-    biologyNotebook.renderEntries();
-  }
-
-  if (nextView === VIEWS.PROTOCOL_MANAGEMENT) {
-    protocol.renderShareTargets();
-    protocol.renderList();
-  }
-
-  if (nextView === VIEWS.SAMPLE_REGISTRY) {
-    personalInventory.renderSections();
-    sampleRegistry.render();
-  }
-
-  if (nextView === VIEWS.ASSAY) {
-    assay.render();
-  }
-
-  if (nextView === VIEWS.GEL) {
-    gel.render();
-  }
-
-  if (nextView === VIEWS.LAB_COMMON_INVENTORY) {
-    labCommonInventory.renderAll();
-  }
-
-  if (nextView === VIEWS.PROJECT_MANAGEMENT) {
-    projectManagement.render();
-  }
-
-  if (nextView === VIEWS.WORKFLOW_MANAGEMENT) {
-    workflowManagement.render();
-  }
-
-  if (nextView === VIEWS.PAPERS) {
-    papers.render();
-  }
-
-  if (nextView === VIEWS.AGENT) {
-    agentChat.render();
-  }
-
-  if (nextView === VIEWS.SEQUENCE_VIEWER || nextView === SEQUENCE_VIEWER_DETAIL_VIEW_ID) {
-    sequenceViewer?.render?.();
-  }
-
+  moduleRuntime.renderView(nextView);
 }
 
 function asArray(value) {
@@ -1403,23 +1194,7 @@ window.addEventListener('enana:appearance-changed', () => {
 
 function renderAll() {
   state.objectGraph = rebuildObjectGraph(state);
-  protocol.renderShareTargets();
-  protocol.renderList();
-  projectManagement.render();
-  workflowManagement.render();
-  labCommonInventory.renderAll();
-  biologyNotebook.renderProjectOptions();
-  biologyNotebook.renderProtocolOptions();
-  biologyNotebook.renderEntries();
-  personalInventory.renderSections();
-  sampleRegistry.render();
-  assay.render();
-  gel.render();
-  settings.renderForms();
-  settings.applyAppearance();
-  homeDashboard?.render();
-  papers.render();
-  agentChat.render();
+  moduleRuntime.renderAll();
 }
 
 async function hydrateStateFromDataFile() {

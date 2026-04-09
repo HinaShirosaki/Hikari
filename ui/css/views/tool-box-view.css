@@ -2,7 +2,7 @@
 
 .tool-layout {
   display: grid;
-  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+  grid-template-columns: var(--layout-left-panel-width) minmax(0, 1fr);
   gap: 24px;
   align-items: start;
 }

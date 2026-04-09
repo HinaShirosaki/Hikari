@@ -2,6 +2,11 @@
 
 const { createAgentLlmRuntimeHelpers } = require('../../shared/agent-llm-utils.js');
 const { createScienceLoopPreSynthesizedQuestionRuntime } = require('./pre-synthesized-question.js');
+const {
+  buildLogicalVerificationSection,
+  getUnstableScienceInferenceChecks,
+  formatScienceInferenceStabilityIssue
+} = require('./logical-verification.js');
 
 const SCIENCE_LOOP_CURRENT_SCIENTIFIC_STATE_SCHEMA = {
   type: 'object',
@@ -11,7 +16,8 @@ const SCIENCE_LOOP_CURRENT_SCIENTIFIC_STATE_SCHEMA = {
     'contradicted',
     'remains_unknown',
     'uncertainty_decision_relevant',
-    'uncertainty_decision_reason'
+    'uncertainty_decision_reason',
+    'trace_sentence'
   ],
   properties: {
     supported_now: {
@@ -27,7 +33,8 @@ const SCIENCE_LOOP_CURRENT_SCIENTIFIC_STATE_SCHEMA = {
       items: { type: 'string' }
     },
     uncertainty_decision_relevant: { type: 'boolean' },
-    uncertainty_decision_reason: { type: 'string' }
+    uncertainty_decision_reason: { type: 'string' },
+    trace_sentence: { type: 'string' }
   }
 };
 
@@ -140,6 +147,10 @@ function createScienceLoopCurrentScientificStateRuntime(deps = {}) {
       input.preSynthesizedQuestion,
       buildFallbackPreSynthesizedQuestion(input)
     );
+    const unstableInferenceChecks = getUnstableScienceInferenceChecks(
+      preSynthesizedQuestion?.logical_verification,
+      { asArray, cleanText, uniqueStrings }
+    );
     const contradicted = collectContradictions(input);
     const supportedNow = [];
     const remainsUnknown = [];
@@ -159,6 +170,13 @@ function createScienceLoopCurrentScientificStateRuntime(deps = {}) {
     if (toolTrace.some((row) => row?.ok === true)) {
       supportedNow.push('At least one evidence-gathering tool step completed successfully.');
     }
+    supportedNow.push(...toolTrace.flatMap((row) => asArray(row?.loaded_context_blocks).map((block) => {
+      const paperTitle = cleanText(block?.paper_title, 160);
+      const sectionLabel = cleanText(block?.section_label, 80);
+      const reason = cleanText(block?.relevance_reason, 180);
+      const header = [paperTitle, sectionLabel].filter(Boolean).join(' | ');
+      return header ? `Loaded context from ${header}${reason ? ` - ${reason}` : ''}.` : '';
+    })));
     supportedNow.push(...asArray(preSynthesizedQuestion?.supporting_basis));
 
     const hasGroundedEvidence = citations.length > 0 || toolTrace.some((row) => row?.ok === true);
@@ -194,13 +212,18 @@ function createScienceLoopCurrentScientificStateRuntime(deps = {}) {
       remainsUnknown.push('The required evidence for exit has not been fully established yet.');
     }
     remainsUnknown.push(...asArray(preSynthesizedQuestion?.unresolved_issues));
+    remainsUnknown.push(...unstableInferenceChecks.map((row) => formatScienceInferenceStabilityIssue(
+      row,
+      { asArray, cleanText, uniqueStrings }
+    )));
 
     const normalizedUnknowns = uniqueStrings(remainsUnknown, 8);
     const uncertaintyDecisionRelevant = contradicted.length > 0
       || !hasGroundedEvidence
       || explicitExternalCitationGap
       || explicitProjectEvidenceGap
-      || explicitComputationGap;
+      || explicitComputationGap
+      || unstableInferenceChecks.length > 0;
 
     return {
       supported_now: uniqueStrings(supportedNow, 8),
@@ -213,7 +236,8 @@ function createScienceLoopCurrentScientificStateRuntime(deps = {}) {
             ? 'Contradictory evidence still affects whether the loop should exit.'
             : (normalizedUnknowns[0] || 'The remaining gaps still affect whether the loop can exit.')
         )
-        : 'The remaining uncertainty does not block a limitation-qualified answer.'
+        : 'The remaining uncertainty does not block a limitation-qualified answer.',
+      trace_sentence: 'I am summarizing what the current evidence supports and what remains uncertain before judging whether to continue.'
     };
   }
 
@@ -236,29 +260,82 @@ function createScienceLoopCurrentScientificStateRuntime(deps = {}) {
         || (source.uncertainty_decision_relevant !== false && fallback.uncertainty_decision_relevant === true),
       uncertainty_decision_reason: cleanText(source.uncertainty_decision_reason, 320)
         || cleanText(fallback.uncertainty_decision_reason, 320)
-        || 'The remaining uncertainty has not been assessed yet.'
+        || 'The remaining uncertainty has not been assessed yet.',
+      trace_sentence: cleanText(source.trace_sentence, 240)
+        || cleanText(fallback.trace_sentence, 240)
+        || 'I am summarizing the current scientific state before the exit decision.'
     };
   }
 
+  function buildCompactList(title, values, max = 4) {
+    const rows = uniqueStrings(asArray(values), max)
+      .map((item) => cleanText(item, 260))
+      .filter(Boolean);
+    if (!rows.length) {
+      return '';
+    }
+    return `${title}:\n${rows.map((item) => `- ${item}`).join('\n')}`;
+  }
+
+  function buildLoadedContextList(blocks, max = 4) {
+    const rows = uniqueStrings(
+      asArray(blocks).map((block) => {
+        const paperTitle = cleanText(block?.paper_title, 160);
+        const sectionLabel = cleanText(block?.section_label, 80);
+        const excerpt = cleanText(block?.excerpt, 180);
+        const reason = cleanText(block?.relevance_reason, 180);
+        const header = [paperTitle, sectionLabel].filter(Boolean).join(' | ');
+        return [header, excerpt, reason].filter(Boolean).join(' - ');
+      }),
+      max
+    );
+    if (!rows.length) {
+      return '';
+    }
+    return `Loaded context blocks:\n${rows.map((item) => `- ${item}`).join('\n')}`;
+  }
+
+  function buildExitCriteriaSection(exitCriteria = {}) {
+    const source = exitCriteria && typeof exitCriteria === 'object' ? exitCriteria : {};
+    return [
+      'Exit criteria:',
+      cleanText(source.objective_summary, 320) ? `Objective: ${cleanText(source.objective_summary, 320)}` : '',
+      buildCompactList('Exit conditions', source.exit_conditions, 4),
+      buildCompactList('Required evidence', source.required_evidence, 4),
+      buildCompactList('Continue when', source.continue_when, 4),
+      buildCompactList('Can exit with limitations when', source.can_exit_with_limitations_when, 3),
+      uniqueStrings(source.preferred_next_tools, 3).length
+        ? `Preferred next tools: ${uniqueStrings(source.preferred_next_tools, 3).join(' | ')}`
+        : ''
+    ].filter(Boolean).join('\n');
+  }
+
+  function buildPreSynthesizedQuestionSection(question = {}) {
+    const source = question && typeof question === 'object' ? question : {};
+    return [
+      'Pre-synthesized question:',
+      cleanText(source?.tentative_answer?.current_best_answer, 600)
+        ? `Current best answer: ${cleanText(source.tentative_answer.current_best_answer, 600)}`
+        : '',
+      buildCompactList('Supporting basis', source.supporting_basis, 4),
+      buildCompactList('Unresolved issues', source.unresolved_issues, 4),
+      buildLogicalVerificationSection(source.logical_verification, { asArray, cleanText, uniqueStrings })
+    ].filter(Boolean).join('\n');
+  }
+
   function buildCurrentScientificStatePrompt(input = {}) {
+    const executionRequest = cleanText(input.message || input.clarifiedInput || input.originalMessage, 3200);
+    const preSynthesizedQuestion = buildPreSynthesizedQuestion(input);
     return [
       'Summarize the current scientific state before the exit judge decides whether the reasoning loop should stop.',
       'Keep it compact and grounded only in the provided evidence.',
       'List what is supported now, what is contradicted, what remains unknown, and whether the remaining uncertainty is actually decision-relevant for deciding stop vs continue.',
       'Set uncertainty_decision_relevant to true only when the remaining uncertainty should materially change the loop exit decision.',
-      `Intent: ${cleanText(input.intent, 80) || 'unknown'}`,
-      `Exit criteria JSON:\n${JSON.stringify(input.exitCriteria || {}, null, 2)}`,
-      input.preSynthesizedQuestion
-        ? `Pre-synthesized question JSON:\n${JSON.stringify(buildPreSynthesizedQuestion(input), null, 2)}`
-        : '',
-      input.project ? `Resolved project JSON:\n${JSON.stringify(input.project, null, 2)}` : '',
-      input.clarification ? `Clarification JSON:\n${JSON.stringify(input.clarification, null, 2)}` : '',
-      `Original user message:\n${cleanText(input.originalMessage, 3200)}`,
-      `Clarified request:\n${cleanText(input.message || input.clarifiedInput, 3200)}`,
-      `Latest assistant text:\n${cleanText(input.latestAssistantText, 4000) || '-'}`,
-      `Latest tool result JSON:\n${JSON.stringify(input.latestToolResult || null, null, 2)}`,
-      `Tool trace JSON:\n${JSON.stringify(asArray(input.toolTrace).slice(-8), null, 2)}`,
-      `Citations JSON:\n${JSON.stringify(asArray(input.citations).slice(0, 16), null, 2)}`,
+      'Include trace_sentence as one short sentence describing what you are doing at this step.',
+      `Clarified request:\n${executionRequest}`,
+      buildExitCriteriaSection(input.exitCriteria),
+      buildPreSynthesizedQuestionSection(preSynthesizedQuestion),
+      buildLoadedContextList(asArray(input.toolTrace).flatMap((row) => asArray(row?.loaded_context_blocks)), 4),
       `Rounds executed: ${Number(input.roundsExecuted) || 0}/${Number(input.maxRounds) || 0}`,
       'Return JSON only.'
     ].filter(Boolean).join('\n\n');

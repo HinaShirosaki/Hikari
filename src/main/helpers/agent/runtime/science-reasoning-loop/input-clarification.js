@@ -12,7 +12,8 @@ const SCIENCE_INPUT_CLARIFICATION_SCHEMA = {
     'missing_information',
     'should_ask_follow_up',
     'follow_up_question',
-    'follow_up_reason'
+    'follow_up_reason',
+    'trace_sentence'
   ],
   properties: {
     clarified_input: { type: 'string' },
@@ -27,7 +28,8 @@ const SCIENCE_INPUT_CLARIFICATION_SCHEMA = {
     },
     should_ask_follow_up: { type: 'boolean' },
     follow_up_question: { type: 'string' },
-    follow_up_reason: { type: 'string' }
+    follow_up_reason: { type: 'string' },
+    trace_sentence: { type: 'string' }
   }
 };
 
@@ -38,16 +40,6 @@ function createScienceInputClarificationRuntime(deps = {}) {
     uniqueStrings,
     requestStructuredJsonPayload
   } = createAgentLlmRuntimeHelpers(deps);
-
-  function buildConversationExcerpt(conversation = [], maxTurns = 6) {
-    return asArray(conversation)
-      .slice(-Math.max(1, Number(maxTurns) || 6))
-      .map((entry) => ({
-        role: cleanText(entry?.role, 30) || 'user',
-        text: cleanText(entry?.text, 1200)
-      }))
-      .filter((entry) => entry.text);
-  }
 
   function buildFallbackClarification(input = {}) {
     const intent = cleanText(input.intent, 80);
@@ -107,7 +99,12 @@ function createScienceInputClarificationRuntime(deps = {}) {
       missing_information: uniqueStrings(missingInformation, 5),
       should_ask_follow_up: shouldAskFollowUp,
       follow_up_question: followUpQuestion,
-      follow_up_reason: followUpReason || 'The request is specific enough to continue.'
+      follow_up_reason: followUpReason || 'The request is specific enough to continue.',
+      trace_sentence: shouldAskFollowUp
+        ? (intent === 'project_science_question'
+          ? 'I need to resolve the project scope before I can continue the science reasoning loop.'
+          : 'I need one blocking clarification before I can continue the science reasoning loop.')
+        : 'I am clarifying the user request into an execution-ready science question.'
     };
   }
 
@@ -133,28 +130,24 @@ function createScienceInputClarificationRuntime(deps = {}) {
         || cleanText(fallback.follow_up_question, 320),
       follow_up_reason: cleanText(source.follow_up_reason, 260)
         || cleanText(fallback.follow_up_reason, 260)
-        || 'The request is specific enough to continue.'
+        || 'The request is specific enough to continue.',
+      trace_sentence: cleanText(source.trace_sentence, 240)
+        || cleanText(fallback.trace_sentence, 240)
+        || 'I am clarifying the user request before reasoning.'
     };
   }
 
   function buildClarificationPrompt(input = {}) {
-    const conversationExcerpt = buildConversationExcerpt(input.conversation, 6);
     return [
       'Clarify the user request for the science reasoning loop.',
       'Rewrite the request into a self-contained, execution-ready input for the next module.',
       'Ask at most one follow-up question, and only when the missing detail is truly blocking.',
+      'Include trace_sentence as one short sentence describing what you are doing at this step.',
       'Preserve the scientific intent, any request for recent/current evidence, and any need for deterministic computation.',
       cleanText(input.intent, 80) === 'project_science_question'
         ? 'If project scope is unresolved, ask a follow-up instead of guessing.'
         : '',
       `Intent: ${cleanText(input.intent, 80) || 'unknown'}`,
-      input.project ? `Resolved project JSON:\n${JSON.stringify(input.project, null, 2)}` : '',
-      cleanText(input.projectResolutionQuestion, 320)
-        ? `Project resolution hint:\n${cleanText(input.projectResolutionQuestion, 320)}`
-        : '',
-      `Parser payload JSON:\n${JSON.stringify(input.parserPayload || {}, null, 2)}`,
-      `Routing JSON:\n${JSON.stringify(input.routing || {}, null, 2)}`,
-      conversationExcerpt.length ? `Recent conversation JSON:\n${JSON.stringify(conversationExcerpt, null, 2)}` : '',
       `User message:\n${cleanText(input.message, 3200)}`,
       'Return JSON only.'
     ].filter(Boolean).join('\n\n');
@@ -186,6 +179,7 @@ function createScienceInputClarificationRuntime(deps = {}) {
   return {
     SCIENCE_INPUT_CLARIFICATION_SCHEMA,
     buildFallbackClarification,
+    buildClarificationPrompt,
     clarifyInput
   };
 }

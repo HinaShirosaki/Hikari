@@ -1,5 +1,7 @@
 'use strict';
 
+const { isAgentRequestAbortError } = require('../../agent/shared/agent-request-context.js');
+
 function createAgentLifecycleService({
   cleanText,
   observability,
@@ -95,7 +97,7 @@ function createAgentLifecycleService({
         const message = cleanText(String(error?.message || error), 320) || 'Tool call failed.';
         observability.recordLifecycleEvent(lifecycleRecorder, {
           stage: 'tool_call_failed',
-          status: 'failed',
+          status: isAgentRequestAbortError(error) ? 'aborted' : 'failed',
           tool_name: toolName,
           tool_args: normalizedArgs,
           message

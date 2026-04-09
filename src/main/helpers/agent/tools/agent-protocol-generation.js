@@ -399,6 +399,8 @@ function createProtocolGenerationRuntime(deps = {}) {
   return {
     PROTOCOL_GENERATION_RESPONSE_SCHEMA,
     PROTOCOL_GENERATION_SYSTEM_PROMPT,
+    PROTOCOL_GENERATION_RULES,
+    buildPrompt,
     normalizeGeneratedProtocol,
     generateProtocol
   };

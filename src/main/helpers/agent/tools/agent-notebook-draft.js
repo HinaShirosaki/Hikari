@@ -111,6 +111,30 @@ function createNotebookDraftRuntime(deps = {}) {
     'If the candidate already includes checklist text from workflow notes, convert it into checkpoints when helpful.'
   ];
 
+  function buildNotebookDraftSelectionPrompt({
+    message,
+    conversation,
+    parserPayload,
+    project,
+    notebookRuns,
+    candidates
+  } = {}) {
+    const promptConversation = asArray(conversation).slice(-8).map((row, index) => {
+      const role = row?.role === 'assistant' ? 'assistant' : 'user';
+      const text = cleanText(row?.text, 1200);
+      return text ? `${index + 1}. ${role}: ${text}` : '';
+    }).filter(Boolean).join('\n');
+    return [
+      ...NOTEBOOK_DRAFT_SELECTION_RULES,
+      `User message: ${cleanText(message, 3200)}`,
+      promptConversation ? `Recent conversation:\n${promptConversation}` : '',
+      `Parser JSON:\n${JSON.stringify(parserPayload || {}, null, 2)}`,
+      `Resolved project JSON:\n${JSON.stringify(project || {}, null, 2)}`,
+      `Recent notebook runs JSON:\n${JSON.stringify(asArray(notebookRuns).slice(0, 12), null, 2)}`,
+      `Candidate experiments JSON:\n${JSON.stringify(asArray(candidates).slice(0, 6), null, 2)}`
+    ].filter(Boolean).join('\n\n');
+  }
+
   function normalizeNotebookState(value) {
     return cleanText(value, 40).toLowerCase() === 'planned' ? 'planned' : 'executed';
   }
@@ -472,11 +496,6 @@ function createNotebookDraftRuntime(deps = {}) {
     candidates,
     traceContext = null
   } = {}) {
-    const promptConversation = asArray(conversation).slice(-8).map((row, index) => {
-      const role = row?.role === 'assistant' ? 'assistant' : 'user';
-      const text = cleanText(row?.text, 1200);
-      return text ? `${index + 1}. ${role}: ${text}` : '';
-    }).filter(Boolean).join('\n');
     return requestStructuredJsonPayload({
       provider,
       endpoint,
@@ -484,15 +503,14 @@ function createNotebookDraftRuntime(deps = {}) {
       model,
       stage: 'notebook_draft_selection',
       systemPrompt: NOTEBOOK_DRAFT_SELECTION_SYSTEM_PROMPT,
-      userPrompt: [
-        ...NOTEBOOK_DRAFT_SELECTION_RULES,
-        `User message: ${cleanText(message, 3200)}`,
-        promptConversation ? `Recent conversation:\n${promptConversation}` : '',
-        `Parser JSON:\n${JSON.stringify(parserPayload || {}, null, 2)}`,
-        `Resolved project JSON:\n${JSON.stringify(project || {}, null, 2)}`,
-        `Recent notebook runs JSON:\n${JSON.stringify(asArray(notebookRuns).slice(0, 12), null, 2)}`,
-        `Candidate experiments JSON:\n${JSON.stringify(asArray(candidates).slice(0, 6), null, 2)}`
-      ].filter(Boolean).join('\n\n'),
+      userPrompt: buildNotebookDraftSelectionPrompt({
+        message,
+        conversation,
+        parserPayload,
+        project,
+        notebookRuns,
+        candidates
+      }),
       schema: NOTEBOOK_DRAFT_SELECTION_SCHEMA,
       traceContext,
       maxOutputTokens: 1200,
@@ -862,11 +880,14 @@ function createNotebookDraftRuntime(deps = {}) {
   }
 
   return {
+    NOTEBOOK_DRAFT_SELECTION_SYSTEM_PROMPT,
+    NOTEBOOK_DRAFT_SELECTION_RULES,
     normalizeWorkflowRecord,
     extractNotebookRuns,
     resolvePlanningProject,
     collectWorkflowCandidates,
     collectProtocolOnlyCandidates,
+    buildNotebookDraftSelectionPrompt,
     requestNotebookDraftSelection,
     buildFallbackProposal,
     renderPlannedResultText,

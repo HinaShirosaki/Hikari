@@ -2,7 +2,7 @@
 
 #personal-inventory-view.is-active {
   display: grid;
-  grid-template-columns: minmax(172px, 19.1%) minmax(0, 80.9%);
+  grid-template-columns: var(--layout-left-panel-width) minmax(0, 1fr);
   gap: 18px;
   align-items: start;
 }

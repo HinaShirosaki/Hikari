@@ -28,16 +28,13 @@ function asArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
-// Normalize unknown input into trimmed text and cap it to a safe maximum length.
-function cleanText(value, maxLength = 4000) {
+// Normalize unknown input into trimmed text without silently clipping content.
+function cleanText(value, _maxLength = 4000) {
   const text = String(value || '').trim();
   if (!text) {
     return '';
   }
-  if (text.length <= maxLength) {
-    return text;
-  }
-  return `${text.slice(0, maxLength)}...`;
+  return text;
 }
 
 // Deep-clone JSON-safe values so stored payloads are detached from live objects.
@@ -86,12 +83,34 @@ function summarizeInventoryLookup(lookup) {
   const query = cleanText(payload.query, 220);
   const items = asArray(payload.items);
   if (status === 'matched' && items.length) {
-    const names = items
+    const previewLines = items
       .slice(0, 3)
-      .map((item) => cleanText(item?.name || item?.id, 140))
+      .map((item, index) => {
+        const source = item && typeof item === 'object' ? item : {};
+        const label = cleanText(source.name || source.id, 140);
+        if (!label) {
+          return '';
+        }
+        const details = [
+          cleanText(source.location, 180) ? `location ${cleanText(source.location, 180)}` : '',
+          cleanText(source.container_name, 180) ? `container ${cleanText(source.container_name, 180)}` : '',
+          Number.isFinite(Number(source.well_index)) ? `well ${Number(source.well_index)}` : '',
+          cleanText(source.quantity, 80)
+            ? `${cleanText(source.kind, 40) === 'personal_sample' ? 'concentration' : 'quantity'} ${cleanText(source.quantity, 80)}`
+            : '',
+          cleanText(source.amount, 80) ? `amount ${cleanText(source.amount, 80)}` : '',
+          cleanText(source.supplier, 160) ? `supplier ${cleanText(source.supplier, 160)}` : '',
+          !cleanText(source.location, 180) && cleanText(source.zone, 120) ? `zone ${cleanText(source.zone, 120)}` : ''
+        ].filter(Boolean).slice(0, 4);
+        return `${index + 1}. ${label}${details.length ? ` (${details.join('; ')})` : ''}`;
+      })
       .filter(Boolean);
-    const preview = names.length ? ` Top matches: ${names.join(', ')}.` : '';
-    return `Found ${items.length} inventory match${items.length === 1 ? '' : 'es'}${query ? ` for "${query}"` : ''}.${preview}`;
+    const extraCount = Math.max(0, items.length - previewLines.length);
+    return [
+      `Found ${items.length} inventory match${items.length === 1 ? '' : 'es'}${query ? ` for "${query}"` : ''}.`,
+      ...previewLines,
+      extraCount ? `${extraCount} more match${extraCount === 1 ? '' : 'es'} not shown.` : ''
+    ].filter(Boolean).join('\n');
   }
   if (status === 'no_match') {
     return `No inventory matches found${query ? ` for "${query}"` : ''}.`;
@@ -113,12 +132,29 @@ function summarizeRecordLookup(lookup) {
   const query = cleanText(payload.query, 220);
   const items = asArray(payload.items);
   if (status === 'matched' && items.length) {
-    const names = items
+    const previewLines = items
       .slice(0, 3)
-      .map((item) => cleanText(item?.title || item?.id, 140))
+      .map((item, index) => {
+        const source = item && typeof item === 'object' ? item : {};
+        const label = cleanText(source.title || source.id, 140);
+        if (!label) {
+          return '';
+        }
+        const recordType = cleanText(source.record_type, 40).replace(/_/g, ' ');
+        const details = [
+          cleanText(source.project_name, 180) ? `project ${cleanText(source.project_name, 180)}` : '',
+          cleanText(source.linked_protocol_name, 180) ? `protocol ${cleanText(source.linked_protocol_name, 180)}` : '',
+          cleanText(source.updated_at, 80) ? `updated ${cleanText(source.updated_at, 80)}` : ''
+        ].filter(Boolean).slice(0, 3);
+        return `${index + 1}. ${recordType ? `${recordType}: ` : ''}${label}${details.length ? ` (${details.join('; ')})` : ''}`;
+      })
       .filter(Boolean);
-    const preview = names.length ? ` Top hits: ${names.join(', ')}.` : '';
-    return `Found ${items.length} record match${items.length === 1 ? '' : 'es'}${query ? ` for "${query}"` : ''}.${preview}`;
+    const extraCount = Math.max(0, items.length - previewLines.length);
+    return [
+      `Found ${items.length} record match${items.length === 1 ? '' : 'es'}${query ? ` for "${query}"` : ''}.`,
+      ...previewLines,
+      extraCount ? `${extraCount} more match${extraCount === 1 ? '' : 'es'} not shown.` : ''
+    ].filter(Boolean).join('\n');
   }
   if (status === 'no_match') {
     return `No record matches found${query ? ` for "${query}"` : ''}.`;
@@ -311,6 +347,24 @@ function buildAssistantMessageFromError({ errorMessage = '', requestText = '', m
       result_analysis: null,
       notebookDraft: null,
       developer_trace: [],
+      requestText: cleanText(requestText, 3000)
+    }
+  };
+}
+
+function buildAssistantMessageFromCancellation({ message = '', requestText = '', messageId = '', timestamp = '' } = {}) {
+  const createdAt = cleanText(timestamp, 80) || new Date().toISOString();
+  const stopMessage = cleanText(message, 1200) || 'Agent request stopped.';
+  return {
+    id: cleanText(messageId, 120) || createDefaultId(),
+    role: 'assistant',
+    text: 'Agent stopped.',
+    createdAt,
+    meta: {
+      cancellation: {
+        stopped: true,
+        message: stopMessage
+      },
       requestText: cleanText(requestText, 3000)
     }
   };
@@ -782,6 +836,7 @@ function createAgentChatLogRuntime(deps = {}) {
     buildAssistantMetaFromResult,
     buildAssistantTextFromResult,
     buildAssistantMessageFromResult,
+    buildAssistantMessageFromCancellation,
     buildAssistantMessageFromError,
     buildRendererMessages,
     ensureChatLogRoot,

@@ -98,6 +98,9 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
       assert.equal(envelope.layers.long_term_memory.length, 1);
       assert.equal(envelope.memory_candidates.some((item) => item.category === 'project_name' && item.key === 'Atlas'), true);
       assert.match(String(envelope.prompt_blocks.immediate || ''), /Immediate working context:/);
+      assert.match(String(envelope.prompt_blocks.immediate || ''), /Latest tool outputs:\n- protocol-matching \(ok\) \| summary: Selected HEK293 Transfection\./);
+      assert.equal(/Current task state JSON:/.test(String(envelope.prompt_blocks.immediate || '')), false);
+      assert.match(String(envelope.prompt_blocks.immediate || ''), /Task summary:/);
       assert.match(String(envelope.prompt_blocks.session_memory || ''), /Session memory summary:/);
       assert.match(String(envelope.prompt_blocks.long_term_memory || ''), /Long-term memory:/);
     });
@@ -363,7 +366,9 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
                 {
                   record_type: 'notebook',
                   id: 'note-1',
-                  title: 'Atlas Binder Notebook'
+                  title: 'Atlas Binder Notebook',
+                  project_name: 'Atlas',
+                  linked_protocol_name: 'Binder Purification'
                 }
               ]
             },
@@ -373,6 +378,43 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
           messageId: 'assistant-fixed-1',
           timestamp: '2026-03-22T15:00:02.000Z'
         });
+        assert.match(assistantMessage.text, /Found 1 record match/);
+        assert.match(assistantMessage.text, /notebook: Atlas Binder Notebook/i);
+        assert.match(assistantMessage.text, /project Atlas/i);
+        assert.match(assistantMessage.text, /protocol Binder Purification/i);
+
+        const inventoryAssistantMessage = runtime.buildAssistantMessageFromResult({
+          result: {
+            ok: true,
+            parser: {
+              primary_intent: 'inventory_lookup',
+              needs_clarification: false,
+              reasoning_summary: 'Matched inventory lookup.'
+            },
+            inventory_lookup: {
+              status: 'matched',
+              query: 'acetic acid',
+              items: [
+                {
+                  kind: 'chemical',
+                  id: 'chem-1',
+                  name: 'Acetic acid',
+                  location: 'Shelf 4',
+                  amount: '500 mL',
+                  supplier: 'Sigma'
+                }
+              ]
+            },
+            developer_trace: []
+          },
+          requestText: 'Do we have acetic acid?',
+          messageId: 'assistant-fixed-2',
+          timestamp: '2026-03-22T15:00:02.500Z'
+        });
+        assert.match(inventoryAssistantMessage.text, /Found 1 inventory match/);
+        assert.match(inventoryAssistantMessage.text, /Acetic acid/i);
+        assert.match(inventoryAssistantMessage.text, /location Shelf 4/i);
+        assert.match(inventoryAssistantMessage.text, /amount 500 mL/i);
 
         await runtime.appendRows(tempDir, created.session.id, [
           {
@@ -450,6 +492,61 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
         const index = JSON.parse(await fsPromises.readFile(indexPath, 'utf8'));
         assert.equal(Array.isArray(index.sessions), true);
         assert.equal(index.sessions[0].id, created.session.id);
+      } finally {
+        await fsPromises.rm(tempDir, { recursive: true, force: true });
+      }
+    });
+
+    test('shared agent cleanText keeps long strings intact', () => {
+      const { defaultCleanText } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'shared',
+        'agent-llm-utils.js'
+      ));
+      const longText = 'full-text-'.repeat(800);
+      assert.equal(defaultCleanText(longText, 40), longText.trim());
+    });
+
+    test('agent chat log runtime preserves long assistant text without truncation', async () => {
+      const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'agent-chat-log-long-text-'));
+      try {
+        const runtime = agentChatLog.createAgentChatLogRuntime({
+          now: () => '2026-03-22T15:30:00.000Z',
+          createId: (() => {
+            let index = 0;
+            return () => `chat-long-${index += 1}`;
+          })()
+        });
+
+        const created = await runtime.createSession({
+          storagePath: tempDir,
+          projectId: 'proj-long',
+          projectName: 'Longform'
+        });
+        const longAnswer = 'assistant-evidence-block-'.repeat(1600);
+
+        await runtime.appendAssistantMessage({
+          storagePath: tempDir,
+          sessionId: created.session.id,
+          text: longAnswer,
+          timestamp: '2026-03-22T15:30:00.000Z'
+        });
+
+        const loaded = await runtime.getSession({
+          storagePath: tempDir,
+          sessionId: created.session.id,
+          includeRows: true
+        });
+        assert.equal(loaded.ok, true);
+        assert.equal(loaded.messages.length, 1);
+        assert.equal(loaded.messages[0].text, longAnswer);
+        const assistantRow = loaded.rows.find((row) => row.type === 'assistant-message');
+        assert.ok(assistantRow);
+        assert.equal(assistantRow.text, longAnswer);
       } finally {
         await fsPromises.rm(tempDir, { recursive: true, force: true });
       }
@@ -1121,6 +1218,40 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
       assert.equal(lifecycle.heartbeats >= 1, true);
     });
 
+    test('python sandbox exposes helper APIs for staged file reads and renderable outputs', async () => {
+      const result = await agentPython.runPythonSandbox({
+        code: [
+          'import enana_sandbox as sandbox',
+          'payload = sandbox.read_json("input.json")',
+          'sandbox.emit_text("Loaded " + payload["name"], title="Summary")',
+          'sandbox.emit_json({"value": payload["value"]}, title="Structured")',
+          'sandbox.emit_image_bytes(b"fake-image", mime_type="image/png", title="Plot")',
+          'print("helper-finished")'
+        ].join('\n'),
+        files: [
+          {
+            path: 'input.json',
+            content: JSON.stringify({ name: 'Atlas', value: 42 })
+          }
+        ],
+        timeout_ms: 4000
+      });
+
+      assert.equal(result.ok, true);
+      assert.equal(Array.isArray(result.render_outputs), true);
+      assert.equal(result.render_outputs.length, 3);
+      assert.equal(result.render_outputs[0].type, 'text');
+      assert.equal(result.render_outputs[0].title, 'Summary');
+      assert.match(String(result.render_outputs[0].content || ''), /Loaded Atlas/);
+      assert.equal(result.render_outputs[1].type, 'text');
+      assert.equal(result.render_outputs[1].format, 'application/json');
+      assert.match(String(result.render_outputs[1].content || ''), /"value": 42/);
+      assert.equal(result.render_outputs[2].type, 'image');
+      assert.equal(result.render_outputs[2].mime_type, 'image/png');
+      assert.equal(result.render_outputs[2].data_base64, Buffer.from('fake-image').toString('base64'));
+      assert.match(String(result.stdout || ''), /helper-finished/);
+    });
+
     test('managed python sandbox runtime supervises runs with sub-agents and sends failures for debugging', async () => {
       const runtime = agentPython.createManagedPythonSandboxRuntime();
 
@@ -1149,8 +1280,126 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
       assert.equal(failure.sandbox.ok, false);
       assert.equal(failure.sub_agent?.task?.state, 'failed');
       assert.equal(failure.sub_agent?.liveness?.state, 'idle');
+      assert.match(String(failure.sandbox?.error || ''), /module_that_does_not_exist_anywhere/);
       assert.match(String(failure.debug?.assistant_message || ''), /Suggested next step/i);
       assert.match(String(failure.debug?.assistant_message || ''), /standard library|vendor/i);
+    });
+
+    test('provider bridge forwards codex multimodal structured requests through one shared API', async () => {
+      const { createAgentLlmProviderBridge } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'shared',
+        'agent-llm-provider-bridge.js'
+      ));
+      const calls = [];
+      const bridge = createAgentLlmProviderBridge({
+        LLM_PROVIDERS: {
+          CODEX: 'codex',
+          OPENAI: 'openai'
+        },
+        requestCodexCliText: async (input = {}) => {
+          calls.push(input);
+          return '{"selected":true}';
+        }
+      });
+
+      const result = await bridge.requestStructuredJsonPayload({
+        provider: 'codex',
+        model: 'gpt-5.4-mini',
+        stage: 'paper_context_selection',
+        systemPrompt: 'Return valid JSON only.',
+        userPrompt: 'Pick the best excerpt.',
+        pdfDataUrl: 'data:application/pdf;base64,QUJD',
+        fileName: 'paper.pdf'
+      });
+
+      assert.equal(result.ok, true);
+      assert.equal(result.payload.selected, true);
+      assert.equal(calls.length, 1);
+      assert.equal(calls[0].fileName, 'paper.pdf');
+      assert.equal(calls[0].pdfDataUrl, 'data:application/pdf;base64,QUJD');
+      assert.match(String(calls[0].prompt || ''), /Return JSON only\./);
+    });
+
+    test('session runtime delegates tool-loop transport through the shared provider bridge', async () => {
+      const { createAgentSessionRuntime } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'runtime',
+        'agent-session-runtime.js'
+      ));
+      const callLog = [];
+      const bridge = {
+        extractFunctionCalls: () => [{ callId: 'openai-call-1', name: 'literature-search', argsText: '{}' }],
+        startToolSession: async (input = {}) => {
+          callLog.push(['start', input]);
+          return {
+            provider: 'codex',
+            parsed: {
+              assistant_text: 'starting turn',
+              tool_calls: [{ callId: 'codex-call-1', name: 'literature-search', argsText: '{}' }]
+            }
+          };
+        },
+        extractToolSessionFunctionCalls: (session) => session.parsed.tool_calls,
+        extractToolSessionText: (session) => session.parsed.assistant_text,
+        continueToolSessionWithToolOutputs: async (session, toolOutputs, traceContext) => {
+          callLog.push(['tool_outputs', toolOutputs, traceContext]);
+          return {
+            ...session,
+            parsed: {
+              assistant_text: 'after tool output',
+              tool_calls: []
+            }
+          };
+        },
+        continueToolSessionWithUserMessage: async (session, message, traceContext) => {
+          callLog.push(['user_message', message, traceContext]);
+          return {
+            ...session,
+            parsed: {
+              assistant_text: `feedback: ${message}`,
+              tool_calls: []
+            }
+          };
+        }
+      };
+      const runtime = createAgentSessionRuntime({
+        llmProviderBridge: bridge
+      });
+
+      const started = await runtime.startAgentSession({
+        provider: 'codex',
+        model: 'gpt-5.4-mini',
+        systemPrompt: 'Be grounded.'
+      });
+      assert.equal(callLog[0][0], 'start');
+      assert.equal(runtime.extractAgentSessionText(started), 'starting turn');
+      assert.equal(runtime.extractAgentSessionFunctionCalls(started).length, 1);
+      assert.equal(runtime.extractFunctionCalls({ output: [{ type: 'function_call', id: 'openai-call-1', name: 'literature-search', arguments: '{}' }] }).length, 1);
+
+      const afterTool = await runtime.continueAgentSessionWithToolOutputs(
+        started,
+        [{ callId: 'codex-call-1', name: 'literature-search', output: '{"ok":true}' }],
+        { trace_id: 'trace-1' }
+      );
+      assert.equal(callLog[1][0], 'tool_outputs');
+      assert.equal(runtime.extractAgentSessionText(afterTool), 'after tool output');
+
+      const afterUser = await runtime.continueAgentSessionWithUserMessage(
+        afterTool,
+        'Please be more specific.',
+        { trace_id: 'trace-2' }
+      );
+      assert.equal(callLog[2][0], 'user_message');
+      assert.equal(runtime.extractAgentSessionText(afterUser), 'feedback: Please be more specific.');
     });
 
   }

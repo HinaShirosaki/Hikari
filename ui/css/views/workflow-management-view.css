@@ -9,7 +9,7 @@
   display: grid;
   gap: 18px;
   align-items: start;
-  grid-template-columns: minmax(320px, 380px) minmax(0, 1fr);
+  grid-template-columns: var(--layout-left-panel-width) minmax(0, 1fr);
 }
 
 .workflow-editor-sidebar,

@@ -65,6 +65,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuite(context = {}) {
       assert.equal(result.source, 'fallback_json');
       assert.equal(result.items.some((item) => item.kind === 'personal_sample'), true);
       assert.equal(result.items.some((item) => item.name === 'Atlas construct'), true);
+      assert.equal(result.items.find((item) => item.name === 'Atlas construct')?.location, 'Shelf 3 / A7');
       assert.equal(result.terms_used.includes('Atlas construct'), true);
     });
 
@@ -122,6 +123,38 @@ module.exports = function registerAgentRetrievalAndToolCallSuite(context = {}) {
       assert.equal(result.items.some((item) => item.linked_protocol_name === 'Protein Purification'), true);
     });
 
+    test('lookup query derivation prefers the searched entity over requested output hints', () => {
+      const inventoryRuntime = agentInventoryLookup.createAgentInventoryLookupRuntime();
+      const recordRuntime = agentRecordLookup.createAgentRecordLookupRuntime();
+
+      assert.equal(
+        inventoryRuntime.deriveInventoryLookupQuery({
+          message: 'Do we have acetic acid?',
+          parserPayload: {
+            entities: {
+              requested_output: 'location'
+            },
+            inventory_search: {}
+          }
+        }),
+        'Do we have acetic acid?'
+      );
+
+      assert.equal(
+        recordRuntime.deriveRecordLookupQuery({
+          message: 'Find protein purification records for Atlas.',
+          parserPayload: {
+            entities: {
+              protocol_name: 'Protein Purification',
+              project_name: 'Atlas',
+              requested_output: 'yield'
+            }
+          }
+        }),
+        'Protein Purification'
+      );
+    });
+
     test('agent tool-call catalog stays in sync and prompt builders render tool metadata', () => {
       const toolNames = toolLoading.AGENT_TOOL_CATALOG.map((entry) => entry.name);
       const schemaNames = Object.keys(toolLoading.AGENT_TOOL_CALL_CATALOG).filter((name) => name !== '$defs');
@@ -145,7 +178,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuite(context = {}) {
       });
       assert.equal(selectionPrompt.includes(`- ${inventoryEntry.name}: ${inventoryEntry.description}`), true);
       assert.equal(selectionPrompt.includes(`- ${protocolEntry.name}: ${protocolEntry.description}`), true);
-      assert.equal(selectionPrompt.includes(`Usage: ${inventorySchema.description}`), true);
+      assert.equal(selectionPrompt.includes(`Usage: ${inventorySchema.description}`), false);
       assert.equal(selectionPrompt.includes('Active project context: Atlas'), true);
       assert.equal(selectionPrompt.includes('Recent conversation:\n1. user: I ran the HEK293 transfection.'), true);
       assert.equal(selectionPrompt.includes('User message: Find the right protocol and draft the notebook.'), true);
@@ -183,18 +216,23 @@ module.exports = function registerAgentRetrievalAndToolCallSuite(context = {}) {
         entryPoint: 'science_reasoning_entry',
         intent: 'general_science_question'
       });
-      assert.deepEqual(scienceTools.tool_names, ['literature-search']);
-      assert.deepEqual(scienceTools.tool_definitions.map((tool) => tool.name), ['literature-search']);
-      assert.equal(scienceTools.tool_definitions[0].parameters.properties.source.$ref, '#/$defs/literature_source');
+      assert.equal(scienceTools.tool_names.includes('literature-search'), true);
+      assert.equal(scienceTools.tool_names.includes('record-lookup'), true);
+      assert.equal(scienceTools.tool_names.includes('python-sandbox'), true);
+      assert.equal(scienceTools.tool_definitions.some((tool) => tool.name === 'literature-search'), true);
+      assert.equal(
+        scienceTools.tool_definitions.find((tool) => tool.name === 'literature-search').parameters.properties.source.$ref,
+        '#/$defs/literature_source'
+      );
 
       const deepResearchTools = runtime.provideTools({
         entryPoint: 'deep_research_entry',
         intent: 'result_analysis'
       });
-      assert.deepEqual(
-        deepResearchTools.tool_names,
-        ['python-sandbox', 'record-lookup', 'literature-search', 'sub-agent']
-      );
+      assert.equal(deepResearchTools.tool_names.includes('python-sandbox'), true);
+      assert.equal(deepResearchTools.tool_names.includes('record-lookup'), true);
+      assert.equal(deepResearchTools.tool_names.includes('literature-search'), true);
+      assert.equal(deepResearchTools.tool_names.includes('sub-agent'), true);
       assert.deepEqual(deepResearchTools.tool_definitions.map((tool) => tool.name), deepResearchTools.tool_names);
 
       const catalogTools = runtime.provideTools();

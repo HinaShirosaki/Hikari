@@ -6,15 +6,12 @@ function createScienceLoopSupport(deps = {}) {
     : ((value) => (Array.isArray(value) ? value : []));
   const cleanText = typeof deps.cleanText === 'function'
     ? deps.cleanText
-    : ((value, maxLength = 2000) => {
+    : ((value, _maxLength = 2000) => {
       const text = String(value || '').trim();
       if (!text) {
         return '';
       }
-      if (text.length <= maxLength) {
-        return text;
-      }
-      return `${text.slice(0, maxLength)}...`;
+      return text;
     });
   const uniqueStrings = typeof deps.uniqueStrings === 'function'
     ? deps.uniqueStrings
@@ -120,6 +117,49 @@ function createScienceLoopSupport(deps = {}) {
       out.push({ source, pointer, reason });
     });
     return out;
+  }
+
+  function normalizeLoadedContextBlocks(blocks, max = 6) {
+    const seen = new Set();
+    const out = [];
+    asArray(blocks).forEach((block) => {
+      const paperId = cleanText(block?.paper_id, 120);
+      const paperTitle = cleanText(block?.paper_title, 320);
+      const sectionLabel = cleanText(block?.section_label, 160) || 'Excerpt';
+      const excerpt = cleanText(block?.excerpt, 1800);
+      const relevanceReason = cleanText(block?.relevance_reason, 260);
+      const source = cleanText(block?.source, 80);
+      const evidenceKind = cleanText(block?.evidence_kind, 40) || 'text';
+      const key = `${paperId.toLowerCase()}::${sectionLabel.toLowerCase()}::${excerpt.toLowerCase()}`;
+      if (!paperId || !excerpt || seen.has(key) || out.length >= max) {
+        return;
+      }
+      seen.add(key);
+      out.push({
+        paper_id: paperId,
+        paper_title: paperTitle,
+        section_label: sectionLabel,
+        excerpt,
+        relevance_reason: relevanceReason,
+        source,
+        evidence_kind: evidenceKind
+      });
+    });
+    return out;
+  }
+
+  function formatLoadedContextBlocks(blocks, max = 4) {
+    return normalizeLoadedContextBlocks(blocks, max)
+      .map((block) => {
+        const header = [
+          cleanText(block.paper_title, 160),
+          cleanText(block.section_label, 80)
+        ].filter(Boolean).join(' | ');
+        const excerpt = cleanText(block.excerpt, 220);
+        const reason = cleanText(block.relevance_reason, 180);
+        return [header, excerpt, reason].filter(Boolean).join(' - ');
+      })
+      .filter(Boolean);
   }
 
   function normalizeDecisionRecord(record, fallback = {}) {
@@ -353,14 +393,98 @@ function createScienceLoopSupport(deps = {}) {
     });
   }
 
+  function buildProjectLabel(project = null) {
+    const source = project && typeof project === 'object' ? project : null;
+    if (!source) {
+      return '';
+    }
+    const projectName = cleanText(source.name, 220);
+    const projectId = cleanText(source.id, 120);
+    if (projectName && projectId) {
+      return `${projectName} (${projectId})`;
+    }
+    return projectName || projectId || '';
+  }
+
+  function buildPolicyHints(policy = {}) {
+    const source = policy && typeof policy === 'object' ? policy : {};
+    return uniqueStrings([
+      cleanText(source.retrieval_priority, 120)
+        ? `Retrieval preference: ${cleanText(source.retrieval_priority, 120)}.`
+        : '',
+      source.require_external_citation_when_recent === true
+        ? 'Use an external citation when the clarified request depends on freshness or recency.'
+        : '',
+      source.require_retrieval_attempt === true
+        ? 'Make at least one evidence-gathering attempt before answering.'
+        : '',
+      source.answer_with_limitations_after_attempt === true
+        ? 'A limitation-qualified answer is acceptable after a best-effort evidence attempt.'
+        : '',
+      source.require_project_resolution === true
+        ? 'Project resolution must be established before project-specific reasoning.'
+        : '',
+      source.distinguish_internal_vs_external === true
+        ? 'Keep internal evidence clearly separated from external evidence.'
+        : '',
+      source.require_compute_for_numeric_queries === true
+        ? 'Prefer deterministic computation for numeric or transformation-heavy questions.'
+        : ''
+    ], 6);
+  }
+
+  function buildRoutePlanHints(routePlan = {}) {
+    const source = routePlan && typeof routePlan === 'object' ? routePlan : {};
+    const toolSuggestions = asArray(source.tool_call_suggestions)
+      .slice(0, 3)
+      .map((item) => cleanText(item?.tool_name, 120))
+      .filter(Boolean);
+    return uniqueStrings([
+      cleanText(source.goal, 260) ? `Loop goal: ${cleanText(source.goal, 260)}` : '',
+      cleanText(source.route_summary, 300) ? `Route summary: ${cleanText(source.route_summary, 300)}` : '',
+      toolSuggestions.length ? `Preferred tools: ${toolSuggestions.join(' | ')}` : '',
+      source.reference_only === true ? 'Route suggestions are guidance only.' : ''
+    ], 4);
+  }
+
+  function buildExitCriteriaHints(exitCriteria = {}) {
+    const source = exitCriteria && typeof exitCriteria === 'object' ? exitCriteria : {};
+    const preferredTools = uniqueStrings(source.preferred_next_tools, 3);
+    const exitCondition = uniqueStrings(source.exit_conditions, 1)[0] || '';
+    const requiredEvidence = uniqueStrings(source.required_evidence, 1)[0] || '';
+    const continueWhen = uniqueStrings(source.continue_when, 1)[0] || '';
+    const limitations = uniqueStrings(source.can_exit_with_limitations_when, 1)[0] || '';
+    return uniqueStrings([
+      cleanText(source.objective_summary, 260) ? `Objective: ${cleanText(source.objective_summary, 260)}` : '',
+      exitCondition ? `Exit when: ${cleanText(exitCondition, 260)}` : '',
+      requiredEvidence ? `Required evidence: ${cleanText(requiredEvidence, 260)}` : '',
+      continueWhen ? `Continue when: ${cleanText(continueWhen, 260)}` : '',
+      limitations ? `Limitations rule: ${cleanText(limitations, 260)}` : '',
+      preferredTools.length ? `Preferred tools: ${preferredTools.join(' | ')}` : ''
+    ], 5);
+  }
+
+  function buildExecutionHintsSection({ policy, project, routePlan, exitCriteria }) {
+    const lines = uniqueStrings([
+      buildProjectLabel(project) ? `Project: ${buildProjectLabel(project)}` : '',
+      ...buildPolicyHints(policy),
+      ...buildRoutePlanHints(routePlan),
+      ...buildExitCriteriaHints(exitCriteria)
+    ], 10);
+    if (!lines.length) {
+      return '';
+    }
+    return `Execution hints:\n${lines.map((line) => `- ${line}`).join('\n')}`;
+  }
+
   function buildScienceSessionSystemPrompt({
     baseSystemPrompt = '',
     intent,
     policy,
     routing,
     project,
-    originalMessage,
     clarification,
+    routePlan,
     exitCriteria,
     message,
     reasoningEffort,
@@ -370,6 +494,8 @@ function createScienceLoopSupport(deps = {}) {
       ? [
         'You are handling a reasoning_effort=0 science request.',
         'Answer directly without entering the deterministic science reasoning loop.',
+        'Provide a complete answer: lead with the main conclusion, then explain the key reasoning and any important caveats.',
+        'Do not be artificially terse unless the user explicitly asked for a short answer.',
         'Do not call tools or ask to enter a reasoning loop.',
         'Use stable scientific knowledge plus the provided context only.',
         'Do not fabricate project records, literature results, or computation outputs.'
@@ -379,33 +505,36 @@ function createScienceLoopSupport(deps = {}) {
         'At each assistant turn, either call exactly one tool or answer directly if you already have sufficient evidence.',
         'Do not call more than one tool in a single assistant turn.',
         'Prefer tools in the listed priority order and explain the answer only after sufficient evidence exists.',
+        'When you give the final answer, include enough detail to explain the conclusion, supporting evidence, and material caveats.',
+        'Do not compress the final answer to one or two sentences unless the user explicitly asked for brevity.',
+        'Treat any route plan as non-binding guidance; adapt when the actual evidence suggests a better next step.',
         'If a tool result is weak or empty, choose a more targeted next tool on the following turn.',
         'Do not fabricate project records, literature results, or computation outputs.'
       ];
     if (intent === 'general_science_question') {
-      rules.push('For general science questions, use literature tools before generic web search whenever possible.');
+      rules.push('For general science questions, prefer the most targeted citation-backed evidence path available.');
     }
     if (intent === 'project_science_question') {
-      rules.push('For project science questions, use internal project records first and clearly separate internal evidence from external evidence.');
+      rules.push('For project science questions, keep project context explicit and clearly separate internal evidence from external evidence.');
     }
     if (intent === 'result_analysis') {
-      rules.push('For result analysis, use python-sandbox for calculations or transformations before interpreting results.');
+      rules.push('For result analysis, prefer deterministic evidence before higher-level interpretation whenever possible.');
     }
     if (directAnswerOnly === true) {
       rules.push('This request was classified as reasoning_effort=0.');
     }
     return [
       cleanText(baseSystemPrompt, 12000),
-      'Science loop policy JSON:',
-      JSON.stringify(policy, null, 2),
-      `Routing JSON:\n${JSON.stringify(routing || {}, null, 2)}`,
-      project ? `Resolved project JSON:\n${JSON.stringify(project, null, 2)}` : '',
-      clarification ? `Clarification JSON:\n${JSON.stringify(clarification, null, 2)}` : '',
-      exitCriteria ? `Exit criteria JSON:\n${JSON.stringify(exitCriteria, null, 2)}` : '',
+      cleanText(intent, 80) ? `Intent: ${cleanText(intent, 80)}` : '',
       Number.isFinite(Number(reasoningEffort)) ? `Reasoning effort: ${Number(reasoningEffort)}` : '',
       directAnswerOnly === true ? 'Execution mode: direct answer only.' : '',
-      `Original user message:\n${cleanText(originalMessage, 3200)}`,
-      `Clarified request for execution:\n${cleanText(message, 3200)}`,
+      buildExecutionHintsSection({
+        policy,
+        project,
+        routePlan,
+        exitCriteria
+      }),
+      directAnswerOnly !== true ? 'The clarified execution request is provided separately as the session message.' : '',
       rules.map((rule, index) => `${index + 1}. ${rule}`).join('\n')
     ].filter(Boolean).join('\n\n');
   }
@@ -477,9 +606,9 @@ function createScienceLoopSupport(deps = {}) {
         'At least one external citation-backed source is still missing.'
       ], 6);
       next.next_tool_hint = next.next_tool_hint || {
-        tool_name: 'literature-search',
+        tool_name: null,
         query: cleanText(message, 320) || null,
-        reason: 'Retrieve at least one external citation before answering, preferring a PubMed-backed literature search first.'
+        reason: 'Retrieve at least one external citation-backed source before answering.'
       };
     }
     if (intent === 'result_analysis'
@@ -495,9 +624,9 @@ function createScienceLoopSupport(deps = {}) {
         'A Python sandbox computation step is still required.'
       ], 6);
       next.next_tool_hint = next.next_tool_hint || {
-        tool_name: 'python-sandbox',
+        tool_name: null,
         query: null,
-        reason: 'Run deterministic computation before interpreting the result.'
+        reason: 'Gather deterministic compute evidence before interpreting the result.'
       };
     }
     if (intent === 'project_science_question'
@@ -528,6 +657,8 @@ function createScienceLoopSupport(deps = {}) {
   return {
     normalizeProject,
     normalizeCitations,
+    normalizeLoadedContextBlocks,
+    formatLoadedContextBlocks,
     normalizeDecisionRecord,
     buildIntermediateState,
     buildNeedsMoreInfoResult,

@@ -6,7 +6,7 @@
 
 .protocol-workspace {
   display: grid;
-  grid-template-columns: minmax(280px, 38.2%) minmax(0, 61.8%);
+  grid-template-columns: var(--layout-left-panel-width) minmax(0, 1fr);
   gap: 28px;
   align-items: start;
 }
@@ -345,6 +345,7 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: start;
+  gap: 18px;
 }
 
 .protocol-polish-dialog {
@@ -360,17 +361,6 @@
   box-shadow: 0 28px 72px rgba(27, 20, 14, 0.16);
   overflow: auto;
   max-height: calc(100vh - 130px);
-}
-
-.protocol-polish-dialog-source {
-  z-index: 1;
-  margin-right: -18px;
-}
-
-.protocol-polish-dialog-result {
-  z-index: 2;
-  margin-left: -18px;
-  margin-top: 30px;
 }
 
 .protocol-polish-dialog-head {
@@ -604,11 +594,6 @@
 
   .protocol-polish-dialog {
     max-height: min(44vh, 460px);
-  }
-
-  .protocol-polish-dialog-source,
-  .protocol-polish-dialog-result {
-    margin: 0;
   }
 
   .protocol-polish-actions {

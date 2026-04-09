@@ -50,7 +50,7 @@ const PARSER_PROTOCOL_CANDIDATE_LIMIT = 3;
 // Prompt-visible JSON template showing the exact response structure expected from the model.
 const INTENT_PARSER_OUTPUT_TEMPLATE = Object.freeze({
   primary_intent: 'one allowed intent',
-  reasoning_effort: 0,
+  reasoning_effort: 1,
   direct_answer: 'string or null',
   needs_clarification: true,
   clarification_reason: 'string or null',
@@ -139,16 +139,13 @@ function asArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
-// Normalize unknown input into trimmed text and cap it to a safe maximum length.
-function cleanText(value, maxLength = 500) {
+// Normalize unknown input into trimmed text without silently clipping content.
+function cleanText(value, _maxLength = 500) {
   const text = String(value || '').trim();
   if (!text) {
     return '';
   }
-  if (text.length <= maxLength) {
-    return text;
-  }
-  return `${text.slice(0, maxLength)}...`;
+  return text;
 }
 
 // Deduplicate normalized strings while preserving order and limiting output size.
@@ -473,6 +470,16 @@ function formatIntentSpecificOutputAppend(rows = []) {
     .join('\n');
 }
 
+function buildScienceReasoningEffortRubric() {
+  return [
+    '- For science intents, default to reasoning_effort 1 unless the request clearly belongs at 0 or 2.',
+    '- Use reasoning_effort 0 only for stable background questions you can answer directly without retrieval, recent-source checking, project-record inspection, or multi-step analysis.',
+    '- Use reasoning_effort 1 for the typical science question that needs a targeted reasoning loop, light retrieval, project lookup, or a careful explanation.',
+    '- Use reasoning_effort 2 when the user wants broad synthesis, comparison of multiple explanations, recent literature, or multi-step evidence gathering.',
+    '- If you are unsure whether a science question should be 0 or 1, choose 1.'
+  ].join('\n');
+}
+
 // Build the base instruction prompt that teaches the model the allowed intents and schema.
 function buildIntentCatalogPrompt(catalog = []) {
   // Fall back to the validated static catalog unless a test/custom catalog is supplied.
@@ -506,6 +513,8 @@ function buildIntentCatalogPrompt(catalog = []) {
     '- For intents other than inventory_lookup, set inventory_search to nulls and empty arrays.',
     '- For intents other than protocol_to_notebook and notebook_draft, set protocol_candidates to [].',
     '- Do not invent obscure aliases or unsupported protocol names.',
+    '## Science reasoning_effort rubric',
+    buildScienceReasoningEffortRubric(),
     '## Intent descriptions',
     descriptions,
     '## Examples',
@@ -521,6 +530,9 @@ const INTENT_PARSER_PROMPT = buildIntentCatalogPrompt(INTENT_PARSER_CATALOG);
 // Map parser output intents to execution-layer intents, defaulting safely when unknown.
 function mapCanonicalIntentToExecutionIntent(primaryIntent) {
   const normalized = normalizeParserIntent(primaryIntent);
+  if (normalized === 'unclear') {
+    return 'general_science_question';
+  }
   if (normalized) {
     return normalized;
   }

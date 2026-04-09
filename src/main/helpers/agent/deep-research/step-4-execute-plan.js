@@ -1,18 +1,17 @@
 'use strict';
 
+const { isAgentRequestAbortError } = require('../shared/agent-request-context.js');
+
 function asArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
-function cleanText(value, maxLength = 2000) {
+function cleanText(value, _maxLength = 2000) {
   const text = String(value || '').trim();
   if (!text) {
     return '';
   }
-  if (text.length <= maxLength) {
-    return text;
-  }
-  return `${text.slice(0, maxLength)}...`;
+  return text;
 }
 
 function safeParseJson(value, fallback = null) {
@@ -303,6 +302,41 @@ function normalizeNextAction(rawPayload, fallback = {}) {
   };
 }
 
+function buildToolTraceRenderOutputs(rawOutputs = []) {
+  return asArray(rawOutputs).slice(0, 6).map((output) => {
+    const source = output && typeof output === 'object' ? output : {};
+    const type = cleanText(source.type, 40).toLowerCase();
+    if (type === 'text') {
+      return {
+        type: 'text',
+        title: cleanText(source.title, 160),
+        format: cleanText(source.format, 80).toLowerCase() || 'text/plain',
+        content: cleanText(source.content, 24000)
+      };
+    }
+    if (type === 'image') {
+      const dataBase64 = String(source.data_base64 || '').replace(/\s+/g, '');
+      return {
+        type: 'image',
+        title: cleanText(source.title, 160),
+        alt: cleanText(source.alt, 200),
+        mime_type: cleanText(source.mime_type, 120).toLowerCase() || 'image/png',
+        data_base64: dataBase64.length <= 1024 * 1024 ? dataBase64 : '',
+        path: cleanText(source.path, 240)
+      };
+    }
+    return null;
+  }).filter((entry) => {
+    if (!entry) {
+      return false;
+    }
+    if (entry.type === 'text') {
+      return Boolean(entry.content);
+    }
+    return Boolean(entry.data_base64);
+  });
+}
+
 function buildExecutionActionPrompt(input = {}) {
   const toolDefinitions = asArray(input.toolDefinitions).map((tool) => ({
     name: cleanText(tool?.name, 120),
@@ -552,6 +586,9 @@ async function runStep4ExecutePlan(input = {}, deps = {}) {
           lifecycleRecorder: input.lifecycleRecorder || null
         });
       } catch (error) {
+        if (isAgentRequestAbortError(error)) {
+          throw error;
+        }
         envelope = buildSyntheticToolEnvelope(toolName, effectiveArgs, cleanText(error?.message || error, 320));
       }
     }
@@ -564,8 +601,13 @@ async function runStep4ExecutePlan(input = {}, deps = {}) {
       tool_name: toolName,
       input: effectiveArgs,
       ok: envelope?.ok === true,
+      status: cleanText(envelope?.result?.status, 40),
+      run_id: cleanText(envelope?.result?.run_id, 120),
       summary: summarizeToolEnvelope(envelope, toolName),
-      error: cleanText(envelope?.error, 600),
+      error: cleanText(envelope?.error || envelope?.result?.error, 1200),
+      stdout: cleanText(envelope?.result?.stdout, 12000),
+      stderr: cleanText(envelope?.result?.stderr, 12000),
+      render_outputs: buildToolTraceRenderOutputs(envelope?.result?.render_outputs),
       citations
     });
 
@@ -644,5 +686,6 @@ async function runStep4ExecutePlan(input = {}, deps = {}) {
 }
 
 module.exports = {
+  buildExecutionActionPrompt,
   runStep4ExecutePlan
 };

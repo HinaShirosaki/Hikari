@@ -4,6 +4,7 @@ module.exports = function registerContractsSuite(context = {}) {
   with (scope) {
 const agentDir = path.join(__dirname, 'src', 'main', 'helpers', 'agent');
 const agentPath = (...parts) => path.join(agentDir, ...parts);
+const agentRegistrarPath = (...parts) => path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc', ...parts);
 test('view constants, index sections, and app registry stay in sync', () => {
   const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
   const registry = JSON.parse(fs.readFileSync(path.join(__dirname, 'ui', 'config', 'app-registry.json'), 'utf8'));
@@ -36,6 +37,7 @@ test('sample and inventory use a merged navigation entry', () => {
 
 test('renderer routes personal inventory aliases to merged sample workspace', () => {
   const source = readSource('src/renderer/renderer.js');
+  const moduleRuntimeSource = readSource('src/renderer/module-runtime.js');
   const registry = JSON.parse(fs.readFileSync(path.join(__dirname, 'ui', 'config', 'app-registry.json'), 'utf8'));
   const sampleEntry = registry.apps.find((app) => app.id === 'sample-inventory');
   assert.match(
@@ -49,21 +51,40 @@ test('renderer routes personal inventory aliases to merged sample workspace', ()
   assert.match(source, /const showSampleInventoryWorkspace = nextView === VIEWS\.SAMPLE_REGISTRY;/);
   assert.match(
     source,
-    /if \(nextView === VIEWS\.SAMPLE_REGISTRY\) \{\s*personalInventory\.renderSections\(\);\s*sampleRegistry\.render\(\);\s*\}/
+    /moduleRuntime\.renderView\(nextView\);/
+  );
+  assert.match(
+    moduleRuntimeSource,
+    /function renderSampleRegistryWorkspace\(modules\) \{\s*modules\.personalInventory\.renderSections\(\);\s*modules\.sampleRegistry\.render\(\);\s*\}/
+  );
+  assert.match(
+    moduleRuntimeSource,
+    /\[views\.SAMPLE_REGISTRY,\s*\(\)\s*=>\s*renderSampleRegistryWorkspace\(modules\)\]/
   );
 });
 
 test('renderer defines sequence viewer aliases and showView render hook', () => {
   const source = readSource('src/renderer/renderer.js');
+  const moduleRuntimeSource = readSource('src/renderer/module-runtime.js');
   const registry = JSON.parse(fs.readFileSync(path.join(__dirname, 'ui', 'config', 'app-registry.json'), 'utf8'));
   const sequenceEntry = registry.apps.find((app) => app.id === 'sequence-viewer');
   assert.ok(sequenceEntry);
   assert.ok(sequenceEntry.aliases.includes('sequence'));
   assert.ok(sequenceEntry.aliases.includes('seqviewer'));
   assert.match(source, /const SEQUENCE_VIEWER_DETAIL_VIEW_ID = 'sequence-viewer-detail-view';/);
-  assert.match(source, /if \(nextView === VIEWS\.SEQUENCE_VIEWER \|\| nextView === SEQUENCE_VIEWER_DETAIL_VIEW_ID\) \{\s*sequenceViewer\?\.render\?\.\(\);\s*\}/);
-  assert.match(source, /sequenceViewer = initSequenceViewer\(\{\s*onNavigateHome:\s*\(\)\s*=>\s*\{\s*showView\(VIEWS\.SEQUENCE_VIEWER\);/);
-  assert.match(source, /onNavigateDetail:\s*\(\)\s*=>\s*\{\s*showView\(SEQUENCE_VIEWER_DETAIL_VIEW_ID\);/);
+  assert.match(source, /moduleRuntime\.renderView\(nextView\);/);
+  assert.match(
+    moduleRuntimeSource,
+    /if \(viewId === views\.SEQUENCE_VIEWER \|\| viewId === sequenceViewerDetailViewId\) \{\s*modules\.sequenceViewer\?\.\s*render\?\.\(\);\s*return;\s*\}/
+  );
+  assert.match(
+    moduleRuntimeSource,
+    /sequenceViewer:\s*initAndRegisterModule\(moduleRegistry,\s*'sequenceViewer',\s*initSequenceViewer,\s*\{\s*onNavigateHome:\s*\(\)\s*=>\s*\{\s*showView\(views\.SEQUENCE_VIEWER\);/
+  );
+  assert.match(
+    moduleRuntimeSource,
+    /onNavigateDetail:\s*\(\)\s*=>\s*\{\s*showView\(sequenceViewerDetailViewId\);/
+  );
 });
 
 test('sequence viewer uses bottom feature track without table dependency', () => {
@@ -169,13 +190,13 @@ test('main composes dedicated IPC registrars with generic tool runtime support',
   const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
   const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');
   const dataRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-data-ipc.js'), 'utf8');
-  const agentRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc.js'), 'utf8');
+  const agentRegistrarSource = fs.readFileSync(agentRegistrarPath('index.js'), 'utf8');
   const systemRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-system-ipc.js'), 'utf8');
   const toolLoadingSource = fs.readFileSync(agentPath('tools', 'agent-tool-loading.js'), 'utf8');
   const toolExecutionSource = fs.readFileSync(agentPath('tools', 'agent-tool-execution.js'), 'utf8');
   const toolProviderSource = fs.readFileSync(agentPath('tools', 'agent-tool-provide.js'), 'utf8');
   const runtimeSupportSource = fs.readFileSync(agentPath('runtime', 'agent-runtime-support.js'), 'utf8');
-  const codexRuntimeSource = fs.readFileSync(agentPath('runtime', 'agent-codex-runtime.js'), 'utf8');
+  const llmBridgeSource = fs.readFileSync(agentPath('shared', 'agent-llm-provider-bridge.js'), 'utf8');
 
   assert.match(mainSource, /createMainAgentServices/);
   assert.match(mainSource, /registerDataIpc/);
@@ -186,7 +207,8 @@ test('main composes dedicated IPC registrars with generic tool runtime support',
   assert.match(mainAgentServicesSource, /agent-tool-loading\.js/);
   assert.match(mainAgentServicesSource, /agent-tool-execution\.js/);
   assert.match(mainAgentServicesSource, /createAgentRuntimeSupport/);
-  assert.match(mainAgentServicesSource, /createCodexAgentRuntime/);
+  assert.match(mainAgentServicesSource, /sharedLlmTransportDeps/);
+  assert.match(mainAgentServicesSource, /sharedAgentLlmDeps/);
   assert.match(mainAgentServicesSource, /registerAgentToolExecutors/);
   assert.match(dataRegistrarSource, /function registerDataIpc\(deps = \{\}\)/);
   assert.match(agentRegistrarSource, /function registerAgentIpc\(deps = \{\}\)/);
@@ -195,7 +217,18 @@ test('main composes dedicated IPC registrars with generic tool runtime support',
   assert.match(toolExecutionSource, /function createAgentToolCallRuntime\(deps = \{\}\)/);
   assert.match(toolProviderSource, /function createAgentToolProviderRuntime\(deps = \{\}\)/);
   assert.match(runtimeSupportSource, /function createAgentRuntimeSupport\(deps = \{\}\)/);
-  assert.match(codexRuntimeSource, /function createCodexAgentRuntime\(deps = \{\}\)/);
+  assert.match(llmBridgeSource, /function createAgentLlmProviderBridge\(deps = \{\}\)/);
+});
+
+test('agent shared text helpers and codex IPC no longer clip long prompts by default', () => {
+  const llmUtilsSource = fs.readFileSync(agentPath('shared', 'agent-llm-utils.js'), 'utf8');
+  const llmBridgeSource = fs.readFileSync(agentPath('shared', 'agent-llm-provider-bridge.js'), 'utf8');
+  const chatLogSource = fs.readFileSync(agentPath('context', 'agent-chat-log.js'), 'utf8');
+  const systemRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-system-ipc.js'), 'utf8');
+  assert.doesNotMatch(llmUtilsSource, /text\.slice\(0,\s*maxLength\)/);
+  assert.doesNotMatch(llmBridgeSource, /text\.slice\(0,\s*maxLength\)/);
+  assert.doesNotMatch(chatLogSource, /text\.slice\(0,\s*maxLength\)/);
+  assert.doesNotMatch(systemRegistrarSource, /promptRaw\.length > 120000/);
 });
 
 test('main and preload expose sequence library IPC bridge through the data registrar', () => {
@@ -479,7 +512,7 @@ test('telegram bot writes events to data/telegram-events.log by default', () => 
 test('main agent chat logging records request/result/error with redacted API key metadata', () => {
   const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
   const appPathsSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'app-paths.js'), 'utf8');
-  const agentRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc.js'), 'utf8');
+  const agentChatHandlerSource = fs.readFileSync(agentRegistrarPath('agent-chat-handler.js'), 'utf8');
   const controllerUtilsSource = fs.readFileSync(agentPath('shared', 'agent-controller-utils.js'), 'utf8');
   assert.match(mainSource, /const AGENT_CHAT_LOG_FILE_NAME = 'agent-chat\.log';/);
   assert.match(mainSource, /void ensureAgentChatLogFile\(getAgentChatLogPath\(\)\);/);
@@ -487,22 +520,25 @@ test('main agent chat logging records request/result/error with redacted API key
   assert.match(appPathsSource, /ENANA_AGENT_CHAT_LOG_PATH/);
   assert.match(controllerUtilsSource, /apiKeyProvided: Boolean\(cleanText\(source\.apiKey, 12\)\)/);
   assert.equal(controllerUtilsSource.includes('apiKey: cleanText(source.apiKey'), false);
-  assert.match(agentRegistrarSource, /type: 'agent-chat-request'/);
-  assert.match(agentRegistrarSource, /type: 'agent-chat-result'/);
-  assert.match(agentRegistrarSource, /type: 'agent-chat-error'/);
+  assert.match(agentChatHandlerSource, /type: 'agent-chat-request'/);
+  assert.match(agentChatHandlerSource, /type: 'agent-chat-result'/);
+  assert.match(agentChatHandlerSource, /type: 'agent-chat-error'/);
 });
 
 test('agent registrar keeps intent-only lifecycle stages and replay IPC handlers', () => {
-  const agentRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc.js'), 'utf8');
-  assert.match(agentRegistrarSource, /createLifecycleRecorder/);
-  assert.match(agentRegistrarSource, /recordLifecycleEvent/);
-  assert.match(agentRegistrarSource, /appendAgentChatLogEntry/);
-  assert.match(agentRegistrarSource, /stage: 'controller_intent_only_selected'/);
-  assert.match(agentRegistrarSource, /stage: 'controller_intent_only'/);
-  assert.match(agentRegistrarSource, /stage: 'parser_completed'/);
-  assert.match(agentRegistrarSource, /ipcMain\.handle\('agent:logs:list-requests'/);
-  assert.match(agentRegistrarSource, /ipcMain\.handle\('agent:logs:replay'/);
-  assert.equal(/agent-validation-safety/.test(agentRegistrarSource), false);
+  const agentChatHandlerSource = fs.readFileSync(agentRegistrarPath('agent-chat-handler.js'), 'utf8');
+  const controllerCoreSource = fs.readFileSync(agentRegistrarPath('agent-controller-core.js'), 'utf8');
+  const logHandlersSource = fs.readFileSync(agentRegistrarPath('agent-log-handlers.js'), 'utf8');
+  const combinedSource = `${agentChatHandlerSource}\n${controllerCoreSource}\n${logHandlersSource}`;
+  assert.match(agentChatHandlerSource, /createLifecycleRecorder/);
+  assert.match(agentChatHandlerSource, /recordLifecycleEvent/);
+  assert.match(agentChatHandlerSource, /appendAgentChatLogEntry/);
+  assert.match(controllerCoreSource, /stage: 'controller_intent_only_selected'/);
+  assert.match(controllerCoreSource, /stage: 'controller_intent_only'/);
+  assert.match(controllerCoreSource, /stage: 'parser_completed'/);
+  assert.match(logHandlersSource, /ipcMain\.handle\('agent:logs:list-requests'/);
+  assert.match(logHandlersSource, /ipcMain\.handle\('agent:logs:replay'/);
+  assert.equal(/agent-validation-safety/.test(combinedSource), false);
 });
 
 test('agent no longer depends on a serialized io contract file', () => {
@@ -540,19 +576,20 @@ test('generic agent tool catalog keeps key retrieval and execution tools', () =>
 test('agent log replay and developer tool smoke-test IPC bridges remain wired without contract file', () => {
   const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
   const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');
-  const agentRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc.js'), 'utf8');
+  const agentChatHandlerSource = fs.readFileSync(agentRegistrarPath('agent-chat-handler.js'), 'utf8');
+  const logHandlersSource = fs.readFileSync(agentRegistrarPath('agent-log-handlers.js'), 'utf8');
   const preloadSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'preload.js'), 'utf8');
   assert.match(mainSource, /createMainAgentServices/);
   assert.match(mainAgentServicesSource, /createAgentToolSmokeTestRuntime/);
   assert.match(mainSource, /registerAgentIpc/);
-  assert.match(agentRegistrarSource, /ipcMain\.handle\('agent:developer:test-tools'/);
-  assert.match(agentRegistrarSource, /agentToolSmokeTestRuntime\.runTool/);
-  assert.match(agentRegistrarSource, /normalizedPayload\?\.toolName/);
-  assert.match(agentRegistrarSource, /ipcMain\.handle\('agent:logs:list-requests'/);
-  assert.match(agentRegistrarSource, /ipcMain\.handle\('agent:logs:replay'/);
-  assert.match(agentRegistrarSource, /agent-progress/);
-  assert.match(agentRegistrarSource, /clientRequestId/);
-  assert.match(agentRegistrarSource, /request_id:/);
+  assert.match(logHandlersSource, /ipcMain\.handle\('agent:developer:test-tools'/);
+  assert.match(logHandlersSource, /agentToolSmokeTestRuntime\.runTool/);
+  assert.match(logHandlersSource, /normalizedPayload\?\.toolName/);
+  assert.match(logHandlersSource, /ipcMain\.handle\('agent:logs:list-requests'/);
+  assert.match(logHandlersSource, /ipcMain\.handle\('agent:logs:replay'/);
+  assert.match(agentChatHandlerSource, /agent-progress/);
+  assert.match(agentChatHandlerSource, /clientRequestId/);
+  assert.match(agentChatHandlerSource, /request_id:/);
   assert.match(preloadSource, /agentDeveloperTestTools:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\('agent:developer:test-tools', payload\)/);
   assert.match(preloadSource, /agentLogsListRequests:\s*\(\)\s*=>\s*ipcRenderer\.invoke\('agent:logs:list-requests'\)/);
   assert.match(preloadSource, /agentLogsReplay:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\('agent:logs:replay', payload\)/);
@@ -563,14 +600,14 @@ test('agent log replay and developer tool smoke-test IPC bridges remain wired wi
 test('agent chat session log IPC bridges are wired through agent registrar and preload', () => {
   const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
   const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');
-  const agentRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc.js'), 'utf8');
+  const logHandlersSource = fs.readFileSync(agentRegistrarPath('agent-log-handlers.js'), 'utf8');
   const preloadSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'preload.js'), 'utf8');
   assert.match(mainSource, /createMainAgentServices/);
   assert.match(mainAgentServicesSource, /createAgentChatLogRuntime/);
   assert.match(mainSource, /registerAgentIpc/);
-  assert.match(agentRegistrarSource, /ipcMain\.handle\('agent:chat-log:create-session'/);
-  assert.match(agentRegistrarSource, /ipcMain\.handle\('agent:chat-log:list-sessions'/);
-  assert.match(agentRegistrarSource, /ipcMain\.handle\('agent:chat-log:get-session'/);
+  assert.match(logHandlersSource, /ipcMain\.handle\('agent:chat-log:create-session'/);
+  assert.match(logHandlersSource, /ipcMain\.handle\('agent:chat-log:list-sessions'/);
+  assert.match(logHandlersSource, /ipcMain\.handle\('agent:chat-log:get-session'/);
   assert.match(preloadSource, /agentChatLogCreateSession:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\('agent:chat-log:create-session', payload\)/);
   assert.match(preloadSource, /agentChatLogListSessions:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\('agent:chat-log:list-sessions', payload\)/);
   assert.match(preloadSource, /agentChatLogGetSession:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\('agent:chat-log:get-session', payload\)/);
@@ -579,34 +616,35 @@ test('agent chat session log IPC bridges are wired through agent registrar and p
 test('agent registrar controller output returns parser payload and optional developer trace', () => {
   const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
   const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');
-  const agentRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc.js'), 'utf8');
+  const controllerCoreSource = fs.readFileSync(agentRegistrarPath('agent-controller-core.js'), 'utf8');
+  const dispatcherSource = fs.readFileSync(agentRegistrarPath('agent-intent-dispatcher.js'), 'utf8');
   const controllerUtilsSource = fs.readFileSync(agentPath('shared', 'agent-controller-utils.js'), 'utf8');
-  assert.match(agentRegistrarSource, /const result = \{\s*ok: true,\s*parser: parserResult\.payload\s*\}/);
-  assert.match(agentRegistrarSource, /if \(parserResult\.payload\.primary_intent === 'protocol_to_notebook'\)/);
-  assert.match(agentRegistrarSource, /result\.protocol_to_notebook = protocolNotebookResult/);
-  assert.match(agentRegistrarSource, /else if \(parserResult\.payload\.primary_intent === 'notebook_draft'\)/);
-  assert.match(agentRegistrarSource, /result\.notebook_draft =/);
-  assert.match(agentRegistrarSource, /runTrackedTool\('notebook-draft'/);
-  assert.match(agentRegistrarSource, /if \(parserResult\.payload\.primary_intent === 'inventory_lookup'\)/);
-  assert.match(agentRegistrarSource, /result\.inventory_lookup = inventoryLookupResult/);
-  assert.match(agentRegistrarSource, /else if \(parserResult\.payload\.primary_intent === 'record_lookup'\)/);
-  assert.match(agentRegistrarSource, /result\.record_lookup = recordLookupResult/);
-  assert.match(agentRegistrarSource, /protocolNotebookRuntime\.runFlow\(/);
-  assert.match(agentRegistrarSource, /protocolNotebookRuntime\.hasPendingSession\(/);
-  assert.match(agentRegistrarSource, /stage: 'protocol_to_notebook_followup'/);
-  assert.match(agentRegistrarSource, /stage: 'inventory_lookup_completed'/);
-  assert.match(agentRegistrarSource, /stage: 'record_lookup_completed'/);
+  assert.match(controllerCoreSource, /const result = \{\s*ok: true,\s*parser: parserResult\.payload\s*\}/);
+  assert.match(dispatcherSource, /if \(parserPayload\.primary_intent === 'protocol_to_notebook'\)/);
+  assert.match(dispatcherSource, /result\.protocol_to_notebook = protocolNotebookResult/);
+  assert.match(dispatcherSource, /if \(parserPayload\.primary_intent === 'notebook_draft'\)/);
+  assert.match(dispatcherSource, /result\.notebook_draft =/);
+  assert.match(dispatcherSource, /runTrackedTool\('notebook-draft'/);
+  assert.match(dispatcherSource, /if \(parserPayload\.primary_intent === 'inventory_lookup'\)/);
+  assert.match(dispatcherSource, /result\.inventory_lookup = inventoryLookupResult/);
+  assert.match(dispatcherSource, /if \(parserPayload\.primary_intent === 'record_lookup'\)/);
+  assert.match(dispatcherSource, /result\.record_lookup = recordLookupResult/);
+  assert.match(dispatcherSource, /protocolNotebookRuntime\.runFlow\(/);
+  assert.match(dispatcherSource, /protocolNotebookRuntime\.hasPendingSession\(/);
+  assert.match(dispatcherSource, /stage: 'protocol_to_notebook_followup'/);
+  assert.match(dispatcherSource, /stage: 'inventory_lookup_completed'/);
+  assert.match(dispatcherSource, /stage: 'record_lookup_completed'/);
   assert.match(mainAgentServicesSource, /createAgentLookupRuntime/);
   assert.match(mainAgentServicesSource, /buildInventorySearchTerms/);
   assert.match(mainAgentServicesSource, /createProtocolNotebookRuntime/);
   assert.match(mainAgentServicesSource, /createNotebookDraftRuntime/);
-  assert.match(agentRegistrarSource, /if \(executionFlags\.developerMode === true\) \{\s*result\.developer_trace = asArray\(traceContext\?\.rows\);/);
-  assert.match(agentRegistrarSource, /requestIntentParserPayload\(/);
+  assert.match(controllerCoreSource, /if \(executionFlags\.developerMode === true\) \{\s*result\.developer_trace = asArray\(traceContext\?\.rows\);/);
+  assert.match(controllerCoreSource, /requestIntentParserPayload\(/);
   assert.match(mainAgentServicesSource, /createAgentControllerUtils/);
   assert.match(controllerUtilsSource, /normalizeIntentParserPayload/);
-  assert.match(agentRegistrarSource, /runAgentControllerCore\(/);
-  assert.equal(/controller_intent_only_selected/.test(agentRegistrarSource), true);
-  assert.equal(/controller_intent_only/.test(agentRegistrarSource), true);
+  assert.match(controllerCoreSource, /runAgentControllerCore\(/);
+  assert.equal(/controller_intent_only_selected/.test(controllerCoreSource), true);
+  assert.equal(/controller_intent_only/.test(controllerCoreSource), true);
 });
 
 test('main agent logs persist redacted llm traces and replay wiring', () => {
@@ -651,25 +689,25 @@ test('protocol runtimes preserve placeholder-fill and tie-break prompt guidance 
 });
 
 test('agent registrar hard-errors when intent parser output is invalid', () => {
-  const agentRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc.js'), 'utf8');
-  assert.match(agentRegistrarSource, /if \(!parserResult\?\.ok \|\| !parserResult\?\.payload\)/);
-  assert.match(agentRegistrarSource, /ok:\s*false/);
-  assert.match(agentRegistrarSource, /Intent parser failed:/);
+  const controllerCoreSource = fs.readFileSync(agentRegistrarPath('agent-controller-core.js'), 'utf8');
+  assert.match(controllerCoreSource, /if \(!parserResult\?\.ok \|\| !parserResult\?\.payload\)/);
+  assert.match(controllerCoreSource, /ok:\s*false/);
+  assert.match(controllerCoreSource, /Intent parser failed:/);
 });
 
 test('science controller path is wired through the agent registrar and shared reasoning loop', () => {
   const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
   const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');
-  const agentRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc.js'), 'utf8');
+  const dispatcherSource = fs.readFileSync(agentRegistrarPath('agent-intent-dispatcher.js'), 'utf8');
   assert.match(mainSource, /createMainAgentServices/);
   assert.match(mainAgentServicesSource, /createScienceReasoningLoopRuntime/);
   assert.match(mainAgentServicesSource, /continueAgentSessionWithUserMessage/);
-  assert.match(agentRegistrarSource, /buildScienceRoutingFromParser/);
-  assert.match(agentRegistrarSource, /result\.general_science_question\s*=\s*await scienceReasoningLoopRuntime\.runGeneralScienceQuestion/);
-  assert.match(agentRegistrarSource, /result\.project_science_question\s*=\s*await scienceReasoningLoopRuntime\.runProjectScienceQuestion/);
-  assert.match(agentRegistrarSource, /result\.result_analysis\s*=\s*await scienceReasoningLoopRuntime\.runResultAnalysis/);
-  assert.match(agentRegistrarSource, /stage:\s*'science_intent_start'/);
-  assert.match(agentRegistrarSource, /stage:\s*'science_intent_completed'/);
+  assert.match(dispatcherSource, /buildScienceRoutingFromParser/);
+  assert.match(dispatcherSource, /result\.general_science_question\s*=\s*await scienceReasoningLoopRuntime\.runGeneralScienceQuestion/);
+  assert.match(dispatcherSource, /result\.project_science_question\s*=\s*await scienceReasoningLoopRuntime\.runProjectScienceQuestion/);
+  assert.match(dispatcherSource, /result\.result_analysis\s*=\s*await scienceReasoningLoopRuntime\.runResultAnalysis/);
+  assert.match(dispatcherSource, /stage:\s*'science_intent_start'/);
+  assert.match(dispatcherSource, /stage:\s*'science_intent_completed'/);
 });
 
 test('agent tool loading and execution helpers expose catalogs and generic executor registry', () => {
@@ -720,7 +758,8 @@ test('agent tool loading and execution helpers expose catalogs and generic execu
   assert.match(executionSource, /const toolExecutors = new Map\(\);/);
   assert.match(executionSource, /function registerToolExecutor\(toolName, executor\)/);
   assert.match(executionSource, /function getToolExecutor\(toolName\)/);
-  assert.match(loadingSource, /Detailed usage:/);
+  assert.match(loadingSource, /Short description:/);
+  assert.doesNotMatch(loadingSource, /Usage: \$/m);
   assert.match(executionSource, /Object\.entries\(ensureObject\(deps\.toolExecutors\)\)/);
   assert.match(wrapperSource, /agent-tool-loading\.js/);
   assert.match(wrapperSource, /agent-tool-execution\.js/);
@@ -743,6 +782,7 @@ test('agent helper cleanup keeps the categorized folder structure and core modul
     ['Readme.md'],
     ['intent', 'agent-intent-parser.js'],
     ['intent', 'agent-intent.json'],
+    ['shared', 'agent-llm-provider-bridge.js'],
     ['shared', 'agent-llm-utils.js'],
     ['shared', 'agent-controller-utils.js'],
     ['shared', 'agent-observability.js'],
@@ -776,6 +816,7 @@ test('agent helper cleanup keeps the categorized folder structure and core modul
     ['tools', 'agent-protocol-matching.js'],
     ['tools', 'agent-protocol-generation.js'],
     ['tools', 'agent-literature-search.js'],
+    ['tools', 'agent-paper-context-loader.js'],
     ['tools', 'agent-paper-download.js'],
     ['tools', 'agent-paper-analysis.js'],
     ['tools', 'agent-python-sandbox.js'],
@@ -842,7 +883,8 @@ test('deep research helper exports stepwise runtime and the app wires the toggle
   );
   const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
   const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');
-  const agentRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc.js'), 'utf8');
+  const agentRegistrarSource = fs.readFileSync(agentRegistrarPath('index.js'), 'utf8');
+  const controllerCoreSource = fs.readFileSync(agentRegistrarPath('agent-controller-core.js'), 'utf8');
   const rendererSource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat.js'), 'utf8');
   const sharedSource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'shared.js'), 'utf8');
   const agentViewSource = fs.readFileSync(path.join(__dirname, 'ui', 'html', 'views', 'agent-view.html'), 'utf8');
@@ -856,8 +898,8 @@ test('deep research helper exports stepwise runtime and the app wires the toggle
   assert.match(mainSource, /createMainAgentServices/);
   assert.match(mainAgentServicesSource, /createDeepResearchRuntime/);
   assert.match(mainAgentServicesSource, /const deepResearchRuntime = createDeepResearchRuntime/);
-  assert.match(agentRegistrarSource, /const deepResearchRuntime = deps\.deepResearchRuntime;/);
-  assert.match(agentRegistrarSource, /payload\?\.agent\?\.deepResearchEnabled === true/);
+  assert.match(agentRegistrarSource, /deepResearchRuntime: deps\.deepResearchRuntime/);
+  assert.match(controllerCoreSource, /payload\?\.agent\?\.deepResearchEnabled === true/);
   assert.match(rendererSource, /agent-deep-research-toggle-btn/);
   assert.match(rendererSource, /deepResearchEnabled: state\.agentChat\.deepResearchEnabled === true/);
   assert.match(sharedSource, /deepResearchEnabled: false/);
@@ -941,9 +983,13 @@ test('agent chat log helper exports reusable session log runtime and renderer co
   assert.match(html, /id="agent-new-chat-btn"/);
 });
 
-test('literature, paper analysis, and protocol generation helpers expose reusable runtimes and registered tools', () => {
+test('literature, paper context, paper analysis, and protocol generation helpers expose reusable runtimes and registered tools', () => {
   const literatureSource = fs.readFileSync(
     agentPath('tools', 'agent-literature-search.js'),
+    'utf8'
+  );
+  const paperContextSource = fs.readFileSync(
+    agentPath('tools', 'agent-paper-context-loader.js'),
     'utf8'
   );
   const paperDownloadSource = fs.readFileSync(
@@ -956,6 +1002,14 @@ test('literature, paper analysis, and protocol generation helpers expose reusabl
   );
   const protocolSource = fs.readFileSync(
     agentPath('tools', 'agent-protocol-generation.js'),
+    'utf8'
+  );
+  const llmUtilsSource = fs.readFileSync(
+    agentPath('shared', 'agent-llm-utils.js'),
+    'utf8'
+  );
+  const mainAgentServicesSource = fs.readFileSync(
+    path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'),
     'utf8'
   );
   const toolsCatalog = JSON.parse(fs.readFileSync(
@@ -971,6 +1025,11 @@ test('literature, paper analysis, and protocol generation helpers expose reusabl
   assert.match(literatureSource, /function createLiteratureSearchRuntime\(deps = \{\}\)/);
   assert.match(literatureSource, /function buildLiteratureQuery\(input = \{\}\)/);
   assert.match(literatureSource, /async function searchLiterature\(input = \{\}\)/);
+  assert.match(paperContextSource, /const PAPER_CONTEXT_SOURCE_ORDER = Object\.freeze/);
+  assert.match(paperContextSource, /function createPaperContextLoaderRuntime\(deps = \{\}\)/);
+  assert.match(paperContextSource, /async function loadPaperContexts\(input = \{\}\)/);
+  assert.equal(paperContextSource.includes('paper-download'), false);
+  assert.equal(paperContextSource.includes('storage_path'), false);
   assert.equal(readSource('src/main/helpers/agent/tools/agent-literature-search.js').includes("require('../shared/agent-llm-utils.js')"), true);
   assert.match(paperDownloadSource, /const PAPER_DOWNLOAD_ACTIONS = Object\.freeze/);
   assert.match(paperDownloadSource, /function createPaperDownloadRuntime\(deps = \{\}\)/);
@@ -984,6 +1043,13 @@ test('literature, paper analysis, and protocol generation helpers expose reusabl
   assert.match(protocolSource, /async function generateProtocol\(input = \{\}\)/);
   assert.match(protocolSource, /troubleshooting/);
   assert.match(protocolSource, /\{\{ph:/);
+  assert.match(llmUtilsSource, /pdfDataUrl/);
+  assert.match(llmUtilsSource, /fileName/);
+  assert.match(llmUtilsSource, /input_file/);
+  assert.match(llmUtilsSource, /inlineData/);
+  assert.match(llmUtilsSource, /document/);
+  assert.match(mainAgentServicesSource, /createPaperContextLoaderRuntime/);
+  assert.match(mainAgentServicesSource, /paperContextLoaderRuntime/);
   assert.equal(readSource('src/main/helpers/agent/tools/agent-paper-analysis.js').includes("require('../shared/agent-llm-utils.js')"), true);
   assert.equal(readSource('src/main/helpers/agent/tools/agent-protocol-generation.js').includes("require('../shared/agent-llm-utils.js')"), true);
   assert.equal(toolsCatalog.some((entry) => entry?.name === 'literature-search'), true);
@@ -1304,15 +1370,20 @@ ORIGIN
 test('main wires intent parser + observability paths for parser-only controller', () => {
   const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
   const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');
-  const agentRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc.js'), 'utf8');
+  const controllerCoreSource = fs.readFileSync(agentRegistrarPath('agent-controller-core.js'), 'utf8');
   const controllerUtilsSource = fs.readFileSync(agentPath('shared', 'agent-controller-utils.js'), 'utf8');
+  const llmBridgeSource = fs.readFileSync(agentPath('shared', 'agent-llm-provider-bridge.js'), 'utf8');
   const sessionRuntimeSource = fs.readFileSync(agentPath('runtime', 'agent-session-runtime.js'), 'utf8');
   assert.match(mainSource, /createMainAgentServices/);
   assert.match(mainAgentServicesSource, /require\('\.\.\/agent\/intent\/agent-intent-parser'\)/);
   assert.match(mainAgentServicesSource, /require\('\.\.\/agent\/shared\/agent-observability'\)/);
   assert.match(mainAgentServicesSource, /require\('\.\.\/agent\/shared\/agent-controller-utils'\)/);
   assert.match(mainSource, /registerAgentIpc/);
-  assert.match(agentRegistrarSource, /requestIntentParserPayload\(/);
+  assert.match(controllerCoreSource, /requestIntentParserPayload\(/);
+  assert.match(llmBridgeSource, /function createAgentLlmProviderBridge\(deps = \{\}\)/);
+  assert.match(controllerUtilsSource, /requestStructuredJsonPayload\(/);
+  assert.match(controllerUtilsSource, /createAgentLlmRuntimeHelpers/);
+  assert.match(sessionRuntimeSource, /agent-llm-provider-bridge\.js/);
   assert.match(controllerUtilsSource, /recordAgentLlmTrace/);
   assert.match(sessionRuntimeSource, /recordAgentLlmTrace\(/);
   assert.equal(/agent-sqlite-index/.test(mainSource), false);
@@ -1421,12 +1492,14 @@ test('science runtimes use canonical catalog tools and main wires their schemas 
   const { REASONING_ENTRY_TOOL_SCOPES } = require(agentPath('tools', 'agent-tool-provide.js'));
 
   Object.values(SCIENCE_REASONING_POLICIES).forEach((policy) => {
+    assert.equal(policy.tool_scope, null);
     const resolved = getToolInputSchemas(policy.tool_scope);
-    assert.deepEqual(resolved.map((tool) => tool.name), policy.tool_scope);
+    assert.equal(resolved.length > 0, true);
   });
   Object.values(DEEP_RESEARCH_POLICIES).forEach((policy) => {
+    assert.equal(policy.tool_scope, null);
     const resolved = getToolInputSchemas(policy.tool_scope);
-    assert.deepEqual(resolved.map((tool) => tool.name), policy.tool_scope);
+    assert.equal(resolved.length > 0, true);
   });
   assert.deepEqual(
     SCIENCE_REASONING_POLICIES.general_science_question.tool_scope,

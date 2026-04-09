@@ -12,15 +12,12 @@ function asArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
-function cleanText(value, maxLength = 2000) {
+function cleanText(value, _maxLength = 2000) {
   const text = String(value || '').trim();
   if (!text) {
     return '';
   }
-  if (!Number.isFinite(Number(maxLength)) || maxLength <= 0 || text.length <= maxLength) {
-    return text;
-  }
-  return text.slice(0, maxLength);
+  return text;
 }
 
 function cloneJson(value, fallback) {

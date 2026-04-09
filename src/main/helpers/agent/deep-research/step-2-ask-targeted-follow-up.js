@@ -4,15 +4,12 @@ function asArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
-function cleanText(value, maxLength = 2000) {
+function cleanText(value, _maxLength = 2000) {
   const text = String(value || '').trim();
   if (!text) {
     return '';
   }
-  if (text.length <= maxLength) {
-    return text;
-  }
-  return `${text.slice(0, maxLength)}...`;
+  return text;
 }
 
 const FOLLOW_UP_SCHEMA = {
@@ -126,5 +123,6 @@ async function runStep2AskTargetedFollowUp(input = {}, deps = {}) {
 }
 
 module.exports = {
+  buildFollowUpPrompt,
   runStep2AskTargetedFollowUp
 };

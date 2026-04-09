@@ -1,18 +1,23 @@
 'use strict';
 
+const {
+  createAgentRequestAbortError,
+  getAgentRequestAbortSignal,
+  isAgentRequestAbortError,
+  throwIfAgentRequestAborted
+} = require('./agent-request-context.js');
+const { createAgentLlmProviderBridge } = require('./agent-llm-provider-bridge.js');
+
 function defaultAsArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
-function defaultCleanText(value, maxLength = 2000) {
+function defaultCleanText(value, _maxLength = 2000) {
   const text = String(value || '').trim();
   if (!text) {
     return '';
   }
-  if (text.length <= maxLength) {
-    return text;
-  }
-  return `${text.slice(0, maxLength)}...`;
+  return text;
 }
 
 function defaultSafeParseJson(text, fallback = null) {
@@ -25,6 +30,11 @@ function defaultSafeParseJson(text, fallback = null) {
     // Fallback below.
   }
   return fallback;
+}
+
+function parsePdfDataUrl(pdfDataUrl) {
+  const match = String(pdfDataUrl || '').trim().match(/^data:application\/pdf(?:;charset=[^;,]+)?;base64,(.+)$/i);
+  return match?.[1] ? String(match[1]).trim() : '';
 }
 
 function defaultToInputText(role, text) {
@@ -82,6 +92,27 @@ function sleep(ms) {
   });
 }
 
+function sleepWithAbort(ms, signal) {
+  if (!signal) {
+    return sleep(ms);
+  }
+  if (signal.aborted) {
+    return Promise.reject(createAgentRequestAbortError(signal.reason || 'Agent request stopped.'));
+  }
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      signal.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    const onAbort = () => {
+      clearTimeout(timeout);
+      signal.removeEventListener('abort', onAbort);
+      reject(createAgentRequestAbortError(signal.reason || 'Agent request stopped.'));
+    };
+    signal.addEventListener('abort', onAbort, { once: true });
+  });
+}
+
 async function requestJsonWithBackoff({
   endpoint,
   headers,
@@ -89,25 +120,32 @@ async function requestJsonWithBackoff({
   retryStatuses = [429, 503],
   maxRetries = 3
 } = {}) {
+  const abortSignal = getAgentRequestAbortSignal();
   let attempt = 0;
   while (attempt <= maxRetries) {
+    throwIfAgentRequestAborted('Agent request stopped before sending LLM request.');
     let response;
     try {
       response = await fetch(endpoint, {
         method: 'POST',
         headers,
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
+        ...(abortSignal ? { signal: abortSignal } : {})
       });
     } catch (error) {
+      if (abortSignal?.aborted || isAgentRequestAbortError(error)) {
+        throw createAgentRequestAbortError(abortSignal?.reason || error?.message || 'Agent request stopped.');
+      }
       if (attempt >= maxRetries) {
         throw error;
       }
       const waitMs = 350 * (2 ** attempt) + Math.floor(Math.random() * 250);
-      await sleep(waitMs);
+      await sleepWithAbort(waitMs, abortSignal);
       attempt += 1;
       continue;
     }
 
+    throwIfAgentRequestAborted('Agent request stopped while waiting for LLM response.');
     if (!retryStatuses.includes(response.status)) {
       if (!response.ok) {
         const raw = await response.text();
@@ -125,7 +163,7 @@ async function requestJsonWithBackoff({
     const retryAfterMs = Number.isFinite(retryAfterHeader) && retryAfterHeader > 0
       ? retryAfterHeader * 1000
       : 500 * (2 ** attempt) + Math.floor(Math.random() * 300);
-    await sleep(retryAfterMs);
+    await sleepWithAbort(retryAfterMs, abortSignal);
     attempt += 1;
   }
 
@@ -221,6 +259,9 @@ function createAgentLlmRuntimeHelpers(deps = {}) {
   const safeParseJson = typeof deps.safeParseJson === 'function'
     ? deps.safeParseJson
     : defaultSafeParseJson;
+  const requestAssistantTextOverride = typeof deps.requestAssistantText === 'function'
+    ? deps.requestAssistantText
+    : null;
   const requestStructuredJsonPayloadOverride = typeof deps.requestStructuredJsonPayload === 'function'
     ? deps.requestStructuredJsonPayload
     : null;
@@ -246,186 +287,50 @@ function createAgentLlmRuntimeHelpers(deps = {}) {
   const recordAgentLlmTrace = typeof deps.recordAgentLlmTrace === 'function'
     ? deps.recordAgentLlmTrace
     : (async () => {});
+  let llmProviderBridge = deps.llmProviderBridge && typeof deps.llmProviderBridge === 'object'
+    ? deps.llmProviderBridge
+    : null;
 
-  function parseJsonObjectFromText(raw) {
-    if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
-      return raw;
+  function getLlmProviderBridge() {
+    if (llmProviderBridge && typeof llmProviderBridge === 'object') {
+      return llmProviderBridge;
     }
-    if (typeof raw !== 'string') {
-      return null;
+    // The shared provider bridge owns provider-specific request shaping,
+    // including pdfDataUrl/fileName attachments for OpenAI input_file,
+    // Gemini inlineData, and Claude document inputs.
+    llmProviderBridge = createAgentLlmProviderBridge({
+      LLM_PROVIDERS,
+      asArray,
+      cleanText,
+      safeParseJson,
+      toInputText,
+      parsePdfDataUrl,
+      requestCodexCliText,
+      getCodexCliWorkingDirectory,
+      requestClaudeMessagesWithBackoff,
+      requestGeminiGenerateContentWithBackoff,
+      requestOpenAiResponsesWithBackoff,
+      extractClaudeResponseText,
+      extractGeminiResponseText,
+      extractResponseText,
+      recordAgentLlmTrace,
+      isAbortError: isAgentRequestAbortError
+    });
+    return llmProviderBridge;
+  }
+
+  async function requestAssistantText(options = {}) {
+    if (requestAssistantTextOverride) {
+      return requestAssistantTextOverride({ ...options });
     }
-    const parsed = safeParseJson(raw, null);
-    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-      return parsed;
-    }
-    return null;
+    return getLlmProviderBridge().requestAssistantText({ ...options });
   }
 
   async function requestStructuredJsonPayload(options = {}) {
-    const {
-    provider,
-    endpoint,
-    apiKey,
-    model,
-    stage,
-    systemPrompt,
-    userPrompt,
-    schema,
-    traceContext = null,
-    maxOutputTokens = null,
-    openAiStrict = null,
-    openAiAsDefaultProvider = false,
-    defaultError = 'Structured JSON provider is not configured.'
-    } = options;
     if (requestStructuredJsonPayloadOverride) {
       return requestStructuredJsonPayloadOverride({ ...options });
     }
-
-    const system = cleanText(systemPrompt, 12000);
-    const user = cleanText(userPrompt, 48000);
-    const normalizedStage = cleanText(stage, 120) || 'agent_stage';
-
-    try {
-      if (provider === LLM_PROVIDERS.CODEX) {
-        const prompt = [system, user, 'Return JSON only.'].filter(Boolean).join('\n\n');
-        const raw = await requestCodexCliText({
-          prompt,
-          model,
-          cwd: getCodexCliWorkingDirectory()
-        });
-        await recordAgentLlmTrace(traceContext, {
-          stage: normalizedStage,
-          provider,
-          model,
-          summary: `${normalizedStage} completed via Codex CLI.`,
-          request_payload: { model, prompt },
-          response_payload: raw
-        });
-        const parsed = parseJsonObjectFromText(raw);
-        if (!parsed) {
-          return { ok: false, error: `${normalizedStage} response was not valid JSON.`, raw };
-        }
-        return { ok: true, payload: parsed, raw };
-      }
-
-      if (provider === LLM_PROVIDERS.CLAUDE) {
-        const body = {
-          model,
-          system: system || 'Return valid JSON only.',
-          max_tokens: Number.isFinite(Number(maxOutputTokens)) ? Number(maxOutputTokens) : 1600,
-          messages: [
-            {
-              role: 'user',
-              content: [{ type: 'text', text: `${user}\n\nReturn JSON only.` }]
-            }
-          ]
-        };
-        const response = await requestClaudeMessagesWithBackoff({
-          endpoint,
-          apiKey,
-          body
-        });
-        await recordAgentLlmTrace(traceContext, {
-          stage: normalizedStage,
-          provider,
-          model,
-          summary: `${normalizedStage} completed via Claude.`,
-          request_payload: body,
-          response_payload: response
-        });
-        const parsed = parseJsonObjectFromText(extractClaudeResponseText(response));
-        if (!parsed) {
-          return { ok: false, error: `${normalizedStage} response was not valid JSON.`, raw: response };
-        }
-        return { ok: true, payload: parsed, raw: response };
-      }
-
-      if (provider === LLM_PROVIDERS.GEMINI) {
-        const body = {
-          systemInstruction: {
-            parts: [{ text: system || 'Return valid JSON only.' }]
-          },
-          contents: [
-            {
-              role: 'user',
-              parts: [{ text: `${user}\n\nReturn JSON only.` }]
-            }
-          ],
-          generationConfig: {
-            ...(Number.isFinite(Number(maxOutputTokens)) ? { maxOutputTokens: Number(maxOutputTokens) } : {})
-          }
-        };
-        const response = await requestGeminiGenerateContentWithBackoff({
-          endpoint,
-          apiKey,
-          model,
-          body
-        });
-        await recordAgentLlmTrace(traceContext, {
-          stage: normalizedStage,
-          provider,
-          model,
-          summary: `${normalizedStage} completed via Gemini.`,
-          request_payload: body,
-          response_payload: response
-        });
-        const parsed = parseJsonObjectFromText(extractGeminiResponseText(response));
-        if (!parsed) {
-          return { ok: false, error: `${normalizedStage} response was not valid JSON.`, raw: response };
-        }
-        return { ok: true, payload: parsed, raw: response };
-      }
-
-      if ((provider === LLM_PROVIDERS.OPENAI || openAiAsDefaultProvider === true) && typeof requestOpenAiResponsesWithBackoff === 'function') {
-        const format = {
-          type: 'json_schema',
-          name: normalizedStage.replace(/[^a-z0-9_]+/gi, '_').toLowerCase() || 'stage_result',
-          schema
-        };
-        if (typeof openAiStrict === 'boolean') {
-          format.strict = openAiStrict;
-        }
-        const body = {
-          model,
-          input: [
-            toInputText('system', system || 'Return valid JSON only.'),
-            toInputText('user', user)
-          ],
-          text: { format }
-        };
-        if (Number.isFinite(Number(maxOutputTokens))) {
-          body.max_output_tokens = Number(maxOutputTokens);
-        }
-        const response = await requestOpenAiResponsesWithBackoff({
-          endpoint,
-          apiKey,
-          body
-        });
-        await recordAgentLlmTrace(traceContext, {
-          stage: normalizedStage,
-          provider: provider === LLM_PROVIDERS.OPENAI ? provider : LLM_PROVIDERS.OPENAI,
-          model,
-          summary: `${normalizedStage} completed via OpenAI Responses.`,
-          request_payload: body,
-          response_payload: response
-        });
-        const parsed = parseJsonObjectFromText(extractResponseText(response));
-        if (!parsed) {
-          return { ok: false, error: `${normalizedStage} response was not valid JSON.`, raw: response };
-        }
-        return { ok: true, payload: parsed, raw: response };
-      }
-    } catch (error) {
-      return {
-        ok: false,
-        error: cleanText(error?.message || error, 600) || `${normalizedStage} request failed.`
-      };
-    }
-
-    return {
-      ok: false,
-      error: defaultError
-    };
+    return getLlmProviderBridge().requestStructuredJsonPayload({ ...options });
   }
 
   return {
@@ -436,7 +341,7 @@ function createAgentLlmRuntimeHelpers(deps = {}) {
     safeParseJson,
     toInputText,
     recordAgentLlmTrace,
-    parseJsonObjectFromText,
+    requestAssistantText,
     requestStructuredJsonPayload
   };
 }
@@ -445,11 +350,13 @@ module.exports = {
   defaultAsArray,
   defaultCleanText,
   defaultSafeParseJson,
+  parsePdfDataUrl,
   defaultToInputText,
   defaultExtractResponseText,
   defaultExtractClaudeResponseText,
   defaultExtractGeminiResponseText,
   sleep,
+  sleepWithAbort,
   requestJsonWithBackoff,
   requestOpenAiResponsesWithBackoff,
   requestClaudeMessagesWithBackoff,

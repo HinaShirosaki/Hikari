@@ -23,15 +23,12 @@ function registerSystemIpc(deps = {}) {
   const writeSavedTelegramToken = deps.writeSavedTelegramToken;
   const cleanText = typeof deps.cleanText === 'function'
     ? deps.cleanText
-    : ((value, maxLength = 2400) => {
+    : ((value, _maxLength = 2400) => {
       const text = String(value || '').trim();
       if (!text) {
         return '';
       }
-      if (text.length <= maxLength) {
-        return text;
-      }
-      return `${text.slice(0, maxLength)}...`;
+      return text;
     });
   const setSavedTelegramToken = typeof deps.setSavedTelegramToken === 'function'
     ? deps.setSavedTelegramToken
@@ -109,7 +106,7 @@ function registerSystemIpc(deps = {}) {
         return { ok: false, error: 'Prompt is required.' };
       }
 
-      const prompt = promptRaw.length > 120000 ? `${promptRaw.slice(0, 120000)}...` : promptRaw;
+      const prompt = promptRaw;
       const model = cleanText(normalizedPayload?.model, 120);
       const reasoningEffort = cleanText(normalizedPayload?.reasoningEffort, 40);
       const fileName = cleanText(normalizedPayload?.fileName, 220);

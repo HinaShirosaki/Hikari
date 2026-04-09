@@ -4,15 +4,12 @@ function asArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
-function cleanText(value, maxLength = 2000) {
+function cleanText(value, _maxLength = 2000) {
   const text = String(value || '').trim();
   if (!text) {
     return '';
   }
-  if (text.length <= maxLength) {
-    return text;
-  }
-  return `${text.slice(0, maxLength)}...`;
+  return text;
 }
 
 function uniqueStrings(values, max = 20) {
@@ -92,6 +89,7 @@ function buildSectionPrompt(input = {}) {
   return [
     'Write one section of the deep research final answer.',
     'Use only the provided evidence. Preserve uncertainty and avoid inventing sources.',
+    'Markdown is allowed for the section text. Use bullets or tables when they make the evidence easier to scan, and do not include HTML.',
     `Section title: ${cleanText(input.section?.title, 160) || 'Section'}`,
     `Section objective: ${cleanText(input.section?.objective, 320) || 'Summarize the section.'}`,
     `Research objective JSON:\n${JSON.stringify(input.researchObjective || {}, null, 2)}`,
@@ -240,7 +238,7 @@ async function runStep5AssembleFinalAnswer(input = {}, deps = {}) {
     : { complete: true, missing_section_ids: [] };
 
   const answer = renderedSections
-    .map((section) => `${cleanText(section.title, 160)}\n${cleanText(section.text, 4000)}`)
+    .map((section) => `## ${cleanText(section.title, 160)}\n${cleanText(section.text, 4000)}`)
     .join('\n\n')
     .trim();
   const confidence = computeConfidence(input);

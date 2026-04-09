@@ -2,15 +2,12 @@
 
 const { toIntegerInRange } = require('../../main/value-utils.js');
 
-function defaultCleanText(value, maxLength = 500) {
+function defaultCleanText(value, _maxLength = 500) {
   const text = String(value || '').trim();
   if (!text) {
     return '';
   }
-  if (text.length <= maxLength) {
-    return text;
-  }
-  return `${text.slice(0, maxLength)}...`;
+  return text;
 }
 
 function resolveToolParserPayload(args = {}, context = {}, extra = {}) {
@@ -50,6 +47,40 @@ function buildExecutorSummary(cleanText, toolName, items = [], emptyText) {
   const count = Array.isArray(items) ? items.length : 0;
   if (!count) {
     return cleanText(emptyText, 320) || `${cleanText(toolName, 120) || 'Tool'} returned no matches.`;
+  }
+  if (cleanText(toolName, 120) === 'inventory-lookup') {
+    const preview = items
+      .slice(0, 2)
+      .map((item) => {
+        const label = cleanText(item?.name || item?.id, 120);
+        const location = cleanText(item?.location, 120);
+        return label
+          ? (location ? `${label} @ ${location}` : label)
+          : '';
+      })
+      .filter(Boolean)
+      .join('; ');
+    return cleanText(
+      `${cleanText(toolName, 120)} matched ${count} item${count === 1 ? '' : 's'}${preview ? `: ${preview}.` : '.'}`,
+      320
+    );
+  }
+  if (cleanText(toolName, 120) === 'record-lookup') {
+    const preview = items
+      .slice(0, 2)
+      .map((item) => {
+        const label = cleanText(item?.title || item?.id, 120);
+        const recordType = cleanText(item?.record_type, 40);
+        return label
+          ? `${recordType ? `${recordType}: ` : ''}${label}`
+          : '';
+      })
+      .filter(Boolean)
+      .join('; ');
+    return cleanText(
+      `${cleanText(toolName, 120)} matched ${count} item${count === 1 ? '' : 's'}${preview ? `: ${preview}.` : '.'}`,
+      320
+    );
   }
   return `${cleanText(toolName, 120) || 'Tool'} matched ${count} item${count === 1 ? '' : 's'}.`;
 }
@@ -130,6 +161,11 @@ function registerAgentToolExecutors(deps = {}) {
 
   genericAgentToolRuntime.registerToolExecutor('literature-search', async ({ args, context }) => literatureSearchRuntime.execute({
     ...args,
+    provider: cleanText(context?.provider, 80),
+    endpoint: cleanText(context?.endpoint, 2000),
+    apiKey: cleanText(context?.apiKey, 400),
+    model: cleanText(context?.model, 120),
+    traceContext: context?.traceContext || null,
     query: cleanText(args?.query, 600),
     message: cleanText(args?.message || context?.message, 1200),
     parser_payload: resolveToolParserPayload(args, context),
@@ -144,14 +180,22 @@ function registerAgentToolExecutors(deps = {}) {
       preferredPythonBin: cleanText(context?.preferredPythonBin, 240),
       pythonExecutable: cleanText(context?.pythonExecutable, 240)
     });
-    const runId = cleanText(result?.sandbox?.run_id, 120);
+    const sandbox = result?.sandbox && typeof result.sandbox === 'object' ? result.sandbox : {};
+    const runId = cleanText(sandbox?.run_id, 120);
 
     return {
       ...result,
+      status: cleanText(sandbox?.status, 40),
+      run_id: runId,
+      error: cleanText(sandbox?.error || result?.debug?.assistant_message, 4000),
+      stdout: cleanText(sandbox?.stdout, 4000),
+      stderr: cleanText(sandbox?.stderr, 12000),
+      readback_files: Array.isArray(sandbox?.readback_files) ? sandbox.readback_files : [],
+      render_outputs: Array.isArray(sandbox?.render_outputs) ? sandbox.render_outputs : [],
       items: runId
         ? [{
           run_id: runId,
-          status: cleanText(result?.sandbox?.status, 40),
+          status: cleanText(sandbox?.status, 40),
           ok: result?.ok === true
         }]
         : [],

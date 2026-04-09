@@ -1,6 +1,7 @@
 :root {
   color-scheme: light;
   --app-font-size: 16px;
+  --layout-left-panel-width: minmax(280px, 340px);
   --bg: #f5efe6;
   --surface: #fcfbf8;
   --surface-subtle: #f1e9de;

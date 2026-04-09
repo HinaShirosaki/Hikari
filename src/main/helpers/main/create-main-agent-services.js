@@ -19,7 +19,9 @@ const {
   INTENT_PARSER_RESPONSE_SCHEMA,
   normalizeIntentParserPayload,
   buildIntentParserPrompt,
-  buildInventorySearchTerms
+  buildInventorySearchTerms,
+  mapCanonicalIntentToExecutionIntent,
+  normalizeParserEntitiesToRoutingEntities
 } = require('../agent/intent/agent-intent-parser');
 const observability = require('../agent/shared/agent-observability');
 const { createAgentControllerUtils } = require('../agent/shared/agent-controller-utils');
@@ -37,12 +39,12 @@ const { createAgentToolCallRuntime } = require('../agent/tools/agent-tool-execut
 const { createAgentToolProviderRuntime } = require('../agent/tools/agent-tool-provide.js');
 const { createNotebookDraftRuntime } = require('../agent/tools/agent-notebook-draft.js');
 const { createLiteratureSearchRuntime } = require('../agent/tools/agent-literature-search.js');
+const { createPaperContextLoaderRuntime } = require('../agent/tools/agent-paper-context-loader.js');
 const { createProtocolMatchingRuntime } = require('../agent/tools/agent-protocol-matching.js');
 const { createNotebookGenerationRuntime } = require('../agent/tools/agent-notebook-generation.js');
 const { createAgentInventoryLookupRuntime } = require('../agent/tools/agent-inventory-lookup.js');
 const { createAgentRecordLookupRuntime } = require('../agent/tools/agent-record-lookup.js');
 const { createAgentRuntimeSupport } = require('../agent/runtime/agent-runtime-support.js');
-const { createCodexAgentRuntime } = require('../agent/runtime/agent-codex-runtime.js');
 const { registerAgentToolExecutors } = require('../agent/tools/register-agent-tool-executors.js');
 const { asArray, clamp, createUniqueStrings } = require('./value-utils.js');
 
@@ -118,6 +120,17 @@ function createMainAgentServices(deps = {}) {
     ? deps.syncBundleFromSnapshot
     : (async () => ({ bundlePaths: {}, sidecarPaths: {} }));
   const uniqueStrings = createUniqueStrings(cleanText);
+  const sharedLlmTransportDeps = {
+    toInputText,
+    requestCodexCliText,
+    getCodexCliWorkingDirectory,
+    requestClaudeMessagesWithBackoff,
+    requestGeminiGenerateContentWithBackoff,
+    requestOpenAiResponsesWithBackoff,
+    extractClaudeResponseText,
+    extractGeminiResponseText,
+    extractResponseText
+  };
 
   const controllerUtils = createAgentControllerUtils({
     LLM_PROVIDERS,
@@ -134,16 +147,17 @@ function createMainAgentServices(deps = {}) {
     buildIntentParserPrompt,
     normalizeIntentParserPayload,
     INTENT_PARSER_RESPONSE_SCHEMA,
-    toInputText,
-    requestCodexCliText,
-    getCodexCliWorkingDirectory,
-    requestClaudeMessagesWithBackoff,
-    requestGeminiGenerateContentWithBackoff,
-    requestOpenAiResponsesWithBackoff,
-    extractClaudeResponseText,
-    extractGeminiResponseText,
-    extractResponseText
+    ...sharedLlmTransportDeps
   });
+  const sharedAgentLlmDeps = {
+    LLM_PROVIDERS,
+    asArray,
+    cleanText,
+    uniqueStrings,
+    safeParseJson,
+    ...sharedLlmTransportDeps,
+    recordAgentLlmTrace: controllerUtils.recordAgentLlmTrace
+  };
 
   const agentRuntimeRegistry = createAgentRuntimeRegistry({
     cleanText
@@ -212,6 +226,8 @@ function createMainAgentServices(deps = {}) {
     cleanText,
     uniqueStrings,
     clamp,
+    mapCanonicalIntentToExecutionIntent,
+    normalizeParserEntitiesToRoutingEntities,
     normalizeRoutingPayload: agentRuntimeSupport.normalizeRoutingPayload,
     normalizeNotebookDraftPayload: (value) => value && typeof value === 'object' ? value : null,
     applyRoutingPlanPatch: (routing, patch = {}) => ({
@@ -227,62 +243,30 @@ function createMainAgentServices(deps = {}) {
   });
 
   const agentSessionRuntime = createAgentSessionRuntime({
-    LLM_PROVIDERS,
-    requestCodexCliText,
-    getCodexCliWorkingDirectory,
-    requestClaudeMessagesWithBackoff,
-    requestGeminiGenerateContentWithBackoff,
-    requestOpenAiResponsesWithBackoff,
-    extractClaudeResponseText,
-    extractGeminiResponseText,
-    extractResponseText,
-    toInputText,
-    recordAgentLlmTrace: controllerUtils.recordAgentLlmTrace
+    ...sharedAgentLlmDeps
   });
 
   const protocolNotebookRuntime = createProtocolNotebookRuntime({
-    LLM_PROVIDERS,
-    asArray,
-    cleanText,
-    uniqueStrings,
+    ...sharedAgentLlmDeps,
     pickTopMatches: agentRuntimeSupport.pickTopMatches,
-    safeParseJson,
     runTool: agentToolRuntime.runAgentTool,
-    requestCodexCliText,
-    getCodexCliWorkingDirectory,
-    requestClaudeMessagesWithBackoff,
-    requestGeminiGenerateContentWithBackoff,
-    requestOpenAiResponsesWithBackoff,
-    extractClaudeResponseText,
-    extractGeminiResponseText,
-    extractResponseText,
-    toInputText,
-    recordAgentLlmTrace: controllerUtils.recordAgentLlmTrace,
     recordLifecycleEvent: observability.recordLifecycleEvent,
     getAgentRuntimeFactory: agentRuntimeRegistry.getRuntimeFactory
   });
 
   const notebookDraftRuntime = createNotebookDraftRuntime({
-    LLM_PROVIDERS,
-    asArray,
-    cleanText,
-    uniqueStrings,
-    safeParseJson,
-    requestCodexCliText,
-    getCodexCliWorkingDirectory,
-    requestClaudeMessagesWithBackoff,
-    requestGeminiGenerateContentWithBackoff,
-    requestOpenAiResponsesWithBackoff,
-    extractClaudeResponseText,
-    extractGeminiResponseText,
-    extractResponseText,
-    toInputText,
-    recordAgentLlmTrace: controllerUtils.recordAgentLlmTrace,
+    ...sharedAgentLlmDeps,
     recordLifecycleEvent: observability.recordLifecycleEvent,
     getAgentRuntimeFactory: agentRuntimeRegistry.getRuntimeFactory
   });
 
+  const paperContextLoaderRuntime = createPaperContextLoaderRuntime({
+    ...sharedAgentLlmDeps,
+    fetch: typeof globalThis.fetch === 'function' ? globalThis.fetch.bind(globalThis) : null
+  });
   const literatureSearchRuntime = createLiteratureSearchRuntime({
+    ...sharedAgentLlmDeps,
+    paperContextLoaderRuntime,
     fetch: typeof globalThis.fetch === 'function' ? globalThis.fetch.bind(globalThis) : null
   });
   const pythonSandboxToolRuntime = createManagedPythonSandboxRuntime({
@@ -301,22 +285,8 @@ function createMainAgentServices(deps = {}) {
   });
 
   const scienceReasoningLoopRuntime = createScienceReasoningLoopRuntime({
-    asArray,
-    cleanText,
-    uniqueStrings,
-    safeParseJson,
+    ...sharedAgentLlmDeps,
     clamp,
-    LLM_PROVIDERS,
-    requestCodexCliText,
-    getCodexCliWorkingDirectory,
-    requestClaudeMessagesWithBackoff,
-    requestGeminiGenerateContentWithBackoff,
-    requestOpenAiResponsesWithBackoff,
-    extractClaudeResponseText,
-    extractGeminiResponseText,
-    extractResponseText,
-    toInputText,
-    recordAgentLlmTrace: controllerUtils.recordAgentLlmTrace,
     toolProvider: agentToolProviderRuntime,
     startAgentSession: agentSessionRuntime.startAgentSession,
     extractAgentSessionFunctionCalls: agentSessionRuntime.extractAgentSessionFunctionCalls,
@@ -330,41 +300,13 @@ function createMainAgentServices(deps = {}) {
   });
 
   const deepResearchRuntime = createDeepResearchRuntime({
-    asArray,
-    cleanText,
-    safeParseJson,
+    ...sharedAgentLlmDeps,
     clamp,
-    LLM_PROVIDERS,
-    requestCodexCliText,
-    getCodexCliWorkingDirectory,
-    requestClaudeMessagesWithBackoff,
-    requestGeminiGenerateContentWithBackoff,
-    requestOpenAiResponsesWithBackoff,
-    extractClaudeResponseText,
-    extractGeminiResponseText,
-    extractResponseText,
-    toInputText,
-    recordAgentLlmTrace: controllerUtils.recordAgentLlmTrace,
     toolProvider: agentToolProviderRuntime,
     applyResponseLayerToOutput: scienceMainUtils.applyResponseLayerToOutput,
     applyValidationGateToOutput: scienceMainUtils.applyValidationGateToOutput,
     recordLifecycleEvent: observability.recordLifecycleEvent
   });
-
-  const codexRuntime = createCodexAgentRuntime({
-    requestCodexCliText,
-    getCodexCliWorkingDirectory,
-    recordAgentLlmTrace: controllerUtils.recordAgentLlmTrace,
-    runAgentTool: agentToolRuntime.runAgentTool,
-    buildAgentSystemPrompt: agentRuntimeSupport.buildAgentSystemPrompt,
-    buildAgentSynthesisPrompt: agentRuntimeSupport.buildAgentSynthesisPrompt,
-    normalizeAgentOutput: agentRuntimeSupport.normalizeAgentOutput,
-    toPromptConversationTranscript: agentRuntimeSupport.toPromptConversationTranscript,
-    applyResponseLayerToOutput: scienceMainUtils.applyResponseLayerToOutput,
-    applyValidationGateToOutput: scienceMainUtils.applyValidationGateToOutput,
-    normalizeRoutingPayload: agentRuntimeSupport.normalizeRoutingPayload
-  });
-  void codexRuntime;
 
   const agentToolSmokeTestRuntime = createAgentToolSmokeTestRuntime({
     runPythonSandbox,
