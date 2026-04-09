@@ -62,7 +62,7 @@
       "icon": "assay.svg",
       "placement": "dock",
       "aliases": ["assays", "plate"],
-      "searchInputId": "assay-search"
+      "searchInputId": ""
     },
     {
       "id": "gel",

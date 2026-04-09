@@ -367,6 +367,76 @@ function createAgentIntentDispatcher({
       return result;
     }
 
+    if (parserPayload.primary_intent === 'purchase_recommendation') {
+      observability.recordLifecycleEvent(lifecycleRecorder, {
+        stage: 'purchase_recommendation_started',
+        status: 'started',
+        routing_intent: 'purchase_recommendation',
+        message: 'Executing purchase recommendation runtime.'
+      });
+      if (parserPayload.needs_clarification === true) {
+        result.purchase_recommendation = {
+          status: 'needs_more_info',
+          query: '',
+          source: 'parser_only',
+          filters: {
+            required_terms: [],
+            excluded_terms: [],
+            budget_preference: ''
+          },
+          items: [],
+          follow_up_questions: [
+            cleanText(parserPayload.clarification_reason, 280)
+              || 'Please tell me what item you want to buy.'
+          ],
+          summary: 'More detail is required before I can recommend a purchasable product.'
+        };
+      } else {
+        const runTrackedTool = createLifecycleToolRunner({
+          snapshot,
+          allowWriteTools: false,
+          lifecycleRecorder
+        });
+        const purchaseRecommendationTool = await runTrackedTool('purchase-recommendation', {}, {
+          allowWriteTools: false
+        });
+        const toolResult = purchaseRecommendationTool?.result && typeof purchaseRecommendationTool.result === 'object'
+          ? purchaseRecommendationTool.result
+          : {};
+        result.purchase_recommendation = purchaseRecommendationTool?.ok === false
+          ? {
+            status: 'no_match',
+            query: cleanText(parserPayload?.entities?.product_query || message, 320),
+            source: 'web',
+            filters: {
+              required_terms: [],
+              excluded_terms: [],
+              budget_preference: ''
+            },
+            items: [],
+            follow_up_questions: [
+              cleanText(purchaseRecommendationTool?.error, 280)
+                || 'The purchase recommendation search could not be completed.'
+            ],
+            summary: cleanText(purchaseRecommendationTool?.error, 320)
+              || 'The purchase recommendation search could not be completed.'
+          }
+          : toolResult;
+      }
+      observability.recordLifecycleEvent(lifecycleRecorder, {
+        stage: 'purchase_recommendation_completed',
+        status: cleanText(result.purchase_recommendation?.status, 40) === 'matched' ? 'ok' : 'pending',
+        routing_intent: 'purchase_recommendation',
+        message: `Purchase recommendation status=${cleanText(result.purchase_recommendation?.status, 40) || 'unknown'}.`,
+        meta: {
+          source: cleanText(result.purchase_recommendation?.source, 80),
+          item_count: asArray(result.purchase_recommendation?.items).length,
+          budget_preference: cleanText(result.purchase_recommendation?.filters?.budget_preference, 80)
+        }
+      });
+      return result;
+    }
+
     if (parserPayload.primary_intent === 'notebook_draft') {
       observability.recordLifecycleEvent(lifecycleRecorder, {
         stage: 'notebook_draft_started',

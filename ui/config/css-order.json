@@ -19,6 +19,7 @@
     "ui/css/views/tool-box-view.css",
     "ui/css/views/sequence-viewer-view.css",
     "ui/css/overrides/cross-view-fixes.css",
-    "ui/css/overrides/shell-first-remake.css"
+    "ui/css/overrides/shell-first-remake.css",
+    "ui/css/overrides/left-rail-template.css"
   ]
 }

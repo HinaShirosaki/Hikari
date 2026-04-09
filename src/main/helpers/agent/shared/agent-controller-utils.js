@@ -262,6 +262,9 @@ function createAgentControllerUtils(deps = {}) {
     const recordLookup = source.record_lookup && typeof source.record_lookup === 'object'
       ? source.record_lookup
       : null;
+    const purchaseRecommendation = source.purchase_recommendation && typeof source.purchase_recommendation === 'object'
+      ? source.purchase_recommendation
+      : null;
     const generalScienceQuestion = source.general_science_question && typeof source.general_science_question === 'object'
       ? source.general_science_question
       : null;
@@ -389,6 +392,15 @@ function createAgentControllerUtils(deps = {}) {
           source: cleanText(recordLookup.source, 80),
           backfilled_sql: recordLookup.backfilled_sql === true,
           item_count: asArray(recordLookup.items).length
+        }
+        : null,
+      purchase_recommendation: purchaseRecommendation
+        ? {
+          status: cleanText(purchaseRecommendation.status, 40),
+          query: cleanText(purchaseRecommendation.query, 320),
+          source: cleanText(purchaseRecommendation.source, 80),
+          budget_preference: cleanText(purchaseRecommendation?.filters?.budget_preference, 80),
+          item_count: asArray(purchaseRecommendation.items).length
         }
         : null,
       general_science_question: generalScienceQuestion

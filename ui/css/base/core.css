@@ -1,7 +1,12 @@
 :root {
   color-scheme: light;
   --app-font-size: 16px;
-  --layout-left-panel-width: minmax(280px, 340px);
+  --shared-left-rail-min: 240px;
+  --shared-left-rail-width: 280px;
+  --shared-left-rail-max: 400px;
+  --shared-left-rail-layout-height: calc(100vh - 144px);
+  --app-left-rail-track-width: max(var(--shared-left-rail-min), var(--shared-left-rail-width));
+  --layout-left-panel-width: minmax(var(--shared-left-rail-min), var(--shared-left-rail-width));
   --bg: #f5efe6;
   --surface: #fcfbf8;
   --surface-subtle: #f1e9de;
@@ -164,8 +169,8 @@ div {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  width: min(61.8vw, calc(100vw - 32px));
-  min-width: 320px;
+  width: max-content;
+  min-width: 0;
   max-width: calc(100vw - 32px);
   padding: 10px 12px;
   border: 1px solid var(--line);
@@ -728,7 +733,7 @@ button:disabled {
 
   .app-dock {
     bottom: 10px;
-    width: min(61.8vw, calc(100vw - 20px));
+    width: max-content;
     min-width: 0;
     max-width: calc(100vw - 20px);
     padding: 8px 10px;

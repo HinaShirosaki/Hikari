@@ -134,6 +134,7 @@ export function toConversation(messages) {
 export const TOOL_ACTIVITY_LABELS = {
   'inventory-lookup': 'Checking inventory records',
   'record-lookup': 'Checking lab records',
+  'purchase-recommendation': 'Finding products to buy',
   'notebook-draft': 'Preparing notebook draft',
   'python-sandbox': 'Running Python sandbox',
   'literature-search': 'Searching literature sources',
@@ -216,6 +217,12 @@ export const DEVELOPER_TOOL_TEST_OPTIONS = [
     example: 'binder stability methods'
   },
   {
+    name: 'purchase-recommendation',
+    label: 'Purchase Recommendation',
+    description: 'Pass a product request and inspect the extracted purchasable items with image, price, and vendor metadata.',
+    example: 'cheap metal-free endotoxin-free syringe filter'
+  },
+  {
     name: 'paper-download',
     label: 'Paper Download',
     description: 'Pass the paper title used during the download smoke test.',
@@ -256,6 +263,9 @@ export function inferRequestedActivities(requestText) {
     rows.push('Checking stored PDF papers');
   }
   if (/\b(web|internet|latest|recent|citation|reference)\b/.test(text)) {
+    rows.push('Searching web sources');
+  }
+  if (/\b(buy|purchase|shop|shopping|vendor|price)\b/.test(text)) {
     rows.push('Searching web sources');
   }
   if (/\b(download|fetch|get)\b/.test(text) && /\b(paper|papers|pdf)\b/.test(text)) {

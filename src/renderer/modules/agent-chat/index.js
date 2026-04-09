@@ -137,6 +137,8 @@ export function initAgentChat({
       parser_completed: 'Intent parsed',
       protocol_to_notebook_followup: 'Continuing notebook follow-up',
       protocol_to_notebook_completed: 'Notebook draft status updated',
+      purchase_recommendation_started: 'Finding products to buy',
+      purchase_recommendation_completed: 'Purchase recommendations updated',
       inventory_lookup_started: 'Checking inventory records',
       inventory_lookup_completed: 'Inventory lookup updated',
       record_lookup_started: 'Checking lab records',
@@ -538,6 +540,22 @@ export function initAgentChat({
   }
 
   async function onHistoryClick(event) {
+    const externalButton = event?.target?.closest?.('[data-agent-open-external-url]')
+      || (event?.target?.dataset?.agentOpenExternalUrl ? event.target : null);
+    if (externalButton) {
+      const url = trimText(externalButton.dataset.agentOpenExternalUrl, 2000);
+      if (!url) {
+        return;
+      }
+      if (!api?.openExternalUrl) {
+        setStatus('External link opening is unavailable in this build.');
+        return;
+      }
+      const result = await api.openExternalUrl(url);
+      setStatus(result?.ok === true ? 'Opened product page.' : (trimText(result?.error, 320) || 'Failed to open product page.'));
+      return;
+    }
+
     const createButton = event?.target?.closest?.('[data-agent-create-planned-page]')
       || (event?.target?.dataset?.agentCreatePlannedPage ? event.target : null);
     if (!createButton) {
@@ -707,6 +725,7 @@ export function initAgentChat({
           parser: response.parser,
           protocol_to_notebook: response.protocolWorkflow,
           notebook_draft: response.notebookDraftWorkflow,
+          purchase_recommendation: response.purchaseRecommendation,
           inventory_lookup: response.inventoryLookup,
           record_lookup: response.recordLookup,
           general_science_question: response.generalScienceQuestion,
@@ -757,6 +776,7 @@ export function initAgentChat({
           },
           protocol_to_notebook: null,
           notebook_draft: null,
+          purchase_recommendation: null,
           inventory_lookup: null,
           record_lookup: null,
           general_science_question: null,

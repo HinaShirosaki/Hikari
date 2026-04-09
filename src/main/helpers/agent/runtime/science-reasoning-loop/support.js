@@ -502,13 +502,13 @@ function createScienceLoopSupport(deps = {}) {
       ]
       : [
         'You are inside a deterministic science reasoning loop.',
-        'At each assistant turn, either call exactly one tool or answer directly if you already have sufficient evidence.',
-        'Do not call more than one tool in a single assistant turn.',
+        'At each assistant turn, either call one or more independent tools or answer directly if you already have sufficient evidence.',
+        'If multiple tool calls would help, keep them tightly scoped and independent so they can be executed in parallel as one evidence round.',
         'Prefer tools in the listed priority order and explain the answer only after sufficient evidence exists.',
         'When you give the final answer, include enough detail to explain the conclusion, supporting evidence, and material caveats.',
         'Do not compress the final answer to one or two sentences unless the user explicitly asked for brevity.',
         'Treat any route plan as non-binding guidance; adapt when the actual evidence suggests a better next step.',
-        'If a tool result is weak or empty, choose a more targeted next tool on the following turn.',
+        'If a tool result is weak or empty, choose a more targeted next tool or tool batch on the following turn.',
         'Do not fabricate project records, literature results, or computation outputs.'
       ];
     if (intent === 'general_science_question') {
@@ -551,7 +551,7 @@ function createScienceLoopSupport(deps = {}) {
       nextTool?.tool_name ? `Suggested next tool: ${cleanText(nextTool.tool_name, 120)}.` : '',
       nextTool?.query ? `Suggested query refinement: ${cleanText(nextTool.query, 320)}` : '',
       nextTool?.reason ? `Why: ${cleanText(nextTool.reason, 260)}` : '',
-      'Please continue with the next best single tool call, or answer directly only if the evidence is now sufficient.'
+      'Please continue with the next best tool call or tightly scoped parallel tool batch, or answer directly only if the evidence is now sufficient.'
     ].filter(Boolean).join('\n');
   }
 

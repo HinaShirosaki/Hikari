@@ -39,6 +39,7 @@ const { createAgentToolCallRuntime } = require('../agent/tools/agent-tool-execut
 const { createAgentToolProviderRuntime } = require('../agent/tools/agent-tool-provide.js');
 const { createNotebookDraftRuntime } = require('../agent/tools/agent-notebook-draft.js');
 const { createLiteratureSearchRuntime } = require('../agent/tools/agent-literature-search.js');
+const { createPurchaseRecommendationRuntime } = require('../agent/tools/agent-purchase-recommendation.js');
 const { createPaperContextLoaderRuntime } = require('../agent/tools/agent-paper-context-loader.js');
 const { createProtocolMatchingRuntime } = require('../agent/tools/agent-protocol-matching.js');
 const { createNotebookGenerationRuntime } = require('../agent/tools/agent-notebook-generation.js');
@@ -269,6 +270,10 @@ function createMainAgentServices(deps = {}) {
     paperContextLoaderRuntime,
     fetch: typeof globalThis.fetch === 'function' ? globalThis.fetch.bind(globalThis) : null
   });
+  const purchaseRecommendationRuntime = createPurchaseRecommendationRuntime({
+    cleanText,
+    fetch: typeof globalThis.fetch === 'function' ? globalThis.fetch.bind(globalThis) : null
+  });
   const pythonSandboxToolRuntime = createManagedPythonSandboxRuntime({
     runPythonSandbox,
     sandboxRoot: getAgentPythonSandboxRoot()
@@ -279,6 +284,7 @@ function createMainAgentServices(deps = {}) {
     genericAgentToolRuntime,
     agentLookupRuntime,
     literatureSearchRuntime,
+    purchaseRecommendationRuntime,
     pythonSandboxToolRuntime,
     notebookDraftRuntime,
     getAgentPythonSandboxRoot

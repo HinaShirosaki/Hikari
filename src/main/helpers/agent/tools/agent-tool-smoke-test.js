@@ -14,6 +14,7 @@ const { runPythonSandbox } = require('./agent-python-sandbox.js');
 const { createAgentSubAgentRuntime } = require('./agent-sub-agent.js');
 const { createAgentMemoryRuntime } = require('../context/agent-memory.js');
 const { createLiteratureSearchRuntime } = require('./agent-literature-search.js');
+const { createPurchaseRecommendationRuntime } = require('./agent-purchase-recommendation.js');
 const { createPaperDownloadRuntime } = require('./agent-paper-download.js');
 const { createPaperAnalysisRuntime } = require('./agent-paper-analysis.js');
 const { createProtocolGenerationRuntime } = require('./agent-protocol-generation.js');
@@ -388,6 +389,9 @@ function buildPreview(toolName, result) {
   if (toolName === 'literature-search') {
     return cleanText(source.items?.[0]?.title || source.items?.[0]?.accession, 220);
   }
+  if (toolName === 'purchase-recommendation') {
+    return cleanText(source.items?.[0]?.title || source.items?.[0]?.vendor, 220);
+  }
   if (toolName === 'paper-download') {
     return cleanText(source.relative_path || source.file_name, 220);
   }
@@ -408,6 +412,9 @@ function buildResultMessage(toolName, result, fallbackSummary = '') {
   }
   if (toolName === 'literature-search') {
     candidates.push(source.items?.[0]?.summary);
+  }
+  if (toolName === 'purchase-recommendation') {
+    candidates.push(source.items?.[0]?.vendor);
   }
   candidates.push(
     source.summary,
@@ -878,6 +885,68 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
     };
   }
 
+  async function smokePurchaseRecommendation(options = {}) {
+    const pages = {
+      'https://vendor-a.test/filter': `
+        <html>
+          <head>
+            <script type="application/ld+json">
+              {
+                "@context": "https://schema.org",
+                "@type": "Product",
+                "name": "Metal-Free Endotoxin-Free Filter",
+                "image": "https://vendor-a.test/filter.png",
+                "brand": { "@type": "Brand", "name": "Vendor A" },
+                "offers": {
+                  "@type": "Offer",
+                  "priceCurrency": "USD",
+                  "price": "12.50",
+                  "url": "https://vendor-a.test/filter"
+                }
+              }
+            </script>
+          </head>
+          <body>metal-free endotoxin-free disposable filter</body>
+        </html>
+      `,
+      'https://vendor-b.test/filter': `
+        <html>
+          <head>
+            <meta property="og:title" content="Premium Metal-Free Endotoxin-Free Filter" />
+            <meta property="og:image" content="https://vendor-b.test/filter.png" />
+            <meta property="og:site_name" content="Vendor B" />
+            <meta property="product:price:amount" content="19.99" />
+            <meta property="product:price:currency" content="USD" />
+            <link rel="canonical" href="https://vendor-b.test/filter" />
+          </head>
+          <body>metal-free endotoxin-free premium filter</body>
+        </html>
+      `
+    };
+    const runtime = createPurchaseRecommendationRuntime({
+      searchWebResults: async () => ([
+        { title: 'Vendor A filter', url: 'https://vendor-a.test/filter' },
+        { title: 'Vendor B filter', url: 'https://vendor-b.test/filter' }
+      ]),
+      fetch: async (url) => ({
+        ok: true,
+        text: async () => pages[url] || ''
+      })
+    });
+    const requestMessage = resolveToolMessage(options.message, 'Find a cheap metal-free endotoxin-free syringe filter.');
+    const result = await runtime.execute({
+      message: requestMessage,
+      query: 'syringe filter',
+      required_terms: ['metal-free', 'endotoxin-free'],
+      budget_preference: 'cheap'
+    });
+    return {
+      ...result,
+      ok: result?.ok !== false,
+      summary: cleanText(result?.summary, 320) || 'Purchase recommendation smoke test completed.'
+    };
+  }
+
   const smokeRunners = {
     'inventory-lookup': async (options = {}) => smokeInventoryLookup(buildSmokeSnapshot(), options),
     'record-lookup': async (options = {}) => smokeRecordLookup(buildSmokeSnapshot(), options),
@@ -888,6 +957,7 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
     'sub-agent': async (options = {}) => smokeSubAgent(options),
     memory: async (options = {}) => smokeMemory(options),
     'literature-search': async (options = {}) => smokeLiteratureSearch(options),
+    'purchase-recommendation': async (options = {}) => smokePurchaseRecommendation(options),
     'paper-download': async (options = {}) => smokePaperDownload(options),
     'paper-analysis': async (options = {}) => smokePaperAnalysis(options),
     'protocol-generation': async (options = {}) => smokeProtocolGeneration(options)

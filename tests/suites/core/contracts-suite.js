@@ -568,6 +568,7 @@ test('generic agent tool catalog keeps key retrieval and execution tools', () =>
   assert.equal(toolsCatalog.some((entry) => entry?.name === 'record-lookup'), true);
   assert.equal(toolsCatalog.some((entry) => entry?.name === 'python-sandbox'), true);
   assert.equal(toolsCatalog.some((entry) => entry?.name === 'literature-search'), true);
+  assert.equal(toolsCatalog.some((entry) => entry?.name === 'purchase-recommendation'), true);
   assert.equal(toolsCatalog.some((entry) => entry?.name === 'paper-download'), true);
   assert.equal(toolsCatalog.some((entry) => entry?.name === 'notebook-draft'), true);
   assert.equal(toolsCatalog.some((entry) => entry?.name === 'protocol-generation'), true);
@@ -710,6 +711,38 @@ test('science controller path is wired through the agent registrar and shared re
   assert.match(dispatcherSource, /stage:\s*'science_intent_completed'/);
 });
 
+test('purchase recommendation runtime and external-link bridge are wired across main and renderer contracts', () => {
+  const purchaseSource = fs.readFileSync(
+    agentPath('tools', 'agent-purchase-recommendation.js'),
+    'utf8'
+  );
+  const executorsSource = fs.readFileSync(
+    agentPath('tools', 'register-agent-tool-executors.js'),
+    'utf8'
+  );
+  const dispatcherSource = fs.readFileSync(agentRegistrarPath('agent-intent-dispatcher.js'), 'utf8');
+  const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
+  const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');
+  const preloadSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'preload.js'), 'utf8');
+  const systemRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-system-ipc.js'), 'utf8');
+
+  assert.match(purchaseSource, /function createPurchaseRecommendationRuntime\(deps = \{\}\)/);
+  assert.match(purchaseSource, /function extractProductFromHtml\(html = '', pageUrl = ''\)/);
+  assert.match(purchaseSource, /async function execute\(input = \{\}\)/);
+  assert.match(mainAgentServicesSource, /createPurchaseRecommendationRuntime/);
+  assert.match(mainAgentServicesSource, /const purchaseRecommendationRuntime = createPurchaseRecommendationRuntime/);
+  assert.match(mainAgentServicesSource, /purchaseRecommendationRuntime,/);
+  assert.match(executorsSource, /registerToolExecutor\('purchase-recommendation'/);
+  assert.match(dispatcherSource, /parserPayload\.primary_intent === 'purchase_recommendation'/);
+  assert.match(dispatcherSource, /runTrackedTool\('purchase-recommendation', \{\}, \{/);
+  assert.match(dispatcherSource, /stage:\s*'purchase_recommendation_started'/);
+  assert.match(dispatcherSource, /stage:\s*'purchase_recommendation_completed'/);
+  assert.match(preloadSource, /openExternalUrl:\s*\(url\)\s*=>\s*ipcRenderer\.invoke\('system:open-external-url', \{ url \}\)/);
+  assert.match(systemRegistrarSource, /ipcMain\.handle\('system:open-external-url'/);
+  assert.match(systemRegistrarSource, /shell\.openExternal\(url\)/);
+  assert.match(mainSource, /registerSystemIpc\(\{[\s\S]*shell,/);
+});
+
 test('agent tool loading and execution helpers expose catalogs and generic executor registry', () => {
   const loadingSource = fs.readFileSync(
     agentPath('tools', 'agent-tool-loading.js'),
@@ -737,6 +770,7 @@ test('agent tool loading and execution helpers expose catalogs and generic execu
   assert.equal(toolsCatalog.some((entry) => entry?.name === 'sub-agent'), true);
   assert.equal(toolsCatalog.some((entry) => entry?.name === 'memory'), true);
   assert.equal(toolsCatalog.some((entry) => entry?.name === 'literature-search'), true);
+  assert.equal(toolsCatalog.some((entry) => entry?.name === 'purchase-recommendation'), true);
   assert.equal(toolsCatalog.some((entry) => entry?.name === 'paper-download'), true);
   assert.equal(toolsCatalog.some((entry) => entry?.name === 'paper-analysis'), true);
   assert.equal(toolsCatalog.some((entry) => entry?.name === 'notebook-draft'), true);
@@ -745,6 +779,7 @@ test('agent tool loading and execution helpers expose catalogs and generic execu
   assert.equal(Boolean(toolCallCatalog['sub-agent']?.input_schema), true);
   assert.equal(Boolean(toolCallCatalog.memory?.input_schema), true);
   assert.equal(Boolean(toolCallCatalog['literature-search']?.input_schema), true);
+  assert.equal(Boolean(toolCallCatalog['purchase-recommendation']?.input_schema), true);
   assert.equal(Boolean(toolCallCatalog['paper-download']?.input_schema), true);
   assert.equal(Boolean(toolCallCatalog['paper-analysis']?.input_schema), true);
   assert.equal(Boolean(toolCallCatalog['notebook-draft']?.input_schema), true);
@@ -752,6 +787,7 @@ test('agent tool loading and execution helpers expose catalogs and generic execu
   assert.equal(typeof toolCallCatalog['inventory-lookup']?.description, 'string');
   assert.equal(typeof toolCallCatalog.memory?.description, 'string');
   assert.equal(typeof toolCallCatalog['literature-search']?.description, 'string');
+  assert.equal(typeof toolCallCatalog['purchase-recommendation']?.description, 'string');
   assert.equal(typeof toolCallCatalog['paper-download']?.description, 'string');
   assert.equal(typeof toolCallCatalog['notebook-draft']?.description, 'string');
   assert.equal(typeof toolCallCatalog['protocol-generation']?.description, 'string');
@@ -772,6 +808,7 @@ test('agent tool loading and execution helpers expose catalogs and generic execu
   assert.equal(/["']sub-agent["']/.test(executionSource), false);
   assert.equal(/["']memory["']/.test(executionSource), false);
   assert.equal(/["']literature-search["']/.test(executionSource), false);
+  assert.equal(/["']purchase-recommendation["']/.test(executionSource), false);
   assert.equal(/["']paper-download["']/.test(executionSource), false);
   assert.equal(/["']paper-analysis["']/.test(executionSource), false);
   assert.equal(/["']protocol-generation["']/.test(executionSource), false);
@@ -816,6 +853,7 @@ test('agent helper cleanup keeps the categorized folder structure and core modul
     ['tools', 'agent-protocol-matching.js'],
     ['tools', 'agent-protocol-generation.js'],
     ['tools', 'agent-literature-search.js'],
+    ['tools', 'agent-purchase-recommendation.js'],
     ['tools', 'agent-paper-context-loader.js'],
     ['tools', 'agent-paper-download.js'],
     ['tools', 'agent-paper-analysis.js'],
@@ -1062,6 +1100,31 @@ test('literature, paper context, paper analysis, and protocol generation helpers
   assert.equal(Boolean(toolCallCatalog['paper-analysis']?.input_schema), true);
   assert.equal(Boolean(toolCallCatalog['notebook-draft']?.input_schema), true);
   assert.equal(Boolean(toolCallCatalog['protocol-generation']?.input_schema), true);
+});
+
+test('purchase recommendation helper exposes reusable runtime and tool contracts', () => {
+  const purchaseSource = fs.readFileSync(
+    agentPath('tools', 'agent-purchase-recommendation.js'),
+    'utf8'
+  );
+  const toolsCatalog = JSON.parse(fs.readFileSync(
+    agentPath('tools', 'Tools.json'),
+    'utf8'
+  ));
+  const toolCallCatalog = JSON.parse(fs.readFileSync(
+    agentPath('tools', 'Tool-call.json'),
+    'utf8'
+  ));
+
+  assert.match(purchaseSource, /function createPurchaseRecommendationRuntime\(deps = \{\}\)/);
+  assert.match(purchaseSource, /function buildSearchQuery\(input = \{\}\)/);
+  assert.match(purchaseSource, /function extractProductFromHtml\(html = '', pageUrl = ''\)/);
+  assert.match(purchaseSource, /const completeJsonLdProduct =/);
+  assert.match(purchaseSource, /readMetaContent\(html, 'property', 'og:image'\)/);
+  assert.match(purchaseSource, /follow_up_questions/);
+  assert.equal(toolsCatalog.some((entry) => entry?.name === 'purchase-recommendation'), true);
+  assert.equal(Boolean(toolCallCatalog['purchase-recommendation']?.input_schema), true);
+  assert.equal(typeof toolCallCatalog['purchase-recommendation']?.description, 'string');
 });
 
 test('sequence library helper creates storage folder, sqlite db, and status-filtered entries', async () => {
@@ -1514,6 +1577,7 @@ test('science runtimes use canonical catalog tools and main wires their schemas 
   assert.equal(mainAgentServicesSource.includes("genericAgentToolRuntime.registerToolExecutor('inventory-lookup'"), false);
   assert.equal(mainAgentServicesSource.includes("genericAgentToolRuntime.registerToolExecutor('record-lookup'"), false);
   assert.equal(mainAgentServicesSource.includes("genericAgentToolRuntime.registerToolExecutor('literature-search'"), false);
+  assert.equal(mainAgentServicesSource.includes("genericAgentToolRuntime.registerToolExecutor('purchase-recommendation'"), false);
   assert.equal(mainAgentServicesSource.includes("genericAgentToolRuntime.registerToolExecutor('python-sandbox'"), false);
   assert.equal(mainAgentServicesSource.includes('registerAgentToolExecutors({'), true);
   assert.equal(mainAgentServicesSource.includes('const agentToolProviderRuntime = createAgentToolProviderRuntime'), true);

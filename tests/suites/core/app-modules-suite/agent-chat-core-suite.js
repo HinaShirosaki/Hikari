@@ -318,6 +318,78 @@ test('agent-chat renders python sandbox text and image outputs inline from resul
   assert.match(history.innerHTML, /data:image\/png;base64,ZmFrZS1pbWFnZQ==/);
 });
 
+test('agent-chat renders purchase recommendation tiles with unified image stage and ordered product metadata', () => {
+  const renderingModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'rendering.js'));
+  const document = createMockDocument(['agent-chat-history']);
+  const history = document.getElementById('agent-chat-history');
+
+  renderingModule.renderHistory({
+    historyNode: history,
+    messages: [
+      {
+        id: 'assistant-purchase-1',
+        role: 'assistant',
+        text: 'Found 1 purchase recommendation for your request.',
+        createdAt: '2026-03-22T17:00:05.000Z',
+        meta: {
+          parser: {
+            primary_intent: 'purchase_recommendation',
+            needs_clarification: false,
+            reasoning_summary: 'Find a purchasable product with explicit lab constraints.'
+          },
+          purchase_recommendation: {
+            status: 'matched',
+            query: 'cheap endotoxin-free metal-free pipette tips',
+            source: 'web',
+            filters: {
+              required_terms: ['endotoxin-free', 'metal-free'],
+              excluded_terms: ['latex'],
+              budget_preference: 'cheap'
+            },
+            items: [
+              {
+                id: 'item-1',
+                title: 'Endotoxin-Free Metal-Free Pipette Tips',
+                vendor: 'Lab Vendor',
+                price_text: '$14.99',
+                price_value: 14.99,
+                currency: 'USD',
+                image_url: 'https://vendor.example/item-1.png',
+                product_url: 'https://vendor.example/item-1'
+              }
+            ],
+            follow_up_questions: []
+          }
+        }
+      }
+    ],
+    state: {
+      settings: {
+        agent: {
+          developerMode: false
+        }
+      }
+    },
+    safeText: shared.safeText
+  });
+
+  assert.match(history.innerHTML, /agent-purchase-grid/);
+  assert.match(history.innerHTML, /agent-purchase-image-wrap/);
+  assert.match(history.innerHTML, /agent-purchase-image/);
+  assert.match(history.innerHTML, /data-agent-open-external-url="https:\/\/vendor\.example\/item-1"/);
+  assert.match(history.innerHTML, /agent-purchase-title">Endotoxin-Free Metal-Free Pipette Tips/);
+  assert.match(history.innerHTML, /agent-purchase-price">\$14\.99/);
+  assert.match(history.innerHTML, /agent-purchase-vendor">Lab Vendor/);
+  assert.match(history.innerHTML, /Purchase Recommendation/);
+  assert.match(history.innerHTML, /Purchase Filters/);
+  const titleIndex = history.innerHTML.indexOf('agent-purchase-title');
+  const priceIndex = history.innerHTML.indexOf('agent-purchase-price');
+  const vendorIndex = history.innerHTML.indexOf('agent-purchase-vendor');
+  assert.equal(titleIndex >= 0, true);
+  assert.equal(titleIndex < priceIndex, true);
+  assert.equal(priceIndex < vendorIndex, true);
+});
+
 test('agent-chat sends settings API key to main process and stores assistant response', async () => {
   const document = createMockDocument([
     'agent-project-select',

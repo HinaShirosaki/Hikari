@@ -16,6 +16,7 @@ import {
 import { APP_DOCK_ORDER, APP_REGISTRY } from './modules/app-registry.generated.js';
 import { createRendererModuleRuntime } from './module-runtime.js';
 import { createModuleRegistry, createRendererServices } from './services/index.js';
+import { initSharedLeftRailResizers } from './shared-left-rail.js';
 
 const state = loadState();
 const LAST_ACTIVE_VIEW_STORAGE_KEY = 'enana_last_active_view_v1';
@@ -102,12 +103,15 @@ const homeBtn = document.getElementById('home-btn');
 const topbarSettingsBtn = document.getElementById('topbar-settings-btn');
 const exitBtn = document.getElementById('exit-btn');
 const topbarSearchInput = document.getElementById('topbar-search');
-const appDock = document.querySelector('.app-dock');
 const dockNav = document.getElementById('app-dock-nav');
 const appDockDivider = document.querySelector('.app-dock-divider');
 const moreBtn = document.getElementById('app-more-btn');
 const moreMenu = document.getElementById('app-more-menu');
 const views = [...document.querySelectorAll('.view')];
+const sharedLeftRailRuntime = initSharedLeftRailResizers({
+  document,
+  windowObject: window
+});
 let appNavButtons = [];
 let moreMenuButtons = [];
 let renderedDockApps = DOCK_APPS;
@@ -208,9 +212,12 @@ function createNavButton(app, options = {}) {
 }
 
 function getDockCapacity() {
-  const dockWidth = appDock?.clientWidth || 0;
   const viewportWidth = window.innerWidth || document.documentElement?.clientWidth || 0;
-  const effectiveWidth = dockWidth || Math.max(240, Math.floor(viewportWidth * 0.618));
+  const dockViewportMargin = viewportWidth <= 960 ? 20 : 32;
+  const effectiveWidth = Math.min(
+    Math.max(240, Math.floor(viewportWidth * 0.618)),
+    Math.max(240, viewportWidth - dockViewportMargin)
+  );
   if (!effectiveWidth) {
     return DOCK_APPS.length;
   }
@@ -1177,6 +1184,7 @@ function initNavigation() {
   const syncResponsiveDock = () => {
     renderAppNavigation();
     syncNavigationState(getActiveViewId());
+    sharedLeftRailRuntime.syncWidth();
   };
   window.addEventListener('resize', syncResponsiveDock);
   if (typeof ResizeObserver === 'function') {

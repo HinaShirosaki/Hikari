@@ -1,10 +1,12 @@
 /* lab-common-inventory-view */
 
 .chemical-layout {
+  --app-left-rail-bleed: 28px;
   display: grid;
   grid-template-columns: var(--layout-left-panel-width) minmax(0, 1fr);
   gap: 28px;
-  align-items: start;
+  align-items: stretch;
+  min-height: var(--shared-left-rail-layout-height);
 }
 
 .chemical-layout > * {
@@ -18,11 +20,6 @@
   margin-top: 0;
   padding-top: 0;
   border-top: 0;
-}
-
-.chemical-sidebar {
-  position: sticky;
-  top: 0;
 }
 
 .chemical-sidebar-stack,

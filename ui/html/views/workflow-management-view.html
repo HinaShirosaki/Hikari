@@ -1,16 +1,13 @@
 <section id="workflow-management-view" class="view">
-      <div class="panel">
-        <h2>Workflows</h2>
-        <div id="workflow-entry-panel" class="form-actions">
-          <button type="button" id="workflow-entry-create-btn" class="primary-btn">Create New Workflow</button>
-          <button type="button" id="workflow-entry-view-btn" class="ghost-btn">View/Edit Workflow</button>
-          <button type="button" id="workflow-entry-back-btn" class="ghost-btn" hidden>Back to Work Flow</button>
-        </div>
-      </div>
+      <div class="workflow-editor-layout left-rail-template">
+        <aside class="workflow-editor-sidebar app-left-rail left-rail-template__rail" data-sync-left-rail>
+          <div id="workflow-entry-panel" class="workflow-entry-panel app-left-rail-section">
+            <button type="button" id="workflow-entry-create-btn" class="primary-btn">Create New Workflow</button>
+            <button type="button" id="workflow-entry-view-btn" class="ghost-btn">View/Edit Workflow</button>
+            <button type="button" id="workflow-entry-back-btn" class="ghost-btn" hidden>Back to Workflow</button>
+          </div>
 
-      <div class="workflow-editor-layout">
-        <div class="workflow-editor-sidebar">
-          <div class="panel workflow-editor-panel" hidden>
+          <div class="workflow-editor-panel app-left-rail-section" hidden>
             <form id="workflow-form" class="stack-form">
               <input type="hidden" id="workflow-id" />
               <label>
@@ -37,9 +34,14 @@
               </div>
             </form>
           </div>
-        </div>
 
-        <div class="workflow-editor-main">
+          <div class="workflow-list-panel app-left-rail-section" hidden>
+            <h3>Saved Workflows</h3>
+            <div id="workflow-list" class="workflow-list app-left-rail-list"></div>
+          </div>
+        </aside>
+
+        <div class="workflow-editor-main left-rail-template__main">
           <div class="panel workflow-editor-panel" hidden>
             <h3>Workflow Blocks</h3>
             <p class="small-note">Add protocol blocks or plain-text blocks. New blocks default assignee to yourself.</p>
@@ -86,10 +88,5 @@
             <div id="workflow-graph-context-menu" class="workflow-context-menu" hidden></div>
           </div>
         </div>
-      </div>
-
-      <div class="panel workflow-list-panel" hidden>
-        <h3>Saved Workflows</h3>
-        <div id="workflow-list" class="cards"></div>
       </div>
     </section>

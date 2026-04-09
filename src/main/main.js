@@ -327,6 +327,7 @@ registerAgentIpc({
 
 registerSystemIpc({
   ipcMain,
+  shell,
   cleanText,
   getCodexLoginStatus,
   getCodexCliCatalog,

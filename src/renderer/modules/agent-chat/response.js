@@ -115,6 +115,18 @@ export function collectAgentActivityRows(meta) {
     upsertRow('done', 'Record SQL index backfilled');
   }
 
+  const purchaseRecommendation = meta.purchase_recommendation && typeof meta.purchase_recommendation === 'object'
+    ? meta.purchase_recommendation
+    : {};
+  const purchaseStatus = trimText(purchaseRecommendation.status, 40);
+  if (purchaseStatus) {
+    upsertRow(purchaseStatus === 'matched' ? 'done' : 'pending', `Purchase recommendation status: ${purchaseStatus}`);
+  }
+  const purchaseItemCount = asArray(purchaseRecommendation.items).length;
+  if (purchaseItemCount > 0) {
+    upsertRow('done', `Purchase matches: ${purchaseItemCount}`);
+  }
+
   [
     ['General science', meta.general_science_question],
     ['Project science', meta.project_science_question],
@@ -236,6 +248,28 @@ export function summarizeRecordLookup(lookup) {
   return '';
 }
 
+export function summarizePurchaseRecommendation(purchaseRecommendation) {
+  const payload = purchaseRecommendation && typeof purchaseRecommendation === 'object' ? purchaseRecommendation : {};
+  const status = trimText(payload.status, 40);
+  if (!status) {
+    return '';
+  }
+  if (status === 'needs_more_info') {
+    return asArray(payload.follow_up_questions).map((item) => trimText(item, 280)).filter(Boolean).join(' ')
+      || 'I need more detail before I can recommend something to buy.';
+  }
+  const query = trimText(payload.query, 220);
+  const items = asArray(payload.items);
+  const requiredTerms = asArray(payload?.filters?.required_terms).map((item) => trimText(item, 120)).filter(Boolean);
+  if (status === 'matched' && items.length) {
+    return `Found ${items.length} purchase recommendation${items.length === 1 ? '' : 's'}${query ? ` for "${query}"` : ''}${requiredTerms.length ? ` matching ${requiredTerms.join(', ')}` : ''}.`;
+  }
+  if (status === 'no_match') {
+    return `No purchase recommendations found${query ? ` for "${query}"` : ''}.`;
+  }
+  return '';
+}
+
 export function summarizeScienceResult(payload) {
   const source = payload && typeof payload === 'object' ? payload : {};
   const status = trimText(source.status, 40);
@@ -301,6 +335,9 @@ export function normalizeAgentResponse(result) {
   const recordLookup = result?.record_lookup && typeof result.record_lookup === 'object'
     ? result.record_lookup
     : null;
+  const purchaseRecommendation = result?.purchase_recommendation && typeof result.purchase_recommendation === 'object'
+    ? result.purchase_recommendation
+    : null;
   const generalScienceQuestion = result?.general_science_question && typeof result.general_science_question === 'object'
     ? result.general_science_question
     : null;
@@ -312,6 +349,7 @@ export function normalizeAgentResponse(result) {
     : null;
   const inventorySummaryText = summarizeInventoryLookup(inventoryLookup);
   const recordSummaryText = summarizeRecordLookup(recordLookup);
+  const purchaseRecommendationText = summarizePurchaseRecommendation(purchaseRecommendation);
   const notebookDraftText = summarizeNotebookDraft(notebookDraftWorkflow);
   const scienceAnswerText = summarizeScienceResult(generalScienceQuestion)
     || summarizeScienceResult(projectScienceQuestion)
@@ -321,8 +359,9 @@ export function normalizeAgentResponse(result) {
       ? (completedNotebookText
         || `Notebook draft completed using protocol ${trimText(protocolWorkflow?.selected_protocol?.name, 220) || 'selection'}.`)
       : (protocolStatus === 'needs_more_info'
-        ? (followUpQuestions.join(' ') || 'More details are needed to fill the remaining notebook placeholders.')
-        : (scienceAnswerText
+      ? (followUpQuestions.join(' ') || 'More details are needed to fill the remaining notebook placeholders.')
+      : (scienceAnswerText
+          || purchaseRecommendationText
           || inventorySummaryText
           || recordSummaryText
           || trimText(parser.reasoning_summary, 12000)
@@ -333,6 +372,7 @@ export function normalizeAgentResponse(result) {
     protocolWorkflow,
     notebookDraftWorkflow,
     notebookPayload,
+    purchaseRecommendation,
     inventoryLookup,
     recordLookup,
     generalScienceQuestion,

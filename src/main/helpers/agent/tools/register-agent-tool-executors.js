@@ -90,6 +90,7 @@ function registerAgentToolExecutors(deps = {}) {
   const genericAgentToolRuntime = deps.genericAgentToolRuntime;
   const agentLookupRuntime = deps.agentLookupRuntime || {};
   const literatureSearchRuntime = deps.literatureSearchRuntime || {};
+  const purchaseRecommendationRuntime = deps.purchaseRecommendationRuntime || {};
   const pythonSandboxToolRuntime = deps.pythonSandboxToolRuntime || {};
   const notebookDraftRuntime = deps.notebookDraftRuntime || {};
   const getAgentPythonSandboxRoot = typeof deps.getAgentPythonSandboxRoot === 'function'
@@ -173,6 +174,32 @@ function registerAgentToolExecutors(deps = {}) {
     max_per_source: toIntegerInRange(args?.max_per_source, 5, 1, 10)
   }));
 
+  genericAgentToolRuntime.registerToolExecutor('purchase-recommendation', async ({ args, context }) => {
+    const result = await purchaseRecommendationRuntime.execute({
+      ...args,
+      message: cleanText(args?.message || context?.message, 1200),
+      parser_payload: resolveToolParserPayload(args, context),
+      limit: toIntegerInRange(args?.limit, 6, 1, 6),
+      search_limit: toIntegerInRange(args?.search_limit, 10, 1, 16)
+    });
+    const items = Array.isArray(result?.items) ? result.items : [];
+    return {
+      ...result,
+      citations: items.slice(0, 8).map((item, index) => ({
+        source: 'web_source',
+        pointer: cleanText(item?.product_url || item?.title, 260) || `purchase-result:${index + 1}`,
+        reason: 'Matched purchasable product metadata from a vendor page.'
+      })),
+      summary: cleanText(result?.summary, 320)
+        || buildExecutorSummary(
+          cleanText,
+          'purchase-recommendation',
+          items,
+          'purchase-recommendation returned no matches.'
+        )
+    };
+  });
+
   genericAgentToolRuntime.registerToolExecutor('python-sandbox', async ({ args, context }) => {
     const result = await pythonSandboxToolRuntime.execute(args, {
       parent_request_id: cleanText(context?.lifecycleRecorder?.requestId || context?.requestId, 160),
@@ -231,6 +258,7 @@ function registerAgentToolExecutors(deps = {}) {
     'inventory-lookup',
     'record-lookup',
     'literature-search',
+    'purchase-recommendation',
     'python-sandbox',
     'notebook-draft'
   ];

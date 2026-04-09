@@ -36,6 +36,10 @@
     "description": "Search literature across PubMed, Crossref, UniProt, Europe PMC, or generic web results with scholarly-first auto fallback. Prefer compact keyword or entity-style queries such as `MAPK inhibitor resistance mechanism` instead of full-sentence prompts."
   },
   {
+    "name": "purchase-recommendation",
+    "description": "Search the web for purchasable products, extract vendor page metadata such as image and price, hard-filter explicit product requirements, and rank valid items for chat recommendation cards."
+  },
+  {
     "name": "paper-download",
     "description": "Extract a downloadable paper PDF URL, stream the file into app storage with progress tracking, and fall back to a browser-assisted download session when sites block automated fetches."
   },
