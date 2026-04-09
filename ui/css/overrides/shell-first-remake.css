@@ -261,11 +261,16 @@
   gap: 16px;
 }
 
-#papers-view .papers-folder-item,
 #papers-view .papers-paper-row-main {
   border: 1px solid transparent;
   border-radius: 6px;
   padding: 8px 10px;
+}
+
+#papers-view .papers-folder-item {
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 8px 10px 8px 0;
 }
 
 #papers-view .papers-folder-item:hover,

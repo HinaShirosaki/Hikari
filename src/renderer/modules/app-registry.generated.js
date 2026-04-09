@@ -83,7 +83,7 @@ export const APP_REGISTRY = [
       "assays",
       "plate"
     ],
-    "searchInputId": "assay-search"
+    "searchInputId": ""
   },
   {
     "id": "gel",

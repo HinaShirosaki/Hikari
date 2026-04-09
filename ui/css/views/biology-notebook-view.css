@@ -12,10 +12,12 @@
 }
 
 .biology-notebook-layout {
+  --app-left-rail-bleed: 24px;
   display: grid;
   grid-template-columns: var(--layout-left-panel-width) minmax(0, 1fr);
   gap: 24px;
-  align-items: start;
+  align-items: stretch;
+  min-height: var(--shared-left-rail-layout-height);
 }
 
 .biology-notebook-rail,
@@ -27,10 +29,10 @@
 }
 
 .biology-notebook-rail {
-  min-height: calc(100vh - 28px);
-  max-height: calc(100vh - 28px);
+  min-height: 100%;
+  max-height: var(--shared-left-rail-layout-height);
   overflow: auto;
-  padding: 2px 2px 16px 0;
+  padding: 2px 18px 16px 0;
 }
 
 .biology-notebook-rail-head,

@@ -1,19 +1,17 @@
 /* tool-box-view */
 
 .tool-layout {
+  --app-left-rail-bleed: 24px;
   display: grid;
   grid-template-columns: var(--layout-left-panel-width) minmax(0, 1fr);
   gap: 24px;
-  align-items: start;
+  align-items: stretch;
+  min-height: var(--shared-left-rail-layout-height);
 }
 
 .tool-sidebar {
-  position: sticky;
-  top: 0;
   display: grid;
-  align-self: start;
-  padding-right: 20px;
-  border-right: 1px solid var(--line);
+  align-self: stretch;
 }
 
 .tool-content {
@@ -23,7 +21,7 @@
 .tool-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 6px;
+  gap: 0;
 }
 
 .tool-tile {
@@ -45,11 +43,12 @@
   width: 100%;
   min-height: 44px;
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: 0;
+  border-bottom: 1px solid var(--line-soft);
   color: var(--text);
   font-size: 0.9rem;
   font-weight: 500;
-  transition: background-color 140ms ease, color 140ms ease;
+  transition: box-shadow 140ms ease, color 140ms ease;
 }
 
 .tool-tile:hover,
@@ -61,7 +60,7 @@
 .tool-tile:hover .label,
 .tool-tile:focus-visible .label,
 .tool-tile-active .label {
-  background: var(--surface-subtle);
+  background: transparent;
   color: var(--strong);
 }
 
@@ -71,6 +70,11 @@
 
 .tool-tile-active .label {
   font-weight: 650;
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+.tool-tile:last-child .label {
+  border-bottom: 0;
 }
 
 .tool-subview {
@@ -940,7 +944,7 @@ body.ui-neutral-compact input[id*="api-key"] {
 
 @media (max-width: 1080px) {
   .tool-layout {
-    grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
+    grid-template-columns: var(--layout-left-panel-width) minmax(0, 1fr);
     gap: 20px;
   }
 

@@ -82,6 +82,19 @@
       "inventory_search": "Keep empty for literature searches."
     }
   },
+  "purchase_recommendation": {
+    "name": "purchase_recommendation",
+    "description": "Use when the user wants a product recommendation or asks to find an item they can buy from an external vendor.",
+    "rules": "Capture the purchase target in entities.product_query, put explicit must-have attributes in entities.required_attributes, put banned attributes in entities.excluded_attributes, capture price preferences such as cheap or budget in entities.budget_preference, and keep inventory_search and protocol_candidates empty.",
+    "example_input": "Find a cheap metal-free endotoxin-free syringe filter I can buy.",
+    "specific_output_append": {
+      "entities.product_query": "Populate with the product name or purchase target.",
+      "entities.required_attributes": "Populate with a compact comma-separated list of explicit must-have product attributes.",
+      "entities.excluded_attributes": "Populate with a compact comma-separated list of explicit banned attributes when present.",
+      "entities.budget_preference": "Populate with price language such as cheap, budget, low cost, or premium when present.",
+      "protocol_candidates": "Set to [] for purchase recommendations."
+    }
+  },
   "result_analysis": {
     "name": "result_analysis",
     "description": "Use for data analysis, result interpretation, coding-style transforms, quantitative fitting, or requests to compute or analyze experimental outputs.",

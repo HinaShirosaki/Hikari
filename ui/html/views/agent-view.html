@@ -1,35 +1,36 @@
 <section id="agent-view" class="view">
-      <div class="panel">
-        <h2>Assistant</h2>
-        <p class="small-note">Read-only assistant workspace. Any write action is proposed before approval.</p>
-        <p class="small-note">Set the API key in Settings, or provide <code>LLM_API_KEY</code> or <code>ENANA_LLM_API_KEY</code> in the app environment.</p>
-        <div class="form-grid">
-          <label>
-            Project Scope (Optional)
-            <select id="agent-project-select">
-              <option value="">All projects</option>
-            </select>
-          </label>
-          <label>
-            Context Summary
-            <input id="agent-context-summary" disabled />
-          </label>
-        </div>
-      </div>
-
-      <div class="agent-chat-layout">
-        <div class="panel agent-session-panel">
-          <div class="agent-session-toolbar">
-            <div>
-              <h3>Saved Chats</h3>
-              <p id="agent-session-status" class="small-note">Set Storage Folder Path in Settings to save and browse agent chats.</p>
+      <div class="agent-chat-layout left-rail-template">
+        <aside class="agent-session-rail app-left-rail left-rail-template__rail" data-sync-left-rail>
+          <div class="agent-rail-meta">
+            <p class="small-note">Read-only assistant workspace. Any write action is proposed before approval.</p>
+            <p class="small-note">Set the API key in Settings, or provide <code>LLM_API_KEY</code> or <code>ENANA_LLM_API_KEY</code> in the app environment.</p>
+            <div class="form-grid agent-rail-context-grid">
+              <label>
+                Project Scope (Optional)
+                <select id="agent-project-select">
+                  <option value="">All projects</option>
+                </select>
+              </label>
+              <label>
+                Context Summary
+                <input id="agent-context-summary" disabled />
+              </label>
             </div>
-            <button type="button" id="agent-new-chat-btn" class="ghost-btn">New Chat</button>
           </div>
-          <div id="agent-session-list" class="agent-session-list" aria-live="polite"></div>
-        </div>
 
-        <div class="panel agent-chat-panel">
+          <div class="agent-session-panel">
+            <div class="agent-session-toolbar">
+              <div>
+                <h3>Saved Chats</h3>
+                <p id="agent-session-status" class="small-note">Set Storage Folder Path in Settings to save and browse agent chats.</p>
+              </div>
+              <button type="button" id="agent-new-chat-btn" class="ghost-btn">New Chat</button>
+            </div>
+            <div id="agent-session-list" class="agent-session-list" aria-live="polite"></div>
+          </div>
+        </aside>
+
+        <div class="panel agent-chat-panel left-rail-template__main">
           <div id="agent-developer-tools" class="agent-developer-tools" hidden>
             <div class="agent-developer-tools-actions">
               <button type="button" id="agent-dev-test-tools-btn" class="ghost-btn">Test All Tools</button>

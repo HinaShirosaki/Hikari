@@ -1014,97 +1014,102 @@ module.exports = function registerAgentScienceAndProtocolSuite(context = {}) {
       assert.equal(judged.sub_agent.last_response.output.satisfied, false);
     });
 
-    test('science reasoning loop enforces one tool per round and continues from evaluator feedback', async () => {
+    test('science reasoning loop runs parallel tool rounds and pre-synthesizes after the full batch returns', async () => {
       const scriptedTurns = [
         {
           calls: [
             { callId: 'call-1', name: 'literature-search', argsText: JSON.stringify({ query: 'MAPK inhibitor resistance', source: 'pubmed', limit: 3 }) },
-            { callId: 'call-2', name: 'literature-search', argsText: JSON.stringify({ query: 'ignore this extra call', source: 'web', limit: 3 }) }
+            { callId: 'call-2', name: 'literature-search', argsText: JSON.stringify({ query: 'MAPK inhibitor resistance review', source: 'web', limit: 3 }) }
           ],
-          text: 'I will start with PubMed.'
+          text: 'I will gather a focused paper and a broader review in parallel.'
         },
         {
           calls: [],
-          text: 'PubMed returned one paper, but I still need a broader review source.'
+          text: 'I now have a focused paper and a broader review, but I still need a deterministic fit.'
         },
         {
           calls: [
-            { callId: 'call-3', name: 'literature-search', argsText: JSON.stringify({ query: 'MAPK inhibitor resistance review', source: 'web', limit: 3 }) }
+            { callId: 'call-3', name: 'python-sandbox', argsText: JSON.stringify({ code: 'fit_escape_curve()', purpose: 'Check whether the observed trend is robust.' }) }
           ],
-          text: 'I will use a broader web-backed retrieval next.'
+          text: 'I will run a deterministic fit next.'
         },
         {
           calls: [],
-          text: 'Now I have enough evidence to answer.'
+          text: 'The combined literature context and deterministic fit are enough to answer.'
         }
       ];
       const feedbackMessages = [];
       const lifecycleEvents = [];
-      const preSynthesizedQuestions = [];
+      const evaluationSnapshots = [];
+      const toolOutputBatches = [];
       let synthesisLoadedContext = [];
       const runtime = agentScienceReasoningLoop.createScienceReasoningLoopRuntime({
         startAgentSession: async ({ toolDefinitions }) => {
           const toolNames = toolDefinitions.map((tool) => tool.name);
           assert.equal(toolNames.includes('literature-search'), true);
+          assert.equal(toolNames.includes('python-sandbox'), true);
           return { step: 0 };
         },
         extractAgentSessionFunctionCalls: (session) => scriptedTurns[session.step].calls,
         extractAgentSessionText: (session) => scriptedTurns[session.step].text,
-        continueAgentSessionWithToolOutputs: async (session) => ({ step: session.step + 1 }),
+        continueAgentSessionWithToolOutputs: async (session, outputs) => {
+          toolOutputBatches.push(outputs.map((entry) => ({
+            name: entry.name,
+            output: JSON.parse(entry.output)
+          })));
+          return { step: session.step + 1 };
+        },
         continueAgentSessionWithUserMessage: async (session, feedback) => {
           feedbackMessages.push(String(feedback || ''));
           return { step: session.step + 1 };
         },
-        resolveToolDefinitions: (selectedToolNames) => selectedToolNames.map((name) => ({
-          name,
-          description: name,
-          parameters: {
-            type: 'object',
-            additionalProperties: false,
-            required: ['query'],
-            properties: {
-              query: { type: 'string' },
-              source: { type: 'string' },
-              limit: { type: 'integer' }
-            }
-          }
-        })),
-        evaluateScienceRound: async ({ roundsExecuted, preSynthesizedQuestion }) => {
-          preSynthesizedQuestions.push({
+        evaluateScienceRound: async ({ roundsExecuted, preSynthesizedQuestion, toolTrace }) => {
+          evaluationSnapshots.push({
             roundsExecuted,
-            preSynthesizedQuestion
+            preSynthesizedQuestion,
+            toolTrace: structuredClone(toolTrace || [])
           });
-          return roundsExecuted >= 2
-            ? {
-              satisfied: true,
-              reason: 'Evidence is sufficient now.',
-              missing_requirements: [],
-              should_continue: false,
-              next_tool_hint: null,
-              can_answer_with_limitations: true
-            }
-            : {
+          if (roundsExecuted === 1) {
+            assert.equal(toolOutputBatches.length, 1);
+            assert.equal(toolOutputBatches[0].length, 2);
+            assert.equal(toolTrace.length, 2);
+            assert.equal(toolTrace.every((row) => row.round === 1), true);
+            assert.equal(toolTrace.every((row) => row.multi_tool_round === true), true);
+            assert.equal(toolTrace.every((row) => row.tool_count_in_round === 2), true);
+            assert.match(preSynthesizedQuestion.tentative_answer.current_best_answer, /focused paper and a broader review/i);
+            assert.equal(preSynthesizedQuestion.supporting_basis.some((item) => /Retrieved from literature-search \(pubmed\)/i.test(String(item))), true);
+            assert.equal(preSynthesizedQuestion.supporting_basis.some((item) => /Retrieved from literature-search \(web\)/i.test(String(item))), true);
+            return {
               satisfied: false,
-              reason: 'Need one broader review-style source.',
-              missing_requirements: ['A broader source is still needed.'],
+              reason: 'Need one deterministic fit before answering.',
+              missing_requirements: ['A deterministic fit is still needed.'],
               should_continue: true,
               next_tool_hint: {
-                tool_name: 'literature-search',
-                query: 'MAPK inhibitor resistance review',
-                reason: 'Broaden beyond the first paper.'
+                tool_name: 'python-sandbox',
+                query: null,
+                reason: 'Check whether the observed trend remains robust.'
               },
               can_answer_with_limitations: true
             };
+          }
+          return {
+            satisfied: true,
+            reason: 'Evidence is sufficient now.',
+            missing_requirements: [],
+            should_continue: false,
+            next_tool_hint: null,
+            can_answer_with_limitations: true
+          };
         },
         synthesizeScienceFinal: async ({ toolTrace }) => {
           synthesisLoadedContext = (toolTrace || []).flatMap((row) => row?.loaded_context_blocks || []);
           return {
-            answer: 'Resistance often involves pathway reactivation and compensatory signaling, supported by both the paper hit and broader review retrieval.',
+            answer: 'Resistance often involves pathway reactivation and compensatory signaling, and the deterministic fit supports a real trend rather than a single outlier.',
             confidence: 0.77,
             decision_record: {
-              assumptions: ['Only retrieved sources were used.'],
+              assumptions: ['Only the collected literature and computation outputs were used.'],
               open_questions: [],
-              verification_notes: ['Two retrieval rounds completed.']
+              verification_notes: ['One parallel literature round and one computation round completed.']
             },
             follow_up_questions: []
           };
@@ -1134,78 +1139,147 @@ module.exports = function registerAgentScienceAndProtocolSuite(context = {}) {
           plan: {},
           classifier: {}
         },
-        runTool: async (toolName, args) => ({
-          ok: true,
-          tool_name: toolName,
-          input: args,
-          result: {
-            items: [{ id: `${toolName}-1` }],
-            citations: [
-              {
-                source: args?.source === 'web' ? 'web_source' : 'pubmed',
-                pointer: `${toolName}-pointer`,
-                reason: `Retrieved from ${toolName} (${args?.source || 'auto'}).`
+        toolDefinitions: [
+          {
+            name: 'literature-search',
+            description: 'literature-search',
+            parameters: {
+              type: 'object',
+              additionalProperties: false,
+              required: ['query'],
+              properties: {
+                query: { type: 'string' },
+                source: { type: 'string' },
+                limit: { type: 'integer' }
               }
-            ],
-            loaded_context_blocks: args?.source === 'web'
-              ? []
-              : [
+            }
+          },
+          {
+            name: 'python-sandbox',
+            description: 'python-sandbox',
+            parameters: {
+              type: 'object',
+              additionalProperties: false,
+              required: ['code'],
+              properties: {
+                code: { type: 'string' },
+                purpose: { type: 'string' }
+              }
+            }
+          }
+        ],
+        runTool: async (toolName, args) => (
+          toolName === 'python-sandbox'
+            ? {
+              ok: true,
+              tool_name: toolName,
+              input: args,
+              result: {
+                items: [{ id: 'fit-1' }],
+                citations: [
+                  {
+                    source: 'python_sandbox',
+                    pointer: 'fit-run-1',
+                    reason: 'Computed a deterministic fit for the observed resistance trend.'
+                  }
+                ],
+                summary: 'python-sandbox estimated a stable trend.'
+              },
+              items: [{ id: 'fit-1' }],
+              citations: [
                 {
-                  paper_id: 'paper-1',
-                  paper_title: 'MAPK resistance mechanisms',
-                  section_label: 'Results',
-                  excerpt: 'ERK signaling resumed after MAPK inhibitor escape.',
-                  relevance_reason: 'Direct evidence from the retrieved paper.',
-                  source: 'pubmed_abstract',
-                  evidence_kind: 'text'
+                  source: 'python_sandbox',
+                  pointer: 'fit-run-1',
+                  reason: 'Computed a deterministic fit for the observed resistance trend.'
                 }
               ],
-            summary: `${toolName} completed.`
-          },
-          items: [{ id: `${toolName}-1` }],
-          citations: [
-            {
-              source: args?.source === 'web' ? 'web_source' : 'pubmed',
-              pointer: `${toolName}-pointer`,
-              reason: `Retrieved from ${toolName} (${args?.source || 'auto'}).`
+              summary: 'python-sandbox estimated a stable trend.'
             }
-          ],
-          loaded_context_blocks: args?.source === 'web'
-            ? []
-            : [
-              {
-                paper_id: 'paper-1',
-                paper_title: 'MAPK resistance mechanisms',
-                section_label: 'Results',
-                excerpt: 'ERK signaling resumed after MAPK inhibitor escape.',
-                relevance_reason: 'Direct evidence from the retrieved paper.',
-                source: 'pubmed_abstract',
-                evidence_kind: 'text'
-              }
-            ],
-          summary: `${toolName} completed.`
-        })
+            : {
+              ok: true,
+              tool_name: toolName,
+              input: args,
+              result: {
+                items: [{ id: `${toolName}-${args?.source || 'auto'}-1` }],
+                citations: [
+                  {
+                    source: args?.source === 'web' ? 'web_source' : 'pubmed',
+                    pointer: `${toolName}-${args?.source || 'auto'}-pointer`,
+                    reason: `Retrieved from ${toolName} (${args?.source || 'auto'}).`
+                  }
+                ],
+                loaded_context_blocks: args?.source === 'web'
+                  ? []
+                  : [
+                    {
+                      paper_id: 'paper-1',
+                      paper_title: 'MAPK resistance mechanisms',
+                      section_label: 'Results',
+                      excerpt: 'ERK signaling resumed after MAPK inhibitor escape.',
+                      relevance_reason: 'Direct evidence from the retrieved paper.',
+                      source: 'pubmed_abstract',
+                      evidence_kind: 'text'
+                    }
+                  ],
+                summary: `${toolName} completed.`
+              },
+              items: [{ id: `${toolName}-${args?.source || 'auto'}-1` }],
+              citations: [
+                {
+                  source: args?.source === 'web' ? 'web_source' : 'pubmed',
+                  pointer: `${toolName}-${args?.source || 'auto'}-pointer`,
+                  reason: `Retrieved from ${toolName} (${args?.source || 'auto'}).`
+                }
+              ],
+              loaded_context_blocks: args?.source === 'web'
+                ? []
+                : [
+                  {
+                    paper_id: 'paper-1',
+                    paper_title: 'MAPK resistance mechanisms',
+                    section_label: 'Results',
+                    excerpt: 'ERK signaling resumed after MAPK inhibitor escape.',
+                    relevance_reason: 'Direct evidence from the retrieved paper.',
+                    source: 'pubmed_abstract',
+                    evidence_kind: 'text'
+                  }
+                ],
+              summary: `${toolName} completed.`
+            }
+        )
       });
 
       assert.equal(result.status, 'completed');
       assert.equal(result.rounds_executed, 2);
-      assert.equal(result.tool_trace.length, 2);
+      assert.equal(result.tool_trace.length, 3);
       assert.equal(result.tool_trace[0].tool_name, 'literature-search');
       assert.equal(result.tool_trace[0].input.source, 'pubmed');
       assert.equal(result.tool_trace[0].loaded_context_blocks.length, 1);
-      assert.equal(result.tool_trace[0].truncated_multi_call, true);
+      assert.equal(result.tool_trace[0].multi_tool_round, true);
+      assert.equal(result.tool_trace[0].truncated_multi_call, false);
       assert.equal(result.tool_trace[1].tool_name, 'literature-search');
       assert.equal(result.tool_trace[1].input.source, 'web');
-      assert.equal(preSynthesizedQuestions.length, 2);
-      assert.match(preSynthesizedQuestions[0].preSynthesizedQuestion.tentative_answer.current_best_answer, /PubMed returned one paper/i);
-      assert.equal(preSynthesizedQuestions[0].preSynthesizedQuestion.supporting_basis.some((item) => /Retrieved from literature-search \(pubmed\)/i.test(String(item))), true);
-      assert.equal(preSynthesizedQuestions[0].preSynthesizedQuestion.supporting_basis.some((item) => /ERK signaling resumed after MAPK inhibitor escape/i.test(String(item))), true);
+      assert.equal(result.tool_trace[1].multi_tool_round, true);
+      assert.equal(result.tool_trace[2].tool_name, 'python-sandbox');
+      assert.equal(result.tool_trace[2].round, 2);
+      assert.equal(toolOutputBatches.length, 2);
+      assert.equal(toolOutputBatches[0].length, 2);
+      assert.deepEqual(toolOutputBatches[0].map((entry) => entry.name), ['literature-search', 'literature-search']);
+      assert.equal(toolOutputBatches[1].length, 1);
+      assert.deepEqual(toolOutputBatches[1].map((entry) => entry.name), ['python-sandbox']);
+      assert.equal(evaluationSnapshots.length, 2);
+      assert.equal(evaluationSnapshots[0].toolTrace.length, 2);
+      assert.match(evaluationSnapshots[0].preSynthesizedQuestion.tentative_answer.current_best_answer, /focused paper and a broader review/i);
+      assert.equal(evaluationSnapshots[0].preSynthesizedQuestion.supporting_basis.some((item) => /ERK signaling resumed after MAPK inhibitor escape/i.test(String(item))), true);
       assert.equal(synthesisLoadedContext.some((block) => /ERK signaling resumed/i.test(String(block?.excerpt || ''))), true);
       assert.equal(result.intermediate_states.some((state) => state.stage === 'science_pre_synthesis'), true);
       assert.equal(feedbackMessages.length, 1);
-      assert.match(feedbackMessages[0], /Need one broader review-style source/i);
-      assert.match(result.answer, /pathway reactivation/i);
-      assert.equal(lifecycleEvents.some((event) => event.stage === 'science_round_started' && event.meta.round === 1), true);
+      assert.match(feedbackMessages[0], /Need one deterministic fit before answering/i);
+      assert.match(result.answer, /deterministic fit supports a real trend/i);
+      assert.equal(
+        lifecycleEvents.some((event) => event.stage === 'science_round_started' && event.meta.round === 1 && event.meta.multi_tool_round === true && event.meta.tool_count === 2),
+        true
+      );
       assert.equal(lifecycleEvents.some((event) => event.stage === 'science_evaluator_continue' && event.meta.round === 1), true);
       assert.equal(lifecycleEvents.some((event) => event.stage === 'science_evaluator_satisfied' && event.meta.round === 2), true);
       assert.equal(
@@ -1217,7 +1291,7 @@ module.exports = function registerAgentScienceAndProtocolSuite(context = {}) {
         true
       );
       assert.equal(
-        lifecycleEvents.some((event) => event.stage === 'science_round_started' && /use literature-search/i.test(String(event?.meta?.thinking_trace || ''))),
+        lifecycleEvents.some((event) => event.stage === 'science_round_started' && /in parallel/i.test(String(event?.meta?.thinking_trace || ''))),
         true
       );
       assert.equal(

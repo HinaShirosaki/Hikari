@@ -112,10 +112,10 @@ function createScienceLoopPreSynthesizedQuestionRuntime(deps = {}) {
       latestToolResult?.summary || latestToolResult?.result?.summary || latestTraceRow?.summary,
       320
     );
-    const latestToolName = cleanText(
-      latestToolResult?.tool_name || latestTraceRow?.tool_name,
-      120
-    );
+    const latestToolNames = uniqueStrings([
+      ...asArray(latestToolResult?.tool_names),
+      cleanText(latestToolResult?.tool_name || latestTraceRow?.tool_name, 120)
+    ], 4);
     const latestError = cleanText(latestToolResult?.error || latestTraceRow?.error, 320);
     const latestItems = Math.max(
       asArray(latestToolResult?.items).length,
@@ -134,8 +134,8 @@ function createScienceLoopPreSynthesizedQuestionRuntime(deps = {}) {
     ]);
     const supportingBasis = uniqueStrings([
       latestToolSummary,
-      latestToolName && latestItems > 0
-        ? `${latestToolName} returned ${latestItems} item(s).`
+      latestToolNames.length && latestItems > 0
+        ? `${latestToolNames.join(' + ')} returned ${latestItems} item(s).`
         : '',
       ...loadedContextBasis,
       ...citationBasis,

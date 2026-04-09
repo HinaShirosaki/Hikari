@@ -15,10 +15,12 @@
 .papers-layout {
   --papers-comments-width: 336px;
   --papers-comments-collapsed-width: 30px;
+  --app-left-rail-bleed: 22px;
   display: grid;
   grid-template-columns: var(--layout-left-panel-width) minmax(0, 1fr) var(--papers-comments-width);
   gap: 22px;
-  align-items: start;
+  align-items: stretch;
+  min-height: var(--shared-left-rail-layout-height);
 }
 
 .papers-layout.is-comments-collapsed {
@@ -39,11 +41,11 @@
   gap: 8px;
   align-content: start;
   width: 100%;
-  min-height: calc(100vh - 28px);
-  max-height: calc(100vh - 28px);
+  min-height: 100%;
+  max-height: var(--shared-left-rail-layout-height);
   overflow: auto;
-  scrollbar-gutter: stable both-edges;
-  padding: 2px 0 12px;
+  scrollbar-gutter: stable;
+  padding: 2px 18px 12px 0;
 }
 
 .papers-library-topbar {
@@ -51,7 +53,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 0 2px 8px;
+  padding: 0 2px 8px 0;
 }
 
 .papers-library-topbar h2 {
@@ -98,7 +100,7 @@
   background: none !important;
   border-radius: 0;
   box-shadow: none;
-  padding: 8px 2px;
+  padding: 8px 0;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   gap: 10px;
@@ -135,25 +137,17 @@
 }
 
 .papers-folder-glyph {
-  width: 16px;
-  height: 11px;
-  position: relative;
-  border: 1.5px solid currentColor;
-  border-radius: 3px;
-  opacity: 0.68;
+  width: 18px;
+  height: 18px;
+  display: block;
+  background: currentColor;
+  opacity: 0.74;
+  -webkit-mask: url("../../../assets/icons/folder-2-svgrepo-com.svg") center / contain no-repeat;
+  mask: url("../../../assets/icons/folder-2-svgrepo-com.svg") center / contain no-repeat;
 }
 
 .papers-folder-glyph::before {
-  content: '';
-  position: absolute;
-  left: 0.5px;
-  top: -4.5px;
-  width: 7px;
-  height: 4px;
-  border: 1.5px solid currentColor;
-  border-bottom: 0;
-  border-radius: 3px 3px 0 0;
-  background: var(--bg);
+  content: none;
 }
 
 .papers-folder-name {
@@ -220,7 +214,7 @@
 
 .papers-library-empty {
   margin: 0;
-  padding: 6px 10px 6px 2px;
+  padding: 6px 10px 6px 0;
   color: var(--muted);
   font-size: 0.92rem;
 }

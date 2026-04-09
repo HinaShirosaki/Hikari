@@ -223,6 +223,47 @@ function renderPythonSandboxRuns(runs, safeText) {
   `;
 }
 
+function renderPurchaseRecommendationCards(purchaseRecommendation, safeText) {
+  const payload = purchaseRecommendation && typeof purchaseRecommendation === 'object' ? purchaseRecommendation : {};
+  const items = asArray(payload.items).filter((item) => (
+    trimText(item?.title, 320)
+    && trimText(item?.vendor, 220)
+    && trimText(item?.price_text, 120)
+    && trimText(item?.image_url, 2000)
+    && trimText(item?.product_url, 2000)
+  ));
+  if (!items.length) {
+    return '';
+  }
+  return `
+    <section class="agent-purchase-group" aria-label="Purchase recommendations">
+      <div class="agent-purchase-grid">
+        ${items.map((item) => `
+          <button
+            type="button"
+            class="agent-purchase-item"
+            data-agent-open-external-url="${safeText(trimText(item.product_url, 2000))}"
+            aria-label="${safeText(`Open ${trimText(item.title, 220)} from ${trimText(item.vendor, 180)}`)}"
+          >
+            <span class="agent-purchase-image-wrap">
+              <img
+                class="agent-purchase-image"
+                src="${safeText(trimText(item.image_url, 2000))}"
+                alt="${safeText(trimText(item.title, 220))}"
+              />
+            </span>
+            <span class="agent-purchase-copy">
+              <strong class="agent-purchase-title">${safeText(trimText(item.title, 220))}</strong>
+              <span class="agent-purchase-price">${safeText(trimText(item.price_text, 120))}</span>
+              <span class="agent-purchase-vendor">${safeText(trimText(item.vendor, 180))}</span>
+            </span>
+          </button>
+        `).join('')}
+      </div>
+    </section>
+  `;
+}
+
 function renderMetaList(title, rows, safeText) {
   if (!rows.length) {
     return '';
@@ -611,6 +652,36 @@ function renderAssistantMeta(meta, messageId = '', { state, safeText }) {
     return `item_${index + 1}: ${title}${parts ? ` (${parts})` : ''}`;
   }).filter(Boolean);
   const recordFollowUpRows = asArray(recordLookup.follow_up_questions).map((question) => trimText(question, 260)).filter(Boolean);
+  const hasPurchaseRecommendation = meta.purchase_recommendation && typeof meta.purchase_recommendation === 'object';
+  const purchaseRecommendation = hasPurchaseRecommendation
+    ? meta.purchase_recommendation
+    : {};
+  const purchaseRecommendationRows = [
+    trimText(purchaseRecommendation.status, 40)
+      ? `status: ${trimText(purchaseRecommendation.status, 40)}`
+      : '',
+    trimText(purchaseRecommendation.query, 240)
+      ? `query: ${trimText(purchaseRecommendation.query, 240)}`
+      : '',
+    trimText(purchaseRecommendation.source, 80)
+      ? `source: ${trimText(purchaseRecommendation.source, 80)}`
+      : '',
+    trimText(purchaseRecommendation?.filters?.budget_preference, 80)
+      ? `budget_preference: ${trimText(purchaseRecommendation.filters.budget_preference, 80)}`
+      : '',
+    `item_count: ${asArray(purchaseRecommendation.items).length}`
+  ].filter(Boolean);
+  const purchaseFilterRows = [
+    ...asArray(purchaseRecommendation?.filters?.required_terms).map((term, index) => {
+      const clean = trimText(term, 120);
+      return clean ? `required_${index + 1}: ${clean}` : '';
+    }),
+    ...asArray(purchaseRecommendation?.filters?.excluded_terms).map((term, index) => {
+      const clean = trimText(term, 120);
+      return clean ? `excluded_${index + 1}: ${clean}` : '';
+    })
+  ].filter(Boolean);
+  const purchaseFollowUpRows = asArray(purchaseRecommendation.follow_up_questions).map((question) => trimText(question, 260)).filter(Boolean);
   const generalScience = meta.general_science_question && typeof meta.general_science_question === 'object'
     ? meta.general_science_question
     : {};
@@ -680,6 +751,7 @@ function renderAssistantMeta(meta, messageId = '', { state, safeText }) {
         </section>
       ` : ''}
       <p class="small-note">${safeText(parserSummaryLine)}</p>
+      ${renderPurchaseRecommendationCards(purchaseRecommendation, safeText)}
       ${renderMetaList('Intent Parser', parserRows, safeText)}
       ${renderMetaList('Protocol Candidates', protocolCandidateRows, safeText)}
       ${renderMetaList('Entities', parserEntityRows, safeText)}
@@ -706,6 +778,9 @@ function renderAssistantMeta(meta, messageId = '', { state, safeText }) {
           </button>
         </section>
       ` : ''}
+      ${hasPurchaseRecommendation ? renderMetaList('Purchase Recommendation', purchaseRecommendationRows, safeText) : ''}
+      ${hasPurchaseRecommendation ? renderMetaList('Purchase Filters', purchaseFilterRows, safeText) : ''}
+      ${hasPurchaseRecommendation ? renderMetaList('Purchase Follow-up', purchaseFollowUpRows, safeText) : ''}
       ${hasInventoryLookup ? renderMetaList('Inventory Lookup', inventoryRows, safeText) : ''}
       ${hasInventoryLookup ? renderMetaList('Inventory Items', inventoryItemRows, safeText) : ''}
       ${hasInventoryLookup ? renderMetaList('Inventory Follow-up', inventoryFollowUpRows, safeText) : ''}

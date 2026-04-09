@@ -21,11 +21,24 @@ export function initSampleRegistry({ state, persist, safeText }) {
   const sampleCompoundClearBtn = document.getElementById('sample-compound-clear-btn');
   const sampleCompoundSmilesInput = document.getElementById('sample-compound-smiles');
   const sampleCompoundStatus = document.getElementById('sample-compound-status');
-  const sampleCompoundEditorWrap = document.getElementById('sample-compound-editor-wrap');
+  const sampleCompoundPreview = document.getElementById('sample-compound-preview');
+  const sampleCompoundPreviewImage = document.getElementById('sample-compound-preview-image');
+  const sampleCompoundDialogOverlay = document.getElementById('sample-compound-dialog-overlay');
+  const sampleCompoundDialogCloseBtn = document.getElementById('sample-compound-dialog-close-btn');
+  const sampleCompoundDialogCancelBtn = document.getElementById('sample-compound-dialog-cancel-btn');
+  const sampleCompoundDialogApplyBtn = document.getElementById('sample-compound-dialog-apply-btn');
   const sampleCompoundKetcherFrame = document.getElementById('sample-compound-ketcher-frame');
   const sampleCancelBtn = document.getElementById('sample-cancel-btn');
   const sampleSearchInput = document.getElementById('sample-search');
+  const sampleResultsSummary = document.getElementById('sample-results-summary');
   const sampleRegistryList = document.getElementById('sample-registry-list');
+  const sampleDetailPanel = document.getElementById('sample-detail-panel');
+  const sampleDetailTitle = document.getElementById('sample-detail-title');
+  const sampleDetailContent = document.getElementById('sample-detail-content');
+  const sampleDetailEditBtn = document.getElementById('sample-detail-edit-btn');
+  const sampleDetailDeleteBtn = document.getElementById('sample-detail-delete-btn');
+
+  let selectedSampleId = '';
   let compoundEditorOpen = false;
   let compoundStructureDraft = emptyCompoundStructureDraft();
 
@@ -35,10 +48,27 @@ export function initSampleRegistry({ state, persist, safeText }) {
   sampleCompoundOpenBtn?.addEventListener('click', onCompoundOpenClick);
   sampleCompoundCaptureBtn?.addEventListener('click', onCompoundCaptureClick);
   sampleCompoundClearBtn?.addEventListener('click', onCompoundClearClick);
+  sampleCompoundDialogCloseBtn?.addEventListener('click', closeCompoundDialog);
+  sampleCompoundDialogCancelBtn?.addEventListener('click', closeCompoundDialog);
+  sampleCompoundDialogApplyBtn?.addEventListener('click', onCompoundDialogApplyClick);
+  sampleCompoundDialogOverlay?.addEventListener('click', onCompoundDialogOverlayClick);
   sampleForm?.addEventListener('submit', onSubmit);
   sampleCancelBtn?.addEventListener('click', resetForm);
   sampleSearchInput?.addEventListener('input', renderList);
   sampleRegistryList?.addEventListener('click', onListClick);
+  sampleDetailEditBtn?.addEventListener('click', () => {
+    if (!selectedSampleId) {
+      return;
+    }
+    editSample(selectedSampleId);
+  });
+  sampleDetailDeleteBtn?.addEventListener('click', () => {
+    if (!selectedSampleId) {
+      return;
+    }
+    deleteSample(selectedSampleId);
+  });
+  document.addEventListener('keydown', onCompoundDialogKeydown);
 
   function ensureState() {
     if (!Array.isArray(state.samples)) {
@@ -292,11 +322,10 @@ export function initSampleRegistry({ state, persist, safeText }) {
   }
 
   function readCellPassage() {
-    const normalized = normalizeCellPassage({
+    return normalizeCellPassage({
       lastPassageDate: samplePassageLastDateInput?.value,
       intervalDays: samplePassageIntervalDaysInput?.value
     });
-    return normalized;
   }
 
   function fillCellPassage(cellPassage) {
@@ -353,6 +382,7 @@ export function initSampleRegistry({ state, persist, safeText }) {
       }
     } else {
       compoundStructureDraft = emptyCompoundStructureDraft();
+      closeCompoundDialog();
     }
 
     const resolvedStructure = isCompound
@@ -391,6 +421,7 @@ export function initSampleRegistry({ state, persist, safeText }) {
       state.samples.push(record);
     }
 
+    selectedSampleId = record.id;
     persist();
     resetForm();
     renderList();
@@ -400,8 +431,8 @@ export function initSampleRegistry({ state, persist, safeText }) {
     sampleIdInput.value = '';
     sampleForm.reset();
     sampleStorageTypeInput.value = 'freezer';
-    compoundEditorOpen = false;
     compoundStructureDraft = emptyCompoundStructureDraft();
+    closeCompoundDialog();
     renderLinkedContainerOptions();
     renderChemicalLinkOptions();
     if (sampleLinkPositionInput) {
@@ -415,16 +446,12 @@ export function initSampleRegistry({ state, persist, safeText }) {
   }
 
   function onListClick(event) {
-    const editBtn = event.target.closest('[data-sample-edit]');
-    if (editBtn) {
-      editSample(editBtn.dataset.sampleEdit);
+    const openBtn = event.target.closest('[data-sample-open]');
+    if (!openBtn) {
       return;
     }
-
-    const deleteBtn = event.target.closest('[data-sample-delete]');
-    if (deleteBtn) {
-      deleteSample(deleteBtn.dataset.sampleDelete);
-    }
+    selectedSampleId = openBtn.dataset.sampleOpen || '';
+    renderList();
   }
 
   function editSample(sampleId) {
@@ -432,6 +459,7 @@ export function initSampleRegistry({ state, persist, safeText }) {
     if (!sample) {
       return;
     }
+    selectedSampleId = sample.id;
     sampleIdInput.value = sample.id;
     sampleCodeInput.value = sample.code || '';
     sampleNameInput.value = sample.name || '';
@@ -439,8 +467,8 @@ export function initSampleRegistry({ state, persist, safeText }) {
     sampleLotInput.value = sample.lot || '';
     sampleConcentrationInput.value = sample.concentration || '';
     sampleNotesInput.value = sample.notes || '';
-    compoundEditorOpen = false;
     compoundStructureDraft = toCompoundStructureDraft(sample.compoundStructure);
+    closeCompoundDialog();
     renderLinkedContainerOptions();
     renderChemicalLinkOptions();
     sampleLinkContainerInput.value = sample.inventoryLink
@@ -457,10 +485,17 @@ export function initSampleRegistry({ state, persist, safeText }) {
     fillCellPassage(sample.cellPassage);
     renderCellPassageFields();
     renderCompoundFields();
+    renderList();
   }
 
   function deleteSample(sampleId) {
     state.samples = (state.samples || []).filter((item) => item.id !== sampleId);
+    if (selectedSampleId === sampleId) {
+      selectedSampleId = '';
+    }
+    if (sampleIdInput?.value === sampleId) {
+      resetForm();
+    }
     persist();
     renderList();
   }
@@ -493,30 +528,98 @@ export function initSampleRegistry({ state, persist, safeText }) {
       .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
       .filter((item) => matchesSearch(item, term));
 
+    if (sampleResultsSummary) {
+      sampleResultsSummary.textContent = `Showing ${rows.length} of ${state.samples.length} samples.`;
+    }
+
     if (!rows.length) {
+      selectedSampleId = '';
       sampleRegistryList.innerHTML = '<p class="small-note">No samples found.</p>';
+      renderSampleDetail();
       return;
     }
 
-    sampleRegistryList.innerHTML = rows.map((sample) => `
-      <article class="card">
-        <h3>${safeText(sample.code || sample.id)} - ${safeText(sample.name)}</h3>
-        <p><strong>Type:</strong> ${safeText(sample.type || '-')}</p>
-        <p><strong>Lot/Batch:</strong> ${safeText(sample.lot || '-')}</p>
-        <p><strong>Concentration:</strong> ${safeText(sample.concentration || '-')}</p>
-        ${sample.type === 'cell_line' ? `<p><strong>Passage:</strong> ${safeText(formatCellPassage(sample.cellPassage))}</p>` : ''}
-        <p><strong>Location:</strong> ${safeText(formatLocation(sample.location))}</p>
-        <p><strong>Inventory Link:</strong> ${safeText(formatInventoryLink(sample.inventoryLink))}</p>
-        <p><strong>Chemical Links:</strong> ${safeText(formatChemicalLinks(sample.chemicalLinks))}</p>
-        ${sample.type === 'compound' ? `<p><strong>Structure:</strong> ${safeText(formatCompoundStructureSummary(sample.compoundStructure))}</p>` : ''}
-        <p><strong>Updated:</strong> ${new Date(sample.updatedAt).toLocaleString()}</p>
-        <p><strong>Notes:</strong> ${safeText(sample.notes || '-')}</p>
-        <div class="card-actions">
-          <button type="button" class="ghost-btn" data-sample-edit="${sample.id}">Edit</button>
-          <button type="button" class="danger-btn" data-sample-delete="${sample.id}">Delete</button>
-        </div>
+    if (!selectedSampleId || !rows.some((item) => item.id === selectedSampleId)) {
+      selectedSampleId = rows[0]?.id || '';
+    }
+
+    const bodyRows = rows.map((sample) => `
+      <article class="list-row${selectedSampleId === sample.id ? ' list-row-selected' : ''}">
+        <button class="list-main-btn text-list-btn" data-sample-open="${escapeHtml(sample.id)}">
+          ${safeText(sample.code || sample.id)} - ${safeText(sample.name)}
+        </button>
+        <span>${safeText(sample.type || '-')}</span>
+        <span>${safeText(formatLocation(sample.location))}</span>
       </article>
     `).join('');
+
+    sampleRegistryList.innerHTML = `
+      <article class="list-row list-row-header">
+        <strong>Sample</strong>
+        <strong>Type</strong>
+        <strong>Location</strong>
+      </article>
+      ${bodyRows}
+    `;
+
+    renderSampleDetail();
+  }
+
+  function renderSampleDetail() {
+    const selected = (state.samples || []).find((item) => item.id === selectedSampleId);
+    if (!selected) {
+      if (sampleDetailPanel) {
+        sampleDetailPanel.hidden = true;
+      }
+      if (sampleDetailContent) {
+        sampleDetailContent.innerHTML = '';
+      }
+      return;
+    }
+
+    if (sampleDetailPanel) {
+      sampleDetailPanel.hidden = false;
+    }
+    if (sampleDetailTitle) {
+      sampleDetailTitle.textContent = selected.code
+        ? `${selected.code} - ${selected.name || 'Sample Details'}`
+        : (selected.name || 'Sample Details');
+    }
+
+    const structure = normalizeCompoundStructureData(selected.compoundStructure);
+    const detailItems = [
+      { label: 'Type', value: selected.type || '-' },
+      { label: 'Lot / Batch', value: selected.lot || '-' },
+      { label: 'Concentration', value: selected.concentration || '-' },
+      { label: 'Location', value: formatLocation(selected.location) },
+      { label: 'Inventory Link', value: formatInventoryLink(selected.inventoryLink) },
+      { label: 'Related Chemicals', value: formatChemicalLinks(selected.chemicalLinks), wide: true }
+    ];
+    if (selected.type === 'cell_line') {
+      detailItems.push({ label: 'Passage', value: formatCellPassage(selected.cellPassage), wide: true });
+    }
+    if (selected.type === 'compound') {
+      detailItems.push({ label: 'Structure', value: formatCompoundStructureSummary(structure), wide: true });
+    }
+    detailItems.push(
+      { label: 'Updated', value: selected.updatedAt ? new Date(selected.updatedAt).toLocaleString() : '-' },
+      { label: 'Notes', value: selected.notes || '-', wide: true }
+    );
+    const detailMarkup = detailItems.map((item) => `
+      <div class="sample-detail-item${item.wide ? ' sample-detail-item-wide' : ''}">
+        <span class="sample-detail-label">${safeText(item.label)}</span>
+        <span class="sample-detail-value">${safeText(item.value)}</span>
+      </div>
+    `).join('');
+
+    const structureMarkup = selected.type === 'compound'
+      ? renderCompoundPreviewMarkup(structure, selected.name || selected.code || 'Compound')
+      : '';
+
+    sampleDetailContent.innerHTML = `
+      ${structureMarkup}
+      <div class="sample-detail-grid">${detailMarkup}</div>
+    `;
   }
 
   function render() {
@@ -534,7 +637,8 @@ export function initSampleRegistry({ state, persist, safeText }) {
   function onSampleTypeChange() {
     renderCellPassageFields();
     if (sampleTypeInput?.value !== 'compound') {
-      compoundEditorOpen = false;
+      compoundStructureDraft = emptyCompoundStructureDraft();
+      closeCompoundDialog();
       renderCompoundFields();
       return;
     }
@@ -554,18 +658,25 @@ export function initSampleRegistry({ state, persist, safeText }) {
   }
 
   async function onCompoundOpenClick() {
-    compoundEditorOpen = !compoundEditorOpen;
-    renderCompoundFields();
-    if (!compoundEditorOpen) {
+    if (sampleTypeInput?.value !== 'compound') {
       return;
     }
-    if (compoundStructureDraft.molfile || compoundStructureDraft.smiles) {
-      try {
-        const ketcher = await getCompoundKetcher();
-        await ketcher.setMolecule(compoundStructureDraft.molfile || compoundStructureDraft.smiles);
-      } catch {
-        setCompoundStatus('Ketcher is still loading.', true);
-      }
+    openCompoundDialog();
+    const loaded = await syncCompoundDraftToEditor();
+    if (!loaded) {
+      setCompoundStatus('Ketcher is still loading.', true);
+      return;
+    }
+    setCompoundStatus('Ketcher is ready. Draw the structure and apply it to the sample.', false);
+  }
+
+  async function onCompoundDialogApplyClick() {
+    try {
+      await captureCompoundStructureFromEditor();
+      closeCompoundDialog();
+      setCompoundStatus(compoundStructureDraft.smiles ? 'Structure snapshot saved with this sample.' : 'No structure detected on canvas.', false);
+    } catch {
+      setCompoundStatus('Cannot read Ketcher yet. Wait a second and try again.', true);
     }
   }
 
@@ -575,7 +686,7 @@ export function initSampleRegistry({ state, persist, safeText }) {
     }
     try {
       await captureCompoundStructureFromEditor();
-      setCompoundStatus(compoundStructureDraft.smiles ? 'Structure captured from Ketcher.' : 'No structure detected on canvas.', false);
+      setCompoundStatus(compoundStructureDraft.smiles ? 'Structure snapshot refreshed from Ketcher.' : 'No structure detected on canvas.', false);
     } catch {
       setCompoundStatus('Cannot read Ketcher yet. Open editor and try again.', true);
     }
@@ -588,6 +699,33 @@ export function initSampleRegistry({ state, persist, safeText }) {
     setCompoundStatus('Compound structure cleared.', false);
   }
 
+  function openCompoundDialog() {
+    compoundEditorOpen = true;
+    if (sampleCompoundDialogOverlay) {
+      sampleCompoundDialogOverlay.hidden = false;
+    }
+  }
+
+  function closeCompoundDialog() {
+    compoundEditorOpen = false;
+    if (sampleCompoundDialogOverlay) {
+      sampleCompoundDialogOverlay.hidden = true;
+    }
+  }
+
+  function onCompoundDialogOverlayClick(event) {
+    if (event.target === sampleCompoundDialogOverlay) {
+      closeCompoundDialog();
+    }
+  }
+
+  function onCompoundDialogKeydown(event) {
+    if (event.key === 'Escape' && compoundEditorOpen) {
+      event.preventDefault();
+      closeCompoundDialog();
+    }
+  }
+
   function renderCompoundFields() {
     if (!sampleCompoundFields) {
       return;
@@ -596,17 +734,22 @@ export function initSampleRegistry({ state, persist, safeText }) {
     sampleCompoundFields.hidden = !isCompound;
     if (!isCompound) {
       setCompoundStatus('', false);
+      if (sampleCompoundPreview) {
+        sampleCompoundPreview.hidden = true;
+      }
       return;
     }
 
     if (sampleCompoundSmilesInput) {
       sampleCompoundSmilesInput.value = compoundStructureDraft.smiles || '';
     }
-    if (sampleCompoundEditorWrap) {
-      sampleCompoundEditorWrap.hidden = !compoundEditorOpen;
-    }
     if (sampleCompoundOpenBtn) {
-      sampleCompoundOpenBtn.textContent = compoundEditorOpen ? 'Hide Ketcher' : 'Open Ketcher';
+      sampleCompoundOpenBtn.textContent = compoundStructureDraft.smiles ? 'Edit in Ketcher' : 'Open Ketcher';
+    }
+    if (sampleCompoundPreview && sampleCompoundPreviewImage) {
+      const hasPreview = Boolean(compoundStructureDraft.imageDataUrl);
+      sampleCompoundPreview.hidden = !hasPreview;
+      sampleCompoundPreviewImage.src = hasPreview ? compoundStructureDraft.imageDataUrl : '';
     }
   }
 
@@ -617,7 +760,8 @@ export function initSampleRegistry({ state, persist, safeText }) {
     const ketcher = await getCompoundKetcher();
     const smiles = String(await ketcher.getSmiles()).trim();
     const molfile = String(await ketcher.getMolfile('v3000')).trim();
-    compoundStructureDraft = toCompoundStructureDraft({ smiles, molfile });
+    const imageDataUrl = await generateCompoundStructurePreview(ketcher, molfile || smiles);
+    compoundStructureDraft = toCompoundStructureDraft({ smiles, molfile, imageDataUrl });
     renderCompoundFields();
   }
 
@@ -636,6 +780,20 @@ export function initSampleRegistry({ state, persist, safeText }) {
       throw new Error('Ketcher is still initializing.');
     }
     return ketcher;
+  }
+
+  async function syncCompoundDraftToEditor() {
+    const molecule = compoundStructureDraft.molfile || compoundStructureDraft.smiles || '';
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      try {
+        const ketcher = await getCompoundKetcher();
+        await ketcher.setMolecule(molecule);
+        return true;
+      } catch {
+        await delay(180);
+      }
+    }
+    return false;
   }
 
   async function clearCompoundCanvas() {
@@ -658,21 +816,23 @@ export function initSampleRegistry({ state, persist, safeText }) {
   function normalizeCompoundStructureData(input) {
     const smiles = String(input?.smiles || '').trim();
     const molfile = String(input?.molfile || '').trim();
-    if (!smiles && !molfile) {
+    const imageDataUrl = String(input?.imageDataUrl || '').trim();
+    if (!smiles && !molfile && !imageDataUrl) {
       return null;
     }
-    return { smiles, molfile };
+    return { smiles, molfile, imageDataUrl };
   }
 
   function toCompoundStructureDraft(input) {
     return {
       smiles: String(input?.smiles || '').trim(),
-      molfile: String(input?.molfile || '').trim()
+      molfile: String(input?.molfile || '').trim(),
+      imageDataUrl: String(input?.imageDataUrl || '').trim()
     };
   }
 
   function emptyCompoundStructureDraft() {
-    return { smiles: '', molfile: '' };
+    return { smiles: '', molfile: '', imageDataUrl: '' };
   }
 
   function formatCompoundStructureSummary(structure) {
@@ -682,6 +842,9 @@ export function initSampleRegistry({ state, persist, safeText }) {
     }
     if (normalized.smiles) {
       return normalized.smiles;
+    }
+    if (normalized.imageDataUrl) {
+      return 'Snapshot only';
     }
     return 'Molfile only';
   }
@@ -770,6 +933,123 @@ export function initSampleRegistry({ state, persist, safeText }) {
     });
     Array.from(selectEl.options).forEach((option) => {
       option.selected = selectedValues.includes(option.value);
+    });
+  }
+
+  async function generateCompoundStructurePreview(ketcher, structureSource) {
+    if (!ketcher || !structureSource) {
+      return '';
+    }
+
+    try {
+      const pngBlob = await ketcher.generateImage(structureSource, {
+        outputFormat: 'png',
+        backgroundColor: '#ffffff',
+        bondThickness: 1
+      });
+      return normalizeImagePayload(pngBlob, 'image/png');
+    } catch {
+      // Fall through to SVG preview generation.
+    }
+
+    try {
+      const svgBlob = await ketcher.generateImage(structureSource, {
+        outputFormat: 'svg',
+        backgroundColor: '#ffffff',
+        bondThickness: 1
+      });
+      return normalizeImagePayload(svgBlob, 'image/svg+xml');
+    } catch {
+      return '';
+    }
+  }
+
+  function blobToDataUrl(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(new Error('Cannot convert image blob to data URL.'));
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  async function normalizeImagePayload(payload, mimeType) {
+    if (!payload) {
+      return '';
+    }
+    if (typeof payload === 'string') {
+      if (payload.startsWith('data:')) {
+        return payload;
+      }
+      return `data:${mimeType};base64,${payload}`;
+    }
+    if (payload instanceof Blob) {
+      return blobToDataUrl(payload);
+    }
+    if (payload instanceof ArrayBuffer) {
+      return `data:${mimeType};base64,${arrayBufferToBase64(payload)}`;
+    }
+    if (ArrayBuffer.isView(payload)) {
+      return `data:${mimeType};base64,${arrayBufferToBase64(payload.buffer)}`;
+    }
+    if (payload && typeof payload === 'object') {
+      if (payload.data && typeof payload.data === 'string') {
+        if (payload.data.startsWith('data:')) {
+          return payload.data;
+        }
+        return `data:${mimeType};base64,${payload.data}`;
+      }
+      if (payload.blob instanceof Blob) {
+        return blobToDataUrl(payload.blob);
+      }
+    }
+    return '';
+  }
+
+  function arrayBufferToBase64(buffer) {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i += 1) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+  }
+
+  function renderCompoundPreviewMarkup(structure, label) {
+    const normalized = normalizeCompoundStructureData(structure);
+    if (!normalized) {
+      return `
+        <section class="sample-structure-card">
+          <h4>Structure Snapshot</h4>
+          <p class="small-note">No structure has been saved for this compound yet.</p>
+        </section>
+      `;
+    }
+
+    const imageMarkup = normalized.imageDataUrl
+      ? `
+        <div class="sample-structure-preview">
+          <img src="${escapeHtml(normalized.imageDataUrl)}" alt="${escapeHtml(`${label} structure preview`)}" />
+        </div>
+      `
+      : '<p class="small-note">Structure saved without an image preview.</p>';
+
+    const smilesMarkup = normalized.smiles
+      ? `<p><strong>SMILES:</strong> ${safeText(normalized.smiles)}</p>`
+      : '';
+
+    return `
+      <section class="sample-structure-card">
+        <h4>Structure Snapshot</h4>
+        ${imageMarkup}
+        ${smilesMarkup}
+      </section>
+    `;
+  }
+
+  function delay(ms) {
+    return new Promise((resolve) => {
+      window.setTimeout(resolve, ms);
     });
   }
 

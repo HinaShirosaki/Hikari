@@ -628,6 +628,54 @@
       }
     }
   },
+  "purchase-recommendation": {
+    "description": "Use this tool when the user wants products they can purchase from external vendors. Provide a compact product query, explicit `required_terms` and `excluded_terms` when known, and a `budget_preference` such as `cheap` when price sensitivity matters. The tool searches generic web results, extracts product metadata from vendor pages, rejects incomplete results, and returns chat-card-ready items with image, vendor, price, and destination URL.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "query": {
+          "type": "string",
+          "maxLength": 600
+        },
+        "message": {
+          "type": "string",
+          "maxLength": 1200
+        },
+        "required_terms": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 12
+        },
+        "excluded_terms": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 12
+        },
+        "budget_preference": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 6
+        },
+        "search_limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16
+        },
+        "parser_payload": {
+          "$ref": "#/$defs/parser_payload"
+        }
+      }
+    }
+  },
   "paper-download": {
     "description": "Use this tool when the user wants a paper PDF downloaded into app storage. `download` performs the full flow in one call, first extracting candidate PDF URLs from the provided fields and then streaming the PDF with progress tracking. `start` begins the download in the background so the caller can poll with `status`. When direct bot fetching is blocked, the tool should fall back to a browser-assisted session, optionally simulate a one-click download, let the user click the site download button if needed, and close the browser session after the file is saved.",
     "input_schema": {

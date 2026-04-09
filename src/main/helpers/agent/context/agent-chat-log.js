@@ -162,6 +162,28 @@ function summarizeRecordLookup(lookup) {
   return '';
 }
 
+function summarizePurchaseRecommendation(purchaseRecommendation) {
+  const payload = purchaseRecommendation && typeof purchaseRecommendation === 'object' ? purchaseRecommendation : {};
+  const status = cleanText(payload.status, 40);
+  if (!status) {
+    return '';
+  }
+  if (status === 'needs_more_info') {
+    return asArray(payload.follow_up_questions).map((item) => cleanText(item, 280)).filter(Boolean).join(' ')
+      || 'I need more detail before I can recommend something to buy.';
+  }
+  const query = cleanText(payload.query, 220);
+  const items = asArray(payload.items);
+  const requiredTerms = asArray(payload?.filters?.required_terms).map((item) => cleanText(item, 120)).filter(Boolean);
+  if (status === 'matched' && items.length) {
+    return `Found ${items.length} purchase recommendation${items.length === 1 ? '' : 's'}${query ? ` for "${query}"` : ''}${requiredTerms.length ? ` matching ${requiredTerms.join(', ')}` : ''}.`;
+  }
+  if (status === 'no_match') {
+    return `No purchase recommendations found${query ? ` for "${query}"` : ''}.`;
+  }
+  return '';
+}
+
 // Extract the main answer or follow-up prompt from a science-question result payload.
 function summarizeScienceResult(payload) {
   const source = payload && typeof payload === 'object' ? payload : {};
@@ -219,6 +241,9 @@ function buildAssistantMetaFromResult(result, requestText = '') {
     parser: payload.parser && typeof payload.parser === 'object' ? cloneJson(payload.parser, {}) : {},
     protocol_to_notebook: protocolWorkflow ? cloneJson(protocolWorkflow, null) : null,
     notebook_draft: notebookDraftWorkflow ? cloneJson(notebookDraftWorkflow, null) : null,
+    purchase_recommendation: payload.purchase_recommendation && typeof payload.purchase_recommendation === 'object'
+      ? cloneJson(payload.purchase_recommendation, null)
+      : null,
     inventory_lookup: payload.inventory_lookup && typeof payload.inventory_lookup === 'object'
       ? cloneJson(payload.inventory_lookup, null)
       : null,
@@ -257,6 +282,9 @@ function buildAssistantTextFromResult(result) {
   const recordLookup = payload.record_lookup && typeof payload.record_lookup === 'object'
     ? payload.record_lookup
     : null;
+  const purchaseRecommendation = payload.purchase_recommendation && typeof payload.purchase_recommendation === 'object'
+    ? payload.purchase_recommendation
+    : null;
   const generalScienceQuestion = payload.general_science_question && typeof payload.general_science_question === 'object'
     ? payload.general_science_question
     : null;
@@ -276,6 +304,7 @@ function buildAssistantTextFromResult(result) {
   );
   const inventorySummaryText = summarizeInventoryLookup(inventoryLookup);
   const recordSummaryText = summarizeRecordLookup(recordLookup);
+  const purchaseRecommendationText = summarizePurchaseRecommendation(purchaseRecommendation);
   const notebookDraftText = summarizeNotebookDraft(notebookDraftWorkflow);
   const scienceAnswerText = summarizeScienceResult(generalScienceQuestion)
     || summarizeScienceResult(projectScienceQuestion)
@@ -294,6 +323,7 @@ function buildAssistantTextFromResult(result) {
   }
   // Otherwise fall back through science answers, lookup summaries, parser reasoning, and a generic default.
   return scienceAnswerText
+    || purchaseRecommendationText
     || inventorySummaryText
     || recordSummaryText
     || cleanText(parser.reasoning_summary, 12000)
@@ -340,6 +370,7 @@ function buildAssistantMessageFromError({ errorMessage = '', requestText = '', m
       },
       protocol_to_notebook: null,
       notebook_draft: null,
+      purchase_recommendation: null,
       inventory_lookup: null,
       record_lookup: null,
       general_science_question: null,

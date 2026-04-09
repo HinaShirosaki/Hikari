@@ -1,6 +1,13 @@
 <section id="assay-view" class="view">
-      <div class="assay-create-layout">
-        <div class="panel assay-mode-create-panel assay-create-sidebar">
+      <div class="assay-create-layout left-rail-template">
+        <div class="assay-mode-create-panel assay-create-sidebar app-left-rail left-rail-template__rail" data-sync-left-rail>
+          <div class="assay-browser-panel">
+            <label>
+              Search Assays
+              <input id="assay-search" placeholder="Search assay plates, projects, or notes" />
+            </label>
+            <div id="assay-list"></div>
+          </div>
           <form id="assay-form" class="form-grid assay-form-grid">
             <input type="hidden" id="assay-id" />
             <div class="assay-display-field">
@@ -62,7 +69,7 @@
           </form>
         </div>
 
-        <div class="panel assay-mode-create-panel assay-create-preview-panel">
+        <div class="panel assay-mode-create-panel assay-create-preview-panel left-rail-template__main">
           <div class="form-actions">
             <div class="calendar-view-switch assay-mode-switch" role="group" aria-label="Plate edit field">
               <button type="button" id="assay-plate-field-sample-btn" class="ghost-btn calendar-view-active">Edit Sample ID</button>
@@ -77,9 +84,9 @@
         </div>
       </div>
 
-      <div class="assay-results-layout assay-mode-results-panel" hidden>
-        <div class="panel assay-results-sheet-panel">
-          <p class="small-note">Open a saved assay plate, paste values from spreadsheet, then save and analyze.</p>
+      <div class="assay-results-layout assay-mode-results-panel left-rail-template" hidden>
+        <div class="assay-results-sheet-panel app-left-rail left-rail-template__rail" data-sync-left-rail>
+          <p class="small-note">Select an assay plate, paste values from spreadsheet, then save and analyze.</p>
           <label>
             Assay Plate
             <select id="assay-results-assay-select">
@@ -96,7 +103,7 @@
           <div id="assay-result-table" class="assay-plate-preview"></div>
         </div>
 
-        <div class="panel assay-results-analysis-panel">
+        <div class="panel assay-results-analysis-panel left-rail-template__main">
           <label>
             Analysis Method
             <select id="assay-analysis-method">
@@ -155,15 +162,6 @@
           <div id="assay-analysis-summary" class="small-note"></div>
           <div id="assay-analysis-table" class="list-table"></div>
         </div>
-      </div>
-
-      <div class="panel assay-mode-results-panel" hidden>
-        <h3>Saved Assays</h3>
-        <label>
-          Search
-          <input id="assay-search" placeholder="Assay number, assay, project, plate, notebook..." />
-        </label>
-        <div id="assay-list" class="cards"></div>
       </div>
 
       <div id="assay-serial-dilution-overlay" class="assay-serial-dilution-overlay" hidden>

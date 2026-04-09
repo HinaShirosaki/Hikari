@@ -902,5 +902,176 @@ test('agent-chat uses record lookup summary when inventory lookup payload is abs
   assert.equal(/Inventory Lookup/.test(history.innerHTML), false);
 });
 
+test('agent-chat prioritizes purchase recommendation summary, renders shopping tiles, and opens vendor pages', async () => {
+  const document = createMockDocument([
+    'agent-project-select',
+    'agent-context-summary',
+    'agent-chat-history',
+    'agent-message-input',
+    'agent-send-btn',
+    'agent-clear-btn',
+    'agent-status'
+  ]);
+  const history = document.getElementById('agent-chat-history');
+  const messageInput = document.getElementById('agent-message-input');
+  const sendBtn = document.getElementById('agent-send-btn');
+  const status = document.getElementById('agent-status');
+
+  const openedUrls = [];
+  const state = {
+    projects: [{ id: 'p1', name: 'Cancer Study' }],
+    protocols: [],
+    notebookEntries: [],
+    assays: [],
+    gelAnalyses: [],
+    workflows: [],
+    papers: [],
+    inventory: {},
+    labInventory: { chemicals: [] },
+    settings: {
+      llm: {
+        provider: 'openai',
+        model: 'gpt-5',
+        apiEndpoint: 'https://api.openai.com/v1/responses',
+        apiKey: 'sk-local-key'
+      },
+      agent: {
+        developerMode: false
+      }
+    },
+    agentChat: { projectId: '', messages: [] }
+  };
+
+  const window = {
+    enanaApi: {
+      autoSaveDataFile: async () => ({
+        ok: true,
+        filePath: '/tmp/enana-data.ena.json'
+      }),
+      openExternalUrl: async (url) => {
+        openedUrls.push(url);
+        return { ok: true, url };
+      },
+      agentChat: async () => ({
+        ok: true,
+        parser: {
+          primary_intent: 'purchase_recommendation',
+          needs_clarification: false,
+          clarification_reason: null,
+          entities: {
+            product_query: 'pipette tips',
+            required_attributes: 'endotoxin-free, metal-free',
+            excluded_attributes: 'latex',
+            budget_preference: 'cheap'
+          },
+          inventory_search: {
+            normalized_query: null,
+            candidate_terms: [],
+            aliases: [],
+            search_mode: null
+          },
+          protocol_candidates: [],
+          reasoning_summary: 'Find products the user can buy that meet explicit constraints.'
+        },
+        purchase_recommendation: {
+          status: 'matched',
+          query: 'cheap endotoxin-free metal-free pipette tips',
+          source: 'web',
+          filters: {
+            required_terms: ['endotoxin-free', 'metal-free'],
+            excluded_terms: ['latex'],
+            budget_preference: 'cheap'
+          },
+          items: [
+            {
+              id: 'item-1',
+              title: 'Endotoxin-Free Metal-Free Pipette Tips',
+              vendor: 'Lab Vendor',
+              price_text: '$14.99',
+              price_value: 14.99,
+              currency: 'USD',
+              image_url: 'https://vendor.example/item-1.png',
+              product_url: 'https://vendor.example/item-1',
+              source_domain: 'vendor.example',
+              matched_requirements: ['endotoxin-free', 'metal-free']
+            },
+            {
+              id: 'item-2',
+              title: 'Metal-Free Filter Tips',
+              vendor: 'Science Supply',
+              price_text: '$19.49',
+              price_value: 19.49,
+              currency: 'USD',
+              image_url: 'https://vendor.example/item-2.png',
+              product_url: 'https://vendor.example/item-2',
+              source_domain: 'vendor.example',
+              matched_requirements: ['metal-free']
+            }
+          ],
+          follow_up_questions: [],
+          summary: 'Found 2 purchase recommendations for cheap endotoxin-free metal-free pipette tips.'
+        },
+        inventory_lookup: {
+          status: 'matched',
+          query: 'pipette tips',
+          source: 'sqlite',
+          backfilled_sql: false,
+          items: [
+            {
+              kind: 'personal_sample',
+              id: 'sample-1',
+              name: 'Legacy tips',
+              location: 'Drawer 4'
+            }
+          ]
+        },
+        developer_trace: []
+      })
+    }
+  };
+
+  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat.js'), {
+    document,
+    window
+  });
+  const agent = agentModule.initAgentChat({
+    state,
+    persist: () => {},
+    createId: (() => {
+      let idx = 0;
+      return () => `agent-msg-${idx += 1}`;
+    })(),
+    safeText: shared.safeText,
+    onNotebookEntriesChanged: () => {}
+  });
+
+  agent.render();
+  messageInput.value = 'Find cheap endotoxin-free metal-free pipette tips.';
+  trigger(sendBtn, 'click');
+  await flushAsync();
+  await flushAsync();
+
+  assert.equal(state.agentChat.messages.length, 2);
+  assert.equal(state.agentChat.messages[1].meta.purchase_recommendation.status, 'matched');
+  assert.equal(state.agentChat.messages[1].meta.inventory_lookup.status, 'matched');
+  assert.match(state.agentChat.messages[1].text, /Found 2 purchase recommendations/);
+  assert.equal(/Found 1 inventory match/i.test(state.agentChat.messages[1].text), false);
+  assert.match(history.innerHTML, /agent-purchase-grid/);
+  assert.match(history.innerHTML, /agent-purchase-image-wrap/);
+  assert.match(history.innerHTML, /agent-purchase-title">Endotoxin-Free Metal-Free Pipette Tips/);
+  assert.match(history.innerHTML, /agent-purchase-price">\$14\.99/);
+  assert.match(history.innerHTML, /agent-purchase-vendor">Lab Vendor/);
+  assert.match(history.innerHTML, /Purchase Recommendation/);
+  assert.match(history.innerHTML, /Purchase Filters/);
+
+  const productButtons = history.querySelectorAll('[data-agent-open-external-url]');
+  assert.equal(productButtons.length, 2);
+  trigger(history, 'click', { target: productButtons[0] });
+  await flushAsync();
+
+  assert.deepEqual(openedUrls, ['https://vendor.example/item-1']);
+  assert.equal(status.textContent, 'Opened product page.');
+});
+
   }
 };

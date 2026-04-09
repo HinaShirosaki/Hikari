@@ -158,7 +158,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuite(context = {}) {
     test('agent tool-call catalog stays in sync and prompt builders render tool metadata', () => {
       const toolNames = toolLoading.AGENT_TOOL_CATALOG.map((entry) => entry.name);
       const schemaNames = Object.keys(toolLoading.AGENT_TOOL_CALL_CATALOG).filter((name) => name !== '$defs');
-      assert.deepEqual(toolNames, ['inventory-lookup', 'record-lookup', 'protocol-matching', 'notebook-generation', 'notebook-draft', 'python-sandbox', 'sub-agent', 'memory', 'literature-search', 'paper-download', 'paper-analysis', 'protocol-generation']);
+      assert.deepEqual(toolNames, ['inventory-lookup', 'record-lookup', 'protocol-matching', 'notebook-generation', 'notebook-draft', 'python-sandbox', 'sub-agent', 'memory', 'literature-search', 'purchase-recommendation', 'paper-download', 'paper-analysis', 'protocol-generation']);
       assert.deepEqual(schemaNames, toolNames);
       const inventoryEntry = toolLoading.AGENT_TOOL_CATALOG.find((entry) => entry.name === 'inventory-lookup');
       const protocolEntry = toolLoading.AGENT_TOOL_CATALOG.find((entry) => entry.name === 'protocol-matching');
@@ -238,10 +238,149 @@ module.exports = function registerAgentRetrievalAndToolCallSuite(context = {}) {
       const catalogTools = runtime.provideTools();
       assert.equal(catalogTools.tool_names.includes('inventory-lookup'), true);
       assert.equal(catalogTools.tool_names.includes('literature-search'), true);
+      assert.equal(catalogTools.tool_names.includes('purchase-recommendation'), true);
       assert.equal(catalogTools.tool_names.includes('protocol-generation'), true);
     });
 
+    test('purchase recommendation runtime extracts JSON-LD products and ranks cheaper matches first', async () => {
+      const { createPurchaseRecommendationRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-purchase-recommendation.js'));
+      const pages = {
+        'https://vendor-a.test/filter': `
+          <html>
+            <head>
+              <script type="application/ld+json">
+                {
+                  "@context": "https://schema.org",
+                  "@type": "Product",
+                  "name": "Vendor A Syringe Filter",
+                  "image": "https://vendor-a.test/filter.png",
+                  "brand": { "@type": "Brand", "name": "Vendor A" },
+                  "offers": {
+                    "@type": "Offer",
+                    "priceCurrency": "USD",
+                    "price": "12.50",
+                    "url": "https://vendor-a.test/filter"
+                  }
+                }
+              </script>
+            </head>
+            <body>metal-free endotoxin-free disposable syringe filter</body>
+          </html>
+        `,
+        'https://vendor-b.test/filter': `
+          <html>
+            <head>
+              <script type="application/ld+json">
+                {
+                  "@context": "https://schema.org",
+                  "@type": "Product",
+                  "name": "Vendor B Syringe Filter",
+                  "image": "https://vendor-b.test/filter.png",
+                  "brand": { "@type": "Brand", "name": "Vendor B" },
+                  "offers": {
+                    "@type": "Offer",
+                    "priceCurrency": "USD",
+                    "price": "19.99",
+                    "url": "https://vendor-b.test/filter"
+                  }
+                }
+              </script>
+            </head>
+            <body>metal-free endotoxin-free sterile syringe filter</body>
+          </html>
+        `
+      };
+      const runtime = createPurchaseRecommendationRuntime({
+        searchWebResults: async () => ([
+          { title: 'Vendor B result', url: 'https://vendor-b.test/filter' },
+          { title: 'Vendor A result', url: 'https://vendor-a.test/filter' }
+        ]),
+        fetch: async (url) => ({
+          ok: true,
+          text: async () => pages[url] || ''
+        })
+      });
+
+      const result = await runtime.execute({
+        query: 'syringe filter',
+        required_terms: ['metal-free', 'endotoxin-free'],
+        budget_preference: 'cheap'
+      });
+
+      assert.equal(result.status, 'matched');
+      assert.equal(result.items.length, 2);
+      assert.equal(result.items[0].title, 'Vendor A Syringe Filter');
+      assert.equal(result.items[0].price_text, '$12.50');
+      assert.equal(result.items[0].vendor, 'Vendor A');
+      assert.equal(result.items[0].matched_requirements.includes('metal-free'), true);
+      assert.equal(result.items[0].matched_requirements.includes('endotoxin-free'), true);
+    });
+
+    test('purchase recommendation runtime falls back to Open Graph metadata and rejects incomplete results', async () => {
+      const { createPurchaseRecommendationRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-purchase-recommendation.js'));
+      const pages = {
+        'https://vendor-a.test/filter': `
+          <html>
+            <head>
+              <meta property="og:title" content="Fallback Syringe Filter" />
+              <meta property="og:image" content="https://vendor-a.test/filter.png" />
+              <meta property="og:site_name" content="Vendor A" />
+              <meta property="product:price:amount" content="14.25" />
+              <meta property="product:price:currency" content="USD" />
+              <link rel="canonical" href="https://vendor-a.test/filter" />
+            </head>
+            <body>metal-free endotoxin-free ready to buy</body>
+          </html>
+        `,
+        'https://vendor-b.test/filter': `
+          <html>
+            <head>
+              <meta property="og:title" content="Incomplete Filter" />
+              <meta property="og:image" content="https://vendor-b.test/filter.png" />
+            </head>
+            <body>metal-free endotoxin-free</body>
+          </html>
+        `
+      };
+      const runtime = createPurchaseRecommendationRuntime({
+        searchWebResults: async () => ([
+          { title: 'Vendor A result', url: 'https://vendor-a.test/filter' },
+          { title: 'Vendor B result', url: 'https://vendor-b.test/filter' }
+        ]),
+        fetch: async (url) => ({
+          ok: true,
+          text: async () => pages[url] || ''
+        })
+      });
+
+      const result = await runtime.execute({
+        message: 'Find a cheap metal-free endotoxin-free syringe filter I can buy.'
+      });
+
+      assert.equal(result.status, 'matched');
+      assert.equal(result.items.length, 1);
+      assert.equal(result.items[0].title, 'Fallback Syringe Filter');
+      assert.equal(result.items[0].vendor, 'Vendor A');
+      assert.equal(result.items[0].price_text, '$14.25');
+      assert.equal(result.items[0].product_url, 'https://vendor-a.test/filter');
+    });
+
     test('agent tool-call catalog validators reject malformed catalog data', () => {
+      const missingDescriptionCatalog = toolLoading.AGENT_TOOL_CATALOG.filter((entry) => [
+        'inventory-lookup',
+        'record-lookup',
+        'protocol-matching',
+        'notebook-generation',
+        'notebook-draft',
+        'python-sandbox',
+        'sub-agent',
+        'memory',
+        'literature-search',
+        'paper-download',
+        'paper-analysis',
+        'protocol-generation'
+      ].includes(entry?.name));
+
       assert.throws(
         () => toolLoading.validateAgentToolCatalog([
           { name: 'inventory-lookup', description: 'first' },
@@ -370,7 +509,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuite(context = {}) {
               properties: {}
             }
           }
-        }, toolLoading.AGENT_TOOL_CATALOG),
+        }, missingDescriptionCatalog),
         /missing description/i
       );
 
@@ -481,7 +620,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuite(context = {}) {
               properties: {}
             }
           }
-        }, toolLoading.AGENT_TOOL_CATALOG),
+        }, missingDescriptionCatalog),
         /unknown tool "made-up-tool"/i
       );
     });

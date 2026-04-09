@@ -333,6 +333,9 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
   }
 
   function renderList() {
+    if (!elements.assayList) {
+      return;
+    }
     ensureState();
     const term = String(elements.assaySearchInput?.value || '').trim().toLowerCase();
     const rows = sortedAssaysByUpdated().filter((item) => matchesSearch(item, term));

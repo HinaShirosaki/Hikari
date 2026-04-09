@@ -18,14 +18,16 @@
 }
 
 .assay-create-sidebar {
-  align-self: start;
+  align-self: stretch;
 }
 
 .assay-create-layout {
+  --app-left-rail-bleed: 20px;
   display: grid;
   grid-template-columns: var(--layout-left-panel-width) minmax(0, 1fr);
   gap: 20px;
   align-items: stretch;
+  min-height: var(--shared-left-rail-layout-height);
 }
 
 .assay-create-layout > * {
@@ -33,10 +35,12 @@
 }
 
 .assay-results-layout {
+  --app-left-rail-bleed: 20px;
   display: grid;
-  grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.8fr);
+  grid-template-columns: var(--layout-left-panel-width) minmax(0, 1fr);
   gap: 20px;
-  align-items: start;
+  align-items: stretch;
+  min-height: var(--shared-left-rail-layout-height);
 }
 
 .assay-results-layout > * {
@@ -654,6 +658,17 @@
 
   .assay-results-layout {
     grid-template-columns: 1fr;
+  }
+
+  .assay-create-layout .app-left-rail,
+  .assay-results-layout .app-left-rail {
+    min-height: auto;
+    max-height: none;
+    padding-right: 0 !important;
+    overflow: visible;
+    background: transparent !important;
+    box-shadow: none;
+    scrollbar-gutter: auto;
   }
 
   .assay-serial-dilution-sample-head {

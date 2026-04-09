@@ -2,6 +2,7 @@
 
 function registerSystemIpc(deps = {}) {
   const ipcMain = deps.ipcMain;
+  const shell = deps.shell || null;
   const getCodexLoginStatus = deps.getCodexLoginStatus;
   const getCodexCliCatalog = typeof deps.getCodexCliCatalog === 'function'
     ? deps.getCodexCliCatalog
@@ -43,6 +44,22 @@ function registerSystemIpc(deps = {}) {
       return parsed && typeof parsed === 'object' ? parsed : fallback;
     } catch {
       return fallback;
+    }
+  }
+
+  function normalizeExternalUrl(value) {
+    const raw = cleanText(value, 2400);
+    if (!raw) {
+      return '';
+    }
+    try {
+      const parsed = new URL(raw);
+      if (!['http:', 'https:'].includes(parsed.protocol)) {
+        return '';
+      }
+      return parsed.toString();
+    } catch {
+      return '';
     }
   }
 
@@ -180,6 +197,26 @@ function registerSystemIpc(deps = {}) {
       };
     } catch (error) {
       return { ok: false, error: String(error) };
+    }
+  });
+
+  ipcMain.handle('system:open-external-url', async (_event, payload) => {
+    const normalizedPayload = normalizeJsonPayload(payload, {});
+    const url = normalizeExternalUrl(normalizedPayload?.url);
+    if (!url) {
+      return { ok: false, error: 'A valid http(s) URL is required.' };
+    }
+    if (!shell || typeof shell.openExternal !== 'function') {
+      return { ok: false, error: 'External URL opening is unavailable.' };
+    }
+    try {
+      await shell.openExternal(url);
+      return { ok: true, url };
+    } catch (error) {
+      return {
+        ok: false,
+        error: cleanText(error?.message || error, 2400) || 'Failed to open the external URL.'
+      };
     }
   });
 }

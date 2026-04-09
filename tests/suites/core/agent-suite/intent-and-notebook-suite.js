@@ -303,11 +303,51 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
       assert.match(String(result.error || ''), /at most 3/i);
     });
 
+    test('intent parser normalizes purchase recommendation payloads and forces reasoning_effort to 0', () => {
+      const result = agentIntentParser.normalizeIntentParserPayload({
+        primary_intent: 'shopping_recommendation',
+        reasoning_effort: 2,
+        needs_clarification: false,
+        clarification_reason: null,
+        entities: {
+          product_query: 'endotoxin-free pipette tips',
+          required_attributes: 'endotoxin-free, metal-free',
+          excluded_attributes: 'latex',
+          budget_preference: 'cheap'
+        },
+        inventory_search: {
+          normalized_query: 'should-clear',
+          candidate_terms: ['stale-term'],
+          aliases: ['legacy'],
+          search_mode: 'exact_then_alias_then_fuzzy'
+        },
+        protocol_candidates: ['Should be cleared'],
+        reasoning_summary: 'Find a cheap purchasable item that meets explicit lab constraints.'
+      });
+
+      assert.equal(result.ok, true);
+      assert.equal(result.payload.primary_intent, 'purchase_recommendation');
+      assert.equal(result.payload.reasoning_effort, 0);
+      assert.equal(result.payload.entities.product_query, 'endotoxin-free pipette tips');
+      assert.equal(result.payload.entities.required_attributes, 'endotoxin-free, metal-free');
+      assert.equal(result.payload.entities.excluded_attributes, 'latex');
+      assert.equal(result.payload.entities.budget_preference, 'cheap');
+      assert.deepEqual(result.payload.protocol_candidates, []);
+      assert.deepEqual(result.payload.inventory_search, {
+        normalized_query: null,
+        candidate_terms: [],
+        aliases: [],
+        search_mode: null
+      });
+    });
+
     test('intent parser maps aliases and typo variants to canonical intents', () => {
       assert.equal(agentIntentParser.normalizeParserIntent('data_analysis_or_coding'), 'result_analysis');
       assert.equal(agentIntentParser.normalizeParserIntent('coding-data-analysis'), 'result_analysis');
       assert.equal(agentIntentParser.normalizeParserIntent('inventory_loopup'), 'inventory_lookup');
       assert.equal(agentIntentParser.normalizeParserIntent('record_loopup'), 'record_lookup');
+      assert.equal(agentIntentParser.normalizeParserIntent('product_recommendation'), 'purchase_recommendation');
+      assert.equal(agentIntentParser.normalizeParserIntent('shopping-search'), 'purchase_recommendation');
     });
 
     test('science routing promotes unclear parser intent into deep general science reasoning', () => {
@@ -459,6 +499,240 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
       assert.equal(receivedScienceInput.routing.intent, 'general_science_question');
       assert.equal(receivedScienceInput.routing.plan.reasoning_effort, 2);
       assert.equal(result.general_science_question.status, 'completed');
+    });
+
+    test('intent dispatcher routes purchase recommendations through the tracked tool executor', async () => {
+      const { createAgentIntentDispatcher } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc', 'agent-intent-dispatcher.js'));
+      const lifecycleStages = [];
+      const toolCalls = [];
+      const dispatcher = createAgentIntentDispatcher({
+        cleanText: (value, _maxLength = 2000) => {
+          const text = String(value || '').trim();
+          return text || '';
+        },
+        observability: {
+          recordLifecycleEvent: (_recorder, event) => {
+            lifecycleStages.push(event?.stage || '');
+          }
+        },
+        protocolNotebookRuntime: {
+          buildSessionKey: () => 'session',
+          hasPendingSession: () => false,
+          clearPendingSession: () => {}
+        },
+        scienceReasoningLoopRuntime: {
+          runGeneralScienceQuestion: async () => {
+            throw new Error('Science runtime should not run for purchase recommendations.');
+          },
+          runProjectScienceQuestion: async () => {
+            throw new Error('Project science runtime should not run for purchase recommendations.');
+          },
+          runResultAnalysis: async () => {
+            throw new Error('Result-analysis runtime should not run for purchase recommendations.');
+          }
+        },
+        deepResearchRuntime: null,
+        scienceMainUtils: {
+          buildScienceRoutingFromParser: () => ({
+            intent: 'general_science_question',
+            entities: {},
+            plan: {
+              reasoning_effort: 1,
+              needs_clarification: false,
+              clarification_reason: ''
+            }
+          })
+        },
+        agentToolRuntime: {
+          buildAgentSystemPrompt: () => 'system prompt'
+        },
+        executeInventoryLookup: async () => {
+          throw new Error('Inventory lookup should not run for purchase recommendations.');
+        },
+        executeRecordLookup: async () => {
+          throw new Error('Record lookup should not run for purchase recommendations.');
+        },
+        getDefaultDataFilePath: () => '',
+        lifecycleService: {
+          asArray: (value) => (Array.isArray(value) ? value : []),
+          createLifecycleToolRunner: () => async (toolName, args, options) => {
+            toolCalls.push({ toolName, args, options });
+            return {
+              ok: true,
+              result: {
+                status: 'matched',
+                query: 'endotoxin-free metal-free pipette tips',
+                source: 'web',
+                filters: {
+                  required_terms: ['endotoxin-free', 'metal-free'],
+                  excluded_terms: ['latex'],
+                  budget_preference: 'cheap'
+                },
+                items: [
+                  {
+                    id: 'item-1',
+                    title: 'Endotoxin-Free Metal-Free Pipette Tips',
+                    vendor: 'Lab Vendor',
+                    price_text: '$14.99',
+                    price_value: 14.99,
+                    currency: 'USD',
+                    image_url: 'https://vendor.example/item-1.png',
+                    product_url: 'https://vendor.example/item-1'
+                  }
+                ],
+                follow_up_questions: [],
+                summary: 'Found 1 purchase recommendation.'
+              }
+            };
+          }
+        }
+      });
+
+      const result = {
+        ok: true,
+        parser: {
+          primary_intent: 'purchase_recommendation'
+        }
+      };
+
+      await dispatcher.dispatchIntent({
+        payload: {},
+        context: {
+          provider: 'openai',
+          endpoint: 'https://example.test',
+          apiKey: 'key',
+          model: 'gpt-test',
+          message: 'Find cheap endotoxin-free metal-free pipette tips.',
+          promptConversation: [],
+          snapshot: {},
+          projectId: '',
+          projectName: '',
+          parserPayload: {
+            primary_intent: 'purchase_recommendation',
+            reasoning_effort: 0,
+            direct_answer: null,
+            needs_clarification: false,
+            clarification_reason: null,
+            entities: {
+              product_query: 'pipette tips',
+              required_attributes: 'endotoxin-free, metal-free',
+              excluded_attributes: 'latex',
+              budget_preference: 'cheap'
+            }
+          },
+          traceContext: null,
+          lifecycleRecorder: null,
+          deepResearchEnabled: false
+        },
+        result
+      });
+
+      assert.equal(toolCalls.length, 1);
+      assert.equal(toolCalls[0].toolName, 'purchase-recommendation');
+      assert.equal(toolCalls[0].options.allowWriteTools, false);
+      assert.equal(result.purchase_recommendation.status, 'matched');
+      assert.equal(result.purchase_recommendation.items.length, 1);
+      assert.deepEqual(result.purchase_recommendation.filters.required_terms, ['endotoxin-free', 'metal-free']);
+      assert.equal(lifecycleStages.includes('purchase_recommendation_started'), true);
+      assert.equal(lifecycleStages.includes('purchase_recommendation_completed'), true);
+    });
+
+    test('intent dispatcher returns purchase clarification prompts without invoking the tool executor', async () => {
+      const { createAgentIntentDispatcher } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc', 'agent-intent-dispatcher.js'));
+      let toolCallCount = 0;
+      const dispatcher = createAgentIntentDispatcher({
+        cleanText: (value, _maxLength = 2000) => {
+          const text = String(value || '').trim();
+          return text || '';
+        },
+        observability: {
+          recordLifecycleEvent: () => {}
+        },
+        protocolNotebookRuntime: {
+          buildSessionKey: () => 'session',
+          hasPendingSession: () => false,
+          clearPendingSession: () => {}
+        },
+        scienceReasoningLoopRuntime: {
+          runGeneralScienceQuestion: async () => {
+            throw new Error('Science runtime should not run for purchase clarifications.');
+          },
+          runProjectScienceQuestion: async () => {
+            throw new Error('Project science runtime should not run for purchase clarifications.');
+          },
+          runResultAnalysis: async () => {
+            throw new Error('Result-analysis runtime should not run for purchase clarifications.');
+          }
+        },
+        deepResearchRuntime: null,
+        scienceMainUtils: {
+          buildScienceRoutingFromParser: () => ({
+            intent: 'general_science_question',
+            entities: {},
+            plan: {
+              reasoning_effort: 1,
+              needs_clarification: false,
+              clarification_reason: ''
+            }
+          })
+        },
+        agentToolRuntime: {
+          buildAgentSystemPrompt: () => 'system prompt'
+        },
+        executeInventoryLookup: async () => {
+          throw new Error('Inventory lookup should not run for purchase clarifications.');
+        },
+        executeRecordLookup: async () => {
+          throw new Error('Record lookup should not run for purchase clarifications.');
+        },
+        getDefaultDataFilePath: () => '',
+        lifecycleService: {
+          asArray: (value) => (Array.isArray(value) ? value : []),
+          createLifecycleToolRunner: () => async () => {
+            toolCallCount += 1;
+            return { ok: false, error: 'Should not be called.' };
+          }
+        }
+      });
+
+      const result = {
+        ok: true,
+        parser: {
+          primary_intent: 'purchase_recommendation'
+        }
+      };
+
+      await dispatcher.dispatchIntent({
+        payload: {},
+        context: {
+          provider: 'openai',
+          endpoint: 'https://example.test',
+          apiKey: 'key',
+          model: 'gpt-test',
+          message: 'Can you recommend something to buy?',
+          promptConversation: [],
+          snapshot: {},
+          projectId: '',
+          projectName: '',
+          parserPayload: {
+            primary_intent: 'purchase_recommendation',
+            reasoning_effort: 0,
+            direct_answer: null,
+            needs_clarification: true,
+            clarification_reason: 'Please tell me which item type you want to buy.',
+            entities: {}
+          },
+          traceContext: null,
+          lifecycleRecorder: null,
+          deepResearchEnabled: false
+        },
+        result
+      });
+
+      assert.equal(toolCallCount, 0);
+      assert.equal(result.purchase_recommendation.status, 'needs_more_info');
+      assert.equal(result.purchase_recommendation.source, 'parser_only');
+      assert.match(String(result.purchase_recommendation.follow_up_questions[0] || ''), /which item type/i);
     });
 
     test('intent parser prompt includes recent transcript and active project context', () => {

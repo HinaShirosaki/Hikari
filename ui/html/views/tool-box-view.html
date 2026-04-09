@@ -1,11 +1,6 @@
 <section id="tool-box-view" class="view">
-      <div class="panel">
-        <h2>Tools</h2>
-        <p class="small-note">Bench calculators, sequence utilities, and quick analysis helpers.</p>
-      </div>
-
-      <div class="tool-layout">
-        <aside class="panel tool-sidebar" aria-label="Tool selection">
+      <div class="tool-layout left-rail-template">
+        <aside class="tool-sidebar app-left-rail left-rail-template__rail" data-sync-left-rail aria-label="Tool selection">
           <div class="tool-grid" role="tablist" aria-orientation="vertical">
             <button class="tile tool-tile" data-tool-view="tool-molarity-view" role="tab" aria-controls="tool-molarity-view">
               <span class="label">Molarity Calculator</span>
@@ -43,7 +38,7 @@
           </div>
         </aside>
 
-        <div class="tool-content">
+        <div class="tool-content left-rail-template__main">
       <div id="tool-molarity-view" class="panel tool-subview">
         <h3>Molarity Calculator</h3>
 

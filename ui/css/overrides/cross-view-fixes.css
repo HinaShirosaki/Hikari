@@ -1,1 +1,169 @@
 /* Spacing and overlap fixes by view */
+
+:root {
+  --multi-panel-left-rail-bg: color-mix(in srgb, var(--surface-subtle) 92%, var(--strong) 8%);
+  --multi-panel-left-rail-border: color-mix(in srgb, var(--line-soft) 84%, var(--strong) 10%);
+  --multi-panel-left-rail-max-height: calc(100vh - 168px);
+  --app-left-rail-bg: color-mix(in srgb, var(--surface-subtle) 92%, var(--bg) 8%);
+  --app-left-rail-divider: color-mix(in srgb, var(--line-soft) 88%, var(--strong) 12%);
+  --app-left-rail-handle: color-mix(in srgb, var(--line) 80%, var(--accent) 20%);
+}
+
+.multi-panel-left-rail {
+  position: relative;
+  z-index: 0;
+  isolation: isolate;
+  border: 0;
+  border-radius: 18px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.multi-panel-left-rail::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--multi-panel-left-rail-bg);
+  box-shadow: inset 0 0 0 1px var(--multi-panel-left-rail-border);
+  pointer-events: none;
+}
+
+.multi-panel-left-scroll {
+  min-height: 0;
+  max-height: var(--multi-panel-left-rail-max-height);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable both-edges;
+}
+
+@media (max-width: 980px) {
+  .multi-panel-left-scroll {
+    max-height: none;
+    overflow: visible;
+    scrollbar-gutter: auto;
+  }
+}
+
+.app-left-rail {
+  position: relative;
+  align-self: stretch;
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  min-width: 0;
+  min-height: 100%;
+  max-height: var(--shared-left-rail-layout-height);
+  margin-top: 0 !important;
+  padding: 14px 16px 16px 16px !important;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable both-edges;
+  border: 0 !important;
+  border-radius: 0 !important;
+  border-top: 0 !important;
+  background: transparent !important;
+  box-shadow: none;
+}
+
+.app-left-rail::before {
+  content: none !important;
+}
+
+.app-left-rail-layout {
+  position: relative;
+  isolation: isolate;
+}
+
+.app-left-rail-layout::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(var(--app-left-rail-track-width) + var(--app-left-rail-bleed, 0px));
+  background: var(--app-left-rail-bg);
+  box-shadow: inset -1px 0 0 var(--app-left-rail-divider);
+  z-index: -1;
+  pointer-events: none;
+}
+
+.app-left-rail > * {
+  min-width: 0;
+}
+
+.app-left-rail-section {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  min-width: 0;
+}
+
+.app-left-rail-section + .app-left-rail-section {
+  padding-top: 16px;
+  border-top: 1px solid color-mix(in srgb, var(--line-soft) 92%, transparent);
+}
+
+.app-left-rail-list {
+  display: grid;
+  gap: 0;
+  align-content: start;
+}
+
+.app-left-rail-handle {
+  position: absolute;
+  top: 0;
+  right: calc(-8px - var(--app-left-rail-bleed, 0px));
+  bottom: 0;
+  width: 16px;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  cursor: col-resize;
+  touch-action: none;
+  z-index: 5;
+}
+
+.app-left-rail-handle::before {
+  content: '';
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  left: 7px;
+  width: 2px;
+  border-radius: 999px;
+  background: transparent;
+  transition: background-color 140ms ease;
+}
+
+.app-left-rail:hover .app-left-rail-handle::before,
+.app-left-rail.is-resizing .app-left-rail-handle::before,
+.app-left-rail-handle:focus-visible::before {
+  background: var(--app-left-rail-handle);
+}
+
+body.shared-left-rail-resizing,
+body.shared-left-rail-resizing * {
+  cursor: col-resize !important;
+  user-select: none;
+}
+
+@media (max-width: 980px) {
+  .app-left-rail {
+    min-height: auto;
+    max-height: none;
+    padding: 0 !important;
+    overflow: visible;
+    background: transparent !important;
+    box-shadow: none;
+    scrollbar-gutter: auto;
+  }
+
+  .app-left-rail-layout::before {
+    display: none;
+  }
+
+  .app-left-rail-handle {
+    display: none;
+  }
+}

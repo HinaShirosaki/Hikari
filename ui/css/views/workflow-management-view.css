@@ -6,16 +6,35 @@
 }
 
 .workflow-editor-layout {
+  --app-left-rail-bleed: 18px;
   display: grid;
   gap: 18px;
-  align-items: start;
+  align-items: stretch;
   grid-template-columns: var(--layout-left-panel-width) minmax(0, 1fr);
+  min-height: var(--shared-left-rail-layout-height);
 }
 
 .workflow-editor-sidebar,
 .workflow-editor-main {
   display: grid;
   gap: 18px;
+  align-content: start;
+}
+
+.workflow-entry-panel {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+.workflow-entry-panel button {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.workflow-list {
+  display: grid;
+  gap: 0;
   align-content: start;
 }
 
@@ -247,11 +266,25 @@
 }
 
 .workflow-card {
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  display: grid;
+  gap: 8px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line-soft);
+}
+
+.workflow-card:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.workflow-card h3,
+.workflow-card p {
+  margin: 0;
 }
 
 .workflow-card-editing {
-  border-color: color-mix(in srgb, var(--accent) 60%, #ffffff);
+  padding-left: 10px;
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--accent) 55%, transparent);
 }
 
 body.workflow-dragging {
@@ -261,6 +294,15 @@ body.workflow-dragging {
 @media (max-width: 1100px) {
   .workflow-editor-layout {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .workflow-editor-sidebar {
+    min-height: auto;
+    max-height: none;
+    padding-right: 0 !important;
+    overflow: visible;
+    background: transparent !important;
+    box-shadow: none;
   }
 
   .workflow-graph-canvas {
@@ -338,6 +380,7 @@ body.theme-night .workflow-context-item:hover {
 
 #workflow-management-view .panel,
 #workflow-management-view .card,
+.workflow-list,
 .workflow-graph-canvas,
 .workflow-node,
 .workflow-context-menu {

@@ -6,8 +6,9 @@
  * - project_science_question: project-aware reasoning that prefers internal records first
  * - result_analysis: deterministic analysis that prefers computation before interpretation
  *
- * The runtime enforces a single-tool-per-round loop, evaluates whether evidence is
- * sufficient after each round, and then synthesizes a final grounded answer.
+ * The runtime executes evidence rounds that may contain one or more independent tools,
+ * evaluates whether evidence is sufficient after each round, and then synthesizes a
+ * final grounded answer.
  */
 'use strict';
 
@@ -321,6 +322,80 @@ function createScienceReasoningLoopRuntime(deps = {}) {
     return `I want to use ${cleanToolName} for the next evidence step.`;
   }
 
+  function buildToolRoundThinkingTrace(calls = []) {
+    const normalizedCalls = asArray(calls).filter((call) => call && typeof call === 'object');
+    if (normalizedCalls.length <= 1) {
+      const firstCall = normalizedCalls[0] || {};
+      return buildToolCallThinkingTrace(firstCall.name, firstCall.argsObject);
+    }
+    const toolNames = uniqueStrings(normalizedCalls.map((call) => cleanText(call?.name, 120)), 4);
+    const queries = uniqueStrings(normalizedCalls.map((call) => cleanText(call?.argsObject?.query, 160)), 3);
+    if (queries.length) {
+      return `I want to use ${toolNames.join(' and ')} in parallel to investigate ${queries.map((query) => `"${query}"`).join(' and ')}.`;
+    }
+    return `I want to use ${toolNames.join(' and ')} in parallel for the next evidence step.`;
+  }
+
+  function buildToolRoundSummary(executedCalls = []) {
+    const summaries = uniqueStrings(asArray(executedCalls).map((entry) => (
+      cleanText(entry?.toolEnvelope?.summary, 220)
+      || cleanText(entry?.toolEnvelope?.error || entry?.toolEnvelope?.result?.error, 220)
+    )), 6);
+    if (!summaries.length) {
+      return 'No tool summary was generated for this round.';
+    }
+    return summaries.join(' | ');
+  }
+
+  function buildRoundToolResult(executedCalls = []) {
+    const normalizedCalls = asArray(executedCalls).filter((entry) => entry && typeof entry === 'object');
+    const toolNames = uniqueStrings(normalizedCalls.map((entry) => cleanText(entry?.selectedCall?.name, 120)), 6);
+    const citations = normalizeCitations(normalizedCalls.flatMap((entry) => (
+      asArray(entry?.toolEnvelope?.citations).length
+        ? asArray(entry?.toolEnvelope?.citations)
+        : asArray(entry?.toolEnvelope?.result?.citations)
+    )), 12);
+    const loadedContextBlocks = normalizeLoadedContextBlocks(
+      normalizedCalls.flatMap((entry) => (
+        asArray(entry?.toolEnvelope?.loaded_context_blocks).length
+          ? asArray(entry?.toolEnvelope?.loaded_context_blocks)
+          : asArray(entry?.toolEnvelope?.result?.loaded_context_blocks)
+      )),
+      6
+    );
+    const contradictions = uniqueStrings(normalizedCalls.flatMap((entry) => [
+      ...asArray(entry?.toolEnvelope?.contradictions),
+      ...asArray(entry?.toolEnvelope?.result?.contradictions)
+    ]), 8);
+    const errors = uniqueStrings(normalizedCalls.map((entry) => (
+      cleanText(entry?.toolEnvelope?.error || entry?.toolEnvelope?.result?.error, 320)
+    )), 6);
+    const items = normalizedCalls.flatMap((entry) => asArray(entry?.toolEnvelope?.items));
+    const summary = normalizedCalls.length > 1
+      ? `Parallel tool round completed: ${buildToolRoundSummary(normalizedCalls)}`
+      : buildToolRoundSummary(normalizedCalls);
+    const error = errors.join(' | ');
+    return {
+      ok: normalizedCalls.every((entry) => entry?.toolEnvelope?.ok === true),
+      tool_name: toolNames.join(' + '),
+      tool_names: toolNames,
+      items,
+      citations,
+      loaded_context_blocks: loadedContextBlocks,
+      contradictions,
+      summary,
+      error,
+      result: {
+        items,
+        citations,
+        loaded_context_blocks: loadedContextBlocks,
+        contradictions,
+        summary,
+        error
+      }
+    };
+  }
+
   function buildToolTraceRenderOutputs(rawOutputs = []) {
     return asArray(rawOutputs).slice(0, 6).map((output) => {
       const source = output && typeof output === 'object' ? output : {};
@@ -417,8 +492,8 @@ function createScienceReasoningLoopRuntime(deps = {}) {
    * Flow:
    * 1. Normalize routing/context.
    * 2. Start an agent session constrained by the selected policy.
-   * 3. Execute at most one valid tool per round.
-   * 4. Re-evaluate sufficiency after each tool result.
+   * 3. Execute one or more valid tools per round.
+   * 4. Re-evaluate sufficiency after each completed tool round.
    * 5. Synthesize a final answer once evidence is sufficient or the budget is exhausted.
    */
   async function runIntentLoop(input = {}) {
@@ -469,6 +544,11 @@ function createScienceReasoningLoopRuntime(deps = {}) {
       Number(input.maxInferenceRetries ?? deps.maxInferenceRetries ?? 2),
       0,
       3
+    );
+    const maxToolsPerRound = clamp(
+      Number(input.maxToolsPerRound ?? deps.maxToolsPerRound ?? 4),
+      1,
+      6
     );
     const lifecycleRecorder = input.lifecycleRecorder || null;
     const toolTrace = [];
@@ -1146,7 +1226,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
           break;
         }
 
-        // Feed evaluator guidance back into the session to steer the next single-tool proposal.
+        // Feed evaluator guidance back into the session to steer the next tool proposal.
         feedbackTurnsWithoutTool += 1;
         recordLifecycleEvent(lifecycleRecorder, {
           stage: 'science_evaluator_continue',
@@ -1167,134 +1247,172 @@ function createScienceReasoningLoopRuntime(deps = {}) {
         continue;
       }
 
-      // A valid tool call resets the no-tool feedback counter.
+      // A valid tool round resets the no-tool feedback counter.
       feedbackTurnsWithoutTool = 0;
-      // Only the first valid call is executed to preserve deterministic one-tool-per-round behavior.
-      const selectedCall = validCalls[0];
-      const parsedArgs = safeParseJson(selectedCall.argsText || '{}', {});
-      const argsObject = parsedArgs && typeof parsedArgs === 'object' ? parsedArgs : {};
-      const validation = validateArgumentsAgainstSchema(toolSchemaMap.get(selectedCall.name), argsObject);
-      const truncatedMultiCall = rawCalls.length > 1;
+      const selectedCalls = validCalls.slice(0, maxToolsPerRound).map((call) => {
+        const parsedArgs = safeParseJson(call.argsText || '{}', {});
+        const argsObject = parsedArgs && typeof parsedArgs === 'object' ? parsedArgs : {};
+        return {
+          ...call,
+          argsObject,
+          validation: validateArgumentsAgainstSchema(toolSchemaMap.get(call.name), argsObject)
+        };
+      });
+      const multiToolRound = selectedCalls.length > 1;
+      const truncatedMultiCall = validCalls.length > selectedCalls.length;
       const assistantBeforeTool = cleanText(latestAssistantText, 4000);
       roundsExecuted += 1;
+      const selectedToolNames = selectedCalls.map((call) => cleanText(call.name, 120)).filter(Boolean);
 
       recordLifecycleEvent(lifecycleRecorder, {
         stage: 'science_round_started',
         status: 'started',
         routing_intent: intent,
-        tool_name: selectedCall.name,
-        message: `Science reasoning round ${roundsExecuted} started with ${selectedCall.name}.`,
+        tool_name: multiToolRound ? 'parallel-tool-round' : selectedToolNames[0],
+        message: `Science reasoning round ${roundsExecuted} started with ${selectedToolNames.join(', ')}.`,
         meta: {
           round: roundsExecuted,
+          multi_tool_round: multiToolRound,
+          tool_count: selectedCalls.length,
+          tool_names: selectedToolNames,
           truncated_multi_call: truncatedMultiCall,
-          thinking_trace: buildToolCallThinkingTrace(selectedCall.name, argsObject)
+          thinking_trace: buildToolRoundThinkingTrace(selectedCalls)
         }
       });
 
-      // Validate and execute the selected tool, normalizing any failure into a synthetic envelope.
-      let toolEnvelope;
-      if (!validation.ok) {
-        toolEnvelope = buildSyntheticToolEnvelope(
-          selectedCall.name,
-          argsObject,
-          roundsExecuted,
-          cleanText(validation.error, 320) || 'Tool arguments failed schema validation.'
-        );
-      } else if (!allowedToolNames.includes(selectedCall.name)) {
-        toolEnvelope = buildSyntheticToolEnvelope(
-          selectedCall.name,
-          argsObject,
-          roundsExecuted,
-          `Tool ${selectedCall.name} is not allowed for ${intent}.`
-        );
-      } else {
-        try {
-          toolEnvelope = await executeTool(selectedCall.name, argsObject, {
-            allowWriteTools: false,
-            traceContext,
-            lifecycleRecorder
-          });
-        } catch (error) {
-          if (isAgentRequestAbortError(error)) {
-            throw error;
-          }
+      // Validate and execute the selected tools in parallel, then synthesize only after the batch finishes.
+      const executedCalls = await Promise.all(selectedCalls.map(async (selectedCall, index) => {
+        let toolEnvelope;
+        if (!selectedCall.validation.ok) {
           toolEnvelope = buildSyntheticToolEnvelope(
             selectedCall.name,
-            argsObject,
+            selectedCall.argsObject,
             roundsExecuted,
-            cleanText(String(error?.message || error), 320) || 'Tool execution failed.'
+            cleanText(selectedCall.validation.error, 320) || 'Tool arguments failed schema validation.'
           );
-        }
-      }
-
-      // Persist a compact trace row for observability and downstream answer synthesis.
-      const normalizedTraceRow = {
-        round: roundsExecuted,
-        call_id: selectedCall.callId,
-        tool_name: cleanText(selectedCall.name, 120),
-        input: argsObject,
-        ok: toolEnvelope?.ok === true,
-        status: cleanText(toolEnvelope?.result?.status, 40),
-        run_id: cleanText(toolEnvelope?.result?.run_id, 120),
-        summary: cleanText(toolEnvelope?.summary, 320)
-          || cleanText(toolEnvelope?.error, 320)
-          || 'No summary was generated.',
-        truncated_multi_call: truncatedMultiCall,
-        error: cleanText(toolEnvelope?.error || toolEnvelope?.result?.error, 1200),
-        stdout: cleanText(toolEnvelope?.result?.stdout, 12000),
-        stderr: cleanText(toolEnvelope?.result?.stderr, 12000),
-        render_outputs: buildToolTraceRenderOutputs(toolEnvelope?.result?.render_outputs),
-        citations: normalizeCitations(toolEnvelope?.citations, 8),
-        loaded_context_blocks: normalizeLoadedContextBlocks(
-          toolEnvelope?.loaded_context_blocks || toolEnvelope?.result?.loaded_context_blocks,
-          6
-        )
-      };
-      toolTrace.push(normalizedTraceRow);
-      normalizeCitations(toolEnvelope?.citations, 10).forEach((citation) => accumulatedCitations.push(citation));
-
-      intermediateStates.push(buildIntermediateState('science_tool_round', `Executed ${selectedCall.name} in round ${roundsExecuted}.`, {
-        assumptions: [
-          truncatedMultiCall
-            ? 'Multiple tool calls were proposed; only the first valid call was executed this round.'
-            : 'Exactly one tool call was executed this round.',
-          toolEnvelope?.ok === true
-            ? 'Tool execution returned a success envelope.'
-            : 'Tool execution returned a failure envelope.'
-        ],
-        evidence: normalizeCitations(toolEnvelope?.citations, 8),
-        proposed_actions: [
-          {
-            action_type: 'read',
-            tool_name: selectedCall.name,
-            risk_level: 'low',
-            reason: cleanText(toolEnvelope?.summary || toolEnvelope?.error, 260)
+        } else if (!allowedToolNames.includes(selectedCall.name)) {
+          toolEnvelope = buildSyntheticToolEnvelope(
+            selectedCall.name,
+            selectedCall.argsObject,
+            roundsExecuted,
+            `Tool ${selectedCall.name} is not allowed for ${intent}.`
+          );
+        } else {
+          try {
+            toolEnvelope = await executeTool(selectedCall.name, selectedCall.argsObject, {
+              allowWriteTools: false,
+              traceContext,
+              lifecycleRecorder
+            });
+          } catch (error) {
+            if (isAgentRequestAbortError(error)) {
+              throw error;
+            }
+            toolEnvelope = buildSyntheticToolEnvelope(
+              selectedCall.name,
+              selectedCall.argsObject,
+              roundsExecuted,
+              cleanText(String(error?.message || error), 320) || 'Tool execution failed.'
+            );
           }
-        ],
-        confidence: toolEnvelope?.ok === true ? 0.66 : 0.42
-      }));
-
-      // Return the tool output to the session so the agent can continue from fresh evidence.
-      currentSession = await continueAgentSessionWithToolOutputs(currentSession, [
-        {
-          callId: selectedCall.callId,
-          name: selectedCall.name,
-          output: JSON.stringify(toolEnvelope || {})
         }
-      ], traceContext);
+        return {
+          selectedCall,
+          toolEnvelope,
+          tool_index_in_round: index + 1,
+          tool_count_in_round: selectedCalls.length
+        };
+      }));
+      const roundToolResult = buildRoundToolResult(executedCalls);
+      const roundEvidence = normalizeCitations(roundToolResult?.citations, 8);
+      const roundSucceeded = executedCalls.some((entry) => entry?.toolEnvelope?.ok === true);
+
+      // Persist compact trace rows for observability and downstream answer synthesis.
+      executedCalls.forEach((entry) => {
+        const selectedCall = entry.selectedCall;
+        const toolEnvelope = entry.toolEnvelope;
+        const normalizedTraceRow = {
+          round: roundsExecuted,
+          call_id: selectedCall.callId,
+          tool_name: cleanText(selectedCall.name, 120),
+          input: selectedCall.argsObject,
+          ok: toolEnvelope?.ok === true,
+          status: cleanText(toolEnvelope?.result?.status, 40),
+          run_id: cleanText(toolEnvelope?.result?.run_id, 120),
+          summary: cleanText(toolEnvelope?.summary, 320)
+            || cleanText(toolEnvelope?.error, 320)
+            || 'No summary was generated.',
+          multi_tool_round: multiToolRound,
+          tool_index_in_round: entry.tool_index_in_round,
+          tool_count_in_round: entry.tool_count_in_round,
+          truncated_multi_call: truncatedMultiCall,
+          error: cleanText(toolEnvelope?.error || toolEnvelope?.result?.error, 1200),
+          stdout: cleanText(toolEnvelope?.result?.stdout, 12000),
+          stderr: cleanText(toolEnvelope?.result?.stderr, 12000),
+          render_outputs: buildToolTraceRenderOutputs(toolEnvelope?.result?.render_outputs),
+          citations: normalizeCitations(toolEnvelope?.citations || toolEnvelope?.result?.citations, 8),
+          loaded_context_blocks: normalizeLoadedContextBlocks(
+            toolEnvelope?.loaded_context_blocks || toolEnvelope?.result?.loaded_context_blocks,
+            6
+          )
+        };
+        toolTrace.push(normalizedTraceRow);
+        normalizedTraceRow.citations.forEach((citation) => accumulatedCitations.push(citation));
+      });
+
+      intermediateStates.push(buildIntermediateState(
+        'science_tool_round',
+        multiToolRound
+          ? `Executed ${selectedCalls.length} tools in round ${roundsExecuted}.`
+          : `Executed ${selectedToolNames[0]} in round ${roundsExecuted}.`,
+        {
+          assumptions: [
+            multiToolRound
+              ? `Executed ${selectedCalls.length} independent tool calls in parallel for this round.`
+              : 'Exactly one tool call was executed this round.',
+            truncatedMultiCall
+              ? `Additional valid tool calls were deferred because the round hit the per-round cap of ${maxToolsPerRound}.`
+              : '',
+            roundSucceeded
+              ? 'At least one tool execution returned a success envelope.'
+              : 'Every tool execution in this round returned a failure envelope.'
+          ].filter(Boolean),
+          evidence: roundEvidence,
+          proposed_actions: executedCalls.slice(0, 4).map((entry) => ({
+            action_type: 'read',
+            tool_name: cleanText(entry?.selectedCall?.name, 120),
+            risk_level: 'low',
+            reason: cleanText(entry?.toolEnvelope?.summary || entry?.toolEnvelope?.error, 260)
+          })).filter((entry) => entry.tool_name || entry.reason),
+          confidence: roundSucceeded ? 0.66 : 0.42
+        }
+      ));
+
+      // Return the full tool batch to the session so the agent can continue from the complete round state.
+      currentSession = await continueAgentSessionWithToolOutputs(currentSession, executedCalls.map((entry) => ({
+        callId: entry.selectedCall.callId,
+        name: entry.selectedCall.name,
+        output: JSON.stringify(entry.toolEnvelope || {})
+      })), traceContext);
       latestAssistantText = cleanText(extractAgentSessionText(currentSession), 12000);
       toolRoundArtifacts.push({
         round: roundsExecuted,
-        tool_name: cleanText(selectedCall.name, 120),
-        tool_arguments: argsObject,
+        tool_name: multiToolRound ? 'parallel-tool-round' : cleanText(selectedToolNames[0], 120),
+        tool_arguments: multiToolRound ? { tool_names: selectedToolNames } : selectedCalls[0]?.argsObject,
+        tool_calls: executedCalls.map((entry) => ({
+          tool_name: cleanText(entry?.selectedCall?.name, 120),
+          tool_arguments: entry?.selectedCall?.argsObject,
+          tool_summary: cleanText(entry?.toolEnvelope?.summary, 600),
+          tool_error: cleanText(entry?.toolEnvelope?.error || entry?.toolEnvelope?.result?.error, 1200)
+        })),
         assistant_before_tool: assistantBeforeTool,
-        tool_summary: cleanText(toolEnvelope?.summary, 600),
-        tool_error: cleanText(toolEnvelope?.error || toolEnvelope?.result?.error, 1200),
+        tool_summary: cleanText(roundToolResult?.summary, 600),
+        tool_error: cleanText(roundToolResult?.error, 1200),
         assistant_after_tool: cleanText(latestAssistantText, 4000)
       });
       const preSynthesisState = await buildVerifiedPreSynthesizedQuestion({
         session: currentSession,
-        latestToolResult: toolEnvelope,
+        latestToolResult: roundToolResult,
         rounds: roundsExecuted
       });
       currentSession = preSynthesisState.session || currentSession;
@@ -1310,7 +1428,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
             ? `Tentative answer: ${cleanText(preSynthesizedQuestion.tentative_answer.current_best_answer, 320)}`
             : 'No grounded tentative answer was available yet.'
         ],
-        evidence: normalizeCitations(toolEnvelope?.citations, 8),
+        evidence: roundEvidence,
         open_questions: uniqueStrings([
           ...asArray(preSynthesizedQuestion?.unresolved_issues),
           ...getUnstableScienceInferenceChecks(
@@ -1318,10 +1436,10 @@ function createScienceReasoningLoopRuntime(deps = {}) {
             { asArray, cleanText, uniqueStrings }
           ).map((row) => formatScienceInferenceStabilityIssue(row, { asArray, cleanText, uniqueStrings }))
         ], 8),
-        confidence: toolEnvelope?.ok === true ? 0.64 : 0.4
+        confidence: roundSucceeded ? 0.64 : 0.4
       }));
 
-      // Re-run sufficiency evaluation now that a new tool result has been incorporated.
+      // Re-run sufficiency evaluation now that the full tool round has been incorporated.
       finalEvaluation = mergePolicyEvaluationHints(
         intent,
         policy,
@@ -1339,7 +1457,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
           project,
           accumulatedCitations,
           toolTrace,
-          latestToolResult: toolEnvelope,
+          latestToolResult: roundToolResult,
           preSynthesizedQuestion,
           latestAssistantText,
           roundsExecuted,
@@ -1355,10 +1473,11 @@ function createScienceReasoningLoopRuntime(deps = {}) {
           stage: 'science_evaluator_satisfied',
           status: 'ok',
           routing_intent: intent,
-          tool_name: selectedCall.name,
+          tool_name: multiToolRound ? 'parallel-tool-round' : selectedToolNames[0],
           message: cleanText(finalEvaluation.reason, 320) || 'Evaluator marked current evidence as sufficient.',
           meta: {
             round: roundsExecuted,
+            tool_names: selectedToolNames,
             thinking_trace: cleanText(finalEvaluation?.trace_sentence, 420)
           }
         });
@@ -1370,7 +1489,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
           stage: 'science_budget_exhausted',
           status: 'failed',
           routing_intent: intent,
-          tool_name: selectedCall.name,
+          tool_name: multiToolRound ? 'parallel-tool-round' : selectedToolNames[0],
           message: 'Science reasoning loop exhausted its tool round budget.',
           meta: {
             round: roundsExecuted
@@ -1383,10 +1502,11 @@ function createScienceReasoningLoopRuntime(deps = {}) {
         stage: 'science_evaluator_continue',
         status: 'started',
         routing_intent: intent,
-        tool_name: selectedCall.name,
+        tool_name: multiToolRound ? 'parallel-tool-round' : selectedToolNames[0],
         message: cleanText(finalEvaluation.reason, 320) || 'Evaluator requested another retrieval/tool round.',
         meta: {
           round: roundsExecuted,
+          tool_names: selectedToolNames,
           thinking_trace: cleanText(finalEvaluation?.trace_sentence, 420)
         }
       });

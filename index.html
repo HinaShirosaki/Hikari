@@ -222,8 +222,8 @@
 
 <!-- SOURCE: ui/html/views/protocol-management-view.html -->
 <section id="protocol-management-view" class="view">
-      <div class="protocol-workspace">
-        <div id="protocol-list-panel" class="panel protocol-list-panel">
+      <div class="protocol-workspace left-rail-template">
+        <div id="protocol-list-panel" class="protocol-list-panel app-left-rail left-rail-template__rail" data-sync-left-rail>
           <div class="protocol-list-head">
             <div class="inline-row protocol-sort-controls">
               <button type="button" id="create-protocol-btn" class="primary-btn">Create Protocol</button>
@@ -240,7 +240,7 @@
           <div id="protocol-list" class="list-table"></div>
         </div>
 
-        <div id="protocol-detail-panel" class="panel protocol-detail-panel">
+        <div id="protocol-detail-panel" class="panel protocol-detail-panel left-rail-template__main">
           <div id="protocol-empty-panel" class="protocol-empty-panel">
             <span class="protocol-empty-eyebrow">Protocol Workspace</span>
             <h3>Select a protocol</h3>
@@ -371,8 +371,8 @@
 
 <!-- SOURCE: ui/html/views/biology-notebook-view.html -->
 <section id="biology-notebook-view" class="view">
-      <div class="biology-notebook-layout">
-        <aside class="biology-notebook-rail">
+      <div class="biology-notebook-layout left-rail-template">
+        <aside class="biology-notebook-rail app-left-rail left-rail-template__rail" data-sync-left-rail>
           <div class="biology-notebook-rail-head">
             <h2>Biology Notebook</h2>
             <p class="small-note">Projects and notebook pages</p>
@@ -404,7 +404,7 @@
           <div id="biology-notebook-entry-list" class="biology-notebook-page-list"></div>
         </aside>
 
-        <div class="biology-notebook-viewer-column">
+        <div class="biology-notebook-viewer-column left-rail-template__main">
           <div id="biology-notebook-empty-state" class="panel biology-notebook-empty-state">
             <h3>Protocol / Result Viewer</h3>
             <p>Select a project and protocol to create a notebook page, or choose an existing page from the left panel.</p>
@@ -466,167 +466,216 @@
 
 <!-- SOURCE: ui/html/views/personal-inventory-view.html -->
 <section id="personal-inventory-view" class="view">
-      <aside class="panel inventory-rail-panel">
-        <button id="inventory-add-container-btn" type="button" class="primary-btn">Add Container</button>
-        <div id="inventory-location-nav" class="inventory-location-nav"></div>
-        <div id="inventory-summary-card" class="inventory-summary-card"></div>
-      </aside>
-
-      <div class="panel inventory-main-panel">
-        <form id="inventory-add-container-form" class="form-grid inventory-add-form" hidden>
-          <label>
-            Container Name
-            <input id="inventory-add-container-name" placeholder="e.g. Box A" required />
-          </label>
-          <label>
-            Location
-            <select id="inventory-add-container-location" required>
-              <option value="">Select location</option>
-            </select>
-          </label>
-          <label>
-            Type
-            <select id="inventory-add-container-type">
-              <option value="box81">81-well cube box</option>
-              <option value="plate96">96-well plate</option>
-              <option value="single">Single container (tube/bottle)</option>
-            </select>
-          </label>
-          <div class="form-actions">
-            <button type="submit" class="primary-btn">Save Container</button>
-            <button id="inventory-add-container-cancel" type="button" class="ghost-btn">Cancel</button>
+      <div class="personal-inventory-layout left-rail-template">
+        <aside class="inventory-rail-panel app-left-rail left-rail-template__rail" data-sync-left-rail>
+          <div class="inventory-rail-stack app-left-rail-section">
+            <button id="inventory-add-container-btn" type="button" class="primary-btn">Add Container</button>
+            <div id="inventory-location-nav" class="inventory-location-nav"></div>
           </div>
-        </form>
-        <div id="inventory-sections" class="inventory-sections"></div>
+          <div id="inventory-summary-card" class="inventory-summary-card app-left-rail-section"></div>
+        </aside>
+
+        <div class="panel inventory-main-panel left-rail-template__main">
+          <form id="inventory-add-container-form" class="form-grid inventory-add-form" hidden>
+            <label>
+              Container Name
+              <input id="inventory-add-container-name" placeholder="e.g. Box A" required />
+            </label>
+            <label>
+              Location
+              <select id="inventory-add-container-location" required>
+                <option value="">Select location</option>
+              </select>
+            </label>
+            <label>
+              Type
+              <select id="inventory-add-container-type">
+                <option value="box81">81-well cube box</option>
+                <option value="plate96">96-well plate</option>
+                <option value="single">Single container (tube/bottle)</option>
+              </select>
+            </label>
+            <div class="form-actions">
+              <button type="submit" class="primary-btn">Save Container</button>
+              <button id="inventory-add-container-cancel" type="button" class="ghost-btn">Cancel</button>
+            </div>
+          </form>
+          <div id="inventory-sections" class="inventory-sections"></div>
+        </div>
       </div>
     </section>
 
 <!-- SOURCE: ui/html/views/sample-registry-view.html -->
 <section id="sample-registry-view" class="view">
-      <div class="panel">
-        <h2>Sample &amp; Inventory</h2>
-        <label class="sample-top-search">
-          Search Samples
-          <input id="sample-search" type="search" placeholder="Code, name, lot, location..." />
-        </label>
-        <form id="sample-form" class="form-grid">
-          <input type="hidden" id="sample-id" />
-          <label>
-            Sample Code
-            <input id="sample-code" placeholder="e.g. C-021, CL-HEK293-17, pET28a-Myc" />
+      <div class="sample-layout left-rail-template">
+        <div class="sample-editor-panel app-left-rail left-rail-template__rail" data-sync-left-rail>
+          <h2>Sample &amp; Inventory</h2>
+          <label class="sample-top-search">
+            Search Samples
+            <input id="sample-search" type="search" placeholder="Code, name, lot, location..." />
           </label>
-          <label>
-            Sample Name
-            <input id="sample-name" required />
-          </label>
-          <label>
-            Type
-            <select id="sample-type" required>
-              <option value="plasmid">Plasmid</option>
-              <option value="cell_line">Cell Line</option>
-              <option value="strain">Strain</option>
-              <option value="antibody">Antibody</option>
-              <option value="protein">Purified Protein</option>
-              <option value="compound">Compound</option>
-              <option value="primer">Primer</option>
-            </select>
-          </label>
-          <section id="sample-cell-passage-fields" class="sample-cell-passage-fields" hidden>
-            <div class="inline-row sample-cell-passage-head">
-              <strong>Cell Passage Reminder</strong>
-              <span class="small-note">Shown on dashboard for cell line tracking</span>
-            </div>
-            <div class="form-grid">
-              <label>
-                Last Passage Date
-                <input id="sample-passage-last-date" type="date" />
-              </label>
-              <label>
-                Passage Interval (days)
-                <input id="sample-passage-interval-days" type="number" min="1" step="1" placeholder="e.g. 3" />
-              </label>
-            </div>
-          </section>
-          <section id="sample-compound-fields" class="sample-compound-fields" hidden>
-            <div class="inline-row sample-compound-head">
-              <strong>Compound Structure (Ketcher)</strong>
-              <span class="small-note">Draw structure for compound inventory records</span>
-            </div>
-            <div class="form-actions">
-              <button id="sample-compound-open-btn" type="button" class="ghost-btn">Open Ketcher</button>
-              <button id="sample-compound-capture-btn" type="button" class="ghost-btn">Capture Structure</button>
-              <button id="sample-compound-clear-btn" type="button" class="ghost-btn">Clear Structure</button>
-            </div>
+          <form id="sample-form" class="form-grid">
+            <input type="hidden" id="sample-id" />
             <label>
-              Captured SMILES
-              <input id="sample-compound-smiles" readonly placeholder="No structure captured yet" />
+              Sample Code
+              <input id="sample-code" placeholder="e.g. C-021, CL-HEK293-17, pET28a-Myc" />
             </label>
-            <div id="sample-compound-status" class="small-note"></div>
-            <div id="sample-compound-editor-wrap" hidden>
-              <iframe
-                id="sample-compound-ketcher-frame"
-                class="ketcher-frame sample-ketcher-frame"
-                title="Sample compound Ketcher editor"
-                src="./ketcher-embedded.html"
-                loading="lazy"
-                referrerpolicy="no-referrer"
-              ></iframe>
+            <label>
+              Sample Name
+              <input id="sample-name" required />
+            </label>
+            <label>
+              Type
+              <select id="sample-type" required>
+                <option value="plasmid">Plasmid</option>
+                <option value="cell_line">Cell Line</option>
+                <option value="strain">Strain</option>
+                <option value="antibody">Antibody</option>
+                <option value="protein">Purified Protein</option>
+                <option value="compound">Compound</option>
+                <option value="primer">Primer</option>
+              </select>
+            </label>
+            <section id="sample-cell-passage-fields" class="sample-cell-passage-fields" hidden>
+              <div class="inline-row sample-cell-passage-head">
+                <strong>Cell Passage Reminder</strong>
+                <span class="small-note">Shown on dashboard for cell line tracking</span>
+              </div>
+              <div class="form-grid">
+                <label>
+                  Last Passage Date
+                  <input id="sample-passage-last-date" type="date" />
+                </label>
+                <label>
+                  Passage Interval (days)
+                  <input id="sample-passage-interval-days" type="number" min="1" step="1" placeholder="e.g. 3" />
+                </label>
+              </div>
+            </section>
+            <section id="sample-compound-fields" class="sample-compound-fields" hidden>
+              <div class="inline-row sample-compound-head">
+                <strong>Compound Structure (Ketcher)</strong>
+                <span class="small-note">Open the editor in a modal, then save the snapshot with the sample</span>
+              </div>
+              <div class="form-actions">
+                <button id="sample-compound-open-btn" type="button" class="ghost-btn">Open Ketcher</button>
+                <button id="sample-compound-capture-btn" type="button" class="ghost-btn">Refresh Snapshot</button>
+                <button id="sample-compound-clear-btn" type="button" class="ghost-btn">Clear Structure</button>
+              </div>
+              <label>
+                Captured SMILES
+                <input id="sample-compound-smiles" readonly placeholder="No structure captured yet" />
+              </label>
+              <div id="sample-compound-status" class="small-note"></div>
+              <div id="sample-compound-preview" class="sample-compound-preview" hidden>
+                <img id="sample-compound-preview-image" alt="Compound structure preview" />
+              </div>
+            </section>
+            <label>
+              Lot / Batch
+              <input id="sample-lot" placeholder="e.g. A17" />
+            </label>
+            <label>
+              Concentration
+              <input id="sample-concentration" placeholder="e.g. 2 mg/mL" />
+            </label>
+            <label>
+              Storage Type
+              <select id="sample-storage-type">
+                <option value="freezer">Freezer</option>
+                <option value="fridge">Fridge</option>
+                <option value="desiccator">Desiccator</option>
+                <option value="rt_cabinet">RT Cabinet</option>
+              </select>
+            </label>
+            <label>
+              Link Personal Inventory Container
+              <select id="sample-link-container">
+                <option value="">Not linked</option>
+              </select>
+            </label>
+            <label>
+              Link Position / Slot
+              <select id="sample-link-position">
+                <option value="">Auto / none</option>
+              </select>
+            </label>
+            <label>
+              Related Chemicals (multi-select)
+              <select id="sample-link-chemicals" multiple size="3"></select>
+            </label>
+            <div id="sample-location-fields" class="form-grid"></div>
+            <label>
+              Notes
+              <textarea id="sample-notes" rows="2"></textarea>
+            </label>
+            <div class="form-actions">
+              <button type="submit" class="primary-btn">Save Sample</button>
+              <button type="button" id="sample-cancel-btn" class="ghost-btn">Cancel Edit</button>
             </div>
-          </section>
-          <label>
-            Lot / Batch
-            <input id="sample-lot" placeholder="e.g. A17" />
-          </label>
-          <label>
-            Concentration
-            <input id="sample-concentration" placeholder="e.g. 2 mg/mL" />
-          </label>
-          <label>
-            Storage Type
-            <select id="sample-storage-type">
-              <option value="freezer">Freezer</option>
-              <option value="fridge">Fridge</option>
-              <option value="desiccator">Desiccator</option>
-              <option value="rt_cabinet">RT Cabinet</option>
-            </select>
-          </label>
-          <label>
-            Link Personal Inventory Container
-            <select id="sample-link-container">
-              <option value="">Not linked</option>
-            </select>
-          </label>
-          <label>
-            Link Position / Slot
-            <select id="sample-link-position">
-              <option value="">Auto / none</option>
-            </select>
-          </label>
-          <label>
-            Related Chemicals (multi-select)
-            <select id="sample-link-chemicals" multiple size="3"></select>
-          </label>
-          <div id="sample-location-fields" class="form-grid"></div>
-          <label>
-            Notes
-            <textarea id="sample-notes" rows="2"></textarea>
-          </label>
-          <div class="form-actions">
-            <button type="submit" class="primary-btn">Save Sample</button>
-            <button type="button" id="sample-cancel-btn" class="ghost-btn">Cancel Edit</button>
+          </form>
+        </div>
+
+        <div class="sample-main left-rail-template__main">
+          <div class="sample-main-grid">
+            <div class="panel sample-list-panel">
+              <div class="sample-panel-head">
+                <div class="sample-panel-copy">
+                  <h3>Registered Samples</h3>
+                  <p id="sample-results-summary" class="small-note">Showing 0 samples.</p>
+                </div>
+              </div>
+              <div id="sample-registry-list" class="list-table"></div>
+            </div>
+
+            <div id="sample-detail-panel" class="panel sample-detail-panel" hidden>
+              <h3 id="sample-detail-title">Sample Details</h3>
+              <div id="sample-detail-content" class="stack-form"></div>
+              <div class="card-actions">
+                <button type="button" id="sample-detail-edit-btn" class="ghost-btn">Edit</button>
+                <button type="button" id="sample-detail-delete-btn" class="danger-btn">Delete</button>
+              </div>
+            </div>
           </div>
-        </form>
+        </div>
       </div>
-      <div class="panel">
-        <h3>Registered Samples</h3>
-        <div id="sample-registry-list" class="cards"></div>
+
+      <div id="sample-compound-dialog-overlay" class="sample-compound-dialog-overlay" hidden>
+        <div class="sample-compound-dialog" role="dialog" aria-modal="true" aria-labelledby="sample-compound-dialog-title">
+          <div class="sample-compound-dialog-head">
+            <div>
+              <h3 id="sample-compound-dialog-title">Draw Compound Structure</h3>
+              <p class="small-note">Use Ketcher to draw or edit the compound, then apply the snapshot to the current sample.</p>
+            </div>
+            <button type="button" id="sample-compound-dialog-close-btn" class="ghost-btn" aria-label="Close Ketcher dialog">Close</button>
+          </div>
+          <iframe
+            id="sample-compound-ketcher-frame"
+            class="ketcher-frame sample-ketcher-frame"
+            title="Sample compound Ketcher editor"
+            src="./ketcher-embedded.html"
+            loading="lazy"
+            referrerpolicy="no-referrer"
+          ></iframe>
+          <div class="form-actions sample-compound-dialog-actions">
+            <button id="sample-compound-dialog-apply-btn" type="button" class="primary-btn">Use Structure</button>
+            <button id="sample-compound-dialog-cancel-btn" type="button" class="ghost-btn">Close</button>
+          </div>
+        </div>
       </div>
     </section>
 
 <!-- SOURCE: ui/html/views/assay-view.html -->
 <section id="assay-view" class="view">
-      <div class="assay-create-layout">
-        <div class="panel assay-mode-create-panel assay-create-sidebar">
+      <div class="assay-create-layout left-rail-template">
+        <div class="assay-mode-create-panel assay-create-sidebar app-left-rail left-rail-template__rail" data-sync-left-rail>
+          <div class="assay-browser-panel">
+            <label>
+              Search Assays
+              <input id="assay-search" placeholder="Search assay plates, projects, or notes" />
+            </label>
+            <div id="assay-list"></div>
+          </div>
           <form id="assay-form" class="form-grid assay-form-grid">
             <input type="hidden" id="assay-id" />
             <div class="assay-display-field">
@@ -688,7 +737,7 @@
           </form>
         </div>
 
-        <div class="panel assay-mode-create-panel assay-create-preview-panel">
+        <div class="panel assay-mode-create-panel assay-create-preview-panel left-rail-template__main">
           <div class="form-actions">
             <div class="calendar-view-switch assay-mode-switch" role="group" aria-label="Plate edit field">
               <button type="button" id="assay-plate-field-sample-btn" class="ghost-btn calendar-view-active">Edit Sample ID</button>
@@ -703,9 +752,9 @@
         </div>
       </div>
 
-      <div class="assay-results-layout assay-mode-results-panel" hidden>
-        <div class="panel assay-results-sheet-panel">
-          <p class="small-note">Open a saved assay plate, paste values from spreadsheet, then save and analyze.</p>
+      <div class="assay-results-layout assay-mode-results-panel left-rail-template" hidden>
+        <div class="assay-results-sheet-panel app-left-rail left-rail-template__rail" data-sync-left-rail>
+          <p class="small-note">Select an assay plate, paste values from spreadsheet, then save and analyze.</p>
           <label>
             Assay Plate
             <select id="assay-results-assay-select">
@@ -722,7 +771,7 @@
           <div id="assay-result-table" class="assay-plate-preview"></div>
         </div>
 
-        <div class="panel assay-results-analysis-panel">
+        <div class="panel assay-results-analysis-panel left-rail-template__main">
           <label>
             Analysis Method
             <select id="assay-analysis-method">
@@ -783,15 +832,6 @@
         </div>
       </div>
 
-      <div class="panel assay-mode-results-panel" hidden>
-        <h3>Saved Assays</h3>
-        <label>
-          Search
-          <input id="assay-search" placeholder="Assay number, assay, project, plate, notebook..." />
-        </label>
-        <div id="assay-list" class="cards"></div>
-      </div>
-
       <div id="assay-serial-dilution-overlay" class="assay-serial-dilution-overlay" hidden>
         <div class="assay-serial-dilution-dialog" role="dialog" aria-modal="true" aria-labelledby="assay-serial-dilution-title">
           <div class="assay-header-row assay-serial-dilution-head">
@@ -814,8 +854,8 @@
 <!-- SOURCE: ui/html/views/gel-view.html -->
 <section id="gel-view" class="view">
       <div class="gel-layout">
-        <div class="gel-workspace">
-          <div class="panel gel-setup-panel">
+        <div class="gel-workspace left-rail-template">
+          <div class="gel-setup-panel app-left-rail left-rail-template__rail" data-sync-left-rail>
             <h3>Setup</h3>
             <form id="gel-form" class="form-grid">
               <input type="hidden" id="gel-id" />
@@ -893,58 +933,62 @@
             </form>
           </div>
 
-          <div class="panel gel-viewer-panel">
-            <h3>Gel Viewer</h3>
-            <div class="gel-viewer-toolbar" role="toolbar" aria-label="Gel viewer tools">
-              <button type="button" id="gel-tool-left-border-btn" class="ghost-btn">Set left border</button>
-              <button type="button" id="gel-tool-right-border-btn" class="ghost-btn">Set right border</button>
-              <button type="button" id="gel-tool-dividers-btn" class="ghost-btn">Set dividers</button>
-              <button type="button" id="gel-tool-ladder-lane-btn" class="ghost-btn">Set ladder lane</button>
-            </div>
-            <div class="gel-canvas-shell">
-              <canvas id="gel-canvas"></canvas>
-              <img id="gel-cropper-image" alt="Gel cropper" />
-            </div>
-          </div>
-
-          <div class="gel-side-rail">
-            <section id="gel-lane-profile-panel" class="panel gel-manual-panel gel-lane-profile-panel" hidden>
-              <div class="gel-lane-profile-head">
-                <div>
-                  <h3>Lane Intensity</h3>
-                  <p id="gel-lane-profile-caption" class="small-note">Load a gel image to inspect a lane profile.</p>
+          <div class="gel-main left-rail-template__main">
+            <div class="gel-main-grid">
+              <div class="panel gel-viewer-panel">
+                <h3>Gel Viewer</h3>
+                <div class="gel-viewer-toolbar" role="toolbar" aria-label="Gel viewer tools">
+                  <button type="button" id="gel-tool-left-border-btn" class="ghost-btn">Set left border</button>
+                  <button type="button" id="gel-tool-right-border-btn" class="ghost-btn">Set right border</button>
+                  <button type="button" id="gel-tool-dividers-btn" class="ghost-btn">Set dividers</button>
+                  <button type="button" id="gel-tool-ladder-lane-btn" class="ghost-btn">Set ladder lane</button>
                 </div>
-                <label class="gel-lane-profile-picker">
-                  Lane
-                  <select id="gel-lane-profile-select" disabled>
-                    <option value="">Select lane</option>
-                  </select>
-                </label>
+                <div class="gel-canvas-shell">
+                  <canvas id="gel-canvas"></canvas>
+                  <img id="gel-cropper-image" alt="Gel cropper" />
+                </div>
               </div>
-              <div class="gel-lane-profile-chart-shell">
-                <svg id="gel-lane-profile-chart" class="gel-lane-profile-chart" viewBox="0 0 320 190" role="img" aria-label="Lane intensity profile"></svg>
-              </div>
-              <div id="gel-lane-profile-meta" class="gel-lane-profile-meta small-note"></div>
-            </section>
 
-            <aside id="gel-manual-progress" class="panel gel-manual-progress gel-manual-panel" hidden>
-              <h3>Manual Steps</h3>
-              <ol class="gel-step-list">
-                <li id="gel-step-left">1. Click left gel border</li>
-                <li id="gel-step-right">2. Click right gel border</li>
-                <li id="gel-step-dividers">3. Click lane dividers</li>
-                <li id="gel-step-ladder">4. Click ladder lane</li>
-                <li id="gel-step-ladder-mw">5. Click ladder band and assign MW</li>
-                <li id="gel-step-band-top">6. Click top line of target band</li>
-                <li id="gel-step-band-bottom">7. Click bottom line of target band</li>
-                <li id="gel-step-bands">8. (Optional) Click bands to add</li>
-              </ol>
-              <div class="form-actions">
-                <button type="button" id="gel-manual-prev-btn" class="ghost-btn">Previous Step</button>
-                <button type="button" id="gel-manual-next-btn" class="ghost-btn">Done Dividers</button>
-                <button type="button" id="gel-manual-reset-btn" class="ghost-btn">Reset Steps</button>
+              <div class="gel-side-rail">
+                <section id="gel-lane-profile-panel" class="panel gel-manual-panel gel-lane-profile-panel" hidden>
+                  <div class="gel-lane-profile-head">
+                    <div>
+                      <h3>Lane Intensity</h3>
+                      <p id="gel-lane-profile-caption" class="small-note">Load a gel image to inspect a lane profile.</p>
+                    </div>
+                    <label class="gel-lane-profile-picker">
+                      Lane
+                      <select id="gel-lane-profile-select" disabled>
+                        <option value="">Select lane</option>
+                      </select>
+                    </label>
+                  </div>
+                  <div class="gel-lane-profile-chart-shell">
+                    <svg id="gel-lane-profile-chart" class="gel-lane-profile-chart" viewBox="0 0 320 190" role="img" aria-label="Lane intensity profile"></svg>
+                  </div>
+                  <div id="gel-lane-profile-meta" class="gel-lane-profile-meta small-note"></div>
+                </section>
+
+                <aside id="gel-manual-progress" class="panel gel-manual-progress gel-manual-panel" hidden>
+                  <h3>Manual Steps</h3>
+                  <ol class="gel-step-list">
+                    <li id="gel-step-left">1. Click left gel border</li>
+                    <li id="gel-step-right">2. Click right gel border</li>
+                    <li id="gel-step-dividers">3. Click lane dividers</li>
+                    <li id="gel-step-ladder">4. Click ladder lane</li>
+                    <li id="gel-step-ladder-mw">5. Click ladder band and assign MW</li>
+                    <li id="gel-step-band-top">6. Click top line of target band</li>
+                    <li id="gel-step-band-bottom">7. Click bottom line of target band</li>
+                    <li id="gel-step-bands">8. (Optional) Click bands to add</li>
+                  </ol>
+                  <div class="form-actions">
+                    <button type="button" id="gel-manual-prev-btn" class="ghost-btn">Previous Step</button>
+                    <button type="button" id="gel-manual-next-btn" class="ghost-btn">Done Dividers</button>
+                    <button type="button" id="gel-manual-reset-btn" class="ghost-btn">Reset Steps</button>
+                  </div>
+                </aside>
               </div>
-            </aside>
+            </div>
           </div>
         </div>
 
@@ -969,8 +1013,8 @@
 
 <!-- SOURCE: ui/html/views/lab-common-inventory-view.html -->
 <section id="lab-common-inventory-view" class="view">
-      <div class="chemical-layout">
-        <aside class="panel chemical-sidebar">
+      <div class="chemical-layout left-rail-template">
+        <aside class="chemical-sidebar app-left-rail left-rail-template__rail" data-sync-left-rail>
           <div class="chemical-sidebar-stack">
             <button type="button" id="chemical-open-add-btn" class="primary-btn chemical-add-btn">Add Chemical</button>
             <label class="chemical-search-field">
@@ -980,7 +1024,7 @@
           </div>
         </aside>
 
-        <div class="chemical-main">
+        <div class="chemical-main left-rail-template__main">
           <div class="panel chemical-list-panel">
             <div class="chemical-panel-head">
               <div class="chemical-panel-copy">
@@ -1109,7 +1153,7 @@
         </div>
 
         <div class="settings-layout">
-          <aside class="settings-nav" aria-label="Settings sections">
+          <aside class="settings-nav multi-panel-left-rail multi-panel-left-scroll" aria-label="Settings sections">
             <button type="button" class="settings-nav-item" data-settings-target="appearance" aria-pressed="true">
               <span>Appearance</span>
               <small>Font size and theme</small>
@@ -1379,18 +1423,15 @@
 
 <!-- SOURCE: ui/html/views/workflow-management-view.html -->
 <section id="workflow-management-view" class="view">
-      <div class="panel">
-        <h2>Workflows</h2>
-        <div id="workflow-entry-panel" class="form-actions">
-          <button type="button" id="workflow-entry-create-btn" class="primary-btn">Create New Workflow</button>
-          <button type="button" id="workflow-entry-view-btn" class="ghost-btn">View/Edit Workflow</button>
-          <button type="button" id="workflow-entry-back-btn" class="ghost-btn" hidden>Back to Work Flow</button>
-        </div>
-      </div>
+      <div class="workflow-editor-layout left-rail-template">
+        <aside class="workflow-editor-sidebar app-left-rail left-rail-template__rail" data-sync-left-rail>
+          <div id="workflow-entry-panel" class="workflow-entry-panel app-left-rail-section">
+            <button type="button" id="workflow-entry-create-btn" class="primary-btn">Create New Workflow</button>
+            <button type="button" id="workflow-entry-view-btn" class="ghost-btn">View/Edit Workflow</button>
+            <button type="button" id="workflow-entry-back-btn" class="ghost-btn" hidden>Back to Workflow</button>
+          </div>
 
-      <div class="workflow-editor-layout">
-        <div class="workflow-editor-sidebar">
-          <div class="panel workflow-editor-panel" hidden>
+          <div class="workflow-editor-panel app-left-rail-section" hidden>
             <form id="workflow-form" class="stack-form">
               <input type="hidden" id="workflow-id" />
               <label>
@@ -1417,9 +1458,14 @@
               </div>
             </form>
           </div>
-        </div>
 
-        <div class="workflow-editor-main">
+          <div class="workflow-list-panel app-left-rail-section" hidden>
+            <h3>Saved Workflows</h3>
+            <div id="workflow-list" class="workflow-list app-left-rail-list"></div>
+          </div>
+        </aside>
+
+        <div class="workflow-editor-main left-rail-template__main">
           <div class="panel workflow-editor-panel" hidden>
             <h3>Workflow Blocks</h3>
             <p class="small-note">Add protocol blocks or plain-text blocks. New blocks default assignee to yourself.</p>
@@ -1467,133 +1513,130 @@
           </div>
         </div>
       </div>
-
-      <div class="panel workflow-list-panel" hidden>
-        <h3>Saved Workflows</h3>
-        <div id="workflow-list" class="cards"></div>
-      </div>
     </section>
 
 <!-- SOURCE: ui/html/views/papers-view.html -->
 <section id="papers-view" class="view">
-      <div id="papers-layout" class="papers-layout">
-        <div class="papers-left-column">
-          <aside id="papers-library-rail" class="papers-library-rail">
-            <div class="papers-library-topbar">
-              <h2>Papers</h2>
-              <div class="papers-library-actions">
-                <button type="button" id="paper-upload-trigger" class="ghost-btn papers-library-upload-btn">Upload PDF</button>
-              </div>
+      <div id="papers-layout" class="papers-layout left-rail-template">
+        <aside id="papers-library-rail" class="papers-library-rail app-left-rail left-rail-template__rail" data-sync-left-rail>
+          <div class="papers-library-topbar">
+            <h2>Papers</h2>
+            <div class="papers-library-actions">
+              <button type="button" id="paper-upload-trigger" class="ghost-btn papers-library-upload-btn">Upload PDF</button>
             </div>
-            <p id="paper-folder-selection" class="papers-library-status" hidden>No folder selected</p>
-            <p id="paper-upload-target-label" class="papers-library-status" hidden>Select a folder to file new papers.</p>
-            <div id="journal-club-list" class="papers-thread-list"></div>
-            <div id="paper-list" class="papers-paper-list" hidden></div>
+          </div>
+          <p id="paper-folder-selection" class="papers-library-status" hidden>No folder selected</p>
+          <p id="paper-upload-target-label" class="papers-library-status" hidden>Select a folder to file new papers.</p>
+          <div id="journal-club-list" class="papers-thread-list"></div>
+          <div id="paper-list" class="papers-paper-list" hidden></div>
 
-            <form id="paper-form" class="papers-hidden-upload-form" hidden>
-              <input id="paper-title" type="hidden" />
-              <input id="paper-pdf" type="file" accept="application/pdf,.pdf" required hidden />
-              <div class="papers-hidden-link-controls" hidden>
-                <label>
-                  Link Type
-                  <select id="paper-link-type">
-                    <option value="project">Project</option>
-                    <option value="journal-club">Journal Club</option>
-                  </select>
-                </label>
-                <label>
-                  Link To
-                  <select id="paper-link-target">
-                    <option value="">Select target</option>
-                  </select>
-                </label>
-              </div>
-              <button type="submit" class="primary-btn">Upload Paper</button>
-            </form>
-
-            <div id="papers-library-context-menu" class="papers-context-menu" hidden>
-              <button type="button" id="papers-context-new-folder" class="papers-context-item">New Journal Club Folder</button>
-              <button type="button" id="papers-context-delete-folder" class="papers-context-item papers-context-item-danger" hidden>Delete Journal Club Folder</button>
+          <form id="paper-form" class="papers-hidden-upload-form" hidden>
+            <input id="paper-title" type="hidden" />
+            <input id="paper-pdf" type="file" accept="application/pdf,.pdf" required hidden />
+            <div class="papers-hidden-link-controls" hidden>
+              <label>
+                Link Type
+                <select id="paper-link-type">
+                  <option value="project">Project</option>
+                  <option value="journal-club">Journal Club</option>
+                </select>
+              </label>
+              <label>
+                Link To
+                <select id="paper-link-target">
+                  <option value="">Select target</option>
+                </select>
+              </label>
             </div>
-          </aside>
-        </div>
+            <button type="submit" class="primary-btn">Upload Paper</button>
+          </form>
 
-        <div class="papers-center-column">
-          <div class="panel papers-viewer-panel">
-            <div class="papers-viewer-head">
-              <div id="paper-viewer-toolbar" class="papers-viewer-toolbar" hidden>
-                <div class="papers-viewer-page-cluster">
-                  <button type="button" id="paper-viewer-prev-btn" class="ghost-btn">Prev</button>
-                  <label class="papers-viewer-page-field">
-                    <span class="papers-viewer-page-label">Page</span>
-                    <input id="paper-viewer-page-input" type="number" min="1" value="1" />
-                  </label>
-                  <span id="paper-viewer-page-count" class="small-note">/ 0</span>
-                  <button type="button" id="paper-viewer-next-btn" class="ghost-btn">Next</button>
+          <div id="papers-library-context-menu" class="papers-context-menu" hidden>
+            <button type="button" id="papers-context-new-folder" class="papers-context-item">New Journal Club Folder</button>
+            <button type="button" id="papers-context-delete-folder" class="papers-context-item papers-context-item-danger" hidden>Delete Journal Club Folder</button>
+          </div>
+        </aside>
+
+        <div class="papers-main left-rail-template__main">
+          <div class="papers-stage">
+            <div class="papers-center-column">
+              <div class="panel papers-viewer-panel">
+                <div class="papers-viewer-head">
+                  <div id="paper-viewer-toolbar" class="papers-viewer-toolbar" hidden>
+                    <div class="papers-viewer-page-cluster">
+                      <button type="button" id="paper-viewer-prev-btn" class="ghost-btn">Prev</button>
+                      <label class="papers-viewer-page-field">
+                        <span class="papers-viewer-page-label">Page</span>
+                        <input id="paper-viewer-page-input" type="number" min="1" value="1" />
+                      </label>
+                      <span id="paper-viewer-page-count" class="small-note">/ 0</span>
+                      <button type="button" id="paper-viewer-next-btn" class="ghost-btn">Next</button>
+                    </div>
+                    <button type="button" id="paper-viewer-zoom-out-btn" class="ghost-btn">-</button>
+                    <span id="paper-viewer-zoom-label" class="small-note">100%</span>
+                    <button type="button" id="paper-viewer-zoom-in-btn" class="ghost-btn">+</button>
+                    <button type="button" id="paper-viewer-zoom-reset-btn" class="ghost-btn">100%</button>
+                    <button type="button" id="paper-viewer-fit-width-btn" class="ghost-btn">Fit Width</button>
+                    <button type="button" id="paper-viewer-highlight-btn" class="ghost-btn">Highlight Selection</button>
+                    <button type="button" id="paper-viewer-summarize-btn" class="ghost-btn">Summarize</button>
+                    <button type="button" id="paper-viewer-open-btn" class="ghost-btn">Open Externally</button>
+                  </div>
+                  <div class="papers-viewer-summary">
+                    <p id="paper-viewer-title" class="papers-viewer-title">No paper selected</p>
+                    <p id="paper-viewer-meta" class="small-note"></p>
+                    <p id="paper-viewer-status" class="small-note"></p>
+                  </div>
                 </div>
-                <button type="button" id="paper-viewer-zoom-out-btn" class="ghost-btn">-</button>
-                <span id="paper-viewer-zoom-label" class="small-note">100%</span>
-                <button type="button" id="paper-viewer-zoom-in-btn" class="ghost-btn">+</button>
-                <button type="button" id="paper-viewer-zoom-reset-btn" class="ghost-btn">100%</button>
-                <button type="button" id="paper-viewer-fit-width-btn" class="ghost-btn">Fit Width</button>
-                <button type="button" id="paper-viewer-highlight-btn" class="ghost-btn">Highlight Selection</button>
-                <button type="button" id="paper-viewer-summarize-btn" class="ghost-btn">Summarize</button>
-                <button type="button" id="paper-viewer-open-btn" class="ghost-btn">Open Externally</button>
-              </div>
-              <div class="papers-viewer-summary">
-                <p id="paper-viewer-title" class="papers-viewer-title">No paper selected</p>
-                <p id="paper-viewer-meta" class="small-note"></p>
-                <p id="paper-viewer-status" class="small-note"></p>
-              </div>
-            </div>
-            <div id="paper-viewer-shell" class="papers-viewer-shell is-empty">
-              <div id="paper-viewer-empty" class="papers-viewer-empty">
-                <p>Scientific PDFs open here with page navigation and zoom.</p>
-              </div>
-              <div id="paper-viewer-workspace" class="papers-viewer-workspace" hidden>
-                <div id="paper-viewer-stage" class="papers-viewer-stage" hidden>
-                  <div id="paper-viewer-page-layer" class="papers-viewer-page-layer">
-                    <canvas id="paper-viewer-canvas" class="papers-viewer-canvas"></canvas>
-                    <div id="paper-viewer-overlay" class="papers-viewer-overlay" aria-label="Paper comment pins"></div>
+                <div id="paper-viewer-shell" class="papers-viewer-shell is-empty">
+                  <div id="paper-viewer-empty" class="papers-viewer-empty">
+                    <p>Scientific PDFs open here with page navigation and zoom.</p>
+                  </div>
+                  <div id="paper-viewer-workspace" class="papers-viewer-workspace" hidden>
+                    <div id="paper-viewer-stage" class="papers-viewer-stage" hidden>
+                      <div id="paper-viewer-page-layer" class="papers-viewer-page-layer">
+                        <canvas id="paper-viewer-canvas" class="papers-viewer-canvas"></canvas>
+                        <div id="paper-viewer-overlay" class="papers-viewer-overlay" aria-label="Paper comment pins"></div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
 
-        <div id="papers-right-column" class="papers-right-column">
-          <div id="paper-comment-panel" class="papers-comment-panel">
-            <button
-              type="button"
-              id="paper-comment-toggle-btn"
-              class="papers-comment-toggle"
-              aria-controls="paper-comment-sidebar"
-              aria-expanded="true"
-              aria-label="Fold comments panel to the right"
-              title="Fold comments panel to the right"
-            >
-              <span class="papers-comment-toggle-icon" aria-hidden="true"></span>
-            </button>
-            <aside id="paper-comment-sidebar" class="panel papers-comment-sidebar">
-              <div class="papers-comment-meta">
-                <h4>Comments</h4>
-                <p id="paper-comment-page" class="small-note">Page 0</p>
-                <p id="paper-comment-count" class="small-note">0 comments on this page</p>
+            <div id="papers-right-column" class="papers-right-column">
+              <div id="paper-comment-panel" class="papers-comment-panel">
+                <button
+                  type="button"
+                  id="paper-comment-toggle-btn"
+                  class="papers-comment-toggle"
+                  aria-controls="paper-comment-sidebar"
+                  aria-expanded="true"
+                  aria-label="Fold comments panel to the right"
+                  title="Fold comments panel to the right"
+                >
+                  <span class="papers-comment-toggle-icon" aria-hidden="true"></span>
+                </button>
+                <aside id="paper-comment-sidebar" class="panel papers-comment-sidebar">
+                  <div class="papers-comment-meta">
+                    <h4>Comments</h4>
+                    <p id="paper-comment-page" class="small-note">Page 0</p>
+                    <p id="paper-comment-count" class="small-note">0 comments on this page</p>
+                  </div>
+                  <div class="papers-comment-actions">
+                    <button type="button" id="paper-comment-add-btn" class="primary-btn">Add Comment</button>
+                    <button type="button" id="paper-comment-save-btn" class="ghost-btn">Save</button>
+                    <button type="button" id="paper-comment-cancel-btn" class="ghost-btn">Cancel</button>
+                    <button type="button" id="paper-comment-delete-btn" class="danger-btn">Delete</button>
+                  </div>
+                  <label class="papers-comment-input">
+                    Comment
+                    <textarea id="paper-comment-text" rows="5" placeholder="Click &quot;Add Comment&quot;, place a pin on the page, then write your note."></textarea>
+                  </label>
+                  <p id="paper-comment-status" class="small-note"></p>
+                  <div id="paper-comment-list" class="papers-comment-list"></div>
+                </aside>
               </div>
-              <div class="papers-comment-actions">
-                <button type="button" id="paper-comment-add-btn" class="primary-btn">Add Comment</button>
-                <button type="button" id="paper-comment-save-btn" class="ghost-btn">Save</button>
-                <button type="button" id="paper-comment-cancel-btn" class="ghost-btn">Cancel</button>
-                <button type="button" id="paper-comment-delete-btn" class="danger-btn">Delete</button>
-              </div>
-              <label class="papers-comment-input">
-                Comment
-                <textarea id="paper-comment-text" rows="5" placeholder="Click &quot;Add Comment&quot;, place a pin on the page, then write your note."></textarea>
-              </label>
-              <p id="paper-comment-status" class="small-note"></p>
-              <div id="paper-comment-list" class="papers-comment-list"></div>
-            </aside>
+            </div>
           </div>
         </div>
       </div>
@@ -1602,37 +1645,38 @@
 
 <!-- SOURCE: ui/html/views/agent-view.html -->
 <section id="agent-view" class="view">
-      <div class="panel">
-        <h2>Assistant</h2>
-        <p class="small-note">Read-only assistant workspace. Any write action is proposed before approval.</p>
-        <p class="small-note">Set the API key in Settings, or provide <code>LLM_API_KEY</code> or <code>ENANA_LLM_API_KEY</code> in the app environment.</p>
-        <div class="form-grid">
-          <label>
-            Project Scope (Optional)
-            <select id="agent-project-select">
-              <option value="">All projects</option>
-            </select>
-          </label>
-          <label>
-            Context Summary
-            <input id="agent-context-summary" disabled />
-          </label>
-        </div>
-      </div>
-
-      <div class="agent-chat-layout">
-        <div class="panel agent-session-panel">
-          <div class="agent-session-toolbar">
-            <div>
-              <h3>Saved Chats</h3>
-              <p id="agent-session-status" class="small-note">Set Storage Folder Path in Settings to save and browse agent chats.</p>
+      <div class="agent-chat-layout left-rail-template">
+        <aside class="agent-session-rail app-left-rail left-rail-template__rail" data-sync-left-rail>
+          <div class="agent-rail-meta">
+            <p class="small-note">Read-only assistant workspace. Any write action is proposed before approval.</p>
+            <p class="small-note">Set the API key in Settings, or provide <code>LLM_API_KEY</code> or <code>ENANA_LLM_API_KEY</code> in the app environment.</p>
+            <div class="form-grid agent-rail-context-grid">
+              <label>
+                Project Scope (Optional)
+                <select id="agent-project-select">
+                  <option value="">All projects</option>
+                </select>
+              </label>
+              <label>
+                Context Summary
+                <input id="agent-context-summary" disabled />
+              </label>
             </div>
-            <button type="button" id="agent-new-chat-btn" class="ghost-btn">New Chat</button>
           </div>
-          <div id="agent-session-list" class="agent-session-list" aria-live="polite"></div>
-        </div>
 
-        <div class="panel agent-chat-panel">
+          <div class="agent-session-panel">
+            <div class="agent-session-toolbar">
+              <div>
+                <h3>Saved Chats</h3>
+                <p id="agent-session-status" class="small-note">Set Storage Folder Path in Settings to save and browse agent chats.</p>
+              </div>
+              <button type="button" id="agent-new-chat-btn" class="ghost-btn">New Chat</button>
+            </div>
+            <div id="agent-session-list" class="agent-session-list" aria-live="polite"></div>
+          </div>
+        </aside>
+
+        <div class="panel agent-chat-panel left-rail-template__main">
           <div id="agent-developer-tools" class="agent-developer-tools" hidden>
             <div class="agent-developer-tools-actions">
               <button type="button" id="agent-dev-test-tools-btn" class="ghost-btn">Test All Tools</button>
@@ -1673,13 +1717,8 @@
 
 <!-- SOURCE: ui/html/views/tool-box-view.html -->
 <section id="tool-box-view" class="view">
-      <div class="panel">
-        <h2>Tools</h2>
-        <p class="small-note">Bench calculators, sequence utilities, and quick analysis helpers.</p>
-      </div>
-
-      <div class="tool-layout">
-        <aside class="panel tool-sidebar" aria-label="Tool selection">
+      <div class="tool-layout left-rail-template">
+        <aside class="tool-sidebar app-left-rail left-rail-template__rail" data-sync-left-rail aria-label="Tool selection">
           <div class="tool-grid" role="tablist" aria-orientation="vertical">
             <button class="tile tool-tile" data-tool-view="tool-molarity-view" role="tab" aria-controls="tool-molarity-view">
               <span class="label">Molarity Calculator</span>
@@ -1717,7 +1756,7 @@
           </div>
         </aside>
 
-        <div class="tool-content">
+        <div class="tool-content left-rail-template__main">
       <div id="tool-molarity-view" class="panel tool-subview">
         <h3>Molarity Calculator</h3>
 
@@ -2347,7 +2386,7 @@
 
           <div class="sequence-viewer-protein-builder-grid-wrap">
             <div class="sequence-viewer-protein-builder-grid">
-              <div class="sequence-viewer-protein-builder-sidebar">
+              <div class="sequence-viewer-protein-builder-sidebar multi-panel-left-rail">
                 <section class="sequence-viewer-protein-builder-panel">
                   <form id="sequence-viewer-protein-builder-form" class="stack-form sequence-viewer-protein-builder-controls" autocomplete="off">
                     <div class="form-grid">

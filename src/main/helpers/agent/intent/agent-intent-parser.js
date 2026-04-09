@@ -18,6 +18,7 @@ const PARSER_CANONICAL_INTENTS = Object.freeze([
   'general_science_question',
   'paper_analysis',
   'literature_search',
+  'purchase_recommendation',
   'result_analysis',
   'mixed_request',
   'unclear'
@@ -28,7 +29,10 @@ const PARSER_INTENT_ALIASES = Object.freeze({
   data_analysis_or_coding: 'result_analysis',
   coding_data_analysis: 'result_analysis',
   inventory_loopup: 'inventory_lookup',
-  record_loopup: 'record_lookup'
+  record_loopup: 'record_lookup',
+  product_recommendation: 'purchase_recommendation',
+  shopping_recommendation: 'purchase_recommendation',
+  shopping_search: 'purchase_recommendation'
 });
 
 // Alias retained so schema/config code can refer to the allowed parser intents explicitly.

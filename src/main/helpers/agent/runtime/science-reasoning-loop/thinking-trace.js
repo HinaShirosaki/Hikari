@@ -58,10 +58,56 @@ function createScienceThinkingTraceRuntime(deps = {}) {
     return normalized;
   }
 
-  function buildToolCallFallback(round = {}) {
-    const toolName = cleanText(round.tool_name, 120) || 'the next tool';
-    const args = round.tool_arguments && typeof round.tool_arguments === 'object'
+  function getRoundToolCalls(round = {}) {
+    const groupedCalls = asArray(round.tool_calls)
+      .filter((entry) => entry && typeof entry === 'object')
+      .map((entry) => ({
+        tool_name: cleanText(entry.tool_name, 120),
+        tool_arguments: entry.tool_arguments && typeof entry.tool_arguments === 'object'
+          ? entry.tool_arguments
+          : {},
+        tool_summary: cleanText(entry.tool_summary, 320),
+        tool_error: cleanText(entry.tool_error, 320)
+      }))
+      .filter((entry) => entry.tool_name || entry.tool_summary || entry.tool_error);
+    if (groupedCalls.length) {
+      return groupedCalls;
+    }
+
+    const toolName = cleanText(round.tool_name, 120);
+    const toolArguments = round.tool_arguments && typeof round.tool_arguments === 'object'
       ? round.tool_arguments
+      : {};
+    const toolSummary = cleanText(round.tool_summary, 320);
+    const toolError = cleanText(round.tool_error, 320);
+    if (!toolName && !toolSummary && !toolError) {
+      return [];
+    }
+    return [{
+      tool_name: toolName,
+      tool_arguments: toolArguments,
+      tool_summary: toolSummary,
+      tool_error: toolError
+    }];
+  }
+
+  function buildToolCallFallback(round = {}) {
+    const toolCalls = getRoundToolCalls(round);
+    if (toolCalls.length > 1) {
+      const toolNames = toolCalls
+        .map((entry) => cleanText(entry.tool_name, 120))
+        .filter(Boolean);
+      const queries = uniqueStrings(toolCalls.map((entry) => cleanText(entry.tool_arguments?.query, 160)), 3);
+      if (queries.length) {
+        return `I want to use ${toolNames.join(' and ')} in parallel to investigate ${queries.map((query) => `"${query}"`).join(' and ')}.`;
+      }
+      return `I want to use ${toolNames.join(' and ')} in parallel for the next evidence step.`;
+    }
+
+    const toolCall = toolCalls[0] || {};
+    const toolName = cleanText(toolCall.tool_name, 120) || 'the next tool';
+    const args = toolCall.tool_arguments && typeof toolCall.tool_arguments === 'object'
+      ? toolCall.tool_arguments
       : {};
     const query = cleanText(args.query, 320);
     const code = cleanText(args.code, 160);
@@ -79,8 +125,11 @@ function createScienceThinkingTraceRuntime(deps = {}) {
     if (assistantAfter) {
       return assistantAfter;
     }
-    const summary = cleanText(round.tool_summary, 320);
-    const error = cleanText(round.tool_error, 320);
+    const toolCalls = getRoundToolCalls(round);
+    const summaries = uniqueStrings(toolCalls.map((entry) => cleanText(entry.tool_summary, 220)), 4);
+    const errors = uniqueStrings(toolCalls.map((entry) => cleanText(entry.tool_error, 220)), 4);
+    const summary = cleanText(round.tool_summary, 320) || summaries.join(' | ');
+    const error = cleanText(round.tool_error, 320) || errors.join(' | ');
     if (summary) {
       return `Based on the tool result, it seems ${summary}`;
     }
@@ -228,6 +277,7 @@ function createScienceThinkingTraceRuntime(deps = {}) {
       tool_arguments: round?.tool_arguments && typeof round.tool_arguments === 'object'
         ? round.tool_arguments
         : {},
+      tool_calls: getRoundToolCalls(round),
       tool_summary: cleanText(round?.tool_summary, 320),
       tool_error: cleanText(round?.tool_error, 320),
       assistant_after_tool: cleanText(round?.assistant_after_tool, 420)

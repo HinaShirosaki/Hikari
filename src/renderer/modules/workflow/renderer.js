@@ -261,7 +261,7 @@ export function createWorkflowRenderer(config = {}) {
     }
 
     elements.workflowTemplateList.innerHTML = templates.map((template) => `
-      <article class="card workflow-card">
+      <article class="workflow-card">
         <h3>${safeText(template.name || 'Untitled template')}</h3>
         <p>${safeText(template.description || 'No description')}</p>
         <p><strong>Blocks:</strong> ${safeText(template.blocks.length)} | <strong>Connections:</strong> ${safeText(template.links.length)}</p>
@@ -303,7 +303,7 @@ export function createWorkflowRenderer(config = {}) {
         : '-';
 
       return `
-        <article class="card workflow-card${workflow.id === runtime.draft?.id ? ' workflow-card-editing' : ''}">
+        <article class="workflow-card${workflow.id === runtime.draft?.id ? ' workflow-card-editing' : ''}">
           <h3>${safeText(workflow.name || 'Untitled workflow')}</h3>
           <p>${safeText(workflow.description || 'No description')}</p>
           <p><strong>Project:</strong> ${safeText(workflow.projectId ? projectNameById(state, workflow.projectId) : 'Unlinked')}</p>
