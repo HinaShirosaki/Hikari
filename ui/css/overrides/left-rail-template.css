@@ -6,19 +6,28 @@
   grid-template-columns: minmax(var(--shared-left-rail-min), var(--shared-left-rail-width)) minmax(0, 1fr);
   gap: 0;
   align-items: stretch;
-  min-height: var(--shared-left-rail-layout-height);
+  min-height: 100%;
+  height: 100%;
 }
 
 .left-rail-template > * {
   min-width: 0;
 }
 
+.left-rail-template > .left-rail-template__rail > *,
+.left-rail-template > .left-rail-template__main > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
 .left-rail-template > .left-rail-template__rail.app-left-rail,
 .left-rail-template > .left-rail-template__rail {
   gap: 14px;
+  align-self: stretch;
+  height: 100%;
   min-height: 100%;
-  max-height: var(--shared-left-rail-layout-height);
-  padding: 14px 16px 16px !important;
+  max-height: none;
+  padding: 14px var(--app-left-rail-padding-inline, 16px) 16px !important;
   border-top: 0 !important;
   border-right: 1px solid var(--app-left-rail-divider) !important;
   border-bottom: 0 !important;
@@ -26,12 +35,26 @@
   border-radius: 0 !important;
   background: var(--surface) !important;
   box-shadow: none !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  scrollbar-gutter: stable !important;
 }
 
 .left-rail-template > .left-rail-template__main {
+  align-self: stretch;
+  height: 100%;
   min-width: 0;
   min-height: 0;
   padding-left: var(--left-rail-main-gap);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+body.has-shared-left-rail-view .left-rail-template > .left-rail-template__rail.app-left-rail,
+body.has-shared-left-rail-view .left-rail-template > .left-rail-template__rail {
+  background: transparent !important;
 }
 
 .left-rail-template__stack {
@@ -57,6 +80,12 @@
   display: grid;
   gap: 0;
   align-content: start;
+}
+
+#papers-view.view.is-active,
+#biology-notebook-view.view.is-active {
+  align-content: stretch;
+  grid-auto-rows: minmax(0, 1fr);
 }
 
 .personal-inventory-layout,
@@ -171,8 +200,10 @@
   }
 
   .left-rail-template > .left-rail-template__main {
+    height: auto;
     padding-left: 0;
     padding-top: 18px;
+    overflow: visible;
   }
 
   .sample-main-grid,

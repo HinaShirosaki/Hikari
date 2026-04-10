@@ -1,6 +1,7 @@
 import { BLOCK_TYPES } from './constants.js';
 import {
   createEmptyDraft,
+  createEmptyWorkflowEntry,
   getBlockType,
   normalizePlainTextBlock,
   suggestedBlockPosition,
@@ -11,6 +12,25 @@ import {
   ensureWorkflowStateShape,
   resolveDefaultAssigneeId
 } from './state.js';
+import {
+  buildWorkflowExecutionLayout,
+  computeEntryProgress
+} from './execution.js';
+
+function createEmptyStepState() {
+  return {
+    status: 'not_done',
+    values: {},
+    result: '',
+    resultFiles: [],
+    resultFileRecords: [],
+    notebookEntryId: '',
+    assayIds: [],
+    gelAnalysisIds: [],
+    completedAt: '',
+    updatedAt: ''
+  };
+}
 
 export function createWorkflowActions(config = {}) {
   const state = config?.state || {};
@@ -30,12 +50,155 @@ export function createWorkflowActions(config = {}) {
   const onWorkflowsChanged = typeof config?.onWorkflowsChanged === 'function'
     ? config.onWorkflowsChanged
     : () => {};
+  const onOpenNotebookEntry = typeof config?.onOpenNotebookEntry === 'function'
+    ? config.onOpenNotebookEntry
+    : () => {};
+  const onCreateLinkedAssay = typeof config?.onCreateLinkedAssay === 'function'
+    ? config.onCreateLinkedAssay
+    : () => {};
+  const onCreateLinkedGel = typeof config?.onCreateLinkedGel === 'function'
+    ? config.onCreateLinkedGel
+    : () => {};
 
   function ensureStateShape() {
     ensureWorkflowStateShape(state, {
       normalizeWorkflow,
       normalizeTemplate
     });
+  }
+
+  function renderWorkflowViews() {
+    renderer.renderTemplateSourceOptions?.();
+    renderer.renderTemplateList?.();
+    renderer.renderWorkflowList?.();
+    renderer.renderExecutionBoard?.();
+  }
+
+  function persistWorkflowChanges() {
+    persist();
+    onWorkflowsChanged();
+  }
+
+  function getWorkflowById(workflowId) {
+    return (state.workflows || []).find((workflow) => workflow.id === workflowId) || null;
+  }
+
+  function getTemplateById(templateId) {
+    return (state.workflowTemplates || []).find((template) => template.id === templateId) || null;
+  }
+
+  function getWorkflowsForTemplate(templateId) {
+    const normalizedTemplateId = String(templateId || '').trim();
+    if (!normalizedTemplateId) {
+      return [];
+    }
+    return (state.workflows || []).filter((workflow) => String(workflow.templateId || '').trim() === normalizedTemplateId);
+  }
+
+  function buildDefaultEntryName(workflow) {
+    const count = Array.isArray(workflow?.entries) ? workflow.entries.length : 0;
+    return `Entry ${count + 1}`;
+  }
+
+  function buildDefaultWorkflowName(template) {
+    const count = getWorkflowsForTemplate(template?.id).length + 1;
+    const baseName = String(template?.name || '').trim() || 'Workflow';
+    return `${baseName} ${count}`;
+  }
+
+  function createWorkflowEntryRecord(workflow, name = '') {
+    const now = new Date().toISOString();
+    return {
+      ...createEmptyWorkflowEntry(),
+      id: createId(),
+      name: String(name || '').trim() || buildDefaultEntryName(workflow),
+      createdAt: now,
+      updatedAt: now
+    };
+  }
+
+  function ensureWorkflowSelection(preferredWorkflowId = '') {
+    ensureStateShape();
+
+    let workflow = getWorkflowById(preferredWorkflowId || runtime.activeWorkflowId);
+    if (!workflow) {
+      workflow = runtime.activeTemplateId
+        ? (getWorkflowsForTemplate(runtime.activeTemplateId)[0] || null)
+        : ((state.workflows || [])[0] || null);
+    }
+
+    runtime.activeWorkflowId = workflow?.id || '';
+
+    if (!workflow) {
+      runtime.activeEntryId = '';
+      runtime.activeBlockId = '';
+      return null;
+    }
+
+    runtime.activeTemplateId = String(workflow.templateId || '').trim() || runtime.activeTemplateId;
+
+    if (!Array.isArray(workflow.entries)) {
+      workflow.entries = [];
+    }
+
+    if (!workflow.entries.some((entry) => entry.id === runtime.activeEntryId)) {
+      runtime.activeEntryId = workflow.entries[0]?.id || '';
+    }
+
+    if (!(workflow.blocks || []).some((block) => block.id === runtime.activeBlockId)) {
+      runtime.activeBlockId = workflow.blocks?.[0]?.id || '';
+    }
+
+    return workflow;
+  }
+
+  function selectTemplate(templateId, options = {}) {
+    const previousTemplateId = String(runtime.activeTemplateId || '').trim();
+    const template = getTemplateById(String(templateId || '').trim());
+    runtime.activeTemplateId = template?.id || '';
+
+    const templateWorkflows = template ? getWorkflowsForTemplate(template.id) : [];
+    const requestedWorkflowId = String(options.workflowId || '').trim();
+    if (requestedWorkflowId && templateWorkflows.some((workflow) => workflow.id === requestedWorkflowId)) {
+      runtime.activeWorkflowId = requestedWorkflowId;
+    } else if (previousTemplateId !== runtime.activeTemplateId) {
+      runtime.activeWorkflowId = '';
+    } else if (!templateWorkflows.some((workflow) => workflow.id === runtime.activeWorkflowId)) {
+      runtime.activeWorkflowId = '';
+    }
+
+    if (!runtime.activeWorkflowId) {
+      runtime.activeEntryId = '';
+      runtime.activeBlockId = '';
+    }
+
+    renderWorkflowViews();
+    return template;
+  }
+
+  function selectWorkflow(workflowId, options = {}) {
+    const workflow = ensureWorkflowSelection(workflowId);
+    if (!workflow) {
+      renderWorkflowViews();
+      return null;
+    }
+
+    runtime.activeTemplateId = String(workflow.templateId || '').trim() || runtime.activeTemplateId;
+    runtime.activeWorkflowId = workflow.id;
+    if (options.entryId && workflow.entries.some((entry) => entry.id === options.entryId)) {
+      runtime.activeEntryId = options.entryId;
+    } else if (!runtime.activeEntryId && workflow.entries.length) {
+      runtime.activeEntryId = workflow.entries[0].id;
+    }
+
+    if (options.blockId && (workflow.blocks || []).some((block) => block.id === options.blockId)) {
+      runtime.activeBlockId = options.blockId;
+    } else if (!runtime.activeBlockId && (workflow.blocks || []).length) {
+      runtime.activeBlockId = workflow.blocks[0].id;
+    }
+
+    renderWorkflowViews();
+    return workflow;
   }
 
   function cloneWorkflowIntoDraft(workflow) {
@@ -47,21 +210,53 @@ export function createWorkflowActions(config = {}) {
     runtime.draft = createEmptyDraft();
     graphController.resetInteractionState?.();
     renderer.applyDraftToForm?.();
-    renderer.renderWorkflowList?.();
   }
 
-  function notifyWorkflowsChanged() {
-    onWorkflowsChanged();
+  function createWorkflowFromTemplateRecord(template, options = {}) {
+    if (!template) {
+      return null;
+    }
+
+    const workflowName = String(options.workflowName || '').trim() || buildDefaultWorkflowName(template);
+    const workflow = instantiateTemplate(template, workflowName);
+    workflow.projectId = String(options.projectId || '').trim();
+    workflow.entries = [createWorkflowEntryRecord(workflow, workflowName)];
+    const normalizedWorkflowRecord = normalizeWorkflow(workflow);
+    state.workflows.push(normalizedWorkflowRecord);
+
+    persistWorkflowChanges();
+    runtime.activeTemplateId = normalizedWorkflowRecord.templateId || template.id;
+    runtime.activeWorkflowId = normalizedWorkflowRecord.id;
+    runtime.activeEntryId = normalizedWorkflowRecord.entries[0]?.id || '';
+    runtime.activeBlockId = normalizedWorkflowRecord.blocks?.[0]?.id || '';
+    renderer.setWorkflowEntryMode?.('list');
+    renderWorkflowViews();
+    return normalizedWorkflowRecord;
+  }
+
+  function deleteWorkflow(workflowId) {
+    const normalizedWorkflowId = String(workflowId || '').trim();
+    if (!normalizedWorkflowId) {
+      return;
+    }
+
+    state.workflows = (state.workflows || []).filter((workflow) => workflow.id !== normalizedWorkflowId);
+    if (runtime.draft.id === normalizedWorkflowId) {
+      resetDraftToEmpty();
+    }
+    if (runtime.activeWorkflowId === normalizedWorkflowId) {
+      runtime.activeWorkflowId = '';
+      runtime.activeEntryId = '';
+      runtime.activeBlockId = '';
+    }
+
+    persistWorkflowChanges();
+    renderWorkflowViews();
   }
 
   function getBlockComposerType() {
     const selected = String(elements.workflowBlockTypeInput?.value || '').trim().toLowerCase();
     return selected === BLOCK_TYPES.TEXT ? BLOCK_TYPES.TEXT : BLOCK_TYPES.PROTOCOL;
-  }
-
-  function onStartCreateWorkflow() {
-    resetDraftToEmpty();
-    renderer.setWorkflowEntryMode?.('create');
   }
 
   function onStartCreateWorkflowTemplate() {
@@ -71,16 +266,19 @@ export function createWorkflowActions(config = {}) {
 
   function onStartViewEditWorkflow() {
     renderer.setWorkflowEntryMode?.('list');
+    renderWorkflowViews();
   }
 
   function onBackToWorkflowEntry() {
     resetDraftToEmpty();
-    renderer.setWorkflowEntryMode?.('home');
+    renderer.setWorkflowEntryMode?.('list');
+    renderWorkflowViews();
   }
 
   function onCancelWorkflowEdit() {
     resetDraftToEmpty();
-    renderer.setWorkflowEntryMode?.('home');
+    renderer.setWorkflowEntryMode?.('list');
+    renderWorkflowViews();
   }
 
   function onProjectChange() {
@@ -107,14 +305,20 @@ export function createWorkflowActions(config = {}) {
     const existing = (state.workflows || []).find(
       (workflow) => workflow.id === (elements.workflowIdInput?.value || '')
     );
+    const draftEntries = Array.isArray(runtime.draft.entries) ? runtime.draft.entries : [];
+    const entries = draftEntries.length
+      ? draftEntries
+      : (existing?.entries?.length ? existing.entries : [createWorkflowEntryRecord(runtime.draft)]);
 
     const workflowRecord = normalizeWorkflow({
       ...runtime.draft,
       id: elements.workflowIdInput?.value || runtime.draft.id || createId(),
+      templateId: runtime.draft.templateId || existing?.templateId || '',
       name,
       description: String(elements.workflowDescriptionInput?.value || '').trim(),
       projectId,
       notebookEntryIds,
+      entries,
       createdAt: existing?.createdAt || runtime.draft.createdAt || now,
       updatedAt: now
     });
@@ -126,13 +330,14 @@ export function createWorkflowActions(config = {}) {
       state.workflows.push(workflowRecord);
     }
 
-    persist();
-    notifyWorkflowsChanged();
+    persistWorkflowChanges();
     cloneWorkflowIntoDraft(workflowRecord);
-    renderer.renderTemplateSourceOptions?.();
-    renderer.renderTemplateList?.();
-    renderer.renderWorkflowList?.();
+    runtime.activeTemplateId = String(workflowRecord.templateId || '').trim() || runtime.activeTemplateId;
+    runtime.activeWorkflowId = workflowRecord.id;
+    runtime.activeEntryId = workflowRecord.entries?.[0]?.id || '';
+    runtime.activeBlockId = workflowRecord.blocks?.[0]?.id || '';
     renderer.setWorkflowEntryMode?.('list');
+    renderWorkflowViews();
   }
 
   function onAddBlock() {
@@ -228,34 +433,11 @@ export function createWorkflowActions(config = {}) {
   }
 
   function onWorkflowListClick(event) {
-    const editBtn = event.target.closest('[data-workflow-edit]');
-    if (editBtn) {
-      const workflow = (state.workflows || []).find((item) => item.id === editBtn.dataset.workflowEdit);
-      if (!workflow) {
-        return;
-      }
-
-      cloneWorkflowIntoDraft(workflow);
-      renderer.applyDraftToForm?.();
-      renderer.renderWorkflowList?.();
-      renderer.setWorkflowEntryMode?.('create');
+    const templateOpenBtn = event.target.closest('[data-workflow-template-open]');
+    if (templateOpenBtn) {
+      selectTemplate(String(templateOpenBtn.dataset.workflowTemplateOpen || '').trim());
       return;
     }
-
-    const deleteBtn = event.target.closest('[data-workflow-delete]');
-    if (!deleteBtn) {
-      return;
-    }
-
-    const workflowId = deleteBtn.dataset.workflowDelete;
-    state.workflows = (state.workflows || []).filter((workflow) => workflow.id !== workflowId);
-    if (runtime.draft.id === workflowId) {
-      resetDraftToEmpty();
-    }
-
-    persist();
-    notifyWorkflowsChanged();
-    renderer.renderWorkflowList?.();
   }
 
   function onSaveTemplate() {
@@ -276,56 +458,39 @@ export function createWorkflowActions(config = {}) {
     });
 
     state.workflowTemplates.push(template);
+    runtime.activeTemplateId = template.id;
     if (elements.workflowTemplateNameInput) {
       elements.workflowTemplateNameInput.value = '';
     }
-    persist();
-    renderer.renderTemplateSourceOptions?.();
-    renderer.renderTemplateList?.();
+    persistWorkflowChanges();
+    renderWorkflowViews();
   }
 
   function onCreateFromTemplate() {
-    const templateId = String(elements.workflowTemplateSourceInput?.value || '').trim();
+    const templateId = String(elements.workflowTemplateSourceInput?.value || runtime.activeTemplateId || '').trim();
     const workflowName = String(elements.workflowTemplateCreateNameInput?.value || '').trim();
-    if (!templateId || !workflowName) {
+    if (!templateId) {
       return;
     }
 
-    const template = (state.workflowTemplates || []).find((item) => item.id === templateId);
+    const template = getTemplateById(templateId);
     if (!template) {
       return;
     }
 
-    const workflow = instantiateTemplate(template, workflowName);
-    state.workflows.push(workflow);
-
-    persist();
-    notifyWorkflowsChanged();
-    if (elements.workflowTemplateCreateNameInput) {
-      elements.workflowTemplateCreateNameInput.value = '';
-    }
-
-    cloneWorkflowIntoDraft(workflow);
-    renderer.applyDraftToForm?.();
-    renderer.renderWorkflowList?.();
-    renderer.setWorkflowEntryMode?.('create');
+    createWorkflowFromTemplateRecord(template, {
+      workflowName,
+      projectId: String(elements.workflowTemplateCreateProjectInput?.value || '').trim()
+    });
   }
 
   function onTemplateListClick(event) {
     const useBtn = event.target.closest('[data-workflow-template-use]');
     if (useBtn) {
       const templateId = useBtn.dataset.workflowTemplateUse;
-      const template = (state.workflowTemplates || []).find((item) => item.id === templateId);
-      if (elements.workflowTemplateSourceInput) {
-        elements.workflowTemplateSourceInput.value = templateId;
-      }
-      if (
-        template
-        && !String(elements.workflowTemplateCreateNameInput?.value || '').trim()
-        && elements.workflowTemplateCreateNameInput
-      ) {
-        elements.workflowTemplateCreateNameInput.value = `${template.name} Copy`;
-      }
+      selectTemplate(templateId);
+      renderer.setWorkflowEntryMode?.('list');
+      renderWorkflowViews();
       return;
     }
 
@@ -338,17 +503,560 @@ export function createWorkflowActions(config = {}) {
     state.workflowTemplates = (state.workflowTemplates || []).filter(
       (template) => template.id !== templateId
     );
-    if (elements.workflowTemplateSourceInput?.value === templateId) {
-      elements.workflowTemplateSourceInput.value = '';
+    if (runtime.activeTemplateId === templateId) {
+      runtime.activeTemplateId = '';
+      runtime.activeWorkflowId = '';
+      runtime.activeEntryId = '';
+      runtime.activeBlockId = '';
     }
 
-    persist();
-    renderer.renderTemplateSourceOptions?.();
-    renderer.renderTemplateList?.();
+    persistWorkflowChanges();
+    renderWorkflowViews();
+  }
+
+  function getWorkflowEntry(workflowId, entryId) {
+    const workflow = getWorkflowById(workflowId);
+    if (!workflow) {
+      return { workflow: null, entry: null };
+    }
+    const entry = (workflow.entries || []).find((item) => item.id === entryId) || null;
+    return { workflow, entry };
+  }
+
+  function getPrimaryWorkflowEntry(workflow) {
+    return Array.isArray(workflow?.entries) ? workflow.entries[0] || null : null;
+  }
+
+  function getPreferredWorkflowBlockId(workflow, entry, fallbackBlockId = '') {
+    const layout = buildWorkflowExecutionLayout(workflow);
+    const progress = entry ? computeEntryProgress(entry, layout) : null;
+    return (
+      progress?.nextBlockId
+      || String(fallbackBlockId || '').trim()
+      || progress?.orderedIds?.[0]
+      || workflow?.blocks?.[0]?.id
+      || ''
+    );
+  }
+
+  function ensureEntryStepState(entry, blockId) {
+    if (!entry.stepStates || typeof entry.stepStates !== 'object' || Array.isArray(entry.stepStates)) {
+      entry.stepStates = {};
+    }
+    if (!entry.stepStates[blockId]) {
+      entry.stepStates[blockId] = createEmptyStepState();
+    }
+    const stepState = entry.stepStates[blockId];
+    if (!stepState.values || typeof stepState.values !== 'object' || Array.isArray(stepState.values)) {
+      stepState.values = {};
+    }
+    if (!Array.isArray(stepState.resultFiles)) {
+      stepState.resultFiles = [];
+    }
+    if (!Array.isArray(stepState.resultFileRecords)) {
+      stepState.resultFileRecords = [];
+    }
+    if (!Array.isArray(stepState.assayIds)) {
+      stepState.assayIds = [];
+    }
+    if (!Array.isArray(stepState.gelAnalysisIds)) {
+      stepState.gelAnalysisIds = [];
+    }
+    return stepState;
+  }
+
+  function touchEntry(entry) {
+    entry.updatedAt = new Date().toISOString();
+  }
+
+  function touchWorkflow(workflow) {
+    workflow.updatedAt = new Date().toISOString();
+  }
+
+  function sanitizeFolderName(value) {
+    return String(value || '')
+      .trim()
+      .replace(/[<>:"/\\|?*\x00-\x1F]+/g, '_')
+      .replace(/\s+/g, '_')
+      .replace(/^_+|_+$/g, '');
+  }
+
+  function buildStepStorageFolderPath(workflow, entry, block) {
+    const rootPath = String(state.settings?.storagePath || '').trim();
+    if (!rootPath) {
+      return '';
+    }
+
+    const project = (state.projects || []).find((item) => item.id === workflow.projectId);
+    const projectName = project?.name || 'Unlinked Project';
+    const workflowName = workflow.name || 'Untitled Workflow';
+    const entryName = entry.name || 'Entry';
+    const blockLabel = renderer.titleForBlock?.(block) || block.id || 'Step';
+
+    return `${rootPath}/Project/${sanitizeFolderName(projectName)}/Workflow/${sanitizeFolderName(workflowName)}/${sanitizeFolderName(entryName)}/${sanitizeFolderName(blockLabel)}`;
+  }
+
+  async function ensureStorageFolderExists(storageFolder) {
+    if (!storageFolder || !window.enanaApi?.ensureStorageDirectory) {
+      return;
+    }
+    await window.enanaApi.ensureStorageDirectory(storageFolder);
+  }
+
+  function blobToDataUrl(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(new Error('Cannot convert imported file to data URL.'));
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  function extractBase64Payload(dataUrl) {
+    const source = String(dataUrl || '');
+    const commaIndex = source.indexOf(',');
+    if (commaIndex < 0) {
+      return '';
+    }
+    return source.slice(commaIndex + 1).trim();
+  }
+
+  async function persistImportedWorkflowFiles({ files, storageFolder }) {
+    const selectedFiles = Array.isArray(files) ? files.filter(Boolean) : [];
+    if (!selectedFiles.length) {
+      return [];
+    }
+
+    const rootPath = String(state.settings?.storagePath || '').trim();
+    if (!rootPath) {
+      throw new Error('Set Storage Folder Path in Settings before importing workflow files.');
+    }
+    if (!storageFolder) {
+      throw new Error('Workflow storage folder is missing.');
+    }
+    if (!window.enanaApi?.storeImportedFile) {
+      throw new Error('Imported file storage API is unavailable.');
+    }
+
+    const targetFolder = `${storageFolder}/ResultFiles`;
+    const importedAt = new Date().toISOString();
+    const records = [];
+
+    for (const file of selectedFiles) {
+      const dataUrl = await blobToDataUrl(file);
+      const dataBase64 = extractBase64Payload(dataUrl);
+      if (!dataBase64) {
+        throw new Error(`Cannot read ${file.name}.`);
+      }
+      const result = await window.enanaApi.storeImportedFile({
+        storagePath: rootPath,
+        targetFolder,
+        fileName: file.name,
+        dataBase64
+      });
+      if (!result?.ok) {
+        throw new Error(result?.error || `Failed to store ${file.name}.`);
+      }
+      records.push({
+        name: result.fileName || file.name,
+        path: result.filePath || '',
+        relativePath: result.relativePath || '',
+        size: Number(file.size) || 0,
+        importedAt
+      });
+    }
+
+    return records;
+  }
+
+  function upsertNotebookEntryForStep(workflow, entry, block, options = {}) {
+    const stepState = ensureEntryStepState(entry, block.id);
+    const now = new Date().toISOString();
+    const project = (state.projects || []).find((item) => item.id === workflow.projectId) || null;
+    const protocol = (state.protocols || []).find((item) => item.id === block.protocolId) || null;
+    const existing = stepState.notebookEntryId
+      ? (state.notebookEntries || []).find((item) => item.id === stepState.notebookEntryId) || null
+      : null;
+    const notebookState = options.executed === true
+      ? 'executed'
+      : (options.executed === false ? 'planned' : (stepState.status === 'completed' ? 'executed' : 'planned'));
+    const createdAt = String(existing?.createdAt || '').trim() || now;
+    const storageFolder = String(existing?.storageFolder || '').trim() || buildStepStorageFolderPath(workflow, entry, block);
+    const notebookId = existing?.id || createId();
+    const linkedAssayIds = (state.assays || [])
+      .filter((item) => item.notebookEntryId === notebookId)
+      .map((item) => item.id);
+    const linkedGelIds = (state.gelAnalyses || [])
+      .filter((item) => item.notebookEntryId === notebookId)
+      .map((item) => item.id);
+    const notebookEntry = {
+      ...(existing || {}),
+      id: notebookId,
+      notebookType: 'biology',
+      projectId: project?.id || workflow.projectId || '',
+      projectName: project?.name || '',
+      protocolId: protocol?.id || '',
+      protocolName: protocol?.name || renderer.titleForBlock?.(block) || 'Workflow Step',
+      values: { ...stepState.values },
+      result: String(stepState.result || '').trim(),
+      resultFiles: [...stepState.resultFiles],
+      resultFileRecords: stepState.resultFileRecords.map((record) => ({ ...record })),
+      storageFolder,
+      createdAt,
+      updatedAt: now,
+      notebookState,
+      executedAt: notebookState === 'executed'
+        ? (String(stepState.completedAt || '').trim() || now)
+        : '',
+      workflowContext: {
+        workflowId: workflow.id,
+        workflowName: workflow.name,
+        workflowEntryId: entry.id,
+        workflowEntryName: entry.name,
+        workflowBlockId: block.id,
+        workflowBlockTitle: renderer.titleForBlock?.(block) || block.id
+      },
+      assayIds: linkedAssayIds,
+      gelAnalysisIds: linkedGelIds
+    };
+
+    const index = state.notebookEntries.findIndex((item) => item.id === notebookEntry.id);
+    if (index >= 0) {
+      state.notebookEntries[index] = notebookEntry;
+    } else {
+      state.notebookEntries.push(notebookEntry);
+    }
+
+    stepState.notebookEntryId = notebookEntry.id;
+    stepState.assayIds = uniqueStrings(linkedAssayIds);
+    stepState.gelAnalysisIds = uniqueStrings(linkedGelIds);
+    workflow.notebookEntryIds = uniqueStrings([...(workflow.notebookEntryIds || []), notebookEntry.id]);
+    return notebookEntry;
+  }
+
+  function onExecutionSearchInput() {
+    runtime.workflowSearchTerm = String(elements.workflowSearchInput?.value || '').trim().toLowerCase();
+    renderWorkflowViews();
+  }
+
+  function onExecutionGroupingChange() {
+    runtime.workflowGrouping = String(elements.workflowGroupingInput?.value || 'project').trim() || 'project';
+    renderWorkflowViews();
+  }
+
+  function onAddWorkflow() {
+    const template = getTemplateById(runtime.activeTemplateId);
+    if (!template) {
+      return;
+    }
+    createWorkflowFromTemplateRecord(template);
+  }
+
+  function onDeleteWorkflow() {
+    deleteWorkflow(runtime.activeWorkflowId);
+  }
+
+  function onExecutionBoardClick(event) {
+    const statusBtn = event.target.closest('[data-workflow-step-status]');
+    if (statusBtn) {
+      const workflowId = String(statusBtn.dataset.workflowWorkflowId || '').trim();
+      const entryId = String(statusBtn.dataset.workflowEntryId || '').trim();
+      const blockId = String(statusBtn.dataset.workflowBlockId || '').trim();
+      const requestedStatus = String(statusBtn.dataset.workflowStepStatus || '').trim().toLowerCase();
+      const { workflow, entry } = getWorkflowEntry(workflowId, entryId);
+      const block = (workflow?.blocks || []).find((item) => item.id === blockId);
+      if (!workflow || !entry || !block) {
+        return;
+      }
+
+      const nextStatus = requestedStatus === 'completed'
+        ? 'completed'
+        : (requestedStatus === 'failed'
+          ? 'failed'
+          : (requestedStatus === 'pending' ? 'pending' : 'not_done'));
+      const stepState = ensureEntryStepState(entry, blockId);
+      const now = new Date().toISOString();
+      stepState.status = nextStatus;
+      stepState.completedAt = nextStatus === 'completed' ? now : '';
+      stepState.updatedAt = now;
+      touchEntry(entry);
+      touchWorkflow(workflow);
+      upsertNotebookEntryForStep(workflow, entry, block, { executed: nextStatus === 'completed' });
+      runtime.activeWorkflowId = workflow.id;
+      runtime.activeEntryId = entry.id;
+      runtime.activeBlockId = blockId;
+      persistWorkflowChanges();
+      renderWorkflowViews();
+      return;
+    }
+
+    const stepOpen = event.target.closest('[data-workflow-step-open]');
+    if (stepOpen) {
+      runtime.activeWorkflowId = String(stepOpen.dataset.workflowWorkflowId || '').trim();
+      runtime.activeEntryId = String(stepOpen.dataset.workflowEntryId || '').trim();
+      runtime.activeBlockId = String(stepOpen.dataset.workflowStepOpen || '').trim();
+      renderWorkflowViews();
+      return;
+    }
+
+    const toggleBtn = event.target.closest('[data-workflow-step-toggle]');
+    if (toggleBtn) {
+      const workflowId = String(toggleBtn.dataset.workflowWorkflowId || '').trim();
+      const entryId = String(toggleBtn.dataset.workflowEntryId || '').trim();
+      const blockId = String(toggleBtn.dataset.workflowStepToggle || '').trim();
+      const { workflow, entry } = getWorkflowEntry(workflowId, entryId);
+      if (!workflow || !entry || !blockId) {
+        return;
+      }
+      const block = (workflow.blocks || []).find((item) => item.id === blockId);
+      if (!block) {
+        return;
+      }
+      const stepState = ensureEntryStepState(entry, blockId);
+      const now = new Date().toISOString();
+      const completed = stepState.status !== 'completed';
+      stepState.status = completed ? 'completed' : 'not_done';
+      stepState.completedAt = completed ? now : '';
+      stepState.updatedAt = now;
+      touchEntry(entry);
+      touchWorkflow(workflow);
+      upsertNotebookEntryForStep(workflow, entry, block, { executed: completed });
+      runtime.activeWorkflowId = workflow.id;
+      runtime.activeEntryId = entry.id;
+      runtime.activeBlockId = completed
+        ? getPreferredWorkflowBlockId(workflow, entry, blockId)
+        : blockId;
+      persistWorkflowChanges();
+      renderWorkflowViews();
+      return;
+    }
+
+    const branchToggleBtn = event.target.closest('[data-workflow-branch-toggle]');
+    if (branchToggleBtn) {
+      const workflowId = String(branchToggleBtn.dataset.workflowWorkflowId || '').trim();
+      const entryId = String(branchToggleBtn.dataset.workflowEntryId || '').trim();
+      const branchRootId = String(branchToggleBtn.dataset.workflowBranchToggle || '').trim();
+      const { workflow, entry } = getWorkflowEntry(workflowId, entryId);
+      if (!workflow || !entry || !branchRootId) {
+        return;
+      }
+      const active = new Set(Array.isArray(entry.activeBranchRootIds) ? entry.activeBranchRootIds : []);
+      if (active.has(branchRootId)) {
+        active.delete(branchRootId);
+      } else {
+        active.add(branchRootId);
+      }
+      entry.activeBranchRootIds = [...active];
+      touchEntry(entry);
+      touchWorkflow(workflow);
+      persistWorkflowChanges();
+      renderWorkflowViews();
+      return;
+    }
+
+    const openNotebookBtn = event.target.closest('[data-workflow-step-open-notebook]');
+    if (openNotebookBtn) {
+      const workflowId = String(openNotebookBtn.dataset.workflowWorkflowId || '').trim();
+      const entryId = String(openNotebookBtn.dataset.workflowEntryId || '').trim();
+      const blockId = String(openNotebookBtn.dataset.workflowStepOpenNotebook || '').trim();
+      const { workflow, entry } = getWorkflowEntry(workflowId, entryId);
+      const block = (workflow?.blocks || []).find((item) => item.id === blockId);
+      if (!workflow || !entry || !block) {
+        return;
+      }
+      const notebookEntry = upsertNotebookEntryForStep(workflow, entry, block, {});
+      touchEntry(entry);
+      touchWorkflow(workflow);
+      persistWorkflowChanges();
+      onOpenNotebookEntry(notebookEntry.id);
+      renderWorkflowViews();
+      return;
+    }
+
+    const assayBtn = event.target.closest('[data-workflow-step-create-assay]');
+    if (assayBtn) {
+      const workflowId = String(assayBtn.dataset.workflowWorkflowId || '').trim();
+      const entryId = String(assayBtn.dataset.workflowEntryId || '').trim();
+      const blockId = String(assayBtn.dataset.workflowStepCreateAssay || '').trim();
+      const { workflow, entry } = getWorkflowEntry(workflowId, entryId);
+      const block = (workflow?.blocks || []).find((item) => item.id === blockId);
+      if (!workflow || !entry || !block) {
+        return;
+      }
+      const notebookEntry = upsertNotebookEntryForStep(workflow, entry, block, { executed: false });
+      touchEntry(entry);
+      touchWorkflow(workflow);
+      persistWorkflowChanges();
+      onCreateLinkedAssay({
+        notebookEntryId: notebookEntry.id,
+        projectId: notebookEntry.projectId,
+        notebookType: notebookEntry.notebookType || 'biology'
+      });
+      renderWorkflowViews();
+      return;
+    }
+
+    const gelBtn = event.target.closest('[data-workflow-step-create-gel]');
+    if (gelBtn) {
+      const workflowId = String(gelBtn.dataset.workflowWorkflowId || '').trim();
+      const entryId = String(gelBtn.dataset.workflowEntryId || '').trim();
+      const blockId = String(gelBtn.dataset.workflowStepCreateGel || '').trim();
+      const { workflow, entry } = getWorkflowEntry(workflowId, entryId);
+      const block = (workflow?.blocks || []).find((item) => item.id === blockId);
+      if (!workflow || !entry || !block) {
+        return;
+      }
+      const notebookEntry = upsertNotebookEntryForStep(workflow, entry, block, { executed: false });
+      touchEntry(entry);
+      touchWorkflow(workflow);
+      persistWorkflowChanges();
+      onCreateLinkedGel({
+        notebookEntryId: notebookEntry.id,
+        projectId: notebookEntry.projectId,
+        notebookType: notebookEntry.notebookType || 'biology'
+      });
+      renderWorkflowViews();
+      return;
+    }
+
+    if (event.target.closest('.workflow-step-inline') || event.target.closest('input, textarea, select')) {
+      return;
+    }
+
+    const runOpenBtn = event.target.closest('[data-workflow-run-open]');
+    if (runOpenBtn) {
+      const workflowId = String(runOpenBtn.dataset.workflowRunOpen || '').trim();
+      const workflow = getWorkflowById(workflowId);
+      const entry = getPrimaryWorkflowEntry(workflow);
+      runtime.activeWorkflowId = workflowId;
+      runtime.activeEntryId = entry?.id || '';
+      runtime.activeBlockId = '';
+      renderWorkflowViews();
+    }
+  }
+
+  function onExecutionBoardChange(event) {
+    const workflowNameInput = event.target.closest('[data-workflow-run-name]');
+    if (workflowNameInput) {
+      const workflowId = String(workflowNameInput.dataset.workflowRunName || '').trim();
+      const workflow = getWorkflowById(workflowId);
+      if (!workflow) {
+        return;
+      }
+      workflow.name = String(workflowNameInput.value || '').trim() || 'Untitled workflow';
+      if (workflow.entries[0]) {
+        workflow.entries[0].name = workflow.name;
+        touchEntry(workflow.entries[0]);
+      }
+      touchWorkflow(workflow);
+      persistWorkflowChanges();
+      renderWorkflowViews();
+      return;
+    }
+
+    const stepValueInput = event.target.closest('[data-workflow-step-value]');
+    if (stepValueInput) {
+      const workflowId = String(stepValueInput.dataset.workflowWorkflowId || '').trim();
+      const entryId = String(stepValueInput.dataset.workflowEntryId || '').trim();
+      const blockId = String(stepValueInput.dataset.workflowBlockId || '').trim();
+      const valueKey = String(stepValueInput.dataset.workflowStepValue || '').trim();
+      const { workflow, entry } = getWorkflowEntry(workflowId, entryId);
+      const block = (workflow?.blocks || []).find((item) => item.id === blockId);
+      if (!workflow || !entry || !block || !valueKey) {
+        return;
+      }
+      const stepState = ensureEntryStepState(entry, blockId);
+      const cleanValue = String(stepValueInput.value || '').trim();
+      if (cleanValue) {
+        stepState.values[valueKey] = cleanValue;
+      } else {
+        delete stepState.values[valueKey];
+      }
+      stepState.updatedAt = new Date().toISOString();
+      touchEntry(entry);
+      touchWorkflow(workflow);
+      if (stepState.notebookEntryId) {
+        upsertNotebookEntryForStep(workflow, entry, block, {});
+      }
+      persistWorkflowChanges();
+      renderWorkflowViews();
+      return;
+    }
+
+    const resultField = event.target.closest('[data-workflow-step-result-field]');
+    if (resultField) {
+      const workflowId = String(resultField.dataset.workflowWorkflowId || '').trim();
+      const entryId = String(resultField.dataset.workflowEntryId || '').trim();
+      const blockId = String(resultField.dataset.workflowStepResultField || '').trim();
+      const { workflow, entry } = getWorkflowEntry(workflowId, entryId);
+      const block = (workflow?.blocks || []).find((item) => item.id === blockId);
+      if (!workflow || !entry || !block) {
+        return;
+      }
+      const stepState = ensureEntryStepState(entry, blockId);
+      stepState.result = String(resultField.value || '').trim();
+      stepState.updatedAt = new Date().toISOString();
+      touchEntry(entry);
+      touchWorkflow(workflow);
+      if (stepState.notebookEntryId) {
+        upsertNotebookEntryForStep(workflow, entry, block, {});
+      }
+      persistWorkflowChanges();
+      renderWorkflowViews();
+      return;
+    }
+
+    const fileInput = event.target.closest('[data-workflow-step-files]');
+    if (fileInput) {
+      void onWorkflowFileInputChange(fileInput);
+    }
+  }
+
+  async function onWorkflowFileInputChange(fileInput) {
+    const workflowId = String(fileInput.dataset.workflowWorkflowId || '').trim();
+    const entryId = String(fileInput.dataset.workflowEntryId || '').trim();
+    const blockId = String(fileInput.dataset.workflowStepFiles || '').trim();
+    const { workflow, entry } = getWorkflowEntry(workflowId, entryId);
+    const block = (workflow?.blocks || []).find((item) => item.id === blockId);
+    if (!workflow || !entry || !block) {
+      return;
+    }
+
+    const selectedFiles = Array.from(fileInput.files || []);
+    if (!selectedFiles.length) {
+      return;
+    }
+
+    try {
+      const storageFolder = buildStepStorageFolderPath(workflow, entry, block);
+      await ensureStorageFolderExists(storageFolder);
+      const importedRecords = await persistImportedWorkflowFiles({
+        files: selectedFiles,
+        storageFolder
+      });
+      const stepState = ensureEntryStepState(entry, blockId);
+      stepState.resultFileRecords = stepState.resultFileRecords.concat(importedRecords);
+      stepState.resultFiles = uniqueStrings([
+        ...stepState.resultFiles,
+        ...importedRecords.map((record) => record.name)
+      ]);
+      stepState.updatedAt = new Date().toISOString();
+      touchEntry(entry);
+      touchWorkflow(workflow);
+      if (stepState.notebookEntryId) {
+        upsertNotebookEntryForStep(workflow, entry, block, {});
+      }
+      persistWorkflowChanges();
+      renderWorkflowViews();
+    } catch (error) {
+      window.alert(String(error?.message || error || 'Failed to store workflow files.'));
+    } finally {
+      fileInput.value = '';
+    }
   }
 
   function bindEvents() {
-    elements.workflowForm.addEventListener('submit', onWorkflowSubmit);
+    elements.workflowForm?.addEventListener('submit', onWorkflowSubmit);
     elements.workflowCancelBtn?.addEventListener('click', onCancelWorkflowEdit);
     elements.workflowProjectInput?.addEventListener('change', onProjectChange);
     elements.workflowBlockTypeInput?.addEventListener('change', renderer.syncBlockComposerFields);
@@ -360,10 +1068,15 @@ export function createWorkflowActions(config = {}) {
     elements.workflowSaveTemplateBtn?.addEventListener('click', onSaveTemplate);
     elements.workflowTemplateCreateBtn?.addEventListener('click', onCreateFromTemplate);
     elements.workflowTemplateList?.addEventListener('click', onTemplateListClick);
-    elements.workflowEntryCreateBtn?.addEventListener('click', onStartCreateWorkflow);
     elements.workflowEntryTemplateBtn?.addEventListener('click', onStartCreateWorkflowTemplate);
     elements.workflowEntryViewBtn?.addEventListener('click', onStartViewEditWorkflow);
     elements.workflowEntryBackBtn?.addEventListener('click', onBackToWorkflowEntry);
+    elements.workflowSearchInput?.addEventListener('input', onExecutionSearchInput);
+    elements.workflowAddRunBtn?.addEventListener('click', onAddWorkflow);
+    elements.workflowDeleteRunBtn?.addEventListener('click', onDeleteWorkflow);
+    elements.workflowExecutionBoard?.addEventListener('click', onExecutionBoardClick);
+    elements.workflowExecutionBoard?.addEventListener('change', onExecutionBoardChange);
+    window.addEventListener('resize', renderer.syncExecutionPopoverPosition);
 
     graphController.bindEvents?.();
   }
@@ -372,6 +1085,7 @@ export function createWorkflowActions(config = {}) {
     runtime.draft.blocks = normalizeBlocks(runtime.draft.blocks);
     runtime.draft.links = normalizeLinks(runtime.draft.links, runtime.draft.blocks);
     runtime.draft.notebookEntryIds = uniqueStrings(runtime.draft.notebookEntryIds);
+    runtime.draft.entries = Array.isArray(runtime.draft.entries) ? runtime.draft.entries : [];
   }
 
   return {
@@ -379,6 +1093,7 @@ export function createWorkflowActions(config = {}) {
     cloneWorkflowIntoDraft,
     ensureStateShape,
     normalizeDraft,
-    resetDraftToEmpty
+    resetDraftToEmpty,
+    selectWorkflow
   };
 }

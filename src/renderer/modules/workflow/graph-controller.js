@@ -172,10 +172,11 @@ export function createWorkflowGraphController(config = {}) {
 
   function renderGraphNodes() {
     elements.workflowGraphNodes.innerHTML = (runtime.draft?.blocks || []).map((block, index) => {
+      const isTextBlock = getBlockType(block) === 'text';
       const connectingClass = runtime.activeLinkFromBlockId === block.id ? ' workflow-node-connecting' : '';
       const selectedClass = runtime.selectedBlockIds.has(block.id) ? ' workflow-node-selected' : '';
-      const typeClass = getBlockType(block) === 'text' ? ' workflow-node-text' : '';
-      const title = titleForBlock(block);
+      const typeClass = isTextBlock ? ' workflow-node-text' : '';
+      const title = isTextBlock ? 'Text Block' : titleForBlock(block);
       const typeLabel = labelForBlockType(block);
       const assigneeName = labelForAssignee(block.assigneeId);
       return `

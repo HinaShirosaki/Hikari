@@ -380,8 +380,8 @@ test('agent-chat renders purchase recommendation tiles with unified image stage 
   assert.match(history.innerHTML, /agent-purchase-title">Endotoxin-Free Metal-Free Pipette Tips/);
   assert.match(history.innerHTML, /agent-purchase-price">\$14\.99/);
   assert.match(history.innerHTML, /agent-purchase-vendor">Lab Vendor/);
-  assert.match(history.innerHTML, /Purchase Recommendation/);
-  assert.match(history.innerHTML, /Purchase Filters/);
+  assert.doesNotMatch(history.innerHTML, /Purchase Recommendation/);
+  assert.doesNotMatch(history.innerHTML, /Purchase Filters/);
   const titleIndex = history.innerHTML.indexOf('agent-purchase-title');
   const priceIndex = history.innerHTML.indexOf('agent-purchase-price');
   const vendorIndex = history.innerHTML.indexOf('agent-purchase-vendor');
@@ -754,16 +754,17 @@ test('agent-chat sends settings API key to main process and stores assistant res
   assert.equal(state.notebookEntries.length, 3);
   assert.equal(notebookChangedCalls, 1);
   assert.match(history.innerHTML, /Assistant/);
-  assert.match(history.innerHTML, /Intent Parser/);
-  assert.match(history.innerHTML, /Protocol Workflow/);
-  assert.match(history.innerHTML, /protocol_to_notebook/);
-  assert.match(history.innerHTML, /Entities/);
-  assert.match(history.innerHTML, /Reasoning Summary/);
+  assert.match(history.innerHTML, /Notebook draft completed for Cell Prep\./);
+  assert.doesNotMatch(history.innerHTML, /Intent Parser/);
+  assert.doesNotMatch(history.innerHTML, /Protocol Workflow/);
+  assert.doesNotMatch(history.innerHTML, /Entities/);
+  assert.doesNotMatch(history.innerHTML, /Reasoning Summary/);
+  assert.doesNotMatch(history.innerHTML, /LLM Activity/);
   assert.equal(/Developer Trace/.test(history.innerHTML), false);
 
   state.settings.agent.developerMode = true;
   agent.render();
-  assert.equal(/Developer Trace/.test(history.innerHTML), true);
+  assert.equal(/Developer Trace/.test(history.innerHTML), false);
   assert.equal(sendBtn.disabled, false);
   assert.equal(clearBtn.disabled, false);
   assert.equal(projectSelect.disabled, false);
@@ -916,7 +917,7 @@ test('agent-chat shows live progress ephemerally in the chat history and locks s
   assert.equal(typeof payloadSeen?.clientRequestId, 'string');
   assert.equal(state.agentChat.messages.length, 1);
   assert.match(history.innerHTML, /Working on this/);
-  assert.match(history.innerHTML, /Request received/);
+  assert.doesNotMatch(history.innerHTML, /Request received/);
   assert.equal(sendBtn.disabled, true);
   assert.equal(newChatBtn.disabled, true);
   assert.match(sessionList.innerHTML, /disabled/);
@@ -952,7 +953,7 @@ test('agent-chat shows live progress ephemerally in the chat history and locks s
     }
   });
   assert.match(history.innerHTML, /I am clarifying the exact question before I search for evidence/);
-  assert.match(history.innerHTML, /Thinking/);
+  assert.match(history.innerHTML, /Thinking Trace/);
 
   progressHandler({
     client_request_id: payloadSeen.clientRequestId,
@@ -969,7 +970,7 @@ test('agent-chat shows live progress ephemerally in the chat history and locks s
     }
   });
   assert.match(history.innerHTML, /I want to use literature-search to investigate &quot;yield drop causes&quot;/);
-  assert.match(history.innerHTML, /Searching literature sources/);
+  assert.doesNotMatch(history.innerHTML, /Searching literature sources/);
 
   resolveAgentRequest({
     ok: true,
@@ -1401,7 +1402,7 @@ test('agent-chat keeps notebook-draft proposals confirm-first and creates one pl
   assert.equal(state.agentChat.messages[1].meta.notebook_draft.status, 'proposal_ready');
   assert.equal(state.notebookEntries.length, 0);
   assert.match(history.innerHTML, /Create Planned Page/);
-  assert.match(history.innerHTML, /Planned Notebook Draft/);
+  assert.match(history.innerHTML, /Planned notebook draft ready: Viability Assay After Cell Prep/);
 
   const createButtons = history.querySelectorAll('[data-agent-create-planned-page]');
   assert.equal(createButtons.length, 1);

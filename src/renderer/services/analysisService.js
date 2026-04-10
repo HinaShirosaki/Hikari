@@ -2,11 +2,13 @@ export function createAnalysisService(registry) {
   function handleAssaysChanged() {
     registry.get('projectManagement').renderNotebookPages?.();
     registry.get('biologyNotebook').renderLinkedPreviews?.();
+    registry.get('workflowManagement').render?.();
   }
 
   function handleGelAnalysesChanged() {
     registry.get('projectManagement').renderNotebookPages?.();
     registry.get('biologyNotebook').renderLinkedPreviews?.();
+    registry.get('workflowManagement').render?.();
   }
 
   function openAssayForNotebook(payload = {}) {

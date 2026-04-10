@@ -338,26 +338,27 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     }
     ensureState();
     const term = String(elements.assaySearchInput?.value || '').trim().toLowerCase();
-    const rows = sortedAssaysByUpdated().filter((item) => matchesSearch(item, term));
+    const assays = sortedAssaysByUpdated();
+    const rows = assays.filter((item) => matchesSearch(item, term));
+    if (elements.assayBrowserCount) {
+      elements.assayBrowserCount.textContent = term ? `${rows.length}/${assays.length}` : String(assays.length);
+    }
 
     if (!rows.length) {
-      elements.assayList.innerHTML = '<p class="small-note">No assays found.</p>';
+      elements.assayList.innerHTML = '<p class="small-note assay-browser-empty">No assays found.</p>';
       return;
     }
 
     elements.assayList.innerHTML = rows.map((assay) => `
-      <article class="card">
-        <h3>${safeText(assay.name)}</h3>
-        <p><strong>Assay Number:</strong> ${safeText(assay.assayNumber || '-')}</p>
-        <p><strong>Project:</strong> ${safeText(assay.projectName || '-')}</p>
-        <p><strong>Plate:</strong> ${safeText(assay.plateLabel || `${assay.wellCount || '-'} well`)} (${safeText(`${assay.plateRows || '-'} x ${assay.plateColumns || '-'}`)})</p>
-        <p><strong>Axis Mapping:</strong> Sample ID by ${safeText(axisLabel(assay.sampleAxis))}, concentration by ${safeText(axisLabel(assay.concentrationAxis))}</p>
-        <p><strong>Mapped Wells:</strong> ${safeText(String((assay.wellLayout || []).length || 0))}</p>
-        <p><strong>Result Wells:</strong> ${safeText(String(Object.keys(assay.resultValues || {}).length || 0))}</p>
-        <p><strong>Notebook Page:</strong> ${safeText(linkedNotebookLabel(assay))}</p>
-        <p><strong>Updated:</strong> ${safeText(formatTimestamp(assay.updatedAt))}</p>
-        <p><strong>Notes:</strong> ${safeText(assay.notes || '-')}</p>
-        <div class="card-actions">
+      <article class="assay-browser-item">
+        <div class="assay-browser-item-copy">
+          <p class="assay-browser-item-title">${safeText(assay.name)}</p>
+          <p class="assay-browser-item-meta">${safeText(assay.assayNumber || '-')} · ${safeText(assay.projectName || 'No project')}</p>
+          <p class="assay-browser-item-meta">${safeText(assay.plateLabel || `${assay.wellCount || '-'} well`)} · Sample ID by ${safeText(axisLabel(assay.sampleAxis))}</p>
+          <p class="assay-browser-item-meta">${safeText(String((assay.wellLayout || []).length || 0))} mapped · ${safeText(String(Object.keys(assay.resultValues || {}).length || 0))} results</p>
+          <p class="assay-browser-item-meta">${safeText(linkedNotebookLabel(assay))} · Updated ${safeText(formatTimestamp(assay.updatedAt))}</p>
+        </div>
+        <div class="card-actions assay-browser-item-actions">
           <button type="button" class="primary-btn" data-assay-open-results="${assay.id}">Open Results</button>
           <button type="button" class="ghost-btn" data-assay-export-pdf="${assay.id}">Export PDF</button>
           <button type="button" class="ghost-btn" data-assay-edit="${assay.id}">Edit</button>
@@ -396,17 +397,24 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
   function setAssayMode(mode) {
     runtime.assayMode = mode === 'results' ? 'results' : 'create';
     const isCreate = runtime.assayMode === 'create';
-    elements.assayCreatePanels.forEach((panel) => {
-      panel.hidden = !isCreate;
-    });
-    elements.assayResultsPanels.forEach((panel) => {
-      panel.hidden = isCreate;
-    });
+    if (elements.assayCreateLayout) {
+      elements.assayCreateLayout.hidden = !isCreate;
+    }
+    if (elements.assayResultsLayout) {
+      elements.assayResultsLayout.hidden = isCreate;
+    }
     elements.assayModeCreateBtn?.classList.toggle('calendar-view-active', isCreate);
     elements.assayModeResultsBtn?.classList.toggle('calendar-view-active', !isCreate);
     if (elements.assayModeNote) {
       elements.assayModeNote.textContent = '';
     }
+    if (isCreate) {
+      layoutManager.renderPlateDefinition();
+      layoutManager.renderPlatePreview();
+      layoutManager.renderLayoutList();
+      return;
+    }
+
     if (!isCreate) {
       renderResultsAssayOptions(runtime.activeResultsAssayId || elements.assayResultsAssaySelect?.value || '');
       const selected = elements.assayResultsAssaySelect?.value || runtime.activeResultsAssayId;
@@ -591,6 +599,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     if (!assay) {
       return;
     }
+    elements.assayBrowserPanel?.setAttribute('open', '');
     elements.assayIdInput.value = assay.id;
     elements.assayNameInput.value = assay.name || '';
     elements.assayProjectInput.value = assay.projectId || '';

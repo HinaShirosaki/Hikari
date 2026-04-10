@@ -47,6 +47,7 @@
 }
 
 .app-left-rail {
+  --app-left-rail-padding-inline: 16px;
   position: relative;
   align-self: stretch;
   display: grid;
@@ -56,10 +57,11 @@
   min-height: 100%;
   max-height: var(--shared-left-rail-layout-height);
   margin-top: 0 !important;
-  padding: 14px 16px 16px 16px !important;
+  padding: 14px var(--app-left-rail-padding-inline) 16px var(--app-left-rail-padding-inline) !important;
+  overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
-  scrollbar-gutter: stable both-edges;
+  scrollbar-gutter: stable;
   border: 0 !important;
   border-radius: 0 !important;
   border-top: 0 !important;
@@ -112,9 +114,9 @@
 .app-left-rail-handle {
   position: absolute;
   top: 0;
-  right: calc(-8px - var(--app-left-rail-bleed, 0px));
+  right: -4px;
   bottom: 0;
-  width: 16px;
+  width: 8px;
   border: 0;
   border-radius: 0;
   padding: 0;
@@ -129,8 +131,9 @@
   position: absolute;
   top: 12px;
   bottom: 12px;
-  left: 7px;
-  width: 2px;
+  left: 50%;
+  width: 1px;
+  transform: translateX(-50%);
   border-radius: 999px;
   background: transparent;
   transition: background-color 140ms ease;

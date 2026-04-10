@@ -650,6 +650,17 @@ function showView(viewId) {
   homeBtn.hidden = nextView === VIEWS.HOME;
   closeMoreMenu();
   moduleRuntime.renderView(nextView);
+  sharedLeftRailRuntime.ensureHandles();
+  sharedLeftRailRuntime.syncWidth();
+  syncSharedLeftRailShellChrome();
+}
+
+function syncSharedLeftRailShellChrome() {
+  const activeView = views.find((view) => view.classList.contains('is-active')) || null;
+  const activeRailShell = activeView?.querySelector?.('.left-rail-template') || null;
+  const hasSharedLeftRailView = Boolean(activeRailShell?.querySelector?.('[data-sync-left-rail]'));
+
+  document.body.classList.toggle('has-shared-left-rail-view', hasSharedLeftRailView);
 }
 
 function asArray(value) {
@@ -1184,7 +1195,9 @@ function initNavigation() {
   const syncResponsiveDock = () => {
     renderAppNavigation();
     syncNavigationState(getActiveViewId());
+    sharedLeftRailRuntime.ensureHandles();
     sharedLeftRailRuntime.syncWidth();
+    syncSharedLeftRailShellChrome();
   };
   window.addEventListener('resize', syncResponsiveDock);
   if (typeof ResizeObserver === 'function') {

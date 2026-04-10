@@ -92,7 +92,13 @@ export function createRendererModuleRuntime(config = {}) {
       persist,
       createId,
       safeText,
-      onWorkflowsChanged: () => {}
+      onWorkflowsChanged: () => {},
+      onOpenNotebookEntry: (entryId = '') => {
+        showView(views.BIOLOGY_NOTEBOOK);
+        modules.biologyNotebook?.openEntry?.(entryId);
+      },
+      onCreateLinkedAssay: rendererServices.analysis.openAssayForNotebook,
+      onCreateLinkedGel: rendererServices.analysis.openGelForNotebook
     }),
     papers: initAndRegisterModule(moduleRegistry, 'papers', initPapersManagement, {
       state,

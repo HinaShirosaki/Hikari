@@ -1016,6 +1016,7 @@ export function initLabNotebook({
   }
 
   return {
+    openEntry: editEntry,
     renderProjectOptions,
     renderProtocolOptions,
     renderEntries,

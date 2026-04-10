@@ -9,6 +9,12 @@ import {
   notebookEntryLabel,
   projectNameById
 } from './presentation.js';
+import {
+  buildWorkflowExecutionLayout,
+  computeEntryProgress,
+  getActiveBranchGroups,
+  getWorkflowStepState
+} from './execution.js';
 
 export function createWorkflowRenderer(config = {}) {
   const state = config?.state || {};
@@ -23,6 +29,7 @@ export function createWorkflowRenderer(config = {}) {
   const getRenderGraphEditor = typeof config?.getRenderGraphEditor === 'function'
     ? config.getRenderGraphEditor
     : (() => null);
+  const renderStepPlaceholderRegex = /\{\{ph:[^}]+\}\}/g;
 
   function getSelectedValues(select) {
     if (!select) {
@@ -51,6 +58,126 @@ export function createWorkflowRenderer(config = {}) {
       getBlockType,
       protocolNameById: protocolNameResolver
     });
+  }
+
+  function templateNameById(templateId) {
+    const template = (state.workflowTemplates || []).find((item) => item.id === templateId);
+    return template?.name || 'Custom Workflow';
+  }
+
+  function humanizeProtocolStep(step) {
+    const placeholders = Array.isArray(step?.placeholders) ? step.placeholders : [];
+    let placeholderIndex = 0;
+    const source = String(step?.text || '').trim();
+    if (!source) {
+      return '';
+    }
+    const replaced = source.replace(renderStepPlaceholderRegex, () => {
+      const placeholder = placeholders[placeholderIndex];
+      placeholderIndex += 1;
+      return `[${placeholder?.name || 'value'}]`;
+    });
+    if (placeholders.length && replaced === source) {
+      return `${source} ${placeholders.map((placeholder) => `[${placeholder.name}]`).join(' ')}`.trim();
+    }
+    return replaced;
+  }
+
+  function collectProtocolPlaceholderFields(protocol) {
+    if (!protocol || !Array.isArray(protocol.steps)) {
+      return [];
+    }
+    const fields = [];
+    protocol.steps.forEach((step) => {
+      const placeholders = Array.isArray(step?.placeholders) ? step.placeholders : [];
+      placeholders.forEach((placeholder) => {
+        const key = `${step.id}:${placeholder.id}`;
+        fields.push({
+          key,
+          stepText: humanizeProtocolStep(step),
+          placeholderName: placeholder.name
+        });
+      });
+    });
+    return fields;
+  }
+
+  function classifyWorkflowDot(stepState, blockId, activeBlockId, progress) {
+    if (stepState?.status === 'completed') {
+      return {
+        className: 'is-finished',
+        title: 'Finished'
+      };
+    }
+    if (stepState?.status === 'failed') {
+      return {
+        className: 'is-failed',
+        title: 'Failed'
+      };
+    }
+    if (progress?.nextBlockId === blockId || activeBlockId === blockId) {
+      return {
+        className: 'is-pending',
+        title: 'Pending'
+      };
+    }
+    return {
+      className: 'is-empty',
+      title: 'Not done'
+    };
+  }
+
+  function templateSearchText(template) {
+    return [
+      template?.name,
+      template?.description,
+      ...(Array.isArray(template?.blocks) ? template.blocks.map((block) => titleForBlock(block)) : [])
+    ].join(' ').toLowerCase();
+  }
+
+  function getVisibleTemplates() {
+    const searchTerm = String(elements.workflowSearchInput?.value || runtime.workflowSearchTerm || '').trim().toLowerCase();
+    const templates = [...(state.workflowTemplates || [])]
+      .sort((a, b) => parseTimestamp(b.updatedAt || b.createdAt) - parseTimestamp(a.updatedAt || a.createdAt))
+      .filter((template) => !searchTerm || templateSearchText(template).includes(searchTerm));
+    runtime.workflowSearchTerm = searchTerm;
+    return templates;
+  }
+
+  function ensureActiveTemplate(templates) {
+    const currentId = String(runtime.activeTemplateId || '').trim();
+    if (currentId && templates.some((template) => template.id === currentId)) {
+      return templates.find((template) => template.id === currentId) || null;
+    }
+    const nextTemplate = templates[0] || null;
+    runtime.activeTemplateId = nextTemplate?.id || '';
+    if (!nextTemplate) {
+      runtime.activeWorkflowId = '';
+      runtime.activeEntryId = '';
+      runtime.activeBlockId = '';
+    }
+    return nextTemplate;
+  }
+
+  function getWorkflowsForTemplate(templateId) {
+    const normalizedTemplateId = String(templateId || '').trim();
+    if (!normalizedTemplateId) {
+      return [];
+    }
+    return [...(state.workflows || [])]
+      .filter((workflow) => String(workflow.templateId || '').trim() === normalizedTemplateId)
+      .sort((a, b) => parseTimestamp(b.updatedAt || b.createdAt) - parseTimestamp(a.updatedAt || a.createdAt));
+  }
+
+  function ensureActiveWorkflow(workflows) {
+    const currentId = String(runtime.activeWorkflowId || '').trim();
+    if (currentId && workflows.some((workflow) => workflow.id === currentId)) {
+      return workflows.find((workflow) => workflow.id === currentId) || null;
+    }
+    runtime.activeWorkflowId = '';
+    runtime.activeEntryId = '';
+    runtime.activeBlockId = '';
+    return null;
   }
 
   function labelForBlockType(block) {
@@ -109,6 +236,21 @@ export function createWorkflowRenderer(config = {}) {
     }
     elements.workflowProjectInput.innerHTML = options.join('');
     elements.workflowProjectInput.value = runtime.draft?.projectId || '';
+  }
+
+  function renderTemplateCreateProjectOptions() {
+    if (!elements.workflowTemplateCreateProjectInput) {
+      return;
+    }
+    const selected = elements.workflowTemplateCreateProjectInput.value;
+    const options = ['<option value="">Unlinked project</option>'];
+    (state.projects || []).forEach((project) => {
+      options.push(`<option value="${safeText(project.id)}">${safeText(project.name)}</option>`);
+    });
+    elements.workflowTemplateCreateProjectInput.innerHTML = options.join('');
+    if (selected && (state.projects || []).some((project) => project.id === selected)) {
+      elements.workflowTemplateCreateProjectInput.value = selected;
+    }
   }
 
   function renderNotebookOptions() {
@@ -264,10 +406,10 @@ export function createWorkflowRenderer(config = {}) {
       <article class="workflow-card">
         <h3>${safeText(template.name || 'Untitled template')}</h3>
         <p>${safeText(template.description || 'No description')}</p>
-        <p><strong>Blocks:</strong> ${safeText(template.blocks.length)} | <strong>Connections:</strong> ${safeText(template.links.length)}</p>
+        <p><strong>Blocks:</strong> ${safeText(template.blocks.length)} | <strong>Connections:</strong> ${safeText(template.links.length)} | <strong>Workflows:</strong> ${safeText(getWorkflowsForTemplate(template.id).length)}</p>
         <p><strong>Updated:</strong> ${safeText(formatTimestamp(template.updatedAt || template.createdAt))}</p>
         <div class="card-actions">
-          <button type="button" class="ghost-btn" data-workflow-template-use="${safeText(template.id)}">Use</button>
+          <button type="button" class="ghost-btn" data-workflow-template-use="${safeText(template.id)}">Select</button>
           <button type="button" class="danger-btn" data-workflow-template-delete="${safeText(template.id)}">Delete</button>
         </div>
       </article>
@@ -279,45 +421,343 @@ export function createWorkflowRenderer(config = {}) {
       return;
     }
 
-    const workflows = [...(state.workflows || [])]
-      .sort((a, b) => parseTimestamp(b.updatedAt) - parseTimestamp(a.updatedAt));
+    const templates = getVisibleTemplates();
+    const activeTemplate = ensureActiveTemplate(templates);
 
-    if (!workflows.length) {
-      elements.workflowList.innerHTML = '<p class="small-note">No workflows saved yet.</p>';
+    if (!templates.length) {
+      elements.workflowList.innerHTML = '<p class="small-note">No workflow templates match the current search.</p>';
       return;
     }
 
-    elements.workflowList.innerHTML = workflows.map((workflow) => {
-      const assigneeLabels = uniqueStrings(workflow.blocks.map((block) => block.assigneeId).filter(Boolean))
-        .map((memberId) => labelForAssignee(memberId))
-        .join(', ') || 'Unassigned';
-      const notebookLabels = workflow.notebookEntryIds
-        .slice(0, 3)
-        .map((entryId) => {
-          const entry = (state.notebookEntries || []).find((item) => item.id === entryId);
-          return entry ? notebookEntryLabel(entry, formatTimestamp) : `Missing notebook page (${entryId})`;
-        });
-      const moreNotebookCount = Math.max(0, workflow.notebookEntryIds.length - notebookLabels.length);
-      const notebookSummary = notebookLabels.length
-        ? `${notebookLabels.join(' | ')}${moreNotebookCount ? ` | +${moreNotebookCount} more` : ''}`
-        : '-';
+    elements.workflowList.innerHTML = `
+      <div class="workflow-template-name-list">
+        ${templates.map((template) => `
+          <button
+            type="button"
+            class="workflow-template-name-item${template.id === activeTemplate?.id ? ' is-active' : ''}"
+            data-workflow-template-open="${safeText(template.id)}"
+          >${safeText(template.name || 'Untitled template')}</button>
+        `).join('')}
+      </div>
+    `;
+  }
 
-      return `
-        <article class="workflow-card${workflow.id === runtime.draft?.id ? ' workflow-card-editing' : ''}">
-          <h3>${safeText(workflow.name || 'Untitled workflow')}</h3>
-          <p>${safeText(workflow.description || 'No description')}</p>
-          <p><strong>Project:</strong> ${safeText(workflow.projectId ? projectNameById(state, workflow.projectId) : 'Unlinked')}</p>
-          <p><strong>Notebook Pages:</strong> ${safeText(notebookSummary)}</p>
-          <p><strong>Blocks:</strong> ${safeText(workflow.blocks.length)} | <strong>Connections:</strong> ${safeText(workflow.links.length)}</p>
-          <p><strong>Assigned To:</strong> ${safeText(assigneeLabels)}</p>
-          <p><strong>Updated:</strong> ${safeText(formatTimestamp(workflow.updatedAt || workflow.createdAt))}</p>
-          <div class="card-actions">
-            <button type="button" class="ghost-btn" data-workflow-edit="${safeText(workflow.id)}">Edit</button>
-            <button type="button" class="danger-btn" data-workflow-delete="${safeText(workflow.id)}">Delete</button>
-          </div>
-        </article>
-      `;
-    }).join('');
+  function buildBranchMarkup(workflow, entry, layout) {
+    const branchGroups = layout.branches || [];
+    if (!branchGroups.length) {
+      return '';
+    }
+
+    return `
+      <section class="workflow-branch-section">
+        <h5>Branches</h5>
+        <div class="workflow-branch-list">
+          ${branchGroups.map((branch) => {
+            const rootBlock = layout.blockById.get(branch.rootId);
+            const anchorBlock = layout.blockById.get(branch.anchorBlockId);
+            const active = getActiveBranchGroups(layout, entry).some((item) => item.rootId === branch.rootId);
+            return `
+              <article class="workflow-branch-card${active ? ' is-active' : ''}">
+                <div class="workflow-branch-card-head">
+                  <div>
+                    <strong>${safeText(titleForBlock(rootBlock))}</strong>
+                    <p class="small-note">${safeText(`From ${titleForBlock(anchorBlock)}`)}</p>
+                  </div>
+                  <button
+                    type="button"
+                    class="ghost-btn"
+                    data-workflow-branch-toggle="${safeText(branch.rootId)}"
+                    data-workflow-entry-id="${safeText(entry.id)}"
+                    data-workflow-workflow-id="${safeText(workflow.id)}"
+                  >${active ? 'Hide Branch' : 'Activate Branch'}</button>
+                </div>
+                <div class="workflow-branch-track">
+                  ${branch.blockIds.map((blockId, index) => {
+                    const block = layout.blockById.get(blockId);
+                    const stepState = getWorkflowStepState(entry, blockId);
+                    const isActive = runtime.activeEntryId === entry.id && runtime.activeBlockId === blockId;
+                    const connectorClass = index < branch.blockIds.length - 1
+                      ? (stepState.status === 'completed'
+                        && getWorkflowStepState(entry, branch.blockIds[index + 1]).status === 'completed'
+                        ? ' is-complete'
+                        : '')
+                      : '';
+                    return `
+                      <button
+                        type="button"
+                        class="workflow-branch-node${stepState.status === 'completed' ? ' is-complete' : ''}${isActive ? ' is-active' : ''}"
+                        data-workflow-step-open="${safeText(blockId)}"
+                        data-workflow-entry-id="${safeText(entry.id)}"
+                        data-workflow-workflow-id="${safeText(workflow.id)}"
+                      >
+                        <span class="workflow-branch-node-label">${safeText(titleForBlock(block))}</span>
+                        <span class="workflow-branch-node-dot"></span>
+                        ${index < branch.blockIds.length - 1 ? `<span class="workflow-branch-node-connector${connectorClass}"></span>` : ''}
+                      </button>
+                    `;
+                  }).join('')}
+                </div>
+              </article>
+            `;
+          }).join('')}
+        </div>
+      </section>
+    `;
+  }
+
+  function buildStepCellMarkup(workflow, entry, block, options = {}) {
+    const stepState = getWorkflowStepState(entry, block.id);
+    const protocol = (state.protocols || []).find((item) => item.id === block.protocolId) || null;
+    const placeholderFields = collectProtocolPlaceholderFields(protocol);
+    const instructionMarkup = getBlockType(block) === BLOCK_TYPES.TEXT
+      ? `
+        <p class="workflow-step-inline-text">${safeText(block.text || 'No text provided.')}</p>
+      `
+      : '';
+    const placeholderMarkup = protocol && placeholderFields.length
+      ? `
+        <table class="workflow-placeholder-table">
+          <tbody>
+            ${placeholderFields.map((field) => `
+              <tr>
+                <th scope="row">${safeText(field.placeholderName)}</th>
+                <td>
+                  <input
+                    data-workflow-step-value="${safeText(field.key)}"
+                    data-workflow-entry-id="${safeText(entry.id)}"
+                    data-workflow-workflow-id="${safeText(workflow.id)}"
+                    data-workflow-block-id="${safeText(block.id)}"
+                    value="${safeText(stepState.values[field.key] || '')}"
+                    aria-label="${safeText(field.placeholderName)}"
+                  />
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `
+      : '';
+    const emptyMarkup = !instructionMarkup && !placeholderMarkup
+      ? '<p class="small-note workflow-step-empty">No placeholders.</p>'
+      : '';
+    const statusOptions = [
+      { value: 'completed', className: 'is-finished', title: 'Finished' },
+      { value: 'failed', className: 'is-failed', title: 'Failed' },
+      { value: 'pending', className: 'is-pending', title: 'Pending' },
+      { value: 'not_done', className: 'is-empty', title: 'Not done' }
+    ];
+    const currentStatus = stepState.status || 'not_done';
+
+    const classNames = ['workflow-step-inline'];
+    if (options.floating) {
+      classNames.push('workflow-step-popover');
+    }
+    if (runtime.activeEntryId === entry.id && runtime.activeBlockId === block.id) {
+      classNames.push('is-active');
+    }
+    if (stepState.status === 'completed') {
+      classNames.push('is-complete');
+    }
+
+    return `
+      <div
+        class="${classNames.join(' ')}"
+        ${options.floating ? 'data-workflow-step-popover="true"' : ''}
+      >
+        ${instructionMarkup}
+        ${placeholderMarkup}
+        ${emptyMarkup}
+        <div class="workflow-step-status-picker" aria-label="Set step status">
+          ${statusOptions.map((option) => `
+            <button
+              type="button"
+              class="workflow-step-status-option ${option.className}${currentStatus === option.value ? ' is-selected' : ''}"
+              data-workflow-step-status="${safeText(option.value)}"
+              data-workflow-entry-id="${safeText(entry.id)}"
+              data-workflow-workflow-id="${safeText(workflow.id)}"
+              data-workflow-block-id="${safeText(block.id)}"
+              title="${safeText(option.title)}"
+              aria-label="${safeText(option.title)}"
+            >
+              <span class="workflow-step-status-dot ${option.className}"></span>
+            </button>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  function buildTemplateWorkflowTableMarkup(activeTemplate, workflows, activeWorkflow) {
+    const referenceWorkflow = activeWorkflow || workflows[0] || {
+      blocks: activeTemplate?.blocks || [],
+      links: activeTemplate?.links || []
+    };
+    const referenceLayout = buildWorkflowExecutionLayout(referenceWorkflow);
+    const activeEntry = activeWorkflow?.entries.find((entry) => entry.id === runtime.activeEntryId)
+      || activeWorkflow?.entries[0]
+      || null;
+    const activeLayout = activeWorkflow ? buildWorkflowExecutionLayout(activeWorkflow) : null;
+    const activeBlock = activeEntry && activeLayout?.blockById?.has(runtime.activeBlockId)
+      ? activeLayout.blockById.get(runtime.activeBlockId)
+      : null;
+    const activePopoverMarkup = activeWorkflow && activeEntry && activeBlock
+      ? buildStepCellMarkup(activeWorkflow, activeEntry, activeBlock, { floating: true })
+      : '';
+
+    if (!referenceLayout.mainPath.length) {
+      return '<p class="small-note">This template has no protocol blocks yet. Open the template editor to define its structure.</p>';
+    }
+
+    if (!workflows.length) {
+      return '<p class="small-note">No specific workflows created from this template yet. Use Add Workflow to create one.</p>';
+    }
+
+    return `
+      <div class="workflow-execution-shell">
+        <div class="workflow-execution-scroll">
+          <table class="workflow-execution-table">
+            <thead>
+              <tr>
+                <th class="workflow-entry-column">Entity</th>
+                ${referenceLayout.mainPath.map((block) => `<th>${safeText(titleForBlock(block))}</th>`).join('')}
+              </tr>
+            </thead>
+            <tbody>
+              ${workflows.map((workflow) => {
+                const layout = buildWorkflowExecutionLayout(workflow);
+                const entry = workflow.entries[0] || null;
+                const progress = entry
+                  ? computeEntryProgress(entry, layout)
+                  : { percentComplete: 0, nextBlockId: layout.mainPathIds[0] || '', orderedIds: layout.mainPathIds || [] };
+                const expanded = workflow.id === activeWorkflow?.id && Boolean(entry);
+                const activeBlockId = expanded
+                  ? (layout.blockById.has(runtime.activeBlockId)
+                    ? runtime.activeBlockId
+                    : '')
+                  : '';
+                return `
+                  <tr class="workflow-entry-row workflow-run-row${expanded ? ' is-expanded' : ''}" data-workflow-run-open="${safeText(workflow.id)}">
+                    <td class="workflow-entry-cell">
+                      <label class="workflow-entry-name-field">
+                        <span class="small-note">${safeText(`${progress.percentComplete}% complete`)}</span>
+                        <input
+                          value="${safeText(workflow.name || '')}"
+                          data-workflow-run-name="${safeText(workflow.id)}"
+                        />
+                      </label>
+                    </td>
+                    ${layout.mainPath.map((block, index) => {
+                      const stepState = entry ? getWorkflowStepState(entry, block.id) : { status: 'pending' };
+                      const isActive = expanded && activeBlockId === block.id;
+                      const connectorClass = index < layout.mainPath.length - 1 && entry
+                        ? (stepState.status === 'completed'
+                          && getWorkflowStepState(entry, layout.mainPath[index + 1].id).status === 'completed'
+                          ? ' is-complete'
+                          : '')
+                        : '';
+                      const dotState = classifyWorkflowDot(stepState, block.id, activeBlockId, progress);
+                      return `
+                        <td class="workflow-progress-cell${isActive ? ' has-popover' : ''}">
+                          ${entry ? `
+                            <button
+                              type="button"
+                              class="workflow-progress-node ${dotState.className}${isActive ? ' is-active' : ''}"
+                              ${isActive ? 'data-workflow-step-anchor="true"' : ''}
+                              data-workflow-step-open="${safeText(block.id)}"
+                              data-workflow-entry-id="${safeText(entry.id)}"
+                              data-workflow-workflow-id="${safeText(workflow.id)}"
+                              aria-label="${safeText(`${titleForBlock(block)} for ${workflow.name || 'workflow'}: ${dotState.title}`)}"
+                              title="${safeText(dotState.title)}"
+                            >
+                              <span class="workflow-progress-dot"></span>
+                              ${index < layout.mainPath.length - 1 ? `<span class="workflow-progress-connector${connectorClass}"></span>` : ''}
+                            </button>
+                          ` : '<span class="small-note">-</span>'}
+                        </td>
+                      `;
+                    }).join('')}
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+          ${activePopoverMarkup}
+        </div>
+      </div>
+    `;
+  }
+
+  function syncExecutionPopoverPosition() {
+    if (!elements.workflowExecutionBoard) {
+      return;
+    }
+
+    const scrollRegion = elements.workflowExecutionBoard.querySelector('.workflow-execution-scroll');
+    const popover = elements.workflowExecutionBoard.querySelector('[data-workflow-step-popover]');
+    const anchor = elements.workflowExecutionBoard.querySelector('[data-workflow-step-anchor="true"]');
+    if (!scrollRegion || !popover || !anchor) {
+      if (popover) {
+        popover.classList.remove('is-positioned');
+      }
+      return;
+    }
+
+    const scrollRect = scrollRegion.getBoundingClientRect();
+    const anchorRect = anchor.getBoundingClientRect();
+    const baseLeft = (anchorRect.left - scrollRect.left) + scrollRegion.scrollLeft + (anchorRect.width / 2);
+    const baseTop = (anchorRect.bottom - scrollRect.top) + scrollRegion.scrollTop + 8;
+    const popoverWidth = popover.offsetWidth || 230;
+    const minLeft = scrollRegion.scrollLeft + (popoverWidth / 2) + 12;
+    const maxLeft = scrollRegion.scrollLeft + scrollRegion.clientWidth - (popoverWidth / 2) - 12;
+    const clampedLeft = Math.min(Math.max(baseLeft, minLeft), Math.max(minLeft, maxLeft));
+
+    popover.style.setProperty('--workflow-step-popover-left', `${Math.round(clampedLeft)}px`);
+    popover.style.setProperty('--workflow-step-popover-top', `${Math.round(baseTop)}px`);
+    popover.classList.add('is-positioned');
+  }
+
+  function renderExecutionBoard() {
+    if (!elements.workflowExecutionBoard || !elements.workflowExecutionTitle || !elements.workflowExecutionStatus) {
+      return;
+    }
+
+    const templates = getVisibleTemplates();
+    const activeTemplate = ensureActiveTemplate(templates);
+    const workflows = getWorkflowsForTemplate(activeTemplate?.id);
+    const activeWorkflow = ensureActiveWorkflow(workflows);
+    if (activeWorkflow && !activeWorkflow.entries.some((entry) => entry.id === runtime.activeEntryId)) {
+      runtime.activeEntryId = activeWorkflow.entries[0]?.id || '';
+    }
+    if (activeWorkflow) {
+      const activeEntry = activeWorkflow.entries.find((entry) => entry.id === runtime.activeEntryId) || activeWorkflow.entries[0] || null;
+      const activeLayout = buildWorkflowExecutionLayout(activeWorkflow);
+      const activeProgress = activeEntry ? computeEntryProgress(activeEntry, activeLayout) : null;
+      const allowedActiveBlockIds = new Set(activeProgress?.orderedIds || activeLayout.mainPathIds);
+      if (!allowedActiveBlockIds.has(runtime.activeBlockId)) {
+        runtime.activeBlockId = '';
+      }
+    }
+
+    if (elements.workflowAddRunBtn) {
+      elements.workflowAddRunBtn.disabled = !activeTemplate;
+    }
+    if (elements.workflowDeleteRunBtn) {
+      elements.workflowDeleteRunBtn.disabled = !activeWorkflow;
+    }
+
+    if (!activeTemplate) {
+      elements.workflowExecutionTitle.textContent = 'Select a workflow template';
+      elements.workflowExecutionStatus.textContent = 'Choose a template on the left to manage the workflows created from it.';
+      elements.workflowExecutionBoard.innerHTML = '<p class="small-note">No workflow template selected.</p>';
+      return;
+    }
+
+    elements.workflowExecutionTitle.textContent = activeTemplate.name || 'Untitled template';
+    elements.workflowExecutionStatus.textContent = `${workflows.length} specific workflow${workflows.length === 1 ? '' : 's'} created from this template.`;
+    elements.workflowExecutionBoard.innerHTML = buildTemplateWorkflowTableMarkup(activeTemplate, workflows, activeWorkflow);
+    const executionScroll = elements.workflowExecutionBoard.querySelector('.workflow-execution-scroll');
+    executionScroll?.addEventListener('scroll', syncExecutionPopoverPosition, { passive: true });
+    window.requestAnimationFrame(syncExecutionPopoverPosition);
   }
 
   function updateSubmitButtonLabel() {
@@ -347,6 +787,7 @@ export function createWorkflowRenderer(config = {}) {
       elements.workflowDescriptionInput.value = runtime.draft?.description || '';
     }
     renderProjectOptions();
+    renderTemplateCreateProjectOptions();
     renderNotebookOptions();
     setSelectedValues(elements.workflowNotebookPagesInput, runtime.draft?.notebookEntryIds);
     renderBlockEditor();
@@ -356,12 +797,12 @@ export function createWorkflowRenderer(config = {}) {
   function setWorkflowEntryMode(nextMode) {
     runtime.workflowEntryMode = nextMode === 'create' || nextMode === 'template' || nextMode === 'list'
       ? nextMode
-      : 'home';
+      : 'list';
 
     const showEditor = runtime.workflowEntryMode === 'create' || runtime.workflowEntryMode === 'template';
     const showTemplates = runtime.workflowEntryMode === 'template';
     const showList = runtime.workflowEntryMode === 'list';
-    const showHome = runtime.workflowEntryMode === 'home';
+    const showHome = runtime.workflowEntryMode === 'list';
     const hideLinkFields = runtime.workflowEntryMode === 'template';
     if (hideLinkFields && (runtime.draft?.projectId || runtime.draft?.notebookEntryIds?.length)) {
       runtime.draft.projectId = '';
@@ -406,16 +847,19 @@ export function createWorkflowRenderer(config = {}) {
     getSelectedValues,
     labelForAssignee,
     labelForBlockType,
+    renderExecutionBoard,
     renderBlockEditor,
     renderBlockList,
     renderNotebookOptions,
     renderProjectOptions,
     renderProtocolOptions,
+    renderTemplateCreateProjectOptions,
     renderTemplateList,
     renderTemplateSourceOptions,
     renderWorkflowList,
     setSelectedValues,
     setWorkflowEntryMode,
+    syncExecutionPopoverPosition,
     syncBlockComposerFields,
     titleForBlock,
     updateSubmitButtonLabel

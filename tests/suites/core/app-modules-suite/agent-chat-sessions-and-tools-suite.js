@@ -505,10 +505,10 @@ test('agent-chat exposes developer-only manual tool smoke test action and render
   assert.equal(state.agentChat.messages.length, 1);
   assert.equal(state.agentChat.messages[0].role, 'assistant');
   assert.equal(state.agentChat.messages[0].meta.tool_test.tool_count, 2);
-  assert.match(history.innerHTML, /Tool Smoke Test/);
-  assert.match(history.innerHTML, /inventory-lookup/);
-  assert.match(history.innerHTML, /python-sandbox/);
-  assert.match(history.innerHTML, /Passed=2/);
+  assert.match(history.innerHTML, /Manual tool smoke test completed: 2\/2 tools passed\./);
+  assert.doesNotMatch(history.innerHTML, /Tool Smoke Test/);
+  assert.doesNotMatch(history.innerHTML, /inventory-lookup/);
+  assert.doesNotMatch(history.innerHTML, /python-sandbox/);
   assert.equal(status.textContent, 'Manual tool smoke test complete.');
 });
 
@@ -655,10 +655,11 @@ test('agent-chat lets developers run one tool with a manual message and inspect 
   assert.equal(state.agentChat.messages[1].role, 'assistant');
   assert.equal(state.agentChat.messages[1].meta.tool_test.run_mode, 'single');
   assert.equal(state.agentChat.messages[1].meta.tool_test.request_message, 'Write a JSON file noting this manual tool test.');
-  assert.match(history.innerHTML, /Manual Tool Test/);
-  assert.match(history.innerHTML, /Input Message/);
-  assert.match(history.innerHTML, /Raw Result/);
-  assert.match(history.innerHTML, /request_message/);
+  assert.match(history.innerHTML, /Manual tool test completed for python-sandbox/);
+  assert.doesNotMatch(history.innerHTML, /Manual Tool Test/);
+  assert.doesNotMatch(history.innerHTML, /Input Message/);
+  assert.doesNotMatch(history.innerHTML, /Raw Result/);
+  assert.doesNotMatch(history.innerHTML, /request_message/);
   assert.match(history.innerHTML, /Manual sandbox output is visible in chat\./);
   assert.match(history.innerHTML, /data:image\/png;base64,bWFudWFsLWltYWdl/);
   assert.equal(status.textContent, 'Manual tool test complete for python-sandbox.');
@@ -795,9 +796,9 @@ test('agent-chat prioritizes inventory lookup summary text and renders lookup me
   assert.match(state.agentChat.messages[1].text, /location Box A1/i);
   assert.match(state.agentChat.messages[1].text, /location Shelf 4/i);
   assert.equal(/record match/i.test(state.agentChat.messages[1].text), false);
-  assert.match(history.innerHTML, /Inventory Lookup/);
-  assert.match(history.innerHTML, /Inventory Items/);
-  assert.match(history.innerHTML, /Record Lookup/);
+  assert.doesNotMatch(history.innerHTML, /Inventory Lookup/);
+  assert.doesNotMatch(history.innerHTML, /Inventory Items/);
+  assert.doesNotMatch(history.innerHTML, /Record Lookup/);
 });
 
 test('agent-chat uses record lookup summary when inventory lookup payload is absent', async () => {
@@ -898,7 +899,7 @@ test('agent-chat uses record lookup summary when inventory lookup payload is abs
   assert.equal(state.agentChat.messages.length, 2);
   assert.equal(state.agentChat.messages[1].meta.record_lookup.status, 'no_match');
   assert.match(state.agentChat.messages[1].text, /No record matches found/);
-  assert.match(history.innerHTML, /Record Lookup/);
+  assert.doesNotMatch(history.innerHTML, /Record Lookup/);
   assert.equal(/Inventory Lookup/.test(history.innerHTML), false);
 });
 
@@ -1061,8 +1062,8 @@ test('agent-chat prioritizes purchase recommendation summary, renders shopping t
   assert.match(history.innerHTML, /agent-purchase-title">Endotoxin-Free Metal-Free Pipette Tips/);
   assert.match(history.innerHTML, /agent-purchase-price">\$14\.99/);
   assert.match(history.innerHTML, /agent-purchase-vendor">Lab Vendor/);
-  assert.match(history.innerHTML, /Purchase Recommendation/);
-  assert.match(history.innerHTML, /Purchase Filters/);
+  assert.doesNotMatch(history.innerHTML, /Purchase Recommendation/);
+  assert.doesNotMatch(history.innerHTML, /Purchase Filters/);
 
   const productButtons = history.querySelectorAll('[data-agent-open-external-url]');
   assert.equal(productButtons.length, 2);
