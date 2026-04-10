@@ -3,12 +3,26 @@ import { BLOCK_TYPES } from './constants.js';
 export function createEmptyDraft() {
   return {
     id: '',
+    templateId: '',
     name: '',
     description: '',
     projectId: '',
     notebookEntryIds: [],
     blocks: [],
     links: [],
+    entries: [],
+    createdAt: '',
+    updatedAt: ''
+  };
+}
+
+export function createEmptyWorkflowEntry() {
+  return {
+    id: '',
+    name: '',
+    notes: '',
+    activeBranchRootIds: [],
+    stepStates: {},
     createdAt: '',
     updatedAt: ''
   };
@@ -51,6 +65,114 @@ export function uniqueStrings(values) {
     out.push(normalized);
   });
   return out;
+}
+
+function normalizeStringMap(rawValue) {
+  if (!rawValue || typeof rawValue !== 'object' || Array.isArray(rawValue)) {
+    return {};
+  }
+  return Object.entries(rawValue).reduce((acc, [key, value]) => {
+    const normalizedKey = String(key || '').trim();
+    const normalizedValue = String(value || '').trim();
+    if (!normalizedKey || !normalizedValue) {
+      return acc;
+    }
+    acc[normalizedKey] = normalizedValue;
+    return acc;
+  }, {});
+}
+
+function normalizeImportedFileRecord(rawRecord) {
+  if (!rawRecord || typeof rawRecord !== 'object' || Array.isArray(rawRecord)) {
+    return null;
+  }
+  const name = String(rawRecord.name || '').trim();
+  if (!name) {
+    return null;
+  }
+  return {
+    name,
+    path: String(rawRecord.path || '').trim(),
+    relativePath: String(rawRecord.relativePath || '').trim(),
+    size: Number(rawRecord.size) || 0,
+    importedAt: normalizeIsoTimestamp(rawRecord.importedAt)
+  };
+}
+
+export function normalizeWorkflowStepState(rawState = {}) {
+  const completedAt = normalizeIsoTimestamp(rawState?.completedAt);
+  const updatedAt = normalizeIsoTimestamp(rawState?.updatedAt, completedAt);
+  const requestedStatus = String(rawState?.status || '').trim().toLowerCase();
+  const status = requestedStatus === 'failed'
+    ? 'failed'
+    : (requestedStatus === 'pending'
+      ? 'pending'
+      : (requestedStatus === 'completed' || completedAt ? 'completed' : 'not_done'));
+  const resultFileRecords = Array.isArray(rawState?.resultFileRecords)
+    ? rawState.resultFileRecords.map((record) => normalizeImportedFileRecord(record)).filter(Boolean)
+    : [];
+  const derivedResultFiles = resultFileRecords.map((record) => record.name);
+
+  return {
+    status,
+    values: normalizeStringMap(rawState?.values),
+    result: String(rawState?.result || rawState?.notes || '').trim(),
+    resultFiles: uniqueStrings([
+      ...(Array.isArray(rawState?.resultFiles) ? rawState.resultFiles : []),
+      ...derivedResultFiles
+    ]),
+    resultFileRecords,
+    notebookEntryId: String(rawState?.notebookEntryId || '').trim(),
+    assayIds: uniqueStrings(rawState?.assayIds),
+    gelAnalysisIds: uniqueStrings(rawState?.gelAnalysisIds || rawState?.gelIds),
+    completedAt,
+    updatedAt
+  };
+}
+
+export function normalizeWorkflowEntries(rawEntries, blocks, createId) {
+  const validBlockIds = new Set((Array.isArray(blocks) ? blocks : []).map((block) => block.id));
+  const seen = new Set();
+  const entries = [];
+
+  (Array.isArray(rawEntries) ? rawEntries : []).forEach((rawEntry, index) => {
+    if (!rawEntry || typeof rawEntry !== 'object' || Array.isArray(rawEntry)) {
+      return;
+    }
+
+    let id = String(rawEntry.id || '').trim();
+    if (!id || seen.has(id)) {
+      id = createId();
+    }
+    seen.add(id);
+
+    const createdAt = normalizeIsoTimestamp(rawEntry.createdAt);
+    const updatedAt = normalizeIsoTimestamp(rawEntry.updatedAt, createdAt);
+    const rawStepStates = rawEntry.stepStates && typeof rawEntry.stepStates === 'object' && !Array.isArray(rawEntry.stepStates)
+      ? rawEntry.stepStates
+      : {};
+    const stepStates = Object.entries(rawStepStates).reduce((acc, [blockId, rawState]) => {
+      const normalizedBlockId = String(blockId || '').trim();
+      if (!normalizedBlockId || !validBlockIds.has(normalizedBlockId)) {
+        return acc;
+      }
+      acc[normalizedBlockId] = normalizeWorkflowStepState(rawState);
+      return acc;
+    }, {});
+
+    entries.push({
+      ...createEmptyWorkflowEntry(),
+      id,
+      name: String(rawEntry.name || '').trim() || `Entry ${index + 1}`,
+      notes: String(rawEntry.notes || '').trim(),
+      activeBranchRootIds: uniqueStrings(rawEntry.activeBranchRootIds).filter((blockId) => validBlockIds.has(blockId)),
+      stepStates,
+      createdAt,
+      updatedAt
+    });
+  });
+
+  return entries;
 }
 
 export function normalizePlainTextBlock(rawValue) {
@@ -176,16 +298,19 @@ export function createWorkflowModel(options = {}) {
   function normalizeWorkflow(rawWorkflow) {
     const blocks = normalizeBlocks(rawWorkflow?.blocks);
     const links = normalizeLinks(rawWorkflow?.links, blocks);
+    const entries = normalizeWorkflowEntries(rawWorkflow?.entries, blocks, createId);
     const createdAt = normalizeIsoTimestamp(rawWorkflow?.createdAt);
     const updatedAt = normalizeIsoTimestamp(rawWorkflow?.updatedAt, createdAt);
     return {
       id: String(rawWorkflow?.id || createId()),
+      templateId: String(rawWorkflow?.templateId || '').trim(),
       name: String(rawWorkflow?.name || '').trim(),
       description: String(rawWorkflow?.description || '').trim(),
       projectId: String(rawWorkflow?.projectId || '').trim(),
       notebookEntryIds: uniqueStrings(rawWorkflow?.notebookEntryIds),
       blocks,
       links,
+      entries,
       createdAt,
       updatedAt
     };
@@ -240,12 +365,14 @@ export function createWorkflowModel(options = {}) {
 
     return normalizeWorkflow({
       id: createId(),
+      templateId: String(template?.id || '').trim(),
       name,
       description: template.description,
       projectId: '',
       notebookEntryIds: [],
       blocks,
       links,
+      entries: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     });

@@ -871,87 +871,87 @@
 
 <!-- SOURCE: ui/html/views/gel-view.html -->
 <section id="gel-view" class="view">
-      <div class="gel-layout">
-        <div class="gel-workspace left-rail-template">
-          <div class="gel-setup-panel app-left-rail left-rail-template__rail" data-sync-left-rail>
-            <h3>Setup</h3>
-            <form id="gel-form" class="form-grid">
-              <input type="hidden" id="gel-id" />
-              <label>
-                Analysis Name
-                <input id="gel-name" required placeholder="e.g. WB_RUN_2026_02_19" />
-              </label>
-              <label>
-                Project
-                <select id="gel-project">
-                  <option value="">Select project</option>
-                </select>
-              </label>
-              <label>
-                Link Notebook Page
-                <select id="gel-notebook-entry" class="gel-wide-field">
-                  <option value="">Not linked</option>
-                </select>
-              </label>
-              <label>
-                Analysis Type
-                <select id="gel-type">
-                  <option value="sds-page">SDS-PAGE</option>
-                  <option value="western">Western Blot</option>
-                  <option value="agarose">DNA/RNA Agarose</option>
-                </select>
-              </label>
-              <label>
-                Gel Image
-                <input id="gel-image-file" class="gel-wide-field" type="file" accept="image/*" />
-              </label>
-              <label>
-                Ladder Lane (1-based)
-                <input id="gel-ladder-lane" type="number" min="1" step="1" value="1" />
-              </label>
-              <label>
-                Ladder Band MW (kDa)
-                <input id="gel-ladder-band-mw" type="number" min="0" step="0.1" placeholder="Use in Step 5, e.g. 50" />
-              </label>
-              <label>
-                Normalization
-                <select id="gel-normalization">
-                  <option value="none">None</option>
-                  <option value="total-lane">Total Lane Intensity</option>
-                </select>
-              </label>
-              <label class="gel-slider-field">
-                Denoise Strength
-                <input id="gel-denoise-strength" type="range" min="0" max="100" step="1" value="35" />
-                <span id="gel-denoise-strength-value" class="small-note">35%</span>
-              </label>
-              <label class="gel-slider-field">
-                Contrast Boost
-                <input id="gel-contrast-strength" type="range" min="0" max="220" step="1" value="100" />
-                <span id="gel-contrast-strength-value" class="small-note">100%</span>
-              </label>
-              <div class="form-actions">
-                <button type="button" id="gel-reset-overrides-btn" class="ghost-btn">Reset Manual Overrides</button>
-                <span id="gel-override-status" class="small-note" hidden>Manual overrides: none</span>
-              </div>
-              <div class="form-actions">
-                <button type="button" id="gel-start-crop-btn" class="ghost-btn">Start Crop</button>
-                <button type="button" id="gel-apply-crop-btn" class="ghost-btn" disabled>Apply Crop</button>
-                <button type="button" id="gel-cancel-crop-btn" class="ghost-btn" disabled>Cancel Crop</button>
-                <button type="button" id="gel-reset-crop-btn" class="ghost-btn">Reset to Full Image</button>
-              </div>
-              <div id="gel-status" class="small-note"></div>
-              <div class="form-actions">
-                <button type="button" id="gel-run-btn" class="primary-btn">Analyze Gel</button>
-                <button type="submit" class="primary-btn">Save Analysis</button>
-                <button type="button" id="gel-cancel-btn" class="ghost-btn">Cancel Edit</button>
-                <button type="button" id="gel-export-json-btn" class="ghost-btn">Export JSON</button>
-                <button type="button" id="gel-export-csv-btn" class="ghost-btn">Export CSV</button>
-              </div>
-            </form>
-          </div>
+      <div class="gel-workspace left-rail-template">
+        <div class="gel-setup-panel app-left-rail left-rail-template__rail" data-sync-left-rail>
+          <h3>Setup</h3>
+          <form id="gel-form" class="form-grid">
+            <input type="hidden" id="gel-id" />
+            <label>
+              Analysis Name
+              <input id="gel-name" required placeholder="e.g. WB_RUN_2026_02_19" />
+            </label>
+            <label>
+              Project
+              <select id="gel-project">
+                <option value="">Select project</option>
+              </select>
+            </label>
+            <label>
+              Link Notebook Page
+              <select id="gel-notebook-entry" class="gel-wide-field">
+                <option value="">Not linked</option>
+              </select>
+            </label>
+            <label>
+              Analysis Type
+              <select id="gel-type">
+                <option value="sds-page">SDS-PAGE</option>
+                <option value="western">Western Blot</option>
+                <option value="agarose">DNA/RNA Agarose</option>
+              </select>
+            </label>
+            <label>
+              Gel Image
+              <input id="gel-image-file" class="gel-wide-field" type="file" accept="image/*" />
+            </label>
+            <label>
+              Ladder Lane (1-based)
+              <input id="gel-ladder-lane" type="number" min="1" step="1" value="1" />
+            </label>
+            <label>
+              Ladder Band MW (kDa)
+              <input id="gel-ladder-band-mw" type="number" min="0" step="0.1" placeholder="Use in Step 5, e.g. 50" />
+            </label>
+            <label>
+              Normalization
+              <select id="gel-normalization">
+                <option value="none">None</option>
+                <option value="total-lane">Total Lane Intensity</option>
+              </select>
+            </label>
+            <label class="gel-slider-field">
+              Denoise Strength
+              <input id="gel-denoise-strength" type="range" min="0" max="100" step="1" value="35" />
+              <span id="gel-denoise-strength-value" class="small-note">35%</span>
+            </label>
+            <label class="gel-slider-field">
+              Contrast Boost
+              <input id="gel-contrast-strength" type="range" min="0" max="220" step="1" value="100" />
+              <span id="gel-contrast-strength-value" class="small-note">100%</span>
+            </label>
+            <div class="form-actions">
+              <button type="button" id="gel-reset-overrides-btn" class="ghost-btn">Reset Manual Overrides</button>
+              <span id="gel-override-status" class="small-note" hidden>Manual overrides: none</span>
+            </div>
+            <div class="form-actions">
+              <button type="button" id="gel-start-crop-btn" class="ghost-btn">Start Crop</button>
+              <button type="button" id="gel-apply-crop-btn" class="ghost-btn" disabled>Apply Crop</button>
+              <button type="button" id="gel-cancel-crop-btn" class="ghost-btn" disabled>Cancel Crop</button>
+              <button type="button" id="gel-reset-crop-btn" class="ghost-btn">Reset to Full Image</button>
+            </div>
+            <div id="gel-status" class="small-note"></div>
+            <div class="form-actions">
+              <button type="button" id="gel-run-btn" class="primary-btn">Analyze Gel</button>
+              <button type="submit" class="primary-btn">Save Analysis</button>
+              <button type="button" id="gel-cancel-btn" class="ghost-btn">Cancel Edit</button>
+              <button type="button" id="gel-export-json-btn" class="ghost-btn">Export JSON</button>
+              <button type="button" id="gel-export-csv-btn" class="ghost-btn">Export CSV</button>
+            </div>
+          </form>
+        </div>
 
-          <div class="gel-main left-rail-template__main">
+        <div class="gel-main left-rail-template__main">
+          <div class="gel-main-stack">
             <div class="gel-main-grid">
               <div class="panel gel-viewer-panel">
                 <h3>Gel Viewer</h3>
@@ -1007,23 +1007,23 @@
                 </aside>
               </div>
             </div>
-          </div>
-        </div>
 
-        <div class="gel-secondary-panels">
-          <div class="panel gel-report-panel">
-            <h3>Analysis Report</h3>
-            <div id="gel-report-summary" class="cards"></div>
-            <pre id="gel-report-json" class="gel-report-json"></pre>
-          </div>
+            <div class="gel-secondary-panels">
+              <div class="panel gel-report-panel">
+                <h3>Analysis Report</h3>
+                <div id="gel-report-summary" class="cards"></div>
+                <pre id="gel-report-json" class="gel-report-json"></pre>
+              </div>
 
-          <div class="panel gel-library-panel">
-            <h3>Saved Gel Analyses</h3>
-            <label>
-              Search
-              <input id="gel-search" placeholder="Name, type, project, notebook..." />
-            </label>
-            <div id="gel-list" class="cards"></div>
+              <div class="panel gel-library-panel">
+                <h3>Saved Gel Analyses</h3>
+                <label>
+                  Search
+                  <input id="gel-search" placeholder="Name, type, project, notebook..." />
+                </label>
+                <div id="gel-list" class="cards"></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1444,9 +1444,34 @@
       <div class="workflow-editor-layout left-rail-template">
         <aside class="workflow-editor-sidebar app-left-rail left-rail-template__rail" data-sync-left-rail>
           <div id="workflow-entry-panel" class="workflow-entry-panel app-left-rail-section">
-            <button type="button" id="workflow-entry-create-btn" class="primary-btn">Create New Workflow</button>
-            <button type="button" id="workflow-entry-view-btn" class="ghost-btn">View/Edit Workflow</button>
-            <button type="button" id="workflow-entry-back-btn" class="ghost-btn" hidden>Back to Workflow</button>
+            <button type="button" id="workflow-entry-view-btn" class="primary-btn">Workflow Board</button>
+            <button type="button" id="workflow-entry-template-btn" class="ghost-btn">Template Editor</button>
+            <button type="button" id="workflow-entry-back-btn" class="ghost-btn" hidden>Back to Board</button>
+          </div>
+
+          <div class="workflow-list-panel app-left-rail-section" hidden>
+            <h3>Workflow Templates</h3>
+            <label>
+              Search
+              <input id="workflow-search" type="search" placeholder="Search templates..." />
+            </label>
+            <div id="workflow-list" class="workflow-list app-left-rail-list"></div>
+          </div>
+
+          <div class="workflow-template-panel app-left-rail-section" hidden>
+            <h3>Save Template</h3>
+            <label>
+              Template Name
+              <input id="workflow-template-name" placeholder="e.g. Clone screening template" />
+            </label>
+            <div class="form-actions">
+              <button type="button" id="workflow-save-template-btn" class="primary-btn">Save Current Graph</button>
+            </div>
+          </div>
+
+          <div class="workflow-template-panel app-left-rail-section" hidden>
+            <h3>Saved Templates</h3>
+            <div id="workflow-template-list" class="workflow-list app-left-rail-list"></div>
           </div>
 
           <div class="workflow-editor-panel app-left-rail-section" hidden>
@@ -1476,14 +1501,24 @@
               </div>
             </form>
           </div>
-
-          <div class="workflow-list-panel app-left-rail-section" hidden>
-            <h3>Saved Workflows</h3>
-            <div id="workflow-list" class="workflow-list app-left-rail-list"></div>
-          </div>
         </aside>
 
         <div class="workflow-editor-main left-rail-template__main">
+          <div class="panel workflow-list-panel" hidden>
+            <div class="workflow-execution-header">
+              <div class="workflow-execution-copy">
+                <p class="small-note">Template Workflows</p>
+                <h3 id="workflow-execution-title">Select a workflow template</h3>
+                <p id="workflow-execution-status" class="small-note">Choose a template on the left to manage the workflows created from it.</p>
+              </div>
+              <div class="workflow-execution-actions">
+                <button type="button" id="workflow-add-run-btn" class="primary-btn">Add Workflow</button>
+                <button type="button" id="workflow-delete-run-btn" class="danger-btn">Delete Workflow</button>
+              </div>
+            </div>
+            <div id="workflow-execution-board" class="workflow-execution-board"></div>
+          </div>
+
           <div class="panel workflow-editor-panel" hidden>
             <h3>Workflow Blocks</h3>
             <p class="small-note">Add protocol blocks or plain-text blocks. New blocks default assignee to yourself.</p>

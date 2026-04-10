@@ -12,7 +12,13 @@ export function createWorkflowRuntime() {
     interactionSuppressUntil: 0,
     graphWidth: 0,
     graphHeight: 0,
-    workflowEntryMode: 'home'
+    workflowEntryMode: 'list',
+    activeTemplateId: '',
+    activeWorkflowId: '',
+    activeEntryId: '',
+    activeBlockId: '',
+    workflowSearchTerm: '',
+    workflowGrouping: 'project'
   };
 }
 
@@ -70,6 +76,23 @@ export function cloneWorkflowDraft(workflow, normalizeWorkflow) {
     ...normalized,
     notebookEntryIds: [...normalized.notebookEntryIds],
     blocks: normalized.blocks.map((block) => ({ ...block })),
-    links: normalized.links.map((link) => ({ ...link }))
+    links: normalized.links.map((link) => ({ ...link })),
+    entries: normalized.entries.map((entry) => ({
+      ...entry,
+      activeBranchRootIds: [...entry.activeBranchRootIds],
+      stepStates: Object.entries(entry.stepStates || {}).reduce((acc, [blockId, stepState]) => {
+        acc[blockId] = {
+          ...stepState,
+          values: { ...(stepState?.values || {}) },
+          resultFiles: [...(stepState?.resultFiles || [])],
+          resultFileRecords: Array.isArray(stepState?.resultFileRecords)
+            ? stepState.resultFileRecords.map((record) => ({ ...record }))
+            : [],
+          assayIds: [...(stepState?.assayIds || [])],
+          gelAnalysisIds: [...(stepState?.gelAnalysisIds || [])]
+        };
+        return acc;
+      }, {})
+    }))
   };
 }

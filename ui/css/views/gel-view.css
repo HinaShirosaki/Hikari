@@ -1,15 +1,24 @@
 /* gel-view */
 
-.gel-layout {
-  display: grid;
-  gap: 28px;
+#gel-view {
+  min-height: 0;
 }
 
 .gel-workspace {
   --app-left-rail-bleed: 24px;
+  min-height: 0;
+  height: 100%;
+}
+
+.gel-main {
+  min-height: 0;
+}
+
+.gel-main-stack {
   display: grid;
-  gap: 24px;
-  align-items: stretch;
+  gap: 28px;
+  align-content: start;
+  min-width: 0;
 }
 
 .gel-side-rail {
@@ -22,6 +31,8 @@
 .gel-secondary-panels {
   display: grid;
   gap: 28px;
+  align-content: start;
+  min-width: 0;
 }
 
 .gel-workspace > .panel,
@@ -322,12 +333,6 @@ body.theme-night .gel-viewer-toolbar .ghost-btn.is-active {
 }
 
 @media (min-width: 1100px) {
-  .gel-workspace {
-    grid-template-columns: var(--layout-left-panel-width) minmax(0, 1fr) minmax(240px, 300px);
-    align-items: stretch;
-    min-height: var(--shared-left-rail-layout-height);
-  }
-
   .gel-secondary-panels {
     grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
     align-items: start;

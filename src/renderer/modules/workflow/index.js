@@ -17,7 +17,10 @@ export function initWorkflowManagement({
   persist,
   createId,
   safeText,
-  onWorkflowsChanged = () => {}
+  onWorkflowsChanged = () => {},
+  onOpenNotebookEntry = () => {},
+  onCreateLinkedAssay = () => {},
+  onCreateLinkedGel = () => {}
 }) {
   const elements = getWorkflowElements(document);
 
@@ -97,7 +100,10 @@ export function initWorkflowManagement({
     instantiateTemplate,
     persist,
     createId,
-    onWorkflowsChanged
+    onWorkflowsChanged,
+    onOpenNotebookEntry,
+    onCreateLinkedAssay,
+    onCreateLinkedGel
   });
 
   function render() {
@@ -106,9 +112,11 @@ export function initWorkflowManagement({
     graphController.pruneSelectedBlockIds();
     renderer.applyDraftToForm();
     renderer.renderTemplateSourceOptions();
+    renderer.renderTemplateCreateProjectOptions();
     renderer.renderTemplateList();
     renderer.renderWorkflowList();
-    renderer.setWorkflowEntryMode(runtime.workflowEntryMode);
+    renderer.renderExecutionBoard();
+    renderer.setWorkflowEntryMode(runtime.workflowEntryMode || 'list');
   }
 
   actions.bindEvents();

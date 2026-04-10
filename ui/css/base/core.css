@@ -82,16 +82,6 @@ div {
   overflow: hidden;
 }
 
-body.has-shared-left-rail-view .app-shell::before {
-  content: '';
-  position: fixed;
-  inset: 0 auto 0 0;
-  width: var(--app-left-rail-track-width);
-  background: var(--surface);
-  pointer-events: none;
-  z-index: 0;
-}
-
 .topbar {
   position: relative;
   z-index: 1;
@@ -102,6 +92,7 @@ body.has-shared-left-rail-view .app-shell::before {
   padding: 8px 20px 4px;
   padding-bottom: 4px;
   border-bottom: 0;
+  background: var(--bg);
 }
 
 .topbar-brand {
@@ -167,11 +158,21 @@ body.has-shared-left-rail-view .app-shell::before {
 }
 
 .workspace-shell {
+  position: relative;
   min-height: 0;
   height: 100%;
   display: grid;
-  position: relative;
   z-index: 1;
+}
+
+body.has-shared-left-rail-view .workspace-shell::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--app-left-rail-track-width);
+  background: var(--surface);
+  pointer-events: none;
+  z-index: 0;
 }
 
 .workspace-main {
@@ -181,6 +182,10 @@ body.has-shared-left-rail-view .app-shell::before {
   overflow: auto;
   padding: 0;
   font-size: var(--app-font-size);
+}
+
+body.has-shared-left-rail-view .workspace-main {
+  overflow: hidden;
 }
 
 .app-dock {
@@ -390,6 +395,11 @@ body.has-shared-left-rail-view .app-shell::before {
 
 .workspace-main > .view.is-active {
   min-height: 100%;
+}
+
+body.has-shared-left-rail-view .workspace-main > .view.is-active {
+  min-height: 0;
+  height: 100%;
 }
 
 #lab-management-view > .panel:first-child > h2,
@@ -738,7 +748,7 @@ button:disabled {
 }
 
 @media (max-width: 960px) {
-  body.has-shared-left-rail-view .app-shell::before {
+  body.has-shared-left-rail-view .workspace-shell::before {
     display: none;
   }
 

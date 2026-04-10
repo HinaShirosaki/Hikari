@@ -397,12 +397,12 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
   function setAssayMode(mode) {
     runtime.assayMode = mode === 'results' ? 'results' : 'create';
     const isCreate = runtime.assayMode === 'create';
-    elements.assayCreatePanels.forEach((panel) => {
-      panel.hidden = !isCreate;
-    });
-    elements.assayResultsPanels.forEach((panel) => {
-      panel.hidden = isCreate;
-    });
+    if (elements.assayCreateLayout) {
+      elements.assayCreateLayout.hidden = !isCreate;
+    }
+    if (elements.assayResultsLayout) {
+      elements.assayResultsLayout.hidden = isCreate;
+    }
     elements.assayModeCreateBtn?.classList.toggle('calendar-view-active', isCreate);
     elements.assayModeResultsBtn?.classList.toggle('calendar-view-active', !isCreate);
     if (elements.assayModeNote) {
