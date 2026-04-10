@@ -34,7 +34,7 @@ html {
 
 body {
   margin: 0;
-  min-height: 100vh;
+  min-height: 100svh;
   overflow-x: hidden;
   color: var(--text);
   background: var(--bg);
@@ -68,21 +68,38 @@ div {
 }
 
 .app-shell {
-  min-height: 100vh;
+  position: relative;
+  isolation: isolate;
+  min-height: 100svh;
+  height: 100svh;
   width: 100%;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 0;
   max-width: none;
   margin: 0;
-  padding: 8px 20px 88px;
+  padding: 0;
+  overflow: hidden;
+}
+
+body.has-shared-left-rail-view .app-shell::before {
+  content: '';
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: var(--app-left-rail-track-width);
+  background: var(--surface);
+  pointer-events: none;
+  z-index: 0;
 }
 
 .topbar {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  padding: 8px 20px 4px;
   padding-bottom: 4px;
   border-bottom: 0;
 }
@@ -151,11 +168,18 @@ div {
 
 .workspace-shell {
   min-height: 0;
+  height: 100%;
+  display: grid;
+  position: relative;
+  z-index: 1;
 }
 
 .workspace-main {
   min-width: 0;
-  padding: 2px 0 24px;
+  min-height: 0;
+  height: 100%;
+  overflow: auto;
+  padding: 0;
   font-size: var(--app-font-size);
 }
 
@@ -177,6 +201,7 @@ div {
   border-radius: 12px;
   background: color-mix(in srgb, var(--bg) 90%, var(--surface-elevated) 10%);
   isolation: isolate;
+  pointer-events: none;
 }
 
 .app-dock-nav {
@@ -188,6 +213,7 @@ div {
   min-width: 0;
   overflow: visible;
   padding-bottom: 0;
+  pointer-events: auto;
 }
 
 .app-dock-divider {
@@ -206,6 +232,11 @@ div {
   height: 46px;
   padding: 0;
   border-radius: 8px;
+}
+
+.app-dock-btn,
+.app-more-menu {
+  pointer-events: auto;
 }
 
 .app-dock-btn {
@@ -355,6 +386,10 @@ div {
 
 .view.is-active {
   display: block;
+}
+
+.workspace-main > .view.is-active {
+  min-height: 100%;
 }
 
 #lab-management-view > .panel:first-child > h2,
@@ -703,15 +738,19 @@ button:disabled {
 }
 
 @media (max-width: 960px) {
+  body.has-shared-left-rail-view .app-shell::before {
+    display: none;
+  }
+
   .app-shell {
-    padding: 8px 14px 84px;
+    padding: 0;
   }
 
   .topbar {
     align-items: stretch;
     flex-direction: column;
     gap: 8px;
-    padding-bottom: 4px;
+    padding: 8px 14px 4px;
   }
 
   .topbar-tools {

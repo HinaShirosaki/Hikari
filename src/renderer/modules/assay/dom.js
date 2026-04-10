@@ -17,6 +17,8 @@ export function getAssayElements(root = document) {
     assayConcentrationAxisDisplay: root.getElementById('assay-concentration-axis-display'),
     assayNotebookEntryInput: root.getElementById('assay-notebook-entry'),
     assayCancelBtn: root.getElementById('assay-cancel-btn'),
+    assayBrowserPanel: root.getElementById('assay-browser-panel'),
+    assayBrowserCount: root.getElementById('assay-browser-count'),
     assaySearchInput: root.getElementById('assay-search'),
     assayPlateDefinition: root.getElementById('assay-plate-definition'),
     assayCsvStatus: root.getElementById('assay-csv-status'),
