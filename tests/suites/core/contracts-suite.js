@@ -446,6 +446,186 @@ test('storage bundle helper sync + hydrate roundtrip restores protocols notebook
   }
 });
 
+test('workflow root storage sync writes template/run folders and hydrates workflows notebook pages plus related papers', async () => {
+  const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle.js'));
+  const workflowStorage = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'workflow-storage.js'));
+  const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'workflow-root-storage-'));
+  const dataFilePath = path.join(tempDir, 'workflow-example.ena.json');
+  try {
+    const snapshot = {
+      projects: [
+        {
+          id: 'project-1',
+          name: 'Atlas'
+        }
+      ],
+      workflowTemplates: [
+        {
+          id: 'template-1',
+          name: 'Protein Expression',
+          description: 'Root workflow template',
+          blocks: [
+            { id: 'block-a', protocolId: 'protocol-1' }
+          ],
+          links: [],
+          createdAt: '2026-04-10T10:00:00.000Z',
+          updatedAt: '2026-04-10T10:00:00.000Z'
+        }
+      ],
+      workflows: [
+        {
+          id: 'workflow-1',
+          templateId: 'template-1',
+          name: 'Histagged protein preparation',
+          description: 'Run 1',
+          projectId: 'project-1',
+          notebookEntryIds: ['note-1'],
+          blocks: [
+            { id: 'block-a', protocolId: 'protocol-1' }
+          ],
+          links: [],
+          entries: [
+            {
+              id: 'entry-1',
+              name: 'Clone 12',
+              stepStates: {
+                'block-a': {
+                  status: 'completed',
+                  notebookEntryId: 'note-1',
+                  resultFiles: ['gel.png'],
+                  resultFileRecords: [
+                    {
+                      name: 'gel.png',
+                      path: '/tmp/original/gel.png',
+                      relativePath: 'Workflow/Protein_Expression__template-1/Histagged_protein_preparation__workflow-1/Results/Clone_12__entry-1/Transform__block-a/ResultFiles/gel.png',
+                      size: 1234,
+                      importedAt: '2026-04-10T10:05:00.000Z'
+                    }
+                  ],
+                  completedAt: '2026-04-10T10:06:00.000Z',
+                  updatedAt: '2026-04-10T10:06:00.000Z'
+                }
+              },
+              createdAt: '2026-04-10T10:00:00.000Z',
+              updatedAt: '2026-04-10T10:06:00.000Z'
+            }
+          ],
+          createdAt: '2026-04-10T10:00:00.000Z',
+          updatedAt: '2026-04-10T10:06:00.000Z'
+        }
+      ],
+      notebookEntries: [
+        {
+          id: 'note-1',
+          projectId: 'project-1',
+          projectName: 'Atlas',
+          protocolId: 'protocol-1',
+          protocolName: 'Transformation',
+          result: 'Expression confirmed.',
+          resultFiles: ['gel.png'],
+          resultFileRecords: [
+            {
+              name: 'gel.png',
+              path: '/tmp/original/gel.png',
+              relativePath: 'Workflow/Protein_Expression__template-1/Histagged_protein_preparation__workflow-1/Notebook/Clone_12__entry-1/Transformation__block-a/ResultFiles/gel.png',
+              size: 1234,
+              importedAt: '2026-04-10T10:05:00.000Z'
+            }
+          ],
+          workflowContext: {
+            workflowId: 'workflow-1',
+            workflowName: 'Histagged protein preparation',
+            workflowEntryId: 'entry-1',
+            workflowEntryName: 'Clone 12',
+            workflowBlockId: 'block-a',
+            workflowBlockTitle: 'Transformation'
+          },
+          createdAt: '2026-04-10T10:00:00.000Z',
+          updatedAt: '2026-04-10T10:06:00.000Z'
+        }
+      ],
+      papers: [
+        {
+          id: 'paper-1',
+          title: 'Relevant Expression Paper',
+          linkedType: 'project',
+          linkedId: 'project-1',
+          linkedName: 'Atlas',
+          storedFilePath: '/tmp/original/paper.pdf',
+          storedRelativePath: 'Project/Atlas/Papers/paper.pdf',
+          pdfDataUrl: 'data:application/pdf;base64,QQ==',
+          createdAt: '2026-04-10T10:00:00.000Z',
+          updatedAt: '2026-04-10T10:06:00.000Z'
+        }
+      ],
+      paperExperimentLinks: [
+        {
+          paperId: 'paper-1',
+          entryId: 'note-1',
+          projectId: 'project-1',
+          note: 'Supports workflow step'
+        }
+      ],
+      settings: {
+        storagePath: tempDir
+      }
+    };
+
+    await bundleHelpers.syncBundleFromSnapshot({
+      dataFilePath,
+      snapshot
+    });
+
+    const folderLayout = workflowStorage.buildWorkflowFolderLayout({
+      storagePath: tempDir,
+      template: snapshot.workflowTemplates[0],
+      workflow: snapshot.workflows[0]
+    });
+    const notebookFolder = path.join(
+      folderLayout.notebookFolderPath,
+      workflowStorage.buildEntryFolderName('Clone 12', 'entry-1'),
+      workflowStorage.buildBlockFolderName('Transformation', 'block-a')
+    );
+    await fsPromises.access(path.join(folderLayout.templateFolderPath, 'template.json'));
+    await fsPromises.access(path.join(folderLayout.workflowFolderPath, 'workflow.json'));
+    await fsPromises.access(path.join(folderLayout.relatedPapersFolderPath, 'related-papers.json'));
+    await fsPromises.access(path.join(notebookFolder, 'page.json'));
+    await fsPromises.access(path.join(folderLayout.workflowRootPath, 'workflow-status.sqlite'));
+
+    const hydrated = await bundleHelpers.hydrateSnapshotFromBundle({
+      dataFilePath,
+      snapshot: {
+        settings: { storagePath: tempDir },
+        workflowTemplates: [],
+        workflows: [],
+        notebookEntries: [],
+        papers: [],
+        paperExperimentLinks: []
+      }
+    });
+
+    assert.equal(hydrated.snapshot.workflowTemplates.length, 1);
+    assert.equal(hydrated.snapshot.workflows.length, 1);
+    assert.equal(hydrated.snapshot.notebookEntries.length, 1);
+    assert.equal(hydrated.snapshot.papers.length, 1);
+    assert.equal(hydrated.snapshot.paperExperimentLinks.length, 1);
+    assert.equal(hydrated.snapshot.workflows[0].entries[0].stepStates['block-a'].resultFileRecords[0].path, '');
+    assert.equal(hydrated.snapshot.papers[0].pdfDataUrl, '');
+    assert.equal(hydrated.snapshot.notebookEntries[0].storageFolder.includes(`${path.sep}Workflow${path.sep}`), true);
+
+    const imported = await bundleHelpers.importStorageRoot({ storagePath: tempDir });
+    assert.equal(imported.summary.workflowTemplates, 1);
+    assert.equal(imported.summary.workflows, 1);
+    assert.equal(imported.summary.papers, 1);
+    assert.equal(imported.statePatch.workflowTemplates.length, 1);
+    assert.equal(imported.statePatch.workflows.length, 1);
+    assert.equal(imported.statePatch.notebookEntries.length, 1);
+    assert.equal(imported.statePatch.papers.length, 1);
+  } finally {
+    await fsPromises.rm(tempDir, { recursive: true, force: true });
+  }
+});
+
 test('storage root importer reads Testdata-like bundles and writes manifest with non-zero summary counts', async () => {
   const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle.js'));
   const fixtureRoot = path.join(__dirname, 'Testdata');
@@ -669,6 +849,10 @@ test('protocol runtimes preserve placeholder-fill and tie-break prompt guidance 
     agentPath('runtime', 'agent-protocol-notebook.js'),
     'utf8'
   );
+  const protocolNotebookContextSource = fs.readFileSync(
+    agentPath('runtime', 'agent-protocol-notebook-context-control.js'),
+    'utf8'
+  );
   const protocolMatchingSource = fs.readFileSync(
     agentPath('tools', 'agent-protocol-matching.js'),
     'utf8'
@@ -677,8 +861,13 @@ test('protocol runtimes preserve placeholder-fill and tie-break prompt guidance 
     agentPath('tools', 'agent-notebook-generation.js'),
     'utf8'
   );
+  assert.match(protocolNotebookSource, /createProtocolNotebookContextControl/);
+  assert.match(protocolNotebookSource, /protocolNotebookContextControl\.syncActionContext\(/);
   assert.match(protocolNotebookSource, /createProtocolMatchingRuntime/);
   assert.match(protocolNotebookSource, /createNotebookGenerationRuntime/);
+  assert.match(protocolNotebookContextSource, /function createProtocolNotebookContextControl\(deps = \{\}\)/);
+  assert.match(protocolNotebookContextSource, /function syncActionContext\(sessionKey, input = \{\}\)/);
+  assert.match(protocolNotebookContextSource, /function closeContext\(sessionKey\)/);
   assert.match(notebookGenerationSource, /Extract exact value spans from the latest user text/);
   assert.match(notebookGenerationSource, /latest user message is a direct answer/);
   assert.match(notebookGenerationSource, /filled_values\.placeholder_key must exactly match one of the provided placeholder_key values/);
@@ -727,6 +916,7 @@ test('purchase recommendation runtime and external-link bridge are wired across 
   const systemRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-system-ipc.js'), 'utf8');
 
   assert.match(purchaseSource, /function createPurchaseRecommendationRuntime\(deps = \{\}\)/);
+  assert.match(purchaseSource, /createAgentLlmRuntimeHelpers/);
   assert.match(purchaseSource, /function extractProductFromHtml\(html = '', pageUrl = ''\)/);
   assert.match(purchaseSource, /async function execute\(input = \{\}\)/);
   assert.match(mainAgentServicesSource, /createPurchaseRecommendationRuntime/);
@@ -734,7 +924,8 @@ test('purchase recommendation runtime and external-link bridge are wired across 
   assert.match(mainAgentServicesSource, /purchaseRecommendationRuntime,/);
   assert.match(executorsSource, /registerToolExecutor\('purchase-recommendation'/);
   assert.match(dispatcherSource, /parserPayload\.primary_intent === 'purchase_recommendation'/);
-  assert.match(dispatcherSource, /runTrackedTool\('purchase-recommendation', \{\}, \{/);
+  assert.match(dispatcherSource, /runTrackedTool\('purchase-recommendation', \{\s*query:/);
+  assert.match(dispatcherSource, /required_terms:\s*parseCompactList\(parserPayload\?\.entities\?\.required_attributes/);
   assert.match(dispatcherSource, /stage:\s*'purchase_recommendation_started'/);
   assert.match(dispatcherSource, /stage:\s*'purchase_recommendation_completed'/);
   assert.match(preloadSource, /openExternalUrl:\s*\(url\)\s*=>\s*ipcRenderer\.invoke\('system:open-external-url', \{ url \}\)/);
@@ -825,6 +1016,7 @@ test('agent helper cleanup keeps the categorized folder structure and core modul
     ['shared', 'agent-observability.js'],
     ['runtime', 'agent-lookup-runtime.js'],
     ['runtime', 'agent-protocol-notebook.js'],
+    ['runtime', 'agent-protocol-notebook-context-control.js'],
     ['runtime', 'science-reasoning-loop', 'index.js'],
     ['runtime', 'science-reasoning-loop', 'current-scientific-state.js'],
     ['runtime', 'science-reasoning-loop', 'input-clarification.js'],
@@ -967,6 +1159,10 @@ test('context management and memory helpers export reusable runtimes with layere
     agentPath('context', 'agent-context-management.js'),
     'utf8'
   );
+  const registrySource = fs.readFileSync(
+    agentPath('context', 'agent-context-registry.js'),
+    'utf8'
+  );
   const memorySource = fs.readFileSync(
     agentPath('context', 'agent-memory.js'),
     'utf8'
@@ -982,10 +1178,14 @@ test('context management and memory helpers export reusable runtimes with layere
 
   assert.match(contextSource, /const CONTEXT_LAYER_IDS = Object\.freeze/);
   assert.match(contextSource, /const CONTEXT_MODES = Object\.freeze/);
+  assert.match(contextSource, /const CONTEXT_REGISTRY_SECTIONS = Object\.freeze/);
   assert.match(contextSource, /function createAgentContextManagementRuntime\(deps = \{\}\)/);
   assert.match(contextSource, /function startTask\(input = \{\}\)/);
   assert.match(contextSource, /function completeTask\(input = \{\}\)/);
+  assert.match(contextSource, /function buildContextRegistry\(input = \{\}\)/);
   assert.match(contextSource, /function buildContextEnvelope\(input = \{\}\)/);
+  assert.match(contextSource, /function getContextRegistry\(sessionId\)/);
+  assert.match(registrySource, /function createAgentContextRegistryRuntime\(deps = \{\}\)/);
   assert.match(memorySource, /const MEMORY_ACTIONS = Object\.freeze/);
   assert.match(memorySource, /function createAgentMemoryRuntime\(deps = \{\}\)/);
   assert.match(memorySource, /async function remember\(input = \{\}\)/);

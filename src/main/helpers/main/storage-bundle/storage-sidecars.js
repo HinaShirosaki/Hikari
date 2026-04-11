@@ -5,6 +5,7 @@ const path = require('path');
 const { getBundlePaths } = require('./storage-paths');
 const { writeSqliteBundleIndex } = require('./storage-sql-write');
 const { asArray, ensureObject } = require('./storage-utils');
+const { syncWorkflowRootFromSnapshot } = require('./workflow-storage');
 
 const PROTOCOL_SIDECAR_SCHEMA = 'enana_protocols';
 const NOTEBOOK_SIDECAR_SCHEMA = 'enana_notebook_pages';
@@ -54,12 +55,21 @@ async function syncBundleFromSnapshot({
     'utf8'
   );
   await writeSqliteBundleIndex(bundlePaths.sqlitePath, safeSnapshot);
+  const workflowSync = await syncWorkflowRootFromSnapshot({
+    storagePath: safeSnapshot?.settings?.storagePath,
+    snapshot: safeSnapshot
+  });
   return {
     bundlePaths,
     sidecarPaths: {
       protocolsPath: bundlePaths.protocolsPath,
       notebookPagesPath: bundlePaths.notebookPagesPath
-    }
+    },
+    workflowPaths: {
+      workflowRootPath: workflowSync?.workflowRootPath || '',
+      sqlitePath: workflowSync?.sqlitePath || ''
+    },
+    workflowSummary: workflowSync?.summary || null
   };
 }
 

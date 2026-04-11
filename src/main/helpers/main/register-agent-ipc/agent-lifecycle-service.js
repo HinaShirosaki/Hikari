@@ -53,7 +53,19 @@ function createAgentLifecycleService({
   function createLifecycleToolRunner({
     snapshot,
     allowWriteTools = false,
-    lifecycleRecorder
+    lifecycleRecorder,
+    provider = '',
+    endpoint = '',
+    apiKey = '',
+    model = '',
+    message = '',
+    conversation = [],
+    parserPayload = {},
+    traceContext = null,
+    project = null,
+    sandboxRoot = '',
+    preferredPythonBin = '',
+    pythonExecutable = ''
   }) {
     return async (toolName, args, options = {}) => {
       const normalizedArgs = typeof agentToolRuntime.normalizeToolInvocationArgs === 'function'
@@ -69,6 +81,19 @@ function createAgentLifecycleService({
       });
       try {
         const result = await agentToolRuntime.runAgentTool(toolName, normalizedArgs, snapshot, {
+          provider,
+          endpoint,
+          apiKey,
+          model,
+          message,
+          conversation,
+          parserPayload,
+          traceContext,
+          lifecycleRecorder,
+          project,
+          sandboxRoot,
+          preferredPythonBin,
+          pythonExecutable,
           ...options,
           allowWriteTools: effectiveAllowWrite,
           requestId: cleanText(lifecycleRecorder?.requestId, 80)

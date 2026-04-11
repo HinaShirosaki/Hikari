@@ -271,7 +271,7 @@ function createMainAgentServices(deps = {}) {
     fetch: typeof globalThis.fetch === 'function' ? globalThis.fetch.bind(globalThis) : null
   });
   const purchaseRecommendationRuntime = createPurchaseRecommendationRuntime({
-    cleanText,
+    ...sharedAgentLlmDeps,
     fetch: typeof globalThis.fetch === 'function' ? globalThis.fetch.bind(globalThis) : null
   });
   const pythonSandboxToolRuntime = createManagedPythonSandboxRuntime({

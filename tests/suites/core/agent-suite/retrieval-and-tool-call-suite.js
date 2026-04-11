@@ -316,6 +316,148 @@ module.exports = function registerAgentRetrievalAndToolCallSuite(context = {}) {
       assert.equal(result.items[0].matched_requirements.includes('endotoxin-free'), true);
     });
 
+    test('purchase recommendation runtime uses provider-layer web search when available', async () => {
+      const { createPurchaseRecommendationRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-purchase-recommendation.js'));
+      const searchedQueries = [];
+      const runtime = createPurchaseRecommendationRuntime({
+        requestWebSearch: async ({ query, maxResults }) => {
+          searchedQueries.push([query, maxResults]);
+          return {
+            ok: true,
+            results: [
+              {
+                title: 'Vendor A Syringe Filter',
+                url: 'https://vendor-a.test/filter',
+                summary: 'Direct product detail page.',
+                source_domain: 'vendor-a.test'
+              }
+            ],
+            reasoning: 'Provider-layer search'
+          };
+        },
+        fetch: async (url) => ({
+          ok: true,
+          text: async () => `
+            <html>
+              <head>
+                <script type="application/ld+json">
+                  {
+                    "@context": "https://schema.org",
+                    "@type": "Product",
+                    "name": "Vendor A Syringe Filter",
+                    "image": "https://vendor-a.test/filter.png",
+                    "brand": { "@type": "Brand", "name": "Vendor A" },
+                    "offers": {
+                      "@type": "Offer",
+                      "priceCurrency": "USD",
+                      "price": "12.50",
+                      "url": "https://vendor-a.test/filter"
+                    }
+                  }
+                </script>
+              </head>
+              <body>endotoxin-free syringe filter</body>
+            </html>
+          `
+        })
+      });
+
+      const result = await runtime.execute({
+        provider: 'openai',
+        query: 'syringe filter'
+      });
+
+      assert.equal(result.status, 'matched');
+      assert.equal(result.items.length, 1);
+      assert.equal(searchedQueries.length > 0, true);
+      assert.equal(result.items[0].title, 'Vendor A Syringe Filter');
+    });
+
+    test('purchase recommendation runtime derives provider-layer web search from raw codex transport deps', async () => {
+      const { createPurchaseRecommendationRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-purchase-recommendation.js'));
+      const codexCalls = [];
+      let structuredCalls = 0;
+      const runtime = createPurchaseRecommendationRuntime({
+        LLM_PROVIDERS: {
+          CODEX: 'codex'
+        },
+        requestStructuredJsonPayload: async () => {
+          structuredCalls += 1;
+          throw new Error('Structured Codex purchase helper should be skipped in fast search mode.');
+        },
+        requestCodexCliText: async (input = {}) => {
+          codexCalls.push(input);
+          return JSON.stringify({
+            results: [
+              {
+                title: 'Recombinant TEV Protease',
+                url: 'https://vendor-tev.test/products/tev-protease',
+                summary: 'Direct product detail page for recombinant TEV protease.',
+                source_domain: 'vendor-tev.test'
+              }
+            ],
+            reasoning: 'Used Codex web search.'
+          });
+        },
+        fetch: async () => ({
+          ok: true,
+          text: async () => `
+            <html>
+              <head>
+                <title>Recombinant TEV Protease</title>
+                <meta name="application-name" content="Vendor TEV" />
+                <link rel="canonical" href="https://vendor-tev.test/products/tev-protease" />
+              </head>
+              <body>
+                <h1>Recombinant TEV Protease</h1>
+                <img src="https://vendor-tev.test/images/tev-protease.png" />
+                <div>Price $89.00</div>
+                <button>Add to cart</button>
+              </body>
+            </html>
+          `
+        })
+      });
+
+      const result = await runtime.execute({
+        provider: 'codex',
+        model: 'gpt-5.4-mini',
+        query: 'TEV protease'
+      });
+
+      assert.equal(result.status, 'matched');
+      assert.equal(result.items.length, 1);
+      assert.equal(result.items[0].title, 'Recombinant TEV Protease');
+      assert.equal(result.items[0].vendor, 'Vendor TEV');
+      assert.equal(result.items[0].price_text, '$89.00');
+      assert.equal(codexCalls.length, 1);
+      assert.equal(codexCalls[0].enableWebSearch, true);
+      assert.equal(structuredCalls, 0);
+      assert.equal(result.diagnostics.reasoning_rounds[0].planner, 'fast_codex_heuristic');
+    });
+
+    test('purchase recommendation runtime does not fall back to direct bing search when provider-layer search is unavailable', async () => {
+      const { createPurchaseRecommendationRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-purchase-recommendation.js'));
+      const runtime = createPurchaseRecommendationRuntime({
+        requestWebSearch: async () => ({
+          ok: false,
+          error: 'Provider web search is unavailable.'
+        }),
+        fetch: async () => {
+          throw new Error('fetch should not be used for search fallback');
+        }
+      });
+
+      const result = await runtime.execute({
+        provider: 'openai',
+        query: 'syringe filter'
+      });
+
+      assert.equal(result.status, 'no_match');
+      assert.match(String(result.summary || ''), /provider web search is unavailable/i);
+      assert.equal(result.diagnostics.search_result_count, 0);
+    });
+
     test('purchase recommendation runtime falls back to Open Graph metadata and rejects incomplete results', async () => {
       const { createPurchaseRecommendationRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-purchase-recommendation.js'));
       const pages = {
@@ -363,6 +505,380 @@ module.exports = function registerAgentRetrievalAndToolCallSuite(context = {}) {
       assert.equal(result.items[0].vendor, 'Vendor A');
       assert.equal(result.items[0].price_text, '$14.25');
       assert.equal(result.items[0].product_url, 'https://vendor-a.test/filter');
+    });
+
+    test('purchase recommendation runtime rejects article pages with non-price meta fields and keeps real products', async () => {
+      const { createPurchaseRecommendationRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-purchase-recommendation.js'));
+      const pages = {
+        'https://microbenotes.test/plasmids': `
+          <html>
+            <head>
+              <meta property="og:title" content="Plasmids: Definition, Structure, Types, and Applications" />
+              <meta property="og:image" content="https://microbenotes.test/plasmids.png" />
+              <meta property="og:site_name" content="Microbe Notes" />
+              <meta name="twitter:data1" content="Nidhi Abhay Kulkarni" />
+              <link rel="canonical" href="https://microbenotes.test/plasmids" />
+            </head>
+            <body>Learn about plasmid structure, replication, and applications in microbiology.</body>
+          </html>
+        `,
+        'https://vendor-a.test/products/plasmid-miniprep-kit': `
+          <html>
+            <head>
+              <title>Vendor A Plasmid Miniprep Kit</title>
+              <meta name="application-name" content="Vendor A" />
+              <link rel="canonical" href="https://vendor-a.test/products/plasmid-miniprep-kit" />
+            </head>
+            <body>
+              <h1>Vendor A Plasmid Miniprep Kit</h1>
+              <img src="https://vendor-a.test/images/plasmid-kit.png" />
+              <div>Price $79.00</div>
+              <button>Add to cart</button>
+            </body>
+          </html>
+        `
+      };
+      const runtime = createPurchaseRecommendationRuntime({
+        searchWebResults: async () => ([
+          { title: 'Plasmids article', url: 'https://microbenotes.test/plasmids' },
+          { title: 'Vendor A product', url: 'https://vendor-a.test/products/plasmid-miniprep-kit' }
+        ]),
+        fetch: async (url) => ({
+          ok: true,
+          text: async () => pages[url] || ''
+        })
+      });
+
+      const result = await runtime.execute({
+        query: 'plasmid miniprep kit'
+      });
+
+      assert.equal(result.status, 'matched');
+      assert.equal(result.items.length, 1);
+      assert.equal(result.items[0].title, 'Vendor A Plasmid Miniprep Kit');
+      assert.equal(result.items[0].vendor, 'Vendor A');
+      assert.equal(result.items[0].price_text, '$79.00');
+      assert.equal(result.items[0].product_url, 'https://vendor-a.test/products/plasmid-miniprep-kit');
+      assert.equal(result.items[0].candidate_reasoning?.product_gate?.is_product, true);
+    });
+
+    test('purchase recommendation runtime extracts deeper product details from shallow vendor pages', async () => {
+      const { createPurchaseRecommendationRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-purchase-recommendation.js'));
+      const runtime = createPurchaseRecommendationRuntime({
+        searchWebResults: async () => ([
+          { title: 'Serological Pipettes', url: 'https://vendor-b.test/catalog/serological-pipettes' }
+        ]),
+        fetch: async () => ({
+          ok: true,
+          text: async () => `
+            <html>
+              <head>
+                <title>Serological Pipettes | Vendor B</title>
+                <meta name="application-name" content="Vendor B" />
+                <link rel="canonical" href="https://vendor-b.test/catalog/serological-pipettes" />
+              </head>
+              <body>
+                <h1>Serological Pipettes</h1>
+                <img src="https://vendor-b.test/images/serological-pipettes.jpg" />
+                <div>From $42.50</div>
+                <button>Add to cart</button>
+              </body>
+            </html>
+          `
+        })
+      });
+
+      const result = await runtime.execute({
+        query: 'serological pipette'
+      });
+
+      assert.equal(result.status, 'matched');
+      assert.equal(result.items.length, 1);
+      assert.equal(result.items[0].vendor, 'Vendor B');
+      assert.equal(result.items[0].price_text, '$42.50');
+      assert.equal(result.items[0].image_url, 'https://vendor-b.test/images/serological-pipettes.jpg');
+      assert.equal(result.items[0].product_url, 'https://vendor-b.test/catalog/serological-pipettes');
+      assert.equal(result.items[0].candidate_reasoning?.product_gate?.signals.includes('commerce_page_cues'), true);
+    });
+
+    test('purchase recommendation runtime ignores product-category echoes in required terms while keeping explicit attributes', async () => {
+      const { createPurchaseRecommendationRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-purchase-recommendation.js'));
+      const runtime = createPurchaseRecommendationRuntime({
+        searchWebResults: async () => ([
+          { title: 'Vendor result', url: 'https://vendor-a.test/plasmid-kit' }
+        ]),
+        fetch: async () => ({
+          ok: true,
+          text: async () => `
+            <html>
+              <head>
+                <script type="application/ld+json">
+                  {
+                    "@context": "https://schema.org",
+                    "@type": "Product",
+                    "name": "Endotoxin-Free Plasmid Maxi Kit",
+                    "image": "https://vendor-a.test/plasmid-kit.png",
+                    "brand": { "@type": "Brand", "name": "Vendor A" },
+                    "offers": {
+                      "@type": "Offer",
+                      "priceCurrency": "USD",
+                      "price": "149.00",
+                      "url": "https://vendor-a.test/plasmid-kit"
+                    }
+                  }
+                </script>
+              </head>
+              <body>endotoxin-free plasmid maxiprep purification kit for transfection</body>
+            </html>
+          `
+        })
+      });
+
+      const result = await runtime.execute({
+        query: 'endotoxin-free plasmid preparation kit',
+        required_terms: ['endotoxin-free', 'plasmid preparation']
+      });
+
+      assert.equal(result.status, 'matched');
+      assert.equal(result.items.length, 1);
+      assert.deepEqual(result.filters.required_terms, ['endotoxin-free']);
+      assert.equal(result.items[0].title, 'Endotoxin-Free Plasmid Maxi Kit');
+    });
+
+    test('purchase recommendation runtime returns closest complete matches when strict attributes cannot all be verified', async () => {
+      const { createPurchaseRecommendationRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-purchase-recommendation.js'));
+      const runtime = createPurchaseRecommendationRuntime({
+        searchWebResults: async () => ([
+          { title: 'Vendor result', url: 'https://vendor-a.test/plasmid-kit' }
+        ]),
+        fetch: async () => ({
+          ok: true,
+          text: async () => `
+            <html>
+              <head>
+                <script type="application/ld+json">
+                  {
+                    "@context": "https://schema.org",
+                    "@type": "Product",
+                    "name": "Plasmid Maxi Kit",
+                    "description": "High-yield plasmid purification kit for large-scale preparation.",
+                    "image": "https://vendor-a.test/plasmid-kit.png",
+                    "brand": { "@type": "Brand", "name": "Vendor A" },
+                    "offers": {
+                      "@type": "Offer",
+                      "priceCurrency": "USD",
+                      "price": "129.00",
+                      "url": "https://vendor-a.test/plasmid-kit"
+                    }
+                  }
+                </script>
+              </head>
+              <body>large-scale plasmid purification kit</body>
+            </html>
+          `
+        })
+      });
+
+      const result = await runtime.execute({
+        query: 'endotoxin-free plasmid preparation kit',
+        required_terms: ['endotoxin-free']
+      });
+
+      assert.equal(result.status, 'matched');
+      assert.equal(result.match_mode, 'partial');
+      assert.equal(result.items.length, 1);
+      assert.match(String(result.summary || ''), /could not verify every requested attribute/i);
+      assert.deepEqual(result.items[0].matched_requirements, []);
+      assert.deepEqual(result.items[0].unverified_requirements, ['endotoxin-free']);
+    });
+
+    test('purchase recommendation runtime surfaces fetch failures instead of masking them as plain no-match results', async () => {
+      const { createPurchaseRecommendationRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-purchase-recommendation.js'));
+      const runtime = createPurchaseRecommendationRuntime({
+        searchWebResults: async () => ([
+          { title: 'Vendor result', url: 'https://vendor-a.test/plasmid-kit' }
+        ]),
+        fetch: async () => {
+          throw new Error('Network unavailable');
+        }
+      });
+
+      const result = await runtime.execute({
+        query: 'endotoxin-free plasmid preparation kit',
+        required_terms: ['endotoxin-free']
+      });
+
+      assert.equal(result.status, 'no_match');
+      assert.match(String(result.summary || ''), /could not retrieve vendor product pages/i);
+      assert.equal(result.diagnostics.fetch_failure_count, 1);
+    });
+
+    test('purchase recommendation runtime retries shopping-oriented search variants when the first query is weak', async () => {
+      const { createPurchaseRecommendationRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-purchase-recommendation.js'));
+      const searchQueries = [];
+      const pages = {
+        'https://info.test/ss320-overview': `
+          <html>
+            <head>
+              <title>SS320 Competent Cells Overview</title>
+              <meta property="og:image" content="https://info.test/ss320-overview.png" />
+              <meta property="og:site_name" content="Info Notes" />
+              <link rel="canonical" href="https://info.test/ss320-overview" />
+            </head>
+            <body>Overview and handling guide for SS320 competent cells.</body>
+          </html>
+        `,
+        'https://vendor-c.test/products/ss320-competent-cells': `
+          <html>
+            <head>
+              <title>SS320 E. coli Competent Cells</title>
+              <meta name="application-name" content="Vendor C" />
+              <link rel="canonical" href="https://vendor-c.test/products/ss320-competent-cells" />
+            </head>
+            <body>
+              <h1>SS320 E. coli Competent Cells</h1>
+              <img src="https://vendor-c.test/images/ss320.png" />
+              <script>
+                window.__NEXT_DATA__ = {"props":{"pageProps":{"product":{"price":"89.00","priceCurrency":"USD"}}}};
+              </script>
+              <button>Add to cart</button>
+            </body>
+          </html>
+        `
+      };
+      const runtime = createPurchaseRecommendationRuntime({
+        searchWebResults: async ({ query }) => {
+          searchQueries.push(query);
+          if (/product price|vendor catalog/i.test(query)) {
+            return [
+              { title: 'Vendor C SS320 product', url: 'https://vendor-c.test/products/ss320-competent-cells' }
+            ];
+          }
+          return [
+            { title: 'SS320 overview', url: 'https://info.test/ss320-overview' }
+          ];
+        },
+        fetch: async (url) => ({
+          ok: true,
+          text: async () => pages[url] || ''
+        })
+      });
+
+      const result = await runtime.execute({
+        query: 'SS320 E. coli competent cells'
+      });
+
+      assert.equal(result.status, 'matched');
+      assert.equal(result.items.length, 1);
+      assert.equal(result.items[0].title, 'SS320 E. coli Competent Cells');
+      assert.equal(result.items[0].vendor, 'Vendor C');
+      assert.equal(result.items[0].price_text, '$89.00');
+      assert.equal(searchQueries.some((query) => /product price|vendor catalog/i.test(query)), true);
+      assert.equal(result.items[0].candidate_reasoning?.product_gate?.is_product, true);
+    });
+
+    test('purchase recommendation runtime can use llm search planning and llm product judgments for non-Codex providers', async () => {
+      const { createPurchaseRecommendationRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-purchase-recommendation.js'));
+      const llmStages = [];
+      const runtime = createPurchaseRecommendationRuntime({
+        requestStructuredJsonPayload: async ({ stage, userPrompt }) => {
+          llmStages.push(stage);
+          if (stage === 'purchase_recommendation_search_plan_round_1') {
+            return {
+              ok: true,
+              payload: {
+                search_queries: ['SS320 competent cells vendor catalog'],
+                reasoning: 'Search the vendor catalog first to avoid overview pages.'
+              }
+            };
+          }
+          if (stage === 'purchase_recommendation_candidate_judge' && /catalog overview/i.test(userPrompt)) {
+            return {
+              ok: true,
+              payload: {
+                is_purchasable_item: false,
+                meets_requirements: false,
+                matched_requirements: [],
+                missing_requirements: [],
+                excluded_hits: [],
+                product_reason: 'This looks like a catalog overview page, not a direct product detail page.',
+                requirement_reason: 'Need to inspect the linked product detail page instead.',
+                likely_product_links: ['https://vendor-c.test/products/ss320-competent-cells']
+              }
+            };
+          }
+          return {
+            ok: true,
+            payload: {
+              is_purchasable_item: true,
+              meets_requirements: true,
+              title: 'SS320 E. coli Competent Cells',
+              vendor: 'Vendor C',
+              price_text: '$89.00',
+              image_url: 'https://vendor-c.test/images/ss320.png',
+              product_url: 'https://vendor-c.test/products/ss320-competent-cells',
+              matched_requirements: [],
+              missing_requirements: [],
+              excluded_hits: [],
+              product_reason: 'This is a purchasable product detail page.',
+              requirement_reason: 'The page matches the requested competent-cell product.',
+              likely_product_links: []
+            }
+          };
+        },
+        searchWebResults: async () => ([
+          { title: 'SS320 catalog overview', url: 'https://vendor-c.test/catalog/overview' }
+        ]),
+        fetch: async (url) => ({
+          ok: true,
+          text: async () => {
+            if (url === 'https://vendor-c.test/catalog/overview') {
+              return `
+                <html>
+                  <head>
+                    <title>Catalog Overview</title>
+                    <meta name="application-name" content="Vendor C" />
+                  </head>
+                  <body>
+                    <h1>Catalog Overview</h1>
+                    <a href="/products/ss320-competent-cells">SS320 Competent Cells</a>
+                  </body>
+                </html>
+              `;
+            }
+            return `
+              <html>
+                <head>
+                  <title>SS320 E. coli Competent Cells</title>
+                  <meta name="application-name" content="Vendor C" />
+                </head>
+                <body>
+                  <h1>SS320 E. coli Competent Cells</h1>
+                  <img src="https://vendor-c.test/images/ss320.png" />
+                  <div>Price $89.00</div>
+                  <button>Add to cart</button>
+                </body>
+              </html>
+            `;
+          }
+        })
+      });
+
+      const result = await runtime.execute({
+        provider: 'openai',
+        query: 'SS320 E. coli competent cells'
+      });
+
+      assert.equal(result.status, 'matched');
+      assert.equal(result.items.length, 1);
+      assert.equal(result.items[0].title, 'SS320 E. coli Competent Cells');
+      assert.equal(result.items[0].vendor, 'Vendor C');
+      assert.equal(result.items[0].price_text, '$89.00');
+      assert.equal(result.items[0].candidate_reasoning?.reasoning_source, 'llm');
+      assert.equal(result.diagnostics.reasoning_rounds[0].planner, 'llm');
+      assert.equal(result.diagnostics.reasoning_rounds[0].followed_product_link_count > 0, true);
+      assert.equal(llmStages.includes('purchase_recommendation_search_plan_round_1'), true);
+      assert.equal(llmStages.includes('purchase_recommendation_candidate_judge'), true);
     });
 
     test('agent tool-call catalog validators reject malformed catalog data', () => {

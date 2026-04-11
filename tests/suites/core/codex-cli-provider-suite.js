@@ -129,5 +129,20 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
         assert.equal(args[args.indexOf('-c') + 1], 'model_reasoning_effort=medium');
       });
     });
+
+    test('codex cli provider can enable web search as a global codex flag before exec', () => {
+      withCodexHome({}, () => {
+        const provider = loadProvider();
+        const args = provider.buildCodexCliExecArgs({
+          outputFile: '/tmp/codex-last-message.txt',
+          enableWebSearch: true
+        });
+
+        const searchIndex = args.indexOf('--search');
+        const execIndex = args.indexOf('exec');
+        assert.equal(searchIndex >= 0, true);
+        assert.equal(execIndex > searchIndex, true);
+      });
+    });
   }
 };

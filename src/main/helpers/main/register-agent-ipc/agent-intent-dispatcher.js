@@ -138,6 +138,27 @@ function createAgentIntentDispatcher({
     );
   }
 
+  function parseCompactList(value, max = 12) {
+    const source = Array.isArray(value)
+      ? value
+      : String(value || '').split(/\s*(?:,|;|\n|(?:\band\b)|(?:\bor\b))\s*/i);
+    const seen = new Set();
+    const output = [];
+    source.forEach((item) => {
+      const normalized = cleanText(item, 120);
+      if (!normalized) {
+        return;
+      }
+      const key = normalized.toLowerCase();
+      if (seen.has(key) || output.length >= max) {
+        return;
+      }
+      seen.add(key);
+      output.push(normalized);
+    });
+    return output;
+  }
+
   async function dispatchIntent({
     payload,
     context,
@@ -165,6 +186,23 @@ function createAgentIntentDispatcher({
       parserPayload
     });
     const hasPendingProtocolSession = protocolNotebookRuntime.hasPendingSession(sessionKey);
+    const trackedToolRunnerContext = {
+      snapshot,
+      allowWriteTools: false,
+      lifecycleRecorder,
+      provider,
+      endpoint,
+      apiKey,
+      model,
+      message,
+      conversation: promptConversation,
+      parserPayload,
+      traceContext,
+      project: {
+        id: cleanText(projectId, 120),
+        name: cleanText(projectName || getParserProjectEntityName(parserPayload), 220)
+      }
+    };
 
     if (parserPayload.primary_intent === 'protocol_to_notebook') {
       let protocolNotebookResult;
@@ -392,12 +430,14 @@ function createAgentIntentDispatcher({
           summary: 'More detail is required before I can recommend a purchasable product.'
         };
       } else {
-        const runTrackedTool = createLifecycleToolRunner({
-          snapshot,
-          allowWriteTools: false,
-          lifecycleRecorder
-        });
-        const purchaseRecommendationTool = await runTrackedTool('purchase-recommendation', {}, {
+        const runTrackedTool = createLifecycleToolRunner(trackedToolRunnerContext);
+        const purchaseRecommendationTool = await runTrackedTool('purchase-recommendation', {
+          query: cleanText(parserPayload?.entities?.product_query || message, 600),
+          message: cleanText(message, 1200),
+          required_terms: parseCompactList(parserPayload?.entities?.required_attributes, 12),
+          excluded_terms: parseCompactList(parserPayload?.entities?.excluded_attributes, 12),
+          budget_preference: cleanText(parserPayload?.entities?.budget_preference, 80)
+        }, {
           allowWriteTools: false
         });
         const toolResult = purchaseRecommendationTool?.result && typeof purchaseRecommendationTool.result === 'object'
@@ -462,11 +502,7 @@ function createAgentIntentDispatcher({
         };
         result.notebookDraft = null;
       } else {
-        const runTrackedTool = createLifecycleToolRunner({
-          snapshot,
-          allowWriteTools: false,
-          lifecycleRecorder
-        });
+        const runTrackedTool = createLifecycleToolRunner(trackedToolRunnerContext);
         const notebookDraftTool = await runTrackedTool('notebook-draft', {
           project: {
             id: cleanText(projectId, 120),
@@ -525,11 +561,7 @@ function createAgentIntentDispatcher({
       const parserDirectScienceAnswer = routingReasoningEffort === 0
         ? cleanText(parserPayload?.direct_answer, 12000)
         : '';
-      const runTrackedTool = createLifecycleToolRunner({
-        snapshot,
-        allowWriteTools: false,
-        lifecycleRecorder
-      });
+      const runTrackedTool = createLifecycleToolRunner(trackedToolRunnerContext);
 
       observability.recordLifecycleEvent(lifecycleRecorder, {
         stage: 'science_intent_start',

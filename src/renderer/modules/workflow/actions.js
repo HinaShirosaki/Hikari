@@ -581,19 +581,50 @@ export function createWorkflowActions(config = {}) {
       .replace(/^_+|_+$/g, '');
   }
 
-  function buildStepStorageFolderPath(workflow, entry, block) {
+  function buildTemplateFolderName(template) {
+    return `${sanitizeFolderName(template?.name || 'Untitled_Template') || 'Untitled_Template'}__${sanitizeFolderName(template?.id || 'template') || 'template'}`;
+  }
+
+  function buildWorkflowFolderName(workflow) {
+    return `${sanitizeFolderName(workflow?.name || 'Untitled_Workflow') || 'Untitled_Workflow'}__${sanitizeFolderName(workflow?.id || 'workflow') || 'workflow'}`;
+  }
+
+  function buildEntryFolderName(entry) {
+    return `${sanitizeFolderName(entry?.name || 'Entry') || 'Entry'}__${sanitizeFolderName(entry?.id || 'entry') || 'entry'}`;
+  }
+
+  function buildBlockFolderName(block) {
+    const blockLabel = renderer.titleForBlock?.(block) || block?.id || 'Step';
+    return `${sanitizeFolderName(blockLabel || 'Step') || 'Step'}__${sanitizeFolderName(block?.id || 'step') || 'step'}`;
+  }
+
+  function buildWorkflowInstanceRootFolderPath(workflow) {
     const rootPath = String(state.settings?.storagePath || '').trim();
     if (!rootPath) {
       return '';
     }
 
-    const project = (state.projects || []).find((item) => item.id === workflow.projectId);
-    const projectName = project?.name || 'Unlinked Project';
-    const workflowName = workflow.name || 'Untitled Workflow';
-    const entryName = entry.name || 'Entry';
-    const blockLabel = renderer.titleForBlock?.(block) || block.id || 'Step';
+    const template = getTemplateById(String(workflow?.templateId || '').trim()) || {
+      id: String(workflow?.templateId || 'untemplated').trim() || 'untemplated',
+      name: 'Untemplated Workflow'
+    };
+    return `${rootPath}/Workflow/${buildTemplateFolderName(template)}/${buildWorkflowFolderName(workflow)}`;
+  }
 
-    return `${rootPath}/Project/${sanitizeFolderName(projectName)}/Workflow/${sanitizeFolderName(workflowName)}/${sanitizeFolderName(entryName)}/${sanitizeFolderName(blockLabel)}`;
+  function buildWorkflowStepResultsFolderPath(workflow, entry, block) {
+    const workflowRoot = buildWorkflowInstanceRootFolderPath(workflow);
+    if (!workflowRoot) {
+      return '';
+    }
+    return `${workflowRoot}/Results/${buildEntryFolderName(entry)}/${buildBlockFolderName(block)}`;
+  }
+
+  function buildWorkflowStepNotebookFolderPath(workflow, entry, block) {
+    const workflowRoot = buildWorkflowInstanceRootFolderPath(workflow);
+    if (!workflowRoot) {
+      return '';
+    }
+    return `${workflowRoot}/Notebook/${buildEntryFolderName(entry)}/${buildBlockFolderName(block)}`;
   }
 
   async function ensureStorageFolderExists(storageFolder) {
@@ -681,7 +712,7 @@ export function createWorkflowActions(config = {}) {
       ? 'executed'
       : (options.executed === false ? 'planned' : (stepState.status === 'completed' ? 'executed' : 'planned'));
     const createdAt = String(existing?.createdAt || '').trim() || now;
-    const storageFolder = String(existing?.storageFolder || '').trim() || buildStepStorageFolderPath(workflow, entry, block);
+    const storageFolder = String(existing?.storageFolder || '').trim() || buildWorkflowStepNotebookFolderPath(workflow, entry, block);
     const notebookId = existing?.id || createId();
     const linkedAssayIds = (state.assays || [])
       .filter((item) => item.notebookEntryId === notebookId)
@@ -1028,7 +1059,7 @@ export function createWorkflowActions(config = {}) {
     }
 
     try {
-      const storageFolder = buildStepStorageFolderPath(workflow, entry, block);
+      const storageFolder = buildWorkflowStepResultsFolderPath(workflow, entry, block);
       await ensureStorageFolderExists(storageFolder);
       const importedRecords = await persistImportedWorkflowFiles({
         files: selectedFiles,

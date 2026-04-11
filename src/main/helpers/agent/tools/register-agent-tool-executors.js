@@ -177,6 +177,11 @@ function registerAgentToolExecutors(deps = {}) {
   genericAgentToolRuntime.registerToolExecutor('purchase-recommendation', async ({ args, context }) => {
     const result = await purchaseRecommendationRuntime.execute({
       ...args,
+      provider: cleanText(context?.provider, 80),
+      endpoint: cleanText(context?.endpoint, 2000),
+      apiKey: cleanText(context?.apiKey, 400),
+      model: cleanText(context?.model, 120),
+      traceContext: context?.traceContext || null,
       message: cleanText(args?.message || context?.message, 1200),
       parser_payload: resolveToolParserPayload(args, context),
       limit: toIntegerInRange(args?.limit, 6, 1, 6),

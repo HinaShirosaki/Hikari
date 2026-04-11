@@ -6,6 +6,7 @@ const { hydrateSnapshotFromBundle } = require('./storage-hydration');
 const { collectManifestEntries, isBundleCandidateName, isSqliteBundleCandidateName, looksLikeEnanaSnapshot, normalizeBundleSummary, STORAGE_MANIFEST_FILE_NAME, toPosixRelative } = require('./storage-manifest');
 const { getBundlePaths, getBundlePathsFromSqlitePath } = require('./storage-paths');
 const { summarizeSequenceLibrary } = require('./sequence-library-summary');
+const { importWorkflowRoot, resolveWorkflowStoragePaths } = require('./workflow-storage');
 const { asArray, cleanText, ensureObject, parseJsonObject } = require('./storage-utils');
 
 function mergeByIdMap(targetMap, records, fallbackPrefix) {
@@ -38,6 +39,19 @@ function mergeInventoryMap(targetInventoryMap, inventoryPayload) {
         id
       });
     });
+  });
+}
+
+function mergePaperExperimentLinks(targetMap, links) {
+  asArray(links).forEach((rawLink, index) => {
+    const link = ensureObject(rawLink);
+    const key = [
+      cleanText(link.paperId, 220),
+      cleanText(link.entryId, 220),
+      cleanText(link.projectId, 220),
+      cleanText(link.note, 600)
+    ].join('::') || `paper_link_${index + 1}`;
+    targetMap.set(key, link);
   });
 }
 
@@ -103,6 +117,10 @@ async function importStorageRoot({ storagePath = '' } = {}) {
 
   const protocolMap = new Map();
   const notebookMap = new Map();
+  const workflowTemplateMap = new Map();
+  const workflowMap = new Map();
+  const paperMap = new Map();
+  const paperExperimentLinkMap = new Map();
   const chemicalMap = new Map();
   const inventoryZoneMap = new Map();
   const blockMap = new Map();
@@ -206,6 +224,10 @@ async function importStorageRoot({ storagePath = '' } = {}) {
   const statePatch = {
     protocols: [...protocolMap.values()],
     notebookEntries: [...notebookMap.values()],
+    workflowTemplates: [...workflowTemplateMap.values()],
+    workflows: [...workflowMap.values()],
+    papers: [...paperMap.values()],
+    paperExperimentLinks: [...paperExperimentLinkMap.values()],
     labInventory: {
       chemicals: [...chemicalMap.values()],
       blocks: mergedBlocks,
@@ -216,11 +238,29 @@ async function importStorageRoot({ storagePath = '' } = {}) {
     inventory: mergedInventory
   };
 
+  const workflowRoot = await importWorkflowRoot({ storagePath: resolvedStoragePath });
+  mergeByIdMap(workflowTemplateMap, workflowRoot?.statePatch?.workflowTemplates, 'workflow_template');
+  mergeByIdMap(workflowMap, workflowRoot?.statePatch?.workflows, 'workflow');
+  mergeByIdMap(notebookMap, workflowRoot?.statePatch?.notebookEntries, 'notebook');
+  mergeByIdMap(paperMap, workflowRoot?.statePatch?.papers, 'paper');
+  mergePaperExperimentLinks(paperExperimentLinkMap, workflowRoot?.statePatch?.paperExperimentLinks);
+
+  statePatch.workflowTemplates = [...workflowTemplateMap.values()];
+  statePatch.workflows = [...workflowMap.values()];
+  statePatch.notebookEntries = [...notebookMap.values()];
+  statePatch.papers = [...paperMap.values()];
+  statePatch.paperExperimentLinks = [...paperExperimentLinkMap.values()];
+
   const sequenceLibrary = await summarizeSequenceLibrary(resolvedStoragePath);
+  const workflowPaths = resolveWorkflowStoragePaths(resolvedStoragePath);
+  const allWarnings = warnings.concat(asArray(workflowRoot?.warnings));
   const summary = {
     bundles: bundleSummaries.length,
     protocols: statePatch.protocols.length,
     notebookEntries: statePatch.notebookEntries.length,
+    workflowTemplates: statePatch.workflowTemplates.length,
+    workflows: statePatch.workflows.length,
+    papers: statePatch.papers.length,
     chemicals: statePatch.labInventory.chemicals.length,
     personalInventoryContainers: Object.values(statePatch.inventory)
       .reduce((sum, list) => sum + asArray(list).length, 0),
@@ -235,6 +275,13 @@ async function importStorageRoot({ storagePath = '' } = {}) {
     root_path: resolvedStoragePath,
     discovered_files: discoveredFiles,
     bundles: bundleSummaries,
+    workflow_storage: {
+      relative_root_path: toPosixRelative(resolvedStoragePath, workflowPaths.workflowRootPath),
+      relative_status_sqlite_path: toPosixRelative(resolvedStoragePath, workflowPaths.sqlitePath),
+      workflow_templates: statePatch.workflowTemplates.length,
+      workflows: statePatch.workflows.length,
+      papers: statePatch.papers.length
+    },
     sequence_library: {
       relative_path: toPosixRelative(resolvedStoragePath, sequenceLibrary.path),
       exists: sequenceLibrary.exists,
@@ -242,7 +289,7 @@ async function importStorageRoot({ storagePath = '' } = {}) {
       status_counts: sequenceLibrary.statusCounts
     },
     summary,
-    warnings
+    warnings: allWarnings
   };
   const manifestPath = path.join(resolvedStoragePath, STORAGE_MANIFEST_FILE_NAME);
   await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2), 'utf8');
@@ -251,7 +298,7 @@ async function importStorageRoot({ storagePath = '' } = {}) {
     statePatch,
     summary,
     manifestPath,
-    warnings,
+    warnings: allWarnings,
     bundles: bundleSummaries,
     sequenceLibrary
   };

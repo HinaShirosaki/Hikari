@@ -669,6 +669,9 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
       const parts = [
         `${Number(summary.protocols) || 0} protocols`,
         `${Number(summary.notebookEntries) || 0} notebook entries`,
+        `${Number(summary.workflowTemplates) || 0} workflow templates`,
+        `${Number(summary.workflows) || 0} workflows`,
+        `${Number(summary.papers) || 0} papers`,
         `${Number(summary.chemicals) || 0} chemicals`,
         `${Number(summary.personalInventoryContainers) || 0} inventory containers`,
         `${Number(summary.sequenceEntries) || 0} sequences`

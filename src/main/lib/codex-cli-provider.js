@@ -389,16 +389,21 @@ function resolveCodexCliReasoningEffort(reasoningEffort = '', model = '', catalo
   return explicitEffort || configuredCodexReasoningEffort || normalizeCodexCliReasoningEffort(resolvedCatalog.defaultReasoningEffort);
 }
 
-function buildCodexCliExecArgs({ outputFile = '', model = '', reasoningEffort = '' } = {}) {
+function buildCodexCliExecArgs({ outputFile = '', model = '', reasoningEffort = '', enableWebSearch = false } = {}) {
   const catalog = getCodexCliCatalog();
   const args = [
     '-a', 'never',
-    '-s', 'read-only',
+    '-s', 'read-only'
+  ];
+  if (enableWebSearch === true) {
+    args.push('--search');
+  }
+  args.push(
     'exec',
     '--skip-git-repo-check',
     '--output-last-message', outputFile,
     '--color', 'never'
-  ];
+  );
   const resolvedModel = resolveCodexCliModel(model, catalog);
   if (resolvedModel) {
     args.push('-m', resolvedModel);
@@ -574,6 +579,7 @@ async function requestCodexCliText({
   prompt,
   model = '',
   reasoningEffort = '',
+  enableWebSearch = false,
   cwd = process.cwd(),
   timeoutMs = DEFAULT_TIMEOUT_MS,
   fileName = '',
@@ -621,7 +627,8 @@ async function requestCodexCliText({
     const args = buildCodexCliExecArgs({
       outputFile,
       model,
-      reasoningEffort
+      reasoningEffort,
+      enableWebSearch
     });
 
     await runCodexCommand({

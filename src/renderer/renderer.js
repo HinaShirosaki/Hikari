@@ -412,10 +412,62 @@ function mergeInventoryMap(existingInventory, importedInventory) {
   return merged;
 }
 
+function mergePaperExperimentLinks(existingLinks, importedLinks) {
+  const merged = new Map();
+  const addLink = (rawLink, prefix, index) => {
+    const source = rawLink && typeof rawLink === 'object' ? rawLink : {};
+    const baseKey = [
+      String(source.paperId || '').trim(),
+      String(source.entryId || '').trim(),
+      String(source.projectId || '').trim(),
+      String(source.note || '').trim()
+    ].join('::');
+    const key = baseKey || `${prefix}_${index + 1}`;
+    merged.set(key, {
+      ...(merged.get(key) || {}),
+      ...source
+    });
+  };
+  asArray(existingLinks).forEach((link, index) => addLink(link, 'existing', index));
+  asArray(importedLinks).forEach((link, index) => addLink(link, 'imported', index));
+  return [...merged.values()];
+}
+
+function mergePaperRecords(existingRecords, importedRecords) {
+  const merged = new Map();
+  const pushRecord = (record, index, prefix) => {
+    const source = record && typeof record === 'object' ? record : {};
+    const id = String(source.id || `${prefix}_${index + 1}`).trim();
+    const previous = merged.get(id) || {};
+    const next = {
+      ...previous,
+      ...source,
+      id
+    };
+    if (!String(source.pdfDataUrl || '').trim()) {
+      next.pdfDataUrl = String(previous.pdfDataUrl || '').trim();
+    }
+    if (!String(source.storedFilePath || '').trim()) {
+      next.storedFilePath = String(previous.storedFilePath || '').trim();
+    }
+    if (!String(source.storedRelativePath || '').trim()) {
+      next.storedRelativePath = String(previous.storedRelativePath || '').trim();
+    }
+    merged.set(id, next);
+  };
+  asArray(existingRecords).forEach((record, index) => pushRecord(record, index, 'paper_existing'));
+  asArray(importedRecords).forEach((record, index) => pushRecord(record, index, 'paper_imported'));
+  return [...merged.values()];
+}
+
 function mergeStorageImportPatch(statePatch) {
   const patch = statePatch && typeof statePatch === 'object' ? statePatch : {};
   state.protocols = mergeRecordsById(state.protocols, patch.protocols, 'protocol');
   state.notebookEntries = mergeRecordsById(state.notebookEntries, patch.notebookEntries, 'notebook');
+  state.workflowTemplates = mergeRecordsById(state.workflowTemplates, patch.workflowTemplates, 'workflow_template');
+  state.workflows = mergeRecordsById(state.workflows, patch.workflows, 'workflow');
+  state.papers = mergePaperRecords(state.papers, patch.papers);
+  state.paperExperimentLinks = mergePaperExperimentLinks(state.paperExperimentLinks, patch.paperExperimentLinks);
 
   const existingLabInventory = state.labInventory && typeof state.labInventory === 'object'
     ? state.labInventory
@@ -483,6 +535,9 @@ function updateStorageImportState(payload) {
       bundles: Number(summary.bundles) || 0,
       protocols: Number(summary.protocols) || 0,
       notebookEntries: Number(summary.notebookEntries) || 0,
+      workflowTemplates: Number(summary.workflowTemplates) || 0,
+      workflows: Number(summary.workflows) || 0,
+      papers: Number(summary.papers) || 0,
       chemicals: Number(summary.chemicals) || 0,
       personalInventoryContainers: Number(summary.personalInventoryContainers) || 0,
       sequenceEntries: Number(summary.sequenceEntries) || 0
@@ -506,6 +561,9 @@ function updateStorageImportError(message) {
         bundles: 0,
         protocols: 0,
         notebookEntries: 0,
+        workflowTemplates: 0,
+        workflows: 0,
+        papers: 0,
         chemicals: 0,
         personalInventoryContainers: 0,
         sequenceEntries: 0

@@ -1,0 +1,31 @@
+{
+  "exportedAt": "2026-04-11T02:18:48.231Z",
+  "workflowId": "1775782082531-5f0b06480b152",
+  "notebookEntry": {
+    "id": "1775782438767-07fe8804749718",
+    "notebookType": "biology",
+    "projectId": "",
+    "projectName": "",
+    "protocolId": "1774024695073-536c18071dd0d",
+    "protocolName": "Ni-NTA Purification of His-Tagged Protein",
+    "values": {},
+    "result": "",
+    "resultFiles": [],
+    "resultFileRecords": [],
+    "storageFolder": "",
+    "createdAt": "2026-04-10T00:53:58.767Z",
+    "updatedAt": "2026-04-10T01:46:09.641Z",
+    "notebookState": "planned",
+    "executedAt": "",
+    "workflowContext": {
+      "workflowId": "1775782082531-5f0b06480b152",
+      "workflowName": "Histagged protein preparation",
+      "workflowEntryId": "1775782082531-987a24403f0f28",
+      "workflowEntryName": "Entry 1",
+      "workflowBlockId": "1775782082531-3fe7f2356647c8",
+      "workflowBlockTitle": "Ni-NTA Purification of His-Tagged Protein"
+    },
+    "assayIds": [],
+    "gelAnalysisIds": []
+  }
+}

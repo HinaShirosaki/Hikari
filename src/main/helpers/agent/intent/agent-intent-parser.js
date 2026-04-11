@@ -51,92 +51,57 @@ const PARSER_REASONING_EFFORT_LEVELS = Object.freeze([0, 1, 2]);
 // Maximum number of protocol name candidates the parser may return.
 const PARSER_PROTOCOL_CANDIDATE_LIMIT = 3;
 
-// Prompt-visible JSON template showing the exact response structure expected from the model.
+// Prompt-visible base JSON template. Intents may append only their listed extra fields.
 const INTENT_PARSER_OUTPUT_TEMPLATE = Object.freeze({
-  primary_intent: 'one allowed intent',
-  reasoning_effort: 1,
-  direct_answer: 'string or null',
-  needs_clarification: true,
-  clarification_reason: 'string or null',
-  entities: {},
-  inventory_search: {
-    normalized_query: null,
-    candidate_terms: [],
-    aliases: [],
-    search_mode: null
-  },
-  protocol_candidates: [],
-  reasoning_summary: 'brief explanation'
+  primary_intent: 'one allowed intent'
 });
 
-// JSON-schema-like validation shape for normalized parser responses.
-const INTENT_PARSER_RESPONSE_SCHEMA = {
-  type: 'object',
-  additionalProperties: false,
-  required: [
-    'primary_intent',
-    'reasoning_effort',
-    'needs_clarification',
-    'clarification_reason',
-    'entities',
-    'inventory_search',
-    'protocol_candidates',
-    'reasoning_summary'
-  ],
-  properties: {
-    primary_intent: {
-      type: 'string',
-      enum: PARSER_ALLOWED_INTENTS
-    },
-    reasoning_effort: {
-      type: 'integer',
-      enum: PARSER_REASONING_EFFORT_LEVELS
-    },
-    direct_answer: {
-      anyOf: [{ type: 'string' }, { type: 'null' }]
-    },
-    needs_clarification: {
-      type: 'boolean'
-    },
-    clarification_reason: {
-      anyOf: [{ type: 'string' }, { type: 'null' }]
-    },
-    entities: {
-      type: 'object',
-      additionalProperties: {
-        anyOf: [{ type: 'string' }, { type: 'null' }]
+// Shared schema fragments used to build the strict per-intent response schema.
+const INTENT_PARSER_ENTITY_VALUE_SCHEMA = Object.freeze({
+  anyOf: [{ type: 'string' }, { type: 'null' }]
+});
+const INTENT_PARSER_OPTIONAL_PROPERTY_SCHEMAS = Object.freeze({
+  reasoning_effort: {
+    type: 'integer',
+    enum: PARSER_REASONING_EFFORT_LEVELS
+  },
+  direct_answer: {
+    anyOf: [{ type: 'string' }, { type: 'null' }]
+  },
+  needs_clarification: {
+    type: 'boolean'
+  },
+  clarification_reason: {
+    anyOf: [{ type: 'string' }, { type: 'null' }]
+  },
+  inventory_search: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['normalized_query', 'candidate_terms', 'aliases', 'search_mode'],
+    properties: {
+      normalized_query: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+      candidate_terms: {
+        type: 'array',
+        items: { type: 'string' }
+      },
+      aliases: {
+        type: 'array',
+        items: { type: 'string' }
+      },
+      search_mode: {
+        anyOf: [
+          { type: 'string', enum: PARSER_SEARCH_MODES },
+          { type: 'null' }
+        ]
       }
-    },
-    inventory_search: {
-      type: 'object',
-      additionalProperties: false,
-      required: ['normalized_query', 'candidate_terms', 'aliases', 'search_mode'],
-      properties: {
-        normalized_query: { anyOf: [{ type: 'string' }, { type: 'null' }] },
-        candidate_terms: {
-          type: 'array',
-          items: { type: 'string' }
-        },
-        aliases: {
-          type: 'array',
-          items: { type: 'string' }
-        },
-        search_mode: {
-          anyOf: [
-            { type: 'string', enum: PARSER_SEARCH_MODES },
-            { type: 'null' }
-          ]
-        }
-      }
-    },
-    protocol_candidates: {
-      type: 'array',
-      maxItems: PARSER_PROTOCOL_CANDIDATE_LIMIT,
-      items: { type: 'string' }
-    },
-    reasoning_summary: { type: 'string' }
+    }
+  },
+  protocol_candidates: {
+    type: 'array',
+    maxItems: PARSER_PROTOCOL_CANDIDATE_LIMIT,
+    items: { type: 'string' }
   }
-};
+});
 
 // Return the input only when it is already an array; otherwise use an empty array.
 function asArray(value) {
@@ -226,8 +191,20 @@ function normalizeEntityKey(rawKey) {
     .replace(/[\s-]+/g, '_');
 }
 
-// Normalize the parser's entity block so every supported entity key is present.
+function createEmptyInventorySearch() {
+  return {
+    normalized_query: null,
+    candidate_terms: [],
+    aliases: [],
+    search_mode: null
+  };
+}
+
+// Normalize the parser's entity block into a compact optional object.
 function normalizeEntityBlock(rawEntities) {
+  if (rawEntities == null) {
+    return {};
+  }
   if (!isObject(rawEntities)) {
     return null;
   }
@@ -263,6 +240,9 @@ function normalizeDirectAnswer(rawDirectAnswer, primaryIntent = '', reasoningEff
 
 // Normalize inventory search hints returned by the parser.
 function normalizeInventorySearch(rawInventorySearch) {
+  if (rawInventorySearch == null) {
+    return createEmptyInventorySearch();
+  }
   if (!isObject(rawInventorySearch)) {
     return null;
   }
@@ -276,6 +256,27 @@ function normalizeInventorySearch(rawInventorySearch) {
     aliases,
     search_mode: PARSER_SEARCH_MODES.includes(searchMode) ? searchMode : null
   };
+}
+
+function normalizeNeedsClarification(rawNeedsClarification, primaryIntent = '', rawClarificationReason = '') {
+  if (rawNeedsClarification === true || rawNeedsClarification === false) {
+    return rawNeedsClarification;
+  }
+  if (cleanText(rawClarificationReason, 260)) {
+    return true;
+  }
+  return ['mixed_request', 'unclear'].includes(cleanText(primaryIntent, 80));
+}
+
+function buildDefaultClarificationReason(primaryIntent = '') {
+  const intent = cleanText(primaryIntent, 80);
+  if (intent === 'mixed_request') {
+    return 'Please split the request or tell me which task to handle first.';
+  }
+  if (intent === 'unclear') {
+    return 'Please share the missing detail I need to route this request.';
+  }
+  return null;
 }
 
 // Keep protocol candidates only for notebook requests and seed them from explicit protocol entities.
@@ -325,7 +326,11 @@ function normalizeIntentParserPayload(rawValue) {
     };
   }
 
-  if (parsed.needs_clarification !== true && parsed.needs_clarification !== false) {
+  if (
+    parsed.needs_clarification !== undefined
+    && parsed.needs_clarification !== true
+    && parsed.needs_clarification !== false
+  ) {
     return {
       ok: false,
       error: 'Intent parser needs_clarification must be a boolean.'
@@ -333,30 +338,35 @@ function normalizeIntentParserPayload(rawValue) {
   }
 
   const reasoningEffort = normalizeReasoningEffort(parsed.reasoning_effort, primaryIntent);
+  const needsClarification = normalizeNeedsClarification(
+    parsed.needs_clarification,
+    primaryIntent,
+    parsed.clarification_reason
+  );
 
   const entities = normalizeEntityBlock(parsed.entities);
-  if (!entities) {
+  if (entities === null) {
     return {
       ok: false,
-      error: 'Intent parser entities payload is missing or malformed.'
+      error: 'Intent parser entities payload is malformed.'
     };
   }
 
   const inventorySearchRaw = normalizeInventorySearch(parsed.inventory_search);
-  if (!inventorySearchRaw) {
+  if (inventorySearchRaw === null) {
     return {
       ok: false,
-      error: 'Intent parser inventory_search payload is missing or malformed.'
+      error: 'Intent parser inventory_search payload is malformed.'
     };
   }
 
-  if (!Array.isArray(parsed.protocol_candidates)) {
+  if (parsed.protocol_candidates !== undefined && !Array.isArray(parsed.protocol_candidates)) {
     return {
       ok: false,
       error: 'Intent parser protocol_candidates must be an array.'
     };
   }
-  if (parsed.protocol_candidates.length > PARSER_PROTOCOL_CANDIDATE_LIMIT) {
+  if (Array.isArray(parsed.protocol_candidates) && parsed.protocol_candidates.length > PARSER_PROTOCOL_CANDIDATE_LIMIT) {
     return {
       ok: false,
       error: 'Intent parser protocol_candidates must contain at most 3 candidates.'
@@ -371,12 +381,7 @@ function normalizeIntentParserPayload(rawValue) {
       aliases: inventorySearchRaw.aliases,
       search_mode: inventorySearchRaw.search_mode || 'exact_then_alias_then_fuzzy'
     }
-    : {
-      normalized_query: null,
-      candidate_terms: [],
-      aliases: [],
-      search_mode: null
-    };
+    : createEmptyInventorySearch();
 
   // Return the final normalized payload consumed by routing and downstream helpers.
   return {
@@ -388,14 +393,21 @@ function normalizeIntentParserPayload(rawValue) {
         parsed.direct_answer,
         primaryIntent,
         reasoningEffort,
-        parsed.needs_clarification === true
+        needsClarification
       ),
-      needs_clarification: parsed.needs_clarification === true,
-      clarification_reason: cleanText(parsed.clarification_reason, 260) || null,
+      needs_clarification: needsClarification,
+      clarification_reason: needsClarification
+        ? (cleanText(parsed.clarification_reason, 260) || buildDefaultClarificationReason(primaryIntent))
+        : null,
       entities,
       inventory_search: normalizedInventorySearch,
-      protocol_candidates: normalizeProtocolCandidates(parsed.protocol_candidates, primaryIntent, entities),
-      reasoning_summary: cleanText(parsed.reasoning_summary, 300) || 'Intent parser returned no reasoning summary.'
+      protocol_candidates: normalizeProtocolCandidates(
+        Array.isArray(parsed.protocol_candidates) ? parsed.protocol_candidates : [],
+        primaryIntent,
+        entities
+      ),
+      reasoning_summary: cleanText(parsed.reasoning_summary, 300)
+        || `Intent parser selected ${primaryIntent}.`
     }
   };
 }
@@ -474,6 +486,13 @@ function formatIntentSpecificOutputAppend(rows = []) {
     .join('\n');
 }
 
+function formatIntentSpecificOutputKeys(rows = []) {
+  return asArray(rows)
+    .map((row) => cleanText(row?.key, 120))
+    .filter(Boolean)
+    .join(', ');
+}
+
 function buildScienceReasoningEffortRubric() {
   return [
     '- For science intents, default to reasoning_effort 1 unless the request clearly belongs at 0 or 2.',
@@ -493,42 +512,89 @@ function buildIntentCatalogPrompt(catalog = []) {
     `### ${entry.name}`,
     entry.description,
     `Intent-specific rule: ${entry.rules}`,
+    `Append only these extra fields: ${formatIntentSpecificOutputKeys(entry.specific_output_append) || '(none)'}`,
     'Intent-specific output append:',
     formatIntentSpecificOutputAppend(entry.specific_output_append)
   ].join('\n')).join('\n\n');
-  const examples = normalizedCatalog.map((entry) => `User: "${entry.example_input}"`).join('\n');
 
   // Assemble one reusable instruction block that defines intents, schema, rules, and examples.
   return [
     'You are an intent and entity parser for a lab assistant app.',
-    "Your job is to read the user's message and return JSON only.",
-    'You must classify the user intent, extract key entities, and prepare inventory search hints when inventory is involved.',
+    "Read the user's message and return compact JSON only.",
     '## Allowed intents',
     allowedIntents,
-    '## Output schema',
+    '## Output shape',
     JSON.stringify(INTENT_PARSER_OUTPUT_TEMPLATE, null, 2),
+    'Always include primary_intent.',
+    'Add only the extra fields listed for the chosen intent.',
+    'Omit all other keys and empty placeholders.',
+    'If you include entities, include only the listed entity keys under an entities object.',
     '## Rules',
     '- Return JSON only.',
     '- Choose exactly one primary intent.',
-    '- Always return reasoning_effort as 0, 1, or 2. For non-science intents, set reasoning_effort to 0.',
-    '- For science intents with reasoning_effort 0, provide the final user-facing answer in direct_answer.',
-    '- For all other cases, set direct_answer to null.',
-    '- Populate entities only when they are supported by the user message or recent conversation.',
-    '- For intents other than inventory_lookup, set inventory_search to nulls and empty arrays.',
-    '- For intents other than protocol_to_notebook and notebook_draft, set protocol_candidates to [].',
+    '- For science intents, include reasoning_effort as 0, 1, or 2.',
+    '- Include direct_answer only when reasoning_effort is 0.',
+    '- Include inventory_search only for inventory_lookup.',
+    '- Include protocol_candidates only for protocol_to_notebook or notebook_draft.',
+    '- Include needs_clarification and clarification_reason when clarification is required.',
     '- Do not invent obscure aliases or unsupported protocol names.',
     '## Science reasoning_effort rubric',
     buildScienceReasoningEffortRubric(),
     '## Intent descriptions',
     descriptions,
-    '## Examples',
-    examples,
     'Return JSON only.'
   ].join('\n\n');
 }
 
-// Validated static catalog and prebuilt prompt shared by all parser calls.
+function cloneSchemaFragment(schema) {
+  return JSON.parse(JSON.stringify(schema));
+}
+
+function buildIntentSpecificResponseSchema(catalog = []) {
+  const normalizedCatalog = asArray(catalog).length ? asArray(catalog) : INTENT_PARSER_CATALOG;
+  const properties = {
+    primary_intent: {
+      type: 'string',
+      enum: normalizedCatalog.map((entry) => entry.name)
+    }
+  };
+  const entityKeys = new Set();
+  normalizedCatalog.forEach((entry) => {
+    asArray(entry.specific_output_append).forEach((row) => {
+      const key = cleanText(row?.key, 120);
+      if (!key) {
+        return;
+      }
+      if (key.startsWith('entities.')) {
+        entityKeys.add(normalizeEntityKey(key.slice('entities.'.length)));
+        return;
+      }
+      if (Object.prototype.hasOwnProperty.call(INTENT_PARSER_OPTIONAL_PROPERTY_SCHEMAS, key)) {
+        properties[key] = cloneSchemaFragment(INTENT_PARSER_OPTIONAL_PROPERTY_SCHEMAS[key]);
+      }
+    });
+  });
+  if (entityKeys.size) {
+    properties.entities = {
+      type: 'object',
+      additionalProperties: false,
+      properties: [...entityKeys].reduce((acc, key) => {
+        acc[key] = cloneSchemaFragment(INTENT_PARSER_ENTITY_VALUE_SCHEMA);
+        return acc;
+      }, {})
+    };
+  }
+  return {
+    type: 'object',
+    additionalProperties: false,
+    required: ['primary_intent'],
+    properties
+  };
+}
+
+// Validated static catalog and prebuilt prompt/schema shared by all parser calls.
 const INTENT_PARSER_CATALOG = validateIntentCatalog(RAW_INTENT_CATALOG);
+const INTENT_PARSER_RESPONSE_SCHEMA = buildIntentSpecificResponseSchema(INTENT_PARSER_CATALOG);
 const INTENT_PARSER_PROMPT = buildIntentCatalogPrompt(INTENT_PARSER_CATALOG);
 
 // Map parser output intents to execution-layer intents, defaulting safely when unknown.

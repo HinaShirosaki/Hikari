@@ -36,6 +36,34 @@ function defaultParsePdfDataUrl(pdfDataUrl) {
   return match?.[1] ? String(match[1]).trim() : '';
 }
 
+function normalizeWebUrl(value) {
+  const raw = String(value || '').trim();
+  if (!raw) {
+    return '';
+  }
+  try {
+    const parsed = new URL(raw);
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      return '';
+    }
+    return parsed.toString();
+  } catch {
+    return '';
+  }
+}
+
+function extractSourceDomain(url) {
+  const normalized = normalizeWebUrl(url);
+  if (!normalized) {
+    return '';
+  }
+  try {
+    return String(new URL(normalized).hostname || '').toLowerCase();
+  } catch {
+    return '';
+  }
+}
+
 function defaultExtractResponseText(payload, asArray = defaultAsArray) {
   if (typeof payload?.output_text === 'string' && payload.output_text.trim()) {
     return payload.output_text.trim();
@@ -326,6 +354,49 @@ function createAgentLlmProviderBridge(deps = {}) {
       assistant_text: cleanText(extractResponseText(raw), 12000),
       tool_calls: extractFunctionCalls(raw)
     };
+  }
+
+  function normalizeWebSearchPayload(payload = {}, maxResults = 8) {
+    const source = payload && typeof payload === 'object' ? payload : {};
+    const results = asArray(source.results || source.items || source.search_results)
+      .map((item) => {
+        const result = item && typeof item === 'object' ? item : {};
+        const url = normalizeWebUrl(result.url || result.link);
+        return {
+          title: cleanText(result.title || result.name, 320),
+          url,
+          summary: cleanText(result.summary || result.snippet || result.description, 1200),
+          source_domain: cleanText(result.source_domain, 120).toLowerCase() || extractSourceDomain(url)
+        };
+      })
+      .filter((item) => item.url)
+      .slice(0, Math.max(1, Number(maxResults) || 8));
+    return {
+      results,
+      reasoning: cleanText(source.reasoning || source.summary, 600)
+    };
+  }
+
+  function buildWebSearchPrompt({
+    query = '',
+    maxResults = 8,
+    allowedDomains = [],
+    userLocation = null,
+    codexMode = false
+  } = {}) {
+    return [
+      codexMode
+        ? 'If internet access is available in this Codex environment, search the web for the requested query. If internet access is unavailable, return an empty results array and explain that in reasoning.'
+        : 'Use web search to find relevant results for the requested query.',
+      `Search query: ${cleanText(query, 800) || '-'}`,
+      `Max results: ${Math.max(1, Number(maxResults) || 8)}`,
+      `Allowed domains: ${asArray(allowedDomains).map((item) => cleanText(item, 160)).filter(Boolean).join(', ') || '-'}`,
+      `User location: ${userLocation && typeof userLocation === 'object'
+        ? JSON.stringify(userLocation)
+        : '-'}`,
+      'Return JSON only with this shape:',
+      '{"results":[{"title":"...","url":"https://...","summary":"...","source_domain":"example.com"}],"reasoning":"brief note"}'
+    ].join('\n\n');
   }
 
   async function recordTrace(traceContext, {
@@ -782,6 +853,159 @@ function createAgentLlmProviderBridge(deps = {}) {
           return { ok: false, error: `${normalizedStage} response was not valid JSON.`, raw: response };
         }
         return { ok: true, payload: parsed, raw: response };
+      }
+    } catch (error) {
+      if (isAbortError(error)) {
+        throw error;
+      }
+      return {
+        ok: false,
+        error: cleanText(error?.message || error, 600) || `${normalizedStage} request failed.`
+      };
+    }
+
+    return {
+      ok: false,
+      error: defaultError
+    };
+  }
+
+  async function requestWebSearch(options = {}) {
+    const {
+      provider,
+      endpoint,
+      apiKey,
+      model,
+      stage,
+      query,
+      maxResults = 8,
+      allowedDomains = [],
+      userLocation = null,
+      externalWebAccess = true,
+      traceContext = null,
+      defaultError = 'Web search provider is not configured.'
+    } = options;
+    const normalizedStage = cleanText(stage, 120) || 'web_search';
+    const normalizedQuery = cleanText(query, 1200);
+    const normalizedDomains = asArray(allowedDomains).map((item) => cleanText(item, 160)).filter(Boolean);
+    const webSearchSchema = {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        results: {
+          type: 'array',
+          maxItems: Math.max(1, Number(maxResults) || 8),
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              title: { type: 'string' },
+              url: { type: 'string' },
+              summary: { type: 'string' },
+              source_domain: { type: 'string' }
+            },
+            required: ['title', 'url', 'summary', 'source_domain']
+          }
+        },
+        reasoning: { type: 'string' }
+      },
+      required: ['results', 'reasoning']
+    };
+
+    if (!normalizedQuery) {
+      return {
+        ok: false,
+        error: 'Web search query is required.'
+      };
+    }
+
+    try {
+      if (provider === LLM_PROVIDERS.CODEX && typeof requestCodexCliText === 'function') {
+        const prompt = buildWebSearchPrompt({
+          query: normalizedQuery,
+          maxResults,
+          allowedDomains: normalizedDomains,
+          userLocation,
+          codexMode: true
+        });
+        const raw = await requestCodexCliText({
+          prompt,
+          model,
+          enableWebSearch: true,
+          cwd: getCodexCliWorkingDirectory()
+        });
+        await recordTrace(traceContext, {
+          stage: normalizedStage,
+          provider,
+          model,
+          summary: `${normalizedStage} completed via Codex CLI.`,
+          requestPayload: { model, prompt },
+          responsePayload: raw
+        });
+        const parsed = parseJsonObjectFromText(raw);
+        if (!parsed) {
+          return { ok: false, error: `${normalizedStage} response was not valid JSON.`, raw };
+        }
+        const normalized = normalizeWebSearchPayload(parsed, maxResults);
+        return { ok: true, results: normalized.results, reasoning: normalized.reasoning, raw };
+      }
+
+      if (provider === LLM_PROVIDERS.OPENAI && typeof requestOpenAiResponsesWithBackoff === 'function') {
+        const format = {
+          type: 'json_schema',
+          name: normalizedStage.replace(/[^a-z0-9_]+/gi, '_').toLowerCase() || 'web_search_results',
+          schema: webSearchSchema,
+          strict: true
+        };
+        const tools = [{
+          type: 'web_search',
+          ...(normalizedDomains.length
+            ? {
+              filters: {
+                allowed_domains: normalizedDomains
+              }
+            }
+            : {}),
+          ...(userLocation && typeof userLocation === 'object'
+            ? { user_location: userLocation }
+            : {}),
+          ...(externalWebAccess === false ? { external_web_access: false } : {})
+        }];
+        const body = {
+          model,
+          tools,
+          tool_choice: 'auto',
+          include: ['web_search_call.action.sources'],
+          input: [
+            toInputText('system', 'Use web search to find relevant sources and return valid JSON only.'),
+            toInputText('user', buildWebSearchPrompt({
+              query: normalizedQuery,
+              maxResults,
+              allowedDomains: normalizedDomains,
+              userLocation
+            }))
+          ],
+          text: { format }
+        };
+        const response = await requestOpenAiResponsesWithBackoff({
+          endpoint,
+          apiKey,
+          body
+        });
+        await recordTrace(traceContext, {
+          stage: normalizedStage,
+          provider,
+          model,
+          summary: `${normalizedStage} completed via OpenAI Responses web_search.`,
+          requestPayload: body,
+          responsePayload: response
+        });
+        const parsed = parseJsonObjectFromText(extractResponseText(response));
+        if (!parsed) {
+          return { ok: false, error: `${normalizedStage} response was not valid JSON.`, raw: response };
+        }
+        const normalized = normalizeWebSearchPayload(parsed, maxResults);
+        return { ok: true, results: normalized.results, reasoning: normalized.reasoning, raw: response };
       }
     } catch (error) {
       if (isAbortError(error)) {
@@ -1412,6 +1636,7 @@ function createAgentLlmProviderBridge(deps = {}) {
     extractFunctionCalls,
     requestAssistantText,
     requestStructuredJsonPayload,
+    requestWebSearch,
     startToolSession,
     continueToolSessionWithToolOutputs,
     continueToolSessionWithUserMessage,

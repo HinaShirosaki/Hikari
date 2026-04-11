@@ -3,6 +3,7 @@
 const { getBundlePaths } = require('./storage-paths');
 const { readNotebookRowsFromSqlite, readProtocolRowsFromSqlite, readSqliteBundleIndex } = require('./storage-sql-read');
 const { asArray, cleanText, cloneJson, ensureObject, readJsonFile } = require('./storage-utils');
+const { hydrateWorkflowRootFromStoragePath } = require('./workflow-storage');
 
 function hydrateInventoryFromSqliteSnapshot(nextSnapshot, sqliteData) {
   const inventoryPersonalMap = {};
@@ -65,6 +66,86 @@ function readNotebookEntriesFromSidecar(payload) {
   return asArray(payload.notebookPages);
 }
 
+function mergeRecordsById(existingRecords, importedRecords, fallbackPrefix) {
+  const byId = new Map();
+  asArray(existingRecords).forEach((record, index) => {
+    const source = ensureObject(record);
+    const id = cleanText(source.id, 220) || `${fallbackPrefix}_existing_${index + 1}`;
+    byId.set(id, {
+      ...source,
+      id
+    });
+  });
+  asArray(importedRecords).forEach((record, index) => {
+    const source = ensureObject(record);
+    const id = cleanText(source.id, 220) || `${fallbackPrefix}_imported_${index + 1}`;
+    const previous = byId.get(id) || {};
+    byId.set(id, {
+      ...previous,
+      ...source,
+      id
+    });
+  });
+  return [...byId.values()];
+}
+
+function mergePaperRecords(existingRecords, importedRecords) {
+  const byId = new Map();
+  asArray(existingRecords).forEach((record, index) => {
+    const source = ensureObject(record);
+    const id = cleanText(source.id, 220) || `paper_existing_${index + 1}`;
+    byId.set(id, {
+      ...source,
+      id
+    });
+  });
+  asArray(importedRecords).forEach((record, index) => {
+    const source = ensureObject(record);
+    const id = cleanText(source.id, 220) || `paper_imported_${index + 1}`;
+    const previous = ensureObject(byId.get(id));
+    const merged = {
+      ...previous,
+      ...source,
+      id
+    };
+    if (!cleanText(source.pdfDataUrl, 80)) {
+      merged.pdfDataUrl = cleanText(previous.pdfDataUrl, 10_000_000);
+    }
+    if (!cleanText(source.storedFilePath, 2400)) {
+      merged.storedFilePath = cleanText(previous.storedFilePath, 2400);
+    }
+    if (!cleanText(source.storedRelativePath, 2400)) {
+      merged.storedRelativePath = cleanText(previous.storedRelativePath, 2400);
+    }
+    byId.set(id, merged);
+  });
+  return [...byId.values()];
+}
+
+function mergePaperExperimentLinks(existingLinks, importedLinks) {
+  const byKey = new Map();
+  const pushLink = (rawLink, prefix, index) => {
+    const link = ensureObject(rawLink);
+    const substantiveKey = [
+      cleanText(link.paperId, 220),
+      cleanText(link.entryId, 220),
+      cleanText(link.projectId, 220),
+      cleanText(link.note, 600)
+    ].join('::');
+    const key = substantiveKey || `${prefix}_${index + 1}`;
+    if (!substantiveKey && !Object.keys(link).length) {
+      return;
+    }
+    byKey.set(key, {
+      ...(byKey.get(key) || {}),
+      ...link
+    });
+  };
+  asArray(existingLinks).forEach((link, index) => pushLink(link, 'existing', index));
+  asArray(importedLinks).forEach((link, index) => pushLink(link, 'imported', index));
+  return [...byKey.values()];
+}
+
 async function hydrateSnapshotFromBundle({
   dataFilePath,
   snapshot,
@@ -119,6 +200,29 @@ async function hydrateSnapshotFromBundle({
     if ((!Array.isArray(nextSnapshot.notebookEntries) || !nextSnapshot.notebookEntries.length) && asArray(sqliteData.notebookRows).length) {
       nextSnapshot.notebookEntries = readNotebookRowsFromSqlite(sqliteData.notebookRows);
       migration.applied.push('notebook_sqlite_fallback');
+    }
+  }
+
+  const workflowRootPath = cleanText(nextSnapshot?.settings?.storagePath, 2400);
+  if (workflowRootPath) {
+    const workflowHydrated = await hydrateWorkflowRootFromStoragePath({
+      storagePath: workflowRootPath
+    });
+    if (workflowHydrated.exists) {
+      nextSnapshot.workflowTemplates = mergeRecordsById(nextSnapshot.workflowTemplates, workflowHydrated.workflowTemplates, 'workflow_template');
+      nextSnapshot.workflows = mergeRecordsById(nextSnapshot.workflows, workflowHydrated.workflows, 'workflow');
+      nextSnapshot.notebookEntries = mergeRecordsById(nextSnapshot.notebookEntries, workflowHydrated.notebookEntries, 'notebook');
+      nextSnapshot.papers = mergePaperRecords(nextSnapshot.papers, workflowHydrated.papers);
+      nextSnapshot.paperExperimentLinks = mergePaperExperimentLinks(
+        nextSnapshot.paperExperimentLinks,
+        workflowHydrated.paperExperimentLinks
+      );
+      migration.applied.push('workflow_root_storage');
+      asArray(workflowHydrated.warnings).forEach((warning) => {
+        if (warning) {
+          migration.warnings.push(String(warning));
+        }
+      });
     }
   }
 

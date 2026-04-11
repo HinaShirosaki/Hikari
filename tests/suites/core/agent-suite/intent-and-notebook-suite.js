@@ -2,32 +2,15 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
   with (scope) {
-    test('intent parser normalizes canonical parser payload', () => {
+    test('intent parser normalizes compact inventory payloads', () => {
       const raw = {
         primary_intent: 'inventory_lookup',
-        reasoning_effort: 2,
-        needs_clarification: false,
-        clarification_reason: null,
-        entities: {
-          activity_type: 'lookup',
-          project_name: 'Atlas',
-          protocol_name: null,
-          protein_name: null,
-          compound_name: 'Tris',
-          inventory_item: 'Tris-HCl',
-          cell_line: null,
-          paper_title: null,
-          workflow_step: null,
-          requested_output: 'location'
-        },
         inventory_search: {
           normalized_query: 'Tris-HCl',
           candidate_terms: ['Tris-HCl', 'tris', 'Tris-HCl'],
           aliases: ['tris(hydroxymethyl)aminomethane'],
           search_mode: 'exact_then_alias_then_fuzzy'
-        },
-        protocol_candidates: ['HEK293 Transfection'],
-        reasoning_summary: 'Inventory lookup for Tris-HCl.'
+        }
       };
 
       const result = agentIntentParser.normalizeIntentParserPayload(raw);
@@ -35,38 +18,18 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
       assert.equal(result.payload.primary_intent, 'inventory_lookup');
       assert.equal(result.payload.reasoning_effort, 0);
       assert.equal(result.payload.needs_clarification, false);
+      assert.deepEqual(result.payload.entities, {});
       assert.equal(result.payload.inventory_search.normalized_query, 'Tris-HCl');
       assert.equal(Array.isArray(result.payload.inventory_search.candidate_terms), true);
       assert.equal(result.payload.inventory_search.candidate_terms.length >= 2, true);
       assert.deepEqual(result.payload.protocol_candidates, []);
-      assert.match(result.payload.reasoning_summary, /Inventory lookup/);
+      assert.match(result.payload.reasoning_summary, /inventory_lookup/i);
     });
 
     test('intent parser normalizes protocol candidates for protocol_to_notebook intent', () => {
       const raw = {
         primary_intent: 'protocol_to_notebook',
-        needs_clarification: false,
-        clarification_reason: null,
-        entities: {
-          activity_type: 'transfection',
-          project_name: 'Atlas',
-          protocol_name: 'HEK293 Transfection',
-          protein_name: null,
-          compound_name: null,
-          inventory_item: null,
-          cell_line: 'HEK293',
-          paper_title: null,
-          workflow_step: null,
-          requested_output: 'notebook'
-        },
-        inventory_search: {
-          normalized_query: null,
-          candidate_terms: [],
-          aliases: [],
-          search_mode: null
-        },
-        protocol_candidates: ['HEK293 Transfection', 'HEK293 transfection', 'Expi293 Transfection'],
-        reasoning_summary: 'Protocol intent payload.'
+        protocol_candidates: ['HEK293 Transfection', 'HEK293 transfection', 'Expi293 Transfection']
       };
 
       const result = agentIntentParser.normalizeIntentParserPayload(raw);
@@ -80,57 +43,13 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
     test('intent parser preserves science reasoning effort and defaults missing science effort to level 1', () => {
       const explicit = agentIntentParser.normalizeIntentParserPayload({
         primary_intent: 'general_science_question',
-        reasoning_effort: 2,
-        needs_clarification: false,
-        clarification_reason: null,
-        entities: {
-          activity_type: null,
-          project_name: null,
-          protocol_name: null,
-          protein_name: null,
-          compound_name: null,
-          inventory_item: null,
-          cell_line: null,
-          paper_title: null,
-          workflow_step: null,
-          requested_output: 'mechanistic explanation'
-        },
-        inventory_search: {
-          normalized_query: null,
-          candidate_terms: [],
-          aliases: [],
-          search_mode: null
-        },
-        protocol_candidates: [],
-        reasoning_summary: 'Needs deeper multi-step science reasoning.'
+        reasoning_effort: 2
       });
       assert.equal(explicit.ok, true);
       assert.equal(explicit.payload.reasoning_effort, 2);
 
       const defaulted = agentIntentParser.normalizeIntentParserPayload({
-        primary_intent: 'project_science_question',
-        needs_clarification: false,
-        clarification_reason: null,
-        entities: {
-          activity_type: null,
-          project_name: 'Atlas',
-          protocol_name: null,
-          protein_name: null,
-          compound_name: null,
-          inventory_item: null,
-          cell_line: null,
-          paper_title: null,
-          workflow_step: null,
-          requested_output: null
-        },
-        inventory_search: {
-          normalized_query: null,
-          candidate_terms: [],
-          aliases: [],
-          search_mode: null
-        },
-        protocol_candidates: [],
-        reasoning_summary: 'Project science question.'
+        primary_intent: 'project_science_question'
       });
       assert.equal(defaulted.ok, true);
       assert.equal(defaulted.payload.reasoning_effort, 1);
@@ -140,20 +59,7 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
       const direct = agentIntentParser.normalizeIntentParserPayload({
         primary_intent: 'general_science_question',
         reasoning_effort: 0,
-        direct_answer: 'Imidazole competes with histidines for nickel binding sites on the resin.',
-        needs_clarification: false,
-        clarification_reason: null,
-        entities: {
-          output: 'mechanistic explanation'
-        },
-        inventory_search: {
-          normalized_query: null,
-          candidate_terms: [],
-          aliases: [],
-          search_mode: null
-        },
-        protocol_candidates: [],
-        reasoning_summary: 'Direct science answer.'
+        direct_answer: 'Imidazole competes with histidines for nickel binding sites on the resin.'
       });
       assert.equal(direct.ok, true);
       assert.match(String(direct.payload.direct_answer || ''), /nickel binding sites/i);
@@ -161,20 +67,7 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
       const routed = agentIntentParser.normalizeIntentParserPayload({
         primary_intent: 'project_science_question',
         reasoning_effort: 1,
-        direct_answer: 'This should be ignored because the request should enter the loop.',
-        needs_clarification: false,
-        clarification_reason: null,
-        entities: {
-          project: 'Atlas'
-        },
-        inventory_search: {
-          normalized_query: null,
-          candidate_terms: [],
-          aliases: [],
-          search_mode: null
-        },
-        protocol_candidates: [],
-        reasoning_summary: 'Needs project evidence.'
+        direct_answer: 'This should be ignored because the request should enter the loop.'
       });
       assert.equal(routed.ok, true);
       assert.equal(routed.payload.direct_answer, null);
@@ -183,28 +76,7 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
     test('intent parser keeps protocol candidates for notebook_draft intent', () => {
       const raw = {
         primary_intent: 'notebook_draft',
-        needs_clarification: false,
-        clarification_reason: null,
-        entities: {
-          activity_type: 'planning',
-          project_name: 'Atlas',
-          protocol_name: null,
-          protein_name: null,
-          compound_name: null,
-          inventory_item: null,
-          cell_line: null,
-          paper_title: null,
-          workflow_step: 'next experiment',
-          requested_output: 'planned notebook page'
-        },
-        inventory_search: {
-          normalized_query: null,
-          candidate_terms: [],
-          aliases: [],
-          search_mode: null
-        },
-        protocol_candidates: ['Viability Assay', 'cell viability assay'],
-        reasoning_summary: 'Propose the next notebook page from the workflow.'
+        protocol_candidates: ['Viability Assay', 'cell viability assay']
       };
 
       const result = agentIntentParser.normalizeIntentParserPayload(raw);
@@ -213,31 +85,25 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
       assert.deepEqual(result.payload.protocol_candidates, ['Viability Assay', 'cell viability assay']);
     });
 
+    test('intent parser defaults unclear and mixed_request to clarification-required payloads', () => {
+      const unclear = agentIntentParser.normalizeIntentParserPayload({
+        primary_intent: 'unclear'
+      });
+      assert.equal(unclear.ok, true);
+      assert.equal(unclear.payload.needs_clarification, true);
+      assert.match(String(unclear.payload.clarification_reason || ''), /missing detail|route this request/i);
+
+      const mixed = agentIntentParser.normalizeIntentParserPayload({
+        primary_intent: 'mixed_request'
+      });
+      assert.equal(mixed.ok, true);
+      assert.equal(mixed.payload.needs_clarification, true);
+      assert.match(String(mixed.payload.clarification_reason || ''), /tell me which task to handle first|split the request/i);
+    });
+
     test('intent parser rejects legacy confidence and secondary_intents fields', () => {
       const withConfidence = agentIntentParser.normalizeIntentParserPayload({
         primary_intent: 'general_science_question',
-        needs_clarification: false,
-        clarification_reason: null,
-        entities: {
-          activity_type: null,
-          project_name: null,
-          protocol_name: null,
-          protein_name: null,
-          compound_name: null,
-          inventory_item: null,
-          cell_line: null,
-          paper_title: null,
-          workflow_step: null,
-          requested_output: null
-        },
-        inventory_search: {
-          normalized_query: null,
-          candidate_terms: [],
-          aliases: [],
-          search_mode: null
-        },
-        protocol_candidates: [],
-        reasoning_summary: 'General question.',
         confidence: 0.91
       });
       assert.equal(withConfidence.ok, false);
@@ -245,28 +111,6 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
 
       const withSecondary = agentIntentParser.normalizeIntentParserPayload({
         primary_intent: 'general_science_question',
-        needs_clarification: false,
-        clarification_reason: null,
-        entities: {
-          activity_type: null,
-          project_name: null,
-          protocol_name: null,
-          protein_name: null,
-          compound_name: null,
-          inventory_item: null,
-          cell_line: null,
-          paper_title: null,
-          workflow_step: null,
-          requested_output: null
-        },
-        inventory_search: {
-          normalized_query: null,
-          candidate_terms: [],
-          aliases: [],
-          search_mode: null
-        },
-        protocol_candidates: [],
-        reasoning_summary: 'General question.',
         secondary_intents: ['inventory_lookup']
       });
       assert.equal(withSecondary.ok, false);
@@ -276,28 +120,7 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
     test('intent parser rejects protocol_candidates lists longer than 3', () => {
       const result = agentIntentParser.normalizeIntentParserPayload({
         primary_intent: 'protocol_to_notebook',
-        needs_clarification: false,
-        clarification_reason: null,
-        entities: {
-          activity_type: null,
-          project_name: null,
-          protocol_name: null,
-          protein_name: null,
-          compound_name: null,
-          inventory_item: null,
-          cell_line: null,
-          paper_title: null,
-          workflow_step: null,
-          requested_output: null
-        },
-        inventory_search: {
-          normalized_query: null,
-          candidate_terms: [],
-          aliases: [],
-          search_mode: null
-        },
-        protocol_candidates: ['A', 'B', 'C', 'D'],
-        reasoning_summary: 'Too many protocol candidates.'
+        protocol_candidates: ['A', 'B', 'C', 'D']
       });
       assert.equal(result.ok, false);
       assert.match(String(result.error || ''), /at most 3/i);
@@ -307,22 +130,13 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
       const result = agentIntentParser.normalizeIntentParserPayload({
         primary_intent: 'shopping_recommendation',
         reasoning_effort: 2,
-        needs_clarification: false,
-        clarification_reason: null,
         entities: {
           product_query: 'endotoxin-free pipette tips',
           required_attributes: 'endotoxin-free, metal-free',
           excluded_attributes: 'latex',
           budget_preference: 'cheap'
         },
-        inventory_search: {
-          normalized_query: 'should-clear',
-          candidate_terms: ['stale-term'],
-          aliases: ['legacy'],
-          search_mode: 'exact_then_alias_then_fuzzy'
-        },
-        protocol_candidates: ['Should be cleared'],
-        reasoning_summary: 'Find a cheap purchasable item that meets explicit lab constraints.'
+        protocol_candidates: ['Should be cleared']
       });
 
       assert.equal(result.ok, true);
@@ -629,6 +443,10 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
 
       assert.equal(toolCalls.length, 1);
       assert.equal(toolCalls[0].toolName, 'purchase-recommendation');
+      assert.equal(toolCalls[0].args.query, 'pipette tips');
+      assert.deepEqual(toolCalls[0].args.required_terms, ['endotoxin-free', 'metal-free']);
+      assert.deepEqual(toolCalls[0].args.excluded_terms, ['latex']);
+      assert.equal(toolCalls[0].args.budget_preference, 'cheap');
       assert.equal(toolCalls[0].options.allowWriteTools, false);
       assert.equal(result.purchase_recommendation.status, 'matched');
       assert.equal(result.purchase_recommendation.items.length, 1);
@@ -735,6 +553,155 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
       assert.match(String(result.purchase_recommendation.follow_up_questions[0] || ''), /which item type/i);
     });
 
+    test('controller core skips intent parser while protocol notebook context remains open', async () => {
+      const { createAgentControllerCore } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc', 'agent-controller-core.js'));
+      let parserCallCount = 0;
+      const lifecycleStages = [];
+      const controller = createAgentControllerCore({
+        deps: {
+          LLM_PROVIDERS: {
+            OPENAI: 'openai',
+            CODEX: 'codex'
+          }
+        },
+        cleanText: (value, _maxLength = 2000) => {
+          const text = String(value || '').trim();
+          return text || '';
+        },
+        controllerUtils: {
+          resolveAgentProvider: () => 'openai',
+          resolveAgentEndpoint: () => 'https://example.test',
+          resolveAgentModel: () => 'gpt-test',
+          resolveAgentApiKey: () => 'key',
+          extractConversation: (conversation) => (Array.isArray(conversation) ? conversation : []),
+          resolveAgentExecutionFlags: () => ({ developerMode: false }),
+          createAgentLlmTraceContext: () => ({
+            enabled: false,
+            requestId: 'req-pending-context',
+            logPath: '',
+            provider: 'openai',
+            model: 'gpt-test',
+            rows: [],
+            entries: []
+          }),
+          async requestIntentParserPayload() {
+            parserCallCount += 1;
+            throw new Error('Intent parser should be skipped while the protocol context remains open.');
+          }
+        },
+        observability: {
+          recordLifecycleEvent: (_recorder, event = {}) => {
+            lifecycleStages.push({
+              stage: event.stage || '',
+              meta: event.meta && typeof event.meta === 'object' ? event.meta : {}
+            });
+          }
+        },
+        protocolNotebookRuntime: {
+          buildSessionKey: () => 'open-protocol-session',
+          hasPendingSession: () => true,
+          clearPendingSession: () => false,
+          setPendingSession: () => null,
+          async runFlow({ parserPayload, message }) {
+            return {
+              status: 'completed',
+              selected_protocol: {
+                id: 'prot-1',
+                name: 'Cell Prep'
+              },
+              candidate_matches: [],
+              missing_placeholders: [],
+              follow_up_questions: [],
+              project_name: 'Atlas',
+              notebook: {
+                protocol: {
+                  id: 'prot-1',
+                  name: 'Cell Prep'
+                },
+                project: {
+                  id: 'proj-1',
+                  name: 'Atlas'
+                },
+                rendered_steps: [message, parserPayload.primary_intent]
+              }
+            };
+          }
+        },
+        scienceReasoningLoopRuntime: {
+          runGeneralScienceQuestion: async () => {
+            throw new Error('Science runtime should not run for pending protocol follow-ups.');
+          },
+          runProjectScienceQuestion: async () => {
+            throw new Error('Project science runtime should not run for pending protocol follow-ups.');
+          },
+          runResultAnalysis: async () => {
+            throw new Error('Result-analysis runtime should not run for pending protocol follow-ups.');
+          }
+        },
+        deepResearchRuntime: null,
+        scienceMainUtils: {
+          buildScienceRoutingFromParser: () => ({
+            intent: 'general_science_question',
+            entities: {},
+            plan: {
+              reasoning_effort: 1,
+              needs_clarification: false,
+              clarification_reason: ''
+            }
+          })
+        },
+        agentToolRuntime: {
+          normalizeAgentSnapshot: (snapshot) => (snapshot && typeof snapshot === 'object' ? snapshot : {}),
+          buildAgentSystemPrompt: () => 'system prompt'
+        },
+        executeInventoryLookup: async () => {
+          throw new Error('Inventory lookup should not run for pending protocol follow-ups.');
+        },
+        executeRecordLookup: async () => {
+          throw new Error('Record lookup should not run for pending protocol follow-ups.');
+        },
+        getAgentChatLogPath: () => '',
+        getDefaultDataFilePath: () => '',
+        setCodexCliModel: () => {},
+        setCodexCliReasoningEffort: () => {},
+        lifecycleService: {
+          normalizeJsonPayload: (payload, fallback = {}) => (
+            payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : fallback
+          ),
+          asArray: (value) => (Array.isArray(value) ? value : [])
+        }
+      });
+
+      const result = await controller.runAgentControllerCore({
+        message: 'The sample name was Atlas-7.',
+        projectId: 'proj-1',
+        projectName: 'Atlas',
+        conversation: [],
+        llm: {
+          provider: 'openai',
+          model: 'gpt-test'
+        },
+        stateSnapshot: {}
+      }, {
+        lifecycleRecorder: {
+          requestId: 'req-pending-context',
+          events: []
+        },
+        requestId: 'req-pending-context'
+      });
+
+      assert.equal(parserCallCount, 0);
+      assert.equal(result.ok, true);
+      assert.equal(result.parser.primary_intent, 'protocol_to_notebook');
+      assert.match(String(result.parser.reasoning_summary || ''), /context is still open/i);
+      assert.equal(result.protocol_to_notebook.status, 'completed');
+      assert.equal(result.protocol_to_notebook.selected_protocol.name, 'Cell Prep');
+      const parserCompleted = lifecycleStages.find((item) => item.stage === 'parser_completed');
+      assert.equal(Boolean(parserCompleted), true);
+      assert.equal(parserCompleted.meta.skipped, true);
+      assert.equal(parserCompleted.meta.resumed_from_pending, true);
+    });
+
     test('intent parser prompt includes recent transcript and active project context', () => {
       const prompt = agentIntentParser.buildIntentParserPrompt({
         message: 'Do we have PEI in stock for Atlas lot 7?',
@@ -767,9 +734,10 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
       assert.match(agentIntentParser.INTENT_PARSER_PROMPT, /## Science reasoning_effort rubric/);
       assert.match(agentIntentParser.INTENT_PARSER_PROMPT, /If you are unsure whether a science question should be 0 or 1, choose 1\./);
       assert.match(agentIntentParser.INTENT_PARSER_PROMPT, /Intent-specific output append:/);
-      assert.match(agentIntentParser.INTENT_PARSER_PROMPT, /"reasoning_effort": 1/);
-      assert.equal(/entities\.project_name/.test(agentIntentParser.INTENT_PARSER_PROMPT), false);
-      assert.equal(/Output:\n\{/.test(agentIntentParser.INTENT_PARSER_PROMPT), false);
+      assert.match(agentIntentParser.INTENT_PARSER_PROMPT, /"primary_intent": "one allowed intent"/);
+      assert.match(agentIntentParser.INTENT_PARSER_PROMPT, /Add only the extra fields listed for the chosen intent\./);
+      assert.equal(/## Examples/.test(agentIntentParser.INTENT_PARSER_PROMPT), false);
+      assert.match(agentIntentParser.INTENT_PARSER_PROMPT, /Omit all other keys and empty placeholders\./);
 
       let previousHeadingIndex = -1;
       agentIntentParser.PARSER_ALLOWED_INTENTS.forEach((intentName) => {
@@ -800,8 +768,9 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
       assert.equal(renderedPrompt.includes('### inventory_lookup'), true);
       assert.equal(renderedPrompt.includes('Custom inventory description.'), true);
       assert.equal(renderedPrompt.includes('Intent-specific rule: Custom inventory rule.'), true);
+      assert.equal(renderedPrompt.includes('Append only these extra fields: custom_inventory_field'), true);
       assert.equal(renderedPrompt.includes('- custom_inventory_field: Custom inventory append description.'), true);
-      assert.equal(renderedPrompt.includes('User: "Where is the custom PEI bottle?"'), true);
+      assert.equal(renderedPrompt.includes('User: "Where is the custom PEI bottle?"'), false);
     });
 
     test('intent parser catalog validation rejects malformed entries', () => {
@@ -877,6 +846,211 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
       });
       assert.equal(result.selection_method, 'deterministic_fallback');
       assert.equal(result.selected.name, 'Protocol A');
+    });
+
+    test('protocol notebook context control closes completed action context', () => {
+      const { createProtocolNotebookContextControl } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'runtime',
+        'agent-protocol-notebook-context-control.js'
+      ));
+      let nowMs = Date.parse('2026-04-10T12:00:00.000Z');
+      const cleanText = (value, _maxLength = 2000) => {
+        const text = String(value || '').trim();
+        return text || '';
+      };
+      const control = createProtocolNotebookContextControl({
+        cleanText,
+        now: () => new Date(nowMs).toISOString(),
+        nowMs: () => nowMs,
+        store: new Map()
+      });
+      const sessionKey = control.buildSessionKey({
+        projectId: 'proj-1',
+        projectName: 'Atlas'
+      });
+
+      control.setPendingSession(sessionKey, {
+        created_at: '2026-04-10T11:55:00.000Z',
+        selected_protocol: {
+          id: 'prot-1',
+          name: 'Cell Prep'
+        },
+        follow_up_questions: ['Please provide sample name.']
+      });
+      assert.equal(control.hasPendingSession(sessionKey), true);
+
+      const syncResult = control.syncActionContext(sessionKey, {
+        status: 'completed'
+      });
+      assert.equal(syncResult.context_closed, true);
+      assert.equal(control.hasPendingSession(sessionKey), false);
+    });
+
+    test('protocol notebook runtime closes pending context after completed action', async () => {
+      const { createProtocolNotebookRuntime } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'runtime',
+        'agent-protocol-notebook.js'
+      ));
+      const cleanText = (value, _maxLength = 2000) => {
+        const text = String(value || '').trim();
+        return text || '';
+      };
+      const asArray = (value) => (Array.isArray(value) ? value : []);
+      const uniqueStrings = (values, max = 50) => {
+        const seen = new Set();
+        const out = [];
+        asArray(values).forEach((value) => {
+          const normalized = cleanText(value, 220);
+          if (!normalized) {
+            return;
+          }
+          const key = normalized.toLowerCase();
+          if (seen.has(key) || out.length >= max) {
+            return;
+          }
+          seen.add(key);
+          out.push(normalized);
+        });
+        return out;
+      };
+      let nowMs = Date.parse('2026-04-10T12:00:00.000Z');
+      const runtime = createProtocolNotebookRuntime({
+        asArray,
+        cleanText,
+        uniqueStrings,
+        pickTopMatches: (items, _selector, _query, count = 1) => asArray(items).slice(0, count),
+        now: () => new Date(nowMs).toISOString(),
+        nowMs: () => nowMs,
+        protocolNotebookPendingSessions: new Map(),
+        getAgentRuntimeFactory: (runtimeName) => {
+          if (runtimeName === 'protocol-matching') {
+            return () => ({
+              normalizeProtocolRecord(protocol = {}, index = 0) {
+                return {
+                  id: String(protocol.id || `protocol-${index + 1}`),
+                  name: String(protocol.name || ''),
+                  project_name: String(protocol.project_name || protocol.projectName || ''),
+                  steps: Array.isArray(protocol.steps) ? protocol.steps : []
+                };
+              },
+              async selectProtocol({ protocols = [] } = {}) {
+                const selected = Array.isArray(protocols) ? protocols[0] : null;
+                return {
+                  selected_protocol: selected,
+                  selection_method: 'deterministic',
+                  rationale: 'Selected the only available protocol.',
+                  ranked_matches: selected
+                    ? [{ id: selected.id, name: selected.name, score: 120 }]
+                    : []
+                };
+              },
+              mapCandidateMatchesForOutput(matches = []) {
+                return asArray(matches).map((match) => ({
+                  id: cleanText(match.id, 120),
+                  name: cleanText(match.name, 220),
+                  score: Number.isFinite(Number(match.score)) ? Number(match.score) : 0
+                }));
+              }
+            });
+          }
+          if (runtimeName === 'notebook-generation') {
+            return () => ({
+              async generateNotebook({ selectedProtocol, project } = {}) {
+                return {
+                  status: 'completed',
+                  notebook: {
+                    protocol: {
+                      id: selectedProtocol?.id || '',
+                      name: selectedProtocol?.name || ''
+                    },
+                    project: {
+                      id: project?.id || '',
+                      name: project?.name || ''
+                    },
+                    rendered_steps: ['Prepare Atlas-7 sample.'],
+                    save: {
+                      status: 'ready_for_save'
+                    },
+                    entry_template: {
+                      result: 'Notebook draft completed for Cell Prep.'
+                    }
+                  },
+                  known_values: {
+                    sample_name: 'Atlas-7'
+                  },
+                  missing_placeholders: [],
+                  follow_up_questions: []
+                };
+              }
+            });
+          }
+          return null;
+        }
+      });
+      const sessionKey = runtime.buildSessionKey({
+        projectId: 'proj-1',
+        projectName: 'Atlas'
+      });
+      runtime.setPendingSession(sessionKey, {
+        created_at: '2026-04-10T11:55:00.000Z',
+        selected_protocol: {
+          id: 'prot-1',
+          name: 'Cell Prep'
+        },
+        project: {
+          id: 'proj-1',
+          name: 'Atlas',
+          resolution_source: 'payload_project_id'
+        },
+        follow_up_questions: ['Please provide sample name.']
+      });
+      assert.equal(runtime.hasPendingSession(sessionKey), true);
+
+      const result = await runtime.runFlow({
+        provider: 'openai',
+        endpoint: 'https://api.openai.com/v1/responses',
+        apiKey: 'test-key',
+        model: 'gpt-5',
+        message: 'The sample name was Atlas-7.',
+        conversation: [],
+        snapshot: {
+          projects: [
+            { id: 'proj-1', name: 'Atlas' }
+          ],
+          protocols: [
+            {
+              id: 'prot-1',
+              name: 'Cell Prep',
+              project_name: 'Atlas',
+              steps: []
+            }
+          ]
+        },
+        parserPayload: {
+          primary_intent: 'protocol_to_notebook',
+          entities: {
+            project_name: 'Atlas',
+            protocol_name: 'Cell Prep'
+          },
+          protocol_candidates: ['Cell Prep']
+        },
+        projectId: 'proj-1',
+        projectName: 'Atlas'
+      });
+
+      assert.equal(result.status, 'completed');
+      assert.equal(result.selected_protocol.name, 'Cell Prep');
+      assert.equal(runtime.hasPendingSession(sessionKey), false);
     });
 
     test('notebook generation runtime extracts token and inline placeholders', () => {

@@ -37,6 +37,32 @@ function createAgentControllerCore({
     lifecycleService
   });
 
+  function buildPendingProtocolParserPayload({
+    projectName = ''
+  } = {}) {
+    const normalizedProjectName = cleanText(projectName, 220);
+    return {
+      primary_intent: 'protocol_to_notebook',
+      reasoning_effort: 0,
+      direct_answer: null,
+      needs_clarification: false,
+      clarification_reason: null,
+      entities: normalizedProjectName
+        ? {
+          project_name: normalizedProjectName
+        }
+        : {},
+      inventory_search: {
+        normalized_query: null,
+        candidate_terms: [],
+        aliases: [],
+        search_mode: null
+      },
+      protocol_candidates: [],
+      reasoning_summary: 'Skipped intent parsing because the protocol-to-notebook context is still open.'
+    };
+  }
+
   async function runAgentControllerCore(payload, runtime = {}) {
     throwIfAgentRequestAborted('Agent request stopped before controller startup.');
     const lifecycleRecorder = runtime && typeof runtime === 'object'
@@ -91,16 +117,28 @@ function createAgentControllerCore({
       message: 'Running parser-first intent phraser pipeline.'
     });
 
-    const parserResult = await controllerUtils.requestIntentParserPayload({
-      provider,
-      endpoint,
-      apiKey,
-      model,
-      message,
-      conversation: promptConversation,
-      projectName,
-      traceContext
+    const sessionKey = protocolNotebookRuntime.buildSessionKey({
+      projectId,
+      projectName
     });
+    const hasPendingProtocolSession = protocolNotebookRuntime.hasPendingSession(sessionKey);
+    const parserResult = hasPendingProtocolSession
+      ? {
+        ok: true,
+        payload: buildPendingProtocolParserPayload({
+          projectName
+        })
+      }
+      : await controllerUtils.requestIntentParserPayload({
+        provider,
+        endpoint,
+        apiKey,
+        model,
+        message,
+        conversation: promptConversation,
+        projectName,
+        traceContext
+      });
     throwIfAgentRequestAborted('Agent request stopped after intent parsing.');
     if (!parserResult?.ok || !parserResult?.payload) {
       observability.recordLifecycleEvent(lifecycleRecorder, {
@@ -120,9 +158,13 @@ function createAgentControllerCore({
       stage: 'parser_completed',
       status: 'ok',
       routing_intent: cleanText(parserResult.payload.primary_intent, 80) || 'unclear',
-      message: `Intent parser returned primary_intent=${cleanText(parserResult.payload.primary_intent, 80) || 'unknown'}.`,
+      message: hasPendingProtocolSession
+        ? 'Skipped intent parser because the protocol-to-notebook context is still open.'
+        : `Intent parser returned primary_intent=${cleanText(parserResult.payload.primary_intent, 80) || 'unknown'}.`,
       meta: {
-        needs_clarification: parserResult.payload.needs_clarification === true
+        needs_clarification: parserResult.payload.needs_clarification === true,
+        skipped: hasPendingProtocolSession === true,
+        resumed_from_pending: hasPendingProtocolSession === true
       }
     });
 

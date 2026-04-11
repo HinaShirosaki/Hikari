@@ -2,113 +2,113 @@
   "protocol_to_notebook": {
     "name": "protocol_to_notebook",
     "description": "Use when the user describes lab work and wants a protocol-based notebook draft or protocol-guided documentation.",
-    "rules": "Infer up to three likely protocol names, capture relevant activity and project entities, and leave inventory search empty unless the request explicitly includes inventory lookup.",
+    "rules": "Infer up to three likely protocol names when possible and omit every other field unless it is listed below.",
     "example_input": "I did the HEK293 transfection for Atlas today. Can you turn it into a notebook page?",
     "specific_output_append": {
-      "protocol_candidates": "Populate with 1 to 3 likely protocol names inferred from the request.",
-      "inventory_search": "Leave empty unless inventory lookup is explicitly part of the request."
+      "protocol_candidates": "Populate with 1 to 3 likely protocol names inferred from the request."
     }
   },
   "notebook_draft": {
     "name": "notebook_draft",
     "description": "Use when the user wants the likely next experiment proposed in advance and wants a future planned notebook page drafted before the work is executed.",
-    "rules": "Infer up to three likely protocol names when possible, capture project and workflow entities when they are present, and keep inventory search empty unless the request explicitly asks about stock.",
+    "rules": "Infer likely protocol names and only include compact project or workflow hints when they materially help plan the draft.",
     "example_input": "What should I do next for Atlas, and can you draft tomorrow's notebook page for it?",
     "specific_output_append": {
       "protocol_candidates": "Populate with 1 to 3 likely protocol names inferred from the next-step planning request.",
+      "entities.project_name": "Populate when a project name is explicit or strongly implied.",
       "entities.workflow_step": "Populate when the user refers to a workflow stage, next step, or continuation point.",
-      "inventory_search": "Leave empty unless inventory lookup is explicitly part of the request."
+      "entities.protocol_name": "Populate when the user explicitly names the protocol to draft."
     }
   },
   "inventory_lookup": {
     "name": "inventory_lookup",
     "description": "Use when the user asks about stock availability, reagent identity, location, supplier metadata, or lab-stored chemical records.",
-    "rules": "Populate inventory_search with a normalized query and candidate terms, use reagent entities when present, and keep protocol_candidates as an empty array.",
+    "rules": "Use inventory_search to carry the normalized lookup query and candidate search terms.",
     "example_input": "Do we have PEI in stock, and where is it?",
     "specific_output_append": {
-      "inventory_search": "Populate normalized_query, candidate_terms, aliases, and search_mode for inventory search.",
-      "protocol_candidates": "Always set to [] for inventory_lookup."
+      "inventory_search": "Populate normalized_query, candidate_terms, aliases, and search_mode for inventory search."
     }
   },
   "record_lookup": {
     "name": "record_lookup",
     "description": "Use when the user asks for stored project, workflow, notebook, assay, gel, or other lab records that are not inventory items.",
-    "rules": "Use project, workflow, paper, or protocol entities when present, keep inventory_search empty, and keep protocol_candidates empty unless notebook generation is explicitly requested.",
+    "rules": "Only include compact record-hint entities when they materially narrow the local record search.",
     "example_input": "What did we use last time for the antibody conjugation workflow?",
     "specific_output_append": {
-      "inventory_search": "Keep empty for record lookups.",
-      "protocol_candidates": "Set to [] because this is not notebook generation."
+      "entities.project_name": "Populate when the request is scoped to a project.",
+      "entities.protocol_name": "Populate when the request names a protocol.",
+      "entities.workflow_step": "Populate when the request names a workflow stage or process.",
+      "entities.requested_output": "Populate when the user asks for a specific record type or output."
     }
   },
   "project_science_question": {
     "name": "project_science_question",
     "description": "Use when the user asks a scientific question tied to a specific project, experiment, workflow, or project record.",
-    "rules": "Capture the project and other routing entities when they are present or strongly implied. Default project-science questions to reasoning_effort 1. Use reasoning_effort 0 only when the user is asking for a stable background explanation that can be answered directly without checking project records, comparing alternatives, or retrieving fresh sources. Use reasoning_effort 1 for most project questions that should inspect internal evidence and may need a small amount of external support. Use reasoning_effort 2 when the request needs broader multi-step synthesis across project evidence and external literature, explicit comparison of multiple hypotheses, or recent-source grounding. Keep inventory_search empty unless the question is explicitly about stock.",
+    "rules": "Return reasoning_effort for routing. Include direct_answer only when reasoning_effort is 0. Include project or protocol hints only when they materially improve project resolution.",
     "example_input": "Why did the Atlas binder lose expression after transfection?",
     "specific_output_append": {
       "reasoning_effort": "Default to 1. Use 0 only for direct stable background answers that do not need project evidence or retrieval. Use 2 for broad synthesis, comparison, or recent-source-heavy reasoning.",
       "direct_answer": "When reasoning_effort is 0, provide the actual user-facing answer here. Otherwise set to null.",
-      "inventory_search": "Keep empty unless the question is specifically about stock."
+      "entities.project_name": "Populate when a project name is explicit or strongly implied.",
+      "entities.protocol_name": "Populate when protocol context is explicit and useful."
     }
   },
   "general_science_question": {
     "name": "general_science_question",
     "description": "Use when the user asks a general science question that is not tied to a specific project or stored lab record.",
-    "rules": "Do not force project entities without project context. Default general science questions to reasoning_effort 1. Use reasoning_effort 0 only when the question is straightforward, stable, and answerable directly from background knowledge without retrieval, recent-source checking, or multi-step analysis. Use reasoning_effort 1 for most science questions that need a targeted reasoning loop, light retrieval, or careful explanation. Use reasoning_effort 2 when the request needs broader synthesis, comparison, multiple mechanisms, or recent-source grounding across multiple steps. Use requested_output when helpful, and keep inventory_search empty unless the user explicitly asks about inventory.",
+    "rules": "Return reasoning_effort for routing. Include direct_answer only when reasoning_effort is 0.",
     "example_input": "Why does imidazole help elute His-tagged proteins?",
     "specific_output_append": {
       "reasoning_effort": "Default to 1. Use 0 only for direct stable background answers with no retrieval need. Use 2 for broad synthesis, comparison, or freshness-sensitive reasoning.",
-      "direct_answer": "When reasoning_effort is 0, provide the actual user-facing answer here. Otherwise set to null.",
-      "protocol_candidates": "Set to [] for general science questions."
+      "direct_answer": "When reasoning_effort is 0, provide the actual user-facing answer here. Otherwise set to null."
     }
   },
   "paper_analysis": {
     "name": "paper_analysis",
     "description": "Use when the user asks to analyze, summarize, extract methods from, or interpret a specific paper or PDF already identified in the conversation.",
-    "rules": "Populate paper_title when it is named or strongly implied, capture the requested analysis output, and keep inventory_search and protocol_candidates empty.",
+    "rules": "Only include the paper title and requested analysis when they are explicit or strongly implied.",
     "example_input": "Summarize the paper 'Engineered Nanobody Constructs' and pull out the methods.",
     "specific_output_append": {
       "entities.paper_title": "Populate when the paper title is provided or strongly implied.",
-      "protocol_candidates": "Set to [] for paper analysis."
+      "entities.requested_output": "Populate with the requested paper-analysis deliverable."
     }
   },
   "literature_search": {
     "name": "literature_search",
     "description": "Use when the user asks to find papers, references, recent literature, or external sources rather than analyze a specific paper already identified.",
-    "rules": "Use topic-defining scientific entities and requested_output to describe the literature task, and keep inventory_search and protocol_candidates empty.",
+    "rules": "Only include the requested literature output when the user specifies it explicitly.",
     "example_input": "Find recent papers on binder stability in mammalian expression systems.",
     "specific_output_append": {
-      "entities.requested_output": "Use to capture the desired literature output such as papers, references, or recent findings.",
-      "inventory_search": "Keep empty for literature searches."
+      "entities.requested_output": "Use to capture the desired literature output such as papers, references, or recent findings."
     }
   },
   "purchase_recommendation": {
     "name": "purchase_recommendation",
     "description": "Use when the user wants a product recommendation or asks to find an item they can buy from an external vendor.",
-    "rules": "Capture the purchase target in entities.product_query, put explicit must-have attributes in entities.required_attributes, put banned attributes in entities.excluded_attributes, capture price preferences such as cheap or budget in entities.budget_preference, and keep inventory_search and protocol_candidates empty.",
+    "rules": "Capture only the compact shopping filters that materially affect the product search. Do not repeat the product category or base item name inside required_attributes.",
     "example_input": "Find a cheap metal-free endotoxin-free syringe filter I can buy.",
     "specific_output_append": {
       "entities.product_query": "Populate with the product name or purchase target.",
-      "entities.required_attributes": "Populate with a compact comma-separated list of explicit must-have product attributes.",
+      "entities.required_attributes": "Populate with a compact comma-separated list of explicit must-have product attributes. Do not repeat the product category or base item name here.",
       "entities.excluded_attributes": "Populate with a compact comma-separated list of explicit banned attributes when present.",
-      "entities.budget_preference": "Populate with price language such as cheap, budget, low cost, or premium when present.",
-      "protocol_candidates": "Set to [] for purchase recommendations."
+      "entities.budget_preference": "Populate with price language such as cheap, budget, low cost, or premium when present."
     }
   },
   "result_analysis": {
     "name": "result_analysis",
     "description": "Use for data analysis, result interpretation, coding-style transforms, quantitative fitting, or requests to compute or analyze experimental outputs.",
-    "rules": "Use activity_type and requested_output to describe the analysis task, capture protocol context when helpful, and keep inventory_search and protocol_candidates empty unless another task is explicitly combined with the request.",
+    "rules": "Only include compact analysis-task hints when they materially help route the computation or interpretation request.",
     "example_input": "Fit a standard curve for this ELISA data and tell me which samples are outliers.",
     "specific_output_append": {
       "entities.requested_output": "Capture the analysis deliverable such as fitting, interpretation, or transformation.",
-      "protocol_candidates": "Set to [] unless the user is explicitly asking for notebook generation."
+      "entities.activity_type": "Capture the analysis or transform type when it is explicit.",
+      "entities.protocol_name": "Capture protocol context when it is explicit and useful."
     }
   },
   "mixed_request": {
     "name": "mixed_request",
     "description": "Use when the user combines materially different tasks in a single message and the app should clarify or separate them before execution.",
-    "rules": "Set needs_clarification to true, explain the minimum clarification needed, and populate only the entities that are explicit in the mixed request.",
+    "rules": "Flag that clarification is required before execution and explain the minimum follow-up needed.",
     "example_input": "Check if we have PEI, summarize the latest binder paper, and build a notebook page for yesterday's transfection.",
     "specific_output_append": {
       "needs_clarification": "Usually true when the user combines multiple materially different tasks.",
@@ -118,11 +118,11 @@
   "unclear": {
     "name": "unclear",
     "description": "Use when the user message is too vague, incomplete, or ambiguous to safely route to a specific intent.",
-    "rules": "Set needs_clarification to true, ask for the minimum missing routing detail, and keep inventory_search and protocol_candidates empty.",
+    "rules": "Flag that clarification is required and ask for the minimum missing routing detail.",
     "example_input": "Can you help with that thing from earlier?",
     "specific_output_append": {
       "needs_clarification": "Must be true for unclear requests.",
-      "inventory_search": "Always keep empty when the request is too vague to form a search."
+      "clarification_reason": "Explain the minimum detail that is missing."
     }
   }
 }

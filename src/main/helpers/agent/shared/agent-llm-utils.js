@@ -265,6 +265,9 @@ function createAgentLlmRuntimeHelpers(deps = {}) {
   const requestStructuredJsonPayloadOverride = typeof deps.requestStructuredJsonPayload === 'function'
     ? deps.requestStructuredJsonPayload
     : null;
+  const requestWebSearchOverride = typeof deps.requestWebSearch === 'function'
+    ? deps.requestWebSearch
+    : null;
   const requestCodexCliText = deps.requestCodexCliText;
   const getCodexCliWorkingDirectory = typeof deps.getCodexCliWorkingDirectory === 'function'
     ? deps.getCodexCliWorkingDirectory
@@ -333,6 +336,13 @@ function createAgentLlmRuntimeHelpers(deps = {}) {
     return getLlmProviderBridge().requestStructuredJsonPayload({ ...options });
   }
 
+  async function requestWebSearch(options = {}) {
+    if (requestWebSearchOverride) {
+      return requestWebSearchOverride({ ...options });
+    }
+    return getLlmProviderBridge().requestWebSearch({ ...options });
+  }
+
   return {
     LLM_PROVIDERS,
     asArray,
@@ -342,7 +352,8 @@ function createAgentLlmRuntimeHelpers(deps = {}) {
     toInputText,
     recordAgentLlmTrace,
     requestAssistantText,
-    requestStructuredJsonPayload
+    requestStructuredJsonPayload,
+    requestWebSearch
   };
 }
 

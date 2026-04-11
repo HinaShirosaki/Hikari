@@ -164,6 +164,9 @@ export const defaultState = {
         bundles: 0,
         protocols: 0,
         notebookEntries: 0,
+        workflowTemplates: 0,
+        workflows: 0,
+        papers: 0,
         chemicals: 0,
         personalInventoryContainers: 0,
         sequenceEntries: 0

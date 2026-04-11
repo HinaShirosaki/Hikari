@@ -96,6 +96,13 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
       assert.equal(envelope.layers.immediate.recent_conversation.length, 3);
       assert.equal(envelope.layers.session_memory.current_project_state.name, 'Atlas');
       assert.equal(envelope.layers.long_term_memory.length, 1);
+      assert.equal(envelope.registry.user.latest_user_message, 'The sample name was TUBE42.');
+      assert.equal(envelope.registry.user.follow_up_questions.includes('Which sample name did you use?'), true);
+      assert.equal(envelope.registry.execution.tool_outputs[0].tool_name, 'protocol-matching');
+      assert.equal(envelope.registry.memory.long_term_memory[0].key, 'output_format');
+      assert.equal(envelope.registry.system.active_task.selected_protocol.name, 'HEK293 Transfection');
+      assert.equal(envelope.registry_selection.user.current_user_request, 'The sample name was TUBE42.');
+      assert.equal(envelope.registry_selection.system.active_task.project.name, 'Atlas');
       assert.equal(envelope.memory_candidates.some((item) => item.category === 'project_name' && item.key === 'Atlas'), true);
       assert.match(String(envelope.prompt_blocks.immediate || ''), /Immediate working context:/);
       assert.match(String(envelope.prompt_blocks.immediate || ''), /Latest tool outputs:\n- protocol-matching \(ok\) \| summary: Selected HEK293 Transfection\./);
@@ -177,6 +184,8 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
       assert.equal(readyEnvelope.active_task, null);
       assert.equal(readyEnvelope.layers.immediate.current_task_state, null);
       assert.equal(readyEnvelope.layers.session_memory.recent_completed_tasks[0].summary, 'Notebook draft completed for Atlas-7.');
+      assert.equal(readyEnvelope.registry.system.active_task, null);
+      assert.equal(readyEnvelope.registry.memory.recent_completed_tasks[0].summary, 'Notebook draft completed for Atlas-7.');
     });
 
     test('context management runtime prunes expired sessions by idle time', () => {
@@ -196,6 +205,74 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
       const removed = runtime.pruneExpiredSessions();
       assert.deepEqual(removed, ['thread-expire']);
       assert.equal(runtime.getSession('thread-expire'), null);
+    });
+
+    test('context management runtime assembles layers from registry-first clarified and verification state', () => {
+      const runtime = agentContextManagement.createAgentContextManagementRuntime({
+        now: (() => {
+          let index = 0;
+          const values = [
+            '2026-03-22T12:30:00.000Z',
+            '2026-03-22T12:30:01.000Z',
+            '2026-03-22T12:30:02.000Z',
+            '2026-03-22T12:30:03.000Z',
+            '2026-03-22T12:30:04.000Z'
+          ];
+          return () => values[Math.min(index++, values.length - 1)];
+        })(),
+        createId: () => 'task-fixed-3'
+      });
+
+      runtime.startTask({
+        session_id: 'thread-3',
+        task_type: 'science_loop',
+        intent: 'project_science_question',
+        project: {
+          id: 'proj-3',
+          name: 'Atlas'
+        }
+      });
+
+      const registrySnapshot = runtime.buildContextRegistry({
+        session_id: 'thread-3',
+        message: 'Can you compare the two Atlas runs?',
+        clarified_user_message: 'Compare Atlas run 7 versus Atlas run 8 and explain the largest difference.',
+        conversation: [
+          { role: 'user', text: 'Can you compare the two Atlas runs?' },
+          { role: 'assistant', text: 'Which runs do you mean?' },
+          { role: 'user', text: 'Runs 7 and 8.' }
+        ],
+        inference_feedback: [
+          {
+            kind: 'inference',
+            summary: 'The comparison still needs one direct delta across both runs.'
+          }
+        ],
+        evaluation_feedback: [
+          {
+            kind: 'judge',
+            summary: 'Fetch both runs before answering.'
+          }
+        ],
+        skills: ['record-lookup'],
+        workflow_state: {
+          stage: 'comparison'
+        }
+      });
+
+      assert.equal(registrySnapshot.registry.user.clarified_user_message, 'Compare Atlas run 7 versus Atlas run 8 and explain the largest difference.');
+      assert.equal(registrySnapshot.registry.reasoning.inference_feedback[0].summary, 'The comparison still needs one direct delta across both runs.');
+      assert.equal(registrySnapshot.registry.system.workflow_state.stage, 'comparison');
+
+      const envelope = runtime.buildContextEnvelope({
+        session_id: 'thread-3'
+      });
+
+      assert.equal(envelope.layers.immediate.current_user_request, 'Compare Atlas run 7 versus Atlas run 8 and explain the largest difference.');
+      assert.equal(envelope.registry_selection.reasoning.evaluation_feedback[0].summary, 'Fetch both runs before answering.');
+      assert.equal(envelope.registry_selection.system.skills.includes('record-lookup'), true);
+      assert.match(String(envelope.prompt_blocks.verification || ''), /Verification feedback:/);
+      assert.match(String(envelope.prompt_blocks.verification || ''), /Fetch both runs before answering\./);
     });
 
     test('memory runtime remembers, updates, recalls, lists, and forgets long-term memory', async () => {
@@ -837,6 +914,92 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
       assert.equal(seen[0].meta.round, 1);
     });
 
+    test('lifecycle tool runner forwards request context into tool execution', async () => {
+      const { createAgentLifecycleService } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc', 'agent-lifecycle-service.js'));
+      let receivedCall = null;
+      const lifecycleService = createAgentLifecycleService({
+        cleanText: (value, maxLength = 2000) => {
+          const text = String(value || '').trim();
+          if (!text) {
+            return '';
+          }
+          return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text;
+        },
+        observability: {
+          recordLifecycleEvent: () => {}
+        },
+        controllerUtils: {},
+        appendAgentChatLogEntry: async () => {},
+        agentToolRuntime: {
+          normalizeToolInvocationArgs(args) {
+            return args;
+          },
+          async runAgentTool(toolName, args, snapshot, options) {
+            receivedCall = {
+              toolName,
+              args,
+              snapshot,
+              options
+            };
+            return {
+              ok: true,
+              summary: 'Tracked tool executed.',
+              result: {
+                status: 'matched',
+                items: []
+              }
+            };
+          }
+        }
+      });
+
+      const runTrackedTool = lifecycleService.createLifecycleToolRunner({
+        snapshot: {
+          data_file_path: '/tmp/agent-data.json'
+        },
+        allowWriteTools: false,
+        lifecycleRecorder: {
+          requestId: 'req-lifecycle-1'
+        },
+        provider: 'codex',
+        endpoint: 'codex://cli',
+        apiKey: '',
+        model: 'gpt-5.4-mini',
+        message: 'Find endotoxin-free pipette tips to buy.',
+        conversation: [
+          { role: 'user', text: 'Find endotoxin-free pipette tips to buy.' }
+        ],
+        parserPayload: {
+          primary_intent: 'purchase_recommendation',
+          entities: {
+            product_query: 'pipette tips'
+          }
+        },
+        traceContext: {
+          trace_id: 'trace-1'
+        },
+        project: {
+          id: 'proj-1',
+          name: 'Atlas'
+        }
+      });
+
+      await runTrackedTool('purchase-recommendation', {
+        query: 'pipette tips'
+      }, {
+        allowWriteTools: false
+      });
+
+      assert.equal(receivedCall.toolName, 'purchase-recommendation');
+      assert.equal(receivedCall.args.query, 'pipette tips');
+      assert.equal(receivedCall.snapshot.data_file_path, '/tmp/agent-data.json');
+      assert.equal(receivedCall.options.message, 'Find endotoxin-free pipette tips to buy.');
+      assert.equal(receivedCall.options.conversation.length, 1);
+      assert.equal(receivedCall.options.parserPayload.entities.product_query, 'pipette tips');
+      assert.equal(receivedCall.options.project.name, 'Atlas');
+      assert.equal(receivedCall.options.requestId, 'req-lifecycle-1');
+    });
+
     test('agent chat handler uses the parser-direct science answer for reasoning_effort 0', async () => {
       const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'agent-chat-direct-science-'));
       try {
@@ -1323,6 +1486,103 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
       assert.equal(calls[0].fileName, 'paper.pdf');
       assert.equal(calls[0].pdfDataUrl, 'data:application/pdf;base64,QUJD');
       assert.match(String(calls[0].prompt || ''), /Return JSON only\./);
+    });
+
+    test('provider bridge forwards openai web search requests through Responses web_search tool', async () => {
+      const { createAgentLlmProviderBridge } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'shared',
+        'agent-llm-provider-bridge.js'
+      ));
+      const calls = [];
+      const bridge = createAgentLlmProviderBridge({
+        LLM_PROVIDERS: {
+          OPENAI: 'openai'
+        },
+        requestOpenAiResponsesWithBackoff: async ({ body } = {}) => {
+          calls.push(body);
+          return {
+            output_text: JSON.stringify({
+              results: [
+                {
+                  title: 'Vendor Product',
+                  url: 'https://vendor.test/products/item-1',
+                  summary: 'Direct product detail page.',
+                  source_domain: 'vendor.test'
+                }
+              ],
+              reasoning: 'Used web search.'
+            })
+          };
+        }
+      });
+
+      const result = await bridge.requestWebSearch({
+        provider: 'openai',
+        endpoint: 'https://api.openai.com/v1/responses',
+        apiKey: 'test-key',
+        model: 'gpt-5',
+        stage: 'purchase_search',
+        query: 'SS320 competent cells',
+        maxResults: 3,
+        allowedDomains: ['vendor.test']
+      });
+
+      assert.equal(result.ok, true);
+      assert.equal(result.results.length, 1);
+      assert.equal(result.results[0].url, 'https://vendor.test/products/item-1');
+      assert.equal(calls.length, 1);
+      assert.equal(calls[0].tools[0].type, 'web_search');
+      assert.deepEqual(calls[0].tools[0].filters.allowed_domains, ['vendor.test']);
+      assert.deepEqual(calls[0].include, ['web_search_call.action.sources']);
+    });
+
+    test('provider bridge uses a best-effort internet-search prompt for codex web search', async () => {
+      const { createAgentLlmProviderBridge } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'shared',
+        'agent-llm-provider-bridge.js'
+      ));
+      const calls = [];
+      const bridge = createAgentLlmProviderBridge({
+        LLM_PROVIDERS: {
+          CODEX: 'codex'
+        },
+        requestCodexCliText: async (input = {}) => {
+          calls.push(input);
+          return JSON.stringify({
+            results: [
+              {
+                title: 'Vendor Product',
+                url: 'https://vendor.test/products/item-1',
+                summary: 'Direct product detail page.',
+                source_domain: 'vendor.test'
+              }
+            ],
+            reasoning: 'Internet search succeeded.'
+          });
+        }
+      });
+
+      const result = await bridge.requestWebSearch({
+        provider: 'codex',
+        model: 'gpt-5.4-mini',
+        query: 'SS320 competent cells',
+        maxResults: 2
+      });
+
+      assert.equal(result.ok, true);
+      assert.equal(result.results.length, 1);
+      assert.match(String(calls[0].prompt || ''), /If internet access is available in this Codex environment/i);
+      assert.equal(calls[0].enableWebSearch, true);
     });
 
     test('session runtime delegates tool-loop transport through the shared provider bridge', async () => {

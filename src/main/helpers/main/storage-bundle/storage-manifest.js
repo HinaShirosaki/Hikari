@@ -50,6 +50,21 @@ function detectManifestRole(relativePath) {
   if (normalized.startsWith('sequenceviewer/entries/')) {
     return 'sequence_entry_file';
   }
+  if (normalized === 'workflow/workflow-status.sqlite') {
+    return 'workflow_status_index';
+  }
+  if (normalized.endsWith('/template.json') && normalized.startsWith('workflow/')) {
+    return 'workflow_template_metadata';
+  }
+  if (normalized.endsWith('/workflow.json') && normalized.startsWith('workflow/')) {
+    return 'workflow_run_metadata';
+  }
+  if (normalized.endsWith('/relatedpapers/related-papers.json') && normalized.startsWith('workflow/')) {
+    return 'workflow_related_papers';
+  }
+  if (normalized.endsWith('/page.json') && normalized.includes('/notebook/') && normalized.startsWith('workflow/')) {
+    return 'workflow_notebook_page';
+  }
   if (hasSupportedDataExtension(normalized)) {
     return 'data_file';
   }
@@ -93,6 +108,9 @@ function normalizeBundleSummary(snapshot) {
   return {
     protocols: asArray(source.protocols).length,
     notebookEntries: asArray(source.notebookEntries).length,
+    workflowTemplates: asArray(source.workflowTemplates).length,
+    workflows: asArray(source.workflows).length,
+    papers: asArray(source.papers).length,
     chemicals: asArray(labInventory.chemicals).length,
     personalInventoryContainers: personalContainerCount
   };

@@ -175,7 +175,11 @@ function summarizePurchaseRecommendation(purchaseRecommendation) {
   const query = cleanText(payload.query, 220);
   const items = asArray(payload.items);
   const requiredTerms = asArray(payload?.filters?.required_terms).map((item) => cleanText(item, 120)).filter(Boolean);
+  const matchMode = cleanText(payload.match_mode, 20);
   if (status === 'matched' && items.length) {
+    if (matchMode === 'partial') {
+      return `Found ${items.length} likely product match${items.length === 1 ? '' : 'es'}${query ? ` for "${query}"` : ''}, but I could not verify every requested attribute from the vendor pages.`;
+    }
     return `Found ${items.length} purchase recommendation${items.length === 1 ? '' : 's'}${query ? ` for "${query}"` : ''}${requiredTerms.length ? ` matching ${requiredTerms.join(', ')}` : ''}.`;
   }
   if (status === 'no_match') {

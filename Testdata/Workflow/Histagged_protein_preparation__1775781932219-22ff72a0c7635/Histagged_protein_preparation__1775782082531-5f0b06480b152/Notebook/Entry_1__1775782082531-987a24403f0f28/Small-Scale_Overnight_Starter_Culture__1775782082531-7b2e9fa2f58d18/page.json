@@ -1,0 +1,31 @@
+{
+  "exportedAt": "2026-04-11T02:18:48.230Z",
+  "workflowId": "1775782082531-5f0b06480b152",
+  "notebookEntry": {
+    "id": "1775782435713-d25977ea3111f8",
+    "notebookType": "biology",
+    "projectId": "",
+    "projectName": "",
+    "protocolId": "1774024647315-74cbb18b4cc37",
+    "protocolName": "Small-Scale Overnight Starter Culture",
+    "values": {},
+    "result": "",
+    "resultFiles": [],
+    "resultFileRecords": [],
+    "storageFolder": "",
+    "createdAt": "2026-04-10T00:53:55.713Z",
+    "updatedAt": "2026-04-10T01:47:04.637Z",
+    "notebookState": "executed",
+    "executedAt": "2026-04-10T01:47:04.637Z",
+    "workflowContext": {
+      "workflowId": "1775782082531-5f0b06480b152",
+      "workflowName": "Histagged protein preparation",
+      "workflowEntryId": "1775782082531-987a24403f0f28",
+      "workflowEntryName": "Entry 1",
+      "workflowBlockId": "1775782082531-7b2e9fa2f58d18",
+      "workflowBlockTitle": "Small-Scale Overnight Starter Culture"
+    },
+    "assayIds": [],
+    "gelAnalysisIds": []
+  }
+}
