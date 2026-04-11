@@ -747,6 +747,7 @@ test('generic agent tool catalog keeps key retrieval and execution tools', () =>
   assert.equal(toolsCatalog.some((entry) => entry?.name === 'inventory-lookup'), true);
   assert.equal(toolsCatalog.some((entry) => entry?.name === 'record-lookup'), true);
   assert.equal(toolsCatalog.some((entry) => entry?.name === 'python-sandbox'), true);
+  assert.equal(toolsCatalog.some((entry) => entry?.name === 'command-line'), true);
   assert.equal(toolsCatalog.some((entry) => entry?.name === 'literature-search'), true);
   assert.equal(toolsCatalog.some((entry) => entry?.name === 'purchase-recommendation'), true);
   assert.equal(toolsCatalog.some((entry) => entry?.name === 'paper-download'), true);
@@ -958,6 +959,7 @@ test('agent tool loading and execution helpers expose catalogs and generic execu
   assert.equal(Array.isArray(toolsCatalog), true);
   assert.equal(Boolean(toolCallCatalog.$defs), true);
   assert.equal(toolsCatalog.some((entry) => entry?.name === 'python-sandbox'), true);
+  assert.equal(toolsCatalog.some((entry) => entry?.name === 'command-line'), true);
   assert.equal(toolsCatalog.some((entry) => entry?.name === 'sub-agent'), true);
   assert.equal(toolsCatalog.some((entry) => entry?.name === 'memory'), true);
   assert.equal(toolsCatalog.some((entry) => entry?.name === 'literature-search'), true);
@@ -967,6 +969,7 @@ test('agent tool loading and execution helpers expose catalogs and generic execu
   assert.equal(toolsCatalog.some((entry) => entry?.name === 'notebook-draft'), true);
   assert.equal(toolsCatalog.some((entry) => entry?.name === 'protocol-generation'), true);
   assert.equal(Boolean(toolCallCatalog['python-sandbox']?.input_schema), true);
+  assert.equal(Boolean(toolCallCatalog['command-line']?.input_schema), true);
   assert.equal(Boolean(toolCallCatalog['sub-agent']?.input_schema), true);
   assert.equal(Boolean(toolCallCatalog.memory?.input_schema), true);
   assert.equal(Boolean(toolCallCatalog['literature-search']?.input_schema), true);
@@ -976,6 +979,7 @@ test('agent tool loading and execution helpers expose catalogs and generic execu
   assert.equal(Boolean(toolCallCatalog['notebook-draft']?.input_schema), true);
   assert.equal(Boolean(toolCallCatalog['protocol-generation']?.input_schema), true);
   assert.equal(typeof toolCallCatalog['inventory-lookup']?.description, 'string');
+  assert.equal(typeof toolCallCatalog['command-line']?.description, 'string');
   assert.equal(typeof toolCallCatalog.memory?.description, 'string');
   assert.equal(typeof toolCallCatalog['literature-search']?.description, 'string');
   assert.equal(typeof toolCallCatalog['purchase-recommendation']?.description, 'string');

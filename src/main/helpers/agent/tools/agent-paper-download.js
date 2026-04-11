@@ -68,7 +68,15 @@ function ensurePdfFileName(fileName, fallback = 'paper.pdf') {
 }
 
 function buildPaperStorageFolder({ rootPath, linkedType, linkedName }) {
-  const category = String(linkedType || '').trim().toLowerCase() === 'journal-club' ? 'JournalClub' : 'Project';
+  const normalizedType = String(linkedType || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_]+/g, '-');
+  const category = normalizedType === 'journal-club'
+    ? 'JournalClub'
+    : (normalizedType === 'literature-search'
+      ? 'LiteratureSearch'
+      : 'Project');
   const safeLinkedName = sanitizeStorageName(linkedName, 'Uncategorized');
   return `${String(rootPath || '').trim()}/${category}/${safeLinkedName}/Papers`;
 }

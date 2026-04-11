@@ -147,6 +147,8 @@ function createAgentToolCallRuntime(deps = {}) {
         endpoint: cleanText(context.endpoint, 1600),
         apiKey: cleanText(context.apiKey, 400),
         model: cleanText(context.model, 120),
+        cwd: cleanText(context.cwd, 1200),
+        allowWriteTools: context.allowWriteTools === true,
         message: cleanText(context.message, 3200),
         conversation: asArray(context.conversation),
         snapshot,

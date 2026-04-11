@@ -188,6 +188,24 @@ function summarizePurchaseRecommendation(purchaseRecommendation) {
   return '';
 }
 
+function summarizeSkillCommand(skillCommand) {
+  const payload = skillCommand && typeof skillCommand === 'object' ? skillCommand : {};
+  if (!Object.keys(payload).length) {
+    return '';
+  }
+  const summary = cleanText(payload.summary, 12000);
+  const result = payload.result && typeof payload.result === 'object' ? payload.result : {};
+  const output = cleanText(
+    result.output
+      || [result.stdout, result.stderr].filter(Boolean).join(result.stdout && result.stderr ? '\n' : ''),
+    12000
+  );
+  if (summary && output && !summary.includes(output)) {
+    return `${summary}\n\n${output}`;
+  }
+  return summary || output;
+}
+
 // Extract the main answer or follow-up prompt from a science-question result payload.
 function summarizeScienceResult(payload) {
   const source = payload && typeof payload === 'object' ? payload : {};
@@ -248,6 +266,9 @@ function buildAssistantMetaFromResult(result, requestText = '') {
     purchase_recommendation: payload.purchase_recommendation && typeof payload.purchase_recommendation === 'object'
       ? cloneJson(payload.purchase_recommendation, null)
       : null,
+    skill_command: payload.skill_command && typeof payload.skill_command === 'object'
+      ? cloneJson(payload.skill_command, null)
+      : null,
     inventory_lookup: payload.inventory_lookup && typeof payload.inventory_lookup === 'object'
       ? cloneJson(payload.inventory_lookup, null)
       : null,
@@ -289,6 +310,9 @@ function buildAssistantTextFromResult(result) {
   const purchaseRecommendation = payload.purchase_recommendation && typeof payload.purchase_recommendation === 'object'
     ? payload.purchase_recommendation
     : null;
+  const skillCommand = payload.skill_command && typeof payload.skill_command === 'object'
+    ? payload.skill_command
+    : null;
   const generalScienceQuestion = payload.general_science_question && typeof payload.general_science_question === 'object'
     ? payload.general_science_question
     : null;
@@ -309,6 +333,7 @@ function buildAssistantTextFromResult(result) {
   const inventorySummaryText = summarizeInventoryLookup(inventoryLookup);
   const recordSummaryText = summarizeRecordLookup(recordLookup);
   const purchaseRecommendationText = summarizePurchaseRecommendation(purchaseRecommendation);
+  const skillCommandText = summarizeSkillCommand(skillCommand);
   const notebookDraftText = summarizeNotebookDraft(notebookDraftWorkflow);
   const scienceAnswerText = summarizeScienceResult(generalScienceQuestion)
     || summarizeScienceResult(projectScienceQuestion)
@@ -327,6 +352,7 @@ function buildAssistantTextFromResult(result) {
   }
   // Otherwise fall back through science answers, lookup summaries, parser reasoning, and a generic default.
   return scienceAnswerText
+    || skillCommandText
     || purchaseRecommendationText
     || inventorySummaryText
     || recordSummaryText

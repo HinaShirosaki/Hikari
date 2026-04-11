@@ -592,7 +592,7 @@ function createLiteratureSearchRuntime(deps = {}) {
     return [];
   }
 
-  async function searchLiterature(input = {}) {
+  async function searchLiteratureCandidates(input = {}) {
     const source = ensureObject(input);
     const query = buildLiteratureQuery(source);
     if (!query) {
@@ -654,9 +654,36 @@ function createLiteratureSearchRuntime(deps = {}) {
       const count = toFiniteInteger(sourceCounts[sourceName], 0);
       return `${SOURCE_LABELS[sourceName] || sourceName}: ${count}`;
     }).join(', ');
+
+    return {
+      ok: true,
+      status: 'completed',
+      query,
+      sources: executedSources,
+      items,
+      citations,
+      loaded_context_blocks: [],
+      papers_read_count: 0,
+      source_counts: cloneJson(sourceCounts, {}),
+      source_errors: cloneJson(sourceErrors, {}),
+      summary: items.length
+        ? `Found ${items.length} literature result${items.length === 1 ? '' : 's'} (${sourceSummary}).`
+        : `No literature results found (${sourceSummary || 'no sources executed'}).`
+    };
+  }
+
+  async function searchLiterature(input = {}) {
+    const candidateResult = await searchLiteratureCandidates(input);
+    if (!candidateResult?.ok) {
+      return candidateResult;
+    }
+
+    const source = ensureObject(input);
+    const query = cleanText(candidateResult.query || buildLiteratureQuery(source), 600);
     let loadedContextBlocks = [];
     let paperContextSummary = '';
     let papersReadCount = 0;
+    const items = asArray(candidateResult.items);
 
     if (paperContextLoaderRuntime && typeof paperContextLoaderRuntime.loadPaperContexts === 'function' && items.length) {
       try {
@@ -692,19 +719,12 @@ function createLiteratureSearchRuntime(deps = {}) {
     }
 
     return {
-      ok: true,
-      status: 'completed',
-      query,
-      sources: executedSources,
-      items,
-      citations,
+      ...candidateResult,
       loaded_context_blocks: loadedContextBlocks,
       papers_read_count: papersReadCount,
-      source_counts: cloneJson(sourceCounts, {}),
-      source_errors: cloneJson(sourceErrors, {}),
-      summary: items.length
-        ? `Found ${items.length} literature result${items.length === 1 ? '' : 's'} (${sourceSummary}).${paperContextSummary ? ` ${paperContextSummary}` : ''}`
-        : `No literature results found (${sourceSummary || 'no sources executed'}).`
+      summary: cleanText(candidateResult.summary, 500)
+        ? `${cleanText(candidateResult.summary, 500)}${paperContextSummary ? ` ${paperContextSummary}` : ''}`
+        : (paperContextSummary || 'No literature results found.')
     };
   }
 
@@ -718,6 +738,7 @@ function createLiteratureSearchRuntime(deps = {}) {
     searchUniProtRecords,
     searchEuropePmcRecords,
     searchWebRecords,
+    searchLiteratureCandidates,
     searchLiterature,
     execute: searchLiterature
   };

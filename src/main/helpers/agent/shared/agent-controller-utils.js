@@ -265,6 +265,9 @@ function createAgentControllerUtils(deps = {}) {
     const purchaseRecommendation = source.purchase_recommendation && typeof source.purchase_recommendation === 'object'
       ? source.purchase_recommendation
       : null;
+    const skillCommand = source.skill_command && typeof source.skill_command === 'object'
+      ? source.skill_command
+      : null;
     const generalScienceQuestion = source.general_science_question && typeof source.general_science_question === 'object'
       ? source.general_science_question
       : null;
@@ -401,6 +404,15 @@ function createAgentControllerUtils(deps = {}) {
           source: cleanText(purchaseRecommendation.source, 80),
           budget_preference: cleanText(purchaseRecommendation?.filters?.budget_preference, 80),
           item_count: asArray(purchaseRecommendation.items).length
+        }
+        : null,
+      skill_command: skillCommand
+        ? {
+          status: cleanText(skillCommand.status, 40),
+          skill_name: cleanText(skillCommand.skill_name, 160),
+          command_name: cleanText(skillCommand.command_name, 80),
+          tool_name: cleanText(skillCommand.tool_name, 120),
+          summary: cleanText(skillCommand.summary, 500)
         }
         : null,
       general_science_question: generalScienceQuestion

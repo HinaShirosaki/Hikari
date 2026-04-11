@@ -7,6 +7,7 @@ const {
   defaultExtractResponseText,
   defaultExtractClaudeResponseText,
   defaultExtractGeminiResponseText,
+  createAgentLlmRuntimeHelpers,
   requestOpenAiResponsesWithBackoff,
   requestClaudeMessagesWithBackoff,
   requestGeminiGenerateContentWithBackoff
@@ -34,13 +35,17 @@ const { createAgentSessionRuntime } = require('../agent/runtime/agent-session-ru
 const { createAgentScienceMainUtils } = require('../agent/runtime/agent-science-main-utils.js');
 const { createAgentToolSmokeTestRuntime } = require('../agent/tools/agent-tool-smoke-test');
 const { createAgentChatLogRuntime } = require('../agent/context/agent-chat-log.js');
+const { createAgentSkillRuntime } = require('../agent/skills/agent-skill-runtime.js');
 const { normalizeToolInvocationArgs } = require('../agent/tools/agent-tool-loading.js');
 const { createAgentToolCallRuntime } = require('../agent/tools/agent-tool-execution.js');
 const { createAgentToolProviderRuntime } = require('../agent/tools/agent-tool-provide.js');
+const { createAgentCommandLineRuntime } = require('../agent/tools/agent-command-line.js');
 const { createNotebookDraftRuntime } = require('../agent/tools/agent-notebook-draft.js');
 const { createLiteratureSearchRuntime } = require('../agent/tools/agent-literature-search.js');
+const { createLiteratureSearchWorkflowRuntime } = require('../agent/literature-search/agent-literature-search-workflow.js');
 const { createPurchaseRecommendationRuntime } = require('../agent/tools/agent-purchase-recommendation.js');
 const { createPaperContextLoaderRuntime } = require('../agent/tools/agent-paper-context-loader.js');
+const { createPaperDownloadRuntime } = require('../agent/tools/agent-paper-download.js');
 const { createProtocolMatchingRuntime } = require('../agent/tools/agent-protocol-matching.js');
 const { createNotebookGenerationRuntime } = require('../agent/tools/agent-notebook-generation.js');
 const { createAgentInventoryLookupRuntime } = require('../agent/tools/agent-inventory-lookup.js');
@@ -159,6 +164,9 @@ function createMainAgentServices(deps = {}) {
     ...sharedLlmTransportDeps,
     recordAgentLlmTrace: controllerUtils.recordAgentLlmTrace
   };
+  const agentLlmRuntimeHelpers = createAgentLlmRuntimeHelpers({
+    ...sharedAgentLlmDeps
+  });
 
   const agentRuntimeRegistry = createAgentRuntimeRegistry({
     cleanText
@@ -182,6 +190,10 @@ function createMainAgentServices(deps = {}) {
   const agentRuntimeSupport = createAgentRuntimeSupport({
     renderPromptTemplate
   });
+  const agentSkillRuntime = createAgentSkillRuntime({
+    cleanText,
+    extraSkillDirs: Array.isArray(deps.agentSkillDirs) ? deps.agentSkillDirs : []
+  });
 
   const genericAgentToolRuntime = createAgentToolCallRuntime({
     asArray,
@@ -194,6 +206,10 @@ function createMainAgentServices(deps = {}) {
     normalizeToolInvocationArgs,
     normalizeAgentSnapshot: agentRuntimeSupport.normalizeAgentSnapshot,
     buildAgentSystemPrompt: agentRuntimeSupport.buildAgentSystemPrompt,
+    listSkills: agentSkillRuntime.listSkills,
+    getSkill: agentSkillRuntime.getSkill,
+    parseSkillInvocation: agentSkillRuntime.parseSkillInvocation,
+    buildSkillsPromptPayload: agentSkillRuntime.buildSkillsPromptPayload,
     async runAgentTool(toolName, args, rawSnapshot, options = {}) {
       const normalizedArgs = normalizeToolInvocationArgs(args);
       const snapshot = agentRuntimeSupport.normalizeAgentSnapshot(rawSnapshot);
@@ -270,23 +286,41 @@ function createMainAgentServices(deps = {}) {
     paperContextLoaderRuntime,
     fetch: typeof globalThis.fetch === 'function' ? globalThis.fetch.bind(globalThis) : null
   });
+  const paperDownloadRuntime = createPaperDownloadRuntime({
+    ...sharedAgentLlmDeps,
+    fetch: typeof globalThis.fetch === 'function' ? globalThis.fetch.bind(globalThis) : null,
+    BrowserWindow: deps.BrowserWindow || deps.electron?.BrowserWindow || null
+  });
+  const literatureSearchWorkflowRuntime = createLiteratureSearchWorkflowRuntime({
+    ...sharedAgentLlmDeps,
+    literatureSearchRuntime,
+    paperContextLoaderRuntime,
+    paperDownloadRuntime
+  });
   const purchaseRecommendationRuntime = createPurchaseRecommendationRuntime({
     ...sharedAgentLlmDeps,
     fetch: typeof globalThis.fetch === 'function' ? globalThis.fetch.bind(globalThis) : null
   });
   const pythonSandboxToolRuntime = createManagedPythonSandboxRuntime({
     runPythonSandbox,
-    sandboxRoot: getAgentPythonSandboxRoot()
+    sandboxRoot: getAgentPythonSandboxRoot(),
+    requestStructuredJsonPayload: agentLlmRuntimeHelpers.requestStructuredJsonPayload
+  });
+  const commandLineToolRuntime = createAgentCommandLineRuntime({
+    cleanText,
+    defaultCwd: process.cwd()
   });
 
   registerAgentToolExecutors({
     cleanText,
     genericAgentToolRuntime,
     agentLookupRuntime,
-    literatureSearchRuntime,
+    literatureSearchRuntime: literatureSearchWorkflowRuntime,
     purchaseRecommendationRuntime,
     pythonSandboxToolRuntime,
+    commandLineRuntime: commandLineToolRuntime,
     notebookDraftRuntime,
+    paperDownloadRuntime,
     getAgentPythonSandboxRoot
   });
 
@@ -328,9 +362,12 @@ function createMainAgentServices(deps = {}) {
     deepResearchRuntime,
     scienceMainUtils,
     agentToolRuntime,
+    agentSkillRuntime,
     agentChatLogRuntime,
     agentToolSmokeTestRuntime,
-    agentLookupRuntime
+    agentLookupRuntime,
+    paperDownloadRuntime,
+    literatureSearchWorkflowRuntime
   };
 }
 

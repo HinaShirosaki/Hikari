@@ -244,7 +244,10 @@ function createAgentRuntimeSupport(deps = {}) {
   function buildAgentSystemPrompt(projectName, prompts) {
     const projectScope = projectName ? `Scoped project: ${projectName}.` : 'Scope: all projects.';
     const template = String(prompts?.agent?.systemPromptTemplate || '').trim() || defaultSystemPrompt;
-    return renderPromptTemplate(template, { projectScope });
+    const rendered = renderPromptTemplate(template, { projectScope });
+    const skillsCatalogPrompt = cleanText(prompts?.agent?.skillsCatalogPrompt, 16000);
+    const activeSkillsPrompt = cleanText(prompts?.agent?.activeSkillsPrompt, 24000);
+    return [rendered, skillsCatalogPrompt, activeSkillsPrompt].filter(Boolean).join('\n\n');
   }
 
   function buildAgentSynthesisPrompt(_requiresApproval, prompts) {

@@ -376,6 +376,7 @@ const agentToolLoading = optionalRequire(path.join(__dirname, 'src', 'main', 'he
 const agentToolExecution = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-tool-execution.js'));
 const agentProjectRetrieval = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-project-retrieval.js'));
 const agentLiteratureSearch = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-literature-search.js'));
+const agentLiteratureSearchWorkflow = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'literature-search', 'agent-literature-search-workflow.js'));
 const agentPaperContextLoader = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-paper-context-loader.js'));
 const agentPaperDownload = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-paper-download.js'));
 const agentPaperAnalysis = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-paper-analysis.js'));
@@ -1407,6 +1408,7 @@ const suiteScope = {
   agentToolExecution,
   agentProjectRetrieval,
   agentLiteratureSearch,
+  agentLiteratureSearchWorkflow,
   agentPaperContextLoader,
   agentPaperDownload,
   agentPaperAnalysis,

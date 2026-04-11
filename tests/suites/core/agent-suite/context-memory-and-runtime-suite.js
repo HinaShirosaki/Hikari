@@ -273,6 +273,7 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
       assert.equal(envelope.registry_selection.system.skills.includes('record-lookup'), true);
       assert.match(String(envelope.prompt_blocks.verification || ''), /Verification feedback:/);
       assert.match(String(envelope.prompt_blocks.verification || ''), /Fetch both runs before answering\./);
+      assert.match(String(envelope.prompt_blocks.session_memory || ''), /Skills: record-lookup/);
     });
 
     test('memory runtime remembers, updates, recalls, lists, and forgets long-term memory', async () => {
@@ -1415,6 +1416,273 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
       assert.match(String(result.stdout || ''), /helper-finished/);
     });
 
+    test('managed python sandbox runtime only forwards the task brief to the sandbox sub-agent', async () => {
+      const createCalls = [];
+      const noop = () => {};
+      const subAgentRuntime = {
+        createSubAgent: async (input = {}) => {
+          const snapshot = JSON.parse(JSON.stringify(input));
+          createCalls.push(snapshot);
+          return {
+            ok: true,
+            status: 'created',
+            agent: {
+              id: 'python-sandbox-subagent-1',
+              name: String(snapshot.name || ''),
+              status: 'active',
+              system_prompt: '',
+              metadata: JSON.parse(JSON.stringify(snapshot.metadata || {})),
+              created_at: '2026-03-22T10:00:00.000Z',
+              updated_at: '2026-03-22T10:00:00.000Z',
+              messages: [
+                {
+                  role: 'user',
+                  text: String(snapshot.message || ''),
+                  timestamp: '2026-03-22T10:00:00.000Z'
+                }
+              ],
+              last_response: null,
+              task: null
+            },
+            summary: 'created'
+          };
+        },
+        sendSubAgentMessage: async () => ({ ok: true, status: 'updated' }),
+        getSubAgent: ({ agent_id } = {}) => ({
+          ok: true,
+          status: 'found',
+          agent: {
+            id: String(agent_id || 'python-sandbox-subagent-1'),
+            name: 'python-sandbox-helper',
+            status: 'active',
+            system_prompt: '',
+            metadata: {
+              task_type: 'python-sandbox'
+            },
+            created_at: '2026-03-22T10:00:00.000Z',
+            updated_at: '2026-03-22T10:00:01.000Z',
+            messages: [],
+            last_response: null,
+            task: {
+              state: 'completed'
+            },
+            liveness: {
+              live: true,
+              state: 'idle',
+              reason: 'task_completed'
+            }
+          }
+        }),
+        startSubAgentTask: noop,
+        recordSubAgentHeartbeat: noop,
+        completeSubAgentTask: noop,
+        failSubAgentTask: noop,
+        listSubAgents: () => ({ ok: true, status: 'listed', items: [] }),
+        deleteSubAgent: () => ({ ok: true, status: 'deleted' })
+      };
+
+      const runtime = agentPython.createManagedPythonSandboxRuntime({
+        subAgentRuntime,
+        runPythonSandbox: async () => ({
+          ok: true,
+          run_id: 'py-test-1',
+          status: 'ok',
+          error: '',
+          timeout_ms: 4000,
+          python_executable: 'python3',
+          process_id: 1234,
+          exit_code: 0,
+          signal: null,
+          timed_out: false,
+          stdout: 'done',
+          stderr: '',
+          files_written: [],
+          readback_files: [],
+          render_outputs: [],
+          warnings: [],
+          summary: 'Python sandbox execution completed.'
+        })
+      });
+
+      const result = await runtime.execute({
+        code: 'print(42)',
+        timeout_ms: 4000,
+        task_type: 'calculation'
+      }, {
+        name: 'python-sandbox-test'
+      });
+
+      assert.equal(result.ok, true);
+      assert.equal(createCalls.length, 1);
+      assert.equal(Object.prototype.hasOwnProperty.call(createCalls[0], 'system_prompt'), false);
+      assert.equal(createCalls[0].metadata.task_type, 'python-sandbox');
+      assert.match(String(createCalls[0].message || ''), /Supervise this Python sandbox execution\./);
+    });
+
+    test('managed python sandbox runtime lets the sandbox sub-agent repair failed runs itself', async () => {
+      const llmCalls = [];
+      const runCalls = [];
+      const runtime = agentPython.createManagedPythonSandboxRuntime({
+        requestStructuredJsonPayload: async (options = {}) => {
+          llmCalls.push(options);
+          return {
+            ok: true,
+            payload: {
+              action: 'rerun',
+              assistant_message: 'I fixed the failing code and prepared a retry.',
+              summary: 'Retry with corrected code.',
+              code: 'print("repaired")'
+            }
+          };
+        },
+        runPythonSandbox: async (input = {}) => {
+          runCalls.push(JSON.parse(JSON.stringify(input)));
+          if (runCalls.length === 1) {
+            return {
+              ok: false,
+              run_id: 'py-failed-1',
+              status: 'error',
+              error: 'NameError: missing_symbol',
+              timeout_ms: 4000,
+              python_executable: 'python3',
+              process_id: 2111,
+              exit_code: 1,
+              signal: null,
+              timed_out: false,
+              stdout: '',
+              stderr: 'Traceback\nNameError: missing_symbol',
+              files_written: [],
+              readback_files: [],
+              render_outputs: [],
+              warnings: [],
+              summary: 'Python sandbox execution failed.'
+            };
+          }
+          return {
+            ok: true,
+            run_id: 'py-repaired-2',
+            status: 'ok',
+            error: '',
+            timeout_ms: 4000,
+            python_executable: 'python3',
+            process_id: 2112,
+            exit_code: 0,
+            signal: null,
+            timed_out: false,
+            stdout: 'repaired',
+            stderr: '',
+            files_written: [],
+            readback_files: [],
+            render_outputs: [],
+            warnings: [],
+            summary: 'Python sandbox execution completed.'
+          };
+        }
+      });
+
+      const result = await runtime.execute({
+        code: 'print(missing_symbol)',
+        timeout_ms: 4000,
+        task_type: 'calculation'
+      }, {
+        provider: 'openai',
+        model: 'gpt-5.4-mini',
+        message: 'Run the sandbox task and repair it if needed.'
+      });
+
+      assert.equal(result.ok, true);
+      assert.equal(runCalls.length, 2);
+      assert.equal(runCalls[1].code, 'print("repaired")');
+      assert.equal(llmCalls.length, 1);
+      assert.equal(llmCalls[0].stage, 'python_sandbox_sub_agent_repair');
+      assert.equal(result.repair_rounds, 1);
+      assert.equal(result.sub_agent?.task?.state, 'completed');
+      assert.equal(result.sub_agent?.task?.metadata?.latest_sandbox_result?.run_id, 'py-repaired-2');
+      assert.match(String(result.summary || ''), /Self-repaired after 1 round/i);
+    });
+
+    test('managed python sandbox runtime reuses the same sub-agent for stored results and follow-up feedback', async () => {
+      const llmCalls = [];
+      const runCalls = [];
+      const runtime = agentPython.createManagedPythonSandboxRuntime({
+        requestStructuredJsonPayload: async (options = {}) => {
+          llmCalls.push(options);
+          return {
+            ok: true,
+            payload: {
+              action: 'rerun',
+              assistant_message: 'I extended the sandbox work for the follow-up request.',
+              summary: 'Run a second pass.',
+              code: 'print("second-pass")'
+            }
+          };
+        },
+        runPythonSandbox: async (input = {}) => {
+          runCalls.push(JSON.parse(JSON.stringify(input)));
+          const index = runCalls.length;
+          return {
+            ok: true,
+            run_id: `py-success-${index}`,
+            status: 'ok',
+            error: '',
+            timeout_ms: 4000,
+            python_executable: 'python3',
+            process_id: 3100 + index,
+            exit_code: 0,
+            signal: null,
+            timed_out: false,
+            stdout: index === 1 ? 'first-pass' : 'second-pass',
+            stderr: '',
+            files_written: [],
+            readback_files: [],
+            render_outputs: [],
+            warnings: [],
+            summary: 'Python sandbox execution completed.'
+          };
+        }
+      });
+
+      const first = await runtime.execute({
+        code: 'print("first-pass")',
+        timeout_ms: 4000,
+        task_type: 'analysis'
+      }, {
+        message: 'Analyze the dataset.'
+      });
+
+      assert.equal(first.ok, true);
+      assert.equal(runCalls.length, 1);
+      assert.equal(typeof first.sub_agent_id, 'string');
+
+      const replayed = await runtime.execute({
+        sub_agent_id: first.sub_agent_id
+      });
+
+      assert.equal(replayed.ok, true);
+      assert.equal(runCalls.length, 1);
+      assert.equal(replayed.sandbox.run_id, 'py-success-1');
+      assert.equal(replayed.sub_agent_id, first.sub_agent_id);
+      assert.equal(replayed.continued_from_sub_agent, true);
+
+      const continued = await runtime.execute({
+        sub_agent_id: first.sub_agent_id,
+        feedback: 'Please do a second pass and expand the result.'
+      }, {
+        provider: 'openai',
+        model: 'gpt-5.4-mini'
+      });
+
+      assert.equal(continued.ok, true);
+      assert.equal(runCalls.length, 2);
+      assert.equal(runCalls[1].code, 'print("second-pass")');
+      assert.equal(llmCalls.length, 1);
+      assert.equal(llmCalls[0].stage, 'python_sandbox_sub_agent_continue');
+      assert.equal(continued.sub_agent_id, first.sub_agent_id);
+      assert.equal(continued.continued_from_sub_agent, true);
+      assert.equal(continued.repair_rounds, 0);
+      assert.match(String(continued.summary || ''), /Continued from Python sandbox sub-agent/i);
+    });
+
     test('managed python sandbox runtime supervises runs with sub-agents and sends failures for debugging', async () => {
       const runtime = agentPython.createManagedPythonSandboxRuntime();
 
@@ -1446,6 +1714,86 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
       assert.match(String(failure.sandbox?.error || ''), /module_that_does_not_exist_anywhere/);
       assert.match(String(failure.debug?.assistant_message || ''), /Suggested next step/i);
       assert.match(String(failure.debug?.assistant_message || ''), /standard library|vendor/i);
+    });
+
+    test('python sandbox executor forwards continuation and llm context into the managed runtime', async () => {
+      const { registerAgentToolExecutors } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'tools',
+        'register-agent-tool-executors.js'
+      ));
+      const executors = new Map();
+      let captured = null;
+      registerAgentToolExecutors({
+        genericAgentToolRuntime: {
+          registerToolExecutor(name, handler) {
+            executors.set(name, handler);
+          }
+        },
+        pythonSandboxToolRuntime: {
+          execute: async (args = {}, options = {}) => {
+            captured = {
+              args: JSON.parse(JSON.stringify(args)),
+              options: JSON.parse(JSON.stringify(options))
+            };
+            return {
+              ok: true,
+              sub_agent_id: 'python-sandbox-subagent-1',
+              summary: 'Python sandbox execution completed.',
+              sandbox: {
+                ok: true,
+                run_id: 'py-tool-1',
+                status: 'ok',
+                error: '',
+                stdout: 'done',
+                stderr: '',
+                readback_files: [],
+                render_outputs: []
+              }
+            };
+          }
+        },
+        getAgentPythonSandboxRoot: () => '/tmp/python-sandbox-root'
+      });
+
+      const result = await executors.get('python-sandbox')({
+        args: {
+          sub_agent_id: 'python-sandbox-subagent-1',
+          feedback: 'Keep working on the same task.'
+        },
+        context: {
+          lifecycleRecorder: {
+            requestId: 'req-77'
+          },
+          preferredPythonBin: 'python3',
+          pythonExecutable: '/usr/bin/python3',
+          provider: 'openai',
+          endpoint: 'https://api.openai.example/v1',
+          apiKey: 'secret-key',
+          model: 'gpt-5.4-mini',
+          traceContext: {
+            trace_id: 'trace-1'
+          },
+          message: 'Please continue the previous Python sandbox analysis.'
+        }
+      });
+
+      assert.equal(captured.options.parent_request_id, 'req-77');
+      assert.equal(captured.options.sandboxRoot, '/tmp/python-sandbox-root');
+      assert.equal(captured.options.preferredPythonBin, 'python3');
+      assert.equal(captured.options.pythonExecutable, '/usr/bin/python3');
+      assert.equal(captured.options.provider, 'openai');
+      assert.equal(captured.options.endpoint, 'https://api.openai.example/v1');
+      assert.equal(captured.options.apiKey, 'secret-key');
+      assert.equal(captured.options.model, 'gpt-5.4-mini');
+      assert.equal(captured.options.traceContext.trace_id, 'trace-1');
+      assert.equal(captured.options.message, 'Please continue the previous Python sandbox analysis.');
+      assert.equal(result.sub_agent_id, 'python-sandbox-subagent-1');
+      assert.equal(result.run_id, 'py-tool-1');
     });
 
     test('provider bridge forwards codex multimodal structured requests through one shared API', async () => {

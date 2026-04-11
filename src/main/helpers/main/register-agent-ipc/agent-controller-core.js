@@ -63,6 +63,82 @@ function createAgentControllerCore({
     };
   }
 
+  function buildSkillCommandParserPayload({
+    skillName = '',
+    toolName = '',
+    reasoningSummary = ''
+  } = {}) {
+    return {
+      primary_intent: 'skill_command',
+      reasoning_effort: 0,
+      direct_answer: null,
+      needs_clarification: false,
+      clarification_reason: null,
+      entities: {
+        skill_name: cleanText(skillName, 160),
+        command_tool: cleanText(toolName, 120)
+      },
+      inventory_search: {
+        normalized_query: null,
+        candidate_terms: [],
+        aliases: [],
+        search_mode: null
+      },
+      protocol_candidates: [],
+      reasoning_summary: cleanText(reasoningSummary, 1200) || 'Handled as a direct skill command.'
+    };
+  }
+
+  function buildSkillListText(skills = []) {
+    const rows = asArray(skills).map((skill) => {
+      const name = cleanText(skill?.name, 160);
+      const description = cleanText(skill?.description, 320);
+      const commandName = cleanText(skill?.command_name, 60);
+      if (!name) {
+        return '';
+      }
+      return [
+        `- ${name}${commandName ? ` (/${commandName})` : ''}`,
+        description ? `  ${description}` : ''
+      ].filter(Boolean).join('\n');
+    }).filter(Boolean);
+    return rows.length
+      ? `Available skills:\n${rows.join('\n')}`
+      : 'No eligible skills were found in the current workspace.';
+  }
+
+  function buildSkillCommandResult({
+    parser,
+    status = '',
+    skillName = '',
+    commandName = '',
+    toolName = '',
+    rawInput = '',
+    summary = '',
+    result = null,
+    availableSkills = []
+  } = {}) {
+    return {
+      ok: true,
+      parser,
+      skill_command: {
+        status: cleanText(status, 40) || 'completed',
+        skill_name: cleanText(skillName, 160),
+        command_name: cleanText(commandName, 80),
+        tool_name: cleanText(toolName, 120),
+        raw_input: cleanText(rawInput, 12000),
+        summary: cleanText(summary, 4000),
+        result: result && typeof result === 'object' ? result : null,
+        available_skills: asArray(availableSkills).map((skill) => ({
+          name: cleanText(skill?.name, 160),
+          description: cleanText(skill?.description, 320),
+          command_name: cleanText(skill?.command_name, 60),
+          path: cleanText(skill?.path, 1200)
+        })).filter((skill) => skill.name)
+      }
+    };
+  }
+
   async function runAgentControllerCore(payload, runtime = {}) {
     throwIfAgentRequestAborted('Agent request stopped before controller startup.');
     const lifecycleRecorder = runtime && typeof runtime === 'object'
@@ -72,6 +148,121 @@ function createAgentControllerCore({
     if (!message) {
       throw new Error('Message is required.');
     }
+    const rawSnapshot = normalizeJsonPayload(payload?.stateSnapshot, {});
+    const snapshot = agentToolRuntime.normalizeAgentSnapshot(rawSnapshot);
+    const workspaceDir = process.cwd();
+    const listedSkills = typeof agentToolRuntime.listSkills === 'function'
+      ? agentToolRuntime.listSkills({ workspaceDir })
+      : [];
+    const skillInvocation = typeof agentToolRuntime.parseSkillInvocation === 'function'
+      ? agentToolRuntime.parseSkillInvocation(message, {
+        workspaceDir
+      })
+      : {
+        type: 'none',
+        active_skill_names: [],
+        cleaned_message: message
+      };
+
+    if (skillInvocation.type === 'list_skills') {
+      const summary = buildSkillListText(listedSkills);
+      observability.recordLifecycleEvent(lifecycleRecorder, {
+        stage: 'skill_command_completed',
+        status: 'ok',
+        routing_intent: 'skill_command',
+        message: 'Listed eligible skills for the current workspace.',
+        meta: {
+          skill_count: listedSkills.length
+        }
+      });
+      return buildSkillCommandResult({
+        parser: buildSkillCommandParserPayload({
+          reasoningSummary: 'Listed the eligible skills in the current workspace.'
+        }),
+        status: 'listed',
+        commandName: 'skills',
+        summary,
+        availableSkills: listedSkills
+      });
+    }
+
+    if (skillInvocation.type === 'unknown_skill') {
+      return buildSkillCommandResult({
+        parser: buildSkillCommandParserPayload({
+          reasoningSummary: 'The requested skill could not be resolved.'
+        }),
+        status: 'error',
+        commandName: 'skill',
+        summary: listedSkills.length
+          ? `I could not find that skill.\n\n${buildSkillListText(listedSkills)}`
+          : 'I could not find that skill, and no eligible skills are available right now.',
+        availableSkills: listedSkills
+      });
+    }
+
+    if (skillInvocation.type === 'direct_tool') {
+      const toolEnvelope = await agentToolRuntime.runAgentTool(
+        skillInvocation.tool_name,
+        {
+          command: cleanText(skillInvocation.raw_args, 12000),
+          commandName: cleanText(skillInvocation.command_name, 80),
+          skillName: cleanText(skillInvocation.skill?.name, 160)
+        },
+        snapshot,
+        {
+          allowWriteTools: true,
+          cwd: workspaceDir
+        }
+      );
+      const toolResult = toolEnvelope?.result && typeof toolEnvelope.result === 'object'
+        ? toolEnvelope.result
+        : {};
+      const status = cleanText(toolResult.status, 40)
+        || (toolEnvelope?.ok === false ? 'error' : 'completed');
+      const summary = cleanText(toolResult.summary || toolEnvelope?.summary, 4000)
+        || 'Skill command completed.';
+      observability.recordLifecycleEvent(lifecycleRecorder, {
+        stage: 'skill_command_completed',
+        status: status === 'completed' || status === 'listed' ? 'ok' : 'pending',
+        routing_intent: 'skill_command',
+        tool_name: cleanText(skillInvocation.tool_name, 120),
+        message: summary,
+        meta: {
+          skill_name: cleanText(skillInvocation.skill?.name, 160),
+          command_name: cleanText(skillInvocation.command_name, 80)
+        }
+      });
+      return buildSkillCommandResult({
+        parser: buildSkillCommandParserPayload({
+          skillName: skillInvocation.skill?.name,
+          toolName: skillInvocation.tool_name,
+          reasoningSummary: `Dispatched the ${cleanText(skillInvocation.skill?.name, 160) || 'requested'} skill directly to the ${cleanText(skillInvocation.tool_name, 120) || 'tool'} tool.`
+        }),
+        status,
+        skillName: skillInvocation.skill?.name,
+        commandName: skillInvocation.command_name,
+        toolName: skillInvocation.tool_name,
+        rawInput: skillInvocation.raw_args,
+        summary,
+        result: toolResult,
+        availableSkills: listedSkills
+      });
+    }
+    const effectiveMessage = cleanText(
+      skillInvocation.type === 'skill_prompt'
+        ? skillInvocation.cleaned_message
+        : message,
+      3000
+    ) || message;
+    const skillPromptPayload = typeof agentToolRuntime.buildSkillsPromptPayload === 'function'
+      ? agentToolRuntime.buildSkillsPromptPayload({
+        workspaceDir,
+        activeSkillNames: skillInvocation.active_skill_names
+      })
+      : {
+        skills_catalog_prompt: '',
+        active_skills_prompt: ''
+      };
 
     const provider = controllerUtils.resolveAgentProvider(payload?.llm);
     const endpoint = controllerUtils.resolveAgentEndpoint(payload?.llm, provider);
@@ -89,10 +280,8 @@ function createAgentControllerCore({
     const hasLatestUserInConversation = Boolean(
       conversation.length > 0
       && conversation[conversation.length - 1].role === 'user'
-      && conversation[conversation.length - 1].text === message
+      && conversation[conversation.length - 1].text === effectiveMessage
     );
-    const rawSnapshot = normalizeJsonPayload(payload?.stateSnapshot, {});
-    const snapshot = agentToolRuntime.normalizeAgentSnapshot(rawSnapshot);
     const executionFlags = controllerUtils.resolveAgentExecutionFlags(payload, { settings: rawSnapshot?.settings || {} });
     const deepResearchEnabled = payload?.agent?.deepResearchEnabled === true;
     const traceContext = controllerUtils.createAgentLlmTraceContext({
@@ -109,7 +298,7 @@ function createAgentControllerCore({
     const projectName = cleanText(payload?.projectName, 180);
     const promptConversation = hasLatestUserInConversation
       ? conversation
-      : [...conversation, { role: 'user', text: message }];
+      : [...conversation, { role: 'user', text: effectiveMessage }];
 
     observability.recordLifecycleEvent(lifecycleRecorder, {
       stage: 'controller_intent_only',
@@ -134,7 +323,7 @@ function createAgentControllerCore({
         endpoint,
         apiKey,
         model,
-        message,
+        message: effectiveMessage,
         conversation: promptConversation,
         projectName,
         traceContext
@@ -180,7 +369,7 @@ function createAgentControllerCore({
         endpoint,
         apiKey,
         model,
-        message,
+        message: effectiveMessage,
         promptConversation,
         snapshot,
         executionFlags,
@@ -188,6 +377,7 @@ function createAgentControllerCore({
         traceContext,
         projectId,
         projectName,
+        skillPromptPayload,
         parserPayload: parserResult.payload,
         lifecycleRecorder
       },

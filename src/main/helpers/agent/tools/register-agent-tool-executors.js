@@ -85,6 +85,46 @@ function buildExecutorSummary(cleanText, toolName, items = [], emptyText) {
   return `${cleanText(toolName, 120) || 'Tool'} matched ${count} item${count === 1 ? '' : 's'}.`;
 }
 
+function resolvePaperDownloadContext(args = {}, context = {}) {
+  const snapshot = context?.snapshot && typeof context.snapshot === 'object'
+    ? context.snapshot
+    : {};
+  const project = context?.project && typeof context.project === 'object'
+    ? context.project
+    : {};
+  const message = cleanTextValue(args?.message || context?.message, 12000);
+  return {
+    storage_path: cleanTextValue(
+      args?.storage_path
+      || args?.storagePath
+      || context?.storagePath
+      || snapshot?.settings?.storagePath
+      || snapshot?.storagePath,
+      2000
+    ),
+    linked_type: cleanTextValue(args?.linked_type || args?.linkedType, 80)
+      || (cleanTextValue(project?.id || project?.name, 120) ? 'project' : 'literature-search'),
+    linked_name: cleanTextValue(
+      args?.linked_name
+      || args?.linkedName
+      || project?.name
+      || project?.id
+      || context?.topic
+      || message,
+      220
+    ),
+    message
+  };
+}
+
+function cleanTextValue(value, _maxLength = 500) {
+  const text = String(value || '').trim();
+  if (!text) {
+    return '';
+  }
+  return text;
+}
+
 function registerAgentToolExecutors(deps = {}) {
   const cleanText = typeof deps.cleanText === 'function' ? deps.cleanText : defaultCleanText;
   const genericAgentToolRuntime = deps.genericAgentToolRuntime;
@@ -92,7 +132,9 @@ function registerAgentToolExecutors(deps = {}) {
   const literatureSearchRuntime = deps.literatureSearchRuntime || {};
   const purchaseRecommendationRuntime = deps.purchaseRecommendationRuntime || {};
   const pythonSandboxToolRuntime = deps.pythonSandboxToolRuntime || {};
+  const commandLineRuntime = deps.commandLineRuntime || {};
   const notebookDraftRuntime = deps.notebookDraftRuntime || {};
+  const paperDownloadRuntime = deps.paperDownloadRuntime || {};
   const getAgentPythonSandboxRoot = typeof deps.getAgentPythonSandboxRoot === 'function'
     ? deps.getAgentPythonSandboxRoot
     : (() => '');
@@ -160,19 +202,60 @@ function registerAgentToolExecutors(deps = {}) {
     };
   });
 
-  genericAgentToolRuntime.registerToolExecutor('literature-search', async ({ args, context }) => literatureSearchRuntime.execute({
-    ...args,
-    provider: cleanText(context?.provider, 80),
-    endpoint: cleanText(context?.endpoint, 2000),
-    apiKey: cleanText(context?.apiKey, 400),
-    model: cleanText(context?.model, 120),
-    traceContext: context?.traceContext || null,
-    query: cleanText(args?.query, 600),
-    message: cleanText(args?.message || context?.message, 1200),
-    parser_payload: resolveToolParserPayload(args, context),
-    limit: toIntegerInRange(args?.limit, 8),
-    max_per_source: toIntegerInRange(args?.max_per_source, 5, 1, 10)
-  }));
+  genericAgentToolRuntime.registerToolExecutor('literature-search', async ({ args, context }) => {
+    if (!literatureSearchRuntime || typeof literatureSearchRuntime.execute !== 'function') {
+      return {
+        ok: false,
+        status: 'error',
+        error: 'Literature search runtime is not configured.'
+      };
+    }
+    return literatureSearchRuntime.execute({
+      ...args,
+      provider: cleanText(context?.provider, 80),
+      endpoint: cleanText(context?.endpoint, 2000),
+      apiKey: cleanText(context?.apiKey, 400),
+      model: cleanText(context?.model, 120),
+      traceContext: context?.traceContext || null,
+      query: cleanText(args?.query, 600),
+      message: cleanText(args?.message || context?.message, 1200),
+      parser_payload: resolveToolParserPayload(args, context),
+      limit: toIntegerInRange(args?.limit, 8),
+      max_per_source: toIntegerInRange(args?.max_per_source, 5, 1, 10)
+    });
+  });
+
+  genericAgentToolRuntime.registerToolExecutor('paper-download', async ({ args, context }) => {
+    if (!paperDownloadRuntime || typeof paperDownloadRuntime.downloadPaper !== 'function') {
+      return {
+        ok: false,
+        status: 'error',
+        error: 'Paper download runtime is not configured.'
+      };
+    }
+    const resolved = resolvePaperDownloadContext(args, context);
+    const result = await paperDownloadRuntime.downloadPaper({
+      ...args,
+      page_url: cleanText(args?.page_url || args?.pageUrl || context?.pageUrl, 2000),
+      message: cleanText(args?.message || context?.message, 12000),
+      paper_title: cleanText(args?.paper_title || args?.paperTitle, 240),
+      linked_type: resolved.linked_type,
+      linked_name: resolved.linked_name,
+      storage_path: resolved.storage_path
+    }).catch((error) => ({
+      ok: false,
+      status: 'error',
+      error: cleanText(error?.message || error, 1200) || 'Paper download failed.'
+    }));
+
+    return {
+      ...result,
+      summary: cleanText(result?.summary, 320)
+        || (result?.ok === true
+          ? `Downloaded ${cleanText(result?.file_name, 240) || 'paper.pdf'}.`
+          : 'Paper download failed.')
+    };
+  });
 
   genericAgentToolRuntime.registerToolExecutor('purchase-recommendation', async ({ args, context }) => {
     const result = await purchaseRecommendationRuntime.execute({
@@ -210,7 +293,13 @@ function registerAgentToolExecutors(deps = {}) {
       parent_request_id: cleanText(context?.lifecycleRecorder?.requestId || context?.requestId, 160),
       sandboxRoot: getAgentPythonSandboxRoot(),
       preferredPythonBin: cleanText(context?.preferredPythonBin, 240),
-      pythonExecutable: cleanText(context?.pythonExecutable, 240)
+      pythonExecutable: cleanText(context?.pythonExecutable, 240),
+      provider: cleanText(context?.provider, 80),
+      endpoint: cleanText(context?.endpoint, 2000),
+      apiKey: cleanText(context?.apiKey, 400),
+      model: cleanText(context?.model, 120),
+      traceContext: context?.traceContext || null,
+      message: cleanText(context?.message, 12000)
     });
     const sandbox = result?.sandbox && typeof result.sandbox === 'object' ? result.sandbox : {};
     const runId = cleanText(sandbox?.run_id, 120);
@@ -241,6 +330,20 @@ function registerAgentToolExecutors(deps = {}) {
     };
   });
 
+  genericAgentToolRuntime.registerToolExecutor('command-line', async ({ args, context }) => {
+    if (!commandLineRuntime || typeof commandLineRuntime.execute !== 'function') {
+      return {
+        status: 'error',
+        error: 'Command-line runtime is not configured.',
+        summary: 'Command-line runtime is not configured.'
+      };
+    }
+    return commandLineRuntime.execute(args, {
+      cwd: cleanText(context?.cwd, 1200),
+      allowWriteTools: context?.allowWriteTools === true
+    });
+  });
+
   genericAgentToolRuntime.registerToolExecutor('notebook-draft', async ({ args, context }) => notebookDraftRuntime.generateNotebookDraft({
     provider: cleanText(context?.provider, 80),
     endpoint: cleanText(context?.endpoint, 1600),
@@ -263,8 +366,10 @@ function registerAgentToolExecutors(deps = {}) {
     'inventory-lookup',
     'record-lookup',
     'literature-search',
+    'paper-download',
     'purchase-recommendation',
     'python-sandbox',
+    'command-line',
     'notebook-draft'
   ];
 }

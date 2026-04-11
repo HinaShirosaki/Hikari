@@ -21,7 +21,11 @@
   },
   {
     "name": "python-sandbox",
-    "description": "Run agent-authored Python code in an isolated sandbox with staged input files, chat-visible text/image outputs, and readback artifacts. Inside the sandbox, import enana_sandbox to read files and emit renderable outputs."
+    "description": "Run agent-authored Python code in an isolated sandbox with staged input files, chat-visible text/image outputs, and readback artifacts. The managed sandbox helper will try to repair failing runs itself, and you can resume the same helper later with feedback by passing its sub_agent_id. Inside the sandbox, import enana_sandbox to read files and emit renderable outputs."
+  },
+  {
+    "name": "command-line",
+    "description": "Run a local shell command in the project workspace, capture stdout and stderr, and return the exit status. Prefer this for focused local CLI inspection or execution when Python is unnecessary."
   },
   {
     "name": "sub-agent",
@@ -33,7 +37,7 @@
   },
   {
     "name": "literature-search",
-    "description": "Search literature across PubMed, Crossref, UniProt, Europe PMC, or generic web results with scholarly-first auto fallback. Prefer compact keyword or entity-style queries such as `MAPK inhibitor resistance mechanism` instead of full-sentence prompts."
+    "description": "Search literature across PubMed, Crossref, UniProt, Europe PMC, or generic web results with scholarly-first auto fallback. The runtime now delegates to a sub-agent for candidate selection, paper reading, and optional paper downloads into the literature-search storage folder. Prefer compact keyword or entity-style queries such as `MAPK inhibitor resistance mechanism` instead of full-sentence prompts."
   },
   {
     "name": "purchase-recommendation",

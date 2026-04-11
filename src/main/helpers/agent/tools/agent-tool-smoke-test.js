@@ -11,6 +11,7 @@ const { createProtocolMatchingRuntime } = require('./agent-protocol-matching.js'
 const { createNotebookGenerationRuntime } = require('./agent-notebook-generation.js');
 const { createNotebookDraftRuntime } = require('./agent-notebook-draft.js');
 const { runPythonSandbox } = require('./agent-python-sandbox.js');
+const { createAgentCommandLineRuntime } = require('./agent-command-line.js');
 const { createAgentSubAgentRuntime } = require('./agent-sub-agent.js');
 const { createAgentMemoryRuntime } = require('../context/agent-memory.js');
 const { createLiteratureSearchRuntime } = require('./agent-literature-search.js');
@@ -634,6 +635,23 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
     };
   }
 
+  async function smokeCommandLine(options = {}) {
+    const runtime = createAgentCommandLineRuntime({
+      defaultCwd: process.cwd()
+    });
+    const result = await runtime.execute({
+      command: resolveToolMessage(options.message, `node -e "process.stdout.write('command-line-smoke')"`),
+      timeout_ms: 8000
+    }, {
+      allowWriteTools: false
+    });
+    return {
+      ...result,
+      ok: result?.status === 'completed',
+      summary: cleanText(result?.summary, 320) || 'Command-line smoke test completed.'
+    };
+  }
+
   async function smokeSubAgent(options = {}) {
     const requestMessage = resolveToolMessage(options.message, 'Ping');
     const runtime = createAgentSubAgentRuntime({
@@ -954,6 +972,7 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
     'notebook-generation': async (options = {}) => smokeNotebookGeneration(buildSmokeSnapshot(), options),
     'notebook-draft': async (options = {}) => smokeNotebookDraft(buildSmokeSnapshot(), options),
     'python-sandbox': async (options = {}) => smokePythonSandbox(options),
+    'command-line': async (options = {}) => smokeCommandLine(options),
     'sub-agent': async (options = {}) => smokeSubAgent(options),
     memory: async (options = {}) => smokeMemory(options),
     'literature-search': async (options = {}) => smokeLiteratureSearch(options),

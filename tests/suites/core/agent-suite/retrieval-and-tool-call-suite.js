@@ -158,7 +158,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuite(context = {}) {
     test('agent tool-call catalog stays in sync and prompt builders render tool metadata', () => {
       const toolNames = toolLoading.AGENT_TOOL_CATALOG.map((entry) => entry.name);
       const schemaNames = Object.keys(toolLoading.AGENT_TOOL_CALL_CATALOG).filter((name) => name !== '$defs');
-      assert.deepEqual(toolNames, ['inventory-lookup', 'record-lookup', 'protocol-matching', 'notebook-generation', 'notebook-draft', 'python-sandbox', 'sub-agent', 'memory', 'literature-search', 'purchase-recommendation', 'paper-download', 'paper-analysis', 'protocol-generation']);
+      assert.deepEqual(toolNames, ['inventory-lookup', 'record-lookup', 'protocol-matching', 'notebook-generation', 'notebook-draft', 'python-sandbox', 'command-line', 'sub-agent', 'memory', 'literature-search', 'purchase-recommendation', 'paper-download', 'paper-analysis', 'protocol-generation']);
       assert.deepEqual(schemaNames, toolNames);
       const inventoryEntry = toolLoading.AGENT_TOOL_CATALOG.find((entry) => entry.name === 'inventory-lookup');
       const protocolEntry = toolLoading.AGENT_TOOL_CATALOG.find((entry) => entry.name === 'protocol-matching');
@@ -203,9 +203,14 @@ module.exports = function registerAgentRetrievalAndToolCallSuite(context = {}) {
       assert.equal(argumentsPrompt.includes(`Detailed usage: ${pythonSchema.description}`), true);
       assert.equal(argumentsPrompt.includes('Input schema JSON:'), true);
       assert.equal(argumentsPrompt.includes('"readback_paths"'), true);
+      assert.equal(argumentsPrompt.includes('"sub_agent_id"'), true);
       assert.equal(argumentsPrompt.includes('Recent conversation:\n1. assistant: Protocol was likely HEK293 Transfection.'), true);
       assert.equal(argumentsPrompt.includes('"primary_intent": "protocol_to_notebook"'), true);
       assert.equal(argumentsPrompt.includes('Tool: protocol-matching'), false);
+      assert.equal(Array.isArray(pythonSchema.input_schema.anyOf), true);
+      assert.equal(pythonSchema.input_schema.anyOf.some((entry) => Array.isArray(entry.required) && entry.required.includes('sub_agent_id')), true);
+      assert.equal(Object.prototype.hasOwnProperty.call(pythonSchema.input_schema.properties, 'feedback'), true);
+      assert.equal(Object.prototype.hasOwnProperty.call(pythonSchema.input_schema.properties, 'max_repair_attempts'), true);
     });
 
     test('agent tool provider resolves reasoning entry tools from the catalog schemas', () => {
@@ -238,8 +243,87 @@ module.exports = function registerAgentRetrievalAndToolCallSuite(context = {}) {
       const catalogTools = runtime.provideTools();
       assert.equal(catalogTools.tool_names.includes('inventory-lookup'), true);
       assert.equal(catalogTools.tool_names.includes('literature-search'), true);
+      assert.equal(catalogTools.tool_names.includes('command-line'), true);
       assert.equal(catalogTools.tool_names.includes('purchase-recommendation'), true);
       assert.equal(catalogTools.tool_names.includes('protocol-generation'), true);
+    });
+
+    test('command-line runtime executes focused commands and blocks mutating commands when write tools are disabled', async () => {
+      const { createAgentCommandLineRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-command-line.js'));
+      const runtime = createAgentCommandLineRuntime({
+        defaultCwd: __dirname
+      });
+      const completed = await runtime.execute({
+        command: `node -e "process.stdout.write('hello-world')"`
+      }, {
+        allowWriteTools: false
+      });
+      const blockedTarget = path.join(__dirname, 'tmp', 'command-line-blocked.txt');
+      fs.rmSync(blockedTarget, { force: true });
+      const blocked = await runtime.execute({
+        command: `touch ${JSON.stringify(blockedTarget)}`
+      }, {
+        allowWriteTools: false
+      });
+
+      assert.equal(completed.status, 'completed');
+      assert.equal(completed.stdout, 'hello-world');
+      assert.equal(blocked.status, 'blocked');
+      assert.equal(fs.existsSync(blockedTarget), false);
+    });
+
+    test('skill runtime loads OpenClaw-style SKILL.md files with workspace precedence and direct tool dispatch metadata', async () => {
+      const { createAgentSkillRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'skills', 'agent-skill-runtime.js'));
+      const tempRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'agent-skills-'));
+      const homeDir = path.join(tempRoot, 'home');
+      const workspaceDir = path.join(tempRoot, 'workspace');
+      const personalSkillDir = path.join(homeDir, '.agents', 'skills', 'command-line');
+      const workspaceSkillDir = path.join(workspaceDir, 'skills', 'command-line');
+      await fsPromises.mkdir(personalSkillDir, { recursive: true });
+      await fsPromises.mkdir(workspaceSkillDir, { recursive: true });
+      await fsPromises.writeFile(path.join(personalSkillDir, 'SKILL.md'), `---
+name: command-line
+description: Personal copy
+user-invocable: true
+command-dispatch: tool
+command-tool: command-line
+---
+
+Personal body
+`, 'utf8');
+      await fsPromises.writeFile(path.join(workspaceSkillDir, 'SKILL.md'), `---
+name: command-line
+description: Workspace copy
+user-invocable: true
+command-dispatch: tool
+command-tool: command-line
+---
+
+Workspace body
+`, 'utf8');
+
+      try {
+        const runtime = createAgentSkillRuntime({
+          homeDir
+        });
+        const skills = runtime.listSkills({ workspaceDir });
+        const promptPayload = runtime.buildSkillsPromptPayload({
+          workspaceDir,
+          activeSkillNames: ['command-line']
+        });
+        const invocation = runtime.parseSkillInvocation('/skill command-line pwd', { workspaceDir });
+
+        assert.equal(skills.length, 1);
+        assert.equal(skills[0].description, 'Workspace copy');
+        assert.equal(promptPayload.skills_catalog_prompt.includes('command-line'), true);
+        assert.equal(promptPayload.active_skills_prompt.includes('Workspace body'), true);
+        assert.equal(invocation.type, 'direct_tool');
+        assert.equal(invocation.tool_name, 'command-line');
+        assert.equal(invocation.active_skill_names.includes('command-line'), true);
+        assert.equal(invocation.raw_args, 'pwd');
+      } finally {
+        fs.rmSync(tempRoot, { recursive: true, force: true });
+      }
     });
 
     test('purchase recommendation runtime extracts JSON-LD products and ranks cheaper matches first', async () => {

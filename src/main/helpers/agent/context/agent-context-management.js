@@ -685,6 +685,7 @@ function createAgentContextManagementRuntime(deps = {}) {
       layers.session_memory.goals.length ? `Goals: ${layers.session_memory.goals.join(' | ')}` : '',
       layers.session_memory.decisions.length ? `Decisions: ${layers.session_memory.decisions.join(' | ')}` : '',
       layers.session_memory.constraints.length ? `Constraints: ${layers.session_memory.constraints.join(' | ')}` : '',
+      layers.session_memory.skills.length ? `Skills: ${layers.session_memory.skills.join(' | ')}` : '',
       layers.session_memory.unresolved_questions.length ? `Unresolved questions: ${layers.session_memory.unresolved_questions.join(' | ')}` : '',
       layers.session_memory.current_project_state?.name
         ? `Current project: ${layers.session_memory.current_project_state.name}`
@@ -751,6 +752,7 @@ function createAgentContextManagementRuntime(deps = {}) {
         goals: selection.memory.goals,
         decisions: selection.memory.decisions,
         constraints: selection.memory.constraints,
+        skills: selection.system.skills,
         unresolved_questions: selection.memory.unresolved_questions,
         current_project_state: selection.memory.current_project_state,
         active_task_summary: selection.memory.active_task_summary,

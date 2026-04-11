@@ -276,6 +276,7 @@ const {
   requestCodexCliText,
   getCodexCliWorkingDirectory,
   getDefaultDataFilePath,
+  BrowserWindow,
   getAgentPythonSandboxRoot,
   getBundlePaths,
   hydrateSnapshotFromBundle,

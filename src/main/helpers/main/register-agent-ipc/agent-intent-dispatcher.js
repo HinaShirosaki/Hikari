@@ -636,7 +636,12 @@ function createAgentIntentDispatcher({
             context.projectName
               || resolvedProject?.name
               || getParserProjectEntityName(parserPayload),
-            null
+            {
+              agent: {
+                skillsCatalogPrompt: cleanText(context?.skillPromptPayload?.skills_catalog_prompt, 16000),
+                activeSkillsPrompt: cleanText(context?.skillPromptPayload?.active_skills_prompt, 24000)
+              }
+            }
           ),
           runTool: async (toolName, args, options = {}) => runTrackedTool(toolName, args, options),
           deepResearchEnabled

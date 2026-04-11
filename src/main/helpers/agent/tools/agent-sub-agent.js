@@ -88,6 +88,19 @@ function normalizeTaskState(value) {
   return ['running', 'completed', 'failed'].includes(normalized) ? normalized : '';
 }
 
+function defaultSubAgentSystemPrompt(source = {}) {
+  const normalizedSource = ensureObject(source);
+  const metadata = ensureObject(normalizedSource.metadata);
+  const taskType = defaultCleanText(
+    metadata.task_type || normalizedSource.task_type || normalizedSource.taskType,
+    120
+  ).toLowerCase();
+  if (taskType === 'python-sandbox') {
+    return 'You are the Python sandbox supervisor sub-agent. Track one sandbox run, keep liveness accurate, and diagnose failures from the actual sandbox output.';
+  }
+  return '';
+}
+
 function createAgentSubAgentRuntime(deps = {}) {
   const asArray = typeof deps.asArray === 'function' ? deps.asArray : defaultAsArray;
   const cleanText = typeof deps.cleanText === 'function' ? deps.cleanText : defaultCleanText;
@@ -95,6 +108,9 @@ function createAgentSubAgentRuntime(deps = {}) {
   const createId = typeof deps.createId === 'function' ? deps.createId : createSubAgentId;
   const runSubAgentTurn = typeof deps.runSubAgentTurn === 'function' ? deps.runSubAgentTurn : (async () => ({}));
   const isProcessAlive = typeof deps.isProcessAlive === 'function' ? deps.isProcessAlive : defaultIsProcessAlive;
+  const getDefaultSystemPrompt = typeof deps.getDefaultSystemPrompt === 'function'
+    ? deps.getDefaultSystemPrompt
+    : defaultSubAgentSystemPrompt;
   const store = deps.store instanceof Map ? deps.store : new Map();
 
   function normalizeTask(rawTask) {
@@ -257,7 +273,8 @@ function createAgentSubAgentRuntime(deps = {}) {
 
   async function createSubAgent(input = {}) {
     const source = ensureObject(input);
-    const systemPrompt = cleanText(source.system_prompt || source.systemPrompt, 40000);
+    const systemPrompt = cleanText(source.system_prompt || source.systemPrompt, 40000)
+      || cleanText(getDefaultSystemPrompt(source), 40000);
     const firstMessage = cleanText(source.message || source.first_message || source.firstMessage, 40000);
     if (!systemPrompt) {
       return {

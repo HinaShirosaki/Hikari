@@ -186,6 +186,8 @@ function registerAgentChatHandler({
             ? 'notebook_draft'
             : (result?.protocol_to_notebook
               ? 'protocol_to_notebook'
+              : (result?.skill_command
+                ? 'skill_command'
               : (result?.purchase_recommendation
                 ? 'purchase_recommendation'
               : (result?.inventory_lookup
@@ -196,7 +198,7 @@ function registerAgentChatHandler({
                     ? 'general_science_question'
                     : (result?.project_science_question
                       ? 'project_science_question'
-                      : (result?.result_analysis ? 'result_analysis' : 'intent_parser'))))))),
+                      : (result?.result_analysis ? 'result_analysis' : 'intent_parser')))))))),
           routing_intent: cleanText(result?.parser?.primary_intent, 80) || 'unclear',
           failure_reasons: failureReasons,
           message: result?.ok === true
