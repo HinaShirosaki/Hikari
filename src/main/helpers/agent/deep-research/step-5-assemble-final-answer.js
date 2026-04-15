@@ -5,7 +5,7 @@ function asArray(value) {
 }
 
 function cleanText(value, _maxLength = 2000) {
-  const text = String(value || '').trim();
+  const text = String(value || '');
   if (!text) {
     return '';
   }
@@ -162,18 +162,11 @@ async function runStep5AssembleFinalAnswer(input = {}, deps = {}) {
 
   if (requestStructuredJsonPayload) {
     const outlineResult = await requestStructuredJsonPayload({
-      provider: cleanText(input.provider, 80),
-      endpoint: cleanText(input.endpoint, 2000),
-      apiKey: cleanText(input.apiKey, 400),
-      model: cleanText(input.model, 120),
       stage: 'deep_research_step_5_outline',
       systemPrompt: 'Return valid JSON only.',
       userPrompt: buildOutlinePrompt(input),
       schema: OUTLINE_SCHEMA,
       traceContext: input.traceContext || null,
-      maxOutputTokens: 1200,
-      openAiStrict: true,
-      openAiAsDefaultProvider: true,
       defaultError: 'Deep research outline synthesis is not configured.'
     });
     if (outlineResult?.ok && outlineResult.payload) {
@@ -200,10 +193,6 @@ async function runStep5AssembleFinalAnswer(input = {}, deps = {}) {
     });
     if (requestStructuredJsonPayload) {
       const sectionResult = await requestStructuredJsonPayload({
-        provider: cleanText(input.provider, 80),
-        endpoint: cleanText(input.endpoint, 2000),
-        apiKey: cleanText(input.apiKey, 400),
-        model: cleanText(input.model, 120),
         stage: 'deep_research_step_5_section',
         systemPrompt: 'Return valid JSON only.',
         userPrompt: buildSectionPrompt({
@@ -213,9 +202,6 @@ async function runStep5AssembleFinalAnswer(input = {}, deps = {}) {
         }),
         schema: SECTION_SCHEMA,
         traceContext: input.traceContext || null,
-        maxOutputTokens: 1200,
-        openAiStrict: true,
-        openAiAsDefaultProvider: true,
         defaultError: 'Deep research section synthesis is not configured.'
       });
       if (sectionResult?.ok && sectionResult.payload) {

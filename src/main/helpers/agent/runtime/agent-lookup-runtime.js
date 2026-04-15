@@ -32,7 +32,7 @@ function defaultAsArray(value) {
 }
 
 function defaultCleanText(value, _maxLength = 500) {
-  const text = String(value || '').trim();
+  const text = String(value || '');
   if (!text) {
     return '';
   }
@@ -204,10 +204,13 @@ function createAgentLookupSupport(deps = {}) {
     });
 
     const hydratedSnapshot = ensureObject(hydrated?.snapshot || sourceSnapshot);
-    const bundlePaths = getBundlePaths({
-      dataFilePath: resolvedDataFilePath,
-      fallbackDataFilePath: fallbackPath
-    });
+    const bundlePaths = hydrated?.bundlePaths && typeof hydrated.bundlePaths === 'object'
+      ? hydrated.bundlePaths
+      : getBundlePaths({
+        dataFilePath: resolvedDataFilePath,
+        fallbackDataFilePath: fallbackPath,
+        storagePath: cleanText(hydratedSnapshot?.settings?.storagePath, 2000)
+      });
 
     return {
       dataFilePath: resolvedDataFilePath,
@@ -398,6 +401,9 @@ function createAgentLookupSupport(deps = {}) {
 
 function createAgentLookupRuntime(deps = {}) {
   const sharedLookupDeps = createAgentLookupSupport(deps);
+  sharedLookupDeps.agentAppApi = deps.agentAppApi && typeof deps.agentAppApi === 'object'
+    ? deps.agentAppApi
+    : {};
   const buildInventorySearchTerms = typeof deps.buildInventorySearchTerms === 'function'
     ? deps.buildInventorySearchTerms
     : (({ fallbackQuery = '' } = {}) => sharedLookupDeps.uniqueStrings([fallbackQuery], 10));
@@ -418,6 +424,35 @@ function createAgentLookupRuntime(deps = {}) {
     : createAgentRecordLookupRuntime(sharedLookupDeps);
 
   function buildProtocolItemsFromSnapshot(snapshot, { query = '', limit = 6 } = {}) {
+    const protocolApi = sharedLookupDeps.agentAppApi?.protocol;
+    if (typeof protocolApi?.listAgentProtocols === 'function') {
+      return sharedLookupDeps.asArray(protocolApi.listAgentProtocols({
+        snapshot,
+        query,
+        limit
+      })).map((protocol, index) => {
+        const normalizedProtocol = typeof protocolApi.normalizeAgentProtocol === 'function'
+          ? protocolApi.normalizeAgentProtocol(protocol, index)
+          : sharedLookupDeps.ensureObject(protocol);
+        const steps = sharedLookupDeps.asArray(normalizedProtocol?.steps)
+          .map((step) => {
+            if (typeof step === 'string') {
+              return sharedLookupDeps.cleanText(step, 220);
+            }
+            const stepPayload = sharedLookupDeps.ensureObject(step);
+            return sharedLookupDeps.cleanText(stepPayload.text || stepPayload.instruction || stepPayload.action, 220);
+          })
+          .filter(Boolean)
+          .slice(0, 8);
+        return {
+          id: sharedLookupDeps.cleanText(normalizedProtocol?.id, 120),
+          name: sharedLookupDeps.cleanText(normalizedProtocol?.name, 220),
+          category: sharedLookupDeps.cleanText(normalizedProtocol?.category, 80),
+          steps
+        };
+      }).filter((item) => item.id || item.name);
+    }
+
     const rows = sharedLookupDeps.asArray(snapshot?.protocols).map((protocol) => {
       const payload = sharedLookupDeps.ensureObject(protocol);
       const steps = sharedLookupDeps.asArray(payload.steps).map((step) => {
@@ -460,6 +495,23 @@ function createAgentLookupRuntime(deps = {}) {
   }
 
   function buildNotebookItemsFromSnapshot(snapshot, { query = '', limit = 6 } = {}) {
+    const notebookApi = sharedLookupDeps.agentAppApi?.notebook;
+    if (typeof notebookApi?.listAgentEntries === 'function') {
+      return sharedLookupDeps.asArray(notebookApi.listAgentEntries({
+        snapshot,
+        query,
+        limit
+      })).map((entry) => {
+        const payload = sharedLookupDeps.ensureObject(entry);
+        return {
+          id: sharedLookupDeps.cleanText(payload.id, 120),
+          protocolName: sharedLookupDeps.cleanText(payload.protocolName, 220),
+          result: sharedLookupDeps.cleanText(payload.result, 500),
+          updatedAt: sharedLookupDeps.cleanText(payload.updatedAt || payload.createdAt, 80)
+        };
+      }).filter((item) => item.id || item.protocolName);
+    }
+
     const rows = sharedLookupDeps.asArray(snapshot?.notebookEntries).map((entry) => {
       const payload = sharedLookupDeps.ensureObject(entry);
       return {

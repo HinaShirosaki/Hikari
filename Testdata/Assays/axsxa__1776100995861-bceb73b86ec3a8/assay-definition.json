@@ -1,0 +1,76 @@
+{
+  "id": "1776100995861-bceb73b86ec3a8",
+  "assayNumber": "ASY-000001",
+  "name": "axsxa",
+  "projectId": "",
+  "projectName": "",
+  "plateType": "96",
+  "plateLabel": "96 well",
+  "plateRows": 8,
+  "plateColumns": 12,
+  "wellCount": 96,
+  "sampleAxis": "row",
+  "concentrationAxis": "column",
+  "sampleAxisValues": [
+    "aaa",
+    "vvv",
+    "",
+    "",
+    "",
+    "",
+    "",
+    ""
+  ],
+  "concentrationAxisValues": [
+    "1",
+    "2",
+    "3",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    ""
+  ],
+  "manualWellOverrides": {},
+  "suppressedWells": [],
+  "notebookEntryId": "",
+  "notebookEntryProtocolName": "",
+  "notebookEntryType": "",
+  "wellLayout": [
+    {
+      "well": "A1",
+      "sampleId": "aaa",
+      "concentration": "1"
+    },
+    {
+      "well": "A2",
+      "sampleId": "aaa",
+      "concentration": "2"
+    },
+    {
+      "well": "A3",
+      "sampleId": "aaa",
+      "concentration": "3"
+    },
+    {
+      "well": "B1",
+      "sampleId": "vvv",
+      "concentration": "1"
+    },
+    {
+      "well": "B2",
+      "sampleId": "vvv",
+      "concentration": "2"
+    },
+    {
+      "well": "B3",
+      "sampleId": "vvv",
+      "concentration": "3"
+    }
+  ],
+  "updatedAt": "2026-04-13T17:23:15.861Z"
+}

@@ -465,10 +465,6 @@ function createNotebookGenerationRuntime(deps = {}) {
     traceContext = null
   }) {
     return requestStructuredJsonPayload({
-      provider,
-      endpoint,
-      apiKey,
-      model,
       stage: 'notebook_fill',
       systemPrompt: PROTOCOL_TO_NOTEBOOK_FILL_SYSTEM_PROMPT,
       userPrompt: buildNotebookPlaceholderFillPrompt({
@@ -483,9 +479,6 @@ function createNotebookGenerationRuntime(deps = {}) {
       }),
       schema: PROTOCOL_NOTEBOOK_FILL_RESPONSE_SCHEMA,
       traceContext,
-      maxOutputTokens: 1300,
-      openAiStrict: true,
-      openAiAsDefaultProvider: true,
       defaultError: 'Notebook generation provider is not configured.'
     });
   }

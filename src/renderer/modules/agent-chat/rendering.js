@@ -4,9 +4,9 @@ import {
   trimText
 } from './shared.js';
 import {
-  findNotebookEntryByProposalId,
+  findNotebookEntryForDraft,
   normalizeNotebookDraft,
-  resolveNotebookDraftProposalId
+  normalizeNotebookState
 } from './notebook-drafts.js';
 
 function formatTime(iso) {
@@ -358,21 +358,21 @@ function renderAssistantMeta(meta, messageId = '', { state, safeText }) {
     `;
   }
   const notebookDraft = normalizeNotebookDraft(meta.notebookDraft);
-  const notebookDraftProposalId = resolveNotebookDraftProposalId(notebookDraft);
-  const existingPlannedEntry = notebookDraftProposalId
-    ? findNotebookEntryByProposalId(state.notebookEntries, notebookDraftProposalId)
-    : null;
+  const existingNotebookEntry = findNotebookEntryForDraft(state.notebookEntries, notebookDraft);
   const showCreatePlannedPageButton = Boolean(
     notebookDraft
     && notebookDraft?.save?.mode === 'confirm_before_save'
     && trimText(messageId, 120)
+    && !existingNotebookEntry
   );
-  const plannedPageButtonDisabled = Boolean(
-    existingPlannedEntry
-    || notebookDraft?.save?.applied === true
-    || ['planned_page_created', 'already_created'].includes(trimText(notebookDraft?.save?.status, 120))
+  const showOpenNotebookPageButton = Boolean(
+    notebookDraft
+    && existingNotebookEntry
+    && trimText(messageId, 120)
   );
-  const plannedPageButtonLabel = plannedPageButtonDisabled ? 'Planned Page Created' : 'Create Planned Page';
+  const openNotebookButtonLabel = normalizeNotebookState(existingNotebookEntry?.notebookState) === 'planned'
+    ? 'Open Planned Page'
+    : 'Open Notebook Page';
   const hasPurchaseRecommendation = meta.purchase_recommendation && typeof meta.purchase_recommendation === 'object';
   const purchaseRecommendation = hasPurchaseRecommendation
     ? meta.purchase_recommendation
@@ -402,9 +402,19 @@ function renderAssistantMeta(meta, messageId = '', { state, safeText }) {
           type="button"
           class="primary-btn"
           data-agent-create-planned-page="${safeText(trimText(messageId, 120))}"
-          ${plannedPageButtonDisabled ? 'disabled' : ''}
         >
-          ${safeText(plannedPageButtonLabel)}
+          Create Planned Page
+        </button>
+      </section>
+    ` : '',
+    showOpenNotebookPageButton ? `
+      <section class="agent-draft-actions">
+        <button
+          type="button"
+          class="ghost-btn"
+          data-agent-open-notebook-page="${safeText(trimText(messageId, 120))}"
+        >
+          ${safeText(openNotebookButtonLabel)}
         </button>
       </section>
     ` : ''
@@ -422,24 +432,49 @@ function renderAssistantMeta(meta, messageId = '', { state, safeText }) {
 export function renderHistory({ historyNode, messages, state, safeText }) {
   const safeMessages = asArray(messages);
   if (!safeMessages.length) {
-    historyNode.innerHTML = '<p class="small-note">Start by asking the agent a lab question.</p>';
+    const projectId = trimText(state?.agentChat?.projectId, 120);
+    const projectName = asArray(state?.projects).find((project) => trimText(project?.id, 120) === projectId)?.name || '';
+    historyNode.innerHTML = `
+      <section class="agent-empty-state">
+        <p class="agent-empty-kicker">Agent Workspace</p>
+        <h3>${safeText(projectName ? `Start a thread for ${projectName}` : 'Start a new lab thread')}</h3>
+        <p class="small-note">
+          ${safeText(projectName
+            ? 'Ask for planning help, record lookups, literature grounding, or a next-step recommendation within the selected project.'
+            : 'Ask for planning help, record lookups, literature grounding, or a next-step recommendation across your lab data.')}
+        </p>
+        <div class="agent-empty-prompt-list">
+          <button type="button" class="ghost-btn agent-empty-prompt" data-agent-suggest-prompt="Summarize the latest progress and open questions for this project.">Summarize recent progress</button>
+          <button type="button" class="ghost-btn agent-empty-prompt" data-agent-suggest-prompt="Draft the next experiment I should run and explain why.">Draft the next experiment</button>
+          <button type="button" class="ghost-btn agent-empty-prompt" data-agent-suggest-prompt="Find likely causes for a weak assay signal and suggest troubleshooting steps.">Troubleshoot an assay</button>
+        </div>
+      </section>
+    `;
     return;
   }
 
   historyNode.innerHTML = safeMessages.map((message) => {
     const role = message.role === 'assistant' ? 'assistant' : 'user';
-    const headerLabel = role === 'assistant' ? 'Assistant' : 'User';
+    const headerLabel = role === 'assistant' ? 'Assistant' : 'You';
     const cardClass = role === 'assistant' ? 'agent-chat-item-assistant' : 'agent-chat-item-user';
     const rowClass = role === 'assistant' ? 'agent-chat-row-assistant' : 'agent-chat-row-user';
+    const hasLiveProgress = Boolean(message?.meta?.live_progress && typeof message.meta.live_progress === 'object');
+    const timestamp = formatTime(message.createdAt);
     const messageBody = role === 'assistant'
       ? `<div class="agent-chat-body agent-chat-markdown">${renderMarkdown(message.text || '', safeText)}</div>`
       : `<p class="agent-chat-body agent-chat-body-plain">${safeText(message.text || '')}</p>`;
     return `
-      <div class="agent-chat-row ${rowClass}">
+      <div class="agent-chat-row ${rowClass}${hasLiveProgress ? ' is-live' : ''}">
+        <div class="agent-chat-identity" aria-hidden="true">
+          <span class="agent-chat-avatar agent-chat-avatar-${role}">${role === 'assistant' ? 'AI' : 'You'}</span>
+        </div>
         <article class="agent-chat-item ${cardClass}">
           <header class="agent-chat-header">
-            <strong>${headerLabel}</strong>
-            <span>${safeText(formatTime(message.createdAt))}</span>
+            <div class="agent-chat-header-copy">
+              <strong>${headerLabel}</strong>
+              ${hasLiveProgress ? '<span class="agent-live-pill">Working</span>' : ''}
+            </div>
+            <span>${safeText(timestamp)}</span>
           </header>
           ${messageBody}
           ${role === 'assistant' ? renderAssistantMeta(message.meta, message.id, { state, safeText }) : ''}
@@ -447,6 +482,4 @@ export function renderHistory({ historyNode, messages, state, safeText }) {
       </div>
     `;
   }).join('');
-
-  historyNode.scrollTop = historyNode.scrollHeight;
 }

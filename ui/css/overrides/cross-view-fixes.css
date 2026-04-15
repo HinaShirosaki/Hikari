@@ -112,37 +112,34 @@
 }
 
 .app-left-rail-handle {
+  appearance: none;
+  -webkit-appearance: none;
   position: absolute;
   top: 0;
-  right: -4px;
+  left: var(--shared-left-rail-width);
   bottom: 0;
-  width: 8px;
+  width: 12px;
   border: 0;
   border-radius: 0;
   padding: 0;
   background: transparent;
+  background-image: none;
+  box-shadow: none;
+  outline: none;
   cursor: col-resize;
   touch-action: none;
   z-index: 5;
-}
-
-.app-left-rail-handle::before {
-  content: '';
-  position: absolute;
-  top: 12px;
-  bottom: 12px;
-  left: 50%;
-  width: 1px;
   transform: translateX(-50%);
-  border-radius: 999px;
-  background: transparent;
-  transition: background-color 140ms ease;
 }
 
-.app-left-rail:hover .app-left-rail-handle::before,
-.app-left-rail.is-resizing .app-left-rail-handle::before,
-.app-left-rail-handle:focus-visible::before {
-  background: var(--app-left-rail-handle);
+.app-left-rail-handle:hover,
+.app-left-rail-handle:focus,
+.app-left-rail-handle:focus-visible,
+.app-left-rail-handle:active {
+  background: transparent;
+  background-image: none;
+  box-shadow: none;
+  outline: none;
 }
 
 body.shared-left-rail-resizing,

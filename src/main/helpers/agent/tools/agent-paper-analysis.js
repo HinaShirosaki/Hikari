@@ -178,16 +178,12 @@ function createPaperAnalysisRuntime(deps = {}) {
     }
 
     const llmResult = await requestStructuredJsonPayload({
-      provider: cleanText(source.provider, 80),
-      endpoint: cleanText(source.endpoint, 2000),
-      apiKey: cleanText(source.apiKey, 400),
-      model: cleanText(source.model, 120),
+      source,
       stage: 'paper_analysis_tool',
       systemPrompt: PAPER_ANALYSIS_SYSTEM_PROMPT,
       userPrompt: buildPrompt(context),
       schema: PAPER_ANALYSIS_RESPONSE_SCHEMA,
       traceContext: source.traceContext || null,
-      maxOutputTokens: 1800,
       defaultError: 'Paper analysis provider is not configured.'
     });
 

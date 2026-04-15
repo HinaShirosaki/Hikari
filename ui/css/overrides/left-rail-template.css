@@ -2,6 +2,7 @@
 
 .left-rail-template {
   --left-rail-main-gap: 24px;
+  position: relative;
   display: grid;
   grid-template-columns: minmax(var(--shared-left-rail-min), var(--shared-left-rail-width)) minmax(0, 1fr);
   gap: 0;

@@ -1,0 +1,61 @@
+{
+  "schema_name": "enana_protocols",
+  "schema_version": "1.0.0",
+  "updated_at": "2026-04-15T23:07:19.989Z",
+  "protocol": {
+    "id": "1774024647315-74cbb18b4cc37",
+    "name": "Small-Scale Overnight Starter Culture",
+    "createdAt": "2026-03-20T16:37:27.315Z",
+    "updatedAt": "2026-03-20T16:37:27.315Z",
+    "purpose": "Prepare a starter culture from a single bacterial colony for downstream expression or plasmid preparation.",
+    "materials": [
+      "Single bacterial colony",
+      "LB medium",
+      "Appropriate antibiotic",
+      "Sterile culture tube or baffled flask",
+      "37 C shaking incubator",
+      "Pipettes and sterile tips"
+    ],
+    "steps": [
+      {
+        "id": "1774024647315-74a9f88e0f0bf8",
+        "text": "Add {{ph:1774024647315-9f03b8d734f3c}} of LB medium containing {{ph:1774024647315-9ce336955a66c}} antibiotic to a sterile culture tube.",
+        "placeholders": [
+          {
+            "id": "1774024647315-9f03b8d734f3c",
+            "name": "volume"
+          },
+          {
+            "id": "1774024647315-9ce336955a66c",
+            "name": "antibiotic concentration"
+          }
+        ]
+      },
+      {
+        "id": "1774024647315-50fbcf026e31b8",
+        "text": "Pick a single colony from a fresh plate and inoculate the medium.",
+        "placeholders": []
+      },
+      {
+        "id": "1774024647315-b56a957dd49a1",
+        "text": "Incubate the culture at 37 C with shaking at {{ph:1774024647315-09eb7ed8adca9}} for {{ph:1774024647315-82400c92a18e08}}.",
+        "placeholders": [
+          {
+            "id": "1774024647315-09eb7ed8adca9",
+            "name": "rpm"
+          },
+          {
+            "id": "1774024647315-82400c92a18e08",
+            "name": "time"
+          }
+        ]
+      },
+      {
+        "id": "1774024647315-7881c04d4e417",
+        "text": "Inspect the culture for turbidity and record the culture ID, date, and plasmid name in the notebook.",
+        "placeholders": []
+      }
+    ],
+    "troubleshooting": "Problem: Culture does not grow; Possible cause: Colony was not viable or antibiotic concentration was too high; Solution: Restart from a fresh colony and confirm the correct antibiotic and concentration were used\nProblem: Culture appears contaminated; Possible cause: Non-sterile handling during inoculation; Solution: Discard the culture and repeat using stricter sterile technique"
+  }
+}

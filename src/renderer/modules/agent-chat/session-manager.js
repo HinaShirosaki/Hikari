@@ -88,12 +88,6 @@ export function createAgentChatSessionManager(deps = {}) {
     sessionList.innerHTML = sessions.map((session) => {
       const sessionId = trimText(session?.id, 120);
       const isActive = activeSessionId && sessionId === activeSessionId;
-      const preview = trimText(session?.last_message_preview, 180) || 'No messages yet.';
-      const meta = [
-        trimText(session?.project_name, 120),
-        Number.isFinite(Number(session?.message_count)) ? `${Number(session.message_count)} msgs` : '',
-        trimText(session?.updated_at, 80)
-      ].filter(Boolean).join(' | ');
       return `
         <button
           type="button"
@@ -102,8 +96,6 @@ export function createAgentChatSessionManager(deps = {}) {
           ${interactionLocked ? 'disabled' : ''}
         >
           <strong>${safeText(trimText(session?.title, 160) || 'New Chat')}</strong>
-          <span>${safeText(preview)}</span>
-          <span class="agent-session-meta">${safeText(meta || 'Saved chat')}</span>
         </button>
       `;
     }).join('');
@@ -154,7 +146,7 @@ export function createAgentChatSessionManager(deps = {}) {
       renderProjectOptions();
       renderContextSummary();
       renderSessionList();
-      renderHistory();
+      renderHistory({ forceScroll: true });
       setSessionStatus('Loaded chats from disk.');
       if (options.silent !== true) {
         setStatus('Ready.');
@@ -225,7 +217,7 @@ export function createAgentChatSessionManager(deps = {}) {
         state.agentChat.currentSessionId = '';
         state.agentChat.messages = [];
         persist();
-        renderHistory();
+        renderHistory({ forceScroll: true });
       } else if (state.agentChat.currentSessionId && options.loadCurrent !== false) {
         await loadChatSession(state.agentChat.currentSessionId, { silent: true, preserveLocalMessages: true });
       } else {
@@ -279,7 +271,7 @@ export function createAgentChatSessionManager(deps = {}) {
       state.agentChat.currentSessionId = '';
       persist();
       renderSessionList();
-      renderHistory();
+      renderHistory({ forceScroll: true });
       setSessionStatus(storagePath
         ? 'Persistent chat sessions are unavailable in this build.'
         : 'Started a new local chat draft. Set Storage Folder Path to persist it.');
@@ -302,7 +294,7 @@ export function createAgentChatSessionManager(deps = {}) {
       upsertSessionSummary(result.session);
       persist();
       renderSessionList();
-      renderHistory();
+      renderHistory({ forceScroll: true });
       setSessionStatus('New chat session created.');
       setStatus('New chat ready.');
     } catch (error) {

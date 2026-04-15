@@ -1,0 +1,208 @@
+{
+  "exportedAt": "2026-04-12T15:23:32.386Z",
+  "template": {
+    "id": "1775781932219-22ff72a0c7635",
+    "name": "Histagged protein preparation",
+    "description": "",
+    "projectId": "",
+    "blocks": [
+      {
+        "id": "1775781881110-029a2a3c9b4d9",
+        "type": "protocol",
+        "protocolId": "1774024047007-d137dae96cab78",
+        "text": "",
+        "assigneeId": "",
+        "x": 44,
+        "y": 70
+      },
+      {
+        "id": "1775781886034-c973e0f174aae8",
+        "type": "protocol",
+        "protocolId": "1774024647315-74cbb18b4cc37",
+        "text": "",
+        "assigneeId": "",
+        "x": 372,
+        "y": 78
+      },
+      {
+        "id": "1775781893844-fc6e4aaae754a8",
+        "type": "protocol",
+        "protocolId": "1774024680081-6b02b28fd6d39",
+        "text": "",
+        "assigneeId": "",
+        "x": 659,
+        "y": 64
+      },
+      {
+        "id": "1775781899748-dde95ad6662ed",
+        "type": "protocol",
+        "protocolId": "1774024695073-536c18071dd0d",
+        "text": "",
+        "assigneeId": "",
+        "x": 963,
+        "y": 191
+      }
+    ],
+    "links": [
+      {
+        "id": "1775781904598-fa2cce4f73f558",
+        "fromBlockId": "1775781881110-029a2a3c9b4d9",
+        "toBlockId": "1775781886034-c973e0f174aae8"
+      },
+      {
+        "id": "1775781906231-fa280c3cc25688",
+        "fromBlockId": "1775781886034-c973e0f174aae8",
+        "toBlockId": "1775781893844-fc6e4aaae754a8"
+      },
+      {
+        "id": "1775781908305-7a938cf32e5df8",
+        "fromBlockId": "1775781893844-fc6e4aaae754a8",
+        "toBlockId": "1775781899748-dde95ad6662ed"
+      }
+    ],
+    "createdAt": "2026-04-10T00:45:32.219Z",
+    "updatedAt": "2026-04-10T00:45:32.219Z"
+  },
+  "workflow": {
+    "id": "1775782082531-5f0b06480b152",
+    "templateId": "1775781932219-22ff72a0c7635",
+    "name": "Histagged protein preparation",
+    "description": "",
+    "projectId": "",
+    "notebookEntryIds": [
+      "1775782216137-95b466c6943368",
+      "1775782435713-d25977ea3111f8",
+      "1775782437050-e49e327369ef98",
+      "1775782438767-07fe8804749718"
+    ],
+    "blocks": [
+      {
+        "id": "1775782082531-e9c3463c29b068",
+        "type": "protocol",
+        "protocolId": "1774024047007-d137dae96cab78",
+        "text": "",
+        "assigneeId": "",
+        "x": 44,
+        "y": 70
+      },
+      {
+        "id": "1775782082531-7b2e9fa2f58d18",
+        "type": "protocol",
+        "protocolId": "1774024647315-74cbb18b4cc37",
+        "text": "",
+        "assigneeId": "",
+        "x": 372,
+        "y": 78
+      },
+      {
+        "id": "1775782082531-2955bed12c8a7",
+        "type": "protocol",
+        "protocolId": "1774024680081-6b02b28fd6d39",
+        "text": "",
+        "assigneeId": "",
+        "x": 659,
+        "y": 64
+      },
+      {
+        "id": "1775782082531-3fe7f2356647c8",
+        "type": "protocol",
+        "protocolId": "1774024695073-536c18071dd0d",
+        "text": "",
+        "assigneeId": "",
+        "x": 963,
+        "y": 191
+      }
+    ],
+    "links": [
+      {
+        "id": "1775782082531-8812c31eff3bd",
+        "fromBlockId": "1775782082531-e9c3463c29b068",
+        "toBlockId": "1775782082531-7b2e9fa2f58d18"
+      },
+      {
+        "id": "1775782082531-957fc2852963e8",
+        "fromBlockId": "1775782082531-7b2e9fa2f58d18",
+        "toBlockId": "1775782082531-2955bed12c8a7"
+      },
+      {
+        "id": "1775782082531-68715cb5f6523",
+        "fromBlockId": "1775782082531-2955bed12c8a7",
+        "toBlockId": "1775782082531-3fe7f2356647c8"
+      }
+    ],
+    "entries": [
+      {
+        "id": "1775782082531-987a24403f0f28",
+        "name": "Entry 1",
+        "notes": "",
+        "activeBranchRootIds": [],
+        "stepStates": {
+          "1775782082531-e9c3463c29b068": {
+            "status": "completed",
+            "values": {},
+            "result": "",
+            "resultFiles": [],
+            "resultFileRecords": [],
+            "notebookEntryId": "1775782216137-95b466c6943368",
+            "assayIds": [],
+            "gelAnalysisIds": [],
+            "completedAt": "2026-04-10T00:50:16.136Z",
+            "updatedAt": "2026-04-10T00:50:16.136Z"
+          },
+          "1775782082531-7b2e9fa2f58d18": {
+            "status": "completed",
+            "values": {},
+            "result": "",
+            "resultFiles": [],
+            "resultFileRecords": [],
+            "notebookEntryId": "1775782435713-d25977ea3111f8",
+            "assayIds": [],
+            "gelAnalysisIds": [],
+            "completedAt": "2026-04-10T01:47:04.637Z",
+            "updatedAt": "2026-04-10T01:47:04.637Z"
+          },
+          "1775782082531-2955bed12c8a7": {
+            "status": "not_done",
+            "values": {},
+            "result": "",
+            "resultFiles": [],
+            "resultFileRecords": [],
+            "notebookEntryId": "1775782437050-e49e327369ef98",
+            "assayIds": [],
+            "gelAnalysisIds": [],
+            "completedAt": "",
+            "updatedAt": "2026-04-10T01:46:05.224Z"
+          },
+          "1775782082531-3fe7f2356647c8": {
+            "status": "not_done",
+            "values": {},
+            "result": "",
+            "resultFiles": [],
+            "resultFileRecords": [],
+            "notebookEntryId": "1775782438767-07fe8804749718",
+            "assayIds": [],
+            "gelAnalysisIds": [],
+            "completedAt": "",
+            "updatedAt": "2026-04-10T01:46:09.641Z"
+          }
+        },
+        "createdAt": "2026-04-10T00:48:02.531Z",
+        "updatedAt": "2026-04-10T01:47:04.637Z"
+      }
+    ],
+    "createdAt": "2026-04-10T00:48:02.531Z",
+    "updatedAt": "2026-04-10T01:47:04.637Z"
+  },
+  "summary": {
+    "overallStatus": "pending",
+    "totalSteps": 4,
+    "completedSteps": 2,
+    "failedSteps": 0,
+    "pendingSteps": 0,
+    "percentComplete": 50,
+    "resultFileCount": 0,
+    "linkedNotebookCount": 4,
+    "notebookCount": 4,
+    "paperCount": 0
+  }
+}

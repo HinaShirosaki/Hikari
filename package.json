@@ -1,7 +1,8 @@
 {
   "name": "enana",
+  "productName": "Hikari",
   "version": "1.0.0",
-  "description": "Electron shell for Enana sub-app launcher",
+  "description": "Electron shell for Hikari sub-app launcher",
   "main": "src/main/main.js",
   "scripts": {
     "build:ui": "node scripts/build-ui.mjs",

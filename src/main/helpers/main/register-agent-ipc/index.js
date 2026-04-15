@@ -36,6 +36,7 @@ function registerAgentIpc(deps = {}) {
     agentToolRuntime: deps.agentToolRuntime || {},
     executeInventoryLookup: deps.executeInventoryLookup,
     executeRecordLookup: deps.executeRecordLookup,
+    agentChatLogRuntime: deps.agentChatLogRuntime,
     getAgentChatLogPath: deps.getAgentChatLogPath,
     getDefaultDataFilePath: deps.getDefaultDataFilePath,
     setCodexCliModel: typeof deps.setCodexCliModel === 'function' ? deps.setCodexCliModel : (() => ''),

@@ -5,41 +5,25 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Enana</title>
+  <title>Hikari</title>
+  <link rel="icon" type="image/png" href="./assets/icon.png" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="./vendor/cropperjs/cropper.min.css" />
   <link rel="stylesheet" href="./vendor/tabulator/tabulator.min.css" />
   <link rel="stylesheet" href="./vendor/react-vis/react-vis.css" />
 </head>
 <body>
-  <script>
-    (() => {
-      const DEFAULT_FONT_SIZE = 16;
-      const FIXED_ACCENT = '#647255';
-      const FIXED_FOCUS = '#7a8a69';
-      const STORAGE_KEY = 'enana_state_v1';
-      const root = document.documentElement;
-      const body = document.body;
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        const parsed = raw ? JSON.parse(raw) : null;
-        const appearance = parsed && parsed.settings ? parsed.settings.appearance || {} : {};
-        const fontSize = Number(appearance.fontSize) || DEFAULT_FONT_SIZE;
-        const mode = appearance.mode === 'night' ? 'night' : 'day';
-
-        root.style.setProperty('--accent', FIXED_ACCENT);
-        root.style.setProperty('--focus', FIXED_FOCUS);
-        root.style.setProperty('--app-font-size', `${fontSize}px`);
-        root.style.setProperty('font-size', `${fontSize}px`);
-        body.classList.toggle('theme-night', mode === 'night');
-        body.classList.add('ui-neutral-compact');
-      } catch {}
-    })();
-  </script>
+  <script type="module" src="src/renderer/bootstrap/index-shell.js"></script>
+  <div id="app-loading-cover" class="app-loading-cover" aria-label="Loading Hikari" role="status">
+    <div class="app-loading-cover__icon-shell" aria-hidden="true">
+      <span class="app-loading-cover__wave"></span>
+      <img class="app-loading-cover__icon" src="./assets/loadingicon.png" alt="" />
+    </div>
+  </div>
   <main class="app-shell">
     <header class="topbar">
       <div class="topbar-brand">
-        <h1 class="sr-only">Enana</h1>
+        <h1 class="sr-only">Hikari</h1>
         <div class="topbar-context">
           <div class="topbar-heading-row">
             <p id="page-title" class="topbar-page-title">Home</p>
@@ -54,25 +38,23 @@
           <p id="page-subtitle" class="sr-only">Reminders and active work.</p>
         </div>
       </div>
+      <nav class="app-dock" aria-label="Primary navigation">
+        <div id="app-dock-nav" class="app-dock-nav"></div>
+        <div class="app-dock-divider" aria-hidden="true"></div>
+        <button id="app-more-btn" class="app-dock-btn app-dock-btn-more" type="button" aria-label="More apps" title="More apps" aria-haspopup="menu" aria-expanded="false" aria-controls="app-more-menu">
+          <span class="app-nav-icon" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <circle cx="6.5" cy="12" r="1.7" />
+              <circle cx="12" cy="12" r="1.7" />
+              <circle cx="17.5" cy="12" r="1.7" />
+            </svg>
+          </span>
+          <span class="sr-only">More apps</span>
+        </button>
+        <div id="app-more-menu" class="app-more-menu" role="menu" hidden></div>
+      </nav>
       <div class="topbar-tools">
         <input id="topbar-search" type="search" placeholder="Search modules or use sample: EGFR" aria-label="Search modules and records" />
-        <button id="home-btn" class="topbar-icon-btn ghost-btn" type="button" aria-label="Go home" title="Home" hidden>
-          <span class="app-nav-icon" aria-hidden="true">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M4 10.5 12 4l8 6.5" />
-              <path d="M6.5 9.5V20h11V9.5" />
-              <path d="M10 20v-5h4v5" />
-            </svg>
-          </span>
-        </button>
-        <button id="topbar-settings-btn" class="topbar-icon-btn ghost-btn" type="button" aria-label="Open settings" title="Settings">
-          <span class="app-nav-icon" aria-hidden="true">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="2.75" />
-              <path d="M12 4.5v2M12 17.5v2M19.5 12h-2M6.5 12h-2M17.3 6.7l-1.4 1.4M8.1 15.9l-1.4 1.4M17.3 17.3l-1.4-1.4M8.1 8.1 6.7 6.7" />
-            </svg>
-          </span>
-        </button>
       </div>
     </header>
     <div class="workspace-shell">
@@ -1164,14 +1146,17 @@
 
 <!-- SOURCE: ui/html/views/setting-view.html -->
 <section id="setting-view" class="view">
-      <div class="panel settings-shell">
-        <div class="settings-head">
-          <h2>Settings</h2>
-          <p class="small-note">Workspace appearance, storage, startup, and model configuration.</p>
-        </div>
+      <div class="settings-layout left-rail-template">
+        <aside class="settings-nav app-left-rail left-rail-template__rail" data-sync-left-rail aria-label="Settings sections">
+          <div class="left-rail-template__stack">
+            <section class="left-rail-template__section">
+              <div class="settings-head">
+                <h2>Settings</h2>
+                <p class="small-note">Workspace appearance, storage, startup, and model configuration.</p>
+              </div>
+            </section>
 
-        <div class="settings-layout">
-          <aside class="settings-nav multi-panel-left-rail multi-panel-left-scroll" aria-label="Settings sections">
+            <section class="left-rail-template__section settings-nav-list">
             <button type="button" class="settings-nav-item" data-settings-target="appearance" aria-pressed="true">
               <span>Appearance</span>
               <small>Font size and theme</small>
@@ -1200,9 +1185,11 @@
               <span>Telegram Bot</span>
               <small>Bot token and status</small>
             </button>
-          </aside>
+            </section>
+          </div>
+        </aside>
 
-          <div class="settings-detail">
+        <div class="settings-detail left-rail-template__main">
             <section class="settings-section" data-settings-panel="appearance">
               <div class="settings-section-head">
                 <h3>Appearance</h3>
@@ -1279,8 +1266,8 @@
 
             <section class="settings-section" data-settings-panel="startup" hidden>
               <div class="settings-section-head">
-                <h3>Startup &amp; Data</h3>
-                <p class="small-note">Control which module opens first and how data loads and saves.</p>
+                <h3>Startup</h3>
+                <p class="small-note">Control which module opens first when the workspace launches.</p>
               </div>
               <form id="startup-form" class="stack-form">
                 <label>
@@ -1306,30 +1293,11 @@
                   <input id="setting-startup-remember-last-view" type="checkbox" />
                   Remember last opened module on launch
                 </label>
-                <label class="inline-row">
-                  <input id="setting-startup-auto-load-data-file" type="checkbox" />
-                  Auto-load current .json data file on launch
-                </label>
                 <p class="small-note">If enabled, “Remember last opened module” overrides the default startup module.</p>
                 <div class="form-actions">
                   <button type="submit" class="primary-btn">Save Startup Settings</button>
                 </div>
               </form>
-
-              <div class="settings-subsection">
-                <h4>Data File (.json)</h4>
-                <div class="stack-form">
-                  <p class="small-note">Current .json file: <span id="setting-ena-path">Not set</span></p>
-                  <label class="inline-row">
-                    <input id="setting-auto-save-ena" type="checkbox" />
-                    Auto-save to current .json file after each change
-                  </label>
-                  <div class="form-actions">
-                    <button type="button" id="save-ena-btn" class="primary-btn">Save .json</button>
-                    <button type="button" id="load-ena-btn" class="ghost-btn">Load .json</button>
-                  </div>
-                </div>
-              </div>
             </section>
 
             <section class="settings-section" data-settings-panel="locations" hidden>
@@ -1373,6 +1341,14 @@
                   API Key
                   <input id="setting-api-key" type="password" placeholder="sk-... (not required for Codex CLI)" />
                 </label>
+                <div id="setting-codex-auth-controls" class="stack-form" hidden>
+                  <p id="setting-codex-status" class="small-note">Codex login: checking...</p>
+                  <p class="small-note">Codex uses a stored OpenAI login. Once signed in, it should stay available after restart until you clear it.</p>
+                  <div class="form-actions">
+                    <button type="button" id="start-codex-login-btn" class="ghost-btn">Login with OpenAI</button>
+                    <button type="button" id="clear-codex-login-btn" class="ghost-btn">Clear Saved Login</button>
+                  </div>
+                </div>
                 <label class="inline-row">
                   <input id="setting-agent-developer-mode" type="checkbox" />
                   Agent Developer Mode (record redacted LLM request/response traces)
@@ -1383,60 +1359,94 @@
               </form>
             </section>
 
-            <section class="settings-section" data-settings-panel="telegram" hidden>
-              <div class="settings-section-head">
-                <h3>Telegram Bot</h3>
-                <p class="small-note">Store a token for Telegram automation and status reporting.</p>
+          <section class="settings-section" data-settings-panel="telegram" hidden>
+            <div class="settings-section-head">
+              <h3>Telegram Bot</h3>
+              <p class="small-note">Store a token for Telegram automation and status reporting.</p>
+            </div>
+            <form id="telegram-form" class="stack-form">
+              <label>
+                Bot Token
+                <input id="setting-telegram-token" type="password" placeholder="123456:ABCDEF..." />
+              </label>
+              <p class="small-note">Enter token to store it in app settings. Clearing saved token falls back to env token if available.</p>
+              <p id="setting-telegram-status" class="small-note">Telegram bot status: loading...</p>
+              <div class="form-actions">
+                <button type="submit" class="primary-btn">Save Telegram Token</button>
+                <button type="button" id="clear-telegram-token-btn" class="ghost-btn">Clear Saved Token</button>
               </div>
-              <form id="telegram-form" class="stack-form">
-                <label>
-                  Bot Token
-                  <input id="setting-telegram-token" type="password" placeholder="123456:ABCDEF..." />
-                </label>
-                <p class="small-note">Enter token to store it in app settings. Clearing saved token falls back to env token if available.</p>
-                <p id="setting-telegram-status" class="small-note">Telegram bot status: loading...</p>
-                <div class="form-actions">
-                  <button type="submit" class="primary-btn">Save Telegram Token</button>
-                  <button type="button" id="clear-telegram-token-btn" class="ghost-btn">Clear Saved Token</button>
-                </div>
-              </form>
-            </section>
-          </div>
+            </form>
+          </section>
         </div>
       </div>
     </section>
 
 <!-- SOURCE: ui/html/views/project-management-view.html -->
 <section id="project-management-view" class="view">
-      <div class="panel">
-        <h2>Projects</h2>
-        <form id="project-form" class="stack-form">
-          <input type="hidden" id="project-id" />
-          <label>
-            Project Name
-            <input id="project-name" required />
-          </label>
-          <label>
-            Description
-            <textarea id="project-description" rows="3"></textarea>
-          </label>
-          <div class="form-actions">
-            <button type="submit" class="primary-btn">Save Project</button>
-            <button type="button" id="project-cancel-btn" class="ghost-btn">Cancel Edit</button>
+      <div class="project-layout left-rail-template">
+        <aside class="project-sidebar app-left-rail left-rail-template__rail" data-sync-left-rail>
+          <div class="left-rail-template__stack">
+            <section class="left-rail-template__section">
+              <div class="project-sidebar-copy">
+                <h2>Projects</h2>
+                <p class="small-note">Create projects, update their notes, and browse linked notebook pages.</p>
+              </div>
+              <form id="project-form" class="stack-form">
+                <input type="hidden" id="project-id" />
+                <label>
+                  Project Name
+                  <input id="project-name" required />
+                </label>
+                <label>
+                  Description
+                  <textarea id="project-description" rows="3"></textarea>
+                </label>
+                <div class="form-actions">
+                  <button type="submit" class="primary-btn">Save Project</button>
+                  <button type="button" id="project-cancel-btn" class="ghost-btn">Cancel Edit</button>
+                </div>
+              </form>
+            </section>
+
+            <section class="left-rail-template__section">
+              <div class="project-sidebar-copy">
+                <h3>Project Notebook Pages</h3>
+                <p class="small-note">Filter notebook pages linked to the selected project.</p>
+              </div>
+              <label>
+                Select Project
+                <select id="project-notebook-filter">
+                  <option value="">Select project</option>
+                </select>
+              </label>
+            </section>
           </div>
-        </form>
+        </aside>
+
+        <div class="project-main left-rail-template__main">
+          <div class="left-rail-template__stack">
+            <section class="panel project-list-panel">
+              <div class="project-panel-head">
+                <div class="project-panel-copy">
+                  <h3>All Projects</h3>
+                  <p class="small-note">Select a project to edit it or remove it from the workspace.</p>
+                </div>
+              </div>
+              <div id="project-list" class="cards"></div>
+            </section>
+
+            <section class="panel project-notebook-panel">
+              <div class="project-panel-head">
+                <div class="project-panel-copy">
+                  <h3>Notebook Pages</h3>
+                  <p class="small-note">Recent notebook pages connected to the chosen project appear here.</p>
+                </div>
+              </div>
+              <div id="project-notebook-pages" class="cards"></div>
+            </section>
+          </div>
+        </div>
       </div>
-      <div class="panel">
-        <h3>Project Notebook Pages</h3>
-        <label>
-          Select Project
-          <select id="project-notebook-filter">
-            <option value="">Select project</option>
-          </select>
-        </label>
-        <div id="project-notebook-pages" class="cards"></div>
-      </div>
-      <div id="project-list" class="cards"></div>
     </section>
 
 <!-- SOURCE: ui/html/views/workflow-management-view.html -->
@@ -1458,23 +1468,28 @@
             <div id="workflow-list" class="workflow-list app-left-rail-list"></div>
           </div>
 
-          <div class="workflow-template-panel app-left-rail-section" hidden>
-            <h3>Save Template</h3>
+          <div class="workflow-template-editor-panel app-left-rail-section" hidden>
+            <h3>Template Details</h3>
             <label>
               Template Name
               <input id="workflow-template-name" placeholder="e.g. Clone screening template" />
             </label>
+            <label>
+              Description
+              <textarea id="workflow-template-description" rows="3" placeholder="Optional notes about this template"></textarea>
+            </label>
             <div class="form-actions">
               <button type="button" id="workflow-save-template-btn" class="primary-btn">Save Current Graph</button>
+              <button type="button" id="workflow-template-cancel-btn" class="ghost-btn">Cancel</button>
             </div>
           </div>
 
-          <div class="workflow-template-panel app-left-rail-section" hidden>
+          <div class="workflow-template-list-panel app-left-rail-section" hidden>
             <h3>Saved Templates</h3>
             <div id="workflow-template-list" class="workflow-list app-left-rail-list"></div>
           </div>
 
-          <div class="workflow-editor-panel app-left-rail-section" hidden>
+          <div class="workflow-editor-panel workflow-sidebar-editor-panel app-left-rail-section" hidden>
             <form id="workflow-form" class="stack-form">
               <input type="hidden" id="workflow-id" />
               <label>
@@ -1519,9 +1534,8 @@
             <div id="workflow-execution-board" class="workflow-execution-board"></div>
           </div>
 
-          <div class="panel workflow-editor-panel" hidden>
-            <h3>Workflow Blocks</h3>
-            <p class="small-note">Add protocol blocks or plain-text blocks. New blocks default assignee to yourself.</p>
+          <div class="panel workflow-editor-panel workflow-main-editor-panel" hidden>
+            <h3>Add Blocks</h3>
             <div class="form-grid workflow-grid workflow-block-grid">
               <label>
                 Block Type
@@ -1548,12 +1562,11 @@
                 <button type="button" id="workflow-block-add-btn" class="ghost-btn">Add Protocol Block</button>
               </div>
             </div>
-            <div id="workflow-block-list" class="list-table"></div>
           </div>
 
-          <div class="panel workflow-editor-panel" hidden>
+          <div class="panel workflow-editor-panel workflow-main-editor-panel" hidden>
             <h3>Graph Editor</h3>
-            <p class="small-note">Drag blocks to arrange. Click an output dot, then an input dot to connect. Click a line to remove a connection.</p>
+            <p class="small-note">Drag blocks to arrange. Hover the top-left corner of a block to delete it. Click an output dot, then an input dot to connect. Click a line to remove a connection.</p>
             <div id="workflow-graph-canvas" class="workflow-graph-canvas">
               <div id="workflow-graph-board" class="workflow-graph-board">
                 <svg id="workflow-graph-svg" class="workflow-graph-svg" aria-hidden="true"></svg>
@@ -1702,15 +1715,11 @@
         <aside class="agent-session-rail app-left-rail left-rail-template__rail" data-sync-left-rail>
           <div class="agent-rail-meta">
             <div class="form-grid agent-rail-context-grid">
-              <label>
-                Project Scope (Optional)
+              <label class="agent-rail-filter">
+                <span>Project Scope</span>
                 <select id="agent-project-select">
                   <option value="">All projects</option>
                 </select>
-              </label>
-              <label>
-                Context Summary
-                <input id="agent-context-summary" disabled />
               </label>
             </div>
           </div>
@@ -1728,38 +1737,53 @@
         </aside>
 
         <div class="panel agent-chat-panel left-rail-template__main">
-          <div id="agent-developer-tools" class="agent-developer-tools" hidden>
-            <div class="agent-developer-tools-actions">
-              <button type="button" id="agent-dev-test-tools-btn" class="ghost-btn">Test All Tools</button>
-              <span class="small-note">Developer mode only. Run the full smoke suite or target one tool with a manual message and inspect the raw result in chat.</span>
-            </div>
-            <div class="agent-developer-tool-grid">
-              <label>
-                Tool
-                <select id="agent-dev-tool-select"></select>
-              </label>
-              <label class="agent-developer-tool-message">
-                Manual Test Message
-                <textarea id="agent-dev-tool-message" rows="3" placeholder="Enter a tool-directed test message."></textarea>
-              </label>
-              <div class="form-actions">
-                <button type="button" id="agent-dev-run-tool-btn" class="ghost-btn">Run Selected Tool</button>
-                <span id="agent-dev-tool-hint" class="small-note"></span>
+          <div class="agent-chat-stage">
+            <p id="agent-status" class="small-note agent-status-pill" hidden>Ready.</p>
+            <div id="agent-developer-tools" class="agent-developer-tools" hidden>
+              <div class="agent-developer-tools-actions">
+                <button type="button" id="agent-dev-test-tools-btn" class="ghost-btn">Test All Tools</button>
+                <span class="small-note">Developer mode only. Run the full smoke suite or target one tool with a manual message and inspect the raw result in chat.</span>
+              </div>
+              <div class="agent-developer-tool-grid">
+                <label>
+                  Tool
+                  <select id="agent-dev-tool-select"></select>
+                </label>
+                <label class="agent-developer-tool-message">
+                  Manual Test Message
+                  <textarea id="agent-dev-tool-message" rows="3" placeholder="Enter a tool-directed test message."></textarea>
+                </label>
+                <div class="form-actions">
+                  <button type="button" id="agent-dev-run-tool-btn" class="ghost-btn">Run Selected Tool</button>
+                  <span id="agent-dev-tool-hint" class="small-note"></span>
+                </div>
               </div>
             </div>
-          </div>
-          <div id="agent-chat-history" class="agent-chat-history" aria-live="polite"></div>
-          <p id="agent-status" class="small-note">Ready.</p>
-          <div class="stack-form">
-            <label>
-              Message
-              <textarea id="agent-message-input" rows="4" placeholder="Ask for protocol guidance, inventory checks, literature-grounded suggestions, or planning support."></textarea>
-            </label>
-            <div class="form-actions">
-              <button type="button" id="agent-deep-research-toggle-btn" class="ghost-btn">Deep Research: Off</button>
-              <button type="button" id="agent-send-btn" class="primary-btn">Send</button>
-              <button type="button" id="agent-stop-btn" class="danger-btn" hidden>Stop</button>
-              <button type="button" id="agent-clear-btn" class="ghost-btn">Clear Chat</button>
+            <div class="agent-conversation-shell">
+              <div class="agent-history-viewport">
+                <div id="agent-chat-history" class="agent-chat-history" aria-live="polite"></div>
+                <button type="button" id="agent-scroll-to-bottom-btn" class="ghost-btn agent-scroll-to-bottom-btn" hidden>Jump to Latest</button>
+              </div>
+              <div class="agent-composer-shell">
+                <div class="stack-form agent-composer-card">
+                  <label class="agent-composer-label">
+                    <span>Message</span>
+                    <textarea id="agent-message-input" rows="3" placeholder="Ask for protocol guidance, inventory checks, literature-grounded suggestions, or planning support."></textarea>
+                  </label>
+                  <div class="agent-composer-toolbar">
+                    <div class="agent-composer-hints">
+                      <span class="agent-inline-hint">Enter to send</span>
+                      <span class="agent-inline-hint">Shift+Enter for newline</span>
+                    </div>
+                    <div class="form-actions agent-composer-actions">
+                      <button type="button" id="agent-deep-research-toggle-btn" class="ghost-btn">Deep Research: Off</button>
+                      <button type="button" id="agent-send-btn" class="primary-btn">Send</button>
+                      <button type="button" id="agent-stop-btn" class="danger-btn" hidden>Stop</button>
+                      <button type="button" id="agent-clear-btn" class="ghost-btn">New Thread</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -2365,22 +2389,24 @@
 <section id="sequence-viewer-view" class="view">
       <div class="sequence-viewer-shell">
         <section id="sequence-viewer-home-workspace" class="sequence-viewer-home-workspace">
-          <div class="sequence-viewer-home-toolbar">
-            <div class="sequence-viewer-home-nav-copy">
-              <h2>Open Sequence</h2>
-              <p class="small-note">Start a sequence session or open a stored GBK or FASTA file.</p>
-            </div>
-            <div class="form-actions sequence-viewer-home-nav-actions">
-              <button id="sequence-viewer-home-paste-btn" type="button" class="primary-btn">New</button>
-              <button id="sequence-viewer-home-open-btn" type="button" class="ghost-btn">Open GBK/FASTA</button>
-              <button id="sequence-viewer-home-protein-builder-btn" type="button" class="ghost-btn">Protein Builder</button>
-              <span id="sequence-viewer-home-status" class="small-note">Choose New or Open to continue.</span>
-            </div>
-            <input id="sequence-viewer-home-open-input" type="file" accept=".gbk,.gb,.gbff,.fasta,.fa,.fas,.fna,.fastq,.fq,.txt,.seq" hidden />
-          </div>
+          <div class="sequence-viewer-home-layout left-rail-template">
+            <aside class="sequence-viewer-home-sidebar app-left-rail left-rail-template__rail" data-sync-left-rail>
+              <div class="left-rail-template__stack">
+                <section class="left-rail-template__section">
+                  <div class="sequence-viewer-home-nav-copy">
+                    <h2>Open Sequence</h2>
+                    <p class="small-note">Start a sequence session or open a stored GBK or FASTA file.</p>
+                  </div>
+                  <div class="form-actions sequence-viewer-home-nav-actions">
+                    <button id="sequence-viewer-home-paste-btn" type="button" class="primary-btn">New</button>
+                    <button id="sequence-viewer-home-open-btn" type="button" class="ghost-btn">Open GBK/FASTA</button>
+                    <button id="sequence-viewer-home-protein-builder-btn" type="button" class="ghost-btn">Protein Builder</button>
+                    <span id="sequence-viewer-home-status" class="small-note">Choose New or Open to continue.</span>
+                  </div>
+                  <input id="sequence-viewer-home-open-input" type="file" accept=".gbk,.gb,.gbff,.fasta,.fa,.fas,.fna,.fastq,.fq,.txt,.seq" hidden />
+                </section>
 
-          <div class="sequence-viewer-home-grid">
-            <section class="plannotate-result-card sequence-viewer-library-card">
+                <section class="plannotate-result-card sequence-viewer-library-card left-rail-template__section">
               <div class="plannotate-card-head">
                 <h4>Sequence Library</h4>
               </div>
@@ -2391,35 +2417,41 @@
               <div id="sequence-viewer-library-list" class="sequence-viewer-library-list">
                 <p class="small-note">No sequence entries found.</p>
               </div>
-            </section>
+                </section>
+              </div>
+            </aside>
 
-            <section class="plannotate-result-card sequence-viewer-preview-card">
-              <div class="plannotate-card-head">
-                <h4>Circular Plasmid Preview</h4>
-              </div>
-              <div id="sequence-viewer-preview-host" class="sequence-viewer-preview-host">
-                <p class="small-note">Select a sequence in the library to preview.</p>
-              </div>
-            </section>
+            <div class="sequence-viewer-home-main left-rail-template__main">
+              <div class="left-rail-template__stack">
+                <section class="plannotate-result-card sequence-viewer-preview-card">
+                  <div class="plannotate-card-head">
+                    <h4>Circular Plasmid Preview</h4>
+                  </div>
+                  <div id="sequence-viewer-preview-host" class="sequence-viewer-preview-host">
+                    <p class="small-note">Select a sequence in the library to preview.</p>
+                  </div>
+                </section>
 
-            <section class="plannotate-result-card sequence-viewer-feature-search-card">
-              <div class="plannotate-card-head">
-                <h4>Feature Search</h4>
+                <section class="plannotate-result-card sequence-viewer-feature-search-card">
+                  <div class="plannotate-card-head">
+                    <h4>Feature Search</h4>
+                  </div>
+                  <div class="sequence-viewer-feature-search-controls">
+                    <input
+                      id="sequence-viewer-feature-search-input"
+                      type="search"
+                      placeholder="Search by feature name or sequence"
+                      autocomplete="off"
+                    />
+                    <button id="sequence-viewer-feature-search-btn" type="button" class="ghost-btn">Search</button>
+                    <span id="sequence-viewer-feature-search-status" class="small-note">Search stored features and open the host vector directly.</span>
+                  </div>
+                  <div id="sequence-viewer-feature-search-results" class="sequence-viewer-feature-search-results">
+                    <p class="small-note">Search by feature name, full sequence, or partial sequence.</p>
+                  </div>
+                </section>
               </div>
-              <div class="sequence-viewer-feature-search-controls">
-                <input
-                  id="sequence-viewer-feature-search-input"
-                  type="search"
-                  placeholder="Search by feature name or sequence"
-                  autocomplete="off"
-                />
-                <button id="sequence-viewer-feature-search-btn" type="button" class="ghost-btn">Search</button>
-                <span id="sequence-viewer-feature-search-status" class="small-note">Search stored features and open the host vector directly.</span>
-              </div>
-              <div id="sequence-viewer-feature-search-results" class="sequence-viewer-feature-search-results">
-                <p class="small-note">Search by feature name, full sequence, or partial sequence.</p>
-              </div>
-            </section>
+            </div>
           </div>
         </section>
 
@@ -2436,8 +2468,8 @@
           </div>
 
           <div class="sequence-viewer-protein-builder-grid-wrap">
-            <div class="sequence-viewer-protein-builder-grid">
-              <div class="sequence-viewer-protein-builder-sidebar multi-panel-left-rail">
+            <div class="sequence-viewer-protein-builder-grid left-rail-template">
+              <aside class="sequence-viewer-protein-builder-sidebar app-left-rail left-rail-template__rail" data-sync-left-rail>
                 <section class="sequence-viewer-protein-builder-panel">
                   <form id="sequence-viewer-protein-builder-form" class="stack-form sequence-viewer-protein-builder-controls" autocomplete="off">
                     <div class="form-grid">
@@ -2495,9 +2527,9 @@
                     <p class="small-note">Search by feature name or stored sequence.</p>
                   </div>
                 </section>
-              </div>
+              </aside>
 
-              <div class="sequence-viewer-protein-builder-main">
+              <div class="sequence-viewer-protein-builder-main left-rail-template__main">
                 <section class="sequence-viewer-protein-builder-panel sequence-viewer-protein-builder-workflow-panel">
                   <div class="plannotate-card-head">
                     <h4>Assembly Chain</h4>
@@ -2755,21 +2787,6 @@
     </section>
 </section>
     </div>
-    <nav class="app-dock" aria-label="Primary navigation">
-      <div id="app-dock-nav" class="app-dock-nav"></div>
-      <div class="app-dock-divider" aria-hidden="true"></div>
-      <button id="app-more-btn" class="app-dock-btn app-dock-btn-more" type="button" aria-label="More apps" title="More apps" aria-haspopup="menu" aria-expanded="false" aria-controls="app-more-menu">
-        <span class="app-nav-icon" aria-hidden="true">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-            <circle cx="6.5" cy="12" r="1.7" />
-            <circle cx="12" cy="12" r="1.7" />
-            <circle cx="17.5" cy="12" r="1.7" />
-          </svg>
-        </span>
-        <span class="sr-only">More apps</span>
-      </button>
-      <div id="app-more-menu" class="app-more-menu" role="menu" hidden></div>
-    </nav>
   </main>
 
   <script src="./vendor/cropperjs/cropper.min.js"></script>

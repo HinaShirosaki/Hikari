@@ -5,7 +5,7 @@ function asArray(value) {
 }
 
 function cleanText(value, _maxLength = 2000) {
-  const text = String(value || '').trim();
+  const text = String(value || '');
   if (!text) {
     return '';
   }
@@ -160,18 +160,11 @@ async function runStep1ClarifyQuestion(input = {}, deps = {}) {
     return fallback;
   }
   const result = await requestStructuredJsonPayload({
-    provider: cleanText(input.provider, 80),
-    endpoint: cleanText(input.endpoint, 2000),
-    apiKey: cleanText(input.apiKey, 400),
-    model: cleanText(input.model, 120),
     stage: 'deep_research_step_1_clarify',
     systemPrompt: 'Return valid JSON only.',
     userPrompt: buildClarifyPrompt(input),
     schema: CLARIFY_SCHEMA,
     traceContext: input.traceContext || null,
-    maxOutputTokens: 1400,
-    openAiStrict: true,
-    openAiAsDefaultProvider: true,
     defaultError: 'Deep research clarification step is not configured.'
   });
   if (!result?.ok || !result.payload) {

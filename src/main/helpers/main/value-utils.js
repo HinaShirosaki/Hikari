@@ -1,7 +1,7 @@
 'use strict';
 
 function defaultCleanText(value, _maxLength = 500) {
-  const text = String(value || '').trim();
+  const text = String(value || '');
   if (!text) {
     return '';
   }

@@ -1,8 +1,16 @@
 'use strict';
 
+const fs = require('fs/promises');
+const path = require('path');
 const { getBundlePaths } = require('./storage-paths');
-const { readNotebookRowsFromSqlite, readProtocolRowsFromSqlite, readSqliteBundleIndex } = require('./storage-sql-read');
+const {
+  readNotebookRowsFromSqlite,
+  readPaperRowsFromSqlite,
+  readProtocolRowsFromSqlite,
+  readSqliteBundleIndex
+} = require('./storage-sql-read');
 const { asArray, cleanText, cloneJson, ensureObject, readJsonFile } = require('./storage-utils');
+const { hydrateWorkflowRootFromStoragePath } = require('./workflow-storage');
 
 function hydrateInventoryFromSqliteSnapshot(nextSnapshot, sqliteData) {
   const inventoryPersonalMap = {};
@@ -51,9 +59,31 @@ function hydrateInventoryFromSqliteSnapshot(nextSnapshot, sqliteData) {
   return true;
 }
 
+function mergeInventorySqliteSnapshots(primarySqliteData, secondarySqliteData) {
+  const primary = ensureObject(primarySqliteData);
+  const secondary = ensureObject(secondarySqliteData);
+  return {
+    inventoryChemicals: asArray(primary.inventoryChemicals).length
+      ? asArray(primary.inventoryChemicals)
+      : asArray(secondary.inventoryChemicals),
+    inventoryPersonal: asArray(primary.inventoryPersonal).length
+      ? asArray(primary.inventoryPersonal)
+      : asArray(secondary.inventoryPersonal),
+    inventorySamples: asArray(primary.inventorySamples).length
+      ? asArray(primary.inventorySamples)
+      : asArray(secondary.inventorySamples),
+    inventoryMeta: Object.keys(ensureObject(primary.inventoryMeta)).length
+      ? ensureObject(primary.inventoryMeta)
+      : ensureObject(secondary.inventoryMeta)
+  };
+}
+
 function readProtocolsFromSidecar(payload) {
   if (!payload || typeof payload !== 'object') {
     return [];
+  }
+  if (payload.protocol && typeof payload.protocol === 'object' && !Array.isArray(payload.protocol)) {
+    return [payload.protocol];
   }
   return asArray(payload.protocols);
 }
@@ -65,16 +95,171 @@ function readNotebookEntriesFromSidecar(payload) {
   return asArray(payload.notebookPages);
 }
 
+function mergeRecordsById(existingRecords, importedRecords, fallbackPrefix) {
+  const byId = new Map();
+  asArray(existingRecords).forEach((record, index) => {
+    const source = ensureObject(record);
+    const id = cleanText(source.id, 220) || `${fallbackPrefix}_existing_${index + 1}`;
+    byId.set(id, {
+      ...source,
+      id
+    });
+  });
+  asArray(importedRecords).forEach((record, index) => {
+    const source = ensureObject(record);
+    const id = cleanText(source.id, 220) || `${fallbackPrefix}_imported_${index + 1}`;
+    const previous = byId.get(id) || {};
+    byId.set(id, {
+      ...previous,
+      ...source,
+      id
+    });
+  });
+  return [...byId.values()];
+}
+
+function mergePaperRecords(existingRecords, importedRecords) {
+  const byId = new Map();
+  asArray(existingRecords).forEach((record, index) => {
+    const source = ensureObject(record);
+    const id = cleanText(source.id, 220) || `paper_existing_${index + 1}`;
+    byId.set(id, {
+      ...source,
+      id
+    });
+  });
+  asArray(importedRecords).forEach((record, index) => {
+    const source = ensureObject(record);
+    const id = cleanText(source.id, 220) || `paper_imported_${index + 1}`;
+    const previous = ensureObject(byId.get(id));
+    const merged = {
+      ...previous,
+      ...source,
+      id
+    };
+    if (!cleanText(source.pdfDataUrl, 80)) {
+      merged.pdfDataUrl = cleanText(previous.pdfDataUrl, 10_000_000);
+    }
+    if (!cleanText(source.storedFilePath, 2400)) {
+      merged.storedFilePath = cleanText(previous.storedFilePath, 2400);
+    }
+    if (!cleanText(source.storedRelativePath, 2400)) {
+      merged.storedRelativePath = cleanText(previous.storedRelativePath, 2400);
+    }
+    byId.set(id, merged);
+  });
+  return [...byId.values()];
+}
+
+function mergePaperExperimentLinks(existingLinks, importedLinks) {
+  const byKey = new Map();
+  const pushLink = (rawLink, prefix, index) => {
+    const link = ensureObject(rawLink);
+    const substantiveKey = [
+      cleanText(link.paperId, 220),
+      cleanText(link.entryId, 220),
+      cleanText(link.projectId, 220),
+      cleanText(link.note, 600)
+    ].join('::');
+    const key = substantiveKey || `${prefix}_${index + 1}`;
+    if (!substantiveKey && !Object.keys(link).length) {
+      return;
+    }
+    byKey.set(key, {
+      ...(byKey.get(key) || {}),
+      ...link
+    });
+  };
+  asArray(existingLinks).forEach((link, index) => pushLink(link, 'existing', index));
+  asArray(importedLinks).forEach((link, index) => pushLink(link, 'imported', index));
+  return [...byKey.values()];
+}
+
+async function readProtocolDirectory(protocolRootPath) {
+  const directoryPath = cleanText(protocolRootPath, 2400);
+  if (!directoryPath) {
+    return {
+      exists: false,
+      ok: false,
+      data: [],
+      error: ''
+    };
+  }
+  try {
+    const stat = await fs.stat(directoryPath);
+    if (!stat.isDirectory()) {
+      const singleFile = await readJsonFile(directoryPath);
+      return {
+        exists: singleFile.exists,
+        ok: singleFile.ok,
+        data: singleFile.ok ? readProtocolsFromSidecar(singleFile.data) : [],
+        error: singleFile.error || ''
+      };
+    }
+    const entries = await fs.readdir(directoryPath, { withFileTypes: true });
+    const protocols = [];
+    const warnings = [];
+    for (const entry of entries) {
+      if (!entry.isDirectory()) {
+        continue;
+      }
+      const filePath = path.join(directoryPath, entry.name, 'protocol.json');
+      const payload = await readJsonFile(filePath);
+      if (payload.ok) {
+        protocols.push(...readProtocolsFromSidecar(payload.data));
+      } else if (payload.exists && payload.error) {
+        warnings.push(payload.error);
+      }
+    }
+    return {
+      exists: true,
+      ok: protocols.length > 0,
+      data: protocols,
+      error: warnings.join('; ')
+    };
+  } catch (error) {
+    if (error?.code === 'ENOENT') {
+      return {
+        exists: false,
+        ok: false,
+        data: [],
+        error: ''
+      };
+    }
+    return {
+      exists: true,
+      ok: false,
+      data: [],
+      error: String(error?.message || error)
+    };
+  }
+}
+
+function getLegacyProtocolsFilePath(bundlePaths) {
+  const basePath = cleanText(bundlePaths?.basePath, 2400);
+  return basePath ? `${basePath}.protocols.json` : '';
+}
+
+function getLegacySqlitePath(bundlePaths) {
+  const explicitLegacyPath = cleanText(bundlePaths?.legacySqlitePath, 2400);
+  if (explicitLegacyPath) {
+    return explicitLegacyPath;
+  }
+  const basePath = cleanText(bundlePaths?.basePath, 2400);
+  return basePath ? `${basePath}.index.sqlite` : '';
+}
+
 async function hydrateSnapshotFromBundle({
   dataFilePath,
   snapshot,
   fallbackDataFilePath = '',
   bundlePaths: explicitBundlePaths = null
 } = {}) {
+  const sourceSnapshot = cloneJson(snapshot, {});
+  const storagePath = cleanText(sourceSnapshot?.settings?.storagePath, 2400);
   const bundlePaths = explicitBundlePaths && typeof explicitBundlePaths === 'object'
     ? explicitBundlePaths
-    : getBundlePaths({ dataFilePath, fallbackDataFilePath });
-  const sourceSnapshot = cloneJson(snapshot, {});
+    : getBundlePaths({ dataFilePath, fallbackDataFilePath, storagePath });
   const nextSnapshot = cloneJson(sourceSnapshot, {});
   const migration = {
     applied: [],
@@ -90,12 +275,22 @@ async function hydrateSnapshotFromBundle({
     };
   }
 
-  const protocolSidecar = await readJsonFile(bundlePaths.protocolsPath);
+  const protocolSidecar = await readProtocolDirectory(bundlePaths.protocolsPath);
   if (protocolSidecar.ok) {
-    nextSnapshot.protocols = readProtocolsFromSidecar(protocolSidecar.data);
+    nextSnapshot.protocols = Array.isArray(protocolSidecar.data)
+      ? protocolSidecar.data
+      : readProtocolsFromSidecar(protocolSidecar.data);
     migration.applied.push('protocol_sidecar');
   } else if (protocolSidecar.exists && protocolSidecar.error) {
     migration.warnings.push(protocolSidecar.error);
+  } else {
+    const legacyProtocolSidecar = await readJsonFile(getLegacyProtocolsFilePath(bundlePaths));
+    if (legacyProtocolSidecar.ok) {
+      nextSnapshot.protocols = readProtocolsFromSidecar(legacyProtocolSidecar.data);
+      migration.applied.push('protocol_sidecar_legacy');
+    } else if (legacyProtocolSidecar.exists && legacyProtocolSidecar.error) {
+      migration.warnings.push(legacyProtocolSidecar.error);
+    }
   }
 
   const notebookSidecar = await readJsonFile(bundlePaths.notebookPagesPath);
@@ -106,19 +301,54 @@ async function hydrateSnapshotFromBundle({
     migration.warnings.push(notebookSidecar.error);
   }
 
-  const sqliteData = await readSqliteBundleIndex(bundlePaths.sqlitePath);
-  if (sqliteData.exists) {
-    const hydratedInventory = hydrateInventoryFromSqliteSnapshot(nextSnapshot, sqliteData);
+  let commonSqliteData = await readSqliteBundleIndex(bundlePaths.sqlitePath);
+  if (!commonSqliteData.exists) {
+    commonSqliteData = await readSqliteBundleIndex(getLegacySqlitePath(bundlePaths));
+  }
+  let chemicalSqliteData = await readSqliteBundleIndex(bundlePaths.chemicalsSqlitePath);
+  if (!chemicalSqliteData.exists && commonSqliteData.exists) {
+    chemicalSqliteData = commonSqliteData;
+  }
+  const inventorySqliteData = mergeInventorySqliteSnapshots(chemicalSqliteData, commonSqliteData);
+  if (commonSqliteData.exists || chemicalSqliteData.exists) {
+    const hydratedInventory = hydrateInventoryFromSqliteSnapshot(nextSnapshot, inventorySqliteData);
     if (hydratedInventory) {
       migration.applied.push('inventory_sqlite');
     }
-    if ((!Array.isArray(nextSnapshot.protocols) || !nextSnapshot.protocols.length) && asArray(sqliteData.protocolRows).length) {
-      nextSnapshot.protocols = readProtocolRowsFromSqlite(sqliteData.protocolRows);
+    if ((!Array.isArray(nextSnapshot.protocols) || !nextSnapshot.protocols.length) && asArray(commonSqliteData.protocolRows).length) {
+      nextSnapshot.protocols = readProtocolRowsFromSqlite(commonSqliteData.protocolRows);
       migration.applied.push('protocol_sqlite_fallback');
     }
-    if ((!Array.isArray(nextSnapshot.notebookEntries) || !nextSnapshot.notebookEntries.length) && asArray(sqliteData.notebookRows).length) {
-      nextSnapshot.notebookEntries = readNotebookRowsFromSqlite(sqliteData.notebookRows);
+    if ((!Array.isArray(nextSnapshot.notebookEntries) || !nextSnapshot.notebookEntries.length) && asArray(commonSqliteData.notebookRows).length) {
+      nextSnapshot.notebookEntries = readNotebookRowsFromSqlite(commonSqliteData.notebookRows);
       migration.applied.push('notebook_sqlite_fallback');
+    }
+    if (asArray(commonSqliteData.paperRows).length) {
+      nextSnapshot.papers = mergePaperRecords(nextSnapshot.papers, readPaperRowsFromSqlite(commonSqliteData.paperRows));
+      migration.applied.push('paper_sqlite');
+    }
+  }
+
+  const workflowRootPath = cleanText(nextSnapshot?.settings?.storagePath, 2400);
+  if (workflowRootPath) {
+    const workflowHydrated = await hydrateWorkflowRootFromStoragePath({
+      storagePath: workflowRootPath
+    });
+    if (workflowHydrated.exists) {
+      nextSnapshot.workflowTemplates = mergeRecordsById(nextSnapshot.workflowTemplates, workflowHydrated.workflowTemplates, 'workflow_template');
+      nextSnapshot.workflows = mergeRecordsById(nextSnapshot.workflows, workflowHydrated.workflows, 'workflow');
+      nextSnapshot.notebookEntries = mergeRecordsById(nextSnapshot.notebookEntries, workflowHydrated.notebookEntries, 'notebook');
+      nextSnapshot.papers = mergePaperRecords(nextSnapshot.papers, workflowHydrated.papers);
+      nextSnapshot.paperExperimentLinks = mergePaperExperimentLinks(
+        nextSnapshot.paperExperimentLinks,
+        workflowHydrated.paperExperimentLinks
+      );
+      migration.applied.push('workflow_root_storage');
+      asArray(workflowHydrated.warnings).forEach((warning) => {
+        if (warning) {
+          migration.warnings.push(String(warning));
+        }
+      });
     }
   }
 

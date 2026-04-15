@@ -4,9 +4,10 @@ const fs = require('fs/promises');
 const path = require('path');
 const { hydrateSnapshotFromBundle } = require('./storage-hydration');
 const { collectManifestEntries, isBundleCandidateName, isSqliteBundleCandidateName, looksLikeEnanaSnapshot, normalizeBundleSummary, STORAGE_MANIFEST_FILE_NAME, toPosixRelative } = require('./storage-manifest');
-const { getBundlePaths, getBundlePathsFromSqlitePath } = require('./storage-paths');
+const { getBundlePaths, getBundlePathsFromSqlitePath, resolveProtocolBundlePaths } = require('./storage-paths');
 const { summarizeSequenceLibrary } = require('./sequence-library-summary');
-const { asArray, cleanText, ensureObject, parseJsonObject } = require('./storage-utils');
+const { importWorkflowRoot, resolveWorkflowStoragePaths } = require('./workflow-storage');
+const { asArray, cleanText, ensureObject, parseJsonObject, readJsonFile } = require('./storage-utils');
 
 function mergeByIdMap(targetMap, records, fallbackPrefix) {
   asArray(records).forEach((rawRecord, index) => {
@@ -41,6 +42,66 @@ function mergeInventoryMap(targetInventoryMap, inventoryPayload) {
   });
 }
 
+function mergePaperExperimentLinks(targetMap, links) {
+  asArray(links).forEach((rawLink, index) => {
+    const link = ensureObject(rawLink);
+    const key = [
+      cleanText(link.paperId, 220),
+      cleanText(link.entryId, 220),
+      cleanText(link.projectId, 220),
+      cleanText(link.note, 600)
+    ].join('::') || `paper_link_${index + 1}`;
+    targetMap.set(key, link);
+  });
+}
+
+async function importProtocolRoot({ storagePath = '' } = {}) {
+  const protocolPaths = resolveProtocolBundlePaths({ storagePath });
+  const protocolRootPath = cleanText(protocolPaths.protocolRootPath, 2400);
+  if (!protocolRootPath) {
+    return {
+      protocols: [],
+      protocolRootPath: '',
+      sqlitePath: ''
+    };
+  }
+  let entries = [];
+  try {
+    entries = await fs.readdir(protocolRootPath, { withFileTypes: true });
+  } catch (error) {
+    if (error?.code === 'ENOENT') {
+      return {
+        protocols: [],
+        protocolRootPath,
+        sqlitePath: protocolPaths.sqlitePath
+      };
+    }
+    throw error;
+  }
+
+  const protocols = [];
+  for (const entry of entries) {
+    if (!entry.isDirectory()) {
+      continue;
+    }
+    const filePath = path.join(protocolRootPath, entry.name, 'protocol.json');
+    const payload = await readJsonFile(filePath);
+    if (!payload.ok) {
+      continue;
+    }
+    const protocol = ensureObject(payload.data?.protocol);
+    if (Object.keys(protocol).length) {
+      protocols.push(protocol);
+    }
+  }
+
+  return {
+    protocols,
+    protocolRootPath,
+    sqlitePath: protocolPaths.sqlitePath
+  };
+}
+
 async function importStorageRoot({ storagePath = '' } = {}) {
   const resolvedStoragePath = path.resolve(cleanText(storagePath, 2400));
   if (!resolvedStoragePath) {
@@ -65,7 +126,7 @@ async function importStorageRoot({ storagePath = '' } = {}) {
     }
     const absPath = path.join(resolvedStoragePath, entry.name);
     const stat = await fs.stat(absPath);
-    const bundlePaths = getBundlePaths({ dataFilePath: absPath });
+    const bundlePaths = getBundlePaths({ dataFilePath: absPath, storagePath: resolvedStoragePath });
     candidateFiles.push({
       kind: 'data_bundle',
       path: absPath,
@@ -85,7 +146,7 @@ async function importStorageRoot({ storagePath = '' } = {}) {
       continue;
     }
     const absPath = path.join(resolvedStoragePath, entry.name);
-    const bundlePaths = getBundlePathsFromSqlitePath(absPath);
+    const bundlePaths = getBundlePathsFromSqlitePath(absPath, { storagePath: resolvedStoragePath });
     if (!bundlePaths.basePath || discoveredBundleBases.has(bundlePaths.basePath)) {
       continue;
     }
@@ -103,6 +164,10 @@ async function importStorageRoot({ storagePath = '' } = {}) {
 
   const protocolMap = new Map();
   const notebookMap = new Map();
+  const workflowTemplateMap = new Map();
+  const workflowMap = new Map();
+  const paperMap = new Map();
+  const paperExperimentLinkMap = new Map();
   const chemicalMap = new Map();
   const inventoryZoneMap = new Map();
   const blockMap = new Map();
@@ -113,7 +178,7 @@ async function importStorageRoot({ storagePath = '' } = {}) {
 
   for (const candidate of candidateFiles) {
     const candidatePath = candidate.path;
-    const bundlePaths = candidate.bundlePaths || getBundlePaths({ dataFilePath: candidatePath });
+    const bundlePaths = candidate.bundlePaths || getBundlePaths({ dataFilePath: candidatePath, storagePath: resolvedStoragePath });
     let parsed = {};
     if (candidate.kind === 'data_bundle') {
       try {
@@ -130,16 +195,17 @@ async function importStorageRoot({ storagePath = '' } = {}) {
       }
     }
 
-    const sidecarExists = await Promise.all([
-      fs.access(bundlePaths.protocolsPath).then(() => true).catch(() => false),
+    const [notebookSidecarExists, sqliteExists, legacySqliteExists] = await Promise.all([
       fs.access(bundlePaths.notebookPagesPath).then(() => true).catch(() => false),
-      fs.access(bundlePaths.sqlitePath).then(() => true).catch(() => false)
+      fs.access(bundlePaths.sqlitePath).then(() => true).catch(() => false),
+      fs.access(bundlePaths.legacySqlitePath || '').then(() => true).catch(() => false)
     ]);
+    const hasAnySqlite = sqliteExists || legacySqliteExists;
 
-    if (candidate.kind === 'data_bundle' && !looksLikeEnanaSnapshot(parsed) && !sidecarExists.some(Boolean)) {
+    if (candidate.kind === 'data_bundle' && !looksLikeEnanaSnapshot(parsed) && !notebookSidecarExists && !hasAnySqlite) {
       continue;
     }
-    if (candidate.kind !== 'data_bundle' && !sidecarExists.some(Boolean)) {
+    if (candidate.kind !== 'data_bundle' && !notebookSidecarExists && !hasAnySqlite) {
       continue;
     }
 
@@ -189,6 +255,9 @@ async function importStorageRoot({ storagePath = '' } = {}) {
     });
   }
 
+  const protocolRoot = await importProtocolRoot({ storagePath: resolvedStoragePath });
+  mergeByIdMap(protocolMap, protocolRoot.protocols, 'protocol');
+
   const mergedInventory = {};
   for (const [zone, zoneMap] of inventoryZoneMap.entries()) {
     mergedInventory[zone] = [...zoneMap.values()];
@@ -206,6 +275,10 @@ async function importStorageRoot({ storagePath = '' } = {}) {
   const statePatch = {
     protocols: [...protocolMap.values()],
     notebookEntries: [...notebookMap.values()],
+    workflowTemplates: [...workflowTemplateMap.values()],
+    workflows: [...workflowMap.values()],
+    papers: [...paperMap.values()],
+    paperExperimentLinks: [...paperExperimentLinkMap.values()],
     labInventory: {
       chemicals: [...chemicalMap.values()],
       blocks: mergedBlocks,
@@ -216,11 +289,29 @@ async function importStorageRoot({ storagePath = '' } = {}) {
     inventory: mergedInventory
   };
 
+  const workflowRoot = await importWorkflowRoot({ storagePath: resolvedStoragePath });
+  mergeByIdMap(workflowTemplateMap, workflowRoot?.statePatch?.workflowTemplates, 'workflow_template');
+  mergeByIdMap(workflowMap, workflowRoot?.statePatch?.workflows, 'workflow');
+  mergeByIdMap(notebookMap, workflowRoot?.statePatch?.notebookEntries, 'notebook');
+  mergeByIdMap(paperMap, workflowRoot?.statePatch?.papers, 'paper');
+  mergePaperExperimentLinks(paperExperimentLinkMap, workflowRoot?.statePatch?.paperExperimentLinks);
+
+  statePatch.workflowTemplates = [...workflowTemplateMap.values()];
+  statePatch.workflows = [...workflowMap.values()];
+  statePatch.notebookEntries = [...notebookMap.values()];
+  statePatch.papers = [...paperMap.values()];
+  statePatch.paperExperimentLinks = [...paperExperimentLinkMap.values()];
+
   const sequenceLibrary = await summarizeSequenceLibrary(resolvedStoragePath);
+  const workflowPaths = resolveWorkflowStoragePaths(resolvedStoragePath);
+  const allWarnings = warnings.concat(asArray(workflowRoot?.warnings));
   const summary = {
     bundles: bundleSummaries.length,
     protocols: statePatch.protocols.length,
     notebookEntries: statePatch.notebookEntries.length,
+    workflowTemplates: statePatch.workflowTemplates.length,
+    workflows: statePatch.workflows.length,
+    papers: statePatch.papers.length,
     chemicals: statePatch.labInventory.chemicals.length,
     personalInventoryContainers: Object.values(statePatch.inventory)
       .reduce((sum, list) => sum + asArray(list).length, 0),
@@ -235,6 +326,18 @@ async function importStorageRoot({ storagePath = '' } = {}) {
     root_path: resolvedStoragePath,
     discovered_files: discoveredFiles,
     bundles: bundleSummaries,
+    protocol_storage: {
+      relative_root_path: toPosixRelative(resolvedStoragePath, protocolRoot.protocolRootPath),
+      relative_index_sqlite_path: toPosixRelative(resolvedStoragePath, protocolRoot.sqlitePath),
+      protocols: statePatch.protocols.length
+    },
+    workflow_storage: {
+      relative_root_path: toPosixRelative(resolvedStoragePath, workflowPaths.workflowRootPath),
+      relative_status_sqlite_path: toPosixRelative(resolvedStoragePath, workflowPaths.sqlitePath),
+      workflow_templates: statePatch.workflowTemplates.length,
+      workflows: statePatch.workflows.length,
+      papers: statePatch.papers.length
+    },
     sequence_library: {
       relative_path: toPosixRelative(resolvedStoragePath, sequenceLibrary.path),
       exists: sequenceLibrary.exists,
@@ -242,7 +345,7 @@ async function importStorageRoot({ storagePath = '' } = {}) {
       status_counts: sequenceLibrary.statusCounts
     },
     summary,
-    warnings
+    warnings: allWarnings
   };
   const manifestPath = path.join(resolvedStoragePath, STORAGE_MANIFEST_FILE_NAME);
   await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2), 'utf8');
@@ -251,7 +354,7 @@ async function importStorageRoot({ storagePath = '' } = {}) {
     statePatch,
     summary,
     manifestPath,
-    warnings,
+    warnings: allWarnings,
     bundles: bundleSummaries,
     sequenceLibrary
   };

@@ -37,15 +37,12 @@ const BASE_COMPLEMENT = Object.freeze({
   X: 'N'
 });
 
-function cleanText(value, maxLength = 300) {
-  const text = String(value || '').trim();
+function cleanText(value, _maxLength = 300) {
+  const text = String(value || '');
   if (!text) {
     return '';
   }
-  if (!Number.isFinite(Number(maxLength)) || maxLength <= 0) {
-    return text;
-  }
-  return text.length > maxLength ? text.slice(0, maxLength) : text;
+  return text;
 }
 
 function normalizeStatus(value) {

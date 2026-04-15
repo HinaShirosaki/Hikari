@@ -1,0 +1,31 @@
+{
+  "exportedAt": "2026-04-11T02:18:48.229Z",
+  "workflowId": "1775782081890-b219b77f7b2e48",
+  "notebookEntry": {
+    "id": "1775785664323-de28c03280f04",
+    "notebookType": "biology",
+    "projectId": "",
+    "projectName": "",
+    "protocolId": "1774024047007-d137dae96cab78",
+    "protocolName": "BL21(DE3) Chemical Transformation with pET28a",
+    "values": {},
+    "result": "",
+    "resultFiles": [],
+    "resultFileRecords": [],
+    "storageFolder": "",
+    "createdAt": "2026-04-10T01:47:44.323Z",
+    "updatedAt": "2026-04-10T01:47:44.323Z",
+    "notebookState": "executed",
+    "executedAt": "2026-04-10T01:47:44.323Z",
+    "workflowContext": {
+      "workflowId": "1775782081890-b219b77f7b2e48",
+      "workflowName": "Histagged protein preparation Run",
+      "workflowEntryId": "1775782081890-be121b50f6a7f",
+      "workflowEntryName": "Entry 1",
+      "workflowBlockId": "1775782081890-847e69d6765308",
+      "workflowBlockTitle": "BL21(DE3) Chemical Transformation with pET28a"
+    },
+    "assayIds": [],
+    "gelAnalysisIds": []
+  }
+}

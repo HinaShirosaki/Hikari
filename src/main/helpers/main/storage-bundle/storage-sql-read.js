@@ -77,6 +77,32 @@ function readNotebookRowsFromSqlite(rows) {
   });
 }
 
+function readPaperRowsFromSqlite(rows) {
+  return asArray(rows).map((row, index) => {
+    const source = ensureObject(row);
+    const parsed = parseJsonObject(source.raw_json);
+    if (parsed) {
+      return parsed;
+    }
+    return {
+      id: cleanText(source.id, 220) || `paper_${index + 1}`,
+      title: cleanText(source.title, 320) || `Paper ${index + 1}`,
+      fileName: cleanText(source.file_name, 320),
+      linkedType: cleanText(source.linked_type, 80),
+      linkedId: cleanText(source.linked_id, 220),
+      linkedName: cleanText(source.linked_name, 320),
+      storedRelativePath: cleanText(source.stored_relative_path, 2400),
+      availabilityStatus: cleanText(source.availability_status, 80),
+      ingestionStatus: cleanText(source.ingestion_status, 80),
+      summaryStatus: cleanText(source.summary_status, 80),
+      methodsStatus: cleanText(source.methods_status, 80),
+      reagentsStatus: cleanText(source.reagents_status, 80),
+      discoveredAt: cleanText(source.discovered_at, 80),
+      updatedAt: cleanText(source.updated_at, 80)
+    };
+  });
+}
+
 async function readSqliteBundleIndex(sqlitePath) {
   try {
     const bytes = await fs.readFile(sqlitePath);
@@ -88,6 +114,7 @@ async function readSqliteBundleIndex(sqlitePath) {
         inventorySamples: [],
         protocolRows: [],
         notebookRows: [],
+        paperRows: [],
         recordRows: [],
         inventoryMeta: {}
       };
@@ -144,6 +171,9 @@ async function readSqliteBundleIndex(sqlitePath) {
       const notebookRows = tableNames.has('notebook_index')
         ? readSqlRows(db, 'SELECT * FROM notebook_index', [])
         : [];
+      const paperRows = tableNames.has('paper_index')
+        ? readSqlRows(db, 'SELECT * FROM paper_index', [])
+        : [];
       const recordRows = tableNames.has('record_index')
         ? readSqlRows(db, 'SELECT * FROM record_index', [])
         : [];
@@ -169,6 +199,7 @@ async function readSqliteBundleIndex(sqlitePath) {
         inventorySamples,
         protocolRows,
         notebookRows,
+        paperRows,
         recordRows,
         inventoryMeta
       };
@@ -184,6 +215,7 @@ async function readSqliteBundleIndex(sqlitePath) {
         inventorySamples: [],
         protocolRows: [],
         notebookRows: [],
+        paperRows: [],
         recordRows: [],
         inventoryMeta: {}
       };
@@ -194,6 +226,7 @@ async function readSqliteBundleIndex(sqlitePath) {
 
 module.exports = {
   readNotebookRowsFromSqlite,
+  readPaperRowsFromSqlite,
   readProtocolRowsFromSqlite,
   readSqlRows,
   readSqliteBundleIndex

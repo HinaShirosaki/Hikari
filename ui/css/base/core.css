@@ -1,6 +1,39 @@
+@font-face {
+  font-family: "Source Serif 4";
+  src: url("../../../assets/fonts/SourceSerif4-400.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Source Serif 4";
+  src: url("../../../assets/fonts/SourceSerif4-500.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Source Serif 4";
+  src: url("../../../assets/fonts/SourceSerif4-600.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Source Serif 4";
+  src: url("../../../assets/fonts/SourceSerif4-700.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
 :root {
   color-scheme: light;
   --app-font-size: 16px;
+  --font-app: "Source Serif 4", serif;
   --shared-left-rail-min: 240px;
   --shared-left-rail-width: 280px;
   --shared-left-rail-max: 400px;
@@ -38,9 +71,76 @@ body {
   overflow-x: hidden;
   color: var(--text);
   background: var(--bg);
-  font-family: "Avenir Next", "SF Pro Text", "Helvetica Neue", sans-serif;
+  font-family: var(--font-app);
   font-size: var(--app-font-size);
   line-height: 1.45;
+  font-optical-sizing: auto;
+  font-kerning: normal;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.app-loading-cover {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  background: #0f1512;
+  pointer-events: all;
+  opacity: 1;
+  transition: opacity 260ms ease, visibility 260ms ease;
+}
+
+.app-loading-cover.is-hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.app-loading-cover__icon-shell {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: clamp(104px, 13vw, 156px);
+  aspect-ratio: 1;
+}
+
+.app-loading-cover__icon {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: brightness(0) invert(1);
+  opacity: 0.9;
+  animation: hikari-loading-breathe 2.2s ease-in-out infinite;
+}
+
+.app-loading-cover__wave {
+  display: none;
+}
+
+@keyframes hikari-loading-breathe {
+  0% {
+    transform: scale(0.94);
+    opacity: 0.58;
+    filter: brightness(0) invert(1) drop-shadow(0 0 0 rgba(255, 255, 255, 0));
+  }
+
+  50% {
+    transform: scale(1);
+    opacity: 1;
+    filter: brightness(0) invert(1) drop-shadow(0 0 24px rgba(255, 255, 255, 0.18));
+  }
+
+  100% {
+    transform: scale(0.94);
+    opacity: 0.58;
+    filter: brightness(0) invert(1) drop-shadow(0 0 0 rgba(255, 255, 255, 0));
+  }
 }
 
 body.theme-night {
@@ -74,7 +174,7 @@ div {
   height: 100svh;
   width: 100%;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr);
   gap: 0;
   max-width: none;
   margin: 0;
@@ -84,21 +184,22 @@ div {
 
 .topbar {
   position: relative;
-  z-index: 1;
-  display: flex;
+  z-index: 12;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 8px 20px 4px;
-  padding-bottom: 4px;
+  gap: 14px;
+  padding: 8px 20px 6px;
   border-bottom: 0;
   background: var(--bg);
+  overflow: visible;
 }
 
 .topbar-brand {
   display: grid;
   gap: 0;
   min-width: 0;
+  justify-self: start;
 }
 
 .topbar h1 {
@@ -143,13 +244,11 @@ div {
 }
 
 .topbar-tools {
-  display: grid;
-  grid-template-columns: minmax(220px, 420px) auto auto;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 6px;
-  width: auto;
-  margin-left: auto;
+  width: clamp(180px, 19vw, 260px);
+  min-width: 0;
+  justify-self: end;
+  position: relative;
+  z-index: 1;
 }
 
 #topbar-search {
@@ -162,7 +261,7 @@ div {
   min-height: 0;
   height: 100%;
   display: grid;
-  z-index: 1;
+  z-index: 0;
 }
 
 body.has-shared-left-rail-view .workspace-shell::before {
@@ -189,24 +288,23 @@ body.has-shared-left-rail-view .workspace-main {
 }
 
 .app-dock {
-  position: fixed;
-  left: 50%;
-  bottom: 14px;
-  transform: translateX(-50%);
-  z-index: 100;
+  position: relative;
+  z-index: 4;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   width: max-content;
   min-width: 0;
-  max-width: calc(100vw - 32px);
-  padding: 10px 12px;
+  max-width: min(100%, calc(100vw - 32px));
+  padding: 7px 9px;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: color-mix(in srgb, var(--bg) 90%, var(--surface-elevated) 10%);
   isolation: isolate;
   pointer-events: none;
+  justify-self: center;
+  overflow: visible;
 }
 
 .app-dock-nav {
@@ -246,6 +344,7 @@ body.has-shared-left-rail-view .workspace-main {
 
 .app-dock-btn {
   position: relative;
+  z-index: 0;
   border-color: transparent;
   background: transparent;
   color: var(--muted);
@@ -258,6 +357,7 @@ body.has-shared-left-rail-view .workspace-main {
 .topbar-icon-btn:hover,
 .topbar-icon-btn:focus-visible,
 .topbar-icon-btn.is-active {
+  z-index: 2;
   color: var(--strong);
   background: var(--surface-subtle);
   border-color: var(--line);
@@ -267,8 +367,9 @@ body.has-shared-left-rail-view .workspace-main {
   content: attr(data-label);
   position: absolute;
   left: 50%;
-  bottom: calc(100% + 14px);
-  transform: translate(-50%, 6px);
+  top: calc(100% + 12px);
+  bottom: auto;
+  transform: translate(-50%, -6px);
   padding: 4px 8px;
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -278,6 +379,7 @@ body.has-shared-left-rail-view .workspace-main {
   line-height: 1.2;
   white-space: nowrap;
   opacity: 0;
+  z-index: 5;
   pointer-events: none;
   transition: opacity 120ms ease, transform 120ms ease;
 }
@@ -316,8 +418,9 @@ body.has-shared-left-rail-view .workspace-main {
 .app-more-menu {
   position: absolute;
   right: 0;
-  bottom: calc(100% + 10px);
-  z-index: 101;
+  top: calc(100% + 10px);
+  bottom: auto;
+  z-index: 6;
   min-width: 260px;
   padding: 6px;
   border-radius: 8px;
@@ -757,15 +860,15 @@ button:disabled {
   }
 
   .topbar {
+    grid-template-columns: minmax(0, 1fr);
     align-items: stretch;
-    flex-direction: column;
-    gap: 8px;
-    padding: 8px 14px 4px;
+    gap: 10px;
+    padding: 8px 14px 6px;
   }
 
   .topbar-tools {
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    justify-content: flex-start;
+    width: 100%;
+    justify-self: stretch;
   }
 
   .topbar-heading-row {
@@ -781,11 +884,10 @@ button:disabled {
   }
 
   .app-dock {
-    bottom: 10px;
     width: max-content;
     min-width: 0;
-    max-width: calc(100vw - 20px);
-    padding: 8px 10px;
+    max-width: calc(100vw - 28px);
+    padding: 7px 8px;
   }
 
   .app-dock-btn,

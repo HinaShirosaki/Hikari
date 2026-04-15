@@ -3,6 +3,8 @@
 function registerSystemIpc(deps = {}) {
   const ipcMain = deps.ipcMain;
   const shell = deps.shell || null;
+  const launchCodexCliLogin = deps.launchCodexCliLogin;
+  const clearCodexCliStoredLogin = deps.clearCodexCliStoredLogin;
   const getCodexLoginStatus = deps.getCodexLoginStatus;
   const getCodexCliCatalog = typeof deps.getCodexCliCatalog === 'function'
     ? deps.getCodexCliCatalog
@@ -68,8 +70,65 @@ function registerSystemIpc(deps = {}) {
     return {
       ok: status.ok === true,
       loggedIn: status.loggedIn === true,
+      source: cleanText(status.source, 80) || 'none',
+      expired: status.expired === true,
+      sourcePath: cleanText(status.sourcePath, 2400),
       message: status.message || ''
     };
+  });
+
+  ipcMain.handle('llm:codex-login', async () => {
+    if (typeof launchCodexCliLogin !== 'function') {
+      return { ok: false, error: 'Codex login is unavailable.' };
+    }
+    try {
+      const result = await launchCodexCliLogin({ cwd: getCodexCliWorkingDirectory() });
+      if (result?.loginUrl && shell && typeof shell.openExternal === 'function') {
+        await shell.openExternal(result.loginUrl);
+      }
+      return {
+        ok: result?.ok !== false,
+        launched: result?.launched !== false,
+        loginUrl: cleanText(result?.loginUrl, 2400),
+        message: cleanText(result?.message, 2400) || 'OpenAI login opened for Codex.'
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        error: cleanText(error?.message || error, 2400) || 'Failed to start Codex login.'
+      };
+    }
+  });
+
+  ipcMain.handle('llm:codex-clear-login', async () => {
+    if (typeof clearCodexCliStoredLogin !== 'function') {
+      return { ok: false, error: 'Codex login reset is unavailable.' };
+    }
+    try {
+      const result = await clearCodexCliStoredLogin({ cwd: getCodexCliWorkingDirectory() });
+      const status = await getCodexLoginStatus({ cwd: getCodexCliWorkingDirectory(), forceRefresh: true });
+      return {
+        ok: result?.ok !== false,
+        clearedPaths: Array.isArray(result?.clearedPaths)
+          ? result.clearedPaths.map((entry) => cleanText(entry, 2400)).filter(Boolean)
+          : [],
+        hasEnvironmentToken: result?.hasEnvironmentToken === true,
+        message: cleanText(result?.message, 2400),
+        status: {
+          ok: status.ok === true,
+          loggedIn: status.loggedIn === true,
+          source: cleanText(status.source, 80) || 'none',
+          expired: status.expired === true,
+          sourcePath: cleanText(status.sourcePath, 2400),
+          message: cleanText(status.message, 2400)
+        }
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        error: cleanText(error?.message || error, 2400) || 'Failed to clear saved Codex login.'
+      };
+    }
   });
 
   ipcMain.handle('llm:codex-catalog', async () => {

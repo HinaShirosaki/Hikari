@@ -1,6 +1,6 @@
 # Agent Context Debug Export
 
-Generated at: 2026-04-08T16:20:28.271Z
+Generated at: 2026-04-12T22:32:13.961Z
 
 This export runs the science agent flow with debug shims only.
 
@@ -8,6 +8,589 @@ This export runs the science agent flow with debug shims only.
 - Every internal tool/API-facing response is replaced with `API response`.
 - The runtime logic stays intact; only the external call boundaries are stubbed.
 
+## Direct Answer
+
+```json
+{
+  "intent": "general_science_question",
+  "mode": "direct-answer",
+  "message": "What does the latest evidence suggest about this science question?",
+  "reasoning_effort": 0,
+  "iterations": 0,
+  "max_rounds": 0,
+  "tool_sequence": [],
+  "project": null
+}
+```
+
+### Final Result
+
+```json
+{
+  "status": "completed",
+  "answer": "LLM Response",
+  "confidence": 0.68,
+  "citations": [],
+  "decision_record": {
+    "assumptions": [
+      "general_science_question was answered directly at reasoning_effort=0."
+    ],
+    "open_questions": [],
+    "verification_notes": [
+      "No reasoning loop or retrieval tool was used."
+    ]
+  },
+  "response_type": "",
+  "confidence_label": "",
+  "source_summary": {
+    "total_sources": 0,
+    "groups": []
+  },
+  "unresolved_fields": [],
+  "validation": {
+    "passed": true,
+    "forced_clarification": false,
+    "violations": [],
+    "failure_reasons": []
+  },
+  "provenance": {
+    "source_evidence": [],
+    "unsupported_statement_count": 0
+  },
+  "clarified_input": "What does the latest evidence suggest about this science question?",
+  "input_clarification": null,
+  "route_plan": null,
+  "exit_criteria": null,
+  "tool_trace": [],
+  "intermediate_states": [
+    {
+      "state_id": "science_intake-1776033133948-3dc72a",
+      "created_at": "2026-04-12T22:32:13.948Z",
+      "stage": "science_intake",
+      "goal": "Start general_science_question handling.",
+      "assumptions": [
+        "Intent policy=literature_first_web_last.",
+        "reasoning_effort=0.",
+        "This request should answer directly without entering the reasoning loop."
+      ],
+      "open_questions": [],
+      "evidence": [],
+      "proposed_actions": [],
+      "confidence": 0.52
+    },
+    {
+      "state_id": "science_direct_answer-1776033133948-17d9aa",
+      "created_at": "2026-04-12T22:32:13.948Z",
+      "stage": "science_direct_answer",
+      "goal": "Answered directly without entering the reasoning loop.",
+      "assumptions": [
+        "reasoning_effort=0 requested a direct answer path.",
+        "No retrieval tools were invoked."
+      ],
+      "open_questions": [],
+      "evidence": [],
+      "proposed_actions": [],
+      "confidence": 0.68
+    }
+  ],
+  "rounds_executed": 0,
+  "follow_up_questions": [],
+  "reasoning_effort": 0,
+  "thinking_trace": {
+    "intent_parse_question": "LLM Response",
+    "question_clarifier": "The user wants to understand: What does the latest evidence suggest about this science question?",
+    "criteria_generate": "I am defining what evidence would be enough to answer safely.",
+    "tool_rounds": [],
+    "pre_synthesize_answer": "LLM Response",
+    "judge": "I am checking whether the evidence is sufficient or whether a key gap remains.",
+    "final_synthesize": "I have gathered enough information and I am ready to synthesize the final answer.",
+    "final_synthesized_question": "What does the latest evidence suggest about this science question?"
+  },
+  "final_synthesized_question": "What does the latest evidence suggest about this science question?"
+}
+```
+
+### Round Contexts
+
+_No round-by-round context was captured._
+
+### Context Snapshots
+
+### 1. Initial context
+
+**Real Context**
+
+```text
+Immediate working context:
+
+User request: What does the latest evidence suggest about this science question?
+
+Recent conversation:
+1. user: What does the latest evidence suggest about this science question?
+
+Session memory summary:
+
+Goals: Inspect debug context export output
+
+Constraints: All LLM outputs are replaced with LLM Response. | All internal API outputs are replaced with API response.
+
+Long-term memory:
+
+No recalled long-term memory.
+```
+
+### 2. Final context
+
+**Real Context**
+
+```text
+Immediate working context:
+
+User request: What does the latest evidence suggest about this science question?
+
+Recent conversation:
+1. user: What does the latest evidence suggest about this science question?
+2. assistant: LLM Response
+
+Session memory summary:
+
+Goals: Inspect debug context export output
+
+Constraints: All LLM outputs are replaced with LLM Response. | All internal API outputs are replaced with API response.
+
+Recent completed tasks: LLM Response | LLM Response
+
+Long-term memory:
+
+No recalled long-term memory.
+```
+
+### LLM Calls
+
+### 1. science_agent_session_start
+
+Kind: `agent-session-start`
+
+Stub response: `LLM Response`
+
+**System Prompt**
+
+```text
+You are a debug-only Enana agent runtime.
+
+Intent: general_science_question
+
+Reasoning effort: 0
+
+Execution mode: direct answer only.
+
+Execution hints:
+- Retrieval preference: literature_first_web_last.
+- Use an external citation when the clarified request depends on freshness or recency.
+- Make at least one evidence-gathering attempt before answering.
+- A limitation-qualified answer is acceptable after a best-effort evidence attempt.
+
+1. You are handling a reasoning_effort=0 science request.
+2. Answer directly without entering the deterministic science reasoning loop.
+3. Provide a complete answer: lead with the main conclusion, then explain the key reasoning and any important caveats.
+4. Do not be artificially terse unless the user explicitly asked for a short answer.
+5. Do not call tools or ask to enter a reasoning loop.
+6. Use stable scientific knowledge plus the provided context only.
+7. Do not fabricate project records, literature results, or computation outputs.
+8. For general science questions, prefer the most targeted citation-backed evidence path available.
+9. This request was classified as reasoning_effort=0.
+```
+
+**Message**
+
+```text
+What does the latest evidence suggest about this science question?
+```
+
+**Conversation**
+
+```json
+[
+  {
+    "role": "user",
+    "text": "What does the latest evidence suggest about this science question?"
+  },
+  {
+    "role": "assistant",
+    "text": "LLM Response"
+  }
+]
+```
+
+### Exact Raw Prompt Payloads
+
+### 1. science_agent_session_start
+
+Kind: `agent-session-start`
+
+**Raw System Prompt**
+
+```text
+You are a debug-only Enana agent runtime.
+
+Intent: general_science_question
+
+Reasoning effort: 0
+
+Execution mode: direct answer only.
+
+Execution hints:
+- Retrieval preference: literature_first_web_last.
+- Use an external citation when the clarified request depends on freshness or recency.
+- Make at least one evidence-gathering attempt before answering.
+- A limitation-qualified answer is acceptable after a best-effort evidence attempt.
+
+1. You are handling a reasoning_effort=0 science request.
+2. Answer directly without entering the deterministic science reasoning loop.
+3. Provide a complete answer: lead with the main conclusion, then explain the key reasoning and any important caveats.
+4. Do not be artificially terse unless the user explicitly asked for a short answer.
+5. Do not call tools or ask to enter a reasoning loop.
+6. Use stable scientific knowledge plus the provided context only.
+7. Do not fabricate project records, literature results, or computation outputs.
+8. For general science questions, prefer the most targeted citation-backed evidence path available.
+9. This request was classified as reasoning_effort=0.
+```
+
+**Raw Message**
+
+```text
+What does the latest evidence suggest about this science question?
+```
+
+**Raw Conversation**
+
+```json
+[
+  {
+    "role": "user",
+    "text": "What does the latest evidence suggest about this science question?"
+  }
+]
+```
+
+### Internal API Calls
+
+_No internal API calls captured._
+
+### Lifecycle
+
+1. `science_direct_answer_started` [started] Answering general_science_question directly at reasoning_effort=0.
+2. `science_direct_answer_completed` [ok] Science direct-answer path completed successfully.
+## Clarification Needed
+
+```json
+{
+  "intent": "general_science_question",
+  "mode": "clarification",
+  "message": "What does the latest evidence suggest about this science question?",
+  "reasoning_effort": 2,
+  "iterations": 0,
+  "max_rounds": 2,
+  "tool_sequence": [
+    "inventory-lookup",
+    "record-lookup",
+    "protocol-matching",
+    "notebook-generation",
+    "notebook-draft",
+    "python-sandbox",
+    "command-line",
+    "sub-agent",
+    "memory",
+    "literature-search",
+    "purchase-recommendation",
+    "paper-download",
+    "paper-analysis",
+    "protocol-generation"
+  ],
+  "project": null
+}
+```
+
+### Final Result
+
+```json
+{
+  "status": "needs_more_info",
+  "answer": "LLM Response",
+  "confidence": 0.35,
+  "citations": [],
+  "decision_record": {
+    "assumptions": [
+      "general_science_question was routed into the shared science reasoning loop.",
+      "general_science_question requires clarification before retrieval."
+    ],
+    "open_questions": [
+      "LLM Response"
+    ],
+    "verification_notes": [
+      "Execution stopped before tool use because prerequisite clarification was missing.",
+      "No science retrieval tool was executed."
+    ]
+  },
+  "response_type": "",
+  "confidence_label": "",
+  "source_summary": {
+    "total_sources": 0,
+    "groups": []
+  },
+  "unresolved_fields": [],
+  "validation": {
+    "passed": true,
+    "forced_clarification": false,
+    "violations": [],
+    "failure_reasons": []
+  },
+  "provenance": {
+    "source_evidence": [],
+    "unsupported_statement_count": 0
+  },
+  "tool_trace": [],
+  "intermediate_states": [
+    {
+      "state_id": "science_intake-1776033133949-5731f8",
+      "created_at": "2026-04-12T22:32:13.949Z",
+      "stage": "science_intake",
+      "goal": "Start general_science_question handling.",
+      "assumptions": [
+        "Intent policy=literature_first_web_last.",
+        "reasoning_effort=2.",
+        "This request should enter the reasoning loop."
+      ],
+      "open_questions": [
+        "LLM Response"
+      ],
+      "evidence": [],
+      "proposed_actions": [],
+      "confidence": 0.52
+    },
+    {
+      "state_id": "science_clarification-1776033133950-21f050",
+      "created_at": "2026-04-12T22:32:13.950Z",
+      "stage": "science_clarification",
+      "goal": "Clarified the user request before reasoning.",
+      "assumptions": [
+        "LLM Response",
+        "Intent: general_science_question",
+        "Requested output: debug-context-export"
+      ],
+      "open_questions": [
+        "LLM Response"
+      ],
+      "evidence": [],
+      "proposed_actions": [],
+      "confidence": 0.4
+    }
+  ],
+  "rounds_executed": 0,
+  "follow_up_questions": [
+    "LLM Response"
+  ],
+  "thinking_trace": {
+    "intent_parse_question": "LLM Response",
+    "question_clarifier": "I need one blocking clarification before I can continue the science reasoning loop.",
+    "criteria_generate": "I am defining what evidence would be enough to answer safely.",
+    "tool_rounds": [],
+    "pre_synthesize_answer": "Based on the evidence so far, I am drafting a tentative answer.",
+    "judge": "I am checking whether the evidence is sufficient or whether a key gap remains.",
+    "final_synthesize": "I have gathered enough information and I am ready to synthesize the final answer.",
+    "final_synthesized_question": "LLM Response"
+  },
+  "final_synthesized_question": "LLM Response"
+}
+```
+
+### Round Contexts
+
+_No round-by-round context was captured._
+
+### Context Snapshots
+
+### 1. Initial context
+
+**Real Context**
+
+```text
+Immediate working context:
+
+User request: What does the latest evidence suggest about this science question?
+
+Recent conversation:
+1. user: What does the latest evidence suggest about this science question?
+
+Session memory summary:
+
+Goals: Inspect debug context export output
+
+Constraints: All LLM outputs are replaced with LLM Response. | All internal API outputs are replaced with API response.
+
+Long-term memory:
+
+No recalled long-term memory.
+```
+
+### 2. After follow-up question was recorded
+
+**Real Context**
+
+```text
+Immediate working context:
+
+User request: What does the latest evidence suggest about this science question?
+
+Recent conversation:
+1. user: What does the latest evidence suggest about this science question?
+2. assistant: LLM Response
+
+Task summary:
+Task type: science_reasoning_loop
+Intent: general_science_question
+Status: active
+Follow-up questions: LLM Response
+
+Session memory summary:
+
+Goals: Inspect debug context export output
+
+Constraints: All LLM outputs are replaced with LLM Response. | All internal API outputs are replaced with API response.
+
+Unresolved questions: LLM Response
+
+Long-term memory:
+
+No recalled long-term memory.
+```
+
+### 3. Final context
+
+**Real Context**
+
+```text
+Immediate working context:
+
+User request: What does the latest evidence suggest about this science question?
+
+Recent conversation:
+1. user: What does the latest evidence suggest about this science question?
+2. assistant: LLM Response
+
+Task summary:
+Task type: science_reasoning_loop
+Intent: general_science_question
+Status: active
+Follow-up questions: LLM Response
+
+Session memory summary:
+
+Goals: Inspect debug context export output
+
+Constraints: All LLM outputs are replaced with LLM Response. | All internal API outputs are replaced with API response.
+
+Unresolved questions: LLM Response
+
+Long-term memory:
+
+No recalled long-term memory.
+```
+
+### LLM Calls
+
+### 1. science_input_clarification
+
+Kind: `structured-json`
+
+Stub response: `LLM Response`
+
+**System Prompt**
+
+```text
+Return valid JSON only.
+```
+
+**User Prompt / Context**
+
+```text
+Clarify the user request for the science reasoning loop.
+
+Rewrite the request into a self-contained, execution-ready input for the next module.
+
+Ask at most one follow-up question, and only when the missing detail is truly blocking.
+
+Include trace_sentence as one short sentence describing what you are doing at this step.
+
+Preserve the scientific intent, any request for recent/current evidence, and any need for deterministic computation.
+
+Intent: general_science_question
+
+User message:
+What does the latest evidence suggest about this science question?
+
+Return JSON only.
+```
+
+**Debug Shim Payload**
+
+```json
+{
+  "clarified_input": "LLM Response",
+  "analysis_goal": "LLM Response",
+  "important_constraints": [
+    "LLM Response"
+  ],
+  "missing_information": [
+    "LLM Response"
+  ],
+  "should_ask_follow_up": true,
+  "follow_up_question": "LLM Response",
+  "follow_up_reason": "LLM Response"
+}
+```
+
+### Exact Raw Prompt Payloads
+
+### 1. science_input_clarification
+
+Kind: `structured-json`
+
+**Raw System Prompt**
+
+```text
+Return valid JSON only.
+```
+
+**Raw User Prompt**
+
+```text
+Clarify the user request for the science reasoning loop.
+
+Rewrite the request into a self-contained, execution-ready input for the next module.
+
+Ask at most one follow-up question, and only when the missing detail is truly blocking.
+
+Include trace_sentence as one short sentence describing what you are doing at this step.
+
+Preserve the scientific intent, any request for recent/current evidence, and any need for deterministic computation.
+
+Intent: general_science_question
+
+User message:
+What does the latest evidence suggest about this science question?
+
+Return JSON only.
+```
+
+### Internal API Calls
+
+_No internal API calls captured._
+
+### Lifecycle
+
+1. `science_clarification_started` [started] Clarifying general_science_question input before tool execution.
+2. `science_clarification_completed` [pending] LLM Response
 ## Science Loop
 
 ```json
@@ -16,8 +599,8 @@ This export runs the science agent flow with debug shims only.
   "mode": "loop",
   "message": "What does the latest evidence suggest about this science question?",
   "reasoning_effort": 2,
-  "iterations": 8,
-  "max_rounds": 8,
+  "iterations": 2,
+  "max_rounds": 2,
   "tool_sequence": [
     "inventory-lookup",
     "record-lookup",
@@ -25,9 +608,11 @@ This export runs the science agent flow with debug shims only.
     "notebook-generation",
     "notebook-draft",
     "python-sandbox",
+    "command-line",
     "sub-agent",
     "memory",
     "literature-search",
+    "purchase-recommendation",
     "paper-download",
     "paper-analysis",
     "protocol-generation"
@@ -41,68 +626,41 @@ This export runs the science agent flow with debug shims only.
 ```json
 {
   "status": "completed",
-  "answer": "LLM Response",
-  "confidence": 0.68,
+  "answer": "LLM Response\n\nRemaining gaps: The current evidence directly supports the core answer to the clarified request..\n\nLatest tool summary: API response",
+  "confidence": 0.74,
   "citations": [
     {
-      "source": "protocol-matching",
+      "source": "inventory-lookup",
       "pointer": "debug:1",
       "reason": "API response"
     },
     {
-      "source": "paper-analysis",
+      "source": "command-line",
       "pointer": "debug:2",
-      "reason": "API response"
-    },
-    {
-      "source": "inventory-lookup",
-      "pointer": "debug:3",
-      "reason": "API response"
-    },
-    {
-      "source": "python-sandbox",
-      "pointer": "debug:4",
-      "reason": "API response"
-    },
-    {
-      "source": "notebook-draft",
-      "pointer": "debug:5",
-      "reason": "API response"
-    },
-    {
-      "source": "protocol-generation",
-      "pointer": "debug:6",
-      "reason": "API response"
-    },
-    {
-      "source": "paper-download",
-      "pointer": "debug:7",
-      "reason": "API response"
-    },
-    {
-      "source": "protocol-matching",
-      "pointer": "debug:8",
       "reason": "API response"
     }
   ],
   "decision_record": {
     "assumptions": [
-      "LLM Response",
+      "The evaluator judged the collected evidence sufficient for a grounded answer.",
+      "The answer is grounded in 2 citation-backed evidence item(s).",
       "general_science_question used the shared science reasoning loop.",
-      "Citation count=8."
+      "Citation count=2."
     ],
     "open_questions": [
       "The current evidence directly supports the core answer to the clarified request."
     ],
     "verification_notes": [
       "LLM Response",
+      "inventory-lookup: API response",
+      "command-line: API response",
       "The evaluator marked the evidence as sufficient before final synthesis."
     ]
   },
   "response_type": "",
   "confidence_label": "",
   "source_summary": {
-    "total_sources": 8,
+    "total_sources": 2,
     "groups": []
   },
   "unresolved_fields": [],
@@ -239,160 +797,64 @@ This export runs the science agent flow with debug shims only.
     {
       "round": 1,
       "call_id": "debug-call-science-loop-1",
-      "tool_name": "protocol-matching",
-      "input": {
-        "query": "What does the latest evidence suggest about this science question?"
-      },
-      "ok": true,
-      "summary": "API response",
-      "truncated_multi_call": false,
-      "error": "",
-      "citations": [
-        {
-          "source": "protocol-matching",
-          "pointer": "debug:1",
-          "reason": "API response"
-        }
-      ]
-    },
-    {
-      "round": 2,
-      "call_id": "debug-call-science-loop-2",
-      "tool_name": "paper-analysis",
-      "input": {
-        "query": "What does the latest evidence suggest about this science question?"
-      },
-      "ok": true,
-      "summary": "API response",
-      "truncated_multi_call": false,
-      "error": "",
-      "citations": [
-        {
-          "source": "paper-analysis",
-          "pointer": "debug:2",
-          "reason": "API response"
-        }
-      ]
-    },
-    {
-      "round": 3,
-      "call_id": "debug-call-science-loop-3",
       "tool_name": "inventory-lookup",
       "input": {
         "query": "What does the latest evidence suggest about this science question?"
       },
       "ok": true,
+      "status": "",
+      "run_id": "",
       "summary": "API response",
+      "multi_tool_round": false,
+      "tool_index_in_round": 1,
+      "tool_count_in_round": 1,
       "truncated_multi_call": false,
       "error": "",
+      "stdout": "",
+      "stderr": "",
+      "render_outputs": [],
       "citations": [
         {
           "source": "inventory-lookup",
-          "pointer": "debug:3",
+          "pointer": "debug:1",
           "reason": "API response"
         }
-      ]
+      ],
+      "loaded_context_blocks": []
     },
     {
-      "round": 4,
-      "call_id": "debug-call-science-loop-4",
-      "tool_name": "python-sandbox",
+      "round": 2,
+      "call_id": "debug-call-science-loop-2",
+      "tool_name": "command-line",
       "input": {
         "query": "What does the latest evidence suggest about this science question?"
       },
       "ok": true,
+      "status": "",
+      "run_id": "",
       "summary": "API response",
+      "multi_tool_round": false,
+      "tool_index_in_round": 1,
+      "tool_count_in_round": 1,
       "truncated_multi_call": false,
       "error": "",
+      "stdout": "",
+      "stderr": "",
+      "render_outputs": [],
       "citations": [
         {
-          "source": "python-sandbox",
-          "pointer": "debug:4",
+          "source": "command-line",
+          "pointer": "debug:2",
           "reason": "API response"
         }
-      ]
-    },
-    {
-      "round": 5,
-      "call_id": "debug-call-science-loop-5",
-      "tool_name": "notebook-draft",
-      "input": {
-        "query": "What does the latest evidence suggest about this science question?"
-      },
-      "ok": true,
-      "summary": "API response",
-      "truncated_multi_call": false,
-      "error": "",
-      "citations": [
-        {
-          "source": "notebook-draft",
-          "pointer": "debug:5",
-          "reason": "API response"
-        }
-      ]
-    },
-    {
-      "round": 6,
-      "call_id": "debug-call-science-loop-6",
-      "tool_name": "protocol-generation",
-      "input": {
-        "query": "What does the latest evidence suggest about this science question?"
-      },
-      "ok": true,
-      "summary": "API response",
-      "truncated_multi_call": false,
-      "error": "",
-      "citations": [
-        {
-          "source": "protocol-generation",
-          "pointer": "debug:6",
-          "reason": "API response"
-        }
-      ]
-    },
-    {
-      "round": 7,
-      "call_id": "debug-call-science-loop-7",
-      "tool_name": "paper-download",
-      "input": {
-        "query": "What does the latest evidence suggest about this science question?"
-      },
-      "ok": true,
-      "summary": "API response",
-      "truncated_multi_call": false,
-      "error": "",
-      "citations": [
-        {
-          "source": "paper-download",
-          "pointer": "debug:7",
-          "reason": "API response"
-        }
-      ]
-    },
-    {
-      "round": 8,
-      "call_id": "debug-call-science-loop-8",
-      "tool_name": "protocol-matching",
-      "input": {
-        "query": "What does the latest evidence suggest about this science question?"
-      },
-      "ok": true,
-      "summary": "API response",
-      "truncated_multi_call": false,
-      "error": "",
-      "citations": [
-        {
-          "source": "protocol-matching",
-          "pointer": "debug:8",
-          "reason": "API response"
-        }
-      ]
+      ],
+      "loaded_context_blocks": []
     }
   ],
   "intermediate_states": [
     {
-      "state_id": "science_intake-1775665228260-4affb7",
-      "created_at": "2026-04-08T16:20:28.260Z",
+      "state_id": "science_intake-1776033133951-93c50f",
+      "created_at": "2026-04-12T22:32:13.951Z",
       "stage": "science_intake",
       "goal": "Start general_science_question handling.",
       "assumptions": [
@@ -406,8 +868,8 @@ This export runs the science agent flow with debug shims only.
       "confidence": 0.52
     },
     {
-      "state_id": "science_clarification-1775665228260-61b423",
-      "created_at": "2026-04-08T16:20:28.260Z",
+      "state_id": "science_clarification-1776033133951-5dc27f",
+      "created_at": "2026-04-12T22:32:13.951Z",
       "stage": "science_clarification",
       "goal": "Clarified the user request before reasoning.",
       "assumptions": [
@@ -421,8 +883,8 @@ This export runs the science agent flow with debug shims only.
       "confidence": 0.66
     },
     {
-      "state_id": "science_route_plan-1775665228260-58bf62",
-      "created_at": "2026-04-08T16:20:28.260Z",
+      "state_id": "science_route_plan-1776033133952-7869d5",
+      "created_at": "2026-04-12T22:32:13.952Z",
       "stage": "science_route_plan",
       "goal": "Drafted a reference route plan for the reasoning loop.",
       "assumptions": [
@@ -466,8 +928,8 @@ This export runs the science agent flow with debug shims only.
       "confidence": 0.64
     },
     {
-      "state_id": "science_exit_criteria-1775665228261-27a1a4",
-      "created_at": "2026-04-08T16:20:28.261Z",
+      "state_id": "science_exit_criteria-1776033133953-a5a0f5",
+      "created_at": "2026-04-12T22:32:13.953Z",
       "stage": "science_exit_criteria",
       "goal": "Generated exit criteria for the reasoning loop.",
       "assumptions": [
@@ -484,111 +946,19 @@ This export runs the science agent flow with debug shims only.
       "confidence": 0.62
     },
     {
-      "state_id": "science_tool_round-1775665228262-30012e",
-      "created_at": "2026-04-08T16:20:28.262Z",
+      "state_id": "science_tool_round-1776033133955-0495c1",
+      "created_at": "2026-04-12T22:32:13.955Z",
       "stage": "science_tool_round",
-      "goal": "Executed protocol-matching in round 1.",
+      "goal": "Executed inventory-lookup in round 1.",
       "assumptions": [
         "Exactly one tool call was executed this round.",
-        "Tool execution returned a success envelope."
-      ],
-      "open_questions": [],
-      "evidence": [
-        {
-          "source": "protocol-matching",
-          "pointer": "debug:1",
-          "reason": "API response"
-        }
-      ],
-      "proposed_actions": [
-        {
-          "action_type": "read",
-          "tool_name": "protocol-matching",
-          "risk_level": "low",
-          "reason": "API response"
-        }
-      ],
-      "confidence": 0.66
-    },
-    {
-      "state_id": "science_pre_synthesis-1775665228262-3675ea",
-      "created_at": "2026-04-08T16:20:28.262Z",
-      "stage": "science_pre_synthesis",
-      "goal": "Prepared a lightweight pre-synthesized question before exit judgement.",
-      "assumptions": [
-        "Tentative answer: LLM Response"
-      ],
-      "open_questions": [],
-      "evidence": [
-        {
-          "source": "protocol-matching",
-          "pointer": "debug:1",
-          "reason": "API response"
-        }
-      ],
-      "proposed_actions": [],
-      "confidence": 0.64
-    },
-    {
-      "state_id": "science_tool_round-1775665228265-a29118",
-      "created_at": "2026-04-08T16:20:28.265Z",
-      "stage": "science_tool_round",
-      "goal": "Executed paper-analysis in round 2.",
-      "assumptions": [
-        "Exactly one tool call was executed this round.",
-        "Tool execution returned a success envelope."
-      ],
-      "open_questions": [],
-      "evidence": [
-        {
-          "source": "paper-analysis",
-          "pointer": "debug:2",
-          "reason": "API response"
-        }
-      ],
-      "proposed_actions": [
-        {
-          "action_type": "read",
-          "tool_name": "paper-analysis",
-          "risk_level": "low",
-          "reason": "API response"
-        }
-      ],
-      "confidence": 0.66
-    },
-    {
-      "state_id": "science_pre_synthesis-1775665228265-e2be01",
-      "created_at": "2026-04-08T16:20:28.265Z",
-      "stage": "science_pre_synthesis",
-      "goal": "Prepared a lightweight pre-synthesized question before exit judgement.",
-      "assumptions": [
-        "Tentative answer: LLM Response"
-      ],
-      "open_questions": [],
-      "evidence": [
-        {
-          "source": "paper-analysis",
-          "pointer": "debug:2",
-          "reason": "API response"
-        }
-      ],
-      "proposed_actions": [],
-      "confidence": 0.64
-    },
-    {
-      "state_id": "science_tool_round-1775665228266-b1472c",
-      "created_at": "2026-04-08T16:20:28.266Z",
-      "stage": "science_tool_round",
-      "goal": "Executed inventory-lookup in round 3.",
-      "assumptions": [
-        "Exactly one tool call was executed this round.",
-        "Tool execution returned a success envelope."
+        "At least one tool execution returned a success envelope."
       ],
       "open_questions": [],
       "evidence": [
         {
           "source": "inventory-lookup",
-          "pointer": "debug:3",
+          "pointer": "debug:1",
           "reason": "API response"
         }
       ],
@@ -603,8 +973,8 @@ This export runs the science agent flow with debug shims only.
       "confidence": 0.66
     },
     {
-      "state_id": "science_pre_synthesis-1775665228266-ea865e",
-      "created_at": "2026-04-08T16:20:28.266Z",
+      "state_id": "science_pre_synthesis-1776033133956-a4c1d1",
+      "created_at": "2026-04-12T22:32:13.956Z",
       "stage": "science_pre_synthesis",
       "goal": "Prepared a lightweight pre-synthesized question before exit judgement.",
       "assumptions": [
@@ -614,7 +984,7 @@ This export runs the science agent flow with debug shims only.
       "evidence": [
         {
           "source": "inventory-lookup",
-          "pointer": "debug:3",
+          "pointer": "debug:1",
           "reason": "API response"
         }
       ],
@@ -622,26 +992,26 @@ This export runs the science agent flow with debug shims only.
       "confidence": 0.64
     },
     {
-      "state_id": "science_tool_round-1775665228267-eba781",
-      "created_at": "2026-04-08T16:20:28.267Z",
+      "state_id": "science_tool_round-1776033133959-c1c594",
+      "created_at": "2026-04-12T22:32:13.959Z",
       "stage": "science_tool_round",
-      "goal": "Executed python-sandbox in round 4.",
+      "goal": "Executed command-line in round 2.",
       "assumptions": [
         "Exactly one tool call was executed this round.",
-        "Tool execution returned a success envelope."
+        "At least one tool execution returned a success envelope."
       ],
       "open_questions": [],
       "evidence": [
         {
-          "source": "python-sandbox",
-          "pointer": "debug:4",
+          "source": "command-line",
+          "pointer": "debug:2",
           "reason": "API response"
         }
       ],
       "proposed_actions": [
         {
           "action_type": "read",
-          "tool_name": "python-sandbox",
+          "tool_name": "command-line",
           "risk_level": "low",
           "reason": "API response"
         }
@@ -649,8 +1019,8 @@ This export runs the science agent flow with debug shims only.
       "confidence": 0.66
     },
     {
-      "state_id": "science_pre_synthesis-1775665228267-386ccd",
-      "created_at": "2026-04-08T16:20:28.267Z",
+      "state_id": "science_pre_synthesis-1776033133959-6f0c35",
+      "created_at": "2026-04-12T22:32:13.959Z",
       "stage": "science_pre_synthesis",
       "goal": "Prepared a lightweight pre-synthesized question before exit judgement.",
       "assumptions": [
@@ -659,8 +1029,8 @@ This export runs the science agent flow with debug shims only.
       "open_questions": [],
       "evidence": [
         {
-          "source": "python-sandbox",
-          "pointer": "debug:4",
+          "source": "command-line",
+          "pointer": "debug:2",
           "reason": "API response"
         }
       ],
@@ -668,248 +1038,34 @@ This export runs the science agent flow with debug shims only.
       "confidence": 0.64
     },
     {
-      "state_id": "science_tool_round-1775665228267-2c2e51",
-      "created_at": "2026-04-08T16:20:28.267Z",
-      "stage": "science_tool_round",
-      "goal": "Executed notebook-draft in round 5.",
-      "assumptions": [
-        "Exactly one tool call was executed this round.",
-        "Tool execution returned a success envelope."
-      ],
-      "open_questions": [],
-      "evidence": [
-        {
-          "source": "notebook-draft",
-          "pointer": "debug:5",
-          "reason": "API response"
-        }
-      ],
-      "proposed_actions": [
-        {
-          "action_type": "read",
-          "tool_name": "notebook-draft",
-          "risk_level": "low",
-          "reason": "API response"
-        }
-      ],
-      "confidence": 0.66
-    },
-    {
-      "state_id": "science_pre_synthesis-1775665228267-2046ce",
-      "created_at": "2026-04-08T16:20:28.267Z",
-      "stage": "science_pre_synthesis",
-      "goal": "Prepared a lightweight pre-synthesized question before exit judgement.",
-      "assumptions": [
-        "Tentative answer: LLM Response"
-      ],
-      "open_questions": [],
-      "evidence": [
-        {
-          "source": "notebook-draft",
-          "pointer": "debug:5",
-          "reason": "API response"
-        }
-      ],
-      "proposed_actions": [],
-      "confidence": 0.64
-    },
-    {
-      "state_id": "science_tool_round-1775665228268-f57f1d",
-      "created_at": "2026-04-08T16:20:28.268Z",
-      "stage": "science_tool_round",
-      "goal": "Executed protocol-generation in round 6.",
-      "assumptions": [
-        "Exactly one tool call was executed this round.",
-        "Tool execution returned a success envelope."
-      ],
-      "open_questions": [],
-      "evidence": [
-        {
-          "source": "protocol-generation",
-          "pointer": "debug:6",
-          "reason": "API response"
-        }
-      ],
-      "proposed_actions": [
-        {
-          "action_type": "read",
-          "tool_name": "protocol-generation",
-          "risk_level": "low",
-          "reason": "API response"
-        }
-      ],
-      "confidence": 0.66
-    },
-    {
-      "state_id": "science_pre_synthesis-1775665228268-bc7f4d",
-      "created_at": "2026-04-08T16:20:28.268Z",
-      "stage": "science_pre_synthesis",
-      "goal": "Prepared a lightweight pre-synthesized question before exit judgement.",
-      "assumptions": [
-        "Tentative answer: LLM Response"
-      ],
-      "open_questions": [],
-      "evidence": [
-        {
-          "source": "protocol-generation",
-          "pointer": "debug:6",
-          "reason": "API response"
-        }
-      ],
-      "proposed_actions": [],
-      "confidence": 0.64
-    },
-    {
-      "state_id": "science_tool_round-1775665228269-306d8d",
-      "created_at": "2026-04-08T16:20:28.269Z",
-      "stage": "science_tool_round",
-      "goal": "Executed paper-download in round 7.",
-      "assumptions": [
-        "Exactly one tool call was executed this round.",
-        "Tool execution returned a success envelope."
-      ],
-      "open_questions": [],
-      "evidence": [
-        {
-          "source": "paper-download",
-          "pointer": "debug:7",
-          "reason": "API response"
-        }
-      ],
-      "proposed_actions": [
-        {
-          "action_type": "read",
-          "tool_name": "paper-download",
-          "risk_level": "low",
-          "reason": "API response"
-        }
-      ],
-      "confidence": 0.66
-    },
-    {
-      "state_id": "science_pre_synthesis-1775665228269-db944e",
-      "created_at": "2026-04-08T16:20:28.269Z",
-      "stage": "science_pre_synthesis",
-      "goal": "Prepared a lightweight pre-synthesized question before exit judgement.",
-      "assumptions": [
-        "Tentative answer: LLM Response"
-      ],
-      "open_questions": [],
-      "evidence": [
-        {
-          "source": "paper-download",
-          "pointer": "debug:7",
-          "reason": "API response"
-        }
-      ],
-      "proposed_actions": [],
-      "confidence": 0.64
-    },
-    {
-      "state_id": "science_tool_round-1775665228269-07e1ff",
-      "created_at": "2026-04-08T16:20:28.269Z",
-      "stage": "science_tool_round",
-      "goal": "Executed protocol-matching in round 8.",
-      "assumptions": [
-        "Exactly one tool call was executed this round.",
-        "Tool execution returned a success envelope."
-      ],
-      "open_questions": [],
-      "evidence": [
-        {
-          "source": "protocol-matching",
-          "pointer": "debug:8",
-          "reason": "API response"
-        }
-      ],
-      "proposed_actions": [
-        {
-          "action_type": "read",
-          "tool_name": "protocol-matching",
-          "risk_level": "low",
-          "reason": "API response"
-        }
-      ],
-      "confidence": 0.66
-    },
-    {
-      "state_id": "science_pre_synthesis-1775665228269-46ccae",
-      "created_at": "2026-04-08T16:20:28.269Z",
-      "stage": "science_pre_synthesis",
-      "goal": "Prepared a lightweight pre-synthesized question before exit judgement.",
-      "assumptions": [
-        "Tentative answer: LLM Response"
-      ],
-      "open_questions": [],
-      "evidence": [
-        {
-          "source": "protocol-matching",
-          "pointer": "debug:8",
-          "reason": "API response"
-        }
-      ],
-      "proposed_actions": [],
-      "confidence": 0.64
-    },
-    {
-      "state_id": "science_synthesis-1775665228270-e93eda",
-      "created_at": "2026-04-08T16:20:28.270Z",
+      "state_id": "science_synthesis-1776033133960-77820e",
+      "created_at": "2026-04-12T22:32:13.960Z",
       "stage": "science_synthesis",
       "goal": "Synthesized final science answer from tool evidence.",
       "assumptions": [
         "Final answer was produced after evaluator satisfaction.",
-        "Total citations=8."
+        "Total citations=2."
       ],
       "open_questions": [
         "The current evidence directly supports the core answer to the clarified request."
       ],
       "evidence": [
         {
-          "source": "protocol-matching",
+          "source": "inventory-lookup",
           "pointer": "debug:1",
           "reason": "API response"
         },
         {
-          "source": "paper-analysis",
+          "source": "command-line",
           "pointer": "debug:2",
-          "reason": "API response"
-        },
-        {
-          "source": "inventory-lookup",
-          "pointer": "debug:3",
-          "reason": "API response"
-        },
-        {
-          "source": "python-sandbox",
-          "pointer": "debug:4",
-          "reason": "API response"
-        },
-        {
-          "source": "notebook-draft",
-          "pointer": "debug:5",
-          "reason": "API response"
-        },
-        {
-          "source": "protocol-generation",
-          "pointer": "debug:6",
-          "reason": "API response"
-        },
-        {
-          "source": "paper-download",
-          "pointer": "debug:7",
-          "reason": "API response"
-        },
-        {
-          "source": "protocol-matching",
-          "pointer": "debug:8",
           "reason": "API response"
         }
       ],
       "proposed_actions": [],
-      "confidence": 0.68
+      "confidence": 0.74
     }
   ],
-  "rounds_executed": 8,
+  "rounds_executed": 2,
   "reasoning_effort": 2,
   "follow_up_questions": [
     "Could you clarify: The current evidence directly supports the core answer to the clarified request."
@@ -922,49 +1078,13 @@ This export runs the science agent flow with debug shims only.
       {
         "round": 1,
         "tool_selection": "LLM Response",
-        "tool_call": "I want to use protocol-matching to investigate \"What does the latest evidence suggest about this science question?\".",
+        "tool_call": "I want to use inventory-lookup to investigate \"What does the latest evidence suggest about this science question?\".",
         "tool_results": "LLM Response"
       },
       {
         "round": 2,
         "tool_selection": "LLM Response",
-        "tool_call": "I want to use paper-analysis to investigate \"What does the latest evidence suggest about this science question?\".",
-        "tool_results": "LLM Response"
-      },
-      {
-        "round": 3,
-        "tool_selection": "LLM Response",
-        "tool_call": "I want to use inventory-lookup to investigate \"What does the latest evidence suggest about this science question?\".",
-        "tool_results": "LLM Response"
-      },
-      {
-        "round": 4,
-        "tool_selection": "LLM Response",
-        "tool_call": "I want to use python-sandbox to investigate \"What does the latest evidence suggest about this science question?\".",
-        "tool_results": "LLM Response"
-      },
-      {
-        "round": 5,
-        "tool_selection": "LLM Response",
-        "tool_call": "I want to use notebook-draft to investigate \"What does the latest evidence suggest about this science question?\".",
-        "tool_results": "LLM Response"
-      },
-      {
-        "round": 6,
-        "tool_selection": "LLM Response",
-        "tool_call": "I want to use protocol-generation to investigate \"What does the latest evidence suggest about this science question?\".",
-        "tool_results": "LLM Response"
-      },
-      {
-        "round": 7,
-        "tool_selection": "LLM Response",
-        "tool_call": "I want to use paper-download to investigate \"What does the latest evidence suggest about this science question?\".",
-        "tool_results": "LLM Response"
-      },
-      {
-        "round": 8,
-        "tool_selection": "LLM Response",
-        "tool_call": "I want to use protocol-matching to investigate \"What does the latest evidence suggest about this science question?\".",
+        "tool_call": "I want to use command-line to investigate \"What does the latest evidence suggest about this science question?\".",
         "tool_results": "LLM Response"
       }
     ],
@@ -987,1088 +1107,6 @@ Selection mode: `random`
 
 ```json
 {
-  "name": "protocol-matching",
-  "arguments": {
-    "query": "What does the latest evidence suggest about this science question?"
-  }
-}
-```
-
-**Agent Request**
-
-```json
-{
-  "system_prompt": "You are a debug-only Enana agent runtime.\n\nIntent: general_science_question\n\nReasoning effort: 2\n\nExecution hints:\n- Retrieval preference: literature_first_web_last.\n- Use an external citation when the clarified request depends on freshness or recency.\n- Make at least one evidence-gathering attempt before answering.\n- A limitation-qualified answer is acceptable after a best-effort evidence attempt.\n- Loop goal: LLM Response\n- Route summary: LLM Response\n- Preferred tools: inventory-lookup | record-lookup | protocol-matching\n- Route suggestions are guidance only.\n- Objective: LLM Response\n- Exit when: LLM Response\n\nThe clarified execution request is provided separately as the session message.\n\n1. You are inside a deterministic science reasoning loop.\n2. At each assistant turn, either call exactly one tool or answer directly if you already have sufficient evidence.\n3. Do not call more than one tool in a single assistant turn.\n4. Prefer tools in the listed priority order and explain the answer only after sufficient evidence exists.\n5. When you give the final answer, include enough detail to explain the conclusion, supporting evidence, and material caveats.\n6. Do not compress the final answer to one or two sentences unless the user explicitly asked for brevity.\n7. Treat any route plan as non-binding guidance; adapt when the actual evidence suggests a better next step.\n8. If a tool result is weak or empty, choose a more targeted next tool on the following turn.\n9. Do not fabricate project records, literature results, or computation outputs.\n10. For general science questions, prefer the most targeted citation-backed evidence path available.",
-  "message": "LLM Response",
-  "feedback_message": "",
-  "conversation": [
-    {
-      "role": "user",
-      "text": "What does the latest evidence suggest about this science question?"
-    },
-    {
-      "role": "assistant",
-      "text": "Could you clarify: The current evidence directly supports the core answer to the clarified request."
-    }
-  ],
-  "tool_definitions": [
-    {
-      "name": "inventory-lookup",
-      "description": "Debug-only tool definition for inventory-lookup.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "record-lookup",
-      "description": "Debug-only tool definition for record-lookup.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "protocol-matching",
-      "description": "Debug-only tool definition for protocol-matching.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "notebook-generation",
-      "description": "Debug-only tool definition for notebook-generation.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "notebook-draft",
-      "description": "Debug-only tool definition for notebook-draft.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "python-sandbox",
-      "description": "Debug-only tool definition for python-sandbox.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "sub-agent",
-      "description": "Debug-only tool definition for sub-agent.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "memory",
-      "description": "Debug-only tool definition for memory.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "literature-search",
-      "description": "Debug-only tool definition for literature-search.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "paper-download",
-      "description": "Debug-only tool definition for paper-download.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "paper-analysis",
-      "description": "Debug-only tool definition for paper-analysis.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "protocol-generation",
-      "description": "Debug-only tool definition for protocol-generation.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    }
-  ]
-}
-```
-
-**Agent Request Raw Payload**
-
-```json
-{
-  "system_prompt": "You are a debug-only Enana agent runtime.\n\nIntent: general_science_question\n\nReasoning effort: 2\n\nExecution hints:\n- Retrieval preference: literature_first_web_last.\n- Use an external citation when the clarified request depends on freshness or recency.\n- Make at least one evidence-gathering attempt before answering.\n- A limitation-qualified answer is acceptable after a best-effort evidence attempt.\n- Loop goal: LLM Response\n- Route summary: LLM Response\n- Preferred tools: inventory-lookup | record-lookup | protocol-matching\n- Route suggestions are guidance only.\n- Objective: LLM Response\n- Exit when: LLM Response\n\nThe clarified execution request is provided separately as the session message.\n\n1. You are inside a deterministic science reasoning loop.\n2. At each assistant turn, either call exactly one tool or answer directly if you already have sufficient evidence.\n3. Do not call more than one tool in a single assistant turn.\n4. Prefer tools in the listed priority order and explain the answer only after sufficient evidence exists.\n5. When you give the final answer, include enough detail to explain the conclusion, supporting evidence, and material caveats.\n6. Do not compress the final answer to one or two sentences unless the user explicitly asked for brevity.\n7. Treat any route plan as non-binding guidance; adapt when the actual evidence suggests a better next step.\n8. If a tool result is weak or empty, choose a more targeted next tool on the following turn.\n9. Do not fabricate project records, literature results, or computation outputs.\n10. For general science questions, prefer the most targeted citation-backed evidence path available.",
-  "message": "LLM Response",
-  "feedback_message": "",
-  "conversation": [
-    {
-      "role": "user",
-      "text": "What does the latest evidence suggest about this science question?"
-    }
-  ],
-  "tool_definitions": [
-    {
-      "name": "inventory-lookup",
-      "description": "Debug-only tool definition for inventory-lookup.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "record-lookup",
-      "description": "Debug-only tool definition for record-lookup.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "protocol-matching",
-      "description": "Debug-only tool definition for protocol-matching.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "notebook-generation",
-      "description": "Debug-only tool definition for notebook-generation.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "notebook-draft",
-      "description": "Debug-only tool definition for notebook-draft.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "python-sandbox",
-      "description": "Debug-only tool definition for python-sandbox.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "sub-agent",
-      "description": "Debug-only tool definition for sub-agent.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "memory",
-      "description": "Debug-only tool definition for memory.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "literature-search",
-      "description": "Debug-only tool definition for literature-search.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "paper-download",
-      "description": "Debug-only tool definition for paper-download.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "paper-analysis",
-      "description": "Debug-only tool definition for paper-analysis.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "protocol-generation",
-      "description": "Debug-only tool definition for protocol-generation.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    }
-  ]
-}
-```
-
-**Context Before Round**
-
-```text
-Immediate working context:
-
-User request: What does the latest evidence suggest about this science question?
-
-Recent conversation:
-1. user: What does the latest evidence suggest about this science question?
-
-Session memory summary:
-
-Goals: Inspect debug context export output
-
-Constraints: All LLM outputs are replaced with LLM Response. | All internal API outputs are replaced with API response.
-
-Long-term memory:
-
-No recalled long-term memory.
-```
-
-**Tool/API Result**
-
-```json
-{
-  "tool_name": "protocol-matching",
-  "arguments": {
-    "query": "What does the latest evidence suggest about this science question?"
-  },
-  "stub_response": "API response",
-  "debug_envelope": {
-    "ok": true,
-    "tool_name": "protocol-matching",
-    "summary": "API response",
-    "result": {
-      "summary": "API response",
-      "text": "API response",
-      "items": [
-        {
-          "id": "api-item-1",
-          "label": "API response"
-        }
-      ]
-    },
-    "items": [
-      {
-        "id": "api-item-1",
-        "label": "API response"
-      }
-    ],
-    "citations": [
-      {
-        "source": "protocol-matching",
-        "pointer": "debug:1",
-        "reason": "API response"
-      }
-    ]
-  }
-}
-```
-
-**Agent Continuation After Tool**
-
-```json
-{
-  "tool_outputs": [
-    {
-      "callId": "debug-call-science-loop-1",
-      "name": "protocol-matching",
-      "output": "{\"ok\":true,\"tool_name\":\"protocol-matching\",\"summary\":\"API response\",\"result\":{\"summary\":\"API response\",\"text\":\"API response\",\"items\":[{\"id\":\"api-item-1\",\"label\":\"API response\"}]},\"items\":[{\"id\":\"api-item-1\",\"label\":\"API response\"}],\"citations\":[{\"source\":\"protocol-matching\",\"pointer\":\"debug:1\",\"reason\":\"API response\"}]}"
-    }
-  ],
-  "assistant_after_tool": "LLM Response"
-}
-```
-
-**Context After Round**
-
-```text
-Immediate working context:
-
-User request: What does the latest evidence suggest about this science question?
-
-Recent conversation:
-1. user: What does the latest evidence suggest about this science question?
-
-Latest tool outputs:
-- protocol-matching (ok) | summary: API response
-
-Session memory summary:
-
-Goals: Inspect debug context export output
-
-Constraints: All LLM outputs are replaced with LLM Response. | All internal API outputs are replaced with API response.
-
-Long-term memory:
-
-No recalled long-term memory.
-```
-
-### Round 2
-
-Selection mode: `random`
-
-**Selected Tool**
-
-```json
-{
-  "name": "paper-analysis",
-  "arguments": {
-    "query": "What does the latest evidence suggest about this science question?"
-  }
-}
-```
-
-**Agent Request**
-
-```json
-{
-  "system_prompt": "",
-  "message": "What does the latest evidence suggest about this science question?",
-  "feedback_message": "Evaluator feedback for general_science_question: the previous result is not sufficient yet.\nReason: LLM Response\nMissing requirements: LLM Response; The current evidence directly supports the core answer to the clarified request.\nSuggested next tool: protocol-matching.\nSuggested query refinement: LLM Response\nWhy: LLM Response\nPlease continue with the next best single tool call, or answer directly only if the evidence is now sufficient.",
-  "conversation": [
-    {
-      "role": "user",
-      "text": "What does the latest evidence suggest about this science question?"
-    },
-    {
-      "role": "assistant",
-      "text": "Could you clarify: The current evidence directly supports the core answer to the clarified request."
-    }
-  ],
-  "tool_definitions": [
-    {
-      "name": "inventory-lookup",
-      "description": "Debug-only tool definition for inventory-lookup.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "record-lookup",
-      "description": "Debug-only tool definition for record-lookup.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "protocol-matching",
-      "description": "Debug-only tool definition for protocol-matching.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "notebook-generation",
-      "description": "Debug-only tool definition for notebook-generation.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "notebook-draft",
-      "description": "Debug-only tool definition for notebook-draft.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "python-sandbox",
-      "description": "Debug-only tool definition for python-sandbox.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "sub-agent",
-      "description": "Debug-only tool definition for sub-agent.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "memory",
-      "description": "Debug-only tool definition for memory.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "literature-search",
-      "description": "Debug-only tool definition for literature-search.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "paper-download",
-      "description": "Debug-only tool definition for paper-download.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "paper-analysis",
-      "description": "Debug-only tool definition for paper-analysis.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "protocol-generation",
-      "description": "Debug-only tool definition for protocol-generation.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    }
-  ]
-}
-```
-
-**Agent Request Raw Payload**
-
-```json
-{
-  "system_prompt": "",
-  "message": "What does the latest evidence suggest about this science question?",
-  "feedback_message": "Evaluator feedback for general_science_question: the previous result is not sufficient yet.\nReason: LLM Response\nMissing requirements: LLM Response; The current evidence directly supports the core answer to the clarified request.\nSuggested next tool: protocol-matching.\nSuggested query refinement: LLM Response\nWhy: LLM Response\nPlease continue with the next best single tool call, or answer directly only if the evidence is now sufficient.",
-  "conversation": [
-    {
-      "role": "user",
-      "text": "What does the latest evidence suggest about this science question?"
-    }
-  ],
-  "tool_definitions": [
-    {
-      "name": "inventory-lookup",
-      "description": "Debug-only tool definition for inventory-lookup.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "record-lookup",
-      "description": "Debug-only tool definition for record-lookup.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "protocol-matching",
-      "description": "Debug-only tool definition for protocol-matching.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "notebook-generation",
-      "description": "Debug-only tool definition for notebook-generation.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "notebook-draft",
-      "description": "Debug-only tool definition for notebook-draft.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "python-sandbox",
-      "description": "Debug-only tool definition for python-sandbox.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "sub-agent",
-      "description": "Debug-only tool definition for sub-agent.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "memory",
-      "description": "Debug-only tool definition for memory.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "literature-search",
-      "description": "Debug-only tool definition for literature-search.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "paper-download",
-      "description": "Debug-only tool definition for paper-download.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "paper-analysis",
-      "description": "Debug-only tool definition for paper-analysis.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "protocol-generation",
-      "description": "Debug-only tool definition for protocol-generation.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    }
-  ]
-}
-```
-
-**Context Before Round**
-
-```text
-Immediate working context:
-
-User request: What does the latest evidence suggest about this science question?
-
-Recent conversation:
-1. user: What does the latest evidence suggest about this science question?
-
-Latest tool outputs:
-- protocol-matching (ok) | summary: API response
-
-Session memory summary:
-
-Goals: Inspect debug context export output
-
-Constraints: All LLM outputs are replaced with LLM Response. | All internal API outputs are replaced with API response.
-
-Long-term memory:
-
-No recalled long-term memory.
-```
-
-**Tool/API Result**
-
-```json
-{
-  "tool_name": "paper-analysis",
-  "arguments": {
-    "query": "What does the latest evidence suggest about this science question?"
-  },
-  "stub_response": "API response",
-  "debug_envelope": {
-    "ok": true,
-    "tool_name": "paper-analysis",
-    "summary": "API response",
-    "result": {
-      "summary": "API response",
-      "text": "API response",
-      "items": [
-        {
-          "id": "api-item-2",
-          "label": "API response"
-        }
-      ]
-    },
-    "items": [
-      {
-        "id": "api-item-2",
-        "label": "API response"
-      }
-    ],
-    "citations": [
-      {
-        "source": "paper-analysis",
-        "pointer": "debug:2",
-        "reason": "API response"
-      }
-    ]
-  }
-}
-```
-
-**Agent Continuation After Tool**
-
-```json
-{
-  "tool_outputs": [
-    {
-      "callId": "debug-call-science-loop-2",
-      "name": "paper-analysis",
-      "output": "{\"ok\":true,\"tool_name\":\"paper-analysis\",\"summary\":\"API response\",\"result\":{\"summary\":\"API response\",\"text\":\"API response\",\"items\":[{\"id\":\"api-item-2\",\"label\":\"API response\"}]},\"items\":[{\"id\":\"api-item-2\",\"label\":\"API response\"}],\"citations\":[{\"source\":\"paper-analysis\",\"pointer\":\"debug:2\",\"reason\":\"API response\"}]}"
-    }
-  ],
-  "assistant_after_tool": "LLM Response"
-}
-```
-
-**Context After Round**
-
-```text
-Immediate working context:
-
-User request: What does the latest evidence suggest about this science question?
-
-Recent conversation:
-1. user: What does the latest evidence suggest about this science question?
-
-Latest tool outputs:
-- paper-analysis (ok) | summary: API response
-- protocol-matching (ok) | summary: API response
-
-Session memory summary:
-
-Goals: Inspect debug context export output
-
-Constraints: All LLM outputs are replaced with LLM Response. | All internal API outputs are replaced with API response.
-
-Long-term memory:
-
-No recalled long-term memory.
-```
-
-### Round 3
-
-Selection mode: `random`
-
-**Selected Tool**
-
-```json
-{
   "name": "inventory-lookup",
   "arguments": {
     "query": "What does the latest evidence suggest about this science question?"
@@ -2080,9 +1118,9 @@ Selection mode: `random`
 
 ```json
 {
-  "system_prompt": "",
-  "message": "What does the latest evidence suggest about this science question?",
-  "feedback_message": "Evaluator feedback for general_science_question: the previous result is not sufficient yet.\nReason: LLM Response\nMissing requirements: LLM Response; The current evidence directly supports the core answer to the clarified request.\nSuggested next tool: paper-analysis.\nSuggested query refinement: LLM Response\nWhy: LLM Response\nPlease continue with the next best single tool call, or answer directly only if the evidence is now sufficient.",
+  "system_prompt": "You are a debug-only Enana agent runtime.\n\nIntent: general_science_question\n\nReasoning effort: 2\n\nExecution hints:\n- Retrieval preference: literature_first_web_last.\n- Use an external citation when the clarified request depends on freshness or recency.\n- Make at least one evidence-gathering attempt before answering.\n- A limitation-qualified answer is acceptable after a best-effort evidence attempt.\n- Loop goal: LLM Response\n- Route summary: LLM Response\n- Preferred tools: inventory-lookup | record-lookup | protocol-matching\n- Route suggestions are guidance only.\n- Objective: LLM Response\n- Exit when: LLM Response\n\nThe clarified execution request is provided separately as the session message.\n\n1. You are inside a deterministic science reasoning loop.\n2. At each assistant turn, either call one or more independent tools or answer directly if you already have sufficient evidence.\n3. If multiple tool calls would help, keep them tightly scoped and independent so they can be executed in parallel as one evidence round.\n4. Prefer tools in the listed priority order and explain the answer only after sufficient evidence exists.\n5. When you give the final answer, include enough detail to explain the conclusion, supporting evidence, and material caveats.\n6. Do not compress the final answer to one or two sentences unless the user explicitly asked for brevity.\n7. Treat any route plan as non-binding guidance; adapt when the actual evidence suggests a better next step.\n8. If a tool result is weak or empty, choose a more targeted next tool or tool batch on the following turn.\n9. Do not fabricate project records, literature results, or computation outputs.\n10. For general science questions, prefer the most targeted citation-backed evidence path available.",
+  "message": "LLM Response",
+  "feedback_message": "",
   "conversation": [
     {
       "role": "user",
@@ -2191,6 +1229,22 @@ Selection mode: `random`
       }
     },
     {
+      "name": "command-line",
+      "description": "Debug-only tool definition for command-line.",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
       "name": "sub-agent",
       "description": "Debug-only tool definition for sub-agent.",
       "parameters": {
@@ -2225,6 +1279,22 @@ Selection mode: `random`
     {
       "name": "literature-search",
       "description": "Debug-only tool definition for literature-search.",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "purchase-recommendation",
+      "description": "Debug-only tool definition for purchase-recommendation.",
       "parameters": {
         "type": "object",
         "additionalProperties": false,
@@ -2294,9 +1364,9 @@ Selection mode: `random`
 
 ```json
 {
-  "system_prompt": "",
-  "message": "What does the latest evidence suggest about this science question?",
-  "feedback_message": "Evaluator feedback for general_science_question: the previous result is not sufficient yet.\nReason: LLM Response\nMissing requirements: LLM Response; The current evidence directly supports the core answer to the clarified request.\nSuggested next tool: paper-analysis.\nSuggested query refinement: LLM Response\nWhy: LLM Response\nPlease continue with the next best single tool call, or answer directly only if the evidence is now sufficient.",
+  "system_prompt": "You are a debug-only Enana agent runtime.\n\nIntent: general_science_question\n\nReasoning effort: 2\n\nExecution hints:\n- Retrieval preference: literature_first_web_last.\n- Use an external citation when the clarified request depends on freshness or recency.\n- Make at least one evidence-gathering attempt before answering.\n- A limitation-qualified answer is acceptable after a best-effort evidence attempt.\n- Loop goal: LLM Response\n- Route summary: LLM Response\n- Preferred tools: inventory-lookup | record-lookup | protocol-matching\n- Route suggestions are guidance only.\n- Objective: LLM Response\n- Exit when: LLM Response\n\nThe clarified execution request is provided separately as the session message.\n\n1. You are inside a deterministic science reasoning loop.\n2. At each assistant turn, either call one or more independent tools or answer directly if you already have sufficient evidence.\n3. If multiple tool calls would help, keep them tightly scoped and independent so they can be executed in parallel as one evidence round.\n4. Prefer tools in the listed priority order and explain the answer only after sufficient evidence exists.\n5. When you give the final answer, include enough detail to explain the conclusion, supporting evidence, and material caveats.\n6. Do not compress the final answer to one or two sentences unless the user explicitly asked for brevity.\n7. Treat any route plan as non-binding guidance; adapt when the actual evidence suggests a better next step.\n8. If a tool result is weak or empty, choose a more targeted next tool or tool batch on the following turn.\n9. Do not fabricate project records, literature results, or computation outputs.\n10. For general science questions, prefer the most targeted citation-backed evidence path available.",
+  "message": "LLM Response",
+  "feedback_message": "",
   "conversation": [
     {
       "role": "user",
@@ -2401,6 +1471,22 @@ Selection mode: `random`
       }
     },
     {
+      "name": "command-line",
+      "description": "Debug-only tool definition for command-line.",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
       "name": "sub-agent",
       "description": "Debug-only tool definition for sub-agent.",
       "parameters": {
@@ -2435,6 +1521,22 @@ Selection mode: `random`
     {
       "name": "literature-search",
       "description": "Debug-only tool definition for literature-search.",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "purchase-recommendation",
+      "description": "Debug-only tool definition for purchase-recommendation.",
       "parameters": {
         "type": "object",
         "additionalProperties": false,
@@ -2509,10 +1611,6 @@ User request: What does the latest evidence suggest about this science question?
 
 Recent conversation:
 1. user: What does the latest evidence suggest about this science question?
-
-Latest tool outputs:
-- paper-analysis (ok) | summary: API response
-- protocol-matching (ok) | summary: API response
 
 Session memory summary:
 
@@ -2543,21 +1641,21 @@ No recalled long-term memory.
       "text": "API response",
       "items": [
         {
-          "id": "api-item-3",
+          "id": "api-item-1",
           "label": "API response"
         }
       ]
     },
     "items": [
       {
-        "id": "api-item-3",
+        "id": "api-item-1",
         "label": "API response"
       }
     ],
     "citations": [
       {
         "source": "inventory-lookup",
-        "pointer": "debug:3",
+        "pointer": "debug:1",
         "reason": "API response"
       }
     ]
@@ -2571,9 +1669,9 @@ No recalled long-term memory.
 {
   "tool_outputs": [
     {
-      "callId": "debug-call-science-loop-3",
+      "callId": "debug-call-science-loop-1",
       "name": "inventory-lookup",
-      "output": "{\"ok\":true,\"tool_name\":\"inventory-lookup\",\"summary\":\"API response\",\"result\":{\"summary\":\"API response\",\"text\":\"API response\",\"items\":[{\"id\":\"api-item-3\",\"label\":\"API response\"}]},\"items\":[{\"id\":\"api-item-3\",\"label\":\"API response\"}],\"citations\":[{\"source\":\"inventory-lookup\",\"pointer\":\"debug:3\",\"reason\":\"API response\"}]}"
+      "output": "{\"ok\":true,\"tool_name\":\"inventory-lookup\",\"summary\":\"API response\",\"result\":{\"summary\":\"API response\",\"text\":\"API response\",\"items\":[{\"id\":\"api-item-1\",\"label\":\"API response\"}]},\"items\":[{\"id\":\"api-item-1\",\"label\":\"API response\"}],\"citations\":[{\"source\":\"inventory-lookup\",\"pointer\":\"debug:1\",\"reason\":\"API response\"}]}"
     }
   ],
   "assistant_after_tool": "LLM Response"
@@ -2592,8 +1690,6 @@ Recent conversation:
 
 Latest tool outputs:
 - inventory-lookup (ok) | summary: API response
-- paper-analysis (ok) | summary: API response
-- protocol-matching (ok) | summary: API response
 
 Session memory summary:
 
@@ -2606,7 +1702,7 @@ Long-term memory:
 No recalled long-term memory.
 ```
 
-### Round 4
+### Round 2
 
 Selection mode: `random`
 
@@ -2614,7 +1710,7 @@ Selection mode: `random`
 
 ```json
 {
-  "name": "python-sandbox",
+  "name": "command-line",
   "arguments": {
     "query": "What does the latest evidence suggest about this science question?"
   }
@@ -2627,7 +1723,7 @@ Selection mode: `random`
 {
   "system_prompt": "",
   "message": "What does the latest evidence suggest about this science question?",
-  "feedback_message": "Evaluator feedback for general_science_question: the previous result is not sufficient yet.\nReason: LLM Response\nMissing requirements: LLM Response; The current evidence directly supports the core answer to the clarified request.\nSuggested next tool: inventory-lookup.\nSuggested query refinement: LLM Response\nWhy: LLM Response\nPlease continue with the next best single tool call, or answer directly only if the evidence is now sufficient.",
+  "feedback_message": "Evaluator feedback for general_science_question: the previous result is not sufficient yet.\nReason: LLM Response\nMissing requirements: LLM Response; The current evidence directly supports the core answer to the clarified request.\nSuggested next tool: inventory-lookup.\nSuggested query refinement: LLM Response\nWhy: LLM Response\nPlease continue with the next best tool call or tightly scoped parallel tool batch, or answer directly only if the evidence is now sufficient.",
   "conversation": [
     {
       "role": "user",
@@ -2736,6 +1832,22 @@ Selection mode: `random`
       }
     },
     {
+      "name": "command-line",
+      "description": "Debug-only tool definition for command-line.",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
       "name": "sub-agent",
       "description": "Debug-only tool definition for sub-agent.",
       "parameters": {
@@ -2770,6 +1882,22 @@ Selection mode: `random`
     {
       "name": "literature-search",
       "description": "Debug-only tool definition for literature-search.",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "purchase-recommendation",
+      "description": "Debug-only tool definition for purchase-recommendation.",
       "parameters": {
         "type": "object",
         "additionalProperties": false,
@@ -2841,7 +1969,7 @@ Selection mode: `random`
 {
   "system_prompt": "",
   "message": "What does the latest evidence suggest about this science question?",
-  "feedback_message": "Evaluator feedback for general_science_question: the previous result is not sufficient yet.\nReason: LLM Response\nMissing requirements: LLM Response; The current evidence directly supports the core answer to the clarified request.\nSuggested next tool: inventory-lookup.\nSuggested query refinement: LLM Response\nWhy: LLM Response\nPlease continue with the next best single tool call, or answer directly only if the evidence is now sufficient.",
+  "feedback_message": "Evaluator feedback for general_science_question: the previous result is not sufficient yet.\nReason: LLM Response\nMissing requirements: LLM Response; The current evidence directly supports the core answer to the clarified request.\nSuggested next tool: inventory-lookup.\nSuggested query refinement: LLM Response\nWhy: LLM Response\nPlease continue with the next best tool call or tightly scoped parallel tool batch, or answer directly only if the evidence is now sufficient.",
   "conversation": [
     {
       "role": "user",
@@ -2946,6 +2074,22 @@ Selection mode: `random`
       }
     },
     {
+      "name": "command-line",
+      "description": "Debug-only tool definition for command-line.",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
       "name": "sub-agent",
       "description": "Debug-only tool definition for sub-agent.",
       "parameters": {
@@ -2980,6 +2124,22 @@ Selection mode: `random`
     {
       "name": "literature-search",
       "description": "Debug-only tool definition for literature-search.",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "purchase-recommendation",
+      "description": "Debug-only tool definition for purchase-recommendation.",
       "parameters": {
         "type": "object",
         "additionalProperties": false,
@@ -3057,8 +2217,6 @@ Recent conversation:
 
 Latest tool outputs:
 - inventory-lookup (ok) | summary: API response
-- paper-analysis (ok) | summary: API response
-- protocol-matching (ok) | summary: API response
 
 Session memory summary:
 
@@ -3075,35 +2233,35 @@ No recalled long-term memory.
 
 ```json
 {
-  "tool_name": "python-sandbox",
+  "tool_name": "command-line",
   "arguments": {
     "query": "What does the latest evidence suggest about this science question?"
   },
   "stub_response": "API response",
   "debug_envelope": {
     "ok": true,
-    "tool_name": "python-sandbox",
+    "tool_name": "command-line",
     "summary": "API response",
     "result": {
       "summary": "API response",
       "text": "API response",
       "items": [
         {
-          "id": "api-item-4",
+          "id": "api-item-2",
           "label": "API response"
         }
       ]
     },
     "items": [
       {
-        "id": "api-item-4",
+        "id": "api-item-2",
         "label": "API response"
       }
     ],
     "citations": [
       {
-        "source": "python-sandbox",
-        "pointer": "debug:4",
+        "source": "command-line",
+        "pointer": "debug:2",
         "reason": "API response"
       }
     ]
@@ -3117,9 +2275,9 @@ No recalled long-term memory.
 {
   "tool_outputs": [
     {
-      "callId": "debug-call-science-loop-4",
-      "name": "python-sandbox",
-      "output": "{\"ok\":true,\"tool_name\":\"python-sandbox\",\"summary\":\"API response\",\"result\":{\"summary\":\"API response\",\"text\":\"API response\",\"items\":[{\"id\":\"api-item-4\",\"label\":\"API response\"}]},\"items\":[{\"id\":\"api-item-4\",\"label\":\"API response\"}],\"citations\":[{\"source\":\"python-sandbox\",\"pointer\":\"debug:4\",\"reason\":\"API response\"}]}"
+      "callId": "debug-call-science-loop-2",
+      "name": "command-line",
+      "output": "{\"ok\":true,\"tool_name\":\"command-line\",\"summary\":\"API response\",\"result\":{\"summary\":\"API response\",\"text\":\"API response\",\"items\":[{\"id\":\"api-item-2\",\"label\":\"API response\"}]},\"items\":[{\"id\":\"api-item-2\",\"label\":\"API response\"}],\"citations\":[{\"source\":\"command-line\",\"pointer\":\"debug:2\",\"reason\":\"API response\"}]}"
     }
   ],
   "assistant_after_tool": "LLM Response"
@@ -3137,2213 +2295,7 @@ Recent conversation:
 1. user: What does the latest evidence suggest about this science question?
 
 Latest tool outputs:
-- python-sandbox (ok) | summary: API response
-- inventory-lookup (ok) | summary: API response
-- paper-analysis (ok) | summary: API response
-- protocol-matching (ok) | summary: API response
-
-Session memory summary:
-
-Goals: Inspect debug context export output
-
-Constraints: All LLM outputs are replaced with LLM Response. | All internal API outputs are replaced with API response.
-
-Long-term memory:
-
-No recalled long-term memory.
-```
-
-### Round 5
-
-Selection mode: `random`
-
-**Selected Tool**
-
-```json
-{
-  "name": "notebook-draft",
-  "arguments": {
-    "query": "What does the latest evidence suggest about this science question?"
-  }
-}
-```
-
-**Agent Request**
-
-```json
-{
-  "system_prompt": "",
-  "message": "What does the latest evidence suggest about this science question?",
-  "feedback_message": "Evaluator feedback for general_science_question: the previous result is not sufficient yet.\nReason: LLM Response\nMissing requirements: LLM Response; The current evidence directly supports the core answer to the clarified request.\nSuggested next tool: python-sandbox.\nSuggested query refinement: LLM Response\nWhy: LLM Response\nPlease continue with the next best single tool call, or answer directly only if the evidence is now sufficient.",
-  "conversation": [
-    {
-      "role": "user",
-      "text": "What does the latest evidence suggest about this science question?"
-    },
-    {
-      "role": "assistant",
-      "text": "Could you clarify: The current evidence directly supports the core answer to the clarified request."
-    }
-  ],
-  "tool_definitions": [
-    {
-      "name": "inventory-lookup",
-      "description": "Debug-only tool definition for inventory-lookup.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "record-lookup",
-      "description": "Debug-only tool definition for record-lookup.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "protocol-matching",
-      "description": "Debug-only tool definition for protocol-matching.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "notebook-generation",
-      "description": "Debug-only tool definition for notebook-generation.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "notebook-draft",
-      "description": "Debug-only tool definition for notebook-draft.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "python-sandbox",
-      "description": "Debug-only tool definition for python-sandbox.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "sub-agent",
-      "description": "Debug-only tool definition for sub-agent.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "memory",
-      "description": "Debug-only tool definition for memory.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "literature-search",
-      "description": "Debug-only tool definition for literature-search.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "paper-download",
-      "description": "Debug-only tool definition for paper-download.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "paper-analysis",
-      "description": "Debug-only tool definition for paper-analysis.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "protocol-generation",
-      "description": "Debug-only tool definition for protocol-generation.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    }
-  ]
-}
-```
-
-**Agent Request Raw Payload**
-
-```json
-{
-  "system_prompt": "",
-  "message": "What does the latest evidence suggest about this science question?",
-  "feedback_message": "Evaluator feedback for general_science_question: the previous result is not sufficient yet.\nReason: LLM Response\nMissing requirements: LLM Response; The current evidence directly supports the core answer to the clarified request.\nSuggested next tool: python-sandbox.\nSuggested query refinement: LLM Response\nWhy: LLM Response\nPlease continue with the next best single tool call, or answer directly only if the evidence is now sufficient.",
-  "conversation": [
-    {
-      "role": "user",
-      "text": "What does the latest evidence suggest about this science question?"
-    }
-  ],
-  "tool_definitions": [
-    {
-      "name": "inventory-lookup",
-      "description": "Debug-only tool definition for inventory-lookup.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "record-lookup",
-      "description": "Debug-only tool definition for record-lookup.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "protocol-matching",
-      "description": "Debug-only tool definition for protocol-matching.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "notebook-generation",
-      "description": "Debug-only tool definition for notebook-generation.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "notebook-draft",
-      "description": "Debug-only tool definition for notebook-draft.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "python-sandbox",
-      "description": "Debug-only tool definition for python-sandbox.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "sub-agent",
-      "description": "Debug-only tool definition for sub-agent.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "memory",
-      "description": "Debug-only tool definition for memory.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "literature-search",
-      "description": "Debug-only tool definition for literature-search.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "paper-download",
-      "description": "Debug-only tool definition for paper-download.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "paper-analysis",
-      "description": "Debug-only tool definition for paper-analysis.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "protocol-generation",
-      "description": "Debug-only tool definition for protocol-generation.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    }
-  ]
-}
-```
-
-**Context Before Round**
-
-```text
-Immediate working context:
-
-User request: What does the latest evidence suggest about this science question?
-
-Recent conversation:
-1. user: What does the latest evidence suggest about this science question?
-
-Latest tool outputs:
-- python-sandbox (ok) | summary: API response
-- inventory-lookup (ok) | summary: API response
-- paper-analysis (ok) | summary: API response
-- protocol-matching (ok) | summary: API response
-
-Session memory summary:
-
-Goals: Inspect debug context export output
-
-Constraints: All LLM outputs are replaced with LLM Response. | All internal API outputs are replaced with API response.
-
-Long-term memory:
-
-No recalled long-term memory.
-```
-
-**Tool/API Result**
-
-```json
-{
-  "tool_name": "notebook-draft",
-  "arguments": {
-    "query": "What does the latest evidence suggest about this science question?"
-  },
-  "stub_response": "API response",
-  "debug_envelope": {
-    "ok": true,
-    "tool_name": "notebook-draft",
-    "summary": "API response",
-    "result": {
-      "summary": "API response",
-      "text": "API response",
-      "items": [
-        {
-          "id": "api-item-5",
-          "label": "API response"
-        }
-      ]
-    },
-    "items": [
-      {
-        "id": "api-item-5",
-        "label": "API response"
-      }
-    ],
-    "citations": [
-      {
-        "source": "notebook-draft",
-        "pointer": "debug:5",
-        "reason": "API response"
-      }
-    ]
-  }
-}
-```
-
-**Agent Continuation After Tool**
-
-```json
-{
-  "tool_outputs": [
-    {
-      "callId": "debug-call-science-loop-5",
-      "name": "notebook-draft",
-      "output": "{\"ok\":true,\"tool_name\":\"notebook-draft\",\"summary\":\"API response\",\"result\":{\"summary\":\"API response\",\"text\":\"API response\",\"items\":[{\"id\":\"api-item-5\",\"label\":\"API response\"}]},\"items\":[{\"id\":\"api-item-5\",\"label\":\"API response\"}],\"citations\":[{\"source\":\"notebook-draft\",\"pointer\":\"debug:5\",\"reason\":\"API response\"}]}"
-    }
-  ],
-  "assistant_after_tool": "LLM Response"
-}
-```
-
-**Context After Round**
-
-```text
-Immediate working context:
-
-User request: What does the latest evidence suggest about this science question?
-
-Recent conversation:
-1. user: What does the latest evidence suggest about this science question?
-
-Latest tool outputs:
-- notebook-draft (ok) | summary: API response
-- python-sandbox (ok) | summary: API response
-- inventory-lookup (ok) | summary: API response
-- paper-analysis (ok) | summary: API response
-- protocol-matching (ok) | summary: API response
-
-Session memory summary:
-
-Goals: Inspect debug context export output
-
-Constraints: All LLM outputs are replaced with LLM Response. | All internal API outputs are replaced with API response.
-
-Long-term memory:
-
-No recalled long-term memory.
-```
-
-### Round 6
-
-Selection mode: `random`
-
-**Selected Tool**
-
-```json
-{
-  "name": "protocol-generation",
-  "arguments": {
-    "query": "What does the latest evidence suggest about this science question?"
-  }
-}
-```
-
-**Agent Request**
-
-```json
-{
-  "system_prompt": "",
-  "message": "What does the latest evidence suggest about this science question?",
-  "feedback_message": "Evaluator feedback for general_science_question: the previous result is not sufficient yet.\nReason: LLM Response\nMissing requirements: LLM Response; The current evidence directly supports the core answer to the clarified request.\nSuggested next tool: notebook-draft.\nSuggested query refinement: LLM Response\nWhy: LLM Response\nPlease continue with the next best single tool call, or answer directly only if the evidence is now sufficient.",
-  "conversation": [
-    {
-      "role": "user",
-      "text": "What does the latest evidence suggest about this science question?"
-    },
-    {
-      "role": "assistant",
-      "text": "Could you clarify: The current evidence directly supports the core answer to the clarified request."
-    }
-  ],
-  "tool_definitions": [
-    {
-      "name": "inventory-lookup",
-      "description": "Debug-only tool definition for inventory-lookup.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "record-lookup",
-      "description": "Debug-only tool definition for record-lookup.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "protocol-matching",
-      "description": "Debug-only tool definition for protocol-matching.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "notebook-generation",
-      "description": "Debug-only tool definition for notebook-generation.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "notebook-draft",
-      "description": "Debug-only tool definition for notebook-draft.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "python-sandbox",
-      "description": "Debug-only tool definition for python-sandbox.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "sub-agent",
-      "description": "Debug-only tool definition for sub-agent.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "memory",
-      "description": "Debug-only tool definition for memory.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "literature-search",
-      "description": "Debug-only tool definition for literature-search.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "paper-download",
-      "description": "Debug-only tool definition for paper-download.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "paper-analysis",
-      "description": "Debug-only tool definition for paper-analysis.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "protocol-generation",
-      "description": "Debug-only tool definition for protocol-generation.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    }
-  ]
-}
-```
-
-**Agent Request Raw Payload**
-
-```json
-{
-  "system_prompt": "",
-  "message": "What does the latest evidence suggest about this science question?",
-  "feedback_message": "Evaluator feedback for general_science_question: the previous result is not sufficient yet.\nReason: LLM Response\nMissing requirements: LLM Response; The current evidence directly supports the core answer to the clarified request.\nSuggested next tool: notebook-draft.\nSuggested query refinement: LLM Response\nWhy: LLM Response\nPlease continue with the next best single tool call, or answer directly only if the evidence is now sufficient.",
-  "conversation": [
-    {
-      "role": "user",
-      "text": "What does the latest evidence suggest about this science question?"
-    }
-  ],
-  "tool_definitions": [
-    {
-      "name": "inventory-lookup",
-      "description": "Debug-only tool definition for inventory-lookup.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "record-lookup",
-      "description": "Debug-only tool definition for record-lookup.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "protocol-matching",
-      "description": "Debug-only tool definition for protocol-matching.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "notebook-generation",
-      "description": "Debug-only tool definition for notebook-generation.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "notebook-draft",
-      "description": "Debug-only tool definition for notebook-draft.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "python-sandbox",
-      "description": "Debug-only tool definition for python-sandbox.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "sub-agent",
-      "description": "Debug-only tool definition for sub-agent.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "memory",
-      "description": "Debug-only tool definition for memory.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "literature-search",
-      "description": "Debug-only tool definition for literature-search.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "paper-download",
-      "description": "Debug-only tool definition for paper-download.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "paper-analysis",
-      "description": "Debug-only tool definition for paper-analysis.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "protocol-generation",
-      "description": "Debug-only tool definition for protocol-generation.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    }
-  ]
-}
-```
-
-**Context Before Round**
-
-```text
-Immediate working context:
-
-User request: What does the latest evidence suggest about this science question?
-
-Recent conversation:
-1. user: What does the latest evidence suggest about this science question?
-
-Latest tool outputs:
-- notebook-draft (ok) | summary: API response
-- python-sandbox (ok) | summary: API response
-- inventory-lookup (ok) | summary: API response
-- paper-analysis (ok) | summary: API response
-- protocol-matching (ok) | summary: API response
-
-Session memory summary:
-
-Goals: Inspect debug context export output
-
-Constraints: All LLM outputs are replaced with LLM Response. | All internal API outputs are replaced with API response.
-
-Long-term memory:
-
-No recalled long-term memory.
-```
-
-**Tool/API Result**
-
-```json
-{
-  "tool_name": "protocol-generation",
-  "arguments": {
-    "query": "What does the latest evidence suggest about this science question?"
-  },
-  "stub_response": "API response",
-  "debug_envelope": {
-    "ok": true,
-    "tool_name": "protocol-generation",
-    "summary": "API response",
-    "result": {
-      "summary": "API response",
-      "text": "API response",
-      "items": [
-        {
-          "id": "api-item-6",
-          "label": "API response"
-        }
-      ]
-    },
-    "items": [
-      {
-        "id": "api-item-6",
-        "label": "API response"
-      }
-    ],
-    "citations": [
-      {
-        "source": "protocol-generation",
-        "pointer": "debug:6",
-        "reason": "API response"
-      }
-    ]
-  }
-}
-```
-
-**Agent Continuation After Tool**
-
-```json
-{
-  "tool_outputs": [
-    {
-      "callId": "debug-call-science-loop-6",
-      "name": "protocol-generation",
-      "output": "{\"ok\":true,\"tool_name\":\"protocol-generation\",\"summary\":\"API response\",\"result\":{\"summary\":\"API response\",\"text\":\"API response\",\"items\":[{\"id\":\"api-item-6\",\"label\":\"API response\"}]},\"items\":[{\"id\":\"api-item-6\",\"label\":\"API response\"}],\"citations\":[{\"source\":\"protocol-generation\",\"pointer\":\"debug:6\",\"reason\":\"API response\"}]}"
-    }
-  ],
-  "assistant_after_tool": "LLM Response"
-}
-```
-
-**Context After Round**
-
-```text
-Immediate working context:
-
-User request: What does the latest evidence suggest about this science question?
-
-Recent conversation:
-1. user: What does the latest evidence suggest about this science question?
-
-Latest tool outputs:
-- protocol-generation (ok) | summary: API response
-- notebook-draft (ok) | summary: API response
-- python-sandbox (ok) | summary: API response
-- inventory-lookup (ok) | summary: API response
-- paper-analysis (ok) | summary: API response
-- protocol-matching (ok) | summary: API response
-
-Session memory summary:
-
-Goals: Inspect debug context export output
-
-Constraints: All LLM outputs are replaced with LLM Response. | All internal API outputs are replaced with API response.
-
-Long-term memory:
-
-No recalled long-term memory.
-```
-
-### Round 7
-
-Selection mode: `random`
-
-**Selected Tool**
-
-```json
-{
-  "name": "paper-download",
-  "arguments": {
-    "query": "What does the latest evidence suggest about this science question?"
-  }
-}
-```
-
-**Agent Request**
-
-```json
-{
-  "system_prompt": "",
-  "message": "What does the latest evidence suggest about this science question?",
-  "feedback_message": "Evaluator feedback for general_science_question: the previous result is not sufficient yet.\nReason: LLM Response\nMissing requirements: LLM Response; The current evidence directly supports the core answer to the clarified request.\nSuggested next tool: protocol-generation.\nSuggested query refinement: LLM Response\nWhy: LLM Response\nPlease continue with the next best single tool call, or answer directly only if the evidence is now sufficient.",
-  "conversation": [
-    {
-      "role": "user",
-      "text": "What does the latest evidence suggest about this science question?"
-    },
-    {
-      "role": "assistant",
-      "text": "Could you clarify: The current evidence directly supports the core answer to the clarified request."
-    }
-  ],
-  "tool_definitions": [
-    {
-      "name": "inventory-lookup",
-      "description": "Debug-only tool definition for inventory-lookup.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "record-lookup",
-      "description": "Debug-only tool definition for record-lookup.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "protocol-matching",
-      "description": "Debug-only tool definition for protocol-matching.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "notebook-generation",
-      "description": "Debug-only tool definition for notebook-generation.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "notebook-draft",
-      "description": "Debug-only tool definition for notebook-draft.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "python-sandbox",
-      "description": "Debug-only tool definition for python-sandbox.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "sub-agent",
-      "description": "Debug-only tool definition for sub-agent.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "memory",
-      "description": "Debug-only tool definition for memory.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "literature-search",
-      "description": "Debug-only tool definition for literature-search.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "paper-download",
-      "description": "Debug-only tool definition for paper-download.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "paper-analysis",
-      "description": "Debug-only tool definition for paper-analysis.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "protocol-generation",
-      "description": "Debug-only tool definition for protocol-generation.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    }
-  ]
-}
-```
-
-**Agent Request Raw Payload**
-
-```json
-{
-  "system_prompt": "",
-  "message": "What does the latest evidence suggest about this science question?",
-  "feedback_message": "Evaluator feedback for general_science_question: the previous result is not sufficient yet.\nReason: LLM Response\nMissing requirements: LLM Response; The current evidence directly supports the core answer to the clarified request.\nSuggested next tool: protocol-generation.\nSuggested query refinement: LLM Response\nWhy: LLM Response\nPlease continue with the next best single tool call, or answer directly only if the evidence is now sufficient.",
-  "conversation": [
-    {
-      "role": "user",
-      "text": "What does the latest evidence suggest about this science question?"
-    }
-  ],
-  "tool_definitions": [
-    {
-      "name": "inventory-lookup",
-      "description": "Debug-only tool definition for inventory-lookup.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "record-lookup",
-      "description": "Debug-only tool definition for record-lookup.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "protocol-matching",
-      "description": "Debug-only tool definition for protocol-matching.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "notebook-generation",
-      "description": "Debug-only tool definition for notebook-generation.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "notebook-draft",
-      "description": "Debug-only tool definition for notebook-draft.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "python-sandbox",
-      "description": "Debug-only tool definition for python-sandbox.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "sub-agent",
-      "description": "Debug-only tool definition for sub-agent.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "memory",
-      "description": "Debug-only tool definition for memory.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "literature-search",
-      "description": "Debug-only tool definition for literature-search.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "paper-download",
-      "description": "Debug-only tool definition for paper-download.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "paper-analysis",
-      "description": "Debug-only tool definition for paper-analysis.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "protocol-generation",
-      "description": "Debug-only tool definition for protocol-generation.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    }
-  ]
-}
-```
-
-**Context Before Round**
-
-```text
-Immediate working context:
-
-User request: What does the latest evidence suggest about this science question?
-
-Recent conversation:
-1. user: What does the latest evidence suggest about this science question?
-
-Latest tool outputs:
-- protocol-generation (ok) | summary: API response
-- notebook-draft (ok) | summary: API response
-- python-sandbox (ok) | summary: API response
-- inventory-lookup (ok) | summary: API response
-- paper-analysis (ok) | summary: API response
-- protocol-matching (ok) | summary: API response
-
-Session memory summary:
-
-Goals: Inspect debug context export output
-
-Constraints: All LLM outputs are replaced with LLM Response. | All internal API outputs are replaced with API response.
-
-Long-term memory:
-
-No recalled long-term memory.
-```
-
-**Tool/API Result**
-
-```json
-{
-  "tool_name": "paper-download",
-  "arguments": {
-    "query": "What does the latest evidence suggest about this science question?"
-  },
-  "stub_response": "API response",
-  "debug_envelope": {
-    "ok": true,
-    "tool_name": "paper-download",
-    "summary": "API response",
-    "result": {
-      "summary": "API response",
-      "text": "API response",
-      "items": [
-        {
-          "id": "api-item-7",
-          "label": "API response"
-        }
-      ]
-    },
-    "items": [
-      {
-        "id": "api-item-7",
-        "label": "API response"
-      }
-    ],
-    "citations": [
-      {
-        "source": "paper-download",
-        "pointer": "debug:7",
-        "reason": "API response"
-      }
-    ]
-  }
-}
-```
-
-**Agent Continuation After Tool**
-
-```json
-{
-  "tool_outputs": [
-    {
-      "callId": "debug-call-science-loop-7",
-      "name": "paper-download",
-      "output": "{\"ok\":true,\"tool_name\":\"paper-download\",\"summary\":\"API response\",\"result\":{\"summary\":\"API response\",\"text\":\"API response\",\"items\":[{\"id\":\"api-item-7\",\"label\":\"API response\"}]},\"items\":[{\"id\":\"api-item-7\",\"label\":\"API response\"}],\"citations\":[{\"source\":\"paper-download\",\"pointer\":\"debug:7\",\"reason\":\"API response\"}]}"
-    }
-  ],
-  "assistant_after_tool": "LLM Response"
-}
-```
-
-**Context After Round**
-
-```text
-Immediate working context:
-
-User request: What does the latest evidence suggest about this science question?
-
-Recent conversation:
-1. user: What does the latest evidence suggest about this science question?
-
-Latest tool outputs:
-- paper-download (ok) | summary: API response
-- protocol-generation (ok) | summary: API response
-- notebook-draft (ok) | summary: API response
-- python-sandbox (ok) | summary: API response
-- inventory-lookup (ok) | summary: API response
-- paper-analysis (ok) | summary: API response
-
-Session memory summary:
-
-Goals: Inspect debug context export output
-
-Constraints: All LLM outputs are replaced with LLM Response. | All internal API outputs are replaced with API response.
-
-Long-term memory:
-
-No recalled long-term memory.
-```
-
-### Round 8
-
-Selection mode: `random`
-
-**Selected Tool**
-
-```json
-{
-  "name": "protocol-matching",
-  "arguments": {
-    "query": "What does the latest evidence suggest about this science question?"
-  }
-}
-```
-
-**Agent Request**
-
-```json
-{
-  "system_prompt": "",
-  "message": "What does the latest evidence suggest about this science question?",
-  "feedback_message": "Evaluator feedback for general_science_question: the previous result is not sufficient yet.\nReason: LLM Response\nMissing requirements: LLM Response; The current evidence directly supports the core answer to the clarified request.\nSuggested next tool: paper-download.\nSuggested query refinement: LLM Response\nWhy: LLM Response\nPlease continue with the next best single tool call, or answer directly only if the evidence is now sufficient.",
-  "conversation": [
-    {
-      "role": "user",
-      "text": "What does the latest evidence suggest about this science question?"
-    },
-    {
-      "role": "assistant",
-      "text": "Could you clarify: The current evidence directly supports the core answer to the clarified request."
-    }
-  ],
-  "tool_definitions": [
-    {
-      "name": "inventory-lookup",
-      "description": "Debug-only tool definition for inventory-lookup.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "record-lookup",
-      "description": "Debug-only tool definition for record-lookup.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "protocol-matching",
-      "description": "Debug-only tool definition for protocol-matching.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "notebook-generation",
-      "description": "Debug-only tool definition for notebook-generation.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "notebook-draft",
-      "description": "Debug-only tool definition for notebook-draft.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "python-sandbox",
-      "description": "Debug-only tool definition for python-sandbox.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "sub-agent",
-      "description": "Debug-only tool definition for sub-agent.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "memory",
-      "description": "Debug-only tool definition for memory.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "literature-search",
-      "description": "Debug-only tool definition for literature-search.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "paper-download",
-      "description": "Debug-only tool definition for paper-download.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "paper-analysis",
-      "description": "Debug-only tool definition for paper-analysis.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "protocol-generation",
-      "description": "Debug-only tool definition for protocol-generation.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    }
-  ]
-}
-```
-
-**Agent Request Raw Payload**
-
-```json
-{
-  "system_prompt": "",
-  "message": "What does the latest evidence suggest about this science question?",
-  "feedback_message": "Evaluator feedback for general_science_question: the previous result is not sufficient yet.\nReason: LLM Response\nMissing requirements: LLM Response; The current evidence directly supports the core answer to the clarified request.\nSuggested next tool: paper-download.\nSuggested query refinement: LLM Response\nWhy: LLM Response\nPlease continue with the next best single tool call, or answer directly only if the evidence is now sufficient.",
-  "conversation": [
-    {
-      "role": "user",
-      "text": "What does the latest evidence suggest about this science question?"
-    }
-  ],
-  "tool_definitions": [
-    {
-      "name": "inventory-lookup",
-      "description": "Debug-only tool definition for inventory-lookup.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "record-lookup",
-      "description": "Debug-only tool definition for record-lookup.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "protocol-matching",
-      "description": "Debug-only tool definition for protocol-matching.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "notebook-generation",
-      "description": "Debug-only tool definition for notebook-generation.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "notebook-draft",
-      "description": "Debug-only tool definition for notebook-draft.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "python-sandbox",
-      "description": "Debug-only tool definition for python-sandbox.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "sub-agent",
-      "description": "Debug-only tool definition for sub-agent.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "memory",
-      "description": "Debug-only tool definition for memory.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "literature-search",
-      "description": "Debug-only tool definition for literature-search.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "paper-download",
-      "description": "Debug-only tool definition for paper-download.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "paper-analysis",
-      "description": "Debug-only tool definition for paper-analysis.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "name": "protocol-generation",
-      "description": "Debug-only tool definition for protocol-generation.",
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string"
-          }
-        }
-      }
-    }
-  ]
-}
-```
-
-**Context Before Round**
-
-```text
-Immediate working context:
-
-User request: What does the latest evidence suggest about this science question?
-
-Recent conversation:
-1. user: What does the latest evidence suggest about this science question?
-
-Latest tool outputs:
-- paper-download (ok) | summary: API response
-- protocol-generation (ok) | summary: API response
-- notebook-draft (ok) | summary: API response
-- python-sandbox (ok) | summary: API response
-- inventory-lookup (ok) | summary: API response
-- paper-analysis (ok) | summary: API response
-
-Session memory summary:
-
-Goals: Inspect debug context export output
-
-Constraints: All LLM outputs are replaced with LLM Response. | All internal API outputs are replaced with API response.
-
-Long-term memory:
-
-No recalled long-term memory.
-```
-
-**Tool/API Result**
-
-```json
-{
-  "tool_name": "protocol-matching",
-  "arguments": {
-    "query": "What does the latest evidence suggest about this science question?"
-  },
-  "stub_response": "API response",
-  "debug_envelope": {
-    "ok": true,
-    "tool_name": "protocol-matching",
-    "summary": "API response",
-    "result": {
-      "summary": "API response",
-      "text": "API response",
-      "items": [
-        {
-          "id": "api-item-8",
-          "label": "API response"
-        }
-      ]
-    },
-    "items": [
-      {
-        "id": "api-item-8",
-        "label": "API response"
-      }
-    ],
-    "citations": [
-      {
-        "source": "protocol-matching",
-        "pointer": "debug:8",
-        "reason": "API response"
-      }
-    ]
-  }
-}
-```
-
-**Agent Continuation After Tool**
-
-```json
-{
-  "tool_outputs": [
-    {
-      "callId": "debug-call-science-loop-8",
-      "name": "protocol-matching",
-      "output": "{\"ok\":true,\"tool_name\":\"protocol-matching\",\"summary\":\"API response\",\"result\":{\"summary\":\"API response\",\"text\":\"API response\",\"items\":[{\"id\":\"api-item-8\",\"label\":\"API response\"}]},\"items\":[{\"id\":\"api-item-8\",\"label\":\"API response\"}],\"citations\":[{\"source\":\"protocol-matching\",\"pointer\":\"debug:8\",\"reason\":\"API response\"}]}"
-    }
-  ],
-  "assistant_after_tool": "LLM Response"
-}
-```
-
-**Context After Round**
-
-```text
-Immediate working context:
-
-User request: What does the latest evidence suggest about this science question?
-
-Recent conversation:
-1. user: What does the latest evidence suggest about this science question?
-
-Latest tool outputs:
-- protocol-matching (ok) | summary: API response
-- paper-download (ok) | summary: API response
-- protocol-generation (ok) | summary: API response
-- notebook-draft (ok) | summary: API response
-- python-sandbox (ok) | summary: API response
+- command-line (ok) | summary: API response
 - inventory-lookup (ok) | summary: API response
 
 Session memory summary:
@@ -5382,60 +2334,7 @@ Long-term memory:
 No recalled long-term memory.
 ```
 
-### 2. After protocol-matching round 1
-
-**Real Context**
-
-```text
-Immediate working context:
-
-User request: What does the latest evidence suggest about this science question?
-
-Recent conversation:
-1. user: What does the latest evidence suggest about this science question?
-
-Latest tool outputs:
-- protocol-matching (ok) | summary: API response
-
-Session memory summary:
-
-Goals: Inspect debug context export output
-
-Constraints: All LLM outputs are replaced with LLM Response. | All internal API outputs are replaced with API response.
-
-Long-term memory:
-
-No recalled long-term memory.
-```
-
-### 3. After paper-analysis round 2
-
-**Real Context**
-
-```text
-Immediate working context:
-
-User request: What does the latest evidence suggest about this science question?
-
-Recent conversation:
-1. user: What does the latest evidence suggest about this science question?
-
-Latest tool outputs:
-- paper-analysis (ok) | summary: API response
-- protocol-matching (ok) | summary: API response
-
-Session memory summary:
-
-Goals: Inspect debug context export output
-
-Constraints: All LLM outputs are replaced with LLM Response. | All internal API outputs are replaced with API response.
-
-Long-term memory:
-
-No recalled long-term memory.
-```
-
-### 4. After inventory-lookup round 3
+### 2. After inventory-lookup round 1
 
 **Real Context**
 
@@ -5449,8 +2348,6 @@ Recent conversation:
 
 Latest tool outputs:
 - inventory-lookup (ok) | summary: API response
-- paper-analysis (ok) | summary: API response
-- protocol-matching (ok) | summary: API response
 
 Session memory summary:
 
@@ -5463,7 +2360,7 @@ Long-term memory:
 No recalled long-term memory.
 ```
 
-### 5. After python-sandbox round 4
+### 3. After command-line round 2
 
 **Real Context**
 
@@ -5476,132 +2373,7 @@ Recent conversation:
 1. user: What does the latest evidence suggest about this science question?
 
 Latest tool outputs:
-- python-sandbox (ok) | summary: API response
-- inventory-lookup (ok) | summary: API response
-- paper-analysis (ok) | summary: API response
-- protocol-matching (ok) | summary: API response
-
-Session memory summary:
-
-Goals: Inspect debug context export output
-
-Constraints: All LLM outputs are replaced with LLM Response. | All internal API outputs are replaced with API response.
-
-Long-term memory:
-
-No recalled long-term memory.
-```
-
-### 6. After notebook-draft round 5
-
-**Real Context**
-
-```text
-Immediate working context:
-
-User request: What does the latest evidence suggest about this science question?
-
-Recent conversation:
-1. user: What does the latest evidence suggest about this science question?
-
-Latest tool outputs:
-- notebook-draft (ok) | summary: API response
-- python-sandbox (ok) | summary: API response
-- inventory-lookup (ok) | summary: API response
-- paper-analysis (ok) | summary: API response
-- protocol-matching (ok) | summary: API response
-
-Session memory summary:
-
-Goals: Inspect debug context export output
-
-Constraints: All LLM outputs are replaced with LLM Response. | All internal API outputs are replaced with API response.
-
-Long-term memory:
-
-No recalled long-term memory.
-```
-
-### 7. After protocol-generation round 6
-
-**Real Context**
-
-```text
-Immediate working context:
-
-User request: What does the latest evidence suggest about this science question?
-
-Recent conversation:
-1. user: What does the latest evidence suggest about this science question?
-
-Latest tool outputs:
-- protocol-generation (ok) | summary: API response
-- notebook-draft (ok) | summary: API response
-- python-sandbox (ok) | summary: API response
-- inventory-lookup (ok) | summary: API response
-- paper-analysis (ok) | summary: API response
-- protocol-matching (ok) | summary: API response
-
-Session memory summary:
-
-Goals: Inspect debug context export output
-
-Constraints: All LLM outputs are replaced with LLM Response. | All internal API outputs are replaced with API response.
-
-Long-term memory:
-
-No recalled long-term memory.
-```
-
-### 8. After paper-download round 7
-
-**Real Context**
-
-```text
-Immediate working context:
-
-User request: What does the latest evidence suggest about this science question?
-
-Recent conversation:
-1. user: What does the latest evidence suggest about this science question?
-
-Latest tool outputs:
-- paper-download (ok) | summary: API response
-- protocol-generation (ok) | summary: API response
-- notebook-draft (ok) | summary: API response
-- python-sandbox (ok) | summary: API response
-- inventory-lookup (ok) | summary: API response
-- paper-analysis (ok) | summary: API response
-
-Session memory summary:
-
-Goals: Inspect debug context export output
-
-Constraints: All LLM outputs are replaced with LLM Response. | All internal API outputs are replaced with API response.
-
-Long-term memory:
-
-No recalled long-term memory.
-```
-
-### 9. After protocol-matching round 8
-
-**Real Context**
-
-```text
-Immediate working context:
-
-User request: What does the latest evidence suggest about this science question?
-
-Recent conversation:
-1. user: What does the latest evidence suggest about this science question?
-
-Latest tool outputs:
-- protocol-matching (ok) | summary: API response
-- paper-download (ok) | summary: API response
-- protocol-generation (ok) | summary: API response
-- notebook-draft (ok) | summary: API response
-- python-sandbox (ok) | summary: API response
+- command-line (ok) | summary: API response
 - inventory-lookup (ok) | summary: API response
 
 Session memory summary:
@@ -5615,7 +2387,7 @@ Long-term memory:
 No recalled long-term memory.
 ```
 
-### 10. After follow-up question was recorded
+### 4. After follow-up question was recorded
 
 **Real Context**
 
@@ -5629,11 +2401,7 @@ Recent conversation:
 2. assistant: Could you clarify: The current evidence directly supports the core answer to the clarified request.
 
 Latest tool outputs:
-- protocol-matching (ok) | summary: API response
-- paper-download (ok) | summary: API response
-- protocol-generation (ok) | summary: API response
-- notebook-draft (ok) | summary: API response
-- python-sandbox (ok) | summary: API response
+- command-line (ok) | summary: API response
 - inventory-lookup (ok) | summary: API response
 
 Task summary:
@@ -5655,7 +2423,7 @@ Long-term memory:
 No recalled long-term memory.
 ```
 
-### 11. Final context
+### 5. Final context
 
 **Real Context**
 
@@ -5675,6 +2443,14 @@ Goals: Inspect debug context export output
 Constraints: All LLM outputs are replaced with LLM Response. | All internal API outputs are replaced with API response.
 
 Recent completed tasks: LLM Response
+
+Remaining gaps: The current evidence directly supports the core answer to the clarified request..
+
+Latest tool summary: API response | LLM Response
+
+Remaining gaps: The current evidence directly supports the core answer to the clarified request..
+
+Latest tool summary: API response
 
 Long-term memory:
 
@@ -5758,6 +2534,8 @@ Suggest a likely order of evidence-gathering steps, optional tool calls, and whe
 Include trace_sentence as one short sentence describing what you are doing at this step.
 
 Prefer only tools that are already allowed by policy or tool scope.
+
+For literature-search query_hint, return short keyword phrases rather than a full sentence.
 
 Clarified request:
 LLM Response
@@ -5949,13 +2727,13 @@ Execution hints:
 The clarified execution request is provided separately as the session message.
 
 1. You are inside a deterministic science reasoning loop.
-2. At each assistant turn, either call exactly one tool or answer directly if you already have sufficient evidence.
-3. Do not call more than one tool in a single assistant turn.
+2. At each assistant turn, either call one or more independent tools or answer directly if you already have sufficient evidence.
+3. If multiple tool calls would help, keep them tightly scoped and independent so they can be executed in parallel as one evidence round.
 4. Prefer tools in the listed priority order and explain the answer only after sufficient evidence exists.
 5. When you give the final answer, include enough detail to explain the conclusion, supporting evidence, and material caveats.
 6. Do not compress the final answer to one or two sentences unless the user explicitly asked for brevity.
 7. Treat any route plan as non-binding guidance; adapt when the actual evidence suggests a better next step.
-8. If a tool result is weak or empty, choose a more targeted next tool on the following turn.
+8. If a tool result is weak or empty, choose a more targeted next tool or tool batch on the following turn.
 9. Do not fabricate project records, literature results, or computation outputs.
 10. For general science questions, prefer the most targeted citation-backed evidence path available.
 ```
@@ -6082,6 +2860,22 @@ LLM Response
     }
   },
   {
+    "name": "command-line",
+    "description": "Debug-only tool definition for command-line.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "query"
+      ],
+      "properties": {
+        "query": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  {
     "name": "sub-agent",
     "description": "Debug-only tool definition for sub-agent.",
     "parameters": {
@@ -6116,6 +2910,22 @@ LLM Response
   {
     "name": "literature-search",
     "description": "Debug-only tool definition for literature-search.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "query"
+      ],
+      "properties": {
+        "query": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  {
+    "name": "purchase-recommendation",
+    "description": "Debug-only tool definition for purchase-recommendation.",
     "parameters": {
       "type": "object",
       "additionalProperties": false,
@@ -6184,7 +2994,7 @@ LLM Response
 
 ```json
 {
-  "name": "protocol-matching",
+  "name": "inventory-lookup",
   "arguments": {
     "query": "What does the latest evidence suggest about this science question?"
   }
@@ -6203,13 +3013,13 @@ Stub response: `LLM Response`
 [
   {
     "callId": "debug-call-science-loop-1",
-    "name": "protocol-matching",
-    "output": "{\"ok\":true,\"tool_name\":\"protocol-matching\",\"summary\":\"API response\",\"result\":{\"summary\":\"API response\",\"text\":\"API response\",\"items\":[{\"id\":\"api-item-1\",\"label\":\"API response\"}]},\"items\":[{\"id\":\"api-item-1\",\"label\":\"API response\"}],\"citations\":[{\"source\":\"protocol-matching\",\"pointer\":\"debug:1\",\"reason\":\"API response\"}]}"
+    "name": "inventory-lookup",
+    "output": "{\"ok\":true,\"tool_name\":\"inventory-lookup\",\"summary\":\"API response\",\"result\":{\"summary\":\"API response\",\"text\":\"API response\",\"items\":[{\"id\":\"api-item-1\",\"label\":\"API response\"}]},\"items\":[{\"id\":\"api-item-1\",\"label\":\"API response\"}],\"citations\":[{\"source\":\"inventory-lookup\",\"pointer\":\"debug:1\",\"reason\":\"API response\"}]}"
   }
 ]
 ```
 
-### 6. science_loop_current_scientific_state
+### 6. science_loop_logic_extraction
 
 Kind: `structured-json`
 
@@ -6224,64 +3034,32 @@ Return valid JSON only.
 **User Prompt / Context**
 
 ```text
-Summarize the current scientific state before the exit judge decides whether the reasoning loop should stop.
+Extract the short logical structure from the current pre-synthesized answer.
 
-Keep it compact and grounded only in the provided evidence.
+Deductive means a direct conclusion from the stated basis.
 
-List what is supported now, what is contradicted, what remains unknown, and whether the remaining uncertainty is actually decision-relevant for deciding stop vs continue.
+Inductive means a pattern or generalization from the available evidence.
 
-Set uncertainty_decision_relevant to true only when the remaining uncertainty should materially change the loop exit decision.
+Abductive means the current best explanation or hypothesis.
 
-Include trace_sentence as one short sentence describing what you are doing at this step.
+Return a short context, the short pre-synthesized answer, and a short logic_list.
+
+Each logic_list item should contain one reasoning_type and one short logic string.
+
+Do not add evidence or alternatives that are not already in the provided answer state.
 
 Clarified request:
 LLM Response
 
-Exit criteria:
-Objective: LLM Response
-Exit conditions:
-- LLM Response
-- The current evidence directly supports the core answer to the clarified request.
-- The answer is grounded in the strongest available evidence, which may include external sources, trusted provided context, or prior retrieved support.
-Required evidence:
-- LLM Response
-- At least one evidence-gathering round has run before the loop exits.
-Continue when:
-- LLM Response
-- A blocking evidence gap still prevents a grounded answer.
-Can exit with limitations when:
-- LLM Response
-- A best-effort answer is allowed when the main remaining gaps are stated explicitly.
-- Stable background questions can be answered without a fresh citation when the answer is already well grounded and any freshness limits are stated.
-Preferred next tools: inventory-lookup | record-lookup | protocol-matching
-
-Pre-synthesized question:
+Pre-synthesized answer:
 Current best answer: LLM Response
 Supporting basis:
 - API response
-- protocol-matching returned 1 item(s).
-- protocol-matching: debug:1 - API response
-- protocol-matching: API response
-
-Rounds executed: 1/8
+- inventory-lookup returned 1 item(s).
+- inventory-lookup: debug:1 - API response
+- inventory-lookup: API response
 
 Return JSON only.
-```
-
-**Debug Shim Payload**
-
-```json
-{
-  "supported_now": [
-    "LLM Response"
-  ],
-  "contradicted": [],
-  "remains_unknown": [
-    "LLM Response"
-  ],
-  "uncertainty_decision_relevant": true,
-  "uncertainty_decision_reason": "LLM Response"
-}
 ```
 
 ### 7. science_loop_exit_judge_sub_agent
@@ -6338,11 +3116,15 @@ Pre-synthesized question:
 Current best answer: LLM Response
 Supporting basis:
 - API response
-- protocol-matching returned 1 item(s).
-- protocol-matching: debug:1 - API response
-- protocol-matching: API response
+- inventory-lookup returned 1 item(s).
+- inventory-lookup: debug:1 - API response
+- inventory-lookup: API response
+Logical verification:
+Part 1:
+- Context: API response | inventory-lookup returned 1 item(s).
+- Pre-synthesized answer: LLM Response
 
-Rounds executed: 1/8
+Rounds executed: 1/2
 
 Return JSON only.
 ```
@@ -6358,7 +3140,7 @@ Return JSON only.
   ],
   "should_continue": true,
   "next_tool_hint": {
-    "tool_name": "protocol-matching",
+    "tool_name": "inventory-lookup",
     "query": "LLM Response",
     "reason": "LLM Response"
   },
@@ -6378,17 +3160,17 @@ Stub response: `LLM Response`
 Evaluator feedback for general_science_question: the previous result is not sufficient yet.
 Reason: LLM Response
 Missing requirements: LLM Response; The current evidence directly supports the core answer to the clarified request.
-Suggested next tool: protocol-matching.
+Suggested next tool: inventory-lookup.
 Suggested query refinement: LLM Response
 Why: LLM Response
-Please continue with the next best single tool call, or answer directly only if the evidence is now sufficient.
+Please continue with the next best tool call or tightly scoped parallel tool batch, or answer directly only if the evidence is now sufficient.
 ```
 
 **Planned Tool Call**
 
 ```json
 {
-  "name": "paper-analysis",
+  "name": "command-line",
   "arguments": {
     "query": "What does the latest evidence suggest about this science question?"
   }
@@ -6407,13 +3189,13 @@ Stub response: `LLM Response`
 [
   {
     "callId": "debug-call-science-loop-2",
-    "name": "paper-analysis",
-    "output": "{\"ok\":true,\"tool_name\":\"paper-analysis\",\"summary\":\"API response\",\"result\":{\"summary\":\"API response\",\"text\":\"API response\",\"items\":[{\"id\":\"api-item-2\",\"label\":\"API response\"}]},\"items\":[{\"id\":\"api-item-2\",\"label\":\"API response\"}],\"citations\":[{\"source\":\"paper-analysis\",\"pointer\":\"debug:2\",\"reason\":\"API response\"}]}"
+    "name": "command-line",
+    "output": "{\"ok\":true,\"tool_name\":\"command-line\",\"summary\":\"API response\",\"result\":{\"summary\":\"API response\",\"text\":\"API response\",\"items\":[{\"id\":\"api-item-2\",\"label\":\"API response\"}]},\"items\":[{\"id\":\"api-item-2\",\"label\":\"API response\"}],\"citations\":[{\"source\":\"command-line\",\"pointer\":\"debug:2\",\"reason\":\"API response\"}]}"
   }
 ]
 ```
 
-### 10. science_loop_current_scientific_state
+### 10. science_loop_logic_extraction
 
 Kind: `structured-json`
 
@@ -6428,64 +3210,32 @@ Return valid JSON only.
 **User Prompt / Context**
 
 ```text
-Summarize the current scientific state before the exit judge decides whether the reasoning loop should stop.
+Extract the short logical structure from the current pre-synthesized answer.
 
-Keep it compact and grounded only in the provided evidence.
+Deductive means a direct conclusion from the stated basis.
 
-List what is supported now, what is contradicted, what remains unknown, and whether the remaining uncertainty is actually decision-relevant for deciding stop vs continue.
+Inductive means a pattern or generalization from the available evidence.
 
-Set uncertainty_decision_relevant to true only when the remaining uncertainty should materially change the loop exit decision.
+Abductive means the current best explanation or hypothesis.
 
-Include trace_sentence as one short sentence describing what you are doing at this step.
+Return a short context, the short pre-synthesized answer, and a short logic_list.
+
+Each logic_list item should contain one reasoning_type and one short logic string.
+
+Do not add evidence or alternatives that are not already in the provided answer state.
 
 Clarified request:
 LLM Response
 
-Exit criteria:
-Objective: LLM Response
-Exit conditions:
-- LLM Response
-- The current evidence directly supports the core answer to the clarified request.
-- The answer is grounded in the strongest available evidence, which may include external sources, trusted provided context, or prior retrieved support.
-Required evidence:
-- LLM Response
-- At least one evidence-gathering round has run before the loop exits.
-Continue when:
-- LLM Response
-- A blocking evidence gap still prevents a grounded answer.
-Can exit with limitations when:
-- LLM Response
-- A best-effort answer is allowed when the main remaining gaps are stated explicitly.
-- Stable background questions can be answered without a fresh citation when the answer is already well grounded and any freshness limits are stated.
-Preferred next tools: inventory-lookup | record-lookup | protocol-matching
-
-Pre-synthesized question:
+Pre-synthesized answer:
 Current best answer: LLM Response
 Supporting basis:
 - API response
-- paper-analysis returned 1 item(s).
-- paper-analysis: debug:2 - API response
-- protocol-matching: debug:1 - API response
-
-Rounds executed: 2/8
+- command-line returned 1 item(s).
+- command-line: debug:2 - API response
+- inventory-lookup: debug:1 - API response
 
 Return JSON only.
-```
-
-**Debug Shim Payload**
-
-```json
-{
-  "supported_now": [
-    "LLM Response"
-  ],
-  "contradicted": [],
-  "remains_unknown": [
-    "LLM Response"
-  ],
-  "uncertainty_decision_relevant": true,
-  "uncertainty_decision_reason": "LLM Response"
-}
 ```
 
 ### 11. science_loop_exit_judge_sub_agent
@@ -6542,1233 +3292,15 @@ Pre-synthesized question:
 Current best answer: LLM Response
 Supporting basis:
 - API response
-- paper-analysis returned 1 item(s).
-- paper-analysis: debug:2 - API response
-- protocol-matching: debug:1 - API response
-
-Rounds executed: 2/8
-
-Return JSON only.
-```
-
-**Debug Shim Payload**
-
-```json
-{
-  "satisfied": false,
-  "reason": "LLM Response",
-  "missing_requirements": [
-    "LLM Response"
-  ],
-  "should_continue": true,
-  "next_tool_hint": {
-    "tool_name": "paper-analysis",
-    "query": "LLM Response",
-    "reason": "LLM Response"
-  },
-  "can_answer_with_limitations": false
-}
-```
-
-### 12. science_agent_session_after_feedback
-
-Kind: `agent-session-feedback`
-
-Stub response: `LLM Response`
-
-**Feedback Message**
-
-```text
-Evaluator feedback for general_science_question: the previous result is not sufficient yet.
-Reason: LLM Response
-Missing requirements: LLM Response; The current evidence directly supports the core answer to the clarified request.
-Suggested next tool: paper-analysis.
-Suggested query refinement: LLM Response
-Why: LLM Response
-Please continue with the next best single tool call, or answer directly only if the evidence is now sufficient.
-```
-
-**Planned Tool Call**
-
-```json
-{
-  "name": "inventory-lookup",
-  "arguments": {
-    "query": "What does the latest evidence suggest about this science question?"
-  }
-}
-```
-
-### 13. science_agent_session_after_tool_output
-
-Kind: `agent-session-tool-output`
-
-Stub response: `LLM Response`
-
-**Tool Outputs**
-
-```json
-[
-  {
-    "callId": "debug-call-science-loop-3",
-    "name": "inventory-lookup",
-    "output": "{\"ok\":true,\"tool_name\":\"inventory-lookup\",\"summary\":\"API response\",\"result\":{\"summary\":\"API response\",\"text\":\"API response\",\"items\":[{\"id\":\"api-item-3\",\"label\":\"API response\"}]},\"items\":[{\"id\":\"api-item-3\",\"label\":\"API response\"}],\"citations\":[{\"source\":\"inventory-lookup\",\"pointer\":\"debug:3\",\"reason\":\"API response\"}]}"
-  }
-]
-```
-
-### 14. science_loop_current_scientific_state
-
-Kind: `structured-json`
-
-Stub response: `LLM Response`
-
-**System Prompt**
-
-```text
-Return valid JSON only.
-```
-
-**User Prompt / Context**
-
-```text
-Summarize the current scientific state before the exit judge decides whether the reasoning loop should stop.
-
-Keep it compact and grounded only in the provided evidence.
-
-List what is supported now, what is contradicted, what remains unknown, and whether the remaining uncertainty is actually decision-relevant for deciding stop vs continue.
-
-Set uncertainty_decision_relevant to true only when the remaining uncertainty should materially change the loop exit decision.
-
-Include trace_sentence as one short sentence describing what you are doing at this step.
-
-Clarified request:
-LLM Response
-
-Exit criteria:
-Objective: LLM Response
-Exit conditions:
-- LLM Response
-- The current evidence directly supports the core answer to the clarified request.
-- The answer is grounded in the strongest available evidence, which may include external sources, trusted provided context, or prior retrieved support.
-Required evidence:
-- LLM Response
-- At least one evidence-gathering round has run before the loop exits.
-Continue when:
-- LLM Response
-- A blocking evidence gap still prevents a grounded answer.
-Can exit with limitations when:
-- LLM Response
-- A best-effort answer is allowed when the main remaining gaps are stated explicitly.
-- Stable background questions can be answered without a fresh citation when the answer is already well grounded and any freshness limits are stated.
-Preferred next tools: inventory-lookup | record-lookup | protocol-matching
-
-Pre-synthesized question:
-Current best answer: LLM Response
-Supporting basis:
-- API response
-- inventory-lookup returned 1 item(s).
-- inventory-lookup: debug:3 - API response
-- protocol-matching: debug:1 - API response
-
-Rounds executed: 3/8
-
-Return JSON only.
-```
-
-**Debug Shim Payload**
-
-```json
-{
-  "supported_now": [
-    "LLM Response"
-  ],
-  "contradicted": [],
-  "remains_unknown": [
-    "LLM Response"
-  ],
-  "uncertainty_decision_relevant": true,
-  "uncertainty_decision_reason": "LLM Response"
-}
-```
-
-### 15. science_loop_exit_judge_sub_agent
-
-Kind: `structured-json`
-
-Stub response: `LLM Response`
-
-**System Prompt**
-
-```text
-You are a specialized sub-agent that judges whether a science reasoning loop should exit.
-
-A lightweight pre-synthesized question is provided so you can see the current best answer, supporting basis, and unresolved issues before judging.
-
-Judge the pre-synthesized answer only against the provided exit criteria and clarified request.
-
-Do not impose any citation, source, or tool-specific requirement unless it is explicitly stated in the exit criteria.
-
-Be conservative: continue when a blocking evidence requirement is still missing.
-
-Return JSON only and do not invent evidence.
-```
-
-**User Prompt / Context**
-
-```text
-Judge whether the reasoning loop should stop now or continue.
-
-Include trace_sentence as one short sentence describing what you are doing at this step.
-
-Clarified request:
-LLM Response
-
-Exit criteria:
-Objective: LLM Response
-Exit conditions:
-- LLM Response
-- The current evidence directly supports the core answer to the clarified request.
-- The answer is grounded in the strongest available evidence, which may include external sources, trusted provided context, or prior retrieved support.
-Required evidence:
-- LLM Response
-- At least one evidence-gathering round has run before the loop exits.
-Continue when:
-- LLM Response
-- A blocking evidence gap still prevents a grounded answer.
-Can exit with limitations when:
-- LLM Response
-- A best-effort answer is allowed when the main remaining gaps are stated explicitly.
-- Stable background questions can be answered without a fresh citation when the answer is already well grounded and any freshness limits are stated.
-Preferred next tools: inventory-lookup | record-lookup | protocol-matching
-
-Pre-synthesized question:
-Current best answer: LLM Response
-Supporting basis:
-- API response
-- inventory-lookup returned 1 item(s).
-- inventory-lookup: debug:3 - API response
-- protocol-matching: debug:1 - API response
-
-Rounds executed: 3/8
-
-Return JSON only.
-```
-
-**Debug Shim Payload**
-
-```json
-{
-  "satisfied": false,
-  "reason": "LLM Response",
-  "missing_requirements": [
-    "LLM Response"
-  ],
-  "should_continue": true,
-  "next_tool_hint": {
-    "tool_name": "inventory-lookup",
-    "query": "LLM Response",
-    "reason": "LLM Response"
-  },
-  "can_answer_with_limitations": false
-}
-```
-
-### 16. science_agent_session_after_feedback
-
-Kind: `agent-session-feedback`
-
-Stub response: `LLM Response`
-
-**Feedback Message**
-
-```text
-Evaluator feedback for general_science_question: the previous result is not sufficient yet.
-Reason: LLM Response
-Missing requirements: LLM Response; The current evidence directly supports the core answer to the clarified request.
-Suggested next tool: inventory-lookup.
-Suggested query refinement: LLM Response
-Why: LLM Response
-Please continue with the next best single tool call, or answer directly only if the evidence is now sufficient.
-```
-
-**Planned Tool Call**
-
-```json
-{
-  "name": "python-sandbox",
-  "arguments": {
-    "query": "What does the latest evidence suggest about this science question?"
-  }
-}
-```
-
-### 17. science_agent_session_after_tool_output
-
-Kind: `agent-session-tool-output`
-
-Stub response: `LLM Response`
-
-**Tool Outputs**
-
-```json
-[
-  {
-    "callId": "debug-call-science-loop-4",
-    "name": "python-sandbox",
-    "output": "{\"ok\":true,\"tool_name\":\"python-sandbox\",\"summary\":\"API response\",\"result\":{\"summary\":\"API response\",\"text\":\"API response\",\"items\":[{\"id\":\"api-item-4\",\"label\":\"API response\"}]},\"items\":[{\"id\":\"api-item-4\",\"label\":\"API response\"}],\"citations\":[{\"source\":\"python-sandbox\",\"pointer\":\"debug:4\",\"reason\":\"API response\"}]}"
-  }
-]
-```
-
-### 18. science_loop_current_scientific_state
-
-Kind: `structured-json`
-
-Stub response: `LLM Response`
-
-**System Prompt**
-
-```text
-Return valid JSON only.
-```
-
-**User Prompt / Context**
-
-```text
-Summarize the current scientific state before the exit judge decides whether the reasoning loop should stop.
-
-Keep it compact and grounded only in the provided evidence.
-
-List what is supported now, what is contradicted, what remains unknown, and whether the remaining uncertainty is actually decision-relevant for deciding stop vs continue.
-
-Set uncertainty_decision_relevant to true only when the remaining uncertainty should materially change the loop exit decision.
-
-Include trace_sentence as one short sentence describing what you are doing at this step.
-
-Clarified request:
-LLM Response
-
-Exit criteria:
-Objective: LLM Response
-Exit conditions:
-- LLM Response
-- The current evidence directly supports the core answer to the clarified request.
-- The answer is grounded in the strongest available evidence, which may include external sources, trusted provided context, or prior retrieved support.
-Required evidence:
-- LLM Response
-- At least one evidence-gathering round has run before the loop exits.
-Continue when:
-- LLM Response
-- A blocking evidence gap still prevents a grounded answer.
-Can exit with limitations when:
-- LLM Response
-- A best-effort answer is allowed when the main remaining gaps are stated explicitly.
-- Stable background questions can be answered without a fresh citation when the answer is already well grounded and any freshness limits are stated.
-Preferred next tools: inventory-lookup | record-lookup | protocol-matching
-
-Pre-synthesized question:
-Current best answer: LLM Response
-Supporting basis:
-- API response
-- python-sandbox returned 1 item(s).
-- python-sandbox: debug:4 - API response
-- protocol-matching: debug:1 - API response
-
-Rounds executed: 4/8
-
-Return JSON only.
-```
-
-**Debug Shim Payload**
-
-```json
-{
-  "supported_now": [
-    "LLM Response"
-  ],
-  "contradicted": [],
-  "remains_unknown": [
-    "LLM Response"
-  ],
-  "uncertainty_decision_relevant": true,
-  "uncertainty_decision_reason": "LLM Response"
-}
-```
-
-### 19. science_loop_exit_judge_sub_agent
-
-Kind: `structured-json`
-
-Stub response: `LLM Response`
-
-**System Prompt**
-
-```text
-You are a specialized sub-agent that judges whether a science reasoning loop should exit.
-
-A lightweight pre-synthesized question is provided so you can see the current best answer, supporting basis, and unresolved issues before judging.
-
-Judge the pre-synthesized answer only against the provided exit criteria and clarified request.
-
-Do not impose any citation, source, or tool-specific requirement unless it is explicitly stated in the exit criteria.
-
-Be conservative: continue when a blocking evidence requirement is still missing.
-
-Return JSON only and do not invent evidence.
-```
-
-**User Prompt / Context**
-
-```text
-Judge whether the reasoning loop should stop now or continue.
-
-Include trace_sentence as one short sentence describing what you are doing at this step.
-
-Clarified request:
-LLM Response
-
-Exit criteria:
-Objective: LLM Response
-Exit conditions:
-- LLM Response
-- The current evidence directly supports the core answer to the clarified request.
-- The answer is grounded in the strongest available evidence, which may include external sources, trusted provided context, or prior retrieved support.
-Required evidence:
-- LLM Response
-- At least one evidence-gathering round has run before the loop exits.
-Continue when:
-- LLM Response
-- A blocking evidence gap still prevents a grounded answer.
-Can exit with limitations when:
-- LLM Response
-- A best-effort answer is allowed when the main remaining gaps are stated explicitly.
-- Stable background questions can be answered without a fresh citation when the answer is already well grounded and any freshness limits are stated.
-Preferred next tools: inventory-lookup | record-lookup | protocol-matching
-
-Pre-synthesized question:
-Current best answer: LLM Response
-Supporting basis:
-- API response
-- python-sandbox returned 1 item(s).
-- python-sandbox: debug:4 - API response
-- protocol-matching: debug:1 - API response
-
-Rounds executed: 4/8
-
-Return JSON only.
-```
-
-**Debug Shim Payload**
-
-```json
-{
-  "satisfied": false,
-  "reason": "LLM Response",
-  "missing_requirements": [
-    "LLM Response"
-  ],
-  "should_continue": true,
-  "next_tool_hint": {
-    "tool_name": "python-sandbox",
-    "query": "LLM Response",
-    "reason": "LLM Response"
-  },
-  "can_answer_with_limitations": false
-}
-```
-
-### 20. science_agent_session_after_feedback
-
-Kind: `agent-session-feedback`
-
-Stub response: `LLM Response`
-
-**Feedback Message**
-
-```text
-Evaluator feedback for general_science_question: the previous result is not sufficient yet.
-Reason: LLM Response
-Missing requirements: LLM Response; The current evidence directly supports the core answer to the clarified request.
-Suggested next tool: python-sandbox.
-Suggested query refinement: LLM Response
-Why: LLM Response
-Please continue with the next best single tool call, or answer directly only if the evidence is now sufficient.
-```
-
-**Planned Tool Call**
-
-```json
-{
-  "name": "notebook-draft",
-  "arguments": {
-    "query": "What does the latest evidence suggest about this science question?"
-  }
-}
-```
-
-### 21. science_agent_session_after_tool_output
-
-Kind: `agent-session-tool-output`
-
-Stub response: `LLM Response`
-
-**Tool Outputs**
-
-```json
-[
-  {
-    "callId": "debug-call-science-loop-5",
-    "name": "notebook-draft",
-    "output": "{\"ok\":true,\"tool_name\":\"notebook-draft\",\"summary\":\"API response\",\"result\":{\"summary\":\"API response\",\"text\":\"API response\",\"items\":[{\"id\":\"api-item-5\",\"label\":\"API response\"}]},\"items\":[{\"id\":\"api-item-5\",\"label\":\"API response\"}],\"citations\":[{\"source\":\"notebook-draft\",\"pointer\":\"debug:5\",\"reason\":\"API response\"}]}"
-  }
-]
-```
-
-### 22. science_loop_current_scientific_state
-
-Kind: `structured-json`
-
-Stub response: `LLM Response`
-
-**System Prompt**
-
-```text
-Return valid JSON only.
-```
-
-**User Prompt / Context**
-
-```text
-Summarize the current scientific state before the exit judge decides whether the reasoning loop should stop.
-
-Keep it compact and grounded only in the provided evidence.
-
-List what is supported now, what is contradicted, what remains unknown, and whether the remaining uncertainty is actually decision-relevant for deciding stop vs continue.
-
-Set uncertainty_decision_relevant to true only when the remaining uncertainty should materially change the loop exit decision.
-
-Include trace_sentence as one short sentence describing what you are doing at this step.
-
-Clarified request:
-LLM Response
-
-Exit criteria:
-Objective: LLM Response
-Exit conditions:
-- LLM Response
-- The current evidence directly supports the core answer to the clarified request.
-- The answer is grounded in the strongest available evidence, which may include external sources, trusted provided context, or prior retrieved support.
-Required evidence:
-- LLM Response
-- At least one evidence-gathering round has run before the loop exits.
-Continue when:
-- LLM Response
-- A blocking evidence gap still prevents a grounded answer.
-Can exit with limitations when:
-- LLM Response
-- A best-effort answer is allowed when the main remaining gaps are stated explicitly.
-- Stable background questions can be answered without a fresh citation when the answer is already well grounded and any freshness limits are stated.
-Preferred next tools: inventory-lookup | record-lookup | protocol-matching
-
-Pre-synthesized question:
-Current best answer: LLM Response
-Supporting basis:
-- API response
-- notebook-draft returned 1 item(s).
-- notebook-draft: debug:5 - API response
-- protocol-matching: debug:1 - API response
-
-Rounds executed: 5/8
-
-Return JSON only.
-```
-
-**Debug Shim Payload**
-
-```json
-{
-  "supported_now": [
-    "LLM Response"
-  ],
-  "contradicted": [],
-  "remains_unknown": [
-    "LLM Response"
-  ],
-  "uncertainty_decision_relevant": true,
-  "uncertainty_decision_reason": "LLM Response"
-}
-```
-
-### 23. science_loop_exit_judge_sub_agent
-
-Kind: `structured-json`
-
-Stub response: `LLM Response`
-
-**System Prompt**
-
-```text
-You are a specialized sub-agent that judges whether a science reasoning loop should exit.
-
-A lightweight pre-synthesized question is provided so you can see the current best answer, supporting basis, and unresolved issues before judging.
-
-Judge the pre-synthesized answer only against the provided exit criteria and clarified request.
-
-Do not impose any citation, source, or tool-specific requirement unless it is explicitly stated in the exit criteria.
-
-Be conservative: continue when a blocking evidence requirement is still missing.
-
-Return JSON only and do not invent evidence.
-```
-
-**User Prompt / Context**
-
-```text
-Judge whether the reasoning loop should stop now or continue.
-
-Include trace_sentence as one short sentence describing what you are doing at this step.
-
-Clarified request:
-LLM Response
-
-Exit criteria:
-Objective: LLM Response
-Exit conditions:
-- LLM Response
-- The current evidence directly supports the core answer to the clarified request.
-- The answer is grounded in the strongest available evidence, which may include external sources, trusted provided context, or prior retrieved support.
-Required evidence:
-- LLM Response
-- At least one evidence-gathering round has run before the loop exits.
-Continue when:
-- LLM Response
-- A blocking evidence gap still prevents a grounded answer.
-Can exit with limitations when:
-- LLM Response
-- A best-effort answer is allowed when the main remaining gaps are stated explicitly.
-- Stable background questions can be answered without a fresh citation when the answer is already well grounded and any freshness limits are stated.
-Preferred next tools: inventory-lookup | record-lookup | protocol-matching
-
-Pre-synthesized question:
-Current best answer: LLM Response
-Supporting basis:
-- API response
-- notebook-draft returned 1 item(s).
-- notebook-draft: debug:5 - API response
-- protocol-matching: debug:1 - API response
-
-Rounds executed: 5/8
-
-Return JSON only.
-```
-
-**Debug Shim Payload**
-
-```json
-{
-  "satisfied": false,
-  "reason": "LLM Response",
-  "missing_requirements": [
-    "LLM Response"
-  ],
-  "should_continue": true,
-  "next_tool_hint": {
-    "tool_name": "notebook-draft",
-    "query": "LLM Response",
-    "reason": "LLM Response"
-  },
-  "can_answer_with_limitations": false
-}
-```
-
-### 24. science_agent_session_after_feedback
-
-Kind: `agent-session-feedback`
-
-Stub response: `LLM Response`
-
-**Feedback Message**
-
-```text
-Evaluator feedback for general_science_question: the previous result is not sufficient yet.
-Reason: LLM Response
-Missing requirements: LLM Response; The current evidence directly supports the core answer to the clarified request.
-Suggested next tool: notebook-draft.
-Suggested query refinement: LLM Response
-Why: LLM Response
-Please continue with the next best single tool call, or answer directly only if the evidence is now sufficient.
-```
-
-**Planned Tool Call**
-
-```json
-{
-  "name": "protocol-generation",
-  "arguments": {
-    "query": "What does the latest evidence suggest about this science question?"
-  }
-}
-```
-
-### 25. science_agent_session_after_tool_output
-
-Kind: `agent-session-tool-output`
-
-Stub response: `LLM Response`
-
-**Tool Outputs**
-
-```json
-[
-  {
-    "callId": "debug-call-science-loop-6",
-    "name": "protocol-generation",
-    "output": "{\"ok\":true,\"tool_name\":\"protocol-generation\",\"summary\":\"API response\",\"result\":{\"summary\":\"API response\",\"text\":\"API response\",\"items\":[{\"id\":\"api-item-6\",\"label\":\"API response\"}]},\"items\":[{\"id\":\"api-item-6\",\"label\":\"API response\"}],\"citations\":[{\"source\":\"protocol-generation\",\"pointer\":\"debug:6\",\"reason\":\"API response\"}]}"
-  }
-]
-```
-
-### 26. science_loop_current_scientific_state
-
-Kind: `structured-json`
-
-Stub response: `LLM Response`
-
-**System Prompt**
-
-```text
-Return valid JSON only.
-```
-
-**User Prompt / Context**
-
-```text
-Summarize the current scientific state before the exit judge decides whether the reasoning loop should stop.
-
-Keep it compact and grounded only in the provided evidence.
-
-List what is supported now, what is contradicted, what remains unknown, and whether the remaining uncertainty is actually decision-relevant for deciding stop vs continue.
-
-Set uncertainty_decision_relevant to true only when the remaining uncertainty should materially change the loop exit decision.
-
-Include trace_sentence as one short sentence describing what you are doing at this step.
-
-Clarified request:
-LLM Response
-
-Exit criteria:
-Objective: LLM Response
-Exit conditions:
-- LLM Response
-- The current evidence directly supports the core answer to the clarified request.
-- The answer is grounded in the strongest available evidence, which may include external sources, trusted provided context, or prior retrieved support.
-Required evidence:
-- LLM Response
-- At least one evidence-gathering round has run before the loop exits.
-Continue when:
-- LLM Response
-- A blocking evidence gap still prevents a grounded answer.
-Can exit with limitations when:
-- LLM Response
-- A best-effort answer is allowed when the main remaining gaps are stated explicitly.
-- Stable background questions can be answered without a fresh citation when the answer is already well grounded and any freshness limits are stated.
-Preferred next tools: inventory-lookup | record-lookup | protocol-matching
-
-Pre-synthesized question:
-Current best answer: LLM Response
-Supporting basis:
-- API response
-- protocol-generation returned 1 item(s).
-- protocol-generation: debug:6 - API response
-- protocol-matching: debug:1 - API response
-
-Rounds executed: 6/8
-
-Return JSON only.
-```
-
-**Debug Shim Payload**
-
-```json
-{
-  "supported_now": [
-    "LLM Response"
-  ],
-  "contradicted": [],
-  "remains_unknown": [
-    "LLM Response"
-  ],
-  "uncertainty_decision_relevant": true,
-  "uncertainty_decision_reason": "LLM Response"
-}
-```
-
-### 27. science_loop_exit_judge_sub_agent
-
-Kind: `structured-json`
-
-Stub response: `LLM Response`
-
-**System Prompt**
-
-```text
-You are a specialized sub-agent that judges whether a science reasoning loop should exit.
-
-A lightweight pre-synthesized question is provided so you can see the current best answer, supporting basis, and unresolved issues before judging.
-
-Judge the pre-synthesized answer only against the provided exit criteria and clarified request.
-
-Do not impose any citation, source, or tool-specific requirement unless it is explicitly stated in the exit criteria.
-
-Be conservative: continue when a blocking evidence requirement is still missing.
-
-Return JSON only and do not invent evidence.
-```
-
-**User Prompt / Context**
-
-```text
-Judge whether the reasoning loop should stop now or continue.
-
-Include trace_sentence as one short sentence describing what you are doing at this step.
-
-Clarified request:
-LLM Response
-
-Exit criteria:
-Objective: LLM Response
-Exit conditions:
-- LLM Response
-- The current evidence directly supports the core answer to the clarified request.
-- The answer is grounded in the strongest available evidence, which may include external sources, trusted provided context, or prior retrieved support.
-Required evidence:
-- LLM Response
-- At least one evidence-gathering round has run before the loop exits.
-Continue when:
-- LLM Response
-- A blocking evidence gap still prevents a grounded answer.
-Can exit with limitations when:
-- LLM Response
-- A best-effort answer is allowed when the main remaining gaps are stated explicitly.
-- Stable background questions can be answered without a fresh citation when the answer is already well grounded and any freshness limits are stated.
-Preferred next tools: inventory-lookup | record-lookup | protocol-matching
-
-Pre-synthesized question:
-Current best answer: LLM Response
-Supporting basis:
-- API response
-- protocol-generation returned 1 item(s).
-- protocol-generation: debug:6 - API response
-- protocol-matching: debug:1 - API response
-
-Rounds executed: 6/8
-
-Return JSON only.
-```
-
-**Debug Shim Payload**
-
-```json
-{
-  "satisfied": false,
-  "reason": "LLM Response",
-  "missing_requirements": [
-    "LLM Response"
-  ],
-  "should_continue": true,
-  "next_tool_hint": {
-    "tool_name": "protocol-generation",
-    "query": "LLM Response",
-    "reason": "LLM Response"
-  },
-  "can_answer_with_limitations": false
-}
-```
-
-### 28. science_agent_session_after_feedback
-
-Kind: `agent-session-feedback`
-
-Stub response: `LLM Response`
-
-**Feedback Message**
-
-```text
-Evaluator feedback for general_science_question: the previous result is not sufficient yet.
-Reason: LLM Response
-Missing requirements: LLM Response; The current evidence directly supports the core answer to the clarified request.
-Suggested next tool: protocol-generation.
-Suggested query refinement: LLM Response
-Why: LLM Response
-Please continue with the next best single tool call, or answer directly only if the evidence is now sufficient.
-```
-
-**Planned Tool Call**
-
-```json
-{
-  "name": "paper-download",
-  "arguments": {
-    "query": "What does the latest evidence suggest about this science question?"
-  }
-}
-```
-
-### 29. science_agent_session_after_tool_output
-
-Kind: `agent-session-tool-output`
-
-Stub response: `LLM Response`
-
-**Tool Outputs**
-
-```json
-[
-  {
-    "callId": "debug-call-science-loop-7",
-    "name": "paper-download",
-    "output": "{\"ok\":true,\"tool_name\":\"paper-download\",\"summary\":\"API response\",\"result\":{\"summary\":\"API response\",\"text\":\"API response\",\"items\":[{\"id\":\"api-item-7\",\"label\":\"API response\"}]},\"items\":[{\"id\":\"api-item-7\",\"label\":\"API response\"}],\"citations\":[{\"source\":\"paper-download\",\"pointer\":\"debug:7\",\"reason\":\"API response\"}]}"
-  }
-]
-```
-
-### 30. science_loop_current_scientific_state
-
-Kind: `structured-json`
-
-Stub response: `LLM Response`
-
-**System Prompt**
-
-```text
-Return valid JSON only.
-```
-
-**User Prompt / Context**
-
-```text
-Summarize the current scientific state before the exit judge decides whether the reasoning loop should stop.
-
-Keep it compact and grounded only in the provided evidence.
-
-List what is supported now, what is contradicted, what remains unknown, and whether the remaining uncertainty is actually decision-relevant for deciding stop vs continue.
-
-Set uncertainty_decision_relevant to true only when the remaining uncertainty should materially change the loop exit decision.
-
-Include trace_sentence as one short sentence describing what you are doing at this step.
-
-Clarified request:
-LLM Response
-
-Exit criteria:
-Objective: LLM Response
-Exit conditions:
-- LLM Response
-- The current evidence directly supports the core answer to the clarified request.
-- The answer is grounded in the strongest available evidence, which may include external sources, trusted provided context, or prior retrieved support.
-Required evidence:
-- LLM Response
-- At least one evidence-gathering round has run before the loop exits.
-Continue when:
-- LLM Response
-- A blocking evidence gap still prevents a grounded answer.
-Can exit with limitations when:
-- LLM Response
-- A best-effort answer is allowed when the main remaining gaps are stated explicitly.
-- Stable background questions can be answered without a fresh citation when the answer is already well grounded and any freshness limits are stated.
-Preferred next tools: inventory-lookup | record-lookup | protocol-matching
-
-Pre-synthesized question:
-Current best answer: LLM Response
-Supporting basis:
-- API response
-- paper-download returned 1 item(s).
-- paper-download: debug:7 - API response
-- protocol-matching: debug:1 - API response
-
-Rounds executed: 7/8
-
-Return JSON only.
-```
-
-**Debug Shim Payload**
-
-```json
-{
-  "supported_now": [
-    "LLM Response"
-  ],
-  "contradicted": [],
-  "remains_unknown": [
-    "LLM Response"
-  ],
-  "uncertainty_decision_relevant": true,
-  "uncertainty_decision_reason": "LLM Response"
-}
-```
-
-### 31. science_loop_exit_judge_sub_agent
-
-Kind: `structured-json`
-
-Stub response: `LLM Response`
-
-**System Prompt**
-
-```text
-You are a specialized sub-agent that judges whether a science reasoning loop should exit.
-
-A lightweight pre-synthesized question is provided so you can see the current best answer, supporting basis, and unresolved issues before judging.
-
-Judge the pre-synthesized answer only against the provided exit criteria and clarified request.
-
-Do not impose any citation, source, or tool-specific requirement unless it is explicitly stated in the exit criteria.
-
-Be conservative: continue when a blocking evidence requirement is still missing.
-
-Return JSON only and do not invent evidence.
-```
-
-**User Prompt / Context**
-
-```text
-Judge whether the reasoning loop should stop now or continue.
-
-Include trace_sentence as one short sentence describing what you are doing at this step.
-
-Clarified request:
-LLM Response
-
-Exit criteria:
-Objective: LLM Response
-Exit conditions:
-- LLM Response
-- The current evidence directly supports the core answer to the clarified request.
-- The answer is grounded in the strongest available evidence, which may include external sources, trusted provided context, or prior retrieved support.
-Required evidence:
-- LLM Response
-- At least one evidence-gathering round has run before the loop exits.
-Continue when:
-- LLM Response
-- A blocking evidence gap still prevents a grounded answer.
-Can exit with limitations when:
-- LLM Response
-- A best-effort answer is allowed when the main remaining gaps are stated explicitly.
-- Stable background questions can be answered without a fresh citation when the answer is already well grounded and any freshness limits are stated.
-Preferred next tools: inventory-lookup | record-lookup | protocol-matching
-
-Pre-synthesized question:
-Current best answer: LLM Response
-Supporting basis:
-- API response
-- paper-download returned 1 item(s).
-- paper-download: debug:7 - API response
-- protocol-matching: debug:1 - API response
-
-Rounds executed: 7/8
-
-Return JSON only.
-```
-
-**Debug Shim Payload**
-
-```json
-{
-  "satisfied": false,
-  "reason": "LLM Response",
-  "missing_requirements": [
-    "LLM Response"
-  ],
-  "should_continue": true,
-  "next_tool_hint": {
-    "tool_name": "paper-download",
-    "query": "LLM Response",
-    "reason": "LLM Response"
-  },
-  "can_answer_with_limitations": false
-}
-```
-
-### 32. science_agent_session_after_feedback
-
-Kind: `agent-session-feedback`
-
-Stub response: `LLM Response`
-
-**Feedback Message**
-
-```text
-Evaluator feedback for general_science_question: the previous result is not sufficient yet.
-Reason: LLM Response
-Missing requirements: LLM Response; The current evidence directly supports the core answer to the clarified request.
-Suggested next tool: paper-download.
-Suggested query refinement: LLM Response
-Why: LLM Response
-Please continue with the next best single tool call, or answer directly only if the evidence is now sufficient.
-```
-
-**Planned Tool Call**
-
-```json
-{
-  "name": "protocol-matching",
-  "arguments": {
-    "query": "What does the latest evidence suggest about this science question?"
-  }
-}
-```
-
-### 33. science_agent_session_after_tool_output
-
-Kind: `agent-session-tool-output`
-
-Stub response: `LLM Response`
-
-**Tool Outputs**
-
-```json
-[
-  {
-    "callId": "debug-call-science-loop-8",
-    "name": "protocol-matching",
-    "output": "{\"ok\":true,\"tool_name\":\"protocol-matching\",\"summary\":\"API response\",\"result\":{\"summary\":\"API response\",\"text\":\"API response\",\"items\":[{\"id\":\"api-item-8\",\"label\":\"API response\"}]},\"items\":[{\"id\":\"api-item-8\",\"label\":\"API response\"}],\"citations\":[{\"source\":\"protocol-matching\",\"pointer\":\"debug:8\",\"reason\":\"API response\"}]}"
-  }
-]
-```
-
-### 34. science_loop_current_scientific_state
-
-Kind: `structured-json`
-
-Stub response: `LLM Response`
-
-**System Prompt**
-
-```text
-Return valid JSON only.
-```
-
-**User Prompt / Context**
-
-```text
-Summarize the current scientific state before the exit judge decides whether the reasoning loop should stop.
-
-Keep it compact and grounded only in the provided evidence.
-
-List what is supported now, what is contradicted, what remains unknown, and whether the remaining uncertainty is actually decision-relevant for deciding stop vs continue.
-
-Set uncertainty_decision_relevant to true only when the remaining uncertainty should materially change the loop exit decision.
-
-Include trace_sentence as one short sentence describing what you are doing at this step.
-
-Clarified request:
-LLM Response
-
-Exit criteria:
-Objective: LLM Response
-Exit conditions:
-- LLM Response
-- The current evidence directly supports the core answer to the clarified request.
-- The answer is grounded in the strongest available evidence, which may include external sources, trusted provided context, or prior retrieved support.
-Required evidence:
-- LLM Response
-- At least one evidence-gathering round has run before the loop exits.
-Continue when:
-- LLM Response
-- A blocking evidence gap still prevents a grounded answer.
-Can exit with limitations when:
-- LLM Response
-- A best-effort answer is allowed when the main remaining gaps are stated explicitly.
-- Stable background questions can be answered without a fresh citation when the answer is already well grounded and any freshness limits are stated.
-Preferred next tools: inventory-lookup | record-lookup | protocol-matching
-
-Pre-synthesized question:
-Current best answer: LLM Response
-Supporting basis:
-- API response
-- protocol-matching returned 1 item(s).
-- protocol-matching: debug:8 - API response
-- protocol-matching: debug:1 - API response
-
-Rounds executed: 8/8
-
-Return JSON only.
-```
-
-**Debug Shim Payload**
-
-```json
-{
-  "supported_now": [
-    "LLM Response"
-  ],
-  "contradicted": [],
-  "remains_unknown": [],
-  "uncertainty_decision_relevant": false,
-  "uncertainty_decision_reason": "LLM Response"
-}
-```
-
-### 35. science_loop_exit_judge_sub_agent
-
-Kind: `structured-json`
-
-Stub response: `LLM Response`
-
-**System Prompt**
-
-```text
-You are a specialized sub-agent that judges whether a science reasoning loop should exit.
-
-A lightweight pre-synthesized question is provided so you can see the current best answer, supporting basis, and unresolved issues before judging.
-
-Judge the pre-synthesized answer only against the provided exit criteria and clarified request.
-
-Do not impose any citation, source, or tool-specific requirement unless it is explicitly stated in the exit criteria.
-
-Be conservative: continue when a blocking evidence requirement is still missing.
-
-Return JSON only and do not invent evidence.
-```
-
-**User Prompt / Context**
-
-```text
-Judge whether the reasoning loop should stop now or continue.
-
-Include trace_sentence as one short sentence describing what you are doing at this step.
-
-Clarified request:
-LLM Response
-
-Exit criteria:
-Objective: LLM Response
-Exit conditions:
-- LLM Response
-- The current evidence directly supports the core answer to the clarified request.
-- The answer is grounded in the strongest available evidence, which may include external sources, trusted provided context, or prior retrieved support.
-Required evidence:
-- LLM Response
-- At least one evidence-gathering round has run before the loop exits.
-Continue when:
-- LLM Response
-- A blocking evidence gap still prevents a grounded answer.
-Can exit with limitations when:
-- LLM Response
-- A best-effort answer is allowed when the main remaining gaps are stated explicitly.
-- Stable background questions can be answered without a fresh citation when the answer is already well grounded and any freshness limits are stated.
-Preferred next tools: inventory-lookup | record-lookup | protocol-matching
-
-Pre-synthesized question:
-Current best answer: LLM Response
-Supporting basis:
-- API response
-- protocol-matching returned 1 item(s).
-- protocol-matching: debug:8 - API response
-- protocol-matching: debug:1 - API response
-
-Rounds executed: 8/8
+- command-line returned 1 item(s).
+- command-line: debug:2 - API response
+- inventory-lookup: debug:1 - API response
+Logical verification:
+Part 1:
+- Context: API response | command-line returned 1 item(s).
+- Pre-synthesized answer: LLM Response
+
+Rounds executed: 2/2
 
 Return JSON only.
 ```
@@ -7783,88 +3315,6 @@ Return JSON only.
   "should_continue": false,
   "next_tool_hint": null,
   "can_answer_with_limitations": true
-}
-```
-
-### 36. science_reasoning_final_synthesis
-
-Kind: `structured-json`
-
-Stub response: `LLM Response`
-
-**System Prompt**
-
-```text
-Return valid JSON only.
-```
-
-**User Prompt / Context**
-
-```text
-You are the final answer synthesizer for a science reasoning loop.
-
-Answer using only the evidence and tool trace provided by the app.
-
-Do not invent evidence, papers, values, or project facts.
-
-Markdown is allowed in the answer field. Use sections, bullets, or tables when they improve clarity, but do not include HTML.
-
-Include trace_sentence as one short sentence describing what you are doing at this step.
-
-The evaluator judged the evidence sufficient. Produce a grounded answer that explains the conclusion, supporting evidence, and any material caveats.
-
-Clarified request:
-LLM Response
-
-Intent: general_science_question
-
-Science policy:
-Description: Use literature and web retrieval to answer general science questions with grounded citations.
-Retrieval priority: literature_first_web_last
-Require external citation when freshness matters: yes
-Require retrieval attempt before final answer: yes
-Allow limitation-qualified answer after evidence attempt: yes
-
-Rounds executed: 8/8
-
-Evaluator summary:
-Satisfied: yes
-Should continue: no
-Can answer with limitations: yes
-Reason: LLM Response
-Missing requirements:
-- The current evidence directly supports the core answer to the clarified request.
-
-Citations:
-- protocol-matching: debug:1 - API response
-- paper-analysis: debug:2 - API response
-- inventory-lookup: debug:3 - API response
-- python-sandbox: debug:4 - API response
-
-Recent tool outputs:
-- protocol-generation (ok) | summary: API response
-- paper-download (ok) | summary: API response
-- protocol-matching (ok) | summary: API response
-
-Return JSON only.
-```
-
-**Debug Shim Payload**
-
-```json
-{
-  "answer": "LLM Response",
-  "confidence": 0.68,
-  "decision_record": {
-    "assumptions": [
-      "LLM Response"
-    ],
-    "open_questions": [],
-    "verification_notes": [
-      "LLM Response"
-    ]
-  },
-  "follow_up_questions": []
 }
 ```
 
@@ -7925,6 +3375,8 @@ Suggest a likely order of evidence-gathering steps, optional tool calls, and whe
 Include trace_sentence as one short sentence describing what you are doing at this step.
 
 Prefer only tools that are already allowed by policy or tool scope.
+
+For literature-search query_hint, return short keyword phrases rather than a full sentence.
 
 Clarified request:
 LLM Response
@@ -8013,13 +3465,13 @@ Execution hints:
 The clarified execution request is provided separately as the session message.
 
 1. You are inside a deterministic science reasoning loop.
-2. At each assistant turn, either call exactly one tool or answer directly if you already have sufficient evidence.
-3. Do not call more than one tool in a single assistant turn.
+2. At each assistant turn, either call one or more independent tools or answer directly if you already have sufficient evidence.
+3. If multiple tool calls would help, keep them tightly scoped and independent so they can be executed in parallel as one evidence round.
 4. Prefer tools in the listed priority order and explain the answer only after sufficient evidence exists.
 5. When you give the final answer, include enough detail to explain the conclusion, supporting evidence, and material caveats.
 6. Do not compress the final answer to one or two sentences unless the user explicitly asked for brevity.
 7. Treat any route plan as non-binding guidance; adapt when the actual evidence suggests a better next step.
-8. If a tool result is weak or empty, choose a more targeted next tool on the following turn.
+8. If a tool result is weak or empty, choose a more targeted next tool or tool batch on the following turn.
 9. Do not fabricate project records, literature results, or computation outputs.
 10. For general science questions, prefer the most targeted citation-backed evidence path available.
 ```
@@ -8142,6 +3594,22 @@ LLM Response
     }
   },
   {
+    "name": "command-line",
+    "description": "Debug-only tool definition for command-line.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "query"
+      ],
+      "properties": {
+        "query": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  {
     "name": "sub-agent",
     "description": "Debug-only tool definition for sub-agent.",
     "parameters": {
@@ -8176,6 +3644,22 @@ LLM Response
   {
     "name": "literature-search",
     "description": "Debug-only tool definition for literature-search.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "query"
+      ],
+      "properties": {
+        "query": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  {
+    "name": "purchase-recommendation",
+    "description": "Debug-only tool definition for purchase-recommendation.",
     "parameters": {
       "type": "object",
       "additionalProperties": false,
@@ -8250,13 +3734,13 @@ Kind: `agent-session-tool-output`
 [
   {
     "callId": "debug-call-science-loop-1",
-    "name": "protocol-matching",
-    "output": "{\"ok\":true,\"tool_name\":\"protocol-matching\",\"summary\":\"API response\",\"result\":{\"summary\":\"API response\",\"text\":\"API response\",\"items\":[{\"id\":\"api-item-1\",\"label\":\"API response\"}]},\"items\":[{\"id\":\"api-item-1\",\"label\":\"API response\"}],\"citations\":[{\"source\":\"protocol-matching\",\"pointer\":\"debug:1\",\"reason\":\"API response\"}]}"
+    "name": "inventory-lookup",
+    "output": "{\"ok\":true,\"tool_name\":\"inventory-lookup\",\"summary\":\"API response\",\"result\":{\"summary\":\"API response\",\"text\":\"API response\",\"items\":[{\"id\":\"api-item-1\",\"label\":\"API response\"}]},\"items\":[{\"id\":\"api-item-1\",\"label\":\"API response\"}],\"citations\":[{\"source\":\"inventory-lookup\",\"pointer\":\"debug:1\",\"reason\":\"API response\"}]}"
   }
 ]
 ```
 
-### 6. science_loop_current_scientific_state
+### 6. science_loop_logic_extraction
 
 Kind: `structured-json`
 
@@ -8269,46 +3753,30 @@ Return valid JSON only.
 **Raw User Prompt**
 
 ```text
-Summarize the current scientific state before the exit judge decides whether the reasoning loop should stop.
+Extract the short logical structure from the current pre-synthesized answer.
 
-Keep it compact and grounded only in the provided evidence.
+Deductive means a direct conclusion from the stated basis.
 
-List what is supported now, what is contradicted, what remains unknown, and whether the remaining uncertainty is actually decision-relevant for deciding stop vs continue.
+Inductive means a pattern or generalization from the available evidence.
 
-Set uncertainty_decision_relevant to true only when the remaining uncertainty should materially change the loop exit decision.
+Abductive means the current best explanation or hypothesis.
 
-Include trace_sentence as one short sentence describing what you are doing at this step.
+Return a short context, the short pre-synthesized answer, and a short logic_list.
+
+Each logic_list item should contain one reasoning_type and one short logic string.
+
+Do not add evidence or alternatives that are not already in the provided answer state.
 
 Clarified request:
 LLM Response
 
-Exit criteria:
-Objective: LLM Response
-Exit conditions:
-- LLM Response
-- The current evidence directly supports the core answer to the clarified request.
-- The answer is grounded in the strongest available evidence, which may include external sources, trusted provided context, or prior retrieved support.
-Required evidence:
-- LLM Response
-- At least one evidence-gathering round has run before the loop exits.
-Continue when:
-- LLM Response
-- A blocking evidence gap still prevents a grounded answer.
-Can exit with limitations when:
-- LLM Response
-- A best-effort answer is allowed when the main remaining gaps are stated explicitly.
-- Stable background questions can be answered without a fresh citation when the answer is already well grounded and any freshness limits are stated.
-Preferred next tools: inventory-lookup | record-lookup | protocol-matching
-
-Pre-synthesized question:
+Pre-synthesized answer:
 Current best answer: LLM Response
 Supporting basis:
 - API response
-- protocol-matching returned 1 item(s).
-- protocol-matching: debug:1 - API response
-- protocol-matching: API response
-
-Rounds executed: 1/8
+- inventory-lookup returned 1 item(s).
+- inventory-lookup: debug:1 - API response
+- inventory-lookup: API response
 
 Return JSON only.
 ```
@@ -8365,11 +3833,15 @@ Pre-synthesized question:
 Current best answer: LLM Response
 Supporting basis:
 - API response
-- protocol-matching returned 1 item(s).
-- protocol-matching: debug:1 - API response
-- protocol-matching: API response
+- inventory-lookup returned 1 item(s).
+- inventory-lookup: debug:1 - API response
+- inventory-lookup: API response
+Logical verification:
+Part 1:
+- Context: API response | inventory-lookup returned 1 item(s).
+- Pre-synthesized answer: LLM Response
 
-Rounds executed: 1/8
+Rounds executed: 1/2
 
 Return JSON only.
 ```
@@ -8390,10 +3862,10 @@ What does the latest evidence suggest about this science question?
 Evaluator feedback for general_science_question: the previous result is not sufficient yet.
 Reason: LLM Response
 Missing requirements: LLM Response; The current evidence directly supports the core answer to the clarified request.
-Suggested next tool: protocol-matching.
+Suggested next tool: inventory-lookup.
 Suggested query refinement: LLM Response
 Why: LLM Response
-Please continue with the next best single tool call, or answer directly only if the evidence is now sufficient.
+Please continue with the next best tool call or tightly scoped parallel tool batch, or answer directly only if the evidence is now sufficient.
 ```
 
 **Raw Conversation**
@@ -8508,6 +3980,22 @@ Please continue with the next best single tool call, or answer directly only if 
     }
   },
   {
+    "name": "command-line",
+    "description": "Debug-only tool definition for command-line.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "query"
+      ],
+      "properties": {
+        "query": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  {
     "name": "sub-agent",
     "description": "Debug-only tool definition for sub-agent.",
     "parameters": {
@@ -8542,6 +4030,22 @@ Please continue with the next best single tool call, or answer directly only if 
   {
     "name": "literature-search",
     "description": "Debug-only tool definition for literature-search.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "query"
+      ],
+      "properties": {
+        "query": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  {
+    "name": "purchase-recommendation",
+    "description": "Debug-only tool definition for purchase-recommendation.",
     "parameters": {
       "type": "object",
       "additionalProperties": false,
@@ -8616,13 +4120,13 @@ Kind: `agent-session-tool-output`
 [
   {
     "callId": "debug-call-science-loop-2",
-    "name": "paper-analysis",
-    "output": "{\"ok\":true,\"tool_name\":\"paper-analysis\",\"summary\":\"API response\",\"result\":{\"summary\":\"API response\",\"text\":\"API response\",\"items\":[{\"id\":\"api-item-2\",\"label\":\"API response\"}]},\"items\":[{\"id\":\"api-item-2\",\"label\":\"API response\"}],\"citations\":[{\"source\":\"paper-analysis\",\"pointer\":\"debug:2\",\"reason\":\"API response\"}]}"
+    "name": "command-line",
+    "output": "{\"ok\":true,\"tool_name\":\"command-line\",\"summary\":\"API response\",\"result\":{\"summary\":\"API response\",\"text\":\"API response\",\"items\":[{\"id\":\"api-item-2\",\"label\":\"API response\"}]},\"items\":[{\"id\":\"api-item-2\",\"label\":\"API response\"}],\"citations\":[{\"source\":\"command-line\",\"pointer\":\"debug:2\",\"reason\":\"API response\"}]}"
   }
 ]
 ```
 
-### 10. science_loop_current_scientific_state
+### 10. science_loop_logic_extraction
 
 Kind: `structured-json`
 
@@ -8635,46 +4139,30 @@ Return valid JSON only.
 **Raw User Prompt**
 
 ```text
-Summarize the current scientific state before the exit judge decides whether the reasoning loop should stop.
+Extract the short logical structure from the current pre-synthesized answer.
 
-Keep it compact and grounded only in the provided evidence.
+Deductive means a direct conclusion from the stated basis.
 
-List what is supported now, what is contradicted, what remains unknown, and whether the remaining uncertainty is actually decision-relevant for deciding stop vs continue.
+Inductive means a pattern or generalization from the available evidence.
 
-Set uncertainty_decision_relevant to true only when the remaining uncertainty should materially change the loop exit decision.
+Abductive means the current best explanation or hypothesis.
 
-Include trace_sentence as one short sentence describing what you are doing at this step.
+Return a short context, the short pre-synthesized answer, and a short logic_list.
+
+Each logic_list item should contain one reasoning_type and one short logic string.
+
+Do not add evidence or alternatives that are not already in the provided answer state.
 
 Clarified request:
 LLM Response
 
-Exit criteria:
-Objective: LLM Response
-Exit conditions:
-- LLM Response
-- The current evidence directly supports the core answer to the clarified request.
-- The answer is grounded in the strongest available evidence, which may include external sources, trusted provided context, or prior retrieved support.
-Required evidence:
-- LLM Response
-- At least one evidence-gathering round has run before the loop exits.
-Continue when:
-- LLM Response
-- A blocking evidence gap still prevents a grounded answer.
-Can exit with limitations when:
-- LLM Response
-- A best-effort answer is allowed when the main remaining gaps are stated explicitly.
-- Stable background questions can be answered without a fresh citation when the answer is already well grounded and any freshness limits are stated.
-Preferred next tools: inventory-lookup | record-lookup | protocol-matching
-
-Pre-synthesized question:
+Pre-synthesized answer:
 Current best answer: LLM Response
 Supporting basis:
 - API response
-- paper-analysis returned 1 item(s).
-- paper-analysis: debug:2 - API response
-- protocol-matching: debug:1 - API response
-
-Rounds executed: 2/8
+- command-line returned 1 item(s).
+- command-line: debug:2 - API response
+- inventory-lookup: debug:1 - API response
 
 Return JSON only.
 ```
@@ -8731,2365 +4219,22 @@ Pre-synthesized question:
 Current best answer: LLM Response
 Supporting basis:
 - API response
-- paper-analysis returned 1 item(s).
-- paper-analysis: debug:2 - API response
-- protocol-matching: debug:1 - API response
-
-Rounds executed: 2/8
-
-Return JSON only.
-```
-
-### 12. science_agent_session_after_feedback
-
-Kind: `agent-session-feedback`
-
-**Raw Message**
-
-```text
-What does the latest evidence suggest about this science question?
-```
-
-**Raw Feedback Message**
-
-```text
-Evaluator feedback for general_science_question: the previous result is not sufficient yet.
-Reason: LLM Response
-Missing requirements: LLM Response; The current evidence directly supports the core answer to the clarified request.
-Suggested next tool: paper-analysis.
-Suggested query refinement: LLM Response
-Why: LLM Response
-Please continue with the next best single tool call, or answer directly only if the evidence is now sufficient.
-```
-
-**Raw Conversation**
-
-```json
-[
-  {
-    "role": "user",
-    "text": "What does the latest evidence suggest about this science question?"
-  }
-]
-```
-
-**Raw Tool Definitions**
-
-```json
-[
-  {
-    "name": "inventory-lookup",
-    "description": "Debug-only tool definition for inventory-lookup.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "record-lookup",
-    "description": "Debug-only tool definition for record-lookup.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "protocol-matching",
-    "description": "Debug-only tool definition for protocol-matching.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "notebook-generation",
-    "description": "Debug-only tool definition for notebook-generation.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "notebook-draft",
-    "description": "Debug-only tool definition for notebook-draft.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "python-sandbox",
-    "description": "Debug-only tool definition for python-sandbox.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "sub-agent",
-    "description": "Debug-only tool definition for sub-agent.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "memory",
-    "description": "Debug-only tool definition for memory.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "literature-search",
-    "description": "Debug-only tool definition for literature-search.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "paper-download",
-    "description": "Debug-only tool definition for paper-download.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "paper-analysis",
-    "description": "Debug-only tool definition for paper-analysis.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "protocol-generation",
-    "description": "Debug-only tool definition for protocol-generation.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  }
-]
-```
-
-### 13. science_agent_session_after_tool_output
-
-Kind: `agent-session-tool-output`
-
-**Raw Tool Outputs**
-
-```json
-[
-  {
-    "callId": "debug-call-science-loop-3",
-    "name": "inventory-lookup",
-    "output": "{\"ok\":true,\"tool_name\":\"inventory-lookup\",\"summary\":\"API response\",\"result\":{\"summary\":\"API response\",\"text\":\"API response\",\"items\":[{\"id\":\"api-item-3\",\"label\":\"API response\"}]},\"items\":[{\"id\":\"api-item-3\",\"label\":\"API response\"}],\"citations\":[{\"source\":\"inventory-lookup\",\"pointer\":\"debug:3\",\"reason\":\"API response\"}]}"
-  }
-]
-```
-
-### 14. science_loop_current_scientific_state
-
-Kind: `structured-json`
-
-**Raw System Prompt**
-
-```text
-Return valid JSON only.
-```
-
-**Raw User Prompt**
-
-```text
-Summarize the current scientific state before the exit judge decides whether the reasoning loop should stop.
-
-Keep it compact and grounded only in the provided evidence.
-
-List what is supported now, what is contradicted, what remains unknown, and whether the remaining uncertainty is actually decision-relevant for deciding stop vs continue.
-
-Set uncertainty_decision_relevant to true only when the remaining uncertainty should materially change the loop exit decision.
-
-Include trace_sentence as one short sentence describing what you are doing at this step.
-
-Clarified request:
-LLM Response
-
-Exit criteria:
-Objective: LLM Response
-Exit conditions:
-- LLM Response
-- The current evidence directly supports the core answer to the clarified request.
-- The answer is grounded in the strongest available evidence, which may include external sources, trusted provided context, or prior retrieved support.
-Required evidence:
-- LLM Response
-- At least one evidence-gathering round has run before the loop exits.
-Continue when:
-- LLM Response
-- A blocking evidence gap still prevents a grounded answer.
-Can exit with limitations when:
-- LLM Response
-- A best-effort answer is allowed when the main remaining gaps are stated explicitly.
-- Stable background questions can be answered without a fresh citation when the answer is already well grounded and any freshness limits are stated.
-Preferred next tools: inventory-lookup | record-lookup | protocol-matching
-
-Pre-synthesized question:
-Current best answer: LLM Response
-Supporting basis:
-- API response
-- inventory-lookup returned 1 item(s).
-- inventory-lookup: debug:3 - API response
-- protocol-matching: debug:1 - API response
-
-Rounds executed: 3/8
-
-Return JSON only.
-```
-
-### 15. science_loop_exit_judge_sub_agent
-
-Kind: `structured-json`
-
-**Raw System Prompt**
-
-```text
-You are a specialized sub-agent that judges whether a science reasoning loop should exit.
-
-A lightweight pre-synthesized question is provided so you can see the current best answer, supporting basis, and unresolved issues before judging.
-
-Judge the pre-synthesized answer only against the provided exit criteria and clarified request.
-
-Do not impose any citation, source, or tool-specific requirement unless it is explicitly stated in the exit criteria.
-
-Be conservative: continue when a blocking evidence requirement is still missing.
-
-Return JSON only and do not invent evidence.
-```
-
-**Raw User Prompt**
-
-```text
-Judge whether the reasoning loop should stop now or continue.
-
-Include trace_sentence as one short sentence describing what you are doing at this step.
-
-Clarified request:
-LLM Response
-
-Exit criteria:
-Objective: LLM Response
-Exit conditions:
-- LLM Response
-- The current evidence directly supports the core answer to the clarified request.
-- The answer is grounded in the strongest available evidence, which may include external sources, trusted provided context, or prior retrieved support.
-Required evidence:
-- LLM Response
-- At least one evidence-gathering round has run before the loop exits.
-Continue when:
-- LLM Response
-- A blocking evidence gap still prevents a grounded answer.
-Can exit with limitations when:
-- LLM Response
-- A best-effort answer is allowed when the main remaining gaps are stated explicitly.
-- Stable background questions can be answered without a fresh citation when the answer is already well grounded and any freshness limits are stated.
-Preferred next tools: inventory-lookup | record-lookup | protocol-matching
-
-Pre-synthesized question:
-Current best answer: LLM Response
-Supporting basis:
-- API response
-- inventory-lookup returned 1 item(s).
-- inventory-lookup: debug:3 - API response
-- protocol-matching: debug:1 - API response
-
-Rounds executed: 3/8
-
-Return JSON only.
-```
-
-### 16. science_agent_session_after_feedback
-
-Kind: `agent-session-feedback`
-
-**Raw Message**
-
-```text
-What does the latest evidence suggest about this science question?
-```
-
-**Raw Feedback Message**
-
-```text
-Evaluator feedback for general_science_question: the previous result is not sufficient yet.
-Reason: LLM Response
-Missing requirements: LLM Response; The current evidence directly supports the core answer to the clarified request.
-Suggested next tool: inventory-lookup.
-Suggested query refinement: LLM Response
-Why: LLM Response
-Please continue with the next best single tool call, or answer directly only if the evidence is now sufficient.
-```
-
-**Raw Conversation**
-
-```json
-[
-  {
-    "role": "user",
-    "text": "What does the latest evidence suggest about this science question?"
-  }
-]
-```
-
-**Raw Tool Definitions**
-
-```json
-[
-  {
-    "name": "inventory-lookup",
-    "description": "Debug-only tool definition for inventory-lookup.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "record-lookup",
-    "description": "Debug-only tool definition for record-lookup.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "protocol-matching",
-    "description": "Debug-only tool definition for protocol-matching.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "notebook-generation",
-    "description": "Debug-only tool definition for notebook-generation.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "notebook-draft",
-    "description": "Debug-only tool definition for notebook-draft.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "python-sandbox",
-    "description": "Debug-only tool definition for python-sandbox.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "sub-agent",
-    "description": "Debug-only tool definition for sub-agent.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "memory",
-    "description": "Debug-only tool definition for memory.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "literature-search",
-    "description": "Debug-only tool definition for literature-search.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "paper-download",
-    "description": "Debug-only tool definition for paper-download.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "paper-analysis",
-    "description": "Debug-only tool definition for paper-analysis.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "protocol-generation",
-    "description": "Debug-only tool definition for protocol-generation.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  }
-]
-```
-
-### 17. science_agent_session_after_tool_output
-
-Kind: `agent-session-tool-output`
-
-**Raw Tool Outputs**
-
-```json
-[
-  {
-    "callId": "debug-call-science-loop-4",
-    "name": "python-sandbox",
-    "output": "{\"ok\":true,\"tool_name\":\"python-sandbox\",\"summary\":\"API response\",\"result\":{\"summary\":\"API response\",\"text\":\"API response\",\"items\":[{\"id\":\"api-item-4\",\"label\":\"API response\"}]},\"items\":[{\"id\":\"api-item-4\",\"label\":\"API response\"}],\"citations\":[{\"source\":\"python-sandbox\",\"pointer\":\"debug:4\",\"reason\":\"API response\"}]}"
-  }
-]
-```
-
-### 18. science_loop_current_scientific_state
-
-Kind: `structured-json`
-
-**Raw System Prompt**
-
-```text
-Return valid JSON only.
-```
-
-**Raw User Prompt**
-
-```text
-Summarize the current scientific state before the exit judge decides whether the reasoning loop should stop.
-
-Keep it compact and grounded only in the provided evidence.
-
-List what is supported now, what is contradicted, what remains unknown, and whether the remaining uncertainty is actually decision-relevant for deciding stop vs continue.
-
-Set uncertainty_decision_relevant to true only when the remaining uncertainty should materially change the loop exit decision.
-
-Include trace_sentence as one short sentence describing what you are doing at this step.
-
-Clarified request:
-LLM Response
-
-Exit criteria:
-Objective: LLM Response
-Exit conditions:
-- LLM Response
-- The current evidence directly supports the core answer to the clarified request.
-- The answer is grounded in the strongest available evidence, which may include external sources, trusted provided context, or prior retrieved support.
-Required evidence:
-- LLM Response
-- At least one evidence-gathering round has run before the loop exits.
-Continue when:
-- LLM Response
-- A blocking evidence gap still prevents a grounded answer.
-Can exit with limitations when:
-- LLM Response
-- A best-effort answer is allowed when the main remaining gaps are stated explicitly.
-- Stable background questions can be answered without a fresh citation when the answer is already well grounded and any freshness limits are stated.
-Preferred next tools: inventory-lookup | record-lookup | protocol-matching
-
-Pre-synthesized question:
-Current best answer: LLM Response
-Supporting basis:
-- API response
-- python-sandbox returned 1 item(s).
-- python-sandbox: debug:4 - API response
-- protocol-matching: debug:1 - API response
-
-Rounds executed: 4/8
-
-Return JSON only.
-```
-
-### 19. science_loop_exit_judge_sub_agent
-
-Kind: `structured-json`
-
-**Raw System Prompt**
-
-```text
-You are a specialized sub-agent that judges whether a science reasoning loop should exit.
-
-A lightweight pre-synthesized question is provided so you can see the current best answer, supporting basis, and unresolved issues before judging.
-
-Judge the pre-synthesized answer only against the provided exit criteria and clarified request.
-
-Do not impose any citation, source, or tool-specific requirement unless it is explicitly stated in the exit criteria.
-
-Be conservative: continue when a blocking evidence requirement is still missing.
-
-Return JSON only and do not invent evidence.
-```
-
-**Raw User Prompt**
-
-```text
-Judge whether the reasoning loop should stop now or continue.
-
-Include trace_sentence as one short sentence describing what you are doing at this step.
-
-Clarified request:
-LLM Response
-
-Exit criteria:
-Objective: LLM Response
-Exit conditions:
-- LLM Response
-- The current evidence directly supports the core answer to the clarified request.
-- The answer is grounded in the strongest available evidence, which may include external sources, trusted provided context, or prior retrieved support.
-Required evidence:
-- LLM Response
-- At least one evidence-gathering round has run before the loop exits.
-Continue when:
-- LLM Response
-- A blocking evidence gap still prevents a grounded answer.
-Can exit with limitations when:
-- LLM Response
-- A best-effort answer is allowed when the main remaining gaps are stated explicitly.
-- Stable background questions can be answered without a fresh citation when the answer is already well grounded and any freshness limits are stated.
-Preferred next tools: inventory-lookup | record-lookup | protocol-matching
-
-Pre-synthesized question:
-Current best answer: LLM Response
-Supporting basis:
-- API response
-- python-sandbox returned 1 item(s).
-- python-sandbox: debug:4 - API response
-- protocol-matching: debug:1 - API response
-
-Rounds executed: 4/8
-
-Return JSON only.
-```
-
-### 20. science_agent_session_after_feedback
-
-Kind: `agent-session-feedback`
-
-**Raw Message**
-
-```text
-What does the latest evidence suggest about this science question?
-```
-
-**Raw Feedback Message**
-
-```text
-Evaluator feedback for general_science_question: the previous result is not sufficient yet.
-Reason: LLM Response
-Missing requirements: LLM Response; The current evidence directly supports the core answer to the clarified request.
-Suggested next tool: python-sandbox.
-Suggested query refinement: LLM Response
-Why: LLM Response
-Please continue with the next best single tool call, or answer directly only if the evidence is now sufficient.
-```
-
-**Raw Conversation**
-
-```json
-[
-  {
-    "role": "user",
-    "text": "What does the latest evidence suggest about this science question?"
-  }
-]
-```
-
-**Raw Tool Definitions**
-
-```json
-[
-  {
-    "name": "inventory-lookup",
-    "description": "Debug-only tool definition for inventory-lookup.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "record-lookup",
-    "description": "Debug-only tool definition for record-lookup.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "protocol-matching",
-    "description": "Debug-only tool definition for protocol-matching.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "notebook-generation",
-    "description": "Debug-only tool definition for notebook-generation.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "notebook-draft",
-    "description": "Debug-only tool definition for notebook-draft.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "python-sandbox",
-    "description": "Debug-only tool definition for python-sandbox.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "sub-agent",
-    "description": "Debug-only tool definition for sub-agent.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "memory",
-    "description": "Debug-only tool definition for memory.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "literature-search",
-    "description": "Debug-only tool definition for literature-search.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "paper-download",
-    "description": "Debug-only tool definition for paper-download.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "paper-analysis",
-    "description": "Debug-only tool definition for paper-analysis.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "protocol-generation",
-    "description": "Debug-only tool definition for protocol-generation.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  }
-]
-```
-
-### 21. science_agent_session_after_tool_output
-
-Kind: `agent-session-tool-output`
-
-**Raw Tool Outputs**
-
-```json
-[
-  {
-    "callId": "debug-call-science-loop-5",
-    "name": "notebook-draft",
-    "output": "{\"ok\":true,\"tool_name\":\"notebook-draft\",\"summary\":\"API response\",\"result\":{\"summary\":\"API response\",\"text\":\"API response\",\"items\":[{\"id\":\"api-item-5\",\"label\":\"API response\"}]},\"items\":[{\"id\":\"api-item-5\",\"label\":\"API response\"}],\"citations\":[{\"source\":\"notebook-draft\",\"pointer\":\"debug:5\",\"reason\":\"API response\"}]}"
-  }
-]
-```
-
-### 22. science_loop_current_scientific_state
-
-Kind: `structured-json`
-
-**Raw System Prompt**
-
-```text
-Return valid JSON only.
-```
-
-**Raw User Prompt**
-
-```text
-Summarize the current scientific state before the exit judge decides whether the reasoning loop should stop.
-
-Keep it compact and grounded only in the provided evidence.
-
-List what is supported now, what is contradicted, what remains unknown, and whether the remaining uncertainty is actually decision-relevant for deciding stop vs continue.
-
-Set uncertainty_decision_relevant to true only when the remaining uncertainty should materially change the loop exit decision.
-
-Include trace_sentence as one short sentence describing what you are doing at this step.
-
-Clarified request:
-LLM Response
-
-Exit criteria:
-Objective: LLM Response
-Exit conditions:
-- LLM Response
-- The current evidence directly supports the core answer to the clarified request.
-- The answer is grounded in the strongest available evidence, which may include external sources, trusted provided context, or prior retrieved support.
-Required evidence:
-- LLM Response
-- At least one evidence-gathering round has run before the loop exits.
-Continue when:
-- LLM Response
-- A blocking evidence gap still prevents a grounded answer.
-Can exit with limitations when:
-- LLM Response
-- A best-effort answer is allowed when the main remaining gaps are stated explicitly.
-- Stable background questions can be answered without a fresh citation when the answer is already well grounded and any freshness limits are stated.
-Preferred next tools: inventory-lookup | record-lookup | protocol-matching
-
-Pre-synthesized question:
-Current best answer: LLM Response
-Supporting basis:
-- API response
-- notebook-draft returned 1 item(s).
-- notebook-draft: debug:5 - API response
-- protocol-matching: debug:1 - API response
-
-Rounds executed: 5/8
-
-Return JSON only.
-```
-
-### 23. science_loop_exit_judge_sub_agent
-
-Kind: `structured-json`
-
-**Raw System Prompt**
-
-```text
-You are a specialized sub-agent that judges whether a science reasoning loop should exit.
-
-A lightweight pre-synthesized question is provided so you can see the current best answer, supporting basis, and unresolved issues before judging.
-
-Judge the pre-synthesized answer only against the provided exit criteria and clarified request.
-
-Do not impose any citation, source, or tool-specific requirement unless it is explicitly stated in the exit criteria.
-
-Be conservative: continue when a blocking evidence requirement is still missing.
-
-Return JSON only and do not invent evidence.
-```
-
-**Raw User Prompt**
-
-```text
-Judge whether the reasoning loop should stop now or continue.
-
-Include trace_sentence as one short sentence describing what you are doing at this step.
-
-Clarified request:
-LLM Response
-
-Exit criteria:
-Objective: LLM Response
-Exit conditions:
-- LLM Response
-- The current evidence directly supports the core answer to the clarified request.
-- The answer is grounded in the strongest available evidence, which may include external sources, trusted provided context, or prior retrieved support.
-Required evidence:
-- LLM Response
-- At least one evidence-gathering round has run before the loop exits.
-Continue when:
-- LLM Response
-- A blocking evidence gap still prevents a grounded answer.
-Can exit with limitations when:
-- LLM Response
-- A best-effort answer is allowed when the main remaining gaps are stated explicitly.
-- Stable background questions can be answered without a fresh citation when the answer is already well grounded and any freshness limits are stated.
-Preferred next tools: inventory-lookup | record-lookup | protocol-matching
-
-Pre-synthesized question:
-Current best answer: LLM Response
-Supporting basis:
-- API response
-- notebook-draft returned 1 item(s).
-- notebook-draft: debug:5 - API response
-- protocol-matching: debug:1 - API response
-
-Rounds executed: 5/8
-
-Return JSON only.
-```
-
-### 24. science_agent_session_after_feedback
-
-Kind: `agent-session-feedback`
-
-**Raw Message**
-
-```text
-What does the latest evidence suggest about this science question?
-```
-
-**Raw Feedback Message**
-
-```text
-Evaluator feedback for general_science_question: the previous result is not sufficient yet.
-Reason: LLM Response
-Missing requirements: LLM Response; The current evidence directly supports the core answer to the clarified request.
-Suggested next tool: notebook-draft.
-Suggested query refinement: LLM Response
-Why: LLM Response
-Please continue with the next best single tool call, or answer directly only if the evidence is now sufficient.
-```
-
-**Raw Conversation**
-
-```json
-[
-  {
-    "role": "user",
-    "text": "What does the latest evidence suggest about this science question?"
-  }
-]
-```
-
-**Raw Tool Definitions**
-
-```json
-[
-  {
-    "name": "inventory-lookup",
-    "description": "Debug-only tool definition for inventory-lookup.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "record-lookup",
-    "description": "Debug-only tool definition for record-lookup.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "protocol-matching",
-    "description": "Debug-only tool definition for protocol-matching.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "notebook-generation",
-    "description": "Debug-only tool definition for notebook-generation.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "notebook-draft",
-    "description": "Debug-only tool definition for notebook-draft.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "python-sandbox",
-    "description": "Debug-only tool definition for python-sandbox.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "sub-agent",
-    "description": "Debug-only tool definition for sub-agent.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "memory",
-    "description": "Debug-only tool definition for memory.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "literature-search",
-    "description": "Debug-only tool definition for literature-search.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "paper-download",
-    "description": "Debug-only tool definition for paper-download.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "paper-analysis",
-    "description": "Debug-only tool definition for paper-analysis.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "protocol-generation",
-    "description": "Debug-only tool definition for protocol-generation.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  }
-]
-```
-
-### 25. science_agent_session_after_tool_output
-
-Kind: `agent-session-tool-output`
-
-**Raw Tool Outputs**
-
-```json
-[
-  {
-    "callId": "debug-call-science-loop-6",
-    "name": "protocol-generation",
-    "output": "{\"ok\":true,\"tool_name\":\"protocol-generation\",\"summary\":\"API response\",\"result\":{\"summary\":\"API response\",\"text\":\"API response\",\"items\":[{\"id\":\"api-item-6\",\"label\":\"API response\"}]},\"items\":[{\"id\":\"api-item-6\",\"label\":\"API response\"}],\"citations\":[{\"source\":\"protocol-generation\",\"pointer\":\"debug:6\",\"reason\":\"API response\"}]}"
-  }
-]
-```
-
-### 26. science_loop_current_scientific_state
-
-Kind: `structured-json`
-
-**Raw System Prompt**
-
-```text
-Return valid JSON only.
-```
-
-**Raw User Prompt**
-
-```text
-Summarize the current scientific state before the exit judge decides whether the reasoning loop should stop.
-
-Keep it compact and grounded only in the provided evidence.
-
-List what is supported now, what is contradicted, what remains unknown, and whether the remaining uncertainty is actually decision-relevant for deciding stop vs continue.
-
-Set uncertainty_decision_relevant to true only when the remaining uncertainty should materially change the loop exit decision.
-
-Include trace_sentence as one short sentence describing what you are doing at this step.
-
-Clarified request:
-LLM Response
-
-Exit criteria:
-Objective: LLM Response
-Exit conditions:
-- LLM Response
-- The current evidence directly supports the core answer to the clarified request.
-- The answer is grounded in the strongest available evidence, which may include external sources, trusted provided context, or prior retrieved support.
-Required evidence:
-- LLM Response
-- At least one evidence-gathering round has run before the loop exits.
-Continue when:
-- LLM Response
-- A blocking evidence gap still prevents a grounded answer.
-Can exit with limitations when:
-- LLM Response
-- A best-effort answer is allowed when the main remaining gaps are stated explicitly.
-- Stable background questions can be answered without a fresh citation when the answer is already well grounded and any freshness limits are stated.
-Preferred next tools: inventory-lookup | record-lookup | protocol-matching
-
-Pre-synthesized question:
-Current best answer: LLM Response
-Supporting basis:
-- API response
-- protocol-generation returned 1 item(s).
-- protocol-generation: debug:6 - API response
-- protocol-matching: debug:1 - API response
-
-Rounds executed: 6/8
-
-Return JSON only.
-```
-
-### 27. science_loop_exit_judge_sub_agent
-
-Kind: `structured-json`
-
-**Raw System Prompt**
-
-```text
-You are a specialized sub-agent that judges whether a science reasoning loop should exit.
-
-A lightweight pre-synthesized question is provided so you can see the current best answer, supporting basis, and unresolved issues before judging.
-
-Judge the pre-synthesized answer only against the provided exit criteria and clarified request.
-
-Do not impose any citation, source, or tool-specific requirement unless it is explicitly stated in the exit criteria.
-
-Be conservative: continue when a blocking evidence requirement is still missing.
-
-Return JSON only and do not invent evidence.
-```
-
-**Raw User Prompt**
-
-```text
-Judge whether the reasoning loop should stop now or continue.
-
-Include trace_sentence as one short sentence describing what you are doing at this step.
-
-Clarified request:
-LLM Response
-
-Exit criteria:
-Objective: LLM Response
-Exit conditions:
-- LLM Response
-- The current evidence directly supports the core answer to the clarified request.
-- The answer is grounded in the strongest available evidence, which may include external sources, trusted provided context, or prior retrieved support.
-Required evidence:
-- LLM Response
-- At least one evidence-gathering round has run before the loop exits.
-Continue when:
-- LLM Response
-- A blocking evidence gap still prevents a grounded answer.
-Can exit with limitations when:
-- LLM Response
-- A best-effort answer is allowed when the main remaining gaps are stated explicitly.
-- Stable background questions can be answered without a fresh citation when the answer is already well grounded and any freshness limits are stated.
-Preferred next tools: inventory-lookup | record-lookup | protocol-matching
-
-Pre-synthesized question:
-Current best answer: LLM Response
-Supporting basis:
-- API response
-- protocol-generation returned 1 item(s).
-- protocol-generation: debug:6 - API response
-- protocol-matching: debug:1 - API response
-
-Rounds executed: 6/8
-
-Return JSON only.
-```
-
-### 28. science_agent_session_after_feedback
-
-Kind: `agent-session-feedback`
-
-**Raw Message**
-
-```text
-What does the latest evidence suggest about this science question?
-```
-
-**Raw Feedback Message**
-
-```text
-Evaluator feedback for general_science_question: the previous result is not sufficient yet.
-Reason: LLM Response
-Missing requirements: LLM Response; The current evidence directly supports the core answer to the clarified request.
-Suggested next tool: protocol-generation.
-Suggested query refinement: LLM Response
-Why: LLM Response
-Please continue with the next best single tool call, or answer directly only if the evidence is now sufficient.
-```
-
-**Raw Conversation**
-
-```json
-[
-  {
-    "role": "user",
-    "text": "What does the latest evidence suggest about this science question?"
-  }
-]
-```
-
-**Raw Tool Definitions**
-
-```json
-[
-  {
-    "name": "inventory-lookup",
-    "description": "Debug-only tool definition for inventory-lookup.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "record-lookup",
-    "description": "Debug-only tool definition for record-lookup.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "protocol-matching",
-    "description": "Debug-only tool definition for protocol-matching.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "notebook-generation",
-    "description": "Debug-only tool definition for notebook-generation.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "notebook-draft",
-    "description": "Debug-only tool definition for notebook-draft.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "python-sandbox",
-    "description": "Debug-only tool definition for python-sandbox.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "sub-agent",
-    "description": "Debug-only tool definition for sub-agent.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "memory",
-    "description": "Debug-only tool definition for memory.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "literature-search",
-    "description": "Debug-only tool definition for literature-search.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "paper-download",
-    "description": "Debug-only tool definition for paper-download.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "paper-analysis",
-    "description": "Debug-only tool definition for paper-analysis.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "protocol-generation",
-    "description": "Debug-only tool definition for protocol-generation.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  }
-]
-```
-
-### 29. science_agent_session_after_tool_output
-
-Kind: `agent-session-tool-output`
-
-**Raw Tool Outputs**
-
-```json
-[
-  {
-    "callId": "debug-call-science-loop-7",
-    "name": "paper-download",
-    "output": "{\"ok\":true,\"tool_name\":\"paper-download\",\"summary\":\"API response\",\"result\":{\"summary\":\"API response\",\"text\":\"API response\",\"items\":[{\"id\":\"api-item-7\",\"label\":\"API response\"}]},\"items\":[{\"id\":\"api-item-7\",\"label\":\"API response\"}],\"citations\":[{\"source\":\"paper-download\",\"pointer\":\"debug:7\",\"reason\":\"API response\"}]}"
-  }
-]
-```
-
-### 30. science_loop_current_scientific_state
-
-Kind: `structured-json`
-
-**Raw System Prompt**
-
-```text
-Return valid JSON only.
-```
-
-**Raw User Prompt**
-
-```text
-Summarize the current scientific state before the exit judge decides whether the reasoning loop should stop.
-
-Keep it compact and grounded only in the provided evidence.
-
-List what is supported now, what is contradicted, what remains unknown, and whether the remaining uncertainty is actually decision-relevant for deciding stop vs continue.
-
-Set uncertainty_decision_relevant to true only when the remaining uncertainty should materially change the loop exit decision.
-
-Include trace_sentence as one short sentence describing what you are doing at this step.
-
-Clarified request:
-LLM Response
-
-Exit criteria:
-Objective: LLM Response
-Exit conditions:
-- LLM Response
-- The current evidence directly supports the core answer to the clarified request.
-- The answer is grounded in the strongest available evidence, which may include external sources, trusted provided context, or prior retrieved support.
-Required evidence:
-- LLM Response
-- At least one evidence-gathering round has run before the loop exits.
-Continue when:
-- LLM Response
-- A blocking evidence gap still prevents a grounded answer.
-Can exit with limitations when:
-- LLM Response
-- A best-effort answer is allowed when the main remaining gaps are stated explicitly.
-- Stable background questions can be answered without a fresh citation when the answer is already well grounded and any freshness limits are stated.
-Preferred next tools: inventory-lookup | record-lookup | protocol-matching
-
-Pre-synthesized question:
-Current best answer: LLM Response
-Supporting basis:
-- API response
-- paper-download returned 1 item(s).
-- paper-download: debug:7 - API response
-- protocol-matching: debug:1 - API response
-
-Rounds executed: 7/8
-
-Return JSON only.
-```
-
-### 31. science_loop_exit_judge_sub_agent
-
-Kind: `structured-json`
-
-**Raw System Prompt**
-
-```text
-You are a specialized sub-agent that judges whether a science reasoning loop should exit.
-
-A lightweight pre-synthesized question is provided so you can see the current best answer, supporting basis, and unresolved issues before judging.
-
-Judge the pre-synthesized answer only against the provided exit criteria and clarified request.
-
-Do not impose any citation, source, or tool-specific requirement unless it is explicitly stated in the exit criteria.
-
-Be conservative: continue when a blocking evidence requirement is still missing.
-
-Return JSON only and do not invent evidence.
-```
-
-**Raw User Prompt**
-
-```text
-Judge whether the reasoning loop should stop now or continue.
-
-Include trace_sentence as one short sentence describing what you are doing at this step.
-
-Clarified request:
-LLM Response
-
-Exit criteria:
-Objective: LLM Response
-Exit conditions:
-- LLM Response
-- The current evidence directly supports the core answer to the clarified request.
-- The answer is grounded in the strongest available evidence, which may include external sources, trusted provided context, or prior retrieved support.
-Required evidence:
-- LLM Response
-- At least one evidence-gathering round has run before the loop exits.
-Continue when:
-- LLM Response
-- A blocking evidence gap still prevents a grounded answer.
-Can exit with limitations when:
-- LLM Response
-- A best-effort answer is allowed when the main remaining gaps are stated explicitly.
-- Stable background questions can be answered without a fresh citation when the answer is already well grounded and any freshness limits are stated.
-Preferred next tools: inventory-lookup | record-lookup | protocol-matching
-
-Pre-synthesized question:
-Current best answer: LLM Response
-Supporting basis:
-- API response
-- paper-download returned 1 item(s).
-- paper-download: debug:7 - API response
-- protocol-matching: debug:1 - API response
-
-Rounds executed: 7/8
-
-Return JSON only.
-```
-
-### 32. science_agent_session_after_feedback
-
-Kind: `agent-session-feedback`
-
-**Raw Message**
-
-```text
-What does the latest evidence suggest about this science question?
-```
-
-**Raw Feedback Message**
-
-```text
-Evaluator feedback for general_science_question: the previous result is not sufficient yet.
-Reason: LLM Response
-Missing requirements: LLM Response; The current evidence directly supports the core answer to the clarified request.
-Suggested next tool: paper-download.
-Suggested query refinement: LLM Response
-Why: LLM Response
-Please continue with the next best single tool call, or answer directly only if the evidence is now sufficient.
-```
-
-**Raw Conversation**
-
-```json
-[
-  {
-    "role": "user",
-    "text": "What does the latest evidence suggest about this science question?"
-  }
-]
-```
-
-**Raw Tool Definitions**
-
-```json
-[
-  {
-    "name": "inventory-lookup",
-    "description": "Debug-only tool definition for inventory-lookup.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "record-lookup",
-    "description": "Debug-only tool definition for record-lookup.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "protocol-matching",
-    "description": "Debug-only tool definition for protocol-matching.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "notebook-generation",
-    "description": "Debug-only tool definition for notebook-generation.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "notebook-draft",
-    "description": "Debug-only tool definition for notebook-draft.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "python-sandbox",
-    "description": "Debug-only tool definition for python-sandbox.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "sub-agent",
-    "description": "Debug-only tool definition for sub-agent.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "memory",
-    "description": "Debug-only tool definition for memory.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "literature-search",
-    "description": "Debug-only tool definition for literature-search.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "paper-download",
-    "description": "Debug-only tool definition for paper-download.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "paper-analysis",
-    "description": "Debug-only tool definition for paper-analysis.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  {
-    "name": "protocol-generation",
-    "description": "Debug-only tool definition for protocol-generation.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "query"
-      ],
-      "properties": {
-        "query": {
-          "type": "string"
-        }
-      }
-    }
-  }
-]
-```
-
-### 33. science_agent_session_after_tool_output
-
-Kind: `agent-session-tool-output`
-
-**Raw Tool Outputs**
-
-```json
-[
-  {
-    "callId": "debug-call-science-loop-8",
-    "name": "protocol-matching",
-    "output": "{\"ok\":true,\"tool_name\":\"protocol-matching\",\"summary\":\"API response\",\"result\":{\"summary\":\"API response\",\"text\":\"API response\",\"items\":[{\"id\":\"api-item-8\",\"label\":\"API response\"}]},\"items\":[{\"id\":\"api-item-8\",\"label\":\"API response\"}],\"citations\":[{\"source\":\"protocol-matching\",\"pointer\":\"debug:8\",\"reason\":\"API response\"}]}"
-  }
-]
-```
-
-### 34. science_loop_current_scientific_state
-
-Kind: `structured-json`
-
-**Raw System Prompt**
-
-```text
-Return valid JSON only.
-```
-
-**Raw User Prompt**
-
-```text
-Summarize the current scientific state before the exit judge decides whether the reasoning loop should stop.
-
-Keep it compact and grounded only in the provided evidence.
-
-List what is supported now, what is contradicted, what remains unknown, and whether the remaining uncertainty is actually decision-relevant for deciding stop vs continue.
-
-Set uncertainty_decision_relevant to true only when the remaining uncertainty should materially change the loop exit decision.
-
-Include trace_sentence as one short sentence describing what you are doing at this step.
-
-Clarified request:
-LLM Response
-
-Exit criteria:
-Objective: LLM Response
-Exit conditions:
-- LLM Response
-- The current evidence directly supports the core answer to the clarified request.
-- The answer is grounded in the strongest available evidence, which may include external sources, trusted provided context, or prior retrieved support.
-Required evidence:
-- LLM Response
-- At least one evidence-gathering round has run before the loop exits.
-Continue when:
-- LLM Response
-- A blocking evidence gap still prevents a grounded answer.
-Can exit with limitations when:
-- LLM Response
-- A best-effort answer is allowed when the main remaining gaps are stated explicitly.
-- Stable background questions can be answered without a fresh citation when the answer is already well grounded and any freshness limits are stated.
-Preferred next tools: inventory-lookup | record-lookup | protocol-matching
-
-Pre-synthesized question:
-Current best answer: LLM Response
-Supporting basis:
-- API response
-- protocol-matching returned 1 item(s).
-- protocol-matching: debug:8 - API response
-- protocol-matching: debug:1 - API response
-
-Rounds executed: 8/8
-
-Return JSON only.
-```
-
-### 35. science_loop_exit_judge_sub_agent
-
-Kind: `structured-json`
-
-**Raw System Prompt**
-
-```text
-You are a specialized sub-agent that judges whether a science reasoning loop should exit.
-
-A lightweight pre-synthesized question is provided so you can see the current best answer, supporting basis, and unresolved issues before judging.
-
-Judge the pre-synthesized answer only against the provided exit criteria and clarified request.
-
-Do not impose any citation, source, or tool-specific requirement unless it is explicitly stated in the exit criteria.
-
-Be conservative: continue when a blocking evidence requirement is still missing.
-
-Return JSON only and do not invent evidence.
-```
-
-**Raw User Prompt**
-
-```text
-Judge whether the reasoning loop should stop now or continue.
-
-Include trace_sentence as one short sentence describing what you are doing at this step.
-
-Clarified request:
-LLM Response
-
-Exit criteria:
-Objective: LLM Response
-Exit conditions:
-- LLM Response
-- The current evidence directly supports the core answer to the clarified request.
-- The answer is grounded in the strongest available evidence, which may include external sources, trusted provided context, or prior retrieved support.
-Required evidence:
-- LLM Response
-- At least one evidence-gathering round has run before the loop exits.
-Continue when:
-- LLM Response
-- A blocking evidence gap still prevents a grounded answer.
-Can exit with limitations when:
-- LLM Response
-- A best-effort answer is allowed when the main remaining gaps are stated explicitly.
-- Stable background questions can be answered without a fresh citation when the answer is already well grounded and any freshness limits are stated.
-Preferred next tools: inventory-lookup | record-lookup | protocol-matching
-
-Pre-synthesized question:
-Current best answer: LLM Response
-Supporting basis:
-- API response
-- protocol-matching returned 1 item(s).
-- protocol-matching: debug:8 - API response
-- protocol-matching: debug:1 - API response
-
-Rounds executed: 8/8
-
-Return JSON only.
-```
-
-### 36. science_reasoning_final_synthesis
-
-Kind: `structured-json`
-
-**Raw System Prompt**
-
-```text
-Return valid JSON only.
-```
-
-**Raw User Prompt**
-
-```text
-You are the final answer synthesizer for a science reasoning loop.
-
-Answer using only the evidence and tool trace provided by the app.
-
-Do not invent evidence, papers, values, or project facts.
-
-Markdown is allowed in the answer field. Use sections, bullets, or tables when they improve clarity, but do not include HTML.
-
-Include trace_sentence as one short sentence describing what you are doing at this step.
-
-The evaluator judged the evidence sufficient. Produce a grounded answer that explains the conclusion, supporting evidence, and any material caveats.
-
-Clarified request:
-LLM Response
-
-Intent: general_science_question
-
-Science policy:
-Description: Use literature and web retrieval to answer general science questions with grounded citations.
-Retrieval priority: literature_first_web_last
-Require external citation when freshness matters: yes
-Require retrieval attempt before final answer: yes
-Allow limitation-qualified answer after evidence attempt: yes
-
-Rounds executed: 8/8
-
-Evaluator summary:
-Satisfied: yes
-Should continue: no
-Can answer with limitations: yes
-Reason: LLM Response
-Missing requirements:
-- The current evidence directly supports the core answer to the clarified request.
-
-Citations:
-- protocol-matching: debug:1 - API response
-- paper-analysis: debug:2 - API response
-- inventory-lookup: debug:3 - API response
-- python-sandbox: debug:4 - API response
-
-Recent tool outputs:
-- protocol-generation (ok) | summary: API response
-- paper-download (ok) | summary: API response
-- protocol-matching (ok) | summary: API response
+- command-line returned 1 item(s).
+- command-line: debug:2 - API response
+- inventory-lookup: debug:1 - API response
+Logical verification:
+Part 1:
+- Context: API response | command-line returned 1 item(s).
+- Pre-synthesized answer: LLM Response
+
+Rounds executed: 2/2
 
 Return JSON only.
 ```
 
 ### Internal API Calls
 
-### 1. protocol-matching
-
-Stub response: `API response`
-
-**Arguments**
-
-```json
-{
-  "query": "What does the latest evidence suggest about this science question?"
-}
-```
-
-**Debug Envelope**
-
-```json
-{
-  "ok": true,
-  "tool_name": "protocol-matching",
-  "summary": "API response",
-  "result": {
-    "summary": "API response",
-    "text": "API response",
-    "items": [
-      {
-        "id": "api-item-1",
-        "label": "API response"
-      }
-    ]
-  },
-  "items": [
-    {
-      "id": "api-item-1",
-      "label": "API response"
-    }
-  ],
-  "citations": [
-    {
-      "source": "protocol-matching",
-      "pointer": "debug:1",
-      "reason": "API response"
-    }
-  ]
-}
-```
-
-### 2. paper-analysis
-
-Stub response: `API response`
-
-**Arguments**
-
-```json
-{
-  "query": "What does the latest evidence suggest about this science question?"
-}
-```
-
-**Debug Envelope**
-
-```json
-{
-  "ok": true,
-  "tool_name": "paper-analysis",
-  "summary": "API response",
-  "result": {
-    "summary": "API response",
-    "text": "API response",
-    "items": [
-      {
-        "id": "api-item-2",
-        "label": "API response"
-      }
-    ]
-  },
-  "items": [
-    {
-      "id": "api-item-2",
-      "label": "API response"
-    }
-  ],
-  "citations": [
-    {
-      "source": "paper-analysis",
-      "pointer": "debug:2",
-      "reason": "API response"
-    }
-  ]
-}
-```
-
-### 3. inventory-lookup
+### 1. inventory-lookup
 
 Stub response: `API response`
 
@@ -11113,28 +4258,28 @@ Stub response: `API response`
     "text": "API response",
     "items": [
       {
-        "id": "api-item-3",
+        "id": "api-item-1",
         "label": "API response"
       }
     ]
   },
   "items": [
     {
-      "id": "api-item-3",
+      "id": "api-item-1",
       "label": "API response"
     }
   ],
   "citations": [
     {
       "source": "inventory-lookup",
-      "pointer": "debug:3",
+      "pointer": "debug:1",
       "reason": "API response"
     }
   ]
 }
 ```
 
-### 4. python-sandbox
+### 2. command-line
 
 Stub response: `API response`
 
@@ -11151,208 +4296,28 @@ Stub response: `API response`
 ```json
 {
   "ok": true,
-  "tool_name": "python-sandbox",
+  "tool_name": "command-line",
   "summary": "API response",
   "result": {
     "summary": "API response",
     "text": "API response",
     "items": [
       {
-        "id": "api-item-4",
+        "id": "api-item-2",
         "label": "API response"
       }
     ]
   },
   "items": [
     {
-      "id": "api-item-4",
+      "id": "api-item-2",
       "label": "API response"
     }
   ],
   "citations": [
     {
-      "source": "python-sandbox",
-      "pointer": "debug:4",
-      "reason": "API response"
-    }
-  ]
-}
-```
-
-### 5. notebook-draft
-
-Stub response: `API response`
-
-**Arguments**
-
-```json
-{
-  "query": "What does the latest evidence suggest about this science question?"
-}
-```
-
-**Debug Envelope**
-
-```json
-{
-  "ok": true,
-  "tool_name": "notebook-draft",
-  "summary": "API response",
-  "result": {
-    "summary": "API response",
-    "text": "API response",
-    "items": [
-      {
-        "id": "api-item-5",
-        "label": "API response"
-      }
-    ]
-  },
-  "items": [
-    {
-      "id": "api-item-5",
-      "label": "API response"
-    }
-  ],
-  "citations": [
-    {
-      "source": "notebook-draft",
-      "pointer": "debug:5",
-      "reason": "API response"
-    }
-  ]
-}
-```
-
-### 6. protocol-generation
-
-Stub response: `API response`
-
-**Arguments**
-
-```json
-{
-  "query": "What does the latest evidence suggest about this science question?"
-}
-```
-
-**Debug Envelope**
-
-```json
-{
-  "ok": true,
-  "tool_name": "protocol-generation",
-  "summary": "API response",
-  "result": {
-    "summary": "API response",
-    "text": "API response",
-    "items": [
-      {
-        "id": "api-item-6",
-        "label": "API response"
-      }
-    ]
-  },
-  "items": [
-    {
-      "id": "api-item-6",
-      "label": "API response"
-    }
-  ],
-  "citations": [
-    {
-      "source": "protocol-generation",
-      "pointer": "debug:6",
-      "reason": "API response"
-    }
-  ]
-}
-```
-
-### 7. paper-download
-
-Stub response: `API response`
-
-**Arguments**
-
-```json
-{
-  "query": "What does the latest evidence suggest about this science question?"
-}
-```
-
-**Debug Envelope**
-
-```json
-{
-  "ok": true,
-  "tool_name": "paper-download",
-  "summary": "API response",
-  "result": {
-    "summary": "API response",
-    "text": "API response",
-    "items": [
-      {
-        "id": "api-item-7",
-        "label": "API response"
-      }
-    ]
-  },
-  "items": [
-    {
-      "id": "api-item-7",
-      "label": "API response"
-    }
-  ],
-  "citations": [
-    {
-      "source": "paper-download",
-      "pointer": "debug:7",
-      "reason": "API response"
-    }
-  ]
-}
-```
-
-### 8. protocol-matching
-
-Stub response: `API response`
-
-**Arguments**
-
-```json
-{
-  "query": "What does the latest evidence suggest about this science question?"
-}
-```
-
-**Debug Envelope**
-
-```json
-{
-  "ok": true,
-  "tool_name": "protocol-matching",
-  "summary": "API response",
-  "result": {
-    "summary": "API response",
-    "text": "API response",
-    "items": [
-      {
-        "id": "api-item-8",
-        "label": "API response"
-      }
-    ]
-  },
-  "items": [
-    {
-      "id": "api-item-8",
-      "label": "API response"
-    }
-  ],
-  "citations": [
-    {
-      "source": "protocol-matching",
-      "pointer": "debug:8",
+      "source": "command-line",
+      "pointer": "debug:2",
       "reason": "API response"
     }
   ]
@@ -11368,20 +4333,8 @@ Stub response: `API response`
 5. `science_exit_criteria_started` [started] Generating exit criteria for general_science_question.
 6. `science_exit_criteria_completed` [ok] Science loop exit criteria are ready.
 7. `science_intent_started` [started] Started shared science reasoning loop for general_science_question.
-8. `science_round_started` [started] Science reasoning round 1 started with protocol-matching.
+8. `science_round_started` [started] Science reasoning round 1 started with inventory-lookup.
 9. `science_evaluator_continue` [started] LLM Response
-10. `science_round_started` [started] Science reasoning round 2 started with paper-analysis.
-11. `science_evaluator_continue` [started] LLM Response
-12. `science_round_started` [started] Science reasoning round 3 started with inventory-lookup.
-13. `science_evaluator_continue` [started] LLM Response
-14. `science_round_started` [started] Science reasoning round 4 started with python-sandbox.
-15. `science_evaluator_continue` [started] LLM Response
-16. `science_round_started` [started] Science reasoning round 5 started with notebook-draft.
-17. `science_evaluator_continue` [started] LLM Response
-18. `science_round_started` [started] Science reasoning round 6 started with protocol-generation.
-19. `science_evaluator_continue` [started] LLM Response
-20. `science_round_started` [started] Science reasoning round 7 started with paper-download.
-21. `science_evaluator_continue` [started] LLM Response
-22. `science_round_started` [started] Science reasoning round 8 started with protocol-matching.
-23. `science_evaluator_satisfied` [ok] LLM Response
-24. `science_intent_completed` [ok] Science reasoning loop completed successfully.
+10. `science_round_started` [started] Science reasoning round 2 started with command-line.
+11. `science_evaluator_satisfied` [ok] LLM Response
+12. `science_intent_completed` [ok] Science reasoning loop completed successfully.

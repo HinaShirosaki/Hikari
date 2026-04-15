@@ -21,23 +21,16 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 .sequence-viewer-shell {
   display: grid;
   gap: 12px;
+  min-height: 100%;
 }
 
 .sequence-viewer-home-workspace {
-  display: grid;
-  gap: 12px;
+  min-height: 0;
 }
 
-.sequence-viewer-home-toolbar {
-  border-radius: 8px;
-  border: 1px solid var(--line);
-  background: var(--surface);
-  padding: 12px;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 10px 16px;
+.sequence-viewer-home-layout {
+  --left-rail-main-gap: 20px;
+  min-height: 100%;
 }
 
 .sequence-viewer-home-nav-copy {
@@ -77,10 +70,7 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 }
 
 .sequence-viewer-home-grid {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  align-items: start;
+  display: contents;
 }
 
 .sequence-viewer-library-card,
@@ -90,7 +80,6 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 
 .sequence-viewer-feature-search-card {
   margin: 0;
-  grid-column: 1 / -1;
 }
 
 .sequence-viewer-library-switch {
@@ -310,10 +299,6 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 }
 
 .sequence-viewer-protein-builder-grid {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: var(--layout-left-panel-width) minmax(640px, 1fr);
-  align-items: stretch;
   height: 100%;
   min-height: 0;
   min-width: 980px;
@@ -327,16 +312,13 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 }
 
 .sequence-viewer-protein-builder-sidebar {
-  align-self: stretch;
   align-content: start;
-  overflow-y: auto;
-  padding-right: 6px;
-  scrollbar-gutter: stable;
 }
 
 .sequence-viewer-protein-builder-main {
   grid-template-rows: minmax(0, 1fr) auto;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .sequence-viewer-protein-builder-panel {
@@ -1764,4 +1746,25 @@ body.theme-night .sequence-viewer-feature-editor-grid textarea {
 .sequence-viewer-inline-toggle-group,
 .sequence-viewer-context-item {
   border-radius: 6px;
+}
+
+@media (max-width: 980px) {
+  .sequence-viewer-home-layout,
+  .sequence-viewer-protein-builder-grid {
+    min-width: 0;
+  }
+
+  .sequence-viewer-protein-builder-workspace,
+  .sequence-viewer-protein-builder-grid-wrap,
+  .sequence-viewer-protein-builder-main {
+    overflow: visible;
+  }
+
+  .sequence-viewer-protein-builder-grid {
+    height: auto;
+  }
+
+  .sequence-viewer-protein-builder-main {
+    grid-template-rows: auto auto;
+  }
 }

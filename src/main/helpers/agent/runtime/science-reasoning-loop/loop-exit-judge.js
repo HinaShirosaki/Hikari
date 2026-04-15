@@ -3,10 +3,6 @@
 const { createAgentLlmRuntimeHelpers } = require('../../shared/agent-llm-utils.js');
 const { createAgentSubAgentRuntime } = require('../../tools/agent-sub-agent.js');
 const {
-  SCIENCE_LOOP_CURRENT_SCIENTIFIC_STATE_SCHEMA,
-  createScienceLoopCurrentScientificStateRuntime
-} = require('./current-scientific-state.js');
-const {
   SCIENCE_LOOP_PRE_SYNTHESIZED_QUESTION_SCHEMA,
   createScienceLoopPreSynthesizedQuestionRuntime
 } = require('./pre-synthesized-question.js');
@@ -73,13 +69,6 @@ function createScienceLoopExitJudgeRuntime(deps = {}) {
     normalizePreSynthesizedQuestion,
     buildPreSynthesizedQuestion
   } = preSynthesizedQuestionRuntime;
-  const currentScientificStateRuntime = createScienceLoopCurrentScientificStateRuntime(deps);
-  const {
-    buildFallbackCurrentScientificState,
-    normalizeCurrentScientificState,
-    buildCurrentScientificStatePrompt,
-    buildCurrentScientificState
-  } = currentScientificStateRuntime;
 
   const MATCH_STOP_WORDS = new Set([
     'a', 'an', 'and', 'are', 'as', 'at', 'be', 'before', 'by', 'for', 'from', 'has', 'have',
@@ -107,9 +96,6 @@ function createScienceLoopExitJudgeRuntime(deps = {}) {
       preSynthesizedQuestion || input.preSynthesizedQuestion,
       buildFallbackPreSynthesizedQuestion(input)
     );
-    const currentScientificState = input.currentScientificState && typeof input.currentScientificState === 'object'
-      ? input.currentScientificState
-      : null;
     const latestToolResult = input.latestToolResult && typeof input.latestToolResult === 'object'
       ? input.latestToolResult
       : {};
@@ -127,7 +113,6 @@ function createScienceLoopExitJudgeRuntime(deps = {}) {
     const evidenceTexts = uniqueStrings([
       normalizedPreSynthesizedQuestion?.tentative_answer?.current_best_answer,
       ...asArray(normalizedPreSynthesizedQuestion?.supporting_basis),
-      ...asArray(currentScientificState?.supported_now),
       cleanText(input.latestAssistantText, 1200),
       cleanText(latestToolResult?.summary || latestToolResult?.result?.summary, 320),
       ...loadedContextBlocks.map((block) => [
@@ -149,8 +134,6 @@ function createScienceLoopExitJudgeRuntime(deps = {}) {
     ], 24);
     const gapTexts = uniqueStrings([
       ...asArray(normalizedPreSynthesizedQuestion?.unresolved_issues),
-      ...asArray(currentScientificState?.remains_unknown),
-      ...asArray(currentScientificState?.contradicted),
       latestToolResult && latestToolResult.ok === false
         ? cleanText(latestToolResult?.error || latestToolResult?.result?.error, 320)
         : '',
@@ -165,7 +148,6 @@ function createScienceLoopExitJudgeRuntime(deps = {}) {
       && (
         citations.length > 0
         || hasSuccessfulToolStep
-        || asArray(currentScientificState?.supported_now).length > 0
       );
     const answerText = cleanText(normalizedPreSynthesizedQuestion?.tentative_answer?.current_best_answer, 1200);
     const hasTentativeAnswer = Boolean(answerText)
@@ -463,13 +445,6 @@ function createScienceLoopExitJudgeRuntime(deps = {}) {
       judgeInput.preSynthesizedQuestion,
       buildFallbackPreSynthesizedQuestion(judgeInput)
     );
-    const currentScientificState = normalizeCurrentScientificState(
-      judgeInput.currentScientificState,
-      buildFallbackCurrentScientificState({
-        ...judgeInput,
-        preSynthesizedQuestion
-      })
-    );
     if (!requestStructuredJsonPayload) {
       return {
         assistant_message: cleanText(fallback.reason, 1200),
@@ -478,29 +453,21 @@ function createScienceLoopExitJudgeRuntime(deps = {}) {
         metadata: {
           mode: 'fallback',
           phase: cleanText(turnInput.phase, 40),
-          current_scientific_state: currentScientificState,
           pre_synthesized_question: preSynthesizedQuestion
         }
       };
     }
 
     const result = await requestStructuredJsonPayload({
-      provider: cleanText(judgeInput.provider, 80),
-      endpoint: cleanText(judgeInput.endpoint, 2000),
-      apiKey: cleanText(judgeInput.apiKey, 400),
-      model: cleanText(judgeInput.model, 120),
+      source: judgeInput,
       stage: 'science_loop_exit_judge_sub_agent',
       systemPrompt: cleanText(turnInput.system_prompt, 12000) || buildJudgeSystemPrompt(),
       userPrompt: cleanText(turnInput.message, 48000) || buildJudgeMessage({
         ...judgeInput,
-        preSynthesizedQuestion,
-        currentScientificState
+        preSynthesizedQuestion
       }),
       schema: SCIENCE_LOOP_EXIT_JUDGEMENT_SCHEMA,
       traceContext: judgeInput.traceContext || null,
-      maxOutputTokens: 1500,
-      openAiStrict: true,
-      openAiAsDefaultProvider: true,
       defaultError: 'Science loop exit judge sub-agent is not configured.'
     });
 
@@ -517,7 +484,6 @@ function createScienceLoopExitJudgeRuntime(deps = {}) {
       metadata: {
         mode: result?.ok && result.payload ? 'llm' : 'fallback',
         phase: cleanText(turnInput.phase, 40),
-        current_scientific_state: currentScientificState,
         pre_synthesized_question: preSynthesizedQuestion
       }
     };
@@ -526,10 +492,6 @@ function createScienceLoopExitJudgeRuntime(deps = {}) {
   function normalizeJudgeResult(result, input = {}) {
     const fallback = buildFallbackEvaluation(input);
     const fallbackPreSynthesizedQuestion = buildFallbackPreSynthesizedQuestion(input);
-    const fallbackCurrentScientificState = buildFallbackCurrentScientificState({
-      ...input,
-      preSynthesizedQuestion: input.preSynthesizedQuestion || fallbackPreSynthesizedQuestion
-    });
     const source = result && typeof result === 'object' ? result : {};
     const evaluationSource = source.evaluation && typeof source.evaluation === 'object'
       ? source.evaluation
@@ -543,14 +505,6 @@ function createScienceLoopExitJudgeRuntime(deps = {}) {
           && typeof source.sub_agent.last_response.metadata.pre_synthesized_question === 'object'
           ? source.sub_agent.last_response.metadata.pre_synthesized_question
           : null));
-    const currentScientificStateSource = source.current_scientific_state && typeof source.current_scientific_state === 'object'
-      ? source.current_scientific_state
-      : (source.currentScientificState && typeof source.currentScientificState === 'object'
-        ? source.currentScientificState
-        : (source.sub_agent?.last_response?.metadata?.current_scientific_state
-          && typeof source.sub_agent.last_response.metadata.current_scientific_state === 'object'
-          ? source.sub_agent.last_response.metadata.current_scientific_state
-          : null));
     return {
       ok: source.ok !== false,
       status: cleanText(source.status, 80) || 'judged',
@@ -558,10 +512,6 @@ function createScienceLoopExitJudgeRuntime(deps = {}) {
       pre_synthesized_question: normalizePreSynthesizedQuestion(
         preSynthesizedQuestionSource,
         input.preSynthesizedQuestion || fallbackPreSynthesizedQuestion
-      ),
-      current_scientific_state: normalizeCurrentScientificState(
-        currentScientificStateSource,
-        fallbackCurrentScientificState
       ),
       sub_agent: source.sub_agent && typeof source.sub_agent === 'object'
         ? source.sub_agent
@@ -577,23 +527,18 @@ function createScienceLoopExitJudgeRuntime(deps = {}) {
     }
 
     const preSynthesizedQuestion = buildPreSynthesizedQuestion(input);
-    const currentScientificState = await buildCurrentScientificState({
+    const judgeInputWithQuestion = {
       ...input,
       preSynthesizedQuestion
-    });
-    const judgeInputWithState = {
-      ...input,
-      preSynthesizedQuestion,
-      currentScientificState
     };
     const subAgentRuntime = createAgentSubAgentRuntime({
       now,
-      runSubAgentTurn: async (turnInput = {}) => runJudgeTurn(turnInput, judgeInputWithState)
+      runSubAgentTurn: async (turnInput = {}) => runJudgeTurn(turnInput, judgeInputWithQuestion)
     });
     const created = await subAgentRuntime.createSubAgent({
       name: `science-loop-exit-judge-${Date.now()}`,
       system_prompt: buildJudgeSystemPrompt(),
-      message: buildJudgeMessage(judgeInputWithState),
+      message: buildJudgeMessage(judgeInputWithQuestion),
       metadata: {
         task_type: 'science-loop-exit-judge',
         tags: ['science', 'reasoning-loop', 'exit-judge']
@@ -604,7 +549,6 @@ function createScienceLoopExitJudgeRuntime(deps = {}) {
       status: created?.status || 'judged',
       evaluation: created?.agent?.last_response?.output,
       pre_synthesized_question: preSynthesizedQuestion,
-      current_scientific_state: currentScientificState,
       sub_agent: created?.agent || null,
       summary: created?.summary
     }, input);
@@ -613,21 +557,16 @@ function createScienceLoopExitJudgeRuntime(deps = {}) {
   return {
     SCIENCE_LOOP_PRE_SYNTHESIZED_QUESTION_SCHEMA,
     buildFallbackPreSynthesizedQuestion,
-    SCIENCE_LOOP_CURRENT_SCIENTIFIC_STATE_SCHEMA,
-    buildFallbackCurrentScientificState,
     SCIENCE_LOOP_EXIT_JUDGEMENT_SCHEMA,
     buildFallbackEvaluation,
-    buildCurrentScientificStatePrompt,
     buildJudgeSystemPrompt,
     buildJudgeMessage,
-    buildCurrentScientificState,
     judgeExit
   };
 }
 
 module.exports = {
   SCIENCE_LOOP_PRE_SYNTHESIZED_QUESTION_SCHEMA,
-  SCIENCE_LOOP_CURRENT_SCIENTIFIC_STATE_SCHEMA,
   SCIENCE_LOOP_EXIT_JUDGEMENT_SCHEMA,
   createScienceLoopExitJudgeRuntime
 };

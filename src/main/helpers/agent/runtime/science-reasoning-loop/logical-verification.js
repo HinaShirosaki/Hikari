@@ -65,7 +65,7 @@ function defaultAsArray(value) {
 }
 
 function defaultCleanText(value, _maxLength = 2000) {
-  const text = String(value || '').trim();
+  const text = String(value || '');
   if (!text) {
     return '';
   }
@@ -94,7 +94,7 @@ function defaultUniqueStrings(values, max = 20, {
 }
 
 function capitalize(value) {
-  const text = String(value || '').trim();
+  const text = String(value || '');
   return text ? `${text.slice(0, 1).toUpperCase()}${text.slice(1)}` : '';
 }
 
@@ -386,18 +386,11 @@ function createScienceLoopLogicalVerificationRuntime(deps = {}) {
       return fallback;
     }
     const result = await requestStructuredJsonPayload({
-      provider: cleanText(input.provider, 80),
-      endpoint: cleanText(input.endpoint, 2000),
-      apiKey: cleanText(input.apiKey, 400),
-      model: cleanText(input.model, 120),
       stage: 'science_loop_logic_extraction',
       systemPrompt: 'Return valid JSON only.',
       userPrompt: buildLogicExtractionPrompt(input),
       schema: SCIENCE_LOOP_LOGIC_EXTRACTION_SCHEMA,
       traceContext: input.traceContext || null,
-      maxOutputTokens: 800,
-      openAiStrict: true,
-      openAiAsDefaultProvider: true,
       defaultError: 'Science loop logic extraction is not configured.'
     });
     if (!result?.ok || !result.payload) {
@@ -469,18 +462,12 @@ function createScienceLoopLogicalVerificationRuntime(deps = {}) {
     }
 
     const result = await requestStructuredJsonPayload({
-      provider: cleanText(judgeInput.provider, 80),
-      endpoint: cleanText(judgeInput.endpoint, 2000),
-      apiKey: cleanText(judgeInput.apiKey, 400),
-      model: cleanText(judgeInput.model, 120),
+      source: judgeInput,
       stage: 'science_loop_inference_stability',
       systemPrompt: cleanText(turnInput.system_prompt, 12000) || buildInferenceStabilitySystemPrompt(),
       userPrompt: cleanText(turnInput.message, 48000) || buildInferenceStabilityMessage(judgeInput),
       schema: SCIENCE_LOOP_INFERENCE_STABILITY_SCHEMA,
       traceContext: judgeInput.traceContext || null,
-      maxOutputTokens: 500,
-      openAiStrict: true,
-      openAiAsDefaultProvider: true,
       defaultError: 'Science loop inference stability check is not configured.'
     });
 

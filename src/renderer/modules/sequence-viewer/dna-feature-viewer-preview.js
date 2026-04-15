@@ -434,7 +434,7 @@ function buildEmptyPreviewHtml(recordName) {
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>${safeName}</title>
   <style>
-    body { margin: 0; padding: 20px; font-family: "Avenir Next", "Segoe UI", sans-serif; background: #eef4fb; color: #15314d; }
+    body { margin: 0; padding: 20px; font-family: "Playfair Display", serif; background: #eef4fb; color: #15314d; }
     .preview-shell { max-width: 760px; margin: 0 auto; padding: 24px; border: 1px solid #d2deed; border-radius: 24px; background: rgba(255, 255, 255, 0.92); box-shadow: 0 28px 72px rgba(16, 40, 66, 0.08); }
     h1 { margin: 0 0 12px; font-size: 1.3rem; }
     p { margin: 0; line-height: 1.5; color: #55708f; }
@@ -624,7 +624,7 @@ export function buildDnaFeatureViewerCircularPreviewHtmlDocument(record) {
       margin: 0;
       padding: 18px;
       min-height: 100vh;
-      font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+      font-family: "Playfair Display", serif;
       color: var(--preview-ink);
       background:
         radial-gradient(circle at top, rgba(255, 255, 255, 0.92), transparent 48%),

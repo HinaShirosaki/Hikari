@@ -10,7 +10,6 @@ const { createScienceLoopSupport } = require('../runtime/science-reasoning-loop/
 const { createScienceInputClarificationRuntime } = require('../runtime/science-reasoning-loop/input-clarification.js');
 const { createAgentRoutePlannerRuntime } = require('../runtime/science-reasoning-loop/agent-route-planner.js');
 const { createScienceLoopExitCriteriaRuntime } = require('../runtime/science-reasoning-loop/loop-exit-criteria.js');
-const { createScienceLoopCurrentScientificStateRuntime } = require('../runtime/science-reasoning-loop/current-scientific-state.js');
 const { createScienceLoopExitJudgeRuntime } = require('../runtime/science-reasoning-loop/loop-exit-judge.js');
 const { createScienceThinkingTraceRuntime } = require('../runtime/science-reasoning-loop/thinking-trace.js');
 const { createScienceFinalSynthesisRuntime } = require('../runtime/science-reasoning-loop/final-synthesis.js');
@@ -41,7 +40,6 @@ const STRUCTURED_JSON_ONLY_SOURCES = Object.freeze([
   'src/main/helpers/agent/runtime/science-reasoning-loop/input-clarification.js',
   'src/main/helpers/agent/runtime/science-reasoning-loop/agent-route-planner.js',
   'src/main/helpers/agent/runtime/science-reasoning-loop/loop-exit-criteria.js',
-  'src/main/helpers/agent/runtime/science-reasoning-loop/current-scientific-state.js',
   'src/main/helpers/agent/runtime/science-reasoning-loop/thinking-trace.js',
   'src/main/helpers/agent/runtime/science-reasoning-loop/final-synthesis.js',
   'src/main/helpers/agent/deep-research/sub-agent-usage.js'
@@ -93,7 +91,6 @@ function buildSampleState() {
   const inputClarificationRuntime = createScienceInputClarificationRuntime();
   const routePlannerRuntime = createAgentRoutePlannerRuntime();
   const exitCriteriaRuntime = createScienceLoopExitCriteriaRuntime();
-  const currentScientificStateRuntime = createScienceLoopCurrentScientificStateRuntime();
   const exitJudgeRuntime = createScienceLoopExitJudgeRuntime();
   const thinkingTraceRuntime = createScienceThinkingTraceRuntime();
   const finalSynthesisRuntime = createScienceFinalSynthesisRuntime();
@@ -222,18 +219,6 @@ function buildSampleState() {
     unresolved_issues: [
       'The pilot did not directly quantify SAE1/SAE2.'
     ]
-  };
-  const sampleCurrentScientificState = {
-    supported_now: [
-      'Atlas notebook AT-14 supports low UBC9 after transfection.',
-      'Recent literature supports UBC9 availability as a limiting factor.'
-    ],
-    contradicted: [],
-    remains_unknown: [
-      'The pilot did not directly quantify SAE1/SAE2.'
-    ],
-    uncertainty_decision_relevant: false,
-    uncertainty_decision_reason: 'The remaining uncertainty does not block a limitation-qualified answer.'
   };
   const sampleEvaluation = {
     satisfied: false,
@@ -406,7 +391,6 @@ function buildSampleState() {
     inputClarificationRuntime,
     routePlannerRuntime,
     exitCriteriaRuntime,
-    currentScientificStateRuntime,
     exitJudgeRuntime,
     thinkingTraceRuntime,
     finalSynthesisRuntime,
@@ -426,7 +410,6 @@ function buildSampleState() {
     sampleToolTrace,
     sampleLatestToolResult,
     samplePreSynthesizedQuestion,
-    sampleCurrentScientificState,
     sampleEvaluation,
     sampleResearchObjective,
     sampleResearchPlan,
@@ -792,28 +775,6 @@ function getAgentPromptRegistry() {
       })
     },
     {
-      id: 'science.current_state_prompt',
-      title: 'Science Current State Prompt',
-      group: 'Science Reasoning',
-      kind: 'dynamic_sample',
-      source: 'src/main/helpers/agent/runtime/science-reasoning-loop/current-scientific-state.js',
-      render: () => state.currentScientificStateRuntime.buildCurrentScientificStatePrompt({
-        intent: state.sampleRouting.intent,
-        exitCriteria: state.sampleExitCriteria,
-        preSynthesizedQuestion: state.samplePreSynthesizedQuestion,
-        project: state.sampleProject,
-        clarification: state.sampleClarification,
-        originalMessage: state.sampleConversation[0].text,
-        message: state.sampleClarification.clarified_input,
-        latestAssistantText: 'Internal evidence points to low UBC9 availability.',
-        latestToolResult: state.sampleLatestToolResult,
-        toolTrace: state.sampleToolTrace,
-        citations: state.sampleCitations,
-        roundsExecuted: 2,
-        maxRounds: 4
-      })
-    },
-    {
       id: 'science.exit_judge_system_prompt',
       title: 'Science Exit Judge System Prompt',
       group: 'Science Reasoning',
@@ -831,7 +792,6 @@ function getAgentPromptRegistry() {
         intent: state.sampleRouting.intent,
         exitCriteria: state.sampleExitCriteria,
         preSynthesizedQuestion: state.samplePreSynthesizedQuestion,
-        currentScientificState: state.sampleCurrentScientificState,
         project: state.sampleProject,
         clarification: state.sampleClarification,
         originalMessage: state.sampleConversation[0].text,

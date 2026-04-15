@@ -369,16 +369,6 @@ function createScienceLoopSupport(deps = {}) {
     };
   }
 
-  function messageRequestsRecentSources(message) {
-    return /\b(latest|recent|current|today|newest|papers|references|citations|study|studies|findings)\b/i
-      .test(String(message || ''));
-  }
-
-  function messageRequestsComputation(message) {
-    return /\b(fit|curve|transform|quantif|outlier|calculate|compute|regression|normalize|analy[sz]e data)\b/i
-      .test(String(message || ''));
-  }
-
   function hasExternalCitation(citations) {
     return asArray(citations).some((citation) => {
       const source = cleanText(citation?.source, 120).toLowerCase();
@@ -464,10 +454,9 @@ function createScienceLoopSupport(deps = {}) {
     ], 5);
   }
 
-  function buildExecutionHintsSection({ policy, project, routePlan, exitCriteria }) {
+  function buildExecutionHintsSection({ project, routePlan, exitCriteria }) {
     const lines = uniqueStrings([
       buildProjectLabel(project) ? `Project: ${buildProjectLabel(project)}` : '',
-      ...buildPolicyHints(policy),
       ...buildRoutePlanHints(routePlan),
       ...buildExitCriteriaHints(exitCriteria)
     ], 10);
@@ -479,7 +468,6 @@ function createScienceLoopSupport(deps = {}) {
 
   function buildScienceSessionSystemPrompt({
     baseSystemPrompt = '',
-    intent,
     policy,
     routing,
     project,
@@ -492,7 +480,6 @@ function createScienceLoopSupport(deps = {}) {
   }) {
     const rules = directAnswerOnly === true
       ? [
-        'You are handling a reasoning_effort=0 science request.',
         'Answer directly without entering the deterministic science reasoning loop.',
         'Provide a complete answer: lead with the main conclusion, then explain the key reasoning and any important caveats.',
         'Do not be artificially terse unless the user explicitly asked for a short answer.',
@@ -511,25 +498,10 @@ function createScienceLoopSupport(deps = {}) {
         'If a tool result is weak or empty, choose a more targeted next tool or tool batch on the following turn.',
         'Do not fabricate project records, literature results, or computation outputs.'
       ];
-    if (intent === 'general_science_question') {
-      rules.push('For general science questions, prefer the most targeted citation-backed evidence path available.');
-    }
-    if (intent === 'project_science_question') {
-      rules.push('For project science questions, keep project context explicit and clearly separate internal evidence from external evidence.');
-    }
-    if (intent === 'result_analysis') {
-      rules.push('For result analysis, prefer deterministic evidence before higher-level interpretation whenever possible.');
-    }
-    if (directAnswerOnly === true) {
-      rules.push('This request was classified as reasoning_effort=0.');
-    }
     return [
       cleanText(baseSystemPrompt, 12000),
-      cleanText(intent, 80) ? `Intent: ${cleanText(intent, 80)}` : '',
-      Number.isFinite(Number(reasoningEffort)) ? `Reasoning effort: ${Number(reasoningEffort)}` : '',
       directAnswerOnly === true ? 'Execution mode: direct answer only.' : '',
       buildExecutionHintsSection({
-        policy,
         project,
         routePlan,
         exitCriteria
@@ -588,72 +560,6 @@ function createScienceLoopSupport(deps = {}) {
     };
   }
 
-  function mergePolicyEvaluationHints(intent, policy, message, evaluation, citations, toolTrace) {
-    const next = {
-      ...evaluation,
-      missing_requirements: uniqueStrings(evaluation?.missing_requirements, 6)
-    };
-    if (intent === 'general_science_question'
-      && policy.require_external_citation_when_recent === true
-      && messageRequestsRecentSources(message)
-      && !hasExternalCitation(citations)) {
-      next.satisfied = false;
-      next.should_continue = true;
-      next.can_answer_with_limitations = true;
-      next.reason = 'Recent/reference-style question still lacks an external citation-backed source.';
-      next.missing_requirements = uniqueStrings([
-        ...next.missing_requirements,
-        'At least one external citation-backed source is still missing.'
-      ], 6);
-      next.next_tool_hint = next.next_tool_hint || {
-        tool_name: null,
-        query: cleanText(message, 320) || null,
-        reason: 'Retrieve at least one external citation-backed source before answering.'
-      };
-    }
-    if (intent === 'result_analysis'
-      && policy.require_compute_for_numeric_queries === true
-      && messageRequestsComputation(message)
-      && !asArray(toolTrace).some((entry) => cleanText(entry?.tool_name, 120) === 'python-sandbox' && entry?.ok === true)) {
-      next.satisfied = false;
-      next.should_continue = true;
-      next.can_answer_with_limitations = true;
-      next.reason = 'Requested analysis still lacks compute evidence from the Python sandbox.';
-      next.missing_requirements = uniqueStrings([
-        ...next.missing_requirements,
-        'A Python sandbox computation step is still required.'
-      ], 6);
-      next.next_tool_hint = next.next_tool_hint || {
-        tool_name: null,
-        query: null,
-        reason: 'Gather deterministic compute evidence before interpreting the result.'
-      };
-    }
-    if (intent === 'project_science_question'
-      && policy.distinguish_internal_vs_external === true
-      && !hasInternalCitation(citations)) {
-      next.satisfied = false;
-      next.should_continue = true;
-      next.can_answer_with_limitations = true;
-      next.reason = 'Project question still lacks direct internal project evidence.';
-      next.missing_requirements = uniqueStrings([
-        ...next.missing_requirements,
-        'At least one internal project citation is still missing.'
-      ], 6);
-    }
-    if (policy.require_retrieval_attempt === true && asArray(toolTrace).length === 0) {
-      next.satisfied = false;
-      next.should_continue = true;
-      next.can_answer_with_limitations = false;
-      next.reason = 'No retrieval attempt has been made yet.';
-      next.missing_requirements = uniqueStrings([
-        ...next.missing_requirements,
-        'At least one retrieval tool should run before answering.'
-      ], 6);
-    }
-    return next;
-  }
-
   return {
     normalizeProject,
     normalizeCitations,
@@ -669,7 +575,6 @@ function createScienceLoopSupport(deps = {}) {
     buildEvaluatorFeedback,
     buildFallbackAnswer,
     buildSyntheticToolEnvelope,
-    mergePolicyEvaluationHints,
     hasExternalCitation,
     hasInternalCitation
   };

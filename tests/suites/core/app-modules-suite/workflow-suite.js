@@ -104,5 +104,117 @@ test('workflow execution layout keeps main path separate from manual branches an
   assert.equal(activeProgress.percentComplete, 60);
 });
 
+test('workflow template instantiation preserves linked project id', () => {
+  let nextId = 0;
+  const workflowModel = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'workflow', 'model.js'));
+  const { createWorkflowModel } = workflowModel;
+  const model = createWorkflowModel({
+    createId: () => `generated-${nextId += 1}`,
+    resolveDefaultAssigneeId: () => 'm1'
+  });
+
+  const template = model.normalizeTemplate({
+    id: 'template-1',
+    name: 'Protein Expression',
+    projectId: 'project-1',
+    blocks: [
+      { id: 'block-a', protocolId: 'protocol-a' }
+    ],
+    links: []
+  });
+  const workflow = model.instantiateTemplate(template, 'Protein Expression 1');
+
+  assert.equal(template.projectId, 'project-1');
+  assert.equal(workflow.projectId, 'project-1');
+  assert.equal(workflow.templateId, 'template-1');
+});
+
+test('workflow execution renderer keeps the active step editor inside the workflow board', () => {
+  const rendererModule = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'workflow', 'renderer.js'),
+    {
+      window: {
+        requestAnimationFrame(callback) {
+          if (typeof callback === 'function') {
+            callback();
+          }
+        }
+      }
+    }
+  );
+  const { createWorkflowRenderer } = rendererModule;
+
+  const board = {
+    innerHTML: '',
+    querySelector() {
+      return null;
+    }
+  };
+  const elements = {
+    workflowExecutionBoard: board,
+    workflowExecutionTitle: { textContent: '' },
+    workflowExecutionStatus: { textContent: '' },
+    workflowAddRunBtn: { disabled: false },
+    workflowDeleteRunBtn: { disabled: false },
+    workflowSearchInput: { value: '' }
+  };
+  const renderer = createWorkflowRenderer({
+    state: {
+      protocols: [],
+      workflowTemplates: [
+        {
+          id: 'template-1',
+          name: 'NiNTA',
+          blocks: [
+            { id: 'block-a', protocolId: 'protocol-a', x: 40, y: 40 },
+            { id: 'block-b', type: 'text', text: 'Record purification yield', x: 240, y: 40 }
+          ],
+          links: [{ fromBlockId: 'block-a', toBlockId: 'block-b' }]
+        }
+      ],
+      workflows: [
+        {
+          id: 'workflow-1',
+          templateId: 'template-1',
+          name: 'NiNTA 1',
+          blocks: [
+            { id: 'block-a', protocolId: 'protocol-a', x: 40, y: 40 },
+            { id: 'block-b', type: 'text', text: 'Record purification yield', x: 240, y: 40 }
+          ],
+          links: [{ fromBlockId: 'block-a', toBlockId: 'block-b' }],
+          entries: [
+            {
+              id: 'entry-1',
+              name: 'NiNTA 1',
+              stepStates: {
+                'block-a': { status: 'completed' },
+                'block-b': { status: 'pending' }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    runtime: {
+      activeTemplateId: 'template-1',
+      activeWorkflowId: 'workflow-1',
+      activeEntryId: 'entry-1',
+      activeBlockId: 'block-b'
+    },
+    elements,
+    safeText: (value) => String(value || ''),
+    getBlockType: (block) => String(block?.type || (block?.protocolId ? 'protocol' : '')),
+    uniqueStrings: (values) => Array.from(new Set(values || []))
+  });
+
+  renderer.renderExecutionBoard();
+
+  assert.equal(elements.workflowExecutionTitle.textContent, 'NiNTA');
+  assert.equal(elements.workflowExecutionStatus.textContent, '1 specific workflow created from this template.');
+  assert.match(board.innerHTML, /workflow-execution-shell/);
+  assert.match(board.innerHTML, /data-workflow-step-popover="true"/);
+  assert.doesNotMatch(board.innerHTML, /workflow-step-detail-panel/);
+});
+
   }
 };

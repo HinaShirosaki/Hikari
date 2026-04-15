@@ -1,22 +1,24 @@
 <section id="sequence-viewer-view" class="view">
       <div class="sequence-viewer-shell">
         <section id="sequence-viewer-home-workspace" class="sequence-viewer-home-workspace">
-          <div class="sequence-viewer-home-toolbar">
-            <div class="sequence-viewer-home-nav-copy">
-              <h2>Open Sequence</h2>
-              <p class="small-note">Start a sequence session or open a stored GBK or FASTA file.</p>
-            </div>
-            <div class="form-actions sequence-viewer-home-nav-actions">
-              <button id="sequence-viewer-home-paste-btn" type="button" class="primary-btn">New</button>
-              <button id="sequence-viewer-home-open-btn" type="button" class="ghost-btn">Open GBK/FASTA</button>
-              <button id="sequence-viewer-home-protein-builder-btn" type="button" class="ghost-btn">Protein Builder</button>
-              <span id="sequence-viewer-home-status" class="small-note">Choose New or Open to continue.</span>
-            </div>
-            <input id="sequence-viewer-home-open-input" type="file" accept=".gbk,.gb,.gbff,.fasta,.fa,.fas,.fna,.fastq,.fq,.txt,.seq" hidden />
-          </div>
+          <div class="sequence-viewer-home-layout left-rail-template">
+            <aside class="sequence-viewer-home-sidebar app-left-rail left-rail-template__rail" data-sync-left-rail>
+              <div class="left-rail-template__stack">
+                <section class="left-rail-template__section">
+                  <div class="sequence-viewer-home-nav-copy">
+                    <h2>Open Sequence</h2>
+                    <p class="small-note">Start a sequence session or open a stored GBK or FASTA file.</p>
+                  </div>
+                  <div class="form-actions sequence-viewer-home-nav-actions">
+                    <button id="sequence-viewer-home-paste-btn" type="button" class="primary-btn">New</button>
+                    <button id="sequence-viewer-home-open-btn" type="button" class="ghost-btn">Open GBK/FASTA</button>
+                    <button id="sequence-viewer-home-protein-builder-btn" type="button" class="ghost-btn">Protein Builder</button>
+                    <span id="sequence-viewer-home-status" class="small-note">Choose New or Open to continue.</span>
+                  </div>
+                  <input id="sequence-viewer-home-open-input" type="file" accept=".gbk,.gb,.gbff,.fasta,.fa,.fas,.fna,.fastq,.fq,.txt,.seq" hidden />
+                </section>
 
-          <div class="sequence-viewer-home-grid">
-            <section class="plannotate-result-card sequence-viewer-library-card">
+                <section class="plannotate-result-card sequence-viewer-library-card left-rail-template__section">
               <div class="plannotate-card-head">
                 <h4>Sequence Library</h4>
               </div>
@@ -27,35 +29,41 @@
               <div id="sequence-viewer-library-list" class="sequence-viewer-library-list">
                 <p class="small-note">No sequence entries found.</p>
               </div>
-            </section>
+                </section>
+              </div>
+            </aside>
 
-            <section class="plannotate-result-card sequence-viewer-preview-card">
-              <div class="plannotate-card-head">
-                <h4>Circular Plasmid Preview</h4>
-              </div>
-              <div id="sequence-viewer-preview-host" class="sequence-viewer-preview-host">
-                <p class="small-note">Select a sequence in the library to preview.</p>
-              </div>
-            </section>
+            <div class="sequence-viewer-home-main left-rail-template__main">
+              <div class="left-rail-template__stack">
+                <section class="plannotate-result-card sequence-viewer-preview-card">
+                  <div class="plannotate-card-head">
+                    <h4>Circular Plasmid Preview</h4>
+                  </div>
+                  <div id="sequence-viewer-preview-host" class="sequence-viewer-preview-host">
+                    <p class="small-note">Select a sequence in the library to preview.</p>
+                  </div>
+                </section>
 
-            <section class="plannotate-result-card sequence-viewer-feature-search-card">
-              <div class="plannotate-card-head">
-                <h4>Feature Search</h4>
+                <section class="plannotate-result-card sequence-viewer-feature-search-card">
+                  <div class="plannotate-card-head">
+                    <h4>Feature Search</h4>
+                  </div>
+                  <div class="sequence-viewer-feature-search-controls">
+                    <input
+                      id="sequence-viewer-feature-search-input"
+                      type="search"
+                      placeholder="Search by feature name or sequence"
+                      autocomplete="off"
+                    />
+                    <button id="sequence-viewer-feature-search-btn" type="button" class="ghost-btn">Search</button>
+                    <span id="sequence-viewer-feature-search-status" class="small-note">Search stored features and open the host vector directly.</span>
+                  </div>
+                  <div id="sequence-viewer-feature-search-results" class="sequence-viewer-feature-search-results">
+                    <p class="small-note">Search by feature name, full sequence, or partial sequence.</p>
+                  </div>
+                </section>
               </div>
-              <div class="sequence-viewer-feature-search-controls">
-                <input
-                  id="sequence-viewer-feature-search-input"
-                  type="search"
-                  placeholder="Search by feature name or sequence"
-                  autocomplete="off"
-                />
-                <button id="sequence-viewer-feature-search-btn" type="button" class="ghost-btn">Search</button>
-                <span id="sequence-viewer-feature-search-status" class="small-note">Search stored features and open the host vector directly.</span>
-              </div>
-              <div id="sequence-viewer-feature-search-results" class="sequence-viewer-feature-search-results">
-                <p class="small-note">Search by feature name, full sequence, or partial sequence.</p>
-              </div>
-            </section>
+            </div>
           </div>
         </section>
 
@@ -72,8 +80,8 @@
           </div>
 
           <div class="sequence-viewer-protein-builder-grid-wrap">
-            <div class="sequence-viewer-protein-builder-grid">
-              <div class="sequence-viewer-protein-builder-sidebar multi-panel-left-rail">
+            <div class="sequence-viewer-protein-builder-grid left-rail-template">
+              <aside class="sequence-viewer-protein-builder-sidebar app-left-rail left-rail-template__rail" data-sync-left-rail>
                 <section class="sequence-viewer-protein-builder-panel">
                   <form id="sequence-viewer-protein-builder-form" class="stack-form sequence-viewer-protein-builder-controls" autocomplete="off">
                     <div class="form-grid">
@@ -131,9 +139,9 @@
                     <p class="small-note">Search by feature name or stored sequence.</p>
                   </div>
                 </section>
-              </div>
+              </aside>
 
-              <div class="sequence-viewer-protein-builder-main">
+              <div class="sequence-viewer-protein-builder-main left-rail-template__main">
                 <section class="sequence-viewer-protein-builder-panel sequence-viewer-protein-builder-workflow-panel">
                   <div class="plannotate-card-head">
                     <h4>Assembly Chain</h4>

@@ -417,16 +417,6 @@ function buildStructuredStagePayload(stage, scenario, state) {
     };
   }
 
-  if (stage === 'science_loop_current_scientific_state') {
-    return {
-      supported_now: state.completedToolCalls > 0 ? ['LLM Response'] : [],
-      contradicted: [],
-      remains_unknown: remainingRounds > 0 ? ['LLM Response'] : [],
-      uncertainty_decision_relevant: remainingRounds > 0,
-      uncertainty_decision_reason: 'LLM Response'
-    };
-  }
-
   if (stage === 'science_loop_exit_judge_sub_agent') {
     const satisfied = state.completedToolCalls >= scenario.iterations;
     const shouldContinue = satisfied === false && state.completedToolCalls < scenario.maxRounds;

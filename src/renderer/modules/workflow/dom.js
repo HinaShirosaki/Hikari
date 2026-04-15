@@ -26,7 +26,9 @@ export function getWorkflowElements(rootDocument) {
     workflowGraphStatus: rootDocument?.getElementById?.('workflow-graph-status'),
     workflowGraphContextMenu: rootDocument?.getElementById?.('workflow-graph-context-menu'),
     workflowTemplateNameInput: rootDocument?.getElementById?.('workflow-template-name'),
+    workflowTemplateDescriptionInput: rootDocument?.getElementById?.('workflow-template-description'),
     workflowSaveTemplateBtn: rootDocument?.getElementById?.('workflow-save-template-btn'),
+    workflowTemplateCancelBtn: rootDocument?.getElementById?.('workflow-template-cancel-btn'),
     workflowTemplateList: rootDocument?.getElementById?.('workflow-template-list'),
     workflowSearchInput: rootDocument?.getElementById?.('workflow-search'),
     workflowList: rootDocument?.getElementById?.('workflow-list'),
@@ -40,8 +42,9 @@ export function getWorkflowElements(rootDocument) {
     workflowEntryTemplateBtn: rootDocument?.getElementById?.('workflow-entry-template-btn'),
     workflowEntryViewBtn: rootDocument?.getElementById?.('workflow-entry-view-btn'),
     workflowEntryBackBtn: rootDocument?.getElementById?.('workflow-entry-back-btn'),
-    workflowEditorPanels: [...(rootDocument?.querySelectorAll?.('#workflow-management-view .workflow-editor-panel') || [])],
-    workflowTemplatePanels: [...(rootDocument?.querySelectorAll?.('#workflow-management-view .workflow-template-panel') || [])],
+    workflowSidebarEditorPanels: [...(rootDocument?.querySelectorAll?.('#workflow-management-view .workflow-sidebar-editor-panel') || [])],
+    workflowMainEditorPanels: [...(rootDocument?.querySelectorAll?.('#workflow-management-view .workflow-main-editor-panel') || [])],
+    workflowTemplateEditorPanels: [...(rootDocument?.querySelectorAll?.('#workflow-management-view .workflow-template-editor-panel') || [])],
     workflowListPanels: [...(rootDocument?.querySelectorAll?.('#workflow-management-view .workflow-list-panel') || [])]
   };
 }

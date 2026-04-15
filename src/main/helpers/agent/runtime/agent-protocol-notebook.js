@@ -3,6 +3,7 @@
 const { resolveAgentRuntimeFactory } = require('../shared/agent-runtime-registry.js');
 const { createProtocolMatchingRuntime } = require('../tools/agent-protocol-matching');
 const { createNotebookGenerationRuntime } = require('../tools/agent-notebook-generation');
+const { createProtocolNotebookContextControl } = require('./agent-protocol-notebook-context-control.js');
 
 function createProtocolNotebookRuntime(deps = {}) {
   const asArray = typeof deps.asArray === 'function'
@@ -46,9 +47,6 @@ function createProtocolNotebookRuntime(deps = {}) {
     ? deps.recordLifecycleEvent
     : (() => {});
 
-  const PROTOCOL_NOTEBOOK_SESSION_TTL_MS = 30 * 60 * 1000;
-  const protocolNotebookPendingSessions = new Map();
-
   const runtimeDeps = {
     ...deps,
     asArray,
@@ -66,58 +64,56 @@ function createProtocolNotebookRuntime(deps = {}) {
   const notebookGenerationRuntime = typeof notebookGenerationFactory === 'function'
     ? notebookGenerationFactory(runtimeDeps)
     : createNotebookGenerationRuntime(runtimeDeps);
-
-  function buildProtocolNotebookSessionKey({
-    projectId = '',
-    projectName = ''
-  } = {}) {
-    const keyProjectId = cleanText(projectId, 80).toLowerCase();
-    const keyProjectName = cleanText(projectName, 180).toLowerCase();
-    return [keyProjectId || '-', keyProjectName || '-'].join('::');
-  }
-
-  function getPendingProtocolNotebookSession(sessionKey) {
-    const key = cleanText(sessionKey, 320);
-    if (!key) {
-      return null;
-    }
-    const existing = protocolNotebookPendingSessions.get(key);
-    if (!existing || typeof existing !== 'object') {
-      return null;
-    }
-    const createdAt = Date.parse(existing.updated_at || existing.created_at || '');
-    if (!Number.isFinite(createdAt)) {
-      protocolNotebookPendingSessions.delete(key);
-      return null;
-    }
-    if ((Date.now() - createdAt) > PROTOCOL_NOTEBOOK_SESSION_TTL_MS) {
-      protocolNotebookPendingSessions.delete(key);
-      return null;
-    }
-    return existing;
-  }
-
-  function setPendingProtocolNotebookSession(sessionKey, session) {
-    const key = cleanText(sessionKey, 320);
-    if (!key || !session || typeof session !== 'object') {
-      return;
-    }
-    protocolNotebookPendingSessions.set(key, {
-      ...session,
-      updated_at: new Date().toISOString()
+  const agentAppApi = deps.agentAppApi && typeof deps.agentAppApi === 'object'
+    ? deps.agentAppApi
+    : {};
+  const protocolApi = agentAppApi.protocol && typeof agentAppApi.protocol === 'object'
+    ? agentAppApi.protocol
+    : {};
+  const notebookApi = agentAppApi.notebook && typeof agentAppApi.notebook === 'object'
+    ? agentAppApi.notebook
+    : {};
+  const protocolNotebookContextControl = deps.protocolNotebookContextControl
+    && typeof deps.protocolNotebookContextControl === 'object'
+    ? deps.protocolNotebookContextControl
+    : createProtocolNotebookContextControl({
+      asArray,
+      cleanText,
+      now: deps.now,
+      nowMs: deps.nowMs,
+      sessionTtlMs: deps.protocolNotebookSessionTtlMs,
+      store: deps.protocolNotebookPendingSessions
     });
-  }
 
-  function clearPendingProtocolNotebookSession(sessionKey) {
-    const key = cleanText(sessionKey, 320);
-    if (!key) {
-      return;
+  function normalizeProtocolRecord(protocol, index = 0) {
+    if (typeof protocolApi.normalizeAgentProtocol === 'function') {
+      return protocolApi.normalizeAgentProtocol(protocol, index);
     }
-    protocolNotebookPendingSessions.delete(key);
+    return protocolMatchingRuntime.normalizeProtocolRecord(protocol, index);
   }
 
-  function hasPendingProtocolNotebookSession(sessionKey) {
-    return Boolean(getPendingProtocolNotebookSession(sessionKey));
+  function listAgentProtocols(snapshot = {}) {
+    if (typeof protocolApi.listAgentProtocols === 'function') {
+      return asArray(protocolApi.listAgentProtocols({
+        snapshot,
+        limit: 120
+      })).map((protocol, index) => normalizeProtocolRecord(protocol, index));
+    }
+    return asArray(snapshot?.protocols).map((item, index) => normalizeProtocolRecord(item, index));
+  }
+
+  async function selectProtocolForNotebook(input = {}) {
+    if (typeof protocolApi.matchForNotebook === 'function') {
+      return protocolApi.matchForNotebook(input);
+    }
+    return protocolMatchingRuntime.selectProtocol(input);
+  }
+
+  async function generateNotebookFromProtocol(input = {}) {
+    if (typeof notebookApi.generateFromProtocol === 'function') {
+      return notebookApi.generateFromProtocol(input);
+    }
+    return notebookGenerationRuntime.generateNotebook(input);
   }
 
   function findProjectByName(projects, projectName) {
@@ -224,16 +220,16 @@ function createProtocolNotebookRuntime(deps = {}) {
     traceContext = null,
     lifecycleRecorder = null
   }) {
-    const protocols = asArray(snapshot?.protocols).map((item, index) => protocolMatchingRuntime.normalizeProtocolRecord(item, index));
+    const protocols = listAgentProtocols(snapshot);
     const parserEntities = parserPayload?.entities && typeof parserPayload.entities === 'object'
       ? parserPayload.entities
       : {};
-    const sessionKey = buildProtocolNotebookSessionKey({
+    const sessionKey = protocolNotebookContextControl.buildSessionKey({
       projectId,
       projectName,
       parserPayload
     });
-    const pendingSession = getPendingProtocolNotebookSession(sessionKey);
+    const pendingSession = protocolNotebookContextControl.getPendingSession(sessionKey);
     const parserCandidates = uniqueStrings([
       ...asArray(parserPayload?.protocol_candidates),
       cleanText(parserEntities.protocol_name, 220)
@@ -266,7 +262,7 @@ function createProtocolNotebookRuntime(deps = {}) {
       };
     }
 
-    const selection = await protocolMatchingRuntime.selectProtocol({
+    const selection = await selectProtocolForNotebook({
       provider,
       endpoint,
       apiKey,
@@ -311,7 +307,7 @@ function createProtocolNotebookRuntime(deps = {}) {
     }
 
     const selectedProtocol = selection?.selected_protocol
-      ? protocolMatchingRuntime.normalizeProtocolRecord(selection.selected_protocol)
+      ? normalizeProtocolRecord(selection.selected_protocol)
       : null;
     if (!selectedProtocol) {
       return {
@@ -344,7 +340,7 @@ function createProtocolNotebookRuntime(deps = {}) {
       pendingSession
     });
 
-    const generationResult = await notebookGenerationRuntime.generateNotebook({
+    const generationResult = await generateNotebookFromProtocol({
       provider,
       endpoint,
       apiKey,
@@ -362,33 +358,30 @@ function createProtocolNotebookRuntime(deps = {}) {
     const status = cleanText(generationResult?.status, 40) || 'needs_more_info';
     const missingPlaceholders = asArray(generationResult?.missing_placeholders);
     const followUpQuestions = asArray(generationResult?.follow_up_questions);
-
-    if (status === 'completed') {
-      clearPendingProtocolNotebookSession(sessionKey);
-    } else {
-      setPendingProtocolNotebookSession(sessionKey, {
-        created_at: pendingSession?.created_at || new Date().toISOString(),
-        selected_protocol: {
-          id: cleanText(selectedProtocol.id, 120),
-          name: cleanText(selectedProtocol.name, 220)
-        },
-        project: {
-          id: cleanText(project.id, 120),
-          name: cleanText(project.name, 220),
-          resolution_source: cleanText(project.resolution_source, 80)
-        },
-        candidate_matches: protocolMatchingRuntime.mapCandidateMatchesForOutput(rankedMatches),
-        known_values: generationResult?.known_values && typeof generationResult.known_values === 'object'
-          ? generationResult.known_values
-          : {},
-        missing_placeholders: missingPlaceholders,
-        follow_up_questions: followUpQuestions
-      });
-    }
+    const candidateMatches = protocolMatchingRuntime.mapCandidateMatchesForOutput(rankedMatches);
+    protocolNotebookContextControl.syncActionContext(sessionKey, {
+      status,
+      pendingSession,
+      selectedProtocol: {
+        id: cleanText(selectedProtocol.id, 120),
+        name: cleanText(selectedProtocol.name, 220)
+      },
+      project: {
+        id: cleanText(project.id, 120),
+        name: cleanText(project.name, 220),
+        resolution_source: cleanText(project.resolution_source, 80)
+      },
+      candidateMatches,
+      knownValues: generationResult?.known_values && typeof generationResult.known_values === 'object'
+        ? generationResult.known_values
+        : {},
+      missingPlaceholders,
+      followUpQuestions
+    });
 
     return {
       status,
-      candidate_matches: protocolMatchingRuntime.mapCandidateMatchesForOutput(rankedMatches),
+      candidate_matches: candidateMatches,
       selected_protocol: {
         id: cleanText(selectedProtocol.id, 120),
         name: cleanText(selectedProtocol.name, 220),
@@ -403,10 +396,11 @@ function createProtocolNotebookRuntime(deps = {}) {
   }
 
   return {
-    buildSessionKey: buildProtocolNotebookSessionKey,
-    hasPendingSession: hasPendingProtocolNotebookSession,
-    setPendingSession: setPendingProtocolNotebookSession,
-    clearPendingSession: clearPendingProtocolNotebookSession,
+    buildSessionKey: protocolNotebookContextControl.buildSessionKey,
+    hasPendingSession: protocolNotebookContextControl.hasPendingSession,
+    setPendingSession: protocolNotebookContextControl.setPendingSession,
+    clearPendingSession: protocolNotebookContextControl.clearPendingSession,
+    closeContext: protocolNotebookContextControl.closeContext,
     runFlow: runProtocolToNotebookFlow
   };
 }

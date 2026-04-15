@@ -10,10 +10,15 @@ const {
   normalizeDataFilePath
 } = require('./lib/main-utils');
 const {
+  clearCodexCliStoredLogin,
   getCodexCliCatalog,
+  launchCodexCliLogin,
   getCodexCliModel,
   getCodexCliReasoningEffort,
   getCodexLoginStatus,
+  resolveCodexCliAccessToken,
+  resolveCodexCliRuntimeHomeDirectory,
+  resolveCodexCliResponsesEndpoint,
   setCodexCliModel,
   setCodexCliReasoningEffort,
   requestCodexCliText
@@ -34,6 +39,7 @@ const { createMainAgentServices } = require('./helpers/main/create-main-agent-se
 const { createMainAppPaths } = require('./helpers/main/app-paths.js');
 const { createMainDataHelpers } = require('./helpers/main/data-helpers');
 const {
+  discoverPapersFromStorageRoot,
   getBundlePaths,
   syncBundleFromSnapshot,
   syncSqliteBundleFromSnapshot,
@@ -58,13 +64,14 @@ const { registerSystemIpc } = require('./helpers/main/register-system-ipc');
 
 const cleanText = defaultCleanText;
 
-const appIconPath = path.join(PROJECT_ROOT, 'image.png');
+const appIconPath = path.join(PROJECT_ROOT, 'assets', 'icon.png');
 const DEFAULT_DATA_FILE_NAME = 'enana-data.json';
 const TELEGRAM_CONFIG_FILE_NAME = 'telegram-bot.json';
 const AGENT_CHAT_LOG_FILE_NAME = 'agent-chat.log';
 const LLM_PROMPTS_FILE_PATH = path.join(PROJECT_ROOT, 'data', 'llm-prompts.json');
 
 const {
+  getCodexCliHomePath,
   getCodexCliWorkingDirectory,
   getDefaultDataFilePath,
   getTelegramConfigPath,
@@ -81,6 +88,10 @@ const {
   telegramConfigFileName: TELEGRAM_CONFIG_FILE_NAME,
   agentChatLogFileName: AGENT_CHAT_LOG_FILE_NAME
 });
+
+if (!String(process.env.ENANA_CODEX_HOME || '').trim()) {
+  process.env.ENANA_CODEX_HOME = getCodexCliHomePath() || resolveCodexCliRuntimeHomeDirectory(getCodexCliWorkingDirectory());
+}
 
 let mainWindow = null;
 let telegramBot = null;
@@ -206,7 +217,7 @@ function createWindow() {
     height: 800,
     minWidth: 900,
     minHeight: 620,
-    title: 'Enana',
+    title: 'Hikari',
     icon: appIconPath,
     webPreferences: {
       contextIsolation: true,
@@ -274,8 +285,11 @@ const {
   cleanText,
   appendAgentChatLogEntry,
   requestCodexCliText,
+  resolveCodexApiKey: ({ apiKey } = {}) => resolveCodexCliAccessToken(apiKey),
+  resolveCodexEndpoint: (endpoint) => resolveCodexCliResponsesEndpoint(endpoint),
   getCodexCliWorkingDirectory,
   getDefaultDataFilePath,
+  BrowserWindow,
   getAgentPythonSandboxRoot,
   getBundlePaths,
   hydrateSnapshotFromBundle,
@@ -291,6 +305,7 @@ registerDataIpc({
   DEFAULT_DATA_FILE_NAME,
   hasSupportedDataExtension,
   mainDataHelpers,
+  discoverPapersFromStorageRoot,
   syncSqliteBundleFromSnapshot,
   importStorageRoot,
   listSequenceEntries,
@@ -329,10 +344,12 @@ registerSystemIpc({
   ipcMain,
   shell,
   cleanText,
+  clearCodexCliStoredLogin,
   getCodexLoginStatus,
   getCodexCliCatalog,
   getCodexCliModel,
   getCodexCliReasoningEffort,
+  launchCodexCliLogin,
   setCodexCliModel,
   setCodexCliReasoningEffort,
   requestCodexCliText,

@@ -13,9 +13,9 @@ function defaultAsArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
-// Convert unknown input to a trimmed string without silently clipping payloads.
+// Convert unknown input to a string without trimming or clipping payload fields.
 function defaultCleanText(value, _maxLength = 500) {
-  const text = String(value || '').trim();
+  const text = String(value || '');
   if (!text) {
     return '';
   }
@@ -147,6 +147,8 @@ function createAgentToolCallRuntime(deps = {}) {
         endpoint: cleanText(context.endpoint, 1600),
         apiKey: cleanText(context.apiKey, 400),
         model: cleanText(context.model, 120),
+        cwd: cleanText(context.cwd, 1200),
+        allowWriteTools: context.allowWriteTools === true,
         message: cleanText(context.message, 3200),
         conversation: asArray(context.conversation),
         snapshot,

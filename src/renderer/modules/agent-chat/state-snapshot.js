@@ -61,8 +61,6 @@ export function buildStateSnapshot(state, projectId) {
   const personalSections = Object.entries(state?.inventory || {});
   const personalItemCount = personalSections.reduce((count, [, items]) => count + asArray(items).length, 0);
   const chemicalCount = asArray(state?.labInventory?.chemicals).length;
-  const dataFilePath = trimText(state?.settings?.enaFilePath, 1600);
-
   return {
     projects,
     workflows,
@@ -89,7 +87,7 @@ export function buildStateSnapshot(state, projectId) {
       inventory_personal_sections: personalSections.length,
       inventory_personal_items: personalItemCount
     },
-    data_file_path: dataFilePath,
+    data_file_path: '',
     settings: {
       storagePath: trimText(state.settings?.storagePath, 1200)
     },

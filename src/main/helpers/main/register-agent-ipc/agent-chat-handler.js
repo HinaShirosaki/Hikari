@@ -71,10 +71,11 @@ function registerAgentChatHandler({
       120
     );
     const logPath = getAgentChatLogPath();
+    const chatSessionStoragePath = getAgentChatSessionStoragePath(normalizedPayload);
     const sessionService = createAgentSessionService({
       cleanText,
       agentChatLogRuntime,
-      chatSessionStoragePath: getAgentChatSessionStoragePath(normalizedPayload),
+      chatSessionStoragePath,
       requestedChatSessionId: cleanText(normalizedPayload?.chatSessionId || normalizedPayload?.sessionId, 120),
       payload: normalizedPayload
     });
@@ -103,8 +104,12 @@ function registerAgentChatHandler({
     const controllerRuntime = {
       requestId,
       clientRequestId,
-      lifecycleRecorder
+      lifecycleRecorder,
+      chatSessionStoragePath: cleanText(chatSessionStoragePath, 2400)
     };
+    const llmSource = typeof controllerUtils.resolveAgentLlmSource === 'function'
+      ? controllerUtils.resolveAgentLlmSource(normalizedPayload?.llm)
+      : null;
     const abortController = new AbortController();
     if (clientRequestId) {
       activeRequests.set(clientRequestId, {
@@ -116,6 +121,7 @@ function registerAgentChatHandler({
 
     try {
       await sessionService.ensureSession();
+      controllerRuntime.chatSessionId = cleanText(sessionService.getSession()?.id, 120);
       observability.recordLifecycleEvent(lifecycleRecorder, {
         stage: 'request_received',
         status: 'ok',
@@ -166,14 +172,19 @@ function registerAgentChatHandler({
             ...requestLogEntry,
             session_id: sessionService.getSession().id
           }
-        ]);
+        ], {
+          llm: normalizedPayload?.llm,
+          projectId: cleanText(normalizedPayload?.projectId, 80),
+          projectName: cleanText(normalizedPayload?.projectName, 180)
+        });
       }
 
       try {
         const result = await runWithAgentRequestContext({
           requestId,
           clientRequestId,
-          abortSignal: abortController.signal
+          abortSignal: abortController.signal,
+          llmSource: llmSource && typeof llmSource === 'object' ? llmSource : null
         }, () => runAgentController(normalizedPayload, controllerRuntime));
         const failureReasons = observability.classifyFailureReasons({
           result,
@@ -186,6 +197,8 @@ function registerAgentChatHandler({
             ? 'notebook_draft'
             : (result?.protocol_to_notebook
               ? 'protocol_to_notebook'
+              : (result?.skill_command
+                ? 'skill_command'
               : (result?.purchase_recommendation
                 ? 'purchase_recommendation'
               : (result?.inventory_lookup
@@ -196,7 +209,7 @@ function registerAgentChatHandler({
                     ? 'general_science_question'
                     : (result?.project_science_question
                       ? 'project_science_question'
-                      : (result?.result_analysis ? 'result_analysis' : 'intent_parser'))))))),
+                      : (result?.result_analysis ? 'result_analysis' : 'intent_parser')))))))),
           routing_intent: cleanText(result?.parser?.primary_intent, 80) || 'unclear',
           failure_reasons: failureReasons,
           message: result?.ok === true
@@ -244,7 +257,11 @@ function registerAgentChatHandler({
               text: cleanText(assistantMessage.text, 24000),
               meta: assistantMessage.meta
             }
-          ]));
+          ]), {
+            llm: normalizedPayload?.llm,
+            projectId: cleanText(normalizedPayload?.projectId, 80),
+            projectName: cleanText(normalizedPayload?.projectName, 180)
+          });
         }
         return sessionService.getSession()
           ? {
@@ -321,7 +338,11 @@ function registerAgentChatHandler({
               text: cleanText(assistantMessage.text, 24000),
               meta: assistantMessage.meta
             }
-          ]));
+          ]), {
+            llm: normalizedPayload?.llm,
+            projectId: cleanText(normalizedPayload?.projectId, 80),
+            projectName: cleanText(normalizedPayload?.projectName, 180)
+          });
         }
         return sessionService.getSession()
           ? {

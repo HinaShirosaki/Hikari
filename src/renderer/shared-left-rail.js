@@ -4,6 +4,7 @@ const MIN_WIDTH = 240;
 const MAX_WIDTH = 400;
 const MOBILE_BREAKPOINT = 980;
 const HANDLE_CLASS = 'app-left-rail-handle';
+const HANDLE_ATTR = 'data-shared-left-rail-handle';
 
 function clampWidth(width, windowObject) {
   const raw = Number(width);
@@ -88,11 +89,15 @@ export function initSharedLeftRailResizers({
     finishResize();
   }
 
-  function onPointerDown(event) {
-    if (!(event.currentTarget instanceof HTMLElement) || windowObject.innerWidth <= MOBILE_BREAKPOINT) {
+  function onPointerDown(event, railOverride = null) {
+    if (windowObject.innerWidth <= MOBILE_BREAKPOINT) {
       return;
     }
-    const rail = event.currentTarget.closest('[data-sync-left-rail]');
+    const rail = railOverride instanceof HTMLElement
+      ? railOverride
+      : (event.currentTarget instanceof HTMLElement
+        ? event.currentTarget.closest('[data-sync-left-rail]')
+        : null);
     if (!(rail instanceof HTMLElement)) {
       return;
     }
@@ -117,17 +122,26 @@ export function initSharedLeftRailResizers({
       if (!(rail instanceof HTMLElement)) {
         return;
       }
-      const existingHandle = [...rail.children].find((child) => child.classList?.contains(HANDLE_CLASS));
+      const layout = rail.parentElement;
+      if (!(layout instanceof HTMLElement)) {
+        return;
+      }
+
+      [...rail.querySelectorAll(`.${HANDLE_CLASS}`)].forEach((node) => node.remove());
+
+      const existingHandle = layout.querySelector(`[${HANDLE_ATTR}="true"]`);
       if (existingHandle) {
         return;
       }
+
       const handle = rootDocument.createElement('button');
       handle.type = 'button';
       handle.className = HANDLE_CLASS;
       handle.tabIndex = -1;
       handle.setAttribute('aria-hidden', 'true');
-      handle.addEventListener('pointerdown', onPointerDown);
-      rail.append(handle);
+      handle.setAttribute(HANDLE_ATTR, 'true');
+      handle.addEventListener('pointerdown', (event) => onPointerDown(event, rail));
+      layout.append(handle);
     });
   }
 

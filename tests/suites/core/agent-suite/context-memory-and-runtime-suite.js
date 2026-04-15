@@ -96,6 +96,13 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
       assert.equal(envelope.layers.immediate.recent_conversation.length, 3);
       assert.equal(envelope.layers.session_memory.current_project_state.name, 'Atlas');
       assert.equal(envelope.layers.long_term_memory.length, 1);
+      assert.equal(envelope.registry.user.latest_user_message, 'The sample name was TUBE42.');
+      assert.equal(envelope.registry.user.follow_up_questions.includes('Which sample name did you use?'), true);
+      assert.equal(envelope.registry.execution.tool_outputs[0].tool_name, 'protocol-matching');
+      assert.equal(envelope.registry.memory.long_term_memory[0].key, 'output_format');
+      assert.equal(envelope.registry.system.active_task.selected_protocol.name, 'HEK293 Transfection');
+      assert.equal(envelope.registry_selection.user.current_user_request, 'The sample name was TUBE42.');
+      assert.equal(envelope.registry_selection.system.active_task.project.name, 'Atlas');
       assert.equal(envelope.memory_candidates.some((item) => item.category === 'project_name' && item.key === 'Atlas'), true);
       assert.match(String(envelope.prompt_blocks.immediate || ''), /Immediate working context:/);
       assert.match(String(envelope.prompt_blocks.immediate || ''), /Latest tool outputs:\n- protocol-matching \(ok\) \| summary: Selected HEK293 Transfection\./);
@@ -177,6 +184,8 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
       assert.equal(readyEnvelope.active_task, null);
       assert.equal(readyEnvelope.layers.immediate.current_task_state, null);
       assert.equal(readyEnvelope.layers.session_memory.recent_completed_tasks[0].summary, 'Notebook draft completed for Atlas-7.');
+      assert.equal(readyEnvelope.registry.system.active_task, null);
+      assert.equal(readyEnvelope.registry.memory.recent_completed_tasks[0].summary, 'Notebook draft completed for Atlas-7.');
     });
 
     test('context management runtime prunes expired sessions by idle time', () => {
@@ -196,6 +205,75 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
       const removed = runtime.pruneExpiredSessions();
       assert.deepEqual(removed, ['thread-expire']);
       assert.equal(runtime.getSession('thread-expire'), null);
+    });
+
+    test('context management runtime assembles layers from registry-first clarified and verification state', () => {
+      const runtime = agentContextManagement.createAgentContextManagementRuntime({
+        now: (() => {
+          let index = 0;
+          const values = [
+            '2026-03-22T12:30:00.000Z',
+            '2026-03-22T12:30:01.000Z',
+            '2026-03-22T12:30:02.000Z',
+            '2026-03-22T12:30:03.000Z',
+            '2026-03-22T12:30:04.000Z'
+          ];
+          return () => values[Math.min(index++, values.length - 1)];
+        })(),
+        createId: () => 'task-fixed-3'
+      });
+
+      runtime.startTask({
+        session_id: 'thread-3',
+        task_type: 'science_loop',
+        intent: 'project_science_question',
+        project: {
+          id: 'proj-3',
+          name: 'Atlas'
+        }
+      });
+
+      const registrySnapshot = runtime.buildContextRegistry({
+        session_id: 'thread-3',
+        message: 'Can you compare the two Atlas runs?',
+        clarified_user_message: 'Compare Atlas run 7 versus Atlas run 8 and explain the largest difference.',
+        conversation: [
+          { role: 'user', text: 'Can you compare the two Atlas runs?' },
+          { role: 'assistant', text: 'Which runs do you mean?' },
+          { role: 'user', text: 'Runs 7 and 8.' }
+        ],
+        inference_feedback: [
+          {
+            kind: 'inference',
+            summary: 'The comparison still needs one direct delta across both runs.'
+          }
+        ],
+        evaluation_feedback: [
+          {
+            kind: 'judge',
+            summary: 'Fetch both runs before answering.'
+          }
+        ],
+        skills: ['record-lookup'],
+        workflow_state: {
+          stage: 'comparison'
+        }
+      });
+
+      assert.equal(registrySnapshot.registry.user.clarified_user_message, 'Compare Atlas run 7 versus Atlas run 8 and explain the largest difference.');
+      assert.equal(registrySnapshot.registry.reasoning.inference_feedback[0].summary, 'The comparison still needs one direct delta across both runs.');
+      assert.equal(registrySnapshot.registry.system.workflow_state.stage, 'comparison');
+
+      const envelope = runtime.buildContextEnvelope({
+        session_id: 'thread-3'
+      });
+
+      assert.equal(envelope.layers.immediate.current_user_request, 'Compare Atlas run 7 versus Atlas run 8 and explain the largest difference.');
+      assert.equal(envelope.registry_selection.reasoning.evaluation_feedback[0].summary, 'Fetch both runs before answering.');
+      assert.equal(envelope.registry_selection.system.skills.includes('record-lookup'), true);
+      assert.match(String(envelope.prompt_blocks.verification || ''), /Verification feedback:/);
+      assert.match(String(envelope.prompt_blocks.verification || ''), /Fetch both runs before answering\./);
+      assert.match(String(envelope.prompt_blocks.session_memory || ''), /Skills: record-lookup/);
     });
 
     test('memory runtime remembers, updates, recalls, lists, and forgets long-term memory', async () => {
@@ -331,7 +409,11 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
           createId: (() => {
             let index = 0;
             return () => `chat-fixed-${index += 1}`;
-          })()
+          })(),
+          requestAssistantText: async () => ({
+            ok: true,
+            text: 'Locate Atlas binder notebook'
+          })
         });
 
         const created = await runtime.createSession({
@@ -346,6 +428,12 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
           storagePath: tempDir,
           sessionId: created.session.id,
           text: 'Where is the Atlas binder notebook?',
+          llm: {
+            provider: 'openai',
+            endpoint: 'https://api.openai.com/v1/responses',
+            apiKey: 'sk-local-key',
+            model: 'gpt-5'
+          },
           projectId: 'proj-1',
           projectName: 'Atlas',
           timestamp: '2026-03-22T15:00:01.000Z'
@@ -469,7 +557,7 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
         });
         assert.equal(listed.ok, true);
         assert.equal(listed.items.length, 1);
-        assert.equal(listed.items[0].title, 'Where is the Atlas binder notebook?');
+        assert.equal(listed.items[0].title, 'Locate Atlas binder notebook');
         assert.equal(listed.items[0].message_count, 2);
         assert.equal(listed.items[0].request_count, 1);
         assert.equal(listed.items[0].project_name, 'Atlas');
@@ -508,7 +596,7 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
         'agent-llm-utils.js'
       ));
       const longText = 'full-text-'.repeat(800);
-      assert.equal(defaultCleanText(longText, 40), longText.trim());
+      assert.equal(defaultCleanText(longText, 40), longText);
     });
 
     test('agent chat log runtime preserves long assistant text without truncation', async () => {
@@ -835,6 +923,92 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
       assert.equal(seen[0].requestId, 'req-observe-1');
       assert.equal(seen[0].stage, 'science_round_started');
       assert.equal(seen[0].meta.round, 1);
+    });
+
+    test('lifecycle tool runner forwards request context into tool execution', async () => {
+      const { createAgentLifecycleService } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc', 'agent-lifecycle-service.js'));
+      let receivedCall = null;
+      const lifecycleService = createAgentLifecycleService({
+        cleanText: (value, maxLength = 2000) => {
+          const text = String(value || '').trim();
+          if (!text) {
+            return '';
+          }
+          return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text;
+        },
+        observability: {
+          recordLifecycleEvent: () => {}
+        },
+        controllerUtils: {},
+        appendAgentChatLogEntry: async () => {},
+        agentToolRuntime: {
+          normalizeToolInvocationArgs(args) {
+            return args;
+          },
+          async runAgentTool(toolName, args, snapshot, options) {
+            receivedCall = {
+              toolName,
+              args,
+              snapshot,
+              options
+            };
+            return {
+              ok: true,
+              summary: 'Tracked tool executed.',
+              result: {
+                status: 'matched',
+                items: []
+              }
+            };
+          }
+        }
+      });
+
+      const runTrackedTool = lifecycleService.createLifecycleToolRunner({
+        snapshot: {
+          data_file_path: '/tmp/agent-data.json'
+        },
+        allowWriteTools: false,
+        lifecycleRecorder: {
+          requestId: 'req-lifecycle-1'
+        },
+        provider: 'codex',
+        endpoint: 'codex://cli',
+        apiKey: '',
+        model: 'gpt-5.4-mini',
+        message: 'Find endotoxin-free pipette tips to buy.',
+        conversation: [
+          { role: 'user', text: 'Find endotoxin-free pipette tips to buy.' }
+        ],
+        parserPayload: {
+          primary_intent: 'purchase_recommendation',
+          entities: {
+            product_query: 'pipette tips'
+          }
+        },
+        traceContext: {
+          trace_id: 'trace-1'
+        },
+        project: {
+          id: 'proj-1',
+          name: 'Atlas'
+        }
+      });
+
+      await runTrackedTool('purchase-recommendation', {
+        query: 'pipette tips'
+      }, {
+        allowWriteTools: false
+      });
+
+      assert.equal(receivedCall.toolName, 'purchase-recommendation');
+      assert.equal(receivedCall.args.query, 'pipette tips');
+      assert.equal(receivedCall.snapshot.data_file_path, '/tmp/agent-data.json');
+      assert.equal(receivedCall.options.message, 'Find endotoxin-free pipette tips to buy.');
+      assert.equal(receivedCall.options.conversation.length, 1);
+      assert.equal(receivedCall.options.parserPayload.entities.product_query, 'pipette tips');
+      assert.equal(receivedCall.options.project.name, 'Atlas');
+      assert.equal(receivedCall.options.requestId, 'req-lifecycle-1');
     });
 
     test('agent chat handler uses the parser-direct science answer for reasoning_effort 0', async () => {
@@ -1252,6 +1426,273 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
       assert.match(String(result.stdout || ''), /helper-finished/);
     });
 
+    test('managed python sandbox runtime only forwards the task brief to the sandbox sub-agent', async () => {
+      const createCalls = [];
+      const noop = () => {};
+      const subAgentRuntime = {
+        createSubAgent: async (input = {}) => {
+          const snapshot = JSON.parse(JSON.stringify(input));
+          createCalls.push(snapshot);
+          return {
+            ok: true,
+            status: 'created',
+            agent: {
+              id: 'python-sandbox-subagent-1',
+              name: String(snapshot.name || ''),
+              status: 'active',
+              system_prompt: '',
+              metadata: JSON.parse(JSON.stringify(snapshot.metadata || {})),
+              created_at: '2026-03-22T10:00:00.000Z',
+              updated_at: '2026-03-22T10:00:00.000Z',
+              messages: [
+                {
+                  role: 'user',
+                  text: String(snapshot.message || ''),
+                  timestamp: '2026-03-22T10:00:00.000Z'
+                }
+              ],
+              last_response: null,
+              task: null
+            },
+            summary: 'created'
+          };
+        },
+        sendSubAgentMessage: async () => ({ ok: true, status: 'updated' }),
+        getSubAgent: ({ agent_id } = {}) => ({
+          ok: true,
+          status: 'found',
+          agent: {
+            id: String(agent_id || 'python-sandbox-subagent-1'),
+            name: 'python-sandbox-helper',
+            status: 'active',
+            system_prompt: '',
+            metadata: {
+              task_type: 'python-sandbox'
+            },
+            created_at: '2026-03-22T10:00:00.000Z',
+            updated_at: '2026-03-22T10:00:01.000Z',
+            messages: [],
+            last_response: null,
+            task: {
+              state: 'completed'
+            },
+            liveness: {
+              live: true,
+              state: 'idle',
+              reason: 'task_completed'
+            }
+          }
+        }),
+        startSubAgentTask: noop,
+        recordSubAgentHeartbeat: noop,
+        completeSubAgentTask: noop,
+        failSubAgentTask: noop,
+        listSubAgents: () => ({ ok: true, status: 'listed', items: [] }),
+        deleteSubAgent: () => ({ ok: true, status: 'deleted' })
+      };
+
+      const runtime = agentPython.createManagedPythonSandboxRuntime({
+        subAgentRuntime,
+        runPythonSandbox: async () => ({
+          ok: true,
+          run_id: 'py-test-1',
+          status: 'ok',
+          error: '',
+          timeout_ms: 4000,
+          python_executable: 'python3',
+          process_id: 1234,
+          exit_code: 0,
+          signal: null,
+          timed_out: false,
+          stdout: 'done',
+          stderr: '',
+          files_written: [],
+          readback_files: [],
+          render_outputs: [],
+          warnings: [],
+          summary: 'Python sandbox execution completed.'
+        })
+      });
+
+      const result = await runtime.execute({
+        code: 'print(42)',
+        timeout_ms: 4000,
+        task_type: 'calculation'
+      }, {
+        name: 'python-sandbox-test'
+      });
+
+      assert.equal(result.ok, true);
+      assert.equal(createCalls.length, 1);
+      assert.equal(Object.prototype.hasOwnProperty.call(createCalls[0], 'system_prompt'), false);
+      assert.equal(createCalls[0].metadata.task_type, 'python-sandbox');
+      assert.match(String(createCalls[0].message || ''), /Supervise this Python sandbox execution\./);
+    });
+
+    test('managed python sandbox runtime lets the sandbox sub-agent repair failed runs itself', async () => {
+      const llmCalls = [];
+      const runCalls = [];
+      const runtime = agentPython.createManagedPythonSandboxRuntime({
+        requestStructuredJsonPayload: async (options = {}) => {
+          llmCalls.push(options);
+          return {
+            ok: true,
+            payload: {
+              action: 'rerun',
+              assistant_message: 'I fixed the failing code and prepared a retry.',
+              summary: 'Retry with corrected code.',
+              code: 'print("repaired")'
+            }
+          };
+        },
+        runPythonSandbox: async (input = {}) => {
+          runCalls.push(JSON.parse(JSON.stringify(input)));
+          if (runCalls.length === 1) {
+            return {
+              ok: false,
+              run_id: 'py-failed-1',
+              status: 'error',
+              error: 'NameError: missing_symbol',
+              timeout_ms: 4000,
+              python_executable: 'python3',
+              process_id: 2111,
+              exit_code: 1,
+              signal: null,
+              timed_out: false,
+              stdout: '',
+              stderr: 'Traceback\nNameError: missing_symbol',
+              files_written: [],
+              readback_files: [],
+              render_outputs: [],
+              warnings: [],
+              summary: 'Python sandbox execution failed.'
+            };
+          }
+          return {
+            ok: true,
+            run_id: 'py-repaired-2',
+            status: 'ok',
+            error: '',
+            timeout_ms: 4000,
+            python_executable: 'python3',
+            process_id: 2112,
+            exit_code: 0,
+            signal: null,
+            timed_out: false,
+            stdout: 'repaired',
+            stderr: '',
+            files_written: [],
+            readback_files: [],
+            render_outputs: [],
+            warnings: [],
+            summary: 'Python sandbox execution completed.'
+          };
+        }
+      });
+
+      const result = await runtime.execute({
+        code: 'print(missing_symbol)',
+        timeout_ms: 4000,
+        task_type: 'calculation'
+      }, {
+        provider: 'openai',
+        model: 'gpt-5.4-mini',
+        message: 'Run the sandbox task and repair it if needed.'
+      });
+
+      assert.equal(result.ok, true);
+      assert.equal(runCalls.length, 2);
+      assert.equal(runCalls[1].code, 'print("repaired")');
+      assert.equal(llmCalls.length, 1);
+      assert.equal(llmCalls[0].stage, 'python_sandbox_sub_agent_repair');
+      assert.equal(result.repair_rounds, 1);
+      assert.equal(result.sub_agent?.task?.state, 'completed');
+      assert.equal(result.sub_agent?.task?.metadata?.latest_sandbox_result?.run_id, 'py-repaired-2');
+      assert.match(String(result.summary || ''), /Self-repaired after 1 round/i);
+    });
+
+    test('managed python sandbox runtime reuses the same sub-agent for stored results and follow-up feedback', async () => {
+      const llmCalls = [];
+      const runCalls = [];
+      const runtime = agentPython.createManagedPythonSandboxRuntime({
+        requestStructuredJsonPayload: async (options = {}) => {
+          llmCalls.push(options);
+          return {
+            ok: true,
+            payload: {
+              action: 'rerun',
+              assistant_message: 'I extended the sandbox work for the follow-up request.',
+              summary: 'Run a second pass.',
+              code: 'print("second-pass")'
+            }
+          };
+        },
+        runPythonSandbox: async (input = {}) => {
+          runCalls.push(JSON.parse(JSON.stringify(input)));
+          const index = runCalls.length;
+          return {
+            ok: true,
+            run_id: `py-success-${index}`,
+            status: 'ok',
+            error: '',
+            timeout_ms: 4000,
+            python_executable: 'python3',
+            process_id: 3100 + index,
+            exit_code: 0,
+            signal: null,
+            timed_out: false,
+            stdout: index === 1 ? 'first-pass' : 'second-pass',
+            stderr: '',
+            files_written: [],
+            readback_files: [],
+            render_outputs: [],
+            warnings: [],
+            summary: 'Python sandbox execution completed.'
+          };
+        }
+      });
+
+      const first = await runtime.execute({
+        code: 'print("first-pass")',
+        timeout_ms: 4000,
+        task_type: 'analysis'
+      }, {
+        message: 'Analyze the dataset.'
+      });
+
+      assert.equal(first.ok, true);
+      assert.equal(runCalls.length, 1);
+      assert.equal(typeof first.sub_agent_id, 'string');
+
+      const replayed = await runtime.execute({
+        sub_agent_id: first.sub_agent_id
+      });
+
+      assert.equal(replayed.ok, true);
+      assert.equal(runCalls.length, 1);
+      assert.equal(replayed.sandbox.run_id, 'py-success-1');
+      assert.equal(replayed.sub_agent_id, first.sub_agent_id);
+      assert.equal(replayed.continued_from_sub_agent, true);
+
+      const continued = await runtime.execute({
+        sub_agent_id: first.sub_agent_id,
+        feedback: 'Please do a second pass and expand the result.'
+      }, {
+        provider: 'openai',
+        model: 'gpt-5.4-mini'
+      });
+
+      assert.equal(continued.ok, true);
+      assert.equal(runCalls.length, 2);
+      assert.equal(runCalls[1].code, 'print("second-pass")');
+      assert.equal(llmCalls.length, 1);
+      assert.equal(llmCalls[0].stage, 'python_sandbox_sub_agent_continue');
+      assert.equal(continued.sub_agent_id, first.sub_agent_id);
+      assert.equal(continued.continued_from_sub_agent, true);
+      assert.equal(continued.repair_rounds, 0);
+      assert.match(String(continued.summary || ''), /Continued from Python sandbox sub-agent/i);
+    });
+
     test('managed python sandbox runtime supervises runs with sub-agents and sends failures for debugging', async () => {
       const runtime = agentPython.createManagedPythonSandboxRuntime();
 
@@ -1285,7 +1726,87 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
       assert.match(String(failure.debug?.assistant_message || ''), /standard library|vendor/i);
     });
 
-    test('provider bridge forwards codex multimodal structured requests through one shared API', async () => {
+    test('python sandbox executor forwards continuation and llm context into the managed runtime', async () => {
+      const { registerAgentToolExecutors } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'tools',
+        'register-agent-tool-executors.js'
+      ));
+      const executors = new Map();
+      let captured = null;
+      registerAgentToolExecutors({
+        genericAgentToolRuntime: {
+          registerToolExecutor(name, handler) {
+            executors.set(name, handler);
+          }
+        },
+        pythonSandboxToolRuntime: {
+          execute: async (args = {}, options = {}) => {
+            captured = {
+              args: JSON.parse(JSON.stringify(args)),
+              options: JSON.parse(JSON.stringify(options))
+            };
+            return {
+              ok: true,
+              sub_agent_id: 'python-sandbox-subagent-1',
+              summary: 'Python sandbox execution completed.',
+              sandbox: {
+                ok: true,
+                run_id: 'py-tool-1',
+                status: 'ok',
+                error: '',
+                stdout: 'done',
+                stderr: '',
+                readback_files: [],
+                render_outputs: []
+              }
+            };
+          }
+        },
+        getAgentPythonSandboxRoot: () => '/tmp/python-sandbox-root'
+      });
+
+      const result = await executors.get('python-sandbox')({
+        args: {
+          sub_agent_id: 'python-sandbox-subagent-1',
+          feedback: 'Keep working on the same task.'
+        },
+        context: {
+          lifecycleRecorder: {
+            requestId: 'req-77'
+          },
+          preferredPythonBin: 'python3',
+          pythonExecutable: '/usr/bin/python3',
+          provider: 'openai',
+          endpoint: 'https://api.openai.example/v1',
+          apiKey: 'secret-key',
+          model: 'gpt-5.4-mini',
+          traceContext: {
+            trace_id: 'trace-1'
+          },
+          message: 'Please continue the previous Python sandbox analysis.'
+        }
+      });
+
+      assert.equal(captured.options.parent_request_id, 'req-77');
+      assert.equal(captured.options.sandboxRoot, '/tmp/python-sandbox-root');
+      assert.equal(captured.options.preferredPythonBin, 'python3');
+      assert.equal(captured.options.pythonExecutable, '/usr/bin/python3');
+      assert.equal(captured.options.provider, 'openai');
+      assert.equal(captured.options.endpoint, 'https://api.openai.example/v1');
+      assert.equal(captured.options.apiKey, 'secret-key');
+      assert.equal(captured.options.model, 'gpt-5.4-mini');
+      assert.equal(captured.options.traceContext.trace_id, 'trace-1');
+      assert.equal(captured.options.message, 'Please continue the previous Python sandbox analysis.');
+      assert.equal(result.sub_agent_id, 'python-sandbox-subagent-1');
+      assert.equal(result.run_id, 'py-tool-1');
+    });
+
+    test('provider bridge routes codex multimodal file requests through the simple Codex bridge surface', async () => {
       const { createAgentLlmProviderBridge } = require(path.join(
         __dirname,
         'src',
@@ -1301,31 +1822,381 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
           CODEX: 'codex',
           OPENAI: 'openai'
         },
+        resolveCodexEndpoint: () => 'https://chatgpt.com/backend-api/codex/responses',
+        resolveCodexApiKey: () => 'oauth-access-token',
         requestCodexCliText: async (input = {}) => {
           calls.push(input);
           return '{"selected":true}';
         }
       });
 
-      const result = await bridge.requestStructuredJsonPayload({
+      const result = await bridge.requestFileInput({
         provider: 'codex',
         model: 'gpt-5.4-mini',
         stage: 'paper_context_selection',
         systemPrompt: 'Return valid JSON only.',
         userPrompt: 'Pick the best excerpt.',
         pdfDataUrl: 'data:application/pdf;base64,QUJD',
-        fileName: 'paper.pdf'
+        fileName: 'paper.pdf',
+        expectJson: true
       });
 
       assert.equal(result.ok, true);
       assert.equal(result.payload.selected, true);
       assert.equal(calls.length, 1);
+      assert.equal(calls[0].endpoint, 'https://chatgpt.com/backend-api/codex/responses');
+      assert.equal(calls[0].apiKey, 'oauth-access-token');
       assert.equal(calls[0].fileName, 'paper.pdf');
       assert.equal(calls[0].pdfDataUrl, 'data:application/pdf;base64,QUJD');
-      assert.match(String(calls[0].prompt || ''), /Return JSON only\./);
+      assert.match(calls[0].prompt, /Return valid JSON only\./);
+      assert.match(calls[0].prompt, /Pick the best excerpt\./);
     });
 
-    test('session runtime delegates tool-loop transport through the shared provider bridge', async () => {
+    test('provider bridge forwards openai web search requests through Responses web_search tool', async () => {
+      const { createAgentLlmProviderBridge } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'shared',
+        'agent-llm-provider-bridge.js'
+      ));
+      const calls = [];
+      const bridge = createAgentLlmProviderBridge({
+        LLM_PROVIDERS: {
+          OPENAI: 'openai'
+        },
+        requestOpenAiResponsesWithBackoff: async ({ body } = {}) => {
+          calls.push(body);
+          return {
+            output_text: JSON.stringify({
+              results: [
+                {
+                  title: 'Vendor Product',
+                  url: 'https://vendor.test/products/item-1',
+                  summary: 'Direct product detail page.',
+                  source_domain: 'vendor.test'
+                }
+              ],
+              reasoning: 'Used web search.'
+            })
+          };
+        }
+      });
+
+      const result = await bridge.requestWebSearch({
+        provider: 'openai',
+        endpoint: 'https://api.openai.com/v1/responses',
+        apiKey: 'test-key',
+        model: 'gpt-5',
+        stage: 'purchase_search',
+        query: 'SS320 competent cells',
+        maxResults: 3,
+        allowedDomains: ['vendor.test']
+      });
+
+      assert.equal(result.ok, true);
+      assert.equal(result.results.length, 1);
+      assert.equal(result.results[0].url, 'https://vendor.test/products/item-1');
+      assert.equal(calls.length, 1);
+      assert.equal(calls[0].tools[0].type, 'web_search');
+      assert.deepEqual(calls[0].tools[0].filters.allowed_domains, ['vendor.test']);
+      assert.deepEqual(calls[0].include, ['web_search_call.action.sources']);
+    });
+
+    test('provider bridge routes codex web search through the simple Codex web-search bridge surface', async () => {
+      const { createAgentLlmProviderBridge } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'shared',
+        'agent-llm-provider-bridge.js'
+      ));
+      const calls = [];
+      const bridge = createAgentLlmProviderBridge({
+        LLM_PROVIDERS: {
+          CODEX: 'codex'
+        },
+        resolveCodexEndpoint: () => 'https://chatgpt.com/backend-api/codex/responses',
+        resolveCodexApiKey: () => 'oauth-access-token',
+        requestCodexCliText: async (input = {}) => {
+          calls.push(input);
+          return JSON.stringify({
+            results: [
+              {
+                title: 'Vendor Product',
+                url: 'https://vendor.test/products/item-1',
+                summary: 'Direct product detail page.',
+                source_domain: 'vendor.test'
+              }
+            ],
+            reasoning: 'Internet search succeeded.'
+          });
+        }
+      });
+
+      const result = await bridge.requestWebSearch({
+        provider: 'codex',
+        model: 'gpt-5.4-mini',
+        query: 'SS320 competent cells',
+        maxResults: 2
+      });
+
+      assert.equal(result.ok, true);
+      assert.equal(result.results.length, 1);
+      assert.equal(calls[0].endpoint, 'https://chatgpt.com/backend-api/codex/responses');
+      assert.equal(calls[0].apiKey, 'oauth-access-token');
+      assert.equal(calls[0].enableWebSearch, true);
+      assert.match(calls[0].prompt, /Search query:/);
+    });
+
+    test('runtime helpers wire codex structured requests through the shared simple Codex provider API surface', async () => {
+      const { createAgentLlmProviderBridge } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'shared',
+        'agent-llm-provider-bridge.js'
+      ));
+      const { createAgentLlmRuntimeHelpers } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'shared',
+        'agent-llm-utils.js'
+      ));
+
+      const calls = [];
+      const bridge = createAgentLlmProviderBridge({
+        LLM_PROVIDERS: {
+          CODEX: 'codex'
+        },
+        resolveCodexEndpoint: () => 'https://chatgpt.com/backend-api/codex/responses',
+        resolveCodexApiKey: () => 'oauth-access-token',
+        requestCodexCliText: async (input = {}) => {
+          calls.push(input);
+          return '{"primary_intent":"general_science_question","needs_clarification":false,"clarifying_question":"","clarification_options":[],"entities":{"projects":[],"samples":[],"proteins":[],"genes":[],"reagents":[],"vendors":[],"inventory_queries":[],"record_queries":[],"assays":[],"gels":[],"papers":[],"protocols":[],"notebooks":[],"purchase_requirements":[]},"reasoning_summary":"Parsed intent.","confidence":"high","reasoning_effort":1}';
+        }
+      });
+      const helpers = createAgentLlmRuntimeHelpers({
+        llmProviderBridge: bridge
+      });
+
+      const result = await helpers.requestStructuredJsonPayload({
+        provider: 'codex',
+        endpoint: 'codex://cli',
+        model: 'gpt-5.4-mini',
+        stage: 'intent_parser',
+        systemPrompt: 'Return valid JSON only.',
+        userPrompt: 'User asks a science question.',
+        schema: {
+          type: 'object',
+          additionalProperties: true
+        },
+        defaultError: 'Intent parser provider is not configured.'
+      });
+
+      assert.equal(result.ok, true);
+      assert.equal(calls.length, 1);
+      assert.equal(calls[0].endpoint, 'https://chatgpt.com/backend-api/codex/responses');
+      assert.equal(calls[0].apiKey, 'oauth-access-token');
+      assert.match(calls[0].prompt, /Return valid JSON only\./);
+      assert.match(calls[0].prompt, /User asks a science question\./);
+    });
+
+    test('web search runtime exposes provider-backed web search to agent tools', async () => {
+      const { createWebSearchRuntime } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'tools',
+        'agent-web-search.js'
+      ));
+
+      const calls = [];
+      const runtime = createWebSearchRuntime({
+        requestWebSearch: async (input = {}) => {
+          calls.push(input);
+          return {
+            ok: true,
+            results: [
+              {
+                title: 'OpenAI result',
+                url: 'https://example.org/openai-result',
+                summary: 'External source.',
+                source_domain: 'example.org'
+              }
+            ],
+            reasoning: 'Provider-backed search.'
+          };
+        }
+      });
+
+      const result = await runtime.execute({
+        provider: 'openai',
+        query: 'recent protein folding benchmark',
+        limit: 4
+      });
+
+      assert.equal(result.ok, true);
+      assert.equal(result.items.length, 1);
+      assert.equal(calls.length, 1);
+      assert.equal(calls[0].provider, 'openai');
+      assert.equal(calls[0].maxResults, 4);
+      assert.equal(result.citations[0].source, 'web_source');
+    });
+
+    test('registerAgentToolExecutors wires the web-search tool through the shared runtime', async () => {
+      const { registerAgentToolExecutors } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'tools',
+        'register-agent-tool-executors.js'
+      ));
+
+      const executors = new Map();
+      const calls = [];
+      registerAgentToolExecutors({
+        genericAgentToolRuntime: {
+          registerToolExecutor(name, handler) {
+            executors.set(name, handler);
+          }
+        },
+        webSearchRuntime: {
+          execute: async (input = {}) => {
+            calls.push(JSON.parse(JSON.stringify(input)));
+            return {
+              ok: true,
+              status: 'completed',
+              query: input.query,
+              items: [
+                {
+                  title: 'Shared web result',
+                  url: 'https://example.org/result',
+                  summary: 'External source.',
+                  source_domain: 'example.org'
+                }
+              ],
+              citations: [
+                {
+                  source: 'web_source',
+                  pointer: 'https://example.org/result',
+                  reason: 'Matched external web search result.'
+                }
+              ],
+              summary: 'Found 1 web result.'
+            };
+          }
+        }
+      });
+
+      const result = await executors.get('web-search')({
+        args: {
+          query: 'recent protein folding benchmark',
+          limit: 3
+        },
+        context: {
+          provider: 'codex',
+          model: 'gpt-5.4-mini',
+          message: 'Find recent protein folding benchmark results.'
+        }
+      });
+
+      assert.equal(result.ok, true);
+      assert.equal(calls.length, 1);
+      assert.equal(calls[0].limit, 3);
+      assert.equal(calls[0].query, 'recent protein folding benchmark');
+      assert.equal(calls[0].message, 'Find recent protein folding benchmark results.');
+      assert.equal(result.summary, 'Found 1 web result.');
+    });
+
+    test('registerAgentToolExecutors forwards snapshot storage and project context into literature-search', async () => {
+      const { registerAgentToolExecutors } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'tools',
+        'register-agent-tool-executors.js'
+      ));
+
+      const executors = new Map();
+      const calls = [];
+      registerAgentToolExecutors({
+        genericAgentToolRuntime: {
+          registerToolExecutor(name, handler) {
+            executors.set(name, handler);
+          }
+        },
+        literatureSearchRuntime: {
+          execute: async (input = {}) => {
+            calls.push(JSON.parse(JSON.stringify(input)));
+            return {
+              ok: true,
+              status: 'completed',
+              items: [],
+              citations: [],
+              loaded_context_blocks: [],
+              papers_read_count: 0,
+              summary: 'Found 0 literature results.'
+            };
+          }
+        }
+      });
+
+      const result = await executors.get('literature-search')({
+        args: {
+          query: 'ncAA incorporation',
+          limit: 5
+        },
+        context: {
+          provider: 'codex',
+          model: 'gpt-5.4-mini',
+          message: 'Find ncAA papers.',
+          project: {
+            id: 'project-1',
+            name: 'Atlas'
+          },
+          snapshot: {
+            settings: {
+              storagePath: '/tmp/enana-storage'
+            },
+            projects: [
+              {
+                id: 'project-1',
+                name: 'Atlas'
+              }
+            ]
+          },
+          parserPayload: {
+            primary_intent: 'literature_search'
+          }
+        }
+      });
+
+      assert.equal(result.ok, true);
+      assert.equal(calls.length, 1);
+      assert.equal(calls[0].project.name, 'Atlas');
+      assert.equal(calls[0].storage_path, '/tmp/enana-storage');
+      assert.equal(calls[0].storagePath, '/tmp/enana-storage');
+      assert.equal(calls[0].snapshot.settings.storagePath, '/tmp/enana-storage');
+      assert.equal(calls[0].parser_payload.primary_intent, 'literature_search');
+    });
+
+    test('session runtime runs the tool loop through the unified requestText API', async () => {
       const { createAgentSessionRuntime } = require(path.join(
         __dirname,
         'src',
@@ -1336,61 +2207,81 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
         'agent-session-runtime.js'
       ));
       const callLog = [];
-      const bridge = {
-        extractFunctionCalls: () => [{ callId: 'openai-call-1', name: 'literature-search', argsText: '{}' }],
-        startToolSession: async (input = {}) => {
-          callLog.push(['start', input]);
+      let turnCount = 0;
+      const runtime = createAgentSessionRuntime({
+        requestText: async (input = {}) => {
+          callLog.push(input);
+          turnCount += 1;
+          if (turnCount === 1) {
+            return {
+              ok: true,
+              text: JSON.stringify({
+                assistant_text: 'starting turn',
+                tool_call: {
+                  call_id: 'codex-call-1',
+                  name: 'literature-search',
+                  arguments: {
+                    query: 'ncAA incorporation'
+                  }
+                }
+              })
+            };
+          }
+          if (turnCount === 2) {
+            return {
+              ok: true,
+              text: JSON.stringify({
+                assistant_text: 'after tool output',
+                tool_calls: []
+              })
+            };
+          }
           return {
-            provider: 'codex',
-            parsed: {
-              assistant_text: 'starting turn',
-              tool_calls: [{ callId: 'codex-call-1', name: 'literature-search', argsText: '{}' }]
-            }
-          };
-        },
-        extractToolSessionFunctionCalls: (session) => session.parsed.tool_calls,
-        extractToolSessionText: (session) => session.parsed.assistant_text,
-        continueToolSessionWithToolOutputs: async (session, toolOutputs, traceContext) => {
-          callLog.push(['tool_outputs', toolOutputs, traceContext]);
-          return {
-            ...session,
-            parsed: {
-              assistant_text: 'after tool output',
+            ok: true,
+            text: JSON.stringify({
+              assistant_text: 'feedback: Please be more specific.',
               tool_calls: []
-            }
-          };
-        },
-        continueToolSessionWithUserMessage: async (session, message, traceContext) => {
-          callLog.push(['user_message', message, traceContext]);
-          return {
-            ...session,
-            parsed: {
-              assistant_text: `feedback: ${message}`,
-              tool_calls: []
-            }
+            })
           };
         }
-      };
-      const runtime = createAgentSessionRuntime({
-        llmProviderBridge: bridge
       });
 
       const started = await runtime.startAgentSession({
         provider: 'codex',
         model: 'gpt-5.4-mini',
-        systemPrompt: 'Be grounded.'
+        systemPrompt: 'Be grounded.',
+        message: 'Search for ncAA incorporation papers.',
+        toolDefinitions: [
+          {
+            type: 'function',
+            name: 'literature-search',
+            description: 'Search papers.',
+            parameters: {
+              type: 'object',
+              properties: {
+                query: { type: 'string' }
+              },
+              required: ['query'],
+              additionalProperties: false
+            }
+          }
+        ]
       });
-      assert.equal(callLog[0][0], 'start');
+      assert.equal(callLog.length, 1);
+      assert.equal(callLog[0].provider, 'codex');
+      assert.match(callLog[0].userPrompt, /Search for ncAA incorporation papers\./);
+      assert.match(callLog[0].userPrompt, /literature-search/);
       assert.equal(runtime.extractAgentSessionText(started), 'starting turn');
       assert.equal(runtime.extractAgentSessionFunctionCalls(started).length, 1);
-      assert.equal(runtime.extractFunctionCalls({ output: [{ type: 'function_call', id: 'openai-call-1', name: 'literature-search', arguments: '{}' }] }).length, 1);
+      assert.equal(runtime.extractFunctionCalls('{"tool_call":{"name":"literature-search","arguments":{}}}').length, 1);
 
       const afterTool = await runtime.continueAgentSessionWithToolOutputs(
         started,
         [{ callId: 'codex-call-1', name: 'literature-search', output: '{"ok":true}' }],
         { trace_id: 'trace-1' }
       );
-      assert.equal(callLog[1][0], 'tool_outputs');
+      assert.equal(callLog[1].traceContext.trace_id, 'trace-1');
+      assert.match(callLog[1].userPrompt, /"ok":true/);
       assert.equal(runtime.extractAgentSessionText(afterTool), 'after tool output');
 
       const afterUser = await runtime.continueAgentSessionWithUserMessage(
@@ -1398,7 +2289,8 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
         'Please be more specific.',
         { trace_id: 'trace-2' }
       );
-      assert.equal(callLog[2][0], 'user_message');
+      assert.equal(callLog[2].traceContext.trace_id, 'trace-2');
+      assert.match(callLog[2].userPrompt, /Please be more specific\./);
       assert.equal(runtime.extractAgentSessionText(afterUser), 'feedback: Please be more specific.');
     });
 

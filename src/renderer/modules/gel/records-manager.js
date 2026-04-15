@@ -11,6 +11,60 @@ export function createRecordsManager({ runtime, elements, deps }) {
     }
   }
 
+  function getStorageRoot() {
+    return String(runtime.state.settings?.storagePath || '').trim();
+  }
+
+  function encodeDataUrlPayload(dataUrl) {
+    const source = String(dataUrl || '').trim();
+    const commaIndex = source.indexOf(',');
+    if (!source.startsWith('data:') || commaIndex < 0) {
+      return '';
+    }
+    const header = source.slice(0, commaIndex);
+    const payload = source.slice(commaIndex + 1);
+    if (/;base64/i.test(header)) {
+      return payload.trim();
+    }
+    try {
+      return btoa(unescape(encodeURIComponent(decodeURIComponent(payload))));
+    } catch {
+      try {
+        return btoa(unescape(encodeURIComponent(payload)));
+      } catch {
+        return '';
+      }
+    }
+  }
+
+  function buildGelArtifactFolder(record) {
+    const storageRoot = getStorageRoot();
+    if (!storageRoot || !record) {
+      return '';
+    }
+    const linkedEntry = (runtime.state.notebookEntries || []).find((entry) => entry.id === record.notebookEntryId);
+    const folderName = `${safeFilePart(record.name || record.id, 'gel')}__${safeFilePart(record.id, 'gel')}`;
+    if (linkedEntry?.storageFolder) {
+      return `${String(linkedEntry.storageFolder).replace(/[\\/]+$/, '')}/gel/${folderName}`;
+    }
+    return `${storageRoot.replace(/[\\/]+$/, '')}/Gels/${folderName}`;
+  }
+
+  async function persistDataUrlArtifact({ targetFolder, fileName, dataUrl }) {
+    const storageRoot = getStorageRoot();
+    const dataBase64 = encodeDataUrlPayload(dataUrl);
+    if (!storageRoot || !targetFolder || !dataBase64 || !window.enanaApi?.storeImportedFile) {
+      return null;
+    }
+    const result = await window.enanaApi.storeImportedFile({
+      storagePath: storageRoot,
+      targetFolder,
+      fileName,
+      dataBase64
+    });
+    return result?.ok ? result : null;
+  }
+
   function arraysEqual(left, right) {
     if (left.length !== right.length) {
       return false;
@@ -81,16 +135,7 @@ export function createRecordsManager({ runtime, elements, deps }) {
     return String(fallback || '').trim();
   }
 
-  function extractBase64Payload(dataUrl) {
-    const source = String(dataUrl || '');
-    const commaIndex = source.indexOf(',');
-    if (commaIndex < 0) {
-      return '';
-    }
-    return source.slice(commaIndex + 1).trim();
-  }
-
-  async function persistNotebookPreviewImage(existingRecord = null) {
+  async function persistNotebookPreviewImage(record, existingRecord = null) {
     const existingPath = String(existingRecord?.previewImagePath || '').trim();
     const existingRelativePath = String(existingRecord?.previewImageRelativePath || '').trim();
     const previewDataUrl = captureNotebookPreviewImage(String(existingRecord?.previewImageDataUrl || '').trim());
@@ -102,18 +147,14 @@ export function createRecordsManager({ runtime, elements, deps }) {
       };
     }
 
-    const linkedEntry = (runtime.state.notebookEntries || []).find((entry) => entry.id === elements.gelNotebookEntryInput?.value);
-    const storagePath = String(runtime.state.settings?.storagePath || '').trim();
-    const storageFolder = String(linkedEntry?.storageFolder || '').trim();
-    const dataBase64 = extractBase64Payload(previewDataUrl);
+    const targetFolder = buildGelArtifactFolder(record);
 
-    if (storagePath && storageFolder && dataBase64 && window.enanaApi?.storeImportedFile) {
+    if (targetFolder) {
       try {
-        const stored = await window.enanaApi.storeImportedFile({
-          storagePath,
-          targetFolder: `${storageFolder}/LinkedPreviews/Gels`,
-          fileName: `${safeFilePart(elements.gelNameInput?.value || runtime.currentReport?.image?.name, 'gel-preview')}.png`,
-          dataBase64
+        const stored = await persistDataUrlArtifact({
+          targetFolder,
+          fileName: 'preview.png',
+          dataUrl: previewDataUrl
         });
         if (stored?.filePath) {
           return {
@@ -129,6 +170,71 @@ export function createRecordsManager({ runtime, elements, deps }) {
       previewImagePath: existingPath,
       previewImageRelativePath: existingRelativePath,
       previewImageDataUrl: previewDataUrl
+    };
+  }
+
+  async function persistGelRecordArtifacts(record, existingRecord = null) {
+    const storageRoot = getStorageRoot();
+    const targetFolder = buildGelArtifactFolder(record);
+    if (!storageRoot || !targetFolder || !window.enanaApi?.writeJsonFile) {
+      return {};
+    }
+
+    const sourceImageDataUrl = runtime.currentImage?.imageData
+      ? deps.imageDataToDataUrl(runtime.currentImage.imageData)
+      : String(existingRecord?.sourceImageDataUrl || '').trim();
+
+    let reportResult = null;
+    let metadataResult = null;
+    let sourceImageResult = null;
+    try {
+      [reportResult, metadataResult, sourceImageResult] = await Promise.all([
+        window.enanaApi.writeJsonFile({
+          storagePath: storageRoot,
+          targetFolder,
+          fileName: 'analysis-result.json',
+          data: record.report || {}
+        }),
+        window.enanaApi.writeJsonFile({
+          storagePath: storageRoot,
+          targetFolder,
+          fileName: 'gel-record.json',
+          data: {
+            id: record.id,
+            name: record.name,
+            projectId: record.projectId,
+            projectName: record.projectName,
+            notebookEntryId: record.notebookEntryId,
+            notebookEntryProtocolName: record.notebookEntryProtocolName,
+            notebookEntryType: record.notebookEntryType,
+            imageName: record.imageName,
+            analysisType: record.analysisType,
+            parameters: record.parameters || {},
+            manualOverrides: record.manualOverrides || {},
+            updatedAt: record.updatedAt
+          }
+        }),
+        sourceImageDataUrl
+          ? persistDataUrlArtifact({
+              targetFolder,
+              fileName: 'source.png',
+              dataUrl: sourceImageDataUrl
+            })
+          : Promise.resolve(null)
+      ]);
+    } catch {
+      return {};
+    }
+
+    return {
+      storageFolder: targetFolder,
+      analysisResultPath: reportResult?.ok ? reportResult.filePath || '' : '',
+      analysisResultRelativePath: reportResult?.ok ? reportResult.relativePath || '' : '',
+      recordJsonPath: metadataResult?.ok ? metadataResult.filePath || '' : '',
+      recordJsonRelativePath: metadataResult?.ok ? metadataResult.relativePath || '' : '',
+      sourceImagePath: sourceImageResult?.filePath || '',
+      sourceImageRelativePath: sourceImageResult?.relativePath || '',
+      sourceImageDataUrl: ''
     };
   }
 
@@ -232,7 +338,8 @@ export function createRecordsManager({ runtime, elements, deps }) {
     const existing = runtime.state.gelAnalyses.find((item) => item.id === editingId);
     const record = buildRecordFromCurrentReport(existing?.id || '');
     record.name = name;
-    Object.assign(record, await persistNotebookPreviewImage(existing));
+    Object.assign(record, await persistNotebookPreviewImage(record, existing));
+    Object.assign(record, await persistGelRecordArtifacts(record, existing));
 
     const index = runtime.state.gelAnalyses.findIndex((item) => item.id === record.id);
     if (index >= 0) {

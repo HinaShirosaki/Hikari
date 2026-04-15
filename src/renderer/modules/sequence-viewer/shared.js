@@ -29,15 +29,12 @@ export function clamp(value, min, max) {
   return Math.min(max, Math.max(min, numeric));
 }
 
-export function cleanText(value, maxLength = 500) {
-  const text = String(value || '').trim();
+export function cleanText(value, _maxLength = 500) {
+  const text = String(value || '');
   if (!text) {
     return '';
   }
-  if (!Number.isFinite(Number(maxLength)) || maxLength <= 0) {
-    return text;
-  }
-  return text.length > maxLength ? text.slice(0, maxLength) : text;
+  return text;
 }
 
 export function parseCssPixels(value) {

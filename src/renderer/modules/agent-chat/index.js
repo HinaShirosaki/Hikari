@@ -8,9 +8,9 @@ import {
 import {
   applyNotebookDraftAutoSave,
   buildNotebookEntryFromDraft,
-  findNotebookEntryByProposalId,
+  findNotebookEntryForDraft,
   normalizeNotebookDraft,
-  resolveNotebookDraftProposalId,
+  normalizeNotebookState,
   updateAssistantNotebookDraftMessage
 } from './notebook-drafts.js';
 import * as renderingModule from './rendering.js';
@@ -27,11 +27,11 @@ export function initAgentChat({
   persist,
   createId,
   safeText,
-  onNotebookEntriesChanged
+  onNotebookEntriesChanged,
+  onOpenNotebookEntry = () => {}
 }) {
   const api = windowObject?.enanaApi || null;
   const projectSelect = rootDocument?.getElementById?.('agent-project-select') || null;
-  const contextSummary = rootDocument?.getElementById?.('agent-context-summary') || null;
   const sessionStatus = rootDocument?.getElementById?.('agent-session-status') || null;
   const sessionList = rootDocument?.getElementById?.('agent-session-list') || null;
   const newChatBtn = rootDocument?.getElementById?.('agent-new-chat-btn') || null;
@@ -42,6 +42,7 @@ export function initAgentChat({
   const developerRunToolBtn = rootDocument?.getElementById?.('agent-dev-run-tool-btn') || null;
   const developerToolHint = rootDocument?.getElementById?.('agent-dev-tool-hint') || null;
   const historyNode = rootDocument?.getElementById?.('agent-chat-history') || null;
+  const scrollToBottomBtn = rootDocument?.getElementById?.('agent-scroll-to-bottom-btn') || null;
   const input = rootDocument?.getElementById?.('agent-message-input') || null;
   const deepResearchToggleBtn = rootDocument?.getElementById?.('agent-deep-research-toggle-btn') || null;
   const sendBtn = rootDocument?.getElementById?.('agent-send-btn') || null;
@@ -333,7 +334,7 @@ export function initAgentChat({
     state.agentChat.messages = state.agentChat.messages.slice(-40);
     persist();
     sessionManager.renderSessionList();
-    renderHistoryView();
+    renderHistoryView({ forceScroll: true });
   }
 
   function applyLiveProgressEvent(eventPayload = {}) {
@@ -380,6 +381,34 @@ export function initAgentChat({
 
   function setStatus(text) {
     status.textContent = text;
+    const normalized = trimText(text, 160).toLowerCase();
+    let tone = 'neutral';
+    if (!normalized || normalized === 'ready.') {
+      tone = 'ready';
+    } else if (
+      normalized.includes('error')
+      || normalized.includes('failed')
+      || normalized.includes('unavailable')
+    ) {
+      tone = 'error';
+    } else if (
+      normalized.includes('complete')
+      || normalized.includes('opened')
+      || normalized.includes('loaded')
+      || normalized.includes('created')
+      || normalized.includes('enabled')
+      || normalized.includes('disabled')
+    ) {
+      tone = 'complete';
+    } else if (
+      normalized.includes('working')
+      || normalized.includes('loading')
+      || normalized.includes('running')
+      || normalized.includes('stopping')
+    ) {
+      tone = 'working';
+    }
+    status.dataset.state = tone;
   }
 
   function setSessionStatus(text) {
@@ -393,8 +422,43 @@ export function initAgentChat({
     return trimText(state.settings?.storagePath, 1200);
   }
 
-  function renderHistoryView() {
+  function isHistoryNearBottom() {
+    const remaining = historyNode.scrollHeight - historyNode.scrollTop - historyNode.clientHeight;
+    return remaining < 96;
+  }
+
+  function updateScrollToBottomButton() {
+    if (!scrollToBottomBtn) {
+      return;
+    }
+    scrollToBottomBtn.hidden = isHistoryNearBottom();
+  }
+
+  function scrollHistoryToBottom(smooth = false) {
+    if (typeof historyNode.scrollTo === 'function') {
+      historyNode.scrollTo({
+        top: historyNode.scrollHeight,
+        behavior: smooth ? 'smooth' : 'auto'
+      });
+    } else {
+      historyNode.scrollTop = historyNode.scrollHeight;
+    }
+    updateScrollToBottomButton();
+  }
+
+  function syncComposerHeight() {
+    input.style.height = 'auto';
+    const nextHeight = Math.min(Math.max(input.scrollHeight, 92), 220);
+    input.style.height = `${nextHeight}px`;
+    input.style.overflowY = input.scrollHeight > 220 ? 'auto' : 'hidden';
+  }
+
+  function renderHistoryView(options = {}) {
     ensureAgentState();
+    const previousScrollTop = historyNode.scrollTop;
+    const shouldStickToBottom = options.forceScroll === true
+      || historyNode.childElementCount === 0
+      || isHistoryNearBottom();
     renderingModule.renderHistory({
       historyNode,
       messages: liveAssistantMessage
@@ -403,6 +467,12 @@ export function initAgentChat({
       state,
       safeText
     });
+    if (shouldStickToBottom) {
+      scrollHistoryToBottom(options.smoothScroll === true);
+      return;
+    }
+    historyNode.scrollTop = previousScrollTop;
+    updateScrollToBottomButton();
   }
 
   function renderProjectOptions() {
@@ -427,6 +497,7 @@ export function initAgentChat({
       return;
     }
     ensureAgentState();
+    deepResearchToggleBtn.dataset.enabled = state.agentChat.deepResearchEnabled === true ? 'true' : 'false';
     deepResearchToggleBtn.textContent = state.agentChat.deepResearchEnabled === true
       ? 'Deep Research: On'
       : 'Deep Research: Off';
@@ -449,24 +520,7 @@ export function initAgentChat({
   }
 
   function renderContextSummary() {
-    const projectId = state.agentChat?.projectId || '';
-    const snapshot = buildStateSnapshot(state, projectId);
-    const counts = snapshot.context_counts && typeof snapshot.context_counts === 'object'
-      ? snapshot.context_counts
-      : {};
-    const summary = [
-      `${Number(counts.projects) || snapshot.projects.length} projects`,
-      `${Number(counts.protocols) || snapshot.protocols.length} protocols`,
-      `${Number(counts.workflows) || snapshot.workflows.length} workflows`,
-      `${Number(counts.notebookEntries) || snapshot.notebookEntries.length} notebook entries`,
-      `${Number(counts.assays) || snapshot.assays.length} assays`,
-      `${Number(counts.gelAnalyses) || snapshot.gelAnalyses.length} gel analyses`,
-      `${Number(counts.papers) || snapshot.papers.length} papers`,
-      `${Number(counts.inventory_chemicals) || snapshot.inventory.chemicals.length} chemicals`
-    ].join(' | ');
-    if (contextSummary) {
-      contextSummary.value = summary;
-    }
+    // Context summary UI has been removed from the agent rail.
   }
 
   const sessionManager = createAgentChatSessionManager({
@@ -523,23 +577,35 @@ export function initAgentChat({
 
   async function buildSyncedStateSnapshot(projectId) {
     let syncResult = null;
-    if (api?.autoSaveDataFile) {
-      syncResult = await api.autoSaveDataFile(state, state.settings?.enaFilePath || '');
+    const storagePath = trimText(state.settings?.storagePath, 1200);
+    if (api?.autoSaveDataFile && storagePath) {
+      syncResult = await api.autoSaveDataFile(state, '');
       if (!syncResult?.ok) {
         throw new Error(syncResult?.error || 'Failed to sync data before agent request.');
-      }
-      if (syncResult?.filePath && state.settings?.enaFilePath !== syncResult.filePath) {
-        state.settings.enaFilePath = syncResult.filePath;
       }
     }
     const stateSnapshot = buildStateSnapshot(state, projectId);
     if (!stateSnapshot.data_file_path) {
-      stateSnapshot.data_file_path = trimText(syncResult?.filePath || state.settings?.enaFilePath, 1600);
+      stateSnapshot.data_file_path = trimText(syncResult?.filePath, 1600);
     }
     return stateSnapshot;
   }
 
   async function onHistoryClick(event) {
+    const suggestedPromptButton = event?.target?.closest?.('[data-agent-suggest-prompt]')
+      || (event?.target?.dataset?.agentSuggestPrompt ? event.target : null);
+    if (suggestedPromptButton) {
+      const prompt = trimText(suggestedPromptButton.dataset.agentSuggestPrompt, 3000);
+      if (!prompt) {
+        return;
+      }
+      input.value = prompt;
+      syncComposerHeight();
+      input.focus();
+      setStatus('Prompt ready.');
+      return;
+    }
+
     const externalButton = event?.target?.closest?.('[data-agent-open-external-url]')
       || (event?.target?.dataset?.agentOpenExternalUrl ? event.target : null);
     if (externalButton) {
@@ -553,6 +619,33 @@ export function initAgentChat({
       }
       const result = await api.openExternalUrl(url);
       setStatus(result?.ok === true ? 'Opened product page.' : (trimText(result?.error, 320) || 'Failed to open product page.'));
+      return;
+    }
+
+    const openNotebookButton = event?.target?.closest?.('[data-agent-open-notebook-page]')
+      || (event?.target?.dataset?.agentOpenNotebookPage ? event.target : null);
+    if (openNotebookButton) {
+      const messageId = trimText(openNotebookButton.dataset.agentOpenNotebookPage, 120);
+      if (!messageId) {
+        return;
+      }
+      const message = asArray(state.agentChat.messages).find((item) => trimText(item?.id, 120) === messageId);
+      const draft = normalizeNotebookDraft(message?.meta?.notebookDraft);
+      const existingEntry = findNotebookEntryForDraft(state.notebookEntries, draft);
+      if (!draft || !existingEntry) {
+        setStatus('Notebook page is unavailable for opening.');
+        return;
+      }
+      try {
+        onOpenNotebookEntry(existingEntry.id);
+      } catch {
+        // Preserve chat responsiveness even if notebook navigation fails.
+      }
+      setStatus(
+        normalizeNotebookState(existingEntry?.notebookState) === 'planned'
+          ? 'Opened planned notebook page.'
+          : 'Opened notebook page.'
+      );
       return;
     }
 
@@ -571,8 +664,7 @@ export function initAgentChat({
       setStatus('Planned notebook draft is unavailable for creation.');
       return;
     }
-    const proposalId = resolveNotebookDraftProposalId(draft);
-    const existingEntry = proposalId ? findNotebookEntryByProposalId(state.notebookEntries, proposalId) : null;
+    const existingEntry = findNotebookEntryForDraft(state.notebookEntries, draft);
     if (existingEntry) {
       updateAssistantNotebookDraftMessage(state.agentChat.messages, messageId, (currentDraft) => ({
         ...currentDraft,
@@ -584,8 +676,13 @@ export function initAgentChat({
         }
       }));
       persist();
-      renderHistoryView();
-      setStatus('Planned notebook page already exists.');
+      renderHistoryView({ forceScroll: true });
+      try {
+        onOpenNotebookEntry(existingEntry.id);
+      } catch {
+        // Preserve chat responsiveness even if notebook navigation fails.
+      }
+      setStatus('Opened planned notebook page.');
       return;
     }
 
@@ -612,11 +709,16 @@ export function initAgentChat({
     }));
     persist();
     renderContextSummary();
-    renderHistoryView();
+    renderHistoryView({ forceScroll: true });
     try {
       onNotebookEntriesChanged?.();
     } catch {
       // Keep chat actions resilient even if downstream render hooks fail.
+    }
+    try {
+      onOpenNotebookEntry(entry.id);
+    } catch {
+      // Keep chat actions resilient even if notebook navigation fails.
     }
     setStatus('Planned notebook page created.');
   }
@@ -654,12 +756,13 @@ export function initAgentChat({
     state.agentChat.messages = state.agentChat.messages.slice(-40);
     persist();
     input.value = '';
-    renderHistoryView();
+    syncComposerHeight();
+    renderHistoryView({ forceScroll: true });
 
     const clientRequestId = `agent-request-${trimText(createId(), 120) || Date.now().toString(36)}`;
     activeClientRequestId = clientRequestId;
     liveAssistantMessage = buildLiveAssistantPlaceholder(clientRequestId, messageText);
-    renderHistoryView();
+    renderHistoryView({ forceScroll: true });
     updateInFlightState(true);
     setStatus('Working on this...');
 
@@ -740,7 +843,7 @@ export function initAgentChat({
       state.agentChat.messages = state.agentChat.messages.slice(-40);
       persist();
       sessionManager.renderSessionList();
-      renderHistoryView();
+      renderHistoryView({ forceScroll: true });
       if (state.agentChat.currentSessionId) {
         void sessionManager.refreshPersistentSessions({ force: true, loadCurrent: false });
       }
@@ -790,7 +893,7 @@ export function initAgentChat({
       state.agentChat.messages = state.agentChat.messages.slice(-40);
       persist();
       sessionManager.renderSessionList();
-      renderHistoryView();
+      renderHistoryView({ forceScroll: true });
       setStatus('Error.');
     } finally {
       updateInFlightState(false);
@@ -856,7 +959,7 @@ export function initAgentChat({
     });
     state.agentChat.messages = state.agentChat.messages.slice(-40);
     persist();
-    renderHistoryView();
+    renderHistoryView({ forceScroll: true });
 
     updateInFlightState(true);
     setStatus(`Running manual test for ${toolName}...`);
@@ -1014,6 +1117,8 @@ export function initAgentChat({
   });
 
   newChatBtn?.addEventListener('click', () => {
+    input.value = '';
+    syncComposerHeight();
     void sessionManager.startNewChatSession();
   });
 
@@ -1028,11 +1133,21 @@ export function initAgentChat({
   });
 
   clearBtn.addEventListener('click', () => {
+    input.value = '';
+    syncComposerHeight();
     void sessionManager.startNewChatSession();
   });
 
   historyNode.addEventListener('click', (event) => {
     void onHistoryClick(event);
+  });
+
+  historyNode.addEventListener('scroll', () => {
+    updateScrollToBottomButton();
+  });
+
+  scrollToBottomBtn?.addEventListener('click', () => {
+    scrollHistoryToBottom(true);
   });
 
   sessionList?.addEventListener('click', (event) => {
@@ -1052,6 +1167,10 @@ export function initAgentChat({
     void sendMessage();
   });
 
+  input.addEventListener('input', () => {
+    syncComposerHeight();
+  });
+
   function render() {
     ensureAgentState();
     renderProjectOptions();
@@ -1063,6 +1182,7 @@ export function initAgentChat({
     if (developerTools) {
       developerTools.hidden = !(state.settings?.agent?.developerMode === true && api?.agentDeveloperTestTools);
     }
+    syncComposerHeight();
     renderHistoryView();
     if (!inFlight) {
       setStatus('Ready.');

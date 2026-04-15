@@ -96,6 +96,79 @@ export function initPapersManagement({
   const uiState = {
     commentsCollapsed: false
   };
+  const discoveryState = {
+    inFlight: false,
+    lastStoragePath: '',
+    lastRunAt: 0
+  };
+
+  function mergeDiscoveredJournalClubs(discoveredClubs = []) {
+    let changed = false;
+    if (!Array.isArray(state.journalClubs)) {
+      state.journalClubs = [];
+      changed = true;
+    }
+    const existingById = new Map((state.journalClubs || []).map((club) => [String(club?.id || '').trim(), club]));
+    discoveredClubs.forEach((club) => {
+      const normalized = club && typeof club === 'object' ? club : {};
+      const id = String(normalized.id || '').trim();
+      if (!id) {
+        return;
+      }
+      const existing = existingById.get(id);
+      if (existing) {
+        return;
+      }
+      state.journalClubs.push({
+        id,
+        name: String(normalized.name || 'Discovered folder').trim() || 'Discovered folder',
+        description: String(normalized.description || '').trim()
+      });
+      changed = true;
+    });
+    return changed;
+  }
+
+  function mergeDiscoveredPapers(discoveredPapers = []) {
+    let changed = false;
+    if (!Array.isArray(state.papers)) {
+      state.papers = [];
+      changed = true;
+    }
+    const existingByRelativePath = new Map(
+      (state.papers || []).map((paper) => [
+        String(paper?.storedRelativePath || '').trim().toLowerCase(),
+        paper
+      ]).filter(([key]) => key)
+    );
+    discoveredPapers.forEach((paper) => {
+      const normalized = paper && typeof paper === 'object' ? paper : {};
+      const relativePath = String(normalized.storedRelativePath || '').trim();
+      const lowerRelativePath = relativePath.toLowerCase();
+      if (!lowerRelativePath) {
+        return;
+      }
+      const existing = existingByRelativePath.get(lowerRelativePath);
+      if (existing) {
+        const merged = {
+          ...existing,
+          ...normalized,
+          id: existing.id || normalized.id
+        };
+        const previousJson = JSON.stringify(existing);
+        const nextJson = JSON.stringify(merged);
+        if (previousJson !== nextJson) {
+          Object.assign(existing, merged);
+          changed = true;
+        }
+        return;
+      }
+      state.papers.push(normalized);
+      existingByRelativePath.set(lowerRelativePath, normalized);
+      changed = true;
+    });
+    return changed;
+  }
 
   const context = {
     state,
@@ -180,6 +253,45 @@ export function initPapersManagement({
   const library = createPapersLibraryController(context);
   context.library = library;
 
+  async function maybeDiscoverStoredPapers() {
+    const storagePath = String(state.settings?.storagePath || '').trim();
+    if (!storagePath || !elements.papersView?.classList?.contains?.('is-active')) {
+      return;
+    }
+    if (!windowRef?.enanaApi?.discoverStoredPapers || discoveryState.inFlight) {
+      return;
+    }
+    const now = Date.now();
+    if (discoveryState.lastStoragePath === storagePath && now - discoveryState.lastRunAt < 15_000) {
+      return;
+    }
+
+    discoveryState.inFlight = true;
+    try {
+      const result = await windowRef.enanaApi.discoverStoredPapers({
+        storagePath,
+        knownPapers: state.papers || [],
+        projects: state.projects || [],
+        journalClubs: state.journalClubs || []
+      });
+      discoveryState.lastStoragePath = storagePath;
+      discoveryState.lastRunAt = Date.now();
+      if (!result?.ok) {
+        return;
+      }
+      const changed = mergeDiscoveredJournalClubs(result.journalClubs)
+        || mergeDiscoveredPapers(result.papers);
+      if (changed) {
+        persist();
+        library.renderLinkTargets();
+        library.renderLibrarySidebar();
+        comments.renderCommentSidebar();
+      }
+    } finally {
+      discoveryState.inFlight = false;
+    }
+  }
+
   context.renderLibrarySidebar = (...args) => library.renderLibrarySidebar(...args);
   context.renderCommentSidebar = (...args) => comments.renderCommentSidebar(...args);
   context.syncViewerHighlights = () => {
@@ -248,6 +360,7 @@ export function initPapersManagement({
     context.syncViewerHighlights();
     comments.renderCommentSidebar();
     library.schedulePapersEdgeBleedSync();
+    void maybeDiscoverStoredPapers();
   };
 
   elements.paperCommentToggleBtn?.addEventListener('click', () => {

@@ -25,9 +25,11 @@ export function sanitizeFolderName(value) {
 }
 
 export function buildPaperStorageFolder({ rootPath, linkedType, linkedName }) {
-  const category = linkedType === 'journal-club' ? 'JournalClub' : 'Project';
   const safeLinkedName = sanitizeFolderName(linkedName) || 'Uncategorized';
-  return `${String(rootPath || '').trim()}/${category}/${safeLinkedName}/Papers`;
+  if (linkedType === 'journal-club') {
+    return `${String(rootPath || '').trim()}/Papers/${safeLinkedName}`;
+  }
+  return `${String(rootPath || '').trim()}/Project/${safeLinkedName}/Papers`;
 }
 
 export function resolveStoredPaperPath(paper, storagePath = '') {

@@ -29,6 +29,8 @@ const SANDBOX_RENDER_OUTPUT_FILE_NAME = '.enana_sandbox_render_outputs.json';
 const SANDBOX_MAX_RENDER_OUTPUTS = 12;
 const SANDBOX_MAX_RENDER_TEXT_CHARS = 24000;
 const SANDBOX_MAX_RENDER_IMAGE_BASE64_CHARS = 1024 * 1024;
+const SANDBOX_DEFAULT_REPAIR_ATTEMPTS = 2;
+const SANDBOX_MAX_REPAIR_ATTEMPTS = 6;
 const SANDBOX_ALLOWED_IMAGE_MIME_TYPES = new Set([
   'image/png',
   'image/jpeg',
@@ -36,6 +38,63 @@ const SANDBOX_ALLOWED_IMAGE_MIME_TYPES = new Set([
   'image/webp',
   'image/svg+xml'
 ]);
+
+const PYTHON_SANDBOX_SUB_AGENT_PLAN_SCHEMA = Object.freeze({
+  type: 'object',
+  additionalProperties: false,
+  required: ['action', 'assistant_message'],
+  properties: {
+    action: {
+      type: 'string',
+      enum: ['rerun', 'return_result', 'give_up']
+    },
+    assistant_message: {
+      type: 'string',
+      maxLength: 4000
+    },
+    summary: {
+      type: 'string',
+      maxLength: 500
+    },
+    code: {
+      type: 'string',
+      maxLength: 40000
+    },
+    timeout_ms: {
+      type: 'integer',
+      minimum: SANDBOX_MIN_TIMEOUT_MS,
+      maximum: SANDBOX_MAX_TIMEOUT_MS
+    },
+    files: {
+      type: 'array',
+      maxItems: SANDBOX_MAX_INPUT_FILES,
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['path'],
+        properties: {
+          path: {
+            type: 'string',
+            minLength: 1,
+            maxLength: 240
+          },
+          content: {
+            type: 'string'
+          }
+        }
+      }
+    },
+    readback_paths: {
+      type: 'array',
+      maxItems: SANDBOX_MAX_READBACK_FILES,
+      items: {
+        type: 'string',
+        minLength: 1,
+        maxLength: 240
+      }
+    }
+  }
+});
 
 function asArray(value) {
   return Array.isArray(value) ? value : [];
@@ -54,7 +113,7 @@ function cloneJson(value, fallback) {
 }
 
 function cleanText(value, _maxLength = 5000) {
-  const text = String(value || '').trim();
+  const text = String(value || '');
   if (!text) {
     return '';
   }
@@ -217,6 +276,135 @@ function normalizePythonSandboxRenderOutputs(rawOutputs, warnings = []) {
     warnings.push(`render_outputs capped at ${SANDBOX_MAX_RENDER_OUTPUTS} entries.`);
   }
   return outputs;
+}
+
+function normalizePythonSandboxFiles(rawFiles = []) {
+  return asArray(rawFiles)
+    .slice(0, SANDBOX_MAX_INPUT_FILES)
+    .map((entry, index) => {
+      const source = ensureObject(entry);
+      const relativePath = normalizeRelativePath(source.path);
+      if (!relativePath) {
+        return null;
+      }
+      return {
+        path: relativePath,
+        content: String(source.content || '')
+      };
+    })
+    .filter(Boolean);
+}
+
+function normalizePythonSandboxReadbackPaths(rawPaths = []) {
+  return asArray(rawPaths)
+    .slice(0, SANDBOX_MAX_READBACK_FILES)
+    .map((entry) => normalizeRelativePath(entry))
+    .filter(Boolean);
+}
+
+function normalizePythonSandboxInput(value = {}) {
+  const source = ensureObject(value);
+  const timeoutCandidate = Number(source.timeout_ms);
+  return {
+    code: typeof source.code === 'string' ? source.code : '',
+    timeout_ms: Number.isFinite(timeoutCandidate)
+      ? clamp(timeoutCandidate, SANDBOX_MIN_TIMEOUT_MS, SANDBOX_MAX_TIMEOUT_MS)
+      : SANDBOX_DEFAULT_TIMEOUT_MS,
+    files: normalizePythonSandboxFiles(source.files),
+    readback_paths: normalizePythonSandboxReadbackPaths(source.readback_paths),
+    task_type: cleanText(source.task_type, 120)
+  };
+}
+
+function buildStoredPythonSandboxInput(input = {}) {
+  const normalized = normalizePythonSandboxInput(input);
+  return {
+    code: normalized.code,
+    timeout_ms: normalized.timeout_ms,
+    files: cloneJson(normalized.files, []),
+    readback_paths: cloneJson(normalized.readback_paths, []),
+    task_type: normalized.task_type
+  };
+}
+
+function summarizeRenderOutputForPrompt(entry = {}) {
+  const source = ensureObject(entry);
+  const type = cleanText(source.type, 40).toLowerCase();
+  if (type === 'text') {
+    return {
+      type: 'text',
+      title: cleanText(source.title, 160),
+      format: cleanText(source.format, 80).toLowerCase() || 'text/plain',
+      content: cleanText(source.content, 2000)
+    };
+  }
+  if (type === 'image') {
+    return {
+      type: 'image',
+      title: cleanText(source.title, 160),
+      alt: cleanText(source.alt, 200),
+      mime_type: cleanText(source.mime_type, 120),
+      path: normalizeRelativePath(source.path)
+    };
+  }
+  return {
+    type: cleanText(source.type, 40) || 'unknown'
+  };
+}
+
+function buildStoredPythonSandboxResult(result = {}) {
+  const source = ensureObject(result);
+  return {
+    ok: source.ok === true,
+    run_id: cleanText(source.run_id, 120),
+    status: cleanText(source.status, 40),
+    error: cleanText(source.error, 4000),
+    timeout_ms: Number.isFinite(Number(source.timeout_ms)) ? Number(source.timeout_ms) : null,
+    python_executable: cleanText(source.python_executable, 240),
+    process_id: Number.isFinite(Number(source.process_id)) ? Number(source.process_id) : null,
+    exit_code: Number.isFinite(Number(source.exit_code)) ? Number(source.exit_code) : null,
+    signal: cleanText(source.signal, 40),
+    timed_out: source.timed_out === true,
+    stdout: cleanText(source.stdout, 4000),
+    stderr: cleanText(source.stderr, 12000),
+    readback_files: asArray(source.readback_files).slice(0, SANDBOX_MAX_READBACK_FILES).map((entry) => ({
+      path: normalizeRelativePath(entry?.path),
+      content: cleanText(entry?.content, 4000),
+      truncated: entry?.truncated === true
+    })),
+    render_outputs: asArray(source.render_outputs).slice(0, 6).map((entry) => summarizeRenderOutputForPrompt(entry)),
+    warnings: asArray(source.warnings).slice(0, 12).map((entry) => cleanText(entry, 240)).filter(Boolean),
+    summary: cleanText(source.summary, 320)
+  };
+}
+
+function mergePythonSandboxInput(baseInput = {}, overrideInput = {}) {
+  const base = normalizePythonSandboxInput(baseInput);
+  const override = ensureObject(overrideInput);
+  const merged = {
+    code: Object.prototype.hasOwnProperty.call(override, 'code')
+      ? String(override.code || '')
+      : base.code,
+    timeout_ms: Object.prototype.hasOwnProperty.call(override, 'timeout_ms')
+      ? clamp(Number(override.timeout_ms) || SANDBOX_DEFAULT_TIMEOUT_MS, SANDBOX_MIN_TIMEOUT_MS, SANDBOX_MAX_TIMEOUT_MS)
+      : base.timeout_ms,
+    files: Object.prototype.hasOwnProperty.call(override, 'files')
+      ? normalizePythonSandboxFiles(override.files)
+      : cloneJson(base.files, []),
+    readback_paths: Object.prototype.hasOwnProperty.call(override, 'readback_paths')
+      ? normalizePythonSandboxReadbackPaths(override.readback_paths)
+      : cloneJson(base.readback_paths, []),
+    task_type: Object.prototype.hasOwnProperty.call(override, 'task_type')
+      ? cleanText(override.task_type, 120)
+      : base.task_type
+  };
+  return merged;
+}
+
+function pythonSandboxInputsEqual(leftInput = {}, rightInput = {}) {
+  const left = buildStoredPythonSandboxInput(leftInput);
+  const right = buildStoredPythonSandboxInput(rightInput);
+  return JSON.stringify(left) === JSON.stringify(right);
 }
 
 function buildPythonSandboxHelperModule() {
@@ -517,6 +705,189 @@ function buildManagedPythonDebugMessage(source, sandboxResult) {
     cleanText(sandboxResult.stdout, 800) ? `stdout:\n${cleanText(sandboxResult.stdout, 800)}` : '',
     `Code preview:\n${cleanText(source.code, 1600)}`
   ].filter(Boolean).join('\n\n');
+}
+
+function buildPythonSandboxSubAgentSystemPrompt() {
+  return [
+    'You are the Python sandbox worker sub-agent.',
+    'Own the sandbox task end to end: if a run fails, repair it yourself instead of asking the main agent to debug for you.',
+    'When the main agent says the latest result is not sufficient, continue the work yourself and prepare the next sandbox run.',
+    'Only return JSON that matches the requested schema.',
+    'When you return action "rerun", provide a complete updated sandbox plan or only the fields that must change; omitted fields keep their prior values.',
+    'Use action "return_result" only when the latest sandbox output is already good enough to hand back to the main agent without another run.',
+    'Use action "give_up" only when you cannot make further progress from the available code, files, and feedback.'
+  ].join('\n');
+}
+
+function buildPythonSandboxPlanFallback(requestType, metadata = {}) {
+  const latestResult = buildStoredPythonSandboxResult(ensureObject(metadata.latest_sandbox_result));
+  const feedback = cleanText(metadata.feedback, 2000);
+  if (requestType === 'continue_plan' && latestResult.ok === true && !feedback) {
+    return {
+      action: 'return_result',
+      assistant_message: 'The latest sandbox result is ready to return to the main agent.',
+      summary: 'Returned the latest sandbox result without another run.'
+    };
+  }
+
+  const details = classifyPythonSandboxFailure(ensureObject(metadata.latest_sandbox_result));
+  if (requestType === 'repair_plan') {
+    return {
+      action: 'give_up',
+      assistant_message: [
+        `Observed sandbox issue: ${details.likely_cause}`,
+        `Suggested next step: ${details.suggested_fix}`
+      ].filter(Boolean).join('\n'),
+      summary: `Unable to self-repair sandbox failure (${details.classification}) without model guidance.`
+    };
+  }
+
+  return {
+    action: 'give_up',
+    assistant_message: feedback
+      ? `The main agent asked for more work, but the sandbox helper needs model guidance to continue automatically. Feedback: ${feedback}`
+      : 'The sandbox helper needs more guidance before it can continue automatically.',
+    summary: 'Unable to continue the sandbox task automatically.'
+  };
+}
+
+function normalizePythonSandboxPlan(rawPayload, fallback = {}) {
+  const source = ensureObject(rawPayload);
+  const normalizedAction = cleanText(source.action, 40).toLowerCase();
+  const action = ['rerun', 'return_result', 'give_up'].includes(normalizedAction)
+    ? normalizedAction
+    : cleanText(fallback.action, 40).toLowerCase() || 'give_up';
+  return {
+    action,
+    assistant_message: cleanText(source.assistant_message, 4000)
+      || cleanText(fallback.assistant_message, 4000)
+      || 'Python sandbox helper reviewed the latest run.',
+    summary: cleanText(source.summary, 500)
+      || cleanText(fallback.summary, 500)
+      || 'Python sandbox helper returned a follow-up decision.',
+    code: Object.prototype.hasOwnProperty.call(source, 'code')
+      ? String(source.code || '')
+      : (Object.prototype.hasOwnProperty.call(fallback, 'code') ? String(fallback.code || '') : ''),
+    timeout_ms: Object.prototype.hasOwnProperty.call(source, 'timeout_ms')
+      ? clamp(Number(source.timeout_ms) || SANDBOX_DEFAULT_TIMEOUT_MS, SANDBOX_MIN_TIMEOUT_MS, SANDBOX_MAX_TIMEOUT_MS)
+      : (Number.isFinite(Number(fallback.timeout_ms))
+        ? clamp(Number(fallback.timeout_ms), SANDBOX_MIN_TIMEOUT_MS, SANDBOX_MAX_TIMEOUT_MS)
+        : null),
+    files: Object.prototype.hasOwnProperty.call(source, 'files')
+      ? normalizePythonSandboxFiles(source.files)
+      : (Object.prototype.hasOwnProperty.call(fallback, 'files')
+        ? normalizePythonSandboxFiles(fallback.files)
+        : null),
+    readback_paths: Object.prototype.hasOwnProperty.call(source, 'readback_paths')
+      ? normalizePythonSandboxReadbackPaths(source.readback_paths)
+      : (Object.prototype.hasOwnProperty.call(fallback, 'readback_paths')
+        ? normalizePythonSandboxReadbackPaths(fallback.readback_paths)
+        : null)
+  };
+}
+
+function buildPythonSandboxPlanMessage({
+  requestType,
+  originalRequest,
+  currentInput,
+  latestResult,
+  feedback = '',
+  attemptNumber = 0,
+  maxRepairAttempts = 0
+} = {}) {
+  const phaseLabel = requestType === 'continue_plan'
+    ? 'The main agent was not satisfied with the last sandbox result and wants you to continue.'
+    : 'The latest sandbox run failed. Repair the sandbox task yourself.';
+  return [
+    phaseLabel,
+    originalRequest ? `Original main-agent request:\n${cleanText(originalRequest, 6000)}` : '',
+    `Current sandbox input JSON:\n${JSON.stringify(buildStoredPythonSandboxInput(currentInput), null, 2)}`,
+    `Latest sandbox result JSON:\n${JSON.stringify(buildStoredPythonSandboxResult(latestResult), null, 2)}`,
+    feedback ? `Main-agent feedback:\n${cleanText(feedback, 6000)}` : '',
+    requestType === 'repair_plan'
+      ? `Repair attempts used: ${Math.max(0, Number(attemptNumber) || 0)} / ${Math.max(0, Number(maxRepairAttempts) || 0)}`
+      : '',
+    'Return JSON only.',
+    'If you need another sandbox run, choose action "rerun".',
+    'If the latest result is already sufficient, choose action "return_result".',
+    'If you cannot make further progress, choose action "give_up".'
+  ].filter(Boolean).join('\n\n');
+}
+
+function createManagedPythonSubAgentTurnRuntime(deps = {}) {
+  const requestStructuredJsonPayload = typeof deps.requestStructuredJsonPayload === 'function'
+    ? deps.requestStructuredJsonPayload
+    : null;
+  const defaultSystemPrompt = typeof deps.buildSystemPrompt === 'function'
+    ? deps.buildSystemPrompt
+    : buildPythonSandboxSubAgentSystemPrompt;
+
+  return async function managedPythonSubAgentTurn({ phase, message, metadata, system_prompt }) {
+    const requestType = cleanText(ensureObject(metadata).request_type, 80).toLowerCase();
+    if (phase === 'create') {
+      return {
+        assistant_message: 'Python sandbox sub-agent is ready to execute, repair, and continue sandbox work as needed.',
+        summary: 'Created Python sandbox worker.'
+      };
+    }
+
+    if (!['repair_plan', 'continue_plan'].includes(requestType)) {
+      return defaultManagedPythonSubAgentTurn({ phase, message, metadata });
+    }
+
+    const fallback = buildPythonSandboxPlanFallback(requestType, metadata);
+    if (!requestStructuredJsonPayload) {
+      const normalizedFallback = normalizePythonSandboxPlan(fallback, fallback);
+      return {
+        assistant_message: normalizedFallback.assistant_message,
+        summary: normalizedFallback.summary,
+        output: normalizedFallback,
+        metadata: {
+          mode: 'fallback',
+          request_type: requestType,
+          action: normalizedFallback.action
+        }
+      };
+    }
+
+    const result = await requestStructuredJsonPayload({
+      source: metadata,
+      stage: requestType === 'continue_plan'
+        ? 'python_sandbox_sub_agent_continue'
+        : 'python_sandbox_sub_agent_repair',
+      systemPrompt: cleanText(system_prompt, 12000) || defaultSystemPrompt(),
+      userPrompt: cleanText(message, 48000),
+      schema: PYTHON_SANDBOX_SUB_AGENT_PLAN_SCHEMA,
+      traceContext: metadata?.traceContext || null,
+      defaultError: 'Python sandbox sub-agent planning is not configured.'
+    });
+
+    const normalized = normalizePythonSandboxPlan(result?.payload, fallback);
+    return {
+      assistant_message: normalized.assistant_message,
+      summary: normalized.summary,
+      output: normalized,
+      metadata: {
+        mode: result?.ok && result.payload ? 'llm' : 'fallback',
+        request_type: requestType,
+        action: normalized.action
+      }
+    };
+  };
+}
+
+function buildManagedPythonExecutionSummary(baseSummary, state = {}) {
+  const summary = cleanText(baseSummary, 320);
+  const repairRounds = Math.max(0, Number(state.repair_rounds) || 0);
+  const continued = state.continued_from_sub_agent === true;
+  const suffixes = [];
+  if (continued) {
+    suffixes.push(`Continued from Python sandbox sub-agent ${cleanText(state.sub_agent_id, 120) || 'session'}.`);
+  }
+  if (repairRounds > 0) {
+    suffixes.push(`Self-repaired after ${repairRounds} round${repairRounds === 1 ? '' : 's'}.`);
+  }
+  return [summary, ...suffixes].filter(Boolean).join(' ');
 }
 
 async function runPythonSandbox(input, options = {}) {
@@ -892,6 +1263,9 @@ function createManagedPythonSandboxRuntime(deps = {}) {
   const runPythonSandboxFn = typeof deps.runPythonSandbox === 'function' ? deps.runPythonSandbox : runPythonSandbox;
   const defaultSandboxRoot = cleanText(deps.sandboxRoot, 1200);
   const defaultPreferredPythonBin = cleanText(deps.preferredPythonBin, 240);
+  const requestStructuredJsonPayload = typeof deps.requestStructuredJsonPayload === 'function'
+    ? deps.requestStructuredJsonPayload
+    : null;
   const buildCreateMessage = typeof deps.buildCreateMessage === 'function'
     ? deps.buildCreateMessage
     : buildManagedPythonCreateMessage;
@@ -900,135 +1274,363 @@ function createManagedPythonSandboxRuntime(deps = {}) {
     : buildManagedPythonDebugMessage;
   const buildSystemPrompt = typeof deps.buildSystemPrompt === 'function'
     ? deps.buildSystemPrompt
-    : (() => 'You are the Python sandbox supervisor sub-agent. Track one sandbox run, keep liveness accurate, and diagnose failures from the actual sandbox output.');
-  const subAgentRuntime = createAgentSubAgentRuntime({
-    now,
-    isProcessAlive: typeof deps.isProcessAlive === 'function' ? deps.isProcessAlive : isProcessAlive,
-    runSubAgentTurn: typeof deps.runSubAgentTurn === 'function'
-      ? deps.runSubAgentTurn
-      : defaultManagedPythonSubAgentTurn
-  });
+    : buildPythonSandboxSubAgentSystemPrompt;
+  const subAgentRuntime = deps.subAgentRuntime && typeof deps.subAgentRuntime.createSubAgent === 'function'
+    ? deps.subAgentRuntime
+    : createAgentSubAgentRuntime({
+      now,
+      isProcessAlive: typeof deps.isProcessAlive === 'function' ? deps.isProcessAlive : isProcessAlive,
+      getDefaultSystemPrompt: () => buildSystemPrompt(),
+      runSubAgentTurn: typeof deps.runSubAgentTurn === 'function'
+        ? deps.runSubAgentTurn
+        : createManagedPythonSubAgentTurnRuntime({
+          requestStructuredJsonPayload,
+          buildSystemPrompt
+        })
+    });
 
   async function execute(input = {}, options = {}) {
     const source = ensureObject(input);
     const executionOptions = ensureObject(options);
-    const created = await subAgentRuntime.createSubAgent({
-      name: cleanText(executionOptions.name, 160) || `python-sandbox-${Date.now()}`,
-      system_prompt: cleanText(buildSystemPrompt(source, executionOptions), 40000),
-      message: cleanText(buildCreateMessage(source, executionOptions), 40000) || 'Supervise the next Python sandbox execution.',
-      metadata: {
-        task_type: 'python-sandbox',
-        parent_request_id: cleanText(executionOptions.parent_request_id || executionOptions.parentRequestId, 160),
-        tags: ['python', 'sandbox', cleanText(source.task_type, 80)].filter(Boolean).slice(0, 12)
-      }
-    });
+    const requestedAgentId = cleanText(source.sub_agent_id || source.subAgentId, 160);
+    const feedback = cleanText(source.feedback || executionOptions.feedback, 40000);
+    const originalRequest = cleanText(
+      executionOptions.message
+      || executionOptions.originalMessage
+      || source.message
+      || source.request
+      || '',
+      6000
+    );
+    const rawMaxRepairAttempts = Object.prototype.hasOwnProperty.call(source, 'max_repair_attempts')
+      ? source.max_repair_attempts
+      : executionOptions.maxRepairAttempts;
+    const maxRepairAttempts = Number.isFinite(Number(rawMaxRepairAttempts))
+      ? clamp(Number(rawMaxRepairAttempts), 0, SANDBOX_MAX_REPAIR_ATTEMPTS)
+      : SANDBOX_DEFAULT_REPAIR_ATTEMPTS;
 
-    const agentId = cleanText(created?.agent?.id, 160);
-    const sandboxResult = await runPythonSandboxFn(source, {
-      sandboxRoot: cleanText(executionOptions.sandboxRoot, 1200) || defaultSandboxRoot,
-      preferredPythonBin: cleanText(executionOptions.preferredPythonBin, 240) || defaultPreferredPythonBin,
-      pythonExecutable: cleanText(executionOptions.pythonExecutable, 240),
-      heartbeatIntervalMs: Number(executionOptions.heartbeatIntervalMs),
-      onTaskStarted: async (event) => {
-        if (agentId) {
-          subAgentRuntime.startSubAgentTask({
-            agent_id: agentId,
-            task_type: 'python-sandbox',
-            started_at: event.started_at,
-            process_id: event.process_id,
-            summary: `Running Python sandbox ${cleanText(event.run_id, 120)}.`,
-            metadata: {
-              run_id: cleanText(event.run_id, 120),
-              python_executable: cleanText(event.python_executable, 240),
-              timeout_ms: Number(event.timeout_ms) || 0,
-              python_task_type: cleanText(source.task_type, 80)
-            }
-          });
-        }
-      },
-      onHeartbeat: async (event) => {
-        if (agentId) {
-          subAgentRuntime.recordSubAgentHeartbeat({
-            agent_id: agentId,
-            timestamp: event.timestamp,
-            process_id: event.process_id,
-            progress: event.progress === true,
-            summary: cleanText(event.summary, 240),
-            metadata: {
-              elapsed_ms: Number(event.elapsed_ms) || 0,
-              stdout_chars: Number(event.stdout_chars) || 0,
-              stderr_chars: Number(event.stderr_chars) || 0
-            }
-          });
-        }
-      },
-      onTaskCompleted: async (event) => {
-        if (agentId) {
-          subAgentRuntime.completeSubAgentTask({
-            agent_id: agentId,
-            finished_at: event.finished_at,
-            exit_code: event.exit_code,
-            signal: event.signal,
-            timed_out: event.timed_out === true,
-            summary: cleanText(event.summary, 240),
-            metadata: {
-              run_id: cleanText(event.run_id, 120)
-            }
-          });
-        }
-      },
-      onTaskFailed: async (event) => {
-        if (agentId) {
-          subAgentRuntime.failSubAgentTask({
-            agent_id: agentId,
-            finished_at: event.finished_at,
-            exit_code: event.exit_code,
-            signal: event.signal,
-            timed_out: event.timed_out === true,
-            summary: cleanText(event.summary || event.error, 240),
-            metadata: {
-              run_id: cleanText(event.run_id, 120)
-            }
-          });
-        }
-      }
-    });
+    let created = null;
+    let inspected = requestedAgentId
+      ? subAgentRuntime.getSubAgent({ agent_id: requestedAgentId })
+      : null;
+    if (requestedAgentId && inspected?.ok !== true) {
+      return {
+        ok: false,
+        sandbox: {
+          ok: false,
+          status: 'error',
+          error: `Python sandbox sub-agent "${requestedAgentId}" was not found.`,
+          summary: 'Python sandbox continuation failed before launch.'
+        },
+        sub_agent: null,
+        debug: null,
+        sub_agent_id: requestedAgentId,
+        repair_rounds: 0,
+        continued_from_sub_agent: true,
+        summary: 'Python sandbox continuation failed before launch.'
+      };
+    }
 
-    let debugTurn = null;
-    if (agentId && sandboxResult.ok !== true) {
-      debugTurn = await subAgentRuntime.sendSubAgentMessage({
-        agent_id: agentId,
-        message: buildDebugMessage(source, sandboxResult),
+    const storedTaskMetadata = ensureObject(inspected?.agent?.task?.metadata);
+    const storedInput = buildStoredPythonSandboxInput(storedTaskMetadata.latest_input);
+    const storedResult = buildStoredPythonSandboxResult(storedTaskMetadata.latest_sandbox_result);
+    const baseInput = requestedAgentId
+      ? mergePythonSandboxInput(storedInput, source)
+      : mergePythonSandboxInput({}, source);
+
+    if (!baseInput.code.trim()) {
+      return {
+        ok: false,
+        sandbox: {
+          ok: false,
+          status: 'error',
+          error: 'python-sandbox requires code for a new run or a resumable sub_agent_id with stored code.',
+          summary: 'Python sandbox execution failed before launch.'
+        },
+        sub_agent: inspected?.agent || null,
+        debug: null,
+        sub_agent_id: requestedAgentId,
+        repair_rounds: 0,
+        continued_from_sub_agent: Boolean(requestedAgentId),
+        summary: 'Python sandbox execution failed before launch.'
+      };
+    }
+
+    if (!requestedAgentId) {
+      created = await subAgentRuntime.createSubAgent({
+        name: cleanText(executionOptions.name, 160) || `python-sandbox-${Date.now()}`,
+        message: cleanText(buildCreateMessage(baseInput, executionOptions), 40000) || 'Supervise the next Python sandbox execution.',
         metadata: {
-          debug_payload: {
-            run_id: cleanText(sandboxResult.run_id, 120),
-            status: cleanText(sandboxResult.status, 40),
-            error: cleanText(sandboxResult.error, 4000),
-            stderr: cleanText(sandboxResult.stderr, 12000),
-            stdout: cleanText(sandboxResult.stdout, 4000),
-            exit_code: sandboxResult.exit_code,
-            signal: cleanText(sandboxResult.signal, 40),
-            timed_out: sandboxResult.timed_out === true
+          task_type: 'python-sandbox',
+          parent_request_id: cleanText(executionOptions.parent_request_id || executionOptions.parentRequestId, 160),
+          main_agent_message: originalRequest,
+          tags: ['python', 'sandbox', cleanText(baseInput.task_type, 80)].filter(Boolean).slice(0, 12)
+        }
+      });
+      inspected = created?.agent?.id
+        ? subAgentRuntime.getSubAgent({ agent_id: created.agent.id })
+        : null;
+    }
+
+    const agentId = cleanText(requestedAgentId || created?.agent?.id, 160);
+    const continuationOriginalRequest = originalRequest
+      || cleanText(inspected?.agent?.metadata?.main_agent_message, 6000);
+    const continuationInputChanged = requestedAgentId
+      ? !pythonSandboxInputsEqual(storedInput, baseInput)
+      : false;
+    let workingInput = baseInput;
+    let latestSandboxResult = storedResult?.run_id
+      ? storedResult
+      : null;
+    let repairRounds = 0;
+    let cumulativeRepairRounds = Math.max(0, Number(storedTaskMetadata.total_repair_attempts) || 0);
+    let latestTurn = null;
+    let returnedStoredResultDirectly = false;
+    let shouldRunSandbox = true;
+    let syntheticFailureResult = null;
+
+    function buildManagedSandboxFailureResult(errorText, summaryText) {
+      return {
+        ok: false,
+        run_id: '',
+        status: 'error',
+        error: cleanText(errorText, 4000) || 'Python sandbox continuation failed before another run.',
+        timeout_ms: Number(workingInput.timeout_ms) || SANDBOX_DEFAULT_TIMEOUT_MS,
+        python_executable: '',
+        process_id: null,
+        exit_code: null,
+        signal: null,
+        timed_out: false,
+        stdout: '',
+        stderr: '',
+        files_written: [],
+        readback_files: [],
+        render_outputs: [],
+        warnings: [],
+        summary: cleanText(summaryText, 320) || 'Python sandbox continuation failed before another run.'
+      };
+    }
+
+    async function requestSubAgentPlan(requestType, currentInput, currentResult, attemptNumber = 0) {
+      if (!agentId) {
+        return null;
+      }
+      const turn = await subAgentRuntime.sendSubAgentMessage({
+        agent_id: agentId,
+        message: buildPythonSandboxPlanMessage({
+          requestType,
+          originalRequest: continuationOriginalRequest,
+          currentInput,
+          latestResult: currentResult,
+          feedback,
+          attemptNumber,
+          maxRepairAttempts
+        }),
+        metadata: {
+          request_type: requestType,
+          provider: cleanText(executionOptions.provider, 80),
+          endpoint: cleanText(executionOptions.endpoint, 2000),
+          apiKey: cleanText(executionOptions.apiKey, 400),
+          model: cleanText(executionOptions.model, 120),
+          traceContext: executionOptions.traceContext || null,
+          feedback,
+          latest_input: buildStoredPythonSandboxInput(currentInput),
+          latest_sandbox_result: buildStoredPythonSandboxResult(currentResult),
+          attempt_number: attemptNumber,
+          max_repair_attempts: maxRepairAttempts,
+          total_repair_attempts: cumulativeRepairRounds
+        }
+      });
+      latestTurn = turn;
+      return normalizePythonSandboxPlan(turn?.agent?.last_response?.output, {
+        action: 'give_up',
+        assistant_message: cleanText(turn?.agent?.last_response?.assistant_message, 4000),
+        summary: cleanText(turn?.summary, 500)
+      });
+    }
+
+    async function runManagedAttempt(currentInput) {
+      const storedAttemptInput = buildStoredPythonSandboxInput(currentInput);
+      return runPythonSandboxFn(currentInput, {
+        sandboxRoot: cleanText(executionOptions.sandboxRoot, 1200) || defaultSandboxRoot,
+        preferredPythonBin: cleanText(executionOptions.preferredPythonBin, 240) || defaultPreferredPythonBin,
+        pythonExecutable: cleanText(executionOptions.pythonExecutable, 240),
+        heartbeatIntervalMs: Number(executionOptions.heartbeatIntervalMs),
+        onTaskStarted: async (event) => {
+          if (agentId) {
+            subAgentRuntime.startSubAgentTask({
+              agent_id: agentId,
+              task_type: 'python-sandbox',
+              started_at: event.started_at,
+              process_id: event.process_id,
+              summary: `Running Python sandbox ${cleanText(event.run_id, 120)}.`,
+              metadata: {
+                run_id: cleanText(event.run_id, 120),
+                python_executable: cleanText(event.python_executable, 240),
+                timeout_ms: Number(event.timeout_ms) || 0,
+                python_task_type: cleanText(currentInput.task_type, 80),
+                latest_input: storedAttemptInput,
+                latest_feedback: feedback,
+                total_repair_attempts: cumulativeRepairRounds,
+                main_agent_message: continuationOriginalRequest
+              }
+            });
+          }
+        },
+        onHeartbeat: async (event) => {
+          if (agentId) {
+            subAgentRuntime.recordSubAgentHeartbeat({
+              agent_id: agentId,
+              timestamp: event.timestamp,
+              process_id: event.process_id,
+              progress: event.progress === true,
+              summary: cleanText(event.summary, 240),
+              metadata: {
+                elapsed_ms: Number(event.elapsed_ms) || 0,
+                stdout_chars: Number(event.stdout_chars) || 0,
+                stderr_chars: Number(event.stderr_chars) || 0,
+                latest_input: storedAttemptInput,
+                total_repair_attempts: cumulativeRepairRounds,
+                latest_feedback: feedback
+              }
+            });
           }
         }
       });
     }
 
-    const inspected = agentId ? subAgentRuntime.getSubAgent({ agent_id: agentId }) : null;
-    const agent = inspected?.ok === true
-      ? inspected.agent
-      : (created?.agent || null);
-    const debug = sandboxResult.ok === true
-      ? null
-      : cloneJson(agent?.last_response || debugTurn?.agent?.last_response, null);
+    function persistFinalTaskState(currentInput, currentResult) {
+      if (!agentId || !currentResult) {
+        return;
+      }
+      const taskUpdater = currentResult.ok === true
+        ? subAgentRuntime.completeSubAgentTask
+        : subAgentRuntime.failSubAgentTask;
+      taskUpdater({
+        agent_id: agentId,
+        finished_at: now(),
+        exit_code: currentResult.exit_code,
+        signal: currentResult.signal,
+        timed_out: currentResult.timed_out === true,
+        summary: cleanText(currentResult.summary || currentResult.error, 240),
+        metadata: {
+          latest_input: buildStoredPythonSandboxInput(currentInput),
+          latest_sandbox_result: buildStoredPythonSandboxResult(currentResult),
+          total_repair_attempts: cumulativeRepairRounds,
+          latest_feedback: feedback,
+          main_agent_message: continuationOriginalRequest
+        }
+      });
+    }
+
+    if (requestedAgentId && feedback) {
+      const continuationPlan = await requestSubAgentPlan('continue_plan', workingInput, latestSandboxResult, repairRounds);
+      if (continuationPlan?.action === 'return_result' && latestSandboxResult?.run_id) {
+        returnedStoredResultDirectly = true;
+        shouldRunSandbox = false;
+      } else if (continuationPlan?.action === 'rerun') {
+        const nextInput = mergePythonSandboxInput(workingInput, continuationPlan);
+        if (!pythonSandboxInputsEqual(workingInput, nextInput)) {
+          workingInput = nextInput;
+        } else {
+          shouldRunSandbox = false;
+          syntheticFailureResult = buildManagedSandboxFailureResult(
+            continuationPlan?.assistant_message,
+            continuationPlan?.summary || 'Python sandbox continuation stalled before another run.'
+          );
+        }
+      } else {
+        shouldRunSandbox = false;
+        syntheticFailureResult = buildManagedSandboxFailureResult(
+          continuationPlan?.assistant_message,
+          continuationPlan?.summary || 'Python sandbox continuation could not progress.'
+        );
+      }
+    } else if (requestedAgentId && !feedback && !continuationInputChanged && latestSandboxResult?.run_id) {
+      returnedStoredResultDirectly = true;
+      shouldRunSandbox = false;
+    }
+
+    let sandboxResult = latestSandboxResult;
+    if (shouldRunSandbox && !returnedStoredResultDirectly) {
+      while (true) {
+        sandboxResult = await runManagedAttempt(workingInput);
+        latestSandboxResult = buildStoredPythonSandboxResult(sandboxResult);
+        persistFinalTaskState(workingInput, sandboxResult);
+
+        if (sandboxResult.ok === true) {
+          break;
+        }
+
+        if (repairRounds >= maxRepairAttempts) {
+          if (agentId) {
+            latestTurn = await subAgentRuntime.sendSubAgentMessage({
+              agent_id: agentId,
+              message: buildDebugMessage(workingInput, sandboxResult),
+              metadata: {
+                debug_payload: buildStoredPythonSandboxResult(sandboxResult)
+              }
+            });
+          }
+          break;
+        }
+
+        const repairPlan = await requestSubAgentPlan('repair_plan', workingInput, sandboxResult, repairRounds + 1);
+        if (!repairPlan || repairPlan.action !== 'rerun') {
+          break;
+        }
+
+        const nextInput = mergePythonSandboxInput(workingInput, repairPlan);
+        if (pythonSandboxInputsEqual(workingInput, nextInput)) {
+          break;
+        }
+
+        workingInput = nextInput;
+        repairRounds += 1;
+        cumulativeRepairRounds += 1;
+      }
+    } else if (returnedStoredResultDirectly && latestSandboxResult) {
+      sandboxResult = latestSandboxResult;
+      persistFinalTaskState(workingInput, sandboxResult);
+    } else {
+      sandboxResult = syntheticFailureResult
+        || latestSandboxResult
+        || buildManagedSandboxFailureResult(
+          cleanText(latestTurn?.agent?.last_response?.assistant_message, 4000),
+          cleanText(latestTurn?.summary, 320) || 'Python sandbox continuation failed before another run.'
+        );
+      latestSandboxResult = buildStoredPythonSandboxResult(sandboxResult);
+      persistFinalTaskState(workingInput, sandboxResult);
+    }
+
+    const finalInspection = agentId ? subAgentRuntime.getSubAgent({ agent_id: agentId }) : null;
+    const agent = finalInspection?.ok === true
+      ? finalInspection.agent
+      : (created?.agent || inspected?.agent || null);
+    const debug = latestTurn?.agent?.last_response
+      ? cloneJson(latestTurn.agent.last_response, null)
+      : (sandboxResult?.ok === true && !returnedStoredResultDirectly
+        ? null
+        : cloneJson(agent?.last_response, null));
+    const summary = buildManagedPythonExecutionSummary(
+      cleanText(sandboxResult?.summary, 320)
+        || (sandboxResult?.ok ? 'Python sandbox execution completed.' : 'Python sandbox execution failed.'),
+      {
+        repair_rounds: repairRounds,
+        continued_from_sub_agent: Boolean(requestedAgentId),
+        sub_agent_id: agentId
+      }
+    );
 
     return {
-      ok: sandboxResult.ok === true,
+      ok: sandboxResult?.ok === true,
       sandbox: sandboxResult,
       sub_agent: agent,
       debug,
-      summary: cleanText(sandboxResult.summary, 320)
-        || (sandboxResult.ok ? 'Python sandbox execution completed.' : 'Python sandbox execution failed.')
+      sub_agent_id: agentId,
+      repair_rounds: repairRounds,
+      continued_from_sub_agent: Boolean(requestedAgentId),
+      summary
     };
   }
 

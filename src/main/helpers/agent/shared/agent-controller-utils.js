@@ -265,6 +265,9 @@ function createAgentControllerUtils(deps = {}) {
     const purchaseRecommendation = source.purchase_recommendation && typeof source.purchase_recommendation === 'object'
       ? source.purchase_recommendation
       : null;
+    const skillCommand = source.skill_command && typeof source.skill_command === 'object'
+      ? source.skill_command
+      : null;
     const generalScienceQuestion = source.general_science_question && typeof source.general_science_question === 'object'
       ? source.general_science_question
       : null;
@@ -401,6 +404,15 @@ function createAgentControllerUtils(deps = {}) {
           source: cleanText(purchaseRecommendation.source, 80),
           budget_preference: cleanText(purchaseRecommendation?.filters?.budget_preference, 80),
           item_count: asArray(purchaseRecommendation.items).length
+        }
+        : null,
+      skill_command: skillCommand
+        ? {
+          status: cleanText(skillCommand.status, 40),
+          skill_name: cleanText(skillCommand.skill_name, 160),
+          command_name: cleanText(skillCommand.command_name, 80),
+          tool_name: cleanText(skillCommand.tool_name, 120),
+          summary: cleanText(skillCommand.summary, 500)
         }
         : null,
       general_science_question: generalScienceQuestion
@@ -540,11 +552,20 @@ function createAgentControllerUtils(deps = {}) {
     return DEFAULT_AGENT_MODELS[DEFAULT_LLM_PROVIDER];
   }
 
+  function resolveAgentLlmSource(llm) {
+    const provider = resolveAgentProvider(llm);
+    const endpoint = resolveAgentEndpoint(llm, provider);
+    const model = resolveAgentModel(llm, provider);
+    const apiKey = provider === LLM_PROVIDERS.CODEX ? '' : resolveAgentApiKey(llm);
+    return {
+      provider,
+      endpoint,
+      apiKey,
+      model
+    };
+  }
+
   async function requestIntentParserPayload({
-    provider,
-    endpoint,
-    apiKey,
-    model,
     message,
     conversation,
     projectName,
@@ -558,18 +579,11 @@ function createAgentControllerUtils(deps = {}) {
 
     try {
       const result = await llmHelpers.requestStructuredJsonPayload({
-        provider,
-        endpoint,
-        apiKey,
-        model,
         stage: 'intent_parser',
         systemPrompt: 'Return valid JSON only.',
         userPrompt: prompt,
         schema: INTENT_PARSER_RESPONSE_SCHEMA,
         traceContext,
-        maxOutputTokens: 1100,
-        openAiStrict: true,
-        openAiAsDefaultProvider: true,
         defaultError: 'Intent parser provider is not configured.'
       });
       if (!result?.ok) {
@@ -603,6 +617,7 @@ function createAgentControllerUtils(deps = {}) {
     resolveAgentProvider,
     resolveAgentEndpoint,
     resolveAgentModel,
+    resolveAgentLlmSource,
     requestIntentParserPayload
   };
 }

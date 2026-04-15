@@ -11,7 +11,7 @@ function asArray(value) {
 }
 
 function cleanText(value, _maxLength = 2000) {
-  const text = String(value || '').trim();
+  const text = String(value || '');
   if (!text) {
     return '';
   }

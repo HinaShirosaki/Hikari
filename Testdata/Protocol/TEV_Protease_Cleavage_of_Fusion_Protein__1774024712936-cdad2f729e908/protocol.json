@@ -1,0 +1,73 @@
+{
+  "schema_name": "enana_protocols",
+  "schema_version": "1.0.0",
+  "updated_at": "2026-04-15T23:07:19.989Z",
+  "protocol": {
+    "id": "1774024712936-cdad2f729e908",
+    "name": "TEV Protease Cleavage of Fusion Protein",
+    "createdAt": "2026-03-20T16:38:32.936Z",
+    "updatedAt": "2026-03-20T16:38:32.936Z",
+    "purpose": "Remove an affinity or solubility tag from a fusion protein using TEV protease.",
+    "materials": [
+      "Purified fusion protein",
+      "TEV protease",
+      "Cleavage buffer",
+      "Dialysis tubing or desalting column",
+      "Microcentrifuge tubes",
+      "4 C incubator or cold room",
+      "SDS-PAGE reagents"
+    ],
+    "steps": [
+      {
+        "id": "1774024712936-af15c001f5a85",
+        "text": "Exchange the fusion protein into cleavage buffer using {{ph:1774024712936-7dba43a18d95f8}}.",
+        "placeholders": [
+          {
+            "id": "1774024712936-7dba43a18d95f8",
+            "name": "buffer exchange method"
+          }
+        ]
+      },
+      {
+        "id": "1774024712936-c39e561ac4cc48",
+        "text": "Add TEV protease at an enzyme-to-substrate ratio of {{ph:1774024712936-8060b8a60ca3b}}.",
+        "placeholders": [
+          {
+            "id": "1774024712936-8060b8a60ca3b",
+            "name": "ratio"
+          }
+        ]
+      },
+      {
+        "id": "1774024712936-f707b8e3323d98",
+        "text": "Incubate the reaction at {{ph:1774024712936-51cd47e4df67a}} for {{ph:1774024712936-bf51d65dc5d7e}}.",
+        "placeholders": [
+          {
+            "id": "1774024712936-51cd47e4df67a",
+            "name": "temperature"
+          },
+          {
+            "id": "1774024712936-bf51d65dc5d7e",
+            "name": "time"
+          }
+        ]
+      },
+      {
+        "id": "1774024712936-abdfa557cbbaf",
+        "text": "Remove an aliquot before and after cleavage for SDS-PAGE analysis.",
+        "placeholders": []
+      },
+      {
+        "id": "1774024712936-66e3e948f83488",
+        "text": "Separate the cleaved tag, uncleaved protein, and TEV protease using {{ph:1774024712936-e83fc6a9af4a2}}.",
+        "placeholders": [
+          {
+            "id": "1774024712936-e83fc6a9af4a2",
+            "name": "purification method"
+          }
+        ]
+      }
+    ],
+    "troubleshooting": "Problem: Incomplete cleavage; Possible cause: Insufficient TEV amount or inaccessible cleavage site; Solution: Increase incubation time, increase TEV ratio, or optimize buffer composition\nProblem: Protein precipitates during cleavage; Possible cause: Protein is unstable in cleavage buffer; Solution: Test alternative salt concentration, glycerol level, or lower protein concentration"
+  }
+}

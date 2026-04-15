@@ -10,18 +10,29 @@ const {
   defaultAsArray,
   defaultCleanText
 } = require('../shared/agent-llm-utils.js');
+const { createAgentContextRegistryRuntime } = require('./agent-context-registry.js');
 
 // Stable identifiers for the context layers that may be exposed to other modules.
 const CONTEXT_LAYER_IDS = Object.freeze({
   IMMEDIATE: 'immediate',
   SESSION_MEMORY: 'session_memory',
-  LONG_TERM_MEMORY: 'long_term_memory'
+  LONG_TERM_MEMORY: 'long_term_memory',
+  VERIFICATION: 'verification'
 });
 
 // High-level session modes indicating whether a task is currently in progress.
 const CONTEXT_MODES = Object.freeze({
   READY: 'ready',
   ACTIVE_TASK: 'active_task'
+});
+
+// Registry sections that capture candidate context before layer assembly.
+const CONTEXT_REGISTRY_SECTIONS = Object.freeze({
+  USER: 'user',
+  EXECUTION: 'execution',
+  MEMORY: 'memory',
+  REASONING: 'reasoning',
+  SYSTEM: 'system'
 });
 
 // Keep only plain object-like values; everything else becomes an empty object.
@@ -153,13 +164,11 @@ function createAgentContextManagementRuntime(deps = {}) {
 
   // Merge incoming task updates with any prior task state into one normalized active-task record.
   function normalizeTask(source = {}, previousTask = null) {
-    // Start from the incoming partial update plus any previous task so omitted fields can be preserved.
     const raw = ensureObject(source);
     const previous = ensureObject(previousTask);
     const taskId = cleanText(raw.task_id || raw.taskId, 160)
       || cleanText(previous.task_id, 160)
       || createId();
-    // Normalize every task subfield into stable shapes used by prompt builders and follow-up logic.
     return {
       task_id: taskId,
       task_type: cleanText(raw.task_type || raw.taskType, 120) || cleanText(previous.task_type, 120),
@@ -187,6 +196,15 @@ function createAgentContextManagementRuntime(deps = {}) {
         || now(),
       updated_at: cleanText(raw.updated_at || raw.updatedAt, 80) || now()
     };
+  }
+
+  function normalizeTaskRecord(source = null, previousTask = null) {
+    const raw = ensureObject(source);
+    const previous = ensureObject(previousTask);
+    if (!Object.keys(raw).length && !Object.keys(previous).length) {
+      return null;
+    }
+    return normalizeTask(raw, previous);
   }
 
   // Build a compact one-line summary of the active task for prompt/session-memory use.
@@ -250,6 +268,20 @@ function createAgentContextManagementRuntime(deps = {}) {
     ].filter(Boolean).join('\n');
   }
 
+  const registryRuntime = createAgentContextRegistryRuntime({
+    asArray,
+    cleanText,
+    now,
+    ensureObject,
+    cloneJson,
+    uniqueStrings,
+    normalizeProject,
+    normalizeTaskRecord,
+    buildTaskSummary,
+    CONTEXT_MODES,
+    CONTEXT_REGISTRY_SECTIONS
+  });
+
   // Create the default layered-memory structure for a brand-new session.
   function createEmptySession(sessionId) {
     const timestamp = now();
@@ -270,7 +302,8 @@ function createAgentContextManagementRuntime(deps = {}) {
         current_project_state: null,
         active_task_summary: '',
         recent_completed_tasks: []
-      }
+      },
+      context_registry: registryRuntime.createEmptyContextRegistry(timestamp)
     };
   }
 
@@ -290,12 +323,19 @@ function createAgentContextManagementRuntime(deps = {}) {
       session = createEmptySession(normalizedId);
       store.set(normalizedId, session);
     }
-    return session ? touchSession(session) : null;
+    if (!session) {
+      return null;
+    }
+    const touched = touchSession(session);
+    registryRuntime.ensureContextRegistry(touched);
+    return touched;
   }
 
   // Persist a cloned snapshot of the session back into the store and return a detached copy.
   function saveSession(session) {
     const normalized = cloneJson(session, {});
+    const registry = registryRuntime.ensureContextRegistry(normalized);
+    registryRuntime.syncLegacySessionFieldsFromRegistry(normalized, registry);
     store.set(requireSessionId(normalized.session_id), normalized);
     return cloneJson(normalized, {});
   }
@@ -310,16 +350,16 @@ function createAgentContextManagementRuntime(deps = {}) {
 
   // Promote the session into active-task mode and synchronize summary/project fields from the task.
   function updateSessionFromTask(session, task) {
-    // Always re-normalize task updates before storing them back on the session.
     const normalizedTask = normalizeTask(task, session.active_task);
     session.mode = CONTEXT_MODES.ACTIVE_TASK;
     session.active_task = normalizedTask;
     session.session_memory.active_task_summary = buildTaskSummary(normalizedTask);
-    // Keep the latest active project visible in session memory for future requests.
     if (normalizedTask.project) {
       session.session_memory.current_project_state = cloneJson(normalizedTask.project, null);
     }
     session.updated_at = now();
+    registryRuntime.syncTaskIntoRegistry(session, normalizedTask);
+    registryRuntime.syncSessionMemoryIntoRegistry(session);
     return normalizedTask;
   }
 
@@ -327,12 +367,14 @@ function createAgentContextManagementRuntime(deps = {}) {
   function startTask(input = {}) {
     const source = ensureObject(input);
     const session = getSessionRecord(source.session_id);
-    const task = updateSessionFromTask(session, source);
-    appendSessionMemoryList(session, 'goals', [source.goal, ...(asArray(source.goals))], 10);
-    appendSessionMemoryList(session, 'decisions', [source.decision, ...(asArray(source.decisions))], 12);
-    appendSessionMemoryList(session, 'constraints', [source.constraint, ...(asArray(source.constraints))], 12);
-    appendSessionMemoryList(session, 'unresolved_questions', [source.unresolved_question, ...(asArray(source.unresolved_questions))], 12);
+    updateSessionFromTask(session, source);
+    appendSessionMemoryList(session, 'goals', [source.goal, ...asArray(source.goals)], 10);
+    appendSessionMemoryList(session, 'decisions', [source.decision, ...asArray(source.decisions)], 12);
+    appendSessionMemoryList(session, 'constraints', [source.constraint, ...asArray(source.constraints)], 12);
+    appendSessionMemoryList(session, 'unresolved_questions', [source.unresolved_question, ...asArray(source.unresolved_questions)], 12);
     session.latest_user_request = cleanText(source.current_user_request || source.message, 4000) || session.latest_user_request;
+    registryRuntime.syncSessionMemoryIntoRegistry(session);
+    registryRuntime.registerContextInputs(session, source);
     return saveSession(session);
   }
 
@@ -340,7 +382,6 @@ function createAgentContextManagementRuntime(deps = {}) {
   function mergeTaskUpdate(input = {}) {
     const source = ensureObject(input);
     const session = getSessionRecord(source.session_id);
-    // Merge incremental fields carefully so known values, questions, and tool traces accumulate.
     const nextTask = normalizeTask({
       ...ensureObject(session.active_task),
       ...source,
@@ -358,10 +399,12 @@ function createAgentContextManagementRuntime(deps = {}) {
       ].slice(-20)
     }, session.active_task);
     updateSessionFromTask(session, nextTask);
-    appendSessionMemoryList(session, 'goals', [source.goal, ...(asArray(source.goals))], 10);
-    appendSessionMemoryList(session, 'decisions', [source.decision, ...(asArray(source.decisions))], 12);
-    appendSessionMemoryList(session, 'constraints', [source.constraint, ...(asArray(source.constraints))], 12);
-    appendSessionMemoryList(session, 'unresolved_questions', [source.unresolved_question, ...(asArray(source.unresolved_questions))], 12);
+    appendSessionMemoryList(session, 'goals', [source.goal, ...asArray(source.goals)], 10);
+    appendSessionMemoryList(session, 'decisions', [source.decision, ...asArray(source.decisions)], 12);
+    appendSessionMemoryList(session, 'constraints', [source.constraint, ...asArray(source.constraints)], 12);
+    appendSessionMemoryList(session, 'unresolved_questions', [source.unresolved_question, ...asArray(source.unresolved_questions)], 12);
+    registryRuntime.syncSessionMemoryIntoRegistry(session);
+    registryRuntime.registerContextInputs(session, source);
     return saveSession(session);
   }
 
@@ -369,7 +412,6 @@ function createAgentContextManagementRuntime(deps = {}) {
   function recordToolRound(input = {}) {
     const source = ensureObject(input);
     const session = getSessionRecord(source.session_id);
-    // Normalize the current tool execution into the canonical trace entry shape.
     const toolEntry = normalizeToolTraceEntry({
       tool_name: source.tool_name,
       ok: source.ok,
@@ -378,7 +420,6 @@ function createAgentContextManagementRuntime(deps = {}) {
       result: source.result,
       recorded_at: source.recorded_at
     });
-    // Attach the tool result to the current task, or create a minimal tool-loop task if none exists yet.
     const activeTask = session.active_task
       ? normalizeTask({
         ...session.active_task,
@@ -393,7 +434,6 @@ function createAgentContextManagementRuntime(deps = {}) {
         tool_trace: [toolEntry]
       });
     updateSessionFromTask(session, activeTask);
-    // Mirror a shorter version of the latest tool results into the immediate context layer.
     session.latest_tool_outputs = [
       {
         tool_name: toolEntry.tool_name,
@@ -404,6 +444,14 @@ function createAgentContextManagementRuntime(deps = {}) {
       },
       ...asArray(session.latest_tool_outputs)
     ].slice(0, 6);
+    registryRuntime.syncSessionMemoryIntoRegistry(session);
+    registryRuntime.registerContextInputs(session, {
+      tool_name: toolEntry.tool_name,
+      ok: toolEntry.ok,
+      summary: toolEntry.summary,
+      result: toolEntry.result,
+      recorded_at: toolEntry.recorded_at
+    });
     return saveSession(session);
   }
 
@@ -411,7 +459,7 @@ function createAgentContextManagementRuntime(deps = {}) {
   function recordFollowUpQuestion(input = {}) {
     const source = ensureObject(input);
     const session = getSessionRecord(source.session_id);
-    const questions = uniqueStrings([source.question, ...(asArray(source.questions))], 12);
+    const questions = uniqueStrings([source.question, ...asArray(source.questions)], 12);
     const activeTask = normalizeTask({
       ...ensureObject(session.active_task),
       follow_up_questions: [
@@ -422,6 +470,11 @@ function createAgentContextManagementRuntime(deps = {}) {
     }, session.active_task);
     updateSessionFromTask(session, activeTask);
     appendSessionMemoryList(session, 'unresolved_questions', questions, 12);
+    registryRuntime.syncSessionMemoryIntoRegistry(session);
+    registryRuntime.registerContextInputs(session, {
+      question: source.question,
+      questions: source.questions
+    });
     return saveSession(session);
   }
 
@@ -429,13 +482,11 @@ function createAgentContextManagementRuntime(deps = {}) {
   function recordFollowUpAnswer(input = {}) {
     const source = ensureObject(input);
     const session = getSessionRecord(source.session_id);
-    // Collect structured values provided by the user so they can be merged into task state.
     const providedValues = ensureObject(source.provided_values || source.known_values);
     const resolvedKeys = uniqueStrings([
       ...asArray(source.resolved_fields),
       ...Object.keys(providedValues)
     ], 24).map((item) => item.toLowerCase());
-    // Remove any missing-field placeholders that were resolved by the new answer payload.
     const nextMissingFields = normalizeMissingFields(asArray(session.active_task?.missing_fields))
       .filter((item) => !resolvedKeys.includes(cleanText(item.key || item.display, 160).toLowerCase()));
     const activeTask = normalizeTask({
@@ -449,7 +500,6 @@ function createAgentContextManagementRuntime(deps = {}) {
     }, session.active_task);
     updateSessionFromTask(session, activeTask);
     session.latest_user_request = cleanText(source.answer || source.message, 4000) || session.latest_user_request;
-    // Best-effort cleanup of session-level unresolved questions that reference the resolved keys.
     session.session_memory.unresolved_questions = uniqueStrings(
       asArray(session.session_memory.unresolved_questions).filter((question) => {
         const normalized = question.toLowerCase();
@@ -457,6 +507,13 @@ function createAgentContextManagementRuntime(deps = {}) {
       }),
       12
     );
+    registryRuntime.syncSessionMemoryIntoRegistry(session);
+    registryRuntime.registerContextInputs(session, {
+      answer: source.answer || source.message,
+      provided_values: providedValues,
+      resolved_fields: resolvedKeys,
+      clarified_user_message: source.clarified_user_message || source.clarifiedUserMessage
+    });
     return saveSession(session);
   }
 
@@ -469,6 +526,14 @@ function createAgentContextManagementRuntime(deps = {}) {
     session.latest_tool_outputs = [];
     session.session_memory.active_task_summary = '';
     session.updated_at = now();
+    const registry = registryRuntime.ensureContextRegistry(session);
+    registry.system.active_task = null;
+    registry.system.mode = CONTEXT_MODES.READY;
+    registry.execution.tool_outputs = [];
+    registry.user.follow_up_questions = [];
+    registry.memory.active_task_summary = '';
+    registry.updated_at = now();
+    registryRuntime.syncLegacySessionFieldsFromRegistry(session, registry);
     return saveSession(session);
   }
 
@@ -476,14 +541,12 @@ function createAgentContextManagementRuntime(deps = {}) {
   function completeTask(input = {}) {
     const source = ensureObject(input);
     const session = getSessionRecord(source.session_id);
-    // Snapshot the final task state before archiving a compact completion record.
     const activeTask = normalizeTask({
       ...ensureObject(session.active_task),
       ...source,
       status: cleanText(source.status, 80) || 'completed',
       updated_at: now()
     }, session.active_task);
-    // Store a short recent-history entry so future prompts can reference recently finished work.
     const completedEntry = {
       task_id: cleanText(activeTask.task_id, 160),
       task_type: cleanText(activeTask.task_type, 120),
@@ -492,7 +555,6 @@ function createAgentContextManagementRuntime(deps = {}) {
       summary: cleanText(source.completion_summary, 320) || buildTaskSummary(activeTask),
       completed_at: now()
     };
-    // Keep only the most recent completed tasks in session memory.
     session.session_memory.recent_completed_tasks = [
       completedEntry,
       ...asArray(session.session_memory.recent_completed_tasks)
@@ -503,61 +565,63 @@ function createAgentContextManagementRuntime(deps = {}) {
     session.latest_tool_outputs = [];
     session.session_memory.active_task_summary = '';
     session.updated_at = now();
+    const registry = registryRuntime.ensureContextRegistry(session);
+    registry.memory.recent_completed_tasks = [
+      completedEntry,
+      ...asArray(registry.memory.recent_completed_tasks)
+    ].slice(0, 8);
+    registry.memory.unresolved_questions = [];
+    registry.memory.active_task_summary = '';
+    registry.user.follow_up_questions = [];
+    registry.system.active_task = null;
+    registry.system.mode = CONTEXT_MODES.READY;
+    registry.execution.tool_outputs = [];
+    registry.updated_at = now();
+    registryRuntime.syncLegacySessionFieldsFromRegistry(session, registry);
     return saveSession(session);
+  }
+
+  function getContextRegistry(sessionId) {
+    const record = getSessionRecord(sessionId, false);
+    if (!record) {
+      return null;
+    }
+    const registry = registryRuntime.ensureContextRegistry(record);
+    return cloneJson(registry, {});
+  }
+
+  function buildContextRegistry(input = {}) {
+    const source = ensureObject(input);
+    const session = getSessionRecord(source.session_id);
+    registryRuntime.registerContextInputs(session, source);
+    registryRuntime.syncTaskIntoRegistry(session, session.active_task);
+    registryRuntime.syncSessionMemoryIntoRegistry(session);
+    const saved = saveSession(session);
+    return {
+      session_id: saved.session_id,
+      mode: saved.active_task ? CONTEXT_MODES.ACTIVE_TASK : CONTEXT_MODES.READY,
+      registry: cloneJson(saved.context_registry, {})
+    };
   }
 
   // Return a detached snapshot of one session record without creating it implicitly.
   function getSession(sessionId) {
     const record = getSessionRecord(sessionId, false);
-    return record ? cloneJson(record, {}) : null;
+    if (!record) {
+      return null;
+    }
+    const registry = registryRuntime.ensureContextRegistry(record);
+    registryRuntime.syncLegacySessionFieldsFromRegistry(record, registry);
+    return cloneJson(record, {});
   }
 
-  // Normalize the recent conversation window into short role/text entries for prompt assembly.
-  function normalizeConversation(conversation, max = 8) {
-    return asArray(conversation)
-      .slice(-max)
-      .map((entry) => ({
-        role: cleanText(entry?.role, 40) || 'user',
-        text: cleanText(entry?.text, 4000)
-      }))
-      .filter((entry) => entry.text);
-  }
-
-  // Normalize recent tool outputs that should remain visible in the immediate working context.
-  function normalizeImmediateToolOutputs(toolOutputs, max = 6) {
-    return asArray(toolOutputs)
-      .slice(-max)
-      .map((entry) => ({
-        tool_name: cleanText(entry?.tool_name || entry?.name, 120),
-        ok: entry?.ok !== false,
-        summary: cleanText(entry?.summary, 320),
-        result: cloneJson(entry?.result !== undefined ? entry.result : entry?.items, null),
-        recorded_at: cleanText(entry?.recorded_at || entry?.recordedAt, 80)
-      }));
-  }
-
-  // Normalize recalled long-term-memory items before they are embedded into prompt context.
-  function normalizeLongTermMemoryItems(items, max = 12) {
-    return asArray(items).slice(0, max).map((item) => {
-      const source = ensureObject(item);
-      return {
-        id: cleanText(source.id, 160),
-        category: cleanText(source.category, 120),
-        key: cleanText(source.key, 220),
-        summary: cleanText(source.summary, 600),
-        value: cloneJson(source.value, null),
-        project_name: cleanText(source.project_name || source.projectName, 220),
-        tags: uniqueStrings(source.tags, 12),
-        source: cleanText(source.source, 120),
-        updated_at: cleanText(source.updated_at || source.updatedAt, 80)
-      };
-    }).filter((item) => item.id || item.key || item.summary);
-  }
-
-  // Derive candidate facts from session memory that may be worth promoting to long-term memory.
-  function deriveMemoryCandidates(session) {
+  // Derive candidate facts from selected registry-backed memory that may be worth promoting.
+  function deriveMemoryCandidates(selection) {
+    const source = ensureObject(selection);
+    const memory = ensureObject(source.memory);
+    const system = ensureObject(source.system);
     const candidates = [];
-    const project = normalizeProject(session.session_memory?.current_project_state);
+    const project = normalizeProject(memory.current_project_state || system.active_task?.project);
     if (project?.name) {
       candidates.push({
         category: 'project_name',
@@ -569,7 +633,7 @@ function createAgentContextManagementRuntime(deps = {}) {
         source: 'session_memory'
       });
     }
-    asArray(session.session_memory?.constraints).slice(0, 3).forEach((constraint) => {
+    asArray(memory.constraints).slice(0, 3).forEach((constraint) => {
       candidates.push({
         category: 'constraint',
         key: constraint,
@@ -580,7 +644,7 @@ function createAgentContextManagementRuntime(deps = {}) {
         source: 'session_memory'
       });
     });
-    asArray(session.session_memory?.decisions).slice(0, 3).forEach((decision) => {
+    asArray(memory.decisions).slice(0, 3).forEach((decision) => {
       candidates.push({
         category: 'decision',
         key: decision,
@@ -597,7 +661,6 @@ function createAgentContextManagementRuntime(deps = {}) {
   // Render each context layer into human-readable prompt sections plus one combined block.
   function buildPromptBlocks(layers) {
     const taskSummary = buildPromptTaskSummary(layers.immediate.current_task_state);
-    // Immediate context focuses on the current request, recent dialogue, and fresh tool outputs.
     const immediate = [
       'Immediate working context:',
       layers.immediate.current_user_request
@@ -617,12 +680,12 @@ function createAgentContextManagementRuntime(deps = {}) {
       taskSummary
     ].filter(Boolean).join('\n\n');
 
-    // Session memory captures medium-term information accumulated during this chat session.
     const sessionMemory = [
       'Session memory summary:',
       layers.session_memory.goals.length ? `Goals: ${layers.session_memory.goals.join(' | ')}` : '',
       layers.session_memory.decisions.length ? `Decisions: ${layers.session_memory.decisions.join(' | ')}` : '',
       layers.session_memory.constraints.length ? `Constraints: ${layers.session_memory.constraints.join(' | ')}` : '',
+      layers.session_memory.skills.length ? `Skills: ${layers.session_memory.skills.join(' | ')}` : '',
       layers.session_memory.unresolved_questions.length ? `Unresolved questions: ${layers.session_memory.unresolved_questions.join(' | ')}` : '',
       layers.session_memory.current_project_state?.name
         ? `Current project: ${layers.session_memory.current_project_state.name}`
@@ -632,7 +695,26 @@ function createAgentContextManagementRuntime(deps = {}) {
         : ''
     ].filter(Boolean).join('\n\n');
 
-    // Long-term memory lists recalled durable facts supplied by external memory retrieval.
+    const verification = [
+      'Verification feedback:',
+      layers.verification?.inference_feedback?.length
+        ? `Inference feedback: ${layers.verification.inference_feedback.map((item) => {
+          const prefix = cleanText(item.kind, 80);
+          const summary = cleanText(item.summary, 320);
+          const impact = cleanText(item.impact, 320);
+          return [prefix ? `${prefix}:` : '', summary, impact ? `(impact: ${impact})` : ''].filter(Boolean).join(' ');
+        }).join(' | ')}`
+        : '',
+      layers.verification?.evaluation_feedback?.length
+        ? `Evaluation feedback: ${layers.verification.evaluation_feedback.map((item) => {
+          const prefix = cleanText(item.kind, 80);
+          const summary = cleanText(item.summary, 320);
+          const impact = cleanText(item.impact, 320);
+          return [prefix ? `${prefix}:` : '', summary, impact ? `(impact: ${impact})` : ''].filter(Boolean).join(' ');
+        }).join(' | ')}`
+        : ''
+    ].filter(Boolean).join('\n\n');
+
     const longTermMemory = [
       'Long-term memory:',
       layers.long_term_memory.length
@@ -643,65 +725,61 @@ function createAgentContextManagementRuntime(deps = {}) {
     return {
       immediate,
       session_memory: sessionMemory,
+      verification,
       long_term_memory: longTermMemory,
-      combined: [immediate, sessionMemory, longTermMemory].filter(Boolean).join('\n\n')
+      combined: [immediate, sessionMemory, verification, longTermMemory].filter(Boolean).join('\n\n')
     };
   }
 
   // Build the full layered context envelope returned to the agent orchestration layer.
   function buildContextEnvelope(input = {}) {
-    // Combine current request data with persisted session state to assemble the layered envelope.
     const source = ensureObject(input);
     const session = getSessionRecord(source.session_id);
-    // Build the three context layers: immediate working state, session memory, and recalled memory.
+    registryRuntime.registerContextInputs(session, source);
+    registryRuntime.syncTaskIntoRegistry(session, session.active_task);
+    registryRuntime.syncSessionMemoryIntoRegistry(session);
+    const saved = saveSession(session);
+    const registry = registryRuntime.normalizeContextRegistry(saved.context_registry, saved);
+    const selection = registryRuntime.buildRegistrySelection(registry);
     const layers = {
       immediate: {
-        current_user_request: cleanText(source.current_user_request || source.message, 4000) || session.latest_user_request,
-        recent_conversation: normalizeConversation(
-          source.recent_conversation !== undefined
-            ? source.recent_conversation
-            : (source.conversation !== undefined ? source.conversation : session.recent_conversation)
-        ),
-        latest_tool_outputs: normalizeImmediateToolOutputs(
-          source.tool_outputs !== undefined ? source.tool_outputs : session.latest_tool_outputs
-        ),
-        current_task_state: session.active_task ? cloneJson(session.active_task, null) : null
+        current_user_request: selection.user.current_user_request,
+        recent_conversation: selection.user.recent_conversation,
+        latest_tool_outputs: selection.execution.latest_tool_outputs,
+        current_task_state: selection.system.active_task ? cloneJson(selection.system.active_task, null) : null
       },
       session_memory: {
-        goals: uniqueStrings(session.session_memory.goals, 10),
-        decisions: uniqueStrings(session.session_memory.decisions, 12),
-        constraints: uniqueStrings(session.session_memory.constraints, 12),
-        unresolved_questions: uniqueStrings(session.session_memory.unresolved_questions, 12),
-        current_project_state: normalizeProject(session.session_memory.current_project_state),
-        active_task_summary: cleanText(session.session_memory.active_task_summary, 600),
-        recent_completed_tasks: cloneJson(asArray(session.session_memory.recent_completed_tasks).slice(0, 8), [])
+        goals: selection.memory.goals,
+        decisions: selection.memory.decisions,
+        constraints: selection.memory.constraints,
+        skills: selection.system.skills,
+        unresolved_questions: selection.memory.unresolved_questions,
+        current_project_state: selection.memory.current_project_state,
+        active_task_summary: selection.memory.active_task_summary,
+        recent_completed_tasks: cloneJson(selection.memory.recent_completed_tasks, [])
       },
-      long_term_memory: normalizeLongTermMemoryItems(
-        source.long_term_memory !== undefined ? source.long_term_memory : source.recalled_memory
-      )
+      verification: {
+        inference_feedback: selection.reasoning.inference_feedback,
+        evaluation_feedback: selection.reasoning.evaluation_feedback
+      },
+      long_term_memory: selection.memory.long_term_memory
     };
-    // Persist the latest immediate-layer values back onto the session for subsequent turns.
-    session.latest_user_request = layers.immediate.current_user_request || session.latest_user_request;
-    session.recent_conversation = cloneJson(layers.immediate.recent_conversation, []);
-    session.latest_tool_outputs = cloneJson(layers.immediate.latest_tool_outputs, []);
-    saveSession(session);
-    // Return both structured layers and ready-to-insert prompt blocks for the orchestrator.
     return {
-      session_id: session.session_id,
-      mode: session.active_task ? CONTEXT_MODES.ACTIVE_TASK : CONTEXT_MODES.READY,
-      active_task: session.active_task ? cloneJson(session.active_task, null) : null,
+      session_id: saved.session_id,
+      mode: selection.system.mode,
+      active_task: selection.system.active_task ? cloneJson(selection.system.active_task, null) : null,
+      registry: cloneJson(registry, {}),
+      registry_selection: cloneJson(selection, {}),
       layers,
       prompt_blocks: buildPromptBlocks(layers),
-      memory_candidates: deriveMemoryCandidates(session)
+      memory_candidates: deriveMemoryCandidates(selection)
     };
   }
 
   // Remove stale sessions whose last update exceeds the configured in-memory TTL.
   function pruneExpiredSessions() {
-    // Track which session ids were removed so callers can inspect cleanup behavior.
     const removed = [];
     const nowMs = Date.now();
-    // Expire sessions based on their most recent timestamp, discarding malformed timestamps as well.
     store.forEach((session, key) => {
       const updatedAt = Date.parse(session?.updated_at || session?.created_at || '');
       if (!Number.isFinite(updatedAt)) {
@@ -726,7 +804,9 @@ function createAgentContextManagementRuntime(deps = {}) {
     recordFollowUpAnswer,
     completeTask,
     resetActiveTask,
+    buildContextRegistry,
     buildContextEnvelope,
+    getContextRegistry,
     getSession,
     pruneExpiredSessions
   };
@@ -736,5 +816,6 @@ function createAgentContextManagementRuntime(deps = {}) {
 module.exports = {
   CONTEXT_LAYER_IDS,
   CONTEXT_MODES,
+  CONTEXT_REGISTRY_SECTIONS,
   createAgentContextManagementRuntime
 };

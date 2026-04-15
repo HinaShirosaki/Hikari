@@ -1,5 +1,7 @@
 'use strict';
 
+const { createAgentOpenContextRuntime } = require('./agent-open-context-runtime');
+
 function createAgentIntentDispatcher({
   deps,
   cleanText,
@@ -15,6 +17,14 @@ function createAgentIntentDispatcher({
   lifecycleService
 } = {}) {
   const { asArray, createLifecycleToolRunner } = lifecycleService;
+  const openContextRuntime = createAgentOpenContextRuntime({
+    cleanText,
+    observability,
+    protocolNotebookRuntime,
+    executeInventoryLookup,
+    executeRecordLookup,
+    getDefaultDataFilePath
+  });
 
   function buildParserDirectScienceResult({
     parserPayload = {},
@@ -138,6 +148,27 @@ function createAgentIntentDispatcher({
     );
   }
 
+  function parseCompactList(value, max = 12) {
+    const source = Array.isArray(value)
+      ? value
+      : String(value || '').split(/\s*(?:,|;|\n|(?:\band\b)|(?:\bor\b))\s*/i);
+    const seen = new Set();
+    const output = [];
+    source.forEach((item) => {
+      const normalized = cleanText(item, 120);
+      if (!normalized) {
+        return;
+      }
+      const key = normalized.toLowerCase();
+      if (seen.has(key) || output.length >= max) {
+        return;
+      }
+      seen.add(key);
+      output.push(normalized);
+    });
+    return output;
+  }
+
   async function dispatchIntent({
     payload,
     context,
@@ -159,211 +190,28 @@ function createAgentIntentDispatcher({
       deepResearchEnabled
     } = context;
 
-    const sessionKey = protocolNotebookRuntime.buildSessionKey({
-      projectId,
-      projectName,
-      parserPayload
-    });
-    const hasPendingProtocolSession = protocolNotebookRuntime.hasPendingSession(sessionKey);
-
-    if (parserPayload.primary_intent === 'protocol_to_notebook') {
-      let protocolNotebookResult;
-      if (parserPayload.needs_clarification === true) {
-        const clarificationQuestion = cleanText(parserPayload.clarification_reason, 280)
-          || 'Please provide more detail so I can match the protocol and fill the notebook placeholders.';
-        protocolNotebookResult = {
-          status: 'needs_more_info',
-          candidate_matches: [],
-          selected_protocol: null,
-          missing_placeholders: [],
-          follow_up_questions: [clarificationQuestion],
-          project_name: cleanText(projectName || getParserProjectEntityName(parserPayload), 220),
-          notebook: null
-        };
-        protocolNotebookRuntime.setPendingSession(sessionKey, {
-          created_at: new Date().toISOString(),
-          selected_protocol: null,
-          project: {
-            id: projectId,
-            name: cleanText(projectName || getParserProjectEntityName(parserPayload), 220),
-            resolution_source: 'clarification'
-          },
-          candidate_matches: [],
-          known_values: {},
-          missing_placeholders: [],
-          follow_up_questions: [clarificationQuestion]
-        });
-      } else {
-        protocolNotebookResult = await protocolNotebookRuntime.runFlow({
-          provider,
-          endpoint,
-          apiKey,
-          model,
-          message,
-          conversation: promptConversation,
-          snapshot,
-          parserPayload,
-          projectId,
-          projectName,
-          traceContext,
-          lifecycleRecorder
-        });
+    const trackedToolRunnerContext = {
+      snapshot,
+      allowWriteTools: false,
+      lifecycleRecorder,
+      provider,
+      endpoint,
+      apiKey,
+      model,
+      message,
+      conversation: promptConversation,
+      parserPayload,
+      traceContext,
+      project: {
+        id: cleanText(projectId, 120),
+        name: cleanText(projectName || getParserProjectEntityName(parserPayload), 220)
       }
+    };
 
-      result.protocol_to_notebook = protocolNotebookResult;
-      observability.recordLifecycleEvent(lifecycleRecorder, {
-        stage: 'protocol_to_notebook_completed',
-        status: cleanText(protocolNotebookResult?.status, 40) === 'completed' ? 'ok' : 'pending',
-        routing_intent: 'protocol_to_notebook',
-        message: `Protocol-to-notebook status=${cleanText(protocolNotebookResult?.status, 40) || 'unknown'}.`,
-        meta: {
-          selected_protocol_id: cleanText(protocolNotebookResult?.selected_protocol?.id, 120),
-          missing_placeholder_count: asArray(protocolNotebookResult?.missing_placeholders).length
-        }
-      });
-      return result;
-    }
-
-    if (hasPendingProtocolSession) {
-      observability.recordLifecycleEvent(lifecycleRecorder, {
-        stage: 'protocol_to_notebook_followup',
-        status: 'ok',
-        routing_intent: cleanText(parserPayload.primary_intent, 80) || 'unclear',
-        message: 'Continuing protocol-to-notebook session using follow-up message context.'
-      });
-      const protocolNotebookResult = await protocolNotebookRuntime.runFlow({
-        provider,
-        endpoint,
-        apiKey,
-        model,
-        message,
-        conversation: promptConversation,
-        snapshot,
-        parserPayload,
-        projectId,
-        projectName,
-        traceContext,
-        lifecycleRecorder
-      });
-      result.protocol_to_notebook = protocolNotebookResult;
-      observability.recordLifecycleEvent(lifecycleRecorder, {
-        stage: 'protocol_to_notebook_completed',
-        status: cleanText(protocolNotebookResult?.status, 40) === 'completed' ? 'ok' : 'pending',
-        routing_intent: 'protocol_to_notebook',
-        message: `Protocol-to-notebook status=${cleanText(protocolNotebookResult?.status, 40) || 'unknown'}.`,
-        meta: {
-          selected_protocol_id: cleanText(protocolNotebookResult?.selected_protocol?.id, 120),
-          missing_placeholder_count: asArray(protocolNotebookResult?.missing_placeholders).length,
-          resumed_from_pending: true
-        }
-      });
-      return result;
-    }
-
-    protocolNotebookRuntime.clearPendingSession(sessionKey);
-
-    if (parserPayload.primary_intent === 'inventory_lookup') {
-      observability.recordLifecycleEvent(lifecycleRecorder, {
-        stage: 'inventory_lookup_started',
-        status: 'started',
-        routing_intent: 'inventory_lookup',
-        message: 'Executing inventory lookup runtime.'
-      });
-      if (parserPayload.needs_clarification === true) {
-        result.inventory_lookup = {
-          status: 'needs_more_info',
-          query: '',
-          terms_used: [],
-          source: 'parser_only',
-          backfilled_sql: false,
-          items: [],
-          follow_up_questions: [
-            cleanText(parserPayload.clarification_reason, 280)
-              || 'Please provide the sample/reagent name so I can run inventory lookup.'
-          ]
-        };
-      } else {
-        const inventoryLookupResult = await executeInventoryLookup({
-          message,
-          parserPayload,
-          snapshot,
-          dataFilePath: cleanText(snapshot?.data_file_path, 1600),
-          fallbackDataFilePath: getDefaultDataFilePath(),
-          limit: 8
-        });
-        result.inventory_lookup = inventoryLookupResult;
-        if (inventoryLookupResult.backfilled_sql === true) {
-          observability.recordLifecycleEvent(lifecycleRecorder, {
-            stage: 'inventory_lookup_backfilled',
-            status: 'ok',
-            routing_intent: 'inventory_lookup',
-            message: 'SQLite inventory index was backfilled from hydrated snapshot.'
-          });
-        }
-      }
-      observability.recordLifecycleEvent(lifecycleRecorder, {
-        stage: 'inventory_lookup_completed',
-        status: cleanText(result.inventory_lookup?.status, 40) === 'matched' ? 'ok' : 'pending',
-        routing_intent: 'inventory_lookup',
-        message: `Inventory lookup status=${cleanText(result.inventory_lookup?.status, 40) || 'unknown'}.`,
-        meta: {
-          source: cleanText(result.inventory_lookup?.source, 80),
-          item_count: asArray(result.inventory_lookup?.items).length,
-          backfilled_sql: result.inventory_lookup?.backfilled_sql === true
-        }
-      });
-      return result;
-    }
-
-    if (parserPayload.primary_intent === 'record_lookup') {
-      observability.recordLifecycleEvent(lifecycleRecorder, {
-        stage: 'record_lookup_started',
-        status: 'started',
-        routing_intent: 'record_lookup',
-        message: 'Executing project record lookup runtime.'
-      });
-      if (parserPayload.needs_clarification === true) {
-        result.record_lookup = {
-          status: 'needs_more_info',
-          query: '',
-          source: 'parser_only',
-          backfilled_sql: false,
-          items: [],
-          follow_up_questions: [
-            cleanText(parserPayload.clarification_reason, 280)
-              || 'Please provide what record you want to search (project/protocol/notebook/assay/gel).'
-          ]
-        };
-      } else {
-        const recordLookupResult = await executeRecordLookup({
-          message,
-          parserPayload,
-          snapshot,
-          dataFilePath: cleanText(snapshot?.data_file_path, 1600),
-          fallbackDataFilePath: getDefaultDataFilePath(),
-          limit: 8
-        });
-        result.record_lookup = recordLookupResult;
-        if (recordLookupResult.backfilled_sql === true) {
-          observability.recordLifecycleEvent(lifecycleRecorder, {
-            stage: 'record_lookup_backfilled',
-            status: 'ok',
-            routing_intent: 'record_lookup',
-            message: 'SQLite record index was backfilled from hydrated snapshot.'
-          });
-        }
-      }
-      observability.recordLifecycleEvent(lifecycleRecorder, {
-        stage: 'record_lookup_completed',
-        status: cleanText(result.record_lookup?.status, 40) === 'matched' ? 'ok' : 'pending',
-        routing_intent: 'record_lookup',
-        message: `Record lookup status=${cleanText(result.record_lookup?.status, 40) || 'unknown'}.`,
-        meta: {
-          source: cleanText(result.record_lookup?.source, 80),
-          item_count: asArray(result.record_lookup?.items).length,
-          backfilled_sql: result.record_lookup?.backfilled_sql === true
-        }
-      });
+    if (await openContextRuntime.dispatchOpenContextIntent({
+      context,
+      result
+    })) {
       return result;
     }
 
@@ -392,12 +240,14 @@ function createAgentIntentDispatcher({
           summary: 'More detail is required before I can recommend a purchasable product.'
         };
       } else {
-        const runTrackedTool = createLifecycleToolRunner({
-          snapshot,
-          allowWriteTools: false,
-          lifecycleRecorder
-        });
-        const purchaseRecommendationTool = await runTrackedTool('purchase-recommendation', {}, {
+        const runTrackedTool = createLifecycleToolRunner(trackedToolRunnerContext);
+        const purchaseRecommendationTool = await runTrackedTool('purchase-recommendation', {
+          query: cleanText(parserPayload?.entities?.product_query || message, 600),
+          message: cleanText(message, 1200),
+          required_terms: parseCompactList(parserPayload?.entities?.required_attributes, 12),
+          excluded_terms: parseCompactList(parserPayload?.entities?.excluded_attributes, 12),
+          budget_preference: cleanText(parserPayload?.entities?.budget_preference, 80)
+        }, {
           allowWriteTools: false
         });
         const toolResult = purchaseRecommendationTool?.result && typeof purchaseRecommendationTool.result === 'object'
@@ -462,11 +312,7 @@ function createAgentIntentDispatcher({
         };
         result.notebookDraft = null;
       } else {
-        const runTrackedTool = createLifecycleToolRunner({
-          snapshot,
-          allowWriteTools: false,
-          lifecycleRecorder
-        });
+        const runTrackedTool = createLifecycleToolRunner(trackedToolRunnerContext);
         const notebookDraftTool = await runTrackedTool('notebook-draft', {
           project: {
             id: cleanText(projectId, 120),
@@ -525,11 +371,7 @@ function createAgentIntentDispatcher({
       const parserDirectScienceAnswer = routingReasoningEffort === 0
         ? cleanText(parserPayload?.direct_answer, 12000)
         : '';
-      const runTrackedTool = createLifecycleToolRunner({
-        snapshot,
-        allowWriteTools: false,
-        lifecycleRecorder
-      });
+      const runTrackedTool = createLifecycleToolRunner(trackedToolRunnerContext);
 
       observability.recordLifecycleEvent(lifecycleRecorder, {
         stage: 'science_intent_start',
@@ -604,7 +446,12 @@ function createAgentIntentDispatcher({
             context.projectName
               || resolvedProject?.name
               || getParserProjectEntityName(parserPayload),
-            null
+            {
+              agent: {
+                skillsCatalogPrompt: cleanText(context?.skillPromptPayload?.skills_catalog_prompt, 16000),
+                activeSkillsPrompt: cleanText(context?.skillPromptPayload?.active_skills_prompt, 24000)
+              }
+            }
           ),
           runTool: async (toolName, args, options = {}) => runTrackedTool(toolName, args, options),
           deepResearchEnabled

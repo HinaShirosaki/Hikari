@@ -190,18 +190,23 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
         searchCrossrefRecords: async () => [],
         searchEuropePmcRecords: async () => [],
         searchUniProtRecords: async () => [],
-        searchWebResults: async () => ({
-          items: [
+        requestWebSearch: async ({ query, maxResults, provider, model }) => ({
+          ok: true,
+          results: [
             {
               title: 'Review of PD-1 binders',
               url: 'https://example.org/review',
-              snippet: 'A recent external review of PD-1 binders.'
+              summary: 'A recent external review of PD-1 binders.',
+              source_domain: 'example.org'
             }
-          ]
+          ].slice(0, maxResults),
+          reasoning: `Provider-layer search for ${query} via ${provider || 'default'} ${model || ''}`.trim()
         })
       });
 
       const result = await runtime.execute({
+        provider: 'codex',
+        model: 'gpt-5.4-mini',
         query: 'PD-1 binder review',
         source: 'auto',
         limit: 5
@@ -215,6 +220,44 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
       assert.equal(result.items[0].source, 'web');
       assert.equal(result.items[0].source_domain, 'example.org');
       assert.match(String(result.summary || ''), /web: 1/i);
+    });
+
+    test('literature web source delegates through the shared web-search runtime api', async () => {
+      const calls = [];
+      const runtime = agentLiteratureSearch.createLiteratureSearchRuntime({
+        webSearchRuntime: {
+          searchWebResults: async (input = {}) => {
+            calls.push(JSON.parse(JSON.stringify(input)));
+            return {
+              query: input.query,
+              results: [
+                {
+                  title: 'Focused review',
+                  url: 'https://example.org/focused-review',
+                  summary: 'Focused external review.',
+                  source_domain: 'example.org'
+                }
+              ],
+              reasoning: 'Used shared web-search runtime.'
+            };
+          }
+        }
+      });
+
+      const result = await runtime.execute({
+        provider: 'openai',
+        query: 'PD-1 focused review',
+        source: 'web',
+        limit: 3
+      });
+
+      assert.equal(result.ok, true);
+      assert.equal(result.items.length, 1);
+      assert.equal(calls.length, 1);
+      assert.equal(calls[0].provider, 'openai');
+      assert.equal(calls[0].query, 'PD-1 focused review');
+      assert.equal(calls[0].limit, 3);
+      assert.equal(result.citations[0].source, 'web_source');
     });
 
     test('paper context loader reads papers in precedence order before falling back to search summaries', async () => {
@@ -503,6 +546,228 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
       }
     });
 
+    test('literature search runtime can return candidate papers without loading paper contexts', async () => {
+      let contextLoadCount = 0;
+      const runtime = agentLiteratureSearch.createLiteratureSearchRuntime({
+        searchPubMedRecords: async () => [
+          {
+            id: 'paper-1',
+            source: 'pubmed',
+            pmid: '111',
+            title: 'MAPK resistance mechanism paper 1',
+            summary: 'MAPK resistance and pathway reactivation in the first candidate.',
+            published_at: '2025-01-02'
+          },
+          {
+            id: 'paper-2',
+            source: 'pubmed',
+            pmid: '222',
+            title: 'MAPK resistance mechanism paper 2',
+            summary: 'MAPK resistance and pathway reactivation in the second candidate.',
+            published_at: '2025-01-01'
+          }
+        ],
+        paperContextLoaderRuntime: {
+          loadPaperContexts: async () => {
+            contextLoadCount += 1;
+            return {
+              ok: true,
+              papers_read_count: 2,
+              loaded_context_blocks: [
+                {
+                  paper_id: 'paper-1',
+                  paper_title: 'MAPK resistance mechanism paper 1',
+                  section_label: 'Results',
+                  excerpt: 'This block should never be loaded by the candidate-only path.',
+                  relevance_reason: 'Should not be used.',
+                  source: 'pubmed_abstract',
+                  evidence_kind: 'text'
+                }
+              ]
+            };
+          }
+        }
+      });
+
+      const result = await runtime.searchLiteratureCandidates({
+        source: 'pubmed',
+        query: 'MAPK resistance mechanism',
+        limit: 2
+      });
+
+      assert.equal(result.ok, true);
+      assert.equal(result.status, 'completed');
+      assert.equal(contextLoadCount, 0);
+      assert.equal(result.items.length, 2);
+      assert.equal(result.loaded_context_blocks.length, 0);
+      assert.equal(result.papers_read_count, 0);
+      assert.match(String(result.summary || ''), /Found 2 literature result/i);
+    });
+
+    test('literature search workflow delegates to a sub-agent, batches paper reads, and downloads into literature-search storage', async () => {
+      const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'literature-workflow-'));
+      const searchCalls = [];
+      const loadCalls = [];
+      const downloadCalls = [];
+      const candidateItems = Array.from({ length: 9 }, (_unused, index) => ({
+        id: `paper-${index + 1}`,
+        source: 'pubmed',
+        pmid: String(200 + index),
+        title: `MAPK resistance mechanism paper ${index + 1}`,
+        summary: `Mechanistic evidence for MAPK resistance and pathway reactivation candidate ${index + 1}.`,
+        url: `https://example.org/paper-${index + 1}`,
+        doi: `10.1000/paper-${index + 1}`,
+        published_at: `2025-01-${String(9 - index).padStart(2, '0')}`
+      }));
+      try {
+        const runtime = agentLiteratureSearchWorkflow.createLiteratureSearchWorkflowRuntime({
+          literatureSearchRuntime: {
+            buildLiteratureQuery: () => 'MAPK resistance mechanism',
+            searchLiteratureCandidates: async (input = {}) => {
+              searchCalls.push({
+                query: String(input.query || ''),
+                limit: Number(input.limit),
+                max_papers: Number(input.max_papers),
+                max_per_source: Number(input.max_per_source)
+              });
+              return {
+                ok: true,
+                status: 'completed',
+                query: String(input.query || 'MAPK resistance mechanism'),
+                sources: ['pubmed'],
+                items: candidateItems,
+                citations: candidateItems.map((item, index) => ({
+                  source: 'pubmed',
+                  pointer: item.pmid || item.id || `paper-${index + 1}`,
+                  reason: `Candidate ${index + 1}.`
+                })),
+                loaded_context_blocks: [],
+                papers_read_count: 0,
+                source_counts: { pubmed: candidateItems.length },
+                source_errors: {},
+                summary: `Found ${candidateItems.length} literature results (PubMed: ${candidateItems.length}).`
+              };
+            }
+          },
+          paperContextLoaderRuntime: {
+            fetchEuropePmcMetadataForItem: async (item = {}) => ({
+              pdf_urls: [`https://example.org/${String(item.id || 'paper').trim()}.pdf`],
+              abstract_sections: [
+                {
+                  label: 'Abstract',
+                  text: `Abstract for ${String(item.id || 'paper').trim()}.`
+                }
+              ]
+            }),
+            loadPaperContexts: async ({ items }) => {
+              loadCalls.push(items.map((item) => item.id));
+              return {
+                ok: true,
+                papers_read_count: items.length,
+                loaded_context_blocks: items.map((item) => ({
+                  paper_id: item.id,
+                  paper_title: item.title,
+                  section_label: 'Results',
+                  excerpt: `Loaded context for ${item.id}.`,
+                  relevance_reason: 'Directly matches the search query.',
+                  source: item.source,
+                  evidence_kind: 'text'
+                })),
+                papers: items,
+                summary: `Read ${items.length} paper(s) and loaded ${items.length} context block(s).`
+              };
+            }
+          },
+          paperDownloadRuntime: {
+            downloadPaper: async (input = {}) => {
+              downloadCalls.push({
+                linked_type: String(input.linked_type || ''),
+                linked_name: String(input.linked_name || ''),
+                storage_path: String(input.storage_path || ''),
+                paper_title: String(input.paper_title || ''),
+                page_url: String(input.page_url || ''),
+                candidate_urls: Array.isArray(input.candidate_urls) ? input.candidate_urls.slice() : []
+              });
+              return {
+                ok: true,
+                status: 'completed',
+                file_name: `${String(input.paper_title || 'paper').trim()}.pdf`,
+                file_path: path.join(storageRoot, 'Papers', String(input.linked_name || 'Uncategorized'), `${String(input.paper_title || 'paper').trim()}.pdf`),
+                relative_path: `Papers/${String(input.linked_name || 'Uncategorized')}/${String(input.paper_title || 'paper').trim()}.pdf`,
+                summary: `Downloaded ${String(input.paper_title || 'paper').trim()}.pdf`
+              };
+            }
+          }
+        });
+
+        const result = await runtime.execute({
+          query: 'MAPK resistance mechanism',
+          message: 'Please gather literature on MAPK resistance.',
+          limit: 9,
+          max_papers: 9,
+          source: 'pubmed',
+          storage_path: storageRoot,
+          snapshot: {
+            settings: {
+              storagePath: storageRoot
+            },
+            projects: [
+              {
+                id: 'project-atlas',
+                name: 'Atlas'
+              }
+            ],
+            protocols: [],
+            notebooks: [],
+            workflows: [],
+            papers: []
+          },
+          project: {
+            id: 'project-atlas',
+            name: 'Atlas'
+          }
+        });
+
+        assert.equal(result.ok, true);
+        assert.equal(result.status, 'completed');
+        assert.equal(searchCalls.length, 1);
+        assert.equal(searchCalls[0].query, 'MAPK resistance mechanism');
+        assert.equal(searchCalls[0].limit, 9);
+        assert.equal(searchCalls[0].max_papers, 9);
+        assert.equal(loadCalls.length, 2);
+        assert.deepEqual(loadCalls[0], candidateItems.slice(0, 8).map((item) => item.id));
+        assert.deepEqual(loadCalls[1], [candidateItems[8].id]);
+        assert.equal(downloadCalls.length, 6);
+        assert.equal(downloadCalls.every((call) => call.linked_type === 'literature-search'), true);
+        assert.equal(downloadCalls.every((call) => call.linked_name === 'Atlas'), true);
+        assert.equal(downloadCalls.every((call) => call.storage_path === storageRoot), true);
+        assert.equal(result.sub_agent_id.length > 0, true);
+        assert.equal(result.sub_agent?.task?.state, 'completed');
+        assert.equal(result.sub_agent?.message_count >= 2, true);
+        assert.equal(result.sub_agent_context.storage_path, storageRoot);
+        assert.equal(result.selected_papers.length, 9);
+        assert.equal(result.downloaded_papers.length, 6);
+        assert.equal(result.loaded_context_blocks.length, 9);
+        assert.equal(result.papers_read_count, 9);
+        assert.match(String(result.summary || ''), /Downloaded 6 selected PDF/i);
+        assert.match(String(result.summary || ''), /Loaded 9 bounded context block/i);
+        assert.equal(result.downloaded_papers.every((item) => String(item.relative_path || '').includes('Papers/Atlas/')), true);
+        assert.equal(result.sub_agent?.last_response?.output?.selected_papers.length, 9);
+      } finally {
+        await fsPromises.rm(storageRoot, { recursive: true, force: true });
+      }
+    });
+
+    test('paper download runtime maps literature-search downloads into top-level Papers folders', async () => {
+      const folder = agentPaperDownload.buildPaperStorageFolder({
+        rootPath: '/tmp/enana-storage',
+        linkedType: 'literature_search',
+        linkedName: 'Atlas'
+      });
+
+      assert.equal(folder, path.join('/tmp/enana-storage', 'Papers', 'Atlas'));
+    });
+
     test('paper download runtime extracts PDF candidates and streams direct download progress into paper storage', async () => {
       const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'paper-download-direct-'));
       const progressEvents = [];
@@ -591,6 +856,131 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
         if (typeof releaseSecondChunk === 'function') {
           releaseSecondChunk();
         }
+        await fsPromises.rm(storageRoot, { recursive: true, force: true });
+      }
+    });
+
+    test('paper download runtime accepts doi-only input and opens the browser-assisted flow under the storage root', async () => {
+      const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'paper-download-doi-'));
+      const browserCalls = [];
+      try {
+        const runtime = agentPaperDownload.createPaperDownloadRuntime({
+          createId: () => 'paper-download-doi-1',
+          startBrowserDownloadSession: async (options = {}) => {
+            browserCalls.push(JSON.parse(JSON.stringify(options)));
+            return {
+              ok: true,
+              session_id: 'paper-browser-paper-download-doi-1',
+              data_base64: Buffer.from('%PDF-1.4\nDOI browser fallback\n', 'utf8').toString('base64'),
+              file_name: 'doi-paper.pdf',
+              relative_path: 'Papers/Atlas/doi-paper.pdf',
+              summary: 'Browser download completed from DOI.'
+            };
+          },
+          terminateBrowserDownloadSession: async () => ({ ok: true })
+        });
+
+        const result = await runtime.downloadPaper({
+          doi: '10.1000/example-doi',
+          paper_title: 'doi-paper',
+          linked_type: 'literature-search',
+          linked_name: 'Atlas',
+          storage_path: storageRoot
+        });
+
+        assert.equal(result.ok, true);
+        assert.equal(result.status, 'completed');
+        assert.equal(result.method, 'browser');
+        assert.equal(browserCalls.length, 1);
+        assert.equal(browserCalls[0].browserEntryUrl, 'https://doi.org/10.1000/example-doi');
+        assert.equal(String(result.relative_path || '').includes('Papers/Atlas/'), true);
+      } finally {
+        await fsPromises.rm(storageRoot, { recursive: true, force: true });
+      }
+    });
+
+    test('literature search workflow preserves DOI metadata and passes it into paper download', async () => {
+      const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'literature-workflow-doi-'));
+      const downloadCalls = [];
+      try {
+        const runtime = agentLiteratureSearchWorkflow.createLiteratureSearchWorkflowRuntime({
+          literatureSearchRuntime: {
+            buildLiteratureQuery: () => 'ncAA incorporation',
+            searchLiteratureCandidates: async () => ({
+              ok: true,
+              status: 'completed',
+              query: 'ncAA incorporation',
+              sources: ['crossref'],
+              items: [
+                {
+                  id: 'paper-1',
+                  source: 'crossref',
+                  title: 'DOI-only paper',
+                  summary: 'Useful DOI-only literature result.',
+                  doi: '10.1000/example-doi',
+                  url: ''
+                }
+              ],
+              citations: [],
+              loaded_context_blocks: [],
+              papers_read_count: 0,
+              source_counts: { crossref: 1 },
+              source_errors: {},
+              summary: 'Found 1 literature result.'
+            })
+          },
+          paperContextLoaderRuntime: {
+            fetchEuropePmcMetadataForItem: async () => ({
+              pmid: '',
+              pmcid: '',
+              doi: '',
+              pdf_urls: [],
+              abstract_sections: []
+            }),
+            loadPaperContexts: async () => ({
+              ok: true,
+              status: 'completed',
+              papers_read_count: 0,
+              loaded_context_blocks: [],
+              papers: [],
+              summary: 'No paper context loaded.'
+            })
+          },
+          paperDownloadRuntime: {
+            downloadPaper: async (input = {}) => {
+              downloadCalls.push(JSON.parse(JSON.stringify(input)));
+              return {
+                ok: true,
+                status: 'completed',
+                file_name: 'doi-paper.pdf',
+                file_path: path.join(storageRoot, 'LiteratureSearch', 'Atlas', 'Papers', 'doi-paper.pdf'),
+                relative_path: 'Papers/Atlas/doi-paper.pdf',
+                summary: 'Downloaded doi-paper.pdf'
+              };
+            }
+          }
+        });
+
+        const result = await runtime.execute({
+          query: 'ncAA incorporation',
+          storage_path: storageRoot,
+          snapshot: {
+            settings: {
+              storagePath: storageRoot
+            }
+          },
+          project: {
+            id: 'project-atlas',
+            name: 'Atlas'
+          }
+        });
+
+        assert.equal(result.ok, true);
+        assert.equal(downloadCalls.length, 1);
+        assert.equal(downloadCalls[0].doi, '10.1000/example-doi');
+        assert.equal(downloadCalls[0].page_url, 'https://doi.org/10.1000/example-doi');
+        assert.equal(result.selected_papers[0].doi, '10.1000/example-doi');
+      } finally {
         await fsPromises.rm(storageRoot, { recursive: true, force: true });
       }
     });
@@ -840,6 +1230,32 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
       });
       assert.equal(missing.ok, false);
       assert.equal(missing.status, 'missing');
+    });
+
+    test('sub-agent runtime supplies the python sandbox prompt internally when task metadata requests it', async () => {
+      const turns = [];
+      const runtime = agentSubAgent.createAgentSubAgentRuntime({
+        runSubAgentTurn: async (turnInput = {}) => {
+          turns.push(turnInput);
+          return {
+            assistant_message: `handled ${turnInput.phase}`,
+            summary: 'handled'
+          };
+        }
+      });
+
+      const created = await runtime.createSubAgent({
+        name: 'python-sandbox-helper',
+        message: 'Supervise the next run.',
+        metadata: {
+          task_type: 'python-sandbox'
+        }
+      });
+
+      assert.equal(created.ok, true);
+      assert.match(String(created.agent.system_prompt || ''), /Python sandbox supervisor sub-agent/);
+      assert.match(String(turns[0]?.system_prompt || ''), /Python sandbox supervisor sub-agent/);
+      assert.equal(turns[0]?.message, 'Supervise the next run.');
     });
 
     test('sub-agent runtime execute validates action-specific requirements', async () => {

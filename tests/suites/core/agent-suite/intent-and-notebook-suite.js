@@ -2,32 +2,15 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
   with (scope) {
-    test('intent parser normalizes canonical parser payload', () => {
+    test('intent parser normalizes compact inventory payloads', () => {
       const raw = {
         primary_intent: 'inventory_lookup',
-        reasoning_effort: 2,
-        needs_clarification: false,
-        clarification_reason: null,
-        entities: {
-          activity_type: 'lookup',
-          project_name: 'Atlas',
-          protocol_name: null,
-          protein_name: null,
-          compound_name: 'Tris',
-          inventory_item: 'Tris-HCl',
-          cell_line: null,
-          paper_title: null,
-          workflow_step: null,
-          requested_output: 'location'
-        },
         inventory_search: {
           normalized_query: 'Tris-HCl',
           candidate_terms: ['Tris-HCl', 'tris', 'Tris-HCl'],
           aliases: ['tris(hydroxymethyl)aminomethane'],
           search_mode: 'exact_then_alias_then_fuzzy'
-        },
-        protocol_candidates: ['HEK293 Transfection'],
-        reasoning_summary: 'Inventory lookup for Tris-HCl.'
+        }
       };
 
       const result = agentIntentParser.normalizeIntentParserPayload(raw);
@@ -35,38 +18,18 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
       assert.equal(result.payload.primary_intent, 'inventory_lookup');
       assert.equal(result.payload.reasoning_effort, 0);
       assert.equal(result.payload.needs_clarification, false);
+      assert.deepEqual(result.payload.entities, {});
       assert.equal(result.payload.inventory_search.normalized_query, 'Tris-HCl');
       assert.equal(Array.isArray(result.payload.inventory_search.candidate_terms), true);
       assert.equal(result.payload.inventory_search.candidate_terms.length >= 2, true);
       assert.deepEqual(result.payload.protocol_candidates, []);
-      assert.match(result.payload.reasoning_summary, /Inventory lookup/);
+      assert.match(result.payload.reasoning_summary, /inventory_lookup/i);
     });
 
     test('intent parser normalizes protocol candidates for protocol_to_notebook intent', () => {
       const raw = {
         primary_intent: 'protocol_to_notebook',
-        needs_clarification: false,
-        clarification_reason: null,
-        entities: {
-          activity_type: 'transfection',
-          project_name: 'Atlas',
-          protocol_name: 'HEK293 Transfection',
-          protein_name: null,
-          compound_name: null,
-          inventory_item: null,
-          cell_line: 'HEK293',
-          paper_title: null,
-          workflow_step: null,
-          requested_output: 'notebook'
-        },
-        inventory_search: {
-          normalized_query: null,
-          candidate_terms: [],
-          aliases: [],
-          search_mode: null
-        },
-        protocol_candidates: ['HEK293 Transfection', 'HEK293 transfection', 'Expi293 Transfection'],
-        reasoning_summary: 'Protocol intent payload.'
+        protocol_candidates: ['HEK293 Transfection', 'HEK293 transfection', 'Expi293 Transfection']
       };
 
       const result = agentIntentParser.normalizeIntentParserPayload(raw);
@@ -80,57 +43,13 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
     test('intent parser preserves science reasoning effort and defaults missing science effort to level 1', () => {
       const explicit = agentIntentParser.normalizeIntentParserPayload({
         primary_intent: 'general_science_question',
-        reasoning_effort: 2,
-        needs_clarification: false,
-        clarification_reason: null,
-        entities: {
-          activity_type: null,
-          project_name: null,
-          protocol_name: null,
-          protein_name: null,
-          compound_name: null,
-          inventory_item: null,
-          cell_line: null,
-          paper_title: null,
-          workflow_step: null,
-          requested_output: 'mechanistic explanation'
-        },
-        inventory_search: {
-          normalized_query: null,
-          candidate_terms: [],
-          aliases: [],
-          search_mode: null
-        },
-        protocol_candidates: [],
-        reasoning_summary: 'Needs deeper multi-step science reasoning.'
+        reasoning_effort: 2
       });
       assert.equal(explicit.ok, true);
       assert.equal(explicit.payload.reasoning_effort, 2);
 
       const defaulted = agentIntentParser.normalizeIntentParserPayload({
-        primary_intent: 'project_science_question',
-        needs_clarification: false,
-        clarification_reason: null,
-        entities: {
-          activity_type: null,
-          project_name: 'Atlas',
-          protocol_name: null,
-          protein_name: null,
-          compound_name: null,
-          inventory_item: null,
-          cell_line: null,
-          paper_title: null,
-          workflow_step: null,
-          requested_output: null
-        },
-        inventory_search: {
-          normalized_query: null,
-          candidate_terms: [],
-          aliases: [],
-          search_mode: null
-        },
-        protocol_candidates: [],
-        reasoning_summary: 'Project science question.'
+        primary_intent: 'project_science_question'
       });
       assert.equal(defaulted.ok, true);
       assert.equal(defaulted.payload.reasoning_effort, 1);
@@ -140,20 +59,7 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
       const direct = agentIntentParser.normalizeIntentParserPayload({
         primary_intent: 'general_science_question',
         reasoning_effort: 0,
-        direct_answer: 'Imidazole competes with histidines for nickel binding sites on the resin.',
-        needs_clarification: false,
-        clarification_reason: null,
-        entities: {
-          output: 'mechanistic explanation'
-        },
-        inventory_search: {
-          normalized_query: null,
-          candidate_terms: [],
-          aliases: [],
-          search_mode: null
-        },
-        protocol_candidates: [],
-        reasoning_summary: 'Direct science answer.'
+        direct_answer: 'Imidazole competes with histidines for nickel binding sites on the resin.'
       });
       assert.equal(direct.ok, true);
       assert.match(String(direct.payload.direct_answer || ''), /nickel binding sites/i);
@@ -161,20 +67,7 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
       const routed = agentIntentParser.normalizeIntentParserPayload({
         primary_intent: 'project_science_question',
         reasoning_effort: 1,
-        direct_answer: 'This should be ignored because the request should enter the loop.',
-        needs_clarification: false,
-        clarification_reason: null,
-        entities: {
-          project: 'Atlas'
-        },
-        inventory_search: {
-          normalized_query: null,
-          candidate_terms: [],
-          aliases: [],
-          search_mode: null
-        },
-        protocol_candidates: [],
-        reasoning_summary: 'Needs project evidence.'
+        direct_answer: 'This should be ignored because the request should enter the loop.'
       });
       assert.equal(routed.ok, true);
       assert.equal(routed.payload.direct_answer, null);
@@ -183,28 +76,7 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
     test('intent parser keeps protocol candidates for notebook_draft intent', () => {
       const raw = {
         primary_intent: 'notebook_draft',
-        needs_clarification: false,
-        clarification_reason: null,
-        entities: {
-          activity_type: 'planning',
-          project_name: 'Atlas',
-          protocol_name: null,
-          protein_name: null,
-          compound_name: null,
-          inventory_item: null,
-          cell_line: null,
-          paper_title: null,
-          workflow_step: 'next experiment',
-          requested_output: 'planned notebook page'
-        },
-        inventory_search: {
-          normalized_query: null,
-          candidate_terms: [],
-          aliases: [],
-          search_mode: null
-        },
-        protocol_candidates: ['Viability Assay', 'cell viability assay'],
-        reasoning_summary: 'Propose the next notebook page from the workflow.'
+        protocol_candidates: ['Viability Assay', 'cell viability assay']
       };
 
       const result = agentIntentParser.normalizeIntentParserPayload(raw);
@@ -213,31 +85,25 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
       assert.deepEqual(result.payload.protocol_candidates, ['Viability Assay', 'cell viability assay']);
     });
 
+    test('intent parser defaults unclear and mixed_request to clarification-required payloads', () => {
+      const unclear = agentIntentParser.normalizeIntentParserPayload({
+        primary_intent: 'unclear'
+      });
+      assert.equal(unclear.ok, true);
+      assert.equal(unclear.payload.needs_clarification, true);
+      assert.match(String(unclear.payload.clarification_reason || ''), /missing detail|route this request/i);
+
+      const mixed = agentIntentParser.normalizeIntentParserPayload({
+        primary_intent: 'mixed_request'
+      });
+      assert.equal(mixed.ok, true);
+      assert.equal(mixed.payload.needs_clarification, true);
+      assert.match(String(mixed.payload.clarification_reason || ''), /tell me which task to handle first|split the request/i);
+    });
+
     test('intent parser rejects legacy confidence and secondary_intents fields', () => {
       const withConfidence = agentIntentParser.normalizeIntentParserPayload({
         primary_intent: 'general_science_question',
-        needs_clarification: false,
-        clarification_reason: null,
-        entities: {
-          activity_type: null,
-          project_name: null,
-          protocol_name: null,
-          protein_name: null,
-          compound_name: null,
-          inventory_item: null,
-          cell_line: null,
-          paper_title: null,
-          workflow_step: null,
-          requested_output: null
-        },
-        inventory_search: {
-          normalized_query: null,
-          candidate_terms: [],
-          aliases: [],
-          search_mode: null
-        },
-        protocol_candidates: [],
-        reasoning_summary: 'General question.',
         confidence: 0.91
       });
       assert.equal(withConfidence.ok, false);
@@ -245,28 +111,6 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
 
       const withSecondary = agentIntentParser.normalizeIntentParserPayload({
         primary_intent: 'general_science_question',
-        needs_clarification: false,
-        clarification_reason: null,
-        entities: {
-          activity_type: null,
-          project_name: null,
-          protocol_name: null,
-          protein_name: null,
-          compound_name: null,
-          inventory_item: null,
-          cell_line: null,
-          paper_title: null,
-          workflow_step: null,
-          requested_output: null
-        },
-        inventory_search: {
-          normalized_query: null,
-          candidate_terms: [],
-          aliases: [],
-          search_mode: null
-        },
-        protocol_candidates: [],
-        reasoning_summary: 'General question.',
         secondary_intents: ['inventory_lookup']
       });
       assert.equal(withSecondary.ok, false);
@@ -276,28 +120,7 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
     test('intent parser rejects protocol_candidates lists longer than 3', () => {
       const result = agentIntentParser.normalizeIntentParserPayload({
         primary_intent: 'protocol_to_notebook',
-        needs_clarification: false,
-        clarification_reason: null,
-        entities: {
-          activity_type: null,
-          project_name: null,
-          protocol_name: null,
-          protein_name: null,
-          compound_name: null,
-          inventory_item: null,
-          cell_line: null,
-          paper_title: null,
-          workflow_step: null,
-          requested_output: null
-        },
-        inventory_search: {
-          normalized_query: null,
-          candidate_terms: [],
-          aliases: [],
-          search_mode: null
-        },
-        protocol_candidates: ['A', 'B', 'C', 'D'],
-        reasoning_summary: 'Too many protocol candidates.'
+        protocol_candidates: ['A', 'B', 'C', 'D']
       });
       assert.equal(result.ok, false);
       assert.match(String(result.error || ''), /at most 3/i);
@@ -307,22 +130,13 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
       const result = agentIntentParser.normalizeIntentParserPayload({
         primary_intent: 'shopping_recommendation',
         reasoning_effort: 2,
-        needs_clarification: false,
-        clarification_reason: null,
         entities: {
           product_query: 'endotoxin-free pipette tips',
           required_attributes: 'endotoxin-free, metal-free',
           excluded_attributes: 'latex',
           budget_preference: 'cheap'
         },
-        inventory_search: {
-          normalized_query: 'should-clear',
-          candidate_terms: ['stale-term'],
-          aliases: ['legacy'],
-          search_mode: 'exact_then_alias_then_fuzzy'
-        },
-        protocol_candidates: ['Should be cleared'],
-        reasoning_summary: 'Find a cheap purchasable item that meets explicit lab constraints.'
+        protocol_candidates: ['Should be cleared']
       });
 
       assert.equal(result.ok, true);
@@ -629,6 +443,10 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
 
       assert.equal(toolCalls.length, 1);
       assert.equal(toolCalls[0].toolName, 'purchase-recommendation');
+      assert.equal(toolCalls[0].args.query, 'pipette tips');
+      assert.deepEqual(toolCalls[0].args.required_terms, ['endotoxin-free', 'metal-free']);
+      assert.deepEqual(toolCalls[0].args.excluded_terms, ['latex']);
+      assert.equal(toolCalls[0].args.budget_preference, 'cheap');
       assert.equal(toolCalls[0].options.allowWriteTools, false);
       assert.equal(result.purchase_recommendation.status, 'matched');
       assert.equal(result.purchase_recommendation.items.length, 1);
@@ -735,6 +553,947 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
       assert.match(String(result.purchase_recommendation.follow_up_questions[0] || ''), /which item type/i);
     });
 
+    test('controller core skips intent parser while protocol notebook context remains open', async () => {
+      const { createAgentControllerCore } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc', 'agent-controller-core.js'));
+      let parserCallCount = 0;
+      const lifecycleStages = [];
+      const controller = createAgentControllerCore({
+        deps: {
+          LLM_PROVIDERS: {
+            OPENAI: 'openai',
+            CODEX: 'codex'
+          }
+        },
+        cleanText: (value, _maxLength = 2000) => {
+          const text = String(value || '').trim();
+          return text || '';
+        },
+        controllerUtils: {
+          resolveAgentProvider: () => 'openai',
+          resolveAgentEndpoint: () => 'https://example.test',
+          resolveAgentModel: () => 'gpt-test',
+          resolveAgentApiKey: () => 'key',
+          extractConversation: (conversation) => (Array.isArray(conversation) ? conversation : []),
+          resolveAgentExecutionFlags: () => ({ developerMode: false }),
+          createAgentLlmTraceContext: () => ({
+            enabled: false,
+            requestId: 'req-pending-context',
+            logPath: '',
+            provider: 'openai',
+            model: 'gpt-test',
+            rows: [],
+            entries: []
+          }),
+          async requestIntentParserPayload() {
+            parserCallCount += 1;
+            throw new Error('Intent parser should be skipped while the protocol context remains open.');
+          }
+        },
+        observability: {
+          recordLifecycleEvent: (_recorder, event = {}) => {
+            lifecycleStages.push({
+              stage: event.stage || '',
+              meta: event.meta && typeof event.meta === 'object' ? event.meta : {}
+            });
+          }
+        },
+        protocolNotebookRuntime: {
+          buildSessionKey: () => 'open-protocol-session',
+          hasPendingSession: () => true,
+          clearPendingSession: () => false,
+          setPendingSession: () => null,
+          async runFlow({ parserPayload, message }) {
+            return {
+              status: 'completed',
+              selected_protocol: {
+                id: 'prot-1',
+                name: 'Cell Prep'
+              },
+              candidate_matches: [],
+              missing_placeholders: [],
+              follow_up_questions: [],
+              project_name: 'Atlas',
+              notebook: {
+                protocol: {
+                  id: 'prot-1',
+                  name: 'Cell Prep'
+                },
+                project: {
+                  id: 'proj-1',
+                  name: 'Atlas'
+                },
+                rendered_steps: [message, parserPayload.primary_intent]
+              }
+            };
+          }
+        },
+        scienceReasoningLoopRuntime: {
+          runGeneralScienceQuestion: async () => {
+            throw new Error('Science runtime should not run for pending protocol follow-ups.');
+          },
+          runProjectScienceQuestion: async () => {
+            throw new Error('Project science runtime should not run for pending protocol follow-ups.');
+          },
+          runResultAnalysis: async () => {
+            throw new Error('Result-analysis runtime should not run for pending protocol follow-ups.');
+          }
+        },
+        deepResearchRuntime: null,
+        scienceMainUtils: {
+          buildScienceRoutingFromParser: () => ({
+            intent: 'general_science_question',
+            entities: {},
+            plan: {
+              reasoning_effort: 1,
+              needs_clarification: false,
+              clarification_reason: ''
+            }
+          })
+        },
+        agentToolRuntime: {
+          normalizeAgentSnapshot: (snapshot) => (snapshot && typeof snapshot === 'object' ? snapshot : {}),
+          buildAgentSystemPrompt: () => 'system prompt'
+        },
+        executeInventoryLookup: async () => {
+          throw new Error('Inventory lookup should not run for pending protocol follow-ups.');
+        },
+        executeRecordLookup: async () => {
+          throw new Error('Record lookup should not run for pending protocol follow-ups.');
+        },
+        getAgentChatLogPath: () => '',
+        getDefaultDataFilePath: () => '',
+        setCodexCliModel: () => {},
+        setCodexCliReasoningEffort: () => {},
+        lifecycleService: {
+          normalizeJsonPayload: (payload, fallback = {}) => (
+            payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : fallback
+          ),
+          asArray: (value) => (Array.isArray(value) ? value : []),
+          createLifecycleToolRunner: () => async () => {
+            throw new Error('Tracked tool runner should not execute in this general science follow-up test.');
+          }
+        }
+      });
+
+      const result = await controller.runAgentControllerCore({
+        message: 'The sample name was Atlas-7.',
+        projectId: 'proj-1',
+        projectName: 'Atlas',
+        conversation: [],
+        llm: {
+          provider: 'openai',
+          model: 'gpt-test'
+        },
+        stateSnapshot: {}
+      }, {
+        lifecycleRecorder: {
+          requestId: 'req-pending-context',
+          events: []
+        },
+        requestId: 'req-pending-context'
+      });
+
+      assert.equal(parserCallCount, 0);
+      assert.equal(result.ok, true);
+      assert.equal(result.parser.primary_intent, 'protocol_to_notebook');
+      assert.match(String(result.parser.reasoning_summary || ''), /context is still open/i);
+      assert.equal(result.protocol_to_notebook.status, 'completed');
+      assert.equal(result.protocol_to_notebook.selected_protocol.name, 'Cell Prep');
+      const parserCompleted = lifecycleStages.find((item) => item.stage === 'parser_completed');
+      assert.equal(Boolean(parserCompleted), true);
+      assert.equal(parserCompleted.meta.skipped, true);
+      assert.equal(parserCompleted.meta.resumed_from_pending, true);
+    });
+
+    test('controller core skips parser for unresolved inventory follow-up turns in the same chat session', async () => {
+      const { createAgentControllerCore } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc', 'agent-controller-core.js'));
+      let parserCallCount = 0;
+      let inventoryLookupCalls = 0;
+      const lifecycleStages = [];
+      const controller = createAgentControllerCore({
+        deps: {
+          LLM_PROVIDERS: {
+            OPENAI: 'openai',
+            CODEX: 'codex'
+          }
+        },
+        cleanText: (value, _maxLength = 2000) => {
+          const text = String(value || '').trim();
+          return text || '';
+        },
+        controllerUtils: {
+          resolveAgentProvider: () => 'openai',
+          resolveAgentEndpoint: () => 'https://example.test',
+          resolveAgentModel: () => 'gpt-test',
+          resolveAgentApiKey: () => 'key',
+          extractConversation: (conversation) => (Array.isArray(conversation) ? conversation : []),
+          resolveAgentExecutionFlags: () => ({ developerMode: false }),
+          createAgentLlmTraceContext: () => ({
+            enabled: false,
+            requestId: 'req-inventory-followup',
+            logPath: '',
+            provider: 'openai',
+            model: 'gpt-test',
+            rows: [],
+            entries: []
+          }),
+          async requestIntentParserPayload() {
+            parserCallCount += 1;
+            throw new Error('Intent parser should be skipped for unresolved inventory follow-ups.');
+          }
+        },
+        observability: {
+          recordLifecycleEvent: (_recorder, event = {}) => {
+            lifecycleStages.push({
+              stage: event.stage || '',
+              meta: event.meta && typeof event.meta === 'object' ? event.meta : {}
+            });
+          }
+        },
+        protocolNotebookRuntime: {
+          buildSessionKey: () => 'inventory-session',
+          hasPendingSession: () => false,
+          clearPendingSession: () => false,
+          setPendingSession: () => null
+        },
+        scienceReasoningLoopRuntime: {
+          runGeneralScienceQuestion: async () => {
+            throw new Error('Science runtime should not run for unresolved inventory follow-ups.');
+          },
+          runProjectScienceQuestion: async () => {
+            throw new Error('Project science runtime should not run for unresolved inventory follow-ups.');
+          },
+          runResultAnalysis: async () => {
+            throw new Error('Result-analysis runtime should not run for unresolved inventory follow-ups.');
+          }
+        },
+        deepResearchRuntime: null,
+        scienceMainUtils: {
+          buildScienceRoutingFromParser: () => ({
+            intent: 'general_science_question',
+            entities: {},
+            plan: {
+              reasoning_effort: 1,
+              needs_clarification: false,
+              clarification_reason: ''
+            }
+          })
+        },
+        agentToolRuntime: {
+          normalizeAgentSnapshot: (snapshot) => (snapshot && typeof snapshot === 'object' ? snapshot : {}),
+          buildAgentSystemPrompt: () => 'system prompt'
+        },
+        executeInventoryLookup: async ({ message, parserPayload }) => {
+          inventoryLookupCalls += 1;
+          return {
+            status: 'matched',
+            query: message,
+            terms_used: [],
+            source: 'fallback_json',
+            backfilled_sql: false,
+            items: [{
+              id: 'inv-1',
+              name: 'Tris-HCl'
+            }],
+            parser_intent: parserPayload.primary_intent
+          };
+        },
+        executeRecordLookup: async () => {
+          throw new Error('Record lookup should not run for unresolved inventory follow-ups.');
+        },
+        agentChatLogRuntime: {
+          async getSession() {
+            return {
+              ok: true,
+              rows: [{
+                type: 'assistant-message',
+                session_id: 'chat-followup-1',
+                timestamp: '2026-04-12T21:40:00.000Z',
+                meta: {
+                  parser: {
+                    primary_intent: 'inventory_lookup'
+                  },
+                  inventory_lookup: {
+                    status: 'needs_more_info',
+                    follow_up_questions: ['Which reagent do you want me to look up?']
+                  }
+                }
+              }]
+            };
+          }
+        },
+        getAgentChatLogPath: () => '',
+        getDefaultDataFilePath: () => '',
+        setCodexCliModel: () => {},
+        setCodexCliReasoningEffort: () => {},
+        lifecycleService: {
+          normalizeJsonPayload: (payload, fallback = {}) => (
+            payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : fallback
+          ),
+          asArray: (value) => (Array.isArray(value) ? value : []),
+          createLifecycleToolRunner: () => async () => {
+            throw new Error('Tracked tool runner should not execute in this bounded follow-up test.');
+          }
+        }
+      });
+
+      const result = await controller.runAgentControllerCore({
+        message: 'It was Tris-HCl.',
+        conversation: [],
+        llm: {
+          provider: 'openai',
+          model: 'gpt-test'
+        },
+        stateSnapshot: {}
+      }, {
+        lifecycleRecorder: {
+          requestId: 'req-inventory-followup',
+          events: []
+        },
+        requestId: 'req-inventory-followup',
+        chatSessionId: 'chat-followup-1',
+        chatSessionStoragePath: '/tmp/chat-followup-1'
+      });
+
+      assert.equal(parserCallCount, 0);
+      assert.equal(inventoryLookupCalls, 1);
+      assert.equal(result.ok, true);
+      assert.equal(result.parser.primary_intent, 'inventory_lookup');
+      assert.match(String(result.parser.reasoning_summary || ''), /inventory_lookup context is still open/i);
+      assert.equal(result.inventory_lookup.status, 'matched');
+      assert.equal(result.inventory_lookup.parser_intent, 'inventory_lookup');
+      const parserCompleted = lifecycleStages.find((item) => item.stage === 'parser_completed');
+      assert.equal(Boolean(parserCompleted), true);
+      assert.equal(parserCompleted.meta.skipped, true);
+      assert.equal(parserCompleted.meta.resumed_from_pending, false);
+    });
+
+    test('controller core skips parser for unresolved record follow-up turns in the same chat session', async () => {
+      const { createAgentControllerCore } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc', 'agent-controller-core.js'));
+      let parserCallCount = 0;
+      let recordLookupCalls = 0;
+      const lifecycleStages = [];
+      const controller = createAgentControllerCore({
+        deps: {
+          LLM_PROVIDERS: {
+            OPENAI: 'openai',
+            CODEX: 'codex'
+          }
+        },
+        cleanText: (value, _maxLength = 2000) => {
+          const text = String(value || '').trim();
+          return text || '';
+        },
+        controllerUtils: {
+          resolveAgentProvider: () => 'openai',
+          resolveAgentEndpoint: () => 'https://example.test',
+          resolveAgentModel: () => 'gpt-test',
+          resolveAgentApiKey: () => 'key',
+          extractConversation: (conversation) => (Array.isArray(conversation) ? conversation : []),
+          resolveAgentExecutionFlags: () => ({ developerMode: false }),
+          createAgentLlmTraceContext: () => ({
+            enabled: false,
+            requestId: 'req-record-followup',
+            logPath: '',
+            provider: 'openai',
+            model: 'gpt-test',
+            rows: [],
+            entries: []
+          }),
+          async requestIntentParserPayload() {
+            parserCallCount += 1;
+            throw new Error('Intent parser should be skipped for unresolved record follow-ups.');
+          }
+        },
+        observability: {
+          recordLifecycleEvent: (_recorder, event = {}) => {
+            lifecycleStages.push({
+              stage: event.stage || '',
+              meta: event.meta && typeof event.meta === 'object' ? event.meta : {}
+            });
+          }
+        },
+        protocolNotebookRuntime: {
+          buildSessionKey: () => 'record-session',
+          hasPendingSession: () => false,
+          clearPendingSession: () => false,
+          setPendingSession: () => null
+        },
+        scienceReasoningLoopRuntime: {
+          runGeneralScienceQuestion: async () => {
+            throw new Error('Science runtime should not run for unresolved record follow-ups.');
+          },
+          runProjectScienceQuestion: async () => {
+            throw new Error('Project science runtime should not run for unresolved record follow-ups.');
+          },
+          runResultAnalysis: async () => {
+            throw new Error('Result-analysis runtime should not run for unresolved record follow-ups.');
+          }
+        },
+        deepResearchRuntime: null,
+        scienceMainUtils: {
+          buildScienceRoutingFromParser: () => ({
+            intent: 'general_science_question',
+            entities: {},
+            plan: {
+              reasoning_effort: 1,
+              needs_clarification: false,
+              clarification_reason: ''
+            }
+          })
+        },
+        agentToolRuntime: {
+          normalizeAgentSnapshot: (snapshot) => (snapshot && typeof snapshot === 'object' ? snapshot : {}),
+          buildAgentSystemPrompt: () => 'system prompt'
+        },
+        executeInventoryLookup: async () => {
+          throw new Error('Inventory lookup should not run for unresolved record follow-ups.');
+        },
+        executeRecordLookup: async ({ message, parserPayload }) => {
+          recordLookupCalls += 1;
+          return {
+            status: 'matched',
+            query: message,
+            source: 'fallback_json',
+            backfilled_sql: false,
+            items: [{
+              id: 'rec-1',
+              title: 'Atlas notebook'
+            }],
+            parser_intent: parserPayload.primary_intent
+          };
+        },
+        agentChatLogRuntime: {
+          async getSession() {
+            return {
+              ok: true,
+              rows: [{
+                type: 'assistant-message',
+                session_id: 'chat-followup-2',
+                timestamp: '2026-04-12T21:41:00.000Z',
+                meta: {
+                  parser: {
+                    primary_intent: 'record_lookup'
+                  },
+                  record_lookup: {
+                    status: 'needs_more_info',
+                    follow_up_questions: ['Which project record do you want me to find?']
+                  }
+                }
+              }]
+            };
+          }
+        },
+        getAgentChatLogPath: () => '',
+        getDefaultDataFilePath: () => '',
+        setCodexCliModel: () => {},
+        setCodexCliReasoningEffort: () => {},
+        lifecycleService: {
+          normalizeJsonPayload: (payload, fallback = {}) => (
+            payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : fallback
+          ),
+          asArray: (value) => (Array.isArray(value) ? value : []),
+          createLifecycleToolRunner: () => async () => {
+            throw new Error('Tracked tool runner should not execute in this general science follow-up test.');
+          }
+        }
+      });
+
+      const result = await controller.runAgentControllerCore({
+        message: 'Find the Atlas notebook entry.',
+        conversation: [],
+        llm: {
+          provider: 'openai',
+          model: 'gpt-test'
+        },
+        stateSnapshot: {}
+      }, {
+        lifecycleRecorder: {
+          requestId: 'req-record-followup',
+          events: []
+        },
+        requestId: 'req-record-followup',
+        chatSessionId: 'chat-followup-2',
+        chatSessionStoragePath: '/tmp/chat-followup-2'
+      });
+
+      assert.equal(parserCallCount, 0);
+      assert.equal(recordLookupCalls, 1);
+      assert.equal(result.ok, true);
+      assert.equal(result.parser.primary_intent, 'record_lookup');
+      assert.match(String(result.parser.reasoning_summary || ''), /record_lookup context is still open/i);
+      assert.equal(result.record_lookup.status, 'matched');
+      assert.equal(result.record_lookup.parser_intent, 'record_lookup');
+      const parserCompleted = lifecycleStages.find((item) => item.stage === 'parser_completed');
+      assert.equal(Boolean(parserCompleted), true);
+      assert.equal(parserCompleted.meta.skipped, true);
+      assert.equal(parserCompleted.meta.resumed_from_pending, false);
+    });
+
+    test('controller core skips parser for the next general science follow-up turn and re-enters the reasoning loop', async () => {
+      const { createAgentControllerCore } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc', 'agent-controller-core.js'));
+      let parserCallCount = 0;
+      let scienceRuntimeCalls = 0;
+      let receivedScienceInput = null;
+      const lifecycleStages = [];
+      const controller = createAgentControllerCore({
+        deps: {
+          LLM_PROVIDERS: {
+            OPENAI: 'openai',
+            CODEX: 'codex'
+          }
+        },
+        cleanText: (value, _maxLength = 2000) => {
+          const text = String(value || '').trim();
+          return text || '';
+        },
+        controllerUtils: {
+          resolveAgentProvider: () => 'openai',
+          resolveAgentEndpoint: () => 'https://example.test',
+          resolveAgentModel: () => 'gpt-test',
+          resolveAgentApiKey: () => 'key',
+          extractConversation: (conversation) => (Array.isArray(conversation) ? conversation : []),
+          resolveAgentExecutionFlags: () => ({ developerMode: false }),
+          createAgentLlmTraceContext: () => ({
+            enabled: false,
+            requestId: 'req-science-followup',
+            logPath: '',
+            provider: 'openai',
+            model: 'gpt-test',
+            rows: [],
+            entries: []
+          }),
+          async requestIntentParserPayload() {
+            parserCallCount += 1;
+            throw new Error('Intent parser should be skipped for the next general science follow-up turn.');
+          }
+        },
+        observability: {
+          recordLifecycleEvent: (_recorder, event = {}) => {
+            lifecycleStages.push({
+              stage: event.stage || '',
+              meta: event.meta && typeof event.meta === 'object' ? event.meta : {}
+            });
+          }
+        },
+        protocolNotebookRuntime: {
+          buildSessionKey: () => 'science-followup-session',
+          hasPendingSession: () => false,
+          clearPendingSession: () => false,
+          setPendingSession: () => null
+        },
+        scienceReasoningLoopRuntime: {
+          runGeneralScienceQuestion: async (input) => {
+            scienceRuntimeCalls += 1;
+            receivedScienceInput = input;
+            return {
+              status: 'completed',
+              answer: 'Deeper answer',
+              confidence: 0.72,
+              citations: [],
+              rounds_executed: 1
+            };
+          },
+          runProjectScienceQuestion: async () => {
+            throw new Error('Project science runtime should not run for this general science follow-up.');
+          },
+          runResultAnalysis: async () => {
+            throw new Error('Result-analysis runtime should not run for this general science follow-up.');
+          }
+        },
+        deepResearchRuntime: null,
+        scienceMainUtils: {
+          buildScienceRoutingFromParser: (parserPayload = {}) => ({
+            intent: parserPayload.primary_intent,
+            entities: {},
+            plan: {
+              reasoning_effort: Number(parserPayload.reasoning_effort) || 0,
+              needs_clarification: false,
+              clarification_reason: ''
+            }
+          })
+        },
+        agentToolRuntime: {
+          normalizeAgentSnapshot: (snapshot) => (snapshot && typeof snapshot === 'object' ? snapshot : {}),
+          buildAgentSystemPrompt: () => 'system prompt'
+        },
+        executeInventoryLookup: async () => {
+          throw new Error('Inventory lookup should not run for this general science follow-up.');
+        },
+        executeRecordLookup: async () => {
+          throw new Error('Record lookup should not run for this general science follow-up.');
+        },
+        agentChatLogRuntime: {
+          async getSession() {
+            return {
+              ok: true,
+              rows: [{
+                type: 'assistant-message',
+                session_id: 'chat-science-followup-1',
+                timestamp: '2026-04-12T21:42:00.000Z',
+                meta: {
+                  parser: {
+                    primary_intent: 'general_science_question',
+                    reasoning_effort: 0,
+                    direct_answer: 'Short answer',
+                    reasoning_summary: 'Intent parser selected general_science_question.'
+                  },
+                  general_science_question: {
+                    status: 'completed'
+                  }
+                }
+              }]
+            };
+          }
+        },
+        getAgentChatLogPath: () => '',
+        getDefaultDataFilePath: () => '',
+        setCodexCliModel: () => {},
+        setCodexCliReasoningEffort: () => {},
+        lifecycleService: {
+          normalizeJsonPayload: (payload, fallback = {}) => (
+            payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : fallback
+          ),
+          asArray: (value) => (Array.isArray(value) ? value : []),
+          createLifecycleToolRunner: () => async () => {
+            throw new Error('Tracked tool runner should not execute in this bounded follow-up test.');
+          }
+        }
+      });
+
+      const result = await controller.runAgentControllerCore({
+        message: 'Think harder',
+        conversation: [],
+        llm: {
+          provider: 'openai',
+          model: 'gpt-test'
+        },
+        stateSnapshot: {}
+      }, {
+        lifecycleRecorder: {
+          requestId: 'req-science-followup',
+          events: []
+        },
+        requestId: 'req-science-followup',
+        chatSessionId: 'chat-science-followup-1',
+        chatSessionStoragePath: '/tmp/chat-science-followup-1'
+      });
+
+      assert.equal(parserCallCount, 0);
+      assert.equal(scienceRuntimeCalls, 1);
+      assert.equal(result.ok, true);
+      assert.equal(result.parser.primary_intent, 'general_science_question');
+      assert.equal(result.parser.reasoning_effort, 1);
+      assert.equal(result.parser.direct_answer, null);
+      assert.match(String(result.parser.reasoning_summary || ''), /following question continues the previous general_science_question intent/i);
+      assert.equal(receivedScienceInput.parserPayload.primary_intent, 'general_science_question');
+      assert.equal(receivedScienceInput.parserPayload.reasoning_effort, 1);
+      assert.equal(receivedScienceInput.parserPayload.direct_answer, null);
+      assert.equal(result.general_science_question.status, 'completed');
+      const parserCompleted = lifecycleStages.find((item) => item.stage === 'parser_completed');
+      assert.equal(Boolean(parserCompleted), true);
+      assert.equal(parserCompleted.meta.skipped, true);
+      assert.equal(parserCompleted.meta.resumed_from_pending, false);
+    });
+
+    test('controller core runs the parser again after a skipped follow-up turn was already used', async () => {
+      const { createAgentControllerCore } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc', 'agent-controller-core.js'));
+      let parserCallCount = 0;
+      let scienceRuntimeCalls = 0;
+      const lifecycleStages = [];
+      const controller = createAgentControllerCore({
+        deps: {
+          LLM_PROVIDERS: {
+            OPENAI: 'openai',
+            CODEX: 'codex'
+          }
+        },
+        cleanText: (value, _maxLength = 2000) => {
+          const text = String(value || '').trim();
+          return text || '';
+        },
+        controllerUtils: {
+          resolveAgentProvider: () => 'openai',
+          resolveAgentEndpoint: () => 'https://example.test',
+          resolveAgentModel: () => 'gpt-test',
+          resolveAgentApiKey: () => 'key',
+          extractConversation: (conversation) => (Array.isArray(conversation) ? conversation : []),
+          resolveAgentExecutionFlags: () => ({ developerMode: false }),
+          createAgentLlmTraceContext: () => ({
+            enabled: false,
+            requestId: 'req-science-followup-bounded',
+            logPath: '',
+            provider: 'openai',
+            model: 'gpt-test',
+            rows: [],
+            entries: []
+          }),
+          async requestIntentParserPayload() {
+            parserCallCount += 1;
+            return {
+              ok: true,
+              payload: {
+                primary_intent: 'general_science_question',
+                reasoning_effort: 1,
+                direct_answer: null,
+                needs_clarification: false,
+                clarification_reason: null,
+                entities: {},
+                inventory_search: {
+                  normalized_query: null,
+                  candidate_terms: [],
+                  aliases: [],
+                  search_mode: null
+                },
+                protocol_candidates: [],
+                reasoning_summary: 'Intent parser selected general_science_question.'
+              }
+            };
+          }
+        },
+        observability: {
+          recordLifecycleEvent: (_recorder, event = {}) => {
+            lifecycleStages.push({
+              stage: event.stage || '',
+              meta: event.meta && typeof event.meta === 'object' ? event.meta : {}
+            });
+          }
+        },
+        protocolNotebookRuntime: {
+          buildSessionKey: () => 'science-followup-bounded-session',
+          hasPendingSession: () => false,
+          clearPendingSession: () => false,
+          setPendingSession: () => null
+        },
+        scienceReasoningLoopRuntime: {
+          runGeneralScienceQuestion: async () => {
+            scienceRuntimeCalls += 1;
+            return {
+              status: 'completed',
+              answer: 'Freshly parsed answer',
+              confidence: 0.7,
+              citations: [],
+              rounds_executed: 1
+            };
+          },
+          runProjectScienceQuestion: async () => {
+            throw new Error('Project science runtime should not run here.');
+          },
+          runResultAnalysis: async () => {
+            throw new Error('Result-analysis runtime should not run here.');
+          }
+        },
+        deepResearchRuntime: null,
+        scienceMainUtils: {
+          buildScienceRoutingFromParser: (parserPayload = {}) => ({
+            intent: parserPayload.primary_intent,
+            entities: {},
+            plan: {
+              reasoning_effort: Number(parserPayload.reasoning_effort) || 0,
+              needs_clarification: false,
+              clarification_reason: ''
+            }
+          })
+        },
+        agentToolRuntime: {
+          normalizeAgentSnapshot: (snapshot) => (snapshot && typeof snapshot === 'object' ? snapshot : {}),
+          buildAgentSystemPrompt: () => 'system prompt'
+        },
+        executeInventoryLookup: async () => {
+          throw new Error('Inventory lookup should not run here.');
+        },
+        executeRecordLookup: async () => {
+          throw new Error('Record lookup should not run here.');
+        },
+        agentChatLogRuntime: {
+          async getSession() {
+            return {
+              ok: true,
+              rows: [{
+                type: 'assistant-message',
+                session_id: 'chat-science-followup-2',
+                timestamp: '2026-04-12T21:43:00.000Z',
+                meta: {
+                  parser: {
+                    primary_intent: 'general_science_question',
+                    reasoning_effort: 1,
+                    direct_answer: null,
+                    reasoning_summary: 'Skipped intent parsing because the following question continues the previous general_science_question intent.'
+                  },
+                  general_science_question: {
+                    status: 'completed'
+                  }
+                }
+              }]
+            };
+          }
+        },
+        getAgentChatLogPath: () => '',
+        getDefaultDataFilePath: () => '',
+        setCodexCliModel: () => {},
+        setCodexCliReasoningEffort: () => {},
+        lifecycleService: {
+          normalizeJsonPayload: (payload, fallback = {}) => (
+            payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : fallback
+          ),
+          asArray: (value) => (Array.isArray(value) ? value : []),
+          createLifecycleToolRunner: () => async () => {
+            throw new Error('Tracked tool runner should not execute in this bounded follow-up test.');
+          }
+        }
+      });
+
+      const result = await controller.runAgentControllerCore({
+        message: 'Add a table too',
+        conversation: [],
+        llm: {
+          provider: 'openai',
+          model: 'gpt-test'
+        },
+        stateSnapshot: {}
+      }, {
+        lifecycleRecorder: {
+          requestId: 'req-science-followup-bounded',
+          events: []
+        },
+        requestId: 'req-science-followup-bounded',
+        chatSessionId: 'chat-science-followup-2',
+        chatSessionStoragePath: '/tmp/chat-science-followup-2'
+      });
+
+      assert.equal(parserCallCount, 1);
+      assert.equal(scienceRuntimeCalls, 1);
+      assert.equal(result.ok, true);
+      assert.equal(result.parser.primary_intent, 'general_science_question');
+      const parserCompleted = lifecycleStages.find((item) => item.stage === 'parser_completed');
+      assert.equal(Boolean(parserCompleted), true);
+      assert.equal(parserCompleted.meta.skipped, false);
+      assert.equal(parserCompleted.meta.resumed_from_pending, false);
+    });
+
+    test('controller core dispatches direct skill commands to tools before intent parsing or LLM setup', async () => {
+      const { createAgentControllerCore } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc', 'agent-controller-core.js'));
+      let parserCallCount = 0;
+      let toolCallCount = 0;
+      const controller = createAgentControllerCore({
+        deps: {
+          LLM_PROVIDERS: {
+            OPENAI: 'openai',
+            CODEX: 'codex'
+          }
+        },
+        cleanText: (value, _maxLength = 2000) => {
+          const text = String(value || '').trim();
+          return text || '';
+        },
+        controllerUtils: {
+          resolveAgentProvider: () => {
+            throw new Error('Provider resolution should not run for direct skill commands.');
+          },
+          resolveAgentEndpoint: () => '',
+          resolveAgentModel: () => '',
+          resolveAgentApiKey: () => '',
+          extractConversation: (conversation) => (Array.isArray(conversation) ? conversation : []),
+          resolveAgentExecutionFlags: () => ({ developerMode: false }),
+          createAgentLlmTraceContext: () => ({
+            enabled: false,
+            requestId: 'req-skill-command',
+            logPath: '',
+            provider: '',
+            model: '',
+            rows: [],
+            entries: []
+          }),
+          async requestIntentParserPayload() {
+            parserCallCount += 1;
+            throw new Error('Intent parser should not run for direct skill commands.');
+          }
+        },
+        observability: {
+          recordLifecycleEvent: () => {}
+        },
+        protocolNotebookRuntime: {
+          buildSessionKey: () => 'skill-command-session',
+          hasPendingSession: () => false
+        },
+        scienceReasoningLoopRuntime: {},
+        deepResearchRuntime: null,
+        scienceMainUtils: {},
+        agentToolRuntime: {
+          normalizeAgentSnapshot: (snapshot) => (snapshot && typeof snapshot === 'object' ? snapshot : {}),
+          listSkills: () => ([
+            {
+              name: 'command-line',
+              description: 'Run shell commands.',
+              command_name: 'command_line',
+              path: '/skills/command-line/SKILL.md'
+            }
+          ]),
+          parseSkillInvocation: () => ({
+            type: 'direct_tool',
+            skill: {
+              name: 'command-line'
+            },
+            tool_name: 'command-line',
+            command_name: 'skill',
+            raw_args: 'pwd',
+            active_skill_names: ['command-line'],
+            cleaned_message: 'pwd'
+          }),
+          async runAgentTool(toolName, args) {
+            toolCallCount += 1;
+            assert.equal(toolName, 'command-line');
+            assert.equal(args.command, 'pwd');
+            return {
+              ok: true,
+              summary: 'Command completed successfully.',
+              result: {
+                status: 'completed',
+                summary: 'Command completed successfully.',
+                stdout: '/tmp/workspace'
+              }
+            };
+          }
+        },
+        executeInventoryLookup: async () => {
+          throw new Error('Inventory lookup should not run for direct skill commands.');
+        },
+        executeRecordLookup: async () => {
+          throw new Error('Record lookup should not run for direct skill commands.');
+        },
+        getAgentChatLogPath: () => '',
+        getDefaultDataFilePath: () => '',
+        setCodexCliModel: () => {},
+        setCodexCliReasoningEffort: () => {},
+        lifecycleService: {
+          normalizeJsonPayload: (payload, fallback = {}) => (
+            payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : fallback
+          ),
+          asArray: (value) => (Array.isArray(value) ? value : [])
+        }
+      });
+
+      const result = await controller.runAgentControllerCore({
+        message: '/skill command-line pwd',
+        stateSnapshot: {}
+      }, {
+        lifecycleRecorder: {
+          requestId: 'req-skill-command',
+          events: []
+        },
+        requestId: 'req-skill-command'
+      });
+
+      assert.equal(parserCallCount, 0);
+      assert.equal(toolCallCount, 1);
+      assert.equal(result.ok, true);
+      assert.equal(result.parser.primary_intent, 'skill_command');
+      assert.equal(result.skill_command.status, 'completed');
+      assert.equal(result.skill_command.skill_name, 'command-line');
+      assert.equal(result.skill_command.tool_name, 'command-line');
+      assert.match(String(result.skill_command.summary || ''), /completed successfully/i);
+    });
+
     test('intent parser prompt includes recent transcript and active project context', () => {
       const prompt = agentIntentParser.buildIntentParserPrompt({
         message: 'Do we have PEI in stock for Atlas lot 7?',
@@ -767,9 +1526,10 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
       assert.match(agentIntentParser.INTENT_PARSER_PROMPT, /## Science reasoning_effort rubric/);
       assert.match(agentIntentParser.INTENT_PARSER_PROMPT, /If you are unsure whether a science question should be 0 or 1, choose 1\./);
       assert.match(agentIntentParser.INTENT_PARSER_PROMPT, /Intent-specific output append:/);
-      assert.match(agentIntentParser.INTENT_PARSER_PROMPT, /"reasoning_effort": 1/);
-      assert.equal(/entities\.project_name/.test(agentIntentParser.INTENT_PARSER_PROMPT), false);
-      assert.equal(/Output:\n\{/.test(agentIntentParser.INTENT_PARSER_PROMPT), false);
+      assert.match(agentIntentParser.INTENT_PARSER_PROMPT, /"primary_intent": "one allowed intent"/);
+      assert.match(agentIntentParser.INTENT_PARSER_PROMPT, /Add only the extra fields listed for the chosen intent\./);
+      assert.equal(/## Examples/.test(agentIntentParser.INTENT_PARSER_PROMPT), false);
+      assert.match(agentIntentParser.INTENT_PARSER_PROMPT, /Omit all other keys and empty placeholders\./);
 
       let previousHeadingIndex = -1;
       agentIntentParser.PARSER_ALLOWED_INTENTS.forEach((intentName) => {
@@ -800,8 +1560,9 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
       assert.equal(renderedPrompt.includes('### inventory_lookup'), true);
       assert.equal(renderedPrompt.includes('Custom inventory description.'), true);
       assert.equal(renderedPrompt.includes('Intent-specific rule: Custom inventory rule.'), true);
+      assert.equal(renderedPrompt.includes('Append only these extra fields: custom_inventory_field'), true);
       assert.equal(renderedPrompt.includes('- custom_inventory_field: Custom inventory append description.'), true);
-      assert.equal(renderedPrompt.includes('User: "Where is the custom PEI bottle?"'), true);
+      assert.equal(renderedPrompt.includes('User: "Where is the custom PEI bottle?"'), false);
     });
 
     test('intent parser catalog validation rejects malformed entries', () => {
@@ -856,11 +1617,10 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
 
     test('protocol matching runtime falls back to highest rank when llm tie-break output is invalid', async () => {
       const runtime = agentProtocolMatching.createProtocolMatchingRuntime({
-        LLM_PROVIDERS: {
-          OPENAI: 'openai'
-        },
-        requestOpenAiResponsesWithBackoff: async () => ({ raw: 'not json' }),
-        extractResponseText: () => 'not json'
+        requestStructuredJsonPayload: async () => ({
+          ok: false,
+          error: 'not json'
+        })
       });
       const result = await runtime.resolveProtocolWinner({
         provider: 'openai',
@@ -877,6 +1637,342 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
       });
       assert.equal(result.selection_method, 'deterministic_fallback');
       assert.equal(result.selected.name, 'Protocol A');
+    });
+
+    test('protocol notebook context control closes completed action context', () => {
+      const { createProtocolNotebookContextControl } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'runtime',
+        'agent-protocol-notebook-context-control.js'
+      ));
+      let nowMs = Date.parse('2026-04-10T12:00:00.000Z');
+      const cleanText = (value, _maxLength = 2000) => {
+        const text = String(value || '').trim();
+        return text || '';
+      };
+      const control = createProtocolNotebookContextControl({
+        cleanText,
+        now: () => new Date(nowMs).toISOString(),
+        nowMs: () => nowMs,
+        store: new Map()
+      });
+      const sessionKey = control.buildSessionKey({
+        projectId: 'proj-1',
+        projectName: 'Atlas'
+      });
+
+      control.setPendingSession(sessionKey, {
+        created_at: '2026-04-10T11:55:00.000Z',
+        selected_protocol: {
+          id: 'prot-1',
+          name: 'Cell Prep'
+        },
+        follow_up_questions: ['Please provide sample name.']
+      });
+      assert.equal(control.hasPendingSession(sessionKey), true);
+
+      const syncResult = control.syncActionContext(sessionKey, {
+        status: 'completed'
+      });
+      assert.equal(syncResult.context_closed, true);
+      assert.equal(control.hasPendingSession(sessionKey), false);
+    });
+
+    test('protocol notebook runtime closes pending context after completed action', async () => {
+      const { createProtocolNotebookRuntime } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'runtime',
+        'agent-protocol-notebook.js'
+      ));
+      const cleanText = (value, _maxLength = 2000) => {
+        const text = String(value || '').trim();
+        return text || '';
+      };
+      const asArray = (value) => (Array.isArray(value) ? value : []);
+      const uniqueStrings = (values, max = 50) => {
+        const seen = new Set();
+        const out = [];
+        asArray(values).forEach((value) => {
+          const normalized = cleanText(value, 220);
+          if (!normalized) {
+            return;
+          }
+          const key = normalized.toLowerCase();
+          if (seen.has(key) || out.length >= max) {
+            return;
+          }
+          seen.add(key);
+          out.push(normalized);
+        });
+        return out;
+      };
+      let nowMs = Date.parse('2026-04-10T12:00:00.000Z');
+      const runtime = createProtocolNotebookRuntime({
+        asArray,
+        cleanText,
+        uniqueStrings,
+        pickTopMatches: (items, _selector, _query, count = 1) => asArray(items).slice(0, count),
+        now: () => new Date(nowMs).toISOString(),
+        nowMs: () => nowMs,
+        protocolNotebookPendingSessions: new Map(),
+        getAgentRuntimeFactory: (runtimeName) => {
+          if (runtimeName === 'protocol-matching') {
+            return () => ({
+              normalizeProtocolRecord(protocol = {}, index = 0) {
+                return {
+                  id: String(protocol.id || `protocol-${index + 1}`),
+                  name: String(protocol.name || ''),
+                  project_name: String(protocol.project_name || protocol.projectName || ''),
+                  steps: Array.isArray(protocol.steps) ? protocol.steps : []
+                };
+              },
+              async selectProtocol({ protocols = [] } = {}) {
+                const selected = Array.isArray(protocols) ? protocols[0] : null;
+                return {
+                  selected_protocol: selected,
+                  selection_method: 'deterministic',
+                  rationale: 'Selected the only available protocol.',
+                  ranked_matches: selected
+                    ? [{ id: selected.id, name: selected.name, score: 120 }]
+                    : []
+                };
+              },
+              mapCandidateMatchesForOutput(matches = []) {
+                return asArray(matches).map((match) => ({
+                  id: cleanText(match.id, 120),
+                  name: cleanText(match.name, 220),
+                  score: Number.isFinite(Number(match.score)) ? Number(match.score) : 0
+                }));
+              }
+            });
+          }
+          if (runtimeName === 'notebook-generation') {
+            return () => ({
+              async generateNotebook({ selectedProtocol, project } = {}) {
+                return {
+                  status: 'completed',
+                  notebook: {
+                    protocol: {
+                      id: selectedProtocol?.id || '',
+                      name: selectedProtocol?.name || ''
+                    },
+                    project: {
+                      id: project?.id || '',
+                      name: project?.name || ''
+                    },
+                    rendered_steps: ['Prepare Atlas-7 sample.'],
+                    save: {
+                      status: 'ready_for_save'
+                    },
+                    entry_template: {
+                      result: 'Notebook draft completed for Cell Prep.'
+                    }
+                  },
+                  known_values: {
+                    sample_name: 'Atlas-7'
+                  },
+                  missing_placeholders: [],
+                  follow_up_questions: []
+                };
+              }
+            });
+          }
+          return null;
+        }
+      });
+      const sessionKey = runtime.buildSessionKey({
+        projectId: 'proj-1',
+        projectName: 'Atlas'
+      });
+      runtime.setPendingSession(sessionKey, {
+        created_at: '2026-04-10T11:55:00.000Z',
+        selected_protocol: {
+          id: 'prot-1',
+          name: 'Cell Prep'
+        },
+        project: {
+          id: 'proj-1',
+          name: 'Atlas',
+          resolution_source: 'payload_project_id'
+        },
+        follow_up_questions: ['Please provide sample name.']
+      });
+      assert.equal(runtime.hasPendingSession(sessionKey), true);
+
+      const result = await runtime.runFlow({
+        provider: 'openai',
+        endpoint: 'https://api.openai.com/v1/responses',
+        apiKey: 'test-key',
+        model: 'gpt-5',
+        message: 'The sample name was Atlas-7.',
+        conversation: [],
+        snapshot: {
+          projects: [
+            { id: 'proj-1', name: 'Atlas' }
+          ],
+          protocols: [
+            {
+              id: 'prot-1',
+              name: 'Cell Prep',
+              project_name: 'Atlas',
+              steps: []
+            }
+          ]
+        },
+        parserPayload: {
+          primary_intent: 'protocol_to_notebook',
+          entities: {
+            project_name: 'Atlas',
+            protocol_name: 'Cell Prep'
+          },
+          protocol_candidates: ['Cell Prep']
+        },
+        projectId: 'proj-1',
+        projectName: 'Atlas'
+      });
+
+      assert.equal(result.status, 'completed');
+      assert.equal(result.selected_protocol.name, 'Cell Prep');
+      assert.equal(runtime.hasPendingSession(sessionKey), false);
+    });
+
+    test('protocol notebook runtime can route protocol and notebook work through the agent sub-app API layer', async () => {
+      const { createProtocolNotebookRuntime } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'runtime',
+        'agent-protocol-notebook.js'
+      ));
+      const cleanText = (value, _maxLength = 2000) => {
+        const text = String(value || '').trim();
+        return text || '';
+      };
+      const asArray = (value) => (Array.isArray(value) ? value : []);
+      const uniqueStrings = (values, max = 50) => {
+        const seen = new Set();
+        const out = [];
+        asArray(values).forEach((value) => {
+          const normalized = cleanText(value, 220);
+          if (!normalized) {
+            return;
+          }
+          const key = normalized.toLowerCase();
+          if (seen.has(key) || out.length >= max) {
+            return;
+          }
+          seen.add(key);
+          out.push(normalized);
+        });
+        return out;
+      };
+      const calls = [];
+      const runtime = createProtocolNotebookRuntime({
+        asArray,
+        cleanText,
+        uniqueStrings,
+        pickTopMatches: (items, _selector, _query, count = 1) => asArray(items).slice(0, count),
+        protocolNotebookPendingSessions: new Map(),
+        agentAppApi: {
+          protocol: {
+            listAgentProtocols() {
+              calls.push('protocol.listAgentProtocols');
+              return [
+                {
+                  id: 'prot-1',
+                  name: 'Cell Prep',
+                  project_id: 'proj-1',
+                  project_name: 'Atlas',
+                  steps: [{ id: 'step-1', text: 'Prepare cells.' }]
+                }
+              ];
+            },
+            normalizeAgentProtocol(protocol = {}) {
+              return {
+                id: String(protocol.id || ''),
+                name: String(protocol.name || ''),
+                project_id: String(protocol.project_id || ''),
+                project_name: String(protocol.project_name || ''),
+                steps: Array.isArray(protocol.steps) ? protocol.steps : []
+              };
+            },
+            async matchForNotebook({ protocols = [] } = {}) {
+              calls.push('protocol.matchForNotebook');
+              return {
+                selected_protocol: Array.isArray(protocols) ? protocols[0] : null,
+                selection_method: 'agent_app_api',
+                rationale: 'Matched through the agent sub-app API.',
+                ranked_matches: [{ id: 'prot-1', name: 'Cell Prep', score: 130 }]
+              };
+            }
+          },
+          notebook: {
+            async generateFromProtocol({ selectedProtocol, project } = {}) {
+              calls.push('notebook.generateFromProtocol');
+              return {
+                status: 'completed',
+                notebook: {
+                  protocol: {
+                    id: selectedProtocol?.id || '',
+                    name: selectedProtocol?.name || ''
+                  },
+                  project: {
+                    id: project?.id || '',
+                    name: project?.name || ''
+                  },
+                  rendered_steps: ['Prepare cells.'],
+                  save: {
+                    status: 'ready_for_save'
+                  }
+                },
+                missing_placeholders: [],
+                follow_up_questions: []
+              };
+            }
+          }
+        }
+      });
+
+      const result = await runtime.runFlow({
+        provider: 'openai',
+        endpoint: 'https://api.openai.com/v1/responses',
+        apiKey: 'test-key',
+        model: 'gpt-5',
+        message: 'Turn today\'s Atlas cell prep into a notebook page.',
+        conversation: [],
+        snapshot: {
+          projects: [
+            { id: 'proj-1', name: 'Atlas' }
+          ]
+        },
+        parserPayload: {
+          protocol_candidates: ['Cell Prep'],
+          entities: {
+            project_name: 'Atlas'
+          }
+        },
+        projectId: 'proj-1',
+        projectName: 'Atlas'
+      });
+
+      assert.deepEqual(calls, [
+        'protocol.listAgentProtocols',
+        'protocol.matchForNotebook',
+        'notebook.generateFromProtocol'
+      ]);
+      assert.equal(result.status, 'completed');
+      assert.equal(result.selected_protocol.name, 'Cell Prep');
+      assert.equal(result.notebook.save.status, 'ready_for_save');
     });
 
     test('notebook generation runtime extracts token and inline placeholders', () => {
@@ -1261,6 +2357,133 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
       assert.equal(result.status, 'proposal_ready');
       assert.equal(result.selected_protocol.name, 'Viability Assay');
       assert.equal(result.proposal.title, 'Registry Draft');
+      assert.equal(result.notebook.save.status, 'awaiting_user_confirmation');
+    });
+
+    test('notebook draft runtime can use the agent sub-app API layer for protocol ranking and notebook generation', async () => {
+      const calls = [];
+      const runtime = agentNotebookDraft.createNotebookDraftRuntime({
+        agentAppApi: {
+          protocol: {
+            listAgentProtocols() {
+              calls.push('protocol.listAgentProtocols');
+              return [
+                {
+                  id: 'prot-1',
+                  name: 'Viability Assay',
+                  project_id: 'proj-1',
+                  project_name: 'Atlas',
+                  steps: [
+                    {
+                      id: 'step-1',
+                      text: 'Measure viability.',
+                      placeholders: []
+                    }
+                  ]
+                }
+              ];
+            },
+            normalizeAgentProtocol(protocol = {}) {
+              return {
+                id: String(protocol.id || ''),
+                name: String(protocol.name || ''),
+                project_id: String(protocol.project_id || ''),
+                project_name: String(protocol.project_name || ''),
+                steps: Array.isArray(protocol.steps) ? protocol.steps : []
+              };
+            },
+            rankAgentProtocols({ protocols = [] } = {}) {
+              calls.push('protocol.rankAgentProtocols');
+              return Array.isArray(protocols)
+                ? protocols.map((protocol) => ({
+                  id: protocol.id,
+                  name: protocol.name,
+                  score: 120
+                }))
+                : [];
+            }
+          },
+          notebook: {
+            listAgentEntries() {
+              calls.push('notebook.listAgentEntries');
+              return [];
+            },
+            async generateFromProtocol() {
+              calls.push('notebook.generateFromProtocol');
+              return {
+                notebook: {
+                  save: {
+                    mode: 'confirm_before_save',
+                    status: 'awaiting_user_confirmation'
+                  },
+                  entry_template: {
+                    notebookState: 'planned',
+                    executedAt: '',
+                    agentDraftStatus: 'draft_ready',
+                    agentDraftMeta: {}
+                  },
+                  unresolved_placeholders: []
+                },
+                missing_placeholders: [],
+                follow_up_questions: []
+              };
+            }
+          }
+        },
+        requestStructuredJsonPayload: async (options = {}) => {
+          if (options.stage === 'notebook_draft_selection') {
+            return {
+              ok: true,
+              payload: {
+                selected_candidate_id: 'protocol-only::prot-1::Viability Assay',
+                title: 'API Draft',
+                purpose: 'Exercise the agent sub-app API path.',
+                rationale: 'Use the new API layer instead of directly coupling to helper runtimes.',
+                planned_materials: ['Assay plate'],
+                checkpoints: ['Confirm project scope.']
+              }
+            };
+          }
+          return {
+            ok: false,
+            error: `Unhandled stage ${String(options.stage || '')}`
+          };
+        }
+      });
+
+      const result = await runtime.generateNotebookDraft({
+        provider: 'openai',
+        endpoint: 'https://api.openai.com/v1/responses',
+        apiKey: 'test-key',
+        model: 'gpt-5',
+        message: 'Draft the next viability assay for Atlas.',
+        conversation: [],
+        snapshot: {
+          projects: [
+            { id: 'proj-1', name: 'Atlas' }
+          ]
+        },
+        parserPayload: {
+          primary_intent: 'notebook_draft',
+          entities: {
+            project_name: 'Atlas',
+            workflow_step: 'next experiment'
+          },
+          protocol_candidates: ['Viability Assay']
+        },
+        project: {
+          id: 'proj-1',
+          name: 'Atlas'
+        }
+      });
+
+      assert.equal(calls.filter((item) => item === 'protocol.listAgentProtocols').length >= 2, true);
+      assert.equal(calls.includes('protocol.rankAgentProtocols'), true);
+      assert.equal(calls.includes('notebook.listAgentEntries'), true);
+      assert.equal(calls.includes('notebook.generateFromProtocol'), true);
+      assert.equal(result.status, 'proposal_ready');
+      assert.equal(result.selected_protocol.name, 'Viability Assay');
+      assert.equal(result.proposal.title, 'API Draft');
       assert.equal(result.notebook.save.status, 'awaiting_user_confirmation');
     });
 

@@ -8,17 +8,19 @@
   --home-tile-line-soft: rgba(42, 36, 29, 0.08);
   --home-tile-text: var(--text);
   --home-tile-muted: var(--muted);
+  --home-shell-gap-inline: clamp(16px, 2vw, 28px);
+  --home-shell-gap-bottom: clamp(16px, 2.2vh, 26px);
   --home-gap: 16px;
   --home-tile-padding: 18px;
   --home-tile-inner-gap: 14px;
   --home-top-row: minmax(128px, 0.62fr);
   --home-middle-row: minmax(0, 1fr);
   --home-bottom-row: minmax(0, 0.84fr);
-  height: calc(100dvh - 208px);
+  height: 100%;
   max-height: 100%;
   min-height: 0;
   overflow: hidden;
-  padding-bottom: 10px;
+  padding: 0 var(--home-shell-gap-inline) var(--home-shell-gap-bottom);
   background: transparent;
 }
 

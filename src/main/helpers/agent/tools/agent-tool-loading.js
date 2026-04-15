@@ -9,9 +9,9 @@ function defaultAsArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
-// Convert unknown input to a trimmed string without silently clipping payloads.
+// Convert unknown input to a string without trimming or clipping content.
 function defaultCleanText(value, _maxLength = 500) {
-  const text = String(value || '').trim();
+  const text = String(value || '');
   if (!text) {
     return '';
   }

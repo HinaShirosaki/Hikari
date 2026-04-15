@@ -1,29 +1,26 @@
 /* setting-view */
 
-#setting-view .settings-shell {
-  margin-top: 0;
-  padding: 0;
+#setting-view {
+  --app-left-rail-bleed: 18px;
 }
 
 #setting-view .settings-head {
   display: grid;
   gap: 4px;
-  padding-bottom: 10px;
 }
 
 #setting-view .settings-layout {
-  display: grid;
-  grid-template-columns: var(--layout-left-panel-width) minmax(0, 1fr);
-  gap: 20px;
-  align-items: start;
+  --left-rail-main-gap: 20px;
 }
 
 #setting-view .settings-nav {
   display: grid;
+  gap: 0;
+}
+
+#setting-view .settings-nav-list {
+  display: grid;
   gap: 6px;
-  position: sticky;
-  top: 0;
-  align-self: start;
 }
 
 #setting-view .settings-nav-item {
@@ -58,6 +55,8 @@
 
 #setting-view .settings-detail {
   min-width: 0;
+  display: grid;
+  align-content: start;
 }
 
 #setting-view .settings-section {
@@ -114,13 +113,7 @@
 }
 
 @media (max-width: 840px) {
-  #setting-view .settings-layout {
-    grid-template-columns: 1fr;
-    gap: 14px;
-  }
-
-  #setting-view .settings-nav {
-    position: static;
+  #setting-view .settings-nav-list {
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   }
 
@@ -131,8 +124,7 @@
 
 #setting-view .panel,
 #setting-view .card,
-#setting-view .cards,
-#setting-view .settings-shell {
+#setting-view .cards {
   border: 0;
   border-radius: 0;
   background: transparent;

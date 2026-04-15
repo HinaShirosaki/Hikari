@@ -16,23 +16,28 @@
             <div id="workflow-list" class="workflow-list app-left-rail-list"></div>
           </div>
 
-          <div class="workflow-template-panel app-left-rail-section" hidden>
-            <h3>Save Template</h3>
+          <div class="workflow-template-editor-panel app-left-rail-section" hidden>
+            <h3>Template Details</h3>
             <label>
               Template Name
               <input id="workflow-template-name" placeholder="e.g. Clone screening template" />
             </label>
+            <label>
+              Description
+              <textarea id="workflow-template-description" rows="3" placeholder="Optional notes about this template"></textarea>
+            </label>
             <div class="form-actions">
               <button type="button" id="workflow-save-template-btn" class="primary-btn">Save Current Graph</button>
+              <button type="button" id="workflow-template-cancel-btn" class="ghost-btn">Cancel</button>
             </div>
           </div>
 
-          <div class="workflow-template-panel app-left-rail-section" hidden>
+          <div class="workflow-template-list-panel app-left-rail-section" hidden>
             <h3>Saved Templates</h3>
             <div id="workflow-template-list" class="workflow-list app-left-rail-list"></div>
           </div>
 
-          <div class="workflow-editor-panel app-left-rail-section" hidden>
+          <div class="workflow-editor-panel workflow-sidebar-editor-panel app-left-rail-section" hidden>
             <form id="workflow-form" class="stack-form">
               <input type="hidden" id="workflow-id" />
               <label>
@@ -77,9 +82,8 @@
             <div id="workflow-execution-board" class="workflow-execution-board"></div>
           </div>
 
-          <div class="panel workflow-editor-panel" hidden>
-            <h3>Workflow Blocks</h3>
-            <p class="small-note">Add protocol blocks or plain-text blocks. New blocks default assignee to yourself.</p>
+          <div class="panel workflow-editor-panel workflow-main-editor-panel" hidden>
+            <h3>Add Blocks</h3>
             <div class="form-grid workflow-grid workflow-block-grid">
               <label>
                 Block Type
@@ -106,12 +110,11 @@
                 <button type="button" id="workflow-block-add-btn" class="ghost-btn">Add Protocol Block</button>
               </div>
             </div>
-            <div id="workflow-block-list" class="list-table"></div>
           </div>
 
-          <div class="panel workflow-editor-panel" hidden>
+          <div class="panel workflow-editor-panel workflow-main-editor-panel" hidden>
             <h3>Graph Editor</h3>
-            <p class="small-note">Drag blocks to arrange. Click an output dot, then an input dot to connect. Click a line to remove a connection.</p>
+            <p class="small-note">Drag blocks to arrange. Hover the top-left corner of a block to delete it. Click an output dot, then an input dot to connect. Click a line to remove a connection.</p>
             <div id="workflow-graph-canvas" class="workflow-graph-canvas">
               <div id="workflow-graph-board" class="workflow-graph-board">
                 <svg id="workflow-graph-svg" class="workflow-graph-svg" aria-hidden="true"></svg>

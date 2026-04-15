@@ -28,9 +28,9 @@ function asArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
-// Normalize unknown input into trimmed text without silently clipping content.
+// Normalize unknown input into a string without trimming or clipping chat fields.
 function cleanText(value, _maxLength = 4000) {
-  const text = String(value || '').trim();
+  const text = String(value || '');
   if (!text) {
     return '';
   }
@@ -67,6 +67,14 @@ function createDefaultId() {
 function deriveSessionTitle(text, fallback = 'New Chat') {
   const firstLine = cleanText(String(text || '').split('\n').find((line) => String(line || '').trim()) || '', 120);
   return firstLine || fallback;
+}
+
+function normalizeSessionBrief(text, fallback = 'New Chat') {
+  const normalized = cleanText(String(text || '').replace(/\s+/g, ' '), 160)
+    .replace(/^["'`]+|["'`]+$/g, '')
+    .replace(/[.!?;,:\s]+$/g, '')
+    .trim();
+  return normalized || fallback;
 }
 
 // Build a concise assistant-facing summary from inventory lookup results.
@@ -175,13 +183,35 @@ function summarizePurchaseRecommendation(purchaseRecommendation) {
   const query = cleanText(payload.query, 220);
   const items = asArray(payload.items);
   const requiredTerms = asArray(payload?.filters?.required_terms).map((item) => cleanText(item, 120)).filter(Boolean);
+  const matchMode = cleanText(payload.match_mode, 20);
   if (status === 'matched' && items.length) {
+    if (matchMode === 'partial') {
+      return `Found ${items.length} likely product match${items.length === 1 ? '' : 'es'}${query ? ` for "${query}"` : ''}, but I could not verify every requested attribute from the vendor pages.`;
+    }
     return `Found ${items.length} purchase recommendation${items.length === 1 ? '' : 's'}${query ? ` for "${query}"` : ''}${requiredTerms.length ? ` matching ${requiredTerms.join(', ')}` : ''}.`;
   }
   if (status === 'no_match') {
     return `No purchase recommendations found${query ? ` for "${query}"` : ''}.`;
   }
   return '';
+}
+
+function summarizeSkillCommand(skillCommand) {
+  const payload = skillCommand && typeof skillCommand === 'object' ? skillCommand : {};
+  if (!Object.keys(payload).length) {
+    return '';
+  }
+  const summary = cleanText(payload.summary, 12000);
+  const result = payload.result && typeof payload.result === 'object' ? payload.result : {};
+  const output = cleanText(
+    result.output
+      || [result.stdout, result.stderr].filter(Boolean).join(result.stdout && result.stderr ? '\n' : ''),
+    12000
+  );
+  if (summary && output && !summary.includes(output)) {
+    return `${summary}\n\n${output}`;
+  }
+  return summary || output;
 }
 
 // Extract the main answer or follow-up prompt from a science-question result payload.
@@ -244,6 +274,9 @@ function buildAssistantMetaFromResult(result, requestText = '') {
     purchase_recommendation: payload.purchase_recommendation && typeof payload.purchase_recommendation === 'object'
       ? cloneJson(payload.purchase_recommendation, null)
       : null,
+    skill_command: payload.skill_command && typeof payload.skill_command === 'object'
+      ? cloneJson(payload.skill_command, null)
+      : null,
     inventory_lookup: payload.inventory_lookup && typeof payload.inventory_lookup === 'object'
       ? cloneJson(payload.inventory_lookup, null)
       : null,
@@ -285,6 +318,9 @@ function buildAssistantTextFromResult(result) {
   const purchaseRecommendation = payload.purchase_recommendation && typeof payload.purchase_recommendation === 'object'
     ? payload.purchase_recommendation
     : null;
+  const skillCommand = payload.skill_command && typeof payload.skill_command === 'object'
+    ? payload.skill_command
+    : null;
   const generalScienceQuestion = payload.general_science_question && typeof payload.general_science_question === 'object'
     ? payload.general_science_question
     : null;
@@ -305,6 +341,7 @@ function buildAssistantTextFromResult(result) {
   const inventorySummaryText = summarizeInventoryLookup(inventoryLookup);
   const recordSummaryText = summarizeRecordLookup(recordLookup);
   const purchaseRecommendationText = summarizePurchaseRecommendation(purchaseRecommendation);
+  const skillCommandText = summarizeSkillCommand(skillCommand);
   const notebookDraftText = summarizeNotebookDraft(notebookDraftWorkflow);
   const scienceAnswerText = summarizeScienceResult(generalScienceQuestion)
     || summarizeScienceResult(projectScienceQuestion)
@@ -323,6 +360,7 @@ function buildAssistantTextFromResult(result) {
   }
   // Otherwise fall back through science answers, lookup summaries, parser reasoning, and a generic default.
   return scienceAnswerText
+    || skillCommandText
     || purchaseRecommendationText
     || inventorySummaryText
     || recordSummaryText
@@ -585,6 +623,51 @@ function createAgentChatLogRuntime(deps = {}) {
   const createId = typeof deps.createId === 'function'
     ? deps.createId
     : createDefaultId;
+  const requestAssistantText = typeof deps.requestAssistantText === 'function'
+    ? deps.requestAssistantText
+    : null;
+
+  async function summarizeFirstUserMessageAsTitle({
+    message = '',
+    llm = {},
+    projectId = '',
+    projectName = ''
+  } = {}) {
+    const prompt = cleanText(message, 6000);
+    const fallback = deriveSessionTitle(prompt, 'New Chat');
+    if (!prompt || !requestAssistantText) {
+      return fallback;
+    }
+    const provider = cleanText(llm?.provider, 80);
+    const endpoint = cleanText(llm?.apiEndpoint || llm?.endpoint, 2400);
+    const apiKey = cleanText(llm?.apiKey, 2400);
+    const model = cleanText(llm?.model, 160);
+    if ((!provider && !endpoint) || !model || !apiKey) {
+      return fallback;
+    }
+    const result = await requestAssistantText({
+      source: { provider, endpoint, apiKey, model },
+      stage: 'agent_chat_session_brief',
+      defaultError: 'Session brief provider is not configured.',
+      systemPrompt: [
+        'You create short chat sidebar labels.',
+        'Summarize the first user message into one brief plain-text label.',
+        'Use 3 to 8 words when possible.',
+        'Keep concrete nouns and task intent.',
+        'No quotes, no markdown, no ending punctuation.'
+      ].join(' '),
+      userPrompt: [
+        projectName ? `Project: ${cleanText(projectName, 220)}` : '',
+        projectId && !projectName ? `Project ID: ${cleanText(projectId, 120)}` : '',
+        `First user message: ${prompt}`,
+        'Return only the label.'
+      ].filter(Boolean).join('\n')
+    });
+    if (result?.ok !== true) {
+      return fallback;
+    }
+    return normalizeSessionBrief(result.text, fallback);
+  }
 
   // Resolve the base storage path plus the chat-log folder and index file locations.
   function resolvePaths(storagePath) {
@@ -637,7 +720,7 @@ function createAgentChatLogRuntime(deps = {}) {
   }
 
   // Append one or more normalized rows to a session log and refresh the summary index.
-  async function appendRows(storagePath, sessionId, rows = []) {
+  async function appendRows(storagePath, sessionId, rows = [], options = {}) {
     const filteredRows = asArray(rows).map((row) => normalizeSessionRow(row)).filter(Boolean);
     if (!filteredRows.length) {
       const existing = await getSession({ storagePath, sessionId });
@@ -667,11 +750,23 @@ function createAgentChatLogRuntime(deps = {}) {
     }
 
     const logPath = runtimePath.join(paths.chatLogPath, session.log_file);
+    const titleWasUntitled = !cleanText(session?.title, 40) || session.title === 'New Chat';
     const payload = filteredRows.map((row) => JSON.stringify(row)).join('\n');
     await runtimeFs.appendFile(logPath, `${payload}\n`, 'utf8');
     filteredRows.forEach((row) => {
       session = applyEntryToSummary(session, row);
     });
+    if (titleWasUntitled) {
+      const firstUserRow = filteredRows.find((row) => row.type === CHAT_LOG_EVENT_TYPES.USER_MESSAGE && cleanText(row.text, 24000));
+      if (firstUserRow) {
+        session.title = await summarizeFirstUserMessageAsTitle({
+          message: firstUserRow.text,
+          llm: options?.llm && typeof options.llm === 'object' ? options.llm : {},
+          projectId: cleanText(options?.projectId || firstUserRow?.project_id || firstUserRow?.projectId, 120),
+          projectName: cleanText(options?.projectName || firstUserRow?.project_name || firstUserRow?.projectName, 220)
+        });
+      }
+    }
     index.sessions = sortSessions(index.sessions.map((item) => item.id === session.id ? session : item));
     await writeIndex(paths, index);
     return {
@@ -841,7 +936,11 @@ function createAgentChatLogRuntime(deps = {}) {
       row.project_id = cleanText(input.projectId || input.project_id, 120);
       row.project_name = cleanText(input.projectName || input.project_name, 220);
     }
-    return appendRows(input.storagePath || input.storage_path, sessionId, [row]);
+    return appendRows(input.storagePath || input.storage_path, sessionId, [row], {
+      llm: input?.llm && typeof input.llm === 'object' ? input.llm : {},
+      projectId: cleanText(input.projectId || input.project_id, 120),
+      projectName: cleanText(input.projectName || input.project_name, 220)
+    });
   }
 
   // Normalize and append an assistant-authored chat message into the session log.
