@@ -75,6 +75,14 @@ function sanitizeFolderName(value, fallback = 'Literature Search') {
   return cleaned || fallback;
 }
 
+function buildDoiUrl(value) {
+  const doi = String(value || '').trim();
+  if (!doi) {
+    return '';
+  }
+  return `https://doi.org/${encodeURIComponent(doi).replace(/%2F/gi, '/')}`;
+}
+
 function tokenizeQuery(value) {
   return String(value || '')
     .toLowerCase()
@@ -274,7 +282,9 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
     );
     return {
       ...source,
-      ...metadata,
+      pmid: cleanText(metadata?.pmid, 120) || cleanText(source.pmid, 120),
+      pmcid: cleanText(metadata?.pmcid, 120) || cleanText(source.pmcid, 120),
+      doi: cleanText(metadata?.doi, 180) || cleanText(source.doi, 180),
       summary,
       pdf_urls: pdfUrls
     };
@@ -296,11 +306,13 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
       return null;
     }
 
+    const doiUrl = buildDoiUrl(source.doi);
     const candidateUrls = uniqueStrings([
       ...asArray(source.pdf_urls),
-      source.url
+      source.url,
+      doiUrl
     ], 8);
-    if (!candidateUrls.length && !source.url) {
+    if (!candidateUrls.length && !source.url && !doiUrl) {
       return null;
     }
 
@@ -309,10 +321,12 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
       message: [
         cleanText(source.title, 320),
         cleanText(source.summary, 1200),
+        cleanText(source.doi, 180),
         cleanText(source.url, 1200)
       ].filter(Boolean).join('\n'),
       paper_title: cleanText(source.title, 320),
-      page_url: cleanText(source.url, 1200),
+      doi: cleanText(source.doi, 180),
+      page_url: cleanText(source.url, 1200) || doiUrl,
       candidate_urls: candidateUrls,
       paper_pdf_url: candidateUrls.find((url) => /\.(?:pdf)(?:$|[?#])/i.test(String(url || ''))) || '',
       linked_type: 'literature-search',
@@ -347,10 +361,6 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
 
     for (const batch of batches) {
       const result = await paperContextLoaderRuntime.loadPaperContexts({
-        provider: cleanText(input.provider, 80),
-        endpoint: cleanText(input.endpoint, 2000),
-        apiKey: cleanText(input.apiKey, 400),
-        model: cleanText(input.model, 120),
         traceContext: input.traceContext || null,
         message: cleanText(input.message, 1600),
         topic: cleanText(input.topic, 240),

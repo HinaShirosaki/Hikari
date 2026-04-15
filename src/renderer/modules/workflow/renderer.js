@@ -648,8 +648,18 @@ export function createWorkflowRenderer(config = {}) {
                     </td>
                     ${layout.mainPath.map((block, index) => {
                       const stepState = entry ? getWorkflowStepState(entry, block.id) : { status: 'pending' };
+                      const previousBlock = index > 0 ? layout.mainPath[index - 1] : null;
+                      const previousStepState = previousBlock && entry
+                        ? getWorkflowStepState(entry, previousBlock.id)
+                        : null;
                       const isActive = expanded && activeBlockId === block.id;
-                      const connectorClass = index < layout.mainPath.length - 1 && entry
+                      const leadingConnectorClass = index > 0 && entry
+                        ? (previousStepState?.status === 'completed'
+                          && stepState.status === 'completed'
+                          ? ' is-complete'
+                          : '')
+                        : '';
+                      const trailingConnectorClass = index < layout.mainPath.length - 1 && entry
                         ? (stepState.status === 'completed'
                           && getWorkflowStepState(entry, layout.mainPath[index + 1].id).status === 'completed'
                           ? ' is-complete'
@@ -669,8 +679,9 @@ export function createWorkflowRenderer(config = {}) {
                               aria-label="${safeText(`${titleForBlock(block)} for ${workflow.name || 'workflow'}: ${dotState.title}`)}"
                               title="${safeText(dotState.title)}"
                             >
+                              ${index > 0 ? `<span class="workflow-progress-connector workflow-progress-connector-start${leadingConnectorClass}"></span>` : ''}
                               <span class="workflow-progress-dot"></span>
-                              ${index < layout.mainPath.length - 1 ? `<span class="workflow-progress-connector${connectorClass}"></span>` : ''}
+                              ${index < layout.mainPath.length - 1 ? `<span class="workflow-progress-connector workflow-progress-connector-end${trailingConnectorClass}"></span>` : ''}
                             </button>
                           ` : '<span class="small-note">-</span>'}
                         </td>
@@ -756,8 +767,10 @@ export function createWorkflowRenderer(config = {}) {
     elements.workflowExecutionStatus.textContent = `${workflows.length} specific workflow${workflows.length === 1 ? '' : 's'} created from this template.`;
     elements.workflowExecutionBoard.innerHTML = buildTemplateWorkflowTableMarkup(activeTemplate, workflows, activeWorkflow);
     const executionScroll = elements.workflowExecutionBoard.querySelector('.workflow-execution-scroll');
-    executionScroll?.addEventListener('scroll', syncExecutionPopoverPosition, { passive: true });
-    window.requestAnimationFrame(syncExecutionPopoverPosition);
+    if (executionScroll && elements.workflowExecutionBoard.querySelector('[data-workflow-step-popover]')) {
+      executionScroll.addEventListener('scroll', syncExecutionPopoverPosition, { passive: true });
+      window.requestAnimationFrame(syncExecutionPopoverPosition);
+    }
   }
 
   function updateSubmitButtonLabel() {
@@ -786,6 +799,9 @@ export function createWorkflowRenderer(config = {}) {
     if (elements.workflowDescriptionInput) {
       elements.workflowDescriptionInput.value = runtime.draft?.description || '';
     }
+    if (elements.workflowTemplateDescriptionInput) {
+      elements.workflowTemplateDescriptionInput.value = runtime.draft?.description || '';
+    }
     renderProjectOptions();
     renderTemplateCreateProjectOptions();
     renderNotebookOptions();
@@ -799,8 +815,9 @@ export function createWorkflowRenderer(config = {}) {
       ? nextMode
       : 'list';
 
-    const showEditor = runtime.workflowEntryMode === 'create' || runtime.workflowEntryMode === 'template';
-    const showTemplates = runtime.workflowEntryMode === 'template';
+    const showWorkflowSidebarEditor = runtime.workflowEntryMode === 'create';
+    const showMainEditor = runtime.workflowEntryMode === 'create' || runtime.workflowEntryMode === 'template';
+    const showTemplateEditor = runtime.workflowEntryMode === 'template';
     const showList = runtime.workflowEntryMode === 'list';
     const showHome = runtime.workflowEntryMode === 'list';
     const hideLinkFields = runtime.workflowEntryMode === 'template';
@@ -815,11 +832,17 @@ export function createWorkflowRenderer(config = {}) {
     if (elements.workflowEntryBackBtn) {
       elements.workflowEntryBackBtn.hidden = showHome;
     }
-    (elements.workflowEditorPanels || []).forEach((panel) => {
-      panel.hidden = !showEditor;
+    if (elements.workflowEntryPanel) {
+      elements.workflowEntryPanel.hidden = showTemplateEditor;
+    }
+    (elements.workflowSidebarEditorPanels || []).forEach((panel) => {
+      panel.hidden = !showWorkflowSidebarEditor;
     });
-    (elements.workflowTemplatePanels || []).forEach((panel) => {
-      panel.hidden = !showTemplates;
+    (elements.workflowMainEditorPanels || []).forEach((panel) => {
+      panel.hidden = !showMainEditor;
+    });
+    (elements.workflowTemplateEditorPanels || []).forEach((panel) => {
+      panel.hidden = !showTemplateEditor;
     });
     (elements.workflowListPanels || []).forEach((panel) => {
       panel.hidden = !showList;

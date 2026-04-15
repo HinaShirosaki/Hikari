@@ -2,7 +2,10 @@
 
 const fs = require('fs/promises');
 const path = require('path');
-const { applySqliteSchema } = require('./storage-sql-schema');
+const {
+  applyChemicalSqliteSchema,
+  applyCommonSqliteSchema
+} = require('./storage-sql-schema');
 const {
   asArray,
   buildSearchText,
@@ -176,6 +179,28 @@ function collectRecordIndexRows(snapshot, updatedAtDefault) {
       updatedAt: gel.updated_at || gel.updatedAt || gel.created_at,
       searchHints: asArray(gel.warnings).join(' '),
       raw: gel
+    });
+  });
+
+  asArray(snapshot.papers).forEach((rawPaper) => {
+    const paper = ensureObject(rawPaper);
+    pushRow('paper', paper.id, {
+      title: paper.title || paper.fileName || paper.id,
+      projectId: paper.linkedType === 'project' ? paper.linkedId : '',
+      projectName: paper.linkedType === 'project' ? paper.linkedName : '',
+      summary: paper.summary || paper.availabilityStatus || paper.ingestionStatus || paper.fileName,
+      updatedAt: paper.updatedAt || paper.createdAt,
+      searchHints: [
+        paper.fileName,
+        paper.linkedType,
+        paper.linkedName,
+        paper.availabilityStatus,
+        paper.ingestionStatus,
+        paper.summaryStatus,
+        paper.methodsStatus,
+        paper.reagentsStatus
+      ].join(' '),
+      raw: paper
     });
   });
 
@@ -448,6 +473,86 @@ function writeSqlNotebookIndex(db, snapshot, updatedAtDefault) {
   });
 }
 
+function writeSqlPaperIndex(db, snapshot, updatedAtDefault) {
+  const papers = asArray(snapshot.papers);
+  papers.forEach((rawPaper, index) => {
+    const paper = ensureObject(rawPaper);
+    const id = cleanText(paper.id, 220) || `paper_${index + 1}`;
+    const title = cleanText(paper.title, 320) || cleanText(paper.fileName, 320) || `Paper ${index + 1}`;
+    const fileName = cleanText(paper.fileName, 320);
+    const linkedType = cleanText(paper.linkedType, 80);
+    const linkedId = cleanText(paper.linkedId, 220);
+    const linkedName = cleanText(paper.linkedName, 320);
+    const storedRelativePath = cleanText(paper.storedRelativePath, 2400);
+    const availabilityStatus = cleanText(paper.availabilityStatus, 80);
+    const ingestionStatus = cleanText(paper.ingestionStatus, 80);
+    const summaryStatus = cleanText(paper.summaryStatus, 80);
+    const methodsStatus = cleanText(paper.methodsStatus, 80);
+    const reagentsStatus = cleanText(paper.reagentsStatus, 80);
+    const discoveredAt = cleanText(paper.discoveredAt || paper.createdAt, 80);
+    const updatedAt = cleanText(paper.updatedAt || paper.createdAt, 80) || updatedAtDefault;
+    const searchText = buildSearchText([
+      id,
+      title,
+      fileName,
+      linkedType,
+      linkedId,
+      linkedName,
+      storedRelativePath,
+      availabilityStatus,
+      ingestionStatus,
+      summaryStatus,
+      methodsStatus,
+      reagentsStatus,
+      asArray(paper.keyReagents).map((item) => item?.name || item).join(' '),
+      asArray(paper.highlights).map((item) => item?.text || '').join(' ')
+    ]);
+    db.run(
+      `INSERT OR REPLACE INTO paper_index
+        (id, title, file_name, linked_type, linked_id, linked_name, stored_relative_path,
+         availability_status, ingestion_status, summary_status, methods_status, reagents_status,
+         discovered_at, updated_at, search_text, raw_json)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        id,
+        title,
+        fileName,
+        linkedType,
+        linkedId,
+        linkedName,
+        storedRelativePath,
+        availabilityStatus,
+        ingestionStatus,
+        summaryStatus,
+        methodsStatus,
+        reagentsStatus,
+        discoveredAt,
+        updatedAt,
+        searchText,
+        JSON.stringify({
+          ...paper,
+          id,
+          title,
+          fileName,
+          linkedType,
+          linkedId,
+          linkedName,
+          storedRelativePath,
+          availabilityStatus,
+          ingestionStatus,
+          summaryStatus,
+          methodsStatus,
+          reagentsStatus,
+          discoveredAt,
+          updatedAt,
+          pdfDataUrl: '',
+          storedFilePath: ''
+        })
+      ]
+    );
+  });
+}
+
 function writeSqlRecordIndex(db, snapshot, updatedAtDefault) {
   const rows = collectRecordIndexRows(snapshot, updatedAtDefault);
   rows.forEach((row) => {
@@ -493,13 +598,27 @@ async function writeSqliteBundleIndex(sqlitePath, snapshot) {
   const db = new SQL.Database();
   const updatedAtDefault = new Date().toISOString();
   try {
-    applySqliteSchema(db);
-    writeSqlInventoryChemicals(db, snapshot);
+    applyCommonSqliteSchema(db);
     writeSqlInventoryPersonal(db, snapshot);
     writeSqlInventorySamples(db, snapshot);
     writeSqlProtocolIndex(db, snapshot, updatedAtDefault);
     writeSqlNotebookIndex(db, snapshot, updatedAtDefault);
+    writeSqlPaperIndex(db, snapshot, updatedAtDefault);
     writeSqlRecordIndex(db, snapshot, updatedAtDefault);
+    const bytes = db.export();
+    await fs.mkdir(path.dirname(sqlitePath), { recursive: true });
+    await fs.writeFile(sqlitePath, Buffer.from(bytes));
+  } finally {
+    db.close();
+  }
+}
+
+async function writeChemicalSqliteBundleIndex(sqlitePath, snapshot) {
+  const SQL = await loadSqlJs();
+  const db = new SQL.Database();
+  try {
+    applyChemicalSqliteSchema(db);
+    writeSqlInventoryChemicals(db, snapshot);
     writeSqlInventoryMeta(db, snapshot);
     const bytes = db.export();
     await fs.mkdir(path.dirname(sqlitePath), { recursive: true });
@@ -510,11 +629,13 @@ async function writeSqliteBundleIndex(sqlitePath, snapshot) {
 }
 
 module.exports = {
+  writeChemicalSqliteBundleIndex,
   writeSqlInventoryChemicals,
   writeSqlInventoryMeta,
   writeSqlInventoryPersonal,
   writeSqlInventorySamples,
   writeSqlNotebookIndex,
+  writeSqlPaperIndex,
   writeSqlProtocolIndex,
   writeSqlRecordIndex,
   writeSqliteBundleIndex

@@ -113,7 +113,7 @@ function cloneJson(value, fallback) {
 }
 
 function cleanText(value, _maxLength = 5000) {
-  const text = String(value || '').trim();
+  const text = String(value || '');
   if (!text) {
     return '';
   }
@@ -851,10 +851,7 @@ function createManagedPythonSubAgentTurnRuntime(deps = {}) {
     }
 
     const result = await requestStructuredJsonPayload({
-      provider: cleanText(metadata?.provider, 80),
-      endpoint: cleanText(metadata?.endpoint, 2000),
-      apiKey: cleanText(metadata?.apiKey, 400),
-      model: cleanText(metadata?.model, 120),
+      source: metadata,
       stage: requestType === 'continue_plan'
         ? 'python_sandbox_sub_agent_continue'
         : 'python_sandbox_sub_agent_repair',
@@ -862,9 +859,6 @@ function createManagedPythonSubAgentTurnRuntime(deps = {}) {
       userPrompt: cleanText(message, 48000),
       schema: PYTHON_SANDBOX_SUB_AGENT_PLAN_SCHEMA,
       traceContext: metadata?.traceContext || null,
-      maxOutputTokens: 2200,
-      openAiStrict: true,
-      openAiAsDefaultProvider: true,
       defaultError: 'Python sandbox sub-agent planning is not configured.'
     });
 

@@ -1,7 +1,7 @@
 'use strict';
 
 function defaultCleanText(value, _maxLength = 2000) {
-  const text = String(value || '').trim();
+  const text = String(value || '');
   if (!text) {
     return '';
   }
@@ -41,6 +41,39 @@ function createMainDataHelpers(deps = {}) {
       ...(source?.sidecarPaths || {}),
       sqlitePath: cleanText(source?.bundlePaths?.sqlitePath, 1600)
     };
+  }
+
+  function isPathWithinRoot(rootPath, targetPath) {
+    const resolvedRoot = path.resolve(cleanText(rootPath, 2400));
+    const resolvedTarget = path.resolve(cleanText(targetPath, 2400));
+    if (!resolvedRoot || !resolvedTarget) {
+      return false;
+    }
+    if (resolvedTarget === resolvedRoot) {
+      return true;
+    }
+    const rootWithSep = resolvedRoot.endsWith(path.sep)
+      ? resolvedRoot
+      : `${resolvedRoot}${path.sep}`;
+    return resolvedTarget.startsWith(rootWithSep);
+  }
+
+  function resolveAutoSaveTargetPath(filePath, snapshot) {
+    const storagePath = cleanText(snapshot?.settings?.storagePath, 2400);
+    if (!storagePath) {
+      return '';
+    }
+
+    const explicitPath = cleanText(filePath, 2400);
+    if (explicitPath) {
+      const normalizedExplicitPath = normalizeDataFilePath(explicitPath, getDefaultDataFilePath());
+      return isPathWithinRoot(storagePath, normalizedExplicitPath)
+        ? normalizedExplicitPath
+        : '';
+    }
+
+    const defaultName = path.basename(getDefaultDataFilePath() || 'enana-data.json') || 'enana-data.json';
+    return normalizeDataFilePath(path.join(storagePath, defaultName), getDefaultDataFilePath());
   }
 
   async function persistSnapshot({
@@ -132,8 +165,11 @@ function createMainDataHelpers(deps = {}) {
     if (!data) {
       return { ok: false, error: 'Missing data payload.' };
     }
-    const targetPath = normalizeDataFilePath(filePath, getDefaultDataFilePath());
     const snapshot = data && typeof data === 'object' ? data : {};
+    const targetPath = resolveAutoSaveTargetPath(filePath, snapshot);
+    if (!targetPath) {
+      return { ok: false, error: 'Auto-save requires a configured storage path.' };
+    }
     return persistSnapshot({
       targetPath,
       snapshot,

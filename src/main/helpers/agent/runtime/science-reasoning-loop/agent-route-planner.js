@@ -369,18 +369,11 @@ function createAgentRoutePlannerRuntime(deps = {}) {
   async function draftRoutePlan(input = {}) {
     const fallback = buildFallbackRoutePlan(input);
     const result = await requestStructuredJsonPayload({
-      provider: cleanText(input.provider, 80),
-      endpoint: cleanText(input.endpoint, 2000),
-      apiKey: cleanText(input.apiKey, 400),
-      model: cleanText(input.model, 120),
       stage: 'science_route_planner',
       systemPrompt: 'Return valid JSON only.',
       userPrompt: buildRoutePlanPrompt(input),
       schema: SCIENCE_ROUTE_PLAN_SCHEMA,
       traceContext: input.traceContext || null,
-      maxOutputTokens: 1700,
-      openAiStrict: true,
-      openAiAsDefaultProvider: true,
       defaultError: 'Science route planner is not configured.'
     });
     if (!result?.ok || !result.payload) {

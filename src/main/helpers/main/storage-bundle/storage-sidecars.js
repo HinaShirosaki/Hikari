@@ -3,13 +3,37 @@
 const fs = require('fs/promises');
 const path = require('path');
 const { getBundlePaths } = require('./storage-paths');
-const { writeSqliteBundleIndex } = require('./storage-sql-write');
-const { asArray, ensureObject } = require('./storage-utils');
+const {
+  writeChemicalSqliteBundleIndex,
+  writeSqliteBundleIndex
+} = require('./storage-sql-write');
+const { asArray, cleanText, ensureObject } = require('./storage-utils');
 const { syncWorkflowRootFromSnapshot } = require('./workflow-storage');
 
 const PROTOCOL_SIDECAR_SCHEMA = 'enana_protocols';
 const NOTEBOOK_SIDECAR_SCHEMA = 'enana_notebook_pages';
 const SIDECAR_SCHEMA_VERSION = '1.0.0';
+const PROTOCOL_FILE_NAME = 'protocol.json';
+
+function sanitizeFolderName(value, fallback = 'item') {
+  const cleaned = String(value || '')
+    .trim()
+    .replace(/[<>:"/\\|?*\x00-\x1F]+/g, '_')
+    .replace(/\s+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 180);
+  return cleaned || fallback;
+}
+
+function buildProtocolFolderName(protocol, index = 0) {
+  const source = ensureObject(protocol);
+  const id = cleanText(source.id, 220);
+  const name = cleanText(source.name, 220);
+  if (name || id) {
+    return `${sanitizeFolderName(name, 'Protocol')}__${sanitizeFolderName(id, `protocol_${index + 1}`)}`;
+  }
+  return sanitizeFolderName(`protocol_${index + 1}`, `protocol_${index + 1}`);
+}
 
 function buildProtocolsSidecar(snapshot, updatedAt) {
   return {
@@ -29,12 +53,123 @@ function buildNotebookPagesSidecar(snapshot, updatedAt) {
   };
 }
 
+async function writeProtocolFiles(protocolRootPath, snapshot, updatedAt) {
+  const protocols = asArray(snapshot.protocols).map((rawProtocol) => ensureObject(rawProtocol));
+  if (!protocolRootPath) {
+    return [];
+  }
+  await fs.mkdir(protocolRootPath, { recursive: true });
+  const existingEntries = await fs.readdir(protocolRootPath, { withFileTypes: true }).catch(() => []);
+  const activeFolders = new Set();
+  const writtenPaths = [];
+  for (let index = 0; index < protocols.length; index += 1) {
+    const protocol = protocols[index];
+    const folderName = buildProtocolFolderName(protocol, index);
+    activeFolders.add(folderName);
+    const folderPath = path.join(protocolRootPath, folderName);
+    const filePath = path.join(folderPath, PROTOCOL_FILE_NAME);
+    await fs.mkdir(folderPath, { recursive: true });
+    await fs.writeFile(
+      filePath,
+      JSON.stringify({
+        schema_name: PROTOCOL_SIDECAR_SCHEMA,
+        schema_version: SIDECAR_SCHEMA_VERSION,
+        updated_at: updatedAt,
+        protocol
+      }, null, 2),
+      'utf8'
+    );
+    writtenPaths.push(filePath);
+  }
+
+  for (const entry of existingEntries) {
+    if (!entry.isDirectory() || activeFolders.has(entry.name)) {
+      continue;
+    }
+    await fs.rm(path.join(protocolRootPath, entry.name), { recursive: true, force: true });
+  }
+
+  return writtenPaths;
+}
+
+function isPathInside(parentPath, childPath) {
+  const parent = path.resolve(String(parentPath || ''));
+  const child = path.resolve(String(childPath || ''));
+  if (!parent || !child) {
+    return false;
+  }
+  if (parent === child) {
+    return true;
+  }
+  const prefix = parent.endsWith(path.sep) ? parent : `${parent}${path.sep}`;
+  return child.startsWith(prefix);
+}
+
+function isWorkflowNotebookEntry(entry) {
+  const workflowContext = ensureObject(entry?.workflowContext);
+  return Boolean(
+    cleanText(workflowContext.workflowId, 220)
+    || cleanText(workflowContext.workflowEntryId, 220)
+    || cleanText(workflowContext.workflowBlockId, 220)
+  );
+}
+
+function buildNotebookPageFolderPath(storageRootPath, entry) {
+  const normalizedEntry = ensureObject(entry);
+  const existingStorageFolder = cleanText(normalizedEntry.storageFolder, 2400);
+  if (existingStorageFolder && isPathInside(storageRootPath, existingStorageFolder)) {
+    return path.resolve(existingStorageFolder);
+  }
+  const projectFolder = sanitizeFolderName(normalizedEntry.projectName || 'Untitled_Project', 'Untitled_Project');
+  const pageFolder = `${sanitizeFolderName(
+    normalizedEntry.protocolName || normalizedEntry.id || 'Notebook_Page',
+    'Notebook_Page'
+  )}__${sanitizeFolderName(normalizedEntry.id, 'page')}`;
+  return path.join(storageRootPath, 'Project', projectFolder, 'Notebook', pageFolder);
+}
+
+function compactNotebookEntryForFolder(entry) {
+  return {
+    ...ensureObject(entry),
+    storageFolder: ''
+  };
+}
+
+async function writeNotebookPageFolders(storageRootPath, snapshot, updatedAt) {
+  const writtenPaths = [];
+  const notebookEntries = asArray(snapshot.notebookEntries)
+    .map((entry) => ensureObject(entry))
+    .filter((entry) => !isWorkflowNotebookEntry(entry));
+  for (const entry of notebookEntries) {
+    const folderPath = buildNotebookPageFolderPath(storageRootPath, entry);
+    const filePath = path.join(folderPath, 'page.json');
+    await fs.mkdir(folderPath, { recursive: true });
+    await fs.writeFile(
+      filePath,
+      JSON.stringify({
+        schema_name: NOTEBOOK_SIDECAR_SCHEMA,
+        schema_version: SIDECAR_SCHEMA_VERSION,
+        updated_at: updatedAt,
+        notebookEntry: compactNotebookEntryForFolder(entry)
+      }, null, 2),
+      'utf8'
+    );
+    writtenPaths.push(filePath);
+  }
+  return writtenPaths;
+}
+
 async function syncBundleFromSnapshot({
   dataFilePath,
   snapshot,
   fallbackDataFilePath = ''
 } = {}) {
-  const bundlePaths = getBundlePaths({ dataFilePath, fallbackDataFilePath });
+  const safeSnapshot = ensureObject(snapshot);
+  const bundlePaths = getBundlePaths({
+    dataFilePath,
+    fallbackDataFilePath,
+    storagePath: safeSnapshot?.settings?.storagePath
+  });
   if (!bundlePaths.dataFilePath) {
     return {
       bundlePaths,
@@ -42,19 +177,23 @@ async function syncBundleFromSnapshot({
     };
   }
   const updatedAt = new Date().toISOString();
-  const safeSnapshot = ensureObject(snapshot);
   await fs.mkdir(path.dirname(bundlePaths.dataFilePath), { recursive: true });
-  await fs.writeFile(
-    bundlePaths.protocolsPath,
-    JSON.stringify(buildProtocolsSidecar(safeSnapshot, updatedAt), null, 2),
-    'utf8'
-  );
+  await Promise.all([
+    bundlePaths.papersRootPath ? fs.mkdir(bundlePaths.papersRootPath, { recursive: true }) : Promise.resolve(),
+    bundlePaths.assaysRootPath ? fs.mkdir(bundlePaths.assaysRootPath, { recursive: true }) : Promise.resolve(),
+    bundlePaths.gelsRootPath ? fs.mkdir(bundlePaths.gelsRootPath, { recursive: true }) : Promise.resolve()
+  ]);
+  const protocolFilePaths = await writeProtocolFiles(bundlePaths.protocolsPath, safeSnapshot, updatedAt);
+  const notebookPageFolderPaths = bundlePaths.storageRootPath
+    ? await writeNotebookPageFolders(bundlePaths.storageRootPath, safeSnapshot, updatedAt)
+    : [];
   await fs.writeFile(
     bundlePaths.notebookPagesPath,
     JSON.stringify(buildNotebookPagesSidecar(safeSnapshot, updatedAt), null, 2),
     'utf8'
   );
   await writeSqliteBundleIndex(bundlePaths.sqlitePath, safeSnapshot);
+  await writeChemicalSqliteBundleIndex(bundlePaths.chemicalsSqlitePath, safeSnapshot);
   const workflowSync = await syncWorkflowRootFromSnapshot({
     storagePath: safeSnapshot?.settings?.storagePath,
     snapshot: safeSnapshot
@@ -63,7 +202,9 @@ async function syncBundleFromSnapshot({
     bundlePaths,
     sidecarPaths: {
       protocolsPath: bundlePaths.protocolsPath,
-      notebookPagesPath: bundlePaths.notebookPagesPath
+      protocolFilePaths,
+      notebookPagesPath: bundlePaths.notebookPagesPath,
+      notebookPageFolderPaths
     },
     workflowPaths: {
       workflowRootPath: workflowSync?.workflowRootPath || '',
@@ -75,7 +216,8 @@ async function syncBundleFromSnapshot({
 
 async function syncSqliteBundleFromSnapshot({
   sqlitePath,
-  snapshot
+  snapshot,
+  mode = ''
 } = {}) {
   const targetSqlitePath = String(sqlitePath || '').trim();
   if (!targetSqlitePath) {
@@ -84,7 +226,11 @@ async function syncSqliteBundleFromSnapshot({
     };
   }
   await fs.mkdir(path.dirname(targetSqlitePath), { recursive: true });
-  await writeSqliteBundleIndex(targetSqlitePath, ensureObject(snapshot));
+  if (cleanText(mode, 40).toLowerCase() === 'chemical') {
+    await writeChemicalSqliteBundleIndex(targetSqlitePath, ensureObject(snapshot));
+  } else {
+    await writeSqliteBundleIndex(targetSqlitePath, ensureObject(snapshot));
+  }
   return {
     sqlitePath: targetSqlitePath
   };

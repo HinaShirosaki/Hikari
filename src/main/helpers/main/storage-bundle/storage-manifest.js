@@ -35,14 +35,35 @@ function detectManifestRole(relativePath) {
   if (normalized === STORAGE_MANIFEST_FILE_NAME.toLowerCase()) {
     return 'storage_manifest';
   }
+  if (normalized === 'protocol') {
+    return 'protocol_root';
+  }
+  if (normalized.endsWith('/protocol.json') && normalized.startsWith('protocol/')) {
+    return 'protocol_record';
+  }
   if (normalized.endsWith('.protocols.json')) {
     return 'protocol_sidecar';
   }
   if (normalized.endsWith('.notebook-pages.json')) {
     return 'notebook_sidecar';
   }
+  if (normalized === 'protocol/protocol.index.sqlite') {
+    return 'protocol_index';
+  }
+  if (normalized === 'enana-chemicals.index.sqlite') {
+    return 'chemical_inventory_index';
+  }
   if (normalized.endsWith('.index.sqlite')) {
     return 'sqlite_index';
+  }
+  if (normalized === 'papers') {
+    return 'papers_root';
+  }
+  if (normalized === 'assays') {
+    return 'assays_root';
+  }
+  if (normalized === 'gels') {
+    return 'gels_root';
   }
   if (normalized === 'sequenceviewer/sequence-library.sqlite') {
     return 'sequence_library_index';

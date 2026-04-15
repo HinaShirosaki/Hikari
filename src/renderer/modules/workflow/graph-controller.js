@@ -177,21 +177,21 @@ export function createWorkflowGraphController(config = {}) {
       const selectedClass = runtime.selectedBlockIds.has(block.id) ? ' workflow-node-selected' : '';
       const typeClass = isTextBlock ? ' workflow-node-text' : '';
       const title = isTextBlock ? 'Text Block' : titleForBlock(block);
-      const typeLabel = labelForBlockType(block);
-      const assigneeName = labelForAssignee(block.assigneeId);
       return `
         <article class="workflow-node${typeClass}${connectingClass}${selectedClass}" data-workflow-node="${safeText(block.id)}" style="left:${safeText(block.x)}px; top:${safeText(block.y)}px;">
+          <button
+            type="button"
+            class="workflow-node-remove"
+            data-workflow-block-remove="${safeText(block.id)}"
+            aria-label="Delete ${safeText(title)}"
+            title="Delete block"
+          >&times;</button>
           <button type="button" class="workflow-port workflow-port-in" data-workflow-port-in="${safeText(block.id)}" title="Connect into this block" aria-label="Input port for ${safeText(title)}"></button>
           <button type="button" class="workflow-port workflow-port-out" data-workflow-port-out="${safeText(block.id)}" title="Connect out from this block" aria-label="Output port for ${safeText(title)}"></button>
           <header class="workflow-node-header" data-workflow-node-drag="${safeText(block.id)}">
             <span class="workflow-node-index">${safeText(index + 1)}</span>
             <strong>${safeText(title)}</strong>
           </header>
-          <div class="workflow-node-body">
-            <p>${safeText(`Type: ${typeLabel}`)}</p>
-            <p>${safeText(`Assignee: ${assigneeName}`)}</p>
-            <button type="button" class="ghost-btn workflow-node-remove" data-workflow-block-remove="${safeText(block.id)}">Remove</button>
-          </div>
         </article>
       `;
     }).join('');

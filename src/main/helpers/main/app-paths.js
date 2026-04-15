@@ -1,7 +1,7 @@
 'use strict';
 
 function defaultCleanText(value, _maxLength = 500) {
-  const text = String(value || '').trim();
+  const text = String(value || '');
   if (!text) {
     return '';
   }
@@ -26,16 +26,56 @@ function createMainAppPaths(deps = {}) {
     }
   }
 
+  function getDocumentsPath() {
+    try {
+      return app?.getPath('documents') || '';
+    } catch {
+      return '';
+    }
+  }
+
+  function getDefaultAppDataRoot() {
+    const override = String(processObject.env.ENANA_APP_DATA_ROOT || '').trim();
+    if (override) {
+      return path.resolve(override);
+    }
+
+    const documentsPath = getDocumentsPath();
+    if (documentsPath) {
+      return path.join(documentsPath, 'Enana');
+    }
+
+    return path.join(projectRoot || processObject.cwd(), 'data');
+  }
+
+  function getCodexCliHomePath() {
+    const override = String(processObject.env.ENANA_CODEX_HOME || '').trim();
+    if (override) {
+      return path.resolve(override);
+    }
+
+    const userDataPath = getUserDataPath();
+    if (userDataPath) {
+      return path.join(userDataPath, 'Config', 'codex-cli-home');
+    }
+
+    return path.join(getDefaultAppDataRoot(), 'Config', 'codex-cli-home');
+  }
+
   function getCodexCliWorkingDirectory() {
-    return getUserDataPath() || processObject.cwd();
+    const userDataPath = getUserDataPath();
+    if (userDataPath) {
+      return userDataPath;
+    }
+    return getDefaultAppDataRoot() || processObject.cwd();
   }
 
   function getDefaultDataFilePath() {
-    return path.join(app.getPath('userData'), defaultDataFileName);
+    return path.join(getDefaultAppDataRoot(), defaultDataFileName);
   }
 
   function getTelegramConfigPath() {
-    return path.join(app.getPath('userData'), telegramConfigFileName);
+    return path.join(getDefaultAppDataRoot(), 'Config', telegramConfigFileName);
   }
 
   function getAgentChatLogPath() {
@@ -44,12 +84,7 @@ function createMainAppPaths(deps = {}) {
       return override;
     }
 
-    const userDataPath = getUserDataPath();
-    if (userDataPath) {
-      return path.join(userDataPath, agentChatLogFileName);
-    }
-
-    return path.join(projectRoot, 'data', agentChatLogFileName);
+    return path.join(getDefaultAppDataRoot(), 'Logs', agentChatLogFileName);
   }
 
   function getAgentPythonSandboxRoot() {
@@ -58,12 +93,7 @@ function createMainAppPaths(deps = {}) {
       return path.resolve(override);
     }
 
-    const userDataPath = getUserDataPath();
-    if (userDataPath) {
-      return path.join(userDataPath, 'agent-python-sandbox');
-    }
-
-    return path.join(projectRoot, 'tmp', 'agent-python-sandbox');
+    return path.join(getDefaultAppDataRoot(), 'Tmp', 'agent-python-sandbox');
   }
 
   function getAgentChatSessionStoragePath(payload) {
@@ -76,6 +106,7 @@ function createMainAppPaths(deps = {}) {
   }
 
   return {
+    getCodexCliHomePath,
     getCodexCliWorkingDirectory,
     getDefaultDataFilePath,
     getTelegramConfigPath,

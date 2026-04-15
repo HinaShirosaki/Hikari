@@ -409,7 +409,11 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
           createId: (() => {
             let index = 0;
             return () => `chat-fixed-${index += 1}`;
-          })()
+          })(),
+          requestAssistantText: async () => ({
+            ok: true,
+            text: 'Locate Atlas binder notebook'
+          })
         });
 
         const created = await runtime.createSession({
@@ -424,6 +428,12 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
           storagePath: tempDir,
           sessionId: created.session.id,
           text: 'Where is the Atlas binder notebook?',
+          llm: {
+            provider: 'openai',
+            endpoint: 'https://api.openai.com/v1/responses',
+            apiKey: 'sk-local-key',
+            model: 'gpt-5'
+          },
           projectId: 'proj-1',
           projectName: 'Atlas',
           timestamp: '2026-03-22T15:00:01.000Z'
@@ -547,7 +557,7 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
         });
         assert.equal(listed.ok, true);
         assert.equal(listed.items.length, 1);
-        assert.equal(listed.items[0].title, 'Where is the Atlas binder notebook?');
+        assert.equal(listed.items[0].title, 'Locate Atlas binder notebook');
         assert.equal(listed.items[0].message_count, 2);
         assert.equal(listed.items[0].request_count, 1);
         assert.equal(listed.items[0].project_name, 'Atlas');
@@ -586,7 +596,7 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
         'agent-llm-utils.js'
       ));
       const longText = 'full-text-'.repeat(800);
-      assert.equal(defaultCleanText(longText, 40), longText.trim());
+      assert.equal(defaultCleanText(longText, 40), longText);
     });
 
     test('agent chat log runtime preserves long assistant text without truncation', async () => {
@@ -1796,7 +1806,7 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
       assert.equal(result.run_id, 'py-tool-1');
     });
 
-    test('provider bridge forwards codex multimodal structured requests through one shared API', async () => {
+    test('provider bridge routes codex multimodal file requests through the simple Codex bridge surface', async () => {
       const { createAgentLlmProviderBridge } = require(path.join(
         __dirname,
         'src',
@@ -1812,28 +1822,34 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
           CODEX: 'codex',
           OPENAI: 'openai'
         },
+        resolveCodexEndpoint: () => 'https://chatgpt.com/backend-api/codex/responses',
+        resolveCodexApiKey: () => 'oauth-access-token',
         requestCodexCliText: async (input = {}) => {
           calls.push(input);
           return '{"selected":true}';
         }
       });
 
-      const result = await bridge.requestStructuredJsonPayload({
+      const result = await bridge.requestFileInput({
         provider: 'codex',
         model: 'gpt-5.4-mini',
         stage: 'paper_context_selection',
         systemPrompt: 'Return valid JSON only.',
         userPrompt: 'Pick the best excerpt.',
         pdfDataUrl: 'data:application/pdf;base64,QUJD',
-        fileName: 'paper.pdf'
+        fileName: 'paper.pdf',
+        expectJson: true
       });
 
       assert.equal(result.ok, true);
       assert.equal(result.payload.selected, true);
       assert.equal(calls.length, 1);
+      assert.equal(calls[0].endpoint, 'https://chatgpt.com/backend-api/codex/responses');
+      assert.equal(calls[0].apiKey, 'oauth-access-token');
       assert.equal(calls[0].fileName, 'paper.pdf');
       assert.equal(calls[0].pdfDataUrl, 'data:application/pdf;base64,QUJD');
-      assert.match(String(calls[0].prompt || ''), /Return JSON only\./);
+      assert.match(calls[0].prompt, /Return valid JSON only\./);
+      assert.match(calls[0].prompt, /Pick the best excerpt\./);
     });
 
     test('provider bridge forwards openai web search requests through Responses web_search tool', async () => {
@@ -1889,7 +1905,7 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
       assert.deepEqual(calls[0].include, ['web_search_call.action.sources']);
     });
 
-    test('provider bridge uses a best-effort internet-search prompt for codex web search', async () => {
+    test('provider bridge routes codex web search through the simple Codex web-search bridge surface', async () => {
       const { createAgentLlmProviderBridge } = require(path.join(
         __dirname,
         'src',
@@ -1904,6 +1920,8 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
         LLM_PROVIDERS: {
           CODEX: 'codex'
         },
+        resolveCodexEndpoint: () => 'https://chatgpt.com/backend-api/codex/responses',
+        resolveCodexApiKey: () => 'oauth-access-token',
         requestCodexCliText: async (input = {}) => {
           calls.push(input);
           return JSON.stringify({
@@ -1929,11 +1947,256 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
 
       assert.equal(result.ok, true);
       assert.equal(result.results.length, 1);
-      assert.match(String(calls[0].prompt || ''), /If internet access is available in this Codex environment/i);
+      assert.equal(calls[0].endpoint, 'https://chatgpt.com/backend-api/codex/responses');
+      assert.equal(calls[0].apiKey, 'oauth-access-token');
       assert.equal(calls[0].enableWebSearch, true);
+      assert.match(calls[0].prompt, /Search query:/);
     });
 
-    test('session runtime delegates tool-loop transport through the shared provider bridge', async () => {
+    test('runtime helpers wire codex structured requests through the shared simple Codex provider API surface', async () => {
+      const { createAgentLlmProviderBridge } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'shared',
+        'agent-llm-provider-bridge.js'
+      ));
+      const { createAgentLlmRuntimeHelpers } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'shared',
+        'agent-llm-utils.js'
+      ));
+
+      const calls = [];
+      const bridge = createAgentLlmProviderBridge({
+        LLM_PROVIDERS: {
+          CODEX: 'codex'
+        },
+        resolveCodexEndpoint: () => 'https://chatgpt.com/backend-api/codex/responses',
+        resolveCodexApiKey: () => 'oauth-access-token',
+        requestCodexCliText: async (input = {}) => {
+          calls.push(input);
+          return '{"primary_intent":"general_science_question","needs_clarification":false,"clarifying_question":"","clarification_options":[],"entities":{"projects":[],"samples":[],"proteins":[],"genes":[],"reagents":[],"vendors":[],"inventory_queries":[],"record_queries":[],"assays":[],"gels":[],"papers":[],"protocols":[],"notebooks":[],"purchase_requirements":[]},"reasoning_summary":"Parsed intent.","confidence":"high","reasoning_effort":1}';
+        }
+      });
+      const helpers = createAgentLlmRuntimeHelpers({
+        llmProviderBridge: bridge
+      });
+
+      const result = await helpers.requestStructuredJsonPayload({
+        provider: 'codex',
+        endpoint: 'codex://cli',
+        model: 'gpt-5.4-mini',
+        stage: 'intent_parser',
+        systemPrompt: 'Return valid JSON only.',
+        userPrompt: 'User asks a science question.',
+        schema: {
+          type: 'object',
+          additionalProperties: true
+        },
+        defaultError: 'Intent parser provider is not configured.'
+      });
+
+      assert.equal(result.ok, true);
+      assert.equal(calls.length, 1);
+      assert.equal(calls[0].endpoint, 'https://chatgpt.com/backend-api/codex/responses');
+      assert.equal(calls[0].apiKey, 'oauth-access-token');
+      assert.match(calls[0].prompt, /Return valid JSON only\./);
+      assert.match(calls[0].prompt, /User asks a science question\./);
+    });
+
+    test('web search runtime exposes provider-backed web search to agent tools', async () => {
+      const { createWebSearchRuntime } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'tools',
+        'agent-web-search.js'
+      ));
+
+      const calls = [];
+      const runtime = createWebSearchRuntime({
+        requestWebSearch: async (input = {}) => {
+          calls.push(input);
+          return {
+            ok: true,
+            results: [
+              {
+                title: 'OpenAI result',
+                url: 'https://example.org/openai-result',
+                summary: 'External source.',
+                source_domain: 'example.org'
+              }
+            ],
+            reasoning: 'Provider-backed search.'
+          };
+        }
+      });
+
+      const result = await runtime.execute({
+        provider: 'openai',
+        query: 'recent protein folding benchmark',
+        limit: 4
+      });
+
+      assert.equal(result.ok, true);
+      assert.equal(result.items.length, 1);
+      assert.equal(calls.length, 1);
+      assert.equal(calls[0].provider, 'openai');
+      assert.equal(calls[0].maxResults, 4);
+      assert.equal(result.citations[0].source, 'web_source');
+    });
+
+    test('registerAgentToolExecutors wires the web-search tool through the shared runtime', async () => {
+      const { registerAgentToolExecutors } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'tools',
+        'register-agent-tool-executors.js'
+      ));
+
+      const executors = new Map();
+      const calls = [];
+      registerAgentToolExecutors({
+        genericAgentToolRuntime: {
+          registerToolExecutor(name, handler) {
+            executors.set(name, handler);
+          }
+        },
+        webSearchRuntime: {
+          execute: async (input = {}) => {
+            calls.push(JSON.parse(JSON.stringify(input)));
+            return {
+              ok: true,
+              status: 'completed',
+              query: input.query,
+              items: [
+                {
+                  title: 'Shared web result',
+                  url: 'https://example.org/result',
+                  summary: 'External source.',
+                  source_domain: 'example.org'
+                }
+              ],
+              citations: [
+                {
+                  source: 'web_source',
+                  pointer: 'https://example.org/result',
+                  reason: 'Matched external web search result.'
+                }
+              ],
+              summary: 'Found 1 web result.'
+            };
+          }
+        }
+      });
+
+      const result = await executors.get('web-search')({
+        args: {
+          query: 'recent protein folding benchmark',
+          limit: 3
+        },
+        context: {
+          provider: 'codex',
+          model: 'gpt-5.4-mini',
+          message: 'Find recent protein folding benchmark results.'
+        }
+      });
+
+      assert.equal(result.ok, true);
+      assert.equal(calls.length, 1);
+      assert.equal(calls[0].limit, 3);
+      assert.equal(calls[0].query, 'recent protein folding benchmark');
+      assert.equal(calls[0].message, 'Find recent protein folding benchmark results.');
+      assert.equal(result.summary, 'Found 1 web result.');
+    });
+
+    test('registerAgentToolExecutors forwards snapshot storage and project context into literature-search', async () => {
+      const { registerAgentToolExecutors } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'tools',
+        'register-agent-tool-executors.js'
+      ));
+
+      const executors = new Map();
+      const calls = [];
+      registerAgentToolExecutors({
+        genericAgentToolRuntime: {
+          registerToolExecutor(name, handler) {
+            executors.set(name, handler);
+          }
+        },
+        literatureSearchRuntime: {
+          execute: async (input = {}) => {
+            calls.push(JSON.parse(JSON.stringify(input)));
+            return {
+              ok: true,
+              status: 'completed',
+              items: [],
+              citations: [],
+              loaded_context_blocks: [],
+              papers_read_count: 0,
+              summary: 'Found 0 literature results.'
+            };
+          }
+        }
+      });
+
+      const result = await executors.get('literature-search')({
+        args: {
+          query: 'ncAA incorporation',
+          limit: 5
+        },
+        context: {
+          provider: 'codex',
+          model: 'gpt-5.4-mini',
+          message: 'Find ncAA papers.',
+          project: {
+            id: 'project-1',
+            name: 'Atlas'
+          },
+          snapshot: {
+            settings: {
+              storagePath: '/tmp/enana-storage'
+            },
+            projects: [
+              {
+                id: 'project-1',
+                name: 'Atlas'
+              }
+            ]
+          },
+          parserPayload: {
+            primary_intent: 'literature_search'
+          }
+        }
+      });
+
+      assert.equal(result.ok, true);
+      assert.equal(calls.length, 1);
+      assert.equal(calls[0].project.name, 'Atlas');
+      assert.equal(calls[0].storage_path, '/tmp/enana-storage');
+      assert.equal(calls[0].storagePath, '/tmp/enana-storage');
+      assert.equal(calls[0].snapshot.settings.storagePath, '/tmp/enana-storage');
+      assert.equal(calls[0].parser_payload.primary_intent, 'literature_search');
+    });
+
+    test('session runtime runs the tool loop through the unified requestText API', async () => {
       const { createAgentSessionRuntime } = require(path.join(
         __dirname,
         'src',
@@ -1944,61 +2207,81 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
         'agent-session-runtime.js'
       ));
       const callLog = [];
-      const bridge = {
-        extractFunctionCalls: () => [{ callId: 'openai-call-1', name: 'literature-search', argsText: '{}' }],
-        startToolSession: async (input = {}) => {
-          callLog.push(['start', input]);
+      let turnCount = 0;
+      const runtime = createAgentSessionRuntime({
+        requestText: async (input = {}) => {
+          callLog.push(input);
+          turnCount += 1;
+          if (turnCount === 1) {
+            return {
+              ok: true,
+              text: JSON.stringify({
+                assistant_text: 'starting turn',
+                tool_call: {
+                  call_id: 'codex-call-1',
+                  name: 'literature-search',
+                  arguments: {
+                    query: 'ncAA incorporation'
+                  }
+                }
+              })
+            };
+          }
+          if (turnCount === 2) {
+            return {
+              ok: true,
+              text: JSON.stringify({
+                assistant_text: 'after tool output',
+                tool_calls: []
+              })
+            };
+          }
           return {
-            provider: 'codex',
-            parsed: {
-              assistant_text: 'starting turn',
-              tool_calls: [{ callId: 'codex-call-1', name: 'literature-search', argsText: '{}' }]
-            }
-          };
-        },
-        extractToolSessionFunctionCalls: (session) => session.parsed.tool_calls,
-        extractToolSessionText: (session) => session.parsed.assistant_text,
-        continueToolSessionWithToolOutputs: async (session, toolOutputs, traceContext) => {
-          callLog.push(['tool_outputs', toolOutputs, traceContext]);
-          return {
-            ...session,
-            parsed: {
-              assistant_text: 'after tool output',
+            ok: true,
+            text: JSON.stringify({
+              assistant_text: 'feedback: Please be more specific.',
               tool_calls: []
-            }
-          };
-        },
-        continueToolSessionWithUserMessage: async (session, message, traceContext) => {
-          callLog.push(['user_message', message, traceContext]);
-          return {
-            ...session,
-            parsed: {
-              assistant_text: `feedback: ${message}`,
-              tool_calls: []
-            }
+            })
           };
         }
-      };
-      const runtime = createAgentSessionRuntime({
-        llmProviderBridge: bridge
       });
 
       const started = await runtime.startAgentSession({
         provider: 'codex',
         model: 'gpt-5.4-mini',
-        systemPrompt: 'Be grounded.'
+        systemPrompt: 'Be grounded.',
+        message: 'Search for ncAA incorporation papers.',
+        toolDefinitions: [
+          {
+            type: 'function',
+            name: 'literature-search',
+            description: 'Search papers.',
+            parameters: {
+              type: 'object',
+              properties: {
+                query: { type: 'string' }
+              },
+              required: ['query'],
+              additionalProperties: false
+            }
+          }
+        ]
       });
-      assert.equal(callLog[0][0], 'start');
+      assert.equal(callLog.length, 1);
+      assert.equal(callLog[0].provider, 'codex');
+      assert.match(callLog[0].userPrompt, /Search for ncAA incorporation papers\./);
+      assert.match(callLog[0].userPrompt, /literature-search/);
       assert.equal(runtime.extractAgentSessionText(started), 'starting turn');
       assert.equal(runtime.extractAgentSessionFunctionCalls(started).length, 1);
-      assert.equal(runtime.extractFunctionCalls({ output: [{ type: 'function_call', id: 'openai-call-1', name: 'literature-search', arguments: '{}' }] }).length, 1);
+      assert.equal(runtime.extractFunctionCalls('{"tool_call":{"name":"literature-search","arguments":{}}}').length, 1);
 
       const afterTool = await runtime.continueAgentSessionWithToolOutputs(
         started,
         [{ callId: 'codex-call-1', name: 'literature-search', output: '{"ok":true}' }],
         { trace_id: 'trace-1' }
       );
-      assert.equal(callLog[1][0], 'tool_outputs');
+      assert.equal(callLog[1].traceContext.trace_id, 'trace-1');
+      assert.match(callLog[1].userPrompt, /"ok":true/);
       assert.equal(runtime.extractAgentSessionText(afterTool), 'after tool output');
 
       const afterUser = await runtime.continueAgentSessionWithUserMessage(
@@ -2006,7 +2289,8 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
         'Please be more specific.',
         { trace_id: 'trace-2' }
       );
-      assert.equal(callLog[2][0], 'user_message');
+      assert.equal(callLog[2].traceContext.trace_id, 'trace-2');
+      assert.match(callLog[2].userPrompt, /Please be more specific\./);
       assert.equal(runtime.extractAgentSessionText(afterUser), 'feedback: Please be more specific.');
     });
 

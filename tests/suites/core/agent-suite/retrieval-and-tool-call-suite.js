@@ -123,6 +123,137 @@ module.exports = function registerAgentRetrievalAndToolCallSuite(context = {}) {
       assert.equal(result.items.some((item) => item.linked_protocol_name === 'Protein Purification'), true);
     });
 
+    test('agent sub-app API exposes protocol, notebook, assay, gel, and paper records for agent use', () => {
+      const { AGENT_SUB_APP_API_CATALOG, createAgentSubAppApi } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'runtime',
+        'agent-sub-app-api.js'
+      ));
+
+      const api = createAgentSubAppApi();
+      assert.deepEqual(Object.keys(AGENT_SUB_APP_API_CATALOG), ['assay', 'gel', 'papers', 'protocol', 'notebook']);
+
+      const protocolRows = api.protocol.listAgentRecords({
+        snapshot: {
+          protocols: [
+            {
+              id: 'prot-1',
+              name: 'Cell Prep',
+              projectId: 'proj-1',
+              projectName: 'Atlas',
+              purpose: 'Prepare cells for the next assay.',
+              steps: [{ id: 'step-1', text: 'Seed cells.' }]
+            }
+          ]
+        }
+      });
+      const notebookRows = api.notebook.listAgentRecords({
+        snapshot: {
+          notebookEntries: [
+            {
+              id: 'note-1',
+              protocolId: 'prot-1',
+              protocolName: 'Cell Prep',
+              projectId: 'proj-1',
+              projectName: 'Atlas',
+              result: 'Cells looked healthy.'
+            }
+          ]
+        }
+      });
+      const assayRows = api.assay.listAgentRecords({
+        snapshot: {
+          assays: [
+            {
+              id: 'assay-1',
+              name: 'Viability Readout',
+              projectId: 'proj-1',
+              projectName: 'Atlas'
+            }
+          ]
+        }
+      });
+      const gelRows = api.gel.listAgentRecords({
+        snapshot: {
+          gelAnalyses: [
+            {
+              id: 'gel-1',
+              name: 'Atlas SDS-PAGE',
+              projectId: 'proj-1',
+              projectName: 'Atlas'
+            }
+          ]
+        }
+      });
+      const paperRows = api.papers.listAgentRecords({
+        snapshot: {
+          papers: [
+            {
+              id: 'paper-1',
+              title: 'Atlas SUMO1 pilot',
+              summary: 'Discusses weak conjugation.',
+              linkedType: 'project',
+              linkedId: 'proj-1',
+              linkedName: 'Atlas'
+            }
+          ]
+        }
+      });
+
+      assert.equal(protocolRows[0].record_type, 'protocol');
+      assert.equal(notebookRows[0].record_type, 'notebook');
+      assert.equal(assayRows[0].record_type, 'assay');
+      assert.equal(gelRows[0].record_type, 'gel');
+      assert.equal(paperRows[0].record_type, 'paper');
+      assert.equal(typeof api.protocol.matchForNotebook, 'function');
+      assert.equal(typeof api.notebook.generateFromProtocol, 'function');
+    });
+
+    test('record lookup runtime can source paper fallback results through the agent sub-app API layer', async () => {
+      const runtime = agentRecordLookup.createAgentRecordLookupRuntime({
+        agentAppApi: {
+          papers: {
+            listAgentRecords() {
+              return [
+                {
+                  record_type: 'paper',
+                  record_id: 'paper-1',
+                  title: 'Atlas SUMO1 pilot',
+                  project_id: 'proj-1',
+                  project_name: 'Atlas',
+                  summary: 'Weak conjugation paper.',
+                  linked_protocol_id: '',
+                  linked_protocol_name: '',
+                  updated_at: '2026-03-22T10:00:00.000Z',
+                  search_text: 'atlas sumo1 pilot weak conjugation paper'
+                }
+              ];
+            }
+          }
+        }
+      });
+
+      const result = await runtime.executeRecordLookup({
+        message: 'Find the Atlas weak conjugation paper.',
+        parserPayload: {
+          entities: {
+            project_name: 'Atlas',
+            requested_output: 'paper'
+          }
+        },
+        snapshot: {}
+      });
+
+      assert.equal(result.status, 'matched');
+      assert.equal(result.source, 'fallback_json');
+      assert.equal(result.items.some((item) => item.record_type === 'paper'), true);
+      assert.equal(result.items.find((item) => item.record_type === 'paper')?.title, 'Atlas SUMO1 pilot');
+    });
+
     test('lookup query derivation prefers the searched entity over requested output hints', () => {
       const inventoryRuntime = agentInventoryLookup.createAgentInventoryLookupRuntime();
       const recordRuntime = agentRecordLookup.createAgentRecordLookupRuntime();
@@ -158,7 +289,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuite(context = {}) {
     test('agent tool-call catalog stays in sync and prompt builders render tool metadata', () => {
       const toolNames = toolLoading.AGENT_TOOL_CATALOG.map((entry) => entry.name);
       const schemaNames = Object.keys(toolLoading.AGENT_TOOL_CALL_CATALOG).filter((name) => name !== '$defs');
-      assert.deepEqual(toolNames, ['inventory-lookup', 'record-lookup', 'protocol-matching', 'notebook-generation', 'notebook-draft', 'python-sandbox', 'command-line', 'sub-agent', 'memory', 'literature-search', 'purchase-recommendation', 'paper-download', 'paper-analysis', 'protocol-generation']);
+      assert.deepEqual(toolNames, ['inventory-lookup', 'record-lookup', 'protocol-matching', 'notebook-generation', 'notebook-draft', 'python-sandbox', 'command-line', 'web-search', 'sub-agent', 'memory', 'literature-search', 'purchase-recommendation', 'paper-download', 'paper-analysis', 'protocol-generation']);
       assert.deepEqual(schemaNames, toolNames);
       const inventoryEntry = toolLoading.AGENT_TOOL_CATALOG.find((entry) => entry.name === 'inventory-lookup');
       const protocolEntry = toolLoading.AGENT_TOOL_CATALOG.find((entry) => entry.name === 'protocol-matching');
@@ -222,9 +353,11 @@ module.exports = function registerAgentRetrievalAndToolCallSuite(context = {}) {
         intent: 'general_science_question'
       });
       assert.equal(scienceTools.tool_names.includes('literature-search'), true);
+      assert.equal(scienceTools.tool_names.includes('web-search'), true);
       assert.equal(scienceTools.tool_names.includes('record-lookup'), true);
       assert.equal(scienceTools.tool_names.includes('python-sandbox'), true);
       assert.equal(scienceTools.tool_definitions.some((tool) => tool.name === 'literature-search'), true);
+      assert.equal(scienceTools.tool_definitions.some((tool) => tool.name === 'web-search'), true);
       assert.equal(
         scienceTools.tool_definitions.find((tool) => tool.name === 'literature-search').parameters.properties.source.$ref,
         '#/$defs/literature_source'
@@ -243,6 +376,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuite(context = {}) {
       const catalogTools = runtime.provideTools();
       assert.equal(catalogTools.tool_names.includes('inventory-lookup'), true);
       assert.equal(catalogTools.tool_names.includes('literature-search'), true);
+      assert.equal(catalogTools.tool_names.includes('web-search'), true);
       assert.equal(catalogTools.tool_names.includes('command-line'), true);
       assert.equal(catalogTools.tool_names.includes('purchase-recommendation'), true);
       assert.equal(catalogTools.tool_names.includes('protocol-generation'), true);
@@ -457,21 +591,19 @@ Workspace body
       assert.equal(result.items[0].title, 'Vendor A Syringe Filter');
     });
 
-    test('purchase recommendation runtime derives provider-layer web search from raw codex transport deps', async () => {
+    test('purchase recommendation runtime uses the simple bridge web-search api for codex fast search mode', async () => {
       const { createPurchaseRecommendationRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-purchase-recommendation.js'));
-      const codexCalls = [];
+      const webSearchCalls = [];
       let structuredCalls = 0;
       const runtime = createPurchaseRecommendationRuntime({
-        LLM_PROVIDERS: {
-          CODEX: 'codex'
-        },
         requestStructuredJsonPayload: async () => {
           structuredCalls += 1;
           throw new Error('Structured Codex purchase helper should be skipped in fast search mode.');
         },
-        requestCodexCliText: async (input = {}) => {
-          codexCalls.push(input);
-          return JSON.stringify({
+        requestWebSearch: async (input = {}) => {
+          webSearchCalls.push(input);
+          return {
+            ok: true,
             results: [
               {
                 title: 'Recombinant TEV Protease',
@@ -480,8 +612,8 @@ Workspace body
                 source_domain: 'vendor-tev.test'
               }
             ],
-            reasoning: 'Used Codex web search.'
-          });
+            reasoning: 'Used bridge web search.'
+          };
         },
         fetch: async () => ({
           ok: true,
@@ -514,8 +646,8 @@ Workspace body
       assert.equal(result.items[0].title, 'Recombinant TEV Protease');
       assert.equal(result.items[0].vendor, 'Vendor TEV');
       assert.equal(result.items[0].price_text, '$89.00');
-      assert.equal(codexCalls.length, 1);
-      assert.equal(codexCalls[0].enableWebSearch, true);
+      assert.equal(webSearchCalls.length, 1);
+      assert.match(String(webSearchCalls[0].query || ''), /TEV protease/i);
       assert.equal(structuredCalls, 0);
       assert.equal(result.diagnostics.reasoning_rounds[0].planner, 'fast_codex_heuristic');
     });
@@ -973,6 +1105,7 @@ Workspace body
         'notebook-generation',
         'notebook-draft',
         'python-sandbox',
+        'web-search',
         'sub-agent',
         'memory',
         'literature-search',
@@ -1055,6 +1188,14 @@ Workspace body
           },
           'python-sandbox': {
             description: 'python usage',
+            input_schema: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {}
+            }
+          },
+          'web-search': {
+            description: 'web search usage',
             input_schema: {
               type: 'object',
               additionalProperties: false,
@@ -1158,6 +1299,14 @@ Workspace body
           },
           'python-sandbox': {
             description: 'python usage',
+            input_schema: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {}
+            }
+          },
+          'web-search': {
+            description: 'web search usage',
             input_schema: {
               type: 'object',
               additionalProperties: false,

@@ -6,7 +6,7 @@ const REQUEST_ABORTED_CODE = 'AGENT_REQUEST_ABORTED';
 const requestContextStorage = new AsyncLocalStorage();
 
 function cleanText(value, _maxLength = 400) {
-  const text = String(value || '').trim();
+  const text = String(value || '');
   if (!text) {
     return '';
   }

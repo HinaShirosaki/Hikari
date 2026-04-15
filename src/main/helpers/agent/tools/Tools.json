@@ -28,6 +28,10 @@
     "description": "Run a local shell command in the project workspace, capture stdout and stderr, and return the exit status. Prefer this for focused local CLI inspection or execution when Python is unnecessary."
   },
   {
+    "name": "web-search",
+    "description": "Search the public web through the agent's shared provider-backed web-search API. This uses provider-native web search when available, or Codex CLI with `--search` when the agent runs on Codex."
+  },
+  {
     "name": "sub-agent",
     "description": "Create, message, inspect, list, and delete helper sub-agent sessions managed outside the main agent."
   },

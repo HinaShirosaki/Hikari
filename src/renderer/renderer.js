@@ -3,7 +3,6 @@ import {
   TITLES,
   loadState,
   persistState,
-  normalizeState,
   createId,
   trackGrowthEvent,
   safeText,
@@ -23,6 +22,7 @@ const LAST_ACTIVE_VIEW_STORAGE_KEY = 'enana_last_active_view_v1';
 const SEQUENCE_VIEWER_DETAIL_VIEW_ID = 'sequence-viewer-detail-view';
 const FIXED_ACCENT = '#647255';
 const FIXED_FOCUS = '#7a8a69';
+const APP_READY_EVENT = 'hikari:app-ready';
 
 function normalizeViewId(viewId) {
   return viewId === VIEWS.PERSONAL_INVENTORY ? VIEWS.SAMPLE_REGISTRY : viewId;
@@ -99,8 +99,6 @@ applyAppearanceSnapshot(state.settings?.appearance);
 const pageTitle = document.getElementById('page-title');
 const pageSubtitle = document.getElementById('page-subtitle');
 const topbarViewActions = document.getElementById('topbar-view-actions');
-const homeBtn = document.getElementById('home-btn');
-const topbarSettingsBtn = document.getElementById('topbar-settings-btn');
 const exitBtn = document.getElementById('exit-btn');
 const topbarSearchInput = document.getElementById('topbar-search');
 const dockNav = document.getElementById('app-dock-nav');
@@ -213,9 +211,12 @@ function createNavButton(app, options = {}) {
 
 function getDockCapacity() {
   const viewportWidth = window.innerWidth || document.documentElement?.clientWidth || 0;
+  const topbar = document.querySelector('.topbar');
   const dockViewportMargin = viewportWidth <= 960 ? 20 : 32;
+  const dockHostWidth = topbar?.clientWidth || viewportWidth;
   const effectiveWidth = Math.min(
-    Math.max(240, Math.floor(viewportWidth * 0.618)),
+    Math.max(240, Math.floor(viewportWidth <= 960 ? dockHostWidth - dockViewportMargin : viewportWidth * 0.56)),
+    Math.max(240, dockHostWidth - (viewportWidth <= 960 ? dockViewportMargin : 360)),
     Math.max(240, viewportWidth - dockViewportMargin)
   );
   if (!effectiveWidth) {
@@ -319,9 +320,6 @@ function syncNavigationState(activeViewId) {
     const isOverflowActive = Boolean(activeApp && renderedOverflowApps.some((app) => app.id === activeApp.id));
     moreBtn.classList.toggle('is-active', isOverflowActive);
   }
-  if (topbarSettingsBtn) {
-    topbarSettingsBtn.classList.toggle('is-active', activeNavView === VIEWS.SETTING);
-  }
   document.body.dataset.activeView = activeNavView;
   if (pageTitle) {
     pageTitle.textContent = activeApp?.label || 'Home';
@@ -329,25 +327,12 @@ function syncNavigationState(activeViewId) {
   pageSubtitle.textContent = TITLES[activeNavView] || '';
 }
 
-function replaceState(nextState) {
-  Object.keys(state).forEach((key) => {
-    delete state[key];
-  });
-  Object.assign(state, nextState);
-}
-
 function persist() {
   state.objectGraph = rebuildObjectGraph(state);
   persistState(state);
-  if (window.enanaApi && state.settings.autoSaveEna !== false) {
+  if (window.enanaApi?.autoSaveDataFile && String(state.settings?.storagePath || '').trim()) {
     window.enanaApi
-      .autoSaveDataFile(state, state.settings.enaFilePath || '')
-      .then((result) => {
-        if (result?.ok && result.filePath && state.settings.enaFilePath !== result.filePath) {
-          state.settings.enaFilePath = result.filePath;
-          persistState(state);
-        }
-      })
+      .autoSaveDataFile(state, '')
       .catch(() => {});
   }
 }
@@ -639,31 +624,6 @@ const moduleRuntime = createRendererModuleRuntime({
     const result = await runStorageRootImport(storagePath, { persistMergedState: true });
     renderAll();
     return result;
-  },
-  onSaveEnaFile: async () => {
-    if (!window.enanaApi) {
-      return;
-    }
-    const result = await window.enanaApi.saveEnaFile(state, state.settings.enaFilePath || '');
-    if (result?.ok && result.filePath) {
-      state.settings.enaFilePath = result.filePath;
-      persistState(state);
-    }
-  },
-  onLoadEnaFile: async () => {
-    if (!window.enanaApi) {
-      return;
-    }
-    const result = await window.enanaApi.loadEnaFile();
-    if (!result?.ok || !result.data) {
-      return;
-    }
-    const loadedState = normalizeState(result.data);
-    loadedState.settings.enaFilePath = result.filePath || loadedState.settings.enaFilePath;
-    replaceState(loadedState);
-    persistState(state);
-    renderAll();
-    showView(VIEWS.HOME);
   }
 });
 
@@ -705,7 +665,6 @@ function showView(viewId) {
   if (topbarViewActions) {
     topbarViewActions.hidden = nextView !== VIEWS.ASSAY;
   }
-  homeBtn.hidden = nextView === VIEWS.HOME;
   closeMoreMenu();
   moduleRuntime.renderView(nextView);
   sharedLeftRailRuntime.ensureHandles();
@@ -1209,10 +1168,6 @@ function initNavigation() {
     });
   }
 
-  homeBtn.addEventListener('click', () => showView(VIEWS.HOME));
-  if (topbarSettingsBtn) {
-    topbarSettingsBtn.addEventListener('click', () => showView(VIEWS.SETTING));
-  }
   if (moreBtn) {
     moreBtn.addEventListener('click', (event) => {
       event.stopPropagation();
@@ -1276,33 +1231,6 @@ function renderAll() {
   moduleRuntime.renderAll();
 }
 
-async function hydrateStateFromDataFile() {
-  if (state.settings?.startup?.autoLoadDataFileOnLaunch === false) {
-    return;
-  }
-  if (!window.enanaApi?.autoLoadDataFile) {
-    return;
-  }
-
-  const preferredPath = typeof state.settings?.enaFilePath === 'string' ? state.settings.enaFilePath : '';
-  const result = await window.enanaApi.autoLoadDataFile(preferredPath);
-  if (!result?.ok) {
-    return;
-  }
-
-  if (result.filePath && state.settings.enaFilePath !== result.filePath) {
-    state.settings.enaFilePath = result.filePath;
-  }
-
-  if (result.data && typeof result.data === 'object') {
-    const loadedState = normalizeState(result.data);
-    loadedState.settings.enaFilePath = result.filePath || loadedState.settings.enaFilePath;
-    replaceState(loadedState);
-  }
-
-  persistState(state);
-}
-
 async function hydrateStateFromStorageRoot() {
   const storagePath = String(state.settings?.storagePath || '').trim();
   if (!storagePath) {
@@ -1312,7 +1240,6 @@ async function hydrateStateFromStorageRoot() {
 }
 
 async function initApp() {
-  await hydrateStateFromDataFile();
   await hydrateStateFromStorageRoot();
   applyAppearanceSnapshot(state.settings?.appearance);
   renderAppNavigation();
@@ -1323,4 +1250,15 @@ async function initApp() {
   showView(resolveStartupViewId());
 }
 
-initApp();
+initApp()
+  .then(() => {
+    window.dispatchEvent(new CustomEvent(APP_READY_EVENT));
+  })
+  .catch((error) => {
+    console.error('Failed to initialize Hikari:', error);
+    window.dispatchEvent(new CustomEvent(APP_READY_EVENT, {
+      detail: {
+        error: true
+      }
+    }));
+  });

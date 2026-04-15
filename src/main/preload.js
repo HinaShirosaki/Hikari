@@ -1,15 +1,14 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('enanaApi', {
-  saveEnaFile: (data, filePath) => ipcRenderer.invoke('ena:save', { data, filePath }),
-  loadEnaFile: () => ipcRenderer.invoke('ena:load'),
   autoSaveDataFile: (data, filePath) => ipcRenderer.invoke('data:auto-save', { data, filePath }),
-  autoLoadDataFile: (filePath) => ipcRenderer.invoke('data:auto-load', { filePath }),
   syncSqliteBundle: (payload) => ipcRenderer.invoke('storage:sync-sqlite-bundle', payload),
   pickStorageDirectory: (currentPath) => ipcRenderer.invoke('storage:pick-directory', { currentPath }),
   ensureStorageDirectory: (path) => ipcRenderer.invoke('storage:ensure-directory', { path }),
   importStorageRoot: (storagePath) => ipcRenderer.invoke('storage:import-root', { storagePath }),
   storeImportedFile: (payload) => ipcRenderer.invoke('storage:store-imported-file', payload),
+  writeJsonFile: (payload) => ipcRenderer.invoke('storage:write-json-file', payload),
+  discoverStoredPapers: (payload) => ipcRenderer.invoke('storage:discover-papers', payload),
   openFilePath: (path) => ipcRenderer.invoke('storage:open-file', { path }),
   openExternalUrl: (url) => ipcRenderer.invoke('system:open-external-url', { url }),
   readFileBase64: (path) => ipcRenderer.invoke('storage:read-file-base64', { path }),
@@ -25,6 +24,8 @@ contextBridge.exposeInMainWorld('enanaApi', {
   clearTelegramBotToken: () => ipcRenderer.invoke('telegram:clear-token'),
   getCodexLlmStatus: () => ipcRenderer.invoke('llm:codex-status'),
   getCodexLlmCatalog: () => ipcRenderer.invoke('llm:codex-catalog'),
+  loginCodexLlm: () => ipcRenderer.invoke('llm:codex-login'),
+  clearCodexLlmLogin: () => ipcRenderer.invoke('llm:codex-clear-login'),
   setCodexLlmModel: (model) => ipcRenderer.invoke('llm:codex-set-model', { model }),
   setCodexLlmReasoningEffort: (reasoningEffort) => ipcRenderer.invoke('llm:codex-set-reasoning-effort', { reasoningEffort }),
   runCodexLlmPrompt: (payload) => ipcRenderer.invoke('llm:codex-generate', payload),

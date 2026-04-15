@@ -49,8 +49,6 @@ export function createRendererModuleRuntime(config = {}) {
   const views = config?.views || {};
   const sequenceViewerDetailViewId = String(config?.sequenceViewerDetailViewId || '').trim();
   const onStoragePathSaved = config?.onStoragePathSaved || (async () => {});
-  const onSaveEnaFile = config?.onSaveEnaFile || (async () => {});
-  const onLoadEnaFile = config?.onLoadEnaFile || (async () => {});
   const rootDocument = config?.rootDocument || globalThis?.document || null;
 
   const modules = {
@@ -85,7 +83,11 @@ export function createRendererModuleRuntime(config = {}) {
       persist,
       createId,
       safeText,
-      onNotebookEntriesChanged: rendererServices.notebook.handleAgentNotebookEntriesChanged
+      onNotebookEntriesChanged: rendererServices.notebook.handleAgentNotebookEntriesChanged,
+      onOpenNotebookEntry: (entryId = '') => {
+        showView(views.BIOLOGY_NOTEBOOK);
+        modules.biologyNotebook?.openEntry?.(entryId);
+      }
     }),
     workflowManagement: initAndRegisterModule(moduleRegistry, 'workflowManagement', initWorkflowManagement, {
       state,
@@ -154,9 +156,7 @@ export function createRendererModuleRuntime(config = {}) {
     settings: initAndRegisterModule(moduleRegistry, 'settings', initSettings, {
       state,
       persist,
-      onStoragePathSaved,
-      onSaveEnaFile,
-      onLoadEnaFile
+      onStoragePathSaved
     }),
     homeDashboard: initAndRegisterModule(moduleRegistry, 'homeDashboard', initHomeDashboard, {
       state,

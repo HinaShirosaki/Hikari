@@ -108,9 +108,9 @@ function asArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
-// Normalize unknown input into trimmed text without silently clipping content.
+// Normalize unknown input into a string without trimming or clipping content.
 function cleanText(value, _maxLength = 500) {
-  const text = String(value || '').trim();
+  const text = String(value || '');
   if (!text) {
     return '';
   }

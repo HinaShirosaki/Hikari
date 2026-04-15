@@ -12,7 +12,7 @@ function asArray(value) {
 }
 
 function cleanText(value, _maxLength = 500) {
-  const text = String(value || '').trim();
+  const text = String(value || '');
   if (!text) {
     return '';
   }
@@ -20,7 +20,7 @@ function cleanText(value, _maxLength = 500) {
 }
 
 function sliceText(value, max = 1200) {
-  const text = String(value || '').trim();
+  const text = String(value || '');
   if (!text) {
     return '';
   }
@@ -1239,10 +1239,7 @@ function createPurchaseRecommendationRuntime(deps = {}) {
     }
     if (requestWebSearch) {
       const providerSearch = await requestWebSearch({
-        provider: cleanText(input.provider, 80),
-        endpoint: cleanText(input.endpoint, 2000),
-        apiKey: cleanText(input.apiKey, 400),
-        model: cleanText(input.model, 120),
+        ...input,
         stage: 'purchase_recommendation_web_search',
         query,
         maxResults: limit,
@@ -1280,10 +1277,7 @@ function createPurchaseRecommendationRuntime(deps = {}) {
     }
     try {
       const llmResult = await requestStructuredJsonPayload({
-        provider: cleanText(input.provider, 80),
-        endpoint: cleanText(input.endpoint, 2000),
-        apiKey: cleanText(input.apiKey, 400),
-        model: cleanText(input.model, 120),
+        ...input,
         stage: `purchase_recommendation_search_plan_round_${asArray(priorRounds).length + 1}`,
         systemPrompt: PURCHASE_SEARCH_PLANNER_SYSTEM_PROMPT,
         userPrompt: buildPurchaseSearchPlannerPrompt({
@@ -1294,7 +1288,6 @@ function createPurchaseRecommendationRuntime(deps = {}) {
         }),
         schema: PURCHASE_SEARCH_PLAN_SCHEMA,
         traceContext: input.traceContext || null,
-        maxOutputTokens: 700,
         defaultError: 'Purchase recommendation provider is not configured.'
       });
       if (!llmResult?.ok || !llmResult.payload) {
@@ -1333,10 +1326,7 @@ function createPurchaseRecommendationRuntime(deps = {}) {
     }
     try {
       const llmResult = await requestStructuredJsonPayload({
-        provider: cleanText(input.provider, 80),
-        endpoint: cleanText(input.endpoint, 2000),
-        apiKey: cleanText(input.apiKey, 400),
-        model: cleanText(input.model, 120),
+        ...input,
         stage: 'purchase_recommendation_candidate_judge',
         systemPrompt: PURCHASE_CANDIDATE_JUDGE_SYSTEM_PROMPT,
         userPrompt: buildPurchaseCandidateJudgePrompt({
@@ -1350,7 +1340,6 @@ function createPurchaseRecommendationRuntime(deps = {}) {
         }),
         schema: PURCHASE_CANDIDATE_JUDGMENT_SCHEMA,
         traceContext: input.traceContext || null,
-        maxOutputTokens: 1100,
         defaultError: 'Purchase recommendation provider is not configured.'
       });
       if (!llmResult?.ok || !llmResult.payload) {

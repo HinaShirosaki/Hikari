@@ -5,7 +5,7 @@ function defaultAsArray(value) {
 }
 
 function defaultCleanText(value, _maxLength = 500) {
-  const text = String(value || '').trim();
+  const text = String(value || '');
   if (!text) {
     return '';
   }
@@ -209,34 +209,59 @@ function createAgentRecordLookupRuntime(deps = {}) {
       }
       return rows;
     });
+  const agentAppApi = deps.agentAppApi && typeof deps.agentAppApi === 'object'
+    ? deps.agentAppApi
+    : {};
+
+  function appendApiRows(records, rows = [], defaultType = '') {
+    asArray(rows).forEach((row) => {
+      const payload = ensureObject(row);
+      records.push({
+        record_type: cleanText(payload.record_type || defaultType, 40),
+        record_id: cleanText(payload.record_id || payload.id, 120),
+        title: cleanText(payload.title || payload.name || payload.protocolName, 220),
+        project_id: cleanText(payload.project_id, 120),
+        project_name: cleanText(payload.project_name, 220),
+        summary: cleanText(payload.summary, 500),
+        linked_protocol_id: cleanText(payload.linked_protocol_id, 120),
+        linked_protocol_name: cleanText(payload.linked_protocol_name, 220),
+        updated_at: cleanText(payload.updated_at, 80),
+        search_text: cleanText(payload.search_text, 5000)
+      });
+    });
+  }
 
   function buildRecordFallbackItems({ snapshot = {}, query = '', terms = [], limit = 8 }) {
     const records = [];
 
-    asArray(snapshot?.notebookEntries).forEach((entry) => {
-      const payload = ensureObject(entry);
-      records.push({
-        record_type: 'notebook',
-        record_id: cleanText(payload.id, 120),
-        title: cleanText(payload.protocolName || payload.id, 220),
-        project_id: cleanText(payload.projectId, 120),
-        project_name: cleanText(payload.projectName, 220),
-        summary: cleanText(payload.result, 500),
-        linked_protocol_id: cleanText(payload.protocolId, 120),
-        linked_protocol_name: cleanText(payload.protocolName, 220),
-        updated_at: cleanText(payload.updatedAt || payload.createdAt, 80),
-        search_text: buildSearchText([
-          payload.id,
-          payload.protocolId,
-          payload.protocolName,
-          payload.projectId,
-          payload.projectName,
-          payload.result,
-          payload.updatedAt,
-          JSON.stringify(payload.values || {})
-        ])
+    if (typeof agentAppApi?.notebook?.listAgentRecords === 'function') {
+      appendApiRows(records, agentAppApi.notebook.listAgentRecords({ snapshot, limit: 240 }), 'notebook');
+    } else {
+      asArray(snapshot?.notebookEntries).forEach((entry) => {
+        const payload = ensureObject(entry);
+        records.push({
+          record_type: 'notebook',
+          record_id: cleanText(payload.id, 120),
+          title: cleanText(payload.protocolName || payload.id, 220),
+          project_id: cleanText(payload.projectId, 120),
+          project_name: cleanText(payload.projectName, 220),
+          summary: cleanText(payload.result, 500),
+          linked_protocol_id: cleanText(payload.protocolId, 120),
+          linked_protocol_name: cleanText(payload.protocolName, 220),
+          updated_at: cleanText(payload.updatedAt || payload.createdAt, 80),
+          search_text: buildSearchText([
+            payload.id,
+            payload.protocolId,
+            payload.protocolName,
+            payload.projectId,
+            payload.projectName,
+            payload.result,
+            payload.updatedAt,
+            JSON.stringify(payload.values || {})
+          ])
+        });
       });
-    });
+    }
 
     asArray(snapshot?.workflows).forEach((workflow) => {
       const payload = ensureObject(workflow);
@@ -261,84 +286,132 @@ function createAgentRecordLookupRuntime(deps = {}) {
       });
     });
 
-    asArray(snapshot?.assays).forEach((assay) => {
-      const payload = ensureObject(assay);
-      records.push({
-        record_type: 'assay',
-        record_id: cleanText(payload.id || payload.assay_number, 120),
-        title: cleanText(payload.name || payload.assay_number || payload.id, 220),
-        project_id: cleanText(payload.project_id || payload.projectId, 120),
-        project_name: cleanText(payload.project_name || payload.projectName, 220),
-        summary: cleanText(payload.notes || payload.notebook_entry_protocol_name || payload.name, 500),
-        linked_protocol_id: cleanText(payload.notebook_entry_protocol_id || payload.protocolId, 120),
-        linked_protocol_name: cleanText(payload.notebook_entry_protocol_name || payload.protocolName, 220),
-        updated_at: cleanText(payload.updated_at || payload.updatedAt || payload.created_at, 80),
-        search_text: buildSearchText([
-          payload.id,
-          payload.assay_number,
-          payload.name,
-          payload.notes,
-          payload.project_id,
-          payload.project_name,
-          payload.notebook_entry_protocol_name
-        ])
+    if (typeof agentAppApi?.assay?.listAgentRecords === 'function') {
+      appendApiRows(records, agentAppApi.assay.listAgentRecords({ snapshot, limit: 240 }), 'assay');
+    } else {
+      asArray(snapshot?.assays).forEach((assay) => {
+        const payload = ensureObject(assay);
+        records.push({
+          record_type: 'assay',
+          record_id: cleanText(payload.id || payload.assay_number, 120),
+          title: cleanText(payload.name || payload.assay_number || payload.id, 220),
+          project_id: cleanText(payload.project_id || payload.projectId, 120),
+          project_name: cleanText(payload.project_name || payload.projectName, 220),
+          summary: cleanText(payload.notes || payload.notebook_entry_protocol_name || payload.name, 500),
+          linked_protocol_id: cleanText(payload.notebook_entry_protocol_id || payload.protocolId, 120),
+          linked_protocol_name: cleanText(payload.notebook_entry_protocol_name || payload.protocolName, 220),
+          updated_at: cleanText(payload.updated_at || payload.updatedAt || payload.created_at, 80),
+          search_text: buildSearchText([
+            payload.id,
+            payload.assay_number,
+            payload.name,
+            payload.notes,
+            payload.project_id,
+            payload.project_name,
+            payload.notebook_entry_protocol_name
+          ])
+        });
       });
-    });
+    }
 
-    asArray(snapshot?.gelAnalyses).forEach((analysis) => {
-      const payload = ensureObject(analysis);
-      records.push({
-        record_type: 'gel',
-        record_id: cleanText(payload.id, 120),
-        title: cleanText(payload.name || payload.id, 220),
-        project_id: cleanText(payload.project_id || payload.projectId, 120),
-        project_name: cleanText(payload.project_name || payload.projectName, 220),
-        summary: cleanText(payload.analysis_type || payload.notebook_entry_protocol_name || payload.name, 500),
-        linked_protocol_id: cleanText(payload.notebook_entry_protocol_id || payload.protocolId, 120),
-        linked_protocol_name: cleanText(payload.notebook_entry_protocol_name || payload.protocolName, 220),
-        updated_at: cleanText(payload.updated_at || payload.updatedAt || payload.created_at, 80),
-        search_text: buildSearchText([
-          payload.id,
-          payload.name,
-          payload.analysis_type,
-          payload.project_id,
-          payload.project_name,
-          payload.notebook_entry_protocol_name,
-          asArray(payload.warnings).join(' ')
-        ])
+    if (typeof agentAppApi?.gel?.listAgentRecords === 'function') {
+      appendApiRows(records, agentAppApi.gel.listAgentRecords({ snapshot, limit: 240 }), 'gel');
+    } else {
+      asArray(snapshot?.gelAnalyses).forEach((analysis) => {
+        const payload = ensureObject(analysis);
+        records.push({
+          record_type: 'gel',
+          record_id: cleanText(payload.id, 120),
+          title: cleanText(payload.name || payload.id, 220),
+          project_id: cleanText(payload.project_id || payload.projectId, 120),
+          project_name: cleanText(payload.project_name || payload.projectName, 220),
+          summary: cleanText(payload.analysis_type || payload.notebook_entry_protocol_name || payload.name, 500),
+          linked_protocol_id: cleanText(payload.notebook_entry_protocol_id || payload.protocolId, 120),
+          linked_protocol_name: cleanText(payload.notebook_entry_protocol_name || payload.protocolName, 220),
+          updated_at: cleanText(payload.updated_at || payload.updatedAt || payload.created_at, 80),
+          search_text: buildSearchText([
+            payload.id,
+            payload.name,
+            payload.analysis_type,
+            payload.project_id,
+            payload.project_name,
+            payload.notebook_entry_protocol_name,
+            asArray(payload.warnings).join(' ')
+          ])
+        });
       });
-    });
+    }
 
-    asArray(snapshot?.protocols).forEach((protocol) => {
-      const payload = ensureObject(protocol);
-      records.push({
-        record_type: 'protocol',
-        record_id: cleanText(payload.id, 120),
-        title: cleanText(payload.name || payload.id, 220),
-        project_id: cleanText(payload.projectId, 120),
-        project_name: cleanText(payload.projectName || payload.linkedProject, 220),
-        summary: cleanText(payload.purpose || payload.description || payload.category, 500),
-        linked_protocol_id: cleanText(payload.id, 120),
-        linked_protocol_name: cleanText(payload.name, 220),
-        updated_at: cleanText(payload.updatedAt || payload.createdAt, 80),
-        search_text: buildSearchText([
-          payload.id,
-          payload.name,
-          payload.purpose,
-          payload.description,
-          payload.category,
-          payload.projectId,
-          payload.projectName,
-          payload.linkedProject,
-          asArray(payload.steps).map((step) => {
-            if (typeof step === 'string') {
-              return step;
-            }
-            return step?.text || step?.instruction || step?.action || '';
-          }).join(' ')
-        ])
+    if (typeof agentAppApi?.protocol?.listAgentRecords === 'function') {
+      appendApiRows(records, agentAppApi.protocol.listAgentRecords({ snapshot, limit: 240 }), 'protocol');
+    } else {
+      asArray(snapshot?.protocols).forEach((protocol) => {
+        const payload = ensureObject(protocol);
+        records.push({
+          record_type: 'protocol',
+          record_id: cleanText(payload.id, 120),
+          title: cleanText(payload.name || payload.id, 220),
+          project_id: cleanText(payload.projectId, 120),
+          project_name: cleanText(payload.projectName || payload.linkedProject, 220),
+          summary: cleanText(payload.purpose || payload.description || payload.category, 500),
+          linked_protocol_id: cleanText(payload.id, 120),
+          linked_protocol_name: cleanText(payload.name, 220),
+          updated_at: cleanText(payload.updatedAt || payload.createdAt, 80),
+          search_text: buildSearchText([
+            payload.id,
+            payload.name,
+            payload.purpose,
+            payload.description,
+            payload.category,
+            payload.projectId,
+            payload.projectName,
+            payload.linkedProject,
+            asArray(payload.steps).map((step) => {
+              if (typeof step === 'string') {
+                return step;
+              }
+              return step?.text || step?.instruction || step?.action || '';
+            }).join(' ')
+          ])
+        });
       });
-    });
+    }
+
+    if (typeof agentAppApi?.papers?.listAgentRecords === 'function') {
+      appendApiRows(records, agentAppApi.papers.listAgentRecords({ snapshot, limit: 240 }), 'paper');
+    } else {
+      asArray(snapshot?.papers).forEach((paper) => {
+        const payload = ensureObject(paper);
+        const linkedType = cleanText(payload.linkedType, 80).toLowerCase();
+        records.push({
+          record_type: 'paper',
+          record_id: cleanText(payload.id, 120),
+          title: cleanText(payload.title || payload.id, 220),
+          project_id: linkedType === 'project'
+            ? cleanText(payload.linkedId || payload.projectId, 120)
+            : cleanText(payload.projectId, 120),
+          project_name: linkedType === 'project'
+            ? cleanText(payload.linkedName || payload.projectName, 220)
+            : cleanText(payload.projectName, 220),
+          summary: cleanText(payload.summary || payload.abstract, 500),
+          linked_protocol_id: '',
+          linked_protocol_name: '',
+          updated_at: cleanText(payload.updatedAt || payload.createdAt || payload.importedAt, 80),
+          search_text: buildSearchText([
+            payload.id,
+            payload.title,
+            payload.summary,
+            payload.abstract,
+            payload.doi,
+            payload.authors,
+            payload.projectId,
+            payload.projectName,
+            payload.linkedId,
+            payload.linkedName
+          ])
+        });
+      });
+    }
 
     const ranked = rankRows(records, {
       terms,

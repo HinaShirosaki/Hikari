@@ -3,15 +3,11 @@
         <aside class="agent-session-rail app-left-rail left-rail-template__rail" data-sync-left-rail>
           <div class="agent-rail-meta">
             <div class="form-grid agent-rail-context-grid">
-              <label>
-                Project Scope (Optional)
+              <label class="agent-rail-filter">
+                <span>Project Scope</span>
                 <select id="agent-project-select">
                   <option value="">All projects</option>
                 </select>
-              </label>
-              <label>
-                Context Summary
-                <input id="agent-context-summary" disabled />
               </label>
             </div>
           </div>
@@ -29,38 +25,53 @@
         </aside>
 
         <div class="panel agent-chat-panel left-rail-template__main">
-          <div id="agent-developer-tools" class="agent-developer-tools" hidden>
-            <div class="agent-developer-tools-actions">
-              <button type="button" id="agent-dev-test-tools-btn" class="ghost-btn">Test All Tools</button>
-              <span class="small-note">Developer mode only. Run the full smoke suite or target one tool with a manual message and inspect the raw result in chat.</span>
-            </div>
-            <div class="agent-developer-tool-grid">
-              <label>
-                Tool
-                <select id="agent-dev-tool-select"></select>
-              </label>
-              <label class="agent-developer-tool-message">
-                Manual Test Message
-                <textarea id="agent-dev-tool-message" rows="3" placeholder="Enter a tool-directed test message."></textarea>
-              </label>
-              <div class="form-actions">
-                <button type="button" id="agent-dev-run-tool-btn" class="ghost-btn">Run Selected Tool</button>
-                <span id="agent-dev-tool-hint" class="small-note"></span>
+          <div class="agent-chat-stage">
+            <p id="agent-status" class="small-note agent-status-pill" hidden>Ready.</p>
+            <div id="agent-developer-tools" class="agent-developer-tools" hidden>
+              <div class="agent-developer-tools-actions">
+                <button type="button" id="agent-dev-test-tools-btn" class="ghost-btn">Test All Tools</button>
+                <span class="small-note">Developer mode only. Run the full smoke suite or target one tool with a manual message and inspect the raw result in chat.</span>
+              </div>
+              <div class="agent-developer-tool-grid">
+                <label>
+                  Tool
+                  <select id="agent-dev-tool-select"></select>
+                </label>
+                <label class="agent-developer-tool-message">
+                  Manual Test Message
+                  <textarea id="agent-dev-tool-message" rows="3" placeholder="Enter a tool-directed test message."></textarea>
+                </label>
+                <div class="form-actions">
+                  <button type="button" id="agent-dev-run-tool-btn" class="ghost-btn">Run Selected Tool</button>
+                  <span id="agent-dev-tool-hint" class="small-note"></span>
+                </div>
               </div>
             </div>
-          </div>
-          <div id="agent-chat-history" class="agent-chat-history" aria-live="polite"></div>
-          <p id="agent-status" class="small-note">Ready.</p>
-          <div class="stack-form">
-            <label>
-              Message
-              <textarea id="agent-message-input" rows="4" placeholder="Ask for protocol guidance, inventory checks, literature-grounded suggestions, or planning support."></textarea>
-            </label>
-            <div class="form-actions">
-              <button type="button" id="agent-deep-research-toggle-btn" class="ghost-btn">Deep Research: Off</button>
-              <button type="button" id="agent-send-btn" class="primary-btn">Send</button>
-              <button type="button" id="agent-stop-btn" class="danger-btn" hidden>Stop</button>
-              <button type="button" id="agent-clear-btn" class="ghost-btn">Clear Chat</button>
+            <div class="agent-conversation-shell">
+              <div class="agent-history-viewport">
+                <div id="agent-chat-history" class="agent-chat-history" aria-live="polite"></div>
+                <button type="button" id="agent-scroll-to-bottom-btn" class="ghost-btn agent-scroll-to-bottom-btn" hidden>Jump to Latest</button>
+              </div>
+              <div class="agent-composer-shell">
+                <div class="stack-form agent-composer-card">
+                  <label class="agent-composer-label">
+                    <span>Message</span>
+                    <textarea id="agent-message-input" rows="3" placeholder="Ask for protocol guidance, inventory checks, literature-grounded suggestions, or planning support."></textarea>
+                  </label>
+                  <div class="agent-composer-toolbar">
+                    <div class="agent-composer-hints">
+                      <span class="agent-inline-hint">Enter to send</span>
+                      <span class="agent-inline-hint">Shift+Enter for newline</span>
+                    </div>
+                    <div class="form-actions agent-composer-actions">
+                      <button type="button" id="agent-deep-research-toggle-btn" class="ghost-btn">Deep Research: Off</button>
+                      <button type="button" id="agent-send-btn" class="primary-btn">Send</button>
+                      <button type="button" id="agent-stop-btn" class="danger-btn" hidden>Stop</button>
+                      <button type="button" id="agent-clear-btn" class="ghost-btn">New Thread</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

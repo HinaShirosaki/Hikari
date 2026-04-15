@@ -185,8 +185,6 @@ export const defaultState = {
     agent: {
       developerMode: false
     },
-    enaFilePath: '',
-    autoSaveEna: true,
     inventoryLocations: ['Main Storage', 'Cold Room', 'Fume Hood'],
     dashboard: {
       currentWorkflowId: '',
@@ -195,8 +193,7 @@ export const defaultState = {
     },
     startup: {
       defaultViewId: VIEWS.HOME,
-      rememberLastView: false,
-      autoLoadDataFileOnLaunch: true
+      rememberLastView: false
     }
   },
   inventory: {
@@ -377,15 +374,29 @@ export function normalizePaperRecord(rawPaper) {
 
 export function normalizeState(parsed) {
   const source = parsed || {};
-  const rawLlm = source.settings?.llm || {};
-  const rawAgent = source.settings?.agent && typeof source.settings.agent === 'object'
-    ? source.settings.agent
+  const rawSettings = source.settings && typeof source.settings === 'object'
+    ? source.settings
     : {};
-  const rawStartup = source.settings?.startup && typeof source.settings.startup === 'object'
-    ? source.settings.startup
+  const rawPersonalInfo = rawSettings.personalInfo && typeof rawSettings.personalInfo === 'object'
+    ? rawSettings.personalInfo
     : {};
-  const rawStorageImport = source.settings?.storageImport && typeof source.settings.storageImport === 'object'
-    ? source.settings.storageImport
+  const rawAppearance = rawSettings.appearance && typeof rawSettings.appearance === 'object'
+    ? rawSettings.appearance
+    : {};
+  const rawStorageImport = rawSettings.storageImport && typeof rawSettings.storageImport === 'object'
+    ? rawSettings.storageImport
+    : {};
+  const rawLlm = rawSettings.llm && typeof rawSettings.llm === 'object'
+    ? rawSettings.llm
+    : {};
+  const rawAgent = rawSettings.agent && typeof rawSettings.agent === 'object'
+    ? rawSettings.agent
+    : {};
+  const rawDashboard = rawSettings.dashboard && typeof rawSettings.dashboard === 'object'
+    ? rawSettings.dashboard
+    : {};
+  const rawStartup = rawSettings.startup && typeof rawSettings.startup === 'object'
+    ? rawSettings.startup
     : {};
   const rawGrowthMetrics = source.growthMetrics && typeof source.growthMetrics === 'object'
     ? source.growthMetrics
@@ -459,15 +470,15 @@ export function normalizeState(parsed) {
       ...(source.labInventory || {})
     },
     settings: {
-      ...defaultState.settings,
-      ...(source.settings || {}),
+      ...structuredClone(defaultState.settings),
+      storagePath: String(rawSettings.storagePath || '').trim(),
       personalInfo: {
         ...defaultState.settings.personalInfo,
-        ...(source.settings?.personalInfo || {})
+        ...rawPersonalInfo
       },
       appearance: {
         ...defaultState.settings.appearance,
-        ...(source.settings?.appearance || {})
+        ...rawAppearance
       },
       storageImport: {
         ...defaultState.settings.storageImport,
@@ -487,23 +498,19 @@ export function normalizeState(parsed) {
       },
       dashboard: {
         ...defaultState.settings.dashboard,
-        ...(source.settings?.dashboard || {}),
-        currentWorkflowId: String(source.settings?.dashboard?.currentWorkflowId || ''),
-        workflowProgress: normalizeWorkflowProgressMap(source.settings?.dashboard?.workflowProgress),
-        quickLogDraft: String(source.settings?.dashboard?.quickLogDraft || '')
+        ...rawDashboard,
+        currentWorkflowId: String(rawDashboard.currentWorkflowId || ''),
+        workflowProgress: normalizeWorkflowProgressMap(rawDashboard.workflowProgress),
+        quickLogDraft: String(rawDashboard.quickLogDraft || '')
       },
       startup: {
         ...defaultState.settings.startup,
-        ...rawStartup,
         defaultViewId: STARTUP_DEFAULT_VIEW_IDS.has(String(rawStartup.defaultViewId || '').trim())
           ? String(rawStartup.defaultViewId || '').trim()
           : defaultState.settings.startup.defaultViewId,
         rememberLastView: typeof rawStartup.rememberLastView === 'boolean'
           ? rawStartup.rememberLastView
-          : defaultState.settings.startup.rememberLastView,
-        autoLoadDataFileOnLaunch: typeof rawStartup.autoLoadDataFileOnLaunch === 'boolean'
-          ? rawStartup.autoLoadDataFileOnLaunch
-          : defaultState.settings.startup.autoLoadDataFileOnLaunch
+          : defaultState.settings.startup.rememberLastView
       },
       llm: {
         ...defaultState.settings.llm,
@@ -520,8 +527,8 @@ export function normalizeState(parsed) {
         ...rawAgent,
         developerMode: rawAgent.developerMode === true
       },
-      inventoryLocations: Array.isArray(source.settings?.inventoryLocations)
-        ? source.settings.inventoryLocations
+      inventoryLocations: Array.isArray(rawSettings.inventoryLocations)
+        ? rawSettings.inventoryLocations
         : defaultState.settings.inventoryLocations
     },
     inventory: {

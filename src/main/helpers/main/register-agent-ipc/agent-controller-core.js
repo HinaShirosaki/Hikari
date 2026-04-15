@@ -1,6 +1,7 @@
 'use strict';
 
 const { createAgentIntentDispatcher } = require('./agent-intent-dispatcher');
+const { createAgentOpenContextRuntime } = require('./agent-open-context-runtime');
 const { throwIfAgentRequestAborted } = require('../../agent/shared/agent-request-context.js');
 
 function createAgentControllerCore({
@@ -15,6 +16,7 @@ function createAgentControllerCore({
   agentToolRuntime,
   executeInventoryLookup,
   executeRecordLookup,
+  agentChatLogRuntime,
   getAgentChatLogPath,
   getDefaultDataFilePath,
   setCodexCliModel,
@@ -22,6 +24,15 @@ function createAgentControllerCore({
   lifecycleService
 } = {}) {
   const { normalizeJsonPayload, asArray } = lifecycleService;
+  const openContextRuntime = createAgentOpenContextRuntime({
+    cleanText,
+    observability,
+    protocolNotebookRuntime,
+    executeInventoryLookup,
+    executeRecordLookup,
+    getDefaultDataFilePath,
+    agentChatLogRuntime
+  });
   const intentDispatcher = createAgentIntentDispatcher({
     deps,
     cleanText,
@@ -36,32 +47,6 @@ function createAgentControllerCore({
     getDefaultDataFilePath,
     lifecycleService
   });
-
-  function buildPendingProtocolParserPayload({
-    projectName = ''
-  } = {}) {
-    const normalizedProjectName = cleanText(projectName, 220);
-    return {
-      primary_intent: 'protocol_to_notebook',
-      reasoning_effort: 0,
-      direct_answer: null,
-      needs_clarification: false,
-      clarification_reason: null,
-      entities: normalizedProjectName
-        ? {
-          project_name: normalizedProjectName
-        }
-        : {},
-      inventory_search: {
-        normalized_query: null,
-        candidate_terms: [],
-        aliases: [],
-        search_mode: null
-      },
-      protocol_candidates: [],
-      reasoning_summary: 'Skipped intent parsing because the protocol-to-notebook context is still open.'
-    };
-  }
 
   function buildSkillCommandParserPayload({
     skillName = '',
@@ -264,11 +249,19 @@ function createAgentControllerCore({
         active_skills_prompt: ''
       };
 
-    const provider = controllerUtils.resolveAgentProvider(payload?.llm);
-    const endpoint = controllerUtils.resolveAgentEndpoint(payload?.llm, provider);
-    const model = controllerUtils.resolveAgentModel(payload?.llm, provider);
+    const llmSource = typeof controllerUtils.resolveAgentLlmSource === 'function'
+      ? controllerUtils.resolveAgentLlmSource(payload?.llm)
+      : {
+        provider: controllerUtils.resolveAgentProvider(payload?.llm),
+        endpoint: controllerUtils.resolveAgentEndpoint(payload?.llm, ''),
+        apiKey: controllerUtils.resolveAgentApiKey(payload?.llm),
+        model: controllerUtils.resolveAgentModel(payload?.llm, '')
+      };
+    const provider = cleanText(llmSource?.provider, 80);
+    const endpoint = cleanText(llmSource?.endpoint, 2000);
+    const apiKey = cleanText(llmSource?.apiKey, 400);
+    const model = cleanText(llmSource?.model, 120);
     const reasoningEffort = cleanText(payload?.llm?.reasoningEffort, 40).toLowerCase();
-    const apiKey = provider === deps.LLM_PROVIDERS.CODEX ? '' : controllerUtils.resolveAgentApiKey(payload?.llm);
     if (provider !== deps.LLM_PROVIDERS.CODEX && !apiKey) {
       throw new Error('Missing LLM API key. Set it in Settings > LLM Model & API, or use LLM_API_KEY / ENANA_LLM_API_KEY.');
     }
@@ -306,23 +299,19 @@ function createAgentControllerCore({
       message: 'Running parser-first intent phraser pipeline.'
     });
 
-    const sessionKey = protocolNotebookRuntime.buildSessionKey({
+    const parserBypass = await openContextRuntime.resolveParserBypass({
       projectId,
-      projectName
+      projectName,
+      chatSessionId: cleanText(runtime?.chatSessionId, 120),
+      chatSessionStoragePath: cleanText(runtime?.chatSessionStoragePath, 2400)
     });
-    const hasPendingProtocolSession = protocolNotebookRuntime.hasPendingSession(sessionKey);
-    const parserResult = hasPendingProtocolSession
+    const parserWasSkipped = Boolean(parserBypass?.ok === true && parserBypass?.payload);
+    const parserResult = parserWasSkipped
       ? {
         ok: true,
-        payload: buildPendingProtocolParserPayload({
-          projectName
-        })
+        payload: parserBypass.payload
       }
       : await controllerUtils.requestIntentParserPayload({
-        provider,
-        endpoint,
-        apiKey,
-        model,
         message: effectiveMessage,
         conversation: promptConversation,
         projectName,
@@ -347,13 +336,13 @@ function createAgentControllerCore({
       stage: 'parser_completed',
       status: 'ok',
       routing_intent: cleanText(parserResult.payload.primary_intent, 80) || 'unclear',
-      message: hasPendingProtocolSession
-        ? 'Skipped intent parser because the protocol-to-notebook context is still open.'
+      message: parserWasSkipped
+        ? cleanText(parserBypass?.message, 320) || 'Skipped intent parser because the context is still open.'
         : `Intent parser returned primary_intent=${cleanText(parserResult.payload.primary_intent, 80) || 'unknown'}.`,
       meta: {
         needs_clarification: parserResult.payload.needs_clarification === true,
-        skipped: hasPendingProtocolSession === true,
-        resumed_from_pending: hasPendingProtocolSession === true
+        skipped: parserWasSkipped === true,
+        resumed_from_pending: parserBypass?.meta?.resumed_from_pending === true
       }
     });
 

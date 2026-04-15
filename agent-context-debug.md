@@ -1,6 +1,6 @@
 # Agent Context Debug Export
 
-Generated at: 2026-04-11T22:32:31.591Z
+Generated at: 2026-04-12T22:32:13.961Z
 
 This export runs the science agent flow with debug shims only.
 
@@ -64,8 +64,8 @@ This export runs the science agent flow with debug shims only.
   "tool_trace": [],
   "intermediate_states": [
     {
-      "state_id": "science_intake-1775946751580-507175",
-      "created_at": "2026-04-11T22:32:31.580Z",
+      "state_id": "science_intake-1776033133948-3dc72a",
+      "created_at": "2026-04-12T22:32:13.948Z",
       "stage": "science_intake",
       "goal": "Start general_science_question handling.",
       "assumptions": [
@@ -79,8 +79,8 @@ This export runs the science agent flow with debug shims only.
       "confidence": 0.52
     },
     {
-      "state_id": "science_direct_answer-1775946751580-e88c5d",
-      "created_at": "2026-04-11T22:32:31.580Z",
+      "state_id": "science_direct_answer-1776033133948-17d9aa",
+      "created_at": "2026-04-12T22:32:13.948Z",
       "stage": "science_direct_answer",
       "goal": "Answered directly without entering the reasoning loop.",
       "assumptions": [
@@ -298,6 +298,7 @@ _No internal API calls captured._
     "notebook-generation",
     "notebook-draft",
     "python-sandbox",
+    "command-line",
     "sub-agent",
     "memory",
     "literature-search",
@@ -351,8 +352,8 @@ _No internal API calls captured._
   "tool_trace": [],
   "intermediate_states": [
     {
-      "state_id": "science_intake-1775946751581-147dc3",
-      "created_at": "2026-04-11T22:32:31.581Z",
+      "state_id": "science_intake-1776033133949-5731f8",
+      "created_at": "2026-04-12T22:32:13.949Z",
       "stage": "science_intake",
       "goal": "Start general_science_question handling.",
       "assumptions": [
@@ -368,8 +369,8 @@ _No internal API calls captured._
       "confidence": 0.52
     },
     {
-      "state_id": "science_clarification-1775946751581-932bf9",
-      "created_at": "2026-04-11T22:32:31.581Z",
+      "state_id": "science_clarification-1776033133950-21f050",
+      "created_at": "2026-04-12T22:32:13.950Z",
       "stage": "science_clarification",
       "goal": "Clarified the user request before reasoning.",
       "assumptions": [
@@ -607,6 +608,7 @@ _No internal API calls captured._
     "notebook-generation",
     "notebook-draft",
     "python-sandbox",
+    "command-line",
     "sub-agent",
     "memory",
     "literature-search",
@@ -628,12 +630,12 @@ _No internal API calls captured._
   "confidence": 0.74,
   "citations": [
     {
-      "source": "paper-download",
+      "source": "inventory-lookup",
       "pointer": "debug:1",
       "reason": "API response"
     },
     {
-      "source": "notebook-generation",
+      "source": "command-line",
       "pointer": "debug:2",
       "reason": "API response"
     }
@@ -650,8 +652,8 @@ _No internal API calls captured._
     ],
     "verification_notes": [
       "LLM Response",
-      "paper-download: API response",
-      "notebook-generation: API response",
+      "inventory-lookup: API response",
+      "command-line: API response",
       "The evaluator marked the evidence as sufficient before final synthesis."
     ]
   },
@@ -795,7 +797,7 @@ _No internal API calls captured._
     {
       "round": 1,
       "call_id": "debug-call-science-loop-1",
-      "tool_name": "paper-download",
+      "tool_name": "inventory-lookup",
       "input": {
         "query": "What does the latest evidence suggest about this science question?"
       },
@@ -813,7 +815,7 @@ _No internal API calls captured._
       "render_outputs": [],
       "citations": [
         {
-          "source": "paper-download",
+          "source": "inventory-lookup",
           "pointer": "debug:1",
           "reason": "API response"
         }
@@ -823,7 +825,7 @@ _No internal API calls captured._
     {
       "round": 2,
       "call_id": "debug-call-science-loop-2",
-      "tool_name": "notebook-generation",
+      "tool_name": "command-line",
       "input": {
         "query": "What does the latest evidence suggest about this science question?"
       },
@@ -841,7 +843,7 @@ _No internal API calls captured._
       "render_outputs": [],
       "citations": [
         {
-          "source": "notebook-generation",
+          "source": "command-line",
           "pointer": "debug:2",
           "reason": "API response"
         }
@@ -851,8 +853,8 @@ _No internal API calls captured._
   ],
   "intermediate_states": [
     {
-      "state_id": "science_intake-1775946751582-554648",
-      "created_at": "2026-04-11T22:32:31.582Z",
+      "state_id": "science_intake-1776033133951-93c50f",
+      "created_at": "2026-04-12T22:32:13.951Z",
       "stage": "science_intake",
       "goal": "Start general_science_question handling.",
       "assumptions": [
@@ -866,8 +868,8 @@ _No internal API calls captured._
       "confidence": 0.52
     },
     {
-      "state_id": "science_clarification-1775946751582-cac5b8",
-      "created_at": "2026-04-11T22:32:31.582Z",
+      "state_id": "science_clarification-1776033133951-5dc27f",
+      "created_at": "2026-04-12T22:32:13.951Z",
       "stage": "science_clarification",
       "goal": "Clarified the user request before reasoning.",
       "assumptions": [
@@ -881,8 +883,8 @@ _No internal API calls captured._
       "confidence": 0.66
     },
     {
-      "state_id": "science_route_plan-1775946751583-bed77a",
-      "created_at": "2026-04-11T22:32:31.583Z",
+      "state_id": "science_route_plan-1776033133952-7869d5",
+      "created_at": "2026-04-12T22:32:13.952Z",
       "stage": "science_route_plan",
       "goal": "Drafted a reference route plan for the reasoning loop.",
       "assumptions": [
@@ -926,8 +928,8 @@ _No internal API calls captured._
       "confidence": 0.64
     },
     {
-      "state_id": "science_exit_criteria-1775946751583-15f2dc",
-      "created_at": "2026-04-11T22:32:31.583Z",
+      "state_id": "science_exit_criteria-1776033133953-a5a0f5",
+      "created_at": "2026-04-12T22:32:13.953Z",
       "stage": "science_exit_criteria",
       "goal": "Generated exit criteria for the reasoning loop.",
       "assumptions": [
@@ -944,10 +946,10 @@ _No internal API calls captured._
       "confidence": 0.62
     },
     {
-      "state_id": "science_tool_round-1775946751585-b21c06",
-      "created_at": "2026-04-11T22:32:31.585Z",
+      "state_id": "science_tool_round-1776033133955-0495c1",
+      "created_at": "2026-04-12T22:32:13.955Z",
       "stage": "science_tool_round",
-      "goal": "Executed paper-download in round 1.",
+      "goal": "Executed inventory-lookup in round 1.",
       "assumptions": [
         "Exactly one tool call was executed this round.",
         "At least one tool execution returned a success envelope."
@@ -955,7 +957,7 @@ _No internal API calls captured._
       "open_questions": [],
       "evidence": [
         {
-          "source": "paper-download",
+          "source": "inventory-lookup",
           "pointer": "debug:1",
           "reason": "API response"
         }
@@ -963,7 +965,7 @@ _No internal API calls captured._
       "proposed_actions": [
         {
           "action_type": "read",
-          "tool_name": "paper-download",
+          "tool_name": "inventory-lookup",
           "risk_level": "low",
           "reason": "API response"
         }
@@ -971,8 +973,8 @@ _No internal API calls captured._
       "confidence": 0.66
     },
     {
-      "state_id": "science_pre_synthesis-1775946751585-671076",
-      "created_at": "2026-04-11T22:32:31.585Z",
+      "state_id": "science_pre_synthesis-1776033133956-a4c1d1",
+      "created_at": "2026-04-12T22:32:13.956Z",
       "stage": "science_pre_synthesis",
       "goal": "Prepared a lightweight pre-synthesized question before exit judgement.",
       "assumptions": [
@@ -981,7 +983,7 @@ _No internal API calls captured._
       "open_questions": [],
       "evidence": [
         {
-          "source": "paper-download",
+          "source": "inventory-lookup",
           "pointer": "debug:1",
           "reason": "API response"
         }
@@ -990,10 +992,10 @@ _No internal API calls captured._
       "confidence": 0.64
     },
     {
-      "state_id": "science_tool_round-1775946751589-930c01",
-      "created_at": "2026-04-11T22:32:31.589Z",
+      "state_id": "science_tool_round-1776033133959-c1c594",
+      "created_at": "2026-04-12T22:32:13.959Z",
       "stage": "science_tool_round",
-      "goal": "Executed notebook-generation in round 2.",
+      "goal": "Executed command-line in round 2.",
       "assumptions": [
         "Exactly one tool call was executed this round.",
         "At least one tool execution returned a success envelope."
@@ -1001,7 +1003,7 @@ _No internal API calls captured._
       "open_questions": [],
       "evidence": [
         {
-          "source": "notebook-generation",
+          "source": "command-line",
           "pointer": "debug:2",
           "reason": "API response"
         }
@@ -1009,7 +1011,7 @@ _No internal API calls captured._
       "proposed_actions": [
         {
           "action_type": "read",
-          "tool_name": "notebook-generation",
+          "tool_name": "command-line",
           "risk_level": "low",
           "reason": "API response"
         }
@@ -1017,8 +1019,8 @@ _No internal API calls captured._
       "confidence": 0.66
     },
     {
-      "state_id": "science_pre_synthesis-1775946751589-7af573",
-      "created_at": "2026-04-11T22:32:31.589Z",
+      "state_id": "science_pre_synthesis-1776033133959-6f0c35",
+      "created_at": "2026-04-12T22:32:13.959Z",
       "stage": "science_pre_synthesis",
       "goal": "Prepared a lightweight pre-synthesized question before exit judgement.",
       "assumptions": [
@@ -1027,7 +1029,7 @@ _No internal API calls captured._
       "open_questions": [],
       "evidence": [
         {
-          "source": "notebook-generation",
+          "source": "command-line",
           "pointer": "debug:2",
           "reason": "API response"
         }
@@ -1036,8 +1038,8 @@ _No internal API calls captured._
       "confidence": 0.64
     },
     {
-      "state_id": "science_synthesis-1775946751590-3b31b7",
-      "created_at": "2026-04-11T22:32:31.590Z",
+      "state_id": "science_synthesis-1776033133960-77820e",
+      "created_at": "2026-04-12T22:32:13.960Z",
       "stage": "science_synthesis",
       "goal": "Synthesized final science answer from tool evidence.",
       "assumptions": [
@@ -1049,12 +1051,12 @@ _No internal API calls captured._
       ],
       "evidence": [
         {
-          "source": "paper-download",
+          "source": "inventory-lookup",
           "pointer": "debug:1",
           "reason": "API response"
         },
         {
-          "source": "notebook-generation",
+          "source": "command-line",
           "pointer": "debug:2",
           "reason": "API response"
         }
@@ -1076,13 +1078,13 @@ _No internal API calls captured._
       {
         "round": 1,
         "tool_selection": "LLM Response",
-        "tool_call": "I want to use paper-download to investigate \"What does the latest evidence suggest about this science question?\".",
+        "tool_call": "I want to use inventory-lookup to investigate \"What does the latest evidence suggest about this science question?\".",
         "tool_results": "LLM Response"
       },
       {
         "round": 2,
         "tool_selection": "LLM Response",
-        "tool_call": "I want to use notebook-generation to investigate \"What does the latest evidence suggest about this science question?\".",
+        "tool_call": "I want to use command-line to investigate \"What does the latest evidence suggest about this science question?\".",
         "tool_results": "LLM Response"
       }
     ],
@@ -1105,7 +1107,7 @@ Selection mode: `random`
 
 ```json
 {
-  "name": "paper-download",
+  "name": "inventory-lookup",
   "arguments": {
     "query": "What does the latest evidence suggest about this science question?"
   }
@@ -1213,6 +1215,22 @@ Selection mode: `random`
     {
       "name": "python-sandbox",
       "description": "Debug-only tool definition for python-sandbox.",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "command-line",
+      "description": "Debug-only tool definition for command-line.",
       "parameters": {
         "type": "object",
         "additionalProperties": false,
@@ -1453,6 +1471,22 @@ Selection mode: `random`
       }
     },
     {
+      "name": "command-line",
+      "description": "Debug-only tool definition for command-line.",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
       "name": "sub-agent",
       "description": "Debug-only tool definition for sub-agent.",
       "parameters": {
@@ -1593,14 +1627,14 @@ No recalled long-term memory.
 
 ```json
 {
-  "tool_name": "paper-download",
+  "tool_name": "inventory-lookup",
   "arguments": {
     "query": "What does the latest evidence suggest about this science question?"
   },
   "stub_response": "API response",
   "debug_envelope": {
     "ok": true,
-    "tool_name": "paper-download",
+    "tool_name": "inventory-lookup",
     "summary": "API response",
     "result": {
       "summary": "API response",
@@ -1620,7 +1654,7 @@ No recalled long-term memory.
     ],
     "citations": [
       {
-        "source": "paper-download",
+        "source": "inventory-lookup",
         "pointer": "debug:1",
         "reason": "API response"
       }
@@ -1636,8 +1670,8 @@ No recalled long-term memory.
   "tool_outputs": [
     {
       "callId": "debug-call-science-loop-1",
-      "name": "paper-download",
-      "output": "{\"ok\":true,\"tool_name\":\"paper-download\",\"summary\":\"API response\",\"result\":{\"summary\":\"API response\",\"text\":\"API response\",\"items\":[{\"id\":\"api-item-1\",\"label\":\"API response\"}]},\"items\":[{\"id\":\"api-item-1\",\"label\":\"API response\"}],\"citations\":[{\"source\":\"paper-download\",\"pointer\":\"debug:1\",\"reason\":\"API response\"}]}"
+      "name": "inventory-lookup",
+      "output": "{\"ok\":true,\"tool_name\":\"inventory-lookup\",\"summary\":\"API response\",\"result\":{\"summary\":\"API response\",\"text\":\"API response\",\"items\":[{\"id\":\"api-item-1\",\"label\":\"API response\"}]},\"items\":[{\"id\":\"api-item-1\",\"label\":\"API response\"}],\"citations\":[{\"source\":\"inventory-lookup\",\"pointer\":\"debug:1\",\"reason\":\"API response\"}]}"
     }
   ],
   "assistant_after_tool": "LLM Response"
@@ -1655,7 +1689,7 @@ Recent conversation:
 1. user: What does the latest evidence suggest about this science question?
 
 Latest tool outputs:
-- paper-download (ok) | summary: API response
+- inventory-lookup (ok) | summary: API response
 
 Session memory summary:
 
@@ -1676,7 +1710,7 @@ Selection mode: `random`
 
 ```json
 {
-  "name": "notebook-generation",
+  "name": "command-line",
   "arguments": {
     "query": "What does the latest evidence suggest about this science question?"
   }
@@ -1689,7 +1723,7 @@ Selection mode: `random`
 {
   "system_prompt": "",
   "message": "What does the latest evidence suggest about this science question?",
-  "feedback_message": "Evaluator feedback for general_science_question: the previous result is not sufficient yet.\nReason: LLM Response\nMissing requirements: LLM Response; The current evidence directly supports the core answer to the clarified request.\nSuggested next tool: paper-download.\nSuggested query refinement: LLM Response\nWhy: LLM Response\nPlease continue with the next best tool call or tightly scoped parallel tool batch, or answer directly only if the evidence is now sufficient.",
+  "feedback_message": "Evaluator feedback for general_science_question: the previous result is not sufficient yet.\nReason: LLM Response\nMissing requirements: LLM Response; The current evidence directly supports the core answer to the clarified request.\nSuggested next tool: inventory-lookup.\nSuggested query refinement: LLM Response\nWhy: LLM Response\nPlease continue with the next best tool call or tightly scoped parallel tool batch, or answer directly only if the evidence is now sufficient.",
   "conversation": [
     {
       "role": "user",
@@ -1784,6 +1818,22 @@ Selection mode: `random`
     {
       "name": "python-sandbox",
       "description": "Debug-only tool definition for python-sandbox.",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "command-line",
+      "description": "Debug-only tool definition for command-line.",
       "parameters": {
         "type": "object",
         "additionalProperties": false,
@@ -1919,7 +1969,7 @@ Selection mode: `random`
 {
   "system_prompt": "",
   "message": "What does the latest evidence suggest about this science question?",
-  "feedback_message": "Evaluator feedback for general_science_question: the previous result is not sufficient yet.\nReason: LLM Response\nMissing requirements: LLM Response; The current evidence directly supports the core answer to the clarified request.\nSuggested next tool: paper-download.\nSuggested query refinement: LLM Response\nWhy: LLM Response\nPlease continue with the next best tool call or tightly scoped parallel tool batch, or answer directly only if the evidence is now sufficient.",
+  "feedback_message": "Evaluator feedback for general_science_question: the previous result is not sufficient yet.\nReason: LLM Response\nMissing requirements: LLM Response; The current evidence directly supports the core answer to the clarified request.\nSuggested next tool: inventory-lookup.\nSuggested query refinement: LLM Response\nWhy: LLM Response\nPlease continue with the next best tool call or tightly scoped parallel tool batch, or answer directly only if the evidence is now sufficient.",
   "conversation": [
     {
       "role": "user",
@@ -2010,6 +2060,22 @@ Selection mode: `random`
     {
       "name": "python-sandbox",
       "description": "Debug-only tool definition for python-sandbox.",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "command-line",
+      "description": "Debug-only tool definition for command-line.",
       "parameters": {
         "type": "object",
         "additionalProperties": false,
@@ -2150,7 +2216,7 @@ Recent conversation:
 1. user: What does the latest evidence suggest about this science question?
 
 Latest tool outputs:
-- paper-download (ok) | summary: API response
+- inventory-lookup (ok) | summary: API response
 
 Session memory summary:
 
@@ -2167,14 +2233,14 @@ No recalled long-term memory.
 
 ```json
 {
-  "tool_name": "notebook-generation",
+  "tool_name": "command-line",
   "arguments": {
     "query": "What does the latest evidence suggest about this science question?"
   },
   "stub_response": "API response",
   "debug_envelope": {
     "ok": true,
-    "tool_name": "notebook-generation",
+    "tool_name": "command-line",
     "summary": "API response",
     "result": {
       "summary": "API response",
@@ -2194,7 +2260,7 @@ No recalled long-term memory.
     ],
     "citations": [
       {
-        "source": "notebook-generation",
+        "source": "command-line",
         "pointer": "debug:2",
         "reason": "API response"
       }
@@ -2210,8 +2276,8 @@ No recalled long-term memory.
   "tool_outputs": [
     {
       "callId": "debug-call-science-loop-2",
-      "name": "notebook-generation",
-      "output": "{\"ok\":true,\"tool_name\":\"notebook-generation\",\"summary\":\"API response\",\"result\":{\"summary\":\"API response\",\"text\":\"API response\",\"items\":[{\"id\":\"api-item-2\",\"label\":\"API response\"}]},\"items\":[{\"id\":\"api-item-2\",\"label\":\"API response\"}],\"citations\":[{\"source\":\"notebook-generation\",\"pointer\":\"debug:2\",\"reason\":\"API response\"}]}"
+      "name": "command-line",
+      "output": "{\"ok\":true,\"tool_name\":\"command-line\",\"summary\":\"API response\",\"result\":{\"summary\":\"API response\",\"text\":\"API response\",\"items\":[{\"id\":\"api-item-2\",\"label\":\"API response\"}]},\"items\":[{\"id\":\"api-item-2\",\"label\":\"API response\"}],\"citations\":[{\"source\":\"command-line\",\"pointer\":\"debug:2\",\"reason\":\"API response\"}]}"
     }
   ],
   "assistant_after_tool": "LLM Response"
@@ -2229,8 +2295,8 @@ Recent conversation:
 1. user: What does the latest evidence suggest about this science question?
 
 Latest tool outputs:
-- notebook-generation (ok) | summary: API response
-- paper-download (ok) | summary: API response
+- command-line (ok) | summary: API response
+- inventory-lookup (ok) | summary: API response
 
 Session memory summary:
 
@@ -2268,7 +2334,7 @@ Long-term memory:
 No recalled long-term memory.
 ```
 
-### 2. After paper-download round 1
+### 2. After inventory-lookup round 1
 
 **Real Context**
 
@@ -2281,7 +2347,7 @@ Recent conversation:
 1. user: What does the latest evidence suggest about this science question?
 
 Latest tool outputs:
-- paper-download (ok) | summary: API response
+- inventory-lookup (ok) | summary: API response
 
 Session memory summary:
 
@@ -2294,7 +2360,7 @@ Long-term memory:
 No recalled long-term memory.
 ```
 
-### 3. After notebook-generation round 2
+### 3. After command-line round 2
 
 **Real Context**
 
@@ -2307,8 +2373,8 @@ Recent conversation:
 1. user: What does the latest evidence suggest about this science question?
 
 Latest tool outputs:
-- notebook-generation (ok) | summary: API response
-- paper-download (ok) | summary: API response
+- command-line (ok) | summary: API response
+- inventory-lookup (ok) | summary: API response
 
 Session memory summary:
 
@@ -2335,8 +2401,8 @@ Recent conversation:
 2. assistant: Could you clarify: The current evidence directly supports the core answer to the clarified request.
 
 Latest tool outputs:
-- notebook-generation (ok) | summary: API response
-- paper-download (ok) | summary: API response
+- command-line (ok) | summary: API response
+- inventory-lookup (ok) | summary: API response
 
 Task summary:
 Task type: science_reasoning_loop
@@ -2794,6 +2860,22 @@ LLM Response
     }
   },
   {
+    "name": "command-line",
+    "description": "Debug-only tool definition for command-line.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "query"
+      ],
+      "properties": {
+        "query": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  {
     "name": "sub-agent",
     "description": "Debug-only tool definition for sub-agent.",
     "parameters": {
@@ -2912,7 +2994,7 @@ LLM Response
 
 ```json
 {
-  "name": "paper-download",
+  "name": "inventory-lookup",
   "arguments": {
     "query": "What does the latest evidence suggest about this science question?"
   }
@@ -2931,8 +3013,8 @@ Stub response: `LLM Response`
 [
   {
     "callId": "debug-call-science-loop-1",
-    "name": "paper-download",
-    "output": "{\"ok\":true,\"tool_name\":\"paper-download\",\"summary\":\"API response\",\"result\":{\"summary\":\"API response\",\"text\":\"API response\",\"items\":[{\"id\":\"api-item-1\",\"label\":\"API response\"}]},\"items\":[{\"id\":\"api-item-1\",\"label\":\"API response\"}],\"citations\":[{\"source\":\"paper-download\",\"pointer\":\"debug:1\",\"reason\":\"API response\"}]}"
+    "name": "inventory-lookup",
+    "output": "{\"ok\":true,\"tool_name\":\"inventory-lookup\",\"summary\":\"API response\",\"result\":{\"summary\":\"API response\",\"text\":\"API response\",\"items\":[{\"id\":\"api-item-1\",\"label\":\"API response\"}]},\"items\":[{\"id\":\"api-item-1\",\"label\":\"API response\"}],\"citations\":[{\"source\":\"inventory-lookup\",\"pointer\":\"debug:1\",\"reason\":\"API response\"}]}"
   }
 ]
 ```
@@ -2973,93 +3055,14 @@ Pre-synthesized answer:
 Current best answer: LLM Response
 Supporting basis:
 - API response
-- paper-download returned 1 item(s).
-- paper-download: debug:1 - API response
-- paper-download: API response
+- inventory-lookup returned 1 item(s).
+- inventory-lookup: debug:1 - API response
+- inventory-lookup: API response
 
 Return JSON only.
 ```
 
-### 7. science_loop_current_scientific_state
-
-Kind: `structured-json`
-
-Stub response: `LLM Response`
-
-**System Prompt**
-
-```text
-Return valid JSON only.
-```
-
-**User Prompt / Context**
-
-```text
-Summarize the current scientific state before the exit judge decides whether the reasoning loop should stop.
-
-Keep it compact and grounded only in the provided evidence.
-
-List what is supported now, what is contradicted, what remains unknown, and whether the remaining uncertainty is actually decision-relevant for deciding stop vs continue.
-
-Set uncertainty_decision_relevant to true only when the remaining uncertainty should materially change the loop exit decision.
-
-Include trace_sentence as one short sentence describing what you are doing at this step.
-
-Clarified request:
-LLM Response
-
-Exit criteria:
-Objective: LLM Response
-Exit conditions:
-- LLM Response
-- The current evidence directly supports the core answer to the clarified request.
-- The answer is grounded in the strongest available evidence, which may include external sources, trusted provided context, or prior retrieved support.
-Required evidence:
-- LLM Response
-- At least one evidence-gathering round has run before the loop exits.
-Continue when:
-- LLM Response
-- A blocking evidence gap still prevents a grounded answer.
-Can exit with limitations when:
-- LLM Response
-- A best-effort answer is allowed when the main remaining gaps are stated explicitly.
-- Stable background questions can be answered without a fresh citation when the answer is already well grounded and any freshness limits are stated.
-Preferred next tools: inventory-lookup | record-lookup | protocol-matching
-
-Pre-synthesized question:
-Current best answer: LLM Response
-Supporting basis:
-- API response
-- paper-download returned 1 item(s).
-- paper-download: debug:1 - API response
-- paper-download: API response
-Logical verification:
-Part 1:
-- Context: API response | paper-download returned 1 item(s).
-- Pre-synthesized answer: LLM Response
-
-Rounds executed: 1/2
-
-Return JSON only.
-```
-
-**Debug Shim Payload**
-
-```json
-{
-  "supported_now": [
-    "LLM Response"
-  ],
-  "contradicted": [],
-  "remains_unknown": [
-    "LLM Response"
-  ],
-  "uncertainty_decision_relevant": true,
-  "uncertainty_decision_reason": "LLM Response"
-}
-```
-
-### 8. science_loop_exit_judge_sub_agent
+### 7. science_loop_exit_judge_sub_agent
 
 Kind: `structured-json`
 
@@ -3113,12 +3116,12 @@ Pre-synthesized question:
 Current best answer: LLM Response
 Supporting basis:
 - API response
-- paper-download returned 1 item(s).
-- paper-download: debug:1 - API response
-- paper-download: API response
+- inventory-lookup returned 1 item(s).
+- inventory-lookup: debug:1 - API response
+- inventory-lookup: API response
 Logical verification:
 Part 1:
-- Context: API response | paper-download returned 1 item(s).
+- Context: API response | inventory-lookup returned 1 item(s).
 - Pre-synthesized answer: LLM Response
 
 Rounds executed: 1/2
@@ -3137,7 +3140,7 @@ Return JSON only.
   ],
   "should_continue": true,
   "next_tool_hint": {
-    "tool_name": "paper-download",
+    "tool_name": "inventory-lookup",
     "query": "LLM Response",
     "reason": "LLM Response"
   },
@@ -3145,7 +3148,7 @@ Return JSON only.
 }
 ```
 
-### 9. science_agent_session_after_feedback
+### 8. science_agent_session_after_feedback
 
 Kind: `agent-session-feedback`
 
@@ -3157,7 +3160,7 @@ Stub response: `LLM Response`
 Evaluator feedback for general_science_question: the previous result is not sufficient yet.
 Reason: LLM Response
 Missing requirements: LLM Response; The current evidence directly supports the core answer to the clarified request.
-Suggested next tool: paper-download.
+Suggested next tool: inventory-lookup.
 Suggested query refinement: LLM Response
 Why: LLM Response
 Please continue with the next best tool call or tightly scoped parallel tool batch, or answer directly only if the evidence is now sufficient.
@@ -3167,14 +3170,14 @@ Please continue with the next best tool call or tightly scoped parallel tool bat
 
 ```json
 {
-  "name": "notebook-generation",
+  "name": "command-line",
   "arguments": {
     "query": "What does the latest evidence suggest about this science question?"
   }
 }
 ```
 
-### 10. science_agent_session_after_tool_output
+### 9. science_agent_session_after_tool_output
 
 Kind: `agent-session-tool-output`
 
@@ -3186,13 +3189,13 @@ Stub response: `LLM Response`
 [
   {
     "callId": "debug-call-science-loop-2",
-    "name": "notebook-generation",
-    "output": "{\"ok\":true,\"tool_name\":\"notebook-generation\",\"summary\":\"API response\",\"result\":{\"summary\":\"API response\",\"text\":\"API response\",\"items\":[{\"id\":\"api-item-2\",\"label\":\"API response\"}]},\"items\":[{\"id\":\"api-item-2\",\"label\":\"API response\"}],\"citations\":[{\"source\":\"notebook-generation\",\"pointer\":\"debug:2\",\"reason\":\"API response\"}]}"
+    "name": "command-line",
+    "output": "{\"ok\":true,\"tool_name\":\"command-line\",\"summary\":\"API response\",\"result\":{\"summary\":\"API response\",\"text\":\"API response\",\"items\":[{\"id\":\"api-item-2\",\"label\":\"API response\"}]},\"items\":[{\"id\":\"api-item-2\",\"label\":\"API response\"}],\"citations\":[{\"source\":\"command-line\",\"pointer\":\"debug:2\",\"reason\":\"API response\"}]}"
   }
 ]
 ```
 
-### 11. science_loop_logic_extraction
+### 10. science_loop_logic_extraction
 
 Kind: `structured-json`
 
@@ -3228,91 +3231,14 @@ Pre-synthesized answer:
 Current best answer: LLM Response
 Supporting basis:
 - API response
-- notebook-generation returned 1 item(s).
-- notebook-generation: debug:2 - API response
-- paper-download: debug:1 - API response
+- command-line returned 1 item(s).
+- command-line: debug:2 - API response
+- inventory-lookup: debug:1 - API response
 
 Return JSON only.
 ```
 
-### 12. science_loop_current_scientific_state
-
-Kind: `structured-json`
-
-Stub response: `LLM Response`
-
-**System Prompt**
-
-```text
-Return valid JSON only.
-```
-
-**User Prompt / Context**
-
-```text
-Summarize the current scientific state before the exit judge decides whether the reasoning loop should stop.
-
-Keep it compact and grounded only in the provided evidence.
-
-List what is supported now, what is contradicted, what remains unknown, and whether the remaining uncertainty is actually decision-relevant for deciding stop vs continue.
-
-Set uncertainty_decision_relevant to true only when the remaining uncertainty should materially change the loop exit decision.
-
-Include trace_sentence as one short sentence describing what you are doing at this step.
-
-Clarified request:
-LLM Response
-
-Exit criteria:
-Objective: LLM Response
-Exit conditions:
-- LLM Response
-- The current evidence directly supports the core answer to the clarified request.
-- The answer is grounded in the strongest available evidence, which may include external sources, trusted provided context, or prior retrieved support.
-Required evidence:
-- LLM Response
-- At least one evidence-gathering round has run before the loop exits.
-Continue when:
-- LLM Response
-- A blocking evidence gap still prevents a grounded answer.
-Can exit with limitations when:
-- LLM Response
-- A best-effort answer is allowed when the main remaining gaps are stated explicitly.
-- Stable background questions can be answered without a fresh citation when the answer is already well grounded and any freshness limits are stated.
-Preferred next tools: inventory-lookup | record-lookup | protocol-matching
-
-Pre-synthesized question:
-Current best answer: LLM Response
-Supporting basis:
-- API response
-- notebook-generation returned 1 item(s).
-- notebook-generation: debug:2 - API response
-- paper-download: debug:1 - API response
-Logical verification:
-Part 1:
-- Context: API response | notebook-generation returned 1 item(s).
-- Pre-synthesized answer: LLM Response
-
-Rounds executed: 2/2
-
-Return JSON only.
-```
-
-**Debug Shim Payload**
-
-```json
-{
-  "supported_now": [
-    "LLM Response"
-  ],
-  "contradicted": [],
-  "remains_unknown": [],
-  "uncertainty_decision_relevant": false,
-  "uncertainty_decision_reason": "LLM Response"
-}
-```
-
-### 13. science_loop_exit_judge_sub_agent
+### 11. science_loop_exit_judge_sub_agent
 
 Kind: `structured-json`
 
@@ -3366,12 +3292,12 @@ Pre-synthesized question:
 Current best answer: LLM Response
 Supporting basis:
 - API response
-- notebook-generation returned 1 item(s).
-- notebook-generation: debug:2 - API response
-- paper-download: debug:1 - API response
+- command-line returned 1 item(s).
+- command-line: debug:2 - API response
+- inventory-lookup: debug:1 - API response
 Logical verification:
 Part 1:
-- Context: API response | notebook-generation returned 1 item(s).
+- Context: API response | command-line returned 1 item(s).
 - Pre-synthesized answer: LLM Response
 
 Rounds executed: 2/2
@@ -3668,6 +3594,22 @@ LLM Response
     }
   },
   {
+    "name": "command-line",
+    "description": "Debug-only tool definition for command-line.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "query"
+      ],
+      "properties": {
+        "query": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  {
     "name": "sub-agent",
     "description": "Debug-only tool definition for sub-agent.",
     "parameters": {
@@ -3792,8 +3734,8 @@ Kind: `agent-session-tool-output`
 [
   {
     "callId": "debug-call-science-loop-1",
-    "name": "paper-download",
-    "output": "{\"ok\":true,\"tool_name\":\"paper-download\",\"summary\":\"API response\",\"result\":{\"summary\":\"API response\",\"text\":\"API response\",\"items\":[{\"id\":\"api-item-1\",\"label\":\"API response\"}]},\"items\":[{\"id\":\"api-item-1\",\"label\":\"API response\"}],\"citations\":[{\"source\":\"paper-download\",\"pointer\":\"debug:1\",\"reason\":\"API response\"}]}"
+    "name": "inventory-lookup",
+    "output": "{\"ok\":true,\"tool_name\":\"inventory-lookup\",\"summary\":\"API response\",\"result\":{\"summary\":\"API response\",\"text\":\"API response\",\"items\":[{\"id\":\"api-item-1\",\"label\":\"API response\"}]},\"items\":[{\"id\":\"api-item-1\",\"label\":\"API response\"}],\"citations\":[{\"source\":\"inventory-lookup\",\"pointer\":\"debug:1\",\"reason\":\"API response\"}]}"
   }
 ]
 ```
@@ -3832,75 +3774,14 @@ Pre-synthesized answer:
 Current best answer: LLM Response
 Supporting basis:
 - API response
-- paper-download returned 1 item(s).
-- paper-download: debug:1 - API response
-- paper-download: API response
+- inventory-lookup returned 1 item(s).
+- inventory-lookup: debug:1 - API response
+- inventory-lookup: API response
 
 Return JSON only.
 ```
 
-### 7. science_loop_current_scientific_state
-
-Kind: `structured-json`
-
-**Raw System Prompt**
-
-```text
-Return valid JSON only.
-```
-
-**Raw User Prompt**
-
-```text
-Summarize the current scientific state before the exit judge decides whether the reasoning loop should stop.
-
-Keep it compact and grounded only in the provided evidence.
-
-List what is supported now, what is contradicted, what remains unknown, and whether the remaining uncertainty is actually decision-relevant for deciding stop vs continue.
-
-Set uncertainty_decision_relevant to true only when the remaining uncertainty should materially change the loop exit decision.
-
-Include trace_sentence as one short sentence describing what you are doing at this step.
-
-Clarified request:
-LLM Response
-
-Exit criteria:
-Objective: LLM Response
-Exit conditions:
-- LLM Response
-- The current evidence directly supports the core answer to the clarified request.
-- The answer is grounded in the strongest available evidence, which may include external sources, trusted provided context, or prior retrieved support.
-Required evidence:
-- LLM Response
-- At least one evidence-gathering round has run before the loop exits.
-Continue when:
-- LLM Response
-- A blocking evidence gap still prevents a grounded answer.
-Can exit with limitations when:
-- LLM Response
-- A best-effort answer is allowed when the main remaining gaps are stated explicitly.
-- Stable background questions can be answered without a fresh citation when the answer is already well grounded and any freshness limits are stated.
-Preferred next tools: inventory-lookup | record-lookup | protocol-matching
-
-Pre-synthesized question:
-Current best answer: LLM Response
-Supporting basis:
-- API response
-- paper-download returned 1 item(s).
-- paper-download: debug:1 - API response
-- paper-download: API response
-Logical verification:
-Part 1:
-- Context: API response | paper-download returned 1 item(s).
-- Pre-synthesized answer: LLM Response
-
-Rounds executed: 1/2
-
-Return JSON only.
-```
-
-### 8. science_loop_exit_judge_sub_agent
+### 7. science_loop_exit_judge_sub_agent
 
 Kind: `structured-json`
 
@@ -3952,12 +3833,12 @@ Pre-synthesized question:
 Current best answer: LLM Response
 Supporting basis:
 - API response
-- paper-download returned 1 item(s).
-- paper-download: debug:1 - API response
-- paper-download: API response
+- inventory-lookup returned 1 item(s).
+- inventory-lookup: debug:1 - API response
+- inventory-lookup: API response
 Logical verification:
 Part 1:
-- Context: API response | paper-download returned 1 item(s).
+- Context: API response | inventory-lookup returned 1 item(s).
 - Pre-synthesized answer: LLM Response
 
 Rounds executed: 1/2
@@ -3965,7 +3846,7 @@ Rounds executed: 1/2
 Return JSON only.
 ```
 
-### 9. science_agent_session_after_feedback
+### 8. science_agent_session_after_feedback
 
 Kind: `agent-session-feedback`
 
@@ -3981,7 +3862,7 @@ What does the latest evidence suggest about this science question?
 Evaluator feedback for general_science_question: the previous result is not sufficient yet.
 Reason: LLM Response
 Missing requirements: LLM Response; The current evidence directly supports the core answer to the clarified request.
-Suggested next tool: paper-download.
+Suggested next tool: inventory-lookup.
 Suggested query refinement: LLM Response
 Why: LLM Response
 Please continue with the next best tool call or tightly scoped parallel tool batch, or answer directly only if the evidence is now sufficient.
@@ -4085,6 +3966,22 @@ Please continue with the next best tool call or tightly scoped parallel tool bat
   {
     "name": "python-sandbox",
     "description": "Debug-only tool definition for python-sandbox.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "query"
+      ],
+      "properties": {
+        "query": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  {
+    "name": "command-line",
+    "description": "Debug-only tool definition for command-line.",
     "parameters": {
       "type": "object",
       "additionalProperties": false,
@@ -4213,7 +4110,7 @@ Please continue with the next best tool call or tightly scoped parallel tool bat
 ]
 ```
 
-### 10. science_agent_session_after_tool_output
+### 9. science_agent_session_after_tool_output
 
 Kind: `agent-session-tool-output`
 
@@ -4223,13 +4120,13 @@ Kind: `agent-session-tool-output`
 [
   {
     "callId": "debug-call-science-loop-2",
-    "name": "notebook-generation",
-    "output": "{\"ok\":true,\"tool_name\":\"notebook-generation\",\"summary\":\"API response\",\"result\":{\"summary\":\"API response\",\"text\":\"API response\",\"items\":[{\"id\":\"api-item-2\",\"label\":\"API response\"}]},\"items\":[{\"id\":\"api-item-2\",\"label\":\"API response\"}],\"citations\":[{\"source\":\"notebook-generation\",\"pointer\":\"debug:2\",\"reason\":\"API response\"}]}"
+    "name": "command-line",
+    "output": "{\"ok\":true,\"tool_name\":\"command-line\",\"summary\":\"API response\",\"result\":{\"summary\":\"API response\",\"text\":\"API response\",\"items\":[{\"id\":\"api-item-2\",\"label\":\"API response\"}]},\"items\":[{\"id\":\"api-item-2\",\"label\":\"API response\"}],\"citations\":[{\"source\":\"command-line\",\"pointer\":\"debug:2\",\"reason\":\"API response\"}]}"
   }
 ]
 ```
 
-### 11. science_loop_logic_extraction
+### 10. science_loop_logic_extraction
 
 Kind: `structured-json`
 
@@ -4263,75 +4160,14 @@ Pre-synthesized answer:
 Current best answer: LLM Response
 Supporting basis:
 - API response
-- notebook-generation returned 1 item(s).
-- notebook-generation: debug:2 - API response
-- paper-download: debug:1 - API response
+- command-line returned 1 item(s).
+- command-line: debug:2 - API response
+- inventory-lookup: debug:1 - API response
 
 Return JSON only.
 ```
 
-### 12. science_loop_current_scientific_state
-
-Kind: `structured-json`
-
-**Raw System Prompt**
-
-```text
-Return valid JSON only.
-```
-
-**Raw User Prompt**
-
-```text
-Summarize the current scientific state before the exit judge decides whether the reasoning loop should stop.
-
-Keep it compact and grounded only in the provided evidence.
-
-List what is supported now, what is contradicted, what remains unknown, and whether the remaining uncertainty is actually decision-relevant for deciding stop vs continue.
-
-Set uncertainty_decision_relevant to true only when the remaining uncertainty should materially change the loop exit decision.
-
-Include trace_sentence as one short sentence describing what you are doing at this step.
-
-Clarified request:
-LLM Response
-
-Exit criteria:
-Objective: LLM Response
-Exit conditions:
-- LLM Response
-- The current evidence directly supports the core answer to the clarified request.
-- The answer is grounded in the strongest available evidence, which may include external sources, trusted provided context, or prior retrieved support.
-Required evidence:
-- LLM Response
-- At least one evidence-gathering round has run before the loop exits.
-Continue when:
-- LLM Response
-- A blocking evidence gap still prevents a grounded answer.
-Can exit with limitations when:
-- LLM Response
-- A best-effort answer is allowed when the main remaining gaps are stated explicitly.
-- Stable background questions can be answered without a fresh citation when the answer is already well grounded and any freshness limits are stated.
-Preferred next tools: inventory-lookup | record-lookup | protocol-matching
-
-Pre-synthesized question:
-Current best answer: LLM Response
-Supporting basis:
-- API response
-- notebook-generation returned 1 item(s).
-- notebook-generation: debug:2 - API response
-- paper-download: debug:1 - API response
-Logical verification:
-Part 1:
-- Context: API response | notebook-generation returned 1 item(s).
-- Pre-synthesized answer: LLM Response
-
-Rounds executed: 2/2
-
-Return JSON only.
-```
-
-### 13. science_loop_exit_judge_sub_agent
+### 11. science_loop_exit_judge_sub_agent
 
 Kind: `structured-json`
 
@@ -4383,12 +4219,12 @@ Pre-synthesized question:
 Current best answer: LLM Response
 Supporting basis:
 - API response
-- notebook-generation returned 1 item(s).
-- notebook-generation: debug:2 - API response
-- paper-download: debug:1 - API response
+- command-line returned 1 item(s).
+- command-line: debug:2 - API response
+- inventory-lookup: debug:1 - API response
 Logical verification:
 Part 1:
-- Context: API response | notebook-generation returned 1 item(s).
+- Context: API response | command-line returned 1 item(s).
 - Pre-synthesized answer: LLM Response
 
 Rounds executed: 2/2
@@ -4398,7 +4234,7 @@ Return JSON only.
 
 ### Internal API Calls
 
-### 1. paper-download
+### 1. inventory-lookup
 
 Stub response: `API response`
 
@@ -4415,7 +4251,7 @@ Stub response: `API response`
 ```json
 {
   "ok": true,
-  "tool_name": "paper-download",
+  "tool_name": "inventory-lookup",
   "summary": "API response",
   "result": {
     "summary": "API response",
@@ -4435,7 +4271,7 @@ Stub response: `API response`
   ],
   "citations": [
     {
-      "source": "paper-download",
+      "source": "inventory-lookup",
       "pointer": "debug:1",
       "reason": "API response"
     }
@@ -4443,7 +4279,7 @@ Stub response: `API response`
 }
 ```
 
-### 2. notebook-generation
+### 2. command-line
 
 Stub response: `API response`
 
@@ -4460,7 +4296,7 @@ Stub response: `API response`
 ```json
 {
   "ok": true,
-  "tool_name": "notebook-generation",
+  "tool_name": "command-line",
   "summary": "API response",
   "result": {
     "summary": "API response",
@@ -4480,7 +4316,7 @@ Stub response: `API response`
   ],
   "citations": [
     {
-      "source": "notebook-generation",
+      "source": "command-line",
       "pointer": "debug:2",
       "reason": "API response"
     }
@@ -4497,8 +4333,8 @@ Stub response: `API response`
 5. `science_exit_criteria_started` [started] Generating exit criteria for general_science_question.
 6. `science_exit_criteria_completed` [ok] Science loop exit criteria are ready.
 7. `science_intent_started` [started] Started shared science reasoning loop for general_science_question.
-8. `science_round_started` [started] Science reasoning round 1 started with paper-download.
+8. `science_round_started` [started] Science reasoning round 1 started with inventory-lookup.
 9. `science_evaluator_continue` [started] LLM Response
-10. `science_round_started` [started] Science reasoning round 2 started with notebook-generation.
+10. `science_round_started` [started] Science reasoning round 2 started with command-line.
 11. `science_evaluator_satisfied` [ok] LLM Response
 12. `science_intent_completed` [ok] Science reasoning loop completed successfully.

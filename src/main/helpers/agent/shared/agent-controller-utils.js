@@ -552,11 +552,20 @@ function createAgentControllerUtils(deps = {}) {
     return DEFAULT_AGENT_MODELS[DEFAULT_LLM_PROVIDER];
   }
 
+  function resolveAgentLlmSource(llm) {
+    const provider = resolveAgentProvider(llm);
+    const endpoint = resolveAgentEndpoint(llm, provider);
+    const model = resolveAgentModel(llm, provider);
+    const apiKey = provider === LLM_PROVIDERS.CODEX ? '' : resolveAgentApiKey(llm);
+    return {
+      provider,
+      endpoint,
+      apiKey,
+      model
+    };
+  }
+
   async function requestIntentParserPayload({
-    provider,
-    endpoint,
-    apiKey,
-    model,
     message,
     conversation,
     projectName,
@@ -570,18 +579,11 @@ function createAgentControllerUtils(deps = {}) {
 
     try {
       const result = await llmHelpers.requestStructuredJsonPayload({
-        provider,
-        endpoint,
-        apiKey,
-        model,
         stage: 'intent_parser',
         systemPrompt: 'Return valid JSON only.',
         userPrompt: prompt,
         schema: INTENT_PARSER_RESPONSE_SCHEMA,
         traceContext,
-        maxOutputTokens: 1100,
-        openAiStrict: true,
-        openAiAsDefaultProvider: true,
         defaultError: 'Intent parser provider is not configured.'
       });
       if (!result?.ok) {
@@ -615,6 +617,7 @@ function createAgentControllerUtils(deps = {}) {
     resolveAgentProvider,
     resolveAgentEndpoint,
     resolveAgentModel,
+    resolveAgentLlmSource,
     requestIntentParserPayload
   };
 }

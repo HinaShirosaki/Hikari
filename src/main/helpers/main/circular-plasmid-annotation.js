@@ -71,17 +71,13 @@ const DEFAULT_CIRCULAR_PLASMID_ANNOTATION_OPTIONS = Object.freeze({
   sortResults: true
 });
 
-function cleanText(value, maxLength = 240) {
+function cleanText(value, _maxLength = 240) {
   const text = String(value == null ? '' : value)
-    .replace(/\s+/g, ' ')
-    .trim();
+    .replace(/\s+/g, ' ');
   if (!text) {
     return '';
   }
-  if (!Number.isFinite(Number(maxLength)) || maxLength <= 0) {
-    return text;
-  }
-  return text.length > maxLength ? text.slice(0, maxLength) : text;
+  return text;
 }
 
 function clampInteger(value, min, max, fallback = min) {

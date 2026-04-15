@@ -381,9 +381,7 @@
   overflow: hidden;
   background: #fff;
   border-radius: 8px;
-  box-shadow:
-    0 0 0 1px rgba(18, 48, 84, 0.08),
-    0 18px 38px rgba(19, 47, 84, 0.18);
+  box-shadow: 0 0 0 1px rgba(18, 48, 84, 0.08);
 }
 
 .papers-viewer-canvas {
@@ -433,7 +431,7 @@
 
 .papers-viewer-text-layer span {
   font-size: calc(var(--font-height, 1px) * var(--total-scale-factor, 1));
-  font-family: sans-serif;
+  font-family: var(--font-app);
   transform: scaleX(var(--scale-x, 1)) rotate(var(--rotate, 0deg));
 }
 

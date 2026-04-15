@@ -3,7 +3,7 @@
 const { toIntegerInRange } = require('../../main/value-utils.js');
 
 function defaultCleanText(value, _maxLength = 500) {
-  const text = String(value || '').trim();
+  const text = String(value || '');
   if (!text) {
     return '';
   }
@@ -118,7 +118,7 @@ function resolvePaperDownloadContext(args = {}, context = {}) {
 }
 
 function cleanTextValue(value, _maxLength = 500) {
-  const text = String(value || '').trim();
+  const text = String(value || '');
   if (!text) {
     return '';
   }
@@ -129,6 +129,7 @@ function registerAgentToolExecutors(deps = {}) {
   const cleanText = typeof deps.cleanText === 'function' ? deps.cleanText : defaultCleanText;
   const genericAgentToolRuntime = deps.genericAgentToolRuntime;
   const agentLookupRuntime = deps.agentLookupRuntime || {};
+  const webSearchRuntime = deps.webSearchRuntime || {};
   const literatureSearchRuntime = deps.literatureSearchRuntime || {};
   const purchaseRecommendationRuntime = deps.purchaseRecommendationRuntime || {};
   const pythonSandboxToolRuntime = deps.pythonSandboxToolRuntime || {};
@@ -202,6 +203,29 @@ function registerAgentToolExecutors(deps = {}) {
     };
   });
 
+  genericAgentToolRuntime.registerToolExecutor('web-search', async ({ args, context }) => {
+    if (!webSearchRuntime || typeof webSearchRuntime.execute !== 'function') {
+      return {
+        ok: false,
+        status: 'error',
+        error: 'Web search runtime is not configured.'
+      };
+    }
+    return webSearchRuntime.execute({
+      ...args,
+      traceContext: context?.traceContext || null,
+      query: cleanText(args?.query, 1200),
+      message: cleanText(args?.message || context?.message, 1200),
+      parser_payload: resolveToolParserPayload(args, context),
+      limit: toIntegerInRange(args?.limit, 8, 1, 25),
+      allowed_domains: Array.isArray(args?.allowed_domains) ? args.allowed_domains : [],
+      user_location: args?.user_location && typeof args.user_location === 'object'
+        ? args.user_location
+        : null,
+      external_web_access: args?.external_web_access !== false
+    });
+  });
+
   genericAgentToolRuntime.registerToolExecutor('literature-search', async ({ args, context }) => {
     if (!literatureSearchRuntime || typeof literatureSearchRuntime.execute !== 'function') {
       return {
@@ -210,15 +234,28 @@ function registerAgentToolExecutors(deps = {}) {
         error: 'Literature search runtime is not configured.'
       };
     }
+    const snapshot = context?.snapshot && typeof context.snapshot === 'object'
+      ? context.snapshot
+      : {};
+    const project = args?.project && typeof args.project === 'object'
+      ? args.project
+      : (context?.project && typeof context.project === 'object' ? context.project : {});
+    const storagePath = cleanText(
+      args?.storage_path
+      || args?.storagePath
+      || snapshot?.settings?.storagePath
+      || snapshot?.storagePath,
+      2000
+    );
     return literatureSearchRuntime.execute({
       ...args,
-      provider: cleanText(context?.provider, 80),
-      endpoint: cleanText(context?.endpoint, 2000),
-      apiKey: cleanText(context?.apiKey, 400),
-      model: cleanText(context?.model, 120),
       traceContext: context?.traceContext || null,
       query: cleanText(args?.query, 600),
       message: cleanText(args?.message || context?.message, 1200),
+      snapshot,
+      project,
+      storage_path: storagePath,
+      storagePath,
       parser_payload: resolveToolParserPayload(args, context),
       limit: toIntegerInRange(args?.limit, 8),
       max_per_source: toIntegerInRange(args?.max_per_source, 5, 1, 10)
@@ -345,10 +382,6 @@ function registerAgentToolExecutors(deps = {}) {
   });
 
   genericAgentToolRuntime.registerToolExecutor('notebook-draft', async ({ args, context }) => notebookDraftRuntime.generateNotebookDraft({
-    provider: cleanText(context?.provider, 80),
-    endpoint: cleanText(context?.endpoint, 1600),
-    apiKey: cleanText(context?.apiKey, 400),
-    model: cleanText(context?.model, 120),
     message: cleanText(context?.message, 3200),
     conversation: Array.isArray(context?.conversation) ? context.conversation : [],
     snapshot: context?.snapshot && typeof context.snapshot === 'object' ? context.snapshot : {},
@@ -365,6 +398,7 @@ function registerAgentToolExecutors(deps = {}) {
   return [
     'inventory-lookup',
     'record-lookup',
+    'web-search',
     'literature-search',
     'paper-download',
     'purchase-recommendation',

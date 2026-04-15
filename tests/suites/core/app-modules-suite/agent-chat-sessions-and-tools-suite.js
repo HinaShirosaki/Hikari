@@ -5,7 +5,6 @@ module.exports = function registerAppAgentChatSessionsAndToolsSuite(context = {}
 test('agent-chat loads saved sessions from chat logs and switches sessions from the sidebar', async () => {
   const document = createMockDocument([
     'agent-project-select',
-    'agent-context-summary',
     'agent-session-status',
     'agent-session-list',
     'agent-new-chat-btn',
@@ -178,6 +177,9 @@ test('agent-chat loads saved sessions from chat logs and switches sessions from 
   assert.equal(state.agentChat.messages.length, 2);
   assert.match(sessionList.innerHTML, /Recent literature search/);
   assert.match(sessionList.innerHTML, /Atlas notebook question/);
+  assert.doesNotMatch(sessionList.innerHTML, /Found 3 recent papers/);
+  assert.doesNotMatch(sessionList.innerHTML, /Saved chat/);
+  assert.doesNotMatch(sessionList.innerHTML, /msgs/);
   assert.match(history.innerHTML, /Found 3 recent papers/);
 
   const sessionButtons = sessionList.querySelectorAll('[data-session-id]');
@@ -195,7 +197,6 @@ test('agent-chat loads saved sessions from chat logs and switches sessions from 
 test('agent-chat session switching honors nested click targets and replays the latest click after an in-flight load', async () => {
   const document = createMockDocument([
     'agent-project-select',
-    'agent-context-summary',
     'agent-session-status',
     'agent-session-list',
     'agent-new-chat-btn',
@@ -391,7 +392,6 @@ test('agent-chat session switching honors nested click targets and replays the l
 test('agent-chat exposes developer-only manual tool smoke test action and renders results', async () => {
   const document = createMockDocument([
     'agent-project-select',
-    'agent-context-summary',
     'agent-developer-tools',
     'agent-dev-test-tools-btn',
     'agent-dev-tool-select',
@@ -515,7 +515,6 @@ test('agent-chat exposes developer-only manual tool smoke test action and render
 test('agent-chat lets developers run one tool with a manual message and inspect the raw result', async () => {
   const document = createMockDocument([
     'agent-project-select',
-    'agent-context-summary',
     'agent-developer-tools',
     'agent-dev-test-tools-btn',
     'agent-dev-tool-select',
@@ -668,7 +667,6 @@ test('agent-chat lets developers run one tool with a manual message and inspect 
 test('agent-chat prioritizes inventory lookup summary text and renders lookup metadata panels', async () => {
   const document = createMockDocument([
     'agent-project-select',
-    'agent-context-summary',
     'agent-chat-history',
     'agent-message-input',
     'agent-send-btn',
@@ -804,7 +802,6 @@ test('agent-chat prioritizes inventory lookup summary text and renders lookup me
 test('agent-chat uses record lookup summary when inventory lookup payload is absent', async () => {
   const document = createMockDocument([
     'agent-project-select',
-    'agent-context-summary',
     'agent-chat-history',
     'agent-message-input',
     'agent-send-btn',
@@ -906,7 +903,6 @@ test('agent-chat uses record lookup summary when inventory lookup payload is abs
 test('agent-chat prioritizes purchase recommendation summary, renders shopping tiles, and opens vendor pages', async () => {
   const document = createMockDocument([
     'agent-project-select',
-    'agent-context-summary',
     'agent-chat-history',
     'agent-message-input',
     'agent-send-btn',

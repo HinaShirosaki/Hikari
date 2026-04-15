@@ -83,14 +83,15 @@ export function initLabNotebook({
     renderProtocolOptions();
   }
 
-  function buildNotebookFolderPath(projectName) {
+  function buildNotebookFolderPath(projectName, protocolName, entryId) {
     const rootPath = state.settings.storagePath.trim();
     if (!rootPath) {
       return '';
     }
     const safeProject = sanitizeFolderName(projectName);
-    const experimentDateTime = new Date().toISOString().replace('T', '_').replace(/[:.]/g, '-').replace('Z', '');
-    return `${rootPath}/Project/${safeProject || 'Untitled_Project'}/Notebook/${experimentDateTime}`;
+    const safeProtocol = sanitizeFolderName(protocolName || 'Notebook_Page');
+    const safeEntryId = sanitizeFolderName(entryId || 'page');
+    return `${rootPath}/Project/${safeProject || 'Untitled_Project'}/Notebook/${safeProtocol || 'Notebook_Page'}__${safeEntryId}`;
   }
 
   function sanitizeFolderName(value) {
@@ -128,6 +129,86 @@ export function initLabNotebook({
       return 'Unknown time';
     }
     return date.toLocaleString();
+  }
+
+  function cloneProtocolSnapshot(protocol) {
+    if (!protocol || typeof protocol !== 'object') {
+      return null;
+    }
+    const protocolId = String(protocol.id || '').trim();
+    return {
+      id: protocolId,
+      name: String(protocol.name || '').trim() || 'Untitled Protocol',
+      category: String(protocol.category || '').trim(),
+      purpose: String(protocol.purpose || '').trim(),
+      steps: Array.isArray(protocol.steps)
+        ? protocol.steps.map((step, index) => {
+          const stepId = String(step?.id || '').trim() || `${protocolId || 'protocol'}_step_${index + 1}`;
+          return {
+            id: stepId,
+            text: String(step?.text || '').trim(),
+            placeholders: Array.isArray(step?.placeholders)
+              ? step.placeholders.map((placeholder, placeholderIndex) => ({
+                id: String(placeholder?.id || '').trim() || `${stepId}_placeholder_${placeholderIndex + 1}`,
+                name: String(placeholder?.name || '').trim() || `Value ${placeholderIndex + 1}`
+              }))
+              : []
+          };
+        })
+        : []
+    };
+  }
+
+  function resolveEntryProject(entry) {
+    const liveProject = state.projects.find((item) => item.id === entry?.projectId) || null;
+    if (liveProject) {
+      return liveProject;
+    }
+    const fallbackName = String(entry?.projectName || '').trim() || 'Untitled Project';
+    return {
+      id: String(entry?.projectId || '').trim(),
+      name: fallbackName
+    };
+  }
+
+  function resolveEntryProtocol(entry) {
+    const liveProtocol = state.protocols.find((item) => item.id === entry?.protocolId) || null;
+    if (liveProtocol) {
+      return liveProtocol;
+    }
+    const snapshot = cloneProtocolSnapshot(entry?.protocolSnapshot);
+    if (snapshot) {
+      return snapshot;
+    }
+    const fallbackName = String(entry?.protocolName || entry?.workflowContext?.workflowBlockTitle || '').trim();
+    if (!fallbackName) {
+      return null;
+    }
+    return {
+      id: String(entry?.protocolId || entry?.id || '').trim(),
+      name: fallbackName,
+      steps: []
+    };
+  }
+
+  function resolveEntryCollectionName(entry) {
+    const workflowEntryName = String(entry?.workflowContext?.workflowEntryName || '').trim();
+    if (workflowEntryName) {
+      return workflowEntryName;
+    }
+    const workflowName = String(entry?.workflowContext?.workflowName || '').trim();
+    if (workflowName) {
+      return workflowName;
+    }
+    const liveProject = state.projects.find((item) => item.id === entry?.projectId) || null;
+    if (liveProject?.name) {
+      return liveProject.name;
+    }
+    const projectName = String(entry?.projectName || '').trim();
+    if (projectName) {
+      return projectName;
+    }
+    return 'Untitled Project';
   }
 
   function onProtocolChange() {
@@ -179,6 +260,7 @@ export function initLabNotebook({
     const editingEntry = editingEntryId
       ? state.notebookEntries.find((item) => item.id === editingEntryId && matchesNotebookType(item))
       : null;
+    const entryId = editingEntry?.id || createId();
     const selectedResultFiles = Array.from(notebookResultFile.files || []);
     const existingResultFiles = Array.isArray(editingEntry?.resultFiles)
       ? editingEntry.resultFiles.map((name) => String(name || '').trim()).filter(Boolean)
@@ -188,7 +270,7 @@ export function initLabNotebook({
         .filter((record) => record && typeof record === 'object')
         .map((record) => ({ ...record }))
       : [];
-    const storageFolder = editingEntry?.storageFolder || buildNotebookFolderPath(project.name);
+    const storageFolder = editingEntry?.storageFolder || buildNotebookFolderPath(project.name, protocol.name, entryId);
 
     let importedResultFileRecords = [];
     try {
@@ -212,12 +294,13 @@ export function initLabNotebook({
     const nowIso = new Date().toISOString();
     const notebookState = resolveEntryNotebookState(editingEntry);
     const entry = {
-      id: editingEntry?.id || createId(),
+      id: entryId,
       notebookType,
       projectId: project.id,
       projectName: project.name,
       protocolId: protocol.id,
       protocolName: protocol.name,
+      protocolSnapshot: cloneProtocolSnapshot(protocol) || cloneProtocolSnapshot(editingEntry?.protocolSnapshot),
       values,
       result: notebookResult.value.trim(),
       resultFiles,
@@ -354,12 +437,12 @@ export function initLabNotebook({
     updatePageListStatus();
   }
 
-  function renderProtocolOptions(preferredProtocolId = '') {
+  function renderProtocolOptions(preferredProtocolId = '', options = {}) {
     const projectId = notebookProjectSelect.value;
     const selected = preferredProtocolId || notebookProtocolSelect.value;
     const hasProject = Boolean(state.projects.find((item) => item.id === projectId));
     const searchTerm = String(notebookProtocolSearchInput?.value || '').trim().toLowerCase();
-    const options = ['<option value="">Select protocol</option>'];
+    const optionMarkup = ['<option value="">Select protocol</option>'];
     const selectedProtocol = state.protocols.find((item) => item.id === selected) || null;
     const filteredProtocols = hasProject
       ? state.protocols.filter((protocol) => String(protocol.name || '').toLowerCase().includes(searchTerm))
@@ -375,10 +458,10 @@ export function initLabNotebook({
 
     filteredProtocols.forEach((protocol) => {
       const isSelected = protocol.id === selected ? ' selected' : '';
-      options.push(`<option value="${protocol.id}"${isSelected}>${safeText(protocol.name)}</option>`);
+      optionMarkup.push(`<option value="${protocol.id}"${isSelected}>${safeText(protocol.name)}</option>`);
     });
 
-    notebookProtocolSelect.innerHTML = options.join('');
+    notebookProtocolSelect.innerHTML = optionMarkup.join('');
     notebookProtocolSelect.disabled = !hasProject;
 
     if (hasProject && selected && filteredProtocols.some((protocol) => protocol.id === selected)) {
@@ -386,7 +469,9 @@ export function initLabNotebook({
     }
 
     updatePageListStatus();
-    onProtocolChange();
+    if (options.triggerChange !== false) {
+      onProtocolChange();
+    }
   }
 
   function renderEntries() {
@@ -394,9 +479,10 @@ export function initLabNotebook({
       .filter((entry) => matchesNotebookType(entry))
       .slice()
       .sort((left, right) => {
-        const projectCompare = String(left.projectName || '').localeCompare(String(right.projectName || ''));
-        if (projectCompare !== 0) {
-          return projectCompare;
+        const collectionCompare = resolveEntryCollectionName(left)
+          .localeCompare(resolveEntryCollectionName(right));
+        if (collectionCompare !== 0) {
+          return collectionCompare;
         }
         return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime();
       });
@@ -410,45 +496,57 @@ export function initLabNotebook({
 
     const groups = new Map();
     entries.forEach((entry) => {
-      const key = entry.projectId || '__unknown__';
-      if (!groups.has(key)) {
-        groups.set(key, {
-          projectName: entry.projectName || 'Untitled Project',
+      const workflowEntryId = String(entry?.workflowContext?.workflowEntryId || '').trim();
+      const workflowName = String(entry?.workflowContext?.workflowName || '').trim();
+      const isWorkflowEntry = Boolean(workflowEntryId || workflowName);
+      const groupName = resolveEntryCollectionName(entry);
+      const groupKey = isWorkflowEntry
+        ? `__workflow__:${workflowEntryId || workflowName || entry.id}`
+        : (entry.projectId || `__project__:${groupName}`);
+      if (!groups.has(groupKey)) {
+        groups.set(groupKey, {
+          groupName,
+          groupClass: isWorkflowEntry
+            ? 'biology-notebook-folder--workflow'
+            : 'biology-notebook-folder--project',
+          itemClass: isWorkflowEntry
+            ? 'biology-notebook-folder-item--workflow'
+            : 'biology-notebook-folder-item--project',
           entries: []
         });
       }
-      groups.get(key).entries.push(entry);
+      groups.get(groupKey).entries.push(entry);
     });
 
     notebookEntryList.innerHTML = Array.from(groups.values()).map((group) => {
-      const itemsHtml = group.entries.map((entry) => {
+      const entryButtons = group.entries.map((entry) => {
         const isActive = entry.id === editingEntryId ? ' is-active' : '';
         const stateLabel = notebookStateLabel(entry);
-        const stateClass = normalizeNotebookState(entry?.notebookState) === 'planned' ? ' is-planned' : ' is-executed';
-        const updatedAt = entry.updatedAt ? formatEntryTimestamp(entry.updatedAt) : 'Not saved yet';
-        const resultText = String(entry.result || '').trim() || 'No result notes yet.';
-        const resultFiles = Array.isArray(entry.resultFiles) && entry.resultFiles.length
-          ? entry.resultFiles.join(', ')
-          : 'No result files attached.';
+        const stateClass = normalizeNotebookState(entry?.notebookState) === 'planned'
+          ? ' is-planned'
+          : ' is-executed';
         return `
-          <details class="biology-notebook-page-card${isActive}${stateClass}"${isActive ? ' open' : ''}>
-            <summary class="biology-notebook-page-item" data-notebook-entry-id="${safeText(entry.id)}">
-              <span class="biology-notebook-page-name">${safeText(entry.protocolName || 'Untitled Page')}</span>
-              <span class="biology-notebook-page-meta${normalizeNotebookState(entry?.notebookState) === 'planned' ? ' is-planned' : ''}">${safeText(`${stateLabel} | ${updatedAt}`)}</span>
-            </summary>
-            <div class="biology-notebook-page-detail">
-              <p class="biology-notebook-page-detail-line"><strong>Notes:</strong> ${safeText(resultText)}</p>
-              <p class="biology-notebook-page-detail-line"><strong>Files:</strong> ${safeText(resultFiles)}</p>
-            </div>
-          </details>
+          <button
+            type="button"
+            class="biology-notebook-page-row${isActive}${stateClass}"
+            data-notebook-entry-id="${safeText(entry.id)}"
+          >
+            <span class="biology-notebook-page-name">${safeText(entry.protocolName || entry.workflowContext?.workflowBlockTitle || 'Untitled Page')}</span>
+            <span class="biology-notebook-page-badge">${safeText(stateLabel)}</span>
+          </button>
         `;
       }).join('');
 
       return `
-        <section class="biology-notebook-project-group">
-          <p class="biology-notebook-project-name">${safeText(group.projectName)}</p>
-          <div class="biology-notebook-project-pages">${itemsHtml}</div>
-        </section>
+        <details class="biology-notebook-folder ${group.groupClass}" open>
+          <summary class="biology-notebook-folder-item ${group.itemClass}">
+            <span class="biology-notebook-folder-glyph" aria-hidden="true"></span>
+            <span class="biology-notebook-folder-name">${safeText(group.groupName)}</span>
+          </summary>
+          <div class="biology-notebook-folder-children biology-notebook-folder-children--pages">
+            ${entryButtons}
+          </div>
+        </details>
       `;
     }).join('');
   }
@@ -471,6 +569,19 @@ export function initLabNotebook({
     if (project) {
       notebookPageListStatus.textContent = `Viewing pages for ${project.name}`;
       return;
+    }
+    const activeEntry = getActiveEntry();
+    if (activeEntry) {
+      const activeCollectionName = resolveEntryCollectionName(activeEntry);
+      const activeProtocol = resolveEntryProtocol(activeEntry);
+      if (activeCollectionName && activeProtocol?.name) {
+        notebookPageListStatus.textContent = `Viewing page for ${activeCollectionName} / ${activeProtocol.name}`;
+        return;
+      }
+      if (activeProtocol?.name) {
+        notebookPageListStatus.textContent = `Viewing ${activeProtocol.name}`;
+        return;
+      }
     }
     notebookPageListStatus.textContent = savedEntries.length
       ? 'Select a notebook page or choose a project and protocol to start a new one.'
@@ -675,7 +786,7 @@ export function initLabNotebook({
     if (!entry) {
       return;
     }
-    const protocol = state.protocols.find((item) => item.id === entry.protocolId) || null;
+    const protocol = resolveEntryProtocol(entry);
     exportNotebookEntryPdf({ entry, protocol });
   }
 
@@ -686,9 +797,34 @@ export function initLabNotebook({
     }
 
     editingEntryId = entry.id;
-    notebookProjectSelect.value = entry.projectId;
-    renderProtocolOptions(entry.protocolId);
-    onProtocolChange();
+    const project = resolveEntryProject(entry);
+    const protocol = resolveEntryProtocol(entry);
+    const hasLiveProject = Boolean(project?.id && state.projects.some((item) => item.id === project.id));
+    const hasLiveProtocol = Boolean(protocol?.id && state.protocols.some((item) => item.id === protocol.id));
+
+    notebookProjectSelect.value = hasLiveProject ? project.id : '';
+    renderProtocolOptions(hasLiveProtocol ? protocol.id : '', { triggerChange: false });
+
+    if (!project || !protocol) {
+      clearViewer();
+      renderEntries();
+      updatePageListStatus();
+      return;
+    }
+
+    if (hasLiveProject && hasLiveProtocol) {
+      onProtocolChange();
+      return;
+    }
+
+    renderProtocolViewer({
+      project,
+      protocol,
+      entry,
+      isSavedEntry: true
+    });
+    renderEntries();
+    updatePageListStatus();
   }
 
   function renderProtocolViewer({ project, protocol, entry, isSavedEntry }) {
@@ -724,6 +860,9 @@ export function initLabNotebook({
   }
 
   function buildViewerMeta(project, entry, isSavedEntry) {
+    const contextLabel = entry
+      ? resolveEntryCollectionName(entry)
+      : String(project?.name || '').trim() || 'Untitled Project';
     if (entry) {
       const updatedAt = entry.updatedAt ? formatEntryTimestamp(entry.updatedAt) : 'Unknown time';
       const stateLabel = notebookStateLabel(entry);
@@ -733,12 +872,12 @@ export function initLabNotebook({
       const resultFiles = Array.isArray(entry.resultFiles) && entry.resultFiles.length
         ? ` Result files: ${entry.resultFiles.join(', ')}.`
         : '';
-      return `${project.name} notebook page. State: ${stateLabel}. Updated ${updatedAt}.${executedAt}${resultFiles}`;
+      return `${contextLabel} notebook page. State: ${stateLabel}. Updated ${updatedAt}.${executedAt}${resultFiles}`;
     }
     if (isSavedEntry) {
-      return `${project.name} notebook page.`;
+      return `${contextLabel} notebook page.`;
     }
-    return `${project.name} protocol draft. Fill placeholders and results, then save this notebook page.`;
+    return `${contextLabel} protocol draft. Fill placeholders and results, then save this notebook page.`;
   }
 
   function clearViewer() {

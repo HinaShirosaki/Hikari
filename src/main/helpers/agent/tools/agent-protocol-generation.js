@@ -358,16 +358,12 @@ function createProtocolGenerationRuntime(deps = {}) {
     }
 
     const llmResult = await requestStructuredJsonPayload({
-      provider: cleanText(source.provider, 80),
-      endpoint: cleanText(source.endpoint, 2000),
-      apiKey: cleanText(source.apiKey, 400),
-      model: cleanText(source.model, 120),
+      source,
       stage: 'protocol_generation',
       systemPrompt: PROTOCOL_GENERATION_SYSTEM_PROMPT,
       userPrompt: prompt,
       schema: PROTOCOL_GENERATION_RESPONSE_SCHEMA,
       traceContext: source.traceContext || null,
-      maxOutputTokens: 1600,
       defaultError: 'Protocol generation provider is not configured.'
     });
 

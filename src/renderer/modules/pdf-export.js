@@ -47,8 +47,7 @@ function createContext({
   orientation = 'p',
   format = 'letter',
   margin = PAGE_MARGIN,
-  serif = false,
-  sectionDividers = false
+  serif = false
 }) {
   const JsPdf = getJsPdfCtor();
   if (!JsPdf) {
@@ -79,7 +78,6 @@ function createContext({
     margin,
     y,
     serif,
-    sectionDividers,
     sectionCount: 0
   };
 }
@@ -99,12 +97,10 @@ function writeWrappedLines(doc, text, x, y, maxWidth, lineHeight = LINE_HEIGHT) 
 }
 
 function writeHeading(ctx, heading) {
-  if (ctx.sectionDividers && ctx.sectionCount > 0) {
-    ensureSpace(ctx, 14);
-    ctx.doc.setDrawColor(180, 180, 180);
-    ctx.doc.setLineWidth(0.8);
-    ctx.doc.line(ctx.margin, ctx.y + 2, ctx.pageWidth - ctx.margin, ctx.y + 2);
-    ctx.y += 10;
+  const spacingBefore = ctx.sectionCount > 0 ? 8 : 0;
+  if (spacingBefore > 0) {
+    ensureSpace(ctx, spacingBefore);
+    ctx.y += spacingBefore;
   }
   ensureSpace(ctx, HEADING_FONT_SIZE + 12);
   ctx.doc.setFont(ctx.serif ? 'times' : 'helvetica', 'bold');
@@ -283,8 +279,7 @@ export function exportProtocolPdf(protocol) {
     orientation: 'p',
     format: 'letter',
     margin: 72,
-    serif: true,
-    sectionDividers: true
+    serif: true
   });
   if (!ctx) {
     return false;
@@ -329,8 +324,7 @@ export function exportNotebookEntryPdf({ entry, protocol }) {
     orientation: 'p',
     format: 'letter',
     margin: 72,
-    serif: true,
-    sectionDividers: true
+    serif: true
   });
   if (!ctx) {
     return false;

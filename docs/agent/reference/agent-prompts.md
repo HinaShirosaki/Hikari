@@ -1,7 +1,7 @@
 # Agent Prompt Registry
 
-Generated at: 2026-04-11T22:32:31.577Z
-Prompt entries: 44
+Generated at: 2026-04-12T22:30:56.964Z
+Prompt entries: 43
 
 This file is generated from the prompt registry and sample renderers in `src/main/helpers/agent/shared/agent-prompt-registry.js`.
 
@@ -11,7 +11,7 @@ This file is generated from the prompt registry and sample renderers in `src/mai
 
 ID: `shared.structured_json_only_system_prompt`
 Kind: `system`
-Source: `src/main/helpers/agent/deep-research/step-1-clarify-question.js`, `src/main/helpers/agent/deep-research/step-2-ask-targeted-follow-up.js`, `src/main/helpers/agent/deep-research/step-3-draft-research-plan.js`, `src/main/helpers/agent/deep-research/step-4-execute-plan.js`, `src/main/helpers/agent/runtime/science-reasoning-loop/input-clarification.js`, `src/main/helpers/agent/runtime/science-reasoning-loop/agent-route-planner.js`, `src/main/helpers/agent/runtime/science-reasoning-loop/loop-exit-criteria.js`, `src/main/helpers/agent/runtime/science-reasoning-loop/current-scientific-state.js`, `src/main/helpers/agent/runtime/science-reasoning-loop/thinking-trace.js`, `src/main/helpers/agent/runtime/science-reasoning-loop/final-synthesis.js`, `src/main/helpers/agent/deep-research/sub-agent-usage.js`
+Source: `src/main/helpers/agent/deep-research/step-1-clarify-question.js`, `src/main/helpers/agent/deep-research/step-2-ask-targeted-follow-up.js`, `src/main/helpers/agent/deep-research/step-3-draft-research-plan.js`, `src/main/helpers/agent/deep-research/step-4-execute-plan.js`, `src/main/helpers/agent/runtime/science-reasoning-loop/input-clarification.js`, `src/main/helpers/agent/runtime/science-reasoning-loop/agent-route-planner.js`, `src/main/helpers/agent/runtime/science-reasoning-loop/loop-exit-criteria.js`, `src/main/helpers/agent/runtime/science-reasoning-loop/thinking-trace.js`, `src/main/helpers/agent/runtime/science-reasoning-loop/final-synthesis.js`, `src/main/helpers/agent/deep-research/sub-agent-usage.js`
 Notes: Shared across structured-output deep-research and science-loop steps.
 
 ```text
@@ -446,10 +446,11 @@ Available tools:
 - protocol-matching: Rank local protocols against protocol candidates and select the best protocol for notebook generation.
 - notebook-generation: Generate a protocol-based notebook draft using a selected protocol, project context, and placeholder values.
 - notebook-draft: Propose a likely next experiment, prepare a planned biology notebook draft, and wait for explicit confirmation before creating the page.
-- python-sandbox: Run agent-authored Python code in an isolated sandbox with staged input files, chat-visible text/image outputs, and readback artifacts. Inside the sandbox, import enana_sandbox to read files and emit renderable outputs.
+- python-sandbox: Run agent-authored Python code in an isolated sandbox with staged input files, chat-visible text/image outputs, and readback artifacts. The managed sandbox helper will try to repair failing runs itself, and you can resume the same helper later with feedback by passing its sub_agent_id. Inside the sandbox, import enana_sandbox to read files and emit renderable outputs.
+- command-line: Run a local shell command in the project workspace, capture stdout and stderr, and return the exit status. Prefer this for focused local CLI inspection or execution when Python is unnecessary.
 - sub-agent: Create, message, inspect, list, and delete helper sub-agent sessions managed outside the main agent.
 - memory: Recall, remember, forget, and list sparse long-term user memory records across sessions.
-- literature-search: Search literature across PubMed, Crossref, UniProt, Europe PMC, or generic web results with scholarly-first auto fallback. Prefer compact keyword or entity-style queries such as `MAPK inhibitor resistance mechanism` instead of full-sentence prompts.
+- literature-search: Search literature across PubMed, Crossref, UniProt, Europe PMC, or generic web results with scholarly-first auto fallback. The runtime now delegates to a sub-agent for candidate selection, paper reading, and optional paper downloads into the literature-search storage folder. Prefer compact keyword or entity-style queries such as `MAPK inhibitor resistance mechanism` instead of full-sentence prompts.
 - purchase-recommendation: Search the web for purchasable products, extract vendor page metadata such as image and price, hard-filter explicit product requirements, and rank valid items for chat recommendation cards.
 - paper-download: Extract a downloadable paper PDF URL, stream the file into app storage with progress tracking, and fall back to a browser-assisted download session when sites block automated fetches.
 - paper-analysis: Summarize a paper briefly, extract protocol-relevant methods, and optionally draft a generated protocol from the paper.
@@ -526,8 +527,8 @@ Input schema JSON:
 }
 
 Tool: literature-search
-Short description: Search literature across PubMed, Crossref, UniProt, Europe PMC, or generic web results with scholarly-first auto fallback. Prefer compact keyword or entity-style queries such as `MAPK inhibitor resistance mechanism` instead of full-sentence prompts.
-Detailed usage: Use this tool when the user wants papers, references, recent literature, external evidence, or protein knowledgebase entries rather than a summary of one already-identified paper. Provide `query` when possible, and prefer short keyword or entity phrases instead of full-sentence prompts, for example `MAPK inhibitor resistance mechanism review` or `PD-1 ubiquitination stability`. Use `source` for one source, `sources` for an explicit multi-source batch, or leave them empty for scholarly-first auto mode. Auto mode searches literature sources first and only falls back to generic web search when those sources do not produce results. Prefer `pubmed`, `crossref`, and `europe_pmc` for papers, `uniprot` for protein/gene knowledge, and `web` for generic recency-aware external search.
+Short description: Search literature across PubMed, Crossref, UniProt, Europe PMC, or generic web results with scholarly-first auto fallback. The runtime now delegates to a sub-agent for candidate selection, paper reading, and optional paper downloads into the literature-search storage folder. Prefer compact keyword or entity-style queries such as `MAPK inhibitor resistance mechanism` instead of full-sentence prompts.
+Detailed usage: Use this tool when the user wants papers, references, recent literature, external evidence, or protein knowledgebase entries rather than a summary of one already-identified paper. Provide `query` when possible, and prefer short keyword or entity phrases instead of full-sentence prompts, for example `MAPK inhibitor resistance mechanism review` or `PD-1 ubiquitination stability`. Use `source` for one source, `sources` for an explicit multi-source batch, or leave them empty for scholarly-first auto mode. The literature workflow delegates search and reading to a sub-agent, then loads the selected paper context back into the main agent. Auto mode searches literature sources first and only falls back to generic web search when those sources do not produce results. Prefer `pubmed`, `crossref`, and `europe_pmc` for papers, `uniprot` for protein/gene knowledge, and `web` for generic recency-aware external search.
 Input schema JSON:
 {
   "type": "object",
@@ -559,6 +560,11 @@ Input schema JSON:
       "type": "integer",
       "minimum": 1,
       "maximum": 25
+    },
+    "max_papers": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 24
     },
     "max_per_source": {
       "type": "integer",
@@ -656,7 +662,7 @@ Input schema JSON:
 }
 
 Tool: literature-search
-Description: Search literature across PubMed, Crossref, UniProt, Europe PMC, or generic web results with scholarly-first auto fallback. Prefer compact keyword or entity-style queries such as `MAPK inhibitor resistance mechanism` instead of full-sentence prompts.
+Description: Search literature across PubMed, Crossref, UniProt, Europe PMC, or generic web results with scholarly-first auto fallback. The runtime now delegates to a sub-agent for candidate selection, paper reading, and optional paper downloads into the literature-search storage folder. Prefer compact keyword or entity-style queries such as `MAPK inhibitor resistance mechanism` instead of full-sentence prompts.
 Input schema JSON:
 {
   "type": "object",
@@ -688,6 +694,11 @@ Input schema JSON:
       "type": "integer",
       "minimum": 1,
       "maximum": 25
+    },
+    "max_papers": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 24
     },
     "max_per_source": {
       "type": "integer",
@@ -1389,53 +1400,6 @@ Resolution source: parser
 Return JSON only.
 ```
 
-### Science Current State Prompt
-
-ID: `science.current_state_prompt`
-Kind: `dynamic_sample`
-Source: `src/main/helpers/agent/runtime/science-reasoning-loop/current-scientific-state.js`
-
-```text
-Summarize the current scientific state before the exit judge decides whether the reasoning loop should stop.
-
-Keep it compact and grounded only in the provided evidence.
-
-List what is supported now, what is contradicted, what remains unknown, and whether the remaining uncertainty is actually decision-relevant for deciding stop vs continue.
-
-Set uncertainty_decision_relevant to true only when the remaining uncertainty should materially change the loop exit decision.
-
-Include trace_sentence as one short sentence describing what you are doing at this step.
-
-Clarified request:
-Explain the most likely cause of weak SUMO1 conjugation in the Atlas HEK293 pilot and compare that explanation with recent literature.
-
-Exit criteria:
-Exit conditions:
-- A grounded explanation links the weak conjugation phenotype to a specific limiting factor.
-Required evidence:
-- At least one internal project record supports the answer.
-- At least one recent external citation addresses the likely limiting factor.
-Continue when:
-- Internal evidence and external evidence conflict materially.
-Can exit with limitations when:
-- Remaining uncertainty is disclosed explicitly.
-Preferred next tools: record-lookup | literature-search
-
-Pre-synthesized question:
-Current best answer: Low UBC9 expression is the most likely driver of weak SUMO1 conjugation in the Atlas HEK293 pilot.
-Supporting basis:
-- Notebook AT-14 recorded low UBC9 signal.
-- Recent literature ties UBC9 availability to conjugation efficiency.
-- Notebook AT-14 shows low UBC9 expression after transfection.
-- project: Notebook AT-14 - The Atlas pilot recorded weak conjugation after transfection.
-Unresolved issues:
-- The pilot did not directly quantify SAE1/SAE2.
-
-Rounds executed: 2/4
-
-Return JSON only.
-```
-
 ### Science Exit Judge System Prompt
 
 ID: `science.exit_judge_system_prompt`
@@ -2053,7 +2017,7 @@ Available tools JSON:
   },
   {
     "name": "literature-search",
-    "description": "Search literature across PubMed, Crossref, UniProt, Europe PMC, or generic web results with scholarly-first auto fallback. Prefer compact keyword or entity-style queries such as `MAPK inhibitor resistance mechanism` instead of full-sentence prompts.",
+    "description": "Search literature across PubMed, Crossref, UniProt, Europe PMC, or generic web results with scholarly-first auto fallback. The runtime now delegates to a sub-agent for candidate selection, paper reading, and optional paper downloads into the literature-search storage folder. Prefer compact keyword or entity-style queries such as `MAPK inhibitor resistance mechanism` instead of full-sentence prompts.",
     "parameters": {
       "type": "object",
       "additionalProperties": false,
@@ -2084,6 +2048,11 @@ Available tools JSON:
           "type": "integer",
           "minimum": 1,
           "maximum": 25
+        },
+        "max_papers": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 24
         },
         "max_per_source": {
           "type": "integer",

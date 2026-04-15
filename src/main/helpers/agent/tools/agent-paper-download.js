@@ -20,7 +20,7 @@ function defaultAsArray(value) {
 }
 
 function defaultCleanText(value, _maxLength = 4000) {
-  const text = String(value || '').trim();
+  const text = String(value || '');
   if (!text) {
     return '';
   }
@@ -72,13 +72,11 @@ function buildPaperStorageFolder({ rootPath, linkedType, linkedName }) {
     .trim()
     .toLowerCase()
     .replace(/[\s_]+/g, '-');
-  const category = normalizedType === 'journal-club'
-    ? 'JournalClub'
-    : (normalizedType === 'literature-search'
-      ? 'LiteratureSearch'
-      : 'Project');
   const safeLinkedName = sanitizeStorageName(linkedName, 'Uncategorized');
-  return `${String(rootPath || '').trim()}/${category}/${safeLinkedName}/Papers`;
+  if (normalizedType === 'journal-club' || normalizedType === 'literature-search') {
+    return `${String(rootPath || '').trim()}/Papers/${safeLinkedName}`;
+  }
+  return `${String(rootPath || '').trim()}/Project/${safeLinkedName}/Papers`;
 }
 
 function ensurePathWithinRoot(rootPath, targetPath) {
@@ -147,6 +145,14 @@ function resolveAbsoluteUrl(rawUrl, baseUrl = '') {
   }
 }
 
+function resolveDoiUrl(rawDoi) {
+  const doi = String(rawDoi || '').trim();
+  if (!doi) {
+    return '';
+  }
+  return `https://doi.org/${encodeURIComponent(doi).replace(/%2F/gi, '/')}`;
+}
+
 function extractUrlsFromText(rawText, baseUrl = '') {
   const text = String(rawText || '');
   const urls = [];
@@ -190,6 +196,8 @@ function scoreCandidateUrl(candidate = {}) {
     score += 200;
   } else if (source === 'candidate_urls' || source === 'pdf_urls') {
     score += 140;
+  } else if (source === 'doi') {
+    score += 60;
   } else if (source === 'page_html') {
     score += 100;
   } else if (source === 'message') {
@@ -231,7 +239,9 @@ function dedupeCandidateUrls(entries = []) {
 
 function extractPaperDownloadTargets(input = {}) {
   const source = ensureObject(input);
-  const pageUrl = resolveAbsoluteUrl(source.page_url || source.pageUrl || source.paper_url || source.paperUrl || '');
+  const doiUrl = resolveDoiUrl(source.doi || source.paper_doi || source.paperDoi || '');
+  const pageUrl = resolveAbsoluteUrl(source.page_url || source.pageUrl || source.paper_url || source.paperUrl || '')
+    || doiUrl;
   const pageHtml = defaultCleanText(source.page_html || source.pageHtml, 400000);
   const message = defaultCleanText(source.message, 12000);
 
@@ -239,6 +249,7 @@ function extractPaperDownloadTargets(input = {}) {
     { url: resolveAbsoluteUrl(source.paper_pdf_url || source.paperPdfUrl || '', pageUrl), source: 'paper_pdf_url' },
     { url: resolveAbsoluteUrl(source.pdf_url || source.pdfUrl || '', pageUrl), source: 'pdf_url' },
     { url: resolveAbsoluteUrl(source.url || '', pageUrl), source: 'url' },
+    { url: doiUrl, source: 'doi' },
     { url: pageUrl, source: 'page_url' },
     ...defaultAsArray(source.candidate_urls).map((url) => ({ url: resolveAbsoluteUrl(url, pageUrl), source: 'candidate_urls' })),
     ...defaultAsArray(source.pdf_urls).map((url) => ({ url: resolveAbsoluteUrl(url, pageUrl), source: 'pdf_urls' })),
@@ -272,7 +283,7 @@ function extractPaperDownloadTargets(input = {}) {
 }
 
 function parseContentDispositionFileName(value) {
-  const text = String(value || '').trim();
+  const text = String(value || '');
   if (!text) {
     return '';
   }

@@ -1,7 +1,14 @@
 'use strict';
 
+const fs = require('fs/promises');
+const path = require('path');
 const { getBundlePaths } = require('./storage-paths');
-const { readNotebookRowsFromSqlite, readProtocolRowsFromSqlite, readSqliteBundleIndex } = require('./storage-sql-read');
+const {
+  readNotebookRowsFromSqlite,
+  readPaperRowsFromSqlite,
+  readProtocolRowsFromSqlite,
+  readSqliteBundleIndex
+} = require('./storage-sql-read');
 const { asArray, cleanText, cloneJson, ensureObject, readJsonFile } = require('./storage-utils');
 const { hydrateWorkflowRootFromStoragePath } = require('./workflow-storage');
 
@@ -52,9 +59,31 @@ function hydrateInventoryFromSqliteSnapshot(nextSnapshot, sqliteData) {
   return true;
 }
 
+function mergeInventorySqliteSnapshots(primarySqliteData, secondarySqliteData) {
+  const primary = ensureObject(primarySqliteData);
+  const secondary = ensureObject(secondarySqliteData);
+  return {
+    inventoryChemicals: asArray(primary.inventoryChemicals).length
+      ? asArray(primary.inventoryChemicals)
+      : asArray(secondary.inventoryChemicals),
+    inventoryPersonal: asArray(primary.inventoryPersonal).length
+      ? asArray(primary.inventoryPersonal)
+      : asArray(secondary.inventoryPersonal),
+    inventorySamples: asArray(primary.inventorySamples).length
+      ? asArray(primary.inventorySamples)
+      : asArray(secondary.inventorySamples),
+    inventoryMeta: Object.keys(ensureObject(primary.inventoryMeta)).length
+      ? ensureObject(primary.inventoryMeta)
+      : ensureObject(secondary.inventoryMeta)
+  };
+}
+
 function readProtocolsFromSidecar(payload) {
   if (!payload || typeof payload !== 'object') {
     return [];
+  }
+  if (payload.protocol && typeof payload.protocol === 'object' && !Array.isArray(payload.protocol)) {
+    return [payload.protocol];
   }
   return asArray(payload.protocols);
 }
@@ -146,16 +175,91 @@ function mergePaperExperimentLinks(existingLinks, importedLinks) {
   return [...byKey.values()];
 }
 
+async function readProtocolDirectory(protocolRootPath) {
+  const directoryPath = cleanText(protocolRootPath, 2400);
+  if (!directoryPath) {
+    return {
+      exists: false,
+      ok: false,
+      data: [],
+      error: ''
+    };
+  }
+  try {
+    const stat = await fs.stat(directoryPath);
+    if (!stat.isDirectory()) {
+      const singleFile = await readJsonFile(directoryPath);
+      return {
+        exists: singleFile.exists,
+        ok: singleFile.ok,
+        data: singleFile.ok ? readProtocolsFromSidecar(singleFile.data) : [],
+        error: singleFile.error || ''
+      };
+    }
+    const entries = await fs.readdir(directoryPath, { withFileTypes: true });
+    const protocols = [];
+    const warnings = [];
+    for (const entry of entries) {
+      if (!entry.isDirectory()) {
+        continue;
+      }
+      const filePath = path.join(directoryPath, entry.name, 'protocol.json');
+      const payload = await readJsonFile(filePath);
+      if (payload.ok) {
+        protocols.push(...readProtocolsFromSidecar(payload.data));
+      } else if (payload.exists && payload.error) {
+        warnings.push(payload.error);
+      }
+    }
+    return {
+      exists: true,
+      ok: protocols.length > 0,
+      data: protocols,
+      error: warnings.join('; ')
+    };
+  } catch (error) {
+    if (error?.code === 'ENOENT') {
+      return {
+        exists: false,
+        ok: false,
+        data: [],
+        error: ''
+      };
+    }
+    return {
+      exists: true,
+      ok: false,
+      data: [],
+      error: String(error?.message || error)
+    };
+  }
+}
+
+function getLegacyProtocolsFilePath(bundlePaths) {
+  const basePath = cleanText(bundlePaths?.basePath, 2400);
+  return basePath ? `${basePath}.protocols.json` : '';
+}
+
+function getLegacySqlitePath(bundlePaths) {
+  const explicitLegacyPath = cleanText(bundlePaths?.legacySqlitePath, 2400);
+  if (explicitLegacyPath) {
+    return explicitLegacyPath;
+  }
+  const basePath = cleanText(bundlePaths?.basePath, 2400);
+  return basePath ? `${basePath}.index.sqlite` : '';
+}
+
 async function hydrateSnapshotFromBundle({
   dataFilePath,
   snapshot,
   fallbackDataFilePath = '',
   bundlePaths: explicitBundlePaths = null
 } = {}) {
+  const sourceSnapshot = cloneJson(snapshot, {});
+  const storagePath = cleanText(sourceSnapshot?.settings?.storagePath, 2400);
   const bundlePaths = explicitBundlePaths && typeof explicitBundlePaths === 'object'
     ? explicitBundlePaths
-    : getBundlePaths({ dataFilePath, fallbackDataFilePath });
-  const sourceSnapshot = cloneJson(snapshot, {});
+    : getBundlePaths({ dataFilePath, fallbackDataFilePath, storagePath });
   const nextSnapshot = cloneJson(sourceSnapshot, {});
   const migration = {
     applied: [],
@@ -171,12 +275,22 @@ async function hydrateSnapshotFromBundle({
     };
   }
 
-  const protocolSidecar = await readJsonFile(bundlePaths.protocolsPath);
+  const protocolSidecar = await readProtocolDirectory(bundlePaths.protocolsPath);
   if (protocolSidecar.ok) {
-    nextSnapshot.protocols = readProtocolsFromSidecar(protocolSidecar.data);
+    nextSnapshot.protocols = Array.isArray(protocolSidecar.data)
+      ? protocolSidecar.data
+      : readProtocolsFromSidecar(protocolSidecar.data);
     migration.applied.push('protocol_sidecar');
   } else if (protocolSidecar.exists && protocolSidecar.error) {
     migration.warnings.push(protocolSidecar.error);
+  } else {
+    const legacyProtocolSidecar = await readJsonFile(getLegacyProtocolsFilePath(bundlePaths));
+    if (legacyProtocolSidecar.ok) {
+      nextSnapshot.protocols = readProtocolsFromSidecar(legacyProtocolSidecar.data);
+      migration.applied.push('protocol_sidecar_legacy');
+    } else if (legacyProtocolSidecar.exists && legacyProtocolSidecar.error) {
+      migration.warnings.push(legacyProtocolSidecar.error);
+    }
   }
 
   const notebookSidecar = await readJsonFile(bundlePaths.notebookPagesPath);
@@ -187,19 +301,31 @@ async function hydrateSnapshotFromBundle({
     migration.warnings.push(notebookSidecar.error);
   }
 
-  const sqliteData = await readSqliteBundleIndex(bundlePaths.sqlitePath);
-  if (sqliteData.exists) {
-    const hydratedInventory = hydrateInventoryFromSqliteSnapshot(nextSnapshot, sqliteData);
+  let commonSqliteData = await readSqliteBundleIndex(bundlePaths.sqlitePath);
+  if (!commonSqliteData.exists) {
+    commonSqliteData = await readSqliteBundleIndex(getLegacySqlitePath(bundlePaths));
+  }
+  let chemicalSqliteData = await readSqliteBundleIndex(bundlePaths.chemicalsSqlitePath);
+  if (!chemicalSqliteData.exists && commonSqliteData.exists) {
+    chemicalSqliteData = commonSqliteData;
+  }
+  const inventorySqliteData = mergeInventorySqliteSnapshots(chemicalSqliteData, commonSqliteData);
+  if (commonSqliteData.exists || chemicalSqliteData.exists) {
+    const hydratedInventory = hydrateInventoryFromSqliteSnapshot(nextSnapshot, inventorySqliteData);
     if (hydratedInventory) {
       migration.applied.push('inventory_sqlite');
     }
-    if ((!Array.isArray(nextSnapshot.protocols) || !nextSnapshot.protocols.length) && asArray(sqliteData.protocolRows).length) {
-      nextSnapshot.protocols = readProtocolRowsFromSqlite(sqliteData.protocolRows);
+    if ((!Array.isArray(nextSnapshot.protocols) || !nextSnapshot.protocols.length) && asArray(commonSqliteData.protocolRows).length) {
+      nextSnapshot.protocols = readProtocolRowsFromSqlite(commonSqliteData.protocolRows);
       migration.applied.push('protocol_sqlite_fallback');
     }
-    if ((!Array.isArray(nextSnapshot.notebookEntries) || !nextSnapshot.notebookEntries.length) && asArray(sqliteData.notebookRows).length) {
-      nextSnapshot.notebookEntries = readNotebookRowsFromSqlite(sqliteData.notebookRows);
+    if ((!Array.isArray(nextSnapshot.notebookEntries) || !nextSnapshot.notebookEntries.length) && asArray(commonSqliteData.notebookRows).length) {
+      nextSnapshot.notebookEntries = readNotebookRowsFromSqlite(commonSqliteData.notebookRows);
       migration.applied.push('notebook_sqlite_fallback');
+    }
+    if (asArray(commonSqliteData.paperRows).length) {
+      nextSnapshot.papers = mergePaperRecords(nextSnapshot.papers, readPaperRowsFromSqlite(commonSqliteData.paperRows));
+      migration.applied.push('paper_sqlite');
     }
   }
 

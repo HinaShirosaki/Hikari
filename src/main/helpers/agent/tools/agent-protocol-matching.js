@@ -275,10 +275,6 @@ function createProtocolMatchingRuntime(deps = {}) {
     }
 
     const llmResult = await requestStructuredJsonPayload({
-      provider,
-      endpoint,
-      apiKey,
-      model,
       stage: 'protocol_tiebreak_llm',
       systemPrompt: PROTOCOL_TO_NOTEBOOK_SELECTION_SYSTEM_PROMPT,
       userPrompt: buildProtocolTieBreakPrompt({
@@ -289,9 +285,6 @@ function createProtocolMatchingRuntime(deps = {}) {
       }),
       schema: PROTOCOL_TIEBREAK_RESPONSE_SCHEMA,
       traceContext,
-      maxOutputTokens: 1300,
-      openAiStrict: true,
-      openAiAsDefaultProvider: true,
       defaultError: 'Protocol selection model is not configured.'
     });
 

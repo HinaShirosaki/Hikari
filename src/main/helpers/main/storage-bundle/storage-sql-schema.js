@@ -1,6 +1,6 @@
 'use strict';
 
-function applySqliteSchema(db) {
+function applyChemicalSqliteSchema(db) {
   db.run(`
     CREATE TABLE IF NOT EXISTS inventory_meta (
       key TEXT PRIMARY KEY,
@@ -16,6 +16,12 @@ function applySqliteSchema(db) {
       search_text TEXT,
       raw_json TEXT
     );
+    CREATE INDEX IF NOT EXISTS idx_inventory_chemicals_search ON inventory_chemicals(search_text);
+  `);
+}
+
+function applyCommonSqliteSchema(db) {
+  db.run(`
     CREATE TABLE IF NOT EXISTS inventory_personal (
       zone TEXT NOT NULL,
       id TEXT NOT NULL,
@@ -72,6 +78,24 @@ function applySqliteSchema(db) {
       linked_refs_json TEXT,
       search_text TEXT
     );
+    CREATE TABLE IF NOT EXISTS paper_index (
+      id TEXT PRIMARY KEY,
+      title TEXT,
+      file_name TEXT,
+      linked_type TEXT,
+      linked_id TEXT,
+      linked_name TEXT,
+      stored_relative_path TEXT,
+      availability_status TEXT,
+      ingestion_status TEXT,
+      summary_status TEXT,
+      methods_status TEXT,
+      reagents_status TEXT,
+      discovered_at TEXT,
+      updated_at TEXT,
+      search_text TEXT,
+      raw_json TEXT
+    );
     CREATE TABLE IF NOT EXISTS record_index (
       record_type TEXT NOT NULL,
       record_id TEXT NOT NULL,
@@ -86,11 +110,12 @@ function applySqliteSchema(db) {
       raw_json TEXT,
       PRIMARY KEY (record_type, record_id)
     );
-    CREATE INDEX IF NOT EXISTS idx_inventory_chemicals_search ON inventory_chemicals(search_text);
     CREATE INDEX IF NOT EXISTS idx_inventory_personal_search ON inventory_personal(search_text);
     CREATE INDEX IF NOT EXISTS idx_inventory_samples_search ON inventory_samples(search_text);
     CREATE INDEX IF NOT EXISTS idx_protocol_index_search ON protocol_index(search_text);
     CREATE INDEX IF NOT EXISTS idx_notebook_index_search ON notebook_index(search_text);
+    CREATE INDEX IF NOT EXISTS idx_paper_index_search ON paper_index(search_text);
+    CREATE INDEX IF NOT EXISTS idx_paper_index_linked ON paper_index(linked_type, linked_id);
     CREATE INDEX IF NOT EXISTS idx_record_index_search ON record_index(search_text);
     CREATE INDEX IF NOT EXISTS idx_record_index_project ON record_index(project_id, project_name);
     CREATE INDEX IF NOT EXISTS idx_record_index_type ON record_index(record_type);
@@ -98,5 +123,7 @@ function applySqliteSchema(db) {
 }
 
 module.exports = {
-  applySqliteSchema
+  applyChemicalSqliteSchema,
+  applyCommonSqliteSchema,
+  applySqliteSchema: applyCommonSqliteSchema
 };

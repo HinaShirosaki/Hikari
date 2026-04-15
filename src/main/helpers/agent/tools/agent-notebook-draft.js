@@ -58,6 +58,46 @@ function createNotebookDraftRuntime(deps = {}) {
       ensureObject,
       runTool: null
     });
+  const agentAppApi = deps.agentAppApi && typeof deps.agentAppApi === 'object'
+    ? deps.agentAppApi
+    : {};
+  const protocolApi = agentAppApi.protocol && typeof agentAppApi.protocol === 'object'
+    ? agentAppApi.protocol
+    : {};
+  const notebookApi = agentAppApi.notebook && typeof agentAppApi.notebook === 'object'
+    ? agentAppApi.notebook
+    : {};
+
+  function normalizeProtocolRecord(protocol, index = 0) {
+    if (typeof protocolApi.normalizeAgentProtocol === 'function') {
+      return protocolApi.normalizeAgentProtocol(protocol, index);
+    }
+    return protocolMatchingRuntime.normalizeProtocolRecord(protocol, index);
+  }
+
+  function listAgentProtocols(snapshot = {}, options = {}) {
+    if (typeof protocolApi.listAgentProtocols === 'function') {
+      return asArray(protocolApi.listAgentProtocols({
+        snapshot,
+        ...options
+      })).map((protocol, index) => normalizeProtocolRecord(protocol, index));
+    }
+    return asArray(snapshot?.protocols).map((protocol, index) => normalizeProtocolRecord(protocol, index));
+  }
+
+  function rankAgentProtocols(input = {}) {
+    if (typeof protocolApi.rankAgentProtocols === 'function') {
+      return protocolApi.rankAgentProtocols(input);
+    }
+    return protocolMatchingRuntime.rankProtocolMatches(input);
+  }
+
+  async function generateNotebookFromProtocol(input = {}) {
+    if (typeof notebookApi.generateFromProtocol === 'function') {
+      return notebookApi.generateFromProtocol(input);
+    }
+    return notebookGenerationRuntime.generateNotebook(input);
+  }
 
   const NOTEBOOK_DRAFT_SELECTION_SCHEMA = {
     type: 'object',
@@ -159,7 +199,13 @@ function createNotebookDraftRuntime(deps = {}) {
     if (experimentRuns.length) {
       return experimentRuns;
     }
-    return asArray(snapshot?.notebookEntries).map((entry) => {
+    const notebookEntries = typeof notebookApi.listAgentEntries === 'function'
+      ? asArray(notebookApi.listAgentEntries({
+        snapshot,
+        limit: 180
+      }))
+      : asArray(snapshot?.notebookEntries);
+    return notebookEntries.map((entry) => {
       const payload = ensureObject(entry);
       return {
         id: cleanText(payload.id, 120),
@@ -179,8 +225,7 @@ function createNotebookDraftRuntime(deps = {}) {
 
   function buildProtocolMap(snapshot = {}) {
     return new Map(
-      asArray(snapshot?.protocols)
-        .map((protocol, index) => protocolMatchingRuntime.normalizeProtocolRecord(protocol, index))
+      listAgentProtocols(snapshot)
         .filter((protocol) => protocol.id || protocol.name)
         .map((protocol) => [cleanText(protocol.id, 120), protocol])
         .filter(([id]) => id)
@@ -464,8 +509,9 @@ function createNotebookDraftRuntime(deps = {}) {
     message = '',
     protocolCandidates = []
   } = {}) {
-    const protocols = asArray(snapshot?.protocols).map((protocol, index) => protocolMatchingRuntime.normalizeProtocolRecord(protocol, index));
-    const ranked = protocolMatchingRuntime.rankProtocolMatches({
+    const protocols = listAgentProtocols(snapshot);
+    const ranked = rankAgentProtocols({
+      snapshot,
       protocols,
       protocolCandidates,
       message,
@@ -497,10 +543,6 @@ function createNotebookDraftRuntime(deps = {}) {
     traceContext = null
   } = {}) {
     return requestStructuredJsonPayload({
-      provider,
-      endpoint,
-      apiKey,
-      model,
       stage: 'notebook_draft_selection',
       systemPrompt: NOTEBOOK_DRAFT_SELECTION_SYSTEM_PROMPT,
       userPrompt: buildNotebookDraftSelectionPrompt({
@@ -513,9 +555,6 @@ function createNotebookDraftRuntime(deps = {}) {
       }),
       schema: NOTEBOOK_DRAFT_SELECTION_SCHEMA,
       traceContext,
-      maxOutputTokens: 1200,
-      openAiStrict: true,
-      openAiAsDefaultProvider: true,
       defaultError: 'Notebook draft proposal provider is not configured.'
     });
   }
@@ -664,7 +703,7 @@ function createNotebookDraftRuntime(deps = {}) {
       selectedProject,
       parserPayload
     });
-    const protocols = asArray(snapshot?.protocols).map((protocol, index) => protocolMatchingRuntime.normalizeProtocolRecord(protocol, index));
+    const protocols = listAgentProtocols(snapshot);
     if (!protocols.length) {
       return {
         status: 'needs_more_info',
@@ -826,7 +865,7 @@ function createNotebookDraftRuntime(deps = {}) {
       }
     });
 
-    const generationResult = await notebookGenerationRuntime.generateNotebook({
+    const generationResult = await generateNotebookFromProtocol({
       provider,
       endpoint,
       apiKey,

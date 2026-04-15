@@ -3,15 +3,19 @@
 const {
   defaultCleanText,
   defaultSafeParseJson,
+  createAgentLlmRuntimeHelpers
+} = require('../agent/shared/agent-llm-utils.js');
+const { createAgentLlmProviderBridge } = require('../agent/shared/agent-llm-provider-bridge.js');
+const {
+  parsePdfDataUrl,
   defaultToInputText,
   defaultExtractResponseText,
   defaultExtractClaudeResponseText,
   defaultExtractGeminiResponseText,
-  createAgentLlmRuntimeHelpers,
   requestOpenAiResponsesWithBackoff,
   requestClaudeMessagesWithBackoff,
   requestGeminiGenerateContentWithBackoff
-} = require('../agent/shared/agent-llm-utils.js');
+} = require('./llm-provider-runtime.js');
 const {
   runPythonSandbox,
   createManagedPythonSandboxRuntime
@@ -41,6 +45,7 @@ const { createAgentToolCallRuntime } = require('../agent/tools/agent-tool-execut
 const { createAgentToolProviderRuntime } = require('../agent/tools/agent-tool-provide.js');
 const { createAgentCommandLineRuntime } = require('../agent/tools/agent-command-line.js');
 const { createNotebookDraftRuntime } = require('../agent/tools/agent-notebook-draft.js');
+const { createWebSearchRuntime } = require('../agent/tools/agent-web-search.js');
 const { createLiteratureSearchRuntime } = require('../agent/tools/agent-literature-search.js');
 const { createLiteratureSearchWorkflowRuntime } = require('../agent/literature-search/agent-literature-search-workflow.js');
 const { createPurchaseRecommendationRuntime } = require('../agent/tools/agent-purchase-recommendation.js');
@@ -51,6 +56,7 @@ const { createNotebookGenerationRuntime } = require('../agent/tools/agent-notebo
 const { createAgentInventoryLookupRuntime } = require('../agent/tools/agent-inventory-lookup.js');
 const { createAgentRecordLookupRuntime } = require('../agent/tools/agent-record-lookup.js');
 const { createAgentRuntimeSupport } = require('../agent/runtime/agent-runtime-support.js');
+const { createAgentSubAppApi } = require('../agent/runtime/agent-sub-app-api.js');
 const { registerAgentToolExecutors } = require('../agent/tools/register-agent-tool-executors.js');
 const { asArray, clamp, createUniqueStrings } = require('./value-utils.js');
 
@@ -99,6 +105,12 @@ function createMainAgentServices(deps = {}) {
   const requestCodexCliText = typeof deps.requestCodexCliText === 'function'
     ? deps.requestCodexCliText
     : (async () => '');
+  const resolveCodexApiKey = typeof deps.resolveCodexApiKey === 'function'
+    ? deps.resolveCodexApiKey
+    : (() => '');
+  const resolveCodexEndpoint = typeof deps.resolveCodexEndpoint === 'function'
+    ? deps.resolveCodexEndpoint
+    : ((endpoint = '') => cleanText(endpoint, 2000));
   const getCodexCliWorkingDirectory = typeof deps.getCodexCliWorkingDirectory === 'function'
     ? deps.getCodexCliWorkingDirectory
     : (() => process.cwd());
@@ -127,8 +139,11 @@ function createMainAgentServices(deps = {}) {
     : (async () => ({ bundlePaths: {}, sidecarPaths: {} }));
   const uniqueStrings = createUniqueStrings(cleanText);
   const sharedLlmTransportDeps = {
+    parsePdfDataUrl,
     toInputText,
     requestCodexCliText,
+    resolveCodexApiKey,
+    resolveCodexEndpoint,
     getCodexCliWorkingDirectory,
     requestClaudeMessagesWithBackoff,
     requestGeminiGenerateContentWithBackoff,
@@ -137,6 +152,18 @@ function createMainAgentServices(deps = {}) {
     extractGeminiResponseText,
     extractResponseText
   };
+
+  const llmTraceRecorderRef = {
+    current: async () => {}
+  };
+  const llmProviderBridge = createAgentLlmProviderBridge({
+    LLM_PROVIDERS,
+    asArray,
+    cleanText,
+    safeParseJson,
+    recordAgentLlmTrace: (...args) => llmTraceRecorderRef.current(...args),
+    ...sharedLlmTransportDeps
+  });
 
   const controllerUtils = createAgentControllerUtils({
     LLM_PROVIDERS,
@@ -153,15 +180,15 @@ function createMainAgentServices(deps = {}) {
     buildIntentParserPrompt,
     normalizeIntentParserPayload,
     INTENT_PARSER_RESPONSE_SCHEMA,
-    ...sharedLlmTransportDeps
+    llmProviderBridge
   });
+  llmTraceRecorderRef.current = controllerUtils.recordAgentLlmTrace;
   const sharedAgentLlmDeps = {
-    LLM_PROVIDERS,
     asArray,
     cleanText,
     uniqueStrings,
     safeParseJson,
-    ...sharedLlmTransportDeps,
+    llmProviderBridge,
     recordAgentLlmTrace: controllerUtils.recordAgentLlmTrace
   };
   const agentLlmRuntimeHelpers = createAgentLlmRuntimeHelpers({
@@ -176,6 +203,22 @@ function createMainAgentServices(deps = {}) {
   agentRuntimeRegistry.registerRuntimeFactory('protocol-matching', createProtocolMatchingRuntime);
   agentRuntimeRegistry.registerRuntimeFactory('notebook-generation', createNotebookGenerationRuntime);
 
+  const agentRuntimeSupport = createAgentRuntimeSupport({
+    renderPromptTemplate
+  });
+  const agentSkillRuntime = createAgentSkillRuntime({
+    cleanText,
+    extraSkillDirs: Array.isArray(deps.agentSkillDirs) ? deps.agentSkillDirs : []
+  });
+
+  let agentToolRuntime = null;
+  const agentAppApi = createAgentSubAppApi({
+    ...sharedAgentLlmDeps,
+    pickTopMatches: agentRuntimeSupport.pickTopMatches,
+    getAgentRuntimeFactory: agentRuntimeRegistry.getRuntimeFactory,
+    getRunTool: () => agentToolRuntime?.runAgentTool || null
+  });
+
   const agentLookupRuntime = createAgentLookupRuntime({
     asArray,
     cleanText,
@@ -184,15 +227,8 @@ function createMainAgentServices(deps = {}) {
     hydrateSnapshotFromBundle,
     syncBundleFromSnapshot,
     buildInventorySearchTerms,
-    getAgentRuntimeFactory: agentRuntimeRegistry.getRuntimeFactory
-  });
-
-  const agentRuntimeSupport = createAgentRuntimeSupport({
-    renderPromptTemplate
-  });
-  const agentSkillRuntime = createAgentSkillRuntime({
-    cleanText,
-    extraSkillDirs: Array.isArray(deps.agentSkillDirs) ? deps.agentSkillDirs : []
+    getAgentRuntimeFactory: agentRuntimeRegistry.getRuntimeFactory,
+    agentAppApi
   });
 
   const genericAgentToolRuntime = createAgentToolCallRuntime({
@@ -202,7 +238,7 @@ function createMainAgentServices(deps = {}) {
   const agentToolProviderRuntime = createAgentToolProviderRuntime({
     cleanText
   });
-  const agentToolRuntime = {
+  agentToolRuntime = {
     normalizeToolInvocationArgs,
     normalizeAgentSnapshot: agentRuntimeSupport.normalizeAgentSnapshot,
     buildAgentSystemPrompt: agentRuntimeSupport.buildAgentSystemPrompt,
@@ -266,6 +302,7 @@ function createMainAgentServices(deps = {}) {
   const protocolNotebookRuntime = createProtocolNotebookRuntime({
     ...sharedAgentLlmDeps,
     pickTopMatches: agentRuntimeSupport.pickTopMatches,
+    agentAppApi,
     runTool: agentToolRuntime.runAgentTool,
     recordLifecycleEvent: observability.recordLifecycleEvent,
     getAgentRuntimeFactory: agentRuntimeRegistry.getRuntimeFactory
@@ -273,6 +310,7 @@ function createMainAgentServices(deps = {}) {
 
   const notebookDraftRuntime = createNotebookDraftRuntime({
     ...sharedAgentLlmDeps,
+    agentAppApi,
     recordLifecycleEvent: observability.recordLifecycleEvent,
     getAgentRuntimeFactory: agentRuntimeRegistry.getRuntimeFactory
   });
@@ -281,8 +319,12 @@ function createMainAgentServices(deps = {}) {
     ...sharedAgentLlmDeps,
     fetch: typeof globalThis.fetch === 'function' ? globalThis.fetch.bind(globalThis) : null
   });
+  const webSearchRuntime = createWebSearchRuntime({
+    ...sharedAgentLlmDeps
+  });
   const literatureSearchRuntime = createLiteratureSearchRuntime({
     ...sharedAgentLlmDeps,
+    webSearchRuntime,
     paperContextLoaderRuntime,
     fetch: typeof globalThis.fetch === 'function' ? globalThis.fetch.bind(globalThis) : null
   });
@@ -315,6 +357,7 @@ function createMainAgentServices(deps = {}) {
     cleanText,
     genericAgentToolRuntime,
     agentLookupRuntime,
+    webSearchRuntime,
     literatureSearchRuntime: literatureSearchWorkflowRuntime,
     purchaseRecommendationRuntime,
     pythonSandboxToolRuntime,
@@ -352,7 +395,9 @@ function createMainAgentServices(deps = {}) {
     runPythonSandbox,
     pythonSandboxRoot: getAgentPythonSandboxRoot()
   });
-  const agentChatLogRuntime = createAgentChatLogRuntime();
+  const agentChatLogRuntime = createAgentChatLogRuntime({
+    requestAssistantText: agentLlmRuntimeHelpers.requestAssistantText
+  });
 
   return {
     observability,
@@ -366,6 +411,8 @@ function createMainAgentServices(deps = {}) {
     agentChatLogRuntime,
     agentToolSmokeTestRuntime,
     agentLookupRuntime,
+    agentAppApi,
+    webSearchRuntime,
     paperDownloadRuntime,
     literatureSearchWorkflowRuntime
   };

@@ -393,7 +393,6 @@ test('agent-chat renders purchase recommendation tiles with unified image stage 
 test('agent-chat sends settings API key to main process and stores assistant response', async () => {
   const document = createMockDocument([
     'agent-project-select',
-    'agent-context-summary',
     'agent-chat-history',
     'agent-message-input',
     'agent-send-btn',
@@ -401,7 +400,6 @@ test('agent-chat sends settings API key to main process and stores assistant res
     'agent-status'
   ]);
   const projectSelect = document.getElementById('agent-project-select');
-  const contextSummary = document.getElementById('agent-context-summary');
   const history = document.getElementById('agent-chat-history');
   const messageInput = document.getElementById('agent-message-input');
   const sendBtn = document.getElementById('agent-send-btn');
@@ -544,6 +542,7 @@ test('agent-chat sends settings API key to main process and stores assistant res
     inventory: {},
     labInventory: { chemicals: [] },
     settings: {
+      storagePath: '/tmp/enana-storage',
       llm: {
         model: 'gpt-5',
         apiEndpoint: 'https://api.openai.com/v1/responses',
@@ -564,15 +563,15 @@ test('agent-chat sends settings API key to main process and stores assistant res
           ok: true,
           filePath: '/tmp/enana-data.ena.json',
           sidecarPaths: {
-            protocolsPath: '/tmp/enana-data.protocols.json',
+            protocolsPath: '/tmp/Protocol',
             notebookPagesPath: '/tmp/enana-data.notebook-pages.json',
-            sqlitePath: '/tmp/enana-data.index.sqlite'
+            sqlitePath: '/tmp/Protocol/protocol.index.sqlite'
           },
           bundlePaths: {
             dataFilePath: '/tmp/enana-data.ena.json',
-            protocolsPath: '/tmp/enana-data.protocols.json',
+            protocolsPath: '/tmp/Protocol',
             notebookPagesPath: '/tmp/enana-data.notebook-pages.json',
-            sqlitePath: '/tmp/enana-data.index.sqlite'
+            sqlitePath: '/tmp/Protocol/protocol.index.sqlite'
           }
         };
       },
@@ -692,13 +691,10 @@ test('agent-chat sends settings API key to main process and stores assistant res
   });
 
   agent.render();
-  assert.match(contextSummary.value, /projects/);
 
   projectSelect.value = 'p1';
   trigger(projectSelect, 'change');
   assert.equal(state.agentChat.projectId, 'p1');
-  assert.match(contextSummary.value, /1 assays/);
-  assert.match(contextSummary.value, /1 gel analyses/);
 
   messageInput.value = 'Give me next steps for p1.';
   trigger(sendBtn, 'click');
@@ -780,7 +776,6 @@ test('agent-chat sends settings API key to main process and stores assistant res
 test('agent-chat shows live progress ephemerally in the chat history and locks session switching until success', async () => {
   const document = createMockDocument([
     'agent-project-select',
-    'agent-context-summary',
     'agent-session-status',
     'agent-session-list',
     'agent-new-chat-btn',
@@ -1023,7 +1018,6 @@ test('agent-chat shows live progress ephemerally in the chat history and locks s
 test('agent-chat replaces the live placeholder with a persisted error response on failure', async () => {
   const document = createMockDocument([
     'agent-project-select',
-    'agent-context-summary',
     'agent-chat-history',
     'agent-message-input',
     'agent-send-btn',
@@ -1133,7 +1127,6 @@ test('agent-chat replaces the live placeholder with a persisted error response o
 test('agent-chat keeps notebook-draft proposals confirm-first and creates one planned page on click', async () => {
   const document = createMockDocument([
     'agent-project-select',
-    'agent-context-summary',
     'agent-chat-history',
     'agent-message-input',
     'agent-deep-research-toggle-btn',
@@ -1146,6 +1139,7 @@ test('agent-chat keeps notebook-draft proposals confirm-first and creates one pl
   const messageInput = document.getElementById('agent-message-input');
   const sendBtn = document.getElementById('agent-send-btn');
   const status = document.getElementById('agent-status');
+  let openedNotebookEntryId = '';
 
   const state = {
     projects: [
@@ -1386,7 +1380,10 @@ test('agent-chat keeps notebook-draft proposals confirm-first and creates one pl
       return () => `agent-msg-${idx += 1}`;
     })(),
     safeText: shared.safeText,
-    onNotebookEntriesChanged: () => {}
+    onNotebookEntriesChanged: () => {},
+    onOpenNotebookEntry: (entryId) => {
+      openedNotebookEntryId = String(entryId || '');
+    }
   });
 
   agent.render();
@@ -1412,17 +1409,22 @@ test('agent-chat keeps notebook-draft proposals confirm-first and creates one pl
   assert.equal(state.notebookEntries[0].notebookState, 'planned');
   assert.equal(state.notebookEntries[0].executedAt, '');
   assert.equal(state.notebookEntries[0].agentDraftMeta.proposalId, 'proposal-1');
-  assert.match(history.innerHTML, /Planned Page Created/);
+  assert.equal(openedNotebookEntryId, state.notebookEntries[0].id);
+  assert.match(history.innerHTML, /Open Planned Page/);
   assert.equal(status.textContent, 'Planned notebook page created.');
 
-  trigger(history, 'click', { target: createButtons[0] });
+  openedNotebookEntryId = '';
+  const openButtons = history.querySelectorAll('[data-agent-open-notebook-page]');
+  assert.equal(openButtons.length, 1);
+  trigger(history, 'click', { target: openButtons[0] });
   assert.equal(state.notebookEntries.length, 1);
+  assert.equal(openedNotebookEntryId, state.notebookEntries[0].id);
+  assert.equal(status.textContent, 'Opened planned notebook page.');
 });
 
 test('agent-chat toggles deep research mode and sends it in the chat payload', async () => {
   const document = createMockDocument([
     'agent-project-select',
-    'agent-context-summary',
     'agent-chat-history',
     'agent-message-input',
     'agent-deep-research-toggle-btn',

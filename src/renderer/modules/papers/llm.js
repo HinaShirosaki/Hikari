@@ -233,10 +233,7 @@ async function requestGemini({ endpoint, token, model, prompt, pdfDataUrl }) {
           role: 'user',
           parts
         }
-      ],
-      generationConfig: {
-        maxOutputTokens: 1400
-      }
+      ]
     })
   });
 

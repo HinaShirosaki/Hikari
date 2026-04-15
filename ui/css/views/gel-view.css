@@ -142,7 +142,7 @@
 .gel-lane-profile-chart .lane-profile-empty {
   fill: #5b6f89;
   font-size: 10px;
-  font-family: "SF Pro Text", "Segoe UI", sans-serif;
+  font-family: var(--font-app);
 }
 
 .gel-lane-profile-empty {

@@ -22,6 +22,25 @@ export function findNotebookEntryByProposalId(notebookEntries, proposalId) {
   )) || null;
 }
 
+export function findNotebookEntryForDraft(notebookEntries, draft) {
+  const byProposalId = findNotebookEntryByProposalId(
+    notebookEntries,
+    resolveNotebookDraftProposalId(draft)
+  );
+  if (byProposalId) {
+    return byProposalId;
+  }
+
+  const entryId = trimText(draft?.entry_template?.id, 120);
+  if (!entryId) {
+    return null;
+  }
+
+  return asArray(notebookEntries).find((entry) => (
+    trimText(entry?.id, 120) === entryId
+  )) || null;
+}
+
 export function normalizeNotebookDraft(rawDraft) {
   if (!rawDraft || typeof rawDraft !== 'object') {
     return null;
@@ -88,6 +107,7 @@ export function normalizeNotebookDraft(rawDraft) {
       reason: trimText(rawDraft?.save?.reason, 220)
     },
     entry_template: {
+      id: trimText(entryTemplate.id, 120),
       notebookType: trimText(entryTemplate.notebookType, 40) || 'biology',
       projectId: trimText(entryTemplate.projectId, 80),
       projectName: trimText(entryTemplate.projectName, 180),

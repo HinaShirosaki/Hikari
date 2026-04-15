@@ -28,9 +28,9 @@ function asArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
-// Normalize unknown input into trimmed text without silently clipping content.
+// Normalize unknown input into a string without trimming or clipping chat fields.
 function cleanText(value, _maxLength = 4000) {
-  const text = String(value || '').trim();
+  const text = String(value || '');
   if (!text) {
     return '';
   }
@@ -67,6 +67,14 @@ function createDefaultId() {
 function deriveSessionTitle(text, fallback = 'New Chat') {
   const firstLine = cleanText(String(text || '').split('\n').find((line) => String(line || '').trim()) || '', 120);
   return firstLine || fallback;
+}
+
+function normalizeSessionBrief(text, fallback = 'New Chat') {
+  const normalized = cleanText(String(text || '').replace(/\s+/g, ' '), 160)
+    .replace(/^["'`]+|["'`]+$/g, '')
+    .replace(/[.!?;,:\s]+$/g, '')
+    .trim();
+  return normalized || fallback;
 }
 
 // Build a concise assistant-facing summary from inventory lookup results.
@@ -615,6 +623,51 @@ function createAgentChatLogRuntime(deps = {}) {
   const createId = typeof deps.createId === 'function'
     ? deps.createId
     : createDefaultId;
+  const requestAssistantText = typeof deps.requestAssistantText === 'function'
+    ? deps.requestAssistantText
+    : null;
+
+  async function summarizeFirstUserMessageAsTitle({
+    message = '',
+    llm = {},
+    projectId = '',
+    projectName = ''
+  } = {}) {
+    const prompt = cleanText(message, 6000);
+    const fallback = deriveSessionTitle(prompt, 'New Chat');
+    if (!prompt || !requestAssistantText) {
+      return fallback;
+    }
+    const provider = cleanText(llm?.provider, 80);
+    const endpoint = cleanText(llm?.apiEndpoint || llm?.endpoint, 2400);
+    const apiKey = cleanText(llm?.apiKey, 2400);
+    const model = cleanText(llm?.model, 160);
+    if ((!provider && !endpoint) || !model || !apiKey) {
+      return fallback;
+    }
+    const result = await requestAssistantText({
+      source: { provider, endpoint, apiKey, model },
+      stage: 'agent_chat_session_brief',
+      defaultError: 'Session brief provider is not configured.',
+      systemPrompt: [
+        'You create short chat sidebar labels.',
+        'Summarize the first user message into one brief plain-text label.',
+        'Use 3 to 8 words when possible.',
+        'Keep concrete nouns and task intent.',
+        'No quotes, no markdown, no ending punctuation.'
+      ].join(' '),
+      userPrompt: [
+        projectName ? `Project: ${cleanText(projectName, 220)}` : '',
+        projectId && !projectName ? `Project ID: ${cleanText(projectId, 120)}` : '',
+        `First user message: ${prompt}`,
+        'Return only the label.'
+      ].filter(Boolean).join('\n')
+    });
+    if (result?.ok !== true) {
+      return fallback;
+    }
+    return normalizeSessionBrief(result.text, fallback);
+  }
 
   // Resolve the base storage path plus the chat-log folder and index file locations.
   function resolvePaths(storagePath) {
@@ -667,7 +720,7 @@ function createAgentChatLogRuntime(deps = {}) {
   }
 
   // Append one or more normalized rows to a session log and refresh the summary index.
-  async function appendRows(storagePath, sessionId, rows = []) {
+  async function appendRows(storagePath, sessionId, rows = [], options = {}) {
     const filteredRows = asArray(rows).map((row) => normalizeSessionRow(row)).filter(Boolean);
     if (!filteredRows.length) {
       const existing = await getSession({ storagePath, sessionId });
@@ -697,11 +750,23 @@ function createAgentChatLogRuntime(deps = {}) {
     }
 
     const logPath = runtimePath.join(paths.chatLogPath, session.log_file);
+    const titleWasUntitled = !cleanText(session?.title, 40) || session.title === 'New Chat';
     const payload = filteredRows.map((row) => JSON.stringify(row)).join('\n');
     await runtimeFs.appendFile(logPath, `${payload}\n`, 'utf8');
     filteredRows.forEach((row) => {
       session = applyEntryToSummary(session, row);
     });
+    if (titleWasUntitled) {
+      const firstUserRow = filteredRows.find((row) => row.type === CHAT_LOG_EVENT_TYPES.USER_MESSAGE && cleanText(row.text, 24000));
+      if (firstUserRow) {
+        session.title = await summarizeFirstUserMessageAsTitle({
+          message: firstUserRow.text,
+          llm: options?.llm && typeof options.llm === 'object' ? options.llm : {},
+          projectId: cleanText(options?.projectId || firstUserRow?.project_id || firstUserRow?.projectId, 120),
+          projectName: cleanText(options?.projectName || firstUserRow?.project_name || firstUserRow?.projectName, 220)
+        });
+      }
+    }
     index.sessions = sortSessions(index.sessions.map((item) => item.id === session.id ? session : item));
     await writeIndex(paths, index);
     return {
@@ -871,7 +936,11 @@ function createAgentChatLogRuntime(deps = {}) {
       row.project_id = cleanText(input.projectId || input.project_id, 120);
       row.project_name = cleanText(input.projectName || input.project_name, 220);
     }
-    return appendRows(input.storagePath || input.storage_path, sessionId, [row]);
+    return appendRows(input.storagePath || input.storage_path, sessionId, [row], {
+      llm: input?.llm && typeof input.llm === 'object' ? input.llm : {},
+      projectId: cleanText(input.projectId || input.project_id, 120),
+      projectName: cleanText(input.projectName || input.project_name, 220)
+    });
   }
 
   // Normalize and append an assistant-authored chat message into the session log.

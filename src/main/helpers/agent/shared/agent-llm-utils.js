@@ -1,19 +1,13 @@
 'use strict';
 
-const {
-  createAgentRequestAbortError,
-  getAgentRequestAbortSignal,
-  isAgentRequestAbortError,
-  throwIfAgentRequestAborted
-} = require('./agent-request-context.js');
-const { createAgentLlmProviderBridge } = require('./agent-llm-provider-bridge.js');
+const { getAgentRequestContext } = require('./agent-request-context.js');
 
 function defaultAsArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
 function defaultCleanText(value, _maxLength = 2000) {
-  const text = String(value || '').trim();
+  const text = String(value || '');
   if (!text) {
     return '';
   }
@@ -32,205 +26,7 @@ function defaultSafeParseJson(text, fallback = null) {
   return fallback;
 }
 
-function parsePdfDataUrl(pdfDataUrl) {
-  const match = String(pdfDataUrl || '').trim().match(/^data:application\/pdf(?:;charset=[^;,]+)?;base64,(.+)$/i);
-  return match?.[1] ? String(match[1]).trim() : '';
-}
-
-function defaultToInputText(role, text) {
-  return {
-    role,
-    content: [{ type: 'input_text', text: String(text || '') }]
-  };
-}
-
-function defaultExtractResponseText(payload, asArray = defaultAsArray) {
-  if (typeof payload?.output_text === 'string' && payload.output_text.trim()) {
-    return payload.output_text.trim();
-  }
-
-  const chunks = [];
-  asArray(payload?.output).forEach((item) => {
-    if (item?.type === 'message') {
-      asArray(item.content).forEach((content) => {
-        if (content?.type === 'output_text' && content.text) {
-          chunks.push(content.text);
-        }
-      });
-    } else if (item?.type === 'output_text' && item.text) {
-      chunks.push(item.text);
-    }
-  });
-  return chunks.join('\n').trim();
-}
-
-function defaultExtractClaudeResponseText(payload, asArray = defaultAsArray) {
-  return asArray(payload?.content)
-    .filter((item) => item?.type === 'text' && item.text)
-    .map((item) => item.text)
-    .join('\n')
-    .trim();
-}
-
-function defaultExtractGeminiResponseText(payload, asArray = defaultAsArray) {
-  const candidate = Array.isArray(payload?.candidates) && payload.candidates.length > 0
-    ? payload.candidates[0]
-    : null;
-  if (!candidate?.content?.parts) {
-    return '';
-  }
-  return asArray(candidate.content.parts)
-    .filter((part) => typeof part?.text === 'string' && part.text.trim())
-    .map((part) => part.text)
-    .join('\n')
-    .trim();
-}
-
-function sleep(ms) {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
-}
-
-function sleepWithAbort(ms, signal) {
-  if (!signal) {
-    return sleep(ms);
-  }
-  if (signal.aborted) {
-    return Promise.reject(createAgentRequestAbortError(signal.reason || 'Agent request stopped.'));
-  }
-  return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      signal.removeEventListener('abort', onAbort);
-      resolve();
-    }, ms);
-    const onAbort = () => {
-      clearTimeout(timeout);
-      signal.removeEventListener('abort', onAbort);
-      reject(createAgentRequestAbortError(signal.reason || 'Agent request stopped.'));
-    };
-    signal.addEventListener('abort', onAbort, { once: true });
-  });
-}
-
-async function requestJsonWithBackoff({
-  endpoint,
-  headers,
-  body,
-  retryStatuses = [429, 503],
-  maxRetries = 3
-} = {}) {
-  const abortSignal = getAgentRequestAbortSignal();
-  let attempt = 0;
-  while (attempt <= maxRetries) {
-    throwIfAgentRequestAborted('Agent request stopped before sending LLM request.');
-    let response;
-    try {
-      response = await fetch(endpoint, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(body),
-        ...(abortSignal ? { signal: abortSignal } : {})
-      });
-    } catch (error) {
-      if (abortSignal?.aborted || isAgentRequestAbortError(error)) {
-        throw createAgentRequestAbortError(abortSignal?.reason || error?.message || 'Agent request stopped.');
-      }
-      if (attempt >= maxRetries) {
-        throw error;
-      }
-      const waitMs = 350 * (2 ** attempt) + Math.floor(Math.random() * 250);
-      await sleepWithAbort(waitMs, abortSignal);
-      attempt += 1;
-      continue;
-    }
-
-    throwIfAgentRequestAborted('Agent request stopped while waiting for LLM response.');
-    if (!retryStatuses.includes(response.status)) {
-      if (!response.ok) {
-        const raw = await response.text();
-        throw new Error(`LLM API error (${response.status}): ${raw}`);
-      }
-      return response.json();
-    }
-
-    if (attempt >= maxRetries) {
-      const raw = await response.text();
-      throw new Error(`LLM API rate-limited (${response.status}): ${raw}`);
-    }
-
-    const retryAfterHeader = Number(response.headers.get('retry-after'));
-    const retryAfterMs = Number.isFinite(retryAfterHeader) && retryAfterHeader > 0
-      ? retryAfterHeader * 1000
-      : 500 * (2 ** attempt) + Math.floor(Math.random() * 300);
-    await sleepWithAbort(retryAfterMs, abortSignal);
-    attempt += 1;
-  }
-
-  throw new Error('LLM API request failed after retries.');
-}
-
-async function requestOpenAiResponsesWithBackoff({ endpoint, apiKey, body } = {}) {
-  return requestJsonWithBackoff({
-    endpoint,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`
-    },
-    body,
-    retryStatuses: [429, 503]
-  });
-}
-
-async function requestClaudeMessagesWithBackoff({ endpoint, apiKey, body } = {}) {
-  return requestJsonWithBackoff({
-    endpoint,
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01'
-    },
-    body,
-    retryStatuses: [429, 503, 529]
-  });
-}
-
-function buildGeminiGenerateContentUrl(endpoint, model, apiKey, fallbackEndpoint = 'https://generativelanguage.googleapis.com/v1beta') {
-  const cleanEndpoint = defaultCleanText(endpoint, 300) || fallbackEndpoint;
-  let url = cleanEndpoint.replace(/\/+$/, '');
-  if (!url.includes(':generateContent')) {
-    if (/\/models\/[^/?#]+$/i.test(url)) {
-      url = `${url}:generateContent`;
-    } else if (/\/models$/i.test(url)) {
-      url = `${url}/${encodeURIComponent(model)}:generateContent`;
-    } else {
-      url = `${url}/models/${encodeURIComponent(model)}:generateContent`;
-    }
-  }
-  return `${url}${url.includes('?') ? '&' : '?'}key=${encodeURIComponent(apiKey)}`;
-}
-
-async function requestGeminiGenerateContentWithBackoff({
-  endpoint,
-  apiKey,
-  model,
-  body,
-  fallbackEndpoint
-} = {}) {
-  return requestJsonWithBackoff({
-    endpoint: buildGeminiGenerateContentUrl(endpoint, model, apiKey, fallbackEndpoint),
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body,
-    retryStatuses: [429, 503]
-  });
-}
-
 function createAgentLlmRuntimeHelpers(deps = {}) {
-  const LLM_PROVIDERS = deps.LLM_PROVIDERS && typeof deps.LLM_PROVIDERS === 'object'
-    ? deps.LLM_PROVIDERS
-    : {};
   const asArray = typeof deps.asArray === 'function'
     ? deps.asArray
     : defaultAsArray;
@@ -262,96 +58,208 @@ function createAgentLlmRuntimeHelpers(deps = {}) {
   const requestAssistantTextOverride = typeof deps.requestAssistantText === 'function'
     ? deps.requestAssistantText
     : null;
+  const requestTextOverride = typeof deps.requestText === 'function'
+    ? deps.requestText
+    : null;
+  const requestImageInputOverride = typeof deps.requestImageInput === 'function'
+    ? deps.requestImageInput
+    : null;
+  const requestFileInputOverride = typeof deps.requestFileInput === 'function'
+    ? deps.requestFileInput
+    : null;
   const requestStructuredJsonPayloadOverride = typeof deps.requestStructuredJsonPayload === 'function'
     ? deps.requestStructuredJsonPayload
     : null;
   const requestWebSearchOverride = typeof deps.requestWebSearch === 'function'
     ? deps.requestWebSearch
     : null;
-  const requestCodexCliText = deps.requestCodexCliText;
-  const getCodexCliWorkingDirectory = typeof deps.getCodexCliWorkingDirectory === 'function'
-    ? deps.getCodexCliWorkingDirectory
-    : (() => process.cwd());
-  const requestClaudeMessagesWithBackoff = deps.requestClaudeMessagesWithBackoff;
-  const requestGeminiGenerateContentWithBackoff = deps.requestGeminiGenerateContentWithBackoff;
-  const requestOpenAiResponsesWithBackoff = deps.requestOpenAiResponsesWithBackoff;
-  const extractClaudeResponseText = typeof deps.extractClaudeResponseText === 'function'
-    ? deps.extractClaudeResponseText
-    : ((payload) => defaultExtractClaudeResponseText(payload, asArray));
-  const extractGeminiResponseText = typeof deps.extractGeminiResponseText === 'function'
-    ? deps.extractGeminiResponseText
-    : ((payload) => defaultExtractGeminiResponseText(payload, asArray));
-  const extractResponseText = typeof deps.extractResponseText === 'function'
-    ? deps.extractResponseText
-    : ((payload) => defaultExtractResponseText(payload, asArray));
-  const toInputText = typeof deps.toInputText === 'function'
-    ? deps.toInputText
-    : defaultToInputText;
   const recordAgentLlmTrace = typeof deps.recordAgentLlmTrace === 'function'
     ? deps.recordAgentLlmTrace
     : (async () => {});
-  let llmProviderBridge = deps.llmProviderBridge && typeof deps.llmProviderBridge === 'object'
+  const llmProviderBridge = deps.llmProviderBridge && typeof deps.llmProviderBridge === 'object'
     ? deps.llmProviderBridge
     : null;
 
-  function getLlmProviderBridge() {
-    if (llmProviderBridge && typeof llmProviderBridge === 'object') {
-      return llmProviderBridge;
+  function resolveLlmRequestOptions(options = {}) {
+    const requestContextSource = getAgentRequestContext()?.llmSource
+      && typeof getAgentRequestContext().llmSource === 'object'
+      ? getAgentRequestContext().llmSource
+      : {};
+    const boundSource = options.llmSource && typeof options.llmSource === 'object'
+      ? options.llmSource
+      : (options.source && typeof options.source === 'object' ? options.source : {});
+    const source = {
+      ...requestContextSource,
+      ...boundSource
+    };
+    const resolvedSource = {
+      provider: cleanText(options.provider, 80) || cleanText(source.provider, 80),
+      endpoint: cleanText(options.endpoint, 2000) || cleanText(source.endpoint, 2000),
+      apiKey: cleanText(options.apiKey, 400) || cleanText(source.apiKey, 400),
+      model: cleanText(options.model, 120) || cleanText(source.model, 120)
+    };
+    const resolved = {
+      ...options,
+      ...resolvedSource,
+      llmSource: resolvedSource
+    };
+    delete resolved.source;
+    return resolved;
+  }
+
+  function getCurrentLlmSource() {
+    const requestContextSource = getAgentRequestContext()?.llmSource
+      && typeof getAgentRequestContext().llmSource === 'object'
+      ? getAgentRequestContext().llmSource
+      : {};
+    return {
+      provider: cleanText(requestContextSource.provider, 80),
+      endpoint: cleanText(requestContextSource.endpoint, 2000),
+      apiKey: cleanText(requestContextSource.apiKey, 400),
+      model: cleanText(requestContextSource.model, 120)
+    };
+  }
+
+  function getCurrentLlmProvider() {
+    return cleanText(getCurrentLlmSource().provider, 80);
+  }
+
+  function getBridgeMethod(methodName) {
+    if (!llmProviderBridge || typeof llmProviderBridge !== 'object') {
+      return null;
     }
-    // The shared provider bridge owns provider-specific request shaping,
-    // including pdfDataUrl/fileName attachments for OpenAI input_file,
-    // Gemini inlineData, and Claude document inputs.
-    llmProviderBridge = createAgentLlmProviderBridge({
-      LLM_PROVIDERS,
-      asArray,
-      cleanText,
-      safeParseJson,
-      toInputText,
-      parsePdfDataUrl,
-      requestCodexCliText,
-      getCodexCliWorkingDirectory,
-      requestClaudeMessagesWithBackoff,
-      requestGeminiGenerateContentWithBackoff,
-      requestOpenAiResponsesWithBackoff,
-      extractClaudeResponseText,
-      extractGeminiResponseText,
-      extractResponseText,
-      recordAgentLlmTrace,
-      isAbortError: isAgentRequestAbortError
-    });
-    return llmProviderBridge;
+    const candidate = llmProviderBridge[methodName];
+    if (typeof candidate !== 'function') {
+      return null;
+    }
+    return candidate.bind(llmProviderBridge);
+  }
+
+  function buildMissingBridgeResult(options = {}, fallbackError = 'LLM API bridge is not configured.') {
+    return {
+      ok: false,
+      error: cleanText(options.defaultError, 600) || fallbackError
+    };
+  }
+
+  async function requestText(options = {}) {
+    const requestOptions = resolveLlmRequestOptions(options);
+    if (requestTextOverride) {
+      return requestTextOverride(requestOptions);
+    }
+    const bridgeRequestText = getBridgeMethod('requestText');
+    if (!bridgeRequestText) {
+      return buildMissingBridgeResult(requestOptions, 'Text generation bridge is not configured.');
+    }
+    return bridgeRequestText(requestOptions);
   }
 
   async function requestAssistantText(options = {}) {
+    const requestOptions = resolveLlmRequestOptions(options);
     if (requestAssistantTextOverride) {
-      return requestAssistantTextOverride({ ...options });
+      return requestAssistantTextOverride(requestOptions);
     }
-    return getLlmProviderBridge().requestAssistantText({ ...options });
+    return requestText(requestOptions);
+  }
+
+  async function requestImageInput(options = {}) {
+    const requestOptions = resolveLlmRequestOptions(options);
+    if (requestImageInputOverride) {
+      return requestImageInputOverride(requestOptions);
+    }
+    const bridgeRequestImageInput = getBridgeMethod('requestImageInput');
+    if (!bridgeRequestImageInput) {
+      return buildMissingBridgeResult(requestOptions, 'Image input bridge is not configured.');
+    }
+    return bridgeRequestImageInput(requestOptions);
+  }
+
+  async function requestFileInput(options = {}) {
+    const requestOptions = resolveLlmRequestOptions(options);
+    if (requestFileInputOverride) {
+      return requestFileInputOverride(requestOptions);
+    }
+    const bridgeRequestFileInput = getBridgeMethod('requestFileInput');
+    if (!bridgeRequestFileInput) {
+      return buildMissingBridgeResult(requestOptions, 'File input bridge is not configured.');
+    }
+    return bridgeRequestFileInput(requestOptions);
   }
 
   async function requestStructuredJsonPayload(options = {}) {
+    const requestOptions = resolveLlmRequestOptions(options);
     if (requestStructuredJsonPayloadOverride) {
-      return requestStructuredJsonPayloadOverride({ ...options });
+      return requestStructuredJsonPayloadOverride(requestOptions);
     }
-    return getLlmProviderBridge().requestStructuredJsonPayload({ ...options });
+    const normalizedFileData = cleanText(requestOptions.fileDataUrl || requestOptions.pdfDataUrl, 240000);
+    const normalizedImageData = cleanText(requestOptions.imageDataUrl || requestOptions.imageUrl, 240000);
+    const structuredRequest = {
+      ...requestOptions,
+      fileDataUrl: normalizedFileData,
+      expectJson: true,
+      defaultError: cleanText(requestOptions.defaultError, 600) || 'Structured JSON bridge is not configured.'
+    };
+
+    if (normalizedFileData) {
+      return requestFileInput(structuredRequest);
+    }
+    if (normalizedImageData) {
+      return requestImageInput({
+        ...structuredRequest,
+        imageDataUrl: cleanText(requestOptions.imageDataUrl, 240000),
+        imageUrl: cleanText(requestOptions.imageUrl, 240000)
+      });
+    }
+    return requestText(structuredRequest);
   }
 
   async function requestWebSearch(options = {}) {
+    const requestOptions = resolveLlmRequestOptions(options);
     if (requestWebSearchOverride) {
-      return requestWebSearchOverride({ ...options });
+      return requestWebSearchOverride(requestOptions);
     }
-    return getLlmProviderBridge().requestWebSearch({ ...options });
+    const bridgeRequestWebSearch = getBridgeMethod('requestWebSearch');
+    if (!bridgeRequestWebSearch) {
+      return buildMissingBridgeResult(requestOptions, 'Web search bridge is not configured.');
+    }
+    return bridgeRequestWebSearch(requestOptions);
+  }
+
+  function createScopedLlmApi(source = {}) {
+    const boundSource = source && typeof source === 'object' ? source : {};
+    const bindOptions = (options = {}) => ({
+      ...options,
+      llmSource: {
+        ...boundSource,
+        ...(options.llmSource && typeof options.llmSource === 'object' ? options.llmSource : {}),
+        ...(options.source && typeof options.source === 'object' ? options.source : {})
+      }
+    });
+
+    return {
+      requestText: (options = {}) => requestText(bindOptions(options)),
+      requestAssistantText: (options = {}) => requestAssistantText(bindOptions(options)),
+      requestImageInput: (options = {}) => requestImageInput(bindOptions(options)),
+      requestFileInput: (options = {}) => requestFileInput(bindOptions(options)),
+      requestStructuredJsonPayload: (options = {}) => requestStructuredJsonPayload(bindOptions(options)),
+      requestWebSearch: (options = {}) => requestWebSearch(bindOptions(options))
+    };
   }
 
   return {
-    LLM_PROVIDERS,
     asArray,
     cleanText,
     uniqueStrings,
     safeParseJson,
-    toInputText,
     recordAgentLlmTrace,
+    getCurrentLlmSource,
+    getCurrentLlmProvider,
+    resolveLlmRequestOptions,
+    createScopedLlmApi,
+    requestText,
     requestAssistantText,
+    requestImageInput,
+    requestFileInput,
     requestStructuredJsonPayload,
     requestWebSearch
   };
@@ -361,17 +269,5 @@ module.exports = {
   defaultAsArray,
   defaultCleanText,
   defaultSafeParseJson,
-  parsePdfDataUrl,
-  defaultToInputText,
-  defaultExtractResponseText,
-  defaultExtractClaudeResponseText,
-  defaultExtractGeminiResponseText,
-  sleep,
-  sleepWithAbort,
-  requestJsonWithBackoff,
-  requestOpenAiResponsesWithBackoff,
-  requestClaudeMessagesWithBackoff,
-  buildGeminiGenerateContentUrl,
-  requestGeminiGenerateContentWithBackoff,
   createAgentLlmRuntimeHelpers
 };

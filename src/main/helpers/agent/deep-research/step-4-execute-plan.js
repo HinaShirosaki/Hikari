@@ -7,7 +7,7 @@ function asArray(value) {
 }
 
 function cleanText(value, _maxLength = 2000) {
-  const text = String(value || '').trim();
+  const text = String(value || '');
   if (!text) {
     return '';
   }
@@ -372,18 +372,11 @@ async function selectNextAction(input = {}, deps = {}) {
     return fallback;
   }
   const result = await requestStructuredJsonPayload({
-    provider: cleanText(input.provider, 80),
-    endpoint: cleanText(input.endpoint, 2000),
-    apiKey: cleanText(input.apiKey, 400),
-    model: cleanText(input.model, 120),
     stage: 'deep_research_step_4_next_action',
     systemPrompt: 'Return valid JSON only.',
     userPrompt: buildExecutionActionPrompt(input),
     schema: NEXT_ACTION_SCHEMA,
     traceContext: input.traceContext || null,
-    maxOutputTokens: 1500,
-    openAiStrict: true,
-    openAiAsDefaultProvider: true,
     defaultError: 'Deep research execution planner is not configured.'
   });
   if (!result?.ok || !result.payload) {

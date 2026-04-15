@@ -209,6 +209,9 @@ export function createWorkflowActions(config = {}) {
   function resetDraftToEmpty() {
     runtime.draft = createEmptyDraft();
     graphController.resetInteractionState?.();
+    if (elements.workflowTemplateNameInput) {
+      elements.workflowTemplateNameInput.value = '';
+    }
     renderer.applyDraftToForm?.();
   }
 
@@ -219,7 +222,7 @@ export function createWorkflowActions(config = {}) {
 
     const workflowName = String(options.workflowName || '').trim() || buildDefaultWorkflowName(template);
     const workflow = instantiateTemplate(template, workflowName);
-    workflow.projectId = String(options.projectId || '').trim();
+    workflow.projectId = String(options.projectId || template?.projectId || '').trim();
     workflow.entries = [createWorkflowEntryRecord(workflow, workflowName)];
     const normalizedWorkflowRecord = normalizeWorkflow(workflow);
     state.workflows.push(normalizedWorkflowRecord);
@@ -450,7 +453,12 @@ export function createWorkflowActions(config = {}) {
     const template = normalizeTemplate({
       id: createId(),
       name: templateName,
-      description: String(elements.workflowDescriptionInput?.value || '').trim() || runtime.draft.description,
+      description: String(
+        elements.workflowTemplateDescriptionInput?.value
+        || elements.workflowDescriptionInput?.value
+        || ''
+      ).trim() || runtime.draft.description,
+      projectId: String(elements.workflowProjectInput?.value || runtime.draft.projectId || '').trim(),
       blocks: runtime.draft.blocks.map((block) => ({ ...block })),
       links: runtime.draft.links.map((link) => ({ ...link })),
       createdAt: now,
@@ -593,6 +601,10 @@ export function createWorkflowActions(config = {}) {
     return `${sanitizeFolderName(entry?.name || 'Entry') || 'Entry'}__${sanitizeFolderName(entry?.id || 'entry') || 'entry'}`;
   }
 
+  function buildNotebookPageFolderName(notebookEntryId = '') {
+    return `${sanitizeFolderName('Notebook_Page') || 'Notebook_Page'}__${sanitizeFolderName(notebookEntryId || 'page') || 'page'}`;
+  }
+
   function buildBlockFolderName(block) {
     const blockLabel = renderer.titleForBlock?.(block) || block?.id || 'Step';
     return `${sanitizeFolderName(blockLabel || 'Step') || 'Step'}__${sanitizeFolderName(block?.id || 'step') || 'step'}`;
@@ -619,12 +631,12 @@ export function createWorkflowActions(config = {}) {
     return `${workflowRoot}/Results/${buildEntryFolderName(entry)}/${buildBlockFolderName(block)}`;
   }
 
-  function buildWorkflowStepNotebookFolderPath(workflow, entry, block) {
+  function buildWorkflowStepNotebookFolderPath(workflow, entry, notebookEntryId = '') {
     const workflowRoot = buildWorkflowInstanceRootFolderPath(workflow);
     if (!workflowRoot) {
       return '';
     }
-    return `${workflowRoot}/Notebook/${buildEntryFolderName(entry)}/${buildBlockFolderName(block)}`;
+    return `${workflowRoot}/Notebook/${buildEntryFolderName(entry)}/${buildNotebookPageFolderName(notebookEntryId)}`;
   }
 
   async function ensureStorageFolderExists(storageFolder) {
@@ -700,6 +712,34 @@ export function createWorkflowActions(config = {}) {
     return records;
   }
 
+  function cloneProtocolSnapshot(protocol) {
+    if (!protocol || typeof protocol !== 'object') {
+      return null;
+    }
+    const protocolId = String(protocol.id || '').trim();
+    return {
+      id: protocolId,
+      name: String(protocol.name || '').trim() || 'Untitled Protocol',
+      category: String(protocol.category || '').trim(),
+      purpose: String(protocol.purpose || '').trim(),
+      steps: Array.isArray(protocol.steps)
+        ? protocol.steps.map((step, index) => {
+          const stepId = String(step?.id || '').trim() || `${protocolId || 'protocol'}_step_${index + 1}`;
+          return {
+            id: stepId,
+            text: String(step?.text || '').trim(),
+            placeholders: Array.isArray(step?.placeholders)
+              ? step.placeholders.map((placeholder, placeholderIndex) => ({
+                id: String(placeholder?.id || '').trim() || `${stepId}_placeholder_${placeholderIndex + 1}`,
+                name: String(placeholder?.name || '').trim() || `Value ${placeholderIndex + 1}`
+              }))
+              : []
+          };
+        })
+        : []
+    };
+  }
+
   function upsertNotebookEntryForStep(workflow, entry, block, options = {}) {
     const stepState = ensureEntryStepState(entry, block.id);
     const now = new Date().toISOString();
@@ -712,8 +752,9 @@ export function createWorkflowActions(config = {}) {
       ? 'executed'
       : (options.executed === false ? 'planned' : (stepState.status === 'completed' ? 'executed' : 'planned'));
     const createdAt = String(existing?.createdAt || '').trim() || now;
-    const storageFolder = String(existing?.storageFolder || '').trim() || buildWorkflowStepNotebookFolderPath(workflow, entry, block);
     const notebookId = existing?.id || createId();
+    const storageFolder = buildWorkflowStepNotebookFolderPath(workflow, entry, notebookId)
+      || String(existing?.storageFolder || '').trim();
     const linkedAssayIds = (state.assays || [])
       .filter((item) => item.notebookEntryId === notebookId)
       .map((item) => item.id);
@@ -725,9 +766,10 @@ export function createWorkflowActions(config = {}) {
       id: notebookId,
       notebookType: 'biology',
       projectId: project?.id || workflow.projectId || '',
-      projectName: project?.name || '',
+      projectName: project?.name || String(existing?.projectName || '').trim(),
       protocolId: protocol?.id || '',
       protocolName: protocol?.name || renderer.titleForBlock?.(block) || 'Workflow Step',
+      protocolSnapshot: cloneProtocolSnapshot(protocol) || cloneProtocolSnapshot(existing?.protocolSnapshot),
       values: { ...stepState.values },
       result: String(stepState.result || '').trim(),
       resultFiles: [...stepState.resultFiles],
@@ -1097,6 +1139,7 @@ export function createWorkflowActions(config = {}) {
     elements.workflowBlockList?.addEventListener('change', onBlockListChange);
     elements.workflowList?.addEventListener('click', onWorkflowListClick);
     elements.workflowSaveTemplateBtn?.addEventListener('click', onSaveTemplate);
+    elements.workflowTemplateCancelBtn?.addEventListener('click', onCancelWorkflowEdit);
     elements.workflowTemplateCreateBtn?.addEventListener('click', onCreateFromTemplate);
     elements.workflowTemplateList?.addEventListener('click', onTemplateListClick);
     elements.workflowEntryTemplateBtn?.addEventListener('click', onStartCreateWorkflowTemplate);

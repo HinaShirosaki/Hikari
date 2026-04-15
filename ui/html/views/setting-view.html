@@ -1,12 +1,15 @@
 <section id="setting-view" class="view">
-      <div class="panel settings-shell">
-        <div class="settings-head">
-          <h2>Settings</h2>
-          <p class="small-note">Workspace appearance, storage, startup, and model configuration.</p>
-        </div>
+      <div class="settings-layout left-rail-template">
+        <aside class="settings-nav app-left-rail left-rail-template__rail" data-sync-left-rail aria-label="Settings sections">
+          <div class="left-rail-template__stack">
+            <section class="left-rail-template__section">
+              <div class="settings-head">
+                <h2>Settings</h2>
+                <p class="small-note">Workspace appearance, storage, startup, and model configuration.</p>
+              </div>
+            </section>
 
-        <div class="settings-layout">
-          <aside class="settings-nav multi-panel-left-rail multi-panel-left-scroll" aria-label="Settings sections">
+            <section class="left-rail-template__section settings-nav-list">
             <button type="button" class="settings-nav-item" data-settings-target="appearance" aria-pressed="true">
               <span>Appearance</span>
               <small>Font size and theme</small>
@@ -35,9 +38,11 @@
               <span>Telegram Bot</span>
               <small>Bot token and status</small>
             </button>
-          </aside>
+            </section>
+          </div>
+        </aside>
 
-          <div class="settings-detail">
+        <div class="settings-detail left-rail-template__main">
             <section class="settings-section" data-settings-panel="appearance">
               <div class="settings-section-head">
                 <h3>Appearance</h3>
@@ -114,8 +119,8 @@
 
             <section class="settings-section" data-settings-panel="startup" hidden>
               <div class="settings-section-head">
-                <h3>Startup &amp; Data</h3>
-                <p class="small-note">Control which module opens first and how data loads and saves.</p>
+                <h3>Startup</h3>
+                <p class="small-note">Control which module opens first when the workspace launches.</p>
               </div>
               <form id="startup-form" class="stack-form">
                 <label>
@@ -141,30 +146,11 @@
                   <input id="setting-startup-remember-last-view" type="checkbox" />
                   Remember last opened module on launch
                 </label>
-                <label class="inline-row">
-                  <input id="setting-startup-auto-load-data-file" type="checkbox" />
-                  Auto-load current .json data file on launch
-                </label>
                 <p class="small-note">If enabled, “Remember last opened module” overrides the default startup module.</p>
                 <div class="form-actions">
                   <button type="submit" class="primary-btn">Save Startup Settings</button>
                 </div>
               </form>
-
-              <div class="settings-subsection">
-                <h4>Data File (.json)</h4>
-                <div class="stack-form">
-                  <p class="small-note">Current .json file: <span id="setting-ena-path">Not set</span></p>
-                  <label class="inline-row">
-                    <input id="setting-auto-save-ena" type="checkbox" />
-                    Auto-save to current .json file after each change
-                  </label>
-                  <div class="form-actions">
-                    <button type="button" id="save-ena-btn" class="primary-btn">Save .json</button>
-                    <button type="button" id="load-ena-btn" class="ghost-btn">Load .json</button>
-                  </div>
-                </div>
-              </div>
             </section>
 
             <section class="settings-section" data-settings-panel="locations" hidden>
@@ -208,6 +194,14 @@
                   API Key
                   <input id="setting-api-key" type="password" placeholder="sk-... (not required for Codex CLI)" />
                 </label>
+                <div id="setting-codex-auth-controls" class="stack-form" hidden>
+                  <p id="setting-codex-status" class="small-note">Codex login: checking...</p>
+                  <p class="small-note">Codex uses a stored OpenAI login. Once signed in, it should stay available after restart until you clear it.</p>
+                  <div class="form-actions">
+                    <button type="button" id="start-codex-login-btn" class="ghost-btn">Login with OpenAI</button>
+                    <button type="button" id="clear-codex-login-btn" class="ghost-btn">Clear Saved Login</button>
+                  </div>
+                </div>
                 <label class="inline-row">
                   <input id="setting-agent-developer-mode" type="checkbox" />
                   Agent Developer Mode (record redacted LLM request/response traces)
@@ -218,25 +212,24 @@
               </form>
             </section>
 
-            <section class="settings-section" data-settings-panel="telegram" hidden>
-              <div class="settings-section-head">
-                <h3>Telegram Bot</h3>
-                <p class="small-note">Store a token for Telegram automation and status reporting.</p>
+          <section class="settings-section" data-settings-panel="telegram" hidden>
+            <div class="settings-section-head">
+              <h3>Telegram Bot</h3>
+              <p class="small-note">Store a token for Telegram automation and status reporting.</p>
+            </div>
+            <form id="telegram-form" class="stack-form">
+              <label>
+                Bot Token
+                <input id="setting-telegram-token" type="password" placeholder="123456:ABCDEF..." />
+              </label>
+              <p class="small-note">Enter token to store it in app settings. Clearing saved token falls back to env token if available.</p>
+              <p id="setting-telegram-status" class="small-note">Telegram bot status: loading...</p>
+              <div class="form-actions">
+                <button type="submit" class="primary-btn">Save Telegram Token</button>
+                <button type="button" id="clear-telegram-token-btn" class="ghost-btn">Clear Saved Token</button>
               </div>
-              <form id="telegram-form" class="stack-form">
-                <label>
-                  Bot Token
-                  <input id="setting-telegram-token" type="password" placeholder="123456:ABCDEF..." />
-                </label>
-                <p class="small-note">Enter token to store it in app settings. Clearing saved token falls back to env token if available.</p>
-                <p id="setting-telegram-status" class="small-note">Telegram bot status: loading...</p>
-                <div class="form-actions">
-                  <button type="submit" class="primary-btn">Save Telegram Token</button>
-                  <button type="button" id="clear-telegram-token-btn" class="ghost-btn">Clear Saved Token</button>
-                </div>
-              </form>
-            </section>
-          </div>
+            </form>
+          </section>
         </div>
       </div>
     </section>

@@ -332,16 +332,11 @@ function createScienceFinalSynthesisRuntime(deps = {}) {
       return normalizeSynthesisPayload(await synthesizeScienceFinalOverride(payload), payload);
     }
     const llmResult = await requestAssistantText({
-      provider: cleanText(payload.provider, 80),
-      endpoint: cleanText(payload.endpoint, 2000),
-      apiKey: cleanText(payload.apiKey, 400),
-      model: cleanText(payload.model, 120),
+      source: payload,
       stage: 'science_reasoning_final_synthesis',
       systemPrompt: 'Write a grounded final science answer using only the supplied evidence. Respond as assistant text only.',
       userPrompt: buildSynthesisPrompt(payload),
       traceContext: payload.traceContext || null,
-      maxOutputTokens: 2200,
-      openAiAsDefaultProvider: true,
       defaultError: 'Science reasoning synthesis is not configured.'
     });
     if (!llmResult?.ok || !llmResult.text) {

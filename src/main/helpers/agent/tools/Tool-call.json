@@ -518,6 +518,49 @@
       }
     }
   },
+  "web-search": {
+    "description": "Use this tool for broad external web retrieval when the agent needs current or general internet sources rather than paper-specific scholarly search. Provide `query` when possible, and optionally constrain `allowed_domains` for focused retrieval. The runtime routes through the shared provider-backed web-search API, including provider-native search and Codex CLI `--search` support.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "query": {
+          "type": "string",
+          "maxLength": 1200
+        },
+        "message": {
+          "type": "string",
+          "maxLength": 1200
+        },
+        "topic": {
+          "type": "string",
+          "maxLength": 240
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 25
+        },
+        "allowed_domains": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "maxItems": 12
+        },
+        "external_web_access": {
+          "type": "boolean"
+        },
+        "user_location": {
+          "type": "object"
+        },
+        "parser_payload": {
+          "$ref": "#/$defs/parser_payload"
+        }
+      }
+    }
+  },
   "sub-agent": {
     "description": "Use this tool to manage helper sub-agent sessions for multi-step or delegated work that should persist across turns. `create` starts a managed sub-agent with a system prompt and initial message, `message` sends a follow-up, `get` inspects one session, `list` shows active sessions, and `delete` removes a session. Use it when the agent needs a reusable delegated workspace rather than a one-shot tool execution.",
     "input_schema": {
@@ -754,6 +797,9 @@
           "maxLength": 160
         },
         "paper_pdf_url": {
+          "type": "string"
+        },
+        "doi": {
           "type": "string"
         },
         "pdf_url": {

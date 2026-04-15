@@ -64,6 +64,10 @@ function buildEntryFolderName(entryName = '', entryId = '') {
   return `${sanitizeFolderName(entryName, 'Entry')}__${sanitizeFolderName(entryId, 'entry')}`;
 }
 
+function buildNotebookPageFolderName(notebookEntryId = '') {
+  return `${sanitizeFolderName('Notebook_Page', 'Notebook_Page')}__${sanitizeFolderName(notebookEntryId, 'page')}`;
+}
+
 function buildBlockFolderName(blockName = '', blockId = '') {
   return `${sanitizeFolderName(blockName, 'Step')}__${sanitizeFolderName(blockId, 'step')}`;
 }
@@ -343,23 +347,26 @@ function isPathInside(parentPath, childPath) {
 
 function buildNotebookStorageFolder(runLayout, notebookEntry) {
   const entry = ensureObject(notebookEntry);
+  const workflowContext = ensureObject(entry.workflowContext);
+  if (cleanText(workflowContext.workflowEntryId, 220) || cleanText(workflowContext.workflowBlockId, 220)) {
+    return path.join(
+      runLayout.notebookFolderPath,
+      buildEntryFolderName(
+        workflowContext.workflowEntryName || workflowContext.workflowName || entry.protocolName || entry.id,
+        workflowContext.workflowEntryId || entry.id
+      ),
+      buildNotebookPageFolderName(entry.id)
+    );
+  }
+
   const existingStorageFolder = cleanText(entry.storageFolder, 2400);
   if (existingStorageFolder && isPathInside(runLayout.workflowFolderPath, existingStorageFolder)) {
     return existingStorageFolder;
   }
 
-  const workflowContext = ensureObject(entry.workflowContext);
-  if (cleanText(workflowContext.workflowEntryId, 220) || cleanText(workflowContext.workflowBlockId, 220)) {
-    return path.join(
-      runLayout.notebookFolderPath,
-      buildEntryFolderName(workflowContext.workflowEntryName || entry.protocolName || entry.id, workflowContext.workflowEntryId || entry.id),
-      buildBlockFolderName(workflowContext.workflowBlockTitle || entry.protocolName || entry.id, workflowContext.workflowBlockId || entry.id)
-    );
-  }
-
   return path.join(
     runLayout.notebookFolderPath,
-    buildBlockFolderName(entry.protocolName || entry.id, entry.id)
+    buildNotebookPageFolderName(entry.id)
   );
 }
 
@@ -855,6 +862,7 @@ module.exports = {
   WORKFLOW_STATUS_SQLITE_FILE_NAME,
   buildBlockFolderName,
   buildEntryFolderName,
+  buildNotebookPageFolderName,
   buildTemplateFolderName,
   buildWorkflowFolderName,
   buildWorkflowFolderLayout,

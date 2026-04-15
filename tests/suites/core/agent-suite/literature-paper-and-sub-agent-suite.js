@@ -190,18 +190,23 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
         searchCrossrefRecords: async () => [],
         searchEuropePmcRecords: async () => [],
         searchUniProtRecords: async () => [],
-        searchWebResults: async () => ({
-          items: [
+        requestWebSearch: async ({ query, maxResults, provider, model }) => ({
+          ok: true,
+          results: [
             {
               title: 'Review of PD-1 binders',
               url: 'https://example.org/review',
-              snippet: 'A recent external review of PD-1 binders.'
+              summary: 'A recent external review of PD-1 binders.',
+              source_domain: 'example.org'
             }
-          ]
+          ].slice(0, maxResults),
+          reasoning: `Provider-layer search for ${query} via ${provider || 'default'} ${model || ''}`.trim()
         })
       });
 
       const result = await runtime.execute({
+        provider: 'codex',
+        model: 'gpt-5.4-mini',
         query: 'PD-1 binder review',
         source: 'auto',
         limit: 5
@@ -215,6 +220,44 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
       assert.equal(result.items[0].source, 'web');
       assert.equal(result.items[0].source_domain, 'example.org');
       assert.match(String(result.summary || ''), /web: 1/i);
+    });
+
+    test('literature web source delegates through the shared web-search runtime api', async () => {
+      const calls = [];
+      const runtime = agentLiteratureSearch.createLiteratureSearchRuntime({
+        webSearchRuntime: {
+          searchWebResults: async (input = {}) => {
+            calls.push(JSON.parse(JSON.stringify(input)));
+            return {
+              query: input.query,
+              results: [
+                {
+                  title: 'Focused review',
+                  url: 'https://example.org/focused-review',
+                  summary: 'Focused external review.',
+                  source_domain: 'example.org'
+                }
+              ],
+              reasoning: 'Used shared web-search runtime.'
+            };
+          }
+        }
+      });
+
+      const result = await runtime.execute({
+        provider: 'openai',
+        query: 'PD-1 focused review',
+        source: 'web',
+        limit: 3
+      });
+
+      assert.equal(result.ok, true);
+      assert.equal(result.items.length, 1);
+      assert.equal(calls.length, 1);
+      assert.equal(calls[0].provider, 'openai');
+      assert.equal(calls[0].query, 'PD-1 focused review');
+      assert.equal(calls[0].limit, 3);
+      assert.equal(result.citations[0].source, 'web_source');
     });
 
     test('paper context loader reads papers in precedence order before falling back to search summaries', async () => {
@@ -649,8 +692,8 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
                 ok: true,
                 status: 'completed',
                 file_name: `${String(input.paper_title || 'paper').trim()}.pdf`,
-                file_path: path.join(storageRoot, 'LiteratureSearch', String(input.linked_name || 'Uncategorized'), 'Papers', `${String(input.paper_title || 'paper').trim()}.pdf`),
-                relative_path: `LiteratureSearch/${String(input.linked_name || 'Uncategorized')}/Papers/${String(input.paper_title || 'paper').trim()}.pdf`,
+                file_path: path.join(storageRoot, 'Papers', String(input.linked_name || 'Uncategorized'), `${String(input.paper_title || 'paper').trim()}.pdf`),
+                relative_path: `Papers/${String(input.linked_name || 'Uncategorized')}/${String(input.paper_title || 'paper').trim()}.pdf`,
                 summary: `Downloaded ${String(input.paper_title || 'paper').trim()}.pdf`
               };
             }
@@ -708,21 +751,21 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
         assert.equal(result.papers_read_count, 9);
         assert.match(String(result.summary || ''), /Downloaded 6 selected PDF/i);
         assert.match(String(result.summary || ''), /Loaded 9 bounded context block/i);
-        assert.equal(result.downloaded_papers.every((item) => String(item.relative_path || '').includes('LiteratureSearch/Atlas/Papers/')), true);
+        assert.equal(result.downloaded_papers.every((item) => String(item.relative_path || '').includes('Papers/Atlas/')), true);
         assert.equal(result.sub_agent?.last_response?.output?.selected_papers.length, 9);
       } finally {
         await fsPromises.rm(storageRoot, { recursive: true, force: true });
       }
     });
 
-    test('paper download runtime maps literature-search downloads into LiteratureSearch folders', async () => {
+    test('paper download runtime maps literature-search downloads into top-level Papers folders', async () => {
       const folder = agentPaperDownload.buildPaperStorageFolder({
         rootPath: '/tmp/enana-storage',
         linkedType: 'literature_search',
         linkedName: 'Atlas'
       });
 
-      assert.equal(folder, path.join('/tmp/enana-storage', 'LiteratureSearch', 'Atlas', 'Papers'));
+      assert.equal(folder, path.join('/tmp/enana-storage', 'Papers', 'Atlas'));
     });
 
     test('paper download runtime extracts PDF candidates and streams direct download progress into paper storage', async () => {
@@ -813,6 +856,131 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
         if (typeof releaseSecondChunk === 'function') {
           releaseSecondChunk();
         }
+        await fsPromises.rm(storageRoot, { recursive: true, force: true });
+      }
+    });
+
+    test('paper download runtime accepts doi-only input and opens the browser-assisted flow under the storage root', async () => {
+      const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'paper-download-doi-'));
+      const browserCalls = [];
+      try {
+        const runtime = agentPaperDownload.createPaperDownloadRuntime({
+          createId: () => 'paper-download-doi-1',
+          startBrowserDownloadSession: async (options = {}) => {
+            browserCalls.push(JSON.parse(JSON.stringify(options)));
+            return {
+              ok: true,
+              session_id: 'paper-browser-paper-download-doi-1',
+              data_base64: Buffer.from('%PDF-1.4\nDOI browser fallback\n', 'utf8').toString('base64'),
+              file_name: 'doi-paper.pdf',
+              relative_path: 'Papers/Atlas/doi-paper.pdf',
+              summary: 'Browser download completed from DOI.'
+            };
+          },
+          terminateBrowserDownloadSession: async () => ({ ok: true })
+        });
+
+        const result = await runtime.downloadPaper({
+          doi: '10.1000/example-doi',
+          paper_title: 'doi-paper',
+          linked_type: 'literature-search',
+          linked_name: 'Atlas',
+          storage_path: storageRoot
+        });
+
+        assert.equal(result.ok, true);
+        assert.equal(result.status, 'completed');
+        assert.equal(result.method, 'browser');
+        assert.equal(browserCalls.length, 1);
+        assert.equal(browserCalls[0].browserEntryUrl, 'https://doi.org/10.1000/example-doi');
+        assert.equal(String(result.relative_path || '').includes('Papers/Atlas/'), true);
+      } finally {
+        await fsPromises.rm(storageRoot, { recursive: true, force: true });
+      }
+    });
+
+    test('literature search workflow preserves DOI metadata and passes it into paper download', async () => {
+      const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'literature-workflow-doi-'));
+      const downloadCalls = [];
+      try {
+        const runtime = agentLiteratureSearchWorkflow.createLiteratureSearchWorkflowRuntime({
+          literatureSearchRuntime: {
+            buildLiteratureQuery: () => 'ncAA incorporation',
+            searchLiteratureCandidates: async () => ({
+              ok: true,
+              status: 'completed',
+              query: 'ncAA incorporation',
+              sources: ['crossref'],
+              items: [
+                {
+                  id: 'paper-1',
+                  source: 'crossref',
+                  title: 'DOI-only paper',
+                  summary: 'Useful DOI-only literature result.',
+                  doi: '10.1000/example-doi',
+                  url: ''
+                }
+              ],
+              citations: [],
+              loaded_context_blocks: [],
+              papers_read_count: 0,
+              source_counts: { crossref: 1 },
+              source_errors: {},
+              summary: 'Found 1 literature result.'
+            })
+          },
+          paperContextLoaderRuntime: {
+            fetchEuropePmcMetadataForItem: async () => ({
+              pmid: '',
+              pmcid: '',
+              doi: '',
+              pdf_urls: [],
+              abstract_sections: []
+            }),
+            loadPaperContexts: async () => ({
+              ok: true,
+              status: 'completed',
+              papers_read_count: 0,
+              loaded_context_blocks: [],
+              papers: [],
+              summary: 'No paper context loaded.'
+            })
+          },
+          paperDownloadRuntime: {
+            downloadPaper: async (input = {}) => {
+              downloadCalls.push(JSON.parse(JSON.stringify(input)));
+              return {
+                ok: true,
+                status: 'completed',
+                file_name: 'doi-paper.pdf',
+                file_path: path.join(storageRoot, 'LiteratureSearch', 'Atlas', 'Papers', 'doi-paper.pdf'),
+                relative_path: 'Papers/Atlas/doi-paper.pdf',
+                summary: 'Downloaded doi-paper.pdf'
+              };
+            }
+          }
+        });
+
+        const result = await runtime.execute({
+          query: 'ncAA incorporation',
+          storage_path: storageRoot,
+          snapshot: {
+            settings: {
+              storagePath: storageRoot
+            }
+          },
+          project: {
+            id: 'project-atlas',
+            name: 'Atlas'
+          }
+        });
+
+        assert.equal(result.ok, true);
+        assert.equal(downloadCalls.length, 1);
+        assert.equal(downloadCalls[0].doi, '10.1000/example-doi');
+        assert.equal(downloadCalls[0].page_url, 'https://doi.org/10.1000/example-doi');
+        assert.equal(result.selected_papers[0].doi, '10.1000/example-doi');
+      } finally {
         await fsPromises.rm(storageRoot, { recursive: true, force: true });
       }
     });

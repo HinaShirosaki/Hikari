@@ -327,6 +327,7 @@ export function initLabCommonInventory({ state, persist, createId, safeText }) {
 
     try {
       const result = await window.enanaApi.syncSqliteBundle({
+        mode: 'chemical',
         snapshot: inventorySnapshot,
         sqlitePath: targetPath
       });

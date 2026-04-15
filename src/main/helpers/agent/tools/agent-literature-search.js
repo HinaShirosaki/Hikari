@@ -194,7 +194,8 @@ function createLiteratureSearchRuntime(deps = {}) {
   const {
     asArray,
     cleanText,
-    uniqueStrings
+    uniqueStrings,
+    requestWebSearch
   } = createAgentLlmRuntimeHelpers(deps);
   const fetchImpl = typeof deps.fetch === 'function'
     ? deps.fetch
@@ -204,6 +205,9 @@ function createLiteratureSearchRuntime(deps = {}) {
   const searchCrossrefRecordsOverride = typeof deps.searchCrossrefRecords === 'function' ? deps.searchCrossrefRecords : null;
   const searchUniProtRecordsOverride = typeof deps.searchUniProtRecords === 'function' ? deps.searchUniProtRecords : null;
   const searchEuropePmcRecordsOverride = typeof deps.searchEuropePmcRecords === 'function' ? deps.searchEuropePmcRecords : null;
+  const webSearchRuntime = deps.webSearchRuntime && typeof deps.webSearchRuntime === 'object'
+    ? deps.webSearchRuntime
+    : null;
   const paperContextLoaderRuntime = deps.paperContextLoaderRuntime && typeof deps.paperContextLoaderRuntime === 'object'
     ? deps.paperContextLoaderRuntime
     : null;
@@ -237,16 +241,6 @@ function createLiteratureSearchRuntime(deps = {}) {
     }
     const text = await readResponseText(response);
     return JSON.parse(String(text || '{}'));
-  }
-
-  async function fetchText(url, options = {}) {
-    const response = await requireFetch('Literature')(url, options);
-    const failed = response?.ok === false || Number(response?.status) >= 400;
-    if (failed) {
-      const body = await readResponseText(response);
-      throw new Error(`Literature request failed (${Number(response?.status) || 'request'}): ${cleanText(body, 300) || 'no response body'}`);
-    }
-    return readResponseText(response);
   }
 
   function normalizeQueryTerms(input = {}) {
@@ -347,7 +341,11 @@ function createLiteratureSearchRuntime(deps = {}) {
   function normalizeResultList(sourceName, rawItems) {
     const list = Array.isArray(rawItems)
       ? rawItems
-      : asArray(ensureObject(rawItems).items);
+      : asArray(
+        ensureObject(rawItems).results
+        || ensureObject(rawItems).items
+        || ensureObject(rawItems).search_results
+      );
     return list
       .map((item) => normalizeResultItem(sourceName, item))
       .filter((item) => item.title || item.url || item.summary || item.accession);
@@ -403,7 +401,7 @@ function createLiteratureSearchRuntime(deps = {}) {
   function buildCitation(item = {}) {
     const sourceName = cleanText(item.source, 80);
     return {
-      source: sourceName,
+      source: sourceName === LITERATURE_SOURCES.WEB ? 'web_source' : sourceName,
       pointer: cleanText(item.doi || item.pmid || item.pmcid || item.accession || item.url || item.title, 260),
       reason: `Matched ${SOURCE_LABELS[sourceName] || sourceName || 'literature'} result.`
     };
@@ -537,45 +535,37 @@ function createLiteratureSearchRuntime(deps = {}) {
     }).filter((item) => item.title);
   }
 
-  function parseWebRssItems(xml, limit = 5) {
-    const text = String(xml || '');
-    const items = [];
-    const itemPattern = /<item\b[^>]*>([\s\S]*?)<\/item>/gi;
-    let match = itemPattern.exec(text);
-    while (match && items.length < limit) {
-      const block = match[1];
-      const title = xmlTagValue(block, 'title');
-      const url = safeUrl(xmlTagValue(block, 'link'));
-      const summary = xmlTagValue(block, 'description');
-      const publishedAt = xmlTagValue(block, 'pubDate');
-      if (title || url || summary) {
-        items.push(normalizeResultItem(LITERATURE_SOURCES.WEB, {
-          id: url || title,
-          title,
-          url,
-          summary,
-          published_at: publishedAt,
-          source_domain: extractSourceDomain(url)
-        }));
-      }
-      match = itemPattern.exec(text);
-    }
-    return items;
-  }
-
-  async function searchWebRecords(query, limit = 5) {
+  async function searchWebRecords(query, limit = 5, input = {}) {
     if (searchWebResultsOverride) {
       return normalizeResultList(LITERATURE_SOURCES.WEB, await searchWebResultsOverride({ query, limit }));
     }
-    const xml = await fetchText(
-      `https://www.bing.com/search?format=rss&q=${encodeURIComponent(query)}`
-    );
-    return parseWebRssItems(xml, limit);
+    if (webSearchRuntime && typeof webSearchRuntime.searchWebResults === 'function') {
+      const result = await webSearchRuntime.searchWebResults({
+        ...ensureObject(input),
+        query,
+        limit,
+        stage: cleanText(input?.stage, 120) || 'literature_search_web'
+      });
+      return normalizeResultList(LITERATURE_SOURCES.WEB, result);
+    }
+    if (requestWebSearch) {
+      const providerSearch = await requestWebSearch({
+        stage: 'literature_search_web',
+        query,
+        maxResults: limit,
+        traceContext: input?.traceContext || null
+      });
+      if (!providerSearch?.ok) {
+        throw new Error(cleanText(providerSearch?.error, 600) || 'Web search failed.');
+      }
+      return normalizeResultList(LITERATURE_SOURCES.WEB, providerSearch);
+    }
+    throw new Error('Literature web search requires provider-layer web search support.');
   }
 
-  async function searchSource(sourceName, query, limit) {
+  async function searchSource(sourceName, query, limit, input = {}) {
     if (sourceName === LITERATURE_SOURCES.WEB) {
-      return searchWebRecords(query, limit);
+      return searchWebRecords(query, limit, input);
     }
     if (sourceName === LITERATURE_SOURCES.PUBMED) {
       return searchPubMedRecords(query, limit);
@@ -616,7 +606,7 @@ function createLiteratureSearchRuntime(deps = {}) {
     for (const sourceName of resolvedSources) {
       executedSources.push(sourceName);
       try {
-        const items = await searchSource(sourceName, query, Math.min(perSourceLimit, limit));
+        const items = await searchSource(sourceName, query, Math.min(perSourceLimit, limit), source);
         sourceCounts[sourceName] = items.length;
         results.push(...items);
       } catch (error) {
@@ -636,7 +626,7 @@ function createLiteratureSearchRuntime(deps = {}) {
     if (shouldTryWebFallback) {
       executedSources.push(LITERATURE_SOURCES.WEB);
       try {
-        const webItems = await searchWebRecords(query, limit);
+        const webItems = await searchWebRecords(query, limit, source);
         sourceCounts[LITERATURE_SOURCES.WEB] = webItems.length;
         results.push(...webItems);
       } catch (error) {

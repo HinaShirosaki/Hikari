@@ -678,18 +678,11 @@ function createPaperContextLoaderRuntime(deps = {}) {
       return normalizeSelectionResult(fallback, candidateBlocks, input.query || input.message);
     }
     const result = await requestStructuredJsonPayload({
-      provider: cleanText(input.provider, 80),
-      endpoint: cleanText(input.endpoint, 2000),
-      apiKey: cleanText(input.apiKey, 400),
-      model: cleanText(input.model, 120),
       stage: 'paper_context_selection',
       systemPrompt: 'Return valid JSON only.',
       userPrompt: buildSelectionPrompt(input),
       schema: PAPER_CONTEXT_SELECTION_SCHEMA,
       traceContext: input.traceContext || null,
-      maxOutputTokens: 1600,
-      openAiStrict: true,
-      openAiAsDefaultProvider: true,
       defaultError: 'Paper context selection is not configured.'
     });
     if (!result?.ok || !result.payload) {
@@ -748,10 +741,6 @@ function createPaperContextLoaderRuntime(deps = {}) {
         continue;
       }
       const result = await requestStructuredJsonPayload({
-        provider: cleanText(input.provider, 80),
-        endpoint: cleanText(input.endpoint, 2000),
-        apiKey: cleanText(input.apiKey, 400),
-        model: cleanText(input.model, 120),
         stage: 'paper_figure_review',
         systemPrompt: 'Return valid JSON only.',
         userPrompt: [
@@ -763,9 +752,6 @@ function createPaperContextLoaderRuntime(deps = {}) {
         ].join('\n\n'),
         schema: PAPER_FIGURE_REVIEW_SCHEMA,
         traceContext: input.traceContext || null,
-        maxOutputTokens: 1000,
-        openAiStrict: true,
-        openAiAsDefaultProvider: true,
         pdfDataUrl: pdfInput.pdfDataUrl,
         fileName: pdfInput.fileName,
         defaultError: 'Paper figure review is not configured.'

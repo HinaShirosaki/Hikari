@@ -8,15 +8,12 @@ const DEFAULT_TIMEOUT_MS = 15000;
 const MAX_TIMEOUT_MS = 120000;
 const DEFAULT_OUTPUT_LIMIT = 12000;
 
-function defaultCleanText(value, maxLength = 4000) {
-  const text = String(value || '').trim();
+function defaultCleanText(value, _maxLength = 4000) {
+  const text = String(value || '');
   if (!text) {
     return '';
   }
-  if (text.length <= maxLength) {
-    return text;
-  }
-  return `${text.slice(0, Math.max(0, maxLength - 3))}...`;
+  return text;
 }
 
 function clampInteger(value, fallback, minimum, maximum) {

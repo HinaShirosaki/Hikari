@@ -152,9 +152,6 @@ function createScienceThinkingTraceRuntime(deps = {}) {
     const evaluation = input.evaluation && typeof input.evaluation === 'object'
       ? input.evaluation
       : {};
-    const currentScientificState = input.currentScientificState && typeof input.currentScientificState === 'object'
-      ? input.currentScientificState
-      : {};
     const preSynthesizedQuestion = input.preSynthesizedQuestion && typeof input.preSynthesizedQuestion === 'object'
       ? input.preSynthesizedQuestion
       : {};
@@ -194,7 +191,6 @@ function createScienceThinkingTraceRuntime(deps = {}) {
       ) || cleanText(input.latestAssistantText, 420)
         || 'Based on the evidence so far, I am drafting a tentative answer.',
       judge: cleanText(evaluation.trace_sentence, 420)
-        || cleanText(currentScientificState.trace_sentence, 420)
         || cleanText(evaluation.reason, 420)
         || 'I am checking whether the evidence is sufficient or whether a key gap remains.',
       final_synthesize: cleanText(finalSynthesis.trace_sentence, 420)

@@ -13,7 +13,7 @@ import {
 const FIXED_ACCENT = '#647255';
 const FIXED_FOCUS = '#7a8a69';
 
-export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile, onLoadEnaFile }) {
+export function initSettings({ state, persist, onStoragePathSaved }) {
   const settingsNavItems = [...document.querySelectorAll('#setting-view [data-settings-target]')];
   const settingsPanels = [...document.querySelectorAll('#setting-view [data-settings-panel]')];
   const personalInfoForm = document.getElementById('personal-info-form');
@@ -33,7 +33,6 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
   const startupForm = document.getElementById('startup-form');
   const settingStartupDefaultView = document.getElementById('setting-startup-default-view');
   const settingStartupRememberLastView = document.getElementById('setting-startup-remember-last-view');
-  const settingStartupAutoLoadDataFile = document.getElementById('setting-startup-auto-load-data-file');
 
   const llmForm = document.getElementById('llm-form');
   const settingProvider = document.getElementById('setting-provider');
@@ -42,15 +41,15 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
   const settingReasoningEffort = document.getElementById('setting-reasoning-effort');
   const settingApiEndpoint = document.getElementById('setting-api-endpoint');
   const settingApiKey = document.getElementById('setting-api-key');
+  const settingCodexAuthControls = document.getElementById('setting-codex-auth-controls');
+  const settingCodexStatus = document.getElementById('setting-codex-status');
+  const startCodexLoginBtn = document.getElementById('start-codex-login-btn');
+  const clearCodexLoginBtn = document.getElementById('clear-codex-login-btn');
   const settingAgentDeveloperMode = document.getElementById('setting-agent-developer-mode');
   const telegramForm = document.getElementById('telegram-form');
   const settingTelegramToken = document.getElementById('setting-telegram-token');
   const settingTelegramStatus = document.getElementById('setting-telegram-status');
   const clearTelegramTokenBtn = document.getElementById('clear-telegram-token-btn');
-  const settingEnaPath = document.getElementById('setting-ena-path');
-  const saveEnaBtn = document.getElementById('save-ena-btn');
-  const loadEnaBtn = document.getElementById('load-ena-btn');
-  const settingAutoSaveEna = document.getElementById('setting-auto-save-ena');
   const locationInput = document.getElementById('setting-location-input');
   const locationAddBtn = document.getElementById('setting-location-add-btn');
   const locationList = document.getElementById('setting-location-list');
@@ -59,9 +58,18 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
     source: 'none',
     hasSavedToken: false
   };
+  let codexLoginConfig = {
+    ok: false,
+    loggedIn: false,
+    source: 'none',
+    expired: false,
+    sourcePath: '',
+    message: 'Checking Codex login...'
+  };
   let storageImportInFlight = false;
   let activeLlmProvider = DEFAULT_LLM_PROVIDER;
   let codexCatalog = null;
+  let codexLoginRefreshTimers = [];
   let activeSettingsPanel = settingsNavItems[0]?.dataset.settingsTarget || 'appearance';
   const looksLikeEndpoint = (value) => /^[a-z]+:\/\//i.test(String(value || '').trim());
 
@@ -81,14 +89,19 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
   settingProvider?.addEventListener('change', onProviderChanged);
   settingModel?.addEventListener('input', onModelChanged);
   settingModel?.addEventListener('change', onModelChanged);
+  startCodexLoginBtn?.addEventListener('click', onStartCodexLogin);
+  clearCodexLoginBtn?.addEventListener('click', onClearCodexLogin);
   telegramForm?.addEventListener('submit', onSaveTelegramToken);
   clearTelegramTokenBtn?.addEventListener('click', onClearTelegramToken);
-  saveEnaBtn.addEventListener('click', onSaveEnaClick);
-  loadEnaBtn.addEventListener('click', onLoadEnaClick);
-  settingAutoSaveEna?.addEventListener('change', onToggleAutoSaveEna);
   locationAddBtn.addEventListener('click', onAddLocation);
+  window.addEventListener('focus', () => {
+    if (activeLlmProvider === 'codex') {
+      void refreshCodexLoginStatus();
+    }
+  });
   void refreshTelegramBotStatus();
   void refreshCodexCatalog();
+  void refreshCodexLoginStatus();
   activateSettingsPanel(activeSettingsPanel);
 
   function activateSettingsPanel(panelId) {
@@ -105,6 +118,10 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
     settingsPanels.forEach((panel) => {
       panel.hidden = panel.dataset.settingsPanel !== activeSettingsPanel;
     });
+
+    if (activeSettingsPanel === 'llm' && activeLlmProvider === 'codex') {
+      void refreshCodexLoginStatus();
+    }
   }
 
   function normalizeCodexCatalog(rawCatalog) {
@@ -122,6 +139,18 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
           defaultReasoningEffort: String(entry?.defaultReasoningEffort || '').trim().toLowerCase()
         })).filter((entry) => entry.id)
         : []
+    };
+  }
+
+  function normalizeCodexLoginStatus(rawStatus) {
+    const source = rawStatus && typeof rawStatus === 'object' ? rawStatus : {};
+    return {
+      ok: source.ok === true,
+      loggedIn: source.loggedIn === true,
+      source: String(source.source || '').trim().toLowerCase() || 'none',
+      expired: source.expired === true,
+      sourcePath: String(source.sourcePath || '').trim(),
+      message: String(source.message || '').trim()
     };
   }
 
@@ -281,9 +310,6 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
     if (settingStartupRememberLastView) {
       settingStartupRememberLastView.checked = state.settings.startup?.rememberLastView === true;
     }
-    if (settingStartupAutoLoadDataFile) {
-      settingStartupAutoLoadDataFile.checked = state.settings.startup?.autoLoadDataFileOnLaunch !== false;
-    }
     const llmProvider = normalizeLlmProvider(llm.provider, llm.apiEndpoint || llm.api);
     activeLlmProvider = llmProvider;
     if (settingProvider) {
@@ -300,10 +326,7 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
     if (settingAgentDeveloperMode) {
       settingAgentDeveloperMode.checked = state.settings?.agent?.developerMode === true;
     }
-    settingEnaPath.textContent = state.settings.enaFilePath || 'Not set';
-    if (settingAutoSaveEna) {
-      settingAutoSaveEna.checked = state.settings.autoSaveEna !== false;
-    }
+    renderCodexStatus();
     renderTelegramStatus();
     renderLocationList();
     renderStorageImportStatus();
@@ -421,10 +444,129 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
     event.preventDefault();
     state.settings.startup = {
       defaultViewId: String(settingStartupDefaultView?.value || 'home-view').trim() || 'home-view',
-      rememberLastView: settingStartupRememberLastView?.checked === true,
-      autoLoadDataFileOnLaunch: settingStartupAutoLoadDataFile?.checked !== false
+      rememberLastView: settingStartupRememberLastView?.checked === true
     };
     persist();
+  }
+
+  function clearCodexLoginRefreshTimers() {
+    codexLoginRefreshTimers.forEach((timerId) => {
+      clearTimeout(timerId);
+    });
+    codexLoginRefreshTimers = [];
+  }
+
+  function scheduleCodexLoginStatusRefresh(delays = [2500, 7000, 15000]) {
+    clearCodexLoginRefreshTimers();
+    codexLoginRefreshTimers = delays.map((delay) => setTimeout(() => {
+      void refreshCodexLoginStatus();
+    }, delay));
+  }
+
+  function renderCodexStatus(overrideMessage = '') {
+    if (!settingCodexAuthControls || !settingCodexStatus) {
+      return;
+    }
+
+    const provider = normalizeLlmProvider(settingProvider?.value, settingApiEndpoint?.value || '');
+    const isCodexProvider = provider === 'codex';
+    settingCodexAuthControls.hidden = !isCodexProvider;
+    if (startCodexLoginBtn) {
+      startCodexLoginBtn.disabled = !isCodexProvider;
+    }
+    if (clearCodexLoginBtn) {
+      clearCodexLoginBtn.disabled = !isCodexProvider;
+    }
+    if (!isCodexProvider) {
+      return;
+    }
+
+    const override = String(overrideMessage || '').trim();
+    if (override) {
+      settingCodexStatus.textContent = `Codex login: ${override}`;
+      return;
+    }
+
+    if (codexLoginConfig.loggedIn) {
+      settingCodexStatus.textContent = codexLoginConfig.source === 'env'
+        ? 'Codex login: connected through an environment token.'
+        : 'Codex login: connected and stored for future launches.';
+      return;
+    }
+
+    if (codexLoginConfig.source === 'login_in_progress') {
+      settingCodexStatus.textContent = 'Codex login: sign-in is in progress in your browser.';
+      return;
+    }
+
+    if (codexLoginConfig.expired) {
+      settingCodexStatus.textContent = 'Codex login: current session expired. Save settings or click Login with OpenAI to sign in again.';
+      return;
+    }
+
+    if (codexLoginConfig.source === 'stored') {
+      settingCodexStatus.textContent = 'Codex login: stored credentials were found, but they are not usable right now. Sign in again or clear them.';
+      return;
+    }
+
+    settingCodexStatus.textContent = 'Codex login: not configured yet. Saving Codex settings will open the OpenAI login flow.';
+  }
+
+  async function refreshCodexLoginStatus() {
+    if (!window.enanaApi?.getCodexLlmStatus) {
+      renderCodexStatus('Codex login is unavailable.');
+      return codexLoginConfig;
+    }
+    try {
+      const result = await window.enanaApi.getCodexLlmStatus();
+      codexLoginConfig = normalizeCodexLoginStatus(result);
+      renderCodexStatus();
+      return codexLoginConfig;
+    } catch {
+      renderCodexStatus('Failed to load Codex login status.');
+      return codexLoginConfig;
+    }
+  }
+
+  async function startCodexLoginFlow() {
+    if (!window.enanaApi?.loginCodexLlm) {
+      renderCodexStatus('Codex login is unavailable.');
+      return { ok: false };
+    }
+    try {
+      const result = await window.enanaApi.loginCodexLlm();
+      if (!result?.ok) {
+        renderCodexStatus(result?.error || 'Failed to start the OpenAI login flow.');
+        return result;
+      }
+      renderCodexStatus(result?.message || 'OpenAI login opened. Finish the Codex sign-in flow in your browser, then return here.');
+      scheduleCodexLoginStatusRefresh();
+      return result;
+    } catch {
+      renderCodexStatus('Failed to start the OpenAI login flow.');
+      return { ok: false };
+    }
+  }
+
+  async function onStartCodexLogin() {
+    await startCodexLoginFlow();
+  }
+
+  async function onClearCodexLogin() {
+    clearCodexLoginRefreshTimers();
+    if (!window.enanaApi?.clearCodexLlmLogin) {
+      renderCodexStatus('Codex login reset is unavailable.');
+      return;
+    }
+
+    const result = await window.enanaApi.clearCodexLlmLogin();
+    if (!result?.ok) {
+      renderCodexStatus(result?.error || 'Failed to clear the saved Codex login.');
+      return;
+    }
+
+    codexLoginConfig = normalizeCodexLoginStatus(result?.status);
+    renderCodexStatus(result?.message || 'Cleared the saved Codex login.');
   }
 
   async function onSaveLlmSettings(event) {
@@ -460,8 +602,12 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
             ? window.enanaApi.setCodexLlmReasoningEffort(state.settings.llm.reasoningEffort)
             : Promise.resolve()
         ]);
+        const status = await refreshCodexLoginStatus();
+        if (status.loggedIn !== true) {
+          await startCodexLoginFlow();
+        }
       } catch {
-        // Keep settings save non-blocking if the desktop bridge is unavailable.
+        renderCodexStatus('Failed to start Codex login from settings.');
       }
     }
   }
@@ -480,6 +626,10 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
     settingApiKey.placeholder = apiKeyPlaceholderForProvider(provider);
     activeLlmProvider = provider;
     refreshLlmModelAndReasoningFields(provider, settingReasoningEffort?.value);
+    renderCodexStatus();
+    if (provider === 'codex') {
+      void refreshCodexLoginStatus();
+    }
   }
 
   function onModelChanged() {
@@ -553,27 +703,6 @@ export function initSettings({ state, persist, onStoragePathSaved, onSaveEnaFile
       settingTelegramToken.value = '';
     }
     renderTelegramStatus();
-  }
-
-  function onToggleAutoSaveEna() {
-    state.settings.autoSaveEna = settingAutoSaveEna?.checked !== false;
-    persist();
-  }
-
-  async function onSaveEnaClick() {
-    if (typeof onSaveEnaFile !== 'function') {
-      return;
-    }
-    await onSaveEnaFile();
-    renderForms();
-  }
-
-  async function onLoadEnaClick() {
-    if (typeof onLoadEnaFile !== 'function') {
-      return;
-    }
-    await onLoadEnaFile();
-    renderForms();
   }
 
   function onAddLocation() {

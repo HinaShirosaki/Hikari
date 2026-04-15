@@ -1,8 +1,43 @@
 /* project-management-view */
 
+#project-management-view {
+  --app-left-rail-bleed: 20px;
+}
+
+.project-layout {
+  --left-rail-main-gap: 20px;
+}
+
+.project-sidebar,
+.project-main {
+  min-height: 0;
+}
+
+.project-sidebar-copy,
+.project-panel-copy,
+.project-panel-head {
+  display: grid;
+  gap: 4px;
+}
+
+.project-sidebar-copy h2,
+.project-sidebar-copy h3,
+.project-panel-copy h3 {
+  margin: 0;
+}
+
+.project-list-panel,
+.project-notebook-panel {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+}
+
 /* Extracted from ui/css/base/core.css */
 .project-notebook-list {
-  margin-top: 14px;
+  display: grid;
+  gap: 0;
+  margin-top: 0;
 }
 
 .project-notebook-item {
@@ -29,4 +64,10 @@
   border-radius: 0;
   background: transparent;
   box-shadow: none;
+}
+
+@media (max-width: 980px) {
+  .project-layout {
+    height: auto;
+  }
 }

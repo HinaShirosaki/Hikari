@@ -4,10 +4,10 @@ const fs = require('fs/promises');
 const path = require('path');
 const { hydrateSnapshotFromBundle } = require('./storage-hydration');
 const { collectManifestEntries, isBundleCandidateName, isSqliteBundleCandidateName, looksLikeEnanaSnapshot, normalizeBundleSummary, STORAGE_MANIFEST_FILE_NAME, toPosixRelative } = require('./storage-manifest');
-const { getBundlePaths, getBundlePathsFromSqlitePath } = require('./storage-paths');
+const { getBundlePaths, getBundlePathsFromSqlitePath, resolveProtocolBundlePaths } = require('./storage-paths');
 const { summarizeSequenceLibrary } = require('./sequence-library-summary');
 const { importWorkflowRoot, resolveWorkflowStoragePaths } = require('./workflow-storage');
-const { asArray, cleanText, ensureObject, parseJsonObject } = require('./storage-utils');
+const { asArray, cleanText, ensureObject, parseJsonObject, readJsonFile } = require('./storage-utils');
 
 function mergeByIdMap(targetMap, records, fallbackPrefix) {
   asArray(records).forEach((rawRecord, index) => {
@@ -55,6 +55,53 @@ function mergePaperExperimentLinks(targetMap, links) {
   });
 }
 
+async function importProtocolRoot({ storagePath = '' } = {}) {
+  const protocolPaths = resolveProtocolBundlePaths({ storagePath });
+  const protocolRootPath = cleanText(protocolPaths.protocolRootPath, 2400);
+  if (!protocolRootPath) {
+    return {
+      protocols: [],
+      protocolRootPath: '',
+      sqlitePath: ''
+    };
+  }
+  let entries = [];
+  try {
+    entries = await fs.readdir(protocolRootPath, { withFileTypes: true });
+  } catch (error) {
+    if (error?.code === 'ENOENT') {
+      return {
+        protocols: [],
+        protocolRootPath,
+        sqlitePath: protocolPaths.sqlitePath
+      };
+    }
+    throw error;
+  }
+
+  const protocols = [];
+  for (const entry of entries) {
+    if (!entry.isDirectory()) {
+      continue;
+    }
+    const filePath = path.join(protocolRootPath, entry.name, 'protocol.json');
+    const payload = await readJsonFile(filePath);
+    if (!payload.ok) {
+      continue;
+    }
+    const protocol = ensureObject(payload.data?.protocol);
+    if (Object.keys(protocol).length) {
+      protocols.push(protocol);
+    }
+  }
+
+  return {
+    protocols,
+    protocolRootPath,
+    sqlitePath: protocolPaths.sqlitePath
+  };
+}
+
 async function importStorageRoot({ storagePath = '' } = {}) {
   const resolvedStoragePath = path.resolve(cleanText(storagePath, 2400));
   if (!resolvedStoragePath) {
@@ -79,7 +126,7 @@ async function importStorageRoot({ storagePath = '' } = {}) {
     }
     const absPath = path.join(resolvedStoragePath, entry.name);
     const stat = await fs.stat(absPath);
-    const bundlePaths = getBundlePaths({ dataFilePath: absPath });
+    const bundlePaths = getBundlePaths({ dataFilePath: absPath, storagePath: resolvedStoragePath });
     candidateFiles.push({
       kind: 'data_bundle',
       path: absPath,
@@ -99,7 +146,7 @@ async function importStorageRoot({ storagePath = '' } = {}) {
       continue;
     }
     const absPath = path.join(resolvedStoragePath, entry.name);
-    const bundlePaths = getBundlePathsFromSqlitePath(absPath);
+    const bundlePaths = getBundlePathsFromSqlitePath(absPath, { storagePath: resolvedStoragePath });
     if (!bundlePaths.basePath || discoveredBundleBases.has(bundlePaths.basePath)) {
       continue;
     }
@@ -131,7 +178,7 @@ async function importStorageRoot({ storagePath = '' } = {}) {
 
   for (const candidate of candidateFiles) {
     const candidatePath = candidate.path;
-    const bundlePaths = candidate.bundlePaths || getBundlePaths({ dataFilePath: candidatePath });
+    const bundlePaths = candidate.bundlePaths || getBundlePaths({ dataFilePath: candidatePath, storagePath: resolvedStoragePath });
     let parsed = {};
     if (candidate.kind === 'data_bundle') {
       try {
@@ -148,16 +195,17 @@ async function importStorageRoot({ storagePath = '' } = {}) {
       }
     }
 
-    const sidecarExists = await Promise.all([
-      fs.access(bundlePaths.protocolsPath).then(() => true).catch(() => false),
+    const [notebookSidecarExists, sqliteExists, legacySqliteExists] = await Promise.all([
       fs.access(bundlePaths.notebookPagesPath).then(() => true).catch(() => false),
-      fs.access(bundlePaths.sqlitePath).then(() => true).catch(() => false)
+      fs.access(bundlePaths.sqlitePath).then(() => true).catch(() => false),
+      fs.access(bundlePaths.legacySqlitePath || '').then(() => true).catch(() => false)
     ]);
+    const hasAnySqlite = sqliteExists || legacySqliteExists;
 
-    if (candidate.kind === 'data_bundle' && !looksLikeEnanaSnapshot(parsed) && !sidecarExists.some(Boolean)) {
+    if (candidate.kind === 'data_bundle' && !looksLikeEnanaSnapshot(parsed) && !notebookSidecarExists && !hasAnySqlite) {
       continue;
     }
-    if (candidate.kind !== 'data_bundle' && !sidecarExists.some(Boolean)) {
+    if (candidate.kind !== 'data_bundle' && !notebookSidecarExists && !hasAnySqlite) {
       continue;
     }
 
@@ -206,6 +254,9 @@ async function importStorageRoot({ storagePath = '' } = {}) {
       migration: hydrated.migration || null
     });
   }
+
+  const protocolRoot = await importProtocolRoot({ storagePath: resolvedStoragePath });
+  mergeByIdMap(protocolMap, protocolRoot.protocols, 'protocol');
 
   const mergedInventory = {};
   for (const [zone, zoneMap] of inventoryZoneMap.entries()) {
@@ -275,6 +326,11 @@ async function importStorageRoot({ storagePath = '' } = {}) {
     root_path: resolvedStoragePath,
     discovered_files: discoveredFiles,
     bundles: bundleSummaries,
+    protocol_storage: {
+      relative_root_path: toPosixRelative(resolvedStoragePath, protocolRoot.protocolRootPath),
+      relative_index_sqlite_path: toPosixRelative(resolvedStoragePath, protocolRoot.sqlitePath),
+      protocols: statePatch.protocols.length
+    },
     workflow_storage: {
       relative_root_path: toPosixRelative(resolvedStoragePath, workflowPaths.workflowRootPath),
       relative_status_sqlite_path: toPosixRelative(resolvedStoragePath, workflowPaths.sqlitePath),

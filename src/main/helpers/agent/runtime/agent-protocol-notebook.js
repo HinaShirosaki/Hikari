@@ -64,6 +64,15 @@ function createProtocolNotebookRuntime(deps = {}) {
   const notebookGenerationRuntime = typeof notebookGenerationFactory === 'function'
     ? notebookGenerationFactory(runtimeDeps)
     : createNotebookGenerationRuntime(runtimeDeps);
+  const agentAppApi = deps.agentAppApi && typeof deps.agentAppApi === 'object'
+    ? deps.agentAppApi
+    : {};
+  const protocolApi = agentAppApi.protocol && typeof agentAppApi.protocol === 'object'
+    ? agentAppApi.protocol
+    : {};
+  const notebookApi = agentAppApi.notebook && typeof agentAppApi.notebook === 'object'
+    ? agentAppApi.notebook
+    : {};
   const protocolNotebookContextControl = deps.protocolNotebookContextControl
     && typeof deps.protocolNotebookContextControl === 'object'
     ? deps.protocolNotebookContextControl
@@ -75,6 +84,37 @@ function createProtocolNotebookRuntime(deps = {}) {
       sessionTtlMs: deps.protocolNotebookSessionTtlMs,
       store: deps.protocolNotebookPendingSessions
     });
+
+  function normalizeProtocolRecord(protocol, index = 0) {
+    if (typeof protocolApi.normalizeAgentProtocol === 'function') {
+      return protocolApi.normalizeAgentProtocol(protocol, index);
+    }
+    return protocolMatchingRuntime.normalizeProtocolRecord(protocol, index);
+  }
+
+  function listAgentProtocols(snapshot = {}) {
+    if (typeof protocolApi.listAgentProtocols === 'function') {
+      return asArray(protocolApi.listAgentProtocols({
+        snapshot,
+        limit: 120
+      })).map((protocol, index) => normalizeProtocolRecord(protocol, index));
+    }
+    return asArray(snapshot?.protocols).map((item, index) => normalizeProtocolRecord(item, index));
+  }
+
+  async function selectProtocolForNotebook(input = {}) {
+    if (typeof protocolApi.matchForNotebook === 'function') {
+      return protocolApi.matchForNotebook(input);
+    }
+    return protocolMatchingRuntime.selectProtocol(input);
+  }
+
+  async function generateNotebookFromProtocol(input = {}) {
+    if (typeof notebookApi.generateFromProtocol === 'function') {
+      return notebookApi.generateFromProtocol(input);
+    }
+    return notebookGenerationRuntime.generateNotebook(input);
+  }
 
   function findProjectByName(projects, projectName) {
     const query = cleanText(projectName, 220);
@@ -180,7 +220,7 @@ function createProtocolNotebookRuntime(deps = {}) {
     traceContext = null,
     lifecycleRecorder = null
   }) {
-    const protocols = asArray(snapshot?.protocols).map((item, index) => protocolMatchingRuntime.normalizeProtocolRecord(item, index));
+    const protocols = listAgentProtocols(snapshot);
     const parserEntities = parserPayload?.entities && typeof parserPayload.entities === 'object'
       ? parserPayload.entities
       : {};
@@ -222,7 +262,7 @@ function createProtocolNotebookRuntime(deps = {}) {
       };
     }
 
-    const selection = await protocolMatchingRuntime.selectProtocol({
+    const selection = await selectProtocolForNotebook({
       provider,
       endpoint,
       apiKey,
@@ -267,7 +307,7 @@ function createProtocolNotebookRuntime(deps = {}) {
     }
 
     const selectedProtocol = selection?.selected_protocol
-      ? protocolMatchingRuntime.normalizeProtocolRecord(selection.selected_protocol)
+      ? normalizeProtocolRecord(selection.selected_protocol)
       : null;
     if (!selectedProtocol) {
       return {
@@ -300,7 +340,7 @@ function createProtocolNotebookRuntime(deps = {}) {
       pendingSession
     });
 
-    const generationResult = await notebookGenerationRuntime.generateNotebook({
+    const generationResult = await generateNotebookFromProtocol({
       provider,
       endpoint,
       apiKey,

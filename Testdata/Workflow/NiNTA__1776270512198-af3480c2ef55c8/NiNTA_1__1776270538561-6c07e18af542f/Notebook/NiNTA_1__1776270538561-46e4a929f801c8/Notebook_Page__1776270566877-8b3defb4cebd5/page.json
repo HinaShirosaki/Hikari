@@ -1,0 +1,74 @@
+{
+  "exportedAt": "2026-04-15T23:07:20.016Z",
+  "workflowId": "1776270538561-6c07e18af542f",
+  "notebookEntry": {
+    "id": "1776270566877-8b3defb4cebd5",
+    "notebookType": "biology",
+    "projectId": "",
+    "projectName": "",
+    "protocolId": "1774024695073-536c18071dd0d",
+    "protocolName": "Ni-NTA Purification of His-Tagged Protein",
+    "protocolSnapshot": {
+      "id": "1774024695073-536c18071dd0d",
+      "name": "Ni-NTA Purification of His-Tagged Protein",
+      "category": "",
+      "purpose": "Purify a His-tagged recombinant protein using nickel affinity resin.",
+      "steps": [
+        {
+          "id": "1774125203496-c7d15ebdc641a8",
+          "text": "Resuspend the cell pellet in 100 mL of lysis buffer",
+          "placeholders": []
+        },
+        {
+          "id": "1774125203496-ec7ee810d38748",
+          "text": "Lyse the cells using sonication and clarify the lysate by centrifugation at 10,000 rpm for 30 mins.",
+          "placeholders": []
+        },
+        {
+          "id": "1774125203496-ae0108f167c538",
+          "text": "Equilibrate 5 mL of Ni-NTA resin with 20 mL of lysis buffer.",
+          "placeholders": []
+        },
+        {
+          "id": "1774125203496-404bcf026d9b68",
+          "text": "Load the clarified lysate onto the resin.",
+          "placeholders": []
+        },
+        {
+          "id": "1774125203497-d3a01f7ca5e048",
+          "text": "Wash the resin with 40 mL of wash buffer containing 20 mM imidazole.",
+          "placeholders": []
+        },
+        {
+          "id": "1774125203497-6e6780fa58bd4",
+          "text": "Elute the bound protein using 6 mL of elution buffer containing 300 mM imidazole.",
+          "placeholders": []
+        },
+        {
+          "id": "1774024695073-9ea9a36345d188",
+          "text": "Collect fractions and analyze them by SDS-PAGE.",
+          "placeholders": []
+        }
+      ]
+    },
+    "values": {},
+    "result": "",
+    "resultFiles": [],
+    "resultFileRecords": [],
+    "storageFolder": "",
+    "createdAt": "2026-04-15T16:29:26.877Z",
+    "updatedAt": "2026-04-15T18:11:38.274Z",
+    "notebookState": "planned",
+    "executedAt": "",
+    "workflowContext": {
+      "workflowId": "1776270538561-6c07e18af542f",
+      "workflowName": "NiNTA 1",
+      "workflowEntryId": "1776270538561-46e4a929f801c8",
+      "workflowEntryName": "NiNTA 1",
+      "workflowBlockId": "1776270538561-e247e7e259dc3",
+      "workflowBlockTitle": "Ni-NTA Purification of His-Tagged Protein"
+    },
+    "assayIds": [],
+    "gelAnalysisIds": []
+  }
+}

@@ -261,14 +261,12 @@ test('[P0] normalizeState falls back to home-view for invalid startup defaultVie
     settings: {
       startup: {
         defaultViewId: 'unknown-view-id',
-        rememberLastView: true,
-        autoLoadDataFileOnLaunch: true
+        rememberLastView: true
       }
     }
   });
   assert.equal(normalized.settings.startup.defaultViewId, 'home-view');
   assert.equal(normalized.settings.startup.rememberLastView, true);
-  assert.equal(normalized.settings.startup.autoLoadDataFileOnLaunch, true);
 });
 
 test('[P0] normalizeState resets invalid startup flags to defaults', () => {
@@ -276,8 +274,7 @@ test('[P0] normalizeState resets invalid startup flags to defaults', () => {
     settings: {
       startup: {
         defaultViewId: 'assay-view',
-        rememberLastView: 'yes',
-        autoLoadDataFileOnLaunch: 1
+        rememberLastView: 'yes'
       }
     }
   });
@@ -285,10 +282,6 @@ test('[P0] normalizeState resets invalid startup flags to defaults', () => {
   assert.equal(
     normalized.settings.startup.rememberLastView,
     shared.defaultState.settings.startup.rememberLastView
-  );
-  assert.equal(
-    normalized.settings.startup.autoLoadDataFileOnLaunch,
-    shared.defaultState.settings.startup.autoLoadDataFileOnLaunch
   );
 });
 

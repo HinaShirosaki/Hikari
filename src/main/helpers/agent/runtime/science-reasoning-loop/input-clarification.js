@@ -156,18 +156,11 @@ function createScienceInputClarificationRuntime(deps = {}) {
   async function clarifyInput(input = {}) {
     const fallback = buildFallbackClarification(input);
     const result = await requestStructuredJsonPayload({
-      provider: cleanText(input.provider, 80),
-      endpoint: cleanText(input.endpoint, 2000),
-      apiKey: cleanText(input.apiKey, 400),
-      model: cleanText(input.model, 120),
       stage: 'science_input_clarification',
       systemPrompt: 'Return valid JSON only.',
       userPrompt: buildClarificationPrompt(input),
       schema: SCIENCE_INPUT_CLARIFICATION_SCHEMA,
       traceContext: input.traceContext || null,
-      maxOutputTokens: 1400,
-      openAiStrict: true,
-      openAiAsDefaultProvider: true,
       defaultError: 'Science input clarification is not configured.'
     });
     if (!result?.ok || !result.payload) {

@@ -17,9 +17,8 @@ function registerDataIpc(deps = {}) {
       return text;
     });
   const mainDataHelpers = deps.mainDataHelpers;
-  const hasSupportedDataExtension = deps.hasSupportedDataExtension;
-  const defaultDataFileName = String(deps.DEFAULT_DATA_FILE_NAME || 'enana-data.json');
   const importStorageRoot = deps.importStorageRoot;
+  const discoverPapersFromStorageRoot = deps.discoverPapersFromStorageRoot;
   const syncSqliteBundleFromSnapshot = deps.syncSqliteBundleFromSnapshot;
   const listSequenceEntries = deps.listSequenceEntries;
   const getSequenceEntry = deps.getSequenceEntry;
@@ -67,6 +66,10 @@ function registerDataIpc(deps = {}) {
     const base = rawName.slice(0, Math.max(0, rawName.length - ext.length));
     const safeBase = sanitizeStorageName(base, 'imported-file');
     return `${safeBase}${ext}`;
+  }
+
+  function asArray(value) {
+    return Array.isArray(value) ? value : [];
   }
 
   function ensurePathWithinRoot(rootPath, targetPath) {
@@ -144,49 +147,32 @@ function registerDataIpc(deps = {}) {
     };
   }
 
-  ipcMain.handle('ena:save', async (_event, payload) => {
-    const normalizedPayload = normalizeJsonPayload(payload, {});
-    const { data, filePath } = normalizedPayload;
-    if (!data) {
-      return { ok: false, error: 'Missing data payload.' };
+  async function writeJsonStorageFile(payload) {
+    const storagePath = String(payload?.storagePath || '').trim();
+    const targetFolderInput = String(payload?.targetFolder || '').trim();
+    const fileName = sanitizeImportedFileName(payload?.fileName || 'data.json');
+    const data = payload?.data;
+
+    if (!storagePath) {
+      throw new Error('Missing storage path.');
+    }
+    if (!targetFolderInput) {
+      throw new Error('Missing target folder.');
     }
 
-    let targetPath = filePath;
-    if (!targetPath) {
-      const result = await dialog.showSaveDialog({
-        title: 'Save Enana Data',
-        defaultPath: defaultDataFileName,
-        filters: [{ name: 'Enana Data', extensions: ['json', 'ena'] }]
-      });
-      if (result.canceled || !result.filePath) {
-        return { ok: false, canceled: true };
-      }
-      targetPath = result.filePath;
-    }
+    const resolvedStoragePath = path.resolve(storagePath);
+    const resolvedTargetFolder = ensurePathWithinRoot(resolvedStoragePath, targetFolderInput);
+    await fs.mkdir(resolvedTargetFolder, { recursive: true });
 
-    if (typeof hasSupportedDataExtension === 'function' && !hasSupportedDataExtension(targetPath)) {
-      targetPath = `${targetPath}.json`;
-    }
+    const targetFilePath = path.join(resolvedTargetFolder, fileName);
+    await fs.writeFile(targetFilePath, JSON.stringify(data ?? null, null, 2), 'utf8');
 
-    return mainDataHelpers.saveSelectedDataFile({
-      data,
-      filePath: targetPath
-    });
-  });
-
-  ipcMain.handle('ena:load', async () => {
-    const result = await dialog.showOpenDialog({
-      title: 'Load Enana Data',
-      properties: ['openFile'],
-      filters: [{ name: 'Enana Data', extensions: ['json', 'ena'] }]
-    });
-
-    if (result.canceled || !result.filePaths.length) {
-      return { ok: false, canceled: true };
-    }
-
-    return mainDataHelpers.loadSelectedDataFile(result.filePaths[0]);
-  });
+    return {
+      filePath: targetFilePath,
+      fileName: path.basename(targetFilePath),
+      relativePath: path.relative(resolvedStoragePath, targetFilePath).split(path.sep).join('/')
+    };
+  }
 
   ipcMain.handle('data:auto-save', async (_event, payload) => {
     const normalizedPayload = normalizeJsonPayload(payload, {});
@@ -197,14 +183,10 @@ function registerDataIpc(deps = {}) {
     return mainDataHelpers.autoSaveDataFile({ data, filePath });
   });
 
-  ipcMain.handle('data:auto-load', async (_event, payload) => {
-    const normalizedPayload = normalizeJsonPayload(payload, {});
-    return mainDataHelpers.autoLoadDataFile(normalizedPayload?.filePath);
-  });
-
   ipcMain.handle('storage:sync-sqlite-bundle', async (_event, payload) => {
     const normalizedPayload = normalizeJsonPayload(payload, {});
     const sqlitePath = cleanText(normalizedPayload?.sqlitePath || normalizedPayload?.filePath, 2400);
+    const mode = cleanText(normalizedPayload?.mode, 40);
     const snapshot = normalizedPayload?.snapshot || normalizedPayload?.data;
     if (!sqlitePath) {
       return { ok: false, error: 'Missing sqlite path.' };
@@ -216,7 +198,7 @@ function registerDataIpc(deps = {}) {
       return { ok: false, error: 'SQLite bundle sync is unavailable.' };
     }
     try {
-      const result = await syncSqliteBundleFromSnapshot({ sqlitePath, snapshot });
+      const result = await syncSqliteBundleFromSnapshot({ sqlitePath, snapshot, mode });
       return {
         ok: true,
         sqlitePath: result?.sqlitePath || sqlitePath
@@ -263,6 +245,22 @@ function registerDataIpc(deps = {}) {
       return { ok: true, ...stored };
     } catch (error) {
       return { ok: false, error: String(error?.message || error) };
+    }
+  });
+
+  ipcMain.handle('storage:write-json-file', async (_event, payload) => {
+    const normalizedPayload = normalizeJsonPayload(payload, {});
+    try {
+      const result = await writeJsonStorageFile(normalizedPayload);
+      return {
+        ok: true,
+        ...result
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        error: String(error?.message || error)
+      };
     }
   });
 
@@ -320,6 +318,28 @@ function registerDataIpc(deps = {}) {
     try {
       const imported = await importStorageRoot({ storagePath });
       return { ok: true, ...imported };
+    } catch (error) {
+      return { ok: false, error: String(error?.message || error) };
+    }
+  });
+
+  ipcMain.handle('storage:discover-papers', async (_event, payload) => {
+    const normalizedPayload = normalizeJsonPayload(payload, {});
+    const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
+    if (!storagePath) {
+      return { ok: false, error: 'Missing storage path.' };
+    }
+    if (typeof discoverPapersFromStorageRoot !== 'function') {
+      return { ok: false, error: 'Paper discovery is unavailable.' };
+    }
+    try {
+      const discovered = await discoverPapersFromStorageRoot({
+        storagePath,
+        knownPapers: asArray(normalizedPayload?.knownPapers),
+        projects: asArray(normalizedPayload?.projects),
+        journalClubs: asArray(normalizedPayload?.journalClubs)
+      });
+      return { ok: true, ...discovered };
     } catch (error) {
       return { ok: false, error: String(error?.message || error) };
     }

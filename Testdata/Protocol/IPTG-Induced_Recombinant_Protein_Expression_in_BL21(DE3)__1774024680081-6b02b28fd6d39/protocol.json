@@ -1,0 +1,99 @@
+{
+  "schema_name": "enana_protocols",
+  "schema_version": "1.0.0",
+  "updated_at": "2026-04-15T23:07:19.989Z",
+  "protocol": {
+    "id": "1774024680081-6b02b28fd6d39",
+    "name": "IPTG-Induced Recombinant Protein Expression in BL21(DE3)",
+    "createdAt": "2026-03-20T16:38:00.081Z",
+    "updatedAt": "2026-03-20T16:38:00.081Z",
+    "purpose": "Express a recombinant protein in BL21(DE3) cells using IPTG induction.",
+    "materials": [
+      "Starter culture of transformed BL21(DE3)",
+      "LB or terrific broth medium",
+      "Appropriate antibiotic",
+      "IPTG",
+      "Shaking incubator",
+      "Spectrophotometer",
+      "Culture flask"
+    ],
+    "steps": [
+      {
+        "id": "1774024680081-30d1ad296ed458",
+        "text": "Inoculate {{ph:1774024680081-ff5ea222c2b28}} of expression medium containing {{ph:1774024680081-2608acdba053b}} with {{ph:1774024680081-b41278cd1047f8}} of overnight starter culture.",
+        "placeholders": [
+          {
+            "id": "1774024680081-ff5ea222c2b28",
+            "name": "volume"
+          },
+          {
+            "id": "1774024680081-2608acdba053b",
+            "name": "antibiotic"
+          },
+          {
+            "id": "1774024680081-b41278cd1047f8",
+            "name": "volume"
+          }
+        ]
+      },
+      {
+        "id": "1774024680081-8b59fc78ea4ba",
+        "text": "Grow the culture at 37 C with shaking until OD600 reaches {{ph:1774024680081-fab6fafbcf158}}.",
+        "placeholders": [
+          {
+            "id": "1774024680081-fab6fafbcf158",
+            "name": "value"
+          }
+        ]
+      },
+      {
+        "id": "1774024680081-261cf8cde96b5",
+        "text": "Add IPTG to a final concentration of {{ph:1774024680081-587c106fae95a}} to induce protein expression.",
+        "placeholders": [
+          {
+            "id": "1774024680081-587c106fae95a",
+            "name": "concentration"
+          }
+        ]
+      },
+      {
+        "id": "1774024680081-060177ce253a3",
+        "text": "Shift the culture to {{ph:1774024680081-2ce357c07b8e68}} and continue shaking for {{ph:1774024680081-1e13340d6a10c}}.",
+        "placeholders": [
+          {
+            "id": "1774024680081-2ce357c07b8e68",
+            "name": "temperature"
+          },
+          {
+            "id": "1774024680081-1e13340d6a10c",
+            "name": "time"
+          }
+        ]
+      },
+      {
+        "id": "1774024680081-c57e1dcb979b6",
+        "text": "Harvest cells by centrifugation at {{ph:1774024680081-d82f101f8190e8}} for {{ph:1774024680081-ad983f4a2f5b68}} at {{ph:1774024680081-4962dce7ed7eb8}}.",
+        "placeholders": [
+          {
+            "id": "1774024680081-d82f101f8190e8",
+            "name": "speed"
+          },
+          {
+            "id": "1774024680081-ad983f4a2f5b68",
+            "name": "time"
+          },
+          {
+            "id": "1774024680081-4962dce7ed7eb8",
+            "name": "temperature"
+          }
+        ]
+      },
+      {
+        "id": "1774024680081-1476f4cf39052",
+        "text": "Record pellet appearance, culture volume, induction time, and temperature in the notebook.",
+        "placeholders": []
+      }
+    ],
+    "troubleshooting": "Problem: Low protein expression; Possible cause: Induction conditions were suboptimal or plasmid expression burden was too high; Solution: Test different IPTG concentrations, induction temperatures, and induction durations\nProblem: Protein mostly insoluble; Possible cause: Expression temperature was too high or expression was too fast; Solution: Lower the induction temperature and reduce IPTG concentration"
+  }
+}

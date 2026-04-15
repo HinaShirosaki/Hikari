@@ -1,0 +1,31 @@
+{
+  "exportedAt": "2026-04-12T15:23:32.387Z",
+  "workflowId": "1775782082531-5f0b06480b152",
+  "notebookEntry": {
+    "id": "1775782437050-e49e327369ef98",
+    "notebookType": "biology",
+    "projectId": "",
+    "projectName": "",
+    "protocolId": "1774024680081-6b02b28fd6d39",
+    "protocolName": "IPTG-Induced Recombinant Protein Expression in BL21(DE3)",
+    "values": {},
+    "result": "",
+    "resultFiles": [],
+    "resultFileRecords": [],
+    "storageFolder": "",
+    "createdAt": "2026-04-10T00:53:57.050Z",
+    "updatedAt": "2026-04-10T01:46:05.224Z",
+    "notebookState": "planned",
+    "executedAt": "",
+    "workflowContext": {
+      "workflowId": "1775782082531-5f0b06480b152",
+      "workflowName": "Histagged protein preparation",
+      "workflowEntryId": "1775782082531-987a24403f0f28",
+      "workflowEntryName": "Entry 1",
+      "workflowBlockId": "1775782082531-2955bed12c8a7",
+      "workflowBlockTitle": "IPTG-Induced Recombinant Protein Expression in BL21(DE3)"
+    },
+    "assayIds": [],
+    "gelAnalysisIds": []
+  }
+}

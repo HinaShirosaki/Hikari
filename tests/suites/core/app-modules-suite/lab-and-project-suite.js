@@ -519,6 +519,131 @@ test('biology-notebook keeps planned pages distinct, marks them executed, and pr
   assert.ok(notebookChangedCalls >= 2);
 });
 
+test('biology-notebook opens workflow-created pages from saved protocol snapshots', () => {
+  const document = createMockDocument([
+    'biology-notebook-project-select',
+    'biology-notebook-protocol-search',
+    'biology-notebook-protocol-select',
+    'biology-notebook-empty-state',
+    'biology-notebook-protocol-area',
+    'biology-notebook-protocol-title',
+    'biology-notebook-protocol-meta',
+    'biology-notebook-export-btn',
+    'biology-notebook-mark-executed-btn',
+    'biology-notebook-page-list-status',
+    'biology-notebook-steps',
+    'biology-notebook-result',
+    'biology-notebook-result-file',
+    'save-biology-notebook-btn',
+    'cancel-biology-notebook-edit-btn',
+    'biology-notebook-entry-list'
+  ]);
+
+  const state = {
+    projects: [
+      { id: 'p1', name: 'Atlas' }
+    ],
+    protocols: [],
+    notebookEntries: [
+      {
+        id: 'workflow-page-1',
+        notebookType: 'biology',
+        projectId: '',
+        projectName: '',
+        protocolId: 'protocol-missing',
+        protocolName: 'IPTG Expression',
+        protocolSnapshot: {
+          id: 'protocol-missing',
+          name: 'IPTG Expression',
+          steps: [
+            {
+              id: 'step-1',
+              text: 'Induce with {{ph:iptg}}.',
+              placeholders: [
+                { id: 'iptg', name: 'IPTG' }
+              ]
+            }
+          ]
+        },
+        values: {
+          'step-1:iptg': '0.5 mM'
+        },
+        result: 'Prepared from workflow',
+        resultFiles: [],
+        resultFileRecords: [],
+        updatedAt: '2026-04-11T00:00:00.000Z',
+        notebookState: 'planned',
+        executedAt: '',
+        workflowContext: {
+          workflowId: 'workflow-1',
+          workflowName: 'Histagged protein preparation',
+          workflowEntryId: 'entry-1',
+          workflowEntryName: 'Clone 12',
+          workflowBlockTitle: 'IPTG Expression'
+        }
+      },
+      {
+        id: 'workflow-page-2',
+        notebookType: 'biology',
+        projectId: '',
+        projectName: '',
+        protocolId: 'protocol-missing-2',
+        protocolName: 'Ni-NTA Purification',
+        protocolSnapshot: {
+          id: 'protocol-missing-2',
+          name: 'Ni-NTA Purification',
+          steps: []
+        },
+        values: {},
+        result: 'Purified from workflow',
+        resultFiles: [],
+        resultFileRecords: [],
+        updatedAt: '2026-04-11T00:05:00.000Z',
+        notebookState: 'executed',
+        executedAt: '2026-04-11T00:05:00.000Z',
+        workflowContext: {
+          workflowId: 'workflow-1',
+          workflowName: 'Histagged protein preparation',
+          workflowEntryId: 'entry-1',
+          workflowEntryName: 'Clone 12',
+          workflowBlockTitle: 'Ni-NTA Purification'
+        }
+      }
+    ],
+    assays: [],
+    gelAnalyses: [],
+    settings: {
+      storagePath: ''
+    }
+  };
+
+  const notebookModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook.js'), {
+    document,
+    window: {
+      enanaApi: {}
+    }
+  });
+  const notebook = notebookModule.initLabNotebook({
+    state,
+    persist: () => {},
+    createId: () => 'new-entry',
+    safeText: shared.safeText,
+    onNotebookEntriesChanged: () => {}
+  });
+
+  notebook.renderProjectOptions();
+  notebook.renderProtocolOptions();
+  notebook.openEntry('workflow-page-1');
+
+  assert.equal(document.getElementById('biology-notebook-protocol-title').textContent, 'IPTG Expression');
+  assert.match(document.getElementById('biology-notebook-steps').innerHTML, /0\.5 mM/);
+  assert.equal(document.getElementById('biology-notebook-mark-executed-btn').hidden, false);
+  assert.match(document.getElementById('biology-notebook-page-list-status').textContent, /Viewing page for Clone 12 \/ IPTG Expression/);
+  assert.doesNotMatch(document.getElementById('biology-notebook-entry-list').innerHTML, /Untitled Project/);
+  assert.equal((document.getElementById('biology-notebook-entry-list').innerHTML.match(/biology-notebook-folder-name">Clone 12</g) || []).length, 1);
+  assert.match(document.getElementById('biology-notebook-entry-list').innerHTML, /Ni-NTA Purification/);
+});
+
 test('workflow presentation labels include notebook execution state', () => {
   const workflowPresentation = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'workflow', 'presentation.js'));
   const label = workflowPresentation.notebookEntryLabel({

@@ -14,6 +14,7 @@ const { runPythonSandbox } = require('./agent-python-sandbox.js');
 const { createAgentCommandLineRuntime } = require('./agent-command-line.js');
 const { createAgentSubAgentRuntime } = require('./agent-sub-agent.js');
 const { createAgentMemoryRuntime } = require('../context/agent-memory.js');
+const { createWebSearchRuntime } = require('./agent-web-search.js');
 const { createLiteratureSearchRuntime } = require('./agent-literature-search.js');
 const { createPurchaseRecommendationRuntime } = require('./agent-purchase-recommendation.js');
 const { createPaperDownloadRuntime } = require('./agent-paper-download.js');
@@ -25,7 +26,7 @@ function asArray(value) {
 }
 
 function cleanText(value, _maxLength = 500) {
-  const text = String(value || '').trim();
+  const text = String(value || '');
   if (!text) {
     return '';
   }
@@ -387,6 +388,9 @@ function buildPreview(toolName, result) {
   if (toolName === 'memory') {
     return cleanText(source.items?.[0]?.summary || source.items?.[0]?.key, 220);
   }
+  if (toolName === 'web-search') {
+    return cleanText(source.items?.[0]?.title || source.items?.[0]?.url, 220);
+  }
   if (toolName === 'literature-search') {
     return cleanText(source.items?.[0]?.title || source.items?.[0]?.accession, 220);
   }
@@ -409,6 +413,9 @@ function buildResultMessage(toolName, result, fallbackSummary = '') {
   const source = ensureObject(result);
   const candidates = [];
   if (toolName === 'memory') {
+    candidates.push(source.items?.[0]?.summary);
+  }
+  if (toolName === 'web-search') {
     candidates.push(source.items?.[0]?.summary);
   }
   if (toolName === 'literature-search') {
@@ -808,6 +815,36 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
     };
   }
 
+  async function smokeWebSearch(options = {}) {
+    const runtime = createWebSearchRuntime({
+      requestWebSearch: async ({ query, maxResults }) => ({
+        ok: true,
+        results: [
+          {
+            title: 'Smoke Web Search Result',
+            url: 'https://example.org/smoke-web-search',
+            summary: `External result for ${query}.`,
+            source_domain: 'example.org'
+          }
+        ].slice(0, maxResults),
+        reasoning: 'Smoke provider-backed web search.'
+      })
+    });
+    const requestMessage = resolveToolMessage(options.message, 'recent binder review');
+    const result = await runtime.execute({
+      query: requestMessage,
+      limit: 4
+    });
+    const itemCount = asArray(result?.items).length;
+    return {
+      ...result,
+      ok: options.strict === true ? itemCount > 0 : result?.ok !== false,
+      summary: itemCount > 0
+        ? `Web search returned ${itemCount} result${itemCount === 1 ? '' : 's'}.`
+        : 'Web search returned no results.'
+    };
+  }
+
   async function smokePaperDownload(options = {}) {
     const storageRoot = await fsPromises.mkdtemp(path.join(os.tmpdir(), 'enana-agent-tool-smoke-download-'));
     try {
@@ -973,6 +1010,7 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
     'notebook-draft': async (options = {}) => smokeNotebookDraft(buildSmokeSnapshot(), options),
     'python-sandbox': async (options = {}) => smokePythonSandbox(options),
     'command-line': async (options = {}) => smokeCommandLine(options),
+    'web-search': async (options = {}) => smokeWebSearch(options),
     'sub-agent': async (options = {}) => smokeSubAgent(options),
     memory: async (options = {}) => smokeMemory(options),
     'literature-search': async (options = {}) => smokeLiteratureSearch(options),
