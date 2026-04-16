@@ -1,7 +1,7 @@
 {
   "schema_name": "enana_protocols",
   "schema_version": "1.0.0",
-  "updated_at": "2026-04-15T23:07:19.989Z",
+  "updated_at": "2026-04-16T03:00:57.560Z",
   "protocol": {
     "id": "1774024712936-cdad2f729e908",
     "name": "TEV Protease Cleavage of Fusion Protein",
