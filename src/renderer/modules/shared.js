@@ -189,7 +189,8 @@ export const defaultState = {
     dashboard: {
       currentWorkflowId: '',
       workflowProgress: {},
-      quickLogDraft: ''
+      quickLogDraft: '',
+      incubationLocations: []
     },
     startup: {
       defaultViewId: VIEWS.HOME,
@@ -217,10 +218,19 @@ function normalizeCellPassage(rawValue) {
   if (!Number.isFinite(intervalDays) || intervalDays <= 0) {
     return null;
   }
-  return {
+  const normalized = {
     lastPassageDate,
     intervalDays
   };
+  const passageNumber = Math.round(Number(rawValue.passageNumber));
+  if (Number.isFinite(passageNumber) && passageNumber > 0) {
+    normalized.passageNumber = passageNumber;
+  }
+  const deferredUntilDate = String(rawValue.deferredUntilDate || '').trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(deferredUntilDate)) {
+    normalized.deferredUntilDate = deferredUntilDate;
+  }
+  return normalized;
 }
 
 function normalizeSampleRecord(rawSample) {
@@ -239,6 +249,27 @@ function normalizeSampleRecord(rawSample) {
     return rest;
   }
   return rawSample;
+}
+
+function normalizeDashboardLocationList(rawValue) {
+  if (!Array.isArray(rawValue)) {
+    return [];
+  }
+  const seen = new Set();
+  const locations = [];
+  rawValue.forEach((item) => {
+    const value = String(item || '').trim();
+    if (!value) {
+      return;
+    }
+    const key = value.toLowerCase();
+    if (seen.has(key)) {
+      return;
+    }
+    seen.add(key);
+    locations.push(value);
+  });
+  return locations;
 }
 
 function normalizeWorkflowProgressMap(rawValue) {
@@ -501,7 +532,8 @@ export function normalizeState(parsed) {
         ...rawDashboard,
         currentWorkflowId: String(rawDashboard.currentWorkflowId || ''),
         workflowProgress: normalizeWorkflowProgressMap(rawDashboard.workflowProgress),
-        quickLogDraft: String(rawDashboard.quickLogDraft || '')
+        quickLogDraft: String(rawDashboard.quickLogDraft || ''),
+        incubationLocations: normalizeDashboardLocationList(rawDashboard.incubationLocations)
       },
       startup: {
         ...defaultState.settings.startup,

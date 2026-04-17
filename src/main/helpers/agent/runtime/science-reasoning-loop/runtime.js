@@ -308,6 +308,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
     const toolRoundArtifacts = [];
     const intermediateStates = [];
     const accumulatedCitations = [];
+    const accumulatedCitationKeys = new Set();
     const conversation = asArray(input.conversation);
     const traceContext = input.traceContext || null;
     let roundsExecuted = 0;
@@ -966,13 +967,18 @@ function createScienceReasoningLoopRuntime(deps = {}) {
           tool_definitions: []
         });
     const toolDefinitions = asArray(providedTools?.tool_definitions);
-    const allowedToolNames = uniqueStrings(
-      asArray(providedTools?.tool_names).length
-        ? asArray(providedTools.tool_names)
-        : toolDefinitions.map((tool) => cleanText(tool?.name, 120)),
-      20
-    );
     const toolSchemaMap = buildToolSchemaMap(toolDefinitions);
+    const candidateAllowedToolNames = asArray(providedTools?.tool_names).length
+      ? asArray(providedTools.tool_names)
+      : toolDefinitions.map((tool) => cleanText(tool?.name, 120));
+    // Derive the cap from the schema map so the allowed set cannot shrink below the schema-known tools.
+    const allowedToolNamesCap = Math.max(
+      20,
+      typeof toolSchemaMap.getCanonicalNames === 'function' ? toolSchemaMap.getCanonicalNames().length : 0,
+      candidateAllowedToolNames.length
+    );
+    const allowedToolNames = uniqueStrings(candidateAllowedToolNames, allowedToolNamesCap);
+    const allowedToolNamesLowerSet = new Set(allowedToolNames.map((name) => name.toLowerCase()));
 
     const executeTool = typeof input.runTool === 'function' ? input.runTool : runTool;
     if (!startAgentSession || !executeTool) {
@@ -1013,12 +1019,64 @@ function createScienceReasoningLoopRuntime(deps = {}) {
     latestAssistantText = cleanText(extractAgentSessionText(currentSession), 12000);
 
     // Continue until evidence is sufficient or the tool / feedback budget is exhausted.
-    while (roundsExecuted < maxRounds || feedbackTurnsWithoutTool < maxRounds) {
+    while (roundsExecuted < maxRounds && feedbackTurnsWithoutTool < maxRounds) {
       const rawCalls = asArray(extractAgentSessionFunctionCalls(currentSession)).map(normalizeToolCall);
-      const validCalls = rawCalls.filter((call) => toolSchemaMap.has(call.name));
+      const resolveCanonicalToolName = typeof toolSchemaMap.resolveCanonicalName === 'function'
+        ? toolSchemaMap.resolveCanonicalName.bind(toolSchemaMap)
+        : ((candidate) => (toolSchemaMap.has(candidate) ? candidate : ''));
+      // Canonicalize tool names so case-variant suggestions are resolved to the registered schema.
+      const canonicalCalls = rawCalls.map((call) => {
+        const canonicalName = resolveCanonicalToolName(call.name);
+        return {
+          ...call,
+          originalName: call.name,
+          name: canonicalName || call.name,
+          isKnownTool: Boolean(canonicalName)
+        };
+      });
+      const validCalls = canonicalCalls.filter((call) => call.isKnownTool);
+      const unknownCalls = canonicalCalls.filter((call) => !call.isKnownTool);
 
       // No valid tool was proposed, so ask the evaluator whether the loop can stop anyway.
       if (!validCalls.length) {
+        // If the model emitted only unknown tool calls, respond to each with a
+        // synthetic 'unknown tool' envelope so the provider session's tool_use
+        // blocks are matched and the model learns the valid tool names.
+        if (unknownCalls.length > 0) {
+          const knownNamesList = (typeof toolSchemaMap.getCanonicalNames === 'function'
+            ? toolSchemaMap.getCanonicalNames()
+            : Array.from(toolSchemaMap.keys())
+          ).slice(0, 12).join(', ');
+          const syntheticOutputs = unknownCalls.map((call) => {
+            const parsedArgs = safeParseJson(call.argsText || '{}', {});
+            const argsObject = parsedArgs && typeof parsedArgs === 'object' ? parsedArgs : {};
+            return {
+              callId: call.callId,
+              name: call.originalName || call.name,
+              output: JSON.stringify(buildSyntheticToolEnvelope(
+                call.originalName || call.name,
+                argsObject,
+                roundsExecuted,
+                `Unknown tool "${call.originalName || call.name}". Use one of the registered tools: ${knownNamesList || '(none available)'}.`
+              ))
+            };
+          });
+          currentSession = await continueAgentSessionWithToolOutputs(currentSession, syntheticOutputs, traceContext);
+          latestAssistantText = cleanText(extractAgentSessionText(currentSession), 12000);
+          feedbackTurnsWithoutTool += 1;
+          if (roundsExecuted >= maxRounds || feedbackTurnsWithoutTool >= maxRounds) {
+            recordLifecycleEvent(lifecycleRecorder, {
+              stage: 'science_budget_exhausted',
+              status: 'failed',
+              routing_intent: intent,
+              message: 'Science reasoning loop exhausted its budget after repeated unknown-tool attempts.',
+              meta: { round: roundsExecuted }
+            });
+            break;
+          }
+          continue;
+        }
+
         await evaluateCurrentLoopState({
           latestToolResult: null,
           includePreSynthesisState: false
@@ -1030,6 +1088,20 @@ function createScienceReasoningLoopRuntime(deps = {}) {
             status: 'ok',
             routing_intent: intent,
             message: cleanText(finalEvaluation.reason, 320) || 'Evaluator marked current evidence as sufficient.',
+            meta: {
+              round: roundsExecuted,
+              thinking_trace: cleanText(finalEvaluation?.trace_sentence, 420)
+            }
+          });
+          break;
+        }
+        if (finalEvaluation?.should_continue === false) {
+          recordLifecycleEvent(lifecycleRecorder, {
+            stage: 'science_evaluator_stop',
+            status: 'ok',
+            routing_intent: intent,
+            message: cleanText(finalEvaluation.reason, 320)
+              || 'Evaluator requested to stop the loop without additional tool rounds.',
             meta: {
               round: roundsExecuted,
               thinking_trace: cleanText(finalEvaluation?.trace_sentence, 420)
@@ -1055,8 +1127,20 @@ function createScienceReasoningLoopRuntime(deps = {}) {
           validation: validateArgumentsAgainstSchema(toolSchemaMap.get(call.name), argsObject)
         };
       });
+      // Valid calls that exceed the per-round cap must still receive tool_result envelopes so
+      // the provider session's tool_use blocks remain matched. These are marked as deferred.
+      const deferredValidCalls = validCalls.slice(maxToolsPerRound).map((call) => {
+        const parsedArgs = safeParseJson(call.argsText || '{}', {});
+        const argsObject = parsedArgs && typeof parsedArgs === 'object' ? parsedArgs : {};
+        return { ...call, argsObject };
+      });
+      const unknownResolvedCalls = unknownCalls.map((call) => {
+        const parsedArgs = safeParseJson(call.argsText || '{}', {});
+        const argsObject = parsedArgs && typeof parsedArgs === 'object' ? parsedArgs : {};
+        return { ...call, argsObject };
+      });
       const multiToolRound = selectedCalls.length > 1;
-      const truncatedMultiCall = validCalls.length > selectedCalls.length;
+      const truncatedMultiCall = deferredValidCalls.length > 0;
       const assistantBeforeTool = cleanText(latestAssistantText, 4000);
       roundsExecuted += 1;
       const selectedToolNames = selectedCalls.map((call) => cleanText(call.name, 120)).filter(Boolean);
@@ -1087,7 +1171,7 @@ function createScienceReasoningLoopRuntime(deps = {}) {
             roundsExecuted,
             cleanText(selectedCall.validation.error, 320) || 'Tool arguments failed schema validation.'
           );
-        } else if (!allowedToolNames.includes(selectedCall.name)) {
+        } else if (!allowedToolNamesLowerSet.has(selectedCall.name.toLowerCase())) {
           toolEnvelope = buildSyntheticToolEnvelope(
             selectedCall.name,
             selectedCall.argsObject,
@@ -1154,7 +1238,19 @@ function createScienceReasoningLoopRuntime(deps = {}) {
           )
         };
         toolTrace.push(normalizedTraceRow);
-        normalizedTraceRow.citations.forEach((citation) => accumulatedCitations.push(citation));
+        // Dedupe incrementally so the accumulated list does not grow unbounded as rounds stack.
+        normalizedTraceRow.citations.forEach((citation) => {
+          const source = cleanText(citation?.source, 120).toLowerCase();
+          const pointer = cleanText(citation?.pointer, 220).toLowerCase();
+          if (!source && !pointer) {
+            return;
+          }
+          const key = `${source}::${pointer}`;
+          if (!accumulatedCitationKeys.has(key)) {
+            accumulatedCitationKeys.add(key);
+            accumulatedCitations.push(citation);
+          }
+        });
       });
 
       intermediateStates.push(buildIntermediateState(
@@ -1185,12 +1281,42 @@ function createScienceReasoningLoopRuntime(deps = {}) {
         }
       ));
 
+      // Build synthetic tool outputs for deferred (over-cap) and unknown calls so every
+      // function_call emitted by the model receives a matching tool_result in the session.
+      const knownNamesListForRound = (typeof toolSchemaMap.getCanonicalNames === 'function'
+        ? toolSchemaMap.getCanonicalNames()
+        : Array.from(toolSchemaMap.keys())
+      ).slice(0, 12).join(', ');
+      const deferredSyntheticOutputs = deferredValidCalls.map((call) => ({
+        callId: call.callId,
+        name: call.name,
+        output: JSON.stringify(buildSyntheticToolEnvelope(
+          call.name,
+          call.argsObject,
+          roundsExecuted,
+          `Tool call deferred: per-round cap of ${maxToolsPerRound} was reached. Re-issue this call on the next turn if still needed.`
+        ))
+      }));
+      const unknownSyntheticOutputs = unknownResolvedCalls.map((call) => ({
+        callId: call.callId,
+        name: call.originalName || call.name,
+        output: JSON.stringify(buildSyntheticToolEnvelope(
+          call.originalName || call.name,
+          call.argsObject,
+          roundsExecuted,
+          `Unknown tool "${call.originalName || call.name}". Use one of the registered tools: ${knownNamesListForRound || '(none available)'}.`
+        ))
+      }));
       // Return the full tool batch to the session so the agent can continue from the complete round state.
-      currentSession = await continueAgentSessionWithToolOutputs(currentSession, executedCalls.map((entry) => ({
-        callId: entry.selectedCall.callId,
-        name: entry.selectedCall.name,
-        output: JSON.stringify(entry.toolEnvelope || {})
-      })), traceContext);
+      currentSession = await continueAgentSessionWithToolOutputs(currentSession, [
+        ...executedCalls.map((entry) => ({
+          callId: entry.selectedCall.callId,
+          name: entry.selectedCall.name,
+          output: JSON.stringify(entry.toolEnvelope || {})
+        })),
+        ...deferredSyntheticOutputs,
+        ...unknownSyntheticOutputs
+      ], traceContext);
       latestAssistantText = cleanText(extractAgentSessionText(currentSession), 12000);
       toolRoundArtifacts.push({
         round: roundsExecuted,
@@ -1277,7 +1403,12 @@ function createScienceReasoningLoopRuntime(deps = {}) {
       if (toolRoundSatisfaction.satisfied !== true && roundsExecuted < maxRounds) {
         currentSession = toolRoundSatisfaction.session || currentSession;
         latestAssistantText = cleanText(toolRoundSatisfaction.latestAssistantText, 12000) || assistantAfterToolRound;
-        if (!asArray(toolRoundSatisfaction.pendingValidToolCalls).length) {
+        // Only send a user-message feedback when the satisfaction session has no outstanding
+        // tool_use blocks (valid or unknown). Unmatched tool_use would break the next turn, so
+        // let the outer loop handle it via the synthetic tool-output path.
+        const hasPendingToolUse = asArray(toolRoundSatisfaction.pendingValidToolCalls).length > 0
+          || asArray(toolRoundSatisfaction.pendingToolCalls).length > 0;
+        if (!hasPendingToolUse) {
           currentSession = await continueAgentSessionWithUserMessage(
             currentSession,
             buildToolRoundSatisfactionFeedback(toolRoundSatisfaction),
@@ -1305,6 +1436,25 @@ function createScienceReasoningLoopRuntime(deps = {}) {
           routing_intent: intent,
           tool_name: multiToolRound ? 'parallel-tool-round' : selectedToolNames[0],
           message: cleanText(finalEvaluation.reason, 320) || 'Evaluator marked current evidence as sufficient.',
+          meta: {
+            round: roundsExecuted,
+            tool_names: selectedToolNames,
+            thinking_trace: cleanText(finalEvaluation?.trace_sentence, 420)
+          }
+        });
+        break;
+      }
+
+      // Honor an explicit should_continue=false from the evaluator even when not satisfied —
+      // further rounds will not help (e.g., no remaining budget or no promising next tool).
+      if (finalEvaluation?.should_continue === false) {
+        recordLifecycleEvent(lifecycleRecorder, {
+          stage: 'science_evaluator_stop',
+          status: 'ok',
+          routing_intent: intent,
+          tool_name: multiToolRound ? 'parallel-tool-round' : selectedToolNames[0],
+          message: cleanText(finalEvaluation.reason, 320)
+            || 'Evaluator requested to stop the loop without additional tool rounds.',
           meta: {
             round: roundsExecuted,
             tool_names: selectedToolNames,

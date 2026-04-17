@@ -26,10 +26,6 @@ export function initLabCommonInventory({ state, persist, createId, safeText }) {
   const chemicalDetailContent = document.getElementById('chemical-detail-content');
   const chemicalDetailEditBtn = document.getElementById('chemical-detail-edit-btn');
   const chemicalDetailDeleteBtn = document.getElementById('chemical-detail-delete-btn');
-
-  const inboxEmail = document.getElementById('inventory-inbox-email');
-  const importBtn = document.getElementById('inventory-import-btn');
-  const pendingCount = document.getElementById('inventory-pending-count');
   const blockchainList = document.getElementById('inventory-blockchain-list');
 
   chemicalOpenAddBtn.addEventListener('click', startNewChemical);
@@ -38,8 +34,6 @@ export function initLabCommonInventory({ state, persist, createId, safeText }) {
   document.addEventListener('keydown', onChemicalDialogKeydown);
   chemicalForm.addEventListener('submit', onChemicalSubmit);
   chemicalCancelBtn.addEventListener('click', resetChemicalForm);
-  importBtn.addEventListener('click', importInventoryUpdates);
-  inboxEmail.addEventListener('change', renderPendingCount);
   chemicalSearch.addEventListener('input', renderChemicalList);
   chemicalFilterLocation.addEventListener('change', renderChemicalList);
   chemicalSort.addEventListener('change', renderChemicalList);
@@ -339,16 +333,6 @@ export function initLabCommonInventory({ state, persist, createId, safeText }) {
     } catch (error) {
       console.warn('Failed to sync chemical sqlite bundle:', error);
     }
-  }
-
-  function isUnreadFor(message, email) {
-    if (!email) {
-      return false;
-    }
-    if (!Array.isArray(message.readBy)) {
-      return true;
-    }
-    return !message.readBy.includes(email);
   }
 
   function simpleHash(text) {
@@ -715,98 +699,6 @@ export function initLabCommonInventory({ state, persist, createId, safeText }) {
     `).join('');
   }
 
-  function renderInboxEmails() {
-    const emails = Array.from(new Set(
-      state.members
-        .map((member) => member.enanaEmail)
-        .filter((email) => email && email.trim())
-    ));
-    const selected = inboxEmail.value;
-    const options = ['<option value="">Select inbox email</option>'];
-    emails.forEach((email) => {
-      const isSelected = selected === email ? ' selected' : '';
-      options.push(`<option value="${safeText(email)}"${isSelected}>${safeText(email)}</option>`);
-    });
-    inboxEmail.innerHTML = options.join('');
-    if (selected && emails.includes(selected)) {
-      inboxEmail.value = selected;
-    }
-  }
-
-  function renderPendingCount() {
-    const target = inboxEmail.value;
-    if (!target) {
-      pendingCount.textContent = '0';
-      return;
-    }
-
-    const pending = state.messages.filter((message) => (
-      message.type === 'inventory_sync' &&
-      message.to === target &&
-      isUnreadFor(message, target)
-    ));
-
-    pendingCount.textContent = String(pending.length);
-  }
-
-  function importInventoryUpdates() {
-    ensureLabInventoryShape();
-    const target = inboxEmail.value;
-    if (!target) {
-      return;
-    }
-
-    const pending = state.messages.filter((message) => (
-      message.type === 'inventory_sync' &&
-      message.to === target &&
-      isUnreadFor(message, target)
-    ));
-
-    pending.forEach((message) => {
-      const incoming = message.payload?.chemical;
-      if (!incoming || !incoming.id) {
-        return;
-      }
-      const normalizedIncoming = {
-        ...incoming,
-        location: String(incoming.location || '').trim()
-      };
-      if (normalizedIncoming.location) {
-        const nextCode = assignLocationCode(normalizedIncoming.location, normalizedIncoming.locationCode || '');
-        const parsed = parseLocationCode(nextCode);
-        normalizedIncoming.locationCode = nextCode;
-        normalizedIncoming.locationNumber = Number(parsed?.number || normalizedIncoming.locationNumber || 0);
-        state.labInventory.lastLocationNumber = Math.max(
-          Number(state.labInventory.lastLocationNumber) || 0,
-          Number(normalizedIncoming.locationNumber) || 0
-        );
-      }
-      const index = state.labInventory.chemicals.findIndex((item) => item.id === incoming.id);
-      if (index >= 0) {
-        state.labInventory.chemicals[index] = normalizedIncoming;
-      } else {
-        state.labInventory.chemicals.push(normalizedIncoming);
-      }
-
-      appendBlock('SYNC_IMPORT', {
-        chemicalId: normalizedIncoming.id,
-        from: message.from,
-        to: message.to
-      });
-
-      if (!Array.isArray(message.readBy)) {
-        message.readBy = [];
-      }
-      if (!message.readBy.includes(target)) {
-        message.readBy.push(target);
-      }
-    });
-
-    persist();
-    void syncChemicalSqliteBundle(true);
-    renderAll();
-  }
-
   function renderAll() {
     ensureLabInventoryShape();
     const migrated = ensureChemicalCodes();
@@ -817,8 +709,6 @@ export function initLabCommonInventory({ state, persist, createId, safeText }) {
     renderChemicalList();
     renderChemicalDetail();
     renderBlockchain();
-    renderInboxEmails();
-    renderPendingCount();
     void syncChemicalSqliteBundle(migrated);
   }
 

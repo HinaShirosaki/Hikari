@@ -58,6 +58,7 @@ const {
 const {
   buildCompactIndexedSnapshot
 } = require('./helpers/main/data-snapshot-utils');
+const { createChatLogTransformMonitor } = require('./helpers/main/chat-log-transformer.js');
 const { registerDataIpc } = require('./helpers/main/register-data-ipc');
 const { registerAgentIpc } = require('./helpers/main/register-agent-ipc');
 const { registerSystemIpc } = require('./helpers/main/register-system-ipc');
@@ -91,6 +92,20 @@ const {
 
 if (!String(process.env.ENANA_CODEX_HOME || '').trim()) {
   process.env.ENANA_CODEX_HOME = getCodexCliHomePath() || resolveCodexCliRuntimeHomeDirectory(getCodexCliWorkingDirectory());
+}
+
+const chatLogTransformMonitor = createChatLogTransformMonitor({
+  fs,
+  path,
+  cleanText
+});
+
+function resolveTrackedAgentChatSessionStoragePath(payload) {
+  const storagePath = getAgentChatSessionStoragePath(payload);
+  if (storagePath) {
+    chatLogTransformMonitor.trackStoragePath(storagePath);
+  }
+  return storagePath;
 }
 
 let mainWindow = null;
@@ -213,10 +228,10 @@ function getTelegramState() {
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1200,
+    width: 1280,
     height: 800,
-    minWidth: 900,
-    minHeight: 620,
+    minWidth: 1280,
+    minHeight: 800,
     title: 'Hikari',
     icon: appIconPath,
     webPreferences: {
@@ -336,7 +351,7 @@ registerAgentIpc({
   executeRecordLookup: agentLookupRuntime.executeRecordLookup,
   getDefaultDataFilePath,
   getAgentChatLogPath,
-  getAgentChatSessionStoragePath,
+  getAgentChatSessionStoragePath: resolveTrackedAgentChatSessionStoragePath,
   appendAgentChatLogEntry
 });
 
@@ -372,6 +387,10 @@ app.whenReady().then(async () => {
   restartTelegramBot();
   void ensureAgentChatLogFile(getAgentChatLogPath());
   void loadLlmPrompts();
+  const defaultDataFilePath = cleanText(getDefaultDataFilePath(), 2400);
+  chatLogTransformMonitor.start({
+    storagePaths: defaultDataFilePath ? [path.dirname(defaultDataFilePath)] : []
+  });
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -387,5 +406,6 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', () => {
+  chatLogTransformMonitor.stop();
   stopTelegramBot('app quit');
 });

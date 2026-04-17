@@ -2,12 +2,13 @@
 //
 // Responsibilities:
 // - summarize urgent bench work for the home screen
-// - surface cell-passage reminders, planned notebook follow-ups, and workflow progress
+// - surface cell-passage reminders, overnight incubation locations, and workflow progress
 // - provide a lightweight dashboard timer with presets, pause, and reset support
 // - bridge quick-log notes into the assistant or notebook workspace
 export function initHomeDashboard({
   state,
   persist,
+  createId = () => '',
   safeText,
   onOpenSampleSearch = () => {},
   onOpenSamples = () => onOpenSampleSearch(''),
@@ -23,9 +24,13 @@ export function initHomeDashboard({
   const todayList = document.getElementById('dashboard-today-list');
 
   const passageSummary = document.getElementById('dashboard-passage-summary');
-  const overdueList = document.getElementById('dashboard-passage-overdue-list');
-  const soonList = document.getElementById('dashboard-passage-soon-list');
-  const unconfiguredList = document.getElementById('dashboard-passage-unconfigured-list');
+  const passageList = document.getElementById('dashboard-passage-list');
+  const passageAddBtn = document.getElementById('dashboard-passage-add-btn');
+  const passageDialogOverlay = document.getElementById('dashboard-passage-dialog-overlay');
+  const passageDialogForm = document.getElementById('dashboard-passage-dialog-form');
+  const passageStrainInput = document.getElementById('dashboard-passage-strain-input');
+  const passageIntervalInput = document.getElementById('dashboard-passage-interval-input');
+  const passageNumberInput = document.getElementById('dashboard-passage-number-input');
 
   const workflowSelect = document.getElementById('dashboard-workflow-select');
   const workflowNextStep = document.getElementById('dashboard-workflow-next-step');
@@ -33,6 +38,11 @@ export function initHomeDashboard({
 
   const incubationSummary = document.getElementById('dashboard-incubation-summary');
   const incubationList = document.getElementById('dashboard-incubation-list');
+  const incubationAddBtn = document.getElementById('dashboard-incubation-add-btn');
+  const incubationDialogOverlay = document.getElementById('dashboard-incubation-dialog-overlay');
+  const incubationLocationList = document.getElementById('dashboard-incubation-location-list');
+  const incubationLocationForm = document.getElementById('dashboard-incubation-location-form');
+  const incubationLocationInput = document.getElementById('dashboard-incubation-location-input');
 
   const quickLogInput = document.getElementById('dashboard-quick-log-input');
   const quickLogStatus = document.getElementById('dashboard-quick-log-status');
@@ -60,14 +70,23 @@ export function initHomeDashboard({
     || !todayIncubationCount
     || !todayList
     || !passageSummary
-    || !overdueList
-    || !soonList
-    || !unconfiguredList
+    || !passageList
+    || !passageAddBtn
+    || !passageDialogOverlay
+    || !passageDialogForm
+    || !passageStrainInput
+    || !passageIntervalInput
+    || !passageNumberInput
     || !workflowSelect
     || !workflowNextStep
     || !workflowProgressList
     || !incubationSummary
     || !incubationList
+    || !incubationAddBtn
+    || !incubationDialogOverlay
+    || !incubationLocationList
+    || !incubationLocationForm
+    || !incubationLocationInput
     || !quickLogInput
     || !quickLogStatus
     || !quickLogAgentBtn
@@ -101,13 +120,17 @@ export function initHomeDashboard({
   let localClockHandle = 0;
   let timerHint = '';
 
-  overdueList.addEventListener('click', onPassageListClick);
-  soonList.addEventListener('click', onPassageListClick);
-  unconfiguredList.addEventListener('click', onPassageListClick);
+  passageList.addEventListener('click', onPassageListClick);
+  passageAddBtn.addEventListener('click', openPassageDialog);
+  passageDialogForm.addEventListener('submit', onPassageDialogSubmit);
+  passageDialogOverlay.addEventListener('click', onPassageDialogOverlayClick);
   todayList.addEventListener('click', onDashboardActionClick);
   workflowSelect.addEventListener('change', onWorkflowSelected);
   workflowProgressList.addEventListener('click', onWorkflowProgressClick);
-  incubationList.addEventListener('click', onDashboardActionClick);
+  incubationAddBtn.addEventListener('click', openIncubationDialog);
+  incubationDialogOverlay.addEventListener('click', onIncubationDialogOverlayClick);
+  incubationLocationForm.addEventListener('submit', onIncubationLocationSubmit);
+  incubationLocationList.addEventListener('click', onIncubationLocationListClick);
   quickActionButtons.forEach((button) => {
     button.addEventListener('click', onQuickActionClick);
   });
@@ -137,6 +160,7 @@ export function initHomeDashboard({
       setTimerDuration(minutes);
     });
   });
+  document.addEventListener('keydown', onDashboardKeydown);
 
   renderLocalClock();
   localClockHandle = window.setInterval(renderLocalClock, 1000);
@@ -149,7 +173,8 @@ export function initHomeDashboard({
       state.settings.dashboard = {
         currentWorkflowId: '',
         workflowProgress: {},
-        quickLogDraft: ''
+        quickLogDraft: '',
+        incubationLocations: []
       };
       return true;
     }
@@ -170,7 +195,216 @@ export function initHomeDashboard({
       state.settings.dashboard.quickLogDraft = '';
       changed = true;
     }
+    if (!Array.isArray(state.settings.dashboard.incubationLocations)) {
+      state.settings.dashboard.incubationLocations = [];
+      changed = true;
+    }
     return changed;
+  }
+
+  function ensureSamplesState() {
+    if (!Array.isArray(state.samples)) {
+      state.samples = [];
+      return true;
+    }
+    return false;
+  }
+
+  function nextSampleId() {
+    const generatedId = String(createId() || '').trim();
+    if (generatedId) {
+      return generatedId;
+    }
+    return `sample-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`;
+  }
+
+  function normalizeSampleCode(value) {
+    return String(value || '')
+      .trim()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-zA-Z0-9._-]/g, '');
+  }
+
+  function buildPassageReminderCode(strain) {
+    const base = normalizeSampleCode(strain).slice(0, 24) || 'CELL';
+    const existingCodes = new Set(
+      (Array.isArray(state.samples) ? state.samples : [])
+        .map((sample) => String(sample?.code || '').trim().toLowerCase())
+        .filter(Boolean)
+    );
+    if (!existingCodes.has(base.toLowerCase())) {
+      return base;
+    }
+    let suffix = 2;
+    while (existingCodes.has(`${base}-${suffix}`.toLowerCase())) {
+      suffix += 1;
+    }
+    return `${base}-${suffix}`;
+  }
+
+  function normalizeIncubationLocationValue(value) {
+    return String(value || '').trim().replace(/\s+/g, ' ');
+  }
+
+  function renderIncubationLocationRows() {
+    const locations = Array.isArray(state.settings?.dashboard?.incubationLocations)
+      ? state.settings.dashboard.incubationLocations
+      : [];
+    incubationLocationList.innerHTML = locations.map((location, index) => `
+      <div class="home-incubation-location-row">
+        <span class="home-incubation-location-name">${safeText(location)}</span>
+        <button
+          type="button"
+          class="home-incubation-delete-btn"
+          data-dashboard-incubation-location-delete="${index}"
+          aria-label="Delete incubation location ${safeText(location)}"
+        >
+          <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
+            <circle cx="12" cy="12" r="12" fill="currentColor"></circle>
+            <path d="M7 7l10 10M17 7 7 17" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"></path>
+          </svg>
+        </button>
+      </div>
+    `).join('');
+  }
+
+  function openPassageDialog() {
+    passageDialogForm.reset();
+    passageDialogOverlay.hidden = false;
+    window.requestAnimationFrame(() => {
+      passageStrainInput.focus();
+    });
+  }
+
+  function closePassageDialog() {
+    passageDialogForm.reset();
+    passageDialogOverlay.hidden = true;
+  }
+
+  function openIncubationDialog() {
+    renderIncubationLocationRows();
+    incubationLocationForm.reset();
+    incubationDialogOverlay.hidden = false;
+    window.requestAnimationFrame(() => {
+      incubationLocationInput.focus();
+    });
+  }
+
+  function closeIncubationDialog() {
+    incubationLocationForm.reset();
+    incubationDialogOverlay.hidden = true;
+  }
+
+  function onPassageDialogOverlayClick(event) {
+    if (event.target !== passageDialogOverlay) {
+      return;
+    }
+    closePassageDialog();
+  }
+
+  function onIncubationDialogOverlayClick(event) {
+    if (event.target !== incubationDialogOverlay) {
+      return;
+    }
+    closeIncubationDialog();
+  }
+
+  function onDashboardKeydown(event) {
+    if (event.key !== 'Escape') {
+      return;
+    }
+    if (!passageDialogOverlay.hidden) {
+      event.preventDefault();
+      closePassageDialog();
+      return;
+    }
+    if (incubationDialogOverlay.hidden) {
+      return;
+    }
+    event.preventDefault();
+    closeIncubationDialog();
+  }
+
+  function onPassageDialogSubmit(event) {
+    event.preventDefault();
+    if (!passageDialogForm.reportValidity()) {
+      return;
+    }
+
+    const strain = String(passageStrainInput.value || '').trim();
+    const intervalDays = Math.round(Number(passageIntervalInput.value));
+    const passageNumber = Math.round(Number(passageNumberInput.value));
+    if (
+      !strain
+      || !Number.isFinite(intervalDays)
+      || intervalDays <= 0
+      || !Number.isFinite(passageNumber)
+      || passageNumber <= 0
+    ) {
+      return;
+    }
+
+    const now = new Date();
+    const today = formatDateLocal(now);
+    ensureSamplesState();
+    state.samples.push({
+      id: nextSampleId(),
+      code: buildPassageReminderCode(strain),
+      name: strain,
+      type: 'cell_line',
+      lot: '',
+      concentration: '',
+      notes: '',
+      cellPassage: {
+        lastPassageDate: today,
+        intervalDays,
+        passageNumber
+      },
+      location: null,
+      inventoryLink: null,
+      chemicalLinks: [],
+      compoundStructure: null,
+      updatedAt: now.toISOString()
+    });
+
+    persist();
+    closePassageDialog();
+    render();
+  }
+
+  function onIncubationLocationSubmit(event) {
+    event.preventDefault();
+    ensureDashboardState();
+    const value = normalizeIncubationLocationValue(incubationLocationInput.value);
+    if (!value) {
+      return;
+    }
+    const existing = state.settings.dashboard.incubationLocations
+      .some((item) => normalizeIncubationLocationValue(item).toLowerCase() === value.toLowerCase());
+    if (existing) {
+      incubationLocationInput.focus();
+      incubationLocationInput.select();
+      return;
+    }
+    state.settings.dashboard.incubationLocations.push(value);
+    persist();
+    renderIncubationLocationRows();
+    incubationLocationForm.reset();
+    incubationLocationInput.focus();
+  }
+
+  function onIncubationLocationListClick(event) {
+    const button = event.target.closest('[data-dashboard-incubation-location-delete]');
+    if (!button) {
+      return;
+    }
+    const index = Number(button.dataset.dashboardIncubationLocationDelete);
+    if (!Number.isInteger(index) || index < 0) {
+      return;
+    }
+    state.settings.dashboard.incubationLocations.splice(index, 1);
+    persist();
+    renderIncubationLocationRows();
   }
 
   function sampleLabel(sample) {
@@ -282,62 +516,191 @@ export function initHomeDashboard({
     return `overdue by ${Math.abs(dayDelta)} day(s)`;
   }
 
-  function parseTimestamp(rawValue) {
-    const parsed = Date.parse(String(rawValue || '').trim());
-    return Number.isFinite(parsed) ? parsed : 0;
+  function readPassageNumber(sample) {
+    const direct = Math.round(Number(sample?.cellPassage?.passageNumber));
+    if (Number.isFinite(direct) && direct > 0) {
+      return direct;
+    }
+    const notes = String(sample?.notes || '').trim();
+    const match = notes.match(/passage number:\s*p?(\d+)/i) || notes.match(/\bP(\d+)\b/);
+    const fallback = Math.round(Number(match?.[1]));
+    return Number.isFinite(fallback) && fallback > 0 ? fallback : 0;
   }
 
-  function formatWaitingAge(timestampMs) {
-    if (!Number.isFinite(timestampMs) || timestampMs <= 0) {
-      return 'waiting';
+  function renderPassageStatusIcon(status) {
+    if (status === 'overdue') {
+      return `
+        <span class="dashboard-passage-status" aria-hidden="true">
+          <svg viewBox="0 0 24 24" role="presentation">
+            <path d="M12 3 22 20H2Z" fill="#d9544d"></path>
+            <path d="M11.1 8.2h1.8l-.2 6.4h-1.4zM12 18a1.15 1.15 0 1 1 0-2.3 1.15 1.15 0 0 1 0 2.3Z" fill="#ffffff"></path>
+          </svg>
+        </span>
+      `;
     }
-    const elapsedMs = Math.max(0, Date.now() - timestampMs);
-    const elapsedHours = Math.floor(elapsedMs / 3600000);
-    const elapsedDays = Math.floor(elapsedMs / 86400000);
-    if (elapsedDays >= 1) {
-      return `${elapsedDays} day(s) waiting`;
+    if (status === 'due_today') {
+      return `
+        <span class="dashboard-passage-status" aria-hidden="true">
+          <svg viewBox="0 0 24 24" role="presentation">
+            <path d="M11.1 4.2h1.8l-.2 10.1h-1.4zM12 19.1a1.4 1.4 0 1 1 0-2.8 1.4 1.4 0 0 1 0 2.8Z" fill="#c77b00"></path>
+          </svg>
+        </span>
+      `;
     }
-    if (elapsedHours >= 1) {
-      return `${elapsedHours} hour(s) waiting`;
+    if (status === 'unconfigured') {
+      return `
+        <span class="dashboard-passage-status" aria-hidden="true">
+          <svg viewBox="0 0 24 24" role="presentation">
+            <circle cx="12" cy="12" r="9" fill="#c2beb7"></circle>
+            <rect x="7" y="11" width="10" height="2" rx="1" fill="#ffffff"></rect>
+          </svg>
+        </span>
+      `;
     }
-    return 'started today';
+    return `
+      <span class="dashboard-passage-status" aria-hidden="true">
+        <svg viewBox="0 0 24 24" role="presentation">
+          <circle cx="12" cy="12" r="8.5" fill="none" stroke="#7a8670" stroke-width="1.8"></circle>
+          <path d="M12 7.6v4.8l3 1.8" fill="none" stroke="#7a8670" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+      </span>
+    `;
   }
 
-  function renderPassageRows(host, rows, { section }) {
-    if (!rows.length) {
-      host.innerHTML = '<p class="small-note">None.</p>';
+  function renderPassageActionIcon(action) {
+    if (action === 'done') {
+      return `
+        <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
+          <circle cx="12" cy="12" r="11" fill="#3a9f5b"></circle>
+          <path d="m7.2 12.4 3.1 3.1 6.5-7.1" fill="none" stroke="#ffffff" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+      `;
+    }
+    return `
+      <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
+        <circle cx="12" cy="12" r="11" fill="#d4ab2d"></circle>
+        <path d="M5.7 14.2V9.6h4.8c1.2 0 2 .8 2 1.8v2.8M5.7 13h12.6M18.3 13v3.2M8 13v1.8M6.4 16.8a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4Zm11.2 0a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4Z" fill="none" stroke="#ffffff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path>
+      </svg>
+    `;
+  }
+
+  function renderPassageActionButtons(row) {
+    if (!row.isActionable) {
+      return '';
+    }
+    const sampleId = safeText(String(row.sample?.id || ''));
+    const label = safeText(sampleLabel(row.sample));
+    return `
+      <div class="dashboard-passage-actions">
+        <button
+          type="button"
+          class="dashboard-passage-action"
+          data-dashboard-passage-action="done"
+          data-dashboard-passage-sample="${sampleId}"
+          aria-label="Mark passage done for ${label}"
+        >${renderPassageActionIcon('done')}</button>
+        <button
+          type="button"
+          class="dashboard-passage-action"
+          data-dashboard-passage-action="extend"
+          data-dashboard-passage-sample="${sampleId}"
+          aria-label="Extend passage reminder one day for ${label}"
+        >${renderPassageActionIcon('extend')}</button>
+      </div>
+    `;
+  }
+
+  function formatPassageRowDetail(row) {
+    if (row.status === 'unconfigured') {
+      return 'Missing last passage date or interval.';
+    }
+    const detail = [];
+    if (row.passageNumber > 0) {
+      detail.push(`P${row.passageNumber}`);
+    }
+    detail.push(`Every ${row.intervalDays} day(s)`);
+    if (row.status === 'overdue') {
+      detail.push(formatRelativeDays(row.daysFromToday));
+      detail.push(`due ${formatDateLocal(row.effectiveDueDate)}`);
+      return detail.join(' | ');
+    }
+    if (row.status === 'due_today') {
+      detail.push('needs passage today');
+      return detail.join(' | ');
+    }
+    if (row.deferredUntilDate) {
+      detail.push(`extended to ${row.deferredUntilDate}`);
+      return detail.join(' | ');
+    }
+    detail.push(`${formatDateLocal(row.effectiveDueDate)} (${formatRelativeDays(row.daysFromToday)})`);
+    return detail.join(' | ');
+  }
+
+  function clonePassageConfig(sample) {
+    const lastPassageDate = String(sample?.cellPassage?.lastPassageDate || '').trim();
+    const intervalDays = Math.round(Number(sample?.cellPassage?.intervalDays));
+    if (!parseLocalDate(lastPassageDate) || !Number.isFinite(intervalDays) || intervalDays <= 0) {
+      return null;
+    }
+    const nextConfig = {
+      lastPassageDate,
+      intervalDays
+    };
+    const passageNumber = readPassageNumber(sample);
+    if (passageNumber > 0) {
+      nextConfig.passageNumber = passageNumber;
+    }
+    const deferredUntilDate = String(sample?.cellPassage?.deferredUntilDate || '').trim();
+    if (parseLocalDate(deferredUntilDate)) {
+      nextConfig.deferredUntilDate = deferredUntilDate;
+    }
+    return nextConfig;
+  }
+
+  function completePassage(sampleId) {
+    const sample = (Array.isArray(state.samples) ? state.samples : []).find((item) => item.id === sampleId);
+    const current = clonePassageConfig(sample);
+    if (!sample || !current) {
       return;
     }
-    host.innerHTML = rows.map((row) => {
-      const detail = section === 'unconfigured'
-        ? 'Missing passage date or interval.'
-        : `${formatDateLocal(row.dueDate)} (${formatRelativeDays(row.daysFromToday)})`;
-      const query = row.sample.code || row.sample.name || row.sample.id || '';
-      return `
-        <article class="dashboard-item">
-          <div>
-            <strong>${safeText(sampleLabel(row.sample))}</strong>
-            <p class="small-note">${safeText(detail)}</p>
-          </div>
-          <button
-            type="button"
-            class="ghost-btn"
-            data-dashboard-open-sample="${safeText(query)}"
-          >Open</button>
-        </article>
-      `;
-    }).join('');
+    const now = new Date();
+    sample.cellPassage = {
+      lastPassageDate: formatDateLocal(now),
+      intervalDays: current.intervalDays,
+      passageNumber: current.passageNumber > 0 ? current.passageNumber + 1 : undefined
+    };
+    sample.updatedAt = now.toISOString();
+    persist();
+    render();
+  }
+
+  function extendPassageOneDay(sampleId) {
+    const sample = (Array.isArray(state.samples) ? state.samples : []).find((item) => item.id === sampleId);
+    const current = clonePassageConfig(sample);
+    if (!sample || !current) {
+      return;
+    }
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    sample.cellPassage = {
+      ...current,
+      deferredUntilDate: formatDateLocal(tomorrow)
+    };
+    sample.updatedAt = now.toISOString();
+    persist();
+    render();
   }
 
   function collectPassageRows() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const soonLimit = new Date(today);
-    soonLimit.setDate(soonLimit.getDate() + 3);
-
     const overdue = [];
-    const soon = [];
+    const dueToday = [];
+    const incubating = [];
     const unconfigured = [];
+    const rows = [];
 
     (Array.isArray(state.samples) ? state.samples : []).forEach((sample) => {
       if (String(sample?.type || '').trim().toLowerCase() !== 'cell_line') {
@@ -346,38 +709,99 @@ export function initHomeDashboard({
       const dateValue = String(sample?.cellPassage?.lastPassageDate || '').trim();
       const interval = Math.round(Number(sample?.cellPassage?.intervalDays));
       const lastPassage = parseLocalDate(dateValue);
+      const passageNumber = readPassageNumber(sample);
       if (!lastPassage || !Number.isFinite(interval) || interval <= 0) {
-        unconfigured.push({ sample });
+        const row = {
+          sample,
+          status: 'unconfigured',
+          intervalDays: 0,
+          passageNumber,
+          dueDate: null,
+          effectiveDueDate: null,
+          deferredUntilDate: '',
+          daysFromToday: 0,
+          isActionable: false
+        };
+        unconfigured.push(row);
+        rows.push(row);
         return;
       }
       const dueDate = new Date(lastPassage);
       dueDate.setDate(dueDate.getDate() + interval);
       dueDate.setHours(0, 0, 0, 0);
-      const daysFromToday = Math.round((dueDate.getTime() - today.getTime()) / 86400000);
-      const row = { sample, dueDate, daysFromToday };
-      if (dueDate.getTime() < today.getTime()) {
+      const deferredUntil = parseLocalDate(sample?.cellPassage?.deferredUntilDate);
+      const effectiveDueDate = deferredUntil && deferredUntil.getTime() > dueDate.getTime()
+        ? deferredUntil
+        : dueDate;
+      const daysFromToday = Math.round((effectiveDueDate.getTime() - today.getTime()) / 86400000);
+      const status = effectiveDueDate.getTime() < today.getTime()
+        ? 'overdue'
+        : (effectiveDueDate.getTime() === today.getTime() ? 'due_today' : 'incubating');
+      const row = {
+        sample,
+        status,
+        intervalDays: interval,
+        passageNumber,
+        dueDate,
+        effectiveDueDate,
+        deferredUntilDate: deferredUntil ? formatDateLocal(deferredUntil) : '',
+        daysFromToday,
+        isActionable: status === 'overdue' || status === 'due_today'
+      };
+      if (status === 'overdue') {
         overdue.push(row);
-      } else if (dueDate.getTime() <= soonLimit.getTime()) {
-        soon.push(row);
+      } else if (status === 'due_today') {
+        dueToday.push(row);
+      } else {
+        incubating.push(row);
       }
+      rows.push(row);
     });
 
-    overdue.sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
-    soon.sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
-    unconfigured.sort((a, b) => String(a.sample?.updatedAt || '').localeCompare(String(b.sample?.updatedAt || '')));
+    const statusRank = {
+      overdue: 0,
+      due_today: 1,
+      incubating: 2,
+      unconfigured: 3
+    };
+    rows.sort((a, b) => {
+      const rankDelta = (statusRank[a.status] ?? 99) - (statusRank[b.status] ?? 99);
+      if (rankDelta) {
+        return rankDelta;
+      }
+      const leftTime = a.effectiveDueDate?.getTime?.() || Number.MAX_SAFE_INTEGER;
+      const rightTime = b.effectiveDueDate?.getTime?.() || Number.MAX_SAFE_INTEGER;
+      if (leftTime !== rightTime) {
+        return leftTime - rightTime;
+      }
+      return sampleLabel(a.sample).localeCompare(sampleLabel(b.sample));
+    });
 
     return {
+      rows,
       overdue,
-      soon,
+      dueToday,
+      incubating,
       unconfigured
     };
   }
 
   function renderPassageWidget(passageRows) {
-    passageSummary.textContent = `Overdue: ${passageRows.overdue.length} | Due in 3 days: ${passageRows.soon.length} | Unconfigured: ${passageRows.unconfigured.length}`;
-    renderPassageRows(overdueList, passageRows.overdue, { section: 'overdue' });
-    renderPassageRows(soonList, passageRows.soon, { section: 'soon' });
-    renderPassageRows(unconfiguredList, passageRows.unconfigured, { section: 'unconfigured' });
+    passageSummary.textContent = `Overdue: ${passageRows.overdue.length} | Need today: ${passageRows.dueToday.length} | Incubating: ${passageRows.incubating.length}${passageRows.unconfigured.length ? ` | Needs setup: ${passageRows.unconfigured.length}` : ''}`;
+    if (!passageRows.rows.length) {
+      passageList.innerHTML = '<p class="small-note">No cell line reminders yet.</p>';
+      return;
+    }
+    passageList.innerHTML = passageRows.rows.map((row) => `
+      <article class="dashboard-passage-row${row.status === 'unconfigured' ? ' is-unconfigured' : ''}">
+        ${renderPassageStatusIcon(row.status)}
+        <div class="dashboard-passage-copy">
+          <strong class="dashboard-passage-title">${safeText(sampleLabel(row.sample))}</strong>
+          <p class="dashboard-passage-detail">${safeText(formatPassageRowDetail(row))}</p>
+        </div>
+        ${renderPassageActionButtons(row)}
+      </article>
+    `).join('');
   }
 
   function protocolNameById(protocolId) {
@@ -486,8 +910,7 @@ export function initHomeDashboard({
     } else {
       const index = workflow.blocks.findIndex((block) => block.id === next.block.id);
       const title = blockLabel(next.block, index);
-      const prefix = next.fallback ? 'Next (fallback):' : 'Next:';
-      workflowNextStep.textContent = `${prefix} ${title} (${doneCount}/${total} done)`;
+      workflowNextStep.textContent = `${title} (${doneCount}/${total} done)`;
     }
 
     workflowProgressList.innerHTML = workflow.blocks.length
@@ -511,40 +934,30 @@ export function initHomeDashboard({
       : '<p class="small-note">This workflow has no blocks yet.</p>';
   }
 
-  function collectIncubationRows() {
-    return (Array.isArray(state.notebookEntries) ? state.notebookEntries : [])
-      .filter((entry) => String(entry?.notebookState || '').trim().toLowerCase() === 'planned')
-      .map((entry) => ({
-        entry,
-        timestampMs: parseTimestamp(entry?.updatedAt || entry?.createdAt || '')
-      }))
-      .sort((a, b) => a.timestampMs - b.timestampMs);
+  function collectIncubationLocations() {
+    return [...(Array.isArray(state.settings?.dashboard?.incubationLocations)
+      ? state.settings.dashboard.incubationLocations
+      : [])];
   }
 
-  function renderIncubationWidget(rows) {
-    incubationSummary.textContent = rows.length
-      ? `${rows.length} planned notebook follow-up(s) still waiting.`
-      : 'No planned follow-ups waiting.';
-    if (!rows.length) {
-      incubationList.innerHTML = '<p class="small-note">Nothing is parked in a planned state right now.</p>';
+  function renderIncubationWidget(locations) {
+    incubationSummary.textContent = locations.length
+      ? ''
+      : 'No incubation locations yet.';
+    if (!locations.length) {
+      incubationList.innerHTML = '<p class="small-note">Add an incubation location to track overnight setups here.</p>';
       return;
     }
-    incubationList.innerHTML = rows.map(({ entry, timestampMs }) => `
+    incubationList.innerHTML = locations.map((location) => `
       <article class="dashboard-item">
         <div>
-          <strong>${safeText(String(entry?.protocolName || 'Untitled notebook page'))}</strong>
-          <p class="small-note">${safeText(String(entry?.projectName || 'Unassigned project'))} | ${safeText(formatWaitingAge(timestampMs))}</p>
+          <strong>${safeText(location)}</strong>
         </div>
-        <button
-          type="button"
-          class="ghost-btn"
-          data-dashboard-action="notebook"
-        >Open</button>
       </article>
     `).join('');
   }
 
-  function buildTodayItems({ passageRows, workflowContext, incubationRows }) {
+  function buildTodayItems({ passageRows, workflowContext }) {
     const items = [];
     const workflow = workflowContext.workflow;
     const workflowOpenCount = workflow
@@ -570,23 +983,12 @@ export function initHomeDashboard({
       });
     });
 
-    if (!passageRows.overdue.length) {
-      passageRows.soon.slice(0, 1).forEach((row) => {
-        items.push({
-          title: sampleLabel(row.sample),
-          detail: `Cell passage ${formatRelativeDays(row.daysFromToday)}`,
-          action: 'samples',
-          actionLabel: 'Samples'
-        });
-      });
-    }
-
-    incubationRows.slice(0, 2).forEach(({ entry, timestampMs }) => {
+    passageRows.dueToday.slice(0, Math.max(0, 2 - passageRows.overdue.length)).forEach((row) => {
       items.push({
-        title: String(entry?.protocolName || 'Planned notebook follow-up'),
-        detail: `${String(entry?.projectName || 'Unassigned project')} | ${formatWaitingAge(timestampMs)}`,
-        action: 'notebook',
-        actionLabel: 'Notebook'
+        title: sampleLabel(row.sample),
+        detail: 'Cell passage due today',
+        action: 'samples',
+        actionLabel: 'Samples'
       });
     });
 
@@ -595,7 +997,7 @@ export function initHomeDashboard({
       counts: {
         overdue: passageRows.overdue.length,
         workflowOpen: workflowOpenCount,
-        incubation: incubationRows.length
+        incubation: 0
       }
     };
   }
@@ -611,7 +1013,7 @@ export function initHomeDashboard({
       return;
     }
 
-    todaySummary.textContent = `${todayData.items.length} active item(s) need attention today.`;
+    todaySummary.textContent = '';
     todayList.innerHTML = todayData.items.map((item) => `
       <article class="dashboard-item">
         <div>
@@ -635,7 +1037,7 @@ export function initHomeDashboard({
   }
 
   function setQuickLogStatus(message) {
-    quickLogStatus.textContent = String(message || '').trim() || 'Type a bench note to keep it handy on this screen.';
+    quickLogStatus.textContent = String(message || '').trim();
   }
 
   function renderQuickLogWidget() {
@@ -644,7 +1046,7 @@ export function initHomeDashboard({
       setQuickLogStatus('Draft saved locally. Press Command/Ctrl+Enter to send it to the Assistant.');
       return;
     }
-    setQuickLogStatus('Type a bench note to keep it handy on this screen.');
+    setQuickLogStatus('');
   }
 
   function formatTimer(ms) {
@@ -778,7 +1180,7 @@ export function initHomeDashboard({
     } else if (timerState.remainingMs < timerState.durationMs) {
       timerStatus.textContent = 'Paused';
     } else {
-      timerStatus.textContent = 'Ready';
+      timerStatus.textContent = '';
     }
 
     timerStartBtn.disabled = timerState.running;
@@ -852,12 +1254,22 @@ export function initHomeDashboard({
   }
 
   function onPassageListClick(event) {
-    const button = event.target.closest('[data-dashboard-open-sample]');
+    const button = event.target.closest('[data-dashboard-passage-action]');
     if (!button) {
       return;
     }
-    const query = String(button.dataset.dashboardOpenSample || '').trim();
-    onOpenSampleSearch(query);
+    const sampleId = String(button.dataset.dashboardPassageSample || '').trim();
+    const action = String(button.dataset.dashboardPassageAction || '').trim().toLowerCase();
+    if (!sampleId || !action) {
+      return;
+    }
+    if (action === 'done') {
+      completePassage(sampleId);
+      return;
+    }
+    if (action === 'extend') {
+      extendPassageOneDay(sampleId);
+    }
   }
 
   function runDashboardAction(action) {
@@ -903,7 +1315,7 @@ export function initHomeDashboard({
       setQuickLogStatus('Draft saved locally. Press Command/Ctrl+Enter to send it to the Assistant.');
       return;
     }
-    setQuickLogStatus('Type a bench note to keep it handy on this screen.');
+    setQuickLogStatus('');
   }
 
   function onQuickLogKeydown(event) {
@@ -935,7 +1347,7 @@ export function initHomeDashboard({
     state.settings.dashboard.quickLogDraft = '';
     quickLogInput.value = '';
     persist();
-    setQuickLogStatus('Quick log cleared.');
+    setQuickLogStatus('');
   }
 
   function onWorkflowSelected() {
@@ -977,6 +1389,7 @@ export function initHomeDashboard({
 
   function render() {
     let changed = ensureDashboardState();
+    changed = ensureSamplesState() || changed;
     if (!localClockHandle) {
       renderLocalClock();
       localClockHandle = window.setInterval(renderLocalClock, 1000);
@@ -984,11 +1397,10 @@ export function initHomeDashboard({
 
     const passageRows = collectPassageRows();
     const workflowContext = buildWorkflowContext();
-    const incubationRows = collectIncubationRows();
+    const incubationLocations = collectIncubationLocations();
     const todayData = buildTodayItems({
       passageRows,
-      workflowContext,
-      incubationRows
+      workflowContext
     });
 
     changed = workflowContext.changed || changed;
@@ -999,7 +1411,10 @@ export function initHomeDashboard({
     renderTodayWidget(todayData);
     renderPassageWidget(passageRows);
     renderWorkflowWidget(workflowContext);
-    renderIncubationWidget(incubationRows);
+    renderIncubationWidget(incubationLocations);
+    if (!incubationDialogOverlay.hidden) {
+      renderIncubationLocationRows();
+    }
     renderQuickLogWidget();
     renderTimerWidget();
   }

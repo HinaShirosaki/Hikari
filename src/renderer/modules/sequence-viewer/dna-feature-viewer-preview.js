@@ -434,8 +434,9 @@ function buildEmptyPreviewHtml(recordName) {
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>${safeName}</title>
   <style>
-    body { margin: 0; padding: 20px; font-family: "Playfair Display", serif; background: #eef4fb; color: #15314d; }
-    .preview-shell { max-width: 760px; margin: 0 auto; padding: 24px; border: 1px solid #d2deed; border-radius: 24px; background: rgba(255, 255, 255, 0.92); box-shadow: 0 28px 72px rgba(16, 40, 66, 0.08); }
+    html, body { margin: 0; padding: 0; background: #ffffff; }
+    body { font-family: "Playfair Display", serif; color: #15314d; overflow: hidden; }
+    .preview-shell { margin: 0; padding: 12px 0; }
     h1 { margin: 0 0 12px; font-size: 1.3rem; }
     p { margin: 0; line-height: 1.5; color: #55708f; }
   </style>
@@ -610,40 +611,33 @@ export function buildDnaFeatureViewerCircularPreviewHtmlDocument(record) {
       color-scheme: light;
       --preview-ink: #16314c;
       --preview-muted: #5a7592;
-      --preview-shell: rgba(255, 255, 255, 0.94);
-      --preview-shell-border: #d3dfed;
-      --preview-backdrop-a: #edf4fb;
-      --preview-backdrop-b: #dce9f7;
       --preview-backbone: #7e99ba;
       --preview-center-ring: #d8e4f2;
       --preview-center-disc: #f9fbfe;
       --preview-tick: #8ca5c5;
     }
     * { box-sizing: border-box; }
-    body {
+    html, body {
       margin: 0;
-      padding: 18px;
-      min-height: 100vh;
+      padding: 0;
+      background: #ffffff;
+    }
+    body {
       font-family: "Playfair Display", serif;
       color: var(--preview-ink);
-      background:
-        radial-gradient(circle at top, rgba(255, 255, 255, 0.92), transparent 48%),
-        linear-gradient(180deg, var(--preview-backdrop-a), var(--preview-backdrop-b));
+      overflow: hidden;
     }
     .preview-shell {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 20px;
-      border: 1px solid var(--preview-shell-border);
-      border-radius: 28px;
-      background: var(--preview-shell);
-      box-shadow: 0 28px 72px rgba(16, 40, 66, 0.08);
-      backdrop-filter: blur(10px);
+      display: grid;
+      justify-items: center;
+      margin: 0;
+      padding: 0;
     }
     svg {
       display: block;
-      width: 100%;
+      width: min(100%, 1120px);
       height: auto;
+      margin: 0 auto;
     }
     .circular-preview__backbone {
       fill: none;

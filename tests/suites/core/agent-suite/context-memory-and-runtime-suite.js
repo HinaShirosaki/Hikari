@@ -640,6 +640,109 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
       }
     });
 
+    test('agent chat log runtime preserves transform status entries in chat_log/index.json', async () => {
+      const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'agent-chat-log-transform-index-'));
+      try {
+        const chatLogDir = path.join(tempDir, 'chat_log');
+        await fsPromises.mkdir(chatLogDir, { recursive: true });
+        await fsPromises.writeFile(path.join(chatLogDir, 'index.json'), JSON.stringify({
+          version: 1,
+          updated_at: '2026-03-22T15:40:00.000Z',
+          sessions: [],
+          transforms: {
+            updated_at: '2026-03-22T15:39:59.000Z',
+            output_folder: 'transformed',
+            files: {
+              'chat-existing.log': {
+                source_file: 'chat-existing.log',
+                output_file: 'transformed/chat-existing.json',
+                status: 'complete',
+                source_mtime_ms: 1234,
+                source_size: 5678,
+                source_line_count: 9,
+                trace_count: 3,
+                transformed_at: '2026-03-22T15:39:59.000Z',
+                error: ''
+              }
+            }
+          }
+        }, null, 2), 'utf8');
+
+        const runtime = agentChatLog.createAgentChatLogRuntime({
+          now: () => '2026-03-22T15:40:01.000Z',
+          createId: () => 'chat-transform-1'
+        });
+
+        await runtime.createSession({
+          storagePath: tempDir,
+          projectId: 'proj-transform',
+          projectName: 'Transform Test'
+        });
+
+        const index = JSON.parse(await fsPromises.readFile(path.join(chatLogDir, 'index.json'), 'utf8'));
+        assert.equal(index.sessions.length, 1);
+        assert.equal(index.transforms.output_folder, 'transformed');
+        assert.equal(index.transforms.files['chat-existing.log'].status, 'complete');
+        assert.equal(index.transforms.files['chat-existing.log'].output_file, 'transformed/chat-existing.json');
+      } finally {
+        await fsPromises.rm(tempDir, { recursive: true, force: true });
+      }
+    });
+
+    test('chat log transformer writes condensed system prompt, context, and response files', async () => {
+      const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'chat-log-transformer-'));
+      try {
+        const { createChatLogTransformRuntime } = require(path.join(
+          __dirname,
+          'src',
+          'main',
+          'helpers',
+          'main',
+          'chat-log-transformer.js'
+        ));
+        const runtime = createChatLogTransformRuntime({
+          now: () => '2026-03-22T16:10:00.000Z'
+        });
+        const chatLogDir = path.join(tempDir, 'chat_log');
+        await fsPromises.mkdir(chatLogDir, { recursive: true });
+        const sampleLogName = 'chat-mnwm38jq-9i28kt9x.log';
+        await fsPromises.copyFile(
+          path.join(__dirname, 'Testdata', 'chat_log', sampleLogName),
+          path.join(chatLogDir, sampleLogName)
+        );
+
+        const result = await runtime.scanStoragePath(tempDir);
+        assert.equal(result.ok, true);
+        assert.equal(result.transformed_count, 1);
+
+        const transformedPath = path.join(chatLogDir, 'transformed', 'chat-mnwm38jq-9i28kt9x.json');
+        const transformed = JSON.parse(await fsPromises.readFile(transformedPath, 'utf8'));
+        assert.equal(transformed.source_log_file, sampleLogName);
+        assert.equal(Array.isArray(transformed.entries), true);
+        assert.equal(transformed.entries.length > 0, true);
+        assert.equal(
+          transformed.entries.some((entry) => /User message:/i.test(String(entry.context || ''))),
+          true
+        );
+        assert.equal(
+          transformed.entries.some((entry) => /Write a grounded final science answer/i.test(String(entry.system_prompt || ''))),
+          true
+        );
+        assert.equal(
+          transformed.entries.some((entry) => /genetic code expansion/i.test(String(entry.response || ''))),
+          true
+        );
+
+        const index = JSON.parse(await fsPromises.readFile(path.join(chatLogDir, 'index.json'), 'utf8'));
+        assert.equal(index.transforms.output_folder, 'transformed');
+        assert.equal(index.transforms.files[sampleLogName].status, 'complete');
+        assert.equal(index.transforms.files[sampleLogName].output_file, 'transformed/chat-mnwm38jq-9i28kt9x.json');
+        assert.equal(index.transforms.files[sampleLogName].trace_count > 0, true);
+      } finally {
+        await fsPromises.rm(tempDir, { recursive: true, force: true });
+      }
+    });
+
     test('agent chat handler persists internal request, tool, trace, and response rows into the session log', async () => {
       const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'agent-chat-handler-'));
       try {

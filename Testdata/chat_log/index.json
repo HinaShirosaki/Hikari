@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-03-24T04:08:26.601Z",
+  "updated_at": "2026-04-17T03:33:57.835Z",
   "sessions": [
     {
       "id": "chat-mnzj4n12-kby9j6s1",
@@ -597,5 +597,396 @@
       "last_request_id": "",
       "last_error": ""
     }
-  ]
+  ],
+  "transforms": {
+    "updated_at": "2026-04-17T03:33:57.835Z",
+    "output_folder": "transformed",
+    "files": {
+      "chat-mn43h4o8-ly51chzo.log": {
+        "source_file": "chat-mn43h4o8-ly51chzo.log",
+        "output_file": "transformed/chat-mn43h4o8-ly51chzo.json",
+        "status": "complete",
+        "source_mtime_ms": 1775619910491.1545,
+        "source_size": 172900,
+        "source_line_count": 41,
+        "trace_count": 15,
+        "transformed_at": "2026-04-17T03:33:57.751Z",
+        "error": ""
+      },
+      "chat-mn43h8fd-z3lkxqpu.log": {
+        "source_file": "chat-mn43h8fd-z3lkxqpu.log",
+        "output_file": "transformed/chat-mn43h8fd-z3lkxqpu.json",
+        "status": "complete",
+        "source_mtime_ms": 1775619139250.1335,
+        "source_size": 24358,
+        "source_line_count": 13,
+        "trace_count": 1,
+        "transformed_at": "2026-04-17T03:33:57.753Z",
+        "error": ""
+      },
+      "chat-mn43hxya-yw2nl1ru.log": {
+        "source_file": "chat-mn43hxya-yw2nl1ru.log",
+        "output_file": "transformed/chat-mn43hxya-yw2nl1ru.json",
+        "status": "complete",
+        "source_mtime_ms": 1775618896885.7354,
+        "source_size": 20117,
+        "source_line_count": 13,
+        "trace_count": 1,
+        "transformed_at": "2026-04-17T03:33:57.755Z",
+        "error": ""
+      },
+      "chat-mnayzbm9-mhkem8h7.log": {
+        "source_file": "chat-mnayzbm9-mhkem8h7.log",
+        "output_file": "transformed/chat-mnayzbm9-mhkem8h7.json",
+        "status": "complete",
+        "source_mtime_ms": 1775618932328.7246,
+        "source_size": 20615,
+        "source_line_count": 13,
+        "trace_count": 1,
+        "transformed_at": "2026-04-17T03:33:57.756Z",
+        "error": ""
+      },
+      "chat-mnayzbx3-5la1li8q.log": {
+        "source_file": "chat-mnayzbx3-5la1li8q.log",
+        "output_file": "transformed/chat-mnayzbx3-5la1li8q.json",
+        "status": "complete",
+        "source_mtime_ms": 1775178527384.778,
+        "source_size": 23126,
+        "source_line_count": 22,
+        "trace_count": 1,
+        "transformed_at": "2026-04-17T03:33:57.757Z",
+        "error": ""
+      },
+      "chat-mnayzc2r-flqt8iaz.log": {
+        "source_file": "chat-mnayzc2r-flqt8iaz.log",
+        "output_file": "transformed/chat-mnayzc2r-flqt8iaz.json",
+        "status": "complete",
+        "source_mtime_ms": 1775077032603.096,
+        "source_size": 18339,
+        "source_line_count": 13,
+        "trace_count": 1,
+        "transformed_at": "2026-04-17T03:33:57.759Z",
+        "error": ""
+      },
+      "chat-mnayzc75-qwlr7732.log": {
+        "source_file": "chat-mnayzc75-qwlr7732.log",
+        "output_file": "transformed/chat-mnayzc75-qwlr7732.json",
+        "status": "complete",
+        "source_mtime_ms": 1775071390255.8672,
+        "source_size": 104749,
+        "source_line_count": 32,
+        "trace_count": 9,
+        "transformed_at": "2026-04-17T03:33:57.762Z",
+        "error": ""
+      },
+      "chat-mnayzcbf-zp2bp4k0.log": {
+        "source_file": "chat-mnayzcbf-zp2bp4k0.log",
+        "output_file": "transformed/chat-mnayzcbf-zp2bp4k0.json",
+        "status": "complete",
+        "source_mtime_ms": 1775062273466.7717,
+        "source_size": 8240,
+        "source_line_count": 5,
+        "trace_count": 0,
+        "transformed_at": "2026-04-17T03:33:57.766Z",
+        "error": ""
+      },
+      "chat-mnq5usuy-v0xbj1as.log": {
+        "source_file": "chat-mnq5usuy-v0xbj1as.log",
+        "output_file": "transformed/chat-mnq5usuy-v0xbj1as.json",
+        "status": "complete",
+        "source_mtime_ms": 1775659616254.192,
+        "source_size": 16309,
+        "source_line_count": 11,
+        "trace_count": 1,
+        "transformed_at": "2026-04-17T03:33:57.767Z",
+        "error": ""
+      },
+      "chat-mnqfnks6-bq150md8.log": {
+        "source_file": "chat-mnqfnks6-bq150md8.log",
+        "output_file": "transformed/chat-mnqfnks6-bq150md8.json",
+        "status": "complete",
+        "source_mtime_ms": 1775676236219.3958,
+        "source_size": 211482,
+        "source_line_count": 49,
+        "trace_count": 19,
+        "transformed_at": "2026-04-17T03:33:57.771Z",
+        "error": ""
+      },
+      "chat-mnqfsq43-xn35aboy.log": {
+        "source_file": "chat-mnqfsq43-xn35aboy.log",
+        "output_file": "transformed/chat-mnqfsq43-xn35aboy.json",
+        "status": "complete",
+        "source_mtime_ms": 1775676287268.276,
+        "source_size": 25474,
+        "source_line_count": 13,
+        "trace_count": 1,
+        "transformed_at": "2026-04-17T03:33:57.773Z",
+        "error": ""
+      },
+      "chat-mnqfvngy-5ebt2fmf.log": {
+        "source_file": "chat-mnqfvngy-5ebt2fmf.log",
+        "output_file": "transformed/chat-mnqfvngy-5ebt2fmf.json",
+        "status": "complete",
+        "source_mtime_ms": 1775676413004.2244,
+        "source_size": 16986,
+        "source_line_count": 11,
+        "trace_count": 1,
+        "transformed_at": "2026-04-17T03:33:57.774Z",
+        "error": ""
+      },
+      "chat-mnqfx9nu-l446ivk9.log": {
+        "source_file": "chat-mnqfx9nu-l446ivk9.log",
+        "output_file": "transformed/chat-mnqfx9nu-l446ivk9.json",
+        "status": "complete",
+        "source_mtime_ms": 1775676470833.8657,
+        "source_size": 190,
+        "source_line_count": 1,
+        "trace_count": 0,
+        "transformed_at": "2026-04-17T03:33:57.775Z",
+        "error": ""
+      },
+      "chat-mnqg1xqu-fqhhvn1a.log": {
+        "source_file": "chat-mnqg1xqu-fqhhvn1a.log",
+        "output_file": "transformed/chat-mnqg1xqu-fqhhvn1a.json",
+        "status": "complete",
+        "source_mtime_ms": 1775677028822.9226,
+        "source_size": 340104,
+        "source_line_count": 75,
+        "trace_count": 30,
+        "transformed_at": "2026-04-17T03:33:57.780Z",
+        "error": ""
+      },
+      "chat-mnqm21fy-8spv15yf.log": {
+        "source_file": "chat-mnqm21fy-8spv15yf.log",
+        "output_file": "transformed/chat-mnqm21fy-8spv15yf.json",
+        "status": "complete",
+        "source_mtime_ms": 1775687006790.0981,
+        "source_size": 293636,
+        "source_line_count": 61,
+        "trace_count": 22,
+        "transformed_at": "2026-04-17T03:33:57.785Z",
+        "error": ""
+      },
+      "chat-mnqq9x1c-jic3fywk.log": {
+        "source_file": "chat-mnqq9x1c-jic3fywk.log",
+        "output_file": "transformed/chat-mnqq9x1c-jic3fywk.json",
+        "status": "complete",
+        "source_mtime_ms": 1775693873628.1938,
+        "source_size": 21254,
+        "source_line_count": 13,
+        "trace_count": 1,
+        "transformed_at": "2026-04-17T03:33:57.787Z",
+        "error": ""
+      },
+      "chat-mnqrrs2j-hrkmfrmh.log": {
+        "source_file": "chat-mnqrrs2j-hrkmfrmh.log",
+        "output_file": "transformed/chat-mnqrrs2j-hrkmfrmh.json",
+        "status": "complete",
+        "source_mtime_ms": 1775696383864.7832,
+        "source_size": 26008,
+        "source_line_count": 11,
+        "trace_count": 1,
+        "transformed_at": "2026-04-17T03:33:57.788Z",
+        "error": ""
+      },
+      "chat-mnqs13lb-yiob58jh.log": {
+        "source_file": "chat-mnqs13lb-yiob58jh.log",
+        "output_file": "transformed/chat-mnqs13lb-yiob58jh.json",
+        "status": "complete",
+        "source_mtime_ms": 1775696945347.0437,
+        "source_size": 314447,
+        "source_line_count": 43,
+        "trace_count": 18,
+        "transformed_at": "2026-04-17T03:33:57.792Z",
+        "error": ""
+      },
+      "chat-mnqsdm02-0eif9zlk.log": {
+        "source_file": "chat-mnqsdm02-0eif9zlk.log",
+        "output_file": "transformed/chat-mnqsdm02-0eif9zlk.json",
+        "status": "complete",
+        "source_mtime_ms": 1775697418699.6829,
+        "source_size": 36000,
+        "source_line_count": 13,
+        "trace_count": 1,
+        "transformed_at": "2026-04-17T03:33:57.794Z",
+        "error": ""
+      },
+      "chat-mnqsjlk5-g6cqmqma.log": {
+        "source_file": "chat-mnqsjlk5-g6cqmqma.log",
+        "output_file": "transformed/chat-mnqsjlk5-g6cqmqma.json",
+        "status": "complete",
+        "source_mtime_ms": 1775697680369.8125,
+        "source_size": 20978,
+        "source_line_count": 13,
+        "trace_count": 1,
+        "transformed_at": "2026-04-17T03:33:57.796Z",
+        "error": ""
+      },
+      "chat-mnqsnree-5fas7e4m.log": {
+        "source_file": "chat-mnqsnree-5fas7e4m.log",
+        "output_file": "transformed/chat-mnqsnree-5fas7e4m.json",
+        "status": "complete",
+        "source_mtime_ms": 1775698365079.736,
+        "source_size": 643512,
+        "source_line_count": 104,
+        "trace_count": 67,
+        "transformed_at": "2026-04-17T03:33:57.804Z",
+        "error": ""
+      },
+      "chat-mnrz8665-yv9egzm7.log": {
+        "source_file": "chat-mnrz8665-yv9egzm7.log",
+        "output_file": "transformed/chat-mnrz8665-yv9egzm7.json",
+        "status": "complete",
+        "source_mtime_ms": 1775769417828.824,
+        "source_size": 40129,
+        "source_line_count": 29,
+        "trace_count": 2,
+        "transformed_at": "2026-04-17T03:33:57.808Z",
+        "error": ""
+      },
+      "chat-mns0njqf-2i03vho0.log": {
+        "source_file": "chat-mns0njqf-2i03vho0.log",
+        "output_file": "transformed/chat-mns0njqf-2i03vho0.json",
+        "status": "complete",
+        "source_mtime_ms": 1775771769632.714,
+        "source_size": 19229,
+        "source_line_count": 13,
+        "trace_count": 1,
+        "transformed_at": "2026-04-17T03:33:57.809Z",
+        "error": ""
+      },
+      "chat-mntg8u68-fzbspkd4.log": {
+        "source_file": "chat-mntg8u68-fzbspkd4.log",
+        "output_file": "transformed/chat-mntg8u68-fzbspkd4.json",
+        "status": "complete",
+        "source_mtime_ms": 1775858433858.1243,
+        "source_size": 40154,
+        "source_line_count": 29,
+        "trace_count": 2,
+        "transformed_at": "2026-04-17T03:33:57.810Z",
+        "error": ""
+      },
+      "chat-mntlqh44-95zr8u2c.log": {
+        "source_file": "chat-mntlqh44-95zr8u2c.log",
+        "output_file": "transformed/chat-mntlqh44-95zr8u2c.json",
+        "status": "complete",
+        "source_mtime_ms": 1775867638403.4534,
+        "source_size": 17822,
+        "source_line_count": 15,
+        "trace_count": 1,
+        "transformed_at": "2026-04-17T03:33:57.811Z",
+        "error": ""
+      },
+      "chat-mntlw1tp-zshcpu2g.log": {
+        "source_file": "chat-mntlw1tp-zshcpu2g.log",
+        "output_file": "transformed/chat-mntlw1tp-zshcpu2g.json",
+        "status": "complete",
+        "source_mtime_ms": 1775873100405.5308,
+        "source_size": 211827,
+        "source_line_count": 127,
+        "trace_count": 9,
+        "transformed_at": "2026-04-17T03:33:57.814Z",
+        "error": ""
+      },
+      "chat-mntp0rmy-y9rrw8r5.log": {
+        "source_file": "chat-mntp0rmy-y9rrw8r5.log",
+        "output_file": "transformed/chat-mntp0rmy-y9rrw8r5.json",
+        "status": "complete",
+        "source_mtime_ms": 1775873162694.164,
+        "source_size": 18573,
+        "source_line_count": 15,
+        "trace_count": 1,
+        "transformed_at": "2026-04-17T03:33:57.815Z",
+        "error": ""
+      },
+      "chat-mntp5hq7-oixi2h41.log": {
+        "source_file": "chat-mntp5hq7-oixi2h41.log",
+        "output_file": "transformed/chat-mntp5hq7-oixi2h41.json",
+        "status": "complete",
+        "source_mtime_ms": 1775873880050.8135,
+        "source_size": 35299,
+        "source_line_count": 16,
+        "trace_count": 2,
+        "transformed_at": "2026-04-17T03:33:57.817Z",
+        "error": ""
+      },
+      "chat-mntp5il6-eb8lnvdx.log": {
+        "source_file": "chat-mntp5il6-eb8lnvdx.log",
+        "output_file": "transformed/chat-mntp5il6-eb8lnvdx.json",
+        "status": "complete",
+        "source_mtime_ms": 1775873928090.6543,
+        "source_size": 33239,
+        "source_line_count": 18,
+        "trace_count": 2,
+        "transformed_at": "2026-04-17T03:33:57.818Z",
+        "error": ""
+      },
+      "chat-mnwama7p-1ma0n8q1.log": {
+        "source_file": "chat-mnwama7p-1ma0n8q1.log",
+        "output_file": "transformed/chat-mnwama7p-1ma0n8q1.json",
+        "status": "complete",
+        "source_mtime_ms": 1776031853825.3452,
+        "source_size": 252761,
+        "source_line_count": 70,
+        "trace_count": 22,
+        "transformed_at": "2026-04-17T03:33:57.821Z",
+        "error": ""
+      },
+      "chat-mnwm38jq-9i28kt9x.log": {
+        "source_file": "chat-mnwm38jq-9i28kt9x.log",
+        "output_file": "transformed/chat-mnwm38jq-9i28kt9x.json",
+        "status": "complete",
+        "source_mtime_ms": 1776049727458.8108,
+        "source_size": 163411,
+        "source_line_count": 37,
+        "trace_count": 13,
+        "transformed_at": "2026-04-17T03:33:57.825Z",
+        "error": ""
+      },
+      "chat-mnz94om4-wiu0mene.log": {
+        "source_file": "chat-mnz94om4-wiu0mene.log",
+        "output_file": "transformed/chat-mnz94om4-wiu0mene.json",
+        "status": "complete",
+        "source_mtime_ms": 1776223483651.6377,
+        "source_size": 460149,
+        "source_line_count": 195,
+        "trace_count": 34,
+        "transformed_at": "2026-04-17T03:33:57.829Z",
+        "error": ""
+      },
+      "chat-mnzbmb8q-3nhrlybb.log": {
+        "source_file": "chat-mnzbmb8q-3nhrlybb.log",
+        "output_file": "transformed/chat-mnzbmb8q-3nhrlybb.json",
+        "status": "complete",
+        "source_mtime_ms": 1776213436780.837,
+        "source_size": 157,
+        "source_line_count": 1,
+        "trace_count": 0,
+        "transformed_at": "2026-04-17T03:33:57.831Z",
+        "error": ""
+      },
+      "chat-mnzikyga-fu65qm2h.log": {
+        "source_file": "chat-mnzikyga-fu65qm2h.log",
+        "output_file": "transformed/chat-mnzikyga-fu65qm2h.json",
+        "status": "complete",
+        "source_mtime_ms": 1776225201392.953,
+        "source_size": 76376,
+        "source_line_count": 43,
+        "trace_count": 12,
+        "transformed_at": "2026-04-17T03:33:57.832Z",
+        "error": ""
+      },
+      "chat-mnzj4n12-kby9j6s1.log": {
+        "source_file": "chat-mnzj4n12-kby9j6s1.log",
+        "output_file": "transformed/chat-mnzj4n12-kby9j6s1.json",
+        "status": "complete",
+        "source_mtime_ms": 1776308457537.504,
+        "source_size": 140049,
+        "source_line_count": 60,
+        "trace_count": 25,
+        "transformed_at": "2026-04-17T03:33:57.835Z",
+        "error": ""
+      }
+    }
+  }
 }

@@ -387,7 +387,7 @@ export function initSequenceViewer(options = {}) {
     state.activeEntryStatus = '';
     setRecords(parsed, 'Loaded');
     setInputComposerVisible(!(Array.isArray(parsed.records) && parsed.records.length > 0));
-    await maybePersistImportedFeatureRecord(parsed);
+    await maybePersistImportedGenbankRecord(parsed);
   }
 
   async function persistRecordToLibrary(record, persistOptions = {}) {
@@ -491,7 +491,11 @@ export function initSequenceViewer(options = {}) {
         alignmentSessions: []
       });
       entryId = cleanText(entry.id, 200);
-      await homeController?.refreshLibraryEntries({ selectedId: entryId, silent: true });
+      await homeController?.refreshLibraryEntries({
+        selectedId: entryId,
+        filter: entry.status || LIBRARY_STATUS_TEMPORARY,
+        silent: true
+      });
     }
 
     const scopedSession = {
@@ -510,7 +514,11 @@ export function initSequenceViewer(options = {}) {
       name: elements.saveNameInput?.value || safeReferenceRecord.name || 'sequence',
       alignmentSessions: nextSessions
     });
-    await homeController?.refreshLibraryEntries({ selectedId: entry.id, silent: true });
+    await homeController?.refreshLibraryEntries({
+      selectedId: entry.id,
+      filter: entry.status || state.activeEntryStatus || LIBRARY_STATUS_TEMPORARY,
+      silent: true
+    });
 
     const resolvedSessions = Array.isArray(entry.alignments) ? entry.alignments : nextSessions;
     const resolvedSession = resolvedSessions.find((item) => String(item?.id || '') === String(scopedSession?.id || ''))
@@ -535,14 +543,18 @@ export function initSequenceViewer(options = {}) {
         status: state.activeEntryStatus || LIBRARY_STATUS_TEMPORARY,
         name: elements.saveNameInput?.value || record.name || 'sequence'
       });
-      await homeController?.refreshLibraryEntries({ selectedId: entry.id, silent: true });
+      await homeController?.refreshLibraryEntries({
+        selectedId: entry.id,
+        filter: entry.status || state.activeEntryStatus || LIBRARY_STATUS_TEMPORARY,
+        silent: true
+      });
       setStatus(`${actionLabel} Saved to ${entry.name}.`);
     } catch (error) {
       setStatus(`${actionLabel} Changes remain local: ${error?.message || 'Failed to save.'}`, true);
     }
   }
 
-  async function maybePersistImportedFeatureRecord(parsed) {
+  async function maybePersistImportedGenbankRecord(parsed) {
     const format = String(parsed?.format || '').toLowerCase();
     if (format !== 'genbank' || state.activeEntryId) {
       return null;
@@ -554,7 +566,7 @@ export function initSequenceViewer(options = {}) {
     }
 
     const record = records[0];
-    if (!record?.sequence?.length || !Array.isArray(record.features) || !record.features.length) {
+    if (!record?.sequence?.length) {
       return null;
     }
 
@@ -569,7 +581,11 @@ export function initSequenceViewer(options = {}) {
         status: LIBRARY_STATUS_TEMPORARY,
         name: record.name || 'sequence'
       });
-      await homeController?.refreshLibraryEntries({ selectedId: entry.id, silent: true });
+      await homeController?.refreshLibraryEntries({
+        selectedId: entry.id,
+        filter: entry.status || LIBRARY_STATUS_TEMPORARY,
+        silent: true
+      });
       return entry;
     } catch {
       return null;
@@ -591,7 +607,11 @@ export function initSequenceViewer(options = {}) {
       });
       state.activeEntryId = cleanText(entry.id, 200);
       state.activeEntryStatus = LIBRARY_STATUS_SAVED;
-      await homeController?.refreshLibraryEntries({ selectedId: entry.id, silent: true });
+      await homeController?.refreshLibraryEntries({
+        selectedId: entry.id,
+        filter: entry.status || LIBRARY_STATUS_SAVED,
+        silent: true
+      });
       setStatus(`Saved sequence as ${entry.name}.`);
       homeController?.setHomeStatus(`Saved sequence entry: ${entry.name}.`);
     } catch (error) {
@@ -735,7 +755,7 @@ export function initSequenceViewer(options = {}) {
     setRecords,
     setStatus,
     readFileAsText,
-    onParsedRecordsOpened: maybePersistImportedFeatureRecord,
+    onParsedRecordsOpened: maybePersistImportedGenbankRecord,
     onLibraryEntryLoaded: ({ alignments }) => {
       setAlignmentSessions(alignments);
       alignmentController?.handleReferenceRecordChanged?.();

@@ -147,19 +147,29 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 }
 
 .sequence-viewer-preview-host {
-  min-height: 640px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #ffffff;
-  padding: 8px;
+  min-height: 520px;
+  display: grid;
+  align-content: start;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  overflow: hidden;
 }
 
 .sequence-viewer-preview-frame {
   width: 100%;
-  min-height: 620px;
+  min-height: 520px;
+  display: block;
   border: 0;
-  border-radius: 8px;
-  background: #ffffff;
+  border-radius: 0;
+  background: transparent;
+  overflow: hidden;
+}
+
+.sequence-viewer-preview-host > .small-note {
+  margin: 0;
+  padding: 12px 0;
 }
 
 .sequence-viewer-feature-search-controls {
@@ -1575,8 +1585,8 @@ body.theme-night .sequence-viewer-alignment-block {
 }
 
 body.theme-night .sequence-viewer-preview-host {
-  border-color: #dddddd;
-  background: #ffffff;
+  border-color: transparent;
+  background: transparent;
 }
 
 body.theme-night .sequence-viewer-mode-btn {

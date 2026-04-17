@@ -465,13 +465,71 @@ function normalizeSessionSummary(rawSummary = {}) {
   };
 }
 
+function normalizeTransformStatus(rawStatus = {}) {
+  const source = rawStatus && typeof rawStatus === 'object' ? rawStatus : {};
+  const sourceFile = cleanText(source.source_file || source.sourceFile, 240);
+  if (!sourceFile) {
+    return null;
+  }
+  return {
+    source_file: sourceFile,
+    output_file: cleanText(source.output_file || source.outputFile, 400),
+    status: cleanText(source.status, 40) || 'pending',
+    source_mtime_ms: Number.isFinite(Number(source.source_mtime_ms ?? source.sourceMtimeMs))
+      ? Number(source.source_mtime_ms ?? source.sourceMtimeMs)
+      : 0,
+    source_size: Math.max(0, Number(source.source_size ?? source.sourceSize) || 0),
+    source_line_count: Math.max(0, Number(source.source_line_count ?? source.sourceLineCount) || 0),
+    trace_count: Math.max(0, Number(source.trace_count ?? source.traceCount) || 0),
+    transformed_at: cleanText(source.transformed_at || source.transformedAt, 80),
+    error: cleanText(source.error, 2400)
+  };
+}
+
+function normalizeTransformIndex(rawTransforms = {}) {
+  const source = rawTransforms && typeof rawTransforms === 'object' ? rawTransforms : {};
+  const filesSource = source.files && typeof source.files === 'object' ? source.files : {};
+  const files = {};
+  Object.entries(filesSource).forEach(([key, value]) => {
+    const normalized = normalizeTransformStatus({
+      ...(value && typeof value === 'object' ? value : {}),
+      source_file: cleanText(
+        value?.source_file || value?.sourceFile || key,
+        240
+      )
+    });
+    if (normalized?.source_file) {
+      files[normalized.source_file] = normalized;
+    }
+  });
+  return {
+    updated_at: cleanText(source.updated_at || source.updatedAt, 80),
+    output_folder: cleanText(source.output_folder || source.outputFolder, 120) || 'transformed',
+    files
+  };
+}
+
+function mergeTransformIndexes(primaryTransforms = {}, fallbackTransforms = {}) {
+  const primary = normalizeTransformIndex(primaryTransforms);
+  const fallback = normalizeTransformIndex(fallbackTransforms);
+  return normalizeTransformIndex({
+    updated_at: primary.updated_at || fallback.updated_at,
+    output_folder: primary.output_folder || fallback.output_folder,
+    files: {
+      ...fallback.files,
+      ...primary.files
+    }
+  });
+}
+
 // Normalize the overall chat index payload loaded from disk.
 function normalizeIndexPayload(rawIndex = {}) {
   const source = rawIndex && typeof rawIndex === 'object' ? rawIndex : {};
   return {
     version: 1,
     updated_at: cleanText(source.updated_at || source.updatedAt, 80),
-    sessions: asArray(source.sessions).map((item) => normalizeSessionSummary(item)).filter(Boolean)
+    sessions: asArray(source.sessions).map((item) => normalizeSessionSummary(item)).filter(Boolean),
+    transforms: normalizeTransformIndex(source.transforms)
   };
 }
 
@@ -712,7 +770,19 @@ function createAgentChatLogRuntime(deps = {}) {
 
   // Persist the normalized index back to disk after session metadata changes.
   async function writeIndex(paths, index) {
-    const normalized = normalizeIndexPayload(index);
+    let existingTransforms = normalizeTransformIndex({});
+    try {
+      const existingRaw = await runtimeFs.readFile(paths.indexPath, 'utf8');
+      existingTransforms = normalizeIndexPayload(JSON.parse(existingRaw)).transforms;
+    } catch (error) {
+      if (error?.code !== 'ENOENT') {
+        throw error;
+      }
+    }
+    const normalized = normalizeIndexPayload({
+      ...index,
+      transforms: mergeTransformIndexes(index?.transforms, existingTransforms)
+    });
     normalized.updated_at = cleanText(normalized.updated_at, 80) || now();
     await runtimeFs.mkdir(paths.chatLogPath, { recursive: true });
     await runtimeFs.writeFile(paths.indexPath, JSON.stringify(normalized, null, 2), 'utf8');

@@ -934,6 +934,9 @@ test('[EDGE] sequence-viewer buildCircularPreviewHtmlDocument emits standalone D
   assert.match(html, /pUC origin/);
   assert.match(html, /circular-preview__leader/);
   assert.match(html, /data-feature-index="1"/);
+  assert.match(html, /background:\s*#ffffff/i);
+  assert.doesNotMatch(html, /radial-gradient/i);
+  assert.doesNotMatch(html, /box-shadow:/i);
 });
 
 test('[EDGE] sequence-viewer buildCircularPreviewHtmlDocument returns an empty-state HTML shell without sequence', () => {

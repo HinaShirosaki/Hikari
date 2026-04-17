@@ -131,8 +131,69 @@ export function createSequenceViewerHomeController(config = {}) {
       return;
     }
 
+    const title = String(entry?.name || 'Sequence preview');
+    if (typeof rootDocument?.createElement === 'function' && typeof elements.previewHost?.replaceChildren === 'function') {
+      const frame = rootDocument.createElement('iframe');
+      frame.className = 'sequence-viewer-preview-frame';
+      frame.loading = 'lazy';
+      frame.title = title;
+      frame.setAttribute('scrolling', 'no');
+      frame.srcdoc = String(htmlText);
+      frame.addEventListener('load', () => {
+        schedulePreviewFrameHeightSync(frame);
+      }, { once: true });
+      elements.previewHost.replaceChildren(frame);
+      schedulePreviewFrameHeightSync(frame);
+      return;
+    }
+
     const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(String(htmlText))}`;
-    elements.previewHost.innerHTML = `<iframe class="sequence-viewer-preview-frame" src="${dataUrl}" loading="lazy" title="${escapeHtml(entry.name || 'Sequence preview')}"></iframe>`;
+    elements.previewHost.innerHTML = `<iframe class="sequence-viewer-preview-frame" src="${dataUrl}" loading="lazy" scrolling="no" title="${escapeHtml(title)}"></iframe>`;
+  }
+
+  function getPreviewFrameElement() {
+    if (!elements.previewHost || typeof elements.previewHost.querySelector !== 'function') {
+      return null;
+    }
+    return elements.previewHost.querySelector('.sequence-viewer-preview-frame');
+  }
+
+  function syncPreviewFrameHeight(frame = getPreviewFrameElement()) {
+    if (!frame) {
+      return;
+    }
+
+    const frameDocument = frame.contentDocument || frame.contentWindow?.document || null;
+    const frameRoot = frameDocument?.documentElement || null;
+    const frameBody = frameDocument?.body || null;
+    if (!frameRoot && !frameBody) {
+      return;
+    }
+
+    const nextHeight = Math.ceil(Math.max(
+      Number(frameBody?.scrollHeight) || 0,
+      Number(frameBody?.offsetHeight) || 0,
+      Number(frameBody?.clientHeight) || 0,
+      Number(frameRoot?.scrollHeight) || 0,
+      Number(frameRoot?.offsetHeight) || 0,
+      Number(frameRoot?.clientHeight) || 0,
+      520
+    ));
+    frame.style.height = `${nextHeight}px`;
+  }
+
+  function schedulePreviewFrameHeightSync(frame = getPreviewFrameElement()) {
+    if (!frame) {
+      return;
+    }
+
+    syncPreviewFrameHeight(frame);
+    globalThis?.requestAnimationFrame?.(() => {
+      syncPreviewFrameHeight(frame);
+    });
+    globalThis?.setTimeout?.(() => {
+      syncPreviewFrameHeight(frame);
+    }, 120);
   }
 
   function buildFeatureSequencePreview(sequence) {
@@ -271,6 +332,11 @@ export function createSequenceViewerHomeController(config = {}) {
   }
 
   async function refreshLibraryEntries(options = {}) {
+    const requestedFilter = cleanText(options.filter || options.status, 40);
+    if (requestedFilter === libraryStatusSaved || requestedFilter === libraryStatusTemporary) {
+      setLibraryFilter(requestedFilter);
+    }
+
     const storagePath = getStoragePath();
     syncHomeControlsState();
     if (!storagePath) {
@@ -497,6 +563,17 @@ export function createSequenceViewerHomeController(config = {}) {
   }
 
   function bindEvents() {
+    const ResizeObserverCtor = rootDocument?.defaultView?.ResizeObserver || globalThis?.ResizeObserver;
+    if (elements.previewHost && typeof ResizeObserverCtor === 'function') {
+      const previewResizeObserver = new ResizeObserverCtor(() => {
+        schedulePreviewFrameHeightSync();
+      });
+      previewResizeObserver.observe(elements.previewHost);
+    }
+    globalThis.addEventListener?.('resize', () => {
+      schedulePreviewFrameHeightSync();
+    });
+
     if (elements.homeOpenInput && typeof elements.homeOpenInput.setAttribute === 'function') {
       elements.homeOpenInput.setAttribute('accept', fileAccept);
     }

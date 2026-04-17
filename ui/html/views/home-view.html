@@ -26,24 +26,19 @@
 
         <section class="home-tile home-tile-passage" aria-labelledby="dashboard-passage-heading">
           <div class="home-tile-head">
-            <h2 id="dashboard-passage-heading">Cell Passage Reminder</h2>
+            <div class="home-tile-head-row">
+              <h2 id="dashboard-passage-heading">Cell Passage Reminder</h2>
+              <button
+                type="button"
+                id="dashboard-passage-add-btn"
+                class="home-passage-add-btn"
+                aria-label="Add cell to passage reminder"
+              >+</button>
+            </div>
             <p id="dashboard-passage-summary" class="small-note">No cell line reminders yet.</p>
           </div>
           <div class="home-tile-scroll">
-            <div class="dashboard-split-grid">
-              <div class="dashboard-list-group">
-                <h3>Overdue</h3>
-                <div id="dashboard-passage-overdue-list" class="dashboard-list"></div>
-              </div>
-              <div class="dashboard-list-group">
-                <h3>Due in 3 Days</h3>
-                <div id="dashboard-passage-soon-list" class="dashboard-list"></div>
-              </div>
-              <div class="dashboard-list-group">
-                <h3>Unconfigured</h3>
-                <div id="dashboard-passage-unconfigured-list" class="dashboard-list"></div>
-              </div>
-            </div>
+            <div id="dashboard-passage-list" class="dashboard-list dashboard-passage-list"></div>
           </div>
         </section>
 
@@ -64,7 +59,7 @@
         <section class="home-tile home-tile-timer" aria-labelledby="dashboard-timer-heading">
           <div class="home-tile-head">
             <h2 id="dashboard-timer-heading">Timer</h2>
-            <p id="dashboard-timer-status" class="small-note">Ready</p>
+            <p id="dashboard-timer-status" class="small-note"></p>
           </div>
           <div class="home-timer-clock">
             <p id="dashboard-local-time" class="dashboard-local-time">--:--:--</p>
@@ -97,8 +92,16 @@
 
         <section class="home-tile home-tile-incubation" aria-labelledby="dashboard-incubation-heading">
           <div class="home-tile-head">
-            <h2 id="dashboard-incubation-heading">Long Incubation Reminder</h2>
-            <p id="dashboard-incubation-summary" class="small-note">No planned follow-ups waiting.</p>
+            <div class="home-tile-head-row">
+              <h2 id="dashboard-incubation-heading">Overnight Incubation Timer</h2>
+              <button
+                type="button"
+                id="dashboard-incubation-add-btn"
+                class="home-passage-add-btn"
+                aria-label="Manage incubation locations"
+              >+</button>
+            </div>
+            <p id="dashboard-incubation-summary" class="small-note">No incubation locations yet.</p>
           </div>
           <div class="home-tile-scroll">
             <div id="dashboard-incubation-list" class="dashboard-list"></div>
@@ -108,7 +111,7 @@
         <section class="home-tile home-tile-quick-log" aria-labelledby="dashboard-quick-log-heading">
           <div class="home-tile-head">
             <h2 id="dashboard-quick-log-heading">Quick Log Notebook</h2>
-            <p id="dashboard-quick-log-status" class="small-note">Type a bench note to keep it handy on this screen.</p>
+            <p id="dashboard-quick-log-status" class="small-note"></p>
           </div>
           <label class="dashboard-field dashboard-field-grow">
             Bench Note
@@ -128,7 +131,7 @@
         <section class="home-tile home-tile-actions" aria-labelledby="dashboard-actions-heading">
           <div class="home-tile-head">
             <h2 id="dashboard-actions-heading">Quick Actions</h2>
-            <p class="small-note">Jump into the modules you use most.</p>
+            <p class="small-note"></p>
           </div>
           <div class="home-action-grid">
             <button type="button" class="home-action-btn" data-dashboard-action="samples">Open Samples</button>
@@ -137,5 +140,75 @@
             <button type="button" class="home-action-btn" data-dashboard-action="assistant">Open Assistant</button>
           </div>
         </section>
+      </div>
+
+      <div id="dashboard-passage-dialog-overlay" class="home-dialog-overlay" hidden>
+        <div
+          class="home-dialog home-passage-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="dashboard-passage-dialog-title"
+        >
+          <form id="dashboard-passage-dialog-form" class="home-dialog-form">
+            <h3 id="dashboard-passage-dialog-title">Add Cell to Passage</h3>
+            <label class="dashboard-field">
+              Cell Strain
+              <input
+                id="dashboard-passage-strain-input"
+                type="text"
+                maxlength="80"
+                placeholder="e.g. HEK293"
+                required
+              />
+            </label>
+            <label class="dashboard-field">
+              Interval Time
+              <input
+                id="dashboard-passage-interval-input"
+                type="number"
+                min="1"
+                step="1"
+                placeholder="e.g. 3"
+                required
+              />
+            </label>
+            <label class="dashboard-field">
+              Passage Number
+              <input
+                id="dashboard-passage-number-input"
+                type="number"
+                min="1"
+                step="1"
+                placeholder="e.g. 5"
+                required
+              />
+            </label>
+            <button type="submit" id="dashboard-passage-submit-btn" class="primary-btn">Add</button>
+          </form>
+        </div>
+      </div>
+
+      <div id="dashboard-incubation-dialog-overlay" class="home-dialog-overlay" hidden>
+        <div
+          class="home-dialog home-incubation-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="dashboard-incubation-dialog-title"
+        >
+          <div class="home-dialog-form">
+            <h3 id="dashboard-incubation-dialog-title">Incubation Location</h3>
+            <div id="dashboard-incubation-location-list" class="home-incubation-location-list"></div>
+            <form id="dashboard-incubation-location-form" class="home-incubation-add-row">
+              <input
+                id="dashboard-incubation-location-input"
+                type="text"
+                maxlength="80"
+                placeholder="Add new incubation location"
+                required
+              />
+              <button type="submit" id="dashboard-incubation-location-submit-btn" class="ghost-btn">Add New</button>
+            </form>
+          </div>
+        </div>
       </div>
     </section>

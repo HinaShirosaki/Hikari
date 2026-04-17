@@ -60,6 +60,13 @@ function getScienceReasoningPolicy(intent) {
 
 function normalizeScienceReasoningEffort(intent, parserPayload = {}) {
   const numeric = Number(parserPayload?.reasoning_effort);
+  // Result analysis always has computation to perform; never short-circuit to the direct-answer path.
+  if (intent === 'result_analysis') {
+    if (SCIENCE_REASONING_EFFORT_LEVELS.includes(numeric) && numeric >= 1) {
+      return numeric;
+    }
+    return 1;
+  }
   if (!['general_science_question', 'project_science_question'].includes(intent)) {
     return 0;
   }

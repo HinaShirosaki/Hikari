@@ -1,7 +1,7 @@
 {
   "schema_name": "enana_storage_manifest",
   "schema_version": "1.0.0",
-  "generated_at": "2026-04-15T18:11:20.177Z",
+  "generated_at": "2026-04-17T03:36:16.248Z",
   "root_path": "/Users/shiyifan/Projects/Enana/Testdata",
   "discovered_files": [
     {
@@ -51,7 +51,7 @@
       "type": "directory",
       "role": "other",
       "size_bytes": 0,
-      "modified_at": "2026-04-15T04:07:29.180Z"
+      "modified_at": "2026-04-17T03:33:57.752Z"
     },
     {
       "relative_path": "chat_log/chat-mn43h4o8-ly51chzo.log",
@@ -295,15 +295,267 @@
       "relative_path": "chat_log/chat-mnzj4n12-kby9j6s1.log",
       "type": "file",
       "role": "other",
-      "size_bytes": 18697,
-      "modified_at": "2026-04-15T04:07:34.782Z"
+      "size_bytes": 140049,
+      "modified_at": "2026-04-16T03:00:57.538Z"
     },
     {
       "relative_path": "chat_log/index.json",
       "type": "file",
       "role": "data_file",
-      "size_bytes": 36488,
-      "modified_at": "2026-04-15T04:07:34.783Z"
+      "size_bytes": 51142,
+      "modified_at": "2026-04-17T03:33:57.836Z"
+    },
+    {
+      "relative_path": "chat_log/transformed",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-04-17T03:33:57.835Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mn43h4o8-ly51chzo.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 133845,
+      "modified_at": "2026-04-17T03:33:57.752Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mn43h8fd-z3lkxqpu.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 12206,
+      "modified_at": "2026-04-17T03:33:57.754Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mn43hxya-yw2nl1ru.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 11313,
+      "modified_at": "2026-04-17T03:33:57.755Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnayzbm9-mhkem8h7.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 11386,
+      "modified_at": "2026-04-17T03:33:57.757Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnayzbx3-5la1li8q.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 11464,
+      "modified_at": "2026-04-17T03:33:57.758Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnayzc2r-flqt8iaz.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 11212,
+      "modified_at": "2026-04-17T03:33:57.760Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnayzc75-qwlr7732.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 81807,
+      "modified_at": "2026-04-17T03:33:57.763Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnayzcbf-zp2bp4k0.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 180,
+      "modified_at": "2026-04-17T03:33:57.766Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnq5usuy-v0xbj1as.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 12141,
+      "modified_at": "2026-04-17T03:33:57.767Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnqfnks6-bq150md8.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 177251,
+      "modified_at": "2026-04-17T03:33:57.772Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnqfsq43-xn35aboy.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 13262,
+      "modified_at": "2026-04-17T03:33:57.774Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnqfvngy-5ebt2fmf.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 12239,
+      "modified_at": "2026-04-17T03:33:57.775Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnqfx9nu-l446ivk9.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 180,
+      "modified_at": "2026-04-17T03:33:57.776Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnqg1xqu-fqhhvn1a.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 296230,
+      "modified_at": "2026-04-17T03:33:57.782Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnqm21fy-8spv15yf.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 235720,
+      "modified_at": "2026-04-17T03:33:57.786Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnqq9x1c-jic3fywk.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 12520,
+      "modified_at": "2026-04-17T03:33:57.788Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnqrrs2j-hrkmfrmh.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 15031,
+      "modified_at": "2026-04-17T03:33:57.789Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnqs13lb-yiob58jh.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 240409,
+      "modified_at": "2026-04-17T03:33:57.794Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnqsdm02-0eif9zlk.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 15538,
+      "modified_at": "2026-04-17T03:33:57.795Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnqsjlk5-g6cqmqma.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 12671,
+      "modified_at": "2026-04-17T03:33:57.797Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnqsnree-5fas7e4m.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 587185,
+      "modified_at": "2026-04-17T03:33:57.807Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnrz8665-yv9egzm7.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 26760,
+      "modified_at": "2026-04-17T03:33:57.808Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mns0njqf-2i03vho0.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 13400,
+      "modified_at": "2026-04-17T03:33:57.810Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mntg8u68-fzbspkd4.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 26766,
+      "modified_at": "2026-04-17T03:33:57.811Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mntlqh44-95zr8u2c.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 10629,
+      "modified_at": "2026-04-17T03:33:57.812Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mntlw1tp-zshcpu2g.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 97872,
+      "modified_at": "2026-04-17T03:33:57.814Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mntp0rmy-y9rrw8r5.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 10634,
+      "modified_at": "2026-04-17T03:33:57.816Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mntp5hq7-oixi2h41.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 14781,
+      "modified_at": "2026-04-17T03:33:57.817Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mntp5il6-eb8lnvdx.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 13978,
+      "modified_at": "2026-04-17T03:33:57.818Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnwama7p-1ma0n8q1.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 200229,
+      "modified_at": "2026-04-17T03:33:57.823Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnwm38jq-9i28kt9x.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 119203,
+      "modified_at": "2026-04-17T03:33:57.826Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnz94om4-wiu0mene.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 238167,
+      "modified_at": "2026-04-17T03:33:57.830Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnzbmb8q-3nhrlybb.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 180,
+      "modified_at": "2026-04-17T03:33:57.831Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnzikyga-fu65qm2h.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 60275,
+      "modified_at": "2026-04-17T03:33:57.833Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnzj4n12-kby9j6s1.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 104582,
+      "modified_at": "2026-04-17T03:33:57.836Z"
     },
     {
       "relative_path": "enana-chemicals.ena.json",
@@ -317,7 +569,7 @@
       "type": "file",
       "role": "chemical_inventory_index",
       "size_bytes": 24576,
-      "modified_at": "2026-04-15T17:01:32.070Z"
+      "modified_at": "2026-04-17T03:33:57.737Z"
     },
     {
       "relative_path": "enana-chemicals.index.sqlite-shm",
@@ -351,15 +603,15 @@
       "relative_path": "enana-data.json",
       "type": "file",
       "role": "data_file",
-      "size_bytes": 678063,
-      "modified_at": "2026-04-15T16:40:54.479Z"
+      "size_bytes": 704981,
+      "modified_at": "2026-04-17T03:24:49.875Z"
     },
     {
       "relative_path": "enana-data.notebook-pages.json",
       "type": "file",
       "role": "notebook_sidecar",
-      "size_bytes": 24106,
-      "modified_at": "2026-04-15T16:40:54.485Z"
+      "size_bytes": 24006,
+      "modified_at": "2026-04-17T03:24:49.879Z"
     },
     {
       "relative_path": "enana-sample.notebook-pages.index.sqlite",
@@ -407,8 +659,8 @@
       "relative_path": "enana-storage-manifest.json",
       "type": "file",
       "role": "storage_manifest",
-      "size_bytes": 45265,
-      "modified_at": "2026-04-15T17:01:32.006Z"
+      "size_bytes": 45981,
+      "modified_at": "2026-04-17T03:33:57.659Z"
     },
     {
       "relative_path": "Gels",
@@ -695,7 +947,7 @@
       "type": "file",
       "role": "protocol_record",
       "size_bytes": 2792,
-      "modified_at": "2026-04-15T16:40:54.480Z"
+      "modified_at": "2026-04-17T03:24:49.876Z"
     },
     {
       "relative_path": "Protocol/BL21(DE3)_Chemical_Transformation_with_pET28a__1774024047007-d137dae96cab78",
@@ -709,7 +961,7 @@
       "type": "file",
       "role": "protocol_record",
       "size_bytes": 2529,
-      "modified_at": "2026-04-15T16:40:54.480Z"
+      "modified_at": "2026-04-17T03:24:49.876Z"
     },
     {
       "relative_path": "Protocol/IPTG-Induced_Recombinant_Protein_Expression_in_BL21(DE3)__1774024680081-6b02b28fd6d39",
@@ -723,7 +975,7 @@
       "type": "file",
       "role": "protocol_record",
       "size_bytes": 3594,
-      "modified_at": "2026-04-15T16:40:54.481Z"
+      "modified_at": "2026-04-17T03:24:49.876Z"
     },
     {
       "relative_path": "Protocol/Ni-NTA_Purification_of_His-Tagged_Protein__1774024695073-536c18071dd0d",
@@ -737,14 +989,14 @@
       "type": "file",
       "role": "protocol_record",
       "size_bytes": 2351,
-      "modified_at": "2026-04-15T16:40:54.481Z"
+      "modified_at": "2026-04-17T03:24:49.876Z"
     },
     {
       "relative_path": "Protocol/protocol.index.sqlite",
       "type": "file",
       "role": "protocol_index",
-      "size_bytes": 233472,
-      "modified_at": "2026-04-15T16:40:54.493Z"
+      "size_bytes": 237568,
+      "modified_at": "2026-04-17T03:24:49.887Z"
     },
     {
       "relative_path": "Protocol/Small-Scale_Overnight_Starter_Culture__1774024647315-74cbb18b4cc37",
@@ -758,7 +1010,7 @@
       "type": "file",
       "role": "protocol_record",
       "size_bytes": 2394,
-      "modified_at": "2026-04-15T16:40:54.481Z"
+      "modified_at": "2026-04-17T03:24:49.876Z"
     },
     {
       "relative_path": "Protocol/TEV_Protease_Cleavage_of_Fusion_Protein__1774024712936-cdad2f729e908",
@@ -772,7 +1024,7 @@
       "type": "file",
       "role": "protocol_record",
       "size_bytes": 2664,
-      "modified_at": "2026-04-15T16:40:54.481Z"
+      "modified_at": "2026-04-17T03:24:49.877Z"
     },
     {
       "relative_path": "SequenceViewer",
@@ -793,7 +1045,7 @@
       "type": "directory",
       "role": "other",
       "size_bytes": 0,
-      "modified_at": "2026-03-26T15:49:25.098Z"
+      "modified_at": "2026-04-17T03:17:22.130Z"
     },
     {
       "relative_path": "SequenceViewer/entries/.DS_Store",
@@ -915,11 +1167,32 @@
       "modified_at": "2026-03-26T15:49:25.098Z"
     },
     {
+      "relative_path": "SequenceViewer/entries/seq_1776395842129_3298cfc0",
+      "type": "directory",
+      "role": "sequence_entry_file",
+      "size_bytes": 0,
+      "modified_at": "2026-04-17T03:17:24.576Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries/seq_1776395842129_3298cfc0/pcDNA3.1-GFP_1-10.gbk",
+      "type": "file",
+      "role": "sequence_entry_file",
+      "size_bytes": 10497,
+      "modified_at": "2026-04-17T03:17:24.576Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries/seq_1776395842129_3298cfc0/pcDNA3.1-GFP_1-10.html",
+      "type": "file",
+      "role": "sequence_entry_file",
+      "size_bytes": 30836,
+      "modified_at": "2026-04-17T03:17:24.577Z"
+    },
+    {
       "relative_path": "SequenceViewer/sequence-library.sqlite",
       "type": "file",
       "role": "sequence_library_index",
-      "size_bytes": 81920,
-      "modified_at": "2026-03-30T02:41:17.282Z"
+      "size_bytes": 94208,
+      "modified_at": "2026-04-17T03:17:24.584Z"
     },
     {
       "relative_path": "Workflow",
@@ -1149,22 +1422,22 @@
       "relative_path": "Workflow/NiNTA__1776270512198-af3480c2ef55c8/NiNTA_1__1776270538561-6c07e18af542f/workflow.json",
       "type": "file",
       "role": "workflow_run_metadata",
-      "size_bytes": 8000,
-      "modified_at": "2026-04-15T16:40:54.505Z"
+      "size_bytes": 7900,
+      "modified_at": "2026-04-17T03:24:49.891Z"
     },
     {
       "relative_path": "Workflow/NiNTA__1776270512198-af3480c2ef55c8/template.json",
       "type": "file",
       "role": "workflow_template_metadata",
       "size_bytes": 2495,
-      "modified_at": "2026-04-15T16:40:54.500Z"
+      "modified_at": "2026-04-17T03:24:49.890Z"
     },
     {
       "relative_path": "Workflow/workflow-status.sqlite",
       "type": "file",
       "role": "workflow_status_index",
       "size_bytes": 40960,
-      "modified_at": "2026-04-15T16:40:54.513Z"
+      "modified_at": "2026-04-17T03:24:49.893Z"
     }
   ],
   "bundles": [
@@ -1431,9 +1704,9 @@
   "sequence_library": {
     "relative_path": "SequenceViewer/sequence-library.sqlite",
     "exists": true,
-    "entry_count": 5,
+    "entry_count": 6,
     "status_counts": {
-      "saved": 2,
+      "saved": 3,
       "temporary": 3
     }
   },
@@ -1446,7 +1719,7 @@
     "papers": 0,
     "chemicals": 3,
     "personalInventoryContainers": 8,
-    "sequenceEntries": 5
+    "sequenceEntries": 6
   },
   "warnings": []
 }

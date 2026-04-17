@@ -499,10 +499,27 @@ test('[EDGE] sequence-viewer importing GenBank with features stores a temporary 
     'sequence-viewer-sequence-host'
   ];
   const upsertCalls = [];
+  const listCalls = [];
   const document = createMockDocument(ids);
   const window = {
     enanaApi: {
-      sequenceLibraryList: async () => ({ ok: true, entries: [] }),
+      sequenceLibraryList: async ({ status }) => {
+        listCalls.push(status);
+        return {
+          ok: true,
+          entries: status === 'temporary'
+            ? [{
+              id: 'entry_imported',
+              name: 'Imported',
+              status: 'temporary',
+              topology: 'circular',
+              sequenceLength: 12,
+              featureCount: 1,
+              updatedAt: '2026-01-01T00:00:00'
+            }]
+            : []
+        };
+      },
       sequenceLibraryUpsert: async (payload) => {
         upsertCalls.push(payload);
         return {
@@ -551,6 +568,118 @@ ORIGIN
   assert.equal(upsertCalls[0].features[0].name, 'shared_prom');
   assert.equal(upsertCalls[0].sequence, 'ATGCGATTTAAA');
   assert.equal(upsertCalls[0].status, 'temporary');
+  assert.equal(listCalls.includes('temporary'), true);
+  assert.match(document.getElementById('sequence-viewer-library-list').innerHTML, /Imported/);
+});
+
+test('[EDGE] sequence-viewer importing a single GenBank record keeps it visible from the temporary library on return home', async () => {
+  const ids = [
+    'sequence-viewer-home-workspace',
+    'sequence-viewer-detail-workspace',
+    'sequence-viewer-home-status',
+    'sequence-viewer-library-filter-saved',
+    'sequence-viewer-library-filter-temporary',
+    'sequence-viewer-library-list',
+    'sequence-viewer-preview-host',
+    'sequence-viewer-home-paste-btn',
+    'sequence-viewer-home-open-btn',
+    'sequence-viewer-home-open-input',
+    'sequence-viewer-back-btn',
+    'sequence-viewer-save-btn',
+    'sequence-viewer-save-name',
+    'sequence-viewer-mode-paste',
+    'sequence-viewer-mode-file',
+    'sequence-viewer-paste-panel',
+    'sequence-viewer-file-panel',
+    'sequence-viewer-textarea',
+    'sequence-viewer-file-input',
+    'sequence-viewer-file-choose',
+    'sequence-viewer-file-name',
+    'sequence-viewer-load-btn',
+    'sequence-viewer-annotate-btn',
+    'sequence-viewer-clear-btn',
+    'sequence-viewer-status',
+    'sequence-viewer-messages',
+    'sequence-viewer-record-select',
+    'sequence-viewer-stat-format',
+    'sequence-viewer-stat-length',
+    'sequence-viewer-stat-topology',
+    'sequence-viewer-stat-gc',
+    'sequence-viewer-stat-ambiguous',
+    'sequence-viewer-stat-quality',
+    'sequence-viewer-stat-features',
+    'sequence-viewer-stat-restriction-sites',
+    'sequence-viewer-feature-rail-host',
+    'sequence-viewer-feature-detail',
+    'sequence-viewer-sequence-host'
+  ];
+  const listCalls = [];
+  const upsertCalls = [];
+  const document = createMockDocument(ids);
+  const window = {
+    enanaApi: {
+      sequenceLibraryList: async ({ status }) => {
+        listCalls.push(status);
+        return {
+          ok: true,
+          entries: status === 'temporary'
+            ? [{
+              id: 'entry_plain_gbk',
+              name: 'plain_gbk',
+              status: 'temporary',
+              topology: 'linear',
+              sequenceLength: 12,
+              featureCount: 0,
+              updatedAt: '2026-01-01T00:00:00'
+            }]
+            : []
+        };
+      },
+      sequenceLibraryUpsert: async (payload) => {
+        upsertCalls.push(payload);
+        return {
+          ok: true,
+          entry: {
+            id: 'entry_plain_gbk',
+            name: payload.name || 'plain_gbk',
+            status: 'temporary'
+          }
+        };
+      }
+    }
+  };
+  const localStorage = {
+    getItem(key) {
+      if (key === 'enana_state_v1') {
+        return JSON.stringify({ settings: { storagePath: '/tmp/sequence-viewer-tests' } });
+      }
+      return null;
+    }
+  };
+  const moduleWithDom = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    { document, window, localStorage }
+  );
+  moduleWithDom.initSequenceViewer();
+
+  trigger(document.getElementById('sequence-viewer-home-paste-btn'), 'click');
+  const textarea = document.getElementById('sequence-viewer-textarea');
+  textarea.value = `
+LOCUS       PLAIN_GBK       12 bp    DNA     linear  SYN 01-JAN-2026
+DEFINITION  plain_gbk.
+ORIGIN
+        1 atgcgatttaaa
+//
+`;
+  trigger(document.getElementById('sequence-viewer-load-btn'), 'click');
+  await flushAsync();
+  await flushAsync();
+
+  assert.equal(upsertCalls.length, 1);
+  assert.equal(upsertCalls[0].sequence, 'ATGCGATTTAAA');
+  assert.equal(upsertCalls[0].status, 'temporary');
+  assert.equal(listCalls.includes('temporary'), true);
+  assert.match(document.getElementById('sequence-viewer-library-list').innerHTML, /plain_gbk/i);
 });
 
 test('[EDGE] sequence-viewer feature search can trace a stored feature back to its host vector', async () => {

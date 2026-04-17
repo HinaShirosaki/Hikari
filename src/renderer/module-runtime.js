@@ -161,6 +161,7 @@ export function createRendererModuleRuntime(config = {}) {
     homeDashboard: initAndRegisterModule(moduleRegistry, 'homeDashboard', initHomeDashboard, {
       state,
       persist,
+      createId,
       safeText,
       onOpenSampleSearch: rendererServices.inventory.openSampleSearch,
       onOpenSamples: () => rendererServices.inventory.openSampleSearch(''),

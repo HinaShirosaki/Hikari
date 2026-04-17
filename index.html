@@ -88,24 +88,19 @@
 
         <section class="home-tile home-tile-passage" aria-labelledby="dashboard-passage-heading">
           <div class="home-tile-head">
-            <h2 id="dashboard-passage-heading">Cell Passage Reminder</h2>
+            <div class="home-tile-head-row">
+              <h2 id="dashboard-passage-heading">Cell Passage Reminder</h2>
+              <button
+                type="button"
+                id="dashboard-passage-add-btn"
+                class="home-passage-add-btn"
+                aria-label="Add cell to passage reminder"
+              >+</button>
+            </div>
             <p id="dashboard-passage-summary" class="small-note">No cell line reminders yet.</p>
           </div>
           <div class="home-tile-scroll">
-            <div class="dashboard-split-grid">
-              <div class="dashboard-list-group">
-                <h3>Overdue</h3>
-                <div id="dashboard-passage-overdue-list" class="dashboard-list"></div>
-              </div>
-              <div class="dashboard-list-group">
-                <h3>Due in 3 Days</h3>
-                <div id="dashboard-passage-soon-list" class="dashboard-list"></div>
-              </div>
-              <div class="dashboard-list-group">
-                <h3>Unconfigured</h3>
-                <div id="dashboard-passage-unconfigured-list" class="dashboard-list"></div>
-              </div>
-            </div>
+            <div id="dashboard-passage-list" class="dashboard-list dashboard-passage-list"></div>
           </div>
         </section>
 
@@ -126,7 +121,7 @@
         <section class="home-tile home-tile-timer" aria-labelledby="dashboard-timer-heading">
           <div class="home-tile-head">
             <h2 id="dashboard-timer-heading">Timer</h2>
-            <p id="dashboard-timer-status" class="small-note">Ready</p>
+            <p id="dashboard-timer-status" class="small-note"></p>
           </div>
           <div class="home-timer-clock">
             <p id="dashboard-local-time" class="dashboard-local-time">--:--:--</p>
@@ -159,8 +154,16 @@
 
         <section class="home-tile home-tile-incubation" aria-labelledby="dashboard-incubation-heading">
           <div class="home-tile-head">
-            <h2 id="dashboard-incubation-heading">Long Incubation Reminder</h2>
-            <p id="dashboard-incubation-summary" class="small-note">No planned follow-ups waiting.</p>
+            <div class="home-tile-head-row">
+              <h2 id="dashboard-incubation-heading">Overnight Incubation Timer</h2>
+              <button
+                type="button"
+                id="dashboard-incubation-add-btn"
+                class="home-passage-add-btn"
+                aria-label="Manage incubation locations"
+              >+</button>
+            </div>
+            <p id="dashboard-incubation-summary" class="small-note">No incubation locations yet.</p>
           </div>
           <div class="home-tile-scroll">
             <div id="dashboard-incubation-list" class="dashboard-list"></div>
@@ -170,7 +173,7 @@
         <section class="home-tile home-tile-quick-log" aria-labelledby="dashboard-quick-log-heading">
           <div class="home-tile-head">
             <h2 id="dashboard-quick-log-heading">Quick Log Notebook</h2>
-            <p id="dashboard-quick-log-status" class="small-note">Type a bench note to keep it handy on this screen.</p>
+            <p id="dashboard-quick-log-status" class="small-note"></p>
           </div>
           <label class="dashboard-field dashboard-field-grow">
             Bench Note
@@ -190,7 +193,7 @@
         <section class="home-tile home-tile-actions" aria-labelledby="dashboard-actions-heading">
           <div class="home-tile-head">
             <h2 id="dashboard-actions-heading">Quick Actions</h2>
-            <p class="small-note">Jump into the modules you use most.</p>
+            <p class="small-note"></p>
           </div>
           <div class="home-action-grid">
             <button type="button" class="home-action-btn" data-dashboard-action="samples">Open Samples</button>
@@ -199,6 +202,76 @@
             <button type="button" class="home-action-btn" data-dashboard-action="assistant">Open Assistant</button>
           </div>
         </section>
+      </div>
+
+      <div id="dashboard-passage-dialog-overlay" class="home-dialog-overlay" hidden>
+        <div
+          class="home-dialog home-passage-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="dashboard-passage-dialog-title"
+        >
+          <form id="dashboard-passage-dialog-form" class="home-dialog-form">
+            <h3 id="dashboard-passage-dialog-title">Add Cell to Passage</h3>
+            <label class="dashboard-field">
+              Cell Strain
+              <input
+                id="dashboard-passage-strain-input"
+                type="text"
+                maxlength="80"
+                placeholder="e.g. HEK293"
+                required
+              />
+            </label>
+            <label class="dashboard-field">
+              Interval Time
+              <input
+                id="dashboard-passage-interval-input"
+                type="number"
+                min="1"
+                step="1"
+                placeholder="e.g. 3"
+                required
+              />
+            </label>
+            <label class="dashboard-field">
+              Passage Number
+              <input
+                id="dashboard-passage-number-input"
+                type="number"
+                min="1"
+                step="1"
+                placeholder="e.g. 5"
+                required
+              />
+            </label>
+            <button type="submit" id="dashboard-passage-submit-btn" class="primary-btn">Add</button>
+          </form>
+        </div>
+      </div>
+
+      <div id="dashboard-incubation-dialog-overlay" class="home-dialog-overlay" hidden>
+        <div
+          class="home-dialog home-incubation-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="dashboard-incubation-dialog-title"
+        >
+          <div class="home-dialog-form">
+            <h3 id="dashboard-incubation-dialog-title">Incubation Location</h3>
+            <div id="dashboard-incubation-location-list" class="home-incubation-location-list"></div>
+            <form id="dashboard-incubation-location-form" class="home-incubation-add-row">
+              <input
+                id="dashboard-incubation-location-input"
+                type="text"
+                maxlength="80"
+                placeholder="Add new incubation location"
+                required
+              />
+              <button type="submit" id="dashboard-incubation-location-submit-btn" class="ghost-btn">Add New</button>
+            </form>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -1016,24 +1089,15 @@
       <div class="chemical-layout left-rail-template">
         <aside class="chemical-sidebar app-left-rail left-rail-template__rail" data-sync-left-rail>
           <div class="chemical-sidebar-stack">
-            <button type="button" id="chemical-open-add-btn" class="primary-btn chemical-add-btn">Add Chemical</button>
-            <label class="chemical-search-field">
-              Search
-              <input id="chemical-search" type="search" placeholder="Name, CAS, vendor, catalog, location" />
-            </label>
-          </div>
-        </aside>
+            <section class="chemical-sidebar-section app-left-rail-section">
+              <button type="button" id="chemical-open-add-btn" class="primary-btn chemical-add-btn">Add Chemical</button>
+              <label class="chemical-search-field">
+                Search
+                <input id="chemical-search" type="search" placeholder="Name, CAS, vendor, catalog, location" />
+              </label>
+            </section>
 
-        <div class="chemical-main left-rail-template__main">
-          <div class="panel chemical-list-panel">
-            <div class="chemical-panel-head">
-              <div class="chemical-panel-copy">
-                <h2>Chemicals</h2>
-                <p id="chemical-results-summary" class="small-note">Showing 0 chemicals.</p>
-              </div>
-            </div>
-
-            <div class="chemical-toolbar-grid">
+            <section class="chemical-sidebar-section app-left-rail-section">
               <label>
                 Filter Location
                 <select id="chemical-filter-location">
@@ -1053,15 +1117,17 @@
                   <option value="expiration_desc">Expiration (Latest)</option>
                 </select>
               </label>
-            </div>
+            </section>
+          </div>
+        </aside>
 
-            <div class="chemical-sync-strip">
-              <label>
-                Inbox Email
-                <select id="inventory-inbox-email"></select>
-              </label>
-              <button type="button" id="inventory-import-btn" class="ghost-btn">Import Chemical Update</button>
-              <p class="small-note chemical-pending-note">Pending inventory updates: <span id="inventory-pending-count">0</span></p>
+        <div class="chemical-main left-rail-template__main">
+          <div class="panel chemical-list-panel">
+            <div class="chemical-panel-head">
+              <div class="chemical-panel-copy">
+                <h2>Chemicals</h2>
+                <p id="chemical-results-summary" class="small-note">Showing 0 chemicals.</p>
+              </div>
             </div>
 
             <div id="chemical-list" class="list-table"></div>
@@ -1161,10 +1227,6 @@
               <span>Appearance</span>
               <small>Font size and theme</small>
             </button>
-            <button type="button" class="settings-nav-item" data-settings-target="personal">
-              <span>Personal Info</span>
-              <small>Name and contact details</small>
-            </button>
             <button type="button" class="settings-nav-item" data-settings-target="storage">
               <span>Storage</span>
               <small>Root folder and imports</small>
@@ -1213,34 +1275,6 @@
                 </label>
                 <div class="form-actions">
                   <button type="submit" class="primary-btn">Save Appearance</button>
-                </div>
-              </form>
-            </section>
-
-            <section class="settings-section" data-settings-panel="personal" hidden>
-              <div class="settings-section-head">
-                <h3>Personal Information</h3>
-                <p class="small-note">Name and contact details used across the workspace.</p>
-              </div>
-              <form id="personal-info-form" class="stack-form">
-                <label>
-                  Name
-                  <input id="setting-name" />
-                </label>
-                <label>
-                  Position
-                  <input id="setting-position" />
-                </label>
-                <label>
-                  Institution Email
-                  <input id="setting-institution-email" type="email" />
-                </label>
-                <label>
-                  Enana Email
-                  <input id="setting-enana-email" type="email" />
-                </label>
-                <div class="form-actions">
-                  <button type="submit" class="primary-btn">Save Personal Info</button>
                 </div>
               </form>
             </section>

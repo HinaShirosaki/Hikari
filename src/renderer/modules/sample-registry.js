@@ -315,16 +315,28 @@ export function initSampleRegistry({ state, persist, safeText }) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(dateValue) || !Number.isFinite(interval) || interval <= 0) {
       return null;
     }
-    return {
+    const normalized = {
       lastPassageDate: dateValue,
       intervalDays: interval
     };
+    const passageNumber = Math.round(Number(rawValue?.passageNumber));
+    if (Number.isFinite(passageNumber) && passageNumber > 0) {
+      normalized.passageNumber = passageNumber;
+    }
+    const deferredUntilDate = String(rawValue?.deferredUntilDate || '').trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(deferredUntilDate)) {
+      normalized.deferredUntilDate = deferredUntilDate;
+    }
+    return normalized;
   }
 
-  function readCellPassage() {
+  function readCellPassage(existingValue = null) {
+    const existing = normalizeCellPassage(existingValue);
     return normalizeCellPassage({
       lastPassageDate: samplePassageLastDateInput?.value,
-      intervalDays: samplePassageIntervalDaysInput?.value
+      intervalDays: samplePassageIntervalDaysInput?.value,
+      passageNumber: existing?.passageNumber,
+      deferredUntilDate: existing?.deferredUntilDate
     });
   }
 
@@ -343,7 +355,14 @@ export function initSampleRegistry({ state, persist, safeText }) {
     if (!normalized) {
       return 'Unconfigured';
     }
-    return `Last: ${normalized.lastPassageDate} | Every ${normalized.intervalDays} day(s)`;
+    const detail = [`Last: ${normalized.lastPassageDate}`, `Every ${normalized.intervalDays} day(s)`];
+    if (normalized.passageNumber) {
+      detail.push(`P${normalized.passageNumber}`);
+    }
+    if (normalized.deferredUntilDate) {
+      detail.push(`Deferred to ${normalized.deferredUntilDate}`);
+    }
+    return detail.join(' | ');
   }
 
   async function onSubmit(event) {
@@ -400,7 +419,7 @@ export function initSampleRegistry({ state, persist, safeText }) {
       lot: sampleLotInput.value.trim(),
       concentration: sampleConcentrationInput.value.trim(),
       notes: sampleNotesInput.value.trim(),
-      cellPassage: isCellLine ? readCellPassage() : null,
+      cellPassage: isCellLine ? readCellPassage(existing?.cellPassage) : null,
       location: isEmptyLocation(manualLocation) && autoLocation ? autoLocation : manualLocation,
       inventoryLink: linkedContainer
         ? {
