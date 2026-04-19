@@ -154,5 +154,77 @@ module.exports = function registerRoutePlanningSuite(context = {}) {
       assert.equal(plan.tool_call_suggestions[0].tool_name, 'literature-search');
       assert.equal(plan.tool_call_suggestions[0].query_hint, 'antigen processing');
     });
+
+    test('science route planner prompt and fallback preserve trailing allowed retrieval tools', () => {
+      const { createAgentRoutePlannerRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'runtime', 'science-reasoning-loop', 'agent-route-planner.js'));
+      const runtime = createAgentRoutePlannerRuntime();
+      const allowedToolNames = [
+        'inventory-lookup',
+        'record-lookup',
+        'protocol-matching',
+        'notebook-generation',
+        'notebook-draft',
+        'python-sandbox',
+        'web-search',
+        'literature-search'
+      ];
+
+      const prompt = runtime.buildRoutePlanPrompt({
+        intent: 'general_science_question',
+        reasoningEffort: 1,
+        message: 'What is sgRNA?',
+        clarifiedInput: 'Explain what sgRNA is with grounded citations.',
+        allowedToolNames
+      });
+      const fallback = runtime.buildFallbackRoutePlan({
+        intent: 'general_science_question',
+        message: 'What is sgRNA?',
+        clarifiedInput: 'Explain what sgRNA is with grounded citations.',
+        allowedToolNames
+      });
+
+      assert.match(
+        prompt,
+        /Allowed tools: inventory-lookup \| record-lookup \| protocol-matching \| notebook-generation \| notebook-draft \| python-sandbox \| web-search \| literature-search/
+      );
+      assert.deepEqual(
+        fallback.tool_call_suggestions.map((item) => item.tool_name),
+        allowedToolNames
+      );
+    });
+
+    test('science exit criteria prompt and fallback preserve trailing allowed retrieval tools', () => {
+      const { createScienceLoopExitCriteriaRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'runtime', 'science-reasoning-loop', 'loop-exit-criteria.js'));
+      const runtime = createScienceLoopExitCriteriaRuntime();
+      const allowedToolNames = [
+        'inventory-lookup',
+        'record-lookup',
+        'protocol-matching',
+        'notebook-generation',
+        'notebook-draft',
+        'python-sandbox',
+        'web-search',
+        'literature-search'
+      ];
+
+      const prompt = runtime.buildExitCriteriaPrompt({
+        intent: 'general_science_question',
+        message: 'What is sgRNA?',
+        clarifiedInput: 'Explain what sgRNA is with grounded citations.',
+        allowedToolNames
+      });
+      const fallback = runtime.buildFallbackExitCriteria({
+        intent: 'general_science_question',
+        message: 'What is sgRNA?',
+        clarifiedInput: 'Explain what sgRNA is with grounded citations.',
+        allowedToolNames
+      });
+
+      assert.match(
+        prompt,
+        /Allowed tools: inventory-lookup \| record-lookup \| protocol-matching \| notebook-generation \| notebook-draft \| python-sandbox \| web-search \| literature-search/
+      );
+      assert.deepEqual(fallback.preferred_next_tools, allowedToolNames);
+    });
   }
 };

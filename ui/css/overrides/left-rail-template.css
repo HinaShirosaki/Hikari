@@ -34,7 +34,7 @@
   border-bottom: 0 !important;
   border-left: 0 !important;
   border-radius: 0 !important;
-  background: var(--surface) !important;
+  background: var(--app-left-rail-surface, var(--surface)) !important;
   box-shadow: none !important;
   overflow-x: hidden !important;
   overflow-y: auto !important;

@@ -165,6 +165,165 @@ module.exports = function registerAgentSequenceLibraryContracts(context = {}) {
       }
     });
 
+    test('sequence library helper stores CDS DNA and translated amino-acid sequences in a dedicated table and removes them when orphaned', async () => {
+      const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'sequence-library-feature-proteins-'));
+      try {
+        await sequenceLibrary.upsertSequenceEntry({
+          storagePath: storageRoot,
+          name: 'ProteinVector',
+          status: 'saved',
+          sourceFormat: 'genbank',
+          topology: 'linear',
+          sequence: 'ATGAAATAAATGGGCCCT',
+          sequenceLength: 18,
+          featureCount: 2,
+          features: [
+            {
+              name: 'ImportedCds',
+              type: 'cds',
+              strand: 1,
+              source: 'genbank',
+              translation: 'MK*',
+              segments: [{ start: 0, end: 9 }]
+            },
+            {
+              name: 'DerivedCds',
+              type: 'cds',
+              strand: 1,
+              source: 'manual',
+              segments: [{ start: 9, end: 18 }]
+            }
+          ],
+          gbkText: 'LOCUS       ProteinVector    18 bp    DNA     linear   SYN 01-JAN-2026\nORIGIN\n        1 atgaaataaatgggccct\n//\n',
+          htmlText: '<html><body>protein vector</body></html>'
+        });
+
+        const { loadSqlJs } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'storage-utils.js'));
+        const { readSqlRows } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'storage-sql-read.js'));
+        const sqlitePath = path.join(storageRoot, 'SequenceViewer', 'sequence-library.sqlite');
+        const bytes = await fsPromises.readFile(sqlitePath);
+        const SQL = await loadSqlJs();
+        const db = new SQL.Database(new Uint8Array(bytes));
+        try {
+          const cdsRows = readSqlRows(
+            db,
+            `SELECT f.name, cds.dna_sequence, cds.amino_acid_sequence
+             FROM sequence_feature_cds_sequences cds
+             JOIN sequence_features f ON f.id = cds.feature_id
+             ORDER BY f.name COLLATE NOCASE ASC`,
+            []
+          );
+          assert.equal(
+            JSON.stringify(cdsRows),
+            JSON.stringify([
+              { name: 'DerivedCds', dna_sequence: 'ATGGGCCCT', amino_acid_sequence: 'MGP' },
+              { name: 'ImportedCds', dna_sequence: 'ATGAAATAA', amino_acid_sequence: 'MK' }
+            ])
+          );
+        } finally {
+          db.close();
+        }
+
+        const savedList = await sequenceLibrary.listSequenceEntries({ storagePath: storageRoot, status: 'saved' });
+        await sequenceLibrary.deleteSequenceEntry({ storagePath: storageRoot, id: savedList.entries[0].id });
+
+        const afterDeleteBytes = await fsPromises.readFile(sqlitePath);
+        const SQLAfterDelete = await loadSqlJs();
+        const afterDeleteDb = new SQLAfterDelete.Database(new Uint8Array(afterDeleteBytes));
+        try {
+          const remainingCdsRows = readSqlRows(afterDeleteDb, 'SELECT * FROM sequence_feature_cds_sequences', []);
+          assert.equal(remainingCdsRows.length, 0);
+        } finally {
+          afterDeleteDb.close();
+        }
+      } finally {
+        await fsPromises.rm(storageRoot, { recursive: true, force: true });
+      }
+    });
+
+    test('sequence library helper annotates DNA features first and then CDS ORFs from stored SQL records', async () => {
+      const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'sequence-library-annotate-'));
+      try {
+        const hostSequence = 'TTGACATATAATATGAAAGGGTAA';
+        await sequenceLibrary.upsertSequenceEntry({
+          storagePath: storageRoot,
+          name: 'AnnotationHost',
+          status: 'saved',
+          sourceFormat: 'genbank',
+          topology: 'linear',
+          sequence: hostSequence,
+          sequenceLength: hostSequence.length,
+          featureCount: 4,
+          features: [
+            {
+              name: 'StrongPromoter',
+              type: 'promoter',
+              strand: 1,
+              source: 'genbank',
+              segments: [{ start: 0, end: 12 }]
+            },
+            {
+              name: 'misc_feature_1',
+              type: 'misc_feature',
+              strand: 1,
+              source: 'genbank',
+              segments: [{ start: 0, end: 12 }]
+            },
+            {
+              name: 'ReporterCds',
+              type: 'cds',
+              strand: 1,
+              source: 'genbank',
+              translation: 'MKG*',
+              segments: [{ start: 12, end: 24 }]
+            },
+            {
+              name: 'misc_feature',
+              type: 'cds',
+              strand: 1,
+              source: 'genbank',
+              translation: 'MKG*',
+              segments: [{ start: 12, end: 24 }]
+            }
+          ],
+          gbkText: `LOCUS       AnnotationHost   ${String(hostSequence.length).padStart(8, ' ')} bp    DNA     linear   SYN 01-JAN-2026
+FEATURES             Location/Qualifiers
+     promoter        1..12
+                     /label="StrongPromoter"
+     misc_feature    1..12
+                     /label="misc_feature_1"
+     CDS             13..24
+                     /label="ReporterCds"
+                     /translation="MKG"
+     CDS             13..24
+                     /label="misc_feature"
+                     /translation="MKG"
+ORIGIN
+        1 ${hostSequence.toLowerCase()}
+//
+`,
+          htmlText: '<html><body>annotation host</body></html>'
+        });
+
+        const annotated = await sequenceLibrary.annotateSequenceRecord({
+          storagePath: storageRoot,
+          sequence: 'GGGTTGACATATAATATGAAAGGGTAACCC',
+          topology: 'linear'
+        });
+
+        assert.equal(annotated.dnaMatches.length, 1);
+        assert.equal(annotated.dnaMatches[0].name, 'StrongPromoter');
+        assert.equal(JSON.stringify(annotated.dnaMatches[0].segments), JSON.stringify([{ start: 3, end: 15 }]));
+        assert.equal(annotated.proteinMatches.length, 1);
+        assert.equal(annotated.proteinMatches[0].name, 'ReporterCds');
+        assert.equal(annotated.proteinMatches[0].translation, 'MKG');
+        assert.equal(annotated.proteinMatches[0].orfFrame, '+1');
+        assert.equal(JSON.stringify(annotated.proteinMatches[0].segments), JSON.stringify([{ start: 15, end: 27 }]));
+      } finally {
+        await fsPromises.rm(storageRoot, { recursive: true, force: true });
+      }
+    });
+
     test('sequence library helper recognizes stored backbone and insert from a derived vector', async () => {
       const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'sequence-library-backbone-recognition-'));
       try {

@@ -137,18 +137,23 @@ export function createProtocolPreviewHelpers({
     `;
   }
 
-  function renderProtocolPolishLoadingState(node) {
+  function renderProtocolPolishLoadingState(node, options = {}) {
     if (!node) {
       return;
     }
+    const source = options && typeof options === 'object'
+      ? options
+      : { message: String(options || '') };
+    const ariaLabel = String(source.ariaLabel || '').trim() || 'Loading polished protocol';
+    const message = String(source.message || '').trim() || 'Polishing the current protocol draft while preserving its structure.';
     node.innerHTML = `
       <div class="protocol-polish-loading">
-        <div class="protocol-polish-loading-dots" aria-label="Loading polished protocol">
+        <div class="protocol-polish-loading-dots" aria-label="${safeText(ariaLabel)}">
           <span>.</span>
           <span>.</span>
           <span>.</span>
         </div>
-        <p>Polishing the current protocol draft while preserving its structure.</p>
+        <p>${safeText(message)}</p>
       </div>
     `;
   }

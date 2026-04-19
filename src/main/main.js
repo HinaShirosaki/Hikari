@@ -52,6 +52,7 @@ const {
   upsertSequenceEntry,
   promoteSequenceEntry,
   deleteSequenceEntry,
+  annotateSequenceRecord,
   searchSequenceFeatures,
   recognizeSequenceBackbone
 } = require('./helpers/main/sequence-library');
@@ -287,6 +288,7 @@ const {
   agentToolRuntime,
   agentChatLogRuntime,
   agentToolSmokeTestRuntime,
+  protocolGenerationRuntime,
   agentLookupRuntime
 } = createMainAgentServices({
   LLM_PROVIDERS,
@@ -328,6 +330,7 @@ registerDataIpc({
   upsertSequenceEntry,
   promoteSequenceEntry,
   deleteSequenceEntry,
+  annotateSequenceRecord,
   searchSequenceFeatures,
   recognizeSequenceBackbone
 });
@@ -347,6 +350,7 @@ registerAgentIpc({
   agentToolRuntime,
   agentChatLogRuntime,
   agentToolSmokeTestRuntime,
+  protocolGenerationRuntime,
   executeInventoryLookup: agentLookupRuntime.executeInventoryLookup,
   executeRecordLookup: agentLookupRuntime.executeRecordLookup,
   getDefaultDataFilePath,

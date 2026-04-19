@@ -190,7 +190,9 @@ export const defaultState = {
       currentWorkflowId: '',
       workflowProgress: {},
       quickLogDraft: '',
-      incubationLocations: []
+      incubationLocations: [],
+      timerTemplates: [],
+      activeTimers: []
     },
     startup: {
       defaultViewId: VIEWS.HOME,
@@ -251,25 +253,90 @@ function normalizeSampleRecord(rawSample) {
   return rawSample;
 }
 
-function normalizeDashboardLocationList(rawValue) {
+function normalizeDashboardDateString(rawValue) {
+  const value = String(rawValue || '').trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : '';
+}
+
+function normalizeDashboardIncubationLocations(rawValue) {
   if (!Array.isArray(rawValue)) {
     return [];
   }
   const seen = new Set();
   const locations = [];
   rawValue.forEach((item) => {
-    const value = String(item || '').trim();
-    if (!value) {
+    const rawName = item && typeof item === 'object' && !Array.isArray(item)
+      ? item.name
+      : item;
+    const name = String(rawName || '').trim().replace(/\s+/g, ' ');
+    if (!name) {
       return;
     }
-    const key = value.toLowerCase();
+    const key = name.toLowerCase();
     if (seen.has(key)) {
       return;
     }
     seen.add(key);
-    locations.push(value);
+    locations.push({
+      name,
+      reminderDate: item && typeof item === 'object' && !Array.isArray(item)
+        ? normalizeDashboardDateString(item.reminderDate || item.remindOnDate)
+        : ''
+    });
   });
   return locations;
+}
+
+function normalizeDashboardTimerTemplates(rawValue) {
+  if (!Array.isArray(rawValue)) {
+    return [];
+  }
+  return rawValue.map((item) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      return null;
+    }
+    const name = String(item.name || '').trim().replace(/\s+/g, ' ');
+    const durationMinutes = Math.round(Number(item.durationMinutes || item.minutes));
+    if (!name || !Number.isFinite(durationMinutes) || durationMinutes <= 0) {
+      return null;
+    }
+    return {
+      name,
+      durationMinutes
+    };
+  }).filter(Boolean);
+}
+
+function normalizeDashboardActiveTimers(rawValue) {
+  if (!Array.isArray(rawValue)) {
+    return [];
+  }
+  return rawValue.map((item) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      return null;
+    }
+    const name = String(item.name || '').trim().replace(/\s+/g, ' ');
+    const durationMinutes = Math.round(Number(item.durationMinutes || item.minutes));
+    const startedAtMs = Number(item.startedAtMs || item.startedAt || 0);
+    const endAtMs = Number(item.endAtMs || item.endAt || 0);
+    if (
+      !name
+      || !Number.isFinite(durationMinutes)
+      || durationMinutes <= 0
+      || !Number.isFinite(startedAtMs)
+      || startedAtMs <= 0
+      || !Number.isFinite(endAtMs)
+      || endAtMs <= startedAtMs
+    ) {
+      return null;
+    }
+    return {
+      name,
+      durationMinutes,
+      startedAtMs,
+      endAtMs
+    };
+  }).filter(Boolean);
 }
 
 function normalizeWorkflowProgressMap(rawValue) {
@@ -533,7 +600,9 @@ export function normalizeState(parsed) {
         currentWorkflowId: String(rawDashboard.currentWorkflowId || ''),
         workflowProgress: normalizeWorkflowProgressMap(rawDashboard.workflowProgress),
         quickLogDraft: String(rawDashboard.quickLogDraft || ''),
-        incubationLocations: normalizeDashboardLocationList(rawDashboard.incubationLocations)
+        incubationLocations: normalizeDashboardIncubationLocations(rawDashboard.incubationLocations),
+        timerTemplates: normalizeDashboardTimerTemplates(rawDashboard.timerTemplates),
+        activeTimers: normalizeDashboardActiveTimers(rawDashboard.activeTimers)
       },
       startup: {
         ...defaultState.settings.startup,

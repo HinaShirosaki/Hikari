@@ -1,0 +1,594 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>plasmid</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --preview-ink: #16314c;
+      --preview-muted: #5a7592;
+      --preview-backbone: #7e99ba;
+      --preview-center-ring: #d8e4f2;
+      --preview-center-disc: #f9fbfe;
+      --preview-tick: #8ca5c5;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: #ffffff;
+    }
+    body {
+      font-family: "Playfair Display", serif;
+      color: var(--preview-ink);
+      overflow: hidden;
+    }
+    .preview-shell {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      place-items: center;
+      margin: 0;
+      padding: 4px;
+    }
+    svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+      max-width: 100%;
+      max-height: 100%;
+    }
+    .circular-preview__backbone {
+      fill: none;
+      stroke: var(--preview-backbone);
+      stroke-width: 16;
+    }
+    .circular-preview__center-ring {
+      fill: none;
+      stroke: var(--preview-center-ring);
+      stroke-width: 2;
+    }
+    .circular-preview__center-disc {
+      fill: var(--preview-center-disc);
+      stroke: var(--preview-center-ring);
+      stroke-width: 2;
+    }
+    .circular-preview__tick {
+      stroke: var(--preview-tick);
+      stroke-width: 1.5;
+      opacity: 0.9;
+    }
+    .circular-preview__feature {
+      stroke-width: 1.5;
+      stroke-linejoin: round;
+    }
+    .circular-preview__leader {
+      fill: none;
+      stroke-width: 1.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      opacity: 0.82;
+    }
+    .circular-preview__label-box {
+      stroke-width: 1.2;
+    }
+    .circular-preview__label-text {
+      font-size: 15px;
+      font-weight: 600;
+      dominant-baseline: middle;
+      letter-spacing: 0.01em;
+    }
+    .circular-preview__title {
+      fill: var(--preview-ink);
+      font-size: 28px;
+      font-weight: 700;
+      text-anchor: middle;
+    }
+    .circular-preview__subtitle {
+      text-anchor: middle;
+      fill: var(--preview-muted);
+      letter-spacing: 0.02em;
+    }
+    .circular-preview__subtitle {
+      font-size: 15px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <main class="preview-shell" data-renderer="dna-feature-viewer-js">
+    <!-- Circular plasmid preview powered by a minimal JS port inspired by DnaFeaturesViewer (MIT). -->
+    <svg
+      viewBox="0 0 1077 842"
+      preserveAspectRatio="xMidYMid meet"
+      role="img"
+      aria-label="plasmid circular plasmid preview">
+      <desc>Standalone circular plasmid preview for plasmid.</desc>
+      <circle class="circular-preview__center-ring" cx="560.60" cy="427.97" r="258.00"></circle>
+      <circle class="circular-preview__backbone" cx="560.60" cy="427.97" r="290.00"></circle>
+      <line class="circular-preview__tick" x1="560.60" y1="149.97" x2="560.60" y2="125.97"></line><line class="circular-preview__tick" x1="666.99" y1="171.13" x2="676.17" y2="148.96"></line><line class="circular-preview__tick" x1="757.18" y1="231.39" x2="774.15" y2="214.42"></line><line class="circular-preview__tick" x1="817.44" y1="321.58" x2="839.61" y2="312.40"></line><line class="circular-preview__tick" x1="838.60" y1="427.97" x2="862.60" y2="427.97"></line><line class="circular-preview__tick" x1="817.44" y1="534.35" x2="839.61" y2="543.54"></line><line class="circular-preview__tick" x1="757.18" y1="624.54" x2="774.15" y2="641.51"></line><line class="circular-preview__tick" x1="666.99" y1="684.81" x2="676.17" y2="706.98"></line><line class="circular-preview__tick" x1="560.60" y1="705.97" x2="560.60" y2="729.97"></line><line class="circular-preview__tick" x1="454.21" y1="684.81" x2="445.03" y2="706.98"></line><line class="circular-preview__tick" x1="364.02" y1="624.54" x2="347.05" y2="641.51"></line><line class="circular-preview__tick" x1="303.76" y1="534.35" x2="281.59" y2="543.54"></line><line class="circular-preview__tick" x1="282.60" y1="427.97" x2="258.60" y2="427.97"></line><line class="circular-preview__tick" x1="303.76" y1="321.58" x2="281.59" y2="312.40"></line><line class="circular-preview__tick" x1="364.02" y1="231.39" x2="347.05" y2="214.42"></line><line class="circular-preview__tick" x1="454.21" y1="171.13" x2="445.03" y2="148.96"></line>
+      
+          <path class="circular-preview__feature"
+            data-feature-index="1"
+            data-segment-index="1"
+            d="M 256.02 544.19 A 326.00 326.00 0 0 1 372.43 161.75 L 400.89 154.14 L 382.82 176.45 A 308.00 308.00 0 0 0 272.84 537.77 Z"
+            fill="#479f71"
+            stroke="#3d8a69">
+            <title>M13 gene III (3764..4981) - pLannotate</title>
+          </path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="2"
+            data-segment-index="1"
+            d="M 827.90 614.58 A 326.00 326.00 0 0 1 494.96 747.29 L 469.95 731.73 L 498.58 729.66 A 308.00 308.00 0 0 0 813.14 604.28 Z"
+            fill="#479f71"
+            stroke="#3d8a69">
+            <title>lacI (1888..2970) - pLannotate</title>
+          </path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="3"
+            data-segment-index="1"
+            d="M 607.52 105.36 A 326.00 326.00 0 0 1 843.70 266.32 L 848.54 295.37 L 828.07 275.24 A 308.00 308.00 0 0 0 604.93 123.17 Z"
+            fill="#479f71"
+            stroke="#3d8a69">
+            <title>AmpR (126..986) - pLannotate</title>
+          </path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="4"
+            data-segment-index="1"
+            d="M 877.63 352.02 A 326.00 326.00 0 0 1 865.91 542.24 L 846.67 564.54 L 849.06 535.93 A 308.00 308.00 0 0 0 860.13 356.21 Z"
+            fill="#4e7fff"
+            stroke="#436fdd">
+            <title>ori (1157..1745) - pLannotate</title>
+          </path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="5"
+            data-segment-index="1"
+            d="M 407.90 150.17 L 429.06 129.68 A 326.00 326.00 0 0 1 558.34 101.98 L 558.46 119.97 A 308.00 308.00 0 0 0 436.32 146.15 Z"
+            fill="#4e7fff"
+            stroke="#436fdd">
+            <title>f1 ori (complement(5004..5432)) - pLannotate</title>
+          </path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="6"
+            data-segment-index="1"
+            d="M 370.14 692.55 A 326.00 326.00 0 0 1 290.43 610.40 L 283.42 581.79 L 305.34 600.33 A 308.00 308.00 0 0 0 380.66 677.94 Z"
+            fill="#479f71"
+            stroke="#3d8a69">
+            <title>HVM25_MOUSE (3260..3640) - pLannotate</title>
+          </path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="7"
+            data-segment-index="1"
+            d="M 568.13 102.05 A 326.00 326.00 0 0 1 587.88 103.11 L 606.22 114.27 L 586.37 121.05 A 308.00 308.00 0 0 0 567.72 120.05 Z"
+            fill="#8b5cf6"
+            stroke="#7553d6">
+            <title>AmpR promoter (21..125) - pLannotate</title>
+          </path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="8"
+            data-segment-index="1"
+            d="M 843.61 589.77 A 326.00 326.00 0 0 1 836.04 602.35 L 820.52 609.43 L 820.83 592.73 A 308.00 308.00 0 0 0 827.99 580.84 Z"
+            fill="#8b5cf6"
+            stroke="#7553d6">
+            <title>lacI promoter (1810..1887) - pLannotate</title>
+          </path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="9"
+            data-segment-index="1"
+            d="M 392.79 707.46 A 326.00 326.00 0 0 1 382.25 700.86 L 377.19 686.52 L 392.10 685.79 A 308.00 308.00 0 0 0 402.05 692.02 Z"
+            fill="#479f71"
+            stroke="#3d8a69">
+            <title>pel1 (fragment) (3188..3253) - pLannotate</title>
+          </path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="10"
+            data-segment-index="1"
+            d="M 430.95 727.08 A 326.00 326.00 0 0 1 425.61 724.71 L 424.19 714.12 L 433.06 708.32 A 308.00 308.00 0 0 0 438.11 710.56 Z"
+            fill="#8b5cf6"
+            stroke="#7553d6">
+            <title>lac promoter (3074..3104) - pLannotate</title>
+          </path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="11"
+            data-segment-index="1"
+            d="M 443.50 732.21 A 326.00 326.00 0 0 1 439.64 730.70 L 439.25 720.82 L 446.32 713.98 A 308.00 308.00 0 0 0 449.96 715.41 Z"
+            fill="#f6a35e"
+            stroke="#cd8d59">
+            <title>CAP binding site (3038..3059) - pLannotate</title>
+          </path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="12"
+            data-segment-index="1"
+            d="M 270.76 577.19 A 326.00 326.00 0 0 1 269.22 574.17 L 275.80 567.18 L 285.31 566.10 A 308.00 308.00 0 0 0 286.76 568.95 Z"
+            fill="#479f71"
+            stroke="#3d8a69">
+            <title>TEV site (fragment) (3668..3685) - pLannotate</title>
+          </path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="13"
+            data-segment-index="1"
+            d="M 417.94 721.10 A 326.00 326.00 0 0 1 412.21 718.24 L 420.41 702.21 A 308.00 308.00 0 0 0 425.82 704.91 Z"
+            fill="#f6a35e"
+            stroke="#cd8d59">
+            <title>lac operator (3112..3128) - pLannotate</title>
+          </path>
+        
+      
+        <g class="circular-preview__annotation" data-label-side="left">
+          <path class="circular-preview__leader"
+            d="M 249.39 318.19 L 217.33 306.88 L 188.60 281.25"
+            stroke="#3d8a69"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="83.80"
+            y="268.25"
+            width="104.80"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e5f2eb"
+            stroke="#3d8a69"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="176.60"
+              y="281.25"
+              text-anchor="end"
+              fill="#0f223e">
+              M13 gene III
+            </text>
+          
+          <title>M13 gene III (3764..4981) - pLannotate</title>
+        </g>
+      
+        <g class="circular-preview__annotation" data-label-side="right">
+          <path class="circular-preview__leader"
+            d="M 669.30 739.55 L 680.50 771.65 L 932.60 790.03"
+            stroke="#3d8a69"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="932.60"
+            y="777.03"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e5f2eb"
+            stroke="#3d8a69"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="944.60"
+              y="790.03"
+              text-anchor="start"
+              fill="#0f223e">
+              lacI
+            </text>
+          
+          <title>lacI (1888..2970) - pLannotate</title>
+        </g>
+      
+        <g class="circular-preview__annotation" data-label-side="right">
+          <path class="circular-preview__leader"
+            d="M 758.16 163.64 L 778.52 136.40 L 932.60 119.18"
+            stroke="#3d8a69"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="932.60"
+            y="106.18"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e5f2eb"
+            stroke="#3d8a69"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="944.60"
+              y="119.18"
+              text-anchor="start"
+              fill="#0f223e">
+              AmpR
+            </text>
+          
+          <title>AmpR (126..986) - pLannotate</title>
+        </g>
+      
+        <g class="circular-preview__annotation" data-label-side="right">
+          <path class="circular-preview__leader"
+            d="M 888.78 462.60 L 922.59 466.17 L 932.60 456.19"
+            stroke="#436fdd"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="932.60"
+            y="443.19"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e6edff"
+            stroke="#436fdd"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="944.60"
+              y="456.19"
+              text-anchor="start"
+              fill="#0f223e">
+              ori
+            </text>
+          
+          <title>ori (1157..1745) - pLannotate</title>
+        </g>
+      
+        <g class="circular-preview__annotation" data-label-side="left">
+          <path class="circular-preview__leader"
+            d="M 477.43 108.62 L 468.86 75.72 L 188.60 45.00"
+            stroke="#436fdd"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="102.60"
+            y="32.00"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e6edff"
+            stroke="#436fdd"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="176.60"
+              y="45.00"
+              text-anchor="end"
+              fill="#0f223e">
+              f1 ori
+            </text>
+          
+          <title>f1 ori (complement(5004..5432)) - pLannotate</title>
+        </g>
+      
+        <g class="circular-preview__annotation" data-label-side="left">
+          <path class="circular-preview__leader"
+            d="M 313.98 647.24 L 288.57 669.83 L 188.60 652.17"
+            stroke="#3d8a69"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="91.20"
+            y="639.17"
+            width="97.40"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e5f2eb"
+            stroke="#3d8a69"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="176.60"
+              y="652.17"
+              text-anchor="end"
+              fill="#0f223e">
+              HVM25_MOUSE
+            </text>
+          
+          <title>HVM25_MOUSE (3260..3640) - pLannotate</title>
+        </g>
+      
+        <g class="circular-preview__annotation" data-label-side="right">
+          <path class="circular-preview__leader"
+            d="M 588.21 99.12 L 591.06 65.24 L 932.60 46.45"
+            stroke="#7553d6"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="932.60"
+            y="33.45"
+            width="112.20"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#efe8fe"
+            stroke="#7553d6"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="944.60"
+              y="46.45"
+              text-anchor="start"
+              fill="#0f223e">
+              AmpR promoter
+            </text>
+          
+          <title>AmpR promoter (21..125) - pLannotate</title>
+        </g>
+      
+        <g class="circular-preview__annotation" data-label-side="right">
+          <path class="circular-preview__leader"
+            d="M 839.42 604.49 L 868.14 622.68 L 932.60 616.14"
+            stroke="#7553d6"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="932.60"
+            y="603.14"
+            width="112.20"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#efe8fe"
+            stroke="#7553d6"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="944.60"
+              y="616.14"
+              text-anchor="start"
+              fill="#0f223e">
+              lacI promoter
+            </text>
+          
+          <title>lacI promoter (1810..1887) - pLannotate</title>
+        </g>
+      
+        <g class="circular-preview__annotation" data-label-side="left">
+          <path class="circular-preview__leader"
+            d="M 380.07 704.20 L 361.46 732.67 L 188.60 716.39"
+            stroke="#3d8a69"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="61.60"
+            y="703.39"
+            width="127.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e5f2eb"
+            stroke="#3d8a69"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="176.60"
+              y="716.39"
+              text-anchor="end"
+              fill="#0f223e">
+              pel1 (fragment)
+            </text>
+          
+          <title>pel1 (fragment) (3188..3253) - pLannotate</title>
+        </g>
+      
+        <g class="circular-preview__annotation" data-label-side="left">
+          <path class="circular-preview__leader"
+            d="M 423.95 728.35 L 409.88 759.30 L 188.60 756.39"
+            stroke="#7553d6"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="83.80"
+            y="743.39"
+            width="104.80"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#efe8fe"
+            stroke="#7553d6"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="176.60"
+              y="756.39"
+              text-anchor="end"
+              fill="#0f223e">
+              lac promoter
+            </text>
+          
+          <title>lac promoter (3074..3104) - pLannotate</title>
+        </g>
+      
+        <g class="circular-preview__annotation" data-label-side="left">
+          <path class="circular-preview__leader"
+            d="M 438.16 734.41 L 425.54 765.98 L 188.60 796.39"
+            stroke="#cd8d59"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="54.20"
+            y="783.39"
+            width="134.40"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#fef2e8"
+            stroke="#cd8d59"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="176.60"
+              y="796.39"
+              text-anchor="end"
+              fill="#0f223e">
+              CAP binding site
+            </text>
+          
+          <title>CAP binding site (3038..3059) - pLannotate</title>
+        </g>
+      
+        <g class="circular-preview__annotation" data-label-side="left">
+          <path class="circular-preview__leader"
+            d="M 265.65 575.96 L 235.26 591.21 L 188.60 571.82"
+            stroke="#3d8a69"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="32.00"
+            y="558.82"
+            width="156.60"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e5f2eb"
+            stroke="#3d8a69"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="176.60"
+              y="571.82"
+              text-anchor="end"
+              fill="#0f223e">
+              TEV site (fragment)
+            </text>
+          
+          <title>TEV site (fragment) (3668..3685) - pLannotate</title>
+        </g>
+      
+        <g class="circular-preview__annotation" data-label-side="right">
+          <path class="circular-preview__leader"
+            d="M 413.29 723.26 L 398.11 753.69 L 932.60 750.03"
+            stroke="#cd8d59"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="932.60"
+            y="737.03"
+            width="104.80"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#fef2e8"
+            stroke="#cd8d59"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="944.60"
+              y="750.03"
+              text-anchor="start"
+              fill="#0f223e">
+              lac operator
+            </text>
+          
+          <title>lac operator (3112..3128) - pLannotate</title>
+        </g>
+      
+      
+    <g class="circular-preview__center">
+      <circle cx="560.60" cy="427.97" r="234.00" class="circular-preview__center-disc"></circle>
+      <text x="560.60" y="413.97" class="circular-preview__title">plasmid</text>
+      <text x="560.60" y="445.97" class="circular-preview__subtitle">5,438 bp · 13 features</text>
+    </g>
+  
+    </svg>
+  </main>
+</body>
+</html>

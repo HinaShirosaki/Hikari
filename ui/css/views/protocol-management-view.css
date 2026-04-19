@@ -53,6 +53,7 @@
 }
 
 #create-protocol-btn,
+#protocol-generate-btn,
 #protocol-polish-btn,
 #protocol-sort-field-btn,
 #protocol-sort-order-btn {
@@ -320,7 +321,8 @@
   margin-top: 12px;
 }
 
-.protocol-polish-overlay {
+.protocol-polish-overlay,
+.protocol-generate-overlay {
   position: fixed;
   inset: 0;
   z-index: 220;
@@ -332,15 +334,33 @@
   backdrop-filter: blur(10px);
 }
 
-.protocol-polish-overlay[hidden] {
+.protocol-generate-overlay {
+  align-items: flex-start;
+  padding-top: 78px;
+}
+
+.protocol-polish-overlay[hidden],
+.protocol-generate-overlay[hidden] {
   display: none;
 }
 
-.protocol-polish-dialog-shell {
+.protocol-polish-dialog-shell,
+.protocol-generate-input-shell,
+.protocol-generate-result-shell {
   width: min(1180px, 100%);
   max-height: calc(100vh - 32px);
   display: grid;
   gap: 16px;
+}
+
+.protocol-generate-input-shell {
+  width: min(900px, 100%);
+  max-height: calc(100vh - 110px);
+}
+
+.protocol-generate-result-shell {
+  width: min(820px, 100%);
+  max-height: calc(100vh - 110px);
 }
 
 .protocol-polish-dialog-stack {
@@ -350,7 +370,9 @@
   gap: 18px;
 }
 
-.protocol-polish-dialog {
+.protocol-polish-dialog,
+.protocol-generate-input-dialog,
+.protocol-generate-result-dialog {
   position: relative;
   display: grid;
   gap: 14px;
@@ -363,6 +385,32 @@
   box-shadow: 0 28px 72px rgba(27, 20, 14, 0.16);
   overflow: auto;
   max-height: calc(100vh - 130px);
+}
+
+.protocol-generate-composer-shell {
+  padding: 0;
+}
+
+.protocol-generate-composer-shell .agent-composer-card {
+  width: 100%;
+  margin: 0;
+}
+
+.protocol-generate-result-dialog {
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  overflow: hidden;
+  max-height: calc(100vh - 172px);
+}
+
+.protocol-generate-result-dialog .protocol-polish-preview {
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+.protocol-generate-result-dialog .protocol-polish-loading,
+.protocol-generate-result-dialog .protocol-polish-preview-empty {
+  min-height: 320px;
 }
 
 .protocol-polish-dialog-head {
@@ -392,6 +440,8 @@
   padding: 0 6px;
 }
 
+#protocol-generate-input-status[data-state="error"],
+#protocol-generate-status[data-state="error"],
 #protocol-polish-status[data-state="error"] {
   color: var(--danger);
 }
@@ -581,11 +631,18 @@
     min-height: 240px;
   }
 
-  .protocol-polish-overlay {
+  .protocol-polish-overlay,
+  .protocol-generate-overlay {
     padding: 12px;
   }
 
-  .protocol-polish-dialog-shell {
+  .protocol-generate-overlay {
+    padding-top: 68px;
+  }
+
+  .protocol-polish-dialog-shell,
+  .protocol-generate-input-shell,
+  .protocol-generate-result-shell {
     max-height: calc(100vh - 24px);
   }
 
@@ -594,8 +651,20 @@
     gap: 14px;
   }
 
-  .protocol-polish-dialog {
+  .protocol-polish-dialog,
+  .protocol-generate-input-dialog,
+  .protocol-generate-result-dialog {
     max-height: min(44vh, 460px);
+  }
+
+  .protocol-generate-input-shell,
+  .protocol-generate-result-shell {
+    max-height: calc(100vh - 84px);
+  }
+
+  .protocol-generate-input-dialog,
+  .protocol-generate-result-dialog {
+    max-height: calc(100vh - 128px);
   }
 
   .protocol-polish-actions {

@@ -47,6 +47,42 @@ function createOpenAiLlmProvider(deps = {}) {
     };
   }
 
+  function normalizeAttachments(input = {}) {
+    const listed = Array.isArray(input.attachments) ? input.attachments : [];
+    const attachments = listed.map((attachment) => {
+      const source = attachment && typeof attachment === 'object' ? attachment : {};
+      return {
+        kind: cleanText(source.kind, 40),
+        name: cleanText(source.name, 240) || 'attachment',
+        dataUrl: cleanText(source.dataUrl || source.data_url, 400000)
+      };
+    }).filter((attachment) => attachment.dataUrl);
+    if (attachments.length) {
+      return attachments;
+    }
+    const fileDataUrl = cleanText(input.fileDataUrl || input.pdfDataUrl, 240000);
+    const imageDataUrl = cleanText(input.imageDataUrl || input.imageUrl, 240000);
+    return [
+      ...(fileDataUrl ? [{ kind: 'file', name: cleanText(input.fileName, 240) || 'attachment.pdf', dataUrl: fileDataUrl }] : []),
+      ...(imageDataUrl ? [{ kind: 'image', name: 'image', dataUrl: imageDataUrl }] : [])
+    ];
+  }
+
+  function buildUserContent(input = {}, attachments = [], redact = false) {
+    return [
+      { type: 'input_text', text: cleanText(input.userPrompt, 48000) },
+      ...attachments.map((attachment) => (
+        attachment.kind === 'image'
+          ? { type: 'input_image', image_url: redact ? '[image omitted]' : attachment.dataUrl }
+          : {
+            type: 'input_file',
+            filename: attachment.name || 'attachment',
+            file_data: redact ? '[file omitted]' : attachment.dataUrl
+          }
+      ))
+    ];
+  }
+
   async function requestText(input = {}) {
     const normalizedStage = cleanText(input.stage, 120) || 'agent_stage';
     if (!requestOpenAiResponsesWithBackoff) {
@@ -59,15 +95,26 @@ function createOpenAiLlmProvider(deps = {}) {
     try {
       const requestInput = [];
       const systemPrompt = cleanText(input.systemPrompt, 12000);
-      const userPrompt = cleanText(input.userPrompt, 48000);
+      const attachments = normalizeAttachments(input);
       if (systemPrompt) {
         requestInput.push(toInputText('system', systemPrompt));
       }
-      requestInput.push(toInputText('user', userPrompt));
+      requestInput.push({
+        role: 'user',
+        content: buildUserContent(input, attachments, false)
+      });
       const body = {
         model: cleanText(input.model, 120),
         input: requestInput
       };
+      if (input.enableWebSearch === true) {
+        body.tools = [{
+          type: 'web_search',
+          ...(input.externalWebAccess === false ? { external_web_access: false } : {})
+        }];
+        body.tool_choice = 'auto';
+        body.include = ['web_search_call.action.sources'];
+      }
       if (Number.isFinite(Number(input.maxOutputTokens))) {
         body.max_output_tokens = Number(input.maxOutputTokens);
       }
@@ -85,8 +132,19 @@ function createOpenAiLlmProvider(deps = {}) {
         stage: normalizedStage,
         provider: providerId,
         model: cleanText(input.model, 120),
-        summary: `${normalizedStage} completed via OpenAI Responses.`,
-        requestPayload: body,
+        summary: attachments.length
+          ? `${normalizedStage} completed via OpenAI Responses multimodal input.`
+          : `${normalizedStage} completed via OpenAI Responses.`,
+        requestPayload: {
+          ...body,
+          input: [
+            ...(systemPrompt ? [toInputText('system', systemPrompt)] : []),
+            {
+              role: 'user',
+              content: buildUserContent(input, attachments, true)
+            }
+          ]
+        },
         responsePayload: response
       });
       const text = extractResponseText(response);
@@ -113,188 +171,11 @@ function createOpenAiLlmProvider(deps = {}) {
   }
 
   async function requestImageInput(input = {}) {
-    const normalizedStage = cleanText(input.stage, 120) || 'agent_stage';
-    if (!requestOpenAiResponsesWithBackoff) {
-      return {
-        ok: false,
-        error: cleanText(input.defaultError, 600) || 'OpenAI image input is not configured.'
-      };
-    }
-    const imageUrl = cleanText(input.imageUrl || input.imageDataUrl, 240000);
-    if (!imageUrl) {
-      return {
-        ok: false,
-        error: `${normalizedStage} image input is required.`
-      };
-    }
-
-    try {
-      const systemPrompt = cleanText(input.systemPrompt, 12000);
-      const userPrompt = cleanText(input.userPrompt, 48000);
-      const body = {
-        model: cleanText(input.model, 120),
-        input: [
-          ...(systemPrompt ? [toInputText('system', systemPrompt)] : []),
-          {
-            role: 'user',
-            content: [
-              { type: 'input_text', text: userPrompt },
-              { type: 'input_image', image_url: imageUrl }
-            ]
-          }
-        ]
-      };
-      if (Number.isFinite(Number(input.maxOutputTokens))) {
-        body.max_output_tokens = Number(input.maxOutputTokens);
-      }
-      if (input.expectJson === true && input.schema && typeof input.schema === 'object') {
-        body.text = {
-          format: buildJsonResponseFormat(normalizedStage, input.schema)
-        };
-      }
-      const response = await requestOpenAiResponsesWithBackoff({
-        endpoint: cleanText(input.endpoint, 2000),
-        apiKey: cleanText(input.apiKey, 400),
-        body
-      });
-      await recordTrace(input.traceContext, {
-        stage: normalizedStage,
-        provider: providerId,
-        model: cleanText(input.model, 120),
-        summary: `${normalizedStage} completed via OpenAI Responses image input.`,
-        requestPayload: {
-          ...body,
-          input: [
-            ...(systemPrompt ? [toInputText('system', systemPrompt)] : []),
-            {
-              role: 'user',
-              content: [
-                { type: 'input_text', text: userPrompt },
-                { type: 'input_image', image_url: '[image omitted]' }
-              ]
-            }
-          ]
-        },
-        responsePayload: response
-      });
-      const text = extractResponseText(response);
-      if (!text) {
-        return { ok: false, error: `${normalizedStage} response was empty.`, raw: response };
-      }
-      if (input.expectJson === true) {
-        const parsed = parseJsonObjectFromText(text);
-        if (!parsed) {
-          return { ok: false, error: `${normalizedStage} response was not valid JSON.`, raw: response };
-        }
-        return { ok: true, payload: parsed, text, raw: response };
-      }
-      return { ok: true, text, raw: response };
-    } catch (error) {
-      if (isAbortError(error)) {
-        throw error;
-      }
-      return {
-        ok: false,
-        error: cleanText(error?.message || error, 600) || `${normalizedStage} request failed.`
-      };
-    }
+    return requestText(input);
   }
 
   async function requestFileInput(input = {}) {
-    const normalizedStage = cleanText(input.stage, 120) || 'agent_stage';
-    if (!requestOpenAiResponsesWithBackoff) {
-      return {
-        ok: false,
-        error: cleanText(input.defaultError, 600) || 'OpenAI file input is not configured.'
-      };
-    }
-    const fileDataUrl = cleanText(input.fileDataUrl || input.pdfDataUrl, 240000);
-    const fileName = cleanText(input.fileName, 240) || 'paper.pdf';
-    if (!fileDataUrl) {
-      return {
-        ok: false,
-        error: `${normalizedStage} file input is required.`
-      };
-    }
-
-    try {
-      const systemPrompt = cleanText(input.systemPrompt, 12000) || 'Return valid JSON only.';
-      const userPrompt = cleanText(input.userPrompt, 48000);
-      const body = {
-        model: cleanText(input.model, 120),
-        input: [
-          toInputText('system', systemPrompt),
-          {
-            role: 'user',
-            content: [
-              { type: 'input_text', text: userPrompt },
-              {
-                type: 'input_file',
-                filename: fileName,
-                file_data: fileDataUrl
-              }
-            ]
-          }
-        ]
-      };
-      if (Number.isFinite(Number(input.maxOutputTokens))) {
-        body.max_output_tokens = Number(input.maxOutputTokens);
-      }
-      if (input.expectJson === true && input.schema && typeof input.schema === 'object') {
-        body.text = {
-          format: buildJsonResponseFormat(normalizedStage, input.schema)
-        };
-      }
-      const response = await requestOpenAiResponsesWithBackoff({
-        endpoint: cleanText(input.endpoint, 2000),
-        apiKey: cleanText(input.apiKey, 400),
-        body
-      });
-      await recordTrace(input.traceContext, {
-        stage: normalizedStage,
-        provider: providerId,
-        model: cleanText(input.model, 120),
-        summary: `${normalizedStage} completed via OpenAI Responses file input.`,
-        requestPayload: {
-          ...body,
-          input: [
-            toInputText('system', systemPrompt),
-            {
-              role: 'user',
-              content: [
-                { type: 'input_text', text: userPrompt },
-                {
-                  type: 'input_file',
-                  filename: fileName,
-                  file_data: '[file omitted]'
-                }
-              ]
-            }
-          ]
-        },
-        responsePayload: response
-      });
-      const text = extractResponseText(response);
-      if (!text) {
-        return { ok: false, error: `${normalizedStage} response was empty.`, raw: response };
-      }
-      if (input.expectJson === true) {
-        const parsed = parseJsonObjectFromText(text);
-        if (!parsed) {
-          return { ok: false, error: `${normalizedStage} response was not valid JSON.`, raw: response };
-        }
-        return { ok: true, payload: parsed, text, raw: response };
-      }
-      return { ok: true, text, raw: response };
-    } catch (error) {
-      if (isAbortError(error)) {
-        throw error;
-      }
-      return {
-        ok: false,
-        error: cleanText(error?.message || error, 600) || `${normalizedStage} request failed.`
-      };
-    }
+    return requestText(input);
   }
 
   async function requestWebSearch(input = {}) {

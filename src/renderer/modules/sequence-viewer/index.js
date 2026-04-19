@@ -19,6 +19,7 @@ import {
   normalizeOrfStopCodonVisibility
 } from './translation-style.js';
 import { getSequenceViewerElements } from './dom.js';
+import { createSequenceViewerAnnotationController } from './annotation.js';
 import { createSequenceViewerHomeController } from './home-controller.js';
 import { createSequenceViewerDetailController } from './detail-controller.js';
 import { createSequenceViewerAlignmentController } from './alignment-controller.js';
@@ -41,6 +42,7 @@ export function initSequenceViewer(options = {}) {
     selectedFeatureIndex: -1,
     warnings: [],
     errors: [],
+    isAnnotating: false,
     isRecognizingBackbone: false,
     orfViewEnabled: false,
     orfStopVisibility: normalizeOrfStopCodonVisibility({
@@ -296,8 +298,9 @@ export function initSequenceViewer(options = {}) {
     return state.records[index] || null;
   }
 
-  let detailController = null;
   let homeController = null;
+  let detailController = null;
+  let annotationController = null;
   let alignmentController = null;
   let proteinBuilderController = null;
 
@@ -314,6 +317,7 @@ export function initSequenceViewer(options = {}) {
     state.records = Array.isArray(result.records) ? result.records : [];
     state.warnings = Array.isArray(result.warnings) ? result.warnings : [];
     state.errors = Array.isArray(result.errors) ? result.errors : [];
+    state.isAnnotating = false;
     state.isRecognizingBackbone = false;
     state.selectedRecordIndex = 0;
     state.selectedFeatureIndex = -1;
@@ -727,6 +731,7 @@ export function initSequenceViewer(options = {}) {
     state.fileText = '';
     state.activeEntryId = '';
     state.activeEntryStatus = '';
+    state.isAnnotating = false;
     state.isRecognizingBackbone = false;
     setMode('paste');
     setInputComposerVisible(true);
@@ -776,6 +781,7 @@ export function initSequenceViewer(options = {}) {
     setStatus,
     hasStoragePath,
     persistFeatureMutation,
+    onRequestAnnotate: () => annotationController?.annotateCurrentRecord?.(),
     onRequestRecognizeBackbone: recognizeCurrentBackboneInsert,
     onRequestClear: clearAll,
     onRequestSave: saveCurrentRecordAsSaved,
@@ -787,6 +793,16 @@ export function initSequenceViewer(options = {}) {
       resetAlignmentState({ preserveSessions: true });
       alignmentController?.handleReferenceRecordChanged?.();
     }
+  });
+
+  annotationController = createSequenceViewerAnnotationController({
+    state,
+    getSelectedRecord,
+    getStoragePath,
+    getBridge,
+    detailController,
+    persistFeatureMutation,
+    setStatus
   });
 
   alignmentController = createSequenceViewerAlignmentController({
@@ -899,7 +915,7 @@ export function initSequenceViewer(options = {}) {
   setMode('paste');
   setInputComposerVisible(true);
   setStatus('Paste sequence text, then click Load.');
-  homeController.setHomeStatus('Choose New or Open to continue.');
+  homeController.setHomeStatus('');
   render();
 
   return {

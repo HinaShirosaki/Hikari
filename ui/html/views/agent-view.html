@@ -54,15 +54,14 @@
               </div>
               <div class="agent-composer-shell">
                 <div class="stack-form agent-composer-card">
+                  <input id="agent-attachment-input" type="file" multiple hidden />
                   <label class="agent-composer-label">
                     <span>Message</span>
                     <textarea id="agent-message-input" rows="3" placeholder="Ask for protocol guidance, inventory checks, literature-grounded suggestions, or planning support."></textarea>
                   </label>
+                  <div id="agent-attachment-list" class="agent-attachment-list" hidden></div>
                   <div class="agent-composer-toolbar">
-                    <div class="agent-composer-hints">
-                      <span class="agent-inline-hint">Enter to send</span>
-                      <span class="agent-inline-hint">Shift+Enter for newline</span>
-                    </div>
+                    <button type="button" id="agent-attach-btn" class="ghost-btn agent-attach-btn" aria-label="Attach photos or files" title="Attach photos or files">+</button>
                     <div class="form-actions agent-composer-actions">
                       <button type="button" id="agent-deep-research-toggle-btn" class="ghost-btn">Deep Research: Off</button>
                       <button type="button" id="agent-send-btn" class="primary-btn">Send</button>

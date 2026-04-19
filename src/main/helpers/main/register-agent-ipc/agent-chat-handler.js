@@ -27,6 +27,19 @@ function registerAgentChatHandler({
   } = lifecycleService;
   const activeRequests = new Map();
 
+  function summarizeAttachments(payloadAttachments = []) {
+    return asArray(payloadAttachments).map((attachment) => {
+      const source = attachment && typeof attachment === 'object' ? attachment : {};
+      return {
+        id: cleanText(source.id, 120),
+        name: cleanText(source.name, 240),
+        mime_type: cleanText(source.mimeType || source.mime_type, 160),
+        kind: cleanText(source.kind, 40),
+        size: Number.isFinite(Number(source.size)) ? Number(source.size) : 0
+      };
+    }).filter((attachment) => attachment.name);
+  }
+
   ipcMain.handle('agent:chat:cancel', async (_event, payload) => {
     const normalizedPayload = normalizeJsonPayload(payload, {});
     const clientRequestId = cleanText(
@@ -148,6 +161,7 @@ function registerAgentChatHandler({
         ),
         allowWriteTools: normalizedPayload?.allowWriteTools === true,
         message: cleanText(normalizedPayload?.message, 3000),
+        attachments: summarizeAttachments(normalizedPayload?.attachments),
         conversation: controllerUtils.extractConversation(normalizedPayload?.conversation),
         llm: controllerUtils.summarizeLlmForAgentLog(normalizedPayload?.llm),
         agent: {
@@ -165,6 +179,9 @@ function registerAgentChatHandler({
             timestamp: requestTimestamp,
             direction: 'user->llm',
             text: cleanText(normalizedPayload?.message, 24000),
+            meta: {
+              attachments: summarizeAttachments(normalizedPayload?.attachments)
+            },
             project_id: cleanText(normalizedPayload?.projectId, 80),
             project_name: cleanText(normalizedPayload?.projectName, 180)
           },

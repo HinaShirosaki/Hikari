@@ -9,6 +9,7 @@ import { createProtocolPreviewHelpers } from './preview.js';
 import { createProtocolSharingController } from './sharing.js';
 import { createProtocolListController } from './list.js';
 import { createProtocolPolishController } from './polish.js';
+import { createProtocolGenerationController } from './generation.js';
 import { createProtocolEditorHelpers } from './editor-utils.js';
 
 export function initProtocolManagement({
@@ -21,6 +22,8 @@ export function initProtocolManagement({
   __globals = {}
 }) {
   const documentRef = __globals.document || globalThis.document;
+  const windowObject = __globals.windowObject || globalThis.window || null;
+  const api = __globals.enanaApi || windowObject?.enanaApi || globalThis.enanaApi || null;
   const navigatorRef = __globals.navigator || globalThis.navigator || null;
   const FileReaderClass = __globals.FileReader || globalThis.FileReader || null;
   const TextEncoderClass = __globals.TextEncoder || globalThis.TextEncoder || null;
@@ -48,7 +51,10 @@ export function initProtocolManagement({
     polishedProtocolDraft: null,
     protocolPolishSourceDraft: null,
     protocolPolishRequestToken: 0,
-    isProtocolPolishPending: false
+    isProtocolPolishPending: false,
+    generatedProtocolDraft: null,
+    protocolGenerationRequestToken: 0,
+    isProtocolGenerationPending: false
   };
   const editorHelpers = createProtocolEditorHelpers({ ui, localState, draftHelpers });
 
@@ -56,6 +62,7 @@ export function initProtocolManagement({
   let sharingController = null;
   let importController = null;
   let polishController = null;
+  let generationController = null;
 
   function setSelectedProtocol(protocolId = '') {
     localState.activeProtocolId = String(protocolId || '').trim();
@@ -86,6 +93,7 @@ export function initProtocolManagement({
 
   function resetEditorDraft() {
     polishController?.closeProtocolPolishOverlay();
+    generationController?.closeAllProtocolGenerationOverlays({ resetComposer: true });
     localState.currentProtocolDraft = draftHelpers.createEmptyDraft();
     ui.protocolForm?.reset();
     importController?.resetProtocolJsonImportUi();
@@ -164,6 +172,7 @@ export function initProtocolManagement({
     }
 
     previewHelpers.populateEditorFormFromDraft(ui, localState.currentProtocolDraft);
+    generationController?.syncProtocolGenerateButtonVisibility();
     showEditorPanel();
     ui.protocolNameInput?.focus();
   }
@@ -409,11 +418,75 @@ export function initProtocolManagement({
     buildDraftFromEditorInputs: editorHelpers.buildDraftFromEditorInputs
   });
 
+  generationController = createProtocolGenerationController({
+    state,
+    ui,
+    localState,
+    safeText,
+    api,
+    FileReaderClass,
+    cloneDraftFromProtocol: draftHelpers.cloneDraftFromProtocol,
+    sanitizeIncomingProtocol: draftHelpers.sanitizeIncomingProtocol,
+    normalizeMaterials: draftHelpers.normalizeMaterials,
+    stepToEditableLine: draftHelpers.stepToEditableLine,
+    renderProtocolPreviewInto: previewHelpers.renderProtocolPreviewInto,
+    renderProtocolPolishEmptyState: previewHelpers.renderProtocolPolishEmptyState,
+    renderProtocolPolishLoadingState: previewHelpers.renderProtocolPolishLoadingState,
+    populateEditorFormFromDraft: (draft) => previewHelpers.populateEditorFormFromDraft(ui, draft),
+    buildDraftFromEditorInputs: editorHelpers.buildDraftFromEditorInputs
+  });
+
   ui.createProtocolBtn?.addEventListener('click', onCreateProtocol);
   ui.emptyCreateProtocolBtn?.addEventListener('click', onCreateProtocol);
   ui.protocolEditorBackBtn?.addEventListener('click', () => showEmptyPanel({ resetEditor: true }));
   ui.protocolCancelBtn?.addEventListener('click', onCancelEditor);
   ui.protocolViewBackBtn?.addEventListener('click', () => showEmptyPanel({ resetEditor: false }));
+  ui.protocolGenerateBtn?.addEventListener('click', generationController.openProtocolGenerateInputOverlay);
+  ui.protocolGenerateCloseBtn?.addEventListener('click', () => generationController.closeProtocolGenerateInputOverlay({ resetComposer: false }));
+  ui.protocolGenerateAttachBtn?.addEventListener('click', () => {
+    ui.protocolGenerateAttachmentInput?.click();
+  });
+  ui.protocolGenerateAttachmentInput?.addEventListener('change', (event) => {
+    void generationController.handleAttachmentSelection(event?.target?.files || []);
+  });
+  ui.protocolGenerateSendBtn?.addEventListener('click', () => {
+    void generationController.onGenerateProtocol();
+  });
+  ui.protocolGeneratePromptInput?.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' || event.shiftKey) {
+      return;
+    }
+    event.preventDefault();
+    void generationController.onGenerateProtocol();
+  });
+  ui.protocolGenerateAttachmentList?.addEventListener('click', (event) => {
+    const target = event?.target;
+    const removeButton = target && typeof target.closest === 'function'
+      ? target.closest('[data-protocol-generate-remove-attachment]')
+      : target;
+    const attachmentId = String(
+      removeButton?.getAttribute?.('data-protocol-generate-remove-attachment')
+        || removeButton?.dataset?.protocolGenerateRemoveAttachment
+        || ''
+    ).trim();
+    if (!attachmentId) {
+      return;
+    }
+    generationController.removeComposerAttachment(attachmentId);
+  });
+  ui.protocolGenerateResultCloseBtn?.addEventListener('click', () => generationController.closeProtocolGenerateResultOverlay({ preserveComposer: true }));
+  ui.protocolGenerateBackBtn?.addEventListener('click', () => generationController.closeProtocolGenerateResultOverlay({ preserveComposer: true }));
+  ui.protocolGenerateApplyBtn?.addEventListener('click', generationController.applyGeneratedProtocolToEditor);
+  ui.protocolGenerateInputOverlay?.addEventListener('click', (event) => {
+    if (event.target === ui.protocolGenerateInputOverlay) {
+      generationController.closeProtocolGenerateInputOverlay({ resetComposer: false });
+    }
+  });
+  ui.protocolGenerateResultOverlay?.addEventListener('click', (event) => {
+    if (event.target === ui.protocolGenerateResultOverlay) {
+      generationController.closeProtocolGenerateResultOverlay({ preserveComposer: true });
+    }
+  });
   ui.protocolPolishBtn?.addEventListener('click', () => { void polishController.onPolishProtocol(); });
   ui.protocolPolishCloseBtn?.addEventListener('click', polishController.closeProtocolPolishOverlay);
   ui.protocolPolishKeepEditingBtn?.addEventListener('click', polishController.closeProtocolPolishOverlay);
@@ -454,6 +527,7 @@ export function initProtocolManagement({
   sharingController.setShareStatus(DEFAULT_SHARE_STATUS);
   if (ui.protocolJsonImportStatus && !String(ui.protocolJsonImportStatus.textContent || '').trim()) ui.protocolJsonImportStatus.textContent = DEFAULT_PROTOCOL_JSON_IMPORT_STATUS;
   listController.updateSortButtonLabels();
+  generationController.syncProtocolGenerateButtonVisibility();
   applyDetailMode('empty');
 
   documentRef?.addEventListener?.('click', (event) => {
@@ -476,6 +550,14 @@ export function initProtocolManagement({
   });
 
   documentRef?.addEventListener?.('keydown', (event) => {
+    if (event.key === 'Escape' && ui.protocolGenerateInputOverlay && !ui.protocolGenerateInputOverlay.hidden) {
+      generationController.closeProtocolGenerateInputOverlay({ resetComposer: false });
+      return;
+    }
+    if (event.key === 'Escape' && ui.protocolGenerateResultOverlay && !ui.protocolGenerateResultOverlay.hidden) {
+      generationController.closeProtocolGenerateResultOverlay({ preserveComposer: true });
+      return;
+    }
     if (event.key === 'Escape' && ui.protocolPolishOverlay && !ui.protocolPolishOverlay.hidden) {
       polishController.closeProtocolPolishOverlay();
       return;

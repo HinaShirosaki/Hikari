@@ -28,6 +28,7 @@ export function createSequenceViewerDetailController(config = {}) {
   const setStatus = config?.setStatus || (() => {});
   const hasStoragePath = config?.hasStoragePath || (() => false);
   const persistFeatureMutation = config?.persistFeatureMutation || (async () => {});
+  const onRequestAnnotate = config?.onRequestAnnotate || (() => {});
   const onRequestRecognizeBackbone = config?.onRequestRecognizeBackbone || (() => {});
   const onRequestClear = config?.onRequestClear || (() => {});
   const onRequestSave = config?.onRequestSave || (() => {});
@@ -223,6 +224,9 @@ export function createSequenceViewerDetailController(config = {}) {
 
   function syncActionButtonsState() {
     const hasRecord = Boolean(getSelectedRecord()?.sequence?.length);
+    if (elements.annotateBtn) {
+      elements.annotateBtn.disabled = !hasRecord || !hasStoragePath() || Boolean(state.isAnnotating);
+    }
     if (elements.recognizeBackboneBtn) {
       elements.recognizeBackboneBtn.disabled = !hasRecord || !hasStoragePath() || Boolean(state.isRecognizingBackbone);
     }
@@ -415,6 +419,7 @@ export function createSequenceViewerDetailController(config = {}) {
       deleteFeatureFromContext,
       applyFeatureEditorChanges,
       getActiveFeatureActionContext: () => activeFeatureActionContext,
+      onRequestAnnotate,
       onRequestRecognizeBackbone,
       onRequestClear,
       onRequestSave,

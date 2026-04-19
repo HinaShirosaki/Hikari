@@ -25,6 +25,7 @@ function registerDataIpc(deps = {}) {
   const upsertSequenceEntry = deps.upsertSequenceEntry;
   const promoteSequenceEntry = deps.promoteSequenceEntry;
   const deleteSequenceEntry = deps.deleteSequenceEntry;
+  const annotateSequenceRecord = deps.annotateSequenceRecord;
   const searchSequenceFeatures = deps.searchSequenceFeatures;
   const recognizeSequenceBackbone = deps.recognizeSequenceBackbone;
 
@@ -465,6 +466,28 @@ function registerDataIpc(deps = {}) {
         storagePath,
         query: cleanText(normalizedPayload?.query, 600),
         limit: Number(normalizedPayload?.limit)
+      });
+      return { ok: true, ...result };
+    } catch (error) {
+      return { ok: false, error: String(error?.message || error) };
+    }
+  });
+
+  ipcMain.handle('sequence-library:annotate', async (_event, payload) => {
+    try {
+      const normalizedPayload = normalizeJsonPayload(payload, {});
+      const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
+      if (!storagePath) {
+        return { ok: false, error: 'Missing storage path.' };
+      }
+      if (typeof annotateSequenceRecord !== 'function') {
+        throw new Error('Sequence annotation API unavailable.');
+      }
+      const result = await annotateSequenceRecord({
+        storagePath,
+        sequence: String(normalizedPayload?.sequence || ''),
+        topology: cleanText(normalizedPayload?.topology, 40),
+        excludeEntryId: cleanText(normalizedPayload?.excludeEntryId, 200)
       });
       return { ok: true, ...result };
     } catch (error) {

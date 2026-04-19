@@ -3,7 +3,7 @@
 // Responsibilities:
 // - summarize urgent bench work for the home screen
 // - surface cell-passage reminders, overnight incubation locations, and workflow progress
-// - provide a lightweight dashboard timer with presets, pause, and reset support
+// - provide lightweight lab timers with reusable named countdowns
 // - bridge quick-log notes into the assistant or notebook workspace
 export function initHomeDashboard({
   state,
@@ -52,15 +52,14 @@ export function initHomeDashboard({
 
   const localTimeDisplay = document.getElementById('dashboard-local-time');
   const localDateDisplay = document.getElementById('dashboard-local-date');
-  const timerDisplay = document.getElementById('dashboard-timer-display');
   const timerStatus = document.getElementById('dashboard-timer-status');
-  const timerSavedList = document.getElementById('dashboard-timer-saved-list');
-  const timerCustomMinutesInput = document.getElementById('dashboard-timer-custom-minutes');
-  const timerSetBtn = document.getElementById('dashboard-timer-set-btn');
-  const timerStartBtn = document.getElementById('dashboard-timer-start-btn');
-  const timerPauseBtn = document.getElementById('dashboard-timer-pause-btn');
-  const timerResetBtn = document.getElementById('dashboard-timer-reset-btn');
-  const presetButtons = [...document.querySelectorAll('[data-dashboard-preset-minutes]')];
+  const timerActiveList = document.getElementById('dashboard-timer-active-list');
+  const timerOpenBtn = document.getElementById('dashboard-timer-open-btn');
+  const timerDialogOverlay = document.getElementById('dashboard-timer-dialog-overlay');
+  const timerDialogForm = document.getElementById('dashboard-timer-dialog-form');
+  const timerNameInput = document.getElementById('dashboard-timer-name-input');
+  const timerMinutesInput = document.getElementById('dashboard-timer-minutes-input');
+  const timerTemplateList = document.getElementById('dashboard-timer-template-list');
   const quickActionButtons = [...document.querySelectorAll('[data-dashboard-action]')];
 
   if (
@@ -94,31 +93,22 @@ export function initHomeDashboard({
     || !quickLogClearBtn
     || !localTimeDisplay
     || !localDateDisplay
-    || !timerDisplay
     || !timerStatus
-    || !timerSavedList
-    || !timerCustomMinutesInput
-    || !timerSetBtn
-    || !timerStartBtn
-    || !timerPauseBtn
-    || !timerResetBtn
+    || !timerActiveList
+    || !timerOpenBtn
+    || !timerDialogOverlay
+    || !timerDialogForm
+    || !timerNameInput
+    || !timerMinutesInput
+    || !timerTemplateList
   ) {
     return {
       render: () => {}
     };
   }
 
-  const timerState = {
-    durationMs: 15 * 60 * 1000,
-    remainingMs: 15 * 60 * 1000,
-    running: false,
-    endAtMs: 0,
-    alert: false,
-    savedDurations: [15, 10, 30, 5]
-  };
   let timerTickHandle = 0;
   let localClockHandle = 0;
-  let timerHint = '';
 
   passageList.addEventListener('click', onPassageListClick);
   passageAddBtn.addEventListener('click', openPassageDialog);
@@ -128,6 +118,7 @@ export function initHomeDashboard({
   workflowSelect.addEventListener('change', onWorkflowSelected);
   workflowProgressList.addEventListener('click', onWorkflowProgressClick);
   incubationAddBtn.addEventListener('click', openIncubationDialog);
+  incubationList.addEventListener('click', onIncubationListClick);
   incubationDialogOverlay.addEventListener('click', onIncubationDialogOverlayClick);
   incubationLocationForm.addEventListener('submit', onIncubationLocationSubmit);
   incubationLocationList.addEventListener('click', onIncubationLocationListClick);
@@ -142,24 +133,11 @@ export function initHomeDashboard({
     setQuickLogStatus('Notebook opened.');
   });
   quickLogClearBtn.addEventListener('click', onQuickLogClear);
-  timerSavedList.addEventListener('click', onSavedTimerClick);
-  timerSetBtn.addEventListener('click', onTimerSet);
-  timerStartBtn.addEventListener('click', onTimerStart);
-  timerPauseBtn.addEventListener('click', onTimerPause);
-  timerResetBtn.addEventListener('click', onTimerReset);
-  timerCustomMinutesInput.addEventListener('keydown', (event) => {
-    if (event.key !== 'Enter') {
-      return;
-    }
-    event.preventDefault();
-    onTimerSet();
-  });
-  presetButtons.forEach((button) => {
-    button.addEventListener('click', () => {
-      const minutes = Number(button.dataset.dashboardPresetMinutes);
-      setTimerDuration(minutes);
-    });
-  });
+  timerOpenBtn.addEventListener('click', openTimerDialog);
+  timerDialogOverlay.addEventListener('click', onTimerDialogOverlayClick);
+  timerDialogForm.addEventListener('submit', onTimerDialogSubmit);
+  timerTemplateList.addEventListener('click', onTimerTemplateListClick);
+  timerActiveList.addEventListener('click', onTimerActiveListClick);
   document.addEventListener('keydown', onDashboardKeydown);
 
   renderLocalClock();
@@ -174,7 +152,9 @@ export function initHomeDashboard({
         currentWorkflowId: '',
         workflowProgress: {},
         quickLogDraft: '',
-        incubationLocations: []
+        incubationLocations: [],
+        timerTemplates: [],
+        activeTimers: []
       };
       return true;
     }
@@ -198,6 +178,58 @@ export function initHomeDashboard({
     if (!Array.isArray(state.settings.dashboard.incubationLocations)) {
       state.settings.dashboard.incubationLocations = [];
       changed = true;
+    } else {
+      const normalizedLocations = state.settings.dashboard.incubationLocations
+        .map(normalizeIncubationLocationRecord)
+        .filter(Boolean);
+      const rawLocations = state.settings.dashboard.incubationLocations;
+      const locationsChanged = normalizedLocations.length !== rawLocations.length
+        || normalizedLocations.some((location, index) => (
+          location.name !== rawLocations[index]?.name
+          || location.reminderDate !== rawLocations[index]?.reminderDate
+        ));
+      if (locationsChanged) {
+        state.settings.dashboard.incubationLocations = normalizedLocations;
+        changed = true;
+      }
+    }
+    if (!Array.isArray(state.settings.dashboard.timerTemplates)) {
+      state.settings.dashboard.timerTemplates = [];
+      changed = true;
+    } else {
+      const normalizedTemplates = state.settings.dashboard.timerTemplates
+        .map(normalizeTimerTemplateRecord)
+        .filter(Boolean);
+      const rawTemplates = state.settings.dashboard.timerTemplates;
+      const templatesChanged = normalizedTemplates.length !== rawTemplates.length
+        || normalizedTemplates.some((template, index) => (
+          template.name !== rawTemplates[index]?.name
+          || template.durationMinutes !== rawTemplates[index]?.durationMinutes
+        ));
+      if (templatesChanged) {
+        state.settings.dashboard.timerTemplates = normalizedTemplates;
+        changed = true;
+      }
+    }
+    if (!Array.isArray(state.settings.dashboard.activeTimers)) {
+      state.settings.dashboard.activeTimers = [];
+      changed = true;
+    } else {
+      const normalizedActiveTimers = state.settings.dashboard.activeTimers
+        .map(normalizeActiveTimerRecord)
+        .filter(Boolean);
+      const rawActiveTimers = state.settings.dashboard.activeTimers;
+      const activeTimersChanged = normalizedActiveTimers.length !== rawActiveTimers.length
+        || normalizedActiveTimers.some((timer, index) => (
+          timer.name !== rawActiveTimers[index]?.name
+          || timer.durationMinutes !== rawActiveTimers[index]?.durationMinutes
+          || timer.startedAtMs !== rawActiveTimers[index]?.startedAtMs
+          || timer.endAtMs !== rawActiveTimers[index]?.endAtMs
+        ));
+      if (activeTimersChanged) {
+        state.settings.dashboard.activeTimers = normalizedActiveTimers;
+        changed = true;
+      }
     }
     return changed;
   }
@@ -246,24 +278,118 @@ export function initHomeDashboard({
     return String(value || '').trim().replace(/\s+/g, ' ');
   }
 
+  function normalizeIncubationLocationRecord(rawValue) {
+    const source = rawValue && typeof rawValue === 'object' && !Array.isArray(rawValue)
+      ? rawValue
+      : { name: rawValue };
+    const name = normalizeIncubationLocationValue(source.name);
+    if (!name) {
+      return null;
+    }
+    const reminderDate = /^\d{4}-\d{2}-\d{2}$/.test(String(source.reminderDate || source.remindOnDate || '').trim())
+      ? String(source.reminderDate || source.remindOnDate || '').trim()
+      : '';
+    return {
+      name,
+      reminderDate
+    };
+  }
+
+  function normalizeTimerTemplateRecord(rawValue) {
+    const source = rawValue && typeof rawValue === 'object' && !Array.isArray(rawValue)
+      ? rawValue
+      : null;
+    const name = normalizeIncubationLocationValue(source?.name);
+    const durationMinutes = Math.round(Number(source?.durationMinutes || source?.minutes));
+    if (!name || !Number.isFinite(durationMinutes) || durationMinutes <= 0) {
+      return null;
+    }
+    return {
+      name,
+      durationMinutes
+    };
+  }
+
+  function normalizeActiveTimerRecord(rawValue) {
+    const source = rawValue && typeof rawValue === 'object' && !Array.isArray(rawValue)
+      ? rawValue
+      : null;
+    const name = normalizeIncubationLocationValue(source?.name);
+    const durationMinutes = Math.round(Number(source?.durationMinutes || source?.minutes));
+    const startedAtMs = Number(source?.startedAtMs || source?.startedAt || 0);
+    const endAtMs = Number(source?.endAtMs || source?.endAt || 0);
+    if (
+      !name
+      || !Number.isFinite(durationMinutes)
+      || durationMinutes <= 0
+      || !Number.isFinite(startedAtMs)
+      || startedAtMs <= 0
+      || !Number.isFinite(endAtMs)
+      || endAtMs <= startedAtMs
+    ) {
+      return null;
+    }
+    return {
+      name,
+      durationMinutes,
+      startedAtMs,
+      endAtMs
+    };
+  }
+
+  function formatTimerTemplateDuration(minutes) {
+    const rounded = Math.max(1, Math.round(Number(minutes) || 0));
+    return `${rounded} min`;
+  }
+
   function renderIncubationLocationRows() {
     const locations = Array.isArray(state.settings?.dashboard?.incubationLocations)
       ? state.settings.dashboard.incubationLocations
       : [];
     incubationLocationList.innerHTML = locations.map((location, index) => `
       <div class="home-incubation-location-row">
-        <span class="home-incubation-location-name">${safeText(location)}</span>
+        <span class="home-incubation-location-name">${safeText(location.name)}</span>
         <button
           type="button"
           class="home-incubation-delete-btn"
           data-dashboard-incubation-location-delete="${index}"
-          aria-label="Delete incubation location ${safeText(location)}"
+          aria-label="Delete incubation location ${safeText(location.name)}"
         >
           <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
             <circle cx="12" cy="12" r="12" fill="currentColor"></circle>
             <path d="M7 7l10 10M17 7 7 17" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"></path>
           </svg>
         </button>
+      </div>
+    `).join('');
+  }
+
+  function renderTimerTemplateRows() {
+    const templates = Array.isArray(state.settings?.dashboard?.timerTemplates)
+      ? state.settings.dashboard.timerTemplates
+      : [];
+    if (!templates.length) {
+      timerTemplateList.innerHTML = '<p class="small-note">Add a named timer to start it from this card.</p>';
+      return;
+    }
+    timerTemplateList.innerHTML = templates.map((template, index) => `
+      <div class="home-timer-template-row">
+        <div class="home-timer-template-copy">
+          <strong class="home-timer-template-name">${safeText(template.name)}</strong>
+          <p class="home-timer-template-duration">${safeText(formatTimerTemplateDuration(template.durationMinutes))}</p>
+        </div>
+        <div class="home-timer-template-actions">
+          <button
+            type="button"
+            class="home-timer-template-start-btn"
+            data-dashboard-start-timer-template="${index}"
+            aria-label="Start timer ${safeText(template.name)}"
+          >
+            <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
+              <path d="M8 6.5 18 12 8 17.5Z" fill="currentColor"></path>
+            </svg>
+          </button>
+        </div>
       </div>
     `).join('');
   }
@@ -279,6 +405,20 @@ export function initHomeDashboard({
   function closePassageDialog() {
     passageDialogForm.reset();
     passageDialogOverlay.hidden = true;
+  }
+
+  function openTimerDialog() {
+    renderTimerTemplateRows();
+    timerDialogForm.reset();
+    timerDialogOverlay.hidden = false;
+    window.requestAnimationFrame(() => {
+      timerNameInput.focus();
+    });
+  }
+
+  function closeTimerDialog() {
+    timerDialogForm.reset();
+    timerDialogOverlay.hidden = true;
   }
 
   function openIncubationDialog() {
@@ -309,6 +449,13 @@ export function initHomeDashboard({
     closeIncubationDialog();
   }
 
+  function onTimerDialogOverlayClick(event) {
+    if (event.target !== timerDialogOverlay) {
+      return;
+    }
+    closeTimerDialog();
+  }
+
   function onDashboardKeydown(event) {
     if (event.key !== 'Escape') {
       return;
@@ -316,6 +463,11 @@ export function initHomeDashboard({
     if (!passageDialogOverlay.hidden) {
       event.preventDefault();
       closePassageDialog();
+      return;
+    }
+    if (!timerDialogOverlay.hidden) {
+      event.preventDefault();
+      closeTimerDialog();
       return;
     }
     if (incubationDialogOverlay.hidden) {
@@ -380,17 +532,93 @@ export function initHomeDashboard({
       return;
     }
     const existing = state.settings.dashboard.incubationLocations
-      .some((item) => normalizeIncubationLocationValue(item).toLowerCase() === value.toLowerCase());
+      .some((item) => normalizeIncubationLocationValue(item?.name).toLowerCase() === value.toLowerCase());
     if (existing) {
       incubationLocationInput.focus();
       incubationLocationInput.select();
       return;
     }
-    state.settings.dashboard.incubationLocations.push(value);
+    state.settings.dashboard.incubationLocations.push({
+      name: value,
+      reminderDate: ''
+    });
     persist();
-    renderIncubationLocationRows();
+    render();
     incubationLocationForm.reset();
     incubationLocationInput.focus();
+  }
+
+  function onTimerDialogSubmit(event) {
+    event.preventDefault();
+    ensureDashboardState();
+    if (!timerDialogForm.reportValidity()) {
+      return;
+    }
+    const name = normalizeIncubationLocationValue(timerNameInput.value);
+    const durationMinutes = Math.round(Number(timerMinutesInput.value));
+    if (!name || !Number.isFinite(durationMinutes) || durationMinutes <= 0) {
+      return;
+    }
+    const duplicate = state.settings.dashboard.timerTemplates.some((template) => (
+      normalizeIncubationLocationValue(template?.name).toLowerCase() === name.toLowerCase()
+      && Math.round(Number(template?.durationMinutes)) === durationMinutes
+    ));
+    if (duplicate) {
+      timerNameInput.focus();
+      timerNameInput.select();
+      return;
+    }
+    state.settings.dashboard.timerTemplates.push({
+      name,
+      durationMinutes
+    });
+    persist();
+    renderTimerTemplateRows();
+    timerDialogForm.reset();
+    timerNameInput.focus();
+  }
+
+  function startTimerFromTemplate(template) {
+    const normalized = normalizeTimerTemplateRecord(template);
+    if (!normalized) {
+      return;
+    }
+    const now = Date.now();
+    state.settings.dashboard.activeTimers.push({
+      name: normalized.name,
+      durationMinutes: normalized.durationMinutes,
+      startedAtMs: now,
+      endAtMs: now + (normalized.durationMinutes * 60 * 1000)
+    });
+    persist();
+    closeTimerDialog();
+    render();
+  }
+
+  function onTimerTemplateListClick(event) {
+    const button = event.target.closest('[data-dashboard-start-timer-template]');
+    if (!button) {
+      return;
+    }
+    const index = Number(button.dataset.dashboardStartTimerTemplate);
+    if (!Number.isInteger(index) || index < 0) {
+      return;
+    }
+    startTimerFromTemplate(state.settings.dashboard.timerTemplates[index]);
+  }
+
+  function onTimerActiveListClick(event) {
+    const button = event.target.closest('[data-dashboard-remove-active-timer]');
+    if (!button) {
+      return;
+    }
+    const index = Number(button.dataset.dashboardRemoveActiveTimer);
+    if (!Number.isInteger(index) || index < 0) {
+      return;
+    }
+    state.settings.dashboard.activeTimers.splice(index, 1);
+    persist();
+    render();
   }
 
   function onIncubationLocationListClick(event) {
@@ -404,7 +632,29 @@ export function initHomeDashboard({
     }
     state.settings.dashboard.incubationLocations.splice(index, 1);
     persist();
-    renderIncubationLocationRows();
+    render();
+  }
+
+  function onIncubationListClick(event) {
+    const button = event.target.closest('[data-dashboard-incubation-remind]');
+    if (!button) {
+      return;
+    }
+    const index = Number(button.dataset.dashboardIncubationRemind);
+    if (!Number.isInteger(index) || index < 0) {
+      return;
+    }
+    const location = normalizeIncubationLocationRecord(state.settings.dashboard.incubationLocations[index]);
+    if (!location) {
+      return;
+    }
+    const tomorrow = new Date();
+    tomorrow.setHours(0, 0, 0, 0);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    location.reminderDate = formatDateLocal(tomorrow);
+    state.settings.dashboard.incubationLocations[index] = location;
+    persist();
+    render();
   }
 
   function sampleLabel(sample) {
@@ -935,29 +1185,84 @@ export function initHomeDashboard({
   }
 
   function collectIncubationLocations() {
-    return [...(Array.isArray(state.settings?.dashboard?.incubationLocations)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return (Array.isArray(state.settings?.dashboard?.incubationLocations)
       ? state.settings.dashboard.incubationLocations
-      : [])];
+      : [])
+      .map((location, index) => {
+        const normalized = normalizeIncubationLocationRecord(location);
+        if (!normalized) {
+          return null;
+        }
+        const reminder = parseLocalDate(normalized.reminderDate);
+        const dayDelta = reminder
+          ? Math.round((reminder.getTime() - today.getTime()) / 86400000)
+          : null;
+        let detail = 'No reminder set.';
+        if (dayDelta === 0) {
+          detail = 'Reminder today.';
+        } else if (dayDelta === 1) {
+          detail = 'Reminder tomorrow.';
+        } else if (dayDelta !== null && dayDelta > 1) {
+          detail = `Reminder in ${dayDelta} day(s).`;
+        } else if (dayDelta !== null && dayDelta < 0) {
+          detail = `Reminder overdue by ${Math.abs(dayDelta)} day(s).`;
+        }
+        return {
+          sourceIndex: index,
+          name: normalized.name,
+          reminderDate: normalized.reminderDate,
+          dayDelta,
+          isDue: dayDelta !== null && dayDelta <= 0,
+          detail
+        };
+      })
+      .filter(Boolean)
+      .sort((left, right) => {
+        const leftRank = left.dayDelta === null ? 2 : left.dayDelta <= 0 ? 0 : 1;
+        const rightRank = right.dayDelta === null ? 2 : right.dayDelta <= 0 ? 0 : 1;
+        if (leftRank !== rightRank) {
+          return leftRank - rightRank;
+        }
+        if (left.dayDelta !== right.dayDelta) {
+          return (left.dayDelta ?? Number.MAX_SAFE_INTEGER) - (right.dayDelta ?? Number.MAX_SAFE_INTEGER);
+        }
+        return left.name.localeCompare(right.name);
+      });
   }
 
   function renderIncubationWidget(locations) {
+    const dueCount = locations.filter((location) => location.isDue).length;
+    const scheduledCount = locations.filter((location) => location.dayDelta !== null && location.dayDelta > 0).length;
     incubationSummary.textContent = locations.length
-      ? ''
+      ? `Due today: ${dueCount} | Scheduled: ${scheduledCount}`
       : 'No incubation locations yet.';
     if (!locations.length) {
       incubationList.innerHTML = '<p class="small-note">Add an incubation location to track overnight setups here.</p>';
       return;
     }
     incubationList.innerHTML = locations.map((location) => `
-      <article class="dashboard-item">
-        <div>
-          <strong>${safeText(location)}</strong>
+      <article class="dashboard-incubation-row${location.isDue ? ' is-due' : ''}">
+        <div class="dashboard-incubation-copy">
+          <strong class="dashboard-incubation-title">${safeText(location.name)}</strong>
+          <p class="dashboard-incubation-detail">${safeText(location.detail)}</p>
         </div>
+        <button
+          type="button"
+          class="dashboard-incubation-action"
+          data-dashboard-incubation-remind="${location.sourceIndex}"
+          aria-label="Set reminder for tomorrow for ${safeText(location.name)}"
+        >
+          <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
+            <path d="M12 5.5v13M5.5 12h13" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"></path>
+          </svg>
+        </button>
       </article>
     `).join('');
   }
 
-  function buildTodayItems({ passageRows, workflowContext }) {
+  function buildTodayItems({ passageRows, workflowContext, incubationRows }) {
     const items = [];
     const workflow = workflowContext.workflow;
     const workflowOpenCount = workflow
@@ -992,12 +1297,22 @@ export function initHomeDashboard({
       });
     });
 
+    const dueIncubationRows = incubationRows.filter((row) => row.isDue);
+    dueIncubationRows.slice(0, Math.max(0, 4 - items.length)).forEach((row) => {
+      items.push({
+        title: row.name,
+        detail: 'Overnight incubation reminder',
+        action: '',
+        actionLabel: ''
+      });
+    });
+
     return {
       items: items.slice(0, 4),
       counts: {
         overdue: passageRows.overdue.length,
         workflowOpen: workflowOpenCount,
-        incubation: 0
+        incubation: dueIncubationRows.length
       }
     };
   }
@@ -1020,11 +1335,15 @@ export function initHomeDashboard({
           <strong>${safeText(item.title)}</strong>
           <p class="small-note">${safeText(item.detail)}</p>
         </div>
-        <button
-          type="button"
-          class="ghost-btn"
-          data-dashboard-action="${safeText(item.action)}"
-        >${safeText(item.actionLabel)}</button>
+        ${item.action
+          ? `
+            <button
+              type="button"
+              class="ghost-btn"
+              data-dashboard-action="${safeText(item.action)}"
+            >${safeText(item.actionLabel)}</button>
+          `
+          : ''}
       </article>
     `).join('');
   }
@@ -1060,17 +1379,6 @@ export function initHomeDashboard({
     return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
   }
 
-  function formatTimerSummary(ms) {
-    const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-    if (hours > 0) {
-      return `${hours}h ${minutes}m left`;
-    }
-    return `${minutes}m ${String(seconds).padStart(2, '0')}s left`;
-  }
-
   function renderLocalClock() {
     const now = new Date();
     localTimeDisplay.textContent = now.toLocaleTimeString([], {
@@ -1083,6 +1391,14 @@ export function initHomeDashboard({
       weekday: 'long',
       month: 'short',
       day: 'numeric'
+    });
+  }
+
+  function formatTimerEndTime(timestampMs) {
+    return new Date(timestampMs).toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
     });
   }
 
@@ -1101,156 +1417,93 @@ export function initHomeDashboard({
     timerTickHandle = window.setInterval(onTimerTick, 250);
   }
 
-  function syncRemainingFromNow() {
-    if (!timerState.running) {
-      return;
-    }
-    timerState.remainingMs = Math.max(0, timerState.endAtMs - Date.now());
-  }
-
-  function setTimerDuration(minutes) {
-    const rounded = Math.round(Number(minutes));
-    if (!Number.isFinite(rounded) || rounded <= 0) {
-      timerHint = 'Enter a valid minute value.';
-      renderTimerWidget();
-      return;
-    }
-    timerState.savedDurations = [
-      rounded,
-      ...timerState.savedDurations.filter((value) => value !== rounded)
-    ].slice(0, 4);
-    const durationMs = rounded * 60 * 1000;
-    timerState.durationMs = durationMs;
-    timerState.remainingMs = durationMs;
-    timerState.running = false;
-    timerState.endAtMs = 0;
-    timerState.alert = false;
-    timerHint = '';
-    stopTimerTick();
-    timerCustomMinutesInput.value = String(rounded);
-    renderTimerWidget();
-  }
-
-  function renderSavedTimers() {
-    const currentMinutes = Math.max(1, Math.round(timerState.durationMs / 60000));
-    const rows = [
-      {
-        minutes: currentMinutes,
-        title: timerState.running
-          ? 'Current countdown'
-          : (timerState.remainingMs < timerState.durationMs ? 'Paused timer' : 'Loaded timer'),
-        value: timerState.running
-          ? formatTimerSummary(timerState.remainingMs)
-          : `${currentMinutes}m ready`,
-        active: true
-      },
-      ...timerState.savedDurations
-        .filter((minutes) => minutes !== currentMinutes)
-        .map((minutes) => ({
-          minutes,
-          title: `${minutes} minute timer`,
-          value: 'Tap to load',
-          active: false
-        }))
-    ];
-
-    timerSavedList.innerHTML = rows.map((row) => `
-      <button
-        type="button"
-        class="dashboard-timer-row${row.active ? ' is-active' : ''}"
-        data-dashboard-saved-minutes="${row.minutes}"
-      >
-        <span class="dashboard-timer-row-title">${safeText(row.title)}</span>
-        <span class="dashboard-timer-row-value">${safeText(row.value)}</span>
-      </button>
-    `).join('');
+  function collectActiveTimers() {
+    const now = Date.now();
+    return (Array.isArray(state.settings?.dashboard?.activeTimers)
+      ? state.settings.dashboard.activeTimers
+      : [])
+      .map((timer, index) => {
+        const normalized = normalizeActiveTimerRecord(timer);
+        if (!normalized) {
+          return null;
+        }
+        const remainingMs = Math.max(0, normalized.endAtMs - now);
+        const isAlert = remainingMs <= 0;
+        return {
+          sourceIndex: index,
+          name: normalized.name,
+          durationMinutes: normalized.durationMinutes,
+          remainingMs,
+          isAlert,
+          detail: isAlert
+            ? `${formatTimerTemplateDuration(normalized.durationMinutes)} timer complete`
+            : `${formatTimerTemplateDuration(normalized.durationMinutes)} timer | ends ${formatTimerEndTime(normalized.endAtMs)}`,
+          endAtMs: normalized.endAtMs
+        };
+      })
+      .filter(Boolean)
+      .sort((left, right) => {
+        if (left.isAlert !== right.isAlert) {
+          return left.isAlert ? -1 : 1;
+        }
+        if (left.endAtMs !== right.endAtMs) {
+          return left.endAtMs - right.endAtMs;
+        }
+        return left.name.localeCompare(right.name);
+      });
   }
 
   function renderTimerWidget() {
-    syncRemainingFromNow();
-    timerDisplay.textContent = formatTimer(timerState.remainingMs);
-    timerDisplay.classList.toggle('is-alert', timerState.alert);
-
-    if (timerHint) {
-      timerStatus.textContent = timerHint;
-    } else if (timerState.alert) {
-      timerStatus.textContent = "Time's up.";
-    } else if (timerState.running) {
-      timerStatus.textContent = 'Running';
-    } else if (timerState.remainingMs < timerState.durationMs) {
-      timerStatus.textContent = 'Paused';
+    const activeTimers = collectActiveTimers();
+    const activeCount = activeTimers.filter((timer) => !timer.isAlert).length;
+    const finishedCount = activeTimers.length - activeCount;
+    if (finishedCount && activeCount) {
+      timerStatus.textContent = `${finishedCount} finished | ${activeCount} running`;
+    } else if (finishedCount) {
+      timerStatus.textContent = `${finishedCount} finished`;
+    } else if (activeCount) {
+      timerStatus.textContent = `${activeCount} active timer(s)`;
     } else {
       timerStatus.textContent = '';
     }
 
-    timerStartBtn.disabled = timerState.running;
-    timerPauseBtn.disabled = !timerState.running;
-    renderSavedTimers();
+    if (!activeTimers.length) {
+      timerActiveList.innerHTML = '<p class="small-note">No countdown timers running.</p>';
+      stopTimerTick();
+      return;
+    }
+
+    timerActiveList.innerHTML = activeTimers.map((timer) => `
+      <article class="dashboard-timer-active-row${timer.isAlert ? ' is-alert' : ''}">
+        <div class="dashboard-timer-active-copy">
+          <strong class="dashboard-timer-active-title">${safeText(timer.name)}</strong>
+          <p class="dashboard-timer-active-detail">${safeText(timer.detail)}</p>
+        </div>
+        <div class="dashboard-timer-active-side">
+          <span class="dashboard-timer-active-value">${safeText(formatTimer(timer.remainingMs))}</span>
+          <button
+            type="button"
+            class="dashboard-timer-remove-btn"
+            data-dashboard-remove-active-timer="${timer.sourceIndex}"
+            aria-label="Remove timer ${safeText(timer.name)}"
+          >
+            <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
+              <path d="M7 7l10 10M17 7 7 17" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path>
+            </svg>
+          </button>
+        </div>
+      </article>
+    `).join('');
+
+    if (activeCount) {
+      startTimerTick();
+      return;
+    }
+    stopTimerTick();
   }
 
   function onTimerTick() {
-    syncRemainingFromNow();
-    if (timerState.remainingMs > 0) {
-      renderTimerWidget();
-      return;
-    }
-    timerState.remainingMs = 0;
-    timerState.running = false;
-    timerState.endAtMs = 0;
-    timerState.alert = true;
-    stopTimerTick();
-    timerHint = '';
     renderTimerWidget();
-  }
-
-  function onTimerSet() {
-    setTimerDuration(timerCustomMinutesInput.value);
-  }
-
-  function onTimerStart() {
-    if (timerState.running) {
-      return;
-    }
-    if (timerState.remainingMs <= 0 || timerState.alert) {
-      timerState.remainingMs = timerState.durationMs;
-    }
-    timerState.running = true;
-    timerState.alert = false;
-    timerHint = '';
-    timerState.endAtMs = Date.now() + timerState.remainingMs;
-    startTimerTick();
-    renderTimerWidget();
-  }
-
-  function onTimerPause() {
-    if (!timerState.running) {
-      return;
-    }
-    syncRemainingFromNow();
-    timerState.running = false;
-    timerState.endAtMs = 0;
-    stopTimerTick();
-    timerHint = '';
-    renderTimerWidget();
-  }
-
-  function onTimerReset() {
-    timerState.running = false;
-    timerState.endAtMs = 0;
-    timerState.remainingMs = timerState.durationMs;
-    timerState.alert = false;
-    timerHint = '';
-    stopTimerTick();
-    renderTimerWidget();
-  }
-
-  function onSavedTimerClick(event) {
-    const button = event.target.closest('[data-dashboard-saved-minutes]');
-    if (!button) {
-      return;
-    }
-    const minutes = Number(button.dataset.dashboardSavedMinutes);
-    setTimerDuration(minutes);
   }
 
   function onPassageListClick(event) {
@@ -1400,7 +1653,8 @@ export function initHomeDashboard({
     const incubationLocations = collectIncubationLocations();
     const todayData = buildTodayItems({
       passageRows,
-      workflowContext
+      workflowContext,
+      incubationRows: incubationLocations
     });
 
     changed = workflowContext.changed || changed;
@@ -1417,6 +1671,9 @@ export function initHomeDashboard({
     }
     renderQuickLogWidget();
     renderTimerWidget();
+    if (!timerDialogOverlay.hidden) {
+      renderTimerTemplateRows();
+    }
   }
 
   return {

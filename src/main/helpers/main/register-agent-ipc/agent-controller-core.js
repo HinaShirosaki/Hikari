@@ -33,6 +33,20 @@ function createAgentControllerCore({
     getDefaultDataFilePath,
     agentChatLogRuntime
   });
+
+  function normalizeAttachments(rawAttachments = []) {
+    return asArray(rawAttachments).map((attachment) => {
+      const source = attachment && typeof attachment === 'object' ? attachment : {};
+      return {
+        id: cleanText(source.id, 120),
+        name: cleanText(source.name, 240),
+        mimeType: cleanText(source.mimeType || source.mime_type, 160),
+        kind: cleanText(source.kind, 40),
+        size: Number.isFinite(Number(source.size)) ? Number(source.size) : 0,
+        dataUrl: cleanText(source.dataUrl || source.data_url, 400000)
+      };
+    }).filter((attachment) => attachment.name && attachment.dataUrl);
+  }
   const intentDispatcher = createAgentIntentDispatcher({
     deps,
     cleanText,
@@ -289,6 +303,7 @@ function createAgentControllerCore({
     }
     const projectId = cleanText(payload?.projectId, 80);
     const projectName = cleanText(payload?.projectName, 180);
+    const attachments = normalizeAttachments(payload?.attachments);
     const promptConversation = hasLatestUserInConversation
       ? conversation
       : [...conversation, { role: 'user', text: effectiveMessage }];
@@ -360,6 +375,7 @@ function createAgentControllerCore({
         model,
         message: effectiveMessage,
         promptConversation,
+        attachments,
         snapshot,
         executionFlags,
         deepResearchEnabled,

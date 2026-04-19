@@ -34,6 +34,7 @@ export function getSequenceViewerElements(rootDocument) {
     fileChooseBtn: rootDocument?.getElementById?.('sequence-viewer-file-choose'),
     fileNameLabel: rootDocument?.getElementById?.('sequence-viewer-file-name'),
     loadBtn: rootDocument?.getElementById?.('sequence-viewer-load-btn'),
+    annotateBtn: rootDocument?.getElementById?.('sequence-viewer-annotate-btn'),
     recognizeBackboneBtn: rootDocument?.getElementById?.('sequence-viewer-recognize-backbone-btn'),
     orfToggle: rootDocument?.getElementById?.('sequence-viewer-orf-toggle'),
     orfStopTagToggle: rootDocument?.getElementById?.('sequence-viewer-orf-stop-tag-toggle'),

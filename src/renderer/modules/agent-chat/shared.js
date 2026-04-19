@@ -126,7 +126,12 @@ export function toConversation(messages) {
     .slice(-12)
     .map((message) => ({
       role: message?.role === 'assistant' ? 'assistant' : 'user',
-      text: trimText(message?.text, 4000)
+      text: trimText([
+        trimText(message?.text, 3600),
+        asArray(message?.attachments).length
+          ? `Attachments: ${asArray(message.attachments).map((attachment) => trimText(attachment?.name, 120)).filter(Boolean).join(', ')}`
+          : ''
+      ].filter(Boolean).join('\n\n'), 4000)
     }))
     .filter((item) => item.text);
 }

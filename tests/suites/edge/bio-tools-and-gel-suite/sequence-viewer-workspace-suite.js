@@ -285,6 +285,54 @@ ORIGIN
   assert.equal(transitions.length, 1);
 });
 
+test('[EDGE] sequence-viewer library rows render only sequence names in the left rail', async () => {
+  const ids = [
+    'sequence-viewer-home-workspace',
+    'sequence-viewer-detail-workspace',
+    'sequence-viewer-home-status',
+    'sequence-viewer-library-filter-saved',
+    'sequence-viewer-library-filter-temporary',
+    'sequence-viewer-library-list',
+    'sequence-viewer-preview-host'
+  ];
+  const entry = {
+    id: 'entry_1',
+    name: 'pcDNA3.1-GFP_1-10_',
+    status: 'saved',
+    sourceFormat: 'GENBANK',
+    topology: 'circular',
+    sequenceLength: 6076,
+    featureCount: 20,
+    updatedAt: '2026-04-17T14:20:00.000Z'
+  };
+  const document = createMockDocument(ids);
+  const window = {
+    enanaApi: {
+      sequenceLibraryList: async () => ({ ok: true, entries: [entry] })
+    }
+  };
+  const localStorage = {
+    getItem(key) {
+      if (key === 'enana_state_v1') {
+        return JSON.stringify({ settings: { storagePath: '/tmp/sequence-viewer-tests' } });
+      }
+      return null;
+    }
+  };
+  const moduleWithDom = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    { document, window, localStorage }
+  );
+  moduleWithDom.initSequenceViewer();
+  await flushAsync();
+
+  const libraryList = document.getElementById('sequence-viewer-library-list');
+  assert.match(libraryList.innerHTML, /sequence-viewer-library-item-name/);
+  assert.match(libraryList.innerHTML, /pcDNA3\.1-GFP_1-10_/);
+  assert.doesNotMatch(libraryList.innerHTML, /sequence-viewer-library-item-meta/);
+  assert.doesNotMatch(libraryList.innerHTML, /6076|6,076|bp|features|updated/i);
+});
+
 test('[EDGE] sequence-viewer opens detail workspace when a library row is double-activated by quick repeated click', async () => {
   const ids = [
     'sequence-viewer-home-workspace',
@@ -1012,6 +1060,111 @@ test('[EDGE] sequence-viewer backbone recognition adds backbone and insert featu
   assert.match(featureRailHost.innerHTML, /Backbone \(HostVector\)/);
   assert.match(featureRailHost.innerHTML, /Insert \(HostVector\)/);
   assert.match(featureDetail.innerHTML, /Insert \(HostVector\)/);
+  assert.match(status.textContent, /Save the record to persist changes/);
+});
+
+test('[EDGE] sequence-viewer annotate button adds SQL DNA and CDS features to the current record', async () => {
+  const ids = [
+    'sequence-viewer-annotate-btn',
+    'sequence-viewer-save-btn',
+    'sequence-viewer-mode-paste',
+    'sequence-viewer-mode-file',
+    'sequence-viewer-paste-panel',
+    'sequence-viewer-file-panel',
+    'sequence-viewer-textarea',
+    'sequence-viewer-file-input',
+    'sequence-viewer-file-choose',
+    'sequence-viewer-file-name',
+    'sequence-viewer-load-btn',
+    'sequence-viewer-clear-btn',
+    'sequence-viewer-status',
+    'sequence-viewer-messages',
+    'sequence-viewer-record-select',
+    'sequence-viewer-stat-format',
+    'sequence-viewer-stat-length',
+    'sequence-viewer-stat-topology',
+    'sequence-viewer-stat-gc',
+    'sequence-viewer-stat-ambiguous',
+    'sequence-viewer-stat-quality',
+    'sequence-viewer-stat-features',
+    'sequence-viewer-stat-restriction-sites',
+    'sequence-viewer-feature-rail-host',
+    'sequence-viewer-feature-detail',
+    'sequence-viewer-sequence-host'
+  ];
+  const annotateCalls = [];
+  const document = createMockDocument(ids);
+  const window = {
+    enanaApi: {
+      sequenceLibraryAnnotate: async (payload) => {
+        annotateCalls.push(payload);
+        return {
+          ok: true,
+          dnaMatches: [{
+            featureId: 'feature_promoter',
+            name: 'StrongPromoter',
+            type: 'promoter',
+            strand: 1,
+            sequenceLength: 12,
+            hosts: [{ hostVectorId: 'host_1', hostVectorName: 'VectorHost', hostVectorStatus: 'saved' }],
+            segments: [{ start: 3, end: 15 }]
+          }],
+          proteinMatches: [{
+            name: 'ReporterCds',
+            type: 'cds',
+            strand: 1,
+            translation: 'MKG',
+            proteinSequence: 'MKG',
+            hosts: [{ hostVectorId: 'host_1', hostVectorName: 'VectorHost', hostVectorStatus: 'saved' }],
+            orfFrame: '+1',
+            orfLengthNt: 12,
+            orfLengthAa: 3,
+            startCodon: 'ATG',
+            stopCodon: 'TAA',
+            segments: [{ start: 15, end: 27 }]
+          }]
+        };
+      }
+    }
+  };
+  const localStorage = {
+    getItem(key) {
+      if (key === 'enana_state_v1') {
+        return JSON.stringify({ settings: { storagePath: '/tmp/sequence-viewer-tests' } });
+      }
+      return null;
+    }
+  };
+  const moduleWithDom = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    { document, window, localStorage }
+  );
+  const viewer = moduleWithDom.initSequenceViewer();
+  viewer.loadFromExternal({
+    name: 'annotate_me',
+    sequence: 'GGGTTGACCATGAAAGGGTAA',
+    source: 'external',
+    features: []
+  });
+
+  const annotateBtn = document.getElementById('sequence-viewer-annotate-btn');
+  const featureRailHost = document.getElementById('sequence-viewer-feature-rail-host');
+  const featureDetail = document.getElementById('sequence-viewer-feature-detail');
+  const status = document.getElementById('sequence-viewer-status');
+  const statFeatures = document.getElementById('sequence-viewer-stat-features');
+  const initialFeatureCount = Number(statFeatures.textContent || 0);
+
+  trigger(annotateBtn, 'click');
+  await flushAsync();
+  await flushAsync();
+
+  assert.equal(annotateCalls.length, 1);
+  assert.equal(annotateCalls[0].sequence, 'GGGTTGACCATGAAAGGGTAA');
+  assert.equal(annotateCalls[0].topology, 'linear');
+  assert.equal(Number(statFeatures.textContent || 0), initialFeatureCount + 2);
+  assert.match(featureRailHost.innerHTML, /StrongPromoter/);
+  assert.match(featureRailHost.innerHTML, /ReporterCds/);
+  assert.match(featureDetail.innerHTML, /ReporterCds/);
   assert.match(status.textContent, /Save the record to persist changes/);
 });
 

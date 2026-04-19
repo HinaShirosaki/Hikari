@@ -363,10 +363,13 @@ module.exports = function registerLoopRuntimeEdgeAndProtocolSuite(context = {}) 
 
     test('protocol generation runtime emits import-ready protocol records with placeholders and troubleshooting', async () => {
       let createIdCounter = 0;
+      const requestOptions = [];
       const runtime = agentProtocolGeneration.createProtocolGenerationRuntime({
         now: () => '2026-03-22T12:00:00.000Z',
         createId: () => `generated-${++createIdCounter}`,
-        requestStructuredJsonPayload: async () => ({
+        requestStructuredJsonPayload: async (options = {}) => {
+          requestOptions.push(options);
+          return {
           ok: true,
           payload: {
             protocol: {
@@ -388,7 +391,8 @@ module.exports = function registerLoopRuntimeEdgeAndProtocolSuite(context = {}) 
             },
             result_summary: 'Generated a purification protocol.'
           }
-        })
+          };
+        }
       });
 
       const result = await runtime.generateProtocol({
@@ -409,6 +413,22 @@ module.exports = function registerLoopRuntimeEdgeAndProtocolSuite(context = {}) 
       assert.equal(result.protocol.steps[1].placeholders[0].name, 'time');
       assert.match(String(result.protocol.troubleshooting || ''), /Low yield/);
       assert.equal(result.summary, 'Generated a purification protocol.');
+      assert.equal(requestOptions.length, 1);
+      assert.equal(requestOptions[0].enableWebSearch, true);
+    });
+
+    test('protocol generation prompt preserves concrete operational values and keeps placeholders rare', () => {
+      const runtime = agentProtocolGeneration.createProtocolGenerationRuntime();
+      const prompt = runtime.buildPrompt({
+        title: 'HEK293 Transfection',
+        method_text: 'Seed HEK293 cells and transfect at 37 C with shaking at 300 rpm for 45 minutes.',
+        message: 'Generate a transfection protocol.'
+      });
+
+      assert.match(runtime.PROTOCOL_GENERATION_SYSTEM_PROMPT, /use web search to confirm broadly documented method details/i);
+      assert.match(prompt, /Placeholders should be rare/i);
+      assert.match(prompt, /time, temperature, rpm, speed, centrifugation force, incubation length, volumes, and concentrations/i);
+      assert.match(prompt, /do not replace stated values with placeholders/i);
     });
   }
 };

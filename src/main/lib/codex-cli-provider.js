@@ -1293,6 +1293,7 @@ async function requestCodexCliText({
   pdfDataUrl = '',
   imageDataUrl = '',
   imageUrl = '',
+  attachments = [],
   endpoint = '',
   apiKey = ''
 }) {
@@ -1316,25 +1317,48 @@ async function requestCodexCliText({
 
   const resolvedModel = resolveCodexCliModel(model);
   const resolvedReasoningEffort = resolveCodexCliReasoningEffort(reasoningEffort, resolvedModel);
+  const normalizedAttachments = Array.isArray(attachments)
+    ? attachments.map((attachment) => {
+      const source = attachment && typeof attachment === 'object' ? attachment : {};
+      return {
+        kind: cleanText(source.kind, 40),
+        name: sanitizeFileName(source.name || 'attachment'),
+        dataUrl: cleanText(source.dataUrl || source.data_url, 400000)
+      };
+    }).filter((attachment) => attachment.dataUrl)
+    : [];
   const normalizedImageData = cleanText(imageDataUrl || imageUrl, 400000);
+  const effectiveAttachments = normalizedAttachments.length
+    ? normalizedAttachments
+    : [
+      ...(pdfDataUrl ? [{
+        kind: 'file',
+        name: sanitizeFileName(fileName || 'paper.pdf'),
+        dataUrl: String(pdfDataUrl)
+      }] : []),
+      ...(normalizedImageData ? [{
+        kind: 'image',
+        name: 'image',
+        dataUrl: normalizedImageData
+      }] : [])
+    ];
   const requestInput = [
     {
       role: 'user',
       content: [
         { type: 'input_text', text: cleanPrompt },
-        ...(pdfDataUrl
-          ? [{
-            type: 'input_file',
-            filename: sanitizeFileName(fileName || 'paper.pdf'),
-            file_data: String(pdfDataUrl)
-          }]
-          : []),
-        ...(normalizedImageData
-          ? [{
-            type: 'input_image',
-            image_url: normalizedImageData
-          }]
-          : [])
+        ...effectiveAttachments.map((attachment) => (
+          attachment.kind === 'image'
+            ? {
+              type: 'input_image',
+              image_url: attachment.dataUrl
+            }
+            : {
+              type: 'input_file',
+              filename: attachment.name,
+              file_data: attachment.dataUrl
+            }
+        ))
       ]
     }
   ];

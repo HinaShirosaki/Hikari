@@ -2099,6 +2099,7 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
         stage: 'intent_parser',
         systemPrompt: 'Return valid JSON only.',
         userPrompt: 'User asks a science question.',
+        enableWebSearch: true,
         schema: {
           type: 'object',
           additionalProperties: true
@@ -2110,8 +2111,67 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
       assert.equal(calls.length, 1);
       assert.equal(calls[0].endpoint, 'https://chatgpt.com/backend-api/codex/responses');
       assert.equal(calls[0].apiKey, 'oauth-access-token');
+      assert.equal(calls[0].enableWebSearch, true);
       assert.match(calls[0].prompt, /Return valid JSON only\./);
       assert.match(calls[0].prompt, /User asks a science question\./);
+    });
+
+    test('runtime helpers can carry web search through openai structured requests', async () => {
+      const { createAgentLlmProviderBridge } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'shared',
+        'agent-llm-provider-bridge.js'
+      ));
+      const { createAgentLlmRuntimeHelpers } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'shared',
+        'agent-llm-utils.js'
+      ));
+
+      const calls = [];
+      const bridge = createAgentLlmProviderBridge({
+        LLM_PROVIDERS: {
+          OPENAI: 'openai'
+        },
+        requestOpenAiResponsesWithBackoff: async ({ body } = {}) => {
+          calls.push(body);
+          return {
+            output_text: '{"protocol":{"name":"Test","purpose":"Test","materials":[],"steps":["Do it."],"troubleshooting":""},"result_summary":"done"}'
+          };
+        }
+      });
+      const helpers = createAgentLlmRuntimeHelpers({
+        llmProviderBridge: bridge
+      });
+
+      const result = await helpers.requestStructuredJsonPayload({
+        provider: 'openai',
+        endpoint: 'https://api.openai.com/v1/responses',
+        apiKey: 'test-key',
+        model: 'gpt-5',
+        stage: 'protocol_generation',
+        systemPrompt: 'Return valid JSON only.',
+        userPrompt: 'Generate a protocol.',
+        enableWebSearch: true,
+        schema: {
+          type: 'object',
+          additionalProperties: true
+        }
+      });
+
+      assert.equal(result.ok, true);
+      assert.equal(calls.length, 1);
+      assert.equal(calls[0].tools[0].type, 'web_search');
+      assert.equal(calls[0].tool_choice, 'auto');
+      assert.deepEqual(calls[0].include, ['web_search_call.action.sources']);
     });
 
     test('web search runtime exposes provider-backed web search to agent tools', async () => {

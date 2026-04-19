@@ -391,6 +391,7 @@ test('protocol-management shows JSON import on create and hides it on edit', asy
     'protocol-materials',
     'protocol-steps',
     'protocol-troubleshooting',
+    'protocol-generate-btn',
     'add-placeholder-btn',
     'placeholder-name',
     'protocol-share-status',
@@ -445,6 +446,7 @@ test('protocol-management shows JSON import on create and hides it on edit', asy
 
   trigger(document.getElementById('create-protocol-btn'), 'click');
   assert.equal(document.getElementById('protocol-json-import-panel').hidden, false);
+  assert.equal(document.getElementById('protocol-generate-btn').hidden, false);
 
   document.getElementById('protocol-json-import-input').value = '{"name":"Imported From Create","steps":["Add buffer"]}';
   trigger(document.getElementById('import-protocol-json-btn'), 'click');
@@ -459,6 +461,204 @@ test('protocol-management shows JSON import on create and hides it on edit', asy
   trigger(editBtn, 'click');
 
   assert.equal(document.getElementById('protocol-json-import-panel').hidden, true);
+  assert.equal(document.getElementById('protocol-generate-btn').hidden, true);
+});
+
+test('protocol-management generates a protocol from the create editor overlay', async () => {
+  const document = createMockDocument([
+    'protocol-list-panel',
+    'protocol-editor-panel',
+    'protocol-view-panel',
+    'create-protocol-btn',
+    'protocol-editor-back-btn',
+    'protocol-cancel-btn',
+    'protocol-view-back-btn',
+    'protocol-editor-heading',
+    'protocol-view-title',
+    'protocol-view-content',
+    'protocol-form',
+    'protocol-name',
+    'protocol-purpose',
+    'protocol-materials',
+    'protocol-steps',
+    'protocol-troubleshooting',
+    'protocol-generate-btn',
+    'protocol-generate-input-overlay',
+    'protocol-generate-prompt-input',
+    'protocol-generate-attachment-input',
+    'protocol-generate-attachment-list',
+    'protocol-generate-input-status',
+    'protocol-generate-attach-btn',
+    'protocol-generate-send-btn',
+    'protocol-generate-close-btn',
+    'protocol-generate-result-overlay',
+    'protocol-generate-result-close-btn',
+    'protocol-generate-result-preview',
+    'protocol-generate-status',
+    'protocol-generate-apply-btn',
+    'protocol-generate-back-btn',
+    'protocol-polish-btn',
+    'protocol-polish-overlay',
+    'protocol-polish-close-btn',
+    'protocol-polish-keep-editing-btn',
+    'protocol-polish-apply-btn',
+    'protocol-polish-original-preview',
+    'protocol-polish-result-preview',
+    'protocol-polish-status',
+    'add-placeholder-btn',
+    'placeholder-name',
+    'protocol-share-status',
+    'protocol-share-link-panel',
+    'protocol-share-link-output',
+    'protocol-list',
+    'protocol-sort-field-btn',
+    'protocol-sort-order-btn'
+  ]);
+
+  const protocolForm = document.getElementById('protocol-form');
+  const protocolName = document.getElementById('protocol-name');
+  const protocolPurpose = document.getElementById('protocol-purpose');
+  const protocolMaterials = document.getElementById('protocol-materials');
+  const protocolSteps = document.getElementById('protocol-steps');
+  const protocolTroubleshooting = document.getElementById('protocol-troubleshooting');
+  wireFormReset(protocolForm, [
+    protocolName,
+    protocolPurpose,
+    protocolMaterials,
+    protocolSteps,
+    protocolTroubleshooting
+  ]);
+
+  const state = {
+    protocols: [],
+    notebookEntries: [],
+    workflows: [],
+    workflowTemplates: [],
+    assays: [],
+    gelAnalyses: [],
+    messages: [],
+    members: [],
+    settings: {
+      personalInfo: { enanaEmail: '' },
+      llm: {
+        provider: 'openai',
+        model: 'gpt-4.1',
+        reasoningEffort: '',
+        apiEndpoint: 'https://api.openai.com/v1/responses',
+        apiKey: 'test-key'
+      }
+    }
+  };
+
+  let generatedPayload = null;
+  let resolveGeneration = null;
+
+  class MockFileReader {
+    readAsDataURL(file) {
+      this.result = String(file?.dataUrl || '');
+      Promise.resolve().then(() => {
+        this.onload?.();
+      });
+    }
+  }
+
+  const protocolModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'protocol-management.js'), {
+    document,
+    TextEncoder,
+    FileReader: MockFileReader,
+    btoa: btoaPolyfill,
+    navigator: {
+      clipboard: {
+        writeText: async () => {}
+      }
+    },
+    window: {
+      enanaApi: {
+        agentGenerateProtocol: async (payload) => {
+          generatedPayload = payload;
+          return new Promise((resolve) => {
+            resolveGeneration = resolve;
+          });
+        }
+      }
+    }
+  });
+
+  const protocol = protocolModule.initProtocolManagement({
+    state,
+    persist: () => {},
+    createId: (() => {
+      let idx = 0;
+      return () => `generated-id-${idx += 1}`;
+    })(),
+    safeText: shared.safeText,
+    onProtocolsChanged: () => {},
+    trackGrowthEvent: () => {}
+  });
+
+  trigger(document.getElementById('create-protocol-btn'), 'click');
+  assert.equal(document.getElementById('protocol-generate-btn').hidden, false);
+
+  trigger(document.getElementById('protocol-generate-btn'), 'click');
+  assert.equal(document.getElementById('protocol-generate-input-overlay').hidden, false);
+
+  document.getElementById('protocol-generate-prompt-input').value = 'Generate a bacterial expression protocol from the attached methods.';
+  const attachmentInput = document.getElementById('protocol-generate-attachment-input');
+  attachmentInput.files = [{
+    name: 'methods.pdf',
+    size: 2048,
+    type: 'application/pdf',
+    dataUrl: 'data:application/pdf;base64,AAAA'
+  }];
+  trigger(attachmentInput, 'change', { target: attachmentInput });
+  await flushAsync();
+
+  assert.equal(document.getElementById('protocol-generate-attachment-list').hidden, false);
+
+  trigger(document.getElementById('protocol-generate-send-btn'), 'click');
+  await flushAsync();
+
+  assert.equal(document.getElementById('protocol-generate-input-overlay').hidden, true);
+  assert.equal(document.getElementById('protocol-generate-result-overlay').hidden, false);
+  assert.match(document.getElementById('protocol-generate-result-preview').innerHTML, /protocol-polish-loading-dots/);
+  assert.equal(generatedPayload.message, 'Generate a bacterial expression protocol from the attached methods.');
+  assert.equal(generatedPayload.attachments.length, 1);
+  assert.equal(generatedPayload.attachments[0].name, 'methods.pdf');
+
+  resolveGeneration({
+    ok: true,
+    summary: 'Generated protocol from the attached methods.',
+    protocol: {
+      name: 'Generated Expression Protocol',
+      purpose: 'Express a recombinant protein in bacteria.',
+      materials: ['LB media', 'Antibiotic', 'Expression plasmid'],
+      steps: [
+        'Transform the expression plasmid into competent cells.',
+        'Grow an overnight starter culture with the correct antibiotic.',
+        'Inoculate fresh media and induce expression at [temperature].'
+      ],
+      troubleshooting: 'Problem: low expression; Solution: reduce the induction temperature.'
+    }
+  });
+  await flushAsync();
+  await flushAsync();
+
+  assert.match(document.getElementById('protocol-generate-result-preview').innerHTML, /Generated Expression Protocol/);
+  assert.equal(document.getElementById('protocol-generate-status').hidden, true);
+  assert.equal(document.getElementById('protocol-generate-status').textContent, '');
+
+  trigger(document.getElementById('protocol-generate-apply-btn'), 'click');
+
+  assert.equal(document.getElementById('protocol-generate-result-overlay').hidden, true);
+  assert.equal(protocolName.value, 'Generated Expression Protocol');
+  assert.match(protocolSteps.value, /Transform the expression plasmid/);
+  assert.match(protocolTroubleshooting.value, /Problem: low expression/);
+
+  trigger(protocolForm, 'submit');
+
+  assert.equal(state.protocols.length, 1);
+  assert.equal(state.protocols[0].name, 'Generated Expression Protocol');
+  protocol.renderList();
 });
 
 test('protocol-management import accepts external title/action schema without ids (including fenced LLM JSON)', () => {

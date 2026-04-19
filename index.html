@@ -120,36 +120,15 @@
 
         <section class="home-tile home-tile-timer" aria-labelledby="dashboard-timer-heading">
           <div class="home-tile-head">
-            <h2 id="dashboard-timer-heading">Timer</h2>
+            <h2 id="dashboard-timer-heading">Lab Timers</h2>
             <p id="dashboard-timer-status" class="small-note"></p>
           </div>
           <div class="home-timer-clock">
             <p id="dashboard-local-time" class="dashboard-local-time">--:--:--</p>
             <p id="dashboard-local-date" class="dashboard-local-date">Loading local date</p>
           </div>
-          <p id="dashboard-timer-display" class="dashboard-timer-display">15:00</p>
-          <label class="dashboard-field">
-            Custom Minutes
-            <input id="dashboard-timer-custom-minutes" type="number" min="1" step="1" value="15" />
-          </label>
-          <div class="dashboard-inline-row dashboard-timer-presets">
-            <button type="button" class="ghost-btn" data-dashboard-preset-minutes="5">5m</button>
-            <button type="button" class="ghost-btn" data-dashboard-preset-minutes="10">10m</button>
-            <button type="button" class="ghost-btn" data-dashboard-preset-minutes="15">15m</button>
-            <button type="button" class="ghost-btn" data-dashboard-preset-minutes="30">30m</button>
-          </div>
-          <div class="dashboard-inline-row">
-            <button type="button" id="dashboard-timer-set-btn" class="ghost-btn">Set</button>
-            <button type="button" id="dashboard-timer-start-btn" class="primary-btn">Start</button>
-            <button type="button" id="dashboard-timer-pause-btn" class="ghost-btn">Pause</button>
-            <button type="button" id="dashboard-timer-reset-btn" class="ghost-btn">Reset</button>
-          </div>
-          <div class="home-tile-divider" aria-hidden="true"></div>
-          <div class="dashboard-timer-saved-head">
-            <h3>Your Timers</h3>
-            <p class="small-note">Tap a row to load it.</p>
-          </div>
-          <div id="dashboard-timer-saved-list" class="dashboard-timer-saved-list"></div>
+          <div id="dashboard-timer-active-list" class="dashboard-timer-active-list"></div>
+          <button type="button" id="dashboard-timer-open-btn" class="ghost-btn home-timer-open-btn">+Start Timer</button>
         </section>
 
         <section class="home-tile home-tile-incubation" aria-labelledby="dashboard-incubation-heading">
@@ -247,6 +226,40 @@
             </label>
             <button type="submit" id="dashboard-passage-submit-btn" class="primary-btn">Add</button>
           </form>
+        </div>
+      </div>
+
+      <div id="dashboard-timer-dialog-overlay" class="home-dialog-overlay" hidden>
+        <div
+          class="home-dialog home-timer-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="dashboard-timer-dialog-title"
+        >
+          <div class="home-dialog-form">
+            <h3 id="dashboard-timer-dialog-title">Start Timer</h3>
+            <form id="dashboard-timer-dialog-form" class="home-timer-form-row">
+              <input
+                id="dashboard-timer-name-input"
+                type="text"
+                maxlength="80"
+                aria-label="Timer name"
+                placeholder="Timer name"
+                required
+              />
+              <input
+                id="dashboard-timer-minutes-input"
+                type="number"
+                min="1"
+                step="1"
+                aria-label="Timer time in minutes"
+                placeholder="Time (min)"
+                required
+              />
+              <button type="submit" id="dashboard-timer-add-btn" class="ghost-btn">Add</button>
+            </form>
+            <div id="dashboard-timer-template-list" class="home-timer-template-list"></div>
+          </div>
         </div>
       </div>
 
@@ -368,6 +381,7 @@
                 <textarea id="protocol-troubleshooting" rows="4" placeholder="Common issues and solutions"></textarea>
               </label>
               <div class="form-actions protocol-save-actions">
+                <button type="button" id="protocol-generate-btn" class="ghost-btn" hidden>Generate Protocol</button>
                 <button type="button" id="protocol-polish-btn" class="ghost-btn">Polish Protocol</button>
                 <button type="submit" class="primary-btn">Save Protocol</button>
               </div>
@@ -386,6 +400,60 @@
               </div>
             </div>
             <div id="protocol-view-content" class="stack-form"></div>
+          </div>
+
+          <div id="protocol-generate-input-overlay" class="protocol-generate-overlay" hidden>
+            <div class="protocol-generate-input-shell" role="dialog" aria-modal="true" aria-labelledby="protocol-generate-input-title">
+              <section class="protocol-polish-dialog protocol-generate-input-dialog" aria-labelledby="protocol-generate-input-title">
+                <div class="protocol-polish-dialog-head">
+                  <div>
+                    <span class="protocol-detail-mode">Generate</span>
+                    <h3 id="protocol-generate-input-title">Generate Protocol</h3>
+                  </div>
+                  <button type="button" id="protocol-generate-close-btn" class="ghost-btn">Close</button>
+                </div>
+
+                <div class="agent-composer-shell protocol-generate-composer-shell">
+                  <div class="stack-form agent-composer-card">
+                    <input id="protocol-generate-attachment-input" type="file" multiple hidden />
+                    <label class="agent-composer-label">
+                      <span>Message</span>
+                      <textarea id="protocol-generate-prompt-input" rows="3" placeholder="Describe the protocol you want, or attach methods, notes, images, or a PDF."></textarea>
+                    </label>
+                    <div id="protocol-generate-attachment-list" class="agent-attachment-list" hidden></div>
+                    <div class="agent-composer-toolbar">
+                      <button type="button" id="protocol-generate-attach-btn" class="ghost-btn agent-attach-btn" aria-label="Attach photos or files" title="Attach photos or files">+</button>
+                      <div class="form-actions agent-composer-actions">
+                        <button type="button" id="protocol-generate-send-btn" class="primary-btn">Generate Protocol</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <p id="protocol-generate-input-status" class="small-note" hidden></p>
+              </section>
+            </div>
+          </div>
+
+          <div id="protocol-generate-result-overlay" class="protocol-generate-overlay" hidden>
+            <div class="protocol-generate-result-shell" role="dialog" aria-modal="true" aria-labelledby="protocol-generate-title">
+              <section class="protocol-polish-dialog protocol-generate-result-dialog" aria-labelledby="protocol-generate-title">
+                <div class="protocol-polish-dialog-head">
+                  <div>
+                    <span class="protocol-detail-mode">Generate</span>
+                    <h3 id="protocol-generate-title">Generated Protocol</h3>
+                  </div>
+                  <button type="button" id="protocol-generate-result-close-btn" class="ghost-btn">Close</button>
+                </div>
+                <div id="protocol-generate-result-preview" class="protocol-polish-preview stack-form"></div>
+                <p id="protocol-generate-status" class="small-note" hidden></p>
+              </section>
+
+              <div class="form-actions protocol-polish-actions">
+                <button type="button" id="protocol-generate-apply-btn" class="primary-btn" disabled>Use Generated Protocol</button>
+                <button type="button" id="protocol-generate-back-btn" class="ghost-btn">Keep Editing</button>
+              </div>
+            </div>
           </div>
 
           <div id="protocol-polish-overlay" class="protocol-polish-overlay" hidden>
@@ -1800,15 +1868,14 @@
               </div>
               <div class="agent-composer-shell">
                 <div class="stack-form agent-composer-card">
+                  <input id="agent-attachment-input" type="file" multiple hidden />
                   <label class="agent-composer-label">
                     <span>Message</span>
                     <textarea id="agent-message-input" rows="3" placeholder="Ask for protocol guidance, inventory checks, literature-grounded suggestions, or planning support."></textarea>
                   </label>
+                  <div id="agent-attachment-list" class="agent-attachment-list" hidden></div>
                   <div class="agent-composer-toolbar">
-                    <div class="agent-composer-hints">
-                      <span class="agent-inline-hint">Enter to send</span>
-                      <span class="agent-inline-hint">Shift+Enter for newline</span>
-                    </div>
+                    <button type="button" id="agent-attach-btn" class="ghost-btn agent-attach-btn" aria-label="Attach photos or files" title="Attach photos or files">+</button>
                     <div class="form-actions agent-composer-actions">
                       <button type="button" id="agent-deep-research-toggle-btn" class="ghost-btn">Deep Research: Off</button>
                       <button type="button" id="agent-send-btn" class="primary-btn">Send</button>
@@ -2429,18 +2496,17 @@
                 <section class="left-rail-template__section">
                   <div class="sequence-viewer-home-nav-copy">
                     <h2>Open Sequence</h2>
-                    <p class="small-note">Start a sequence session or open a stored GBK or FASTA file.</p>
                   </div>
                   <div class="form-actions sequence-viewer-home-nav-actions">
                     <button id="sequence-viewer-home-paste-btn" type="button" class="primary-btn">New</button>
                     <button id="sequence-viewer-home-open-btn" type="button" class="ghost-btn">Open GBK/FASTA</button>
                     <button id="sequence-viewer-home-protein-builder-btn" type="button" class="ghost-btn">Protein Builder</button>
-                    <span id="sequence-viewer-home-status" class="small-note">Choose New or Open to continue.</span>
+                    <span id="sequence-viewer-home-status" class="small-note"></span>
                   </div>
                   <input id="sequence-viewer-home-open-input" type="file" accept=".gbk,.gb,.gbff,.fasta,.fa,.fas,.fna,.fastq,.fq,.txt,.seq" hidden />
                 </section>
 
-                <section class="plannotate-result-card sequence-viewer-library-card left-rail-template__section">
+                <section class="sequence-viewer-library-card left-rail-template__section">
               <div class="plannotate-card-head">
                 <h4>Sequence Library</h4>
               </div>
@@ -2623,6 +2689,7 @@
 
           <div class="form-actions">
             <button id="sequence-viewer-load-btn" type="button" class="primary-btn">Load</button>
+            <button id="sequence-viewer-annotate-btn" type="button" class="ghost-btn">Annotate</button>
             <button id="sequence-viewer-recognize-backbone-btn" type="button" class="ghost-btn">Recognize Backbone/Insert</button>
             <button id="sequence-viewer-alignment-open-btn" type="button" class="ghost-btn">Alignment</button>
             <label class="sequence-viewer-inline-toggle" title="Show or hide the currently selected sequencing alignment on the reference sequence.">

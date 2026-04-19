@@ -40,7 +40,7 @@
   --shared-left-rail-layout-height: calc(100vh - 144px);
   --app-left-rail-track-width: max(var(--shared-left-rail-min), var(--shared-left-rail-width));
   --layout-left-panel-width: minmax(var(--shared-left-rail-min), var(--shared-left-rail-width));
-  --bg: #f5efe6;
+  --bg: #fcfbf8;
   --surface: #fcfbf8;
   --surface-subtle: #f1e9de;
   --surface-elevated: #ffffff;
@@ -269,7 +269,7 @@ body.has-shared-left-rail-view .workspace-shell::before {
   position: absolute;
   inset: 0 auto 0 0;
   width: var(--app-left-rail-track-width);
-  background: var(--surface);
+  background: var(--app-left-rail-surface, var(--surface));
   pointer-events: none;
   z-index: 0;
 }

@@ -99,7 +99,8 @@ function createAgentSessionRuntime(deps = {}) {
     transcript,
     toolDefinitions,
     traceContext,
-    round
+    round,
+    attachments = []
   }) {
     const prompt = buildCodexToolLoopPrompt({
       systemPrompt,
@@ -114,6 +115,7 @@ function createAgentSessionRuntime(deps = {}) {
       stage: `agent_tool_loop_round_${Number(round) || 0}`,
       systemPrompt: '',
       userPrompt: prompt,
+      attachments,
       traceContext,
       maxOutputTokens: 2200,
       defaultError: 'Assistant text provider is not configured.'
@@ -134,7 +136,8 @@ function createAgentSessionRuntime(deps = {}) {
     message,
     hasLatestUserInConversation,
     toolDefinitions = [],
-    traceContext = null
+    traceContext = null,
+    attachments = []
   } = {}) {
     const transcript = [
       ...arrayValues(conversation).map((item) => ({
@@ -154,6 +157,7 @@ function createAgentSessionRuntime(deps = {}) {
       systemPrompt,
       transcript,
       toolDefinitions: arrayValues(toolDefinitions),
+      attachments: arrayValues(attachments),
       traceContext,
       round: 0
     });

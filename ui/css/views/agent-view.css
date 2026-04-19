@@ -995,6 +995,45 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   outline: none;
 }
 
+.agent-attachment-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.agent-attachment-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--line) 74%, transparent);
+  background: color-mix(in srgb, var(--surface-subtle) 78%, transparent);
+  color: var(--strong);
+  font-size: 0.82rem;
+}
+
+.agent-attachment-pill.is-image {
+  border-color: color-mix(in srgb, var(--accent) 28%, var(--line));
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface-subtle));
+}
+
+.agent-attachment-pill button {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.agent-attachment-pill button:hover,
+.agent-attachment-pill button:focus-visible {
+  color: var(--strong);
+}
+
 .agent-composer-toolbar {
   display: flex;
   align-items: center;
@@ -1003,20 +1042,17 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   flex-wrap: wrap;
 }
 
-.agent-composer-hints {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.agent-inline-hint {
+.agent-attach-btn {
   display: inline-flex;
+  justify-content: center;
   align-items: center;
-  padding: 4px 9px;
+  width: 42px;
+  min-width: 42px;
+  height: 42px;
+  padding: 0;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--surface-subtle) 76%, transparent);
-  color: var(--muted);
-  font-size: 0.76rem;
+  font-size: 1.45rem;
+  line-height: 1;
 }
 
 .agent-composer-actions {
@@ -1305,6 +1341,10 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   .agent-composer-toolbar {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .agent-attach-btn {
+    align-self: flex-start;
   }
 
   .agent-composer-actions {

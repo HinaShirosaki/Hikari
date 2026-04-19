@@ -101,6 +101,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(detailBlock, /id="sequence-viewer-back-btn"/);
       assert.match(detailBlock, /id="sequence-viewer-detail-protein-builder-btn"/);
       assert.match(detailBlock, /id="sequence-viewer-save-btn"/);
+      assert.match(detailBlock, /id="sequence-viewer-annotate-btn"/);
       assert.match(detailBlock, /id="sequence-viewer-recognize-backbone-btn"/);
       assert.match(detailBlock, /id="sequence-viewer-orf-toggle"/);
       assert.match(detailBlock, /id="sequence-viewer-restriction-neb-toggle"/);
@@ -125,6 +126,15 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
     test('sequence viewer input panels force-hide when hidden attribute is set', () => {
       const css = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'views', 'sequence-viewer-view.css'), 'utf8');
       assert.match(css, /\.sequence-viewer-input-panel\[hidden\]\s*\{\s*display:\s*none !important;/);
+    });
+
+    test('sequence viewer home sidebar owns scrolling instead of nesting it inside the library list', () => {
+      const css = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'views', 'sequence-viewer-view.css'), 'utf8');
+      assert.match(css, /\.sequence-viewer-home-sidebar,\s*\.sequence-viewer-home-main\s*\{[\s\S]*min-height:\s*0;/);
+      assert.match(css, /\.sequence-viewer-home-sidebar\s*\{[\s\S]*scrollbar-width:\s*thin;/);
+      assert.match(css, /\.sequence-viewer-home-sidebar::-webkit-scrollbar/);
+      assert.match(css, /\.sequence-viewer-library-list\s*\{[\s\S]*max-height:\s*none;/);
+      assert.match(css, /\.sequence-viewer-library-list\s*\{[\s\S]*overflow:\s*visible;/);
     });
 
     test('ketcher embedded page uses portable static path resolution', () => {
@@ -241,11 +251,13 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(dataRegistrarSource, /ipcMain\.handle\('sequence-library:promote'/);
       assert.match(dataRegistrarSource, /ipcMain\.handle\('sequence-library:delete'/);
       assert.match(dataRegistrarSource, /ipcMain\.handle\('sequence-library:search-features'/);
+      assert.match(dataRegistrarSource, /ipcMain\.handle\('sequence-library:annotate'/);
       assert.match(dataRegistrarSource, /ipcMain\.handle\('sequence-library:recognize-backbone'/);
       assert.match(preloadSource, /sequenceLibraryList:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\('sequence-library:list', payload\)/);
       assert.match(preloadSource, /sequenceLibraryGet:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\('sequence-library:get', payload\)/);
       assert.match(preloadSource, /sequenceLibraryUpsert:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\('sequence-library:upsert', payload\)/);
       assert.match(preloadSource, /sequenceLibrarySearchFeatures:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\('sequence-library:search-features', payload\)/);
+      assert.match(preloadSource, /sequenceLibraryAnnotate:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\('sequence-library:annotate', payload\)/);
       assert.match(preloadSource, /sequenceLibraryRecognizeBackbone:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\('sequence-library:recognize-backbone', payload\)/);
     });
 

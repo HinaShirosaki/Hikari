@@ -163,23 +163,27 @@ export function createSequenceViewerHomeController(config = {}) {
       return;
     }
 
-    const frameDocument = frame.contentDocument || frame.contentWindow?.document || null;
-    const frameRoot = frameDocument?.documentElement || null;
-    const frameBody = frameDocument?.body || null;
-    if (!frameRoot && !frameBody) {
-      return;
-    }
+    const hostRect = typeof elements.previewHost?.getBoundingClientRect === 'function'
+      ? elements.previewHost.getBoundingClientRect()
+      : null;
+    const frameRect = typeof frame.getBoundingClientRect === 'function'
+      ? frame.getBoundingClientRect()
+      : null;
+    const viewWindow = rootDocument?.defaultView || globalThis || null;
+    const viewportHeight = Math.max(0, Number(viewWindow?.innerHeight) || 0);
+    const previewWidth = Math.max(
+      0,
+      Number(frameRect?.width) || Number(hostRect?.width) || Number(elements.previewHost?.clientWidth) || 0
+    );
+    const previewTop = Math.max(0, Number(hostRect?.top) || Number(frameRect?.top) || 0);
+    const availableHeight = viewportHeight > 0
+      ? Math.max(280, viewportHeight - previewTop - 28)
+      : 520;
+    const fallbackSize = Math.max(280, Math.min(availableHeight, 520));
+    const widthBound = previewWidth > 0 ? previewWidth : fallbackSize;
+    const nextSize = Math.min(widthBound, availableHeight, 1120);
 
-    const nextHeight = Math.ceil(Math.max(
-      Number(frameBody?.scrollHeight) || 0,
-      Number(frameBody?.offsetHeight) || 0,
-      Number(frameBody?.clientHeight) || 0,
-      Number(frameRoot?.scrollHeight) || 0,
-      Number(frameRoot?.offsetHeight) || 0,
-      Number(frameRoot?.clientHeight) || 0,
-      520
-    ));
-    frame.style.height = `${nextHeight}px`;
+    frame.style.height = `${Math.round(nextSize > 0 ? nextSize : fallbackSize)}px`;
   }
 
   function schedulePreviewFrameHeightSync(frame = getPreviewFrameElement()) {
@@ -282,9 +286,6 @@ export function createSequenceViewerHomeController(config = {}) {
     elements.libraryList.innerHTML = entries
       .map((entry) => {
         const active = cleanText(entry.id, 200) === cleanText(state.selectedLibraryEntryId, 200);
-        const lengthLabel = `${Math.max(0, Number(entry.sequenceLength) || 0).toLocaleString()} bp`;
-        const featureLabel = `${Math.max(0, Number(entry.featureCount) || 0).toLocaleString()} features`;
-        const updated = String(entry.updatedAt || '').slice(0, 16).replace('T', ' ');
         return `
           <button
             type="button"
@@ -293,8 +294,6 @@ export function createSequenceViewerHomeController(config = {}) {
             title="${escapeHtml(entry.name || 'sequence')}"
           >
             <span class="sequence-viewer-library-item-name">${escapeHtml(entry.name || 'sequence')}</span>
-            <span class="sequence-viewer-library-item-meta">${escapeHtml(lengthLabel)} | ${escapeHtml(entry.topology || 'linear')}</span>
-            <span class="sequence-viewer-library-item-meta">${escapeHtml(featureLabel)} | updated ${escapeHtml(updated || '-')}</span>
           </button>
         `;
       })

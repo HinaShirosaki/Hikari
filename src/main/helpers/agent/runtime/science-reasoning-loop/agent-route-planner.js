@@ -205,7 +205,7 @@ function createAgentRoutePlannerRuntime(deps = {}) {
     const clarifiedInput = cleanText(input.clarifiedInput || input.message, 3200);
     const allowedTools = getAllowedTools(input);
     const goal = clarifiedInput || 'Plan the next science reasoning steps.';
-    const toolCallSuggestions = allowedTools.slice(0, 5).map((toolName, index) => ({
+    const toolCallSuggestions = allowedTools.map((toolName, index) => ({
       tool_name: toolName,
       priority: index + 1,
       when_to_use: index === 0
@@ -341,7 +341,7 @@ function createAgentRoutePlannerRuntime(deps = {}) {
 
   function buildRoutePlanPrompt(input = {}) {
     const executionRequest = cleanText(input.clarifiedInput || input.message, 3200);
-    const allowedTools = getAllowedTools(input).slice(0, 6);
+    const allowedTools = getAllowedTools(input);
     return [
       'Draft a reference route plan for the science reasoning loop.',
       'This plan is guidance only. The agent may deviate when real tool outputs or evidence suggest a better path.',

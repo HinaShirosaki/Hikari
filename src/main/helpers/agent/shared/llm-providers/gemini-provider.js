@@ -40,6 +40,50 @@ function createGeminiLlmProvider(deps = {}) {
     };
   }
 
+  function normalizeAttachments(input = {}) {
+    const listed = Array.isArray(input.attachments) ? input.attachments : [];
+    const attachments = listed.map((attachment) => {
+      const source = attachment && typeof attachment === 'object' ? attachment : {};
+      return {
+        kind: cleanText(source.kind, 40),
+        name: cleanText(source.name, 240) || 'attachment',
+        dataUrl: cleanText(source.dataUrl || source.data_url, 400000)
+      };
+    }).filter((attachment) => attachment.dataUrl);
+    if (attachments.length) {
+      return attachments;
+    }
+    const fileDataUrl = cleanText(input.fileDataUrl || input.pdfDataUrl, 240000);
+    const imageDataUrl = cleanText(input.imageDataUrl || input.imageUrl, 240000);
+    return [
+      ...(fileDataUrl ? [{ kind: 'file', name: cleanText(input.fileName, 240) || 'attachment.pdf', dataUrl: fileDataUrl }] : []),
+      ...(imageDataUrl ? [{ kind: 'image', name: 'image', dataUrl: imageDataUrl }] : [])
+    ];
+  }
+
+  function buildParts(input = {}, attachments = [], redact = false) {
+    return [
+      {
+        text: cleanText(input.userPrompt, 48000)
+          + (input.expectJson === true ? '\n\nReturn JSON only.' : '')
+      },
+      ...attachments.map((attachment) => {
+        const source = parseBase64DataUrl(attachment?.dataUrl);
+        if (!source) {
+          return {
+            text: `Attached file: ${cleanText(attachment?.name, 240) || 'attachment'}`
+          };
+        }
+        return {
+          inlineData: {
+            mimeType: source.mediaType,
+            data: redact ? '[binary omitted]' : source.data
+          }
+        };
+      })
+    ];
+  }
+
   async function requestText(input = {}) {
     const normalizedStage = cleanText(input.stage, 120) || 'agent_stage';
     if (!requestGeminiGenerateContentWithBackoff) {
@@ -50,6 +94,7 @@ function createGeminiLlmProvider(deps = {}) {
     }
 
     try {
+      const attachments = normalizeAttachments(input);
       const body = {
         ...(cleanText(input.systemPrompt, 12000)
           ? {
@@ -61,12 +106,7 @@ function createGeminiLlmProvider(deps = {}) {
         contents: [
           {
             role: 'user',
-            parts: [
-              {
-                text: cleanText(input.userPrompt, 48000)
-                  + (input.expectJson === true ? '\n\nReturn JSON only.' : '')
-              }
-            ]
+            parts: buildParts(input, attachments, false)
           }
         ],
         generationConfig: buildGenerationConfig(input.maxOutputTokens)
@@ -81,8 +121,18 @@ function createGeminiLlmProvider(deps = {}) {
         stage: normalizedStage,
         provider: providerId,
         model: cleanText(input.model, 120),
-        summary: `${normalizedStage} completed via Gemini.`,
-        requestPayload: body,
+        summary: attachments.length
+          ? `${normalizedStage} completed via Gemini multimodal input.`
+          : `${normalizedStage} completed via Gemini.`,
+        requestPayload: {
+          ...body,
+          contents: [
+            {
+              role: 'user',
+              parts: buildParts(input, attachments, true)
+            }
+          ]
+        },
         responsePayload: response
       });
       const text = extractGeminiResponseText(response);
@@ -109,195 +159,11 @@ function createGeminiLlmProvider(deps = {}) {
   }
 
   async function requestImageInput(input = {}) {
-    const normalizedStage = cleanText(input.stage, 120) || 'agent_stage';
-    if (!requestGeminiGenerateContentWithBackoff) {
-      return {
-        ok: false,
-        error: cleanText(input.defaultError, 600) || 'Gemini image input is not configured.'
-      };
-    }
-    const imageSource = parseBase64DataUrl(input.imageDataUrl);
-    if (!imageSource || !/^image\//i.test(imageSource.mediaType)) {
-      return {
-        ok: false,
-        error: `${normalizedStage} image input must be a base64 data URL.`
-      };
-    }
-
-    try {
-      const body = {
-        systemInstruction: {
-          parts: [{ text: cleanText(input.systemPrompt, 12000) || 'Answer the user request.' }]
-        },
-        contents: [
-          {
-            role: 'user',
-            parts: [
-              {
-                text: cleanText(input.userPrompt, 48000)
-                  + (input.expectJson === true ? '\n\nReturn JSON only.' : '')
-              },
-              {
-                inlineData: {
-                  mimeType: imageSource.mediaType,
-                  data: imageSource.data
-                }
-              }
-            ]
-          }
-        ],
-        generationConfig: buildGenerationConfig(input.maxOutputTokens)
-      };
-      const response = await requestGeminiGenerateContentWithBackoff({
-        endpoint: cleanText(input.endpoint, 2000),
-        apiKey: cleanText(input.apiKey, 400),
-        model: cleanText(input.model, 120),
-        body
-      });
-      await recordTrace(input.traceContext, {
-        stage: normalizedStage,
-        provider: providerId,
-        model: cleanText(input.model, 120),
-        summary: `${normalizedStage} completed via Gemini image input.`,
-        requestPayload: {
-          ...body,
-          contents: [
-            {
-              role: 'user',
-              parts: [
-                {
-                  text: cleanText(input.userPrompt, 48000)
-                    + (input.expectJson === true ? '\n\nReturn JSON only.' : '')
-                },
-                {
-                  inlineData: {
-                    mimeType: imageSource.mediaType,
-                    data: '[image omitted]'
-                  }
-                }
-              ]
-            }
-          ]
-        },
-        responsePayload: response
-      });
-      const text = extractGeminiResponseText(response);
-      if (!text) {
-        return { ok: false, error: `${normalizedStage} response was empty.`, raw: response };
-      }
-      if (input.expectJson === true) {
-        const parsed = parseJsonObjectFromText(text);
-        if (!parsed) {
-          return { ok: false, error: `${normalizedStage} response was not valid JSON.`, raw: response };
-        }
-        return { ok: true, payload: parsed, text, raw: response };
-      }
-      return { ok: true, text, raw: response };
-    } catch (error) {
-      if (isAbortError(error)) {
-        throw error;
-      }
-      return {
-        ok: false,
-        error: cleanText(error?.message || error, 600) || `${normalizedStage} request failed.`
-      };
-    }
+    return requestText(input);
   }
 
   async function requestFileInput(input = {}) {
-    const normalizedStage = cleanText(input.stage, 120) || 'agent_stage';
-    if (!requestGeminiGenerateContentWithBackoff) {
-      return {
-        ok: false,
-        error: cleanText(input.defaultError, 600) || 'Gemini file input is not configured.'
-      };
-    }
-    const fileSource = parseBase64DataUrl(input.fileDataUrl || input.pdfDataUrl);
-    if (!fileSource || fileSource.mediaType.toLowerCase() !== 'application/pdf') {
-      return {
-        ok: false,
-        error: `${normalizedStage} PDF input was not a valid PDF data URL.`
-      };
-    }
-
-    try {
-      const body = {
-        systemInstruction: {
-          parts: [{ text: cleanText(input.systemPrompt, 12000) || 'Return valid JSON only.' }]
-        },
-        contents: [
-          {
-            role: 'user',
-            parts: [
-              {
-                text: cleanText(input.userPrompt, 48000)
-                  + (input.expectJson === true ? '\n\nReturn JSON only.' : '')
-              },
-              {
-                inlineData: {
-                  mimeType: 'application/pdf',
-                  data: fileSource.data
-                }
-              }
-            ]
-          }
-        ],
-        generationConfig: buildGenerationConfig(input.maxOutputTokens)
-      };
-      const response = await requestGeminiGenerateContentWithBackoff({
-        endpoint: cleanText(input.endpoint, 2000),
-        apiKey: cleanText(input.apiKey, 400),
-        model: cleanText(input.model, 120),
-        body
-      });
-      await recordTrace(input.traceContext, {
-        stage: normalizedStage,
-        provider: providerId,
-        model: cleanText(input.model, 120),
-        summary: `${normalizedStage} completed via Gemini file input.`,
-        requestPayload: {
-          ...body,
-          contents: [
-            {
-              role: 'user',
-              parts: [
-                {
-                  text: cleanText(input.userPrompt, 48000)
-                    + (input.expectJson === true ? '\n\nReturn JSON only.' : '')
-                },
-                {
-                  inlineData: {
-                    mimeType: 'application/pdf',
-                    data: '[pdf omitted]'
-                  }
-                }
-              ]
-            }
-          ]
-        },
-        responsePayload: response
-      });
-      const text = extractGeminiResponseText(response);
-      if (!text) {
-        return { ok: false, error: `${normalizedStage} response was empty.`, raw: response };
-      }
-      if (input.expectJson === true) {
-        const parsed = parseJsonObjectFromText(text);
-        if (!parsed) {
-          return { ok: false, error: `${normalizedStage} response was not valid JSON.`, raw: response };
-        }
-        return { ok: true, payload: parsed, text, raw: response };
-      }
-      return { ok: true, text, raw: response };
-    } catch (error) {
-      if (isAbortError(error)) {
-        throw error;
-      }
-      return {
-        ok: false,
-        error: cleanText(error?.message || error, 600) || `${normalizedStage} request failed.`
-      };
-    }
+    return requestText(input);
   }
 
   async function requestWebSearch(input = {}) {
