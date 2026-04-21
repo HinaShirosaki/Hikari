@@ -62,30 +62,6 @@
 <!-- SOURCE: ui/html/views/home-view.html -->
 <section id="home-view" class="view is-active" aria-label="Home">
       <div class="home-layout">
-        <section class="home-tile home-tile-today" aria-labelledby="dashboard-today-heading">
-          <div class="home-tile-head">
-            <h2 id="dashboard-today-heading">Today To Do</h2>
-            <p id="dashboard-today-summary" class="small-note">No urgent items right now.</p>
-          </div>
-          <div class="home-today-grid">
-            <div class="home-summary-strip" aria-label="Today's overview">
-              <div class="home-summary-cell">
-                <span class="home-summary-label">Overdue</span>
-                <strong id="dashboard-today-overdue-count">0</strong>
-              </div>
-              <div class="home-summary-cell">
-                <span class="home-summary-label">Open Steps</span>
-                <strong id="dashboard-today-workflow-count">0</strong>
-              </div>
-              <div class="home-summary-cell">
-                <span class="home-summary-label">Follow-ups</span>
-                <strong id="dashboard-today-incubation-count">0</strong>
-              </div>
-            </div>
-            <div id="dashboard-today-list" class="dashboard-list dashboard-list-compact"></div>
-          </div>
-        </section>
-
         <section class="home-tile home-tile-passage" aria-labelledby="dashboard-passage-heading">
           <div class="home-tile-head">
             <div class="home-tile-head-row">
@@ -166,6 +142,16 @@
             <button type="button" id="dashboard-quick-log-agent-btn" class="primary-btn">Send to Assistant</button>
             <button type="button" id="dashboard-quick-log-notebook-btn" class="ghost-btn">Open Notebook</button>
             <button type="button" id="dashboard-quick-log-clear-btn" class="ghost-btn">Clear</button>
+          </div>
+        </section>
+
+        <section class="home-tile home-tile-notebook-pages" aria-labelledby="dashboard-notebook-pages-heading">
+          <div class="home-tile-head">
+            <h2 id="dashboard-notebook-pages-heading">Recent Notebook Pages</h2>
+            <p id="dashboard-notebook-pages-status" class="small-note">Tap a page to add a note.</p>
+          </div>
+          <div class="home-tile-scroll">
+            <div id="dashboard-notebook-page-list" class="dashboard-list"></div>
           </div>
         </section>
 
@@ -260,6 +246,34 @@
             </form>
             <div id="dashboard-timer-template-list" class="home-timer-template-list"></div>
           </div>
+        </div>
+      </div>
+
+      <div id="dashboard-notebook-note-dialog-overlay" class="home-dialog-overlay" hidden>
+        <div
+          class="home-dialog home-notebook-note-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="dashboard-notebook-note-dialog-title"
+        >
+          <form id="dashboard-notebook-note-dialog-form" class="home-dialog-form">
+            <h3 id="dashboard-notebook-note-dialog-title">Add Note</h3>
+            <p id="dashboard-notebook-note-dialog-page" class="small-note"></p>
+            <label class="dashboard-field">
+              Note
+              <textarea
+                id="dashboard-notebook-note-input"
+                rows="5"
+                maxlength="4000"
+                placeholder="Add a quick note to this notebook page."
+                required
+              ></textarea>
+            </label>
+            <div class="dashboard-inline-row">
+              <button type="submit" id="dashboard-notebook-note-save-btn" class="primary-btn">Save Note</button>
+              <button type="button" id="dashboard-notebook-note-clarify-btn" class="ghost-btn">Clarify and Save</button>
+            </div>
+          </form>
         </div>
       </div>
 
@@ -537,6 +551,10 @@
             <div class="biology-notebook-viewer-head">
               <div class="biology-notebook-viewer-copy">
                 <p class="small-note biology-notebook-viewer-kicker">Filled protocol and results</p>
+                <label>
+                  Experiment Name
+                  <input id="biology-notebook-experiment-name" type="text" placeholder="Name this specific experiment" />
+                </label>
                 <h3 id="biology-notebook-protocol-title"></h3>
                 <p id="biology-notebook-protocol-meta" class="small-note">Select a notebook page or start a new one.</p>
               </div>
@@ -577,7 +595,8 @@
                   <input id="biology-notebook-result-file" type="file" multiple />
                 </label>
                 <div class="form-actions">
-                  <button id="save-biology-notebook-btn" class="primary-btn" type="button">Save Notebook Entry</button>
+                  <button id="save-biology-notebook-btn" class="primary-btn" type="button">Save</button>
+                  <button id="clarify-save-biology-notebook-btn" class="ghost-btn" type="button">Clarify and Save</button>
                   <button id="cancel-biology-notebook-edit-btn" class="ghost-btn" type="button" hidden>Cancel Edit</button>
                 </div>
               </div>
@@ -1000,7 +1019,7 @@
           <form id="gel-form" class="form-grid">
             <input type="hidden" id="gel-id" />
             <label>
-              Analysis Name
+              Gel Name
               <input id="gel-name" required placeholder="e.g. WB_RUN_2026_02_19" />
             </label>
             <label>
@@ -1083,10 +1102,17 @@
                   <button type="button" id="gel-tool-right-border-btn" class="ghost-btn">Set right border</button>
                   <button type="button" id="gel-tool-dividers-btn" class="ghost-btn">Set dividers</button>
                   <button type="button" id="gel-tool-ladder-lane-btn" class="ghost-btn">Set ladder lane</button>
+                  <button type="button" id="gel-add-table-btn" class="ghost-btn" hidden>Add table</button>
                 </div>
-                <div class="gel-canvas-shell">
-                  <canvas id="gel-canvas"></canvas>
-                  <img id="gel-cropper-image" alt="Gel cropper" />
+                <div id="gel-viewer-stage" class="gel-viewer-stage">
+                  <div id="gel-lane-table-shell" class="gel-lane-table-shell" hidden></div>
+                  <div id="gel-image-row" class="gel-image-row">
+                    <div id="gel-lane-table-label-spacer" class="gel-lane-table-label-spacer" hidden aria-hidden="true"></div>
+                    <div class="gel-canvas-shell">
+                      <canvas id="gel-canvas"></canvas>
+                      <img id="gel-cropper-image" alt="Gel cropper" />
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -1720,8 +1746,8 @@
           </form>
 
           <div id="papers-library-context-menu" class="papers-context-menu" hidden>
-            <button type="button" id="papers-context-new-folder" class="papers-context-item">New Journal Club Folder</button>
-            <button type="button" id="papers-context-delete-folder" class="papers-context-item papers-context-item-danger" hidden>Delete Journal Club Folder</button>
+            <button type="button" id="papers-context-new-folder" class="papers-context-item">New Folder</button>
+            <button type="button" id="papers-context-delete-folder" class="papers-context-item papers-context-item-danger" hidden>Delete Folder</button>
           </div>
         </aside>
 
@@ -1785,6 +1811,23 @@
                   <span class="papers-comment-toggle-icon" aria-hidden="true"></span>
                 </button>
                 <aside id="paper-comment-sidebar" class="panel papers-comment-sidebar">
+                  <section id="paper-summary-section" class="papers-summary-section">
+                    <button
+                      type="button"
+                      id="paper-summary-toggle-btn"
+                      class="papers-section-toggle"
+                      aria-controls="paper-summary-content"
+                      aria-expanded="true"
+                      aria-label="Hide paper summary"
+                      title="Hide paper summary"
+                    >
+                      <span class="papers-section-toggle-icon" aria-hidden="true"></span>
+                      <span>Summary</span>
+                    </button>
+                    <div id="paper-summary-content" class="papers-summary-content">
+                      <dl id="paper-summary-list" class="papers-summary-list"></dl>
+                    </div>
+                  </section>
                   <div class="papers-comment-meta">
                     <h4>Comments</h4>
                     <p id="paper-comment-page" class="small-note">Page 0</p>
@@ -1815,17 +1858,6 @@
 <section id="agent-view" class="view">
       <div class="agent-chat-layout left-rail-template">
         <aside class="agent-session-rail app-left-rail left-rail-template__rail" data-sync-left-rail>
-          <div class="agent-rail-meta">
-            <div class="form-grid agent-rail-context-grid">
-              <label class="agent-rail-filter">
-                <span>Project Scope</span>
-                <select id="agent-project-select">
-                  <option value="">All projects</option>
-                </select>
-              </label>
-            </div>
-          </div>
-
           <div class="agent-session-panel">
             <div class="agent-session-toolbar">
               <div>
@@ -1875,7 +1907,15 @@
                   </label>
                   <div id="agent-attachment-list" class="agent-attachment-list" hidden></div>
                   <div class="agent-composer-toolbar">
-                    <button type="button" id="agent-attach-btn" class="ghost-btn agent-attach-btn" aria-label="Attach photos or files" title="Attach photos or files">+</button>
+                    <div class="agent-composer-toolbar-start">
+                      <button type="button" id="agent-attach-btn" class="ghost-btn agent-attach-btn" aria-label="Attach photos or files" title="Attach photos or files">+</button>
+                      <label class="agent-composer-project agent-composer-project-inline">
+                        <span class="sr-only">Project Scope</span>
+                        <select id="agent-project-select" aria-label="Project Scope">
+                          <option value="">All projects</option>
+                        </select>
+                      </label>
+                    </div>
                     <div class="form-actions agent-composer-actions">
                       <button type="button" id="agent-deep-research-toggle-btn" class="ghost-btn">Deep Research: Off</button>
                       <button type="button" id="agent-send-btn" class="primary-btn">Send</button>

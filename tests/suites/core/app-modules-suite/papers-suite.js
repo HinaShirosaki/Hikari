@@ -10,6 +10,7 @@ function buildFakePapersViewerFactory() {
     highlights: [],
     selectedCommentId: '',
     placementMode: false,
+    metadataOnOpen: null,
     callbacks: {}
   };
 
@@ -21,12 +22,17 @@ function buildFakePapersViewerFactory() {
         onPlacement: elements.onPlacement,
         onPinSelect: elements.onPinSelect,
         onHighlightSelection: elements.onHighlightSelection,
+        onMetadataResolved: elements.onMetadataResolved,
         onClose: elements.onClose
       };
       return {
         async openPaper({ paper }) {
           controller.activePaperId = paper.id;
           controller.currentPageNumber = 1;
+          await Promise.resolve(controller.callbacks.onMetadataResolved?.({
+            paperId: paper.id,
+            metadata: controller.metadataOnOpen
+          }));
           controller.callbacks.onPageChange?.(1);
           return true;
         },
@@ -65,6 +71,9 @@ function buildFakePapersViewerFactory() {
     emitPageChange(pageNumber) {
       controller.currentPageNumber = pageNumber;
       controller.callbacks.onPageChange?.(pageNumber);
+    },
+    emitMetadata(payload) {
+      controller.callbacks.onMetadataResolved?.(payload);
     },
     selectPin(comment) {
       controller.callbacks.onPinSelect?.(comment);
@@ -115,6 +124,10 @@ function buildPapersManagementHarness({ comments = [], promptResponses = [], con
     'paper-comment-panel',
     'paper-comment-toggle-btn',
     'paper-comment-sidebar',
+    'paper-summary-section',
+    'paper-summary-toggle-btn',
+    'paper-summary-content',
+    'paper-summary-list',
     'paper-comment-page',
     'paper-comment-count',
     'paper-comment-add-btn',
@@ -258,9 +271,7 @@ test('papers module renders folder rows with nested paper titles in the library 
 });
 
 test('papers module creates a journal club folder from the library context menu', () => {
-  const harness = buildPapersManagementHarness({
-    promptResponses: ['Weekly Biochem JC']
-  });
+  const harness = buildPapersManagementHarness();
   const journalClubList = harness.document.getElementById('journal-club-list');
   const papersLibraryRail = harness.document.getElementById('papers-library-rail');
   const contextMenu = harness.document.getElementById('papers-library-context-menu');
@@ -280,9 +291,50 @@ test('papers module creates a journal club folder from the library context menu'
   trigger(newFolderBtn, 'click');
 
   assert.equal(harness.state.journalClubs.length, 1);
-  assert.equal(harness.state.journalClubs[0].name, 'Weekly Biochem JC');
+  assert.equal(harness.state.journalClubs[0].name, 'New Folder');
   assert.equal(harness.state.journalClubs[0].description, '');
-  assert.match(journalClubList.innerHTML, /Weekly Biochem JC/);
+  assert.match(journalClubList.innerHTML, /New Folder/);
+});
+
+test('papers module folds and unfolds folder children from the library tree', () => {
+  const harness = buildPapersManagementHarness();
+  const journalClubList = harness.document.getElementById('journal-club-list');
+
+  assert.match(journalClubList.innerHTML, /Atlas Uploaded Paper/);
+
+  trigger(journalClubList, 'click', {
+    target: {
+      closest(selector) {
+        if (selector === '[data-folder-select]') {
+          return {
+            dataset: {
+              folderSelect: 'project:p1'
+            }
+          };
+        }
+        return null;
+      }
+    }
+  });
+
+  assert.equal(/Atlas Uploaded Paper/.test(journalClubList.innerHTML), false);
+
+  trigger(journalClubList, 'click', {
+    target: {
+      closest(selector) {
+        if (selector === '[data-folder-select]') {
+          return {
+            dataset: {
+              folderSelect: 'project:p1'
+            }
+          };
+        }
+        return null;
+      }
+    }
+  });
+
+  assert.match(journalClubList.innerHTML, /Atlas Uploaded Paper/);
 });
 
 test('papers module creates a pinned page comment after placement and save', async () => {
@@ -434,6 +486,66 @@ test('papers module syncs stored highlights into the PDF viewer when a paper ope
 
   assert.equal(harness.viewerFactory.controller.highlights.length, 1);
   assert.equal(harness.viewerFactory.controller.highlights[0].id, 'highlight-1');
+});
+
+test('papers module renders embedded PDF metadata in the right-rail summary section', async () => {
+  const harness = buildPapersManagementHarness();
+  harness.state.papers[0].pdfMetadata = {
+    title: 'The hidden biology of cells',
+    author: 'Ada Lovelace, Grace Hopper',
+    year: '2024',
+    journal: 'Nature',
+    doi: '10.1000/example-doi',
+    url: 'https://doi.org/10.1000/example-doi'
+  };
+  const summaryList = harness.document.getElementById('paper-summary-list');
+
+  await openPaperInHarness(harness);
+
+  assert.match(summaryList.innerHTML, /The hidden biology of cells/);
+  assert.match(summaryList.innerHTML, /Ada Lovelace, Grace Hopper/);
+  assert.match(summaryList.innerHTML, /Nature/);
+  assert.match(summaryList.innerHTML, /10\.1000\/example-doi/);
+  assert.match(summaryList.innerHTML, /https:\/\/doi\.org\/10\.1000\/example-doi/);
+});
+
+test('papers module folds and unfolds the summary section above comments', async () => {
+  const harness = buildPapersManagementHarness();
+  const toggleBtn = harness.document.getElementById('paper-summary-toggle-btn');
+  const summaryContent = harness.document.getElementById('paper-summary-content');
+
+  await openPaperInHarness(harness);
+
+  assert.equal(summaryContent.hidden, false);
+  assert.equal(toggleBtn.classList.contains('is-collapsed'), false);
+
+  trigger(toggleBtn, 'click');
+
+  assert.equal(summaryContent.hidden, true);
+  assert.equal(toggleBtn.classList.contains('is-collapsed'), true);
+
+  trigger(toggleBtn, 'click');
+
+  assert.equal(summaryContent.hidden, false);
+  assert.equal(toggleBtn.classList.contains('is-collapsed'), false);
+});
+
+test('papers module promotes embedded PDF titles into the left rail after opening a paper', async () => {
+  const harness = buildPapersManagementHarness();
+  const journalClubList = harness.document.getElementById('journal-club-list');
+  harness.viewerFactory.controller.metadataOnOpen = {
+    title: 'Embedded Metadata Title',
+    author: 'Alice Scientist',
+    year: '2025',
+    journal: 'Science',
+    doi: '10.1000/embedded-title',
+    url: 'https://example.test/papers/embedded-title'
+  };
+
+  await openPaperInHarness(harness);
+
+  assert.equal(harness.state.papers[0].title, 'Embedded Metadata Title');
+  assert.match(journalClubList.innerHTML, /Embedded Metadata Title/);
 });
 
 test('papers module folds and unfolds the comment sidebar from the right rail', () => {

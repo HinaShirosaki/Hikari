@@ -1,4 +1,10 @@
 import { installPdfJsCompat } from './pdfjs-compat.js';
+import {
+  EMPTY_PAPER_PDF_METADATA,
+  extractPaperPdfMetadata,
+  getPaperDisplayTitle,
+  hasPaperPdfMetadata
+} from './pdf-metadata.js';
 
 const DEFAULT_ZOOM = 1;
 const MIN_ZOOM = 0.5;
@@ -218,6 +224,7 @@ export function createPapersPdfViewer(elements = {}) {
     placementMode: false,
     openExternal: null,
     resolveBytes: null,
+    onMetadataResolved: typeof elements.onMetadataResolved === 'function' ? elements.onMetadataResolved : null,
     onPageChange: typeof elements.onPageChange === 'function' ? elements.onPageChange : null,
     onPlacement: typeof elements.onPlacement === 'function' ? elements.onPlacement : null,
     onPinSelect: typeof elements.onPinSelect === 'function' ? elements.onPinSelect : null,
@@ -885,6 +892,19 @@ export function createPapersPdfViewer(elements = {}) {
     };
   }
 
+  async function loadEmbeddedPdfMetadata(pdfDocument) {
+    if (!pdfDocument || typeof pdfDocument.getMetadata !== 'function') {
+      return EMPTY_PAPER_PDF_METADATA;
+    }
+
+    try {
+      const metadata = await pdfDocument.getMetadata();
+      return extractPaperPdfMetadata(metadata);
+    } catch {
+      return EMPTY_PAPER_PDF_METADATA;
+    }
+  }
+
   async function renderPageRecord(record, scale, activeRenderToken) {
     if (!state.pdfDocument || !record?.canvas || !record?.element) {
       return;
@@ -1097,7 +1117,7 @@ export function createPapersPdfViewer(elements = {}) {
     state.resolveBytes = resolveBytes;
     state.openExternal = typeof onOpenExternal === 'function' ? onOpenExternal : null;
     state.paperId = String(paper.id || '');
-    state.paperTitle = String(paper.title || paper.fileName || 'Untitled paper');
+    state.paperTitle = getPaperDisplayTitle(paper);
     state.paperMeta = summary || String(paper.fileName || '').trim() || 'PDF preview';
     releasePageRecords();
     state.pageNumber = 1;
@@ -1160,7 +1180,10 @@ export function createPapersPdfViewer(elements = {}) {
       state.pageCount = Number(pdfDocument.numPages) || 1;
       setStatus('Preparing pages...');
 
-      const { metrics, maxBasePageWidth } = await loadPageMetrics(pdfDocument);
+      const [embeddedMetadata, pageMetrics] = await Promise.all([
+        loadEmbeddedPdfMetadata(pdfDocument),
+        loadPageMetrics(pdfDocument)
+      ]);
       if (activeLoadToken !== state.loadToken) {
         try {
           await pdfDocument.destroy();
@@ -1168,8 +1191,19 @@ export function createPapersPdfViewer(elements = {}) {
         return false;
       }
 
-      state.pageMetrics = metrics;
-      state.maxBasePageWidth = maxBasePageWidth;
+      if (hasPaperPdfMetadata(embeddedMetadata)) {
+        if (embeddedMetadata.title) {
+          state.paperTitle = embeddedMetadata.title;
+          setTitle(state.paperTitle);
+        }
+        Promise.resolve(state.onMetadataResolved?.({
+          paperId: state.paperId,
+          metadata: embeddedMetadata
+        })).catch(() => {});
+      }
+
+      state.pageMetrics = pageMetrics.metrics;
+      state.maxBasePageWidth = pageMetrics.maxBasePageWidth;
       ensurePageRecords();
       await renderDocumentPages({ resetScroll: true });
       return true;

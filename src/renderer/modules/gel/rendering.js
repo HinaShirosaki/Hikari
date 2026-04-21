@@ -333,6 +333,7 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
 
   function renderCanvas() {
     if (!elements.gelCanvas) {
+      deps.renderLaneTable?.();
       renderLaneProfile();
       return;
     }
@@ -342,6 +343,7 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
       elements.gelCanvas.width = 1;
       elements.gelCanvas.height = 1;
       context?.clearRect(0, 0, 1, 1);
+      deps.renderLaneTable?.();
       renderLaneProfile();
       return;
     }
@@ -480,6 +482,7 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
       });
     }
 
+    deps.renderLaneTable?.();
     renderLaneProfile();
   }
 
@@ -509,6 +512,7 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
       ? `${runtime.currentReport.image.tiffPage}/${runtime.currentReport.image.tiffPageCount}`
       : '-';
     const manualSummary = runtime.currentReport.preprocessing?.manualOverridesSummary || {};
+    const normalizedOverrides = normalizeManualOverrides(runtime.manualOverrides);
     const manualText = [
       `gelL:${manualSummary.laneSegmentationLeft ?? '-'}`,
       `gelR:${manualSummary.laneSegmentationRight ?? '-'}`,
@@ -517,7 +521,8 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
       `bottom:${manualSummary.laneSegmentationBandBottom ?? '-'}`,
       `add:${manualSummary.addedBands || 0}`,
       `ladder:${manualSummary.ladderLaneOverride || '-'}`,
-      `ladderMW:${manualSummary.ladderBands || 0}`
+      `ladderMW:${manualSummary.ladderBands || 0}`,
+      `table:${normalizedOverrides.laneTable?.rows?.length || 0}`
     ].join(' ');
 
     elements.gelReportSummary.innerHTML = `

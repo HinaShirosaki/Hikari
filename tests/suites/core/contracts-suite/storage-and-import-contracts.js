@@ -62,6 +62,7 @@ module.exports = function registerStorageAndImportContracts(context = {}) {
           settings: { appearance: { uiStyle: 'classic', themeColor: '#336699' } }
         };
         await bundleHelpers.syncBundleFromSnapshot({ dataFilePath, snapshot: sourceSnapshot });
+        await fsPromises.access(path.join(tempDir, 'Project', 'Atlas', 'MEMORY.md'));
 
         const compactSnapshot = {
           settings: { appearance: { uiStyle: 'classic', themeColor: '#336699' } },
@@ -166,6 +167,7 @@ module.exports = function registerStorageAndImportContracts(context = {}) {
           workflowStorage.buildNotebookPageFolderName('note-1')
         );
         await fsPromises.access(path.join(folderLayout.templateFolderPath, 'template.json'));
+        await fsPromises.access(path.join(folderLayout.workflowFolderPath, 'MEMORY.md'));
         await fsPromises.access(path.join(folderLayout.workflowFolderPath, 'workflow.json'));
         await fsPromises.access(path.join(folderLayout.relatedPapersFolderPath, 'related-papers.json'));
         await fsPromises.access(path.join(notebookFolder, 'page.json'));

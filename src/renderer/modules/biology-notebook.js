@@ -11,6 +11,7 @@ import {
   findLatestLinkedRecord,
   formatLinkedPreviewTimestamp
 } from './notebook-linked-previews.js';
+import { clarifyNotebookNote, showTransientNotice } from './notebook-note-tools.js';
 
 // Initialize the biology notebook module and wire it to app state plus DOM controls.
 export function initLabNotebook({
@@ -21,6 +22,7 @@ export function initLabNotebook({
   onNotebookEntriesChanged,
   onCreateLinkedAssay,
   onCreateLinkedGel,
+  selectionInsightsController = null,
   notebookType = 'biology'
 }) {
   const PLACEHOLDER_TOKEN_REGEX = /\{\{ph:([^}]+)\}\}/g;
@@ -30,6 +32,7 @@ export function initLabNotebook({
   const notebookProtocolSelect = document.getElementById('biology-notebook-protocol-select');
   const notebookEmptyState = document.getElementById('biology-notebook-empty-state');
   const notebookProtocolArea = document.getElementById('biology-notebook-protocol-area');
+  const notebookExperimentName = document.getElementById('biology-notebook-experiment-name');
   const notebookProtocolTitle = document.getElementById('biology-notebook-protocol-title');
   const notebookProtocolMeta = document.getElementById('biology-notebook-protocol-meta');
   const notebookExportBtn = document.getElementById('biology-notebook-export-btn');
@@ -42,6 +45,7 @@ export function initLabNotebook({
   const notebookAddAssayBtn = document.getElementById('biology-notebook-add-assay-btn');
   const notebookLinkedResults = document.getElementById('biology-notebook-linked-results');
   const saveNotebookBtn = document.getElementById('save-biology-notebook-btn');
+  const clarifySaveNotebookBtn = document.getElementById('clarify-save-biology-notebook-btn');
   const cancelEditBtn = document.getElementById('cancel-biology-notebook-edit-btn');
   const notebookEntryList = document.getElementById('biology-notebook-entry-list');
 
@@ -49,11 +53,40 @@ export function initLabNotebook({
   const linkedPreviewCache = new Map();
   let linkedPreviewRenderToken = 0;
 
+  function cloneSelectionInsights(insights) {
+    try {
+      return Array.isArray(insights)
+        ? JSON.parse(JSON.stringify(
+          insights.filter((item) => item && typeof item === 'object')
+        ))
+        : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function updateNotebookEntryRecord(entryId, updater) {
+    const index = state.notebookEntries.findIndex((item) => item.id === entryId && matchesNotebookType(item));
+    if (index < 0 || typeof updater !== 'function') {
+      return null;
+    }
+    const nextEntry = updater(state.notebookEntries[index]);
+    if (!nextEntry || typeof nextEntry !== 'object') {
+      return null;
+    }
+    state.notebookEntries[index] = nextEntry;
+    persist();
+    return nextEntry;
+  }
+
   notebookProjectSelect.addEventListener('change', onProjectChange);
   notebookProtocolSearchInput?.addEventListener('input', onProtocolSearchInput);
   notebookProtocolSelect.addEventListener('change', onProtocolChange);
   saveNotebookBtn.addEventListener('click', () => {
     void saveEntry();
+  });
+  clarifySaveNotebookBtn?.addEventListener('click', () => {
+    void clarifyAndSaveEntry();
   });
   notebookAddGelBtn?.addEventListener('click', () => {
     void onAddGelClick();
@@ -191,6 +224,20 @@ export function initLabNotebook({
     };
   }
 
+  function resolveEntryExperimentName(entry, fallbackProtocol = null) {
+    const experimentName = String(entry?.experimentName || '').trim();
+    if (experimentName) {
+      return experimentName;
+    }
+    const protocolName = String(
+      fallbackProtocol?.name
+      || entry?.protocolName
+      || entry?.workflowContext?.workflowBlockTitle
+      || ''
+    ).trim();
+    return protocolName || 'Untitled Page';
+  }
+
   function resolveEntryCollectionName(entry) {
     const workflowEntryName = String(entry?.workflowContext?.workflowEntryName || '').trim();
     if (workflowEntryName) {
@@ -243,7 +290,7 @@ export function initLabNotebook({
     renderEntries();
   }
 
-  async function saveEntry() {
+  async function saveEntry(options = {}) {
     const projectId = notebookProjectSelect.value;
     const protocolId = notebookProtocolSelect.value;
     const project = state.projects.find((item) => item.id === projectId);
@@ -293,6 +340,8 @@ export function initLabNotebook({
 
     const nowIso = new Date().toISOString();
     const notebookState = resolveEntryNotebookState(editingEntry);
+    const resultText = String(options.resultText ?? notebookResult.value).trim();
+    const experimentName = String(notebookExperimentName?.value || '').trim() || protocol.name;
     const entry = {
       id: entryId,
       notebookType,
@@ -300,9 +349,10 @@ export function initLabNotebook({
       projectName: project.name,
       protocolId: protocol.id,
       protocolName: protocol.name,
+      experimentName,
       protocolSnapshot: cloneProtocolSnapshot(protocol) || cloneProtocolSnapshot(editingEntry?.protocolSnapshot),
       values,
-      result: notebookResult.value.trim(),
+      result: resultText,
       resultFiles,
       resultFileRecords,
       storageFolder,
@@ -313,7 +363,8 @@ export function initLabNotebook({
       agentDraftStatus: String(editingEntry?.agentDraftStatus || '').trim(),
       agentDraftMeta: editingEntry?.agentDraftMeta && typeof editingEntry.agentDraftMeta === 'object'
         ? { ...editingEntry.agentDraftMeta }
-        : {}
+        : {},
+      selectionInsights: cloneSelectionInsights(editingEntry?.selectionInsights)
     };
 
     const index = editingEntry
@@ -341,6 +392,35 @@ export function initLabNotebook({
       onNotebookEntriesChanged();
     }
     return entry;
+  }
+
+  async function clarifyAndSaveEntry() {
+    const source = String(notebookResult.value || '').trim();
+    if (!source) {
+      showTransientNotice('Add notebook notes before clarifying them.', { type: 'error' });
+      return;
+    }
+    setNotebookSaveBusy(true, { clarify: true });
+    try {
+      const clarified = await clarifyNotebookNote({
+        llm: state.settings?.llm,
+        text: source
+      });
+      notebookResult.value = clarified;
+      const savedEntry = await saveEntry({
+        resultText: clarified
+      });
+      if (!savedEntry) {
+        throw new Error('Unable to save the clarified notebook entry.');
+      }
+      showTransientNotice('Clarified note saved.');
+    } catch (error) {
+      showTransientNotice(String(error?.message || error || 'Failed to clarify the notebook entry.'), {
+        type: 'error'
+      });
+    } finally {
+      setNotebookSaveBusy(false);
+    }
   }
 
   async function ensureStorageFolderExists(storageFolder) {
@@ -531,7 +611,7 @@ export function initLabNotebook({
             class="biology-notebook-page-row${isActive}${stateClass}"
             data-notebook-entry-id="${safeText(entry.id)}"
           >
-            <span class="biology-notebook-page-name">${safeText(entry.protocolName || entry.workflowContext?.workflowBlockTitle || 'Untitled Page')}</span>
+            <span class="biology-notebook-page-name">${safeText(resolveEntryExperimentName(entry))}</span>
             <span class="biology-notebook-page-badge">${safeText(stateLabel)}</span>
           </button>
         `;
@@ -746,10 +826,12 @@ export function initLabNotebook({
     if (!entry || typeof onCreateLinkedGel !== 'function') {
       return;
     }
+    const gelName = String(notebookExperimentName?.value || '').trim() || resolveEntryExperimentName(entry);
     onCreateLinkedGel({
       notebookEntryId: entry.id,
       projectId: entry.projectId,
-      notebookType: entry.notebookType || notebookType
+      notebookType: entry.notebookType || notebookType,
+      gelName
     });
   }
 
@@ -833,6 +915,9 @@ export function initLabNotebook({
       notebookEmptyState.hidden = true;
     }
 
+    if (notebookExperimentName) {
+      notebookExperimentName.value = resolveEntryExperimentName(entry, protocol);
+    }
     notebookProtocolTitle.textContent = protocol.name;
     notebookProtocolMeta.textContent = buildViewerMeta(project, entry, isSavedEntry);
     if (notebookExportBtn) {
@@ -847,7 +932,7 @@ export function initLabNotebook({
       const sentenceHtml = renderStepSentence(step, values);
       return `
         <article class="card">
-          <p class="notebook-step-line"><strong>Step ${index + 1}:</strong> ${sentenceHtml}</p>
+          <p class="notebook-step-line"><strong>Step ${index + 1}:</strong> <span class="notebook-step-content" data-selection-segment-id="notebook:step:${safeText(String(step?.id || `step_${index + 1}`))}" data-selection-segment-label="Step ${index + 1}">${sentenceHtml}</span></p>
         </article>
       `;
     }).join('');
@@ -857,11 +942,12 @@ export function initLabNotebook({
     renderLinkedPreviews(entry);
     updateSaveButtonLabel();
     syncViewerVisibility();
+    selectionInsightsController?.refreshHost?.('biology-notebook-protocol');
   }
 
   function buildViewerMeta(project, entry, isSavedEntry) {
     const contextLabel = entry
-      ? resolveEntryCollectionName(entry)
+      ? `${resolveEntryCollectionName(entry)} / ${resolveEntryExperimentName(entry)}`
       : String(project?.name || '').trim() || 'Untitled Project';
     if (entry) {
       const updatedAt = entry.updatedAt ? formatEntryTimestamp(entry.updatedAt) : 'Unknown time';
@@ -885,6 +971,9 @@ export function initLabNotebook({
     notebookSteps.innerHTML = '';
     notebookResult.value = '';
     notebookResultFile.value = '';
+    if (notebookExperimentName) {
+      notebookExperimentName.value = '';
+    }
     notebookProtocolTitle.textContent = '';
     notebookProtocolMeta.textContent = 'Select a notebook page or start a new one.';
     if (notebookExportBtn) {
@@ -910,10 +999,23 @@ export function initLabNotebook({
     if (!saveNotebookBtn) {
       return;
     }
-    const editing = Boolean(editingEntryId);
-    saveNotebookBtn.textContent = editing ? 'Update Notebook Entry' : 'Save Notebook Entry';
+    saveNotebookBtn.textContent = 'Save';
+    if (clarifySaveNotebookBtn) {
+      clarifySaveNotebookBtn.textContent = 'Clarify and Save';
+    }
     if (cancelEditBtn) {
-      cancelEditBtn.hidden = !editing;
+      cancelEditBtn.hidden = !editingEntryId;
+    }
+  }
+
+  function setNotebookSaveBusy(isBusy, { clarify = false } = {}) {
+    if (saveNotebookBtn) {
+      saveNotebookBtn.disabled = isBusy;
+      saveNotebookBtn.textContent = isBusy && !clarify ? 'Saving...' : 'Save';
+    }
+    if (clarifySaveNotebookBtn) {
+      clarifySaveNotebookBtn.disabled = isBusy;
+      clarifySaveNotebookBtn.textContent = isBusy && clarify ? 'Clarifying...' : 'Clarify and Save';
     }
   }
 
@@ -1153,6 +1255,54 @@ export function initLabNotebook({
     editor.hidden = true;
     token.hidden = false;
   }
+
+  selectionInsightsController?.registerHost?.({
+    key: 'biology-notebook-protocol',
+    host: notebookSteps,
+    getContext: () => {
+      if (notebookProtocolArea.hidden) {
+        return null;
+      }
+      const entry = getActiveEntry();
+      const project = entry
+        ? resolveEntryProject(entry)
+        : (state.projects.find((item) => item.id === notebookProjectSelect.value) || null);
+      const protocol = entry
+        ? resolveEntryProtocol(entry)
+        : (state.protocols.find((item) => item.id === notebookProtocolSelect.value) || null);
+      if (!project || !protocol) {
+        return null;
+      }
+      const record = entry || {
+        id: '',
+        projectId: project.id,
+        projectName: project.name,
+        protocolId: protocol.id,
+        protocolName: protocol.name,
+        storageFolder: '',
+        selectionInsights: []
+      };
+      return {
+        kind: 'notebook',
+        record,
+        projectId: project.id,
+        projectName: project.name,
+        storagePath: String(state.settings?.storagePath || '').trim(),
+        insights: cloneSelectionInsights(record.selectionInsights),
+        ensureRecord: async () => {
+          const activeEntry = getActiveEntry();
+          if (activeEntry) {
+            return activeEntry;
+          }
+          return saveEntry();
+        },
+        updateRecord: (updater) => updateNotebookEntryRecord(record.id, (currentEntry) => {
+          const nextEntry = updater(currentEntry);
+          return nextEntry && typeof nextEntry === 'object' ? nextEntry : currentEntry;
+        })
+      };
+    }
+  });
 
   return {
     openEntry: editEntry,

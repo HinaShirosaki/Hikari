@@ -13,7 +13,8 @@ export function formatTimestamp(raw) {
 
 export function notebookLabel(entry) {
   const type = entry.notebookType === 'biology' ? 'Biology' : 'Synthesis';
-  return `${type}: ${entry.protocolName || '-'} (${formatTimestamp(entry.updatedAt)})`;
+  const pageName = String(entry.experimentName || entry.protocolName || '-').trim() || '-';
+  return `${type}: ${pageName} (${formatTimestamp(entry.updatedAt)})`;
 }
 
 export function sanitizeFilePart(text, fallback) {

@@ -41,9 +41,9 @@ body.theme-night #home-view {
   min-height: 0;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(280px, 0.86fr);
   grid-template-areas:
-    "today today timer"
-    "passage workflow timer"
-    "incubation quicklog actions";
+    "quicklog passage timer"
+    "notebook incubation timer"
+    "workflow workflow actions";
   grid-template-rows: var(--home-top-row) var(--home-middle-row) var(--home-bottom-row);
   gap: var(--home-gap);
 }
@@ -90,6 +90,11 @@ body.theme-night #home-view {
 #home-view .home-tile-quick-log {
   grid-area: quicklog;
   grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+#home-view .home-tile-notebook-pages {
+  grid-area: notebook;
+  grid-template-rows: auto minmax(0, 1fr);
 }
 
 #home-view .home-tile-actions {
@@ -326,6 +331,39 @@ body.theme-night #home-view {
 
 #home-view .dashboard-incubation-row.is-due .dashboard-incubation-detail {
   color: #b25522;
+}
+
+#home-view .home-tile .dashboard-notebook-page-row {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  padding: 11px 0;
+  border: 0;
+  border-radius: 0;
+  border-bottom: 1px solid var(--home-tile-line-soft);
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+#home-view .dashboard-list > .dashboard-notebook-page-row:last-child {
+  border-bottom: 0;
+}
+
+#home-view .home-tile .dashboard-notebook-page-row:hover,
+#home-view .home-tile .dashboard-notebook-page-row:focus-visible {
+  background: transparent;
+}
+
+#home-view .dashboard-notebook-page-title {
+  font-weight: 600;
+  color: var(--home-tile-text);
+}
+
+#home-view .dashboard-notebook-page-meta {
+  margin: 0;
+  color: var(--home-tile-muted);
+  font-size: 0.84rem;
 }
 
 #home-view .dashboard-incubation-action {
@@ -729,6 +767,10 @@ body.theme-night #home-view .dashboard-timer-remove-btn:focus-visible {
   justify-content: center;
 }
 
+#home-view .home-notebook-note-dialog {
+  width: min(100%, 380px);
+}
+
 body.theme-night #home-view .home-dialog {
   background: var(--home-tile-bg-strong);
 }
@@ -941,11 +983,11 @@ body.theme-night #home-view .home-tile .home-action-btn:focus-visible {
   #home-view .home-layout {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-template-areas:
-      "today today"
-      "passage workflow"
-      "timer actions"
-      "incubation quicklog";
-    grid-template-rows: minmax(148px, auto) repeat(3, minmax(280px, auto));
+      "quicklog timer"
+      "passage timer"
+      "notebook workflow"
+      "incubation actions";
+    grid-template-rows: repeat(4, minmax(280px, auto));
     height: auto;
     min-height: auto;
   }
@@ -959,12 +1001,12 @@ body.theme-night #home-view .home-tile .home-action-btn:focus-visible {
   #home-view .home-layout {
     grid-template-columns: 1fr;
     grid-template-areas:
-      "today"
+      "quicklog"
+      "notebook"
       "passage"
+      "incubation"
       "workflow"
       "timer"
-      "incubation"
-      "quicklog"
       "actions";
     grid-template-rows: none;
     min-height: auto;

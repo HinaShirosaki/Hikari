@@ -2,6 +2,7 @@
 
 const { createAgentIntentDispatcher } = require('./agent-intent-dispatcher');
 const { createAgentOpenContextRuntime } = require('./agent-open-context-runtime');
+const { createSelectionInsightRuntime } = require('./selection-insight-runtime');
 const { throwIfAgentRequestAborted } = require('../../agent/shared/agent-request-context.js');
 
 function createAgentControllerCore({
@@ -47,6 +48,76 @@ function createAgentControllerCore({
       };
     }).filter((attachment) => attachment.name && attachment.dataUrl);
   }
+
+  function clarificationNeedsProjectScope(parserPayload = {}) {
+    const clarificationText = cleanText(
+      parserPayload?.clarification_reason || parserPayload?.clarification_question,
+      320
+    ).toLowerCase();
+    return /\bproject\b|\bworkspace\b/.test(clarificationText);
+  }
+
+  function contextualizeParserPayload(parserPayload = {}, {
+    projectId = '',
+    projectName = ''
+  } = {}) {
+    const selectedProjectId = cleanText(projectId, 120);
+    const selectedProjectName = cleanText(projectName, 220);
+    if (!selectedProjectId && !selectedProjectName) {
+      return parserPayload && typeof parserPayload === 'object' ? parserPayload : {};
+    }
+
+    const source = parserPayload && typeof parserPayload === 'object' ? parserPayload : {};
+    const entities = source.entities && typeof source.entities === 'object' && !Array.isArray(source.entities)
+      ? { ...source.entities }
+      : {};
+    const next = {
+      ...source,
+      entities
+    };
+    const originalIntent = cleanText(source.primary_intent, 80);
+    const projectScopedIntents = new Set([
+      'project_science_question',
+      'protocol_to_notebook',
+      'notebook_draft'
+    ]);
+    const upgradeToProjectScience = originalIntent === 'general_science_question';
+    if (upgradeToProjectScience) {
+      next.primary_intent = 'project_science_question';
+    }
+    const effectiveIntent = cleanText(next.primary_intent, 80);
+    if (projectScopedIntents.has(effectiveIntent)) {
+      if (!cleanText(entities.project_id, 120) && selectedProjectId) {
+        entities.project_id = selectedProjectId;
+      }
+      if (!cleanText(entities.project_name, 220) && !cleanText(entities.project, 220) && selectedProjectName) {
+        entities.project_name = selectedProjectName;
+      }
+      if (next.needs_clarification === true && clarificationNeedsProjectScope(next)) {
+        next.needs_clarification = false;
+        next.clarification_reason = null;
+        if (Object.prototype.hasOwnProperty.call(next, 'clarification_question')) {
+          next.clarification_question = '';
+        }
+      }
+    }
+    const contextualNotes = [];
+    if (upgradeToProjectScience) {
+      contextualNotes.push(
+        `Selected project scope ${selectedProjectName || selectedProjectId} upgraded this request to project_science_question.`
+      );
+    }
+    if (source.needs_clarification === true && next.needs_clarification === false) {
+      contextualNotes.push('Selected project scope satisfied the missing project requirement.');
+    }
+    if (contextualNotes.length) {
+      next.reasoning_summary = [
+        cleanText(source.reasoning_summary, 1200),
+        ...contextualNotes
+      ].filter(Boolean).join(' ');
+    }
+    return next;
+  }
   const intentDispatcher = createAgentIntentDispatcher({
     deps,
     cleanText,
@@ -60,6 +131,16 @@ function createAgentControllerCore({
     executeRecordLookup,
     getDefaultDataFilePath,
     lifecycleService
+  });
+  const selectionInsightRuntime = createSelectionInsightRuntime({
+    cleanText,
+    requestText: typeof controllerUtils.requestText === 'function'
+      ? controllerUtils.requestText
+      : null,
+    requestWebSearch: typeof controllerUtils.requestWebSearch === 'function'
+      ? controllerUtils.requestWebSearch
+      : null,
+    observability
   });
 
   function buildSkillCommandParserPayload({
@@ -308,6 +389,22 @@ function createAgentControllerCore({
       ? conversation
       : [...conversation, { role: 'user', text: effectiveMessage }];
 
+    const selectionInsightResult = await selectionInsightRuntime.runSelectionInsight(payload, {
+      provider,
+      endpoint,
+      apiKey,
+      model,
+      snapshot,
+      traceContext,
+      lifecycleRecorder
+    });
+    if (selectionInsightResult) {
+      if (executionFlags.developerMode === true) {
+        selectionInsightResult.developer_trace = asArray(traceContext?.rows);
+      }
+      return selectionInsightResult;
+    }
+
     observability.recordLifecycleEvent(lifecycleRecorder, {
       stage: 'controller_intent_only',
       status: 'ok',
@@ -321,7 +418,7 @@ function createAgentControllerCore({
       chatSessionStoragePath: cleanText(runtime?.chatSessionStoragePath, 2400)
     });
     const parserWasSkipped = Boolean(parserBypass?.ok === true && parserBypass?.payload);
-    const parserResult = parserWasSkipped
+    const rawParserResult = parserWasSkipped
       ? {
         ok: true,
         payload: parserBypass.payload
@@ -333,20 +430,27 @@ function createAgentControllerCore({
         traceContext
       });
     throwIfAgentRequestAborted('Agent request stopped after intent parsing.');
-    if (!parserResult?.ok || !parserResult?.payload) {
+    if (!rawParserResult?.ok || !rawParserResult?.payload) {
       observability.recordLifecycleEvent(lifecycleRecorder, {
         stage: 'parser_completed',
         status: 'failed',
-        message: cleanText(parserResult?.error || 'Malformed parser output.', 320),
+        message: cleanText(rawParserResult?.error || 'Malformed parser output.', 320),
         failure_reasons: ['intent_parser_failed']
       });
       return {
         ok: false,
         provider,
         model: model || (provider === deps.LLM_PROVIDERS.CODEX ? 'codex-default' : ''),
-        error: cleanText(`Intent parser failed: ${parserResult?.error || 'Malformed parser output.'}`, 360)
+        error: cleanText(`Intent parser failed: ${rawParserResult?.error || 'Malformed parser output.'}`, 360)
       };
     }
+    const parserResult = {
+      ...rawParserResult,
+      payload: contextualizeParserPayload(rawParserResult.payload, {
+        projectId: cleanText(payload?.projectId, 80),
+        projectName: cleanText(payload?.projectName, 180)
+      })
+    };
     observability.recordLifecycleEvent(lifecycleRecorder, {
       stage: 'parser_completed',
       status: 'ok',

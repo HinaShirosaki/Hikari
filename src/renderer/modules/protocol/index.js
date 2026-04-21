@@ -19,6 +19,7 @@ export function initProtocolManagement({
   safeText,
   onProtocolsChanged,
   trackGrowthEvent,
+  selectionInsightsController = null,
   __globals = {}
 }) {
   const documentRef = __globals.document || globalThis.document;
@@ -63,6 +64,32 @@ export function initProtocolManagement({
   let importController = null;
   let polishController = null;
   let generationController = null;
+
+  function cloneSelectionInsights(insights) {
+    try {
+      return Array.isArray(insights)
+        ? JSON.parse(JSON.stringify(
+          insights.filter((item) => item && typeof item === 'object')
+        ))
+        : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function updateProtocolRecord(protocolId, updater) {
+    const index = state.protocols.findIndex((item) => String(item?.id || '') === String(protocolId || '').trim());
+    if (index < 0 || typeof updater !== 'function') {
+      return null;
+    }
+    const nextProtocol = updater(state.protocols[index]);
+    if (!nextProtocol || typeof nextProtocol !== 'object') {
+      return null;
+    }
+    state.protocols[index] = nextProtocol;
+    persist();
+    return nextProtocol;
+  }
 
   function setSelectedProtocol(protocolId = '') {
     localState.activeProtocolId = String(protocolId || '').trim();
@@ -121,6 +148,7 @@ export function initProtocolManagement({
     }
     ui.protocolViewTitle.textContent = protocol.name || 'Protocol';
     ui.protocolViewContent.innerHTML = previewHelpers.buildProtocolPreviewMarkup(protocol);
+    selectionInsightsController?.refreshHost?.('protocol-view');
   }
 
   function syncSelectionAfterMutation() {
@@ -296,6 +324,7 @@ export function initProtocolManagement({
 
     const nowIso = new Date().toISOString();
     const createdAt = draftHelpers.normalizeIsoTimestamp(localState.currentProtocolDraft.createdAt, nowIso);
+    const existingProtocol = state.protocols.find((item) => item.id === localState.currentProtocolDraft.id) || null;
     const protocol = {
       id: localState.currentProtocolDraft.id || createId(),
       name: editorDraft.name,
@@ -304,7 +333,8 @@ export function initProtocolManagement({
       steps: editorDraft.steps,
       troubleshooting: editorDraft.troubleshooting,
       createdAt,
-      updatedAt: nowIso
+      updatedAt: nowIso,
+      selectionInsights: cloneSelectionInsights(existingProtocol?.selectionInsights)
     };
 
     const index = state.protocols.findIndex((item) => item.id === protocol.id);
@@ -529,6 +559,26 @@ export function initProtocolManagement({
   listController.updateSortButtonLabels();
   generationController.syncProtocolGenerateButtonVisibility();
   applyDetailMode('empty');
+  selectionInsightsController?.registerHost?.({
+    key: 'protocol-view',
+    host: ui.protocolViewContent,
+    getContext: () => {
+      const protocol = getSelectedProtocol();
+      if (!protocol || localState.protocolDetailMode !== 'view') {
+        return null;
+      }
+      return {
+        kind: 'protocol',
+        record: protocol,
+        storagePath: String(state.settings?.storagePath || '').trim(),
+        insights: cloneSelectionInsights(protocol.selectionInsights),
+        updateRecord: (updater) => updateProtocolRecord(protocol.id, (currentProtocol) => {
+          const nextProtocol = updater(currentProtocol);
+          return nextProtocol && typeof nextProtocol === 'object' ? nextProtocol : currentProtocol;
+        })
+      };
+    }
+  });
 
   documentRef?.addEventListener?.('click', (event) => {
     if (!localState.activeMenuProtocolId) {

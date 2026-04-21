@@ -40,7 +40,10 @@ export function createEmptyManualOverrides() {
     addedBands: [],
     ladderLane: null,
     ladderBands: [],
-    ladderBandsDone: false
+    ladderBandsDone: false,
+    laneTable: {
+      rows: []
+    }
   };
 }
 
@@ -99,6 +102,18 @@ export function normalizeManualOverrides(raw) {
     .filter((item) => Number.isFinite(item.mw) && item.mw > 0)
     .sort((a, b) => a.pixelY - b.pixelY);
   normalized.ladderBandsDone = Boolean(input.ladderBandsDone);
+  const rawLaneTable = input.laneTable && typeof input.laneTable === 'object'
+    ? input.laneTable
+    : {};
+  normalized.laneTable = {
+    rows: (Array.isArray(rawLaneTable.rows) ? rawLaneTable.rows : [])
+      .filter((row) => row && typeof row === 'object')
+      .map((row) => ({
+        label: String(row.label ?? '').slice(0, 160),
+        values: (Array.isArray(row.values) ? row.values : [])
+          .map((value) => String(value ?? '').slice(0, 160))
+      }))
+  };
 
   return normalized;
 }

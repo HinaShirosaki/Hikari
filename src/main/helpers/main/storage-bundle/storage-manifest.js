@@ -38,6 +38,12 @@ function detectManifestRole(relativePath) {
   if (normalized === 'protocol') {
     return 'protocol_root';
   }
+  if (normalized === 'project') {
+    return 'project_root';
+  }
+  if (normalized.startsWith('project/') && normalized.endsWith('/memory.md')) {
+    return 'project_memory';
+  }
   if (normalized.endsWith('/protocol.json') && normalized.startsWith('protocol/')) {
     return 'protocol_record';
   }
@@ -73,6 +79,9 @@ function detectManifestRole(relativePath) {
   }
   if (normalized === 'workflow/workflow-status.sqlite') {
     return 'workflow_status_index';
+  }
+  if (normalized.startsWith('workflow/') && normalized.endsWith('/memory.md')) {
+    return 'workflow_memory';
   }
   if (normalized.endsWith('/template.json') && normalized.startsWith('workflow/')) {
     return 'workflow_template_metadata';

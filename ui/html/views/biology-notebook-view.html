@@ -42,6 +42,10 @@
             <div class="biology-notebook-viewer-head">
               <div class="biology-notebook-viewer-copy">
                 <p class="small-note biology-notebook-viewer-kicker">Filled protocol and results</p>
+                <label>
+                  Experiment Name
+                  <input id="biology-notebook-experiment-name" type="text" placeholder="Name this specific experiment" />
+                </label>
                 <h3 id="biology-notebook-protocol-title"></h3>
                 <p id="biology-notebook-protocol-meta" class="small-note">Select a notebook page or start a new one.</p>
               </div>
@@ -82,7 +86,8 @@
                   <input id="biology-notebook-result-file" type="file" multiple />
                 </label>
                 <div class="form-actions">
-                  <button id="save-biology-notebook-btn" class="primary-btn" type="button">Save Notebook Entry</button>
+                  <button id="save-biology-notebook-btn" class="primary-btn" type="button">Save</button>
+                  <button id="clarify-save-biology-notebook-btn" class="ghost-btn" type="button">Clarify and Save</button>
                   <button id="cancel-biology-notebook-edit-btn" class="ghost-btn" type="button" hidden>Cancel Edit</button>
                 </div>
               </div>

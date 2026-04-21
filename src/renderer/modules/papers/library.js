@@ -5,6 +5,7 @@ import {
   getVisiblePapersForFolder,
   formatRelativePaperTime
 } from './model.js';
+import { getPaperDisplayTitle } from './pdf-metadata.js';
 
 export function createPapersLibraryController(context) {
   const {
@@ -19,6 +20,51 @@ export function createPapersLibraryController(context) {
     libraryContextState,
     elements
   } = context;
+
+  function getExpandedFolderKeys() {
+    if (!(libraryState.expandedFolderKeys instanceof Set)) {
+      const normalized = Array.isArray(libraryState.expandedFolderKeys)
+        ? libraryState.expandedFolderKeys
+        : [];
+      libraryState.expandedFolderKeys = new Set(
+        normalized
+          .map((item) => String(item || '').trim())
+          .filter(Boolean)
+      );
+    }
+    return libraryState.expandedFolderKeys;
+  }
+
+  function pruneExpandedFolderKeys(folders = []) {
+    const validKeys = new Set(
+      (Array.isArray(folders) ? folders : [])
+        .map((folder) => String(folder?.key || '').trim())
+        .filter(Boolean)
+    );
+    const expandedFolderKeys = getExpandedFolderKeys();
+    [...expandedFolderKeys].forEach((key) => {
+      if (!validKeys.has(key)) {
+        expandedFolderKeys.delete(key);
+      }
+    });
+  }
+
+  function isFolderExpanded(folderKey = '') {
+    return getExpandedFolderKeys().has(String(folderKey || '').trim());
+  }
+
+  function setFolderExpanded(folderKey = '', expanded = false) {
+    const normalizedKey = String(folderKey || '').trim();
+    if (!normalizedKey) {
+      return;
+    }
+    const expandedFolderKeys = getExpandedFolderKeys();
+    if (expanded) {
+      expandedFolderKeys.add(normalizedKey);
+      return;
+    }
+    expandedFolderKeys.delete(normalizedKey);
+  }
 
   function getCurrentLinkOptions() {
     if (elements.paperLinkTypeSelect?.value === 'journal-club') {
@@ -81,10 +127,31 @@ export function createPapersLibraryController(context) {
     elements.papersLibraryContextMenu.hidden = false;
   }
 
+  function buildDefaultFolderName() {
+    const existingNames = new Set(
+      (state.journalClubs || [])
+        .map((club) => String(club?.name || '').trim().toLowerCase())
+        .filter(Boolean)
+    );
+
+    let suffix = 1;
+    while (true) {
+      const candidate = suffix === 1 ? 'New Folder' : `New Folder ${suffix}`;
+      if (!existingNames.has(candidate.toLowerCase())) {
+        return candidate;
+      }
+      suffix += 1;
+    }
+  }
+
   function createJournalClubFolder({ name, description = '' } = {}) {
-    const normalizedName = String(name || '').trim();
+    const fallbackName = buildDefaultFolderName();
+    const normalizedName = String(name || fallbackName).trim() || fallbackName;
     if (!normalizedName) {
-      return false;
+      return null;
+    }
+    if (!Array.isArray(state.journalClubs)) {
+      state.journalClubs = [];
     }
 
     const journalClub = {
@@ -96,23 +163,14 @@ export function createPapersLibraryController(context) {
 
     persist();
     libraryState.selectedFolderKey = buildFolderKey('journal-club', journalClub.id);
+    setFolderExpanded(libraryState.selectedFolderKey, true);
     renderLibrarySidebar();
-    return true;
+    return journalClub;
   }
 
   function onCreateJournalClubFromMenu() {
     hideLibraryContextMenu();
-    const promptFn = typeof windowRef?.prompt === 'function' ? windowRef.prompt.bind(windowRef) : null;
-    if (!promptFn) {
-      windowRef?.alert?.('Folder naming prompt is unavailable.');
-      return;
-    }
-
-    const name = String(promptFn('Journal club folder name') || '').trim();
-    if (!name) {
-      return;
-    }
-    createJournalClubFolder({ name });
+    createJournalClubFolder({ name: buildDefaultFolderName() });
   }
 
   function onDeleteJournalClubFromMenu() {
@@ -199,6 +257,8 @@ export function createPapersLibraryController(context) {
 
   function syncSelectedFolder(preferredKey = '') {
     const folders = getLibraryFolders(state);
+    pruneExpandedFolderKeys(folders);
+    const previousSelectedKey = String(libraryState.selectedFolderKey || '').trim();
     const selectedFolder = folders.find((folder) => folder.key === preferredKey)
       || folders.find((folder) => folder.key === libraryState.selectedFolderKey)
       || folders.find((folder) => folder.key === buildFolderKey(elements.paperLinkTypeSelect?.value, elements.paperLinkTargetSelect?.value))
@@ -206,6 +266,16 @@ export function createPapersLibraryController(context) {
       || null;
 
     libraryState.selectedFolderKey = selectedFolder?.key || '';
+    if (
+      selectedFolder?.key
+      && (
+        libraryState.hasInitializedFolderExpansion !== true
+        || previousSelectedKey !== selectedFolder.key
+      )
+    ) {
+      setFolderExpanded(selectedFolder.key, true);
+      libraryState.hasInitializedFolderExpansion = true;
+    }
 
     if (!selectedFolder) {
       if (elements.paperLinkTargetSelect) {
@@ -253,7 +323,7 @@ export function createPapersLibraryController(context) {
         class="papers-paper-row${activePaperId === paper.id ? ' is-active' : ''}"
         data-paper-view="${paper.id}"
       >
-        <span class="papers-paper-title">${safeText(paper.title)}</span>
+        <span class="papers-paper-title">${safeText(getPaperDisplayTitle(paper))}</span>
         <span class="papers-paper-time">${safeText(formatRelativePaperTime(paper.updatedAt))}</span>
       </button>
     `).join('');
@@ -280,16 +350,19 @@ export function createPapersLibraryController(context) {
     }
 
     elements.journalClubList.innerHTML = folders.map((folder) => `
-      <div class="papers-folder-group${folder.key === selectedFolder?.key ? ' is-active' : ''}">
+      <div class="papers-folder-group${folder.key === selectedFolder?.key ? ' is-active' : ''}${isFolderExpanded(folder.key) ? ' is-expanded' : ''}">
         <button
           type="button"
-          class="papers-folder-item${folder.key === selectedFolder?.key ? ' is-active' : ''}"
+          class="papers-folder-item${folder.key === selectedFolder?.key ? ' is-active' : ''}${isFolderExpanded(folder.key) ? ' is-expanded' : ''}"
           data-folder-select="${safeText(folder.key)}"
+          aria-expanded="${isFolderExpanded(folder.key) ? 'true' : 'false'}"
         >
+          <span class="papers-folder-chevron" aria-hidden="true"></span>
           <span class="papers-folder-glyph" aria-hidden="true"></span>
           <span class="papers-folder-name">${safeText(folder.name)}</span>
+          <span class="papers-folder-count">${getFolderPaperCount(state, folder)}</span>
         </button>
-        ${folder.key === selectedFolder?.key ? `<div class="papers-folder-children">${paperTreeHtml}</div>` : ''}
+        ${isFolderExpanded(folder.key) ? `<div class="papers-folder-children">${buildPaperTreeListHtml(folder)}</div>` : ''}
       </div>
     `).join('');
   }
@@ -376,7 +449,12 @@ export function createPapersLibraryController(context) {
       return;
     }
     hideLibraryContextMenu();
-    libraryState.selectedFolderKey = selectBtn.dataset.folderSelect;
+    const folderKey = String(selectBtn.dataset.folderSelect || '').trim();
+    const alreadySelected = folderKey && folderKey === libraryState.selectedFolderKey;
+    libraryState.selectedFolderKey = folderKey;
+    if (folderKey) {
+      setFolderExpanded(folderKey, alreadySelected ? !isFolderExpanded(folderKey) : true);
+    }
     renderLibrarySidebar(libraryState.selectedFolderKey);
   }
 
@@ -468,6 +546,9 @@ export function createPapersLibraryController(context) {
   return {
     bindEvents,
     observeViewActivation,
+    ensureFolderExpanded(folderKey = '') {
+      setFolderExpanded(folderKey, true);
+    },
     getCurrentLinkOptions,
     getSelectedFolder,
     hideLibraryContextMenu,

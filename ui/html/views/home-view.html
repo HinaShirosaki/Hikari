@@ -1,29 +1,5 @@
 <section id="home-view" class="view is-active" aria-label="Home">
       <div class="home-layout">
-        <section class="home-tile home-tile-today" aria-labelledby="dashboard-today-heading">
-          <div class="home-tile-head">
-            <h2 id="dashboard-today-heading">Today To Do</h2>
-            <p id="dashboard-today-summary" class="small-note">No urgent items right now.</p>
-          </div>
-          <div class="home-today-grid">
-            <div class="home-summary-strip" aria-label="Today's overview">
-              <div class="home-summary-cell">
-                <span class="home-summary-label">Overdue</span>
-                <strong id="dashboard-today-overdue-count">0</strong>
-              </div>
-              <div class="home-summary-cell">
-                <span class="home-summary-label">Open Steps</span>
-                <strong id="dashboard-today-workflow-count">0</strong>
-              </div>
-              <div class="home-summary-cell">
-                <span class="home-summary-label">Follow-ups</span>
-                <strong id="dashboard-today-incubation-count">0</strong>
-              </div>
-            </div>
-            <div id="dashboard-today-list" class="dashboard-list dashboard-list-compact"></div>
-          </div>
-        </section>
-
         <section class="home-tile home-tile-passage" aria-labelledby="dashboard-passage-heading">
           <div class="home-tile-head">
             <div class="home-tile-head-row">
@@ -104,6 +80,16 @@
             <button type="button" id="dashboard-quick-log-agent-btn" class="primary-btn">Send to Assistant</button>
             <button type="button" id="dashboard-quick-log-notebook-btn" class="ghost-btn">Open Notebook</button>
             <button type="button" id="dashboard-quick-log-clear-btn" class="ghost-btn">Clear</button>
+          </div>
+        </section>
+
+        <section class="home-tile home-tile-notebook-pages" aria-labelledby="dashboard-notebook-pages-heading">
+          <div class="home-tile-head">
+            <h2 id="dashboard-notebook-pages-heading">Recent Notebook Pages</h2>
+            <p id="dashboard-notebook-pages-status" class="small-note">Tap a page to add a note.</p>
+          </div>
+          <div class="home-tile-scroll">
+            <div id="dashboard-notebook-page-list" class="dashboard-list"></div>
           </div>
         </section>
 
@@ -198,6 +184,34 @@
             </form>
             <div id="dashboard-timer-template-list" class="home-timer-template-list"></div>
           </div>
+        </div>
+      </div>
+
+      <div id="dashboard-notebook-note-dialog-overlay" class="home-dialog-overlay" hidden>
+        <div
+          class="home-dialog home-notebook-note-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="dashboard-notebook-note-dialog-title"
+        >
+          <form id="dashboard-notebook-note-dialog-form" class="home-dialog-form">
+            <h3 id="dashboard-notebook-note-dialog-title">Add Note</h3>
+            <p id="dashboard-notebook-note-dialog-page" class="small-note"></p>
+            <label class="dashboard-field">
+              Note
+              <textarea
+                id="dashboard-notebook-note-input"
+                rows="5"
+                maxlength="4000"
+                placeholder="Add a quick note to this notebook page."
+                required
+              ></textarea>
+            </label>
+            <div class="dashboard-inline-row">
+              <button type="submit" id="dashboard-notebook-note-save-btn" class="primary-btn">Save Note</button>
+              <button type="button" id="dashboard-notebook-note-clarify-btn" class="ghost-btn">Clarify and Save</button>
+            </div>
+          </form>
         </div>
       </div>
 

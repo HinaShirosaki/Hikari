@@ -1,7 +1,7 @@
 {
   "schema_name": "enana_notebook_pages",
   "schema_version": "1.0.0",
-  "updated_at": "2026-04-19T01:49:35.620Z",
+  "updated_at": "2026-04-21T02:45:39.615Z",
   "notebookPages": [
     {
       "id": "1774025061643-8e7f8d2afe1198",
@@ -636,14 +636,14 @@
         ]
       },
       "values": {},
-      "result": "",
+      "result": "[Apr 20, 19:44] Protein crashed out during overnight incubation",
       "resultFiles": [],
       "resultFileRecords": [],
       "storageFolder": "/Users/shiyifan/Projects/Enana/Testdata/Workflow/NiNTA__1776270512198-af3480c2ef55c8/NiNTA_1__1776270538561-6c07e18af542f/Notebook/NiNTA_1__1776270538561-46e4a929f801c8/Notebook_Page__1776270569678-971d9d9b018028",
       "createdAt": "2026-04-15T16:29:29.678Z",
-      "updatedAt": "2026-04-15T18:11:48.146Z",
-      "notebookState": "planned",
-      "executedAt": "",
+      "updatedAt": "2026-04-21T00:45:24.020Z",
+      "notebookState": "executed",
+      "executedAt": "2026-04-21T00:45:24.020Z",
       "workflowContext": {
         "workflowId": "1776270538561-6c07e18af542f",
         "workflowName": "NiNTA 1",
@@ -653,7 +653,81 @@
         "workflowBlockTitle": "TEV Protease Cleavage of Fusion Protein"
       },
       "assayIds": [],
-      "gelAnalysisIds": []
+      "gelAnalysisIds": [],
+      "gelIds": [
+        "1776735689441-836cf784e1a4a"
+      ]
+    },
+    {
+      "id": "1776739509659-fed30b23b7adf8",
+      "notebookType": "biology",
+      "projectId": "1776101131639-b3a065c67eb558",
+      "projectName": "SUMO1",
+      "protocolId": "1774024047007-d137dae96cab78",
+      "protocolName": "BL21(DE3) Chemical Transformation with pET28a",
+      "experimentName": "pETDuet-SUMO1 transformation",
+      "protocolSnapshot": {
+        "id": "1774024047007-d137dae96cab78",
+        "name": "BL21(DE3) Chemical Transformation with pET28a",
+        "category": "",
+        "purpose": "Introduce a plasmid into BL21(DE3) competent E. coli cells for protein expression.",
+        "steps": [
+          {
+            "id": "1774125436234-8c09146262f048",
+            "text": "Thaw 1 tube of BL21(DE3) competent cells on ice.",
+            "placeholders": []
+          },
+          {
+            "id": "1774125436234-5e6cd5beb943b",
+            "text": "Add 200ng of {{ph:1774125436234-cac9aa958fe75}} DNA to the cells and gently flick to mix.",
+            "placeholders": [
+              {
+                "id": "1774125436234-cac9aa958fe75",
+                "name": "plasmid"
+              }
+            ]
+          },
+          {
+            "id": "1774125436234-15189704d9d308",
+            "text": "Incubate the mixture on ice for 30 min.",
+            "placeholders": []
+          },
+          {
+            "id": "1774125436234-43f81b59a452a",
+            "text": "Heat shock the cells at 42 C for 45 s, then immediately place them back on ice for 1 min.",
+            "placeholders": []
+          },
+          {
+            "id": "1774125436234-b55f8f12ff476",
+            "text": "Add 1 mL of SOC medium and recover the cells at 37 C with shaking for 1 h.",
+            "placeholders": []
+          },
+          {
+            "id": "1774125436234-04fdf2bad48cb8",
+            "text": "Plate 100 uL of the recovery culture onto an LB agar plate containing Kanamycin.",
+            "placeholders": []
+          },
+          {
+            "id": "1774125436234-c8e74cf17602d8",
+            "text": "Incubate the plate at 37 C for overnight until colonies appear.",
+            "placeholders": []
+          }
+        ]
+      },
+      "values": {
+        "1774125436234-5e6cd5beb943b:1774125436234-cac9aa958fe75": ""
+      },
+      "result": "",
+      "resultFiles": [],
+      "resultFileRecords": [],
+      "storageFolder": "/Users/shiyifan/Projects/Enana/Testdata/Project/SUMO1/Notebook/BL21(DE3)_Chemical_Transformation_with_pET28a__1776739509659-fed30b23b7adf8",
+      "updatedAt": "2026-04-21T02:45:39.587Z",
+      "createdAt": "2026-04-21T02:45:09.661Z",
+      "notebookState": "executed",
+      "executedAt": "2026-04-21T02:45:09.661Z",
+      "agentDraftStatus": "",
+      "agentDraftMeta": {},
+      "selectionInsights": []
     }
   ]
 }

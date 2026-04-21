@@ -964,6 +964,27 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   filter: none;
 }
 
+.agent-composer-project {
+  display: grid;
+  gap: 8px;
+  min-width: min(100%, 280px);
+}
+
+.agent-composer-project > span {
+  font-size: 0.76rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.agent-composer-project select {
+  min-height: 42px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--line) 76%, transparent);
+  background: color-mix(in srgb, var(--surface-subtle) 82%, transparent);
+  color: var(--strong);
+}
+
 .agent-composer-label {
   display: grid;
   gap: 10px;
@@ -1040,6 +1061,25 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   justify-content: space-between;
   gap: 14px;
   flex-wrap: wrap;
+}
+
+.agent-composer-toolbar-start {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1 1 260px;
+}
+
+.agent-composer-project-inline {
+  display: block;
+  min-width: 0;
+  width: min(100%, 260px);
+  flex: 0 1 260px;
+}
+
+.agent-composer-project-inline select {
+  width: 100%;
 }
 
 .agent-attach-btn {
@@ -1338,13 +1378,27 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
     border-radius: 20px;
   }
 
+  .agent-composer-project {
+    width: 100%;
+    min-width: 0;
+  }
+
   .agent-composer-toolbar {
     align-items: stretch;
     flex-direction: column;
   }
 
+  .agent-composer-toolbar-start {
+    width: 100%;
+  }
+
+  .agent-composer-project-inline {
+    width: 100%;
+    flex: 1 1 auto;
+  }
+
   .agent-attach-btn {
-    align-self: flex-start;
+    align-self: auto;
   }
 
   .agent-composer-actions {

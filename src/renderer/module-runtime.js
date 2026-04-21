@@ -13,6 +13,7 @@ import { initToolBox } from './modules/tool-box.js';
 import { initAgentChat } from './modules/agent-chat.js';
 import { initHomeDashboard } from './modules/home-dashboard.js';
 import { initSequenceViewer } from './modules/sequence-viewer.js';
+import { createSelectionInsightsController } from './modules/selection-insights.js';
 
 function renderBiologyNotebook(modules) {
   modules.biologyNotebook.renderProjectOptions();
@@ -50,6 +51,14 @@ export function createRendererModuleRuntime(config = {}) {
   const sequenceViewerDetailViewId = String(config?.sequenceViewerDetailViewId || '').trim();
   const onStoragePathSaved = config?.onStoragePathSaved || (async () => {});
   const rootDocument = config?.rootDocument || globalThis?.document || null;
+  const selectionInsightsController = createSelectionInsightsController({
+    state,
+    persist,
+    createId,
+    safeText,
+    rootDocument,
+    windowObject: globalThis?.window || null
+  });
 
   const modules = {
     biologyNotebook: initAndRegisterModule(moduleRegistry, 'biologyNotebook', initBiologyNotebook, {
@@ -61,7 +70,8 @@ export function createRendererModuleRuntime(config = {}) {
       importProtocolsFromJson: rendererServices.protocol.importProtocolsFromJson,
       onCreateLinkedAssay: rendererServices.analysis.openAssayForNotebook,
       onCreateLinkedGel: rendererServices.analysis.openGelForNotebook,
-      onNotebookEntriesChanged: rendererServices.notebook.handleNotebookEntriesChanged
+      onNotebookEntriesChanged: rendererServices.notebook.handleNotebookEntriesChanged,
+      selectionInsightsController
     }),
     protocol: initAndRegisterModule(moduleRegistry, 'protocol', initProtocolManagement, {
       state,
@@ -69,7 +79,8 @@ export function createRendererModuleRuntime(config = {}) {
       createId,
       safeText,
       onProtocolsChanged: rendererServices.protocol.handleProtocolsChanged,
-      trackGrowthEvent
+      trackGrowthEvent,
+      selectionInsightsController
     }),
     projectManagement: initAndRegisterModule(moduleRegistry, 'projectManagement', initProjectManagement, {
       state,

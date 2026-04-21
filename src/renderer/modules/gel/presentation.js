@@ -1,7 +1,8 @@
 export function notebookLabel(entry) {
   const typeLabel = entry.notebookType === 'biology' ? 'Biology' : 'Synthesis';
   const updated = entry.updatedAt ? new Date(entry.updatedAt).toLocaleString() : '-';
-  return `${typeLabel}: ${entry.protocolName || '-'} (${updated})`;
+  const pageName = String(entry.experimentName || entry.protocolName || '-').trim() || '-';
+  return `${typeLabel}: ${pageName} (${updated})`;
 }
 
 export function formatAnalysisTypeLabel(type) {

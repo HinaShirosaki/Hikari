@@ -301,6 +301,9 @@ export function createRecordsManager({ runtime, elements, deps }) {
   function buildRecordFromCurrentReport(existingId = '') {
     const project = (runtime.state.projects || []).find((item) => item.id === elements.gelProjectInput?.value);
     const notebookEntry = (runtime.state.notebookEntries || []).find((entry) => entry.id === elements.gelNotebookEntryInput?.value);
+    const report = runtime.currentReport;
+    const params = readParams();
+    const sourceImageName = String(runtime.currentImage?.name || '').trim();
 
     return {
       id: existingId || runtime.createId(),
@@ -308,13 +311,13 @@ export function createRecordsManager({ runtime, elements, deps }) {
       projectId: project?.id || '',
       projectName: project?.name || '',
       notebookEntryId: elements.gelNotebookEntryInput?.value || '',
-      notebookEntryProtocolName: notebookEntry?.protocolName || '',
+      notebookEntryProtocolName: notebookEntry?.experimentName || notebookEntry?.protocolName || '',
       notebookEntryType: notebookEntry?.notebookType || '',
-      imageName: runtime.currentReport?.image?.name || '',
-      analysisType: runtime.currentReport?.analysisType || (elements.gelTypeInput?.value || 'sds-page'),
-      parameters: runtime.currentReport?.parameters || readParams(),
+      imageName: report?.image?.name || sourceImageName,
+      analysisType: report?.analysisType || (elements.gelTypeInput?.value || 'sds-page'),
+      parameters: report?.parameters || params,
       manualOverrides: normalizeManualOverrides(runtime.manualOverrides),
-      report: runtime.currentReport,
+      report,
       updatedAt: new Date().toISOString()
     };
   }
@@ -323,14 +326,9 @@ export function createRecordsManager({ runtime, elements, deps }) {
     event.preventDefault();
     ensureState();
 
-    if (!runtime.currentReport) {
-      deps.setStatus('Run analysis before saving.');
-      return;
-    }
-
     const name = elements.gelNameInput?.value.trim() || '';
     if (!name) {
-      deps.setStatus('Analysis name is required.');
+      deps.setStatus('Gel name is required.');
       return;
     }
 
@@ -354,7 +352,9 @@ export function createRecordsManager({ runtime, elements, deps }) {
     if (typeof runtime.onGelAnalysesChanged === 'function') {
       runtime.onGelAnalysesChanged();
     }
-    deps.setStatus(`Saved analysis: ${record.name}.`);
+    deps.setStatus(record.report
+      ? `Saved gel analysis: ${record.name}.`
+      : `Saved gel draft: ${record.name}. You can finish the analysis later.`);
   }
 
   function onExportJson() {
@@ -560,7 +560,7 @@ export function createRecordsManager({ runtime, elements, deps }) {
     }).join('');
   }
 
-  function startLinkedGel({ notebookEntryId = '', projectId = '' } = {}) {
+  function startLinkedGel({ notebookEntryId = '', projectId = '', gelName = '' } = {}) {
     resetForm();
 
     const linkedEntry = (runtime.state.notebookEntries || []).find((entry) => entry.id === notebookEntryId);
@@ -573,8 +573,13 @@ export function createRecordsManager({ runtime, elements, deps }) {
 
     renderNotebookOptions();
     selectNotebookOption(notebookEntryId);
+    const resolvedGelName = String(gelName || linkedEntry?.experimentName || linkedEntry?.protocolName || '').trim();
+    if (resolvedGelName && elements.gelNameInput) {
+      elements.gelNameInput.value = resolvedGelName;
+    }
     if (elements.gelNameInput) {
       elements.gelNameInput.focus();
+      elements.gelNameInput.select?.();
     }
     deps.setStatus(notebookEntryId
       ? `New gel analysis will be linked to notebook page ${notebookEntryId}.`

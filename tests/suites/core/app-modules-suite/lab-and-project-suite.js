@@ -486,7 +486,7 @@ test('biology-notebook keeps planned pages distinct, marks them executed, and pr
   assert.match(document.getElementById('biology-notebook-entry-list').innerHTML, /Planned/);
   assert.match(document.getElementById('biology-notebook-entry-list').innerHTML, /Executed/);
   assert.match(document.getElementById('biology-notebook-protocol-meta').textContent, /protocol draft/i);
-  assert.equal(document.getElementById('save-biology-notebook-btn').textContent, 'Save Notebook Entry');
+  assert.equal(document.getElementById('save-biology-notebook-btn').textContent, 'Save');
 
   trigger(document.getElementById('biology-notebook-entry-list'), 'click', {
     target: {

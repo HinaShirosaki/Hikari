@@ -73,7 +73,9 @@ export function createProtocolPreviewHelpers({
       sections.push(`
         <section class="protocol-view-section">
           <h4>Protocol Name</h4>
-          ${name ? `<p>${safeText(name)}</p>` : '<p class="small-note">No protocol name provided.</p>'}
+          ${name
+            ? `<p data-selection-segment-id="protocol:name" data-selection-segment-label="Protocol Name">${safeText(name)}</p>`
+            : '<p class="small-note">No protocol name provided.</p>'}
         </section>
       `);
     }
@@ -81,7 +83,9 @@ export function createProtocolPreviewHelpers({
     sections.push(`
       <section class="protocol-view-section">
         <h4>Purpose</h4>
-        ${purpose ? `<p>${safeText(purpose)}</p>` : '<p class="small-note">No purpose provided.</p>'}
+        ${purpose
+          ? `<p data-selection-segment-id="protocol:purpose" data-selection-segment-label="Purpose">${safeText(purpose)}</p>`
+          : '<p class="small-note">No purpose provided.</p>'}
       </section>
     `);
 
@@ -89,7 +93,9 @@ export function createProtocolPreviewHelpers({
       <section class="protocol-view-section">
         <h4>Materials</h4>
         ${materials.length
-          ? `<ul>${materials.map((item) => `<li>${safeText(item)}</li>`).join('')}</ul>`
+          ? `<ul>${materials.map((item, index) => `
+              <li data-selection-segment-id="protocol:material:${index + 1}" data-selection-segment-label="Material ${index + 1}">${safeText(item)}</li>
+            `).join('')}</ul>`
           : '<p class="small-note">No materials provided.</p>'}
       </section>
     `);
@@ -99,7 +105,7 @@ export function createProtocolPreviewHelpers({
         <h4>Steps</h4>
         ${steps.length
           ? `<ol class="protocol-view-steps">${steps.map((step) => `
-              <li>
+              <li data-selection-segment-id="protocol:step:${safeText(String(step?.id || ''))}" data-selection-segment-label="Protocol Step">
                 ${renderReadonlyStepSentence(step)}
               </li>
             `).join('')}</ol>`
@@ -110,7 +116,9 @@ export function createProtocolPreviewHelpers({
     sections.push(`
       <section class="protocol-view-section">
         <h4>Troubleshooting</h4>
-        ${troubleshooting ? `<p>${safeText(troubleshooting)}</p>` : '<p class="small-note">No troubleshooting notes.</p>'}
+        ${troubleshooting
+          ? `<p data-selection-segment-id="protocol:troubleshooting" data-selection-segment-label="Troubleshooting">${safeText(troubleshooting)}</p>`
+          : '<p class="small-note">No troubleshooting notes.</p>'}
       </section>
     `);
 

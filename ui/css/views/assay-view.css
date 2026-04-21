@@ -431,6 +431,21 @@
   gap: 12px;
 }
 
+.assay-serial-dilution-stock-table-wrap,
+.assay-serial-dilution-table-wrap {
+  overflow: auto;
+}
+
+.assay-serial-dilution-stock-table,
+.assay-serial-dilution-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.assay-serial-dilution-stock-table {
+  min-width: 320px;
+}
+
 .assay-serial-dilution-sample {
   display: grid;
   gap: 10px;
@@ -440,31 +455,34 @@
 }
 
 .assay-serial-dilution-sample-head {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(220px, 280px);
-  gap: 12px;
-  align-items: end;
+  display: block;
 }
 
 .assay-serial-dilution-sample-head h4 {
   margin: 0;
 }
 
-.assay-serial-dilution-sample-head label {
-  display: grid;
-  gap: 6px;
-}
-
-.assay-serial-dilution-table-wrap {
-  overflow: auto;
-}
-
-.assay-serial-dilution-table {
+.assay-serial-dilution-stock-table input {
   width: 100%;
-  min-width: 720px;
-  border-collapse: collapse;
+  min-width: 140px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
 }
 
+.assay-serial-dilution-stock-table input:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.assay-serial-dilution-stock-table input:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.assay-serial-dilution-stock-table th,
+.assay-serial-dilution-stock-table td,
 .assay-serial-dilution-table th,
 .assay-serial-dilution-table td {
   padding: 8px 10px;
@@ -474,6 +492,15 @@
   vertical-align: top;
 }
 
+.assay-serial-dilution-table {
+  min-width: 720px;
+}
+
+.assay-serial-dilution-table-compact {
+  min-width: 420px;
+}
+
+.assay-serial-dilution-stock-table th,
 .assay-serial-dilution-table th {
   background: rgba(222, 237, 255, 0.72);
   font-weight: 700;
@@ -941,11 +968,14 @@ body.theme-night .assay-serial-dilution-sample {
   background: rgba(31, 49, 81, 0.7);
 }
 
+body.theme-night .assay-serial-dilution-stock-table th,
+body.theme-night .assay-serial-dilution-stock-table td,
 body.theme-night .assay-serial-dilution-table th,
 body.theme-night .assay-serial-dilution-table td {
   border-color: rgba(145, 174, 214, 0.18);
 }
 
+body.theme-night .assay-serial-dilution-stock-table th,
 body.theme-night .assay-serial-dilution-table th {
   background: rgba(44, 69, 110, 0.72);
 }

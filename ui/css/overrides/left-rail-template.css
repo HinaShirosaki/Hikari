@@ -53,6 +53,12 @@
   scrollbar-gutter: stable;
 }
 
+.papers-layout > .papers-main.left-rail-template__main {
+  overflow-x: hidden;
+  overflow-y: hidden;
+  scrollbar-gutter: auto;
+}
+
 body.has-shared-left-rail-view .left-rail-template > .left-rail-template__rail.app-left-rail,
 body.has-shared-left-rail-view .left-rail-template > .left-rail-template__rail {
   background: transparent !important;
@@ -124,12 +130,15 @@ body.has-shared-left-rail-view .left-rail-template > .left-rail-template__rail {
   min-width: 0;
 }
 
-.papers-stage {
+.papers-layout .papers-stage {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) var(--papers-comments-width);
+  grid-template-columns: minmax(0, 1fr) minmax(248px, var(--papers-comments-width));
   gap: 22px;
-  align-items: start;
+  align-items: stretch;
   min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
 }
 
 .papers-layout.is-comments-collapsed .papers-stage {
@@ -179,20 +188,13 @@ body.has-shared-left-rail-view .left-rail-template > .left-rail-template__rail {
   }
 }
 
-@media (max-width: 1280px) {
-  .papers-stage,
-  .papers-layout.is-comments-collapsed .papers-stage {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
 @media (max-width: 980px) {
-  .left-rail-template {
+  .left-rail-template:not(.papers-layout) {
     grid-template-columns: 1fr;
   }
 
-  .left-rail-template > .left-rail-template__rail.app-left-rail,
-  .left-rail-template > .left-rail-template__rail {
+  .left-rail-template:not(.papers-layout) > .left-rail-template__rail.app-left-rail,
+  .left-rail-template:not(.papers-layout) > .left-rail-template__rail {
     max-height: none;
     padding: 0 0 18px !important;
     border-right: 0 !important;
@@ -200,7 +202,7 @@ body.has-shared-left-rail-view .left-rail-template > .left-rail-template__rail {
     background: transparent !important;
   }
 
-  .left-rail-template > .left-rail-template__main {
+  .left-rail-template:not(.papers-layout) > .left-rail-template__main {
     height: auto;
     padding-left: 0;
     padding-top: 18px;
@@ -208,7 +210,6 @@ body.has-shared-left-rail-view .left-rail-template > .left-rail-template__rail {
   }
 
   .sample-main-grid,
-  .papers-stage,
   .gel-main-grid {
     grid-template-columns: minmax(0, 1fr) !important;
     gap: 18px;

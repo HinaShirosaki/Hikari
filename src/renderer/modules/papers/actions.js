@@ -165,6 +165,7 @@ export function createPapersActions(context) {
     persist();
     elements.paperForm?.reset?.();
     libraryState.selectedFolderKey = buildFolderKey(paper.linkedType, paper.linkedId);
+    context.library?.ensureFolderExpanded?.(libraryState.selectedFolderKey);
     context.render?.();
   }
 
@@ -366,6 +367,7 @@ export function createPapersActions(context) {
 
     try {
       libraryState.selectedFolderKey = buildFolderKey(paper.linkedType, paper.linkedId);
+      context.library?.ensureFolderExpanded?.(libraryState.selectedFolderKey);
       context.renderLibrarySidebar?.(libraryState.selectedFolderKey);
       context.comments?.primeForPaperOpen();
       const opened = await paperViewer.openPaper({

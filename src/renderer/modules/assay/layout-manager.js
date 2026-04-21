@@ -710,67 +710,172 @@ export function createAssayLayoutManager({
 
     assaySerialDilutionSummary.textContent = `Calculated from the current ${concentrationAxisName} order. Trailing 0 concentration control wells are skipped from the serial dilution chain.`;
 
-    assaySerialDilutionContent.innerHTML = groups.map((group) => {
-      const stockValue = getSerialDilutionStockValue(group.sampleId);
-      const stockSource = String(group.inventorySample?.concentration || '').trim();
-      const plan = calculateSerialDilutionPlan({
-        group,
-        volumePerWellUl,
-        stockConcentrationText: stockValue
-      });
-
+    const renderSerialDilutionTable = (headers, rows, className = '') => {
+      if (!rows.length) {
+        return '';
+      }
       return `
+        <div class="assay-serial-dilution-table-wrap">
+          <table class="assay-serial-dilution-table ${className}">
+            <thead>
+              <tr>
+                ${headers.map((header) => `<th>${safeText(header)}</th>`).join('')}
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.map((cells) => `
+                <tr>
+                  ${cells.map((cell) => `<td>${safeText(cell)}</td>`).join('')}
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    };
+
+    const matchesSharedFollowingRecipe = (rows, referenceRows) => {
+      if (rows.length !== referenceRows.length) {
+        return false;
+      }
+      return rows.every((row, index) => {
+        const referenceRow = referenceRows[index];
+        return String(row.concentrationLabel || '') === String(referenceRow.concentrationLabel || '')
+          && formatVolumeText(row.inputVolume) === formatVolumeText(referenceRow.inputVolume)
+          && formatVolumeText(row.bufferVolume) === formatVolumeText(referenceRow.bufferVolume)
+          && formatVolumeText(row.outputVolume) === formatVolumeText(referenceRow.outputVolume)
+          && formatVolumeText(row.finalVolume) === formatVolumeText(referenceRow.finalVolume)
+          && (row.outputLabel === 'Discard') === (referenceRow.outputLabel === 'Discard');
+      });
+    };
+
+    const sampleInputTable = `
+      <div class="assay-serial-dilution-stock-table-wrap">
+        <table class="assay-serial-dilution-stock-table">
+          <thead>
+            <tr>
+              <th>Sample</th>
+              <th>Conc</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${groups.map((group) => {
+              const stockValue = getSerialDilutionStockValue(group.sampleId);
+              return `
+                <tr>
+                  <td>${safeText(group.sampleId)}</td>
+                  <td>
+                    <input
+                      type="text"
+                      value="${safeText(stockValue)}"
+                      placeholder="e.g. 10 mM"
+                      data-assay-serial-stock-sample="${safeText(group.sampleId)}"
+                    />
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+      <p class="small-note">Stock concentration is loaded from inventory when available. You can edit any value in the table above.</p>
+    `;
+
+    const planResults = groups.map((group) => {
+      const stockValue = getSerialDilutionStockValue(group.sampleId);
+      return {
+        group,
+        plan: calculateSerialDilutionPlan({
+          group,
+          volumePerWellUl,
+          stockConcentrationText: stockValue
+        })
+      };
+    });
+
+    const feedbackLines = planResults.flatMap(({ group, plan }) => {
+      const lines = [];
+      if (plan.error) {
+        lines.push(`<p class="small-note assay-serial-dilution-error">${safeText(`${group.sampleId}: ${plan.error}`)}</p>`);
+      }
+      for (const note of plan.notes) {
+        lines.push(`<p class="small-note assay-serial-dilution-note">${safeText(`${group.sampleId}: ${note}`)}</p>`);
+      }
+      return lines;
+    }).join('');
+
+    const validPlans = planResults.filter(({ plan }) => plan.rows.length && !plan.error);
+    const initialDilutionRows = validPlans.map(({ group, plan }) => {
+      const firstRow = plan.rows[0];
+      return [
+        group.sampleId,
+        formatVolumeText(firstRow.inputVolume),
+        formatVolumeText(firstRow.bufferVolume)
+      ];
+    });
+
+    const referenceFollowingRows = validPlans.find(({ plan }) => plan.rows.length > 1)?.plan.rows.slice(1) || [];
+    const followingRowsAreShared = referenceFollowingRows.length
+      ? validPlans.every(({ plan }) => matchesSharedFollowingRecipe(plan.rows.slice(1), referenceFollowingRows))
+      : true;
+
+    const initialDilutionSection = initialDilutionRows.length
+      ? `
         <section class="assay-serial-dilution-sample">
           <div class="assay-serial-dilution-sample-head">
-            <div>
-              <h4>${safeText(group.sampleId)}</h4>
-              <p class="small-note">${safeText(stockSource ? 'Stock concentration loaded from inventory when available. You can override it here.' : 'Enter the stock concentration for this sample to calculate the dilution recipe.')}</p>
-            </div>
-            <label>
-              Stock Concentration
-              <input
-                type="text"
-                value="${safeText(stockValue)}"
-                placeholder="e.g. 10 mM"
-                data-assay-serial-stock-sample="${safeText(group.sampleId)}"
-              />
-            </label>
+            <h4>Initial Dilution</h4>
           </div>
-          ${plan.error ? `<p class="small-note assay-serial-dilution-error">${safeText(plan.error)}</p>` : ''}
-          ${plan.notes.map((note) => `<p class="small-note assay-serial-dilution-note">${safeText(note)}</p>`).join('')}
-          ${plan.rows.length ? `
-            <div class="assay-serial-dilution-table-wrap">
-              <table class="assay-serial-dilution-table">
-                <thead>
-                  <tr>
-                    <th>Well</th>
-                    <th>Target Conc.</th>
-                    <th>Source</th>
-                    <th>Source Vol.</th>
-                    <th>Buffer Vol.</th>
-                    <th>Transfer / Discard</th>
-                    <th>Final Vol.</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${plan.rows.map((row) => `
-                    <tr>
-                      <td>${safeText(row.wellLabel)}</td>
-                      <td>${safeText(row.concentrationLabel)}</td>
-                      <td>${safeText(row.inputLabel)}</td>
-                      <td>${safeText(formatVolumeText(row.inputVolume))}</td>
-                      <td>${safeText(formatVolumeText(row.bufferVolume))}</td>
-                      <td>${safeText(row.outputLabel === '-' ? '-' : `${row.outputLabel}: ${formatVolumeText(row.outputVolume)}`)}</td>
-                      <td>${safeText(formatVolumeText(row.finalVolume))}</td>
-                    </tr>
-                  `).join('')}
-                </tbody>
-              </table>
-            </div>
-          ` : ''}
+          <p class="small-note">Prepare the first active dilution well for each sample using its stock concentration.</p>
+          ${renderSerialDilutionTable(
+            ['Sample', 'Stock Vol.', 'Buffer Vol.'],
+            initialDilutionRows,
+            'assay-serial-dilution-table-compact'
+          )}
         </section>
-      `;
-    }).join('');
+      `
+      : '';
+
+    const followingDilutionRows = referenceFollowingRows.map((row, index) => [
+      `Step ${index + 1}`,
+      row.concentrationLabel,
+      formatVolumeText(row.inputVolume),
+      formatVolumeText(row.bufferVolume),
+      row.outputLabel === 'Discard'
+        ? `Discard ${formatVolumeText(row.outputVolume)}`
+        : `Transfer ${formatVolumeText(row.outputVolume)}`,
+      formatVolumeText(row.finalVolume)
+    ]);
+
+    const followingDilutionSection = referenceFollowingRows.length
+      ? `
+        <section class="assay-serial-dilution-sample">
+          <div class="assay-serial-dilution-sample-head">
+            <h4>Following Dilution</h4>
+          </div>
+          <p class="small-note">Repeat this same downstream dilution sequence for every sample after the initial well is prepared.</p>
+          ${!followingRowsAreShared ? '<p class="small-note assay-serial-dilution-note">Following-dilution rows were not identical across every sample, so this table is based on the first valid sample sequence.</p>' : ''}
+          ${renderSerialDilutionTable(
+            ['Step', 'Target Conc.', 'From Previous Well', 'Buffer Vol.', 'Transfer / Discard', 'Final Vol.'],
+            followingDilutionRows
+          )}
+        </section>
+      `
+      : validPlans.length
+        ? `
+        <section class="assay-serial-dilution-sample">
+          <div class="assay-serial-dilution-sample-head">
+            <h4>Following Dilution</h4>
+          </div>
+          <p class="small-note">No downstream dilution steps are needed for the current mapped series.</p>
+        </section>
+      `
+        : '';
+
+    const emptyState = !validPlans.length
+      ? '<p class="small-note">No serial dilution recipe could be calculated yet.</p>'
+      : '';
+
+    assaySerialDilutionContent.innerHTML = `${sampleInputTable}${feedbackLines}${initialDilutionSection}${followingDilutionSection}${emptyState}`;
   }
 
   function openSerialDilutionDialog() {

@@ -1,3 +1,5 @@
+import { clarifyNotebookNote, showTransientNotice } from './notebook-note-tools.js';
+
 // Home dashboard controller.
 //
 // Responsibilities:
@@ -17,12 +19,6 @@ export function initHomeDashboard({
   onOpenAssistant = () => {},
   onSendQuickLogToAgent = () => false
 }) {
-  const todaySummary = document.getElementById('dashboard-today-summary');
-  const todayOverdueCount = document.getElementById('dashboard-today-overdue-count');
-  const todayWorkflowCount = document.getElementById('dashboard-today-workflow-count');
-  const todayIncubationCount = document.getElementById('dashboard-today-incubation-count');
-  const todayList = document.getElementById('dashboard-today-list');
-
   const passageSummary = document.getElementById('dashboard-passage-summary');
   const passageList = document.getElementById('dashboard-passage-list');
   const passageAddBtn = document.getElementById('dashboard-passage-add-btn');
@@ -50,6 +46,14 @@ export function initHomeDashboard({
   const quickLogNotebookBtn = document.getElementById('dashboard-quick-log-notebook-btn');
   const quickLogClearBtn = document.getElementById('dashboard-quick-log-clear-btn');
 
+  const notebookPagesStatus = document.getElementById('dashboard-notebook-pages-status');
+  const notebookPageList = document.getElementById('dashboard-notebook-page-list');
+  const notebookNoteDialogOverlay = document.getElementById('dashboard-notebook-note-dialog-overlay');
+  const notebookNoteDialogForm = document.getElementById('dashboard-notebook-note-dialog-form');
+  const notebookNoteDialogPage = document.getElementById('dashboard-notebook-note-dialog-page');
+  const notebookNoteInput = document.getElementById('dashboard-notebook-note-input');
+  const notebookNoteClarifyBtn = document.getElementById('dashboard-notebook-note-clarify-btn');
+
   const localTimeDisplay = document.getElementById('dashboard-local-time');
   const localDateDisplay = document.getElementById('dashboard-local-date');
   const timerStatus = document.getElementById('dashboard-timer-status');
@@ -63,12 +67,7 @@ export function initHomeDashboard({
   const quickActionButtons = [...document.querySelectorAll('[data-dashboard-action]')];
 
   if (
-    !todaySummary
-    || !todayOverdueCount
-    || !todayWorkflowCount
-    || !todayIncubationCount
-    || !todayList
-    || !passageSummary
+    !passageSummary
     || !passageList
     || !passageAddBtn
     || !passageDialogOverlay
@@ -91,6 +90,13 @@ export function initHomeDashboard({
     || !quickLogAgentBtn
     || !quickLogNotebookBtn
     || !quickLogClearBtn
+    || !notebookPagesStatus
+    || !notebookPageList
+    || !notebookNoteDialogOverlay
+    || !notebookNoteDialogForm
+    || !notebookNoteDialogPage
+    || !notebookNoteInput
+    || !notebookNoteClarifyBtn
     || !localTimeDisplay
     || !localDateDisplay
     || !timerStatus
@@ -109,12 +115,12 @@ export function initHomeDashboard({
 
   let timerTickHandle = 0;
   let localClockHandle = 0;
+  let notebookNoteEntryId = '';
 
   passageList.addEventListener('click', onPassageListClick);
   passageAddBtn.addEventListener('click', openPassageDialog);
   passageDialogForm.addEventListener('submit', onPassageDialogSubmit);
   passageDialogOverlay.addEventListener('click', onPassageDialogOverlayClick);
-  todayList.addEventListener('click', onDashboardActionClick);
   workflowSelect.addEventListener('change', onWorkflowSelected);
   workflowProgressList.addEventListener('click', onWorkflowProgressClick);
   incubationAddBtn.addEventListener('click', openIncubationDialog);
@@ -133,6 +139,10 @@ export function initHomeDashboard({
     setQuickLogStatus('Notebook opened.');
   });
   quickLogClearBtn.addEventListener('click', onQuickLogClear);
+  notebookPageList.addEventListener('click', onNotebookPageListClick);
+  notebookNoteDialogOverlay.addEventListener('click', onNotebookNoteDialogOverlayClick);
+  notebookNoteDialogForm.addEventListener('submit', onNotebookNoteDialogSubmit);
+  notebookNoteClarifyBtn.addEventListener('click', onNotebookNoteClarifyAndSave);
   timerOpenBtn.addEventListener('click', openTimerDialog);
   timerDialogOverlay.addEventListener('click', onTimerDialogOverlayClick);
   timerDialogForm.addEventListener('submit', onTimerDialogSubmit);
@@ -342,6 +352,25 @@ export function initHomeDashboard({
     return `${rounded} min`;
   }
 
+  function notebookPageLabel(entry) {
+    return String(entry?.protocolName || entry?.workflowContext?.workflowBlockTitle || 'Untitled Page').trim()
+      || 'Untitled Page';
+  }
+
+  function formatNotebookTimestamp(timestamp) {
+    const parsed = new Date(String(timestamp || '').trim());
+    if (Number.isNaN(parsed.getTime())) {
+      return 'Unknown update';
+    }
+    return parsed.toLocaleString([], {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+  }
+
   function renderIncubationLocationRows() {
     const locations = Array.isArray(state.settings?.dashboard?.incubationLocations)
       ? state.settings.dashboard.incubationLocations
@@ -407,6 +436,24 @@ export function initHomeDashboard({
     passageDialogOverlay.hidden = true;
   }
 
+  function openNotebookNoteDialog(entry, initialNote = '') {
+    notebookNoteEntryId = String(entry?.id || '').trim();
+    notebookNoteDialogPage.textContent = `${notebookPageLabel(entry)} | ${String(entry?.projectName || 'No project').trim() || 'No project'}`;
+    notebookNoteDialogForm.reset();
+    notebookNoteInput.value = String(initialNote || '').trim();
+    notebookNoteDialogOverlay.hidden = false;
+    window.requestAnimationFrame(() => {
+      notebookNoteInput.focus();
+    });
+  }
+
+  function closeNotebookNoteDialog() {
+    notebookNoteEntryId = '';
+    notebookNoteDialogForm.reset();
+    notebookNoteDialogOverlay.hidden = true;
+    notebookNoteDialogPage.textContent = '';
+  }
+
   function openTimerDialog() {
     renderTimerTemplateRows();
     timerDialogForm.reset();
@@ -456,6 +503,13 @@ export function initHomeDashboard({
     closeTimerDialog();
   }
 
+  function onNotebookNoteDialogOverlayClick(event) {
+    if (event.target !== notebookNoteDialogOverlay) {
+      return;
+    }
+    closeNotebookNoteDialog();
+  }
+
   function onDashboardKeydown(event) {
     if (event.key !== 'Escape') {
       return;
@@ -468,6 +522,11 @@ export function initHomeDashboard({
     if (!timerDialogOverlay.hidden) {
       event.preventDefault();
       closeTimerDialog();
+      return;
+    }
+    if (!notebookNoteDialogOverlay.hidden) {
+      event.preventDefault();
+      closeNotebookNoteDialog();
       return;
     }
     if (incubationDialogOverlay.hidden) {
@@ -619,6 +678,93 @@ export function initHomeDashboard({
     state.settings.dashboard.activeTimers.splice(index, 1);
     persist();
     render();
+  }
+
+  function onNotebookPageListClick(event) {
+    const button = event.target.closest('[data-dashboard-notebook-entry]');
+    if (!button) {
+      return;
+    }
+    const entryId = String(button.dataset.dashboardNotebookEntry || '').trim();
+    const entry = (Array.isArray(state.notebookEntries) ? state.notebookEntries : [])
+      .find((item) => String(item?.id || '').trim() === entryId);
+    if (!entry) {
+      return;
+    }
+    openNotebookNoteDialog(entry);
+  }
+
+  function onNotebookNoteDialogSubmit(event) {
+    event.preventDefault();
+    const note = String(notebookNoteInput.value || '').trim();
+    if (!note) {
+      return;
+    }
+    if (!appendNoteToNotebookEntry(notebookNoteEntryId, note)) {
+      return;
+    }
+    closeNotebookNoteDialog();
+    render();
+  }
+
+  function appendNoteToNotebookEntry(entryId, note) {
+    const cleanEntryId = String(entryId || '').trim();
+    const cleanNote = String(note || '').trim();
+    if (!cleanEntryId || !cleanNote) {
+      return false;
+    }
+    const index = (Array.isArray(state.notebookEntries) ? state.notebookEntries : [])
+      .findIndex((item) => String(item?.id || '').trim() === cleanEntryId);
+    if (index < 0) {
+      return false;
+    }
+    const currentEntry = state.notebookEntries[index];
+    const timestamp = new Date();
+    const noteLine = `[${timestamp.toLocaleString([], {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    })}] ${note}`;
+    const existingResult = String(currentEntry?.result || '').trim();
+    state.notebookEntries[index] = {
+      ...currentEntry,
+      result: existingResult ? `${existingResult}\n\n${noteLine}` : noteLine,
+      updatedAt: timestamp.toISOString()
+    };
+    persist();
+    return true;
+  }
+
+  async function onNotebookNoteClarifyAndSave() {
+    const entryId = String(notebookNoteEntryId || '').trim();
+    const originalNote = String(notebookNoteInput.value || '').trim();
+    if (!entryId || !originalNote) {
+      showTransientNotice('Add a note before clarifying it.', { type: 'error' });
+      return;
+    }
+    const entry = (Array.isArray(state.notebookEntries) ? state.notebookEntries : [])
+      .find((item) => String(item?.id || '').trim() === entryId);
+    closeNotebookNoteDialog();
+    try {
+      const clarifiedNote = await clarifyNotebookNote({
+        llm: state.settings?.llm,
+        text: originalNote
+      });
+      if (!appendNoteToNotebookEntry(entryId, clarifiedNote)) {
+        throw new Error('Unable to save the clarified note.');
+      }
+      render();
+      showTransientNotice('Clarified note saved.');
+    } catch (error) {
+      if (entry) {
+        openNotebookNoteDialog(entry, originalNote);
+      }
+      showTransientNotice(String(error?.message || error || 'Failed to clarify the note.'), {
+        type: 'error'
+      });
+    }
   }
 
   function onIncubationLocationListClick(event) {
@@ -1262,89 +1408,33 @@ export function initHomeDashboard({
     `).join('');
   }
 
-  function buildTodayItems({ passageRows, workflowContext, incubationRows }) {
-    const items = [];
-    const workflow = workflowContext.workflow;
-    const workflowOpenCount = workflow
-      ? Math.max(0, workflow.blocks.length - workflowContext.finished.size)
-      : 0;
-
-    if (workflow && !workflowContext.next.complete && workflowContext.next.block) {
-      const nextIndex = workflow.blocks.findIndex((block) => block.id === workflowContext.next.block.id);
-      items.push({
-        title: blockLabel(workflowContext.next.block, nextIndex),
-        detail: `${workflowContext.finished.size}/${workflow.blocks.length} blocks complete`,
-        action: 'workflow',
-        actionLabel: 'Workflow'
-      });
-    }
-
-    passageRows.overdue.slice(0, 2).forEach((row) => {
-      items.push({
-        title: sampleLabel(row.sample),
-        detail: `Cell passage ${formatRelativeDays(row.daysFromToday)}`,
-        action: 'samples',
-        actionLabel: 'Samples'
-      });
-    });
-
-    passageRows.dueToday.slice(0, Math.max(0, 2 - passageRows.overdue.length)).forEach((row) => {
-      items.push({
-        title: sampleLabel(row.sample),
-        detail: 'Cell passage due today',
-        action: 'samples',
-        actionLabel: 'Samples'
-      });
-    });
-
-    const dueIncubationRows = incubationRows.filter((row) => row.isDue);
-    dueIncubationRows.slice(0, Math.max(0, 4 - items.length)).forEach((row) => {
-      items.push({
-        title: row.name,
-        detail: 'Overnight incubation reminder',
-        action: '',
-        actionLabel: ''
-      });
-    });
-
-    return {
-      items: items.slice(0, 4),
-      counts: {
-        overdue: passageRows.overdue.length,
-        workflowOpen: workflowOpenCount,
-        incubation: dueIncubationRows.length
-      }
-    };
+  function collectRecentNotebookPages() {
+    return (Array.isArray(state.notebookEntries) ? state.notebookEntries : [])
+      .slice()
+      .sort((left, right) => (
+        new Date(String(right?.updatedAt || right?.createdAt || 0)).getTime()
+        - new Date(String(left?.updatedAt || left?.createdAt || 0)).getTime()
+      ))
+      .slice(0, 6);
   }
 
-  function renderTodayWidget(todayData) {
-    todayOverdueCount.textContent = String(todayData.counts.overdue);
-    todayWorkflowCount.textContent = String(todayData.counts.workflowOpen);
-    todayIncubationCount.textContent = String(todayData.counts.incubation);
-
-    if (!todayData.items.length) {
-      todaySummary.textContent = 'Nothing urgent is waiting on the bench right now.';
-      todayList.innerHTML = '<p class="small-note">The dashboard is clear. Use Quick Actions to jump into a workspace.</p>';
+  function renderRecentNotebookPages(entries) {
+    notebookPagesStatus.textContent = entries.length
+      ? 'Tap a page to add a note.'
+      : 'No notebook pages yet.';
+    if (!entries.length) {
+      notebookPageList.innerHTML = '<p class="small-note">Save a notebook page to show it here.</p>';
       return;
     }
-
-    todaySummary.textContent = '';
-    todayList.innerHTML = todayData.items.map((item) => `
-      <article class="dashboard-item">
-        <div>
-          <strong>${safeText(item.title)}</strong>
-          <p class="small-note">${safeText(item.detail)}</p>
-        </div>
-        ${item.action
-          ? `
-            <button
-              type="button"
-              class="ghost-btn"
-              data-dashboard-action="${safeText(item.action)}"
-            >${safeText(item.actionLabel)}</button>
-          `
-          : ''}
-      </article>
+    notebookPageList.innerHTML = entries.map((entry) => `
+      <button
+        type="button"
+        class="dashboard-notebook-page-row"
+        data-dashboard-notebook-entry="${safeText(entry.id)}"
+      >
+        <strong class="dashboard-notebook-page-title">${safeText(notebookPageLabel(entry))}</strong>
+        <p class="dashboard-notebook-page-meta">${safeText(`${String(entry?.projectName || 'No project').trim() || 'No project'} | Updated ${formatNotebookTimestamp(entry?.updatedAt || entry?.createdAt)}`)}</p>
+      </button>
     `).join('');
   }
 
@@ -1651,21 +1741,17 @@ export function initHomeDashboard({
     const passageRows = collectPassageRows();
     const workflowContext = buildWorkflowContext();
     const incubationLocations = collectIncubationLocations();
-    const todayData = buildTodayItems({
-      passageRows,
-      workflowContext,
-      incubationRows: incubationLocations
-    });
+    const recentNotebookPages = collectRecentNotebookPages();
 
     changed = workflowContext.changed || changed;
     if (changed) {
       persist();
     }
 
-    renderTodayWidget(todayData);
     renderPassageWidget(passageRows);
     renderWorkflowWidget(workflowContext);
     renderIncubationWidget(incubationLocations);
+    renderRecentNotebookPages(recentNotebookPages);
     if (!incubationDialogOverlay.hidden) {
       renderIncubationLocationRows();
     }
