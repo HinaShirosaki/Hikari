@@ -460,6 +460,23 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
                 }
               ]
             },
+            thinking_trace: {
+              intent_parse_question: 'This is a record lookup request.',
+              question_clarifier: 'I am narrowing the lookup to the Atlas binder notebook.',
+              criteria_generate: 'I am checking whether one clear record match is enough.',
+              tool_rounds: [
+                {
+                  round: 1,
+                  tool_selection: 'I am choosing record lookup first.',
+                  tool_call: 'I want to use record-lookup to investigate "Atlas binder".',
+                  tool_results: 'Based on the tool result, it seems I found the notebook entry.'
+                }
+              ],
+              pre_synthesize_answer: 'Based on the evidence so far, the Atlas Binder Notebook is the likely match.',
+              judge: 'I have enough evidence to answer with one record match.',
+              final_synthesize: 'I am summarizing the matched record for the user.',
+              final_synthesized_question: 'Where is the Atlas binder notebook?'
+            },
             developer_trace: []
           },
           requestText: 'Where is the Atlas binder notebook?',
@@ -470,6 +487,7 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
         assert.match(assistantMessage.text, /notebook: Atlas Binder Notebook/i);
         assert.match(assistantMessage.text, /project Atlas/i);
         assert.match(assistantMessage.text, /protocol Binder Purification/i);
+        assert.equal(assistantMessage.meta.thinking_trace.final_synthesized_question, 'Where is the Atlas binder notebook?');
 
         const inventoryAssistantMessage = runtime.buildAssistantMessageFromResult({
           result: {

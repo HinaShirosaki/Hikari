@@ -36,18 +36,19 @@ function resolveLaneLayout(runtime) {
 
   const gelLeft = Math.max(0, Math.min(imageWidth - 1, Math.floor(segmentation.gelLeft)));
   const gelRight = Math.max(gelLeft + 1, Math.min(imageWidth - 1, Math.floor(segmentation.gelRight)));
+  const gelWidth = Math.max(1, gelRight - gelLeft);
   const leftGapWidth = gelLeft;
   const rightGapWidth = Math.max(0, imageWidth - gelRight);
   const columns = lanes.map((lane) => ({
     laneIndex: lane.index + 1,
-    widthPercent: Math.max(0, ((lane.xEnd - lane.xStart + 1) / imageWidth) * 100)
+    widthPercent: Math.max(0, ((lane.xEnd - lane.xStart + 1) / gelWidth) * 100)
   }));
 
   return {
     columns,
     laneCount: columns.length,
-    leftGapPercent: Math.max(0, (leftGapWidth / imageWidth) * 100),
-    rightGapPercent: Math.max(0, (rightGapWidth / imageWidth) * 100)
+    leftOffsetPercent: Math.max(0, (leftGapWidth / imageWidth) * 100),
+    rightOffsetPercent: Math.max(0, (rightGapWidth / imageWidth) * 100)
   };
 }
 
@@ -122,17 +123,26 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
       return;
     }
 
-    const hasLeadingGap = layout.leftGapPercent > 0;
-    const hasTrailingGap = layout.rightGapPercent > 0;
-    const colMarkup = [
-      `<col style="width:${LABEL_COLUMN_WIDTH_PX}px;" />`,
-      hasLeadingGap ? `<col class="gel-lane-table-gap-col" style="width:${formatPercentWidth(layout.leftGapPercent)};" />` : '',
-      ...layout.columns.map((column) => `<col style="width:${formatPercentWidth(column.widthPercent)};" />`),
-      hasTrailingGap ? `<col class="gel-lane-table-gap-col" style="width:${formatPercentWidth(layout.rightGapPercent)};" />` : ''
-    ].join('');
+    const colMarkup = layout.columns
+      .map((column) => `<col style="width:${formatPercentWidth(column.widthPercent)};" />`)
+      .join('');
     const headerMarkup = layout.columns
       .map((column) => `<th scope="col">Lane ${column.laneIndex}</th>`)
       .join('');
+    const labelMarkup = rows.map((row, rowIndex) => `
+      <div class="gel-lane-table-label-cell">
+        <input
+          type="text"
+          class="gel-lane-table-input gel-lane-table-input-label"
+          data-gel-table-role="label"
+          data-gel-table-row="${rowIndex}"
+          value="${safeText(row.label || '')}"
+          placeholder="Label"
+          autocomplete="off"
+          spellcheck="false"
+        />
+      </div>
+    `).join('');
     const bodyMarkup = rows.map((row, rowIndex) => {
       const cells = layout.columns.map((column, columnIndex) => `
         <td>
@@ -152,21 +162,7 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
 
       return `
         <tr>
-          <th scope="row">
-            <input
-              type="text"
-              class="gel-lane-table-input gel-lane-table-input-label"
-              data-gel-table-role="label"
-              data-gel-table-row="${rowIndex}"
-              value="${safeText(row.label || '')}"
-              placeholder="Label"
-              autocomplete="off"
-              spellcheck="false"
-            />
-          </th>
-          ${hasLeadingGap ? '<td class="gel-lane-table-gap" aria-hidden="true"></td>' : ''}
           ${cells}
-          ${hasTrailingGap ? '<td class="gel-lane-table-gap" aria-hidden="true"></td>' : ''}
         </tr>
       `;
     }).join('');
@@ -176,21 +172,29 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
         <p class="small-note">Lane columns stay aligned with the current gel borders and dividers.</p>
         <button type="button" class="ghost-btn" data-gel-table-add-row>Add row</button>
       </div>
-      <div class="gel-lane-table-wrap">
-        <table class="gel-lane-table">
-          <colgroup>${colMarkup}</colgroup>
-          <thead>
-            <tr>
-              <th scope="col">Label</th>
-              ${hasLeadingGap ? '<th scope="col" class="gel-lane-table-gap" aria-hidden="true"></th>' : ''}
-              ${headerMarkup}
-              ${hasTrailingGap ? '<th scope="col" class="gel-lane-table-gap" aria-hidden="true"></th>' : ''}
-            </tr>
-          </thead>
-          <tbody>
-            ${bodyMarkup}
-          </tbody>
-        </table>
+      <div class="gel-lane-table-labels">
+        <div class="gel-lane-table-label-head">Label</div>
+        ${labelMarkup}
+      </div>
+      <div class="gel-lane-table-grid-shell">
+        <div
+          class="gel-lane-table-grid-offsets"
+          style="padding-left:${formatPercentWidth(layout.leftOffsetPercent)}; padding-right:${formatPercentWidth(layout.rightOffsetPercent)};"
+        >
+          <div class="gel-lane-table-wrap">
+            <table class="gel-lane-table">
+              <colgroup>${colMarkup}</colgroup>
+              <thead>
+                <tr>
+                  ${headerMarkup}
+                </tr>
+              </thead>
+              <tbody>
+                ${bodyMarkup}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     `;
   }

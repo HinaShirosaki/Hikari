@@ -218,11 +218,14 @@
 
 .gel-lane-table-shell {
   display: grid;
-  gap: 10px;
+  grid-template-columns: var(--gel-lane-label-width) minmax(0, 1fr);
+  column-gap: 0;
+  row-gap: 10px;
   min-width: 0;
 }
 
 .gel-lane-table-toolbar {
+  grid-column: 1 / -1;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -235,6 +238,42 @@
 
 .gel-lane-table-wrap {
   overflow-x: auto;
+}
+
+.gel-lane-table-labels {
+  display: grid;
+  grid-auto-rows: 40px;
+  min-width: 0;
+}
+
+.gel-lane-table-label-head,
+.gel-lane-table-label-cell {
+  border: 1px solid rgba(53, 99, 153, 0.24);
+  padding: 0;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.gel-lane-table-label-head {
+  display: grid;
+  place-items: center;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #46556c;
+  background: rgba(232, 240, 250, 0.94);
+}
+
+.gel-lane-table-label-cell {
+  background: rgba(245, 248, 252, 0.94);
+}
+
+.gel-lane-table-grid-shell,
+.gel-lane-table-grid-offsets {
+  min-width: 0;
+}
+
+.gel-lane-table-grid-offsets {
+  box-sizing: border-box;
 }
 
 .gel-lane-table {
@@ -264,12 +303,6 @@
 .gel-lane-table tbody th {
   font-weight: 500;
   background: rgba(245, 248, 252, 0.94);
-}
-
-.gel-lane-table .gel-lane-table-gap {
-  border: 0;
-  padding: 0;
-  background: transparent;
 }
 
 .gel-lane-table-input {
@@ -450,7 +483,12 @@ body.theme-night .gel-lane-table thead th {
   background: rgba(34, 51, 80, 0.96);
 }
 
-body.theme-night .gel-lane-table tbody th {
+body.theme-night .gel-lane-table-label-head {
+  color: #d9e5f7;
+  background: rgba(34, 51, 80, 0.96);
+}
+
+body.theme-night .gel-lane-table-label-cell {
   background: rgba(25, 40, 66, 0.96);
 }
 
@@ -519,6 +557,14 @@ body.theme-night .gel-report-json {
   .gel-lane-table-toolbar {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .gel-lane-table-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .gel-lane-table-labels {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .gel-viewer-stage.has-lane-table .gel-image-row {

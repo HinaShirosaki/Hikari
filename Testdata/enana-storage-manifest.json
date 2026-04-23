@@ -1,7 +1,7 @@
 {
   "schema_name": "enana_storage_manifest",
   "schema_version": "1.0.0",
-  "generated_at": "2026-04-23T04:14:21.145Z",
+  "generated_at": "2026-04-23T16:07:14.465Z",
   "root_path": "/Users/shiyifan/Projects/Enana/Testdata",
   "discovered_files": [
     {
@@ -730,7 +730,7 @@
       "type": "file",
       "role": "chemical_inventory_index",
       "size_bytes": 24576,
-      "modified_at": "2026-04-23T03:48:16.257Z"
+      "modified_at": "2026-04-23T14:49:21.889Z"
     },
     {
       "relative_path": "enana-chemicals.index.sqlite-shm",
@@ -764,15 +764,15 @@
       "relative_path": "enana-data.json",
       "type": "file",
       "role": "data_file",
-      "size_bytes": 769206,
-      "modified_at": "2026-04-23T03:48:16.238Z"
+      "size_bytes": 883336,
+      "modified_at": "2026-04-23T14:49:21.858Z"
     },
     {
       "relative_path": "enana-data.notebook-pages.json",
       "type": "file",
       "role": "notebook_sidecar",
-      "size_bytes": 34563,
-      "modified_at": "2026-04-23T03:48:16.244Z"
+      "size_bytes": 34608,
+      "modified_at": "2026-04-23T14:49:21.872Z"
     },
     {
       "relative_path": "enana-sample.notebook-pages.index.sqlite",
@@ -821,7 +821,7 @@
       "type": "file",
       "role": "storage_manifest",
       "size_bytes": 70521,
-      "modified_at": "2026-04-23T03:48:16.086Z"
+      "modified_at": "2026-04-23T14:49:21.718Z"
     },
     {
       "relative_path": "Gels",
@@ -898,7 +898,7 @@
       "type": "file",
       "role": "project_memory",
       "size_bytes": 437,
-      "modified_at": "2026-04-23T03:48:16.244Z"
+      "modified_at": "2026-04-23T14:49:21.871Z"
     },
     {
       "relative_path": "Project/PD-1_Nanobody_Binder_Discovery/Notebook",
@@ -975,7 +975,7 @@
       "type": "file",
       "role": "project_memory",
       "size_bytes": 388,
-      "modified_at": "2026-04-23T03:48:16.244Z"
+      "modified_at": "2026-04-23T14:49:21.871Z"
     },
     {
       "relative_path": "Project/SUMO1/Notebook",
@@ -1094,7 +1094,7 @@
       "type": "file",
       "role": "project_memory",
       "size_bytes": 414,
-      "modified_at": "2026-04-23T03:48:16.244Z"
+      "modified_at": "2026-04-23T14:49:21.872Z"
     },
     {
       "relative_path": "Project/Untitled_Project/Notebook",
@@ -1192,7 +1192,7 @@
       "type": "file",
       "role": "protocol_record",
       "size_bytes": 8700,
-      "modified_at": "2026-04-23T03:48:16.239Z"
+      "modified_at": "2026-04-23T14:49:21.859Z"
     },
     {
       "relative_path": "Protocol/Avi-Tag_Protein_Biotinylation__1774024745003-46df848e78c068/selection-insights.json",
@@ -1213,7 +1213,7 @@
       "type": "file",
       "role": "protocol_record",
       "size_bytes": 2529,
-      "modified_at": "2026-04-23T03:48:16.239Z"
+      "modified_at": "2026-04-23T14:49:21.860Z"
     },
     {
       "relative_path": "Protocol/IPTG-Induced_Recombinant_Protein_Expression_in_BL21(DE3)__1774024680081-6b02b28fd6d39",
@@ -1227,7 +1227,7 @@
       "type": "file",
       "role": "protocol_record",
       "size_bytes": 3594,
-      "modified_at": "2026-04-23T03:48:16.239Z"
+      "modified_at": "2026-04-23T14:49:21.861Z"
     },
     {
       "relative_path": "Protocol/Ni-NTA_Purification_of_His-Tagged_Protein__1774024695073-536c18071dd0d",
@@ -1241,14 +1241,14 @@
       "type": "file",
       "role": "protocol_record",
       "size_bytes": 2351,
-      "modified_at": "2026-04-23T03:48:16.240Z"
+      "modified_at": "2026-04-23T14:49:21.861Z"
     },
     {
       "relative_path": "Protocol/protocol.index.sqlite",
       "type": "file",
       "role": "protocol_index",
-      "size_bytes": 294912,
-      "modified_at": "2026-04-23T03:48:16.255Z"
+      "size_bytes": 299008,
+      "modified_at": "2026-04-23T14:49:21.887Z"
     },
     {
       "relative_path": "Protocol/Small-Scale_Overnight_Starter_Culture__1774024647315-74cbb18b4cc37",
@@ -1262,7 +1262,7 @@
       "type": "file",
       "role": "protocol_record",
       "size_bytes": 8927,
-      "modified_at": "2026-04-23T03:48:16.240Z"
+      "modified_at": "2026-04-23T14:49:21.861Z"
     },
     {
       "relative_path": "Protocol/Small-Scale_Overnight_Starter_Culture__1774024647315-74cbb18b4cc37/selection-insights.json",
@@ -1283,7 +1283,7 @@
       "type": "file",
       "role": "protocol_record",
       "size_bytes": 2166,
-      "modified_at": "2026-04-23T03:48:16.241Z"
+      "modified_at": "2026-04-23T14:49:21.862Z"
     },
     {
       "relative_path": "Protocol/TEV_Protease_Cleavage_of_Fusion_Protein__1774024712936-cdad2f729e908",
@@ -1297,7 +1297,7 @@
       "type": "file",
       "role": "protocol_record",
       "size_bytes": 21987,
-      "modified_at": "2026-04-23T03:48:16.240Z"
+      "modified_at": "2026-04-23T14:49:21.862Z"
     },
     {
       "relative_path": "Protocol/TEV_Protease_Cleavage_of_Fusion_Protein__1774024712936-cdad2f729e908/selection-insights.json",
@@ -1661,7 +1661,7 @@
       "type": "file",
       "role": "sequence_library_index",
       "size_bytes": 339968,
-      "modified_at": "2026-04-23T04:14:20.946Z"
+      "modified_at": "2026-04-23T16:07:14.281Z"
     },
     {
       "relative_path": "Workflow",
@@ -1899,7 +1899,7 @@
       "type": "file",
       "role": "workflow_memory",
       "size_bytes": 611,
-      "modified_at": "2026-04-23T03:48:16.258Z"
+      "modified_at": "2026-04-23T14:49:21.895Z"
     },
     {
       "relative_path": "Workflow/NiNTA__1776270512198-af3480c2ef55c8/NiNTA_1__1776270538561-6c07e18af542f/Notebook",
@@ -1927,21 +1927,21 @@
       "type": "file",
       "role": "workflow_run_metadata",
       "size_bytes": 7900,
-      "modified_at": "2026-04-23T03:48:16.258Z"
+      "modified_at": "2026-04-23T14:49:21.896Z"
     },
     {
       "relative_path": "Workflow/NiNTA__1776270512198-af3480c2ef55c8/template.json",
       "type": "file",
       "role": "workflow_template_metadata",
       "size_bytes": 2495,
-      "modified_at": "2026-04-23T03:48:16.258Z"
+      "modified_at": "2026-04-23T14:49:21.892Z"
     },
     {
       "relative_path": "Workflow/workflow-status.sqlite",
       "type": "file",
       "role": "workflow_status_index",
       "size_bytes": 40960,
-      "modified_at": "2026-04-23T03:48:16.260Z"
+      "modified_at": "2026-04-23T14:49:21.902Z"
     }
   ],
   "bundles": [

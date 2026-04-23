@@ -255,6 +255,31 @@ function summarizeNotebookDraft(payload) {
   return '';
 }
 
+function extractStructuredThinkingTrace(result) {
+  const payload = result && typeof result === 'object' ? result : {};
+  const candidates = [
+    payload.thinking_trace,
+    payload.general_science_question?.thinking_trace,
+    payload.project_science_question?.thinking_trace,
+    payload.result_analysis?.thinking_trace
+  ];
+  const match = candidates.find((candidate) => (
+    candidate
+    && typeof candidate === 'object'
+    && !Array.isArray(candidate)
+  ));
+  return match ? cloneJson(match, null) : null;
+}
+
+function ensureThinkingTraceMeta(meta) {
+  const payload = meta && typeof meta === 'object' ? cloneJson(meta, {}) : {};
+  if (payload.thinking_trace && typeof payload.thinking_trace === 'object' && !Array.isArray(payload.thinking_trace)) {
+    return payload;
+  }
+  payload.thinking_trace = extractStructuredThinkingTrace(payload);
+  return payload;
+}
+
 // Preserve structured agent output in assistant message metadata for later UI use.
 function buildAssistantMetaFromResult(result, requestText = '') {
   const payload = result && typeof result === 'object' ? result : {};
@@ -292,6 +317,7 @@ function buildAssistantMetaFromResult(result, requestText = '') {
     result_analysis: payload.result_analysis && typeof payload.result_analysis === 'object'
       ? cloneJson(payload.result_analysis, null)
       : null,
+    thinking_trace: extractStructuredThinkingTrace(payload),
     notebookDraft: notebookPayload ? cloneJson(notebookPayload, null) : null,
     developer_trace: cloneJson(asArray(payload.developer_trace), []),
     requestText: cleanText(requestText, 3000)
@@ -414,6 +440,7 @@ function buildAssistantMessageFromError({ errorMessage = '', requestText = '', m
       general_science_question: null,
       project_science_question: null,
       result_analysis: null,
+      thinking_trace: null,
       notebookDraft: null,
       developer_trace: [],
       requestText: cleanText(requestText, 3000)
@@ -434,6 +461,7 @@ function buildAssistantMessageFromCancellation({ message = '', requestText = '',
         stopped: true,
         message: stopMessage
       },
+      thinking_trace: null,
       requestText: cleanText(requestText, 3000)
     }
   };
@@ -652,7 +680,7 @@ function buildRendererMessages(rows) {
         role: 'assistant',
         text: cleanText(entry.text, 24000),
         createdAt: entry.timestamp,
-        meta: cloneJson(entry.meta, {})
+        meta: ensureThinkingTraceMeta(entry.meta)
       });
     }
     return messages;

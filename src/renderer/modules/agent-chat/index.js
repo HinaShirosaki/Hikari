@@ -475,6 +475,13 @@ export function initAgentChat({
     };
   }
 
+  function cloneLiveThinkingRows(source) {
+    return asArray(source).map((row) => ({
+      key: trimText(row?.key, 620),
+      text: trimText(row?.text || row, 420)
+    })).filter((row) => row.text);
+  }
+
   function ensureAgentState() {
     if (!state.agentChat || typeof state.agentChat !== 'object') {
       state.agentChat = { projectId: '', deepResearchEnabled: false, currentSessionId: '', sessions: [], messages: [] };
@@ -927,6 +934,7 @@ export function initAgentChat({
         createId,
         onNotebookEntriesChanged
       });
+      const persistedThinkingRows = cloneLiveThinkingRows(liveAssistantMessage?.meta?.live_progress?.thinking_rows);
       if (notebookDraft?.save?.applied === true) {
         renderContextSummary();
       }
@@ -947,8 +955,10 @@ export function initAgentChat({
           general_science_question: response.generalScienceQuestion,
           project_science_question: response.projectScienceQuestion,
           result_analysis: response.resultAnalysis,
+          thinking_trace: response.thinkingTrace,
           notebookDraft: notebookDraft || null,
           developer_trace: response.developerTrace,
+          thinking_trace_rows: persistedThinkingRows,
           requestText: messageText
         }
       });
@@ -967,6 +977,7 @@ export function initAgentChat({
         setStatus('Stopped.');
         return;
       }
+      const persistedThinkingRows = cloneLiveThinkingRows(liveAssistantMessage?.meta?.live_progress?.thinking_rows);
       clearLiveAssistantState();
       state.agentChat.messages.push({
         id: createId(),
@@ -998,8 +1009,10 @@ export function initAgentChat({
           general_science_question: null,
           project_science_question: null,
           result_analysis: null,
+          thinking_trace: null,
           notebookDraft: null,
           developer_trace: [],
+          thinking_trace_rows: persistedThinkingRows,
           requestText: messageText
         }
       });

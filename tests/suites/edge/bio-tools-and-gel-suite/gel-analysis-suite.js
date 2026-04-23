@@ -83,10 +83,11 @@ test('[EDGE] gel-analysis lane table render includes gel-edge offsets for divide
 
   assert.equal(elements.gelLaneTableShell.hidden, false);
   assert.equal(elements.gelViewerStage.classList.contains('has-lane-table'), true);
-  assert.match(elements.gelLaneTableShell.innerHTML, /gel-lane-table-gap-col/);
-  assert.match(elements.gelLaneTableShell.innerHTML, /width:16\.6667%;/);
-  assert.match(elements.gelLaneTableShell.innerHTML, /width:25%;/);
-  assert.match(elements.gelLaneTableShell.innerHTML, /width:20\.8333%;/);
+  assert.match(elements.gelLaneTableShell.innerHTML, /gel-lane-table-grid-offsets/);
+  assert.match(elements.gelLaneTableShell.innerHTML, /padding-left:16\.6667%;/);
+  assert.match(elements.gelLaneTableShell.innerHTML, /padding-right:16\.6667%;/);
+  assert.match(elements.gelLaneTableShell.innerHTML, /width:37\.5%;/);
+  assert.match(elements.gelLaneTableShell.innerHTML, /width:31\.25%;/);
 });
 
 [

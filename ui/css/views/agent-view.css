@@ -515,16 +515,23 @@ body.agent-view-fixed-scroll .workspace-main {
 .agent-thinking-trace {
   display: grid;
   gap: 10px;
+  margin: 0;
   padding-left: 16px;
   border-left: 2px solid color-mix(in srgb, var(--accent) 24%, var(--line));
 }
 
-.agent-thinking-trace h4 {
+.agent-thinking-trace-summary {
   margin: 0;
+  cursor: pointer;
   font-size: 0.74rem;
   line-height: 1.2;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  color: var(--muted);
+}
+
+.agent-thinking-trace-summary::marker,
+.agent-thinking-trace-summary::-webkit-details-marker {
   color: var(--muted);
 }
 
@@ -1282,6 +1289,10 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
 .agent-thinking-trace {
   padding: 14px 0 0 16px;
   border-left: 2px solid color-mix(in srgb, var(--accent) 34%, var(--line));
+}
+
+.agent-thinking-trace-summary {
+  color: var(--strong);
 }
 
 .agent-thinking-trace-item {

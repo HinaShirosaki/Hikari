@@ -187,6 +187,30 @@ function createAgentControllerCore({
       : 'No eligible skills were found in the current workspace.';
   }
 
+  function cloneJson(value, fallback = null) {
+    try {
+      return JSON.parse(JSON.stringify(value));
+    } catch {
+      return fallback;
+    }
+  }
+
+  function extractStructuredThinkingTrace(result = {}) {
+    const source = result && typeof result === 'object' ? result : {};
+    const candidates = [
+      source.thinking_trace,
+      source.general_science_question?.thinking_trace,
+      source.project_science_question?.thinking_trace,
+      source.result_analysis?.thinking_trace
+    ];
+    const match = candidates.find((candidate) => (
+      candidate
+      && typeof candidate === 'object'
+      && !Array.isArray(candidate)
+    ));
+    return match ? cloneJson(match, null) : null;
+  }
+
   function buildSkillCommandResult({
     parser,
     status = '',
@@ -494,6 +518,7 @@ function createAgentControllerCore({
     });
     throwIfAgentRequestAborted('Agent request stopped before finalizing agent response.');
 
+    result.thinking_trace = extractStructuredThinkingTrace(result);
     if (executionFlags.developerMode === true) {
       result.developer_trace = asArray(traceContext?.rows);
     }
