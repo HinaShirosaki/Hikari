@@ -1342,7 +1342,8 @@ export function initSequenceViewer(options = {}) {
     hasStoragePath,
     setStatus,
     onNavigateHome: homeController.navigateToHome,
-    onNavigateBuilder: showProteinBuilderWorkspace
+    onNavigateBuilder: showProteinBuilderWorkspace,
+    loadExternalRecord: loadFromExternal
   });
 
   function loadFromExternal(payload) {

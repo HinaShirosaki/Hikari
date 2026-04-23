@@ -70,26 +70,6 @@ function createScienceLoopExitJudgeRuntime(deps = {}) {
     buildPreSynthesizedQuestion
   } = preSynthesizedQuestionRuntime;
 
-  const MATCH_STOP_WORDS = new Set([
-    'a', 'an', 'and', 'are', 'as', 'at', 'be', 'before', 'by', 'for', 'from', 'has', 'have',
-    'if', 'in', 'into', 'is', 'it', 'its', 'of', 'on', 'or', 'that', 'the', 'their', 'then',
-    'there', 'these', 'this', 'to', 'when', 'with'
-  ]);
-
-  function normalizeForMatching(value, maxLength = 400) {
-    return cleanText(value, maxLength)
-      .toLowerCase()
-      .replace(/[_-]+/g, ' ')
-      .replace(/[^a-z0-9\s]/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-  }
-
-  function tokenizeForMatching(value, maxLength = 400) {
-    return normalizeForMatching(value, maxLength)
-      .split(' ')
-      .filter((token) => token.length > 2 && !MATCH_STOP_WORDS.has(token));
-  }
 
   function collectCriteriaEvaluationContext(input = {}, preSynthesizedQuestion = null) {
     const normalizedPreSynthesizedQuestion = normalizePreSynthesizedQuestion(
@@ -164,34 +144,16 @@ function createScienceLoopExitJudgeRuntime(deps = {}) {
   }
 
   function matchesTexts(targetText, texts) {
-    const normalizedTarget = normalizeForMatching(targetText);
-    if (!normalizedTarget) {
+    const target = String(targetText || '').toLowerCase().trim();
+    if (!target) {
       return false;
     }
-    const targetTokens = tokenizeForMatching(targetText);
     return asArray(texts).some((text) => {
-      const normalizedText = normalizeForMatching(text);
-      if (!normalizedText) {
+      const candidate = String(text || '').toLowerCase().trim();
+      if (!candidate) {
         return false;
       }
-      if (normalizedText.includes(normalizedTarget) || normalizedTarget.includes(normalizedText)) {
-        return true;
-      }
-      const textTokens = new Set(tokenizeForMatching(text));
-      if (!targetTokens.length || !textTokens.size) {
-        return false;
-      }
-      let overlap = 0;
-      targetTokens.forEach((token) => {
-        if (textTokens.has(token)) {
-          overlap += 1;
-        }
-      });
-      const minimumOverlap = targetTokens.length >= 5
-        ? 3
-        : Math.min(2, targetTokens.length);
-      return overlap >= minimumOverlap
-        || (targetTokens.length >= 4 && overlap / targetTokens.length >= 0.6);
+      return candidate.includes(target) || target.includes(candidate);
     });
   }
 

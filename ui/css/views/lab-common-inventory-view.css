@@ -44,6 +44,27 @@
   min-height: 46px;
 }
 
+.chemical-import-btn {
+  width: 100%;
+  min-height: 42px;
+}
+
+.chemical-import-status {
+  margin-top: -4px;
+}
+
+.chemical-import-status[data-status="success"] {
+  color: color-mix(in srgb, var(--success, #1f8f5f) 82%, var(--text) 18%);
+}
+
+.chemical-import-status[data-status="warning"] {
+  color: color-mix(in srgb, var(--warning, #b26a00) 82%, var(--text) 18%);
+}
+
+.chemical-import-status[data-status="error"] {
+  color: color-mix(in srgb, var(--danger, #b42318) 82%, var(--text) 18%);
+}
+
 .chemical-search-field {
   align-content: start;
 }

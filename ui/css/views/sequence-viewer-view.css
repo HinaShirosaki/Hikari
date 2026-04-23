@@ -318,16 +318,24 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   padding: 12px;
   display: grid;
   grid-template-columns: minmax(var(--shared-left-rail-min), var(--shared-left-rail-width)) minmax(0, 1fr) auto;
-  align-items: end;
+  align-items: center;
   row-gap: 10px;
   column-gap: var(--left-rail-main-gap, 24px);
+}
+
+.sequence-viewer-protein-builder-toolbar-nav {
+  grid-column: 1;
+  display: flex;
+  align-items: center;
+  justify-self: start;
+  padding-left: var(--app-left-rail-padding-inline, 16px);
 }
 
 .sequence-viewer-protein-builder-toolbar-copy {
   grid-column: 2;
   display: grid;
-  gap: 4px;
-  max-width: 720px;
+  gap: 6px;
+  max-width: 980px;
 }
 
 .sequence-viewer-protein-builder-toolbar-copy h2 {
@@ -1695,13 +1703,18 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
     align-items: stretch;
   }
 
+  .sequence-viewer-protein-builder-toolbar-nav,
   .sequence-viewer-protein-builder-toolbar-copy,
   .sequence-viewer-protein-builder-toolbar-actions {
     grid-column: 1;
   }
 
+  .sequence-viewer-protein-builder-toolbar-nav {
+    padding-left: 0;
+  }
+
   .sequence-viewer-protein-builder-toolbar-actions {
-    justify-self: stretch;
+    justify-self: start;
   }
 
   .sequence-viewer-protein-builder-block-actions {

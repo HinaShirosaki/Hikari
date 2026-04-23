@@ -16,6 +16,8 @@ const FEATURE_SOURCE_SQL_ANNOTATION_DNA = 'sql_annotation_dna';
 const FEATURE_SOURCE_SQL_ANNOTATION_PROTEIN = 'sql_annotation_protein';
 const ALIGNMENTS_DIR_NAME = 'alignments';
 const ALIGNMENTS_MANIFEST_FILE_NAME = 'alignment-sessions.json';
+const RECOGNIZED_BACKBONE_ARTIFACT_DIR_NAME = 'protein-builder/backbones';
+const RECOGNIZED_BACKBONE_SCHEMA_NAME = 'enana_recognized_backbone';
 const ORF_START_CODONS = new Set(['ATG']);
 const ORF_STOP_CODONS = new Set(['TAA', 'TAG', 'TGA']);
 const MIN_DNA_ANNOTATION_FEATURE_LENGTH = 12;
@@ -2037,6 +2039,97 @@ async function searchSequenceFeatures({ storagePath, query = '', limit = 30 }) {
     db.close();
   }
 }
+
+async function listRecognizedBackbones({ storagePath, query = '', limit = 50 }) {
+  const safeQuery = cleanText(query, 600).toLowerCase();
+  const safeLimit = clamp(Math.round(Number(limit) || 50), 1, 200);
+  const paths = resolveLibraryPaths(storagePath);
+  await ensureLibraryDirectories(paths);
+
+  const artifactsRoot = path.join(paths.libraryRoot, RECOGNIZED_BACKBONE_ARTIFACT_DIR_NAME);
+  let entries = [];
+  try {
+    entries = await fs.readdir(artifactsRoot, { withFileTypes: true });
+  } catch (error) {
+    if (String(error?.code || '') === 'ENOENT') {
+      return { query: cleanText(query, 600), results: [] };
+    }
+    throw error;
+  }
+
+  const results = [];
+  await Promise.all(entries.map(async (entry) => {
+    if (!entry?.isFile?.() || !String(entry.name || '').toLowerCase().endsWith('.json')) {
+      return;
+    }
+
+    const filePath = path.join(artifactsRoot, entry.name);
+    let parsed = null;
+    try {
+      parsed = JSON.parse(await fs.readFile(filePath, 'utf8'));
+    } catch {
+      return;
+    }
+    if (!parsed || String(parsed?.schema_name || '') !== RECOGNIZED_BACKBONE_SCHEMA_NAME) {
+      return;
+    }
+
+    const hostVectorName = cleanText(parsed?.recognition?.host_vector_name, 160);
+    const sourceRecordName = cleanText(parsed?.source_record?.name, 160);
+    const backboneName = cleanText(parsed?.backbone?.name, 160);
+    const promoterName = cleanText(parsed?.recognition?.promoter_name, 160);
+    const searchableText = [
+      hostVectorName,
+      sourceRecordName,
+      backboneName,
+      promoterName,
+      cleanText(parsed?.recognition?.variant_mode, 40)
+    ].join(' ').toLowerCase();
+
+    if (safeQuery && !searchableText.includes(safeQuery)) {
+      return;
+    }
+
+    const backboneSequence = normalizeSequenceText(parsed?.backbone?.sequence || '');
+    const insertSequence = normalizeSequenceText(parsed?.insert?.sequence || '');
+    const updatedAt = cleanText(parsed?.updated_at, 120);
+    results.push({
+      id: toPosixRelative(paths.storageRoot, filePath),
+      fileName: entry.name,
+      relativePath: toPosixRelative(paths.storageRoot, filePath),
+      updatedAt,
+      sourceRecordName,
+      sourceEntryId: cleanText(parsed?.source_record?.entry_id, 200),
+      sourceEntryStatus: normalizeStatus(parsed?.source_record?.entry_status),
+      hostVectorName,
+      promoterName,
+      variantMode: cleanText(parsed?.recognition?.variant_mode, 40).toLowerCase() === 'restriction'
+        ? 'restriction'
+        : 'gibson',
+      backboneName: backboneName || hostVectorName || sourceRecordName || 'Stored backbone',
+      backboneSequence,
+      backboneLength: Math.max(0, Number(parsed?.backbone?.sequence_length) || backboneSequence.length),
+      insertName: cleanText(parsed?.insert?.name, 160) || 'Stored insert',
+      insertSequence,
+      insertLength: Math.max(0, Number(parsed?.insert?.sequence_length) || insertSequence.length)
+    });
+  }));
+
+  results.sort((left, right) => {
+    const leftTime = Date.parse(String(left?.updatedAt || '')) || 0;
+    const rightTime = Date.parse(String(right?.updatedAt || '')) || 0;
+    if (leftTime !== rightTime) {
+      return rightTime - leftTime;
+    }
+    return cleanText(left?.backboneName, 160).localeCompare(cleanText(right?.backboneName, 160));
+  });
+
+  return {
+    query: cleanText(query, 600),
+    results: results.slice(0, safeLimit)
+  };
+}
+
 async function recognizeSequenceBackbone({ storagePath, sequence = '', excludeEntryId = '' }) {
   return recognizeSequenceBackboneInLibrary({
     fs,
@@ -2072,6 +2165,7 @@ module.exports = {
   deleteSequenceEntry,
   annotateSequenceRecord,
   searchSequenceFeatures,
+  listRecognizedBackbones,
   recognizeSequenceBackbone,
   sanitizeFileName
 };

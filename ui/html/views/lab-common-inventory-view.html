@@ -4,6 +4,9 @@
           <div class="chemical-sidebar-stack">
             <section class="chemical-sidebar-section app-left-rail-section">
               <button type="button" id="chemical-open-add-btn" class="primary-btn chemical-add-btn">Add Chemical</button>
+              <button type="button" id="chemical-import-btn" class="ghost-btn chemical-import-btn">Import Chemicals</button>
+              <input id="chemical-import-file" type="file" accept=".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden />
+              <p id="chemical-import-status" class="small-note chemical-import-status">Import CSV, XLS, or XLSX. Similar column names are matched automatically.</p>
               <label class="chemical-search-field">
                 Search
                 <input id="chemical-search" type="search" placeholder="Name, CAS, vendor, catalog, location" />

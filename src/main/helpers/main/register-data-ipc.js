@@ -1,6 +1,7 @@
 'use strict';
 
 const path = require('node:path');
+const { parseChemicalImportFile } = require('./chemical-import-parser');
 
 function registerDataIpc(deps = {}) {
   const ipcMain = deps.ipcMain;
@@ -27,6 +28,7 @@ function registerDataIpc(deps = {}) {
   const deleteSequenceEntry = deps.deleteSequenceEntry;
   const annotateSequenceRecord = deps.annotateSequenceRecord;
   const searchSequenceFeatures = deps.searchSequenceFeatures;
+  const listRecognizedBackbones = deps.listRecognizedBackbones;
   const recognizeSequenceBackbone = deps.recognizeSequenceBackbone;
 
   function safeParseJson(value, fallback = null) {
@@ -310,6 +312,28 @@ function registerDataIpc(deps = {}) {
     }
   });
 
+  ipcMain.handle('inventory:parse-chemical-import', async (_event, payload) => {
+    const normalizedPayload = normalizeJsonPayload(payload, {});
+    const fileName = cleanText(normalizedPayload?.fileName, 300);
+    const dataBase64 = String(normalizedPayload?.dataBase64 || '').trim();
+    if (!dataBase64) {
+      return { ok: false, error: 'Missing chemical import file data.' };
+    }
+
+    try {
+      const parsed = parseChemicalImportFile({ fileName, dataBase64 });
+      return {
+        ok: true,
+        ...parsed
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        error: String(error?.message || error)
+      };
+    }
+  });
+
   ipcMain.handle('storage:import-root', async (_event, payload) => {
     const normalizedPayload = normalizeJsonPayload(payload, {});
     const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
@@ -463,6 +487,27 @@ function registerDataIpc(deps = {}) {
         return { ok: false, error: 'Missing storage path.' };
       }
       const result = await searchSequenceFeatures({
+        storagePath,
+        query: cleanText(normalizedPayload?.query, 600),
+        limit: Number(normalizedPayload?.limit)
+      });
+      return { ok: true, ...result };
+    } catch (error) {
+      return { ok: false, error: String(error?.message || error) };
+    }
+  });
+
+  ipcMain.handle('sequence-library:list-backbones', async (_event, payload) => {
+    try {
+      const normalizedPayload = normalizeJsonPayload(payload, {});
+      const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
+      if (!storagePath) {
+        return { ok: false, error: 'Missing storage path.' };
+      }
+      if (typeof listRecognizedBackbones !== 'function') {
+        throw new Error('Stored backbone API unavailable.');
+      }
+      const result = await listRecognizedBackbones({
         storagePath,
         query: cleanText(normalizedPayload?.query, 600),
         limit: Number(normalizedPayload?.limit)

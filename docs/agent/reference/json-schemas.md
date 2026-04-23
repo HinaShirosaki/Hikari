@@ -620,7 +620,7 @@ Source: `src/main/helpers/agent/tools/Tool-call.json`
     }
   },
   "literature-search": {
-    "description": "Use this tool when the user wants papers, references, recent literature, external evidence, or protein knowledgebase entries rather than a summary of one already-identified paper. Provide `query` when possible. Use `source` for one source, `sources` for an explicit multi-source batch, or leave them empty for scholarly-first auto mode. Auto mode searches literature sources first and only falls back to generic web search when those sources do not produce results. Prefer `pubmed`, `crossref`, and `europe_pmc` for papers, `uniprot` for protein/gene knowledge, and `web` for generic recency-aware external search.",
+    "description": "Use this tool when the user wants papers, references, recent literature, external evidence, or protein knowledgebase entries rather than a summary of one already-identified paper. Provide `query` when possible. Use `source` for one source, `sources` for an explicit multi-source batch, or leave them empty for scholarly-first auto mode. `preferred_literature_source` biases auto mode toward one literature database first, and `preferred_web_source` prefers one web domain when web results are used. Auto mode searches literature sources first and only falls back to generic web search when those sources do not produce results. Prefer `pubmed`, `crossref`, and `europe_pmc` for papers, `uniprot` for protein/gene knowledge, and `web` for generic recency-aware external search.",
     "input_schema": {
       "type": "object",
       "additionalProperties": false,
@@ -646,6 +646,13 @@ Source: `src/main/helpers/agent/tools/Tool-call.json`
             "$ref": "#/$defs/literature_source"
           },
           "maxItems": 6
+        },
+        "preferred_literature_source": {
+          "$ref": "#/$defs/literature_source"
+        },
+        "preferred_web_source": {
+          "type": "string",
+          "maxLength": 240
         },
         "limit": {
           "type": "integer",

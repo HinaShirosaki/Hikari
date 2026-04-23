@@ -106,6 +106,7 @@ export function getSequenceViewerElements(rootDocument) {
     proteinBuilderAddCustomBtn: rootDocument?.getElementById?.('sequence-viewer-protein-builder-add-custom-btn'),
     proteinBuilderAddPoiBtn: rootDocument?.getElementById?.('sequence-viewer-protein-builder-add-poi-btn'),
     proteinBuilderBuildDnaBtn: rootDocument?.getElementById?.('sequence-viewer-protein-builder-build-dna-btn'),
+    proteinBuilderAssembleBtn: rootDocument?.getElementById?.('sequence-viewer-protein-builder-assemble-btn'),
     proteinBuilderCommonBlocks: rootDocument?.getElementById?.('sequence-viewer-protein-builder-common-blocks'),
     proteinBuilderFeatureSearchInput: rootDocument?.getElementById?.('sequence-viewer-protein-builder-feature-search-input'),
     proteinBuilderFeatureSearchBtn: rootDocument?.getElementById?.('sequence-viewer-protein-builder-feature-search-btn'),
@@ -115,6 +116,13 @@ export function getSequenceViewerElements(rootDocument) {
     proteinBuilderWorkflow: rootDocument?.getElementById?.('sequence-viewer-protein-builder-workflow'),
     proteinBuilderSequence: rootDocument?.getElementById?.('sequence-viewer-protein-builder-sequence'),
     proteinBuilderDnaMeta: rootDocument?.getElementById?.('sequence-viewer-protein-builder-dna-meta'),
-    proteinBuilderDnaSequence: rootDocument?.getElementById?.('sequence-viewer-protein-builder-dna-sequence')
+    proteinBuilderDnaSequence: rootDocument?.getElementById?.('sequence-viewer-protein-builder-dna-sequence'),
+    proteinBuilderAssemblyOverlay: rootDocument?.getElementById?.('sequence-viewer-protein-builder-assembly-overlay'),
+    proteinBuilderAssemblySubtitle: rootDocument?.getElementById?.('sequence-viewer-protein-builder-assembly-subtitle'),
+    proteinBuilderAssemblyCloseBtn: rootDocument?.getElementById?.('sequence-viewer-protein-builder-assembly-close-btn'),
+    proteinBuilderAssemblyList: rootDocument?.getElementById?.('sequence-viewer-protein-builder-assembly-list'),
+    proteinBuilderAssemblySummary: rootDocument?.getElementById?.('sequence-viewer-protein-builder-assembly-summary'),
+    proteinBuilderAssemblyApplyBtn: rootDocument?.getElementById?.('sequence-viewer-protein-builder-assembly-apply-btn'),
+    proteinBuilderAssemblyCancelBtn: rootDocument?.getElementById?.('sequence-viewer-protein-builder-assembly-cancel-btn')
   };
 }

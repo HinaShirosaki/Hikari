@@ -54,6 +54,7 @@ const {
   deleteSequenceEntry,
   annotateSequenceRecord,
   searchSequenceFeatures,
+  listRecognizedBackbones,
   recognizeSequenceBackbone
 } = require('./helpers/main/sequence-library');
 const {
@@ -332,6 +333,7 @@ registerDataIpc({
   deleteSequenceEntry,
   annotateSequenceRecord,
   searchSequenceFeatures,
+  listRecognizedBackbones,
   recognizeSequenceBackbone
 });
 

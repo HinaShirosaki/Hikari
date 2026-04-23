@@ -68,13 +68,16 @@
 
         <section id="sequence-viewer-protein-builder-workspace" class="sequence-viewer-protein-builder-workspace" hidden>
           <div class="sequence-viewer-protein-builder-toolbar">
+            <div class="sequence-viewer-protein-builder-toolbar-nav">
+              <button id="sequence-viewer-protein-builder-back-btn" type="button" class="ghost-btn">Back to Sequence Library</button>
+            </div>
             <div class="sequence-viewer-protein-builder-toolbar-copy">
               <h2>Protein Builder</h2>
               <p class="small-note">Build a linear fusion from tags, stored features, linkers, cleavage sites, and a POI block.</p>
+              <span id="sequence-viewer-protein-builder-status" class="small-note">Linear chain: each block accepts one upstream and one downstream connection.</span>
             </div>
             <div class="form-actions sequence-viewer-protein-builder-toolbar-actions">
-              <button id="sequence-viewer-protein-builder-back-btn" type="button" class="ghost-btn">Back to Sequence Library</button>
-              <span id="sequence-viewer-protein-builder-status" class="small-note">Linear chain: each block accepts one upstream and one downstream connection.</span>
+              <button id="sequence-viewer-protein-builder-assemble-btn" type="button" class="primary-btn">Assemble Plasmid <span aria-hidden="true">&rarr;</span></button>
             </div>
           </div>
 
@@ -168,6 +171,43 @@
                     <p class="small-note">Click Build DNA Sequence to generate a coding sequence for the current chain.</p>
                   </div>
                 </section>
+              </div>
+            </div>
+          </div>
+
+          <div id="sequence-viewer-protein-builder-assembly-overlay" class="sequence-viewer-backbone-dialog-overlay" hidden>
+            <div class="sequence-viewer-backbone-dialog" role="dialog" aria-modal="true" aria-labelledby="sequence-viewer-protein-builder-assembly-title">
+              <div class="sequence-viewer-backbone-dialog-head">
+                <div>
+                  <h4 id="sequence-viewer-protein-builder-assembly-title">Assemble Plasmid</h4>
+                  <p id="sequence-viewer-protein-builder-assembly-subtitle" class="small-note">Select a stored backbone to combine with the current DNA build.</p>
+                </div>
+                <button id="sequence-viewer-protein-builder-assembly-close-btn" type="button" class="ghost-btn" aria-label="Close stored backbone selector">Close</button>
+              </div>
+
+              <div class="sequence-viewer-backbone-dialog-grid">
+                <section class="plannotate-result-card sequence-viewer-backbone-dialog-panel">
+                  <div class="plannotate-card-head">
+                    <h4>Stored Backbones</h4>
+                  </div>
+                  <div id="sequence-viewer-protein-builder-assembly-list" class="sequence-viewer-backbone-dialog-candidates">
+                    <p class="small-note">Stored backbones will appear here.</p>
+                  </div>
+                </section>
+
+                <section class="plannotate-result-card sequence-viewer-backbone-dialog-panel sequence-viewer-protein-builder-assembly-summary-panel">
+                  <div class="plannotate-card-head">
+                    <h4>Assembly Summary</h4>
+                  </div>
+                  <div id="sequence-viewer-protein-builder-assembly-summary" class="calc-output sequence-viewer-backbone-dialog-summary">
+                    <p class="small-note">Choose a stored backbone to review the assembled plasmid length.</p>
+                  </div>
+                </section>
+              </div>
+
+              <div class="form-actions">
+                <button id="sequence-viewer-protein-builder-assembly-apply-btn" type="button" class="primary-btn">Open Assembled Plasmid</button>
+                <button id="sequence-viewer-protein-builder-assembly-cancel-btn" type="button" class="ghost-btn">Cancel</button>
               </div>
             </div>
           </div>
