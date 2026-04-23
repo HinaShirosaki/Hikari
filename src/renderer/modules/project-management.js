@@ -1,3 +1,5 @@
+import { summarizeNotebookResultTable } from './notebook-result-table.js';
+
 export function initProjectManagement({ state, persist, createId, safeText, onProjectsChanged }) {
   const projectForm = document.getElementById('project-form');
   const projectIdInput = document.getElementById('project-id');
@@ -151,6 +153,7 @@ export function initProjectManagement({ state, persist, createId, safeText, onPr
         <p><strong>State:</strong> ${safeText(notebookStateLabel(entry))}</p>
         <p><strong>Updated:</strong> ${safeText(formatTimestamp(entry.updatedAt))}</p>
         <p><strong>Result:</strong> ${safeText(entry.result || '-')}</p>
+        <p><strong>Result Table:</strong> ${safeText(summarizeNotebookResultTable(entry.resultTable) || '-')}</p>
         <p><strong>Files:</strong> ${safeText((entry.resultFiles || []).join(', ') || '-')}</p>
         <p><strong>Linked Assays:</strong> ${safeText(formatLinkedAssays(entry.id))}</p>
         <p><strong>Linked Gels:</strong> ${safeText(formatLinkedGels(entry.id))}</p>

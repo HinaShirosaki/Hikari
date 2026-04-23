@@ -1,0 +1,16 @@
+LOCUS       .                         92 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..92
+                     /gene="bla"
+                     /label="AmpR promoter"
+ORIGIN
+        1 tttgtttatt tttctaaata cattcaaata tgtatccgct catgagacaa taaccctgat
+       61 aaatgcttca ataatattga aaaaggaaga gt
+//

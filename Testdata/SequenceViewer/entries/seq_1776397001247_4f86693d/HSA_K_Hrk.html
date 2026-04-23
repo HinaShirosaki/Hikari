@@ -18,6 +18,8 @@
     html, body {
       margin: 0;
       padding: 0;
+      width: 100%;
+      height: 100%;
       background: #ffffff;
     }
     body {
@@ -26,21 +28,24 @@
       overflow: hidden;
     }
     .preview-shell {
+      width: 100%;
+      height: 100%;
       display: grid;
-      justify-items: center;
+      place-items: center;
       margin: 0;
-      padding: 0;
+      padding: 4px;
     }
     svg {
       display: block;
-      width: min(100%, 1120px);
-      height: auto;
-      margin: 0 auto;
+      width: 100%;
+      height: 100%;
+      max-width: 100%;
+      max-height: 100%;
     }
     .circular-preview__backbone {
       fill: none;
       stroke: var(--preview-backbone);
-      stroke-width: 14;
+      stroke-width: 16;
     }
     .circular-preview__center-ring {
       fill: none;
@@ -77,14 +82,43 @@
       dominant-baseline: middle;
       letter-spacing: 0.01em;
     }
+    .circular-preview__hover-tooltip {
+      position: fixed;
+      z-index: 20;
+      min-width: 180px;
+      max-width: min(320px, calc(100vw - 16px));
+      border-radius: 10px;
+      border: 1px solid rgba(90, 119, 165, 0.42);
+      background: rgba(249, 252, 255, 0.98);
+      box-shadow: 0 10px 24px rgba(27, 20, 14, 0.12);
+      padding: 9px 11px;
+      font-size: 12px;
+      line-height: 1.35;
+      color: var(--preview-ink);
+      pointer-events: none;
+    }
+    .circular-preview__hover-tooltip[hidden] {
+      display: none;
+    }
+    .circular-preview__hover-tooltip p {
+      margin: 0;
+    }
+    .circular-preview__hover-tooltip p + p {
+      margin-top: 3px;
+    }
+    .circular-preview__hover-title {
+      font-weight: 700;
+    }
+    .circular-preview__hover-description {
+      color: var(--preview-muted);
+    }
     .circular-preview__title {
       fill: var(--preview-ink);
       font-size: 28px;
       font-weight: 700;
       text-anchor: middle;
     }
-    .circular-preview__subtitle,
-    .circular-preview__caption {
+    .circular-preview__subtitle {
       text-anchor: middle;
       fill: var(--preview-muted);
       letter-spacing: 0.02em;
@@ -93,222 +127,465 @@
       font-size: 15px;
       font-weight: 600;
     }
-    .circular-preview__caption {
-      font-size: 13px;
-      text-transform: uppercase;
-    }
   </style>
 </head>
 <body>
   <main class="preview-shell" data-renderer="dna-feature-viewer-js">
     <!-- Circular plasmid preview powered by a minimal JS port inspired by DnaFeaturesViewer (MIT). -->
     <svg
-      viewBox="0 0 1728 1728"
+      viewBox="0 0 1699 1518"
+      preserveAspectRatio="xMidYMid meet"
       role="img"
       aria-label="HSA_K_Hrk circular plasmid preview">
       <desc>Standalone circular plasmid preview for HSA_K_Hrk.</desc>
-      <circle class="circular-preview__center-ring" cx="864.00" cy="864.00" r="208.00"></circle>
-      <circle class="circular-preview__backbone" cx="864.00" cy="864.00" r="240.00"></circle>
-      <line class="circular-preview__tick" x1="864.00" y1="636.00" x2="864.00" y2="612.00"></line><line class="circular-preview__tick" x1="951.25" y1="653.36" x2="960.44" y2="631.18"></line><line class="circular-preview__tick" x1="1025.22" y1="702.78" x2="1042.19" y2="685.81"></line><line class="circular-preview__tick" x1="1074.64" y1="776.75" x2="1096.82" y2="767.56"></line><line class="circular-preview__tick" x1="1092.00" y1="864.00" x2="1116.00" y2="864.00"></line><line class="circular-preview__tick" x1="1074.64" y1="951.25" x2="1096.82" y2="960.44"></line><line class="circular-preview__tick" x1="1025.22" y1="1025.22" x2="1042.19" y2="1042.19"></line><line class="circular-preview__tick" x1="951.25" y1="1074.64" x2="960.44" y2="1096.82"></line><line class="circular-preview__tick" x1="864.00" y1="1092.00" x2="864.00" y2="1116.00"></line><line class="circular-preview__tick" x1="776.75" y1="1074.64" x2="767.56" y2="1096.82"></line><line class="circular-preview__tick" x1="702.78" y1="1025.22" x2="685.81" y2="1042.19"></line><line class="circular-preview__tick" x1="653.36" y1="951.25" x2="631.18" y2="960.44"></line><line class="circular-preview__tick" x1="636.00" y1="864.00" x2="612.00" y2="864.00"></line><line class="circular-preview__tick" x1="653.36" y1="776.75" x2="631.18" y2="767.56"></line><line class="circular-preview__tick" x1="702.78" y1="702.78" x2="685.81" y2="685.81"></line><line class="circular-preview__tick" x1="776.75" y1="653.36" x2="767.56" y2="631.18"></line>
-      
+      <g class="circular-preview__scene">
+        <circle class="circular-preview__center-ring" cx="831.00" cy="767.11" r="258.00"></circle>
+        <circle class="circular-preview__backbone" cx="831.00" cy="767.11" r="290.00"></circle>
+        <line class="circular-preview__tick" x1="831.00" y1="489.11" x2="831.00" y2="465.11"></line><line class="circular-preview__tick" x1="937.39" y1="510.27" x2="946.57" y2="488.10"></line><line class="circular-preview__tick" x1="1027.58" y1="570.53" x2="1044.55" y2="553.56"></line><line class="circular-preview__tick" x1="1087.84" y1="660.72" x2="1110.01" y2="651.54"></line><line class="circular-preview__tick" x1="1109.00" y1="767.11" x2="1133.00" y2="767.11"></line><line class="circular-preview__tick" x1="1087.84" y1="873.50" x2="1110.01" y2="882.68"></line><line class="circular-preview__tick" x1="1027.58" y1="963.69" x2="1044.55" y2="980.66"></line><line class="circular-preview__tick" x1="937.39" y1="1023.95" x2="946.57" y2="1046.12"></line><line class="circular-preview__tick" x1="831.00" y1="1045.11" x2="831.00" y2="1069.11"></line><line class="circular-preview__tick" x1="724.61" y1="1023.95" x2="715.43" y2="1046.12"></line><line class="circular-preview__tick" x1="634.42" y1="963.69" x2="617.45" y2="980.66"></line><line class="circular-preview__tick" x1="574.16" y1="873.50" x2="551.99" y2="882.68"></line><line class="circular-preview__tick" x1="553.00" y1="767.11" x2="529.00" y2="767.11"></line><line class="circular-preview__tick" x1="574.16" y1="660.72" x2="551.99" y2="651.54"></line><line class="circular-preview__tick" x1="634.42" y1="570.53" x2="617.45" y2="553.56"></line><line class="circular-preview__tick" x1="724.61" y1="510.27" x2="715.43" y2="488.10"></line>
+        
           <path class="circular-preview__feature"
             data-feature-index="1"
             data-segment-index="1"
-            d="M 983.36 615.14 A 276.00 276.00 0 1 1 839.95 589.05 L 864.00 597.00 L 841.51 606.98 A 258.00 258.00 0 1 0 975.57 631.37 Z"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_3"
+            data-tooltip-name="misc_feature_"
+            data-tooltip-meta="misc_feature_ | Strand +"
+            data-tooltip-location="402..5634"
+            data-tooltip-description=""
+            d="M 971.98 473.17 A 326.00 326.00 0 1 1 802.59 442.35 L 831.00 450.11 L 804.16 460.28 A 308.00 308.00 0 1 0 964.19 489.40 Z"
+            aria-label="misc_feature_ (402..5634)"
             fill="#808080"
-            stroke="#6c7075">
-            <title>misc_feature_ (402..5634/label=&quot;vector_backbone-401-5634&quot;)</title>
-          </path>
+            stroke="#6c7075"></path>
         
           <path class="circular-preview__feature"
             data-feature-index="2"
             data-segment-index="1"
-            d="M 864.00 588.00 A 276.00 276.00 0 0 1 868.31 588.03 L 872.34 597.13 L 868.03 606.03 A 258.00 258.00 0 0 0 864.00 606.00 Z"
-            fill="#2f8f9d"
-            stroke="#297c8d">
-            <title>source (1..5634/organism=&quot;HSA_K_Hrk in pET-28a(+)&quot;)</title>
-          </path>
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_17"
+            data-tooltip-name="Nearest ORF (10 aa)"
+            data-tooltip-meta="orf | Strand +"
+            data-tooltip-location="220..249"
+            data-tooltip-description="30 bp ORF identified from ATG to TGA."
+            d="M 909.83 450.78 A 326.00 326.00 0 0 1 915.11 452.15 L 917.90 462.25 L 910.47 469.54 A 308.00 308.00 0 0 0 905.48 468.25 Z"
+            aria-label="Nearest ORF (10 aa) (220..249) - 30 bp ORF identified from ATG to TGA."
+            fill="#c97064"
+            stroke="#a8635e"></path>
         
           <path class="circular-preview__feature"
             data-feature-index="3"
             data-segment-index="1"
-            d="M 562.36 915.46 A 306.00 306.00 0 0 1 688.91 613.05 L 715.93 606.54 L 699.20 627.81 A 288.00 288.00 0 0 0 580.10 912.43 Z"
-            fill="#808080"
-            stroke="#6c7075">
-            <title>misc_feature_ (4075..5166/label=&quot;lacI&quot;)</title>
-          </path>
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_1"
+            data-tooltip-name="source"
+            data-tooltip-meta="source | Strand +"
+            data-tooltip-location="1..28"
+            data-tooltip-description=""
+            d="M 831.00 441.11 A 326.00 326.00 0 0 1 836.09 441.15 L 840.90 450.26 L 835.81 459.15 A 308.00 308.00 0 0 0 831.00 459.11 Z"
+            aria-label="source (1..28)"
+            fill="#2f8f9d"
+            stroke="#297c8d"></path>
         
           <path class="circular-preview__feature"
             data-feature-index="4"
             data-segment-index="1"
-            d="M 1154.51 767.88 A 306.00 306.00 0 0 1 1132.06 1011.58 L 1110.70 1029.37 L 1116.29 1002.89 A 288.00 288.00 0 0 0 1137.42 773.54 Z"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_10"
+            data-tooltip-name="misc_feature_"
+            data-tooltip-meta="misc_feature_ | Strand +"
+            data-tooltip-location="4075..5166"
+            data-tooltip-description=""
+            d="M 480.07 826.97 A 356.00 356.00 0 0 1 627.29 475.15 L 658.00 466.31 L 637.59 489.91 A 338.00 338.00 0 0 0 497.81 823.95 Z"
+            aria-label="misc_feature_ (4075..5166)"
             fill="#808080"
-            stroke="#6c7075">
-            <title>misc_feature_ (1123..1938/label=&quot;kan&quot;)</title>
-          </path>
+            stroke="#6c7075"></path>
         
           <path class="circular-preview__feature"
             data-feature-index="5"
             data-segment-index="1"
-            d="M 864.00 558.00 A 306.00 306.00 0 0 1 971.78 577.61 L 992.44 596.21 L 965.44 594.46 A 288.00 288.00 0 0 0 864.00 576.00 Z"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_6"
+            data-tooltip-name="misc_feature_"
+            data-tooltip-meta="misc_feature_ | Strand +"
+            data-tooltip-location="1123..1938"
+            data-tooltip-description=""
+            d="M 1168.98 655.29 A 356.00 356.00 0 0 1 1142.86 938.80 L 1119.24 960.31 L 1127.10 930.12 A 338.00 338.00 0 0 0 1151.89 660.94 Z"
+            aria-label="misc_feature_ (1123..1938)"
             fill="#808080"
-            stroke="#6c7075">
-            <title>misc_feature_ (1..401/label=&quot;insert&quot;)</title>
-          </path>
+            stroke="#6c7075"></path>
         
           <path class="circular-preview__feature"
             data-feature-index="6"
             data-segment-index="1"
-            d="M 777.49 1157.52 A 306.00 306.00 0 0 1 741.05 1144.21 L 721.42 1124.54 L 748.28 1127.73 A 288.00 288.00 0 0 0 782.58 1140.25 Z"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_2"
+            data-tooltip-name="misc_feature_"
+            data-tooltip-meta="misc_feature_ | Strand +"
+            data-tooltip-location="1..401"
+            data-tooltip-description=""
+            d="M 831.00 411.11 A 356.00 356.00 0 0 1 956.39 433.92 L 981.06 454.23 L 950.05 450.77 A 338.00 338.00 0 0 0 831.00 429.11 Z"
+            aria-label="misc_feature_ (1..401)"
             fill="#808080"
-            stroke="#6c7075">
-            <title>misc_feature_ (3075..3266/label=&quot;ROP&quot;)</title>
-          </path>
+            stroke="#6c7075"></path>
         
           <path class="circular-preview__feature"
             data-feature-index="7"
             data-segment-index="1"
-            d="M 839.12 559.01 A 306.00 306.00 0 0 1 843.88 558.66 L 849.10 567.37 L 845.06 576.62 A 288.00 288.00 0 0 0 840.58 576.95 Z"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_8"
+            data-tooltip-name="misc_feature_"
+            data-tooltip-meta="misc_feature_ | Strand +"
+            data-tooltip-location="3075..3266"
+            data-tooltip-description=""
+            d="M 730.36 1108.59 A 356.00 356.00 0 0 1 687.96 1093.11 L 664.42 1071.51 L 695.20 1076.63 A 338.00 338.00 0 0 0 735.45 1091.32 Z"
+            aria-label="misc_feature_ (3075..3266)"
             fill="#808080"
-            stroke="#6c7075">
-            <title>misc_feature_ (5562..5589/label=&quot;lacO&quot;)</title>
-          </path>
+            stroke="#6c7075"></path>
         
           <path class="circular-preview__feature"
             data-feature-index="8"
             data-segment-index="1"
-            d="M 564.52 926.85 A 306.00 306.00 0 0 1 563.78 923.17 L 571.92 917.86 L 581.44 919.69 A 288.00 288.00 0 0 0 582.14 923.16 Z"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_13"
+            data-tooltip-name="misc_feature_"
+            data-tooltip-meta="misc_feature_ | Strand +"
+            data-tooltip-location="5562..5589"
+            data-tooltip-description=""
+            d="M 802.05 412.29 A 356.00 356.00 0 0 1 807.59 411.88 L 813.59 420.55 L 808.78 429.84 A 338.00 338.00 0 0 0 803.51 430.23 Z"
+            aria-label="misc_feature_ (5562..5589)"
             fill="#808080"
-            stroke="#6c7075">
-            <title>misc_feature_ (4041..4062/label=&quot;CAP_binding&quot;)</title>
-          </path>
+            stroke="#6c7075"></path>
         
           <path class="circular-preview__feature"
             data-feature-index="9"
             data-segment-index="1"
-            d="M 864.00 528.00 A 336.00 336.00 0 0 1 866.25 528.01 L 866.13 546.01 A 318.00 318.00 0 0 0 864.00 546.00 Z"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_9"
+            data-tooltip-name="misc_feature_"
+            data-tooltip-meta="misc_feature_ | Strand +"
+            data-tooltip-location="4041..4062"
+            data-tooltip-description=""
+            d="M 482.59 840.23 A 356.00 356.00 0 0 1 481.72 835.95 L 489.75 830.03 L 499.38 832.47 A 338.00 338.00 0 0 0 500.21 836.54 Z"
+            aria-label="misc_feature_ (4041..4062)"
             fill="#808080"
-            stroke="#6c7075">
-            <title>misc_feature_ (408..425/label=&quot;6x_His_tag&quot;)</title>
-          </path>
-        
-          <path class="circular-preview__feature"
-            data-feature-index="9"
-            data-segment-index="2"
-            d="M 1011.33 562.02 A 336.00 336.00 0 1 1 834.72 529.28 L 864.00 537.00 L 836.28 547.21 A 318.00 318.00 0 1 0 1003.43 578.20 Z"
-            fill="#808080"
-            stroke="#6c7075">
-            <title>misc_feature_ (408..425/label=&quot;6x_His_tag&quot;)</title>
-          </path>
+            stroke="#6c7075"></path>
         
           <path class="circular-preview__feature"
             data-feature-index="10"
             data-segment-index="1"
-            d="M 864.00 498.00 A 366.00 366.00 0 0 1 864.41 498.00 L 864.39 516.00 A 348.00 348.00 0 0 0 864.00 516.00 Z"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_4"
+            data-tooltip-name="misc_feature_"
+            data-tooltip-meta="misc_feature_ | Strand +"
+            data-tooltip-location="join(408..5634,1..6)"
+            data-tooltip-description=""
+            d="M 831.00 381.11 A 386.00 386.00 0 0 1 833.58 381.12 L 833.46 399.12 A 368.00 368.00 0 0 0 831.00 399.11 Z"
+            aria-label="misc_feature_ (join(408..5634,1..6))"
             fill="#808080"
-            stroke="#6c7075">
-            <title>misc_feature_ (593..899/label=&quot;f1&quot;)</title>
-          </path>
+            stroke="#6c7075"></path>
         
           <path class="circular-preview__feature"
             data-feature-index="10"
             data-segment-index="2"
-            d="M 1088.46 574.91 A 366.00 366.00 0 1 1 832.10 499.39 L 864.00 507.00 L 833.67 517.32 A 348.00 348.00 0 1 0 1077.42 589.13 Z"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_4"
+            data-tooltip-name="misc_feature_"
+            data-tooltip-meta="misc_feature_ | Strand +"
+            data-tooltip-location="join(408..5634,1..6)"
+            data-tooltip-description=""
+            d="M 1000.25 420.19 A 386.00 386.00 0 1 1 797.36 382.58 L 831.00 390.11 L 798.93 400.51 A 368.00 368.00 0 1 0 992.36 436.37 Z"
+            aria-label="misc_feature_ (join(408..5634,1..6))"
             fill="#808080"
-            stroke="#6c7075">
-            <title>misc_feature_ (593..899/label=&quot;f1&quot;)</title>
-          </path>
+            stroke="#6c7075"></path>
         
           <path class="circular-preview__feature"
             data-feature-index="11"
             data-segment-index="1"
-            d="M 864.00 468.00 A 396.00 396.00 0 0 1 864.44 468.00 L 864.42 486.00 A 378.00 378.00 0 0 0 864.00 486.00 Z"
-            fill="#808080"
-            stroke="#6c7075">
-            <title>misc_feature_ (2060..2648/label=&quot;colE1_high_copy&quot;)</title>
-          </path>
-        
-          <path class="circular-preview__feature"
-            data-feature-index="11"
-            data-segment-index="2"
-            d="M 1160.29 1126.74 A 396.00 396.00 0 1 1 829.49 469.51 L 864.00 477.00 L 831.06 487.44 A 378.00 378.00 0 1 0 1146.82 1114.79 Z"
-            fill="#808080"
-            stroke="#6c7075">
-            <title>misc_feature_ (2060..2648/label=&quot;colE1_high_copy&quot;)</title>
-          </path>
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_19"
+            data-tooltip-name="Insert (CD19)"
+            data-tooltip-meta="insert | Strand +"
+            data-tooltip-location="220..249"
+            data-tooltip-description="30 bp insert sequence (ATG to stop codon) not explained by stored vector CD19."
+            d="M 924.34 392.57 A 386.00 386.00 0 0 1 930.59 394.18 L 934.35 404.55 L 925.95 411.57 A 368.00 368.00 0 0 0 919.99 410.03 Z"
+            aria-label="Insert (CD19) (220..249) - 30 bp insert sequence (ATG to stop codon) not explained by stored vector CD19."
+            fill="#a16207"
+            stroke="#875812"></path>
         
           <path class="circular-preview__feature"
             data-feature-index="12"
             data-segment-index="1"
-            d="M 864.00 438.00 A 426.00 426.00 0 0 1 867.33 438.01 L 867.19 456.01 A 408.00 408.00 0 0 0 864.00 456.00 Z"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_5"
+            data-tooltip-name="misc_feature_"
+            data-tooltip-meta="misc_feature_ | Strand +"
+            data-tooltip-location="join(593..5634,1..1)"
+            data-tooltip-description=""
+            d="M 831.00 351.11 A 416.00 416.00 0 0 1 831.46 351.11 L 831.44 369.11 A 398.00 398.00 0 0 0 831.00 369.11 Z"
+            aria-label="misc_feature_ (join(593..5634,1..1))"
             fill="#808080"
-            stroke="#6c7075">
-            <title>misc_feature_ (5544..5562/label=&quot;T7&quot;)</title>
-          </path>
+            stroke="#6c7075"></path>
         
           <path class="circular-preview__feature"
             data-feature-index="12"
             data-segment-index="2"
-            d="M 820.84 440.19 A 426.00 426.00 0 0 1 842.39 438.55 L 864.00 447.00 L 843.31 456.53 A 408.00 408.00 0 0 0 822.66 458.10 Z"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_5"
+            data-tooltip-name="misc_feature_"
+            data-tooltip-meta="misc_feature_ | Strand +"
+            data-tooltip-location="join(593..5634,1..1)"
+            data-tooltip-description=""
+            d="M 1086.13 438.53 A 416.00 416.00 0 1 1 794.74 352.69 L 831.00 360.11 L 796.31 370.62 A 398.00 398.00 0 1 0 1075.09 452.74 Z"
+            aria-label="misc_feature_ (join(593..5634,1..1))"
             fill="#808080"
-            stroke="#6c7075">
-            <title>misc_feature_ (5544..5562/label=&quot;T7&quot;)</title>
-          </path>
+            stroke="#6c7075"></path>
         
           <path class="circular-preview__feature"
             data-feature-index="13"
             data-segment-index="1"
-            d="M 647.92 496.87 A 426.00 426.00 0 0 1 664.09 487.82 L 684.51 487.61 L 672.54 503.71 A 408.00 408.00 0 0 0 657.05 512.38 Z"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_7"
+            data-tooltip-name="misc_feature_"
+            data-tooltip-meta="misc_feature_ | Strand +"
+            data-tooltip-location="join(2060..5634,1..1)"
+            data-tooltip-description=""
+            d="M 831.00 321.11 A 446.00 446.00 0 0 1 831.50 321.11 L 831.48 339.11 A 428.00 428.00 0 0 0 831.00 339.11 Z"
+            aria-label="misc_feature_ (join(2060..5634,1..1))"
             fill="#808080"
-            stroke="#6c7075">
-            <title>misc_feature_ (5158..5235/label=&quot;lacIQ_promoter&quot;)</title>
-          </path>
+            stroke="#6c7075"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="13"
+            data-segment-index="2"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_7"
+            data-tooltip-name="misc_feature_"
+            data-tooltip-meta="misc_feature_ | Strand +"
+            data-tooltip-location="join(2060..5634,1..1)"
+            data-tooltip-description=""
+            d="M 1164.70 1063.02 A 446.00 446.00 0 1 1 792.13 322.81 L 831.00 330.11 L 793.70 340.74 A 428.00 428.00 0 1 0 1151.23 1051.08 Z"
+            aria-label="misc_feature_ (join(2060..5634,1..1))"
+            fill="#808080"
+            stroke="#6c7075"></path>
         
           <path class="circular-preview__feature"
             data-feature-index="14"
             data-segment-index="1"
-            d="M 864.00 408.00 A 456.00 456.00 0 0 1 865.53 408.00 L 865.47 426.00 A 438.00 438.00 0 0 0 864.00 426.00 Z"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_12"
+            data-tooltip-name="misc_feature_"
+            data-tooltip-meta="misc_feature_ | Strand +"
+            data-tooltip-location="join(5544..5634,1..7)"
+            data-tooltip-description=""
+            d="M 831.00 291.11 A 476.00 476.00 0 0 1 834.72 291.12 L 834.58 309.12 A 458.00 458.00 0 0 0 831.00 309.11 Z"
+            aria-label="misc_feature_ (join(5544..5634,1..7))"
             fill="#808080"
-            stroke="#6c7075">
-            <title>misc_feature_ (5602..5624/label=&quot;RBS_3&quot;)</title>
-          </path>
+            stroke="#6c7075"></path>
         
           <path class="circular-preview__feature"
             data-feature-index="14"
             data-segment-index="2"
-            d="M 847.22 408.31 A 456.00 456.00 0 0 1 855.61 408.08 L 864.00 417.00 L 855.94 426.07 A 438.00 438.00 0 0 0 847.88 426.30 Z"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_12"
+            data-tooltip-name="misc_feature_"
+            data-tooltip-meta="misc_feature_ | Strand +"
+            data-tooltip-location="join(5544..5634,1..7)"
+            data-tooltip-description=""
+            d="M 782.78 293.56 A 476.00 476.00 0 0 1 806.86 291.72 L 831.00 300.11 L 807.77 309.70 A 458.00 458.00 0 0 0 784.60 311.47 Z"
+            aria-label="misc_feature_ (join(5544..5634,1..7))"
             fill="#808080"
-            stroke="#6c7075">
-            <title>misc_feature_ (5602..5624/label=&quot;RBS_3&quot;)</title>
-          </path>
+            stroke="#6c7075"></path>
         
           <path class="circular-preview__feature"
             data-feature-index="15"
             data-segment-index="1"
-            d="M 864.00 378.00 A 486.00 486.00 0 0 1 867.79 378.01 L 867.65 396.01 A 468.00 468.00 0 0 0 864.00 396.00 Z"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_11"
+            data-tooltip-name="misc_feature_"
+            data-tooltip-meta="misc_feature_ | Strand +"
+            data-tooltip-location="5158..5235"
+            data-tooltip-description=""
+            d="M 589.56 356.89 A 476.00 476.00 0 0 1 607.63 346.78 L 629.99 345.59 L 616.07 362.67 A 458.00 458.00 0 0 0 598.69 372.40 Z"
+            aria-label="misc_feature_ (5158..5235)"
             fill="#808080"
-            stroke="#6c7075">
-            <title>misc_feature_ (5607..5623/label=&quot;T7_transl_en_RBS&quot;)</title>
-          </path>
+            stroke="#6c7075"></path>
         
           <path class="circular-preview__feature"
-            data-feature-index="15"
-            data-segment-index="2"
-            d="M 848.83 378.24 A 486.00 486.00 0 0 1 856.41 378.06 L 864.00 387.00 L 856.69 396.06 A 468.00 468.00 0 0 0 849.39 396.23 Z"
+            data-feature-index="16"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_14"
+            data-tooltip-name="misc_feature_"
+            data-tooltip-meta="misc_feature_ | Strand +"
+            data-tooltip-location="join(5602..5634,1..3)"
+            data-tooltip-description=""
+            d="M 831.00 261.11 A 506.00 506.00 0 0 1 832.69 261.11 L 832.63 279.11 A 488.00 488.00 0 0 0 831.00 279.11 Z"
+            aria-label="misc_feature_ (join(5602..5634,1..3))"
             fill="#808080"
-            stroke="#6c7075">
-            <title>misc_feature_ (5607..5623/label=&quot;T7_transl_en_RBS&quot;)</title>
-          </path>
+            stroke="#6c7075"></path>
         
-      
-        <g class="circular-preview__annotation" data-label-level="0">
+          <path class="circular-preview__feature"
+            data-feature-index="16"
+            data-segment-index="2"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_14"
+            data-tooltip-name="misc_feature_"
+            data-tooltip-meta="misc_feature_ | Strand +"
+            data-tooltip-location="join(5602..5634,1..3)"
+            data-tooltip-description=""
+            d="M 812.38 261.45 A 506.00 506.00 0 0 1 821.69 261.20 L 831.00 270.11 L 822.02 279.19 A 488.00 488.00 0 0 0 813.04 279.44 Z"
+            aria-label="misc_feature_ (join(5602..5634,1..3))"
+            fill="#808080"
+            stroke="#6c7075"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="17"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_16"
+            data-tooltip-name="T7 promoter"
+            data-tooltip-meta="promoter | Strand +"
+            data-tooltip-location="5544..5562"
+            data-tooltip-description="Matched exported promoter T7 promoter with the nearest ORF 291 bp downstream."
+            d="M 779.74 263.71 A 506.00 506.00 0 0 1 785.07 263.20 L 791.14 271.71 L 786.71 281.12 A 488.00 488.00 0 0 0 781.56 281.62 Z"
+            aria-label="T7 promoter (5544..5562) - Matched exported promoter T7 promoter with the nearest ORF 291 bp downstream."
+            fill="#8b5cf6"
+            stroke="#7553d6"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="18"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_15"
+            data-tooltip-name="misc_feature_"
+            data-tooltip-meta="misc_feature_ | Strand +"
+            data-tooltip-location="join(5607..5634,1..7)"
+            data-tooltip-description=""
+            d="M 831.00 231.11 A 536.00 536.00 0 0 1 835.18 231.13 L 835.04 249.13 A 518.00 518.00 0 0 0 831.00 249.11 Z"
+            aria-label="misc_feature_ (join(5607..5634,1..7))"
+            fill="#808080"
+            stroke="#6c7075"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="18"
+            data-segment-index="2"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_15"
+            data-tooltip-name="misc_feature_"
+            data-tooltip-meta="misc_feature_ | Strand +"
+            data-tooltip-location="join(5607..5634,1..7)"
+            data-tooltip-description=""
+            d="M 814.27 231.37 A 536.00 536.00 0 0 1 822.63 231.17 L 831.00 240.11 L 822.91 249.17 A 518.00 518.00 0 0 0 814.83 249.36 Z"
+            aria-label="misc_feature_ (join(5607..5634,1..7))"
+            fill="#808080"
+            stroke="#6c7075"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="19"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="backbone_recognition_promoter_seq_1776444918195_cdc551db"
+            data-tooltip-name="T7 promoter"
+            data-tooltip-meta="promoter | Strand +"
+            data-tooltip-location="5544..5562"
+            data-tooltip-description="Matched exported promoter T7 promoter with the nearest ORF 72 bp downstream."
+            d="M 776.70 233.87 A 536.00 536.00 0 0 1 782.35 233.32 L 788.73 241.81 L 783.98 251.25 A 518.00 518.00 0 0 0 778.52 251.77 Z"
+            aria-label="T7 promoter (5544..5562) - Matched exported promoter T7 promoter with the nearest ORF 72 bp downstream."
+            fill="#8b5cf6"
+            stroke="#7553d6"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="20"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_18"
+            data-tooltip-name="Backbone (CD19)"
+            data-tooltip-meta="backbone | Strand +"
+            data-tooltip-location="join(1..219,250..5634)"
+            data-tooltip-description="CD19 saved vector recognized with 5,604 bp exact backbone coverage (93.4% of host, forward orientation; Gibson/HR view)."
+            d="M 831.00 201.11 A 566.00 566.00 0 0 1 919.48 208.07 L 965.69 226.64 L 916.67 225.85 A 548.00 548.00 0 0 0 831.00 219.11 Z"
+            aria-label="Backbone (CD19) (join(1..219,250..5634)) - CD19 saved vector recognized with 5,604 bp exact backbone coverage (93.4% of host, forward orientation; Gibson/HR view)."
+            fill="#c97064"
+            stroke="#a8635e"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="20"
+            data-segment-index="2"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_18"
+            data-tooltip-name="Backbone (CD19)"
+            data-tooltip-meta="backbone | Strand +"
+            data-tooltip-location="join(1..219,250..5634)"
+            data-tooltip-description="CD19 saved vector recognized with 5,604 bp exact backbone coverage (93.4% of host, forward orientation; Gibson/HR view)."
+            d="M 986.16 222.79 A 566.00 566.00 0 1 1 781.67 203.26 L 831.00 210.11 L 783.24 221.19 A 548.00 548.00 0 1 0 981.23 240.10 Z"
+            aria-label="Backbone (CD19) (join(1..219,250..5634)) - CD19 saved vector recognized with 5,604 bp exact backbone coverage (93.4% of host, forward orientation; Gibson/HR view)."
+            fill="#c97064"
+            stroke="#a8635e"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="21"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="backbone_recognition_backbone_seq_1776444918195_cdc551db"
+            data-tooltip-name="Backbone (CD19)"
+            data-tooltip-meta="backbone | Strand +"
+            data-tooltip-location="406..5634"
+            data-tooltip-description="CD19 saved vector recognized with 5,229 bp exact backbone coverage (93.4% of host, forward orientation; Gibson/HR view)."
+            d="M 1091.13 230.88 A 596.00 596.00 0 1 1 779.06 173.38 L 831.00 180.11 L 780.62 191.31 A 578.00 578.00 0 1 0 1083.28 247.07 Z"
+            aria-label="Backbone (CD19) (406..5634) - CD19 saved vector recognized with 5,229 bp exact backbone coverage (93.4% of host, forward orientation; Gibson/HR view)."
+            fill="#c97064"
+            stroke="#a8635e"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="22"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="backbone_recognition_orf_seq_1776444918195_cdc551db"
+            data-tooltip-name="Nearest ORF (134 aa)"
+            data-tooltip-meta="orf | Strand +"
+            data-tooltip-location="1..405"
+            data-tooltip-description="405 bp ORF identified from ATG to TAA."
+            d="M 831.00 171.11 A 596.00 596.00 0 0 1 1043.41 210.24 L 1087.21 238.97 L 1036.99 227.06 A 578.00 578.00 0 0 0 831.00 189.11 Z"
+            aria-label="Nearest ORF (134 aa) (1..405) - 405 bp ORF identified from ATG to TAA."
+            fill="#c97064"
+            stroke="#a8635e"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="23"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="backbone_recognition_insert_seq_1776444918195_cdc551db"
+            data-tooltip-name="Insert (CD19)"
+            data-tooltip-meta="insert | Strand +"
+            data-tooltip-location="1..405"
+            data-tooltip-description="405 bp insert sequence (ATG to stop codon) selected relative to backbone candidate CD19."
+            d="M 831.00 141.11 A 626.00 626.00 0 0 1 1054.10 182.21 L 1100.30 211.98 L 1047.68 199.03 A 608.00 608.00 0 0 0 831.00 159.11 Z"
+            aria-label="Insert (CD19) (1..405) - 405 bp insert sequence (ATG to stop codon) selected relative to backbone candidate CD19."
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+        
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_3"
+          data-tooltip-name="misc_feature_"
+          data-tooltip-meta="misc_feature_ | Strand +"
+          data-tooltip-location="402..5634"
+          data-tooltip-description=""
+          data-feature-x="757.82"
+          data-feature-y="1088.89"
+          data-bend-x="683.76"
+          data-bend-y="1414.58"
+          data-label-center-y="1472.60"
+          aria-label="misc_feature_ (402..5634)">
           <path class="circular-preview__leader"
-            d="M 801.91 1137.03 L 745.59 1384.71 L 731.37 1394.46"
+            d="M 757.82 1088.89 L 683.76 1414.58 L 159.00 1472.60"
             stroke="#6c7075"></path>
           <rect
             class="circular-preview__label-box"
-            x="619.17"
-            y="1381.46"
+            x="46.80"
+            y="1459.60"
             width="112.20"
             height="26.00"
             rx="10"
@@ -318,24 +595,77 @@
           
             <text
               class="circular-preview__label-text"
-              x="725.37"
-              y="1394.46"
+              x="147.00"
+              y="1472.60"
               text-anchor="end"
               fill="#0f223e">
               misc_feature_
             </text>
           
-          <title>misc_feature_ (402..5634/label=&quot;vector_backbone-401-5634&quot;)</title>
         </g>
       
-        <g class="circular-preview__annotation" data-label-level="4">
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_17"
+          data-tooltip-name="Nearest ORF (10 aa)"
+          data-tooltip-meta="orf | Strand +"
+          data-tooltip-location="220..249"
+          data-tooltip-description="30 bp ORF identified from ATG to TGA."
+          data-feature-x="916.14"
+          data-feature-y="448.28"
+          data-bend-x="1002.32"
+          data-bend-y="125.59"
+          data-label-center-y="375.19"
+          aria-label="Nearest ORF (10 aa) (220..249) - 30 bp ORF identified from ATG to TGA.">
           <path class="circular-preview__leader"
-            d="M 868.37 584.03 L 874.34 202.08 L 874.49 192.08"
+            d="M 916.14 448.28 L 1002.32 125.59 L 1503.00 375.19"
+            stroke="#a8635e"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1503.00"
+            y="362.19"
+            width="156.60"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f7ebe9"
+            stroke="#a8635e"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1515.00"
+              y="375.19"
+              text-anchor="start"
+              fill="#0f223e">
+              Nearest ORF (10 aa)
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_1"
+          data-tooltip-name="source"
+          data-tooltip-meta="source | Strand +"
+          data-tooltip-location="1..28"
+          data-tooltip-description=""
+          data-feature-x="836.15"
+          data-feature-y="437.15"
+          data-bend-x="841.37"
+          data-bend-y="103.19"
+          data-label-center-y="95.19"
+          aria-label="source (1..28)">
+          <path class="circular-preview__leader"
+            d="M 836.15 437.15 L 841.37 103.19 L 1503.00 95.19"
             stroke="#297c8d"></path>
           <rect
             class="circular-preview__label-box"
-            x="831.49"
-            y="179.08"
+            x="1503.00"
+            y="82.19"
             width="86.00"
             height="26.00"
             rx="10"
@@ -345,24 +675,37 @@
           
             <text
               class="circular-preview__label-text"
-              x="874.49"
-              y="192.08"
-              text-anchor="middle"
+              x="1515.00"
+              y="95.19"
+              text-anchor="start"
               fill="#0f223e">
               source
             </text>
           
-          <title>source (1..5634/organism=&quot;HSA_K_Hrk in pET-28a(+)&quot;)</title>
         </g>
       
-        <g class="circular-preview__annotation" data-label-level="0">
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_10"
+          data-tooltip-name="misc_feature_"
+          data-tooltip-meta="misc_feature_ | Strand +"
+          data-tooltip-location="4075..5166"
+          data-tooltip-description=""
+          data-feature-x="505.28"
+          data-feature-y="613.79"
+          data-bend-x="230.23"
+          data-bend-y="484.31"
+          data-label-center-y="430.68"
+          aria-label="misc_feature_ (4075..5166)">
           <path class="circular-preview__leader"
-            d="M 583.52 731.97 L 380.85 636.57 L 359.81 632.31"
+            d="M 505.28 613.79 L 230.23 484.31 L 159.00 430.68"
             stroke="#6c7075"></path>
           <rect
             class="circular-preview__label-box"
-            x="247.61"
-            y="619.31"
+            x="46.80"
+            y="417.68"
             width="112.20"
             height="26.00"
             rx="10"
@@ -372,24 +715,37 @@
           
             <text
               class="circular-preview__label-text"
-              x="353.81"
-              y="632.31"
+              x="147.00"
+              y="430.68"
               text-anchor="end"
               fill="#0f223e">
               misc_feature_
             </text>
           
-          <title>misc_feature_ (4075..5166/label=&quot;lacI&quot;)</title>
         </g>
       
-        <g class="circular-preview__annotation" data-label-level="0">
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_6"
+          data-tooltip-name="misc_feature_"
+          data-tooltip-meta="misc_feature_ | Strand +"
+          data-tooltip-location="1123..1938"
+          data-tooltip-description=""
+          data-feature-x="1187.70"
+          data-feature-y="815.74"
+          data-bend-x="1488.91"
+          data-bend-y="856.81"
+          data-label-center-y="857.89"
+          aria-label="misc_feature_ (1123..1938)">
           <path class="circular-preview__leader"
-            d="M 1171.16 905.88 L 1393.11 936.14 L 1415.01 937.49"
+            d="M 1187.70 815.74 L 1488.91 856.81 L 1503.00 857.89"
             stroke="#6c7075"></path>
           <rect
             class="circular-preview__label-box"
-            x="1415.01"
-            y="924.49"
+            x="1503.00"
+            y="844.89"
             width="112.20"
             height="26.00"
             rx="10"
@@ -399,24 +755,37 @@
           
             <text
               class="circular-preview__label-text"
-              x="1421.01"
-              y="937.49"
+              x="1515.00"
+              y="857.89"
               text-anchor="start"
               fill="#0f223e">
               misc_feature_
             </text>
           
-          <title>misc_feature_ (1123..1938/label=&quot;kan&quot;)</title>
         </g>
       
-        <g class="circular-preview__annotation" data-label-level="0">
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_2"
+          data-tooltip-name="misc_feature_"
+          data-tooltip-meta="misc_feature_ | Strand +"
+          data-tooltip-location="1..401"
+          data-tooltip-description=""
+          data-feature-x="910.83"
+          data-feature-y="416.07"
+          data-bend-x="978.24"
+          data-bend-y="119.64"
+          data-label-center-y="255.19"
+          aria-label="misc_feature_ (1..401)">
           <path class="circular-preview__leader"
-            d="M 932.74 561.72 L 982.41 343.29 L 996.63 333.54"
+            d="M 910.83 416.07 L 978.24 119.64 L 1503.00 255.19"
             stroke="#6c7075"></path>
           <rect
             class="circular-preview__label-box"
-            x="996.63"
-            y="320.54"
+            x="1503.00"
+            y="242.19"
             width="112.20"
             height="26.00"
             rx="10"
@@ -426,24 +795,37 @@
           
             <text
               class="circular-preview__label-text"
-              x="1002.63"
-              y="333.54"
+              x="1515.00"
+              y="255.19"
               text-anchor="start"
               fill="#0f223e">
               misc_feature_
             </text>
           
-          <title>misc_feature_ (1..401/label=&quot;insert&quot;)</title>
         </g>
       
-        <g class="circular-preview__annotation" data-label-level="3">
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_8"
+          data-tooltip-name="misc_feature_"
+          data-tooltip-meta="misc_feature_ | Strand +"
+          data-tooltip-location="3075..3266"
+          data-tooltip-description=""
+          data-feature-x="692.91"
+          data-feature-y="1099.57"
+          data-bend-x="576.30"
+          data-bend-y="1380.32"
+          data-label-center-y="1387.71"
+          aria-label="misc_feature_ (3075..3266)">
           <path class="circular-preview__leader"
-            d="M 745.09 1150.29 L 622.34 1445.81 L 606.51 1455.04"
+            d="M 692.91 1099.57 L 576.30 1380.32 L 1503.00 1387.71"
             stroke="#6c7075"></path>
           <rect
             class="circular-preview__label-box"
-            x="494.31"
-            y="1442.04"
+            x="1503.00"
+            y="1374.71"
             width="112.20"
             height="26.00"
             rx="10"
@@ -453,24 +835,77 @@
           
             <text
               class="circular-preview__label-text"
-              x="600.51"
-              y="1455.04"
+              x="1515.00"
+              y="1387.71"
+              text-anchor="start"
+              fill="#0f223e">
+              misc_feature_
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_13"
+          data-tooltip-name="misc_feature_"
+          data-tooltip-meta="misc_feature_ | Strand +"
+          data-tooltip-location="5562..5589"
+          data-tooltip-description=""
+          data-feature-x="807.33"
+          data-feature-y="407.89"
+          data-bend-x="787.34"
+          data-bend-y="104.55"
+          data-label-center-y="85.00"
+          aria-label="misc_feature_ (5562..5589)">
+          <path class="circular-preview__leader"
+            d="M 807.33 407.89 L 787.34 104.55 L 159.00 85.00"
+            stroke="#6c7075"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="46.80"
+            y="72.00"
+            width="112.20"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#ededed"
+            stroke="#6c7075"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="147.00"
+              y="85.00"
               text-anchor="end"
               fill="#0f223e">
               misc_feature_
             </text>
           
-          <title>misc_feature_ (3075..3266/label=&quot;ROP&quot;)</title>
         </g>
       
-        <g class="circular-preview__annotation" data-label-level="3">
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_9"
+          data-tooltip-name="misc_feature_"
+          data-tooltip-meta="misc_feature_ | Strand +"
+          data-tooltip-location="4041..4062"
+          data-tooltip-description=""
+          data-feature-x="477.80"
+          data-feature-y="836.73"
+          data-bend-x="179.53"
+          data-bend-y="895.51"
+          data-label-center-y="846.84"
+          aria-label="misc_feature_ (4041..4062)">
           <path class="circular-preview__leader"
-            d="M 843.62 554.67 L 822.58 235.36 L 821.92 225.38"
+            d="M 477.80 836.73 L 179.53 895.51 L 159.00 846.84"
             stroke="#6c7075"></path>
           <rect
             class="circular-preview__label-box"
-            x="765.82"
-            y="212.38"
+            x="46.80"
+            y="833.84"
             width="112.20"
             height="26.00"
             rx="10"
@@ -480,51 +915,37 @@
           
             <text
               class="circular-preview__label-text"
-              x="821.92"
-              y="225.38"
-              text-anchor="middle"
-              fill="#0f223e">
-              misc_feature_
-            </text>
-          
-          <title>misc_feature_ (5562..5589/label=&quot;lacO&quot;)</title>
-        </g>
-      
-        <g class="circular-preview__annotation" data-label-level="0">
-          <path class="circular-preview__leader"
-            d="M 559.85 923.95 L 340.08 967.27 L 318.27 969.20"
-            stroke="#6c7075"></path>
-          <rect
-            class="circular-preview__label-box"
-            x="206.07"
-            y="956.20"
-            width="112.20"
-            height="26.00"
-            rx="10"
-            ry="10"
-            fill="#ededed"
-            stroke="#6c7075"></rect>
-          
-            <text
-              class="circular-preview__label-text"
-              x="312.27"
-              y="969.20"
+              x="147.00"
+              y="846.84"
               text-anchor="end"
               fill="#0f223e">
               misc_feature_
             </text>
           
-          <title>misc_feature_ (4041..4062/label=&quot;CAP_binding&quot;)</title>
         </g>
       
-        <g class="circular-preview__annotation" data-label-level="1">
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_4"
+          data-tooltip-name="misc_feature_"
+          data-tooltip-meta="misc_feature_ | Strand +"
+          data-tooltip-location="join(408..5634,1..6)"
+          data-tooltip-description=""
+          data-feature-x="743.25"
+          data-feature-y="1147.11"
+          data-bend-x="681.60"
+          data-bend-y="1414.08"
+          data-label-center-y="1392.60"
+          aria-label="misc_feature_ (join(408..5634,1..6))">
           <path class="circular-preview__leader"
-            d="M 787.50 1195.28 L 736.65 1415.49 L 722.40 1425.23"
+            d="M 743.25 1147.11 L 681.60 1414.08 L 159.00 1392.60"
             stroke="#6c7075"></path>
           <rect
             class="circular-preview__label-box"
-            x="610.20"
-            y="1412.23"
+            x="46.80"
+            y="1379.60"
             width="112.20"
             height="26.00"
             rx="10"
@@ -534,24 +955,77 @@
           
             <text
               class="circular-preview__label-text"
-              x="716.40"
-              y="1425.23"
+              x="147.00"
+              y="1392.60"
               text-anchor="end"
               fill="#0f223e">
               misc_feature_
             </text>
           
-          <title>misc_feature_ (408..425/label=&quot;6x_His_tag&quot;)</title>
         </g>
       
-        <g class="circular-preview__annotation" data-label-level="2">
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_19"
+          data-tooltip-name="Insert (CD19)"
+          data-tooltip-meta="insert | Strand +"
+          data-tooltip-location="220..249"
+          data-tooltip-description="30 bp insert sequence (ATG to stop codon) not explained by stored vector CD19."
+          data-feature-x="931.62"
+          data-feature-y="390.31"
+          data-bend-x="1002.32"
+          data-bend-y="125.59"
+          data-label-center-y="165.00"
+          aria-label="Insert (CD19) (220..249) - 30 bp insert sequence (ATG to stop codon) not explained by stored vector CD19.">
           <path class="circular-preview__leader"
-            d="M 744.07 1214.02 L 670.16 1429.71 L 654.92 1439.17"
+            d="M 931.62 390.31 L 1002.32 125.59 L 159.00 165.00"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="46.80"
+            y="152.00"
+            width="112.20"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="147.00"
+              y="165.00"
+              text-anchor="end"
+              fill="#0f223e">
+              Insert (CD19)
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_5"
+          data-tooltip-name="misc_feature_"
+          data-tooltip-meta="misc_feature_ | Strand +"
+          data-tooltip-location="join(593..5634,1..1)"
+          data-tooltip-description=""
+          data-feature-x="694.86"
+          data-feature-y="1164.43"
+          data-bend-x="615.77"
+          data-bend-y="1395.26"
+          data-label-center-y="1352.60"
+          aria-label="misc_feature_ (join(593..5634,1..1))">
+          <path class="circular-preview__leader"
+            d="M 694.86 1164.43 L 615.77 1395.26 L 159.00 1352.60"
             stroke="#6c7075"></path>
           <rect
             class="circular-preview__label-box"
-            x="542.72"
-            y="1426.17"
+            x="46.80"
+            y="1339.60"
             width="112.20"
             height="26.00"
             rx="10"
@@ -561,24 +1035,37 @@
           
             <text
               class="circular-preview__label-text"
-              x="648.92"
-              y="1439.17"
+              x="147.00"
+              y="1352.60"
               text-anchor="end"
               fill="#0f223e">
               misc_feature_
             </text>
           
-          <title>misc_feature_ (593..899/label=&quot;f1&quot;)</title>
         </g>
       
-        <g class="circular-preview__annotation" data-label-level="0">
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_7"
+          data-tooltip-name="misc_feature_"
+          data-tooltip-meta="misc_feature_ | Strand +"
+          data-tooltip-location="join(2060..5634,1..1)"
+          data-tooltip-description=""
+          data-feature-x="420.60"
+          data-feature-y="951.70"
+          data-bend-x="225.43"
+          data-bend-y="1039.48"
+          data-label-center-y="992.54"
+          aria-label="misc_feature_ (join(2060..5634,1..1))">
           <path class="circular-preview__leader"
-            d="M 499.20 1028.08 L 376.99 1083.05 L 355.87 1087.15"
+            d="M 420.60 951.70 L 225.43 1039.48 L 159.00 992.54"
             stroke="#6c7075"></path>
           <rect
             class="circular-preview__label-box"
-            x="243.67"
-            y="1074.15"
+            x="46.80"
+            y="979.54"
             width="112.20"
             height="26.00"
             rx="10"
@@ -588,24 +1075,37 @@
           
             <text
               class="circular-preview__label-text"
-              x="349.87"
-              y="1087.15"
+              x="147.00"
+              y="992.54"
               text-anchor="end"
               fill="#0f223e">
               misc_feature_
             </text>
           
-          <title>misc_feature_ (2060..2648/label=&quot;colE1_high_copy&quot;)</title>
         </g>
       
-        <g class="circular-preview__annotation" data-label-level="0">
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_12"
+          data-tooltip-name="misc_feature_"
+          data-tooltip-meta="misc_feature_ | Strand +"
+          data-tooltip-location="join(5544..5634,1..7)"
+          data-tooltip-description=""
+          data-feature-x="806.65"
+          data-feature-y="287.73"
+          data-bend-x="797.32"
+          data-bend-y="103.96"
+          data-label-center-y="175.19"
+          aria-label="misc_feature_ (join(5544..5634,1..7))">
           <path class="circular-preview__leader"
-            d="M 842.19 434.55 L 836.91 330.69 L 836.41 320.70"
+            d="M 806.65 287.73 L 797.32 103.96 L 1503.00 175.19"
             stroke="#6c7075"></path>
           <rect
             class="circular-preview__label-box"
-            x="780.31"
-            y="307.70"
+            x="1503.00"
+            y="162.19"
             width="112.20"
             height="26.00"
             rx="10"
@@ -615,24 +1115,37 @@
           
             <text
               class="circular-preview__label-text"
-              x="836.41"
-              y="320.70"
-              text-anchor="middle"
+              x="1515.00"
+              y="175.19"
+              text-anchor="start"
               fill="#0f223e">
               misc_feature_
             </text>
           
-          <title>misc_feature_ (5544..5562/label=&quot;T7&quot;)</title>
         </g>
       
-        <g class="circular-preview__annotation" data-label-level="0">
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_11"
+          data-tooltip-name="misc_feature_"
+          data-tooltip-meta="misc_feature_ | Strand +"
+          data-tooltip-location="5158..5235"
+          data-tooltip-description=""
+          data-feature-x="605.75"
+          data-feature-y="343.24"
+          data-bend-x="519.40"
+          data-bend-y="180.76"
+          data-label-center-y="205.00"
+          aria-label="misc_feature_ (5158..5235)">
           <path class="circular-preview__leader"
-            d="M 662.21 484.29 L 613.41 392.45 L 596.71 383.62"
+            d="M 605.75 343.24 L 519.40 180.76 L 159.00 205.00"
             stroke="#6c7075"></path>
           <rect
             class="circular-preview__label-box"
-            x="484.51"
-            y="370.62"
+            x="46.80"
+            y="192.00"
             width="112.20"
             height="26.00"
             rx="10"
@@ -642,24 +1155,37 @@
           
             <text
               class="circular-preview__label-text"
-              x="590.71"
-              y="383.62"
+              x="147.00"
+              y="205.00"
               text-anchor="end"
               fill="#0f223e">
               misc_feature_
             </text>
           
-          <title>misc_feature_ (5158..5235/label=&quot;lacIQ_promoter&quot;)</title>
         </g>
       
-        <g class="circular-preview__annotation" data-label-level="1">
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_14"
+          data-tooltip-name="misc_feature_"
+          data-tooltip-meta="misc_feature_ | Strand +"
+          data-tooltip-location="join(5602..5634,1..3)"
+          data-tooltip-description=""
+          data-feature-x="821.62"
+          data-feature-y="257.20"
+          data-bend-x="818.78"
+          data-bend-y="103.22"
+          data-label-center-y="45.00"
+          aria-label="misc_feature_ (join(5602..5634,1..3))">
           <path class="circular-preview__leader"
-            d="M 855.54 404.08 L 853.59 298.10 L 853.40 288.10"
+            d="M 821.62 257.20 L 818.78 103.22 L 159.00 45.00"
             stroke="#6c7075"></path>
           <rect
             class="circular-preview__label-box"
-            x="797.30"
-            y="275.10"
+            x="46.80"
+            y="32.00"
             width="112.20"
             height="26.00"
             rx="10"
@@ -669,24 +1195,77 @@
           
             <text
               class="circular-preview__label-text"
-              x="853.40"
-              y="288.10"
-              text-anchor="middle"
+              x="147.00"
+              y="45.00"
+              text-anchor="end"
               fill="#0f223e">
               misc_feature_
             </text>
           
-          <title>misc_feature_ (5602..5624/label=&quot;RBS_3&quot;)</title>
         </g>
       
-        <g class="circular-preview__annotation" data-label-level="2">
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_16"
+          data-tooltip-name="T7 promoter"
+          data-tooltip-meta="promoter | Strand +"
+          data-tooltip-location="5544..5562"
+          data-tooltip-description="Matched exported promoter T7 promoter with the nearest ORF 291 bp downstream."
+          data-feature-x="784.71"
+          data-feature-y="259.21"
+          data-bend-x="770.73"
+          data-bend-y="105.85"
+          data-label-center-y="215.19"
+          aria-label="T7 promoter (5544..5562) - Matched exported promoter T7 promoter with the nearest ORF 291 bp downstream.">
           <path class="circular-preview__leader"
-            d="M 856.35 374.06 L 854.66 266.07 L 854.51 256.07"
+            d="M 784.71 259.21 L 770.73 105.85 L 1503.00 215.19"
+            stroke="#7553d6"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1503.00"
+            y="202.19"
+            width="97.40"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#efe8fe"
+            stroke="#7553d6"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1515.00"
+              y="215.19"
+              text-anchor="start"
+              fill="#0f223e">
+              T7 promoter
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_15"
+          data-tooltip-name="misc_feature_"
+          data-tooltip-meta="misc_feature_ | Strand +"
+          data-tooltip-location="join(5607..5634,1..7)"
+          data-tooltip-description=""
+          data-feature-x="822.57"
+          data-feature-y="227.18"
+          data-bend-x="820.63"
+          data-bend-y="103.19"
+          data-label-center-y="135.19"
+          aria-label="misc_feature_ (join(5607..5634,1..7))">
+          <path class="circular-preview__leader"
+            d="M 822.57 227.18 L 820.63 103.19 L 1503.00 135.19"
             stroke="#6c7075"></path>
           <rect
             class="circular-preview__label-box"
-            x="798.41"
-            y="243.07"
+            x="1503.00"
+            y="122.19"
             width="112.20"
             height="26.00"
             rx="10"
@@ -696,25 +1275,434 @@
           
             <text
               class="circular-preview__label-text"
-              x="854.51"
-              y="256.07"
-              text-anchor="middle"
+              x="1515.00"
+              y="135.19"
+              text-anchor="start"
               fill="#0f223e">
               misc_feature_
             </text>
           
-          <title>misc_feature_ (5607..5623/label=&quot;T7_transl_en_RBS&quot;)</title>
         </g>
       
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="backbone_recognition_promoter_seq_1776444918195_cdc551db"
+          data-tooltip-name="T7 promoter"
+          data-tooltip-meta="promoter | Strand +"
+          data-tooltip-location="5544..5562"
+          data-tooltip-description="Matched exported promoter T7 promoter with the nearest ORF 72 bp downstream."
+          data-feature-x="781.99"
+          data-feature-y="229.34"
+          data-bend-x="770.73"
+          data-bend-y="105.85"
+          data-label-center-y="125.00"
+          aria-label="T7 promoter (5544..5562) - Matched exported promoter T7 promoter with the nearest ORF 72 bp downstream.">
+          <path class="circular-preview__leader"
+            d="M 781.99 229.34 L 770.73 105.85 L 159.00 125.00"
+            stroke="#7553d6"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="61.60"
+            y="112.00"
+            width="97.40"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#efe8fe"
+            stroke="#7553d6"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="147.00"
+              y="125.00"
+              text-anchor="end"
+              fill="#0f223e">
+              T7 promoter
+            </text>
+          
+        </g>
       
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_18"
+          data-tooltip-name="Backbone (CD19)"
+          data-tooltip-meta="backbone | Strand +"
+          data-tooltip-location="join(1..219,250..5634)"
+          data-tooltip-description="CD19 saved vector recognized with 5,604 bp exact backbone coverage (93.4% of host, forward orientation; Gibson/HR view)."
+          data-feature-x="752.11"
+          data-feature-y="1331.62"
+          data-bend-x="739.10"
+          data-bend-y="1424.72"
+          data-label-center-y="1432.64"
+          aria-label="Backbone (CD19) (join(1..219,250..5634)) - CD19 saved vector recognized with 5,604 bp exact backbone coverage (93.4% of host, forward orientation; Gibson/HR view).">
+          <path class="circular-preview__leader"
+            d="M 752.11 1331.62 L 739.10 1424.72 L 1503.00 1432.64"
+            stroke="#a8635e"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1503.00"
+            y="1419.64"
+            width="127.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f7ebe9"
+            stroke="#a8635e"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1515.00"
+              y="1432.64"
+              text-anchor="start"
+              fill="#0f223e">
+              Backbone (CD19)
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="backbone_recognition_backbone_seq_1776444918195_cdc551db"
+          data-tooltip-name="Backbone (CD19)"
+          data-tooltip-meta="backbone | Strand +"
+          data-tooltip-location="406..5634"
+          data-tooltip-description="CD19 saved vector recognized with 5,229 bp exact backbone coverage (93.4% of host, forward orientation; Gibson/HR view)."
+          data-feature-x="696.65"
+          data-feature-y="1351.87"
+          data-bend-x="682.32"
+          data-bend-y="1414.25"
+          data-label-center-y="1432.60"
+          aria-label="Backbone (CD19) (406..5634) - CD19 saved vector recognized with 5,229 bp exact backbone coverage (93.4% of host, forward orientation; Gibson/HR view).">
+          <path class="circular-preview__leader"
+            d="M 696.65 1351.87 L 682.32 1414.25 L 159.00 1432.60"
+            stroke="#a8635e"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="32.00"
+            y="1419.60"
+            width="127.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f7ebe9"
+            stroke="#a8635e"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="147.00"
+              y="1432.60"
+              text-anchor="end"
+              fill="#0f223e">
+              Backbone (CD19)
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="backbone_recognition_orf_seq_1776444918195_cdc551db"
+          data-tooltip-name="Nearest ORF (134 aa)"
+          data-tooltip-meta="orf | Strand +"
+          data-tooltip-location="1..405"
+          data-tooltip-description="405 bp ORF identified from ATG to TAA."
+          data-feature-x="965.35"
+          data-feature-y="182.34"
+          data-bend-x="979.68"
+          data-bend-y="119.97"
+          data-label-center-y="295.19"
+          aria-label="Nearest ORF (134 aa) (1..405) - 405 bp ORF identified from ATG to TAA.">
+          <path class="circular-preview__leader"
+            d="M 965.35 182.34 L 979.68 119.97 L 1503.00 295.19"
+            stroke="#a8635e"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1503.00"
+            y="282.19"
+            width="164.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f7ebe9"
+            stroke="#a8635e"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1515.00"
+              y="295.19"
+              text-anchor="start"
+              fill="#0f223e">
+              Nearest ORF (134 aa)
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="backbone_recognition_insert_seq_1776444918195_cdc551db"
+          data-tooltip-name="Insert (CD19)"
+          data-tooltip-meta="insert | Strand +"
+          data-tooltip-location="1..405"
+          data-tooltip-description="405 bp insert sequence (ATG to stop codon) selected relative to backbone candidate CD19."
+          data-feature-x="972.07"
+          data-feature-y="153.11"
+          data-bend-x="979.68"
+          data-bend-y="119.97"
+          data-label-center-y="335.19"
+          aria-label="Insert (CD19) (1..405) - 405 bp insert sequence (ATG to stop codon) selected relative to backbone candidate CD19.">
+          <path class="circular-preview__leader"
+            d="M 972.07 153.11 L 979.68 119.97 L 1503.00 335.19"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1503.00"
+            y="322.19"
+            width="112.20"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1515.00"
+              y="335.19"
+              text-anchor="start"
+              fill="#0f223e">
+              Insert (CD19)
+            </text>
+          
+        </g>
+      
+        
     <g class="circular-preview__center">
-      <circle cx="864.00" cy="864.00" r="184.00" class="circular-preview__center-disc"></circle>
-      <text x="864.00" y="850.00" class="circular-preview__title">HSA_K_Hrk</text>
-      <text x="864.00" y="882.00" class="circular-preview__subtitle">5,634 bp · 15 features</text>
-      <text x="864.00" y="912.00" class="circular-preview__caption">Circular plasmid preview</text>
+      <circle cx="831.00" cy="767.11" r="234.00" class="circular-preview__center-disc"></circle>
+      <text x="831.00" y="753.11" class="circular-preview__title">HSA_K_Hrk</text>
+      <text x="831.00" y="785.11" class="circular-preview__subtitle">5,634 bp · 23 features</text>
     </g>
   
+      </g>
     </svg>
   </main>
+  
+  <script>
+    (() => {
+      const LABEL_PADDING_X = 12;
+      const MIN_LABEL_WIDTH = 70;
+      const VIEWBOX_GUTTER = 32;
+      const TOOLTIP_OFFSET = 12;
+
+      function escapeText(value) {
+        return String(value || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function ensureTooltipNode() {
+        let node = document.querySelector('.circular-preview__hover-tooltip');
+        if (node) {
+          return node;
+        }
+        node = document.createElement('div');
+        node.className = 'circular-preview__hover-tooltip';
+        node.hidden = true;
+        document.body.appendChild(node);
+        return node;
+      }
+
+      function hideTooltip() {
+        const tooltip = document.querySelector('.circular-preview__hover-tooltip');
+        if (tooltip) {
+          tooltip.hidden = true;
+          tooltip.dataset.owner = '';
+        }
+      }
+
+      function buildTooltipHtml(target) {
+        const name = String(target?.dataset?.tooltipName || '').trim();
+        const meta = String(target?.dataset?.tooltipMeta || '').trim();
+        const location = String(target?.dataset?.tooltipLocation || '').trim();
+        const description = String(target?.dataset?.tooltipDescription || '').trim();
+        if (!name && !meta && !location && !description) {
+          return '';
+        }
+        return [
+          name ? '<p class="circular-preview__hover-title">' + escapeText(name) + '</p>' : '',
+          meta ? '<p>' + escapeText(meta) + '</p>' : '',
+          location ? '<p>' + escapeText(location) + '</p>' : '',
+          description ? '<p class="circular-preview__hover-description">' + escapeText(description) + '</p>' : ''
+        ].filter(Boolean).join('');
+      }
+
+      function positionTooltip(tooltip, event) {
+        const rawX = Number(event?.clientX);
+        const rawY = Number(event?.clientY);
+        const startX = Number.isFinite(rawX) ? rawX + TOOLTIP_OFFSET : TOOLTIP_OFFSET;
+        const startY = Number.isFinite(rawY) ? rawY + TOOLTIP_OFFSET : TOOLTIP_OFFSET;
+        const tooltipRect = tooltip.getBoundingClientRect();
+        const viewportWidth = Number(window?.innerWidth) || 0;
+        const viewportHeight = Number(window?.innerHeight) || 0;
+
+        let left = Math.max(8, startX);
+        let top = Math.max(8, startY);
+
+        if (viewportWidth > 0) {
+          left = Math.min(left, Math.max(8, viewportWidth - tooltipRect.width - 8));
+        }
+        if (viewportHeight > 0) {
+          top = Math.min(top, Math.max(8, viewportHeight - tooltipRect.height - 8));
+        }
+
+        tooltip.style.left = left.toFixed(0) + 'px';
+        tooltip.style.top = top.toFixed(0) + 'px';
+      }
+
+      function showTooltip(target, event) {
+        const html = buildTooltipHtml(target);
+        if (!html) {
+          hideTooltip();
+          return;
+        }
+        const tooltip = ensureTooltipNode();
+        const ownerKey = String(target?.dataset?.tooltipKey || '');
+        if (tooltip.dataset.owner !== ownerKey) {
+          tooltip.innerHTML = html;
+          tooltip.dataset.owner = ownerKey;
+        }
+        tooltip.hidden = false;
+        positionTooltip(tooltip, event);
+      }
+
+      function bindFeatureHoverCards() {
+        const svg = document.querySelector('.preview-shell svg');
+        if (!svg || svg.dataset.hoverCardsBound === 'true') {
+          return;
+        }
+
+        svg.dataset.hoverCardsBound = 'true';
+        svg.querySelectorAll('[data-preview-tooltip="feature"]').forEach((node) => {
+          node.addEventListener('pointerenter', (event) => {
+            showTooltip(node, event);
+          });
+          node.addEventListener('pointermove', (event) => {
+            showTooltip(node, event);
+          });
+          node.addEventListener('pointerleave', () => {
+            hideTooltip();
+          });
+        });
+
+        svg.addEventListener('pointerleave', () => {
+          hideTooltip();
+        });
+        window.addEventListener('blur', () => {
+          hideTooltip();
+        });
+      }
+
+      function fitAnnotationBoxes() {
+        const svg = document.querySelector('.preview-shell svg');
+        const scene = svg?.querySelector('.circular-preview__scene');
+        if (!svg || !scene) {
+          return;
+        }
+
+        svg.querySelectorAll('.circular-preview__annotation').forEach((annotation) => {
+          const rect = annotation.querySelector('.circular-preview__label-box');
+          const leader = annotation.querySelector('.circular-preview__leader');
+          const textNodes = annotation.querySelectorAll('.circular-preview__label-text');
+          if (!rect || !leader || !textNodes.length) {
+            return;
+          }
+
+          let minX = Number.POSITIVE_INFINITY;
+          let maxX = Number.NEGATIVE_INFINITY;
+          textNodes.forEach((node) => {
+            const box = node.getBBox();
+            if (!Number.isFinite(box.x) || !Number.isFinite(box.width)) {
+              return;
+            }
+            minX = Math.min(minX, box.x);
+            maxX = Math.max(maxX, box.x + box.width);
+          });
+
+          if (!Number.isFinite(minX) || !Number.isFinite(maxX)) {
+            return;
+          }
+
+          const width = Math.max(MIN_LABEL_WIDTH, (maxX - minX) + (LABEL_PADDING_X * 2));
+          const x = minX - LABEL_PADDING_X;
+          rect.setAttribute('x', x.toFixed(2));
+          rect.setAttribute('width', width.toFixed(2));
+
+          const featureX = Number(annotation.dataset.featureX);
+          const featureY = Number(annotation.dataset.featureY);
+          const bendX = Number(annotation.dataset.bendX);
+          const bendY = Number(annotation.dataset.bendY);
+          const centerY = Number(annotation.dataset.labelCenterY);
+          if (![featureX, featureY, bendX, bendY, centerY].every(Number.isFinite)) {
+            return;
+          }
+
+          const endX = annotation.dataset.labelSide === 'right'
+            ? x
+            : x + width;
+          leader.setAttribute(
+            'd',
+            `M ${featureX.toFixed(2)} ${featureY.toFixed(2)} L ${bendX.toFixed(2)} ${bendY.toFixed(2)} L ${endX.toFixed(2)} ${centerY.toFixed(2)}`
+          );
+        });
+
+        const bounds = scene.getBBox();
+        if (![bounds.x, bounds.y, bounds.width, bounds.height].every(Number.isFinite)) {
+          return;
+        }
+
+        svg.setAttribute(
+          'viewBox',
+          [
+            Math.floor(bounds.x - VIEWBOX_GUTTER),
+            Math.floor(bounds.y - VIEWBOX_GUTTER),
+            Math.ceil(bounds.width + (VIEWBOX_GUTTER * 2)),
+            Math.ceil(bounds.height + (VIEWBOX_GUTTER * 2))
+          ].join(' ')
+        );
+      }
+
+      function scheduleFit() {
+        bindFeatureHoverCards();
+        window.requestAnimationFrame(() => {
+          fitAnnotationBoxes();
+          bindFeatureHoverCards();
+          window.setTimeout(fitAnnotationBoxes, 48);
+        });
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', scheduleFit, { once: true });
+      } else {
+        scheduleFit();
+      }
+
+      if (document.fonts?.ready) {
+        document.fonts.ready.then(scheduleFit).catch(() => {});
+      }
+
+      window.addEventListener('load', scheduleFit, { once: true });
+    })();
+  </script>
 </body>
 </html>

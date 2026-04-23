@@ -1,4 +1,4 @@
-import { createDefaultWells } from './constants.js';
+import { createDefaultWells, normalizeCustomGridDimensions } from './constants.js';
 import { createPersonalInventoryStateHelpers } from './state.js';
 import { createPersonalInventoryDetailRenderer } from './detail-rendering.js';
 
@@ -18,6 +18,9 @@ export function initPersonalInventory({
   const addContainerNameInput = document.getElementById('inventory-add-container-name');
   const addContainerLocationSelect = document.getElementById('inventory-add-container-location');
   const addContainerTypeSelect = document.getElementById('inventory-add-container-type');
+  const addContainerGridFields = document.getElementById('inventory-add-container-grid-fields');
+  const addContainerRowsInput = document.getElementById('inventory-add-container-rows');
+  const addContainerColsInput = document.getElementById('inventory-add-container-cols');
   const addContainerCancelBtn = document.getElementById('inventory-add-container-cancel');
 
   const uiState = {
@@ -50,6 +53,43 @@ export function initPersonalInventory({
     if (addContainerForm) {
       addContainerForm.hidden = !uiState.isAddContainerFormOpen;
     }
+    if (uiState.isAddContainerFormOpen) {
+      renderAddContainerTypeFields();
+    }
+  }
+
+  function renderAddContainerTypeFields() {
+    const showCustomGridFields = addContainerTypeSelect?.value === 'customGrid';
+    if (addContainerGridFields) {
+      addContainerGridFields.hidden = !showCustomGridFields;
+    }
+    [addContainerRowsInput, addContainerColsInput].forEach((input) => {
+      if (!input) {
+        return;
+      }
+      input.disabled = !showCustomGridFields;
+      input.required = showCustomGridFields;
+      if (showCustomGridFields && !String(input.value || '').trim()) {
+        input.value = '9';
+      }
+    });
+  }
+
+  function resetAddContainerForm() {
+    addContainerForm?.reset();
+    if (addContainerLocationSelect) {
+      addContainerLocationSelect.value = '';
+    }
+    if (addContainerTypeSelect) {
+      addContainerTypeSelect.value = 'box81';
+    }
+    if (addContainerRowsInput) {
+      addContainerRowsInput.value = '9';
+    }
+    if (addContainerColsInput) {
+      addContainerColsInput.value = '9';
+    }
+    renderAddContainerTypeFields();
   }
 
   function renderAddContainerLocationOptions() {
@@ -170,8 +210,20 @@ export function initPersonalInventory({
     if (!section || !name) {
       return;
     }
-    const type = ['single', 'plate96'].includes(addContainerTypeSelect?.value) ? addContainerTypeSelect.value : 'box81';
-    const container = { id: createId(), name, type, wells: createDefaultWells(type), singleContent: type === 'single' ? '' : undefined };
+    const type = ['single', 'plate96', 'customGrid'].includes(addContainerTypeSelect?.value) ? addContainerTypeSelect.value : 'box81';
+    const customGrid = type === 'customGrid'
+      ? normalizeCustomGridDimensions(addContainerRowsInput?.value, addContainerColsInput?.value)
+      : null;
+    const containerShape = type === 'customGrid'
+      ? { type, gridRows: customGrid.rows, gridCols: customGrid.cols }
+      : { type };
+    const container = {
+      id: createId(),
+      name,
+      ...containerShape,
+      wells: createDefaultWells(containerShape),
+      singleContent: type === 'single' ? '' : undefined
+    };
     state.inventory[section] = state.inventory[section] || [];
     state.inventory[section].push(container);
     persist();
@@ -181,9 +233,7 @@ export function initPersonalInventory({
     uiState.editingSampleId = '';
     uiState.wellEditorStatus = '';
     uiState.shouldAutoOpenContainer = true;
-    if (addContainerNameInput) {
-      addContainerNameInput.value = '';
-    }
+    resetAddContainerForm();
     setAddContainerFormOpen(false);
     notifyInventoryChanged();
     renderSections();
@@ -196,14 +246,19 @@ export function initPersonalInventory({
       addContainerNameInput?.focus();
     }
   });
+  addContainerTypeSelect?.addEventListener('change', renderAddContainerTypeFields);
   addContainerForm?.addEventListener('submit', (event) => {
     event.preventDefault();
     addContainerFromForm();
   });
-  addContainerCancelBtn?.addEventListener('click', () => setAddContainerFormOpen(false));
+  addContainerCancelBtn?.addEventListener('click', () => {
+    resetAddContainerForm();
+    setAddContainerFormOpen(false);
+  });
 
   function renderSections() {
     renderAddContainerLocationOptions();
+    renderAddContainerTypeFields();
     const activeSection = uiState.selectedContainer?.section || helpers.getPreferredSection();
     const activeContainers = state.inventory?.[activeSection] || [];
     if ((!uiState.selectedContainer || uiState.selectedContainer.section !== activeSection || !helpers.getContainer(activeSection, uiState.selectedContainer.containerId))

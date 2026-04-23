@@ -95,6 +95,7 @@ function buildPapersManagementHarness({ comments = [], promptResponses = [], con
     'papers-library-rail',
     'papers-library-context-menu',
     'papers-context-new-folder',
+    'papers-context-rename-folder',
     'papers-context-delete-folder',
     'paper-folder-selection',
     'paper-upload-target-label',
@@ -335,6 +336,77 @@ test('papers module folds and unfolds folder children from the library tree', ()
   });
 
   assert.match(journalClubList.innerHTML, /Atlas Uploaded Paper/);
+});
+
+test('papers module renames a journal club folder from the library context menu', () => {
+  const harness = buildPapersManagementHarness();
+  const papersLibraryRail = harness.document.getElementById('papers-library-rail');
+  const renameFolderBtn = harness.document.getElementById('papers-context-rename-folder');
+  const journalClubList = harness.document.getElementById('journal-club-list');
+
+  trigger(harness.document.getElementById('papers-context-new-folder'), 'click');
+  assert.match(journalClubList.innerHTML, /New Folder/);
+
+  const newFolderId = harness.state.journalClubs[0].id;
+  const newFolderKey = `journal-club:${newFolderId}`;
+
+  trigger(papersLibraryRail, 'contextmenu', {
+    clientX: 32,
+    clientY: 48,
+    target: {
+      closest(selector) {
+        if (selector === '[data-folder-context]') {
+          return {
+            dataset: {
+              folderContext: newFolderKey
+            }
+          };
+        }
+        return null;
+      }
+    }
+  });
+
+  assert.equal(renameFolderBtn.hidden, false);
+  trigger(renameFolderBtn, 'click');
+  assert.match(journalClubList.innerHTML, /data-folder-rename-input/);
+
+  trigger(journalClubList, 'input', {
+    target: {
+      value: 'Weekly Biochem JC',
+      closest(selector) {
+        if (selector === '[data-folder-rename-input]') {
+          return {
+            dataset: {
+              folderRenameInput: newFolderKey
+            }
+          };
+        }
+        return null;
+      }
+    }
+  });
+
+  trigger(journalClubList, 'keydown', {
+    key: 'Enter',
+    target: {
+      value: 'Weekly Biochem JC',
+      closest(selector) {
+        if (selector === '[data-folder-rename-input]') {
+          return {
+            dataset: {
+              folderRenameInput: newFolderKey
+            }
+          };
+        }
+        return null;
+      }
+    }
+  });
+
+  assert.equal(harness.state.journalClubs[0].name, 'Weekly Biochem JC');
+  assert.match(journalClubList.innerHTML, /Weekly Biochem JC/);
+  assert.equal(/data-folder-rename-input/.test(journalClubList.innerHTML), false);
 });
 
 test('papers module creates a pinned page comment after placement and save', async () => {

@@ -1,3 +1,5 @@
+import { getWellName, isMultiWellContainer } from './personal-inventory/constants.js';
+
 export function initSampleRegistry({ state, persist, safeText }) {
   const sampleForm = document.getElementById('sample-form');
   const sampleIdInput = document.getElementById('sample-id');
@@ -108,6 +110,17 @@ export function initSampleRegistry({ state, persist, safeText }) {
     return { section, containerId, container };
   }
 
+  function getContainerWellName(container, index) {
+    const rawWell = container?.wells?.[index];
+    if (rawWell && typeof rawWell === 'object') {
+      const explicitName = String(rawWell.name || '').trim();
+      if (explicitName) {
+        return explicitName;
+      }
+    }
+    return getWellName(container, index);
+  }
+
   function renderLinkedPositionOptions() {
     if (!sampleLinkPositionInput) {
       return;
@@ -116,11 +129,11 @@ export function initSampleRegistry({ state, persist, safeText }) {
     const linked = findLinkedContainer(sampleLinkContainerInput?.value);
     const options = ['<option value="">Auto / none</option>'];
     if (linked) {
-      if ((linked.container.type || 'box81') !== 'single') {
+      if (isMultiWellContainer(linked.container)) {
         (linked.container.wells || []).forEach((rawWell, index) => {
           const wellName = rawWell && typeof rawWell === 'object'
-            ? String(rawWell.name || `W${index + 1}`)
-            : `W${index + 1}`;
+            ? String(rawWell.name || getContainerWellName(linked.container, index))
+            : getContainerWellName(linked.container, index);
           options.push(`<option value="${index}">${escapeHtml(`${index + 1} - ${wellName}`)}</option>`);
         });
       } else {
@@ -895,7 +908,7 @@ export function initSampleRegistry({ state, persist, safeText }) {
       box: container.name || '',
       position: linkedPosition === '' || linkedPosition === 'single'
         ? ''
-        : String(Number(linkedPosition) + 1)
+        : getContainerWellName(container, Number(linkedPosition))
     };
   }
 
@@ -921,8 +934,8 @@ export function initSampleRegistry({ state, persist, safeText }) {
     }
     const rawWell = container.wells?.[link.wellIndex];
     const wellName = rawWell && typeof rawWell === 'object'
-      ? (rawWell.name || `W${Number(link.wellIndex) + 1}`)
-      : `W${Number(link.wellIndex) + 1}`;
+      ? (rawWell.name || getContainerWellName(container, Number(link.wellIndex)))
+      : getContainerWellName(container, Number(link.wellIndex));
     return `${link.section} / ${container.name} / ${wellName}`;
   }
 

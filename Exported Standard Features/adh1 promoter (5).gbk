@@ -1,0 +1,29 @@
+LOCUS       .                        742 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..742
+                     /gene=""
+                     /note="promoter for the&nbsp;Schizosaccharomyces
+                     pombe&nbsp;adh1 gene encoding alcohol dehydrogenase"
+                     /label="adh1 promoter"
+ORIGIN
+        1 gccctacaac aactaagaaa atggctatca tgcggaagct ggtgagaaga acagcatcgg
+       61 gacaagggaa ggaagaacaa agacaaagaa aacaaaagaa agcaattgaa aacaaaacaa
+      121 aacaattttc attccttctc ttatcattcc ttttcttttc ttttctctca ttcaacgcac
+      181 tccatcgtat ccgtattcct cttatttttt ctctttctct atatccattt ctttctctct
+      241 aggtgtgtcc tctctctctc ttcaatttct ctactccgca ttccaacgca tccttccccc
+      301 aacctcccat ttcctcctta cggcccgata gcgatcgtct ttccctcgct atcactcgct
+      361 accggcccct cctctgcacc gtaacctcct acgtatttac catatcataa agttttttcc
+      421 gacgcttatc gctgaccccc tgtcgccctc ctattggctt ccggattatc ttcttgtcca
+      481 taaggtgatc catgcttcct gaagattccc gaaatgtgtc cactttggcg gggaatcatt
+      541 ccatccactt ctttctctct cgctttcctc attcggcgct ccccttccgc gtctcattgg
+      601 tcttccgctc cgtttttgct ttgccgatgt tacttgggga gaggtgcgat aatcctttcg
+      661 caaaaactcg gtttgacgcc tcccatggta taaatagtgg gtggtggaca ggtgccttcg
+      721 cttttcttta agcaagagaa tt
+//

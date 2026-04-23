@@ -70,6 +70,16 @@ export function getSequenceViewerElements(rootDocument) {
     featureEditorDescriptionInput: rootDocument?.getElementById?.('sequence-viewer-feature-editor-description'),
     featureEditorCloseBtn: rootDocument?.getElementById?.('sequence-viewer-feature-editor-close'),
     featureEditorCancelBtn: rootDocument?.getElementById?.('sequence-viewer-feature-editor-cancel'),
+    backboneDialogOverlay: rootDocument?.getElementById?.('sequence-viewer-backbone-dialog-overlay'),
+    backboneDialogSubtitle: rootDocument?.getElementById?.('sequence-viewer-backbone-dialog-subtitle'),
+    backboneDialogCloseBtn: rootDocument?.getElementById?.('sequence-viewer-backbone-dialog-close-btn'),
+    backboneDialogModeGibsonBtn: rootDocument?.getElementById?.('sequence-viewer-backbone-dialog-mode-gibson-btn'),
+    backboneDialogModeRestrictionBtn: rootDocument?.getElementById?.('sequence-viewer-backbone-dialog-mode-restriction-btn'),
+    backboneDialogCandidates: rootDocument?.getElementById?.('sequence-viewer-backbone-dialog-candidates'),
+    backboneDialogSummary: rootDocument?.getElementById?.('sequence-viewer-backbone-dialog-summary'),
+    backboneDialogPreview: rootDocument?.getElementById?.('sequence-viewer-backbone-dialog-preview'),
+    backboneDialogApplyBtn: rootDocument?.getElementById?.('sequence-viewer-backbone-dialog-apply-btn'),
+    backboneDialogCancelBtn: rootDocument?.getElementById?.('sequence-viewer-backbone-dialog-cancel-btn'),
     alignmentCloseBtn: rootDocument?.getElementById?.('sequence-viewer-alignment-close-btn'),
     alignmentQueryModePasteBtn: rootDocument?.getElementById?.('sequence-viewer-alignment-query-mode-paste'),
     alignmentQueryModeFileBtn: rootDocument?.getElementById?.('sequence-viewer-alignment-query-mode-file'),
@@ -95,6 +105,7 @@ export function getSequenceViewerElements(rootDocument) {
     proteinBuilderResetBtn: rootDocument?.getElementById?.('sequence-viewer-protein-builder-reset-btn'),
     proteinBuilderAddCustomBtn: rootDocument?.getElementById?.('sequence-viewer-protein-builder-add-custom-btn'),
     proteinBuilderAddPoiBtn: rootDocument?.getElementById?.('sequence-viewer-protein-builder-add-poi-btn'),
+    proteinBuilderBuildDnaBtn: rootDocument?.getElementById?.('sequence-viewer-protein-builder-build-dna-btn'),
     proteinBuilderCommonBlocks: rootDocument?.getElementById?.('sequence-viewer-protein-builder-common-blocks'),
     proteinBuilderFeatureSearchInput: rootDocument?.getElementById?.('sequence-viewer-protein-builder-feature-search-input'),
     proteinBuilderFeatureSearchBtn: rootDocument?.getElementById?.('sequence-viewer-protein-builder-feature-search-btn'),
@@ -102,6 +113,8 @@ export function getSequenceViewerElements(rootDocument) {
     proteinBuilderFeatureSearchResults: rootDocument?.getElementById?.('sequence-viewer-protein-builder-feature-search-results'),
     proteinBuilderMeta: rootDocument?.getElementById?.('sequence-viewer-protein-builder-meta'),
     proteinBuilderWorkflow: rootDocument?.getElementById?.('sequence-viewer-protein-builder-workflow'),
-    proteinBuilderSequence: rootDocument?.getElementById?.('sequence-viewer-protein-builder-sequence')
+    proteinBuilderSequence: rootDocument?.getElementById?.('sequence-viewer-protein-builder-sequence'),
+    proteinBuilderDnaMeta: rootDocument?.getElementById?.('sequence-viewer-protein-builder-dna-meta'),
+    proteinBuilderDnaSequence: rootDocument?.getElementById?.('sequence-viewer-protein-builder-dna-sequence')
   };
 }

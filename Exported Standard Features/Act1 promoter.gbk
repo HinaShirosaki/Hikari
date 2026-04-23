@@ -1,0 +1,28 @@
+LOCUS       .                        833 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..833
+                     /note="rice actin promoter"
+                     /label="Act1 promoter"
+ORIGIN
+        1 tcgaggtcat tcatatgctt gagaagagag tcgggatagt ccaaaataaa acaaaggtaa
+       61 gattacctgg tcaaaagtga aaacatcagt taaaaggtgg tataagtaaa atatcggtaa
+      121 taaaaggtgg cccaaagtga aatttactct tttctactat tataaaaatt gaggatgttt
+      181 tgtcggtact ttgatacgtc atttttgtat gaattggttt ttaagtttat tcgcgatttg
+      241 gaaatgcata tctgtatttg agtcggtttt taagttcgtt gcttttgtaa atacagaggg
+      301 atttgtataa gaaatatctt taaaaaaccc atatgctaat ttgacataat ttttgagaaa
+      361 aatatatatt caggcgaatt ccacaatgaa caataataag attaaaatag cttgcccccg
+      421 ttgcagcgat gggtattttt tctagtaaaa taaaagataa acttagactc aaaacattta
+      481 caaaaacaac ccctaaagtc ctaaagccca aagtgctatg cacgatccat agcaagccca
+      541 gcccaaccca acccaaccca acccacccca gtgcagccaa ctggcaaata gtctccaccc
+      601 ccggcactat caccgtgagt tgtccgcacc accgcacgtc tcgcagccaa aaaaaaaaaa
+      661 agaaagaaaa aaaagaaaaa gaaaaacagc aggtgggtcc gggtcgtggg ggccggaaaa
+      721 gcgaggagga tcgcgagcag cgacgaggcc cggccctccc tccgcttcca aagaaacgcc
+      781 ccccatcgcc actatataca tacccccccc tctcctccca tccccccaac cct
+//

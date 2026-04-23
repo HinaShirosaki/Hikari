@@ -1,0 +1,32 @@
+LOCUS       .                        985 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..985
+                     /note="enhancer/promoter region of simian cytomegalovirus
+                     major immediate early transcription unit IE94"
+                     /label="CMV IE94 promoter"
+ORIGIN
+        1 gaccatagcc aattcaatat ggcgtatatg gactcatgcc aattcaatat ggtggatctg
+       61 gacctgtgcc aattcaatat ggcgtatatg gactcgtgcc aattcaatat ggtggatctg
+      121 gaccccagcc aattcaatat ggcggacttg gcaccatgcc aattcaatat ggcggacttg
+      181 gcactgtgcc aactggggag gggtctactt ggcacggtgc caagtttgag gaggggtctt
+      241 ggccctgtgc caagtccgcc atattgaatt ggcatggtgc caataatggc ggccatattg
+      301 gctatatgcc aggatcaata tataggcaat atccaatatg gccctatgcc aatatggcta
+      361 ttggccaggt tcaatactat gtattggccc tatgccatat agtattccat atatgggttt
+      421 tcctattgac gtagatagcc cctcccaatg ggcggtccca tataccatat atggggcttc
+      481 ctaataccgc ccatagccac tcccccattg acgtcaatgg tctctatata tggtctttcc
+      541 tattgacgtc atatgggcgg tcctattgac gtatatggcg cctcccccat tgacgtcaat
+      601 tacggtaaat ggcccgcctg gctcaatgcc cattgacgtc aataggacca cccaccattg
+      661 acgtcaatgg gatggctcat tgcccattca tatccgttct cacgccccct attgacgtca
+      721 atgacggtaa atggcccact tggcagtaca tcaatatcta ttaatagtaa cttggcaagt
+      781 acattactat tggaagtacg ccagggtaca ttggcagtac tcccattgac gtcaatggcg
+      841 gtaaatggcc cgcgatggct gccaagtaca tccccattga cgtcaatggg gaggggcaat
+      901 gacgcaaatg ggcgttccat tgacgtaaat gggcggtagg cgtgcctaat gggaggtcta
+      961 tataagcaat gctcgtttag ggaac
+//

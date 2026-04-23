@@ -511,20 +511,6 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
     const tiffPageText = runtime.currentReport.image?.tiffPageCount
       ? `${runtime.currentReport.image.tiffPage}/${runtime.currentReport.image.tiffPageCount}`
       : '-';
-    const manualSummary = runtime.currentReport.preprocessing?.manualOverridesSummary || {};
-    const normalizedOverrides = normalizeManualOverrides(runtime.manualOverrides);
-    const manualText = [
-      `gelL:${manualSummary.laneSegmentationLeft ?? '-'}`,
-      `gelR:${manualSummary.laneSegmentationRight ?? '-'}`,
-      `div:${manualSummary.laneSegmentationDividers || 0}`,
-      `top:${manualSummary.laneSegmentationBandTop ?? '-'}`,
-      `bottom:${manualSummary.laneSegmentationBandBottom ?? '-'}`,
-      `add:${manualSummary.addedBands || 0}`,
-      `ladder:${manualSummary.ladderLaneOverride || '-'}`,
-      `ladderMW:${manualSummary.ladderBands || 0}`,
-      `table:${normalizedOverrides.laneTable?.rows?.length || 0}`
-    ].join(' ');
-
     elements.gelReportSummary.innerHTML = `
       <article class="card">
         <h3>${safeText(formatAnalysisTypeLabel(runtime.currentReport.analysisType))}</h3>
@@ -535,10 +521,6 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
         <p><strong>Enhancement:</strong> ${safeText(enhancementText)}</p>
         <p><strong>Avg Target Intensity:</strong> ${safeText(String(averageTargetIntensity ?? '-'))}</p>
         <p><strong>Confidence:</strong> ${safeText(runtime.currentReport.confidence?.label || '-')} (${safeText(String(runtime.currentReport.confidence?.score ?? '-'))})</p>
-      </article>
-      <article class="card">
-        <h3>Overrides</h3>
-        <p>${safeText(manualText)}</p>
       </article>
       <article class="card">
         <h3>Warnings</h3>

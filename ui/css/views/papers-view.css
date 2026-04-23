@@ -148,6 +148,10 @@
   transition: color 140ms ease;
 }
 
+.papers-folder-item-editing {
+  cursor: default;
+}
+
 .papers-folder-item:hover,
 .papers-folder-item:focus-visible {
   background: transparent;
@@ -210,6 +214,51 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.papers-folder-rename-wrap {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.papers-folder-rename-input {
+  min-width: 0;
+  width: 100%;
+  height: 32px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-elevated);
+  color: var(--text);
+  padding: 0 10px;
+  font: inherit;
+}
+
+.papers-folder-rename-input:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.papers-folder-rename-btn {
+  border: 1px solid var(--line);
+  background: var(--surface-elevated);
+  color: var(--text);
+  border-radius: 8px;
+  min-height: 30px;
+  padding: 0 10px;
+  cursor: pointer;
+  font: inherit;
+  white-space: nowrap;
+}
+
+.papers-folder-rename-btn:hover,
+.papers-folder-rename-btn:focus-visible {
+  background: rgba(18, 48, 84, 0.06);
+}
+
+.papers-folder-rename-btn.is-secondary {
+  color: var(--muted);
 }
 
 .papers-folder-count {

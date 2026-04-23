@@ -27,6 +27,7 @@ function getPapersElements(doc = null) {
     paperUploadTargetLabel: getById('paper-upload-target-label'),
     papersLibraryContextMenu: getById('papers-library-context-menu'),
     papersContextNewFolderBtn: getById('papers-context-new-folder'),
+    papersContextRenameFolderBtn: getById('papers-context-rename-folder'),
     papersContextDeleteFolderBtn: getById('papers-context-delete-folder'),
     paperCommentPanel: getById('paper-comment-panel'),
     paperCommentToggleBtn: getById('paper-comment-toggle-btn'),
@@ -94,7 +95,9 @@ export function initPapersManagement({
   };
   const libraryState = {
     selectedFolderKey: '',
-    expandedFolderKeys: new Set()
+    expandedFolderKeys: new Set(),
+    renamingFolderKey: '',
+    renamingFolderName: ''
   };
   const libraryContextState = {
     folderKey: '',

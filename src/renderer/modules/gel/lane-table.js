@@ -10,10 +10,19 @@ function cloneLaneTableRows(rows = []) {
   }));
 }
 
+function formatPercentWidth(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return '0%';
+  }
+  return `${Math.round(numeric * 10000) / 10000}%`;
+}
+
 function resolveLaneLayout(runtime) {
   if (!runtime.currentImage) {
     return null;
   }
+  const imageWidth = Math.max(1, Math.floor(Number(runtime.currentImage.width) || 0));
   const overrides = normalizeManualOverrides(runtime.manualOverrides);
   const lanes = buildLanesFromManualSegmentation(overrides, runtime.currentImage.width) || [];
   if (!lanes.length) {
@@ -25,15 +34,20 @@ function resolveLaneLayout(runtime) {
     return null;
   }
 
-  const totalWidth = Math.max(1, segmentation.gelRight - segmentation.gelLeft);
+  const gelLeft = Math.max(0, Math.min(imageWidth - 1, Math.floor(segmentation.gelLeft)));
+  const gelRight = Math.max(gelLeft + 1, Math.min(imageWidth - 1, Math.floor(segmentation.gelRight)));
+  const leftGapWidth = gelLeft;
+  const rightGapWidth = Math.max(0, imageWidth - gelRight);
   const columns = lanes.map((lane) => ({
     laneIndex: lane.index + 1,
-    widthPercent: Math.max(0, ((lane.xEnd - lane.xStart + 1) / totalWidth) * 100)
+    widthPercent: Math.max(0, ((lane.xEnd - lane.xStart + 1) / imageWidth) * 100)
   }));
 
   return {
     columns,
-    laneCount: columns.length
+    laneCount: columns.length,
+    leftGapPercent: Math.max(0, (leftGapWidth / imageWidth) * 100),
+    rightGapPercent: Math.max(0, (rightGapWidth / imageWidth) * 100)
   };
 }
 
@@ -108,9 +122,13 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
       return;
     }
 
+    const hasLeadingGap = layout.leftGapPercent > 0;
+    const hasTrailingGap = layout.rightGapPercent > 0;
     const colMarkup = [
       `<col style="width:${LABEL_COLUMN_WIDTH_PX}px;" />`,
-      ...layout.columns.map((column) => `<col style="width:${column.widthPercent}%;"/>`)
+      hasLeadingGap ? `<col class="gel-lane-table-gap-col" style="width:${formatPercentWidth(layout.leftGapPercent)};" />` : '',
+      ...layout.columns.map((column) => `<col style="width:${formatPercentWidth(column.widthPercent)};" />`),
+      hasTrailingGap ? `<col class="gel-lane-table-gap-col" style="width:${formatPercentWidth(layout.rightGapPercent)};" />` : ''
     ].join('');
     const headerMarkup = layout.columns
       .map((column) => `<th scope="col">Lane ${column.laneIndex}</th>`)
@@ -146,7 +164,9 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
               spellcheck="false"
             />
           </th>
+          ${hasLeadingGap ? '<td class="gel-lane-table-gap" aria-hidden="true"></td>' : ''}
           ${cells}
+          ${hasTrailingGap ? '<td class="gel-lane-table-gap" aria-hidden="true"></td>' : ''}
         </tr>
       `;
     }).join('');
@@ -162,7 +182,9 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
           <thead>
             <tr>
               <th scope="col">Label</th>
+              ${hasLeadingGap ? '<th scope="col" class="gel-lane-table-gap" aria-hidden="true"></th>' : ''}
               ${headerMarkup}
+              ${hasTrailingGap ? '<th scope="col" class="gel-lane-table-gap" aria-hidden="true"></th>' : ''}
             </tr>
           </thead>
           <tbody>

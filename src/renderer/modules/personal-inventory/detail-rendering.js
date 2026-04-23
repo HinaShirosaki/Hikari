@@ -20,7 +20,7 @@ export function createPersonalInventoryDetailRenderer({ safeText, uiState, helpe
       `;
     }
 
-    const well = getWellDataForType(container.type || 'box81', container.wells[index], index);
+    const well = getWellDataForType(container, container.wells[index], index);
     const linkedSamples = getLinkedSamples(section, container.id, index);
     const activeSample = linkedSamples.find((item) => item.id === uiState.editingSampleId) || null;
     const statusMarkup = uiState.wellEditorStatus ? `<p class="small-note well-editor-status">${safeText(uiState.wellEditorStatus)}</p>` : '';
@@ -210,7 +210,7 @@ export function createPersonalInventoryDetailRenderer({ safeText, uiState, helpe
       const linkedSamples = getLinkedSamples(section, container.id, null);
       return `
         <div class="container-inline-detail">
-          <h4>${safeText(section)} / ${safeText(container.name)} (${getContainerTypeLabel(container.type)})</h4>
+          <h4>${safeText(section)} / ${safeText(container.name)} (${getContainerTypeLabel(container)})</h4>
           <p class="small-note">50 mL Falcon tube. Linked samples fill about one-third of the visible volume.</p>
           <div class="well-editor-shell well-editor-shell-single">
             <div class="well-grid-panel falcon-grid-panel">
@@ -226,7 +226,7 @@ export function createPersonalInventoryDetailRenderer({ safeText, uiState, helpe
       `;
     }
 
-    const layout = getContainerLayout(container.type || 'box81');
+    const layout = getContainerLayout(container);
     const wells = Array.isArray(container.wells) ? container.wells : [];
     const rowLabels = layout.className === 'plate96'
       ? Array.from({ length: layout.rows }, (_item, index) => String.fromCharCode(65 + index))
@@ -235,7 +235,7 @@ export function createPersonalInventoryDetailRenderer({ safeText, uiState, helpe
       ? Array.from({ length: layout.cols }, (_item, index) => String(index + 1))
       : [];
     const grid = wells.map((rawWell, index) => {
-      const well = getWellDataForType(container.type || 'box81', rawWell, index);
+      const well = getWellDataForType(container, rawWell, index);
       const linkedSamples = getLinkedSamples(section, container.id, index);
       const linkedTypeLabels = Array.from(new Set(linkedSamples.map((item) => getSampleTypeLabel(item.type))));
       const linkedText = linkedSamples.length
@@ -253,10 +253,11 @@ export function createPersonalInventoryDetailRenderer({ safeText, uiState, helpe
         </button>
       `;
     }).join('');
+    const gridStyle = `--well-grid-cols:${safeText(String(layout.cols))}; --well-grid-rows:${safeText(String(layout.rows))}; --well-grid-aspect-x:${safeText(String(layout.cols))}; --well-grid-aspect-y:${safeText(String(layout.rows))};`;
 
     return `
       <div class="container-inline-detail">
-        <h4>${safeText(section)} / ${safeText(container.name)} (${getContainerTypeLabel(container.type)})</h4>
+        <h4>${safeText(section)} / ${safeText(container.name)} (${getContainerTypeLabel(container)})</h4>
         <p class="small-note">${safeText(layout.helperText)}</p>
         <div class="well-editor-shell">
           <div class="well-grid-panel well-grid-panel-${safeText(layout.className)}">
@@ -266,11 +267,11 @@ export function createPersonalInventoryDetailRenderer({ safeText, uiState, helpe
                   <div class="plate96-top-labels" aria-hidden="true">${columnLabels.map((label) => `<span>${safeText(label)}</span>`).join('')}</div>
                   <div class="plate96-body">
                     <div class="plate96-side-labels" aria-hidden="true">${rowLabels.map((label) => `<span>${safeText(label)}</span>`).join('')}</div>
-                    <div class="well-grid well-grid-${safeText(layout.className)}" style="--well-grid-cols:${safeText(String(layout.cols))}; --well-grid-rows:${safeText(String(layout.rows))};">${grid}</div>
+                    <div class="well-grid well-grid-${safeText(layout.className)}" style="${gridStyle}">${grid}</div>
                   </div>
                 </div>
               `
-              : `<div class="well-grid well-grid-${safeText(layout.className)}" style="--well-grid-cols:${safeText(String(layout.cols))}; --well-grid-rows:${safeText(String(layout.rows))};">${grid}</div>`
+              : `<div class="well-grid well-grid-${safeText(layout.className)}" style="${gridStyle}">${grid}</div>`
             }
             ${renderSampleLegendForContainer(section, container)}
           </div>

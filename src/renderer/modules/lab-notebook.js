@@ -1,5 +1,5 @@
 import { exportNotebookEntryPdf } from './pdf-export.js';
-import { clarifyNotebookNote, showTransientNotice } from './notebook-note-tools.js';
+import { buildClarifiedNotebookNote, clarifyNotebookNote, showTransientNotice } from './notebook-note-tools.js';
 
 export function initLabNotebook({
   state,
@@ -233,9 +233,10 @@ export function initLabNotebook({
         llm: state.settings?.llm,
         text: source
       });
-      notebookResult.value = clarified;
+      const combinedNote = buildClarifiedNotebookNote(source, clarified);
+      notebookResult.value = combinedNote;
       const savedEntry = await saveEntry({
-        resultText: clarified
+        resultText: combinedNote
       });
       if (!savedEntry) {
         throw new Error('Unable to save the clarified notebook entry.');

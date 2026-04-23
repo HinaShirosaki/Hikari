@@ -1,0 +1,21 @@
+LOCUS       .                        355 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..355
+                     /note="promoter of the ie0 gene from the baculovirus
+                     Autographa californica"
+                     /label="IE0 promoter"
+ORIGIN
+        1 ggcaggcgct ggcaaagatt tggcacgacc cttgcccccg gtccttggcg cgtcaaaaat
+       61 gttattctct cgaaaaaaac ggttcattgt aactgttagt tagcactcag aaatcaacac
+      121 gatactgtgc acgttcagcc atcgagaggc tttatatatg gaaaccttat ctatagagat
+      181 aagattgtat atgcgtagga gagcctggtc acgtaggcac tttgcgcacg gcactagggc
+      241 tgtggagggg acaggctata taaagcccgt ttgcccaact cgtaaatcag tatcaattgt
+      301 gctccggcgc acacgctcgc ttgcgcgccg gatagtataa gtaattgata acggg
+//

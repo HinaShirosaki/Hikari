@@ -7,6 +7,7 @@
   "scripts": {
     "build:ui": "node scripts/build-ui.mjs",
     "check:dom-ids": "node scripts/check-dom-ids.mjs",
+    "extract:standard-features": "node scripts/extract-standard-features.mjs",
     "export:agent-context-debug": "node scripts/export-agent-context-debug.mjs",
     "export:agent-prompts": "node scripts/export-agent-prompts.mjs",
     "report:modules": "node scripts/report-module-relationships.mjs",

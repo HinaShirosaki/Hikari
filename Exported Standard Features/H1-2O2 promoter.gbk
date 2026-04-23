@@ -1,0 +1,17 @@
+LOCUS       .                         95 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..95
+                     /note="doxycycline-inducible variant of the human H1 RNA
+                     promoter (Henriksen et al., 2007)"
+                     /label="H1-2O2 promoter"
+ORIGIN
+        1 atatttgcat gtcgctatgt gttctgggaa atcaccataa acgtgaaatc cctatcagtg
+       61 atagagactt ataagttccc tatcagtgat agaga
+//

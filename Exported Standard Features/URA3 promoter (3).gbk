@@ -1,0 +1,18 @@
+LOCUS       .                        216 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..216
+                     /gene="S. cerevisiae URA3"
+                     /label="URA3 promoter"
+ORIGIN
+        1 ttcaattcat catttttttt ttattctttt ttttgatttc ggtttccttg aaattttttt
+       61 gattcggtaa tctccgaaca gaaggaagaa cgaaggaagg agcacagact tagattggta
+      121 tatatacgca tatgtagtgt tgaagaaaca tgaaattgcc cagtattctt aacccaactg
+      181 cacagaacaa aaacctgcag gaaacgaaga taaatc
+//

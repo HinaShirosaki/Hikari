@@ -1,4 +1,4 @@
-LOCUS       sequence_1             5625 bp    DNA     linear   SYN 17-APR-2026
+LOCUS       sequence_1             5625 bp    DNA     linear   SYN 21-APR-2026
 DEFINITION  sequence_1
 ACCESSION   .
 VERSION     .
@@ -6,7 +6,7 @@ KEYWORDS    .
 SOURCE      synthetic DNA construct
   ORGANISM  synthetic DNA construct
             .
-COMMENT     Exported from Sequence Viewer (RAW).
+COMMENT     Exported from Sequence Viewer (GENBANK).
 FEATURES             Location/Qualifiers
      backbone        1..5625
                      /label="Backbone (pasted_sequence)"
@@ -114,12 +114,17 @@ FEATURES             Location/Qualifiers
                      /label="KanR"
                      /note="Exact ORF protein annotation match for a stored CDS.
                      frame -2, 271 aa, 816 nt. Seen in sequence_1, 001_sample_1,
-                     and 2 more."
+                     and 2 m"
                      /translation="MSHIQRETSCSRPRLNSNMDADLYGYKWARDNVGQSGATIYRLYG
                      KPDAPELFLKHGKGSVANDVTDEMVRLNWLTEFMPLPTIKHFIRTPDDAWLLTTAIPGK
                      TAFQVLEEYPDSGENIVDALAVFLRRLHSIPVCNCPFNSDRVFRLAQAQSRMNNGLVDA
                      SDFDDERNGWPVEQVWKEMHKLLPFSPDSVVTHGDFSLDNLIFDEGKLIGCIDVGRVGI
                      ADRYQDLAILWNCLGEFSPSLQKRLFQKYGIDNPDMNKLQFHLMLDEFF"
+     backbone        1..5625
+                     /label="Backbone (pasted_sequence)"
+                     /note="pasted_sequence saved vector recognized with 5,625
+                     bp exact backbone coverage (100.0% of host, forward
+                     orientation)."
 ORIGIN
         1 ggcgccagca accgcacctg tggcgccggt gatgccggcc acgatgcgtc cggcgtagag
        61 gatcgagatc tcgatcccgc gaaattaata cgactcacta taggggaatt gtgagcggat

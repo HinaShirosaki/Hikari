@@ -1,0 +1,16 @@
+LOCUS       .                         35 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..35
+                     /note="bacterial promoter (Registry of Standard Biological
+                     Parts BBa_J23119)"
+                     /label="J23119 promoter"
+ORIGIN
+        1 ttgacagcta gctcagtcct aggtataatg ctagc
+//

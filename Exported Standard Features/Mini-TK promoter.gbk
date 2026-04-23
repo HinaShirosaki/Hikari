@@ -1,0 +1,17 @@
+LOCUS       .                         63 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..63
+                     /note="minimal herpes simplex virus (HSV) thymidine kinase
+                     promoter"
+                     /label="Mini-TK promoter"
+ORIGIN
+        1 ttcgcatatt aaggtgacgc gtgtggcctc gaacaccgag cgaccctgca gcgacccgct
+       61 taa
+//

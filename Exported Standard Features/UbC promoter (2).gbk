@@ -1,0 +1,21 @@
+LOCUS       .                        400 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..400
+                     /note="human ubiquitin C promoter"
+                     /label="UbC promoter"
+ORIGIN
+        1 ggcctccgcg ccgggttttg gcgcctcccg cgggcgcccc cctcctcacg gcgagcgctg
+       61 ccacgtcaga cgaagggcgc agcgagcgtc ctgatccttc cgcccggacg ctcaggacag
+      121 cggcccgctg ctcataagac tcggccttag aaccccagta tcagcagaag gacattttag
+      181 gacgggactt gggtgactct agggcactgg ttttctttcc agagagcgga acaggcgagg
+      241 aaaagtagtc ccttctcggc gattctgcgg agggatctcc gtggggcggt gaacgccgat
+      301 gattatataa ggacgcgccg ggtgtggcac agctagttcc gtcgcagccg ggatttgggt
+      361 cgcagttctt gtttgtggat cgctgtgatc gtcacttggt
+//

@@ -1,0 +1,16 @@
+LOCUS       .                        110 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..110
+                     /note="baculovirus promoter for expression in insect cells"
+                     /label="p10 promoter"
+ORIGIN
+        1 gacctttaat tcaacccaac acaatatatt atagttaaat aagaattatt atcaaatcat
+       61 ttgtatatta attaaaatac tatactgtaa attacatttt atttacaatc
+//

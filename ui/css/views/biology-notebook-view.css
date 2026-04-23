@@ -241,6 +241,24 @@
   padding-top: 10px;
 }
 
+.biology-notebook-protocol-editor {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px dashed color-mix(in srgb, var(--line) 78%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--panel) 90%, white);
+}
+
+.biology-notebook-protocol-editor-note {
+  margin: 0;
+}
+
+#biology-notebook-page-protocol-steps {
+  min-height: 180px;
+  resize: vertical;
+}
+
 .biology-notebook-viewer-section-static .biology-notebook-viewer-section-summary-static {
   cursor: default;
 }
@@ -255,6 +273,56 @@
 .biology-notebook-linked-results {
   display: grid;
   gap: 12px;
+}
+
+.biology-notebook-result-table-wrap {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--panel) 92%, white);
+}
+
+.biology-notebook-result-table-head p {
+  margin: 0;
+}
+
+.biology-notebook-result-table {
+  min-height: 180px;
+  border: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.biology-notebook-result-table .tabulator {
+  border: 0;
+  background: transparent;
+  font-size: 0.92rem;
+}
+
+.biology-notebook-result-table .tabulator-header {
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
+  background: color-mix(in srgb, white 90%, var(--panel));
+}
+
+.biology-notebook-result-table .tabulator-col,
+.biology-notebook-result-table .tabulator-cell {
+  border-right: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
+}
+
+.biology-notebook-result-table .tabulator-row {
+  background: #fff;
+}
+
+.biology-notebook-result-table .tabulator-row:not(:last-child) {
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 66%, transparent);
+}
+
+.biology-notebook-result-table .tabulator-cell:focus {
+  outline: 2px solid color-mix(in srgb, #3d79c5 72%, transparent);
+  outline-offset: -2px;
 }
 
 .biology-notebook-linked-preview {
@@ -312,6 +380,34 @@
 .biology-notebook-linked-assay-grid {
   display: grid;
   gap: 8px;
+}
+
+.biology-notebook-linked-assay-serial-dilution {
+  display: grid;
+  gap: 10px;
+}
+
+.biology-notebook-linked-assay-serial-dilution-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 12px;
+  align-items: baseline;
+}
+
+.biology-notebook-linked-assay-serial-dilution-head h5,
+.biology-notebook-linked-assay-serial-dilution-block > .small-note {
+  margin: 0;
+}
+
+.biology-notebook-linked-assay-serial-dilution-block {
+  display: grid;
+  gap: 6px;
+}
+
+.biology-notebook-linked-results .assay-serial-dilution-table-wrap {
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
 }
 
 .biology-notebook-linked-results .assay-plate-table-wrap {

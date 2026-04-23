@@ -1,4 +1,4 @@
-LOCUS       004_CD22               5658 bp    DNA     circular SYN 17-APR-2026
+LOCUS       004_CD22               5658 bp    DNA     circular SYN 22-APR-2026
 DEFINITION  004_CD22
 ACCESSION   .
 VERSION     .
@@ -65,6 +65,22 @@ FEATURES             Location/Qualifiers
      cds             4007..4024
                      /label="9xHis (fragment)"
                      /note="pLannotate"
+     promoter        3485..3503
+                     /label="T7 promoter"
+                     /note="Matched exported promoter T7 promoter with the
+                     nearest ORF 68 bp downstream."
+     cds             3572..4000
+                     /label="VHH"
+                     /note="429 bp ORF identified from ATG to TAA."
+     backbone        join(1..3569,4007..5658)
+                     /label="Backbone (pasted_sequence)"
+                     /note="pasted_sequence saved vector recognized with 5,221
+                     bp exact backbone coverage (93.3% of host, forward
+                     orientation; restr"
+     insert          3570..4006
+                     /label="XhoI (3')"
+                     /note="Nearest 3' restriction site XhoI used to bound the
+                     insert."
 ORIGIN
         1 ttgagatcct ttttttctgc gcgtaatctg ctgcttgcaa acaaaaaaac caccgctacc
        61 agcggtggtt tgtttgccgg atcaagagct accaactctt tttccgaagg taactggctt

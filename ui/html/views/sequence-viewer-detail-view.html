@@ -176,6 +176,51 @@
             </div>
           </form>
         </div>
+
+        <div id="sequence-viewer-backbone-dialog-overlay" class="sequence-viewer-backbone-dialog-overlay" hidden>
+          <div class="sequence-viewer-backbone-dialog" role="dialog" aria-modal="true" aria-labelledby="sequence-viewer-backbone-dialog-title">
+            <div class="sequence-viewer-backbone-dialog-head">
+              <div>
+                <h4 id="sequence-viewer-backbone-dialog-title">Backbone / Insert Candidates</h4>
+                <p id="sequence-viewer-backbone-dialog-subtitle" class="small-note">Review promoter and ORF candidates before applying a backbone/insert interpretation.</p>
+              </div>
+              <button id="sequence-viewer-backbone-dialog-close-btn" type="button" class="ghost-btn" aria-label="Close backbone recognition dialog">Close</button>
+            </div>
+
+            <div class="sequence-viewer-backbone-dialog-mode-switch" role="tablist" aria-label="Recognition mode">
+              <button id="sequence-viewer-backbone-dialog-mode-gibson-btn" class="sequence-viewer-mode-btn sequence-viewer-mode-btn-active" type="button">Gibson / HR</button>
+              <button id="sequence-viewer-backbone-dialog-mode-restriction-btn" class="sequence-viewer-mode-btn" type="button">Restriction</button>
+            </div>
+
+            <div class="sequence-viewer-backbone-dialog-grid">
+              <section class="plannotate-result-card sequence-viewer-backbone-dialog-panel">
+                <div class="plannotate-card-head">
+                  <h4>Candidate List</h4>
+                </div>
+                <div id="sequence-viewer-backbone-dialog-candidates" class="sequence-viewer-backbone-dialog-candidates">
+                  <p class="small-note">No candidates available.</p>
+                </div>
+              </section>
+
+              <section class="plannotate-result-card sequence-viewer-backbone-dialog-panel sequence-viewer-backbone-dialog-preview-panel">
+                <div class="plannotate-card-head">
+                  <h4>Preview</h4>
+                </div>
+                <div id="sequence-viewer-backbone-dialog-summary" class="calc-output sequence-viewer-backbone-dialog-summary">
+                  <p class="small-note">Select a candidate to preview the plasmid map.</p>
+                </div>
+                <div id="sequence-viewer-backbone-dialog-preview" class="sequence-viewer-backbone-dialog-preview">
+                  <p class="small-note">Circular plasmid preview unavailable.</p>
+                </div>
+              </section>
+            </div>
+
+            <div class="form-actions">
+              <button id="sequence-viewer-backbone-dialog-apply-btn" type="button" class="primary-btn">Apply Selection</button>
+              <button id="sequence-viewer-backbone-dialog-cancel-btn" type="button" class="ghost-btn">Cancel</button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div id="sequence-viewer-alignment-workspace" class="sequence-viewer-alignment-workspace" hidden>

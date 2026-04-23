@@ -257,6 +257,18 @@
   background: color-mix(in srgb, var(--surface-subtle) 78%, transparent);
 }
 
+.inventory-custom-grid-fields {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.inventory-custom-grid-note {
+  margin: 0;
+  grid-column: 1 / -1;
+}
+
 .inventory-section {
   border-radius: 12px;
   padding: 12px;
@@ -369,7 +381,7 @@
   grid-template-columns: repeat(var(--well-grid-cols, 9), 1fr);
   grid-template-rows: repeat(var(--well-grid-rows, 9), 1fr);
   width: 100%;
-  aspect-ratio: 1 / 1;
+  aspect-ratio: var(--well-grid-aspect-x, 1) / var(--well-grid-aspect-y, 1);
   border: 1px solid rgba(77, 109, 140, 0.45);
   overflow: hidden;
   gap: 0;

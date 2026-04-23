@@ -1,3 +1,8 @@
+import {
+  notebookResultTableToLines,
+  summarizeNotebookResultTable
+} from './notebook-result-table.js';
+
 const PLACEHOLDER_TOKEN_REGEX = /\{\{ph:([^}]+)\}\}/g;
 
 const PAGE_MARGIN = 72;
@@ -17,6 +22,9 @@ const PLATE_DEFINITIONS = {
 };
 
 function getJsPdfCtor() {
+  if (typeof window === 'undefined') {
+    return null;
+  }
   return window?.jspdf?.jsPDF || null;
 }
 
@@ -133,8 +141,181 @@ function writeBulletLines(ctx, lines) {
   });
 }
 
+function writeMinorHeading(ctx, heading) {
+  ensureSpace(ctx, BODY_FONT_SIZE + 8);
+  ctx.doc.setFont(ctx.serif ? 'times' : 'helvetica', 'bold');
+  ctx.doc.setFontSize(BODY_FONT_SIZE);
+  ctx.y = writeWrappedLines(ctx.doc, heading, ctx.margin, ctx.y, ctx.maxWidth, BODY_FONT_SIZE + 4);
+  ctx.y += 2;
+}
+
+function writeSimpleTable(ctx, headers, rows, { emptyText = '-' } = {}) {
+  const safeHeaders = Array.isArray(headers) ? headers.map((header) => safeValue(header)) : [];
+  const safeRows = Array.isArray(rows)
+    ? rows.map((cells) => (Array.isArray(cells) ? cells.map((cell) => safeValue(cell)) : []))
+    : [];
+
+  if (!safeRows.length) {
+    writeParagraph(ctx, emptyText);
+    return;
+  }
+
+  if (safeHeaders.length) {
+    writeMinorHeading(ctx, safeHeaders.join(' | '));
+  }
+  safeRows.forEach((cells) => {
+    writeParagraph(ctx, cells.join(' | '));
+  });
+}
+
+function writeNotebookResultTable(ctx, table) {
+  const lines = notebookResultTableToLines(table);
+  if (!lines.length) {
+    writeParagraph(ctx, '-');
+    return;
+  }
+  lines.forEach((line, index) => {
+    writeParagraph(ctx, index === 0 ? line : `| ${line}`);
+  });
+}
+
 function finishAndSave(ctx, fileNameBase) {
   ctx.doc.save(`${sanitizeFileName(fileNameBase, 'export')}.pdf`);
+}
+
+function notebookStateLabel(entry) {
+  return String(entry?.notebookState || '').trim().toLowerCase() === 'planned' ? 'Planned' : 'Executed';
+}
+
+function formatGelAnalysisTypeLabel(type) {
+  if (type === 'western') {
+    return 'Western Blot';
+  }
+  if (type === 'agarose') {
+    return 'DNA/RNA Agarose';
+  }
+  return 'SDS-PAGE';
+}
+
+function formatAssayAnalysisMethodLabel(method) {
+  const source = String(method || '').trim();
+  if (!source) {
+    return 'Analysis plot';
+  }
+  return source
+    .split('_')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+function hasSerialDilutionContent(summary) {
+  return Boolean(
+    summary
+    && (
+      (Array.isArray(summary.feedbackMessages) && summary.feedbackMessages.length)
+      || (Array.isArray(summary.initialDilutionRows) && summary.initialDilutionRows.length)
+      || (Array.isArray(summary.followingDilutionRows) && summary.followingDilutionRows.length)
+      || summary.hasValidPlans
+    )
+  );
+}
+
+function inferPdfImageFormat(dataUrl) {
+  const source = String(dataUrl || '').trim().toLowerCase();
+  if (source.startsWith('data:image/jpeg') || source.startsWith('data:image/jpg')) {
+    return 'JPEG';
+  }
+  return 'PNG';
+}
+
+async function preparePdfImageAsset(dataUrl) {
+  const source = String(dataUrl || '').trim();
+  if (!source.startsWith('data:image/')) {
+    return null;
+  }
+
+  if (
+    typeof Image !== 'function'
+    || typeof document === 'undefined'
+    || typeof document.createElement !== 'function'
+  ) {
+    return {
+      dataUrl: source,
+      format: inferPdfImageFormat(source),
+      width: 1200,
+      height: 800
+    };
+  }
+
+  return new Promise((resolve) => {
+    const image = new Image();
+    image.onload = () => {
+      const width = Math.max(1, Math.ceil(image.naturalWidth || image.width || 1));
+      const height = Math.max(1, Math.ceil(image.naturalHeight || image.height || 1));
+      const canvas = document.createElement('canvas');
+      if (!canvas || typeof canvas.getContext !== 'function' || typeof canvas.toDataURL !== 'function') {
+        resolve({
+          dataUrl: source,
+          format: inferPdfImageFormat(source),
+          width,
+          height
+        });
+        return;
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      const context2d = canvas.getContext('2d');
+      if (!context2d) {
+        resolve({
+          dataUrl: source,
+          format: inferPdfImageFormat(source),
+          width,
+          height
+        });
+        return;
+      }
+
+      context2d.fillStyle = '#ffffff';
+      context2d.fillRect(0, 0, width, height);
+      context2d.drawImage(image, 0, 0, width, height);
+      resolve({
+        dataUrl: canvas.toDataURL('image/png'),
+        format: 'PNG',
+        width,
+        height
+      });
+    };
+    image.onerror = () => resolve(null);
+    image.src = source;
+  });
+}
+
+async function writeImageFigure(ctx, dataUrl, { caption = '', maxHeight = 260 } = {}) {
+  const asset = await preparePdfImageAsset(dataUrl);
+  if (!asset) {
+    if (caption) {
+      writeParagraph(ctx, caption);
+    }
+    return false;
+  }
+
+  const availableHeight = Math.max(80, ctx.pageHeight - (ctx.margin * 2) - 20);
+  const targetMaxHeight = Math.min(maxHeight, availableHeight);
+  const widthScale = ctx.maxWidth / asset.width;
+  const heightScale = targetMaxHeight / asset.height;
+  const scale = Math.min(widthScale, heightScale, 1);
+  const drawWidth = Math.max(1, asset.width * scale);
+  const drawHeight = Math.max(1, asset.height * scale);
+
+  ensureSpace(ctx, drawHeight + (caption ? LINE_HEIGHT + 8 : 8));
+  ctx.doc.addImage(asset.dataUrl, asset.format, ctx.margin, ctx.y, drawWidth, drawHeight);
+  ctx.y += drawHeight + 6;
+  if (caption) {
+    writeParagraph(ctx, caption);
+  }
+  return true;
 }
 
 function renderStepText(step, values = null) {
@@ -183,14 +364,6 @@ function toRowLabel(rowIndex) {
 
 function wellIdFor(rowIndex, columnIndex) {
   return `${toRowLabel(rowIndex)}${columnIndex + 1}`;
-}
-
-function sortWellLayout(layout) {
-  return (Array.isArray(layout) ? layout : []).slice().sort((a, b) => {
-    const aWell = String(a?.well || '');
-    const bWell = String(b?.well || '');
-    return aWell.localeCompare(bWell, undefined, { numeric: true });
-  });
 }
 
 function resolveAssayDefinition(assay) {
@@ -313,47 +486,166 @@ export function exportProtocolPdf(protocol) {
   return true;
 }
 
-export function exportNotebookEntryPdf({ entry, protocol }) {
-  if (!entry) {
-    return false;
-  }
+export const exportNotebookEntryPdf = async ({
+  entry,
+  protocol,
+  linkedGel = null,
+  linkedGelPreviewImage = '',
+  linkedAssay = null,
+  linkedAssayPlotImage = ''
+}) => {
+  try {
+    if (!entry) {
+      return false;
+    }
 
-  const title = `Notebook: ${safeValue(entry.projectName)} / ${safeValue(entry.protocolName)}`;
-  const ctx = createContext({
-    title,
-    orientation: 'p',
-    format: 'letter',
-    margin: 72,
-    serif: true
-  });
-  if (!ctx) {
-    return false;
-  }
-
-  writeHeading(ctx, 'Summary');
-  writeKeyValue(ctx, 'Notebook Type', entry.notebookType === 'biology' ? 'Biology' : 'Synthesis');
-  writeKeyValue(ctx, 'Project', entry.projectName);
-  writeKeyValue(ctx, 'Protocol', entry.protocolName);
-  writeKeyValue(ctx, 'Updated', formatTimestamp(entry.updatedAt));
-  writeKeyValue(ctx, 'Storage Folder', entry.storageFolder);
-
-  writeHeading(ctx, 'Protocol Steps (Filled)');
-  const steps = Array.isArray(protocol?.steps) ? protocol.steps : [];
-  if (!steps.length) {
-    writeParagraph(ctx, 'No protocol steps available for this entry.');
-  } else {
-    steps.forEach((step, index) => {
-      writeParagraph(ctx, `${index + 1}. ${renderStepText(step, entry.values || {})}`);
+    const title = `Notebook: ${safeValue(entry.projectName)} / ${safeValue(entry.experimentName || entry.protocolName)}`;
+    const ctx = createContext({
+      title,
+      orientation: 'p',
+      format: 'letter',
+      margin: 72,
+      serif: true
     });
+    if (!ctx) {
+      return false;
+    }
+
+    writeHeading(ctx, 'Summary');
+    writeKeyValue(ctx, 'Project', entry.projectName);
+    if (String(entry.experimentName || '').trim()) {
+      writeKeyValue(ctx, 'Experiment', entry.experimentName);
+    }
+    writeKeyValue(ctx, 'Protocol', entry.protocolName);
+    writeKeyValue(ctx, 'State', notebookStateLabel(entry));
+    writeKeyValue(ctx, 'Updated', formatTimestamp(entry.updatedAt));
+    if (String(entry.executedAt || '').trim()) {
+      writeKeyValue(ctx, 'Executed', formatTimestamp(entry.executedAt));
+    }
+
+    writeHeading(ctx, 'Protocol Steps (Filled)');
+    const steps = Array.isArray(protocol?.steps) ? protocol.steps : [];
+    if (!steps.length) {
+      writeParagraph(ctx, 'No protocol steps available for this entry.');
+    } else {
+      steps.forEach((step, index) => {
+        writeParagraph(ctx, `${index + 1}. ${renderStepText(step, entry.values || {})}`);
+      });
+    }
+
+    if (linkedGel || linkedAssay) {
+      writeHeading(ctx, 'Linked Results');
+
+      if (linkedGel) {
+        writeMinorHeading(ctx, 'Gel');
+        writeParagraph(
+          ctx,
+          `${safeValue(linkedGel.name, 'Linked Gel')} | ${formatGelAnalysisTypeLabel(linkedGel.analysisType)} | Updated ${formatTimestamp(linkedGel.updatedAt)}`
+        );
+        const gelCaption = `${formatGelAnalysisTypeLabel(linkedGel.analysisType)} preview`;
+        if (linkedGelPreviewImage) {
+          await writeImageFigure(ctx, linkedGelPreviewImage, {
+            caption: gelCaption,
+            maxHeight: 260
+          });
+        } else {
+          writeParagraph(ctx, gelCaption);
+        }
+      }
+
+      if (linkedAssay) {
+        writeMinorHeading(ctx, 'Assay');
+        writeParagraph(
+          ctx,
+          `${safeValue(linkedAssay.name, 'Linked Assay')} | ${safeValue(linkedAssay.assayNumber || linkedAssay.id)} | ${safeValue(linkedAssay.plateLabel || `${linkedAssay.wellCount || '-'} well plate`)} | Updated ${formatTimestamp(linkedAssay.updatedAt)}`
+        );
+        const latestAnalysis = linkedAssay.latestAnalysis && typeof linkedAssay.latestAnalysis === 'object'
+          ? linkedAssay.latestAnalysis
+          : null;
+        if (latestAnalysis) {
+          writeParagraph(
+            ctx,
+            `Analysis: ${formatAssayAnalysisMethodLabel(latestAnalysis.method)}${String(latestAnalysis.summary || '').trim() ? ` | ${latestAnalysis.summary}` : ''}`
+          );
+        }
+
+        writeMinorHeading(ctx, 'Plate Layout');
+        renderAssayPlot(ctx, linkedAssay, resolveAssayDefinition(linkedAssay));
+
+        const serialDilutionSummary = linkedAssay.serialDilutionSummary && typeof linkedAssay.serialDilutionSummary === 'object'
+          ? linkedAssay.serialDilutionSummary
+          : null;
+        if (hasSerialDilutionContent(serialDilutionSummary)) {
+          writeMinorHeading(ctx, 'Serial Dilution');
+          if (Number.isFinite(serialDilutionSummary?.volumePerWellUl) && serialDilutionSummary.volumePerWellUl > 0) {
+            writeParagraph(ctx, `Volume per well: ${serialDilutionSummary.volumePerWellUl} uL`);
+          }
+          (Array.isArray(serialDilutionSummary.feedbackMessages) ? serialDilutionSummary.feedbackMessages : []).forEach((item) => {
+            writeParagraph(ctx, safeValue(item?.text));
+          });
+          if (Array.isArray(serialDilutionSummary.initialDilutionRows) && serialDilutionSummary.initialDilutionRows.length) {
+            writeMinorHeading(ctx, 'Initial Dilution');
+            writeSimpleTable(
+              ctx,
+              ['Sample', 'Stock Vol.', 'Buffer Vol.'],
+              serialDilutionSummary.initialDilutionRows.map((row) => [
+                row?.sample || '',
+                row?.stockVolume || '',
+                row?.bufferVolume || ''
+              ])
+            );
+          }
+          if (Array.isArray(serialDilutionSummary.followingDilutionRows) && serialDilutionSummary.followingDilutionRows.length) {
+            writeMinorHeading(ctx, 'Following Dilution');
+            writeSimpleTable(
+              ctx,
+              ['Step', 'Target Conc.', 'From Previous Well', 'Buffer Vol.', 'Transfer / Discard', 'Final Vol.'],
+              serialDilutionSummary.followingDilutionRows.map((row) => [
+                row?.step || '',
+                row?.targetConcentration || '',
+                row?.fromPreviousWell || '',
+                row?.bufferVolume || '',
+                row?.transferOrDiscard || '',
+                row?.finalVolume || ''
+              ])
+            );
+          } else if (serialDilutionSummary?.hasValidPlans) {
+            writeParagraph(ctx, 'No downstream dilution steps are needed for this assay.');
+          }
+        }
+
+        const assayPlotImage = String(linkedAssayPlotImage || latestAnalysis?.chartDataUrl || '').trim();
+        if (assayPlotImage) {
+          writeMinorHeading(ctx, 'Analysis Plot');
+          await writeImageFigure(ctx, assayPlotImage, {
+            caption: `${formatAssayAnalysisMethodLabel(latestAnalysis?.method)}${String(latestAnalysis?.summary || '').trim() ? ` | ${latestAnalysis.summary}` : ''}`,
+            maxHeight: 220
+          });
+        }
+      }
+    }
+
+    writeHeading(ctx, 'Notes / Results');
+    writeParagraph(ctx, safeValue(entry.result));
+    if (summarizeNotebookResultTable(entry.resultTable)) {
+      writeMinorHeading(ctx, 'Result Table');
+      writeNotebookResultTable(ctx, entry.resultTable);
+    }
+    if (Array.isArray(entry.resultFiles) && entry.resultFiles.length) {
+      writeMinorHeading(ctx, 'Result Files');
+      writeBulletLines(ctx, entry.resultFiles);
+    }
+
+    finishAndSave(ctx, `notebook-${entry.projectName || 'project'}-${entry.experimentName || entry.protocolName || entry.id || 'entry'}`);
+    return true;
+  } catch (error) {
+    console.error('Failed to export notebook PDF:', error);
+    if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+      window.alert(String(error?.message || error || 'Failed to export notebook PDF.'));
+    }
+    return false;
   }
-
-  writeHeading(ctx, 'Results');
-  writeParagraph(ctx, safeValue(entry.result));
-  writeKeyValue(ctx, 'Result Files', Array.isArray(entry.resultFiles) && entry.resultFiles.length ? entry.resultFiles.join(', ') : '-');
-
-  finishAndSave(ctx, `notebook-${entry.projectName || 'project'}-${entry.protocolName || entry.id || 'entry'}`);
-  return true;
-}
+};
 
 export function exportAssayDefinitionPdf(assay) {
   if (!assay) {
@@ -380,22 +672,6 @@ export function exportAssayDefinitionPdf(assay) {
 
   writeHeading(ctx, 'Well Definition Plot');
   renderAssayPlot(ctx, assay, def);
-
-  writeHeading(ctx, 'Mapped Well Definitions');
-  const mappedRows = sortWellLayout(assay.wellLayout);
-  if (!mappedRows.length) {
-    writeParagraph(ctx, 'No mapped well definitions.');
-  } else {
-    mappedRows.slice(0, 220).forEach((item) => {
-      writeParagraph(
-        ctx,
-        `${safeValue(item.well)} | Sample: ${safeValue(item.sampleId)} | Concentration: ${safeValue(item.concentration)}`
-      );
-    });
-    if (mappedRows.length > 220) {
-      writeParagraph(ctx, `... ${mappedRows.length - 220} more mapped wells not shown in this section.`);
-    }
-  }
 
   finishAndSave(ctx, `assay-${assay.assayNumber || assay.id || assay.name || 'definition'}`);
   return true;

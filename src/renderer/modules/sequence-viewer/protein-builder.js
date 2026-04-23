@@ -1,12 +1,13 @@
 import { escapeHtml } from '../tool-box/common.js';
-import { cleanProteinSequence, translateDnaSequence } from '../tool-box/sequence.js';
+import { cleanProteinSequence, reverseComplementDna, reverseTranslateProteinSequence, translateDnaSequence } from '../tool-box/sequence.js';
 import {
   PROTEIN_ASSEMBLY_CLEAVAGE_SITES,
   PROTEIN_ASSEMBLY_LINKERS,
   PROTEIN_ASSEMBLY_TAGS,
   sanitizeProteinAssemblySequence
 } from '../tool-box/protein-assembly.js';
-import { cleanText } from './shared.js';
+import { buildOrfFeatures } from './orf-analysis.js';
+import { cleanText, clamp, normalizeSequenceText } from './shared.js';
 
 const BLOCK_TYPE_LABELS = Object.freeze({
   tag: 'Tag',
@@ -109,6 +110,74 @@ function buildFeatureDerivedSequence(feature) {
   };
 }
 
+function normalizeProteinBuildSequence(sequence) {
+  return sanitizeProteinAssemblySequence(sequence || '', true);
+}
+
+function stripTerminalStop(proteinSequence) {
+  const cleaned = normalizeProteinBuildSequence(proteinSequence);
+  return cleaned.endsWith('*') ? cleaned.slice(0, -1) : cleaned;
+}
+
+function proteinsEquivalent(left, right) {
+  return stripTerminalStop(left) === stripTerminalStop(right);
+}
+
+function translateDnaToProtein(dnaSequence) {
+  const cleaned = normalizeSequenceText(dnaSequence);
+  if (!cleaned.length) {
+    return '';
+  }
+  return normalizeProteinBuildSequence(translateDnaSequence(cleaned, 1, 'star')?.protein || '');
+}
+
+function normalizeRecordSegments(segments, sequenceLength) {
+  const safeLength = Math.max(0, Number(sequenceLength) || 0);
+  return (Array.isArray(segments) ? segments : [])
+    .map((segment) => {
+      const start = clamp(Math.round(Number(segment?.start) || 0), 0, safeLength);
+      const end = clamp(Math.round(Number(segment?.end) || 0), 0, safeLength);
+      if (end <= start) {
+        return null;
+      }
+      return { start, end };
+    })
+    .filter(Boolean);
+}
+
+function extractDnaFromRecordSegments(sequence, segments, strand = 1) {
+  const cleanedSequence = normalizeSequenceText(sequence);
+  const normalizedSegments = normalizeRecordSegments(segments, cleanedSequence.length);
+  if (!cleanedSequence.length || !normalizedSegments.length) {
+    return '';
+  }
+
+  const orderedSegments = strand === -1
+    ? [...normalizedSegments].reverse()
+    : normalizedSegments;
+  const rawSequence = orderedSegments
+    .map((segment) => cleanedSequence.slice(segment.start, segment.end))
+    .join('');
+  return strand === -1 ? reverseComplementDna(rawSequence) : rawSequence;
+}
+
+function alignDnaToProteinSequence(dnaSequence, proteinSequence) {
+  const cleanedDna = normalizeSequenceText(dnaSequence);
+  const cleanedProtein = normalizeProteinBuildSequence(proteinSequence);
+  if (!cleanedDna.length || !cleanedProtein.length) {
+    return cleanedDna;
+  }
+
+  const translated = translateDnaToProtein(cleanedDna);
+  if (translated === cleanedProtein) {
+    return cleanedDna;
+  }
+  if (!cleanedProtein.endsWith('*') && translated === `${cleanedProtein}*` && cleanedDna.length >= 3) {
+    return cleanedDna.slice(0, -3);
+  }
+  return cleanedDna;
+}
+
 function cloneLibraryRow(nextRowId, type, libraryId) {
   const preset = LIBRARY_LOOKUP.get(`${type}:${libraryId}`);
   if (!preset) {
@@ -168,6 +237,7 @@ function createFeatureRow(nextRowId, feature) {
     sourceFeatureId: cleanText(feature?.id, 200),
     sourceFeatureType: cleanText(feature?.type, 120),
     sourceSequence: derived.sourceSequence,
+    sourceDnaSequence: derived.mode === 'translated' ? derived.sourceSequence : '',
     warnings: derived.warnings
   };
 }
@@ -215,6 +285,7 @@ function buildConstruct(payload = {}) {
         index: index + 1,
         type: 'poi',
         typeLabel: getBlockTypeLabel('poi'),
+        kind: 'poi',
         label: poiName,
         sequence: poiSequence,
         note: 'User-supplied POI sequence'
@@ -233,9 +304,14 @@ function buildConstruct(payload = {}) {
       index: index + 1,
       type: rowType || 'custom',
       typeLabel: getBlockTypeLabel(rowType || 'custom'),
+      kind: cleanText(row?.kind, 40) || 'custom',
       label: rowLabel,
       sequence: rowSequence,
-      note: cleanText(row?.note, 240)
+      note: cleanText(row?.note, 240),
+      sourceSequence: cleanText(row?.sourceSequence, 24000),
+      sourceDnaSequence: normalizeSequenceText(row?.sourceDnaSequence || ''),
+      sourceFeatureId: cleanText(row?.sourceFeatureId, 200),
+      sourceFeatureType: cleanText(row?.sourceFeatureType, 120)
     });
 
     (Array.isArray(row?.warnings) ? row.warnings : []).forEach((warning) => {
@@ -310,10 +386,233 @@ function buildFeatureResultMeta(feature) {
   };
 }
 
+function buildRecordSequenceCandidate(record, feature, sourceKind = 'feature') {
+  const featureType = cleanText(feature?.type, 120).toLowerCase();
+  const hasExplicitProtein = Boolean(cleanText(feature?.translation || feature?.proteinSequence, 24000));
+  const isLikelyCoding = hasExplicitProtein
+    || featureType === 'cds'
+    || featureType === 'insert'
+    || featureType === 'open_reading_frame'
+    || featureType === 'orf';
+  if (!isLikelyCoding) {
+    return null;
+  }
+
+  const dnaSequence = extractDnaFromRecordSegments(record?.sequence, feature?.segments, Number(feature?.strand) === -1 ? -1 : 1);
+  if (!dnaSequence) {
+    return null;
+  }
+  const proteinSequence = normalizeProteinBuildSequence(
+    feature?.translation
+      || feature?.proteinSequence
+      || translateDnaToProtein(dnaSequence)
+  );
+  if (!proteinSequence.length) {
+    return null;
+  }
+
+  return {
+    sourceKind,
+    type: featureType || 'feature',
+    label: cleanText(feature?.name, 140) || 'feature',
+    dnaSequence,
+    proteinSequence,
+    segments: normalizeRecordSegments(feature?.segments, String(record?.sequence || '').length),
+    strand: Number(feature?.strand) === -1 ? -1 : 1
+  };
+}
+
+function getPoiSourcePriority(candidate) {
+  const sourceKind = cleanText(candidate?.sourceKind, 40).toLowerCase();
+  const type = cleanText(candidate?.type, 120).toLowerCase();
+  if (sourceKind === 'selected_feature') {
+    return 0;
+  }
+  if (type === 'cds') {
+    return 1;
+  }
+  if (type === 'insert') {
+    return 2;
+  }
+  if (type === 'open_reading_frame' || type === 'orf') {
+    return 3;
+  }
+  return 4;
+}
+
+function resolvePoiDnaFromRecord(proteinSequence, record, selectedFeature = null) {
+  const targetProtein = normalizeProteinBuildSequence(proteinSequence);
+  if (!targetProtein.length || !record?.sequence?.length) {
+    return null;
+  }
+
+  const dedupe = new Set();
+  const candidates = [];
+  const pushCandidate = (candidate) => {
+    if (!candidate?.dnaSequence || !candidate?.proteinSequence) {
+      return;
+    }
+    if (!proteinsEquivalent(candidate.proteinSequence, targetProtein)) {
+      return;
+    }
+    const key = [
+      cleanText(candidate.sourceKind, 40),
+      cleanText(candidate.type, 120),
+      cleanText(candidate.label, 140),
+      candidate.strand === -1 ? -1 : 1,
+      candidate.segments.map((segment) => `${segment.start}-${segment.end}`).join(',')
+    ].join('|');
+    if (dedupe.has(key)) {
+      return;
+    }
+    dedupe.add(key);
+    candidates.push(candidate);
+  };
+
+  pushCandidate(buildRecordSequenceCandidate(record, selectedFeature, 'selected_feature'));
+  (Array.isArray(record?.features) ? record.features : []).forEach((feature) => {
+    pushCandidate(buildRecordSequenceCandidate(record, feature, 'record_feature'));
+  });
+
+  buildOrfFeatures(record.sequence, record.topology, {
+    minAaLength: Math.max(1, stripTerminalStop(targetProtein).length)
+  }).forEach((orfFeature) => {
+    pushCandidate(buildRecordSequenceCandidate(record, orfFeature, 'record_orf'));
+  });
+
+  if (!candidates.length) {
+    return null;
+  }
+
+  candidates.sort((left, right) => {
+    const leftPriority = getPoiSourcePriority(left);
+    const rightPriority = getPoiSourcePriority(right);
+    if (leftPriority !== rightPriority) {
+      return leftPriority - rightPriority;
+    }
+    const leftLengthDelta = Math.abs(stripTerminalStop(left.proteinSequence).length - stripTerminalStop(targetProtein).length);
+    const rightLengthDelta = Math.abs(stripTerminalStop(right.proteinSequence).length - stripTerminalStop(targetProtein).length);
+    if (leftLengthDelta !== rightLengthDelta) {
+      return leftLengthDelta - rightLengthDelta;
+    }
+    return cleanText(left.label, 140).localeCompare(cleanText(right.label, 140));
+  });
+
+  const best = candidates[0];
+  const sourceLabel = cleanText(best?.label, 140) || 'current vector';
+  const sourceType = cleanText(best?.type, 120).toLowerCase();
+  const sourceDescription = sourceType === 'cds'
+    ? `current vector CDS ${sourceLabel}`
+    : (sourceType === 'open_reading_frame' || sourceType === 'orf'
+      ? `current vector ORF ${sourceLabel}`
+      : `current vector feature ${sourceLabel}`);
+
+  return {
+    dnaSequence: alignDnaToProteinSequence(best.dnaSequence, proteinSequence),
+    note: `Reused POI DNA from ${sourceDescription}.`,
+    sourceLabel
+  };
+}
+
+function buildDnaPartFromProtein(part, options = {}) {
+  const proteinSequence = normalizeProteinBuildSequence(part?.sequence || '');
+  if (!proteinSequence.length) {
+    return null;
+  }
+
+  if (cleanText(part?.kind, 40).toLowerCase() === 'poi') {
+    const poiSource = resolvePoiDnaFromRecord(proteinSequence, options?.record, options?.selectedFeature);
+    if (poiSource?.dnaSequence) {
+      return {
+        ok: true,
+        label: cleanText(part?.label, 160) || 'POI',
+        dnaSequence: poiSource.dnaSequence,
+        reusedSource: poiSource.note
+      };
+    }
+  }
+
+  const sourceDnaSequence = normalizeSequenceText(part?.sourceDnaSequence || '');
+  if (sourceDnaSequence.length) {
+    return {
+      ok: true,
+      label: cleanText(part?.label, 160) || 'Block',
+      dnaSequence: alignDnaToProteinSequence(sourceDnaSequence, proteinSequence),
+      reusedSource: cleanText(part?.kind, 40).toLowerCase() === 'feature'
+        ? `Reused stored DNA for ${cleanText(part?.label, 160) || 'feature block'}.`
+        : ''
+    };
+  }
+
+  const reverseTranslated = reverseTranslateProteinSequence(proteinSequence);
+  if (!reverseTranslated?.ok || !reverseTranslated?.dna) {
+    return {
+      ok: false,
+      label: cleanText(part?.label, 160) || 'Block',
+      error: reverseTranslated?.message || `Unable to generate DNA for ${cleanText(part?.label, 160) || 'block'}.`
+    };
+  }
+
+  return {
+    ok: true,
+    label: cleanText(part?.label, 160) || 'Block',
+    dnaSequence: normalizeSequenceText(reverseTranslated.dna)
+  };
+}
+
+function buildDnaConstruct(payload = {}, options = {}) {
+  const proteinConstruct = buildConstruct(payload);
+  if (!proteinConstruct.ok) {
+    return {
+      ok: false,
+      length: 0,
+      sequence: '',
+      warnings: Array.isArray(proteinConstruct?.warnings) ? proteinConstruct.warnings : [],
+      errors: Array.isArray(proteinConstruct?.errors) ? proteinConstruct.errors : ['Unable to build the protein construct first.'],
+      parts: [],
+      notes: []
+    };
+  }
+
+  const parts = [];
+  const warnings = Array.isArray(proteinConstruct?.warnings) ? [...proteinConstruct.warnings] : [];
+  const errors = [];
+  const notes = [];
+
+  (Array.isArray(proteinConstruct?.parts) ? proteinConstruct.parts : []).forEach((part) => {
+    const dnaPart = buildDnaPartFromProtein(part, options);
+    if (!dnaPart?.ok || !dnaPart?.dnaSequence) {
+      errors.push(dnaPart?.error || `Unable to generate DNA for ${cleanText(part?.label, 160) || 'block'}.`);
+      return;
+    }
+    if (dnaPart.reusedSource) {
+      notes.push(dnaPart.reusedSource);
+    }
+    parts.push({
+      label: dnaPart.label,
+      dnaSequence: dnaPart.dnaSequence,
+      length: dnaPart.dnaSequence.length
+    });
+  });
+
+  const sequence = parts.map((part) => part.dnaSequence).join('');
+  return {
+    ok: Boolean(sequence.length) && errors.length === 0,
+    length: sequence.length,
+    sequence,
+    warnings,
+    errors,
+    parts,
+    notes
+  };
+}
+
 export function createSequenceViewerProteinBuilderController(config = {}) {
   const elements = config?.elements || {};
   const getBridge = config?.getBridge || (() => null);
   const getStoragePath = config?.getStoragePath || (() => '');
+  const getSelectedRecord = config?.getSelectedRecord || (() => null);
+  const getSelectedFeature = config?.getSelectedFeature || (() => null);
   const hasStoragePath = config?.hasStoragePath || (() => false);
   const setStatus = config?.setStatus || (() => {});
   const onNavigateHome = typeof config?.onNavigateHome === 'function'
@@ -329,6 +628,7 @@ export function createSequenceViewerProteinBuilderController(config = {}) {
     featureSearchQuery: '',
     featureSearchResults: [],
     isSearchingFeatures: false,
+    dnaConstruct: null,
     statusMessage: 'Linear chain: each block accepts one upstream and one downstream connection.',
     statusError: false
   };
@@ -361,6 +661,10 @@ export function createSequenceViewerProteinBuilderController(config = {}) {
     }
   }
 
+  function invalidateDnaConstruct() {
+    state.dnaConstruct = null;
+  }
+
   function appendRow(row, options = {}) {
     if (!row) {
       return;
@@ -376,6 +680,7 @@ export function createSequenceViewerProteinBuilderController(config = {}) {
 
   function resetRows() {
     state.rows = [];
+    invalidateDnaConstruct();
     DEFAULT_CHAIN.forEach((entry) => {
       if (entry.kind === 'library') {
         appendRow(cloneLibraryRow(state.nextRowId++, entry.type, entry.libraryId), { insertBeforePoi: false });
@@ -388,6 +693,64 @@ export function createSequenceViewerProteinBuilderController(config = {}) {
 
   function currentRows() {
     return state.rows.map((row) => ({ ...row }));
+  }
+
+  function getDnaBuildContextKey() {
+    const record = getSelectedRecord();
+    const selectedFeature = getSelectedFeature();
+    const recordKey = normalizeSequenceText(record?.sequence || '');
+    const featureKey = selectedFeature
+      ? [
+          cleanText(selectedFeature?.name, 140),
+          cleanText(selectedFeature?.type, 120),
+          Number(selectedFeature?.strand) === -1 ? -1 : 1,
+          (Array.isArray(selectedFeature?.segments) ? selectedFeature.segments : [])
+            .map((segment) => `${Math.round(Number(segment?.start) || 0)}-${Math.round(Number(segment?.end) || 0)}`)
+            .join(',')
+        ].join('|')
+      : '';
+    return `${recordKey}::${featureKey}`;
+  }
+
+  function renderDnaConstruct() {
+    if (state.dnaConstruct?.contextKey && state.dnaConstruct.contextKey !== getDnaBuildContextKey()) {
+      state.dnaConstruct = null;
+    }
+    if (elements.proteinBuilderDnaMeta) {
+      elements.proteinBuilderDnaMeta.textContent = state.dnaConstruct?.sequence?.length
+        ? `${state.dnaConstruct.length} nt | ${state.dnaConstruct.parts.length} block${state.dnaConstruct.parts.length === 1 ? '' : 's'}`
+        : 'DNA build not run yet.';
+    }
+    if (!elements.proteinBuilderDnaSequence) {
+      return;
+    }
+
+    if (!state.dnaConstruct) {
+      elements.proteinBuilderDnaSequence.innerHTML = '<p class="small-note">Click Build DNA Sequence to generate a coding sequence for the current chain.</p>';
+      return;
+    }
+
+    if (!state.dnaConstruct.ok || !state.dnaConstruct.sequence) {
+      const messages = [
+        ...(Array.isArray(state.dnaConstruct.errors) ? state.dnaConstruct.errors : []),
+        ...(Array.isArray(state.dnaConstruct.warnings) ? state.dnaConstruct.warnings : [])
+      ].filter(Boolean);
+      elements.proteinBuilderDnaSequence.innerHTML = messages.length
+        ? messages.map((message) => `<p class="small-note">${escapeHtml(message)}</p>`).join('')
+        : '<p class="small-note">Unable to generate a DNA sequence.</p>';
+      return;
+    }
+
+    const supplemental = [
+      ...(Array.isArray(state.dnaConstruct.notes) ? state.dnaConstruct.notes : []),
+      ...(Array.isArray(state.dnaConstruct.warnings) ? state.dnaConstruct.warnings : [])
+    ].filter(Boolean);
+    elements.proteinBuilderDnaSequence.innerHTML = `
+      <span class="sequence-viewer-protein-builder-sequence-text">${escapeHtml(state.dnaConstruct.sequence)}</span>
+      ${supplemental.length
+        ? `<div class="sequence-viewer-protein-builder-dna-notes">${supplemental.map((message) => `<p class="small-note">${escapeHtml(message)}</p>`).join('')}</div>`
+        : ''}
+    `;
   }
 
   function renderCommonGroup(group) {
@@ -601,6 +964,35 @@ export function createSequenceViewerProteinBuilderController(config = {}) {
     }
   }
 
+  function buildCurrentDnaSequence() {
+    const payload = {
+      constructName: elements.proteinBuilderNameInput?.value,
+      poiName: elements.proteinBuilderPoiNameInput?.value,
+      poiSequence: elements.proteinBuilderPoiSequenceInput?.value,
+      rows: currentRows()
+    };
+    const dnaConstruct = buildDnaConstruct(payload, {
+      record: getSelectedRecord(),
+      selectedFeature: getSelectedFeature()
+    });
+    state.dnaConstruct = {
+      ...dnaConstruct,
+      contextKey: getDnaBuildContextKey()
+    };
+    renderDnaConstruct();
+
+    if (!state.dnaConstruct.ok) {
+      const failure = state.dnaConstruct.errors[0]
+        || state.dnaConstruct.warnings[0]
+        || 'Unable to build a DNA sequence from the current chain.';
+      setBuilderStatus(failure, true);
+      return;
+    }
+
+    const noteText = state.dnaConstruct.notes.length ? ` ${state.dnaConstruct.notes.join(' ')}` : '';
+    setBuilderStatus(`Built ${state.dnaConstruct.length} nt DNA sequence from the current protein chain.${noteText}`);
+  }
+
   function moveRow(rowId, direction) {
     const index = state.rows.findIndex((row) => row.id === rowId);
     if (index < 0) {
@@ -615,10 +1007,12 @@ export function createSequenceViewerProteinBuilderController(config = {}) {
     }
     const [row] = state.rows.splice(index, 1);
     state.rows.splice(targetIndex, 0, row);
+    invalidateDnaConstruct();
   }
 
   function removeRow(rowId) {
     state.rows = state.rows.filter((row) => row.id !== rowId);
+    invalidateDnaConstruct();
   }
 
   function addPoiRow() {
@@ -627,11 +1021,13 @@ export function createSequenceViewerProteinBuilderController(config = {}) {
       return;
     }
     appendRow(createPoiRow(state.nextRowId++), { insertBeforePoi: false });
+    invalidateDnaConstruct();
     render();
   }
 
   function addCustomRow() {
     appendRow(createCustomRow(state.nextRowId++));
+    invalidateDnaConstruct();
     render();
   }
 
@@ -641,6 +1037,7 @@ export function createSequenceViewerProteinBuilderController(config = {}) {
       return;
     }
     appendRow(row);
+    invalidateDnaConstruct();
     render();
   }
 
@@ -650,6 +1047,7 @@ export function createSequenceViewerProteinBuilderController(config = {}) {
       return;
     }
     appendRow(createFeatureRow(state.nextRowId++, feature));
+    invalidateDnaConstruct();
     render();
   }
 
@@ -715,6 +1113,7 @@ export function createSequenceViewerProteinBuilderController(config = {}) {
     renderFeatureSearchResults();
     renderWorkflow();
     renderSummary();
+    renderDnaConstruct();
     syncFeatureSearchControls();
     if (!state.featureSearchQuery) {
       setFeatureSearchStatus(
@@ -760,8 +1159,16 @@ export function createSequenceViewerProteinBuilderController(config = {}) {
       addPoiRow();
     });
 
-    elements.proteinBuilderForm?.addEventListener('input', () => {
+    elements.proteinBuilderForm?.addEventListener('input', (event) => {
+      const targetId = cleanText(event?.target?.id, 120);
+      if (targetId === 'sequence-viewer-protein-builder-poi-sequence') {
+        invalidateDnaConstruct();
+      }
       render();
+    });
+
+    elements.proteinBuilderBuildDnaBtn?.addEventListener('click', () => {
+      buildCurrentDnaSequence();
     });
 
     elements.proteinBuilderCommonBlocks?.addEventListener('click', (event) => {
@@ -837,6 +1244,7 @@ export function createSequenceViewerProteinBuilderController(config = {}) {
         const row = state.rows.find((item) => item.id === rowId);
         if (row) {
           row.sequence = sanitizeProteinAssemblySequence(customSequenceTrigger.value, true);
+          invalidateDnaConstruct();
         }
         render();
       }

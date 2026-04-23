@@ -1,7 +1,7 @@
 {
   "schema_name": "enana_notebook_pages",
   "schema_version": "1.0.0",
-  "updated_at": "2026-04-21T02:45:39.615Z",
+  "updated_at": "2026-04-23T04:21:11.341Z",
   "notebookPages": [
     {
       "id": "1774025061643-8e7f8d2afe1198",
@@ -21,7 +21,8 @@
         "proposalId": ""
       },
       "updatedAt": "2026-03-20T16:43:07.684Z",
-      "createdAt": ""
+      "createdAt": "",
+      "storageFolder": "/Users/shiyifan/Projects/Enana/Testdata/Project/PD-1_Nanobody_Binder_Discovery/Notebook/Ni-NTA_Purification_of_His-Tagged_Protein__1774025061643-8e7f8d2afe1198"
     },
     {
       "id": "1774129431833-1ae8e1d6da588",
@@ -41,7 +42,8 @@
         "proposalId": ""
       },
       "updatedAt": "2026-03-21T21:43:51.827Z",
-      "createdAt": ""
+      "createdAt": "",
+      "storageFolder": "/Users/shiyifan/Projects/Enana/Testdata/Project/SUMO1/Notebook/BL21(DE3)_Chemical_Transformation_with_pET28a__1774129431833-1ae8e1d6da588"
     },
     {
       "id": "1774226912932-85bb211fc546a",
@@ -61,14 +63,15 @@
         "proposalId": ""
       },
       "updatedAt": "2026-03-23T00:48:32.928Z",
-      "createdAt": ""
+      "createdAt": "",
+      "storageFolder": "/Users/shiyifan/Projects/Enana/Testdata/Project/SUMO1/Notebook/BL21(DE3)_Chemical_Transformation_with_pET28a__1774226912932-85bb211fc546a"
     },
     {
       "id": "1775782216137-95b466c6943368",
       "protocolId": "1774024047007-d137dae96cab78",
       "protocolName": "BL21(DE3) Chemical Transformation with pET28a",
-      "projectId": "",
-      "projectName": "",
+      "projectId": "project_folder_untitled_project",
+      "projectName": "Untitled Project",
       "result": "",
       "resultFiles": [],
       "resultFileRecords": [],
@@ -81,14 +84,15 @@
         "proposalId": ""
       },
       "updatedAt": "2026-04-10T00:50:16.136Z",
-      "createdAt": "2026-04-10T00:50:16.136Z"
+      "createdAt": "2026-04-10T00:50:16.136Z",
+      "storageFolder": "/Users/shiyifan/Projects/Enana/Testdata/Project/Untitled_Project/Notebook/BL21(DE3)_Chemical_Transformation_with_pET28a__1775782216137-95b466c6943368"
     },
     {
       "id": "1775782435713-d25977ea3111f8",
       "protocolId": "1774024647315-74cbb18b4cc37",
       "protocolName": "Small-Scale Overnight Starter Culture",
-      "projectId": "",
-      "projectName": "",
+      "projectId": "project_folder_untitled_project",
+      "projectName": "Untitled Project",
       "result": "",
       "resultFiles": [],
       "resultFileRecords": [],
@@ -101,14 +105,15 @@
         "proposalId": ""
       },
       "updatedAt": "2026-04-10T01:47:04.637Z",
-      "createdAt": "2026-04-10T00:53:55.713Z"
+      "createdAt": "2026-04-10T00:53:55.713Z",
+      "storageFolder": "/Users/shiyifan/Projects/Enana/Testdata/Project/Untitled_Project/Notebook/Small-Scale_Overnight_Starter_Culture__1775782435713-d25977ea3111f8"
     },
     {
       "id": "1775782437050-e49e327369ef98",
       "protocolId": "1774024680081-6b02b28fd6d39",
       "protocolName": "IPTG-Induced Recombinant Protein Expression in BL21(DE3)",
-      "projectId": "",
-      "projectName": "",
+      "projectId": "project_folder_untitled_project",
+      "projectName": "Untitled Project",
       "result": "",
       "resultFiles": [],
       "resultFileRecords": [],
@@ -121,14 +126,15 @@
         "proposalId": ""
       },
       "updatedAt": "2026-04-10T01:46:05.224Z",
-      "createdAt": "2026-04-10T00:53:57.050Z"
+      "createdAt": "2026-04-10T00:53:57.050Z",
+      "storageFolder": "/Users/shiyifan/Projects/Enana/Testdata/Project/Untitled_Project/Notebook/IPTG-Induced_Recombinant_Protein_Expression_in_BL21(DE3)__1775782437050-e49e327369ef98"
     },
     {
       "id": "1775782438767-07fe8804749718",
       "protocolId": "1774024695073-536c18071dd0d",
       "protocolName": "Ni-NTA Purification of His-Tagged Protein",
-      "projectId": "",
-      "projectName": "",
+      "projectId": "project_folder_untitled_project",
+      "projectName": "Untitled Project",
       "result": "",
       "resultFiles": [],
       "resultFileRecords": [],
@@ -141,14 +147,15 @@
         "proposalId": ""
       },
       "updatedAt": "2026-04-10T01:46:09.641Z",
-      "createdAt": "2026-04-10T00:53:58.767Z"
+      "createdAt": "2026-04-10T00:53:58.767Z",
+      "storageFolder": "/Users/shiyifan/Projects/Enana/Testdata/Project/Untitled_Project/Notebook/Ni-NTA_Purification_of_His-Tagged_Protein__1775782438767-07fe8804749718"
     },
     {
       "id": "1775785653645-93c2327505c0c",
       "protocolId": "1774024047007-d137dae96cab78",
       "protocolName": "BL21(DE3) Chemical Transformation with pET28a",
-      "projectId": "",
-      "projectName": "",
+      "projectId": "project_folder_untitled_project",
+      "projectName": "Untitled Project",
       "result": "",
       "resultFiles": [],
       "resultFileRecords": [],
@@ -161,14 +168,15 @@
         "proposalId": ""
       },
       "updatedAt": "2026-04-10T01:47:39.999Z",
-      "createdAt": "2026-04-10T01:47:33.645Z"
+      "createdAt": "2026-04-10T01:47:33.645Z",
+      "storageFolder": "/Users/shiyifan/Projects/Enana/Testdata/Project/Untitled_Project/Notebook/BL21(DE3)_Chemical_Transformation_with_pET28a__1775785653645-93c2327505c0c"
     },
     {
       "id": "1775785664323-de28c03280f04",
       "protocolId": "1774024047007-d137dae96cab78",
       "protocolName": "BL21(DE3) Chemical Transformation with pET28a",
-      "projectId": "",
-      "projectName": "",
+      "projectId": "project_folder_untitled_project",
+      "projectName": "Untitled Project",
       "result": "",
       "resultFiles": [],
       "resultFileRecords": [],
@@ -181,14 +189,15 @@
         "proposalId": ""
       },
       "updatedAt": "2026-04-10T01:47:44.323Z",
-      "createdAt": "2026-04-10T01:47:44.323Z"
+      "createdAt": "2026-04-10T01:47:44.323Z",
+      "storageFolder": "/Users/shiyifan/Projects/Enana/Testdata/Project/Untitled_Project/Notebook/BL21(DE3)_Chemical_Transformation_with_pET28a__1775785664323-de28c03280f04"
     },
     {
       "id": "1775786097062-844c417ab93cd",
       "protocolId": "1774024647315-74cbb18b4cc37",
       "protocolName": "Small-Scale Overnight Starter Culture",
-      "projectId": "",
-      "projectName": "",
+      "projectId": "project_folder_untitled_project",
+      "projectName": "Untitled Project",
       "result": "",
       "resultFiles": [],
       "resultFileRecords": [],
@@ -201,14 +210,15 @@
         "proposalId": ""
       },
       "updatedAt": "2026-04-10T01:54:58.452Z",
-      "createdAt": "2026-04-10T01:54:57.062Z"
+      "createdAt": "2026-04-10T01:54:57.062Z",
+      "storageFolder": "/Users/shiyifan/Projects/Enana/Testdata/Project/Untitled_Project/Notebook/Small-Scale_Overnight_Starter_Culture__1775786097062-844c417ab93cd"
     },
     {
       "id": "1775858351357-2cd35369d1dfc",
       "protocolId": "1774024047007-d137dae96cab78",
       "protocolName": "BL21(DE3) Chemical Transformation with pET28a",
-      "projectId": "",
-      "projectName": "",
+      "projectId": "project_folder_untitled_project",
+      "projectName": "Untitled Project",
       "result": "",
       "resultFiles": [],
       "resultFileRecords": [],
@@ -221,7 +231,8 @@
         "proposalId": ""
       },
       "updatedAt": "2026-04-10T21:59:41.506Z",
-      "createdAt": "2026-04-10T21:59:11.357Z"
+      "createdAt": "2026-04-10T21:59:11.357Z",
+      "storageFolder": "/Users/shiyifan/Projects/Enana/Testdata/Project/Untitled_Project/Notebook/BL21(DE3)_Chemical_Transformation_with_pET28a__1775858351357-2cd35369d1dfc"
     },
     {
       "id": "1776222791606-6589584353b8d",
@@ -241,7 +252,8 @@
         "proposalId": ""
       },
       "updatedAt": "2026-04-15T03:13:11.609Z",
-      "createdAt": "2026-04-15T03:13:11.609Z"
+      "createdAt": "2026-04-15T03:13:11.609Z",
+      "storageFolder": "/Users/shiyifan/Projects/Enana/Testdata/Project/SUMO1/Notebook/Avi-Tag_Protein_Biotinylation__1776222791606-6589584353b8d"
     },
     {
       "id": "1776270544362-2c654c6110e398",
@@ -278,7 +290,7 @@
           },
           {
             "id": "1774125436234-43f81b59a452a",
-            "text": "Heat shock the cells at 42 C for 45 s, then immediately place them back on ice for 1 min.",
+            "text": "Heat shock the cells at 45 C for 45 s, then immediately place them back on ice for 1 min.",
             "placeholders": []
           },
           {
@@ -298,13 +310,15 @@
           }
         ]
       },
-      "values": {},
+      "values": {
+        "1774125436234-5e6cd5beb943b:1774125436234-cac9aa958fe75": ""
+      },
       "result": "",
       "resultFiles": [],
       "resultFileRecords": [],
       "storageFolder": "/Users/shiyifan/Projects/Enana/Testdata/Workflow/NiNTA__1776270512198-af3480c2ef55c8/NiNTA_1__1776270538561-6c07e18af542f/Notebook/NiNTA_1__1776270538561-46e4a929f801c8/Notebook_Page__1776270544362-2c654c6110e398",
       "createdAt": "2026-04-15T16:29:04.362Z",
-      "updatedAt": "2026-04-15T16:29:20.078Z",
+      "updatedAt": "2026-04-22T02:06:42.306Z",
       "notebookState": "executed",
       "executedAt": "2026-04-15T16:29:20.078Z",
       "workflowContext": {
@@ -316,7 +330,8 @@
         "workflowBlockTitle": "BL21(DE3) Chemical Transformation with pET28a"
       },
       "assayIds": [],
-      "gelAnalysisIds": []
+      "gelAnalysisIds": [],
+      "experimentName": "BL21(DE3) Chemical Transformation with pET28a"
     },
     {
       "id": "1776270561757-e3f42b70a908",
@@ -498,7 +513,9 @@
         "workflowBlockId": "1776270538561-74e8c18bdcad18",
         "workflowBlockTitle": "IPTG-Induced Recombinant Protein Expression in BL21(DE3)"
       },
-      "assayIds": [],
+      "assayIds": [
+        "1776918071270-25a114f810413"
+      ],
       "gelAnalysisIds": []
     },
     {
@@ -660,71 +677,195 @@
     },
     {
       "id": "1776739509659-fed30b23b7adf8",
+      "protocolId": "1774024047007-d137dae96cab78",
+      "protocolName": "BL21(DE3) Chemical Transformation with pET28a",
+      "projectId": "1776101131639-b3a065c67eb558",
+      "projectName": "SUMO1",
+      "result": "[Apr 21, 09:46] No colony observed.",
+      "resultFiles": [],
+      "resultFileRecords": [],
+      "resultFileAddresses": [],
+      "notebookState": "executed",
+      "executedAt": "2026-04-21T02:45:09.661Z",
+      "agentDraftStatus": "",
+      "agentDraftMeta": {
+        "workflowId": "",
+        "proposalId": ""
+      },
+      "updatedAt": "2026-04-21T14:46:01.826Z",
+      "createdAt": "2026-04-21T02:45:09.661Z",
+      "storageFolder": "/Users/shiyifan/Projects/Enana/Testdata/Project/SUMO1/Notebook/BL21(DE3)_Chemical_Transformation_with_pET28a__1776739509659-fed30b23b7adf8"
+    },
+    {
+      "id": "1776782800730-d800d86c3126f",
+      "protocolId": "1774024047007-d137dae96cab78",
+      "protocolName": "BL21(DE3) Chemical Transformation with pET28a",
+      "projectId": "1776101131639-b3a065c67eb558",
+      "projectName": "SUMO1",
+      "result": "[Apr 21, 09:46] No colony; wrong antibiotic.",
+      "resultFiles": [],
+      "resultFileRecords": [],
+      "resultFileAddresses": [],
+      "notebookState": "executed",
+      "executedAt": "2026-04-21T14:46:40.733Z",
+      "agentDraftStatus": "",
+      "agentDraftMeta": {
+        "workflowId": "",
+        "proposalId": ""
+      },
+      "updatedAt": "2026-04-21T14:47:19.574Z",
+      "createdAt": "2026-04-21T14:46:40.733Z",
+      "storageFolder": "/Users/shiyifan/Projects/Enana/Testdata/Project/SUMO1/Notebook/BL21(DE3)_Chemical_Transformation_with_pET28a__1776782800730-d800d86c3126f"
+    },
+    {
+      "id": "1776822400577-3600ec37b3665",
       "notebookType": "biology",
       "projectId": "1776101131639-b3a065c67eb558",
       "projectName": "SUMO1",
-      "protocolId": "1774024047007-d137dae96cab78",
-      "protocolName": "BL21(DE3) Chemical Transformation with pET28a",
-      "experimentName": "pETDuet-SUMO1 transformation",
+      "protocolId": "1774024745003-46df848e78c068",
+      "protocolName": "Avi-Tag Protein Biotinylation",
+      "experimentName": "Avi-Tag Protein Biotinylation",
       "protocolSnapshot": {
-        "id": "1774024047007-d137dae96cab78",
-        "name": "BL21(DE3) Chemical Transformation with pET28a",
+        "id": "1774024745003-46df848e78c068",
+        "name": "Avi-Tag Protein Biotinylation",
         "category": "",
-        "purpose": "Introduce a plasmid into BL21(DE3) competent E. coli cells for protein expression.",
+        "purpose": "Biotinylate an Avi-tagged protein for downstream binding assays or immobilization.",
         "steps": [
           {
-            "id": "1774125436234-8c09146262f048",
-            "text": "Thaw 1 tube of BL21(DE3) competent cells on ice.",
-            "placeholders": []
-          },
-          {
-            "id": "1774125436234-5e6cd5beb943b",
-            "text": "Add 200ng of {{ph:1774125436234-cac9aa958fe75}} DNA to the cells and gently flick to mix.",
+            "id": "1774024745003-dd7693fa953ce",
+            "text": "Prepare the biotinylation reaction by combining {{ph:1774024745003-093192d094133}} of Avi-tagged protein, {{ph:1774024745003-fbbbfbaa73e5b}} of BirA, {{ph:1774024745003-d6f73ec6557a1}} of biotin, ATP, and buffer.",
             "placeholders": [
               {
-                "id": "1774125436234-cac9aa958fe75",
-                "name": "plasmid"
+                "id": "1774024745003-093192d094133",
+                "name": "mass or volume"
+              },
+              {
+                "id": "1774024745003-fbbbfbaa73e5b",
+                "name": "amount"
+              },
+              {
+                "id": "1774024745003-d6f73ec6557a1",
+                "name": "amount"
               }
             ]
           },
           {
-            "id": "1774125436234-15189704d9d308",
-            "text": "Incubate the mixture on ice for 30 min.",
-            "placeholders": []
+            "id": "1774024745003-d9091ff6a0a69",
+            "text": "Incubate the reaction at {{ph:1774024745003-907ec8f41b1b4}} for {{ph:1774024745003-6d181f4be08878}}.",
+            "placeholders": [
+              {
+                "id": "1774024745003-907ec8f41b1b4",
+                "name": "temperature"
+              },
+              {
+                "id": "1774024745003-6d181f4be08878",
+                "name": "time"
+              }
+            ]
           },
           {
-            "id": "1774125436234-43f81b59a452a",
-            "text": "Heat shock the cells at 42 C for 45 s, then immediately place them back on ice for 1 min.",
-            "placeholders": []
+            "id": "1774024745003-5c803a37b8e3a8",
+            "text": "Remove excess free biotin using {{ph:1774024745003-d1b54c3887f0f8}}.",
+            "placeholders": [
+              {
+                "id": "1774024745003-d1b54c3887f0f8",
+                "name": "desalting method"
+              }
+            ]
           },
           {
-            "id": "1774125436234-b55f8f12ff476",
-            "text": "Add 1 mL of SOC medium and recover the cells at 37 C with shaking for 1 h.",
-            "placeholders": []
-          },
-          {
-            "id": "1774125436234-04fdf2bad48cb8",
-            "text": "Plate 100 uL of the recovery culture onto an LB agar plate containing Kanamycin.",
-            "placeholders": []
-          },
-          {
-            "id": "1774125436234-c8e74cf17602d8",
-            "text": "Incubate the plate at 37 C for overnight until colonies appear.",
-            "placeholders": []
+            "id": "1774024745003-d843fa3ad64918",
+            "text": "Assess biotinylation efficiency using {{ph:1774024745003-0dd0ef09f4b6c}}, such as streptavidin shift or binding assay.",
+            "placeholders": [
+              {
+                "id": "1774024745003-0dd0ef09f4b6c",
+                "name": "analysis method"
+              }
+            ]
           }
         ]
       },
       "values": {
-        "1774125436234-5e6cd5beb943b:1774125436234-cac9aa958fe75": ""
+        "1774024745003-dd7693fa953ce:1774024745003-093192d094133": "",
+        "1774024745003-dd7693fa953ce:1774024745003-fbbbfbaa73e5b": "",
+        "1774024745003-dd7693fa953ce:1774024745003-d6f73ec6557a1": "",
+        "1774024745003-d9091ff6a0a69:1774024745003-907ec8f41b1b4": "",
+        "1774024745003-d9091ff6a0a69:1774024745003-6d181f4be08878": "",
+        "1774024745003-5c803a37b8e3a8:1774024745003-d1b54c3887f0f8": "",
+        "1774024745003-d843fa3ad64918:1774024745003-0dd0ef09f4b6c": ""
       },
       "result": "",
       "resultFiles": [],
       "resultFileRecords": [],
-      "storageFolder": "/Users/shiyifan/Projects/Enana/Testdata/Project/SUMO1/Notebook/BL21(DE3)_Chemical_Transformation_with_pET28a__1776739509659-fed30b23b7adf8",
-      "updatedAt": "2026-04-21T02:45:39.587Z",
-      "createdAt": "2026-04-21T02:45:09.661Z",
+      "storageFolder": "/Users/shiyifan/Projects/Enana/Testdata/Project/SUMO1/Notebook/Avi-Tag_Protein_Biotinylation__1776822400577-3600ec37b3665",
+      "updatedAt": "2026-04-22T01:46:40.580Z",
+      "createdAt": "2026-04-22T01:46:40.580Z",
       "notebookState": "executed",
-      "executedAt": "2026-04-21T02:45:09.661Z",
+      "executedAt": "2026-04-22T01:46:40.580Z",
+      "agentDraftStatus": "",
+      "agentDraftMeta": {},
+      "selectionInsights": []
+    },
+    {
+      "id": "1776822403940-d536e9c309a8e8",
+      "notebookType": "biology",
+      "projectId": "1776101131639-b3a065c67eb558",
+      "projectName": "SUMO1",
+      "protocolId": "1774024695073-536c18071dd0d",
+      "protocolName": "Ni-NTA Purification of His-Tagged Protein",
+      "experimentName": "Ni-NTA Purification of His-Tagged Protein",
+      "protocolSnapshot": {
+        "id": "1774024695073-536c18071dd0d",
+        "name": "Ni-NTA Purification of His-Tagged Protein",
+        "category": "",
+        "purpose": "Purify a His-tagged recombinant protein using nickel affinity resin.",
+        "steps": [
+          {
+            "id": "1774125203496-c7d15ebdc641a8",
+            "text": "Resuspend the cell pellet in 100 mL of lysis buffer",
+            "placeholders": []
+          },
+          {
+            "id": "1774125203496-ec7ee810d38748",
+            "text": "Lyse the cells using sonication and clarify the lysate by centrifugation at 10,000 rpm for 30 mins.",
+            "placeholders": []
+          },
+          {
+            "id": "1774125203496-ae0108f167c538",
+            "text": "Equilibrate 5 mL of Ni-NTA resin with 20 mL of lysis buffer.",
+            "placeholders": []
+          },
+          {
+            "id": "1774125203496-404bcf026d9b68",
+            "text": "Load the clarified lysate onto the resin.",
+            "placeholders": []
+          },
+          {
+            "id": "1774125203497-d3a01f7ca5e048",
+            "text": "Wash the resin with 40 mL of wash buffer containing 20 mM imidazole.",
+            "placeholders": []
+          },
+          {
+            "id": "1774125203497-6e6780fa58bd4",
+            "text": "Elute the bound protein using 6 mL of elution buffer containing 300 mM imidazole.",
+            "placeholders": []
+          },
+          {
+            "id": "1774024695073-9ea9a36345d188",
+            "text": "Collect fractions and analyze them by SDS-PAGE.",
+            "placeholders": []
+          }
+        ]
+      },
+      "values": {},
+      "result": "",
+      "resultFiles": [],
+      "resultFileRecords": [],
+      "storageFolder": "/Users/shiyifan/Projects/Enana/Testdata/Project/SUMO1/Notebook/Ni-NTA_Purification_of_His-Tagged_Protein__1776822403940-d536e9c309a8e8",
+      "updatedAt": "2026-04-22T02:06:21.125Z",
+      "createdAt": "2026-04-22T01:46:43.941Z",
+      "notebookState": "executed",
+      "executedAt": "2026-04-22T01:46:43.941Z",
       "agentDraftStatus": "",
       "agentDraftMeta": {},
       "selectionInsights": []

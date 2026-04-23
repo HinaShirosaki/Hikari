@@ -11,7 +11,15 @@ import {
   findLatestLinkedRecord,
   formatLinkedPreviewTimestamp
 } from './notebook-linked-previews.js';
-import { clarifyNotebookNote, showTransientNotice } from './notebook-note-tools.js';
+import { buildClarifiedNotebookNote, clarifyNotebookNote, showTransientNotice } from './notebook-note-tools.js';
+import {
+  addNotebookResultTableColumn,
+  addNotebookResultTableRow,
+  cloneNotebookResultTable,
+  createDefaultNotebookResultTable,
+  normalizeNotebookResultTable,
+  summarizeNotebookResultTable
+} from './notebook-result-table.js';
 
 // Initialize the biology notebook module and wire it to app state plus DOM controls.
 export function initLabNotebook({
@@ -26,6 +34,7 @@ export function initLabNotebook({
   notebookType = 'biology'
 }) {
   const PLACEHOLDER_TOKEN_REGEX = /\{\{ph:([^}]+)\}\}/g;
+  const TabulatorLib = window.Tabulator || null;
 
   const notebookProjectSelect = document.getElementById('biology-notebook-project-select');
   const notebookProtocolSearchInput = document.getElementById('biology-notebook-protocol-search');
@@ -35,12 +44,25 @@ export function initLabNotebook({
   const notebookExperimentName = document.getElementById('biology-notebook-experiment-name');
   const notebookProtocolTitle = document.getElementById('biology-notebook-protocol-title');
   const notebookProtocolMeta = document.getElementById('biology-notebook-protocol-meta');
+  const notebookEditProtocolBtn = document.getElementById('biology-notebook-edit-protocol-btn');
+  const notebookApplyProtocolEditBtn = document.getElementById('biology-notebook-apply-protocol-edit-btn');
+  const notebookCancelProtocolEditBtn = document.getElementById('biology-notebook-cancel-protocol-edit-btn');
   const notebookExportBtn = document.getElementById('biology-notebook-export-btn');
   const notebookMarkExecutedBtn = document.getElementById('biology-notebook-mark-executed-btn');
   const notebookPageListStatus = document.getElementById('biology-notebook-page-list-status');
+  const notebookProtocolEditor = document.getElementById('biology-notebook-protocol-editor');
+  const notebookProtocolDraftName = document.getElementById('biology-notebook-page-protocol-name');
+  const notebookProtocolDraftSteps = document.getElementById('biology-notebook-page-protocol-steps');
   const notebookSteps = document.getElementById('biology-notebook-steps');
   const notebookResult = document.getElementById('biology-notebook-result');
   const notebookResultFile = document.getElementById('biology-notebook-result-file');
+  const notebookAddTableBtn = document.getElementById('biology-notebook-add-table-btn');
+  const notebookAddTableRowBtn = document.getElementById('biology-notebook-add-table-row-btn');
+  const notebookAddTableColumnBtn = document.getElementById('biology-notebook-add-table-column-btn');
+  const notebookRemoveTableBtn = document.getElementById('biology-notebook-remove-table-btn');
+  const notebookResultTableWrap = document.getElementById('biology-notebook-result-table-wrap');
+  const notebookResultTableHost = document.getElementById('biology-notebook-result-table');
+  const notebookResultTableStatus = document.getElementById('biology-notebook-result-table-status');
   const notebookAddGelBtn = document.getElementById('biology-notebook-add-gel-btn');
   const notebookAddAssayBtn = document.getElementById('biology-notebook-add-assay-btn');
   const notebookLinkedResults = document.getElementById('biology-notebook-linked-results');
@@ -50,8 +72,12 @@ export function initLabNotebook({
   const notebookEntryList = document.getElementById('biology-notebook-entry-list');
 
   let editingEntryId = null;
+  let viewerProtocolDraft = null;
+  let isProtocolSnapshotEditing = false;
   const linkedPreviewCache = new Map();
   let linkedPreviewRenderToken = 0;
+  let resultTableGrid = null;
+  let resultTableDraft = null;
 
   function cloneSelectionInsights(insights) {
     try {
@@ -79,15 +105,172 @@ export function initLabNotebook({
     return nextEntry;
   }
 
+  function destroyResultTableGrid() {
+    if (resultTableGrid && typeof resultTableGrid.destroy === 'function') {
+      resultTableGrid.destroy();
+    }
+    resultTableGrid = null;
+    if (notebookResultTableHost) {
+      notebookResultTableHost.innerHTML = '';
+    }
+  }
+
+  function getResultTableHeight(table) {
+    const rowCount = Array.isArray(table?.rows) ? table.rows.length : 0;
+    return `${Math.max(180, Math.min(420, 82 + (rowCount * 42)))}px`;
+  }
+
+  function setResultTableStatus(table, message = '') {
+    if (!notebookResultTableStatus) {
+      return;
+    }
+    if (message) {
+      notebookResultTableStatus.textContent = message;
+      return;
+    }
+    const summary = summarizeNotebookResultTable(table);
+    notebookResultTableStatus.textContent = summary
+      ? `Result table: ${summary}. Edit cells directly.`
+      : 'Add a table to capture structured notebook results.';
+  }
+
+  function syncResultTableControls(table = null) {
+    const hasTable = Boolean(table);
+    if (notebookResultTableWrap) {
+      notebookResultTableWrap.hidden = !hasTable;
+    }
+    if (notebookAddTableBtn) {
+      notebookAddTableBtn.hidden = hasTable;
+    }
+    if (notebookAddTableRowBtn) {
+      notebookAddTableRowBtn.hidden = !hasTable;
+    }
+    if (notebookAddTableColumnBtn) {
+      notebookAddTableColumnBtn.hidden = !hasTable;
+    }
+    if (notebookRemoveTableBtn) {
+      notebookRemoveTableBtn.hidden = !hasTable;
+    }
+  }
+
+  function syncResultTableDraftFromGrid() {
+    if (!resultTableGrid) {
+      resultTableDraft = cloneNotebookResultTable(resultTableDraft);
+      return resultTableDraft;
+    }
+
+    const columns = typeof resultTableGrid.getColumns === 'function'
+      ? resultTableGrid.getColumns()
+        .map((component, index) => {
+          const field = String(component?.getField?.() || '').trim();
+          if (!field) {
+            return null;
+          }
+          const definition = component?.getDefinition?.() || {};
+          return {
+            field,
+            title: String(definition?.title || '').trim() || `Column ${index + 1}`
+          };
+        })
+        .filter(Boolean)
+      : [];
+    const rows = typeof resultTableGrid.getData === 'function'
+      ? resultTableGrid.getData().map((rawRow, index) => {
+        const row = {
+          id: String(rawRow?.id || '').trim() || `row_${index + 1}`
+        };
+        columns.forEach((column) => {
+          row[column.field] = String(rawRow?.[column.field] ?? '');
+        });
+        return row;
+      })
+      : [];
+
+    resultTableDraft = normalizeNotebookResultTable({
+      columns,
+      rows
+    });
+    return cloneNotebookResultTable(resultTableDraft);
+  }
+
+  function handleResultTableEdited() {
+    const table = syncResultTableDraftFromGrid();
+    setResultTableStatus(table);
+  }
+
+  function renderResultTableEditor(rawTable = null) {
+    resultTableDraft = cloneNotebookResultTable(rawTable);
+    destroyResultTableGrid();
+    syncResultTableControls(resultTableDraft);
+    setResultTableStatus(resultTableDraft);
+
+    if (!resultTableDraft || !notebookResultTableHost) {
+      return;
+    }
+
+    if (!TabulatorLib) {
+      notebookResultTableHost.innerHTML = '<p class="small-note">Table editing is unavailable because Tabulator did not load.</p>';
+      setResultTableStatus(resultTableDraft, 'Table data is saved, but the Tabulator editor is unavailable right now.');
+      return;
+    }
+
+    resultTableGrid = new TabulatorLib(notebookResultTableHost, {
+      data: resultTableDraft.rows.map((row) => ({ ...row })),
+      columns: resultTableDraft.columns.map((column) => ({
+        title: column.title,
+        field: column.field,
+        editor: 'input',
+        headerSort: false,
+        resizable: true
+      })),
+      index: 'id',
+      height: getResultTableHeight(resultTableDraft),
+      layout: 'fitColumns',
+      reactiveData: false,
+      placeholder: 'Use Add row / Add column to shape this notebook table.',
+      cellEdited: handleResultTableEdited
+    });
+  }
+
+  function getCurrentResultTable() {
+    return syncResultTableDraftFromGrid();
+  }
+
+  function onAddResultTableClick() {
+    if (resultTableDraft) {
+      return;
+    }
+    renderResultTableEditor(createDefaultNotebookResultTable(createId));
+  }
+
+  function onAddResultTableRowClick() {
+    renderResultTableEditor(addNotebookResultTableRow(getCurrentResultTable(), createId));
+  }
+
+  function onAddResultTableColumnClick() {
+    renderResultTableEditor(addNotebookResultTableColumn(getCurrentResultTable(), createId));
+  }
+
+  function onRemoveResultTableClick() {
+    renderResultTableEditor(null);
+  }
+
   notebookProjectSelect.addEventListener('change', onProjectChange);
   notebookProtocolSearchInput?.addEventListener('input', onProtocolSearchInput);
   notebookProtocolSelect.addEventListener('change', onProtocolChange);
+  notebookEditProtocolBtn?.addEventListener('click', beginProtocolEdit);
+  notebookApplyProtocolEditBtn?.addEventListener('click', applyProtocolEdit);
+  notebookCancelProtocolEditBtn?.addEventListener('click', cancelProtocolEdit);
   saveNotebookBtn.addEventListener('click', () => {
     void saveEntry();
   });
   clarifySaveNotebookBtn?.addEventListener('click', () => {
     void clarifyAndSaveEntry();
   });
+  notebookAddTableBtn?.addEventListener('click', onAddResultTableClick);
+  notebookAddTableRowBtn?.addEventListener('click', onAddResultTableRowClick);
+  notebookAddTableColumnBtn?.addEventListener('click', onAddResultTableColumnClick);
+  notebookRemoveTableBtn?.addEventListener('click', onRemoveResultTableClick);
   notebookAddGelBtn?.addEventListener('click', () => {
     void onAddGelClick();
   });
@@ -104,9 +287,11 @@ export function initLabNotebook({
   updateSaveButtonLabel();
   syncViewerVisibility();
   renderLinkedPreviews(null);
+  renderResultTableEditor(null);
 
   function onProjectChange() {
     editingEntryId = null;
+    clearProtocolPageCopyDraft();
     updateSaveButtonLabel();
     renderProtocolOptions();
     renderEntries();
@@ -205,13 +390,13 @@ export function initLabNotebook({
   }
 
   function resolveEntryProtocol(entry) {
-    const liveProtocol = state.protocols.find((item) => item.id === entry?.protocolId) || null;
-    if (liveProtocol) {
-      return liveProtocol;
-    }
     const snapshot = cloneProtocolSnapshot(entry?.protocolSnapshot);
     if (snapshot) {
       return snapshot;
+    }
+    const liveProtocol = state.protocols.find((item) => item.id === entry?.protocolId) || null;
+    if (liveProtocol) {
+      return liveProtocol;
     }
     const fallbackName = String(entry?.protocolName || entry?.workflowContext?.workflowBlockTitle || '').trim();
     if (!fallbackName) {
@@ -258,7 +443,340 @@ export function initLabNotebook({
     return 'Untitled Project';
   }
 
+  function findSelectedProject() {
+    return state.projects.find((item) => item.id === notebookProjectSelect.value) || null;
+  }
+
+  function findSelectedProtocol() {
+    return state.protocols.find((item) => item.id === notebookProtocolSelect.value) || null;
+  }
+
+  function resolveViewerProject(entry = null) {
+    return entry ? resolveEntryProject(entry) : findSelectedProject();
+  }
+
+  function resolveViewerProtocol(entry = null) {
+    if (viewerProtocolDraft) {
+      return viewerProtocolDraft;
+    }
+    return entry ? resolveEntryProtocol(entry) : findSelectedProtocol();
+  }
+
+  function collectNotebookValues() {
+    const values = {};
+    notebookSteps.querySelectorAll('[data-nb-key]').forEach((input) => {
+      values[input.dataset.nbKey] = input.value.trim();
+    });
+    return values;
+  }
+
+  function mergeNotebookValues(existingValues, currentValues) {
+    const baseValues = existingValues && typeof existingValues === 'object' ? existingValues : {};
+    const liveValues = currentValues && typeof currentValues === 'object' ? currentValues : {};
+    return {
+      ...baseValues,
+      ...liveValues
+    };
+  }
+
+  function clearProtocolPageCopyDraft({ preserveDraft = false } = {}) {
+    isProtocolSnapshotEditing = false;
+    if (!preserveDraft) {
+      viewerProtocolDraft = null;
+    }
+    if (notebookProtocolDraftName) {
+      notebookProtocolDraftName.value = '';
+    }
+    if (notebookProtocolDraftSteps) {
+      notebookProtocolDraftSteps.value = '';
+    }
+  }
+
+  function stripNotebookStepBulletPrefix(rawLine) {
+    return String(rawLine || '')
+      .replace(/^\s*(?:[-*•]|\d+[.)])\s*/, '')
+      .trim();
+  }
+
+  function formatProtocolStepLineForEditor(step) {
+    const source = String(step?.text || '');
+    const placeholders = Array.isArray(step?.placeholders) ? step.placeholders : [];
+    const matches = [...source.matchAll(PLACEHOLDER_TOKEN_REGEX)];
+
+    if (!matches.length) {
+      if (!placeholders.length) {
+        return source.trim();
+      }
+
+      let placeholderIndex = 0;
+      let replaced = false;
+      const rendered = source.replace(/\[([^[\]]+)\]/g, (match) => {
+        const placeholder = placeholders[placeholderIndex];
+        if (!placeholder) {
+          return match;
+        }
+        placeholderIndex += 1;
+        replaced = true;
+        return `[${String(placeholder?.name || '').trim() || 'value'}]`;
+      });
+
+      if (replaced) {
+        return rendered.trim();
+      }
+
+      const trailing = placeholders
+        .map((placeholder) => `[${String(placeholder?.name || '').trim() || 'value'}]`)
+        .join(' ');
+      return `${source} ${trailing}`.trim();
+    }
+
+    let cursor = 0;
+    let line = '';
+
+    matches.forEach((match) => {
+      const index = Number(match.index || 0);
+      const placeholderId = String(match[1] || '').trim();
+      const placeholder = placeholders.find((item) => String(item?.id || '').trim() === placeholderId);
+      line += source.slice(cursor, index);
+      line += `[${String(placeholder?.name || '').trim() || 'value'}]`;
+      cursor = index + match[0].length;
+    });
+
+    line += source.slice(cursor);
+    return line.trim();
+  }
+
+  function formatProtocolStepsForEditor(protocol) {
+    const steps = Array.isArray(protocol?.steps) ? protocol.steps : [];
+    return steps
+      .map((step) => formatProtocolStepLineForEditor(step))
+      .filter(Boolean)
+      .map((line) => `• ${line}`)
+      .join('\n');
+  }
+
+  function buildEditedProtocolStep(rawLine, baseStep, stepIndex) {
+    const line = stripNotebookStepBulletPrefix(rawLine);
+    const stepId = String(baseStep?.id || '').trim() || createId();
+    const existingPlaceholders = Array.isArray(baseStep?.placeholders)
+      ? baseStep.placeholders
+        .filter((item) => item && typeof item === 'object')
+        .map((item, index) => ({
+          id: String(item?.id || '').trim() || `${stepId}_placeholder_${index + 1}`,
+          name: String(item?.name || '').trim()
+        }))
+      : [];
+    const usedPlaceholderIds = new Set();
+    const placeholders = [];
+    const text = line.replace(/\[([^[\]]*)\]/g, (_match, rawName) => {
+      const placeholderName = String(rawName || '').trim() || 'value';
+      const expectedIndex = placeholders.length;
+      const normalizedName = placeholderName.toLowerCase();
+      const exactMatch = existingPlaceholders.find((item) => (
+        item.id
+        && !usedPlaceholderIds.has(item.id)
+        && String(item.name || '').trim().toLowerCase() === normalizedName
+      ));
+      const positionalMatch = existingPlaceholders[expectedIndex];
+      const placeholderId = exactMatch?.id
+        || (positionalMatch?.id && !usedPlaceholderIds.has(positionalMatch.id) ? positionalMatch.id : '')
+        || createId();
+      usedPlaceholderIds.add(placeholderId);
+      placeholders.push({
+        id: placeholderId,
+        name: placeholderName
+      });
+      return `{{ph:${placeholderId}}}`;
+    }).replace(/\s+/g, ' ').trim();
+
+    return {
+      id: stepId || `${String(baseStep?.id || '').trim() || 'protocol'}_step_${stepIndex + 1}`,
+      text,
+      placeholders
+    };
+  }
+
+  function buildEditedProtocolSnapshot(baseProtocol) {
+    const fallbackProtocol = cloneProtocolSnapshot(baseProtocol) || {
+      id: String(baseProtocol?.id || '').trim(),
+      name: String(baseProtocol?.name || '').trim() || 'Untitled Protocol',
+      category: String(baseProtocol?.category || '').trim(),
+      purpose: String(baseProtocol?.purpose || '').trim(),
+      steps: []
+    };
+    const rawName = String(notebookProtocolDraftName?.value || '').trim();
+    const rawLines = String(notebookProtocolDraftSteps?.value || '').replace(/\r\n?/g, '\n').split('\n');
+    const nextSteps = rawLines
+      .map((line) => stripNotebookStepBulletPrefix(line))
+      .filter(Boolean)
+      .map((line, index) => buildEditedProtocolStep(line, fallbackProtocol.steps[index], index));
+
+    return {
+      ...fallbackProtocol,
+      name: rawName || fallbackProtocol.name || 'Untitled Protocol',
+      steps: nextSteps
+    };
+  }
+
+  function pruneNotebookValuesForProtocol(values, protocol) {
+    const allowedKeys = new Set();
+    const sourceValues = values && typeof values === 'object' ? values : {};
+    (Array.isArray(protocol?.steps) ? protocol.steps : []).forEach((step) => {
+      const stepId = String(step?.id || '').trim();
+      if (!stepId) {
+        return;
+      }
+      (Array.isArray(step?.placeholders) ? step.placeholders : []).forEach((placeholder) => {
+        const placeholderId = String(placeholder?.id || '').trim();
+        if (placeholderId) {
+          allowedKeys.add(`${stepId}:${placeholderId}`);
+        }
+      });
+    });
+
+    return Object.entries(sourceValues).reduce((accumulator, [key, rawValue]) => {
+      if (!allowedKeys.has(key)) {
+        return accumulator;
+      }
+      accumulator[key] = String(rawValue || '').trim();
+      return accumulator;
+    }, {});
+  }
+
+  function shouldSyncExperimentNameWithProtocol(currentName, previousProtocolName) {
+    const normalizedCurrent = String(currentName || '').trim();
+    const normalizedPrevious = String(previousProtocolName || '').trim();
+    return !normalizedCurrent || normalizedCurrent === normalizedPrevious;
+  }
+
+  function syncProtocolEditorControls(protocol = null, entry = null) {
+    const hasProtocol = Boolean(protocol) && !notebookProtocolArea.hidden;
+
+    if (notebookProtocolEditor) {
+      notebookProtocolEditor.hidden = !hasProtocol || !isProtocolSnapshotEditing;
+    }
+    if (notebookSteps) {
+      notebookSteps.hidden = Boolean(hasProtocol && isProtocolSnapshotEditing);
+    }
+    if (notebookEditProtocolBtn) {
+      notebookEditProtocolBtn.hidden = !hasProtocol || isProtocolSnapshotEditing;
+    }
+    if (notebookApplyProtocolEditBtn) {
+      notebookApplyProtocolEditBtn.hidden = !hasProtocol || !isProtocolSnapshotEditing;
+    }
+    if (notebookCancelProtocolEditBtn) {
+      notebookCancelProtocolEditBtn.hidden = !hasProtocol || !isProtocolSnapshotEditing;
+    }
+    if (notebookExportBtn) {
+      notebookExportBtn.hidden = !entry || isProtocolSnapshotEditing;
+    }
+    if (notebookMarkExecutedBtn) {
+      notebookMarkExecutedBtn.hidden = !entry
+        || normalizeNotebookState(entry?.notebookState) !== 'planned'
+        || isProtocolSnapshotEditing;
+    }
+  }
+
+  function beginProtocolEdit() {
+    const entry = getActiveEntry();
+    const protocol = cloneProtocolSnapshot(resolveViewerProtocol(entry));
+    if (!protocol) {
+      return;
+    }
+
+    viewerProtocolDraft = protocol;
+    if (notebookProtocolDraftName) {
+      notebookProtocolDraftName.value = protocol.name;
+    }
+    if (notebookProtocolDraftSteps) {
+      notebookProtocolDraftSteps.value = formatProtocolStepsForEditor(protocol);
+    }
+    isProtocolSnapshotEditing = true;
+    syncProtocolEditorControls(protocol, entry);
+  }
+
+  function cancelProtocolEdit() {
+    isProtocolSnapshotEditing = false;
+    const entry = getActiveEntry();
+    syncProtocolEditorControls(resolveViewerProtocol(entry), entry);
+  }
+
+  function applyProtocolEdit() {
+    const entry = getActiveEntry();
+    const project = resolveViewerProject(entry);
+    const currentProtocol = resolveViewerProtocol(entry);
+    if (!project || !currentProtocol) {
+      return;
+    }
+
+    const nextProtocol = buildEditedProtocolSnapshot(currentProtocol);
+    const shouldSyncExperimentName = shouldSyncExperimentNameWithProtocol(
+      notebookExperimentName?.value,
+      currentProtocol.name
+    );
+    const nextExperimentName = shouldSyncExperimentName
+      ? nextProtocol.name
+      : String(notebookExperimentName?.value || '').trim();
+
+    if (notebookExperimentName && shouldSyncExperimentName) {
+      notebookExperimentName.value = nextProtocol.name;
+    }
+
+    isProtocolSnapshotEditing = false;
+
+    if (!entry) {
+      const resultTable = getCurrentResultTable();
+      viewerProtocolDraft = cloneProtocolSnapshot(nextProtocol);
+      renderProtocolViewer({
+        project,
+        protocol: nextProtocol,
+        entry: null,
+        isSavedEntry: false,
+        experimentNameOverride: nextExperimentName,
+        resultTableOverride: resultTable,
+        preserveSelectedFiles: true
+      });
+      updatePageListStatus();
+      return;
+    }
+
+    const nextEntry = {
+      ...entry,
+      protocolId: String(nextProtocol.id || entry.protocolId || '').trim(),
+      protocolName: nextProtocol.name,
+      experimentName: nextExperimentName || resolveEntryExperimentName(entry, nextProtocol),
+      protocolSnapshot: cloneProtocolSnapshot(nextProtocol),
+      values: pruneNotebookValuesForProtocol(
+        mergeNotebookValues(entry?.values, collectNotebookValues()),
+        nextProtocol
+      ),
+      result: String(notebookResult.value || '').trim(),
+      resultTable: getCurrentResultTable(),
+      updatedAt: new Date().toISOString()
+    };
+    const index = state.notebookEntries.findIndex((item) => item.id === entry.id && matchesNotebookType(item));
+    if (index < 0) {
+      return;
+    }
+
+    state.notebookEntries[index] = nextEntry;
+    viewerProtocolDraft = null;
+    persist();
+    renderEntries();
+    renderProtocolViewer({
+      project,
+      protocol: nextProtocol,
+      entry: nextEntry,
+      isSavedEntry: true,
+      preserveSelectedFiles: true
+    });
+    if (typeof onNotebookEntriesChanged === 'function') {
+      onNotebookEntriesChanged();
+    }
+  }
+
   function onProtocolChange() {
+    clearProtocolPageCopyDraft();
     const projectId = notebookProjectSelect.value;
     const protocolId = notebookProtocolSelect.value;
     const project = state.projects.find((item) => item.id === projectId);
@@ -283,7 +801,7 @@ export function initLabNotebook({
 
     renderProtocolViewer({
       project,
-      protocol,
+      protocol: selectedEntry ? (resolveEntryProtocol(selectedEntry) || protocol) : protocol,
       entry: selectedEntry,
       isSavedEntry: Boolean(selectedEntry)
     });
@@ -291,22 +809,24 @@ export function initLabNotebook({
   }
 
   async function saveEntry(options = {}) {
-    const projectId = notebookProjectSelect.value;
-    const protocolId = notebookProtocolSelect.value;
-    const project = state.projects.find((item) => item.id === projectId);
-    const protocol = state.protocols.find((item) => item.id === protocolId);
+    const editingEntry = editingEntryId
+      ? state.notebookEntries.find((item) => item.id === editingEntryId && matchesNotebookType(item))
+      : null;
+    const project = resolveViewerProject(editingEntry);
+    const selectedProtocol = findSelectedProtocol();
+    const baseProtocol = resolveViewerProtocol(editingEntry) || selectedProtocol;
+    const protocol = isProtocolSnapshotEditing
+      ? buildEditedProtocolSnapshot(baseProtocol)
+      : (cloneProtocolSnapshot(baseProtocol) || cloneProtocolSnapshot(editingEntry?.protocolSnapshot) || null);
+
     if (!project || !protocol) {
       return null;
     }
 
-    const values = {};
-    notebookSteps.querySelectorAll('[data-nb-key]').forEach((input) => {
-      values[input.dataset.nbKey] = input.value.trim();
-    });
-
-    const editingEntry = editingEntryId
-      ? state.notebookEntries.find((item) => item.id === editingEntryId && matchesNotebookType(item))
-      : null;
+    const values = pruneNotebookValuesForProtocol(
+      mergeNotebookValues(editingEntry?.values, collectNotebookValues()),
+      protocol
+    );
     const entryId = editingEntry?.id || createId();
     const selectedResultFiles = Array.from(notebookResultFile.files || []);
     const existingResultFiles = Array.isArray(editingEntry?.resultFiles)
@@ -341,18 +861,24 @@ export function initLabNotebook({
     const nowIso = new Date().toISOString();
     const notebookState = resolveEntryNotebookState(editingEntry);
     const resultText = String(options.resultText ?? notebookResult.value).trim();
-    const experimentName = String(notebookExperimentName?.value || '').trim() || protocol.name;
+    const resultTable = getCurrentResultTable();
+    const currentExperimentName = String(notebookExperimentName?.value || '').trim();
+    const baseProtocolName = String(baseProtocol?.name || '').trim();
+    const experimentName = shouldSyncExperimentNameWithProtocol(currentExperimentName, baseProtocolName)
+      ? protocol.name
+      : (currentExperimentName || protocol.name);
     const entry = {
       id: entryId,
       notebookType,
       projectId: project.id,
       projectName: project.name,
-      protocolId: protocol.id,
+      protocolId: String(protocol.id || editingEntry?.protocolId || '').trim(),
       protocolName: protocol.name,
       experimentName,
       protocolSnapshot: cloneProtocolSnapshot(protocol) || cloneProtocolSnapshot(editingEntry?.protocolSnapshot),
       values,
       result: resultText,
+      resultTable,
       resultFiles,
       resultFileRecords,
       storageFolder,
@@ -377,6 +903,8 @@ export function initLabNotebook({
     }
 
     editingEntryId = entry.id;
+    viewerProtocolDraft = null;
+    isProtocolSnapshotEditing = false;
     updateSaveButtonLabel();
 
     persist();
@@ -384,7 +912,7 @@ export function initLabNotebook({
     renderEntries();
     renderProtocolViewer({
       project,
-      protocol,
+      protocol: cloneProtocolSnapshot(protocol) || protocol,
       entry,
       isSavedEntry: true
     });
@@ -406,9 +934,10 @@ export function initLabNotebook({
         llm: state.settings?.llm,
         text: source
       });
-      notebookResult.value = clarified;
+      const combinedNote = buildClarifiedNotebookNote(source, clarified);
+      notebookResult.value = combinedNote;
       const savedEntry = await saveEntry({
-        resultText: clarified
+        resultText: combinedNote
       });
       if (!savedEntry) {
         throw new Error('Unable to save the clarified notebook entry.');
@@ -640,7 +1169,7 @@ export function initLabNotebook({
       ? entries
       : state.notebookEntries.filter((entry) => matchesNotebookType(entry));
     const project = state.projects.find((item) => item.id === notebookProjectSelect.value);
-    const protocol = state.protocols.find((item) => item.id === notebookProtocolSelect.value);
+    const protocol = viewerProtocolDraft || state.protocols.find((item) => item.id === notebookProtocolSelect.value);
 
     if (project && protocol) {
       notebookPageListStatus.textContent = `Working in ${project.name} / ${protocol.name}`;
@@ -715,6 +1244,43 @@ export function initLabNotebook({
     return String(analysis?.previewImageDataUrl || '').trim();
   }
 
+  async function resolveLinkedAssayPlotImage(assay) {
+    const latestAnalysis = assay?.latestAnalysis && typeof assay.latestAnalysis === 'object'
+      ? assay.latestAnalysis
+      : null;
+    const chartDataUrl = String(latestAnalysis?.chartDataUrl || '').trim();
+    if (chartDataUrl) {
+      return chartDataUrl;
+    }
+
+    const chartPath = String(latestAnalysis?.chartPath || '').trim();
+    if (!chartPath) {
+      return '';
+    }
+    if (linkedPreviewCache.has(chartPath)) {
+      return linkedPreviewCache.get(chartPath);
+    }
+    if (!window.enanaApi?.readFileBase64) {
+      return '';
+    }
+
+    const response = await window.enanaApi.readFileBase64(chartPath);
+    if (!response?.ok || !response.dataBase64) {
+      return '';
+    }
+    const normalizedPath = chartPath.toLowerCase();
+    const mimeType = normalizedPath.endsWith('.svg')
+      ? 'image/svg+xml'
+      : normalizedPath.endsWith('.jpg') || normalizedPath.endsWith('.jpeg')
+        ? 'image/jpeg'
+        : normalizedPath.endsWith('.webp')
+          ? 'image/webp'
+          : 'image/png';
+    const dataUrl = `data:${mimeType};base64,${response.dataBase64}`;
+    linkedPreviewCache.set(chartPath, dataUrl);
+    return dataUrl;
+  }
+
   function buildLinkedGelPreviewHtml(analysis, previewImage) {
     const updatedAt = formatLinkedPreviewTimestamp(analysis?.updatedAt);
     const imageHtml = previewImage
@@ -750,6 +1316,9 @@ export function initLabNotebook({
       : null;
     const plotImage = String(latestAnalysis?.chartDataUrl || '').trim();
     const plateHtml = buildNotebookAssayPlatePreviewHtml(assay, safeText);
+    const serialDilutionSummary = assay?.serialDilutionSummary && typeof assay.serialDilutionSummary === 'object'
+      ? assay.serialDilutionSummary
+      : null;
     const plotHtml = plotImage
       ? `
         <figure class="biology-notebook-linked-preview-figure">
@@ -758,6 +1327,89 @@ export function initLabNotebook({
             ${safeText(`${formatAssayAnalysisMethodLabel(latestAnalysis?.method)} · ${latestAnalysis?.summary || 'Saved analysis plot'}`)}
           </figcaption>
         </figure>
+      `
+      : '';
+    const hasSerialDilutionContent = Boolean(
+      serialDilutionSummary
+      && (
+        (Array.isArray(serialDilutionSummary.feedbackMessages) && serialDilutionSummary.feedbackMessages.length)
+        || (Array.isArray(serialDilutionSummary.initialDilutionRows) && serialDilutionSummary.initialDilutionRows.length)
+        || (Array.isArray(serialDilutionSummary.followingDilutionRows) && serialDilutionSummary.followingDilutionRows.length)
+        || serialDilutionSummary.hasValidPlans
+      )
+    );
+    const renderSerialDilutionTable = (headers, rows, className = '') => {
+      if (!rows.length) {
+        return '';
+      }
+      return `
+        <div class="assay-serial-dilution-table-wrap">
+          <table class="assay-serial-dilution-table ${className}">
+            <thead>
+              <tr>
+                ${headers.map((header) => `<th>${safeText(header)}</th>`).join('')}
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.map((cells) => `
+                <tr>
+                  ${cells.map((cell) => `<td>${safeText(cell)}</td>`).join('')}
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    };
+    const serialDilutionHtml = hasSerialDilutionContent
+      ? `
+        <section class="biology-notebook-linked-assay-serial-dilution">
+          <div class="biology-notebook-linked-assay-serial-dilution-head">
+            <h5>Serial Dilution</h5>
+            ${Number.isFinite(serialDilutionSummary?.volumePerWellUl) && serialDilutionSummary.volumePerWellUl > 0
+              ? `<span class="small-note">${safeText(`Volume per well: ${serialDilutionSummary.volumePerWellUl} uL`)}</span>`
+              : ''}
+          </div>
+          ${(Array.isArray(serialDilutionSummary.feedbackMessages) ? serialDilutionSummary.feedbackMessages : []).map((item) => `
+            <p class="small-note ${item?.type === 'error' ? 'assay-serial-dilution-error' : 'assay-serial-dilution-note'}">${safeText(String(item?.text || ''))}</p>
+          `).join('')}
+          ${Array.isArray(serialDilutionSummary.initialDilutionRows) && serialDilutionSummary.initialDilutionRows.length
+            ? `
+              <div class="biology-notebook-linked-assay-serial-dilution-block">
+                <p class="small-note">Initial dilution</p>
+                ${renderSerialDilutionTable(
+                  ['Sample', 'Stock Vol.', 'Buffer Vol.'],
+                  serialDilutionSummary.initialDilutionRows.map((row) => [
+                    row?.sample || '',
+                    row?.stockVolume || '',
+                    row?.bufferVolume || ''
+                  ]),
+                  'assay-serial-dilution-table-compact'
+                )}
+              </div>
+            `
+            : ''}
+          ${Array.isArray(serialDilutionSummary.followingDilutionRows) && serialDilutionSummary.followingDilutionRows.length
+            ? `
+              <div class="biology-notebook-linked-assay-serial-dilution-block">
+                <p class="small-note">Following dilution</p>
+                ${renderSerialDilutionTable(
+                  ['Step', 'Target Conc.', 'From Previous Well', 'Buffer Vol.', 'Transfer / Discard', 'Final Vol.'],
+                  serialDilutionSummary.followingDilutionRows.map((row) => [
+                    row?.step || '',
+                    row?.targetConcentration || '',
+                    row?.fromPreviousWell || '',
+                    row?.bufferVolume || '',
+                    row?.transferOrDiscard || '',
+                    row?.finalVolume || ''
+                  ])
+                )}
+              </div>
+            `
+            : serialDilutionSummary?.hasValidPlans
+              ? '<p class="small-note">No downstream dilution steps are needed for this assay.</p>'
+              : ''}
+        </section>
       `
       : '';
 
@@ -774,6 +1426,7 @@ export function initLabNotebook({
           <div class="biology-notebook-linked-assay-grid">
             ${plateHtml}
           </div>
+          ${serialDilutionHtml}
           ${plotHtml}
         </div>
       </article>
@@ -860,16 +1513,29 @@ export function initLabNotebook({
     if (!editingEntryId) {
       return;
     }
-    exportEntryPdf(editingEntryId);
+    void exportEntryPdf(editingEntryId);
   }
 
-  function exportEntryPdf(entryId) {
+  async function exportEntryPdf(entryId) {
     const entry = state.notebookEntries.find((item) => item.id === entryId && matchesNotebookType(item));
     if (!entry) {
       return;
     }
     const protocol = resolveEntryProtocol(entry);
-    exportNotebookEntryPdf({ entry, protocol });
+    const linkedGel = findLatestLinkedRecord(state.gelAnalyses, entry.id);
+    const linkedAssay = findLatestLinkedRecord(state.assays, entry.id);
+    const [linkedGelPreviewImage, linkedAssayPlotImage] = await Promise.all([
+      linkedGel ? resolveLinkedGelPreviewImage(linkedGel) : Promise.resolve(''),
+      linkedAssay ? resolveLinkedAssayPlotImage(linkedAssay) : Promise.resolve('')
+    ]);
+    await exportNotebookEntryPdf({
+      entry,
+      protocol,
+      linkedGel,
+      linkedGelPreviewImage,
+      linkedAssay,
+      linkedAssayPlotImage
+    });
   }
 
   function editEntry(entryId) {
@@ -879,6 +1545,7 @@ export function initLabNotebook({
     }
 
     editingEntryId = entry.id;
+    clearProtocolPageCopyDraft();
     const project = resolveEntryProject(entry);
     const protocol = resolveEntryProtocol(entry);
     const hasLiveProject = Boolean(project?.id && state.projects.some((item) => item.id === project.id));
@@ -909,23 +1576,25 @@ export function initLabNotebook({
     updatePageListStatus();
   }
 
-  function renderProtocolViewer({ project, protocol, entry, isSavedEntry }) {
+  function renderProtocolViewer({
+    project,
+    protocol,
+    entry,
+    isSavedEntry,
+    experimentNameOverride = '',
+    resultTableOverride = null,
+    preserveSelectedFiles = false
+  }) {
     notebookProtocolArea.hidden = false;
     if (notebookEmptyState) {
       notebookEmptyState.hidden = true;
     }
 
     if (notebookExperimentName) {
-      notebookExperimentName.value = resolveEntryExperimentName(entry, protocol);
+      notebookExperimentName.value = String(experimentNameOverride || '').trim() || resolveEntryExperimentName(entry, protocol);
     }
     notebookProtocolTitle.textContent = protocol.name;
     notebookProtocolMeta.textContent = buildViewerMeta(project, entry, isSavedEntry);
-    if (notebookExportBtn) {
-      notebookExportBtn.hidden = !entry;
-    }
-    if (notebookMarkExecutedBtn) {
-      notebookMarkExecutedBtn.hidden = !entry || normalizeNotebookState(entry?.notebookState) !== 'planned';
-    }
 
     const values = entry?.values || {};
     notebookSteps.innerHTML = protocol.steps.map((step, index) => {
@@ -938,9 +1607,13 @@ export function initLabNotebook({
     }).join('');
 
     notebookResult.value = entry?.result || '';
-    notebookResultFile.value = '';
+    renderResultTableEditor(resultTableOverride ?? entry?.resultTable ?? null);
+    if (!preserveSelectedFiles) {
+      notebookResultFile.value = '';
+    }
     renderLinkedPreviews(entry);
     updateSaveButtonLabel();
+    syncProtocolEditorControls(protocol, entry);
     syncViewerVisibility();
     selectionInsightsController?.refreshHost?.('biology-notebook-protocol');
   }
@@ -958,7 +1631,11 @@ export function initLabNotebook({
       const resultFiles = Array.isArray(entry.resultFiles) && entry.resultFiles.length
         ? ` Result files: ${entry.resultFiles.join(', ')}.`
         : '';
-      return `${contextLabel} notebook page. State: ${stateLabel}. Updated ${updatedAt}.${executedAt}${resultFiles}`;
+      const resultTableSummary = summarizeNotebookResultTable(entry?.resultTable);
+      const resultTable = resultTableSummary
+        ? ` Result table: ${resultTableSummary}.`
+        : '';
+      return `${contextLabel} notebook page. State: ${stateLabel}. Updated ${updatedAt}.${executedAt}${resultFiles}${resultTable}`;
     }
     if (isSavedEntry) {
       return `${contextLabel} notebook page.`;
@@ -968,21 +1645,19 @@ export function initLabNotebook({
 
   function clearViewer() {
     notebookProtocolArea.hidden = true;
+    clearProtocolPageCopyDraft();
     notebookSteps.innerHTML = '';
+    notebookSteps.hidden = false;
     notebookResult.value = '';
     notebookResultFile.value = '';
+    renderResultTableEditor(null);
     if (notebookExperimentName) {
       notebookExperimentName.value = '';
     }
     notebookProtocolTitle.textContent = '';
     notebookProtocolMeta.textContent = 'Select a notebook page or start a new one.';
-    if (notebookExportBtn) {
-      notebookExportBtn.hidden = true;
-    }
-    if (notebookMarkExecutedBtn) {
-      notebookMarkExecutedBtn.hidden = true;
-    }
     editingEntryId = null;
+    syncProtocolEditorControls(null, null);
     renderLinkedPreviews(null);
     updateSaveButtonLabel();
     syncViewerVisibility();
@@ -1006,6 +1681,7 @@ export function initLabNotebook({
     if (cancelEditBtn) {
       cancelEditBtn.hidden = !editingEntryId;
     }
+    syncProtocolEditorControls(resolveViewerProtocol(getActiveEntry()), getActiveEntry());
   }
 
   function setNotebookSaveBusy(isBusy, { clarify = false } = {}) {
@@ -1021,6 +1697,7 @@ export function initLabNotebook({
 
   function cancelEdit() {
     editingEntryId = null;
+    clearProtocolPageCopyDraft();
     updateSaveButtonLabel();
     onProtocolChange();
   }
@@ -1049,8 +1726,8 @@ export function initLabNotebook({
     persist();
     renderEntries();
 
-    const project = state.projects.find((item) => item.id === nextEntry.projectId);
-    const protocol = state.protocols.find((item) => item.id === nextEntry.protocolId);
+    const project = resolveEntryProject(nextEntry);
+    const protocol = resolveEntryProtocol(nextEntry);
     if (project && protocol) {
       renderProtocolViewer({
         project,
@@ -1265,11 +1942,11 @@ export function initLabNotebook({
       }
       const entry = getActiveEntry();
       const project = entry
-        ? resolveEntryProject(entry)
-        : (state.projects.find((item) => item.id === notebookProjectSelect.value) || null);
+        ? resolveViewerProject(entry)
+        : resolveViewerProject();
       const protocol = entry
-        ? resolveEntryProtocol(entry)
-        : (state.protocols.find((item) => item.id === notebookProtocolSelect.value) || null);
+        ? resolveViewerProtocol(entry)
+        : resolveViewerProtocol();
       if (!project || !protocol) {
         return null;
       }

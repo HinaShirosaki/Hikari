@@ -1,0 +1,26 @@
+LOCUS       .                        510 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        join(1..299,300..322,323..510)
+                     /parts="1:CaMV 35S enhancer;3:C4PPDK basal promoter"
+                     /note="hybrid promoter consisting of the cauliflower mosaic
+                     virus 35S enhancer fused to the maize C4PPDK basal promoter
+                     (Yoo et al., 2007)"
+                     /label="35SPPDK promoter"
+ORIGIN
+        1 tgagactttt caacaaaggg taatatcggg aaacctcctc ggattccatt gcccagctat
+       61 ctgtcacttc atcaaaagga cagtagaaaa ggaaggtggc acctacaaat gccatcattg
+      121 cgataaagga aaggctatcg ttcaagatgc ctctgccgac agtggtccca aagatggacc
+      181 cccacccaca aggagcatcg tggaaaaaga agacgttcca accacgtctt caaagcaagt
+      241 ggattgatgt gatatctcca ctgacgtaag ggatgacgca caatcccact atccttcgcc
+      301 ccaagcttgg gcccaagctt gggtcgcgcc ccacggatgg tataagaata aaggcattcc
+      361 gcgtgcagga ttcacccgtt cgcctctcac cttttcgctg tactctctcg ccacacacac
+      421 cccctctcca gctccgttgg agctccggac agcagcaggc gcggggcggt cacgtagtaa
+      481 gcagctctcg gctccctctc cccttgctcc
+//

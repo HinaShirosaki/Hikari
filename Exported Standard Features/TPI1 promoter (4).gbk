@@ -1,0 +1,23 @@
+LOCUS       .                        412 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..412
+                     /gene="S. cerevisiae TPI1"
+                     /note="strong constitutive promoter for yeast triose
+                     phosphate isomerase"
+                     /label="TPI1 promoter"
+ORIGIN
+        1 ccatcaggtt ggtggaagat tacccgttct aagacttttc agcttcctct attgatgtta
+       61 cacctggaca ccccttttct ggcatccagt ttttaatctt cagtggcatg tgagattctc
+      121 cgaaattaat taaagcaatc acacaattct ctcggatacc acctcggttg aaactgacag
+      181 gtggtttgtt acgcatgcta atgcaaagga gcctatatac ctttggctcg gctgctgtaa
+      241 cagggaatat aaagggcagc ataatttagg agtttagtga acttgcaaca tttactattt
+      301 tcccttctta cgtaaatatt tttcttttta attctaaatc aatctttttc aattttttgt
+      361 ttgtattctt ttcttgctta aatctataac tacaaaaaac acatacataa ac
+//

@@ -1,0 +1,16 @@
+LOCUS       .                        103 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..103
+                     /gene="bla"
+                     /label="AmpR promoter"
+ORIGIN
+        1 cgcggaaccc ctatttgttt atttttctaa atacattcaa atatgtatcc gctcatgaga
+       61 caataaccct gataaatgct tcaataatat tgaaaaagga aga
+//

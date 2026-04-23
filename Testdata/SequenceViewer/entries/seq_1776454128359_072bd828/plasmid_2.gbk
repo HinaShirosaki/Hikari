@@ -1,4 +1,4 @@
-LOCUS       plasmid                5438 bp    DNA     circular SYN 17-APR-2026
+LOCUS       plasmid                5438 bp    DNA     circular SYN 21-APR-2026
 DEFINITION  plasmid
 ACCESSION   .
 VERSION     .
@@ -47,6 +47,22 @@ FEATURES             Location/Qualifiers
      cds             3188..3253
                      /label="pel1 (fragment)"
                      /note="pLannotate"
+     promoter        3074..3104
+                     /label="lac promoter"
+                     /note="Matched exported promoter lac promoter with the
+                     nearest ORF 43 bp downstream."
+     orf             3148..3171
+                     /label="Nearest ORF (7 aa)"
+                     /note="24 bp ORF identified from ATG to TAG."
+     backbone        join(1..3147,3172..5438)
+                     /label="Backbone (plasmid)"
+                     /note="plasmid saved vector recognized with 5,414 bp exact
+                     backbone coverage (100.0% of host, forward orientation;
+                     Gibson/HR view)."
+     insert          3148..3171
+                     /label="Insert (plasmid)"
+                     /note="24 bp insert sequence (ATG to stop codon) not
+                     explained by stored vector plasmid."
 ORIGIN
         1 gcacttttcg gggaaatgtg cgcggaaccc ctatttgttt atttttctaa atacattcaa
        61 atatgtatcc gctcatgaga caataaccct gataaatgct tcaataatat tgaaaaagga

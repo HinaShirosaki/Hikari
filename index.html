@@ -132,17 +132,25 @@
           </div>
           <label class="dashboard-field dashboard-field-grow">
             Bench Note
-            <textarea
-              id="dashboard-quick-log-input"
-              rows="6"
-              placeholder="Summarize what happened, what is incubating, or what you want the assistant to help with next."
-            ></textarea>
+            <div class="home-quick-log-input-wrap">
+              <textarea
+                id="dashboard-quick-log-input"
+                rows="6"
+                placeholder="Summarize what happened, what is incubating, or what you want the assistant to help with next."
+              ></textarea>
+              <button
+                type="button"
+                id="dashboard-quick-log-agent-btn"
+                class="home-quick-log-send-btn"
+                aria-label="Send to Assistant"
+              >
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
+                  <path d="M12 17V7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path>
+                  <path d="M6.5 12.5 12 7l5.5 5.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
+              </button>
+            </div>
           </label>
-          <div class="dashboard-inline-row">
-            <button type="button" id="dashboard-quick-log-agent-btn" class="primary-btn">Send to Assistant</button>
-            <button type="button" id="dashboard-quick-log-notebook-btn" class="ghost-btn">Open Notebook</button>
-            <button type="button" id="dashboard-quick-log-clear-btn" class="ghost-btn">Clear</button>
-          </div>
         </section>
 
         <section class="home-tile home-tile-notebook-pages" aria-labelledby="dashboard-notebook-pages-heading">
@@ -559,6 +567,9 @@
                 <p id="biology-notebook-protocol-meta" class="small-note">Select a notebook page or start a new one.</p>
               </div>
               <div class="biology-notebook-viewer-actions">
+                <button id="biology-notebook-edit-protocol-btn" class="ghost-btn" type="button" hidden>Edit Page Copy</button>
+                <button id="biology-notebook-apply-protocol-edit-btn" class="primary-btn" type="button" hidden>Apply Page Edit</button>
+                <button id="biology-notebook-cancel-protocol-edit-btn" class="ghost-btn" type="button" hidden>Cancel Page Edit</button>
                 <button id="biology-notebook-mark-executed-btn" class="primary-btn" type="button" hidden>Executed</button>
                 <button id="biology-notebook-export-btn" class="ghost-btn" type="button" hidden>Export PDF</button>
               </div>
@@ -570,6 +581,18 @@
                 <span class="biology-notebook-viewer-section-chevron" aria-hidden="true"></span>
               </summary>
               <div class="biology-notebook-viewer-section-body">
+                <div id="biology-notebook-protocol-editor" class="biology-notebook-protocol-editor" hidden>
+                  <p class="small-note biology-notebook-protocol-editor-note">Edits here only change this notebook page copy. The original protocol stays unchanged.</p>
+                  <label>
+                    Page Protocol Name
+                    <input id="biology-notebook-page-protocol-name" type="text" placeholder="Rename this page copy" />
+                  </label>
+                  <label>
+                    Page Protocol Steps
+                    <textarea id="biology-notebook-page-protocol-steps" rows="8" placeholder="• Add buffer [Volume]&#10;• Incubate for [Time]"></textarea>
+                  </label>
+                  <p class="small-note biology-notebook-protocol-editor-note">Use one step per line. Keep fillable values as `[Volume]`, `[Buffer]`, `[Time]`, and so on.</p>
+                </div>
                 <div id="biology-notebook-steps" class="notebook-steps"></div>
               </div>
             </details>
@@ -582,9 +605,19 @@
                 <div class="biology-notebook-linked-toolbar">
                   <button id="biology-notebook-add-gel-btn" class="ghost-btn" type="button">Add Gel</button>
                   <button id="biology-notebook-add-assay-btn" class="ghost-btn" type="button">Add Assay</button>
+                  <button id="biology-notebook-add-table-btn" class="ghost-btn" type="button">Add Table</button>
+                  <button id="biology-notebook-add-table-row-btn" class="ghost-btn" type="button" hidden>Add Row</button>
+                  <button id="biology-notebook-add-table-column-btn" class="ghost-btn" type="button" hidden>Add Column</button>
+                  <button id="biology-notebook-remove-table-btn" class="ghost-btn" type="button" hidden>Remove Table</button>
                 </div>
                 <div id="biology-notebook-linked-results" class="biology-notebook-linked-results">
                   <p class="small-note">Linked gel, assay, and plot previews will appear here.</p>
+                </div>
+                <div id="biology-notebook-result-table-wrap" class="biology-notebook-result-table-wrap" hidden>
+                  <div class="biology-notebook-result-table-head">
+                    <p id="biology-notebook-result-table-status" class="small-note">Add a table to capture structured notebook results.</p>
+                  </div>
+                  <div id="biology-notebook-result-table" class="biology-notebook-result-table" aria-label="Notebook result table"></div>
                 </div>
                 <label>
                   Experiment Results File / Notes
@@ -633,10 +666,22 @@
               Type
               <select id="inventory-add-container-type">
                 <option value="box81">81-well cube box</option>
+                <option value="customGrid">Custom grid box</option>
                 <option value="plate96">96-well plate</option>
                 <option value="single">Single container (tube/bottle)</option>
               </select>
             </label>
+            <div id="inventory-add-container-grid-fields" class="inventory-custom-grid-fields" hidden>
+              <label>
+                Rows
+                <input id="inventory-add-container-rows" type="number" min="1" max="24" step="1" value="9" />
+              </label>
+              <label>
+                Columns
+                <input id="inventory-add-container-cols" type="number" min="1" max="24" step="1" value="9" />
+              </label>
+              <p class="small-note inventory-custom-grid-note">Custom grid boxes reuse the same visual style as the 81-well box.</p>
+            </div>
             <div class="form-actions">
               <button type="submit" class="primary-btn">Save Container</button>
               <button id="inventory-add-container-cancel" type="button" class="ghost-btn">Cancel</button>
@@ -1747,6 +1792,7 @@
 
           <div id="papers-library-context-menu" class="papers-context-menu" hidden>
             <button type="button" id="papers-context-new-folder" class="papers-context-item">New Folder</button>
+            <button type="button" id="papers-context-rename-folder" class="papers-context-item" hidden>Rename Folder</button>
             <button type="button" id="papers-context-delete-folder" class="papers-context-item papers-context-item-danger" hidden>Delete Folder</button>
           </div>
         </aside>
@@ -2686,6 +2732,17 @@
                   </div>
                   <div id="sequence-viewer-protein-builder-sequence" class="sequence-block">-</div>
                 </section>
+
+                <section class="sequence-viewer-protein-builder-panel sequence-viewer-protein-builder-sequence-panel">
+                  <div class="plannotate-card-head">
+                    <h4>DNA Build</h4>
+                    <button id="sequence-viewer-protein-builder-build-dna-btn" type="button" class="ghost-btn">Build DNA Sequence</button>
+                  </div>
+                  <span id="sequence-viewer-protein-builder-dna-meta" class="small-note">DNA build not run yet.</span>
+                  <div id="sequence-viewer-protein-builder-dna-sequence" class="sequence-block">
+                    <p class="small-note">Click Build DNA Sequence to generate a coding sequence for the current chain.</p>
+                  </div>
+                </section>
               </div>
             </div>
           </div>
@@ -2871,6 +2928,51 @@
               <button id="sequence-viewer-feature-editor-cancel" type="button" class="ghost-btn">Cancel</button>
             </div>
           </form>
+        </div>
+
+        <div id="sequence-viewer-backbone-dialog-overlay" class="sequence-viewer-backbone-dialog-overlay" hidden>
+          <div class="sequence-viewer-backbone-dialog" role="dialog" aria-modal="true" aria-labelledby="sequence-viewer-backbone-dialog-title">
+            <div class="sequence-viewer-backbone-dialog-head">
+              <div>
+                <h4 id="sequence-viewer-backbone-dialog-title">Backbone / Insert Candidates</h4>
+                <p id="sequence-viewer-backbone-dialog-subtitle" class="small-note">Review promoter and ORF candidates before applying a backbone/insert interpretation.</p>
+              </div>
+              <button id="sequence-viewer-backbone-dialog-close-btn" type="button" class="ghost-btn" aria-label="Close backbone recognition dialog">Close</button>
+            </div>
+
+            <div class="sequence-viewer-backbone-dialog-mode-switch" role="tablist" aria-label="Recognition mode">
+              <button id="sequence-viewer-backbone-dialog-mode-gibson-btn" class="sequence-viewer-mode-btn sequence-viewer-mode-btn-active" type="button">Gibson / HR</button>
+              <button id="sequence-viewer-backbone-dialog-mode-restriction-btn" class="sequence-viewer-mode-btn" type="button">Restriction</button>
+            </div>
+
+            <div class="sequence-viewer-backbone-dialog-grid">
+              <section class="plannotate-result-card sequence-viewer-backbone-dialog-panel">
+                <div class="plannotate-card-head">
+                  <h4>Candidate List</h4>
+                </div>
+                <div id="sequence-viewer-backbone-dialog-candidates" class="sequence-viewer-backbone-dialog-candidates">
+                  <p class="small-note">No candidates available.</p>
+                </div>
+              </section>
+
+              <section class="plannotate-result-card sequence-viewer-backbone-dialog-panel sequence-viewer-backbone-dialog-preview-panel">
+                <div class="plannotate-card-head">
+                  <h4>Preview</h4>
+                </div>
+                <div id="sequence-viewer-backbone-dialog-summary" class="calc-output sequence-viewer-backbone-dialog-summary">
+                  <p class="small-note">Select a candidate to preview the plasmid map.</p>
+                </div>
+                <div id="sequence-viewer-backbone-dialog-preview" class="sequence-viewer-backbone-dialog-preview">
+                  <p class="small-note">Circular plasmid preview unavailable.</p>
+                </div>
+              </section>
+            </div>
+
+            <div class="form-actions">
+              <button id="sequence-viewer-backbone-dialog-apply-btn" type="button" class="primary-btn">Apply Selection</button>
+              <button id="sequence-viewer-backbone-dialog-cancel-btn" type="button" class="ghost-btn">Cancel</button>
+            </div>
+          </div>
         </div>
       </div>
 

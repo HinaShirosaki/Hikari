@@ -1,4 +1,4 @@
-import { clarifyNotebookNote, showTransientNotice } from './notebook-note-tools.js';
+import { buildClarifiedNotebookNote, clarifyNotebookNote, showTransientNotice } from './notebook-note-tools.js';
 
 // Home dashboard controller.
 //
@@ -6,7 +6,7 @@ import { clarifyNotebookNote, showTransientNotice } from './notebook-note-tools.
 // - summarize urgent bench work for the home screen
 // - surface cell-passage reminders, overnight incubation locations, and workflow progress
 // - provide lightweight lab timers with reusable named countdowns
-// - bridge quick-log notes into the assistant or notebook workspace
+// - bridge quick-log notes into the assistant workspace
 export function initHomeDashboard({
   state,
   persist,
@@ -43,8 +43,6 @@ export function initHomeDashboard({
   const quickLogInput = document.getElementById('dashboard-quick-log-input');
   const quickLogStatus = document.getElementById('dashboard-quick-log-status');
   const quickLogAgentBtn = document.getElementById('dashboard-quick-log-agent-btn');
-  const quickLogNotebookBtn = document.getElementById('dashboard-quick-log-notebook-btn');
-  const quickLogClearBtn = document.getElementById('dashboard-quick-log-clear-btn');
 
   const notebookPagesStatus = document.getElementById('dashboard-notebook-pages-status');
   const notebookPageList = document.getElementById('dashboard-notebook-page-list');
@@ -88,8 +86,6 @@ export function initHomeDashboard({
     || !quickLogInput
     || !quickLogStatus
     || !quickLogAgentBtn
-    || !quickLogNotebookBtn
-    || !quickLogClearBtn
     || !notebookPagesStatus
     || !notebookPageList
     || !notebookNoteDialogOverlay
@@ -134,11 +130,6 @@ export function initHomeDashboard({
   quickLogInput.addEventListener('input', onQuickLogInput);
   quickLogInput.addEventListener('keydown', onQuickLogKeydown);
   quickLogAgentBtn.addEventListener('click', onQuickLogSendToAgent);
-  quickLogNotebookBtn.addEventListener('click', () => {
-    onOpenNotebook();
-    setQuickLogStatus('Notebook opened.');
-  });
-  quickLogClearBtn.addEventListener('click', onQuickLogClear);
   notebookPageList.addEventListener('click', onNotebookPageListClick);
   notebookNoteDialogOverlay.addEventListener('click', onNotebookNoteDialogOverlayClick);
   notebookNoteDialogForm.addEventListener('submit', onNotebookNoteDialogSubmit);
@@ -752,7 +743,8 @@ export function initHomeDashboard({
         llm: state.settings?.llm,
         text: originalNote
       });
-      if (!appendNoteToNotebookEntry(entryId, clarifiedNote)) {
+      const noteToSave = buildClarifiedNotebookNote(originalNote, clarifiedNote);
+      if (!appendNoteToNotebookEntry(entryId, noteToSave)) {
         throw new Error('Unable to save the clarified note.');
       }
       render();
@@ -1451,7 +1443,9 @@ export function initHomeDashboard({
 
   function renderQuickLogWidget() {
     syncQuickLogInput();
-    if (String(state.settings.dashboard.quickLogDraft || '').trim()) {
+    const hasDraft = Boolean(String(state.settings.dashboard.quickLogDraft || '').trim());
+    quickLogAgentBtn.disabled = !hasDraft;
+    if (hasDraft) {
       setQuickLogStatus('Draft saved locally. Press Command/Ctrl+Enter to send it to the Assistant.');
       return;
     }
@@ -1654,6 +1648,7 @@ export function initHomeDashboard({
     ensureDashboardState();
     state.settings.dashboard.quickLogDraft = quickLogInput.value;
     persist();
+    quickLogAgentBtn.disabled = !quickLogInput.value.trim();
     if (quickLogInput.value.trim()) {
       setQuickLogStatus('Draft saved locally. Press Command/Ctrl+Enter to send it to the Assistant.');
       return;
@@ -1683,14 +1678,8 @@ export function initHomeDashboard({
     state.settings.dashboard.quickLogDraft = '';
     quickLogInput.value = '';
     persist();
+    quickLogAgentBtn.disabled = true;
     setQuickLogStatus('Sent to Assistant.');
-  }
-
-  function onQuickLogClear() {
-    state.settings.dashboard.quickLogDraft = '';
-    quickLogInput.value = '';
-    persist();
-    setQuickLogStatus('');
   }
 
   function onWorkflowSelected() {

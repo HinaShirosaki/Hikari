@@ -1,0 +1,22 @@
+LOCUS       .                        410 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..410
+                     /note="promoter from the human thyroxine-binding globulin
+                     gene (Yan et al., 2012)"
+                     /label="TBG promoter"
+ORIGIN
+        1 tgcatgtata atttctacag aacctattag aaaggatcac ccagcctctg cttttgtaca
+       61 actttccctt aaaaaactgc caattccact gctgtttggc ccaatagtga gaactttttc
+      121 ctgctgcctc ttggtgcttt tgcctatggc ccctattctg cctgctgaag acactcttgc
+      181 cagcatggac ttaaacccct ccagctctga caatcctctt tctcttttgt tttacatgaa
+      241 gggtctggca gccaaagcaa tcactcaaag ttcaaacctt atcatttttt gctttgttcc
+      301 tcttggcctt ggttttgtac atcagctttg aaaataccat cccagggtta atgctggggt
+      361 taatttataa ctaagagtgc tctagttttg caatacagga catgctataa
+//

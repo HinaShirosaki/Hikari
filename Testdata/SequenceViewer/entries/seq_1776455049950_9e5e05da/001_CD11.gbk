@@ -1,4 +1,4 @@
-LOCUS       001_CD11               5658 bp    DNA     circular SYN 17-APR-2026
+LOCUS       001_CD11               5658 bp    DNA     circular SYN 21-APR-2026
 DEFINITION  001_CD11
 ACCESSION   .
 VERSION     .
@@ -65,6 +65,30 @@ FEATURES             Location/Qualifiers
      cds             4007..4024
                      /label="9xHis (fragment)"
                      /note="pLannotate"
+     promoter        3485..3503
+                     /label="T7 promoter"
+                     /note="Matched exported promoter T7 promoter with the
+                     nearest ORF 68 bp downstream."
+     orf             3572..4000
+                     /label="Nearest ORF (142 aa)"
+                     /note="429 bp ORF identified from ATG to TAA."
+     backbone        join(1..3569,4007..5658)
+                     /label="Backbone (004_CD22)"
+                     /note="004_CD22 saved vector recognized with 5,221 bp exact
+                     backbone coverage (99.8% of host, forward orientation;
+                     restriction-site view)."
+     insert          3570..4006
+                     /label="Insert (004_CD22)"
+                     /note="437 bp insert sequence (5' NcoI / 3' XhoI) selected
+                     relative to backbone candidate 004_CD22."
+     restriction_site3570..3575
+                     /label="NcoI (5')"
+                     /note="Nearest 5' restriction site NcoI used to bound the
+                     insert."
+     restriction_site4001..4006
+                     /label="XhoI (3')"
+                     /note="Nearest 3' restriction site XhoI used to bound the
+                     insert."
 ORIGIN
         1 ttgagatcct ttttttctgc gcgtaatctg ctgcttgcaa acaaaaaaac caccgctacc
        61 agcggtggtt tgtttgccgg atcaagagct accaactctt tttccgaagg taactggctt

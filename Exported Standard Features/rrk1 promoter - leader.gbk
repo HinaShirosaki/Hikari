@@ -1,0 +1,22 @@
+LOCUS       .                        357 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..357
+                     /note="promoter and leader RNA for the Schizosaccharomyces
+                     pombe rrk1 gene encoding the K-RNA component of RNase P
+                     (Jacobs et al., 2014)"
+                     /label="rrk1 promoter/leader"
+ORIGIN
+        1 tttgcttatg ttggtggtag ttggcatgcg tagactgatg actagtcagc aaggagcgta
+       61 gaacagtcac actcgttata tatgtgcttc caagaaaact caagaattta ccattagcaa
+      121 acactttttt gaaatgttag acatttaaat gacgaaggca tatagaagct ttgaataggt
+      181 gttgtaaagt gttgatttat gtgacgctga gggtgcgcat gaaaggaatg ttgggtcacg
+      241 attattaaac agtttgctag cttggacact tgagtattgg aagttgttga attctaaaaa
+      301 actttcagtt gatttgaata gttgctgttg ccaaaaaaca taacctgtac cgaagaa
+//

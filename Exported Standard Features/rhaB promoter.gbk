@@ -1,0 +1,19 @@
+LOCUS       .                        119 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..119
+                     /note="promoter of the E. coli rhaBAD operon, conferring
+                     tight induction with L-rhamnose and repression with
+                     D-glucose in the presence of RhaR and RhaS (Giacalone et
+                     al., 2006)"
+                     /label="rhaB promoter"
+ORIGIN
+        1 caccacaatt cagcaaattg tgaacatcat cacgttcatc tttccctggt tgccaatggc
+       61 ccattttcct gtcagtaacg agaaggtcgc gaattcaggc gctttttaga ctggtcgta
+//

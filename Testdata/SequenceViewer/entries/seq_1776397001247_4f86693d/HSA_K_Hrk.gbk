@@ -1,4 +1,4 @@
-LOCUS       HSA_K_Hrk              5634 bp    DNA     circular SYN 16-APR-2026
+LOCUS       HSA_K_Hrk              5634 bp    DNA     circular SYN 21-APR-2026
 DEFINITION  HSA_K_Hrk
 ACCESSION   .
 VERSION     .
@@ -38,6 +38,38 @@ FEATURES             Location/Qualifiers
                      /label="misc_feature_"
      misc_feature_   join(5607..5634,1..7)
                      /label="misc_feature_"
+     promoter        5544..5562
+                     /label="T7 promoter"
+                     /note="Matched exported promoter T7 promoter with the
+                     nearest ORF 291 bp downstream."
+     orf             220..249
+                     /label="Nearest ORF (10 aa)"
+                     /note="30 bp ORF identified from ATG to TGA."
+     backbone        join(1..219,250..5634)
+                     /label="Backbone (CD19)"
+                     /note="CD19 saved vector recognized with 5,604 bp exact
+                     backbone coverage (93.4% of host, forward orientation;
+                     Gibson/HR view)."
+     insert          220..249
+                     /label="Insert (CD19)"
+                     /note="30 bp insert sequence (ATG to stop codon) not
+                     explained by stored vector CD19."
+     promoter        5544..5562
+                     /label="T7 promoter"
+                     /note="Matched exported promoter T7 promoter with the
+                     nearest ORF 72 bp downstream."
+     orf             1..405
+                     /label="Nearest ORF (134 aa)"
+                     /note="405 bp ORF identified from ATG to TAA."
+     backbone        406..5634
+                     /label="Backbone (CD19)"
+                     /note="CD19 saved vector recognized with 5,229 bp exact
+                     backbone coverage (93.4% of host, forward orientation;
+                     Gibson/HR view)."
+     insert          1..405
+                     /label="Insert (CD19)"
+                     /note="405 bp insert sequence (ATG to stop codon) selected
+                     relative to backbone candidate CD19."
 ORIGIN
         1 aagtccaact tgtggagagc ggtggtggtc tggtgcaggc cggcgatagt ttgcgcctga
        61 gttgcgccgc gagcgggacg aagccgacag cttcaattat gggatggttt cgacaagctc

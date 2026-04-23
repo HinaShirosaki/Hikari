@@ -1,0 +1,18 @@
+LOCUS       .                        215 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..215
+                     /note="human H1 RNA promoter"
+                     /label="H1 promoter"
+ORIGIN
+        1 gaacgctgac gtcatcaacc cgctccaagg aatcgcgggc ccagtgtcac taggcgggaa
+       61 cacccagcgc gcgtgcgccc tggcaggaag atggctgtga gggacagggg agtggcgccc
+      121 tgcaatattt gcatgtcgct atgtgttctg ggaaatcacc ataaacgtga aatgtctttg
+      181 gatttgggaa tcttataagt tctgtatgag accac
+//

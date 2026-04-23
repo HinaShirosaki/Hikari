@@ -1,0 +1,15 @@
+LOCUS       .                         48 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..48
+                     /note="synthetic bacterial promoter&nbsp;"
+                     /label="EM7 promoter"
+ORIGIN
+        1 gttgacaatt aatcatcggc atagtatatc ggcatagtat aatacgac
+//

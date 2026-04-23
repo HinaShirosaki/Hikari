@@ -403,6 +403,32 @@ ORIGIN
         assert.equal(result.match?.variants?.restriction?.upstreamSite?.name, 'NdeI');
         assert.equal(result.match?.variants?.restriction?.downstreamSite?.name, 'XhoI');
         assert.equal(JSON.stringify(result.match?.variants?.restriction?.insertSegments), JSON.stringify([{ start: promoterLength, end: promoterLength + restrictionInsert.length }]));
+        assert.equal(Array.isArray(result.match?.candidateSelections), true);
+        assert.equal(result.match?.candidateSelections?.[0]?.promoter?.name, 'T7 promoter');
+        assert.equal(result.match?.candidateSelections?.[0]?.variants?.gibson?.insertSequence, gibsonInsert);
+      } finally {
+        await fsPromises.rm(storageRoot, { recursive: true, force: true });
+      }
+    });
+
+    test('sequence library helper can recognize promoter-aligned backbone candidates without a stored vector match', async () => {
+      const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'sequence-library-promoter-only-backbone-'));
+      try {
+        const promoter = 'TAATACGACTCACTATAGG';
+        const upstreamSite = 'CATATG';
+        const downstreamSite = 'CTCGAG';
+        const suffix = 'GCGTACCGGATCCGTTAAACCGGATCA';
+        const querySequence = `${promoter}${upstreamSite}AAACCCGGGTAA${downstreamSite}${suffix}`;
+
+        const result = await sequenceLibrary.recognizeSequenceBackbone({ storagePath: storageRoot, sequence: querySequence });
+        assert.equal(result.match?.recognitionSource, 'promoter_alignment');
+        assert.equal(result.match?.hostVectorName, 'Promoter-aligned backbone');
+        assert.equal(result.match?.promoter?.name, 'T7 promoter');
+        assert.equal(result.match?.variants?.gibson?.insertSequence, 'ATGAAACCCGGGTAA');
+        assert.equal(result.match?.variants?.restriction?.upstreamSite?.name, 'NdeI');
+        assert.equal(result.match?.variants?.restriction?.downstreamSite?.name, 'XhoI');
+        assert.equal(Array.isArray(result.match?.candidateSelections), true);
+        assert.equal(result.match?.candidateSelections?.length > 0, true);
       } finally {
         await fsPromises.rm(storageRoot, { recursive: true, force: true });
       }

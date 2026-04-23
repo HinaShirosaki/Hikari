@@ -140,6 +140,8 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
       notebookEntryId: assay.notebookEntryId,
       notebookEntryProtocolName: assay.notebookEntryProtocolName,
       notebookEntryType: assay.notebookEntryType,
+      serialDilution: assay.serialDilution,
+      serialDilutionSummary: assay.serialDilutionSummary,
       wellLayout: assay.wellLayout,
       updatedAt: assay.updatedAt
     };
@@ -691,6 +693,8 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
       notebookEntryId: elements.assayNotebookEntryInput?.value || '',
       notebookEntryProtocolName: notebookEntry?.protocolName || '',
       notebookEntryType: notebookEntry?.notebookType || '',
+      serialDilution: layoutManager.getSerialDilutionSnapshot(),
+      serialDilutionSummary: layoutManager.getSerialDilutionSummaryData(),
       wellLayout: normalizeLayout(runtime.currentLayout, plateDef),
       resultValues: layoutManager.filterMappedResults(normalizeResults(runtime.currentResults, plateDef)),
       updatedAt: new Date().toISOString()
@@ -731,6 +735,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     runtime.currentResults = {};
     runtime.resultPasteAnchor = { rowIndex: 0, columnIndex: 0 };
     runtime.axisTemplateValues = { sampleValues: [], concentrationValues: [] };
+    layoutManager.resetSerialDilutionState();
     if (elements.assayAnalysisMethodInput) {
       elements.assayAnalysisMethodInput.value = 'grouped_summary';
     }
@@ -788,6 +793,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     elements.assaySampleAxisInput.value = assay.sampleAxis === 'column' ? 'column' : 'row';
     const def = layoutManager.getCurrentDefinition();
     const axisValues = layoutManager.restoreAssayLayoutState(assay, def);
+    layoutManager.restoreSerialDilutionSnapshot(assay.serialDilution || null);
     runtime.activeResultsAssayId = assay.id;
     layoutManager.syncAxisDisplay();
     layoutManager.renderPlateDefinition();

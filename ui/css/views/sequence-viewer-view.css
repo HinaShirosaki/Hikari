@@ -316,20 +316,29 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   border: 1px solid var(--line);
   background: var(--surface);
   padding: 12px;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 10px 16px;
+  display: grid;
+  grid-template-columns: minmax(var(--shared-left-rail-min), var(--shared-left-rail-width)) minmax(0, 1fr) auto;
+  align-items: end;
+  row-gap: 10px;
+  column-gap: var(--left-rail-main-gap, 24px);
 }
 
 .sequence-viewer-protein-builder-toolbar-copy {
+  grid-column: 2;
   display: grid;
   gap: 4px;
   max-width: 720px;
 }
 
+.sequence-viewer-protein-builder-toolbar-copy h2 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--strong);
+}
+
 .sequence-viewer-protein-builder-toolbar-actions {
+  grid-column: 3;
+  justify-self: end;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -629,29 +638,145 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   word-break: break-all;
 }
 
+.sequence-viewer-protein-builder-dna-notes {
+  margin-top: 10px;
+}
+
 .sequence-viewer-detail-workspace {
   display: grid;
   gap: 12px;
 }
 
+.sequence-viewer-backbone-dialog-overlay,
 .sequence-viewer-alignment-workspace {
   position: fixed;
   inset: 0;
   z-index: 2540;
   background: rgba(18, 34, 55, 0.24);
   display: grid;
-  place-items: center;
-  padding: 18px;
+  justify-items: center;
+  align-items: start;
+  padding: max(72px, env(safe-area-inset-top, 0px)) 18px 18px;
   overflow: auto;
 }
 
+.sequence-viewer-backbone-dialog-overlay[hidden],
 .sequence-viewer-alignment-workspace[hidden] {
   display: none !important;
 }
 
+.sequence-viewer-backbone-dialog {
+  width: min(1180px, 100%);
+  max-height: calc(100svh - 90px);
+  overflow: auto;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--surface-elevated);
+  box-shadow: 0 28px 70px rgba(18, 34, 55, 0.22);
+  padding: 18px;
+  display: grid;
+  gap: 14px;
+}
+
+.sequence-viewer-backbone-dialog-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sequence-viewer-backbone-dialog-head h4,
+.sequence-viewer-backbone-dialog-head p {
+  margin: 0;
+}
+
+.sequence-viewer-backbone-dialog-mode-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sequence-viewer-backbone-dialog-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
+  align-items: start;
+}
+
+.sequence-viewer-backbone-dialog-panel {
+  margin: 0;
+}
+
+.sequence-viewer-backbone-dialog-preview-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.sequence-viewer-backbone-dialog-candidates {
+  display: grid;
+  gap: 8px;
+  max-height: min(62vh, 720px);
+  overflow: auto;
+}
+
+.sequence-viewer-backbone-dialog-candidate {
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--line-soft);
+  background: var(--surface-subtle);
+  border-radius: 10px;
+  padding: 11px 12px;
+  display: grid;
+  gap: 5px;
+}
+
+.sequence-viewer-backbone-dialog-candidate-active {
+  border-color: rgba(173, 47, 47, 0.3);
+  box-shadow: inset 0 0 0 1px rgba(173, 47, 47, 0.18);
+  background: rgba(173, 47, 47, 0.07);
+}
+
+.sequence-viewer-backbone-dialog-candidate-name {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--strong);
+}
+
+.sequence-viewer-backbone-dialog-candidate-meta,
+.sequence-viewer-backbone-dialog-candidate-note {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.sequence-viewer-backbone-dialog-summary {
+  display: grid;
+  gap: 6px;
+}
+
+.sequence-viewer-backbone-dialog-summary p {
+  margin: 0;
+}
+
+.sequence-viewer-backbone-dialog-preview {
+  min-height: 560px;
+  border: 1px solid var(--line-soft);
+  border-radius: 12px;
+  background: var(--surface-subtle);
+  overflow: hidden;
+}
+
+.sequence-viewer-backbone-dialog-preview .sequence-viewer-preview-frame {
+  width: 100%;
+  min-height: 560px;
+  border: 0;
+  display: block;
+  background: transparent;
+}
+
 .sequence-viewer-alignment-dialog {
   width: min(760px, 100%);
-  max-height: calc(100vh - 36px);
+  max-height: calc(100svh - 90px);
   overflow: auto;
   border-radius: 12px;
   border: 1px solid var(--line);
@@ -1490,6 +1615,7 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
     grid-template-columns: 1fr;
   }
 
+  .sequence-viewer-backbone-dialog-grid,
   .sequence-viewer-alignment-grid,
   .sequence-viewer-alignment-summary {
     grid-template-columns: 1fr;
@@ -1497,13 +1623,20 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 }
 
 @media (max-width: 640px) {
+  .sequence-viewer-backbone-dialog-overlay,
   .sequence-viewer-alignment-workspace {
-    padding: 10px;
+    padding: max(56px, env(safe-area-inset-top, 0px)) 10px 10px;
+  }
+
+  .sequence-viewer-backbone-dialog {
+    width: 100%;
+    max-height: calc(100svh - 66px);
+    padding: 12px;
   }
 
   .sequence-viewer-alignment-dialog {
     width: 100%;
-    max-height: calc(100vh - 20px);
+    max-height: calc(100svh - 66px);
     padding: 12px;
   }
 
@@ -1558,12 +1691,30 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   }
 
   .sequence-viewer-protein-builder-toolbar {
-    flex-direction: column;
+    grid-template-columns: 1fr;
     align-items: stretch;
+  }
+
+  .sequence-viewer-protein-builder-toolbar-copy,
+  .sequence-viewer-protein-builder-toolbar-actions {
+    grid-column: 1;
+  }
+
+  .sequence-viewer-protein-builder-toolbar-actions {
+    justify-self: stretch;
   }
 
   .sequence-viewer-protein-builder-block-actions {
     justify-content: center;
+  }
+
+  .sequence-viewer-backbone-dialog-candidates {
+    max-height: none;
+  }
+
+  .sequence-viewer-backbone-dialog-preview,
+  .sequence-viewer-backbone-dialog-preview .sequence-viewer-preview-frame {
+    min-height: 420px;
   }
 }
 

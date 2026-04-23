@@ -1,0 +1,17 @@
+LOCUS       .                        114 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..114
+                     /label="IL-2 promoter"
+                     /note="minimal promoter from the human interleukin-2 gene"
+                     /name="minimal IL-2 promoter"
+ORIGIN
+        1 cattttgaca cccccataat atttttccag aattaacagt ataaattgca tctcttgttc
+       61 aagagttccc tatcactctc tttaatcact actcacagta acctcaactc ctgc
+//

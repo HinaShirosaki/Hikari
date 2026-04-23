@@ -1,0 +1,22 @@
+LOCUS       .                        400 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..400
+                     /gene="S. cerevisiae TEF1"
+                     /note="promoter for EF-1α"
+                     /label="TEF1 promoter"
+ORIGIN
+        1 catagcttca aaatgtttct actccttttt tactcttcca gattttctcg gactccgcgc
+       61 atcgccgtac cacttcaaaa cacccaagca cagcatacta aatttcccct ctttcttcct
+      121 ctagggtgtc gttaattacc cgtactaaag gtttggaaaa gaaaaaagag accgcctcgt
+      181 ttctttttct tcgtcgaaaa aggcaataaa aatttttatc acgtttcttt ttcttgaaaa
+      241 tttttttttt tgattttttt ctctttcgat gacctcccat tgatatttaa gttaataaac
+      301 ggtcttcaat ttctcaagtt tcagtttcat ttttcttgtt ctattacaac tttttttact
+      361 tcttgctcat tagaaagaaa gcatagcaat ctaatctaag
+//

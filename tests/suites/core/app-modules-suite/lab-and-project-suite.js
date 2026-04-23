@@ -644,6 +644,673 @@ test('biology-notebook opens workflow-created pages from saved protocol snapshot
   assert.match(document.getElementById('biology-notebook-entry-list').innerHTML, /Ni-NTA Purification/);
 });
 
+test('biology-notebook prefers stored protocol snapshots over live protocol records for saved pages', () => {
+  const document = createMockDocument([
+    'biology-notebook-project-select',
+    'biology-notebook-protocol-search',
+    'biology-notebook-protocol-select',
+    'biology-notebook-empty-state',
+    'biology-notebook-protocol-area',
+    'biology-notebook-protocol-title',
+    'biology-notebook-protocol-meta',
+    'biology-notebook-edit-protocol-btn',
+    'biology-notebook-apply-protocol-edit-btn',
+    'biology-notebook-cancel-protocol-edit-btn',
+    'biology-notebook-export-btn',
+    'biology-notebook-mark-executed-btn',
+    'biology-notebook-page-list-status',
+    'biology-notebook-protocol-editor',
+    'biology-notebook-page-protocol-name',
+    'biology-notebook-page-protocol-steps',
+    'biology-notebook-steps',
+    'biology-notebook-result',
+    'biology-notebook-result-file',
+    'save-biology-notebook-btn',
+    'cancel-biology-notebook-edit-btn',
+    'biology-notebook-entry-list'
+  ]);
+
+  const state = {
+    projects: [
+      { id: 'p1', name: 'Atlas' }
+    ],
+    protocols: [
+      {
+        id: 'protocol-1',
+        name: 'Live Protocol Name',
+        steps: [
+          {
+            id: 'step-live',
+            text: 'Live library step.',
+            placeholders: []
+          }
+        ]
+      }
+    ],
+    notebookEntries: [
+      {
+        id: 'saved-page-1',
+        notebookType: 'biology',
+        projectId: 'p1',
+        projectName: 'Atlas',
+        protocolId: 'protocol-1',
+        protocolName: 'Stored Snapshot Name',
+        protocolSnapshot: {
+          id: 'protocol-1',
+          name: 'Stored Snapshot Name',
+          steps: [
+            {
+              id: 'step-saved',
+              text: 'Stored notebook step with {{ph:volume}}.',
+              placeholders: [
+                { id: 'volume', name: 'Volume' }
+              ]
+            }
+          ]
+        },
+        values: {
+          'step-saved:volume': '15 mL'
+        },
+        result: 'Snapshot-backed page',
+        resultFiles: [],
+        resultFileRecords: [],
+        updatedAt: '2026-04-21T00:00:00.000Z',
+        notebookState: 'executed',
+        executedAt: '2026-04-21T00:00:00.000Z'
+      }
+    ],
+    assays: [],
+    gelAnalyses: [],
+    settings: {
+      storagePath: ''
+    }
+  };
+
+  const notebookModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook.js'), {
+    document,
+    window: {
+      enanaApi: {}
+    }
+  });
+  const notebook = notebookModule.initLabNotebook({
+    state,
+    persist: () => {},
+    createId: () => 'new-entry',
+    safeText: shared.safeText,
+    onNotebookEntriesChanged: () => {}
+  });
+
+  notebook.renderProjectOptions();
+  notebook.renderProtocolOptions();
+  notebook.openEntry('saved-page-1');
+
+  assert.equal(document.getElementById('biology-notebook-protocol-title').textContent, 'Stored Snapshot Name');
+  assert.match(document.getElementById('biology-notebook-steps').innerHTML, /Stored notebook step with/);
+  assert.match(document.getElementById('biology-notebook-steps').innerHTML, /data-nb-key-ref="step-saved:volume"/);
+  assert.match(document.getElementById('biology-notebook-steps').innerHTML, />15 mL</);
+  assert.doesNotMatch(document.getElementById('biology-notebook-steps').innerHTML, /Live library step/);
+});
+
+test('biology-notebook edits only the saved page protocol copy and keeps the original protocol unchanged', () => {
+  const document = createMockDocument([
+    'biology-notebook-project-select',
+    'biology-notebook-protocol-search',
+    'biology-notebook-protocol-select',
+    'biology-notebook-empty-state',
+    'biology-notebook-protocol-area',
+    'biology-notebook-protocol-title',
+    'biology-notebook-protocol-meta',
+    'biology-notebook-edit-protocol-btn',
+    'biology-notebook-apply-protocol-edit-btn',
+    'biology-notebook-cancel-protocol-edit-btn',
+    'biology-notebook-export-btn',
+    'biology-notebook-mark-executed-btn',
+    'biology-notebook-page-list-status',
+    'biology-notebook-protocol-editor',
+    'biology-notebook-page-protocol-name',
+    'biology-notebook-page-protocol-steps',
+    'biology-notebook-steps',
+    'biology-notebook-result',
+    'biology-notebook-result-file',
+    'save-biology-notebook-btn',
+    'cancel-biology-notebook-edit-btn',
+    'biology-notebook-entry-list'
+  ]);
+
+  let persistCalls = 0;
+  let notebookChangedCalls = 0;
+  const state = {
+    projects: [
+      { id: 'p1', name: 'Atlas' }
+    ],
+    protocols: [
+      {
+        id: 'protocol-1',
+        name: 'Source Protocol',
+        steps: [
+          {
+            id: 'step-saved',
+            text: 'Add {{ph:volume}} buffer.',
+            placeholders: [
+              { id: 'volume', name: 'Volume' }
+            ]
+          }
+        ]
+      }
+    ],
+    notebookEntries: [
+      {
+        id: 'saved-page-1',
+        notebookType: 'biology',
+        projectId: 'p1',
+        projectName: 'Atlas',
+        protocolId: 'protocol-1',
+        protocolName: 'Source Protocol',
+        experimentName: 'Source Protocol',
+        protocolSnapshot: {
+          id: 'protocol-1',
+          name: 'Source Protocol',
+          steps: [
+            {
+              id: 'step-saved',
+              text: 'Add {{ph:volume}} buffer.',
+              placeholders: [
+                { id: 'volume', name: 'Volume' }
+              ]
+            }
+          ]
+        },
+        values: {
+          'step-saved:volume': '15 mL'
+        },
+        result: 'Snapshot-backed page',
+        resultFiles: [],
+        resultFileRecords: [],
+        updatedAt: '2026-04-21T00:00:00.000Z',
+        notebookState: 'executed',
+        executedAt: '2026-04-21T00:00:00.000Z'
+      }
+    ],
+    assays: [],
+    gelAnalyses: [],
+    settings: {
+      storagePath: ''
+    }
+  };
+
+  const notebookModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook.js'), {
+    document,
+    window: {
+      enanaApi: {}
+    }
+  });
+  const notebook = notebookModule.initLabNotebook({
+    state,
+    persist: () => {
+      persistCalls += 1;
+    },
+    createId: (() => {
+      let index = 0;
+      return () => `generated-${index += 1}`;
+    })(),
+    safeText: shared.safeText,
+    onNotebookEntriesChanged: () => {
+      notebookChangedCalls += 1;
+    }
+  });
+
+  notebook.renderProjectOptions();
+  notebook.renderProtocolOptions();
+  notebook.openEntry('saved-page-1');
+
+  trigger(document.getElementById('biology-notebook-edit-protocol-btn'), 'click');
+  assert.equal(document.getElementById('biology-notebook-protocol-editor').hidden, false);
+  assert.equal(document.getElementById('biology-notebook-page-protocol-name').value, 'Source Protocol');
+  assert.match(document.getElementById('biology-notebook-page-protocol-steps').value, /Add \[Volume\] buffer\./);
+
+  document.getElementById('biology-notebook-page-protocol-name').value = 'Edited Page Copy';
+  document.getElementById('biology-notebook-page-protocol-steps').value = '• Add [Sample volume] buffer.\n• Mix thoroughly.';
+  trigger(document.getElementById('biology-notebook-apply-protocol-edit-btn'), 'click');
+
+  assert.equal(state.protocols[0].name, 'Source Protocol');
+  assert.equal(state.protocols[0].steps.length, 1);
+  assert.equal(state.protocols[0].steps[0].text, 'Add {{ph:volume}} buffer.');
+
+  assert.equal(state.notebookEntries[0].protocolName, 'Edited Page Copy');
+  assert.equal(state.notebookEntries[0].experimentName, 'Edited Page Copy');
+  assert.equal(state.notebookEntries[0].protocolSnapshot.name, 'Edited Page Copy');
+  assert.equal(state.notebookEntries[0].protocolSnapshot.steps.length, 2);
+  assert.equal(state.notebookEntries[0].protocolSnapshot.steps[0].id, 'step-saved');
+  assert.equal(state.notebookEntries[0].protocolSnapshot.steps[0].placeholders[0].id, 'volume');
+  assert.equal(state.notebookEntries[0].protocolSnapshot.steps[0].placeholders[0].name, 'Sample volume');
+  assert.equal(state.notebookEntries[0].values['step-saved:volume'], '15 mL');
+  assert.match(document.getElementById('biology-notebook-steps').innerHTML, /Sample volume/);
+  assert.match(document.getElementById('biology-notebook-steps').innerHTML, /Mix thoroughly\./);
+  assert.ok(persistCalls >= 1);
+  assert.ok(notebookChangedCalls >= 1);
+});
+
+test('biology-notebook saves and reopens result tables with Tabulator', async () => {
+  const document = createMockDocument([
+    'biology-notebook-project-select',
+    'biology-notebook-protocol-search',
+    'biology-notebook-protocol-select',
+    'biology-notebook-empty-state',
+    'biology-notebook-protocol-area',
+    'biology-notebook-protocol-title',
+    'biology-notebook-protocol-meta',
+    'biology-notebook-export-btn',
+    'biology-notebook-mark-executed-btn',
+    'biology-notebook-page-list-status',
+    'biology-notebook-steps',
+    'biology-notebook-result',
+    'biology-notebook-result-file',
+    'biology-notebook-add-table-btn',
+    'biology-notebook-add-table-row-btn',
+    'biology-notebook-add-table-column-btn',
+    'biology-notebook-remove-table-btn',
+    'biology-notebook-result-table-wrap',
+    'biology-notebook-result-table',
+    'biology-notebook-result-table-status',
+    'save-biology-notebook-btn',
+    'cancel-biology-notebook-edit-btn',
+    'biology-notebook-entry-list'
+  ]);
+
+  class MockTabulator {
+    static instances = [];
+
+    constructor(host, options = {}) {
+      this.host = host;
+      this.data = Array.isArray(options.data) ? options.data.map((row) => ({ ...row })) : [];
+      this.columns = Array.isArray(options.columns) ? options.columns.map((column) => ({ ...column })) : [];
+      this.events = {};
+      MockTabulator.instances.push(this);
+    }
+
+    destroy() {
+      this.destroyed = true;
+    }
+
+    getData() {
+      return this.data.map((row) => ({ ...row }));
+    }
+
+    getColumns() {
+      return this.columns.map((column) => ({
+        getField: () => column.field,
+        getDefinition: () => ({ ...column })
+      }));
+    }
+
+    on(eventName, handler) {
+      this.events[eventName] = handler;
+    }
+  }
+
+  let persistCalls = 0;
+  const state = {
+    projects: [
+      { id: 'p1', name: 'Atlas' }
+    ],
+    protocols: [
+      {
+        id: 'pr1',
+        name: 'Expression Readout',
+        steps: [
+          { id: 's1', text: 'Capture result table.', placeholders: [] }
+        ]
+      }
+    ],
+    notebookEntries: [],
+    assays: [],
+    gelAnalyses: [],
+    settings: {
+      storagePath: ''
+    }
+  };
+
+  const notebookModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook.js'), {
+    document,
+    window: {
+      enanaApi: {},
+      Tabulator: MockTabulator
+    }
+  });
+  const notebook = notebookModule.initLabNotebook({
+    state,
+    persist: () => {
+      persistCalls += 1;
+    },
+    createId: (() => {
+      let index = 0;
+      return () => `generated-${index += 1}`;
+    })(),
+    safeText: shared.safeText,
+    onNotebookEntriesChanged: () => {}
+  });
+
+  notebook.renderProjectOptions();
+  notebook.renderProtocolOptions('pr1');
+
+  trigger(document.getElementById('biology-notebook-add-table-btn'), 'click');
+  assert.equal(document.getElementById('biology-notebook-result-table-wrap').hidden, false);
+
+  let tableInstance = MockTabulator.instances[MockTabulator.instances.length - 1];
+  const firstField = tableInstance.columns[0].field;
+  tableInstance.columns[0].title = 'Sample';
+  tableInstance.data[0][firstField] = 'A1';
+
+  trigger(document.getElementById('biology-notebook-add-table-column-btn'), 'click');
+  tableInstance = MockTabulator.instances[MockTabulator.instances.length - 1];
+  const lastField = tableInstance.columns[tableInstance.columns.length - 1].field;
+  tableInstance.columns[tableInstance.columns.length - 1].title = 'OD600';
+  tableInstance.data[0][lastField] = '0.82';
+
+  trigger(document.getElementById('biology-notebook-add-table-row-btn'), 'click');
+  tableInstance = MockTabulator.instances[MockTabulator.instances.length - 1];
+  tableInstance.data[tableInstance.data.length - 1][firstField] = 'Control';
+
+  document.getElementById('biology-notebook-result').value = 'Measured expression panel.';
+  trigger(document.getElementById('save-biology-notebook-btn'), 'click');
+  await flushAsync();
+
+  assert.equal(state.notebookEntries.length, 1);
+  assert.equal(state.notebookEntries[0].resultTable.columns.length, 4);
+  assert.equal(state.notebookEntries[0].resultTable.rows.length, 4);
+  assert.equal(state.notebookEntries[0].resultTable.columns[0].title, 'Sample');
+  assert.equal(state.notebookEntries[0].resultTable.columns[3].title, 'OD600');
+  assert.equal(state.notebookEntries[0].resultTable.rows[0][state.notebookEntries[0].resultTable.columns[0].field], 'A1');
+  assert.equal(state.notebookEntries[0].resultTable.rows[0][state.notebookEntries[0].resultTable.columns[3].field], '0.82');
+  assert.equal(state.notebookEntries[0].resultTable.rows[3][state.notebookEntries[0].resultTable.columns[0].field], 'Control');
+
+  notebook.openEntry(state.notebookEntries[0].id);
+  tableInstance = MockTabulator.instances[MockTabulator.instances.length - 1];
+  assert.equal(tableInstance.columns.length, 4);
+  assert.equal(tableInstance.columns[0].title, 'Sample');
+  assert.equal(tableInstance.columns[3].title, 'OD600');
+  assert.equal(tableInstance.data[0][tableInstance.columns[0].field], 'A1');
+  assert.equal(tableInstance.data[0][tableInstance.columns[3].field], '0.82');
+  assert.match(document.getElementById('biology-notebook-result-table-status').textContent, /4 columns x 4 rows/i);
+  assert.ok(persistCalls >= 1);
+});
+
+test('notebook pdf export includes linked page content and omits notebook type plus storage folder metadata', async () => {
+  class MockJsPdf {
+    static instances = [];
+
+    constructor() {
+      this.textCalls = [];
+      this.imageCalls = [];
+      this.savedFileName = '';
+      this.internal = {
+        pageSize: {
+          getWidth: () => 612,
+          getHeight: () => 792
+        }
+      };
+      MockJsPdf.instances.push(this);
+    }
+
+    setFont() {}
+
+    setFontSize() {}
+
+    splitTextToSize(text) {
+      return String(text || '').split('\n');
+    }
+
+    text(value) {
+      this.textCalls.push(Array.isArray(value) ? value.join(' ') : String(value || ''));
+    }
+
+    addPage() {}
+
+    addImage(dataUrl, format, x, y, width, height) {
+      this.imageCalls.push({ dataUrl, format, x, y, width, height });
+    }
+
+    rect() {}
+
+    setFillColor() {}
+
+    setDrawColor() {}
+
+    save(fileName) {
+      this.savedFileName = String(fileName || '');
+    }
+  }
+
+  class MockImage {
+    constructor() {
+      this.onload = null;
+      this.onerror = null;
+      this.width = 240;
+      this.height = 120;
+      this.naturalWidth = 240;
+      this.naturalHeight = 120;
+    }
+
+    set src(_value) {
+      if (typeof this.onload === 'function') {
+        this.onload();
+      }
+    }
+  }
+
+  const mockDocument = {
+    createElement(tagName) {
+      if (tagName !== 'canvas') {
+        return {};
+      }
+      return {
+        width: 0,
+        height: 0,
+        getContext() {
+          return {
+            fillStyle: '#ffffff',
+            fillRect() {},
+            drawImage() {}
+          };
+        },
+        toDataURL() {
+          return 'data:image/png;base64,MOCKPNG';
+        }
+      };
+    }
+  };
+
+  const pdfExportModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'pdf-export.js'), {
+    window: {
+      jspdf: {
+        jsPDF: MockJsPdf
+      },
+      alert() {}
+    },
+    document: mockDocument,
+    Image: MockImage
+  });
+
+  const exportResult = await pdfExportModule.exportNotebookEntryPdf({
+    entry: {
+      id: 'notebook-1',
+      notebookType: 'biology',
+      projectName: 'Atlas',
+      protocolName: 'Expression Readout',
+      experimentName: 'Expression Panel A',
+      notebookState: 'executed',
+      updatedAt: '2026-04-22T14:30:00.000Z',
+      executedAt: '2026-04-22T13:45:00.000Z',
+      storageFolder: '/tmp/not-used',
+      result: 'Final expression notes.',
+      resultTable: {
+        columns: [
+          { field: 'sample', title: 'Sample' },
+          { field: 'od600', title: 'OD600' }
+        ],
+        rows: [
+          { id: 'row-1', sample: 'Clone 12', od600: '0.82' }
+        ]
+      },
+      resultFiles: ['gel.png', 'assay.csv'],
+      values: {
+        'step-1:buffer': 'PBS'
+      }
+    },
+    protocol: {
+      id: 'protocol-1',
+      steps: [
+        {
+          id: 'step-1',
+          text: 'Wash with {{ph:buffer}}.',
+          placeholders: [
+            { id: 'buffer', name: 'Buffer' }
+          ]
+        }
+      ]
+    },
+    linkedGel: {
+      name: 'Expression Gel',
+      analysisType: 'sds-page',
+      updatedAt: '2026-04-22T14:10:00.000Z'
+    },
+    linkedGelPreviewImage: 'data:image/png;base64,GELPREVIEW',
+    linkedAssay: {
+      id: 'assay-1',
+      name: 'Expression Assay',
+      assayNumber: 'A-001',
+      plateLabel: '96 well plate',
+      plateType: '96',
+      updatedAt: '2026-04-22T14:12:00.000Z',
+      wellLayout: [
+        { well: 'A1', sampleId: 'Clone 12', concentration: '1 uM' }
+      ],
+      sampleAxis: 'row',
+      concentrationAxis: 'column',
+      sampleAxisValues: ['Clone 12'],
+      concentrationAxisValues: ['1 uM'],
+      serialDilutionSummary: {
+        volumePerWellUl: 100,
+        feedbackMessages: [
+          { text: 'Dilution plan validated.', type: 'note' }
+        ],
+        initialDilutionRows: [
+          { sample: 'Clone 12', stockVolume: '10 uL', bufferVolume: '90 uL' }
+        ],
+        followingDilutionRows: [
+          {
+            step: '1',
+            targetConcentration: '0.1 uM',
+            fromPreviousWell: '10 uL',
+            bufferVolume: '90 uL',
+            transferOrDiscard: 'Transfer 10 uL',
+            finalVolume: '100 uL'
+          }
+        ],
+        hasValidPlans: true
+      },
+      latestAnalysis: {
+        method: 'standard_curve_line',
+        summary: 'Good fit',
+        chartDataUrl: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22240%22%20height%3D%22120%22%3E%3C/svg%3E'
+      }
+    }
+  });
+
+  assert.equal(exportResult, true);
+  const pdf = MockJsPdf.instances[0];
+  const allText = pdf.textCalls.join('\n');
+
+  assert.match(allText, /Project: Atlas/);
+  assert.match(allText, /Experiment: Expression Panel A/);
+  assert.match(allText, /Linked Results/);
+  assert.match(allText, /Serial Dilution/);
+  assert.match(allText, /Initial Dilution/);
+  assert.match(allText, /Following Dilution/);
+  assert.match(allText, /Result Table/);
+  assert.doesNotMatch(allText, /Mapped Wells/);
+  assert.doesNotMatch(allText, /Mapped Well Definitions/);
+  assert.doesNotMatch(allText, /Notebook Type:/);
+  assert.doesNotMatch(allText, /Storage Folder:/);
+  assert.equal(pdf.imageCalls.length, 2);
+  assert.match(pdf.savedFileName, /Expression-Panel-A/i);
+});
+
+test('assay pdf export omits mapped well text section', () => {
+  class MockJsPdf {
+    static instances = [];
+
+    constructor() {
+      this.textCalls = [];
+      this.savedFileName = '';
+      this.internal = {
+        pageSize: {
+          getWidth: () => 612,
+          getHeight: () => 792
+        }
+      };
+      MockJsPdf.instances.push(this);
+    }
+
+    setFont() {}
+
+    setFontSize() {}
+
+    splitTextToSize(text) {
+      return String(text || '').split('\n');
+    }
+
+    text(value) {
+      this.textCalls.push(Array.isArray(value) ? value.join(' ') : String(value || ''));
+    }
+
+    addPage() {}
+
+    rect() {}
+
+    setFillColor() {}
+
+    setDrawColor() {}
+
+    save(fileName) {
+      this.savedFileName = String(fileName || '');
+    }
+  }
+
+  const pdfExportModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'pdf-export.js'), {
+    window: {
+      jspdf: {
+        jsPDF: MockJsPdf
+      },
+      alert() {}
+    }
+  });
+
+  const exportResult = pdfExportModule.exportAssayDefinitionPdf({
+    id: 'assay-1',
+    assayNumber: 'A-001',
+    name: 'Expression Assay',
+    projectName: 'Atlas',
+    plateLabel: '96 well plate',
+    plateType: '96',
+    sampleAxis: 'row',
+    concentrationAxis: 'column',
+    updatedAt: '2026-04-22T14:12:00.000Z',
+    wellLayout: [
+      { well: 'A1', sampleId: 'Clone 12', concentration: '1 uM' }
+    ]
+  });
+
+  assert.equal(exportResult, true);
+  const pdf = MockJsPdf.instances[0];
+  const allText = pdf.textCalls.join('\n');
+
+  assert.match(allText, /Well Definition Plot/);
+  assert.doesNotMatch(allText, /Mapped Wells/);
+  assert.doesNotMatch(allText, /Mapped Well Definitions/);
+  assert.match(pdf.savedFileName, /A-001/i);
+});
+
 test('workflow presentation labels include notebook execution state', () => {
   const workflowPresentation = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'workflow', 'presentation.js'));
   const label = workflowPresentation.notebookEntryLabel({

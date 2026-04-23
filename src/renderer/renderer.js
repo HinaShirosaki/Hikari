@@ -447,6 +447,7 @@ function mergePaperRecords(existingRecords, importedRecords) {
 
 function mergeStorageImportPatch(statePatch) {
   const patch = statePatch && typeof statePatch === 'object' ? statePatch : {};
+  state.projects = mergeRecordsById(state.projects, patch.projects, 'project');
   state.protocols = mergeRecordsById(state.protocols, patch.protocols, 'protocol');
   state.notebookEntries = mergeRecordsById(state.notebookEntries, patch.notebookEntries, 'notebook');
   state.workflowTemplates = mergeRecordsById(state.workflowTemplates, patch.workflowTemplates, 'workflow_template');

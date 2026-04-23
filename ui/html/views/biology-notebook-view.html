@@ -50,6 +50,9 @@
                 <p id="biology-notebook-protocol-meta" class="small-note">Select a notebook page or start a new one.</p>
               </div>
               <div class="biology-notebook-viewer-actions">
+                <button id="biology-notebook-edit-protocol-btn" class="ghost-btn" type="button" hidden>Edit Page Copy</button>
+                <button id="biology-notebook-apply-protocol-edit-btn" class="primary-btn" type="button" hidden>Apply Page Edit</button>
+                <button id="biology-notebook-cancel-protocol-edit-btn" class="ghost-btn" type="button" hidden>Cancel Page Edit</button>
                 <button id="biology-notebook-mark-executed-btn" class="primary-btn" type="button" hidden>Executed</button>
                 <button id="biology-notebook-export-btn" class="ghost-btn" type="button" hidden>Export PDF</button>
               </div>
@@ -61,6 +64,18 @@
                 <span class="biology-notebook-viewer-section-chevron" aria-hidden="true"></span>
               </summary>
               <div class="biology-notebook-viewer-section-body">
+                <div id="biology-notebook-protocol-editor" class="biology-notebook-protocol-editor" hidden>
+                  <p class="small-note biology-notebook-protocol-editor-note">Edits here only change this notebook page copy. The original protocol stays unchanged.</p>
+                  <label>
+                    Page Protocol Name
+                    <input id="biology-notebook-page-protocol-name" type="text" placeholder="Rename this page copy" />
+                  </label>
+                  <label>
+                    Page Protocol Steps
+                    <textarea id="biology-notebook-page-protocol-steps" rows="8" placeholder="• Add buffer [Volume]&#10;• Incubate for [Time]"></textarea>
+                  </label>
+                  <p class="small-note biology-notebook-protocol-editor-note">Use one step per line. Keep fillable values as `[Volume]`, `[Buffer]`, `[Time]`, and so on.</p>
+                </div>
                 <div id="biology-notebook-steps" class="notebook-steps"></div>
               </div>
             </details>
@@ -73,9 +88,19 @@
                 <div class="biology-notebook-linked-toolbar">
                   <button id="biology-notebook-add-gel-btn" class="ghost-btn" type="button">Add Gel</button>
                   <button id="biology-notebook-add-assay-btn" class="ghost-btn" type="button">Add Assay</button>
+                  <button id="biology-notebook-add-table-btn" class="ghost-btn" type="button">Add Table</button>
+                  <button id="biology-notebook-add-table-row-btn" class="ghost-btn" type="button" hidden>Add Row</button>
+                  <button id="biology-notebook-add-table-column-btn" class="ghost-btn" type="button" hidden>Add Column</button>
+                  <button id="biology-notebook-remove-table-btn" class="ghost-btn" type="button" hidden>Remove Table</button>
                 </div>
                 <div id="biology-notebook-linked-results" class="biology-notebook-linked-results">
                   <p class="small-note">Linked gel, assay, and plot previews will appear here.</p>
+                </div>
+                <div id="biology-notebook-result-table-wrap" class="biology-notebook-result-table-wrap" hidden>
+                  <div class="biology-notebook-result-table-head">
+                    <p id="biology-notebook-result-table-status" class="small-note">Add a table to capture structured notebook results.</p>
+                  </div>
+                  <div id="biology-notebook-result-table" class="biology-notebook-result-table" aria-label="Notebook result table"></div>
                 </div>
                 <label>
                   Experiment Results File / Notes

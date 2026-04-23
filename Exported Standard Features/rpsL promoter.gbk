@@ -1,0 +1,21 @@
+LOCUS       .                        302 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..302
+                     /note="promoter for the&nbsp;Xylanimonas cellulosilytica
+                     ribosomal protein S12 gene"
+                     /label="rpsL promoter"
+ORIGIN
+        1 gccctgcagg cggaagtcag gtagacacga cttccgctag tccttgcaag gtctgctgac
+       61 gtgaggcggg gcggtcgttt ttgaccgccc cgccttcgtc atgtaggctc gctcgctgtg
+      121 cctggcgtgt cttcagacgc ccaggtcccg gtgccgtgag gcccgggcca tcgagccggt
+      181 ggtacgtggc tgcggtcccc ttgtgagggc tgcgcgccgt gtgctgtccg gcgcgcacag
+      241 ccttgaatcc acccgcgggg gccggccggt ctccgtgagc tcgagaagac gacggagacg
+      301 ta
+//

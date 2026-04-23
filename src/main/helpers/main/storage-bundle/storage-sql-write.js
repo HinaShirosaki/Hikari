@@ -22,6 +22,37 @@ function extractProtocolStepText(step) {
   return cleanText(source.text || source.instruction || source.action || source.title, 1200);
 }
 
+function summarizeNotebookResultTable(rawTable) {
+  const source = ensureObject(rawTable);
+  const columns = asArray(source.columns);
+  if (!columns.length) {
+    return '';
+  }
+  const rows = asArray(source.rows);
+  const columnCount = columns.length;
+  const rowCount = rows.length;
+  return `${columnCount} columns x ${rowCount} rows`;
+}
+
+function flattenNotebookResultTableText(rawTable) {
+  const source = ensureObject(rawTable);
+  const columns = asArray(source.columns)
+    .map((column, index) => ({
+      field: cleanText(column?.field, 160),
+      title: cleanText(column?.title, 240) || `Column ${index + 1}`
+    }))
+    .filter((column) => column.field);
+  if (!columns.length) {
+    return '';
+  }
+  const headerText = columns.map((column) => column.title).join(' ');
+  const rowText = asArray(source.rows).map((rawRow) => {
+    const row = ensureObject(rawRow);
+    return columns.map((column) => cleanText(row[column.field], 320)).filter(Boolean).join(' ');
+  });
+  return buildSearchText([headerText, ...rowText]);
+}
+
 function resolvePersonalInventorySections(inventoryPayload) {
   const inventory = ensureObject(inventoryPayload);
   if (Array.isArray(inventory.personal)) {
@@ -119,17 +150,21 @@ function collectRecordIndexRows(snapshot, updatedAtDefault) {
 
   asArray(snapshot.notebookEntries).forEach((rawEntry) => {
     const entry = ensureObject(rawEntry);
+    const tableSummary = summarizeNotebookResultTable(entry.resultTable);
     pushRow('notebook', entry.id, {
       title: entry.protocolName || entry.id,
       projectId: entry.projectId,
       projectName: entry.projectName,
-      summary: entry.result,
+      summary: [cleanText(entry.result, 6000), tableSummary ? `Result table: ${tableSummary}` : '']
+        .filter(Boolean)
+        .join('\n'),
       linkedProtocolId: entry.protocolId,
       linkedProtocolName: entry.protocolName,
       updatedAt: entry.updatedAt || entry.createdAt,
       searchHints: [
         asArray(entry.resultFiles).join(' '),
-        JSON.stringify(entry.values || {})
+        JSON.stringify(entry.values || {}),
+        flattenNotebookResultTableText(entry.resultTable)
       ].join(' '),
       raw: entry
     });
@@ -446,7 +481,9 @@ function writeSqlNotebookIndex(db, snapshot, updatedAtDefault) {
       result,
       updatedAt,
       asArray(entry.resultFiles).join(' '),
-      JSON.stringify(entry.values || {})
+      JSON.stringify(entry.values || {}),
+      flattenNotebookResultTableText(entry.resultTable),
+      summarizeNotebookResultTable(entry.resultTable)
     ]);
     db.run(
       `INSERT OR REPLACE INTO notebook_index

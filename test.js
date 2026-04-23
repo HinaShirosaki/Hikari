@@ -173,6 +173,9 @@ const gelAnalysisInternals = loadEsmStyleModule(
     'interpretLane'
   ]
 );
+const gelLaneTableInternals = loadEsmStyleModule(
+  path.join(__dirname, 'src', 'renderer', 'modules', 'gel', 'lane-table.js')
+);
 const papersManagementInternals = loadEsmStyleModule(
   path.join(__dirname, 'src', 'renderer', 'modules', 'papers-management.js'),
   {},
@@ -310,6 +313,7 @@ const suiteScope = {
   toolBox,
   sequenceViewerInternals,
   gelAnalysisInternals,
+  gelLaneTableInternals,
   papersManagementInternals,
   papersPdfViewerInternals,
   assayAnalysis,

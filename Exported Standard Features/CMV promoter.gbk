@@ -1,0 +1,19 @@
+LOCUS       .                        200 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..200
+                     /note="human cytomegalovirus (CMV) immediate early
+                     promoter"
+                     /label="CMV promoter"
+ORIGIN
+        1 tgatgcggtt ttggcagtac accaatgggc gtggatagcg gtttgactca cggggatttc
+       61 caagtctcca ccccattgac gtcaatggga gtttgttttg gcaccaaaat caacgggact
+      121 ttccaaaatg tcgtaataac cccgccccgt tgacgcaaat gggcggtagg cgtgtacggt
+      181 gggaggtcta tataagcaga
+//

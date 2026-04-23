@@ -5,10 +5,10 @@ Folder: SUMO1
 ID: 1774128185432-96a318da61d208
 Description: None recorded.
 Created: 2026-04-15T03:13:11.609Z
-Updated: 2026-04-21T02:45:39.587Z
+Updated: 2026-04-22T02:06:21.125Z
 
 ## Linked Records
-- Notebook pages: 4
+- Notebook pages: 7
 - Workflows: 0
 - Papers: 5
 - Assays: 0

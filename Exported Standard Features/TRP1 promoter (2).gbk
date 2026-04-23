@@ -1,0 +1,19 @@
+LOCUS       .                        281 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..281
+                     /gene="S. cerevisiae TRP1"
+                     /label="TRP1 promoter"
+ORIGIN
+        1 aacgacatta ctatatatat aatataggaa gcatttaata gacagcatcg taatatatgt
+       61 gtactttgca gttatgacgc cagatggcag tagtggaaga tattctttat tgaaaaatag
+      121 cttgtcacct tacgtacaat cttgatccgg agcttttctt tttttgccga ttaagaatta
+      181 attcggtcga aaaaagaaaa ggagagggcc aagagggagg gcattggtga ctattgagca
+      241 cgtgagtata cgtgattaag cacacaaagg cagcttggag t
+//

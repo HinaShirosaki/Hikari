@@ -1,0 +1,23 @@
+LOCUS       .                        421 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..421
+                     /note="RNA polymerase III promoter for Drosophila U6-3
+                     snRNA (Port et al., 2014)"
+                     /label="dU6-3 promoter"
+ORIGIN
+        1 ttttttgctc acctgtgatt gctcctactc aaatacaaaa acatcaaatt ttctgtcaat
+       61 aaagcatatt tatttatatt tattttacag gaaagaattc cttttaaagt gtattttaac
+      121 ctataatgaa aaacgattaa aaaaaataca taaaataatt cgaaaatttt tgaatagccc
+      181 aggttgataa aaattcattt catacgtttt ataacttatg cccctaagta ttttttgacc
+      241 atagtgtttc aattctacat taattttaca gagtagaatg aaacgccacc tactcagcca
+      301 agaggcgaaa aggttagctc gccaagcaga gagggcgcca gtgctcacta ctttttataa
+      361 ttctcaactt ctttttccag actcagttcg tatatataga cctattttca atttaacgtc
+      421 g
+//

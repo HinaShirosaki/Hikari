@@ -41,6 +41,54 @@ test('[EDGE] gel-analysis viewer image selection handles empty input', () => {
   assert.equal(gelAnalysisInternals.selectViewerBaseImageData(null, { previewImageData: { tag: 'preview' } }), null);
 });
 
+test('[EDGE] gel-analysis lane table render includes gel-edge offsets for divider alignment', () => {
+  const runtime = {
+    currentImage: { width: 600 },
+    cropperActive: false,
+    manualOverrides: {
+      laneSegmentation: {
+        gelLeft: 100,
+        gelRight: 500,
+        dividers: [250, 375],
+        dividerDone: true,
+        bandTop: null,
+        bandBottom: null
+      },
+      addedBands: [],
+      ladderLane: null,
+      ladderBands: [],
+      ladderBandsDone: false,
+      laneTable: {
+        rows: [
+          { label: 'Samples', values: ['A', 'B', 'C'] }
+        ]
+      }
+    }
+  };
+  const elements = {
+    gelAddTableBtn: new MockElement('gel-add-table-btn'),
+    gelLaneTableShell: new MockElement('gel-lane-table-shell'),
+    gelViewerStage: new MockElement('gel-viewer-stage'),
+    gelImageRow: new MockElement('gel-image-row'),
+    gelLaneTableSpacer: new MockElement('gel-lane-table-spacer')
+  };
+  const controller = gelLaneTableInternals.createLaneTableController({
+    runtime,
+    elements,
+    safeText: (value) => String(value),
+    deps: {}
+  });
+
+  controller.render();
+
+  assert.equal(elements.gelLaneTableShell.hidden, false);
+  assert.equal(elements.gelViewerStage.classList.contains('has-lane-table'), true);
+  assert.match(elements.gelLaneTableShell.innerHTML, /gel-lane-table-gap-col/);
+  assert.match(elements.gelLaneTableShell.innerHTML, /width:16\.6667%;/);
+  assert.match(elements.gelLaneTableShell.innerHTML, /width:25%;/);
+  assert.match(elements.gelLaneTableShell.innerHTML, /width:20\.8333%;/);
+});
+
 [
   [0, 0, 10, 0],
   [5, 0, 10, 5],

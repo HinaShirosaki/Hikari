@@ -1,0 +1,21 @@
+LOCUS       .                        316 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..316
+                     /gene="Autographa californica p6.9"
+                     /note="baculovirus late basic protein promoter"
+                     /label="p6.9 promoter"
+ORIGIN
+        1 aaattccgtt ttgcgacgat gcagagtttt tgaacaggct gctcaaacac atagatccgt
+       61 acccgctcag tcggatgtat tacaatgcag ccaataccat gttttacacg actatggaaa
+      121 actatgccgt gtccaattgc aagttcaaca ttgaggatta caataacata tttaaggtga
+      181 tggaaaatat taggaaacac agcaacaaaa attcaaacga ccaagacgag ttaaacatat
+      241 atttgggagt tcagtcgtcg aatgcaaagc gtaaaaaata ttaataaggt aaaaattaca
+      301 gctacataaa ttacac
+//

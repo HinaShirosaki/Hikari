@@ -154,6 +154,8 @@ export function createRendererModuleRuntime(config = {}) {
       onGelAnalysesChanged: rendererServices.analysis.handleGelAnalysesChanged
     }),
     sequenceViewer: initAndRegisterModule(moduleRegistry, 'sequenceViewer', initSequenceViewer, {
+      homeViewId: views.SEQUENCE_VIEWER,
+      detailViewId: sequenceViewerDetailViewId,
       onNavigateHome: () => {
         showView(views.SEQUENCE_VIEWER);
       },
@@ -213,7 +215,7 @@ export function createRendererModuleRuntime(config = {}) {
 
   function renderView(viewId) {
     if (viewId === views.SEQUENCE_VIEWER || viewId === sequenceViewerDetailViewId) {
-      modules.sequenceViewer?.render?.();
+      modules.sequenceViewer?.render?.({ activeViewId: viewId });
       return;
     }
     renderByViewId.get(viewId)?.();

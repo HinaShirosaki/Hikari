@@ -266,6 +266,12 @@
   background: rgba(245, 248, 252, 0.94);
 }
 
+.gel-lane-table .gel-lane-table-gap {
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
 .gel-lane-table-input {
   display: block;
   width: 100%;

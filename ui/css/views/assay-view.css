@@ -385,8 +385,10 @@
   z-index: 2550;
   background: rgba(18, 34, 55, 0.18);
   display: grid;
-  place-items: center;
-  padding: 18px;
+  justify-items: center;
+  align-items: start;
+  overflow: auto;
+  padding: max(72px, env(safe-area-inset-top, 0px)) 18px 18px;
 }
 
 .assay-serial-dilution-overlay[hidden] {
@@ -395,7 +397,7 @@
 
 .assay-serial-dilution-dialog {
   width: min(1040px, calc(100vw - 32px));
-  max-height: calc(100vh - 36px);
+  max-height: calc(100svh - 90px);
   overflow: auto;
   display: grid;
   gap: 12px;

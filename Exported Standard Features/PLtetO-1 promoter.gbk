@@ -1,0 +1,18 @@
+LOCUS       .                         74 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        join(1..19,20..25,26..42,43..48,49..74)
+                     /parts="2:-35;4:-10"
+                     /note="modified phage lambda PL promoter with tet operator
+                     sites&nbsp;(Lutz and Bujard, 1997)"
+                     /label="PLtetO-1 promoter"
+ORIGIN
+        1 tccctatcag tgatagagat tgacatccct atcagtgata gagatactga gcacatcagc
+       61 aggacgcact gacc
+//

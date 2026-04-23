@@ -1,0 +1,18 @@
+LOCUS       .                        227 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..227
+                     /note="Rous sarcoma virus enhancer/promoter"
+                     /label="RSV promoter"
+ORIGIN
+        1 tgtagtctta tgcaatactc ttgtagtctt gcaacatggt aacgatgagt tagcaacatg
+       61 ccttacaagg agagaaaaag caccgtgcat gccgattggt ggaagtaagg tggtacgatc
+      121 gtgccttatt aggaaggcaa cagacgggtc tgacatggat tggacgaacc actgaattgc
+      181 cgcattgcag agatattgta tttaagtgcc tagctcgata cataaac
+//

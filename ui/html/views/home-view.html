@@ -70,17 +70,25 @@
           </div>
           <label class="dashboard-field dashboard-field-grow">
             Bench Note
-            <textarea
-              id="dashboard-quick-log-input"
-              rows="6"
-              placeholder="Summarize what happened, what is incubating, or what you want the assistant to help with next."
-            ></textarea>
+            <div class="home-quick-log-input-wrap">
+              <textarea
+                id="dashboard-quick-log-input"
+                rows="6"
+                placeholder="Summarize what happened, what is incubating, or what you want the assistant to help with next."
+              ></textarea>
+              <button
+                type="button"
+                id="dashboard-quick-log-agent-btn"
+                class="home-quick-log-send-btn"
+                aria-label="Send to Assistant"
+              >
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
+                  <path d="M12 17V7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path>
+                  <path d="M6.5 12.5 12 7l5.5 5.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
+              </button>
+            </div>
           </label>
-          <div class="dashboard-inline-row">
-            <button type="button" id="dashboard-quick-log-agent-btn" class="primary-btn">Send to Assistant</button>
-            <button type="button" id="dashboard-quick-log-notebook-btn" class="ghost-btn">Open Notebook</button>
-            <button type="button" id="dashboard-quick-log-clear-btn" class="ghost-btn">Clear</button>
-          </div>
         </section>
 
         <section class="home-tile home-tile-notebook-pages" aria-labelledby="dashboard-notebook-pages-heading">

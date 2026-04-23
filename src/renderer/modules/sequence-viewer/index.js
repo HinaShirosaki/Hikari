@@ -9,7 +9,7 @@ import {
   DEFAULT_RESTRICTION_VENDOR_FILTER
 } from './constants.js';
 import { normalizeExternalPayload, parseInputRecords } from './parsing.js';
-import { buildSequenceSignature, cleanText, clamp, normalizeRecordName, normalizeTopology } from './shared.js';
+import { buildSequenceSignature, cleanText, clamp, normalizeRecordName, normalizeSequenceText, normalizeTopology } from './shared.js';
 import {
   buildCircularPreviewHtmlDocument,
   buildRecordGenbankText,
@@ -29,7 +29,12 @@ export function initSequenceViewer(options = {}) {
   const LIBRARY_STATUS_SAVED = 'saved';
   const LIBRARY_STATUS_TEMPORARY = 'temporary';
   const FEATURE_SOURCE_BACKBONE_RECOGNITION = 'backbone_recognition';
+  const RECOGNIZED_BACKBONE_ARTIFACT_FOLDER = 'SequenceViewer/protein-builder/backbones';
+  const RECOGNIZED_BACKBONE_SCHEMA_NAME = 'enana_recognized_backbone';
+  const RECOGNIZED_BACKBONE_SCHEMA_VERSION = '1.0.0';
   const FILE_ACCEPT = '.gbk,.gb,.gbff,.fasta,.fa,.fas,.fna,.fastq,.fq,.txt,.seq';
+  const homeViewId = String(options?.homeViewId || '').trim();
+  const detailViewId = String(options?.detailViewId || '').trim();
   const rootDocument = options?.document || globalThis?.document || null;
   const elements = getSequenceViewerElements(rootDocument);
 
@@ -44,6 +49,13 @@ export function initSequenceViewer(options = {}) {
     errors: [],
     isAnnotating: false,
     isRecognizingBackbone: false,
+    backboneRecognitionDialog: {
+      open: false,
+      recordIndex: -1,
+      match: null,
+      candidateId: '',
+      variantMode: 'gibson'
+    },
     orfViewEnabled: false,
     orfStopVisibility: normalizeOrfStopCodonVisibility({
       TAG: Boolean(elements.orfStopTagToggle?.checked),
@@ -149,6 +161,16 @@ export function initSequenceViewer(options = {}) {
     return `${FEATURE_SOURCE_BACKBONE_RECOGNITION}_${safeRole}_${safeHostId}`;
   }
 
+  function sanitizeStorageArtifactPart(value, fallback = 'artifact') {
+    const cleaned = String(value || '')
+      .trim()
+      .replace(/[<>:"/\\|?*\x00-\x1F]+/g, '_')
+      .replace(/\s+/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .slice(0, 80);
+    return cleaned || fallback;
+  }
+
   function normalizeRecognitionSegments(segments, sequenceLength) {
     const safeLength = Math.max(0, Number(sequenceLength) || 0);
     return (Array.isArray(segments) ? segments : [])
@@ -163,73 +185,282 @@ export function initSequenceViewer(options = {}) {
       .filter(Boolean);
   }
 
-  function getRecognitionDisplayMatch(match) {
+  function getRecognitionCandidates(match) {
+    return Array.isArray(match?.candidateSelections) ? match.candidateSelections : [];
+  }
+
+  function getRecognitionSelectedCandidate(match, candidateId = '') {
+    const candidates = getRecognitionCandidates(match);
+    if (!candidates.length) {
+      return null;
+    }
+    return candidates.find((candidate) => String(candidate?.id || '') === String(candidateId || ''))
+      || candidates[0]
+      || null;
+  }
+
+  function getRecognitionDisplayMatch(match, selection = {}) {
     const safeMatch = match && typeof match === 'object' ? match : null;
     if (!safeMatch) {
       return null;
     }
 
-    const gibsonVariant = safeMatch.variants?.gibson;
-    if (!gibsonVariant || typeof gibsonVariant !== 'object') {
+    const selectedCandidate = getRecognitionSelectedCandidate(
+      safeMatch,
+      selection?.candidateId || safeMatch.selectedCandidateId || ''
+    );
+    const requestedVariantMode = selection?.variantMode === 'restriction' ? 'restriction' : 'gibson';
+    const requestedVariant = selectedCandidate?.variants?.[requestedVariantMode];
+    const fallbackVariant = safeMatch.variants?.gibson || safeMatch.variants?.restriction;
+    const activeVariant = (requestedVariant && typeof requestedVariant === 'object')
+      ? requestedVariant
+      : fallbackVariant;
+    const activeVariantMode = (requestedVariant && typeof requestedVariant === 'object')
+      ? requestedVariantMode
+      : (safeMatch.variants?.restriction && !safeMatch.variants?.gibson ? 'restriction' : 'gibson');
+    if (!activeVariant || typeof activeVariant !== 'object') {
       return safeMatch;
     }
 
     return {
       ...safeMatch,
-      backboneLength: Math.max(0, Number(gibsonVariant.backboneLength) || 0),
-      insertLength: Math.max(0, Number(gibsonVariant.insertLength) || 0),
-      backboneSegments: Array.isArray(gibsonVariant.backboneSegments)
-        ? gibsonVariant.backboneSegments
+      selectedCandidateId: String(selectedCandidate?.id || safeMatch.selectedCandidateId || ''),
+      activeVariantMode,
+      promoter: selectedCandidate?.promoter || safeMatch.promoter || null,
+      orf: selectedCandidate?.orf || safeMatch.orf || null,
+      startCodon: activeVariant?.startCodon || selectedCandidate?.orf?.startCodon || '',
+      stopCodon: activeVariant?.stopCodon || selectedCandidate?.orf?.stopCodon || '',
+      upstreamSite: activeVariant?.upstreamSite || null,
+      downstreamSite: activeVariant?.downstreamSite || null,
+      siteExtensionApplied: Boolean(activeVariant?.siteExtensionApplied),
+      backboneSequence: String(activeVariant?.backboneSequence || safeMatch.backboneSequence || ''),
+      insertSequence: String(activeVariant?.insertSequence || safeMatch.insertSequence || ''),
+      backboneLength: Math.max(0, Number(activeVariant.backboneLength) || 0),
+      insertLength: Math.max(0, Number(activeVariant.insertLength) || 0),
+      backboneSegments: Array.isArray(activeVariant.backboneSegments)
+        ? activeVariant.backboneSegments
         : safeMatch.backboneSegments,
-      insertSegments: Array.isArray(gibsonVariant.insertSegments)
-        ? gibsonVariant.insertSegments
+      insertSegments: Array.isArray(activeVariant.insertSegments)
+        ? activeVariant.insertSegments
         : safeMatch.insertSegments
     };
   }
 
-  function buildBackboneRecognitionFeatures(match, sequenceLength) {
-    const safeMatch = getRecognitionDisplayMatch(match);
+  function buildBackboneRecognitionFeatures(match, sequenceLength, selection = {}) {
+    const safeMatch = getRecognitionDisplayMatch(match, selection);
     if (!safeMatch) {
       return [];
     }
 
+    const includeContextFeatures = selection?.includeContextFeatures !== false;
     const hostName = cleanText(safeMatch.hostVectorName, 140) || 'vector';
-    const hostStatus = String(safeMatch.hostVectorStatus || '').toLowerCase() === LIBRARY_STATUS_SAVED
-      ? 'saved'
-      : 'temporary';
+    const hasLibraryContext = String(safeMatch.recognitionSource || '').toLowerCase() === 'library_alignment'
+      || Boolean(cleanText(safeMatch.hostVectorId, 120));
+    const hostStatus = hasLibraryContext
+      ? (String(safeMatch.hostVectorStatus || '').toLowerCase() === LIBRARY_STATUS_SAVED ? 'saved' : 'temporary')
+      : 'recognized';
     const orientationText = safeMatch.orientation === 'reverse' ? 'reverse-complement' : 'forward';
     const hostCoveragePercent = Math.max(0, Number(safeMatch.hostCoverage) || 0) * 100;
     const backboneSegments = normalizeRecognitionSegments(safeMatch.backboneSegments, sequenceLength);
     const insertSegments = normalizeRecognitionSegments(safeMatch.insertSegments, sequenceLength);
+    const promoterSegments = normalizeRecognitionSegments(safeMatch.promoter?.segments, sequenceLength);
+    const orfSegments = normalizeRecognitionSegments(safeMatch.orf?.segments, sequenceLength);
+    const upstreamSiteSegments = normalizeRecognitionSegments(safeMatch.upstreamSite?.segments, sequenceLength);
+    const downstreamSiteSegments = normalizeRecognitionSegments(safeMatch.downstreamSite?.segments, sequenceLength);
 
     const features = [];
+    if (includeContextFeatures && promoterSegments.length) {
+      features.push({
+        id: buildBackboneRecognitionFeatureId('promoter', safeMatch),
+        name: safeMatch.promoter?.name || 'Promoter',
+        type: 'promoter',
+        strand: Number(safeMatch.promoter?.strand) === -1 ? -1 : 1,
+        source: FEATURE_SOURCE_BACKBONE_RECOGNITION,
+        description: `Matched exported promoter ${safeMatch.promoter?.name || 'promoter'} with the nearest ORF ${Math.max(0, Number(safeMatch.promoter?.gapToOrf) || 0).toLocaleString()} bp downstream.`,
+        locationText: '',
+        segments: promoterSegments
+      });
+    }
+
+    if (includeContextFeatures && orfSegments.length) {
+      const stopCodon = String(safeMatch.stopCodon || safeMatch.orf?.stopCodon || '').trim();
+      features.push({
+        id: buildBackboneRecognitionFeatureId('orf', safeMatch),
+        name: safeMatch.orf?.name || 'Nearest ORF',
+        type: 'orf',
+        strand: Number(safeMatch.orf?.strand) === -1 ? -1 : 1,
+        source: FEATURE_SOURCE_BACKBONE_RECOGNITION,
+        description: `${Math.max(0, Number(safeMatch.orf?.length) || 0).toLocaleString()} bp ORF identified from ATG to ${stopCodon || 'stop codon'}.`,
+        locationText: '',
+        segments: orfSegments
+      });
+    }
+
     if (backboneSegments.length) {
+      const backboneDescription = hasLibraryContext
+        ? `${hostName} ${hostStatus} vector recognized with ${Math.max(0, Number(safeMatch.backboneLength) || 0).toLocaleString()} bp exact backbone coverage (${hostCoveragePercent.toFixed(1)}% of host, ${orientationText} orientation; ${safeMatch.activeVariantMode === 'restriction' ? 'restriction-site' : 'Gibson/HR'} view).`
+        : `Backbone region recognized from promoter alignment with ${Math.max(0, Number(safeMatch.backboneLength) || 0).toLocaleString()} bp outside the selected insert (${safeMatch.activeVariantMode === 'restriction' ? 'restriction-site' : 'Gibson/HR'} view).`;
       features.push({
         id: buildBackboneRecognitionFeatureId('backbone', safeMatch),
         name: `Backbone (${hostName})`,
         type: 'backbone',
         strand: 1,
         source: FEATURE_SOURCE_BACKBONE_RECOGNITION,
-        description: `${hostName} ${hostStatus} vector recognized with ${Math.max(0, Number(safeMatch.backboneLength) || 0).toLocaleString()} bp exact backbone coverage (${hostCoveragePercent.toFixed(1)}% of host, ${orientationText} orientation).`,
+        description: backboneDescription,
         locationText: '',
         segments: backboneSegments
       });
     }
 
     if (insertSegments.length) {
+      const insertQualifier = safeMatch.activeVariantMode === 'restriction'
+        ? [
+          safeMatch.upstreamSite?.name ? `5' ${safeMatch.upstreamSite.name}` : '',
+          safeMatch.downstreamSite?.name ? `3' ${safeMatch.downstreamSite.name}` : ''
+        ].filter(Boolean).join(' / ')
+        : 'ATG to stop codon';
       features.push({
         id: buildBackboneRecognitionFeatureId('insert', safeMatch),
         name: `Insert (${hostName})`,
         type: 'insert',
         strand: 1,
         source: FEATURE_SOURCE_BACKBONE_RECOGNITION,
-        description: `${Math.max(0, Number(safeMatch.insertLength) || 0).toLocaleString()} bp sequence not explained by stored vector ${hostName}.`,
+        description: hasLibraryContext
+          ? `${Math.max(0, Number(safeMatch.insertLength) || 0).toLocaleString()} bp insert sequence (${insertQualifier || 'selected candidate'}) selected relative to backbone candidate ${hostName}.`
+          : `${Math.max(0, Number(safeMatch.insertLength) || 0).toLocaleString()} bp insert sequence (${insertQualifier || 'selected candidate'}) selected from promoter / ORF recognition.`,
         locationText: '',
         segments: insertSegments
       });
     }
 
+    if (includeContextFeatures && safeMatch.activeVariantMode === 'restriction' && upstreamSiteSegments.length) {
+      features.push({
+        id: buildBackboneRecognitionFeatureId('restriction_5', safeMatch),
+        name: `${safeMatch.upstreamSite?.name || '5 prime site'} (5')`,
+        type: 'restriction_site',
+        strand: 1,
+        source: FEATURE_SOURCE_BACKBONE_RECOGNITION,
+        description: `Nearest 5' restriction site ${safeMatch.upstreamSite?.name || 'site'} used to bound the insert.`,
+        locationText: '',
+        segments: upstreamSiteSegments
+      });
+    }
+
+    if (includeContextFeatures && safeMatch.activeVariantMode === 'restriction' && downstreamSiteSegments.length) {
+      features.push({
+        id: buildBackboneRecognitionFeatureId('restriction_3', safeMatch),
+        name: `${safeMatch.downstreamSite?.name || '3 prime site'} (3')`,
+        type: 'restriction_site',
+        strand: 1,
+        source: FEATURE_SOURCE_BACKBONE_RECOGNITION,
+        description: `Nearest 3' restriction site ${safeMatch.downstreamSite?.name || 'site'} used to bound the insert.`,
+        locationText: '',
+        segments: downstreamSiteSegments
+      });
+    }
+
     return features;
+  }
+
+  function buildSequenceFromSegments(sequence, segments) {
+    const normalizedSequence = normalizeSequenceText(sequence);
+    if (!normalizedSequence.length) {
+      return '';
+    }
+    return normalizeRecognitionSegments(segments, normalizedSequence.length)
+      .map((segment) => normalizedSequence.slice(segment.start, segment.end))
+      .join('');
+  }
+
+  function buildRecognizedBackboneArtifact(match, record, selection = {}) {
+    const displayMatch = getRecognitionDisplayMatch(match, selection);
+    const normalizedSequence = normalizeSequenceText(record?.sequence || '');
+    if (!displayMatch || !normalizedSequence.length) {
+      return null;
+    }
+
+    const nowIso = new Date().toISOString();
+    const recordName = normalizeRecordName(record?.name || 'sequence', 'sequence');
+    const recordSignature = buildSequenceSignature(normalizedSequence, 'seq')
+      || `seq_${normalizedSequence.length}`;
+    const hostVectorName = cleanText(displayMatch?.hostVectorName, 140) || 'Promoter-aligned backbone';
+    const variantMode = displayMatch?.activeVariantMode === 'restriction' ? 'restriction' : 'gibson';
+    const backboneSegments = normalizeRecognitionSegments(displayMatch?.backboneSegments, normalizedSequence.length);
+    const insertSegments = normalizeRecognitionSegments(displayMatch?.insertSegments, normalizedSequence.length);
+    const backboneSequence = normalizeSequenceText(
+      displayMatch?.backboneSequence || buildSequenceFromSegments(normalizedSequence, backboneSegments)
+    );
+    const insertSequence = normalizeSequenceText(
+      displayMatch?.insertSequence || buildSequenceFromSegments(normalizedSequence, insertSegments)
+    );
+
+    return {
+      fileName: `${sanitizeStorageArtifactPart(recordName, 'sequence')}__${recordSignature}.recognized-backbone.json`,
+      data: {
+        schema_name: RECOGNIZED_BACKBONE_SCHEMA_NAME,
+        schema_version: RECOGNIZED_BACKBONE_SCHEMA_VERSION,
+        updated_at: nowIso,
+        source_record: {
+          name: recordName,
+          entry_id: cleanText(state.activeEntryId, 200),
+          entry_status: cleanText(state.activeEntryStatus, 40),
+          sequence_signature: recordSignature,
+          topology: normalizeTopology(record?.topology || 'linear')
+        },
+        recognition: {
+          host_vector_id: cleanText(displayMatch?.hostVectorId, 200),
+          host_vector_name: hostVectorName,
+          host_vector_status: cleanText(displayMatch?.hostVectorStatus, 40),
+          recognition_source: cleanText(displayMatch?.recognitionSource, 80),
+          variant_mode: variantMode,
+          candidate_id: cleanText(displayMatch?.selectedCandidateId, 120),
+          promoter_name: cleanText(displayMatch?.promoter?.name, 160),
+          orf_name: cleanText(displayMatch?.orf?.name, 160),
+          start_codon: cleanText(displayMatch?.startCodon, 12),
+          stop_codon: cleanText(displayMatch?.stopCodon, 12),
+          upstream_site_name: cleanText(displayMatch?.upstreamSite?.name, 120),
+          downstream_site_name: cleanText(displayMatch?.downstreamSite?.name, 120)
+        },
+        backbone: {
+          name: `Backbone (${hostVectorName})`,
+          type: 'backbone',
+          sequence: backboneSequence,
+          sequence_length: backboneSequence.length,
+          segments: backboneSegments
+        },
+        insert: {
+          name: `Insert (${hostVectorName})`,
+          type: 'insert',
+          sequence: insertSequence,
+          sequence_length: insertSequence.length,
+          segments: insertSegments
+        }
+      }
+    };
+  }
+
+  async function persistRecognizedBackboneArtifact(match, record, selection = {}) {
+    const bridge = getBridge();
+    const storagePath = getStoragePath();
+    if (!storagePath || !bridge?.writeJsonFile) {
+      return null;
+    }
+
+    const artifact = buildRecognizedBackboneArtifact(match, record, selection);
+    if (!artifact) {
+      return null;
+    }
+
+    const response = await bridge.writeJsonFile({
+      storagePath,
+      targetFolder: RECOGNIZED_BACKBONE_ARTIFACT_FOLDER,
+      fileName: artifact.fileName,
+      data: artifact.data
+    });
+    if (!response?.ok) {
+      throw new Error(response?.error || 'Failed to store recognized backbone.');
+    }
+    return response;
   }
 
   function setMode(mode) {
@@ -298,6 +529,301 @@ export function initSequenceViewer(options = {}) {
     return state.records[index] || null;
   }
 
+  function toDataAttributeName(key) {
+    return String(key || '').replace(/[A-Z]/g, (match) => `-${match.toLowerCase()}`);
+  }
+
+  function getDatasetValueFromTarget(target, key) {
+    if (!target) {
+      return '';
+    }
+    if (target.dataset && typeof target.dataset[key] === 'string') {
+      return target.dataset[key];
+    }
+    if (typeof target.closest === 'function') {
+      const closest = target.closest(`[data-${toDataAttributeName(key)}]`);
+      if (closest?.dataset && typeof closest.dataset[key] === 'string') {
+        return closest.dataset[key];
+      }
+    }
+    return '';
+  }
+
+  function renderBackboneDialogPreviewFrame(record) {
+    if (!elements.backboneDialogPreview) {
+      return;
+    }
+    if (!record?.sequence?.length) {
+      elements.backboneDialogPreview.innerHTML = '<p class="small-note">Circular plasmid preview unavailable.</p>';
+      return;
+    }
+
+    const htmlText = buildCircularPreviewHtmlDocument({
+      ...record,
+      topology: 'circular'
+    });
+    const title = normalizeRecordName(record?.name || 'Backbone preview', 'Backbone preview');
+    if (typeof rootDocument?.createElement === 'function' && typeof elements.backboneDialogPreview?.replaceChildren === 'function') {
+      const frame = rootDocument.createElement('iframe');
+      frame.className = 'sequence-viewer-preview-frame';
+      frame.loading = 'lazy';
+      frame.title = title;
+      frame.setAttribute('scrolling', 'no');
+      frame.srcdoc = String(htmlText || '');
+      elements.backboneDialogPreview.replaceChildren(frame);
+      return;
+    }
+
+    const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(String(htmlText || ''))}`;
+    elements.backboneDialogPreview.innerHTML = `<iframe class="sequence-viewer-preview-frame" src="${dataUrl}" loading="lazy" scrolling="no" title="${escapeHtml(title)}"></iframe>`;
+  }
+
+  function buildBackboneDialogSummaryHtml(displayMatch) {
+    if (!displayMatch) {
+      return '<p class="small-note">Select a candidate to preview the plasmid map.</p>';
+    }
+
+    const modeLabel = displayMatch.activeVariantMode === 'restriction'
+      ? 'Restriction cloning'
+      : 'Gibson / homologous recombination';
+    const vectorName = cleanText(displayMatch.hostVectorName, 140) || 'vector';
+    const promoterName = cleanText(displayMatch.promoter?.name, 140);
+    const orfLength = Math.max(0, Number(displayMatch.orf?.length) || 0);
+    const upstreamSite = cleanText(displayMatch.upstreamSite?.name, 80);
+    const downstreamSite = cleanText(displayMatch.downstreamSite?.name, 80);
+
+    const rows = [
+      `<p><strong>Backbone Candidate:</strong> ${escapeHtml(vectorName)}</p>`,
+      `<p><strong>Mode:</strong> ${escapeHtml(modeLabel)}</p>`,
+      promoterName ? `<p><strong>Promoter:</strong> ${escapeHtml(promoterName)}</p>` : '<p><strong>Promoter:</strong> No promoter-aligned candidate</p>',
+      orfLength > 0
+        ? `<p><strong>ORF:</strong> ${orfLength.toLocaleString()} bp from ${escapeHtml(String(displayMatch.startCodon || 'ATG'))} to ${escapeHtml(String(displayMatch.stopCodon || 'stop'))}</p>`
+        : '',
+      `<p><strong>Insert:</strong> ${Math.max(0, Number(displayMatch.insertLength) || 0).toLocaleString()} bp</p>`,
+      `<p><strong>Backbone:</strong> ${Math.max(0, Number(displayMatch.backboneLength) || 0).toLocaleString()} bp</p>`,
+      displayMatch.activeVariantMode === 'restriction'
+        ? `<p><strong>Sites:</strong> ${escapeHtml(upstreamSite || '5\' site not found')}${downstreamSite ? ` -> ${escapeHtml(downstreamSite)}` : ''}</p>`
+        : ''
+    ].filter(Boolean);
+
+    return rows.join('');
+  }
+
+  function renderBackboneRecognitionDialog() {
+    const dialogState = state.backboneRecognitionDialog || {};
+    const isOpen = Boolean(dialogState.open) && Boolean(dialogState.match);
+    if (elements.backboneDialogOverlay) {
+      elements.backboneDialogOverlay.hidden = !isOpen;
+    }
+    if (!isOpen) {
+      return;
+    }
+
+    const match = dialogState.match;
+    const candidates = getRecognitionCandidates(match);
+    const activeCandidateId = String(dialogState.candidateId || candidates[0]?.id || '');
+    const activeVariantMode = dialogState.variantMode === 'restriction' ? 'restriction' : 'gibson';
+    const activeDisplayMatch = getRecognitionDisplayMatch(match, {
+      candidateId: activeCandidateId,
+      variantMode: activeVariantMode
+    });
+
+    if (elements.backboneDialogModeGibsonBtn) {
+      elements.backboneDialogModeGibsonBtn.classList.toggle('sequence-viewer-mode-btn-active', activeVariantMode === 'gibson');
+    }
+    if (elements.backboneDialogModeRestrictionBtn) {
+      elements.backboneDialogModeRestrictionBtn.classList.toggle('sequence-viewer-mode-btn-active', activeVariantMode === 'restriction');
+    }
+    if (elements.backboneDialogSubtitle) {
+      const hostName = cleanText(activeDisplayMatch?.hostVectorName, 140) || 'vector';
+      elements.backboneDialogSubtitle.textContent = String(activeDisplayMatch?.recognitionSource || '').toLowerCase() === 'library_alignment'
+        ? `Recognized ${hostName} as the backbone candidate. Choose a promoter / ORF candidate and insert mode to apply.`
+        : `Recognized a backbone candidate from promoter alignment. Choose a promoter / ORF candidate and insert mode to apply.`;
+    }
+    if (elements.backboneDialogCandidates) {
+      elements.backboneDialogCandidates.innerHTML = candidates.length
+        ? candidates.map((candidate) => {
+          const candidateId = String(candidate?.id || '');
+          const promoterName = cleanText(candidate?.promoter?.name || candidate?.label || 'Candidate', 140);
+          const promoterGap = Math.max(0, Number(candidate?.promoter?.gapToOrf) || 0);
+          const orfLength = Math.max(0, Number(candidate?.orf?.length) || 0);
+          const restrictionUp = cleanText(candidate?.variants?.restriction?.upstreamSite?.name, 80);
+          const restrictionDown = cleanText(candidate?.variants?.restriction?.downstreamSite?.name, 80);
+          const activeClass = candidateId === activeCandidateId
+            ? ' sequence-viewer-backbone-dialog-candidate-active'
+            : '';
+          const note = restrictionUp || restrictionDown
+            ? `${restrictionUp || '5\' site missing'} -> ${restrictionDown || '3\' site missing'}`
+            : 'Restriction sites unavailable; Gibson/HR still available.';
+          return `
+            <button
+              type="button"
+              class="sequence-viewer-backbone-dialog-candidate${activeClass}"
+              data-candidate-id="${escapeHtml(candidateId)}"
+            >
+              <span class="sequence-viewer-backbone-dialog-candidate-name">${escapeHtml(promoterName)}</span>
+              <span class="sequence-viewer-backbone-dialog-candidate-meta">${orfLength > 0 ? `${orfLength.toLocaleString()} bp ORF` : 'No downstream ORF'}; ${promoterGap.toLocaleString()} bp from promoter</span>
+              <span class="sequence-viewer-backbone-dialog-candidate-note">${escapeHtml(note)}</span>
+            </button>
+          `;
+        }).join('')
+        : '<p class="small-note">No candidates available.</p>';
+    }
+    if (elements.backboneDialogSummary) {
+      elements.backboneDialogSummary.innerHTML = buildBackboneDialogSummaryHtml(activeDisplayMatch);
+    }
+
+    const record = state.records[clamp(dialogState.recordIndex, 0, Math.max(0, state.records.length - 1))] || null;
+    if (!record?.sequence?.length) {
+      renderBackboneDialogPreviewFrame(null);
+      return;
+    }
+
+    const previewFeatures = buildBackboneRecognitionFeatures(match, record.sequence.length, {
+      candidateId: activeCandidateId,
+      variantMode: activeVariantMode,
+      includeContextFeatures: false
+    }).filter((feature) => feature?.type === 'backbone' || feature?.type === 'insert');
+    const previewRecord = {
+      ...record,
+      features: previewFeatures
+    };
+    renderBackboneDialogPreviewFrame(previewRecord);
+  }
+
+  function closeBackboneRecognitionDialog() {
+    state.backboneRecognitionDialog = {
+      open: false,
+      recordIndex: -1,
+      match: null,
+      candidateId: '',
+      variantMode: 'gibson'
+    };
+    if (elements.backboneDialogOverlay) {
+      elements.backboneDialogOverlay.hidden = true;
+    }
+  }
+
+  function openBackboneRecognitionDialog(match, recordIndex) {
+    const defaultDisplayMatch = getRecognitionDisplayMatch(match, { variantMode: 'gibson' });
+    state.backboneRecognitionDialog = {
+      open: true,
+      recordIndex,
+      match,
+      candidateId: String(defaultDisplayMatch?.selectedCandidateId || getRecognitionCandidates(match)[0]?.id || ''),
+      variantMode: 'gibson'
+    };
+    renderBackboneRecognitionDialog();
+  }
+
+  function updateBackboneRecognitionDialogSelection(nextSelection = {}) {
+    if (!state.backboneRecognitionDialog?.open || !state.backboneRecognitionDialog?.match) {
+      return;
+    }
+
+    const candidates = getRecognitionCandidates(state.backboneRecognitionDialog.match);
+    const nextCandidateId = String(nextSelection.candidateId || state.backboneRecognitionDialog.candidateId || candidates[0]?.id || '');
+    state.backboneRecognitionDialog = {
+      ...state.backboneRecognitionDialog,
+      candidateId: nextCandidateId,
+      variantMode: nextSelection.variantMode === 'restriction'
+        ? 'restriction'
+        : (nextSelection.variantMode === 'gibson' ? 'gibson' : state.backboneRecognitionDialog.variantMode)
+    };
+    renderBackboneRecognitionDialog();
+  }
+
+  async function applyBackboneRecognitionSelection() {
+    const dialogState = state.backboneRecognitionDialog || {};
+    const match = dialogState.match;
+    if (!dialogState.open || !match) {
+      return;
+    }
+
+    const recordIndex = clamp(dialogState.recordIndex, 0, Math.max(0, state.records.length - 1));
+    const nextRecords = [...state.records];
+    const current = nextRecords[recordIndex];
+    if (!current?.sequence?.length) {
+      closeBackboneRecognitionDialog();
+      setStatus('Selected record no longer exists.', true);
+      return;
+    }
+
+    const previousFeatures = Array.isArray(current.features) ? current.features : [];
+    const retainedFeatures = removeBackboneRecognitionFeatures(previousFeatures);
+    const removedRecognitionFeatures = retainedFeatures.length !== previousFeatures.length;
+    if (removedRecognitionFeatures) {
+      current.features = retainedFeatures;
+      state.records = nextRecords;
+      state.selectedFeatureIndex = -1;
+    }
+
+    detailController?.hideFeatureContextMenu();
+    detailController?.hideFeatureEditor();
+
+    closeBackboneRecognitionDialog();
+    if (removedRecognitionFeatures) {
+      detailController?.clearSequenceSelection();
+      detailController?.renderActiveRecord();
+    }
+
+    const displayMatch = getRecognitionDisplayMatch(match, {
+      candidateId: dialogState.candidateId,
+      variantMode: dialogState.variantMode
+    });
+    const matchedHostName = cleanText(displayMatch?.hostVectorName, 140) || 'vector';
+    const promoterDriven = String(displayMatch?.recognitionSource || '').toLowerCase() === 'promoter_alignment';
+    const insertLength = Math.max(0, Number(displayMatch?.insertLength) || 0);
+    const summary = insertLength > 0
+      ? `${promoterDriven ? 'Recognized a promoter-aligned backbone' : `Recognized ${matchedHostName} backbone`} with a ${insertLength.toLocaleString()} bp ${dialogState.variantMode === 'restriction' ? 'restriction-bounded' : 'Gibson/HR'} insert.`
+      : `${promoterDriven ? 'Recognized a promoter-aligned backbone.' : `Recognized ${matchedHostName} backbone.`}`;
+    let artifactStored = false;
+    let artifactError = '';
+    let sequenceCleanupSaved = false;
+    let sequenceCleanupError = '';
+
+    try {
+      const artifactResult = await persistRecognizedBackboneArtifact(match, current, {
+        candidateId: dialogState.candidateId,
+        variantMode: dialogState.variantMode
+      });
+      artifactStored = Boolean(artifactResult?.ok || artifactResult?.filePath);
+    } catch (error) {
+      artifactError = error?.message || 'Failed to store Protein Builder backbone file.';
+    }
+
+    if (removedRecognitionFeatures && state.activeEntryId) {
+      try {
+        const entry = await persistRecordToLibrary(current, {
+          id: state.activeEntryId,
+          status: state.activeEntryStatus || LIBRARY_STATUS_TEMPORARY,
+          name: elements.saveNameInput?.value || current.name || 'sequence'
+        });
+        await homeController?.refreshLibraryEntries({
+          selectedId: entry.id,
+          filter: entry.status || state.activeEntryStatus || LIBRARY_STATUS_TEMPORARY,
+          silent: true
+        });
+        sequenceCleanupSaved = true;
+      } catch (error) {
+        sequenceCleanupError = error?.message || 'Failed to update stored sequence.';
+      }
+    }
+
+    const artifactMessage = artifactStored
+      ? ' Stored a Protein Builder backbone file.'
+      : (artifactError ? ` ${artifactError}` : '');
+    const sequenceMessage = removedRecognitionFeatures
+      ? (sequenceCleanupSaved
+        ? ' Removed backbone/insert annotations from the original sequence.'
+        : (sequenceCleanupError
+          ? ` Could not remove existing backbone/insert annotations from the original sequence: ${sequenceCleanupError}`
+          : ' Removed local backbone/insert annotations from the original sequence.'))
+      : ' The original sequence was left unchanged.';
+
+    setStatus(`${summary}${artifactMessage}${sequenceMessage}`);
+  }
+
   let homeController = null;
   let detailController = null;
   let annotationController = null;
@@ -319,6 +845,7 @@ export function initSequenceViewer(options = {}) {
     state.errors = Array.isArray(result.errors) ? result.errors : [];
     state.isAnnotating = false;
     state.isRecognizingBackbone = false;
+    closeBackboneRecognitionDialog();
     state.selectedRecordIndex = 0;
     state.selectedFeatureIndex = -1;
     resetAlignmentState();
@@ -670,44 +1197,24 @@ export function initSequenceViewer(options = {}) {
       const previousFeatures = Array.isArray(current.features) ? current.features : [];
       const retainedFeatures = removeBackboneRecognitionFeatures(previousFeatures);
       const hadRecognitionFeatures = retainedFeatures.length !== previousFeatures.length;
-      const recognizedFeatures = buildBackboneRecognitionFeatures(response.match, current.sequence.length);
 
-      current.features = [...retainedFeatures, ...recognizedFeatures];
-      state.records = nextRecords;
-      detailController?.clearSequenceSelection();
-      detailController?.hideFeatureContextMenu();
-      detailController?.hideFeatureEditor();
-
-      if (!recognizedFeatures.length) {
+      if (!response.match) {
+        current.features = retainedFeatures;
+        state.records = nextRecords;
+        detailController?.clearSequenceSelection();
+        detailController?.hideFeatureContextMenu();
+        detailController?.hideFeatureEditor();
         state.selectedFeatureIndex = -1;
         detailController?.renderActiveRecord();
         if (hadRecognitionFeatures && state.activeEntryId) {
           await persistFeatureMutation(current, 'Cleared auto-detected backbone/insert features.');
         }
-        setStatus('No stored vector backbone matched this sequence.');
+        setStatus('No backbone candidate was recognized from promoter alignment.');
         return;
       }
 
-      const preferredFeature = recognizedFeatures.find((feature) => feature.type === 'insert') || recognizedFeatures[0];
-      state.selectedFeatureIndex = detailController?.findFeatureIndexByIdentity(
-        detailController?.getVisibleFeaturesForRecord(current),
-        preferredFeature
-      ) ?? -1;
-
-      detailController?.renderActiveRecord();
-
-      const displayMatch = getRecognitionDisplayMatch(response.match);
-      const matchedHostName = cleanText(displayMatch?.hostVectorName, 140) || 'vector';
-      const insertLength = Math.max(0, Number(displayMatch?.insertLength) || 0);
-      const summary = insertLength > 0
-        ? `Recognized ${matchedHostName} backbone with a ${insertLength.toLocaleString()} bp insert.`
-        : `Recognized ${matchedHostName} backbone.`;
-
-      if (state.activeEntryId) {
-        await persistFeatureMutation(current, `Recognized backbone ${matchedHostName}.`);
-      } else {
-        setStatus(`${summary} Save the record to persist changes.`);
-      }
+      openBackboneRecognitionDialog(response.match, selectedIndex);
+      setStatus('Backbone recognized. Review promoter / ORF candidates before applying.');
     } catch (error) {
       setStatus(error?.message || 'Backbone recognition failed.', true);
     } finally {
@@ -733,6 +1240,7 @@ export function initSequenceViewer(options = {}) {
     state.activeEntryStatus = '';
     state.isAnnotating = false;
     state.isRecognizingBackbone = false;
+    closeBackboneRecognitionDialog();
     setMode('paste');
     setInputComposerVisible(true);
     detailController?.hideFeatureContextMenu();
@@ -822,6 +1330,15 @@ export function initSequenceViewer(options = {}) {
     elements,
     getBridge,
     getStoragePath,
+    getSelectedRecord,
+    getSelectedFeature: () => {
+      const record = getSelectedRecord();
+      if (!record || !Number.isFinite(state.selectedFeatureIndex) || state.selectedFeatureIndex < 0) {
+        return null;
+      }
+      const visibleFeatures = detailController?.getVisibleFeaturesForRecord?.(record) || [];
+      return visibleFeatures[state.selectedFeatureIndex] || null;
+    },
     hasStoragePath,
     setStatus,
     onNavigateHome: homeController.navigateToHome,
@@ -855,7 +1372,29 @@ export function initSequenceViewer(options = {}) {
     }
   }
 
-  function render() {
+  function syncShellWorkspace(activeViewId = '') {
+    const nextViewId = String(activeViewId || '').trim();
+    const workspaceMode = String(state.localWorkspaceMode || '').trim().toLowerCase();
+    if (!nextViewId || !workspaceMode) {
+      return;
+    }
+
+    if (nextViewId === homeViewId) {
+      if (workspaceMode === 'detail' || workspaceMode === 'alignment') {
+        homeController?.setLocalWorkspaceVisibility('home');
+      }
+      return;
+    }
+
+    if (nextViewId === detailViewId) {
+      if (workspaceMode === 'home' || workspaceMode === 'builder') {
+        homeController?.setLocalWorkspaceVisibility('detail');
+      }
+    }
+  }
+
+  function render(renderOptions = {}) {
+    syncShellWorkspace(renderOptions?.activeViewId);
     detailController.updateRecordSelect();
     detailController.renderActiveRecord();
     alignmentController?.render?.();
@@ -903,6 +1442,44 @@ export function initSequenceViewer(options = {}) {
   elements.loadBtn?.addEventListener('click', (event) => {
     event.preventDefault();
     void loadCurrentInput();
+  });
+
+  elements.backboneDialogCandidates?.addEventListener('click', (event) => {
+    const candidateId = getDatasetValueFromTarget(event.target, 'candidateId');
+    if (!candidateId) {
+      return;
+    }
+    updateBackboneRecognitionDialogSelection({ candidateId });
+  });
+
+  elements.backboneDialogModeGibsonBtn?.addEventListener('click', () => {
+    updateBackboneRecognitionDialogSelection({ variantMode: 'gibson' });
+  });
+
+  elements.backboneDialogModeRestrictionBtn?.addEventListener('click', () => {
+    updateBackboneRecognitionDialogSelection({ variantMode: 'restriction' });
+  });
+
+  elements.backboneDialogApplyBtn?.addEventListener('click', () => {
+    void applyBackboneRecognitionSelection();
+  });
+
+  elements.backboneDialogCloseBtn?.addEventListener('click', () => {
+    closeBackboneRecognitionDialog();
+    setStatus('Backbone recognition review closed.');
+  });
+
+  elements.backboneDialogCancelBtn?.addEventListener('click', () => {
+    closeBackboneRecognitionDialog();
+    setStatus('Backbone recognition review canceled.');
+  });
+
+  elements.backboneDialogOverlay?.addEventListener('click', (event) => {
+    if (event.target !== elements.backboneDialogOverlay) {
+      return;
+    }
+    closeBackboneRecognitionDialog();
+    setStatus('Backbone recognition review closed.');
   });
 
   homeController.bindEvents();

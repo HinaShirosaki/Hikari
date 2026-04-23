@@ -1,0 +1,17 @@
+LOCUS       .                         29 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        join(1..6,7..23,24..29)
+                     /parts="1:-35;3:-10"
+                     /gene="intI1 (promoter lies within the coding sequence)"
+                     /note="class 1 integron promoter"
+                     /label="Pc promoter"
+ORIGIN
+        1 ttgacataag cctgttcggt tcgtaaact
+//

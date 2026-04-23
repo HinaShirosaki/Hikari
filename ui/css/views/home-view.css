@@ -13,9 +13,9 @@
   --home-gap: 16px;
   --home-tile-padding: 18px;
   --home-tile-inner-gap: 14px;
-  --home-top-row: minmax(128px, 0.62fr);
+  --home-top-row: minmax(0, 1fr);
   --home-middle-row: minmax(0, 1fr);
-  --home-bottom-row: minmax(0, 0.84fr);
+  --home-bottom-row: minmax(0, 0.8fr);
   height: 100%;
   max-height: 100%;
   min-height: 0;
@@ -43,7 +43,7 @@ body.theme-night #home-view {
   grid-template-areas:
     "quicklog passage timer"
     "notebook incubation timer"
-    "workflow workflow actions";
+    "notebook workflow actions";
   grid-template-rows: var(--home-top-row) var(--home-middle-row) var(--home-bottom-row);
   gap: var(--home-gap);
 }
@@ -89,7 +89,7 @@ body.theme-night #home-view {
 
 #home-view .home-tile-quick-log {
   grid-area: quicklog;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr);
 }
 
 #home-view .home-tile-notebook-pages {
@@ -422,6 +422,61 @@ body.theme-night #home-view .dashboard-incubation-action:focus-visible {
   height: 100%;
 }
 
+#home-view .home-quick-log-input-wrap {
+  position: relative;
+  min-height: 0;
+  height: 100%;
+}
+
+#home-view .home-quick-log-input-wrap textarea {
+  height: 100%;
+  min-height: 0;
+  max-height: 100%;
+  padding-right: 74px;
+  padding-bottom: 74px;
+  resize: none;
+}
+
+#home-view .home-tile .home-quick-log-send-btn {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 54px;
+  height: 54px;
+  min-width: 54px;
+  min-height: 54px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: #1f2328;
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(23, 18, 14, 0.18);
+}
+
+#home-view .home-tile .home-quick-log-send-btn:hover,
+#home-view .home-tile .home-quick-log-send-btn:focus-visible {
+  background: #161a1f;
+  transform: translateY(-1px);
+}
+
+#home-view .home-tile .home-quick-log-send-btn:disabled,
+#home-view .home-tile .home-quick-log-send-btn:disabled:hover,
+#home-view .home-tile .home-quick-log-send-btn:disabled:focus-visible {
+  background: #8c939b;
+  color: #ffffff;
+  transform: none;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+#home-view .home-quick-log-send-btn svg {
+  width: 24px;
+  height: 24px;
+}
+
 #home-view .dashboard-inline-row {
   display: flex;
   align-items: center;
@@ -510,6 +565,20 @@ body.theme-night #home-view .home-tile .home-passage-add-btn,
 body.theme-night #home-view .home-tile .home-passage-add-btn:hover,
 body.theme-night #home-view .home-tile .home-passage-add-btn:focus-visible {
   background: #a8a8a8;
+  color: #ffffff;
+}
+
+body.theme-night #home-view .home-tile .home-quick-log-send-btn,
+body.theme-night #home-view .home-tile .home-quick-log-send-btn:hover,
+body.theme-night #home-view .home-tile .home-quick-log-send-btn:focus-visible {
+  background: #1f2328;
+  color: #ffffff;
+}
+
+body.theme-night #home-view .home-tile .home-quick-log-send-btn:disabled,
+body.theme-night #home-view .home-tile .home-quick-log-send-btn:disabled:hover,
+body.theme-night #home-view .home-tile .home-quick-log-send-btn:disabled:focus-visible {
+  background: #8c939b;
   color: #ffffff;
 }
 
@@ -895,9 +964,9 @@ body.theme-night #home-view .home-tile .home-action-btn:focus-visible {
     --home-gap: 12px;
     --home-tile-padding: 14px;
     --home-tile-inner-gap: 10px;
-    --home-top-row: minmax(108px, 0.5fr);
-    --home-middle-row: minmax(0, 0.94fr);
-    --home-bottom-row: minmax(0, 0.76fr);
+    --home-top-row: minmax(0, 0.96fr);
+    --home-middle-row: minmax(0, 0.96fr);
+    --home-bottom-row: minmax(0, 0.74fr);
   }
 
   #home-view .home-today-grid {
@@ -935,9 +1004,9 @@ body.theme-night #home-view .home-tile .home-action-btn:focus-visible {
     --home-gap: 10px;
     --home-tile-padding: 12px;
     --home-tile-inner-gap: 8px;
-    --home-top-row: minmax(92px, 0.42fr);
-    --home-middle-row: minmax(0, 0.88fr);
-    --home-bottom-row: minmax(0, 0.7fr);
+    --home-top-row: minmax(0, 0.9fr);
+    --home-middle-row: minmax(0, 0.9fr);
+    --home-bottom-row: minmax(0, 0.68fr);
   }
 
   #home-view .home-summary-label,
@@ -984,9 +1053,9 @@ body.theme-night #home-view .home-tile .home-action-btn:focus-visible {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-template-areas:
       "quicklog timer"
-      "passage timer"
-      "notebook workflow"
-      "incubation actions";
+      "notebook timer"
+      "passage incubation"
+      "workflow actions";
     grid-template-rows: repeat(4, minmax(280px, auto));
     height: auto;
     min-height: auto;

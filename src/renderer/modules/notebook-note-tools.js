@@ -54,6 +54,24 @@ export function showTransientNotice(message, { type = 'success', durationMs = 50
   }, Math.max(1000, Number(durationMs) || 5000));
 }
 
+export function buildClarifiedNotebookNote(sourceText, clarifiedText) {
+  const source = String(sourceText || '').trim();
+  const clarified = String(clarifiedText || '').trim() || source;
+  if (!source) {
+    return clarified;
+  }
+  if (!clarified) {
+    return source;
+  }
+  return [
+    'Original note:',
+    source,
+    '',
+    'Clarified note:',
+    clarified
+  ].join('\n');
+}
+
 export const clarifyNotebookNote = async ({ llm, text }) => {
   const source = String(text || '').trim();
   if (!source) {

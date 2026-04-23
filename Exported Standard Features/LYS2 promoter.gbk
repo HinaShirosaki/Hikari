@@ -1,0 +1,18 @@
+LOCUS       .                        240 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..240
+                     /gene="S. cerevisiae LYS2"
+                     /label="LYS2 promoter"
+ORIGIN
+        1 aattccactt gcaattacat aaaaaattcc ggcggttttt cgcgtgtgac tcaatgtcga
+       61 aatacctgcc taatgaacat gaacatcgcc caaatgtatt tgaagacccg ctgggagaag
+      121 ttcaagatat ataagtaaca agcagccaat agtataaaaa aaaatctgag tttattacct
+      181 ttcctggaat ttcagtgaaa aactgctaat tatagagaga tatcacagag ttactcacta
+//

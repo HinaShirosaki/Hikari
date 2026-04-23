@@ -1,0 +1,27 @@
+LOCUS       .                        675 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..675
+                     /note="urg1 promoter from Schizosaccharomyces pombe,
+                     conferring rapid uracil-induced expression"
+                     /label="urg1 promoter"
+ORIGIN
+        1 cgattagcgt gacacggatt attattttta tatcctacgt aaaaaagaat ttcgaactag
+       61 aatgtgtggc aaacgccttc actactgact attacgaatt gtataaatac aaagccgtgg
+      121 aaatagaaac catcttttcg atcgttcttt gaatacttgt aagaatgatg ttctattctt
+      181 ttcctgtaaa tgggaatatt tgcttactga catcaaccaa ttccaattgt ttacattaca
+      241 aaaaaatttt ttttcttcta aacaatgact tgcgtcggct attgcccgcg gtagcgccgc
+      301 tcgagaacat gcgtgcacga cccttccccg cgacttcgta aggtctaaga aggcgcaacg
+      361 atgtaaacaa ggtattgttt tcggttcgct gacgaggaag tgcccgcggc aagtccgcgt
+      421 ggtatctggt atcatgcgag ctagcgcttt cattgatagt atctggaagg ctataaataa
+      481 gggaggaaat ccatacggtt caacatcaat tgcaaaggtt tcattcatta ctttagctgc
+      541 cttactcaat tcactttgtt taaaggctaa ttttgtgaaa cgaatttctt tctacccatt
+      601 gaacattcgt ttgtcatttt tcttgttgtt ttacttatcc gttttcttca attactaaat
+      661 tagaactaat tcaat
+//

@@ -1,0 +1,22 @@
+LOCUS       .                        427 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..427
+                     /note="Drosophila metallothionein promoter"
+                     /label="MT promoter"
+ORIGIN
+        1 aattcgttgc aggacaggat gtggtgcccg atgtgactag ctctttgctg caggccgtcc
+       61 tatcctctgg ttccgataag agacccagaa ctccggcccc ccaccgccca ccgccacccc
+      121 catacatatg tggtacgcaa gtaagagtgc ctgcgcatgc cccatgtgcc ccaccaagag
+      181 ttttgcatcc catacaagtc cccaaagtgg agaaccgaac caattcttcg cgggcagaac
+      241 aaaagcttct gcacacgtct ccactcgaat ttggagccgg ccggcgtgtg caaaagaggt
+      301 gaatcgaacg aaagacccgt gtgtaaagcc gcgtttccaa aatgtataaa accgagagca
+      361 tctggccaat gtgcatcagt tgtggtcagc agcaaaatca agtgaatcat ctcagtgcaa
+      421 ctaaagg
+//

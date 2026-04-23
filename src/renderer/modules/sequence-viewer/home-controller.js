@@ -54,6 +54,7 @@ export function createSequenceViewerHomeController(config = {}) {
       : mode === 'builder'
         ? 'builder'
         : 'home';
+    state.localWorkspaceMode = next;
     rootDocument?.body?.classList?.toggle?.('sequence-viewer-fixed-scroll', next === 'builder' || next === 'alignment');
     if (elements.homeWorkspace) {
       elements.homeWorkspace.hidden = next !== 'home';

@@ -1,0 +1,26 @@
+LOCUS       .                        600 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..600
+                     /gene="eft-3"
+                     /note="promoter for the C. elegans&nbsp;elongation factor
+                     1α gene (Mitrovich and Anderson, 2000)"
+                     /label="eft-3 promoter"
+ORIGIN
+        1 gcacctttgg tcttttattg tcaacttcca ttggttcttc cattgtttct gttaaattaa
+       61 tgaatttttc ataaaataaa gacattatac aatataaaaa tgaagaattt attgaaaata
+      121 aactgccaga gagaaaaagt atgcaacact cccgccgaga gtgtttgaaa tggtgtacgg
+      181 tacattttcg tgctaggagt tagatgtgca ggcagcaacg agagggggag agattttttt
+      241 gggccttgtg aaattaacgt gagttttctg gtcatctgac taatcatgtt ggttttttgt
+      301 tggtttattt tgtttttatc tttgttttta tccagattag gaaatttaaa ttttatgaat
+      361 ttataatgag gtcaaacatt cagtcccagc gtttttcctg ttctcactgt ttagtcgaat
+      421 ttttatttta ggctttcaac aaatgttcta actgtcttat ttgtgacctc actttttata
+      481 tttttttaat ttttaaaaat attagaagtt tctaggataa ttttttcgac ttttattctc
+      541 tctaccgtcc gcactcttct tacttttaaa ttaaattgtt tttttttcag ttgggaaaca
+//
