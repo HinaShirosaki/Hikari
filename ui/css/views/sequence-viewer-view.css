@@ -655,6 +655,46 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   gap: 12px;
 }
 
+.sequence-viewer-protein-builder-confirmation {
+  border: 1px solid color-mix(in srgb, var(--accent) 26%, var(--line) 74%);
+  background: color-mix(in srgb, var(--surface) 82%, var(--accent) 18%);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) minmax(260px, auto) auto;
+  align-items: center;
+  gap: 14px;
+}
+
+.sequence-viewer-protein-builder-confirmation[hidden] {
+  display: none !important;
+}
+
+.sequence-viewer-protein-builder-confirmation-copy,
+.sequence-viewer-protein-builder-confirmation-summary {
+  display: grid;
+  gap: 6px;
+}
+
+.sequence-viewer-protein-builder-confirmation-copy h4,
+.sequence-viewer-protein-builder-confirmation-copy p,
+.sequence-viewer-protein-builder-confirmation-summary p {
+  margin: 0;
+}
+
+.sequence-viewer-protein-builder-confirmation-summary {
+  font-size: 0.83rem;
+  color: var(--muted);
+}
+
+.sequence-viewer-protein-builder-confirmation-actions {
+  justify-self: end;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
 .sequence-viewer-backbone-dialog-overlay,
 .sequence-viewer-alignment-workspace {
   position: fixed;
@@ -1660,6 +1700,15 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   .sequence-viewer-detail-topbar {
     grid-template-columns: 1fr;
     align-items: stretch;
+  }
+
+  .sequence-viewer-protein-builder-confirmation {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .sequence-viewer-protein-builder-confirmation-actions {
+    justify-self: start;
   }
 
   .sequence-viewer-alignment-toolbar {
