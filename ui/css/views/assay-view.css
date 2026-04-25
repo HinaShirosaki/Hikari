@@ -234,45 +234,6 @@
   align-self: stretch;
 }
 
-.assay-layout-list-panel {
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-
-.assay-layout-list-summary {
-  list-style: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  color: var(--strong);
-  font-size: 0.88rem;
-  font-weight: 650;
-}
-
-.assay-layout-list-summary::-webkit-details-marker {
-  display: none;
-}
-
-.assay-layout-list-summary::before {
-  content: '';
-  width: 9px;
-  height: 9px;
-  border-right: 1.5px solid currentColor;
-  border-bottom: 1.5px solid currentColor;
-  transform: rotate(45deg);
-  transition: transform 140ms ease;
-}
-
-.assay-layout-list-panel[open] .assay-layout-list-summary::before {
-  transform: translateY(1px) rotate(225deg);
-}
-
-.assay-layout-list-body {
-  margin-top: 10px;
-}
-
 /* Extracted from ui/css/themes/modes.css */
 .assay-plate-preview {
   display: grid;

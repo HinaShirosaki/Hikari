@@ -23,7 +23,6 @@ import {
   normalizeResults,
   parseWellId,
   removeSuppressedWellsFromLayout,
-  sortLayout,
   wellIdFor
 } from './plate-model.js';
 import { createInventorySamplePicker } from './inventory-sample-picker.js';
@@ -37,14 +36,12 @@ export function createAssayLayoutManager({
   getInventorySamples,
   setCsvStatus,
   setLayoutStatus,
-  setResultStatus,
   renderResultTable,
   clearAnalysisOutput
 }) {
   const {
     assayConcentrationAxisDisplay,
     assayImportFile,
-    assayLayoutList,
     assayNumberDisplay,
     assayPlateDefinition,
     assayPlateFieldConcentrationBtn,
@@ -230,7 +227,6 @@ export function createAssayLayoutManager({
 
   function applyInventorySampleToWell(wellId, sampleValue) {
     updateInlineWellOverride(wellId, 'sampleId', sampleValue);
-    renderLayoutList();
     renderPlatePreview();
     renderResultTable();
     setLayoutStatus(`Updated ${wellId} from inventory.`);
@@ -384,7 +380,6 @@ export function createAssayLayoutManager({
     assaySampleAxisInput.value = next;
     syncAxisDisplay();
     setLayoutFromAxisAndOverrides();
-    renderLayoutList();
     renderPlatePreview();
     renderResultTable();
   }
@@ -408,7 +403,6 @@ export function createAssayLayoutManager({
     };
     syncAxisTemplateValues(swapped);
     setLayoutFromAxisAndOverrides();
-    renderLayoutList();
     renderPlatePreview();
     renderResultTable();
     setLayoutStatus(`Switched axes. Sample axis is now ${axisLabel(assaySampleAxisInput.value)}.`);
@@ -480,27 +474,6 @@ export function createAssayLayoutManager({
     }
   }
 
-  function renderLayoutList() {
-    if (!assayLayoutList) {
-      return;
-    }
-    const rows = sortLayout(runtime.currentLayout);
-    if (!rows.length) {
-      assayLayoutList.innerHTML = '<p class="small-note">No mapped wells yet.</p>';
-      return;
-    }
-    assayLayoutList.innerHTML = rows.map((item) => `
-      <article class="list-row">
-        <span><strong>${safeText(item.well)}</strong> — Sample: ${safeText(item.sampleId || '-')}</span>
-        <span>Conc: ${safeText(item.concentration || '-')}</span>
-        <div class="card-actions list-actions">
-          <button type="button" class="ghost-btn" data-layout-edit="${item.well}">Edit</button>
-          <button type="button" class="danger-btn" data-layout-delete="${item.well}">Delete</button>
-        </div>
-      </article>
-    `).join('');
-  }
-
   function onPlatePreviewInput(event) {
     const axisInput = event.target.closest('[data-axis-dimension]');
     if (axisInput) {
@@ -524,7 +497,6 @@ export function createAssayLayoutManager({
     const axisInput = event.target.closest('[data-axis-dimension]');
     if (axisInput) {
       setLayoutFromAxisAndOverrides();
-      renderLayoutList();
       renderPlatePreview();
       renderResultTable();
       setLayoutStatus('Updated axis-based mapping from in-plate row/column definitions.');
@@ -542,7 +514,6 @@ export function createAssayLayoutManager({
       inlineInput.dataset.wellInlineField,
       inlineInput.value
     );
-    renderLayoutList();
     renderPlatePreview();
     renderResultTable();
     setLayoutStatus(`Updated ${String(inlineInput.dataset.well || '').trim().toUpperCase()}.`);
@@ -659,7 +630,6 @@ export function createAssayLayoutManager({
     runtime.currentLayout = [];
     runtime.activeWellEditorId = '';
     runtime.currentResults = {};
-    renderLayoutList();
     renderPlatePreview();
     renderResultTable();
     setLayoutStatus('Cleared all well mappings.');
@@ -746,36 +716,6 @@ export function createAssayLayoutManager({
     return wellIdFor(nextRow, nextColumn);
   }
 
-  function onLayoutListClick(event) {
-    const editBtn = event.target.closest('[data-layout-edit]');
-    if (editBtn) {
-      const well = editBtn.dataset.layoutEdit;
-      const item = runtime.currentLayout.find((entry) => entry.well === well);
-      if (!item) {
-        return;
-      }
-      setActiveWellSelection(item.well || '');
-      focusPlateWellInput(item.well || '');
-      setLayoutStatus(`Focused ${well} in plate preview.`);
-      return;
-    }
-    const deleteBtn = event.target.closest('[data-layout-delete]');
-    if (deleteBtn) {
-      const well = deleteBtn.dataset.layoutDelete;
-      delete runtime.manualWellOverrides[well];
-      runtime.suppressedWells.add(well);
-      setLayoutFromAxisAndOverrides();
-      if (runtime.activeWellEditorId === well) {
-        runtime.activeWellEditorId = '';
-      }
-      renderLayoutList();
-      renderPlatePreview();
-      renderResultTable();
-      setLayoutStatus(`Deleted ${well}.`);
-      setCsvStatus(`Mapped wells: ${runtime.currentLayout.length}.`);
-    }
-  }
-
   function renderPlateDefinition() {
     if (!assayPlateDefinition) {
       return;
@@ -799,7 +739,6 @@ export function createAssayLayoutManager({
     renderPlateDefinition();
     renderPlatePreview();
     renderResultTable();
-    renderLayoutList();
     if (typeof clearAnalysisOutput === 'function') {
       clearAnalysisOutput();
     }
@@ -887,7 +826,6 @@ export function createAssayLayoutManager({
       runtime.manualWellOverrides = layoutToMap(normalizeLayout(imported, def));
       setLayoutFromAxisAndOverrides();
       renderPlatePreview();
-      renderLayoutList();
       renderResultTable();
       setCsvStatus(`Imported ${runtime.currentLayout.length} mapped wells from ${file.name}.`);
     } catch {
@@ -917,7 +855,6 @@ export function createAssayLayoutManager({
     syncAxisDisplay,
     onSwapAxes,
     renderPlatePreview,
-    renderLayoutList,
     onPlatePreviewInput,
     onPlatePreviewChange,
     onPlatePreviewFocusIn,
@@ -934,7 +871,6 @@ export function createAssayLayoutManager({
     resetSerialDilutionState: serialDilution.reset,
     getSerialDilutionSummaryData: serialDilution.getSummaryData,
     focusPlateWellInput,
-    onLayoutListClick,
     renderPlateDefinition,
     renderAssayNumberDisplay,
     updateActiveWellPreviewState,
