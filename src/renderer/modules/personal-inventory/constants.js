@@ -4,6 +4,7 @@ export const SAMPLE_TYPE_COLORS = {
   strain: '#159a8a',
   antibody: '#d75062',
   protein: '#3b9d3a',
+  chemical: '#0f8a9d',
   compound: '#7a58e8',
   primer: '#be9a1a',
   other: '#718096'
@@ -15,6 +16,7 @@ export const SAMPLE_TYPE_LABELS = {
   strain: 'Strain',
   antibody: 'Antibody',
   protein: 'Protein',
+  chemical: 'Chemical',
   compound: 'Compound',
   primer: 'Primer',
   other: 'Other'

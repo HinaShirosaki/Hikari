@@ -1,6 +1,6 @@
 import { getWellName, isMultiWellContainer } from './personal-inventory/constants.js';
 
-export function initSampleRegistry({ state, persist, safeText }) {
+export function initSampleRegistry({ state, persist, safeText, onNotebookSampleCaptured }) {
   const sampleForm = document.getElementById('sample-form');
   const sampleIdInput = document.getElementById('sample-id');
   const sampleCodeInput = document.getElementById('sample-code');
@@ -43,6 +43,8 @@ export function initSampleRegistry({ state, persist, safeText }) {
   let selectedSampleId = '';
   let compoundEditorOpen = false;
   let compoundStructureDraft = emptyCompoundStructureDraft();
+
+  const CHEMICAL_STRUCTURE_SAMPLE_TYPES = new Set(['chemical', 'compound']);
 
   sampleStorageTypeInput?.addEventListener('change', renderLocationFields);
   sampleLinkContainerInput?.addEventListener('change', onLinkedContainerChange);
@@ -378,6 +380,100 @@ export function initSampleRegistry({ state, persist, safeText }) {
     return detail.join(' | ');
   }
 
+  function cloneMetadataObject(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return null;
+    }
+    return Object.entries(value).reduce((accumulator, [key, raw]) => {
+      const cleanKey = String(key || '').trim();
+      if (!cleanKey) {
+        return accumulator;
+      }
+      accumulator[cleanKey] = raw === null || raw === undefined ? '' : raw;
+      return accumulator;
+    }, {});
+  }
+
+  function formatSampleRecordLabel(sample) {
+    const code = String(sample?.code || '').trim();
+    const name = String(sample?.name || '').trim();
+    if (code && name) {
+      return `${code} - ${name}`;
+    }
+    return code || name || String(sample?.id || 'Sample').trim();
+  }
+
+  function formatSampleTypeLabel(sampleType) {
+    return String(sampleType || 'sample')
+      .replace(/_/g, ' ')
+      .replace(/\b[a-z]/g, (letter) => letter.toUpperCase());
+  }
+
+  function appendNotebookResultLine(source, line) {
+    const cleanLine = String(line || '').trim();
+    if (!cleanLine) {
+      return String(source || '').trim();
+    }
+    const current = String(source || '').trim();
+    return current ? `${current}\n${cleanLine}` : cleanLine;
+  }
+
+  function resolveSampleStorageLabel(sample) {
+    const inventoryLabel = formatInventoryLink(sample?.inventoryLink);
+    if (inventoryLabel && inventoryLabel !== '-') {
+      return inventoryLabel;
+    }
+    const locationLabel = formatLocation(sample?.location);
+    return locationLabel && locationLabel !== '-' ? locationLabel : 'No storage location recorded';
+  }
+
+  function appendPendingNotebookSampleCapture(record) {
+    const capture = state.settings?.pendingNotebookSampleCapture;
+    const notebookEntryId = String(capture?.notebookEntryId || '').trim();
+    if (!notebookEntryId) {
+      return null;
+    }
+    const entryIndex = (state.notebookEntries || []).findIndex((entry) => entry.id === notebookEntryId);
+    if (entryIndex < 0) {
+      state.settings.pendingNotebookSampleCapture = null;
+      return null;
+    }
+
+    const savedAt = new Date().toISOString();
+    const storageLabel = resolveSampleStorageLabel(record);
+    const sampleLink = {
+      id: `notebook-sample-capture-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`,
+      source: 'sample-registry-capture',
+      placeholderKey: '',
+      placeholderName: '',
+      placeholderType: '',
+      sampleId: String(record?.id || '').trim(),
+      sampleCode: String(record?.code || '').trim(),
+      sampleName: String(record?.name || '').trim(),
+      sampleType: String(record?.type || '').trim(),
+      sampleLot: String(record?.lot || '').trim(),
+      sampleConcentration: String(record?.concentration || '').trim(),
+      storageLabel,
+      location: cloneMetadataObject(record?.location),
+      inventoryLink: cloneMetadataObject(record?.inventoryLink),
+      linkedAt: savedAt,
+      captureRequestedAt: String(capture?.requestedAt || '').trim()
+    };
+    const savedAtLabel = new Date(savedAt).toLocaleString();
+    const note = `[${savedAtLabel}] Saved sample ${formatSampleRecordLabel(record)} (${formatSampleTypeLabel(record?.type)}) from Add Samples. Saved in: ${storageLabel}.`;
+    const currentEntry = state.notebookEntries[entryIndex];
+    const nextEntry = {
+      ...currentEntry,
+      result: appendNotebookResultLine(currentEntry?.result, note),
+      sampleLinks: (Array.isArray(currentEntry?.sampleLinks) ? currentEntry.sampleLinks : []).concat(sampleLink),
+      updatedAt: savedAt
+    };
+
+    state.notebookEntries[entryIndex] = nextEntry;
+    state.settings.pendingNotebookSampleCapture = null;
+    return nextEntry;
+  }
+
   async function onSubmit(event) {
     event.preventDefault();
     ensureState();
@@ -403,10 +499,10 @@ export function initSampleRegistry({ state, persist, safeText }) {
     const autoLocation = buildLocationFromInventoryLink(linkedContainer, linkedPosition);
     const manualLocation = readLocation();
     const sampleType = sampleTypeInput.value;
-    const isCompound = sampleType === 'compound';
+    const isChemicalStructureSample = isChemicalStructureSampleType(sampleType);
     const isCellLine = sampleType === 'cell_line';
 
-    if (isCompound) {
+    if (isChemicalStructureSample) {
       try {
         await captureCompoundStructureFromEditor();
       } catch {
@@ -417,7 +513,7 @@ export function initSampleRegistry({ state, persist, safeText }) {
       closeCompoundDialog();
     }
 
-    const resolvedStructure = isCompound
+    const resolvedStructure = isChemicalStructureSample
       ? normalizeCompoundStructureData({
         ...existing?.compoundStructure,
         ...compoundStructureDraft
@@ -453,8 +549,12 @@ export function initSampleRegistry({ state, persist, safeText }) {
       state.samples.push(record);
     }
 
+    const capturedNotebookEntry = appendPendingNotebookSampleCapture(record);
     selectedSampleId = record.id;
     persist();
+    if (capturedNotebookEntry && typeof onNotebookSampleCaptured === 'function') {
+      onNotebookSampleCaptured(capturedNotebookEntry);
+    }
     resetForm();
     renderList();
   }
@@ -465,6 +565,9 @@ export function initSampleRegistry({ state, persist, safeText }) {
     sampleStorageTypeInput.value = 'freezer';
     compoundStructureDraft = emptyCompoundStructureDraft();
     closeCompoundDialog();
+    if (sampleNotesInput) {
+      sampleNotesInput.placeholder = '';
+    }
     renderLinkedContainerOptions();
     renderChemicalLinkOptions();
     if (sampleLinkPositionInput) {
@@ -630,7 +733,7 @@ export function initSampleRegistry({ state, persist, safeText }) {
     if (selected.type === 'cell_line') {
       detailItems.push({ label: 'Passage', value: formatCellPassage(selected.cellPassage), wide: true });
     }
-    if (selected.type === 'compound') {
+    if (isChemicalStructureSampleType(selected.type)) {
       detailItems.push({ label: 'Structure', value: formatCompoundStructureSummary(structure), wide: true });
     }
     detailItems.push(
@@ -644,8 +747,8 @@ export function initSampleRegistry({ state, persist, safeText }) {
       </div>
     `).join('');
 
-    const structureMarkup = selected.type === 'compound'
-      ? renderCompoundPreviewMarkup(structure, selected.name || selected.code || 'Compound')
+    const structureMarkup = isChemicalStructureSampleType(selected.type)
+      ? renderCompoundPreviewMarkup(structure, selected.name || selected.code || 'Chemical')
       : '';
 
     sampleDetailContent.innerHTML = `
@@ -668,13 +771,13 @@ export function initSampleRegistry({ state, persist, safeText }) {
 
   function onSampleTypeChange() {
     renderCellPassageFields();
-    if (sampleTypeInput?.value !== 'compound') {
+    if (!isChemicalStructureSampleType(sampleTypeInput?.value)) {
       compoundStructureDraft = emptyCompoundStructureDraft();
       closeCompoundDialog();
       renderCompoundFields();
       return;
     }
-    setCompoundStatus('Compound mode enabled. Open Ketcher to draw structure.', false);
+    setCompoundStatus('Chemical structure mode enabled. Open Ketcher to draw structure.', false);
     renderCompoundFields();
   }
 
@@ -690,7 +793,7 @@ export function initSampleRegistry({ state, persist, safeText }) {
   }
 
   async function onCompoundOpenClick() {
-    if (sampleTypeInput?.value !== 'compound') {
+    if (!isChemicalStructureSampleType(sampleTypeInput?.value)) {
       return;
     }
     openCompoundDialog();
@@ -713,7 +816,7 @@ export function initSampleRegistry({ state, persist, safeText }) {
   }
 
   async function onCompoundCaptureClick() {
-    if (sampleTypeInput?.value !== 'compound') {
+    if (!isChemicalStructureSampleType(sampleTypeInput?.value)) {
       return;
     }
     try {
@@ -728,7 +831,7 @@ export function initSampleRegistry({ state, persist, safeText }) {
     compoundStructureDraft = emptyCompoundStructureDraft();
     renderCompoundFields();
     await clearCompoundCanvas();
-    setCompoundStatus('Compound structure cleared.', false);
+    setCompoundStatus('Chemical structure cleared.', false);
   }
 
   function openCompoundDialog() {
@@ -762,9 +865,9 @@ export function initSampleRegistry({ state, persist, safeText }) {
     if (!sampleCompoundFields) {
       return;
     }
-    const isCompound = sampleTypeInput?.value === 'compound';
-    sampleCompoundFields.hidden = !isCompound;
-    if (!isCompound) {
+    const isChemicalStructureSample = isChemicalStructureSampleType(sampleTypeInput?.value);
+    sampleCompoundFields.hidden = !isChemicalStructureSample;
+    if (!isChemicalStructureSample) {
       setCompoundStatus('', false);
       if (sampleCompoundPreview) {
         sampleCompoundPreview.hidden = true;
@@ -776,7 +879,7 @@ export function initSampleRegistry({ state, persist, safeText }) {
       sampleCompoundSmilesInput.value = compoundStructureDraft.smiles || '';
     }
     if (sampleCompoundOpenBtn) {
-      sampleCompoundOpenBtn.textContent = compoundStructureDraft.smiles ? 'Edit in Ketcher' : 'Open Ketcher';
+      sampleCompoundOpenBtn.textContent = compoundStructureDraft.smiles ? 'Edit Structure' : 'Add Structure';
     }
     if (sampleCompoundPreview && sampleCompoundPreviewImage) {
       const hasPreview = Boolean(compoundStructureDraft.imageDataUrl);
@@ -786,7 +889,7 @@ export function initSampleRegistry({ state, persist, safeText }) {
   }
 
   async function captureCompoundStructureFromEditor() {
-    if (sampleTypeInput?.value !== 'compound') {
+    if (!isChemicalStructureSampleType(sampleTypeInput?.value)) {
       return;
     }
     const ketcher = await getCompoundKetcher();
@@ -865,6 +968,10 @@ export function initSampleRegistry({ state, persist, safeText }) {
 
   function emptyCompoundStructureDraft() {
     return { smiles: '', molfile: '', imageDataUrl: '' };
+  }
+
+  function isChemicalStructureSampleType(sampleType) {
+    return CHEMICAL_STRUCTURE_SAMPLE_TYPES.has(String(sampleType || '').trim().toLowerCase());
   }
 
   function formatCompoundStructureSummary(structure) {
@@ -1053,7 +1160,7 @@ export function initSampleRegistry({ state, persist, safeText }) {
       return `
         <section class="sample-structure-card">
           <h4>Structure Snapshot</h4>
-          <p class="small-note">No structure has been saved for this compound yet.</p>
+          <p class="small-note">No structure has been saved for this chemical yet.</p>
         </section>
       `;
     }
@@ -1098,5 +1205,33 @@ export function initSampleRegistry({ state, persist, safeText }) {
     });
   }
 
-  return { render, renderList };
+  function startNotebookSampleCapture(context = {}) {
+    state.settings = state.settings && typeof state.settings === 'object' ? state.settings : {};
+    const existingCapture = state.settings.pendingNotebookSampleCapture || {};
+    state.settings.pendingNotebookSampleCapture = {
+      ...existingCapture,
+      notebookEntryId: String(context.notebookEntryId || existingCapture.notebookEntryId || '').trim(),
+      notebookType: String(context.notebookType || existingCapture.notebookType || 'biology').trim(),
+      projectId: String(context.projectId || existingCapture.projectId || '').trim(),
+      projectName: String(context.projectName || existingCapture.projectName || '').trim(),
+      protocolName: String(context.protocolName || existingCapture.protocolName || '').trim(),
+      experimentName: String(context.experimentName || existingCapture.experimentName || '').trim(),
+      requestedAt: String(context.requestedAt || existingCapture.requestedAt || new Date().toISOString()).trim()
+    };
+    resetForm();
+    if (sampleSearchInput) {
+      sampleSearchInput.value = '';
+    }
+    const notebookLabel = state.settings.pendingNotebookSampleCapture.experimentName
+      || state.settings.pendingNotebookSampleCapture.protocolName
+      || 'current notebook page';
+    if (sampleNotesInput) {
+      sampleNotesInput.placeholder = `Optional notes for ${notebookLabel}`;
+    }
+    renderList();
+    sampleForm?.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
+    sampleNameInput?.focus();
+  }
+
+  return { render, renderList, startNotebookSampleCapture };
 }

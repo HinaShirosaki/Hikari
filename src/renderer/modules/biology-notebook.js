@@ -20,6 +20,7 @@ import {
   normalizeNotebookResultTable,
   summarizeNotebookResultTable
 } from './notebook-result-table.js';
+import { SAMPLE_TYPE_LABELS, getWellName } from './personal-inventory/constants.js';
 
 // Initialize the biology notebook module and wire it to app state plus DOM controls.
 export function initLabNotebook({
@@ -30,10 +31,12 @@ export function initLabNotebook({
   onNotebookEntriesChanged,
   onCreateLinkedAssay,
   onCreateLinkedGel,
+  onOpenSampleRecorder,
   selectionInsightsController = null,
   notebookType = 'biology'
 }) {
   const PLACEHOLDER_TOKEN_REGEX = /\{\{ph:([^}]+)\}\}/g;
+  const SAMPLE_PLACEHOLDER_TYPE_ALIASES = buildSamplePlaceholderTypeAliases();
   const TabulatorLib = window.Tabulator || null;
 
   const notebookProjectSelect = document.getElementById('biology-notebook-project-select');
@@ -65,6 +68,7 @@ export function initLabNotebook({
   const notebookResultTableStatus = document.getElementById('biology-notebook-result-table-status');
   const notebookAddGelBtn = document.getElementById('biology-notebook-add-gel-btn');
   const notebookAddAssayBtn = document.getElementById('biology-notebook-add-assay-btn');
+  const notebookAddSamplesBtn = document.getElementById('biology-notebook-add-samples-btn');
   const notebookLinkedResults = document.getElementById('biology-notebook-linked-results');
   const saveNotebookBtn = document.getElementById('save-biology-notebook-btn');
   const clarifySaveNotebookBtn = document.getElementById('clarify-save-biology-notebook-btn');
@@ -78,6 +82,9 @@ export function initLabNotebook({
   let linkedPreviewRenderToken = 0;
   let resultTableGrid = null;
   let resultTableDraft = null;
+  let sampleLinkDrafts = new Map();
+  let sampleLinkMenu = null;
+  let sampleLinkMenuState = null;
 
   function cloneSelectionInsights(insights) {
     try {
@@ -277,13 +284,24 @@ export function initLabNotebook({
   notebookAddAssayBtn?.addEventListener('click', () => {
     void onAddAssayClick();
   });
+  notebookAddSamplesBtn?.addEventListener('click', () => {
+    void onAddSamplesClick();
+  });
   cancelEditBtn?.addEventListener('click', cancelEdit);
   notebookEntryList?.addEventListener('click', onEntryListClick);
   notebookExportBtn?.addEventListener('click', onExportButtonClick);
   notebookMarkExecutedBtn?.addEventListener('click', markEntryExecuted);
   notebookSteps.addEventListener('click', onInlinePlaceholderClick);
+  notebookSteps.addEventListener('contextmenu', onInlinePlaceholderContextMenu);
   notebookSteps.addEventListener('blur', onInlinePlaceholderBlur, true);
   notebookSteps.addEventListener('keydown', onInlinePlaceholderKeydown);
+  if (typeof document.addEventListener === 'function') {
+    document.addEventListener('click', onDocumentClickForSampleLinkMenu);
+    document.addEventListener('keydown', onDocumentKeydownForSampleLinkMenu);
+  }
+  if (typeof window.addEventListener === 'function') {
+    window.addEventListener('resize', closeSampleLinkMenu);
+  }
   updateSaveButtonLabel();
   syncViewerVisibility();
   renderLinkedPreviews(null);
@@ -291,6 +309,8 @@ export function initLabNotebook({
 
   function onProjectChange() {
     editingEntryId = null;
+    sampleLinkDrafts = new Map();
+    closeSampleLinkMenu();
     clearProtocolPageCopyDraft();
     updateSaveButtonLabel();
     renderProtocolOptions();
@@ -347,6 +367,275 @@ export function initLabNotebook({
       return 'Unknown time';
     }
     return date.toLocaleString();
+  }
+
+  function normalizeSampleLookupText(value) {
+    return String(value || '')
+      .trim()
+      .toLowerCase()
+      .replace(/&/g, ' and ')
+      .replace(/[_-]+/g, ' ')
+      .replace(/[^a-z0-9]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function addSamplePlaceholderAlias(aliases, alias, type) {
+    const normalized = normalizeSampleLookupText(alias);
+    if (normalized) {
+      aliases.set(normalized, type);
+    }
+  }
+
+  function buildSamplePlaceholderTypeAliases() {
+    const aliases = new Map();
+    const extraAliases = {
+      plasmid: ['plasmids', 'vector', 'vectors'],
+      cell_line: ['cell', 'cells', 'cell line', 'cell lines'],
+      strain: ['strains'],
+      antibody: ['antibodies'],
+      protein: ['proteins', 'purified protein', 'purified proteins'],
+      chemical: ['chemicals', 'reagent', 'reagents'],
+      compound: ['compounds', 'compund', 'compunds', 'small molecule', 'small molecules'],
+      primer: ['primers', 'oligo', 'oligos']
+    };
+
+    Object.entries(SAMPLE_TYPE_LABELS).forEach(([type, label]) => {
+      if (type === 'other') {
+        return;
+      }
+      addSamplePlaceholderAlias(aliases, type, type);
+      addSamplePlaceholderAlias(aliases, String(type || '').replace(/_/g, ' '), type);
+      addSamplePlaceholderAlias(aliases, label, type);
+      (extraAliases[type] || []).forEach((alias) => addSamplePlaceholderAlias(aliases, alias, type));
+    });
+
+    return aliases;
+  }
+
+  function normalizeSampleType(type) {
+    const key = String(type || '').trim().toLowerCase();
+    if (Object.prototype.hasOwnProperty.call(SAMPLE_TYPE_LABELS, key)) {
+      return key;
+    }
+    return 'other';
+  }
+
+  function getSampleTypeLabel(type) {
+    const normalized = normalizeSampleType(type);
+    return SAMPLE_TYPE_LABELS[normalized] || SAMPLE_TYPE_LABELS.other || 'Sample';
+  }
+
+  function resolveSampleTypeForPlaceholder(name) {
+    const normalized = normalizeSampleLookupText(name);
+    if (!normalized) {
+      return '';
+    }
+    if (SAMPLE_PLACEHOLDER_TYPE_ALIASES.has(normalized)) {
+      return SAMPLE_PLACEHOLDER_TYPE_ALIASES.get(normalized);
+    }
+    const singular = normalized.endsWith('s') ? normalized.slice(0, -1) : normalized;
+    return SAMPLE_PLACEHOLDER_TYPE_ALIASES.get(singular) || '';
+  }
+
+  function getContainerWellLabel(container, index) {
+    const rawWell = Array.isArray(container?.wells) ? container.wells[index] : null;
+    if (rawWell && typeof rawWell === 'object') {
+      const explicitName = String(rawWell.name || '').trim();
+      if (explicitName) {
+        return explicitName;
+      }
+    }
+    return getWellName(container, index);
+  }
+
+  function formatSampleLocation(location) {
+    if (!location || typeof location !== 'object') {
+      return '-';
+    }
+    if (location.storageType === 'freezer') {
+      return [location.freezer, location.rack, location.box, location.position].filter(Boolean).join(' / ') || '-';
+    }
+    if (location.storageType === 'fridge') {
+      return [location.fridge, location.shelf].filter(Boolean).join(' / ') || '-';
+    }
+    if (location.storageType === 'desiccator') {
+      return [location.desiccator, location.position].filter(Boolean).join(' / ') || '-';
+    }
+    return [location.cabinet, location.slot].filter(Boolean).join(' / ') || '-';
+  }
+
+  function formatSampleInventoryLink(link) {
+    if (!link || typeof link !== 'object') {
+      return '-';
+    }
+    const section = String(link.section || '').trim();
+    const container = (state.inventory?.[section] || []).find((item) => item.id === link.containerId);
+    if (!container) {
+      return section ? `${section} / missing container` : '-';
+    }
+    if (link.wellIndex === null || link.wellIndex === undefined || link.wellIndex === '') {
+      return `${section} / ${container.name || 'Container'}`;
+    }
+    return `${section} / ${container.name || 'Container'} / ${getContainerWellLabel(container, Number(link.wellIndex))}`;
+  }
+
+  function formatSampleStorageLabel(sample) {
+    const inventoryLabel = formatSampleInventoryLink(sample?.inventoryLink);
+    if (inventoryLabel && inventoryLabel !== '-') {
+      return inventoryLabel;
+    }
+    const locationLabel = formatSampleLocation(sample?.location);
+    return locationLabel && locationLabel !== '-' ? locationLabel : 'No storage location recorded';
+  }
+
+  function formatSampleRecordLabel(sample) {
+    const code = String(sample?.code || '').trim();
+    const name = String(sample?.name || '').trim();
+    if (code && name) {
+      return `${code} - ${name}`;
+    }
+    return code || name || String(sample?.id || 'Sample').trim();
+  }
+
+  function formatSampleLinkValue(link) {
+    const code = String(link?.sampleCode || '').trim();
+    const name = String(link?.sampleName || '').trim();
+    if (code && name) {
+      return `${code} - ${name}`;
+    }
+    return code || name || String(link?.sampleId || 'Sample').trim();
+  }
+
+  function cloneMetadataObject(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return null;
+    }
+    return Object.entries(value).reduce((accumulator, [key, raw]) => {
+      const cleanKey = String(key || '').trim();
+      if (!cleanKey) {
+        return accumulator;
+      }
+      accumulator[cleanKey] = raw === null || raw === undefined ? '' : raw;
+      return accumulator;
+    }, {});
+  }
+
+  function normalizeNotebookSampleLink(rawLink) {
+    if (!rawLink || typeof rawLink !== 'object') {
+      return null;
+    }
+    const sampleId = String(rawLink.sampleId || '').trim();
+    const sampleCode = String(rawLink.sampleCode || rawLink.code || '').trim();
+    const sampleName = String(rawLink.sampleName || rawLink.name || '').trim();
+    if (!sampleId && !sampleCode && !sampleName) {
+      return null;
+    }
+    const sampleType = normalizeSampleType(rawLink.sampleType || rawLink.type);
+    const linkedAt = String(rawLink.linkedAt || rawLink.savedAt || '').trim();
+    return {
+      id: String(rawLink.id || '').trim() || `notebook-sample-link-${sampleId || sampleCode || Date.now()}`,
+      source: String(rawLink.source || '').trim() || 'notebook',
+      placeholderKey: String(rawLink.placeholderKey || '').trim(),
+      placeholderName: String(rawLink.placeholderName || '').trim(),
+      placeholderType: normalizeSampleType(rawLink.placeholderType || sampleType),
+      sampleId,
+      sampleCode,
+      sampleName,
+      sampleType,
+      sampleLot: String(rawLink.sampleLot || rawLink.lot || '').trim(),
+      sampleConcentration: String(rawLink.sampleConcentration || rawLink.concentration || '').trim(),
+      storageLabel: String(rawLink.storageLabel || '').trim(),
+      location: cloneMetadataObject(rawLink.location),
+      inventoryLink: cloneMetadataObject(rawLink.inventoryLink),
+      linkedAt
+    };
+  }
+
+  function normalizeNotebookSampleLinks(rawLinks) {
+    return Array.isArray(rawLinks)
+      ? rawLinks.map((link) => normalizeNotebookSampleLink(link)).filter(Boolean)
+      : [];
+  }
+
+  function seedSampleLinkDrafts(entry) {
+    sampleLinkDrafts = new Map();
+    normalizeNotebookSampleLinks(entry?.sampleLinks).forEach((link) => {
+      if (link.placeholderKey) {
+        sampleLinkDrafts.set(link.placeholderKey, link);
+      }
+    });
+  }
+
+  function collectProtocolPlaceholderKeys(protocol) {
+    const allowedKeys = new Set();
+    (Array.isArray(protocol?.steps) ? protocol.steps : []).forEach((step) => {
+      const stepId = String(step?.id || '').trim();
+      if (!stepId) {
+        return;
+      }
+      (Array.isArray(step?.placeholders) ? step.placeholders : []).forEach((placeholder) => {
+        const placeholderId = String(placeholder?.id || '').trim();
+        if (placeholderId) {
+          allowedKeys.add(`${stepId}:${placeholderId}`);
+        }
+      });
+    });
+    return allowedKeys;
+  }
+
+  function collectNotebookSampleLinks(existingEntry, protocol) {
+    const allowedKeys = collectProtocolPlaceholderKeys(protocol);
+    const nonPlaceholderLinks = normalizeNotebookSampleLinks(existingEntry?.sampleLinks)
+      .filter((link) => !link.placeholderKey);
+    const placeholderLinks = Array.from(sampleLinkDrafts.values())
+      .map((link) => normalizeNotebookSampleLink(link))
+      .filter((link) => link?.placeholderKey && allowedKeys.has(link.placeholderKey));
+    return nonPlaceholderLinks.concat(placeholderLinks);
+  }
+
+  function appendNotebookResultLine(line) {
+    if (!notebookResult) {
+      return;
+    }
+    const cleanLine = String(line || '').trim();
+    if (!cleanLine) {
+      return;
+    }
+    const current = String(notebookResult.value || '').trim();
+    notebookResult.value = current ? `${current}\n${cleanLine}` : cleanLine;
+  }
+
+  function buildNotebookSampleLinkMetadata({ key, name, placeholderType, sample, linkedAt = '' }) {
+    const existingLink = sampleLinkDrafts.get(key);
+    const timestamp = linkedAt || new Date().toISOString();
+    return {
+      id: existingLink?.id || `notebook-sample-link-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`,
+      source: 'notebook-placeholder',
+      placeholderKey: String(key || '').trim(),
+      placeholderName: String(name || '').trim(),
+      placeholderType: normalizeSampleType(placeholderType),
+      sampleId: String(sample?.id || '').trim(),
+      sampleCode: String(sample?.code || '').trim(),
+      sampleName: String(sample?.name || '').trim(),
+      sampleType: normalizeSampleType(sample?.type),
+      sampleLot: String(sample?.lot || '').trim(),
+      sampleConcentration: String(sample?.concentration || '').trim(),
+      storageLabel: formatSampleStorageLabel(sample),
+      location: cloneMetadataObject(sample?.location),
+      inventoryLink: cloneMetadataObject(sample?.inventoryLink),
+      linkedAt: timestamp
+    };
+  }
+
+  function buildNotebookSampleNote(link, action = 'Linked') {
+    const timeLabel = formatEntryTimestamp(link?.linkedAt || new Date().toISOString());
+    const sampleLabel = formatSampleLinkValue(link);
+    const typeLabel = getSampleTypeLabel(link?.sampleType);
+    const placeholderLabel = String(link?.placeholderName || '').trim();
+    const targetText = placeholderLabel ? ` to ${placeholderLabel}` : '';
+    const storageLabel = String(link?.storageLabel || '').trim() || 'No storage location recorded';
+    return `[${timeLabel}] ${action} sample ${sampleLabel} (${typeLabel})${targetText}. Saved in: ${storageLabel}.`;
   }
 
   function cloneProtocolSnapshot(protocol) {
@@ -752,6 +1041,7 @@ export function initLabNotebook({
       ),
       result: String(notebookResult.value || '').trim(),
       resultTable: getCurrentResultTable(),
+      sampleLinks: collectNotebookSampleLinks(entry, nextProtocol),
       updatedAt: new Date().toISOString()
     };
     const index = state.notebookEntries.findIndex((item) => item.id === entry.id && matchesNotebookType(item));
@@ -777,6 +1067,8 @@ export function initLabNotebook({
 
   function onProtocolChange() {
     clearProtocolPageCopyDraft();
+    sampleLinkDrafts = new Map();
+    closeSampleLinkMenu();
     const projectId = notebookProjectSelect.value;
     const protocolId = notebookProtocolSelect.value;
     const project = state.projects.find((item) => item.id === projectId);
@@ -879,6 +1171,7 @@ export function initLabNotebook({
       values,
       result: resultText,
       resultTable,
+      sampleLinks: collectNotebookSampleLinks(editingEntry, protocol),
       resultFiles,
       resultFileRecords,
       storageFolder,
@@ -1500,6 +1793,37 @@ export function initLabNotebook({
     });
   }
 
+  async function onAddSamplesClick() {
+    const entry = await ensureNotebookEntryForLinkedWork();
+    if (!entry) {
+      return;
+    }
+    const requestedAt = new Date().toISOString();
+    state.settings = state.settings && typeof state.settings === 'object' ? state.settings : {};
+    state.settings.pendingNotebookSampleCapture = {
+      notebookEntryId: entry.id,
+      notebookType: entry.notebookType || notebookType,
+      projectId: entry.projectId,
+      projectName: entry.projectName,
+      protocolName: entry.protocolName,
+      experimentName: resolveEntryExperimentName(entry),
+      requestedAt
+    };
+    persist();
+
+    if (typeof onOpenSampleRecorder === 'function') {
+      onOpenSampleRecorder({
+        notebookEntryId: entry.id,
+        notebookType: entry.notebookType || notebookType,
+        projectId: entry.projectId,
+        projectName: entry.projectName,
+        protocolName: entry.protocolName,
+        experimentName: resolveEntryExperimentName(entry),
+        requestedAt
+      });
+    }
+  }
+
   function onEntryListClick(event) {
     const entryButton = event?.target?.closest?.('[data-notebook-entry-id]')
       || (event?.target?.dataset?.notebookEntryId ? event.target : null);
@@ -1596,6 +1920,9 @@ export function initLabNotebook({
     notebookProtocolTitle.textContent = protocol.name;
     notebookProtocolMeta.textContent = buildViewerMeta(project, entry, isSavedEntry);
 
+    if (entry) {
+      seedSampleLinkDrafts(entry);
+    }
     const values = entry?.values || {};
     notebookSteps.innerHTML = protocol.steps.map((step, index) => {
       const sentenceHtml = renderStepSentence(step, values);
@@ -1635,7 +1962,11 @@ export function initLabNotebook({
       const resultTable = resultTableSummary
         ? ` Result table: ${resultTableSummary}.`
         : '';
-      return `${contextLabel} notebook page. State: ${stateLabel}. Updated ${updatedAt}.${executedAt}${resultFiles}${resultTable}`;
+      const sampleLinkCount = normalizeNotebookSampleLinks(entry?.sampleLinks).length;
+      const sampleLinks = sampleLinkCount
+        ? ` Linked samples: ${sampleLinkCount}.`
+        : '';
+      return `${contextLabel} notebook page. State: ${stateLabel}. Updated ${updatedAt}.${executedAt}${resultFiles}${resultTable}${sampleLinks}`;
     }
     if (isSavedEntry) {
       return `${contextLabel} notebook page.`;
@@ -1646,6 +1977,8 @@ export function initLabNotebook({
   function clearViewer() {
     notebookProtocolArea.hidden = true;
     clearProtocolPageCopyDraft();
+    sampleLinkDrafts = new Map();
+    closeSampleLinkMenu();
     notebookSteps.innerHTML = '';
     notebookSteps.hidden = false;
     notebookResult.value = '';
@@ -1697,6 +2030,8 @@ export function initLabNotebook({
 
   function cancelEdit() {
     editingEntryId = null;
+    sampleLinkDrafts = new Map();
+    closeSampleLinkMenu();
     clearProtocolPageCopyDraft();
     updateSaveButtonLabel();
     onProtocolChange();
@@ -1792,7 +2127,7 @@ export function initLabNotebook({
       }
       return replaceBracketPlaceholders(source, placeholders, (item) => {
         const key = `${step.id}:${item.id}`;
-        return buildInlinePlaceholderHtml(key, item.name, values[key] || '');
+        return buildInlinePlaceholderHtml(key, item.name, values[key] || '', sampleLinkDrafts.get(key));
       });
     }
 
@@ -1805,7 +2140,7 @@ export function initLabNotebook({
       const key = `${step.id}:${placeholderId}`;
       const placeholder = placeholders.find((item) => item.id === placeholderId);
       html += safeText(source.slice(cursor, index));
-      html += buildInlinePlaceholderHtml(key, placeholder?.name || 'value', values[key] || '');
+      html += buildInlinePlaceholderHtml(key, placeholder?.name || 'value', values[key] || '', sampleLinkDrafts.get(key));
       cursor = index + match[0].length;
     });
 
@@ -1834,19 +2169,308 @@ export function initLabNotebook({
     return `${safeText(source)} ${trailing}`.trim();
   }
 
-  function buildInlinePlaceholderHtml(key, name, value) {
+  function buildInlinePlaceholderHtml(key, name, value, sampleLink = null) {
     const cleanName = safeText(name || 'value');
-    const cleanValue = safeText(value || '');
+    const placeholderType = resolveSampleTypeForPlaceholder(name);
+    const linkedValue = sampleLink ? formatSampleLinkValue(sampleLink) : '';
+    const cleanValue = safeText(value || linkedValue || '');
     const tokenLabel = cleanValue || `[${cleanName}]`;
     const isEmptyClass = cleanValue ? '' : ' is-empty';
+    const isSampleClass = placeholderType ? ' is-sample-placeholder' : '';
+    const isLinkedClass = sampleLink?.sampleId ? ' is-linked-sample' : '';
+    const sampleTypeAttrs = placeholderType
+      ? ` data-sample-placeholder-type="${safeText(placeholderType)}"`
+      : '';
+    const linkedAttrs = sampleLink?.sampleId
+      ? ` data-linked-sample-id="${safeText(sampleLink.sampleId)}"`
+      : '';
+    const title = sampleLink?.sampleId
+      ? `Linked sample: ${formatSampleLinkValue(sampleLink)}. Right-click to replace.`
+      : (placeholderType ? `Right-click to link a ${getSampleTypeLabel(placeholderType)} sample.` : '');
 
     return `
-      <span class="inline-placeholder-wrap" data-inline-placeholder data-placeholder-name="${cleanName}">
-        <button type="button" class="inline-placeholder-token${isEmptyClass}" data-inline-token data-nb-key-ref="${safeText(key)}">${tokenLabel}</button>
+      <span class="inline-placeholder-wrap" data-inline-placeholder data-placeholder-name="${cleanName}"${sampleTypeAttrs}${linkedAttrs}>
+        <button type="button" class="inline-placeholder-token${isEmptyClass}${isSampleClass}${isLinkedClass}" data-inline-token data-nb-key-ref="${safeText(key)}" title="${safeText(title)}">${tokenLabel}</button>
         <input type="text" class="inline-placeholder-editor" data-inline-input data-nb-key-ref="${safeText(key)}" value="${cleanValue}" placeholder="${cleanName}" hidden />
         <input type="hidden" data-nb-key="${safeText(key)}" value="${cleanValue}" />
       </span>
     `;
+  }
+
+  function ensureSampleLinkMenu() {
+    if (sampleLinkMenu) {
+      return sampleLinkMenu;
+    }
+    sampleLinkMenu = document.createElement('div');
+    sampleLinkMenu.className = 'biology-notebook-sample-link-menu';
+    sampleLinkMenu.setAttribute('role', 'menu');
+    sampleLinkMenu.hidden = true;
+    document.body.append(sampleLinkMenu);
+    return sampleLinkMenu;
+  }
+
+  function closeSampleLinkMenu() {
+    if (sampleLinkMenu) {
+      sampleLinkMenu.hidden = true;
+      sampleLinkMenu.innerHTML = '';
+    }
+    sampleLinkMenuState = null;
+  }
+
+  function positionSampleLinkMenu(menu, x, y) {
+    const menuWidth = 340;
+    const menuHeight = 420;
+    const viewportWidth = window.innerWidth || document.documentElement?.clientWidth || menuWidth;
+    const viewportHeight = window.innerHeight || document.documentElement?.clientHeight || menuHeight;
+    const left = Math.max(12, Math.min(Number(x) || 12, viewportWidth - menuWidth - 12));
+    const top = Math.max(12, Math.min(Number(y) || 12, viewportHeight - menuHeight - 12));
+    menu.style.left = `${left}px`;
+    menu.style.top = `${top}px`;
+  }
+
+  function getSampleLinkSearchResults(placeholderType, query) {
+    const normalizedType = normalizeSampleType(placeholderType);
+    const normalizedQuery = normalizeSampleLookupText(query);
+    const samples = Array.isArray(state.samples) ? state.samples : [];
+    return samples
+      .filter((sample) => normalizeSampleType(sample?.type) === normalizedType)
+      .filter((sample) => {
+        if (!normalizedQuery) {
+          return true;
+        }
+        const haystack = normalizeSampleLookupText([
+          sample?.code,
+          sample?.name,
+          sample?.type,
+          sample?.lot,
+          sample?.concentration,
+          formatSampleStorageLabel(sample),
+          sample?.notes
+        ].join(' '));
+        return haystack.includes(normalizedQuery);
+      })
+      .sort((left, right) => {
+        const leftUpdated = new Date(left?.updatedAt || 0).getTime();
+        const rightUpdated = new Date(right?.updatedAt || 0).getTime();
+        return rightUpdated - leftUpdated;
+      })
+      .slice(0, 30);
+  }
+
+  function renderSampleLinkMenuResults() {
+    if (!sampleLinkMenu || !sampleLinkMenuState) {
+      return;
+    }
+    const resultsHost = sampleLinkMenu.querySelector('[data-sample-link-results]');
+    if (!resultsHost) {
+      return;
+    }
+    const samples = getSampleLinkSearchResults(
+      sampleLinkMenuState.placeholderType,
+      sampleLinkMenuState.query
+    );
+    if (!samples.length) {
+      resultsHost.innerHTML = `
+        <p class="small-note biology-notebook-sample-link-empty">
+          No ${safeText(getSampleTypeLabel(sampleLinkMenuState.placeholderType))} samples found.
+        </p>
+      `;
+      return;
+    }
+    resultsHost.innerHTML = samples.map((sample) => {
+      const storageLabel = formatSampleStorageLabel(sample);
+      return `
+        <button type="button" class="biology-notebook-sample-link-option" data-sample-link-select="${safeText(sample.id)}">
+          <span class="biology-notebook-sample-link-option-main">${safeText(formatSampleRecordLabel(sample))}</span>
+          <span class="biology-notebook-sample-link-option-meta">${safeText(`${getSampleTypeLabel(sample.type)} - ${storageLabel}`)}</span>
+        </button>
+      `;
+    }).join('');
+  }
+
+  function openSampleLinkMenu({ wrap, token, x, y }) {
+    const key = String(token?.dataset?.nbKeyRef || '').trim();
+    const placeholderName = String(wrap?.dataset?.placeholderName || '').trim();
+    const placeholderType = String(wrap?.dataset?.samplePlaceholderType || '').trim();
+    if (!key || !placeholderType) {
+      return;
+    }
+    const menu = ensureSampleLinkMenu();
+    sampleLinkMenuState = {
+      wrap,
+      key,
+      placeholderName,
+      placeholderType,
+      query: ''
+    };
+    menu.innerHTML = `
+      <div class="biology-notebook-sample-link-menu-head">
+        <strong>Link ${safeText(getSampleTypeLabel(placeholderType))}</strong>
+        <span class="small-note">${safeText(placeholderName || 'Placeholder')}</span>
+      </div>
+      <input
+        type="search"
+        class="biology-notebook-sample-link-search"
+        data-sample-link-search
+        placeholder="Search samples..."
+        aria-label="Search samples"
+      />
+      <div class="biology-notebook-sample-link-results" data-sample-link-results></div>
+    `;
+    const searchInput = menu.querySelector('[data-sample-link-search]');
+    searchInput?.addEventListener('input', () => {
+      if (!sampleLinkMenuState) {
+        return;
+      }
+      sampleLinkMenuState.query = searchInput.value || '';
+      renderSampleLinkMenuResults();
+    });
+    menu.querySelector('[data-sample-link-results]')?.addEventListener('click', onSampleLinkMenuResultsClick);
+    renderSampleLinkMenuResults();
+    positionSampleLinkMenu(menu, x, y);
+    menu.hidden = false;
+    searchInput?.focus();
+  }
+
+  function onSampleLinkMenuResultsClick(event) {
+    const option = event.target.closest('[data-sample-link-select]');
+    if (!option || !sampleLinkMenuState) {
+      return;
+    }
+    const sample = (state.samples || []).find((item) => item.id === option.dataset.sampleLinkSelect);
+    if (!sample) {
+      return;
+    }
+    linkSampleToPlaceholder(sample);
+  }
+
+  function updateInlinePlaceholderTokenFromValue(wrap) {
+    const hiddenValue = wrap?.querySelector('[data-nb-key]');
+    const token = wrap?.querySelector('[data-inline-token]');
+    const editor = wrap?.querySelector('[data-inline-input]');
+    if (!wrap || !hiddenValue || !token) {
+      return;
+    }
+    const key = String(hiddenValue.dataset.nbKey || token.dataset.nbKeyRef || '').trim();
+    const name = wrap.dataset.placeholderName || 'value';
+    const cleanValue = hiddenValue.value || '';
+    const sampleLink = key ? sampleLinkDrafts.get(key) : null;
+    token.textContent = cleanValue || `[${name}]`;
+    token.classList.toggle('is-empty', !cleanValue);
+    token.classList.toggle('is-linked-sample', Boolean(sampleLink?.sampleId));
+    token.title = sampleLink?.sampleId
+      ? `Linked sample: ${formatSampleLinkValue(sampleLink)}. Right-click to replace.`
+      : (wrap.dataset.samplePlaceholderType
+        ? `Right-click to link a ${getSampleTypeLabel(wrap.dataset.samplePlaceholderType)} sample.`
+        : '');
+    if (sampleLink?.sampleId) {
+      wrap.dataset.linkedSampleId = sampleLink.sampleId;
+    } else {
+      delete wrap.dataset.linkedSampleId;
+    }
+    if (editor) {
+      editor.hidden = true;
+    }
+    token.hidden = false;
+  }
+
+  function persistActiveEntrySampleLinks() {
+    const activeEntry = getActiveEntry();
+    if (!activeEntry) {
+      return;
+    }
+    const protocol = resolveViewerProtocol(activeEntry);
+    if (!protocol) {
+      return;
+    }
+    const index = state.notebookEntries.findIndex((item) => item.id === activeEntry.id && matchesNotebookType(item));
+    if (index < 0) {
+      return;
+    }
+    const timestamp = new Date().toISOString();
+    const nextEntry = {
+      ...state.notebookEntries[index],
+      values: pruneNotebookValuesForProtocol(
+        mergeNotebookValues(state.notebookEntries[index]?.values, collectNotebookValues()),
+        protocol
+      ),
+      result: String(notebookResult.value || '').trim(),
+      resultTable: getCurrentResultTable(),
+      sampleLinks: collectNotebookSampleLinks(state.notebookEntries[index], protocol),
+      updatedAt: timestamp
+    };
+    state.notebookEntries[index] = nextEntry;
+    persist();
+    renderEntries();
+    const project = resolveEntryProject(nextEntry);
+    if (project && notebookProtocolMeta) {
+      notebookProtocolMeta.textContent = buildViewerMeta(project, nextEntry, true);
+    }
+    if (typeof onNotebookEntriesChanged === 'function') {
+      onNotebookEntriesChanged();
+    }
+  }
+
+  function linkSampleToPlaceholder(sample) {
+    if (!sampleLinkMenuState?.wrap) {
+      return;
+    }
+    const { wrap, key, placeholderName, placeholderType } = sampleLinkMenuState;
+    const hiddenValue = wrap.querySelector('[data-nb-key]');
+    const editor = wrap.querySelector('[data-inline-input]');
+    if (!hiddenValue) {
+      return;
+    }
+    const link = buildNotebookSampleLinkMetadata({
+      key,
+      name: placeholderName,
+      placeholderType,
+      sample
+    });
+    sampleLinkDrafts.set(key, link);
+    hiddenValue.value = formatSampleRecordLabel(sample);
+    if (editor) {
+      editor.value = hiddenValue.value;
+    }
+    updateInlinePlaceholderTokenFromValue(wrap);
+    appendNotebookResultLine(buildNotebookSampleNote(link, 'Linked'));
+    persistActiveEntrySampleLinks();
+    closeSampleLinkMenu();
+  }
+
+  function onInlinePlaceholderContextMenu(event) {
+    const token = event.target.closest('[data-inline-token]');
+    if (!token) {
+      return;
+    }
+    const wrap = token.closest('[data-inline-placeholder]');
+    if (!wrap?.dataset?.samplePlaceholderType) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    openSampleLinkMenu({
+      wrap,
+      token,
+      x: event.clientX,
+      y: event.clientY
+    });
+  }
+
+  function onDocumentClickForSampleLinkMenu(event) {
+    if (!sampleLinkMenu || sampleLinkMenu.hidden) {
+      return;
+    }
+    if (sampleLinkMenu.contains(event.target)) {
+      return;
+    }
+    closeSampleLinkMenu();
+  }
+
+  function onDocumentKeydownForSampleLinkMenu(event) {
+    if (event.key === 'Escape' && sampleLinkMenu && !sampleLinkMenu.hidden) {
+      closeSampleLinkMenu();
+    }
   }
 
   function onInlinePlaceholderClick(event) {
@@ -1913,8 +2537,18 @@ export function initLabNotebook({
     }
 
     const cleanValue = editor.value.trim();
+    const key = String(hiddenValue.dataset.nbKey || '').trim();
+    const existingLink = key ? sampleLinkDrafts.get(key) : null;
+    let removedSampleLink = false;
+    if (existingLink && cleanValue !== formatSampleLinkValue(existingLink)) {
+      sampleLinkDrafts.delete(key);
+      removedSampleLink = true;
+    }
     hiddenValue.value = cleanValue;
     closeInlinePlaceholderEditor(editor);
+    if (removedSampleLink) {
+      persistActiveEntrySampleLinks();
+    }
   }
 
   function closeInlinePlaceholderEditor(editor) {
@@ -1925,12 +2559,7 @@ export function initLabNotebook({
       return;
     }
 
-    const name = wrap.dataset.placeholderName || 'value';
-    const cleanValue = hiddenValue.value || '';
-    token.textContent = cleanValue || `[${name}]`;
-    token.classList.toggle('is-empty', !cleanValue);
-    editor.hidden = true;
-    token.hidden = false;
+    updateInlinePlaceholderTokenFromValue(wrap);
   }
 
   selectionInsightsController?.registerHost?.({

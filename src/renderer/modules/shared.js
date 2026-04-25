@@ -157,6 +157,7 @@ export const defaultState = {
       uiStyle: 'neutral-compact'
     },
     storagePath: '',
+    pendingNotebookSampleCapture: null,
     storageImport: {
       lastImportedAt: '',
       manifestPath: '',

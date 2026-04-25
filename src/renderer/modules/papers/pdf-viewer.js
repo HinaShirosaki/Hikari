@@ -847,15 +847,19 @@ export function createPapersPdfViewer(elements = {}) {
     } catch {}
   }
 
-  async function cleanupDocument() {
-    const currentDocument = state.pdfDocument;
-    state.pdfDocument = null;
-    if (!currentDocument || typeof currentDocument.destroy !== 'function') {
+  async function destroyPdfDocument(pdfDocument) {
+    if (!pdfDocument || typeof pdfDocument.destroy !== 'function') {
       return;
     }
     try {
-      await currentDocument.destroy();
+      await pdfDocument.destroy();
     } catch {}
+  }
+
+  async function cleanupDocument() {
+    const currentDocument = state.pdfDocument;
+    state.pdfDocument = null;
+    await destroyPdfDocument(currentDocument);
   }
 
   async function resetViewer(message = '') {
@@ -1112,6 +1116,23 @@ export function createPapersPdfViewer(elements = {}) {
       return false;
     }
 
+    const previousState = {
+      paperId: state.paperId,
+      paperTitle: state.paperTitle,
+      paperMeta: state.paperMeta,
+      pageNumber: state.pageNumber,
+      pageCount: state.pageCount,
+      pageMetrics: state.pageMetrics,
+      maxBasePageWidth: state.maxBasePageWidth,
+      zoom: state.zoom,
+      fitWidth: state.fitWidth,
+      comments: state.comments,
+      highlights: state.highlights,
+      selectedCommentId: state.selectedCommentId,
+      pendingSelection: state.pendingSelection,
+      placementMode: state.placementMode,
+      pdfDocument: state.pdfDocument
+    };
     state.loadToken += 1;
     const activeLoadToken = state.loadToken;
     state.resolveBytes = resolveBytes;
@@ -1119,13 +1140,6 @@ export function createPapersPdfViewer(elements = {}) {
     state.paperId = String(paper.id || '');
     state.paperTitle = getPaperDisplayTitle(paper);
     state.paperMeta = summary || String(paper.fileName || '').trim() || 'PDF preview';
-    releasePageRecords();
-    state.pageNumber = 1;
-    state.pageCount = 0;
-    state.pageMetrics = [];
-    state.maxBasePageWidth = 0;
-    state.zoom = DEFAULT_ZOOM;
-    state.fitWidth = true;
     state.comments = [];
     state.highlights = [];
     state.selectedCommentId = '';
@@ -1134,7 +1148,11 @@ export function createPapersPdfViewer(elements = {}) {
     cancelScrollSync();
     cancelAllRenderTasks();
     await cleanupLoadingTask();
-    await cleanupDocument();
+    if (activeLoadToken !== state.loadToken) {
+      return false;
+    }
+    renderHighlights();
+    renderPins();
     refreshToolbar();
     setTitle(state.paperTitle);
     setMeta(state.paperMeta);
@@ -1176,8 +1194,6 @@ export function createPapersPdfViewer(elements = {}) {
       }
 
       state.loadingTask = null;
-      state.pdfDocument = pdfDocument;
-      state.pageCount = Number(pdfDocument.numPages) || 1;
       setStatus('Preparing pages...');
 
       const [embeddedMetadata, pageMetrics] = await Promise.all([
@@ -1191,6 +1207,17 @@ export function createPapersPdfViewer(elements = {}) {
         return false;
       }
 
+      state.pdfDocument = pdfDocument;
+      state.pageNumber = 1;
+      state.pageCount = Number(pdfDocument.numPages) || 1;
+      state.pageMetrics = pageMetrics.metrics;
+      state.maxBasePageWidth = pageMetrics.maxBasePageWidth;
+      state.zoom = DEFAULT_ZOOM;
+      state.fitWidth = true;
+      if (previousState.pdfDocument && previousState.pdfDocument !== pdfDocument) {
+        Promise.resolve(destroyPdfDocument(previousState.pdfDocument)).catch(() => {});
+      }
+
       if (hasPaperPdfMetadata(embeddedMetadata)) {
         if (embeddedMetadata.title) {
           state.paperTitle = embeddedMetadata.title;
@@ -1202,8 +1229,7 @@ export function createPapersPdfViewer(elements = {}) {
         })).catch(() => {});
       }
 
-      state.pageMetrics = pageMetrics.metrics;
-      state.maxBasePageWidth = pageMetrics.maxBasePageWidth;
+      releasePageRecords();
       ensurePageRecords();
       await renderDocumentPages({ resetScroll: true });
       return true;
@@ -1212,8 +1238,29 @@ export function createPapersPdfViewer(elements = {}) {
         return false;
       }
       state.loadingTask = null;
-      state.pdfDocument = null;
-      releasePageRecords();
+      if (state.pdfDocument === previousState.pdfDocument) {
+        state.paperId = previousState.paperId;
+        state.paperTitle = previousState.paperTitle;
+        state.paperMeta = previousState.paperMeta;
+        state.pageNumber = previousState.pageNumber;
+        state.pageCount = previousState.pageCount;
+        state.pageMetrics = previousState.pageMetrics;
+        state.maxBasePageWidth = previousState.maxBasePageWidth;
+        state.zoom = previousState.zoom;
+        state.fitWidth = previousState.fitWidth;
+        state.comments = previousState.comments;
+        state.highlights = previousState.highlights;
+        state.selectedCommentId = previousState.selectedCommentId;
+        state.pendingSelection = previousState.pendingSelection;
+        state.placementMode = previousState.placementMode;
+        setTitle(state.paperTitle);
+        setMeta(state.paperMeta);
+        renderHighlights();
+        renderPins();
+      } else {
+        await cleanupDocument();
+        releasePageRecords();
+      }
       refreshToolbar();
       setStatus(String(error?.message || error || 'Failed to load PDF.'), true);
       return false;

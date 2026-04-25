@@ -7,6 +7,7 @@ import {
   sanitizeProteinAssemblySequence
 } from '../tool-box/protein-assembly.js';
 import { buildOrfFeatures } from './orf-analysis.js';
+import { createProteinBuilderCloningNotebookPage } from './protein-builder-cloning-notebook.js';
 import { cleanText, clamp, normalizeSequenceText } from './shared.js';
 
 const BLOCK_TYPE_LABELS = Object.freeze({
@@ -705,6 +706,12 @@ export function createSequenceViewerProteinBuilderController(config = {}) {
   const loadExternalRecord = typeof config?.loadExternalRecord === 'function'
     ? config.loadExternalRecord
     : (() => {});
+  const appState = config?.state && typeof config.state === 'object' ? config.state : null;
+  const persist = typeof config?.persist === 'function' ? config.persist : null;
+  const createId = typeof config?.createId === 'function' ? config.createId : null;
+  const onNotebookEntriesChanged = typeof config?.onNotebookEntriesChanged === 'function'
+    ? config.onNotebookEntriesChanged
+    : null;
 
   const state = {
     nextRowId: 1,
@@ -1005,16 +1012,50 @@ export function createSequenceViewerProteinBuilderController(config = {}) {
       }
     }
 
+    const constructName = cleanText(elements.proteinBuilderNameInput?.value, 140) || 'Protein Builder Insert';
     const payload = buildAssembledPlasmidPayload(selectedBackbone, state.dnaConstruct, {
-      constructName: elements.proteinBuilderNameInput?.value
+      constructName
     });
     if (!payload?.sequence) {
       setBuilderStatus('Unable to assemble the plasmid from the selected backbone.', true);
       return;
     }
 
+    let cloningNotebookResult = null;
+    let notebookWarning = '';
+    try {
+      cloningNotebookResult = createProteinBuilderCloningNotebookPage({
+        state: appState,
+        persist,
+        createId,
+        onNotebookEntriesChanged,
+        constructName,
+        backbone: selectedBackbone,
+        dnaConstruct: state.dnaConstruct,
+        assembledRecord: payload
+      });
+    } catch (error) {
+      notebookWarning = error?.message || 'Failed to create the cloning notebook page.';
+    }
+
     closeAssemblyDialog();
     loadExternalRecord(payload);
+    if (cloningNotebookResult?.entry) {
+      const primerCount = Math.max(
+        0,
+        Number(cloningNotebookResult?.entry?.proteinBuilderCloningDesign?.primerCount) || 0
+      );
+      const notebookTitle = cleanText(cloningNotebookResult.entry.experimentName, 220)
+        || cloningNotebookResult.entry.protocolName;
+      setBuilderStatus(`Created notebook page "${notebookTitle}" with PCR program and ${primerCount} primer${primerCount === 1 ? '' : 's'}.`);
+      setStatus(`Opened assembled plasmid using stored backbone ${buildStoredBackboneDisplayName(selectedBackbone)}. Notebook page "${notebookTitle}" has the PCR program and primer table.`);
+      return;
+    }
+    if (notebookWarning) {
+      setBuilderStatus(`Assembled plasmid opened, but notebook page was not saved: ${notebookWarning}`, true);
+      setStatus(`Opened assembled plasmid using stored backbone ${buildStoredBackboneDisplayName(selectedBackbone)}. Notebook page was not saved: ${notebookWarning}`, true);
+      return;
+    }
     setStatus(`Opened assembled plasmid using stored backbone ${buildStoredBackboneDisplayName(selectedBackbone)}.`);
   }
 

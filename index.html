@@ -62,6 +62,72 @@
 <!-- SOURCE: ui/html/views/home-view.html -->
 <section id="home-view" class="view is-active" aria-label="Home">
       <div class="home-layout">
+        <section class="home-tile home-tile-contribution" aria-labelledby="dashboard-contribution-heading">
+          <div class="home-tile-head">
+            <h2 id="dashboard-contribution-heading">Contribution Heatmap</h2>
+            <p id="dashboard-contribution-summary" class="small-note">No activity logged yet.</p>
+          </div>
+          <div class="home-contribution-map" aria-label="Lab activity contribution heatmap">
+            <div id="dashboard-contribution-months" class="home-contribution-months" aria-hidden="true"></div>
+            <div class="home-contribution-body">
+              <div class="home-contribution-weekdays" aria-hidden="true">
+                <span>Mon</span>
+                <span>Wed</span>
+                <span>Fri</span>
+              </div>
+              <div id="dashboard-contribution-grid" class="home-contribution-grid" role="grid" aria-label="Daily lab activity"></div>
+            </div>
+            <div class="home-contribution-legend" aria-hidden="true">
+              <span>Less</span>
+              <span class="home-contribution-legend-cell" data-level="0"></span>
+              <span class="home-contribution-legend-cell" data-level="1"></span>
+              <span class="home-contribution-legend-cell" data-level="2"></span>
+              <span class="home-contribution-legend-cell" data-level="3"></span>
+              <span class="home-contribution-legend-cell" data-level="4"></span>
+              <span>More</span>
+            </div>
+          </div>
+          <div class="home-contribution-quick-log">
+            <div class="home-contribution-quick-log-head">
+              <h3>Quick Log Notebook</h3>
+              <p id="dashboard-quick-log-status" class="small-note"></p>
+            </div>
+            <label class="dashboard-field dashboard-field-grow">
+              Bench Note
+              <div class="home-quick-log-input-wrap">
+                <textarea
+                  id="dashboard-quick-log-input"
+                  rows="3"
+                  placeholder="Log a notebook entry, upload note, analysis note, or completed protocol."
+                ></textarea>
+                <div class="home-quick-log-actions">
+                  <button
+                    type="button"
+                    id="dashboard-quick-log-save-btn"
+                    class="home-quick-log-icon-btn"
+                    aria-label="Save quick log"
+                  >
+                    <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
+                      <path d="m5 12.5 4.2 4.1L19 7" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"></path>
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    id="dashboard-quick-log-agent-btn"
+                    class="home-quick-log-icon-btn home-quick-log-send-btn"
+                    aria-label="Save quick log and send to Assistant"
+                  >
+                    <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
+                      <path d="M12 17V7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path>
+                      <path d="M6.5 12.5 12 7l5.5 5.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </label>
+          </div>
+        </section>
+
         <section class="home-tile home-tile-passage" aria-labelledby="dashboard-passage-heading">
           <div class="home-tile-head">
             <div class="home-tile-head-row">
@@ -77,20 +143,6 @@
           </div>
           <div class="home-tile-scroll">
             <div id="dashboard-passage-list" class="dashboard-list dashboard-passage-list"></div>
-          </div>
-        </section>
-
-        <section class="home-tile home-tile-workflow" aria-labelledby="dashboard-workflow-heading">
-          <div class="home-tile-head">
-            <h2 id="dashboard-workflow-heading">Current Workflow</h2>
-            <p id="dashboard-workflow-next-step" class="small-note">No workflow selected.</p>
-          </div>
-          <label class="dashboard-field">
-            Workflow
-            <select id="dashboard-workflow-select"></select>
-          </label>
-          <div class="home-tile-scroll">
-            <div id="dashboard-workflow-progress-list" class="dashboard-list"></div>
           </div>
         </section>
 
@@ -123,34 +175,6 @@
           <div class="home-tile-scroll">
             <div id="dashboard-incubation-list" class="dashboard-list"></div>
           </div>
-        </section>
-
-        <section class="home-tile home-tile-quick-log" aria-labelledby="dashboard-quick-log-heading">
-          <div class="home-tile-head">
-            <h2 id="dashboard-quick-log-heading">Quick Log Notebook</h2>
-            <p id="dashboard-quick-log-status" class="small-note"></p>
-          </div>
-          <label class="dashboard-field dashboard-field-grow">
-            Bench Note
-            <div class="home-quick-log-input-wrap">
-              <textarea
-                id="dashboard-quick-log-input"
-                rows="6"
-                placeholder="Summarize what happened, what is incubating, or what you want the assistant to help with next."
-              ></textarea>
-              <button
-                type="button"
-                id="dashboard-quick-log-agent-btn"
-                class="home-quick-log-send-btn"
-                aria-label="Send to Assistant"
-              >
-                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
-                  <path d="M12 17V7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path>
-                  <path d="M6.5 12.5 12 7l5.5 5.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>
-                </svg>
-              </button>
-            </div>
-          </label>
         </section>
 
         <section class="home-tile home-tile-notebook-pages" aria-labelledby="dashboard-notebook-pages-heading">
@@ -605,6 +629,7 @@
                 <div class="biology-notebook-linked-toolbar">
                   <button id="biology-notebook-add-gel-btn" class="ghost-btn" type="button">Add Gel</button>
                   <button id="biology-notebook-add-assay-btn" class="ghost-btn" type="button">Add Assay</button>
+                  <button id="biology-notebook-add-samples-btn" class="ghost-btn" type="button">Add Samples</button>
                   <button id="biology-notebook-add-table-btn" class="ghost-btn" type="button">Add Table</button>
                   <button id="biology-notebook-add-table-row-btn" class="ghost-btn" type="button" hidden>Add Row</button>
                   <button id="biology-notebook-add-table-column-btn" class="ghost-btn" type="button" hidden>Add Column</button>
@@ -719,6 +744,7 @@
                 <option value="strain">Strain</option>
                 <option value="antibody">Antibody</option>
                 <option value="protein">Purified Protein</option>
+                <option value="chemical">Chemical</option>
                 <option value="compound">Compound</option>
                 <option value="primer">Primer</option>
               </select>
@@ -739,13 +765,13 @@
                 </label>
               </div>
             </section>
-            <section id="sample-compound-fields" class="sample-compound-fields" hidden>
+            <section id="sample-compound-fields" class="sample-compound-fields">
               <div class="inline-row sample-compound-head">
-                <strong>Compound Structure (Ketcher)</strong>
-                <span class="small-note">Open the editor in a modal, then save the snapshot with the sample</span>
+                <strong>Chemical Structure (Ketcher)</strong>
+                <span class="small-note">Open the editor, draw the structure, then save the snapshot with the sample</span>
               </div>
               <div class="form-actions">
-                <button id="sample-compound-open-btn" type="button" class="ghost-btn">Open Ketcher</button>
+                <button id="sample-compound-open-btn" type="button" class="ghost-btn">Add Structure</button>
                 <button id="sample-compound-capture-btn" type="button" class="ghost-btn">Refresh Snapshot</button>
                 <button id="sample-compound-clear-btn" type="button" class="ghost-btn">Clear Structure</button>
               </div>
@@ -755,7 +781,7 @@
               </label>
               <div id="sample-compound-status" class="small-note"></div>
               <div id="sample-compound-preview" class="sample-compound-preview" hidden>
-                <img id="sample-compound-preview-image" alt="Compound structure preview" />
+                <img id="sample-compound-preview-image" alt="Chemical structure preview" />
               </div>
             </section>
             <label>
@@ -831,15 +857,15 @@
         <div class="sample-compound-dialog" role="dialog" aria-modal="true" aria-labelledby="sample-compound-dialog-title">
           <div class="sample-compound-dialog-head">
             <div>
-              <h3 id="sample-compound-dialog-title">Draw Compound Structure</h3>
-              <p class="small-note">Use Ketcher to draw or edit the compound, then apply the snapshot to the current sample.</p>
+              <h3 id="sample-compound-dialog-title">Draw Chemical Structure</h3>
+              <p class="small-note">Use Ketcher to draw or edit the chemical, then apply the snapshot to the current sample.</p>
             </div>
             <button type="button" id="sample-compound-dialog-close-btn" class="ghost-btn" aria-label="Close Ketcher dialog">Close</button>
           </div>
           <iframe
             id="sample-compound-ketcher-frame"
             class="ketcher-frame sample-ketcher-frame"
-            title="Sample compound Ketcher editor"
+            title="Sample chemical Ketcher editor"
             src="./ketcher-embedded.html"
             loading="lazy"
             referrerpolicy="no-referrer"
@@ -1565,7 +1591,15 @@
             <section class="left-rail-template__section">
               <div class="project-sidebar-copy">
                 <h2>Projects</h2>
-                <p class="small-note">Create projects, update their notes, and browse linked notebook pages.</p>
+                <p class="small-note">Select a project to review its workspace activity.</p>
+              </div>
+              <div id="project-list" class="project-rail-list"></div>
+            </section>
+
+            <section class="left-rail-template__section">
+              <div class="project-sidebar-copy">
+                <h3>Project Details</h3>
+                <p class="small-note">Create a project or edit the selected project notes.</p>
               </div>
               <form id="project-form" class="stack-form">
                 <input type="hidden" id="project-id" />
@@ -1583,44 +1617,11 @@
                 </div>
               </form>
             </section>
-
-            <section class="left-rail-template__section">
-              <div class="project-sidebar-copy">
-                <h3>Project Notebook Pages</h3>
-                <p class="small-note">Filter notebook pages linked to the selected project.</p>
-              </div>
-              <label>
-                Select Project
-                <select id="project-notebook-filter">
-                  <option value="">Select project</option>
-                </select>
-              </label>
-            </section>
           </div>
         </aside>
 
         <div class="project-main left-rail-template__main">
-          <div class="left-rail-template__stack">
-            <section class="panel project-list-panel">
-              <div class="project-panel-head">
-                <div class="project-panel-copy">
-                  <h3>All Projects</h3>
-                  <p class="small-note">Select a project to edit it or remove it from the workspace.</p>
-                </div>
-              </div>
-              <div id="project-list" class="cards"></div>
-            </section>
-
-            <section class="panel project-notebook-panel">
-              <div class="project-panel-head">
-                <div class="project-panel-copy">
-                  <h3>Notebook Pages</h3>
-                  <p class="small-note">Recent notebook pages connected to the chosen project appear here.</p>
-                </div>
-              </div>
-              <div id="project-notebook-pages" class="cards"></div>
-            </section>
-          </div>
+          <div id="project-dashboard" class="project-dashboard"></div>
         </div>
       </div>
     </section>

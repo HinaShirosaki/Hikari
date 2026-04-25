@@ -1328,6 +1328,10 @@ export function initSequenceViewer(options = {}) {
 
   proteinBuilderController = createSequenceViewerProteinBuilderController({
     elements,
+    state: options?.state,
+    persist: options?.persist,
+    createId: options?.createId,
+    onNotebookEntriesChanged: options?.onNotebookEntriesChanged,
     getBridge,
     getStoragePath,
     getSelectedRecord,

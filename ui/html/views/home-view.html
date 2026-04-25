@@ -1,5 +1,71 @@
 <section id="home-view" class="view is-active" aria-label="Home">
       <div class="home-layout">
+        <section class="home-tile home-tile-contribution" aria-labelledby="dashboard-contribution-heading">
+          <div class="home-tile-head">
+            <h2 id="dashboard-contribution-heading">Contribution Heatmap</h2>
+            <p id="dashboard-contribution-summary" class="small-note">No activity logged yet.</p>
+          </div>
+          <div class="home-contribution-map" aria-label="Lab activity contribution heatmap">
+            <div id="dashboard-contribution-months" class="home-contribution-months" aria-hidden="true"></div>
+            <div class="home-contribution-body">
+              <div class="home-contribution-weekdays" aria-hidden="true">
+                <span>Mon</span>
+                <span>Wed</span>
+                <span>Fri</span>
+              </div>
+              <div id="dashboard-contribution-grid" class="home-contribution-grid" role="grid" aria-label="Daily lab activity"></div>
+            </div>
+            <div class="home-contribution-legend" aria-hidden="true">
+              <span>Less</span>
+              <span class="home-contribution-legend-cell" data-level="0"></span>
+              <span class="home-contribution-legend-cell" data-level="1"></span>
+              <span class="home-contribution-legend-cell" data-level="2"></span>
+              <span class="home-contribution-legend-cell" data-level="3"></span>
+              <span class="home-contribution-legend-cell" data-level="4"></span>
+              <span>More</span>
+            </div>
+          </div>
+          <div class="home-contribution-quick-log">
+            <div class="home-contribution-quick-log-head">
+              <h3>Quick Log Notebook</h3>
+              <p id="dashboard-quick-log-status" class="small-note"></p>
+            </div>
+            <label class="dashboard-field dashboard-field-grow">
+              Bench Note
+              <div class="home-quick-log-input-wrap">
+                <textarea
+                  id="dashboard-quick-log-input"
+                  rows="3"
+                  placeholder="Log a notebook entry, upload note, analysis note, or completed protocol."
+                ></textarea>
+                <div class="home-quick-log-actions">
+                  <button
+                    type="button"
+                    id="dashboard-quick-log-save-btn"
+                    class="home-quick-log-icon-btn"
+                    aria-label="Save quick log"
+                  >
+                    <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
+                      <path d="m5 12.5 4.2 4.1L19 7" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"></path>
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    id="dashboard-quick-log-agent-btn"
+                    class="home-quick-log-icon-btn home-quick-log-send-btn"
+                    aria-label="Save quick log and send to Assistant"
+                  >
+                    <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
+                      <path d="M12 17V7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path>
+                      <path d="M6.5 12.5 12 7l5.5 5.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </label>
+          </div>
+        </section>
+
         <section class="home-tile home-tile-passage" aria-labelledby="dashboard-passage-heading">
           <div class="home-tile-head">
             <div class="home-tile-head-row">
@@ -15,20 +81,6 @@
           </div>
           <div class="home-tile-scroll">
             <div id="dashboard-passage-list" class="dashboard-list dashboard-passage-list"></div>
-          </div>
-        </section>
-
-        <section class="home-tile home-tile-workflow" aria-labelledby="dashboard-workflow-heading">
-          <div class="home-tile-head">
-            <h2 id="dashboard-workflow-heading">Current Workflow</h2>
-            <p id="dashboard-workflow-next-step" class="small-note">No workflow selected.</p>
-          </div>
-          <label class="dashboard-field">
-            Workflow
-            <select id="dashboard-workflow-select"></select>
-          </label>
-          <div class="home-tile-scroll">
-            <div id="dashboard-workflow-progress-list" class="dashboard-list"></div>
           </div>
         </section>
 
@@ -61,34 +113,6 @@
           <div class="home-tile-scroll">
             <div id="dashboard-incubation-list" class="dashboard-list"></div>
           </div>
-        </section>
-
-        <section class="home-tile home-tile-quick-log" aria-labelledby="dashboard-quick-log-heading">
-          <div class="home-tile-head">
-            <h2 id="dashboard-quick-log-heading">Quick Log Notebook</h2>
-            <p id="dashboard-quick-log-status" class="small-note"></p>
-          </div>
-          <label class="dashboard-field dashboard-field-grow">
-            Bench Note
-            <div class="home-quick-log-input-wrap">
-              <textarea
-                id="dashboard-quick-log-input"
-                rows="6"
-                placeholder="Summarize what happened, what is incubating, or what you want the assistant to help with next."
-              ></textarea>
-              <button
-                type="button"
-                id="dashboard-quick-log-agent-btn"
-                class="home-quick-log-send-btn"
-                aria-label="Send to Assistant"
-              >
-                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
-                  <path d="M12 17V7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path>
-                  <path d="M6.5 12.5 12 7l5.5 5.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>
-                </svg>
-              </button>
-            </div>
-          </label>
         </section>
 
         <section class="home-tile home-tile-notebook-pages" aria-labelledby="dashboard-notebook-pages-heading">

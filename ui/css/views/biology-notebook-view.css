@@ -461,6 +461,94 @@
   line-height: 1.45;
 }
 
+#biology-notebook-view .inline-placeholder-token.is-sample-placeholder {
+  cursor: context-menu;
+}
+
+#biology-notebook-view .inline-placeholder-token.is-linked-sample {
+  border-color: color-mix(in srgb, #23622b 46%, var(--line));
+  background: color-mix(in srgb, #e8f5e9 70%, white);
+  color: #1f5c27;
+  font-weight: 600;
+}
+
+.biology-notebook-sample-link-menu {
+  position: fixed;
+  z-index: 3000;
+  width: min(340px, calc(100vw - 24px));
+  max-height: min(420px, calc(100vh - 24px));
+  overflow: hidden;
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--line) 86%, transparent);
+  border-radius: 8px;
+  background: var(--surface-elevated, #fff);
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.18);
+}
+
+.biology-notebook-sample-link-menu[hidden] {
+  display: none;
+}
+
+.biology-notebook-sample-link-menu-head {
+  display: grid;
+  gap: 2px;
+}
+
+.biology-notebook-sample-link-search {
+  width: 100%;
+}
+
+.biology-notebook-sample-link-results {
+  min-height: 80px;
+  max-height: 300px;
+  overflow: auto;
+  display: grid;
+  gap: 4px;
+}
+
+.biology-notebook-sample-link-option {
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  padding: 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.biology-notebook-sample-link-option:hover,
+.biology-notebook-sample-link-option:focus-visible {
+  border-color: color-mix(in srgb, var(--line) 84%, transparent);
+  background: color-mix(in srgb, var(--surface-subtle, #f8fafc) 86%, white);
+  outline: none;
+}
+
+.biology-notebook-sample-link-option-main,
+.biology-notebook-sample-link-option-meta {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.biology-notebook-sample-link-option-main {
+  font-weight: 600;
+  color: var(--strong);
+}
+
+.biology-notebook-sample-link-option-meta {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.biology-notebook-sample-link-empty {
+  margin: 0;
+}
+
 .biology-notebook-viewer-head {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;

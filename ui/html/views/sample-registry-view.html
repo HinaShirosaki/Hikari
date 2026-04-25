@@ -24,6 +24,7 @@
                 <option value="strain">Strain</option>
                 <option value="antibody">Antibody</option>
                 <option value="protein">Purified Protein</option>
+                <option value="chemical">Chemical</option>
                 <option value="compound">Compound</option>
                 <option value="primer">Primer</option>
               </select>
@@ -44,13 +45,13 @@
                 </label>
               </div>
             </section>
-            <section id="sample-compound-fields" class="sample-compound-fields" hidden>
+            <section id="sample-compound-fields" class="sample-compound-fields">
               <div class="inline-row sample-compound-head">
-                <strong>Compound Structure (Ketcher)</strong>
-                <span class="small-note">Open the editor in a modal, then save the snapshot with the sample</span>
+                <strong>Chemical Structure (Ketcher)</strong>
+                <span class="small-note">Open the editor, draw the structure, then save the snapshot with the sample</span>
               </div>
               <div class="form-actions">
-                <button id="sample-compound-open-btn" type="button" class="ghost-btn">Open Ketcher</button>
+                <button id="sample-compound-open-btn" type="button" class="ghost-btn">Add Structure</button>
                 <button id="sample-compound-capture-btn" type="button" class="ghost-btn">Refresh Snapshot</button>
                 <button id="sample-compound-clear-btn" type="button" class="ghost-btn">Clear Structure</button>
               </div>
@@ -60,7 +61,7 @@
               </label>
               <div id="sample-compound-status" class="small-note"></div>
               <div id="sample-compound-preview" class="sample-compound-preview" hidden>
-                <img id="sample-compound-preview-image" alt="Compound structure preview" />
+                <img id="sample-compound-preview-image" alt="Chemical structure preview" />
               </div>
             </section>
             <label>
@@ -136,15 +137,15 @@
         <div class="sample-compound-dialog" role="dialog" aria-modal="true" aria-labelledby="sample-compound-dialog-title">
           <div class="sample-compound-dialog-head">
             <div>
-              <h3 id="sample-compound-dialog-title">Draw Compound Structure</h3>
-              <p class="small-note">Use Ketcher to draw or edit the compound, then apply the snapshot to the current sample.</p>
+              <h3 id="sample-compound-dialog-title">Draw Chemical Structure</h3>
+              <p class="small-note">Use Ketcher to draw or edit the chemical, then apply the snapshot to the current sample.</p>
             </div>
             <button type="button" id="sample-compound-dialog-close-btn" class="ghost-btn" aria-label="Close Ketcher dialog">Close</button>
           </div>
           <iframe
             id="sample-compound-ketcher-frame"
             class="ketcher-frame sample-ketcher-frame"
-            title="Sample compound Ketcher editor"
+            title="Sample chemical Ketcher editor"
             src="./ketcher-embedded.html"
             loading="lazy"
             referrerpolicy="no-referrer"

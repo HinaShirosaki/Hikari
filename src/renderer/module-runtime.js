@@ -70,6 +70,10 @@ export function createRendererModuleRuntime(config = {}) {
       importProtocolsFromJson: rendererServices.protocol.importProtocolsFromJson,
       onCreateLinkedAssay: rendererServices.analysis.openAssayForNotebook,
       onCreateLinkedGel: rendererServices.analysis.openGelForNotebook,
+      onOpenSampleRecorder: (context = {}) => {
+        showView(views.SAMPLE_REGISTRY);
+        modules.sampleRegistry?.startNotebookSampleCapture?.(context);
+      },
       onNotebookEntriesChanged: rendererServices.notebook.handleNotebookEntriesChanged,
       selectionInsightsController
     }),
@@ -137,7 +141,8 @@ export function createRendererModuleRuntime(config = {}) {
     sampleRegistry: initAndRegisterModule(moduleRegistry, 'sampleRegistry', initSampleRegistry, {
       state,
       persist,
-      safeText
+      safeText,
+      onNotebookSampleCaptured: rendererServices.notebook.handleNotebookEntriesChanged
     }),
     assay: initAndRegisterModule(moduleRegistry, 'assay', initAssay, {
       state,
@@ -161,6 +166,14 @@ export function createRendererModuleRuntime(config = {}) {
       },
       onNavigateDetail: () => {
         showView(sequenceViewerDetailViewId);
+      },
+      state,
+      persist,
+      createId,
+      onNotebookEntriesChanged: () => {
+        rendererServices.project.handleProjectsChanged();
+        rendererServices.protocol.handleProtocolsChanged();
+        rendererServices.notebook.handleNotebookEntriesChanged();
       }
     }),
     toolBox: initAndRegisterModule(moduleRegistry, 'toolBox', initToolBox, {
