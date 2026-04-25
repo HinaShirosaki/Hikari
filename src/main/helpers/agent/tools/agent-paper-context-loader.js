@@ -1,6 +1,7 @@
 'use strict';
 
 const { Buffer } = require('node:buffer');
+const fsPromises = require('node:fs/promises');
 
 const { createAgentLlmRuntimeHelpers } = require('../shared/agent-llm-utils.js');
 
@@ -15,6 +16,7 @@ const PAPER_CONTEXT_SOURCE_ORDER = Object.freeze([
 const DEFAULT_MAX_PAPERS = 8;
 const DEFAULT_MAX_BLOCKS = 6;
 const DEFAULT_MAX_BLOCKS_PER_PAPER = 2;
+const DEFAULT_MAX_BLOCKS_PER_PAPER_WITH_PDF = 4;
 const DEFAULT_MAX_FIGURE_REVIEWS = 2;
 const DEFAULT_CHUNK_SIZE = 1500;
 const DEFAULT_CHUNK_OVERLAP = 200;
@@ -65,6 +67,27 @@ const PAPER_FIGURE_REVIEW_SCHEMA = {
     useful: { type: 'boolean' },
     figure_summary: { type: 'string' },
     relevance_reason: { type: 'string' }
+  }
+};
+
+const PAPER_PDF_EXCERPT_SELECTION_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['excerpts'],
+  properties: {
+    excerpts: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['section_label', 'excerpt', 'relevance_reason'],
+        properties: {
+          section_label: { type: 'string' },
+          excerpt: { type: 'string' },
+          relevance_reason: { type: 'string' }
+        }
+      }
+    }
   }
 };
 
@@ -671,24 +694,201 @@ function createPaperContextLoaderRuntime(deps = {}) {
     };
   }
 
-  async function selectContextBlocks(input = {}) {
-    const candidateBlocks = asArray(input.candidate_blocks);
-    const fallback = buildFallbackSelection(candidateBlocks, input.query || input.message);
-    if (!candidateBlocks.length || typeof requestStructuredJsonPayload !== 'function') {
-      return normalizeSelectionResult(fallback, candidateBlocks, input.query || input.message);
-    }
+  function buildPdfSelectionPrompt({ query, paper, paperCandidates }) {
+    const anchorLines = asArray(paperCandidates).slice(0, 6).map((block) => [
+      `- Section: ${cleanText(block.section_label, 120) || 'Section'}`,
+      `  Excerpt anchor: ${cleanText(block.excerpt, 400)}`
+    ].join('\n')).join('\n');
+    return [
+      'You have the full paper PDF attached. Read it before answering.',
+      `Select up to ${DEFAULT_MAX_BLOCKS_PER_PAPER_WITH_PDF} short excerpts from the PDF that most directly support the clarified request.`,
+      'Prefer concrete results, numerical findings, mechanisms, and conclusions over background or generic statements.',
+      'Quote excerpts verbatim from the PDF (keep each under ~1500 characters). Do not paraphrase.',
+      'Each excerpt needs a section_label (e.g., "Results", "Discussion", "Figure 2 caption") and a specific relevance_reason.',
+      `Clarified request:\n${cleanText(query, 1200)}`,
+      `Paper title: ${cleanText(paper?.paper_title, 320)}`,
+      anchorLines
+        ? `Existing abstract-derived excerpts (reference only — you may pick entirely different content from the PDF):\n${anchorLines}`
+        : '',
+      'Return JSON only.'
+    ].filter(Boolean).join('\n\n');
+  }
+
+  async function selectPdfExcerptsForPaper({ paper, paperCandidates, pdfInput, input }) {
+    const query = input.query || input.message;
     const result = await requestStructuredJsonPayload({
-      stage: 'paper_context_selection',
+      stage: 'paper_context_selection_pdf',
       systemPrompt: 'Return valid JSON only.',
-      userPrompt: buildSelectionPrompt(input),
-      schema: PAPER_CONTEXT_SELECTION_SCHEMA,
+      userPrompt: buildPdfSelectionPrompt({ query, paper, paperCandidates }),
+      schema: PAPER_PDF_EXCERPT_SELECTION_SCHEMA,
       traceContext: input.traceContext || null,
-      defaultError: 'Paper context selection is not configured.'
+      pdfDataUrl: pdfInput.pdfDataUrl,
+      fileName: pdfInput.fileName,
+      defaultError: 'Paper PDF context selection is not configured.'
     });
     if (!result?.ok || !result.payload) {
-      return normalizeSelectionResult(fallback, candidateBlocks, input.query || input.message);
+      return [];
     }
-    return normalizeSelectionResult(result.payload, candidateBlocks, input.query || input.message);
+    const paperId = cleanText(paper?.paper_id, 120);
+    return asArray(result.payload.excerpts)
+      .slice(0, DEFAULT_MAX_BLOCKS_PER_PAPER_WITH_PDF)
+      .map((entry, index) => ({
+        block_id: `${paperId}::pdf-${index + 1}`,
+        paper_id: paperId,
+        paper_title: cleanText(paper?.paper_title, 320),
+        section_label: cleanText(entry?.section_label, 160) || 'From PDF',
+        excerpt: cleanText(entry?.excerpt, 1800),
+        relevance_reason: cleanText(entry?.relevance_reason, 260)
+          || `Excerpt drawn from the attached PDF of ${cleanText(paper?.paper_title, 160) || 'the paper'}.`,
+        source: 'llm_pdf_read',
+        evidence_kind: 'text'
+      }))
+      .filter((block) => block.paper_id && block.excerpt);
+  }
+
+  function mergeSelectedBlocksWithPdf(nonPdfBlocks, pdfBlocks, pdfPaperIds) {
+    const merged = [];
+    const seenBlockIds = new Set();
+    const perPaperCounts = new Map();
+    const pushBlock = (block) => {
+      if (!block) {
+        return;
+      }
+      if (merged.length >= DEFAULT_MAX_BLOCKS) {
+        return;
+      }
+      const blockId = cleanText(block.block_id, 160);
+      if (blockId && seenBlockIds.has(blockId)) {
+        return;
+      }
+      const paperId = cleanText(block.paper_id, 120);
+      const cap = pdfPaperIds.has(paperId)
+        ? DEFAULT_MAX_BLOCKS_PER_PAPER_WITH_PDF
+        : DEFAULT_MAX_BLOCKS_PER_PAPER;
+      const count = perPaperCounts.get(paperId) || 0;
+      if (count >= cap) {
+        return;
+      }
+      perPaperCounts.set(paperId, count + 1);
+      if (blockId) {
+        seenBlockIds.add(blockId);
+      }
+      merged.push(block);
+    };
+    asArray(pdfBlocks).forEach(pushBlock);
+    asArray(nonPdfBlocks).forEach(pushBlock);
+    return merged;
+  }
+
+  async function selectContextBlocks(input = {}) {
+    const candidateBlocks = asArray(input.candidate_blocks);
+    const query = input.query || input.message;
+    const fallback = buildFallbackSelection(candidateBlocks, query);
+    if (!candidateBlocks.length || typeof requestStructuredJsonPayload !== 'function') {
+      return normalizeSelectionResult(fallback, candidateBlocks, query);
+    }
+    const paperPdfs = input.paper_pdfs instanceof Map ? input.paper_pdfs : new Map();
+    const papersById = input.papers_by_id instanceof Map ? input.papers_by_id : new Map();
+
+    if (!paperPdfs.size) {
+      const result = await requestStructuredJsonPayload({
+        stage: 'paper_context_selection',
+        systemPrompt: 'Return valid JSON only.',
+        userPrompt: buildSelectionPrompt(input),
+        schema: PAPER_CONTEXT_SELECTION_SCHEMA,
+        traceContext: input.traceContext || null,
+        defaultError: 'Paper context selection is not configured.'
+      });
+      if (!result?.ok || !result.payload) {
+        return normalizeSelectionResult(fallback, candidateBlocks, query);
+      }
+      return normalizeSelectionResult(result.payload, candidateBlocks, query);
+    }
+
+    const candidatesByPaper = new Map();
+    candidateBlocks.forEach((block) => {
+      const paperId = cleanText(block?.paper_id, 120);
+      if (!paperId) {
+        return;
+      }
+      if (!candidatesByPaper.has(paperId)) {
+        candidatesByPaper.set(paperId, []);
+      }
+      candidatesByPaper.get(paperId).push(block);
+    });
+
+    const pdfSelectedBlocks = [];
+    const pdfPaperIds = new Set();
+    for (const [paperId, paperCandidates] of candidatesByPaper.entries()) {
+      const pdfInput = paperPdfs.get(paperId);
+      if (!pdfInput) {
+        continue;
+      }
+      const paper = papersById.get(paperId) || {
+        paper_id: paperId,
+        paper_title: cleanText(paperCandidates[0]?.paper_title, 320) || paperId
+      };
+      const blocks = await selectPdfExcerptsForPaper({ paper, paperCandidates, pdfInput, input });
+      if (blocks.length) {
+        pdfPaperIds.add(paperId);
+        pdfSelectedBlocks.push(...blocks);
+      }
+    }
+
+    const nonPdfCandidates = candidateBlocks.filter((block) => !paperPdfs.has(cleanText(block?.paper_id, 120)));
+    let nonPdfSelection = { selected_blocks: [], figure_review_requests: [] };
+    if (nonPdfCandidates.length) {
+      const result = await requestStructuredJsonPayload({
+        stage: 'paper_context_selection',
+        systemPrompt: 'Return valid JSON only.',
+        userPrompt: buildSelectionPrompt({ ...input, candidate_blocks: nonPdfCandidates }),
+        schema: PAPER_CONTEXT_SELECTION_SCHEMA,
+        traceContext: input.traceContext || null,
+        defaultError: 'Paper context selection is not configured.'
+      });
+      if (result?.ok && result.payload) {
+        nonPdfSelection = normalizeSelectionResult(result.payload, nonPdfCandidates, query);
+      } else {
+        nonPdfSelection = normalizeSelectionResult(
+          buildFallbackSelection(nonPdfCandidates, query),
+          nonPdfCandidates,
+          query
+        );
+      }
+    }
+
+    const merged = mergeSelectedBlocksWithPdf(
+      asArray(nonPdfSelection.selected_blocks),
+      pdfSelectedBlocks,
+      pdfPaperIds
+    );
+    return {
+      selected_blocks: merged,
+      figure_review_requests: asArray(nonPdfSelection.figure_review_requests)
+    };
+  }
+
+  async function readLocalPdfAsDataUrl(filePath, paperTitle = '') {
+    const normalizedPath = cleanText(filePath, 4000);
+    if (!normalizedPath) {
+      return null;
+    }
+    try {
+      const buffer = await fsPromises.readFile(normalizedPath);
+      if (!buffer.length) {
+        return null;
+      }
+      if (buffer.subarray(0, 5).toString('utf8') !== '%PDF-') {
+        return null;
+      }
+      return {
+        pdfDataUrl: `data:application/pdf;base64,${buffer.toString('base64')}`,
+        fileName: `${cleanText(paperTitle, 180).replace(/[^a-z0-9]+/gi, '_') || 'paper'}.pdf`,
+        source: 'local_download'
+      };
+    } catch {
+      return null;
+    }
   }
 
   async function fetchPaperPdfDataUrl(paper = {}) {
@@ -837,12 +1037,41 @@ function createPaperContextLoaderRuntime(deps = {}) {
       papers.push(paper);
     }
     const candidateBlocks = buildCandidateBlocks(papers, query);
+    const papersById = new Map(papers.map((paper) => [cleanText(paper.paper_id, 120), paper]));
+
+    let downloadedPapers = asArray(input.downloaded_papers);
+    if (input.download_promise && typeof input.download_promise.then === 'function') {
+      try {
+        const awaited = await input.download_promise;
+        if (Array.isArray(awaited) && awaited.length) {
+          downloadedPapers = awaited;
+        }
+      } catch {
+        // Ignore — we'll proceed without attached PDFs.
+      }
+    }
+    const paperPdfs = new Map();
+    for (const entry of downloadedPapers) {
+      if (!entry?.ok || !entry?.file_path) {
+        continue;
+      }
+      const paperId = cleanText(entry.paper_id, 120);
+      if (!paperId || !papersById.has(paperId) || paperPdfs.has(paperId)) {
+        continue;
+      }
+      const pdfInput = await readLocalPdfAsDataUrl(entry.file_path, papersById.get(paperId)?.paper_title || '');
+      if (pdfInput) {
+        paperPdfs.set(paperId, pdfInput);
+      }
+    }
+
     const selection = await selectContextBlocks({
       ...input,
       query,
-      candidate_blocks: candidateBlocks
+      candidate_blocks: candidateBlocks,
+      paper_pdfs: paperPdfs,
+      papers_by_id: papersById
     });
-    const papersById = new Map(papers.map((paper) => [cleanText(paper.paper_id, 120), paper]));
     const selectedBlocks = asArray(selection.selected_blocks);
     const figureReviewRequests = asArray(selection.figure_review_requests).length
       ? asArray(selection.figure_review_requests)
@@ -893,6 +1122,7 @@ function createPaperContextLoaderRuntime(deps = {}) {
     PAPER_CONTEXT_SOURCE_ORDER,
     PAPER_CONTEXT_SELECTION_SCHEMA,
     PAPER_FIGURE_REVIEW_SCHEMA,
+    PAPER_PDF_EXCERPT_SELECTION_SCHEMA,
     chunkSectionText,
     parseEuropePmcFullTextSections,
     parsePubMedAbstractSections,
@@ -910,5 +1140,6 @@ module.exports = {
   PAPER_CONTEXT_SOURCE_ORDER,
   PAPER_CONTEXT_SELECTION_SCHEMA,
   PAPER_FIGURE_REVIEW_SCHEMA,
+  PAPER_PDF_EXCERPT_SELECTION_SCHEMA,
   createPaperContextLoaderRuntime
 };

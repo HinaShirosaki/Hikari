@@ -3,9 +3,9 @@
 const { createAgentLlmRuntimeHelpers } = require('../../shared/agent-llm-utils.js');
 const { createAgentSubAgentRuntime } = require('../../tools/agent-sub-agent.js');
 const {
-  SCIENCE_LOOP_PRE_SYNTHESIZED_QUESTION_SCHEMA,
-  createScienceLoopPreSynthesizedQuestionRuntime
-} = require('./pre-synthesized-question.js');
+  SCIENCE_LOOP_PRE_SYNTHESIZED_ANSWER_SCHEMA,
+  createScienceLoopPreSynthesizedAnswerRuntime
+} = require('./pre-synthesized-answer.js');
 const {
   buildLogicalVerificationSection,
   getUnstableScienceInferenceChecks,
@@ -63,18 +63,18 @@ function createScienceLoopExitJudgeRuntime(deps = {}) {
     ? deps.judgeScienceLoopExit
     : null;
   const now = typeof deps.now === 'function' ? deps.now : (() => new Date().toISOString());
-  const preSynthesizedQuestionRuntime = createScienceLoopPreSynthesizedQuestionRuntime(deps);
+  const preSynthesizedAnswerRuntime = createScienceLoopPreSynthesizedAnswerRuntime(deps);
   const {
-    buildFallbackPreSynthesizedQuestion,
-    normalizePreSynthesizedQuestion,
-    buildPreSynthesizedQuestion
-  } = preSynthesizedQuestionRuntime;
+    buildFallbackPreSynthesizedAnswer,
+    normalizePreSynthesizedAnswer,
+    buildPreSynthesizedAnswer
+  } = preSynthesizedAnswerRuntime;
 
 
-  function collectCriteriaEvaluationContext(input = {}, preSynthesizedQuestion = null) {
-    const normalizedPreSynthesizedQuestion = normalizePreSynthesizedQuestion(
-      preSynthesizedQuestion || input.preSynthesizedQuestion,
-      buildFallbackPreSynthesizedQuestion(input)
+  function collectCriteriaEvaluationContext(input = {}, preSynthesizedAnswer = null) {
+    const normalizedPreSynthesizedAnswer = normalizePreSynthesizedAnswer(
+      preSynthesizedAnswer || input.preSynthesizedAnswer,
+      buildFallbackPreSynthesizedAnswer(input)
     );
     const latestToolResult = input.latestToolResult && typeof input.latestToolResult === 'object'
       ? input.latestToolResult
@@ -91,8 +91,8 @@ function createScienceLoopExitJudgeRuntime(deps = {}) {
       ...toolTrace.flatMap((row) => asArray(row?.loaded_context_blocks))
     ];
     const evidenceTexts = uniqueStrings([
-      normalizedPreSynthesizedQuestion?.tentative_answer?.current_best_answer,
-      ...asArray(normalizedPreSynthesizedQuestion?.supporting_basis),
+      normalizedPreSynthesizedAnswer?.tentative_answer?.current_best_answer,
+      ...asArray(normalizedPreSynthesizedAnswer?.supporting_basis),
       cleanText(input.latestAssistantText, 1200),
       cleanText(latestToolResult?.summary || latestToolResult?.result?.summary, 320),
       ...loadedContextBlocks.map((block) => [
@@ -113,7 +113,7 @@ function createScienceLoopExitJudgeRuntime(deps = {}) {
       ].filter(Boolean).join(': '))
     ], 24);
     const gapTexts = uniqueStrings([
-      ...asArray(normalizedPreSynthesizedQuestion?.unresolved_issues),
+      ...asArray(normalizedPreSynthesizedAnswer?.unresolved_issues),
       latestToolResult && latestToolResult.ok === false
         ? cleanText(latestToolResult?.error || latestToolResult?.result?.error, 320)
         : '',
@@ -129,12 +129,12 @@ function createScienceLoopExitJudgeRuntime(deps = {}) {
         citations.length > 0
         || hasSuccessfulToolStep
       );
-    const answerText = cleanText(normalizedPreSynthesizedQuestion?.tentative_answer?.current_best_answer, 1200);
+    const answerText = cleanText(normalizedPreSynthesizedAnswer?.tentative_answer?.current_best_answer, 1200);
     const hasTentativeAnswer = Boolean(answerText)
       && !/^no grounded tentative answer is available yet\.?$/i.test(answerText);
 
     return {
-      preSynthesizedQuestion: normalizedPreSynthesizedQuestion,
+      preSynthesizedAnswer: normalizedPreSynthesizedAnswer,
       evidenceTexts,
       gapTexts,
       hasGroundedEvidence,
@@ -155,6 +155,33 @@ function createScienceLoopExitJudgeRuntime(deps = {}) {
       }
       return candidate.includes(target) || target.includes(candidate);
     });
+  }
+
+  function hasSubstantiveOverlap(leftText, rightText) {
+    const stopwords = new Set([
+      'about', 'after', 'again', 'answer', 'because', 'before', 'being', 'between',
+      'could', 'evidence', 'explicitly', 'from', 'into', 'remaining', 'should',
+      'source', 'stated', 'still', 'synthesized', 'that', 'their', 'there',
+      'these', 'this', 'when', 'where', 'with'
+    ]);
+    const tokenize = (text) => String(text || '')
+      .toLowerCase()
+      .split(/[^a-z0-9]+/)
+      .filter((token) => token.length >= 4 && !stopwords.has(token));
+    const leftTokens = new Set(tokenize(leftText));
+    const rightTokens = new Set(tokenize(rightText));
+    if (!leftTokens.size || !rightTokens.size) {
+      return false;
+    }
+    const smaller = leftTokens.size <= rightTokens.size ? leftTokens : rightTokens;
+    const larger = leftTokens.size <= rightTokens.size ? rightTokens : leftTokens;
+    let overlap = 0;
+    smaller.forEach((token) => {
+      if (larger.has(token)) {
+        overlap += 1;
+      }
+    });
+    return overlap >= 3 && overlap / smaller.size >= 0.5;
   }
 
   function criterionIsSatisfied(criterion, context) {
@@ -196,25 +223,28 @@ function createScienceLoopExitJudgeRuntime(deps = {}) {
     if (/\bexplicit|state|noted|disclose/i.test(ruleText)
       && /\buncertaint|limitation|missing|gap/i.test(ruleText)) {
       const answerText = cleanText(
-        context.preSynthesizedQuestion?.tentative_answer?.current_best_answer,
+        context.preSynthesizedAnswer?.tentative_answer?.current_best_answer,
         1200
       );
       if (!answerText) {
         return false;
       }
-      return context.gapTexts.some((gap) => matchesTexts(gap, [answerText]));
+      return context.gapTexts.some((gap) => (
+        matchesTexts(gap, [answerText])
+        || hasSubstantiveOverlap(gap, answerText)
+      ));
     }
     return false;
   }
 
   function buildFallbackEvaluation(input = {}) {
-    const context = collectCriteriaEvaluationContext(input, input.preSynthesizedQuestion);
+    const context = collectCriteriaEvaluationContext(input, input.preSynthesizedAnswer);
     const roundsExecuted = Number(input.roundsExecuted) || 0;
     const maxRounds = Math.max(1, Number(input.maxRounds) || 4);
     const clarifiedInput = cleanText(input.message || input.clarifiedInput || input.originalMessage, 3200);
     const exitCriteria = input.exitCriteria && typeof input.exitCriteria === 'object' ? input.exitCriteria : {};
     const unstableInferenceChecks = getUnstableScienceInferenceChecks(
-      context.preSynthesizedQuestion?.logical_verification,
+      context.preSynthesizedAnswer?.logical_verification,
       { asArray, cleanText, uniqueStrings }
     );
     const missing = [];
@@ -344,10 +374,10 @@ function createScienceLoopExitJudgeRuntime(deps = {}) {
     ].filter(Boolean).join('\n');
   }
 
-  function buildPreSynthesizedQuestionSection(question = {}) {
-    const source = question && typeof question === 'object' ? question : {};
+  function buildPreSynthesizedAnswerSection(answer = {}) {
+    const source = answer && typeof answer === 'object' ? answer : {};
     return [
-      'Pre-synthesized question:',
+      'Pre-synthesized answer:',
       cleanText(source?.tentative_answer?.current_best_answer, 600)
         ? `Current best answer: ${cleanText(source.tentative_answer.current_best_answer, 600)}`
         : '',
@@ -374,7 +404,7 @@ function createScienceLoopExitJudgeRuntime(deps = {}) {
   function buildJudgeSystemPrompt() {
     return [
       'You are a specialized sub-agent that judges whether a science reasoning loop should exit.',
-      'A lightweight pre-synthesized question is provided so you can see the current best answer, supporting basis, and unresolved issues before judging.',
+      'A lightweight pre-synthesized answer is provided so you can see the current best answer, supporting basis, and unresolved issues before judging.',
       'Judge the pre-synthesized answer only against the provided exit criteria and clarified request.',
       'Do not impose any citation, source, or tool-specific requirement unless it is explicitly stated in the exit criteria.',
       'Be conservative: continue when a blocking evidence requirement is still missing.',
@@ -383,14 +413,14 @@ function createScienceLoopExitJudgeRuntime(deps = {}) {
   }
 
   function buildJudgeMessage(input = {}) {
-    const preSynthesizedQuestion = buildPreSynthesizedQuestion(input);
+    const preSynthesizedAnswer = buildPreSynthesizedAnswer(input);
     const clarifiedRequest = cleanText(input.message || input.clarifiedInput || input.originalMessage, 3200);
     return [
       'Judge whether the reasoning loop should stop now or continue.',
       'Include trace_sentence as one short sentence describing what you are doing at this step.',
       `Clarified request:\n${clarifiedRequest}`,
       buildExitCriteriaSection(input.exitCriteria),
-      buildPreSynthesizedQuestionSection(preSynthesizedQuestion),
+      buildPreSynthesizedAnswerSection(preSynthesizedAnswer),
       buildLoadedContextSection([
         ...asArray(input.latestToolResult?.loaded_context_blocks),
         ...asArray(input.latestToolResult?.result?.loaded_context_blocks),
@@ -403,9 +433,9 @@ function createScienceLoopExitJudgeRuntime(deps = {}) {
 
   async function runJudgeTurn(turnInput = {}, judgeInput = {}) {
     const fallback = buildFallbackEvaluation(judgeInput);
-    const preSynthesizedQuestion = normalizePreSynthesizedQuestion(
-      judgeInput.preSynthesizedQuestion,
-      buildFallbackPreSynthesizedQuestion(judgeInput)
+    const preSynthesizedAnswer = normalizePreSynthesizedAnswer(
+      judgeInput.preSynthesizedAnswer,
+      buildFallbackPreSynthesizedAnswer(judgeInput)
     );
     if (!requestStructuredJsonPayload) {
       return {
@@ -415,7 +445,7 @@ function createScienceLoopExitJudgeRuntime(deps = {}) {
         metadata: {
           mode: 'fallback',
           phase: cleanText(turnInput.phase, 40),
-          pre_synthesized_question: preSynthesizedQuestion
+          pre_synthesized_answer: preSynthesizedAnswer
         }
       };
     }
@@ -426,7 +456,7 @@ function createScienceLoopExitJudgeRuntime(deps = {}) {
       systemPrompt: cleanText(turnInput.system_prompt, 12000) || buildJudgeSystemPrompt(),
       userPrompt: cleanText(turnInput.message, 48000) || buildJudgeMessage({
         ...judgeInput,
-        preSynthesizedQuestion
+        preSynthesizedAnswer
       }),
       schema: SCIENCE_LOOP_EXIT_JUDGEMENT_SCHEMA,
       traceContext: judgeInput.traceContext || null,
@@ -446,34 +476,34 @@ function createScienceLoopExitJudgeRuntime(deps = {}) {
       metadata: {
         mode: result?.ok && result.payload ? 'llm' : 'fallback',
         phase: cleanText(turnInput.phase, 40),
-        pre_synthesized_question: preSynthesizedQuestion
+        pre_synthesized_answer: preSynthesizedAnswer
       }
     };
   }
 
   function normalizeJudgeResult(result, input = {}) {
     const fallback = buildFallbackEvaluation(input);
-    const fallbackPreSynthesizedQuestion = buildFallbackPreSynthesizedQuestion(input);
+    const fallbackPreSynthesizedAnswer = buildFallbackPreSynthesizedAnswer(input);
     const source = result && typeof result === 'object' ? result : {};
     const evaluationSource = source.evaluation && typeof source.evaluation === 'object'
       ? source.evaluation
       : (source.output && typeof source.output === 'object' ? source.output : source);
-    const preSynthesizedQuestionSource = source.pre_synthesized_question
-      && typeof source.pre_synthesized_question === 'object'
-      ? source.pre_synthesized_question
-      : (source.preSynthesizedQuestion && typeof source.preSynthesizedQuestion === 'object'
-        ? source.preSynthesizedQuestion
-        : (source.sub_agent?.last_response?.metadata?.pre_synthesized_question
-          && typeof source.sub_agent.last_response.metadata.pre_synthesized_question === 'object'
-          ? source.sub_agent.last_response.metadata.pre_synthesized_question
+    const preSynthesizedAnswerSource = source.pre_synthesized_answer
+      && typeof source.pre_synthesized_answer === 'object'
+      ? source.pre_synthesized_answer
+      : (source.preSynthesizedAnswer && typeof source.preSynthesizedAnswer === 'object'
+        ? source.preSynthesizedAnswer
+        : (source.sub_agent?.last_response?.metadata?.pre_synthesized_answer
+          && typeof source.sub_agent.last_response.metadata.pre_synthesized_answer === 'object'
+          ? source.sub_agent.last_response.metadata.pre_synthesized_answer
           : null));
     return {
       ok: source.ok !== false,
       status: cleanText(source.status, 80) || 'judged',
       evaluation: normalizeEvaluationPayload(evaluationSource, fallback),
-      pre_synthesized_question: normalizePreSynthesizedQuestion(
-        preSynthesizedQuestionSource,
-        input.preSynthesizedQuestion || fallbackPreSynthesizedQuestion
+      pre_synthesized_answer: normalizePreSynthesizedAnswer(
+        preSynthesizedAnswerSource,
+        input.preSynthesizedAnswer || fallbackPreSynthesizedAnswer
       ),
       sub_agent: source.sub_agent && typeof source.sub_agent === 'object'
         ? source.sub_agent
@@ -488,19 +518,19 @@ function createScienceLoopExitJudgeRuntime(deps = {}) {
       return normalizeJudgeResult(overridden, input);
     }
 
-    const preSynthesizedQuestion = buildPreSynthesizedQuestion(input);
-    const judgeInputWithQuestion = {
+    const preSynthesizedAnswer = buildPreSynthesizedAnswer(input);
+    const judgeInputWithAnswer = {
       ...input,
-      preSynthesizedQuestion
+      preSynthesizedAnswer
     };
     const subAgentRuntime = createAgentSubAgentRuntime({
       now,
-      runSubAgentTurn: async (turnInput = {}) => runJudgeTurn(turnInput, judgeInputWithQuestion)
+      runSubAgentTurn: async (turnInput = {}) => runJudgeTurn(turnInput, judgeInputWithAnswer)
     });
     const created = await subAgentRuntime.createSubAgent({
       name: `science-loop-exit-judge-${Date.now()}`,
       system_prompt: buildJudgeSystemPrompt(),
-      message: buildJudgeMessage(judgeInputWithQuestion),
+      message: buildJudgeMessage(judgeInputWithAnswer),
       metadata: {
         task_type: 'science-loop-exit-judge',
         tags: ['science', 'reasoning-loop', 'exit-judge']
@@ -510,15 +540,15 @@ function createScienceLoopExitJudgeRuntime(deps = {}) {
       ok: created?.ok !== false,
       status: created?.status || 'judged',
       evaluation: created?.agent?.last_response?.output,
-      pre_synthesized_question: preSynthesizedQuestion,
+      pre_synthesized_answer: preSynthesizedAnswer,
       sub_agent: created?.agent || null,
       summary: created?.summary
     }, input);
   }
 
   return {
-    SCIENCE_LOOP_PRE_SYNTHESIZED_QUESTION_SCHEMA,
-    buildFallbackPreSynthesizedQuestion,
+    SCIENCE_LOOP_PRE_SYNTHESIZED_ANSWER_SCHEMA,
+    buildFallbackPreSynthesizedAnswer,
     SCIENCE_LOOP_EXIT_JUDGEMENT_SCHEMA,
     buildFallbackEvaluation,
     buildJudgeSystemPrompt,
@@ -528,7 +558,7 @@ function createScienceLoopExitJudgeRuntime(deps = {}) {
 }
 
 module.exports = {
-  SCIENCE_LOOP_PRE_SYNTHESIZED_QUESTION_SCHEMA,
+  SCIENCE_LOOP_PRE_SYNTHESIZED_ANSWER_SCHEMA,
   SCIENCE_LOOP_EXIT_JUDGEMENT_SCHEMA,
   createScienceLoopExitJudgeRuntime
 };

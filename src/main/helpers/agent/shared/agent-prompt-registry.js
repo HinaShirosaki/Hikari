@@ -208,7 +208,7 @@ function buildSampleState() {
     summary: 'Notebook AT-14 shows low UBC9 expression after transfection.',
     citations: [sampleCitations[0]]
   };
-  const samplePreSynthesizedQuestion = {
+  const samplePreSynthesizedAnswer = {
     tentative_answer: {
       current_best_answer: 'Low UBC9 expression is the most likely driver of weak SUMO1 conjugation in the Atlas HEK293 pilot.'
     },
@@ -409,7 +409,7 @@ function buildSampleState() {
     sampleCitations,
     sampleToolTrace,
     sampleLatestToolResult,
-    samplePreSynthesizedQuestion,
+    samplePreSynthesizedAnswer,
     sampleEvaluation,
     sampleResearchObjective,
     sampleResearchPlan,
@@ -791,7 +791,7 @@ function getAgentPromptRegistry() {
       render: () => state.exitJudgeRuntime.buildJudgeMessage({
         intent: state.sampleRouting.intent,
         exitCriteria: state.sampleExitCriteria,
-        preSynthesizedQuestion: state.samplePreSynthesizedQuestion,
+        preSynthesizedAnswer: state.samplePreSynthesizedAnswer,
         project: state.sampleProject,
         clarification: state.sampleClarification,
         originalMessage: state.sampleConversation[0].text,
@@ -828,7 +828,7 @@ function getAgentPromptRegistry() {
           tool_summary: row.summary,
           assistant_after_tool: row.assistant_after_tool
         })),
-        preSynthesizedQuestion: state.samplePreSynthesizedQuestion,
+        preSynthesizedAnswer: state.samplePreSynthesizedAnswer,
         evaluation: state.sampleEvaluation,
         status: 'completed',
         finalAnswer: 'Low UBC9 expression is the best-supported explanation.'

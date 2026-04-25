@@ -2682,9 +2682,15 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
       assert.equal(callLog[0].provider, 'codex');
       assert.match(callLog[0].userPrompt, /Search for ncAA incorporation papers\./);
       assert.match(callLog[0].userPrompt, /literature-search/);
+      assert.match(callLog[0].userPrompt, /tool_schema_requests/);
+      assert.doesNotMatch(callLog[0].userPrompt, /Input schema JSON:/);
       assert.equal(runtime.extractAgentSessionText(started), 'starting turn');
       assert.equal(runtime.extractAgentSessionFunctionCalls(started).length, 1);
       assert.equal(runtime.extractFunctionCalls('{"tool_call":{"name":"literature-search","arguments":{}}}').length, 1);
+      assert.deepEqual(
+        runtime.extractSchemaRequests('{"tool_schema_requests":["literature-search"]}').map((entry) => entry.name),
+        ['literature-search']
+      );
 
       const afterTool = await runtime.continueAgentSessionWithToolOutputs(
         started,

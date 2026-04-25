@@ -423,7 +423,8 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
         query: cleanText(input.query, 600),
         figure_policy: cleanText(input.figure_policy, 40) || 'when_needed',
         max_papers: batch.length,
-        items: batch
+        items: batch,
+        download_promise: input.downloadPromise || null
       }).catch((error) => ({
         ok: false,
         status: 'error',
@@ -545,7 +546,8 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
     }, linkedName);
     const readPromise = readSelectedPapers(enrichedCandidates, {
       ...source,
-      query
+      query,
+      downloadPromise
     });
     const [downloadedPapers, readResult] = await Promise.all([downloadPromise, readPromise]);
 

@@ -70,7 +70,9 @@ function createAgentToolProviderRuntime(deps = {}) {
     ? deps.getModelToolDefinitions
     : ((selectedToolNames = []) => getToolInputSchemas(selectedToolNames).map((tool) => ({
       name: cleanText(tool?.name, 120),
-      description: cleanText(tool?.detailed_description || tool?.description, 2400),
+      description: cleanText(tool?.description, 500),
+      short_description: cleanText(tool?.description, 500),
+      detailed_description: cleanText(tool?.detailed_description, 2400),
       parameters: tool?.input_schema && typeof tool.input_schema === 'object'
         ? tool.input_schema
         : { type: 'object', additionalProperties: true, properties: {} }

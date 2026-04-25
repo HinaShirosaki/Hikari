@@ -366,5 +366,134 @@ module.exports = function registerLoopRuntimeFollowupSuite(context = {}) {
       assert.equal(result.citations[0].source, 'pubmed');
       assert.match(result.answer, /10x PBS stock/i);
     });
+
+    test('science reasoning loop hydrates selected tool schemas before executing tool arguments', async () => {
+      const outputBatches = [];
+      const executedTools = [];
+      const runtime = agentScienceReasoningLoop.createScienceReasoningLoopRuntime({
+        startAgentSession: async () => ({ step: 0 }),
+        extractAgentSessionSchemaRequests: (session) => (
+          session.step === 0
+            ? [{ callId: 'schema-1', name: 'literature-search' }]
+            : []
+        ),
+        extractAgentSessionFunctionCalls: (session) => (
+          session.step === 1
+            ? [{
+              callId: 'call-1',
+              name: 'literature-search',
+              argsText: JSON.stringify({
+                query: 'rabbit appendix antibody repertoire diversification',
+                limit: 3
+              })
+            }]
+            : []
+        ),
+        extractAgentSessionText: (session) => (
+          session.step === 0
+            ? 'I need the literature-search schema before creating arguments.'
+            : (session.step === 1 ? 'I can now call literature-search.' : 'The literature evidence is enough.')
+        ),
+        continueAgentSessionWithToolOutputs: async (session, outputs) => {
+          outputBatches.push(outputs.map((entry) => ({
+            name: entry.name,
+            output: JSON.parse(entry.output)
+          })));
+          return {
+            step: outputBatches[outputBatches.length - 1][0].output.type === 'tool_schema'
+              ? 1
+              : 2
+          };
+        },
+        continueAgentSessionWithUserMessage: async (session) => session,
+        askMainAgentToolRoundSatisfaction: async () => ({
+          satisfied: true,
+          reason: 'The current tool round is ready for pre-synthesis.'
+        }),
+        evaluateScienceRound: async () => ({
+          satisfied: true,
+          reason: 'One hydrated literature-search round is enough.',
+          missing_requirements: [],
+          should_continue: false,
+          next_tool_hint: null,
+          can_answer_with_limitations: true
+        }),
+        synthesizeScienceFinal: async () => ({
+          answer: 'Rabbit GALT diversification is supported by the hydrated literature-search evidence.',
+          confidence: 0.73,
+          decision_record: {
+            assumptions: [],
+            open_questions: [],
+            verification_notes: ['Hydrated the selected schema before executing literature-search.']
+          },
+          follow_up_questions: []
+        })
+      });
+
+      const result = await runtime.runGeneralScienceQuestion({
+        provider: 'openai',
+        endpoint: 'https://example.test',
+        apiKey: 'key',
+        model: 'gpt-test',
+        message: 'Think harder about rabbit antibody maturation in GALT.',
+        conversation: [],
+        parserPayload: {
+          primary_intent: 'general_science_question',
+          needs_clarification: false,
+          clarification_reason: null,
+          entities: {}
+        },
+        routing: {
+          intent: 'general_science_question',
+          confidence: 0.64,
+          entities: {},
+          plan: {},
+          classifier: {}
+        },
+        toolDefinitions: [
+          {
+            name: 'literature-search',
+            description: 'Search papers.',
+            short_description: 'Search papers.',
+            detailed_description: 'Use this tool for scholarly literature retrieval.',
+            parameters: {
+              type: 'object',
+              additionalProperties: false,
+              required: ['query'],
+              properties: {
+                query: { type: 'string' },
+                limit: { type: 'integer' }
+              }
+            }
+          }
+        ],
+        runTool: async (toolName, args) => {
+          executedTools.push({ toolName, args });
+          return {
+            ok: true,
+            tool_name: toolName,
+            input: args,
+            result: {
+              items: [{ id: 'lit-1' }],
+              citations: [{ source: 'pubmed', pointer: 'lit-1', reason: 'Retrieved hydrated-schema evidence.' }],
+              summary: 'Hydrated literature retrieval completed.'
+            },
+            items: [{ id: 'lit-1' }],
+            citations: [{ source: 'pubmed', pointer: 'lit-1', reason: 'Retrieved hydrated-schema evidence.' }],
+            summary: 'Hydrated literature retrieval completed.'
+          };
+        }
+      });
+
+      assert.equal(outputBatches.length >= 2, true);
+      assert.equal(outputBatches[0][0].output.type, 'tool_schema');
+      assert.equal(outputBatches[0][0].output.input_schema.required[0], 'query');
+      assert.equal(executedTools.length, 1);
+      assert.equal(executedTools[0].toolName, 'literature-search');
+      assert.equal(result.rounds_executed, 1);
+      assert.equal(result.tool_trace.length, 1);
+      assert.equal(result.tool_trace[0].tool_name, 'literature-search');
+      assert.match(result.answer, /Rabbit GALT diversification/i);
+    });
   }
 };

@@ -114,7 +114,7 @@ module.exports = function registerPromptAndFallbackSuite(context = {}) {
           assistant_after_tool: 'I now have one targeted source but may still need broader context.'
         }
       ];
-      const preSynthesizedQuestion = {
+      const preSynthesizedAnswer = {
         tentative_answer: {
           current_best_answer: 'Pathway reactivation and compensatory signaling appear central.'
         },
@@ -216,7 +216,7 @@ module.exports = function registerPromptAndFallbackSuite(context = {}) {
       const judgePrompt = judgeRuntime.buildJudgeMessage({
         intent: 'general_science_question',
         exitCriteria,
-        preSynthesizedQuestion,
+        preSynthesizedAnswer,
         project,
         clarification,
         message: clarification.clarified_input,
@@ -259,7 +259,7 @@ module.exports = function registerPromptAndFallbackSuite(context = {}) {
             assistant_after_tool: 'I now have one targeted source but may still need broader context.'
           }
         ],
-        preSynthesizedQuestion,
+        preSynthesizedAnswer,
         evaluation,
         status: 'partial',
         finalAnswer: 'Pathway reactivation and compensatory signaling are likely important.'
@@ -298,7 +298,7 @@ module.exports = function registerPromptAndFallbackSuite(context = {}) {
       assert.doesNotMatch(exitCriteriaPrompt, /Original user message:/);
       assert.match(judgePrompt, /Clarified request:\nExplain MAPK inhibitor resistance with literature-backed mechanisms and note any uncertainty\./);
       assert.match(judgePrompt, /Exit criteria:/);
-      assert.match(judgePrompt, /Pre-synthesized question:/);
+      assert.match(judgePrompt, /Pre-synthesized answer:/);
       assert.match(judgePrompt, /Logical verification:/);
       assert.match(judgePrompt, /Pre-synthesized answer: Pathway reactivation and compensatory signaling appear central\./);
       assert.match(judgePrompt, /Abductive: unstable - alternatives still open/i);

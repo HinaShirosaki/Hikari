@@ -378,6 +378,7 @@ function createMainAgentServices(deps = {}) {
     toolProvider: agentToolProviderRuntime,
     startAgentSession: agentSessionRuntime.startAgentSession,
     extractAgentSessionFunctionCalls: agentSessionRuntime.extractAgentSessionFunctionCalls,
+    extractAgentSessionSchemaRequests: agentSessionRuntime.extractAgentSessionSchemaRequests,
     extractAgentSessionText: agentSessionRuntime.extractAgentSessionText,
     continueAgentSessionWithToolOutputs: agentSessionRuntime.continueAgentSessionWithToolOutputs,
     continueAgentSessionWithUserMessage: agentSessionRuntime.continueAgentSessionWithUserMessage,

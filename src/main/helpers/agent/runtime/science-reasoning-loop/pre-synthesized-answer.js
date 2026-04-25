@@ -5,7 +5,7 @@ const {
   normalizeScienceLogicalVerification
 } = require('./logical-verification.js');
 
-const SCIENCE_LOOP_PRE_SYNTHESIZED_QUESTION_SCHEMA = {
+const SCIENCE_LOOP_PRE_SYNTHESIZED_ANSWER_SCHEMA = {
   type: 'object',
   additionalProperties: false,
   required: ['tentative_answer', 'supporting_basis', 'unresolved_issues'],
@@ -30,7 +30,7 @@ const SCIENCE_LOOP_PRE_SYNTHESIZED_QUESTION_SCHEMA = {
   }
 };
 
-function createScienceLoopPreSynthesizedQuestionRuntime(deps = {}) {
+function createScienceLoopPreSynthesizedAnswerRuntime(deps = {}) {
   const asArray = typeof deps.asArray === 'function'
     ? deps.asArray
     : ((value) => (Array.isArray(value) ? value : []));
@@ -102,7 +102,7 @@ function createScienceLoopPreSynthesizedQuestionRuntime(deps = {}) {
     }).filter(Boolean);
   }
 
-  function buildFallbackPreSynthesizedQuestion(input = {}) {
+  function buildFallbackPreSynthesizedAnswer(input = {}) {
     const latestToolResult = input.latestToolResult && typeof input.latestToolResult === 'object'
       ? input.latestToolResult
       : {};
@@ -177,7 +177,7 @@ function createScienceLoopPreSynthesizedQuestionRuntime(deps = {}) {
     };
   }
 
-  function normalizePreSynthesizedQuestion(rawPayload, fallback = {}) {
+  function normalizePreSynthesizedAnswer(rawPayload, fallback = {}) {
     const source = rawPayload && typeof rawPayload === 'object' ? rawPayload : {};
     const fallbackSource = fallback && typeof fallback === 'object' ? fallback : {};
     const sourceTentative = source.tentative_answer && typeof source.tentative_answer === 'object'
@@ -211,22 +211,22 @@ function createScienceLoopPreSynthesizedQuestionRuntime(deps = {}) {
     };
   }
 
-  function buildPreSynthesizedQuestion(input = {}) {
-    return normalizePreSynthesizedQuestion(
-      input.preSynthesizedQuestion,
-      buildFallbackPreSynthesizedQuestion(input)
+  function buildPreSynthesizedAnswer(input = {}) {
+    return normalizePreSynthesizedAnswer(
+      input.preSynthesizedAnswer,
+      buildFallbackPreSynthesizedAnswer(input)
     );
   }
 
   return {
-    SCIENCE_LOOP_PRE_SYNTHESIZED_QUESTION_SCHEMA,
-    buildFallbackPreSynthesizedQuestion,
-    normalizePreSynthesizedQuestion,
-    buildPreSynthesizedQuestion
+    SCIENCE_LOOP_PRE_SYNTHESIZED_ANSWER_SCHEMA,
+    buildFallbackPreSynthesizedAnswer,
+    normalizePreSynthesizedAnswer,
+    buildPreSynthesizedAnswer
   };
 }
 
 module.exports = {
-  SCIENCE_LOOP_PRE_SYNTHESIZED_QUESTION_SCHEMA,
-  createScienceLoopPreSynthesizedQuestionRuntime
+  SCIENCE_LOOP_PRE_SYNTHESIZED_ANSWER_SCHEMA,
+  createScienceLoopPreSynthesizedAnswerRuntime
 };

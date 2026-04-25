@@ -29,7 +29,7 @@ module.exports = function registerJudgeAndTraceSuite(context = {}) {
           tool_name: 'record-lookup',
           summary: 'Loaded the assay record and attached notes.'
         },
-        preSynthesizedQuestion: {
+        preSynthesizedAnswer: {
           tentative_answer: {
             current_best_answer: 'The assay trend looks directionally real, but broader review context is still missing.'
           },
@@ -49,11 +49,11 @@ module.exports = function registerJudgeAndTraceSuite(context = {}) {
       assert.equal(evaluation.can_answer_with_limitations, true);
     });
 
-    test('science loop pre-synthesized question runtime compacts the current best answer, basis, and gaps', () => {
-      const { createScienceLoopPreSynthesizedQuestionRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'runtime', 'science-reasoning-loop', 'pre-synthesized-question.js'));
-      const runtime = createScienceLoopPreSynthesizedQuestionRuntime();
+    test('science loop pre-synthesized answer runtime compacts the current best answer, basis, and gaps', () => {
+      const { createScienceLoopPreSynthesizedAnswerRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'runtime', 'science-reasoning-loop', 'pre-synthesized-answer.js'));
+      const runtime = createScienceLoopPreSynthesizedAnswerRuntime();
 
-      const preSynthesizedQuestion = runtime.buildPreSynthesizedQuestion({
+      const preSynthesizedAnswer = runtime.buildPreSynthesizedAnswer({
         latestAssistantText: 'The assay trend looks directionally real, but the answer is still provisional.',
         latestToolResult: {
           ok: false,
@@ -82,11 +82,11 @@ module.exports = function registerJudgeAndTraceSuite(context = {}) {
         ]
       });
 
-      assert.equal(preSynthesizedQuestion.tentative_answer.current_best_answer, 'The assay trend looks directionally real, but the answer is still provisional.');
-      assert.equal(preSynthesizedQuestion.supporting_basis.some((item) => /Located the assay record/i.test(String(item))), true);
-      assert.equal(preSynthesizedQuestion.supporting_basis.some((item) => /Replicate A tracked the expected upward trend/i.test(String(item))), true);
-      assert.equal(preSynthesizedQuestion.unresolved_issues.some((item) => /Latest tool issue: Python fit has not been executed yet/i.test(String(item))), true);
-      assert.equal(preSynthesizedQuestion.unresolved_issues.some((item) => /No citation-backed evidence has been collected yet/i.test(String(item))), true);
+      assert.equal(preSynthesizedAnswer.tentative_answer.current_best_answer, 'The assay trend looks directionally real, but the answer is still provisional.');
+      assert.equal(preSynthesizedAnswer.supporting_basis.some((item) => /Located the assay record/i.test(String(item))), true);
+      assert.equal(preSynthesizedAnswer.supporting_basis.some((item) => /Replicate A tracked the expected upward trend/i.test(String(item))), true);
+      assert.equal(preSynthesizedAnswer.unresolved_issues.some((item) => /Latest tool issue: Python fit has not been executed yet/i.test(String(item))), true);
+      assert.equal(preSynthesizedAnswer.unresolved_issues.some((item) => /No citation-backed evidence has been collected yet/i.test(String(item))), true);
     });
 
     test('science thinking trace runtime reuses per-step trace sentences without another llm call', async () => {
@@ -121,7 +121,7 @@ module.exports = function registerJudgeAndTraceSuite(context = {}) {
             assistant_after_tool: 'I now have one targeted source but may still need broader context.'
           }
         ],
-        preSynthesizedQuestion: {
+        preSynthesizedAnswer: {
           tentative_answer: {
             current_best_answer: 'Pathway reactivation looks central, but the answer is still provisional.'
           }
@@ -156,7 +156,7 @@ module.exports = function registerJudgeAndTraceSuite(context = {}) {
           assert.equal(stage, 'science_loop_exit_judge_sub_agent');
           assert.match(String(userPrompt || ''), /Clarified request:\nFit this assay and explain the outliers\./);
           assert.match(String(userPrompt || ''), /Exit criteria:/);
-          assert.match(String(userPrompt || ''), /Pre-synthesized question:/);
+          assert.match(String(userPrompt || ''), /Pre-synthesized answer:/);
           assert.match(String(userPrompt || ''), /The assay trend looks real, but I still need a computation-backed fit/i);
           assert.doesNotMatch(String(userPrompt || ''), /Current scientific state JSON:/);
           assert.doesNotMatch(String(userPrompt || ''), /Clarification JSON:/);
@@ -221,8 +221,8 @@ module.exports = function registerJudgeAndTraceSuite(context = {}) {
       assert.equal(judged.evaluation.satisfied, false);
       assert.equal(judged.evaluation.should_continue, true);
       assert.equal(judged.evaluation.next_tool_hint.tool_name, 'python-sandbox');
-      assert.equal(judged.pre_synthesized_question.tentative_answer.current_best_answer, 'The assay trend looks real, but I still need a computation-backed fit.');
-      assert.equal(judged.pre_synthesized_question.supporting_basis.some((item) => /Loaded assay data for fitting/i.test(String(item))), true);
+      assert.equal(judged.pre_synthesized_answer.tentative_answer.current_best_answer, 'The assay trend looks real, but I still need a computation-backed fit.');
+      assert.equal(judged.pre_synthesized_answer.supporting_basis.some((item) => /Loaded assay data for fitting/i.test(String(item))), true);
       assert.equal(judged.sub_agent !== null, true);
       assert.equal(judged.sub_agent.last_response.output.satisfied, false);
     });

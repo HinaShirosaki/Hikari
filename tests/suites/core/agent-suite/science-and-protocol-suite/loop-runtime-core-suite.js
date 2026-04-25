@@ -56,10 +56,10 @@ module.exports = function registerLoopRuntimeCoreSuite(context = {}) {
           satisfied: true,
           reason: 'The current tool round is ready for pre-synthesis.'
         }),
-        evaluateScienceRound: async ({ roundsExecuted, preSynthesizedQuestion, toolTrace }) => {
+        evaluateScienceRound: async ({ roundsExecuted, preSynthesizedAnswer, toolTrace }) => {
           evaluationSnapshots.push({
             roundsExecuted,
-            preSynthesizedQuestion,
+            preSynthesizedAnswer,
             toolTrace: structuredClone(toolTrace || [])
           });
           if (roundsExecuted === 1) {
@@ -69,9 +69,9 @@ module.exports = function registerLoopRuntimeCoreSuite(context = {}) {
             assert.equal(toolTrace.every((row) => row.round === 1), true);
             assert.equal(toolTrace.every((row) => row.multi_tool_round === true), true);
             assert.equal(toolTrace.every((row) => row.tool_count_in_round === 2), true);
-            assert.match(preSynthesizedQuestion.tentative_answer.current_best_answer, /focused paper and a broader review/i);
-            assert.equal(preSynthesizedQuestion.supporting_basis.some((item) => /Retrieved from literature-search \(pubmed\)/i.test(String(item))), true);
-            assert.equal(preSynthesizedQuestion.supporting_basis.some((item) => /Retrieved from literature-search \(web\)/i.test(String(item))), true);
+            assert.match(preSynthesizedAnswer.tentative_answer.current_best_answer, /focused paper and a broader review/i);
+            assert.equal(preSynthesizedAnswer.supporting_basis.some((item) => /Retrieved from literature-search \(pubmed\)/i.test(String(item))), true);
+            assert.equal(preSynthesizedAnswer.supporting_basis.some((item) => /Retrieved from literature-search \(web\)/i.test(String(item))), true);
             return {
               satisfied: false,
               reason: 'Need one deterministic fit before answering.',
@@ -262,8 +262,8 @@ module.exports = function registerLoopRuntimeCoreSuite(context = {}) {
       assert.deepEqual(toolOutputBatches[1].map((entry) => entry.name), ['python-sandbox']);
       assert.equal(evaluationSnapshots.length, 2);
       assert.equal(evaluationSnapshots[0].toolTrace.length, 2);
-      assert.match(evaluationSnapshots[0].preSynthesizedQuestion.tentative_answer.current_best_answer, /focused paper and a broader review/i);
-      assert.equal(evaluationSnapshots[0].preSynthesizedQuestion.supporting_basis.some((item) => /ERK signaling resumed after MAPK inhibitor escape/i.test(String(item))), true);
+      assert.match(evaluationSnapshots[0].preSynthesizedAnswer.tentative_answer.current_best_answer, /focused paper and a broader review/i);
+      assert.equal(evaluationSnapshots[0].preSynthesizedAnswer.supporting_basis.some((item) => /ERK signaling resumed after MAPK inhibitor escape/i.test(String(item))), true);
       assert.equal(synthesisLoadedContext.some((block) => /ERK signaling resumed/i.test(String(block?.excerpt || ''))), true);
       assert.equal(result.intermediate_states.some((state) => state.stage === 'science_pre_synthesis'), true);
       assert.equal(feedbackMessages.length, 1);
@@ -344,10 +344,10 @@ module.exports = function registerLoopRuntimeCoreSuite(context = {}) {
           feedbackMessages.push(message);
           return { step: session.step + 1 };
         },
-        evaluateScienceRound: async ({ roundsExecuted, preSynthesizedQuestion, toolTrace }) => {
+        evaluateScienceRound: async ({ roundsExecuted, preSynthesizedAnswer, toolTrace }) => {
           evaluationSnapshots.push({
             roundsExecuted,
-            preSynthesizedQuestion,
+            preSynthesizedAnswer,
             toolTrace: structuredClone(toolTrace || [])
           });
           return {
@@ -516,7 +516,7 @@ module.exports = function registerLoopRuntimeCoreSuite(context = {}) {
       assert.equal(evaluationSnapshots[0].roundsExecuted, 2);
       assert.equal(evaluationSnapshots[0].toolTrace.length, 3);
       assert.equal(
-        evaluationSnapshots[0].preSynthesizedQuestion.supporting_basis.some((item) => /Computed a deterministic fit/i.test(String(item))),
+        evaluationSnapshots[0].preSynthesizedAnswer.supporting_basis.some((item) => /Computed a deterministic fit/i.test(String(item))),
         true
       );
       assert.equal(feedbackMessages.length, 0);
@@ -528,7 +528,7 @@ module.exports = function registerLoopRuntimeCoreSuite(context = {}) {
 
     test('science reasoning loop retries the tentative inference when logical verification is unstable', async () => {
       const feedbackMessages = [];
-      const evaluatedQuestions = [];
+      const evaluatedAnswers = [];
       const runtime = agentScienceReasoningLoop.createScienceReasoningLoopRuntime({
         startAgentSession: async () => ({ step: 0 }),
         extractAgentSessionFunctionCalls: (session) => (
@@ -570,7 +570,7 @@ module.exports = function registerLoopRuntimeCoreSuite(context = {}) {
             }
           }
         })),
-        verifySciencePreSynthesizedQuestionLogic: async ({ latestAssistantText }) => (
+        verifySciencePreSynthesizedAnswerLogic: async ({ latestAssistantText }) => (
           /alternatives still remain possible/i.test(String(latestAssistantText || ''))
             ? {
               part_1: {
@@ -623,8 +623,8 @@ module.exports = function registerLoopRuntimeCoreSuite(context = {}) {
               ]
             }
         ),
-        evaluateScienceRound: async ({ preSynthesizedQuestion }) => {
-          evaluatedQuestions.push(preSynthesizedQuestion);
+        evaluateScienceRound: async ({ preSynthesizedAnswer }) => {
+          evaluatedAnswers.push(preSynthesizedAnswer);
           return {
             satisfied: true,
             reason: 'The revised inference is stable enough for this harness.',
@@ -685,9 +685,9 @@ module.exports = function registerLoopRuntimeCoreSuite(context = {}) {
       assert.equal(feedbackMessages.length, 1);
       assert.match(feedbackMessages[0], /inference checks were unstable/i);
       assert.match(feedbackMessages[0], /alternatives unresolved/i);
-      assert.equal(evaluatedQuestions.length, 1);
-      assert.equal(evaluatedQuestions[0].tentative_answer.current_best_answer, 'Pathway reactivation is supported, but alternatives still remain possible.');
-      assert.equal(evaluatedQuestions[0].logical_verification.part_2.some((row) => row.stable === false), false);
+      assert.equal(evaluatedAnswers.length, 1);
+      assert.equal(evaluatedAnswers[0].tentative_answer.current_best_answer, 'Pathway reactivation is supported, but alternatives still remain possible.');
+      assert.equal(evaluatedAnswers[0].logical_verification.part_2.some((row) => row.stable === false), false);
       assert.equal(result.intermediate_states.some((state) => state.stage === 'science_inference_retry'), true);
     });
   }
