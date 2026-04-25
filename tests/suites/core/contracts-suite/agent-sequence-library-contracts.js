@@ -355,6 +355,53 @@ ORIGIN
       }
     });
 
+    test('sequence library helper lists recognized backbone artifacts with insertion offsets for Protein Builder assembly', async () => {
+      const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'sequence-library-recognized-backbone-list-'));
+      try {
+        const artifactDir = path.join(storageRoot, 'SequenceViewer', 'protein-builder', 'backbones');
+        await fsPromises.mkdir(artifactDir, { recursive: true });
+        await fsPromises.writeFile(
+          path.join(artifactDir, 'hostvector.recognized-backbone.json'),
+          JSON.stringify({
+            schema_name: 'enana_recognized_backbone',
+            schema_version: '1.0.0',
+            updated_at: '2026-04-24T09:30:00.000Z',
+            source_record: {
+              name: 'DerivedVector',
+              entry_status: 'saved'
+            },
+            recognition: {
+              host_vector_name: 'HostVector',
+              promoter_name: 'T7 promoter',
+              variant_mode: 'gibson'
+            },
+            backbone: {
+              name: 'Backbone (HostVector)',
+              sequence: 'ATGCGTACGCTAGTTACCGGATCA',
+              sequence_length: 24,
+              segments: [{ start: 0, end: 16 }, { start: 22, end: 30 }]
+            },
+            insert: {
+              name: 'Insert (HostVector)',
+              sequence: 'GGAACC',
+              sequence_length: 6,
+              segments: [{ start: 16, end: 22 }]
+            }
+          }),
+          'utf8'
+        );
+
+        const listed = await sequenceLibrary.listRecognizedBackbones({ storagePath: storageRoot });
+        assert.equal(listed.results.length, 1);
+        assert.equal(listed.results[0].hostVectorName, 'HostVector');
+        assert.equal(JSON.stringify(listed.results[0].backboneSegments), JSON.stringify([{ start: 0, end: 16 }, { start: 22, end: 30 }]));
+        assert.equal(JSON.stringify(listed.results[0].insertSegments), JSON.stringify([{ start: 16, end: 22 }]));
+        assert.equal(listed.results[0].insertionOffset, 16);
+      } finally {
+        await fsPromises.rm(storageRoot, { recursive: true, force: true });
+      }
+    });
+
     test('sequence library helper exposes Gibson and restriction variants for promoter-anchored expression inserts', async () => {
       const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'sequence-library-expression-backbone-'));
       try {

@@ -105,6 +105,55 @@ function clamp(value, min, max) {
   return Math.min(max, Math.max(min, numeric));
 }
 
+function normalizeRecognitionSegmentList(segments = []) {
+  return (Array.isArray(segments) ? segments : [])
+    .map((segment) => {
+      const start = Math.max(0, Math.round(Number(segment?.start) || 0));
+      const end = Math.max(0, Math.round(Number(segment?.end) || 0));
+      if (end <= start) {
+        return null;
+      }
+      return { start, end };
+    })
+    .filter(Boolean);
+}
+
+function computeRecognizedBackboneInsertionOffset(backboneSegments = [], insertSegments = []) {
+  const normalizedBackboneSegments = normalizeRecognitionSegmentList(backboneSegments);
+  const normalizedInsertSegments = normalizeRecognitionSegmentList(insertSegments);
+  if (!normalizedBackboneSegments.length) {
+    return 0;
+  }
+  if (!normalizedInsertSegments.length) {
+    return normalizedBackboneSegments.reduce(
+      (length, segment) => length + Math.max(0, segment.end - segment.start),
+      0
+    );
+  }
+
+  const insertStart = normalizedInsertSegments[0].start;
+  let insertionOffset = 0;
+  let matched = false;
+
+  normalizedBackboneSegments.forEach((segment) => {
+    if (matched) {
+      return;
+    }
+    if (segment.end <= insertStart) {
+      insertionOffset += Math.max(0, segment.end - segment.start);
+      return;
+    }
+    if (segment.start >= insertStart) {
+      matched = true;
+      return;
+    }
+    insertionOffset += Math.max(0, insertStart - segment.start);
+    matched = true;
+  });
+
+  return insertionOffset;
+}
+
 function positiveModulo(value, modulo) {
   if (!Number.isFinite(Number(modulo)) || modulo <= 0) {
     return 0;
@@ -2092,6 +2141,8 @@ async function listRecognizedBackbones({ storagePath, query = '', limit = 50 }) 
 
     const backboneSequence = normalizeSequenceText(parsed?.backbone?.sequence || '');
     const insertSequence = normalizeSequenceText(parsed?.insert?.sequence || '');
+    const backboneSegments = normalizeRecognitionSegmentList(parsed?.backbone?.segments);
+    const insertSegments = normalizeRecognitionSegmentList(parsed?.insert?.segments);
     const updatedAt = cleanText(parsed?.updated_at, 120);
     results.push({
       id: toPosixRelative(paths.storageRoot, filePath),
@@ -2108,10 +2159,13 @@ async function listRecognizedBackbones({ storagePath, query = '', limit = 50 }) 
         : 'gibson',
       backboneName: backboneName || hostVectorName || sourceRecordName || 'Stored backbone',
       backboneSequence,
+      backboneSegments,
       backboneLength: Math.max(0, Number(parsed?.backbone?.sequence_length) || backboneSequence.length),
       insertName: cleanText(parsed?.insert?.name, 160) || 'Stored insert',
       insertSequence,
-      insertLength: Math.max(0, Number(parsed?.insert?.sequence_length) || insertSequence.length)
+      insertSegments,
+      insertLength: Math.max(0, Number(parsed?.insert?.sequence_length) || insertSequence.length),
+      insertionOffset: computeRecognizedBackboneInsertionOffset(backboneSegments, insertSegments)
     });
   }));
 
