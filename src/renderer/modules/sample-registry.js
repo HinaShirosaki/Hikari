@@ -404,6 +404,9 @@ export function initSampleRegistry({ state, persist, safeText, onNotebookSampleC
   }
 
   function formatSampleTypeLabel(sampleType) {
+    if (isChemicalStructureSampleType(sampleType)) {
+      return 'Chemical';
+    }
     return String(sampleType || 'sample')
       .replace(/_/g, ' ')
       .replace(/\b[a-z]/g, (letter) => letter.toUpperCase());
@@ -598,7 +601,7 @@ export function initSampleRegistry({ state, persist, safeText, onNotebookSampleC
     sampleIdInput.value = sample.id;
     sampleCodeInput.value = sample.code || '';
     sampleNameInput.value = sample.name || '';
-    sampleTypeInput.value = sample.type || 'plasmid';
+    sampleTypeInput.value = isChemicalStructureSampleType(sample.type) ? 'chemical' : (sample.type || 'plasmid');
     sampleLotInput.value = sample.lot || '';
     sampleConcentrationInput.value = sample.concentration || '';
     sampleNotesInput.value = sample.notes || '';
@@ -683,7 +686,7 @@ export function initSampleRegistry({ state, persist, safeText, onNotebookSampleC
         <button class="list-main-btn text-list-btn" data-sample-open="${escapeHtml(sample.id)}">
           ${safeText(sample.code || sample.id)} - ${safeText(sample.name)}
         </button>
-        <span>${safeText(sample.type || '-')}</span>
+        <span>${safeText(formatSampleTypeLabel(sample.type || '-'))}</span>
         <span>${safeText(formatLocation(sample.location))}</span>
       </article>
     `).join('');
@@ -723,7 +726,7 @@ export function initSampleRegistry({ state, persist, safeText, onNotebookSampleC
 
     const structure = normalizeCompoundStructureData(selected.compoundStructure);
     const detailItems = [
-      { label: 'Type', value: selected.type || '-' },
+      { label: 'Type', value: formatSampleTypeLabel(selected.type || '-') },
       { label: 'Lot / Batch', value: selected.lot || '-' },
       { label: 'Concentration', value: selected.concentration || '-' },
       { label: 'Location', value: formatLocation(selected.location) },
@@ -866,6 +869,9 @@ export function initSampleRegistry({ state, persist, safeText, onNotebookSampleC
       return;
     }
     const isChemicalStructureSample = isChemicalStructureSampleType(sampleTypeInput?.value);
+    if (sampleCompoundOpenBtn) {
+      sampleCompoundOpenBtn.hidden = !isChemicalStructureSample;
+    }
     sampleCompoundFields.hidden = !isChemicalStructureSample;
     if (!isChemicalStructureSample) {
       setCompoundStatus('', false);

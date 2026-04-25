@@ -736,18 +736,20 @@
               Sample Name
               <input id="sample-name" required />
             </label>
-            <label>
+            <label class="sample-type-field">
               Type
-              <select id="sample-type" required>
-                <option value="plasmid">Plasmid</option>
-                <option value="cell_line">Cell Line</option>
-                <option value="strain">Strain</option>
-                <option value="antibody">Antibody</option>
-                <option value="protein">Purified Protein</option>
-                <option value="chemical">Chemical</option>
-                <option value="compound">Compound</option>
-                <option value="primer">Primer</option>
-              </select>
+              <span class="sample-type-control">
+                <select id="sample-type" required>
+                  <option value="plasmid">Plasmid</option>
+                  <option value="cell_line">Cell Line</option>
+                  <option value="strain">Strain</option>
+                  <option value="antibody">Antibody</option>
+                  <option value="protein">Purified Protein</option>
+                  <option value="chemical">Chemical</option>
+                  <option value="primer">Primer</option>
+                </select>
+                <button id="sample-compound-open-btn" type="button" class="ghost-btn sample-structure-open-btn">Add Structure</button>
+              </span>
             </label>
             <section id="sample-cell-passage-fields" class="sample-cell-passage-fields" hidden>
               <div class="inline-row sample-cell-passage-head">
@@ -771,7 +773,6 @@
                 <span class="small-note">Open the editor, draw the structure, then save the snapshot with the sample</span>
               </div>
               <div class="form-actions">
-                <button id="sample-compound-open-btn" type="button" class="ghost-btn">Add Structure</button>
                 <button id="sample-compound-capture-btn" type="button" class="ghost-btn">Refresh Snapshot</button>
                 <button id="sample-compound-clear-btn" type="button" class="ghost-btn">Clear Structure</button>
               </div>

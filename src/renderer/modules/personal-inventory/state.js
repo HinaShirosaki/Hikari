@@ -122,6 +122,9 @@ export function createPersonalInventoryStateHelpers({ state, safeText, uiState }
     if (!key) {
       return 'other';
     }
+    if (key === 'compound') {
+      return 'chemical';
+    }
     return Object.prototype.hasOwnProperty.call(SAMPLE_TYPE_COLORS, key) ? key : 'other';
   }
 

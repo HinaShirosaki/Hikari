@@ -48,6 +48,17 @@
   margin: 0;
 }
 
+.sample-type-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.sample-structure-open-btn[hidden] {
+  display: none !important;
+}
+
 .sample-detail-panel {
   padding-top: 18px;
   border-top: 1px solid var(--line);
