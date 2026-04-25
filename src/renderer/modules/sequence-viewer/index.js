@@ -77,6 +77,7 @@ export function initSequenceViewer(options = {}) {
     activeAlignmentResult: null,
     activeAlignmentQueryRecord: null,
     alignmentViewEnabled: false,
+    proteinBuilderConfirmation: null,
     featureSearchQuery: '',
     featureSearchResults: [],
     isSearchingFeatures: false,
@@ -115,6 +116,59 @@ export function initSequenceViewer(options = {}) {
 
   function hasStoragePath() {
     return Boolean(getStoragePath());
+  }
+
+  function normalizeProteinBuilderConfirmation(payload) {
+    const safePayload = payload && typeof payload === 'object' ? payload : null;
+    if (!safePayload) {
+      return null;
+    }
+
+    const recordName = cleanText(safePayload.recordName, 160);
+    const constructName = cleanText(safePayload.constructName, 160);
+    const backboneName = cleanText(safePayload.backboneName, 160);
+    const sourceLabel = cleanText(safePayload.sourceLabel, 160);
+    const notebookEntryId = cleanText(safePayload.notebookEntryId, 160);
+    const notebookTitle = cleanText(safePayload.notebookTitle, 220);
+    const assemblyStrategy = cleanText(safePayload.assemblyStrategy, 120);
+    const plasmidLength = Math.max(0, Number(safePayload.plasmidLength) || 0);
+    const insertLength = Math.max(0, Number(safePayload.insertLength) || 0);
+    const primerCount = Math.max(0, Number(safePayload.primerCount) || 0);
+    if (
+      !recordName
+      && !constructName
+      && !backboneName
+      && !sourceLabel
+      && !notebookEntryId
+      && !notebookTitle
+      && !assemblyStrategy
+      && !plasmidLength
+      && !insertLength
+      && !primerCount
+    ) {
+      return null;
+    }
+
+    return {
+      recordName,
+      constructName,
+      backboneName,
+      sourceLabel,
+      plasmidLength,
+      insertLength,
+      notebookEntryId,
+      notebookTitle,
+      assemblyStrategy,
+      primerCount
+    };
+  }
+
+  function setProteinBuilderConfirmation(payload, options = {}) {
+    state.proteinBuilderConfirmation = normalizeProteinBuilderConfirmation(payload);
+    if (options?.render === false) {
+      return;
+    }
+    detailController?.renderActiveRecord?.();
   }
 
   function resetAlignmentState(options = {}) {
@@ -831,6 +885,7 @@ export function initSequenceViewer(options = {}) {
   let proteinBuilderController = null;
 
   function showProteinBuilderWorkspace() {
+    setProteinBuilderConfirmation(null, { render: false });
     detailController?.hideFeatureContextMenu();
     detailController?.hideFeatureEditor();
     homeController?.setLocalWorkspaceVisibility('builder');
@@ -845,6 +900,7 @@ export function initSequenceViewer(options = {}) {
     state.errors = Array.isArray(result.errors) ? result.errors : [];
     state.isAnnotating = false;
     state.isRecognizingBackbone = false;
+    state.proteinBuilderConfirmation = null;
     closeBackboneRecognitionDialog();
     state.selectedRecordIndex = 0;
     state.selectedFeatureIndex = -1;
@@ -907,8 +963,20 @@ export function initSequenceViewer(options = {}) {
     const raw = state.mode === 'file'
       ? state.fileText
       : (elements.inputTextarea?.value || '');
+    const reviewConfirmation = state.proteinBuilderConfirmation
+      ? { ...state.proteinBuilderConfirmation }
+      : null;
+    const currentRecord = reviewConfirmation ? getSelectedRecord() : null;
 
     if (!String(raw || '').trim()) {
+      if (reviewConfirmation && currentRecord?.sequence?.length) {
+        state.warnings = [];
+        state.errors = ['Provide sequence input first.'];
+        updateMessages();
+        setInputComposerVisible(true);
+        setStatus('Provide sequence input first.', true);
+        return;
+      }
       setRecords({ records: [], warnings: [], errors: ['Provide sequence input first.'] }, 'Idle');
       return;
     }
@@ -916,6 +984,60 @@ export function initSequenceViewer(options = {}) {
     const parsed = parseInputRecords(raw, { maxRecords: DEFAULT_MAX_RECORDS });
     state.activeEntryId = '';
     state.activeEntryStatus = '';
+    if (reviewConfirmation && currentRecord?.sequence?.length) {
+      if (!Array.isArray(parsed.records) || !parsed.records.length) {
+        state.warnings = Array.isArray(parsed.warnings) ? parsed.warnings : [];
+        state.errors = Array.isArray(parsed.errors) ? parsed.errors : ['Failed to reload the edited construct.'];
+        updateMessages();
+        setInputComposerVisible(true);
+        setStatus(state.errors[0] || 'Failed to reload the edited construct.', true);
+        return;
+      }
+
+      const parsedRecord = parsed.records[0] || {};
+      const reusedFeatures = normalizeExternalPayload({
+        sequence: parsedRecord.sequence,
+        features: Array.isArray(parsedRecord.features) && parsedRecord.features.length
+          ? parsedRecord.features
+          : (Array.isArray(currentRecord.features) ? currentRecord.features : [])
+      }).features;
+      const warnings = Array.isArray(parsed.warnings) ? [...parsed.warnings] : [];
+      if ((!Array.isArray(parsedRecord.features) || !parsedRecord.features.length) && reusedFeatures.length) {
+        warnings.push('Retained the current construct features while reloading the edited sequence. Review annotations after insertions or deletions.');
+      }
+      if (Array.isArray(parsed.records) && parsed.records.length > 1) {
+        warnings.push('Protein Builder review uses the first loaded record only.');
+      }
+
+      const nextRecord = {
+        ...parsedRecord,
+        id: cleanText(currentRecord?.id, 120) || cleanText(parsedRecord?.id, 120) || 'external_1',
+        name: cleanText(currentRecord?.name, 160) || cleanText(reviewConfirmation?.recordName, 160) || cleanText(parsedRecord?.name, 160) || 'protein_builder_construct',
+        topology: cleanText(parsedRecord?.sourceFormat, 40).toLowerCase() === 'genbank'
+          ? String(parsedRecord?.topology || currentRecord?.topology || 'circular')
+          : String(currentRecord?.topology || parsedRecord?.topology || 'circular'),
+        features: reusedFeatures
+      };
+
+      setRecords({
+        records: [nextRecord],
+        warnings,
+        errors: Array.isArray(parsed.errors) ? parsed.errors : []
+      }, 'Loaded');
+      setProteinBuilderConfirmation({
+        ...reviewConfirmation,
+        recordName: cleanText(nextRecord?.name, 160) || reviewConfirmation.recordName,
+        plasmidLength: Math.max(0, Number(nextRecord?.sequence?.length) || 0)
+      }, { render: false });
+      setInputComposerVisible(true);
+      if (elements.saveNameInput) {
+        elements.saveNameInput.value = nextRecord.name || 'sequence';
+      }
+      detailController?.renderActiveRecord?.();
+      setStatus('Updated the construct review. Inspect the edited plasmid and confirm when ready.');
+      return;
+    }
+
     setRecords(parsed, 'Loaded');
     setInputComposerVisible(!(Array.isArray(parsed.records) && parsed.records.length > 0));
     await maybePersistImportedGenbankRecord(parsed);
@@ -1143,6 +1265,8 @@ export function initSequenceViewer(options = {}) {
         filter: entry.status || LIBRARY_STATUS_SAVED,
         silent: true
       });
+      setProteinBuilderConfirmation(null, { render: false });
+      detailController?.renderActiveRecord?.();
       setStatus(`Saved sequence as ${entry.name}.`);
       homeController?.setHomeStatus(`Saved sequence entry: ${entry.name}.`);
     } catch (error) {
@@ -1295,7 +1419,23 @@ export function initSequenceViewer(options = {}) {
     onRequestSave: saveCurrentRecordAsSaved,
     onRequestAlignment: () => alignmentController?.openSequencingAlignmentWorkspace?.(),
     onSelectAlignmentSession: (sessionId) => alignmentController?.selectSavedAlignmentSession?.(sessionId, { enableView: true }),
-    onNavigateHome: homeController.navigateToHome,
+    onConfirmProteinBuilderConstruct: () => {
+      if (!state.proteinBuilderConfirmation) {
+        return;
+      }
+      setProteinBuilderConfirmation(null);
+      setInputComposerVisible(false);
+      setStatus('Construct confirmed. Save it to add it to Sequence Library.');
+    },
+    onReturnToProteinBuilder: () => {
+      setProteinBuilderConfirmation(null, { render: false });
+      showProteinBuilderWorkspace();
+      setStatus('Returned to Protein Builder to adjust the construct.');
+    },
+    onNavigateHome: () => {
+      setProteinBuilderConfirmation(null, { render: false });
+      homeController.navigateToHome();
+    },
     onRefreshLibraryEntries: homeController.refreshLibraryEntries,
     onReferenceRecordChanged: () => {
       resetAlignmentState({ preserveSessions: true });
@@ -1345,14 +1485,18 @@ export function initSequenceViewer(options = {}) {
     },
     hasStoragePath,
     setStatus,
-    onNavigateHome: homeController.navigateToHome,
+    onNavigateHome: () => {
+      setProteinBuilderConfirmation(null, { render: false });
+      homeController.navigateToHome();
+    },
     onNavigateBuilder: showProteinBuilderWorkspace,
     loadExternalRecord: loadFromExternal
   });
 
-  function loadFromExternal(payload) {
+  function loadFromExternal(payload, options = {}) {
     const record = normalizeExternalPayload(payload);
     const hasSequence = Boolean(record.sequence.length);
+    const proteinBuilderConfirmation = normalizeProteinBuilderConfirmation(options?.proteinBuilderConfirmation);
 
     setMode('paste');
     if (elements.inputTextarea) {
@@ -1369,11 +1513,17 @@ export function initSequenceViewer(options = {}) {
       warnings: hasSequence ? [] : ['External payload had no sequence.'],
       errors: hasSequence ? [] : ['Failed to load external payload.']
     }, 'Imported');
-    setInputComposerVisible(!hasSequence);
+    setProteinBuilderConfirmation(proteinBuilderConfirmation, { render: false });
+    setInputComposerVisible(proteinBuilderConfirmation ? true : !hasSequence);
 
     if (hasSequence) {
       homeController.navigateToDetail();
-      setStatus(`Imported ${record.name} from ${record.sourceFormat || 'external'}.`);
+      detailController?.renderActiveRecord?.();
+      setStatus(
+        proteinBuilderConfirmation
+          ? 'Review the assembled plasmid and confirm the construct.'
+          : `Imported ${record.name} from ${record.sourceFormat || 'external'}.`
+      );
     }
   }
 

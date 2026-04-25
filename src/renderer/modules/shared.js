@@ -38,7 +38,7 @@ export const VIEWS = {
 };
 
 export const TITLES = {
-  [VIEWS.HOME]: 'Bench overview, reminders, workflow progress, and a lab timer.',
+  [VIEWS.HOME]: 'Bench overview, contribution activity, reminders, and lab timers.',
   [VIEWS.PROTOCOL_MANAGEMENT]: 'Protocol library for drafting, editing, and reuse.',
   [VIEWS.BIOLOGY_NOTEBOOK]: 'Biology notebook entries and wet-lab context.',
   [VIEWS.LAB_COMMON_INVENTORY]: 'Chemical inventory, locations, and stock records.',
@@ -191,6 +191,7 @@ export const defaultState = {
       currentWorkflowId: '',
       workflowProgress: {},
       quickLogDraft: '',
+      quickLogEntries: [],
       incubationLocations: [],
       timerTemplates: [],
       activeTimers: []
@@ -338,6 +339,30 @@ function normalizeDashboardActiveTimers(rawValue) {
       endAtMs
     };
   }).filter(Boolean);
+}
+
+function normalizeDashboardQuickLogEntries(rawValue) {
+  if (!Array.isArray(rawValue)) {
+    return [];
+  }
+  return rawValue.map((item) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      return null;
+    }
+    const id = String(item.id || '').trim();
+    const text = String(item.text || item.note || '').trim();
+    const createdAt = String(item.createdAt || item.updatedAt || '').trim();
+    const updatedAt = String(item.updatedAt || item.createdAt || '').trim() || createdAt;
+    if (!id || !text || Number.isNaN(Date.parse(createdAt))) {
+      return null;
+    }
+    return {
+      id,
+      text,
+      createdAt,
+      updatedAt
+    };
+  }).filter(Boolean).slice(-500);
 }
 
 function normalizeWorkflowProgressMap(rawValue) {
@@ -601,6 +626,7 @@ export function normalizeState(parsed) {
         currentWorkflowId: String(rawDashboard.currentWorkflowId || ''),
         workflowProgress: normalizeWorkflowProgressMap(rawDashboard.workflowProgress),
         quickLogDraft: String(rawDashboard.quickLogDraft || ''),
+        quickLogEntries: normalizeDashboardQuickLogEntries(rawDashboard.quickLogEntries),
         incubationLocations: normalizeDashboardIncubationLocations(rawDashboard.incubationLocations),
         timerTemplates: normalizeDashboardTimerTemplates(rawDashboard.timerTemplates),
         activeTimers: normalizeDashboardActiveTimers(rawDashboard.activeTimers)
