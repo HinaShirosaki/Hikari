@@ -1,0 +1,21 @@
+LOCUS       .                        346 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..346
+                     /note="strong constitutive promoter from cauliflower mosaic
+                     virus"
+                     /label="CaMV 35S promoter"
+ORIGIN
+        1 tgagactttt caacaaaggg taatatccgg aaacctcctc ggattccatt gcccagctat
+       61 ctgtcacttt attgtgaaga tagtggaaaa ggaaggtggc tcctacaaat gccatcattg
+      121 cgataaagga aaggccatcg ttgaagatgc ctctgccgac agtggtccca aagatggacc
+      181 cccacccacg aggagcatcg tggaaaaaga agacgttcca accacgtctt caaagcaagt
+      241 ggattgatgt gatatctcca ctgacgtaag ggatgacgca caatcccact atccttcgca
+      301 agacccttcc tctatataag gaagttcatt tcatttggag aggaca
+//

@@ -1,0 +1,22 @@
+LOCUS       .                        241 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..241
+                     /note="Truncated RNA polymerase III promoter for human U6
+                     snRNA used in pSIREN vectors such as
+                     pSIREN-RetroQ-ZsGreen1. Expected transcription start site
+                     is 8bp downstream of this feature."
+                     /label="U6 promoter"
+ORIGIN
+        1 gagggcctat ttcccatgat tccttcatat ttgcatatac gatacaaggc tgttagagag
+       61 ataattagaa ttaatttgac tgtaaacaca aagatattag tacaaaatac gtgacgtaga
+      121 aagtaataat ttcttgggta gtttgcagtt ttaaaattat gttttaaaat ggactatcat
+      181 atgcttaccg taacttgaaa gtatttcgat ttcttggctt tatatatctt gtggaaagga
+      241 c
+//

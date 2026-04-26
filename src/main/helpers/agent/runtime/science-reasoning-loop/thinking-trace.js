@@ -152,8 +152,8 @@ function createScienceThinkingTraceRuntime(deps = {}) {
     const evaluation = input.evaluation && typeof input.evaluation === 'object'
       ? input.evaluation
       : {};
-    const preSynthesizedQuestion = input.preSynthesizedQuestion && typeof input.preSynthesizedQuestion === 'object'
-      ? input.preSynthesizedQuestion
+    const preSynthesizedAnswer = input.preSynthesizedAnswer && typeof input.preSynthesizedAnswer === 'object'
+      ? input.preSynthesizedAnswer
       : {};
     const finalSynthesis = input.finalSynthesis && typeof input.finalSynthesis === 'object'
       ? input.finalSynthesis
@@ -186,7 +186,7 @@ function createScienceThinkingTraceRuntime(deps = {}) {
         tool_results: buildToolResultFallback(round)
       })),
       pre_synthesize_answer: cleanText(
-        preSynthesizedQuestion?.tentative_answer?.current_best_answer,
+        preSynthesizedAnswer?.tentative_answer?.current_best_answer,
         420
       ) || cleanText(input.latestAssistantText, 420)
         || 'Based on the evidence so far, I am drafting a tentative answer.',
@@ -296,7 +296,7 @@ function createScienceThinkingTraceRuntime(deps = {}) {
       input.routePlan ? `Route plan JSON:\n${JSON.stringify(input.routePlan, null, 2)}` : '',
       input.exitCriteria ? `Exit criteria JSON:\n${JSON.stringify(input.exitCriteria, null, 2)}` : '',
       compactToolRounds.length ? `Tool rounds JSON:\n${JSON.stringify(compactToolRounds, null, 2)}` : 'Tool rounds JSON:\n[]',
-      input.preSynthesizedQuestion ? `Pre-synthesized question JSON:\n${JSON.stringify(input.preSynthesizedQuestion, null, 2)}` : '',
+      input.preSynthesizedAnswer ? `Pre-synthesized answer JSON:\n${JSON.stringify(input.preSynthesizedAnswer, null, 2)}` : '',
       input.evaluation ? `Judge evaluation JSON:\n${JSON.stringify(input.evaluation, null, 2)}` : '',
       `Final status: ${cleanText(input.status, 40) || (input.partial === true ? 'partial' : 'completed')}`,
       `Final answer:\n${cleanText(input.finalAnswer || input.answer, 3200) || '-'}`,

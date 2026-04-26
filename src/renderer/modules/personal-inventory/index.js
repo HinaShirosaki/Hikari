@@ -1,4 +1,4 @@
-import { createDefaultWells } from './constants.js';
+import { createDefaultWells, normalizeCustomGridDimensions } from './constants.js';
 import { createPersonalInventoryStateHelpers } from './state.js';
 import { createPersonalInventoryDetailRenderer } from './detail-rendering.js';
 
@@ -18,7 +18,15 @@ export function initPersonalInventory({
   const addContainerNameInput = document.getElementById('inventory-add-container-name');
   const addContainerLocationSelect = document.getElementById('inventory-add-container-location');
   const addContainerTypeSelect = document.getElementById('inventory-add-container-type');
+  const addContainerGridFields = document.getElementById('inventory-add-container-grid-fields');
+  const addContainerRowsInput = document.getElementById('inventory-add-container-rows');
+  const addContainerColsInput = document.getElementById('inventory-add-container-cols');
   const addContainerCancelBtn = document.getElementById('inventory-add-container-cancel');
+  const sampleCompoundDialogOverlay = document.getElementById('sample-compound-dialog-overlay');
+  const sampleCompoundDialogCloseBtn = document.getElementById('sample-compound-dialog-close-btn');
+  const sampleCompoundDialogCancelBtn = document.getElementById('sample-compound-dialog-cancel-btn');
+  const sampleCompoundDialogApplyBtn = document.getElementById('sample-compound-dialog-apply-btn');
+  const sampleCompoundKetcherFrame = document.getElementById('sample-compound-ketcher-frame');
 
   const uiState = {
     selectedContainer: null,
@@ -32,6 +40,8 @@ export function initPersonalInventory({
 
   const helpers = createPersonalInventoryStateHelpers({ state, safeText, uiState });
   const { renderContainerDetail } = createPersonalInventoryDetailRenderer({ safeText, uiState, helpers });
+  const pendingStructureDrafts = new Map();
+  let structureEditorContext = null;
 
   function notifySamplesChanged() {
     if (typeof onSamplesChanged === 'function') {
@@ -45,11 +55,332 @@ export function initPersonalInventory({
     }
   }
 
+  function isChemicalSampleType(type) {
+    return helpers.normalizeSampleType(type) === 'chemical';
+  }
+
+  function normalizeStructureData(input) {
+    const smiles = String(input?.smiles || '').trim();
+    const molfile = String(input?.molfile || '').trim();
+    const imageDataUrl = String(input?.imageDataUrl || '').trim();
+    if (!smiles && !molfile && !imageDataUrl) {
+      return null;
+    }
+    return { smiles, molfile, imageDataUrl };
+  }
+
+  function toStructureDraft(input) {
+    return {
+      smiles: String(input?.smiles || '').trim(),
+      molfile: String(input?.molfile || '').trim(),
+      imageDataUrl: String(input?.imageDataUrl || '').trim()
+    };
+  }
+
+  function getPendingStructureKey(mode) {
+    const section = uiState.selectedContainer?.section || '';
+    const containerId = uiState.selectedContainer?.containerId || '';
+    const slot = mode === 'single-new' ? 'single' : `well-${Number(uiState.editingWellIndex)}`;
+    return `${section}::${containerId}::${slot}`;
+  }
+
+  function getStructureTypeInput(mode) {
+    const selectors = {
+      'well-existing': '[data-well-sample-type]',
+      'well-new': '[data-well-sample-new-type]',
+      'single-existing': '[data-single-sample-type]',
+      'single-new': '[data-single-sample-new-type]'
+    };
+    const selector = selectors[mode];
+    return selector ? inventorySections?.querySelector(selector) : null;
+  }
+
+  function setStructureStatus(message) {
+    const status = inventorySections?.querySelector('[data-inventory-sample-structure-status]');
+    if (status) {
+      status.textContent = String(message || '');
+    }
+  }
+
+  function syncStructureButtons() {
+    inventorySections?.querySelectorAll('[data-inventory-sample-structure-open]').forEach((button) => {
+      const mode = String(button.dataset.inventorySampleStructureOpen || '');
+      const typeInput = getStructureTypeInput(mode);
+      const isChemical = isChemicalSampleType(typeInput?.value);
+      button.hidden = !isChemical;
+      if (isChemical) {
+        const sample = button.dataset.sampleId ? helpers.getSampleById(button.dataset.sampleId) : null;
+        const draft = sample
+          ? normalizeStructureData(sample.compoundStructure)
+          : normalizeStructureData(pendingStructureDrafts.get(getPendingStructureKey(mode)));
+        button.textContent = draft ? 'Edit Structure' : 'Add Structure';
+      }
+    });
+  }
+
+  function openStructureDialog() {
+    if (sampleCompoundDialogOverlay) {
+      sampleCompoundDialogOverlay.hidden = false;
+    }
+  }
+
+  function closeStructureDialog() {
+    structureEditorContext = null;
+    if (sampleCompoundDialogOverlay) {
+      sampleCompoundDialogOverlay.hidden = true;
+    }
+  }
+
+  async function getKetcherInstance() {
+    if (!sampleCompoundKetcherFrame || !sampleCompoundKetcherFrame.contentWindow) {
+      throw new Error('Ketcher frame is not loaded yet.');
+    }
+    let editorFrame = null;
+    try {
+      editorFrame = sampleCompoundKetcherFrame.contentWindow.document.getElementById('editor');
+    } catch {
+      throw new Error('Cannot access embedded Ketcher editor.');
+    }
+    const ketcher = editorFrame?.contentWindow?.ketcher;
+    if (!ketcher) {
+      throw new Error('Ketcher is still initializing.');
+    }
+    return ketcher;
+  }
+
+  async function syncStructureDraftToEditor(draft) {
+    const molecule = draft?.molfile || draft?.smiles || '';
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      try {
+        const ketcher = await getKetcherInstance();
+        await ketcher.setMolecule(molecule);
+        return true;
+      } catch {
+        await delay(180);
+      }
+    }
+    return false;
+  }
+
+  async function captureStructureDraftFromEditor() {
+    const ketcher = await getKetcherInstance();
+    const smiles = String(await ketcher.getSmiles()).trim();
+    const molfile = String(await ketcher.getMolfile('v3000')).trim();
+    const imageDataUrl = await generateStructurePreview(ketcher, molfile || smiles);
+    return toStructureDraft({ smiles, molfile, imageDataUrl });
+  }
+
+  async function openInventoryStructureEditor(button) {
+    const mode = String(button.dataset.inventorySampleStructureOpen || '');
+    const typeInput = getStructureTypeInput(mode);
+    if (!isChemicalSampleType(typeInput?.value)) {
+      syncStructureButtons();
+      return;
+    }
+
+    const sampleId = String(button.dataset.sampleId || '');
+    const sample = sampleId ? helpers.getSampleById(sampleId) : null;
+    const pendingKey = getPendingStructureKey(mode);
+    const draft = sample
+      ? toStructureDraft(sample.compoundStructure)
+      : toStructureDraft(pendingStructureDrafts.get(pendingKey));
+
+    structureEditorContext = { mode, sampleId, pendingKey };
+    openStructureDialog();
+    const loaded = await syncStructureDraftToEditor(draft);
+    if (!loaded) {
+      setStructureStatus('Ketcher is still loading. Try Add Structure again in a moment.');
+      return;
+    }
+    setStructureStatus('Ketcher is ready.');
+  }
+
+  function applyCapturedStructureDraft(draft) {
+    const context = structureEditorContext;
+    if (!context) {
+      return;
+    }
+    const normalized = normalizeStructureData(draft);
+    if (context.sampleId) {
+      const sample = helpers.getSampleById(context.sampleId);
+      if (sample) {
+        sample.type = 'chemical';
+        sample.compoundStructure = normalized;
+        sample.updatedAt = new Date().toISOString();
+        persist();
+        notifySamplesChanged();
+      }
+      setStructureStatus(normalized ? 'Structure saved for this sample.' : 'No structure detected.');
+      return;
+    }
+
+    if (normalized) {
+      pendingStructureDrafts.set(context.pendingKey, normalized);
+      setStructureStatus('Structure ready. Click Add Sample to save it.');
+    } else {
+      pendingStructureDrafts.delete(context.pendingKey);
+      setStructureStatus('No structure detected.');
+    }
+  }
+
+  async function onInventoryStructureApplyClick(event) {
+    if (!structureEditorContext) {
+      return;
+    }
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    try {
+      const draft = await captureStructureDraftFromEditor();
+      applyCapturedStructureDraft(draft);
+    } catch {
+      setStructureStatus('Cannot read Ketcher yet. Wait a second and try again.');
+    } finally {
+      closeStructureDialog();
+      syncStructureButtons();
+    }
+  }
+
+  function onInventoryStructureCloseClick(event) {
+    if (!structureEditorContext) {
+      return;
+    }
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    closeStructureDialog();
+  }
+
+  function onInventoryStructureOverlayClick(event) {
+    if (!structureEditorContext || event.target !== sampleCompoundDialogOverlay) {
+      return;
+    }
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    closeStructureDialog();
+  }
+
+  function onInventoryStructureKeydown(event) {
+    if (event.key !== 'Escape' || !structureEditorContext) {
+      return;
+    }
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    closeStructureDialog();
+  }
+
+  function delay(ms) {
+    return new Promise((resolve) => {
+      window.setTimeout(resolve, ms);
+    });
+  }
+
+  async function generateStructurePreview(ketcher, structureSource) {
+    if (!ketcher || !structureSource) {
+      return '';
+    }
+    try {
+      const pngBlob = await ketcher.generateImage(structureSource, {
+        outputFormat: 'png',
+        backgroundColor: '#ffffff',
+        bondThickness: 1
+      });
+      return normalizeImagePayload(pngBlob, 'image/png');
+    } catch {
+      // Fall through to SVG generation.
+    }
+    try {
+      const svgBlob = await ketcher.generateImage(structureSource, {
+        outputFormat: 'svg',
+        backgroundColor: '#ffffff',
+        bondThickness: 1
+      });
+      return normalizeImagePayload(svgBlob, 'image/svg+xml');
+    } catch {
+      return '';
+    }
+  }
+
+  function blobToDataUrl(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(new Error('Cannot convert image blob to data URL.'));
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  async function normalizeImagePayload(payload, mimeType) {
+    if (!payload) {
+      return '';
+    }
+    if (typeof payload === 'string') {
+      if (payload.startsWith('data:')) {
+        return payload;
+      }
+      return `data:${mimeType};base64,${payload}`;
+    }
+    if (payload instanceof Blob) {
+      return blobToDataUrl(payload);
+    }
+    if (payload instanceof ArrayBuffer) {
+      return `data:${mimeType};base64,${arrayBufferToBase64(payload)}`;
+    }
+    if (ArrayBuffer.isView(payload)) {
+      return `data:${mimeType};base64,${arrayBufferToBase64(payload.buffer)}`;
+    }
+    return '';
+  }
+
+  function arrayBufferToBase64(buffer) {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i += 1) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+  }
+
   function setAddContainerFormOpen(nextOpen) {
     uiState.isAddContainerFormOpen = Boolean(nextOpen);
     if (addContainerForm) {
       addContainerForm.hidden = !uiState.isAddContainerFormOpen;
     }
+    if (uiState.isAddContainerFormOpen) {
+      renderAddContainerTypeFields();
+    }
+  }
+
+  function renderAddContainerTypeFields() {
+    const showCustomGridFields = addContainerTypeSelect?.value === 'customGrid';
+    if (addContainerGridFields) {
+      addContainerGridFields.hidden = !showCustomGridFields;
+    }
+    [addContainerRowsInput, addContainerColsInput].forEach((input) => {
+      if (!input) {
+        return;
+      }
+      input.disabled = !showCustomGridFields;
+      input.required = showCustomGridFields;
+      if (showCustomGridFields && !String(input.value || '').trim()) {
+        input.value = '9';
+      }
+    });
+  }
+
+  function resetAddContainerForm() {
+    addContainerForm?.reset();
+    if (addContainerLocationSelect) {
+      addContainerLocationSelect.value = '';
+    }
+    if (addContainerTypeSelect) {
+      addContainerTypeSelect.value = 'box81';
+    }
+    if (addContainerRowsInput) {
+      addContainerRowsInput.value = '9';
+    }
+    if (addContainerColsInput) {
+      addContainerColsInput.value = '9';
+    }
+    renderAddContainerTypeFields();
   }
 
   function renderAddContainerLocationOptions() {
@@ -170,8 +501,20 @@ export function initPersonalInventory({
     if (!section || !name) {
       return;
     }
-    const type = ['single', 'plate96'].includes(addContainerTypeSelect?.value) ? addContainerTypeSelect.value : 'box81';
-    const container = { id: createId(), name, type, wells: createDefaultWells(type), singleContent: type === 'single' ? '' : undefined };
+    const type = ['single', 'plate96', 'customGrid'].includes(addContainerTypeSelect?.value) ? addContainerTypeSelect.value : 'box81';
+    const customGrid = type === 'customGrid'
+      ? normalizeCustomGridDimensions(addContainerRowsInput?.value, addContainerColsInput?.value)
+      : null;
+    const containerShape = type === 'customGrid'
+      ? { type, gridRows: customGrid.rows, gridCols: customGrid.cols }
+      : { type };
+    const container = {
+      id: createId(),
+      name,
+      ...containerShape,
+      wells: createDefaultWells(containerShape),
+      singleContent: type === 'single' ? '' : undefined
+    };
     state.inventory[section] = state.inventory[section] || [];
     state.inventory[section].push(container);
     persist();
@@ -181,9 +524,7 @@ export function initPersonalInventory({
     uiState.editingSampleId = '';
     uiState.wellEditorStatus = '';
     uiState.shouldAutoOpenContainer = true;
-    if (addContainerNameInput) {
-      addContainerNameInput.value = '';
-    }
+    resetAddContainerForm();
     setAddContainerFormOpen(false);
     notifyInventoryChanged();
     renderSections();
@@ -196,14 +537,26 @@ export function initPersonalInventory({
       addContainerNameInput?.focus();
     }
   });
+  addContainerTypeSelect?.addEventListener('change', renderAddContainerTypeFields);
   addContainerForm?.addEventListener('submit', (event) => {
     event.preventDefault();
     addContainerFromForm();
   });
-  addContainerCancelBtn?.addEventListener('click', () => setAddContainerFormOpen(false));
+  addContainerCancelBtn?.addEventListener('click', () => {
+    resetAddContainerForm();
+    setAddContainerFormOpen(false);
+  });
+  sampleCompoundDialogApplyBtn?.addEventListener('click', onInventoryStructureApplyClick);
+  sampleCompoundDialogCloseBtn?.addEventListener('click', onInventoryStructureCloseClick);
+  sampleCompoundDialogCancelBtn?.addEventListener('click', onInventoryStructureCloseClick);
+  sampleCompoundDialogOverlay?.addEventListener('click', onInventoryStructureOverlayClick);
+  if (typeof document.addEventListener === 'function') {
+    document.addEventListener('keydown', onInventoryStructureKeydown);
+  }
 
   function renderSections() {
     renderAddContainerLocationOptions();
+    renderAddContainerTypeFields();
     const activeSection = uiState.selectedContainer?.section || helpers.getPreferredSection();
     const activeContainers = state.inventory?.[activeSection] || [];
     if ((!uiState.selectedContainer || uiState.selectedContainer.section !== activeSection || !helpers.getContainer(activeSection, uiState.selectedContainer.containerId))
@@ -319,6 +672,9 @@ export function initPersonalInventory({
         sample.code = code;
         sample.name = name;
         sample.type = helpers.normalizeSampleType(typeInput?.value || sample.type || 'plasmid');
+        if (!isChemicalSampleType(sample.type)) {
+          sample.compoundStructure = null;
+        }
         sample.lot = String(lotInput?.value || '').trim();
         sample.concentration = String(concentrationInput?.value || '').trim();
         sample.notes = String(notesInput?.value || '').trim();
@@ -393,8 +749,12 @@ export function initPersonalInventory({
           location: helpers.buildAutoLocationFromLink(section, container, index),
           inventoryLink: { section, containerId, wellIndex: index },
           chemicalLinks: [],
+          compoundStructure: isChemicalSampleType(typeInput?.value)
+            ? normalizeStructureData(pendingStructureDrafts.get(getPendingStructureKey('well-new')))
+            : null,
           updatedAt: new Date().toISOString()
         };
+        pendingStructureDrafts.delete(getPendingStructureKey('well-new'));
         state.samples.push(sample);
         uiState.editingSampleId = sample.id;
         uiState.wellEditorStatus = `Created sample ${sample.code}.`;
@@ -447,6 +807,9 @@ export function initPersonalInventory({
         sample.code = code;
         sample.name = name;
         sample.type = helpers.normalizeSampleType(typeInput?.value || sample.type || 'plasmid');
+        if (!isChemicalSampleType(sample.type)) {
+          sample.compoundStructure = null;
+        }
         sample.lot = String(lotInput?.value || '').trim();
         sample.concentration = String(concentrationInput?.value || '').trim();
         sample.notes = String(notesInput?.value || '').trim();
@@ -520,8 +883,12 @@ export function initPersonalInventory({
           location: helpers.buildAutoLocationFromLink(section, container, null),
           inventoryLink: { section, containerId, wellIndex: null },
           chemicalLinks: [],
+          compoundStructure: isChemicalSampleType(typeInput?.value)
+            ? normalizeStructureData(pendingStructureDrafts.get(getPendingStructureKey('single-new')))
+            : null,
           updatedAt: new Date().toISOString()
         };
+        pendingStructureDrafts.delete(getPendingStructureKey('single-new'));
         state.samples.push(sample);
         uiState.editingSampleId = sample.id;
         uiState.wellEditorStatus = `Created sample ${sample.code}.`;
@@ -530,6 +897,27 @@ export function initPersonalInventory({
         renderSections();
       });
     });
+
+    [
+      '[data-well-sample-type]',
+      '[data-well-sample-new-type]',
+      '[data-single-sample-type]',
+      '[data-single-sample-new-type]'
+    ].forEach((selector) => {
+      inventorySections.querySelectorAll(selector).forEach((select) => {
+        select.addEventListener('change', syncStructureButtons);
+      });
+    });
+
+    inventorySections.querySelectorAll('[data-inventory-sample-structure-open]').forEach((button) => {
+      button.addEventListener('click', () => {
+        openInventoryStructureEditor(button).catch(() => {
+          setStructureStatus('Cannot open Ketcher yet. Wait a second and try again.');
+        });
+      });
+    });
+
+    syncStructureButtons();
   }
 
   return { renderSections };

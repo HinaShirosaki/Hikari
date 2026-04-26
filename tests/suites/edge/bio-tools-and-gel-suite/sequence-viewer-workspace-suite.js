@@ -127,6 +127,175 @@ test('[EDGE] sequence-viewer loadFromExternal switches to detail workspace', () 
   assert.equal(Boolean(detailWorkspace.hidden), false);
 });
 
+test('[EDGE] sequence-viewer render sync returns to the home workspace when the home shell is reopened from detail', () => {
+  const ids = [
+    'sequence-viewer-home-workspace',
+    'sequence-viewer-protein-builder-workspace',
+    'sequence-viewer-detail-workspace',
+    'sequence-viewer-home-status',
+    'sequence-viewer-library-filter-saved',
+    'sequence-viewer-library-filter-temporary',
+    'sequence-viewer-library-list',
+    'sequence-viewer-preview-host',
+    'sequence-viewer-home-paste-btn',
+    'sequence-viewer-home-open-btn',
+    'sequence-viewer-home-open-input',
+    'sequence-viewer-back-btn',
+    'sequence-viewer-save-btn',
+    'sequence-viewer-save-name',
+    'sequence-viewer-mode-paste',
+    'sequence-viewer-mode-file',
+    'sequence-viewer-paste-panel',
+    'sequence-viewer-file-panel',
+    'sequence-viewer-textarea',
+    'sequence-viewer-file-input',
+    'sequence-viewer-file-choose',
+    'sequence-viewer-file-name',
+    'sequence-viewer-load-btn',
+    'sequence-viewer-annotate-btn',
+    'sequence-viewer-clear-btn',
+    'sequence-viewer-status',
+    'sequence-viewer-messages',
+    'sequence-viewer-record-select',
+    'sequence-viewer-stat-format',
+    'sequence-viewer-stat-length',
+    'sequence-viewer-stat-topology',
+    'sequence-viewer-stat-gc',
+    'sequence-viewer-stat-ambiguous',
+    'sequence-viewer-stat-quality',
+    'sequence-viewer-stat-features',
+    'sequence-viewer-stat-restriction-sites',
+    'sequence-viewer-feature-rail-host',
+    'sequence-viewer-feature-detail',
+    'sequence-viewer-sequence-host'
+  ];
+  const document = createMockDocument(ids);
+  const moduleWithDom = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    { document }
+  );
+  const viewer = moduleWithDom.initSequenceViewer({
+    homeViewId: 'sequence-viewer-view',
+    detailViewId: 'sequence-viewer-detail-view'
+  });
+  viewer.loadFromExternal({
+    name: 'imported',
+    sequence: 'ACGTACGTACGT',
+    topology: 'circular',
+    source: 'external',
+    features: []
+  });
+
+  const homeWorkspace = document.getElementById('sequence-viewer-home-workspace');
+  const detailWorkspace = document.getElementById('sequence-viewer-detail-workspace');
+  assert.equal(Boolean(homeWorkspace.hidden), true);
+  assert.equal(Boolean(detailWorkspace.hidden), false);
+
+  viewer.render({ activeViewId: 'sequence-viewer-view' });
+
+  assert.equal(Boolean(homeWorkspace.hidden), false);
+  assert.equal(Boolean(detailWorkspace.hidden), true);
+});
+
+test('[EDGE] sequence-viewer render sync keeps Protein Builder visible inside the home shell', async () => {
+  const ids = [
+    'sequence-viewer-home-workspace',
+    'sequence-viewer-protein-builder-workspace',
+    'sequence-viewer-detail-workspace',
+    'sequence-viewer-protein-builder-confirmation',
+    'sequence-viewer-protein-builder-confirmation-summary',
+    'sequence-viewer-protein-builder-confirmation-back-btn',
+    'sequence-viewer-protein-builder-confirmation-confirm-btn',
+    'sequence-viewer-detail-protein-builder-btn',
+    'sequence-viewer-home-protein-builder-btn',
+    'sequence-viewer-protein-builder-back-btn',
+    'sequence-viewer-protein-builder-status',
+    'sequence-viewer-protein-builder-form',
+    'sequence-viewer-protein-builder-name',
+    'sequence-viewer-protein-builder-poi-name',
+    'sequence-viewer-protein-builder-poi-sequence',
+    'sequence-viewer-protein-builder-reset-btn',
+    'sequence-viewer-protein-builder-add-custom-btn',
+    'sequence-viewer-protein-builder-add-poi-btn',
+    'sequence-viewer-protein-builder-build-dna-btn',
+    'sequence-viewer-protein-builder-common-blocks',
+    'sequence-viewer-protein-builder-feature-search-input',
+    'sequence-viewer-protein-builder-feature-search-btn',
+    'sequence-viewer-protein-builder-feature-search-status',
+    'sequence-viewer-protein-builder-feature-search-results',
+    'sequence-viewer-protein-builder-meta',
+    'sequence-viewer-protein-builder-workflow',
+    'sequence-viewer-protein-builder-sequence',
+    'sequence-viewer-protein-builder-dna-meta',
+    'sequence-viewer-protein-builder-dna-sequence',
+    'sequence-viewer-home-status',
+    'sequence-viewer-library-filter-saved',
+    'sequence-viewer-library-filter-temporary',
+    'sequence-viewer-library-list',
+    'sequence-viewer-preview-host',
+    'sequence-viewer-back-btn',
+    'sequence-viewer-save-btn',
+    'sequence-viewer-save-name',
+    'sequence-viewer-mode-paste',
+    'sequence-viewer-mode-file',
+    'sequence-viewer-paste-panel',
+    'sequence-viewer-file-panel',
+    'sequence-viewer-textarea',
+    'sequence-viewer-file-input',
+    'sequence-viewer-file-choose',
+    'sequence-viewer-file-name',
+    'sequence-viewer-load-btn',
+    'sequence-viewer-annotate-btn',
+    'sequence-viewer-clear-btn',
+    'sequence-viewer-status',
+    'sequence-viewer-messages',
+    'sequence-viewer-record-select',
+    'sequence-viewer-stat-format',
+    'sequence-viewer-stat-length',
+    'sequence-viewer-stat-topology',
+    'sequence-viewer-stat-gc',
+    'sequence-viewer-stat-ambiguous',
+    'sequence-viewer-stat-quality',
+    'sequence-viewer-stat-features',
+    'sequence-viewer-stat-restriction-sites',
+    'sequence-viewer-feature-rail-host',
+    'sequence-viewer-feature-detail',
+    'sequence-viewer-sequence-host'
+  ];
+  const document = createMockDocument(ids);
+  const moduleWithDom = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    { document }
+  );
+  const viewer = moduleWithDom.initSequenceViewer({
+    homeViewId: 'sequence-viewer-view',
+    detailViewId: 'sequence-viewer-detail-view'
+  });
+  viewer.loadFromExternal({
+    name: 'imported',
+    sequence: 'ACGTACGTACGT',
+    topology: 'circular',
+    source: 'external',
+    features: []
+  });
+
+  trigger(document.getElementById('sequence-viewer-detail-protein-builder-btn'), 'click');
+  await flushAsync();
+
+  const homeWorkspace = document.getElementById('sequence-viewer-home-workspace');
+  const builderWorkspace = document.getElementById('sequence-viewer-protein-builder-workspace');
+  const detailWorkspace = document.getElementById('sequence-viewer-detail-workspace');
+  assert.equal(Boolean(homeWorkspace.hidden), true);
+  assert.equal(Boolean(builderWorkspace.hidden), false);
+  assert.equal(Boolean(detailWorkspace.hidden), true);
+
+  viewer.render({ activeViewId: 'sequence-viewer-view' });
+
+  assert.equal(Boolean(homeWorkspace.hidden), true);
+  assert.equal(Boolean(builderWorkspace.hidden), false);
+  assert.equal(Boolean(detailWorkspace.hidden), true);
+});
+
 test('[EDGE] sequence-viewer home paste button opens detail workspace even with empty text', () => {
   const ids = [
     'sequence-viewer-home-workspace',
@@ -283,6 +452,54 @@ ORIGIN
   await flushAsync();
   await flushAsync();
   assert.equal(transitions.length, 1);
+});
+
+test('[EDGE] sequence-viewer library rows render only sequence names in the left rail', async () => {
+  const ids = [
+    'sequence-viewer-home-workspace',
+    'sequence-viewer-detail-workspace',
+    'sequence-viewer-home-status',
+    'sequence-viewer-library-filter-saved',
+    'sequence-viewer-library-filter-temporary',
+    'sequence-viewer-library-list',
+    'sequence-viewer-preview-host'
+  ];
+  const entry = {
+    id: 'entry_1',
+    name: 'pcDNA3.1-GFP_1-10_',
+    status: 'saved',
+    sourceFormat: 'GENBANK',
+    topology: 'circular',
+    sequenceLength: 6076,
+    featureCount: 20,
+    updatedAt: '2026-04-17T14:20:00.000Z'
+  };
+  const document = createMockDocument(ids);
+  const window = {
+    enanaApi: {
+      sequenceLibraryList: async () => ({ ok: true, entries: [entry] })
+    }
+  };
+  const localStorage = {
+    getItem(key) {
+      if (key === 'enana_state_v1') {
+        return JSON.stringify({ settings: { storagePath: '/tmp/sequence-viewer-tests' } });
+      }
+      return null;
+    }
+  };
+  const moduleWithDom = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    { document, window, localStorage }
+  );
+  moduleWithDom.initSequenceViewer();
+  await flushAsync();
+
+  const libraryList = document.getElementById('sequence-viewer-library-list');
+  assert.match(libraryList.innerHTML, /sequence-viewer-library-item-name/);
+  assert.match(libraryList.innerHTML, /pcDNA3\.1-GFP_1-10_/);
+  assert.doesNotMatch(libraryList.innerHTML, /sequence-viewer-library-item-meta/);
+  assert.doesNotMatch(libraryList.innerHTML, /6076|6,076|bp|features|updated/i);
 });
 
 test('[EDGE] sequence-viewer opens detail workspace when a library row is double-activated by quick repeated click', async () => {
@@ -499,10 +716,27 @@ test('[EDGE] sequence-viewer importing GenBank with features stores a temporary 
     'sequence-viewer-sequence-host'
   ];
   const upsertCalls = [];
+  const listCalls = [];
   const document = createMockDocument(ids);
   const window = {
     enanaApi: {
-      sequenceLibraryList: async () => ({ ok: true, entries: [] }),
+      sequenceLibraryList: async ({ status }) => {
+        listCalls.push(status);
+        return {
+          ok: true,
+          entries: status === 'temporary'
+            ? [{
+              id: 'entry_imported',
+              name: 'Imported',
+              status: 'temporary',
+              topology: 'circular',
+              sequenceLength: 12,
+              featureCount: 1,
+              updatedAt: '2026-01-01T00:00:00'
+            }]
+            : []
+        };
+      },
       sequenceLibraryUpsert: async (payload) => {
         upsertCalls.push(payload);
         return {
@@ -551,6 +785,118 @@ ORIGIN
   assert.equal(upsertCalls[0].features[0].name, 'shared_prom');
   assert.equal(upsertCalls[0].sequence, 'ATGCGATTTAAA');
   assert.equal(upsertCalls[0].status, 'temporary');
+  assert.equal(listCalls.includes('temporary'), true);
+  assert.match(document.getElementById('sequence-viewer-library-list').innerHTML, /Imported/);
+});
+
+test('[EDGE] sequence-viewer importing a single GenBank record keeps it visible from the temporary library on return home', async () => {
+  const ids = [
+    'sequence-viewer-home-workspace',
+    'sequence-viewer-detail-workspace',
+    'sequence-viewer-home-status',
+    'sequence-viewer-library-filter-saved',
+    'sequence-viewer-library-filter-temporary',
+    'sequence-viewer-library-list',
+    'sequence-viewer-preview-host',
+    'sequence-viewer-home-paste-btn',
+    'sequence-viewer-home-open-btn',
+    'sequence-viewer-home-open-input',
+    'sequence-viewer-back-btn',
+    'sequence-viewer-save-btn',
+    'sequence-viewer-save-name',
+    'sequence-viewer-mode-paste',
+    'sequence-viewer-mode-file',
+    'sequence-viewer-paste-panel',
+    'sequence-viewer-file-panel',
+    'sequence-viewer-textarea',
+    'sequence-viewer-file-input',
+    'sequence-viewer-file-choose',
+    'sequence-viewer-file-name',
+    'sequence-viewer-load-btn',
+    'sequence-viewer-annotate-btn',
+    'sequence-viewer-clear-btn',
+    'sequence-viewer-status',
+    'sequence-viewer-messages',
+    'sequence-viewer-record-select',
+    'sequence-viewer-stat-format',
+    'sequence-viewer-stat-length',
+    'sequence-viewer-stat-topology',
+    'sequence-viewer-stat-gc',
+    'sequence-viewer-stat-ambiguous',
+    'sequence-viewer-stat-quality',
+    'sequence-viewer-stat-features',
+    'sequence-viewer-stat-restriction-sites',
+    'sequence-viewer-feature-rail-host',
+    'sequence-viewer-feature-detail',
+    'sequence-viewer-sequence-host'
+  ];
+  const listCalls = [];
+  const upsertCalls = [];
+  const document = createMockDocument(ids);
+  const window = {
+    enanaApi: {
+      sequenceLibraryList: async ({ status }) => {
+        listCalls.push(status);
+        return {
+          ok: true,
+          entries: status === 'temporary'
+            ? [{
+              id: 'entry_plain_gbk',
+              name: 'plain_gbk',
+              status: 'temporary',
+              topology: 'linear',
+              sequenceLength: 12,
+              featureCount: 0,
+              updatedAt: '2026-01-01T00:00:00'
+            }]
+            : []
+        };
+      },
+      sequenceLibraryUpsert: async (payload) => {
+        upsertCalls.push(payload);
+        return {
+          ok: true,
+          entry: {
+            id: 'entry_plain_gbk',
+            name: payload.name || 'plain_gbk',
+            status: 'temporary'
+          }
+        };
+      }
+    }
+  };
+  const localStorage = {
+    getItem(key) {
+      if (key === 'enana_state_v1') {
+        return JSON.stringify({ settings: { storagePath: '/tmp/sequence-viewer-tests' } });
+      }
+      return null;
+    }
+  };
+  const moduleWithDom = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    { document, window, localStorage }
+  );
+  moduleWithDom.initSequenceViewer();
+
+  trigger(document.getElementById('sequence-viewer-home-paste-btn'), 'click');
+  const textarea = document.getElementById('sequence-viewer-textarea');
+  textarea.value = `
+LOCUS       PLAIN_GBK       12 bp    DNA     linear  SYN 01-JAN-2026
+DEFINITION  plain_gbk.
+ORIGIN
+        1 atgcgatttaaa
+//
+`;
+  trigger(document.getElementById('sequence-viewer-load-btn'), 'click');
+  await flushAsync();
+  await flushAsync();
+
+  assert.equal(upsertCalls.length, 1);
+  assert.equal(upsertCalls[0].sequence, 'ATGCGATTTAAA');
+  assert.equal(upsertCalls[0].status, 'temporary');
+  assert.equal(listCalls.includes('temporary'), true);
+  assert.match(document.getElementById('sequence-viewer-library-list').innerHTML, /plain_gbk/i);
 });
 
 test('[EDGE] sequence-viewer feature search can trace a stored feature back to its host vector', async () => {
@@ -792,9 +1138,704 @@ test('[EDGE] sequence-viewer protein builder searches stored features and adds t
   assert.equal(sequenceHtml.includes('MAE'), true);
 });
 
-test('[EDGE] sequence-viewer backbone recognition adds backbone and insert features to the current record', async () => {
+test('[EDGE] sequence-viewer protein builder can build DNA and reuse POI DNA from the current vector', async () => {
+  const ids = [
+    'sequence-viewer-home-workspace',
+    'sequence-viewer-protein-builder-workspace',
+    'sequence-viewer-detail-workspace',
+    'sequence-viewer-protein-builder-confirmation',
+    'sequence-viewer-protein-builder-confirmation-summary',
+    'sequence-viewer-protein-builder-confirmation-back-btn',
+    'sequence-viewer-protein-builder-confirmation-confirm-btn',
+    'sequence-viewer-detail-protein-builder-btn',
+    'sequence-viewer-protein-builder-back-btn',
+    'sequence-viewer-protein-builder-status',
+    'sequence-viewer-protein-builder-form',
+    'sequence-viewer-protein-builder-name',
+    'sequence-viewer-protein-builder-poi-name',
+    'sequence-viewer-protein-builder-poi-sequence',
+    'sequence-viewer-protein-builder-reset-btn',
+    'sequence-viewer-protein-builder-add-custom-btn',
+    'sequence-viewer-protein-builder-add-poi-btn',
+    'sequence-viewer-protein-builder-build-dna-btn',
+    'sequence-viewer-protein-builder-common-blocks',
+    'sequence-viewer-protein-builder-feature-search-input',
+    'sequence-viewer-protein-builder-feature-search-btn',
+    'sequence-viewer-protein-builder-feature-search-status',
+    'sequence-viewer-protein-builder-feature-search-results',
+    'sequence-viewer-protein-builder-meta',
+    'sequence-viewer-protein-builder-workflow',
+    'sequence-viewer-protein-builder-sequence',
+    'sequence-viewer-protein-builder-dna-meta',
+    'sequence-viewer-protein-builder-dna-sequence',
+    'sequence-viewer-save-btn',
+    'sequence-viewer-save-name',
+    'sequence-viewer-mode-paste',
+    'sequence-viewer-mode-file',
+    'sequence-viewer-paste-panel',
+    'sequence-viewer-file-panel',
+    'sequence-viewer-textarea',
+    'sequence-viewer-file-input',
+    'sequence-viewer-file-choose',
+    'sequence-viewer-file-name',
+    'sequence-viewer-load-btn',
+    'sequence-viewer-annotate-btn',
+    'sequence-viewer-recognize-backbone-btn',
+    'sequence-viewer-alignment-open-btn',
+    'sequence-viewer-alignment-toggle',
+    'sequence-viewer-alignment-session-select',
+    'sequence-viewer-alignment-active-note',
+    'sequence-viewer-clear-btn',
+    'sequence-viewer-status',
+    'sequence-viewer-messages',
+    'sequence-viewer-record-select',
+    'sequence-viewer-stat-format',
+    'sequence-viewer-stat-length',
+    'sequence-viewer-stat-topology',
+    'sequence-viewer-stat-gc',
+    'sequence-viewer-stat-ambiguous',
+    'sequence-viewer-stat-quality',
+    'sequence-viewer-stat-features',
+    'sequence-viewer-stat-restriction-sites',
+    'sequence-viewer-feature-rail-host',
+    'sequence-viewer-feature-detail',
+    'sequence-viewer-sequence-host'
+  ];
+  const document = createMockDocument(ids);
+  const moduleWithDom = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    { document }
+  );
+  const viewer = moduleWithDom.initSequenceViewer();
+  viewer.loadFromExternal({
+    name: 'vector_with_poi',
+    sequence: 'GGGATGTTATTATTACCC',
+    topology: 'linear',
+    source: 'external',
+    features: [
+      {
+        id: 'poi_feature',
+        name: 'PoiCds',
+        type: 'cds',
+        strand: 1,
+        translation: 'MLLL',
+        segments: [{ start: 3, end: 15 }]
+      }
+    ]
+  });
+
+  trigger(document.getElementById('sequence-viewer-detail-protein-builder-btn'), 'click');
+
+  const builderForm = document.getElementById('sequence-viewer-protein-builder-form');
+  const poiInput = document.getElementById('sequence-viewer-protein-builder-poi-sequence');
+  poiInput.value = 'MLLL';
+  trigger(builderForm, 'input', { target: poiInput });
+  await flushAsync();
+
+  trigger(document.getElementById('sequence-viewer-protein-builder-build-dna-btn'), 'click');
+  await flushAsync();
+
+  const dnaMeta = document.getElementById('sequence-viewer-protein-builder-dna-meta');
+  const dnaSequence = document.getElementById('sequence-viewer-protein-builder-dna-sequence');
+  const builderStatus = document.getElementById('sequence-viewer-protein-builder-status');
+
+  assert.match(dnaMeta.textContent, /nt/);
+  assert.equal(dnaSequence.innerHTML.includes('ATGTTATTATTA'), true);
+  assert.match(builderStatus.textContent, /Reused POI DNA from current vector CDS PoiCds/i);
+});
+
+test('[EDGE] sequence-viewer protein builder can open an assembled plasmid from a stored backbone', async () => {
+  const ids = [
+    'sequence-viewer-home-workspace',
+    'sequence-viewer-protein-builder-workspace',
+    'sequence-viewer-detail-workspace',
+    'sequence-viewer-detail-protein-builder-btn',
+    'sequence-viewer-protein-builder-back-btn',
+    'sequence-viewer-protein-builder-status',
+    'sequence-viewer-protein-builder-form',
+    'sequence-viewer-protein-builder-name',
+    'sequence-viewer-protein-builder-poi-name',
+    'sequence-viewer-protein-builder-poi-sequence',
+    'sequence-viewer-protein-builder-reset-btn',
+    'sequence-viewer-protein-builder-add-custom-btn',
+    'sequence-viewer-protein-builder-add-poi-btn',
+    'sequence-viewer-protein-builder-build-dna-btn',
+    'sequence-viewer-protein-builder-assemble-btn',
+    'sequence-viewer-protein-builder-common-blocks',
+    'sequence-viewer-protein-builder-feature-search-input',
+    'sequence-viewer-protein-builder-feature-search-btn',
+    'sequence-viewer-protein-builder-feature-search-status',
+    'sequence-viewer-protein-builder-feature-search-results',
+    'sequence-viewer-protein-builder-meta',
+    'sequence-viewer-protein-builder-workflow',
+    'sequence-viewer-protein-builder-sequence',
+    'sequence-viewer-protein-builder-dna-meta',
+    'sequence-viewer-protein-builder-dna-sequence',
+    'sequence-viewer-protein-builder-assembly-overlay',
+    'sequence-viewer-protein-builder-assembly-subtitle',
+    'sequence-viewer-protein-builder-assembly-close-btn',
+    'sequence-viewer-protein-builder-assembly-list',
+    'sequence-viewer-protein-builder-assembly-summary',
+    'sequence-viewer-protein-builder-assembly-apply-btn',
+    'sequence-viewer-protein-builder-assembly-cancel-btn',
+    'sequence-viewer-save-btn',
+    'sequence-viewer-save-name',
+    'sequence-viewer-mode-paste',
+    'sequence-viewer-mode-file',
+    'sequence-viewer-paste-panel',
+    'sequence-viewer-file-panel',
+    'sequence-viewer-textarea',
+    'sequence-viewer-file-input',
+    'sequence-viewer-file-choose',
+    'sequence-viewer-file-name',
+    'sequence-viewer-load-btn',
+    'sequence-viewer-annotate-btn',
+    'sequence-viewer-recognize-backbone-btn',
+    'sequence-viewer-alignment-open-btn',
+    'sequence-viewer-alignment-toggle',
+    'sequence-viewer-alignment-session-select',
+    'sequence-viewer-alignment-active-note',
+    'sequence-viewer-clear-btn',
+    'sequence-viewer-status',
+    'sequence-viewer-messages',
+    'sequence-viewer-record-select',
+    'sequence-viewer-stat-format',
+    'sequence-viewer-stat-length',
+    'sequence-viewer-stat-topology',
+    'sequence-viewer-stat-gc',
+    'sequence-viewer-stat-ambiguous',
+    'sequence-viewer-stat-quality',
+    'sequence-viewer-stat-features',
+    'sequence-viewer-stat-restriction-sites',
+    'sequence-viewer-feature-rail-host',
+    'sequence-viewer-feature-detail',
+    'sequence-viewer-sequence-host'
+  ];
+  const document = createMockDocument(ids);
+  const window = {
+    enanaApi: {
+      sequenceLibraryListBackbones: async () => ({
+        ok: true,
+        results: [
+          {
+            id: 'stored_backbone_1',
+            hostVectorName: 'HostVector',
+            sourceRecordName: 'HostVector',
+            backboneName: 'Backbone (HostVector)',
+            backboneSequence: 'ATGCGTACGCTAGTTACC',
+            backboneLength: 18,
+            insertionOffset: 10,
+            insertLength: 6,
+            variantMode: 'gibson',
+            updatedAt: '2026-04-23T12:00:00.000Z'
+          }
+        ]
+      })
+    }
+  };
+  const localStorage = {
+    getItem(key) {
+      if (key === 'enana_state_v1') {
+        return JSON.stringify({ settings: { storagePath: '/tmp/sequence-viewer-tests' } });
+      }
+      return null;
+    }
+  };
+  const moduleWithDom = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    { document, window, localStorage }
+  );
+  const viewer = moduleWithDom.initSequenceViewer();
+  viewer.loadFromExternal({
+    name: 'vector_with_poi',
+    sequence: 'GGGATGTTATTATTACCC',
+    topology: 'linear',
+    source: 'external',
+    features: [
+      {
+        id: 'poi_feature',
+        name: 'PoiCds',
+        type: 'cds',
+        strand: 1,
+        translation: 'MLLL',
+        segments: [{ start: 3, end: 15 }]
+      }
+    ]
+  });
+
+  trigger(document.getElementById('sequence-viewer-detail-protein-builder-btn'), 'click');
+
+  const builderForm = document.getElementById('sequence-viewer-protein-builder-form');
+  const constructNameInput = document.getElementById('sequence-viewer-protein-builder-name');
+  const poiInput = document.getElementById('sequence-viewer-protein-builder-poi-sequence');
+  constructNameInput.value = 'GFP Insert';
+  trigger(builderForm, 'input', { target: constructNameInput });
+  poiInput.value = 'MLLL';
+  trigger(builderForm, 'input', { target: poiInput });
+  await flushAsync();
+
+  trigger(document.getElementById('sequence-viewer-protein-builder-assemble-btn'), 'click');
+  await flushAsync();
+  await flushAsync();
+
+  const assemblyOverlay = document.getElementById('sequence-viewer-protein-builder-assembly-overlay');
+  const assemblyList = document.getElementById('sequence-viewer-protein-builder-assembly-list');
+  const assemblySummary = document.getElementById('sequence-viewer-protein-builder-assembly-summary');
+  const confirmationBanner = document.getElementById('sequence-viewer-protein-builder-confirmation');
+  const confirmationSummary = document.getElementById('sequence-viewer-protein-builder-confirmation-summary');
+  const textarea = document.getElementById('sequence-viewer-textarea');
+  assert.equal(Boolean(assemblyOverlay.hidden), false);
+  assert.match(assemblyList.innerHTML, /HostVector/);
+  assert.match(assemblySummary.innerHTML, /Estimated Circular Plasmid/i);
+
+  const backboneTarget = {
+    closest(selector) {
+      if (selector === '[data-protein-builder-backbone-id]') {
+        return { dataset: { proteinBuilderBackboneId: 'stored_backbone_1' } };
+      }
+      return null;
+    }
+  };
+  trigger(assemblyList, 'click', { target: backboneTarget });
+  trigger(document.getElementById('sequence-viewer-protein-builder-assembly-apply-btn'), 'click');
+  await flushAsync();
+  await flushAsync();
+
+  assert.equal(Boolean(document.getElementById('sequence-viewer-detail-workspace').hidden), false);
+  assert.equal(Boolean(confirmationBanner.hidden), false);
+  assert.equal(confirmationSummary.innerHTML.includes('HostVector'), true);
+  assert.equal(document.getElementById('sequence-viewer-save-name').value, 'GFP Insert (HostVector)');
+  assert.match(document.getElementById('sequence-viewer-status').textContent, /Review the assembled plasmid.*HostVector.*confirm the construct/i);
+  assert.match(document.getElementById('sequence-viewer-stat-topology').textContent, /circular/i);
+  assert.equal(String(textarea.value || '').startsWith('ATGCGTACGC'), true);
+  assert.equal(String(textarea.value || '').endsWith('TAGTTACC'), true);
+
+  trigger(document.getElementById('sequence-viewer-protein-builder-confirmation-confirm-btn'), 'click');
+  await flushAsync();
+
+  assert.equal(Boolean(confirmationBanner.hidden), true);
+  assert.match(document.getElementById('sequence-viewer-status').textContent, /Construct confirmed/i);
+});
+
+test('[EDGE] sequence-viewer protein builder can fall back to saved sequence library entries for plasmid assembly', async () => {
+  const ids = [
+    'sequence-viewer-home-workspace',
+    'sequence-viewer-protein-builder-workspace',
+    'sequence-viewer-detail-workspace',
+    'sequence-viewer-protein-builder-confirmation',
+    'sequence-viewer-protein-builder-confirmation-summary',
+    'sequence-viewer-protein-builder-confirmation-back-btn',
+    'sequence-viewer-protein-builder-confirmation-confirm-btn',
+    'sequence-viewer-detail-protein-builder-btn',
+    'sequence-viewer-protein-builder-back-btn',
+    'sequence-viewer-protein-builder-status',
+    'sequence-viewer-protein-builder-form',
+    'sequence-viewer-protein-builder-name',
+    'sequence-viewer-protein-builder-poi-name',
+    'sequence-viewer-protein-builder-poi-sequence',
+    'sequence-viewer-protein-builder-reset-btn',
+    'sequence-viewer-protein-builder-add-custom-btn',
+    'sequence-viewer-protein-builder-add-poi-btn',
+    'sequence-viewer-protein-builder-build-dna-btn',
+    'sequence-viewer-protein-builder-assemble-btn',
+    'sequence-viewer-protein-builder-common-blocks',
+    'sequence-viewer-protein-builder-feature-search-input',
+    'sequence-viewer-protein-builder-feature-search-btn',
+    'sequence-viewer-protein-builder-feature-search-status',
+    'sequence-viewer-protein-builder-feature-search-results',
+    'sequence-viewer-protein-builder-meta',
+    'sequence-viewer-protein-builder-workflow',
+    'sequence-viewer-protein-builder-sequence',
+    'sequence-viewer-protein-builder-dna-meta',
+    'sequence-viewer-protein-builder-dna-sequence',
+    'sequence-viewer-protein-builder-assembly-overlay',
+    'sequence-viewer-protein-builder-assembly-subtitle',
+    'sequence-viewer-protein-builder-assembly-close-btn',
+    'sequence-viewer-protein-builder-assembly-list',
+    'sequence-viewer-protein-builder-assembly-summary',
+    'sequence-viewer-protein-builder-assembly-apply-btn',
+    'sequence-viewer-protein-builder-assembly-cancel-btn',
+    'sequence-viewer-save-btn',
+    'sequence-viewer-save-name',
+    'sequence-viewer-mode-paste',
+    'sequence-viewer-mode-file',
+    'sequence-viewer-paste-panel',
+    'sequence-viewer-file-panel',
+    'sequence-viewer-textarea',
+    'sequence-viewer-file-input',
+    'sequence-viewer-file-choose',
+    'sequence-viewer-file-name',
+    'sequence-viewer-load-btn',
+    'sequence-viewer-annotate-btn',
+    'sequence-viewer-recognize-backbone-btn',
+    'sequence-viewer-alignment-open-btn',
+    'sequence-viewer-alignment-toggle',
+    'sequence-viewer-alignment-session-select',
+    'sequence-viewer-alignment-active-note',
+    'sequence-viewer-clear-btn',
+    'sequence-viewer-status',
+    'sequence-viewer-messages',
+    'sequence-viewer-record-select',
+    'sequence-viewer-stat-format',
+    'sequence-viewer-stat-length',
+    'sequence-viewer-stat-topology',
+    'sequence-viewer-stat-gc',
+    'sequence-viewer-stat-ambiguous',
+    'sequence-viewer-stat-quality',
+    'sequence-viewer-stat-features',
+    'sequence-viewer-stat-restriction-sites',
+    'sequence-viewer-feature-rail-host',
+    'sequence-viewer-feature-detail',
+    'sequence-viewer-sequence-host'
+  ];
+  const sequenceLibraryGetCalls = [];
+  const document = createMockDocument(ids);
+  const window = {
+    enanaApi: {
+      sequenceLibraryListBackbones: async () => ({
+        ok: true,
+        results: []
+      }),
+      sequenceLibraryList: async () => ({
+        ok: true,
+        entries: [
+          {
+            id: 'entry_backbone_1',
+            name: 'pETDuet-1-NdeI-F',
+            status: 'saved',
+            topology: 'circular',
+            sequenceLength: 24,
+            updatedAt: '2026-04-23T15:00:00.000Z'
+          }
+        ]
+      }),
+      sequenceLibraryGet: async (payload) => {
+        sequenceLibraryGetCalls.push(payload);
+        return {
+          ok: true,
+          entry: {
+            id: 'entry_backbone_1',
+            name: 'pETDuet-1-NdeI-F',
+            status: 'saved',
+            topology: 'circular'
+          },
+          gbkText: `LOCUS       pETDuet-1-NdeI-F 24 bp    DNA     circular SYN 01-JAN-2026
+FEATURES             Location/Qualifiers
+     promoter        1..6
+                     /label="T7 promoter"
+     CDS             14..20
+                     /label="AmpR"
+ORIGIN
+        1 atgcgtacgctagttaccggttaa
+//
+`
+        };
+      }
+    }
+  };
+  const localStorage = {
+    getItem(key) {
+      if (key === 'enana_state_v1') {
+        return JSON.stringify({ settings: { storagePath: '/tmp/sequence-viewer-tests' } });
+      }
+      return null;
+    }
+  };
+  const moduleWithDom = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    { document, window, localStorage }
+  );
+  const viewer = moduleWithDom.initSequenceViewer();
+  viewer.loadFromExternal({
+    name: 'vector_with_poi',
+    sequence: 'GGGATGTTATTATTACCC',
+    topology: 'linear',
+    source: 'external',
+    features: [
+      {
+        id: 'poi_feature',
+        name: 'PoiCds',
+        type: 'cds',
+        strand: 1,
+        translation: 'MLLL',
+        segments: [{ start: 3, end: 15 }]
+      }
+    ]
+  });
+
+  trigger(document.getElementById('sequence-viewer-detail-protein-builder-btn'), 'click');
+
+  const builderForm = document.getElementById('sequence-viewer-protein-builder-form');
+  const constructNameInput = document.getElementById('sequence-viewer-protein-builder-name');
+  const poiInput = document.getElementById('sequence-viewer-protein-builder-poi-sequence');
+  constructNameInput.value = 'GFP Insert';
+  trigger(builderForm, 'input', { target: constructNameInput });
+  poiInput.value = 'MLLL';
+  trigger(builderForm, 'input', { target: poiInput });
+  await flushAsync();
+
+  trigger(document.getElementById('sequence-viewer-protein-builder-assemble-btn'), 'click');
+  await flushAsync();
+  await flushAsync();
+
+  const assemblyOverlay = document.getElementById('sequence-viewer-protein-builder-assembly-overlay');
+  const assemblyList = document.getElementById('sequence-viewer-protein-builder-assembly-list');
+  const confirmationBanner = document.getElementById('sequence-viewer-protein-builder-confirmation');
+  const confirmationSummary = document.getElementById('sequence-viewer-protein-builder-confirmation-summary');
+  const loadBtn = document.getElementById('sequence-viewer-load-btn');
+  const pastePanel = document.getElementById('sequence-viewer-paste-panel');
+  const textarea = document.getElementById('sequence-viewer-textarea');
+  const featureRailHost = document.getElementById('sequence-viewer-feature-rail-host');
+  assert.equal(Boolean(assemblyOverlay.hidden), false);
+  assert.match(assemblyList.innerHTML, /pETDuet-1-NdeI-F/);
+  assert.match(assemblyList.innerHTML, /Saved Sequence Library entry/i);
+
+  const backboneTarget = {
+    closest(selector) {
+      if (selector === '[data-protein-builder-backbone-id]') {
+        return { dataset: { proteinBuilderBackboneId: 'library_entry:entry_backbone_1' } };
+      }
+      return null;
+    }
+  };
+  trigger(assemblyList, 'click', { target: backboneTarget });
+  trigger(document.getElementById('sequence-viewer-protein-builder-assembly-apply-btn'), 'click');
+  await flushAsync();
+  await flushAsync();
+
+  assert.equal(sequenceLibraryGetCalls.some((call) => call.id === 'entry_backbone_1' && call.includeGbk === true), true);
+  assert.equal(Boolean(document.getElementById('sequence-viewer-detail-workspace').hidden), false);
+  assert.equal(Boolean(confirmationBanner.hidden), false);
+  assert.equal(confirmationSummary.innerHTML.includes('pETDuet-1-NdeI-F'), true);
+  assert.match(confirmationSummary.innerHTML, /Edit the sequence below and click Load/i);
+  assert.equal(Boolean(loadBtn.hidden), false);
+  assert.equal(Boolean(pastePanel.hidden), false);
+  assert.equal(document.getElementById('sequence-viewer-save-name').value, 'GFP Insert (pETDuet-1-NdeI-F)');
+  assert.match(document.getElementById('sequence-viewer-status').textContent, /Review the assembled plasmid.*pETDuet-1-NdeI-F.*confirm the construct/i);
+  assert.match(document.getElementById('sequence-viewer-stat-topology').textContent, /circular/i);
+  assert.equal(String(textarea.value || '').startsWith('ATGCGT'), true);
+  assert.equal(String(textarea.value || '').endsWith('ACGCTAGTTACCGGTTAA'), true);
+  assert.match(featureRailHost.innerHTML, /T7 promoter/);
+  assert.match(featureRailHost.innerHTML, /AmpR/);
+
+  const editedSequence = `${String(textarea.value || '')}AAA`;
+  textarea.value = editedSequence;
+  trigger(loadBtn, 'click');
+  await flushAsync();
+  await flushAsync();
+
+  assert.equal(Boolean(confirmationBanner.hidden), false);
+  assert.equal(Boolean(loadBtn.hidden), false);
+  assert.equal(document.getElementById('sequence-viewer-save-name').value, 'GFP Insert (pETDuet-1-NdeI-F)');
+  assert.equal(document.getElementById('sequence-viewer-stat-length').textContent, String(editedSequence.length));
+  assert.match(document.getElementById('sequence-viewer-stat-topology').textContent, /circular/i);
+  assert.match(document.getElementById('sequence-viewer-status').textContent, /Updated the construct review/i);
+  assert.match(document.getElementById('sequence-viewer-messages').innerHTML, /Retained the current construct features/i);
+  assert.match(featureRailHost.innerHTML, /AmpR/);
+});
+
+test('[EDGE] sequence-viewer protein builder hydrates a saved library backbone entry and preserves backbone features in the assembled plasmid', async () => {
+  const ids = [
+    'sequence-viewer-home-workspace',
+    'sequence-viewer-protein-builder-workspace',
+    'sequence-viewer-detail-workspace',
+    'sequence-viewer-detail-protein-builder-btn',
+    'sequence-viewer-protein-builder-back-btn',
+    'sequence-viewer-protein-builder-status',
+    'sequence-viewer-protein-builder-form',
+    'sequence-viewer-protein-builder-name',
+    'sequence-viewer-protein-builder-poi-name',
+    'sequence-viewer-protein-builder-poi-sequence',
+    'sequence-viewer-protein-builder-reset-btn',
+    'sequence-viewer-protein-builder-add-custom-btn',
+    'sequence-viewer-protein-builder-add-poi-btn',
+    'sequence-viewer-protein-builder-build-dna-btn',
+    'sequence-viewer-protein-builder-assemble-btn',
+    'sequence-viewer-protein-builder-common-blocks',
+    'sequence-viewer-protein-builder-feature-search-input',
+    'sequence-viewer-protein-builder-feature-search-btn',
+    'sequence-viewer-protein-builder-feature-search-status',
+    'sequence-viewer-protein-builder-feature-search-results',
+    'sequence-viewer-protein-builder-meta',
+    'sequence-viewer-protein-builder-workflow',
+    'sequence-viewer-protein-builder-sequence',
+    'sequence-viewer-protein-builder-dna-meta',
+    'sequence-viewer-protein-builder-dna-sequence',
+    'sequence-viewer-protein-builder-assembly-overlay',
+    'sequence-viewer-protein-builder-assembly-subtitle',
+    'sequence-viewer-protein-builder-assembly-close-btn',
+    'sequence-viewer-protein-builder-assembly-list',
+    'sequence-viewer-protein-builder-assembly-summary',
+    'sequence-viewer-protein-builder-assembly-apply-btn',
+    'sequence-viewer-protein-builder-assembly-cancel-btn',
+    'sequence-viewer-save-btn',
+    'sequence-viewer-save-name',
+    'sequence-viewer-mode-paste',
+    'sequence-viewer-mode-file',
+    'sequence-viewer-paste-panel',
+    'sequence-viewer-file-panel',
+    'sequence-viewer-textarea',
+    'sequence-viewer-file-input',
+    'sequence-viewer-file-choose',
+    'sequence-viewer-file-name',
+    'sequence-viewer-load-btn',
+    'sequence-viewer-annotate-btn',
+    'sequence-viewer-recognize-backbone-btn',
+    'sequence-viewer-alignment-open-btn',
+    'sequence-viewer-alignment-toggle',
+    'sequence-viewer-alignment-session-select',
+    'sequence-viewer-alignment-active-note',
+    'sequence-viewer-clear-btn',
+    'sequence-viewer-status',
+    'sequence-viewer-messages',
+    'sequence-viewer-record-select',
+    'sequence-viewer-stat-format',
+    'sequence-viewer-stat-length',
+    'sequence-viewer-stat-topology',
+    'sequence-viewer-stat-gc',
+    'sequence-viewer-stat-ambiguous',
+    'sequence-viewer-stat-quality',
+    'sequence-viewer-stat-features',
+    'sequence-viewer-stat-restriction-sites',
+    'sequence-viewer-feature-rail-host',
+    'sequence-viewer-feature-detail',
+    'sequence-viewer-sequence-host'
+  ];
+  const sequenceLibraryGetCalls = [];
+  const document = createMockDocument(ids);
+  const window = {
+    enanaApi: {
+      sequenceLibraryListBackbones: async () => ({
+        ok: true,
+        results: []
+      }),
+      sequenceLibraryList: async () => ({
+        ok: true,
+        entries: [
+          {
+            id: 'entry_saved_backbone',
+            name: 'StoredVector',
+            status: 'saved',
+            topology: 'circular',
+            sequenceLength: 24,
+            featureCount: 4,
+            updatedAt: '2026-04-25T12:00:00.000Z'
+          }
+        ]
+      }),
+      sequenceLibraryGet: async (payload) => {
+        sequenceLibraryGetCalls.push(payload);
+        return {
+          ok: true,
+          entry: {
+            id: 'entry_saved_backbone',
+            name: 'StoredVector',
+            status: 'saved',
+            topology: 'circular',
+            updatedAt: '2026-04-25T12:00:00.000Z'
+          },
+          gbkText: `LOCUS       StoredVector              24 bp    DNA     circular SYN 01-JAN-2026
+FEATURES             Location/Qualifiers
+     promoter        1..10
+                     /label="T7 promoter"
+     insert          11..14
+                     /label="Legacy Insert"
+     backbone        join(1..10,15..24)
+                     /label="Backbone (StoredVector)"
+     cds             15..24
+                     /label="AmpR"
+ORIGIN
+        1 aaaaaaaaaaccccgggggggggg
+//
+`
+        };
+      }
+    }
+  };
+  const localStorage = {
+    getItem(key) {
+      if (key === 'enana_state_v1') {
+        return JSON.stringify({ settings: { storagePath: '/tmp/sequence-viewer-tests' } });
+      }
+      return null;
+    }
+  };
+  const moduleWithDom = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    { document, window, localStorage }
+  );
+  const viewer = moduleWithDom.initSequenceViewer();
+  viewer.loadFromExternal({
+    name: 'vector_with_poi',
+    sequence: 'GGGATGTTATTATTACCC',
+    topology: 'linear',
+    source: 'external',
+    features: [
+      {
+        id: 'poi_feature',
+        name: 'PoiCds',
+        type: 'cds',
+        strand: 1,
+        translation: 'MLLL',
+        segments: [{ start: 3, end: 15 }]
+      }
+    ]
+  });
+
+  trigger(document.getElementById('sequence-viewer-detail-protein-builder-btn'), 'click');
+
+  const builderForm = document.getElementById('sequence-viewer-protein-builder-form');
+  const constructNameInput = document.getElementById('sequence-viewer-protein-builder-name');
+  const poiInput = document.getElementById('sequence-viewer-protein-builder-poi-sequence');
+  constructNameInput.value = 'GFP Insert';
+  trigger(builderForm, 'input', { target: constructNameInput });
+  poiInput.value = 'MLLL';
+  trigger(builderForm, 'input', { target: poiInput });
+  await flushAsync();
+
+  trigger(document.getElementById('sequence-viewer-protein-builder-assemble-btn'), 'click');
+  await flushAsync();
+  await flushAsync();
+
+  const assemblyOverlay = document.getElementById('sequence-viewer-protein-builder-assembly-overlay');
+  const assemblyList = document.getElementById('sequence-viewer-protein-builder-assembly-list');
+  assert.equal(Boolean(assemblyOverlay.hidden), false);
+  assert.match(assemblyList.innerHTML, /StoredVector/);
+  assert.match(assemblyList.innerHTML, /Saved Sequence Library entry/i);
+
+  const backboneTarget = {
+    closest(selector) {
+      if (selector === '[data-protein-builder-backbone-id]') {
+        return { dataset: { proteinBuilderBackboneId: 'library_entry:entry_saved_backbone' } };
+      }
+      return null;
+    }
+  };
+  trigger(assemblyList, 'click', { target: backboneTarget });
+  trigger(document.getElementById('sequence-viewer-protein-builder-assembly-apply-btn'), 'click');
+  await flushAsync();
+  await flushAsync();
+
+  const featureRailHost = document.getElementById('sequence-viewer-feature-rail-host');
+  assert.equal(sequenceLibraryGetCalls.some((call) => call.id === 'entry_saved_backbone' && call.includeGbk === true), true);
+  assert.equal(Boolean(document.getElementById('sequence-viewer-detail-workspace').hidden), false);
+  assert.equal(document.getElementById('sequence-viewer-save-name').value, 'GFP Insert (StoredVector)');
+  assert.match(document.getElementById('sequence-viewer-status').textContent, /Opened assembled plasmid using stored backbone StoredVector/i);
+  assert.match(document.getElementById('sequence-viewer-stat-topology').textContent, /circular/i);
+  assert.match(featureRailHost.innerHTML, /T7 promoter/);
+  assert.match(featureRailHost.innerHTML, /GFP Insert/);
+  assert.match(featureRailHost.innerHTML, /AmpR/);
+  assert.doesNotMatch(featureRailHost.innerHTML, /Legacy Insert/);
+});
+
+test('[EDGE] sequence-viewer backbone recognition stores a Protein Builder artifact without annotating the original sequence', async () => {
   const ids = [
     'sequence-viewer-recognize-backbone-btn',
+    'sequence-viewer-backbone-dialog-overlay',
+    'sequence-viewer-backbone-dialog-candidates',
+    'sequence-viewer-backbone-dialog-summary',
+    'sequence-viewer-backbone-dialog-preview',
+    'sequence-viewer-backbone-dialog-apply-btn',
     'sequence-viewer-save-btn',
     'sequence-viewer-mode-paste',
     'sequence-viewer-mode-file',
@@ -823,9 +1864,17 @@ test('[EDGE] sequence-viewer backbone recognition adds backbone and insert featu
     'sequence-viewer-sequence-host'
   ];
   const recognizeCalls = [];
+  const writeJsonCalls = [];
   const document = createMockDocument(ids);
   const window = {
     enanaApi: {
+      writeJsonFile: async (payload) => {
+        writeJsonCalls.push(payload);
+        return {
+          ok: true,
+          filePath: '/tmp/sequence-viewer-tests/SequenceViewer/protein-builder/backbones/derived_vector.recognized-backbone.json'
+        };
+      },
       sequenceLibraryRecognizeBackbone: async (payload) => {
         recognizeCalls.push(payload);
         return {
@@ -834,12 +1883,83 @@ test('[EDGE] sequence-viewer backbone recognition adds backbone and insert featu
             hostVectorId: 'entry_host',
             hostVectorName: 'HostVector',
             hostVectorStatus: 'saved',
+            hostCoverage: 1,
             orientation: 'forward',
             backboneLength: 24,
             insertLength: 6,
-            hostCoverage: 1,
             backboneSegments: [{ start: 0, end: 16 }, { start: 22, end: 30 }],
-            insertSegments: [{ start: 16, end: 22 }]
+            insertSegments: [{ start: 16, end: 22 }],
+            candidateSelections: [
+              {
+                id: 'candidate_1',
+                label: 'T7 promoter',
+                promoter: {
+                  name: 'T7 promoter',
+                  strand: 1,
+                  gapToOrf: 6,
+                  segments: [{ start: 0, end: 10 }]
+                },
+                orf: {
+                  name: 'Nearest ORF (2 aa)',
+                  strand: 1,
+                  length: 6,
+                  segments: [{ start: 16, end: 22 }]
+                },
+                variants: {
+                  gibson: {
+                    source: 'promoter_orf',
+                    backboneLength: 24,
+                    insertLength: 6,
+                    backboneSegments: [{ start: 0, end: 16 }, { start: 22, end: 30 }],
+                    insertSegments: [{ start: 16, end: 22 }],
+                    startCodon: 'ATG',
+                    stopCodon: 'TAA'
+                  },
+                  restriction: {
+                    source: 'promoter_orf',
+                    backboneLength: 24,
+                    insertLength: 10,
+                    backboneSegments: [{ start: 0, end: 16 }, { start: 22, end: 30 }],
+                    insertSegments: [{ start: 14, end: 24 }],
+                    startCodon: 'ATG',
+                    stopCodon: 'TAA',
+                    upstreamSite: {
+                      name: 'NdeI',
+                      segments: [{ start: 14, end: 20 }]
+                    },
+                    downstreamSite: {
+                      name: 'XhoI',
+                      segments: [{ start: 22, end: 28 }]
+                    },
+                    siteExtensionApplied: true
+                  }
+                }
+              }
+            ],
+            selectedCandidateId: 'candidate_1',
+            promoter: {
+              name: 'T7 promoter',
+              strand: 1,
+              gapToOrf: 6,
+              segments: [{ start: 0, end: 10 }]
+            },
+            orf: {
+              name: 'Nearest ORF (2 aa)',
+              strand: 1,
+              length: 6,
+              segments: [{ start: 16, end: 22 }]
+            },
+            variants: {
+              gibson: {
+                source: 'promoter_orf',
+                backboneLength: 24,
+                insertLength: 6,
+                backboneSegments: [{ start: 0, end: 16 }, { start: 22, end: 30 }],
+                insertSegments: [{ start: 16, end: 22 }],
+                startCodon: 'ATG',
+                stopCodon: 'TAA'
+              }
+            }
           }
         };
       }
@@ -866,6 +1986,9 @@ test('[EDGE] sequence-viewer backbone recognition adds backbone and insert featu
   });
 
   const recognizeBtn = document.getElementById('sequence-viewer-recognize-backbone-btn');
+  const dialogOverlay = document.getElementById('sequence-viewer-backbone-dialog-overlay');
+  const dialogCandidates = document.getElementById('sequence-viewer-backbone-dialog-candidates');
+  const dialogApplyBtn = document.getElementById('sequence-viewer-backbone-dialog-apply-btn');
   const featureRailHost = document.getElementById('sequence-viewer-feature-rail-host');
   const featureDetail = document.getElementById('sequence-viewer-feature-detail');
   const status = document.getElementById('sequence-viewer-status');
@@ -879,10 +2002,132 @@ test('[EDGE] sequence-viewer backbone recognition adds backbone and insert featu
   assert.equal(recognizeCalls.length, 1);
   assert.equal(recognizeCalls[0].sequence, 'ATGCGTACGCTAGTTAGGAACCCCGGATCA');
   assert.equal(recognizeCalls[0].excludeEntryId, '');
+  assert.equal(Boolean(dialogOverlay.hidden), false);
+  assert.match(dialogCandidates.innerHTML, /T7 promoter/);
+  assert.equal(Number(statFeatures.textContent || 0), initialFeatureCount);
+  assert.match(status.textContent, /Review promoter \/ ORF candidates/i);
+
+  trigger(dialogApplyBtn, 'click');
+  await flushAsync();
+  await flushAsync();
+
+  assert.equal(Number(statFeatures.textContent || 0), initialFeatureCount);
+  assert.equal(featureRailHost.innerHTML.includes('T7 promoter'), false);
+  assert.equal(featureRailHost.innerHTML.includes('Backbone (HostVector)'), false);
+  assert.equal(featureDetail.innerHTML.includes('Insert (HostVector)'), false);
+  assert.equal(writeJsonCalls.length, 1);
+  assert.equal(writeJsonCalls[0].targetFolder, 'SequenceViewer/protein-builder/backbones');
+  assert.match(String(writeJsonCalls[0].fileName || ''), /recognized-backbone\.json$/);
+  assert.equal(writeJsonCalls[0].data?.recognition?.variant_mode, 'gibson');
+  assert.equal(writeJsonCalls[0].data?.recognition?.promoter_name, 'T7 promoter');
+  assert.equal(writeJsonCalls[0].data?.backbone?.sequence_length, 24);
+  assert.equal(writeJsonCalls[0].data?.insert?.sequence_length, 6);
+  assert.match(status.textContent, /Stored a Protein Builder backbone file/i);
+  assert.match(status.textContent, /original sequence was left unchanged/i);
+});
+
+test('[EDGE] sequence-viewer annotate button adds SQL DNA and CDS features to the current record', async () => {
+  const ids = [
+    'sequence-viewer-annotate-btn',
+    'sequence-viewer-save-btn',
+    'sequence-viewer-mode-paste',
+    'sequence-viewer-mode-file',
+    'sequence-viewer-paste-panel',
+    'sequence-viewer-file-panel',
+    'sequence-viewer-textarea',
+    'sequence-viewer-file-input',
+    'sequence-viewer-file-choose',
+    'sequence-viewer-file-name',
+    'sequence-viewer-load-btn',
+    'sequence-viewer-clear-btn',
+    'sequence-viewer-status',
+    'sequence-viewer-messages',
+    'sequence-viewer-record-select',
+    'sequence-viewer-stat-format',
+    'sequence-viewer-stat-length',
+    'sequence-viewer-stat-topology',
+    'sequence-viewer-stat-gc',
+    'sequence-viewer-stat-ambiguous',
+    'sequence-viewer-stat-quality',
+    'sequence-viewer-stat-features',
+    'sequence-viewer-stat-restriction-sites',
+    'sequence-viewer-feature-rail-host',
+    'sequence-viewer-feature-detail',
+    'sequence-viewer-sequence-host'
+  ];
+  const annotateCalls = [];
+  const document = createMockDocument(ids);
+  const window = {
+    enanaApi: {
+      sequenceLibraryAnnotate: async (payload) => {
+        annotateCalls.push(payload);
+        return {
+          ok: true,
+          dnaMatches: [{
+            featureId: 'feature_promoter',
+            name: 'StrongPromoter',
+            type: 'promoter',
+            strand: 1,
+            sequenceLength: 12,
+            hosts: [{ hostVectorId: 'host_1', hostVectorName: 'VectorHost', hostVectorStatus: 'saved' }],
+            segments: [{ start: 3, end: 15 }]
+          }],
+          proteinMatches: [{
+            name: 'ReporterCds',
+            type: 'cds',
+            strand: 1,
+            translation: 'MKG',
+            proteinSequence: 'MKG',
+            hosts: [{ hostVectorId: 'host_1', hostVectorName: 'VectorHost', hostVectorStatus: 'saved' }],
+            orfFrame: '+1',
+            orfLengthNt: 12,
+            orfLengthAa: 3,
+            startCodon: 'ATG',
+            stopCodon: 'TAA',
+            segments: [{ start: 15, end: 27 }]
+          }]
+        };
+      }
+    }
+  };
+  const localStorage = {
+    getItem(key) {
+      if (key === 'enana_state_v1') {
+        return JSON.stringify({ settings: { storagePath: '/tmp/sequence-viewer-tests' } });
+      }
+      return null;
+    }
+  };
+  const moduleWithDom = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    { document, window, localStorage }
+  );
+  const viewer = moduleWithDom.initSequenceViewer();
+  viewer.loadFromExternal({
+    name: 'annotate_me',
+    sequence: 'GGGTTGACCATGAAAGGGTAA',
+    source: 'external',
+    features: []
+  });
+
+  const annotateBtn = document.getElementById('sequence-viewer-annotate-btn');
+  const featureRailHost = document.getElementById('sequence-viewer-feature-rail-host');
+  const featureDetail = document.getElementById('sequence-viewer-feature-detail');
+  const status = document.getElementById('sequence-viewer-status');
+  const statFeatures = document.getElementById('sequence-viewer-stat-features');
+  const initialFeatureCount = Number(statFeatures.textContent || 0);
+
+  trigger(annotateBtn, 'click');
+  await flushAsync();
+  await flushAsync();
+
+  assert.equal(annotateCalls.length, 1);
+  assert.equal(annotateCalls[0].sequence, 'GGGTTGACCATGAAAGGGTAA');
+  assert.equal(annotateCalls[0].topology, 'linear');
   assert.equal(Number(statFeatures.textContent || 0), initialFeatureCount + 2);
-  assert.match(featureRailHost.innerHTML, /Backbone \(HostVector\)/);
-  assert.match(featureRailHost.innerHTML, /Insert \(HostVector\)/);
-  assert.match(featureDetail.innerHTML, /Insert \(HostVector\)/);
+  assert.match(featureRailHost.innerHTML, /StrongPromoter/);
+  assert.match(featureRailHost.innerHTML, /ReporterCds/);
+  assert.match(featureDetail.innerHTML, /ReporterCds/);
   assert.match(status.textContent, /Save the record to persist changes/);
 });
 

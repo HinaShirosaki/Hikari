@@ -1,0 +1,37 @@
+LOCUS       .                       1289 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..1289
+                     /note="promoter for the mouse calcium/calmodulin-dependent
+                     kinase II α subunit"
+                     /label="CaMKII promoter"
+ORIGIN
+        1 cattatggcc ttaggtcact tcatctccat ggggttcttc ttctgatttt ctagaaaatg
+       61 agatgggggt gcagagagct tcctcagtga cctgcccagg gtcacatcag aaatgtcaga
+      121 gctagaactt gaactcagat tactaatctt aaattccatg ccttgggggc atgcaagtac
+      181 gatatacaga aggagtgaac tcattagggc agatgaccaa tgagtttagg aaagaagagt
+      241 ccagggcagg gtacatctac accacccgcc cagccctggg tgagtccagc cacgttcacc
+      301 tcattatagt tgcctctctc cagtcctacc ttgacgggaa gcacaagcag aaactgggac
+      361 aggagcccca ggagaccaaa tcttcatggt ccctctggga ggatgggtgg ggagagctgt
+      421 ggcagaggcc tcaggagggg ccctgctgct cagtggtgac agataggggt gagaaagcag
+      481 acagagtcat tccgtcagca ttctgggtct gtttggtact tcttctcacg ctaaggtggc
+      541 ggtgtgatat gcacaatggc taaaaagcag ggagagctgg aaagaaacaa ggacagagac
+      601 agaggccaag tcaaccagac caattcccag aggaagcaaa gaaaccatta cagagactac
+      661 aagggggaag ggaaggagag atgaattagc ttcccctgta aaccttagaa cccagctgtt
+      721 gccagggcaa cggggcaata cctgtctctt cagaggagat gaagttgcca gggtaactac
+      781 atcctgtctt tctcaaggac catcccagaa tgtggcaccc actagccgtt accatagcaa
+      841 ctgcctcttt gccccactta atcccatccc gtctgttaaa agggccctat agttggaggt
+      901 gggggaggta ggaagagcga tgatcacttg tggactaagt ttgttcgcat ccccttctcc
+      961 aaccccctca gtacatcacc ctgggggaac agggtccact tgctcctggg cccacacagt
+     1021 cctgcagtat tgtgtatata aggccagggc aaagaggagc aggttttaaa gtgaaaggca
+     1081 ggcaggtgtt ggggaggcag ttaccggggc aacgggaaca gggcgtttcg gaggtggttg
+     1141 ccatggggac ctggatgctg acgaaggctc gcgaggctgt gagcagccac agtgccctgc
+     1201 tcagaagccc caagctcgtc agtcaagccg gttctccgtt tgcactcagg agcacgggca
+     1261 ggcgagtggc ccctagttct gggggcagc
+//

@@ -1,0 +1,22 @@
+LOCUS       .                        453 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..453
+                     /note="Drosophila melanogaster&nbsp;hsp70Bb promoter"
+                     /label="hsp70 promoter"
+ORIGIN
+        1 ctagaatccc aaaacaaact ggttattgtg gtaggtcatt tgtttggcag aaagaaaact
+       61 cgagaaattt ctctggccgt tattcgttat tctctctttt ctttttgggt ctctccctct
+      121 ctgcactaat gctctctcac tctgtcacac agtaaacggc atactgctct cgttggttcg
+      181 agagagcgcg cctcgaatgt tcgcgaaaag agcgccggag tataaataga ggcgcttcgt
+      241 ctacggagcg acaattcaat tcaaacaagc aaagtgaaca cgtcgctaag cgaaagctaa
+      301 gcaaataaac aagcgcagct gaacaagcta aacaatctgc agtaaagtgc aagttaaagt
+      361 gaatcaatta aaagtaacca gcaaccaagt aaatcaactg caactactga aatctgccaa
+      421 gaagtaatta ttgaatacaa gaagagaact ctg
+//

@@ -1,17 +1,6 @@
 <section id="agent-view" class="view">
       <div class="agent-chat-layout left-rail-template">
         <aside class="agent-session-rail app-left-rail left-rail-template__rail" data-sync-left-rail>
-          <div class="agent-rail-meta">
-            <div class="form-grid agent-rail-context-grid">
-              <label class="agent-rail-filter">
-                <span>Project Scope</span>
-                <select id="agent-project-select">
-                  <option value="">All projects</option>
-                </select>
-              </label>
-            </div>
-          </div>
-
           <div class="agent-session-panel">
             <div class="agent-session-toolbar">
               <div>
@@ -54,14 +43,21 @@
               </div>
               <div class="agent-composer-shell">
                 <div class="stack-form agent-composer-card">
+                  <input id="agent-attachment-input" type="file" multiple hidden />
                   <label class="agent-composer-label">
                     <span>Message</span>
                     <textarea id="agent-message-input" rows="3" placeholder="Ask for protocol guidance, inventory checks, literature-grounded suggestions, or planning support."></textarea>
                   </label>
+                  <div id="agent-attachment-list" class="agent-attachment-list" hidden></div>
                   <div class="agent-composer-toolbar">
-                    <div class="agent-composer-hints">
-                      <span class="agent-inline-hint">Enter to send</span>
-                      <span class="agent-inline-hint">Shift+Enter for newline</span>
+                    <div class="agent-composer-toolbar-start">
+                      <button type="button" id="agent-attach-btn" class="ghost-btn agent-attach-btn" aria-label="Attach photos or files" title="Attach photos or files">+</button>
+                      <label class="agent-composer-project agent-composer-project-inline">
+                        <span class="sr-only">Project Scope</span>
+                        <select id="agent-project-select" aria-label="Project Scope">
+                          <option value="">All projects</option>
+                        </select>
+                      </label>
                     </div>
                     <div class="form-actions agent-composer-actions">
                       <button type="button" id="agent-deep-research-toggle-btn" class="ghost-btn">Deep Research: Off</button>

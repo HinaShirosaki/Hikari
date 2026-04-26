@@ -4,6 +4,10 @@ import { createPapersCommentController } from './comments.js';
 import { createPapersLibraryController } from './library.js';
 import { ensurePaperHighlights } from './model.js';
 import { normalizePaperSummary } from './normalizers.js';
+import {
+  hasPaperPdfMetadata,
+  normalizePaperPdfMetadata
+} from './pdf-metadata.js';
 
 function getPapersElements(doc = null) {
   const getById = (id) => doc?.getElementById?.(id) || null;
@@ -23,10 +27,15 @@ function getPapersElements(doc = null) {
     paperUploadTargetLabel: getById('paper-upload-target-label'),
     papersLibraryContextMenu: getById('papers-library-context-menu'),
     papersContextNewFolderBtn: getById('papers-context-new-folder'),
+    papersContextRenameFolderBtn: getById('papers-context-rename-folder'),
     papersContextDeleteFolderBtn: getById('papers-context-delete-folder'),
     paperCommentPanel: getById('paper-comment-panel'),
     paperCommentToggleBtn: getById('paper-comment-toggle-btn'),
     paperCommentSidebar: getById('paper-comment-sidebar'),
+    paperSummarySection: getById('paper-summary-section'),
+    paperSummaryToggleBtn: getById('paper-summary-toggle-btn'),
+    paperSummaryContent: getById('paper-summary-content'),
+    paperSummaryList: getById('paper-summary-list'),
     paperCommentPage: getById('paper-comment-page'),
     paperCommentCount: getById('paper-comment-count'),
     paperCommentAddBtn: getById('paper-comment-add-btn'),
@@ -85,7 +94,10 @@ export function initPapersManagement({
     draftAnchorY: Number.NaN
   };
   const libraryState = {
-    selectedFolderKey: ''
+    selectedFolderKey: '',
+    expandedFolderKeys: new Set(),
+    renamingFolderKey: '',
+    renamingFolderName: ''
   };
   const libraryContextState = {
     folderKey: '',
@@ -94,7 +106,8 @@ export function initPapersManagement({
     paperId: ''
   };
   const uiState = {
-    commentsCollapsed: false
+    commentsCollapsed: false,
+    summaryCollapsed: false
   };
   const discoveryState = {
     inFlight: false,
@@ -188,6 +201,7 @@ export function initPapersManagement({
     library: null,
     renderLibrarySidebar() {},
     renderCommentSidebar() {},
+    renderSummarySection() {},
     renderCommentPanelState() {},
     syncViewerHighlights() {},
     render() {},
@@ -203,12 +217,52 @@ export function initPapersManagement({
     toggleCommentsCollapsed() {
       context.setCommentsCollapsed(!uiState.commentsCollapsed);
     },
+    setSummaryCollapsed(collapsed) {
+      const nextValue = Boolean(collapsed);
+      if (uiState.summaryCollapsed === nextValue) {
+        return;
+      }
+      uiState.summaryCollapsed = nextValue;
+      context.renderSummarySection();
+    },
+    toggleSummaryCollapsed() {
+      context.setSummaryCollapsed(!uiState.summaryCollapsed);
+    },
     getPaperById(paperId) {
       return (state.papers || []).find((paper) => paper.id === paperId) || null;
     },
     getActivePaper() {
       const activePaperId = context.paperViewer.getActivePaperId();
       return (state.papers || []).find((paper) => paper.id === activePaperId) || null;
+    },
+    applyResolvedPdfMetadata({ paperId = '', metadata = null } = {}) {
+      const paper = context.getPaperById(paperId);
+      if (!paper) {
+        return;
+      }
+
+      const normalized = normalizePaperPdfMetadata(metadata);
+      if (!hasPaperPdfMetadata(normalized)) {
+        context.renderSummarySection();
+        return;
+      }
+
+      const current = normalizePaperPdfMetadata(paper.pdfMetadata);
+      const metadataChanged = JSON.stringify(normalized) !== JSON.stringify(current);
+      const titleChanged = Boolean(normalized.title) && normalized.title !== String(paper.title || '').trim();
+      if (!metadataChanged && !titleChanged) {
+        context.renderSummarySection();
+        return;
+      }
+
+      paper.pdfMetadata = normalized;
+      if (normalized.title) {
+        paper.title = normalized.title;
+      }
+
+      persist();
+      context.renderLibrarySidebar?.(libraryState.selectedFolderKey);
+      context.renderSummarySection();
     }
   };
 
@@ -235,6 +289,7 @@ export function initPapersManagement({
     highlightBtn: elements.paperViewerHighlightBtn,
     zoomLabel: elements.paperViewerZoomLabel,
     openExternalBtn: elements.paperViewerOpenExternalBtn,
+    onMetadataResolved: (...args) => context.applyResolvedPdfMetadata(...args),
     onPageChange: (...args) => context.comments?.onViewerPageChange(...args),
     onPlacement: (...args) => context.comments?.onViewerPlacement(...args),
     onPinSelect: (...args) => context.comments?.onViewerPinSelect(...args),
@@ -294,6 +349,7 @@ export function initPapersManagement({
 
   context.renderLibrarySidebar = (...args) => library.renderLibrarySidebar(...args);
   context.renderCommentSidebar = (...args) => comments.renderCommentSidebar(...args);
+  context.renderSummarySection = (...args) => comments.renderSummarySection(...args);
   context.syncViewerHighlights = () => {
     const activePaper = context.getActivePaper?.() || null;
     paperViewer.setHighlights(activePaper ? ensurePaperHighlights(activePaper) : []);

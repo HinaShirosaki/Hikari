@@ -171,7 +171,7 @@ module.exports = function registerAgentContractsA(context = {}) {
 
     test('agent registrar hard-errors when intent parser output is invalid', () => {
       const controllerCoreSource = fs.readFileSync(agentRegistrarPath('agent-controller-core.js'), 'utf8');
-      assert.match(controllerCoreSource, /if \(!parserResult\?\.ok \|\| !parserResult\?\.payload\)/);
+      assert.match(controllerCoreSource, /if \(!rawParserResult\?\.ok \|\| !rawParserResult\?\.payload\)/);
       assert.match(controllerCoreSource, /ok:\s*false/);
       assert.match(controllerCoreSource, /Intent parser failed:/);
     });

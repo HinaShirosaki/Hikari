@@ -1,0 +1,23 @@
+LOCUS       .                        433 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..433
+                     /gene="sacR"
+                     /note="sacB promoter and control region"
+                     /label="sacB promoter"
+ORIGIN
+        1 cgttcactat tatttagtga aatgagatat tatgatattt tctgaattgt gattaaaaag
+       61 gcaactttat gcccatgcaa cagaaactat aaaaaataca gagaatgaaa agaaacagat
+      121 agatttttta gttctttagg cccgtagtct gcaaatcctt ttatgatttt ctatcaaaca
+      181 aaagaggaaa atagaccagt tgcaatccaa acgagagtct aatagaatga ggtcgaaaag
+      241 taaatcgcgc gggtttgtta ctgataaagc aggcaagacc taaaatgtgt aaagggcaaa
+      301 gtgtatactt tggcgtcacc ccttacatat tttaggtctt tttttattgt gcgtaactaa
+      361 cttgccatct tcaaacagga gggctggaag aagcagaccg ctaacacagt acataaaaaa
+      421 ggagacatga acg
+//

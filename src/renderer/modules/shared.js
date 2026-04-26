@@ -38,7 +38,7 @@ export const VIEWS = {
 };
 
 export const TITLES = {
-  [VIEWS.HOME]: 'Bench overview, reminders, workflow progress, and a lab timer.',
+  [VIEWS.HOME]: 'Bench overview, contribution activity, reminders, and lab timers.',
   [VIEWS.PROTOCOL_MANAGEMENT]: 'Protocol library for drafting, editing, and reuse.',
   [VIEWS.BIOLOGY_NOTEBOOK]: 'Biology notebook entries and wet-lab context.',
   [VIEWS.LAB_COMMON_INVENTORY]: 'Chemical inventory, locations, and stock records.',
@@ -157,6 +157,7 @@ export const defaultState = {
       uiStyle: 'neutral-compact'
     },
     storagePath: '',
+    pendingNotebookSampleCapture: null,
     storageImport: {
       lastImportedAt: '',
       manifestPath: '',
@@ -189,7 +190,11 @@ export const defaultState = {
     dashboard: {
       currentWorkflowId: '',
       workflowProgress: {},
-      quickLogDraft: ''
+      quickLogDraft: '',
+      quickLogEntries: [],
+      incubationLocations: [],
+      timerTemplates: [],
+      activeTimers: []
     },
     startup: {
       defaultViewId: VIEWS.HOME,
@@ -217,10 +222,19 @@ function normalizeCellPassage(rawValue) {
   if (!Number.isFinite(intervalDays) || intervalDays <= 0) {
     return null;
   }
-  return {
+  const normalized = {
     lastPassageDate,
     intervalDays
   };
+  const passageNumber = Math.round(Number(rawValue.passageNumber));
+  if (Number.isFinite(passageNumber) && passageNumber > 0) {
+    normalized.passageNumber = passageNumber;
+  }
+  const deferredUntilDate = String(rawValue.deferredUntilDate || '').trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(deferredUntilDate)) {
+    normalized.deferredUntilDate = deferredUntilDate;
+  }
+  return normalized;
 }
 
 function normalizeSampleRecord(rawSample) {
@@ -239,6 +253,116 @@ function normalizeSampleRecord(rawSample) {
     return rest;
   }
   return rawSample;
+}
+
+function normalizeDashboardDateString(rawValue) {
+  const value = String(rawValue || '').trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : '';
+}
+
+function normalizeDashboardIncubationLocations(rawValue) {
+  if (!Array.isArray(rawValue)) {
+    return [];
+  }
+  const seen = new Set();
+  const locations = [];
+  rawValue.forEach((item) => {
+    const rawName = item && typeof item === 'object' && !Array.isArray(item)
+      ? item.name
+      : item;
+    const name = String(rawName || '').trim().replace(/\s+/g, ' ');
+    if (!name) {
+      return;
+    }
+    const key = name.toLowerCase();
+    if (seen.has(key)) {
+      return;
+    }
+    seen.add(key);
+    locations.push({
+      name,
+      reminderDate: item && typeof item === 'object' && !Array.isArray(item)
+        ? normalizeDashboardDateString(item.reminderDate || item.remindOnDate)
+        : ''
+    });
+  });
+  return locations;
+}
+
+function normalizeDashboardTimerTemplates(rawValue) {
+  if (!Array.isArray(rawValue)) {
+    return [];
+  }
+  return rawValue.map((item) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      return null;
+    }
+    const name = String(item.name || '').trim().replace(/\s+/g, ' ');
+    const durationMinutes = Math.round(Number(item.durationMinutes || item.minutes));
+    if (!name || !Number.isFinite(durationMinutes) || durationMinutes <= 0) {
+      return null;
+    }
+    return {
+      name,
+      durationMinutes
+    };
+  }).filter(Boolean);
+}
+
+function normalizeDashboardActiveTimers(rawValue) {
+  if (!Array.isArray(rawValue)) {
+    return [];
+  }
+  return rawValue.map((item) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      return null;
+    }
+    const name = String(item.name || '').trim().replace(/\s+/g, ' ');
+    const durationMinutes = Math.round(Number(item.durationMinutes || item.minutes));
+    const startedAtMs = Number(item.startedAtMs || item.startedAt || 0);
+    const endAtMs = Number(item.endAtMs || item.endAt || 0);
+    if (
+      !name
+      || !Number.isFinite(durationMinutes)
+      || durationMinutes <= 0
+      || !Number.isFinite(startedAtMs)
+      || startedAtMs <= 0
+      || !Number.isFinite(endAtMs)
+      || endAtMs <= startedAtMs
+    ) {
+      return null;
+    }
+    return {
+      name,
+      durationMinutes,
+      startedAtMs,
+      endAtMs
+    };
+  }).filter(Boolean);
+}
+
+function normalizeDashboardQuickLogEntries(rawValue) {
+  if (!Array.isArray(rawValue)) {
+    return [];
+  }
+  return rawValue.map((item) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      return null;
+    }
+    const id = String(item.id || '').trim();
+    const text = String(item.text || item.note || '').trim();
+    const createdAt = String(item.createdAt || item.updatedAt || '').trim();
+    const updatedAt = String(item.updatedAt || item.createdAt || '').trim() || createdAt;
+    if (!id || !text || Number.isNaN(Date.parse(createdAt))) {
+      return null;
+    }
+    return {
+      id,
+      text,
+      createdAt,
+      updatedAt
+    };
+  }).filter(Boolean).slice(-500);
 }
 
 function normalizeWorkflowProgressMap(rawValue) {
@@ -501,7 +625,11 @@ export function normalizeState(parsed) {
         ...rawDashboard,
         currentWorkflowId: String(rawDashboard.currentWorkflowId || ''),
         workflowProgress: normalizeWorkflowProgressMap(rawDashboard.workflowProgress),
-        quickLogDraft: String(rawDashboard.quickLogDraft || '')
+        quickLogDraft: String(rawDashboard.quickLogDraft || ''),
+        quickLogEntries: normalizeDashboardQuickLogEntries(rawDashboard.quickLogEntries),
+        incubationLocations: normalizeDashboardIncubationLocations(rawDashboard.incubationLocations),
+        timerTemplates: normalizeDashboardTimerTemplates(rawDashboard.timerTemplates),
+        activeTimers: normalizeDashboardActiveTimers(rawDashboard.activeTimers)
       },
       startup: {
         ...defaultState.settings.startup,

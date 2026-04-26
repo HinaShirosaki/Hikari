@@ -1,0 +1,35 @@
+LOCUS       .                       1190 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..1190
+                     /note="strong constitutive promoter for human elongation
+                     factor EF-1α"
+                     /label="EF-1α promoter"
+ORIGIN
+        1 gctccggtgc ccgtcagtgg gcagagcgca catcgcccac agtccccgag aagttggggg
+       61 gaggggtcgg caattgaacc ggtgcctaga gaaggtggcg cggggtaaac tgggaaagtg
+      121 atgtcgtgta ctggctccgc ctttttcccg agggtggggg agaaccgtat ataagtgcag
+      181 tagtcgccgt gaacgttctt tttcgcaacg ggtttgccgc cagaacacag gtaagtgccg
+      241 tgtgtggttc ccgcgggcct ggcctcttta cgggttatgg cccttgcgtg ccttgaatta
+      301 cttccacgcc cctggctgca gtacgtgatt cttgatcccg agcttcgggt tggaagtggg
+      361 tgggagagtt cgaggccttg cgcttaagga gccccttcgc ctcgtgcttg agttgaggcc
+      421 tggcctgggc gctggggccg ccgcgtgcga atctggtggc accttcgcgc ctgtctcgct
+      481 gctttcgata agtctctagc catttaaaat ttttgatgac ctgctgcgac gctttttttc
+      541 tggcaagata gtcttgtaaa tgcgggccaa gatcgatctg cacactggta tttcggtttt
+      601 tggggccgcg ggcggcgacg gggcccgtgc gtcccagcgc acatgttcgg cgaggcgggg
+      661 cctgcgagcg cggccaccga gaatcggacg ggggtagtct caagctggcc ggcctgctct
+      721 ggtgcctggc ctcgcgccgc cgtgtatcgc cccgccctgg gcggcaaggc tggcccggtc
+      781 ggcaccagtt gcgtgagcgg aaagatggcc gcttcccggc cctgctgcag ggagctcaaa
+      841 atggaggacg cggcgctcgg gagagcgggc gggtgagtca cccacacaaa ggaaaagggc
+      901 ctttccgtcc tcagccgtcg cttcatgtga ctccacggag taccgggcgc cgtccaggca
+      961 cctcgattag ttctcgatcg agcttttgga gtacgtcgtc tttaggttgg ggggaggggt
+     1021 tttatgcgat ggagtttccc cacactgagt gggtggagac tgaagttagg ccagcttggc
+     1081 acttgatgta attctccttg gaatttgccc tttttgagtt tggatcttgg ttcattctca
+     1141 agcctcagac agtggttcaa agtttttttc ttccatttca ggtgtcgtga
+//

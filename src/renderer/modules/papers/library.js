@@ -5,6 +5,7 @@ import {
   getVisiblePapersForFolder,
   formatRelativePaperTime
 } from './model.js';
+import { getPaperDisplayTitle } from './pdf-metadata.js';
 
 export function createPapersLibraryController(context) {
   const {
@@ -20,6 +21,51 @@ export function createPapersLibraryController(context) {
     elements
   } = context;
 
+  function getExpandedFolderKeys() {
+    if (!(libraryState.expandedFolderKeys instanceof Set)) {
+      const normalized = Array.isArray(libraryState.expandedFolderKeys)
+        ? libraryState.expandedFolderKeys
+        : [];
+      libraryState.expandedFolderKeys = new Set(
+        normalized
+          .map((item) => String(item || '').trim())
+          .filter(Boolean)
+      );
+    }
+    return libraryState.expandedFolderKeys;
+  }
+
+  function pruneExpandedFolderKeys(folders = []) {
+    const validKeys = new Set(
+      (Array.isArray(folders) ? folders : [])
+        .map((folder) => String(folder?.key || '').trim())
+        .filter(Boolean)
+    );
+    const expandedFolderKeys = getExpandedFolderKeys();
+    [...expandedFolderKeys].forEach((key) => {
+      if (!validKeys.has(key)) {
+        expandedFolderKeys.delete(key);
+      }
+    });
+  }
+
+  function isFolderExpanded(folderKey = '') {
+    return getExpandedFolderKeys().has(String(folderKey || '').trim());
+  }
+
+  function setFolderExpanded(folderKey = '', expanded = false) {
+    const normalizedKey = String(folderKey || '').trim();
+    if (!normalizedKey) {
+      return;
+    }
+    const expandedFolderKeys = getExpandedFolderKeys();
+    if (expanded) {
+      expandedFolderKeys.add(normalizedKey);
+      return;
+    }
+    expandedFolderKeys.delete(normalizedKey);
+  }
+
   function getCurrentLinkOptions() {
     if (elements.paperLinkTypeSelect?.value === 'journal-club') {
       return (state.journalClubs || []).map((club) => ({
@@ -32,6 +78,30 @@ export function createPapersLibraryController(context) {
       id: project.id,
       name: project.name
     }));
+  }
+
+  function clearFolderRenameState() {
+    libraryState.renamingFolderKey = '';
+    libraryState.renamingFolderName = '';
+  }
+
+  function getRenameableFolder(folderKey = '') {
+    const normalizedKey = String(folderKey || '').trim();
+    if (!normalizedKey) {
+      return null;
+    }
+    const folder = getLibraryFolders(state).find((item) => item.key === normalizedKey) || null;
+    if (!folder || folder.type !== 'journal-club') {
+      return null;
+    }
+    return folder;
+  }
+
+  function findFolderTarget(target) {
+    if (!target || typeof target.closest !== 'function') {
+      return null;
+    }
+    return target.closest('[data-folder-context]') || target.closest('[data-folder-select]') || null;
   }
 
   function hideLibraryContextMenu() {
@@ -47,6 +117,10 @@ export function createPapersLibraryController(context) {
 
   function onGlobalKeydown(event) {
     if (event?.key === 'Escape') {
+      if (libraryState.renamingFolderKey) {
+        cancelFolderRename();
+        return;
+      }
       hideLibraryContextMenu();
     }
   }
@@ -61,8 +135,13 @@ export function createPapersLibraryController(context) {
     }
     event.preventDefault?.();
 
-    const folderTarget = event.target?.closest?.('[data-folder-select]');
-    const folderKey = String(folderTarget?.dataset?.folderSelect || libraryState.selectedFolderKey || '').trim();
+    const folderTarget = findFolderTarget(event.target);
+    const folderKey = String(
+      folderTarget?.dataset?.folderContext
+      || folderTarget?.dataset?.folderSelect
+      || libraryState.selectedFolderKey
+      || ''
+    ).trim();
     const folder = getLibraryFolders(state).find((item) => item.key === folderKey) || null;
 
     libraryContextState.folderKey = folder?.key || '';
@@ -70,6 +149,9 @@ export function createPapersLibraryController(context) {
     libraryContextState.folderType = folder?.type || '';
     libraryContextState.paperId = '';
 
+    if (elements.papersContextRenameFolderBtn) {
+      elements.papersContextRenameFolderBtn.hidden = !(folder && folder.type === 'journal-club');
+    }
     if (elements.papersContextDeleteFolderBtn) {
       elements.papersContextDeleteFolderBtn.hidden = !(folder && folder.type === 'journal-club');
     }
@@ -81,10 +163,31 @@ export function createPapersLibraryController(context) {
     elements.papersLibraryContextMenu.hidden = false;
   }
 
+  function buildDefaultFolderName() {
+    const existingNames = new Set(
+      (state.journalClubs || [])
+        .map((club) => String(club?.name || '').trim().toLowerCase())
+        .filter(Boolean)
+    );
+
+    let suffix = 1;
+    while (true) {
+      const candidate = suffix === 1 ? 'New Folder' : `New Folder ${suffix}`;
+      if (!existingNames.has(candidate.toLowerCase())) {
+        return candidate;
+      }
+      suffix += 1;
+    }
+  }
+
   function createJournalClubFolder({ name, description = '' } = {}) {
-    const normalizedName = String(name || '').trim();
+    const fallbackName = buildDefaultFolderName();
+    const normalizedName = String(name || fallbackName).trim() || fallbackName;
     if (!normalizedName) {
-      return false;
+      return null;
+    }
+    if (!Array.isArray(state.journalClubs)) {
+      state.journalClubs = [];
     }
 
     const journalClub = {
@@ -96,23 +199,105 @@ export function createPapersLibraryController(context) {
 
     persist();
     libraryState.selectedFolderKey = buildFolderKey('journal-club', journalClub.id);
+    setFolderExpanded(libraryState.selectedFolderKey, true);
     renderLibrarySidebar();
-    return true;
+    return journalClub;
   }
 
   function onCreateJournalClubFromMenu() {
     hideLibraryContextMenu();
-    const promptFn = typeof windowRef?.prompt === 'function' ? windowRef.prompt.bind(windowRef) : null;
-    if (!promptFn) {
-      windowRef?.alert?.('Folder naming prompt is unavailable.');
+    createJournalClubFolder({ name: buildDefaultFolderName() });
+  }
+
+  function focusRenameInput() {
+    if (typeof windowRef?.requestAnimationFrame !== 'function') {
+      return;
+    }
+    windowRef.requestAnimationFrame(() => {
+      const renameInput = elements.journalClubList?.querySelector?.('[data-folder-rename-input]');
+      renameInput?.focus?.();
+      const value = String(renameInput?.value || '');
+      renameInput?.setSelectionRange?.(0, value.length);
+    });
+  }
+
+  function beginFolderRename(folderKey = '') {
+    const folder = getRenameableFolder(folderKey);
+    if (!folder) {
       return;
     }
 
-    const name = String(promptFn('Journal club folder name') || '').trim();
-    if (!name) {
+    hideLibraryContextMenu();
+    libraryState.selectedFolderKey = folder.key;
+    setFolderExpanded(folder.key, true);
+    libraryState.renamingFolderKey = folder.key;
+    libraryState.renamingFolderName = folder.name;
+    renderLibrarySidebar(folder.key);
+    focusRenameInput();
+  }
+
+  function validateRenamedFolderName(nextName = '', currentFolderId = '') {
+    const normalizedName = String(nextName || '').trim();
+    if (!normalizedName) {
+      return {
+        ok: false,
+        error: 'Folder name cannot be empty.'
+      };
+    }
+    const duplicate = (state.journalClubs || []).find((club) => (
+      String(club?.id || '').trim() !== String(currentFolderId || '').trim()
+      && String(club?.name || '').trim().toLowerCase() === normalizedName.toLowerCase()
+    ));
+    if (duplicate) {
+      return {
+        ok: false,
+        error: 'A folder with this name already exists.'
+      };
+    }
+    return {
+      ok: true,
+      name: normalizedName
+    };
+  }
+
+  function commitFolderRename(folderKey = '') {
+    const folder = getRenameableFolder(folderKey || libraryState.renamingFolderKey);
+    if (!folder) {
+      clearFolderRenameState();
+      renderLibrarySidebar(libraryState.selectedFolderKey);
       return;
     }
-    createJournalClubFolder({ name });
+
+    const validation = validateRenamedFolderName(libraryState.renamingFolderName, folder.id);
+    if (!validation.ok) {
+      windowRef?.alert?.(validation.error);
+      focusRenameInput();
+      return;
+    }
+
+    const journalClub = (state.journalClubs || []).find((club) => String(club?.id || '').trim() === String(folder.id || '').trim()) || null;
+    if (!journalClub) {
+      clearFolderRenameState();
+      renderLibrarySidebar(libraryState.selectedFolderKey);
+      return;
+    }
+
+    journalClub.name = validation.name;
+    clearFolderRenameState();
+    persist();
+    renderLibrarySidebar(folder.key);
+  }
+
+  function cancelFolderRename() {
+    if (!libraryState.renamingFolderKey) {
+      return;
+    }
+    clearFolderRenameState();
+    renderLibrarySidebar(libraryState.selectedFolderKey);
+  }
+
+  function onRenameJournalClubFromMenu() {
+    beginFolderRename(libraryContextState.folderKey);
   }
 
   function onDeleteJournalClubFromMenu() {
@@ -136,6 +321,12 @@ export function createPapersLibraryController(context) {
     event?.preventDefault?.();
     event?.stopPropagation?.();
     onCreateJournalClubFromMenu();
+  }
+
+  function onRenameJournalClubFromMenuClick(event) {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    onRenameJournalClubFromMenu();
   }
 
   function onDeleteJournalClubFromMenuClick(event) {
@@ -199,6 +390,8 @@ export function createPapersLibraryController(context) {
 
   function syncSelectedFolder(preferredKey = '') {
     const folders = getLibraryFolders(state);
+    pruneExpandedFolderKeys(folders);
+    const previousSelectedKey = String(libraryState.selectedFolderKey || '').trim();
     const selectedFolder = folders.find((folder) => folder.key === preferredKey)
       || folders.find((folder) => folder.key === libraryState.selectedFolderKey)
       || folders.find((folder) => folder.key === buildFolderKey(elements.paperLinkTypeSelect?.value, elements.paperLinkTargetSelect?.value))
@@ -206,6 +399,16 @@ export function createPapersLibraryController(context) {
       || null;
 
     libraryState.selectedFolderKey = selectedFolder?.key || '';
+    if (
+      selectedFolder?.key
+      && (
+        libraryState.hasInitializedFolderExpansion !== true
+        || previousSelectedKey !== selectedFolder.key
+      )
+    ) {
+      setFolderExpanded(selectedFolder.key, true);
+      libraryState.hasInitializedFolderExpansion = true;
+    }
 
     if (!selectedFolder) {
       if (elements.paperLinkTargetSelect) {
@@ -253,7 +456,7 @@ export function createPapersLibraryController(context) {
         class="papers-paper-row${activePaperId === paper.id ? ' is-active' : ''}"
         data-paper-view="${paper.id}"
       >
-        <span class="papers-paper-title">${safeText(paper.title)}</span>
+        <span class="papers-paper-title">${safeText(getPaperDisplayTitle(paper))}</span>
         <span class="papers-paper-time">${safeText(formatRelativePaperTime(paper.updatedAt))}</span>
       </button>
     `).join('');
@@ -280,16 +483,54 @@ export function createPapersLibraryController(context) {
     }
 
     elements.journalClubList.innerHTML = folders.map((folder) => `
-      <div class="papers-folder-group${folder.key === selectedFolder?.key ? ' is-active' : ''}">
-        <button
-          type="button"
-          class="papers-folder-item${folder.key === selectedFolder?.key ? ' is-active' : ''}"
-          data-folder-select="${safeText(folder.key)}"
-        >
-          <span class="papers-folder-glyph" aria-hidden="true"></span>
-          <span class="papers-folder-name">${safeText(folder.name)}</span>
-        </button>
-        ${folder.key === selectedFolder?.key ? `<div class="papers-folder-children">${paperTreeHtml}</div>` : ''}
+      <div class="papers-folder-group${folder.key === selectedFolder?.key ? ' is-active' : ''}${isFolderExpanded(folder.key) ? ' is-expanded' : ''}">
+        ${libraryState.renamingFolderKey === folder.key ? `
+          <div
+            class="papers-folder-item papers-folder-item-editing${folder.key === selectedFolder?.key ? ' is-active' : ''}${isFolderExpanded(folder.key) ? ' is-expanded' : ''}"
+            data-folder-context="${safeText(folder.key)}"
+          >
+            <span class="papers-folder-chevron" aria-hidden="true"></span>
+            <span class="papers-folder-glyph" aria-hidden="true"></span>
+            <div class="papers-folder-rename-wrap">
+              <input
+                type="text"
+                class="papers-folder-rename-input"
+                data-folder-rename-input="${safeText(folder.key)}"
+                value="${safeText(libraryState.renamingFolderName || folder.name)}"
+                aria-label="Rename folder"
+              />
+              <button
+                type="button"
+                class="papers-folder-rename-btn"
+                data-folder-rename-save="${safeText(folder.key)}"
+              >
+                Save
+              </button>
+              <button
+                type="button"
+                class="papers-folder-rename-btn is-secondary"
+                data-folder-rename-cancel="${safeText(folder.key)}"
+              >
+                Cancel
+              </button>
+            </div>
+            <span class="papers-folder-count">${getFolderPaperCount(state, folder)}</span>
+          </div>
+        ` : `
+          <button
+            type="button"
+            class="papers-folder-item${folder.key === selectedFolder?.key ? ' is-active' : ''}${isFolderExpanded(folder.key) ? ' is-expanded' : ''}"
+            data-folder-select="${safeText(folder.key)}"
+            data-folder-context="${safeText(folder.key)}"
+            aria-expanded="${isFolderExpanded(folder.key) ? 'true' : 'false'}"
+          >
+            <span class="papers-folder-chevron" aria-hidden="true"></span>
+            <span class="papers-folder-glyph" aria-hidden="true"></span>
+            <span class="papers-folder-name">${safeText(folder.name)}</span>
+            <span class="papers-folder-count">${getFolderPaperCount(state, folder)}</span>
+          </button>
+        `}
+        ${isFolderExpanded(folder.key) ? `<div class="papers-folder-children">${buildPaperTreeListHtml(folder)}</div>` : ''}
       </div>
     `).join('');
   }
@@ -371,13 +612,62 @@ export function createPapersLibraryController(context) {
   }
 
   function onFolderListClick(event) {
+    const renameSaveBtn = event.target?.closest?.('[data-folder-rename-save]');
+    if (renameSaveBtn) {
+      commitFolderRename(renameSaveBtn.dataset.folderRenameSave);
+      return;
+    }
+
+    const renameCancelBtn = event.target?.closest?.('[data-folder-rename-cancel]');
+    if (renameCancelBtn) {
+      cancelFolderRename();
+      return;
+    }
+
+    if (event.target?.closest?.('[data-folder-rename-input]')) {
+      return;
+    }
+
     const selectBtn = event.target?.closest?.('[data-folder-select]');
     if (!selectBtn) {
       return;
     }
     hideLibraryContextMenu();
-    libraryState.selectedFolderKey = selectBtn.dataset.folderSelect;
+    const folderKey = String(selectBtn.dataset.folderSelect || '').trim();
+    const alreadySelected = folderKey && folderKey === libraryState.selectedFolderKey;
+    libraryState.selectedFolderKey = folderKey;
+    if (folderKey) {
+      setFolderExpanded(folderKey, alreadySelected ? !isFolderExpanded(folderKey) : true);
+    }
     renderLibrarySidebar(libraryState.selectedFolderKey);
+  }
+
+  function onFolderListInput(event) {
+    const renameInput = event.target?.closest?.('[data-folder-rename-input]');
+    if (!renameInput) {
+      return;
+    }
+    libraryState.renamingFolderName = String(event.target?.value || '');
+  }
+
+  function onFolderListKeydown(event) {
+    const renameInput = event.target?.closest?.('[data-folder-rename-input]');
+    if (!renameInput) {
+      return;
+    }
+
+    if (event?.key === 'Enter') {
+      event.preventDefault?.();
+      event.stopPropagation?.();
+      commitFolderRename(renameInput.dataset.folderRenameInput);
+      return;
+    }
+
+    if (event?.key === 'Escape') {
+      event.preventDefault?.();
+      event.stopPropagation?.();
+      cancelFolderRename();
+    }
   }
 
   function onPaperListClick(event) {
@@ -448,12 +738,15 @@ export function createPapersLibraryController(context) {
     elements.paperUploadTrigger?.addEventListener('click', onUploadTriggerClick);
     elements.paperPdfInput?.addEventListener('change', onPaperFileChange);
     elements.journalClubList?.addEventListener('click', onFolderListClick);
+    elements.journalClubList?.addEventListener('input', onFolderListInput);
+    elements.journalClubList?.addEventListener('keydown', onFolderListKeydown);
     elements.journalClubList?.addEventListener('click', onPaperListClick);
     elements.papersLibraryRail?.addEventListener('contextmenu', onLibraryContextMenu);
     elements.papersLibraryContextMenu?.addEventListener('click', onLibraryContextMenuClick);
     elements.paperList?.addEventListener('click', onPaperListClick);
     elements.paperViewerSummarizeBtn?.addEventListener('click', onViewerSummarizeClick);
     elements.papersContextNewFolderBtn?.addEventListener('click', onCreateJournalClubFromMenuClick);
+    elements.papersContextRenameFolderBtn?.addEventListener('click', onRenameJournalClubFromMenuClick);
     elements.papersContextDeleteFolderBtn?.addEventListener('click', onDeleteJournalClubFromMenuClick);
     if (typeof windowRef?.addEventListener === 'function') {
       windowRef.addEventListener('resize', schedulePapersEdgeBleedSync);
@@ -468,6 +761,9 @@ export function createPapersLibraryController(context) {
   return {
     bindEvents,
     observeViewActivation,
+    ensureFolderExpanded(folderKey = '') {
+      setFolderExpanded(folderKey, true);
+    },
     getCurrentLinkOptions,
     getSelectedFolder,
     hideLibraryContextMenu,

@@ -1,0 +1,22 @@
+LOCUS       .                        315 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..315
+                     /note="Tet-responsive promoter&nbsp;PTight, consisting of
+                     seven tet operator&nbsp;sequences followed by the minimal
+                     CMV promoter"
+                     /label="tight TRE promoter"
+ORIGIN
+        1 gagtttactc cctatcagtg atagagaacg tatgtcgagt ttactcccta tcagtgatag
+       61 agaacgatgt cgagtttact ccctatcagt gatagagaac gtatgtcgag tttactccct
+      121 atcagtgata gagaacgtat gtcgagttta ctccctatca gtgatagaga acgtatgtcg
+      181 agtttatccc tatcagtgat agagaacgta tgtcgagttt actccctatc agtgatagag
+      241 aacgtatgtc gaggtaggcg tgtacggtgg gaggcctata taagcagagc tcgtttagtg
+      301 aaccgtcaga tcgcc
+//

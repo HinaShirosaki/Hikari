@@ -95,9 +95,10 @@ function createProtocolGenerationRuntime(deps = {}) {
   };
 
   const PROTOCOL_GENERATION_SYSTEM_PROMPT = [
-    'You generate a concise, reusable lab protocol from paper methods or extracted procedure notes.',
-    'Use only the supplied evidence.',
-    'Do not invent experimental details that are not supported.',
+    'You generate a concise, reusable lab protocol from paper methods, extracted procedure notes, and relevant web results when available.',
+    'Prefer the supplied evidence first.',
+    'If the supplied evidence is incomplete, you may use web search to confirm broadly documented method details from reputable sources before resorting to a placeholder.',
+    'Do not invent experiment-specific details that are not supported.',
     'Return JSON only.'
   ].join(' ');
 
@@ -105,7 +106,9 @@ function createProtocolGenerationRuntime(deps = {}) {
     'Write a short protocol name and a one-sentence purpose.',
     'List only materials that are explicit or strongly supported by the provided evidence.',
     'Produce ordered steps that are operational and concise.',
-    'If the paper omits important values, use bracket placeholders like [time] or [temperature] instead of fabricating numbers.',
+    'Preserve concrete operational values from the evidence, including time, temperature, rpm, speed, centrifugation force, volumes, and concentrations; do not replace stated values with placeholders.',
+    'Placeholders should be rare. Use bracket placeholders only for truly critical missing experiment-specific details that are absent from the supplied evidence and cannot be safely confirmed.',
+    'Prefer trustworthy web-confirmed generic method context over vague placeholders, but do not invent sample-specific or construct-specific settings.',
     'Return the protocol object in the app import format with name, purpose, materials, steps, and troubleshooting.'
   ];
 
@@ -334,7 +337,8 @@ function createProtocolGenerationRuntime(deps = {}) {
       `Step hints:\n- ${stepSeed || '-'}`,
       `User request: ${cleanText(source.message, 2400) || '-'}`,
       'Return JSON with protocol { name, purpose, materials, steps, troubleshooting } and result_summary.',
-      'If a required value is missing, keep the step operational but use bracket placeholders such as [time], [temperature], or [buffer].'
+      'Placeholders should be rare. Keep concrete values for time, temperature, rpm, speed, centrifugation force, incubation length, volumes, and concentrations whenever the evidence states them.',
+      'If a truly critical experiment-specific value remains missing after using the supplied evidence and any available web search context, keep the step operational and use a bracket placeholder such as [DNA amount], [cell density], or [buffer composition].'
     ].join('\n\n');
   }
 
@@ -363,6 +367,7 @@ function createProtocolGenerationRuntime(deps = {}) {
       systemPrompt: PROTOCOL_GENERATION_SYSTEM_PROMPT,
       userPrompt: prompt,
       schema: PROTOCOL_GENERATION_RESPONSE_SCHEMA,
+      enableWebSearch: true,
       traceContext: source.traceContext || null,
       defaultError: 'Protocol generation provider is not configured.'
     });

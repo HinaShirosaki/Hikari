@@ -1,0 +1,26 @@
+LOCUS       .                        658 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..658
+                     /note="5' portion of the Kluyveromyces lactis LAC4
+                     promoter"
+                     /label="LAC4 promoter (5')"
+ORIGIN
+        1 ctagtaacca aaggaaagga acagatagat aaaattccga gactgtcaaa ttaggttttt
+       61 ttcttttttt ttggcgggag tcagtgggcc gaaatatgtt cttggcctag aacttaatct
+      121 ggtttgatca tgccaatact tgcctgagtg cccgactttt tgcccaccct tttgccttct
+      181 gtctatcctt caaaacccac ctgttttcca gccgtatctt cgctcgcatc tacacatact
+      241 gtgccatatc ttgtgtgtag ccggacgtga ctatgaccaa aaacaaacaa ggagaactgt
+      301 tcgccgattt gtaacactcc tgcatccatc caagtgggta tgcgctatgc aatgttaagc
+      361 taggtcaggt cagaccaggt ccaaggacag caacttgact gtatgcaacc tttaccatct
+      421 ttgcacagaa catacttgta gctagctagt tacacttatg gaccgaaaag gcaccccacc
+      481 atgtctgtcc ggctttagag tacggccgca gaccgctgat ttgccttgcc aagcagtagt
+      541 cacaatgcat cgcatgagca cacgggcacg ggcacgggca caggaaccat tggcaaaaat
+      601 accagataca ctataccgac gtatatcaag cccaagttta aaattcctaa atttccgc
+//

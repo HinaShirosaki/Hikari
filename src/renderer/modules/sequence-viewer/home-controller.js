@@ -54,6 +54,7 @@ export function createSequenceViewerHomeController(config = {}) {
       : mode === 'builder'
         ? 'builder'
         : 'home';
+    state.localWorkspaceMode = next;
     rootDocument?.body?.classList?.toggle?.('sequence-viewer-fixed-scroll', next === 'builder' || next === 'alignment');
     if (elements.homeWorkspace) {
       elements.homeWorkspace.hidden = next !== 'home';
@@ -131,8 +132,73 @@ export function createSequenceViewerHomeController(config = {}) {
       return;
     }
 
+    const title = String(entry?.name || 'Sequence preview');
+    if (typeof rootDocument?.createElement === 'function' && typeof elements.previewHost?.replaceChildren === 'function') {
+      const frame = rootDocument.createElement('iframe');
+      frame.className = 'sequence-viewer-preview-frame';
+      frame.loading = 'lazy';
+      frame.title = title;
+      frame.setAttribute('scrolling', 'no');
+      frame.srcdoc = String(htmlText);
+      frame.addEventListener('load', () => {
+        schedulePreviewFrameHeightSync(frame);
+      }, { once: true });
+      elements.previewHost.replaceChildren(frame);
+      schedulePreviewFrameHeightSync(frame);
+      return;
+    }
+
     const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(String(htmlText))}`;
-    elements.previewHost.innerHTML = `<iframe class="sequence-viewer-preview-frame" src="${dataUrl}" loading="lazy" title="${escapeHtml(entry.name || 'Sequence preview')}"></iframe>`;
+    elements.previewHost.innerHTML = `<iframe class="sequence-viewer-preview-frame" src="${dataUrl}" loading="lazy" scrolling="no" title="${escapeHtml(title)}"></iframe>`;
+  }
+
+  function getPreviewFrameElement() {
+    if (!elements.previewHost || typeof elements.previewHost.querySelector !== 'function') {
+      return null;
+    }
+    return elements.previewHost.querySelector('.sequence-viewer-preview-frame');
+  }
+
+  function syncPreviewFrameHeight(frame = getPreviewFrameElement()) {
+    if (!frame) {
+      return;
+    }
+
+    const hostRect = typeof elements.previewHost?.getBoundingClientRect === 'function'
+      ? elements.previewHost.getBoundingClientRect()
+      : null;
+    const frameRect = typeof frame.getBoundingClientRect === 'function'
+      ? frame.getBoundingClientRect()
+      : null;
+    const viewWindow = rootDocument?.defaultView || globalThis || null;
+    const viewportHeight = Math.max(0, Number(viewWindow?.innerHeight) || 0);
+    const previewWidth = Math.max(
+      0,
+      Number(frameRect?.width) || Number(hostRect?.width) || Number(elements.previewHost?.clientWidth) || 0
+    );
+    const previewTop = Math.max(0, Number(hostRect?.top) || Number(frameRect?.top) || 0);
+    const availableHeight = viewportHeight > 0
+      ? Math.max(280, viewportHeight - previewTop - 28)
+      : 520;
+    const fallbackSize = Math.max(280, Math.min(availableHeight, 520));
+    const widthBound = previewWidth > 0 ? previewWidth : fallbackSize;
+    const nextSize = Math.min(widthBound, availableHeight, 1120);
+
+    frame.style.height = `${Math.round(nextSize > 0 ? nextSize : fallbackSize)}px`;
+  }
+
+  function schedulePreviewFrameHeightSync(frame = getPreviewFrameElement()) {
+    if (!frame) {
+      return;
+    }
+
+    syncPreviewFrameHeight(frame);
+    globalThis?.requestAnimationFrame?.(() => {
+      syncPreviewFrameHeight(frame);
+    });
+    globalThis?.setTimeout?.(() => {
+      syncPreviewFrameHeight(frame);
+    }, 120);
   }
 
   function buildFeatureSequencePreview(sequence) {
@@ -221,9 +287,6 @@ export function createSequenceViewerHomeController(config = {}) {
     elements.libraryList.innerHTML = entries
       .map((entry) => {
         const active = cleanText(entry.id, 200) === cleanText(state.selectedLibraryEntryId, 200);
-        const lengthLabel = `${Math.max(0, Number(entry.sequenceLength) || 0).toLocaleString()} bp`;
-        const featureLabel = `${Math.max(0, Number(entry.featureCount) || 0).toLocaleString()} features`;
-        const updated = String(entry.updatedAt || '').slice(0, 16).replace('T', ' ');
         return `
           <button
             type="button"
@@ -232,8 +295,6 @@ export function createSequenceViewerHomeController(config = {}) {
             title="${escapeHtml(entry.name || 'sequence')}"
           >
             <span class="sequence-viewer-library-item-name">${escapeHtml(entry.name || 'sequence')}</span>
-            <span class="sequence-viewer-library-item-meta">${escapeHtml(lengthLabel)} | ${escapeHtml(entry.topology || 'linear')}</span>
-            <span class="sequence-viewer-library-item-meta">${escapeHtml(featureLabel)} | updated ${escapeHtml(updated || '-')}</span>
           </button>
         `;
       })
@@ -271,6 +332,11 @@ export function createSequenceViewerHomeController(config = {}) {
   }
 
   async function refreshLibraryEntries(options = {}) {
+    const requestedFilter = cleanText(options.filter || options.status, 40);
+    if (requestedFilter === libraryStatusSaved || requestedFilter === libraryStatusTemporary) {
+      setLibraryFilter(requestedFilter);
+    }
+
     const storagePath = getStoragePath();
     syncHomeControlsState();
     if (!storagePath) {
@@ -497,6 +563,17 @@ export function createSequenceViewerHomeController(config = {}) {
   }
 
   function bindEvents() {
+    const ResizeObserverCtor = rootDocument?.defaultView?.ResizeObserver || globalThis?.ResizeObserver;
+    if (elements.previewHost && typeof ResizeObserverCtor === 'function') {
+      const previewResizeObserver = new ResizeObserverCtor(() => {
+        schedulePreviewFrameHeightSync();
+      });
+      previewResizeObserver.observe(elements.previewHost);
+    }
+    globalThis.addEventListener?.('resize', () => {
+      schedulePreviewFrameHeightSync();
+    });
+
     if (elements.homeOpenInput && typeof elements.homeOpenInput.setAttribute === 'function') {
       elements.homeOpenInput.setAttribute('accept', fileAccept);
     }

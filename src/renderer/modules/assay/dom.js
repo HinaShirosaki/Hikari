@@ -55,7 +55,6 @@ export function getAssayElements(root = document) {
     assaySerialDilutionSummary: root.getElementById('assay-serial-dilution-summary'),
     assaySerialDilutionContent: root.getElementById('assay-serial-dilution-content'),
     assayLayoutStatus: root.getElementById('assay-layout-status'),
-    assayLayoutList: root.getElementById('assay-layout-list'),
     assayList: root.getElementById('assay-list')
   };
 }

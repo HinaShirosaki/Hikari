@@ -9,10 +9,25 @@ function registerAgentLogHandlers({
   getAgentChatSessionStoragePath,
   agentToolRuntime,
   agentToolSmokeTestRuntime,
+  protocolGenerationRuntime,
   controllerUtils,
   lifecycleService
 } = {}) {
   const { normalizeJsonPayload, asArray } = lifecycleService;
+
+  function normalizeProtocolGenerationEditorDraft(rawDraft) {
+    const source = rawDraft && typeof rawDraft === 'object'
+      ? rawDraft
+      : {};
+    return {
+      title: cleanText(source?.title || source?.name, 220),
+      purpose: cleanText(source?.purpose, 600),
+      method_text: cleanText(source?.methodText || source?.method_text, 12000),
+      materials: asArray(source?.materials).map((item) => cleanText(item, 220)).filter(Boolean).slice(0, 80),
+      steps: asArray(source?.steps).map((item) => cleanText(item, 2000)).filter(Boolean).slice(0, 120),
+      troubleshooting: cleanText(source?.troubleshooting, 2400)
+    };
+  }
 
   ipcMain.handle('agent:chat-log:create-session', async (_event, payload) => {
     const normalizedPayload = normalizeJsonPayload(payload, {});
@@ -138,6 +153,79 @@ function registerAgentLogHandlers({
         items: [],
         summary: message,
         error: message
+      };
+    }
+  });
+
+  ipcMain.handle('agent:generate-protocol', async (_event, payload) => {
+    if (!protocolGenerationRuntime || typeof protocolGenerationRuntime.generateProtocol !== 'function') {
+      return {
+        ok: false,
+        error: 'Protocol generation runtime is unavailable.'
+      };
+    }
+
+    const normalizedPayload = normalizeJsonPayload(payload, {});
+    const llmSource = typeof controllerUtils.resolveAgentLlmSource === 'function'
+      ? controllerUtils.resolveAgentLlmSource(normalizedPayload?.llm)
+      : {};
+    const editorDraft = normalizeProtocolGenerationEditorDraft(normalizedPayload?.editorDraft);
+    const attachments = asArray(normalizedPayload?.attachments)
+      .filter((attachment) => attachment && typeof attachment === 'object')
+      .map((attachment) => ({
+        id: cleanText(attachment?.id, 120),
+        name: cleanText(attachment?.name, 240),
+        mimeType: cleanText(attachment?.mimeType || attachment?.mime_type, 160),
+        dataUrl: cleanText(attachment?.dataUrl || attachment?.data_url, 400000),
+        kind: cleanText(attachment?.kind, 40),
+        size: Number.isFinite(Number(attachment?.size)) ? Number(attachment.size) : 0
+      }))
+      .filter((attachment) => attachment.dataUrl);
+
+    const requestMessage = cleanText(normalizedPayload?.message, 3000);
+    const hasEditorContext = Boolean(
+      editorDraft.title
+      || editorDraft.purpose
+      || editorDraft.method_text
+      || editorDraft.materials.length
+      || editorDraft.steps.length
+      || editorDraft.troubleshooting
+    );
+    if (!requestMessage && !attachments.length && !hasEditorContext) {
+      return {
+        ok: false,
+        error: 'Add a prompt, editor context, or attachment before generating a protocol.'
+      };
+    }
+
+    try {
+      const result = await protocolGenerationRuntime.generateProtocol({
+        provider: cleanText(llmSource?.provider, 80),
+        endpoint: cleanText(llmSource?.endpoint, 2000),
+        apiKey: cleanText(llmSource?.apiKey, 400),
+        model: cleanText(llmSource?.model, 120),
+        reasoningEffort: cleanText(normalizedPayload?.llm?.reasoningEffort, 40).toLowerCase(),
+        message: requestMessage,
+        attachments,
+        ...editorDraft
+      });
+
+      if (!result?.ok || !result.protocol) {
+        return {
+          ok: false,
+          error: cleanText(result?.error, 600) || 'Protocol generation failed.'
+        };
+      }
+
+      return {
+        ok: true,
+        protocol: result.protocol,
+        summary: cleanText(result?.summary, 320)
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        error: cleanText(error?.message || error, 600) || 'Protocol generation failed.'
       };
     }
   });

@@ -13,6 +13,7 @@ import { initToolBox } from './modules/tool-box.js';
 import { initAgentChat } from './modules/agent-chat.js';
 import { initHomeDashboard } from './modules/home-dashboard.js';
 import { initSequenceViewer } from './modules/sequence-viewer.js';
+import { createSelectionInsightsController } from './modules/selection-insights.js';
 
 function renderBiologyNotebook(modules) {
   modules.biologyNotebook.renderProjectOptions();
@@ -50,6 +51,14 @@ export function createRendererModuleRuntime(config = {}) {
   const sequenceViewerDetailViewId = String(config?.sequenceViewerDetailViewId || '').trim();
   const onStoragePathSaved = config?.onStoragePathSaved || (async () => {});
   const rootDocument = config?.rootDocument || globalThis?.document || null;
+  const selectionInsightsController = createSelectionInsightsController({
+    state,
+    persist,
+    createId,
+    safeText,
+    rootDocument,
+    windowObject: globalThis?.window || null
+  });
 
   const modules = {
     biologyNotebook: initAndRegisterModule(moduleRegistry, 'biologyNotebook', initBiologyNotebook, {
@@ -61,7 +70,12 @@ export function createRendererModuleRuntime(config = {}) {
       importProtocolsFromJson: rendererServices.protocol.importProtocolsFromJson,
       onCreateLinkedAssay: rendererServices.analysis.openAssayForNotebook,
       onCreateLinkedGel: rendererServices.analysis.openGelForNotebook,
-      onNotebookEntriesChanged: rendererServices.notebook.handleNotebookEntriesChanged
+      onOpenSampleRecorder: (context = {}) => {
+        showView(views.SAMPLE_REGISTRY);
+        modules.sampleRegistry?.startNotebookSampleCapture?.(context);
+      },
+      onNotebookEntriesChanged: rendererServices.notebook.handleNotebookEntriesChanged,
+      selectionInsightsController
     }),
     protocol: initAndRegisterModule(moduleRegistry, 'protocol', initProtocolManagement, {
       state,
@@ -69,7 +83,8 @@ export function createRendererModuleRuntime(config = {}) {
       createId,
       safeText,
       onProtocolsChanged: rendererServices.protocol.handleProtocolsChanged,
-      trackGrowthEvent
+      trackGrowthEvent,
+      selectionInsightsController
     }),
     projectManagement: initAndRegisterModule(moduleRegistry, 'projectManagement', initProjectManagement, {
       state,
@@ -126,7 +141,8 @@ export function createRendererModuleRuntime(config = {}) {
     sampleRegistry: initAndRegisterModule(moduleRegistry, 'sampleRegistry', initSampleRegistry, {
       state,
       persist,
-      safeText
+      safeText,
+      onNotebookSampleCaptured: rendererServices.notebook.handleNotebookEntriesChanged
     }),
     assay: initAndRegisterModule(moduleRegistry, 'assay', initAssay, {
       state,
@@ -143,11 +159,21 @@ export function createRendererModuleRuntime(config = {}) {
       onGelAnalysesChanged: rendererServices.analysis.handleGelAnalysesChanged
     }),
     sequenceViewer: initAndRegisterModule(moduleRegistry, 'sequenceViewer', initSequenceViewer, {
+      homeViewId: views.SEQUENCE_VIEWER,
+      detailViewId: sequenceViewerDetailViewId,
       onNavigateHome: () => {
         showView(views.SEQUENCE_VIEWER);
       },
       onNavigateDetail: () => {
         showView(sequenceViewerDetailViewId);
+      },
+      state,
+      persist,
+      createId,
+      onNotebookEntriesChanged: () => {
+        rendererServices.project.handleProjectsChanged();
+        rendererServices.protocol.handleProtocolsChanged();
+        rendererServices.notebook.handleNotebookEntriesChanged();
       }
     }),
     toolBox: initAndRegisterModule(moduleRegistry, 'toolBox', initToolBox, {
@@ -161,6 +187,7 @@ export function createRendererModuleRuntime(config = {}) {
     homeDashboard: initAndRegisterModule(moduleRegistry, 'homeDashboard', initHomeDashboard, {
       state,
       persist,
+      createId,
       safeText,
       onOpenSampleSearch: rendererServices.inventory.openSampleSearch,
       onOpenSamples: () => rendererServices.inventory.openSampleSearch(''),
@@ -201,7 +228,7 @@ export function createRendererModuleRuntime(config = {}) {
 
   function renderView(viewId) {
     if (viewId === views.SEQUENCE_VIEWER || viewId === sequenceViewerDetailViewId) {
-      modules.sequenceViewer?.render?.();
+      modules.sequenceViewer?.render?.({ activeViewId: viewId });
       return;
     }
     renderByViewId.get(viewId)?.();

@@ -1,0 +1,37 @@
+LOCUS       .                       1306 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..1306
+                     /note="strong constitutive promoter for rat elongation
+                     factor EF-1α"
+                     /label="rEF-1α promoter"
+ORIGIN
+        1 agagtaattc atacaaaagg agggatcgcc ttcgcaaggg gagagcccag ggaccgtccc
+       61 taaattctca cagacccaaa tccctgtagc cgccccacga cagcgcgagg agcatgcgcc
+      121 cagggctgag cgcgggtaga tcagagcaca caagctcaca gtccccggcg gtggggggag
+      181 gggcgcgctg agcgggggcc agggagctgg cgcggggcaa actgggaaag tggtgtcgtg
+      241 tgctggctcc gccctcttcc cgagggtggg ggagaacggt atataagtgc ggtagtcgcc
+      301 ttggacgttc tttttcgcaa cgggtttgcc gtcagaacgc aggtgagtgg cgggtgtggc
+      361 ttccgcgggc cccggagctg gagccctgct ctgagcgggc cgggctgata tgcgagtgtc
+      421 gtccgcaggg tttagctgtg agcattccca cttcgagtgg cgggcggtgc gggggtgaga
+      481 gtgcgaggcc tagcggcaac cccgtagcct cgcctcgtgt ccggcttgag gcctagcgtg
+      541 gtgtccgccg ccgcgtgcca ctccggccgc actatgcgtt ttttgtcctt gctgccctcg
+      601 attgccttcc agcagcatgg gctaacaaag ggagggtgtg gggctcactc ttaaggagcc
+      661 catgaagctt acgttggata ggaatggaag ggcaggaggg gcgactgggg cccgcccgcc
+      721 ttcggagcac atgtccgacg ccacctggat ggggcgaggc ctgtggcttt ccgaagcaat
+      781 cgggcgtgag tttagcctac ctgggccatg tggccctagc actgggcacg gtctggcctg
+      841 gcggtgccgc gttcccttgc ctcccaacaa gggtgaggcc gtcccgcccg gcaccagttg
+      901 cttgcgcgga aagatggccg ctcccggggc cctgttgcaa ggagctcaaa atggaggacg
+      961 cggcagcccg gtggagcggg cgggtgagtc acccacacaa aggaagaggg ccttgcccct
+     1021 cgccggccgc tgcttcctgt gaccccgtgg tctatcggcc gcatagtcac ctcgggcttc
+     1081 tcttgagcac cgctcgtcgc ggcgggggga ggggatctaa tggcgttgga gtttgttcac
+     1141 atttggtggg tggagactag tcaggccagc ctggcgctgg aagtcattct tggaatttgc
+     1201 ccctttgagt ttggagcgag gctaattctc aagcctctta gcggttcaaa ggtattttct
+     1261 aaacccgttt ccaggtgttg tgaaagccac cgctaattca aagcaa
+//

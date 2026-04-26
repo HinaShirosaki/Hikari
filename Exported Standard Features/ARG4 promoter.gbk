@@ -1,0 +1,20 @@
+LOCUS       .                        316 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..316
+                     /gene="S. cerevisiae ARG4"
+                     /label="ARG4 promoter"
+ORIGIN
+        1 aacgacaatc aaataacctg atctgccaag gctccatcat atctggccta gaaacagttt
+       61 tttttttcga ttattttgtt cgttcttgtg gtggttactc attggcagaa tcccgaaaat
+      121 catgattagt agatgaatga ctcacttttt ggataagctg gcgcaaattg aaacatgtga
+      181 aaaaaaaaaa aaaggattat aaaaggtcag cgaagcacag aactctgaga taagactacc
+      241 tttctttagc taggggagaa tattcgcaat tgaagagctc aaaagcaggt aactatataa
+      301 caagactaag gcaaac
+//

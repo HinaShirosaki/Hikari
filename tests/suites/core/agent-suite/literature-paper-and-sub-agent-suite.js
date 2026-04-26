@@ -222,6 +222,69 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
       assert.match(String(result.summary || ''), /web: 1/i);
     });
 
+    test('literature search runtime applies preferred literature source ahead of auto defaults', async () => {
+      const calls = [];
+      const runtime = agentLiteratureSearch.createLiteratureSearchRuntime({
+        searchPubMedRecords: async () => {
+          calls.push('pubmed');
+          return [];
+        },
+        searchCrossrefRecords: async () => {
+          calls.push('crossref');
+          return [];
+        },
+        searchEuropePmcRecords: async () => {
+          calls.push('europe_pmc');
+          return [];
+        }
+      });
+
+      const result = await runtime.execute({
+        query: 'antigen processing machinery',
+        preferred_literature_source: 'crossref',
+        limit: 5
+      });
+
+      assert.equal(result.ok, true);
+      assert.deepEqual(calls, ['crossref', 'pubmed', 'europe_pmc']);
+      assert.deepEqual(result.sources, ['crossref', 'pubmed', 'europe_pmc', 'web']);
+    });
+
+    test('literature search runtime prioritizes preferred web sources within returned web results', async () => {
+      const runtime = agentLiteratureSearch.createLiteratureSearchRuntime({
+        searchPubMedRecords: async () => [],
+        searchCrossrefRecords: async () => [],
+        searchEuropePmcRecords: async () => [],
+        searchUniProtRecords: async () => [],
+        searchWebResults: async () => ([
+          {
+            title: 'Secondary review',
+            url: 'https://example.org/review',
+            summary: 'Generic review result.',
+            source_domain: 'example.org'
+          },
+          {
+            title: 'NIH review',
+            url: 'https://www.nih.gov/focused-review',
+            summary: 'Preferred source review.',
+            source_domain: 'www.nih.gov'
+          }
+        ])
+      });
+
+      const result = await runtime.execute({
+        query: 'PD-1 focused review',
+        preferred_web_source: 'nih.gov',
+        limit: 2
+      });
+
+      assert.equal(result.ok, true);
+      assert.equal(result.sources.includes('web'), true);
+      assert.equal(result.items.length, 2);
+      assert.equal(result.items[0].source, 'web');
+      assert.equal(result.items[0].source_domain, 'www.nih.gov');
+    });
+
     test('literature web source delegates through the shared web-search runtime api', async () => {
       const calls = [];
       const runtime = agentLiteratureSearch.createLiteratureSearchRuntime({
@@ -609,6 +672,8 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
       const searchCalls = [];
       const loadCalls = [];
       const downloadCalls = [];
+      let activeDownloads = 0;
+      let maxConcurrentDownloads = 0;
       const candidateItems = Array.from({ length: 9 }, (_unused, index) => ({
         id: `paper-${index + 1}`,
         source: 'pubmed',
@@ -680,6 +745,8 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
           },
           paperDownloadRuntime: {
             downloadPaper: async (input = {}) => {
+              activeDownloads += 1;
+              maxConcurrentDownloads = Math.max(maxConcurrentDownloads, activeDownloads);
               downloadCalls.push({
                 linked_type: String(input.linked_type || ''),
                 linked_name: String(input.linked_name || ''),
@@ -688,14 +755,19 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
                 page_url: String(input.page_url || ''),
                 candidate_urls: Array.isArray(input.candidate_urls) ? input.candidate_urls.slice() : []
               });
-              return {
-                ok: true,
-                status: 'completed',
-                file_name: `${String(input.paper_title || 'paper').trim()}.pdf`,
-                file_path: path.join(storageRoot, 'Papers', String(input.linked_name || 'Uncategorized'), `${String(input.paper_title || 'paper').trim()}.pdf`),
-                relative_path: `Papers/${String(input.linked_name || 'Uncategorized')}/${String(input.paper_title || 'paper').trim()}.pdf`,
-                summary: `Downloaded ${String(input.paper_title || 'paper').trim()}.pdf`
-              };
+              try {
+                await new Promise((resolve) => setTimeout(resolve, 10));
+                return {
+                  ok: true,
+                  status: 'completed',
+                  file_name: `${String(input.paper_title || 'paper').trim()}.pdf`,
+                  file_path: path.join(storageRoot, 'Papers', String(input.linked_name || 'Uncategorized'), `${String(input.paper_title || 'paper').trim()}.pdf`),
+                  relative_path: `Papers/${String(input.linked_name || 'Uncategorized')}/${String(input.paper_title || 'paper').trim()}.pdf`,
+                  summary: `Downloaded ${String(input.paper_title || 'paper').trim()}.pdf`
+                };
+              } finally {
+                activeDownloads -= 1;
+              }
             }
           }
         });
@@ -737,7 +809,8 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
         assert.equal(loadCalls.length, 2);
         assert.deepEqual(loadCalls[0], candidateItems.slice(0, 8).map((item) => item.id));
         assert.deepEqual(loadCalls[1], [candidateItems[8].id]);
-        assert.equal(downloadCalls.length, 6);
+        assert.equal(downloadCalls.length, 9);
+        assert.equal(maxConcurrentDownloads > 1, true);
         assert.equal(downloadCalls.every((call) => call.linked_type === 'literature-search'), true);
         assert.equal(downloadCalls.every((call) => call.linked_name === 'Atlas'), true);
         assert.equal(downloadCalls.every((call) => call.storage_path === storageRoot), true);
@@ -746,10 +819,10 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
         assert.equal(result.sub_agent?.message_count >= 2, true);
         assert.equal(result.sub_agent_context.storage_path, storageRoot);
         assert.equal(result.selected_papers.length, 9);
-        assert.equal(result.downloaded_papers.length, 6);
+        assert.equal(result.downloaded_papers.length, 9);
         assert.equal(result.loaded_context_blocks.length, 9);
         assert.equal(result.papers_read_count, 9);
-        assert.match(String(result.summary || ''), /Downloaded 6 selected PDF/i);
+        assert.match(String(result.summary || ''), /Downloaded 9 selected PDF/i);
         assert.match(String(result.summary || ''), /Loaded 9 bounded context block/i);
         assert.equal(result.downloaded_papers.every((item) => String(item.relative_path || '').includes('Papers/Atlas/')), true);
         assert.equal(result.sub_agent?.last_response?.output?.selected_papers.length, 9);

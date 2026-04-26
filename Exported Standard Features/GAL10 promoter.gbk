@@ -1,0 +1,21 @@
+LOCUS       .                        331 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        complement(1..331)
+                     /gene="S. cerevisiae GAL10"
+                     /note="inducible promoter, regulated by Gal4"
+                     /label="GAL10 promoter"
+ORIGIN
+        1 caaaaattct tacttttttt ttggatggac gcaaagaagt ttaataatca tattacatgg
+       61 cattaccacc atatacatat ccatatacat atccatatct aatcttactt atatgttgtg
+      121 gaaatgtaaa gagccccatt atcttagcct aaaaaaacct tctctttgga actttcagta
+      181 atacgcttaa ctgctcattg ctatattgaa gtacggatta gaagccgccg agcgggtgac
+      241 agccctccga aggaagactc tcctccgtgc gtcctcgtct tcaccggtcg cgttcctgaa
+      301 acgcagatgt gcctcgcgcc gcactgctcc g
+//

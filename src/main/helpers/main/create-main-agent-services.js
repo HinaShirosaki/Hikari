@@ -49,6 +49,7 @@ const { createWebSearchRuntime } = require('../agent/tools/agent-web-search.js')
 const { createLiteratureSearchRuntime } = require('../agent/tools/agent-literature-search.js');
 const { createLiteratureSearchWorkflowRuntime } = require('../agent/literature-search/agent-literature-search-workflow.js');
 const { createPurchaseRecommendationRuntime } = require('../agent/tools/agent-purchase-recommendation.js');
+const { createProtocolGenerationRuntime } = require('../agent/tools/agent-protocol-generation.js');
 const { createPaperContextLoaderRuntime } = require('../agent/tools/agent-paper-context-loader.js');
 const { createPaperDownloadRuntime } = require('../agent/tools/agent-paper-download.js');
 const { createProtocolMatchingRuntime } = require('../agent/tools/agent-protocol-matching.js');
@@ -315,6 +316,10 @@ function createMainAgentServices(deps = {}) {
     getAgentRuntimeFactory: agentRuntimeRegistry.getRuntimeFactory
   });
 
+  const protocolGenerationRuntime = createProtocolGenerationRuntime({
+    ...sharedAgentLlmDeps
+  });
+
   const paperContextLoaderRuntime = createPaperContextLoaderRuntime({
     ...sharedAgentLlmDeps,
     fetch: typeof globalThis.fetch === 'function' ? globalThis.fetch.bind(globalThis) : null
@@ -373,6 +378,7 @@ function createMainAgentServices(deps = {}) {
     toolProvider: agentToolProviderRuntime,
     startAgentSession: agentSessionRuntime.startAgentSession,
     extractAgentSessionFunctionCalls: agentSessionRuntime.extractAgentSessionFunctionCalls,
+    extractAgentSessionSchemaRequests: agentSessionRuntime.extractAgentSessionSchemaRequests,
     extractAgentSessionText: agentSessionRuntime.extractAgentSessionText,
     continueAgentSessionWithToolOutputs: agentSessionRuntime.continueAgentSessionWithToolOutputs,
     continueAgentSessionWithUserMessage: agentSessionRuntime.continueAgentSessionWithUserMessage,
@@ -410,6 +416,7 @@ function createMainAgentServices(deps = {}) {
     agentSkillRuntime,
     agentChatLogRuntime,
     agentToolSmokeTestRuntime,
+    protocolGenerationRuntime,
     agentLookupRuntime,
     agentAppApi,
     webSearchRuntime,

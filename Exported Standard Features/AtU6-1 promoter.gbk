@@ -1,0 +1,21 @@
+LOCUS       .                        304 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..304
+                     /note="promoter for the Arabidopsis thaliana U6-1 snRNA
+                     gene (Waibel and Filipowicz, 1990)"
+                     /label="AtU6-1 promoter"
+ORIGIN
+        1 agaaatctca aaattccggc agaacaattt tgaatctcga tccgtagaaa cgagacggtc
+       61 attgttttag ttccaccacg attatatttg aaatttacgt gagtgtgagt gagacttgca
+      121 taagaaaata aaatctttag ttgggaaaaa attcaataat ataaatgggc ttgagaagga
+      181 agcgagggat aggccttttt ctaaaatagg cccatttaag ctattaacaa tcttcaaaag
+      241 taccacagcg cttaggtaaa gaaagcagct gagtttatat atggttagag acgaagtagt
+      301 gatt
+//

@@ -98,13 +98,13 @@ module.exports = function registerSynthesisAndVerificationSuite(context = {}) {
         }
       });
 
-      const verification = await runtime.verifyPreSynthesizedQuestion({
+      const verification = await runtime.verifyPreSynthesizedAnswer({
         provider: 'openai',
         endpoint: 'https://example.test',
         apiKey: 'key',
         model: 'gpt-test',
         message: 'Why do tumors stop responding to MAPK inhibitors?',
-        preSynthesizedQuestion: {
+        preSynthesizedAnswer: {
           tentative_answer: {
             current_best_answer: 'Pathway reactivation looks central, but the answer is still provisional.'
           },

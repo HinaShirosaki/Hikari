@@ -1,4 +1,5 @@
 import { exportNotebookEntryPdf } from './pdf-export.js';
+import { buildClarifiedNotebookNote, clarifyNotebookNote, showTransientNotice } from './notebook-note-tools.js';
 
 export function initLabNotebook({
   state,
@@ -18,6 +19,7 @@ export function initLabNotebook({
   const notebookResult = document.getElementById('synthesis-notebook-result');
   const notebookResultFile = document.getElementById('synthesis-notebook-result-file');
   const saveNotebookBtn = document.getElementById('save-synthesis-notebook-btn');
+  const clarifySaveNotebookBtn = document.getElementById('clarify-save-synthesis-notebook-btn');
   const cancelEditBtn = document.getElementById('cancel-synthesis-notebook-edit-btn');
   const notebookEntryList = document.getElementById('synthesis-notebook-entry-list');
 
@@ -42,6 +44,9 @@ export function initLabNotebook({
 
   notebookProjectSelect.addEventListener('change', onProjectChange);
   saveNotebookBtn?.addEventListener('click', saveEntry);
+  clarifySaveNotebookBtn?.addEventListener('click', () => {
+    void clarifyAndSaveEntry();
+  });
   cancelEditBtn?.addEventListener('click', cancelEdit);
   notebookEntryList?.addEventListener('click', onEntryListClick);
 
@@ -124,7 +129,7 @@ export function initLabNotebook({
     updateSaveButtonLabel();
   }
 
-  async function saveEntry() {
+  async function saveEntry(options = {}) {
     const projectId = notebookProjectSelect.value;
     const project = state.projects.find((item) => item.id === projectId);
     if (!project) {
@@ -177,7 +182,7 @@ export function initLabNotebook({
       protocolId: SYNTHESIS_ENTRY_PROTOCOL_KEY,
       protocolName: SYNTHESIS_ENTRY_PROTOCOL_NAME,
       values,
-      result: notebookResult.value.trim(),
+      result: String(options.resultText ?? notebookResult.value).trim(),
       resultFiles,
       resultFileRecords,
       chemical: null,
@@ -212,6 +217,37 @@ export function initLabNotebook({
     renderEntries();
     if (typeof onNotebookEntriesChanged === 'function') {
       onNotebookEntriesChanged();
+    }
+    return entry;
+  }
+
+  async function clarifyAndSaveEntry() {
+    const source = String(notebookResult.value || '').trim();
+    if (!source) {
+      showTransientNotice('Add notebook notes before clarifying them.', { type: 'error' });
+      return;
+    }
+    setNotebookSaveBusy(true, { clarify: true });
+    try {
+      const clarified = await clarifyNotebookNote({
+        llm: state.settings?.llm,
+        text: source
+      });
+      const combinedNote = buildClarifiedNotebookNote(source, clarified);
+      notebookResult.value = combinedNote;
+      const savedEntry = await saveEntry({
+        resultText: combinedNote
+      });
+      if (!savedEntry) {
+        throw new Error('Unable to save the clarified notebook entry.');
+      }
+      showTransientNotice('Clarified note saved.');
+    } catch (error) {
+      showTransientNotice(String(error?.message || error || 'Failed to clarify the notebook entry.'), {
+        type: 'error'
+      });
+    } finally {
+      setNotebookSaveBusy(false);
     }
   }
 
@@ -378,10 +414,23 @@ export function initLabNotebook({
     if (!saveNotebookBtn) {
       return;
     }
-    const editing = Boolean(editingEntryId);
-    saveNotebookBtn.textContent = editing ? 'Update Notebook Entry' : 'Save Notebook Entry';
+    saveNotebookBtn.textContent = 'Save';
+    if (clarifySaveNotebookBtn) {
+      clarifySaveNotebookBtn.textContent = 'Clarify and Save';
+    }
     if (cancelEditBtn) {
-      cancelEditBtn.hidden = !editing;
+      cancelEditBtn.hidden = !editingEntryId;
+    }
+  }
+
+  function setNotebookSaveBusy(isBusy, { clarify = false } = {}) {
+    if (saveNotebookBtn) {
+      saveNotebookBtn.disabled = isBusy;
+      saveNotebookBtn.textContent = isBusy && !clarify ? 'Saving...' : 'Save';
+    }
+    if (clarifySaveNotebookBtn) {
+      clarifySaveNotebookBtn.disabled = isBusy;
+      clarifySaveNotebookBtn.textContent = isBusy && clarify ? 'Clarifying...' : 'Clarify and Save';
     }
   }
 

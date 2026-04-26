@@ -314,6 +314,21 @@ export function summarizeNotebookDraft(payload) {
   return '';
 }
 
+function extractStructuredThinkingTrace(result) {
+  const source = result && typeof result === 'object' ? result : {};
+  const candidates = [
+    source.thinking_trace,
+    source.general_science_question?.thinking_trace,
+    source.project_science_question?.thinking_trace,
+    source.result_analysis?.thinking_trace
+  ];
+  return candidates.find((candidate) => (
+    candidate
+    && typeof candidate === 'object'
+    && !Array.isArray(candidate)
+  )) || null;
+}
+
 export function normalizeAgentResponse(result) {
   const protocolWorkflow = result?.protocol_to_notebook && typeof result.protocol_to_notebook === 'object'
     ? result.protocol_to_notebook
@@ -382,6 +397,7 @@ export function normalizeAgentResponse(result) {
     generalScienceQuestion,
     projectScienceQuestion,
     resultAnalysis,
+    thinkingTrace: extractStructuredThinkingTrace(result),
     developerTrace: asArray(result?.developer_trace),
     assistantText
   };

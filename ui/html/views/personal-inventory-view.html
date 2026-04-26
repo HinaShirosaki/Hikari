@@ -24,10 +24,22 @@
               Type
               <select id="inventory-add-container-type">
                 <option value="box81">81-well cube box</option>
+                <option value="customGrid">Custom grid box</option>
                 <option value="plate96">96-well plate</option>
                 <option value="single">Single container (tube/bottle)</option>
               </select>
             </label>
+            <div id="inventory-add-container-grid-fields" class="inventory-custom-grid-fields" hidden>
+              <label>
+                Rows
+                <input id="inventory-add-container-rows" type="number" min="1" max="24" step="1" value="9" />
+              </label>
+              <label>
+                Columns
+                <input id="inventory-add-container-cols" type="number" min="1" max="24" step="1" value="9" />
+              </label>
+              <p class="small-note inventory-custom-grid-note">Custom grid boxes reuse the same visual style as the 81-well box.</p>
+            </div>
             <div class="form-actions">
               <button type="submit" class="primary-btn">Save Container</button>
               <button id="inventory-add-container-cancel" type="button" class="ghost-btn">Cancel</button>

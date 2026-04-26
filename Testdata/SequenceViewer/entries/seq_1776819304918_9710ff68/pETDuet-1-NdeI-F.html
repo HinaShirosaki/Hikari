@@ -1,0 +1,2363 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>pETDuet-1-NdeI-F</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --preview-ink: #16314c;
+      --preview-muted: #5a7592;
+      --preview-backbone: #7e99ba;
+      --preview-center-ring: #d8e4f2;
+      --preview-center-disc: #f9fbfe;
+      --preview-tick: #8ca5c5;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: #ffffff;
+    }
+    body {
+      font-family: "Playfair Display", serif;
+      color: var(--preview-ink);
+      overflow: hidden;
+    }
+    .preview-shell {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      place-items: center;
+      margin: 0;
+      padding: 4px;
+    }
+    svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+      max-width: 100%;
+      max-height: 100%;
+    }
+    .circular-preview__backbone {
+      fill: none;
+      stroke: var(--preview-backbone);
+      stroke-width: 16;
+    }
+    .circular-preview__center-ring {
+      fill: none;
+      stroke: var(--preview-center-ring);
+      stroke-width: 2;
+    }
+    .circular-preview__center-disc {
+      fill: var(--preview-center-disc);
+      stroke: var(--preview-center-ring);
+      stroke-width: 2;
+    }
+    .circular-preview__tick {
+      stroke: var(--preview-tick);
+      stroke-width: 1.5;
+      opacity: 0.9;
+    }
+    .circular-preview__feature {
+      stroke-width: 1.5;
+      stroke-linejoin: round;
+    }
+    .circular-preview__leader {
+      fill: none;
+      stroke-width: 1.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      opacity: 0.82;
+    }
+    .circular-preview__label-box {
+      stroke-width: 1.2;
+    }
+    .circular-preview__label-text {
+      font-size: 15px;
+      font-weight: 600;
+      dominant-baseline: middle;
+      letter-spacing: 0.01em;
+    }
+    .circular-preview__hover-tooltip {
+      position: fixed;
+      z-index: 20;
+      min-width: 180px;
+      max-width: min(320px, calc(100vw - 16px));
+      border-radius: 10px;
+      border: 1px solid rgba(90, 119, 165, 0.42);
+      background: rgba(249, 252, 255, 0.98);
+      box-shadow: 0 10px 24px rgba(27, 20, 14, 0.12);
+      padding: 9px 11px;
+      font-size: 12px;
+      line-height: 1.35;
+      color: var(--preview-ink);
+      pointer-events: none;
+    }
+    .circular-preview__hover-tooltip[hidden] {
+      display: none;
+    }
+    .circular-preview__hover-tooltip p {
+      margin: 0;
+    }
+    .circular-preview__hover-tooltip p + p {
+      margin-top: 3px;
+    }
+    .circular-preview__hover-title {
+      font-weight: 700;
+    }
+    .circular-preview__hover-description {
+      color: var(--preview-muted);
+    }
+    .circular-preview__title {
+      fill: var(--preview-ink);
+      font-size: 28px;
+      font-weight: 700;
+      text-anchor: middle;
+    }
+    .circular-preview__subtitle {
+      text-anchor: middle;
+      fill: var(--preview-muted);
+      letter-spacing: 0.02em;
+    }
+    .circular-preview__subtitle {
+      font-size: 15px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <main class="preview-shell" data-renderer="dna-feature-viewer-js">
+    <!-- Circular plasmid preview powered by a minimal JS port inspired by DnaFeaturesViewer (MIT). -->
+    <svg
+      viewBox="0 0 1496 1258"
+      preserveAspectRatio="xMidYMid meet"
+      role="img"
+      aria-label="pETDuet-1-NdeI-F circular plasmid preview">
+      <desc>Standalone circular plasmid preview for pETDuet-1-NdeI-F.</desc>
+      <g class="circular-preview__scene">
+        <circle class="circular-preview__center-ring" cx="748.00" cy="628.56" r="258.00"></circle>
+        <circle class="circular-preview__backbone" cx="748.00" cy="628.56" r="290.00"></circle>
+        <line class="circular-preview__tick" x1="748.00" y1="350.56" x2="748.00" y2="326.56"></line><line class="circular-preview__tick" x1="854.39" y1="371.72" x2="863.57" y2="349.54"></line><line class="circular-preview__tick" x1="944.58" y1="431.98" x2="961.55" y2="415.01"></line><line class="circular-preview__tick" x1="1004.84" y1="522.17" x2="1027.01" y2="512.99"></line><line class="circular-preview__tick" x1="1026.00" y1="628.56" x2="1050.00" y2="628.56"></line><line class="circular-preview__tick" x1="1004.84" y1="734.94" x2="1027.01" y2="744.13"></line><line class="circular-preview__tick" x1="944.58" y1="825.13" x2="961.55" y2="842.10"></line><line class="circular-preview__tick" x1="854.39" y1="885.39" x2="863.57" y2="907.57"></line><line class="circular-preview__tick" x1="748.00" y1="906.56" x2="748.00" y2="930.56"></line><line class="circular-preview__tick" x1="641.61" y1="885.39" x2="632.43" y2="907.57"></line><line class="circular-preview__tick" x1="551.42" y1="825.13" x2="534.45" y2="842.10"></line><line class="circular-preview__tick" x1="491.16" y1="734.94" x2="468.99" y2="744.13"></line><line class="circular-preview__tick" x1="470.00" y1="628.56" x2="446.00" y2="628.56"></line><line class="circular-preview__tick" x1="491.16" y1="522.17" x2="468.99" y2="512.99"></line><line class="circular-preview__tick" x1="551.42" y1="431.98" x2="534.45" y2="415.01"></line><line class="circular-preview__tick" x1="641.61" y1="371.72" x2="632.43" y2="349.54"></line>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="1"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_1"
+            data-tooltip-name="source"
+            data-tooltip-meta="source | Strand +"
+            data-tooltip-location="1..5717"
+            data-tooltip-description=""
+            d="M 748.00 302.56 A 326.00 326.00 0 1 1 719.59 303.80 L 748.00 311.56 L 721.16 321.73 A 308.00 308.00 0 1 0 748.00 320.56 Z"
+            aria-label="source (1..5717)"
+            fill="#2f8f9d"
+            stroke="#297c8d"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="2"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_28"
+            data-tooltip-name="lacI"
+            data-tooltip-meta="cds | Strand -"
+            data-tooltip-location="complement(4228..5310)"
+            data-tooltip-description="The lac repressor binds to the lac operator to inhibit transcription in E. coli. This inhibition can be relieved by addi"
+            d="M 401.77 651.71 L 392.07 621.26 A 356.00 356.00 0 0 1 594.02 307.58 L 601.80 323.81 A 338.00 338.00 0 0 0 410.07 621.63 Z"
+            aria-label="lacI (complement(4228..5310)) - The lac repressor binds to the lac operator to inhibit transcription in E. coli. This inhibition can be relieved by addi"
+            fill="#479f71"
+            stroke="#3d8a69"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="3"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_24"
+            data-tooltip-name="AmpR"
+            data-tooltip-meta="cds | Strand -"
+            data-tooltip-location="complement(join(2205..2273,1413..2204))"
+            data-tooltip-description="confers resistance to ampicillin, carbenicillin, and related antibiotics"
+            d="M 1094.94 621.98 L 1103.17 652.85 A 356.00 356.00 0 0 1 982.56 896.36 L 970.70 882.82 A 338.00 338.00 0 0 0 1085.21 651.63 Z"
+            aria-label="AmpR (complement(join(2205..2273,1413..2204))) - confers resistance to ampicillin, carbenicillin, and related antibiotics"
+            fill="#479f71"
+            stroke="#3d8a69"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="3"
+            data-segment-index="2"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_24"
+            data-tooltip-name="AmpR"
+            data-tooltip-meta="cds | Strand -"
+            data-tooltip-location="complement(join(2205..2273,1413..2204))"
+            data-tooltip-description="confers resistance to ampicillin, carbenicillin, and related antibiotics"
+            d="M 976.63 889.59 L 972.24 905.06 A 356.00 356.00 0 0 1 961.60 913.36 L 950.80 898.96 A 338.00 338.00 0 0 0 960.90 891.08 Z"
+            aria-label="AmpR (complement(join(2205..2273,1413..2204))) - confers resistance to ampicillin, carbenicillin, and related antibiotics"
+            fill="#479f71"
+            stroke="#3d8a69"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="4"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_26"
+            data-tooltip-name="ori"
+            data-tooltip-meta="rep_origin | Strand +"
+            data-tooltip-location="2447..3035"
+            data-tooltip-description="high-copy-number ColE1/pMB1/pBR322/pUC origin of replication"
+            d="M 903.92 948.59 A 356.00 356.00 0 0 1 710.08 982.53 L 681.11 969.05 L 712.00 964.63 A 338.00 338.00 0 0 0 896.04 932.41 Z"
+            aria-label="ori (2447..3035) - high-copy-number ColE1/pMB1/pBR322/pUC origin of replication"
+            fill="#4e7fff"
+            stroke="#436fdd"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="5"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_23"
+            data-tooltip-name="f1 ori"
+            data-tooltip-meta="rep_origin | Strand +"
+            data-tooltip-location="843..1298"
+            data-tooltip-description="f1 bacteriophage origin of replication; arrow indicates direction of (+) strand synthesis"
+            d="M 1032.39 414.41 A 356.00 356.00 0 0 1 1094.50 546.87 L 1091.40 578.68 L 1076.98 551.00 A 338.00 338.00 0 0 0 1018.01 425.24 Z"
+            aria-label="f1 ori (843..1298) - f1 bacteriophage origin of replication; arrow indicates direction of (+) strand synthesis"
+            fill="#4e7fff"
+            stroke="#436fdd"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="6"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_14"
+            data-tooltip-name="SUMO-1(G97C)"
+            data-tooltip-meta="cds | Strand +"
+            data-tooltip-location="333..623"
+            data-tooltip-description=""
+            d="M 875.03 295.99 A 356.00 356.00 0 0 1 948.26 334.22 L 967.46 359.77 L 938.13 349.10 A 338.00 338.00 0 0 0 868.61 312.81 Z"
+            aria-label="SUMO-1(G97C) (333..623)"
+            fill="#479f71"
+            stroke="#3d8a69"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="7"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_27"
+            data-tooltip-name="rop"
+            data-tooltip-meta="cds | Strand -"
+            data-tooltip-location="complement(3465..3656)"
+            data-tooltip-description="Rop protein, which maintains plasmids at low copy number"
+            d="M 533.75 901.52 L 504.63 888.37 A 356.00 356.00 0 0 1 474.42 856.35 L 488.25 844.83 A 338.00 338.00 0 0 0 516.93 875.24 Z"
+            aria-label="rop (complement(3465..3656)) - Rop protein, which maintains plasmids at low copy number"
+            fill="#479f71"
+            stroke="#3d8a69"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="8"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_4"
+            data-tooltip-name="MCS-1"
+            data-tooltip-meta="misc_feature | Strand +"
+            data-tooltip-location="69..168"
+            data-tooltip-description="multiple cloning site #1"
+            d="M 774.58 273.55 A 356.00 356.00 0 0 1 794.04 275.55 L 811.71 287.45 L 791.71 293.39 A 338.00 338.00 0 0 0 773.24 291.50 Z"
+            aria-label="MCS-1 (69..168) - multiple cloning site #1"
+            fill="#2f8f9d"
+            stroke="#297c8d"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="9"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_25"
+            data-tooltip-name="AmpR promoter"
+            data-tooltip-meta="promoter | Strand -"
+            data-tooltip-location="complement(2274..2366)"
+            data-tooltip-description=""
+            d="M 956.20 906.16 L 946.77 923.90 A 356.00 356.00 0 0 1 931.42 933.67 L 922.15 918.24 A 338.00 338.00 0 0 0 936.72 908.97 Z"
+            aria-label="AmpR promoter (complement(2274..2366))"
+            fill="#8b5cf6"
+            stroke="#7553d6"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="10"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_19"
+            data-tooltip-name="MCS-2"
+            data-tooltip-meta="misc_feature | Strand +"
+            data-tooltip-location="650..735"
+            data-tooltip-description="multiple cloning site #2"
+            d="M 980.94 359.34 A 356.00 356.00 0 0 1 993.39 370.64 L 998.80 388.75 L 980.99 383.69 A 338.00 338.00 0 0 0 969.16 372.95 Z"
+            aria-label="MCS-2 (650..735) - multiple cloning site #2"
+            fill="#2f8f9d"
+            stroke="#297c8d"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="11"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_29"
+            data-tooltip-name="lacI promoter"
+            data-tooltip-meta="promoter | Strand -"
+            data-tooltip-location="complement(5311..5388)"
+            data-tooltip-description=""
+            d="M 597.91 315.70 L 607.91 301.28 A 356.00 356.00 0 0 1 622.06 295.58 L 628.43 312.41 A 338.00 338.00 0 0 0 614.99 317.83 Z"
+            aria-label="lacI promoter (complement(5311..5388))"
+            fill="#8b5cf6"
+            stroke="#7553d6"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="12"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_2"
+            data-tooltip-name="lac operator"
+            data-tooltip-meta="protein_bind | Strand +"
+            data-tooltip-location="3..27"
+            data-tooltip-description="The lac repressor binds to the lac operator to inhibit transcription in E. coli. This inhibition can be relieved by addi"
+            d="M 748.78 272.56 A 356.00 356.00 0 0 1 753.67 272.60 L 758.30 281.71 L 753.39 290.60 A 338.00 338.00 0 0 0 748.74 290.56 Z"
+            aria-label="lac operator (3..27) - The lac repressor binds to the lac operator to inhibit transcription in E. coli. This inhibition can be relieved by addi"
+            fill="#f6a35e"
+            stroke="#cd8d59"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="13"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_8"
+            data-tooltip-name="lac operator"
+            data-tooltip-meta="protein_bind | Strand +"
+            data-tooltip-location="233..257"
+            data-tooltip-description="The lac repressor binds to the lac operator to inhibit transcription in E. coli. This inhibition can be relieved by addi"
+            d="M 837.79 284.07 A 356.00 356.00 0 0 1 842.52 285.33 L 844.71 295.31 L 837.74 302.69 A 338.00 338.00 0 0 0 833.25 301.48 Z"
+            aria-label="lac operator (233..257) - The lac repressor binds to the lac operator to inhibit transcription in E. coli. This inhibition can be relieved by addi"
+            fill="#f6a35e"
+            stroke="#cd8d59"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="14"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_10"
+            data-tooltip-name="pETDuet F"
+            data-tooltip-meta="primer_bind | Strand +"
+            data-tooltip-location="293..314"
+            data-tooltip-description=""
+            d="M 860.30 290.73 A 356.00 356.00 0 0 1 864.37 292.11 L 865.39 302.01 L 858.49 309.12 A 338.00 338.00 0 0 0 854.62 307.81 Z"
+            aria-label="pETDuet F (293..314)"
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="15"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_7"
+            data-tooltip-name="T7 promoter"
+            data-tooltip-meta="promoter | Strand +"
+            data-tooltip-location="214..232"
+            data-tooltip-description="promoter for bacteriophage T7 RNA polymerase"
+            d="M 830.58 282.27 A 356.00 356.00 0 0 1 834.19 283.15 L 835.52 292.77 L 829.83 300.61 A 338.00 338.00 0 0 0 826.40 299.77 Z"
+            aria-label="T7 promoter (214..232) - promoter for bacteriophage T7 RNA polymerase"
+            fill="#8b5cf6"
+            stroke="#7553d6"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="16"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_21"
+            data-tooltip-name="T7 Terminator Primer"
+            data-tooltip-meta="primer_bind | Strand -"
+            data-tooltip-location="complement(745..763)"
+            data-tooltip-description=""
+            d="M 1001.16 391.24 L 1010.25 387.81 A 356.00 356.00 0 0 1 1012.75 390.56 L 999.37 402.59 A 338.00 338.00 0 0 0 996.99 399.98 Z"
+            aria-label="T7 Terminator Primer (complement(745..763))"
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="17"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_31"
+            data-tooltip-name="T7 promoter"
+            data-tooltip-meta="promoter | Strand +"
+            data-tooltip-location="join(5701..5717,1..2)"
+            data-tooltip-description="promoter for bacteriophage T7 RNA polymerase"
+            d="M 748.00 272.56 A 356.00 356.00 0 0 1 748.78 272.56 L 748.74 290.56 A 338.00 338.00 0 0 0 748.00 290.56 Z"
+            aria-label="T7 promoter (join(5701..5717,1..2)) - promoter for bacteriophage T7 RNA polymerase"
+            fill="#8b5cf6"
+            stroke="#7553d6"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="17"
+            data-segment-index="2"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_31"
+            data-tooltip-name="T7 promoter"
+            data-tooltip-meta="promoter | Strand +"
+            data-tooltip-location="join(5701..5717,1..2)"
+            data-tooltip-description="promoter for bacteriophage T7 RNA polymerase"
+            d="M 741.35 272.62 A 356.00 356.00 0 0 1 748.00 272.56 L 748.00 290.56 A 338.00 338.00 0 0 0 741.69 290.61 Z"
+            aria-label="T7 promoter (join(5701..5717,1..2)) - promoter for bacteriophage T7 RNA polymerase"
+            fill="#8b5cf6"
+            stroke="#7553d6"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="18"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_18"
+            data-tooltip-name="6xHis"
+            data-tooltip-meta="cds | Strand +"
+            data-tooltip-location="624..641"
+            data-tooltip-description="6xHis affinity tag"
+            d="M 973.15 352.80 A 356.00 356.00 0 0 1 978.56 357.30 L 966.90 371.02 A 338.00 338.00 0 0 0 961.76 366.74 Z"
+            aria-label="6xHis (624..641) - 6xHis affinity tag"
+            fill="#479f71"
+            stroke="#3d8a69"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="19"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_30"
+            data-tooltip-name="pET Upstream Primer"
+            data-tooltip-meta="primer_bind | Strand +"
+            data-tooltip-location="5655..5670"
+            data-tooltip-description=""
+            d="M 723.37 273.41 A 356.00 356.00 0 0 1 729.62 273.03 L 730.55 291.01 A 338.00 338.00 0 0 0 724.62 291.37 Z"
+            aria-label="pET Upstream Primer (5655..5670)"
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="20"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_3"
+            data-tooltip-name="RBS"
+            data-tooltip-meta="rbs | Strand +"
+            data-tooltip-location="58..63"
+            data-tooltip-description="ribosome binding site"
+            d="M 770.29 273.25 A 356.00 356.00 0 0 1 772.63 273.41 L 771.38 291.37 A 338.00 338.00 0 0 0 769.16 291.22 Z"
+            aria-label="RBS (58..63) - ribosome binding site"
+            fill="#c97064"
+            stroke="#a8635e"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="21"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_9"
+            data-tooltip-name="RBS"
+            data-tooltip-meta="rbs | Strand +"
+            data-tooltip-location="286..291"
+            data-tooltip-description="ribosome binding site"
+            d="M 857.69 289.88 A 356.00 356.00 0 0 1 859.92 290.61 L 854.27 307.70 A 338.00 338.00 0 0 0 852.15 307.00 Z"
+            aria-label="RBS (286..291) - ribosome binding site"
+            fill="#c97064"
+            stroke="#a8635e"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="22"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_12"
+            data-tooltip-name="FLAG-SUMO-1(G97C)-6xHis"
+            data-tooltip-meta="cds | Strand +"
+            data-tooltip-location="300..644"
+            data-tooltip-description=""
+            d="M 872.57 263.21 A 386.00 386.00 0 0 1 972.44 314.51 L 993.11 342.11 L 961.97 329.16 A 368.00 368.00 0 0 0 866.76 280.25 Z"
+            aria-label="FLAG-SUMO-1(G97C)-6xHis (300..644)"
+            fill="#479f71"
+            stroke="#3d8a69"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="23"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_22"
+            data-tooltip-name="T7 terminator"
+            data-tooltip-meta="terminator | Strand +"
+            data-tooltip-location="759..806"
+            data-tooltip-description="transcription terminator for bacteriophage T7 RNA polymerase"
+            d="M 1033.64 368.93 A 386.00 386.00 0 0 1 1040.39 376.55 L 1039.96 390.05 L 1026.75 388.30 A 368.00 368.00 0 0 0 1020.32 381.04 Z"
+            aria-label="T7 terminator (759..806) - transcription terminator for bacteriophage T7 RNA polymerase"
+            fill="#f6a35e"
+            stroke="#cd8d59"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="24"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_20"
+            data-tooltip-name="S-Tag"
+            data-tooltip-meta="cds | Strand +"
+            data-tooltip-location="663..707"
+            data-tooltip-description="affinity and epitope tag derived from pancreatic ribonuclease A"
+            d="M 1004.71 340.29 A 386.00 386.00 0 0 1 1011.76 346.73 L 1012.34 359.75 L 999.46 359.87 A 368.00 368.00 0 0 0 992.74 353.73 Z"
+            aria-label="S-Tag (663..707) - affinity and epitope tag derived from pancreatic ribonuclease A"
+            fill="#479f71"
+            stroke="#3d8a69"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="25"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="backbone_recognition_promoter_vector"
+            data-tooltip-name="T7 promoter"
+            data-tooltip-meta="promoter | Strand +"
+            data-tooltip-location="214..232"
+            data-tooltip-description="Matched exported promoter T7 promoter with the nearest ORF 67 bp downstream."
+            d="M 837.54 253.08 A 386.00 386.00 0 0 1 841.45 254.04 L 843.09 263.74 L 837.09 271.50 A 368.00 368.00 0 0 0 833.36 270.59 Z"
+            aria-label="T7 promoter (214..232) - Matched exported promoter T7 promoter with the nearest ORF 67 bp downstream."
+            fill="#8b5cf6"
+            stroke="#7553d6"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="26"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_6"
+            data-tooltip-name="6xHis"
+            data-tooltip-meta="cds | Strand +"
+            data-tooltip-location="83..100"
+            data-tooltip-description="6xHis affinity tag"
+            d="M 782.74 244.12 A 386.00 386.00 0 0 1 790.34 244.88 L 788.36 262.78 A 368.00 368.00 0 0 0 781.12 262.05 Z"
+            aria-label="6xHis (83..100) - 6xHis affinity tag"
+            fill="#479f71"
+            stroke="#3d8a69"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="27"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_5"
+            data-tooltip-name="ATG"
+            data-tooltip-meta="cds | Strand +"
+            data-tooltip-location="71..73"
+            data-tooltip-description="start codon"
+            d="M 777.67 243.70 A 386.00 386.00 0 0 1 778.94 243.80 L 777.49 261.74 A 368.00 368.00 0 0 0 776.28 261.64 Z"
+            aria-label="ATG (71..73) - start codon"
+            fill="#479f71"
+            stroke="#3d8a69"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="28"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_11"
+            data-tooltip-name="MCS-2"
+            data-tooltip-meta="misc_feature | Strand +"
+            data-tooltip-location="297..298"
+            data-tooltip-description="multiple cloning site #2"
+            d="M 871.37 262.80 A 386.00 386.00 0 0 1 872.17 263.07 L 866.38 280.12 A 368.00 368.00 0 0 0 865.62 279.86 Z"
+            aria-label="MCS-2 (297..298) - multiple cloning site #2"
+            fill="#2f8f9d"
+            stroke="#297c8d"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="29"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_17"
+            data-tooltip-name="SUMO1(G96X) R"
+            data-tooltip-meta="primer_bind | Strand -"
+            data-tooltip-location="complement(606..653)"
+            data-tooltip-description=""
+            d="M 999.12 308.26 L 1013.21 308.06 A 416.00 416.00 0 0 1 1021.57 315.17 L 1009.74 328.73 A 398.00 398.00 0 0 0 1001.74 321.93 Z"
+            aria-label="SUMO1(G96X) R (complement(606..653))"
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="30"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_15"
+            data-tooltip-name="SUMO-1(G97C)C52A-6xHis-R"
+            data-tooltip-meta="primer_bind | Strand -"
+            data-tooltip-location="complement(472..503)"
+            data-tooltip-description=""
+            d="M 949.40 274.88 L 960.18 270.73 A 416.00 416.00 0 0 1 966.44 274.52 L 956.98 289.84 A 398.00 398.00 0 0 0 951.00 286.22 Z"
+            aria-label="SUMO-1(G97C)C52A-6xHis-R (complement(472..503))"
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="31"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_13"
+            data-tooltip-name="FLAG"
+            data-tooltip-meta="cds | Strand +"
+            data-tooltip-location="303..326"
+            data-tooltip-description="FLAG epitope tag, followed by an enterokinase cleavage site"
+            d="M 883.55 235.26 A 416.00 416.00 0 0 1 888.73 237.08 L 890.72 247.40 L 882.64 254.02 A 398.00 398.00 0 0 0 877.69 252.28 Z"
+            aria-label="FLAG (303..326) - FLAG epitope tag, followed by an enterokinase cleavage site"
+            fill="#479f71"
+            stroke="#3d8a69"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="32"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="backbone_recognition_backbone_vector"
+            data-tooltip-name="Backbone (Promoter-aligned backbone)"
+            data-tooltip-meta="backbone | Strand +"
+            data-tooltip-location="1..296, 651..5717"
+            data-tooltip-description="Backbone region recognized from promoter alignment with 5,363 bp outside the selected insert (restriction-site view)."
+            d="M 748.00 182.56 A 446.00 446.00 0 0 1 853.17 195.13 L 887.67 214.48 L 848.93 212.63 A 428.00 428.00 0 0 0 748.00 200.56 Z"
+            aria-label="Backbone (Promoter-aligned backbone) (1..296, 651..5717) - Backbone region recognized from promoter alignment with 5,363 bp outside the selected insert (restriction-site view)."
+            fill="#c97064"
+            stroke="#a8635e"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="32"
+            data-segment-index="2"
+            data-preview-tooltip="feature"
+            data-tooltip-key="backbone_recognition_backbone_vector"
+            data-tooltip-name="Backbone (Promoter-aligned backbone)"
+            data-tooltip-meta="backbone | Strand +"
+            data-tooltip-location="1..296, 651..5717"
+            data-tooltip-description="Backbone region recognized from promoter alignment with 5,363 bp outside the selected insert (restriction-site view)."
+            d="M 1040.19 291.60 A 446.00 446.00 0 1 1 709.13 184.25 L 748.00 191.56 L 710.70 202.18 A 428.00 428.00 0 1 0 1028.40 305.20 Z"
+            aria-label="Backbone (Promoter-aligned backbone) (1..296, 651..5717) - Backbone region recognized from promoter alignment with 5,363 bp outside the selected insert (restriction-site view)."
+            fill="#c97064"
+            stroke="#a8635e"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="33"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_16"
+            data-tooltip-name="SUMO-1(G97C)C52A-6xHis-F"
+            data-tooltip-meta="primer_bind | Strand +"
+            data-tooltip-location="472..503"
+            data-tooltip-description=""
+            d="M 968.70 240.99 A 446.00 446.00 0 0 1 975.48 244.93 L 977.46 256.65 L 966.30 260.41 A 428.00 428.00 0 0 0 959.79 256.63 Z"
+            aria-label="SUMO-1(G97C)C52A-6xHis-F (472..503)"
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="34"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="backbone_recognition_orf_vector"
+            data-tooltip-name="Nearest ORF (114 aa)"
+            data-tooltip-meta="orf | Strand +"
+            data-tooltip-location="300..644"
+            data-tooltip-description="345 bp ORF identified from ATG to TGA."
+            d="M 901.62 178.03 A 476.00 476.00 0 0 1 1024.77 241.29 L 1051.62 273.73 L 1014.31 255.94 A 458.00 458.00 0 0 0 895.81 195.06 Z"
+            aria-label="Nearest ORF (114 aa) (300..644) - 345 bp ORF identified from ATG to TGA."
+            fill="#c97064"
+            stroke="#a8635e"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="35"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="backbone_recognition_insert_vector"
+            data-tooltip-name="Insert (Promoter-aligned backbone)"
+            data-tooltip-meta="insert | Strand +"
+            data-tooltip-location="297..650"
+            data-tooltip-description="354 bp insert sequence (5&#39; NdeI / 3&#39; KpnI) selected from promoter / ORF recognition."
+            d="M 909.72 149.10 A 506.00 506.00 0 0 1 1044.92 218.83 L 1073.61 253.07 L 1034.36 233.41 A 488.00 488.00 0 0 0 903.97 166.15 Z"
+            aria-label="Insert (Promoter-aligned backbone) (297..650) - 354 bp insert sequence (5&#39; NdeI / 3&#39; KpnI) selected from promoter / ORF recognition."
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+        
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_1"
+          data-tooltip-name="source"
+          data-tooltip-meta="source | Strand +"
+          data-tooltip-location="1..5717"
+          data-tooltip-description=""
+          data-feature-x="748.00"
+          data-feature-y="958.56"
+          data-bend-x="748.00"
+          data-bend-y="1172.56"
+          data-label-center-y="1212.14"
+          aria-label="source (1..5717)">
+          <path class="circular-preview__leader"
+            d="M 748.00 958.56 L 748.00 1172.56 L 196.00 1212.14"
+            stroke="#297c8d"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="110.00"
+            y="1199.14"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e2eff1"
+            stroke="#297c8d"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="184.00"
+              y="1212.14"
+              text-anchor="end"
+              fill="#0f223e">
+              source
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_28"
+          data-tooltip-name="lacI"
+          data-tooltip-meta="cds | Strand -"
+          data-tooltip-location="complement(4228..5310)"
+          data-tooltip-description="The lac repressor binds to the lac operator to inhibit transcription in E. coli. This inhibition can be relieved by addi"
+          data-feature-x="437.09"
+          data-feature-y="447.07"
+          data-bend-x="278.18"
+          data-bend-y="354.32"
+          data-label-center-y="579.00"
+          aria-label="lacI (complement(4228..5310)) - The lac repressor binds to the lac operator to inhibit transcription in E. coli. This inhibition can be relieved by addi">
+          <path class="circular-preview__leader"
+            d="M 437.09 447.07 L 278.18 354.32 L 196.00 579.00"
+            stroke="#3d8a69"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="110.00"
+            y="566.00"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e5f2eb"
+            stroke="#3d8a69"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="184.00"
+              y="579.00"
+              text-anchor="end"
+              fill="#0f223e">
+              lacI
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_24"
+          data-tooltip-name="AmpR"
+          data-tooltip-meta="cds | Strand -"
+          data-tooltip-location="complement(join(2205..2273,1413..2204))"
+          data-tooltip-description="confers resistance to ampicillin, carbenicillin, and related antibiotics"
+          data-feature-x="1077.26"
+          data-feature-y="774.12"
+          data-bend-x="1245.55"
+          data-bend-y="848.52"
+          data-label-center-y="851.75"
+          aria-label="AmpR (complement(join(2205..2273,1413..2204))) - confers resistance to ampicillin, carbenicillin, and related antibiotics">
+          <path class="circular-preview__leader"
+            d="M 1077.26 774.12 L 1245.55 848.52 L 1300.00 851.75"
+            stroke="#3d8a69"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1300.00"
+            y="838.75"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e5f2eb"
+            stroke="#3d8a69"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1312.00"
+              y="851.75"
+              text-anchor="start"
+              fill="#0f223e">
+              AmpR
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_26"
+          data-tooltip-name="ori"
+          data-tooltip-meta="rep_origin | Strand +"
+          data-tooltip-location="2447..3035"
+          data-tooltip-description="high-copy-number ColE1/pMB1/pBR322/pUC origin of replication"
+          data-feature-x="794.56"
+          data-feature-y="985.53"
+          data-bend-x="818.35"
+          data-bend-y="1167.99"
+          data-label-center-y="1172.14"
+          aria-label="ori (2447..3035) - high-copy-number ColE1/pMB1/pBR322/pUC origin of replication">
+          <path class="circular-preview__leader"
+            d="M 794.56 985.53 L 818.35 1167.99 L 196.00 1172.14"
+            stroke="#436fdd"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="110.00"
+            y="1159.14"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e6edff"
+            stroke="#436fdd"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="184.00"
+              y="1172.14"
+              text-anchor="end"
+              fill="#0f223e">
+              ori
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_23"
+          data-tooltip-name="f1 ori"
+          data-tooltip-meta="rep_origin | Strand +"
+          data-tooltip-location="843..1298"
+          data-tooltip-description="f1 bacteriophage origin of replication; arrow indicates direction of (+) strand synthesis"
+          data-feature-x="1080.30"
+          data-feature-y="490.08"
+          data-bend-x="1250.15"
+          data-bend-y="419.31"
+          data-label-center-y="717.19"
+          aria-label="f1 ori (843..1298) - f1 bacteriophage origin of replication; arrow indicates direction of (+) strand synthesis">
+          <path class="circular-preview__leader"
+            d="M 1080.30 490.08 L 1250.15 419.31 L 1300.00 717.19"
+            stroke="#436fdd"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1300.00"
+            y="704.19"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e6edff"
+            stroke="#436fdd"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1312.00"
+              y="717.19"
+              text-anchor="start"
+              fill="#0f223e">
+              f1 ori
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_14"
+          data-tooltip-name="SUMO-1(G97C)"
+          data-tooltip-meta="cds | Strand +"
+          data-tooltip-location="333..623"
+          data-tooltip-description=""
+          data-feature-x="928.37"
+          data-feature-y="317.00"
+          data-bend-x="1020.56"
+          data-bend-y="157.76"
+          data-label-center-y="379.19"
+          aria-label="SUMO-1(G97C) (333..623)">
+          <path class="circular-preview__leader"
+            d="M 928.37 317.00 L 1020.56 157.76 L 1300.00 379.19"
+            stroke="#3d8a69"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1300.00"
+            y="366.19"
+            width="104.80"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e5f2eb"
+            stroke="#3d8a69"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1312.00"
+              y="379.19"
+              text-anchor="start"
+              fill="#0f223e">
+              SUMO-1(G97C)
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_27"
+          data-tooltip-name="rop"
+          data-tooltip-meta="cds | Strand -"
+          data-tooltip-location="complement(3465..3656)"
+          data-tooltip-description="Rop protein, which maintains plasmids at low copy number"
+          data-feature-x="497.14"
+          data-feature-y="886.76"
+          data-bend-x="368.92"
+          data-bend-y="1018.73"
+          data-label-center-y="992.89"
+          aria-label="rop (complement(3465..3656)) - Rop protein, which maintains plasmids at low copy number">
+          <path class="circular-preview__leader"
+            d="M 497.14 886.76 L 368.92 1018.73 L 196.00 992.89"
+            stroke="#3d8a69"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="110.00"
+            y="979.89"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e5f2eb"
+            stroke="#3d8a69"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="184.00"
+              y="992.89"
+              text-anchor="end"
+              fill="#0f223e">
+              rop
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_4"
+          data-tooltip-name="MCS-1"
+          data-tooltip-meta="misc_feature | Strand +"
+          data-tooltip-location="69..168"
+          data-tooltip-description="multiple cloning site #1"
+          data-feature-x="794.56"
+          data-feature-y="271.58"
+          data-bend-x="818.35"
+          data-bend-y="89.12"
+          data-label-center-y="81.19"
+          aria-label="MCS-1 (69..168) - multiple cloning site #1">
+          <path class="circular-preview__leader"
+            d="M 794.56 271.58 L 818.35 89.12 L 1300.00 81.19"
+            stroke="#297c8d"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1300.00"
+            y="68.19"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e2eff1"
+            stroke="#297c8d"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1312.00"
+              y="81.19"
+              text-anchor="start"
+              fill="#0f223e">
+              MCS-1
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_25"
+          data-tooltip-name="AmpR promoter"
+          data-tooltip-meta="promoter | Strand -"
+          data-tooltip-location="complement(2274..2366)"
+          data-tooltip-description=""
+          data-feature-x="949.00"
+          data-feature-y="927.22"
+          data-bend-x="1051.74"
+          data-bend-y="1079.87"
+          data-label-center-y="1086.50"
+          aria-label="AmpR promoter (complement(2274..2366))">
+          <path class="circular-preview__leader"
+            d="M 949.00 927.22 L 1051.74 1079.87 L 1300.00 1086.50"
+            stroke="#7553d6"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1300.00"
+            y="1073.50"
+            width="112.20"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#efe8fe"
+            stroke="#7553d6"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1312.00"
+              y="1086.50"
+              text-anchor="start"
+              fill="#0f223e">
+              AmpR promoter
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_19"
+          data-tooltip-name="MCS-2"
+          data-tooltip-meta="misc_feature | Strand +"
+          data-tooltip-location="650..735"
+          data-tooltip-description="multiple cloning site #2"
+          data-feature-x="996.15"
+          data-feature-y="367.75"
+          data-bend-x="1122.98"
+          data-bend-y="234.44"
+          data-label-center-y="597.19"
+          aria-label="MCS-2 (650..735) - multiple cloning site #2">
+          <path class="circular-preview__leader"
+            d="M 996.15 367.75 L 1122.98 234.44 L 1300.00 597.19"
+            stroke="#297c8d"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1300.00"
+            y="584.19"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e2eff1"
+            stroke="#297c8d"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1312.00"
+              y="597.19"
+              text-anchor="start"
+              fill="#0f223e">
+              MCS-2
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_29"
+          data-tooltip-name="lacI promoter"
+          data-tooltip-meta="promoter | Strand -"
+          data-tooltip-location="complement(5311..5388)"
+          data-tooltip-description=""
+          data-feature-x="606.34"
+          data-feature-y="297.60"
+          data-bend-x="533.93"
+          data-bend-y="128.45"
+          data-label-center-y="281.19"
+          aria-label="lacI promoter (complement(5311..5388))">
+          <path class="circular-preview__leader"
+            d="M 606.34 297.60 L 533.93 128.45 L 1300.00 281.19"
+            stroke="#7553d6"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1300.00"
+            y="268.19"
+            width="112.20"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#efe8fe"
+            stroke="#7553d6"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1312.00"
+              y="281.19"
+              text-anchor="start"
+              fill="#0f223e">
+              lacI promoter
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_2"
+          data-tooltip-name="lac operator"
+          data-tooltip-meta="protein_bind | Strand +"
+          data-tooltip-location="3..27"
+          data-tooltip-description="The lac repressor binds to the lac operator to inhibit transcription in E. coli. This inhibition can be relieved by addi"
+          data-feature-x="753.74"
+          data-feature-y="268.60"
+          data-bend-x="756.67"
+          data-bend-y="84.63"
+          data-label-center-y="85.00"
+          aria-label="lac operator (3..27) - The lac repressor binds to the lac operator to inhibit transcription in E. coli. This inhibition can be relieved by addi">
+          <path class="circular-preview__leader"
+            d="M 753.74 268.60 L 756.67 84.63 L 196.00 85.00"
+            stroke="#cd8d59"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="91.20"
+            y="72.00"
+            width="104.80"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#fef2e8"
+            stroke="#cd8d59"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="184.00"
+              y="85.00"
+              text-anchor="end"
+              fill="#0f223e">
+              lac operator
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_8"
+          data-tooltip-name="lac operator"
+          data-tooltip-meta="protein_bind | Strand +"
+          data-tooltip-location="233..257"
+          data-tooltip-description="The lac repressor binds to the lac operator to inhibit transcription in E. coli. This inhibition can be relieved by addi"
+          data-feature-x="843.58"
+          data-feature-y="281.48"
+          data-bend-x="892.43"
+          data-bend-y="104.08"
+          data-label-center-y="161.19"
+          aria-label="lac operator (233..257) - The lac repressor binds to the lac operator to inhibit transcription in E. coli. This inhibition can be relieved by addi">
+          <path class="circular-preview__leader"
+            d="M 843.58 281.48 L 892.43 104.08 L 1300.00 161.19"
+            stroke="#cd8d59"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1300.00"
+            y="148.19"
+            width="104.80"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#fef2e8"
+            stroke="#cd8d59"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1312.00"
+              y="161.19"
+              text-anchor="start"
+              fill="#0f223e">
+              lac operator
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_10"
+          data-tooltip-name="pETDuet F"
+          data-tooltip-meta="primer_bind | Strand +"
+          data-tooltip-location="293..314"
+          data-tooltip-description=""
+          data-feature-x="865.68"
+          data-feature-y="288.33"
+          data-bend-x="925.83"
+          data-bend-y="114.44"
+          data-label-center-y="365.00"
+          aria-label="pETDuet F (293..314)">
+          <path class="circular-preview__leader"
+            d="M 865.68 288.33 L 925.83 114.44 L 196.00 365.00"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="110.00"
+            y="352.00"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="184.00"
+              y="365.00"
+              text-anchor="end"
+              fill="#0f223e">
+              pETDuet F
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_7"
+          data-tooltip-name="T7 promoter"
+          data-tooltip-meta="promoter | Strand +"
+          data-tooltip-location="214..232"
+          data-tooltip-description="promoter for bacteriophage T7 RNA polymerase"
+          data-feature-x="835.16"
+          data-feature-y="279.27"
+          data-bend-x="879.71"
+          data-bend-y="100.74"
+          data-label-center-y="121.19"
+          aria-label="T7 promoter (214..232) - promoter for bacteriophage T7 RNA polymerase">
+          <path class="circular-preview__leader"
+            d="M 835.16 279.27 L 879.71 100.74 L 1300.00 121.19"
+            stroke="#7553d6"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1300.00"
+            y="108.19"
+            width="97.40"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#efe8fe"
+            stroke="#7553d6"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1312.00"
+              y="121.19"
+              text-anchor="start"
+              fill="#0f223e">
+              T7 promoter
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_21"
+          data-tooltip-name="T7 Terminator Primer"
+          data-tooltip-meta="primer_bind | Strand -"
+          data-tooltip-location="complement(745..763)"
+          data-tooltip-description=""
+          data-feature-x="1013.20"
+          data-feature-y="385.10"
+          data-bend-x="1148.74"
+          data-bend-y="260.67"
+          data-label-center-y="637.19"
+          aria-label="T7 Terminator Primer (complement(745..763))">
+          <path class="circular-preview__leader"
+            d="M 1013.20 385.10 L 1148.74 260.67 L 1300.00 637.19"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1300.00"
+            y="624.19"
+            width="164.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1312.00"
+              y="637.19"
+              text-anchor="start"
+              fill="#0f223e">
+              T7 Terminator Primer
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_31"
+          data-tooltip-name="T7 promoter"
+          data-tooltip-meta="promoter | Strand +"
+          data-tooltip-location="join(5701..5717,1..2)"
+          data-tooltip-description="promoter for bacteriophage T7 RNA polymerase"
+          data-feature-x="744.64"
+          data-feature-y="268.57"
+          data-bend-x="742.92"
+          data-bend-y="84.58"
+          data-label-center-y="45.00"
+          aria-label="T7 promoter (join(5701..5717,1..2)) - promoter for bacteriophage T7 RNA polymerase">
+          <path class="circular-preview__leader"
+            d="M 744.64 268.57 L 742.92 84.58 L 196.00 45.00"
+            stroke="#7553d6"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="98.60"
+            y="32.00"
+            width="97.40"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#efe8fe"
+            stroke="#7553d6"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="184.00"
+              y="45.00"
+              text-anchor="end"
+              fill="#0f223e">
+              T7 promoter
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_18"
+          data-tooltip-name="6xHis"
+          data-tooltip-meta="cds | Strand +"
+          data-tooltip-location="624..641"
+          data-tooltip-description="6xHis affinity tag"
+          data-feature-x="978.43"
+          data-feature-y="351.96"
+          data-bend-x="1096.20"
+          data-bend-y="210.59"
+          data-label-center-y="517.19"
+          aria-label="6xHis (624..641) - 6xHis affinity tag">
+          <path class="circular-preview__leader"
+            d="M 978.43 351.96 L 1096.20 210.59 L 1300.00 517.19"
+            stroke="#3d8a69"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1300.00"
+            y="504.19"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e5f2eb"
+            stroke="#3d8a69"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1312.00"
+              y="517.19"
+              text-anchor="start"
+              fill="#0f223e">
+              6xHis
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_30"
+          data-tooltip-name="pET Upstream Primer"
+          data-tooltip-meta="primer_bind | Strand +"
+          data-tooltip-location="5655..5670"
+          data-tooltip-description=""
+          data-feature-x="726.25"
+          data-feature-y="269.21"
+          data-bend-x="715.14"
+          data-bend-y="85.55"
+          data-label-center-y="125.00"
+          aria-label="pET Upstream Primer (5655..5670)">
+          <path class="circular-preview__leader"
+            d="M 726.25 269.21 L 715.14 85.55 L 196.00 125.00"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="39.40"
+            y="112.00"
+            width="156.60"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="184.00"
+              y="125.00"
+              text-anchor="end"
+              fill="#0f223e">
+              pET Upstream Primer
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_3"
+          data-tooltip-name="RBS"
+          data-tooltip-meta="rbs | Strand +"
+          data-tooltip-location="58..63"
+          data-tooltip-description="ribosome binding site"
+          data-feature-x="771.72"
+          data-feature-y="269.34"
+          data-bend-x="783.85"
+          data-bend-y="85.74"
+          data-label-center-y="165.00"
+          aria-label="RBS (58..63) - ribosome binding site">
+          <path class="circular-preview__leader"
+            d="M 771.72 269.34 L 783.85 85.74 L 196.00 165.00"
+            stroke="#a8635e"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="110.00"
+            y="152.00"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f7ebe9"
+            stroke="#a8635e"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="184.00"
+              y="165.00"
+              text-anchor="end"
+              fill="#0f223e">
+              RBS
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_9"
+          data-tooltip-name="RBS"
+          data-tooltip-meta="rbs | Strand +"
+          data-tooltip-location="286..291"
+          data-tooltip-description="ribosome binding site"
+          data-feature-x="860.05"
+          data-feature-y="286.44"
+          data-bend-x="917.33"
+          data-bend-y="111.58"
+          data-label-center-y="325.00"
+          aria-label="RBS (286..291) - ribosome binding site">
+          <path class="circular-preview__leader"
+            d="M 860.05 286.44 L 917.33 111.58 L 196.00 325.00"
+            stroke="#a8635e"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="110.00"
+            y="312.00"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f7ebe9"
+            stroke="#a8635e"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="184.00"
+              y="325.00"
+              text-anchor="end"
+              fill="#0f223e">
+              RBS
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_12"
+          data-tooltip-name="FLAG-SUMO-1(G97C)-6xHis"
+          data-tooltip-meta="cds | Strand +"
+          data-tooltip-location="300..644"
+          data-tooltip-description=""
+          data-feature-x="941.17"
+          data-feature-y="289.76"
+          data-bend-x="1017.45"
+          data-bend-y="155.98"
+          data-label-center-y="330.19"
+          aria-label="FLAG-SUMO-1(G97C)-6xHis (300..644)">
+          <path class="circular-preview__leader"
+            d="M 941.17 289.76 L 1017.45 155.98 L 1300.00 330.19"
+            stroke="#3d8a69"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1300.00"
+            y="308.19"
+            width="104.80"
+            height="44.00"
+            rx="10"
+            ry="10"
+            fill="#e5f2eb"
+            stroke="#3d8a69"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1312.00"
+              y="321.19"
+              text-anchor="start"
+              fill="#0f223e">
+              FLAG-SUMO-1(
+            </text>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1312.00"
+              y="339.19"
+              text-anchor="start"
+              fill="#0f223e">
+              G97C)-6xHis
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_22"
+          data-tooltip-name="T7 terminator"
+          data-tooltip-meta="terminator | Strand +"
+          data-tooltip-location="759..806"
+          data-tooltip-description="transcription terminator for bacteriophage T7 RNA polymerase"
+          data-feature-x="1043.42"
+          data-feature-y="373.94"
+          data-bend-x="1160.07"
+          data-bend-y="273.40"
+          data-label-center-y="677.19"
+          aria-label="T7 terminator (759..806) - transcription terminator for bacteriophage T7 RNA polymerase">
+          <path class="circular-preview__leader"
+            d="M 1043.42 373.94 L 1160.07 273.40 L 1300.00 677.19"
+            stroke="#cd8d59"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1300.00"
+            y="664.19"
+            width="112.20"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#fef2e8"
+            stroke="#cd8d59"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1312.00"
+              y="677.19"
+              text-anchor="start"
+              fill="#0f223e">
+              T7 terminator
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_20"
+          data-tooltip-name="S-Tag"
+          data-tooltip-meta="cds | Strand +"
+          data-tooltip-location="663..707"
+          data-tooltip-description="affinity and epitope tag derived from pancreatic ribonuclease A"
+          data-feature-x="1014.49"
+          data-feature-y="343.81"
+          data-bend-x="1119.72"
+          data-bend-y="231.37"
+          data-label-center-y="557.19"
+          aria-label="S-Tag (663..707) - affinity and epitope tag derived from pancreatic ribonuclease A">
+          <path class="circular-preview__leader"
+            d="M 1014.49 343.81 L 1119.72 231.37 L 1300.00 557.19"
+            stroke="#3d8a69"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1300.00"
+            y="544.19"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e5f2eb"
+            stroke="#3d8a69"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1312.00"
+              y="557.19"
+              text-anchor="start"
+              fill="#0f223e">
+              S-Tag
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="backbone_recognition_promoter_vector"
+          data-tooltip-name="T7 promoter"
+          data-tooltip-meta="promoter | Strand +"
+          data-tooltip-location="214..232"
+          data-tooltip-description="Matched exported promoter T7 promoter with the nearest ORF 67 bp downstream."
+          data-feature-x="842.42"
+          data-feature-y="250.16"
+          data-bend-x="879.71"
+          data-bend-y="100.74"
+          data-label-center-y="285.00"
+          aria-label="T7 promoter (214..232) - Matched exported promoter T7 promoter with the nearest ORF 67 bp downstream.">
+          <path class="circular-preview__leader"
+            d="M 842.42 250.16 L 879.71 100.74 L 196.00 285.00"
+            stroke="#7553d6"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="98.60"
+            y="272.00"
+            width="97.40"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#efe8fe"
+            stroke="#7553d6"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="184.00"
+              y="285.00"
+              text-anchor="end"
+              fill="#0f223e">
+              T7 promoter
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_6"
+          data-tooltip-name="6xHis"
+          data-tooltip-meta="cds | Strand +"
+          data-tooltip-location="83..100"
+          data-tooltip-description="6xHis affinity tag"
+          data-feature-x="786.94"
+          data-feature-y="240.50"
+          data-bend-x="802.32"
+          data-bend-y="87.27"
+          data-label-center-y="245.00"
+          aria-label="6xHis (83..100) - 6xHis affinity tag">
+          <path class="circular-preview__leader"
+            d="M 786.94 240.50 L 802.32 87.27 L 196.00 245.00"
+            stroke="#3d8a69"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="110.00"
+            y="232.00"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e5f2eb"
+            stroke="#3d8a69"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="184.00"
+              y="245.00"
+              text-anchor="end"
+              fill="#0f223e">
+              6xHis
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_5"
+          data-tooltip-name="ATG"
+          data-tooltip-meta="cds | Strand +"
+          data-tooltip-location="71..73"
+          data-tooltip-description="start codon"
+          data-feature-x="778.62"
+          data-feature-y="239.76"
+          data-bend-x="790.70"
+          data-bend-y="86.23"
+          data-label-center-y="205.00"
+          aria-label="ATG (71..73) - start codon">
+          <path class="circular-preview__leader"
+            d="M 778.62 239.76 L 790.70 86.23 L 196.00 205.00"
+            stroke="#3d8a69"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="110.00"
+            y="192.00"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e5f2eb"
+            stroke="#3d8a69"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="184.00"
+              y="205.00"
+              text-anchor="end"
+              fill="#0f223e">
+              ATG
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_11"
+          data-tooltip-name="MCS-2"
+          data-tooltip-meta="misc_feature | Strand +"
+          data-tooltip-location="297..298"
+          data-tooltip-description="multiple cloning site #2"
+          data-feature-x="873.05"
+          data-feature-y="259.15"
+          data-bend-x="922.43"
+          data-bend-y="113.28"
+          data-label-center-y="201.19"
+          aria-label="MCS-2 (297..298) - multiple cloning site #2">
+          <path class="circular-preview__leader"
+            d="M 873.05 259.15 L 922.43 113.28 L 1300.00 201.19"
+            stroke="#297c8d"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1300.00"
+            y="188.19"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e2eff1"
+            stroke="#297c8d"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1312.00"
+              y="201.19"
+              text-anchor="start"
+              fill="#0f223e">
+              MCS-2
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_17"
+          data-tooltip-name="SUMO1(G96X) R"
+          data-tooltip-meta="primer_bind | Strand -"
+          data-tooltip-location="complement(606..653)"
+          data-tooltip-description=""
+          data-feature-x="1015.76"
+          data-feature-y="304.98"
+          data-bend-x="1094.82"
+          data-bend-y="209.45"
+          data-label-center-y="477.19"
+          aria-label="SUMO1(G96X) R (complement(606..653))">
+          <path class="circular-preview__leader"
+            d="M 1015.76 304.98 L 1094.82 209.45 L 1300.00 477.19"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1300.00"
+            y="464.19"
+            width="112.20"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1312.00"
+              y="477.19"
+              text-anchor="start"
+              fill="#0f223e">
+              SUMO1(G96X) R
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_15"
+          data-tooltip-name="SUMO-1(G97C)C52A-6xHis-R"
+          data-tooltip-meta="primer_bind | Strand -"
+          data-tooltip-location="complement(472..503)"
+          data-tooltip-description=""
+          data-feature-x="962.22"
+          data-feature-y="267.29"
+          data-bend-x="1025.46"
+          data-bend-y="160.63"
+          data-label-center-y="428.19"
+          aria-label="SUMO-1(G97C)C52A-6xHis-R (complement(472..503))">
+          <path class="circular-preview__leader"
+            d="M 962.22 267.29 L 1025.46 160.63 L 1300.00 428.19"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1300.00"
+            y="406.19"
+            width="104.80"
+            height="44.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1312.00"
+              y="419.19"
+              text-anchor="start"
+              fill="#0f223e">
+              SUMO-1(G97C)
+            </text>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1312.00"
+              y="437.19"
+              text-anchor="start"
+              fill="#0f223e">
+              C52A-6xHis-R
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_13"
+          data-tooltip-name="FLAG"
+          data-tooltip-meta="cds | Strand +"
+          data-tooltip-location="303..326"
+          data-tooltip-description="FLAG epitope tag, followed by an enterokinase cleavage site"
+          data-feature-x="890.08"
+          data-feature-y="233.32"
+          data-bend-x="932.03"
+          data-bend-y="116.63"
+          data-label-center-y="241.19"
+          aria-label="FLAG (303..326) - FLAG epitope tag, followed by an enterokinase cleavage site">
+          <path class="circular-preview__leader"
+            d="M 890.08 233.32 L 932.03 116.63 L 1300.00 241.19"
+            stroke="#3d8a69"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1300.00"
+            y="228.19"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e5f2eb"
+            stroke="#3d8a69"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1312.00"
+              y="241.19"
+              text-anchor="start"
+              fill="#0f223e">
+              FLAG
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="backbone_recognition_backbone_vector"
+          data-tooltip-name="Backbone (Promoter-aligned backbone)"
+          data-tooltip-meta="backbone | Strand +"
+          data-tooltip-location="1..296, 651..5717"
+          data-tooltip-description="Backbone region recognized from promoter alignment with 5,363 bp outside the selected insert (restriction-site view)."
+          data-feature-x="590.66"
+          data-feature-y="1050.15"
+          data-bend-x="557.80"
+          data-bend-y="1138.22"
+          data-label-center-y="1114.14"
+          aria-label="Backbone (Promoter-aligned backbone) (1..296, 651..5717) - Backbone region recognized from promoter alignment with 5,363 bp outside the selected insert (restriction-site view).">
+          <path class="circular-preview__leader"
+            d="M 590.66 1050.15 L 557.80 1138.22 L 196.00 1114.14"
+            stroke="#a8635e"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="76.40"
+            y="1083.14"
+            width="119.60"
+            height="62.00"
+            rx="10"
+            ry="10"
+            fill="#f7ebe9"
+            stroke="#a8635e"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="184.00"
+              y="1096.14"
+              text-anchor="end"
+              fill="#0f223e">
+              Backbone
+            </text>
+          
+            <text
+              class="circular-preview__label-text"
+              x="184.00"
+              y="1114.14"
+              text-anchor="end"
+              fill="#0f223e">
+              (Promoter-alig
+            </text>
+          
+            <text
+              class="circular-preview__label-text"
+              x="184.00"
+              y="1132.14"
+              text-anchor="end"
+              fill="#0f223e">
+              ned backbone)
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_16"
+          data-tooltip-name="SUMO-1(G97C)C52A-6xHis-F"
+          data-tooltip-meta="primer_bind | Strand +"
+          data-tooltip-location="472..503"
+          data-tooltip-description=""
+          data-feature-x="977.52"
+          data-feature-y="241.49"
+          data-bend-x="1025.46"
+          data-bend-y="160.63"
+          data-label-center-y="530.00"
+          aria-label="SUMO-1(G97C)C52A-6xHis-F (472..503)">
+          <path class="circular-preview__leader"
+            d="M 977.52 241.49 L 1025.46 160.63 L 196.00 530.00"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="91.20"
+            y="508.00"
+            width="104.80"
+            height="44.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="184.00"
+              y="521.00"
+              text-anchor="end"
+              fill="#0f223e">
+              SUMO-1(G97C)
+            </text>
+          
+            <text
+              class="circular-preview__label-text"
+              x="184.00"
+              y="539.00"
+              text-anchor="end"
+              fill="#0f223e">
+              C52A-6xHis-F
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="backbone_recognition_orf_vector"
+          data-tooltip-name="Nearest ORF (114 aa)"
+          data-tooltip-meta="orf | Strand +"
+          data-tooltip-location="300..644"
+          data-tooltip-description="345 bp ORF identified from ATG to TGA."
+          data-feature-x="985.75"
+          data-feature-y="211.57"
+          data-bend-x="1017.45"
+          data-bend-y="155.98"
+          data-label-center-y="405.00"
+          aria-label="Nearest ORF (114 aa) (300..644) - 345 bp ORF identified from ATG to TGA.">
+          <path class="circular-preview__leader"
+            d="M 985.75 211.57 L 1017.45 155.98 L 196.00 405.00"
+            stroke="#a8635e"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="32.00"
+            y="392.00"
+            width="164.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f7ebe9"
+            stroke="#a8635e"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="184.00"
+              y="405.00"
+              text-anchor="end"
+              fill="#0f223e">
+              Nearest ORF (114 aa)
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="backbone_recognition_insert_vector"
+          data-tooltip-name="Insert (Promoter-aligned backbone)"
+          data-tooltip-meta="insert | Strand +"
+          data-tooltip-location="297..650"
+          data-tooltip-description="354 bp insert sequence (5&#39; NdeI / 3&#39; KpnI) selected from promoter / ORF recognition."
+          data-feature-x="1001.34"
+          data-feature-y="185.93"
+          data-bend-x="1018.23"
+          data-bend-y="156.42"
+          data-label-center-y="463.00"
+          aria-label="Insert (Promoter-aligned backbone) (297..650) - 354 bp insert sequence (5&#39; NdeI / 3&#39; KpnI) selected from promoter / ORF recognition.">
+          <path class="circular-preview__leader"
+            d="M 1001.34 185.93 L 1018.23 156.42 L 196.00 463.00"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="76.40"
+            y="432.00"
+            width="119.60"
+            height="62.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="184.00"
+              y="445.00"
+              text-anchor="end"
+              fill="#0f223e">
+              Insert
+            </text>
+          
+            <text
+              class="circular-preview__label-text"
+              x="184.00"
+              y="463.00"
+              text-anchor="end"
+              fill="#0f223e">
+              (Promoter-alig
+            </text>
+          
+            <text
+              class="circular-preview__label-text"
+              x="184.00"
+              y="481.00"
+              text-anchor="end"
+              fill="#0f223e">
+              ned backbone)
+            </text>
+          
+        </g>
+      
+        
+    <g class="circular-preview__center">
+      <circle cx="748.00" cy="628.56" r="234.00" class="circular-preview__center-disc"></circle>
+      <text x="748.00" y="614.56" class="circular-preview__title">pETDuet-1-NdeI-F</text>
+      <text x="748.00" y="646.56" class="circular-preview__subtitle">5,717 bp · 35 features</text>
+    </g>
+  
+      </g>
+    </svg>
+  </main>
+  
+  <script>
+    (() => {
+      const LABEL_PADDING_X = 12;
+      const MIN_LABEL_WIDTH = 70;
+      const VIEWBOX_GUTTER = 32;
+      const TOOLTIP_OFFSET = 12;
+
+      function escapeText(value) {
+        return String(value || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function ensureTooltipNode() {
+        let node = document.querySelector('.circular-preview__hover-tooltip');
+        if (node) {
+          return node;
+        }
+        node = document.createElement('div');
+        node.className = 'circular-preview__hover-tooltip';
+        node.hidden = true;
+        document.body.appendChild(node);
+        return node;
+      }
+
+      function hideTooltip() {
+        const tooltip = document.querySelector('.circular-preview__hover-tooltip');
+        if (tooltip) {
+          tooltip.hidden = true;
+          tooltip.dataset.owner = '';
+        }
+      }
+
+      function buildTooltipHtml(target) {
+        const name = String(target?.dataset?.tooltipName || '').trim();
+        const meta = String(target?.dataset?.tooltipMeta || '').trim();
+        const location = String(target?.dataset?.tooltipLocation || '').trim();
+        const description = String(target?.dataset?.tooltipDescription || '').trim();
+        if (!name && !meta && !location && !description) {
+          return '';
+        }
+        return [
+          name ? '<p class="circular-preview__hover-title">' + escapeText(name) + '</p>' : '',
+          meta ? '<p>' + escapeText(meta) + '</p>' : '',
+          location ? '<p>' + escapeText(location) + '</p>' : '',
+          description ? '<p class="circular-preview__hover-description">' + escapeText(description) + '</p>' : ''
+        ].filter(Boolean).join('');
+      }
+
+      function positionTooltip(tooltip, event) {
+        const rawX = Number(event?.clientX);
+        const rawY = Number(event?.clientY);
+        const startX = Number.isFinite(rawX) ? rawX + TOOLTIP_OFFSET : TOOLTIP_OFFSET;
+        const startY = Number.isFinite(rawY) ? rawY + TOOLTIP_OFFSET : TOOLTIP_OFFSET;
+        const tooltipRect = tooltip.getBoundingClientRect();
+        const viewportWidth = Number(window?.innerWidth) || 0;
+        const viewportHeight = Number(window?.innerHeight) || 0;
+
+        let left = Math.max(8, startX);
+        let top = Math.max(8, startY);
+
+        if (viewportWidth > 0) {
+          left = Math.min(left, Math.max(8, viewportWidth - tooltipRect.width - 8));
+        }
+        if (viewportHeight > 0) {
+          top = Math.min(top, Math.max(8, viewportHeight - tooltipRect.height - 8));
+        }
+
+        tooltip.style.left = left.toFixed(0) + 'px';
+        tooltip.style.top = top.toFixed(0) + 'px';
+      }
+
+      function showTooltip(target, event) {
+        const html = buildTooltipHtml(target);
+        if (!html) {
+          hideTooltip();
+          return;
+        }
+        const tooltip = ensureTooltipNode();
+        const ownerKey = String(target?.dataset?.tooltipKey || '');
+        if (tooltip.dataset.owner !== ownerKey) {
+          tooltip.innerHTML = html;
+          tooltip.dataset.owner = ownerKey;
+        }
+        tooltip.hidden = false;
+        positionTooltip(tooltip, event);
+      }
+
+      function bindFeatureHoverCards() {
+        const svg = document.querySelector('.preview-shell svg');
+        if (!svg || svg.dataset.hoverCardsBound === 'true') {
+          return;
+        }
+
+        svg.dataset.hoverCardsBound = 'true';
+        svg.querySelectorAll('[data-preview-tooltip="feature"]').forEach((node) => {
+          node.addEventListener('pointerenter', (event) => {
+            showTooltip(node, event);
+          });
+          node.addEventListener('pointermove', (event) => {
+            showTooltip(node, event);
+          });
+          node.addEventListener('pointerleave', () => {
+            hideTooltip();
+          });
+        });
+
+        svg.addEventListener('pointerleave', () => {
+          hideTooltip();
+        });
+        window.addEventListener('blur', () => {
+          hideTooltip();
+        });
+      }
+
+      function fitAnnotationBoxes() {
+        const svg = document.querySelector('.preview-shell svg');
+        const scene = svg?.querySelector('.circular-preview__scene');
+        if (!svg || !scene) {
+          return;
+        }
+
+        svg.querySelectorAll('.circular-preview__annotation').forEach((annotation) => {
+          const rect = annotation.querySelector('.circular-preview__label-box');
+          const leader = annotation.querySelector('.circular-preview__leader');
+          const textNodes = annotation.querySelectorAll('.circular-preview__label-text');
+          if (!rect || !leader || !textNodes.length) {
+            return;
+          }
+
+          let minX = Number.POSITIVE_INFINITY;
+          let maxX = Number.NEGATIVE_INFINITY;
+          textNodes.forEach((node) => {
+            const box = node.getBBox();
+            if (!Number.isFinite(box.x) || !Number.isFinite(box.width)) {
+              return;
+            }
+            minX = Math.min(minX, box.x);
+            maxX = Math.max(maxX, box.x + box.width);
+          });
+
+          if (!Number.isFinite(minX) || !Number.isFinite(maxX)) {
+            return;
+          }
+
+          const width = Math.max(MIN_LABEL_WIDTH, (maxX - minX) + (LABEL_PADDING_X * 2));
+          const x = minX - LABEL_PADDING_X;
+          rect.setAttribute('x', x.toFixed(2));
+          rect.setAttribute('width', width.toFixed(2));
+
+          const featureX = Number(annotation.dataset.featureX);
+          const featureY = Number(annotation.dataset.featureY);
+          const bendX = Number(annotation.dataset.bendX);
+          const bendY = Number(annotation.dataset.bendY);
+          const centerY = Number(annotation.dataset.labelCenterY);
+          if (![featureX, featureY, bendX, bendY, centerY].every(Number.isFinite)) {
+            return;
+          }
+
+          const endX = annotation.dataset.labelSide === 'right'
+            ? x
+            : x + width;
+          leader.setAttribute(
+            'd',
+            `M ${featureX.toFixed(2)} ${featureY.toFixed(2)} L ${bendX.toFixed(2)} ${bendY.toFixed(2)} L ${endX.toFixed(2)} ${centerY.toFixed(2)}`
+          );
+        });
+
+        const bounds = scene.getBBox();
+        if (![bounds.x, bounds.y, bounds.width, bounds.height].every(Number.isFinite)) {
+          return;
+        }
+
+        svg.setAttribute(
+          'viewBox',
+          [
+            Math.floor(bounds.x - VIEWBOX_GUTTER),
+            Math.floor(bounds.y - VIEWBOX_GUTTER),
+            Math.ceil(bounds.width + (VIEWBOX_GUTTER * 2)),
+            Math.ceil(bounds.height + (VIEWBOX_GUTTER * 2))
+          ].join(' ')
+        );
+      }
+
+      function scheduleFit() {
+        bindFeatureHoverCards();
+        window.requestAnimationFrame(() => {
+          fitAnnotationBoxes();
+          bindFeatureHoverCards();
+          window.setTimeout(fitAnnotationBoxes, 48);
+        });
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', scheduleFit, { once: true });
+      } else {
+        scheduleFit();
+      }
+
+      if (document.fonts?.ready) {
+        document.fonts.ready.then(scheduleFit).catch(() => {});
+      }
+
+      window.addEventListener('load', scheduleFit, { once: true });
+    })();
+  </script>
+</body>
+</html>

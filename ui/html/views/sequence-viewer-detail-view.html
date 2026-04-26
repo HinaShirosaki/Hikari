@@ -1,5 +1,19 @@
 <section id="sequence-viewer-detail-view" class="view">
       <div id="sequence-viewer-detail-workspace" class="sequence-viewer-detail-workspace">
+        <div id="sequence-viewer-protein-builder-confirmation" class="sequence-viewer-protein-builder-confirmation" hidden>
+          <div class="sequence-viewer-protein-builder-confirmation-copy">
+            <h4>Confirm Construct</h4>
+            <p class="small-note">Review the assembled plasmid in Sequence Viewer before confirming the construct.</p>
+          </div>
+          <div id="sequence-viewer-protein-builder-confirmation-summary" class="sequence-viewer-protein-builder-confirmation-summary">
+            <p class="small-note">Protein Builder review details will appear here.</p>
+          </div>
+          <div class="form-actions sequence-viewer-protein-builder-confirmation-actions">
+            <button id="sequence-viewer-protein-builder-confirmation-back-btn" type="button" class="ghost-btn">Back to Protein Builder</button>
+            <button id="sequence-viewer-protein-builder-confirmation-confirm-btn" type="button" class="primary-btn">Confirm Construct</button>
+          </div>
+        </div>
+
         <div class="sequence-viewer-detail-topbar">
           <button id="sequence-viewer-back-btn" type="button" class="ghost-btn">Back to Library</button>
           <button id="sequence-viewer-detail-protein-builder-btn" type="button" class="ghost-btn">Protein Builder</button>
@@ -33,6 +47,7 @@
 
           <div class="form-actions">
             <button id="sequence-viewer-load-btn" type="button" class="primary-btn">Load</button>
+            <button id="sequence-viewer-annotate-btn" type="button" class="ghost-btn">Annotate</button>
             <button id="sequence-viewer-recognize-backbone-btn" type="button" class="ghost-btn">Recognize Backbone/Insert</button>
             <button id="sequence-viewer-alignment-open-btn" type="button" class="ghost-btn">Alignment</button>
             <label class="sequence-viewer-inline-toggle" title="Show or hide the currently selected sequencing alignment on the reference sequence.">
@@ -174,6 +189,51 @@
               <button id="sequence-viewer-feature-editor-cancel" type="button" class="ghost-btn">Cancel</button>
             </div>
           </form>
+        </div>
+
+        <div id="sequence-viewer-backbone-dialog-overlay" class="sequence-viewer-backbone-dialog-overlay" hidden>
+          <div class="sequence-viewer-backbone-dialog" role="dialog" aria-modal="true" aria-labelledby="sequence-viewer-backbone-dialog-title">
+            <div class="sequence-viewer-backbone-dialog-head">
+              <div>
+                <h4 id="sequence-viewer-backbone-dialog-title">Backbone / Insert Candidates</h4>
+                <p id="sequence-viewer-backbone-dialog-subtitle" class="small-note">Review promoter and ORF candidates before applying a backbone/insert interpretation.</p>
+              </div>
+              <button id="sequence-viewer-backbone-dialog-close-btn" type="button" class="ghost-btn" aria-label="Close backbone recognition dialog">Close</button>
+            </div>
+
+            <div class="sequence-viewer-backbone-dialog-mode-switch" role="tablist" aria-label="Recognition mode">
+              <button id="sequence-viewer-backbone-dialog-mode-gibson-btn" class="sequence-viewer-mode-btn sequence-viewer-mode-btn-active" type="button">Gibson / HR</button>
+              <button id="sequence-viewer-backbone-dialog-mode-restriction-btn" class="sequence-viewer-mode-btn" type="button">Restriction</button>
+            </div>
+
+            <div class="sequence-viewer-backbone-dialog-grid">
+              <section class="plannotate-result-card sequence-viewer-backbone-dialog-panel">
+                <div class="plannotate-card-head">
+                  <h4>Candidate List</h4>
+                </div>
+                <div id="sequence-viewer-backbone-dialog-candidates" class="sequence-viewer-backbone-dialog-candidates">
+                  <p class="small-note">No candidates available.</p>
+                </div>
+              </section>
+
+              <section class="plannotate-result-card sequence-viewer-backbone-dialog-panel sequence-viewer-backbone-dialog-preview-panel">
+                <div class="plannotate-card-head">
+                  <h4>Preview</h4>
+                </div>
+                <div id="sequence-viewer-backbone-dialog-summary" class="calc-output sequence-viewer-backbone-dialog-summary">
+                  <p class="small-note">Select a candidate to preview the plasmid map.</p>
+                </div>
+                <div id="sequence-viewer-backbone-dialog-preview" class="sequence-viewer-backbone-dialog-preview">
+                  <p class="small-note">Circular plasmid preview unavailable.</p>
+                </div>
+              </section>
+            </div>
+
+            <div class="form-actions">
+              <button id="sequence-viewer-backbone-dialog-apply-btn" type="button" class="primary-btn">Apply Selection</button>
+              <button id="sequence-viewer-backbone-dialog-cancel-btn" type="button" class="ghost-btn">Cancel</button>
+            </div>
+          </div>
         </div>
       </div>
 

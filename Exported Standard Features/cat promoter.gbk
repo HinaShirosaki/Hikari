@@ -1,0 +1,17 @@
+LOCUS       .                         91 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..91
+                     /note="promoter of the E. coli cat gene encoding
+                     chloramphenicol acetyltransferase"
+                     /label="cat promoter"
+ORIGIN
+        1 tgatcggcac gtaagaggtt ccaactttca ccataatgaa ataagatcac taccgggcgt
+       61 attttttgag ttatcgagat tttcaggagc t
+//

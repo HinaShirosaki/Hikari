@@ -1,7 +1,7 @@
 {
   "schema_name": "enana_storage_manifest",
   "schema_version": "1.0.0",
-  "generated_at": "2026-04-15T18:11:20.177Z",
+  "generated_at": "2026-04-25T19:58:24.543Z",
   "root_path": "/Users/shiyifan/Projects/Enana/Testdata",
   "discovered_files": [
     {
@@ -9,14 +9,14 @@
       "type": "file",
       "role": "other",
       "size_bytes": 6148,
-      "modified_at": "2026-04-15T01:37:16.589Z"
+      "modified_at": "2026-04-23T22:10:59.293Z"
     },
     {
       "relative_path": "Assays",
       "type": "directory",
       "role": "assays_root",
       "size_bytes": 0,
-      "modified_at": "2026-04-13T17:23:26.378Z"
+      "modified_at": "2026-04-21T02:25:53.401Z"
     },
     {
       "relative_path": "Assays/.DS_Store",
@@ -47,11 +47,32 @@
       "modified_at": "2026-04-13T17:23:15.884Z"
     },
     {
+      "relative_path": "Assays/axsxa__1776738353366-a35f062c43492",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-04-21T02:25:53.401Z"
+    },
+    {
+      "relative_path": "Assays/axsxa__1776738353366-a35f062c43492/analysis-result.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 137,
+      "modified_at": "2026-04-21T02:25:53.401Z"
+    },
+    {
+      "relative_path": "Assays/axsxa__1776738353366-a35f062c43492/assay-definition.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 1242,
+      "modified_at": "2026-04-21T02:25:53.402Z"
+    },
+    {
       "relative_path": "chat_log",
       "type": "directory",
       "role": "other",
       "size_bytes": 0,
-      "modified_at": "2026-04-15T04:07:29.180Z"
+      "modified_at": "2026-04-23T16:32:46.588Z"
     },
     {
       "relative_path": "chat_log/chat-mn43h4o8-ly51chzo.log",
@@ -295,15 +316,463 @@
       "relative_path": "chat_log/chat-mnzj4n12-kby9j6s1.log",
       "type": "file",
       "role": "other",
-      "size_bytes": 18697,
-      "modified_at": "2026-04-15T04:07:34.782Z"
+      "size_bytes": 140049,
+      "modified_at": "2026-04-16T03:00:57.538Z"
+    },
+    {
+      "relative_path": "chat_log/chat-mo30twnc-bnhxj2qw.log",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 157,
+      "modified_at": "2026-04-17T14:46:20.050Z"
+    },
+    {
+      "relative_path": "chat_log/chat-mo3hk0jq-2p0l185h.log",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 157,
+      "modified_at": "2026-04-17T22:34:32.018Z"
+    },
+    {
+      "relative_path": "chat_log/chat-mo54u7cx-8dyzkmep.log",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 5774,
+      "modified_at": "2026-04-19T02:14:10.297Z"
+    },
+    {
+      "relative_path": "chat_log/chat-mo5xzil0-y751tb5d.log",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 21586,
+      "modified_at": "2026-04-19T15:50:06.565Z"
+    },
+    {
+      "relative_path": "chat_log/chat-mo5y1m9u-bpd1eauc.log",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 43799,
+      "modified_at": "2026-04-19T15:51:51.888Z"
+    },
+    {
+      "relative_path": "chat_log/chat-mo807s9r-c0usb037.log",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 22337,
+      "modified_at": "2026-04-21T02:28:03.110Z"
+    },
+    {
+      "relative_path": "chat_log/chat-mo80823v-75c2ijd8.log",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 21991,
+      "modified_at": "2026-04-21T02:28:14.172Z"
+    },
+    {
+      "relative_path": "chat_log/chat-mo80ef70-mitzcdn8.log",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 20059,
+      "modified_at": "2026-04-21T02:33:11.436Z"
+    },
+    {
+      "relative_path": "chat_log/chat-mo80gjbs-r7m5g4ki.log",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 19470,
+      "modified_at": "2026-04-21T02:34:51.822Z"
+    },
+    {
+      "relative_path": "chat_log/chat-mo80hjbe-brv1n1u2.log",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 21559,
+      "modified_at": "2026-04-21T02:35:37.446Z"
+    },
+    {
+      "relative_path": "chat_log/chat-moboe15d-h0l66uuk.log",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 20453,
+      "modified_at": "2026-04-23T16:08:30.869Z"
+    },
+    {
+      "relative_path": "chat_log/chat-mobofajq-zx6vk7zm.log",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 304539,
+      "modified_at": "2026-04-23T16:12:38.647Z"
+    },
+    {
+      "relative_path": "chat_log/chat-mobp6078-bqwqtpba.log",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 73780,
+      "modified_at": "2026-04-23T16:32:15.846Z"
+    },
+    {
+      "relative_path": "chat_log/chat-mobp9wj7-sminuzs9.log",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 642456,
+      "modified_at": "2026-04-23T16:45:12.417Z"
     },
     {
       "relative_path": "chat_log/index.json",
       "type": "file",
       "role": "data_file",
-      "size_bytes": 36488,
-      "modified_at": "2026-04-15T04:07:34.783Z"
+      "size_bytes": 74808,
+      "modified_at": "2026-04-23T16:45:12.483Z"
+    },
+    {
+      "relative_path": "chat_log/transformed",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-04-23T16:32:49.638Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mn43h4o8-ly51chzo.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 133845,
+      "modified_at": "2026-04-17T03:33:57.752Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mn43h8fd-z3lkxqpu.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 12206,
+      "modified_at": "2026-04-17T03:33:57.754Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mn43hxya-yw2nl1ru.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 11313,
+      "modified_at": "2026-04-17T03:33:57.755Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnayzbm9-mhkem8h7.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 11386,
+      "modified_at": "2026-04-17T03:33:57.757Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnayzbx3-5la1li8q.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 11464,
+      "modified_at": "2026-04-17T03:33:57.758Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnayzc2r-flqt8iaz.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 11212,
+      "modified_at": "2026-04-17T03:33:57.760Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnayzc75-qwlr7732.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 81807,
+      "modified_at": "2026-04-17T03:33:57.763Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnayzcbf-zp2bp4k0.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 180,
+      "modified_at": "2026-04-17T03:33:57.766Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnq5usuy-v0xbj1as.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 12141,
+      "modified_at": "2026-04-17T03:33:57.767Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnqfnks6-bq150md8.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 177251,
+      "modified_at": "2026-04-17T03:33:57.772Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnqfsq43-xn35aboy.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 13262,
+      "modified_at": "2026-04-17T03:33:57.774Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnqfvngy-5ebt2fmf.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 12239,
+      "modified_at": "2026-04-17T03:33:57.775Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnqfx9nu-l446ivk9.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 180,
+      "modified_at": "2026-04-17T03:33:57.776Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnqg1xqu-fqhhvn1a.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 296230,
+      "modified_at": "2026-04-17T03:33:57.782Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnqm21fy-8spv15yf.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 235720,
+      "modified_at": "2026-04-17T03:33:57.786Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnqq9x1c-jic3fywk.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 12520,
+      "modified_at": "2026-04-17T03:33:57.788Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnqrrs2j-hrkmfrmh.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 15031,
+      "modified_at": "2026-04-17T03:33:57.789Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnqs13lb-yiob58jh.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 240409,
+      "modified_at": "2026-04-17T03:33:57.794Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnqsdm02-0eif9zlk.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 15538,
+      "modified_at": "2026-04-17T03:33:57.795Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnqsjlk5-g6cqmqma.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 12671,
+      "modified_at": "2026-04-17T03:33:57.797Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnqsnree-5fas7e4m.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 587185,
+      "modified_at": "2026-04-17T03:33:57.807Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnrz8665-yv9egzm7.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 26760,
+      "modified_at": "2026-04-17T03:33:57.808Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mns0njqf-2i03vho0.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 13400,
+      "modified_at": "2026-04-17T03:33:57.810Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mntg8u68-fzbspkd4.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 26766,
+      "modified_at": "2026-04-17T03:33:57.811Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mntlqh44-95zr8u2c.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 10629,
+      "modified_at": "2026-04-17T03:33:57.812Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mntlw1tp-zshcpu2g.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 97872,
+      "modified_at": "2026-04-17T03:33:57.814Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mntp0rmy-y9rrw8r5.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 10634,
+      "modified_at": "2026-04-17T03:33:57.816Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mntp5hq7-oixi2h41.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 14781,
+      "modified_at": "2026-04-17T03:33:57.817Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mntp5il6-eb8lnvdx.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 13978,
+      "modified_at": "2026-04-17T03:33:57.818Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnwama7p-1ma0n8q1.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 200229,
+      "modified_at": "2026-04-17T03:33:57.823Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnwm38jq-9i28kt9x.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 119203,
+      "modified_at": "2026-04-17T03:33:57.826Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnz94om4-wiu0mene.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 238167,
+      "modified_at": "2026-04-17T03:33:57.830Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnzbmb8q-3nhrlybb.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 180,
+      "modified_at": "2026-04-17T03:33:57.831Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnzikyga-fu65qm2h.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 60275,
+      "modified_at": "2026-04-17T03:33:57.833Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mnzj4n12-kby9j6s1.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 104582,
+      "modified_at": "2026-04-17T03:33:57.836Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mo30twnc-bnhxj2qw.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 180,
+      "modified_at": "2026-04-17T14:46:24.512Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mo3hk0jq-2p0l185h.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 180,
+      "modified_at": "2026-04-17T22:34:33.533Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mo54u7cx-8dyzkmep.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 180,
+      "modified_at": "2026-04-19T02:14:23.467Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mo5xzil0-y751tb5d.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 11572,
+      "modified_at": "2026-04-19T15:50:07.096Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mo5y1m9u-bpd1eauc.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 14665,
+      "modified_at": "2026-04-19T15:51:52.110Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mo807s9r-c0usb037.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 11614,
+      "modified_at": "2026-04-21T02:28:11.571Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mo80823v-75c2ijd8.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 11548,
+      "modified_at": "2026-04-21T02:28:16.997Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mo80ef70-mitzcdn8.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 11436,
+      "modified_at": "2026-04-21T02:33:15.558Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mo80gjbs-r7m5g4ki.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 11395,
+      "modified_at": "2026-04-21T02:34:55.051Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mo80hjbe-brv1n1u2.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 11561,
+      "modified_at": "2026-04-21T02:35:40.066Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-moboe15d-h0l66uuk.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 10844,
+      "modified_at": "2026-04-23T16:08:30.898Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mobofajq-zx6vk7zm.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 235968,
+      "modified_at": "2026-04-23T16:12:38.689Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mobp6078-bqwqtpba.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 48751,
+      "modified_at": "2026-04-23T16:32:29.429Z"
+    },
+    {
+      "relative_path": "chat_log/transformed/chat-mobp9wj7-sminuzs9.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 554078,
+      "modified_at": "2026-04-23T16:45:12.482Z"
     },
     {
       "relative_path": "enana-chemicals.ena.json",
@@ -317,7 +786,7 @@
       "type": "file",
       "role": "chemical_inventory_index",
       "size_bytes": 24576,
-      "modified_at": "2026-04-15T17:01:32.070Z"
+      "modified_at": "2026-04-25T19:49:51.297Z"
     },
     {
       "relative_path": "enana-chemicals.index.sqlite-shm",
@@ -351,15 +820,15 @@
       "relative_path": "enana-data.json",
       "type": "file",
       "role": "data_file",
-      "size_bytes": 678063,
-      "modified_at": "2026-04-15T16:40:54.479Z"
+      "size_bytes": 991478,
+      "modified_at": "2026-04-25T19:36:31.292Z"
     },
     {
       "relative_path": "enana-data.notebook-pages.json",
       "type": "file",
       "role": "notebook_sidecar",
-      "size_bytes": 24106,
-      "modified_at": "2026-04-15T16:40:54.485Z"
+      "size_bytes": 34608,
+      "modified_at": "2026-04-25T19:36:31.293Z"
     },
     {
       "relative_path": "enana-sample.notebook-pages.index.sqlite",
@@ -407,8 +876,8 @@
       "relative_path": "enana-storage-manifest.json",
       "type": "file",
       "role": "storage_manifest",
-      "size_bytes": 45265,
-      "modified_at": "2026-04-15T17:01:32.006Z"
+      "size_bytes": 74692,
+      "modified_at": "2026-04-25T19:49:51.205Z"
     },
     {
       "relative_path": "Gels",
@@ -422,12 +891,68 @@
       "type": "directory",
       "role": "papers_root",
       "size_bytes": 0,
-      "modified_at": "2026-04-13T17:23:15.881Z"
+      "modified_at": "2026-04-23T16:42:11.884Z"
+    },
+    {
+      "relative_path": "Papers/.DS_Store",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 6148,
+      "modified_at": "2026-04-23T16:42:09.803Z"
+    },
+    {
+      "relative_path": "Papers/rabbit_antibody_repertoire_diversification_affinity_maturation_GALT_appendix_Peyer's_patches_somatic_hypermutation_gene_conversion",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-04-23T16:41:22.217Z"
+    },
+    {
+      "relative_path": "Papers/rabbit_antibody_repertoire_diversification_affinity_maturation_GALT_appendix_Peyer's_patches_somatic_hypermutation_gene_conversion/Faculty_Opinions_recommendation_of_Somatic_hypermutation_maintains_antibody_thermodynamic_stability_during_affinity_maturation..pdf",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 1229573,
+      "modified_at": "2026-04-23T16:39:44.515Z"
+    },
+    {
+      "relative_path": "Papers/rabbit_antibody_repertoire_diversification_affinity_maturation_GALT_appendix_Peyer's_patches_somatic_hypermutation_gene_conversion/Poster_Sessions.pdf",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 5916496,
+      "modified_at": "2026-04-23T16:41:22.583Z"
+    },
+    {
+      "relative_path": "Papers/rabbit_appendix_Peyer's_patches_antibody_repertoire_diversification_review_gene_conversion_somatic_hypermutation",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-04-23T16:43:01.828Z"
+    },
+    {
+      "relative_path": "Papers/rabbit_appendix_Peyer's_patches_antibody_repertoire_diversification_review_gene_conversion_somatic_hypermutation/Review_for__Diversification_of_the_VH3-53_immunoglobulin_gene_segment_by_somatic_hypermutation_results_in_neutralization_of_SARS-CoV-2_virus_variants.pdf",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 2525946,
+      "modified_at": "2026-04-23T16:43:02.587Z"
+    },
+    {
+      "relative_path": "Papers/rabbit_GALT_antibody_affinity_maturation_mechanism_gut_associated_lymphoid_tissue",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-04-23T16:32:06.888Z"
+    },
+    {
+      "relative_path": "Papers/rabbit_GALT_antibody_affinity_maturation_mechanism_gut_associated_lymphoid_tissue/Imprint_of_mechanical_forces_on_antibody_affinity_maturation_in_B_cell_immune_responses.pdf",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 57141864,
+      "modified_at": "2026-04-23T16:32:16.705Z"
     },
     {
       "relative_path": "Project",
       "type": "directory",
-      "role": "other",
+      "role": "project_root",
       "size_bytes": 0,
       "modified_at": "2026-04-13T17:23:15.886Z"
     },
@@ -436,28 +961,42 @@
       "type": "file",
       "role": "other",
       "size_bytes": 8196,
-      "modified_at": "2026-04-13T00:49:26.454Z"
+      "modified_at": "2026-04-19T16:04:56.989Z"
     },
     {
       "relative_path": "Project/CD19_CAR_Binder_Optimization",
       "type": "directory",
       "role": "other",
       "size_bytes": 0,
-      "modified_at": "2026-03-14T00:10:52.005Z"
+      "modified_at": "2026-04-20T20:06:08.787Z"
+    },
+    {
+      "relative_path": "Project/CD19_CAR_Binder_Optimization/MEMORY.md",
+      "type": "file",
+      "role": "project_memory",
+      "size_bytes": 386,
+      "modified_at": "2026-04-20T20:06:08.787Z"
     },
     {
       "relative_path": "Project/ncAA_Incorporation_in_sfGFP_Reporter",
       "type": "directory",
       "role": "other",
       "size_bytes": 0,
-      "modified_at": "2026-03-14T00:11:16.335Z"
+      "modified_at": "2026-04-20T20:06:08.787Z"
+    },
+    {
+      "relative_path": "Project/ncAA_Incorporation_in_sfGFP_Reporter/MEMORY.md",
+      "type": "file",
+      "role": "project_memory",
+      "size_bytes": 402,
+      "modified_at": "2026-04-20T20:06:08.787Z"
     },
     {
       "relative_path": "Project/PD-1_Nanobody_Binder_Discovery",
       "type": "directory",
       "role": "other",
       "size_bytes": 0,
-      "modified_at": "2026-04-13T17:23:15.885Z"
+      "modified_at": "2026-04-20T20:06:08.787Z"
     },
     {
       "relative_path": "Project/PD-1_Nanobody_Binder_Discovery/.DS_Store",
@@ -465,6 +1004,13 @@
       "role": "other",
       "size_bytes": 6148,
       "modified_at": "2026-03-17T22:21:52.051Z"
+    },
+    {
+      "relative_path": "Project/PD-1_Nanobody_Binder_Discovery/MEMORY.md",
+      "type": "file",
+      "role": "project_memory",
+      "size_bytes": 437,
+      "modified_at": "2026-04-25T18:24:36.757Z"
     },
     {
       "relative_path": "Project/PD-1_Nanobody_Binder_Discovery/Notebook",
@@ -478,7 +1024,7 @@
       "type": "directory",
       "role": "other",
       "size_bytes": 0,
-      "modified_at": "2026-04-13T17:23:15.885Z"
+      "modified_at": "2026-04-25T19:36:31.279Z"
     },
     {
       "relative_path": "Project/PD-1_Nanobody_Binder_Discovery/Papers",
@@ -499,56 +1045,112 @@
       "type": "directory",
       "role": "other",
       "size_bytes": 0,
-      "modified_at": "2026-03-14T00:09:52.431Z"
+      "modified_at": "2026-04-20T20:06:08.788Z"
+    },
+    {
+      "relative_path": "Project/PD-L1_Blocking_Clone_Validation/MEMORY.md",
+      "type": "file",
+      "role": "project_memory",
+      "size_bytes": 392,
+      "modified_at": "2026-04-20T20:06:08.788Z"
     },
     {
       "relative_path": "Project/SUMO_Protease_Activity_Probe_Development",
       "type": "directory",
       "role": "other",
       "size_bytes": 0,
-      "modified_at": "2026-03-14T00:11:05.151Z"
+      "modified_at": "2026-04-20T20:06:08.788Z"
+    },
+    {
+      "relative_path": "Project/SUMO_Protease_Activity_Probe_Development/MEMORY.md",
+      "type": "file",
+      "role": "project_memory",
+      "size_bytes": 410,
+      "modified_at": "2026-04-20T20:06:08.788Z"
     },
     {
       "relative_path": "Project/SUMO1",
       "type": "directory",
       "role": "other",
       "size_bytes": 0,
-      "modified_at": "2026-04-13T17:23:15.885Z"
+      "modified_at": "2026-04-20T20:06:08.788Z"
     },
     {
       "relative_path": "Project/SUMO1/.DS_Store",
       "type": "file",
       "role": "other",
       "size_bytes": 6148,
-      "modified_at": "2026-04-13T00:49:26.455Z"
+      "modified_at": "2026-04-21T14:52:19.888Z"
+    },
+    {
+      "relative_path": "Project/SUMO1/MEMORY.md",
+      "type": "file",
+      "role": "project_memory",
+      "size_bytes": 388,
+      "modified_at": "2026-04-25T18:24:36.757Z"
     },
     {
       "relative_path": "Project/SUMO1/Notebook",
       "type": "directory",
       "role": "other",
       "size_bytes": 0,
-      "modified_at": "2026-04-15T03:13:11.609Z"
+      "modified_at": "2026-04-22T01:46:43.941Z"
+    },
+    {
+      "relative_path": "Project/SUMO1/Notebook/.DS_Store",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 6148,
+      "modified_at": "2026-04-21T14:48:25.544Z"
     },
     {
       "relative_path": "Project/SUMO1/Notebook/Avi-Tag_Protein_Biotinylation__1776222791606-6589584353b8d",
       "type": "directory",
       "role": "other",
       "size_bytes": 0,
-      "modified_at": "2026-04-15T03:13:11.644Z"
+      "modified_at": "2026-04-25T19:36:31.279Z"
+    },
+    {
+      "relative_path": "Project/SUMO1/Notebook/Avi-Tag_Protein_Biotinylation__1776822400577-3600ec37b3665",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-04-25T19:36:31.279Z"
     },
     {
       "relative_path": "Project/SUMO1/Notebook/BL21(DE3)_Chemical_Transformation_with_pET28a__1774129431833-1ae8e1d6da588",
       "type": "directory",
       "role": "other",
       "size_bytes": 0,
-      "modified_at": "2026-04-13T17:23:15.885Z"
+      "modified_at": "2026-04-25T19:36:31.280Z"
     },
     {
       "relative_path": "Project/SUMO1/Notebook/BL21(DE3)_Chemical_Transformation_with_pET28a__1774226912932-85bb211fc546a",
       "type": "directory",
       "role": "other",
       "size_bytes": 0,
-      "modified_at": "2026-04-13T17:23:15.886Z"
+      "modified_at": "2026-04-25T19:36:31.280Z"
+    },
+    {
+      "relative_path": "Project/SUMO1/Notebook/BL21(DE3)_Chemical_Transformation_with_pET28a__1776739509659-fed30b23b7adf8",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-04-25T19:36:31.281Z"
+    },
+    {
+      "relative_path": "Project/SUMO1/Notebook/BL21(DE3)_Chemical_Transformation_with_pET28a__1776782800730-d800d86c3126f",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-04-25T19:36:31.281Z"
+    },
+    {
+      "relative_path": "Project/SUMO1/Notebook/Ni-NTA_Purification_of_His-Tagged_Protein__1776822403940-d536e9c309a8e8",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-04-25T19:36:31.281Z"
     },
     {
       "relative_path": "Project/SUMO1/Papers",
@@ -597,7 +1199,14 @@
       "type": "directory",
       "role": "other",
       "size_bytes": 0,
-      "modified_at": "2026-04-13T17:23:15.886Z"
+      "modified_at": "2026-04-20T20:06:08.789Z"
+    },
+    {
+      "relative_path": "Project/Untitled_Project/MEMORY.md",
+      "type": "file",
+      "role": "project_memory",
+      "size_bytes": 414,
+      "modified_at": "2026-04-25T18:24:36.758Z"
     },
     {
       "relative_path": "Project/Untitled_Project/Notebook",
@@ -611,63 +1220,63 @@
       "type": "directory",
       "role": "other",
       "size_bytes": 0,
-      "modified_at": "2026-04-13T17:23:15.886Z"
+      "modified_at": "2026-04-25T19:36:31.282Z"
     },
     {
       "relative_path": "Project/Untitled_Project/Notebook/BL21(DE3)_Chemical_Transformation_with_pET28a__1775785653645-93c2327505c0c",
       "type": "directory",
       "role": "other",
       "size_bytes": 0,
-      "modified_at": "2026-04-13T17:23:15.887Z"
+      "modified_at": "2026-04-25T19:36:31.282Z"
     },
     {
       "relative_path": "Project/Untitled_Project/Notebook/BL21(DE3)_Chemical_Transformation_with_pET28a__1775785664323-de28c03280f04",
       "type": "directory",
       "role": "other",
       "size_bytes": 0,
-      "modified_at": "2026-04-13T17:23:15.887Z"
+      "modified_at": "2026-04-25T19:36:31.282Z"
     },
     {
       "relative_path": "Project/Untitled_Project/Notebook/BL21(DE3)_Chemical_Transformation_with_pET28a__1775858351357-2cd35369d1dfc",
       "type": "directory",
       "role": "other",
       "size_bytes": 0,
-      "modified_at": "2026-04-13T17:23:15.888Z"
+      "modified_at": "2026-04-25T19:36:31.283Z"
     },
     {
       "relative_path": "Project/Untitled_Project/Notebook/IPTG-Induced_Recombinant_Protein_Expression_in_BL21(DE3)__1775782437050-e49e327369ef98",
       "type": "directory",
       "role": "other",
       "size_bytes": 0,
-      "modified_at": "2026-04-13T17:23:15.887Z"
+      "modified_at": "2026-04-25T19:36:31.283Z"
     },
     {
       "relative_path": "Project/Untitled_Project/Notebook/Ni-NTA_Purification_of_His-Tagged_Protein__1775782438767-07fe8804749718",
       "type": "directory",
       "role": "other",
       "size_bytes": 0,
-      "modified_at": "2026-04-13T17:23:15.887Z"
+      "modified_at": "2026-04-25T19:36:31.283Z"
     },
     {
       "relative_path": "Project/Untitled_Project/Notebook/Small-Scale_Overnight_Starter_Culture__1775782435713-d25977ea3111f8",
       "type": "directory",
       "role": "other",
       "size_bytes": 0,
-      "modified_at": "2026-04-13T17:23:15.886Z"
+      "modified_at": "2026-04-25T19:36:31.284Z"
     },
     {
       "relative_path": "Project/Untitled_Project/Notebook/Small-Scale_Overnight_Starter_Culture__1775786097062-844c417ab93cd",
       "type": "directory",
       "role": "other",
       "size_bytes": 0,
-      "modified_at": "2026-04-13T17:23:15.888Z"
+      "modified_at": "2026-04-25T19:36:31.284Z"
     },
     {
       "relative_path": "Protocol",
       "type": "directory",
       "role": "protocol_root",
       "size_bytes": 0,
-      "modified_at": "2026-04-12T22:09:05.523Z"
+      "modified_at": "2026-04-25T19:36:31.286Z"
     },
     {
       "relative_path": "protocol-import-example.json",
@@ -688,119 +1297,154 @@
       "type": "directory",
       "role": "other",
       "size_bytes": 0,
-      "modified_at": "2026-04-12T21:44:19.341Z"
+      "modified_at": "2026-04-25T19:36:31.284Z"
     },
     {
       "relative_path": "Protocol/Avi-Tag_Protein_Biotinylation__1774024745003-46df848e78c068/protocol.json",
       "type": "file",
       "role": "protocol_record",
-      "size_bytes": 2792,
-      "modified_at": "2026-04-15T16:40:54.480Z"
+      "size_bytes": 8700,
+      "modified_at": "2026-04-25T19:36:31.284Z"
+    },
+    {
+      "relative_path": "Protocol/Avi-Tag_Protein_Biotinylation__1774024745003-46df848e78c068/selection-insights.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 5947,
+      "modified_at": "2026-04-21T02:35:37.469Z"
     },
     {
       "relative_path": "Protocol/BL21(DE3)_Chemical_Transformation_with_pET28a__1774024047007-d137dae96cab78",
       "type": "directory",
       "role": "other",
       "size_bytes": 0,
-      "modified_at": "2026-04-12T21:44:19.338Z"
+      "modified_at": "2026-04-25T19:36:31.285Z"
     },
     {
       "relative_path": "Protocol/BL21(DE3)_Chemical_Transformation_with_pET28a__1774024047007-d137dae96cab78/protocol.json",
       "type": "file",
       "role": "protocol_record",
       "size_bytes": 2529,
-      "modified_at": "2026-04-15T16:40:54.480Z"
+      "modified_at": "2026-04-25T19:36:31.285Z"
     },
     {
       "relative_path": "Protocol/IPTG-Induced_Recombinant_Protein_Expression_in_BL21(DE3)__1774024680081-6b02b28fd6d39",
       "type": "directory",
       "role": "other",
       "size_bytes": 0,
-      "modified_at": "2026-04-12T21:44:19.339Z"
+      "modified_at": "2026-04-25T19:36:31.285Z"
     },
     {
       "relative_path": "Protocol/IPTG-Induced_Recombinant_Protein_Expression_in_BL21(DE3)__1774024680081-6b02b28fd6d39/protocol.json",
       "type": "file",
       "role": "protocol_record",
       "size_bytes": 3594,
-      "modified_at": "2026-04-15T16:40:54.481Z"
+      "modified_at": "2026-04-25T19:36:31.285Z"
     },
     {
       "relative_path": "Protocol/Ni-NTA_Purification_of_His-Tagged_Protein__1774024695073-536c18071dd0d",
       "type": "directory",
       "role": "other",
       "size_bytes": 0,
-      "modified_at": "2026-04-12T21:44:19.340Z"
+      "modified_at": "2026-04-25T19:36:31.285Z"
     },
     {
       "relative_path": "Protocol/Ni-NTA_Purification_of_His-Tagged_Protein__1774024695073-536c18071dd0d/protocol.json",
       "type": "file",
       "role": "protocol_record",
       "size_bytes": 2351,
-      "modified_at": "2026-04-15T16:40:54.481Z"
+      "modified_at": "2026-04-25T19:36:31.285Z"
     },
     {
       "relative_path": "Protocol/protocol.index.sqlite",
       "type": "file",
       "role": "protocol_index",
-      "size_bytes": 233472,
-      "modified_at": "2026-04-15T16:40:54.493Z"
+      "size_bytes": 339968,
+      "modified_at": "2026-04-25T19:36:31.287Z"
     },
     {
       "relative_path": "Protocol/Small-Scale_Overnight_Starter_Culture__1774024647315-74cbb18b4cc37",
       "type": "directory",
       "role": "other",
       "size_bytes": 0,
-      "modified_at": "2026-04-12T21:44:19.339Z"
+      "modified_at": "2026-04-25T19:36:31.285Z"
     },
     {
       "relative_path": "Protocol/Small-Scale_Overnight_Starter_Culture__1774024647315-74cbb18b4cc37/protocol.json",
       "type": "file",
       "role": "protocol_record",
-      "size_bytes": 2394,
-      "modified_at": "2026-04-15T16:40:54.481Z"
+      "size_bytes": 8927,
+      "modified_at": "2026-04-25T19:36:31.286Z"
+    },
+    {
+      "relative_path": "Protocol/Small-Scale_Overnight_Starter_Culture__1774024647315-74cbb18b4cc37/selection-insights.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 6579,
+      "modified_at": "2026-04-21T02:33:11.450Z"
+    },
+    {
+      "relative_path": "Protocol/T4_DNA_Ligation__1776562378892-e9d8a0a7eee9c",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-04-25T19:36:31.286Z"
+    },
+    {
+      "relative_path": "Protocol/T4_DNA_Ligation__1776562378892-e9d8a0a7eee9c/protocol.json",
+      "type": "file",
+      "role": "protocol_record",
+      "size_bytes": 2166,
+      "modified_at": "2026-04-25T19:36:31.286Z"
     },
     {
       "relative_path": "Protocol/TEV_Protease_Cleavage_of_Fusion_Protein__1774024712936-cdad2f729e908",
       "type": "directory",
       "role": "other",
       "size_bytes": 0,
-      "modified_at": "2026-04-12T21:44:19.340Z"
+      "modified_at": "2026-04-25T19:36:31.286Z"
     },
     {
       "relative_path": "Protocol/TEV_Protease_Cleavage_of_Fusion_Protein__1774024712936-cdad2f729e908/protocol.json",
       "type": "file",
       "role": "protocol_record",
-      "size_bytes": 2664,
-      "modified_at": "2026-04-15T16:40:54.481Z"
+      "size_bytes": 21987,
+      "modified_at": "2026-04-25T19:36:31.286Z"
+    },
+    {
+      "relative_path": "Protocol/TEV_Protease_Cleavage_of_Fusion_Protein__1774024712936-cdad2f729e908/selection-insights.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 18893,
+      "modified_at": "2026-04-19T15:51:51.901Z"
     },
     {
       "relative_path": "SequenceViewer",
       "type": "directory",
       "role": "other",
       "size_bytes": 0,
-      "modified_at": "2026-03-23T16:43:22.546Z"
+      "modified_at": "2026-04-25T19:36:31.288Z"
     },
     {
       "relative_path": "SequenceViewer/.DS_Store",
       "type": "file",
       "role": "other",
       "size_bytes": 6148,
-      "modified_at": "2026-03-21T19:56:19.929Z"
+      "modified_at": "2026-04-23T22:10:45.183Z"
     },
     {
       "relative_path": "SequenceViewer/entries",
       "type": "directory",
       "role": "other",
       "size_bytes": 0,
-      "modified_at": "2026-03-26T15:49:25.098Z"
+      "modified_at": "2026-04-22T00:55:04.919Z"
     },
     {
       "relative_path": "SequenceViewer/entries/.DS_Store",
       "type": "file",
       "role": "sequence_entry_file",
       "size_bytes": 6148,
-      "modified_at": "2026-03-21T19:56:14.277Z"
+      "modified_at": "2026-04-19T16:04:32.759Z"
     },
     {
       "relative_path": "SequenceViewer/entries/seq_1773867148163_5a98f139",
@@ -915,11 +1559,221 @@
       "modified_at": "2026-03-26T15:49:25.098Z"
     },
     {
+      "relative_path": "SequenceViewer/entries/seq_1776395842129_3298cfc0",
+      "type": "directory",
+      "role": "sequence_entry_file",
+      "size_bytes": 0,
+      "modified_at": "2026-04-17T03:17:24.576Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries/seq_1776395842129_3298cfc0/pcDNA3.1-GFP_1-10.gbk",
+      "type": "file",
+      "role": "sequence_entry_file",
+      "size_bytes": 10497,
+      "modified_at": "2026-04-17T03:17:24.576Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries/seq_1776395842129_3298cfc0/pcDNA3.1-GFP_1-10.html",
+      "type": "file",
+      "role": "sequence_entry_file",
+      "size_bytes": 30836,
+      "modified_at": "2026-04-17T03:17:24.577Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries/seq_1776397001247_4f86693d",
+      "type": "directory",
+      "role": "sequence_entry_file",
+      "size_bytes": 0,
+      "modified_at": "2026-04-22T01:30:12.773Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries/seq_1776397001247_4f86693d/HSA_K_Hrk.gbk",
+      "type": "file",
+      "role": "sequence_entry_file",
+      "size_bytes": 10320,
+      "modified_at": "2026-04-22T01:30:12.773Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries/seq_1776397001247_4f86693d/HSA_K_Hrk.html",
+      "type": "file",
+      "role": "sequence_entry_file",
+      "size_bytes": 65572,
+      "modified_at": "2026-04-22T01:30:12.773Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries/seq_1776444918195_cdc551db",
+      "type": "directory",
+      "role": "sequence_entry_file",
+      "size_bytes": 0,
+      "modified_at": "2026-04-17T16:55:19.834Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries/seq_1776444918195_cdc551db/CD19.gbk",
+      "type": "file",
+      "role": "sequence_entry_file",
+      "size_bytes": 8633,
+      "modified_at": "2026-04-17T16:55:19.834Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries/seq_1776444918195_cdc551db/CD19.html",
+      "type": "file",
+      "role": "sequence_entry_file",
+      "size_bytes": 26419,
+      "modified_at": "2026-04-17T16:55:19.834Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries/seq_1776445060992_dade0229",
+      "type": "directory",
+      "role": "sequence_entry_file",
+      "size_bytes": 0,
+      "modified_at": "2026-04-17T16:57:42.322Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries/seq_1776445060992_dade0229/plasmid.gbk",
+      "type": "file",
+      "role": "sequence_entry_file",
+      "size_bytes": 8709,
+      "modified_at": "2026-04-17T16:57:42.321Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries/seq_1776445060992_dade0229/plasmid.html",
+      "type": "file",
+      "role": "sequence_entry_file",
+      "size_bytes": 20717,
+      "modified_at": "2026-04-17T16:57:42.322Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries/seq_1776454128359_072bd828",
+      "type": "directory",
+      "role": "sequence_entry_file",
+      "size_bytes": 0,
+      "modified_at": "2026-04-22T00:52:33.588Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries/seq_1776454128359_072bd828/plasmid_2.gbk",
+      "type": "file",
+      "role": "sequence_entry_file",
+      "size_bytes": 9562,
+      "modified_at": "2026-04-22T00:52:33.588Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries/seq_1776454128359_072bd828/plasmid_2.html",
+      "type": "file",
+      "role": "sequence_entry_file",
+      "size_bytes": 48855,
+      "modified_at": "2026-04-22T00:52:33.588Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries/seq_1776454544232_9d27fc51",
+      "type": "directory",
+      "role": "sequence_entry_file",
+      "size_bytes": 0,
+      "modified_at": "2026-04-17T19:35:45.676Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries/seq_1776454544232_9d27fc51/001_sample_1.gbk",
+      "type": "file",
+      "role": "sequence_entry_file",
+      "size_bytes": 9968,
+      "modified_at": "2026-04-17T19:35:45.676Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries/seq_1776454544232_9d27fc51/001_sample_1.html",
+      "type": "file",
+      "role": "sequence_entry_file",
+      "size_bytes": 36950,
+      "modified_at": "2026-04-17T19:35:45.676Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries/seq_1776455049950_9e5e05da",
+      "type": "directory",
+      "role": "sequence_entry_file",
+      "size_bytes": 0,
+      "modified_at": "2026-04-22T01:33:01.072Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries/seq_1776455049950_9e5e05da/001_CD11.gbk",
+      "type": "file",
+      "role": "sequence_entry_file",
+      "size_bytes": 10983,
+      "modified_at": "2026-04-22T01:33:01.062Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries/seq_1776455049950_9e5e05da/001_CD11.html",
+      "type": "file",
+      "role": "sequence_entry_file",
+      "size_bytes": 61205,
+      "modified_at": "2026-04-22T01:33:01.072Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries/seq_1776455119373_2af5c561",
+      "type": "directory",
+      "role": "sequence_entry_file",
+      "size_bytes": 0,
+      "modified_at": "2026-04-25T19:36:31.287Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries/seq_1776455119373_2af5c561/004_CD22.gbk",
+      "type": "file",
+      "role": "sequence_entry_file",
+      "size_bytes": 10558,
+      "modified_at": "2026-04-25T19:36:31.288Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries/seq_1776455119373_2af5c561/004_CD22.html",
+      "type": "file",
+      "role": "sequence_entry_file",
+      "size_bytes": 60814,
+      "modified_at": "2026-04-23T22:07:09.305Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries/seq_1776458218155_1717409b",
+      "type": "directory",
+      "role": "sequence_entry_file",
+      "size_bytes": 0,
+      "modified_at": "2026-04-21T21:51:51.660Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries/seq_1776458218155_1717409b/sequence_1_2.gbk",
+      "type": "file",
+      "role": "sequence_entry_file",
+      "size_bytes": 13954,
+      "modified_at": "2026-04-21T21:51:51.660Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries/seq_1776458218155_1717409b/sequence_1_2.html",
+      "type": "file",
+      "role": "sequence_entry_file",
+      "size_bytes": 74649,
+      "modified_at": "2026-04-21T21:51:51.660Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries/seq_1776819304918_9710ff68",
+      "type": "directory",
+      "role": "sequence_entry_file",
+      "size_bytes": 0,
+      "modified_at": "2026-04-22T01:29:45.158Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries/seq_1776819304918_9710ff68/pETDuet-1-NdeI-F.gbk",
+      "type": "file",
+      "role": "sequence_entry_file",
+      "size_bytes": 14742,
+      "modified_at": "2026-04-22T01:29:45.158Z"
+    },
+    {
+      "relative_path": "SequenceViewer/entries/seq_1776819304918_9710ff68/pETDuet-1-NdeI-F.html",
+      "type": "file",
+      "role": "sequence_entry_file",
+      "size_bytes": 90327,
+      "modified_at": "2026-04-22T01:29:45.158Z"
+    },
+    {
       "relative_path": "SequenceViewer/sequence-library.sqlite",
       "type": "file",
       "role": "sequence_library_index",
-      "size_bytes": 81920,
-      "modified_at": "2026-03-30T02:41:17.282Z"
+      "size_bytes": 339968,
+      "modified_at": "2026-04-25T19:58:24.320Z"
     },
     {
       "relative_path": "Workflow",
@@ -933,7 +1787,7 @@
       "type": "file",
       "role": "other",
       "size_bytes": 6148,
-      "modified_at": "2026-04-10T21:59:27.157Z"
+      "modified_at": "2026-04-21T14:52:32.793Z"
     },
     {
       "relative_path": "Workflow/Histagged_protein_preparation__1775781932219-22ff72a0c7635",
@@ -954,7 +1808,14 @@
       "type": "directory",
       "role": "other",
       "size_bytes": 0,
-      "modified_at": "2026-04-10T21:59:09.550Z"
+      "modified_at": "2026-04-20T20:06:08.789Z"
+    },
+    {
+      "relative_path": "Workflow/Histagged_protein_preparation__1775781932219-22ff72a0c7635/Histagged_protein_preparation__1775781943536-d3dbf2dd6a3c08/MEMORY.md",
+      "type": "file",
+      "role": "workflow_memory",
+      "size_bytes": 657,
+      "modified_at": "2026-04-20T20:06:08.790Z"
     },
     {
       "relative_path": "Workflow/Histagged_protein_preparation__1775781932219-22ff72a0c7635/Histagged_protein_preparation__1775781943536-d3dbf2dd6a3c08/Notebook",
@@ -989,7 +1850,7 @@
       "type": "directory",
       "role": "other",
       "size_bytes": 0,
-      "modified_at": "2026-04-12T02:28:52.633Z"
+      "modified_at": "2026-04-20T20:06:08.790Z"
     },
     {
       "relative_path": "Workflow/Histagged_protein_preparation__1775781932219-22ff72a0c7635/Histagged_protein_preparation__1775782082531-5f0b06480b152/.DS_Store",
@@ -997,6 +1858,13 @@
       "role": "other",
       "size_bytes": 6148,
       "modified_at": "2026-04-12T18:15:04.690Z"
+    },
+    {
+      "relative_path": "Workflow/Histagged_protein_preparation__1775781932219-22ff72a0c7635/Histagged_protein_preparation__1775782082531-5f0b06480b152/MEMORY.md",
+      "type": "file",
+      "role": "workflow_memory",
+      "size_bytes": 656,
+      "modified_at": "2026-04-20T20:06:08.790Z"
     },
     {
       "relative_path": "Workflow/Histagged_protein_preparation__1775781932219-22ff72a0c7635/Histagged_protein_preparation__1775782082531-5f0b06480b152/Notebook",
@@ -1031,7 +1899,7 @@
       "type": "directory",
       "role": "other",
       "size_bytes": 0,
-      "modified_at": "2026-04-12T02:28:41.023Z"
+      "modified_at": "2026-04-20T20:06:08.791Z"
     },
     {
       "relative_path": "Workflow/Histagged_protein_preparation__1775781932219-22ff72a0c7635/Histagged_protein_preparation_4__1775858349340-e22328837caff/.DS_Store",
@@ -1039,6 +1907,13 @@
       "role": "other",
       "size_bytes": 6148,
       "modified_at": "2026-04-12T02:28:41.023Z"
+    },
+    {
+      "relative_path": "Workflow/Histagged_protein_preparation__1775781932219-22ff72a0c7635/Histagged_protein_preparation_4__1775858349340-e22328837caff/MEMORY.md",
+      "type": "file",
+      "role": "workflow_memory",
+      "size_bytes": 657,
+      "modified_at": "2026-04-20T20:06:08.791Z"
     },
     {
       "relative_path": "Workflow/Histagged_protein_preparation__1775781932219-22ff72a0c7635/Histagged_protein_preparation_4__1775858349340-e22328837caff/Notebook",
@@ -1073,7 +1948,14 @@
       "type": "directory",
       "role": "other",
       "size_bytes": 0,
-      "modified_at": "2026-04-10T21:59:09.552Z"
+      "modified_at": "2026-04-20T20:06:08.791Z"
+    },
+    {
+      "relative_path": "Workflow/Histagged_protein_preparation__1775781932219-22ff72a0c7635/Histagged_protein_preparation_Run__1775782081890-b219b77f7b2e48/MEMORY.md",
+      "type": "file",
+      "role": "workflow_memory",
+      "size_bytes": 661,
+      "modified_at": "2026-04-20T20:06:08.791Z"
     },
     {
       "relative_path": "Workflow/Histagged_protein_preparation__1775781932219-22ff72a0c7635/Histagged_protein_preparation_Run__1775782081890-b219b77f7b2e48/Notebook",
@@ -1115,14 +1997,21 @@
       "type": "directory",
       "role": "other",
       "size_bytes": 0,
-      "modified_at": "2026-04-15T16:28:58.609Z"
+      "modified_at": "2026-04-25T19:36:31.291Z"
     },
     {
       "relative_path": "Workflow/NiNTA__1776270512198-af3480c2ef55c8/NiNTA_1__1776270538561-6c07e18af542f",
       "type": "directory",
       "role": "other",
       "size_bytes": 0,
-      "modified_at": "2026-04-15T16:28:58.610Z"
+      "modified_at": "2026-04-25T19:36:31.290Z"
+    },
+    {
+      "relative_path": "Workflow/NiNTA__1776270512198-af3480c2ef55c8/NiNTA_1__1776270538561-6c07e18af542f/MEMORY.md",
+      "type": "file",
+      "role": "workflow_memory",
+      "size_bytes": 611,
+      "modified_at": "2026-04-25T18:24:36.774Z"
     },
     {
       "relative_path": "Workflow/NiNTA__1776270512198-af3480c2ef55c8/NiNTA_1__1776270538561-6c07e18af542f/Notebook",
@@ -1136,7 +2025,7 @@
       "type": "directory",
       "role": "other",
       "size_bytes": 0,
-      "modified_at": "2026-04-15T16:28:58.610Z"
+      "modified_at": "2026-04-25T19:36:31.290Z"
     },
     {
       "relative_path": "Workflow/NiNTA__1776270512198-af3480c2ef55c8/NiNTA_1__1776270538561-6c07e18af542f/Results",
@@ -1149,22 +2038,22 @@
       "relative_path": "Workflow/NiNTA__1776270512198-af3480c2ef55c8/NiNTA_1__1776270538561-6c07e18af542f/workflow.json",
       "type": "file",
       "role": "workflow_run_metadata",
-      "size_bytes": 8000,
-      "modified_at": "2026-04-15T16:40:54.505Z"
+      "size_bytes": 7900,
+      "modified_at": "2026-04-25T19:36:31.291Z"
     },
     {
       "relative_path": "Workflow/NiNTA__1776270512198-af3480c2ef55c8/template.json",
       "type": "file",
       "role": "workflow_template_metadata",
       "size_bytes": 2495,
-      "modified_at": "2026-04-15T16:40:54.500Z"
+      "modified_at": "2026-04-25T19:36:31.291Z"
     },
     {
       "relative_path": "Workflow/workflow-status.sqlite",
       "type": "file",
       "role": "workflow_status_index",
       "size_bytes": 40960,
-      "modified_at": "2026-04-15T16:40:54.513Z"
+      "modified_at": "2026-04-25T18:24:36.777Z"
     }
   ],
   "bundles": [
@@ -1177,11 +2066,11 @@
         "sqlite_path": "Protocol/protocol.index.sqlite"
       },
       "counts": {
-        "protocols": 6,
-        "notebookEntries": 17,
-        "workflowTemplates": 0,
-        "workflows": 0,
-        "papers": 6,
+        "protocols": 7,
+        "notebookEntries": 21,
+        "workflowTemplates": 1,
+        "workflows": 1,
+        "papers": 10,
         "chemicals": 3,
         "personalInventoryContainers": 8
       },
@@ -1190,7 +2079,9 @@
           "protocol_sidecar",
           "inventory_sqlite",
           "notebook_sqlite_fallback",
-          "paper_sqlite"
+          "paper_sqlite",
+          "project_root_storage",
+          "workflow_root_storage"
         ],
         "warnings": []
       }
@@ -1204,11 +2095,11 @@
         "sqlite_path": "Protocol/protocol.index.sqlite"
       },
       "counts": {
-        "protocols": 6,
-        "notebookEntries": 17,
+        "protocols": 7,
+        "notebookEntries": 21,
         "workflowTemplates": 1,
         "workflows": 1,
-        "papers": 6,
+        "papers": 10,
         "chemicals": 3,
         "personalInventoryContainers": 8
       },
@@ -1219,6 +2110,7 @@
           "inventory_sqlite",
           "notebook_sqlite_fallback",
           "paper_sqlite",
+          "project_root_storage",
           "workflow_root_storage"
         ],
         "warnings": []
@@ -1233,11 +2125,11 @@
         "sqlite_path": "Protocol/protocol.index.sqlite"
       },
       "counts": {
-        "protocols": 6,
-        "notebookEntries": 17,
-        "workflowTemplates": 0,
-        "workflows": 0,
-        "papers": 6,
+        "protocols": 7,
+        "notebookEntries": 21,
+        "workflowTemplates": 1,
+        "workflows": 1,
+        "papers": 10,
         "chemicals": 3,
         "personalInventoryContainers": 8
       },
@@ -1246,7 +2138,9 @@
           "protocol_sidecar",
           "inventory_sqlite",
           "notebook_sqlite_fallback",
-          "paper_sqlite"
+          "paper_sqlite",
+          "project_root_storage",
+          "workflow_root_storage"
         ],
         "warnings": []
       }
@@ -1260,11 +2154,11 @@
         "sqlite_path": "Protocol/protocol.index.sqlite"
       },
       "counts": {
-        "protocols": 6,
-        "notebookEntries": 17,
-        "workflowTemplates": 0,
-        "workflows": 0,
-        "papers": 6,
+        "protocols": 7,
+        "notebookEntries": 21,
+        "workflowTemplates": 1,
+        "workflows": 1,
+        "papers": 10,
         "chemicals": 3,
         "personalInventoryContainers": 8
       },
@@ -1273,7 +2167,9 @@
           "protocol_sidecar",
           "inventory_sqlite",
           "notebook_sqlite_fallback",
-          "paper_sqlite"
+          "paper_sqlite",
+          "project_root_storage",
+          "workflow_root_storage"
         ],
         "warnings": []
       }
@@ -1287,11 +2183,11 @@
         "sqlite_path": "Protocol/protocol.index.sqlite"
       },
       "counts": {
-        "protocols": 6,
-        "notebookEntries": 16,
+        "protocols": 7,
+        "notebookEntries": 21,
         "workflowTemplates": 2,
         "workflows": 5,
-        "papers": 9,
+        "papers": 13,
         "chemicals": 3,
         "personalInventoryContainers": 8
       },
@@ -1301,6 +2197,7 @@
           "notebook_sidecar",
           "inventory_sqlite",
           "paper_sqlite",
+          "project_root_storage",
           "workflow_root_storage"
         ],
         "warnings": []
@@ -1315,11 +2212,11 @@
         "sqlite_path": "Protocol/protocol.index.sqlite"
       },
       "counts": {
-        "protocols": 6,
-        "notebookEntries": 17,
-        "workflowTemplates": 0,
-        "workflows": 0,
-        "papers": 6,
+        "protocols": 7,
+        "notebookEntries": 21,
+        "workflowTemplates": 1,
+        "workflows": 1,
+        "papers": 10,
         "chemicals": 3,
         "personalInventoryContainers": 8
       },
@@ -1328,7 +2225,9 @@
           "protocol_sidecar",
           "inventory_sqlite",
           "notebook_sqlite_fallback",
-          "paper_sqlite"
+          "paper_sqlite",
+          "project_root_storage",
+          "workflow_root_storage"
         ],
         "warnings": []
       }
@@ -1342,11 +2241,11 @@
         "sqlite_path": "Protocol/protocol.index.sqlite"
       },
       "counts": {
-        "protocols": 6,
-        "notebookEntries": 17,
-        "workflowTemplates": 0,
-        "workflows": 0,
-        "papers": 6,
+        "protocols": 7,
+        "notebookEntries": 21,
+        "workflowTemplates": 1,
+        "workflows": 1,
+        "papers": 10,
         "chemicals": 3,
         "personalInventoryContainers": 8
       },
@@ -1355,7 +2254,9 @@
           "protocol_sidecar",
           "inventory_sqlite",
           "notebook_sqlite_fallback",
-          "paper_sqlite"
+          "paper_sqlite",
+          "project_root_storage",
+          "workflow_root_storage"
         ],
         "warnings": []
       }
@@ -1369,11 +2270,11 @@
         "sqlite_path": "Protocol/protocol.index.sqlite"
       },
       "counts": {
-        "protocols": 6,
-        "notebookEntries": 17,
+        "protocols": 7,
+        "notebookEntries": 21,
         "workflowTemplates": 1,
         "workflows": 1,
-        "papers": 6,
+        "papers": 10,
         "chemicals": 3,
         "personalInventoryContainers": 8
       },
@@ -1383,6 +2284,7 @@
           "notebook_sidecar",
           "inventory_sqlite",
           "paper_sqlite",
+          "project_root_storage",
           "workflow_root_storage"
         ],
         "warnings": []
@@ -1397,11 +2299,11 @@
         "sqlite_path": "Protocol/protocol.index.sqlite"
       },
       "counts": {
-        "protocols": 6,
-        "notebookEntries": 17,
-        "workflowTemplates": 0,
-        "workflows": 0,
-        "papers": 6,
+        "protocols": 7,
+        "notebookEntries": 21,
+        "workflowTemplates": 1,
+        "workflows": 1,
+        "papers": 10,
         "chemicals": 3,
         "personalInventoryContainers": 8
       },
@@ -1410,7 +2312,9 @@
           "protocol_sidecar",
           "inventory_sqlite",
           "notebook_sqlite_fallback",
-          "paper_sqlite"
+          "paper_sqlite",
+          "project_root_storage",
+          "workflow_root_storage"
         ],
         "warnings": []
       }
@@ -1419,7 +2323,7 @@
   "protocol_storage": {
     "relative_root_path": "Protocol",
     "relative_index_sqlite_path": "Protocol/protocol.index.sqlite",
-    "protocols": 6
+    "protocols": 7
   },
   "workflow_storage": {
     "relative_root_path": "Workflow",
@@ -1431,22 +2335,22 @@
   "sequence_library": {
     "relative_path": "SequenceViewer/sequence-library.sqlite",
     "exists": true,
-    "entry_count": 5,
+    "entry_count": 15,
     "status_counts": {
-      "saved": 2,
-      "temporary": 3
+      "saved": 11,
+      "temporary": 4
     }
   },
   "summary": {
     "bundles": 9,
-    "protocols": 6,
-    "notebookEntries": 17,
+    "protocols": 7,
+    "notebookEntries": 21,
     "workflowTemplates": 1,
     "workflows": 1,
     "papers": 0,
     "chemicals": 3,
     "personalInventoryContainers": 8,
-    "sequenceEntries": 5
+    "sequenceEntries": 15
   },
   "warnings": []
 }

@@ -5,7 +5,7 @@ const { createAgentSubAgentRuntime } = require('../tools/agent-sub-agent.js');
 
 const SEARCH_BATCH_SIZE = 8;
 const DEFAULT_MAX_CANDIDATE_PAPERS = 12;
-const DEFAULT_MAX_DOWNLOADS = 6;
+const DEFAULT_DOWNLOAD_CONCURRENCY = 4;
 
 const PAPER_TOKEN_STOPWORDS = new Set([
   'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from', 'in', 'into',
@@ -221,6 +221,16 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
       message: cleanText(source.message, 1200),
       query: cleanText(query || source.query, 600),
       topic: cleanText(source.topic, 240),
+      source: cleanText(source.source, 80),
+      sources: uniqueStrings(asArray(source.sources).map((item) => cleanText(item, 80)), 8),
+      preferred_literature_source: cleanText(
+        source.preferred_literature_source || source.preferredLiteratureSource,
+        80
+      ),
+      preferred_web_source: cleanText(
+        source.preferred_web_source || source.preferredWebSource,
+        240
+      ),
       project: {
         id: cleanText(project.id || project.projectId, 120),
         name: cleanText(project.name || project.projectName, 220)
@@ -340,6 +350,52 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
     }));
   }
 
+  async function downloadSelectedPapers(items = [], input = {}, linkedName = '') {
+    const selectedItems = Array.isArray(items) ? items.slice(0, 24) : [];
+    if (!selectedItems.length) {
+      return [];
+    }
+
+    const concurrency = Math.max(
+      1,
+      Math.min(
+        Number.isFinite(Number(input.max_download_concurrency))
+          ? Number(input.max_download_concurrency)
+          : DEFAULT_DOWNLOAD_CONCURRENCY,
+        selectedItems.length
+      )
+    );
+    const batches = chunkArray(selectedItems, concurrency);
+    const downloadedPapers = [];
+
+    for (const batch of batches) {
+      const batchResults = await Promise.all(
+        batch.map(async (candidate) => ({
+          candidate,
+          downloadResult: await downloadSelectedPaper(candidate, input, linkedName)
+        }))
+      );
+
+      batchResults.forEach(({ candidate, downloadResult }) => {
+        if (!downloadResult) {
+          return;
+        }
+        downloadedPapers.push({
+          paper_id: cleanText(candidate.paper_id || candidate.id, 120),
+          paper_title: cleanText(candidate.title, 320),
+          ok: downloadResult.ok === true,
+          status: cleanText(downloadResult.status, 80),
+          file_name: cleanText(downloadResult.file_name, 240),
+          file_path: cleanText(downloadResult.file_path, 4000),
+          relative_path: cleanText(downloadResult.relative_path, 2000),
+          error: cleanText(downloadResult.error, 1200)
+        });
+      });
+    }
+
+    return downloadedPapers;
+  }
+
   async function readSelectedPapers(items = [], input = {}) {
     if (!paperContextLoaderRuntime || typeof paperContextLoaderRuntime.loadPaperContexts !== 'function') {
       return {
@@ -367,7 +423,8 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
         query: cleanText(input.query, 600),
         figure_policy: cleanText(input.figure_policy, 40) || 'when_needed',
         max_papers: batch.length,
-        items: batch
+        items: batch,
+        download_promise: input.downloadPromise || null
       }).catch((error) => ({
         ok: false,
         status: 'error',
@@ -483,31 +540,16 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
       enrichedCandidates.push(await enrichPaperForDownload(candidate));
     }
 
-    const maxDownloads = Math.min(DEFAULT_MAX_DOWNLOADS, enrichedCandidates.length);
-    const downloadedPapers = [];
-    for (const candidate of enrichedCandidates.slice(0, maxDownloads)) {
-      const downloadResult = await downloadSelectedPaper(candidate, {
-        ...source,
-        storage_path: copiedContext.storage_path
-      }, linkedName);
-      if (downloadResult) {
-        downloadedPapers.push({
-          paper_id: cleanText(candidate.paper_id || candidate.id, 120),
-          paper_title: cleanText(candidate.title, 320),
-          ok: downloadResult.ok === true,
-          status: cleanText(downloadResult.status, 80),
-          file_name: cleanText(downloadResult.file_name, 240),
-          file_path: cleanText(downloadResult.file_path, 4000),
-          relative_path: cleanText(downloadResult.relative_path, 2000),
-          error: cleanText(downloadResult.error, 1200)
-        });
-      }
-    }
-
-    const readResult = await readSelectedPapers(enrichedCandidates, {
+    const downloadPromise = downloadSelectedPapers(enrichedCandidates, {
       ...source,
-      query
+      storage_path: copiedContext.storage_path
+    }, linkedName);
+    const readPromise = readSelectedPapers(enrichedCandidates, {
+      ...source,
+      query,
+      downloadPromise
     });
+    const [downloadedPapers, readResult] = await Promise.all([downloadPromise, readPromise]);
 
     const selectedPapers = enrichedCandidates.map((candidate) => ({
       paper_id: cleanText(candidate.paper_id || candidate.id, 120),
@@ -748,6 +790,7 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
     runLiteratureWorkflow,
     selectPaperCandidates,
     scorePaperCandidate,
+    downloadSelectedPapers,
     chunkArray,
     buildCopiedContext
   };

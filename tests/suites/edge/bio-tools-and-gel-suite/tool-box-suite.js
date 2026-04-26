@@ -495,6 +495,57 @@ test('[EDGE] tool-box assembleCloningPlan reports infeasible inputs with alterna
   assert.equal(plan.warnings.length > 0, true);
 });
 
+test('[EDGE] protein-builder cloning notebook page includes PCR program and primer table', () => {
+  const notebookAdapter = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'protein-builder-cloning-notebook.js')
+  );
+  const state = {
+    projects: [],
+    protocols: [],
+    notebookEntries: []
+  };
+  let nextId = 0;
+  let persisted = false;
+  let changedCount = 0;
+  const created = notebookAdapter.createProteinBuilderCloningNotebookPage({
+    state,
+    persist: () => {
+      persisted = true;
+    },
+    createId: () => `id-${nextId += 1}`,
+    onNotebookEntriesChanged: () => {
+      changedCount += 1;
+    },
+    constructName: 'His6-TEV-POI',
+    backbone: {
+      hostVectorName: 'Host Backbone',
+      topology: 'circular',
+      backboneSequence: 'TTTGGATCCAAAAAAGGTACCTTT'
+    },
+    dnaConstruct: {
+      sequence: 'GCGCGCGCGCGCGATTTTTTTTTTGCGCGCGCGCGCGAT',
+      length: 43,
+      parts: [{ label: 'POI', dnaSequence: 'GCGCGCGCGCGCGATTTTTTTTTTGCGCGCGCGCGCGAT' }]
+    },
+    assembledRecord: {
+      name: 'His6-TEV-POI (Host Backbone)',
+      sequence: 'TTTGGATCCAAAAAAGGTACCTTTGCGCGCGCGCGCGATTTTTTTTTTGCGCGCGCGCGCGAT'
+    }
+  });
+
+  assert.equal(Boolean(created?.entry), true);
+  assert.equal(persisted, true);
+  assert.equal(changedCount, 1);
+  assert.equal(state.projects.length, 1);
+  assert.equal(state.protocols.length, 1);
+  assert.equal(state.notebookEntries.length, 1);
+  assert.equal(state.notebookEntries[0].notebookState, 'planned');
+  assert.match(state.notebookEntries[0].result, /PCR program/i);
+  assert.match(state.notebookEntries[0].result, /Primers/i);
+  assert.equal(state.notebookEntries[0].resultTable.rows.length > 0, true);
+  assert.equal(created.plan.primerOligoPlan.feasible, true);
+});
+
 [
   [[1, 2, 3], [2, 4, 6], { slope: 2, intercept: 0, rSquared: 1 }],
   [[1, 2, 3], [3, 2, 1], { slope: -1, intercept: 4, rSquared: 1 }],

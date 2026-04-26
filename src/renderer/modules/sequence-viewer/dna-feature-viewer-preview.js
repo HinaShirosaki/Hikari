@@ -11,20 +11,22 @@ import { clamp, normalizeRecordName, normalizeSequenceText } from './shared.js';
 // https://github.com/Edinburgh-Genome-Foundry/DnaFeaturesViewer (MIT)
 // Enana only keeps the standalone HTML/SVG plasmid-preview path.
 
-const BACKBONE_RADIUS = 240;
-const BACKBONE_WIDTH = 14;
+const BACKBONE_RADIUS = 290;
+const BACKBONE_WIDTH = 16;
 const FEATURE_START_GAP = 18;
 const FEATURE_BAND_WIDTH = 18;
 const FEATURE_LANE_GAP = 12;
-const LABEL_BASE_GAP = 58;
-const LABEL_LEVEL_GAP = 32;
+const LABEL_BASE_GAP = 46;
 const LABEL_FONT_SIZE = 15;
 const LABEL_LINE_HEIGHT = 18;
 const LABEL_CHAR_WIDTH = 7.4;
 const LABEL_MAX_LINE_LENGTH = 20;
 const LABEL_MAX_LENGTH = 60;
-const MIN_VIEWBOX_RADIUS = 470;
-const VIEWBOX_PADDING = 72;
+const LABEL_STACK_GAP = 14;
+const LABEL_SIDE_BALANCE_THRESHOLD = 0.55;
+const LABEL_BOX_HORIZONTAL_PADDING = 12;
+const PREVIEW_TOOLTIP_OFFSET_PX = 12;
+const VIEWBOX_PADDING = 32;
 
 function parseHexColor(color) {
   const normalized = String(color || '').trim();
@@ -74,14 +76,6 @@ function lightenHexColor(color, amount = 0.84) {
 
 function darkenHexColor(color, amount = 0.24) {
   return mixHexColors(color, '#102842', amount);
-}
-
-function positiveModulo(value, modulo) {
-  if (!Number.isFinite(Number(modulo)) || modulo <= 0) {
-    return 0;
-  }
-  const numeric = Number(value) || 0;
-  return ((numeric % modulo) + modulo) % modulo;
 }
 
 function normalizeFeatureSegments(feature, sequenceLength) {
@@ -197,31 +191,6 @@ function buildDirectionalRingPath(cx, cy, innerRadius, outerRadius, startRatio, 
   ].join(' ');
 }
 
-function splitCircularInterval(start, end, sequenceLength) {
-  const span = Math.max(0, (Number(end) || 0) - (Number(start) || 0));
-  if (!sequenceLength || span <= 0) {
-    return [];
-  }
-  if (span >= sequenceLength) {
-    return [{ start: 0, end: sequenceLength }];
-  }
-
-  const normalizedStart = positiveModulo(start, sequenceLength);
-  const normalizedEnd = normalizedStart + span;
-  if (normalizedEnd <= sequenceLength) {
-    return [{ start: normalizedStart, end: normalizedEnd }];
-  }
-
-  return [
-    { start: normalizedStart, end: sequenceLength },
-    { start: 0, end: normalizedEnd - sequenceLength }
-  ];
-}
-
-function intervalsOverlap(leftIntervals, rightIntervals) {
-  return leftIntervals.some((left) => rightIntervals.some((right) => left.start < right.end && right.start < left.end));
-}
-
 function wrapWords(text, lineLength) {
   const normalized = String(text || '').trim();
   if (!normalized) {
@@ -330,55 +299,125 @@ function computeFeatureAnchorPosition(feature, sequenceLength) {
   return clamp((longestSegment.start + longestSegment.end) / 2, 0, sequenceLength);
 }
 
-function assignLabelLevels(features, sequenceLength, labelRadius) {
-  const circumferencePx = Math.max(1, 2 * Math.PI * labelRadius);
+function buildColumnLabelLayout(features, sequenceLength, ringOuterRadius) {
   const items = features.map((feature) => {
-    const labelWidthPx = estimateLabelWidthPx(feature.labelLines);
-    const bpWidth = (labelWidthPx / circumferencePx) * sequenceLength;
+    const theta = positionToTheta(feature.anchorPosition, sequenceLength);
+    const labelWidthPx = Math.max(70, Number(feature?.labelWidthPx) || estimateLabelWidthPx(feature.labelLines));
+    const labelHeightPx = estimateLabelHeightPx(feature.labelLines);
+    const desiredPoint = polarPoint(0, 0, ringOuterRadius + LABEL_BASE_GAP, theta);
     return {
-      feature,
+      ...feature,
+      theta,
+      defaultLabelSide: Math.cos(theta) >= 0 ? 'right' : 'left',
       labelWidthPx,
-      collisionSegments: splitCircularInterval(
-        feature.anchorPosition - (bpWidth / 2),
-        feature.anchorPosition + (bpWidth / 2),
-        sequenceLength
-      )
+      labelHeightPx,
+      desiredLabelCenterY: desiredPoint.y
     };
   });
 
-  const neighbors = new Map(items.map((item) => [item, []]));
-  for (let index = 0; index < items.length; index += 1) {
-    for (let compareIndex = index + 1; compareIndex < items.length; compareIndex += 1) {
-      if (!intervalsOverlap(items[index].collisionSegments, items[compareIndex].collisionSegments)) {
-        continue;
+  const sideLoad = { left: 0, right: 0 };
+  const flexibleItems = [];
+
+  items.forEach((item) => {
+    const horizontalBias = Math.abs(Math.cos(item.theta));
+    if (horizontalBias >= LABEL_SIDE_BALANCE_THRESHOLD) {
+      item.labelSide = item.defaultLabelSide;
+      sideLoad[item.labelSide] += item.labelHeightPx + LABEL_STACK_GAP;
+      return;
+    }
+    flexibleItems.push(item);
+  });
+
+  flexibleItems
+    .sort((left, right) => {
+      const biasDiff = Math.abs(Math.cos(left.theta)) - Math.abs(Math.cos(right.theta));
+      if (biasDiff !== 0) {
+        return biasDiff;
       }
-      neighbors.get(items[index]).push(items[compareIndex]);
-      neighbors.get(items[compareIndex]).push(items[index]);
-    }
-  }
+      return left.anchorPosition - right.anchorPosition;
+    })
+    .forEach((item) => {
+      const preferredSide = item.defaultLabelSide;
+      const alternateSide = preferredSide === 'right' ? 'left' : 'right';
+      const preferredProjectedLoad = sideLoad[preferredSide] + item.labelHeightPx + LABEL_STACK_GAP;
+      const alternateProjectedLoad = sideLoad[alternateSide] + item.labelHeightPx + LABEL_STACK_GAP;
+      const chosenSide = alternateProjectedLoad + 8 < preferredProjectedLoad ? alternateSide : preferredSide;
+      item.labelSide = chosenSide;
+      sideLoad[chosenSide] = chosenSide === preferredSide ? preferredProjectedLoad : alternateProjectedLoad;
+    });
 
-  const levels = new Map();
-  const ordered = [...items].sort((left, right) => {
-    const spanDiff = featureSpanBp(right.feature) - featureSpanBp(left.feature);
-    if (spanDiff !== 0) {
-      return spanDiff;
+  ['left', 'right'].forEach((side) => {
+    const sideItems = items
+      .filter((item) => item.labelSide === side)
+      .sort((left, right) => left.desiredLabelCenterY - right.desiredLabelCenterY);
+
+    if (!sideItems.length) {
+      return;
     }
-    return right.labelWidthPx - left.labelWidthPx;
+
+    sideItems[0].labelCenterY = sideItems[0].desiredLabelCenterY;
+    for (let index = 1; index < sideItems.length; index += 1) {
+      const previous = sideItems[index - 1];
+      const current = sideItems[index];
+      const minimumCenterY = previous.labelCenterY
+        + (previous.labelHeightPx / 2)
+        + (current.labelHeightPx / 2)
+        + LABEL_STACK_GAP;
+      current.labelCenterY = Math.max(current.desiredLabelCenterY, minimumCenterY);
+    }
+
+    const desiredCenterY = (sideItems[0].desiredLabelCenterY + sideItems[sideItems.length - 1].desiredLabelCenterY) / 2;
+    const actualCenterY = (sideItems[0].labelCenterY + sideItems[sideItems.length - 1].labelCenterY) / 2;
+    const shift = desiredCenterY - actualCenterY;
+    sideItems.forEach((item) => {
+      item.labelCenterY += shift;
+    });
   });
 
-  ordered.forEach((item) => {
-    let level = 0;
-    while (neighbors.get(item).some((neighbor) => levels.get(neighbor) === level)) {
-      level += 1;
-    }
-    levels.set(item, level);
+  const rightColumnX = ringOuterRadius + LABEL_BASE_GAP;
+  const leftColumnRightX = -ringOuterRadius - LABEL_BASE_GAP;
+  const bendRadius = ringOuterRadius + Math.max(22, LABEL_BASE_GAP - 8);
+
+  items.forEach((item) => {
+    item.labelBoxX = item.labelSide === 'right'
+      ? rightColumnX
+      : leftColumnRightX - item.labelWidthPx;
+    item.labelBoxY = item.labelCenterY - (item.labelHeightPx / 2);
+    item.labelTextAnchor = item.labelSide === 'right' ? 'start' : 'end';
+    item.textX = item.labelSide === 'right'
+      ? item.labelBoxX + LABEL_BOX_HORIZONTAL_PADDING
+      : item.labelBoxX + item.labelWidthPx - LABEL_BOX_HORIZONTAL_PADDING;
+    item.leaderEndX = item.labelSide === 'right'
+      ? item.labelBoxX
+      : item.labelBoxX + item.labelWidthPx;
+    item.leaderEndY = item.labelCenterY;
+    item.bendPoint = polarPoint(0, 0, bendRadius, item.theta);
   });
 
-  return items.map((item) => ({
-    ...item.feature,
-    labelLevel: levels.get(item) || 0,
-    labelWidthPx: item.labelWidthPx
-  }));
+  const minX = Math.min(
+    -ringOuterRadius,
+    ...items.map((item) => item.labelBoxX)
+  );
+  const maxX = Math.max(
+    ringOuterRadius,
+    ...items.map((item) => item.labelBoxX + item.labelWidthPx)
+  );
+  const minY = Math.min(
+    -ringOuterRadius,
+    ...items.map((item) => item.labelBoxY)
+  );
+  const maxY = Math.max(
+    ringOuterRadius,
+    ...items.map((item) => item.labelBoxY + item.labelHeightPx)
+  );
+
+  return {
+    items,
+    minX,
+    maxX,
+    minY,
+    maxY
+  };
 }
 
 function buildTickMarkup(cx, cy, radius, sequenceLength) {
@@ -399,12 +438,25 @@ function buildTickMarkup(cx, cy, radius, sequenceLength) {
 }
 
 function buildFeatureTooltip(feature, sequenceLength) {
+  const summary = buildFeatureHoverCardData(feature, sequenceLength);
+  const description = summary.description;
+  return description
+    ? `${summary.name} (${summary.location}) - ${description}`
+    : `${summary.name} (${summary.location})`;
+}
+
+function buildFeatureHoverCardData(feature, sequenceLength) {
   const name = normalizeRecordName(feature?.name || 'Feature', 'Feature');
+  const strand = feature?.strand === -1 ? '-' : '+';
+  const type = normalizeRecordName(feature?.type || 'Feature', 'Feature');
   const location = buildFeatureLocationText(feature, sequenceLength);
   const description = String(feature?.description || '').replace(/\s+/g, ' ').trim();
-  return description
-    ? `${name} (${location}) - ${description}`
-    : `${name} (${location})`;
+  return {
+    name,
+    meta: `${type} | Strand ${strand}`,
+    location,
+    description
+  };
 }
 
 function formatBpCount(value) {
@@ -420,9 +472,221 @@ function buildCenterMarkup(recordName, sequenceLength, featureCount, cx, cy) {
       <circle cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" r="${(BACKBONE_RADIUS - 56).toFixed(2)}" class="circular-preview__center-disc"></circle>
       <text x="${cx.toFixed(2)}" y="${(cy - 14).toFixed(2)}" class="circular-preview__title">${safeName}</text>
       <text x="${cx.toFixed(2)}" y="${(cy + 18).toFixed(2)}" class="circular-preview__subtitle">${subtitle}</text>
-      <text x="${cx.toFixed(2)}" y="${(cy + 48).toFixed(2)}" class="circular-preview__caption">Circular plasmid preview</text>
     </g>
   `;
+}
+
+function buildPreviewMeasurementScriptMarkup() {
+  return `
+  <script>
+    (() => {
+      const LABEL_PADDING_X = ${LABEL_BOX_HORIZONTAL_PADDING};
+      const MIN_LABEL_WIDTH = 70;
+      const VIEWBOX_GUTTER = ${VIEWBOX_PADDING};
+      const TOOLTIP_OFFSET = ${PREVIEW_TOOLTIP_OFFSET_PX};
+
+      function escapeText(value) {
+        return String(value || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function ensureTooltipNode() {
+        let node = document.querySelector('.circular-preview__hover-tooltip');
+        if (node) {
+          return node;
+        }
+        node = document.createElement('div');
+        node.className = 'circular-preview__hover-tooltip';
+        node.hidden = true;
+        document.body.appendChild(node);
+        return node;
+      }
+
+      function hideTooltip() {
+        const tooltip = document.querySelector('.circular-preview__hover-tooltip');
+        if (tooltip) {
+          tooltip.hidden = true;
+          tooltip.dataset.owner = '';
+        }
+      }
+
+      function buildTooltipHtml(target) {
+        const name = String(target?.dataset?.tooltipName || '').trim();
+        const meta = String(target?.dataset?.tooltipMeta || '').trim();
+        const location = String(target?.dataset?.tooltipLocation || '').trim();
+        const description = String(target?.dataset?.tooltipDescription || '').trim();
+        if (!name && !meta && !location && !description) {
+          return '';
+        }
+        return [
+          name ? '<p class="circular-preview__hover-title">' + escapeText(name) + '</p>' : '',
+          meta ? '<p>' + escapeText(meta) + '</p>' : '',
+          location ? '<p>' + escapeText(location) + '</p>' : '',
+          description ? '<p class="circular-preview__hover-description">' + escapeText(description) + '</p>' : ''
+        ].filter(Boolean).join('');
+      }
+
+      function positionTooltip(tooltip, event) {
+        const rawX = Number(event?.clientX);
+        const rawY = Number(event?.clientY);
+        const startX = Number.isFinite(rawX) ? rawX + TOOLTIP_OFFSET : TOOLTIP_OFFSET;
+        const startY = Number.isFinite(rawY) ? rawY + TOOLTIP_OFFSET : TOOLTIP_OFFSET;
+        const tooltipRect = tooltip.getBoundingClientRect();
+        const viewportWidth = Number(window?.innerWidth) || 0;
+        const viewportHeight = Number(window?.innerHeight) || 0;
+
+        let left = Math.max(8, startX);
+        let top = Math.max(8, startY);
+
+        if (viewportWidth > 0) {
+          left = Math.min(left, Math.max(8, viewportWidth - tooltipRect.width - 8));
+        }
+        if (viewportHeight > 0) {
+          top = Math.min(top, Math.max(8, viewportHeight - tooltipRect.height - 8));
+        }
+
+        tooltip.style.left = left.toFixed(0) + 'px';
+        tooltip.style.top = top.toFixed(0) + 'px';
+      }
+
+      function showTooltip(target, event) {
+        const html = buildTooltipHtml(target);
+        if (!html) {
+          hideTooltip();
+          return;
+        }
+        const tooltip = ensureTooltipNode();
+        const ownerKey = String(target?.dataset?.tooltipKey || '');
+        if (tooltip.dataset.owner !== ownerKey) {
+          tooltip.innerHTML = html;
+          tooltip.dataset.owner = ownerKey;
+        }
+        tooltip.hidden = false;
+        positionTooltip(tooltip, event);
+      }
+
+      function bindFeatureHoverCards() {
+        const svg = document.querySelector('.preview-shell svg');
+        if (!svg || svg.dataset.hoverCardsBound === 'true') {
+          return;
+        }
+
+        svg.dataset.hoverCardsBound = 'true';
+        svg.querySelectorAll('[data-preview-tooltip="feature"]').forEach((node) => {
+          node.addEventListener('pointerenter', (event) => {
+            showTooltip(node, event);
+          });
+          node.addEventListener('pointermove', (event) => {
+            showTooltip(node, event);
+          });
+          node.addEventListener('pointerleave', () => {
+            hideTooltip();
+          });
+        });
+
+        svg.addEventListener('pointerleave', () => {
+          hideTooltip();
+        });
+        window.addEventListener('blur', () => {
+          hideTooltip();
+        });
+      }
+
+      function fitAnnotationBoxes() {
+        const svg = document.querySelector('.preview-shell svg');
+        const scene = svg?.querySelector('.circular-preview__scene');
+        if (!svg || !scene) {
+          return;
+        }
+
+        svg.querySelectorAll('.circular-preview__annotation').forEach((annotation) => {
+          const rect = annotation.querySelector('.circular-preview__label-box');
+          const leader = annotation.querySelector('.circular-preview__leader');
+          const textNodes = annotation.querySelectorAll('.circular-preview__label-text');
+          if (!rect || !leader || !textNodes.length) {
+            return;
+          }
+
+          let minX = Number.POSITIVE_INFINITY;
+          let maxX = Number.NEGATIVE_INFINITY;
+          textNodes.forEach((node) => {
+            const box = node.getBBox();
+            if (!Number.isFinite(box.x) || !Number.isFinite(box.width)) {
+              return;
+            }
+            minX = Math.min(minX, box.x);
+            maxX = Math.max(maxX, box.x + box.width);
+          });
+
+          if (!Number.isFinite(minX) || !Number.isFinite(maxX)) {
+            return;
+          }
+
+          const width = Math.max(MIN_LABEL_WIDTH, (maxX - minX) + (LABEL_PADDING_X * 2));
+          const x = minX - LABEL_PADDING_X;
+          rect.setAttribute('x', x.toFixed(2));
+          rect.setAttribute('width', width.toFixed(2));
+
+          const featureX = Number(annotation.dataset.featureX);
+          const featureY = Number(annotation.dataset.featureY);
+          const bendX = Number(annotation.dataset.bendX);
+          const bendY = Number(annotation.dataset.bendY);
+          const centerY = Number(annotation.dataset.labelCenterY);
+          if (![featureX, featureY, bendX, bendY, centerY].every(Number.isFinite)) {
+            return;
+          }
+
+          const endX = annotation.dataset.labelSide === 'right'
+            ? x
+            : x + width;
+          leader.setAttribute(
+            'd',
+            \`M \${featureX.toFixed(2)} \${featureY.toFixed(2)} L \${bendX.toFixed(2)} \${bendY.toFixed(2)} L \${endX.toFixed(2)} \${centerY.toFixed(2)}\`
+          );
+        });
+
+        const bounds = scene.getBBox();
+        if (![bounds.x, bounds.y, bounds.width, bounds.height].every(Number.isFinite)) {
+          return;
+        }
+
+        svg.setAttribute(
+          'viewBox',
+          [
+            Math.floor(bounds.x - VIEWBOX_GUTTER),
+            Math.floor(bounds.y - VIEWBOX_GUTTER),
+            Math.ceil(bounds.width + (VIEWBOX_GUTTER * 2)),
+            Math.ceil(bounds.height + (VIEWBOX_GUTTER * 2))
+          ].join(' ')
+        );
+      }
+
+      function scheduleFit() {
+        bindFeatureHoverCards();
+        window.requestAnimationFrame(() => {
+          fitAnnotationBoxes();
+          bindFeatureHoverCards();
+          window.setTimeout(fitAnnotationBoxes, 48);
+        });
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', scheduleFit, { once: true });
+      } else {
+        scheduleFit();
+      }
+
+      if (document.fonts?.ready) {
+        document.fonts.ready.then(scheduleFit).catch(() => {});
+      }
+
+      window.addEventListener('load', scheduleFit, { once: true });
+    })();
+  </script>`;
 }
 
 function buildEmptyPreviewHtml(recordName) {
@@ -434,16 +698,32 @@ function buildEmptyPreviewHtml(recordName) {
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>${safeName}</title>
   <style>
-    body { margin: 0; padding: 20px; font-family: "Playfair Display", serif; background: #eef4fb; color: #15314d; }
-    .preview-shell { max-width: 760px; margin: 0 auto; padding: 24px; border: 1px solid #d2deed; border-radius: 24px; background: rgba(255, 255, 255, 0.92); box-shadow: 0 28px 72px rgba(16, 40, 66, 0.08); }
-    h1 { margin: 0 0 12px; font-size: 1.3rem; }
+    html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #ffffff; }
+    body { font-family: "Playfair Display", serif; color: #15314d; overflow: hidden; }
+    .preview-shell {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 16px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+    }
+    .preview-empty {
+      display: grid;
+      gap: 12px;
+      max-width: 560px;
+    }
+    h1 { margin: 0; font-size: 1.3rem; }
     p { margin: 0; line-height: 1.5; color: #55708f; }
   </style>
 </head>
 <body>
   <main class="preview-shell" data-renderer="dna-feature-viewer-js">
-    <h1>${safeName}</h1>
-    <p>No sequence is available for this circular plasmid preview.</p>
+    <div class="preview-empty">
+      <h1>${safeName}</h1>
+      <p>No sequence is available for this circular plasmid preview.</p>
+    </div>
   </main>
 </body>
 </html>`;
@@ -488,24 +768,20 @@ export function buildDnaFeatureViewerCircularPreviewHtmlDocument(record) {
   }));
 
   const maxLane = Math.max(0, ...previewFeatures.map((feature) => Number(feature?.lane) || 0));
-  const featureMaxOuterRadius = BACKBONE_RADIUS + FEATURE_START_GAP + FEATURE_BAND_WIDTH + (maxLane * (FEATURE_BAND_WIDTH + FEATURE_LANE_GAP));
-  const labelBaseRadius = featureMaxOuterRadius + LABEL_BASE_GAP;
-  const labeledFeatures = assignLabelLevels(previewFeatures, sequenceLength, labelBaseRadius + LABEL_LEVEL_GAP);
-  const maxLabelLevel = Math.max(0, ...labeledFeatures.map((feature) => Number(feature?.labelLevel) || 0));
-  const maxLabelWidthPx = Math.max(120, ...labeledFeatures.map((feature) => Number(feature?.labelWidthPx) || 0));
-  const viewboxRadius = Math.max(
-    MIN_VIEWBOX_RADIUS,
-    labelBaseRadius + (maxLabelLevel * LABEL_LEVEL_GAP) + maxLabelWidthPx + VIEWBOX_PADDING
-  );
-  const viewboxSize = Math.ceil(viewboxRadius * 2);
-  const cx = viewboxSize / 2;
-  const cy = viewboxSize / 2;
+  const ringOuterRadius = BACKBONE_RADIUS + FEATURE_START_GAP + FEATURE_BAND_WIDTH + (maxLane * (FEATURE_BAND_WIDTH + FEATURE_LANE_GAP));
+  const labeledFeatures = buildColumnLabelLayout(previewFeatures, sequenceLength, ringOuterRadius);
+  const contentWidth = labeledFeatures.maxX - labeledFeatures.minX;
+  const contentHeight = labeledFeatures.maxY - labeledFeatures.minY;
+  const viewboxWidth = Math.ceil(contentWidth + (VIEWBOX_PADDING * 2));
+  const viewboxHeight = Math.ceil(contentHeight + (VIEWBOX_PADDING * 2));
+  const cx = VIEWBOX_PADDING - labeledFeatures.minX;
+  const cy = VIEWBOX_PADDING - labeledFeatures.minY;
 
   const tickMarkup = buildTickMarkup(cx, cy, BACKBONE_RADIUS, sequenceLength);
   const featureMarkup = [];
   const labelMarkup = [];
 
-  [...labeledFeatures]
+  [...labeledFeatures.items]
     .sort((left, right) => {
       const laneDiff = (Number(left?.lane) || 0) - (Number(right?.lane) || 0);
       if (laneDiff !== 0) {
@@ -519,6 +795,12 @@ export function buildDnaFeatureViewerCircularPreviewHtmlDocument(record) {
       const outerRadius = innerRadius + FEATURE_BAND_WIDTH;
       const direction = feature?.strand === -1 ? -1 : feature?.strand === 1 ? 1 : 0;
       const tooltip = escapeHtml(buildFeatureTooltip(feature, sequenceLength));
+      const hoverCard = buildFeatureHoverCardData(feature, sequenceLength);
+      const hoverKey = escapeHtml(String(feature?.id || `feature_${index + 1}`));
+      const hoverName = escapeHtml(hoverCard.name);
+      const hoverMeta = escapeHtml(hoverCard.meta);
+      const hoverLocation = escapeHtml(hoverCard.location);
+      const hoverDescription = escapeHtml(hoverCard.description);
 
       feature.segments.forEach((segment, segmentIndex) => {
         const path = buildDirectionalRingPath(
@@ -537,40 +819,50 @@ export function buildDnaFeatureViewerCircularPreviewHtmlDocument(record) {
           <path class="circular-preview__feature"
             data-feature-index="${index + 1}"
             data-segment-index="${segmentIndex + 1}"
+            data-preview-tooltip="feature"
+            data-tooltip-key="${hoverKey}"
+            data-tooltip-name="${hoverName}"
+            data-tooltip-meta="${hoverMeta}"
+            data-tooltip-location="${hoverLocation}"
+            data-tooltip-description="${hoverDescription}"
             d="${path}"
+            aria-label="${tooltip}"
             fill="${feature.fill}"
-            stroke="${feature.stroke}">
-            <title>${tooltip}</title>
-          </path>
+            stroke="${feature.stroke}"></path>
         `);
       });
 
-      const labelRadius = labelBaseRadius + ((Number(feature?.labelLevel) || 0) * LABEL_LEVEL_GAP);
-      const theta = positionToTheta(feature.anchorPosition, sequenceLength);
-      const featurePoint = polarPoint(cx, cy, outerRadius + 4, theta);
-      const bendPoint = polarPoint(cx, cy, labelRadius - 10, theta);
-      const labelPoint = polarPoint(cx, cy, labelRadius, theta);
-      const labelWidthPx = estimateLabelWidthPx(feature.labelLines);
-      const labelHeightPx = estimateLabelHeightPx(feature.labelLines);
-      const horizontalBias = Math.cos(theta);
-      const textAnchor = Math.abs(horizontalBias) < 0.18 ? 'middle' : horizontalBias > 0 ? 'start' : 'end';
-      const textX = labelPoint.x + (textAnchor === 'middle' ? 0 : (textAnchor === 'start' ? 18 : -18));
-      const textY = labelPoint.y;
-      const boxX = textAnchor === 'middle'
-        ? textX - (labelWidthPx / 2)
-        : textAnchor === 'start'
-          ? textX - 6
-          : textX - labelWidthPx + 6;
-      const boxY = textY - (labelHeightPx / 2);
-      const leaderEndX = textAnchor === 'middle'
-        ? textX
-        : textAnchor === 'start'
-          ? boxX
-          : boxX + labelWidthPx;
-      const leaderEndY = textY;
+      const featurePoint = polarPoint(cx, cy, outerRadius + 4, feature.theta);
+      const bendPoint = {
+        x: cx + feature.bendPoint.x,
+        y: cy + feature.bendPoint.y
+      };
+      const labelWidthPx = feature.labelWidthPx;
+      const labelHeightPx = feature.labelHeightPx;
+      const textAnchor = feature.labelTextAnchor;
+      const textX = cx + feature.textX;
+      const textY = cy + feature.labelCenterY;
+      const boxX = cx + feature.labelBoxX;
+      const boxY = cy + feature.labelBoxY;
+      const leaderEndX = cx + feature.leaderEndX;
+      const leaderEndY = cy + feature.leaderEndY;
 
       labelMarkup.push(`
-        <g class="circular-preview__annotation" data-label-level="${Number(feature?.labelLevel) || 0}">
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="${feature.labelSide}"
+          data-tooltip-key="${hoverKey}"
+          data-tooltip-name="${hoverName}"
+          data-tooltip-meta="${hoverMeta}"
+          data-tooltip-location="${hoverLocation}"
+          data-tooltip-description="${hoverDescription}"
+          data-feature-x="${featurePoint.x.toFixed(2)}"
+          data-feature-y="${featurePoint.y.toFixed(2)}"
+          data-bend-x="${bendPoint.x.toFixed(2)}"
+          data-bend-y="${bendPoint.y.toFixed(2)}"
+          data-label-center-y="${leaderEndY.toFixed(2)}"
+          aria-label="${tooltip}">
           <path class="circular-preview__leader"
             d="M ${featurePoint.x.toFixed(2)} ${featurePoint.y.toFixed(2)} L ${bendPoint.x.toFixed(2)} ${bendPoint.y.toFixed(2)} L ${leaderEndX.toFixed(2)} ${leaderEndY.toFixed(2)}"
             stroke="${feature.stroke}"></path>
@@ -594,7 +886,6 @@ export function buildDnaFeatureViewerCircularPreviewHtmlDocument(record) {
               ${escapeHtml(line)}
             </text>
           `).join('')}
-          <title>${tooltip}</title>
         </g>
       `);
     });
@@ -610,40 +901,38 @@ export function buildDnaFeatureViewerCircularPreviewHtmlDocument(record) {
       color-scheme: light;
       --preview-ink: #16314c;
       --preview-muted: #5a7592;
-      --preview-shell: rgba(255, 255, 255, 0.94);
-      --preview-shell-border: #d3dfed;
-      --preview-backdrop-a: #edf4fb;
-      --preview-backdrop-b: #dce9f7;
       --preview-backbone: #7e99ba;
       --preview-center-ring: #d8e4f2;
       --preview-center-disc: #f9fbfe;
       --preview-tick: #8ca5c5;
     }
     * { box-sizing: border-box; }
-    body {
+    html, body {
       margin: 0;
-      padding: 18px;
-      min-height: 100vh;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: #ffffff;
+    }
+    body {
       font-family: "Playfair Display", serif;
       color: var(--preview-ink);
-      background:
-        radial-gradient(circle at top, rgba(255, 255, 255, 0.92), transparent 48%),
-        linear-gradient(180deg, var(--preview-backdrop-a), var(--preview-backdrop-b));
+      overflow: hidden;
     }
     .preview-shell {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 20px;
-      border: 1px solid var(--preview-shell-border);
-      border-radius: 28px;
-      background: var(--preview-shell);
-      box-shadow: 0 28px 72px rgba(16, 40, 66, 0.08);
-      backdrop-filter: blur(10px);
+      width: 100%;
+      height: 100%;
+      display: grid;
+      place-items: center;
+      margin: 0;
+      padding: 4px;
     }
     svg {
       display: block;
       width: 100%;
-      height: auto;
+      height: 100%;
+      max-width: 100%;
+      max-height: 100%;
     }
     .circular-preview__backbone {
       fill: none;
@@ -685,14 +974,43 @@ export function buildDnaFeatureViewerCircularPreviewHtmlDocument(record) {
       dominant-baseline: middle;
       letter-spacing: 0.01em;
     }
+    .circular-preview__hover-tooltip {
+      position: fixed;
+      z-index: 20;
+      min-width: 180px;
+      max-width: min(320px, calc(100vw - 16px));
+      border-radius: 10px;
+      border: 1px solid rgba(90, 119, 165, 0.42);
+      background: rgba(249, 252, 255, 0.98);
+      box-shadow: 0 10px 24px rgba(27, 20, 14, 0.12);
+      padding: 9px 11px;
+      font-size: 12px;
+      line-height: 1.35;
+      color: var(--preview-ink);
+      pointer-events: none;
+    }
+    .circular-preview__hover-tooltip[hidden] {
+      display: none;
+    }
+    .circular-preview__hover-tooltip p {
+      margin: 0;
+    }
+    .circular-preview__hover-tooltip p + p {
+      margin-top: 3px;
+    }
+    .circular-preview__hover-title {
+      font-weight: 700;
+    }
+    .circular-preview__hover-description {
+      color: var(--preview-muted);
+    }
     .circular-preview__title {
       fill: var(--preview-ink);
       font-size: 28px;
       font-weight: 700;
       text-anchor: middle;
     }
-    .circular-preview__subtitle,
-    .circular-preview__caption {
+    .circular-preview__subtitle {
       text-anchor: middle;
       fill: var(--preview-muted);
       letter-spacing: 0.02em;
@@ -701,28 +1019,28 @@ export function buildDnaFeatureViewerCircularPreviewHtmlDocument(record) {
       font-size: 15px;
       font-weight: 600;
     }
-    .circular-preview__caption {
-      font-size: 13px;
-      text-transform: uppercase;
-    }
   </style>
 </head>
 <body>
   <main class="preview-shell" data-renderer="dna-feature-viewer-js">
     <!-- Circular plasmid preview powered by a minimal JS port inspired by DnaFeaturesViewer (MIT). -->
     <svg
-      viewBox="0 0 ${viewboxSize} ${viewboxSize}"
+      viewBox="0 0 ${viewboxWidth} ${viewboxHeight}"
+      preserveAspectRatio="xMidYMid meet"
       role="img"
       aria-label="${escapeHtml(`${recordName} circular plasmid preview`)}">
       <desc>Standalone circular plasmid preview for ${escapeHtml(recordName)}.</desc>
-      <circle class="circular-preview__center-ring" cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" r="${(BACKBONE_RADIUS - 32).toFixed(2)}"></circle>
-      <circle class="circular-preview__backbone" cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" r="${BACKBONE_RADIUS.toFixed(2)}"></circle>
-      ${tickMarkup}
-      ${featureMarkup.join('')}
-      ${labelMarkup.join('')}
-      ${buildCenterMarkup(recordName, sequenceLength, labeledFeatures.length, cx, cy)}
+      <g class="circular-preview__scene">
+        <circle class="circular-preview__center-ring" cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" r="${(BACKBONE_RADIUS - 32).toFixed(2)}"></circle>
+        <circle class="circular-preview__backbone" cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" r="${BACKBONE_RADIUS.toFixed(2)}"></circle>
+        ${tickMarkup}
+        ${featureMarkup.join('')}
+        ${labelMarkup.join('')}
+        ${buildCenterMarkup(recordName, sequenceLength, labeledFeatures.items.length, cx, cy)}
+      </g>
     </svg>
   </main>
+  ${buildPreviewMeasurementScriptMarkup()}
 </body>
 </html>`;
 }

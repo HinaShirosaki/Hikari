@@ -1,3 +1,5 @@
+import { getWellName, isMultiWellContainer } from './personal-inventory/constants.js';
+
 export function createUid(type, id) {
   return `${type}:${id}`;
 }
@@ -171,11 +173,11 @@ export function rebuildObjectGraph(state) {
         return;
       }
 
-      if ((container.type || 'box81') === 'box81') {
+      if (isMultiWellContainer(container)) {
         (container.wells || []).forEach((rawWell, index) => {
           const well = typeof rawWell === 'object' && rawWell
             ? rawWell
-            : { name: `W${index + 1}`, content: String(rawWell || '') };
+            : { name: getWellName(container, index), content: String(rawWell || '') };
           const sampleId = `${container.id}:well:${index + 1}`;
           addNode('sample', sampleId, well.name || sampleId, {
             ...well,

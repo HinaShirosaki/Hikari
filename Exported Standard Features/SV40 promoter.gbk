@@ -1,0 +1,18 @@
+LOCUS       .                        211 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..211
+                     /note="SV40 early promoter"
+                     /label="SV40 promoter"
+ORIGIN
+        1 gcaggcagaa gtatgcaaag catgcatctc aattagtcag caaccatagt cccgccccta
+       61 actccgccca tcccgcccct aactccgccc agttccgccc attctccgcc ccatggctga
+      121 ctaatttttt ttatttatgc agaggccgag gccgcctcgg cctctgagct attccagaag
+      181 tagtgaggag gcttttttgg aggcctaggc t
+//

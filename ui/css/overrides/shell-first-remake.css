@@ -288,13 +288,17 @@
 #papers-view .papers-paper-row {
   border: 1px solid transparent;
   border-radius: 8px;
-  padding: 0;
+  padding: 7px 8px;
 }
 
 #papers-view .papers-paper-row.is-active {
-  border-color: var(--line);
-  background: var(--surface);
-  padding: 6px 8px 10px;
+  border-color: transparent;
+  background: color-mix(in srgb, var(--surface-subtle) 78%, transparent);
+  padding: 7px 8px;
+}
+
+#papers-view .papers-paper-row.is-active .papers-paper-title {
+  font-weight: 500;
 }
 
 #papers-view .papers-viewer-stage {

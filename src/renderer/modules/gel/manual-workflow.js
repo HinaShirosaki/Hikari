@@ -89,6 +89,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     ];
     elements.gelOverrideStatus.textContent = `Manual overrides: ${parts.join(' | ')}`;
     renderManualProgress();
+    deps.renderLaneTable?.();
   }
 
   function updateLaneSegmentation(patch) {

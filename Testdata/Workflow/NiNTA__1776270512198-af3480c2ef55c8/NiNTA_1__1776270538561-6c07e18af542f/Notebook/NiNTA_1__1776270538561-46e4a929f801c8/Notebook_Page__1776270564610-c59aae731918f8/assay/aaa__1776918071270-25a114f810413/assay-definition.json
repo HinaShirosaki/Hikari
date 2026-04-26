@@ -1,0 +1,307 @@
+{
+  "id": "1776918071270-25a114f810413",
+  "assayNumber": "ASY-000003",
+  "name": "aaa",
+  "projectId": "",
+  "projectName": "",
+  "plateType": "96",
+  "plateLabel": "96 well",
+  "plateRows": 8,
+  "plateColumns": 12,
+  "wellCount": 96,
+  "sampleAxis": "row",
+  "concentrationAxis": "column",
+  "sampleAxisValues": [
+    "A",
+    "V",
+    "R",
+    "",
+    "",
+    "",
+    "",
+    ""
+  ],
+  "concentrationAxisValues": [
+    "1000000",
+    "20000",
+    "10000",
+    "5000",
+    "4000",
+    "300",
+    "20",
+    "1.25",
+    "0.94",
+    "0",
+    "",
+    ""
+  ],
+  "manualWellOverrides": {},
+  "suppressedWells": [],
+  "notebookEntryId": "1776270564610-c59aae731918f8",
+  "notebookEntryProtocolName": "IPTG-Induced Recombinant Protein Expression in BL21(DE3)",
+  "notebookEntryType": "biology",
+  "serialDilution": {
+    "volumePerWellUl": "100",
+    "stockConcentrations": {
+      "A": "100000000",
+      "V": "100000000",
+      "R": "20000000"
+    }
+  },
+  "serialDilutionSummary": {
+    "concentrationAxisName": "Column",
+    "volumePerWellUl": 100,
+    "feedbackMessages": [
+      {
+        "type": "note",
+        "text": "A: Skipped trailing 0 concentration well: A10."
+      },
+      {
+        "type": "note",
+        "text": "V: Skipped trailing 0 concentration well: B10."
+      },
+      {
+        "type": "note",
+        "text": "R: Skipped trailing 0 concentration well: C10."
+      }
+    ],
+    "initialDilutionRows": [
+      {
+        "sample": "A",
+        "stockVolume": "1.039 uL",
+        "bufferVolume": "102.9 uL"
+      },
+      {
+        "sample": "V",
+        "stockVolume": "1.039 uL",
+        "bufferVolume": "102.9 uL"
+      },
+      {
+        "sample": "R",
+        "stockVolume": "5.197 uL",
+        "bufferVolume": "98.74 uL"
+      }
+    ],
+    "followingDilutionRows": [
+      {
+        "step": "Step 1",
+        "targetConcentration": "20000",
+        "fromPreviousWell": "3.933 uL",
+        "bufferVolume": "192.7 uL",
+        "transferOrDiscard": "Transfer 96.63 uL",
+        "finalVolume": "100 uL"
+      },
+      {
+        "step": "Step 2",
+        "targetConcentration": "10000",
+        "fromPreviousWell": "96.63 uL",
+        "bufferVolume": "96.63 uL",
+        "transferOrDiscard": "Transfer 93.25 uL",
+        "finalVolume": "100 uL"
+      },
+      {
+        "step": "Step 3",
+        "targetConcentration": "5000",
+        "fromPreviousWell": "93.25 uL",
+        "bufferVolume": "93.25 uL",
+        "transferOrDiscard": "Transfer 86.5 uL",
+        "finalVolume": "100 uL"
+      },
+      {
+        "step": "Step 4",
+        "targetConcentration": "4000",
+        "fromPreviousWell": "86.5 uL",
+        "bufferVolume": "21.63 uL",
+        "transferOrDiscard": "Transfer 8.126 uL",
+        "finalVolume": "100 uL"
+      },
+      {
+        "step": "Step 5",
+        "targetConcentration": "300",
+        "fromPreviousWell": "8.126 uL",
+        "bufferVolume": "100.2 uL",
+        "transferOrDiscard": "Transfer 8.347 uL",
+        "finalVolume": "100 uL"
+      },
+      {
+        "step": "Step 6",
+        "targetConcentration": "20",
+        "fromPreviousWell": "8.347 uL",
+        "bufferVolume": "116.9 uL",
+        "transferOrDiscard": "Transfer 25.2 uL",
+        "finalVolume": "100 uL"
+      },
+      {
+        "step": "Step 7",
+        "targetConcentration": "1.25",
+        "fromPreviousWell": "25.2 uL",
+        "bufferVolume": "378 uL",
+        "transferOrDiscard": "Transfer 303.2 uL",
+        "finalVolume": "100 uL"
+      },
+      {
+        "step": "Step 8",
+        "targetConcentration": "0.94",
+        "fromPreviousWell": "303.2 uL",
+        "bufferVolume": "100 uL",
+        "transferOrDiscard": "Discard 303.2 uL",
+        "finalVolume": "100 uL"
+      }
+    ],
+    "followingRowsAreShared": true,
+    "hasValidPlans": true
+  },
+  "wellLayout": [
+    {
+      "well": "A1",
+      "sampleId": "A",
+      "concentration": "1000000"
+    },
+    {
+      "well": "A2",
+      "sampleId": "A",
+      "concentration": "20000"
+    },
+    {
+      "well": "A3",
+      "sampleId": "A",
+      "concentration": "10000"
+    },
+    {
+      "well": "A4",
+      "sampleId": "A",
+      "concentration": "5000"
+    },
+    {
+      "well": "A5",
+      "sampleId": "A",
+      "concentration": "4000"
+    },
+    {
+      "well": "A6",
+      "sampleId": "A",
+      "concentration": "300"
+    },
+    {
+      "well": "A7",
+      "sampleId": "A",
+      "concentration": "20"
+    },
+    {
+      "well": "A8",
+      "sampleId": "A",
+      "concentration": "1.25"
+    },
+    {
+      "well": "A9",
+      "sampleId": "A",
+      "concentration": "0.94"
+    },
+    {
+      "well": "A10",
+      "sampleId": "A",
+      "concentration": "0"
+    },
+    {
+      "well": "B1",
+      "sampleId": "V",
+      "concentration": "1000000"
+    },
+    {
+      "well": "B2",
+      "sampleId": "V",
+      "concentration": "20000"
+    },
+    {
+      "well": "B3",
+      "sampleId": "V",
+      "concentration": "10000"
+    },
+    {
+      "well": "B4",
+      "sampleId": "V",
+      "concentration": "5000"
+    },
+    {
+      "well": "B5",
+      "sampleId": "V",
+      "concentration": "4000"
+    },
+    {
+      "well": "B6",
+      "sampleId": "V",
+      "concentration": "300"
+    },
+    {
+      "well": "B7",
+      "sampleId": "V",
+      "concentration": "20"
+    },
+    {
+      "well": "B8",
+      "sampleId": "V",
+      "concentration": "1.25"
+    },
+    {
+      "well": "B9",
+      "sampleId": "V",
+      "concentration": "0.94"
+    },
+    {
+      "well": "B10",
+      "sampleId": "V",
+      "concentration": "0"
+    },
+    {
+      "well": "C1",
+      "sampleId": "R",
+      "concentration": "1000000"
+    },
+    {
+      "well": "C2",
+      "sampleId": "R",
+      "concentration": "20000"
+    },
+    {
+      "well": "C3",
+      "sampleId": "R",
+      "concentration": "10000"
+    },
+    {
+      "well": "C4",
+      "sampleId": "R",
+      "concentration": "5000"
+    },
+    {
+      "well": "C5",
+      "sampleId": "R",
+      "concentration": "4000"
+    },
+    {
+      "well": "C6",
+      "sampleId": "R",
+      "concentration": "300"
+    },
+    {
+      "well": "C7",
+      "sampleId": "R",
+      "concentration": "20"
+    },
+    {
+      "well": "C8",
+      "sampleId": "R",
+      "concentration": "1.25"
+    },
+    {
+      "well": "C9",
+      "sampleId": "R",
+      "concentration": "0.94"
+    },
+    {
+      "well": "C10",
+      "sampleId": "R",
+      "concentration": "0"
+    }
+  ],
+  "updatedAt": "2026-04-23T04:21:11.271Z"
+}

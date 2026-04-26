@@ -262,15 +262,32 @@ function createScienceLoopSupport(deps = {}) {
 
   function buildToolSchemaMap(toolDefinitions) {
     const out = new Map();
+    const lowerIndex = new Map();
     asArray(toolDefinitions).forEach((tool) => {
       const name = cleanText(tool?.name, 120);
       if (!name) {
         return;
       }
-      out.set(name, tool?.parameters && typeof tool.parameters === 'object'
+      const schema = tool?.parameters && typeof tool.parameters === 'object'
         ? tool.parameters
-        : { type: 'object', additionalProperties: true, properties: {} });
+        : { type: 'object', additionalProperties: true, properties: {} };
+      out.set(name, schema);
+      lowerIndex.set(name.toLowerCase(), name);
     });
+    out.resolveCanonicalName = function resolveCanonicalName(candidate) {
+      const raw = cleanText(candidate, 120);
+      if (!raw) {
+        return '';
+      }
+      if (out.has(raw)) {
+        return raw;
+      }
+      const canonical = lowerIndex.get(raw.toLowerCase());
+      return canonical || '';
+    };
+    out.getCanonicalNames = function getCanonicalNames() {
+      return Array.from(out.keys());
+    };
     return out;
   }
 
@@ -362,10 +379,25 @@ function createScienceLoopSupport(deps = {}) {
 
   function normalizeToolCall(call) {
     const source = call && typeof call === 'object' ? call : {};
+    const rawArgs = source.argsText != null
+      ? source.argsText
+      : (source.arguments != null ? source.arguments : source.args);
+    let argsText = '';
+    if (typeof rawArgs === 'string') {
+      argsText = cleanText(rawArgs, 12000);
+    } else if (rawArgs && typeof rawArgs === 'object') {
+      try {
+        argsText = cleanText(JSON.stringify(rawArgs), 12000);
+      } catch (_err) {
+        argsText = '';
+      }
+    } else if (rawArgs != null) {
+      argsText = cleanText(rawArgs, 12000);
+    }
     return {
       callId: cleanText(source.callId || source.call_id || source.id, 120),
       name: cleanText(source.name || source.tool_name, 120),
-      argsText: cleanText(source.argsText || source.arguments || source.args, 12000)
+      argsText
     };
   }
 

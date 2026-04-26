@@ -4,6 +4,11 @@ const fs = require('fs/promises');
 const path = require('path');
 const { getBundlePaths } = require('./storage-paths');
 const {
+  MEMORY_FILE_NAME,
+  buildProjectMemoryMarkdown,
+  collectProjectMemoryRecords
+} = require('./storage-memory');
+const {
   writeChemicalSqliteBundleIndex,
   writeSqliteBundleIndex
 } = require('./storage-sql-write');
@@ -159,6 +164,24 @@ async function writeNotebookPageFolders(storageRootPath, snapshot, updatedAt) {
   return writtenPaths;
 }
 
+async function writeProjectMemoryFiles(storageRootPath, snapshot) {
+  if (!storageRootPath) {
+    return [];
+  }
+  const projectRootPath = path.join(storageRootPath, 'Project');
+  await fs.mkdir(projectRootPath, { recursive: true });
+  const projectRecords = collectProjectMemoryRecords(snapshot);
+  const writtenPaths = [];
+  for (const projectRecord of projectRecords) {
+    const folderPath = path.join(projectRootPath, cleanText(projectRecord.folderName, 320) || 'Untitled_Project');
+    const filePath = path.join(folderPath, MEMORY_FILE_NAME);
+    await fs.mkdir(folderPath, { recursive: true });
+    await fs.writeFile(filePath, buildProjectMemoryMarkdown(projectRecord), 'utf8');
+    writtenPaths.push(filePath);
+  }
+  return writtenPaths;
+}
+
 async function syncBundleFromSnapshot({
   dataFilePath,
   snapshot,
@@ -187,6 +210,9 @@ async function syncBundleFromSnapshot({
   const notebookPageFolderPaths = bundlePaths.storageRootPath
     ? await writeNotebookPageFolders(bundlePaths.storageRootPath, safeSnapshot, updatedAt)
     : [];
+  const projectMemoryFilePaths = bundlePaths.storageRootPath
+    ? await writeProjectMemoryFiles(bundlePaths.storageRootPath, safeSnapshot)
+    : [];
   await fs.writeFile(
     bundlePaths.notebookPagesPath,
     JSON.stringify(buildNotebookPagesSidecar(safeSnapshot, updatedAt), null, 2),
@@ -204,7 +230,8 @@ async function syncBundleFromSnapshot({
       protocolsPath: bundlePaths.protocolsPath,
       protocolFilePaths,
       notebookPagesPath: bundlePaths.notebookPagesPath,
-      notebookPageFolderPaths
+      notebookPageFolderPaths,
+      projectMemoryFilePaths
     },
     workflowPaths: {
       workflowRootPath: workflowSync?.workflowRootPath || '',

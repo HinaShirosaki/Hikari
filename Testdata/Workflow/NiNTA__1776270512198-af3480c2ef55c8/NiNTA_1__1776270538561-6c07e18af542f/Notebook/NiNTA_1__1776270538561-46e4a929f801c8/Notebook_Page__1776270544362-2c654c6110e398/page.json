@@ -1,5 +1,5 @@
 {
-  "exportedAt": "2026-04-15T23:07:20.015Z",
+  "exportedAt": "2026-04-25T18:24:36.774Z",
   "workflowId": "1776270538561-6c07e18af542f",
   "notebookEntry": {
     "id": "1776270544362-2c654c6110e398",
@@ -36,7 +36,7 @@
         },
         {
           "id": "1774125436234-43f81b59a452a",
-          "text": "Heat shock the cells at 42 C for 45 s, then immediately place them back on ice for 1 min.",
+          "text": "Heat shock the cells at 45 C for 45 s, then immediately place them back on ice for 1 min.",
           "placeholders": []
         },
         {
@@ -56,13 +56,15 @@
         }
       ]
     },
-    "values": {},
+    "values": {
+      "1774125436234-5e6cd5beb943b:1774125436234-cac9aa958fe75": ""
+    },
     "result": "",
     "resultFiles": [],
     "resultFileRecords": [],
     "storageFolder": "",
     "createdAt": "2026-04-15T16:29:04.362Z",
-    "updatedAt": "2026-04-15T16:29:20.078Z",
+    "updatedAt": "2026-04-22T02:06:42.306Z",
     "notebookState": "executed",
     "executedAt": "2026-04-15T16:29:20.078Z",
     "workflowContext": {
@@ -74,6 +76,7 @@
       "workflowBlockTitle": "BL21(DE3) Chemical Transformation with pET28a"
     },
     "assayIds": [],
-    "gelAnalysisIds": []
+    "gelAnalysisIds": [],
+    "experimentName": "BL21(DE3) Chemical Transformation with pET28a"
   }
 }

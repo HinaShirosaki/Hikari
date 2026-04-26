@@ -1,0 +1,23 @@
+LOCUS       .                        446 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..446
+                     /gene="sacR"
+                     /note="sacB promoter and control region"
+                     /label="sacB promoter"
+ORIGIN
+        1 cacatatacc tgccgttcac tattatttag tgaaatgaga tattatgata ttttctgaat
+       61 tgtgattaaa aaggcaactt tatgcccatg caacagaaac tataaaaaat acagagaatg
+      121 aaaagaaaca gatagatttt ttagttcttt aggcccgtag tctgcaaatc cttttatgat
+      181 tttctatcaa acaaaagagg aaaatagacc agttgcaatc caaacgagag tctaatagaa
+      241 tgaggtcgaa aagtaaatcg cgcgggtttg ttactgataa agcaggcaag acctaaaatg
+      301 tgtaaagggc aaagtgtata ctttggcgtc accccttaca tattttaggt ctttttttat
+      361 tgtgcgtaac taacttgcca tcttcaaaca ggagggctgg aagaagcaga ccgctaacac
+      421 agtacataaa aaaggagaca tgaacg
+//

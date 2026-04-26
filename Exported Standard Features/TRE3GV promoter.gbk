@@ -1,0 +1,22 @@
+LOCUS       .                        350 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..350
+                     /note="3rd-generation Tet-responsive promoter that can be
+                     activated by binding of Tet-On® 3G, optimized for
+                     retroviral and lentiviral vectors"
+                     /label="TRE3GV promoter"
+ORIGIN
+        1 gagtttactc cctatcagtg atagagaacg tatgaagagt ttactcccta tcagtgatag
+       61 agaacgtatg cagactttac tccctatcag tgatagagaa cgtataagga gtttactccc
+      121 tatcagtgat agagaacgta tgaccagttt actccctatc agtgatagag aacgtatcta
+      181 cagtttactc cctatcagtg atagagaacg tatatccagt ttactcccta tcagtgatag
+      241 agaacgtatg tcgaggtagg cgtgtacggt gggcgcctat aaaagcagag ctcgtttagt
+      301 gaaccgtcag atcgcctgga gcaattccac aacacttttg tcttatactt
+//

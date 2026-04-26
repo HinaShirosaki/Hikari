@@ -2,6 +2,7 @@ import { analyzeGelImage } from './analysis-core.js';
 import { createCropController } from './crop-controller.js';
 import { getGelElements } from './dom.js';
 import { createImageController } from './image-controller.js';
+import { createLaneTableController } from './lane-table.js';
 import { createManualWorkflowController } from './manual-workflow.js';
 import { createRecordsManager } from './records-manager.js';
 import { createRenderingController, selectViewerBaseImageData } from './rendering.js';
@@ -40,6 +41,14 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
   }
 
   let rendering;
+  const laneTable = createLaneTableController({
+    runtime,
+    elements,
+    safeText,
+    deps: {
+      setStatus
+    }
+  });
   const imageController = createImageController({
     runtime,
     elements,
@@ -72,6 +81,7 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
     deps: {
       onRunAnalysis,
       renderCanvas: () => rendering.renderCanvas(),
+      renderLaneTable: () => laneTable.render(),
       renderReport: () => rendering.renderReport(),
       setStatus
     }
@@ -97,7 +107,8 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
     elements,
     safeText,
     deps: {
-      getPreprocessedImageForCurrentSettings: imageController.getPreprocessedImageForCurrentSettings
+      getPreprocessedImageForCurrentSettings: imageController.getPreprocessedImageForCurrentSettings,
+      renderLaneTable: () => laneTable.render()
     }
   });
 
@@ -119,6 +130,9 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
   elements.gelToolRightBorderBtn?.addEventListener('click', () => manualWorkflow.onViewerToolSelected('right'));
   elements.gelToolDividersBtn?.addEventListener('click', () => manualWorkflow.onViewerToolSelected('dividers'));
   elements.gelToolLadderLaneBtn?.addEventListener('click', () => manualWorkflow.onViewerToolSelected('ladder'));
+  elements.gelAddTableBtn?.addEventListener('click', laneTable.onAddTableClick);
+  elements.gelLaneTableShell?.addEventListener('click', laneTable.onShellClick);
+  elements.gelLaneTableShell?.addEventListener('input', laneTable.onShellInput);
   elements.gelForm?.addEventListener('submit', recordsManager.onSaveAnalysis);
   elements.gelSearchInput?.addEventListener('input', recordsManager.renderList);
   elements.gelList?.addEventListener('click', recordsManager.onListClick);
@@ -142,6 +156,7 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
     manualWorkflow.renderOverrideStatus();
     manualWorkflow.renderManualProgress();
     manualWorkflow.renderViewerToolbar();
+    laneTable.render();
     rendering.renderReport();
     recordsManager.renderList();
     if (!runtime.currentImage) {

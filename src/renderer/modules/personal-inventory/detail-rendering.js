@@ -11,6 +11,31 @@ export function createPersonalInventoryDetailRenderer({ safeText, uiState, helpe
     buildSampleDotFill
   } = helpers;
 
+  function hasStructure(sample) {
+    const structure = sample?.compoundStructure;
+    return Boolean(
+      String(structure?.smiles || '').trim()
+      || String(structure?.molfile || '').trim()
+      || String(structure?.imageDataUrl || '').trim()
+    );
+  }
+
+  function renderStructureAction({ mode, sample = null }) {
+    const buttonText = sample && hasStructure(sample) ? 'Edit Structure' : 'Add Structure';
+    const sampleId = sample?.id ? ` data-sample-id="${safeText(sample.id)}"` : '';
+    return `
+      <div class="inventory-sample-structure-control">
+        <button
+          type="button"
+          class="ghost-btn inventory-sample-structure-btn"
+          data-inventory-sample-structure-open="${safeText(mode)}"${sampleId}
+          hidden
+        >${safeText(buttonText)}</button>
+        <span class="small-note inventory-sample-structure-status" data-inventory-sample-structure-status></span>
+      </div>
+    `;
+  }
+
   function renderWellEditor(section, container, index) {
     if (!Number.isInteger(index) || index < 0) {
       return `
@@ -20,7 +45,7 @@ export function createPersonalInventoryDetailRenderer({ safeText, uiState, helpe
       `;
     }
 
-    const well = getWellDataForType(container.type || 'box81', container.wells[index], index);
+    const well = getWellDataForType(container, container.wells[index], index);
     const linkedSamples = getLinkedSamples(section, container.id, index);
     const activeSample = linkedSamples.find((item) => item.id === uiState.editingSampleId) || null;
     const statusMarkup = uiState.wellEditorStatus ? `<p class="small-note well-editor-status">${safeText(uiState.wellEditorStatus)}</p>` : '';
@@ -65,6 +90,7 @@ export function createPersonalInventoryDetailRenderer({ safeText, uiState, helpe
             ${renderSampleTypeOptions(activeSample.type || 'plasmid')}
           </select>
         </label>
+        ${renderStructureAction({ mode: 'well-existing', sample: activeSample })}
         <label>
           Lot / Batch
           <input data-well-sample-lot value="${safeText(activeSample.lot || '')}" />
@@ -103,6 +129,7 @@ export function createPersonalInventoryDetailRenderer({ safeText, uiState, helpe
             ${renderSampleTypeOptions('plasmid')}
           </select>
         </label>
+        ${renderStructureAction({ mode: 'well-new' })}
         <label>
           Lot / Batch
           <input data-well-sample-new-lot />
@@ -154,6 +181,7 @@ export function createPersonalInventoryDetailRenderer({ safeText, uiState, helpe
         <label><input data-single-sample-code value="${safeText(activeSample.code || '')}" placeholder="e.g. S-001" /></label>
         <label><input data-single-sample-name value="${safeText(activeSample.name || '')}" required /></label>
         <label><select data-single-sample-type>${renderSampleTypeOptions(activeSample.type || 'plasmid')}</select></label>
+        ${renderStructureAction({ mode: 'single-existing', sample: activeSample })}
         <label><input data-single-sample-lot value="${safeText(activeSample.lot || '')}" /></label>
         <label><input data-single-sample-concentration value="${safeText(activeSample.concentration || '')}" placeholder="e.g. 2 mg/mL" /></label>
         <label><textarea data-single-sample-notes rows="3">${safeText(activeSample.notes || '')}</textarea></label>
@@ -172,6 +200,7 @@ export function createPersonalInventoryDetailRenderer({ safeText, uiState, helpe
         <label><input data-single-sample-new-code placeholder="e.g. S-001" /></label>
         <label><input data-single-sample-new-name placeholder="Required" /></label>
         <label><select data-single-sample-new-type>${renderSampleTypeOptions('plasmid')}</select></label>
+        ${renderStructureAction({ mode: 'single-new' })}
         <label><input data-single-sample-new-lot /></label>
         <label><input data-single-sample-new-concentration placeholder="e.g. 2 mg/mL" /></label>
         <label><textarea data-single-sample-new-notes rows="3"></textarea></label>
@@ -210,7 +239,7 @@ export function createPersonalInventoryDetailRenderer({ safeText, uiState, helpe
       const linkedSamples = getLinkedSamples(section, container.id, null);
       return `
         <div class="container-inline-detail">
-          <h4>${safeText(section)} / ${safeText(container.name)} (${getContainerTypeLabel(container.type)})</h4>
+          <h4>${safeText(section)} / ${safeText(container.name)} (${getContainerTypeLabel(container)})</h4>
           <p class="small-note">50 mL Falcon tube. Linked samples fill about one-third of the visible volume.</p>
           <div class="well-editor-shell well-editor-shell-single">
             <div class="well-grid-panel falcon-grid-panel">
@@ -226,7 +255,7 @@ export function createPersonalInventoryDetailRenderer({ safeText, uiState, helpe
       `;
     }
 
-    const layout = getContainerLayout(container.type || 'box81');
+    const layout = getContainerLayout(container);
     const wells = Array.isArray(container.wells) ? container.wells : [];
     const rowLabels = layout.className === 'plate96'
       ? Array.from({ length: layout.rows }, (_item, index) => String.fromCharCode(65 + index))
@@ -235,7 +264,7 @@ export function createPersonalInventoryDetailRenderer({ safeText, uiState, helpe
       ? Array.from({ length: layout.cols }, (_item, index) => String(index + 1))
       : [];
     const grid = wells.map((rawWell, index) => {
-      const well = getWellDataForType(container.type || 'box81', rawWell, index);
+      const well = getWellDataForType(container, rawWell, index);
       const linkedSamples = getLinkedSamples(section, container.id, index);
       const linkedTypeLabels = Array.from(new Set(linkedSamples.map((item) => getSampleTypeLabel(item.type))));
       const linkedText = linkedSamples.length
@@ -253,10 +282,11 @@ export function createPersonalInventoryDetailRenderer({ safeText, uiState, helpe
         </button>
       `;
     }).join('');
+    const gridStyle = `--well-grid-cols:${safeText(String(layout.cols))}; --well-grid-rows:${safeText(String(layout.rows))}; --well-grid-aspect-x:${safeText(String(layout.cols))}; --well-grid-aspect-y:${safeText(String(layout.rows))};`;
 
     return `
       <div class="container-inline-detail">
-        <h4>${safeText(section)} / ${safeText(container.name)} (${getContainerTypeLabel(container.type)})</h4>
+        <h4>${safeText(section)} / ${safeText(container.name)} (${getContainerTypeLabel(container)})</h4>
         <p class="small-note">${safeText(layout.helperText)}</p>
         <div class="well-editor-shell">
           <div class="well-grid-panel well-grid-panel-${safeText(layout.className)}">
@@ -266,11 +296,11 @@ export function createPersonalInventoryDetailRenderer({ safeText, uiState, helpe
                   <div class="plate96-top-labels" aria-hidden="true">${columnLabels.map((label) => `<span>${safeText(label)}</span>`).join('')}</div>
                   <div class="plate96-body">
                     <div class="plate96-side-labels" aria-hidden="true">${rowLabels.map((label) => `<span>${safeText(label)}</span>`).join('')}</div>
-                    <div class="well-grid well-grid-${safeText(layout.className)}" style="--well-grid-cols:${safeText(String(layout.cols))}; --well-grid-rows:${safeText(String(layout.rows))};">${grid}</div>
+                    <div class="well-grid well-grid-${safeText(layout.className)}" style="${gridStyle}">${grid}</div>
                   </div>
                 </div>
               `
-              : `<div class="well-grid well-grid-${safeText(layout.className)}" style="--well-grid-cols:${safeText(String(layout.cols))}; --well-grid-rows:${safeText(String(layout.rows))};">${grid}</div>`
+              : `<div class="well-grid well-grid-${safeText(layout.className)}" style="${gridStyle}">${grid}</div>`
             }
             ${renderSampleLegendForContainer(section, container)}
           </div>

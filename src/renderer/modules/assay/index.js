@@ -140,6 +140,8 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
       notebookEntryId: assay.notebookEntryId,
       notebookEntryProtocolName: assay.notebookEntryProtocolName,
       notebookEntryType: assay.notebookEntryType,
+      serialDilution: assay.serialDilution,
+      serialDilutionSummary: assay.serialDilutionSummary,
       wellLayout: assay.wellLayout,
       updatedAt: assay.updatedAt
     };
@@ -417,7 +419,6 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     getInventorySamples: () => (Array.isArray(state.samples) ? state.samples : []),
     setCsvStatus,
     setLayoutStatus,
-    setResultStatus,
     renderResultTable: () => resultsManager.renderResultTable(),
     clearAnalysisOutput: () => analysisView?.clearOutput()
   });
@@ -562,7 +563,6 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     const def = layoutManager.getCurrentDefinition();
     const axisValues = layoutManager.restoreAssayLayoutState(assay, def);
     layoutManager.renderPlatePreview(axisValues);
-    layoutManager.renderLayoutList();
     layoutManager.renderPlateDefinition();
     resultsManager.renderResultTable();
     renderActiveAssayInfo(assay);
@@ -587,7 +587,6 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     if (isCreate) {
       layoutManager.renderPlateDefinition();
       layoutManager.renderPlatePreview();
-      layoutManager.renderLayoutList();
       return;
     }
 
@@ -691,6 +690,8 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
       notebookEntryId: elements.assayNotebookEntryInput?.value || '',
       notebookEntryProtocolName: notebookEntry?.protocolName || '',
       notebookEntryType: notebookEntry?.notebookType || '',
+      serialDilution: layoutManager.getSerialDilutionSnapshot(),
+      serialDilutionSummary: layoutManager.getSerialDilutionSummaryData(),
       wellLayout: normalizeLayout(runtime.currentLayout, plateDef),
       resultValues: layoutManager.filterMappedResults(normalizeResults(runtime.currentResults, plateDef)),
       updatedAt: new Date().toISOString()
@@ -731,6 +732,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     runtime.currentResults = {};
     runtime.resultPasteAnchor = { rowIndex: 0, columnIndex: 0 };
     runtime.axisTemplateValues = { sampleValues: [], concentrationValues: [] };
+    layoutManager.resetSerialDilutionState();
     if (elements.assayAnalysisMethodInput) {
       elements.assayAnalysisMethodInput.value = 'grouped_summary';
     }
@@ -766,7 +768,6 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     renderResultsAssayOptions();
     renderActiveAssayInfo(null);
     resultsManager.renderResultTable();
-    layoutManager.renderLayoutList();
     analysisView.clearOutput();
     layoutManager.updateActiveWellPreviewState();
     setAssayMode('create');
@@ -788,6 +789,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     elements.assaySampleAxisInput.value = assay.sampleAxis === 'column' ? 'column' : 'row';
     const def = layoutManager.getCurrentDefinition();
     const axisValues = layoutManager.restoreAssayLayoutState(assay, def);
+    layoutManager.restoreSerialDilutionSnapshot(assay.serialDilution || null);
     runtime.activeResultsAssayId = assay.id;
     layoutManager.syncAxisDisplay();
     layoutManager.renderPlateDefinition();
@@ -796,7 +798,6 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     renderResultsAssayOptions(assay.id);
     renderActiveAssayInfo(assay);
     resultsManager.renderResultTable();
-    layoutManager.renderLayoutList();
     elements.assayNotebookEntryInput.value = assay.notebookEntryId || '';
     if (assay.notebookEntryId && !Array.from(elements.assayNotebookEntryInput.options).some((option) => option.value === assay.notebookEntryId)) {
       const option = document.createElement('option');
@@ -882,7 +883,6 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     renderActiveAssayInfo(getAssayById(runtime.activeResultsAssayId));
     layoutManager.renderPlatePreview();
     resultsManager.renderResultTable();
-    layoutManager.renderLayoutList();
     renderList();
     setAssayMode(runtime.assayMode);
   }
@@ -922,7 +922,6 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
   elements.assaySampleAxisInput?.addEventListener('change', () => {
     layoutManager.syncAxisDisplay();
     layoutManager.setLayoutFromAxisAndOverrides();
-    layoutManager.renderLayoutList();
     layoutManager.renderPlatePreview();
     resultsManager.renderResultTable();
   });
@@ -959,7 +958,6 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
   elements.assayPlatePreview?.addEventListener('keydown', layoutManager.onPlatePreviewKeyDown);
   elements.assayPlatePreview?.addEventListener('contextmenu', layoutManager.onPlatePreviewContextMenu);
   elements.assayPlatePreview?.addEventListener('scroll', layoutManager.onPlatePreviewScroll, true);
-  elements.assayLayoutList?.addEventListener('click', layoutManager.onLayoutListClick);
   elements.assayList?.addEventListener('click', onListClick);
   globalThis.addEventListener?.('pointerdown', layoutManager.onGlobalPointerDown);
   globalThis.addEventListener?.('keydown', layoutManager.onGlobalKeyDown);

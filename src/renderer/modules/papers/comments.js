@@ -4,6 +4,16 @@ import {
   getCommentsForPage,
   getCommentAuthorLabel
 } from './model.js';
+import { normalizePaperPdfMetadata } from './pdf-metadata.js';
+
+const PAPER_SUMMARY_FIELDS = [
+  { key: 'title', label: 'Title' },
+  { key: 'author', label: 'Author' },
+  { key: 'year', label: 'Year' },
+  { key: 'journal', label: 'Journal' },
+  { key: 'doi', label: 'DOI' },
+  { key: 'url', label: 'URL' }
+];
 
 export function createPapersCommentController(context) {
   const {
@@ -13,6 +23,7 @@ export function createPapersCommentController(context) {
     safeText,
     paperViewer,
     commentState,
+    uiState,
     elements
   } = context;
 
@@ -46,11 +57,46 @@ export function createPapersCommentController(context) {
     elements.paperCommentStatus.textContent = String(message || '').trim();
   }
 
+  function renderSummarySection() {
+    const activePaper = getActivePaper();
+    const summary = normalizePaperPdfMetadata(activePaper?.pdfMetadata || null);
+    const collapsed = Boolean(uiState.summaryCollapsed);
+
+    if (elements.paperSummarySection) {
+      elements.paperSummarySection.classList.toggle('is-disabled', !activePaper);
+    }
+    if (elements.paperSummaryContent) {
+      elements.paperSummaryContent.hidden = collapsed;
+    }
+    if (elements.paperSummaryToggleBtn) {
+      const label = collapsed ? 'Show paper summary' : 'Hide paper summary';
+      elements.paperSummaryToggleBtn.classList.toggle('is-collapsed', collapsed);
+      elements.paperSummaryToggleBtn.setAttribute?.('aria-expanded', String(!collapsed));
+      elements.paperSummaryToggleBtn.setAttribute?.('aria-label', label);
+      elements.paperSummaryToggleBtn.title = label;
+    }
+    if (!elements.paperSummaryList) {
+      return;
+    }
+
+    elements.paperSummaryList.innerHTML = PAPER_SUMMARY_FIELDS.map(({ key, label }) => {
+      const value = String(summary[key] || '').trim();
+      return `
+        <div class="papers-summary-row">
+          <dt>${safeText(label)}</dt>
+          <dd class="papers-summary-value${value ? '' : ' is-empty'}">${safeText(value)}</dd>
+        </div>
+      `;
+    }).join('');
+  }
+
   function renderCommentSidebar() {
     const activePaper = getActivePaper();
     const currentPageNumber = activePaper ? Math.max(1, paperViewer.getCurrentPageNumber() || commentState.currentPageNumber || 1) : 0;
     const currentPageComments = activePaper ? getCommentsForPage(activePaper, currentPageNumber) : [];
     commentState.currentPageNumber = currentPageNumber || 1;
+
+    renderSummarySection();
 
     elements.paperCommentSidebar?.classList?.toggle('is-disabled', !activePaper);
     if (elements.paperCommentPage) {
@@ -323,6 +369,9 @@ export function createPapersCommentController(context) {
   }
 
   function bindEvents() {
+    elements.paperSummaryToggleBtn?.addEventListener('click', () => {
+      context.toggleSummaryCollapsed?.();
+    });
     elements.paperCommentAddBtn?.addEventListener('click', beginCommentPlacement);
     elements.paperCommentSaveBtn?.addEventListener('click', savePaperComment);
     elements.paperCommentCancelBtn?.addEventListener('click', cancelPaperComment);
@@ -346,6 +395,7 @@ export function createPapersCommentController(context) {
     syncViewerComments,
     setCommentStatus,
     selectCommentForEdit,
-    primeForPaperOpen
+    primeForPaperOpen,
+    renderSummarySection
   };
 }

@@ -5,7 +5,15 @@
             <section class="left-rail-template__section">
               <div class="project-sidebar-copy">
                 <h2>Projects</h2>
-                <p class="small-note">Create projects, update their notes, and browse linked notebook pages.</p>
+                <p class="small-note">Select a project to review its workspace activity.</p>
+              </div>
+              <div id="project-list" class="project-rail-list"></div>
+            </section>
+
+            <section class="left-rail-template__section">
+              <div class="project-sidebar-copy">
+                <h3>Project Details</h3>
+                <p class="small-note">Create a project or edit the selected project notes.</p>
               </div>
               <form id="project-form" class="stack-form">
                 <input type="hidden" id="project-id" />
@@ -23,44 +31,11 @@
                 </div>
               </form>
             </section>
-
-            <section class="left-rail-template__section">
-              <div class="project-sidebar-copy">
-                <h3>Project Notebook Pages</h3>
-                <p class="small-note">Filter notebook pages linked to the selected project.</p>
-              </div>
-              <label>
-                Select Project
-                <select id="project-notebook-filter">
-                  <option value="">Select project</option>
-                </select>
-              </label>
-            </section>
           </div>
         </aside>
 
         <div class="project-main left-rail-template__main">
-          <div class="left-rail-template__stack">
-            <section class="panel project-list-panel">
-              <div class="project-panel-head">
-                <div class="project-panel-copy">
-                  <h3>All Projects</h3>
-                  <p class="small-note">Select a project to edit it or remove it from the workspace.</p>
-                </div>
-              </div>
-              <div id="project-list" class="cards"></div>
-            </section>
-
-            <section class="panel project-notebook-panel">
-              <div class="project-panel-head">
-                <div class="project-panel-copy">
-                  <h3>Notebook Pages</h3>
-                  <p class="small-note">Recent notebook pages connected to the chosen project appear here.</p>
-                </div>
-              </div>
-              <div id="project-notebook-pages" class="cards"></div>
-            </section>
-          </div>
+          <div id="project-dashboard" class="project-dashboard"></div>
         </div>
       </div>
     </section>

@@ -1,0 +1,36 @@
+LOCUS       .                       1161 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..1161
+                     /note="mutant&nbsp;nmt1 promoter from Schizosaccharomyces
+                     pombe, conferring medium strength thiamine-repressible
+                     expression"
+                     /label="nmt1 P41 promoter"
+ORIGIN
+        1 tcgccataaa agacagaata agtcatcagc ggttgtttca tttcctatat ttttttttta
+       61 tttttttatt ttttaataag ggaaaattta acgtctaagg atacagaaga ttgttagcac
+      121 attaaagtaa taaaggctta agtagtaagt gccttagcat gttattgtat ttcaaaggac
+      181 ataatctaaa ataataacaa tatcatttct cacaagttat tcaattttct tttttttttc
+      241 taataatatc aagaatgtat tatttgtttg acataagtca actaatttat ttaatatgct
+      301 ggattaatct tgcagacatg taaattaaca agttttagtc aaataacgtt gaagtttcaa
+      361 tgaactcaaa taatttctct ttttttttat ataaccataa gtctaatctg atttatattt
+      421 tccgcaggga tcaactgaag ttatgacatt tggattggat cacttataac cttggtcgcc
+      481 aaataataca aaaatcagcg ttataaaaca aagaaggttt ttgttaagaa attaatcctc
+      541 tttcttgata agaaagttga accgaaattg cagatactga tatatgaaaa taatacccac
+      601 aattttggga atagcgcaag cctcaattta aacaataggt gaggacacat gataatgacc
+      661 tcaatgattg ttagaagaaa agagcctcat tacaaaatcg aaaaatgaat ggttgggtac
+      721 aagtttccaa aacatggtaa agtggacttt gcgtatgaga cgtaaataga aaaaaacact
+      781 tgttatatgt tttctagaat tattgttgtc tctttatggt tggatgatgc aaaatagtaa
+      841 tttcggttag ttgctgtaaa acaccacgag acaaatagat atggatattt attaaatcag
+      901 gaaaaacgta actctcggct actggatggt tcagtcaccc aacgattact ggggagagaa
+      961 aacagggcaa aagcaaagct taaaggaatc cgattgtcat tcggcaatgt gcagcgaaac
+     1021 taaaaaccgg ataatggacc tgttaatcga aacattgaag ataaaggaag aggaatcctg
+     1081 gcatatcatc aattgaataa gttgaattaa ttatttcaat ctcattctca ctttctgact
+     1141 tatagtcgct ttgttaaatc a
+//

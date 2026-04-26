@@ -597,6 +597,13 @@ function parseFeatureQualifier(line) {
   };
 }
 
+function normalizeProteinTranslation(rawValue) {
+  return String(rawValue || '')
+    .toUpperCase()
+    .replace(/\s+/g, '')
+    .replace(/[^A-Z*]/g, '');
+}
+
 function parseGenBankFeatureEntries(featureBlock, sequenceLength) {
   const lines = String(featureBlock || '').replace(/\r\n?/g, '\n').split('\n');
   const entries = [];
@@ -698,6 +705,7 @@ function parseGenBankFeatureEntries(featureBlock, sequenceLength) {
           || '',
         ''
       );
+      const translation = normalizeProteinTranslation(entry.qualifiers.translation || '');
 
       return {
         id: `gbk_feature_${index + 1}`,
@@ -705,6 +713,7 @@ function parseGenBankFeatureEntries(featureBlock, sequenceLength) {
         type: String(entry.type || 'misc_feature').toLowerCase(),
         strand,
         description,
+        ...(translation ? { translation } : {}),
         source: 'genbank',
         locationText: entry.location,
         segments

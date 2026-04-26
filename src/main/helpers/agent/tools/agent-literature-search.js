@@ -1,9 +1,12 @@
 'use strict';
 
 const { isAgentRequestAbortError } = require('../shared/agent-request-context.js');
-
 const { createAgentLlmRuntimeHelpers } = require('../shared/agent-llm-utils.js');
 const { buildKeywordStyleLiteratureQuery, extractKeywordPhrases } = require('../shared/agent-literature-query-utils.js');
+const {
+  prependPreferredValue,
+  prioritizePreferredWebSource
+} = require('../shared/agent-search-source-preferences.js');
 
 const LITERATURE_SOURCES = Object.freeze({
   AUTO: 'auto',
@@ -277,6 +280,10 @@ function createLiteratureSearchRuntime(deps = {}) {
     }
 
     const query = buildLiteratureQuery(source);
+    const preferredSource = normalizeSource(
+      source.preferred_literature_source
+      || source.preferredLiteratureSource
+    );
     const defaults = [
       LITERATURE_SOURCES.PUBMED,
       LITERATURE_SOURCES.EUROPE_PMC,
@@ -285,7 +292,9 @@ function createLiteratureSearchRuntime(deps = {}) {
     if (queryLooksProteinFocused(query, source)) {
       defaults.unshift(LITERATURE_SOURCES.UNIPROT);
     }
-    return uniqueStrings(defaults, 8);
+    return prependPreferredValue(uniqueStrings(defaults, 8), preferredSource)
+      .filter((item) => item !== LITERATURE_SOURCES.AUTO)
+      .slice(0, 8);
   }
 
   function normalizeAuthorList(value) {
@@ -536,8 +545,17 @@ function createLiteratureSearchRuntime(deps = {}) {
   }
 
   async function searchWebRecords(query, limit = 5, input = {}) {
+    const preferredWebSource = cleanText(
+      input?.preferred_web_source || input?.preferredWebSource,
+      240
+    );
+
     if (searchWebResultsOverride) {
-      return normalizeResultList(LITERATURE_SOURCES.WEB, await searchWebResultsOverride({ query, limit }));
+      return prioritizePreferredWebSource(
+        normalizeResultList(LITERATURE_SOURCES.WEB, await searchWebResultsOverride({ query, limit })),
+        preferredWebSource,
+        (item) => item?.source_domain || item?.url || ''
+      );
     }
     if (webSearchRuntime && typeof webSearchRuntime.searchWebResults === 'function') {
       const result = await webSearchRuntime.searchWebResults({
@@ -546,7 +564,11 @@ function createLiteratureSearchRuntime(deps = {}) {
         limit,
         stage: cleanText(input?.stage, 120) || 'literature_search_web'
       });
-      return normalizeResultList(LITERATURE_SOURCES.WEB, result);
+      return prioritizePreferredWebSource(
+        normalizeResultList(LITERATURE_SOURCES.WEB, result),
+        preferredWebSource,
+        (item) => item?.source_domain || item?.url || ''
+      );
     }
     if (requestWebSearch) {
       const providerSearch = await requestWebSearch({
@@ -558,7 +580,11 @@ function createLiteratureSearchRuntime(deps = {}) {
       if (!providerSearch?.ok) {
         throw new Error(cleanText(providerSearch?.error, 600) || 'Web search failed.');
       }
-      return normalizeResultList(LITERATURE_SOURCES.WEB, providerSearch);
+      return prioritizePreferredWebSource(
+        normalizeResultList(LITERATURE_SOURCES.WEB, providerSearch),
+        preferredWebSource,
+        (item) => item?.source_domain || item?.url || ''
+      );
     }
     throw new Error('Literature web search requires provider-layer web search support.');
   }

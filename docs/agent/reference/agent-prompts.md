@@ -528,7 +528,7 @@ Input schema JSON:
 
 Tool: literature-search
 Short description: Search literature across PubMed, Crossref, UniProt, Europe PMC, or generic web results with scholarly-first auto fallback. The runtime now delegates to a sub-agent for candidate selection, paper reading, and optional paper downloads into the literature-search storage folder. Prefer compact keyword or entity-style queries such as `MAPK inhibitor resistance mechanism` instead of full-sentence prompts.
-Detailed usage: Use this tool when the user wants papers, references, recent literature, external evidence, or protein knowledgebase entries rather than a summary of one already-identified paper. Provide `query` when possible, and prefer short keyword or entity phrases instead of full-sentence prompts, for example `MAPK inhibitor resistance mechanism review` or `PD-1 ubiquitination stability`. Use `source` for one source, `sources` for an explicit multi-source batch, or leave them empty for scholarly-first auto mode. The literature workflow delegates search and reading to a sub-agent, then loads the selected paper context back into the main agent. Auto mode searches literature sources first and only falls back to generic web search when those sources do not produce results. Prefer `pubmed`, `crossref`, and `europe_pmc` for papers, `uniprot` for protein/gene knowledge, and `web` for generic recency-aware external search.
+Detailed usage: Use this tool when the user wants papers, references, recent literature, external evidence, or protein knowledgebase entries rather than a summary of one already-identified paper. Provide `query` when possible, and prefer short keyword or entity phrases instead of full-sentence prompts, for example `MAPK inhibitor resistance mechanism review` or `PD-1 ubiquitination stability`. Use `source` for one source, `sources` for an explicit multi-source batch, or leave them empty for scholarly-first auto mode. `preferred_literature_source` biases auto mode toward one literature database first, and `preferred_web_source` prefers one web domain when web results are used. The literature workflow delegates search and reading to a sub-agent, then loads the selected paper context back into the main agent. Auto mode searches literature sources first and only falls back to generic web search when those sources do not produce results. Prefer `pubmed`, `crossref`, and `europe_pmc` for papers, `uniprot` for protein/gene knowledge, and `web` for generic recency-aware external search.
 Input schema JSON:
 {
   "type": "object",
@@ -555,6 +555,13 @@ Input schema JSON:
         "$ref": "#/$defs/literature_source"
       },
       "maxItems": 6
+    },
+    "preferred_literature_source": {
+      "$ref": "#/$defs/literature_source"
+    },
+    "preferred_web_source": {
+      "type": "string",
+      "maxLength": 240
     },
     "limit": {
       "type": "integer",
@@ -689,6 +696,13 @@ Input schema JSON:
         "$ref": "#/$defs/literature_source"
       },
       "maxItems": 6
+    },
+    "preferred_literature_source": {
+      "$ref": "#/$defs/literature_source"
+    },
+    "preferred_web_source": {
+      "type": "string",
+      "maxLength": 240
     },
     "limit": {
       "type": "integer",
@@ -2043,6 +2057,13 @@ Available tools JSON:
             "$ref": "#/$defs/literature_source"
           },
           "maxItems": 6
+        },
+        "preferred_literature_source": {
+          "$ref": "#/$defs/literature_source"
+        },
+        "preferred_web_source": {
+          "type": "string",
+          "maxLength": 240
         },
         "limit": {
           "type": "integer",

@@ -35,6 +35,27 @@ function createOpenAiCliLlmProvider(deps = {}) {
   const isAbortError = typeof deps.isAbortError === 'function' ? deps.isAbortError : (() => false);
   const providerId = cleanText(deps.providerId, 80) || 'codex';
 
+  function normalizeAttachments(input = {}) {
+    const listed = Array.isArray(input.attachments) ? input.attachments : [];
+    const attachments = listed.map((attachment) => {
+      const source = attachment && typeof attachment === 'object' ? attachment : {};
+      return {
+        kind: cleanText(source.kind, 40),
+        name: cleanText(source.name, 240) || 'attachment',
+        dataUrl: cleanText(source.dataUrl || source.data_url, 400000)
+      };
+    }).filter((attachment) => attachment.dataUrl);
+    if (attachments.length) {
+      return attachments;
+    }
+    const fileDataUrl = cleanText(input.fileDataUrl || input.pdfDataUrl, 240000);
+    const imageDataUrl = cleanText(input.imageDataUrl || input.imageUrl, 400000);
+    return [
+      ...(fileDataUrl ? [{ kind: 'file', name: cleanText(input.fileName, 240) || 'attachment.pdf', dataUrl: fileDataUrl }] : []),
+      ...(imageDataUrl ? [{ kind: 'image', name: 'image', dataUrl: imageDataUrl }] : [])
+    ];
+  }
+
   function resolveCodexRequestOptions(input = {}) {
     const endpoint = cleanText(resolveCodexEndpoint(input.endpoint), 2000);
     const apiKey = cleanText(resolveCodexApiKey({
@@ -70,6 +91,7 @@ function createOpenAiCliLlmProvider(deps = {}) {
     }
 
     try {
+      const attachments = normalizeAttachments(input);
       const prompt = [
         cleanText(input.systemPrompt, 12000),
         cleanText(input.userPrompt, 48000),
@@ -80,7 +102,9 @@ function createOpenAiCliLlmProvider(deps = {}) {
       const raw = await requestCodexCliText({
         prompt,
         model: cleanText(input.model, 120),
+        enableWebSearch: input.enableWebSearch === true,
         cwd: getWorkingDirectory(),
+        attachments,
         endpoint: cleanText(input.endpoint, 2000),
         apiKey: cleanText(input.apiKey, 4000)
       });
@@ -88,10 +112,18 @@ function createOpenAiCliLlmProvider(deps = {}) {
         stage: normalizedStage,
         provider: providerId,
         model: cleanText(input.model, 120),
-        summary: `${normalizedStage} completed via legacy OpenAI CLI fallback.`,
+        summary: attachments.length
+          ? `${normalizedStage} completed via Codex multimodal prompt transport.`
+          : `${normalizedStage} completed via legacy OpenAI CLI fallback.`,
         requestPayload: {
           model: cleanText(input.model, 120),
-          prompt
+          prompt,
+          enableWebSearch: input.enableWebSearch === true,
+          attachments: attachments.map((attachment) => ({
+            name: attachment.name,
+            kind: attachment.kind,
+            data: attachment.kind === 'image' ? '[image omitted]' : '[file omitted]'
+          }))
         },
         responsePayload: raw
       });
@@ -145,6 +177,7 @@ function createOpenAiCliLlmProvider(deps = {}) {
       const raw = await requestCodexCliText({
         prompt,
         model: cleanText(input.model, 120),
+        enableWebSearch: input.enableWebSearch === true,
         cwd: getWorkingDirectory(),
         fileName: normalizedFileName,
         pdfDataUrl: normalizedFileData,
@@ -159,6 +192,7 @@ function createOpenAiCliLlmProvider(deps = {}) {
         requestPayload: {
           model: cleanText(input.model, 120),
           prompt,
+          enableWebSearch: input.enableWebSearch === true,
           attachment: {
             file_name: normalizedFileName,
             file_type: 'document'
@@ -280,6 +314,7 @@ function createOpenAiCliLlmProvider(deps = {}) {
       const raw = await requestCodexCliText({
         prompt,
         model: cleanText(input.model, 120),
+        enableWebSearch: input.enableWebSearch === true,
         cwd: getWorkingDirectory(),
         imageDataUrl: normalizedImageData,
         endpoint: cleanText(input.endpoint, 2000),
@@ -293,6 +328,7 @@ function createOpenAiCliLlmProvider(deps = {}) {
         requestPayload: {
           model: cleanText(input.model, 120),
           prompt,
+          enableWebSearch: input.enableWebSearch === true,
           attachment: {
             file_type: 'image'
           }

@@ -83,10 +83,9 @@ function createScienceLoopExitCriteriaRuntime(deps = {}) {
       ...asArray(input.allowedToolNames),
       ...asArray(input.toolScope),
       ...asArray(input.policy?.tool_scope)
-    ], 8)
+    ], 12)
       .map((item) => cleanText(item, 120))
-      .filter(Boolean)
-      .slice(0, 6);
+      .filter(Boolean);
   }
 
   function buildFallbackExitCriteria(input = {}) {
@@ -97,10 +96,9 @@ function createScienceLoopExitCriteriaRuntime(deps = {}) {
       ...asArray(input.allowedToolNames),
       ...asArray(input.toolScope),
       ...asArray(policy.tool_scope)
-    ], 8)
+    ], 12)
       .map((item) => cleanText(item, 120))
-      .filter(Boolean)
-      .slice(0, 6);
+      .filter(Boolean);
     const exitConditions = [
       'The current evidence directly supports a grounded answer to the clarified request.'
     ];

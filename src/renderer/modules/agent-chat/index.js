@@ -44,6 +44,9 @@ export function initAgentChat({
   const historyNode = rootDocument?.getElementById?.('agent-chat-history') || null;
   const scrollToBottomBtn = rootDocument?.getElementById?.('agent-scroll-to-bottom-btn') || null;
   const input = rootDocument?.getElementById?.('agent-message-input') || null;
+  const attachmentInput = rootDocument?.getElementById?.('agent-attachment-input') || null;
+  const attachmentList = rootDocument?.getElementById?.('agent-attachment-list') || null;
+  const attachBtn = rootDocument?.getElementById?.('agent-attach-btn') || null;
   const deepResearchToggleBtn = rootDocument?.getElementById?.('agent-deep-research-toggle-btn') || null;
   const sendBtn = rootDocument?.getElementById?.('agent-send-btn') || null;
   const stopBtn = rootDocument?.getElementById?.('agent-stop-btn') || null;
@@ -54,6 +57,7 @@ export function initAgentChat({
   let activeClientRequestId = '';
   let stopRequested = false;
   let stopInProgress = false;
+  let composerAttachments = [];
 
   if (!projectSelect || !historyNode || !input || !sendBtn || !clearBtn || !status) {
     return { render: () => {} };
@@ -102,6 +106,110 @@ export function initAgentChat({
   function getToolActivityLabel(toolName = '') {
     const normalized = trimText(toolName, 120);
     return TOOL_ACTIVITY_LABELS[normalized] || humanizeToken(normalized) || 'Running tool';
+  }
+
+  function sanitizeAttachmentName(fileName = '', fallback = 'attachment') {
+    return trimText(String(fileName || '').replace(/\s+/g, ' ').trim(), 180) || fallback;
+  }
+
+  function formatAttachmentSize(size) {
+    const numeric = Number(size);
+    if (!Number.isFinite(numeric) || numeric <= 0) {
+      return '';
+    }
+    if (numeric >= 1024 * 1024) {
+      return `${(numeric / (1024 * 1024)).toFixed(1)} MB`;
+    }
+    if (numeric >= 1024) {
+      return `${Math.round(numeric / 1024)} KB`;
+    }
+    return `${numeric} B`;
+  }
+
+  function buildAttachmentSummary(attachments = []) {
+    const items = asArray(attachments).filter((attachment) => trimText(attachment?.name, 180));
+    if (!items.length) {
+      return '';
+    }
+    const label = items.length === 1 ? 'attachment' : 'attachments';
+    return `Please consider the attached ${label}: ${items.map((attachment) => trimText(attachment.name, 120)).join(', ')}.`;
+  }
+
+  function buildMessagePayloadText(messageText, attachments = []) {
+    const normalizedMessage = trimText(messageText, 3000);
+    const attachmentSummary = buildAttachmentSummary(attachments);
+    return trimText([normalizedMessage, attachmentSummary].filter(Boolean).join('\n\n'), 3000)
+      || trimText(attachmentSummary, 3000);
+  }
+
+  function renderComposerAttachments() {
+    if (!attachmentList) {
+      return;
+    }
+    const items = asArray(composerAttachments).filter((attachment) => trimText(attachment?.name, 180));
+    if (!items.length) {
+      attachmentList.innerHTML = '';
+      attachmentList.hidden = true;
+      return;
+    }
+    attachmentList.hidden = false;
+    attachmentList.innerHTML = items.map((attachment) => {
+      const label = trimText(attachment?.kind, 20) === 'image' ? 'Image' : 'File';
+      const size = formatAttachmentSize(attachment?.size);
+      return `
+        <span class="agent-attachment-pill${label === 'Image' ? ' is-image' : ''}">
+          <span>${safeText(label)}</span>
+          <span>${safeText(trimText(attachment?.name, 180))}</span>
+          ${size ? `<span>${safeText(size)}</span>` : ''}
+          <button type="button" data-agent-remove-attachment="${safeText(trimText(attachment?.id, 120))}" aria-label="${safeText(`Remove ${trimText(attachment?.name, 180)}`)}">&times;</button>
+        </span>
+      `;
+    }).join('');
+  }
+
+  function resetComposerAttachments() {
+    composerAttachments = [];
+    if (attachmentInput) {
+      attachmentInput.value = '';
+    }
+    renderComposerAttachments();
+  }
+
+  function fileToDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(reader.error || new Error(`Failed to read ${file?.name || 'attachment'}.`));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function normalizeAttachmentFile(file) {
+    const dataUrl = await fileToDataUrl(file);
+    const mimeType = trimText(file?.type, 160) || trimText(String(dataUrl).match(/^data:([^;,]+)/i)?.[1], 160);
+    return {
+      id: createId(),
+      name: sanitizeAttachmentName(file?.name, mimeType.startsWith('image/') ? 'image' : 'attachment'),
+      mimeType,
+      size: Number(file?.size) || 0,
+      dataUrl,
+      kind: mimeType.startsWith('image/') ? 'image' : 'file'
+    };
+  }
+
+  async function handleAttachmentSelection(files = []) {
+    const incomingFiles = asArray(Array.from(files)).filter(Boolean);
+    if (!incomingFiles.length) {
+      return;
+    }
+    try {
+      const nextAttachments = await Promise.all(incomingFiles.map((file) => normalizeAttachmentFile(file)));
+      composerAttachments = [...composerAttachments, ...nextAttachments].slice(-8);
+      renderComposerAttachments();
+      setStatus(`${composerAttachments.length} attachment${composerAttachments.length === 1 ? '' : 's'} ready.`);
+    } catch (error) {
+      setStatus(String(error?.message || error || 'Failed to load attachments.'));
+    }
   }
 
   function getProgressRowKey(eventPayload = {}) {
@@ -365,6 +473,13 @@ export function initAgentChat({
         }
       }
     };
+  }
+
+  function cloneLiveThinkingRows(source) {
+    return asArray(source).map((row) => ({
+      key: trimText(row?.key, 620),
+      text: trimText(row?.text || row, 420)
+    })).filter((row) => row.text);
   }
 
   function ensureAgentState() {
@@ -728,8 +843,10 @@ export function initAgentChat({
       return;
     }
 
-    const messageText = trimText(input.value, 3000);
-    if (!messageText) {
+    const rawMessageText = trimText(input.value, 3000);
+    const attachments = asArray(composerAttachments).map((attachment) => ({ ...attachment }));
+    const messageText = buildMessagePayloadText(rawMessageText, attachments);
+    if (!messageText && !attachments.length) {
       return;
     }
 
@@ -748,7 +865,8 @@ export function initAgentChat({
     const userMessage = {
       id: createId(),
       role: 'user',
-      text: messageText,
+      text: rawMessageText || buildAttachmentSummary(attachments),
+      attachments,
       createdAt: new Date().toISOString()
     };
 
@@ -756,6 +874,7 @@ export function initAgentChat({
     state.agentChat.messages = state.agentChat.messages.slice(-40);
     persist();
     input.value = '';
+    resetComposerAttachments();
     syncComposerHeight();
     renderHistoryView({ forceScroll: true });
 
@@ -775,6 +894,7 @@ export function initAgentChat({
       const result = await api.agentChat({
         clientRequestId,
         message: messageText,
+        attachments,
         chatSessionId: currentSessionId,
         projectId,
         projectName,
@@ -814,6 +934,7 @@ export function initAgentChat({
         createId,
         onNotebookEntriesChanged
       });
+      const persistedThinkingRows = cloneLiveThinkingRows(liveAssistantMessage?.meta?.live_progress?.thinking_rows);
       if (notebookDraft?.save?.applied === true) {
         renderContextSummary();
       }
@@ -834,8 +955,10 @@ export function initAgentChat({
           general_science_question: response.generalScienceQuestion,
           project_science_question: response.projectScienceQuestion,
           result_analysis: response.resultAnalysis,
+          thinking_trace: response.thinkingTrace,
           notebookDraft: notebookDraft || null,
           developer_trace: response.developerTrace,
+          thinking_trace_rows: persistedThinkingRows,
           requestText: messageText
         }
       });
@@ -854,6 +977,7 @@ export function initAgentChat({
         setStatus('Stopped.');
         return;
       }
+      const persistedThinkingRows = cloneLiveThinkingRows(liveAssistantMessage?.meta?.live_progress?.thinking_rows);
       clearLiveAssistantState();
       state.agentChat.messages.push({
         id: createId(),
@@ -885,8 +1009,10 @@ export function initAgentChat({
           general_science_question: null,
           project_science_question: null,
           result_analysis: null,
+          thinking_trace: null,
           notebookDraft: null,
           developer_trace: [],
+          thinking_trace_rows: persistedThinkingRows,
           requestText: messageText
         }
       });
@@ -1118,6 +1244,7 @@ export function initAgentChat({
 
   newChatBtn?.addEventListener('click', () => {
     input.value = '';
+    resetComposerAttachments();
     syncComposerHeight();
     void sessionManager.startNewChatSession();
   });
@@ -1134,6 +1261,7 @@ export function initAgentChat({
 
   clearBtn.addEventListener('click', () => {
     input.value = '';
+    resetComposerAttachments();
     syncComposerHeight();
     void sessionManager.startNewChatSession();
   });
@@ -1171,6 +1299,26 @@ export function initAgentChat({
     syncComposerHeight();
   });
 
+  attachBtn?.addEventListener('click', () => {
+    attachmentInput?.click();
+  });
+
+  attachmentInput?.addEventListener('change', (event) => {
+    void handleAttachmentSelection(event?.target?.files || []);
+  });
+
+  attachmentList?.addEventListener('click', (event) => {
+    const removeButton = event.target instanceof HTMLElement
+      ? event.target.closest('[data-agent-remove-attachment]')
+      : null;
+    const attachmentId = trimText(removeButton?.getAttribute?.('data-agent-remove-attachment'), 120);
+    if (!attachmentId) {
+      return;
+    }
+    composerAttachments = composerAttachments.filter((attachment) => trimText(attachment?.id, 120) !== attachmentId);
+    renderComposerAttachments();
+  });
+
   function render() {
     ensureAgentState();
     renderProjectOptions();
@@ -1183,6 +1331,7 @@ export function initAgentChat({
       developerTools.hidden = !(state.settings?.agent?.developerMode === true && api?.agentDeveloperTestTools);
     }
     syncComposerHeight();
+    renderComposerAttachments();
     renderHistoryView();
     if (!inFlight) {
       setStatus('Ready.');

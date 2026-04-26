@@ -31,6 +31,36 @@ function createAgentSessionRuntime(deps = {}) {
     ? requestText
     : (async () => ({ ok: false, error: 'Text generation bridge is not configured.' }));
 
+  function normalizeToolSchemaRequests(parsed) {
+    const source = parsed && typeof parsed === 'object' ? parsed : {};
+    const rawRequests = [
+      ...(Array.isArray(source.tool_schema_requests) ? source.tool_schema_requests : []),
+      ...(Array.isArray(source.tool_schema_request) ? source.tool_schema_request : []),
+      ...(!Array.isArray(source.tool_schema_request) && source.tool_schema_request ? [source.tool_schema_request] : []),
+      ...(!Array.isArray(source.request_tool_schemas) && source.request_tool_schemas ? [source.request_tool_schemas] : []),
+      ...(Array.isArray(source.request_tool_schemas) ? source.request_tool_schemas : [])
+    ];
+    const seen = new Set();
+    return rawRequests.map((entry) => {
+      const item = typeof entry === 'string' ? { name: entry } : (entry && typeof entry === 'object' ? entry : {});
+      const name = cleanValue(item.name || item.tool_name || item.tool, 120);
+      return {
+        callId: cleanValue(item.call_id || item.callId || item.id, 120),
+        name
+      };
+    }).filter((entry) => {
+      if (!entry.name) {
+        return false;
+      }
+      const key = entry.name.toLowerCase();
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
+  }
+
   function buildCodexToolLoopPrompt({
     systemPrompt,
     transcript = [],
@@ -38,8 +68,7 @@ function createAgentSessionRuntime(deps = {}) {
   }) {
     const toolRows = arrayValues(toolDefinitions).map((tool) => [
       `Tool: ${cleanValue(tool?.name, 120) || 'unknown_tool'}`,
-      `Description: ${cleanValue(tool?.description, 500) || '-'}`,
-      `Input schema JSON:\n${JSON.stringify(tool?.parameters || { type: 'object', additionalProperties: true }, null, 2)}`
+      `Short description: ${cleanValue(tool?.short_description || tool?.description, 500) || '-'}`
     ].join('\n')).join('\n\n');
     const transcriptText = arrayValues(transcript).map((entry, index) => {
       const role = cleanValue(entry?.role, 30) || 'system';
@@ -51,9 +80,12 @@ function createAgentSessionRuntime(deps = {}) {
       'You are participating in a stepwise tool loop.',
       'At each turn, either request one or more independent tool calls or answer directly if the evidence is already sufficient.',
       'Return JSON only in one of these forms:',
+      '{"assistant_text":"progress update","tool_schema_requests":["tool_name"]}',
       '{"assistant_text":"progress update","tool_call":{"name":"tool_name","arguments":{}}}',
       '{"assistant_text":"progress update","tool_calls":[{"name":"tool_name","arguments":{}}]}',
       '{"assistant_text":"grounded final answer","tool_call":null,"tool_calls":[]}',
+      'First request full schema for any tool whose schema is not already present in the transcript; do not guess arguments from the short catalog.',
+      'After the selected schema is returned in the transcript, use that exact schema to produce the tool call arguments.',
       'If you request multiple tool calls, keep them tightly scoped and independent so they can run in parallel as one round.',
       toolRows ? `Available tools:\n${toolRows}` : 'No tools are available.',
       transcriptText ? `Transcript:\n${transcriptText}` : ''
@@ -81,12 +113,14 @@ function createAgentSessionRuntime(deps = {}) {
         .filter((entry) => entry.name);
       return {
         assistant_text: cleanValue(parsed.assistant_text || parsed.answer || parsed.text, 12000),
-        tool_calls: toolCalls
+        tool_calls: toolCalls,
+        tool_schema_requests: normalizeToolSchemaRequests(parsed)
       };
     }
     return {
       assistant_text: source,
-      tool_calls: []
+      tool_calls: [],
+      tool_schema_requests: []
     };
   }
 
@@ -99,7 +133,8 @@ function createAgentSessionRuntime(deps = {}) {
     transcript,
     toolDefinitions,
     traceContext,
-    round
+    round,
+    attachments = []
   }) {
     const prompt = buildCodexToolLoopPrompt({
       systemPrompt,
@@ -114,6 +149,7 @@ function createAgentSessionRuntime(deps = {}) {
       stage: `agent_tool_loop_round_${Number(round) || 0}`,
       systemPrompt: '',
       userPrompt: prompt,
+      attachments,
       traceContext,
       maxOutputTokens: 2200,
       defaultError: 'Assistant text provider is not configured.'
@@ -134,7 +170,8 @@ function createAgentSessionRuntime(deps = {}) {
     message,
     hasLatestUserInConversation,
     toolDefinitions = [],
-    traceContext = null
+    traceContext = null,
+    attachments = []
   } = {}) {
     const transcript = [
       ...arrayValues(conversation).map((item) => ({
@@ -154,6 +191,7 @@ function createAgentSessionRuntime(deps = {}) {
       systemPrompt,
       transcript,
       toolDefinitions: arrayValues(toolDefinitions),
+      attachments: arrayValues(attachments),
       traceContext,
       round: 0
     });
@@ -179,6 +217,16 @@ function createAgentSessionRuntime(deps = {}) {
       return session.parsed.tool_calls;
     }
     return parseToolLoopTurn(session.raw).tool_calls;
+  }
+
+  function extractAgentSessionSchemaRequests(session) {
+    if (!session) {
+      return [];
+    }
+    if (Array.isArray(session?.parsed?.tool_schema_requests)) {
+      return session.parsed.tool_schema_requests;
+    }
+    return parseToolLoopTurn(session.raw).tool_schema_requests;
   }
 
   function extractAgentSessionText(session) {
@@ -277,11 +325,17 @@ function createAgentSessionRuntime(deps = {}) {
     return parseToolLoopTurn(payload).tool_calls;
   }
 
+  function extractSchemaRequests(payload) {
+    return parseToolLoopTurn(payload).tool_schema_requests;
+  }
+
   return {
     buildCodexToolLoopPrompt,
     startAgentSession,
     extractFunctionCalls,
+    extractSchemaRequests,
     extractAgentSessionFunctionCalls,
+    extractAgentSessionSchemaRequests,
     extractAgentSessionText,
     continueAgentSessionWithToolOutputs,
     continueAgentSessionWithUserMessage

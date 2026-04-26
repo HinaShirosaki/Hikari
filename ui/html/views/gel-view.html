@@ -5,7 +5,7 @@
           <form id="gel-form" class="form-grid">
             <input type="hidden" id="gel-id" />
             <label>
-              Analysis Name
+              Gel Name
               <input id="gel-name" required placeholder="e.g. WB_RUN_2026_02_19" />
             </label>
             <label>
@@ -88,10 +88,17 @@
                   <button type="button" id="gel-tool-right-border-btn" class="ghost-btn">Set right border</button>
                   <button type="button" id="gel-tool-dividers-btn" class="ghost-btn">Set dividers</button>
                   <button type="button" id="gel-tool-ladder-lane-btn" class="ghost-btn">Set ladder lane</button>
+                  <button type="button" id="gel-add-table-btn" class="ghost-btn" hidden>Add table</button>
                 </div>
-                <div class="gel-canvas-shell">
-                  <canvas id="gel-canvas"></canvas>
-                  <img id="gel-cropper-image" alt="Gel cropper" />
+                <div id="gel-viewer-stage" class="gel-viewer-stage">
+                  <div id="gel-lane-table-shell" class="gel-lane-table-shell" hidden></div>
+                  <div id="gel-image-row" class="gel-image-row">
+                    <div id="gel-lane-table-label-spacer" class="gel-lane-table-label-spacer" hidden aria-hidden="true"></div>
+                    <div class="gel-canvas-shell">
+                      <canvas id="gel-canvas"></canvas>
+                      <img id="gel-cropper-image" alt="Gel cropper" />
+                    </div>
+                  </div>
                 </div>
               </div>
 

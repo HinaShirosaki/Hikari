@@ -193,6 +193,146 @@
   color: #14532d;
 }
 
+.gel-viewer-stage {
+  --gel-lane-label-width: 118px;
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.gel-image-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  align-items: start;
+}
+
+.gel-viewer-stage.has-lane-table .gel-image-row {
+  grid-template-columns: var(--gel-lane-label-width) minmax(0, 1fr);
+}
+
+.gel-lane-table-label-spacer {
+  width: var(--gel-lane-label-width);
+  min-width: var(--gel-lane-label-width);
+}
+
+.gel-lane-table-shell {
+  display: grid;
+  grid-template-columns: var(--gel-lane-label-width) minmax(0, 1fr);
+  column-gap: 0;
+  row-gap: 10px;
+  min-width: 0;
+}
+
+.gel-lane-table-toolbar {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.gel-lane-table-toolbar p {
+  margin: 0;
+}
+
+.gel-lane-table-wrap {
+  overflow-x: auto;
+}
+
+.gel-lane-table-labels {
+  display: grid;
+  grid-auto-rows: 40px;
+  min-width: 0;
+}
+
+.gel-lane-table-label-head,
+.gel-lane-table-label-cell {
+  border: 1px solid rgba(53, 99, 153, 0.24);
+  padding: 0;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.gel-lane-table-label-head {
+  display: grid;
+  place-items: center;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #46556c;
+  background: rgba(232, 240, 250, 0.94);
+}
+
+.gel-lane-table-label-cell {
+  background: rgba(245, 248, 252, 0.94);
+}
+
+.gel-lane-table-grid-shell,
+.gel-lane-table-grid-offsets {
+  min-width: 0;
+}
+
+.gel-lane-table-grid-offsets {
+  box-sizing: border-box;
+}
+
+.gel-lane-table {
+  width: 100%;
+  min-width: max-content;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.gel-lane-table th,
+.gel-lane-table td {
+  border: 1px solid rgba(53, 99, 153, 0.24);
+  padding: 0;
+  height: 40px;
+  text-align: center;
+  vertical-align: middle;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.gel-lane-table thead th {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #46556c;
+  background: rgba(232, 240, 250, 0.94);
+}
+
+.gel-lane-table tbody th {
+  font-weight: 500;
+  background: rgba(245, 248, 252, 0.94);
+}
+
+.gel-lane-table-input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  font: inherit;
+  font-size: 0.78rem;
+  line-height: 1.2;
+  color: var(--text);
+  text-align: center;
+}
+
+.gel-lane-table-input::placeholder {
+  color: #90a0b5;
+}
+
+.gel-lane-table-input:focus {
+  outline: 2px solid color-mix(in srgb, var(--accent) 34%, transparent);
+  outline-offset: -2px;
+  background: rgba(255, 255, 255, 0.92);
+}
+
 /* Extracted from ui/css/themes/modes.css */
 .gel-canvas-shell {
   border: 1px solid rgba(53, 99, 153, 0.24);
@@ -332,6 +472,38 @@ body.theme-night .gel-viewer-toolbar .ghost-btn.is-active {
   color: #bbf7d0;
 }
 
+body.theme-night .gel-lane-table th,
+body.theme-night .gel-lane-table td {
+  border-color: rgba(145, 174, 214, 0.32);
+  background: rgba(20, 33, 57, 0.68);
+}
+
+body.theme-night .gel-lane-table thead th {
+  color: #d9e5f7;
+  background: rgba(34, 51, 80, 0.96);
+}
+
+body.theme-night .gel-lane-table-label-head {
+  color: #d9e5f7;
+  background: rgba(34, 51, 80, 0.96);
+}
+
+body.theme-night .gel-lane-table-label-cell {
+  background: rgba(25, 40, 66, 0.96);
+}
+
+body.theme-night .gel-lane-table-input {
+  color: #f6f8fc;
+}
+
+body.theme-night .gel-lane-table-input::placeholder {
+  color: #8da6ca;
+}
+
+body.theme-night .gel-lane-table-input:focus {
+  background: rgba(34, 51, 80, 0.92);
+}
+
 @media (min-width: 1100px) {
   .gel-secondary-panels {
     grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
@@ -380,6 +552,27 @@ body.theme-night .gel-report-json {
 
   .gel-lane-profile-picker {
     min-width: 0;
+  }
+
+  .gel-lane-table-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .gel-lane-table-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .gel-lane-table-labels {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .gel-viewer-stage.has-lane-table .gel-image-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .gel-lane-table-label-spacer {
+    display: none;
   }
 }
 

@@ -18,3 +18,5 @@ scripts/
 *.asar
 
 Agent.md
+
+Testdata/

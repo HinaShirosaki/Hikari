@@ -16,11 +16,6 @@ const FIXED_FOCUS = '#7a8a69';
 export function initSettings({ state, persist, onStoragePathSaved }) {
   const settingsNavItems = [...document.querySelectorAll('#setting-view [data-settings-target]')];
   const settingsPanels = [...document.querySelectorAll('#setting-view [data-settings-panel]')];
-  const personalInfoForm = document.getElementById('personal-info-form');
-  const settingNameInput = document.getElementById('setting-name');
-  const settingPositionInput = document.getElementById('setting-position');
-  const settingInstitutionEmailInput = document.getElementById('setting-institution-email');
-  const settingEnanaEmailInput = document.getElementById('setting-enana-email');
 
   const appearanceForm = document.getElementById('appearance-form');
   const settingFontSize = document.getElementById('setting-font-size');
@@ -80,7 +75,6 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
       activateSettingsPanel(item.dataset.settingsTarget);
     });
   });
-  personalInfoForm.addEventListener('submit', onSavePersonalInfo);
   appearanceForm.addEventListener('submit', onSaveAppearance);
   storageForm.addEventListener('submit', onSaveStoragePath);
   selectStoragePathBtn?.addEventListener('click', onSelectStoragePath);
@@ -289,14 +283,8 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
 
   function renderForms() {
     const didSyncCodexSettings = syncCodexSettingsFromCatalog();
-    const personal = state.settings.personalInfo;
     const appearance = state.settings.appearance;
     const llm = state.settings.llm;
-
-    settingNameInput.value = personal.name || '';
-    settingPositionInput.value = personal.position || '';
-    settingInstitutionEmailInput.value = personal.institutionEmail || '';
-    settingEnanaEmailInput.value = personal.enanaEmail || '';
 
     settingFontSize.value = String(appearance.fontSize || 16);
     settingMode.value = appearance.mode || 'day';
@@ -371,19 +359,6 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
     document.body.classList.toggle('theme-night', appearance.mode === 'night');
     document.body.classList.add('ui-neutral-compact');
     window.dispatchEvent(new CustomEvent('enana:appearance-changed'));
-  }
-
-  function onSavePersonalInfo(event) {
-    event.preventDefault();
-
-    state.settings.personalInfo = {
-      name: settingNameInput.value.trim(),
-      position: settingPositionInput.value.trim(),
-      institutionEmail: settingInstitutionEmailInput.value.trim(),
-      enanaEmail: settingEnanaEmailInput.value.trim()
-    };
-
-    persist();
   }
 
   function onSaveAppearance(event) {

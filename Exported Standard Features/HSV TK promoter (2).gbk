@@ -1,0 +1,27 @@
+LOCUS       .                        752 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..752
+                     /note="herpes simplex virus thymidine kinase promoter"
+                     /label="HSV TK promoter"
+ORIGIN
+        1 aatgagtctt cggacctcgc gggggccgct taagcggtgg ttagggtttg tctgacgcgg
+       61 ggggaggggg aaggaacgaa acactctcat tcggaggcgg ctcggggttt ggtcttggtg
+      121 gccacgggca cgcagaagag cgccgcgatc ctcttaagca cccccccgcc ctccgtggag
+      181 gcgggggttt ggtcggcggg tggtaactgg cgggccgctg actcgggcgg gtcgcgcgcc
+      241 ccagagtgtg accttttcgg tctgctcgca gacccccggg cggcgccgcc gcggcggcga
+      301 cgggctcgct gggtcctagg ctccatgggg accgtatacg tggacaggct ctggagcatc
+      361 cgcacgactg cggtgatatt accggagacc ttctgcggga cgagccgggt cacgcggctg
+      421 acgcggagcg tccgttgggc gacaaacacc aggacggggc acaggtacac tatcttgtca
+      481 cccggaggcg cgagggactg caggagcttc agggagtggc gcagctgctt catccccgtg
+      541 gcccgttgct cgcgtttgct ggcggtgtcc ccggaagaaa tatatttgca tgtctttagt
+      601 tctatgatga cacaaacccc gcccagcgtc ttgtcattgg cgaattcgaa cacgcagatg
+      661 cagtcggggc ggcgcggtcc caggtccact tcgcatatta aggtgacgcg tgtggcctcg
+      721 aacaccgagc gaccctgcag cgacccgctt aa
+//

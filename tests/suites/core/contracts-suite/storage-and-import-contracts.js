@@ -62,6 +62,7 @@ module.exports = function registerStorageAndImportContracts(context = {}) {
           settings: { appearance: { uiStyle: 'classic', themeColor: '#336699' } }
         };
         await bundleHelpers.syncBundleFromSnapshot({ dataFilePath, snapshot: sourceSnapshot });
+        await fsPromises.access(path.join(tempDir, 'Project', 'Atlas', 'MEMORY.md'));
 
         const compactSnapshot = {
           settings: { appearance: { uiStyle: 'classic', themeColor: '#336699' } },
@@ -97,6 +98,116 @@ module.exports = function registerStorageAndImportContracts(context = {}) {
         assert.equal(recordSearch.usedSqlite, true);
         assert.equal(recordSearch.items.length > 0, true);
         assert.equal(recordSearch.items.some((item) => item.record_type === 'protocol'), true);
+      } finally {
+        await fsPromises.rm(tempDir, { recursive: true, force: true });
+      }
+    });
+
+    test('storage hydration restores project notebook pages from page folders when the notebook sidecar is missing', async () => {
+      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle.js'));
+      const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'project-notebook-folder-hydration-'));
+      const dataFilePath = path.join(tempDir, 'example.ena.json');
+      try {
+        const sourceSnapshot = {
+          projects: [{ id: 'project-1', name: 'Atlas' }],
+          protocols: [{
+            id: 'protocol-1',
+            name: 'Protein Purification',
+            purpose: 'Affinity purification flow.',
+            steps: [{ id: 'step-1', text: 'Add {{ph:volume}} of buffer.' }]
+          }],
+          notebookEntries: [{
+            id: 'note-1',
+            notebookType: 'biology',
+            protocolId: 'protocol-1',
+            protocolName: 'Protein Purification',
+            projectId: 'project-1',
+            projectName: 'Atlas',
+            experimentName: 'Purification Run 7',
+            protocolSnapshot: {
+              id: 'protocol-1',
+              name: 'Protein Purification',
+              steps: [{ id: 'step-1', text: 'Add {{ph:volume}} of buffer.', placeholders: [{ id: 'volume', name: 'Volume' }] }]
+            },
+            values: { 'step-1:volume': '15 mL' },
+            result: 'Yield improved by 20%.',
+            resultFiles: ['gel.png'],
+            resultFileRecords: [{ name: 'gel.png', relativePath: 'Project/Atlas/Notebook/Protein_Purification__note-1/ResultFiles/gel.png' }],
+            notebookState: 'executed',
+            updatedAt: '2026-04-20T10:30:00.000Z',
+            createdAt: '2026-04-20T09:00:00.000Z'
+          }],
+          settings: { storagePath: tempDir }
+        };
+
+        await bundleHelpers.syncBundleFromSnapshot({ dataFilePath, snapshot: sourceSnapshot });
+        const bundlePaths = bundleHelpers.getBundlePaths({ dataFilePath, storagePath: tempDir });
+        await fsPromises.rm(bundlePaths.notebookPagesPath, { force: true });
+
+        const hydrated = await bundleHelpers.hydrateSnapshotFromBundle({
+          dataFilePath,
+          snapshot: {
+            settings: { storagePath: tempDir },
+            projects: [],
+            protocols: [],
+            notebookEntries: []
+          }
+        });
+
+        assert.equal(hydrated.snapshot.notebookEntries.length, 1);
+        assert.equal(hydrated.snapshot.notebookEntries[0].notebookType, 'biology');
+        assert.equal(hydrated.snapshot.notebookEntries[0].experimentName, 'Purification Run 7');
+        assert.equal(hydrated.snapshot.notebookEntries[0].values['step-1:volume'], '15 mL');
+        assert.equal(hydrated.snapshot.notebookEntries[0].storageFolder.includes(`${path.sep}Project${path.sep}Atlas${path.sep}Notebook${path.sep}`), true);
+      } finally {
+        await fsPromises.rm(tempDir, { recursive: true, force: true });
+      }
+    });
+
+    test('storage root importer restores projects and notebook pages from project folders without bundle files', async () => {
+      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle.js'));
+      const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'project-folder-only-import-'));
+      try {
+        const projectRoot = path.join(tempDir, 'Project', 'Atlas');
+        const notebookFolder = path.join(projectRoot, 'Notebook', 'Protein_Purification__note-1');
+        await fsPromises.mkdir(notebookFolder, { recursive: true });
+        await fsPromises.writeFile(path.join(projectRoot, 'MEMORY.md'), [
+          '# Project Memory',
+          '',
+          'Name: Atlas',
+          'Folder: Atlas',
+          'ID: project-1',
+          'Description: Folder-only project restore test.',
+          'Created: 2026-04-20T09:00:00.000Z',
+          'Updated: 2026-04-20T10:30:00.000Z'
+        ].join('\n'), 'utf8');
+        await fsPromises.writeFile(path.join(notebookFolder, 'page.json'), JSON.stringify({
+          schema_name: 'enana_notebook_pages',
+          schema_version: '1.0.0',
+          updated_at: '2026-04-20T10:30:00.000Z',
+          notebookEntry: {
+            id: 'note-1',
+            notebookType: 'biology',
+            protocolId: 'protocol-1',
+            protocolName: 'Protein Purification',
+            projectId: 'project-1',
+            projectName: 'Atlas',
+            experimentName: 'Purification Run 7',
+            values: { 'step-1:volume': '15 mL' },
+            result: 'Yield improved by 20%.',
+            updatedAt: '2026-04-20T10:30:00.000Z',
+            createdAt: '2026-04-20T09:00:00.000Z'
+          }
+        }, null, 2), 'utf8');
+
+        const imported = await bundleHelpers.importStorageRoot({ storagePath: tempDir });
+        assert.equal(imported.statePatch.projects.length, 1);
+        assert.equal(imported.statePatch.projects[0].id, 'project-1');
+        assert.equal(imported.statePatch.projects[0].name, 'Atlas');
+        assert.equal(imported.statePatch.notebookEntries.length, 1);
+        assert.equal(imported.statePatch.notebookEntries[0].notebookType, 'biology');
+        assert.equal(imported.statePatch.notebookEntries[0].storageFolder.includes(`${path.sep}Project${path.sep}Atlas${path.sep}Notebook${path.sep}`), true);
+        assert.equal(imported.summary.notebookEntries, 1);
       } finally {
         await fsPromises.rm(tempDir, { recursive: true, force: true });
       }
@@ -166,6 +277,7 @@ module.exports = function registerStorageAndImportContracts(context = {}) {
           workflowStorage.buildNotebookPageFolderName('note-1')
         );
         await fsPromises.access(path.join(folderLayout.templateFolderPath, 'template.json'));
+        await fsPromises.access(path.join(folderLayout.workflowFolderPath, 'MEMORY.md'));
         await fsPromises.access(path.join(folderLayout.workflowFolderPath, 'workflow.json'));
         await fsPromises.access(path.join(folderLayout.relatedPapersFolderPath, 'related-papers.json'));
         await fsPromises.access(path.join(notebookFolder, 'page.json'));
@@ -251,6 +363,7 @@ module.exports = function registerStorageAndImportContracts(context = {}) {
       assert.match(rendererSource, /async function hydrateStateFromStorageRoot\(\)/);
       assert.equal(rendererSource.includes('hydrateStateFromDataFile'), false);
       assert.match(rendererSource, /async function initApp\(\)\s*\{\s*await hydrateStateFromStorageRoot\(\);/);
+      assert.match(rendererSource, /state\.projects = mergeRecordsById\(state\.projects, patch\.projects, 'project'\);/);
       assert.match(rendererSource, /mergeStorageImportPatch\(result\.statePatch\);/);
       assert.equal(/state\.settings\s*=\s*result\.statePatch\.settings/.test(rendererSource), false);
     });

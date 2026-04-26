@@ -12,10 +12,39 @@ const DB_FILE_NAME = 'sequence-library.sqlite';
 const STATUS_SAVED = 'saved';
 const STATUS_TEMPORARY = 'temporary';
 const FEATURE_SOURCE_BACKBONE_RECOGNITION = 'backbone_recognition';
+const FEATURE_SOURCE_SQL_ANNOTATION_DNA = 'sql_annotation_dna';
+const FEATURE_SOURCE_SQL_ANNOTATION_PROTEIN = 'sql_annotation_protein';
 const ALIGNMENTS_DIR_NAME = 'alignments';
 const ALIGNMENTS_MANIFEST_FILE_NAME = 'alignment-sessions.json';
+const RECOGNIZED_BACKBONE_ARTIFACT_DIR_NAME = 'protein-builder/backbones';
+const RECOGNIZED_BACKBONE_SCHEMA_NAME = 'enana_recognized_backbone';
+const ORF_START_CODONS = new Set(['ATG']);
+const ORF_STOP_CODONS = new Set(['TAA', 'TAG', 'TGA']);
+const MIN_DNA_ANNOTATION_FEATURE_LENGTH = 12;
+const MIN_PROTEIN_ANNOTATION_AA_LENGTH = 3;
+const MAX_ANNOTATION_MATCHES_PER_FEATURE = 32;
+const MAX_ANNOTATION_FEATURES_PER_RUN = 500;
 
 let sqlJsInitPromise = null;
+
+const CODON_TO_AMINO_ACID = Object.freeze({
+  TTT: 'F', TTC: 'F', TTA: 'L', TTG: 'L',
+  TCT: 'S', TCC: 'S', TCA: 'S', TCG: 'S',
+  TAT: 'Y', TAC: 'Y', TAA: '*', TAG: '*',
+  TGT: 'C', TGC: 'C', TGA: '*', TGG: 'W',
+  CTT: 'L', CTC: 'L', CTA: 'L', CTG: 'L',
+  CCT: 'P', CCC: 'P', CCA: 'P', CCG: 'P',
+  CAT: 'H', CAC: 'H', CAA: 'Q', CAG: 'Q',
+  CGT: 'R', CGC: 'R', CGA: 'R', CGG: 'R',
+  ATT: 'I', ATC: 'I', ATA: 'I', ATG: 'M',
+  ACT: 'T', ACC: 'T', ACA: 'T', ACG: 'T',
+  AAT: 'N', AAC: 'N', AAA: 'K', AAG: 'K',
+  AGT: 'S', AGC: 'S', AGA: 'R', AGG: 'R',
+  GTT: 'V', GTC: 'V', GTA: 'V', GTG: 'V',
+  GCT: 'A', GCC: 'A', GCA: 'A', GCG: 'A',
+  GAT: 'D', GAC: 'D', GAA: 'E', GAG: 'E',
+  GGT: 'G', GGC: 'G', GGA: 'G', GGG: 'G'
+});
 
 const BASE_COMPLEMENT = Object.freeze({
   A: 'T',
@@ -74,6 +103,18 @@ function clamp(value, min, max) {
     return min;
   }
   return Math.min(max, Math.max(min, numeric));
+}
+
+function positiveModulo(value, modulo) {
+  if (!Number.isFinite(Number(modulo)) || modulo <= 0) {
+    return 0;
+  }
+  const numeric = Number(value) || 0;
+  return ((numeric % modulo) + modulo) % modulo;
+}
+
+function normalizeTopologyValue(value) {
+  return String(value || '').toLowerCase().trim() === 'circular' ? 'circular' : 'linear';
 }
 
 function normalizeSequenceText(raw) {
@@ -217,6 +258,25 @@ function applySchema(db) {
       ON sequence_features(normalized_name);
     CREATE INDEX IF NOT EXISTS idx_sequence_features_type
       ON sequence_features(feature_type);
+    CREATE TABLE IF NOT EXISTS sequence_feature_cds_sequences (
+      feature_id TEXT PRIMARY KEY,
+      dna_sequence TEXT NOT NULL,
+      dna_length INTEGER NOT NULL DEFAULT 0,
+      amino_acid_sequence TEXT NOT NULL,
+      amino_acid_length INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY(feature_id) REFERENCES sequence_features(id) ON DELETE CASCADE
+    );
+    CREATE TABLE IF NOT EXISTS sequence_feature_proteins (
+      feature_id TEXT PRIMARY KEY,
+      protein_sequence TEXT NOT NULL,
+      protein_length INTEGER NOT NULL DEFAULT 0,
+      translation_source TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY(feature_id) REFERENCES sequence_features(id) ON DELETE CASCADE
+    );
     CREATE TABLE IF NOT EXISTS sequence_feature_occurrences (
       id TEXT PRIMARY KEY,
       feature_id TEXT NOT NULL,
@@ -255,7 +315,20 @@ async function openDatabase(sqlitePath) {
       throw error;
     }
   }
+  const hadCdsSequenceTable = Boolean(
+    readSingleRow(
+      db,
+      `SELECT name
+       FROM sqlite_master
+       WHERE type = 'table' AND name = 'sequence_feature_cds_sequences'
+       LIMIT 1`
+    )
+  );
   applySchema(db);
+  const cdsTableChanges = rebuildCdsSequenceTable(db);
+  if (!hadCdsSequenceTable || cdsTableChanges > 0) {
+    await persistDatabase(sqlitePath, db);
+  }
   return db;
 }
 
@@ -311,6 +384,52 @@ function normalizeEntryRow(row) {
     createdAt: cleanText(row.created_at, 60),
     updatedAt: cleanText(row.updated_at, 60)
   };
+}
+
+function normalizeBackboneSegments(segments, sequenceLength) {
+  const safeLength = Math.max(0, Number(sequenceLength) || 0);
+  return (Array.isArray(segments) ? segments : [])
+    .map((segment) => {
+      const start = clamp(Math.round(Number(segment?.start) || 0), 0, safeLength);
+      const end = clamp(Math.round(Number(segment?.end) || 0), 0, safeLength);
+      if (end <= start) {
+        return null;
+      }
+      return { start, end };
+    })
+    .filter(Boolean);
+}
+
+function computeRecognizedBackboneInsertionOffset(segments, sequenceLength) {
+  const normalized = normalizeBackboneSegments(segments, sequenceLength);
+  if (!normalized.length) {
+    return null;
+  }
+  if (normalized.length === 1) {
+    const wrapGap = Math.max(0, sequenceLength - normalized[0].end) + normalized[0].start;
+    return wrapGap > 0 ? normalized[0].end - normalized[0].start : null;
+  }
+
+  let cursor = 0;
+  for (let index = 0; index < normalized.length - 1; index += 1) {
+    const current = normalized[index];
+    const next = normalized[index + 1];
+    cursor += current.end - current.start;
+    const gapLength = next.start >= current.end
+      ? next.start - current.end
+      : Math.max(0, sequenceLength - current.end) + next.start;
+    if (gapLength > 0) {
+      return cursor;
+    }
+  }
+
+  const last = normalized[normalized.length - 1];
+  const first = normalized[0];
+  const wrapGap = Math.max(0, sequenceLength - last.end) + first.start;
+  if (wrapGap > 0) {
+    return normalized.reduce((total, segment) => total + Math.max(0, segment.end - segment.start), 0);
+  }
+  return null;
 }
 
 function stripExtension(name) {
@@ -700,7 +819,11 @@ function normalizeFeaturePayload(feature, sequenceLength, index = 0) {
   }
 
   const source = cleanText(feature?.source || feature?.mode || '', 120).toLowerCase();
-  if (source === FEATURE_SOURCE_BACKBONE_RECOGNITION) {
+  if (
+    source === FEATURE_SOURCE_BACKBONE_RECOGNITION
+    || source === FEATURE_SOURCE_SQL_ANNOTATION_DNA
+    || source === FEATURE_SOURCE_SQL_ANNOTATION_PROTEIN
+  ) {
     return null;
   }
 
@@ -713,6 +836,7 @@ function normalizeFeaturePayload(feature, sequenceLength, index = 0) {
   return {
     name: normalizeName(feature?.name || feature?.label || `feature_${index + 1}`, `feature_${index + 1}`),
     type: cleanText(feature?.type || 'misc_feature', 120).toLowerCase() || 'misc_feature',
+    translation: normalizeProteinSequence(feature?.translation || feature?.proteinSequence || ''),
     strand,
     source,
     segments
@@ -744,6 +868,117 @@ function buildFeatureDedupeKey(name, type, sequence) {
     .createHash('sha1')
     .update(`${String(name || '').toLowerCase()}\n${String(type || '').toLowerCase()}\n${String(sequence || '')}`)
     .digest('hex');
+}
+
+function normalizeProteinSequence(raw) {
+  return String(raw || '')
+    .toUpperCase()
+    .replace(/\s+/g, '')
+    .replace(/[^A-Z*]/g, '');
+}
+
+function stripTerminalProteinStop(proteinSequence) {
+  const normalized = normalizeProteinSequence(proteinSequence);
+  return normalized.endsWith('*') ? normalized.slice(0, -1) : normalized;
+}
+
+function translateFeatureSequenceToProtein(featureSequence) {
+  const sequence = normalizeSequenceText(featureSequence);
+  const codonCount = Math.floor(sequence.length / 3);
+  if (codonCount <= 0) {
+    return '';
+  }
+
+  let protein = '';
+  for (let index = 0; index < codonCount; index += 1) {
+    const codon = sequence.slice(index * 3, (index * 3) + 3);
+    protein += CODON_TO_AMINO_ACID[codon] || 'X';
+  }
+  return stripTerminalProteinStop(protein);
+}
+
+function resolveFeatureProteinPayload(feature, featureSequence) {
+  if (String(feature?.type || '').toLowerCase() !== 'cds') {
+    return { proteinSequence: '', translationSource: '' };
+  }
+
+  const qualifierProteinSequence = stripTerminalProteinStop(feature?.translation || feature?.proteinSequence || '');
+  if (qualifierProteinSequence) {
+    return {
+      proteinSequence: qualifierProteinSequence,
+      translationSource: 'qualifier'
+    };
+  }
+
+  const derivedProteinSequence = translateFeatureSequenceToProtein(featureSequence);
+  if (derivedProteinSequence) {
+    return {
+      proteinSequence: derivedProteinSequence,
+      translationSource: 'derived'
+    };
+  }
+  return { proteinSequence: '', translationSource: '' };
+}
+
+function rebuildCdsSequenceTable(db) {
+  if (!db || typeof db.run !== 'function') {
+    return 0;
+  }
+
+  let rowsChanged = 0;
+  db.run(`
+    DELETE FROM sequence_feature_cds_sequences
+    WHERE feature_id NOT IN (
+      SELECT id
+      FROM sequence_features
+      WHERE lower(feature_type) = 'cds'
+    )
+  `);
+  rowsChanged += Math.max(0, Number(db.getRowsModified?.() || 0));
+
+  const cdsRows = readRows(
+    db,
+    `SELECT id, sequence, created_at, updated_at
+     FROM sequence_features
+     WHERE lower(feature_type) = 'cds'
+     ORDER BY updated_at DESC, name COLLATE NOCASE ASC`
+  );
+
+  cdsRows.forEach((row) => {
+    const featureId = cleanText(row?.id, 200);
+    const dnaSequence = normalizeSequenceText(row?.sequence);
+    if (!featureId || !dnaSequence) {
+      return;
+    }
+
+    const createdAt = cleanText(row?.created_at, 60) || new Date().toISOString();
+    const updatedAt = cleanText(row?.updated_at, 60) || createdAt;
+    const aminoAcidSequence = translateFeatureSequenceToProtein(dnaSequence);
+
+    db.run(
+      `INSERT INTO sequence_feature_cds_sequences (
+         feature_id, dna_sequence, dna_length, amino_acid_sequence, amino_acid_length, created_at, updated_at
+       ) VALUES (?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(feature_id) DO UPDATE SET
+         dna_sequence = excluded.dna_sequence,
+         dna_length = excluded.dna_length,
+         amino_acid_sequence = excluded.amino_acid_sequence,
+         amino_acid_length = excluded.amino_acid_length,
+         updated_at = excluded.updated_at`,
+      [
+        featureId,
+        dnaSequence,
+        dnaSequence.length,
+        aminoAcidSequence,
+        aminoAcidSequence.length,
+        createdAt,
+        updatedAt
+      ]
+    );
+    rowsChanged += Math.max(0, Number(db.getRowsModified?.() || 0));
+  });
+
+  return rowsChanged;
 }
 
 function extractFeatureBounds(segments) {
@@ -785,6 +1020,7 @@ function replaceFeatureOccurrencesForEntry(db, entryRow, payload = {}) {
 
   if (!sequence.length || !normalizedFeatures.length) {
     deleteOrphanFeatures(db);
+    rebuildCdsSequenceTable(db);
     return;
   }
 
@@ -795,6 +1031,7 @@ function replaceFeatureOccurrencesForEntry(db, entryRow, payload = {}) {
     if (!featureSequence) {
       return;
     }
+    const proteinPayload = resolveFeatureProteinPayload(feature, featureSequence);
 
     const dedupeKey = buildFeatureDedupeKey(feature.name, feature.type, featureSequence);
     const featureId = buildStableId('feature', dedupeKey);
@@ -835,6 +1072,29 @@ function replaceFeatureOccurrencesForEntry(db, entryRow, payload = {}) {
       ]
     );
 
+    if (proteinPayload.proteinSequence) {
+      db.run(
+        `INSERT INTO sequence_feature_proteins (
+           feature_id, protein_sequence, protein_length, translation_source, created_at, updated_at
+         ) VALUES (?, ?, ?, ?, ?, ?)
+         ON CONFLICT(feature_id) DO UPDATE SET
+           protein_sequence = excluded.protein_sequence,
+           protein_length = excluded.protein_length,
+           translation_source = excluded.translation_source,
+           updated_at = excluded.updated_at`,
+        [
+          featureId,
+          proteinPayload.proteinSequence,
+          proteinPayload.proteinSequence.length,
+          proteinPayload.translationSource,
+          now,
+          now
+        ]
+      );
+    } else {
+      db.run('DELETE FROM sequence_feature_proteins WHERE feature_id = ?', [featureId]);
+    }
+
     db.run(
       `INSERT INTO sequence_feature_occurrences (
          id, feature_id, host_vector_id, host_vector_name, host_vector_status, host_topology,
@@ -873,6 +1133,7 @@ function replaceFeatureOccurrencesForEntry(db, entryRow, payload = {}) {
   });
 
   deleteOrphanFeatures(db);
+  rebuildCdsSequenceTable(db);
 }
 
 function normalizeFeatureOccurrenceRow(row) {
@@ -1188,6 +1449,7 @@ async function deleteSequenceEntry({ storagePath, id }) {
     db.run('DELETE FROM sequence_feature_occurrences WHERE host_vector_id = ?', [safeId]);
     db.run('DELETE FROM sequence_entries WHERE id = ?', [safeId]);
     deleteOrphanFeatures(db);
+    rebuildCdsSequenceTable(db);
     await persistDatabase(paths.sqlitePath, db);
   } finally {
     db.close();
@@ -1195,6 +1457,581 @@ async function deleteSequenceEntry({ storagePath, id }) {
   const entryDir = path.join(paths.entriesRoot, safeId);
   await fs.rm(entryDir, { recursive: true, force: true });
   return { ok: true, id: safeId };
+}
+
+function buildSegmentsFromStartAndLength(start, length, sequenceLength, topology = 'linear') {
+  const normalizedLength = Math.max(0, Number(sequenceLength) || 0);
+  const normalizedSpan = Math.max(0, Number(length) || 0);
+  if (!normalizedLength || normalizedSpan <= 0) {
+    return [];
+  }
+
+  if (normalizeTopologyValue(topology) === 'linear') {
+    const safeStart = clamp(Math.round(Number(start) || 0), 0, normalizedLength);
+    const safeEnd = clamp(safeStart + normalizedSpan, 0, normalizedLength);
+    return safeEnd > safeStart ? [{ start: safeStart, end: safeEnd }] : [];
+  }
+
+  const circularStart = positiveModulo(Math.round(Number(start) || 0), normalizedLength);
+  if (normalizedSpan >= normalizedLength) {
+    if (circularStart === 0) {
+      return [{ start: 0, end: normalizedLength }];
+    }
+    return [
+      { start: circularStart, end: normalizedLength },
+      { start: 0, end: circularStart }
+    ];
+  }
+
+  const circularEnd = (circularStart + normalizedSpan) % normalizedLength;
+  if (circularEnd > circularStart) {
+    return [{ start: circularStart, end: circularEnd }];
+  }
+  if (circularEnd === circularStart) {
+    return [{ start: 0, end: normalizedLength }];
+  }
+  return [
+    { start: circularStart, end: normalizedLength },
+    { start: 0, end: circularEnd }
+  ];
+}
+
+function readCircularCodon(sequence, start) {
+  const text = String(sequence || '');
+  const length = text.length;
+  if (length < 3) {
+    return '';
+  }
+  const first = text[positiveModulo(start, length)] || '';
+  const second = text[positiveModulo(start + 1, length)] || '';
+  const third = text[positiveModulo(start + 2, length)] || '';
+  return `${first}${second}${third}`;
+}
+
+function readSequenceSpan(sequence, start, length, topology = 'linear') {
+  const text = String(sequence || '');
+  const safeLength = Math.max(0, Number(length) || 0);
+  if (!text.length || safeLength <= 0) {
+    return '';
+  }
+
+  if (normalizeTopologyValue(topology) === 'linear') {
+    const safeStart = clamp(Math.round(Number(start) || 0), 0, text.length);
+    return text.slice(safeStart, safeStart + safeLength);
+  }
+
+  let output = '';
+  const safeStart = positiveModulo(Math.round(Number(start) || 0), text.length);
+  for (let index = 0; index < safeLength; index += 1) {
+    output += text[positiveModulo(safeStart + index, text.length)] || '';
+  }
+  return output;
+}
+
+function findPatternMatchStarts(querySequence, patternSequence, topology = 'linear', maxHits = MAX_ANNOTATION_MATCHES_PER_FEATURE) {
+  const query = normalizeSequenceText(querySequence);
+  const pattern = normalizeSequenceText(patternSequence);
+  if (!query.length || !pattern.length || pattern.length > query.length) {
+    return [];
+  }
+
+  if (pattern.length === query.length) {
+    return query === pattern ? [0] : [];
+  }
+
+  const normalizedTopology = normalizeTopologyValue(topology);
+  const haystack = normalizedTopology === 'circular'
+    ? `${query}${query.slice(0, Math.max(0, pattern.length - 1))}`
+    : query;
+  const starts = [];
+  let cursor = 0;
+
+  while (starts.length < Math.max(1, Number(maxHits) || MAX_ANNOTATION_MATCHES_PER_FEATURE)) {
+    const matchIndex = haystack.indexOf(pattern, cursor);
+    if (matchIndex < 0 || matchIndex >= query.length) {
+      break;
+    }
+    starts.push(matchIndex);
+    cursor = matchIndex + 1;
+  }
+
+  return starts;
+}
+
+function appendHostToMap(hostMap, row) {
+  if (!hostMap || !(hostMap instanceof Map)) {
+    return;
+  }
+
+  const hostVectorId = cleanText(row?.host_vector_id, 200);
+  if (!hostVectorId) {
+    return;
+  }
+
+  if (!hostMap.has(hostVectorId)) {
+    hostMap.set(hostVectorId, {
+      hostVectorId,
+      hostVectorName: cleanText(row?.host_vector_name, 140),
+      hostVectorStatus: normalizeStatus(row?.host_vector_status)
+    });
+  }
+}
+
+function shouldSkipAnnotationFeatureName(name) {
+  const normalized = String(name || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '_');
+  return normalized === 'misc_feature'
+    || normalized.startsWith('misc_feature_');
+}
+
+function buildDnaAnnotationCandidates(db, queryLength, excludeEntryId = '') {
+  const rows = readRows(
+    db,
+    `SELECT f.id, f.name, f.feature_type, f.sequence, f.sequence_length, f.updated_at,
+            o.host_vector_id, o.host_vector_name, o.host_vector_status
+     FROM sequence_features f
+     JOIN sequence_feature_occurrences o ON o.feature_id = f.id
+     WHERE lower(f.feature_type) <> 'cds'
+       AND f.sequence_length >= ?
+       AND f.sequence_length <= ?
+       AND lower(COALESCE(o.annotation_source, '')) NOT LIKE 'sql_annotation_%'
+       AND (? = '' OR o.host_vector_id <> ?)
+     ORDER BY f.sequence_length DESC, f.updated_at DESC, f.name COLLATE NOCASE ASC`,
+    [
+      MIN_DNA_ANNOTATION_FEATURE_LENGTH,
+      Math.max(0, Number(queryLength) || 0),
+      cleanText(excludeEntryId, 200),
+      cleanText(excludeEntryId, 200)
+    ]
+  );
+
+  const byFeatureId = new Map();
+  rows.forEach((row) => {
+    const featureId = cleanText(row?.id, 200);
+    const sequence = normalizeSequenceText(row?.sequence);
+    if (!featureId || !sequence || shouldSkipAnnotationFeatureName(row?.name)) {
+      return;
+    }
+
+    let candidate = byFeatureId.get(featureId);
+    if (!candidate) {
+      candidate = {
+        featureId,
+        name: normalizeName(row?.name || 'feature', 'feature'),
+        type: cleanText(row?.feature_type, 120).toLowerCase() || 'misc_feature',
+        matchedSequence: sequence,
+        sequenceLength: Math.max(0, Number(row?.sequence_length) || sequence.length),
+        hosts: new Map()
+      };
+      byFeatureId.set(featureId, candidate);
+    }
+    appendHostToMap(candidate.hosts, row);
+  });
+
+  return [...byFeatureId.values()]
+    .map((candidate) => ({
+      ...candidate,
+      hosts: [...candidate.hosts.values()]
+    }))
+    .sort((left, right) => {
+      if (left.sequenceLength !== right.sequenceLength) {
+        return right.sequenceLength - left.sequenceLength;
+      }
+      return String(left.name || '').localeCompare(String(right.name || ''));
+    });
+}
+
+function detectLinearOrfHits(sequence, minNtLength) {
+  const text = String(sequence || '');
+  const sequenceLength = text.length;
+  if (sequenceLength < 6) {
+    return [];
+  }
+
+  const hits = [];
+  for (let frame = 0; frame < 3; frame += 1) {
+    for (let start = frame; start <= sequenceLength - 3; start += 3) {
+      const startCodon = text.slice(start, start + 3);
+      if (!ORF_START_CODONS.has(startCodon)) {
+        continue;
+      }
+
+      for (let position = start + 3; position <= sequenceLength - 3; position += 3) {
+        const stopCodon = text.slice(position, position + 3);
+        if (!ORF_STOP_CODONS.has(stopCodon)) {
+          continue;
+        }
+        const length = (position + 3) - start;
+        if (length >= minNtLength) {
+          hits.push({
+            start,
+            length,
+            frame,
+            stopCodon
+          });
+        }
+        break;
+      }
+    }
+  }
+
+  return hits;
+}
+
+function detectCircularOrfHits(sequence, minNtLength) {
+  const text = String(sequence || '');
+  const sequenceLength = text.length;
+  if (sequenceLength < 6) {
+    return [];
+  }
+
+  const maxCodonSteps = Math.max(0, Math.floor(sequenceLength / 3));
+  if (!maxCodonSteps) {
+    return [];
+  }
+
+  const hits = [];
+  for (let frame = 0; frame < 3; frame += 1) {
+    for (let start = frame; start < sequenceLength; start += 3) {
+      const startCodon = readCircularCodon(text, start);
+      if (!ORF_START_CODONS.has(startCodon)) {
+        continue;
+      }
+
+      for (let step = 1; step <= maxCodonSteps; step += 1) {
+        const length = (step * 3) + 3;
+        if (length > sequenceLength) {
+          break;
+        }
+        const position = (start + (step * 3)) % sequenceLength;
+        const stopCodon = readCircularCodon(text, position);
+        if (!ORF_STOP_CODONS.has(stopCodon)) {
+          continue;
+        }
+        if (length >= minNtLength) {
+          hits.push({
+            start,
+            length,
+            frame,
+            stopCodon
+          });
+        }
+        break;
+      }
+    }
+  }
+
+  return hits;
+}
+
+function detectOrfHitsForSequence(sequence, topology, minNtLength) {
+  return normalizeTopologyValue(topology) === 'circular'
+    ? detectCircularOrfHits(sequence, minNtLength)
+    : detectLinearOrfHits(sequence, minNtLength);
+}
+
+function buildProteinAnnotationOrfs(sequence, topology = 'linear', minAaLength = MIN_PROTEIN_ANNOTATION_AA_LENGTH) {
+  const text = normalizeSequenceText(sequence).replace(/[^ACGT]/g, 'N');
+  const sequenceLength = text.length;
+  if (!sequenceLength) {
+    return [];
+  }
+
+  const normalizedTopology = normalizeTopologyValue(topology);
+  const safeMinAaLength = Math.max(1, Math.floor(Number(minAaLength) || MIN_PROTEIN_ANNOTATION_AA_LENGTH));
+  const minNtLength = Math.max(6, (safeMinAaLength + 1) * 3);
+  const forwardHits = detectOrfHitsForSequence(text, normalizedTopology, minNtLength);
+  const reverseSequence = reverseComplementIupac(text).replace(/[^ACGT]/g, 'N');
+  const reverseHits = detectOrfHitsForSequence(reverseSequence, normalizedTopology, minNtLength);
+  const dedupe = new Set();
+  const orfs = [];
+
+  const pushOrf = (hit, strand) => {
+    const hitLength = Math.max(0, Number(hit?.length) || 0);
+    if (hitLength <= 0) {
+      return;
+    }
+
+    const genomicStart = strand === 1
+      ? Math.max(0, Number(hit?.start) || 0)
+      : positiveModulo(sequenceLength - ((Number(hit?.start) || 0) + hitLength), sequenceLength);
+    const segments = buildSegmentsFromStartAndLength(genomicStart, hitLength, sequenceLength, normalizedTopology);
+    if (!segments.length) {
+      return;
+    }
+
+    const sourceSequence = strand === 1 ? text : reverseSequence;
+    const dnaSequence = readSequenceSpan(sourceSequence, Number(hit?.start) || 0, hitLength, normalizedTopology);
+    const proteinSequence = translateFeatureSequenceToProtein(dnaSequence);
+    if (!proteinSequence) {
+      return;
+    }
+
+    const frameIndex = Math.max(0, Math.min(2, Number(hit?.frame) || 0));
+    const frameLabel = `${strand === -1 ? '-' : '+'}${frameIndex + 1}`;
+    const dedupeKey = `${strand}|${frameLabel}|${segments.map((segment) => `${segment.start}-${segment.end}`).join(',')}|${proteinSequence}`;
+    if (dedupe.has(dedupeKey)) {
+      return;
+    }
+    dedupe.add(dedupeKey);
+
+    orfs.push({
+      strand,
+      segments,
+      dnaSequence,
+      proteinSequence,
+      translation: proteinSequence,
+      orfFrame: frameLabel,
+      orfLengthNt: hitLength,
+      orfLengthAa: proteinSequence.length,
+      startCodon: 'ATG',
+      stopCodon: String(hit?.stopCodon || '').toUpperCase()
+    });
+  };
+
+  forwardHits.forEach((hit) => pushOrf(hit, 1));
+  reverseHits.forEach((hit) => pushOrf(hit, -1));
+
+  return orfs.sort((left, right) => {
+    const leftStart = left.segments?.[0]?.start ?? 0;
+    const rightStart = right.segments?.[0]?.start ?? 0;
+    if (leftStart !== rightStart) {
+      return leftStart - rightStart;
+    }
+    return Math.max(0, Number(right.orfLengthNt) || 0) - Math.max(0, Number(left.orfLengthNt) || 0);
+  });
+}
+
+function buildProteinAnnotationGroups(db, querySequence, excludeEntryId = '') {
+  const rows = readRows(
+    db,
+    `SELECT f.id, f.name, f.feature_type,
+            cds.dna_sequence, cds.dna_length, cds.amino_acid_sequence, cds.amino_acid_length,
+            o.host_vector_id, o.host_vector_name, o.host_vector_status
+     FROM sequence_feature_cds_sequences cds
+     JOIN sequence_features f ON f.id = cds.feature_id
+     JOIN sequence_feature_occurrences o ON o.feature_id = f.id
+     WHERE cds.amino_acid_length >= ?
+       AND cds.amino_acid_length <= ?
+       AND lower(COALESCE(o.annotation_source, '')) NOT LIKE 'sql_annotation_%'
+       AND (? = '' OR o.host_vector_id <> ?)
+     ORDER BY cds.amino_acid_length DESC, f.updated_at DESC, f.name COLLATE NOCASE ASC`,
+    [
+      MIN_PROTEIN_ANNOTATION_AA_LENGTH,
+      Math.max(0, Math.floor((normalizeSequenceText(querySequence).length || 0) / 3)),
+      cleanText(excludeEntryId, 200),
+      cleanText(excludeEntryId, 200)
+    ]
+  );
+
+  const groupsByProtein = new Map();
+  rows.forEach((row) => {
+    const proteinSequence = normalizeProteinSequence(row?.amino_acid_sequence);
+    if (!proteinSequence || shouldSkipAnnotationFeatureName(row?.name)) {
+      return;
+    }
+
+    const groupKey = `${normalizeName(row?.name || 'cds', 'cds')}\n${cleanText(row?.feature_type, 120).toLowerCase() || 'cds'}`;
+    let grouped = groupsByProtein.get(proteinSequence);
+    if (!grouped) {
+      grouped = new Map();
+      groupsByProtein.set(proteinSequence, grouped);
+    }
+
+    let group = grouped.get(groupKey);
+    if (!group) {
+      group = {
+        name: normalizeName(row?.name || 'cds', 'cds'),
+        type: cleanText(row?.feature_type, 120).toLowerCase() || 'cds',
+        proteinSequence,
+        dnaSequence: normalizeSequenceText(row?.dna_sequence),
+        hosts: new Map()
+      };
+      grouped.set(groupKey, group);
+    }
+
+    appendHostToMap(group.hosts, row);
+  });
+
+  return groupsByProtein;
+}
+
+function buildDnaAnnotationMatches(db, querySequence, topology = 'linear', excludeEntryId = '') {
+  const normalizedQuery = normalizeSequenceText(querySequence);
+  if (!normalizedQuery.length) {
+    return [];
+  }
+
+  const candidates = buildDnaAnnotationCandidates(db, normalizedQuery.length, excludeEntryId);
+  if (!candidates.length) {
+    return [];
+  }
+
+  const sequenceMatchCache = new Map();
+  const matches = [];
+  for (const candidate of candidates) {
+    if (matches.length >= MAX_ANNOTATION_FEATURES_PER_RUN) {
+      break;
+    }
+
+    const candidateSequence = normalizeSequenceText(candidate.matchedSequence);
+    if (!candidateSequence.length) {
+      continue;
+    }
+
+    let cached = sequenceMatchCache.get(candidateSequence);
+    if (!cached) {
+      const reverseSequence = reverseComplementIupac(candidateSequence);
+      cached = {
+        forwardStarts: findPatternMatchStarts(normalizedQuery, candidateSequence, topology),
+        reverseSequence,
+        reverseStarts: reverseSequence !== candidateSequence
+          ? findPatternMatchStarts(normalizedQuery, reverseSequence, topology)
+          : []
+      };
+      sequenceMatchCache.set(candidateSequence, cached);
+    }
+
+    cached.forwardStarts.forEach((start) => {
+      if (matches.length >= MAX_ANNOTATION_FEATURES_PER_RUN) {
+        return;
+      }
+      matches.push({
+        featureId: candidate.featureId,
+        name: candidate.name,
+        type: candidate.type,
+        strand: 1,
+        matchedSequence: candidateSequence,
+        sequenceLength: candidate.sequenceLength,
+        hosts: candidate.hosts,
+        segments: buildSegmentsFromStartAndLength(start, candidateSequence.length, normalizedQuery.length, topology)
+      });
+    });
+
+    cached.reverseStarts.forEach((start) => {
+      if (matches.length >= MAX_ANNOTATION_FEATURES_PER_RUN) {
+        return;
+      }
+      matches.push({
+        featureId: candidate.featureId,
+        name: candidate.name,
+        type: candidate.type,
+        strand: -1,
+        matchedSequence: candidateSequence,
+        sequenceLength: candidate.sequenceLength,
+        hosts: candidate.hosts,
+        segments: buildSegmentsFromStartAndLength(start, candidateSequence.length, normalizedQuery.length, topology)
+      });
+    });
+  }
+
+  return matches
+    .filter((match) => Array.isArray(match.segments) && match.segments.length)
+    .sort((left, right) => {
+      const leftStart = left.segments?.[0]?.start ?? 0;
+      const rightStart = right.segments?.[0]?.start ?? 0;
+      if (leftStart !== rightStart) {
+        return leftStart - rightStart;
+      }
+      return Math.max(0, Number(right.sequenceLength) || 0) - Math.max(0, Number(left.sequenceLength) || 0);
+    });
+}
+
+function buildProteinAnnotationMatches(db, querySequence, topology = 'linear', excludeEntryId = '') {
+  const normalizedQuery = normalizeSequenceText(querySequence);
+  if (!normalizedQuery.length) {
+    return [];
+  }
+
+  const groupsByProtein = buildProteinAnnotationGroups(db, normalizedQuery, excludeEntryId);
+  const proteinLengths = [...groupsByProtein.keys()].map((proteinSequence) => proteinSequence.length).filter(Boolean);
+  if (!proteinLengths.length) {
+    return [];
+  }
+
+  const minDetectedAaLength = Math.max(
+    MIN_PROTEIN_ANNOTATION_AA_LENGTH,
+    Math.min(...proteinLengths)
+  );
+  const orfs = buildProteinAnnotationOrfs(normalizedQuery, topology, minDetectedAaLength);
+  if (!orfs.length) {
+    return [];
+  }
+
+  const matches = [];
+  for (const orf of orfs) {
+    if (matches.length >= MAX_ANNOTATION_FEATURES_PER_RUN) {
+      break;
+    }
+
+    const groupedCandidates = groupsByProtein.get(normalizeProteinSequence(orf.proteinSequence));
+    if (!groupedCandidates || !groupedCandidates.size) {
+      continue;
+    }
+
+    groupedCandidates.forEach((group) => {
+      if (matches.length >= MAX_ANNOTATION_FEATURES_PER_RUN) {
+        return;
+      }
+      matches.push({
+        name: group.name,
+        type: group.type,
+        strand: orf.strand,
+        segments: orf.segments,
+        translation: orf.translation,
+        matchedSequence: orf.dnaSequence,
+        proteinSequence: orf.proteinSequence,
+        hosts: [...group.hosts.values()],
+        orfFrame: orf.orfFrame,
+        orfLengthNt: orf.orfLengthNt,
+        orfLengthAa: orf.orfLengthAa,
+        startCodon: orf.startCodon,
+        stopCodon: orf.stopCodon
+      });
+    });
+  }
+
+  return matches.sort((left, right) => {
+    const leftStart = left.segments?.[0]?.start ?? 0;
+    const rightStart = right.segments?.[0]?.start ?? 0;
+    if (leftStart !== rightStart) {
+      return leftStart - rightStart;
+    }
+    return Math.max(0, Number(right.orfLengthNt) || 0) - Math.max(0, Number(left.orfLengthNt) || 0);
+  });
+}
+
+async function annotateSequenceRecord({ storagePath, sequence = '', topology = 'linear', excludeEntryId = '' }) {
+  const normalizedQuery = normalizeSequenceText(sequence);
+  const paths = resolveLibraryPaths(storagePath);
+  await ensureLibraryDirectories(paths);
+  const db = await openDatabase(paths.sqlitePath);
+  try {
+    if (!normalizedQuery.length) {
+      return {
+        queryLength: 0,
+        topology: normalizeTopologyValue(topology),
+        dnaMatches: [],
+        proteinMatches: [],
+        totalMatches: 0
+      };
+    }
+
+    const normalizedTopology = normalizeTopologyValue(topology);
+    const dnaMatches = buildDnaAnnotationMatches(db, normalizedQuery, normalizedTopology, excludeEntryId);
+    const proteinMatches = buildProteinAnnotationMatches(db, normalizedQuery, normalizedTopology, excludeEntryId);
+    return {
+      queryLength: normalizedQuery.length,
+      topology: normalizedTopology,
+      dnaMatches,
+      proteinMatches,
+      totalMatches: dnaMatches.length + proteinMatches.length
+    };
+  } finally {
+    db.close();
+  }
 }
 
 async function searchSequenceFeatures({ storagePath, query = '', limit = 30 }) {
@@ -1248,6 +2085,108 @@ async function searchSequenceFeatures({ storagePath, query = '', limit = 30 }) {
     db.close();
   }
 }
+
+async function listRecognizedBackbones({ storagePath, query = '', limit = 50 }) {
+  const safeQuery = cleanText(query, 600).toLowerCase();
+  const safeLimit = clamp(Math.round(Number(limit) || 50), 1, 200);
+  const paths = resolveLibraryPaths(storagePath);
+  await ensureLibraryDirectories(paths);
+
+  const artifactsRoot = path.join(paths.libraryRoot, RECOGNIZED_BACKBONE_ARTIFACT_DIR_NAME);
+  let entries = [];
+  try {
+    entries = await fs.readdir(artifactsRoot, { withFileTypes: true });
+  } catch (error) {
+    if (String(error?.code || '') === 'ENOENT') {
+      return { query: cleanText(query, 600), results: [] };
+    }
+    throw error;
+  }
+
+  const results = [];
+  await Promise.all(entries.map(async (entry) => {
+    if (!entry?.isFile?.() || !String(entry.name || '').toLowerCase().endsWith('.json')) {
+      return;
+    }
+
+    const filePath = path.join(artifactsRoot, entry.name);
+    let parsed = null;
+    try {
+      parsed = JSON.parse(await fs.readFile(filePath, 'utf8'));
+    } catch {
+      return;
+    }
+    if (!parsed || String(parsed?.schema_name || '') !== RECOGNIZED_BACKBONE_SCHEMA_NAME) {
+      return;
+    }
+
+    const hostVectorName = cleanText(parsed?.recognition?.host_vector_name, 160);
+    const sourceRecordName = cleanText(parsed?.source_record?.name, 160);
+    const backboneName = cleanText(parsed?.backbone?.name, 160);
+    const promoterName = cleanText(parsed?.recognition?.promoter_name, 160);
+    const searchableText = [
+      hostVectorName,
+      sourceRecordName,
+      backboneName,
+      promoterName,
+      cleanText(parsed?.recognition?.variant_mode, 40)
+    ].join(' ').toLowerCase();
+
+    if (safeQuery && !searchableText.includes(safeQuery)) {
+      return;
+    }
+
+    const backboneSequence = normalizeSequenceText(parsed?.backbone?.sequence || '');
+    const insertSequence = normalizeSequenceText(parsed?.insert?.sequence || '');
+    const backboneLength = Math.max(0, Number(parsed?.backbone?.sequence_length) || backboneSequence.length);
+    const insertLength = Math.max(0, Number(parsed?.insert?.sequence_length) || insertSequence.length);
+    const originalSequenceLength = Math.max(backboneLength + insertLength, backboneSequence.length);
+    const backboneSegments = normalizeBackboneSegments(parsed?.backbone?.segments, originalSequenceLength);
+    const insertSegments = normalizeBackboneSegments(parsed?.insert?.segments, originalSequenceLength);
+    const insertionOffset = computeRecognizedBackboneInsertionOffset(backboneSegments, originalSequenceLength);
+    const updatedAt = cleanText(parsed?.updated_at, 120);
+    results.push({
+      id: toPosixRelative(paths.storageRoot, filePath),
+      sourceKind: 'recognized_backbone',
+      fileName: entry.name,
+      relativePath: toPosixRelative(paths.storageRoot, filePath),
+      updatedAt,
+      sourceRecordName,
+      sourceEntryId: cleanText(parsed?.source_record?.entry_id, 200),
+      sourceEntryStatus: normalizeStatus(parsed?.source_record?.entry_status),
+      topology: cleanText(parsed?.source_record?.topology, 40) || 'linear',
+      hostVectorName,
+      promoterName,
+      variantMode: cleanText(parsed?.recognition?.variant_mode, 40).toLowerCase() === 'restriction'
+        ? 'restriction'
+        : 'gibson',
+      backboneName: backboneName || hostVectorName || sourceRecordName || 'Stored backbone',
+      backboneSequence,
+      backboneLength,
+      backboneSegments,
+      insertName: cleanText(parsed?.insert?.name, 160) || 'Stored insert',
+      insertSequence,
+      insertLength,
+      insertSegments,
+      insertionOffset
+    });
+  }));
+
+  results.sort((left, right) => {
+    const leftTime = Date.parse(String(left?.updatedAt || '')) || 0;
+    const rightTime = Date.parse(String(right?.updatedAt || '')) || 0;
+    if (leftTime !== rightTime) {
+      return rightTime - leftTime;
+    }
+    return cleanText(left?.backboneName, 160).localeCompare(cleanText(right?.backboneName, 160));
+  });
+
+  return {
+    query: cleanText(query, 600),
+    results: results.slice(0, safeLimit)
+  };
+}
+
 async function recognizeSequenceBackbone({ storagePath, sequence = '', excludeEntryId = '' }) {
   return recognizeSequenceBackboneInLibrary({
     fs,
@@ -1281,7 +2220,9 @@ module.exports = {
   upsertSequenceEntry,
   promoteSequenceEntry,
   deleteSequenceEntry,
+  annotateSequenceRecord,
   searchSequenceFeatures,
+  listRecognizedBackbones,
   recognizeSequenceBackbone,
   sanitizeFileName
 };

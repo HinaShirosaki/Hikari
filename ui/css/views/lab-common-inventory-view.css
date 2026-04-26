@@ -22,15 +22,47 @@
   border-top: 0;
 }
 
-.chemical-sidebar-stack,
+.chemical-sidebar-stack {
+  display: grid;
+  gap: 0;
+  align-content: start;
+}
+
 .chemical-main {
   display: grid;
   gap: 18px;
 }
 
+.chemical-sidebar-section {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
 .chemical-add-btn {
   width: 100%;
   min-height: 46px;
+}
+
+.chemical-import-btn {
+  width: 100%;
+  min-height: 42px;
+}
+
+.chemical-import-status {
+  margin-top: -4px;
+}
+
+.chemical-import-status[data-status="success"] {
+  color: color-mix(in srgb, var(--success, #1f8f5f) 82%, var(--text) 18%);
+}
+
+.chemical-import-status[data-status="warning"] {
+  color: color-mix(in srgb, var(--warning, #b26a00) 82%, var(--text) 18%);
+}
+
+.chemical-import-status[data-status="error"] {
+  color: color-mix(in srgb, var(--danger, #b42318) 82%, var(--text) 18%);
 }
 
 .chemical-search-field {
@@ -52,37 +84,6 @@
 
 .chemical-panel-copy h2 {
   margin-bottom: 0;
-}
-
-.chemical-toolbar-grid {
-  margin-top: 18px;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.chemical-toolbar-grid > * {
-  min-width: 0;
-}
-
-.chemical-sync-strip {
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px solid var(--line-soft);
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: end;
-}
-
-.chemical-sync-strip label {
-  flex: 1 1 260px;
-  min-width: 220px;
-}
-
-.chemical-pending-note {
-  margin-left: auto;
-  align-self: center;
 }
 
 #lab-common-inventory-view #chemical-list {
@@ -196,19 +197,6 @@
 
   .chemical-sidebar {
     position: static;
-  }
-
-  .chemical-sidebar-stack {
-    gap: 12px;
-  }
-
-  .chemical-toolbar-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .chemical-pending-note {
-    margin-left: 0;
-    width: 100%;
   }
 }
 

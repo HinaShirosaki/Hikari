@@ -1,0 +1,41 @@
+LOCUS       .                       1529 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..1529
+                     /note="3' portion of a modified Kluyveromyces lactis LAC4
+                     promoter"
+                     /label="LAC4 promoter (3')"
+ORIGIN
+        1 ggggatcgac tcataaaata gtaaccttct aatgcgtatc tattgactac caaccattag
+       61 tgtggttgca gaaggcggaa ttttcccttc ttcgaattta gcttgctttt tcatttttta
+      121 ttttccattt ttcagttttt gtttgtgtcg aatttagcca gttgcttctc caagatgaaa
+      181 aaaacccctg cgcagtttct gtgctgcaag atcctaatcg acttttccac cccccacaaa
+      241 agtaaatgtt cttttgttac attcgcgtgg gtagctagct ccccgaatct tcaaaggact
+      301 tagggactgc actacatcag agtgtgttca cctggtttgc tgcctggttt gaaagaaaag
+      361 agcagggaac tcgcgggttc ccggcgaata atcatgcgat agtcctttgg ccttccaagt
+      421 cgcatgtaga gtagacaaca gacagggagg gcaggaagga tctttcactg agatcctgta
+      481 tcttgttggg taagtcggat gaaaggggaa tcgtatgaga ttggagagga tgcggaagag
+      541 gtaacgcctt ttgttaactt gtttaattat tatggggcag gcgagagggg gaggaatgta
+      601 tgtgtgtgag gcgggcgaga cggagccatc caggccaggt agaaatagag aaagccgaat
+      661 gttagacaat atggcagcgt agtagagtag gtaggtaggc aagtactgct agcaaagagg
+      721 agaagggtaa gctcactctt cgcattccac accgttagtg tgtcagtttg aacaaaaaaa
+      781 caatcatcat accaattgat ggactgtgga ctggcttttg gaacggcttt tcggactgcg
+      841 attattcgtg aggaatcaag gtaggaattt ggtcatattt acggacaaca gtgggtgatt
+      901 cccatatcga gtaggaaaac gagatcatgg tatcctcaga tatgttgcgg aaatctgttc
+      961 accgcaaagt tcagggtgct ctggtgggtt tcggttggtc tttgctttgc ttctcccttg
+     1021 tcttgcatgt taataatagc ctagcctgtg agccgaaact tagggtaggc ttagtgttgg
+     1081 aacgtacata tctatcacgt tgacttggtt taaccaggcg acctggtagc cagccatacc
+     1141 cacacacgtt ttttgtatct tcagtatagt tgtgaaaagt gtagcggaaa tttgtggtcc
+     1201 gagcaacagc gtctttttct agtagtgcgg tcggttactt ggttgacatt ggtatttgga
+     1261 ctttgttgct acaccattca ctacttgaag tcgagtgtga agggtatgat ttctagtggt
+     1321 gaacaccttt agttacgtaa tgttttcatt gctgttttac ttgagatttc gattgagaaa
+     1381 aaggtattta atagctcgaa tcaatgtgag aacagagaga agatgttctt ccctaactcg
+     1441 aaaggtatat gaggcttgtg tttcttagga gaattattat tcttttgtta tgttgcgctt
+     1501 gtagttggaa aaggtgaaga gacaaaagc
+//

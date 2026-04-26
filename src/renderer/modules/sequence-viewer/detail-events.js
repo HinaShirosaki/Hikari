@@ -23,14 +23,22 @@ export function bindSequenceViewerDetailEvents(config = {}) {
   const deleteFeatureFromContext = config?.deleteFeatureFromContext || (async () => {});
   const applyFeatureEditorChanges = config?.applyFeatureEditorChanges || (async () => {});
   const getActiveFeatureActionContext = config?.getActiveFeatureActionContext || (() => null);
+  const onRequestAnnotate = config?.onRequestAnnotate || (() => {});
   const onRequestRecognizeBackbone = config?.onRequestRecognizeBackbone || (() => {});
   const onRequestClear = config?.onRequestClear || (() => {});
   const onRequestSave = config?.onRequestSave || (() => {});
   const onRequestAlignment = config?.onRequestAlignment || (() => {});
   const onSelectAlignmentSession = config?.onSelectAlignmentSession || (() => {});
+  const onConfirmProteinBuilderConstruct = config?.onConfirmProteinBuilderConstruct || (() => {});
+  const onReturnToProteinBuilder = config?.onReturnToProteinBuilder || (() => {});
   const onNavigateHome = config?.onNavigateHome || (() => {});
   const onRefreshLibraryEntries = config?.onRefreshLibraryEntries || (() => {});
   const onReferenceRecordChanged = config?.onReferenceRecordChanged || (() => {});
+
+  elements.annotateBtn?.addEventListener('click', (event) => {
+    event.preventDefault();
+    void onRequestAnnotate();
+  });
 
   elements.recognizeBackboneBtn?.addEventListener('click', (event) => {
     event.preventDefault();
@@ -99,6 +107,16 @@ export function bindSequenceViewerDetailEvents(config = {}) {
     }
     state.alignmentViewEnabled = Boolean(elements.alignmentToggle.checked);
     renderActiveRecord();
+  });
+
+  elements.proteinBuilderConfirmationConfirmBtn?.addEventListener('click', (event) => {
+    event.preventDefault();
+    onConfirmProteinBuilderConstruct();
+  });
+
+  elements.proteinBuilderConfirmationBackBtn?.addEventListener('click', (event) => {
+    event.preventDefault();
+    onReturnToProteinBuilder();
   });
 
   elements.backBtn?.addEventListener('click', (event) => {

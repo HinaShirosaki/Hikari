@@ -1,0 +1,18 @@
+LOCUS       .                        188 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..188
+                     /gene="S. cerevisiae HIS3"
+                     /label="HIS3 promoter"
+ORIGIN
+        1 ctagtacact ctatattttt ttatgcctcg gtaatgattt tcattttttt ttttccacct
+       61 agcggatgac tctttttttt tcttagcgat tggcattatc acataatgaa ttatacatta
+      121 tataaagtaa tgtgatttct tcgaagaata tactaaaaaa tgagcaggca agataaacga
+      181 aggcaaag
+//

@@ -1,0 +1,17 @@
+LOCUS       .                         35 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..35
+                     /note="Anderson constitutive promoter
+                     (https://parts.igem.org/Promoters/Catalog/Anderson).
+                     Measured strength relative to BBa_J223100: 0.33"
+                     /label="BBa_J23110"
+ORIGIN
+        1 tttacggcta gctcagtcct aggtacaatg ctagc
+//

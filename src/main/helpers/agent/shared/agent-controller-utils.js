@@ -618,6 +618,8 @@ function createAgentControllerUtils(deps = {}) {
     resolveAgentEndpoint,
     resolveAgentModel,
     resolveAgentLlmSource,
+    requestText: llmHelpers.requestText,
+    requestWebSearch: llmHelpers.requestWebSearch,
     requestIntentParserPayload
   };
 }

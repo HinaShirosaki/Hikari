@@ -270,6 +270,16 @@ class MockElement {
     while ((match = pattern.exec(this._innerHTML))) {
       const element = new MockElement(`${this.id}:${attributeName}:${results.length}`);
       element.dataset[datasetKey] = String(match[1] || '');
+      const tagStart = this._innerHTML.lastIndexOf('<', match.index);
+      const tagEnd = this._innerHTML.indexOf('>', match.index);
+      const tagMarkup = tagStart >= 0 && tagEnd >= tagStart
+        ? this._innerHTML.slice(tagStart, tagEnd + 1)
+        : '';
+      const valueMatch = tagMarkup.match(/\bvalue="([^"]*)"/i);
+      if (valueMatch) {
+        element.value = String(valueMatch[1] || '');
+      }
+      element.hidden = /\shidden(?:[\s=>]|$)/i.test(tagMarkup);
       results.push(element);
     }
     return results;

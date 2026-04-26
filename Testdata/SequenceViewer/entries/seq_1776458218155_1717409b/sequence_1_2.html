@@ -1,0 +1,1799 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>sequence_1</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --preview-ink: #16314c;
+      --preview-muted: #5a7592;
+      --preview-backbone: #7e99ba;
+      --preview-center-ring: #d8e4f2;
+      --preview-center-disc: #f9fbfe;
+      --preview-tick: #8ca5c5;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: #ffffff;
+    }
+    body {
+      font-family: "Playfair Display", serif;
+      color: var(--preview-ink);
+      overflow: hidden;
+    }
+    .preview-shell {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      place-items: center;
+      margin: 0;
+      padding: 4px;
+    }
+    svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+      max-width: 100%;
+      max-height: 100%;
+    }
+    .circular-preview__backbone {
+      fill: none;
+      stroke: var(--preview-backbone);
+      stroke-width: 16;
+    }
+    .circular-preview__center-ring {
+      fill: none;
+      stroke: var(--preview-center-ring);
+      stroke-width: 2;
+    }
+    .circular-preview__center-disc {
+      fill: var(--preview-center-disc);
+      stroke: var(--preview-center-ring);
+      stroke-width: 2;
+    }
+    .circular-preview__tick {
+      stroke: var(--preview-tick);
+      stroke-width: 1.5;
+      opacity: 0.9;
+    }
+    .circular-preview__feature {
+      stroke-width: 1.5;
+      stroke-linejoin: round;
+    }
+    .circular-preview__leader {
+      fill: none;
+      stroke-width: 1.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      opacity: 0.82;
+    }
+    .circular-preview__label-box {
+      stroke-width: 1.2;
+    }
+    .circular-preview__label-text {
+      font-size: 15px;
+      font-weight: 600;
+      dominant-baseline: middle;
+      letter-spacing: 0.01em;
+    }
+    .circular-preview__hover-tooltip {
+      position: fixed;
+      z-index: 20;
+      min-width: 180px;
+      max-width: min(320px, calc(100vw - 16px));
+      border-radius: 10px;
+      border: 1px solid rgba(90, 119, 165, 0.42);
+      background: rgba(249, 252, 255, 0.98);
+      box-shadow: 0 10px 24px rgba(27, 20, 14, 0.12);
+      padding: 9px 11px;
+      font-size: 12px;
+      line-height: 1.35;
+      color: var(--preview-ink);
+      pointer-events: none;
+    }
+    .circular-preview__hover-tooltip[hidden] {
+      display: none;
+    }
+    .circular-preview__hover-tooltip p {
+      margin: 0;
+    }
+    .circular-preview__hover-tooltip p + p {
+      margin-top: 3px;
+    }
+    .circular-preview__hover-title {
+      font-weight: 700;
+    }
+    .circular-preview__hover-description {
+      color: var(--preview-muted);
+    }
+    .circular-preview__title {
+      fill: var(--preview-ink);
+      font-size: 28px;
+      font-weight: 700;
+      text-anchor: middle;
+    }
+    .circular-preview__subtitle {
+      text-anchor: middle;
+      fill: var(--preview-muted);
+      letter-spacing: 0.02em;
+    }
+    .circular-preview__subtitle {
+      font-size: 15px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <main class="preview-shell" data-renderer="dna-feature-viewer-js">
+    <!-- Circular plasmid preview powered by a minimal JS port inspired by DnaFeaturesViewer (MIT). -->
+    <svg
+      viewBox="0 0 1302 1266"
+      preserveAspectRatio="xMidYMid meet"
+      role="img"
+      aria-label="sequence_1 circular plasmid preview">
+      <desc>Standalone circular plasmid preview for sequence_1.</desc>
+      <g class="circular-preview__scene">
+        <circle class="circular-preview__center-ring" cx="665.80" cy="626.74" r="258.00"></circle>
+        <circle class="circular-preview__backbone" cx="665.80" cy="626.74" r="290.00"></circle>
+        <line class="circular-preview__tick" x1="665.80" y1="348.74" x2="665.80" y2="324.74"></line><line class="circular-preview__tick" x1="772.19" y1="369.90" x2="781.37" y2="347.72"></line><line class="circular-preview__tick" x1="862.38" y1="430.16" x2="879.35" y2="413.19"></line><line class="circular-preview__tick" x1="922.64" y1="520.35" x2="944.81" y2="511.17"></line><line class="circular-preview__tick" x1="943.80" y1="626.74" x2="967.80" y2="626.74"></line><line class="circular-preview__tick" x1="922.64" y1="733.12" x2="944.81" y2="742.31"></line><line class="circular-preview__tick" x1="862.38" y1="823.31" x2="879.35" y2="840.28"></line><line class="circular-preview__tick" x1="772.19" y1="883.57" x2="781.37" y2="905.75"></line><line class="circular-preview__tick" x1="665.80" y1="904.74" x2="665.80" y2="928.74"></line><line class="circular-preview__tick" x1="559.41" y1="883.57" x2="550.23" y2="905.75"></line><line class="circular-preview__tick" x1="469.22" y1="823.31" x2="452.25" y2="840.28"></line><line class="circular-preview__tick" x1="408.96" y1="733.12" x2="386.79" y2="742.31"></line><line class="circular-preview__tick" x1="387.80" y1="626.74" x2="363.80" y2="626.74"></line><line class="circular-preview__tick" x1="408.96" y1="520.35" x2="386.79" y2="511.17"></line><line class="circular-preview__tick" x1="469.22" y1="430.16" x2="452.25" y2="413.19"></line><line class="circular-preview__tick" x1="559.41" y1="369.90" x2="550.23" y2="347.72"></line>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="1"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_1"
+            data-tooltip-name="Backbone (pasted_sequence)"
+            data-tooltip-meta="backbone | Strand +"
+            data-tooltip-location="1..5625"
+            data-tooltip-description="Exact DNA annotation match for stored backbone. 5,625 bp matched. Seen in sequence_1."
+            d="M 665.80 300.74 A 326.00 326.00 0 1 1 637.39 301.98 L 665.80 309.74 L 638.96 319.91 A 308.00 308.00 0 1 0 665.80 318.74 Z"
+            aria-label="Backbone (pasted_sequence) (1..5625) - Exact DNA annotation match for stored backbone. 5,625 bp matched. Seen in sequence_1."
+            fill="#c97064"
+            stroke="#a8635e"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="2"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_22"
+            data-tooltip-name="misc_feature_"
+            data-tooltip-meta="misc_feature_ | Strand +"
+            data-tooltip-location="4242..5333"
+            data-tooltip-description="Exact DNA annotation match for stored misc_feature_. 1,092 bp matched. Seen in HSA_K_Hrk and CD19."
+            d="M 309.91 617.89 A 356.00 356.00 0 0 1 522.77 300.73 L 554.62 298.03 L 530.01 317.21 A 338.00 338.00 0 0 0 327.90 618.34 Z"
+            aria-label="misc_feature_ (4242..5333) - Exact DNA annotation match for stored misc_feature_. 1,092 bp matched. Seen in HSA_K_Hrk and CD19."
+            fill="#808080"
+            stroke="#6c7075"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="3"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_11"
+            data-tooltip-name="misc_feature_"
+            data-tooltip-meta="misc_feature_ | Strand +"
+            data-tooltip-location="1290..2105"
+            data-tooltip-description="Exact DNA annotation match for stored misc_feature_. 816 bp matched. Seen in HSA_K_Hrk and CD19."
+            d="M 1018.75 580.24 A 356.00 356.00 0 0 1 939.63 854.23 L 912.36 870.90 L 925.78 842.73 A 338.00 338.00 0 0 0 1000.91 582.59 Z"
+            aria-label="misc_feature_ (1290..2105) - Exact DNA annotation match for stored misc_feature_. 816 bp matched. Seen in HSA_K_Hrk and CD19."
+            fill="#808080"
+            stroke="#6c7075"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="4"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_8"
+            data-tooltip-name="f1 ori"
+            data-tooltip-meta="rep_origin | Strand +"
+            data-tooltip-location="743..1171"
+            data-tooltip-description="Exact DNA annotation match for stored rep_origin. 429 bp matched. Seen in sequence_1, pcDNA3.1-GFP_1-10_, and 5 more."
+            d="M 928.22 386.17 A 356.00 356.00 0 0 1 1000.21 504.65 L 1000.89 536.60 L 983.30 510.82 A 338.00 338.00 0 0 0 914.95 398.33 Z"
+            aria-label="f1 ori (743..1171) - Exact DNA annotation match for stored rep_origin. 429 bp matched. Seen in sequence_1, pcDNA3.1-GFP_1-10_, and 5 more."
+            fill="#4e7fff"
+            stroke="#436fdd"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="5"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_16"
+            data-tooltip-name="ori (fragment)"
+            data-tooltip-meta="rep_origin | Strand +"
+            data-tooltip-location="2523..2815"
+            data-tooltip-description="Exact DNA annotation match for stored rep_origin. 293 bp matched. Seen in 001_sample_1."
+            d="M 779.30 964.16 A 356.00 356.00 0 0 1 695.84 981.47 L 664.83 973.73 L 694.32 963.53 A 338.00 338.00 0 0 0 773.56 947.10 Z"
+            aria-label="ori (fragment) (2523..2815) - Exact DNA annotation match for stored rep_origin. 293 bp matched. Seen in 001_sample_1."
+            fill="#4e7fff"
+            stroke="#436fdd"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="6"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_19"
+            data-tooltip-name="misc_feature_"
+            data-tooltip-meta="misc_feature_ | Strand +"
+            data-tooltip-location="3242..3433"
+            data-tooltip-description="Exact DNA annotation match for stored misc_feature_. 192 bp matched. Seen in HSA_K_Hrk and CD19."
+            d="M 501.84 942.73 A 356.00 356.00 0 0 1 463.08 919.38 L 444.09 893.67 L 473.33 904.58 A 338.00 338.00 0 0 0 510.13 926.75 Z"
+            aria-label="misc_feature_ (3242..3433) - Exact DNA annotation match for stored misc_feature_. 192 bp matched. Seen in HSA_K_Hrk and CD19."
+            fill="#808080"
+            stroke="#6c7075"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="7"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_18"
+            data-tooltip-name="bom"
+            data-tooltip-meta="misc_feature | Strand -"
+            data-tooltip-location="complement(3001..3140)"
+            data-tooltip-description="Exact DNA annotation match for stored misc_feature. 140 bp matched. Seen in sequence_1, 001_sample_1, and 2 more."
+            d="M 593.65 966.15 L 564.81 968.11 A 356.00 356.00 0 0 1 538.45 959.18 L 544.89 942.37 A 338.00 338.00 0 0 0 569.92 950.85 Z"
+            aria-label="bom (complement(3001..3140)) - Exact DNA annotation match for stored misc_feature. 140 bp matched. Seen in sequence_1, 001_sample_1, and 2 more."
+            fill="#2f8f9d"
+            stroke="#297c8d"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="8"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_9"
+            data-tooltip-name="AmpR promoter"
+            data-tooltip-meta="promoter | Strand +"
+            data-tooltip-location="1224..1281"
+            data-tooltip-description="Exact DNA annotation match for stored promoter. 58 bp matched. Seen in sequence_1."
+            d="M 1014.37 554.37 A 356.00 356.00 0 0 1 1016.53 565.70 L 1009.41 578.35 L 998.80 568.79 A 338.00 338.00 0 0 0 996.74 558.03 Z"
+            aria-label="AmpR promoter (1224..1281) - Exact DNA annotation match for stored promoter. 58 bp matched. Seen in sequence_1."
+            fill="#8b5cf6"
+            stroke="#7553d6"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="9"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_7"
+            data-tooltip-name="T7 terminator"
+            data-tooltip-meta="terminator | Strand +"
+            data-tooltip-location="659..706"
+            data-tooltip-description="Exact DNA annotation match for stored terminator. 48 bp matched. Seen in sequence_1, 001_sample_1, and 2 more."
+            d="M 904.53 362.64 A 356.00 356.00 0 0 1 911.52 369.14 L 911.95 382.16 L 899.10 382.16 A 338.00 338.00 0 0 0 892.46 376.00 Z"
+            aria-label="T7 terminator (659..706) - Exact DNA annotation match for stored terminator. 48 bp matched. Seen in sequence_1, 001_sample_1, and 2 more."
+            fill="#f6a35e"
+            stroke="#cd8d59"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="10"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_12"
+            data-tooltip-name="CloDF13 ori"
+            data-tooltip-meta="rep_origin | Strand +"
+            data-tooltip-location="2212..2255"
+            data-tooltip-description="Exact DNA annotation match for stored rep_origin. 44 bp matched. Seen in sequence_1."
+            d="M 887.40 905.36 A 356.00 356.00 0 0 1 880.48 910.72 L 868.19 908.60 L 869.63 896.36 A 338.00 338.00 0 0 0 876.19 891.27 Z"
+            aria-label="CloDF13 ori (2212..2255) - Exact DNA annotation match for stored rep_origin. 44 bp matched. Seen in sequence_1."
+            fill="#4e7fff"
+            stroke="#436fdd"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="11"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_15"
+            data-tooltip-name="RSF ori"
+            data-tooltip-meta="rep_origin | Strand +"
+            data-tooltip-location="2271..2297"
+            data-tooltip-description="Exact DNA annotation match for stored rep_origin. 27 bp matched. Seen in sequence_1."
+            d="M 868.57 919.35 A 356.00 356.00 0 0 1 864.13 922.37 L 854.75 917.78 L 854.10 907.42 A 338.00 338.00 0 0 0 858.31 904.55 Z"
+            aria-label="RSF ori (2271..2297) - Exact DNA annotation match for stored rep_origin. 27 bp matched. Seen in sequence_1."
+            fill="#4e7fff"
+            stroke="#436fdd"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="12"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_4"
+            data-tooltip-name="lac operator"
+            data-tooltip-meta="protein_bind | Strand +"
+            data-tooltip-location="105..129"
+            data-tooltip-description="Exact DNA annotation match for stored protein_bind. 25 bp matched. Seen in sequence_1, 001_sample_1, and 2 more."
+            d="M 707.06 273.14 A 356.00 356.00 0 0 1 712.00 273.75 L 715.63 283.33 L 709.66 291.59 A 338.00 338.00 0 0 0 704.98 291.01 Z"
+            aria-label="lac operator (105..129) - Exact DNA annotation match for stored protein_bind. 25 bp matched. Seen in sequence_1, 001_sample_1, and 2 more."
+            fill="#f6a35e"
+            stroke="#cd8d59"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="13"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_6"
+            data-tooltip-name="RBS"
+            data-tooltip-meta="rbs | Strand +"
+            data-tooltip-location="144..166"
+            data-tooltip-description="Exact DNA annotation match for stored rbs. 23 bp matched. Seen in sequence_1, 001_sample_1, and 2 more."
+            d="M 722.42 275.27 A 356.00 356.00 0 0 1 726.93 276.02 L 729.77 285.68 L 723.84 293.76 A 338.00 338.00 0 0 0 719.56 293.04 Z"
+            aria-label="RBS (144..166) - Exact DNA annotation match for stored rbs. 23 bp matched. Seen in sequence_1, 001_sample_1, and 2 more."
+            fill="#c97064"
+            stroke="#a8635e"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="14"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_20"
+            data-tooltip-name="CAP binding site"
+            data-tooltip-meta="protein_bind | Strand -"
+            data-tooltip-location="complement(4208..4229)"
+            data-tooltip-description="Exact DNA annotation match for stored protein_bind. 22 bp matched. Seen in sequence_1, 001_sample_1, and 2 more."
+            d="M 318.83 631.29 L 309.80 627.03 A 356.00 356.00 0 0 1 309.82 622.66 L 327.82 622.87 A 338.00 338.00 0 0 0 327.80 627.02 Z"
+            aria-label="CAP binding site (complement(4208..4229)) - Exact DNA annotation match for stored protein_bind. 22 bp matched. Seen in sequence_1, 001_sample_1, and 2 more."
+            fill="#f6a35e"
+            stroke="#cd8d59"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="15"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_2"
+            data-tooltip-name="T7 promoter"
+            data-tooltip-meta="promoter | Strand +"
+            data-tooltip-location="86..104"
+            data-tooltip-description="Exact DNA annotation match for stored promoter. 19 bp matched. Seen in sequence_1, pcDNA3.1-GFP_1-10_, and 3 more."
+            d="M 699.55 272.34 A 356.00 356.00 0 0 1 703.31 272.72 L 706.02 282.07 L 701.41 290.62 A 338.00 338.00 0 0 0 697.84 290.26 Z"
+            aria-label="T7 promoter (86..104) - Exact DNA annotation match for stored promoter. 19 bp matched. Seen in sequence_1, pcDNA3.1-GFP_1-10_, and 3 more."
+            fill="#8b5cf6"
+            stroke="#7553d6"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="16"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_25"
+            data-tooltip-name="KanR"
+            data-tooltip-meta="cds | Strand -"
+            data-tooltip-location="complement(1290..2105)"
+            data-tooltip-description="Exact ORF protein annotation match for a stored CDS. frame -2, 271 aa, 816 nt. Seen in sequence_1, 001_sample_1, and 2 m"
+            d="M 1039.57 577.50 L 1051.43 609.87 A 386.00 386.00 0 0 1 940.07 898.34 L 927.28 885.68 A 368.00 368.00 0 0 0 1033.45 610.66 Z"
+            aria-label="KanR (complement(1290..2105)) - Exact ORF protein annotation match for a stored CDS. frame -2, 271 aa, 816 nt. Seen in sequence_1, 001_sample_1, and 2 m"
+            fill="#479f71"
+            stroke="#3d8a69"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="17"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_13"
+            data-tooltip-name="ori"
+            data-tooltip-meta="rep_origin | Strand +"
+            data-tooltip-location="2227..2815"
+            data-tooltip-description="Exact DNA annotation match for stored rep_origin. 589 bp matched. Seen in sequence_1, 001_CD11, and 1 more."
+            d="M 900.97 932.82 A 386.00 386.00 0 0 1 698.37 1011.36 L 664.75 1003.73 L 696.85 993.42 A 368.00 368.00 0 0 0 890.01 918.55 Z"
+            aria-label="ori (2227..2815) - Exact DNA annotation match for stored rep_origin. 589 bp matched. Seen in sequence_1, 001_CD11, and 1 more."
+            fill="#4e7fff"
+            stroke="#436fdd"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="18"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_23"
+            data-tooltip-name="lacI promoter"
+            data-tooltip-meta="promoter | Strand -"
+            data-tooltip-location="complement(5325..5402)"
+            data-tooltip-description="Exact DNA annotation match for stored promoter. 78 bp matched. Seen in sequence_1, plasmid, and 4 more."
+            d="M 541.42 270.84 L 554.44 257.15 A 386.00 386.00 0 0 1 570.64 252.65 L 575.08 270.09 A 368.00 368.00 0 0 0 559.63 274.38 Z"
+            aria-label="lacI promoter (complement(5325..5402)) - Exact DNA annotation match for stored promoter. 78 bp matched. Seen in sequence_1, plasmid, and 4 more."
+            fill="#8b5cf6"
+            stroke="#7553d6"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="19"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_10"
+            data-tooltip-name="AmpR promoter (fragment)"
+            data-tooltip-meta="promoter | Strand +"
+            data-tooltip-location="1224..1281"
+            data-tooltip-description="Exact DNA annotation match for stored promoter. 58 bp matched. Seen in 001_sample_1, 001_CD11, and 1 more."
+            d="M 1043.74 548.28 A 386.00 386.00 0 0 1 1046.08 560.56 L 1039.12 574.16 L 1028.35 563.64 A 368.00 368.00 0 0 0 1026.12 551.93 Z"
+            aria-label="AmpR promoter (fragment) (1224..1281) - Exact DNA annotation match for stored promoter. 58 bp matched. Seen in 001_sample_1, 001_CD11, and 1 more."
+            fill="#8b5cf6"
+            stroke="#7553d6"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="20"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_3"
+            data-tooltip-name="misc_feature_"
+            data-tooltip-meta="misc_feature_ | Strand +"
+            data-tooltip-location="104..131"
+            data-tooltip-description="Exact DNA annotation match for stored misc_feature_. 28 bp matched. Seen in HSA_K_Hrk and CD19."
+            d="M 710.11 243.29 A 386.00 386.00 0 0 1 716.10 244.03 L 720.77 253.77 L 713.76 261.87 A 368.00 368.00 0 0 0 708.05 261.17 Z"
+            aria-label="misc_feature_ (104..131) - Exact DNA annotation match for stored misc_feature_. 28 bp matched. Seen in HSA_K_Hrk and CD19."
+            fill="#808080"
+            stroke="#6c7075"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="21"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_21"
+            data-tooltip-name="misc_feature_"
+            data-tooltip-meta="misc_feature_ | Strand +"
+            data-tooltip-location="4208..4229"
+            data-tooltip-description="Exact DNA annotation match for stored misc_feature_. 22 bp matched. Seen in HSA_K_Hrk and CD19."
+            d="M 279.83 631.80 A 386.00 386.00 0 0 1 279.80 627.06 L 288.82 622.42 L 297.80 627.04 A 368.00 368.00 0 0 0 297.83 631.57 Z"
+            aria-label="misc_feature_ (4208..4229) - Exact DNA annotation match for stored misc_feature_. 22 bp matched. Seen in HSA_K_Hrk and CD19."
+            fill="#808080"
+            stroke="#6c7075"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="22"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_14"
+            data-tooltip-name="ori (fragment)"
+            data-tooltip-meta="rep_origin | Strand +"
+            data-tooltip-location="2227..2522"
+            data-tooltip-description="Exact DNA annotation match for stored rep_origin. 296 bp matched. Seen in 001_sample_1."
+            d="M 919.25 956.61 A 416.00 416.00 0 0 1 832.29 1007.97 L 795.56 1012.50 L 825.09 991.47 A 398.00 398.00 0 0 0 908.29 942.34 Z"
+            aria-label="ori (fragment) (2227..2522) - Exact DNA annotation match for stored rep_origin. 296 bp matched. Seen in 001_sample_1."
+            fill="#4e7fff"
+            stroke="#436fdd"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="23"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_24"
+            data-tooltip-name="misc_feature_"
+            data-tooltip-meta="misc_feature_ | Strand +"
+            data-tooltip-location="5325..5402"
+            data-tooltip-description="Exact DNA annotation match for stored misc_feature_. 78 bp matched. Seen in HSA_K_Hrk and CD19."
+            d="M 528.55 234.03 A 416.00 416.00 0 0 1 545.79 228.42 L 565.46 232.30 L 550.98 245.66 A 398.00 398.00 0 0 0 534.49 251.02 Z"
+            aria-label="misc_feature_ (5325..5402) - Exact DNA annotation match for stored misc_feature_. 78 bp matched. Seen in HSA_K_Hrk and CD19."
+            fill="#808080"
+            stroke="#6c7075"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="24"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_17"
+            data-tooltip-name="CloDF13 ori"
+            data-tooltip-meta="rep_origin | Strand +"
+            data-tooltip-location="2793..2822"
+            data-tooltip-description="Exact DNA annotation match for stored rep_origin. 30 bp matched. Seen in sequence_1."
+            d="M 675.33 1042.63 A 416.00 416.00 0 0 1 668.36 1042.73 L 661.48 1033.71 L 668.25 1024.73 A 398.00 398.00 0 0 0 674.91 1024.63 Z"
+            aria-label="CloDF13 ori (2793..2822) - Exact DNA annotation match for stored rep_origin. 30 bp matched. Seen in sequence_1."
+            fill="#4e7fff"
+            stroke="#436fdd"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="25"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_5"
+            data-tooltip-name="lac operator"
+            data-tooltip-meta="protein_bind | Strand +"
+            data-tooltip-location="109..125"
+            data-tooltip-description="Exact DNA annotation match for stored protein_bind. 17 bp matched. Seen in pcDNA3.1-GFP_1-10_, plasmid, and 1 more."
+            d="M 715.86 213.76 A 416.00 416.00 0 0 1 723.70 214.78 L 721.19 232.61 A 398.00 398.00 0 0 0 713.70 231.63 Z"
+            aria-label="lac operator (109..125) - Exact DNA annotation match for stored protein_bind. 17 bp matched. Seen in pcDNA3.1-GFP_1-10_, plasmid, and 1 more."
+            fill="#f6a35e"
+            stroke="#cd8d59"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="26"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="backbone_recognition_backbone_seq_1773874586757_605b1bda"
+            data-tooltip-name="Backbone (pasted_sequence)"
+            data-tooltip-meta="backbone | Strand +"
+            data-tooltip-location="1..5625"
+            data-tooltip-description="pasted_sequence saved vector recognized with 5,625 bp exact backbone coverage (100.0% of host, forward orientation)."
+            d="M 665.80 180.74 A 446.00 446.00 0 1 1 626.93 182.43 L 665.80 189.74 L 628.50 200.36 A 428.00 428.00 0 1 0 665.80 198.74 Z"
+            aria-label="Backbone (pasted_sequence) (1..5625) - pasted_sequence saved vector recognized with 5,625 bp exact backbone coverage (100.0% of host, forward orientation)."
+            fill="#c97064"
+            stroke="#a8635e"></path>
+        
+        
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_1"
+          data-tooltip-name="Backbone (pasted_sequence)"
+          data-tooltip-meta="backbone | Strand +"
+          data-tooltip-location="1..5625"
+          data-tooltip-description="Exact DNA annotation match for stored backbone. 5,625 bp matched. Seen in sequence_1."
+          data-feature-x="665.80"
+          data-feature-y="956.74"
+          data-bend-x="665.80"
+          data-bend-y="1110.74"
+          data-label-center-y="1153.21"
+          aria-label="Backbone (pasted_sequence) (1..5625) - Exact DNA annotation match for stored backbone. 5,625 bp matched. Seen in sequence_1.">
+          <path class="circular-preview__leader"
+            d="M 665.80 956.74 L 665.80 1110.74 L 173.80 1153.21"
+            stroke="#a8635e"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="32.00"
+            y="1131.21"
+            width="141.80"
+            height="44.00"
+            rx="10"
+            ry="10"
+            fill="#f7ebe9"
+            stroke="#a8635e"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="161.80"
+              y="1144.21"
+              text-anchor="end"
+              fill="#0f223e">
+              Backbone
+            </text>
+          
+            <text
+              class="circular-preview__label-text"
+              x="161.80"
+              y="1162.21"
+              text-anchor="end"
+              fill="#0f223e">
+              (pasted_sequence)
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_22"
+          data-tooltip-name="misc_feature_"
+          data-tooltip-meta="misc_feature_ | Strand +"
+          data-tooltip-location="4242..5333"
+          data-tooltip-description="Exact DNA annotation match for stored misc_feature_. 1,092 bp matched. Seen in HSA_K_Hrk and CD19."
+          data-feature-x="375.92"
+          data-feature-y="413.27"
+          data-bend-x="276.07"
+          data-bend-y="339.74"
+          data-label-center-y="242.52"
+          aria-label="misc_feature_ (4242..5333) - Exact DNA annotation match for stored misc_feature_. 1,092 bp matched. Seen in HSA_K_Hrk and CD19.">
+          <path class="circular-preview__leader"
+            d="M 375.92 413.27 L 276.07 339.74 L 173.80 242.52"
+            stroke="#6c7075"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="61.60"
+            y="229.52"
+            width="112.20"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#ededed"
+            stroke="#6c7075"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="161.80"
+              y="242.52"
+              text-anchor="end"
+              fill="#0f223e">
+              misc_feature_
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_11"
+          data-tooltip-name="misc_feature_"
+          data-tooltip-meta="misc_feature_ | Strand +"
+          data-tooltip-location="1290..2105"
+          data-tooltip-description="Exact DNA annotation match for stored misc_feature_. 816 bp matched. Seen in HSA_K_Hrk and CD19."
+          data-feature-x="1006.98"
+          data-feature-y="741.61"
+          data-bend-x="1124.50"
+          data-bend-y="781.18"
+          data-label-center-y="780.52"
+          aria-label="misc_feature_ (1290..2105) - Exact DNA annotation match for stored misc_feature_. 816 bp matched. Seen in HSA_K_Hrk and CD19.">
+          <path class="circular-preview__leader"
+            d="M 1006.98 741.61 L 1124.50 781.18 L 1157.80 780.52"
+            stroke="#6c7075"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1157.80"
+            y="767.52"
+            width="112.20"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#ededed"
+            stroke="#6c7075"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1169.80"
+              y="780.52"
+              text-anchor="start"
+              fill="#0f223e">
+              misc_feature_
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_8"
+          data-tooltip-name="f1 ori"
+          data-tooltip-meta="rep_origin | Strand +"
+          data-tooltip-location="743..1171"
+          data-tooltip-description="Exact DNA annotation match for stored rep_origin. 429 bp matched. Seen in sequence_1, pcDNA3.1-GFP_1-10_, and 5 more."
+          data-feature-x="981.32"
+          data-feature-y="453.39"
+          data-bend-x="1090.00"
+          data-bend-y="393.69"
+          data-label-center-y="386.63"
+          aria-label="f1 ori (743..1171) - Exact DNA annotation match for stored rep_origin. 429 bp matched. Seen in sequence_1, pcDNA3.1-GFP_1-10_, and 5 more.">
+          <path class="circular-preview__leader"
+            d="M 981.32 453.39 L 1090.00 393.69 L 1157.80 386.63"
+            stroke="#436fdd"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1157.80"
+            y="373.63"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e6edff"
+            stroke="#436fdd"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1169.80"
+              y="386.63"
+              text-anchor="start"
+              fill="#0f223e">
+              f1 ori
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_16"
+          data-tooltip-name="ori (fragment)"
+          data-tooltip-meta="rep_origin | Strand +"
+          data-tooltip-location="2523..2815"
+          data-tooltip-description="Exact DNA annotation match for stored rep_origin. 293 bp matched. Seen in 001_sample_1."
+          data-feature-x="723.46"
+          data-feature-y="982.09"
+          data-bend-x="743.32"
+          data-bend-y="1104.49"
+          data-label-center-y="1064.21"
+          aria-label="ori (fragment) (2523..2815) - Exact DNA annotation match for stored rep_origin. 293 bp matched. Seen in 001_sample_1.">
+          <path class="circular-preview__leader"
+            d="M 723.46 982.09 L 743.32 1104.49 L 173.80 1064.21"
+            stroke="#436fdd"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="54.20"
+            y="1051.21"
+            width="119.60"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e6edff"
+            stroke="#436fdd"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="161.80"
+              y="1064.21"
+              text-anchor="end"
+              fill="#0f223e">
+              ori (fragment)
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_19"
+          data-tooltip-name="misc_feature_"
+          data-tooltip-meta="misc_feature_ | Strand +"
+          data-tooltip-location="3242..3433"
+          data-tooltip-description="Exact DNA annotation match for stored misc_feature_. 192 bp matched. Seen in HSA_K_Hrk and CD19."
+          data-feature-x="466.75"
+          data-feature-y="926.70"
+          data-bend-x="398.18"
+          data-bend-y="1030.02"
+          data-label-center-y="944.21"
+          aria-label="misc_feature_ (3242..3433) - Exact DNA annotation match for stored misc_feature_. 192 bp matched. Seen in HSA_K_Hrk and CD19.">
+          <path class="circular-preview__leader"
+            d="M 466.75 926.70 L 398.18 1030.02 L 173.80 944.21"
+            stroke="#6c7075"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="61.60"
+            y="931.21"
+            width="112.20"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#ededed"
+            stroke="#6c7075"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="161.80"
+              y="944.21"
+              text-anchor="end"
+              fill="#0f223e">
+              misc_feature_
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_18"
+          data-tooltip-name="bom"
+          data-tooltip-meta="misc_feature | Strand -"
+          data-tooltip-location="complement(3001..3140)"
+          data-tooltip-description="Exact DNA annotation match for stored misc_feature. 140 bp matched. Seen in sequence_1, 001_sample_1, and 2 more."
+          data-feature-x="563.67"
+          data-feature-y="971.95"
+          data-bend-x="528.50"
+          data-bend-y="1090.85"
+          data-label-center-y="1024.21"
+          aria-label="bom (complement(3001..3140)) - Exact DNA annotation match for stored misc_feature. 140 bp matched. Seen in sequence_1, 001_sample_1, and 2 more.">
+          <path class="circular-preview__leader"
+            d="M 563.67 971.95 L 528.50 1090.85 L 173.80 1024.21"
+            stroke="#297c8d"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="87.80"
+            y="1011.21"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e2eff1"
+            stroke="#297c8d"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="161.80"
+              y="1024.21"
+              text-anchor="end"
+              fill="#0f223e">
+              bom
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_9"
+          data-tooltip-name="AmpR promoter"
+          data-tooltip-meta="promoter | Strand +"
+          data-tooltip-location="1224..1281"
+          data-tooltip-description="Exact DNA annotation match for stored promoter. 58 bp matched. Seen in sequence_1."
+          data-feature-x="1020.47"
+          data-feature-y="565.01"
+          data-bend-x="1142.63"
+          data-bend-y="543.76"
+          data-label-center-y="539.18"
+          aria-label="AmpR promoter (1224..1281) - Exact DNA annotation match for stored promoter. 58 bp matched. Seen in sequence_1.">
+          <path class="circular-preview__leader"
+            d="M 1020.47 565.01 L 1142.63 543.76 L 1157.80 539.18"
+            stroke="#7553d6"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1157.80"
+            y="526.18"
+            width="112.20"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#efe8fe"
+            stroke="#7553d6"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1169.80"
+              y="539.18"
+              text-anchor="start"
+              fill="#0f223e">
+              AmpR promoter
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_7"
+          data-tooltip-name="T7 terminator"
+          data-tooltip-meta="terminator | Strand +"
+          data-tooltip-location="659..706"
+          data-tooltip-description="Exact DNA annotation match for stored terminator. 48 bp matched. Seen in sequence_1, 001_sample_1, and 2 more."
+          data-feature-x="914.28"
+          data-feature-y="366.24"
+          data-bend-x="999.87"
+          data-bend-y="276.52"
+          data-label-center-y="295.69"
+          aria-label="T7 terminator (659..706) - Exact DNA annotation match for stored terminator. 48 bp matched. Seen in sequence_1, 001_sample_1, and 2 more.">
+          <path class="circular-preview__leader"
+            d="M 914.28 366.24 L 999.87 276.52 L 1157.80 295.69"
+            stroke="#cd8d59"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1157.80"
+            y="282.69"
+            width="112.20"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#fef2e8"
+            stroke="#cd8d59"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1169.80"
+              y="295.69"
+              text-anchor="start"
+              fill="#0f223e">
+              T7 terminator
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_12"
+          data-tooltip-name="CloDF13 ori"
+          data-tooltip-meta="rep_origin | Strand +"
+          data-tooltip-location="2212..2255"
+          data-tooltip-description="Exact DNA annotation match for stored rep_origin. 44 bp matched. Seen in sequence_1."
+          data-feature-x="882.89"
+          data-feature-y="913.91"
+          data-bend-x="957.67"
+          data-bend-y="1012.83"
+          data-label-center-y="1016.00"
+          aria-label="CloDF13 ori (2212..2255) - Exact DNA annotation match for stored rep_origin. 44 bp matched. Seen in sequence_1.">
+          <path class="circular-preview__leader"
+            d="M 882.89 913.91 L 957.67 1012.83 L 1157.80 1016.00"
+            stroke="#436fdd"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1157.80"
+            y="1003.00"
+            width="97.40"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e6edff"
+            stroke="#436fdd"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1169.80"
+              y="1016.00"
+              text-anchor="start"
+              fill="#0f223e">
+              CloDF13 ori
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_15"
+          data-tooltip-name="RSF ori"
+          data-tooltip-meta="rep_origin | Strand +"
+          data-tooltip-location="2271..2297"
+          data-tooltip-description="Exact DNA annotation match for stored rep_origin. 27 bp matched. Seen in sequence_1."
+          data-feature-x="866.36"
+          data-feature-y="925.69"
+          data-bend-x="935.44"
+          data-bend-y="1028.67"
+          data-label-center-y="1056.00"
+          aria-label="RSF ori (2271..2297) - Exact DNA annotation match for stored rep_origin. 27 bp matched. Seen in sequence_1.">
+          <path class="circular-preview__leader"
+            d="M 866.36 925.69 L 935.44 1028.67 L 1157.80 1056.00"
+            stroke="#436fdd"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1157.80"
+            y="1043.00"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e6edff"
+            stroke="#436fdd"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1169.80"
+              y="1056.00"
+              text-anchor="start"
+              fill="#0f223e">
+              RSF ori
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_4"
+          data-tooltip-name="lac operator"
+          data-tooltip-meta="protein_bind | Strand +"
+          data-tooltip-location="105..129"
+          data-tooltip-description="Exact DNA annotation match for stored protein_bind. 25 bp matched. Seen in sequence_1, 001_sample_1, and 2 more."
+          data-feature-x="712.52"
+          data-feature-y="269.78"
+          data-bend-x="728.61"
+          data-bend-y="146.83"
+          data-label-center-y="135.69"
+          aria-label="lac operator (105..129) - Exact DNA annotation match for stored protein_bind. 25 bp matched. Seen in sequence_1, 001_sample_1, and 2 more.">
+          <path class="circular-preview__leader"
+            d="M 712.52 269.78 L 728.61 146.83 L 1157.80 135.69"
+            stroke="#cd8d59"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1157.80"
+            y="122.69"
+            width="104.80"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#fef2e8"
+            stroke="#cd8d59"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1169.80"
+              y="135.69"
+              text-anchor="start"
+              fill="#0f223e">
+              lac operator
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_6"
+          data-tooltip-name="RBS"
+          data-tooltip-meta="rbs | Strand +"
+          data-tooltip-location="144..166"
+          data-tooltip-description="Exact DNA annotation match for stored rbs. 23 bp matched. Seen in sequence_1, 001_sample_1, and 2 more."
+          data-feature-x="727.62"
+          data-feature-y="272.08"
+          data-bend-x="748.91"
+          data-bend-y="149.93"
+          data-label-center-y="215.69"
+          aria-label="RBS (144..166) - Exact DNA annotation match for stored rbs. 23 bp matched. Seen in sequence_1, 001_sample_1, and 2 more.">
+          <path class="circular-preview__leader"
+            d="M 727.62 272.08 L 748.91 149.93 L 1157.80 215.69"
+            stroke="#a8635e"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1157.80"
+            y="202.69"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f7ebe9"
+            stroke="#a8635e"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1169.80"
+              y="215.69"
+              text-anchor="start"
+              fill="#0f223e">
+              RBS
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_20"
+          data-tooltip-name="CAP binding site"
+          data-tooltip-meta="protein_bind | Strand -"
+          data-tooltip-location="complement(4208..4229)"
+          data-tooltip-description="Exact DNA annotation match for stored protein_bind. 22 bp matched. Seen in sequence_1, 001_sample_1, and 2 more."
+          data-feature-x="305.80"
+          data-feature-y="627.04"
+          data-bend-x="181.80"
+          data-bend-y="627.14"
+          data-label-center-y="534.67"
+          aria-label="CAP binding site (complement(4208..4229)) - Exact DNA annotation match for stored protein_bind. 22 bp matched. Seen in sequence_1, 001_sample_1, and 2 more.">
+          <path class="circular-preview__leader"
+            d="M 305.80 627.04 L 181.80 627.14 L 173.80 534.67"
+            stroke="#cd8d59"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="39.40"
+            y="521.67"
+            width="134.40"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#fef2e8"
+            stroke="#cd8d59"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="161.80"
+              y="534.67"
+              text-anchor="end"
+              fill="#0f223e">
+              CAP binding site
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_2"
+          data-tooltip-name="T7 promoter"
+          data-tooltip-meta="promoter | Strand +"
+          data-tooltip-location="86..104"
+          data-tooltip-description="Exact DNA annotation match for stored promoter. 19 bp matched. Seen in sequence_1, pcDNA3.1-GFP_1-10_, and 3 more."
+          data-feature-x="703.73"
+          data-feature-y="268.74"
+          data-bend-x="716.80"
+          data-bend-y="145.43"
+          data-label-center-y="45.00"
+          aria-label="T7 promoter (86..104) - Exact DNA annotation match for stored promoter. 19 bp matched. Seen in sequence_1, pcDNA3.1-GFP_1-10_, and 3 more.">
+          <path class="circular-preview__leader"
+            d="M 703.73 268.74 L 716.80 145.43 L 173.80 45.00"
+            stroke="#7553d6"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="76.40"
+            y="32.00"
+            width="97.40"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#efe8fe"
+            stroke="#7553d6"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="161.80"
+              y="45.00"
+              text-anchor="end"
+              fill="#0f223e">
+              T7 promoter
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_25"
+          data-tooltip-name="KanR"
+          data-tooltip-meta="cds | Strand -"
+          data-tooltip-location="complement(1290..2105)"
+          data-tooltip-description="Exact ORF protein annotation match for a stored CDS. frame -2, 271 aa, 816 nt. Seen in sequence_1, 001_sample_1, and 2 m"
+          data-feature-x="1035.41"
+          data-feature-y="751.18"
+          data-bend-x="1124.50"
+          data-bend-y="781.18"
+          data-label-center-y="820.52"
+          aria-label="KanR (complement(1290..2105)) - Exact ORF protein annotation match for a stored CDS. frame -2, 271 aa, 816 nt. Seen in sequence_1, 001_sample_1, and 2 m">
+          <path class="circular-preview__leader"
+            d="M 1035.41 751.18 L 1124.50 781.18 L 1157.80 820.52"
+            stroke="#3d8a69"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1157.80"
+            y="807.52"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e5f2eb"
+            stroke="#3d8a69"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1169.80"
+              y="820.52"
+              text-anchor="start"
+              fill="#0f223e">
+              KanR
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_13"
+          data-tooltip-name="ori"
+          data-tooltip-meta="rep_origin | Strand +"
+          data-tooltip-location="2227..2815"
+          data-tooltip-description="Exact DNA annotation match for stored rep_origin. 589 bp matched. Seen in sequence_1, 001_CD11, and 1 more."
+          data-feature-x="790.76"
+          data-feature-y="996.17"
+          data-bend-x="820.88"
+          data-bend-y="1085.22"
+          data-label-center-y="1096.00"
+          aria-label="ori (2227..2815) - Exact DNA annotation match for stored rep_origin. 589 bp matched. Seen in sequence_1, 001_CD11, and 1 more.">
+          <path class="circular-preview__leader"
+            d="M 790.76 996.17 L 820.88 1085.22 L 1157.80 1096.00"
+            stroke="#436fdd"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1157.80"
+            y="1083.00"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e6edff"
+            stroke="#436fdd"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1169.80"
+              y="1096.00"
+              text-anchor="start"
+              fill="#0f223e">
+              ori
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_23"
+          data-tooltip-name="lacI promoter"
+          data-tooltip-meta="promoter | Strand -"
+          data-tooltip-location="complement(5325..5402)"
+          data-tooltip-description="Exact DNA annotation match for stored promoter. 78 bp matched. Seen in sequence_1, plasmid, and 4 more."
+          data-feature-x="553.29"
+          data-feature-y="253.32"
+          data-bend-x="526.17"
+          data-bend-y="163.32"
+          data-label-center-y="255.69"
+          aria-label="lacI promoter (complement(5325..5402)) - Exact DNA annotation match for stored promoter. 78 bp matched. Seen in sequence_1, plasmid, and 4 more.">
+          <path class="circular-preview__leader"
+            d="M 553.29 253.32 L 526.17 163.32 L 1157.80 255.69"
+            stroke="#7553d6"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1157.80"
+            y="242.69"
+            width="112.20"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#efe8fe"
+            stroke="#7553d6"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1169.80"
+              y="255.69"
+              text-anchor="start"
+              fill="#0f223e">
+              lacI promoter
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_10"
+          data-tooltip-name="AmpR promoter (fragment)"
+          data-tooltip-meta="promoter | Strand +"
+          data-tooltip-location="1224..1281"
+          data-tooltip-description="Exact DNA annotation match for stored promoter. 58 bp matched. Seen in 001_sample_1, 001_CD11, and 1 more."
+          data-feature-x="1050.03"
+          data-feature-y="559.87"
+          data-bend-x="1142.63"
+          data-bend-y="543.76"
+          data-label-center-y="588.18"
+          aria-label="AmpR promoter (fragment) (1224..1281) - Exact DNA annotation match for stored promoter. 58 bp matched. Seen in 001_sample_1, 001_CD11, and 1 more.">
+          <path class="circular-preview__leader"
+            d="M 1050.03 559.87 L 1142.63 543.76 L 1157.80 588.18"
+            stroke="#7553d6"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1157.80"
+            y="566.18"
+            width="112.20"
+            height="44.00"
+            rx="10"
+            ry="10"
+            fill="#efe8fe"
+            stroke="#7553d6"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1169.80"
+              y="579.18"
+              text-anchor="start"
+              fill="#0f223e">
+              AmpR promoter
+            </text>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1169.80"
+              y="597.18"
+              text-anchor="start"
+              fill="#0f223e">
+              (fragment)
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_3"
+          data-tooltip-name="misc_feature_"
+          data-tooltip-meta="misc_feature_ | Strand +"
+          data-tooltip-location="104..131"
+          data-tooltip-description="Exact DNA annotation match for stored misc_feature_. 28 bp matched. Seen in HSA_K_Hrk and CD19."
+          data-feature-x="716.62"
+          data-feature-y="240.06"
+          data-bend-x="728.87"
+          data-bend-y="146.86"
+          data-label-center-y="175.69"
+          aria-label="misc_feature_ (104..131) - Exact DNA annotation match for stored misc_feature_. 28 bp matched. Seen in HSA_K_Hrk and CD19.">
+          <path class="circular-preview__leader"
+            d="M 716.62 240.06 L 728.87 146.86 L 1157.80 175.69"
+            stroke="#6c7075"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1157.80"
+            y="162.69"
+            width="112.20"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#ededed"
+            stroke="#6c7075"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1169.80"
+              y="175.69"
+              text-anchor="start"
+              fill="#0f223e">
+              misc_feature_
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_21"
+          data-tooltip-name="misc_feature_"
+          data-tooltip-meta="misc_feature_ | Strand +"
+          data-tooltip-location="4208..4229"
+          data-tooltip-description="Exact DNA annotation match for stored misc_feature_. 22 bp matched. Seen in HSA_K_Hrk and CD19."
+          data-feature-x="275.80"
+          data-feature-y="627.06"
+          data-bend-x="181.80"
+          data-bend-y="627.14"
+          data-label-center-y="574.67"
+          aria-label="misc_feature_ (4208..4229) - Exact DNA annotation match for stored misc_feature_. 22 bp matched. Seen in HSA_K_Hrk and CD19.">
+          <path class="circular-preview__leader"
+            d="M 275.80 627.06 L 181.80 627.14 L 173.80 574.67"
+            stroke="#6c7075"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="61.60"
+            y="561.67"
+            width="112.20"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#ededed"
+            stroke="#6c7075"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="161.80"
+              y="574.67"
+              text-anchor="end"
+              fill="#0f223e">
+              misc_feature_
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_14"
+          data-tooltip-name="ori (fragment)"
+          data-tooltip-meta="rep_origin | Strand +"
+          data-tooltip-location="2227..2522"
+          data-tooltip-description="Exact DNA annotation match for stored rep_origin. 296 bp matched. Seen in 001_sample_1."
+          data-feature-x="863.39"
+          data-feature-y="997.35"
+          data-bend-x="893.50"
+          data-bend-y="1053.83"
+          data-label-center-y="984.21"
+          aria-label="ori (fragment) (2227..2522) - Exact DNA annotation match for stored rep_origin. 296 bp matched. Seen in 001_sample_1.">
+          <path class="circular-preview__leader"
+            d="M 863.39 997.35 L 893.50 1053.83 L 173.80 984.21"
+            stroke="#436fdd"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="54.20"
+            y="971.21"
+            width="119.60"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e6edff"
+            stroke="#436fdd"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="161.80"
+              y="984.21"
+              text-anchor="end"
+              fill="#0f223e">
+              ori (fragment)
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_24"
+          data-tooltip-name="misc_feature_"
+          data-tooltip-meta="misc_feature_ | Strand +"
+          data-tooltip-location="5325..5402"
+          data-tooltip-description="Exact DNA annotation match for stored misc_feature_. 78 bp matched. Seen in HSA_K_Hrk and CD19."
+          data-feature-x="544.63"
+          data-feature-y="224.59"
+          data-bend-x="526.17"
+          data-bend-y="163.32"
+          data-label-center-y="125.00"
+          aria-label="misc_feature_ (5325..5402) - Exact DNA annotation match for stored misc_feature_. 78 bp matched. Seen in HSA_K_Hrk and CD19.">
+          <path class="circular-preview__leader"
+            d="M 544.63 224.59 L 526.17 163.32 L 173.80 125.00"
+            stroke="#6c7075"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="61.60"
+            y="112.00"
+            width="112.20"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#ededed"
+            stroke="#6c7075"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="161.80"
+              y="125.00"
+              text-anchor="end"
+              fill="#0f223e">
+              misc_feature_
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_17"
+          data-tooltip-name="CloDF13 ori"
+          data-tooltip-meta="rep_origin | Strand +"
+          data-tooltip-location="2793..2822"
+          data-tooltip-description="Exact DNA annotation match for stored rep_origin. 30 bp matched. Seen in sequence_1."
+          data-feature-x="668.38"
+          data-feature-y="1046.73"
+          data-bend-x="668.77"
+          data-bend-y="1110.73"
+          data-label-center-y="1104.21"
+          aria-label="CloDF13 ori (2793..2822) - Exact DNA annotation match for stored rep_origin. 30 bp matched. Seen in sequence_1.">
+          <path class="circular-preview__leader"
+            d="M 668.38 1046.73 L 668.77 1110.73 L 173.80 1104.21"
+            stroke="#436fdd"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="76.40"
+            y="1091.21"
+            width="97.40"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e6edff"
+            stroke="#436fdd"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="161.80"
+              y="1104.21"
+              text-anchor="end"
+              fill="#0f223e">
+              CloDF13 ori
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_5"
+          data-tooltip-name="lac operator"
+          data-tooltip-meta="protein_bind | Strand +"
+          data-tooltip-location="109..125"
+          data-tooltip-description="Exact DNA annotation match for stored protein_bind. 17 bp matched. Seen in pcDNA3.1-GFP_1-10_, plasmid, and 1 more."
+          data-feature-x="720.30"
+          data-feature-y="210.29"
+          data-bend-x="728.61"
+          data-bend-y="146.83"
+          data-label-center-y="85.00"
+          aria-label="lac operator (109..125) - Exact DNA annotation match for stored protein_bind. 17 bp matched. Seen in pcDNA3.1-GFP_1-10_, plasmid, and 1 more.">
+          <path class="circular-preview__leader"
+            d="M 720.30 210.29 L 728.61 146.83 L 173.80 85.00"
+            stroke="#cd8d59"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="69.00"
+            y="72.00"
+            width="104.80"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#fef2e8"
+            stroke="#cd8d59"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="161.80"
+              y="85.00"
+              text-anchor="end"
+              fill="#0f223e">
+              lac operator
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="backbone_recognition_backbone_seq_1773874586757_605b1bda"
+          data-tooltip-name="Backbone (pasted_sequence)"
+          data-tooltip-meta="backbone | Strand +"
+          data-tooltip-location="1..5625"
+          data-tooltip-description="pasted_sequence saved vector recognized with 5,625 bp exact backbone coverage (100.0% of host, forward orientation)."
+          data-feature-x="665.80"
+          data-feature-y="1076.74"
+          data-bend-x="665.80"
+          data-bend-y="1110.74"
+          data-label-center-y="1211.21"
+          aria-label="Backbone (pasted_sequence) (1..5625) - pasted_sequence saved vector recognized with 5,625 bp exact backbone coverage (100.0% of host, forward orientation).">
+          <path class="circular-preview__leader"
+            d="M 665.80 1076.74 L 665.80 1110.74 L 173.80 1211.21"
+            stroke="#a8635e"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="32.00"
+            y="1189.21"
+            width="141.80"
+            height="44.00"
+            rx="10"
+            ry="10"
+            fill="#f7ebe9"
+            stroke="#a8635e"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="161.80"
+              y="1202.21"
+              text-anchor="end"
+              fill="#0f223e">
+              Backbone
+            </text>
+          
+            <text
+              class="circular-preview__label-text"
+              x="161.80"
+              y="1220.21"
+              text-anchor="end"
+              fill="#0f223e">
+              (pasted_sequence)
+            </text>
+          
+        </g>
+      
+        
+    <g class="circular-preview__center">
+      <circle cx="665.80" cy="626.74" r="234.00" class="circular-preview__center-disc"></circle>
+      <text x="665.80" y="612.74" class="circular-preview__title">sequence_1</text>
+      <text x="665.80" y="644.74" class="circular-preview__subtitle">5,625 bp · 26 features</text>
+    </g>
+  
+      </g>
+    </svg>
+  </main>
+  
+  <script>
+    (() => {
+      const LABEL_PADDING_X = 12;
+      const MIN_LABEL_WIDTH = 70;
+      const VIEWBOX_GUTTER = 32;
+      const TOOLTIP_OFFSET = 12;
+
+      function escapeText(value) {
+        return String(value || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function ensureTooltipNode() {
+        let node = document.querySelector('.circular-preview__hover-tooltip');
+        if (node) {
+          return node;
+        }
+        node = document.createElement('div');
+        node.className = 'circular-preview__hover-tooltip';
+        node.hidden = true;
+        document.body.appendChild(node);
+        return node;
+      }
+
+      function hideTooltip() {
+        const tooltip = document.querySelector('.circular-preview__hover-tooltip');
+        if (tooltip) {
+          tooltip.hidden = true;
+          tooltip.dataset.owner = '';
+        }
+      }
+
+      function buildTooltipHtml(target) {
+        const name = String(target?.dataset?.tooltipName || '').trim();
+        const meta = String(target?.dataset?.tooltipMeta || '').trim();
+        const location = String(target?.dataset?.tooltipLocation || '').trim();
+        const description = String(target?.dataset?.tooltipDescription || '').trim();
+        if (!name && !meta && !location && !description) {
+          return '';
+        }
+        return [
+          name ? '<p class="circular-preview__hover-title">' + escapeText(name) + '</p>' : '',
+          meta ? '<p>' + escapeText(meta) + '</p>' : '',
+          location ? '<p>' + escapeText(location) + '</p>' : '',
+          description ? '<p class="circular-preview__hover-description">' + escapeText(description) + '</p>' : ''
+        ].filter(Boolean).join('');
+      }
+
+      function positionTooltip(tooltip, event) {
+        const rawX = Number(event?.clientX);
+        const rawY = Number(event?.clientY);
+        const startX = Number.isFinite(rawX) ? rawX + TOOLTIP_OFFSET : TOOLTIP_OFFSET;
+        const startY = Number.isFinite(rawY) ? rawY + TOOLTIP_OFFSET : TOOLTIP_OFFSET;
+        const tooltipRect = tooltip.getBoundingClientRect();
+        const viewportWidth = Number(window?.innerWidth) || 0;
+        const viewportHeight = Number(window?.innerHeight) || 0;
+
+        let left = Math.max(8, startX);
+        let top = Math.max(8, startY);
+
+        if (viewportWidth > 0) {
+          left = Math.min(left, Math.max(8, viewportWidth - tooltipRect.width - 8));
+        }
+        if (viewportHeight > 0) {
+          top = Math.min(top, Math.max(8, viewportHeight - tooltipRect.height - 8));
+        }
+
+        tooltip.style.left = left.toFixed(0) + 'px';
+        tooltip.style.top = top.toFixed(0) + 'px';
+      }
+
+      function showTooltip(target, event) {
+        const html = buildTooltipHtml(target);
+        if (!html) {
+          hideTooltip();
+          return;
+        }
+        const tooltip = ensureTooltipNode();
+        const ownerKey = String(target?.dataset?.tooltipKey || '');
+        if (tooltip.dataset.owner !== ownerKey) {
+          tooltip.innerHTML = html;
+          tooltip.dataset.owner = ownerKey;
+        }
+        tooltip.hidden = false;
+        positionTooltip(tooltip, event);
+      }
+
+      function bindFeatureHoverCards() {
+        const svg = document.querySelector('.preview-shell svg');
+        if (!svg || svg.dataset.hoverCardsBound === 'true') {
+          return;
+        }
+
+        svg.dataset.hoverCardsBound = 'true';
+        svg.querySelectorAll('[data-preview-tooltip="feature"]').forEach((node) => {
+          node.addEventListener('pointerenter', (event) => {
+            showTooltip(node, event);
+          });
+          node.addEventListener('pointermove', (event) => {
+            showTooltip(node, event);
+          });
+          node.addEventListener('pointerleave', () => {
+            hideTooltip();
+          });
+        });
+
+        svg.addEventListener('pointerleave', () => {
+          hideTooltip();
+        });
+        window.addEventListener('blur', () => {
+          hideTooltip();
+        });
+      }
+
+      function fitAnnotationBoxes() {
+        const svg = document.querySelector('.preview-shell svg');
+        const scene = svg?.querySelector('.circular-preview__scene');
+        if (!svg || !scene) {
+          return;
+        }
+
+        svg.querySelectorAll('.circular-preview__annotation').forEach((annotation) => {
+          const rect = annotation.querySelector('.circular-preview__label-box');
+          const leader = annotation.querySelector('.circular-preview__leader');
+          const textNodes = annotation.querySelectorAll('.circular-preview__label-text');
+          if (!rect || !leader || !textNodes.length) {
+            return;
+          }
+
+          let minX = Number.POSITIVE_INFINITY;
+          let maxX = Number.NEGATIVE_INFINITY;
+          textNodes.forEach((node) => {
+            const box = node.getBBox();
+            if (!Number.isFinite(box.x) || !Number.isFinite(box.width)) {
+              return;
+            }
+            minX = Math.min(minX, box.x);
+            maxX = Math.max(maxX, box.x + box.width);
+          });
+
+          if (!Number.isFinite(minX) || !Number.isFinite(maxX)) {
+            return;
+          }
+
+          const width = Math.max(MIN_LABEL_WIDTH, (maxX - minX) + (LABEL_PADDING_X * 2));
+          const x = minX - LABEL_PADDING_X;
+          rect.setAttribute('x', x.toFixed(2));
+          rect.setAttribute('width', width.toFixed(2));
+
+          const featureX = Number(annotation.dataset.featureX);
+          const featureY = Number(annotation.dataset.featureY);
+          const bendX = Number(annotation.dataset.bendX);
+          const bendY = Number(annotation.dataset.bendY);
+          const centerY = Number(annotation.dataset.labelCenterY);
+          if (![featureX, featureY, bendX, bendY, centerY].every(Number.isFinite)) {
+            return;
+          }
+
+          const endX = annotation.dataset.labelSide === 'right'
+            ? x
+            : x + width;
+          leader.setAttribute(
+            'd',
+            `M ${featureX.toFixed(2)} ${featureY.toFixed(2)} L ${bendX.toFixed(2)} ${bendY.toFixed(2)} L ${endX.toFixed(2)} ${centerY.toFixed(2)}`
+          );
+        });
+
+        const bounds = scene.getBBox();
+        if (![bounds.x, bounds.y, bounds.width, bounds.height].every(Number.isFinite)) {
+          return;
+        }
+
+        svg.setAttribute(
+          'viewBox',
+          [
+            Math.floor(bounds.x - VIEWBOX_GUTTER),
+            Math.floor(bounds.y - VIEWBOX_GUTTER),
+            Math.ceil(bounds.width + (VIEWBOX_GUTTER * 2)),
+            Math.ceil(bounds.height + (VIEWBOX_GUTTER * 2))
+          ].join(' ')
+        );
+      }
+
+      function scheduleFit() {
+        bindFeatureHoverCards();
+        window.requestAnimationFrame(() => {
+          fitAnnotationBoxes();
+          bindFeatureHoverCards();
+          window.setTimeout(fitAnnotationBoxes, 48);
+        });
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', scheduleFit, { once: true });
+      } else {
+        scheduleFit();
+      }
+
+      if (document.fonts?.ready) {
+        document.fonts.ready.then(scheduleFit).catch(() => {});
+      }
+
+      window.addEventListener('load', scheduleFit, { once: true });
+    })();
+  </script>
+</body>
+</html>

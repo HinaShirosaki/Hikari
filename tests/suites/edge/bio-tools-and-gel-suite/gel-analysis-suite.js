@@ -41,6 +41,55 @@ test('[EDGE] gel-analysis viewer image selection handles empty input', () => {
   assert.equal(gelAnalysisInternals.selectViewerBaseImageData(null, { previewImageData: { tag: 'preview' } }), null);
 });
 
+test('[EDGE] gel-analysis lane table render includes gel-edge offsets for divider alignment', () => {
+  const runtime = {
+    currentImage: { width: 600 },
+    cropperActive: false,
+    manualOverrides: {
+      laneSegmentation: {
+        gelLeft: 100,
+        gelRight: 500,
+        dividers: [250, 375],
+        dividerDone: true,
+        bandTop: null,
+        bandBottom: null
+      },
+      addedBands: [],
+      ladderLane: null,
+      ladderBands: [],
+      ladderBandsDone: false,
+      laneTable: {
+        rows: [
+          { label: 'Samples', values: ['A', 'B', 'C'] }
+        ]
+      }
+    }
+  };
+  const elements = {
+    gelAddTableBtn: new MockElement('gel-add-table-btn'),
+    gelLaneTableShell: new MockElement('gel-lane-table-shell'),
+    gelViewerStage: new MockElement('gel-viewer-stage'),
+    gelImageRow: new MockElement('gel-image-row'),
+    gelLaneTableSpacer: new MockElement('gel-lane-table-spacer')
+  };
+  const controller = gelLaneTableInternals.createLaneTableController({
+    runtime,
+    elements,
+    safeText: (value) => String(value),
+    deps: {}
+  });
+
+  controller.render();
+
+  assert.equal(elements.gelLaneTableShell.hidden, false);
+  assert.equal(elements.gelViewerStage.classList.contains('has-lane-table'), true);
+  assert.match(elements.gelLaneTableShell.innerHTML, /gel-lane-table-grid-offsets/);
+  assert.match(elements.gelLaneTableShell.innerHTML, /padding-left:16\.6667%;/);
+  assert.match(elements.gelLaneTableShell.innerHTML, /padding-right:16\.6667%;/);
+  assert.match(elements.gelLaneTableShell.innerHTML, /width:37\.5%;/);
+  assert.match(elements.gelLaneTableShell.innerHTML, /width:31\.25%;/);
+});
+
 [
   [0, 0, 10, 0],
   [5, 0, 10, 5],
@@ -98,9 +147,11 @@ test('[EDGE] gel-analysis viewer image selection handles empty input', () => {
 
 test('[EDGE] gel-analysis createEmptyManualOverrides baseline shape', () => {
   const value = gelAnalysisInternals.createEmptyManualOverrides();
-  assert.equal(JSON.stringify(Object.keys(value).sort()), JSON.stringify(['addedBands', 'ladderBands', 'ladderBandsDone', 'ladderLane', 'laneSegmentation']));
+  assert.equal(JSON.stringify(Object.keys(value).sort()), JSON.stringify(['addedBands', 'ladderBands', 'ladderBandsDone', 'ladderLane', 'laneSegmentation', 'laneTable']));
   assert.equal(Array.isArray(value.laneSegmentation.dividers), true);
   assert.equal(value.laneSegmentation.dividers.length, 0);
+  assert.equal(Array.isArray(value.laneTable.rows), true);
+  assert.equal(value.laneTable.rows.length, 0);
 });
 
 [
@@ -117,7 +168,13 @@ test('[EDGE] gel-analysis createEmptyManualOverrides baseline shape', () => {
       addedBands: [{ laneIndex: '2', pixelY: '33.2' }, { laneIndex: -1, pixelY: 5 }],
       ladderLane: '3',
       ladderBands: [{ pixelY: 80.2, mw: 50 }, { pixelY: 10.2, mw: 150 }, { pixelY: 2, mw: 0 }],
-      ladderBandsDone: 1
+      ladderBandsDone: 1,
+      laneTable: {
+        rows: [
+          { label: 'Samples', values: ['M', 'A', 42] },
+          { label: 'Notes', values: [' strong ', null] }
+        ]
+      }
     },
     expectation: (value) => {
       assert.equal(value.laneSegmentation.gelLeft, 10);
@@ -127,6 +184,9 @@ test('[EDGE] gel-analysis createEmptyManualOverrides baseline shape', () => {
       assert.equal(value.ladderLane, 3);
       assert.equal(JSON.stringify(value.ladderBands.map((item) => item.mw)), JSON.stringify([150, 50]));
       assert.equal(value.ladderBandsDone, true);
+      assert.equal(value.laneTable.rows.length, 2);
+      assert.equal(value.laneTable.rows[0].label, 'Samples');
+      assert.equal(JSON.stringify(value.laneTable.rows[0].values), JSON.stringify(['M', 'A', '42']));
     }
   },
   {

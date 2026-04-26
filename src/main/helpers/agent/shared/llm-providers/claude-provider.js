@@ -20,139 +20,118 @@ function parseBase64DataUrl(dataUrl = '') {
 }
 
 function createClaudeLlmProvider(deps = {}) {
-  const cleanText = typeof deps.cleanText === 'function' ? deps.cleanText : defaultCleanText;
+  const injectedCleanText = typeof deps.cleanText === 'function' ? deps.cleanText : defaultCleanText;
+  const cleanText = (value) => injectedCleanText(value);
   const requestClaudeMessagesWithBackoff = typeof deps.requestClaudeMessagesWithBackoff === 'function'
     ? deps.requestClaudeMessagesWithBackoff
     : null;
   const extractClaudeResponseText = typeof deps.extractClaudeResponseText === 'function'
     ? deps.extractClaudeResponseText
-    : ((payload) => cleanText(payload?.content?.[0]?.text, 120000));
+    : ((payload) => cleanText(payload?.content?.[0]?.text));
   const recordTrace = typeof deps.recordTrace === 'function' ? deps.recordTrace : (async () => {});
   const parseJsonObjectFromText = typeof deps.parseJsonObjectFromText === 'function'
     ? deps.parseJsonObjectFromText
     : (() => null);
   const isAbortError = typeof deps.isAbortError === 'function' ? deps.isAbortError : (() => false);
-  const providerId = cleanText(deps.providerId, 80) || 'claude';
+  const providerId = cleanText(deps.providerId) || 'claude';
 
-  async function requestText(input = {}) {
-    const normalizedStage = cleanText(input.stage, 120) || 'agent_stage';
-    if (!requestClaudeMessagesWithBackoff) {
+  function normalizeAttachments(input = {}) {
+    const listed = Array.isArray(input.attachments) ? input.attachments : [];
+    const attachments = listed.map((attachment) => {
+      const source = attachment && typeof attachment === 'object' ? attachment : {};
       return {
-        ok: false,
-        error: cleanText(input.defaultError, 600) || 'Claude text input is not configured.'
+        kind: cleanText(source.kind),
+        name: cleanText(source.name) || 'attachment',
+        dataUrl: cleanText(source.dataUrl || source.data_url)
       };
+    }).filter((attachment) => attachment.dataUrl);
+    if (attachments.length) {
+      return attachments;
     }
-
-    try {
-      const body = {
-        model: cleanText(input.model, 120),
-        ...(cleanText(input.systemPrompt, 12000)
-          ? { system: cleanText(input.systemPrompt, 12000) }
-          : {}),
-        max_tokens: Number.isFinite(Number(input.maxOutputTokens)) ? Number(input.maxOutputTokens) : 1600,
-        messages: [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: cleanText(input.userPrompt, 48000)
-                  + (input.expectJson === true ? '\n\nReturn JSON only.' : '')
-              }
-            ]
-          }
-        ]
-      };
-      const response = await requestClaudeMessagesWithBackoff({
-        endpoint: cleanText(input.endpoint, 2000),
-        apiKey: cleanText(input.apiKey, 400),
-        body
-      });
-      await recordTrace(input.traceContext, {
-        stage: normalizedStage,
-        provider: providerId,
-        model: cleanText(input.model, 120),
-        summary: `${normalizedStage} completed via Claude.`,
-        requestPayload: body,
-        responsePayload: response
-      });
-      const text = extractClaudeResponseText(response);
-      if (!text) {
-        return { ok: false, error: `${normalizedStage} response was empty.`, raw: response };
-      }
-      if (input.expectJson === true) {
-        const parsed = parseJsonObjectFromText(text);
-        if (!parsed) {
-          return { ok: false, error: `${normalizedStage} response was not valid JSON.`, raw: response };
-        }
-        return { ok: true, payload: parsed, text, raw: response };
-      }
-      return { ok: true, text, raw: response };
-    } catch (error) {
-      if (isAbortError(error)) {
-        throw error;
-      }
-      return {
-        ok: false,
-        error: cleanText(error?.message || error, 600) || `${normalizedStage} request failed.`
-      };
-    }
+    const fileDataUrl = cleanText(input.fileDataUrl || input.pdfDataUrl);
+    const imageDataUrl = cleanText(input.imageDataUrl || input.imageUrl);
+    return [
+      ...(fileDataUrl ? [{ kind: 'file', name: cleanText(input.fileName) || 'attachment.pdf', dataUrl: fileDataUrl }] : []),
+      ...(imageDataUrl ? [{ kind: 'image', name: 'image', dataUrl: imageDataUrl }] : [])
+    ];
   }
 
-  async function requestImageInput(input = {}) {
-    const normalizedStage = cleanText(input.stage, 120) || 'agent_stage';
+  function buildAttachmentContent(attachment, redact = false) {
+    const source = parseBase64DataUrl(attachment?.dataUrl);
+    if (!source) {
+      return {
+        type: 'text',
+        text: `Attached file: ${cleanText(attachment?.name) || 'attachment'}`
+      };
+    }
+    if (attachment?.kind === 'image' || /^image\//i.test(source.mediaType)) {
+      return {
+        type: 'image',
+        source: {
+          type: 'base64',
+          media_type: source.mediaType,
+          data: redact ? '[image omitted]' : source.data
+        }
+      };
+    }
+    if (source.mediaType === 'application/pdf') {
+      return {
+        type: 'document',
+        source: {
+          type: 'base64',
+          media_type: 'application/pdf',
+          data: redact ? '[pdf omitted]' : source.data
+        }
+      };
+    }
+    return {
+      type: 'text',
+      text: `Attached file: ${cleanText(attachment?.name) || 'attachment'} (${cleanText(source.mediaType) || 'application/octet-stream'}).`
+    };
+  }
+
+  async function requestText(input = {}) {
+    const normalizedStage = cleanText(input.stage) || 'agent_stage';
     if (!requestClaudeMessagesWithBackoff) {
       return {
         ok: false,
-        error: cleanText(input.defaultError, 600) || 'Claude image input is not configured.'
-      };
-    }
-    const imageSource = parseBase64DataUrl(input.imageDataUrl);
-    if (!imageSource || !/^image\//i.test(imageSource.mediaType)) {
-      return {
-        ok: false,
-        error: `${normalizedStage} image input must be a base64 data URL.`
+        error: cleanText(input.defaultError) || 'Claude text input is not configured.'
       };
     }
 
     try {
+      const attachments = normalizeAttachments(input);
+      const systemPrompt = cleanText(input.systemPrompt);
       const body = {
-        model: cleanText(input.model, 120),
-        ...(cleanText(input.systemPrompt, 12000)
-          ? { system: cleanText(input.systemPrompt, 12000) }
-          : {}),
-        max_tokens: Number.isFinite(Number(input.maxOutputTokens)) ? Number(input.maxOutputTokens) : 1600,
+        model: cleanText(input.model),
+        ...(systemPrompt ? { system: systemPrompt } : {}),
+        max_tokens: Number.isFinite(Number(input.maxOutputTokens)) ? Number(input.maxOutputTokens) : 64000,
         messages: [
           {
             role: 'user',
             content: [
               {
                 type: 'text',
-                text: cleanText(input.userPrompt, 48000)
+                text: cleanText(input.userPrompt)
                   + (input.expectJson === true ? '\n\nReturn JSON only.' : '')
               },
-              {
-                type: 'image',
-                source: {
-                  type: 'base64',
-                  media_type: imageSource.mediaType,
-                  data: imageSource.data
-                }
-              }
+              ...attachments.map((attachment) => buildAttachmentContent(attachment, false))
             ]
           }
         ]
       };
       const response = await requestClaudeMessagesWithBackoff({
-        endpoint: cleanText(input.endpoint, 2000),
-        apiKey: cleanText(input.apiKey, 400),
+        endpoint: cleanText(input.endpoint),
+        apiKey: cleanText(input.apiKey),
         body
       });
       await recordTrace(input.traceContext, {
         stage: normalizedStage,
         provider: providerId,
-        model: cleanText(input.model, 120),
-        summary: `${normalizedStage} completed via Claude image input.`,
+        model: cleanText(input.model),
+        summary: attachments.length
+          ? `${normalizedStage} completed via Claude multimodal input.`
+          : `${normalizedStage} completed via Claude.`,
         requestPayload: {
           ...body,
           messages: [
@@ -161,17 +140,10 @@ function createClaudeLlmProvider(deps = {}) {
               content: [
                 {
                   type: 'text',
-                  text: cleanText(input.userPrompt, 48000)
+                  text: cleanText(input.userPrompt)
                     + (input.expectJson === true ? '\n\nReturn JSON only.' : '')
                 },
-                {
-                  type: 'image',
-                  source: {
-                    type: 'base64',
-                    media_type: imageSource.mediaType,
-                    data: '[image omitted]'
-                  }
-                }
+                ...attachments.map((attachment) => buildAttachmentContent(attachment, true))
               ]
             }
           ]
@@ -196,109 +168,23 @@ function createClaudeLlmProvider(deps = {}) {
       }
       return {
         ok: false,
-        error: cleanText(error?.message || error, 600) || `${normalizedStage} request failed.`
+        error: cleanText(error?.message || error) || `${normalizedStage} request failed.`
       };
     }
   }
 
-  async function requestFileInput(input = {}) {
-    const normalizedStage = cleanText(input.stage, 120) || 'agent_stage';
-    if (!requestClaudeMessagesWithBackoff) {
-      return {
-        ok: false,
-        error: cleanText(input.defaultError, 600) || 'Claude file input is not configured.'
-      };
-    }
-    const documentSource = parseBase64DataUrl(input.fileDataUrl || input.pdfDataUrl);
-    if (!documentSource || documentSource.mediaType !== 'application/pdf') {
-      return {
-        ok: false,
-        error: `${normalizedStage} PDF input was not a valid PDF data URL.`
-      };
-    }
+  async function requestImageInput(input = {}) {
+    return requestText(input);
+  }
 
-    try {
-      const textPrompt = cleanText(input.userPrompt, 48000)
-        + (input.expectJson === true ? '\n\nReturn JSON only.' : '');
-      const body = {
-        model: cleanText(input.model, 120),
-        system: cleanText(input.systemPrompt, 12000) || 'Return valid JSON only.',
-        max_tokens: Number.isFinite(Number(input.maxOutputTokens)) ? Number(input.maxOutputTokens) : 1600,
-        messages: [
-          {
-            role: 'user',
-            content: [
-              { type: 'text', text: textPrompt },
-              {
-                type: 'document',
-                source: {
-                  type: 'base64',
-                  media_type: 'application/pdf',
-                  data: documentSource.data
-                }
-              }
-            ]
-          }
-        ]
-      };
-      const response = await requestClaudeMessagesWithBackoff({
-        endpoint: cleanText(input.endpoint, 2000),
-        apiKey: cleanText(input.apiKey, 400),
-        body
-      });
-      await recordTrace(input.traceContext, {
-        stage: normalizedStage,
-        provider: providerId,
-        model: cleanText(input.model, 120),
-        summary: `${normalizedStage} completed via Claude file input.`,
-        requestPayload: {
-          ...body,
-          messages: [
-            {
-              role: 'user',
-              content: [
-                { type: 'text', text: textPrompt },
-                {
-                  type: 'document',
-                  source: {
-                    type: 'base64',
-                    media_type: 'application/pdf',
-                    data: '[pdf omitted]'
-                  }
-                }
-              ]
-            }
-          ]
-        },
-        responsePayload: response
-      });
-      const text = extractClaudeResponseText(response);
-      if (!text) {
-        return { ok: false, error: `${normalizedStage} response was empty.`, raw: response };
-      }
-      if (input.expectJson === true) {
-        const parsed = parseJsonObjectFromText(text);
-        if (!parsed) {
-          return { ok: false, error: `${normalizedStage} response was not valid JSON.`, raw: response };
-        }
-        return { ok: true, payload: parsed, text, raw: response };
-      }
-      return { ok: true, text, raw: response };
-    } catch (error) {
-      if (isAbortError(error)) {
-        throw error;
-      }
-      return {
-        ok: false,
-        error: cleanText(error?.message || error, 600) || `${normalizedStage} request failed.`
-      };
-    }
+  async function requestFileInput(input = {}) {
+    return requestText(input);
   }
 
   async function requestWebSearch(input = {}) {
     return {
       ok: false,
-      error: cleanText(input.defaultError, 600) || 'Claude provider web search is not configured.'
+      error: cleanText(input.defaultError) || 'Claude provider web search is not configured.'
     };
   }
 

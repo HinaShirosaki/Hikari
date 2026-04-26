@@ -34,8 +34,9 @@
           </form>
 
           <div id="papers-library-context-menu" class="papers-context-menu" hidden>
-            <button type="button" id="papers-context-new-folder" class="papers-context-item">New Journal Club Folder</button>
-            <button type="button" id="papers-context-delete-folder" class="papers-context-item papers-context-item-danger" hidden>Delete Journal Club Folder</button>
+            <button type="button" id="papers-context-new-folder" class="papers-context-item">New Folder</button>
+            <button type="button" id="papers-context-rename-folder" class="papers-context-item" hidden>Rename Folder</button>
+            <button type="button" id="papers-context-delete-folder" class="papers-context-item papers-context-item-danger" hidden>Delete Folder</button>
           </div>
         </aside>
 
@@ -99,6 +100,23 @@
                   <span class="papers-comment-toggle-icon" aria-hidden="true"></span>
                 </button>
                 <aside id="paper-comment-sidebar" class="panel papers-comment-sidebar">
+                  <section id="paper-summary-section" class="papers-summary-section">
+                    <button
+                      type="button"
+                      id="paper-summary-toggle-btn"
+                      class="papers-section-toggle"
+                      aria-controls="paper-summary-content"
+                      aria-expanded="true"
+                      aria-label="Hide paper summary"
+                      title="Hide paper summary"
+                    >
+                      <span class="papers-section-toggle-icon" aria-hidden="true"></span>
+                      <span>Summary</span>
+                    </button>
+                    <div id="paper-summary-content" class="papers-summary-content">
+                      <dl id="paper-summary-list" class="papers-summary-list"></dl>
+                    </div>
+                  </section>
                   <div class="papers-comment-meta">
                     <h4>Comments</h4>
                     <p id="paper-comment-page" class="small-note">Page 0</p>

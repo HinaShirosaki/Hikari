@@ -385,17 +385,26 @@ export function createSequenceViewerFeatureEditingController(config = {}) {
         && payload.range.start === featureEditorState.originalRange.start
         && payload.range.end === featureEditorState.originalRange.end
       );
+      const nextSegments = preserveSegments
+        ? (Array.isArray(previousFeature?.segments) ? previousFeature.segments : [])
+        : [{ start: payload.range.start, end: payload.range.end }];
       updatedFeature = {
         ...previousFeature,
         name: payload.name,
         type: payload.type,
         strand: payload.strand,
         description: payload.description,
-        segments: preserveSegments
-          ? (Array.isArray(previousFeature?.segments) ? previousFeature.segments : [])
-          : [{ start: payload.range.start, end: payload.range.end }],
+        segments: nextSegments,
         locationText: ''
       };
+      if (
+        payload.type !== previousFeature?.type
+        || payload.strand !== previousFeature?.strand
+        || !preserveSegments
+      ) {
+        delete updatedFeature.translation;
+        delete updatedFeature.proteinSequence;
+      }
       nextFeatures[targetIndex] = updatedFeature;
       actionLabel = `Updated feature ${updatedFeature.name}.`;
     } else {

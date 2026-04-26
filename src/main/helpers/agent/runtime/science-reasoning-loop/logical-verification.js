@@ -292,8 +292,8 @@ function createScienceLoopLogicalVerificationRuntime(deps = {}) {
   } = createAgentLlmRuntimeHelpers(deps);
   const now = typeof deps.now === 'function' ? deps.now : (() => new Date().toISOString());
 
-  function normalizeQuestion(question = {}) {
-    const source = question && typeof question === 'object' ? question : {};
+  function normalizeAnswer(answer = {}) {
+    const source = answer && typeof answer === 'object' ? answer : {};
     return {
       tentative_answer: {
         current_best_answer: cleanText(
@@ -321,8 +321,8 @@ function createScienceLoopLogicalVerificationRuntime(deps = {}) {
     return `${title}:\n${rows.map((item) => `- ${item}`).join('\n')}`;
   }
 
-  function buildQuestionSection(question = {}) {
-    const source = normalizeQuestion(question);
+  function buildAnswerSection(answer = {}) {
+    const source = normalizeAnswer(answer);
     return [
       'Pre-synthesized answer:',
       cleanText(source?.tentative_answer?.current_best_answer, 600)
@@ -334,7 +334,7 @@ function createScienceLoopLogicalVerificationRuntime(deps = {}) {
   }
 
   function buildFallbackLogicExtraction(input = {}) {
-    const question = normalizeQuestion(input.preSynthesizedQuestion);
+    const answer = normalizeAnswer(input.preSynthesizedAnswer);
     const existing = normalizeScienceLogicalVerification(
       input.logical_verification || input.logicalVerification,
       {},
@@ -343,11 +343,11 @@ function createScienceLoopLogicalVerificationRuntime(deps = {}) {
     return {
       context: cleanText(existing.context, 320)
         || uniqueStrings([
-          ...question.supporting_basis.slice(0, 2),
-          ...question.unresolved_issues.slice(0, 1)
+          ...answer.supporting_basis.slice(0, 2),
+          ...answer.unresolved_issues.slice(0, 1)
         ], 3).join(' | '),
       pre_synthesized_answer: cleanText(
-        existing.pre_synthesized_answer || question?.tentative_answer?.current_best_answer,
+        existing.pre_synthesized_answer || answer?.tentative_answer?.current_best_answer,
         320
       ),
       logic_list: normalizeLogicListRows(existing.logic_list, [], { asArray, cleanText, uniqueStrings })
@@ -365,7 +365,7 @@ function createScienceLoopLogicalVerificationRuntime(deps = {}) {
 
   function buildLogicExtractionPrompt(input = {}) {
     const clarifiedRequest = cleanText(input.message || input.clarifiedInput || input.originalMessage, 3200);
-    const question = normalizeQuestion(input.preSynthesizedQuestion);
+    const answer = normalizeAnswer(input.preSynthesizedAnswer);
     return [
       'Extract the short logical structure from the current pre-synthesized answer.',
       'Deductive means a direct conclusion from the stated basis.',
@@ -375,7 +375,7 @@ function createScienceLoopLogicalVerificationRuntime(deps = {}) {
       'Each logic_list item should contain one reasoning_type and one short logic string.',
       'Do not add evidence or alternatives that are not already in the provided answer state.',
       `Clarified request:\n${clarifiedRequest}`,
-      buildQuestionSection(question),
+      buildAnswerSection(answer),
       'Return JSON only.'
     ].filter(Boolean).join('\n\n');
   }
@@ -431,17 +431,17 @@ function createScienceLoopLogicalVerificationRuntime(deps = {}) {
 
   function buildInferenceStabilityMessage(input = {}) {
     const clarifiedRequest = cleanText(input.message || input.clarifiedInput || input.originalMessage, 3200);
-    const question = normalizeQuestion(input.preSynthesizedQuestion);
+    const answer = normalizeAnswer(input.preSynthesizedAnswer);
     const reasoningType = normalizeReasoningType(input.reasoningType, cleanText);
     const logicText = cleanText(input.logicText, 240);
     const context = cleanText(input.context, 320);
-    const preSynthesizedAnswer = cleanText(input.preSynthesizedAnswer, 320);
+    const extractedAnswer = cleanText(input.extractedAnswer, 320);
     return [
       'Judge whether this one extracted inference is stable.',
       `Clarified request:\n${clarifiedRequest}`,
       context ? `Extracted context: ${context}` : '',
-      preSynthesizedAnswer ? `Extracted pre-synthesized answer: ${preSynthesizedAnswer}` : '',
-      buildQuestionSection(question),
+      extractedAnswer ? `Extracted pre-synthesized answer: ${extractedAnswer}` : '',
+      buildAnswerSection(answer),
       `Reasoning type: ${reasoningType}`,
       `Extracted logic: ${logicText}`,
       'Return JSON only.'
@@ -523,7 +523,7 @@ function createScienceLoopLogicalVerificationRuntime(deps = {}) {
     );
   }
 
-  async function verifyPreSynthesizedQuestion(input = {}) {
+  async function verifyPreSynthesizedAnswer(input = {}) {
     const part1 = await extractLogic(input);
     const rows = [];
     for (const row of asArray(part1.logic_list)) {
@@ -537,7 +537,7 @@ function createScienceLoopLogicalVerificationRuntime(deps = {}) {
         reasoningType,
         logicText,
         context: cleanText(part1.context, 320),
-        preSynthesizedAnswer: cleanText(part1.pre_synthesized_answer, 320)
+        extractedAnswer: cleanText(part1.pre_synthesized_answer, 320)
       }));
     }
     return normalizeScienceLogicalVerification(
@@ -588,7 +588,7 @@ function createScienceLoopLogicalVerificationRuntime(deps = {}) {
     buildLogicExtractionPrompt,
     buildInferenceStabilitySystemPrompt,
     buildInferenceStabilityMessage,
-    verifyPreSynthesizedQuestion,
+    verifyPreSynthesizedAnswer,
     buildInferenceRetryFeedback
   };
 }

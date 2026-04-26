@@ -1,0 +1,725 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CD19</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --preview-ink: #16314c;
+      --preview-muted: #5a7592;
+      --preview-backbone: #7e99ba;
+      --preview-center-ring: #d8e4f2;
+      --preview-center-disc: #f9fbfe;
+      --preview-tick: #8ca5c5;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: #ffffff;
+    }
+    body {
+      font-family: "Playfair Display", serif;
+      color: var(--preview-ink);
+      overflow: hidden;
+    }
+    .preview-shell {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      place-items: center;
+      margin: 0;
+      padding: 8px;
+    }
+    svg {
+      display: block;
+      width: auto;
+      height: 100%;
+      max-width: 100%;
+      max-height: 100%;
+    }
+    .circular-preview__backbone {
+      fill: none;
+      stroke: var(--preview-backbone);
+      stroke-width: 14;
+    }
+    .circular-preview__center-ring {
+      fill: none;
+      stroke: var(--preview-center-ring);
+      stroke-width: 2;
+    }
+    .circular-preview__center-disc {
+      fill: var(--preview-center-disc);
+      stroke: var(--preview-center-ring);
+      stroke-width: 2;
+    }
+    .circular-preview__tick {
+      stroke: var(--preview-tick);
+      stroke-width: 1.5;
+      opacity: 0.9;
+    }
+    .circular-preview__feature {
+      stroke-width: 1.5;
+      stroke-linejoin: round;
+    }
+    .circular-preview__leader {
+      fill: none;
+      stroke-width: 1.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      opacity: 0.82;
+    }
+    .circular-preview__label-box {
+      stroke-width: 1.2;
+    }
+    .circular-preview__label-text {
+      font-size: 15px;
+      font-weight: 600;
+      dominant-baseline: middle;
+      letter-spacing: 0.01em;
+    }
+    .circular-preview__title {
+      fill: var(--preview-ink);
+      font-size: 28px;
+      font-weight: 700;
+      text-anchor: middle;
+    }
+    .circular-preview__subtitle,
+    .circular-preview__caption {
+      text-anchor: middle;
+      fill: var(--preview-muted);
+      letter-spacing: 0.02em;
+    }
+    .circular-preview__subtitle {
+      font-size: 15px;
+      font-weight: 600;
+    }
+    .circular-preview__caption {
+      font-size: 13px;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+  <main class="preview-shell" data-renderer="dna-feature-viewer-js">
+    <!-- Circular plasmid preview powered by a minimal JS port inspired by DnaFeaturesViewer (MIT). -->
+    <svg
+      viewBox="0 0 1728 1728"
+      role="img"
+      aria-label="CD19 circular plasmid preview">
+      <desc>Standalone circular plasmid preview for CD19.</desc>
+      <circle class="circular-preview__center-ring" cx="864.00" cy="864.00" r="208.00"></circle>
+      <circle class="circular-preview__backbone" cx="864.00" cy="864.00" r="240.00"></circle>
+      <line class="circular-preview__tick" x1="864.00" y1="636.00" x2="864.00" y2="612.00"></line><line class="circular-preview__tick" x1="951.25" y1="653.36" x2="960.44" y2="631.18"></line><line class="circular-preview__tick" x1="1025.22" y1="702.78" x2="1042.19" y2="685.81"></line><line class="circular-preview__tick" x1="1074.64" y1="776.75" x2="1096.82" y2="767.56"></line><line class="circular-preview__tick" x1="1092.00" y1="864.00" x2="1116.00" y2="864.00"></line><line class="circular-preview__tick" x1="1074.64" y1="951.25" x2="1096.82" y2="960.44"></line><line class="circular-preview__tick" x1="1025.22" y1="1025.22" x2="1042.19" y2="1042.19"></line><line class="circular-preview__tick" x1="951.25" y1="1074.64" x2="960.44" y2="1096.82"></line><line class="circular-preview__tick" x1="864.00" y1="1092.00" x2="864.00" y2="1116.00"></line><line class="circular-preview__tick" x1="776.75" y1="1074.64" x2="767.56" y2="1096.82"></line><line class="circular-preview__tick" x1="702.78" y1="1025.22" x2="685.81" y2="1042.19"></line><line class="circular-preview__tick" x1="653.36" y1="951.25" x2="631.18" y2="960.44"></line><line class="circular-preview__tick" x1="636.00" y1="864.00" x2="612.00" y2="864.00"></line><line class="circular-preview__tick" x1="653.36" y1="776.75" x2="631.18" y2="767.56"></line><line class="circular-preview__tick" x1="702.78" y1="702.78" x2="685.81" y2="685.81"></line><line class="circular-preview__tick" x1="776.75" y1="653.36" x2="767.56" y2="631.18"></line>
+      
+          <path class="circular-preview__feature"
+            data-feature-index="1"
+            data-segment-index="1"
+            d="M 978.68 612.95 A 276.00 276.00 0 1 1 839.95 589.05 L 864.00 597.00 L 841.51 606.98 A 258.00 258.00 0 1 0 971.20 629.33 Z"
+            fill="#808080"
+            stroke="#6c7075">
+            <title>misc_feature_ (384..5616/label=&quot;vector_backbone-383-5616&quot;)</title>
+          </path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="2"
+            data-segment-index="1"
+            d="M 864.00 588.00 A 276.00 276.00 0 0 1 868.32 588.03 L 872.36 597.13 L 868.04 606.03 A 258.00 258.00 0 0 0 864.00 606.00 Z"
+            fill="#2f8f9d"
+            stroke="#297c8d">
+            <title>source (1..5616/organism=&quot;CD19 in pET-28a(+)&quot;)</title>
+          </path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="3"
+            data-segment-index="1"
+            d="M 562.65 917.14 A 306.00 306.00 0 0 1 688.49 613.34 L 715.50 606.79 L 698.81 628.08 A 288.00 288.00 0 0 0 580.38 914.01 Z"
+            fill="#808080"
+            stroke="#6c7075">
+            <title>misc_feature_ (4057..5148/label=&quot;lacI&quot;)</title>
+          </path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="4"
+            data-segment-index="1"
+            d="M 1152.93 763.21 A 306.00 306.00 0 0 1 1133.99 1008.02 L 1112.87 1026.09 L 1118.11 999.55 A 288.00 288.00 0 0 0 1135.93 769.14 Z"
+            fill="#808080"
+            stroke="#6c7075">
+            <title>misc_feature_ (1105..1920/label=&quot;kan&quot;)</title>
+          </path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="5"
+            data-segment-index="1"
+            d="M 864.00 558.00 A 306.00 306.00 0 0 1 966.40 575.64 L 987.41 593.85 L 960.38 592.61 A 288.00 288.00 0 0 0 864.00 576.00 Z"
+            fill="#808080"
+            stroke="#6c7075">
+            <title>misc_feature_ (1..383/label=&quot;insert&quot;)</title>
+          </path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="6"
+            data-segment-index="1"
+            d="M 780.18 1158.30 A 306.00 306.00 0 0 1 743.43 1145.24 L 723.63 1125.73 L 750.52 1128.70 A 288.00 288.00 0 0 0 785.11 1140.99 Z"
+            fill="#808080"
+            stroke="#6c7075">
+            <title>misc_feature_ (3057..3248/label=&quot;ROP&quot;)</title>
+          </path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="7"
+            data-segment-index="1"
+            d="M 839.04 559.02 A 306.00 306.00 0 0 1 843.82 558.67 L 849.05 567.38 L 845.00 576.63 A 288.00 288.00 0 0 0 840.50 576.96 Z"
+            fill="#808080"
+            stroke="#6c7075">
+            <title>misc_feature_ (5544..5571/label=&quot;lacO&quot;)</title>
+          </path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="8"
+            data-segment-index="1"
+            d="M 564.89 928.56 A 306.00 306.00 0 0 1 564.12 924.87 L 572.23 919.50 L 581.76 921.29 A 288.00 288.00 0 0 0 582.48 924.76 Z"
+            fill="#808080"
+            stroke="#6c7075">
+            <title>misc_feature_ (4023..4044/label=&quot;CAP_binding&quot;)</title>
+          </path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="9"
+            data-segment-index="1"
+            d="M 864.00 528.00 A 336.00 336.00 0 0 1 866.26 528.01 L 866.13 546.01 A 318.00 318.00 0 0 0 864.00 546.00 Z"
+            fill="#808080"
+            stroke="#6c7075">
+            <title>misc_feature_ (390..407/label=&quot;6x_His_tag&quot;)</title>
+          </path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="9"
+            data-segment-index="2"
+            d="M 1005.66 559.32 A 336.00 336.00 0 1 1 834.72 529.28 L 864.00 537.00 L 836.28 547.21 A 318.00 318.00 0 1 0 998.07 575.64 Z"
+            fill="#808080"
+            stroke="#6c7075">
+            <title>misc_feature_ (390..407/label=&quot;6x_His_tag&quot;)</title>
+          </path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="10"
+            data-segment-index="1"
+            d="M 864.00 498.00 A 366.00 366.00 0 0 1 864.41 498.00 L 864.39 516.00 A 348.00 348.00 0 0 0 864.00 516.00 Z"
+            fill="#808080"
+            stroke="#6c7075">
+            <title>misc_feature_ (575..881/label=&quot;f1&quot;)</title>
+          </path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="10"
+            data-segment-index="2"
+            d="M 1083.22 570.91 A 366.00 366.00 0 1 1 832.10 499.39 L 864.00 507.00 L 833.67 517.32 A 348.00 348.00 0 1 0 1072.44 585.33 Z"
+            fill="#808080"
+            stroke="#6c7075">
+            <title>misc_feature_ (575..881/label=&quot;f1&quot;)</title>
+          </path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="11"
+            data-segment-index="1"
+            d="M 864.00 468.00 A 396.00 396.00 0 0 1 864.44 468.00 L 864.42 486.00 A 378.00 378.00 0 0 0 864.00 486.00 Z"
+            fill="#808080"
+            stroke="#6c7075">
+            <title>misc_feature_ (2042..2630/label=&quot;colE1_high_copy&quot;)</title>
+          </path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="11"
+            data-segment-index="2"
+            d="M 1163.62 1122.93 A 396.00 396.00 0 1 1 829.49 469.51 L 864.00 477.00 L 831.06 487.44 A 378.00 378.00 0 1 0 1150.00 1111.16 Z"
+            fill="#808080"
+            stroke="#6c7075">
+            <title>misc_feature_ (2042..2630/label=&quot;colE1_high_copy&quot;)</title>
+          </path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="12"
+            data-segment-index="1"
+            d="M 864.00 438.00 A 426.00 426.00 0 0 1 867.34 438.01 L 867.20 456.01 A 408.00 408.00 0 0 0 864.00 456.00 Z"
+            fill="#808080"
+            stroke="#6c7075">
+            <title>misc_feature_ (5526..5544/label=&quot;T7&quot;)</title>
+          </path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="12"
+            data-segment-index="2"
+            d="M 820.70 440.21 A 426.00 426.00 0 0 1 842.32 438.55 L 864.00 447.00 L 843.24 456.53 A 408.00 408.00 0 0 0 822.53 458.11 Z"
+            fill="#808080"
+            stroke="#6c7075">
+            <title>misc_feature_ (5526..5544/label=&quot;T7&quot;)</title>
+          </path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="13"
+            data-segment-index="1"
+            d="M 647.30 497.24 A 426.00 426.00 0 0 1 663.50 488.13 L 683.97 487.86 L 671.97 504.01 A 408.00 408.00 0 0 0 656.45 512.73 Z"
+            fill="#808080"
+            stroke="#6c7075">
+            <title>misc_feature_ (5140..5217/label=&quot;lacIQ_promoter&quot;)</title>
+          </path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="14"
+            data-segment-index="1"
+            d="M 864.00 408.00 A 456.00 456.00 0 0 1 865.53 408.00 L 865.47 426.00 A 438.00 438.00 0 0 0 864.00 426.00 Z"
+            fill="#808080"
+            stroke="#6c7075">
+            <title>misc_feature_ (5584..5606/label=&quot;RBS_3&quot;)</title>
+          </path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="14"
+            data-segment-index="2"
+            d="M 847.17 408.31 A 456.00 456.00 0 0 1 855.58 408.08 L 864.00 417.00 L 855.91 426.07 A 438.00 438.00 0 0 0 847.83 426.30 Z"
+            fill="#808080"
+            stroke="#6c7075">
+            <title>misc_feature_ (5584..5606/label=&quot;RBS_3&quot;)</title>
+          </path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="15"
+            data-segment-index="1"
+            d="M 864.00 378.00 A 486.00 486.00 0 0 1 867.81 378.01 L 867.67 396.01 A 468.00 468.00 0 0 0 864.00 396.00 Z"
+            fill="#808080"
+            stroke="#6c7075">
+            <title>misc_feature_ (5589..5605/label=&quot;T7_transl_en_RBS&quot;)</title>
+          </path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="15"
+            data-segment-index="2"
+            d="M 848.78 378.24 A 486.00 486.00 0 0 1 856.39 378.06 L 864.00 387.00 L 856.67 396.06 A 468.00 468.00 0 0 0 849.34 396.23 Z"
+            fill="#808080"
+            stroke="#6c7075">
+            <title>misc_feature_ (5589..5605/label=&quot;T7_transl_en_RBS&quot;)</title>
+          </path>
+        
+      
+        <g class="circular-preview__annotation" data-label-level="0">
+          <path class="circular-preview__leader"
+            d="M 804.47 1137.60 L 750.46 1385.79 L 736.34 1395.56"
+            stroke="#6c7075"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="624.14"
+            y="1382.56"
+            width="112.20"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#ededed"
+            stroke="#6c7075"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="730.34"
+              y="1395.56"
+              text-anchor="end"
+              fill="#0f223e">
+              misc_feature_
+            </text>
+          
+          <title>misc_feature_ (384..5616/label=&quot;vector_backbone-383-5616&quot;)</title>
+        </g>
+      
+        <g class="circular-preview__annotation" data-label-level="4">
+          <path class="circular-preview__leader"
+            d="M 868.39 584.03 L 874.37 202.08 L 874.53 192.08"
+            stroke="#297c8d"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="831.53"
+            y="179.08"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e2eff1"
+            stroke="#297c8d"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="874.53"
+              y="192.08"
+              text-anchor="middle"
+              fill="#0f223e">
+              source
+            </text>
+          
+          <title>source (1..5616/organism=&quot;CD19 in pET-28a(+)&quot;)</title>
+        </g>
+      
+        <g class="circular-preview__annotation" data-label-level="0">
+          <path class="circular-preview__leader"
+            d="M 583.04 732.99 L 380.03 638.32 L 358.97 634.10"
+            stroke="#6c7075"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="246.77"
+            y="621.10"
+            width="112.20"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#ededed"
+            stroke="#6c7075"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="352.97"
+              y="634.10"
+              text-anchor="end"
+              fill="#0f223e">
+              misc_feature_
+            </text>
+          
+          <title>misc_feature_ (4057..5148/label=&quot;lacI&quot;)</title>
+        </g>
+      
+        <g class="circular-preview__annotation" data-label-level="0">
+          <path class="circular-preview__leader"
+            d="M 1171.74 901.37 L 1394.11 928.37 L 1416.03 929.57"
+            stroke="#6c7075"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1416.03"
+            y="916.57"
+            width="112.20"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#ededed"
+            stroke="#6c7075"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1422.03"
+              y="929.57"
+              text-anchor="start"
+              fill="#0f223e">
+              misc_feature_
+            </text>
+          
+          <title>misc_feature_ (1105..1920/label=&quot;kan&quot;)</title>
+        </g>
+      
+        <g class="circular-preview__annotation" data-label-level="0">
+          <path class="circular-preview__leader"
+            d="M 929.91 561.09 L 977.54 342.21 L 991.66 332.44"
+            stroke="#6c7075"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="991.66"
+            y="319.44"
+            width="112.20"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#ededed"
+            stroke="#6c7075"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="997.66"
+              y="332.44"
+              text-anchor="start"
+              fill="#0f223e">
+              misc_feature_
+            </text>
+          
+          <title>misc_feature_ (1..383/label=&quot;insert&quot;)</title>
+        </g>
+      
+        <g class="circular-preview__annotation" data-label-level="3">
+          <path class="circular-preview__leader"
+            d="M 747.61 1151.32 L 627.48 1447.91 L 611.72 1457.18"
+            stroke="#6c7075"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="499.52"
+            y="1444.18"
+            width="112.20"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#ededed"
+            stroke="#6c7075"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="605.72"
+              y="1457.18"
+              text-anchor="end"
+              fill="#0f223e">
+              misc_feature_
+            </text>
+          
+          <title>misc_feature_ (3057..3248/label=&quot;ROP&quot;)</title>
+        </g>
+      
+        <g class="circular-preview__annotation" data-label-level="3">
+          <path class="circular-preview__leader"
+            d="M 843.55 554.68 L 822.44 235.37 L 821.78 225.39"
+            stroke="#6c7075"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="765.68"
+            y="212.39"
+            width="112.20"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#ededed"
+            stroke="#6c7075"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="821.78"
+              y="225.39"
+              text-anchor="middle"
+              fill="#0f223e">
+              misc_feature_
+            </text>
+          
+          <title>misc_feature_ (5544..5571/label=&quot;lacO&quot;)</title>
+        </g>
+      
+        <g class="circular-preview__annotation" data-label-level="0">
+          <path class="circular-preview__leader"
+            d="M 560.20 925.67 L 340.67 970.23 L 318.87 972.22"
+            stroke="#6c7075"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="206.67"
+            y="959.22"
+            width="112.20"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#ededed"
+            stroke="#6c7075"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="312.87"
+              y="972.22"
+              text-anchor="end"
+              fill="#0f223e">
+              misc_feature_
+            </text>
+          
+          <title>misc_feature_ (4023..4044/label=&quot;CAP_binding&quot;)</title>
+        </g>
+      
+        <g class="circular-preview__annotation" data-label-level="1">
+          <path class="circular-preview__leader"
+            d="M 790.60 1195.98 L 741.80 1416.65 L 727.65 1426.42"
+            stroke="#6c7075"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="615.45"
+            y="1413.42"
+            width="112.20"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#ededed"
+            stroke="#6c7075"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="721.65"
+              y="1426.42"
+              text-anchor="end"
+              fill="#0f223e">
+              misc_feature_
+            </text>
+          
+          <title>misc_feature_ (390..407/label=&quot;6x_His_tag&quot;)</title>
+        </g>
+      
+        <g class="circular-preview__annotation" data-label-level="2">
+          <path class="circular-preview__leader"
+            d="M 747.23 1215.09 L 675.27 1431.44 L 660.11 1440.93"
+            stroke="#6c7075"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="547.91"
+            y="1427.93"
+            width="112.20"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#ededed"
+            stroke="#6c7075"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="654.11"
+              y="1440.93"
+              text-anchor="end"
+              fill="#0f223e">
+              misc_feature_
+            </text>
+          
+          <title>misc_feature_ (575..881/label=&quot;f1&quot;)</title>
+        </g>
+      
+        <g class="circular-preview__annotation" data-label-level="0">
+          <path class="circular-preview__leader"
+            d="M 500.26 1030.41 L 378.40 1086.15 L 357.31 1090.31"
+            stroke="#6c7075"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="245.11"
+            y="1077.31"
+            width="112.20"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#ededed"
+            stroke="#6c7075"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="351.31"
+              y="1090.31"
+              text-anchor="end"
+              fill="#0f223e">
+              misc_feature_
+            </text>
+          
+          <title>misc_feature_ (2042..2630/label=&quot;colE1_high_copy&quot;)</title>
+        </g>
+      
+        <g class="circular-preview__annotation" data-label-level="0">
+          <path class="circular-preview__leader"
+            d="M 842.12 434.56 L 836.83 330.69 L 836.32 320.70"
+            stroke="#6c7075"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="780.22"
+            y="307.70"
+            width="112.20"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#ededed"
+            stroke="#6c7075"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="836.32"
+              y="320.70"
+              text-anchor="middle"
+              fill="#0f223e">
+              misc_feature_
+            </text>
+          
+          <title>misc_feature_ (5526..5544/label=&quot;T7&quot;)</title>
+        </g>
+      
+        <g class="circular-preview__annotation" data-label-level="0">
+          <path class="circular-preview__leader"
+            d="M 661.62 484.60 L 612.67 392.84 L 595.96 384.02"
+            stroke="#6c7075"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="483.76"
+            y="371.02"
+            width="112.20"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#ededed"
+            stroke="#6c7075"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="589.96"
+              y="384.02"
+              text-anchor="end"
+              fill="#0f223e">
+              misc_feature_
+            </text>
+          
+          <title>misc_feature_ (5140..5217/label=&quot;lacIQ_promoter&quot;)</title>
+        </g>
+      
+        <g class="circular-preview__annotation" data-label-level="1">
+          <path class="circular-preview__leader"
+            d="M 855.51 404.08 L 853.55 298.10 L 853.37 288.10"
+            stroke="#6c7075"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="797.27"
+            y="275.10"
+            width="112.20"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#ededed"
+            stroke="#6c7075"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="853.37"
+              y="288.10"
+              text-anchor="middle"
+              fill="#0f223e">
+              misc_feature_
+            </text>
+          
+          <title>misc_feature_ (5584..5606/label=&quot;RBS_3&quot;)</title>
+        </g>
+      
+        <g class="circular-preview__annotation" data-label-level="2">
+          <path class="circular-preview__leader"
+            d="M 856.33 374.06 L 854.63 266.07 L 854.48 256.07"
+            stroke="#6c7075"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="798.38"
+            y="243.07"
+            width="112.20"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#ededed"
+            stroke="#6c7075"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="854.48"
+              y="256.07"
+              text-anchor="middle"
+              fill="#0f223e">
+              misc_feature_
+            </text>
+          
+          <title>misc_feature_ (5589..5605/label=&quot;T7_transl_en_RBS&quot;)</title>
+        </g>
+      
+      
+    <g class="circular-preview__center">
+      <circle cx="864.00" cy="864.00" r="184.00" class="circular-preview__center-disc"></circle>
+      <text x="864.00" y="850.00" class="circular-preview__title">CD19</text>
+      <text x="864.00" y="882.00" class="circular-preview__subtitle">5,616 bp · 15 features</text>
+      <text x="864.00" y="912.00" class="circular-preview__caption">Circular plasmid preview</text>
+    </g>
+  
+    </svg>
+  </main>
+</body>
+</html>

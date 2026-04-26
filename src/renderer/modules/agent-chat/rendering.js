@@ -252,39 +252,57 @@ function renderPurchaseRecommendationCards(purchaseRecommendation, safeText) {
   `;
 }
 
-function renderThinkingTrace(title, rows, safeText) {
+function renderCollapsibleThinkingTrace(title, rows, safeText, { open = false } = {}) {
   if (!rows.length) {
     return '';
   }
   return `
-    <section class="agent-thinking-trace" aria-label="${safeText(title)}">
-      <h4>${safeText(title)}</h4>
+    <details class="agent-thinking-trace"${open ? ' open' : ''} aria-label="${safeText(title)}">
+      <summary class="agent-thinking-trace-summary">${safeText(title)}</summary>
       <ul class="agent-thinking-trace-list">
         ${rows.map((row) => `<li class="agent-thinking-trace-item">${safeText(row)}</li>`).join('')}
       </ul>
-    </section>
+    </details>
   `;
 }
 
-function buildScienceThinkingTraceRows(payload) {
-  const trace = payload?.thinking_trace && typeof payload.thinking_trace === 'object'
-    ? payload.thinking_trace
+function normalizeThinkingTraceRows(rows) {
+  const seen = new Set();
+  return asArray(rows)
+    .map((row) => trimText(row?.text || row, 420))
+    .filter((row) => {
+      if (!row) {
+        return false;
+      }
+      const key = row.toLowerCase();
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 32);
+}
+
+function buildStructuredThinkingTraceRows(trace) {
+  const source = trace && typeof trace === 'object'
+    ? trace
     : null;
-  if (!trace) {
+  if (!source) {
     return [];
   }
   const rows = [
-    trimText(trace.intent_parse_question, 420)
-      ? `Intent parse: ${trimText(trace.intent_parse_question, 420)}`
+    trimText(source.intent_parse_question, 420)
+      ? `Intent parse: ${trimText(source.intent_parse_question, 420)}`
       : '',
-    trimText(trace.question_clarifier, 420)
-      ? `Clarify: ${trimText(trace.question_clarifier, 420)}`
+    trimText(source.question_clarifier, 420)
+      ? `Clarify: ${trimText(source.question_clarifier, 420)}`
       : '',
-    trimText(trace.criteria_generate, 420)
-      ? `Criteria: ${trimText(trace.criteria_generate, 420)}`
+    trimText(source.criteria_generate, 420)
+      ? `Criteria: ${trimText(source.criteria_generate, 420)}`
       : ''
   ].filter(Boolean);
-  asArray(trace.tool_rounds).slice(0, 8).forEach((round, index) => {
+  asArray(source.tool_rounds).slice(0, 8).forEach((round, index) => {
     const roundNumber = Math.max(1, Number(round?.round) || index + 1);
     const toolSelection = trimText(round?.tool_selection, 420);
     const toolCall = trimText(round?.tool_call, 420);
@@ -300,10 +318,10 @@ function buildScienceThinkingTraceRows(payload) {
     }
   });
   [
-    ['Pre-synthesis', trace.pre_synthesize_answer],
-    ['Judge', trace.judge],
-    ['Final synthesis', trace.final_synthesize],
-    ['Answered question', trace.final_synthesized_question]
+    ['Pre-synthesis', source.pre_synthesize_answer],
+    ['Judge', source.judge],
+    ['Final synthesis', source.final_synthesize],
+    ['Answered question', source.final_synthesized_question]
   ].forEach(([label, value]) => {
     const clean = trimText(value, 420);
     if (clean) {
@@ -313,16 +331,34 @@ function buildScienceThinkingTraceRows(payload) {
   return rows.slice(0, 32);
 }
 
-function renderLiveProgressMeta(progress, safeText) {
-  const thinkingRows = asArray(progress?.thinking_rows).map((row) => trimText(row?.text || row, 420)).filter(Boolean);
+function collectAssistantThinkingTraceRows(meta) {
+  if (!meta || typeof meta !== 'object') {
+    return [];
+  }
+  const liveProgress = meta.live_progress && typeof meta.live_progress === 'object'
+    ? meta.live_progress
+    : null;
+  const liveThinkingRows = normalizeThinkingTraceRows(liveProgress?.thinking_rows);
+  if (liveThinkingRows.length) {
+    return liveThinkingRows;
+  }
+  const structuredThinkingRows = buildStructuredThinkingTraceRows(meta.thinking_trace);
+  if (structuredThinkingRows.length) {
+    return structuredThinkingRows;
+  }
+  const persistedThinkingRows = normalizeThinkingTraceRows(
+    meta.thinking_trace_rows || meta.thinkingTraceRows
+  );
+  return persistedThinkingRows;
+}
+
+function renderAssistantThinkingTrace(meta, safeText) {
+  const thinkingRows = collectAssistantThinkingTraceRows(meta);
   if (!thinkingRows.length) {
     return '';
   }
-  return `
-    <div class="agent-meta-grid agent-meta-grid-streamlined">
-      ${renderThinkingTrace('Thinking Trace', thinkingRows, safeText)}
-    </div>
-  `;
+  const isLive = Boolean(meta?.live_progress && typeof meta.live_progress === 'object');
+  return renderCollapsibleThinkingTrace('Thinking Trace', thinkingRows, safeText, { open: isLive });
 }
 
 function renderAssistantMeta(meta, messageId = '', { state, safeText }) {
@@ -332,9 +368,6 @@ function renderAssistantMeta(meta, messageId = '', { state, safeText }) {
   const liveProgress = meta.live_progress && typeof meta.live_progress === 'object'
     ? meta.live_progress
     : null;
-  if (liveProgress) {
-    return renderLiveProgressMeta(liveProgress, safeText);
-  }
   const toolTest = meta.tool_test && typeof meta.tool_test === 'object'
     ? meta.tool_test
     : null;
@@ -357,6 +390,9 @@ function renderAssistantMeta(meta, messageId = '', { state, safeText }) {
       </div>
     `;
   }
+  if (liveProgress) {
+    return '';
+  }
   const notebookDraft = normalizeNotebookDraft(meta.notebookDraft);
   const existingNotebookEntry = findNotebookEntryForDraft(state.notebookEntries, notebookDraft);
   const showCreatePlannedPageButton = Boolean(
@@ -377,25 +413,10 @@ function renderAssistantMeta(meta, messageId = '', { state, safeText }) {
   const purchaseRecommendation = hasPurchaseRecommendation
     ? meta.purchase_recommendation
     : {};
-  const generalScience = meta.general_science_question && typeof meta.general_science_question === 'object'
-    ? meta.general_science_question
-    : {};
-  const projectScience = meta.project_science_question && typeof meta.project_science_question === 'object'
-    ? meta.project_science_question
-    : {};
-  const resultAnalysis = meta.result_analysis && typeof meta.result_analysis === 'object'
-    ? meta.result_analysis
-    : {};
   const pythonSandboxRuns = collectPythonSandboxRuns(meta);
-  const scienceThinkingRows = [
-    buildScienceThinkingTraceRows(generalScience),
-    buildScienceThinkingTraceRows(projectScience),
-    buildScienceThinkingTraceRows(resultAnalysis)
-  ].find((rows) => rows.length) || [];
   const sections = [
     hasPurchaseRecommendation ? renderPurchaseRecommendationCards(purchaseRecommendation, safeText) : '',
     renderPythonSandboxRuns(pythonSandboxRuns, safeText),
-    scienceThinkingRows.length ? renderThinkingTrace('Thinking Trace', scienceThinkingRows, safeText) : '',
     showCreatePlannedPageButton ? `
       <section class="agent-draft-actions">
         <button
@@ -425,6 +446,23 @@ function renderAssistantMeta(meta, messageId = '', { state, safeText }) {
   return `
     <div class="agent-meta-grid agent-meta-grid-streamlined">
       ${sections.join('')}
+    </div>
+  `;
+}
+
+function renderUserAttachments(attachments, safeText) {
+  const items = asArray(attachments).filter((attachment) => trimText(attachment?.name, 240));
+  if (!items.length) {
+    return '';
+  }
+  return `
+    <div class="agent-attachment-list">
+      ${items.map((attachment) => `
+        <span class="agent-attachment-pill${trimText(attachment?.kind, 20) === 'image' ? ' is-image' : ''}">
+          <span>${safeText(trimText(attachment?.kind, 20) === 'image' ? 'Image' : 'File')}</span>
+          <span>${safeText(trimText(attachment?.name, 240))}</span>
+        </span>
+      `).join('')}
     </div>
   `;
 }
@@ -460,6 +498,12 @@ export function renderHistory({ historyNode, messages, state, safeText }) {
     const rowClass = role === 'assistant' ? 'agent-chat-row-assistant' : 'agent-chat-row-user';
     const hasLiveProgress = Boolean(message?.meta?.live_progress && typeof message.meta.live_progress === 'object');
     const timestamp = formatTime(message.createdAt);
+    const assistantThinkingTrace = role === 'assistant'
+      ? renderAssistantThinkingTrace(message.meta, safeText)
+      : '';
+    const assistantMeta = role === 'assistant'
+      ? renderAssistantMeta(message.meta, message.id, { state, safeText })
+      : '';
     const messageBody = role === 'assistant'
       ? `<div class="agent-chat-body agent-chat-markdown">${renderMarkdown(message.text || '', safeText)}</div>`
       : `<p class="agent-chat-body agent-chat-body-plain">${safeText(message.text || '')}</p>`;
@@ -476,8 +520,10 @@ export function renderHistory({ historyNode, messages, state, safeText }) {
             </div>
             <span>${safeText(timestamp)}</span>
           </header>
+          ${assistantThinkingTrace}
           ${messageBody}
-          ${role === 'assistant' ? renderAssistantMeta(message.meta, message.id, { state, safeText }) : ''}
+          ${role === 'user' ? renderUserAttachments(message.attachments, safeText) : ''}
+          ${assistantMeta}
         </article>
       </div>
     `;

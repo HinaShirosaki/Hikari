@@ -1,0 +1,23 @@
+LOCUS       .                        511 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..511
+                     /note="human phosphoglycerate kinase 1 promoter"
+                     /label="hPGK promoter"
+ORIGIN
+        1 ggggttgggg ttgcgccttt tccaaggcag ccctgggttt gcgcagggac gcggctgctc
+       61 tgggcgtggt tccgggaaac gcagcggcgc cgaccctggg tctcgcacat tcttcacgtc
+      121 cgttcgcagc gtcacccgga tcttcgccgc tacccttgtg ggccccccgg cgacgcttcc
+      181 tgctccgccc ctaagtcggg aaggttcctt gcggttcgcg gcgtgccgga cgtgacaaac
+      241 ggaagccgca cgtctcacta gtaccctcgc agacggacag cgccagggag caatggcagc
+      301 gcgccgaccg cgatgggctg tggccaatag cggctgctca gcagggcgcg ccgagagcag
+      361 cggccgggaa ggggcggtgc gggaggcggg gtgtggggcg gtagtgtggg ccctgttcct
+      421 gcccgcgcgg tgttccgcat tctgcaagcc tccggagcgc acgtcggcag tcggctccct
+      481 cgttgaccga atcaccgacc tctctcccca g
+//

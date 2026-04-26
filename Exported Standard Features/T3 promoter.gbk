@@ -1,0 +1,15 @@
+LOCUS       .                         19 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..19
+                     /note="promoter for bacteriophage T3 RNA polymerase"
+                     /label="T3 promoter"
+ORIGIN
+        1 aattaaccct cactaaagg
+//

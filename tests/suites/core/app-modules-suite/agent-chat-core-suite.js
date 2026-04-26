@@ -206,30 +206,30 @@ test('agent-chat renders completed science thinking trace details in assistant m
             needs_clarification: false,
             reasoning_summary: 'This is a general science question.'
           },
+          thinking_trace: {
+            intent_parse_question: 'This is a general science question.',
+            question_clarifier: 'I am clarifying which resistance mechanism the user wants explained.',
+            criteria_generate: 'I am defining what evidence would be enough to answer safely.',
+            tool_rounds: [
+              {
+                round: 1,
+                tool_selection: 'I am choosing the most targeted literature step first.',
+                tool_call: 'I want to use literature-search to investigate "MAPK inhibitor resistance".',
+                tool_results: 'Based on the tool result, it seems pathway reactivation is a common explanation.'
+              }
+            ],
+            pre_synthesize_answer: 'Based on the evidence so far, pathway reactivation is the leading answer.',
+            judge: 'I am checking whether the current evidence is sufficient.',
+            final_synthesize: 'I am synthesizing the final grounded answer from the evidence collected so far.',
+            final_synthesized_question: 'What causes MAPK inhibitor resistance?'
+          },
           general_science_question: {
             status: 'completed',
             confidence: 0.77,
             confidence_label: 'medium',
             rounds_executed: 1,
             citations: [],
-            follow_up_questions: [],
-            thinking_trace: {
-              intent_parse_question: 'This is a general science question.',
-              question_clarifier: 'I am clarifying which resistance mechanism the user wants explained.',
-              criteria_generate: 'I am defining what evidence would be enough to answer safely.',
-              tool_rounds: [
-                {
-                  round: 1,
-                  tool_selection: 'I am choosing the most targeted literature step first.',
-                  tool_call: 'I want to use literature-search to investigate "MAPK inhibitor resistance".',
-                  tool_results: 'Based on the tool result, it seems pathway reactivation is a common explanation.'
-                }
-              ],
-              pre_synthesize_answer: 'Based on the evidence so far, pathway reactivation is the leading answer.',
-              judge: 'I am checking whether the current evidence is sufficient.',
-              final_synthesize: 'I am synthesizing the final grounded answer from the evidence collected so far.',
-              final_synthesized_question: 'What causes MAPK inhibitor resistance?'
-            }
+            follow_up_questions: []
           }
         }
       }
@@ -245,9 +245,15 @@ test('agent-chat renders completed science thinking trace details in assistant m
   });
 
   assert.match(history.innerHTML, /Thinking Trace/);
+  assert.match(history.innerHTML, /<details class="agent-thinking-trace" aria-label="Thinking Trace">/);
+  assert.doesNotMatch(history.innerHTML, /<details class="agent-thinking-trace" open aria-label="Thinking Trace">/);
   assert.match(history.innerHTML, /Intent parse: This is a general science question/);
   assert.match(history.innerHTML, /Round 1 call: I want to use literature-search to investigate/);
   assert.match(history.innerHTML, /Final synthesis: I am synthesizing the final grounded answer/);
+  assert.equal(
+    history.innerHTML.indexOf('Thinking Trace') < history.innerHTML.indexOf('MAPK resistance commonly involves pathway reactivation.'),
+    true
+  );
 });
 
 test('agent-chat renders python sandbox text and image outputs inline from result analysis metadata', () => {
@@ -949,6 +955,7 @@ test('agent-chat shows live progress ephemerally in the chat history and locks s
   });
   assert.match(history.innerHTML, /I am clarifying the exact question before I search for evidence/);
   assert.match(history.innerHTML, /Thinking Trace/);
+  assert.match(history.innerHTML, /<details class="agent-thinking-trace" open aria-label="Thinking Trace">/);
 
   progressHandler({
     client_request_id: payloadSeen.clientRequestId,
@@ -1002,6 +1009,23 @@ test('agent-chat shows live progress ephemerally in the chat history and locks s
       rounds_executed: 1,
       follow_up_questions: []
     },
+    thinking_trace: {
+      intent_parse_question: 'This is a general science question.',
+      question_clarifier: 'I am clarifying the exact question before I search for evidence.',
+      criteria_generate: 'I am defining what evidence would be enough to answer safely.',
+      tool_rounds: [
+        {
+          round: 1,
+          tool_selection: 'I am choosing the most targeted literature step first.',
+          tool_call: 'I want to use literature-search to investigate "yield drop causes".',
+          tool_results: 'Based on the tool result, it seems I have enough evidence to answer.'
+        }
+      ],
+      pre_synthesize_answer: 'Based on the evidence so far, low expression or purification loss are likely causes.',
+      judge: 'I am checking whether the current evidence is sufficient.',
+      final_synthesize: 'I am synthesizing the final grounded answer from the evidence collected so far.',
+      final_synthesized_question: 'Why did the yield drop?'
+    },
     developer_trace: []
   });
   await flushAsync();
@@ -1009,6 +1033,14 @@ test('agent-chat shows live progress ephemerally in the chat history and locks s
 
   assert.equal(state.agentChat.messages.length, 2);
   assert.match(history.innerHTML, /Literature-backed answer/);
+  assert.match(history.innerHTML, /I want to use literature-search to investigate &quot;yield drop causes&quot;/);
+  assert.match(history.innerHTML, /<details class="agent-thinking-trace" aria-label="Thinking Trace">/);
+  assert.doesNotMatch(history.innerHTML, /<details class="agent-thinking-trace" open aria-label="Thinking Trace">/);
+  assert.equal(
+    history.innerHTML.indexOf('I want to use literature-search to investigate &quot;yield drop causes&quot;')
+      < history.innerHTML.indexOf('Literature-backed answer.'),
+    true
+  );
   assert.equal(/Working on this/.test(history.innerHTML), false);
   assert.equal(sendBtn.disabled, false);
   assert.equal(newChatBtn.disabled, false);

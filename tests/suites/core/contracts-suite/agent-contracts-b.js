@@ -141,6 +141,7 @@ module.exports = function registerAgentContractsB(context = {}) {
       assert.match(webSearchSource, /async function searchWebResults\(input = \{\}\)/);
       assert.match(webSearchSource, /requestWebSearch/);
       assert.match(literatureSource, /const LITERATURE_SOURCES = Object\.freeze/);
+      assert.match(literatureSource, /agent-search-source-preferences\.js/);
       assert.match(literatureSource, /function createLiteratureSearchRuntime\(deps = \{\}\)/);
       assert.match(literatureSource, /function buildLiteratureQuery\(input = \{\}\)/);
       assert.match(literatureSource, /async function searchLiterature\(input = \{\}\)/);

@@ -2,6 +2,7 @@
 
 const fs = require('fs/promises');
 const path = require('path');
+const { MEMORY_FILE_NAME, buildWorkflowMemoryMarkdown } = require('./storage-memory');
 const {
   asArray,
   cleanText,
@@ -531,6 +532,19 @@ async function syncWorkflowRootFromSnapshot({
     ));
     const portableWorkflow = compactWorkflowRecord(workflow);
 
+    await ensureFolder(runLayout.workflowFolderPath);
+    await fs.writeFile(
+      path.join(runLayout.workflowFolderPath, MEMORY_FILE_NAME),
+      buildWorkflowMemoryMarkdown({
+        workflow,
+        template,
+        project,
+        workflowSummary,
+        notebookEntries,
+        relatedPapers: relatedPapers.papers
+      }),
+      'utf8'
+    );
     await writeJsonFile(path.join(runLayout.workflowFolderPath, WORKFLOW_METADATA_FILE_NAME), {
       exportedAt: new Date().toISOString(),
       template: ensureObject(template),

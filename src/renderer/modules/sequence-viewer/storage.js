@@ -86,6 +86,13 @@ function sanitizeGenbankQualifierValue(value) {
     .replace(/"/g, '\'');
 }
 
+function sanitizeGenbankProteinQualifierValue(value) {
+  return String(value ?? '')
+    .toUpperCase()
+    .replace(/\s+/g, '')
+    .replace(/[^A-Z*]/g, '');
+}
+
 function buildGenbankFeatureLocation(feature, sequenceLength) {
   const strand = feature?.strand === -1 ? -1 : 1;
   const rawSegments = Array.isArray(feature?.segments) ? feature.segments : [];
@@ -159,7 +166,8 @@ export function buildRecordGenbankText(record) {
     lines.push(...wrapGenbankLine(location, featurePrefix, qualifierPrefix));
     const qualifiers = [
       ['label', feature?.name || type],
-      ['note', feature?.description || '']
+      ['note', feature?.description || ''],
+      ['translation', sanitizeGenbankProteinQualifierValue(feature?.translation || '')]
     ];
 
     qualifiers.forEach(([key, rawValue]) => {

@@ -1,5 +1,5 @@
 {
-  "exportedAt": "2026-04-15T23:07:20.016Z",
+  "exportedAt": "2026-04-25T18:24:36.775Z",
   "workflowId": "1776270538561-6c07e18af542f",
   "notebookEntry": {
     "id": "1776270569678-971d9d9b018028",
@@ -66,14 +66,14 @@
       ]
     },
     "values": {},
-    "result": "",
+    "result": "[Apr 20, 19:44] Protein crashed out during overnight incubation",
     "resultFiles": [],
     "resultFileRecords": [],
     "storageFolder": "",
     "createdAt": "2026-04-15T16:29:29.678Z",
-    "updatedAt": "2026-04-15T18:11:48.146Z",
-    "notebookState": "planned",
-    "executedAt": "",
+    "updatedAt": "2026-04-21T00:45:24.020Z",
+    "notebookState": "executed",
+    "executedAt": "2026-04-21T00:45:24.020Z",
     "workflowContext": {
       "workflowId": "1776270538561-6c07e18af542f",
       "workflowName": "NiNTA 1",
@@ -83,6 +83,9 @@
       "workflowBlockTitle": "TEV Protease Cleavage of Fusion Protein"
     },
     "assayIds": [],
-    "gelAnalysisIds": []
+    "gelAnalysisIds": [],
+    "gelIds": [
+      "1776735689441-836cf784e1a4a"
+    ]
   }
 }

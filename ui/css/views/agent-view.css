@@ -515,16 +515,23 @@ body.agent-view-fixed-scroll .workspace-main {
 .agent-thinking-trace {
   display: grid;
   gap: 10px;
+  margin: 0;
   padding-left: 16px;
   border-left: 2px solid color-mix(in srgb, var(--accent) 24%, var(--line));
 }
 
-.agent-thinking-trace h4 {
+.agent-thinking-trace-summary {
   margin: 0;
+  cursor: pointer;
   font-size: 0.74rem;
   line-height: 1.2;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  color: var(--muted);
+}
+
+.agent-thinking-trace-summary::marker,
+.agent-thinking-trace-summary::-webkit-details-marker {
   color: var(--muted);
 }
 
@@ -964,6 +971,27 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   filter: none;
 }
 
+.agent-composer-project {
+  display: grid;
+  gap: 8px;
+  min-width: min(100%, 280px);
+}
+
+.agent-composer-project > span {
+  font-size: 0.76rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.agent-composer-project select {
+  min-height: 42px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--line) 76%, transparent);
+  background: color-mix(in srgb, var(--surface-subtle) 82%, transparent);
+  color: var(--strong);
+}
+
 .agent-composer-label {
   display: grid;
   gap: 10px;
@@ -995,6 +1023,45 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   outline: none;
 }
 
+.agent-attachment-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.agent-attachment-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--line) 74%, transparent);
+  background: color-mix(in srgb, var(--surface-subtle) 78%, transparent);
+  color: var(--strong);
+  font-size: 0.82rem;
+}
+
+.agent-attachment-pill.is-image {
+  border-color: color-mix(in srgb, var(--accent) 28%, var(--line));
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface-subtle));
+}
+
+.agent-attachment-pill button {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.agent-attachment-pill button:hover,
+.agent-attachment-pill button:focus-visible {
+  color: var(--strong);
+}
+
 .agent-composer-toolbar {
   display: flex;
   align-items: center;
@@ -1003,20 +1070,36 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   flex-wrap: wrap;
 }
 
-.agent-composer-hints {
+.agent-composer-toolbar-start {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   gap: 10px;
+  min-width: 0;
+  flex: 1 1 260px;
 }
 
-.agent-inline-hint {
+.agent-composer-project-inline {
+  display: block;
+  min-width: 0;
+  width: min(100%, 260px);
+  flex: 0 1 260px;
+}
+
+.agent-composer-project-inline select {
+  width: 100%;
+}
+
+.agent-attach-btn {
   display: inline-flex;
+  justify-content: center;
   align-items: center;
-  padding: 4px 9px;
+  width: 42px;
+  min-width: 42px;
+  height: 42px;
+  padding: 0;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--surface-subtle) 76%, transparent);
-  color: var(--muted);
-  font-size: 0.76rem;
+  font-size: 1.45rem;
+  line-height: 1;
 }
 
 .agent-composer-actions {
@@ -1208,6 +1291,10 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   border-left: 2px solid color-mix(in srgb, var(--accent) 34%, var(--line));
 }
 
+.agent-thinking-trace-summary {
+  color: var(--strong);
+}
+
 .agent-thinking-trace-item {
   color: color-mix(in srgb, var(--strong) 80%, var(--muted));
 }
@@ -1302,9 +1389,27 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
     border-radius: 20px;
   }
 
+  .agent-composer-project {
+    width: 100%;
+    min-width: 0;
+  }
+
   .agent-composer-toolbar {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .agent-composer-toolbar-start {
+    width: 100%;
+  }
+
+  .agent-composer-project-inline {
+    width: 100%;
+    flex: 1 1 auto;
+  }
+
+  .agent-attach-btn {
+    align-self: auto;
   }
 
   .agent-composer-actions {

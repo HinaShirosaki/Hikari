@@ -1,7 +1,7 @@
 {
   "schema_name": "enana_protocols",
   "schema_version": "1.0.0",
-  "updated_at": "2026-04-15T23:07:19.989Z",
+  "updated_at": "2026-04-25T18:24:36.750Z",
   "protocol": {
     "id": "1774024647315-74cbb18b4cc37",
     "name": "Small-Scale Overnight Starter Culture",
@@ -56,6 +56,106 @@
         "placeholders": []
       }
     ],
-    "troubleshooting": "Problem: Culture does not grow; Possible cause: Colony was not viable or antibiotic concentration was too high; Solution: Restart from a fresh colony and confirm the correct antibiotic and concentration were used\nProblem: Culture appears contaminated; Possible cause: Non-sterile handling during inoculation; Solution: Discard the culture and repeat using stricter sterile technique"
+    "troubleshooting": "Problem: Culture does not grow; Possible cause: Colony was not viable or antibiotic concentration was too high; Solution: Restart from a fresh colony and confirm the correct antibiotic and concentration were used\nProblem: Culture appears contaminated; Possible cause: Non-sterile handling during inoculation; Solution: Discard the culture and repeat using stricter sterile technique",
+    "selectionInsights": [
+      {
+        "id": "1776613801353-82e115b8f81eb8",
+        "segmentId": "protocol:step:1774024647315-74a9f88e0f0bf8",
+        "segmentLabel": "Protocol Step",
+        "selectedText": "LB medium",
+        "occurrenceIndex": 1,
+        "contextText": "Add volume of LB medium containing antibiotic concentration antibiotic to a sterile culture tube.",
+        "createdAt": "2026-04-19T15:50:01.352Z",
+        "updatedAt": "2026-04-21T02:28:03.114Z",
+        "answers": {
+          "what_is_it": {
+            "actionType": "what_is_it",
+            "status": "completed",
+            "requestedAt": "2026-04-21T02:27:58.732Z",
+            "answeredAt": "2026-04-21T02:28:03.114Z",
+            "text": "LB medium (Luria-Bertani medium) is a nutrient-rich liquid growth medium used to culture bacteria, especially E. coli. In this protocol, it serves as the base broth for the overnight starter culture before cells are grown with the antibiotic.",
+            "summary": "",
+            "payload": {
+              "status": "completed",
+              "answer": "LB medium (Luria-Bertani medium) is a nutrient-rich liquid growth medium used to culture bacteria, especially E. coli. In this protocol, it serves as the base broth for the overnight starter culture before cells are grown with the antibiotic.",
+              "execution_mode": "intent_parser",
+              "confidence": 0.68,
+              "citations": [],
+              "decision_record": {
+                "assumptions": [
+                  "general_science_question was answered directly by the intent parser at reasoning_effort=0."
+                ],
+                "open_questions": [],
+                "verification_notes": [
+                  "No reasoning loop or retrieval tool was executed."
+                ]
+              },
+              "response_type": "factual_answer",
+              "confidence_label": "medium",
+              "source_summary": {
+                "total_sources": 0,
+                "groups": []
+              },
+              "unresolved_fields": [],
+              "validation": {
+                "passed": true,
+                "forced_clarification": false,
+                "violations": [],
+                "failure_reasons": []
+              },
+              "provenance": {
+                "source_evidence": [
+                  {
+                    "statement": "LB medium (Luria-Bertani medium) is a nutrient-rich liquid growth medium used to culture bacteria, especially E. coli. In this protocol, it serves as the base broth for the overnight starter culture before cells are grown with the antibiotic.",
+                    "support_level": "none",
+                    "supports": []
+                  }
+                ],
+                "unsupported_statement_count": 1
+              },
+              "rounds_executed": 0,
+              "follow_up_questions": [],
+              "reasoning_effort": 0,
+              "thinking_trace": {
+                "intent_parse_question": "Intent parser selected general_science_question.",
+                "question_clarifier": "The user wants to understand: Help me explain this selected lab term in context.\n\nAnswer the question \"what is it?\" for the selected text in this exact protocol or notebook context. Keep it concise and practical.\n\nRecord: Small-Scale Overnight Starter Culture\n\nSection: Protocol Step\n\nSelected text: \"LB medium\"\n\nLocal context: \"Add volume of LB medium containing antibiotic concentration antibiotic to a sterile culture tube.\"",
+                "criteria_generate": "I do not need a separate evidence loop for this direct-answer request.",
+                "tool_rounds": [],
+                "pre_synthesize_answer": "LB medium (Luria-Bertani medium) is a nutrient-rich liquid growth medium used to culture bacteria, especially E. coli. In this protocol, it serves as the base broth for the overnight starter culture before cells are grown with the antibiotic.",
+                "judge": "I can answer this directly without additional tool evidence.",
+                "final_synthesize": "I am returning the direct answer without tool use.",
+                "final_synthesized_question": "Help me explain this selected lab term in context.\n\nAnswer the question \"what is it?\" for the selected text in this exact protocol or notebook context. Keep it concise and practical.\n\nRecord: Small-Scale Overnight Starter Culture\n\nSection: Protocol Step\n\nSelected text: \"LB medium\"\n\nLocal context: \"Add volume of LB medium containing antibiotic concentration antibiotic to a sterile culture tube.\""
+              },
+              "final_synthesized_question": "Help me explain this selected lab term in context.\n\nAnswer the question \"what is it?\" for the selected text in this exact protocol or notebook context. Keep it concise and practical.\n\nRecord: Small-Scale Overnight Starter Culture\n\nSection: Protocol Step\n\nSelected text: \"LB medium\"\n\nLocal context: \"Add volume of LB medium containing antibiotic concentration antibiotic to a sterile culture tube.\""
+            },
+            "error": ""
+          },
+          "where_to_buy": null
+        }
+      },
+      {
+        "id": "1776738491506-db05fbda7f4038",
+        "segmentId": "protocol:step:1774024647315-50fbcf026e31b8",
+        "segmentLabel": "Protocol Step",
+        "selectedText": "a single colony",
+        "occurrenceIndex": 1,
+        "contextText": "Pick a single colony from a fresh plate and inoculate the medium.",
+        "createdAt": "2026-04-21T02:28:11.506Z",
+        "updatedAt": "2026-04-21T02:33:11.437Z",
+        "answers": {
+          "what_is_it": {
+            "actionType": "what_is_it",
+            "status": "completed",
+            "requestedAt": "2026-04-21T02:33:08.413Z",
+            "answeredAt": "2026-04-21T02:33:11.437Z",
+            "text": "Found 4 record matches for \"Small-Scale Overnight Starter Culture\".\n1. notebook: Small-Scale Overnight Starter Culture (protocol Small-Scale Overnight Starter Culture; updated 2026-04-10T01:47:04.637Z)\n2. notebook: Small-Scale Overnight Starter Culture (protocol Small-Scale Overnight Starter Culture; updated 2026-04-10T01:54:58.452Z)\n3. notebook: Small-Scale Overnight Starter Culture (protocol Small-Scale Overnight Starter Culture; updated 2026-04-15T18:11:31.295Z)\n1 more match not shown.",
+            "summary": "",
+            "payload": null,
+            "error": ""
+          },
+          "where_to_buy": null
+        }
+      }
+    ]
   }
 }

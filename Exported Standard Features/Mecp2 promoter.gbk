@@ -1,0 +1,19 @@
+LOCUS       .                        229 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..229
+                     /note="promoter for selective expression in neurons (Adachi
+                     et al., 2005;&nbsp;Gray et al., 2011)"
+                     /label="Mecp2 promoter"
+ORIGIN
+        1 agctgaatgg ggtccgcctc ttttccctgc ctaaacagac aggaactcct gccaattgag
+       61 ggcgtcaccg ctaaggctcc gccccagcct gggctccaca accaatgaag ggtaatctcg
+      121 acaaagagca aggggtgggg cgcgggcgcg caggtgcagc agcacacagg ctggtcggga
+      181 gggcggggcg cgacgtctgc cgtgcggggt cccggcatcg gttgcgcgc
+//

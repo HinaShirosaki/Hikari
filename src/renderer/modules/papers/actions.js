@@ -165,6 +165,7 @@ export function createPapersActions(context) {
     persist();
     elements.paperForm?.reset?.();
     libraryState.selectedFolderKey = buildFolderKey(paper.linkedType, paper.linkedId);
+    context.library?.ensureFolderExpanded?.(libraryState.selectedFolderKey);
     context.render?.();
   }
 
@@ -366,20 +367,22 @@ export function createPapersActions(context) {
 
     try {
       libraryState.selectedFolderKey = buildFolderKey(paper.linkedType, paper.linkedId);
-      context.renderLibrarySidebar?.(libraryState.selectedFolderKey);
+      context.library?.ensureFolderExpanded?.(libraryState.selectedFolderKey);
       context.comments?.primeForPaperOpen();
-      const opened = await paperViewer.openPaper({
+      const openPaperPromise = paperViewer.openPaper({
         paper,
         summary: buildPaperViewerSummary(paper),
         resolveBytes: resolvePaperPdfBytes,
         onOpenExternal: openPaperPdf
       });
+      context.renderLibrarySidebar?.(libraryState.selectedFolderKey);
+      const opened = await openPaperPromise;
       if (!opened) {
+        context.renderLibrarySidebar?.(libraryState.selectedFolderKey);
         return;
       }
       context.comments?.syncViewerComments();
       context.comments?.setCommentStatus('Viewing page 1. Select a comment or place a new pin.');
-      context.renderLibrarySidebar?.(libraryState.selectedFolderKey);
       context.renderCommentSidebar?.();
     } catch (error) {
       windowRef?.alert?.(String(error?.message || error || 'Failed to load the PDF viewer.'));

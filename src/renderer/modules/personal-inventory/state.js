@@ -7,6 +7,17 @@ import {
 } from './constants.js';
 
 export function createPersonalInventoryStateHelpers({ state, safeText, uiState }) {
+  function getWellLabel(container, index) {
+    const rawWell = Array.isArray(container?.wells) ? container.wells[index] : null;
+    if (rawWell && typeof rawWell === 'object') {
+      const explicitName = String(rawWell.name || '').trim();
+      if (explicitName) {
+        return explicitName;
+      }
+    }
+    return getWellName(container, index);
+  }
+
   function getContainer(section, containerId) {
     return (state.inventory?.[section] || []).find((item) => item.id === containerId);
   }
@@ -102,7 +113,7 @@ export function createPersonalInventoryStateHelpers({ state, safeText, uiState }
       freezer: section,
       rack: '',
       box: container.name || '',
-      position: Number.isInteger(index) && index >= 0 ? String(Number(index) + 1) : ''
+      position: Number.isInteger(index) && index >= 0 ? getWellLabel(container, index) : ''
     };
   }
 
@@ -110,6 +121,9 @@ export function createPersonalInventoryStateHelpers({ state, safeText, uiState }
     const key = String(type || '').trim().toLowerCase();
     if (!key) {
       return 'other';
+    }
+    if (key === 'compound') {
+      return 'chemical';
     }
     return Object.prototype.hasOwnProperty.call(SAMPLE_TYPE_COLORS, key) ? key : 'other';
   }
@@ -184,8 +198,8 @@ export function createPersonalInventoryStateHelpers({ state, safeText, uiState }
     `;
   }
 
-  function getWellDataForType(type, rawWell, index) {
-    const fallbackName = getWellName(type, index);
+  function getWellDataForType(containerOrType, rawWell, index) {
+    const fallbackName = getWellName(containerOrType, index);
     if (rawWell && typeof rawWell === 'object') {
       return {
         name: String(rawWell.name || '').trim() || fallbackName,

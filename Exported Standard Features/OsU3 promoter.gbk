@@ -1,0 +1,21 @@
+LOCUS       .                        381 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..381
+                     /note="Oryza sativa (rice) snRNA U3 promoter"
+                     /label="OsU3 promoter"
+ORIGIN
+        1 aaggaatctt taaacatacg aacagatcac ttaaagttct tctgaagcaa cttaaagtta
+       61 tcaggcatgc atggatcttg gaggaatcag atgtgcagtc agggaccata gcacaagaca
+      121 ggcgtcttct actggtgcta ccagcaaatg ctggaagccg ggaacactgg gtacgttgga
+      181 aaccacgtga tgtgaagaag taagataaac tgtaggagaa aagcatttcg tagtgggcca
+      241 tgaagccttt caggacatgt attgcagtat gggccggccc attacgcaat tggacgacaa
+      301 caaagactag tattagtacc acctcggcta tccacataga tcaaagctga tttaaaagag
+      361 ttgtgcagat gatccgtggc a
+//

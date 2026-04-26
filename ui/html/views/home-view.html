@@ -1,134 +1,134 @@
 <section id="home-view" class="view is-active" aria-label="Home">
       <div class="home-layout">
-        <section class="home-tile home-tile-today" aria-labelledby="dashboard-today-heading">
+        <section class="home-tile home-tile-contribution" aria-labelledby="dashboard-contribution-heading">
           <div class="home-tile-head">
-            <h2 id="dashboard-today-heading">Today To Do</h2>
-            <p id="dashboard-today-summary" class="small-note">No urgent items right now.</p>
+            <h2 id="dashboard-contribution-heading">Contribution Heatmap</h2>
+            <p id="dashboard-contribution-summary" class="small-note">No activity logged yet.</p>
           </div>
-          <div class="home-today-grid">
-            <div class="home-summary-strip" aria-label="Today's overview">
-              <div class="home-summary-cell">
-                <span class="home-summary-label">Overdue</span>
-                <strong id="dashboard-today-overdue-count">0</strong>
+          <div class="home-contribution-map" aria-label="Lab activity contribution heatmap">
+            <div id="dashboard-contribution-months" class="home-contribution-months" aria-hidden="true"></div>
+            <div class="home-contribution-body">
+              <div class="home-contribution-weekdays" aria-hidden="true">
+                <span>Mon</span>
+                <span>Wed</span>
+                <span>Fri</span>
               </div>
-              <div class="home-summary-cell">
-                <span class="home-summary-label">Open Steps</span>
-                <strong id="dashboard-today-workflow-count">0</strong>
-              </div>
-              <div class="home-summary-cell">
-                <span class="home-summary-label">Follow-ups</span>
-                <strong id="dashboard-today-incubation-count">0</strong>
-              </div>
+              <div id="dashboard-contribution-grid" class="home-contribution-grid" role="grid" aria-label="Daily lab activity"></div>
             </div>
-            <div id="dashboard-today-list" class="dashboard-list dashboard-list-compact"></div>
+            <div class="home-contribution-legend" aria-hidden="true">
+              <span>Less</span>
+              <span class="home-contribution-legend-cell" data-level="0"></span>
+              <span class="home-contribution-legend-cell" data-level="1"></span>
+              <span class="home-contribution-legend-cell" data-level="2"></span>
+              <span class="home-contribution-legend-cell" data-level="3"></span>
+              <span class="home-contribution-legend-cell" data-level="4"></span>
+              <span>More</span>
+            </div>
+          </div>
+          <div class="home-contribution-quick-log">
+            <div class="home-contribution-quick-log-head">
+              <h3>Quick Log Notebook</h3>
+              <p id="dashboard-quick-log-status" class="small-note"></p>
+            </div>
+            <label class="dashboard-field dashboard-field-grow">
+              Bench Note
+              <div class="home-quick-log-input-wrap">
+                <textarea
+                  id="dashboard-quick-log-input"
+                  rows="3"
+                  placeholder="Log a notebook entry, upload note, analysis note, or completed protocol."
+                ></textarea>
+                <div class="home-quick-log-actions">
+                  <button
+                    type="button"
+                    id="dashboard-quick-log-save-btn"
+                    class="home-quick-log-icon-btn"
+                    aria-label="Save quick log"
+                  >
+                    <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
+                      <path d="m5 12.5 4.2 4.1L19 7" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"></path>
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    id="dashboard-quick-log-agent-btn"
+                    class="home-quick-log-icon-btn home-quick-log-send-btn"
+                    aria-label="Save quick log and send to Assistant"
+                  >
+                    <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
+                      <path d="M12 17V7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path>
+                      <path d="M6.5 12.5 12 7l5.5 5.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </label>
           </div>
         </section>
 
         <section class="home-tile home-tile-passage" aria-labelledby="dashboard-passage-heading">
           <div class="home-tile-head">
-            <h2 id="dashboard-passage-heading">Cell Passage Reminder</h2>
+            <div class="home-tile-head-row">
+              <h2 id="dashboard-passage-heading">Cell Passage Reminder</h2>
+              <button
+                type="button"
+                id="dashboard-passage-add-btn"
+                class="home-passage-add-btn"
+                aria-label="Add cell to passage reminder"
+              >+</button>
+            </div>
             <p id="dashboard-passage-summary" class="small-note">No cell line reminders yet.</p>
           </div>
           <div class="home-tile-scroll">
-            <div class="dashboard-split-grid">
-              <div class="dashboard-list-group">
-                <h3>Overdue</h3>
-                <div id="dashboard-passage-overdue-list" class="dashboard-list"></div>
-              </div>
-              <div class="dashboard-list-group">
-                <h3>Due in 3 Days</h3>
-                <div id="dashboard-passage-soon-list" class="dashboard-list"></div>
-              </div>
-              <div class="dashboard-list-group">
-                <h3>Unconfigured</h3>
-                <div id="dashboard-passage-unconfigured-list" class="dashboard-list"></div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section class="home-tile home-tile-workflow" aria-labelledby="dashboard-workflow-heading">
-          <div class="home-tile-head">
-            <h2 id="dashboard-workflow-heading">Current Workflow</h2>
-            <p id="dashboard-workflow-next-step" class="small-note">No workflow selected.</p>
-          </div>
-          <label class="dashboard-field">
-            Workflow
-            <select id="dashboard-workflow-select"></select>
-          </label>
-          <div class="home-tile-scroll">
-            <div id="dashboard-workflow-progress-list" class="dashboard-list"></div>
+            <div id="dashboard-passage-list" class="dashboard-list dashboard-passage-list"></div>
           </div>
         </section>
 
         <section class="home-tile home-tile-timer" aria-labelledby="dashboard-timer-heading">
           <div class="home-tile-head">
-            <h2 id="dashboard-timer-heading">Timer</h2>
-            <p id="dashboard-timer-status" class="small-note">Ready</p>
+            <h2 id="dashboard-timer-heading">Lab Timers</h2>
+            <p id="dashboard-timer-status" class="small-note"></p>
           </div>
           <div class="home-timer-clock">
             <p id="dashboard-local-time" class="dashboard-local-time">--:--:--</p>
             <p id="dashboard-local-date" class="dashboard-local-date">Loading local date</p>
           </div>
-          <p id="dashboard-timer-display" class="dashboard-timer-display">15:00</p>
-          <label class="dashboard-field">
-            Custom Minutes
-            <input id="dashboard-timer-custom-minutes" type="number" min="1" step="1" value="15" />
-          </label>
-          <div class="dashboard-inline-row dashboard-timer-presets">
-            <button type="button" class="ghost-btn" data-dashboard-preset-minutes="5">5m</button>
-            <button type="button" class="ghost-btn" data-dashboard-preset-minutes="10">10m</button>
-            <button type="button" class="ghost-btn" data-dashboard-preset-minutes="15">15m</button>
-            <button type="button" class="ghost-btn" data-dashboard-preset-minutes="30">30m</button>
-          </div>
-          <div class="dashboard-inline-row">
-            <button type="button" id="dashboard-timer-set-btn" class="ghost-btn">Set</button>
-            <button type="button" id="dashboard-timer-start-btn" class="primary-btn">Start</button>
-            <button type="button" id="dashboard-timer-pause-btn" class="ghost-btn">Pause</button>
-            <button type="button" id="dashboard-timer-reset-btn" class="ghost-btn">Reset</button>
-          </div>
-          <div class="home-tile-divider" aria-hidden="true"></div>
-          <div class="dashboard-timer-saved-head">
-            <h3>Your Timers</h3>
-            <p class="small-note">Tap a row to load it.</p>
-          </div>
-          <div id="dashboard-timer-saved-list" class="dashboard-timer-saved-list"></div>
+          <div id="dashboard-timer-active-list" class="dashboard-timer-active-list"></div>
+          <button type="button" id="dashboard-timer-open-btn" class="ghost-btn home-timer-open-btn">+Start Timer</button>
         </section>
 
         <section class="home-tile home-tile-incubation" aria-labelledby="dashboard-incubation-heading">
           <div class="home-tile-head">
-            <h2 id="dashboard-incubation-heading">Long Incubation Reminder</h2>
-            <p id="dashboard-incubation-summary" class="small-note">No planned follow-ups waiting.</p>
+            <div class="home-tile-head-row">
+              <h2 id="dashboard-incubation-heading">Overnight Incubation Timer</h2>
+              <button
+                type="button"
+                id="dashboard-incubation-add-btn"
+                class="home-passage-add-btn"
+                aria-label="Manage incubation locations"
+              >+</button>
+            </div>
+            <p id="dashboard-incubation-summary" class="small-note">No incubation locations yet.</p>
           </div>
           <div class="home-tile-scroll">
             <div id="dashboard-incubation-list" class="dashboard-list"></div>
           </div>
         </section>
 
-        <section class="home-tile home-tile-quick-log" aria-labelledby="dashboard-quick-log-heading">
+        <section class="home-tile home-tile-notebook-pages" aria-labelledby="dashboard-notebook-pages-heading">
           <div class="home-tile-head">
-            <h2 id="dashboard-quick-log-heading">Quick Log Notebook</h2>
-            <p id="dashboard-quick-log-status" class="small-note">Type a bench note to keep it handy on this screen.</p>
+            <h2 id="dashboard-notebook-pages-heading">Recent Notebook Pages</h2>
+            <p id="dashboard-notebook-pages-status" class="small-note">Tap a page to add a note.</p>
           </div>
-          <label class="dashboard-field dashboard-field-grow">
-            Bench Note
-            <textarea
-              id="dashboard-quick-log-input"
-              rows="6"
-              placeholder="Summarize what happened, what is incubating, or what you want the assistant to help with next."
-            ></textarea>
-          </label>
-          <div class="dashboard-inline-row">
-            <button type="button" id="dashboard-quick-log-agent-btn" class="primary-btn">Send to Assistant</button>
-            <button type="button" id="dashboard-quick-log-notebook-btn" class="ghost-btn">Open Notebook</button>
-            <button type="button" id="dashboard-quick-log-clear-btn" class="ghost-btn">Clear</button>
+          <div class="home-tile-scroll">
+            <div id="dashboard-notebook-page-list" class="dashboard-list"></div>
           </div>
         </section>
 
         <section class="home-tile home-tile-actions" aria-labelledby="dashboard-actions-heading">
           <div class="home-tile-head">
             <h2 id="dashboard-actions-heading">Quick Actions</h2>
-            <p class="small-note">Jump into the modules you use most.</p>
+            <p class="small-note"></p>
           </div>
           <div class="home-action-grid">
             <button type="button" class="home-action-btn" data-dashboard-action="samples">Open Samples</button>
@@ -137,5 +137,137 @@
             <button type="button" class="home-action-btn" data-dashboard-action="assistant">Open Assistant</button>
           </div>
         </section>
+      </div>
+
+      <div id="dashboard-passage-dialog-overlay" class="home-dialog-overlay" hidden>
+        <div
+          class="home-dialog home-passage-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="dashboard-passage-dialog-title"
+        >
+          <form id="dashboard-passage-dialog-form" class="home-dialog-form">
+            <h3 id="dashboard-passage-dialog-title">Add Cell to Passage</h3>
+            <label class="dashboard-field">
+              Cell Strain
+              <input
+                id="dashboard-passage-strain-input"
+                type="text"
+                maxlength="80"
+                placeholder="e.g. HEK293"
+                required
+              />
+            </label>
+            <label class="dashboard-field">
+              Interval Time
+              <input
+                id="dashboard-passage-interval-input"
+                type="number"
+                min="1"
+                step="1"
+                placeholder="e.g. 3"
+                required
+              />
+            </label>
+            <label class="dashboard-field">
+              Passage Number
+              <input
+                id="dashboard-passage-number-input"
+                type="number"
+                min="1"
+                step="1"
+                placeholder="e.g. 5"
+                required
+              />
+            </label>
+            <button type="submit" id="dashboard-passage-submit-btn" class="primary-btn">Add</button>
+          </form>
+        </div>
+      </div>
+
+      <div id="dashboard-timer-dialog-overlay" class="home-dialog-overlay" hidden>
+        <div
+          class="home-dialog home-timer-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="dashboard-timer-dialog-title"
+        >
+          <div class="home-dialog-form">
+            <h3 id="dashboard-timer-dialog-title">Start Timer</h3>
+            <form id="dashboard-timer-dialog-form" class="home-timer-form-row">
+              <input
+                id="dashboard-timer-name-input"
+                type="text"
+                maxlength="80"
+                aria-label="Timer name"
+                placeholder="Timer name"
+                required
+              />
+              <input
+                id="dashboard-timer-minutes-input"
+                type="number"
+                min="1"
+                step="1"
+                aria-label="Timer time in minutes"
+                placeholder="Time (min)"
+                required
+              />
+              <button type="submit" id="dashboard-timer-add-btn" class="ghost-btn">Add</button>
+            </form>
+            <div id="dashboard-timer-template-list" class="home-timer-template-list"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="dashboard-notebook-note-dialog-overlay" class="home-dialog-overlay" hidden>
+        <div
+          class="home-dialog home-notebook-note-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="dashboard-notebook-note-dialog-title"
+        >
+          <form id="dashboard-notebook-note-dialog-form" class="home-dialog-form">
+            <h3 id="dashboard-notebook-note-dialog-title">Add Note</h3>
+            <p id="dashboard-notebook-note-dialog-page" class="small-note"></p>
+            <label class="dashboard-field">
+              Note
+              <textarea
+                id="dashboard-notebook-note-input"
+                rows="5"
+                maxlength="4000"
+                placeholder="Add a quick note to this notebook page."
+                required
+              ></textarea>
+            </label>
+            <div class="dashboard-inline-row">
+              <button type="submit" id="dashboard-notebook-note-save-btn" class="primary-btn">Save Note</button>
+              <button type="button" id="dashboard-notebook-note-clarify-btn" class="ghost-btn">Clarify and Save</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div id="dashboard-incubation-dialog-overlay" class="home-dialog-overlay" hidden>
+        <div
+          class="home-dialog home-incubation-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="dashboard-incubation-dialog-title"
+        >
+          <div class="home-dialog-form">
+            <h3 id="dashboard-incubation-dialog-title">Incubation Location</h3>
+            <div id="dashboard-incubation-location-list" class="home-incubation-location-list"></div>
+            <form id="dashboard-incubation-location-form" class="home-incubation-add-row">
+              <input
+                id="dashboard-incubation-location-input"
+                type="text"
+                maxlength="80"
+                placeholder="Add new incubation location"
+                required
+              />
+              <button type="submit" id="dashboard-incubation-location-submit-btn" class="ghost-btn">Add New</button>
+            </form>
+          </div>
+        </div>
       </div>
     </section>

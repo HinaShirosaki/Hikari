@@ -28,11 +28,14 @@ export function createSequenceViewerDetailController(config = {}) {
   const setStatus = config?.setStatus || (() => {});
   const hasStoragePath = config?.hasStoragePath || (() => false);
   const persistFeatureMutation = config?.persistFeatureMutation || (async () => {});
+  const onRequestAnnotate = config?.onRequestAnnotate || (() => {});
   const onRequestRecognizeBackbone = config?.onRequestRecognizeBackbone || (() => {});
   const onRequestClear = config?.onRequestClear || (() => {});
   const onRequestSave = config?.onRequestSave || (() => {});
   const onRequestAlignment = config?.onRequestAlignment || (() => {});
   const onSelectAlignmentSession = config?.onSelectAlignmentSession || (() => {});
+  const onConfirmProteinBuilderConstruct = config?.onConfirmProteinBuilderConstruct || (() => {});
+  const onReturnToProteinBuilder = config?.onReturnToProteinBuilder || (() => {});
   const onNavigateHome = config?.onNavigateHome || (() => {});
   const onRefreshLibraryEntries = config?.onRefreshLibraryEntries || (() => {});
   const onReferenceRecordChanged = config?.onReferenceRecordChanged || (() => {});
@@ -223,6 +226,9 @@ export function createSequenceViewerDetailController(config = {}) {
 
   function syncActionButtonsState() {
     const hasRecord = Boolean(getSelectedRecord()?.sequence?.length);
+    if (elements.annotateBtn) {
+      elements.annotateBtn.disabled = !hasRecord || !hasStoragePath() || Boolean(state.isAnnotating);
+    }
     if (elements.recognizeBackboneBtn) {
       elements.recognizeBackboneBtn.disabled = !hasRecord || !hasStoragePath() || Boolean(state.isRecognizingBackbone);
     }
@@ -284,6 +290,56 @@ export function createSequenceViewerDetailController(config = {}) {
     }
   }
 
+  function renderProteinBuilderConfirmation(record) {
+    const confirmation = state.proteinBuilderConfirmation && typeof state.proteinBuilderConfirmation === 'object'
+      ? state.proteinBuilderConfirmation
+      : null;
+    const isVisible = Boolean(confirmation && record?.sequence?.length);
+
+    if (elements.proteinBuilderConfirmation) {
+      elements.proteinBuilderConfirmation.hidden = !isVisible;
+    }
+    if (!elements.proteinBuilderConfirmationSummary) {
+      return;
+    }
+    if (!isVisible) {
+      elements.proteinBuilderConfirmationSummary.innerHTML = '<p class="small-note">Protein Builder review details will appear here.</p>';
+      return;
+    }
+
+    const summaryParts = [
+      cleanText(confirmation?.recordName, 160)
+        ? `<p><strong>Reviewing:</strong> ${escapeHtml(cleanText(confirmation.recordName, 160))}</p>`
+        : '',
+      cleanText(confirmation?.constructName, 160)
+        ? `<p><strong>Insert:</strong> ${escapeHtml(cleanText(confirmation.constructName, 160))}</p>`
+        : '',
+      cleanText(confirmation?.backboneName, 160)
+        ? `<p><strong>Backbone:</strong> ${escapeHtml(cleanText(confirmation.backboneName, 160))}</p>`
+        : '',
+      Number.isFinite(Number(confirmation?.plasmidLength))
+        ? `<p><strong>Total Length:</strong> ${Math.max(0, Number(confirmation.plasmidLength)).toLocaleString()} bp</p>`
+        : '',
+      Number.isFinite(Number(confirmation?.insertLength))
+        ? `<p><strong>Insert DNA:</strong> ${Math.max(0, Number(confirmation.insertLength)).toLocaleString()} bp</p>`
+        : '',
+      cleanText(confirmation?.sourceLabel, 160)
+        ? `<p><strong>Backbone Source:</strong> ${escapeHtml(cleanText(confirmation.sourceLabel, 160))}</p>`
+        : '',
+      cleanText(confirmation?.assemblyStrategy, 120)
+        ? `<p><strong>Assembly Route:</strong> ${escapeHtml(cleanText(confirmation.assemblyStrategy, 120).replace(/[-_]+/g, ' '))}</p>`
+        : '',
+      Number.isFinite(Number(confirmation?.primerCount)) && Number(confirmation.primerCount) > 0
+        ? `<p><strong>Primer Plan:</strong> ${Math.max(0, Number(confirmation.primerCount)).toLocaleString()} primer${Number(confirmation.primerCount) === 1 ? '' : 's'} designed.</p>`
+        : '',
+      cleanText(confirmation?.notebookTitle, 220)
+        ? `<p><strong>Notebook Page:</strong> ${escapeHtml(cleanText(confirmation.notebookTitle, 220))}</p>`
+        : '',
+      '<p class="small-note">Edit the sequence below and click Load to refresh this review without leaving Protein Builder confirmation.</p>'
+    ].filter(Boolean);
+    elements.proteinBuilderConfirmationSummary.innerHTML = summaryParts.join('');
+  }
+
   function updateRecordSelect() {
     if (!elements.recordSelect) {
       return;
@@ -322,6 +378,7 @@ export function createSequenceViewerDetailController(config = {}) {
 
   function renderActiveRecord() {
     const record = getSelectedRecord();
+    renderProteinBuilderConfirmation(record);
     renderStats(record);
     renderSequence(record);
     renderFeatureRail(record);
@@ -415,11 +472,14 @@ export function createSequenceViewerDetailController(config = {}) {
       deleteFeatureFromContext,
       applyFeatureEditorChanges,
       getActiveFeatureActionContext: () => activeFeatureActionContext,
+      onRequestAnnotate,
       onRequestRecognizeBackbone,
       onRequestClear,
       onRequestSave,
       onRequestAlignment,
       onSelectAlignmentSession,
+      onConfirmProteinBuilderConstruct,
+      onReturnToProteinBuilder,
       onNavigateHome,
       onRefreshLibraryEntries,
       onReferenceRecordChanged

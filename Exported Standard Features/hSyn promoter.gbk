@@ -1,0 +1,23 @@
+LOCUS       .                        448 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..448
+                     /note="human synapsin I promoter; confers neuron-specific
+                     expression (Kügler et al., 2003)"
+                     /label="hSyn promoter"
+ORIGIN
+        1 agtgcaagtg ggttttagga ccaggatgag gcggggtggg ggtgcctacc tgacgaccga
+       61 ccccgaccca ctggacaagc acccaacccc cattccccaa attgcgcatc ccctatcaga
+      121 gagggggagg ggaaacagga tgcggcgagg cgcgtgcgca ctgccagctt cagcaccgcg
+      181 gacagtgcct tcgcccccgc ctggcggcgc gcgccaccgc cgcctcagca ctgaaggcgc
+      241 gctgacgtca ctcgccggtc ccccgcaaac tccccttccc ggccaccttg gtcgcgtccg
+      301 cgccgccgcc ggcccagccg gaccgcacca cgcgaggcgc gagatagggg ggcacgggcg
+      361 cgaccatctg cgctgcggcg ccggcgactc agcgctgcct cagtctgcgg tgggcagcgg
+      421 aggagtcgtg tcgtgcctga gagcgcag
+//

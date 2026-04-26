@@ -1,0 +1,25 @@
+LOCUS       .                        592 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..592
+                     /note="promoter of the ie1 gene from the baculovirus
+                     Autographa californica"
+                     /label="IE1 promoter"
+ORIGIN
+        1 cgatgtcttt gtgatgcgcg cgacattttt gtaggttatt gataaaatga acggatacgt
+       61 tgcccgacat tatcattaaa tccttggcgt agaatttgtc gggtccattg tccgtgtgcg
+      121 ctagcatgcc cgtaacggac ctcgtacttt tggcttcaaa ggttttgcgc acagacaaaa
+      181 tgtgccacac ttgcagctct gcatgtgtgc gcgttaccac aaatcccaac ggcgcagtgt
+      241 acttgttgta tgcaaataaa tctcgataaa ggcgcggcgc gcgaatgcag ctgatcacgt
+      301 acgctcctcg tgttccgttc aaggacggtg ttatcgacct cagattaatg tttatcggcc
+      361 gactgttttc gtatccgctc accaaacgcg tttttgcatt aacattgtat gtcggcggat
+      421 gttctatatc taatttgaat aaataaacga taaccgcgtt ggttttagag ggcataataa
+      481 aagaaatatt gttatcgtgt tcgccattag ggcagtataa attgacgttc atgttggata
+      541 ttgtttcagt tgcaagttga cactggcggc gacaagatcg tgaacaacca ag
+//

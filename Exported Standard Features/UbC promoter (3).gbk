@@ -1,0 +1,35 @@
+LOCUS       .                       1211 bp    DNA     linear   UNK 01-JAN-1980
+DEFINITION  .
+ACCESSION   <unknown id>
+VERSION     <unknown id>
+KEYWORDS    .
+SOURCE      .
+  ORGANISM  .
+            .
+FEATURES             Location/Qualifiers
+     promoter        1..1211
+                     /note="human ubiquitin C promoter"
+                     /label="UbC promoter"
+ORIGIN
+        1 ggcctccgcg ccgggttttg gcgcctcccg cgggcgcccc cctcctcacg gcgagcgctg
+       61 ccacgtcaga cgaagggcgc aggagcgttc ctgatccttc cgcccggacg ctcaggacag
+      121 cggcccgctg ctcataagac tcggccttag aaccccagta tcagcagaag gacattttag
+      181 gacgggactt gggtgactct agggcactgg ttttctttcc agagagcgga acaggcgagg
+      241 aaaagtagtc ccttctcggc gattctgcgg agggatctcc gtggggcggt gaacgccgat
+      301 gattatataa ggacgcgccg ggtgtggcac agctagttcc gtcgcagccg ggatttgggt
+      361 cgcggttctt gtttgtggat cgctgtgatc gtcacttggt gagttgcggg ctgctgggct
+      421 ggccggggct ttcgtggccg ccgggccgct cggtgggacg gaagcgtgtg gagagaccgc
+      481 caagggctgt agtctgggtc cgcgagcaag gttgccctga actgggggtt ggggggagcg
+      541 cacaaaatgg cggctgttcc cgagtcttga atggaagacg cttgtaaggc gggctgtgag
+      601 gtcgttgaaa caaggtgggg ggcatggtgg gcggcaagaa cccaaggtct tgaggccttc
+      661 gctaatgcgg gaaagctctt attcgggtga gatgggctgg ggcaccatct ggggaccctg
+      721 acgtgaagtt tgtcactgac tggagaactc gggtttgtcg tctggttgcg ggggcggcag
+      781 ttatgcggtg ccgttgggca gtgcacccgt acctttggga gcgcgcgcct cgtcgtgtcg
+      841 tgacgtcacc cgttctgttg gcttataatg cagggtgggg ccacctgccg gtaggtgtgc
+      901 ggtaggcttt tctccgtcgc aggacgcagg gttcgggcct agggtaggct ctcctgaatc
+      961 gacaggcgcc ggacctctgg tgaggggagg gataagtgag gcgtcagttt ctttggtcgg
+     1021 ttttatgtac ctatcttctt aagtagctga agctccggtt ttgaactatg cgctcggggt
+     1081 tggcgagtgt gttttgtgaa gttttttagg caccttttga aatgtaatca tttgggtcaa
+     1141 tatgtaattt tcagtgttag actagtaaat tgtccgctaa attctggccg tttttggctt
+     1201 ttttgttaga c
+//

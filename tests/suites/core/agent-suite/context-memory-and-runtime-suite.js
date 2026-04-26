@@ -460,6 +460,23 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
                 }
               ]
             },
+            thinking_trace: {
+              intent_parse_question: 'This is a record lookup request.',
+              question_clarifier: 'I am narrowing the lookup to the Atlas binder notebook.',
+              criteria_generate: 'I am checking whether one clear record match is enough.',
+              tool_rounds: [
+                {
+                  round: 1,
+                  tool_selection: 'I am choosing record lookup first.',
+                  tool_call: 'I want to use record-lookup to investigate "Atlas binder".',
+                  tool_results: 'Based on the tool result, it seems I found the notebook entry.'
+                }
+              ],
+              pre_synthesize_answer: 'Based on the evidence so far, the Atlas Binder Notebook is the likely match.',
+              judge: 'I have enough evidence to answer with one record match.',
+              final_synthesize: 'I am summarizing the matched record for the user.',
+              final_synthesized_question: 'Where is the Atlas binder notebook?'
+            },
             developer_trace: []
           },
           requestText: 'Where is the Atlas binder notebook?',
@@ -470,6 +487,7 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
         assert.match(assistantMessage.text, /notebook: Atlas Binder Notebook/i);
         assert.match(assistantMessage.text, /project Atlas/i);
         assert.match(assistantMessage.text, /protocol Binder Purification/i);
+        assert.equal(assistantMessage.meta.thinking_trace.final_synthesized_question, 'Where is the Atlas binder notebook?');
 
         const inventoryAssistantMessage = runtime.buildAssistantMessageFromResult({
           result: {
@@ -635,6 +653,109 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
         const assistantRow = loaded.rows.find((row) => row.type === 'assistant-message');
         assert.ok(assistantRow);
         assert.equal(assistantRow.text, longAnswer);
+      } finally {
+        await fsPromises.rm(tempDir, { recursive: true, force: true });
+      }
+    });
+
+    test('agent chat log runtime preserves transform status entries in chat_log/index.json', async () => {
+      const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'agent-chat-log-transform-index-'));
+      try {
+        const chatLogDir = path.join(tempDir, 'chat_log');
+        await fsPromises.mkdir(chatLogDir, { recursive: true });
+        await fsPromises.writeFile(path.join(chatLogDir, 'index.json'), JSON.stringify({
+          version: 1,
+          updated_at: '2026-03-22T15:40:00.000Z',
+          sessions: [],
+          transforms: {
+            updated_at: '2026-03-22T15:39:59.000Z',
+            output_folder: 'transformed',
+            files: {
+              'chat-existing.log': {
+                source_file: 'chat-existing.log',
+                output_file: 'transformed/chat-existing.json',
+                status: 'complete',
+                source_mtime_ms: 1234,
+                source_size: 5678,
+                source_line_count: 9,
+                trace_count: 3,
+                transformed_at: '2026-03-22T15:39:59.000Z',
+                error: ''
+              }
+            }
+          }
+        }, null, 2), 'utf8');
+
+        const runtime = agentChatLog.createAgentChatLogRuntime({
+          now: () => '2026-03-22T15:40:01.000Z',
+          createId: () => 'chat-transform-1'
+        });
+
+        await runtime.createSession({
+          storagePath: tempDir,
+          projectId: 'proj-transform',
+          projectName: 'Transform Test'
+        });
+
+        const index = JSON.parse(await fsPromises.readFile(path.join(chatLogDir, 'index.json'), 'utf8'));
+        assert.equal(index.sessions.length, 1);
+        assert.equal(index.transforms.output_folder, 'transformed');
+        assert.equal(index.transforms.files['chat-existing.log'].status, 'complete');
+        assert.equal(index.transforms.files['chat-existing.log'].output_file, 'transformed/chat-existing.json');
+      } finally {
+        await fsPromises.rm(tempDir, { recursive: true, force: true });
+      }
+    });
+
+    test('chat log transformer writes condensed system prompt, context, and response files', async () => {
+      const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'chat-log-transformer-'));
+      try {
+        const { createChatLogTransformRuntime } = require(path.join(
+          __dirname,
+          'src',
+          'main',
+          'helpers',
+          'main',
+          'chat-log-transformer.js'
+        ));
+        const runtime = createChatLogTransformRuntime({
+          now: () => '2026-03-22T16:10:00.000Z'
+        });
+        const chatLogDir = path.join(tempDir, 'chat_log');
+        await fsPromises.mkdir(chatLogDir, { recursive: true });
+        const sampleLogName = 'chat-mnwm38jq-9i28kt9x.log';
+        await fsPromises.copyFile(
+          path.join(__dirname, 'Testdata', 'chat_log', sampleLogName),
+          path.join(chatLogDir, sampleLogName)
+        );
+
+        const result = await runtime.scanStoragePath(tempDir);
+        assert.equal(result.ok, true);
+        assert.equal(result.transformed_count, 1);
+
+        const transformedPath = path.join(chatLogDir, 'transformed', 'chat-mnwm38jq-9i28kt9x.json');
+        const transformed = JSON.parse(await fsPromises.readFile(transformedPath, 'utf8'));
+        assert.equal(transformed.source_log_file, sampleLogName);
+        assert.equal(Array.isArray(transformed.entries), true);
+        assert.equal(transformed.entries.length > 0, true);
+        assert.equal(
+          transformed.entries.some((entry) => /User message:/i.test(String(entry.context || ''))),
+          true
+        );
+        assert.equal(
+          transformed.entries.some((entry) => /Write a grounded final science answer/i.test(String(entry.system_prompt || ''))),
+          true
+        );
+        assert.equal(
+          transformed.entries.some((entry) => /genetic code expansion/i.test(String(entry.response || ''))),
+          true
+        );
+
+        const index = JSON.parse(await fsPromises.readFile(path.join(chatLogDir, 'index.json'), 'utf8'));
+        assert.equal(index.transforms.output_folder, 'transformed');
+        assert.equal(index.transforms.files[sampleLogName].status, 'complete');
+        assert.equal(index.transforms.files[sampleLogName].output_file, 'transformed/chat-mnwm38jq-9i28kt9x.json');
+        assert.equal(index.transforms.files[sampleLogName].trace_count > 0, true);
       } finally {
         await fsPromises.rm(tempDir, { recursive: true, force: true });
       }
@@ -1225,6 +1346,236 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
         assert.equal(retrieveProjectEvidenceCalls, 0);
         assert.equal(scienceRuntimeCalls, 0);
         assert.equal(buildAgentSystemPromptCalls, 0);
+      } finally {
+        await fsPromises.rm(tempDir, { recursive: true, force: true });
+      }
+    });
+
+    test('selected project upgrades general science parsing into project science execution', async () => {
+      const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'agent-chat-project-scope-'));
+      try {
+        const { registerAgentIpc } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc.js'));
+        const handlers = new Map();
+        const ipcMain = {
+          handle(channel, handler) {
+            handlers.set(channel, handler);
+          }
+        };
+        const agentLogPath = path.join(tempDir, 'agent-chat.log');
+        const chatLogRuntime = agentChatLog.createAgentChatLogRuntime();
+        let routedParserPayload = null;
+        let receivedScienceInput = null;
+        const controllerUtils = {
+          buildAgentLogRequestId: () => 'req-project-scope-1',
+          formatAgentChatLogEntry(entry) {
+            return JSON.stringify({
+              timestamp: entry?.timestamp || '2026-03-22T17:10:00.000Z',
+              ...entry
+            });
+          },
+          summarizeLlmForAgentLog(llm) {
+            return {
+              provider: String(llm?.provider || 'openai'),
+              model: String(llm?.model || 'gpt-5')
+            };
+          },
+          extractConversation(conversation) {
+            return Array.isArray(conversation) ? conversation : [];
+          },
+          resolveAgentExecutionFlags() {
+            return { developerMode: false };
+          },
+          createAgentLlmTraceContext(input = {}) {
+            return {
+              enabled: input.enabled === true,
+              requestId: String(input.requestId || ''),
+              logPath: String(input.logPath || ''),
+              provider: String(input.provider || ''),
+              model: String(input.model || ''),
+              rows: [],
+              entries: []
+            };
+          },
+          resolveAgentProvider() {
+            return 'openai';
+          },
+          resolveAgentEndpoint() {
+            return 'https://api.example.test';
+          },
+          resolveAgentModel() {
+            return 'gpt-5';
+          },
+          resolveAgentApiKey() {
+            return 'test-key';
+          },
+          async requestIntentParserPayload() {
+            return {
+              ok: true,
+              payload: {
+                primary_intent: 'general_science_question',
+                reasoning_effort: 1,
+                direct_answer: null,
+                needs_clarification: true,
+                clarification_reason: 'Please tell me which project should I use for this analysis.',
+                entities: {},
+                inventory_search: {
+                  normalized_query: null,
+                  candidate_terms: [],
+                  aliases: [],
+                  search_mode: null
+                },
+                protocol_candidates: [],
+                reasoning_summary: 'Parser classified this as a general science question.'
+              }
+            };
+          },
+          summarizeAgentResultForLog(result) {
+            return {
+              ok: result?.ok === true,
+              parser: result?.parser || {},
+              response_type: result?.project_science_question ? 'project_science_question' : 'intent_parser'
+            };
+          }
+        };
+        const protocolNotebookRuntime = {
+          buildSessionKey() {
+            return 'protocol-session-project-scope';
+          },
+          hasPendingSession() {
+            return false;
+          },
+          clearPendingSession() {},
+          setPendingSession() {},
+          async runFlow() {
+            throw new Error('protocol flow should not run in this test');
+          }
+        };
+        const agentToolRuntime = {
+          normalizeAgentSnapshot(snapshot) {
+            return snapshot && typeof snapshot === 'object' ? snapshot : {};
+          },
+          normalizeToolInvocationArgs(args) {
+            return args;
+          },
+          async runAgentTool() {
+            throw new Error('tools should not run in this science routing test');
+          },
+          buildAgentSystemPrompt() {
+            return 'system prompt';
+          }
+        };
+
+        registerAgentIpc({
+          ipcMain,
+          controllerUtils,
+          observability: agentObservability,
+          protocolNotebookRuntime,
+          scienceReasoningLoopRuntime: {
+            async runGeneralScienceQuestion() {
+              throw new Error('general science runtime should not run when a project is selected');
+            },
+            async runProjectScienceQuestion(input) {
+              receivedScienceInput = input;
+              return {
+                status: 'completed',
+                answer: 'Atlas-specific science answer.',
+                rounds_executed: 1,
+                citations: []
+              };
+            },
+            async runResultAnalysis() {
+              throw new Error('result analysis should not run in this test');
+            }
+          },
+          deepResearchRuntime: null,
+          scienceMainUtils: {
+            buildScienceRoutingFromParser(parserPayload = {}) {
+              routedParserPayload = parserPayload;
+              return {
+                intent: String(parserPayload.primary_intent || ''),
+                confidence: parserPayload.needs_clarification === true ? 0.35 : 0.64,
+                entities: parserPayload.entities || {},
+                plan: {
+                  reasoning_effort: Number(parserPayload.reasoning_effort || 1),
+                  needs_clarification: parserPayload.needs_clarification === true,
+                  clarification_reason: String(parserPayload.clarification_reason || '')
+                },
+                classifier: {
+                  reasoning_effort: Number(parserPayload.reasoning_effort || 1)
+                }
+              };
+            },
+            retrieveProjectEvidence(input = {}) {
+              return {
+                selected_project: {
+                  id: String(input.selectedProjectId || ''),
+                  name: String(input.selectedProjectName || ''),
+                  resolution_source: 'selected_project'
+                },
+                clarification_question: 'Which project should I use?'
+              };
+            }
+          },
+          agentToolRuntime,
+          agentChatLogRuntime: chatLogRuntime,
+          agentToolSmokeTestRuntime: {
+            async runTool() {
+              return { ok: true };
+            }
+          },
+          executeInventoryLookup: async () => ({ status: 'matched', items: [] }),
+          executeRecordLookup: async () => ({ status: 'matched', items: [] }),
+          getAgentChatLogPath: () => agentLogPath,
+          getAgentChatSessionStoragePath: () => tempDir,
+          appendAgentChatLogEntry: async (logPath, entry) => {
+            await agentObservability.appendLogWithRotation({ logPath, entry });
+          },
+          cleanText: (value, maxLength = 2000) => {
+            const text = String(value || '').trim();
+            if (!text) {
+              return '';
+            }
+            return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text;
+          },
+          LLM_PROVIDERS: {
+            OPENAI: 'openai',
+            CODEX: 'codex'
+          },
+          getDefaultDataFilePath: () => ''
+        });
+
+        const handler = handlers.get('agent:chat');
+        assert.equal(typeof handler, 'function');
+
+        const result = await handler(null, {
+          message: 'Why did the binder signal drop after transfection?',
+          projectId: 'proj-1',
+          projectName: 'Atlas',
+          llm: {
+            provider: 'openai',
+            model: 'gpt-5'
+          },
+          stateSnapshot: {
+            settings: {
+              agent: {
+                developerMode: false
+              }
+            }
+          }
+        });
+
+        assert.equal(result.ok, true);
+        assert.equal(result.parser.primary_intent, 'project_science_question');
+        assert.equal(result.parser.needs_clarification, false);
+        assert.equal(result.parser.entities.project_name, 'Atlas');
+        assert.equal(routedParserPayload.primary_intent, 'project_science_question');
+        assert.equal(routedParserPayload.needs_clarification, false);
+        assert.equal(receivedScienceInput.parserPayload.primary_intent, 'project_science_question');
+        assert.equal(receivedScienceInput.parserPayload.entities.project_name, 'Atlas');
+        assert.equal(receivedScienceInput.project.id, 'proj-1');
+        assert.equal(receivedScienceInput.project.name, 'Atlas');
+        assert.equal(result.project_science_question.status, 'completed');
+        assert.equal(Boolean(result.general_science_question), false);
       } finally {
         await fsPromises.rm(tempDir, { recursive: true, force: true });
       }
@@ -1996,6 +2347,7 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
         stage: 'intent_parser',
         systemPrompt: 'Return valid JSON only.',
         userPrompt: 'User asks a science question.',
+        enableWebSearch: true,
         schema: {
           type: 'object',
           additionalProperties: true
@@ -2007,8 +2359,67 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
       assert.equal(calls.length, 1);
       assert.equal(calls[0].endpoint, 'https://chatgpt.com/backend-api/codex/responses');
       assert.equal(calls[0].apiKey, 'oauth-access-token');
+      assert.equal(calls[0].enableWebSearch, true);
       assert.match(calls[0].prompt, /Return valid JSON only\./);
       assert.match(calls[0].prompt, /User asks a science question\./);
+    });
+
+    test('runtime helpers can carry web search through openai structured requests', async () => {
+      const { createAgentLlmProviderBridge } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'shared',
+        'agent-llm-provider-bridge.js'
+      ));
+      const { createAgentLlmRuntimeHelpers } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'shared',
+        'agent-llm-utils.js'
+      ));
+
+      const calls = [];
+      const bridge = createAgentLlmProviderBridge({
+        LLM_PROVIDERS: {
+          OPENAI: 'openai'
+        },
+        requestOpenAiResponsesWithBackoff: async ({ body } = {}) => {
+          calls.push(body);
+          return {
+            output_text: '{"protocol":{"name":"Test","purpose":"Test","materials":[],"steps":["Do it."],"troubleshooting":""},"result_summary":"done"}'
+          };
+        }
+      });
+      const helpers = createAgentLlmRuntimeHelpers({
+        llmProviderBridge: bridge
+      });
+
+      const result = await helpers.requestStructuredJsonPayload({
+        provider: 'openai',
+        endpoint: 'https://api.openai.com/v1/responses',
+        apiKey: 'test-key',
+        model: 'gpt-5',
+        stage: 'protocol_generation',
+        systemPrompt: 'Return valid JSON only.',
+        userPrompt: 'Generate a protocol.',
+        enableWebSearch: true,
+        schema: {
+          type: 'object',
+          additionalProperties: true
+        }
+      });
+
+      assert.equal(result.ok, true);
+      assert.equal(calls.length, 1);
+      assert.equal(calls[0].tools[0].type, 'web_search');
+      assert.equal(calls[0].tool_choice, 'auto');
+      assert.deepEqual(calls[0].include, ['web_search_call.action.sources']);
     });
 
     test('web search runtime exposes provider-backed web search to agent tools', async () => {
@@ -2271,9 +2682,15 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
       assert.equal(callLog[0].provider, 'codex');
       assert.match(callLog[0].userPrompt, /Search for ncAA incorporation papers\./);
       assert.match(callLog[0].userPrompt, /literature-search/);
+      assert.match(callLog[0].userPrompt, /tool_schema_requests/);
+      assert.doesNotMatch(callLog[0].userPrompt, /Input schema JSON:/);
       assert.equal(runtime.extractAgentSessionText(started), 'starting turn');
       assert.equal(runtime.extractAgentSessionFunctionCalls(started).length, 1);
       assert.equal(runtime.extractFunctionCalls('{"tool_call":{"name":"literature-search","arguments":{}}}').length, 1);
+      assert.deepEqual(
+        runtime.extractSchemaRequests('{"tool_schema_requests":["literature-search"]}').map((entry) => entry.name),
+        ['literature-search']
+      );
 
       const afterTool = await runtime.continueAgentSessionWithToolOutputs(
         started,

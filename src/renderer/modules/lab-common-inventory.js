@@ -1,5 +1,227 @@
+const CHEMICAL_IMPORT_FIELDS = [
+  { key: 'name', label: 'Name', description: 'Chemical, reagent, compound, product, or item name.' },
+  { key: 'casNumber', label: 'CAS Number', description: 'CAS registry number or CAS identifier.' },
+  { key: 'location', label: 'Location', description: 'Storage location, storage position, shelf, freezer, cabinet, room, or position.' },
+  { key: 'vendor', label: 'Vendor', description: 'Vendor, supplier, manufacturer, company, or brand.' },
+  { key: 'catalogNumber', label: 'Catalog Number', description: 'Catalog, catalogue, SKU, product, part, or item number.' },
+  { key: 'unitSize', label: 'Unit Size', description: 'Package size, unit size, bottle size, weight, or volume per item.' },
+  { key: 'price', label: 'Price', description: 'Price, cost, or unit price.' },
+  { key: 'amountInStock', label: 'Amount in Stock', description: 'Quantity on hand, count, stock, remaining amount, or available inventory.' },
+  { key: 'url', label: 'URL', description: 'Product URL, supplier link, website, or web page.' },
+  { key: 'expirationDate', label: 'Expiration Date', description: 'Expiration, expiry, use-by, or best-before date.' }
+];
+
+const CHEMICAL_IMPORT_ALIASES = {
+  name: [
+    'name',
+    'chemical',
+    'chemical name',
+    'compound',
+    'compound name',
+    'item',
+    'item name',
+    'material',
+    'material name',
+    'product',
+    'product name',
+    'reagent',
+    'reagent name'
+  ],
+  casNumber: [
+    'cas',
+    'cas number',
+    'cas no',
+    'cas #',
+    'cas registry',
+    'cas registry number',
+    'registry number'
+  ],
+  location: [
+    'location',
+    'position',
+    'storage',
+    'storage location',
+    'storage position',
+    'place',
+    'where',
+    'room',
+    'shelf',
+    'freezer',
+    'fridge',
+    'refrigerator',
+    'cabinet',
+    'box',
+    'rack'
+  ],
+  vendor: [
+    'vendor',
+    'supplier',
+    'manufacturer',
+    'company',
+    'brand',
+    'source'
+  ],
+  catalogNumber: [
+    'catalog',
+    'catalog number',
+    'catalog no',
+    'catalog #',
+    'catalogue',
+    'catalogue number',
+    'cat',
+    'cat no',
+    'cat #',
+    'sku',
+    'product number',
+    'part number',
+    'item number'
+  ],
+  unitSize: [
+    'unit size',
+    'package size',
+    'pack size',
+    'bottle size',
+    'container size',
+    'size',
+    'volume',
+    'weight'
+  ],
+  price: [
+    'price',
+    'cost',
+    'unit price',
+    'unit cost'
+  ],
+  amountInStock: [
+    'stock',
+    'amount',
+    'amount in stock',
+    'qty',
+    'quantity',
+    'quantity on hand',
+    'on hand',
+    'inventory',
+    'count',
+    'remaining',
+    'available',
+    'current amount'
+  ],
+  url: [
+    'url',
+    'link',
+    'product url',
+    'supplier url',
+    'web',
+    'website',
+    'web site'
+  ],
+  expirationDate: [
+    'expiration',
+    'expiration date',
+    'expiry',
+    'expiry date',
+    'exp',
+    'exp date',
+    'expires',
+    'use by',
+    'best before'
+  ]
+};
+
+const CHEMICAL_IMPORT_FIELD_BY_NORMALIZED_ALIAS = new Map();
+Object.entries(CHEMICAL_IMPORT_ALIASES).forEach(([field, aliases]) => {
+  aliases.forEach((alias) => {
+    CHEMICAL_IMPORT_FIELD_BY_NORMALIZED_ALIAS.set(normalizeImportHeader(alias), field);
+  });
+});
+
+function normalizeImportHeader(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[#\u2116]/g, ' number ')
+    .replace(/[_/\\().:;,[\]{}-]+/g, ' ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function normalizeImportFieldKey(value) {
+  const normalized = String(value || '').trim().replace(/[^a-zA-Z0-9]+/g, '').toLowerCase();
+  if (normalized === 'ignore' || normalized === 'ignored' || normalized === 'none' || normalized === 'skip') {
+    return 'ignore';
+  }
+  const match = CHEMICAL_IMPORT_FIELDS.find((field) => field.key.toLowerCase() === normalized);
+  if (match) {
+    return match.key;
+  }
+  if (['cas', 'casno', 'casnum', 'casnumber'].includes(normalized)) {
+    return 'casNumber';
+  }
+  if (['catalog', 'catalogue', 'catno', 'catnumber', 'catalogno', 'catalognumber', 'sku'].includes(normalized)) {
+    return 'catalogNumber';
+  }
+  if (['stock', 'quantity', 'qty', 'amount', 'amountstock', 'amountinstock'].includes(normalized)) {
+    return 'amountInStock';
+  }
+  if (['expiry', 'expiration', 'expdate', 'expirydate', 'expirationdate'].includes(normalized)) {
+    return 'expirationDate';
+  }
+  return '';
+}
+
+function fieldLabel(fieldKey) {
+  return CHEMICAL_IMPORT_FIELDS.find((field) => field.key === fieldKey)?.label || fieldKey;
+}
+
+function guessChemicalImportField(header) {
+  const normalized = normalizeImportHeader(header);
+  if (!normalized) {
+    return '';
+  }
+  const exact = CHEMICAL_IMPORT_FIELD_BY_NORMALIZED_ALIAS.get(normalized);
+  if (exact) {
+    return exact;
+  }
+  const compact = normalized.replace(/\s+/g, '');
+  if (/\bcas\b/.test(normalized) || compact.includes('casregistry')) {
+    return 'casNumber';
+  }
+  if (/\b(cat|catalog|catalogue|sku)\b/.test(normalized) || compact.includes('partnumber') || compact.includes('productnumber')) {
+    return 'catalogNumber';
+  }
+  if (/\b(exp|expiry|expiration|expires)\b/.test(normalized) || compact.includes('bestbefore')) {
+    return 'expirationDate';
+  }
+  if (/\b(url|link|website|web)\b/.test(normalized)) {
+    return 'url';
+  }
+  if (/\b(vendor|supplier|manufacturer|company|brand)\b/.test(normalized)) {
+    return 'vendor';
+  }
+  if (/\b(location|position|storage|shelf|freezer|fridge|cabinet|rack|box|room)\b/.test(normalized)) {
+    return 'location';
+  }
+  if (/\b(stock|qty|quantity|remaining|available|inventory|count)\b/.test(normalized) || compact.includes('onhand')) {
+    return 'amountInStock';
+  }
+  if (compact.includes('unitsize') || compact.includes('packagesize') || compact.includes('packsize') || compact.includes('bottlesize')) {
+    return 'unitSize';
+  }
+  if (/\b(price|cost)\b/.test(normalized)) {
+    return 'price';
+  }
+  if (/\b(name|chemical|compound|reagent|material|product|item)\b/.test(normalized) && !/\b(number|no|#|id)\b/.test(normalized)) {
+    return 'name';
+  }
+  return '';
+}
+
 export function initLabCommonInventory({ state, persist, createId, safeText }) {
   const chemicalOpenAddBtn = document.getElementById('chemical-open-add-btn');
+  const chemicalImportBtn = document.getElementById('chemical-import-btn');
+  const chemicalImportFile = document.getElementById('chemical-import-file');
+  const chemicalImportStatus = document.getElementById('chemical-import-status');
   const chemicalDialogOverlay = document.getElementById('chemical-dialog-overlay');
   const chemicalDialogTitle = document.getElementById('chemical-dialog-title');
   const chemicalDialogCloseBtn = document.getElementById('chemical-dialog-close-btn');
@@ -26,20 +248,18 @@ export function initLabCommonInventory({ state, persist, createId, safeText }) {
   const chemicalDetailContent = document.getElementById('chemical-detail-content');
   const chemicalDetailEditBtn = document.getElementById('chemical-detail-edit-btn');
   const chemicalDetailDeleteBtn = document.getElementById('chemical-detail-delete-btn');
-
-  const inboxEmail = document.getElementById('inventory-inbox-email');
-  const importBtn = document.getElementById('inventory-import-btn');
-  const pendingCount = document.getElementById('inventory-pending-count');
   const blockchainList = document.getElementById('inventory-blockchain-list');
 
   chemicalOpenAddBtn.addEventListener('click', startNewChemical);
+  chemicalImportBtn?.addEventListener('click', () => {
+    chemicalImportFile?.click();
+  });
+  chemicalImportFile?.addEventListener('change', onChemicalImportFileChange);
   chemicalDialogCloseBtn.addEventListener('click', resetChemicalForm);
   chemicalDialogOverlay.addEventListener('click', onChemicalDialogOverlayClick);
   document.addEventListener('keydown', onChemicalDialogKeydown);
   chemicalForm.addEventListener('submit', onChemicalSubmit);
   chemicalCancelBtn.addEventListener('click', resetChemicalForm);
-  importBtn.addEventListener('click', importInventoryUpdates);
-  inboxEmail.addEventListener('change', renderPendingCount);
   chemicalSearch.addEventListener('input', renderChemicalList);
   chemicalFilterLocation.addEventListener('change', renderChemicalList);
   chemicalSort.addEventListener('change', renderChemicalList);
@@ -341,16 +561,6 @@ export function initLabCommonInventory({ state, persist, createId, safeText }) {
     }
   }
 
-  function isUnreadFor(message, email) {
-    if (!email) {
-      return false;
-    }
-    if (!Array.isArray(message.readBy)) {
-      return true;
-    }
-    return !message.readBy.includes(email);
-  }
-
   function simpleHash(text) {
     let hash = 0;
     for (let i = 0; i < text.length; i += 1) {
@@ -398,6 +608,486 @@ export function initLabCommonInventory({ state, persist, createId, safeText }) {
           }
         });
       });
+  }
+
+  function setChemicalImportStatus(message, tone = 'idle') {
+    if (!chemicalImportStatus) {
+      return;
+    }
+    chemicalImportStatus.textContent = String(message || '');
+    chemicalImportStatus.dataset.status = tone;
+  }
+
+  function arrayBufferToBase64(buffer) {
+    const bytes = new Uint8Array(buffer);
+    const chunkSize = 0x8000;
+    let binary = '';
+    for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+      const chunk = bytes.subarray(offset, offset + chunkSize);
+      binary += String.fromCharCode(...chunk);
+    }
+    return btoa(binary);
+  }
+
+  async function readImportFileBase64(file) {
+    const buffer = await file.arrayBuffer();
+    return arrayBufferToBase64(buffer);
+  }
+
+  function parseCsvRows(rawText) {
+    const rows = [];
+    let row = [];
+    let cell = '';
+    let inQuotes = false;
+    const text = String(rawText || '').replace(/^\uFEFF/, '');
+    for (let index = 0; index < text.length; index += 1) {
+      const char = text[index];
+      if (char === '"') {
+        if (inQuotes && text[index + 1] === '"') {
+          cell += '"';
+          index += 1;
+        } else {
+          inQuotes = !inQuotes;
+        }
+        continue;
+      }
+      if (char === ',' && !inQuotes) {
+        row.push(cell);
+        cell = '';
+        continue;
+      }
+      if ((char === '\n' || char === '\r') && !inQuotes) {
+        if (char === '\r' && text[index + 1] === '\n') {
+          index += 1;
+        }
+        row.push(cell);
+        rows.push(row);
+        row = [];
+        cell = '';
+        continue;
+      }
+      cell += char;
+    }
+    if (cell || row.length) {
+      row.push(cell);
+      rows.push(row);
+    }
+    const normalized = rows
+      .map((item) => item.map((cellValue) => String(cellValue || '').trim()))
+      .filter((item) => item.some((cellValue) => cellValue));
+    return {
+      headers: normalized[0] || [],
+      rows: normalized.slice(1),
+      rowCount: Math.max(0, normalized.length - 1),
+      format: 'csv'
+    };
+  }
+
+  async function parseChemicalImportFile(file) {
+    if (window.enanaApi?.parseChemicalImportFile) {
+      const dataBase64 = await readImportFileBase64(file);
+      const parsed = await window.enanaApi.parseChemicalImportFile({
+        fileName: file.name,
+        dataBase64
+      });
+      if (!parsed?.ok) {
+        throw new Error(parsed?.error || 'Could not parse chemical import file.');
+      }
+      return parsed;
+    }
+
+    if (!/\.csv$/i.test(file.name || '')) {
+      throw new Error('This build can only import Excel files through the desktop parser.');
+    }
+    return parseCsvRows(await file.text());
+  }
+
+  function mapChemicalImportHeadersLocally(headers) {
+    const fieldToColumn = {};
+    const columnToField = {};
+    const decisions = [];
+    const unmappedHeaders = [];
+
+    headers.forEach((header, index) => {
+      const cleanHeader = String(header || '').trim();
+      if (!cleanHeader) {
+        return;
+      }
+      const field = guessChemicalImportField(cleanHeader);
+      if (field && fieldToColumn[field] == null) {
+        fieldToColumn[field] = index;
+        columnToField[index] = field;
+        decisions.push({
+          header: cleanHeader,
+          field,
+          source: 'local'
+        });
+        return;
+      }
+      unmappedHeaders.push(cleanHeader);
+    });
+
+    return {
+      fieldToColumn,
+      columnToField,
+      decisions,
+      unmappedHeaders,
+      usedLlm: false,
+      llmError: ''
+    };
+  }
+
+  function buildLlmHeaderPrompt(headers, rows, localInference) {
+    const previewRows = rows.slice(0, 5).map((row) => {
+      const entry = {};
+      headers.forEach((header, index) => {
+        entry[String(header || `Column ${index + 1}`).trim() || `Column ${index + 1}`] = String(row[index] ?? '').trim();
+      });
+      return entry;
+    });
+    const fields = CHEMICAL_IMPORT_FIELDS.map((field) => ({
+      key: field.key,
+      label: field.label,
+      description: field.description
+    }));
+    return [
+      'Map spreadsheet column headers into this chemical inventory schema.',
+      'Return only JSON with this shape: {"mapping":{"Source Header":"fieldKey or ignore"},"notes":"short"}',
+      'Use "ignore" for columns that do not fit. Important example: "position" should map to "location" when it means storage position.',
+      `Allowed field keys: ${CHEMICAL_IMPORT_FIELDS.map((field) => field.key).join(', ')}`,
+      '',
+      `Schema: ${JSON.stringify(fields)}`,
+      `Headers: ${JSON.stringify(headers)}`,
+      `Local mapping already found: ${JSON.stringify(localInference.decisions)}`,
+      `Preview rows: ${JSON.stringify(previewRows)}`
+    ].join('\n');
+  }
+
+  function parseJsonObjectFromText(text) {
+    const raw = String(text || '').trim();
+    if (!raw) {
+      return null;
+    }
+    const unfenced = raw
+      .replace(/^```(?:json)?/i, '')
+      .replace(/```$/i, '')
+      .trim();
+    try {
+      return JSON.parse(unfenced);
+    } catch {
+      const start = unfenced.indexOf('{');
+      const end = unfenced.lastIndexOf('}');
+      if (start >= 0 && end > start) {
+        try {
+          return JSON.parse(unfenced.slice(start, end + 1));
+        } catch {
+          return null;
+        }
+      }
+    }
+    return null;
+  }
+
+  async function requestLlmChemicalHeaderMapping(headers, rows, localInference) {
+    if (!window.enanaApi?.runCodexLlmPrompt) {
+      return null;
+    }
+    const prompt = buildLlmHeaderPrompt(headers, rows, localInference);
+    const result = await window.enanaApi.runCodexLlmPrompt({
+      model: String(state.settings?.llm?.model || '').trim(),
+      reasoningEffort: String(state.settings?.llm?.reasoningEffort || '').trim(),
+      prompt
+    });
+    if (!result?.ok) {
+      throw new Error(result?.error || 'LLM header mapping failed.');
+    }
+    return parseJsonObjectFromText(result.text);
+  }
+
+  function findHeaderIndex(headers, headerName) {
+    const normalized = normalizeImportHeader(headerName);
+    return headers.findIndex((header) => normalizeImportHeader(header) === normalized);
+  }
+
+  function applyLlmHeaderMapping(headers, inference, llmPayload) {
+    const rawMapping = llmPayload?.mapping && typeof llmPayload.mapping === 'object'
+      ? llmPayload.mapping
+      : (llmPayload && typeof llmPayload === 'object' ? llmPayload : {});
+    Object.entries(rawMapping).forEach(([headerName, fieldName]) => {
+      let headerIndex = findHeaderIndex(headers, headerName);
+      let field = normalizeImportFieldKey(fieldName);
+
+      if (headerIndex < 0) {
+        const keyAsField = normalizeImportFieldKey(headerName);
+        const valueAsHeaderIndex = findHeaderIndex(headers, fieldName);
+        if (keyAsField && valueAsHeaderIndex >= 0) {
+          headerIndex = valueAsHeaderIndex;
+          field = keyAsField;
+        }
+      }
+
+      if (headerIndex < 0 || !field || field === 'ignore') {
+        return;
+      }
+      if (inference.fieldToColumn[field] != null || inference.columnToField[headerIndex]) {
+        return;
+      }
+      inference.fieldToColumn[field] = headerIndex;
+      inference.columnToField[headerIndex] = field;
+      inference.decisions.push({
+        header: String(headers[headerIndex] || '').trim(),
+        field,
+        source: 'llm'
+      });
+    });
+    inference.unmappedHeaders = headers.filter((header, index) => {
+      return String(header || '').trim() && !inference.columnToField[index];
+    });
+    inference.usedLlm = true;
+    return inference;
+  }
+
+  async function inferChemicalImportHeaders(headers, rows) {
+    const cleanHeaders = headers.map((header, index) => String(header || `Column ${index + 1}`).trim() || `Column ${index + 1}`);
+    const inference = mapChemicalImportHeadersLocally(cleanHeaders);
+    const needsLlm = inference.unmappedHeaders.length > 0
+      || inference.fieldToColumn.name == null
+      || inference.fieldToColumn.location == null;
+    if (!needsLlm || !window.enanaApi?.runCodexLlmPrompt) {
+      return inference;
+    }
+    try {
+      const llmPayload = await requestLlmChemicalHeaderMapping(cleanHeaders, rows, inference);
+      if (llmPayload) {
+        applyLlmHeaderMapping(cleanHeaders, inference, llmPayload);
+      }
+    } catch (error) {
+      inference.llmError = String(error?.message || error);
+    }
+    return inference;
+  }
+
+  function cleanImportCell(value) {
+    return String(value ?? '').trim();
+  }
+
+  function mappedImportValue(row, inference, field) {
+    const index = inference.fieldToColumn[field];
+    if (index == null || index < 0) {
+      return '';
+    }
+    return cleanImportCell(row[index]);
+  }
+
+  function normalizeImportedDate(value) {
+    const raw = cleanImportCell(value);
+    if (!raw) {
+      return '';
+    }
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+      return raw;
+    }
+    const numeric = Number(raw);
+    if (Number.isFinite(numeric) && numeric > 20000 && numeric < 80000) {
+      const excelEpoch = Date.UTC(1899, 11, 30);
+      const date = new Date(excelEpoch + (Math.round(numeric) * 86400000));
+      return Number.isNaN(date.getTime()) ? '' : date.toISOString().slice(0, 10);
+    }
+    const parsed = Date.parse(raw);
+    if (!Number.isFinite(parsed)) {
+      return raw;
+    }
+    return new Date(parsed).toISOString().slice(0, 10);
+  }
+
+  function ensureImportedLocation(location) {
+    const cleanLocation = cleanImportCell(location) || 'Imported';
+    if (!state.settings || typeof state.settings !== 'object') {
+      state.settings = {};
+    }
+    if (!Array.isArray(state.settings.inventoryLocations)) {
+      state.settings.inventoryLocations = [];
+    }
+    const exists = state.settings.inventoryLocations.some((item) => normalizeLocationKey(item) === normalizeLocationKey(cleanLocation));
+    if (!exists) {
+      state.settings.inventoryLocations.push(cleanLocation);
+    }
+    return cleanLocation;
+  }
+
+  function findExistingChemicalForImport(record) {
+    const casKey = cleanImportCell(record.casNumber).toLowerCase();
+    const catalogKey = cleanImportCell(record.catalogNumber).toLowerCase();
+    const vendorKey = cleanImportCell(record.vendor).toLowerCase();
+    const nameKey = cleanImportCell(record.name).toLowerCase();
+    const locationKey = normalizeLocationKey(record.location);
+
+    if (casKey) {
+      const matchByCas = state.labInventory.chemicals.find((item) => cleanImportCell(item.casNumber).toLowerCase() === casKey);
+      if (matchByCas) {
+        return matchByCas;
+      }
+    }
+    if (catalogKey) {
+      const matchByCatalog = state.labInventory.chemicals.find((item) => {
+        return cleanImportCell(item.catalogNumber).toLowerCase() === catalogKey
+          && (!vendorKey || cleanImportCell(item.vendor).toLowerCase() === vendorKey);
+      });
+      if (matchByCatalog) {
+        return matchByCatalog;
+      }
+    }
+    if (nameKey && locationKey) {
+      return state.labInventory.chemicals.find((item) => {
+        return cleanImportCell(item.name).toLowerCase() === nameKey
+          && normalizeLocationKey(item.location) === locationKey;
+      }) || null;
+    }
+    return null;
+  }
+
+  function mergeImportedChemicalRecord(imported, existing = null) {
+    const sameLocation = normalizeLocationKey(imported.location) === normalizeLocationKey(existing?.location);
+    const locationCode = assignLocationCode(imported.location, sameLocation ? existing?.locationCode || '' : '');
+    const parsedLocationCode = parseLocationCode(locationCode);
+    const locationNumber = Number(parsedLocationCode?.number || existing?.locationNumber || 0);
+    state.labInventory.lastLocationNumber = Math.max(Number(state.labInventory.lastLocationNumber) || 0, locationNumber);
+
+    const valueOrExisting = (field) => {
+      const importedValue = cleanImportCell(imported[field]);
+      return importedValue || cleanImportCell(existing?.[field]);
+    };
+
+    return {
+      ...(existing || {}),
+      id: existing?.id || createId(),
+      name: cleanImportCell(imported.name) || cleanImportCell(existing?.name),
+      casNumber: valueOrExisting('casNumber'),
+      location: cleanImportCell(imported.location) || cleanImportCell(existing?.location) || 'Imported',
+      locationCode,
+      locationNumber,
+      vendor: valueOrExisting('vendor'),
+      catalogNumber: valueOrExisting('catalogNumber'),
+      unitSize: valueOrExisting('unitSize'),
+      price: valueOrExisting('price'),
+      amountInStock: valueOrExisting('amountInStock'),
+      url: valueOrExisting('url'),
+      expirationDate: normalizeImportedDate(imported.expirationDate) || cleanImportCell(existing?.expirationDate),
+      updatedAt: new Date().toISOString()
+    };
+  }
+
+  function importChemicalRows(parsed, inference, fileName) {
+    ensureLabInventoryShape();
+    const rows = Array.isArray(parsed?.rows) ? parsed.rows : [];
+    const result = {
+      created: 0,
+      updated: 0,
+      skipped: 0,
+      importedIds: []
+    };
+
+    rows.forEach((row) => {
+      const imported = {
+        name: mappedImportValue(row, inference, 'name'),
+        casNumber: mappedImportValue(row, inference, 'casNumber'),
+        location: ensureImportedLocation(mappedImportValue(row, inference, 'location') || 'Imported'),
+        vendor: mappedImportValue(row, inference, 'vendor'),
+        catalogNumber: mappedImportValue(row, inference, 'catalogNumber'),
+        unitSize: mappedImportValue(row, inference, 'unitSize'),
+        price: mappedImportValue(row, inference, 'price'),
+        amountInStock: mappedImportValue(row, inference, 'amountInStock'),
+        url: mappedImportValue(row, inference, 'url'),
+        expirationDate: mappedImportValue(row, inference, 'expirationDate')
+      };
+      if (!imported.name) {
+        result.skipped += 1;
+        return;
+      }
+
+      const existing = findExistingChemicalForImport(imported);
+      const record = mergeImportedChemicalRecord(imported, existing);
+      const index = state.labInventory.chemicals.findIndex((item) => item.id === record.id);
+      if (index >= 0) {
+        state.labInventory.chemicals[index] = record;
+        result.updated += 1;
+      } else {
+        state.labInventory.chemicals.push(record);
+        result.created += 1;
+      }
+      result.importedIds.push(record.id);
+    });
+
+    if (result.created || result.updated) {
+      selectedChemicalId = result.importedIds[0] || selectedChemicalId;
+      appendBlock('IMPORT_CHEMICALS', {
+        fileName: cleanImportCell(fileName),
+        created: result.created,
+        updated: result.updated,
+        skipped: result.skipped,
+        mappedColumns: inference.decisions.map((decision) => ({
+          header: decision.header,
+          field: decision.field,
+          source: decision.source
+        }))
+      });
+    }
+
+    return result;
+  }
+
+  function buildImportMappingSummary(inference) {
+    const decisions = inference.decisions
+      .slice(0, 8)
+      .map((decision) => `${decision.header} -> ${fieldLabel(decision.field)}${decision.source === 'llm' ? ' (LLM)' : ''}`);
+    const remainingCount = Math.max(0, inference.decisions.length - decisions.length);
+    const summary = decisions.join(', ');
+    return `${summary}${remainingCount ? `, +${remainingCount} more` : ''}`;
+  }
+
+  async function onChemicalImportFileChange(event) {
+    const file = event?.target?.files?.[0];
+    if (!file) {
+      return;
+    }
+    setChemicalImportStatus(`Reading ${file.name}...`, 'busy');
+    try {
+      const parsed = await parseChemicalImportFile(file);
+      if (!Array.isArray(parsed.headers) || !parsed.headers.length) {
+        throw new Error('Import file needs a header row.');
+      }
+      if (!Array.isArray(parsed.rows) || !parsed.rows.length) {
+        throw new Error('Import file does not contain chemical rows.');
+      }
+
+      setChemicalImportStatus('Matching spreadsheet columns...', 'busy');
+      const inference = await inferChemicalImportHeaders(parsed.headers, parsed.rows);
+      if (inference.fieldToColumn.name == null) {
+        throw new Error('Could not find a chemical name column.');
+      }
+
+      const result = importChemicalRows(parsed, inference, file.name);
+      if (!result.created && !result.updated) {
+        setChemicalImportStatus(`No chemicals imported from ${file.name}. ${result.skipped} rows were skipped.`, 'error');
+        return;
+      }
+
+      persist();
+      void syncChemicalSqliteBundle(true);
+      renderAll();
+      const mappingSummary = buildImportMappingSummary(inference);
+      const llmNote = inference.llmError ? ` LLM mapping unavailable: ${inference.llmError}` : '';
+      setChemicalImportStatus(
+        `Imported ${result.created} new and updated ${result.updated} chemicals from ${file.name}. Skipped ${result.skipped}. ${mappingSummary ? `Mapped ${mappingSummary}.` : ''}${llmNote}`,
+        inference.llmError ? 'warning' : 'success'
+      );
+    } catch (error) {
+      setChemicalImportStatus(`Import failed: ${String(error?.message || error)}`, 'error');
+    } finally {
+      if (chemicalImportFile) {
+        chemicalImportFile.value = '';
+      }
+    }
   }
 
   function onChemicalSubmit(event) {
@@ -715,98 +1405,6 @@ export function initLabCommonInventory({ state, persist, createId, safeText }) {
     `).join('');
   }
 
-  function renderInboxEmails() {
-    const emails = Array.from(new Set(
-      state.members
-        .map((member) => member.enanaEmail)
-        .filter((email) => email && email.trim())
-    ));
-    const selected = inboxEmail.value;
-    const options = ['<option value="">Select inbox email</option>'];
-    emails.forEach((email) => {
-      const isSelected = selected === email ? ' selected' : '';
-      options.push(`<option value="${safeText(email)}"${isSelected}>${safeText(email)}</option>`);
-    });
-    inboxEmail.innerHTML = options.join('');
-    if (selected && emails.includes(selected)) {
-      inboxEmail.value = selected;
-    }
-  }
-
-  function renderPendingCount() {
-    const target = inboxEmail.value;
-    if (!target) {
-      pendingCount.textContent = '0';
-      return;
-    }
-
-    const pending = state.messages.filter((message) => (
-      message.type === 'inventory_sync' &&
-      message.to === target &&
-      isUnreadFor(message, target)
-    ));
-
-    pendingCount.textContent = String(pending.length);
-  }
-
-  function importInventoryUpdates() {
-    ensureLabInventoryShape();
-    const target = inboxEmail.value;
-    if (!target) {
-      return;
-    }
-
-    const pending = state.messages.filter((message) => (
-      message.type === 'inventory_sync' &&
-      message.to === target &&
-      isUnreadFor(message, target)
-    ));
-
-    pending.forEach((message) => {
-      const incoming = message.payload?.chemical;
-      if (!incoming || !incoming.id) {
-        return;
-      }
-      const normalizedIncoming = {
-        ...incoming,
-        location: String(incoming.location || '').trim()
-      };
-      if (normalizedIncoming.location) {
-        const nextCode = assignLocationCode(normalizedIncoming.location, normalizedIncoming.locationCode || '');
-        const parsed = parseLocationCode(nextCode);
-        normalizedIncoming.locationCode = nextCode;
-        normalizedIncoming.locationNumber = Number(parsed?.number || normalizedIncoming.locationNumber || 0);
-        state.labInventory.lastLocationNumber = Math.max(
-          Number(state.labInventory.lastLocationNumber) || 0,
-          Number(normalizedIncoming.locationNumber) || 0
-        );
-      }
-      const index = state.labInventory.chemicals.findIndex((item) => item.id === incoming.id);
-      if (index >= 0) {
-        state.labInventory.chemicals[index] = normalizedIncoming;
-      } else {
-        state.labInventory.chemicals.push(normalizedIncoming);
-      }
-
-      appendBlock('SYNC_IMPORT', {
-        chemicalId: normalizedIncoming.id,
-        from: message.from,
-        to: message.to
-      });
-
-      if (!Array.isArray(message.readBy)) {
-        message.readBy = [];
-      }
-      if (!message.readBy.includes(target)) {
-        message.readBy.push(target);
-      }
-    });
-
-    persist();
-    void syncChemicalSqliteBundle(true);
-    renderAll();
-  }
-
   function renderAll() {
     ensureLabInventoryShape();
     const migrated = ensureChemicalCodes();
@@ -817,8 +1415,6 @@ export function initLabCommonInventory({ state, persist, createId, safeText }) {
     renderChemicalList();
     renderChemicalDetail();
     renderBlockchain();
-    renderInboxEmails();
-    renderPendingCount();
     void syncChemicalSqliteBundle(migrated);
   }
 

@@ -445,6 +445,25 @@ ORIGIN
   );
 });
 
+test('[EDGE] sequence-viewer parseGenBankRecords preserves CDS translation qualifiers', () => {
+  const parsed = sequenceViewerInternals.parseGenBankRecords(`
+LOCUS       CDSSEQ         15 bp    DNA     linear   SYN 01-JAN-2026
+FEATURES             Location/Qualifiers
+     CDS             1..15
+                     /label="cds_a"
+                     /translation="M K
+                     P*"
+ORIGIN
+        1 atgaaaccctaaacc
+//
+`);
+
+  assert.equal(parsed.records.length, 1);
+  assert.equal(parsed.records[0].features.length, 1);
+  assert.equal(parsed.records[0].features[0].type, 'cds');
+  assert.equal(parsed.records[0].features[0].translation, 'MKP*');
+});
+
 test('[EDGE] sequence-viewer normalizeExternalPayload clamps segments and keeps metadata', () => {
   const normalized = sequenceViewerInternals.normalizeExternalPayload({
     name: 'Example payload',
@@ -933,7 +952,42 @@ test('[EDGE] sequence-viewer buildCircularPreviewHtmlDocument emits standalone D
   assert.match(html, /AmpR/);
   assert.match(html, /pUC origin/);
   assert.match(html, /circular-preview__leader/);
+  assert.match(html, /circular-preview__scene/);
+  assert.match(html, /circular-preview__hover-tooltip/);
+  assert.match(html, /data-preview-tooltip="feature"/);
+  assert.match(html, /data-tooltip-description="/);
+  assert.match(html, /data-feature-x="/);
   assert.match(html, /data-feature-index="1"/);
+  assert.match(html, /\.preview-shell\s*\{[\s\S]*height:\s*100%/i);
+  assert.match(html, /svg\s*\{[\s\S]*width:\s*100%/i);
+  assert.match(html, /svg\s*\{[\s\S]*height:\s*100%/i);
+  assert.match(html, /preserveAspectRatio="xMidYMid meet"/i);
+  assert.match(html, /getBBox\(\)/);
+  assert.match(html, /pointerenter/);
+  assert.match(html, /background:\s*#ffffff/i);
+  assert.doesNotMatch(html, /radial-gradient/i);
+  assert.doesNotMatch(html, /\.preview-shell\s*\{[^}]*box-shadow:/i);
+  assert.doesNotMatch(html, /svg\s*\{[^}]*width:\s*auto/i);
+});
+
+test('[EDGE] sequence-viewer buildCircularPreviewHtmlDocument balances crowded top labels across both sides', () => {
+  const html = sequenceViewerInternals.buildCircularPreviewHtmlDocument({
+    name: 'pCrowded',
+    topology: 'circular',
+    sequence: 'A'.repeat(4000),
+    features: [0, 80, 160, 240, 320, 400].map((start, index) => ({
+      name: `misc_feature_${index + 1}`,
+      type: 'misc_feature',
+      strand: 0,
+      segments: [{ start, end: start + 60 }]
+    }))
+  });
+
+  assert.match(html, /data-label-side="left"/);
+  assert.match(html, /data-label-side="right"/);
+  const viewBoxMatch = html.match(/viewBox="0 0 (\d+(?:\.\d+)?) (\d+(?:\.\d+)?)"/i);
+  assert.ok(viewBoxMatch);
+  assert.equal(Number(viewBoxMatch[1]) > Number(viewBoxMatch[2]), true);
 });
 
 test('[EDGE] sequence-viewer buildCircularPreviewHtmlDocument returns an empty-state HTML shell without sequence', () => {
