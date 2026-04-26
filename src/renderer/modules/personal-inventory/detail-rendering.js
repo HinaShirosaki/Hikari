@@ -11,6 +11,31 @@ export function createPersonalInventoryDetailRenderer({ safeText, uiState, helpe
     buildSampleDotFill
   } = helpers;
 
+  function hasStructure(sample) {
+    const structure = sample?.compoundStructure;
+    return Boolean(
+      String(structure?.smiles || '').trim()
+      || String(structure?.molfile || '').trim()
+      || String(structure?.imageDataUrl || '').trim()
+    );
+  }
+
+  function renderStructureAction({ mode, sample = null }) {
+    const buttonText = sample && hasStructure(sample) ? 'Edit Structure' : 'Add Structure';
+    const sampleId = sample?.id ? ` data-sample-id="${safeText(sample.id)}"` : '';
+    return `
+      <div class="inventory-sample-structure-control">
+        <button
+          type="button"
+          class="ghost-btn inventory-sample-structure-btn"
+          data-inventory-sample-structure-open="${safeText(mode)}"${sampleId}
+          hidden
+        >${safeText(buttonText)}</button>
+        <span class="small-note inventory-sample-structure-status" data-inventory-sample-structure-status></span>
+      </div>
+    `;
+  }
+
   function renderWellEditor(section, container, index) {
     if (!Number.isInteger(index) || index < 0) {
       return `
@@ -65,6 +90,7 @@ export function createPersonalInventoryDetailRenderer({ safeText, uiState, helpe
             ${renderSampleTypeOptions(activeSample.type || 'plasmid')}
           </select>
         </label>
+        ${renderStructureAction({ mode: 'well-existing', sample: activeSample })}
         <label>
           Lot / Batch
           <input data-well-sample-lot value="${safeText(activeSample.lot || '')}" />
@@ -103,6 +129,7 @@ export function createPersonalInventoryDetailRenderer({ safeText, uiState, helpe
             ${renderSampleTypeOptions('plasmid')}
           </select>
         </label>
+        ${renderStructureAction({ mode: 'well-new' })}
         <label>
           Lot / Batch
           <input data-well-sample-new-lot />
@@ -154,6 +181,7 @@ export function createPersonalInventoryDetailRenderer({ safeText, uiState, helpe
         <label><input data-single-sample-code value="${safeText(activeSample.code || '')}" placeholder="e.g. S-001" /></label>
         <label><input data-single-sample-name value="${safeText(activeSample.name || '')}" required /></label>
         <label><select data-single-sample-type>${renderSampleTypeOptions(activeSample.type || 'plasmid')}</select></label>
+        ${renderStructureAction({ mode: 'single-existing', sample: activeSample })}
         <label><input data-single-sample-lot value="${safeText(activeSample.lot || '')}" /></label>
         <label><input data-single-sample-concentration value="${safeText(activeSample.concentration || '')}" placeholder="e.g. 2 mg/mL" /></label>
         <label><textarea data-single-sample-notes rows="3">${safeText(activeSample.notes || '')}</textarea></label>
@@ -172,6 +200,7 @@ export function createPersonalInventoryDetailRenderer({ safeText, uiState, helpe
         <label><input data-single-sample-new-code placeholder="e.g. S-001" /></label>
         <label><input data-single-sample-new-name placeholder="Required" /></label>
         <label><select data-single-sample-new-type>${renderSampleTypeOptions('plasmid')}</select></label>
+        ${renderStructureAction({ mode: 'single-new' })}
         <label><input data-single-sample-new-lot /></label>
         <label><input data-single-sample-new-concentration placeholder="e.g. 2 mg/mL" /></label>
         <label><textarea data-single-sample-new-notes rows="3"></textarea></label>

@@ -154,10 +154,19 @@ test('personal-inventory shows right-side sample editor and saves linked sample 
 
   assert.match(inventorySections.innerHTML, /well-editor-shell/);
   assert.match(inventorySections.innerHTML, /data-well-sample-save="sample-1"/);
+  assert.match(inventorySections.innerHTML, /value="chemical">Chemical/);
+  assert.doesNotMatch(inventorySections.innerHTML, />Compound</);
+
+  const existingStructureBtn = inventorySections.querySelector('[data-inventory-sample-structure-open]');
+  assert.equal(Boolean(existingStructureBtn.hidden), true);
+  const existingTypeInput = inventorySections.querySelector('[data-well-sample-type]');
+  existingTypeInput.value = 'chemical';
+  trigger(existingTypeInput, 'change');
+  assert.equal(Boolean(existingStructureBtn.hidden), false);
 
   inventorySections.querySelector('[data-well-sample-code]').value = 'S-UPDATED-1';
   inventorySections.querySelector('[data-well-sample-name]').value = 'Updated Sample';
-  inventorySections.querySelector('[data-well-sample-type]').value = 'protein';
+  existingTypeInput.value = 'protein';
   inventorySections.querySelector('[data-well-sample-lot]').value = 'LOT-99';
   inventorySections.querySelector('[data-well-sample-concentration]').value = '2 mg/mL';
   inventorySections.querySelector('[data-well-sample-notes]').value = 'edited in side panel';
@@ -236,9 +245,18 @@ test('personal-inventory creates a linked sample from the side editor for an emp
   trigger(wellBtn, 'click');
 
   assert.match(inventorySections.innerHTML, /data-well-sample-create="0"/);
+  assert.match(inventorySections.innerHTML, /value="chemical">Chemical/);
+  assert.doesNotMatch(inventorySections.innerHTML, />Compound</);
+  const newStructureBtn = inventorySections.querySelector('[data-inventory-sample-structure-open]');
+  assert.equal(Boolean(newStructureBtn.hidden), true);
+  const newTypeInput = inventorySections.querySelector('[data-well-sample-new-type]');
+  newTypeInput.value = 'chemical';
+  trigger(newTypeInput, 'change');
+  assert.equal(Boolean(newStructureBtn.hidden), false);
+
   inventorySections.querySelector('[data-well-sample-new-code]').value = 'S-NEW-1';
   inventorySections.querySelector('[data-well-sample-new-name]').value = 'Created Sample';
-  inventorySections.querySelector('[data-well-sample-new-type]').value = 'antibody';
+  newTypeInput.value = 'antibody';
   inventorySections.querySelector('[data-well-sample-new-lot]').value = 'BATCH-7';
   inventorySections.querySelector('[data-well-sample-new-concentration]').value = '5 mg/mL';
   inventorySections.querySelector('[data-well-sample-new-notes]').value = 'created from inventory panel';

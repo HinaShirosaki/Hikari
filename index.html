@@ -968,10 +968,6 @@
           </div>
           <div id="assay-layout-status" class="small-note"></div>
           <div id="assay-plate-preview" class="assay-plate-preview"></div>
-          <details class="assay-layout-list-panel">
-            <summary class="assay-layout-list-summary">Mapped Wells</summary>
-            <div id="assay-layout-list" class="assay-layout-list-body"></div>
-          </details>
         </div>
       </div>
 
@@ -2786,7 +2782,7 @@
               </div>
 
               <div class="form-actions">
-                <button id="sequence-viewer-protein-builder-assembly-apply-btn" type="button" class="primary-btn">Open Assembled Plasmid</button>
+                <button id="sequence-viewer-protein-builder-assembly-apply-btn" type="button" class="primary-btn" hidden>Next Step <span aria-hidden="true">&rarr;</span></button>
                 <button id="sequence-viewer-protein-builder-assembly-cancel-btn" type="button" class="ghost-btn">Cancel</button>
               </div>
             </div>
@@ -2798,6 +2794,20 @@
 <!-- SOURCE: ui/html/views/sequence-viewer-detail-view.html -->
 <section id="sequence-viewer-detail-view" class="view">
       <div id="sequence-viewer-detail-workspace" class="sequence-viewer-detail-workspace">
+        <div id="sequence-viewer-protein-builder-confirmation" class="sequence-viewer-protein-builder-confirmation" hidden>
+          <div class="sequence-viewer-protein-builder-confirmation-copy">
+            <h4>Confirm Construct</h4>
+            <p class="small-note">Review the assembled plasmid in Sequence Viewer before confirming the construct.</p>
+          </div>
+          <div id="sequence-viewer-protein-builder-confirmation-summary" class="sequence-viewer-protein-builder-confirmation-summary">
+            <p class="small-note">Protein Builder review details will appear here.</p>
+          </div>
+          <div class="form-actions sequence-viewer-protein-builder-confirmation-actions">
+            <button id="sequence-viewer-protein-builder-confirmation-back-btn" type="button" class="ghost-btn">Back to Protein Builder</button>
+            <button id="sequence-viewer-protein-builder-confirmation-confirm-btn" type="button" class="primary-btn">Confirm Construct</button>
+          </div>
+        </div>
+
         <div class="sequence-viewer-detail-topbar">
           <button id="sequence-viewer-back-btn" type="button" class="ghost-btn">Back to Library</button>
           <button id="sequence-viewer-detail-protein-builder-btn" type="button" class="ghost-btn">Protein Builder</button>

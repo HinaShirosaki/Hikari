@@ -8,6 +8,7 @@ import {
 } from '../tool-box/protein-assembly.js';
 import { buildOrfFeatures } from './orf-analysis.js';
 import { createProteinBuilderCloningNotebookPage } from './protein-builder-cloning-notebook.js';
+import { parseInputRecords } from './parsing.js';
 import { cleanText, clamp, normalizeSequenceText } from './shared.js';
 
 const BLOCK_TYPE_LABELS = Object.freeze({
@@ -160,6 +161,362 @@ function extractDnaFromRecordSegments(sequence, segments, strand = 1) {
     .map((segment) => cleanedSequence.slice(segment.start, segment.end))
     .join('');
   return strand === -1 ? reverseComplementDna(rawSequence) : rawSequence;
+}
+
+function mergeSegments(segments) {
+  const normalized = (Array.isArray(segments) ? segments : [])
+    .map((segment) => {
+      const start = Math.max(0, Math.round(Number(segment?.start) || 0));
+      const end = Math.max(start, Math.round(Number(segment?.end) || 0));
+      if (end <= start) {
+        return null;
+      }
+      return { start, end };
+    })
+    .filter(Boolean)
+    .sort((left, right) => {
+      if (left.start !== right.start) {
+        return left.start - right.start;
+      }
+      return left.end - right.end;
+    });
+
+  if (!normalized.length) {
+    return [];
+  }
+
+  return normalized.reduce((merged, segment) => {
+    const last = merged[merged.length - 1];
+    if (!last || segment.start > last.end) {
+      merged.push({ ...segment });
+      return merged;
+    }
+    last.end = Math.max(last.end, segment.end);
+    return merged;
+  }, []);
+}
+
+function sumSegmentLength(segments) {
+  return mergeSegments(segments)
+    .reduce((total, segment) => total + Math.max(0, segment.end - segment.start), 0);
+}
+
+function buildSequenceFromSegments(sequence, segments) {
+  const normalizedSequence = normalizeSequenceText(sequence);
+  const normalizedSegments = normalizeRecordSegments(segments, normalizedSequence.length);
+  if (!normalizedSequence.length || !normalizedSegments.length) {
+    return '';
+  }
+  return normalizedSegments
+    .map((segment) => normalizedSequence.slice(segment.start, segment.end))
+    .join('');
+}
+
+function invertSegments(segments, sequenceLength) {
+  const safeLength = Math.max(0, Number(sequenceLength) || 0);
+  const normalized = normalizeRecordSegments(segments, safeLength)
+    .sort((left, right) => left.start - right.start);
+  if (!safeLength) {
+    return [];
+  }
+  if (!normalized.length) {
+    return safeLength ? [{ start: 0, end: safeLength }] : [];
+  }
+
+  const inverted = [];
+  let cursor = 0;
+  normalized.forEach((segment) => {
+    if (segment.start > cursor) {
+      inverted.push({ start: cursor, end: segment.start });
+    }
+    cursor = Math.max(cursor, segment.end);
+  });
+  if (cursor < safeLength) {
+    inverted.push({ start: cursor, end: safeLength });
+  }
+  return inverted;
+}
+
+function getFeatureSpanLength(feature, sequenceLength) {
+  return sumSegmentLength(normalizeRecordSegments(feature?.segments, sequenceLength));
+}
+
+function getReusableBackboneFeaturePriority(feature, sequenceLength) {
+  const source = cleanText(feature?.source, 120).toLowerCase();
+  const type = cleanText(feature?.type, 120).toLowerCase();
+  return [
+    type === 'backbone' ? 0 : 1,
+    source === 'backbone_recognition' ? 0 : (source === 'protein_builder' ? 1 : 2),
+    -getFeatureSpanLength(feature, sequenceLength),
+    cleanText(feature?.name, 160)
+  ];
+}
+
+function getReusableInsertFeaturePriority(feature, sequenceLength) {
+  const source = cleanText(feature?.source, 120).toLowerCase();
+  const type = cleanText(feature?.type, 120).toLowerCase();
+  return [
+    type === 'insert' ? 0 : 1,
+    source === 'backbone_recognition' ? 0 : (source === 'protein_builder' ? 1 : 2),
+    -getFeatureSpanLength(feature, sequenceLength),
+    cleanText(feature?.name, 160)
+  ];
+}
+
+function comparePriorityTuple(left = [], right = []) {
+  const count = Math.max(left.length, right.length);
+  for (let index = 0; index < count; index += 1) {
+    const leftValue = left[index];
+    const rightValue = right[index];
+    if (leftValue === rightValue) {
+      continue;
+    }
+    if (typeof leftValue === 'string' || typeof rightValue === 'string') {
+      return String(leftValue || '').localeCompare(String(rightValue || ''));
+    }
+    return Number(leftValue || 0) - Number(rightValue || 0);
+  }
+  return 0;
+}
+
+function selectFeatureByType(features, type, sequenceLength) {
+  return (Array.isArray(features) ? features : [])
+    .filter((feature) => cleanText(feature?.type, 120).toLowerCase() === type)
+    .sort((left, right) => {
+      const leftPriority = type === 'backbone'
+        ? getReusableBackboneFeaturePriority(left, sequenceLength)
+        : getReusableInsertFeaturePriority(left, sequenceLength);
+      const rightPriority = type === 'backbone'
+        ? getReusableBackboneFeaturePriority(right, sequenceLength)
+        : getReusableInsertFeaturePriority(right, sequenceLength);
+      return comparePriorityTuple(leftPriority, rightPriority);
+    })[0] || null;
+}
+
+function deriveInsertionOffsetFromBackboneSegments(backboneSegments, sequenceLength) {
+  const orderedSegments = normalizeRecordSegments(backboneSegments, sequenceLength);
+  if (!orderedSegments.length) {
+    return null;
+  }
+  if (orderedSegments.length === 1) {
+    const wrapGap = Math.max(0, sequenceLength - orderedSegments[0].end) + orderedSegments[0].start;
+    return wrapGap > 0 ? orderedSegments[0].end - orderedSegments[0].start : null;
+  }
+
+  let cursor = 0;
+  for (let index = 0; index < orderedSegments.length - 1; index += 1) {
+    const current = orderedSegments[index];
+    const next = orderedSegments[index + 1];
+    cursor += current.end - current.start;
+    const gapLength = next.start >= current.end
+      ? next.start - current.end
+      : Math.max(0, sequenceLength - current.end) + next.start;
+    if (gapLength > 0) {
+      return cursor;
+    }
+  }
+
+  const last = orderedSegments[orderedSegments.length - 1];
+  const first = orderedSegments[0];
+  const wrapGap = Math.max(0, sequenceLength - last.end) + first.start;
+  if (wrapGap > 0) {
+    return sumSegmentLength(orderedSegments);
+  }
+  return null;
+}
+
+function resolvePromoterInsertionOffset(features, backboneLength) {
+  const safeBackboneLength = Math.max(0, Number(backboneLength) || 0);
+  const promoter = (Array.isArray(features) ? features : [])
+    .filter((feature) => cleanText(feature?.type, 120).toLowerCase() === 'promoter')
+    .map((feature) => ({
+      feature,
+      segments: mergeSegments(feature?.segments)
+    }))
+    .filter((entry) => entry.segments.length)
+    .sort((left, right) => {
+      if (left.segments[0].start !== right.segments[0].start) {
+        return left.segments[0].start - right.segments[0].start;
+      }
+      return right.segments[right.segments.length - 1].end - left.segments[left.segments.length - 1].end;
+    })[0];
+
+  if (!promoter) {
+    return safeBackboneLength;
+  }
+  return clamp(promoter.segments[promoter.segments.length - 1].end, 0, safeBackboneLength);
+}
+
+function projectSegmentsOntoBackbone(featureSegments, backboneSegments, sequenceLength) {
+  const orderedBackboneSegments = normalizeRecordSegments(backboneSegments, sequenceLength);
+  const normalizedFeatureSegments = normalizeRecordSegments(featureSegments, sequenceLength);
+  if (!orderedBackboneSegments.length || !normalizedFeatureSegments.length) {
+    return [];
+  }
+
+  const projectionMap = [];
+  let projectedCursor = 0;
+  orderedBackboneSegments.forEach((segment) => {
+    const length = Math.max(0, segment.end - segment.start);
+    if (!length) {
+      return;
+    }
+    projectionMap.push({
+      originalStart: segment.start,
+      originalEnd: segment.end,
+      projectedStart: projectedCursor
+    });
+    projectedCursor += length;
+  });
+
+  const projectedSegments = [];
+  normalizedFeatureSegments.forEach((featureSegment) => {
+    projectionMap.forEach((projection) => {
+      const overlapStart = Math.max(featureSegment.start, projection.originalStart);
+      const overlapEnd = Math.min(featureSegment.end, projection.originalEnd);
+      if (overlapEnd <= overlapStart) {
+        return;
+      }
+      projectedSegments.push({
+        start: projection.projectedStart + (overlapStart - projection.originalStart),
+        end: projection.projectedStart + (overlapEnd - projection.originalStart)
+      });
+    });
+  });
+
+  return mergeSegments(projectedSegments);
+}
+
+function projectFeatureOntoBackbone(feature, backboneSegments, sequenceLength, index = 0) {
+  if (!feature || typeof feature !== 'object') {
+    return null;
+  }
+
+  const featureType = cleanText(feature?.type, 120).toLowerCase();
+  if (featureType === 'insert') {
+    return null;
+  }
+
+  const projectedSegments = projectSegmentsOntoBackbone(feature?.segments, backboneSegments, sequenceLength);
+  if (!projectedSegments.length) {
+    return null;
+  }
+
+  return {
+    id: cleanText(feature?.id, 200) || `stored_backbone_feature_${index + 1}`,
+    name: cleanText(feature?.name, 160) || `Feature ${index + 1}`,
+    type: featureType || 'misc_feature',
+    strand: Number(feature?.strand) === -1 ? -1 : 1,
+    source: cleanText(feature?.source, 120) || 'stored_backbone',
+    description: cleanText(feature?.description, 2400),
+    locationText: cleanText(feature?.locationText, 240),
+    segments: projectedSegments
+  };
+}
+
+function shiftSegmentsForInsertion(segments, insertionOffset, insertLength) {
+  const safeOffset = Math.max(0, Math.round(Number(insertionOffset) || 0));
+  const safeInsertLength = Math.max(0, Math.round(Number(insertLength) || 0));
+  const shifted = [];
+
+  mergeSegments(segments).forEach((segment) => {
+    if (segment.end <= safeOffset) {
+      shifted.push({ ...segment });
+      return;
+    }
+    if (segment.start >= safeOffset) {
+      shifted.push({
+        start: segment.start + safeInsertLength,
+        end: segment.end + safeInsertLength
+      });
+      return;
+    }
+    shifted.push({ start: segment.start, end: safeOffset });
+    shifted.push({
+      start: safeOffset + safeInsertLength,
+      end: segment.end + safeInsertLength
+    });
+  });
+
+  return mergeSegments(shifted);
+}
+
+function shiftFeatureForInsertion(feature, insertionOffset, insertLength) {
+  if (!feature || typeof feature !== 'object') {
+    return null;
+  }
+  const shiftedSegments = shiftSegmentsForInsertion(feature?.segments, insertionOffset, insertLength);
+  if (!shiftedSegments.length) {
+    return null;
+  }
+  return {
+    ...feature,
+    segments: shiftedSegments
+  };
+}
+
+function buildBackboneCoverageSegments(backboneLength, insertionOffset, insertLength) {
+  const safeBackboneLength = Math.max(0, Math.round(Number(backboneLength) || 0));
+  const safeOffset = clamp(Math.round(Number(insertionOffset) || 0), 0, safeBackboneLength);
+  const safeInsertLength = Math.max(0, Math.round(Number(insertLength) || 0));
+  const segments = [];
+
+  if (safeOffset > 0) {
+    segments.push({ start: 0, end: safeOffset });
+  }
+  if (safeBackboneLength > safeOffset) {
+    segments.push({
+      start: safeOffset + safeInsertLength,
+      end: safeOffset + safeInsertLength + (safeBackboneLength - safeOffset)
+    });
+  }
+
+  return mergeSegments(segments);
+}
+
+function deriveReusableBackboneFromRecord(record = {}, options = {}) {
+  const sequence = normalizeSequenceText(record?.sequence || '');
+  const features = Array.isArray(record?.features) ? record.features : [];
+  if (!sequence.length) {
+    return null;
+  }
+
+  const explicitBackboneFeature = selectFeatureByType(features, 'backbone', sequence.length);
+  const explicitInsertFeature = selectFeatureByType(features, 'insert', sequence.length);
+  const explicitBackboneSegments = normalizeRecordSegments(explicitBackboneFeature?.segments, sequence.length);
+  const explicitInsertSegments = normalizeRecordSegments(explicitInsertFeature?.segments, sequence.length);
+  let reusableBackboneSegments = explicitBackboneSegments.length
+    ? explicitBackboneSegments
+    : (explicitInsertSegments.length ? invertSegments(explicitInsertSegments, sequence.length) : []);
+
+  if (!reusableBackboneSegments.length) {
+    reusableBackboneSegments = [{ start: 0, end: sequence.length }];
+  }
+
+  const backboneSequence = buildSequenceFromSegments(sequence, reusableBackboneSegments);
+  const backboneLength = backboneSequence.length;
+  const projectedFeatures = features
+    .map((feature, index) => projectFeatureOntoBackbone(feature, reusableBackboneSegments, sequence.length, index))
+    .filter(Boolean);
+  const insertionOffset = clamp(
+    deriveInsertionOffsetFromBackboneSegments(reusableBackboneSegments, sequence.length)
+      ?? resolvePromoterInsertionOffset(projectedFeatures, backboneLength),
+    0,
+    backboneLength
+  );
+
+  return {
+    topology: cleanText(record?.topology, 40).toLowerCase() === 'linear' ? 'linear' : 'circular',
+    backboneSequence,
+    backboneLength,
+    backboneSegments: reusableBackboneSegments,
+    insertSegments: explicitInsertSegments,
+    insertionOffset,
+    features: projectedFeatures,
+    sourceRecordName: cleanText(options?.sourceRecordName, 160) || cleanText(record?.name, 160),
+    hostVectorName: cleanText(options?.hostVectorName, 160) || cleanText(record?.name, 160),
+    backboneName: cleanText(options?.backboneName, 160) || cleanText(record?.name, 160) || 'Stored backbone'
+  };
 }
 
 function alignDnaToProteinSequence(dnaSequence, proteinSequence) {
@@ -611,6 +968,7 @@ function buildDnaConstruct(payload = {}, options = {}) {
 function buildStoredBackboneDisplayName(backbone = {}) {
   return cleanText(backbone?.hostVectorName, 160)
     || cleanText(backbone?.backboneName, 160)
+    || cleanText(backbone?.entryName, 160)
     || cleanText(backbone?.sourceRecordName, 160)
     || 'Stored backbone';
 }
@@ -641,28 +999,43 @@ function buildAssembledPlasmidPayload(backbone = {}, dnaConstruct = {}, options 
   const constructName = cleanText(options?.constructName, 140) || 'Protein Builder Insert';
   const backboneName = buildStoredBackboneDisplayName(backbone);
   const assembledName = `${constructName} (${backboneName})`;
-  const features = [
-    {
+  const explicitInsertionOffset = Number(backbone?.insertionOffset);
+  const insertionOffset = clamp(
+    Number.isFinite(explicitInsertionOffset) ? Math.round(explicitInsertionOffset) : backboneSequence.length,
+    0,
+    backboneSequence.length
+  );
+  const shiftedBackboneFeatures = (Array.isArray(backbone?.features) ? backbone.features : [])
+    .map((feature) => shiftFeatureForInsertion(feature, insertionOffset, insertSequence.length))
+    .filter(Boolean);
+  const hasBackboneFeature = shiftedBackboneFeatures
+    .some((feature) => cleanText(feature?.type, 120).toLowerCase() === 'backbone');
+  const features = [];
+
+  if (!hasBackboneFeature) {
+    features.push({
       id: 'protein_builder_backbone',
       name: `Backbone (${backboneName})`,
       type: 'backbone',
       strand: 1,
       source: 'protein_builder',
       description: `Stored backbone selected from ${cleanText(backbone?.sourceRecordName, 160) || backboneName}.`,
-      segments: [{ start: 0, end: backboneSequence.length }]
-    },
-    {
-      id: 'protein_builder_insert',
-      name: constructName,
-      type: 'insert',
-      strand: 1,
-      source: 'protein_builder',
-      description: `Protein Builder insert assembled from ${Math.max(0, Number(dnaConstruct?.parts?.length) || 0)} DNA block(s).`,
-      segments: [{ start: backboneSequence.length, end: backboneSequence.length + insertSequence.length }]
-    }
-  ];
+      segments: buildBackboneCoverageSegments(backboneSequence.length, insertionOffset, insertSequence.length)
+    });
+  }
 
-  let cursor = backboneSequence.length;
+  features.push(...shiftedBackboneFeatures);
+  features.push({
+    id: 'protein_builder_insert',
+    name: constructName,
+    type: 'insert',
+    strand: 1,
+    source: 'protein_builder',
+    description: `Protein Builder insert assembled from ${Math.max(0, Number(dnaConstruct?.parts?.length) || 0)} DNA block(s).`,
+    segments: [{ start: insertionOffset, end: insertionOffset + insertSequence.length }]
+  });
+
+  let cursor = insertionOffset;
   (Array.isArray(dnaConstruct?.parts) ? dnaConstruct.parts : []).forEach((part, index) => {
     const dnaSequence = normalizeSequenceText(part?.dnaSequence || '');
     if (!dnaSequence.length) {
@@ -682,8 +1055,8 @@ function buildAssembledPlasmidPayload(backbone = {}, dnaConstruct = {}, options 
 
   return {
     name: assembledName,
-    sequence: `${backboneSequence}${insertSequence}`,
-    topology: 'circular',
+    sequence: `${backboneSequence.slice(0, insertionOffset)}${insertSequence}${backboneSequence.slice(insertionOffset)}`,
+    topology: cleanText(backbone?.topology, 40).toLowerCase() === 'linear' ? 'linear' : 'circular',
     source: 'protein_builder',
     features
   };
@@ -722,6 +1095,7 @@ export function createSequenceViewerProteinBuilderController(config = {}) {
     dnaConstruct: null,
     assemblyDialogOpen: false,
     isLoadingAssemblyBackbones: false,
+    isPreparingAssembly: false,
     storedBackbones: [],
     selectedBackboneId: '',
     statusMessage: 'Linear chain: each block accepts one upstream and one downstream connection.',
@@ -755,7 +1129,7 @@ export function createSequenceViewerProteinBuilderController(config = {}) {
       elements.proteinBuilderFeatureSearchBtn.disabled = disabled;
     }
     if (elements.proteinBuilderAssembleBtn) {
-      elements.proteinBuilderAssembleBtn.disabled = Boolean(state.isLoadingAssemblyBackbones);
+      elements.proteinBuilderAssembleBtn.disabled = Boolean(state.isLoadingAssemblyBackbones || state.isPreparingAssembly);
     }
   }
 
@@ -859,7 +1233,161 @@ export function createSequenceViewerProteinBuilderController(config = {}) {
   function closeAssemblyDialog() {
     state.assemblyDialogOpen = false;
     state.isLoadingAssemblyBackbones = false;
+    state.isPreparingAssembly = false;
     renderAssemblyDialog();
+  }
+
+  function normalizeStoredBackboneCandidate(backbone = {}) {
+    const backboneSequence = normalizeSequenceText(backbone?.backboneSequence || '');
+    const insertLength = Math.max(0, Number(backbone?.insertLength) || 0);
+    const backboneLength = Math.max(0, Number(backbone?.backboneLength) || backboneSequence.length);
+    const originalSequenceLength = Math.max(backboneLength + insertLength, backboneSequence.length);
+    const backboneSegments = normalizeRecordSegments(backbone?.backboneSegments, originalSequenceLength);
+    const insertSegments = normalizeRecordSegments(backbone?.insertSegments, originalSequenceLength);
+    const fallbackInsertionOffset = deriveInsertionOffsetFromBackboneSegments(backboneSegments, originalSequenceLength);
+    const explicitInsertionOffset = Number(backbone?.insertionOffset);
+    const insertionOffset = clamp(
+      Number.isFinite(explicitInsertionOffset)
+        ? Math.round(explicitInsertionOffset)
+        : (Number.isFinite(fallbackInsertionOffset) ? fallbackInsertionOffset : backboneSequence.length),
+      0,
+      backboneSequence.length
+    );
+
+    return {
+      ...backbone,
+      sourceKind: cleanText(backbone?.sourceKind, 120) || 'recognized_backbone',
+      topology: cleanText(backbone?.topology, 40).toLowerCase() === 'linear' ? 'linear' : 'circular',
+      backboneSequence,
+      backboneLength,
+      insertLength,
+      backboneSegments,
+      insertSegments,
+      insertionOffset,
+      features: Array.isArray(backbone?.features) ? backbone.features : []
+    };
+  }
+
+  function buildLibraryBackboneCandidates(entries) {
+    return (Array.isArray(entries) ? entries : []).map((entry) => ({
+      id: `library_entry:${cleanText(entry?.id, 200)}`,
+      sourceKind: 'library_entry',
+      entryId: cleanText(entry?.id, 200),
+      entryName: cleanText(entry?.name, 160),
+      hostVectorName: cleanText(entry?.name, 160),
+      backboneName: cleanText(entry?.name, 160) || 'Stored backbone',
+      sourceRecordName: cleanText(entry?.name, 160),
+      topology: cleanText(entry?.topology, 40).toLowerCase() === 'linear' ? 'linear' : 'circular',
+      backboneLength: Math.max(0, Number(entry?.sequenceLength) || 0),
+      featureCount: Math.max(0, Number(entry?.featureCount) || 0),
+      updatedAt: cleanText(entry?.updatedAt, 120),
+      entryStatus: cleanText(entry?.status, 40)
+    }));
+  }
+
+  async function loadStoredBackboneCandidates() {
+    const bridge = getBridge();
+    const storagePath = getStoragePath();
+    const candidates = [];
+    let lastError = null;
+
+    if (bridge?.sequenceLibraryListBackbones) {
+      try {
+        const response = await bridge.sequenceLibraryListBackbones({
+          storagePath,
+          limit: 100
+        });
+        if (!response?.ok) {
+          throw new Error(response?.error || 'Failed to load stored backbones.');
+        }
+        candidates.push(
+          ...(Array.isArray(response.results) ? response.results : []).map((item) => normalizeStoredBackboneCandidate(item))
+        );
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    if (!candidates.length && bridge?.sequenceLibraryList) {
+      try {
+        const response = await bridge.sequenceLibraryList({
+          storagePath,
+          status: 'saved'
+        });
+        if (!response?.ok) {
+          throw new Error(response?.error || 'Failed to load saved sequence entries.');
+        }
+        candidates.push(...buildLibraryBackboneCandidates(response.entries));
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    if (!candidates.length && lastError) {
+      throw lastError;
+    }
+    return candidates;
+  }
+
+  async function hydrateStoredBackbone(backbone = {}) {
+    if (!backbone || typeof backbone !== 'object') {
+      throw new Error('Missing stored backbone selection.');
+    }
+    if (backbone.hydratedBackbone && typeof backbone.hydratedBackbone === 'object') {
+      return backbone.hydratedBackbone;
+    }
+
+    if (cleanText(backbone?.sourceKind, 120) !== 'library_entry') {
+      const normalized = normalizeStoredBackboneCandidate(backbone);
+      backbone.hydratedBackbone = normalized;
+      return normalized;
+    }
+
+    const bridge = getBridge();
+    if (!bridge?.sequenceLibraryGet) {
+      throw new Error('Stored sequence entry API unavailable.');
+    }
+
+    const response = await bridge.sequenceLibraryGet({
+      storagePath: getStoragePath(),
+      id: cleanText(backbone?.entryId, 200),
+      includeGbk: true
+    });
+    if (!response?.ok) {
+      throw new Error(response?.error || 'Failed to load the selected stored backbone.');
+    }
+
+    const gbkText = String(response?.gbkText || '');
+    const parsed = parseInputRecords(gbkText, {
+      fileName: cleanText(response?.entry?.name, 160) || cleanText(backbone?.entryName, 160) || 'stored_backbone.gbk'
+    });
+    const record = Array.isArray(parsed?.records) ? parsed.records[0] : null;
+    if (!record?.sequence) {
+      throw new Error('Stored backbone entry did not contain a usable sequence.');
+    }
+
+    const derived = deriveReusableBackboneFromRecord(record, {
+      sourceRecordName: cleanText(response?.entry?.name, 160) || cleanText(backbone?.sourceRecordName, 160),
+      hostVectorName: cleanText(response?.entry?.name, 160) || cleanText(backbone?.hostVectorName, 160),
+      backboneName: cleanText(backbone?.backboneName, 160) || cleanText(response?.entry?.name, 160)
+    });
+    if (!derived?.backboneSequence) {
+      throw new Error('Unable to derive a reusable backbone from the selected sequence entry.');
+    }
+
+    const hydrated = {
+      ...backbone,
+      ...derived,
+      entryName: cleanText(response?.entry?.name, 160) || cleanText(backbone?.entryName, 160),
+      entryStatus: cleanText(response?.entry?.status, 40) || cleanText(backbone?.entryStatus, 40),
+      updatedAt: cleanText(response?.entry?.updatedAt, 120) || cleanText(backbone?.updatedAt, 120)
+    };
+    backbone.hydratedBackbone = hydrated;
+    backbone.backboneLength = hydrated.backboneLength;
+    backbone.insertionOffset = hydrated.insertionOffset;
+    backbone.features = hydrated.features;
+    backbone.topology = hydrated.topology;
+    return hydrated;
   }
 
   function renderAssemblyDialog() {
@@ -892,10 +1420,16 @@ export function createSequenceViewerProteinBuilderController(config = {}) {
             Math.max(0, Number(backbone?.insertLength) || 0)
               ? `${Math.max(0, Number(backbone?.insertLength) || 0).toLocaleString()} bp prior insert`
               : '',
+            cleanText(backbone?.sourceKind, 120) === 'library_entry'
+              ? `${Math.max(0, Number(backbone?.featureCount) || 0).toLocaleString()} feature${Math.max(0, Number(backbone?.featureCount) || 0) === 1 ? '' : 's'}`
+              : '',
             variantLabel,
             updatedLabel ? `Updated ${updatedLabel}` : ''
           ].filter(Boolean);
           const noteParts = [
+            cleanText(backbone?.sourceKind, 120) === 'library_entry'
+              ? 'Saved Sequence Library entry'
+              : 'Recognized Protein Builder backbone',
             cleanText(backbone?.sourceRecordName, 160) ? `Source: ${cleanText(backbone?.sourceRecordName, 160)}` : '',
             cleanText(backbone?.promoterName, 160) ? `Promoter: ${cleanText(backbone?.promoterName, 160)}` : ''
           ].filter(Boolean);
@@ -943,6 +1477,7 @@ export function createSequenceViewerProteinBuilderController(config = {}) {
 
     if (elements.proteinBuilderAssemblyApplyBtn) {
       elements.proteinBuilderAssemblyApplyBtn.disabled = state.isLoadingAssemblyBackbones
+        || state.isPreparingAssembly
         || !selectedBackbone
         || !state.dnaConstruct?.ok
         || !state.dnaConstruct?.sequence;
@@ -962,31 +1497,18 @@ export function createSequenceViewerProteinBuilderController(config = {}) {
       }
     }
 
-    const bridge = getBridge();
-    if (!bridge?.sequenceLibraryListBackbones) {
-      setBuilderStatus('Stored backbone API unavailable.', true);
-      return;
-    }
-
     state.assemblyDialogOpen = true;
     state.isLoadingAssemblyBackbones = true;
     renderAssemblyDialog();
 
     try {
-      const response = await bridge.sequenceLibraryListBackbones({
-        storagePath: getStoragePath(),
-        limit: 100
-      });
-      if (!response?.ok) {
-        throw new Error(response?.error || 'Failed to load stored backbones.');
-      }
-      state.storedBackbones = Array.isArray(response.results) ? response.results : [];
+      state.storedBackbones = await loadStoredBackboneCandidates();
       state.selectedBackboneId = cleanText(state.storedBackbones[0]?.id, 400);
       renderAssemblyDialog();
       if (state.storedBackbones.length) {
         setBuilderStatus('Select a stored backbone to assemble the plasmid.');
       } else {
-        setBuilderStatus('No stored backbones found. Recognize a backbone from a vector first.');
+        setBuilderStatus('No stored backbones found. Save a backbone sequence or recognize one from a vector first.');
       }
     } catch (error) {
       state.storedBackbones = [];
@@ -999,7 +1521,7 @@ export function createSequenceViewerProteinBuilderController(config = {}) {
     }
   }
 
-  function assembleWithStoredBackbone() {
+  async function assembleWithStoredBackbone() {
     const selectedBackbone = getSelectedStoredBackbone();
     if (!selectedBackbone) {
       setBuilderStatus('Choose a stored backbone before assembling the plasmid.', true);
@@ -1012,51 +1534,65 @@ export function createSequenceViewerProteinBuilderController(config = {}) {
       }
     }
 
-    const constructName = cleanText(elements.proteinBuilderNameInput?.value, 140) || 'Protein Builder Insert';
-    const payload = buildAssembledPlasmidPayload(selectedBackbone, state.dnaConstruct, {
-      constructName
-    });
-    if (!payload?.sequence) {
-      setBuilderStatus('Unable to assemble the plasmid from the selected backbone.', true);
-      return;
-    }
-
-    let cloningNotebookResult = null;
-    let notebookWarning = '';
     try {
-      cloningNotebookResult = createProteinBuilderCloningNotebookPage({
-        state: appState,
-        persist,
-        createId,
-        onNotebookEntriesChanged,
-        constructName,
-        backbone: selectedBackbone,
-        dnaConstruct: state.dnaConstruct,
-        assembledRecord: payload
+      state.isPreparingAssembly = true;
+      renderAssemblyDialog();
+      syncFeatureSearchControls();
+      setBuilderStatus(`Loading ${buildStoredBackboneDisplayName(selectedBackbone)}...`);
+      const hydratedBackbone = await hydrateStoredBackbone(selectedBackbone);
+      const constructName = cleanText(elements.proteinBuilderNameInput?.value, 140) || 'Protein Builder Insert';
+      const payload = buildAssembledPlasmidPayload(hydratedBackbone, state.dnaConstruct, {
+        constructName
       });
-    } catch (error) {
-      notebookWarning = error?.message || 'Failed to create the cloning notebook page.';
-    }
+      if (!payload?.sequence) {
+        setBuilderStatus('Unable to assemble the plasmid from the selected backbone.', true);
+        return;
+      }
 
-    closeAssemblyDialog();
-    loadExternalRecord(payload);
-    if (cloningNotebookResult?.entry) {
-      const primerCount = Math.max(
-        0,
-        Number(cloningNotebookResult?.entry?.proteinBuilderCloningDesign?.primerCount) || 0
-      );
-      const notebookTitle = cleanText(cloningNotebookResult.entry.experimentName, 220)
-        || cloningNotebookResult.entry.protocolName;
-      setBuilderStatus(`Created notebook page "${notebookTitle}" with PCR program and ${primerCount} primer${primerCount === 1 ? '' : 's'}.`);
-      setStatus(`Opened assembled plasmid using stored backbone ${buildStoredBackboneDisplayName(selectedBackbone)}. Notebook page "${notebookTitle}" has the PCR program and primer table.`);
-      return;
+      let cloningNotebookResult = null;
+      let notebookWarning = '';
+      try {
+        cloningNotebookResult = createProteinBuilderCloningNotebookPage({
+          state: appState,
+          persist,
+          createId,
+          onNotebookEntriesChanged,
+          constructName,
+          backbone: hydratedBackbone,
+          dnaConstruct: state.dnaConstruct,
+          assembledRecord: payload
+        });
+      } catch (error) {
+        notebookWarning = error?.message || 'Failed to create the cloning notebook page.';
+      }
+
+      closeAssemblyDialog();
+      loadExternalRecord(payload);
+      if (cloningNotebookResult?.entry) {
+        const primerCount = Math.max(
+          0,
+          Number(cloningNotebookResult?.entry?.proteinBuilderCloningDesign?.primerCount) || 0
+        );
+        const notebookTitle = cleanText(cloningNotebookResult.entry.experimentName, 220)
+          || cloningNotebookResult.entry.protocolName;
+        setBuilderStatus(`Created notebook page "${notebookTitle}" with PCR program and ${primerCount} primer${primerCount === 1 ? '' : 's'}.`);
+        setStatus(`Opened assembled plasmid using stored backbone ${buildStoredBackboneDisplayName(hydratedBackbone)}. Notebook page "${notebookTitle}" has the PCR program and primer table.`);
+        return;
+      }
+      if (notebookWarning) {
+        setBuilderStatus(`Assembled plasmid opened, but notebook page was not saved: ${notebookWarning}`, true);
+        setStatus(`Opened assembled plasmid using stored backbone ${buildStoredBackboneDisplayName(hydratedBackbone)}. Notebook page was not saved: ${notebookWarning}`, true);
+        return;
+      }
+      setStatus(`Opened assembled plasmid using stored backbone ${buildStoredBackboneDisplayName(hydratedBackbone)}.`);
+    } catch (error) {
+      setBuilderStatus(error?.message || 'Unable to assemble the plasmid from the selected backbone.', true);
+      setStatus(error?.message || 'Unable to assemble the plasmid from the selected backbone.', true);
+    } finally {
+      state.isPreparingAssembly = false;
+      renderAssemblyDialog();
+      syncFeatureSearchControls();
     }
-    if (notebookWarning) {
-      setBuilderStatus(`Assembled plasmid opened, but notebook page was not saved: ${notebookWarning}`, true);
-      setStatus(`Opened assembled plasmid using stored backbone ${buildStoredBackboneDisplayName(selectedBackbone)}. Notebook page was not saved: ${notebookWarning}`, true);
-      return;
-    }
-    setStatus(`Opened assembled plasmid using stored backbone ${buildStoredBackboneDisplayName(selectedBackbone)}.`);
   }
 
   function renderCommonGroup(group) {
@@ -1573,7 +2109,7 @@ export function createSequenceViewerProteinBuilderController(config = {}) {
     });
 
     elements.proteinBuilderAssemblyApplyBtn?.addEventListener('click', () => {
-      assembleWithStoredBackbone();
+      void assembleWithStoredBackbone();
     });
 
     elements.proteinBuilderAssemblyCloseBtn?.addEventListener('click', () => {

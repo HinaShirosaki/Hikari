@@ -105,55 +105,6 @@ function clamp(value, min, max) {
   return Math.min(max, Math.max(min, numeric));
 }
 
-function normalizeRecognitionSegmentList(segments = []) {
-  return (Array.isArray(segments) ? segments : [])
-    .map((segment) => {
-      const start = Math.max(0, Math.round(Number(segment?.start) || 0));
-      const end = Math.max(0, Math.round(Number(segment?.end) || 0));
-      if (end <= start) {
-        return null;
-      }
-      return { start, end };
-    })
-    .filter(Boolean);
-}
-
-function computeRecognizedBackboneInsertionOffset(backboneSegments = [], insertSegments = []) {
-  const normalizedBackboneSegments = normalizeRecognitionSegmentList(backboneSegments);
-  const normalizedInsertSegments = normalizeRecognitionSegmentList(insertSegments);
-  if (!normalizedBackboneSegments.length) {
-    return 0;
-  }
-  if (!normalizedInsertSegments.length) {
-    return normalizedBackboneSegments.reduce(
-      (length, segment) => length + Math.max(0, segment.end - segment.start),
-      0
-    );
-  }
-
-  const insertStart = normalizedInsertSegments[0].start;
-  let insertionOffset = 0;
-  let matched = false;
-
-  normalizedBackboneSegments.forEach((segment) => {
-    if (matched) {
-      return;
-    }
-    if (segment.end <= insertStart) {
-      insertionOffset += Math.max(0, segment.end - segment.start);
-      return;
-    }
-    if (segment.start >= insertStart) {
-      matched = true;
-      return;
-    }
-    insertionOffset += Math.max(0, insertStart - segment.start);
-    matched = true;
-  });
-
-  return insertionOffset;
-}
-
 function positiveModulo(value, modulo) {
   if (!Number.isFinite(Number(modulo)) || modulo <= 0) {
     return 0;
@@ -433,6 +384,52 @@ function normalizeEntryRow(row) {
     createdAt: cleanText(row.created_at, 60),
     updatedAt: cleanText(row.updated_at, 60)
   };
+}
+
+function normalizeBackboneSegments(segments, sequenceLength) {
+  const safeLength = Math.max(0, Number(sequenceLength) || 0);
+  return (Array.isArray(segments) ? segments : [])
+    .map((segment) => {
+      const start = clamp(Math.round(Number(segment?.start) || 0), 0, safeLength);
+      const end = clamp(Math.round(Number(segment?.end) || 0), 0, safeLength);
+      if (end <= start) {
+        return null;
+      }
+      return { start, end };
+    })
+    .filter(Boolean);
+}
+
+function computeRecognizedBackboneInsertionOffset(segments, sequenceLength) {
+  const normalized = normalizeBackboneSegments(segments, sequenceLength);
+  if (!normalized.length) {
+    return null;
+  }
+  if (normalized.length === 1) {
+    const wrapGap = Math.max(0, sequenceLength - normalized[0].end) + normalized[0].start;
+    return wrapGap > 0 ? normalized[0].end - normalized[0].start : null;
+  }
+
+  let cursor = 0;
+  for (let index = 0; index < normalized.length - 1; index += 1) {
+    const current = normalized[index];
+    const next = normalized[index + 1];
+    cursor += current.end - current.start;
+    const gapLength = next.start >= current.end
+      ? next.start - current.end
+      : Math.max(0, sequenceLength - current.end) + next.start;
+    if (gapLength > 0) {
+      return cursor;
+    }
+  }
+
+  const last = normalized[normalized.length - 1];
+  const first = normalized[0];
+  const wrapGap = Math.max(0, sequenceLength - last.end) + first.start;
+  if (wrapGap > 0) {
+    return normalized.reduce((total, segment) => total + Math.max(0, segment.end - segment.start), 0);
+  }
+  return null;
 }
 
 function stripExtension(name) {
@@ -2141,17 +2138,23 @@ async function listRecognizedBackbones({ storagePath, query = '', limit = 50 }) 
 
     const backboneSequence = normalizeSequenceText(parsed?.backbone?.sequence || '');
     const insertSequence = normalizeSequenceText(parsed?.insert?.sequence || '');
-    const backboneSegments = normalizeRecognitionSegmentList(parsed?.backbone?.segments);
-    const insertSegments = normalizeRecognitionSegmentList(parsed?.insert?.segments);
+    const backboneLength = Math.max(0, Number(parsed?.backbone?.sequence_length) || backboneSequence.length);
+    const insertLength = Math.max(0, Number(parsed?.insert?.sequence_length) || insertSequence.length);
+    const originalSequenceLength = Math.max(backboneLength + insertLength, backboneSequence.length);
+    const backboneSegments = normalizeBackboneSegments(parsed?.backbone?.segments, originalSequenceLength);
+    const insertSegments = normalizeBackboneSegments(parsed?.insert?.segments, originalSequenceLength);
+    const insertionOffset = computeRecognizedBackboneInsertionOffset(backboneSegments, originalSequenceLength);
     const updatedAt = cleanText(parsed?.updated_at, 120);
     results.push({
       id: toPosixRelative(paths.storageRoot, filePath),
+      sourceKind: 'recognized_backbone',
       fileName: entry.name,
       relativePath: toPosixRelative(paths.storageRoot, filePath),
       updatedAt,
       sourceRecordName,
       sourceEntryId: cleanText(parsed?.source_record?.entry_id, 200),
       sourceEntryStatus: normalizeStatus(parsed?.source_record?.entry_status),
+      topology: cleanText(parsed?.source_record?.topology, 40) || 'linear',
       hostVectorName,
       promoterName,
       variantMode: cleanText(parsed?.recognition?.variant_mode, 40).toLowerCase() === 'restriction'
@@ -2159,13 +2162,13 @@ async function listRecognizedBackbones({ storagePath, query = '', limit = 50 }) 
         : 'gibson',
       backboneName: backboneName || hostVectorName || sourceRecordName || 'Stored backbone',
       backboneSequence,
+      backboneLength,
       backboneSegments,
-      backboneLength: Math.max(0, Number(parsed?.backbone?.sequence_length) || backboneSequence.length),
       insertName: cleanText(parsed?.insert?.name, 160) || 'Stored insert',
       insertSequence,
+      insertLength,
       insertSegments,
-      insertLength: Math.max(0, Number(parsed?.insert?.sequence_length) || insertSequence.length),
-      insertionOffset: computeRecognizedBackboneInsertionOffset(backboneSegments, insertSegments)
+      insertionOffset
     });
   }));
 
