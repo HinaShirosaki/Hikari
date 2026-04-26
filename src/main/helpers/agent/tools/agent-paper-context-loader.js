@@ -14,7 +14,7 @@ const PAPER_CONTEXT_SOURCE_ORDER = Object.freeze([
 ]);
 
 const DEFAULT_MAX_PAPERS = 8;
-const DEFAULT_MAX_BLOCKS = 6;
+const DEFAULT_MAX_BLOCKS = 50;
 const DEFAULT_MAX_BLOCKS_PER_PAPER = 2;
 const DEFAULT_MAX_BLOCKS_PER_PAPER_WITH_PDF = 4;
 const DEFAULT_MAX_FIGURE_REVIEWS = 2;
@@ -388,7 +388,7 @@ function createPaperContextLoaderRuntime(deps = {}) {
   function normalizePaperItem(item = {}) {
     const source = ensureObject(item);
     const paperId = cleanText(
-      source.id || source.paper_id || source.pmid || source.pmcid || source.doi || source.url || source.title,
+      source.paper_id || source.id || source.pmid || source.pmcid || source.doi || source.url || source.title,
       220
     );
     return {
@@ -602,7 +602,7 @@ function createPaperContextLoaderRuntime(deps = {}) {
     const candidates = asArray(input.candidate_blocks).slice(0, 24);
     return [
       'Select the most relevant paper excerpts for the clarified request.',
-      'Return up to 6 selected blocks total and no more than 2 blocks from the same paper.',
+      `Return up to ${DEFAULT_MAX_BLOCKS} selected blocks total and no more than ${DEFAULT_MAX_BLOCKS_PER_PAPER} blocks from the same paper.`,
       'Use only the provided block IDs. Do not rewrite excerpts.',
       'Request figure review only when the text evidence is still insufficient and the paper PDF is likely to add relevant figure-level evidence.',
       `Clarified request:\n${query}`,
@@ -784,11 +784,15 @@ function createPaperContextLoaderRuntime(deps = {}) {
     const candidateBlocks = asArray(input.candidate_blocks);
     const query = input.query || input.message;
     const fallback = buildFallbackSelection(candidateBlocks, query);
-    if (!candidateBlocks.length || typeof requestStructuredJsonPayload !== 'function') {
+    if (typeof requestStructuredJsonPayload !== 'function') {
       return normalizeSelectionResult(fallback, candidateBlocks, query);
     }
     const paperPdfs = input.paper_pdfs instanceof Map ? input.paper_pdfs : new Map();
     const papersById = input.papers_by_id instanceof Map ? input.papers_by_id : new Map();
+
+    if (!candidateBlocks.length && !paperPdfs.size) {
+      return normalizeSelectionResult(fallback, candidateBlocks, query);
+    }
 
     if (!paperPdfs.size) {
       const result = await requestStructuredJsonPayload({
@@ -815,6 +819,12 @@ function createPaperContextLoaderRuntime(deps = {}) {
         candidatesByPaper.set(paperId, []);
       }
       candidatesByPaper.get(paperId).push(block);
+    });
+    paperPdfs.forEach((_pdfInput, paperId) => {
+      const normalizedPaperId = cleanText(paperId, 120);
+      if (normalizedPaperId && !candidatesByPaper.has(normalizedPaperId)) {
+        candidatesByPaper.set(normalizedPaperId, []);
+      }
     });
 
     const pdfSelectedBlocks = [];
@@ -925,6 +935,7 @@ function createPaperContextLoaderRuntime(deps = {}) {
 
   async function reviewFigureEvidence(input = {}) {
     const papersById = input.papers_by_id instanceof Map ? input.papers_by_id : new Map();
+    const paperPdfs = input.paper_pdfs instanceof Map ? input.paper_pdfs : new Map();
     const figureRequests = asArray(input.figure_review_requests).slice(0, DEFAULT_MAX_FIGURE_REVIEWS);
     const blocks = [];
     if (!figureRequests.length || typeof requestStructuredJsonPayload !== 'function') {
@@ -936,7 +947,7 @@ function createPaperContextLoaderRuntime(deps = {}) {
       if (!paper) {
         continue;
       }
-      const pdfInput = await fetchPaperPdfDataUrl(paper);
+      const pdfInput = paperPdfs.get(paperId) || await fetchPaperPdfDataUrl(paper);
       if (!pdfInput) {
         continue;
       }
@@ -1091,16 +1102,36 @@ function createPaperContextLoaderRuntime(deps = {}) {
         ...input,
         query,
         papers_by_id: papersById,
+        paper_pdfs: paperPdfs,
         figure_review_requests: figureReviewRequests
       })
       : [];
     const loadedContextBlocks = normalizeLoadedContextBlocks(
       mergeFigureBlocks(selectedBlocks, figureBlocks)
     );
+    const readPaperIds = new Set(
+      papers
+        .filter((paper) => asArray(paper.sections).length > 0)
+        .map((paper) => cleanText(paper.paper_id, 120))
+        .filter(Boolean)
+    );
+    loadedContextBlocks.forEach((block) => {
+      if (
+        cleanText(block?.source, 80) === 'llm_pdf_read'
+        || cleanText(block?.source, 80) === 'figure_review'
+        || cleanText(block?.evidence_kind, 40) === 'figure_review'
+      ) {
+        const paperId = cleanText(block?.paper_id, 120);
+        if (paperId) {
+          readPaperIds.add(paperId);
+        }
+      }
+    });
+    const papersReadCount = readPaperIds.size;
     return {
       ok: true,
       status: 'completed',
-      papers_read_count: papers.filter((paper) => asArray(paper.sections).length > 0).length,
+      papers_read_count: papersReadCount,
       selected_context_block_count: loadedContextBlocks.length,
       figure_review_count: figureBlocks.length,
       papers: papers.map((paper) => ({
@@ -1111,9 +1142,9 @@ function createPaperContextLoaderRuntime(deps = {}) {
       })),
       loaded_context_blocks: loadedContextBlocks,
       summary: loadedContextBlocks.length
-        ? `Read ${papers.length} paper(s) and loaded ${loadedContextBlocks.length} context block(s).`
+        ? `Read ${papersReadCount} paper(s) and loaded ${loadedContextBlocks.length} context block(s).`
         : (papers.length
-          ? `Read ${papers.length} paper(s) but did not load any bounded context blocks.`
+          ? `Read ${papersReadCount} paper(s) but did not load any bounded context blocks.`
           : 'No paper context could be loaded from the literature results.')
     };
   }

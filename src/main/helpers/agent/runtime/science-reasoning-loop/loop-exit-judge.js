@@ -52,6 +52,8 @@ const SCIENCE_LOOP_EXIT_JUDGEMENT_SCHEMA = {
   }
 };
 
+const LOOP_EXIT_JUDGE_CONTEXT_LIMIT = 20;
+
 function createScienceLoopExitJudgeRuntime(deps = {}) {
   const {
     asArray,
@@ -381,20 +383,25 @@ function createScienceLoopExitJudgeRuntime(deps = {}) {
       cleanText(source?.tentative_answer?.current_best_answer, 600)
         ? `Current best answer: ${cleanText(source.tentative_answer.current_best_answer, 600)}`
         : '',
-      buildCompactList('Supporting basis', source.supporting_basis, 4),
-      buildCompactList('Unresolved issues', source.unresolved_issues, 4),
+      buildCompactList('Supporting basis', asArray(source.supporting_basis).slice(-LOOP_EXIT_JUDGE_CONTEXT_LIMIT), LOOP_EXIT_JUDGE_CONTEXT_LIMIT),
+      buildCompactList('Unresolved issues', source.unresolved_issues, 8),
       buildLogicalVerificationSection(source.logical_verification, { asArray, cleanText, uniqueStrings })
     ].filter(Boolean).join('\n');
   }
 
   function buildLoadedContextSection(blocks = []) {
-    const rows = uniqueStrings(asArray(blocks).map((block) => {
-      const paperTitle = cleanText(block?.paper_title, 160);
-      const sectionLabel = cleanText(block?.section_label, 80);
-      const excerpt = cleanText(block?.excerpt, 180);
-      const reason = cleanText(block?.relevance_reason, 180);
-      return [[paperTitle, sectionLabel].filter(Boolean).join(' | '), excerpt, reason].filter(Boolean).join(' - ');
-    }), 4);
+    const rows = uniqueStrings(
+      asArray(blocks)
+        .slice(-LOOP_EXIT_JUDGE_CONTEXT_LIMIT)
+        .map((block) => {
+          const paperTitle = cleanText(block?.paper_title, 160);
+          const sectionLabel = cleanText(block?.section_label, 80);
+          const excerpt = cleanText(block?.excerpt, 180);
+          const reason = cleanText(block?.relevance_reason, 180);
+          return [[paperTitle, sectionLabel].filter(Boolean).join(' | '), excerpt, reason].filter(Boolean).join(' - ');
+        }),
+      LOOP_EXIT_JUDGE_CONTEXT_LIMIT
+    );
     if (!rows.length) {
       return '';
     }
@@ -407,7 +414,10 @@ function createScienceLoopExitJudgeRuntime(deps = {}) {
       'A lightweight pre-synthesized answer is provided so you can see the current best answer, supporting basis, and unresolved issues before judging.',
       'Judge the pre-synthesized answer only against the provided exit criteria and clarified request.',
       'Do not impose any citation, source, or tool-specific requirement unless it is explicitly stated in the exit criteria.',
-      'Be conservative: continue when a blocking evidence requirement is still missing.',
+      'Judge sufficiency, not perfection: stop when the evidence supports the main answer and remaining gaps can be stated as caveats without changing the conclusion.',
+      'Continue only when a missing requirement is truly blocking for the clarified request.',
+      'Do not require exhaustive literature coverage, every selected paper to be fully read, or extra citations unless the exit criteria explicitly require them.',
+      'For stable general science, citation-backed anchors plus well-established background knowledge can be enough; project facts still require project/tool evidence.',
       'Return JSON only and do not invent evidence.'
     ].join('\n\n');
   }

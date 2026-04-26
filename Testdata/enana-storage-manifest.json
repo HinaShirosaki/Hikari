@@ -1,7 +1,7 @@
 {
   "schema_name": "enana_storage_manifest",
   "schema_version": "1.0.0",
-  "generated_at": "2026-04-25T19:58:24.543Z",
+  "generated_at": "2026-04-26T20:41:43.992Z",
   "root_path": "/Users/shiyifan/Projects/Enana/Testdata",
   "discovered_files": [
     {
@@ -786,7 +786,7 @@
       "type": "file",
       "role": "chemical_inventory_index",
       "size_bytes": 24576,
-      "modified_at": "2026-04-25T19:49:51.297Z"
+      "modified_at": "2026-04-26T17:24:05.229Z"
     },
     {
       "relative_path": "enana-chemicals.index.sqlite-shm",
@@ -877,7 +877,7 @@
       "type": "file",
       "role": "storage_manifest",
       "size_bytes": 74692,
-      "modified_at": "2026-04-25T19:49:51.205Z"
+      "modified_at": "2026-04-26T17:24:05.127Z"
     },
     {
       "relative_path": "Gels",
@@ -1773,7 +1773,7 @@
       "type": "file",
       "role": "sequence_library_index",
       "size_bytes": 339968,
-      "modified_at": "2026-04-25T19:58:24.320Z"
+      "modified_at": "2026-04-26T20:41:43.776Z"
     },
     {
       "relative_path": "Workflow",

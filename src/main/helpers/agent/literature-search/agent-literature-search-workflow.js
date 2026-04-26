@@ -272,6 +272,13 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
     ].join('\n\n');
   }
 
+  function assignCanonicalPaperIds(items = []) {
+    return asArray(items).map((item, index) => ({
+      ...defaultEnsureObject(item),
+      paper_id: `paper-${index + 1}`
+    }));
+  }
+
   async function enrichPaperForDownload(item = {}) {
     const source = defaultEnsureObject(item);
     const metadata = paperContextLoaderRuntime && typeof paperContextLoaderRuntime.fetchEuropePmcMetadataForItem === 'function'
@@ -381,7 +388,7 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
           return;
         }
         downloadedPapers.push({
-          paper_id: cleanText(candidate.paper_id || candidate.id, 120),
+          paper_id: cleanText(candidate.paper_id, 120),
           paper_title: cleanText(candidate.title, 320),
           ok: downloadResult.ok === true,
           status: cleanText(downloadResult.status, 80),
@@ -539,20 +546,21 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
     for (const candidate of selectedCandidates) {
       enrichedCandidates.push(await enrichPaperForDownload(candidate));
     }
+    const workflowCandidates = assignCanonicalPaperIds(enrichedCandidates);
 
-    const downloadPromise = downloadSelectedPapers(enrichedCandidates, {
+    const downloadPromise = downloadSelectedPapers(workflowCandidates, {
       ...source,
       storage_path: copiedContext.storage_path
     }, linkedName);
-    const readPromise = readSelectedPapers(enrichedCandidates, {
+    const readPromise = readSelectedPapers(workflowCandidates, {
       ...source,
       query,
       downloadPromise
     });
     const [downloadedPapers, readResult] = await Promise.all([downloadPromise, readPromise]);
 
-    const selectedPapers = enrichedCandidates.map((candidate) => ({
-      paper_id: cleanText(candidate.paper_id || candidate.id, 120),
+    const selectedPapers = workflowCandidates.map((candidate) => ({
+      paper_id: cleanText(candidate.paper_id, 120),
       paper_title: cleanText(candidate.title, 320),
       source: cleanText(candidate.source, 80),
       summary: cleanText(candidate.summary || candidate.snippet, 1200),
