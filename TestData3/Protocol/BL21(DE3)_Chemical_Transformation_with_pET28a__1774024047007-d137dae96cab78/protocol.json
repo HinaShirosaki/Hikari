@@ -1,0 +1,65 @@
+{
+  "schema_name": "enana_protocols",
+  "schema_version": "1.0.0",
+  "updated_at": "2026-04-27T22:57:08.597Z",
+  "protocol": {
+    "id": "1774024047007-d137dae96cab78",
+    "name": "BL21(DE3) Chemical Transformation with pET28a",
+    "purpose": "Introduce a plasmid into BL21(DE3) competent E. coli cells for protein expression.",
+    "materials": [
+      "BL21(DE3) competent cells",
+      "Plasmid DNA",
+      "LB agar plate with appropriate antibiotic",
+      "SOC medium",
+      "Ice bucket",
+      "42 C heat block or water bath",
+      "Sterile microcentrifuge tubes",
+      "37 C shaking incubator"
+    ],
+    "steps": [
+      {
+        "id": "1774125436234-8c09146262f048",
+        "text": "Thaw 1 tube of BL21(DE3) competent cells on ice.",
+        "placeholders": []
+      },
+      {
+        "id": "1774125436234-5e6cd5beb943b",
+        "text": "Add 200ng of {{ph:1774125436234-cac9aa958fe75}} DNA to the cells and gently flick to mix.",
+        "placeholders": [
+          {
+            "id": "1774125436234-cac9aa958fe75",
+            "name": "plasmid"
+          }
+        ]
+      },
+      {
+        "id": "1774125436234-15189704d9d308",
+        "text": "Incubate the mixture on ice for 30 min.",
+        "placeholders": []
+      },
+      {
+        "id": "1774125436234-43f81b59a452a",
+        "text": "Heat shock the cells at 42 C for 45 s, then immediately place them back on ice for 1 min.",
+        "placeholders": []
+      },
+      {
+        "id": "1774125436234-b55f8f12ff476",
+        "text": "Add 1 mL of SOC medium and recover the cells at 37 C with shaking for 1 h.",
+        "placeholders": []
+      },
+      {
+        "id": "1774125436234-04fdf2bad48cb8",
+        "text": "Plate 100 uL of the recovery culture onto an LB agar plate containing Kanamycin.",
+        "placeholders": []
+      },
+      {
+        "id": "1774125436234-c8e74cf17602d8",
+        "text": "Incubate the plate at 37 C for overnight until colonies appear.",
+        "placeholders": []
+      }
+    ],
+    "troubleshooting": "Problem: No colonies on plate; Possible cause: Competent cells lost efficiency or antibiotic selection was incorrect; Solution: Use fresh competent cells and verify the plasmid resistance marker matches the plate antibiotic\nProblem: Too many background colonies; Possible cause: Contamination or insufficient antibiotic concentration; Solution: Prepare fresh selective plates and use sterile technique throughout",
+    "createdAt": "2026-03-20T16:27:27.007Z",
+    "updatedAt": "2026-03-21T20:37:16.234Z"
+  }
+}

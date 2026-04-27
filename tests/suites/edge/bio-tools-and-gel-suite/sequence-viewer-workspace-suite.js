@@ -1326,7 +1326,7 @@ test('[EDGE] sequence-viewer protein builder can open an assembled plasmid from 
             backboneLength: 18,
             insertionOffset: 10,
             insertLength: 6,
-            variantMode: 'gibson',
+            variantMode: 'restriction',
             updatedAt: '2026-04-23T12:00:00.000Z'
           }
         ]
@@ -1345,7 +1345,20 @@ test('[EDGE] sequence-viewer protein builder can open an assembled plasmid from 
     path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
     { document, window, localStorage }
   );
-  const viewer = moduleWithDom.initSequenceViewer();
+  const appState = { projects: [], protocols: [], notebookEntries: [] };
+  let persisted = false;
+  let notebookChangedCount = 0;
+  let nextId = 0;
+  const viewer = moduleWithDom.initSequenceViewer({
+    state: appState,
+    persist: () => {
+      persisted = true;
+    },
+    createId: () => `protein-builder-test-id-${nextId += 1}`,
+    onNotebookEntriesChanged: () => {
+      notebookChangedCount += 1;
+    }
+  });
   viewer.loadFromExternal({
     name: 'vector_with_poi',
     sequence: 'GGGATGTTATTATTACCC',
@@ -1384,6 +1397,10 @@ test('[EDGE] sequence-viewer protein builder can open an assembled plasmid from 
   const confirmationBanner = document.getElementById('sequence-viewer-protein-builder-confirmation');
   const confirmationSummary = document.getElementById('sequence-viewer-protein-builder-confirmation-summary');
   const textarea = document.getElementById('sequence-viewer-textarea');
+  const loadBtn = document.getElementById('sequence-viewer-load-btn');
+  const pastePanel = document.getElementById('sequence-viewer-paste-panel');
+  const modePasteBtn = document.getElementById('sequence-viewer-mode-paste');
+  const modeFileBtn = document.getElementById('sequence-viewer-mode-file');
   assert.equal(Boolean(assemblyOverlay.hidden), false);
   assert.match(assemblyList.innerHTML, /HostVector/);
   assert.match(assemblySummary.innerHTML, /Estimated Circular Plasmid/i);
@@ -1407,17 +1424,30 @@ test('[EDGE] sequence-viewer protein builder can open an assembled plasmid from 
   assert.equal(document.getElementById('sequence-viewer-save-name').value, 'GFP Insert (HostVector)');
   assert.match(document.getElementById('sequence-viewer-status').textContent, /Review the assembled plasmid.*HostVector.*confirm the construct/i);
   assert.match(document.getElementById('sequence-viewer-stat-topology').textContent, /circular/i);
-  assert.equal(String(textarea.value || '').startsWith('ATGCGTACGC'), true);
-  assert.equal(String(textarea.value || '').endsWith('TAGTTACC'), true);
+  assert.equal(Boolean(loadBtn.hidden), true);
+  assert.equal(Boolean(pastePanel.hidden), true);
+  assert.equal(Boolean(modePasteBtn.hidden), true);
+  assert.equal(Boolean(modeFileBtn.hidden), true);
+  assert.equal(textarea.value, '');
+  assert.equal(appState.notebookEntries.length, 1);
+  const notebookEntryId = appState.notebookEntries[0].id;
 
   trigger(document.getElementById('sequence-viewer-protein-builder-confirmation-confirm-btn'), 'click');
   await flushAsync();
 
   assert.equal(Boolean(confirmationBanner.hidden), true);
-  assert.match(document.getElementById('sequence-viewer-status').textContent, /Construct confirmed/i);
+  assert.match(document.getElementById('sequence-viewer-status').textContent, /Construct confirmed.*cloning plan.*PCR program/i);
+  assert.equal(persisted, true);
+  assert.equal(notebookChangedCount >= 2, true);
+  assert.equal(appState.notebookEntries.length, 1);
+  assert.equal(appState.notebookEntries[0].id, notebookEntryId);
+  assert.match(appState.notebookEntries[0].result, /Protein Builder cloning assembly design/i);
+  assert.match(appState.notebookEntries[0].result, /PCR program/i);
+  assert.match(appState.notebookEntries[0].result, /Primers/i);
+  assert.equal(appState.notebookEntries[0].resultTable.rows.length > 0, true);
 });
 
-test('[EDGE] sequence-viewer protein builder can fall back to saved sequence library entries for plasmid assembly', async () => {
+test('[EDGE] sequence-viewer protein builder only lists recognized backbone selections for plasmid assembly', async () => {
   const ids = [
     'sequence-viewer-home-workspace',
     'sequence-viewer-protein-builder-workspace',
@@ -1489,6 +1519,7 @@ test('[EDGE] sequence-viewer protein builder can fall back to saved sequence lib
     'sequence-viewer-sequence-host'
   ];
   const sequenceLibraryGetCalls = [];
+  const sequenceLibraryListCalls = [];
   const document = createMockDocument(ids);
   const window = {
     enanaApi: {
@@ -1496,19 +1527,22 @@ test('[EDGE] sequence-viewer protein builder can fall back to saved sequence lib
         ok: true,
         results: []
       }),
-      sequenceLibraryList: async () => ({
-        ok: true,
-        entries: [
-          {
-            id: 'entry_backbone_1',
-            name: 'pETDuet-1-NdeI-F',
-            status: 'saved',
-            topology: 'circular',
-            sequenceLength: 24,
-            updatedAt: '2026-04-23T15:00:00.000Z'
-          }
-        ]
-      }),
+      sequenceLibraryList: async (payload) => {
+        sequenceLibraryListCalls.push(payload);
+        return {
+          ok: true,
+          entries: [
+            {
+              id: 'entry_backbone_1',
+              name: 'pETDuet-1-NdeI-F',
+              status: 'saved',
+              topology: 'circular',
+              sequenceLength: 24,
+              updatedAt: '2026-04-23T15:00:00.000Z'
+            }
+          ]
+        };
+      },
       sequenceLibraryGet: async (payload) => {
         sequenceLibraryGetCalls.push(payload);
         return {
@@ -1574,67 +1608,23 @@ ORIGIN
   trigger(builderForm, 'input', { target: poiInput });
   await flushAsync();
 
+  const sequenceLibraryListCallsBeforeAssembly = sequenceLibraryListCalls.length;
+  const sequenceLibraryGetCallsBeforeAssembly = sequenceLibraryGetCalls.length;
   trigger(document.getElementById('sequence-viewer-protein-builder-assemble-btn'), 'click');
   await flushAsync();
   await flushAsync();
 
   const assemblyOverlay = document.getElementById('sequence-viewer-protein-builder-assembly-overlay');
   const assemblyList = document.getElementById('sequence-viewer-protein-builder-assembly-list');
-  const confirmationBanner = document.getElementById('sequence-viewer-protein-builder-confirmation');
-  const confirmationSummary = document.getElementById('sequence-viewer-protein-builder-confirmation-summary');
-  const loadBtn = document.getElementById('sequence-viewer-load-btn');
-  const pastePanel = document.getElementById('sequence-viewer-paste-panel');
-  const textarea = document.getElementById('sequence-viewer-textarea');
-  const featureRailHost = document.getElementById('sequence-viewer-feature-rail-host');
   assert.equal(Boolean(assemblyOverlay.hidden), false);
-  assert.match(assemblyList.innerHTML, /pETDuet-1-NdeI-F/);
-  assert.match(assemblyList.innerHTML, /Saved Sequence Library entry/i);
-
-  const backboneTarget = {
-    closest(selector) {
-      if (selector === '[data-protein-builder-backbone-id]') {
-        return { dataset: { proteinBuilderBackboneId: 'library_entry:entry_backbone_1' } };
-      }
-      return null;
-    }
-  };
-  trigger(assemblyList, 'click', { target: backboneTarget });
-  trigger(document.getElementById('sequence-viewer-protein-builder-assembly-apply-btn'), 'click');
-  await flushAsync();
-  await flushAsync();
-
-  assert.equal(sequenceLibraryGetCalls.some((call) => call.id === 'entry_backbone_1' && call.includeGbk === true), true);
-  assert.equal(Boolean(document.getElementById('sequence-viewer-detail-workspace').hidden), false);
-  assert.equal(Boolean(confirmationBanner.hidden), false);
-  assert.equal(confirmationSummary.innerHTML.includes('pETDuet-1-NdeI-F'), true);
-  assert.match(confirmationSummary.innerHTML, /Edit the sequence below and click Load/i);
-  assert.equal(Boolean(loadBtn.hidden), false);
-  assert.equal(Boolean(pastePanel.hidden), false);
-  assert.equal(document.getElementById('sequence-viewer-save-name').value, 'GFP Insert (pETDuet-1-NdeI-F)');
-  assert.match(document.getElementById('sequence-viewer-status').textContent, /Review the assembled plasmid.*pETDuet-1-NdeI-F.*confirm the construct/i);
-  assert.match(document.getElementById('sequence-viewer-stat-topology').textContent, /circular/i);
-  assert.equal(String(textarea.value || '').startsWith('ATGCGT'), true);
-  assert.equal(String(textarea.value || '').endsWith('ACGCTAGTTACCGGTTAA'), true);
-  assert.match(featureRailHost.innerHTML, /T7 promoter/);
-  assert.match(featureRailHost.innerHTML, /AmpR/);
-
-  const editedSequence = `${String(textarea.value || '')}AAA`;
-  textarea.value = editedSequence;
-  trigger(loadBtn, 'click');
-  await flushAsync();
-  await flushAsync();
-
-  assert.equal(Boolean(confirmationBanner.hidden), false);
-  assert.equal(Boolean(loadBtn.hidden), false);
-  assert.equal(document.getElementById('sequence-viewer-save-name').value, 'GFP Insert (pETDuet-1-NdeI-F)');
-  assert.equal(document.getElementById('sequence-viewer-stat-length').textContent, String(editedSequence.length));
-  assert.match(document.getElementById('sequence-viewer-stat-topology').textContent, /circular/i);
-  assert.match(document.getElementById('sequence-viewer-status').textContent, /Updated the construct review/i);
-  assert.match(document.getElementById('sequence-viewer-messages').innerHTML, /Retained the current construct features/i);
-  assert.match(featureRailHost.innerHTML, /AmpR/);
+  assert.match(assemblyList.innerHTML, /No stored backbones yet/i);
+  assert.doesNotMatch(assemblyList.innerHTML, /pETDuet-1-NdeI-F/);
+  assert.doesNotMatch(assemblyList.innerHTML, /Saved Sequence Library entry/i);
+  assert.equal(sequenceLibraryListCalls.length, sequenceLibraryListCallsBeforeAssembly);
+  assert.equal(sequenceLibraryGetCalls.length, sequenceLibraryGetCallsBeforeAssembly);
 });
 
-test('[EDGE] sequence-viewer protein builder hydrates a saved library backbone entry and preserves backbone features in the assembled plasmid', async () => {
+test('[EDGE] sequence-viewer protein builder does not hydrate saved library entries as assembly backbones', async () => {
   const ids = [
     'sequence-viewer-home-workspace',
     'sequence-viewer-protein-builder-workspace',
@@ -1702,6 +1692,7 @@ test('[EDGE] sequence-viewer protein builder hydrates a saved library backbone e
     'sequence-viewer-sequence-host'
   ];
   const sequenceLibraryGetCalls = [];
+  const sequenceLibraryListCalls = [];
   const document = createMockDocument(ids);
   const window = {
     enanaApi: {
@@ -1709,20 +1700,23 @@ test('[EDGE] sequence-viewer protein builder hydrates a saved library backbone e
         ok: true,
         results: []
       }),
-      sequenceLibraryList: async () => ({
-        ok: true,
-        entries: [
-          {
-            id: 'entry_saved_backbone',
-            name: 'StoredVector',
-            status: 'saved',
-            topology: 'circular',
-            sequenceLength: 24,
-            featureCount: 4,
-            updatedAt: '2026-04-25T12:00:00.000Z'
-          }
-        ]
-      }),
+      sequenceLibraryList: async (payload) => {
+        sequenceLibraryListCalls.push(payload);
+        return {
+          ok: true,
+          entries: [
+            {
+              id: 'entry_saved_backbone',
+              name: 'StoredVector',
+              status: 'saved',
+              topology: 'circular',
+              sequenceLength: 24,
+              featureCount: 4,
+              updatedAt: '2026-04-25T12:00:00.000Z'
+            }
+          ]
+        };
+      },
       sequenceLibraryGet: async (payload) => {
         sequenceLibraryGetCalls.push(payload);
         return {
@@ -1793,6 +1787,8 @@ ORIGIN
   trigger(builderForm, 'input', { target: poiInput });
   await flushAsync();
 
+  const sequenceLibraryListCallsBeforeAssembly = sequenceLibraryListCalls.length;
+  const sequenceLibraryGetCallsBeforeAssembly = sequenceLibraryGetCalls.length;
   trigger(document.getElementById('sequence-viewer-protein-builder-assemble-btn'), 'click');
   await flushAsync();
   await flushAsync();
@@ -1800,32 +1796,11 @@ ORIGIN
   const assemblyOverlay = document.getElementById('sequence-viewer-protein-builder-assembly-overlay');
   const assemblyList = document.getElementById('sequence-viewer-protein-builder-assembly-list');
   assert.equal(Boolean(assemblyOverlay.hidden), false);
-  assert.match(assemblyList.innerHTML, /StoredVector/);
-  assert.match(assemblyList.innerHTML, /Saved Sequence Library entry/i);
-
-  const backboneTarget = {
-    closest(selector) {
-      if (selector === '[data-protein-builder-backbone-id]') {
-        return { dataset: { proteinBuilderBackboneId: 'library_entry:entry_saved_backbone' } };
-      }
-      return null;
-    }
-  };
-  trigger(assemblyList, 'click', { target: backboneTarget });
-  trigger(document.getElementById('sequence-viewer-protein-builder-assembly-apply-btn'), 'click');
-  await flushAsync();
-  await flushAsync();
-
-  const featureRailHost = document.getElementById('sequence-viewer-feature-rail-host');
-  assert.equal(sequenceLibraryGetCalls.some((call) => call.id === 'entry_saved_backbone' && call.includeGbk === true), true);
-  assert.equal(Boolean(document.getElementById('sequence-viewer-detail-workspace').hidden), false);
-  assert.equal(document.getElementById('sequence-viewer-save-name').value, 'GFP Insert (StoredVector)');
-  assert.match(document.getElementById('sequence-viewer-status').textContent, /Opened assembled plasmid using stored backbone StoredVector/i);
-  assert.match(document.getElementById('sequence-viewer-stat-topology').textContent, /circular/i);
-  assert.match(featureRailHost.innerHTML, /T7 promoter/);
-  assert.match(featureRailHost.innerHTML, /GFP Insert/);
-  assert.match(featureRailHost.innerHTML, /AmpR/);
-  assert.doesNotMatch(featureRailHost.innerHTML, /Legacy Insert/);
+  assert.match(assemblyList.innerHTML, /No stored backbones yet/i);
+  assert.doesNotMatch(assemblyList.innerHTML, /StoredVector/);
+  assert.doesNotMatch(assemblyList.innerHTML, /Saved Sequence Library entry/i);
+  assert.equal(sequenceLibraryListCalls.length, sequenceLibraryListCallsBeforeAssembly);
+  assert.equal(sequenceLibraryGetCalls.length, sequenceLibraryGetCallsBeforeAssembly);
 });
 
 test('[EDGE] sequence-viewer backbone recognition stores a Protein Builder artifact without annotating the original sequence', async () => {

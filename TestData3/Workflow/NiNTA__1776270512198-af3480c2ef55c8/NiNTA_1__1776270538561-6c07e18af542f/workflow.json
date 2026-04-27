@@ -1,0 +1,277 @@
+{
+  "exportedAt": "2026-04-27T22:57:08.622Z",
+  "template": {
+    "id": "1776270512198-af3480c2ef55c8",
+    "name": "NiNTA",
+    "description": "",
+    "projectId": "",
+    "blocks": [
+      {
+        "id": "1776270449257-17e473bb99632",
+        "type": "protocol",
+        "protocolId": "1774024047007-d137dae96cab78",
+        "text": "",
+        "assigneeId": "",
+        "x": 34,
+        "y": 102
+      },
+      {
+        "id": "1776270458069-8a623015edb578",
+        "type": "protocol",
+        "protocolId": "1774024647315-74cbb18b4cc37",
+        "text": "",
+        "assigneeId": "",
+        "x": 325,
+        "y": 92
+      },
+      {
+        "id": "1776270468788-2a5962af57ab08",
+        "type": "protocol",
+        "protocolId": "1774024680081-6b02b28fd6d39",
+        "text": "",
+        "assigneeId": "",
+        "x": 619,
+        "y": 86
+      },
+      {
+        "id": "1776270480835-e466e8723a7c28",
+        "type": "protocol",
+        "protocolId": "1774024695073-536c18071dd0d",
+        "text": "",
+        "assigneeId": "",
+        "x": 182,
+        "y": 312
+      },
+      {
+        "id": "1776270492455-b1275a121f61c8",
+        "type": "protocol",
+        "protocolId": "1774024712936-cdad2f729e908",
+        "text": "",
+        "assigneeId": "",
+        "x": 576,
+        "y": 280
+      },
+      {
+        "id": "1776270499372-b273dfbc75ce9",
+        "type": "protocol",
+        "protocolId": "1774024745003-46df848e78c068",
+        "text": "",
+        "assigneeId": "",
+        "x": 584,
+        "y": 416
+      }
+    ],
+    "links": [
+      {
+        "id": "1776270471752-ad87e60aa0b69",
+        "fromBlockId": "1776270449257-17e473bb99632",
+        "toBlockId": "1776270458069-8a623015edb578"
+      },
+      {
+        "id": "1776270473555-d8d3f6ead5a3f",
+        "fromBlockId": "1776270458069-8a623015edb578",
+        "toBlockId": "1776270468788-2a5962af57ab08"
+      },
+      {
+        "id": "1776270484835-9e7e586bccbd3",
+        "fromBlockId": "1776270468788-2a5962af57ab08",
+        "toBlockId": "1776270480835-e466e8723a7c28"
+      },
+      {
+        "id": "1776270502831-5d2a41569478",
+        "fromBlockId": "1776270480835-e466e8723a7c28",
+        "toBlockId": "1776270492455-b1275a121f61c8"
+      },
+      {
+        "id": "1776270504718-ab46bdff60f21",
+        "fromBlockId": "1776270480835-e466e8723a7c28",
+        "toBlockId": "1776270499372-b273dfbc75ce9"
+      }
+    ],
+    "createdAt": "2026-04-15T16:28:32.198Z",
+    "updatedAt": "2026-04-15T16:28:32.198Z"
+  },
+  "workflow": {
+    "id": "1776270538561-6c07e18af542f",
+    "templateId": "1776270512198-af3480c2ef55c8",
+    "name": "NiNTA 1",
+    "description": "",
+    "projectId": "",
+    "notebookEntryIds": [
+      "1776270544362-2c654c6110e398",
+      "1776270561757-e3f42b70a908",
+      "1776270564610-c59aae731918f8",
+      "1776270566877-8b3defb4cebd5",
+      "1776270569678-971d9d9b018028"
+    ],
+    "blocks": [
+      {
+        "id": "1776270538561-485b4c8b52f838",
+        "type": "protocol",
+        "protocolId": "1774024047007-d137dae96cab78",
+        "text": "",
+        "assigneeId": "",
+        "x": 34,
+        "y": 102
+      },
+      {
+        "id": "1776270538561-8355d20b5e9e78",
+        "type": "protocol",
+        "protocolId": "1774024647315-74cbb18b4cc37",
+        "text": "",
+        "assigneeId": "",
+        "x": 325,
+        "y": 92
+      },
+      {
+        "id": "1776270538561-74e8c18bdcad18",
+        "type": "protocol",
+        "protocolId": "1774024680081-6b02b28fd6d39",
+        "text": "",
+        "assigneeId": "",
+        "x": 619,
+        "y": 86
+      },
+      {
+        "id": "1776270538561-e247e7e259dc3",
+        "type": "protocol",
+        "protocolId": "1774024695073-536c18071dd0d",
+        "text": "",
+        "assigneeId": "",
+        "x": 182,
+        "y": 312
+      },
+      {
+        "id": "1776270538561-9e88f7264ca91",
+        "type": "protocol",
+        "protocolId": "1774024712936-cdad2f729e908",
+        "text": "",
+        "assigneeId": "",
+        "x": 576,
+        "y": 280
+      },
+      {
+        "id": "1776270538561-658add378c9f98",
+        "type": "protocol",
+        "protocolId": "1774024745003-46df848e78c068",
+        "text": "",
+        "assigneeId": "",
+        "x": 584,
+        "y": 416
+      }
+    ],
+    "links": [
+      {
+        "id": "1776270538561-aed25010a0ccd",
+        "fromBlockId": "1776270538561-485b4c8b52f838",
+        "toBlockId": "1776270538561-8355d20b5e9e78"
+      },
+      {
+        "id": "1776270538561-cd0f82f5b06d18",
+        "fromBlockId": "1776270538561-8355d20b5e9e78",
+        "toBlockId": "1776270538561-74e8c18bdcad18"
+      },
+      {
+        "id": "1776270538561-24bd27faff342",
+        "fromBlockId": "1776270538561-74e8c18bdcad18",
+        "toBlockId": "1776270538561-e247e7e259dc3"
+      },
+      {
+        "id": "1776270538561-8f62716f97225",
+        "fromBlockId": "1776270538561-e247e7e259dc3",
+        "toBlockId": "1776270538561-9e88f7264ca91"
+      },
+      {
+        "id": "1776270538561-c0378b0b62eb58",
+        "fromBlockId": "1776270538561-e247e7e259dc3",
+        "toBlockId": "1776270538561-658add378c9f98"
+      }
+    ],
+    "entries": [
+      {
+        "id": "1776270538561-46e4a929f801c8",
+        "name": "NiNTA 1",
+        "notes": "",
+        "activeBranchRootIds": [],
+        "stepStates": {
+          "1776270538561-485b4c8b52f838": {
+            "status": "completed",
+            "values": {},
+            "result": "",
+            "resultFiles": [],
+            "resultFileRecords": [],
+            "notebookEntryId": "1776270544362-2c654c6110e398",
+            "assayIds": [],
+            "gelAnalysisIds": [],
+            "completedAt": "2026-04-15T16:29:20.078Z",
+            "updatedAt": "2026-04-15T16:29:20.078Z"
+          },
+          "1776270538561-8355d20b5e9e78": {
+            "status": "not_done",
+            "values": {},
+            "result": "",
+            "resultFiles": [],
+            "resultFileRecords": [],
+            "notebookEntryId": "1776270561757-e3f42b70a908",
+            "assayIds": [],
+            "gelAnalysisIds": [],
+            "completedAt": "",
+            "updatedAt": "2026-04-15T18:11:31.295Z"
+          },
+          "1776270538561-74e8c18bdcad18": {
+            "status": "not_done",
+            "values": {},
+            "result": "",
+            "resultFiles": [],
+            "resultFileRecords": [],
+            "notebookEntryId": "1776270564610-c59aae731918f8",
+            "assayIds": [],
+            "gelAnalysisIds": [],
+            "completedAt": "",
+            "updatedAt": "2026-04-15T18:11:35.653Z"
+          },
+          "1776270538561-e247e7e259dc3": {
+            "status": "not_done",
+            "values": {},
+            "result": "",
+            "resultFiles": [],
+            "resultFileRecords": [],
+            "notebookEntryId": "1776270566877-8b3defb4cebd5",
+            "assayIds": [],
+            "gelAnalysisIds": [],
+            "completedAt": "",
+            "updatedAt": "2026-04-15T18:11:38.274Z"
+          },
+          "1776270538561-9e88f7264ca91": {
+            "status": "not_done",
+            "values": {},
+            "result": "",
+            "resultFiles": [],
+            "resultFileRecords": [],
+            "notebookEntryId": "1776270569678-971d9d9b018028",
+            "assayIds": [],
+            "gelAnalysisIds": [],
+            "completedAt": "",
+            "updatedAt": "2026-04-15T18:11:48.146Z"
+          }
+        },
+        "createdAt": "2026-04-15T16:28:58.561Z",
+        "updatedAt": "2026-04-15T18:11:48.146Z"
+      }
+    ],
+    "createdAt": "2026-04-15T16:28:58.561Z",
+    "updatedAt": "2026-04-15T18:11:48.146Z"
+  },
+  "summary": {
+    "overallStatus": "pending",
+    "totalSteps": 6,
+    "completedSteps": 1,
+    "failedSteps": 0,
+    "pendingSteps": 0,
+    "percentComplete": 17,
+    "resultFileCount": 0,
+    "linkedNotebookCount": 5,
+    "notebookCount": 5,
+    "paperCount": 0
+  }
+}

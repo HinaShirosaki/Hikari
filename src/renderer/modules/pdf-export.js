@@ -1,5 +1,5 @@
 import {
-  notebookResultTableToLines,
+  normalizeNotebookResultTable,
   summarizeNotebookResultTable
 } from './notebook-result-table.js';
 
@@ -10,6 +10,11 @@ const TITLE_FONT_SIZE = 20;
 const HEADING_FONT_SIZE = 15;
 const BODY_FONT_SIZE = 11;
 const LINE_HEIGHT = 14;
+const TABLE_FONT_SIZE = 8.5;
+const TABLE_LINE_HEIGHT = 10.5;
+const TABLE_CELL_PADDING = 4;
+const TABLE_HEADER_FILL = 238;
+const TABLE_BORDER_COLOR = 175;
 
 const PLATE_DEFINITIONS = {
   '6': { rows: 2, columns: 3, label: '6 well' },
@@ -84,24 +89,58 @@ function createContext({
     pageHeight,
     maxWidth,
     margin,
+    orientation,
+    format,
     y,
     serif,
     sectionCount: 0
   };
 }
 
+function refreshPageMetrics(ctx) {
+  ctx.pageWidth = ctx.doc.internal.pageSize.getWidth();
+  ctx.pageHeight = ctx.doc.internal.pageSize.getHeight();
+  ctx.maxWidth = ctx.pageWidth - (ctx.margin * 2);
+}
+
+function addPage(ctx, orientation = ctx.orientation) {
+  if (typeof ctx.doc.addPage === 'function') {
+    ctx.doc.addPage(ctx.format, orientation);
+  }
+  ctx.orientation = orientation || ctx.orientation;
+  refreshPageMetrics(ctx);
+  ctx.y = ctx.margin;
+}
+
 function ensureSpace(ctx, neededHeight) {
   if (ctx.y + neededHeight <= ctx.pageHeight - ctx.margin) {
     return;
   }
-  ctx.doc.addPage();
-  ctx.y = ctx.margin;
+  addPage(ctx);
 }
 
 function writeWrappedLines(doc, text, x, y, maxWidth, lineHeight = LINE_HEIGHT) {
   const lines = doc.splitTextToSize(String(text || ''), maxWidth);
   doc.text(lines, x, y);
   return y + (lines.length * lineHeight);
+}
+
+function splitWrappedLines(doc, text, maxWidth) {
+  const rawLines = String(text || '').split(/\r?\n/);
+  const lines = rawLines.flatMap((line) => {
+    const wrapped = doc.splitTextToSize(line || ' ', maxWidth);
+    return Array.isArray(wrapped) && wrapped.length ? wrapped : [''];
+  });
+  return lines.length ? lines : [''];
+}
+
+function writeWrappedBlock(ctx, text, x, maxWidth, lineHeight = LINE_HEIGHT) {
+  const lines = splitWrappedLines(ctx.doc, text, maxWidth);
+  lines.forEach((line) => {
+    ensureSpace(ctx, lineHeight);
+    ctx.doc.text(String(line || ''), x, ctx.y);
+    ctx.y += lineHeight;
+  });
 }
 
 function writeHeading(ctx, heading) {
@@ -113,7 +152,7 @@ function writeHeading(ctx, heading) {
   ensureSpace(ctx, HEADING_FONT_SIZE + 12);
   ctx.doc.setFont(ctx.serif ? 'times' : 'helvetica', 'bold');
   ctx.doc.setFontSize(HEADING_FONT_SIZE);
-  ctx.y = writeWrappedLines(ctx.doc, heading, ctx.margin, ctx.y, ctx.maxWidth, HEADING_FONT_SIZE + 8);
+  writeWrappedBlock(ctx, heading, ctx.margin, ctx.maxWidth, HEADING_FONT_SIZE + 8);
   ctx.y += 4;
   ctx.sectionCount += 1;
 }
@@ -122,7 +161,7 @@ function writeParagraph(ctx, text) {
   ensureSpace(ctx, LINE_HEIGHT + 2);
   ctx.doc.setFont(ctx.serif ? 'times' : 'helvetica', 'normal');
   ctx.doc.setFontSize(BODY_FONT_SIZE);
-  ctx.y = writeWrappedLines(ctx.doc, text || '-', ctx.margin, ctx.y, ctx.maxWidth, LINE_HEIGHT);
+  writeWrappedBlock(ctx, text || '-', ctx.margin, ctx.maxWidth, LINE_HEIGHT);
   ctx.y += 4;
 }
 
@@ -145,14 +184,124 @@ function writeMinorHeading(ctx, heading) {
   ensureSpace(ctx, BODY_FONT_SIZE + 8);
   ctx.doc.setFont(ctx.serif ? 'times' : 'helvetica', 'bold');
   ctx.doc.setFontSize(BODY_FONT_SIZE);
-  ctx.y = writeWrappedLines(ctx.doc, heading, ctx.margin, ctx.y, ctx.maxWidth, BODY_FONT_SIZE + 4);
+  writeWrappedBlock(ctx, heading, ctx.margin, ctx.maxWidth, BODY_FONT_SIZE + 4);
   ctx.y += 2;
 }
 
-function writeSimpleTable(ctx, headers, rows, { emptyText = '-' } = {}) {
+function estimateTextWidth(ctx, text, fontSize = TABLE_FONT_SIZE) {
+  if (typeof ctx.doc.getTextWidth === 'function') {
+    const measured = Number(ctx.doc.getTextWidth(String(text || '')));
+    if (Number.isFinite(measured)) {
+      return measured;
+    }
+  }
+  return String(text || '').length * fontSize * 0.52;
+}
+
+function splitLongToken(token, maxChars) {
+  const source = String(token || '');
+  if (source.length <= maxChars) {
+    return source;
+  }
+  const chunks = [];
+  for (let index = 0; index < source.length; index += maxChars) {
+    chunks.push(source.slice(index, index + maxChars));
+  }
+  return chunks.join(' ');
+}
+
+function prepareTableCellText(value, columnWidth, fallback = '') {
+  const text = safeValue(value, fallback);
+  const maxChars = Math.max(
+    6,
+    Math.floor((columnWidth - (TABLE_CELL_PADDING * 2)) / (TABLE_FONT_SIZE * 0.52))
+  );
+  return text
+    .split(/(\s+)/)
+    .map((part) => (/^\s+$/.test(part) ? part : splitLongToken(part, maxChars)))
+    .join('');
+}
+
+function resolveTableColumnWidths(ctx, headers, rows) {
+  const columnCount = headers.length;
+  if (!columnCount) {
+    return [];
+  }
+  const minWidth = Math.max(34, Math.min(62, ctx.maxWidth / Math.max(columnCount * 2.8, 1)));
+  const maxWidth = Math.max(minWidth, Math.min(190, ctx.maxWidth * 0.36));
+  const desiredWidths = headers.map((header, columnIndex) => {
+    const values = [
+      header,
+      ...rows.map((row) => (Array.isArray(row) ? row[columnIndex] : ''))
+    ];
+    const measured = values.reduce((max, value) => {
+      const text = String(value || '');
+      const naturalWidth = estimateTextWidth(ctx, text, TABLE_FONT_SIZE) + (TABLE_CELL_PADDING * 2);
+      return Math.max(max, Math.min(maxWidth, naturalWidth));
+    }, minWidth);
+    return Math.max(minWidth, measured);
+  });
+
+  const desiredTotal = desiredWidths.reduce((sum, width) => sum + width, 0);
+  if (desiredTotal <= 0) {
+    return Array.from({ length: columnCount }, () => ctx.maxWidth / columnCount);
+  }
+  if (desiredTotal >= ctx.maxWidth) {
+    const scale = ctx.maxWidth / desiredTotal;
+    return desiredWidths.map((width) => Math.max(minWidth * 0.8, width * scale));
+  }
+  const extra = ctx.maxWidth - desiredTotal;
+  return desiredWidths.map((width) => width + (extra * (width / desiredTotal)));
+}
+
+function splitTableCells(ctx, cells, widths, { fallback = '' } = {}) {
+  return cells.map((cell, index) => {
+    const width = Math.max(12, widths[index] - (TABLE_CELL_PADDING * 2));
+    return splitWrappedLines(ctx.doc, prepareTableCellText(cell, widths[index], fallback), width);
+  });
+}
+
+function getTableRowHeight(lineGroups) {
+  const maxLines = lineGroups.reduce((max, lines) => Math.max(max, Array.isArray(lines) ? lines.length : 1), 1);
+  return Math.max(18, (maxLines * TABLE_LINE_HEIGHT) + (TABLE_CELL_PADDING * 2));
+}
+
+function drawTableRow(ctx, lineGroups, widths, { header = false } = {}) {
+  const rowHeight = getTableRowHeight(lineGroups);
+  let x = ctx.margin;
+
+  ctx.doc.setDrawColor(TABLE_BORDER_COLOR, TABLE_BORDER_COLOR, TABLE_BORDER_COLOR);
+  if (header) {
+    ctx.doc.setFillColor(TABLE_HEADER_FILL, TABLE_HEADER_FILL, TABLE_HEADER_FILL);
+  } else {
+    ctx.doc.setFillColor(255, 255, 255);
+  }
+  ctx.doc.setFont(ctx.serif ? 'times' : 'helvetica', header ? 'bold' : 'normal');
+  ctx.doc.setFontSize(TABLE_FONT_SIZE);
+
+  widths.forEach((width) => {
+    ctx.doc.rect(x, ctx.y, width, rowHeight, header ? 'FD' : 'S');
+    x += width;
+  });
+
+  x = ctx.margin;
+  lineGroups.forEach((lines, columnIndex) => {
+    const cellLines = Array.isArray(lines) && lines.length ? lines : [''];
+    let textY = ctx.y + TABLE_CELL_PADDING + TABLE_FONT_SIZE;
+    cellLines.forEach((line) => {
+      ctx.doc.text(String(line || ''), x + TABLE_CELL_PADDING, textY);
+      textY += TABLE_LINE_HEIGHT;
+    });
+    x += widths[columnIndex];
+  });
+
+  ctx.y += rowHeight;
+}
+
+function writePdfTable(ctx, headers, rows, { emptyText = '-' } = {}) {
   const safeHeaders = Array.isArray(headers) ? headers.map((header) => safeValue(header)) : [];
   const safeRows = Array.isArray(rows)
-    ? rows.map((cells) => (Array.isArray(cells) ? cells.map((cell) => safeValue(cell)) : []))
+    ? rows.map((cells) => (Array.isArray(cells) ? cells.map((cell) => String(cell ?? '').trim()) : []))
     : [];
 
   if (!safeRows.length) {
@@ -160,23 +309,64 @@ function writeSimpleTable(ctx, headers, rows, { emptyText = '-' } = {}) {
     return;
   }
 
-  if (safeHeaders.length) {
-    writeMinorHeading(ctx, safeHeaders.join(' | '));
+  if (!safeHeaders.length) {
+    safeRows.forEach((cells) => writeParagraph(ctx, cells.join(' ')));
+    return;
   }
+
+  ctx.doc.setFont(ctx.serif ? 'times' : 'helvetica', 'normal');
+  ctx.doc.setFontSize(TABLE_FONT_SIZE);
+  const widths = resolveTableColumnWidths(ctx, safeHeaders, safeRows);
+  const headerLines = splitTableCells(ctx, safeHeaders, widths, { fallback: '-' });
+  const headerHeight = getTableRowHeight(headerLines);
+
+  function writeHeader() {
+    ensureSpace(ctx, headerHeight);
+    drawTableRow(ctx, headerLines, widths, { header: true });
+  }
+
+  writeHeader();
   safeRows.forEach((cells) => {
-    writeParagraph(ctx, cells.join(' | '));
+    const rowCells = safeHeaders.map((_header, index) => String(cells[index] ?? '').trim());
+    const rowLines = splitTableCells(ctx, rowCells, widths);
+    const rowHeight = getTableRowHeight(rowLines);
+    if (ctx.y + rowHeight > ctx.pageHeight - ctx.margin) {
+      addPage(ctx);
+      writeHeader();
+    }
+    drawTableRow(ctx, rowLines, widths);
   });
+  ctx.y += 6;
+}
+
+function writeSimpleTable(ctx, headers, rows, { emptyText = '-' } = {}) {
+  writePdfTable(ctx, headers, rows, { emptyText });
 }
 
 function writeNotebookResultTable(ctx, table) {
-  const lines = notebookResultTableToLines(table);
-  if (!lines.length) {
+  const normalized = normalizeNotebookResultTable(table);
+  if (!normalized) {
     writeParagraph(ctx, '-');
     return;
   }
-  lines.forEach((line, index) => {
-    writeParagraph(ctx, index === 0 ? line : `| ${line}`);
-  });
+  const headers = normalized.columns.map((column) => column.title);
+  const rows = normalized.rows.map((row) => (
+    normalized.columns.map((column) => row[column.field] || '')
+  ));
+  writePdfTable(ctx, headers, rows);
+}
+
+function isWideNotebookResultTable(table) {
+  const normalized = normalizeNotebookResultTable(table);
+  if (!normalized) {
+    return false;
+  }
+  const maxCellLength = normalized.rows.reduce((max, row) => (
+    normalized.columns.reduce((cellMax, column) => (
+      Math.max(cellMax, String(row[column.field] || '').trim().length)
+    ), max)
+  ), 0);
+  return normalized.columns.length > 4 || maxCellLength > 48;
 }
 
 function finishAndSave(ctx, fileNameBase) {
@@ -500,11 +690,12 @@ export const exportNotebookEntryPdf = async ({
     }
 
     const title = `Notebook: ${safeValue(entry.projectName)} / ${safeValue(entry.experimentName || entry.protocolName)}`;
+    const useWideLayout = isWideNotebookResultTable(entry.resultTable);
     const ctx = createContext({
       title,
-      orientation: 'p',
+      orientation: useWideLayout ? 'l' : 'p',
       format: 'letter',
-      margin: 72,
+      margin: useWideLayout ? 54 : 72,
       serif: true
     });
     if (!ctx) {

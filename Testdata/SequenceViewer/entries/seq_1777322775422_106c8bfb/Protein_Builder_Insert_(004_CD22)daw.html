@@ -1,0 +1,1705 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Protein Builder Insert (004_CD22)</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --preview-ink: #16314c;
+      --preview-muted: #5a7592;
+      --preview-backbone: #7e99ba;
+      --preview-center-ring: #d8e4f2;
+      --preview-center-disc: #f9fbfe;
+      --preview-tick: #8ca5c5;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: #ffffff;
+    }
+    body {
+      font-family: "Playfair Display", serif;
+      color: var(--preview-ink);
+      overflow: hidden;
+    }
+    .preview-shell {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      place-items: center;
+      margin: 0;
+      padding: 4px;
+    }
+    svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+      max-width: 100%;
+      max-height: 100%;
+    }
+    .circular-preview__backbone {
+      fill: none;
+      stroke: var(--preview-backbone);
+      stroke-width: 16;
+    }
+    .circular-preview__center-ring {
+      fill: none;
+      stroke: var(--preview-center-ring);
+      stroke-width: 2;
+    }
+    .circular-preview__center-disc {
+      fill: var(--preview-center-disc);
+      stroke: var(--preview-center-ring);
+      stroke-width: 2;
+    }
+    .circular-preview__tick {
+      stroke: var(--preview-tick);
+      stroke-width: 1.5;
+      opacity: 0.9;
+    }
+    .circular-preview__feature {
+      stroke-width: 1.5;
+      stroke-linejoin: round;
+    }
+    .circular-preview__leader {
+      fill: none;
+      stroke-width: 1.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      opacity: 0.82;
+    }
+    .circular-preview__label-box {
+      stroke-width: 1.2;
+    }
+    .circular-preview__label-text {
+      font-size: 15px;
+      font-weight: 600;
+      dominant-baseline: middle;
+      letter-spacing: 0.01em;
+    }
+    .circular-preview__hover-tooltip {
+      position: fixed;
+      z-index: 20;
+      min-width: 180px;
+      max-width: min(320px, calc(100vw - 16px));
+      border-radius: 10px;
+      border: 1px solid rgba(90, 119, 165, 0.42);
+      background: rgba(249, 252, 255, 0.98);
+      box-shadow: 0 10px 24px rgba(27, 20, 14, 0.12);
+      padding: 9px 11px;
+      font-size: 12px;
+      line-height: 1.35;
+      color: var(--preview-ink);
+      pointer-events: none;
+    }
+    .circular-preview__hover-tooltip[hidden] {
+      display: none;
+    }
+    .circular-preview__hover-tooltip p {
+      margin: 0;
+    }
+    .circular-preview__hover-tooltip p + p {
+      margin-top: 3px;
+    }
+    .circular-preview__hover-title {
+      font-weight: 700;
+    }
+    .circular-preview__hover-description {
+      color: var(--preview-muted);
+    }
+    .circular-preview__title {
+      fill: var(--preview-ink);
+      font-size: 28px;
+      font-weight: 700;
+      text-anchor: middle;
+    }
+    .circular-preview__subtitle {
+      text-anchor: middle;
+      fill: var(--preview-muted);
+      letter-spacing: 0.02em;
+    }
+    .circular-preview__subtitle {
+      font-size: 15px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <main class="preview-shell" data-renderer="dna-feature-viewer-js">
+    <!-- Circular plasmid preview powered by a minimal JS port inspired by DnaFeaturesViewer (MIT). -->
+    <svg
+      viewBox="0 0 1205 984"
+      preserveAspectRatio="xMidYMid meet"
+      role="img"
+      aria-label="Protein Builder Insert (004_CD22) circular plasmid preview">
+      <desc>Standalone circular plasmid preview for Protein Builder Insert (004_CD22).</desc>
+      <g class="circular-preview__scene">
+        <circle class="circular-preview__center-ring" cx="598.40" cy="485.47" r="258.00"></circle>
+        <circle class="circular-preview__backbone" cx="598.40" cy="485.47" r="290.00"></circle>
+        <line class="circular-preview__tick" x1="598.40" y1="207.47" x2="598.40" y2="183.47"></line><line class="circular-preview__tick" x1="704.79" y1="228.63" x2="713.97" y2="206.46"></line><line class="circular-preview__tick" x1="794.98" y1="288.90" x2="811.95" y2="271.93"></line><line class="circular-preview__tick" x1="855.24" y1="379.09" x2="877.41" y2="369.90"></line><line class="circular-preview__tick" x1="876.40" y1="485.47" x2="900.40" y2="485.47"></line><line class="circular-preview__tick" x1="855.24" y1="591.86" x2="877.41" y2="601.04"></line><line class="circular-preview__tick" x1="794.98" y1="682.05" x2="811.95" y2="699.02"></line><line class="circular-preview__tick" x1="704.79" y1="742.31" x2="713.97" y2="764.48"></line><line class="circular-preview__tick" x1="598.40" y1="763.47" x2="598.40" y2="787.47"></line><line class="circular-preview__tick" x1="492.01" y1="742.31" x2="482.83" y2="764.48"></line><line class="circular-preview__tick" x1="401.82" y1="682.05" x2="384.85" y2="699.02"></line><line class="circular-preview__tick" x1="341.56" y1="591.86" x2="319.39" y2="601.04"></line><line class="circular-preview__tick" x1="320.40" y1="485.47" x2="296.40" y2="485.47"></line><line class="circular-preview__tick" x1="341.56" y1="379.09" x2="319.39" y2="369.90"></line><line class="circular-preview__tick" x1="401.82" y1="288.90" x2="384.85" y2="271.93"></line><line class="circular-preview__tick" x1="492.01" y1="228.63" x2="482.83" y2="206.46"></line>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="1"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_4"
+            data-tooltip-name="lacI"
+            data-tooltip-meta="cds | Strand -"
+            data-tooltip-location="2016..3098"
+            data-tooltip-description="pLannotate"
+            d="M 864.91 657.11 L 856.05 685.20 A 326.00 326.00 0 0 1 548.67 807.66 L 551.42 789.87 A 308.00 308.00 0 0 0 841.82 674.17 Z"
+            aria-label="lacI (2016..3098) - pLannotate"
+            fill="#479f71"
+            stroke="#3d8a69"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="2"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_5"
+            data-tooltip-name="KanR"
+            data-tooltip-meta="cds | Strand -"
+            data-tooltip-location="4972..5787"
+            data-tooltip-description="pLannotate"
+            d="M 332.25 313.27 L 341.17 285.20 A 326.00 326.00 0 0 1 556.56 162.17 L 558.87 180.02 A 308.00 308.00 0 0 0 355.38 296.25 Z"
+            aria-label="KanR (4972..5787) - pLannotate"
+            fill="#479f71"
+            stroke="#3d8a69"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="3"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="protein_builder_insert"
+            data-tooltip-name="Protein Builder Insert"
+            data-tooltip-meta="insert | Strand +"
+            data-tooltip-location="3573..4253"
+            data-tooltip-description="Protein Builder insert assembled from 3 DNA block(s)."
+            d="M 399.23 743.56 A 326.00 326.00 0 0 1 284.79 574.49 L 287.06 545.12 L 302.10 569.57 A 308.00 308.00 0 0 0 410.23 729.31 Z"
+            aria-label="Protein Builder Insert (3573..4253) - Protein Builder insert assembled from 3 DNA block(s)."
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="4"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_1"
+            data-tooltip-name="ori"
+            data-tooltip-meta="rep_origin | Strand +"
+            data-tooltip-location="1..589"
+            data-tooltip-description="pLannotate"
+            d="M 598.40 159.47 A 326.00 326.00 0 0 1 765.77 205.72 L 784.24 228.66 L 756.53 221.16 A 308.00 308.00 0 0 0 598.40 177.47 Z"
+            aria-label="ori (1..589) - pLannotate"
+            fill="#4e7fff"
+            stroke="#436fdd"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="5"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_2"
+            data-tooltip-name="f1 ori"
+            data-tooltip-meta="rep_origin | Strand +"
+            data-tooltip-location="4425..4853"
+            data-tooltip-description="pLannotate"
+            d="M 272.41 487.90 A 326.00 326.00 0 0 1 293.47 370.16 L 312.79 347.93 L 310.31 376.53 A 308.00 308.00 0 0 0 290.41 487.77 Z"
+            aria-label="f1 ori (4425..4853) - pLannotate"
+            fill="#4e7fff"
+            stroke="#436fdd"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="6"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_16"
+            data-tooltip-name="YPB1_ECOLX"
+            data-tooltip-meta="cds | Strand +"
+            data-tooltip-location="1224..1604"
+            data-tooltip-description="pLannotate"
+            d="M 912.58 398.48 A 326.00 326.00 0 0 1 924.03 501.05 L 912.51 528.16 L 906.05 500.19 A 308.00 308.00 0 0 0 895.23 403.28 Z"
+            aria-label="YPB1_ECOLX (1224..1604) - pLannotate"
+            fill="#479f71"
+            stroke="#3d8a69"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="7"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_13"
+            data-tooltip-name="TcR (fragment)"
+            data-tooltip-meta="cds | Strand -"
+            data-tooltip-location="1676..1967"
+            data-tooltip-description="pLannotate"
+            d="M 908.40 551.73 L 910.05 581.14 A 326.00 326.00 0 0 1 881.13 647.77 L 865.52 638.81 A 308.00 308.00 0 0 0 892.84 575.86 Z"
+            aria-label="TcR (fragment) (1676..1967) - pLannotate"
+            fill="#479f71"
+            stroke="#3d8a69"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="8"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_14"
+            data-tooltip-name="TcR (fragment)"
+            data-tooltip-meta="cds | Strand -"
+            data-tooltip-location="3184..3463"
+            data-tooltip-description="pLannotate"
+            d="M 521.96 793.12 L 492.51 793.80 A 326.00 326.00 0 0 1 430.42 764.86 L 439.70 749.44 A 308.00 308.00 0 0 0 498.36 776.77 Z"
+            aria-label="TcR (fragment) (3184..3463) - pLannotate"
+            fill="#479f71"
+            stroke="#3d8a69"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="9"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_3"
+            data-tooltip-name="rop"
+            data-tooltip-meta="cds | Strand -"
+            data-tooltip-location="1016..1207"
+            data-tooltip-description="pLannotate"
+            d="M 877.90 335.91 L 898.15 357.30 A 326.00 326.00 0 0 1 911.05 393.14 L 893.79 398.24 A 308.00 308.00 0 0 0 881.60 364.38 Z"
+            aria-label="rop (1016..1207) - pLannotate"
+            fill="#479f71"
+            stroke="#3d8a69"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="10"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_11"
+            data-tooltip-name="bom"
+            data-tooltip-meta="misc_feature | Strand -"
+            data-tooltip-location="775..914"
+            data-tooltip-description="pLannotate"
+            d="M 830.85 269.94 L 853.28 282.22 A 326.00 326.00 0 0 1 867.69 301.74 L 852.82 311.88 A 308.00 308.00 0 0 0 839.20 293.44 Z"
+            aria-label="bom (775..914) - pLannotate"
+            fill="#2f8f9d"
+            stroke="#297c8d"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="11"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_6"
+            data-tooltip-name="lacI promoter"
+            data-tooltip-meta="promoter | Strand -"
+            data-tooltip-location="3099..3176"
+            data-tooltip-description="pLannotate"
+            d="M 550.04 798.76 L 535.35 805.32 A 326.00 326.00 0 0 1 522.15 802.43 L 526.36 784.93 A 308.00 308.00 0 0 0 538.83 787.66 Z"
+            aria-label="lacI promoter (3099..3176) - pLannotate"
+            fill="#8b5cf6"
+            stroke="#7553d6"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="12"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_15"
+            data-tooltip-name="AmpR promoter (fragment)"
+            data-tooltip-meta="promoter | Strand +"
+            data-tooltip-location="4906..4963"
+            data-tooltip-description="pLannotate"
+            d="M 312.95 328.01 A 326.00 326.00 0 0 1 317.94 319.28 L 330.80 315.54 L 333.43 328.46 A 308.00 308.00 0 0 0 328.71 336.70 Z"
+            aria-label="AmpR promoter (fragment) (4906..4963) - pLannotate"
+            fill="#8b5cf6"
+            stroke="#7553d6"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="13"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_18"
+            data-tooltip-name="SET1 (fragment)"
+            data-tooltip-meta="cds | Strand +"
+            data-tooltip-location="4284..4333"
+            data-tooltip-description="pLannotate"
+            d="M 276.43 536.57 A 326.00 326.00 0 0 1 275.19 528.00 L 283.12 518.45 L 293.03 525.65 A 308.00 308.00 0 0 0 294.21 533.75 Z"
+            aria-label="SET1 (fragment) (4284..4333) - pLannotate"
+            fill="#479f71"
+            stroke="#3d8a69"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="14"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_7"
+            data-tooltip-name="T7 terminator"
+            data-tooltip-meta="terminator | Strand +"
+            data-tooltip-location="4341..4388"
+            data-tooltip-description="pLannotate"
+            d="M 273.93 516.97 A 326.00 326.00 0 0 1 273.23 508.68 L 281.73 499.96 L 291.18 507.40 A 308.00 308.00 0 0 0 291.84 515.23 Z"
+            aria-label="T7 terminator (4341..4388) - pLannotate"
+            fill="#f6a35e"
+            stroke="#cd8d59"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="15"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_8"
+            data-tooltip-name="lac operator"
+            data-tooltip-meta="protein_bind | Strand +"
+            data-tooltip-location="3504..3528"
+            data-tooltip-description="pLannotate"
+            d="M 418.69 757.47 A 326.00 326.00 0 0 1 415.09 755.05 L 416.68 745.22 L 425.21 740.17 A 308.00 308.00 0 0 0 428.61 742.45 Z"
+            aria-label="lac operator (3504..3528) - pLannotate"
+            fill="#f6a35e"
+            stroke="#cd8d59"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="16"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_9"
+            data-tooltip-name="RBS"
+            data-tooltip-meta="rbs | Strand +"
+            data-tooltip-location="3543..3565"
+            data-tooltip-description="pLannotate"
+            d="M 407.57 749.78 A 326.00 326.00 0 0 1 404.35 747.43 L 406.61 737.87 L 415.06 732.96 A 308.00 308.00 0 0 0 418.10 735.19 Z"
+            aria-label="RBS (3543..3565) - pLannotate"
+            fill="#c97064"
+            stroke="#a8635e"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="17"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_17"
+            data-tooltip-name="CAP binding site"
+            data-tooltip-meta="protein_bind | Strand -"
+            data-tooltip-location="1982..2003"
+            data-tooltip-description="pLannotate"
+            d="M 870.94 647.37 L 876.71 655.23 A 326.00 326.00 0 0 1 874.71 658.47 L 859.45 648.92 A 308.00 308.00 0 0 0 861.35 645.86 Z"
+            aria-label="CAP binding site (1982..2003) - pLannotate"
+            fill="#f6a35e"
+            stroke="#cd8d59"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="18"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_10"
+            data-tooltip-name="T7 promoter"
+            data-tooltip-meta="promoter | Strand +"
+            data-tooltip-location="3485..3503"
+            data-tooltip-description="pLannotate"
+            d="M 424.22 761.04 A 326.00 326.00 0 0 1 421.45 759.27 L 423.65 749.96 L 431.22 744.15 A 308.00 308.00 0 0 0 433.84 745.83 Z"
+            aria-label="T7 promoter (3485..3503) - pLannotate"
+            fill="#8b5cf6"
+            stroke="#7553d6"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="19"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_19"
+            data-tooltip-name="9xHis (fragment)"
+            data-tooltip-meta="cds | Strand +"
+            data-tooltip-location="4257..4274"
+            data-tooltip-description="pLannotate"
+            d="M 278.03 545.80 A 326.00 326.00 0 0 1 276.93 539.65 L 294.68 536.66 A 308.00 308.00 0 0 0 295.72 542.47 Z"
+            aria-label="9xHis (fragment) (4257..4274) - pLannotate"
+            fill="#479f71"
+            stroke="#3d8a69"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="20"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="protein_builder_insert_part_3"
+            data-tooltip-name="GFP(1-10)"
+            data-tooltip-meta="misc_feature | Strand +"
+            data-tooltip-location="3612..4253"
+            data-tooltip-description="Protein Builder DNA block (642 bp)."
+            d="M 369.41 758.05 A 356.00 356.00 0 0 1 255.93 582.68 L 257.60 550.77 L 273.24 577.77 A 338.00 338.00 0 0 0 380.98 744.27 Z"
+            aria-label="GFP(1-10) (3612..4253) - Protein Builder DNA block (642 bp)."
+            fill="#2f8f9d"
+            stroke="#297c8d"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="21"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="protein_builder_insert_part_2"
+            data-tooltip-name="TEV protease"
+            data-tooltip-meta="misc_feature | Strand +"
+            data-tooltip-location="3591..3611"
+            data-tooltip-description="Protein Builder DNA block (21 bp)."
+            d="M 375.55 763.10 A 356.00 356.00 0 0 1 372.46 760.59 L 375.20 751.16 L 383.89 746.68 A 338.00 338.00 0 0 0 386.82 749.06 Z"
+            aria-label="TEV protease (3591..3611) - Protein Builder DNA block (21 bp)."
+            fill="#2f8f9d"
+            stroke="#297c8d"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="22"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_20"
+            data-tooltip-name="T7 promoter"
+            data-tooltip-meta="promoter | Strand +"
+            data-tooltip-location="3485..3503"
+            data-tooltip-description="Matched exported promoter T7 promoter with the nearest ORF 68 bp downstream."
+            d="M 408.20 786.40 A 356.00 356.00 0 0 1 405.17 784.47 L 407.12 774.99 L 414.94 769.35 A 338.00 338.00 0 0 0 417.81 771.19 Z"
+            aria-label="T7 promoter (3485..3503) - Matched exported promoter T7 promoter with the nearest ORF 68 bp downstream."
+            fill="#8b5cf6"
+            stroke="#7553d6"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="23"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="protein_builder_insert_part_1"
+            data-tooltip-name="6xHis"
+            data-tooltip-meta="misc_feature | Strand +"
+            data-tooltip-location="3573..3590"
+            data-tooltip-description="Protein Builder DNA block (18 bp)."
+            d="M 380.91 767.31 A 356.00 356.00 0 0 1 375.55 763.10 L 386.82 749.06 A 338.00 338.00 0 0 0 391.90 753.06 Z"
+            aria-label="6xHis (3573..3590) - Protein Builder DNA block (18 bp)."
+            fill="#2f8f9d"
+            stroke="#297c8d"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="24"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_22"
+            data-tooltip-name="Backbone (pasted_sequence)"
+            data-tooltip-meta="backbone | Strand +"
+            data-tooltip-location="1..3569, 4257..5908"
+            data-tooltip-description="pasted_sequence saved vector recognized with 5,221 bp exact backbone coverage (93.3% of host, forward orientation; restr"
+            d="M 598.40 99.47 A 386.00 386.00 0 1 1 391.15 811.11 L 369.03 784.67 L 400.81 795.93 A 368.00 368.00 0 1 0 598.40 117.47 Z"
+            aria-label="Backbone (pasted_sequence) (1..3569, 4257..5908) - pasted_sequence saved vector recognized with 5,221 bp exact backbone coverage (93.3% of host, forward orientation; restr"
+            fill="#c97064"
+            stroke="#a8635e"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="24"
+            data-segment-index="2"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_22"
+            data-tooltip-name="Backbone (pasted_sequence)"
+            data-tooltip-meta="backbone | Strand +"
+            data-tooltip-location="1..3569, 4257..5908"
+            data-tooltip-description="pasted_sequence saved vector recognized with 5,221 bp exact backbone coverage (93.3% of host, forward orientation; restr"
+            d="M 219.07 556.90 A 386.00 386.00 0 0 1 564.76 100.94 L 598.40 108.47 L 566.33 118.87 A 368.00 368.00 0 0 0 236.76 553.57 Z"
+            aria-label="Backbone (pasted_sequence) (1..3569, 4257..5908) - pasted_sequence saved vector recognized with 5,221 bp exact backbone coverage (93.3% of host, forward orientation; restr"
+            fill="#c97064"
+            stroke="#a8635e"></path>
+        
+        
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_4"
+          data-tooltip-name="lacI"
+          data-tooltip-meta="cds | Strand -"
+          data-tooltip-location="2016..3098"
+          data-tooltip-description="pLannotate"
+          data-feature-x="733.79"
+          data-feature-y="786.42"
+          data-bend-x="772.35"
+          data-bend-y="872.15"
+          data-label-center-y="858.81"
+          aria-label="lacI (2016..3098) - pLannotate">
+          <path class="circular-preview__leader"
+            d="M 733.79 786.42 L 772.35 872.15 L 1030.40 858.81"
+            stroke="#3d8a69"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1030.40"
+            y="845.81"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e5f2eb"
+            stroke="#3d8a69"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1042.40"
+              y="858.81"
+              text-anchor="start"
+              fill="#0f223e">
+              lacI
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_5"
+          data-tooltip-name="KanR"
+          data-tooltip-meta="cds | Strand -"
+          data-tooltip-location="4972..5787"
+          data-tooltip-description="pLannotate"
+          data-feature-x="422.38"
+          data-feature-y="206.33"
+          data-bend-x="372.25"
+          data-bend-y="126.82"
+          data-label-center-y="90.57"
+          aria-label="KanR (4972..5787) - pLannotate">
+          <path class="circular-preview__leader"
+            d="M 422.38 206.33 L 372.25 126.82 L 1030.40 90.57"
+            stroke="#3d8a69"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1030.40"
+            y="77.57"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e5f2eb"
+            stroke="#3d8a69"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1042.40"
+              y="90.57"
+              text-anchor="start"
+              fill="#0f223e">
+              KanR
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="protein_builder_insert"
+          data-tooltip-name="Protein Builder Insert"
+          data-tooltip-meta="insert | Strand +"
+          data-tooltip-location="3573..4253"
+          data-tooltip-description="Protein Builder insert assembled from 3 DNA block(s)."
+          data-feature-x="317.31"
+          data-feature-y="658.36"
+          data-bend-x="237.25"
+          data-bend-y="707.61"
+          data-label-center-y="687.61"
+          aria-label="Protein Builder Insert (3573..4253) - Protein Builder insert assembled from 3 DNA block(s).">
+          <path class="circular-preview__leader"
+            d="M 317.31 658.36 L 237.25 707.61 L 166.40 687.61"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="46.80"
+            y="665.61"
+            width="119.60"
+            height="44.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="154.40"
+              y="678.61"
+              text-anchor="end"
+              fill="#0f223e">
+              Protein
+            </text>
+          
+            <text
+              class="circular-preview__label-text"
+              x="154.40"
+              y="696.61"
+              text-anchor="end"
+              fill="#0f223e">
+              Builder Insert
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_1"
+          data-tooltip-name="ori"
+          data-tooltip-meta="rep_origin | Strand +"
+          data-tooltip-location="1..589"
+          data-tooltip-description="pLannotate"
+          data-feature-x="700.08"
+          data-feature-y="171.53"
+          data-bend-x="729.04"
+          data-bend-y="82.10"
+          data-label-center-y="45.00"
+          aria-label="ori (1..589) - pLannotate">
+          <path class="circular-preview__leader"
+            d="M 700.08 171.53 L 729.04 82.10 L 1030.40 45.00"
+            stroke="#436fdd"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1030.40"
+            y="32.00"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e6edff"
+            stroke="#436fdd"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1042.40"
+              y="45.00"
+              text-anchor="start"
+              fill="#0f223e">
+              ori
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_2"
+          data-tooltip-name="f1 ori"
+          data-tooltip-meta="rep_origin | Strand +"
+          data-tooltip-location="4425..4853"
+          data-tooltip-description="pLannotate"
+          data-feature-x="276.40"
+          data-feature-y="413.24"
+          data-bend-x="184.68"
+          data-bend-y="392.66"
+          data-label-center-y="325.40"
+          aria-label="f1 ori (4425..4853) - pLannotate">
+          <path class="circular-preview__leader"
+            d="M 276.40 413.24 L 184.68 392.66 L 166.40 325.40"
+            stroke="#436fdd"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="80.40"
+            y="312.40"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e6edff"
+            stroke="#436fdd"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="154.40"
+              y="325.40"
+              text-anchor="end"
+              fill="#0f223e">
+              f1 ori
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_16"
+          data-tooltip-name="YPB1_ECOLX"
+          data-tooltip-meta="cds | Strand +"
+          data-tooltip-location="1224..1604"
+          data-tooltip-description="pLannotate"
+          data-feature-x="927.65"
+          data-feature-y="463.20"
+          data-bend-x="1021.43"
+          data-bend-y="456.86"
+          data-label-center-y="426.83"
+          aria-label="YPB1_ECOLX (1224..1604) - pLannotate">
+          <path class="circular-preview__leader"
+            d="M 927.65 463.20 L 1021.43 456.86 L 1030.40 426.83"
+            stroke="#3d8a69"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1030.40"
+            y="413.83"
+            width="90.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e5f2eb"
+            stroke="#3d8a69"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1042.40"
+              y="426.83"
+              text-anchor="start"
+              fill="#0f223e">
+              YPB1_ECOLX
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_13"
+          data-tooltip-name="TcR (fragment)"
+          data-tooltip-meta="cds | Strand -"
+          data-tooltip-location="1676..1967"
+          data-tooltip-description="pLannotate"
+          data-feature-x="906.56"
+          data-feature-y="603.53"
+          data-bend-x="994.34"
+          data-bend-y="637.15"
+          data-label-center-y="643.76"
+          aria-label="TcR (fragment) (1676..1967) - pLannotate">
+          <path class="circular-preview__leader"
+            d="M 906.56 603.53 L 994.34 637.15 L 1030.40 643.76"
+            stroke="#3d8a69"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1030.40"
+            y="630.76"
+            width="119.60"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e5f2eb"
+            stroke="#3d8a69"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1042.40"
+              y="643.76"
+              text-anchor="start"
+              fill="#0f223e">
+              TcR (fragment)
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_14"
+          data-tooltip-name="TcR (fragment)"
+          data-tooltip-meta="cds | Strand -"
+          data-tooltip-location="3184..3463"
+          data-tooltip-description="pLannotate"
+          data-feature-x="472.20"
+          data-feature-y="790.39"
+          data-bend-x="436.25"
+          data-bend-y="877.24"
+          data-label-center-y="898.81"
+          aria-label="TcR (fragment) (3184..3463) - pLannotate">
+          <path class="circular-preview__leader"
+            d="M 472.20 790.39 L 436.25 877.24 L 1030.40 898.81"
+            stroke="#3d8a69"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1030.40"
+            y="885.81"
+            width="119.60"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e5f2eb"
+            stroke="#3d8a69"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1042.40"
+              y="898.81"
+              text-anchor="start"
+              fill="#0f223e">
+              TcR (fragment)
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_3"
+          data-tooltip-name="rop"
+          data-tooltip-meta="cds | Strand -"
+          data-tooltip-location="1016..1207"
+          data-tooltip-description="pLannotate"
+          data-feature-x="903.71"
+          data-feature-y="360.24"
+          data-bend-x="990.68"
+          data-bend-y="324.57"
+          data-label-center-y="292.05"
+          aria-label="rop (1016..1207) - pLannotate">
+          <path class="circular-preview__leader"
+            d="M 903.71 360.24 L 990.68 324.57 L 1030.40 292.05"
+            stroke="#3d8a69"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1030.40"
+            y="279.05"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e5f2eb"
+            stroke="#3d8a69"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1042.40"
+              y="292.05"
+              text-anchor="start"
+              fill="#0f223e">
+              rop
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_11"
+          data-tooltip-name="bom"
+          data-tooltip-meta="misc_feature | Strand -"
+          data-tooltip-location="775..914"
+          data-tooltip-description="pLannotate"
+          data-feature-x="856.40"
+          data-feature-y="279.72"
+          data-bend-x="929.90"
+          data-bend-y="221.11"
+          data-label-center-y="186.64"
+          aria-label="bom (775..914) - pLannotate">
+          <path class="circular-preview__leader"
+            d="M 856.40 279.72 L 929.90 221.11 L 1030.40 186.64"
+            stroke="#297c8d"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1030.40"
+            y="173.64"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e2eff1"
+            stroke="#297c8d"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1042.40"
+              y="186.64"
+              text-anchor="start"
+              fill="#0f223e">
+              bom
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_6"
+          data-tooltip-name="lacI promoter"
+          data-tooltip-meta="promoter | Strand -"
+          data-tooltip-location="3099..3176"
+          data-tooltip-description="pLannotate"
+          data-feature-x="534.58"
+          data-feature-y="809.24"
+          data-bend-x="516.40"
+          data-bend-y="901.47"
+          data-label-center-y="938.81"
+          aria-label="lacI promoter (3099..3176) - pLannotate">
+          <path class="circular-preview__leader"
+            d="M 534.58 809.24 L 516.40 901.47 L 1030.40 938.81"
+            stroke="#7553d6"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1030.40"
+            y="925.81"
+            width="112.20"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#efe8fe"
+            stroke="#7553d6"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1042.40"
+              y="938.81"
+              text-anchor="start"
+              fill="#0f223e">
+              lacI promoter
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_15"
+          data-tooltip-name="AmpR promoter (fragment)"
+          data-tooltip-meta="promoter | Strand +"
+          data-tooltip-location="4906..4963"
+          data-tooltip-description="pLannotate"
+          data-feature-x="314.50"
+          data-feature-y="317.24"
+          data-bend-x="233.63"
+          data-bend-y="269.32"
+          data-label-center-y="199.73"
+          aria-label="AmpR promoter (fragment) (4906..4963) - pLannotate">
+          <path class="circular-preview__leader"
+            d="M 314.50 317.24 L 233.63 269.32 L 166.40 199.73"
+            stroke="#7553d6"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="54.20"
+            y="177.73"
+            width="112.20"
+            height="44.00"
+            rx="10"
+            ry="10"
+            fill="#efe8fe"
+            stroke="#7553d6"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="154.40"
+              y="190.73"
+              text-anchor="end"
+              fill="#0f223e">
+              AmpR promoter
+            </text>
+          
+            <text
+              class="circular-preview__label-text"
+              x="154.40"
+              y="208.73"
+              text-anchor="end"
+              fill="#0f223e">
+              (fragment)
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_18"
+          data-tooltip-name="SET1 (fragment)"
+          data-tooltip-meta="cds | Strand +"
+          data-tooltip-location="4284..4333"
+          data-tooltip-description="pLannotate"
+          data-feature-x="271.22"
+          data-feature-y="528.52"
+          data-bend-x="178.02"
+          data-bend-y="540.78"
+          data-label-center-y="490.72"
+          aria-label="SET1 (fragment) (4284..4333) - pLannotate">
+          <path class="circular-preview__leader"
+            d="M 271.22 528.52 L 178.02 540.78 L 166.40 490.72"
+            stroke="#3d8a69"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="39.40"
+            y="477.72"
+            width="127.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e5f2eb"
+            stroke="#3d8a69"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="154.40"
+              y="490.72"
+              text-anchor="end"
+              fill="#0f223e">
+              SET1 (fragment)
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_7"
+          data-tooltip-name="T7 terminator"
+          data-tooltip-meta="terminator | Strand +"
+          data-tooltip-location="4341..4388"
+          data-tooltip-description="pLannotate"
+          data-feature-x="269.24"
+          data-feature-y="508.97"
+          data-bend-x="175.48"
+          data-bend-y="515.66"
+          data-label-center-y="450.72"
+          aria-label="T7 terminator (4341..4388) - pLannotate">
+          <path class="circular-preview__leader"
+            d="M 269.24 508.97 L 175.48 515.66 L 166.40 450.72"
+            stroke="#cd8d59"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="54.20"
+            y="437.72"
+            width="112.20"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#fef2e8"
+            stroke="#cd8d59"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="154.40"
+              y="450.72"
+              text-anchor="end"
+              fill="#0f223e">
+              T7 terminator
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_8"
+          data-tooltip-name="lac operator"
+          data-tooltip-meta="protein_bind | Strand +"
+          data-tooltip-location="3504..3528"
+          data-tooltip-description="pLannotate"
+          data-feature-x="412.84"
+          data-feature-y="758.36"
+          data-bend-x="359.99"
+          data-bend-y="836.09"
+          data-label-center-y="873.81"
+          aria-label="lac operator (3504..3528) - pLannotate">
+          <path class="circular-preview__leader"
+            d="M 412.84 758.36 L 359.99 836.09 L 166.40 873.81"
+            stroke="#cd8d59"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="61.60"
+            y="860.81"
+            width="104.80"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#fef2e8"
+            stroke="#cd8d59"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="154.40"
+              y="873.81"
+              text-anchor="end"
+              fill="#0f223e">
+              lac operator
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_9"
+          data-tooltip-name="RBS"
+          data-tooltip-meta="rbs | Strand +"
+          data-tooltip-location="3543..3565"
+          data-tooltip-description="pLannotate"
+          data-feature-x="401.97"
+          data-feature-y="750.64"
+          data-bend-x="346.02"
+          data-bend-y="826.18"
+          data-label-center-y="833.81"
+          aria-label="RBS (3543..3565) - pLannotate">
+          <path class="circular-preview__leader"
+            d="M 401.97 750.64 L 346.02 826.18 L 166.40 833.81"
+            stroke="#a8635e"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="80.40"
+            y="820.81"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f7ebe9"
+            stroke="#a8635e"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="154.40"
+              y="833.81"
+              text-anchor="end"
+              fill="#0f223e">
+              RBS
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_17"
+          data-tooltip-name="CAP binding site"
+          data-tooltip-meta="protein_bind | Strand -"
+          data-tooltip-location="1982..2003"
+          data-tooltip-description="pLannotate"
+          data-feature-x="880.13"
+          data-feature-y="657.31"
+          data-bend-x="960.38"
+          data-bend-y="706.26"
+          data-label-center-y="683.76"
+          aria-label="CAP binding site (1982..2003) - pLannotate">
+          <path class="circular-preview__leader"
+            d="M 880.13 657.31 L 960.38 706.26 L 1030.40 683.76"
+            stroke="#cd8d59"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1030.40"
+            y="670.76"
+            width="134.40"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#fef2e8"
+            stroke="#cd8d59"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1042.40"
+              y="683.76"
+              text-anchor="start"
+              fill="#0f223e">
+              CAP binding site
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_10"
+          data-tooltip-name="T7 promoter"
+          data-tooltip-meta="promoter | Strand +"
+          data-tooltip-location="3485..3503"
+          data-tooltip-description="pLannotate"
+          data-feature-x="419.28"
+          data-feature-y="762.63"
+          data-bend-x="368.26"
+          data-bend-y="841.58"
+          data-label-center-y="818.81"
+          aria-label="T7 promoter (3485..3503) - pLannotate">
+          <path class="circular-preview__leader"
+            d="M 419.28 762.63 L 368.26 841.58 L 1030.40 818.81"
+            stroke="#7553d6"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1030.40"
+            y="805.81"
+            width="97.40"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#efe8fe"
+            stroke="#7553d6"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1042.40"
+              y="818.81"
+              text-anchor="start"
+              fill="#0f223e">
+              T7 promoter
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_19"
+          data-tooltip-name="9xHis (fragment)"
+          data-tooltip-meta="cds | Strand +"
+          data-tooltip-location="4257..4274"
+          data-tooltip-description="pLannotate"
+          data-feature-x="273.53"
+          data-feature-y="543.43"
+          data-bend-x="180.99"
+          data-bend-y="559.94"
+          data-label-center-y="530.72"
+          aria-label="9xHis (fragment) (4257..4274) - pLannotate">
+          <path class="circular-preview__leader"
+            d="M 273.53 543.43 L 180.99 559.94 L 166.40 530.72"
+            stroke="#3d8a69"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="32.00"
+            y="517.72"
+            width="134.40"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e5f2eb"
+            stroke="#3d8a69"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="154.40"
+              y="530.72"
+              text-anchor="end"
+              fill="#0f223e">
+              9xHis (fragment)
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="protein_builder_insert_part_3"
+          data-tooltip-name="GFP(1-10)"
+          data-tooltip-meta="misc_feature | Strand +"
+          data-tooltip-location="3612..4253"
+          data-tooltip-description="Protein Builder DNA block (642 bp)."
+          data-feature-x="287.91"
+          data-feature-y="667.68"
+          data-bend-x="232.72"
+          data-bend-y="700.07"
+          data-label-center-y="638.61"
+          aria-label="GFP(1-10) (3612..4253) - Protein Builder DNA block (642 bp).">
+          <path class="circular-preview__leader"
+            d="M 287.91 667.68 L 232.72 700.07 L 166.40 638.61"
+            stroke="#297c8d"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="80.40"
+            y="625.61"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e2eff1"
+            stroke="#297c8d"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="154.40"
+              y="638.61"
+              text-anchor="end"
+              fill="#0f223e">
+              GFP(1-10)
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="protein_builder_insert_part_2"
+          data-tooltip-name="TEV protease"
+          data-tooltip-meta="misc_feature | Strand +"
+          data-tooltip-location="3591..3611"
+          data-tooltip-description="Protein Builder DNA block (21 bp)."
+          data-feature-x="369.93"
+          data-feature-y="763.68"
+          data-bend-x="329.31"
+          data-bend-y="813.14"
+          data-label-center-y="753.81"
+          aria-label="TEV protease (3591..3611) - Protein Builder DNA block (21 bp).">
+          <path class="circular-preview__leader"
+            d="M 369.93 763.68 L 329.31 813.14 L 166.40 753.81"
+            stroke="#297c8d"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="61.60"
+            y="740.81"
+            width="104.80"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e2eff1"
+            stroke="#297c8d"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="154.40"
+              y="753.81"
+              text-anchor="end"
+              fill="#0f223e">
+              TEV protease
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_20"
+          data-tooltip-name="T7 promoter"
+          data-tooltip-meta="promoter | Strand +"
+          data-tooltip-location="3485..3503"
+          data-tooltip-description="Matched exported promoter T7 promoter with the nearest ORF 68 bp downstream."
+          data-feature-x="402.99"
+          data-feature-y="787.82"
+          data-bend-x="368.26"
+          data-bend-y="841.58"
+          data-label-center-y="913.81"
+          aria-label="T7 promoter (3485..3503) - Matched exported promoter T7 promoter with the nearest ORF 68 bp downstream.">
+          <path class="circular-preview__leader"
+            d="M 402.99 787.82 L 368.26 841.58 L 166.40 913.81"
+            stroke="#7553d6"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="69.00"
+            y="900.81"
+            width="97.40"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#efe8fe"
+            stroke="#7553d6"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="154.40"
+              y="913.81"
+              text-anchor="end"
+              fill="#0f223e">
+              T7 promoter
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="protein_builder_insert_part_1"
+          data-tooltip-name="6xHis"
+          data-tooltip-meta="misc_feature | Strand +"
+          data-tooltip-location="3573..3590"
+          data-tooltip-description="Protein Builder DNA block (18 bp)."
+          data-feature-x="375.74"
+          data-feature-y="768.36"
+          data-bend-x="336.16"
+          data-bend-y="818.65"
+          data-label-center-y="793.81"
+          aria-label="6xHis (3573..3590) - Protein Builder DNA block (18 bp).">
+          <path class="circular-preview__leader"
+            d="M 375.74 768.36 L 336.16 818.65 L 166.40 793.81"
+            stroke="#297c8d"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="80.40"
+            y="780.81"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e2eff1"
+            stroke="#297c8d"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="154.40"
+              y="793.81"
+              text-anchor="end"
+              fill="#0f223e">
+              6xHis
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_22"
+          data-tooltip-name="Backbone (pasted_sequence)"
+          data-tooltip-meta="backbone | Strand +"
+          data-tooltip-location="1..3569, 4257..5908"
+          data-tooltip-description="pasted_sequence saved vector recognized with 5,221 bp exact backbone coverage (93.3% of host, forward orientation; restr"
+          data-feature-x="967.73"
+          data-feature-y="610.75"
+          data-bend-x="999.93"
+          data-bend-y="621.67"
+          data-label-center-y="594.76"
+          aria-label="Backbone (pasted_sequence) (1..3569, 4257..5908) - pasted_sequence saved vector recognized with 5,221 bp exact backbone coverage (93.3% of host, forward orientation; restr">
+          <path class="circular-preview__leader"
+            d="M 967.73 610.75 L 999.93 621.67 L 1030.40 594.76"
+            stroke="#a8635e"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1030.40"
+            y="572.76"
+            width="141.80"
+            height="44.00"
+            rx="10"
+            ry="10"
+            fill="#f7ebe9"
+            stroke="#a8635e"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1042.40"
+              y="585.76"
+              text-anchor="start"
+              fill="#0f223e">
+              Backbone
+            </text>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1042.40"
+              y="603.76"
+              text-anchor="start"
+              fill="#0f223e">
+              (pasted_sequence)
+            </text>
+          
+        </g>
+      
+        
+    <g class="circular-preview__center">
+      <circle cx="598.40" cy="485.47" r="234.00" class="circular-preview__center-disc"></circle>
+      <text x="598.40" y="471.47" class="circular-preview__title">Protein Builder Insert (004_CD22)</text>
+      <text x="598.40" y="503.47" class="circular-preview__subtitle">5,908 bp · 24 features</text>
+    </g>
+  
+      </g>
+    </svg>
+  </main>
+  
+  <script>
+    (() => {
+      const LABEL_PADDING_X = 12;
+      const MIN_LABEL_WIDTH = 70;
+      const VIEWBOX_GUTTER = 32;
+      const TOOLTIP_OFFSET = 12;
+
+      function escapeText(value) {
+        return String(value || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function ensureTooltipNode() {
+        let node = document.querySelector('.circular-preview__hover-tooltip');
+        if (node) {
+          return node;
+        }
+        node = document.createElement('div');
+        node.className = 'circular-preview__hover-tooltip';
+        node.hidden = true;
+        document.body.appendChild(node);
+        return node;
+      }
+
+      function hideTooltip() {
+        const tooltip = document.querySelector('.circular-preview__hover-tooltip');
+        if (tooltip) {
+          tooltip.hidden = true;
+          tooltip.dataset.owner = '';
+        }
+      }
+
+      function buildTooltipHtml(target) {
+        const name = String(target?.dataset?.tooltipName || '').trim();
+        const meta = String(target?.dataset?.tooltipMeta || '').trim();
+        const location = String(target?.dataset?.tooltipLocation || '').trim();
+        const description = String(target?.dataset?.tooltipDescription || '').trim();
+        if (!name && !meta && !location && !description) {
+          return '';
+        }
+        return [
+          name ? '<p class="circular-preview__hover-title">' + escapeText(name) + '</p>' : '',
+          meta ? '<p>' + escapeText(meta) + '</p>' : '',
+          location ? '<p>' + escapeText(location) + '</p>' : '',
+          description ? '<p class="circular-preview__hover-description">' + escapeText(description) + '</p>' : ''
+        ].filter(Boolean).join('');
+      }
+
+      function positionTooltip(tooltip, event) {
+        const rawX = Number(event?.clientX);
+        const rawY = Number(event?.clientY);
+        const startX = Number.isFinite(rawX) ? rawX + TOOLTIP_OFFSET : TOOLTIP_OFFSET;
+        const startY = Number.isFinite(rawY) ? rawY + TOOLTIP_OFFSET : TOOLTIP_OFFSET;
+        const tooltipRect = tooltip.getBoundingClientRect();
+        const viewportWidth = Number(window?.innerWidth) || 0;
+        const viewportHeight = Number(window?.innerHeight) || 0;
+
+        let left = Math.max(8, startX);
+        let top = Math.max(8, startY);
+
+        if (viewportWidth > 0) {
+          left = Math.min(left, Math.max(8, viewportWidth - tooltipRect.width - 8));
+        }
+        if (viewportHeight > 0) {
+          top = Math.min(top, Math.max(8, viewportHeight - tooltipRect.height - 8));
+        }
+
+        tooltip.style.left = left.toFixed(0) + 'px';
+        tooltip.style.top = top.toFixed(0) + 'px';
+      }
+
+      function showTooltip(target, event) {
+        const html = buildTooltipHtml(target);
+        if (!html) {
+          hideTooltip();
+          return;
+        }
+        const tooltip = ensureTooltipNode();
+        const ownerKey = String(target?.dataset?.tooltipKey || '');
+        if (tooltip.dataset.owner !== ownerKey) {
+          tooltip.innerHTML = html;
+          tooltip.dataset.owner = ownerKey;
+        }
+        tooltip.hidden = false;
+        positionTooltip(tooltip, event);
+      }
+
+      function bindFeatureHoverCards() {
+        const svg = document.querySelector('.preview-shell svg');
+        if (!svg || svg.dataset.hoverCardsBound === 'true') {
+          return;
+        }
+
+        svg.dataset.hoverCardsBound = 'true';
+        svg.querySelectorAll('[data-preview-tooltip="feature"]').forEach((node) => {
+          node.addEventListener('pointerenter', (event) => {
+            showTooltip(node, event);
+          });
+          node.addEventListener('pointermove', (event) => {
+            showTooltip(node, event);
+          });
+          node.addEventListener('pointerleave', () => {
+            hideTooltip();
+          });
+        });
+
+        svg.addEventListener('pointerleave', () => {
+          hideTooltip();
+        });
+        window.addEventListener('blur', () => {
+          hideTooltip();
+        });
+      }
+
+      function fitAnnotationBoxes() {
+        const svg = document.querySelector('.preview-shell svg');
+        const scene = svg?.querySelector('.circular-preview__scene');
+        if (!svg || !scene) {
+          return;
+        }
+
+        svg.querySelectorAll('.circular-preview__annotation').forEach((annotation) => {
+          const rect = annotation.querySelector('.circular-preview__label-box');
+          const leader = annotation.querySelector('.circular-preview__leader');
+          const textNodes = annotation.querySelectorAll('.circular-preview__label-text');
+          if (!rect || !leader || !textNodes.length) {
+            return;
+          }
+
+          let minX = Number.POSITIVE_INFINITY;
+          let maxX = Number.NEGATIVE_INFINITY;
+          textNodes.forEach((node) => {
+            const box = node.getBBox();
+            if (!Number.isFinite(box.x) || !Number.isFinite(box.width)) {
+              return;
+            }
+            minX = Math.min(minX, box.x);
+            maxX = Math.max(maxX, box.x + box.width);
+          });
+
+          if (!Number.isFinite(minX) || !Number.isFinite(maxX)) {
+            return;
+          }
+
+          const width = Math.max(MIN_LABEL_WIDTH, (maxX - minX) + (LABEL_PADDING_X * 2));
+          const x = minX - LABEL_PADDING_X;
+          rect.setAttribute('x', x.toFixed(2));
+          rect.setAttribute('width', width.toFixed(2));
+
+          const featureX = Number(annotation.dataset.featureX);
+          const featureY = Number(annotation.dataset.featureY);
+          const bendX = Number(annotation.dataset.bendX);
+          const bendY = Number(annotation.dataset.bendY);
+          const centerY = Number(annotation.dataset.labelCenterY);
+          if (![featureX, featureY, bendX, bendY, centerY].every(Number.isFinite)) {
+            return;
+          }
+
+          const endX = annotation.dataset.labelSide === 'right'
+            ? x
+            : x + width;
+          leader.setAttribute(
+            'd',
+            `M ${featureX.toFixed(2)} ${featureY.toFixed(2)} L ${bendX.toFixed(2)} ${bendY.toFixed(2)} L ${endX.toFixed(2)} ${centerY.toFixed(2)}`
+          );
+        });
+
+        const bounds = scene.getBBox();
+        if (![bounds.x, bounds.y, bounds.width, bounds.height].every(Number.isFinite)) {
+          return;
+        }
+
+        svg.setAttribute(
+          'viewBox',
+          [
+            Math.floor(bounds.x - VIEWBOX_GUTTER),
+            Math.floor(bounds.y - VIEWBOX_GUTTER),
+            Math.ceil(bounds.width + (VIEWBOX_GUTTER * 2)),
+            Math.ceil(bounds.height + (VIEWBOX_GUTTER * 2))
+          ].join(' ')
+        );
+      }
+
+      function scheduleFit() {
+        bindFeatureHoverCards();
+        window.requestAnimationFrame(() => {
+          fitAnnotationBoxes();
+          bindFeatureHoverCards();
+          window.setTimeout(fitAnnotationBoxes, 48);
+        });
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', scheduleFit, { once: true });
+      } else {
+        scheduleFit();
+      }
+
+      if (document.fonts?.ready) {
+        document.fonts.ready.then(scheduleFit).catch(() => {});
+      }
+
+      window.addEventListener('load', scheduleFit, { once: true });
+    })();
+  </script>
+</body>
+</html>

@@ -3,9 +3,9 @@
 Name: Untitled Project
 Folder: Untitled_Project
 ID: project_folder_untitled_project
-Description: None recorded.
+Description: Automatically collected cloning designs from Protein Builder.
 Created: 2026-03-23T16:43:22.543Z
-Updated: 2026-04-23T04:21:11.271Z
+Updated: 2026-04-27T14:44:08.548Z
 
 ## Linked Records
 - Notebook pages: 13

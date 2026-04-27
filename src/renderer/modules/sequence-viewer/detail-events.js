@@ -8,6 +8,7 @@ export function bindSequenceViewerDetailEvents(config = {}) {
   const clearSequenceSelection = config?.clearSequenceSelection || (() => {});
   const hideFeatureContextMenu = config?.hideFeatureContextMenu || (() => {});
   const hideFeatureEditor = config?.hideFeatureEditor || (() => {});
+  const hideSequenceEditDialog = config?.hideSequenceEditDialog || (() => {});
   const hideSequenceHoverTooltip = config?.hideSequenceHoverTooltip || (() => {});
   const showSequenceHoverTooltip = config?.showSequenceHoverTooltip || (() => {});
   const renderActiveRecord = config?.renderActiveRecord || (() => {});
@@ -23,6 +24,9 @@ export function bindSequenceViewerDetailEvents(config = {}) {
   const deleteFeatureFromContext = config?.deleteFeatureFromContext || (async () => {});
   const applyFeatureEditorChanges = config?.applyFeatureEditorChanges || (async () => {});
   const getActiveFeatureActionContext = config?.getActiveFeatureActionContext || (() => null);
+  const openSequenceEditFromKeyboardEvent = config?.openSequenceEditFromKeyboardEvent || (() => false);
+  const applySequenceEditDialog = config?.applySequenceEditDialog || (async () => {});
+  const hasOpenSequenceEditDialog = config?.hasOpenSequenceEditDialog || (() => false);
   const onRequestAnnotate = config?.onRequestAnnotate || (() => {});
   const onRequestRecognizeBackbone = config?.onRequestRecognizeBackbone || (() => {});
   const onRequestClear = config?.onRequestClear || (() => {});
@@ -131,6 +135,7 @@ export function bindSequenceViewerDetailEvents(config = {}) {
     clearSequenceSelection();
     hideFeatureContextMenu();
     hideFeatureEditor();
+    hideSequenceEditDialog();
     onReferenceRecordChanged();
     renderActiveRecord();
     const selected = getSelectedRecord();
@@ -343,6 +348,25 @@ export function bindSequenceViewerDetailEvents(config = {}) {
     }
   });
 
+  elements.sequenceEditForm?.addEventListener('submit', (event) => {
+    event.preventDefault?.();
+    void applySequenceEditDialog();
+  });
+
+  elements.sequenceEditCloseBtn?.addEventListener('click', () => {
+    hideSequenceEditDialog();
+  });
+
+  elements.sequenceEditCancelBtn?.addEventListener('click', () => {
+    hideSequenceEditDialog();
+  });
+
+  elements.sequenceEditOverlay?.addEventListener('click', (event) => {
+    if (event?.target === elements.sequenceEditOverlay) {
+      hideSequenceEditDialog();
+    }
+  });
+
   globalThis.addEventListener?.('mouseup', () => {
     if (!state.isSelectingSequence) {
       return;
@@ -362,6 +386,16 @@ export function bindSequenceViewerDetailEvents(config = {}) {
     if (String(event?.key || '') === 'Escape') {
       hideFeatureContextMenu();
       hideFeatureEditor();
+      hideSequenceEditDialog();
+      return;
+    }
+
+    if (hasOpenSequenceEditDialog()) {
+      return;
+    }
+
+    if (openSequenceEditFromKeyboardEvent(event)) {
+      hideFeatureContextMenu();
     }
   });
 

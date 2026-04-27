@@ -1254,6 +1254,119 @@ test('notebook pdf export includes linked page content and omits notebook type p
   assert.match(pdf.savedFileName, /Expression-Panel-A/i);
 });
 
+test('notebook pdf export paginates wrapped notes and draws result tables as cells', async () => {
+  class MockJsPdf {
+    static instances = [];
+
+    constructor() {
+      this.page = 1;
+      this.addPageCalls = 0;
+      this.textCalls = [];
+      this.rectCalls = [];
+      this.savedFileName = '';
+      this.internal = {
+        pageSize: {
+          getWidth: () => 612,
+          getHeight: () => 260
+        }
+      };
+      MockJsPdf.instances.push(this);
+    }
+
+    setFont() {}
+
+    setFontSize() {}
+
+    setDrawColor() {}
+
+    setFillColor() {}
+
+    splitTextToSize(text) {
+      return String(text || '')
+        .split('\n')
+        .flatMap((line) => line.match(/.{1,32}/g) || ['']);
+    }
+
+    text(value, _x, y) {
+      const lines = Array.isArray(value) ? value : [value];
+      lines.forEach((line) => {
+        this.textCalls.push({
+          page: this.page,
+          y: Number(y),
+          value: String(line || '')
+        });
+      });
+    }
+
+    addPage() {
+      this.page += 1;
+      this.addPageCalls += 1;
+    }
+
+    rect(x, y, width, height, style) {
+      this.rectCalls.push({ x, y, width, height, style });
+    }
+
+    save(fileName) {
+      this.savedFileName = String(fileName || '');
+    }
+  }
+
+  const pdfExportModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'pdf-export.js'), {
+    window: {
+      jspdf: {
+        jsPDF: MockJsPdf
+      },
+      alert() {}
+    }
+  });
+
+  const exportResult = await pdfExportModule.exportNotebookEntryPdf({
+    entry: {
+      id: 'notebook-long',
+      projectName: 'Atlas',
+      protocolName: 'Expression Readout',
+      experimentName: 'Long Notes',
+      notebookState: 'planned',
+      updatedAt: '2026-04-22T14:30:00.000Z',
+      result: Array.from({ length: 18 }, (_unused, index) => (
+        `Observation ${index + 1}: this note is intentionally long enough to wrap inside the PDF export.`
+      )).join('\n'),
+      resultTable: {
+        columns: [
+          { field: 'sample', title: 'Sample' },
+          { field: 'reading', title: 'Reading' }
+        ],
+        rows: [
+          { id: 'row-1', sample: 'Clone 12', reading: '0.82' },
+          { id: 'row-2', sample: 'Clone 18', reading: '0.76' }
+        ]
+      },
+      values: {}
+    },
+    protocol: {
+      id: 'protocol-1',
+      steps: [
+        {
+          id: 'step-1',
+          text: 'Collect expression readout.',
+          placeholders: []
+        }
+      ]
+    }
+  });
+
+  assert.equal(exportResult, true);
+  const pdf = MockJsPdf.instances[0];
+  const allText = pdf.textCalls.map((call) => call.value).join('\n');
+
+  assert.ok(pdf.addPageCalls > 0);
+  assert.ok(pdf.textCalls.every((call) => call.y <= 188), 'Expected text baselines to stay inside the visible page body.');
+  assert.ok(pdf.rectCalls.length >= 6, 'Expected result table cells to be drawn as bordered rectangles.');
+  assert.doesNotMatch(allText, /Sample \| Reading/);
+  assert.match(allText, /Clone 12/);
+});
+
 test('assay pdf export omits mapped well text section', () => {
   class MockJsPdf {
     static instances = [];

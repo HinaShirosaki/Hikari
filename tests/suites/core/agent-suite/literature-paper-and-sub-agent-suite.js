@@ -620,6 +620,147 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
       }
     });
 
+    test('paper context loader prefers extracted PDF text and skips the PDF binary when figures are not needed', async () => {
+      const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'paper-context-pdf-text-'));
+      try {
+        const pdfPath = path.join(tempDir, 'extract.pdf');
+        await fsPromises.writeFile(pdfPath, Buffer.from('%PDF-1.7\nExtracted body'));
+        const calls = [];
+        const extractCalls = [];
+        const runtime = agentPaperContextLoader.createPaperContextLoaderRuntime({
+          pdfTextExtractionRuntime: {
+            extractText: async (options = {}) => {
+              extractCalls.push(options);
+              return {
+                ok: true,
+                status: 'completed',
+                page_count: 4,
+                text: 'Background and results combined into one body of text.',
+                sections: [
+                  { label: 'Abstract', normalized_label: 'abstract', text: 'We engineered a binder against PD-1.', start_page: 1, end_page: 1 },
+                  { label: 'Results', normalized_label: 'results', text: 'The binder rescued T cell killing in coculture by 3.2-fold.', start_page: 2, end_page: 3 }
+                ],
+                sections_source: 'heuristic'
+              };
+            }
+          },
+          requestStructuredJsonPayload: async (options = {}) => {
+            calls.push({
+              stage: String(options.stage || ''),
+              pdfDataUrl: String(options.pdfDataUrl || ''),
+              userPrompt: String(options.userPrompt || '')
+            });
+            if (options.stage === 'paper_context_selection_pdf_text') {
+              return {
+                ok: true,
+                payload: {
+                  excerpts: [
+                    {
+                      section_label: 'Results',
+                      excerpt: 'The binder rescued T cell killing in coculture by 3.2-fold.',
+                      relevance_reason: 'Directly answers the request about rescue magnitude.'
+                    }
+                  ],
+                  request_pdf_review: false,
+                  pdf_review_reason: ''
+                }
+              };
+            }
+            return {
+              ok: false,
+              error: `Unexpected stage ${options.stage}`
+            };
+          }
+        });
+
+        const result = await runtime.loadPaperContexts({
+          query: 'How much did the binder rescue T cell killing?',
+          items: [{ paper_id: 'paper-text', title: 'Text-first paper' }],
+          downloaded_papers: [{ ok: true, paper_id: 'paper-text', file_path: pdfPath }]
+        });
+
+        assert.equal(result.ok, true);
+        assert.equal(extractCalls.length, 1);
+        assert.equal(extractCalls[0].file_path, pdfPath);
+        assert.equal(calls.length, 1);
+        assert.equal(calls[0].stage, 'paper_context_selection_pdf_text');
+        assert.equal(calls[0].pdfDataUrl, '');
+        assert.match(calls[0].userPrompt, /extracted text of a scientific paper/i);
+        assert.match(calls[0].userPrompt, /Results/);
+        assert.equal(result.loaded_context_blocks.length, 1);
+        assert.equal(result.loaded_context_blocks[0].source, 'llm_pdf_text_read');
+        assert.match(String(result.loaded_context_blocks[0].excerpt || ''), /3\.2-fold/);
+        assert.equal(result.papers_read_count, 1);
+      } finally {
+        await fsPromises.rm(tempDir, { recursive: true, force: true });
+      }
+    });
+
+    test('paper context loader falls back to whole-PDF read when text-stage requests figure review', async () => {
+      const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'paper-context-pdf-text-fallback-'));
+      try {
+        const pdfPath = path.join(tempDir, 'figs.pdf');
+        await fsPromises.writeFile(pdfPath, Buffer.from('%PDF-1.7\nFigure heavy paper'));
+        const calls = [];
+        const runtime = agentPaperContextLoader.createPaperContextLoaderRuntime({
+          pdfTextExtractionRuntime: {
+            extractText: async () => ({
+              ok: true,
+              status: 'completed',
+              page_count: 2,
+              text: 'See Figure 2 for the localization pattern.',
+              sections: [
+                { label: 'Results', normalized_label: 'results', text: 'See Figure 2 for the localization pattern.', start_page: 1, end_page: 1 }
+              ],
+              sections_source: 'heuristic'
+            })
+          },
+          requestStructuredJsonPayload: async (options = {}) => {
+            calls.push(String(options.stage || ''));
+            if (options.stage === 'paper_context_selection_pdf_text') {
+              return {
+                ok: true,
+                payload: {
+                  excerpts: [],
+                  request_pdf_review: true,
+                  pdf_review_reason: 'Localization is shown in Figure 2 only.'
+                }
+              };
+            }
+            if (options.stage === 'paper_context_selection_pdf') {
+              return {
+                ok: true,
+                payload: {
+                  excerpts: [
+                    {
+                      section_label: 'Figure 2 caption',
+                      excerpt: 'Confocal images show membrane localization in transfected HEK293 cells.',
+                      relevance_reason: 'Figure 2 directly visualizes localization.'
+                    }
+                  ]
+                }
+              };
+            }
+            return { ok: false, error: `Unexpected stage ${options.stage}` };
+          }
+        });
+
+        const result = await runtime.loadPaperContexts({
+          query: 'Where does the protein localize?',
+          items: [{ paper_id: 'paper-fig', title: 'Figure-first paper' }],
+          downloaded_papers: [{ ok: true, paper_id: 'paper-fig', file_path: pdfPath }]
+        });
+
+        assert.equal(result.ok, true);
+        assert.deepEqual(calls, ['paper_context_selection_pdf_text', 'paper_context_selection_pdf']);
+        assert.equal(result.loaded_context_blocks.length, 1);
+        assert.equal(result.loaded_context_blocks[0].source, 'llm_pdf_read');
+        assert.match(String(result.loaded_context_blocks[0].excerpt || ''), /membrane localization/i);
+      } finally {
+        await fsPromises.rm(tempDir, { recursive: true, force: true });
+      }
+    });
+
     test('literature search runtime returns loaded paper context blocks without writing paper files', async () => {
       const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'literature-context-no-write-'));
       try {

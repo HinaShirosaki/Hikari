@@ -191,6 +191,27 @@
           </form>
         </div>
 
+        <div id="sequence-viewer-sequence-edit-overlay" class="sequence-viewer-sequence-edit-overlay" hidden>
+          <form id="sequence-viewer-sequence-edit-form" class="sequence-viewer-sequence-edit-dialog" autocomplete="off">
+            <div class="plannotate-card-head sequence-viewer-sequence-edit-head">
+              <h4 id="sequence-viewer-sequence-edit-title">Edit Bases</h4>
+              <button id="sequence-viewer-sequence-edit-close" type="button" class="ghost-btn">Close</button>
+            </div>
+            <p id="sequence-viewer-sequence-edit-note" class="small-note">Type the bases to apply.</p>
+
+            <label id="sequence-viewer-sequence-edit-input-wrap" class="sequence-viewer-sequence-edit-input-wrap">
+              Sequence
+              <textarea id="sequence-viewer-sequence-edit-textarea" rows="3" spellcheck="false" placeholder="ACGT"></textarea>
+            </label>
+            <div id="sequence-viewer-sequence-edit-delete-message" class="sequence-viewer-sequence-edit-delete-message calc-output" hidden></div>
+
+            <div class="form-actions">
+              <button id="sequence-viewer-sequence-edit-confirm" type="submit" class="primary-btn">Apply</button>
+              <button id="sequence-viewer-sequence-edit-cancel" type="button" class="ghost-btn">Cancel</button>
+            </div>
+          </form>
+        </div>
+
         <div id="sequence-viewer-backbone-dialog-overlay" class="sequence-viewer-backbone-dialog-overlay" hidden>
           <div class="sequence-viewer-backbone-dialog" role="dialog" aria-modal="true" aria-labelledby="sequence-viewer-backbone-dialog-title">
             <div class="sequence-viewer-backbone-dialog-head">

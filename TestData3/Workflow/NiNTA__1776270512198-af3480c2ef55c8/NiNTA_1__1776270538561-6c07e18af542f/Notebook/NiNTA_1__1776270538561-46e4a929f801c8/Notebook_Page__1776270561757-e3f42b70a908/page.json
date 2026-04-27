@@ -1,0 +1,77 @@
+{
+  "exportedAt": "2026-04-27T22:57:08.623Z",
+  "workflowId": "1776270538561-6c07e18af542f",
+  "notebookEntry": {
+    "id": "1776270561757-e3f42b70a908",
+    "notebookType": "biology",
+    "projectId": "",
+    "projectName": "",
+    "protocolId": "1774024647315-74cbb18b4cc37",
+    "protocolName": "Small-Scale Overnight Starter Culture",
+    "protocolSnapshot": {
+      "id": "1774024647315-74cbb18b4cc37",
+      "name": "Small-Scale Overnight Starter Culture",
+      "category": "",
+      "purpose": "Prepare a starter culture from a single bacterial colony for downstream expression or plasmid preparation.",
+      "steps": [
+        {
+          "id": "1774024647315-74a9f88e0f0bf8",
+          "text": "Add {{ph:1774024647315-9f03b8d734f3c}} of LB medium containing {{ph:1774024647315-9ce336955a66c}} antibiotic to a sterile culture tube.",
+          "placeholders": [
+            {
+              "id": "1774024647315-9f03b8d734f3c",
+              "name": "volume"
+            },
+            {
+              "id": "1774024647315-9ce336955a66c",
+              "name": "antibiotic concentration"
+            }
+          ]
+        },
+        {
+          "id": "1774024647315-50fbcf026e31b8",
+          "text": "Pick a single colony from a fresh plate and inoculate the medium.",
+          "placeholders": []
+        },
+        {
+          "id": "1774024647315-b56a957dd49a1",
+          "text": "Incubate the culture at 37 C with shaking at {{ph:1774024647315-09eb7ed8adca9}} for {{ph:1774024647315-82400c92a18e08}}.",
+          "placeholders": [
+            {
+              "id": "1774024647315-09eb7ed8adca9",
+              "name": "rpm"
+            },
+            {
+              "id": "1774024647315-82400c92a18e08",
+              "name": "time"
+            }
+          ]
+        },
+        {
+          "id": "1774024647315-7881c04d4e417",
+          "text": "Inspect the culture for turbidity and record the culture ID, date, and plasmid name in the notebook.",
+          "placeholders": []
+        }
+      ]
+    },
+    "values": {},
+    "result": "",
+    "resultFiles": [],
+    "resultFileRecords": [],
+    "storageFolder": "",
+    "createdAt": "2026-04-15T16:29:21.757Z",
+    "updatedAt": "2026-04-15T18:11:31.295Z",
+    "notebookState": "planned",
+    "executedAt": "",
+    "workflowContext": {
+      "workflowId": "1776270538561-6c07e18af542f",
+      "workflowName": "NiNTA 1",
+      "workflowEntryId": "1776270538561-46e4a929f801c8",
+      "workflowEntryName": "NiNTA 1",
+      "workflowBlockId": "1776270538561-8355d20b5e9e78",
+      "workflowBlockTitle": "Small-Scale Overnight Starter Culture"
+    },
+    "assayIds": [],
+    "gelAnalysisIds": []
+  }
+}

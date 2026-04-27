@@ -91,6 +91,50 @@ const PAPER_PDF_EXCERPT_SELECTION_SCHEMA = {
   }
 };
 
+const PAPER_PDF_TEXT_EXCERPT_SELECTION_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['excerpts', 'request_pdf_review', 'pdf_review_reason'],
+  properties: {
+    excerpts: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['section_label', 'excerpt', 'relevance_reason'],
+        properties: {
+          section_label: { type: 'string' },
+          excerpt: { type: 'string' },
+          relevance_reason: { type: 'string' }
+        }
+      }
+    },
+    request_pdf_review: { type: 'boolean' },
+    pdf_review_reason: { type: 'string' }
+  }
+};
+
+const PDF_TEXT_SECTION_PROMPT_BUDGETS = Object.freeze({
+  abstract: 3000,
+  introduction: 4000,
+  methods: 3000,
+  results: 8000,
+  discussion: 6000,
+  conclusion: 3000,
+  acknowledgments: 0,
+  funding: 0,
+  declarations: 0,
+  references: 0,
+  supplementary: 1500,
+  appendix: 1500,
+  author_contributions: 0,
+  data_availability: 500,
+  '': 2000
+});
+
+const DEFAULT_PDF_TEXT_PROMPT_TOTAL_BUDGET = 32000;
+const DEFAULT_PDF_TEXT_PLAIN_PROMPT_BUDGET = 30000;
+
 function ensureObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 }
@@ -141,6 +185,10 @@ function createPaperContextLoaderRuntime(deps = {}) {
   const fetchImpl = typeof deps.fetch === 'function'
     ? deps.fetch
     : (typeof globalThis.fetch === 'function' ? globalThis.fetch.bind(globalThis) : null);
+  const pdfTextExtractionRuntime = deps.pdfTextExtractionRuntime
+    && typeof deps.pdfTextExtractionRuntime.extractText === 'function'
+    ? deps.pdfTextExtractionRuntime
+    : null;
 
   function requireFetch() {
     if (!fetchImpl) {
@@ -746,6 +794,140 @@ function createPaperContextLoaderRuntime(deps = {}) {
       .filter((block) => block.paper_id && block.excerpt);
   }
 
+  async function extractPaperPdfText({ filePath, paperTitle }) {
+    if (!pdfTextExtractionRuntime) {
+      return null;
+    }
+    const normalizedPath = cleanText(filePath, 4000);
+    if (!normalizedPath) {
+      return null;
+    }
+    try {
+      const result = await pdfTextExtractionRuntime.extractText({
+        action: 'extract',
+        file_path: normalizedPath,
+        include_pages: false,
+        include_sections: true
+      });
+      if (!result?.ok) {
+        return null;
+      }
+      const text = cleanText(result.text, 0);
+      const sections = asArray(result.sections);
+      if (!text && !sections.length) {
+        return null;
+      }
+      return {
+        text,
+        sections,
+        sections_source: cleanText(result.sections_source, 40),
+        page_count: Number(result.page_count) || 0,
+        truncated: result.truncated === true,
+        fileName: `${cleanText(paperTitle, 180).replace(/[^a-z0-9]+/gi, '_') || 'paper'}.pdf`,
+        filePath: normalizedPath
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  function formatExtractedTextForPrompt(extractedText, totalBudget = DEFAULT_PDF_TEXT_PROMPT_TOTAL_BUDGET) {
+    const sections = asArray(extractedText?.sections);
+    if (!sections.length) {
+      const plain = cleanText(extractedText?.text, 0);
+      if (!plain) {
+        return '';
+      }
+      const cap = Math.min(plain.length, DEFAULT_PDF_TEXT_PLAIN_PROMPT_BUDGET, totalBudget);
+      const truncated = plain.length > cap ? `${plain.slice(0, cap)}\n[... truncated ...]` : plain;
+      return `[full text]\n${truncated}`;
+    }
+
+    const formatted = [];
+    let remaining = totalBudget;
+    sections.forEach((section) => {
+      if (remaining <= 0) {
+        return;
+      }
+      const normalizedKind = cleanText(section?.normalized_label, 40);
+      const budgetKey = Object.prototype.hasOwnProperty.call(PDF_TEXT_SECTION_PROMPT_BUDGETS, normalizedKind)
+        ? normalizedKind
+        : '';
+      const sectionBudget = PDF_TEXT_SECTION_PROMPT_BUDGETS[budgetKey];
+      if (!sectionBudget) {
+        return;
+      }
+      const text = cleanText(section?.text, 0);
+      if (!text) {
+        return;
+      }
+      const cap = Math.min(text.length, sectionBudget, remaining);
+      const slice = text.length > cap ? `${text.slice(0, cap)}\n[... truncated ...]` : text;
+      const label = cleanText(section?.label, 160) || normalizedKind || 'Section';
+      formatted.push(`[${label}${normalizedKind ? ` :: ${normalizedKind}` : ''}]\n${slice}`);
+      remaining -= cap;
+    });
+    return formatted.join('\n\n');
+  }
+
+  function buildPdfTextSelectionPrompt({ query, paper, paperCandidates, extractedText }) {
+    const sectionsText = formatExtractedTextForPrompt(extractedText);
+    const anchorLines = asArray(paperCandidates).slice(0, 4).map((block) => [
+      `- Section: ${cleanText(block.section_label, 120) || 'Section'}`,
+      `  Excerpt anchor: ${cleanText(block.excerpt, 300)}`
+    ].join('\n')).join('\n');
+    return [
+      'You are reading the extracted text of a scientific paper. The PDF binary is NOT attached on this turn.',
+      `Select up to ${DEFAULT_MAX_BLOCKS_PER_PAPER_WITH_PDF} short excerpts from the extracted text that most directly support the clarified request.`,
+      'Quote excerpts verbatim from the extracted text. Each needs section_label (e.g., "Results", "Methods"), a verbatim excerpt, and a specific relevance_reason.',
+      `Set request_pdf_review=true ONLY when the relevant evidence is figure-only (microscopy, gels, blots, plots, structures, schematics) AND nothing equivalent appears in the captured text. In that case, set excerpts=[] and put a one-sentence pdf_review_reason. Otherwise set request_pdf_review=false and pdf_review_reason="".`,
+      `Clarified request:\n${cleanText(query, 1200)}`,
+      `Paper title: ${cleanText(paper?.paper_title, 320)}`,
+      sectionsText
+        ? `Extracted paper text (sections labeled; figures and images are NOT present):\n${sectionsText}`
+        : '',
+      anchorLines
+        ? `Existing abstract-derived excerpts (reference only):\n${anchorLines}`
+        : '',
+      'Return JSON only.'
+    ].filter(Boolean).join('\n\n');
+  }
+
+  async function selectPdfTextExcerptsForPaper({ paper, paperCandidates, extractedText, input }) {
+    const query = input.query || input.message;
+    const result = await requestStructuredJsonPayload({
+      stage: 'paper_context_selection_pdf_text',
+      systemPrompt: 'Return valid JSON only.',
+      userPrompt: buildPdfTextSelectionPrompt({ query, paper, paperCandidates, extractedText }),
+      schema: PAPER_PDF_TEXT_EXCERPT_SELECTION_SCHEMA,
+      traceContext: input.traceContext || null,
+      defaultError: 'Paper extracted-text context selection is not configured.'
+    });
+    if (!result?.ok || !result.payload) {
+      return { excerpts: [], requestPdfReview: false, pdfReviewReason: '' };
+    }
+    const paperId = cleanText(paper?.paper_id, 120);
+    const excerpts = asArray(result.payload.excerpts)
+      .slice(0, DEFAULT_MAX_BLOCKS_PER_PAPER_WITH_PDF)
+      .map((entry, index) => ({
+        block_id: `${paperId}::pdf-text-${index + 1}`,
+        paper_id: paperId,
+        paper_title: cleanText(paper?.paper_title, 320),
+        section_label: cleanText(entry?.section_label, 160) || 'From extracted text',
+        excerpt: cleanText(entry?.excerpt, 1800),
+        relevance_reason: cleanText(entry?.relevance_reason, 260)
+          || `Excerpt drawn from the extracted text of ${cleanText(paper?.paper_title, 160) || 'the paper'}.`,
+        source: 'llm_pdf_text_read',
+        evidence_kind: 'text'
+      }))
+      .filter((block) => block.paper_id && block.excerpt);
+    return {
+      excerpts,
+      requestPdfReview: result.payload.request_pdf_review === true,
+      pdfReviewReason: cleanText(result.payload.pdf_review_reason, 260)
+    };
+  }
+
   function mergeSelectedBlocksWithPdf(nonPdfBlocks, pdfBlocks, pdfPaperIds) {
     const merged = [];
     const seenBlockIds = new Set();
@@ -788,13 +970,14 @@ function createPaperContextLoaderRuntime(deps = {}) {
       return normalizeSelectionResult(fallback, candidateBlocks, query);
     }
     const paperPdfs = input.paper_pdfs instanceof Map ? input.paper_pdfs : new Map();
+    const paperPdfTexts = input.paper_pdf_texts instanceof Map ? input.paper_pdf_texts : new Map();
     const papersById = input.papers_by_id instanceof Map ? input.papers_by_id : new Map();
 
-    if (!candidateBlocks.length && !paperPdfs.size) {
+    if (!candidateBlocks.length && !paperPdfs.size && !paperPdfTexts.size) {
       return normalizeSelectionResult(fallback, candidateBlocks, query);
     }
 
-    if (!paperPdfs.size) {
+    if (!paperPdfs.size && !paperPdfTexts.size) {
       const result = await requestStructuredJsonPayload({
         stage: 'paper_context_selection',
         systemPrompt: 'Return valid JSON only.',
@@ -826,26 +1009,55 @@ function createPaperContextLoaderRuntime(deps = {}) {
         candidatesByPaper.set(normalizedPaperId, []);
       }
     });
+    paperPdfTexts.forEach((_textInput, paperId) => {
+      const normalizedPaperId = cleanText(paperId, 120);
+      if (normalizedPaperId && !candidatesByPaper.has(normalizedPaperId)) {
+        candidatesByPaper.set(normalizedPaperId, []);
+      }
+    });
 
     const pdfSelectedBlocks = [];
     const pdfPaperIds = new Set();
     for (const [paperId, paperCandidates] of candidatesByPaper.entries()) {
       const pdfInput = paperPdfs.get(paperId);
-      if (!pdfInput) {
+      const textInput = paperPdfTexts.get(paperId);
+      if (!pdfInput && !textInput) {
         continue;
       }
       const paper = papersById.get(paperId) || {
         paper_id: paperId,
         paper_title: cleanText(paperCandidates[0]?.paper_title, 320) || paperId
       };
-      const blocks = await selectPdfExcerptsForPaper({ paper, paperCandidates, pdfInput, input });
-      if (blocks.length) {
+
+      let textBlocks = [];
+      let needsPdfReview = false;
+      if (textInput) {
+        const textResult = await selectPdfTextExcerptsForPaper({
+          paper,
+          paperCandidates,
+          extractedText: textInput,
+          input
+        });
+        textBlocks = textResult.excerpts;
+        needsPdfReview = textResult.requestPdfReview;
+      }
+
+      const shouldRunPdfPath = pdfInput && (!textInput || needsPdfReview || !textBlocks.length);
+      const pdfBlocks = shouldRunPdfPath
+        ? await selectPdfExcerptsForPaper({ paper, paperCandidates, pdfInput, input })
+        : [];
+
+      const combined = pdfBlocks.length ? pdfBlocks : textBlocks;
+      if (combined.length) {
         pdfPaperIds.add(paperId);
-        pdfSelectedBlocks.push(...blocks);
+        pdfSelectedBlocks.push(...combined);
       }
     }
 
-    const nonPdfCandidates = candidateBlocks.filter((block) => !paperPdfs.has(cleanText(block?.paper_id, 120)));
+    const nonPdfCandidates = candidateBlocks.filter((block) => {
+      const paperId = cleanText(block?.paper_id, 120);
+      return !paperPdfs.has(paperId) && !paperPdfTexts.has(paperId);
+    });
     let nonPdfSelection = { selected_blocks: [], figure_review_requests: [] };
     if (nonPdfCandidates.length) {
       const result = await requestStructuredJsonPayload({
@@ -1062,6 +1274,7 @@ function createPaperContextLoaderRuntime(deps = {}) {
       }
     }
     const paperPdfs = new Map();
+    const paperPdfTexts = new Map();
     for (const entry of downloadedPapers) {
       if (!entry?.ok || !entry?.file_path) {
         continue;
@@ -1070,9 +1283,19 @@ function createPaperContextLoaderRuntime(deps = {}) {
       if (!paperId || !papersById.has(paperId) || paperPdfs.has(paperId)) {
         continue;
       }
-      const pdfInput = await readLocalPdfAsDataUrl(entry.file_path, papersById.get(paperId)?.paper_title || '');
+      const paperTitle = papersById.get(paperId)?.paper_title || '';
+      const pdfInput = await readLocalPdfAsDataUrl(entry.file_path, paperTitle);
       if (pdfInput) {
         paperPdfs.set(paperId, pdfInput);
+      }
+      if (pdfTextExtractionRuntime) {
+        const textInput = await extractPaperPdfText({
+          filePath: entry.file_path,
+          paperTitle
+        });
+        if (textInput) {
+          paperPdfTexts.set(paperId, textInput);
+        }
       }
     }
 
@@ -1081,6 +1304,7 @@ function createPaperContextLoaderRuntime(deps = {}) {
       query,
       candidate_blocks: candidateBlocks,
       paper_pdfs: paperPdfs,
+      paper_pdf_texts: paperPdfTexts,
       papers_by_id: papersById
     });
     const selectedBlocks = asArray(selection.selected_blocks);
@@ -1116,9 +1340,11 @@ function createPaperContextLoaderRuntime(deps = {}) {
         .filter(Boolean)
     );
     loadedContextBlocks.forEach((block) => {
+      const blockSource = cleanText(block?.source, 80);
       if (
-        cleanText(block?.source, 80) === 'llm_pdf_read'
-        || cleanText(block?.source, 80) === 'figure_review'
+        blockSource === 'llm_pdf_read'
+        || blockSource === 'llm_pdf_text_read'
+        || blockSource === 'figure_review'
         || cleanText(block?.evidence_kind, 40) === 'figure_review'
       ) {
         const paperId = cleanText(block?.paper_id, 120);
@@ -1154,6 +1380,7 @@ function createPaperContextLoaderRuntime(deps = {}) {
     PAPER_CONTEXT_SELECTION_SCHEMA,
     PAPER_FIGURE_REVIEW_SCHEMA,
     PAPER_PDF_EXCERPT_SELECTION_SCHEMA,
+    PAPER_PDF_TEXT_EXCERPT_SELECTION_SCHEMA,
     chunkSectionText,
     parseEuropePmcFullTextSections,
     parsePubMedAbstractSections,
@@ -1172,5 +1399,6 @@ module.exports = {
   PAPER_CONTEXT_SELECTION_SCHEMA,
   PAPER_FIGURE_REVIEW_SCHEMA,
   PAPER_PDF_EXCERPT_SELECTION_SCHEMA,
+  PAPER_PDF_TEXT_EXCERPT_SELECTION_SCHEMA,
   createPaperContextLoaderRuntime
 };

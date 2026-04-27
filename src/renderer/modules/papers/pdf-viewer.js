@@ -1,182 +1,49 @@
-import { installPdfJsCompat } from './pdfjs-compat.js';
 import {
-  EMPTY_PAPER_PDF_METADATA,
-  extractPaperPdfMetadata,
   getPaperDisplayTitle,
   hasPaperPdfMetadata
 } from './pdf-metadata.js';
+import {
+  clamp,
+  clampCommentAnchor,
+  computePdfAnchorFromClientPoint,
+  getPdfCommentPinPosition
+} from './pdf-viewer-anchors.js';
+import {
+  buildViewerAssetUrl,
+  isRenderingCancelled,
+  loadPdfJsModule
+} from './pdf-viewer-loader.js';
+import {
+  normalizeCommentList,
+  normalizeHighlightList
+} from './pdf-viewer-normalizers.js';
+import {
+  applyPageSizing,
+  cancelAllRenderTasks,
+  ensurePageRecords,
+  releasePageRecords
+} from './pdf-viewer-page-records.js';
+import {
+  renderHighlights,
+  renderPins
+} from './pdf-viewer-overlays.js';
+import {
+  loadEmbeddedPdfMetadata,
+  loadPageMetrics,
+  renderPageRecord
+} from './pdf-viewer-rendering.js';
+import { getSelectionInfo } from './pdf-viewer-selection.js';
+
+export {
+  clampCommentAnchor,
+  computePdfAnchorFromClientPoint,
+  getPdfCommentPinPosition
+};
 
 const DEFAULT_ZOOM = 1;
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 3;
 const ZOOM_STEP = 0.2;
-
-let pdfJsModulePromise = null;
-
-function clamp(value, min, max) {
-  return Math.min(Math.max(value, min), max);
-}
-
-export function clampCommentAnchor(value) {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) {
-    return Number.NaN;
-  }
-  return clamp(numeric, 0, 1);
-}
-
-export function computePdfAnchorFromClientPoint({ clientX, clientY, rect } = {}) {
-  const width = Number(rect?.width) || 0;
-  const height = Number(rect?.height) || 0;
-  if (width <= 0 || height <= 0) {
-    return null;
-  }
-
-  return {
-    anchorX: clampCommentAnchor((Number(clientX) - Number(rect.left || 0)) / width),
-    anchorY: clampCommentAnchor((Number(clientY) - Number(rect.top || 0)) / height)
-  };
-}
-
-export function getPdfCommentPinPosition(anchorX, anchorY) {
-  const left = clampCommentAnchor(anchorX);
-  const top = clampCommentAnchor(anchorY);
-  if (!Number.isFinite(left) || !Number.isFinite(top)) {
-    return {
-      left: '0%',
-      top: '0%'
-    };
-  }
-  return {
-    left: `${(left * 100).toFixed(3)}%`,
-    top: `${(top * 100).toFixed(3)}%`
-  };
-}
-
-function buildViewerAssetUrl(relativePath) {
-  if (typeof window === 'undefined' || !window.location?.href) {
-    return relativePath;
-  }
-  return new URL(relativePath, window.location.href).href;
-}
-
-async function loadPdfJsModule() {
-  if (!pdfJsModulePromise) {
-    installPdfJsCompat(globalThis);
-    pdfJsModulePromise = import(buildViewerAssetUrl('./vendor/pdfjs/build/pdf.mjs'))
-      .then((pdfjsLib) => {
-        pdfjsLib.GlobalWorkerOptions.workerSrc = buildViewerAssetUrl('./src/renderer/modules/papers-pdfjs-worker.js');
-        return pdfjsLib;
-      })
-      .catch((error) => {
-        pdfJsModulePromise = null;
-        throw error;
-      });
-  }
-  return pdfJsModulePromise;
-}
-
-function isRenderingCancelled(error) {
-  const message = String(error?.message || error || '');
-  return error?.name === 'RenderingCancelledException' || /cancelled/i.test(message);
-}
-
-function normalizeCommentList(comments) {
-  return (Array.isArray(comments) ? comments : [])
-    .map((comment) => {
-      if (!comment || typeof comment !== 'object') {
-        return null;
-      }
-      const id = String(comment.id || '').trim();
-      const pageNumber = Math.round(Number(comment.pageNumber));
-      const anchorX = clampCommentAnchor(comment.anchorX);
-      const anchorY = clampCommentAnchor(comment.anchorY);
-      if (!id || !Number.isFinite(pageNumber) || pageNumber < 1 || !Number.isFinite(anchorX) || !Number.isFinite(anchorY)) {
-        return null;
-      }
-      return {
-        ...comment,
-        id,
-        pageNumber,
-        anchorX,
-        anchorY,
-        author: String(comment.author || 'Local user').trim() || 'Local user'
-      };
-    })
-    .filter(Boolean);
-}
-
-function normalizeHighlightList(highlights) {
-  return (Array.isArray(highlights) ? highlights : [])
-    .map((highlight) => {
-      if (!highlight || typeof highlight !== 'object') {
-        return null;
-      }
-      const id = String(highlight.id || '').trim();
-      const pageNumber = Math.round(Number(highlight.pageNumber));
-      const text = String(highlight.text || '').trim();
-      const boxes = (Array.isArray(highlight.boxes) ? highlight.boxes : [])
-        .map((box) => {
-          if (!box || typeof box !== 'object') {
-            return null;
-          }
-          const left = clamp(Number(box.x) || 0, 0, 1);
-          const top = clamp(Number(box.y) || 0, 0, 1);
-          const width = clamp(Number(box.width) || 0, 0, 1);
-          const height = clamp(Number(box.height) || 0, 0, 1);
-          if (width <= 0 || height <= 0) {
-            return null;
-          }
-          const right = clamp(left + width, 0, 1);
-          const bottom = clamp(top + height, 0, 1);
-          if (right <= left || bottom <= top) {
-            return null;
-          }
-          return {
-            x: left,
-            y: top,
-            width: right - left,
-            height: bottom - top
-          };
-        })
-        .filter(Boolean);
-      if (!id || !Number.isFinite(pageNumber) || pageNumber < 1 || !text || !boxes.length) {
-        return null;
-      }
-      return {
-        ...highlight,
-        id,
-        pageNumber,
-        text,
-        boxes
-      };
-    })
-    .filter(Boolean);
-}
-
-function getHighlightMarkerBox(box = {}) {
-  const left = clamp(Number(box.x) || 0, 0, 1);
-  const top = clamp(Number(box.y) || 0, 0, 1);
-  const width = clamp(Number(box.width) || 0, 0, 1);
-  const height = clamp(Number(box.height) || 0, 0, 1);
-  if (width <= 0 || height <= 0) {
-    return null;
-  }
-
-  // Render highlights like a marker stroke rather than a full line-height block.
-  const adjustedTop = clamp(top + (height * 0.3), 0, 1);
-  const adjustedBottom = clamp(top + (height * 1.02), 0, 1);
-  if (adjustedBottom <= adjustedTop) {
-    return null;
-  }
-
-  return {
-    left,
-    top: adjustedTop,
-    width: Math.min(width, 1 - left),
-    height: adjustedBottom - adjustedTop
-  };
-}
 
 export function createPapersPdfViewer(elements = {}) {
   const shell = elements.shell || null;
@@ -272,6 +139,24 @@ export function createPapersPdfViewer(elements = {}) {
     if (meta) {
       meta.textContent = text || '';
     }
+  }
+
+  function paintHighlights() {
+    renderHighlights({
+      pageRecords: state.pageRecords,
+      highlights: state.highlights
+    });
+  }
+
+  function paintPins() {
+    renderPins({
+      pageRecords: state.pageRecords,
+      comments: state.comments,
+      selectedCommentId: state.selectedCommentId,
+      placementMode: state.placementMode,
+      isActive: hasActiveDocument(),
+      onPinSelect: state.onPinSelect
+    });
   }
 
   function getDocumentScale() {
@@ -402,228 +287,6 @@ export function createPapersPdfViewer(elements = {}) {
     });
   }
 
-  function cancelAllRenderTasks() {
-    state.pageRecords.forEach((record) => {
-      if (!record?.renderTask || typeof record.renderTask.cancel !== 'function') {
-        record.renderTask = null;
-      } else {
-        try {
-          record.renderTask.cancel();
-        } catch {}
-        record.renderTask = null;
-      }
-      if (!record?.textLayerBuilder || typeof record.textLayerBuilder.cancel !== 'function') {
-        record.textLayerBuilder = null;
-        return;
-      }
-      try {
-        record.textLayerBuilder.cancel();
-      } catch {}
-      record.textLayerBuilder = null;
-    });
-  }
-
-  function releasePageRecords() {
-    cancelAllRenderTasks();
-    if (pageLayer) {
-      pageLayer.innerHTML = '';
-    }
-    state.pageRecords = [];
-  }
-
-  function ensurePageRecords() {
-    if (!pageLayer) {
-      state.pageRecords = [];
-      return;
-    }
-
-    const doc = pageLayer.ownerDocument || (typeof document !== 'undefined' ? document : null);
-    if (!doc?.createElement) {
-      state.pageRecords = [];
-      return;
-    }
-
-    pageLayer.innerHTML = '';
-    const fragment = doc.createDocumentFragment();
-    state.pageRecords = state.pageMetrics.map((metric, index) => {
-      const pageNumber = index + 1;
-      const pageElement = doc.createElement('div');
-      pageElement.className = 'papers-viewer-page';
-      pageElement.dataset.pageNumber = String(pageNumber);
-
-      const canvas = doc.createElement('canvas');
-      canvas.className = 'papers-viewer-canvas';
-      canvas.setAttribute('aria-hidden', 'true');
-
-      const highlightLayer = doc.createElement('div');
-      highlightLayer.className = 'papers-viewer-highlight-layer';
-      highlightLayer.dataset.pageNumber = String(pageNumber);
-      highlightLayer.setAttribute('aria-hidden', 'true');
-
-      const textLayer = doc.createElement('div');
-      textLayer.className = 'papers-viewer-text-layer';
-      textLayer.dataset.pageNumber = String(pageNumber);
-
-      const overlay = doc.createElement('div');
-      overlay.className = 'papers-viewer-overlay';
-      overlay.dataset.pageNumber = String(pageNumber);
-      overlay.setAttribute('aria-label', `Paper page ${pageNumber} comment pins`);
-
-      pageElement.append(canvas, highlightLayer, textLayer, overlay);
-      fragment.appendChild(pageElement);
-
-      return {
-        pageNumber,
-        metric,
-        element: pageElement,
-        canvas,
-        highlightLayer,
-        textLayer,
-        overlay,
-        renderTask: null,
-        textLayerBuilder: null,
-        renderedScale: 0
-      };
-    });
-    pageLayer.appendChild(fragment);
-  }
-
-  function applyPageSizing(scale, { preserveScroll = false, resetScroll = false } = {}) {
-    if (!pageLayer || !state.pageRecords.length) {
-      return;
-    }
-
-    const anchor = preserveScroll ? getScrollAnchor() : null;
-    state.zoom = clamp(scale, MIN_ZOOM, MAX_ZOOM);
-
-    state.pageRecords.forEach((record) => {
-      const width = Math.max(Math.ceil((record.metric?.width || 1) * scale), 1);
-      const height = Math.max(Math.ceil((record.metric?.height || 1) * scale), 1);
-      record.element.style.setProperty('--total-scale-factor', String(scale));
-      record.element.style.setProperty('--scale-round-x', '1px');
-      record.element.style.setProperty('--scale-round-y', '1px');
-      record.element.style.width = `${width}px`;
-      record.element.style.height = `${height}px`;
-      record.canvas.style.width = `${width}px`;
-      record.canvas.style.height = `${height}px`;
-      if (record.textLayer) {
-        record.textLayer.style.setProperty('--total-scale-factor', String(scale));
-      }
-    });
-
-    if (resetScroll) {
-      setStageScrollTop(0);
-    } else if (anchor) {
-      restoreScrollAnchor(anchor);
-    }
-  }
-
-  function clearPins() {
-    state.pageRecords.forEach((record) => {
-      if (!record?.overlay) {
-        return;
-      }
-      record.overlay.innerHTML = '';
-      record.overlay.style.cursor = state.placementMode ? 'crosshair' : 'default';
-      record.overlay.style.pointerEvents = state.placementMode ? 'auto' : 'none';
-    });
-  }
-
-  function renderHighlights() {
-    const highlightsByPage = new Map();
-    state.highlights.forEach((highlight) => {
-      if (!highlightsByPage.has(highlight.pageNumber)) {
-        highlightsByPage.set(highlight.pageNumber, []);
-      }
-      highlightsByPage.get(highlight.pageNumber).push(highlight);
-    });
-
-    state.pageRecords.forEach((record) => {
-      const highlightLayer = record?.highlightLayer;
-      if (!highlightLayer) {
-        return;
-      }
-      highlightLayer.innerHTML = '';
-      const pageHighlights = highlightsByPage.get(record.pageNumber) || [];
-      if (!pageHighlights.length) {
-        return;
-      }
-      const doc = highlightLayer.ownerDocument || (typeof document !== 'undefined' ? document : null);
-      if (!doc?.createElement) {
-        return;
-      }
-      pageHighlights.forEach((highlight) => {
-        highlight.boxes.forEach((box) => {
-          const markerBox = getHighlightMarkerBox(box);
-          if (!markerBox) {
-            return;
-          }
-          const mark = doc.createElement('div');
-          mark.className = 'papers-viewer-highlight';
-          mark.dataset.highlightId = highlight.id;
-          mark.style.left = `${(markerBox.left * 100).toFixed(3)}%`;
-          mark.style.top = `${(markerBox.top * 100).toFixed(3)}%`;
-          mark.style.width = `${(markerBox.width * 100).toFixed(3)}%`;
-          mark.style.height = `${(markerBox.height * 100).toFixed(3)}%`;
-          mark.title = highlight.text;
-          highlightLayer.appendChild(mark);
-        });
-      });
-    });
-  }
-
-  function renderPins() {
-    clearPins();
-    if (!hasActiveDocument()) {
-      return;
-    }
-
-    const commentsByPage = new Map();
-    state.comments.forEach((comment) => {
-      const pageNumber = Math.max(1, Math.round(Number(comment.pageNumber) || 1));
-      if (!commentsByPage.has(pageNumber)) {
-        commentsByPage.set(pageNumber, []);
-      }
-      commentsByPage.get(pageNumber).push(comment);
-    });
-
-    state.pageRecords.forEach((record) => {
-      const overlay = record.overlay;
-      if (!overlay) {
-        return;
-      }
-      const pageComments = commentsByPage.get(record.pageNumber) || [];
-      if (!pageComments.length) {
-        return;
-      }
-      const doc = overlay.ownerDocument || (typeof document !== 'undefined' ? document : null);
-      if (!doc?.createElement) {
-        return;
-      }
-      pageComments.forEach((comment) => {
-        const pin = doc.createElement('button');
-        pin.type = 'button';
-        pin.className = 'papers-viewer-pin';
-        pin.dataset.commentId = comment.id;
-        if (comment.id === state.selectedCommentId) {
-          pin.classList.add('is-active');
-        }
-        const position = getPdfCommentPinPosition(comment.anchorX, comment.anchorY);
-        pin.style.left = position.left;
-        pin.style.top = position.top;
-        pin.setAttribute('aria-label', `Comment by ${comment.author || 'Local user'}`);
-        pin.addEventListener('click', (event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          if (typeof state.onPinSelect === 'function') {
-            state.onPinSelect(comment);
-          }
-        });
-        overlay.appendChild(pin);
-      });
-    });
-  }
-
   function refreshToolbar() {
     const active = hasActiveDocument();
     if (toolbar) {
@@ -687,7 +350,8 @@ export function createPapersPdfViewer(elements = {}) {
 
   function renderEmptyViewer(message = '') {
     cancelScrollSync();
-    releasePageRecords();
+    releasePageRecords({ pageLayer, pageRecords: state.pageRecords });
+    state.pageRecords = [];
     state.paperId = '';
     state.paperTitle = '';
     state.paperMeta = '';
@@ -709,130 +373,15 @@ export function createPapersPdfViewer(elements = {}) {
     refreshToolbar();
   }
 
-  function getSelectionInfo() {
-    if (!hasActiveDocument() || !pageLayer || state.placementMode) {
-      return null;
-    }
-
-    const selection = getSelectionRef();
-    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
-      return null;
-    }
-
-    let textLayer = null;
-    for (let index = 0; index < selection.rangeCount; index += 1) {
-      const range = selection.getRangeAt(index);
-      if (!range || range.collapsed) {
-        continue;
-      }
-      const ancestor = range.commonAncestorContainer;
-      const layer = (ancestor?.nodeType === 1 ? ancestor : ancestor?.parentElement)?.closest?.('.papers-viewer-text-layer') || null;
-      if (!layer || !pageLayer.contains(layer) || !layer.contains(ancestor)) {
-        return null;
-      }
-      if (textLayer && textLayer !== layer) {
-        return null;
-      }
-      textLayer = layer;
-    }
-
-    if (!textLayer) {
-      return null;
-    }
-
-    const layerRect = textLayer.getBoundingClientRect?.();
-    const layerLeft = Number(layerRect?.x ?? layerRect?.left);
-    const layerTop = Number(layerRect?.y ?? layerRect?.top);
-    const parentWidth = Number(layerRect?.width);
-    const parentHeight = Number(layerRect?.height);
-    if (!Number.isFinite(parentWidth) || !Number.isFinite(parentHeight) || parentWidth <= 0 || parentHeight <= 0) {
-      return null;
-    }
-
-    let rotator;
-    switch (textLayer.getAttribute('data-main-rotation')) {
-      case '90':
-        rotator = (x, y, width, height) => ({
-          x: (y - layerTop) / parentHeight,
-          y: 1 - ((x + width - layerLeft) / parentWidth),
-          width: height / parentHeight,
-          height: width / parentWidth
-        });
-        break;
-      case '180':
-        rotator = (x, y, width, height) => ({
-          x: 1 - ((x + width - layerLeft) / parentWidth),
-          y: 1 - ((y + height - layerTop) / parentHeight),
-          width: width / parentWidth,
-          height: height / parentHeight
-        });
-        break;
-      case '270':
-        rotator = (x, y, width, height) => ({
-          x: 1 - ((y + height - layerTop) / parentHeight),
-          y: (x - layerLeft) / parentWidth,
-          width: height / parentHeight,
-          height: width / parentWidth
-        });
-        break;
-      default:
-        rotator = (x, y, width, height) => ({
-          x: (x - layerLeft) / parentWidth,
-          y: (y - layerTop) / parentHeight,
-          width: width / parentWidth,
-          height: height / parentHeight
-        });
-        break;
-    }
-
-    const boxes = [];
-    for (let index = 0; index < selection.rangeCount; index += 1) {
-      const range = selection.getRangeAt(index);
-      if (!range || range.collapsed || !textLayer.contains(range.commonAncestorContainer)) {
-        continue;
-      }
-      for (const rect of range.getClientRects()) {
-        const width = Number(rect?.width);
-        const height = Number(rect?.height);
-        if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
-          continue;
-        }
-        const normalized = rotator(
-          Number(rect.x ?? rect.left),
-          Number(rect.y ?? rect.top),
-          width,
-          height
-        );
-        const left = clamp(normalized.x, 0, 1);
-        const top = clamp(normalized.y, 0, 1);
-        const right = clamp(normalized.x + normalized.width, 0, 1);
-        const bottom = clamp(normalized.y + normalized.height, 0, 1);
-        if (right <= left || bottom <= top) {
-          continue;
-        }
-        boxes.push({
-          x: left,
-          y: top,
-          width: right - left,
-          height: bottom - top
-        });
-      }
-    }
-
-    const text = String(selection.toString() || '').replace(/\s+/g, ' ').trim();
-    const pageNumber = Math.max(1, Math.round(Number(textLayer.dataset.pageNumber) || 1));
-    if (!text || !boxes.length) {
-      return null;
-    }
-    return {
-      pageNumber,
-      text,
-      boxes
-    };
-  }
-
   function updatePendingSelection() {
-    state.pendingSelection = getSelectionInfo();
+    if (!hasActiveDocument() || !pageLayer || state.placementMode) {
+      state.pendingSelection = null;
+    } else {
+      state.pendingSelection = getSelectionInfo({
+        selection: getSelectionRef(),
+        pageLayer
+      });
+    }
     refreshToolbar();
   }
 
@@ -865,7 +414,7 @@ export function createPapersPdfViewer(elements = {}) {
   async function resetViewer(message = '') {
     state.loadToken += 1;
     state.renderToken += 1;
-    cancelAllRenderTasks();
+    cancelAllRenderTasks(state.pageRecords);
     await cleanupLoadingTask();
     await cleanupDocument();
     renderEmptyViewer(message);
@@ -874,167 +423,56 @@ export function createPapersPdfViewer(elements = {}) {
     }
   }
 
-  async function loadPageMetrics(pdfDocument) {
-    const metrics = [];
-    let maxBasePageWidth = 0;
-    for (let pageNumber = 1; pageNumber <= (Number(pdfDocument?.numPages) || 0); pageNumber += 1) {
-      const page = await pdfDocument.getPage(pageNumber);
-      const viewport = page.getViewport({ scale: 1 });
-      const width = Math.max(Math.ceil(viewport.width || 0), 1);
-      const height = Math.max(Math.ceil(viewport.height || 0), 1);
-      metrics.push({ width, height });
-      maxBasePageWidth = Math.max(maxBasePageWidth, width);
-      if (typeof page.cleanup === 'function') {
-        try {
-          page.cleanup();
-        } catch {}
-      }
-    }
-    return {
-      metrics,
-      maxBasePageWidth
-    };
-  }
-
-  async function loadEmbeddedPdfMetadata(pdfDocument) {
-    if (!pdfDocument || typeof pdfDocument.getMetadata !== 'function') {
-      return EMPTY_PAPER_PDF_METADATA;
-    }
-
-    try {
-      const metadata = await pdfDocument.getMetadata();
-      return extractPaperPdfMetadata(metadata);
-    } catch {
-      return EMPTY_PAPER_PDF_METADATA;
-    }
-  }
-
-  async function renderPageRecord(record, scale, activeRenderToken) {
-    if (!state.pdfDocument || !record?.canvas || !record?.element) {
+  function applyDocumentScale(scale, { preserveScroll = false, resetScroll = false } = {}) {
+    if (!pageLayer || !state.pageRecords.length) {
       return;
     }
-
-    const page = await state.pdfDocument.getPage(record.pageNumber);
-    if (activeRenderToken !== state.renderToken) {
-      if (typeof page.cleanup === 'function') {
-        try {
-          page.cleanup();
-        } catch {}
-      }
-      return;
-    }
-
-    const viewport = page.getViewport({ scale });
-    const outputScale = Math.max(getWindowRef()?.devicePixelRatio || 1, 1);
-    const context = typeof record.canvas.getContext === 'function'
-      ? record.canvas.getContext('2d', { alpha: false })
-      : null;
-    if (!context) {
-      throw new Error('Canvas context is unavailable.');
-    }
-
-    const cssWidth = Math.max(Math.ceil(viewport.width), 1);
-    const cssHeight = Math.max(Math.ceil(viewport.height), 1);
-    if (record.textLayerBuilder && typeof record.textLayerBuilder.cancel === 'function') {
-      try {
-        record.textLayerBuilder.cancel();
-      } catch {}
-      record.textLayerBuilder = null;
-    }
-    if (record.textLayer) {
-      record.textLayer.innerHTML = '';
-      record.textLayer.style.width = `${cssWidth}px`;
-      record.textLayer.style.height = `${cssHeight}px`;
-    }
-    record.canvas.width = Math.ceil(viewport.width * outputScale);
-    record.canvas.height = Math.ceil(viewport.height * outputScale);
-    record.canvas.style.width = `${cssWidth}px`;
-    record.canvas.style.height = `${cssHeight}px`;
-    record.element.style.width = `${cssWidth}px`;
-    record.element.style.height = `${cssHeight}px`;
-
-    context.setTransform(1, 0, 0, 1, 0, 0);
-    context.clearRect(0, 0, record.canvas.width, record.canvas.height);
-
-    const renderTask = page.render({
-      canvasContext: context,
-      viewport,
-      transform: outputScale === 1 ? null : [outputScale, 0, 0, outputScale, 0, 0]
-    });
-    record.renderTask = renderTask;
-    await renderTask.promise;
-    if (record.renderTask === renderTask) {
-      record.renderTask = null;
-    }
-
-    if (activeRenderToken !== state.renderToken) {
-      if (typeof page.cleanup === 'function') {
-        try {
-          page.cleanup();
-        } catch {}
-      }
-      return;
-    }
-    if (record.textLayer) {
-      const pdfjsLib = await loadPdfJsModule();
-      const textContent = await page.getTextContent();
-      if (activeRenderToken !== state.renderToken) {
-        if (typeof page.cleanup === 'function') {
-          try {
-            page.cleanup();
-          } catch {}
-        }
-        return;
-      }
-      const textLayerBuilder = new pdfjsLib.TextLayer({
-        textContentSource: textContent,
-        container: record.textLayer,
-        viewport
-      });
-      record.textLayerBuilder = textLayerBuilder;
-      await textLayerBuilder.render();
-      if (record.textLayerBuilder === textLayerBuilder) {
-        record.textLayerBuilder = null;
-      }
-    }
-    record.renderedScale = scale;
-    if (typeof page.cleanup === 'function') {
-      try {
-        page.cleanup();
-      } catch {}
+    const anchor = preserveScroll ? getScrollAnchor() : null;
+    state.zoom = clamp(scale, MIN_ZOOM, MAX_ZOOM);
+    applyPageSizing({ pageRecords: state.pageRecords, scale });
+    if (resetScroll) {
+      setStageScrollTop(0);
+    } else if (anchor) {
+      restoreScrollAnchor(anchor);
     }
   }
 
   async function renderDocumentPages({ preserveScroll = false, resetScroll = false } = {}) {
     if (!state.pdfDocument || !pageLayer) {
       refreshToolbar();
-      renderHighlights();
-      renderPins();
+      paintHighlights();
+      paintPins();
       return;
     }
 
     const activeRenderToken = ++state.renderToken;
-    cancelAllRenderTasks();
+    const isStale = () => activeRenderToken !== state.renderToken;
+    cancelAllRenderTasks(state.pageRecords);
     const scale = getDocumentScale();
 
-    applyPageSizing(scale, {
-      preserveScroll,
-      resetScroll
-    });
+    applyDocumentScale(scale, { preserveScroll, resetScroll });
     refreshToolbar();
-    renderHighlights();
-    renderPins();
+    paintHighlights();
+    paintPins();
     updateCurrentPageFromScroll({ force: true });
+
+    const outputScale = Math.max(getWindowRef()?.devicePixelRatio || 1, 1);
 
     try {
       for (const record of state.pageRecords) {
-        if (activeRenderToken !== state.renderToken) {
+        if (isStale()) {
           return;
         }
         setStatus(`Rendering page ${record.pageNumber} of ${state.pageCount}...`);
-        await renderPageRecord(record, scale, activeRenderToken);
+        await renderPageRecord({
+          pdfDocument: state.pdfDocument,
+          record,
+          scale,
+          outputScale,
+          isStale
+        });
       }
-      if (activeRenderToken !== state.renderToken) {
+      if (isStale()) {
         return;
       }
       setTitle(state.paperTitle || 'Paper Viewer');
@@ -1042,8 +480,8 @@ export function createPapersPdfViewer(elements = {}) {
       updateCurrentPageFromScroll({ force: true });
       setStatus(`Viewing page ${state.pageNumber} of ${state.pageCount}.`);
       refreshToolbar();
-      renderHighlights();
-      renderPins();
+      paintHighlights();
+      paintPins();
     } catch (error) {
       if (isRenderingCancelled(error)) {
         return;
@@ -1146,13 +584,13 @@ export function createPapersPdfViewer(elements = {}) {
     state.pendingSelection = null;
     state.placementMode = false;
     cancelScrollSync();
-    cancelAllRenderTasks();
+    cancelAllRenderTasks(state.pageRecords);
     await cleanupLoadingTask();
     if (activeLoadToken !== state.loadToken) {
       return false;
     }
-    renderHighlights();
-    renderPins();
+    paintHighlights();
+    paintPins();
     refreshToolbar();
     setTitle(state.paperTitle);
     setMeta(state.paperMeta);
@@ -1229,8 +667,8 @@ export function createPapersPdfViewer(elements = {}) {
         })).catch(() => {});
       }
 
-      releasePageRecords();
-      ensurePageRecords();
+      releasePageRecords({ pageLayer, pageRecords: state.pageRecords });
+      state.pageRecords = ensurePageRecords({ pageLayer, pageMetrics: state.pageMetrics });
       await renderDocumentPages({ resetScroll: true });
       return true;
     } catch (error) {
@@ -1255,11 +693,12 @@ export function createPapersPdfViewer(elements = {}) {
         state.placementMode = previousState.placementMode;
         setTitle(state.paperTitle);
         setMeta(state.paperMeta);
-        renderHighlights();
-        renderPins();
+        paintHighlights();
+        paintPins();
       } else {
         await cleanupDocument();
-        releasePageRecords();
+        releasePageRecords({ pageLayer, pageRecords: state.pageRecords });
+        state.pageRecords = [];
       }
       refreshToolbar();
       setStatus(String(error?.message || error || 'Failed to load PDF.'), true);
@@ -1269,17 +708,17 @@ export function createPapersPdfViewer(elements = {}) {
 
   function setComments(comments = []) {
     state.comments = normalizeCommentList(comments);
-    renderPins();
+    paintPins();
   }
 
   function setHighlights(highlights = []) {
     state.highlights = normalizeHighlightList(highlights);
-    renderHighlights();
+    paintHighlights();
   }
 
   function setSelectedCommentId(commentId = '') {
     state.selectedCommentId = String(commentId || '').trim();
-    renderPins();
+    paintPins();
   }
 
   function setPlacementMode(enabled) {
@@ -1289,7 +728,7 @@ export function createPapersPdfViewer(elements = {}) {
       state.pendingSelection = null;
     }
     refreshToolbar();
-    renderPins();
+    paintPins();
   }
 
   function handleOverlayClick(event) {
@@ -1322,15 +761,15 @@ export function createPapersPdfViewer(elements = {}) {
 
   function handleResize() {
     if (!state.pdfDocument) {
-      renderHighlights();
-      renderPins();
+      paintHighlights();
+      paintPins();
       return;
     }
     if (state.fitWidth) {
       void renderDocumentPages({ preserveScroll: true });
       return;
     }
-    renderPins();
+    paintPins();
     updateCurrentPageFromScroll({ force: true });
   }
 

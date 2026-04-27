@@ -11,6 +11,7 @@ import { bindSequenceViewerDetailEvents } from './detail-events.js';
 import { createSequenceViewerFeatureEditingController } from './detail-feature-editing.js';
 import { createSequenceHoverTooltipController } from './detail-hover.js';
 import { createSequenceViewerDetailRenderingController } from './detail-rendering.js';
+import { createSequenceViewerSequenceEditingController } from './detail-sequence-editing.js';
 import { normalizeRestrictionVendorFilter } from './restriction-analysis.js';
 import {
   cleanText,
@@ -39,6 +40,7 @@ export function createSequenceViewerDetailController(config = {}) {
   const onNavigateHome = config?.onNavigateHome || (() => {});
   const onRefreshLibraryEntries = config?.onRefreshLibraryEntries || (() => {});
   const onReferenceRecordChanged = config?.onReferenceRecordChanged || (() => {});
+  const onApplySequenceEdit = config?.onApplySequenceEdit || (async () => {});
 
   const hoverController = createSequenceHoverTooltipController(rootDocument);
   const hideSequenceHoverTooltip = () => hoverController.hide();
@@ -46,6 +48,7 @@ export function createSequenceViewerDetailController(config = {}) {
     hoverController.show(event, feature, sequenceLength);
   };
   let featureEditingController = null;
+  let sequenceEditingController = null;
   let activeFeatureActionContext = null;
 
   function getVisibleFeaturesForRecord(record) {
@@ -142,6 +145,10 @@ export function createSequenceViewerDetailController(config = {}) {
     featureEditingController?.hideFeatureEditor();
   }
 
+  function hideSequenceEditDialog() {
+    sequenceEditingController?.hideSequenceEditDialog();
+  }
+
   function buildSelectionDetailHtml(record) {
     return featureEditingController?.buildSelectionDetailHtml(record)
       || '<p class="small-note">Select a feature in the bottom track to view details.</p>';
@@ -166,6 +173,14 @@ export function createSequenceViewerDetailController(config = {}) {
 
   async function deleteFeatureFromContext(context = {}) {
     await featureEditingController?.deleteFeatureFromContext(context);
+  }
+
+  function openSequenceEditFromKeyboardEvent(event) {
+    return sequenceEditingController?.openSequenceEditFromKeyboardEvent(event) || false;
+  }
+
+  async function applySequenceEditDialog() {
+    await sequenceEditingController?.applySequenceEditDialog();
   }
 
   const detailRenderingController = createSequenceViewerDetailRenderingController({
@@ -335,7 +350,7 @@ export function createSequenceViewerDetailController(config = {}) {
       cleanText(confirmation?.notebookTitle, 220)
         ? `<p><strong>Notebook Page:</strong> ${escapeHtml(cleanText(confirmation.notebookTitle, 220))}</p>`
         : '',
-      '<p class="small-note">Edit the sequence below and click Load to refresh this review without leaving Protein Builder confirmation.</p>'
+      '<p class="small-note">Review the sequence and annotations before confirming this Protein Builder construct.</p>'
     ].filter(Boolean);
     elements.proteinBuilderConfirmationSummary.innerHTML = summaryParts.join('');
   }
@@ -448,6 +463,21 @@ export function createSequenceViewerDetailController(config = {}) {
     persistFeatureMutation
   });
 
+  sequenceEditingController = createSequenceViewerSequenceEditingController({
+    rootDocument,
+    elements,
+    state,
+    getSelectedRecord,
+    getSequenceSelectionRange,
+    clearSequenceSelection,
+    hideFeatureContextMenu,
+    hideFeatureEditor,
+    renderSequence,
+    renderSelectedFeatureDetail,
+    setStatus,
+    onApplySequenceEdit
+  });
+
   function bindEvents() {
     bindSequenceViewerDetailEvents({
       elements,
@@ -457,6 +487,7 @@ export function createSequenceViewerDetailController(config = {}) {
       clearSequenceSelection,
       hideFeatureContextMenu,
       hideFeatureEditor,
+      hideSequenceEditDialog,
       hideSequenceHoverTooltip,
       showSequenceHoverTooltip,
       renderActiveRecord,
@@ -472,6 +503,9 @@ export function createSequenceViewerDetailController(config = {}) {
       deleteFeatureFromContext,
       applyFeatureEditorChanges,
       getActiveFeatureActionContext: () => activeFeatureActionContext,
+      openSequenceEditFromKeyboardEvent,
+      applySequenceEditDialog,
+      hasOpenSequenceEditDialog: () => sequenceEditingController?.hasOpenSequenceEditDialog?.() || false,
       onRequestAnnotate,
       onRequestRecognizeBackbone,
       onRequestClear,
@@ -493,6 +527,7 @@ export function createSequenceViewerDetailController(config = {}) {
     getVisibleFeaturesForRecord,
     hideFeatureContextMenu,
     hideFeatureEditor,
+    hideSequenceEditDialog,
     renderActiveRecord,
     renderSelectedFeatureDetail,
     renderSequence,
