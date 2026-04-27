@@ -546,6 +546,40 @@ test('[EDGE] protein-builder cloning notebook page includes PCR program and prim
   assert.equal(created.plan.primerOligoPlan.feasible, true);
 });
 
+test('[EDGE] protein-builder Gibson backbone keeps primer design on the Gibson route', () => {
+  const notebookAdapter = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'protein-builder-cloning-notebook.js')
+  );
+  const leftOverlap = 'ATGCGTACGATCGTACGATCGTACGATCGA';
+  const rightOverlap = 'CGATGCTAGCTAGCATGCTAGCATGCTAGC';
+  const backboneSequence = `${rightOverlap}TTTTTATATATATATATAT${leftOverlap}`;
+  const insertSequence = `${leftOverlap}GGGGGGCCCCCCC${rightOverlap}`;
+  const plan = notebookAdapter.buildProteinBuilderCloningPlan({
+    constructName: 'Overlap-POI',
+    backbone: {
+      hostVectorName: 'Host Backbone',
+      topology: 'circular',
+      variantMode: 'gibson',
+      backboneSequence
+    },
+    dnaConstruct: {
+      sequence: insertSequence,
+      length: insertSequence.length,
+      parts: [{ label: 'POI', dnaSequence: insertSequence }]
+    },
+    assembledRecord: {
+      name: 'Overlap-POI (Host Backbone)',
+      sequence: `${backboneSequence}${insertSequence}`
+    }
+  });
+
+  assert.equal(plan.recommendedAssemblyStrategy, 'gibson');
+  assert.equal(plan.restrictionEnzymeSelection, null);
+  assert.equal(plan.primerOligoPlan.feasible, true);
+  assert.equal(plan.primerOligoPlan.primers.some((primer) => /restriction/i.test(primer.role)), false);
+  assert.equal(plan.primerOligoPlan.primers.some((primer) => /Adds .* to the 5' end/i.test(String(primer.warnings || ''))), false);
+});
+
 [
   [[1, 2, 3], [2, 4, 6], { slope: 2, intercept: 0, rSquared: 1 }],
   [[1, 2, 3], [3, 2, 1], { slope: -1, intercept: 4, rSquared: 1 }],

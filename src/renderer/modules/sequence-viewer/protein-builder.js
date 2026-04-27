@@ -1062,6 +1062,56 @@ function buildAssembledPlasmidPayload(backbone = {}, dnaConstruct = {}, options 
   };
 }
 
+function buildProteinBuilderConfirmationPayload({
+  assembledRecord = {},
+  constructName = '',
+  backbone = {},
+  dnaConstruct = {},
+  notebookEntry = null
+} = {}) {
+  const design = notebookEntry?.proteinBuilderCloningDesign && typeof notebookEntry.proteinBuilderCloningDesign === 'object'
+    ? notebookEntry.proteinBuilderCloningDesign
+    : null;
+  const notebookTitle = cleanText(notebookEntry?.experimentName, 220)
+    || cleanText(notebookEntry?.protocolName, 220);
+  return {
+    recordName: cleanText(assembledRecord?.name, 160),
+    constructName: cleanText(constructName, 160),
+    backboneName: buildStoredBackboneDisplayName(backbone),
+    sourceLabel: cleanText(backbone?.sourceRecordName, 160) || buildStoredBackboneDisplayName(backbone),
+    plasmidLength: Math.max(0, Number(assembledRecord?.sequence?.length) || 0),
+    insertLength: Math.max(0, Number(dnaConstruct?.length || dnaConstruct?.sequence?.length) || 0),
+    notebookEntryId: cleanText(notebookEntry?.id, 160),
+    notebookTitle,
+    assemblyStrategy: cleanText(design?.recommendedAssemblyStrategy, 120),
+    primerCount: Math.max(
+      0,
+      Number(design?.primerCount) || 0
+    ),
+    cloningDesignSource: {
+      constructName: cleanText(constructName, 160),
+      backbone: { ...backbone },
+      dnaConstruct: {
+        ...dnaConstruct,
+        parts: Array.isArray(dnaConstruct?.parts)
+          ? dnaConstruct.parts.map((part) => ({ ...part }))
+          : []
+      },
+      assembledRecord: {
+        ...assembledRecord,
+        features: Array.isArray(assembledRecord?.features)
+          ? assembledRecord.features.map((feature) => ({
+              ...feature,
+              segments: Array.isArray(feature?.segments)
+                ? feature.segments.map((segment) => ({ ...segment }))
+                : []
+            }))
+          : []
+      }
+    }
+  };
+}
+
 export function createSequenceViewerProteinBuilderController(config = {}) {
   const elements = config?.elements || {};
   const getBridge = config?.getBridge || (() => null);
@@ -1258,6 +1308,7 @@ export function createSequenceViewerProteinBuilderController(config = {}) {
       ...backbone,
       sourceKind: cleanText(backbone?.sourceKind, 120) || 'recognized_backbone',
       topology: cleanText(backbone?.topology, 40).toLowerCase() === 'linear' ? 'linear' : 'circular',
+      variantMode: cleanText(backbone?.variantMode, 40).toLowerCase() === 'restriction' ? 'restriction' : 'gibson',
       backboneSequence,
       backboneLength,
       insertLength,
@@ -1268,65 +1319,23 @@ export function createSequenceViewerProteinBuilderController(config = {}) {
     };
   }
 
-  function buildLibraryBackboneCandidates(entries) {
-    return (Array.isArray(entries) ? entries : []).map((entry) => ({
-      id: `library_entry:${cleanText(entry?.id, 200)}`,
-      sourceKind: 'library_entry',
-      entryId: cleanText(entry?.id, 200),
-      entryName: cleanText(entry?.name, 160),
-      hostVectorName: cleanText(entry?.name, 160),
-      backboneName: cleanText(entry?.name, 160) || 'Stored backbone',
-      sourceRecordName: cleanText(entry?.name, 160),
-      topology: cleanText(entry?.topology, 40).toLowerCase() === 'linear' ? 'linear' : 'circular',
-      backboneLength: Math.max(0, Number(entry?.sequenceLength) || 0),
-      featureCount: Math.max(0, Number(entry?.featureCount) || 0),
-      updatedAt: cleanText(entry?.updatedAt, 120),
-      entryStatus: cleanText(entry?.status, 40)
-    }));
-  }
-
   async function loadStoredBackboneCandidates() {
     const bridge = getBridge();
     const storagePath = getStoragePath();
-    const candidates = [];
-    let lastError = null;
 
-    if (bridge?.sequenceLibraryListBackbones) {
-      try {
-        const response = await bridge.sequenceLibraryListBackbones({
-          storagePath,
-          limit: 100
-        });
-        if (!response?.ok) {
-          throw new Error(response?.error || 'Failed to load stored backbones.');
-        }
-        candidates.push(
-          ...(Array.isArray(response.results) ? response.results : []).map((item) => normalizeStoredBackboneCandidate(item))
-        );
-      } catch (error) {
-        lastError = error;
-      }
+    if (!bridge?.sequenceLibraryListBackbones) {
+      return [];
     }
 
-    if (!candidates.length && bridge?.sequenceLibraryList) {
-      try {
-        const response = await bridge.sequenceLibraryList({
-          storagePath,
-          status: 'saved'
-        });
-        if (!response?.ok) {
-          throw new Error(response?.error || 'Failed to load saved sequence entries.');
-        }
-        candidates.push(...buildLibraryBackboneCandidates(response.entries));
-      } catch (error) {
-        lastError = error;
-      }
+    const response = await bridge.sequenceLibraryListBackbones({
+      storagePath,
+      limit: 100
+    });
+    if (!response?.ok) {
+      throw new Error(response?.error || 'Failed to load stored backbones.');
     }
-
-    if (!candidates.length && lastError) {
-      throw lastError;
-    }
-    return candidates;
+    return (Array.isArray(response.results) ? response.results : [])
+      .map((item) => normalizeStoredBackboneCandidate(item));
   }
 
   async function hydrateStoredBackbone(backbone = {}) {
@@ -1396,6 +1405,11 @@ export function createSequenceViewerProteinBuilderController(config = {}) {
     }
 
     const selectedBackbone = getSelectedStoredBackbone();
+    const canAdvanceToReview = Boolean(
+      selectedBackbone
+      && state.dnaConstruct?.ok
+      && state.dnaConstruct?.sequence
+    );
     const constructName = cleanText(elements.proteinBuilderNameInput?.value, 140) || 'Protein Builder Insert';
     if (elements.proteinBuilderAssemblySubtitle) {
       elements.proteinBuilderAssemblySubtitle.textContent = state.dnaConstruct?.ok && state.dnaConstruct?.sequence
@@ -1476,11 +1490,10 @@ export function createSequenceViewerProteinBuilderController(config = {}) {
     }
 
     if (elements.proteinBuilderAssemblyApplyBtn) {
+      elements.proteinBuilderAssemblyApplyBtn.hidden = !canAdvanceToReview;
       elements.proteinBuilderAssemblyApplyBtn.disabled = state.isLoadingAssemblyBackbones
         || state.isPreparingAssembly
-        || !selectedBackbone
-        || !state.dnaConstruct?.ok
-        || !state.dnaConstruct?.sequence;
+        || !canAdvanceToReview;
     }
   }
 
@@ -1508,7 +1521,7 @@ export function createSequenceViewerProteinBuilderController(config = {}) {
       if (state.storedBackbones.length) {
         setBuilderStatus('Select a stored backbone to assemble the plasmid.');
       } else {
-        setBuilderStatus('No stored backbones found. Save a backbone sequence or recognize one from a vector first.');
+        setBuilderStatus('No stored backbones found. Use Recognize Backbone/Insert on a vector and Apply Selection first.');
       }
     } catch (error) {
       state.storedBackbones = [];
@@ -1566,8 +1579,18 @@ export function createSequenceViewerProteinBuilderController(config = {}) {
         notebookWarning = error?.message || 'Failed to create the cloning notebook page.';
       }
 
+      const reviewConfirmation = buildProteinBuilderConfirmationPayload({
+        assembledRecord: payload,
+        constructName,
+        backbone: hydratedBackbone,
+        dnaConstruct: state.dnaConstruct,
+        notebookEntry: cloningNotebookResult?.entry || null
+      });
+      const backboneDisplayName = buildStoredBackboneDisplayName(hydratedBackbone);
       closeAssemblyDialog();
-      loadExternalRecord(payload);
+      loadExternalRecord(payload, {
+        proteinBuilderConfirmation: reviewConfirmation
+      });
       if (cloningNotebookResult?.entry) {
         const primerCount = Math.max(
           0,
@@ -1576,15 +1599,16 @@ export function createSequenceViewerProteinBuilderController(config = {}) {
         const notebookTitle = cleanText(cloningNotebookResult.entry.experimentName, 220)
           || cloningNotebookResult.entry.protocolName;
         setBuilderStatus(`Created notebook page "${notebookTitle}" with PCR program and ${primerCount} primer${primerCount === 1 ? '' : 's'}.`);
-        setStatus(`Opened assembled plasmid using stored backbone ${buildStoredBackboneDisplayName(hydratedBackbone)}. Notebook page "${notebookTitle}" has the PCR program and primer table.`);
+        setStatus(`Review the assembled plasmid from stored backbone ${backboneDisplayName} and confirm the construct. Notebook page "${notebookTitle}" has the PCR program and primer table.`);
         return;
       }
       if (notebookWarning) {
-        setBuilderStatus(`Assembled plasmid opened, but notebook page was not saved: ${notebookWarning}`, true);
-        setStatus(`Opened assembled plasmid using stored backbone ${buildStoredBackboneDisplayName(hydratedBackbone)}. Notebook page was not saved: ${notebookWarning}`, true);
+        setBuilderStatus(`Construct review opened, but notebook page was not saved: ${notebookWarning}`, true);
+        setStatus(`Review the assembled plasmid from stored backbone ${backboneDisplayName} and confirm the construct. Notebook page was not saved: ${notebookWarning}`, true);
         return;
       }
-      setStatus(`Opened assembled plasmid using stored backbone ${buildStoredBackboneDisplayName(hydratedBackbone)}.`);
+      setBuilderStatus(`Opened construct review for ${backboneDisplayName}.`);
+      setStatus(`Review the assembled plasmid from stored backbone ${backboneDisplayName} and confirm the construct.`);
     } catch (error) {
       setBuilderStatus(error?.message || 'Unable to assemble the plasmid from the selected backbone.', true);
       setStatus(error?.message || 'Unable to assemble the plasmid from the selected backbone.', true);

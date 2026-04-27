@@ -320,6 +320,9 @@ module.exports = function registerPromptAndFallbackSuite(context = {}) {
       assert.match(synthesisPrompt, /Recent tool outputs:/);
       assert.match(synthesisPrompt, /Markdown is allowed in the final answer\./);
       assert.match(synthesisPrompt, /Respond with the final answer text only\./);
+      assert.match(synthesisPrompt, /Use the collected evidence and tool trace as provenance anchors\./);
+      assert.match(synthesisPrompt, /stable background knowledge needed to answer/i);
+      assert.match(synthesisPrompt, /Keep caveats proportionate/i);
       assert.doesNotMatch(synthesisPrompt, /Original user message:/);
       assert.doesNotMatch(synthesisPrompt, /Clarification JSON:/);
       assert.doesNotMatch(synthesisPrompt, /Parser payload JSON:/);
@@ -327,6 +330,7 @@ module.exports = function registerPromptAndFallbackSuite(context = {}) {
       assert.doesNotMatch(synthesisPrompt, /Citations JSON:/);
       assert.doesNotMatch(synthesisPrompt, /Tool trace JSON:/);
       assert.doesNotMatch(synthesisPrompt, /Return JSON only/i);
+      assert.doesNotMatch(synthesisPrompt, /Answer using only the evidence and tool trace/i);
       assert.match(thinkingTracePrompt, /Tool rounds JSON:/);
       assert.match(routePlanPrompt, /Explain MAPK inhibitor resistance with literature-backed mechanisms and note any uncertainty\./);
       assert.match(thinkingTracePrompt, /Explain MAPK inhibitor resistance with literature-backed mechanisms and note any uncertainty\./);

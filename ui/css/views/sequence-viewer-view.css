@@ -1596,7 +1596,8 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   opacity: 0.55;
 }
 
-.sequence-viewer-feature-editor-overlay {
+.sequence-viewer-feature-editor-overlay,
+.sequence-viewer-sequence-edit-overlay {
   position: fixed;
   inset: 0;
   z-index: 2550;
@@ -1606,11 +1607,13 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   padding: 18px;
 }
 
-.sequence-viewer-feature-editor-overlay[hidden] {
+.sequence-viewer-feature-editor-overlay[hidden],
+.sequence-viewer-sequence-edit-overlay[hidden] {
   display: none !important;
 }
 
-.sequence-viewer-feature-editor {
+.sequence-viewer-feature-editor,
+.sequence-viewer-sequence-edit-dialog {
   width: min(100%, 560px);
   border-radius: 8px;
   border: 1px solid var(--line);
@@ -1621,11 +1624,17 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   gap: 12px;
 }
 
-.sequence-viewer-feature-editor-head {
+.sequence-viewer-sequence-edit-dialog {
+  width: min(100%, 480px);
+}
+
+.sequence-viewer-feature-editor-head,
+.sequence-viewer-sequence-edit-head {
   align-items: center;
 }
 
-.sequence-viewer-feature-editor-head h4 {
+.sequence-viewer-feature-editor-head h4,
+.sequence-viewer-sequence-edit-head h4 {
   margin: 0;
 }
 
@@ -1656,6 +1665,32 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 
 .sequence-viewer-feature-editor-field-wide {
   grid-column: 1 / -1;
+}
+
+.sequence-viewer-sequence-edit-input-wrap {
+  display: grid;
+  gap: 5px;
+  font-size: 0.84rem;
+  color: var(--text);
+}
+
+.sequence-viewer-sequence-edit-input-wrap textarea {
+  min-height: 78px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--surface-elevated);
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  letter-spacing: 0;
+  padding: 8px 10px;
+  resize: vertical;
+  text-transform: uppercase;
+}
+
+.sequence-viewer-sequence-edit-delete-message {
+  margin: 0;
 }
 
 @media (max-width: 1260px) {
@@ -1946,7 +1981,8 @@ body.theme-night .sequence-viewer-context-item:focus-visible:not(:disabled) {
   background: rgba(60, 85, 126, 0.96);
 }
 
-body.theme-night .sequence-viewer-feature-editor-overlay {
+body.theme-night .sequence-viewer-feature-editor-overlay,
+body.theme-night .sequence-viewer-sequence-edit-overlay {
   background: rgba(3, 8, 18, 0.44);
 }
 
@@ -1954,19 +1990,22 @@ body.theme-night .sequence-viewer-alignment-workspace {
   background: rgba(3, 8, 18, 0.58);
 }
 
-body.theme-night .sequence-viewer-feature-editor {
+body.theme-night .sequence-viewer-feature-editor,
+body.theme-night .sequence-viewer-sequence-edit-dialog {
   border-color: rgba(171, 205, 245, 0.34);
   background: var(--surface-elevated);
   box-shadow: 0 2px 8px rgba(27, 20, 14, 0.12);
 }
 
-body.theme-night .sequence-viewer-feature-editor-grid label {
+body.theme-night .sequence-viewer-feature-editor-grid label,
+body.theme-night .sequence-viewer-sequence-edit-input-wrap {
   color: rgba(213, 234, 255, 0.82);
 }
 
 body.theme-night .sequence-viewer-feature-editor-grid input,
 body.theme-night .sequence-viewer-feature-editor-grid select,
-body.theme-night .sequence-viewer-feature-editor-grid textarea {
+body.theme-night .sequence-viewer-feature-editor-grid textarea,
+body.theme-night .sequence-viewer-sequence-edit-input-wrap textarea {
   border-color: rgba(171, 205, 245, 0.32);
   background: rgba(18, 30, 49, 0.9);
   color: rgba(236, 246, 255, 0.96);

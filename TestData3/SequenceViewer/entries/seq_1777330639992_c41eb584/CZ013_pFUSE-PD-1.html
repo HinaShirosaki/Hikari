@@ -1,0 +1,1988 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CZ013_pFUSE-PD-1</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --preview-ink: #16314c;
+      --preview-muted: #5a7592;
+      --preview-backbone: #7e99ba;
+      --preview-center-ring: #d8e4f2;
+      --preview-center-disc: #f9fbfe;
+      --preview-tick: #8ca5c5;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: #ffffff;
+    }
+    body {
+      font-family: "Playfair Display", serif;
+      color: var(--preview-ink);
+      overflow: hidden;
+    }
+    .preview-shell {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      place-items: center;
+      margin: 0;
+      padding: 4px;
+    }
+    svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+      max-width: 100%;
+      max-height: 100%;
+    }
+    .circular-preview__backbone {
+      fill: none;
+      stroke: var(--preview-backbone);
+      stroke-width: 16;
+    }
+    .circular-preview__center-ring {
+      fill: none;
+      stroke: var(--preview-center-ring);
+      stroke-width: 2;
+    }
+    .circular-preview__center-disc {
+      fill: var(--preview-center-disc);
+      stroke: var(--preview-center-ring);
+      stroke-width: 2;
+    }
+    .circular-preview__tick {
+      stroke: var(--preview-tick);
+      stroke-width: 1.5;
+      opacity: 0.9;
+    }
+    .circular-preview__feature {
+      stroke-width: 1.5;
+      stroke-linejoin: round;
+    }
+    .circular-preview__leader {
+      fill: none;
+      stroke-width: 1.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      opacity: 0.82;
+    }
+    .circular-preview__label-box {
+      stroke-width: 1.2;
+    }
+    .circular-preview__label-text {
+      font-size: 15px;
+      font-weight: 600;
+      dominant-baseline: middle;
+      letter-spacing: 0.01em;
+    }
+    .circular-preview__hover-tooltip {
+      position: fixed;
+      z-index: 20;
+      min-width: 180px;
+      max-width: min(320px, calc(100vw - 16px));
+      border-radius: 10px;
+      border: 1px solid rgba(90, 119, 165, 0.42);
+      background: rgba(249, 252, 255, 0.98);
+      box-shadow: 0 10px 24px rgba(27, 20, 14, 0.12);
+      padding: 9px 11px;
+      font-size: 12px;
+      line-height: 1.35;
+      color: var(--preview-ink);
+      pointer-events: none;
+    }
+    .circular-preview__hover-tooltip[hidden] {
+      display: none;
+    }
+    .circular-preview__hover-tooltip p {
+      margin: 0;
+    }
+    .circular-preview__hover-tooltip p + p {
+      margin-top: 3px;
+    }
+    .circular-preview__hover-title {
+      font-weight: 700;
+    }
+    .circular-preview__hover-description {
+      color: var(--preview-muted);
+    }
+    .circular-preview__title {
+      fill: var(--preview-ink);
+      font-size: 28px;
+      font-weight: 700;
+      text-anchor: middle;
+    }
+    .circular-preview__subtitle {
+      text-anchor: middle;
+      fill: var(--preview-muted);
+      letter-spacing: 0.02em;
+    }
+    .circular-preview__subtitle {
+      font-size: 15px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <main class="preview-shell" data-renderer="dna-feature-viewer-js">
+    <!-- Circular plasmid preview powered by a minimal JS port inspired by DnaFeaturesViewer (MIT). -->
+    <svg
+      viewBox="0 0 1489 1272"
+      preserveAspectRatio="xMidYMid meet"
+      role="img"
+      aria-label="CZ013_pFUSE-PD-1 circular plasmid preview">
+      <desc>Standalone circular plasmid preview for CZ013_pFUSE-PD-1.</desc>
+      <g class="circular-preview__scene">
+        <circle class="circular-preview__center-ring" cx="740.60" cy="634.88" r="258.00"></circle>
+        <circle class="circular-preview__backbone" cx="740.60" cy="634.88" r="290.00"></circle>
+        <line class="circular-preview__tick" x1="740.60" y1="356.88" x2="740.60" y2="332.88"></line><line class="circular-preview__tick" x1="846.99" y1="378.04" x2="856.17" y2="355.87"></line><line class="circular-preview__tick" x1="937.18" y1="438.30" x2="954.15" y2="421.33"></line><line class="circular-preview__tick" x1="997.44" y1="528.49" x2="1019.61" y2="519.31"></line><line class="circular-preview__tick" x1="1018.60" y1="634.88" x2="1042.60" y2="634.88"></line><line class="circular-preview__tick" x1="997.44" y1="741.26" x2="1019.61" y2="750.45"></line><line class="circular-preview__tick" x1="937.18" y1="831.45" x2="954.15" y2="848.42"></line><line class="circular-preview__tick" x1="846.99" y1="891.72" x2="856.17" y2="913.89"></line><line class="circular-preview__tick" x1="740.60" y1="912.88" x2="740.60" y2="936.88"></line><line class="circular-preview__tick" x1="634.21" y1="891.72" x2="625.03" y2="913.89"></line><line class="circular-preview__tick" x1="544.02" y1="831.45" x2="527.05" y2="848.42"></line><line class="circular-preview__tick" x1="483.76" y1="741.26" x2="461.59" y2="750.45"></line><line class="circular-preview__tick" x1="462.60" y1="634.88" x2="438.60" y2="634.88"></line><line class="circular-preview__tick" x1="483.76" y1="528.49" x2="461.59" y2="519.31"></line><line class="circular-preview__tick" x1="544.02" y1="438.30" x2="527.05" y2="421.33"></line><line class="circular-preview__tick" x1="634.21" y1="378.04" x2="625.03" y2="355.87"></line>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="1"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_1"
+            data-tooltip-name="source"
+            data-tooltip-meta="source | Strand +"
+            data-tooltip-location="1..4713"
+            data-tooltip-description=""
+            d="M 740.60 308.88 A 326.00 326.00 0 1 1 712.19 310.12 L 740.60 317.88 L 713.76 328.05 A 308.00 308.00 0 1 0 740.60 326.88 Z"
+            aria-label="source (1..4713)"
+            fill="#2f8f9d"
+            stroke="#297c8d"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="2"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_19"
+            data-tooltip-name="IgG1-Fc2"
+            data-tooltip-meta="cds | Strand +"
+            data-tooltip-location="1173..1856"
+            data-tooltip-description=""
+            d="M 1096.59 631.91 A 356.00 356.00 0 0 1 984.44 894.26 L 955.33 907.46 L 972.11 881.15 A 338.00 338.00 0 0 0 1078.59 632.06 Z"
+            aria-label="IgG1-Fc2 (1173..1856)"
+            fill="#479f71"
+            stroke="#3d8a69"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="3"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_28"
+            data-tooltip-name="ori"
+            data-tooltip-meta="rep_origin | Strand -"
+            data-tooltip-location="complement(3861..4449)"
+            data-tooltip-description="high-copy-number ColE1/pMB1/pBR322/pUC origin of replication"
+            d="M 425.71 489.09 L 431.81 457.72 A 356.00 356.00 0 0 1 617.88 300.70 L 624.08 317.60 A 338.00 338.00 0 0 0 447.42 466.67 Z"
+            aria-label="ori (complement(3861..4449)) - high-copy-number ColE1/pMB1/pBR322/pUC origin of replication"
+            fill="#4e7fff"
+            stroke="#436fdd"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="4"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_9"
+            data-tooltip-name="Feature 19"
+            data-tooltip-meta="cds | Strand +"
+            data-tooltip-location="633..1136"
+            data-tooltip-description=""
+            d="M 1006.30 397.94 A 356.00 356.00 0 0 1 1092.94 583.93 L 1087.05 615.34 L 1075.12 586.51 A 338.00 338.00 0 0 0 992.87 409.92 Z"
+            aria-label="Feature 19 (633..1136)"
+            fill="#479f71"
+            stroke="#3d8a69"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="5"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_24"
+            data-tooltip-name="beta-globin poly(A)"
+            data-tooltip-meta="polya_site | Strand +"
+            data-tooltip-location="2103..2497"
+            data-tooltip-description="human beta-globin polyadenylation signal"
+            d="M 859.08 970.58 A 356.00 356.00 0 0 1 705.04 989.10 L 675.98 975.81 L 706.84 971.19 A 338.00 338.00 0 0 0 853.09 953.61 Z"
+            aria-label="beta-globin poly(A) (2103..2497) - human beta-globin polyadenylation signal"
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="6"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_26"
+            data-tooltip-name="BleoR"
+            data-tooltip-meta="cds | Strand -"
+            data-tooltip-location="complement(2511..2885)"
+            data-tooltip-description="confers resistance to bleomycin, phleomycin, and Zeocin(TM)"
+            d="M 670.08 974.64 L 638.15 975.82 A 356.00 356.00 0 0 1 510.02 906.11 L 521.67 892.40 A 338.00 338.00 0 0 0 643.33 958.58 Z"
+            aria-label="BleoR (complement(2511..2885)) - confers resistance to bleomycin, phleomycin, and Zeocin(TM)"
+            fill="#479f71"
+            stroke="#3d8a69"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="7"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_27"
+            data-tooltip-name="CMV enhancer"
+            data-tooltip-meta="enhancer | Strand +"
+            data-tooltip-location="3478..3781"
+            data-tooltip-description="human cytomegalovirus immediate early enhancer"
+            d="M 385.65 662.26 A 356.00 356.00 0 0 1 394.89 549.90 L 412.13 523.00 L 412.37 554.20 A 338.00 338.00 0 0 0 403.60 660.87 Z"
+            aria-label="CMV enhancer (3478..3781) - human cytomegalovirus immediate early enhancer"
+            fill="#808080"
+            stroke="#6c7075"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="8"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_3"
+            data-tooltip-name="5&#39; LTR(truncated)"
+            data-tooltip-meta="ltr | Strand +"
+            data-tooltip-location="255..523"
+            data-tooltip-description=""
+            d="M 858.86 299.09 A 356.00 356.00 0 0 1 944.53 343.08 L 963.41 368.86 L 934.22 357.83 A 338.00 338.00 0 0 0 852.88 316.07 Z"
+            aria-label="5&#39; LTR(truncated) (255..523)"
+            fill="#479f71"
+            stroke="#3d8a69"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="9"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_2"
+            data-tooltip-name="EF-1a core promoter"
+            data-tooltip-meta="promoter | Strand +"
+            data-tooltip-location="31..242"
+            data-tooltip-description=""
+            d="M 754.83 279.16 A 356.00 356.00 0 0 1 823.62 288.69 L 850.62 305.78 L 819.42 306.20 A 338.00 338.00 0 0 0 754.11 297.15 Z"
+            aria-label="EF-1a core promoter (31..242)"
+            fill="#8b5cf6"
+            stroke="#7553d6"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="10"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_23"
+            data-tooltip-name="SV40 poly(A) signal"
+            data-tooltip-meta="polya_signal | Strand +"
+            data-tooltip-location="1878..1999"
+            data-tooltip-description="SV40 polyadenylation signal"
+            d="M 952.99 920.58 A 356.00 356.00 0 0 1 929.08 936.89 L 899.79 943.21 L 919.55 921.62 A 338.00 338.00 0 0 0 942.25 906.14 Z"
+            aria-label="SV40 poly(A) signal (1878..1999) - SV40 polyadenylation signal"
+            fill="#8b5cf6"
+            stroke="#7553d6"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="11"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_30"
+            data-tooltip-name="pause site"
+            data-tooltip-meta="misc_feature | Strand +"
+            data-tooltip-location="4616..4707"
+            data-tooltip-description="RNA polymerase II transcriptional pause signal from the human alpha-2 globin gene"
+            d="M 694.22 281.91 A 356.00 356.00 0 0 1 715.94 279.73 L 737.82 287.89 L 717.19 297.69 A 338.00 338.00 0 0 0 696.57 299.76 Z"
+            aria-label="pause site (4616..4707) - RNA polymerase II transcriptional pause signal from the human alpha-2 globin gene"
+            fill="#2f8f9d"
+            stroke="#297c8d"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="12"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_5"
+            data-tooltip-name="IL-2 signal sequence"
+            data-tooltip-meta="cds | Strand +"
+            data-tooltip-location="573..632"
+            data-tooltip-description="human interleukin-2 signal sequence"
+            d="M 986.52 377.47 A 356.00 356.00 0 0 1 996.61 387.51 L 999.58 403.93 L 983.67 400.01 A 338.00 338.00 0 0 0 974.08 390.48 Z"
+            aria-label="IL-2 signal sequence (573..632) - human interleukin-2 signal sequence"
+            fill="#479f71"
+            stroke="#3d8a69"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="13"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_29"
+            data-tooltip-name="polyA_signal"
+            data-tooltip-meta="polya_signal | Strand +"
+            data-tooltip-location="4557..4605"
+            data-tooltip-description="synthetic polyadenylation signal"
+            d="M 666.63 286.65 A 356.00 356.00 0 0 1 678.04 284.42 L 690.81 291.47 L 681.20 302.14 A 338.00 338.00 0 0 0 670.37 304.25 Z"
+            aria-label="polyA_signal (4557..4605) - synthetic polyadenylation signal"
+            fill="#8b5cf6"
+            stroke="#7553d6"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="14"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_10"
+            data-tooltip-name="Extracellular Domain"
+            data-tooltip-meta="misc_feature | Strand +"
+            data-tooltip-location="633..1073"
+            data-tooltip-description=""
+            d="M 1028.69 377.97 A 386.00 386.00 0 0 1 1116.65 547.79 L 1113.89 582.15 L 1099.11 551.85 A 368.00 368.00 0 0 0 1015.26 389.95 Z"
+            aria-label="Extracellular Domain (633..1073)"
+            fill="#2f8f9d"
+            stroke="#297c8d"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="15"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_25"
+            data-tooltip-name="beta-globin poly(A)"
+            data-tooltip-meta="polya_signal | Strand +"
+            data-tooltip-location="2103..2497"
+            data-tooltip-description="human beta-globin polyadenylation signal"
+            d="M 869.07 998.87 A 386.00 386.00 0 0 1 702.05 1018.95 L 670.40 1005.28 L 703.85 1001.04 A 368.00 368.00 0 0 0 863.08 981.90 Z"
+            aria-label="beta-globin poly(A) (2103..2497) - human beta-globin polyadenylation signal"
+            fill="#8b5cf6"
+            stroke="#7553d6"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="16"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_20"
+            data-tooltip-name="PFUSE_PD1 R"
+            data-tooltip-meta="primer_bind | Strand -"
+            data-tooltip-location="complement(1808..1868)"
+            data-tooltip-description=""
+            d="M 992.73 915.16 L 986.87 932.11 A 386.00 386.00 0 0 1 974.59 941.87 L 963.67 927.56 A 368.00 368.00 0 0 0 975.39 918.25 Z"
+            aria-label="PFUSE_PD1 R (complement(1808..1868))"
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="17"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_6"
+            data-tooltip-name="IL-2 signal sequence"
+            data-tooltip-meta="sig_peptide | Strand +"
+            data-tooltip-location="573..632"
+            data-tooltip-description="human interleukin-2 signal sequence"
+            d="M 1007.24 355.77 A 386.00 386.00 0 0 1 1018.19 366.66 L 1021.97 383.96 L 1005.24 379.17 A 368.00 368.00 0 0 0 994.81 368.79 Z"
+            aria-label="IL-2 signal sequence (573..632) - human interleukin-2 signal sequence"
+            fill="#c97064"
+            stroke="#a8635e"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="18"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_14"
+            data-tooltip-name="AviTag(TM)"
+            data-tooltip-meta="cds | Strand +"
+            data-tooltip-location="1092..1136"
+            data-tooltip-description="peptide tag that allows for enzymatic biotinylation"
+            d="M 1123.99 590.08 A 386.00 386.00 0 0 1 1125.16 601.60 L 1117.00 613.65 L 1107.23 603.15 A 368.00 368.00 0 0 0 1106.11 592.17 Z"
+            aria-label="AviTag(TM) (1092..1136) - peptide tag that allows for enzymatic biotinylation"
+            fill="#479f71"
+            stroke="#3d8a69"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="19"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_4"
+            data-tooltip-name="PFUSE_Seq F"
+            data-tooltip-meta="primer_bind | Strand +"
+            data-tooltip-location="511..528"
+            data-tooltip-description=""
+            d="M 983.29 334.71 A 386.00 386.00 0 0 1 986.87 337.65 L 984.60 347.48 L 975.39 351.51 A 368.00 368.00 0 0 0 971.97 348.71 Z"
+            aria-label="PFUSE_Seq F (511..528)"
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="20"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_13"
+            data-tooltip-name="PD-1 R1"
+            data-tooltip-meta="primer_bind | Strand -"
+            data-tooltip-location="complement(1056..1110)"
+            data-tooltip-description=""
+            d="M 1142.12 568.30 L 1153.22 581.92 A 416.00 416.00 0 0 1 1154.88 597.08 L 1136.95 598.71 A 398.00 398.00 0 0 0 1135.36 584.21 Z"
+            aria-label="PD-1 R1 (complement(1056..1110))"
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="21"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_21"
+            data-tooltip-name="Primer 2"
+            data-tooltip-meta="primer_bind | Strand -"
+            data-tooltip-location="complement(1839..1868)"
+            data-tooltip-description=""
+            d="M 1000.06 948.45 L 999.34 960.63 A 416.00 416.00 0 0 1 992.77 965.73 L 981.86 951.42 A 398.00 398.00 0 0 0 988.14 946.53 Z"
+            aria-label="Primer 2 (complement(1839..1868))"
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="22"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_16"
+            data-tooltip-name="Primer 1 (1)"
+            data-tooltip-meta="primer_bind | Strand -"
+            data-tooltip-location="complement(1125..1150)"
+            data-tooltip-description=""
+            d="M 1146.54 605.47 L 1155.97 612.01 A 416.00 416.00 0 0 1 1156.31 619.21 L 1138.32 619.89 A 398.00 398.00 0 0 0 1138.00 613.00 Z"
+            aria-label="Primer 1 (1) (complement(1125..1150))"
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="23"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_7"
+            data-tooltip-name="Primer 2 (1)"
+            data-tooltip-meta="primer_bind | Strand +"
+            data-tooltip-location="615..635"
+            data-tooltip-description=""
+            d="M 1044.35 350.64 A 416.00 416.00 0 0 1 1048.30 354.92 L 1045.44 365.21 L 1034.98 367.03 A 398.00 398.00 0 0 0 1031.20 362.93 Z"
+            aria-label="Primer 2 (1) (615..635)"
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="24"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_15"
+            data-tooltip-name="PD-1 R2"
+            data-tooltip-meta="primer_bind | Strand -"
+            data-tooltip-location="complement(1093..1142)"
+            data-tooltip-description=""
+            d="M 1174.71 584.74 L 1185.11 598.50 A 446.00 446.00 0 0 1 1186.08 613.33 L 1168.10 614.20 A 428.00 428.00 0 0 0 1167.17 599.97 Z"
+            aria-label="PD-1 R2 (complement(1093..1142))"
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="25"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_22"
+            data-tooltip-name="Fc R"
+            data-tooltip-meta="primer_bind | Strand -"
+            data-tooltip-location="complement(1839..1868)"
+            data-tooltip-description=""
+            d="M 1019.19 971.57 L 1018.00 984.12 A 446.00 446.00 0 0 1 1010.96 989.59 L 1000.05 975.28 A 428.00 428.00 0 0 0 1006.80 970.02 Z"
+            aria-label="Fc R (complement(1839..1868))"
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="26"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_8"
+            data-tooltip-name="PD-1-op F"
+            data-tooltip-meta="primer_bind | Strand +"
+            data-tooltip-location="615..635"
+            data-tooltip-description=""
+            d="M 1066.25 330.14 A 446.00 446.00 0 0 1 1070.49 334.73 L 1067.91 345.34 L 1057.17 346.84 A 428.00 428.00 0 0 0 1053.11 342.44 Z"
+            aria-label="PD-1-op F (615..635)"
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="27"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_11"
+            data-tooltip-name="PD-1 full length"
+            data-tooltip-meta="cds | Strand +"
+            data-tooltip-location="633..1073"
+            data-tooltip-description="DNA sequence same with human PD-1 Transcript. Not codon optimized"
+            d="M 1095.86 318.07 A 476.00 476.00 0 0 1 1204.33 527.48 L 1203.01 569.57 L 1186.79 531.54 A 458.00 458.00 0 0 0 1082.43 330.05 Z"
+            aria-label="PD-1 full length (633..1073) - DNA sequence same with human PD-1 Transcript. Not codon optimized"
+            fill="#479f71"
+            stroke="#3d8a69"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="28"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_17"
+            data-tooltip-name="Primer 1 (2)"
+            data-tooltip-meta="primer_bind | Strand -"
+            data-tooltip-location="complement(1125..1150)"
+            data-tooltip-description=""
+            d="M 1206.38 601.13 L 1215.88 608.71 A 476.00 476.00 0 0 1 1216.26 616.95 L 1198.28 617.63 A 458.00 458.00 0 0 0 1197.91 609.70 Z"
+            aria-label="Primer 1 (2) (complement(1125..1150))"
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="29"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_18"
+            data-tooltip-name="Primer 1"
+            data-tooltip-meta="primer_bind | Strand +"
+            data-tooltip-location="1131..1153"
+            data-tooltip-description=""
+            d="M 1245.55 602.35 A 506.00 506.00 0 0 1 1245.99 610.10 L 1237.32 618.15 L 1228.01 610.98 A 488.00 488.00 0 0 0 1227.59 603.51 Z"
+            aria-label="Primer 1 (1131..1153)"
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="30"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_12"
+            data-tooltip-name="PD1 F"
+            data-tooltip-meta="primer_bind | Strand +"
+            data-tooltip-location="633..650"
+            data-tooltip-description=""
+            d="M 1118.25 298.11 A 506.00 506.00 0 0 1 1122.27 302.66 L 1119.36 313.09 L 1108.69 314.48 A 488.00 488.00 0 0 0 1104.82 310.09 Z"
+            aria-label="PD1 F (633..650)"
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+        
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_1"
+          data-tooltip-name="source"
+          data-tooltip-meta="source | Strand +"
+          data-tooltip-location="1..4713"
+          data-tooltip-description=""
+          data-feature-x="740.60"
+          data-feature-y="964.88"
+          data-bend-x="740.60"
+          data-bend-y="1178.88"
+          data-label-center-y="1226.08"
+          aria-label="source (1..4713)">
+          <path class="circular-preview__leader"
+            d="M 740.60 964.88 L 740.60 1178.88 L 188.60 1226.08"
+            stroke="#297c8d"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="102.60"
+            y="1213.08"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e2eff1"
+            stroke="#297c8d"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="176.60"
+              y="1226.08"
+              text-anchor="end"
+              fill="#0f223e">
+              source
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_19"
+          data-tooltip-name="IgG1-Fc2"
+          data-tooltip-meta="cds | Strand +"
+          data-tooltip-location="1173..1856"
+          data-tooltip-description=""
+          data-feature-x="1065.13"
+          data-feature-y="790.69"
+          data-bend-x="1231.01"
+          data-bend-y="870.33"
+          data-label-center-y="837.38"
+          aria-label="IgG1-Fc2 (1173..1856)">
+          <path class="circular-preview__leader"
+            d="M 1065.13 790.69 L 1231.01 870.33 L 1292.60 837.38"
+            stroke="#3d8a69"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1292.60"
+            y="824.38"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e5f2eb"
+            stroke="#3d8a69"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1304.60"
+              y="837.38"
+              text-anchor="start"
+              fill="#0f223e">
+              IgG1-Fc2
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_28"
+          data-tooltip-name="ori"
+          data-tooltip-meta="rep_origin | Strand -"
+          data-tooltip-location="complement(3861..4449)"
+          data-tooltip-description="high-copy-number ColE1/pMB1/pBR322/pUC origin of replication"
+          data-feature-x="496.64"
+          data-feature-y="370.14"
+          data-bend-x="371.96"
+          data-bend-y="234.83"
+          data-label-center-y="205.00"
+          aria-label="ori (complement(3861..4449)) - high-copy-number ColE1/pMB1/pBR322/pUC origin of replication">
+          <path class="circular-preview__leader"
+            d="M 496.64 370.14 L 371.96 234.83 L 188.60 205.00"
+            stroke="#436fdd"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="102.60"
+            y="192.00"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e6edff"
+            stroke="#436fdd"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="176.60"
+              y="205.00"
+              text-anchor="end"
+              fill="#0f223e">
+              ori
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_9"
+          data-tooltip-name="Feature 19"
+          data-tooltip-meta="cds | Strand +"
+          data-tooltip-location="633..1136"
+          data-tooltip-description=""
+          data-feature-x="1073.25"
+          data-feature-y="497.25"
+          data-bend-x="1243.28"
+          data-bend-y="426.91"
+          data-label-center-y="494.90"
+          aria-label="Feature 19 (633..1136)">
+          <path class="circular-preview__leader"
+            d="M 1073.25 497.25 L 1243.28 426.91 L 1292.60 494.90"
+            stroke="#3d8a69"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1292.60"
+            y="481.90"
+            width="90.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e5f2eb"
+            stroke="#3d8a69"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1304.60"
+              y="494.90"
+              text-anchor="start"
+              fill="#0f223e">
+              Feature 19
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_24"
+          data-tooltip-name="beta-globin poly(A)"
+          data-tooltip-meta="polya_site | Strand +"
+          data-tooltip-location="2103..2497"
+          data-tooltip-description="human beta-globin polyadenylation signal"
+          data-feature-x="767.93"
+          data-feature-y="993.84"
+          data-bend-x="781.90"
+          data-bend-y="1177.31"
+          data-label-center-y="1146.08"
+          aria-label="beta-globin poly(A) (2103..2497) - human beta-globin polyadenylation signal">
+          <path class="circular-preview__leader"
+            d="M 767.93 993.84 L 781.90 1177.31 L 188.60 1146.08"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="32.00"
+            y="1133.08"
+            width="156.60"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="176.60"
+              y="1146.08"
+              text-anchor="end"
+              fill="#0f223e">
+              beta-globin poly(A)
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_26"
+          data-tooltip-name="BleoR"
+          data-tooltip-meta="cds | Strand -"
+          data-tooltip-location="complement(2511..2885)"
+          data-tooltip-description="confers resistance to bleomycin, phleomycin, and Zeocin(TM)"
+          data-feature-x="582.52"
+          data-feature-y="958.31"
+          data-bend-x="501.72"
+          data-bend-y="1123.63"
+          data-label-center-y="1103.97"
+          aria-label="BleoR (complement(2511..2885)) - confers resistance to bleomycin, phleomycin, and Zeocin(TM)">
+          <path class="circular-preview__leader"
+            d="M 582.52 958.31 L 501.72 1123.63 L 188.60 1103.97"
+            stroke="#3d8a69"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="102.60"
+            y="1090.97"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e5f2eb"
+            stroke="#3d8a69"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="176.60"
+              y="1103.97"
+              text-anchor="end"
+              fill="#0f223e">
+              BleoR
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_27"
+          data-tooltip-name="CMV enhancer"
+          data-tooltip-meta="enhancer | Strand +"
+          data-tooltip-location="3478..3781"
+          data-tooltip-description="human cytomegalovirus immediate early enhancer"
+          data-feature-x="383.44"
+          data-feature-y="589.76"
+          data-bend-x="200.89"
+          data-bend-y="566.70"
+          data-label-center-y="526.50"
+          aria-label="CMV enhancer (3478..3781) - human cytomegalovirus immediate early enhancer">
+          <path class="circular-preview__leader"
+            d="M 383.44 589.76 L 200.89 566.70 L 188.60 526.50"
+            stroke="#6c7075"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="83.80"
+            y="513.50"
+            width="104.80"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#ededed"
+            stroke="#6c7075"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="176.60"
+              y="526.50"
+              text-anchor="end"
+              fill="#0f223e">
+              CMV enhancer
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_3"
+          data-tooltip-name="5&#39; LTR(truncated)"
+          data-tooltip-meta="ltr | Strand +"
+          data-tooltip-location="255..523"
+          data-tooltip-description=""
+          data-feature-x="918.83"
+          data-feature-y="322.09"
+          data-bend-x="1009.93"
+          data-bend-y="162.23"
+          data-label-center-y="165.00"
+          aria-label="5&#39; LTR(truncated) (255..523)">
+          <path class="circular-preview__leader"
+            d="M 918.83 322.09 L 1009.93 162.23 L 188.60 165.00"
+            stroke="#3d8a69"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="46.80"
+            y="152.00"
+            width="141.80"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e5f2eb"
+            stroke="#3d8a69"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="176.60"
+              y="165.00"
+              text-anchor="end"
+              fill="#0f223e">
+              5&#39; LTR(truncated)
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_2"
+          data-tooltip-name="EF-1a core promoter"
+          data-tooltip-meta="promoter | Strand +"
+          data-tooltip-location="31..242"
+          data-tooltip-description=""
+          data-feature-x="805.51"
+          data-feature-y="280.78"
+          data-bend-x="838.69"
+          data-bend-y="99.79"
+          data-label-center-y="125.00"
+          aria-label="EF-1a core promoter (31..242)">
+          <path class="circular-preview__leader"
+            d="M 805.51 280.78 L 838.69 99.79 L 188.60 125.00"
+            stroke="#7553d6"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="32.00"
+            y="112.00"
+            width="156.60"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#efe8fe"
+            stroke="#7553d6"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="176.60"
+              y="125.00"
+              text-anchor="end"
+              fill="#0f223e">
+              EF-1a core promoter
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_23"
+          data-tooltip-name="SV40 poly(A) signal"
+          data-tooltip-meta="polya_signal | Strand +"
+          data-tooltip-location="1878..1999"
+          data-tooltip-description="SV40 polyadenylation signal"
+          data-feature-x="931.19"
+          data-feature-y="940.29"
+          data-bend-x="1028.61"
+          data-bend-y="1096.38"
+          data-label-center-y="1063.97"
+          aria-label="SV40 poly(A) signal (1878..1999) - SV40 polyadenylation signal">
+          <path class="circular-preview__leader"
+            d="M 931.19 940.29 L 1028.61 1096.38 L 188.60 1063.97"
+            stroke="#7553d6"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="32.00"
+            y="1050.97"
+            width="156.60"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#efe8fe"
+            stroke="#7553d6"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="176.60"
+              y="1063.97"
+              text-anchor="end"
+              fill="#0f223e">
+              SV40 poly(A) signal
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_30"
+          data-tooltip-name="pause site"
+          data-tooltip-meta="misc_feature | Strand +"
+          data-tooltip-location="4616..4707"
+          data-tooltip-description="RNA polymerase II transcriptional pause signal from the human alpha-2 globin gene"
+          data-feature-x="715.66"
+          data-feature-y="275.74"
+          data-bend-x="702.92"
+          data-bend-y="92.18"
+          data-label-center-y="45.00"
+          aria-label="pause site (4616..4707) - RNA polymerase II transcriptional pause signal from the human alpha-2 globin gene">
+          <path class="circular-preview__leader"
+            d="M 715.66 275.74 L 702.92 92.18 L 188.60 45.00"
+            stroke="#297c8d"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="98.60"
+            y="32.00"
+            width="90.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e2eff1"
+            stroke="#297c8d"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="176.60"
+              y="45.00"
+              text-anchor="end"
+              fill="#0f223e">
+              pause site
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_5"
+          data-tooltip-name="IL-2 signal sequence"
+          data-tooltip-meta="cds | Strand +"
+          data-tooltip-location="573..632"
+          data-tooltip-description="human interleukin-2 signal sequence"
+          data-feature-x="999.49"
+          data-feature-y="384.73"
+          data-bend-x="1131.81"
+          data-bend-y="256.87"
+          data-label-center-y="214.90"
+          aria-label="IL-2 signal sequence (573..632) - human interleukin-2 signal sequence">
+          <path class="circular-preview__leader"
+            d="M 999.49 384.73 L 1131.81 256.87 L 1292.60 214.90"
+            stroke="#3d8a69"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1292.60"
+            y="201.90"
+            width="164.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e5f2eb"
+            stroke="#3d8a69"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1304.60"
+              y="214.90"
+              text-anchor="start"
+              fill="#0f223e">
+              IL-2 signal sequence
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_29"
+          data-tooltip-name="polyA_signal"
+          data-tooltip-meta="polya_signal | Strand +"
+          data-tooltip-location="4557..4605"
+          data-tooltip-description="synthetic polyadenylation signal"
+          data-feature-x="677.34"
+          data-feature-y="280.48"
+          data-bend-x="645.00"
+          data-bend-y="99.34"
+          data-label-center-y="85.00"
+          aria-label="polyA_signal (4557..4605) - synthetic polyadenylation signal">
+          <path class="circular-preview__leader"
+            d="M 677.34 280.48 L 645.00 99.34 L 188.60 85.00"
+            stroke="#7553d6"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="83.80"
+            y="72.00"
+            width="104.80"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#efe8fe"
+            stroke="#7553d6"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="176.60"
+              y="85.00"
+              text-anchor="end"
+              fill="#0f223e">
+              polyA_signal
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_10"
+          data-tooltip-name="Extracellular Domain"
+          data-tooltip-meta="misc_feature | Strand +"
+          data-tooltip-location="633..1073"
+          data-tooltip-description=""
+          data-feature-x="1094.40"
+          data-feature-y="470.78"
+          data-bend-x="1234.10"
+          data-bend-y="405.99"
+          data-label-center-y="414.90"
+          aria-label="Extracellular Domain (633..1073)">
+          <path class="circular-preview__leader"
+            d="M 1094.40 470.78 L 1234.10 405.99 L 1292.60 414.90"
+            stroke="#297c8d"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1292.60"
+            y="401.90"
+            width="164.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e2eff1"
+            stroke="#297c8d"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1304.60"
+              y="414.90"
+              text-anchor="start"
+              fill="#0f223e">
+              Extracellular Domain
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_25"
+          data-tooltip-name="beta-globin poly(A)"
+          data-tooltip-meta="polya_signal | Strand +"
+          data-tooltip-location="2103..2497"
+          data-tooltip-description="human beta-globin polyadenylation signal"
+          data-feature-x="770.21"
+          data-feature-y="1023.75"
+          data-bend-x="781.90"
+          data-bend-y="1177.31"
+          data-label-center-y="1186.08"
+          aria-label="beta-globin poly(A) (2103..2497) - human beta-globin polyadenylation signal">
+          <path class="circular-preview__leader"
+            d="M 770.21 1023.75 L 781.90 1177.31 L 188.60 1186.08"
+            stroke="#7553d6"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="32.00"
+            y="1173.08"
+            width="156.60"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#efe8fe"
+            stroke="#7553d6"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="176.60"
+              y="1186.08"
+              text-anchor="end"
+              fill="#0f223e">
+              beta-globin poly(A)
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_20"
+          data-tooltip-name="PFUSE_PD1 R"
+          data-tooltip-meta="primer_bind | Strand -"
+          data-tooltip-location="complement(1808..1868)"
+          data-tooltip-description=""
+          data-feature-x="989.42"
+          data-feature-y="935.19"
+          data-bend-x="1087.68"
+          data-bend-y="1053.77"
+          data-label-center-y="1023.53"
+          aria-label="PFUSE_PD1 R (complement(1808..1868))">
+          <path class="circular-preview__leader"
+            d="M 989.42 935.19 L 1087.68 1053.77 L 1292.60 1023.53"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1292.60"
+            y="1010.53"
+            width="97.40"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1304.60"
+              y="1023.53"
+              text-anchor="start"
+              fill="#0f223e">
+              PFUSE_PD1 R
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_6"
+          data-tooltip-name="IL-2 signal sequence"
+          data-tooltip-meta="sig_peptide | Strand +"
+          data-tooltip-location="573..632"
+          data-tooltip-description="human interleukin-2 signal sequence"
+          data-feature-x="1021.06"
+          data-feature-y="363.88"
+          data-bend-x="1131.81"
+          data-bend-y="256.87"
+          data-label-center-y="254.90"
+          aria-label="IL-2 signal sequence (573..632) - human interleukin-2 signal sequence">
+          <path class="circular-preview__leader"
+            d="M 1021.06 363.88 L 1131.81 256.87 L 1292.60 254.90"
+            stroke="#a8635e"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1292.60"
+            y="241.90"
+            width="164.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f7ebe9"
+            stroke="#a8635e"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1304.60"
+              y="254.90"
+              text-anchor="start"
+              fill="#0f223e">
+              IL-2 signal sequence
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_14"
+          data-tooltip-name="AviTag(TM)"
+          data-tooltip-meta="cds | Strand +"
+          data-tooltip-location="1092..1136"
+          data-tooltip-description="peptide tag that allows for enzymatic biotinylation"
+          data-feature-x="1129.15"
+          data-feature-y="601.25"
+          data-bend-x="1282.57"
+          data-bend-y="587.98"
+          data-label-center-y="574.90"
+          aria-label="AviTag(TM) (1092..1136) - peptide tag that allows for enzymatic biotinylation">
+          <path class="circular-preview__leader"
+            d="M 1129.15 601.25 L 1282.57 587.98 L 1292.60 574.90"
+            stroke="#3d8a69"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1292.60"
+            y="561.90"
+            width="90.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e5f2eb"
+            stroke="#3d8a69"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1304.60"
+              y="574.90"
+              text-anchor="start"
+              fill="#0f223e">
+              AviTag(TM)
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_4"
+          data-tooltip-name="PFUSE_Seq F"
+          data-tooltip-meta="primer_bind | Strand +"
+          data-tooltip-location="511..528"
+          data-tooltip-description=""
+          data-feature-x="989.42"
+          data-feature-y="334.57"
+          data-bend-x="1087.68"
+          data-bend-y="215.98"
+          data-label-center-y="173.41"
+          aria-label="PFUSE_Seq F (511..528)">
+          <path class="circular-preview__leader"
+            d="M 989.42 334.57 L 1087.68 215.98 L 1292.60 173.41"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1292.60"
+            y="160.41"
+            width="97.40"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1304.60"
+              y="173.41"
+              text-anchor="start"
+              fill="#0f223e">
+              PFUSE_Seq F
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_13"
+          data-tooltip-name="PD-1 R1"
+          data-tooltip-meta="primer_bind | Strand -"
+          data-tooltip-location="complement(1056..1110)"
+          data-tooltip-description=""
+          data-feature-x="1157.18"
+          data-feature-y="581.41"
+          data-bend-x="1280.17"
+          data-bend-y="565.62"
+          data-label-center-y="534.90"
+          aria-label="PD-1 R1 (complement(1056..1110))">
+          <path class="circular-preview__leader"
+            d="M 1157.18 581.41 L 1280.17 565.62 L 1292.60 534.90"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1292.60"
+            y="521.90"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1304.60"
+              y="534.90"
+              text-anchor="start"
+              fill="#0f223e">
+              PD-1 R1
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_21"
+          data-tooltip-name="Primer 2"
+          data-tooltip-meta="primer_bind | Strand -"
+          data-tooltip-location="complement(1839..1868)"
+          data-tooltip-description=""
+          data-feature-x="1001.82"
+          data-feature-y="963.76"
+          data-bend-x="1078.95"
+          data-bend-y="1060.86"
+          data-label-center-y="1063.53"
+          aria-label="Primer 2 (complement(1839..1868))">
+          <path class="circular-preview__leader"
+            d="M 1001.82 963.76 L 1078.95 1060.86 L 1292.60 1063.53"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1292.60"
+            y="1050.53"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1304.60"
+              y="1063.53"
+              text-anchor="start"
+              fill="#0f223e">
+              Primer 2
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_16"
+          data-tooltip-name="Primer 1 (1)"
+          data-tooltip-meta="primer_bind | Strand -"
+          data-tooltip-location="complement(1125..1150)"
+          data-tooltip-description=""
+          data-feature-x="1159.97"
+          data-feature-y="611.79"
+          data-bend-x="1283.78"
+          data-bend-y="604.98"
+          data-label-center-y="654.90"
+          aria-label="Primer 1 (1) (complement(1125..1150))">
+          <path class="circular-preview__leader"
+            d="M 1159.97 611.79 L 1283.78 604.98 L 1292.60 654.90"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1292.60"
+            y="641.90"
+            width="104.80"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1304.60"
+              y="654.90"
+              text-anchor="start"
+              fill="#0f223e">
+              Primer 1 (1)
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_7"
+          data-tooltip-name="Primer 2 (1)"
+          data-tooltip-meta="primer_bind | Strand +"
+          data-tooltip-location="615..635"
+          data-tooltip-description=""
+          data-feature-x="1051.26"
+          data-feature-y="352.22"
+          data-bend-x="1142.97"
+          data-bend-y="268.77"
+          data-label-center-y="294.90"
+          aria-label="Primer 2 (1) (615..635)">
+          <path class="circular-preview__leader"
+            d="M 1051.26 352.22 L 1142.97 268.77 L 1292.60 294.90"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1292.60"
+            y="281.90"
+            width="104.80"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1304.60"
+              y="294.90"
+              text-anchor="start"
+              fill="#0f223e">
+              Primer 2 (1)
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_15"
+          data-tooltip-name="PD-1 R2"
+          data-tooltip-meta="primer_bind | Strand -"
+          data-tooltip-location="complement(1093..1142)"
+          data-tooltip-description=""
+          data-feature-x="1189.10"
+          data-feature-y="598.17"
+          data-bend-x="1282.79"
+          data-bend-y="590.51"
+          data-label-center-y="614.90"
+          aria-label="PD-1 R2 (complement(1093..1142))">
+          <path class="circular-preview__leader"
+            d="M 1189.10 598.17 L 1282.79 590.51 L 1292.60 614.90"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1292.60"
+            y="601.90"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1304.60"
+              y="614.90"
+              text-anchor="start"
+              fill="#0f223e">
+              PD-1 R2
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_22"
+          data-tooltip-name="Fc R"
+          data-tooltip-meta="primer_bind | Strand -"
+          data-tooltip-location="complement(1839..1868)"
+          data-tooltip-description=""
+          data-feature-x="1020.48"
+          data-feature-y="987.25"
+          data-bend-x="1078.95"
+          data-bend-y="1060.86"
+          data-label-center-y="1103.53"
+          aria-label="Fc R (complement(1839..1868))">
+          <path class="circular-preview__leader"
+            d="M 1020.48 987.25 L 1078.95 1060.86 L 1292.60 1103.53"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1292.60"
+            y="1090.53"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1304.60"
+              y="1103.53"
+              text-anchor="start"
+              fill="#0f223e">
+              Fc R
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_8"
+          data-tooltip-name="PD-1-op F"
+          data-tooltip-meta="primer_bind | Strand +"
+          data-tooltip-location="615..635"
+          data-tooltip-description=""
+          data-feature-x="1073.45"
+          data-feature-y="332.03"
+          data-bend-x="1142.97"
+          data-bend-y="268.77"
+          data-label-center-y="334.90"
+          aria-label="PD-1-op F (615..635)">
+          <path class="circular-preview__leader"
+            d="M 1073.45 332.03 L 1142.97 268.77 L 1292.60 334.90"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1292.60"
+            y="321.90"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1304.60"
+              y="334.90"
+              text-anchor="start"
+              fill="#0f223e">
+              PD-1-op F
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_11"
+          data-tooltip-name="PD-1 full length"
+          data-tooltip-meta="cds | Strand +"
+          data-tooltip-location="633..1073"
+          data-tooltip-description="DNA sequence same with human PD-1 Transcript. Not codon optimized"
+          data-feature-x="1176.04"
+          data-feature-y="432.92"
+          data-bend-x="1234.10"
+          data-bend-y="405.99"
+          data-label-center-y="454.90"
+          aria-label="PD-1 full length (633..1073) - DNA sequence same with human PD-1 Transcript. Not codon optimized">
+          <path class="circular-preview__leader"
+            d="M 1176.04 432.92 L 1234.10 405.99 L 1292.60 454.90"
+            stroke="#3d8a69"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1292.60"
+            y="441.90"
+            width="134.40"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e5f2eb"
+            stroke="#3d8a69"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1304.60"
+              y="454.90"
+              text-anchor="start"
+              fill="#0f223e">
+              PD-1 full length
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_17"
+          data-tooltip-name="Primer 1 (2)"
+          data-tooltip-meta="primer_bind | Strand -"
+          data-tooltip-location="complement(1125..1150)"
+          data-tooltip-description=""
+          data-feature-x="1219.87"
+          data-feature-y="608.49"
+          data-bend-x="1283.78"
+          data-bend-y="604.98"
+          data-label-center-y="694.90"
+          aria-label="Primer 1 (2) (complement(1125..1150))">
+          <path class="circular-preview__leader"
+            d="M 1219.87 608.49 L 1283.78 604.98 L 1292.60 694.90"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1292.60"
+            y="681.90"
+            width="104.80"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1304.60"
+              y="694.90"
+              text-anchor="start"
+              fill="#0f223e">
+              Primer 1 (2)
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_18"
+          data-tooltip-name="Primer 1"
+          data-tooltip-meta="primer_bind | Strand +"
+          data-tooltip-location="1131..1153"
+          data-tooltip-description=""
+          data-feature-x="1249.99"
+          data-feature-y="609.90"
+          data-bend-x="1283.95"
+          data-bend-y="608.24"
+          data-label-center-y="734.90"
+          aria-label="Primer 1 (1131..1153)">
+          <path class="circular-preview__leader"
+            d="M 1249.99 609.90 L 1283.95 608.24 L 1292.60 734.90"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1292.60"
+            y="721.90"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1304.60"
+              y="734.90"
+              text-anchor="start"
+              fill="#0f223e">
+              Primer 1
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_12"
+          data-tooltip-name="PD1 F"
+          data-tooltip-meta="primer_bind | Strand +"
+          data-tooltip-location="633..650"
+          data-tooltip-description=""
+          data-feature-x="1125.28"
+          data-feature-y="300.04"
+          data-bend-x="1150.93"
+          data-bend-y="277.71"
+          data-label-center-y="374.90"
+          aria-label="PD1 F (633..650)">
+          <path class="circular-preview__leader"
+            d="M 1125.28 300.04 L 1150.93 277.71 L 1292.60 374.90"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1292.60"
+            y="361.90"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1304.60"
+              y="374.90"
+              text-anchor="start"
+              fill="#0f223e">
+              PD1 F
+            </text>
+          
+        </g>
+      
+        
+    <g class="circular-preview__center">
+      <circle cx="740.60" cy="634.88" r="234.00" class="circular-preview__center-disc"></circle>
+      <text x="740.60" y="620.88" class="circular-preview__title">CZ013_pFUSE-PD-1</text>
+      <text x="740.60" y="652.88" class="circular-preview__subtitle">4,713 bp · 30 features</text>
+    </g>
+  
+      </g>
+    </svg>
+  </main>
+  
+  <script>
+    (() => {
+      const LABEL_PADDING_X = 12;
+      const MIN_LABEL_WIDTH = 70;
+      const VIEWBOX_GUTTER = 32;
+      const TOOLTIP_OFFSET = 12;
+
+      function escapeText(value) {
+        return String(value || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function ensureTooltipNode() {
+        let node = document.querySelector('.circular-preview__hover-tooltip');
+        if (node) {
+          return node;
+        }
+        node = document.createElement('div');
+        node.className = 'circular-preview__hover-tooltip';
+        node.hidden = true;
+        document.body.appendChild(node);
+        return node;
+      }
+
+      function hideTooltip() {
+        const tooltip = document.querySelector('.circular-preview__hover-tooltip');
+        if (tooltip) {
+          tooltip.hidden = true;
+          tooltip.dataset.owner = '';
+        }
+      }
+
+      function buildTooltipHtml(target) {
+        const name = String(target?.dataset?.tooltipName || '').trim();
+        const meta = String(target?.dataset?.tooltipMeta || '').trim();
+        const location = String(target?.dataset?.tooltipLocation || '').trim();
+        const description = String(target?.dataset?.tooltipDescription || '').trim();
+        if (!name && !meta && !location && !description) {
+          return '';
+        }
+        return [
+          name ? '<p class="circular-preview__hover-title">' + escapeText(name) + '</p>' : '',
+          meta ? '<p>' + escapeText(meta) + '</p>' : '',
+          location ? '<p>' + escapeText(location) + '</p>' : '',
+          description ? '<p class="circular-preview__hover-description">' + escapeText(description) + '</p>' : ''
+        ].filter(Boolean).join('');
+      }
+
+      function positionTooltip(tooltip, event) {
+        const rawX = Number(event?.clientX);
+        const rawY = Number(event?.clientY);
+        const startX = Number.isFinite(rawX) ? rawX + TOOLTIP_OFFSET : TOOLTIP_OFFSET;
+        const startY = Number.isFinite(rawY) ? rawY + TOOLTIP_OFFSET : TOOLTIP_OFFSET;
+        const tooltipRect = tooltip.getBoundingClientRect();
+        const viewportWidth = Number(window?.innerWidth) || 0;
+        const viewportHeight = Number(window?.innerHeight) || 0;
+
+        let left = Math.max(8, startX);
+        let top = Math.max(8, startY);
+
+        if (viewportWidth > 0) {
+          left = Math.min(left, Math.max(8, viewportWidth - tooltipRect.width - 8));
+        }
+        if (viewportHeight > 0) {
+          top = Math.min(top, Math.max(8, viewportHeight - tooltipRect.height - 8));
+        }
+
+        tooltip.style.left = left.toFixed(0) + 'px';
+        tooltip.style.top = top.toFixed(0) + 'px';
+      }
+
+      function showTooltip(target, event) {
+        const html = buildTooltipHtml(target);
+        if (!html) {
+          hideTooltip();
+          return;
+        }
+        const tooltip = ensureTooltipNode();
+        const ownerKey = String(target?.dataset?.tooltipKey || '');
+        if (tooltip.dataset.owner !== ownerKey) {
+          tooltip.innerHTML = html;
+          tooltip.dataset.owner = ownerKey;
+        }
+        tooltip.hidden = false;
+        positionTooltip(tooltip, event);
+      }
+
+      function bindFeatureHoverCards() {
+        const svg = document.querySelector('.preview-shell svg');
+        if (!svg || svg.dataset.hoverCardsBound === 'true') {
+          return;
+        }
+
+        svg.dataset.hoverCardsBound = 'true';
+        svg.querySelectorAll('[data-preview-tooltip="feature"]').forEach((node) => {
+          node.addEventListener('pointerenter', (event) => {
+            showTooltip(node, event);
+          });
+          node.addEventListener('pointermove', (event) => {
+            showTooltip(node, event);
+          });
+          node.addEventListener('pointerleave', () => {
+            hideTooltip();
+          });
+        });
+
+        svg.addEventListener('pointerleave', () => {
+          hideTooltip();
+        });
+        window.addEventListener('blur', () => {
+          hideTooltip();
+        });
+      }
+
+      function fitAnnotationBoxes() {
+        const svg = document.querySelector('.preview-shell svg');
+        const scene = svg?.querySelector('.circular-preview__scene');
+        if (!svg || !scene) {
+          return;
+        }
+
+        svg.querySelectorAll('.circular-preview__annotation').forEach((annotation) => {
+          const rect = annotation.querySelector('.circular-preview__label-box');
+          const leader = annotation.querySelector('.circular-preview__leader');
+          const textNodes = annotation.querySelectorAll('.circular-preview__label-text');
+          if (!rect || !leader || !textNodes.length) {
+            return;
+          }
+
+          let minX = Number.POSITIVE_INFINITY;
+          let maxX = Number.NEGATIVE_INFINITY;
+          textNodes.forEach((node) => {
+            const box = node.getBBox();
+            if (!Number.isFinite(box.x) || !Number.isFinite(box.width)) {
+              return;
+            }
+            minX = Math.min(minX, box.x);
+            maxX = Math.max(maxX, box.x + box.width);
+          });
+
+          if (!Number.isFinite(minX) || !Number.isFinite(maxX)) {
+            return;
+          }
+
+          const width = Math.max(MIN_LABEL_WIDTH, (maxX - minX) + (LABEL_PADDING_X * 2));
+          const x = minX - LABEL_PADDING_X;
+          rect.setAttribute('x', x.toFixed(2));
+          rect.setAttribute('width', width.toFixed(2));
+
+          const featureX = Number(annotation.dataset.featureX);
+          const featureY = Number(annotation.dataset.featureY);
+          const bendX = Number(annotation.dataset.bendX);
+          const bendY = Number(annotation.dataset.bendY);
+          const centerY = Number(annotation.dataset.labelCenterY);
+          if (![featureX, featureY, bendX, bendY, centerY].every(Number.isFinite)) {
+            return;
+          }
+
+          const endX = annotation.dataset.labelSide === 'right'
+            ? x
+            : x + width;
+          leader.setAttribute(
+            'd',
+            `M ${featureX.toFixed(2)} ${featureY.toFixed(2)} L ${bendX.toFixed(2)} ${bendY.toFixed(2)} L ${endX.toFixed(2)} ${centerY.toFixed(2)}`
+          );
+        });
+
+        const bounds = scene.getBBox();
+        if (![bounds.x, bounds.y, bounds.width, bounds.height].every(Number.isFinite)) {
+          return;
+        }
+
+        svg.setAttribute(
+          'viewBox',
+          [
+            Math.floor(bounds.x - VIEWBOX_GUTTER),
+            Math.floor(bounds.y - VIEWBOX_GUTTER),
+            Math.ceil(bounds.width + (VIEWBOX_GUTTER * 2)),
+            Math.ceil(bounds.height + (VIEWBOX_GUTTER * 2))
+          ].join(' ')
+        );
+      }
+
+      function scheduleFit() {
+        bindFeatureHoverCards();
+        window.requestAnimationFrame(() => {
+          fitAnnotationBoxes();
+          bindFeatureHoverCards();
+          window.setTimeout(fitAnnotationBoxes, 48);
+        });
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', scheduleFit, { once: true });
+      } else {
+        scheduleFit();
+      }
+
+      if (document.fonts?.ready) {
+        document.fonts.ready.then(scheduleFit).catch(() => {});
+      }
+
+      window.addEventListener('load', scheduleFit, { once: true });
+    })();
+  </script>
+</body>
+</html>

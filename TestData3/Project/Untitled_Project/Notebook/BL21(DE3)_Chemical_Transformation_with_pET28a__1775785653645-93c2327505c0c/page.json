@@ -1,0 +1,26 @@
+{
+  "schema_name": "enana_notebook_pages",
+  "schema_version": "1.0.0",
+  "updated_at": "2026-04-27T22:57:08.597Z",
+  "notebookEntry": {
+    "id": "1775785653645-93c2327505c0c",
+    "protocolId": "1774024047007-d137dae96cab78",
+    "protocolName": "BL21(DE3) Chemical Transformation with pET28a",
+    "projectId": "project_folder_untitled_project",
+    "projectName": "Untitled Project",
+    "result": "",
+    "resultFiles": [],
+    "resultFileRecords": [],
+    "resultFileAddresses": [],
+    "notebookState": "executed",
+    "executedAt": "2026-04-10T01:47:39.999Z",
+    "agentDraftStatus": "",
+    "agentDraftMeta": {
+      "workflowId": "",
+      "proposalId": ""
+    },
+    "updatedAt": "2026-04-10T01:47:39.999Z",
+    "createdAt": "2026-04-10T01:47:33.645Z",
+    "storageFolder": ""
+  }
+}

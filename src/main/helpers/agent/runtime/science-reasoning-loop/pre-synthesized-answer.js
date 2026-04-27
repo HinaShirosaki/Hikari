@@ -30,6 +30,8 @@ const SCIENCE_LOOP_PRE_SYNTHESIZED_ANSWER_SCHEMA = {
   }
 };
 
+const PRE_SYNTHESIS_TOOL_CONTEXT_LIMIT = 20;
+
 function createScienceLoopPreSynthesizedAnswerRuntime(deps = {}) {
   const asArray = typeof deps.asArray === 'function'
     ? deps.asArray
@@ -92,7 +94,7 @@ function createScienceLoopPreSynthesizedAnswerRuntime(deps = {}) {
   }
 
   function buildLoadedContextBasis(blocks) {
-    return asArray(blocks).slice(0, 4).map((block) => {
+    return asArray(blocks).slice(-PRE_SYNTHESIS_TOOL_CONTEXT_LIMIT).map((block) => {
       const paperTitle = cleanText(block?.paper_title, 160);
       const sectionLabel = cleanText(block?.section_label, 80);
       const excerpt = cleanText(block?.excerpt, 180);
@@ -139,7 +141,7 @@ function createScienceLoopPreSynthesizedAnswerRuntime(deps = {}) {
         : '',
       ...loadedContextBasis,
       ...citationBasis,
-      ...asArray(input.toolTrace).slice(-3).map((row) => {
+      ...asArray(input.toolTrace).slice(-PRE_SYNTHESIS_TOOL_CONTEXT_LIMIT).map((row) => {
         const toolName = cleanText(row?.tool_name, 120);
         const summary = cleanText(row?.summary, 220);
         if (!toolName && !summary) {
@@ -147,7 +149,7 @@ function createScienceLoopPreSynthesizedAnswerRuntime(deps = {}) {
         }
         return toolName && summary ? `${toolName}: ${summary}` : (toolName || summary);
       })
-    ], 6);
+    ], PRE_SYNTHESIS_TOOL_CONTEXT_LIMIT + 4);
     const unresolvedIssues = uniqueStrings([
       ...collectContradictions(input),
       latestToolResult && latestToolResult.ok === false && latestError
@@ -186,6 +188,14 @@ function createScienceLoopPreSynthesizedAnswerRuntime(deps = {}) {
     const fallbackTentative = fallbackSource.tentative_answer && typeof fallbackSource.tentative_answer === 'object'
       ? fallbackSource.tentative_answer
       : {};
+    const sourceSupportingBasis = uniqueStrings(
+      asArray(source.supporting_basis),
+      PRE_SYNTHESIS_TOOL_CONTEXT_LIMIT + 4
+    );
+    const fallbackSupportingBasis = uniqueStrings(
+      asArray(fallbackSource.supporting_basis),
+      PRE_SYNTHESIS_TOOL_CONTEXT_LIMIT + 4
+    );
 
     return {
       tentative_answer: {
@@ -195,10 +205,9 @@ function createScienceLoopPreSynthesizedAnswerRuntime(deps = {}) {
           || cleanText(fallbackSource.current_best_answer, 1200)
           || 'No grounded tentative answer is available yet.'
       },
-      supporting_basis: uniqueStrings([
-        ...asArray(source.supporting_basis),
-        ...asArray(fallbackSource.supporting_basis)
-      ], 6),
+      supporting_basis: sourceSupportingBasis.length
+        ? sourceSupportingBasis
+        : fallbackSupportingBasis,
       unresolved_issues: uniqueStrings([
         ...asArray(source.unresolved_issues),
         ...asArray(fallbackSource.unresolved_issues)

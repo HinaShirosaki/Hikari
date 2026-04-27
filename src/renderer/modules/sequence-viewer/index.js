@@ -24,6 +24,7 @@ import { createSequenceViewerHomeController } from './home-controller.js';
 import { createSequenceViewerDetailController } from './detail-controller.js';
 import { createSequenceViewerAlignmentController } from './alignment-controller.js';
 import { createSequenceViewerProteinBuilderController } from './protein-builder.js';
+import { createProteinBuilderCloningNotebookPage } from './protein-builder-cloning-notebook.js';
 
 export function initSequenceViewer(options = {}) {
   const LIBRARY_STATUS_SAVED = 'saved';
@@ -118,6 +119,57 @@ export function initSequenceViewer(options = {}) {
     return Boolean(getStoragePath());
   }
 
+  function normalizeProteinBuilderCloningDesignSource(source) {
+    const safeSource = source && typeof source === 'object' ? source : null;
+    if (!safeSource) {
+      return null;
+    }
+
+    const backbone = safeSource.backbone && typeof safeSource.backbone === 'object'
+      ? { ...safeSource.backbone }
+      : {};
+    const dnaConstruct = safeSource.dnaConstruct && typeof safeSource.dnaConstruct === 'object'
+      ? { ...safeSource.dnaConstruct }
+      : {};
+    const assembledRecord = safeSource.assembledRecord && typeof safeSource.assembledRecord === 'object'
+      ? { ...safeSource.assembledRecord }
+      : {};
+    const backboneSequence = normalizeSequenceText(backbone.backboneSequence || '');
+    const insertSequence = normalizeSequenceText(dnaConstruct.sequence || '');
+    const assembledSequence = normalizeSequenceText(assembledRecord.sequence || '');
+    if (!backboneSequence && !insertSequence && !assembledSequence) {
+      return null;
+    }
+
+    return {
+      constructName: cleanText(safeSource.constructName, 160),
+      backbone: {
+        ...backbone,
+        backboneSequence
+      },
+      dnaConstruct: {
+        ...dnaConstruct,
+        sequence: insertSequence,
+        length: Math.max(0, Number(dnaConstruct.length || insertSequence.length) || 0),
+        parts: Array.isArray(dnaConstruct.parts)
+          ? dnaConstruct.parts.map((part) => ({ ...part }))
+          : []
+      },
+      assembledRecord: {
+        ...assembledRecord,
+        sequence: assembledSequence,
+        features: Array.isArray(assembledRecord.features)
+          ? assembledRecord.features.map((feature) => ({
+              ...feature,
+              segments: Array.isArray(feature?.segments)
+                ? feature.segments.map((segment) => ({ ...segment }))
+                : []
+            }))
+          : []
+      }
+    };
+  }
+
   function normalizeProteinBuilderConfirmation(payload) {
     const safePayload = payload && typeof payload === 'object' ? payload : null;
     if (!safePayload) {
@@ -134,6 +186,7 @@ export function initSequenceViewer(options = {}) {
     const plasmidLength = Math.max(0, Number(safePayload.plasmidLength) || 0);
     const insertLength = Math.max(0, Number(safePayload.insertLength) || 0);
     const primerCount = Math.max(0, Number(safePayload.primerCount) || 0);
+    const cloningDesignSource = normalizeProteinBuilderCloningDesignSource(safePayload.cloningDesignSource);
     if (
       !recordName
       && !constructName
@@ -145,6 +198,7 @@ export function initSequenceViewer(options = {}) {
       && !plasmidLength
       && !insertLength
       && !primerCount
+      && !cloningDesignSource
     ) {
       return null;
     }
@@ -159,7 +213,8 @@ export function initSequenceViewer(options = {}) {
       notebookEntryId,
       notebookTitle,
       assemblyStrategy,
-      primerCount
+      primerCount,
+      cloningDesignSource
     };
   }
 
@@ -169,6 +224,42 @@ export function initSequenceViewer(options = {}) {
       return;
     }
     detailController?.renderActiveRecord?.();
+  }
+
+  function createConfirmedProteinBuilderCloningNotebookPage(confirmation = {}) {
+    const designSource = confirmation?.cloningDesignSource;
+    if (!designSource) {
+      return null;
+    }
+
+    const currentRecord = getSelectedRecord();
+    const sourceRecord = designSource.assembledRecord || {};
+    const assembledRecord = {
+      ...sourceRecord,
+      ...(currentRecord || {}),
+      name: cleanText(currentRecord?.name, 160)
+        || cleanText(sourceRecord?.name, 160)
+        || cleanText(confirmation?.recordName, 160)
+        || 'Protein Builder construct',
+      sequence: normalizeSequenceText(currentRecord?.sequence || sourceRecord?.sequence || '')
+    };
+    if (!assembledRecord.sequence) {
+      return null;
+    }
+
+    return createProteinBuilderCloningNotebookPage({
+      state: options?.state,
+      persist: options?.persist,
+      createId: options?.createId,
+      onNotebookEntriesChanged: options?.onNotebookEntriesChanged,
+      entryId: confirmation?.notebookEntryId,
+      constructName: cleanText(confirmation?.constructName, 160)
+        || cleanText(designSource?.constructName, 160)
+        || cleanText(assembledRecord?.name, 160),
+      backbone: designSource.backbone,
+      dnaConstruct: designSource.dnaConstruct,
+      assembledRecord
+    });
   }
 
   function resetAlignmentState(options = {}) {
@@ -888,6 +979,7 @@ export function initSequenceViewer(options = {}) {
     setProteinBuilderConfirmation(null, { render: false });
     detailController?.hideFeatureContextMenu();
     detailController?.hideFeatureEditor();
+    detailController?.hideSequenceEditDialog?.();
     homeController?.setLocalWorkspaceVisibility('builder');
     if (onNavigateHome) {
       onNavigateHome();
@@ -908,6 +1000,7 @@ export function initSequenceViewer(options = {}) {
     detailController?.clearSequenceSelection();
     detailController?.hideFeatureContextMenu();
     detailController?.hideFeatureEditor();
+    detailController?.hideSequenceEditDialog?.();
 
     detailController?.updateRecordSelect();
     detailController?.renderActiveRecord();
@@ -960,23 +1053,17 @@ export function initSequenceViewer(options = {}) {
   }
 
   async function loadCurrentInput() {
+    if (state.proteinBuilderConfirmation) {
+      setInputComposerVisible(false);
+      setStatus('Use the sequence edit dialog to edit this Protein Builder construct.');
+      return;
+    }
+
     const raw = state.mode === 'file'
       ? state.fileText
       : (elements.inputTextarea?.value || '');
-    const reviewConfirmation = state.proteinBuilderConfirmation
-      ? { ...state.proteinBuilderConfirmation }
-      : null;
-    const currentRecord = reviewConfirmation ? getSelectedRecord() : null;
 
     if (!String(raw || '').trim()) {
-      if (reviewConfirmation && currentRecord?.sequence?.length) {
-        state.warnings = [];
-        state.errors = ['Provide sequence input first.'];
-        updateMessages();
-        setInputComposerVisible(true);
-        setStatus('Provide sequence input first.', true);
-        return;
-      }
       setRecords({ records: [], warnings: [], errors: ['Provide sequence input first.'] }, 'Idle');
       return;
     }
@@ -984,59 +1071,6 @@ export function initSequenceViewer(options = {}) {
     const parsed = parseInputRecords(raw, { maxRecords: DEFAULT_MAX_RECORDS });
     state.activeEntryId = '';
     state.activeEntryStatus = '';
-    if (reviewConfirmation && currentRecord?.sequence?.length) {
-      if (!Array.isArray(parsed.records) || !parsed.records.length) {
-        state.warnings = Array.isArray(parsed.warnings) ? parsed.warnings : [];
-        state.errors = Array.isArray(parsed.errors) ? parsed.errors : ['Failed to reload the edited construct.'];
-        updateMessages();
-        setInputComposerVisible(true);
-        setStatus(state.errors[0] || 'Failed to reload the edited construct.', true);
-        return;
-      }
-
-      const parsedRecord = parsed.records[0] || {};
-      const reusedFeatures = normalizeExternalPayload({
-        sequence: parsedRecord.sequence,
-        features: Array.isArray(parsedRecord.features) && parsedRecord.features.length
-          ? parsedRecord.features
-          : (Array.isArray(currentRecord.features) ? currentRecord.features : [])
-      }).features;
-      const warnings = Array.isArray(parsed.warnings) ? [...parsed.warnings] : [];
-      if ((!Array.isArray(parsedRecord.features) || !parsedRecord.features.length) && reusedFeatures.length) {
-        warnings.push('Retained the current construct features while reloading the edited sequence. Review annotations after insertions or deletions.');
-      }
-      if (Array.isArray(parsed.records) && parsed.records.length > 1) {
-        warnings.push('Protein Builder review uses the first loaded record only.');
-      }
-
-      const nextRecord = {
-        ...parsedRecord,
-        id: cleanText(currentRecord?.id, 120) || cleanText(parsedRecord?.id, 120) || 'external_1',
-        name: cleanText(currentRecord?.name, 160) || cleanText(reviewConfirmation?.recordName, 160) || cleanText(parsedRecord?.name, 160) || 'protein_builder_construct',
-        topology: cleanText(parsedRecord?.sourceFormat, 40).toLowerCase() === 'genbank'
-          ? String(parsedRecord?.topology || currentRecord?.topology || 'circular')
-          : String(currentRecord?.topology || parsedRecord?.topology || 'circular'),
-        features: reusedFeatures
-      };
-
-      setRecords({
-        records: [nextRecord],
-        warnings,
-        errors: Array.isArray(parsed.errors) ? parsed.errors : []
-      }, 'Loaded');
-      setProteinBuilderConfirmation({
-        ...reviewConfirmation,
-        recordName: cleanText(nextRecord?.name, 160) || reviewConfirmation.recordName,
-        plasmidLength: Math.max(0, Number(nextRecord?.sequence?.length) || 0)
-      }, { render: false });
-      setInputComposerVisible(true);
-      if (elements.saveNameInput) {
-        elements.saveNameInput.value = nextRecord.name || 'sequence';
-      }
-      detailController?.renderActiveRecord?.();
-      setStatus('Updated the construct review. Inspect the edited plasmid and confirm when ready.');
-      return;
-    }
 
     setRecords(parsed, 'Loaded');
     setInputComposerVisible(!(Array.isArray(parsed.records) && parsed.records.length > 0));
@@ -1207,6 +1241,186 @@ export function initSequenceViewer(options = {}) {
     }
   }
 
+  function normalizeEditedFeatureSegment(segment, sequenceLength) {
+    const safeLength = Math.max(0, Number(sequenceLength) || 0);
+    const start = clamp(Math.round(Number(segment?.start) || 0), 0, safeLength);
+    const end = clamp(Math.round(Number(segment?.end) || 0), start, safeLength);
+    if (end <= start) {
+      return null;
+    }
+    return { start, end };
+  }
+
+  function mergeEditedFeatureSegments(segments, sequenceLength) {
+    const normalized = (Array.isArray(segments) ? segments : [])
+      .map((segment) => normalizeEditedFeatureSegment(segment, sequenceLength))
+      .filter(Boolean)
+      .sort((left, right) => {
+        if (left.start !== right.start) {
+          return left.start - right.start;
+        }
+        return left.end - right.end;
+      });
+
+    if (!normalized.length) {
+      return [];
+    }
+
+    const merged = [normalized[0]];
+    for (let index = 1; index < normalized.length; index += 1) {
+      const previous = merged[merged.length - 1];
+      const current = normalized[index];
+      if (current.start <= previous.end) {
+        previous.end = Math.max(previous.end, current.end);
+      } else {
+        merged.push(current);
+      }
+    }
+    return merged;
+  }
+
+  function adjustFeatureSegmentsForSequenceEdit(features, editRange, replacementLength, nextSequenceLength) {
+    const editStart = Math.max(0, Math.round(Number(editRange?.start) || 0));
+    const editEnd = Math.max(editStart, Math.round(Number(editRange?.end) || editStart));
+    const insertLength = Math.max(0, Math.round(Number(replacementLength) || 0));
+    const delta = insertLength - Math.max(0, editEnd - editStart);
+    const safeNextLength = Math.max(0, Number(nextSequenceLength) || 0);
+
+    return (Array.isArray(features) ? features : [])
+      .map((feature) => {
+        if (!Array.isArray(feature?.segments)) {
+          return feature;
+        }
+
+        const adjustedSegments = feature.segments
+          .map((segment) => {
+            const start = Math.max(0, Math.round(Number(segment?.start) || 0));
+            const end = Math.max(start, Math.round(Number(segment?.end) || start));
+            if (end <= start) {
+              return null;
+            }
+
+            if (end <= editStart) {
+              return { start, end };
+            }
+            if (start >= editEnd) {
+              return { start: start + delta, end: end + delta };
+            }
+
+            const nextStart = start < editStart ? start : editStart;
+            const nextEnd = end > editEnd
+              ? end + delta
+              : editStart + insertLength;
+            if (nextEnd <= nextStart) {
+              return null;
+            }
+            return { start: nextStart, end: nextEnd };
+          })
+          .filter(Boolean);
+
+        const mergedSegments = mergeEditedFeatureSegments(adjustedSegments, safeNextLength);
+        if (!mergedSegments.length) {
+          return null;
+        }
+
+        return {
+          ...feature,
+          locationText: '',
+          segments: mergedSegments
+        };
+      })
+      .filter(Boolean);
+  }
+
+  function buildSequenceEditStatus(mode, range, replacementLength) {
+    const start = Math.max(0, Math.round(Number(range?.start) || 0));
+    const end = Math.max(start, Math.round(Number(range?.end) || start));
+    const selectedLength = Math.max(0, end - start);
+    const insertedLength = Math.max(0, Number(replacementLength) || 0);
+    if (mode === 'delete') {
+      return `Deleted ${selectedLength.toLocaleString()} bp.`;
+    }
+    if (mode === 'replace') {
+      return `Replaced ${selectedLength.toLocaleString()} bp with ${insertedLength.toLocaleString()} bp.`;
+    }
+    return `Inserted ${insertedLength.toLocaleString()} bp.`;
+  }
+
+  async function applySequenceEdit(payload = {}) {
+    const record = getSelectedRecord();
+    if (!record?.sequence?.length) {
+      throw new Error('Load a record before editing sequence bases.');
+    }
+
+    const sequence = normalizeSequenceText(record.sequence);
+    const sequenceLength = sequence.length;
+    const mode = payload?.mode === 'delete'
+      ? 'delete'
+      : (payload?.mode === 'replace' ? 'replace' : 'insert');
+    const start = clamp(Math.round(Number(payload?.range?.start) || 0), 0, sequenceLength);
+    const end = mode === 'insert'
+      ? start
+      : clamp(Math.round(Number(payload?.range?.end) || start), start, sequenceLength);
+    const replacement = mode === 'delete'
+      ? ''
+      : normalizeSequenceText(payload?.sequence || '').replace(/\*/g, '');
+
+    if (mode !== 'insert' && end <= start) {
+      throw new Error('Select one or more bases before editing.');
+    }
+    if (mode !== 'delete' && !replacement.length) {
+      throw new Error('Enter at least one base before confirming.');
+    }
+
+    const nextSequence = `${sequence.slice(0, start)}${replacement}${sequence.slice(end)}`;
+    if (!nextSequence.length) {
+      throw new Error('The sequence cannot be empty.');
+    }
+
+    const selectedIndex = clamp(state.selectedRecordIndex, 0, Math.max(0, state.records.length - 1));
+    const nextRecords = [...state.records];
+    const current = nextRecords[selectedIndex];
+    const adjustedFeatures = adjustFeatureSegmentsForSequenceEdit(
+      current?.features,
+      { start, end },
+      replacement.length,
+      nextSequence.length
+    );
+    const nextRecord = {
+      ...current,
+      sequence: nextSequence,
+      features: adjustedFeatures
+    };
+    if (typeof nextRecord.quality === 'string' && nextRecord.quality.length) {
+      nextRecord.quality = '';
+      const qualityWarning = 'Sequence edits clear per-base quality scores because they no longer match the edited sequence.';
+      if (!state.warnings.includes(qualityWarning)) {
+        state.warnings = [...state.warnings, qualityWarning];
+      }
+    }
+
+    nextRecords[selectedIndex] = nextRecord;
+    state.records = nextRecords;
+    state.selectedFeatureIndex = -1;
+    state.sequenceCursorBase = clamp(start + replacement.length, 0, nextSequence.length);
+    resetAlignmentState({ preserveSessions: true });
+    if (state.proteinBuilderConfirmation) {
+      state.proteinBuilderConfirmation = {
+        ...state.proteinBuilderConfirmation,
+        plasmidLength: nextSequence.length
+      };
+    }
+    detailController?.clearSequenceSelection({ preserveCursor: true });
+    detailController?.hideFeatureContextMenu();
+    detailController?.hideFeatureEditor();
+    detailController?.updateRecordSelect?.();
+    detailController?.renderActiveRecord?.();
+    alignmentController?.handleReferenceRecordChanged?.();
+
+    const actionLabel = buildSequenceEditStatus(mode, { start, end }, replacement.length);
+    await persistFeatureMutation(nextRecord, actionLabel);
+  }
+
   async function maybePersistImportedGenbankRecord(parsed) {
     const format = String(parsed?.format || '').toLowerCase();
     if (format !== 'genbank' || state.activeEntryId) {
@@ -1369,6 +1583,7 @@ export function initSequenceViewer(options = {}) {
     setInputComposerVisible(true);
     detailController?.hideFeatureContextMenu();
     detailController?.hideFeatureEditor();
+    detailController?.hideSequenceEditDialog?.();
     setRecords({ records: [], warnings: [], errors: [] }, 'Cleared');
     setStatus('Idle');
     if (elements.saveNameInput) {
@@ -1417,14 +1632,38 @@ export function initSequenceViewer(options = {}) {
     onRequestRecognizeBackbone: recognizeCurrentBackboneInsert,
     onRequestClear: clearAll,
     onRequestSave: saveCurrentRecordAsSaved,
+    onApplySequenceEdit: applySequenceEdit,
     onRequestAlignment: () => alignmentController?.openSequencingAlignmentWorkspace?.(),
     onSelectAlignmentSession: (sessionId) => alignmentController?.selectSavedAlignmentSession?.(sessionId, { enableView: true }),
     onConfirmProteinBuilderConstruct: () => {
       if (!state.proteinBuilderConfirmation) {
         return;
       }
+      const confirmation = state.proteinBuilderConfirmation;
+      let cloningNotebookResult = null;
+      let notebookWarning = '';
+      try {
+        cloningNotebookResult = createConfirmedProteinBuilderCloningNotebookPage(confirmation);
+      } catch (error) {
+        notebookWarning = error?.message || 'Failed to update the cloning notebook page.';
+      }
       setProteinBuilderConfirmation(null);
       setInputComposerVisible(false);
+      if (cloningNotebookResult?.entry) {
+        const notebookTitle = cleanText(cloningNotebookResult.entry.experimentName, 220)
+          || cleanText(cloningNotebookResult.entry.protocolName, 220)
+          || 'Protein Builder Cloning Assembly';
+        const primerCount = Math.max(
+          0,
+          Number(cloningNotebookResult.entry?.proteinBuilderCloningDesign?.primerCount) || 0
+        );
+        setStatus(`Construct confirmed. Notebook page "${notebookTitle}" has the cloning plan, PCR program, and ${primerCount} primer${primerCount === 1 ? '' : 's'}. Save it to add it to Sequence Library.`);
+        return;
+      }
+      if (notebookWarning) {
+        setStatus(`Construct confirmed, but the cloning notebook page was not updated: ${notebookWarning}`, true);
+        return;
+      }
       setStatus('Construct confirmed. Save it to add it to Sequence Library.');
     },
     onReturnToProteinBuilder: () => {
@@ -1434,6 +1673,7 @@ export function initSequenceViewer(options = {}) {
     },
     onNavigateHome: () => {
       setProteinBuilderConfirmation(null, { render: false });
+      detailController?.hideSequenceEditDialog?.();
       homeController.navigateToHome();
     },
     onRefreshLibraryEntries: homeController.refreshLibraryEntries,
@@ -1500,7 +1740,7 @@ export function initSequenceViewer(options = {}) {
 
     setMode('paste');
     if (elements.inputTextarea) {
-      elements.inputTextarea.value = record.sequence;
+      elements.inputTextarea.value = proteinBuilderConfirmation ? '' : record.sequence;
     }
     state.activeEntryId = '';
     state.activeEntryStatus = '';
@@ -1514,7 +1754,7 @@ export function initSequenceViewer(options = {}) {
       errors: hasSequence ? [] : ['Failed to load external payload.']
     }, 'Imported');
     setProteinBuilderConfirmation(proteinBuilderConfirmation, { render: false });
-    setInputComposerVisible(proteinBuilderConfirmation ? true : !hasSequence);
+    setInputComposerVisible(!hasSequence);
 
     if (hasSequence) {
       homeController.navigateToDetail();

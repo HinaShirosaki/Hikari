@@ -3,6 +3,61 @@ module.exports = function registerJudgeAndTraceSuite(context = {}) {
   const __dirname = context.__dirname || process.cwd();
 
   with (scope) {
+    test('science loop exit judge prompt checks sufficiency instead of reflexive conservatism', () => {
+      const { createScienceLoopExitJudgeRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'runtime', 'science-reasoning-loop', 'loop-exit-judge.js'));
+      const runtime = createScienceLoopExitJudgeRuntime();
+      const systemPrompt = runtime.buildJudgeSystemPrompt();
+
+      assert.match(systemPrompt, /Judge sufficiency, not perfection/i);
+      assert.match(systemPrompt, /Continue only when a missing requirement is truly blocking/i);
+      assert.match(systemPrompt, /Do not require exhaustive literature coverage/i);
+      assert.match(systemPrompt, /citation-backed anchors plus well-established background knowledge can be enough/i);
+      assert.doesNotMatch(systemPrompt, /Be conservative/i);
+    });
+
+    test('science loop exit judge message carries the last 20 supporting basis and context entries', () => {
+      const { createScienceLoopExitJudgeRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'runtime', 'science-reasoning-loop', 'loop-exit-judge.js'));
+      const runtime = createScienceLoopExitJudgeRuntime();
+      const labels = Array.from({ length: 21 }, (_, index) => String(index + 1).padStart(2, '0'));
+      const message = runtime.buildJudgeMessage({
+        message: 'Explain rabbit antibody maturation in GALT.',
+        exitCriteria: {
+          exit_conditions: ['The answer explains the main mechanism.'],
+          required_evidence: [],
+          continue_when: [],
+          can_exit_with_limitations_when: [],
+          preferred_next_tools: []
+        },
+        preSynthesizedAnswer: {
+          tentative_answer: {
+            current_best_answer: 'Rabbit GALT diversification is explainable from the gathered evidence.'
+          },
+          supporting_basis: labels.map((label) => `basis-${label}`),
+          unresolved_issues: []
+        },
+        toolTrace: labels.map((label) => ({
+          tool_name: `tool-${label}`,
+          ok: true,
+          summary: `summary-${label}`,
+          loaded_context_blocks: [{
+            paper_title: `Paper ${label}`,
+            section_label: 'Abstract',
+            excerpt: `excerpt-${label}`,
+            relevance_reason: `reason-${label}`
+          }]
+        })),
+        roundsExecuted: 21,
+        maxRounds: 21
+      });
+
+      assert.doesNotMatch(message, /basis-01\b/);
+      assert.match(message, /basis-02\b/);
+      assert.match(message, /basis-21\b/);
+      assert.doesNotMatch(message, /excerpt-01\b/);
+      assert.match(message, /excerpt-02\b/);
+      assert.match(message, /excerpt-21\b/);
+    });
+
     test('science loop exit judge fallback uses only supplied exit criteria as blocking requirements', () => {
       const { createScienceLoopExitJudgeRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'runtime', 'science-reasoning-loop', 'loop-exit-judge.js'));
       const runtime = createScienceLoopExitJudgeRuntime();

@@ -1,0 +1,1479 @@
+{
+  "schema_name": "enana_notebook_pages",
+  "schema_version": "1.0.0",
+  "updated_at": "2026-04-27T22:57:08.597Z",
+  "notebookPages": [
+    {
+      "id": "1774025061643-8e7f8d2afe1198",
+      "protocolId": "1774024695073-536c18071dd0d",
+      "protocolName": "Ni-NTA Purification of His-Tagged Protein",
+      "projectId": "1773446973979-1dead4da556a2",
+      "projectName": "PD-1 Nanobody Binder Discovery",
+      "result": "Agent-generated notebook draft from request: Ni-NTA",
+      "resultFiles": [],
+      "resultFileRecords": [],
+      "resultFileAddresses": [],
+      "notebookState": "executed",
+      "executedAt": "",
+      "agentDraftStatus": "needs_review",
+      "agentDraftMeta": {
+        "workflowId": "",
+        "proposalId": ""
+      },
+      "updatedAt": "2026-03-20T16:43:07.684Z",
+      "createdAt": "",
+      "storageFolder": "/Users/shiyifan/Projects/Enana/TestData3/Project/PD-1_Nanobody_Binder_Discovery/Notebook/Ni-NTA_Purification_of_His-Tagged_Protein__1774025061643-8e7f8d2afe1198"
+    },
+    {
+      "id": "1774129431833-1ae8e1d6da588",
+      "protocolId": "1774024047007-d137dae96cab78",
+      "protocolName": "BL21(DE3) Chemical Transformation with pET28a",
+      "projectId": "1774128185432-96a318da61d208",
+      "projectName": "SUMO1",
+      "result": "Notebook draft generated from request: I did a pFuse-SUMO1-PD-1 transformation today",
+      "resultFiles": [],
+      "resultFileRecords": [],
+      "resultFileAddresses": [],
+      "notebookState": "executed",
+      "executedAt": "",
+      "agentDraftStatus": "draft_ready",
+      "agentDraftMeta": {
+        "workflowId": "",
+        "proposalId": ""
+      },
+      "updatedAt": "2026-03-21T21:43:51.827Z",
+      "createdAt": "",
+      "storageFolder": "/Users/shiyifan/Projects/Enana/TestData3/Project/SUMO1/Notebook/BL21(DE3)_Chemical_Transformation_with_pET28a__1774129431833-1ae8e1d6da588"
+    },
+    {
+      "id": "1774226912932-85bb211fc546a",
+      "protocolId": "1774024047007-d137dae96cab78",
+      "protocolName": "BL21(DE3) Chemical Transformation with pET28a",
+      "projectId": "1774128185432-96a318da61d208",
+      "projectName": "SUMO1",
+      "result": "Notebook draft generated from request: I did a pFuse-SUMO1-PD-1 transformation today",
+      "resultFiles": [],
+      "resultFileRecords": [],
+      "resultFileAddresses": [],
+      "notebookState": "executed",
+      "executedAt": "",
+      "agentDraftStatus": "draft_ready",
+      "agentDraftMeta": {
+        "workflowId": "",
+        "proposalId": ""
+      },
+      "updatedAt": "2026-03-23T00:48:32.928Z",
+      "createdAt": "",
+      "storageFolder": "/Users/shiyifan/Projects/Enana/TestData3/Project/SUMO1/Notebook/BL21(DE3)_Chemical_Transformation_with_pET28a__1774226912932-85bb211fc546a"
+    },
+    {
+      "id": "1775782216137-95b466c6943368",
+      "protocolId": "1774024047007-d137dae96cab78",
+      "protocolName": "BL21(DE3) Chemical Transformation with pET28a",
+      "projectId": "project_folder_untitled_project",
+      "projectName": "Untitled Project",
+      "result": "",
+      "resultFiles": [],
+      "resultFileRecords": [],
+      "resultFileAddresses": [],
+      "notebookState": "executed",
+      "executedAt": "2026-04-10T00:50:16.136Z",
+      "agentDraftStatus": "",
+      "agentDraftMeta": {
+        "workflowId": "",
+        "proposalId": ""
+      },
+      "updatedAt": "2026-04-10T00:50:16.136Z",
+      "createdAt": "2026-04-10T00:50:16.136Z",
+      "storageFolder": "/Users/shiyifan/Projects/Enana/TestData3/Project/Untitled_Project/Notebook/BL21(DE3)_Chemical_Transformation_with_pET28a__1775782216137-95b466c6943368"
+    },
+    {
+      "id": "1775782435713-d25977ea3111f8",
+      "protocolId": "1774024647315-74cbb18b4cc37",
+      "protocolName": "Small-Scale Overnight Starter Culture",
+      "projectId": "project_folder_untitled_project",
+      "projectName": "Untitled Project",
+      "result": "",
+      "resultFiles": [],
+      "resultFileRecords": [],
+      "resultFileAddresses": [],
+      "notebookState": "executed",
+      "executedAt": "2026-04-10T01:47:04.637Z",
+      "agentDraftStatus": "",
+      "agentDraftMeta": {
+        "workflowId": "",
+        "proposalId": ""
+      },
+      "updatedAt": "2026-04-10T01:47:04.637Z",
+      "createdAt": "2026-04-10T00:53:55.713Z",
+      "storageFolder": "/Users/shiyifan/Projects/Enana/TestData3/Project/Untitled_Project/Notebook/Small-Scale_Overnight_Starter_Culture__1775782435713-d25977ea3111f8"
+    },
+    {
+      "id": "1775782437050-e49e327369ef98",
+      "protocolId": "1774024680081-6b02b28fd6d39",
+      "protocolName": "IPTG-Induced Recombinant Protein Expression in BL21(DE3)",
+      "projectId": "project_folder_untitled_project",
+      "projectName": "Untitled Project",
+      "result": "",
+      "resultFiles": [],
+      "resultFileRecords": [],
+      "resultFileAddresses": [],
+      "notebookState": "planned",
+      "executedAt": "",
+      "agentDraftStatus": "",
+      "agentDraftMeta": {
+        "workflowId": "",
+        "proposalId": ""
+      },
+      "updatedAt": "2026-04-10T01:46:05.224Z",
+      "createdAt": "2026-04-10T00:53:57.050Z",
+      "storageFolder": "/Users/shiyifan/Projects/Enana/TestData3/Project/Untitled_Project/Notebook/IPTG-Induced_Recombinant_Protein_Expression_in_BL21(DE3)__1775782437050-e49e327369ef98"
+    },
+    {
+      "id": "1775782438767-07fe8804749718",
+      "protocolId": "1774024695073-536c18071dd0d",
+      "protocolName": "Ni-NTA Purification of His-Tagged Protein",
+      "projectId": "project_folder_untitled_project",
+      "projectName": "Untitled Project",
+      "result": "",
+      "resultFiles": [],
+      "resultFileRecords": [],
+      "resultFileAddresses": [],
+      "notebookState": "planned",
+      "executedAt": "",
+      "agentDraftStatus": "",
+      "agentDraftMeta": {
+        "workflowId": "",
+        "proposalId": ""
+      },
+      "updatedAt": "2026-04-10T01:46:09.641Z",
+      "createdAt": "2026-04-10T00:53:58.767Z",
+      "storageFolder": "/Users/shiyifan/Projects/Enana/TestData3/Project/Untitled_Project/Notebook/Ni-NTA_Purification_of_His-Tagged_Protein__1775782438767-07fe8804749718"
+    },
+    {
+      "id": "1775785653645-93c2327505c0c",
+      "protocolId": "1774024047007-d137dae96cab78",
+      "protocolName": "BL21(DE3) Chemical Transformation with pET28a",
+      "projectId": "project_folder_untitled_project",
+      "projectName": "Untitled Project",
+      "result": "",
+      "resultFiles": [],
+      "resultFileRecords": [],
+      "resultFileAddresses": [],
+      "notebookState": "executed",
+      "executedAt": "2026-04-10T01:47:39.999Z",
+      "agentDraftStatus": "",
+      "agentDraftMeta": {
+        "workflowId": "",
+        "proposalId": ""
+      },
+      "updatedAt": "2026-04-10T01:47:39.999Z",
+      "createdAt": "2026-04-10T01:47:33.645Z",
+      "storageFolder": "/Users/shiyifan/Projects/Enana/TestData3/Project/Untitled_Project/Notebook/BL21(DE3)_Chemical_Transformation_with_pET28a__1775785653645-93c2327505c0c"
+    },
+    {
+      "id": "1775785664323-de28c03280f04",
+      "protocolId": "1774024047007-d137dae96cab78",
+      "protocolName": "BL21(DE3) Chemical Transformation with pET28a",
+      "projectId": "project_folder_untitled_project",
+      "projectName": "Untitled Project",
+      "result": "",
+      "resultFiles": [],
+      "resultFileRecords": [],
+      "resultFileAddresses": [],
+      "notebookState": "executed",
+      "executedAt": "2026-04-10T01:47:44.323Z",
+      "agentDraftStatus": "",
+      "agentDraftMeta": {
+        "workflowId": "",
+        "proposalId": ""
+      },
+      "updatedAt": "2026-04-10T01:47:44.323Z",
+      "createdAt": "2026-04-10T01:47:44.323Z",
+      "storageFolder": "/Users/shiyifan/Projects/Enana/TestData3/Project/Untitled_Project/Notebook/BL21(DE3)_Chemical_Transformation_with_pET28a__1775785664323-de28c03280f04"
+    },
+    {
+      "id": "1775786097062-844c417ab93cd",
+      "protocolId": "1774024647315-74cbb18b4cc37",
+      "protocolName": "Small-Scale Overnight Starter Culture",
+      "projectId": "project_folder_untitled_project",
+      "projectName": "Untitled Project",
+      "result": "",
+      "resultFiles": [],
+      "resultFileRecords": [],
+      "resultFileAddresses": [],
+      "notebookState": "executed",
+      "executedAt": "2026-04-10T01:54:58.452Z",
+      "agentDraftStatus": "",
+      "agentDraftMeta": {
+        "workflowId": "",
+        "proposalId": ""
+      },
+      "updatedAt": "2026-04-10T01:54:58.452Z",
+      "createdAt": "2026-04-10T01:54:57.062Z",
+      "storageFolder": "/Users/shiyifan/Projects/Enana/TestData3/Project/Untitled_Project/Notebook/Small-Scale_Overnight_Starter_Culture__1775786097062-844c417ab93cd"
+    },
+    {
+      "id": "1775858351357-2cd35369d1dfc",
+      "protocolId": "1774024047007-d137dae96cab78",
+      "protocolName": "BL21(DE3) Chemical Transformation with pET28a",
+      "projectId": "project_folder_untitled_project",
+      "projectName": "Untitled Project",
+      "result": "",
+      "resultFiles": [],
+      "resultFileRecords": [],
+      "resultFileAddresses": [],
+      "notebookState": "planned",
+      "executedAt": "",
+      "agentDraftStatus": "",
+      "agentDraftMeta": {
+        "workflowId": "",
+        "proposalId": ""
+      },
+      "updatedAt": "2026-04-10T21:59:41.506Z",
+      "createdAt": "2026-04-10T21:59:11.357Z",
+      "storageFolder": "/Users/shiyifan/Projects/Enana/TestData3/Project/Untitled_Project/Notebook/BL21(DE3)_Chemical_Transformation_with_pET28a__1775858351357-2cd35369d1dfc"
+    },
+    {
+      "id": "1776222791606-6589584353b8d",
+      "protocolId": "1774024745003-46df848e78c068",
+      "protocolName": "Avi-Tag Protein Biotinylation",
+      "projectId": "1776101131639-b3a065c67eb558",
+      "projectName": "SUMO1",
+      "result": "",
+      "resultFiles": [],
+      "resultFileRecords": [],
+      "resultFileAddresses": [],
+      "notebookState": "executed",
+      "executedAt": "2026-04-15T03:13:11.609Z",
+      "agentDraftStatus": "",
+      "agentDraftMeta": {
+        "workflowId": "",
+        "proposalId": ""
+      },
+      "updatedAt": "2026-04-15T03:13:11.609Z",
+      "createdAt": "2026-04-15T03:13:11.609Z",
+      "storageFolder": "/Users/shiyifan/Projects/Enana/TestData3/Project/SUMO1/Notebook/Avi-Tag_Protein_Biotinylation__1776222791606-6589584353b8d"
+    },
+    {
+      "id": "1776270544362-2c654c6110e398",
+      "notebookType": "biology",
+      "projectId": "",
+      "projectName": "",
+      "protocolId": "1774024047007-d137dae96cab78",
+      "protocolName": "BL21(DE3) Chemical Transformation with pET28a",
+      "protocolSnapshot": {
+        "id": "1774024047007-d137dae96cab78",
+        "name": "BL21(DE3) Chemical Transformation with pET28a",
+        "category": "",
+        "purpose": "Introduce a plasmid into BL21(DE3) competent E. coli cells for protein expression.",
+        "steps": [
+          {
+            "id": "1774125436234-8c09146262f048",
+            "text": "Thaw 1 tube of BL21(DE3) competent cells on ice.",
+            "placeholders": []
+          },
+          {
+            "id": "1774125436234-5e6cd5beb943b",
+            "text": "Add 200ng of {{ph:1774125436234-cac9aa958fe75}} DNA to the cells and gently flick to mix.",
+            "placeholders": [
+              {
+                "id": "1774125436234-cac9aa958fe75",
+                "name": "plasmid"
+              }
+            ]
+          },
+          {
+            "id": "1774125436234-15189704d9d308",
+            "text": "Incubate the mixture on ice for 30 min.",
+            "placeholders": []
+          },
+          {
+            "id": "1774125436234-43f81b59a452a",
+            "text": "Heat shock the cells at 45 C for 45 s, then immediately place them back on ice for 1 min.",
+            "placeholders": []
+          },
+          {
+            "id": "1774125436234-b55f8f12ff476",
+            "text": "Add 1 mL of SOC medium and recover the cells at 37 C with shaking for 1 h.",
+            "placeholders": []
+          },
+          {
+            "id": "1774125436234-04fdf2bad48cb8",
+            "text": "Plate 100 uL of the recovery culture onto an LB agar plate containing Kanamycin.",
+            "placeholders": []
+          },
+          {
+            "id": "1774125436234-c8e74cf17602d8",
+            "text": "Incubate the plate at 37 C for overnight until colonies appear.",
+            "placeholders": []
+          }
+        ]
+      },
+      "values": {
+        "1774125436234-5e6cd5beb943b:1774125436234-cac9aa958fe75": ""
+      },
+      "result": "",
+      "resultFiles": [],
+      "resultFileRecords": [],
+      "storageFolder": "/Users/shiyifan/Projects/Enana/TestData3/Workflow/NiNTA__1776270512198-af3480c2ef55c8/NiNTA_1__1776270538561-6c07e18af542f/Notebook/NiNTA_1__1776270538561-46e4a929f801c8/Notebook_Page__1776270544362-2c654c6110e398",
+      "createdAt": "2026-04-15T16:29:04.362Z",
+      "updatedAt": "2026-04-22T02:06:42.306Z",
+      "notebookState": "executed",
+      "executedAt": "2026-04-15T16:29:20.078Z",
+      "workflowContext": {
+        "workflowId": "1776270538561-6c07e18af542f",
+        "workflowName": "NiNTA 1",
+        "workflowEntryId": "1776270538561-46e4a929f801c8",
+        "workflowEntryName": "NiNTA 1",
+        "workflowBlockId": "1776270538561-485b4c8b52f838",
+        "workflowBlockTitle": "BL21(DE3) Chemical Transformation with pET28a"
+      },
+      "assayIds": [],
+      "gelAnalysisIds": [],
+      "experimentName": "BL21(DE3) Chemical Transformation with pET28a"
+    },
+    {
+      "id": "1776270561757-e3f42b70a908",
+      "notebookType": "biology",
+      "projectId": "",
+      "projectName": "",
+      "protocolId": "1774024647315-74cbb18b4cc37",
+      "protocolName": "Small-Scale Overnight Starter Culture",
+      "protocolSnapshot": {
+        "id": "1774024647315-74cbb18b4cc37",
+        "name": "Small-Scale Overnight Starter Culture",
+        "category": "",
+        "purpose": "Prepare a starter culture from a single bacterial colony for downstream expression or plasmid preparation.",
+        "steps": [
+          {
+            "id": "1774024647315-74a9f88e0f0bf8",
+            "text": "Add {{ph:1774024647315-9f03b8d734f3c}} of LB medium containing {{ph:1774024647315-9ce336955a66c}} antibiotic to a sterile culture tube.",
+            "placeholders": [
+              {
+                "id": "1774024647315-9f03b8d734f3c",
+                "name": "volume"
+              },
+              {
+                "id": "1774024647315-9ce336955a66c",
+                "name": "antibiotic concentration"
+              }
+            ]
+          },
+          {
+            "id": "1774024647315-50fbcf026e31b8",
+            "text": "Pick a single colony from a fresh plate and inoculate the medium.",
+            "placeholders": []
+          },
+          {
+            "id": "1774024647315-b56a957dd49a1",
+            "text": "Incubate the culture at 37 C with shaking at {{ph:1774024647315-09eb7ed8adca9}} for {{ph:1774024647315-82400c92a18e08}}.",
+            "placeholders": [
+              {
+                "id": "1774024647315-09eb7ed8adca9",
+                "name": "rpm"
+              },
+              {
+                "id": "1774024647315-82400c92a18e08",
+                "name": "time"
+              }
+            ]
+          },
+          {
+            "id": "1774024647315-7881c04d4e417",
+            "text": "Inspect the culture for turbidity and record the culture ID, date, and plasmid name in the notebook.",
+            "placeholders": []
+          }
+        ]
+      },
+      "values": {},
+      "result": "",
+      "resultFiles": [],
+      "resultFileRecords": [],
+      "storageFolder": "/Users/shiyifan/Projects/Enana/TestData3/Workflow/NiNTA__1776270512198-af3480c2ef55c8/NiNTA_1__1776270538561-6c07e18af542f/Notebook/NiNTA_1__1776270538561-46e4a929f801c8/Notebook_Page__1776270561757-e3f42b70a908",
+      "createdAt": "2026-04-15T16:29:21.757Z",
+      "updatedAt": "2026-04-15T18:11:31.295Z",
+      "notebookState": "planned",
+      "executedAt": "",
+      "workflowContext": {
+        "workflowId": "1776270538561-6c07e18af542f",
+        "workflowName": "NiNTA 1",
+        "workflowEntryId": "1776270538561-46e4a929f801c8",
+        "workflowEntryName": "NiNTA 1",
+        "workflowBlockId": "1776270538561-8355d20b5e9e78",
+        "workflowBlockTitle": "Small-Scale Overnight Starter Culture"
+      },
+      "assayIds": [],
+      "gelAnalysisIds": []
+    },
+    {
+      "id": "1776270564610-c59aae731918f8",
+      "notebookType": "biology",
+      "projectId": "",
+      "projectName": "",
+      "protocolId": "1774024680081-6b02b28fd6d39",
+      "protocolName": "IPTG-Induced Recombinant Protein Expression in BL21(DE3)",
+      "protocolSnapshot": {
+        "id": "1774024680081-6b02b28fd6d39",
+        "name": "IPTG-Induced Recombinant Protein Expression in BL21(DE3)",
+        "category": "",
+        "purpose": "Express a recombinant protein in BL21(DE3) cells using IPTG induction.",
+        "steps": [
+          {
+            "id": "1774024680081-30d1ad296ed458",
+            "text": "Inoculate {{ph:1774024680081-ff5ea222c2b28}} of expression medium containing {{ph:1774024680081-2608acdba053b}} with {{ph:1774024680081-b41278cd1047f8}} of overnight starter culture.",
+            "placeholders": [
+              {
+                "id": "1774024680081-ff5ea222c2b28",
+                "name": "volume"
+              },
+              {
+                "id": "1774024680081-2608acdba053b",
+                "name": "antibiotic"
+              },
+              {
+                "id": "1774024680081-b41278cd1047f8",
+                "name": "volume"
+              }
+            ]
+          },
+          {
+            "id": "1774024680081-8b59fc78ea4ba",
+            "text": "Grow the culture at 37 C with shaking until OD600 reaches {{ph:1774024680081-fab6fafbcf158}}.",
+            "placeholders": [
+              {
+                "id": "1774024680081-fab6fafbcf158",
+                "name": "value"
+              }
+            ]
+          },
+          {
+            "id": "1774024680081-261cf8cde96b5",
+            "text": "Add IPTG to a final concentration of {{ph:1774024680081-587c106fae95a}} to induce protein expression.",
+            "placeholders": [
+              {
+                "id": "1774024680081-587c106fae95a",
+                "name": "concentration"
+              }
+            ]
+          },
+          {
+            "id": "1774024680081-060177ce253a3",
+            "text": "Shift the culture to {{ph:1774024680081-2ce357c07b8e68}} and continue shaking for {{ph:1774024680081-1e13340d6a10c}}.",
+            "placeholders": [
+              {
+                "id": "1774024680081-2ce357c07b8e68",
+                "name": "temperature"
+              },
+              {
+                "id": "1774024680081-1e13340d6a10c",
+                "name": "time"
+              }
+            ]
+          },
+          {
+            "id": "1774024680081-c57e1dcb979b6",
+            "text": "Harvest cells by centrifugation at {{ph:1774024680081-d82f101f8190e8}} for {{ph:1774024680081-ad983f4a2f5b68}} at {{ph:1774024680081-4962dce7ed7eb8}}.",
+            "placeholders": [
+              {
+                "id": "1774024680081-d82f101f8190e8",
+                "name": "speed"
+              },
+              {
+                "id": "1774024680081-ad983f4a2f5b68",
+                "name": "time"
+              },
+              {
+                "id": "1774024680081-4962dce7ed7eb8",
+                "name": "temperature"
+              }
+            ]
+          },
+          {
+            "id": "1774024680081-1476f4cf39052",
+            "text": "Record pellet appearance, culture volume, induction time, and temperature in the notebook.",
+            "placeholders": []
+          }
+        ]
+      },
+      "values": {},
+      "result": "",
+      "resultFiles": [],
+      "resultFileRecords": [],
+      "storageFolder": "/Users/shiyifan/Projects/Enana/TestData3/Workflow/NiNTA__1776270512198-af3480c2ef55c8/NiNTA_1__1776270538561-6c07e18af542f/Notebook/NiNTA_1__1776270538561-46e4a929f801c8/Notebook_Page__1776270564610-c59aae731918f8",
+      "createdAt": "2026-04-15T16:29:24.610Z",
+      "updatedAt": "2026-04-15T18:11:35.653Z",
+      "notebookState": "planned",
+      "executedAt": "",
+      "workflowContext": {
+        "workflowId": "1776270538561-6c07e18af542f",
+        "workflowName": "NiNTA 1",
+        "workflowEntryId": "1776270538561-46e4a929f801c8",
+        "workflowEntryName": "NiNTA 1",
+        "workflowBlockId": "1776270538561-74e8c18bdcad18",
+        "workflowBlockTitle": "IPTG-Induced Recombinant Protein Expression in BL21(DE3)"
+      },
+      "assayIds": [
+        "1776918071270-25a114f810413"
+      ],
+      "gelAnalysisIds": []
+    },
+    {
+      "id": "1776270566877-8b3defb4cebd5",
+      "notebookType": "biology",
+      "projectId": "",
+      "projectName": "",
+      "protocolId": "1774024695073-536c18071dd0d",
+      "protocolName": "Ni-NTA Purification of His-Tagged Protein",
+      "protocolSnapshot": {
+        "id": "1774024695073-536c18071dd0d",
+        "name": "Ni-NTA Purification of His-Tagged Protein",
+        "category": "",
+        "purpose": "Purify a His-tagged recombinant protein using nickel affinity resin.",
+        "steps": [
+          {
+            "id": "1774125203496-c7d15ebdc641a8",
+            "text": "Resuspend the cell pellet in 100 mL of lysis buffer",
+            "placeholders": []
+          },
+          {
+            "id": "1774125203496-ec7ee810d38748",
+            "text": "Lyse the cells using sonication and clarify the lysate by centrifugation at 10,000 rpm for 30 mins.",
+            "placeholders": []
+          },
+          {
+            "id": "1774125203496-ae0108f167c538",
+            "text": "Equilibrate 5 mL of Ni-NTA resin with 20 mL of lysis buffer.",
+            "placeholders": []
+          },
+          {
+            "id": "1774125203496-404bcf026d9b68",
+            "text": "Load the clarified lysate onto the resin.",
+            "placeholders": []
+          },
+          {
+            "id": "1774125203497-d3a01f7ca5e048",
+            "text": "Wash the resin with 40 mL of wash buffer containing 20 mM imidazole.",
+            "placeholders": []
+          },
+          {
+            "id": "1774125203497-6e6780fa58bd4",
+            "text": "Elute the bound protein using 6 mL of elution buffer containing 300 mM imidazole.",
+            "placeholders": []
+          },
+          {
+            "id": "1774024695073-9ea9a36345d188",
+            "text": "Collect fractions and analyze them by SDS-PAGE.",
+            "placeholders": []
+          }
+        ]
+      },
+      "values": {},
+      "result": "",
+      "resultFiles": [],
+      "resultFileRecords": [],
+      "storageFolder": "/Users/shiyifan/Projects/Enana/TestData3/Workflow/NiNTA__1776270512198-af3480c2ef55c8/NiNTA_1__1776270538561-6c07e18af542f/Notebook/NiNTA_1__1776270538561-46e4a929f801c8/Notebook_Page__1776270566877-8b3defb4cebd5",
+      "createdAt": "2026-04-15T16:29:26.877Z",
+      "updatedAt": "2026-04-15T18:11:38.274Z",
+      "notebookState": "planned",
+      "executedAt": "",
+      "workflowContext": {
+        "workflowId": "1776270538561-6c07e18af542f",
+        "workflowName": "NiNTA 1",
+        "workflowEntryId": "1776270538561-46e4a929f801c8",
+        "workflowEntryName": "NiNTA 1",
+        "workflowBlockId": "1776270538561-e247e7e259dc3",
+        "workflowBlockTitle": "Ni-NTA Purification of His-Tagged Protein"
+      },
+      "assayIds": [],
+      "gelAnalysisIds": []
+    },
+    {
+      "id": "1776270569678-971d9d9b018028",
+      "notebookType": "biology",
+      "projectId": "",
+      "projectName": "",
+      "protocolId": "1774024712936-cdad2f729e908",
+      "protocolName": "TEV Protease Cleavage of Fusion Protein",
+      "protocolSnapshot": {
+        "id": "1774024712936-cdad2f729e908",
+        "name": "TEV Protease Cleavage of Fusion Protein",
+        "category": "",
+        "purpose": "Remove an affinity or solubility tag from a fusion protein using TEV protease.",
+        "steps": [
+          {
+            "id": "1774024712936-af15c001f5a85",
+            "text": "Exchange the fusion protein into cleavage buffer using {{ph:1774024712936-7dba43a18d95f8}}.",
+            "placeholders": [
+              {
+                "id": "1774024712936-7dba43a18d95f8",
+                "name": "buffer exchange method"
+              }
+            ]
+          },
+          {
+            "id": "1774024712936-c39e561ac4cc48",
+            "text": "Add TEV protease at an enzyme-to-substrate ratio of {{ph:1774024712936-8060b8a60ca3b}}.",
+            "placeholders": [
+              {
+                "id": "1774024712936-8060b8a60ca3b",
+                "name": "ratio"
+              }
+            ]
+          },
+          {
+            "id": "1774024712936-f707b8e3323d98",
+            "text": "Incubate the reaction at {{ph:1774024712936-51cd47e4df67a}} for {{ph:1774024712936-bf51d65dc5d7e}}.",
+            "placeholders": [
+              {
+                "id": "1774024712936-51cd47e4df67a",
+                "name": "temperature"
+              },
+              {
+                "id": "1774024712936-bf51d65dc5d7e",
+                "name": "time"
+              }
+            ]
+          },
+          {
+            "id": "1774024712936-abdfa557cbbaf",
+            "text": "Remove an aliquot before and after cleavage for SDS-PAGE analysis.",
+            "placeholders": []
+          },
+          {
+            "id": "1774024712936-66e3e948f83488",
+            "text": "Separate the cleaved tag, uncleaved protein, and TEV protease using {{ph:1774024712936-e83fc6a9af4a2}}.",
+            "placeholders": [
+              {
+                "id": "1774024712936-e83fc6a9af4a2",
+                "name": "purification method"
+              }
+            ]
+          }
+        ]
+      },
+      "values": {},
+      "result": "[Apr 20, 19:44] Protein crashed out during overnight incubation",
+      "resultFiles": [],
+      "resultFileRecords": [],
+      "storageFolder": "/Users/shiyifan/Projects/Enana/TestData3/Workflow/NiNTA__1776270512198-af3480c2ef55c8/NiNTA_1__1776270538561-6c07e18af542f/Notebook/NiNTA_1__1776270538561-46e4a929f801c8/Notebook_Page__1776270569678-971d9d9b018028",
+      "createdAt": "2026-04-15T16:29:29.678Z",
+      "updatedAt": "2026-04-21T00:45:24.020Z",
+      "notebookState": "executed",
+      "executedAt": "2026-04-21T00:45:24.020Z",
+      "workflowContext": {
+        "workflowId": "1776270538561-6c07e18af542f",
+        "workflowName": "NiNTA 1",
+        "workflowEntryId": "1776270538561-46e4a929f801c8",
+        "workflowEntryName": "NiNTA 1",
+        "workflowBlockId": "1776270538561-9e88f7264ca91",
+        "workflowBlockTitle": "TEV Protease Cleavage of Fusion Protein"
+      },
+      "assayIds": [],
+      "gelAnalysisIds": [],
+      "gelIds": [
+        "1776735689441-836cf784e1a4a"
+      ]
+    },
+    {
+      "id": "1776739509659-fed30b23b7adf8",
+      "protocolId": "1774024047007-d137dae96cab78",
+      "protocolName": "BL21(DE3) Chemical Transformation with pET28a",
+      "projectId": "1776101131639-b3a065c67eb558",
+      "projectName": "SUMO1",
+      "result": "[Apr 21, 09:46] No colony observed.",
+      "resultFiles": [],
+      "resultFileRecords": [],
+      "resultFileAddresses": [],
+      "notebookState": "executed",
+      "executedAt": "2026-04-21T02:45:09.661Z",
+      "agentDraftStatus": "",
+      "agentDraftMeta": {
+        "workflowId": "",
+        "proposalId": ""
+      },
+      "updatedAt": "2026-04-21T14:46:01.826Z",
+      "createdAt": "2026-04-21T02:45:09.661Z",
+      "storageFolder": "/Users/shiyifan/Projects/Enana/TestData3/Project/SUMO1/Notebook/BL21(DE3)_Chemical_Transformation_with_pET28a__1776739509659-fed30b23b7adf8"
+    },
+    {
+      "id": "1776782800730-d800d86c3126f",
+      "protocolId": "1774024047007-d137dae96cab78",
+      "protocolName": "BL21(DE3) Chemical Transformation with pET28a",
+      "projectId": "1776101131639-b3a065c67eb558",
+      "projectName": "SUMO1",
+      "result": "[Apr 21, 09:46] No colony; wrong antibiotic.",
+      "resultFiles": [],
+      "resultFileRecords": [],
+      "resultFileAddresses": [],
+      "notebookState": "executed",
+      "executedAt": "2026-04-21T14:46:40.733Z",
+      "agentDraftStatus": "",
+      "agentDraftMeta": {
+        "workflowId": "",
+        "proposalId": ""
+      },
+      "updatedAt": "2026-04-21T14:47:19.574Z",
+      "createdAt": "2026-04-21T14:46:40.733Z",
+      "storageFolder": "/Users/shiyifan/Projects/Enana/TestData3/Project/SUMO1/Notebook/BL21(DE3)_Chemical_Transformation_with_pET28a__1776782800730-d800d86c3126f"
+    },
+    {
+      "id": "1776822400577-3600ec37b3665",
+      "notebookType": "biology",
+      "projectId": "1776101131639-b3a065c67eb558",
+      "projectName": "SUMO1",
+      "protocolId": "1774024745003-46df848e78c068",
+      "protocolName": "Avi-Tag Protein Biotinylation",
+      "experimentName": "Avi-Tag Protein Biotinylation",
+      "protocolSnapshot": {
+        "id": "1774024745003-46df848e78c068",
+        "name": "Avi-Tag Protein Biotinylation",
+        "category": "",
+        "purpose": "Biotinylate an Avi-tagged protein for downstream binding assays or immobilization.",
+        "steps": [
+          {
+            "id": "1774024745003-dd7693fa953ce",
+            "text": "Prepare the biotinylation reaction by combining {{ph:1774024745003-093192d094133}} of Avi-tagged protein, {{ph:1774024745003-fbbbfbaa73e5b}} of BirA, {{ph:1774024745003-d6f73ec6557a1}} of biotin, ATP, and buffer.",
+            "placeholders": [
+              {
+                "id": "1774024745003-093192d094133",
+                "name": "mass or volume"
+              },
+              {
+                "id": "1774024745003-fbbbfbaa73e5b",
+                "name": "amount"
+              },
+              {
+                "id": "1774024745003-d6f73ec6557a1",
+                "name": "amount"
+              }
+            ]
+          },
+          {
+            "id": "1774024745003-d9091ff6a0a69",
+            "text": "Incubate the reaction at {{ph:1774024745003-907ec8f41b1b4}} for {{ph:1774024745003-6d181f4be08878}}.",
+            "placeholders": [
+              {
+                "id": "1774024745003-907ec8f41b1b4",
+                "name": "temperature"
+              },
+              {
+                "id": "1774024745003-6d181f4be08878",
+                "name": "time"
+              }
+            ]
+          },
+          {
+            "id": "1774024745003-5c803a37b8e3a8",
+            "text": "Remove excess free biotin using {{ph:1774024745003-d1b54c3887f0f8}}.",
+            "placeholders": [
+              {
+                "id": "1774024745003-d1b54c3887f0f8",
+                "name": "desalting method"
+              }
+            ]
+          },
+          {
+            "id": "1774024745003-d843fa3ad64918",
+            "text": "Assess biotinylation efficiency using {{ph:1774024745003-0dd0ef09f4b6c}}, such as streptavidin shift or binding assay.",
+            "placeholders": [
+              {
+                "id": "1774024745003-0dd0ef09f4b6c",
+                "name": "analysis method"
+              }
+            ]
+          }
+        ]
+      },
+      "values": {
+        "1774024745003-dd7693fa953ce:1774024745003-093192d094133": "",
+        "1774024745003-dd7693fa953ce:1774024745003-fbbbfbaa73e5b": "",
+        "1774024745003-dd7693fa953ce:1774024745003-d6f73ec6557a1": "",
+        "1774024745003-d9091ff6a0a69:1774024745003-907ec8f41b1b4": "",
+        "1774024745003-d9091ff6a0a69:1774024745003-6d181f4be08878": "",
+        "1774024745003-5c803a37b8e3a8:1774024745003-d1b54c3887f0f8": "",
+        "1774024745003-d843fa3ad64918:1774024745003-0dd0ef09f4b6c": ""
+      },
+      "result": "",
+      "resultFiles": [],
+      "resultFileRecords": [],
+      "storageFolder": "/Users/shiyifan/Projects/Enana/TestData3/Project/SUMO1/Notebook/Avi-Tag_Protein_Biotinylation__1776822400577-3600ec37b3665",
+      "updatedAt": "2026-04-22T01:46:40.580Z",
+      "createdAt": "2026-04-22T01:46:40.580Z",
+      "notebookState": "executed",
+      "executedAt": "2026-04-22T01:46:40.580Z",
+      "agentDraftStatus": "",
+      "agentDraftMeta": {},
+      "selectionInsights": []
+    },
+    {
+      "id": "1776822403940-d536e9c309a8e8",
+      "notebookType": "biology",
+      "projectId": "1776101131639-b3a065c67eb558",
+      "projectName": "SUMO1",
+      "protocolId": "1774024695073-536c18071dd0d",
+      "protocolName": "Ni-NTA Purification of His-Tagged Protein",
+      "experimentName": "Ni-NTA Purification of His-Tagged Protein",
+      "protocolSnapshot": {
+        "id": "1774024695073-536c18071dd0d",
+        "name": "Ni-NTA Purification of His-Tagged Protein",
+        "category": "",
+        "purpose": "Purify a His-tagged recombinant protein using nickel affinity resin.",
+        "steps": [
+          {
+            "id": "1774125203496-c7d15ebdc641a8",
+            "text": "Resuspend the cell pellet in 100 mL of lysis buffer",
+            "placeholders": []
+          },
+          {
+            "id": "1774125203496-ec7ee810d38748",
+            "text": "Lyse the cells using sonication and clarify the lysate by centrifugation at 10,000 rpm for 30 mins.",
+            "placeholders": []
+          },
+          {
+            "id": "1774125203496-ae0108f167c538",
+            "text": "Equilibrate 5 mL of Ni-NTA resin with 20 mL of lysis buffer.",
+            "placeholders": []
+          },
+          {
+            "id": "1774125203496-404bcf026d9b68",
+            "text": "Load the clarified lysate onto the resin.",
+            "placeholders": []
+          },
+          {
+            "id": "1774125203497-d3a01f7ca5e048",
+            "text": "Wash the resin with 40 mL of wash buffer containing 20 mM imidazole.",
+            "placeholders": []
+          },
+          {
+            "id": "1774125203497-6e6780fa58bd4",
+            "text": "Elute the bound protein using 6 mL of elution buffer containing 300 mM imidazole.",
+            "placeholders": []
+          },
+          {
+            "id": "1774024695073-9ea9a36345d188",
+            "text": "Collect fractions and analyze them by SDS-PAGE.",
+            "placeholders": []
+          }
+        ]
+      },
+      "values": {},
+      "result": "",
+      "resultFiles": [],
+      "resultFileRecords": [],
+      "storageFolder": "/Users/shiyifan/Projects/Enana/TestData3/Project/SUMO1/Notebook/Ni-NTA_Purification_of_His-Tagged_Protein__1776822403940-d536e9c309a8e8",
+      "updatedAt": "2026-04-22T02:06:21.125Z",
+      "createdAt": "2026-04-22T01:46:43.941Z",
+      "notebookState": "executed",
+      "executedAt": "2026-04-22T01:46:43.941Z",
+      "agentDraftStatus": "",
+      "agentDraftMeta": {},
+      "selectionInsights": []
+    },
+    {
+      "id": "1777258183557-d7f46e2b351bb8",
+      "notebookType": "biology",
+      "projectId": "1777258183556-6354a25f71fc4",
+      "projectName": "Protein Builder",
+      "protocolId": "protein-builder-cloning-assembly-protocol",
+      "protocolName": "Protein Builder Cloning Assembly",
+      "experimentName": "Protein Builder Insert cloning primer design",
+      "protocolSnapshot": {
+        "id": "protein-builder-cloning-assembly-protocol",
+        "name": "Protein Builder Cloning Assembly",
+        "category": "",
+        "purpose": "Design cloning primers and PCR setup for a Protein Builder assembled construct.",
+        "steps": [
+          {
+            "id": "protein-builder-cloning-assembly-protocol_step_1",
+            "text": "Amplify insert: PCR-amplify the insert with restriction-site tails from the primer plan.",
+            "placeholders": []
+          },
+          {
+            "id": "protein-builder-cloning-assembly-protocol_step_2",
+            "text": "Digest DNA: Digest backbone and insert with the selected enzyme pair, then purify both products.",
+            "placeholders": []
+          },
+          {
+            "id": "protein-builder-cloning-assembly-protocol_step_3",
+            "text": "Ligate construct: Ligate digested insert into the prepared backbone.",
+            "placeholders": []
+          },
+          {
+            "id": "protein-builder-cloning-assembly-protocol_step_4",
+            "text": "Transform and screen: Transform competent cells and screen colonies by colony PCR and sequencing.",
+            "placeholders": []
+          }
+        ]
+      },
+      "values": {},
+      "result": "Protein Builder cloning assembly design\n\nConstruct: Protein Builder Insert\nBackbone: 004_CD22\nAssembled construct length: 5,686 bp\nRecommended route: Restriction ligation\nPrimer threshold: strict\n\nPCR program\nPolymerase: High-fidelity DNA polymerase\nLongest PCR target: 465 bp\n- Initial denaturation: 98 C, 30 s, 1 cycle\n- Denaturation: 98 C, 10 s, 30 cycles\n- Annealing: 55 C, 20 s, 30 cycles\n- Extension: 72 C, 30 s, 30 cycles\n- Final extension: 72 C, 2 min, 1 cycle\n- Hold: 4 C, hold, 1 cycle\n- Annealing temperature is estimated from the lowest primer binding Tm (58.2 C) minus 3 C.\n- Extension is estimated at 30 s/kb for the longest planned PCR target (465 bp). Adjust to the polymerase data sheet.\n\nPrimers\n- Protein Builder Insert_F; role: Restriction Forward; sequence: GCGCTGATCACACCACCACCACCACCACGAAAAC; length: 34 nt; Tm: 60.8 C; GC: 58.8%; notes: Adds BclI to the 5' end.\n- Protein Builder Insert_R; role: Restriction Reverse; sequence: GCGCACGCGTATGATGGTGATGGTGGTGTGACTGAAA; length: 37 nt; Tm: 58.2 C; GC: 54.1%; notes: Adds MluI to the 5' end.\n\nAssembly procedure\n1. Amplify insert: PCR-amplify the insert with restriction-site tails from the primer plan.\n2. Digest DNA: Digest backbone and insert with the selected enzyme pair, then purify both products.\n3. Ligate construct: Ligate digested insert into the prepared backbone.\n4. Transform and screen: Transform competent cells and screen colonies by colony PCR and sequencing.\n\nValidation plan\n- colony-pcr, left/right cloning junctions: Confirm insert presence and orientation.\n- sanger-sequencing, entire insert region: Verify insert integrity after ligation.\n\nWarnings\n- Existing terminal overlap is too weak; engineered primer overlap is recommended.\n- No supported edit request was provided.",
+      "resultTable": {
+        "columns": [
+          {
+            "field": "name",
+            "title": "Primer"
+          },
+          {
+            "field": "role",
+            "title": "Role"
+          },
+          {
+            "field": "sequence",
+            "title": "Sequence"
+          },
+          {
+            "field": "length",
+            "title": "Length"
+          },
+          {
+            "field": "tm",
+            "title": "Binding Tm"
+          },
+          {
+            "field": "gc",
+            "title": "GC%"
+          },
+          {
+            "field": "notes",
+            "title": "Notes"
+          }
+        ],
+        "rows": [
+          {
+            "id": "Protein Builder Insert_F",
+            "name": "Protein Builder Insert_F",
+            "role": "Restriction Forward",
+            "sequence": "GCGCTGATCACACCACCACCACCACCACGAAAAC",
+            "length": "34",
+            "tm": "60.8 C",
+            "gc": "58.8%",
+            "notes": "Adds BclI to the 5' end."
+          },
+          {
+            "id": "Protein Builder Insert_R",
+            "name": "Protein Builder Insert_R",
+            "role": "Restriction Reverse",
+            "sequence": "GCGCACGCGTATGATGGTGATGGTGGTGTGACTGAAA",
+            "length": "37",
+            "tm": "58.2 C",
+            "gc": "54.1%",
+            "notes": "Adds MluI to the 5' end."
+          }
+        ]
+      },
+      "resultFiles": [],
+      "resultFileRecords": [],
+      "storageFolder": "/Users/shiyifan/Projects/Enana/TestData3/Project/Protein_Builder/Notebook/Protein_Builder_Cloning_Assembly__1777258183557-d7f46e2b351bb8",
+      "updatedAt": "2026-04-27T02:49:43.556Z",
+      "createdAt": "2026-04-27T02:49:43.556Z",
+      "notebookState": "planned",
+      "executedAt": "",
+      "agentDraftStatus": "",
+      "agentDraftMeta": {},
+      "selectionInsights": [],
+      "proteinBuilderCloningDesign": {
+        "source": "protein_builder_cloning_assembly",
+        "constructName": "Protein Builder Insert",
+        "backboneName": "004_CD22",
+        "assembledRecordName": "Protein Builder Insert (004_CD22)",
+        "assembledLength": 5686,
+        "insertLength": 465,
+        "recommendedAssemblyStrategy": "restriction-ligation",
+        "primerCount": 2,
+        "pcrProgram": {
+          "polymerase": "High-fidelity DNA polymerase",
+          "annealingTemperature": 55,
+          "longestAmpliconLength": 465,
+          "pcrTargets": [
+            {
+              "name": "Protein Builder Insert",
+              "role": "insert",
+              "length": 465
+            }
+          ],
+          "steps": [
+            {
+              "label": "Initial denaturation",
+              "temperature": "98 C",
+              "time": "30 s",
+              "cycles": "1"
+            },
+            {
+              "label": "Denaturation",
+              "temperature": "98 C",
+              "time": "10 s",
+              "cycles": "30"
+            },
+            {
+              "label": "Annealing",
+              "temperature": "55 C",
+              "time": "20 s",
+              "cycles": "30"
+            },
+            {
+              "label": "Extension",
+              "temperature": "72 C",
+              "time": "30 s",
+              "cycles": "30"
+            },
+            {
+              "label": "Final extension",
+              "temperature": "72 C",
+              "time": "2 min",
+              "cycles": "1"
+            },
+            {
+              "label": "Hold",
+              "temperature": "4 C",
+              "time": "hold",
+              "cycles": "1"
+            }
+          ],
+          "notes": [
+            "Annealing temperature is estimated from the lowest primer binding Tm (58.2 C) minus 3 C.",
+            "Extension is estimated at 30 s/kb for the longest planned PCR target (465 bp). Adjust to the polymerase data sheet."
+          ]
+        }
+      }
+    },
+    {
+      "id": "1777300788781-b98b27f4a961e8",
+      "notebookType": "biology",
+      "projectId": "1777258183556-6354a25f71fc4",
+      "projectName": "Protein Builder",
+      "protocolId": "protein-builder-cloning-assembly-protocol",
+      "protocolName": "Protein Builder Cloning Assembly",
+      "experimentName": "Protein Builder Insert cloning primer design",
+      "protocolSnapshot": {
+        "id": "protein-builder-cloning-assembly-protocol",
+        "name": "Protein Builder Cloning Assembly",
+        "category": "",
+        "purpose": "Design cloning primers and PCR setup for a Protein Builder assembled construct.",
+        "steps": [
+          {
+            "id": "protein-builder-cloning-assembly-protocol_step_1",
+            "text": "Amplify insert: PCR-amplify the insert with restriction-site tails from the primer plan.",
+            "placeholders": []
+          },
+          {
+            "id": "protein-builder-cloning-assembly-protocol_step_2",
+            "text": "Digest DNA: Digest backbone and insert with the selected enzyme pair, then purify both products.",
+            "placeholders": []
+          },
+          {
+            "id": "protein-builder-cloning-assembly-protocol_step_3",
+            "text": "Ligate construct: Ligate digested insert into the prepared backbone.",
+            "placeholders": []
+          },
+          {
+            "id": "protein-builder-cloning-assembly-protocol_step_4",
+            "text": "Transform and screen: Transform competent cells and screen colonies by colony PCR and sequencing.",
+            "placeholders": []
+          }
+        ]
+      },
+      "values": {},
+      "result": "Protein Builder cloning assembly design\n\nConstruct: Protein Builder Insert\nBackbone: 004_CD22\nAssembled construct length: 5,686 bp\nRecommended route: Restriction ligation\nPrimer threshold: strict\n\nPCR program\nPolymerase: High-fidelity DNA polymerase\nLongest PCR target: 465 bp\n- Initial denaturation: 98 C, 30 s, 1 cycle\n- Denaturation: 98 C, 10 s, 30 cycles\n- Annealing: 55 C, 20 s, 30 cycles\n- Extension: 72 C, 30 s, 30 cycles\n- Final extension: 72 C, 2 min, 1 cycle\n- Hold: 4 C, hold, 1 cycle\n- Annealing temperature is estimated from the lowest primer binding Tm (58.2 C) minus 3 C.\n- Extension is estimated at 30 s/kb for the longest planned PCR target (465 bp). Adjust to the polymerase data sheet.\n\nPrimers\n- Protein Builder Insert_F; role: Restriction Forward; sequence: GCGCTGATCACACCACCACCACCACCACGAAAAC; length: 34 nt; Tm: 60.8 C; GC: 58.8%; notes: Adds BclI to the 5' end.\n- Protein Builder Insert_R; role: Restriction Reverse; sequence: GCGCACGCGTATGATGGTGATGGTGGTGTGACTGAAA; length: 37 nt; Tm: 58.2 C; GC: 54.1%; notes: Adds MluI to the 5' end.\n\nAssembly procedure\n1. Amplify insert: PCR-amplify the insert with restriction-site tails from the primer plan.\n2. Digest DNA: Digest backbone and insert with the selected enzyme pair, then purify both products.\n3. Ligate construct: Ligate digested insert into the prepared backbone.\n4. Transform and screen: Transform competent cells and screen colonies by colony PCR and sequencing.\n\nValidation plan\n- colony-pcr, left/right cloning junctions: Confirm insert presence and orientation.\n- sanger-sequencing, entire insert region: Verify insert integrity after ligation.\n\nWarnings\n- Existing terminal overlap is too weak; engineered primer overlap is recommended.\n- No supported edit request was provided.",
+      "resultTable": {
+        "columns": [
+          {
+            "field": "name",
+            "title": "Primer"
+          },
+          {
+            "field": "role",
+            "title": "Role"
+          },
+          {
+            "field": "sequence",
+            "title": "Sequence"
+          },
+          {
+            "field": "length",
+            "title": "Length"
+          },
+          {
+            "field": "tm",
+            "title": "Binding Tm"
+          },
+          {
+            "field": "gc",
+            "title": "GC%"
+          },
+          {
+            "field": "notes",
+            "title": "Notes"
+          }
+        ],
+        "rows": [
+          {
+            "id": "Protein Builder Insert_F",
+            "name": "Protein Builder Insert_F",
+            "role": "Restriction Forward",
+            "sequence": "GCGCTGATCACACCACCACCACCACCACGAAAAC",
+            "length": "34",
+            "tm": "60.8 C",
+            "gc": "58.8%",
+            "notes": "Adds BclI to the 5' end."
+          },
+          {
+            "id": "Protein Builder Insert_R",
+            "name": "Protein Builder Insert_R",
+            "role": "Restriction Reverse",
+            "sequence": "GCGCACGCGTATGATGGTGATGGTGGTGTGACTGAAA",
+            "length": "37",
+            "tm": "58.2 C",
+            "gc": "54.1%",
+            "notes": "Adds MluI to the 5' end."
+          }
+        ]
+      },
+      "resultFiles": [],
+      "resultFileRecords": [],
+      "storageFolder": "/Users/shiyifan/Projects/Enana/TestData3/Project/Protein_Builder/Notebook/Protein_Builder_Cloning_Assembly__1777300788781-b98b27f4a961e8",
+      "updatedAt": "2026-04-27T14:40:43.874Z",
+      "createdAt": "2026-04-27T14:39:48.781Z",
+      "notebookState": "planned",
+      "executedAt": "",
+      "agentDraftStatus": "",
+      "agentDraftMeta": {},
+      "selectionInsights": [],
+      "proteinBuilderCloningDesign": {
+        "source": "protein_builder_cloning_assembly",
+        "constructName": "Protein Builder Insert",
+        "backboneName": "004_CD22",
+        "assembledRecordName": "Protein Builder Insert (004_CD22)",
+        "assembledLength": 5686,
+        "insertLength": 465,
+        "recommendedAssemblyStrategy": "restriction-ligation",
+        "primerCount": 2,
+        "pcrProgram": {
+          "polymerase": "High-fidelity DNA polymerase",
+          "annealingTemperature": 55,
+          "longestAmpliconLength": 465,
+          "pcrTargets": [
+            {
+              "name": "Protein Builder Insert",
+              "role": "insert",
+              "length": 465
+            }
+          ],
+          "steps": [
+            {
+              "label": "Initial denaturation",
+              "temperature": "98 C",
+              "time": "30 s",
+              "cycles": "1"
+            },
+            {
+              "label": "Denaturation",
+              "temperature": "98 C",
+              "time": "10 s",
+              "cycles": "30"
+            },
+            {
+              "label": "Annealing",
+              "temperature": "55 C",
+              "time": "20 s",
+              "cycles": "30"
+            },
+            {
+              "label": "Extension",
+              "temperature": "72 C",
+              "time": "30 s",
+              "cycles": "30"
+            },
+            {
+              "label": "Final extension",
+              "temperature": "72 C",
+              "time": "2 min",
+              "cycles": "1"
+            },
+            {
+              "label": "Hold",
+              "temperature": "4 C",
+              "time": "hold",
+              "cycles": "1"
+            }
+          ],
+          "notes": [
+            "Annealing temperature is estimated from the lowest primer binding Tm (58.2 C) minus 3 C.",
+            "Extension is estimated at 30 s/kb for the longest planned PCR target (465 bp). Adjust to the polymerase data sheet."
+          ]
+        }
+      }
+    },
+    {
+      "id": "1777301040912-b5f0a16687145",
+      "notebookType": "biology",
+      "projectId": "1777258183556-6354a25f71fc4",
+      "projectName": "Protein Builder",
+      "protocolId": "protein-builder-cloning-assembly-protocol",
+      "protocolName": "Protein Builder Cloning Assembly",
+      "experimentName": "Protein Builder Insert cloning primer design",
+      "protocolSnapshot": {
+        "id": "protein-builder-cloning-assembly-protocol",
+        "name": "Protein Builder Cloning Assembly",
+        "category": "",
+        "purpose": "Design cloning primers and PCR setup for a Protein Builder assembled construct.",
+        "steps": [
+          {
+            "id": "protein-builder-cloning-assembly-protocol_step_1",
+            "text": "Amplify insert: PCR-amplify the insert with restriction-site tails from the primer plan.",
+            "placeholders": []
+          },
+          {
+            "id": "protein-builder-cloning-assembly-protocol_step_2",
+            "text": "Digest DNA: Digest backbone and insert with the selected enzyme pair, then purify both products.",
+            "placeholders": []
+          },
+          {
+            "id": "protein-builder-cloning-assembly-protocol_step_3",
+            "text": "Ligate construct: Ligate digested insert into the prepared backbone.",
+            "placeholders": []
+          },
+          {
+            "id": "protein-builder-cloning-assembly-protocol_step_4",
+            "text": "Transform and screen: Transform competent cells and screen colonies by colony PCR and sequencing.",
+            "placeholders": []
+          }
+        ]
+      },
+      "values": {},
+      "result": "Protein Builder cloning assembly design\n\nConstruct: Protein Builder Insert\nBackbone: Protein Builder Insert (004_CD22)jj\nAssembled construct length: 5,686 bp\nRecommended route: Restriction ligation\nPrimer threshold: strict\n\nPCR program\nPolymerase: High-fidelity DNA polymerase\nLongest PCR target: 465 bp\n- Initial denaturation: 98 C, 30 s, 1 cycle\n- Denaturation: 98 C, 10 s, 30 cycles\n- Annealing: 55 C, 20 s, 30 cycles\n- Extension: 72 C, 30 s, 30 cycles\n- Final extension: 72 C, 2 min, 1 cycle\n- Hold: 4 C, hold, 1 cycle\n- Annealing temperature is estimated from the lowest primer binding Tm (58.2 C) minus 3 C.\n- Extension is estimated at 30 s/kb for the longest planned PCR target (465 bp). Adjust to the polymerase data sheet.\n\nPrimers\n- Protein Builder Insert_F; role: Restriction Forward; sequence: GCGCTGATCACACCACCACCACCACCACGAAAAC; length: 34 nt; Tm: 60.8 C; GC: 58.8%; notes: Adds BclI to the 5' end.\n- Protein Builder Insert_R; role: Restriction Reverse; sequence: GCGCACGCGTATGATGGTGATGGTGGTGTGACTGAAA; length: 37 nt; Tm: 58.2 C; GC: 54.1%; notes: Adds MluI to the 5' end.\n\nAssembly procedure\n1. Amplify insert: PCR-amplify the insert with restriction-site tails from the primer plan.\n2. Digest DNA: Digest backbone and insert with the selected enzyme pair, then purify both products.\n3. Ligate construct: Ligate digested insert into the prepared backbone.\n4. Transform and screen: Transform competent cells and screen colonies by colony PCR and sequencing.\n\nValidation plan\n- colony-pcr, left/right cloning junctions: Confirm insert presence and orientation.\n- sanger-sequencing, entire insert region: Verify insert integrity after ligation.\n\nWarnings\n- Existing terminal overlap is too weak; engineered primer overlap is recommended.\n- No supported edit request was provided.",
+      "resultTable": {
+        "columns": [
+          {
+            "field": "name",
+            "title": "Primer"
+          },
+          {
+            "field": "role",
+            "title": "Role"
+          },
+          {
+            "field": "sequence",
+            "title": "Sequence"
+          },
+          {
+            "field": "length",
+            "title": "Length"
+          },
+          {
+            "field": "tm",
+            "title": "Binding Tm"
+          },
+          {
+            "field": "gc",
+            "title": "GC%"
+          },
+          {
+            "field": "notes",
+            "title": "Notes"
+          }
+        ],
+        "rows": [
+          {
+            "id": "Protein Builder Insert_F",
+            "name": "Protein Builder Insert_F",
+            "role": "Restriction Forward",
+            "sequence": "GCGCTGATCACACCACCACCACCACCACGAAAAC",
+            "length": "34",
+            "tm": "60.8 C",
+            "gc": "58.8%",
+            "notes": "Adds BclI to the 5' end."
+          },
+          {
+            "id": "Protein Builder Insert_R",
+            "name": "Protein Builder Insert_R",
+            "role": "Restriction Reverse",
+            "sequence": "GCGCACGCGTATGATGGTGATGGTGGTGTGACTGAAA",
+            "length": "37",
+            "tm": "58.2 C",
+            "gc": "54.1%",
+            "notes": "Adds MluI to the 5' end."
+          }
+        ]
+      },
+      "resultFiles": [],
+      "resultFileRecords": [],
+      "storageFolder": "/Users/shiyifan/Projects/Enana/TestData3/Project/Protein_Builder/Notebook/Protein_Builder_Cloning_Assembly__1777301040912-b5f0a16687145",
+      "updatedAt": "2026-04-27T14:44:08.548Z",
+      "createdAt": "2026-04-27T14:44:00.911Z",
+      "notebookState": "planned",
+      "executedAt": "",
+      "agentDraftStatus": "",
+      "agentDraftMeta": {},
+      "selectionInsights": [],
+      "proteinBuilderCloningDesign": {
+        "source": "protein_builder_cloning_assembly",
+        "constructName": "Protein Builder Insert",
+        "backboneName": "Protein Builder Insert (004_CD22)jj",
+        "assembledRecordName": "Protein Builder Insert (Protein Builder Insert (004_CD22)jj)",
+        "assembledLength": 5686,
+        "insertLength": 465,
+        "recommendedAssemblyStrategy": "restriction-ligation",
+        "primerCount": 2,
+        "pcrProgram": {
+          "polymerase": "High-fidelity DNA polymerase",
+          "annealingTemperature": 55,
+          "longestAmpliconLength": 465,
+          "pcrTargets": [
+            {
+              "name": "Protein Builder Insert",
+              "role": "insert",
+              "length": 465
+            }
+          ],
+          "steps": [
+            {
+              "label": "Initial denaturation",
+              "temperature": "98 C",
+              "time": "30 s",
+              "cycles": "1"
+            },
+            {
+              "label": "Denaturation",
+              "temperature": "98 C",
+              "time": "10 s",
+              "cycles": "30"
+            },
+            {
+              "label": "Annealing",
+              "temperature": "55 C",
+              "time": "20 s",
+              "cycles": "30"
+            },
+            {
+              "label": "Extension",
+              "temperature": "72 C",
+              "time": "30 s",
+              "cycles": "30"
+            },
+            {
+              "label": "Final extension",
+              "temperature": "72 C",
+              "time": "2 min",
+              "cycles": "1"
+            },
+            {
+              "label": "Hold",
+              "temperature": "4 C",
+              "time": "hold",
+              "cycles": "1"
+            }
+          ],
+          "notes": [
+            "Annealing temperature is estimated from the lowest primer binding Tm (58.2 C) minus 3 C.",
+            "Extension is estimated at 30 s/kb for the longest planned PCR target (465 bp). Adjust to the polymerase data sheet."
+          ]
+        }
+      }
+    },
+    {
+      "id": "1777322737104-afb3a68955121",
+      "notebookType": "biology",
+      "projectId": "1777258183556-6354a25f71fc4",
+      "projectName": "Protein Builder",
+      "protocolId": "protein-builder-cloning-assembly-protocol",
+      "protocolName": "Protein Builder Cloning Assembly",
+      "experimentName": "Protein Builder Insert cloning primer design",
+      "protocolSnapshot": {
+        "id": "protein-builder-cloning-assembly-protocol",
+        "name": "Protein Builder Cloning Assembly",
+        "category": "",
+        "purpose": "Design cloning primers and PCR setup for a Protein Builder assembled construct.",
+        "steps": [
+          {
+            "id": "protein-builder-cloning-assembly-protocol_step_1",
+            "text": "Reassess inputs: No executable route was identified. Re-check backbone choice, fragment order, or edit size.",
+            "placeholders": []
+          }
+        ]
+      },
+      "values": {},
+      "result": "Protein Builder cloning assembly design\n\nConstruct: Protein Builder Insert\nBackbone: 004_CD22\nAssembled construct length: 5,908 bp\nRecommended route: No feasible route\nPrimer threshold: not selected\n\nPCR program\nPolymerase: High-fidelity DNA polymerase\nLongest PCR target: 5,221 bp\n- Initial denaturation: 98 C, 30 s, 1 cycle\n- Denaturation: 98 C, 10 s, 30 cycles\n- Annealing: 57 C, 20 s, 30 cycles\n- Extension: 72 C, 2 min 40 s, 30 cycles\n- Final extension: 72 C, 2 min, 1 cycle\n- Hold: 4 C, hold, 1 cycle\n- Annealing temperature is estimated from the lowest primer binding Tm (60.0 C) minus 3 C.\n- Extension is estimated at 30 s/kb for the longest planned PCR target (5,221 bp). Adjust to the polymerase data sheet.\n\nPrimers\nNo primer set was generated for the selected route.\n\nAssembly procedure\n1. Reassess inputs: No executable route was identified. Re-check backbone choice, fragment order, or edit size.\n\nValidation plan\n- review-inputs, host_backbone, protein_builder_insert: No feasible route was selected.\n\nWarnings\n- Existing terminal overlap is too weak; engineered primer overlap is recommended.\n- No terminal overlap is present and no primer-compatible engineered overlap was found.\n- No supported edit request was provided.\n- Primer design failed under strict, moderate, and relaxed thresholds. Consider Gibson assembly, overlap PCR, or synthesis.\n- No feasible assembly strategy was identified from the provided inputs.\n\nAlternate strategy: Provide a clearer host backbone, fragment order, or edit request to enable route evaluation.",
+      "resultTable": null,
+      "resultFiles": [],
+      "resultFileRecords": [],
+      "storageFolder": "/Users/shiyifan/Projects/Enana/TestData3/Project/Protein_Builder/Notebook/Protein_Builder_Cloning_Assembly__1777322737104-afb3a68955121",
+      "updatedAt": "2026-04-27T20:46:11.521Z",
+      "createdAt": "2026-04-27T20:45:37.103Z",
+      "notebookState": "planned",
+      "executedAt": "",
+      "agentDraftStatus": "",
+      "agentDraftMeta": {},
+      "selectionInsights": [],
+      "proteinBuilderCloningDesign": {
+        "source": "protein_builder_cloning_assembly",
+        "constructName": "Protein Builder Insert",
+        "backboneName": "004_CD22",
+        "assembledRecordName": "Protein Builder Insert (004_CD22)",
+        "assembledLength": 5908,
+        "insertLength": 681,
+        "recommendedAssemblyStrategy": null,
+        "primerCount": 0,
+        "pcrProgram": {
+          "polymerase": "High-fidelity DNA polymerase",
+          "annealingTemperature": 57,
+          "longestAmpliconLength": 5221,
+          "pcrTargets": [
+            {
+              "name": "004_CD22",
+              "role": "backbone",
+              "length": 5221
+            },
+            {
+              "name": "Protein Builder Insert",
+              "role": "insert",
+              "length": 681
+            }
+          ],
+          "steps": [
+            {
+              "label": "Initial denaturation",
+              "temperature": "98 C",
+              "time": "30 s",
+              "cycles": "1"
+            },
+            {
+              "label": "Denaturation",
+              "temperature": "98 C",
+              "time": "10 s",
+              "cycles": "30"
+            },
+            {
+              "label": "Annealing",
+              "temperature": "57 C",
+              "time": "20 s",
+              "cycles": "30"
+            },
+            {
+              "label": "Extension",
+              "temperature": "72 C",
+              "time": "2 min 40 s",
+              "cycles": "30"
+            },
+            {
+              "label": "Final extension",
+              "temperature": "72 C",
+              "time": "2 min",
+              "cycles": "1"
+            },
+            {
+              "label": "Hold",
+              "temperature": "4 C",
+              "time": "hold",
+              "cycles": "1"
+            }
+          ],
+          "notes": [
+            "Annealing temperature is estimated from the lowest primer binding Tm (60.0 C) minus 3 C.",
+            "Extension is estimated at 30 s/kb for the longest planned PCR target (5,221 bp). Adjust to the polymerase data sheet."
+          ]
+        }
+      }
+    }
+  ]
+}

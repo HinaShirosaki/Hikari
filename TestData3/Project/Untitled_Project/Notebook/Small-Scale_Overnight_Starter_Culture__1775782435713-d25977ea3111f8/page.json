@@ -1,0 +1,26 @@
+{
+  "schema_name": "enana_notebook_pages",
+  "schema_version": "1.0.0",
+  "updated_at": "2026-04-27T22:57:08.597Z",
+  "notebookEntry": {
+    "id": "1775782435713-d25977ea3111f8",
+    "protocolId": "1774024647315-74cbb18b4cc37",
+    "protocolName": "Small-Scale Overnight Starter Culture",
+    "projectId": "project_folder_untitled_project",
+    "projectName": "Untitled Project",
+    "result": "",
+    "resultFiles": [],
+    "resultFileRecords": [],
+    "resultFileAddresses": [],
+    "notebookState": "executed",
+    "executedAt": "2026-04-10T01:47:04.637Z",
+    "agentDraftStatus": "",
+    "agentDraftMeta": {
+      "workflowId": "",
+      "proposalId": ""
+    },
+    "updatedAt": "2026-04-10T01:47:04.637Z",
+    "createdAt": "2026-04-10T00:53:55.713Z",
+    "storageFolder": ""
+  }
+}

@@ -483,5 +483,250 @@ test('[EDGE] sequence-viewer drag selection context menu can edit and delete an 
   assert.equal(featureRailHost.innerHTML.includes('Feature_B'), false);
   assert.equal(featureDetail.innerHTML.includes('Feature_B'), false);
 });
+
+test('[EDGE] sequence-viewer keyboard edits selected bases through the sequence edit dialog', async () => {
+  const ids = [
+    'sequence-viewer-mode-paste',
+    'sequence-viewer-mode-file',
+    'sequence-viewer-paste-panel',
+    'sequence-viewer-file-panel',
+    'sequence-viewer-textarea',
+    'sequence-viewer-file-input',
+    'sequence-viewer-file-choose',
+    'sequence-viewer-file-name',
+    'sequence-viewer-load-btn',
+    'sequence-viewer-annotate-btn',
+    'sequence-viewer-clear-btn',
+    'sequence-viewer-status',
+    'sequence-viewer-messages',
+    'sequence-viewer-record-select',
+    'sequence-viewer-stat-format',
+    'sequence-viewer-stat-length',
+    'sequence-viewer-stat-topology',
+    'sequence-viewer-stat-gc',
+    'sequence-viewer-stat-ambiguous',
+    'sequence-viewer-stat-quality',
+    'sequence-viewer-stat-features',
+    'sequence-viewer-feature-rail-host',
+    'sequence-viewer-feature-detail',
+    'sequence-viewer-sequence-host',
+    'sequence-viewer-feature-context-menu',
+    'sequence-viewer-feature-editor-overlay',
+    'sequence-viewer-sequence-edit-overlay',
+    'sequence-viewer-sequence-edit-form',
+    'sequence-viewer-sequence-edit-title',
+    'sequence-viewer-sequence-edit-note',
+    'sequence-viewer-sequence-edit-input-wrap',
+    'sequence-viewer-sequence-edit-textarea',
+    'sequence-viewer-sequence-edit-delete-message',
+    'sequence-viewer-sequence-edit-confirm',
+    'sequence-viewer-sequence-edit-close',
+    'sequence-viewer-sequence-edit-cancel'
+  ];
+  const listeners = {};
+  const document = createMockDocument(ids);
+  const moduleWithDom = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    {
+      document,
+      addEventListener(type, listener) {
+        listeners[type] = [...(listeners[type] || []), listener];
+      },
+      setTimeout(callback) {
+        callback();
+      }
+    }
+  );
+  const viewer = moduleWithDom.initSequenceViewer();
+  viewer.loadFromExternal({
+    name: 'keyboard_replace',
+    sequence: 'ACGTACGTACGT',
+    source: 'external',
+    features: []
+  });
+
+  const sequenceHost = document.getElementById('sequence-viewer-sequence-host');
+  const editOverlay = document.getElementById('sequence-viewer-sequence-edit-overlay');
+  const editForm = document.getElementById('sequence-viewer-sequence-edit-form');
+  const editTitle = document.getElementById('sequence-viewer-sequence-edit-title');
+  const editTextarea = document.getElementById('sequence-viewer-sequence-edit-textarea');
+  const statLength = document.getElementById('sequence-viewer-stat-length');
+
+  const lineElement = {
+    dataset: { lineStart: '0', lineEnd: '12' },
+    querySelector() {
+      return {
+        getBoundingClientRect() {
+          return { left: 20, width: 96 };
+        }
+      };
+    }
+  };
+  const lineTarget = {
+    closest(selector) {
+      if (selector === '.sequence-viewer-dual-line') {
+        return lineElement;
+      }
+      return null;
+    }
+  };
+  const dispatchGlobalKeydown = (event) => {
+    (listeners.keydown || []).forEach((listener) => {
+      listener({
+        preventDefault() {},
+        stopPropagation() {},
+        target: {},
+        ...event
+      });
+    });
+  };
+
+  trigger(sequenceHost, 'mousedown', { button: 0, clientX: 28, target: lineTarget });
+  trigger(sequenceHost, 'mousemove', { clientX: 60, target: lineTarget });
+  trigger(sequenceHost, 'mouseup', { target: lineTarget });
+  dispatchGlobalKeydown({ key: 't' });
+
+  assert.equal(Boolean(editOverlay.hidden), false);
+  assert.equal(editTitle.textContent, 'Replace Bases');
+  assert.equal(editTextarea.value, 'T');
+
+  editTextarea.value = 'GG';
+  trigger(editForm, 'submit');
+  await flushAsync();
+
+  assert.equal(Boolean(editOverlay.hidden), true);
+  assert.equal(statLength.textContent, '10');
+  assert.equal(sequenceHost.innerHTML.includes('AGGCGTACGT'), true);
+});
+
+test('[EDGE] sequence-viewer keyboard inserts at cursor and confirms selected-base deletion', async () => {
+  const ids = [
+    'sequence-viewer-mode-paste',
+    'sequence-viewer-mode-file',
+    'sequence-viewer-paste-panel',
+    'sequence-viewer-file-panel',
+    'sequence-viewer-textarea',
+    'sequence-viewer-file-input',
+    'sequence-viewer-file-choose',
+    'sequence-viewer-file-name',
+    'sequence-viewer-load-btn',
+    'sequence-viewer-annotate-btn',
+    'sequence-viewer-clear-btn',
+    'sequence-viewer-status',
+    'sequence-viewer-messages',
+    'sequence-viewer-record-select',
+    'sequence-viewer-stat-format',
+    'sequence-viewer-stat-length',
+    'sequence-viewer-stat-topology',
+    'sequence-viewer-stat-gc',
+    'sequence-viewer-stat-ambiguous',
+    'sequence-viewer-stat-quality',
+    'sequence-viewer-stat-features',
+    'sequence-viewer-feature-rail-host',
+    'sequence-viewer-feature-detail',
+    'sequence-viewer-sequence-host',
+    'sequence-viewer-feature-context-menu',
+    'sequence-viewer-feature-editor-overlay',
+    'sequence-viewer-sequence-edit-overlay',
+    'sequence-viewer-sequence-edit-form',
+    'sequence-viewer-sequence-edit-title',
+    'sequence-viewer-sequence-edit-note',
+    'sequence-viewer-sequence-edit-input-wrap',
+    'sequence-viewer-sequence-edit-textarea',
+    'sequence-viewer-sequence-edit-delete-message',
+    'sequence-viewer-sequence-edit-confirm',
+    'sequence-viewer-sequence-edit-close',
+    'sequence-viewer-sequence-edit-cancel'
+  ];
+  const listeners = {};
+  const document = createMockDocument(ids);
+  const moduleWithDom = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    {
+      document,
+      addEventListener(type, listener) {
+        listeners[type] = [...(listeners[type] || []), listener];
+      },
+      setTimeout(callback) {
+        callback();
+      }
+    }
+  );
+  const viewer = moduleWithDom.initSequenceViewer();
+  viewer.loadFromExternal({
+    name: 'keyboard_insert_delete',
+    sequence: 'ACGTACGTACGT',
+    source: 'external',
+    features: []
+  });
+
+  const sequenceHost = document.getElementById('sequence-viewer-sequence-host');
+  const editOverlay = document.getElementById('sequence-viewer-sequence-edit-overlay');
+  const editForm = document.getElementById('sequence-viewer-sequence-edit-form');
+  const editTitle = document.getElementById('sequence-viewer-sequence-edit-title');
+  const editTextarea = document.getElementById('sequence-viewer-sequence-edit-textarea');
+  const deleteMessage = document.getElementById('sequence-viewer-sequence-edit-delete-message');
+  const statLength = document.getElementById('sequence-viewer-stat-length');
+
+  const lineElement = {
+    dataset: { lineStart: '0', lineEnd: '12' },
+    querySelector() {
+      return {
+        getBoundingClientRect() {
+          return { left: 20, width: 96 };
+        }
+      };
+    }
+  };
+  const lineTarget = {
+    closest(selector) {
+      if (selector === '.sequence-viewer-dual-line') {
+        return lineElement;
+      }
+      return null;
+    }
+  };
+  const dispatchGlobalKeydown = (event) => {
+    (listeners.keydown || []).forEach((listener) => {
+      listener({
+        preventDefault() {},
+        stopPropagation() {},
+        target: {},
+        ...event
+      });
+    });
+  };
+
+  trigger(sequenceHost, 'mousedown', { button: 0, clientX: 52, target: lineTarget });
+  trigger(sequenceHost, 'mouseup', { target: lineTarget });
+  dispatchGlobalKeydown({ key: 'c' });
+
+  assert.equal(Boolean(editOverlay.hidden), false);
+  assert.equal(editTitle.textContent, 'Insert Bases');
+  assert.equal(editTextarea.value, 'C');
+
+  editTextarea.value = 'TT';
+  trigger(editForm, 'submit');
+  await flushAsync();
+
+  assert.equal(statLength.textContent, '14');
+  assert.equal(sequenceHost.innerHTML.includes('ACGTTTACGTACGT'), true);
+
+  trigger(sequenceHost, 'mousedown', { button: 0, clientX: 28, target: lineTarget });
+  trigger(sequenceHost, 'mousemove', { clientX: 60, target: lineTarget });
+  trigger(sequenceHost, 'mouseup', { target: lineTarget });
+  dispatchGlobalKeydown({ key: 'Delete' });
+
+  assert.equal(Boolean(editOverlay.hidden), false);
+  assert.equal(editTitle.textContent, 'Delete Bases');
+  assert.equal(Boolean(deleteMessage.hidden), false);
+
+  trigger(editForm, 'submit');
+  await flushAsync();
+
+  assert.equal(Boolean(editOverlay.hidden), true);
+  assert.equal(statLength.textContent, '10');
+  assert.equal(sequenceHost.innerHTML.includes('ATACGTACGT'), true);
+});
   }
 };

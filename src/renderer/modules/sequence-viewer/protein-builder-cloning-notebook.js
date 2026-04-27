@@ -83,6 +83,30 @@ function buildBackboneName(backbone = {}) {
     || 'Stored backbone';
 }
 
+function resolveBackboneCloningPreferences(backbone = {}) {
+  const variantMode = cleanText(backbone?.variantMode || backbone?.variant_mode, 60).toLowerCase();
+  if (variantMode === 'restriction' || variantMode === 'restriction-ligation') {
+    return {
+      allowRestrictionLigation: true,
+      preferRestrictionLigation: true
+    };
+  }
+  if (
+    variantMode === 'gibson'
+    || variantMode === 'hr'
+    || variantMode === 'homology'
+    || variantMode === 'homology-recombination'
+    || variantMode === 'homologous-recombination'
+  ) {
+    return {
+      allowRestrictionLigation: false,
+      preferRestrictionLigation: false,
+      preferGibsonForMultiFragment: true
+    };
+  }
+  return {};
+}
+
 function resolvePcrTargets(plan = {}) {
   const strategy = cleanText(plan?.recommendedAssemblyStrategy, 80).toLowerCase();
   const fragments = asArray(plan?.orderedFragmentMap?.fragments)
@@ -144,7 +168,8 @@ export function buildProteinBuilderCloningPlan({
         }
       }
     ],
-    resultSequence
+    resultSequence,
+    preferences: resolveBackboneCloningPreferences(backbone)
   });
 }
 
@@ -404,6 +429,7 @@ export function createProteinBuilderCloningNotebookPage({
   persist,
   createId,
   onNotebookEntriesChanged,
+  entryId: requestedEntryId = '',
   constructName = '',
   backbone = {},
   dnaConstruct = {},
@@ -440,7 +466,12 @@ export function createProteinBuilderCloningNotebookPage({
     pcrProgram
   });
   const resultTable = buildProteinBuilderPrimerResultTable(cloningPlan);
-  const entryId = createStableId(createId, 'protein_builder_cloning_entry');
+  state.notebookEntries = asArray(state.notebookEntries);
+  const entryId = cleanText(requestedEntryId, 160) || createStableId(createId, 'protein_builder_cloning_entry');
+  const existingEntryIndex = state.notebookEntries.findIndex((candidate) => (
+    cleanText(candidate?.id, 160) === entryId
+  ));
+  const existingEntry = existingEntryIndex >= 0 ? state.notebookEntries[existingEntryIndex] : null;
   const entry = {
     id: entryId,
     notebookType: 'biology',
@@ -457,8 +488,8 @@ export function createProteinBuilderCloningNotebookPage({
     resultFileRecords: [],
     storageFolder: '',
     updatedAt: nowIso,
-    createdAt: nowIso,
-    notebookState: 'planned',
+    createdAt: cleanText(existingEntry?.createdAt, 120) || nowIso,
+    notebookState: cleanText(existingEntry?.notebookState, 80) || 'planned',
     executedAt: '',
     agentDraftStatus: '',
     agentDraftMeta: {},
@@ -476,8 +507,14 @@ export function createProteinBuilderCloningNotebookPage({
     }
   };
 
-  state.notebookEntries = asArray(state.notebookEntries);
-  state.notebookEntries.push(entry);
+  if (existingEntryIndex >= 0) {
+    state.notebookEntries[existingEntryIndex] = {
+      ...existingEntry,
+      ...entry
+    };
+  } else {
+    state.notebookEntries.push(entry);
+  }
   if (typeof persist === 'function') {
     persist();
   }

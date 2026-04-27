@@ -27,6 +27,8 @@ const SCIENCE_FINAL_SYNTHESIS_SCHEMA = {
   }
 };
 
+const FINAL_SYNTHESIS_TOOL_CONTEXT_LIMIT = 20;
+
 function createScienceFinalSynthesisRuntime(deps = {}) {
   const {
     asArray,
@@ -158,7 +160,7 @@ function createScienceFinalSynthesisRuntime(deps = {}) {
 
   function buildToolTraceSection(toolTrace = []) {
     const rows = asArray(toolTrace)
-      .slice(-3)
+      .slice(-FINAL_SYNTHESIS_TOOL_CONTEXT_LIMIT)
       .map((row) => {
         const toolName = cleanText(row?.tool_name, 120) || 'unknown-tool';
         const status = row?.ok === false ? 'failed' : 'ok';
@@ -184,7 +186,7 @@ function createScienceFinalSynthesisRuntime(deps = {}) {
   function buildLoadedContextSection(toolTrace = []) {
     const rows = uniqueStrings(
       asArray(toolTrace)
-        .slice(-3)
+        .slice(-FINAL_SYNTHESIS_TOOL_CONTEXT_LIMIT)
         .flatMap((row) => asArray(row?.loaded_context_blocks))
         .map((block) => {
           const paperTitle = cleanText(block?.paper_title, 160);
@@ -193,7 +195,7 @@ function createScienceFinalSynthesisRuntime(deps = {}) {
           const reason = cleanText(block?.relevance_reason, 180);
           return [[paperTitle, sectionLabel].filter(Boolean).join(' | '), excerpt, reason].filter(Boolean).join(' - ');
         }),
-      6
+      FINAL_SYNTHESIS_TOOL_CONTEXT_LIMIT
     );
     if (!rows.length) {
       return '';
@@ -219,13 +221,17 @@ function createScienceFinalSynthesisRuntime(deps = {}) {
     const executionRequest = cleanText(message || originalMessage, 3200);
     return [
       'You are the final answer synthesizer for a science reasoning loop.',
-      'Answer using only the evidence and tool trace provided by the app.',
-      'Do not invent evidence, papers, values, or project facts.',
+      'Use the collected evidence and tool trace as provenance anchors.',
+      'For general science questions, you may connect those anchors with stable background knowledge needed to answer the mechanism or concept clearly.',
+      'For project-scoped facts, lab records, tool results, paper contents, values, and citations, rely only on the supplied project/tool evidence.',
+      'Do not invent evidence, papers, values, or project facts, and do not attribute background knowledge to a source unless that source actually supports it.',
       'Markdown is allowed in the final answer. Use sections, bullets, or tables when they improve clarity, but do not include HTML.',
       'Respond with the final answer text only. Do not wrap the answer in JSON.',
       partial
         ? 'The loop stopped before full satisfaction. Produce the best available answer and explicitly name the remaining gaps.'
-        : 'The evaluator judged the evidence sufficient. Produce a grounded answer that explains the conclusion, supporting evidence, and any material caveats.',
+        : 'The evaluator judged the evidence sufficient. Answer the clarified scientific question directly, then explain the supporting evidence and any material caveats.',
+      'Keep caveats proportionate: mention important limitations, but do not collapse the answer into a list of things not proven unless a gap truly blocks the conclusion.',
+      'Do not lead with restrictive evidence-bound disclaimers unless the answer is partial or the user explicitly asked for an evidence-bound audit.',
       `Clarified request:\n${executionRequest}`,
       cleanText(intent, 80) ? `Intent: ${cleanText(intent, 80)}` : '',
       buildPolicySection(policy),
@@ -264,7 +270,7 @@ function createScienceFinalSynthesisRuntime(deps = {}) {
     const evaluator = payload.evaluator && typeof payload.evaluator === 'object' ? payload.evaluator : {};
     const citations = normalizeCitations(payload.accumulatedCitations, 4);
     const recentToolNotes = asArray(payload.toolTrace)
-      .slice(-3)
+      .slice(-FINAL_SYNTHESIS_TOOL_CONTEXT_LIMIT)
       .map((row) => {
         const toolName = cleanText(row?.tool_name, 120) || 'tool';
         const summary = cleanText(
@@ -291,7 +297,7 @@ function createScienceFinalSynthesisRuntime(deps = {}) {
       verification_notes: uniqueStrings([
         cleanText(evaluator.reason, 260),
         ...recentToolNotes
-      ], 12)
+      ], FINAL_SYNTHESIS_TOOL_CONTEXT_LIMIT + 4)
     };
   }
 
@@ -334,7 +340,7 @@ function createScienceFinalSynthesisRuntime(deps = {}) {
     const llmResult = await requestAssistantText({
       source: payload,
       stage: 'science_reasoning_final_synthesis',
-      systemPrompt: 'Write a grounded final science answer using only the supplied evidence. Respond as assistant text only.',
+      systemPrompt: 'Write a grounded final science answer from collected evidence plus stable background knowledge when appropriate. Respond as assistant text only.',
       userPrompt: buildSynthesisPrompt(payload),
       traceContext: payload.traceContext || null,
       defaultError: 'Science reasoning synthesis is not configured.'

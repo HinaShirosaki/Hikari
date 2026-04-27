@@ -16,6 +16,7 @@ import { APP_DOCK_ORDER, APP_REGISTRY } from './modules/app-registry.generated.j
 import { createRendererModuleRuntime } from './module-runtime.js';
 import { createModuleRegistry, createRendererServices } from './services/index.js';
 import { initSharedLeftRailResizers } from './shared-left-rail.js';
+import { normalizeStateStoragePaths } from './modules/storage-path-normalizer.js';
 
 const state = loadState();
 const LAST_ACTIVE_VIEW_STORAGE_KEY = 'enana_last_active_view_v1';
@@ -328,6 +329,7 @@ function syncNavigationState(activeViewId) {
 }
 
 function persist() {
+  normalizeStateStoragePaths(state);
   state.objectGraph = rebuildObjectGraph(state);
   persistState(state);
   if (window.enanaApi?.autoSaveDataFile && String(state.settings?.storagePath || '').trim()) {
@@ -579,6 +581,7 @@ async function runStorageRootImport(storagePath, options = {}) {
     if (persistMergedState) {
       persist();
     } else {
+      normalizeStateStoragePaths(state);
       state.objectGraph = rebuildObjectGraph(state);
       persistState(state);
     }

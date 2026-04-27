@@ -1,0 +1,172 @@
+{
+  "schema_name": "enana_notebook_pages",
+  "schema_version": "1.0.0",
+  "updated_at": "2026-04-27T20:46:11.554Z",
+  "notebookEntry": {
+    "id": "1777258183557-d7f46e2b351bb8",
+    "notebookType": "biology",
+    "projectId": "1777258183556-6354a25f71fc4",
+    "projectName": "Protein Builder",
+    "protocolId": "protein-builder-cloning-assembly-protocol",
+    "protocolName": "Protein Builder Cloning Assembly",
+    "experimentName": "Protein Builder Insert cloning primer design",
+    "protocolSnapshot": {
+      "id": "protein-builder-cloning-assembly-protocol",
+      "name": "Protein Builder Cloning Assembly",
+      "category": "",
+      "purpose": "Design cloning primers and PCR setup for a Protein Builder assembled construct.",
+      "steps": [
+        {
+          "id": "protein-builder-cloning-assembly-protocol_step_1",
+          "text": "Amplify insert: PCR-amplify the insert with restriction-site tails from the primer plan.",
+          "placeholders": []
+        },
+        {
+          "id": "protein-builder-cloning-assembly-protocol_step_2",
+          "text": "Digest DNA: Digest backbone and insert with the selected enzyme pair, then purify both products.",
+          "placeholders": []
+        },
+        {
+          "id": "protein-builder-cloning-assembly-protocol_step_3",
+          "text": "Ligate construct: Ligate digested insert into the prepared backbone.",
+          "placeholders": []
+        },
+        {
+          "id": "protein-builder-cloning-assembly-protocol_step_4",
+          "text": "Transform and screen: Transform competent cells and screen colonies by colony PCR and sequencing.",
+          "placeholders": []
+        }
+      ]
+    },
+    "values": {},
+    "result": "Protein Builder cloning assembly design\n\nConstruct: Protein Builder Insert\nBackbone: 004_CD22\nAssembled construct length: 5,686 bp\nRecommended route: Restriction ligation\nPrimer threshold: strict\n\nPCR program\nPolymerase: High-fidelity DNA polymerase\nLongest PCR target: 465 bp\n- Initial denaturation: 98 C, 30 s, 1 cycle\n- Denaturation: 98 C, 10 s, 30 cycles\n- Annealing: 55 C, 20 s, 30 cycles\n- Extension: 72 C, 30 s, 30 cycles\n- Final extension: 72 C, 2 min, 1 cycle\n- Hold: 4 C, hold, 1 cycle\n- Annealing temperature is estimated from the lowest primer binding Tm (58.2 C) minus 3 C.\n- Extension is estimated at 30 s/kb for the longest planned PCR target (465 bp). Adjust to the polymerase data sheet.\n\nPrimers\n- Protein Builder Insert_F; role: Restriction Forward; sequence: GCGCTGATCACACCACCACCACCACCACGAAAAC; length: 34 nt; Tm: 60.8 C; GC: 58.8%; notes: Adds BclI to the 5' end.\n- Protein Builder Insert_R; role: Restriction Reverse; sequence: GCGCACGCGTATGATGGTGATGGTGGTGTGACTGAAA; length: 37 nt; Tm: 58.2 C; GC: 54.1%; notes: Adds MluI to the 5' end.\n\nAssembly procedure\n1. Amplify insert: PCR-amplify the insert with restriction-site tails from the primer plan.\n2. Digest DNA: Digest backbone and insert with the selected enzyme pair, then purify both products.\n3. Ligate construct: Ligate digested insert into the prepared backbone.\n4. Transform and screen: Transform competent cells and screen colonies by colony PCR and sequencing.\n\nValidation plan\n- colony-pcr, left/right cloning junctions: Confirm insert presence and orientation.\n- sanger-sequencing, entire insert region: Verify insert integrity after ligation.\n\nWarnings\n- Existing terminal overlap is too weak; engineered primer overlap is recommended.\n- No supported edit request was provided.",
+    "resultTable": {
+      "columns": [
+        {
+          "field": "name",
+          "title": "Primer"
+        },
+        {
+          "field": "role",
+          "title": "Role"
+        },
+        {
+          "field": "sequence",
+          "title": "Sequence"
+        },
+        {
+          "field": "length",
+          "title": "Length"
+        },
+        {
+          "field": "tm",
+          "title": "Binding Tm"
+        },
+        {
+          "field": "gc",
+          "title": "GC%"
+        },
+        {
+          "field": "notes",
+          "title": "Notes"
+        }
+      ],
+      "rows": [
+        {
+          "id": "Protein Builder Insert_F",
+          "name": "Protein Builder Insert_F",
+          "role": "Restriction Forward",
+          "sequence": "GCGCTGATCACACCACCACCACCACCACGAAAAC",
+          "length": "34",
+          "tm": "60.8 C",
+          "gc": "58.8%",
+          "notes": "Adds BclI to the 5' end."
+        },
+        {
+          "id": "Protein Builder Insert_R",
+          "name": "Protein Builder Insert_R",
+          "role": "Restriction Reverse",
+          "sequence": "GCGCACGCGTATGATGGTGATGGTGGTGTGACTGAAA",
+          "length": "37",
+          "tm": "58.2 C",
+          "gc": "54.1%",
+          "notes": "Adds MluI to the 5' end."
+        }
+      ]
+    },
+    "resultFiles": [],
+    "resultFileRecords": [],
+    "storageFolder": "",
+    "updatedAt": "2026-04-27T02:49:43.556Z",
+    "createdAt": "2026-04-27T02:49:43.556Z",
+    "notebookState": "planned",
+    "executedAt": "",
+    "agentDraftStatus": "",
+    "agentDraftMeta": {},
+    "selectionInsights": [],
+    "proteinBuilderCloningDesign": {
+      "source": "protein_builder_cloning_assembly",
+      "constructName": "Protein Builder Insert",
+      "backboneName": "004_CD22",
+      "assembledRecordName": "Protein Builder Insert (004_CD22)",
+      "assembledLength": 5686,
+      "insertLength": 465,
+      "recommendedAssemblyStrategy": "restriction-ligation",
+      "primerCount": 2,
+      "pcrProgram": {
+        "polymerase": "High-fidelity DNA polymerase",
+        "annealingTemperature": 55,
+        "longestAmpliconLength": 465,
+        "pcrTargets": [
+          {
+            "name": "Protein Builder Insert",
+            "role": "insert",
+            "length": 465
+          }
+        ],
+        "steps": [
+          {
+            "label": "Initial denaturation",
+            "temperature": "98 C",
+            "time": "30 s",
+            "cycles": "1"
+          },
+          {
+            "label": "Denaturation",
+            "temperature": "98 C",
+            "time": "10 s",
+            "cycles": "30"
+          },
+          {
+            "label": "Annealing",
+            "temperature": "55 C",
+            "time": "20 s",
+            "cycles": "30"
+          },
+          {
+            "label": "Extension",
+            "temperature": "72 C",
+            "time": "30 s",
+            "cycles": "30"
+          },
+          {
+            "label": "Final extension",
+            "temperature": "72 C",
+            "time": "2 min",
+            "cycles": "1"
+          },
+          {
+            "label": "Hold",
+            "temperature": "4 C",
+            "time": "hold",
+            "cycles": "1"
+          }
+        ],
+        "notes": [
+          "Annealing temperature is estimated from the lowest primer binding Tm (58.2 C) minus 3 C.",
+          "Extension is estimated at 30 s/kb for the longest planned PCR target (465 bp). Adjust to the polymerase data sheet."
+        ]
+      }
+    }
+  }
+}

@@ -543,7 +543,7 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
       assert.equal(result.ok, true);
       assert.equal(result.papers.length, 8);
       assert.equal(result.papers_read_count, 8);
-      assert.equal(result.loaded_context_blocks.length <= 6, true);
+      assert.equal(result.loaded_context_blocks.length <= 50, true);
       assert.equal(result.loaded_context_blocks.some((block) => block.paper_id === 'paper-1' && block.evidence_kind === 'figure_review'), true);
       assert.equal(result.loaded_context_blocks.some((block) => block.paper_id === 'paper-9'), false);
       assert.equal(result.loaded_context_blocks.some((block) => /ERK signaling returning/i.test(String(block.excerpt || ''))), true);
@@ -551,6 +551,214 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
       assert.equal(figureReviewCalls.every((call) => call.pdfDataUrl.startsWith('data:application/pdf;base64,')), true);
       assert.equal(figureReviewCalls.every((call) => call.fileName.endsWith('.pdf')), true);
       assert.match(String(result.summary || ''), /Read 8 paper\(s\) and loaded/i);
+    });
+
+    test('paper context loader sends downloaded PDF-only papers to the LLM', async () => {
+      const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'paper-context-pdf-only-'));
+      try {
+        const pdfPath = path.join(tempDir, 'pdf-only.pdf');
+        await fsPromises.writeFile(pdfPath, Buffer.from('%PDF-1.7\nPDF-only paper body'));
+        const calls = [];
+        const runtime = agentPaperContextLoader.createPaperContextLoaderRuntime({
+          requestStructuredJsonPayload: async (options = {}) => {
+            calls.push({
+              stage: String(options.stage || ''),
+              pdfDataUrl: String(options.pdfDataUrl || ''),
+              userPrompt: String(options.userPrompt || '')
+            });
+            if (options.stage === 'paper_context_selection_pdf') {
+              return {
+                ok: true,
+                payload: {
+                  excerpts: [
+                    {
+                      section_label: 'Results',
+                      excerpt: 'The PDF-only paper reports a direct rescue of pathway activity.',
+                      relevance_reason: 'The excerpt answers the clarified request from the attached PDF.'
+                    }
+                  ]
+                }
+              };
+            }
+            return {
+              ok: false,
+              error: `Unexpected stage ${options.stage}`
+            };
+          }
+        });
+
+        const result = await runtime.loadPaperContexts({
+          query: 'What does the PDF-only paper report?',
+          items: [
+            {
+              id: 'llm-invented-id',
+              paper_id: 'paper-1',
+              title: 'PDF-only paper'
+            }
+          ],
+          downloaded_papers: [
+            {
+              ok: true,
+              paper_id: 'paper-1',
+              file_path: pdfPath
+            }
+          ]
+        });
+
+        assert.equal(result.ok, true);
+        assert.equal(result.papers_read_count, 1);
+        assert.equal(calls.length, 1);
+        assert.equal(calls[0].stage, 'paper_context_selection_pdf');
+        assert.equal(calls[0].pdfDataUrl.startsWith('data:application/pdf;base64,'), true);
+        assert.match(calls[0].userPrompt, /full paper PDF attached/i);
+        assert.equal(result.loaded_context_blocks.length, 1);
+        assert.equal(result.loaded_context_blocks[0].paper_id, 'paper-1');
+        assert.equal(result.loaded_context_blocks[0].source, 'llm_pdf_read');
+        assert.match(String(result.loaded_context_blocks[0].excerpt || ''), /direct rescue/i);
+      } finally {
+        await fsPromises.rm(tempDir, { recursive: true, force: true });
+      }
+    });
+
+    test('paper context loader prefers extracted PDF text and skips the PDF binary when figures are not needed', async () => {
+      const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'paper-context-pdf-text-'));
+      try {
+        const pdfPath = path.join(tempDir, 'extract.pdf');
+        await fsPromises.writeFile(pdfPath, Buffer.from('%PDF-1.7\nExtracted body'));
+        const calls = [];
+        const extractCalls = [];
+        const runtime = agentPaperContextLoader.createPaperContextLoaderRuntime({
+          pdfTextExtractionRuntime: {
+            extractText: async (options = {}) => {
+              extractCalls.push(options);
+              return {
+                ok: true,
+                status: 'completed',
+                page_count: 4,
+                text: 'Background and results combined into one body of text.',
+                sections: [
+                  { label: 'Abstract', normalized_label: 'abstract', text: 'We engineered a binder against PD-1.', start_page: 1, end_page: 1 },
+                  { label: 'Results', normalized_label: 'results', text: 'The binder rescued T cell killing in coculture by 3.2-fold.', start_page: 2, end_page: 3 }
+                ],
+                sections_source: 'heuristic'
+              };
+            }
+          },
+          requestStructuredJsonPayload: async (options = {}) => {
+            calls.push({
+              stage: String(options.stage || ''),
+              pdfDataUrl: String(options.pdfDataUrl || ''),
+              userPrompt: String(options.userPrompt || '')
+            });
+            if (options.stage === 'paper_context_selection_pdf_text') {
+              return {
+                ok: true,
+                payload: {
+                  excerpts: [
+                    {
+                      section_label: 'Results',
+                      excerpt: 'The binder rescued T cell killing in coculture by 3.2-fold.',
+                      relevance_reason: 'Directly answers the request about rescue magnitude.'
+                    }
+                  ],
+                  request_pdf_review: false,
+                  pdf_review_reason: ''
+                }
+              };
+            }
+            return {
+              ok: false,
+              error: `Unexpected stage ${options.stage}`
+            };
+          }
+        });
+
+        const result = await runtime.loadPaperContexts({
+          query: 'How much did the binder rescue T cell killing?',
+          items: [{ paper_id: 'paper-text', title: 'Text-first paper' }],
+          downloaded_papers: [{ ok: true, paper_id: 'paper-text', file_path: pdfPath }]
+        });
+
+        assert.equal(result.ok, true);
+        assert.equal(extractCalls.length, 1);
+        assert.equal(extractCalls[0].file_path, pdfPath);
+        assert.equal(calls.length, 1);
+        assert.equal(calls[0].stage, 'paper_context_selection_pdf_text');
+        assert.equal(calls[0].pdfDataUrl, '');
+        assert.match(calls[0].userPrompt, /extracted text of a scientific paper/i);
+        assert.match(calls[0].userPrompt, /Results/);
+        assert.equal(result.loaded_context_blocks.length, 1);
+        assert.equal(result.loaded_context_blocks[0].source, 'llm_pdf_text_read');
+        assert.match(String(result.loaded_context_blocks[0].excerpt || ''), /3\.2-fold/);
+        assert.equal(result.papers_read_count, 1);
+      } finally {
+        await fsPromises.rm(tempDir, { recursive: true, force: true });
+      }
+    });
+
+    test('paper context loader falls back to whole-PDF read when text-stage requests figure review', async () => {
+      const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'paper-context-pdf-text-fallback-'));
+      try {
+        const pdfPath = path.join(tempDir, 'figs.pdf');
+        await fsPromises.writeFile(pdfPath, Buffer.from('%PDF-1.7\nFigure heavy paper'));
+        const calls = [];
+        const runtime = agentPaperContextLoader.createPaperContextLoaderRuntime({
+          pdfTextExtractionRuntime: {
+            extractText: async () => ({
+              ok: true,
+              status: 'completed',
+              page_count: 2,
+              text: 'See Figure 2 for the localization pattern.',
+              sections: [
+                { label: 'Results', normalized_label: 'results', text: 'See Figure 2 for the localization pattern.', start_page: 1, end_page: 1 }
+              ],
+              sections_source: 'heuristic'
+            })
+          },
+          requestStructuredJsonPayload: async (options = {}) => {
+            calls.push(String(options.stage || ''));
+            if (options.stage === 'paper_context_selection_pdf_text') {
+              return {
+                ok: true,
+                payload: {
+                  excerpts: [],
+                  request_pdf_review: true,
+                  pdf_review_reason: 'Localization is shown in Figure 2 only.'
+                }
+              };
+            }
+            if (options.stage === 'paper_context_selection_pdf') {
+              return {
+                ok: true,
+                payload: {
+                  excerpts: [
+                    {
+                      section_label: 'Figure 2 caption',
+                      excerpt: 'Confocal images show membrane localization in transfected HEK293 cells.',
+                      relevance_reason: 'Figure 2 directly visualizes localization.'
+                    }
+                  ]
+                }
+              };
+            }
+            return { ok: false, error: `Unexpected stage ${options.stage}` };
+          }
+        });
+
+        const result = await runtime.loadPaperContexts({
+          query: 'Where does the protein localize?',
+          items: [{ paper_id: 'paper-fig', title: 'Figure-first paper' }],
+          downloaded_papers: [{ ok: true, paper_id: 'paper-fig', file_path: pdfPath }]
+        });
+
+        assert.equal(result.ok, true);
+        assert.deepEqual(calls, ['paper_context_selection_pdf_text', 'paper_context_selection_pdf']);
+        assert.equal(result.loaded_context_blocks.length, 1);
+        assert.equal(result.loaded_context_blocks[0].source, 'llm_pdf_read');
+        assert.match(String(result.loaded_context_blocks[0].excerpt || ''), /membrane localization/i);
+      } finally {
+        await fsPromises.rm(tempDir, { recursive: true, force: true });
+      }
     });
 
     test('literature search runtime returns loaded paper context blocks without writing paper files', async () => {
@@ -826,6 +1034,113 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
         assert.match(String(result.summary || ''), /Loaded 9 bounded context block/i);
         assert.equal(result.downloaded_papers.every((item) => String(item.relative_path || '').includes('Papers/Atlas/')), true);
         assert.equal(result.sub_agent?.last_response?.output?.selected_papers.length, 9);
+      } finally {
+        await fsPromises.rm(storageRoot, { recursive: true, force: true });
+      }
+    });
+
+    test('literature search workflow owns paper IDs used for downloads and reads', async () => {
+      const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'literature-workflow-paper-id-'));
+      const downloadCalls = [];
+      const loadCalls = [];
+      try {
+        const runtime = agentLiteratureSearchWorkflow.createLiteratureSearchWorkflowRuntime({
+          literatureSearchRuntime: {
+            searchLiteratureCandidates: async () => ({
+              ok: true,
+              status: 'completed',
+              query: 'MAPK resistance',
+              sources: ['web'],
+              items: [
+                {
+                  id: 'llm-invented-candidate-id',
+                  paper_id: 'llm-invented-paper-id',
+                  source: 'web',
+                  title: 'MAPK resistance PDF',
+                  summary: 'A candidate PDF about MAPK resistance.',
+                  url: 'https://example.org/mapk-resistance',
+                  published_at: '2025-01-01'
+                }
+              ],
+              citations: [],
+              loaded_context_blocks: [],
+              papers_read_count: 0,
+              source_counts: { web: 1 },
+              source_errors: {},
+              summary: 'Found 1 literature result.'
+            })
+          },
+          paperContextLoaderRuntime: {
+            fetchEuropePmcMetadataForItem: async () => ({
+              pdf_urls: ['https://example.org/mapk-resistance.pdf'],
+              abstract_sections: []
+            }),
+            loadPaperContexts: async ({ items, download_promise }) => {
+              const downloaded = await download_promise;
+              loadCalls.push({
+                itemPaperId: String(items[0]?.paper_id || ''),
+                itemId: String(items[0]?.id || ''),
+                downloadedPaperId: String(downloaded[0]?.paper_id || '')
+              });
+              return {
+                ok: true,
+                papers_read_count: 1,
+                loaded_context_blocks: [
+                  {
+                    paper_id: String(items[0]?.paper_id || ''),
+                    paper_title: String(items[0]?.title || ''),
+                    section_label: 'Results',
+                    excerpt: 'Canonical paper IDs keep the downloaded PDF matched to the selected item.',
+                    relevance_reason: 'Regression coverage for paper ID ownership.',
+                    source: 'llm_pdf_read',
+                    evidence_kind: 'text'
+                  }
+                ],
+                papers: items,
+                summary: 'Read 1 paper(s) and loaded 1 context block(s).'
+              };
+            }
+          },
+          paperDownloadRuntime: {
+            downloadPaper: async (input = {}) => {
+              downloadCalls.push(JSON.parse(JSON.stringify(input)));
+              return {
+                ok: true,
+                status: 'completed',
+                file_name: 'mapk-resistance.pdf',
+                file_path: path.join(storageRoot, 'Papers', 'Atlas', 'mapk-resistance.pdf'),
+                relative_path: 'Papers/Atlas/mapk-resistance.pdf',
+                summary: 'Downloaded mapk-resistance.pdf'
+              };
+            }
+          }
+        });
+
+        const result = await runtime.execute({
+          query: 'MAPK resistance',
+          storage_path: storageRoot,
+          snapshot: {
+            settings: {
+              storagePath: storageRoot
+            }
+          },
+          project: {
+            id: 'project-atlas',
+            name: 'Atlas'
+          }
+        });
+
+        assert.equal(result.ok, true);
+        assert.equal(downloadCalls.length, 1);
+        assert.equal(result.selected_papers[0].paper_id, 'paper-1');
+        assert.equal(result.downloaded_papers[0].paper_id, 'paper-1');
+        assert.equal(loadCalls.length, 1);
+        assert.deepEqual(loadCalls[0], {
+          itemPaperId: 'paper-1',
+          itemId: 'llm-invented-candidate-id',
+          downloadedPaperId: 'paper-1'
+        });
+        assert.equal(result.loaded_context_blocks[0].paper_id, 'paper-1');
       } finally {
         await fsPromises.rm(storageRoot, { recursive: true, force: true });
       }

@@ -1,0 +1,26 @@
+{
+  "schema_name": "enana_notebook_pages",
+  "schema_version": "1.0.0",
+  "updated_at": "2026-04-27T22:57:08.597Z",
+  "notebookEntry": {
+    "id": "1776739509659-fed30b23b7adf8",
+    "protocolId": "1774024047007-d137dae96cab78",
+    "protocolName": "BL21(DE3) Chemical Transformation with pET28a",
+    "projectId": "1776101131639-b3a065c67eb558",
+    "projectName": "SUMO1",
+    "result": "[Apr 21, 09:46] No colony observed.",
+    "resultFiles": [],
+    "resultFileRecords": [],
+    "resultFileAddresses": [],
+    "notebookState": "executed",
+    "executedAt": "2026-04-21T02:45:09.661Z",
+    "agentDraftStatus": "",
+    "agentDraftMeta": {
+      "workflowId": "",
+      "proposalId": ""
+    },
+    "updatedAt": "2026-04-21T14:46:01.826Z",
+    "createdAt": "2026-04-21T02:45:09.661Z",
+    "storageFolder": ""
+  }
+}

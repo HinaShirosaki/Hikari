@@ -1,0 +1,73 @@
+import {
+  formatEntryTimestamp,
+  notebookStateLabel,
+  resolveEntryCollectionName,
+  resolveEntryExecutedAt,
+  resolveEntryExperimentName
+} from './entry-helpers.js';
+import {
+  formatSampleLinkValue,
+  getSampleTypeLabel,
+  normalizeNotebookSampleLinks,
+  resolveSampleTypeForPlaceholder
+} from './sample-helpers.js';
+import { renderStepSentence } from './step-renderer.js';
+import { summarizeNotebookResultTable } from '../notebook-result-table.js';
+
+export function buildViewerMeta({
+  project,
+  entry,
+  isSavedEntry,
+  projects = []
+}) {
+  const contextLabel = entry
+    ? `${resolveEntryCollectionName(entry, projects)} / ${resolveEntryExperimentName(entry)}`
+    : String(project?.name || '').trim() || 'Untitled Project';
+  if (entry) {
+    const updatedAt = entry.updatedAt ? formatEntryTimestamp(entry.updatedAt) : 'Unknown time';
+    const stateLabel = notebookStateLabel(entry);
+    const executedAt = resolveEntryExecutedAt(entry)
+      ? ` Executed at ${formatEntryTimestamp(resolveEntryExecutedAt(entry))}.`
+      : '';
+    const resultFiles = Array.isArray(entry.resultFiles) && entry.resultFiles.length
+      ? ` Result files: ${entry.resultFiles.join(', ')}.`
+      : '';
+    const resultTableSummary = summarizeNotebookResultTable(entry?.resultTable);
+    const resultTable = resultTableSummary
+      ? ` Result table: ${resultTableSummary}.`
+      : '';
+    const sampleLinkCount = normalizeNotebookSampleLinks(entry?.sampleLinks).length;
+    const sampleLinks = sampleLinkCount
+      ? ` Linked samples: ${sampleLinkCount}.`
+      : '';
+    return `${contextLabel} notebook page. State: ${stateLabel}. Updated ${updatedAt}.${executedAt}${resultFiles}${resultTable}${sampleLinks}`;
+  }
+  if (isSavedEntry) {
+    return `${contextLabel} notebook page.`;
+  }
+  return `${contextLabel} protocol draft. Fill placeholders and results, then save this notebook page.`;
+}
+
+export function buildProtocolStepsHtml({
+  protocol,
+  values,
+  safeText,
+  samplePlaceholderTypeAliases,
+  getSampleLink
+}) {
+  const helpers = {
+    safeText,
+    getSampleLink,
+    resolveType: (name) => resolveSampleTypeForPlaceholder(name, samplePlaceholderTypeAliases),
+    getSampleLabel: getSampleTypeLabel,
+    formatLinkValue: formatSampleLinkValue
+  };
+  return (Array.isArray(protocol?.steps) ? protocol.steps : []).map((step, index) => {
+    const sentenceHtml = renderStepSentence(step, values || {}, helpers);
+    return `
+        <article class="card">
+          <p class="notebook-step-line"><strong>Step ${index + 1}:</strong> <span class="notebook-step-content" data-selection-segment-id="notebook:step:${safeText(String(step?.id || `step_${index + 1}`))}" data-selection-segment-label="Step ${index + 1}">${sentenceHtml}</span></p>
+        </article>
+      `;
+  }).join('');
+}

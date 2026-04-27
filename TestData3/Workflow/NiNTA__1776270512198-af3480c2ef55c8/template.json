@@ -1,0 +1,94 @@
+{
+  "exportedAt": "2026-04-27T22:57:08.621Z",
+  "template": {
+    "id": "1776270512198-af3480c2ef55c8",
+    "name": "NiNTA",
+    "description": "",
+    "projectId": "",
+    "blocks": [
+      {
+        "id": "1776270449257-17e473bb99632",
+        "type": "protocol",
+        "protocolId": "1774024047007-d137dae96cab78",
+        "text": "",
+        "assigneeId": "",
+        "x": 34,
+        "y": 102
+      },
+      {
+        "id": "1776270458069-8a623015edb578",
+        "type": "protocol",
+        "protocolId": "1774024647315-74cbb18b4cc37",
+        "text": "",
+        "assigneeId": "",
+        "x": 325,
+        "y": 92
+      },
+      {
+        "id": "1776270468788-2a5962af57ab08",
+        "type": "protocol",
+        "protocolId": "1774024680081-6b02b28fd6d39",
+        "text": "",
+        "assigneeId": "",
+        "x": 619,
+        "y": 86
+      },
+      {
+        "id": "1776270480835-e466e8723a7c28",
+        "type": "protocol",
+        "protocolId": "1774024695073-536c18071dd0d",
+        "text": "",
+        "assigneeId": "",
+        "x": 182,
+        "y": 312
+      },
+      {
+        "id": "1776270492455-b1275a121f61c8",
+        "type": "protocol",
+        "protocolId": "1774024712936-cdad2f729e908",
+        "text": "",
+        "assigneeId": "",
+        "x": 576,
+        "y": 280
+      },
+      {
+        "id": "1776270499372-b273dfbc75ce9",
+        "type": "protocol",
+        "protocolId": "1774024745003-46df848e78c068",
+        "text": "",
+        "assigneeId": "",
+        "x": 584,
+        "y": 416
+      }
+    ],
+    "links": [
+      {
+        "id": "1776270471752-ad87e60aa0b69",
+        "fromBlockId": "1776270449257-17e473bb99632",
+        "toBlockId": "1776270458069-8a623015edb578"
+      },
+      {
+        "id": "1776270473555-d8d3f6ead5a3f",
+        "fromBlockId": "1776270458069-8a623015edb578",
+        "toBlockId": "1776270468788-2a5962af57ab08"
+      },
+      {
+        "id": "1776270484835-9e7e586bccbd3",
+        "fromBlockId": "1776270468788-2a5962af57ab08",
+        "toBlockId": "1776270480835-e466e8723a7c28"
+      },
+      {
+        "id": "1776270502831-5d2a41569478",
+        "fromBlockId": "1776270480835-e466e8723a7c28",
+        "toBlockId": "1776270492455-b1275a121f61c8"
+      },
+      {
+        "id": "1776270504718-ab46bdff60f21",
+        "fromBlockId": "1776270480835-e466e8723a7c28",
+        "toBlockId": "1776270499372-b273dfbc75ce9"
+      }
+    ],
+    "createdAt": "2026-04-15T16:28:32.198Z",
+    "updatedAt": "2026-04-15T16:28:32.198Z"
+  }
+}

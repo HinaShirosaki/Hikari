@@ -1,0 +1,61 @@
+{
+  "schema_name": "enana_protocols",
+  "schema_version": "1.0.0",
+  "updated_at": "2026-04-27T22:19:03.316Z",
+  "protocol": {
+    "id": "1774024695073-536c18071dd0d",
+    "name": "Ni-NTA Purification of His-Tagged Protein",
+    "purpose": "Purify a His-tagged recombinant protein using nickel affinity resin.",
+    "materials": [
+      "Cell pellet or clarified lysate",
+      "Ni-NTA resin",
+      "Lysis buffer",
+      "Wash buffer",
+      "Elution buffer",
+      "Gravity column or chromatography setup",
+      "Centrifuge",
+      "Tube rack",
+      "Optional protease inhibitor"
+    ],
+    "steps": [
+      {
+        "id": "1774125203496-c7d15ebdc641a8",
+        "text": "Resuspend the cell pellet in 100 mL of lysis buffer",
+        "placeholders": []
+      },
+      {
+        "id": "1774125203496-ec7ee810d38748",
+        "text": "Lyse the cells using sonication and clarify the lysate by centrifugation at 10,000 rpm for 30 mins.",
+        "placeholders": []
+      },
+      {
+        "id": "1774125203496-ae0108f167c538",
+        "text": "Equilibrate 5 mL of Ni-NTA resin with 20 mL of lysis buffer.",
+        "placeholders": []
+      },
+      {
+        "id": "1774125203496-404bcf026d9b68",
+        "text": "Load the clarified lysate onto the resin.",
+        "placeholders": []
+      },
+      {
+        "id": "1774125203497-d3a01f7ca5e048",
+        "text": "Wash the resin with 40 mL of wash buffer containing 20 mM imidazole.",
+        "placeholders": []
+      },
+      {
+        "id": "1774125203497-6e6780fa58bd4",
+        "text": "Elute the bound protein using 6 mL of elution buffer containing 300 mM imidazole.",
+        "placeholders": []
+      },
+      {
+        "id": "1774024695073-9ea9a36345d188",
+        "text": "Collect fractions and analyze them by SDS-PAGE.",
+        "placeholders": []
+      }
+    ],
+    "troubleshooting": "Problem: Target protein does not bind resin; Possible cause: His-tag is inaccessible or imidazole concentration in binding buffer is too high; Solution: Reduce imidazole in the binding step and confirm the His-tag is intact\nProblem: High contaminant bands in elution; Possible cause: Wash conditions were too weak; Solution: Increase wash stringency by adjusting imidazole concentration or wash volume",
+    "createdAt": "2026-03-20T16:38:15.073Z",
+    "updatedAt": "2026-03-21T20:33:23.497Z"
+  }
+}

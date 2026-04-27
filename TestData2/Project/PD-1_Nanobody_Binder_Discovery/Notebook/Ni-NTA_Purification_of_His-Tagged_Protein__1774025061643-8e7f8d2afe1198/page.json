@@ -1,0 +1,26 @@
+{
+  "schema_name": "enana_notebook_pages",
+  "schema_version": "1.0.0",
+  "updated_at": "2026-04-27T22:19:03.316Z",
+  "notebookEntry": {
+    "id": "1774025061643-8e7f8d2afe1198",
+    "protocolId": "1774024695073-536c18071dd0d",
+    "protocolName": "Ni-NTA Purification of His-Tagged Protein",
+    "projectId": "1773446973979-1dead4da556a2",
+    "projectName": "PD-1 Nanobody Binder Discovery",
+    "result": "Agent-generated notebook draft from request: Ni-NTA",
+    "resultFiles": [],
+    "resultFileRecords": [],
+    "resultFileAddresses": [],
+    "notebookState": "executed",
+    "executedAt": "",
+    "agentDraftStatus": "needs_review",
+    "agentDraftMeta": {
+      "workflowId": "",
+      "proposalId": ""
+    },
+    "updatedAt": "2026-03-20T16:43:07.684Z",
+    "createdAt": "",
+    "storageFolder": ""
+  }
+}

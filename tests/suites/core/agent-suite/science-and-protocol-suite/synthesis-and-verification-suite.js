@@ -7,9 +7,11 @@ module.exports = function registerSynthesisAndVerificationSuite(context = {}) {
       const { createScienceFinalSynthesisRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'runtime', 'science-reasoning-loop', 'final-synthesis.js'));
       let capturedPrompt = '';
       let capturedStage = '';
+      let capturedSystemPrompt = '';
       const runtime = createScienceFinalSynthesisRuntime({
-        requestAssistantText: async ({ stage, userPrompt }) => {
+        requestAssistantText: async ({ stage, systemPrompt, userPrompt }) => {
           capturedStage = String(stage || '');
+          capturedSystemPrompt = String(systemPrompt || '');
           capturedPrompt = String(userPrompt || '');
           return {
             ok: true,
@@ -45,11 +47,60 @@ module.exports = function registerSynthesisAndVerificationSuite(context = {}) {
 
       assert.equal(capturedStage, 'science_reasoning_final_synthesis');
       assert.match(capturedPrompt, /Respond with the final answer text only/i);
+      assert.match(capturedPrompt, /Use the collected evidence and tool trace as provenance anchors/i);
+      assert.match(capturedPrompt, /stable background knowledge/i);
+      assert.match(capturedPrompt, /Keep caveats proportionate/i);
+      assert.match(capturedSystemPrompt, /collected evidence plus stable background knowledge/i);
       assert.doesNotMatch(capturedPrompt, /Return JSON only/i);
+      assert.doesNotMatch(capturedPrompt, /Answer using only the evidence and tool trace/i);
+      assert.doesNotMatch(capturedPrompt, /using only the supplied evidence/i);
+      assert.doesNotMatch(capturedSystemPrompt, /using only the supplied evidence/i);
       assert.match(synthesis.answer, /Pathway reactivation/i);
       assert.equal(synthesis.confidence > 0.7, true);
       assert.equal(synthesis.decision_record.verification_notes.some((item) => /Two grounded retrieval steps are enough to answer/i.test(String(item))), true);
       assert.match(String(synthesis.trace_sentence || ''), /final grounded answer/i);
+    });
+
+    test('science final synthesis prompt includes the last 20 tool outputs and context blocks', () => {
+      const { createScienceFinalSynthesisRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'runtime', 'science-reasoning-loop', 'final-synthesis.js'));
+      const runtime = createScienceFinalSynthesisRuntime();
+      const toolTrace = Array.from({ length: 21 }, (_, index) => {
+        const label = String(index + 1).padStart(2, '0');
+        return {
+          tool_name: `tool-${label}`,
+          ok: true,
+          summary: `summary-${label}`,
+          loaded_context_blocks: [{
+            paper_title: `Paper ${label}`,
+            section_label: 'Abstract',
+            excerpt: `excerpt-${label}`,
+            relevance_reason: `reason-${label}`
+          }]
+        };
+      });
+
+      const prompt = runtime.buildSynthesisPrompt({
+        intent: 'general_science_question',
+        message: 'Explain rabbit antibody maturation in GALT.',
+        roundsExecuted: 21,
+        maxRounds: 21,
+        evaluator: {
+          satisfied: true,
+          should_continue: false,
+          can_answer_with_limitations: true,
+          reason: 'The gathered evidence is sufficient.'
+        },
+        accumulatedCitations: [],
+        toolTrace,
+        partial: false
+      });
+
+      assert.doesNotMatch(prompt, /summary-01\b/);
+      assert.doesNotMatch(prompt, /excerpt-01\b/);
+      assert.match(prompt, /summary-02\b/);
+      assert.match(prompt, /summary-21\b/);
+      assert.match(prompt, /excerpt-02\b/);
+      assert.match(prompt, /excerpt-21\b/);
     });
 
     test('science logical verification runtime extracts context plus per-item logic and checks each item separately', async () => {

@@ -52,6 +52,7 @@ const { createPurchaseRecommendationRuntime } = require('../agent/tools/agent-pu
 const { createProtocolGenerationRuntime } = require('../agent/tools/agent-protocol-generation.js');
 const { createPaperContextLoaderRuntime } = require('../agent/tools/agent-paper-context-loader.js');
 const { createPaperDownloadRuntime } = require('../agent/tools/agent-paper-download.js');
+const { createPdfTextExtractionRuntime } = require('../agent/tools/agent-pdf-text-extraction.js');
 const { createProtocolMatchingRuntime } = require('../agent/tools/agent-protocol-matching.js');
 const { createNotebookGenerationRuntime } = require('../agent/tools/agent-notebook-generation.js');
 const { createAgentInventoryLookupRuntime } = require('../agent/tools/agent-inventory-lookup.js');
@@ -320,9 +321,13 @@ function createMainAgentServices(deps = {}) {
     ...sharedAgentLlmDeps
   });
 
+  const pdfTextExtractionRuntime = createPdfTextExtractionRuntime({
+    fetch: typeof globalThis.fetch === 'function' ? globalThis.fetch.bind(globalThis) : null
+  });
   const paperContextLoaderRuntime = createPaperContextLoaderRuntime({
     ...sharedAgentLlmDeps,
-    fetch: typeof globalThis.fetch === 'function' ? globalThis.fetch.bind(globalThis) : null
+    fetch: typeof globalThis.fetch === 'function' ? globalThis.fetch.bind(globalThis) : null,
+    pdfTextExtractionRuntime
   });
   const webSearchRuntime = createWebSearchRuntime({
     ...sharedAgentLlmDeps

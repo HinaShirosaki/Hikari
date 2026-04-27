@@ -1,0 +1,2826 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>pET28a-His-sfGFP</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --preview-ink: #16314c;
+      --preview-muted: #5a7592;
+      --preview-backbone: #7e99ba;
+      --preview-center-ring: #d8e4f2;
+      --preview-center-disc: #f9fbfe;
+      --preview-tick: #8ca5c5;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: #ffffff;
+    }
+    body {
+      font-family: "Playfair Display", serif;
+      color: var(--preview-ink);
+      overflow: hidden;
+    }
+    .preview-shell {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      place-items: center;
+      margin: 0;
+      padding: 4px;
+    }
+    svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+      max-width: 100%;
+      max-height: 100%;
+    }
+    .circular-preview__backbone {
+      fill: none;
+      stroke: var(--preview-backbone);
+      stroke-width: 16;
+    }
+    .circular-preview__center-ring {
+      fill: none;
+      stroke: var(--preview-center-ring);
+      stroke-width: 2;
+    }
+    .circular-preview__center-disc {
+      fill: var(--preview-center-disc);
+      stroke: var(--preview-center-ring);
+      stroke-width: 2;
+    }
+    .circular-preview__tick {
+      stroke: var(--preview-tick);
+      stroke-width: 1.5;
+      opacity: 0.9;
+    }
+    .circular-preview__feature {
+      stroke-width: 1.5;
+      stroke-linejoin: round;
+    }
+    .circular-preview__leader {
+      fill: none;
+      stroke-width: 1.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      opacity: 0.82;
+    }
+    .circular-preview__label-box {
+      stroke-width: 1.2;
+    }
+    .circular-preview__label-text {
+      font-size: 15px;
+      font-weight: 600;
+      dominant-baseline: middle;
+      letter-spacing: 0.01em;
+    }
+    .circular-preview__hover-tooltip {
+      position: fixed;
+      z-index: 20;
+      min-width: 180px;
+      max-width: min(320px, calc(100vw - 16px));
+      border-radius: 10px;
+      border: 1px solid rgba(90, 119, 165, 0.42);
+      background: rgba(249, 252, 255, 0.98);
+      box-shadow: 0 10px 24px rgba(27, 20, 14, 0.12);
+      padding: 9px 11px;
+      font-size: 12px;
+      line-height: 1.35;
+      color: var(--preview-ink);
+      pointer-events: none;
+    }
+    .circular-preview__hover-tooltip[hidden] {
+      display: none;
+    }
+    .circular-preview__hover-tooltip p {
+      margin: 0;
+    }
+    .circular-preview__hover-tooltip p + p {
+      margin-top: 3px;
+    }
+    .circular-preview__hover-title {
+      font-weight: 700;
+    }
+    .circular-preview__hover-description {
+      color: var(--preview-muted);
+    }
+    .circular-preview__title {
+      fill: var(--preview-ink);
+      font-size: 28px;
+      font-weight: 700;
+      text-anchor: middle;
+    }
+    .circular-preview__subtitle {
+      text-anchor: middle;
+      fill: var(--preview-muted);
+      letter-spacing: 0.02em;
+    }
+    .circular-preview__subtitle {
+      font-size: 15px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <main class="preview-shell" data-renderer="dna-feature-viewer-js">
+    <!-- Circular plasmid preview powered by a minimal JS port inspired by DnaFeaturesViewer (MIT). -->
+    <svg
+      viewBox="0 0 1588 1367"
+      preserveAspectRatio="xMidYMid meet"
+      role="img"
+      aria-label="pET28a-His-sfGFP circular plasmid preview">
+      <desc>Standalone circular plasmid preview for pET28a-His-sfGFP.</desc>
+      <g class="circular-preview__scene">
+        <circle class="circular-preview__center-ring" cx="801.00" cy="679.58" r="258.00"></circle>
+        <circle class="circular-preview__backbone" cx="801.00" cy="679.58" r="290.00"></circle>
+        <line class="circular-preview__tick" x1="801.00" y1="401.58" x2="801.00" y2="377.58"></line><line class="circular-preview__tick" x1="907.39" y1="422.74" x2="916.57" y2="400.57"></line><line class="circular-preview__tick" x1="997.58" y1="483.01" x2="1014.55" y2="466.04"></line><line class="circular-preview__tick" x1="1057.84" y1="573.20" x2="1080.01" y2="564.01"></line><line class="circular-preview__tick" x1="1079.00" y1="679.58" x2="1103.00" y2="679.58"></line><line class="circular-preview__tick" x1="1057.84" y1="785.97" x2="1080.01" y2="795.15"></line><line class="circular-preview__tick" x1="997.58" y1="876.16" x2="1014.55" y2="893.13"></line><line class="circular-preview__tick" x1="907.39" y1="936.42" x2="916.57" y2="958.59"></line><line class="circular-preview__tick" x1="801.00" y1="957.58" x2="801.00" y2="981.58"></line><line class="circular-preview__tick" x1="694.61" y1="936.42" x2="685.43" y2="958.59"></line><line class="circular-preview__tick" x1="604.42" y1="876.16" x2="587.45" y2="893.13"></line><line class="circular-preview__tick" x1="544.16" y1="785.97" x2="521.99" y2="795.15"></line><line class="circular-preview__tick" x1="523.00" y1="679.58" x2="499.00" y2="679.58"></line><line class="circular-preview__tick" x1="544.16" y1="573.20" x2="521.99" y2="564.01"></line><line class="circular-preview__tick" x1="604.42" y1="483.01" x2="587.45" y2="466.04"></line><line class="circular-preview__tick" x1="694.61" y1="422.74" x2="685.43" y2="400.57"></line>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="1"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_1"
+            data-tooltip-name="source"
+            data-tooltip-meta="source | Strand +"
+            data-tooltip-location="1..6400"
+            data-tooltip-description=""
+            d="M 801.00 353.58 A 326.00 326.00 0 1 1 772.59 354.82 L 801.00 362.58 L 774.16 372.75 A 308.00 308.00 0 1 0 801.00 371.58 Z"
+            aria-label="source (1..6400)"
+            fill="#2f8f9d"
+            stroke="#297c8d"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="2"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_9"
+            data-tooltip-name="lacI"
+            data-tooltip-meta="cds | Strand -"
+            data-tooltip-location="complement(3409..4491)"
+            data-tooltip-description="The lac repressor binds to the lac operator to inhibit transcription in E. coli. This inhibition can be relieved by addi"
+            d="M 730.63 1019.37 L 698.70 1020.57 A 356.00 356.00 0 0 1 461.26 785.93 L 478.43 780.55 A 338.00 338.00 0 0 0 703.87 1003.33 Z"
+            aria-label="lacI (complement(3409..4491)) - The lac repressor binds to the lac operator to inhibit transcription in E. coli. This inhibition can be relieved by addi"
+            fill="#479f71"
+            stroke="#3d8a69"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="3"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_2"
+            data-tooltip-name="KanR"
+            data-tooltip-meta="cds | Strand -"
+            data-tooltip-location="complement(454..1269)"
+            data-tooltip-description="confers resistance to kanamycin in bacteria or G418 (Geneticin(R)) in eukaryotes"
+            d="M 950.28 366.34 L 981.58 372.78 A 356.00 356.00 0 0 1 1138.37 565.92 L 1121.31 571.67 A 338.00 338.00 0 0 0 972.45 388.29 Z"
+            aria-label="KanR (complement(454..1269)) - confers resistance to kanamycin in bacteria or G418 (Geneticin(R)) in eukaryotes"
+            fill="#479f71"
+            stroke="#3d8a69"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="4"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_3"
+            data-tooltip-name="ori"
+            data-tooltip-meta="rep_origin | Strand +"
+            data-tooltip-location="1391..1979"
+            data-tooltip-description="high-copy-number ColE1/pMB1/pBR322/pUC origin of replication"
+            d="M 1149.46 606.70 A 356.00 356.00 0 0 1 1142.66 779.61 L 1124.26 805.74 L 1125.38 774.55 A 338.00 338.00 0 0 0 1131.84 610.39 Z"
+            aria-label="ori (1391..1979) - high-copy-number ColE1/pMB1/pBR322/pUC origin of replication"
+            fill="#4e7fff"
+            stroke="#436fdd"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="5"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_45"
+            data-tooltip-name="f1 ori"
+            data-tooltip-meta="rep_origin | Strand +"
+            data-tooltip-location="join(6306..6400,1..361)"
+            data-tooltip-description="f1 bacteriophage origin of replication; arrow indicates direction of (+) strand synthesis"
+            d="M 801.00 323.58 A 356.00 356.00 0 0 1 894.98 336.21 L 921.42 354.15 L 890.22 353.57 A 338.00 338.00 0 0 0 801.00 341.58 Z"
+            aria-label="f1 ori (join(6306..6400,1..361)) - f1 bacteriophage origin of replication; arrow indicates direction of (+) strand synthesis"
+            fill="#4e7fff"
+            stroke="#436fdd"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="5"
+            data-segment-index="2"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_45"
+            data-tooltip-name="f1 ori"
+            data-tooltip-meta="rep_origin | Strand +"
+            data-tooltip-location="join(6306..6400,1..361)"
+            data-tooltip-description="f1 bacteriophage origin of replication; arrow indicates direction of (+) strand synthesis"
+            d="M 767.85 325.13 A 356.00 356.00 0 0 1 784.40 323.97 L 801.00 332.58 L 785.24 341.95 A 338.00 338.00 0 0 0 769.52 343.05 Z"
+            aria-label="f1 ori (join(6306..6400,1..361)) - f1 bacteriophage origin of replication; arrow indicates direction of (+) strand synthesis"
+            fill="#4e7fff"
+            stroke="#436fdd"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="6"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_40"
+            data-tooltip-name="CD274(PD-L1)"
+            data-tooltip-meta="cds | Strand +"
+            data-tooltip-location="5805..6155"
+            data-tooltip-description="PD-L1 EXTRACELLULAR domain."
+            d="M 604.38 382.80 A 356.00 356.00 0 0 1 686.38 342.54 L 718.34 342.57 L 692.18 359.58 A 338.00 338.00 0 0 0 614.32 397.81 Z"
+            aria-label="CD274(PD-L1) (5805..6155) - PD-L1 EXTRACELLULAR domain."
+            fill="#479f71"
+            stroke="#3d8a69"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="7"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_8"
+            data-tooltip-name="rop"
+            data-tooltip-meta="cds | Strand -"
+            data-tooltip-location="complement(2409..2600)"
+            data-tooltip-description="Rop protein, which maintains plasmids at low copy number"
+            d="M 1044.43 926.87 L 1027.68 954.08 A 356.00 356.00 0 0 1 998.78 975.58 L 988.78 960.62 A 338.00 338.00 0 0 0 1016.22 940.20 Z"
+            aria-label="rop (complement(2409..2600)) - Rop protein, which maintains plasmids at low copy number"
+            fill="#479f71"
+            stroke="#3d8a69"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="8"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_7"
+            data-tooltip-name="bom"
+            data-tooltip-meta="misc_feature | Strand +"
+            data-tooltip-location="2165..2307"
+            data-tooltip-description="basis of mobility region from pBR322"
+            d="M 1103.81 866.78 A 356.00 356.00 0 0 1 1089.93 887.56 L 1067.72 901.55 L 1075.32 877.04 A 338.00 338.00 0 0 0 1088.50 857.32 Z"
+            aria-label="bom (2165..2307) - basis of mobility region from pBR322"
+            fill="#2f8f9d"
+            stroke="#297c8d"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="9"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_10"
+            data-tooltip-name="lacI promoter"
+            data-tooltip-meta="promoter | Strand -"
+            data-tooltip-location="complement(4492..4569)"
+            data-tooltip-description=""
+            d="M 469.84 783.24 L 457.43 772.85 A 356.00 356.00 0 0 1 454.12 759.63 L 471.65 755.58 A 338.00 338.00 0 0 0 474.81 768.13 Z"
+            aria-label="lacI promoter (complement(4492..4569))"
+            fill="#8b5cf6"
+            stroke="#7553d6"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="10"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_20"
+            data-tooltip-name="sfGFP TEV R"
+            data-tooltip-meta="primer_bind | Strand -"
+            data-tooltip-location="complement(5678..5735)"
+            data-tooltip-description=""
+            d="M 574.87 416.39 L 576.78 403.06 A 356.00 356.00 0 0 1 584.74 396.79 L 595.68 411.09 A 338.00 338.00 0 0 0 588.12 417.05 Z"
+            aria-label="sfGFP TEV R (complement(5678..5735))"
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="11"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_32"
+            data-tooltip-name="NCH2 GS F"
+            data-tooltip-meta="primer_bind | Strand +"
+            data-tooltip-location="5742..5790"
+            data-tooltip-description=""
+            d="M 586.41 395.52 A 356.00 356.00 0 0 1 593.31 390.45 L 605.39 392.97 L 603.81 405.06 A 338.00 338.00 0 0 0 597.26 409.89 Z"
+            aria-label="NCH2 GS F (5742..5790)"
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="12"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_44"
+            data-tooltip-name="T7 terminator"
+            data-tooltip-meta="terminator | Strand +"
+            data-tooltip-location="6222..6269"
+            data-tooltip-description="transcription terminator for bacteriophage T7 RNA polymerase"
+            d="M 738.76 329.06 A 356.00 356.00 0 0 1 747.04 327.70 L 756.50 335.45 L 749.76 345.49 A 338.00 338.00 0 0 0 741.91 346.79 Z"
+            aria-label="T7 terminator (6222..6269) - transcription terminator for bacteriophage T7 RNA polymerase"
+            fill="#f6a35e"
+            stroke="#cd8d59"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="13"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_16"
+            data-tooltip-name="His sfGFP F"
+            data-tooltip-meta="primer_bind | Strand +"
+            data-tooltip-location="4967..5004"
+            data-tooltip-description=""
+            d="M 449.72 621.82 A 356.00 356.00 0 0 1 450.86 615.28 L 460.94 610.55 L 468.56 618.53 A 338.00 338.00 0 0 0 467.48 624.74 Z"
+            aria-label="His sfGFP F (4967..5004)"
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="14"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_12"
+            data-tooltip-name="lac operator"
+            data-tooltip-meta="protein_bind | Strand +"
+            data-tooltip-location="4897..4921"
+            data-tooltip-description="The lac repressor binds to the lac operator to inhibit transcription in E. coli. This inhibition can be relieved by addi"
+            d="M 446.58 646.08 A 356.00 356.00 0 0 1 447.02 641.73 L 456.45 638.46 L 464.92 643.65 A 338.00 338.00 0 0 0 464.50 647.77 Z"
+            aria-label="lac operator (4897..4921) - The lac repressor binds to the lac operator to inhibit transcription in E. coli. This inhibition can be relieved by addi"
+            fill="#f6a35e"
+            stroke="#cd8d59"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="15"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_43"
+            data-tooltip-name="PD1 vector F"
+            data-tooltip-meta="primer_bind | Strand +"
+            data-tooltip-location="6156..6180"
+            data-tooltip-description=""
+            d="M 716.20 333.83 A 356.00 356.00 0 0 1 720.44 332.82 L 726.63 340.64 L 724.52 350.35 A 338.00 338.00 0 0 0 720.48 351.31 Z"
+            aria-label="PD1 vector F (6156..6180)"
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="16"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_13"
+            data-tooltip-name="RBS"
+            data-tooltip-meta="rbs | Strand +"
+            data-tooltip-location="4936..4958"
+            data-tooltip-description="efficient ribosome binding site from bacteriophage T7 gene 10 (Olins and Rangwala, 1989)"
+            d="M 448.12 632.54 A 356.00 356.00 0 0 1 448.68 628.56 L 458.17 625.97 L 466.49 631.14 A 338.00 338.00 0 0 0 465.96 634.92 Z"
+            aria-label="RBS (4936..4958) - efficient ribosome binding site from bacteriophage T7 gene 10 (Olins and Rangwala, 1989)"
+            fill="#c97064"
+            stroke="#a8635e"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="17"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_11"
+            data-tooltip-name="T7 promoter"
+            data-tooltip-meta="promoter | Strand +"
+            data-tooltip-location="4878..4896"
+            data-tooltip-description="promoter for bacteriophage T7 RNA polymerase"
+            d="M 446.02 652.70 A 356.00 356.00 0 0 1 446.58 646.08 L 464.50 647.77 A 338.00 338.00 0 0 0 463.97 654.05 Z"
+            aria-label="T7 promoter (4878..4896) - promoter for bacteriophage T7 RNA polymerase"
+            fill="#8b5cf6"
+            stroke="#7553d6"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="18"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_4"
+            data-tooltip-name="Z34 GS F"
+            data-tooltip-meta="primer_bind | Strand -"
+            data-tooltip-location="complement(2109..2119)"
+            data-tooltip-description=""
+            d="M 1113.64 849.86 A 356.00 356.00 0 0 1 1111.78 853.23 L 1096.07 844.45 A 338.00 338.00 0 0 0 1097.83 841.25 Z"
+            aria-label="Z34 GS F (complement(2109..2119))"
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="19"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_29"
+            data-tooltip-name="sfGFP NCH2 R"
+            data-tooltip-meta="primer_bind | Strand -"
+            data-tooltip-location="complement(5717..5765)"
+            data-tooltip-description=""
+            d="M 566.44 384.44 L 568.18 371.70 A 386.00 386.00 0 0 1 575.65 366.19 L 586.16 380.80 A 368.00 368.00 0 0 0 579.04 386.06 Z"
+            aria-label="sfGFP NCH2 R (complement(5717..5765))"
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="20"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_41"
+            data-tooltip-name="PDL1 vector F"
+            data-tooltip-meta="primer_bind | Strand +"
+            data-tooltip-location="6133..6180"
+            data-tooltip-description=""
+            d="M 700.61 306.86 A 386.00 386.00 0 0 1 709.42 304.60 L 720.21 311.34 L 713.69 322.09 A 368.00 368.00 0 0 0 705.29 324.25 Z"
+            aria-label="PDL1 vector F (6133..6180)"
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="21"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_14"
+            data-tooltip-name="vector R"
+            data-tooltip-meta="primer_bind | Strand -"
+            data-tooltip-location="complement(4951..4991)"
+            data-tooltip-description=""
+            d="M 428.08 624.26 L 420.40 615.27 A 386.00 386.00 0 0 1 421.77 607.62 L 439.45 610.98 A 368.00 368.00 0 0 0 438.14 618.27 Z"
+            aria-label="vector R (complement(4951..4991))"
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="22"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_21"
+            data-tooltip-name="GS sfGFP R"
+            data-tooltip-meta="primer_bind | Strand -"
+            data-tooltip-location="complement(5688..5715)"
+            data-tooltip-description=""
+            d="M 558.13 391.23 L 556.42 380.96 A 386.00 386.00 0 0 1 560.54 377.63 L 571.76 391.71 A 368.00 368.00 0 0 0 567.82 394.88 Z"
+            aria-label="GS sfGFP R (complement(5688..5715))"
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="23"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_34"
+            data-tooltip-name="Z34 GS F"
+            data-tooltip-meta="primer_bind | Strand +"
+            data-tooltip-location="5772..5790"
+            data-tooltip-description=""
+            d="M 577.50 364.87 A 386.00 386.00 0 0 1 583.41 360.75 L 593.56 375.62 A 368.00 368.00 0 0 0 587.92 379.54 Z"
+            aria-label="Z34 GS F (5772..5790)"
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="24"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_5"
+            data-tooltip-name="Z32 GS F"
+            data-tooltip-meta="primer_bind | Strand -"
+            data-tooltip-location="complement(2109..2119)"
+            data-tooltip-description=""
+            d="M 1139.98 864.21 A 386.00 386.00 0 0 1 1137.97 867.86 L 1122.25 859.08 A 368.00 368.00 0 0 0 1124.17 855.60 Z"
+            aria-label="Z32 GS F (complement(2109..2119))"
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="25"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_15"
+            data-tooltip-name="vector R new"
+            data-tooltip-meta="primer_bind | Strand -"
+            data-tooltip-location="complement(4951..4991)"
+            data-tooltip-description=""
+            d="M 398.41 619.86 L 390.81 610.27 A 416.00 416.00 0 0 1 392.29 602.03 L 409.98 605.39 A 398.00 398.00 0 0 0 408.56 613.27 Z"
+            aria-label="vector R new (complement(4951..4991))"
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="26"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_42"
+            data-tooltip-name="PDL1 R"
+            data-tooltip-meta="primer_bind | Strand -"
+            data-tooltip-location="complement(6133..6157)"
+            data-tooltip-description=""
+            d="M 695.15 286.59 L 697.74 276.60 A 416.00 416.00 0 0 1 702.70 275.36 L 706.95 292.85 A 398.00 398.00 0 0 0 702.21 294.04 Z"
+            aria-label="PDL1 R (complement(6133..6157))"
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="27"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_33"
+            data-tooltip-name="overlap"
+            data-tooltip-meta="misc_feature | Strand +"
+            data-tooltip-location="5742..5765"
+            data-tooltip-description=""
+            d="M 550.25 347.65 A 416.00 416.00 0 0 1 554.17 344.72 L 563.39 349.14 L 564.85 359.21 A 398.00 398.00 0 0 0 561.10 362.01 Z"
+            aria-label="overlap (5742..5765)"
+            fill="#2f8f9d"
+            stroke="#297c8d"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="28"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_30"
+            data-tooltip-name="sfGFP Z32 R"
+            data-tooltip-meta="primer_bind | Strand -"
+            data-tooltip-location="complement(5717..5738)"
+            data-tooltip-description=""
+            d="M 547.78 360.95 L 545.71 351.13 A 416.00 416.00 0 0 1 549.27 348.39 L 560.16 362.72 A 398.00 398.00 0 0 0 556.75 365.34 Z"
+            aria-label="sfGFP Z32 R (complement(5717..5738))"
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="29"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_35"
+            data-tooltip-name="Z32 GS F"
+            data-tooltip-meta="primer_bind | Strand +"
+            data-tooltip-location="5772..5790"
+            data-tooltip-description=""
+            d="M 560.13 340.41 A 416.00 416.00 0 0 1 566.50 335.98 L 576.64 350.84 A 398.00 398.00 0 0 0 570.55 355.08 Z"
+            aria-label="Z32 GS F (5772..5790)"
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="30"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_22"
+            data-tooltip-name="GS PD1 F"
+            data-tooltip-meta="primer_bind | Strand +"
+            data-tooltip-location="5700..5715"
+            data-tooltip-description=""
+            d="M 536.78 358.27 A 416.00 416.00 0 0 1 541.86 354.16 L 553.07 368.24 A 398.00 398.00 0 0 0 548.21 372.17 Z"
+            aria-label="GS PD1 F (5700..5715)"
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="31"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_6"
+            data-tooltip-name="NCH2 GS F"
+            data-tooltip-meta="primer_bind | Strand -"
+            data-tooltip-location="complement(2109..2119)"
+            data-tooltip-description=""
+            d="M 1166.33 878.56 A 416.00 416.00 0 0 1 1164.16 882.49 L 1148.44 873.71 A 398.00 398.00 0 0 0 1150.52 869.95 Z"
+            aria-label="NCH2 GS F (complement(2109..2119))"
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="32"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_36"
+            data-tooltip-name="GS PDL1 F"
+            data-tooltip-meta="primer_bind | Strand +"
+            data-tooltip-location="5775..5824"
+            data-tooltip-description=""
+            d="M 543.83 315.19 A 446.00 446.00 0 0 1 552.85 308.99 L 566.84 310.61 L 562.87 323.95 A 428.00 428.00 0 0 0 554.21 329.90 Z"
+            aria-label="GS PDL1 F (5775..5824)"
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="33"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_17"
+            data-tooltip-name="sfGFP F"
+            data-tooltip-meta="primer_bind | Strand +"
+            data-tooltip-location="4967..5001"
+            data-tooltip-description=""
+            d="M 360.91 607.22 A 446.00 446.00 0 0 1 362.22 599.67 L 372.48 593.91 L 379.93 602.89 A 428.00 428.00 0 0 0 378.67 610.14 Z"
+            aria-label="sfGFP F (4967..5001)"
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="34"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_31"
+            data-tooltip-name="sfGFP Z34 R"
+            data-tooltip-meta="primer_bind | Strand -"
+            data-tooltip-location="complement(5717..5735)"
+            data-tooltip-description=""
+            d="M 523.51 330.42 A 446.00 446.00 0 0 1 530.07 325.30 L 541.01 339.60 A 428.00 428.00 0 0 0 534.71 344.51 Z"
+            aria-label="sfGFP Z34 R (complement(5717..5735))"
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="35"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_23"
+            data-tooltip-name="Z34 GS F"
+            data-tooltip-meta="primer_bind | Strand +"
+            data-tooltip-location="5700..5715"
+            data-tooltip-description=""
+            d="M 517.72 335.10 A 446.00 446.00 0 0 1 523.17 330.69 L 534.38 344.77 A 428.00 428.00 0 0 0 529.15 349.00 Z"
+            aria-label="Z34 GS F (5700..5715)"
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="36"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_19"
+            data-tooltip-name="superfolder GFP"
+            data-tooltip-meta="cds | Strand +"
+            data-tooltip-location="join(4986..4988,4989..5699)"
+            data-tooltip-description="mammalian codon-optimized"
+            d="M 332.83 593.60 A 476.00 476.00 0 0 1 333.08 592.22 L 350.78 595.53 A 458.00 458.00 0 0 0 350.53 596.85 Z"
+            aria-label="superfolder GFP (join(4986..4988,4989..5699)) - mammalian codon-optimized"
+            fill="#479f71"
+            stroke="#3d8a69"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="36"
+            data-segment-index="2"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_19"
+            data-tooltip-name="superfolder GFP"
+            data-tooltip-meta="cds | Strand +"
+            data-tooltip-location="join(4986..4988,4989..5699)"
+            data-tooltip-description="mammalian codon-optimized"
+            d="M 333.08 592.22 A 476.00 476.00 0 0 1 467.77 339.67 L 504.38 318.88 L 480.38 352.53 A 458.00 458.00 0 0 0 350.78 595.53 Z"
+            aria-label="superfolder GFP (join(4986..4988,4989..5699)) - mammalian codon-optimized"
+            fill="#479f71"
+            stroke="#3d8a69"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="37"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_37"
+            data-tooltip-name="GS"
+            data-tooltip-meta="misc_feature | Strand +"
+            data-tooltip-location="5775..5804"
+            data-tooltip-description=""
+            d="M 526.53 290.68 A 476.00 476.00 0 0 1 532.29 286.68 L 543.08 290.27 L 542.45 301.54 A 458.00 458.00 0 0 0 536.91 305.39 Z"
+            aria-label="GS (5775..5804)"
+            fill="#2f8f9d"
+            stroke="#297c8d"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="38"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_18"
+            data-tooltip-name="6xHis"
+            data-tooltip-meta="cds | Strand +"
+            data-tooltip-location="4968..4985"
+            data-tooltip-description="6xHis affinity tag"
+            d="M 331.38 601.89 A 476.00 476.00 0 0 1 332.83 593.60 L 350.53 596.85 A 458.00 458.00 0 0 0 349.14 604.83 Z"
+            aria-label="6xHis (4968..4985) - 6xHis affinity tag"
+            fill="#479f71"
+            stroke="#3d8a69"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="39"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_24"
+            data-tooltip-name="Z32 GS F"
+            data-tooltip-meta="primer_bind | Strand +"
+            data-tooltip-location="5700..5715"
+            data-tooltip-description=""
+            d="M 498.67 311.92 A 476.00 476.00 0 0 1 504.48 307.22 L 515.69 321.30 A 458.00 458.00 0 0 0 510.10 325.83 Z"
+            aria-label="Z32 GS F (5700..5715)"
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="40"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_38"
+            data-tooltip-name="GS PD1 F"
+            data-tooltip-meta="primer_bind | Strand +"
+            data-tooltip-location="5775..5804"
+            data-tooltip-description=""
+            d="M 509.24 266.17 A 506.00 506.00 0 0 1 515.35 261.92 L 526.51 265.26 L 525.52 276.78 A 488.00 488.00 0 0 0 519.61 280.88 Z"
+            aria-label="GS PD1 F (5775..5804)"
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="41"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_25"
+            data-tooltip-name="NCH2 GS F"
+            data-tooltip-meta="primer_bind | Strand +"
+            data-tooltip-location="5700..5715"
+            data-tooltip-description=""
+            d="M 479.61 288.75 A 506.00 506.00 0 0 1 485.79 283.75 L 497.00 297.83 A 488.00 488.00 0 0 0 491.05 302.66 Z"
+            aria-label="NCH2 GS F (5700..5715)"
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="42"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_26"
+            data-tooltip-name="GS PDL1 F"
+            data-tooltip-meta="primer_bind | Strand +"
+            data-tooltip-location="5700..5715"
+            data-tooltip-description=""
+            d="M 460.56 265.58 A 536.00 536.00 0 0 1 467.10 260.29 L 478.32 274.37 A 518.00 518.00 0 0 0 471.99 279.48 Z"
+            aria-label="GS PDL1 F (5700..5715)"
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="43"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_39"
+            data-tooltip-name="GS sfGFP R"
+            data-tooltip-meta="primer_bind | Strand -"
+            data-tooltip-location="complement(5775..5790)"
+            data-tooltip-description=""
+            d="M 491.94 241.66 A 536.00 536.00 0 0 1 498.85 236.86 L 509.00 251.73 A 518.00 518.00 0 0 0 502.32 256.37 Z"
+            aria-label="GS sfGFP R (complement(5775..5790))"
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="44"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_27"
+            data-tooltip-name="vector TEV F"
+            data-tooltip-meta="primer_bind | Strand +"
+            data-tooltip-location="5706..5735"
+            data-tooltip-description=""
+            d="M 444.09 240.30 A 566.00 566.00 0 0 1 450.59 235.09 L 462.64 237.13 L 461.74 249.23 A 548.00 548.00 0 0 0 455.44 254.27 Z"
+            aria-label="vector TEV F (5706..5735)"
+            fill="#a16207"
+            stroke="#875812"></path>
+        
+          <path class="circular-preview__feature"
+            data-feature-index="45"
+            data-segment-index="1"
+            data-preview-tooltip="feature"
+            data-tooltip-key="gbk_feature_28"
+            data-tooltip-name="GS"
+            data-tooltip-meta="misc_feature | Strand +"
+            data-tooltip-location="5706..5714"
+            data-tooltip-description=""
+            d="M 425.17 217.02 A 596.00 596.00 0 0 1 429.27 213.71 L 440.50 227.78 A 578.00 578.00 0 0 0 436.52 230.99 Z"
+            aria-label="GS (5706..5714)"
+            fill="#2f8f9d"
+            stroke="#297c8d"></path>
+        
+        
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_1"
+          data-tooltip-name="source"
+          data-tooltip-meta="source | Strand +"
+          data-tooltip-location="1..6400"
+          data-tooltip-description=""
+          data-feature-x="801.00"
+          data-feature-y="1009.58"
+          data-bend-x="801.00"
+          data-bend-y="1313.58"
+          data-label-center-y="1321.58"
+          aria-label="source (1..6400)">
+          <path class="circular-preview__leader"
+            d="M 801.00 1009.58 L 801.00 1313.58 L 1443.00 1321.58"
+            stroke="#297c8d"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1443.00"
+            y="1308.58"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e2eff1"
+            stroke="#297c8d"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1455.00"
+              y="1321.58"
+              text-anchor="start"
+              fill="#0f223e">
+              source
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_9"
+          data-tooltip-name="lacI"
+          data-tooltip-meta="cds | Strand -"
+          data-tooltip-location="complement(3409..4491)"
+          data-tooltip-description="The lac repressor binds to the lac operator to inhibit transcription in E. coli. This inhibition can be relieved by addi"
+          data-feature-x="559.37"
+          data-feature-y="946.44"
+          data-bend-x="375.46"
+          data-bend-y="1149.55"
+          data-label-center-y="1250.81"
+          aria-label="lacI (complement(3409..4491)) - The lac repressor binds to the lac operator to inhibit transcription in E. coli. This inhibition can be relieved by addi">
+          <path class="circular-preview__leader"
+            d="M 559.37 946.44 L 375.46 1149.55 L 159.00 1250.81"
+            stroke="#3d8a69"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="73.00"
+            y="1237.81"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e5f2eb"
+            stroke="#3d8a69"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="147.00"
+              y="1250.81"
+              text-anchor="end"
+              fill="#0f223e">
+              lacI
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_2"
+          data-tooltip-name="KanR"
+          data-tooltip-meta="cds | Strand -"
+          data-tooltip-location="complement(454..1269)"
+          data-tooltip-description="confers resistance to kanamycin in bacteria or G418 (Geneticin(R)) in eukaryotes"
+          data-feature-x="1070.34"
+          data-feature-y="440.71"
+          data-bend-x="1275.33"
+          data-bend-y="258.91"
+          data-label-center-y="285.00"
+          aria-label="KanR (complement(454..1269)) - confers resistance to kanamycin in bacteria or G418 (Geneticin(R)) in eukaryotes">
+          <path class="circular-preview__leader"
+            d="M 1070.34 440.71 L 1275.33 258.91 L 1443.00 285.00"
+            stroke="#3d8a69"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1443.00"
+            y="272.00"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e5f2eb"
+            stroke="#3d8a69"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1455.00"
+              y="285.00"
+              text-anchor="start"
+              fill="#0f223e">
+              KanR
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_3"
+          data-tooltip-name="ori"
+          data-tooltip-meta="rep_origin | Strand +"
+          data-tooltip-location="1391..1979"
+          data-tooltip-description="high-copy-number ColE1/pMB1/pBR322/pUC origin of replication"
+          data-feature-x="1159.76"
+          data-feature-y="709.41"
+          data-bend-x="1432.82"
+          data-bend-y="732.12"
+          data-label-center-y="732.78"
+          aria-label="ori (1391..1979) - high-copy-number ColE1/pMB1/pBR322/pUC origin of replication">
+          <path class="circular-preview__leader"
+            d="M 1159.76 709.41 L 1432.82 732.12 L 1443.00 732.78"
+            stroke="#436fdd"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1443.00"
+            y="719.78"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e6edff"
+            stroke="#436fdd"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1455.00"
+              y="732.78"
+              text-anchor="start"
+              fill="#0f223e">
+              ori
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_45"
+          data-tooltip-name="f1 ori"
+          data-tooltip-meta="rep_origin | Strand +"
+          data-tooltip-location="join(6306..6400,1..361)"
+          data-tooltip-description="f1 bacteriophage origin of replication; arrow indicates direction of (+) strand synthesis"
+          data-feature-x="864.46"
+          data-feature-y="325.22"
+          data-bend-x="912.76"
+          data-bend-y="55.51"
+          data-label-center-y="85.00"
+          aria-label="f1 ori (join(6306..6400,1..361)) - f1 bacteriophage origin of replication; arrow indicates direction of (+) strand synthesis">
+          <path class="circular-preview__leader"
+            d="M 864.46 325.22 L 912.76 55.51 L 1443.00 85.00"
+            stroke="#436fdd"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1443.00"
+            y="72.00"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e6edff"
+            stroke="#436fdd"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1455.00"
+              y="85.00"
+              text-anchor="start"
+              fill="#0f223e">
+              f1 ori
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_40"
+          data-tooltip-name="CD274(PD-L1)"
+          data-tooltip-meta="cds | Strand +"
+          data-tooltip-location="5805..6155"
+          data-tooltip-description="PD-L1 EXTRACELLULAR domain."
+          data-feature-x="656.57"
+          data-feature-y="349.82"
+          data-bend-x="546.64"
+          data-bend-y="98.84"
+          data-label-center-y="245.00"
+          aria-label="CD274(PD-L1) (5805..6155) - PD-L1 EXTRACELLULAR domain.">
+          <path class="circular-preview__leader"
+            d="M 656.57 349.82 L 546.64 98.84 L 1443.00 245.00"
+            stroke="#3d8a69"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1443.00"
+            y="232.00"
+            width="104.80"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e5f2eb"
+            stroke="#3d8a69"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1455.00"
+              y="245.00"
+              text-anchor="start"
+              fill="#0f223e">
+              CD274(PD-L1)
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_8"
+          data-tooltip-name="rop"
+          data-tooltip-meta="cds | Strand -"
+          data-tooltip-location="complement(2409..2600)"
+          data-tooltip-description="Rop protein, which maintains plasmids at low copy number"
+          data-feature-x="1028.29"
+          data-feature-y="958.76"
+          data-bend-x="1201.28"
+          data-bend-y="1171.25"
+          data-label-center-y="1177.45"
+          aria-label="rop (complement(2409..2600)) - Rop protein, which maintains plasmids at low copy number">
+          <path class="circular-preview__leader"
+            d="M 1028.29 958.76 L 1201.28 1171.25 L 1443.00 1177.45"
+            stroke="#3d8a69"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1443.00"
+            y="1164.45"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e5f2eb"
+            stroke="#3d8a69"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1455.00"
+              y="1177.45"
+              text-anchor="start"
+              fill="#0f223e">
+              rop
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_7"
+          data-tooltip-name="bom"
+          data-tooltip-meta="misc_feature | Strand +"
+          data-tooltip-location="2165..2307"
+          data-tooltip-description="basis of mobility region from pBR322"
+          data-feature-x="1093.18"
+          data-feature-y="889.90"
+          data-bend-x="1315.56"
+          data-bend-y="1049.97"
+          data-label-center-y="1109.70"
+          aria-label="bom (2165..2307) - basis of mobility region from pBR322">
+          <path class="circular-preview__leader"
+            d="M 1093.18 889.90 L 1315.56 1049.97 L 1443.00 1109.70"
+            stroke="#297c8d"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1443.00"
+            y="1096.70"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e2eff1"
+            stroke="#297c8d"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1455.00"
+              y="1109.70"
+              text-anchor="start"
+              fill="#0f223e">
+              bom
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_10"
+          data-tooltip-name="lacI promoter"
+          data-tooltip-meta="promoter | Strand -"
+          data-tooltip-location="complement(4492..4569)"
+          data-tooltip-description=""
+          data-feature-x="453.57"
+          data-feature-y="773.89"
+          data-bend-x="189.14"
+          data-bend-y="845.68"
+          data-label-center-y="1210.81"
+          aria-label="lacI promoter (complement(4492..4569))">
+          <path class="circular-preview__leader"
+            d="M 453.57 773.89 L 189.14 845.68 L 159.00 1210.81"
+            stroke="#7553d6"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="46.80"
+            y="1197.81"
+            width="112.20"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#efe8fe"
+            stroke="#7553d6"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="147.00"
+              y="1210.81"
+              text-anchor="end"
+              fill="#0f223e">
+              lacI promoter
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_20"
+          data-tooltip-name="sfGFP TEV R"
+          data-tooltip-meta="primer_bind | Strand -"
+          data-tooltip-location="complement(5678..5735)"
+          data-tooltip-description=""
+          data-feature-x="574.26"
+          data-feature-y="399.96"
+          data-bend-x="401.69"
+          data-bend-y="187.13"
+          data-label-center-y="770.81"
+          aria-label="sfGFP TEV R (complement(5678..5735))">
+          <path class="circular-preview__leader"
+            d="M 574.26 399.96 L 401.69 187.13 L 159.00 770.81"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="61.60"
+            y="757.81"
+            width="97.40"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="147.00"
+              y="770.81"
+              text-anchor="end"
+              fill="#0f223e">
+              sfGFP TEV R
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_32"
+          data-tooltip-name="NCH2 GS F"
+          data-tooltip-meta="primer_bind | Strand +"
+          data-tooltip-location="5742..5790"
+          data-tooltip-description=""
+          data-feature-x="590.97"
+          data-feature-y="387.20"
+          data-bend-x="431.12"
+          data-bend-y="164.66"
+          data-label-center-y="290.81"
+          aria-label="NCH2 GS F (5742..5790)">
+          <path class="circular-preview__leader"
+            d="M 590.97 387.20 L 431.12 164.66 L 159.00 290.81"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="73.00"
+            y="277.81"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="147.00"
+              y="290.81"
+              text-anchor="end"
+              fill="#0f223e">
+              NCH2 GS F
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_44"
+          data-tooltip-name="T7 terminator"
+          data-tooltip-meta="terminator | Strand +"
+          data-tooltip-location="6222..6269"
+          data-tooltip-description="transcription terminator for bacteriophage T7 RNA polymerase"
+          data-feature-x="746.43"
+          data-feature-y="323.74"
+          data-bend-x="704.90"
+          data-bend-y="52.91"
+          data-label-center-y="45.00"
+          aria-label="T7 terminator (6222..6269) - transcription terminator for bacteriophage T7 RNA polymerase">
+          <path class="circular-preview__leader"
+            d="M 746.43 323.74 L 704.90 52.91 L 1443.00 45.00"
+            stroke="#cd8d59"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1443.00"
+            y="32.00"
+            width="112.20"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#fef2e8"
+            stroke="#cd8d59"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1455.00"
+              y="45.00"
+              text-anchor="start"
+              fill="#0f223e">
+              T7 terminator
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_16"
+          data-tooltip-name="His sfGFP F"
+          data-tooltip-meta="primer_bind | Strand +"
+          data-tooltip-location="4967..5004"
+          data-tooltip-description=""
+          data-feature-x="446.92"
+          data-feature-y="614.56"
+          data-bend-x="177.43"
+          data-bend-y="565.06"
+          data-label-center-y="890.81"
+          aria-label="His sfGFP F (4967..5004)">
+          <path class="circular-preview__leader"
+            d="M 446.92 614.56 L 177.43 565.06 L 159.00 890.81"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="61.60"
+            y="877.81"
+            width="97.40"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="147.00"
+              y="890.81"
+              text-anchor="end"
+              fill="#0f223e">
+              His sfGFP F
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_12"
+          data-tooltip-name="lac operator"
+          data-tooltip-meta="protein_bind | Strand +"
+          data-tooltip-location="4897..4921"
+          data-tooltip-description="The lac repressor binds to the lac operator to inhibit transcription in E. coli. This inhibition can be relieved by addi"
+          data-feature-x="443.04"
+          data-feature-y="641.31"
+          data-bend-x="170.59"
+          data-bend-y="612.18"
+          data-label-center-y="1130.81"
+          aria-label="lac operator (4897..4921) - The lac repressor binds to the lac operator to inhibit transcription in E. coli. This inhibition can be relieved by addi">
+          <path class="circular-preview__leader"
+            d="M 443.04 641.31 L 170.59 612.18 L 159.00 1130.81"
+            stroke="#cd8d59"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="54.20"
+            y="1117.81"
+            width="104.80"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#fef2e8"
+            stroke="#cd8d59"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="147.00"
+              y="1130.81"
+              text-anchor="end"
+              fill="#0f223e">
+              lac operator
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_43"
+          data-tooltip-name="PD1 vector F"
+          data-tooltip-meta="primer_bind | Strand +"
+          data-tooltip-location="6156..6180"
+          data-tooltip-description=""
+          data-feature-x="719.54"
+          data-feature-y="328.92"
+          data-bend-x="657.54"
+          data-bend-y="62.03"
+          data-label-center-y="125.00"
+          aria-label="PD1 vector F (6156..6180)">
+          <path class="circular-preview__leader"
+            d="M 719.54 328.92 L 657.54 62.03 L 1443.00 125.00"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1443.00"
+            y="112.00"
+            width="104.80"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1455.00"
+              y="125.00"
+              text-anchor="start"
+              fill="#0f223e">
+              PD1 vector F
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_13"
+          data-tooltip-name="RBS"
+          data-tooltip-meta="rbs | Strand +"
+          data-tooltip-location="4936..4958"
+          data-tooltip-description="efficient ribosome binding site from bacteriophage T7 gene 10 (Olins and Rangwala, 1989)"
+          data-feature-x="444.72"
+          data-feature-y="627.98"
+          data-bend-x="173.55"
+          data-bend-y="588.71"
+          data-label-center-y="1090.81"
+          aria-label="RBS (4936..4958) - efficient ribosome binding site from bacteriophage T7 gene 10 (Olins and Rangwala, 1989)">
+          <path class="circular-preview__leader"
+            d="M 444.72 627.98 L 173.55 588.71 L 159.00 1090.81"
+            stroke="#a8635e"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="73.00"
+            y="1077.81"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f7ebe9"
+            stroke="#a8635e"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="147.00"
+              y="1090.81"
+              text-anchor="end"
+              fill="#0f223e">
+              RBS
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_11"
+          data-tooltip-name="T7 promoter"
+          data-tooltip-meta="promoter | Strand +"
+          data-tooltip-location="4878..4896"
+          data-tooltip-description="promoter for bacteriophage T7 RNA polymerase"
+          data-feature-x="442.30"
+          data-feature-y="649.05"
+          data-bend-x="169.28"
+          data-bend-y="625.81"
+          data-label-center-y="1170.81"
+          aria-label="T7 promoter (4878..4896) - promoter for bacteriophage T7 RNA polymerase">
+          <path class="circular-preview__leader"
+            d="M 442.30 649.05 L 169.28 625.81 L 159.00 1170.81"
+            stroke="#7553d6"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="61.60"
+            y="1157.81"
+            width="97.40"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#efe8fe"
+            stroke="#7553d6"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="147.00"
+              y="1170.81"
+              text-anchor="end"
+              fill="#0f223e">
+              T7 promoter
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_4"
+          data-tooltip-name="Z34 GS F"
+          data-tooltip-meta="primer_bind | Strand -"
+          data-tooltip-location="complement(2109..2119)"
+          data-tooltip-description=""
+          data-feature-x="1116.21"
+          data-feature-y="853.48"
+          data-bend-x="1356.13"
+          data-bend-y="985.83"
+          data-label-center-y="989.70"
+          aria-label="Z34 GS F (complement(2109..2119))">
+          <path class="circular-preview__leader"
+            d="M 1116.21 853.48 L 1356.13 985.83 L 1443.00 989.70"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1443.00"
+            y="976.70"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1455.00"
+              y="989.70"
+              text-anchor="start"
+              fill="#0f223e">
+              Z34 GS F
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_29"
+          data-tooltip-name="sfGFP NCH2 R"
+          data-tooltip-meta="primer_bind | Strand -"
+          data-tooltip-location="complement(5717..5765)"
+          data-tooltip-description=""
+          data-feature-x="565.77"
+          data-feature-y="368.51"
+          data-bend-x="418.59"
+          data-bend-y="173.89"
+          data-label-center-y="370.81"
+          aria-label="sfGFP NCH2 R (complement(5717..5765))">
+          <path class="circular-preview__leader"
+            d="M 565.77 368.51 L 418.59 173.89 L 159.00 370.81"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="54.20"
+            y="357.81"
+            width="104.80"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="147.00"
+              y="370.81"
+              text-anchor="end"
+              fill="#0f223e">
+              sfGFP NCH2 R
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_41"
+          data-tooltip-name="PDL1 vector F"
+          data-tooltip-meta="primer_bind | Strand +"
+          data-tooltip-location="6133..6180"
+          data-tooltip-description=""
+          data-feature-x="708.47"
+          data-feature-y="300.72"
+          data-bend-x="650.58"
+          data-bend-y="63.68"
+          data-label-center-y="165.00"
+          aria-label="PDL1 vector F (6133..6180)">
+          <path class="circular-preview__leader"
+            d="M 708.47 300.72 L 650.58 63.68 L 1443.00 165.00"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1443.00"
+            y="152.00"
+            width="112.20"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1455.00"
+              y="165.00"
+              text-anchor="start"
+              fill="#0f223e">
+              PDL1 vector F
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_14"
+          data-tooltip-name="vector R"
+          data-tooltip-meta="primer_bind | Strand -"
+          data-tooltip-location="complement(4951..4991)"
+          data-tooltip-description=""
+          data-feature-x="416.45"
+          data-feature-y="614.60"
+          data-bend-x="175.86"
+          data-bend-y="573.95"
+          data-label-center-y="1010.81"
+          aria-label="vector R (complement(4951..4991))">
+          <path class="circular-preview__leader"
+            d="M 416.45 614.60 L 175.86 573.95 L 159.00 1010.81"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="73.00"
+            y="997.81"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="147.00"
+              y="1010.81"
+              text-anchor="end"
+              fill="#0f223e">
+              vector R
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_21"
+          data-tooltip-name="GS sfGFP R"
+          data-tooltip-meta="primer_bind | Strand -"
+          data-tooltip-location="complement(5688..5715)"
+          data-tooltip-description=""
+          data-feature-x="553.88"
+          data-feature-y="377.86"
+          data-bend-x="399.28"
+          data-bend-y="189.10"
+          data-label-center-y="810.81"
+          aria-label="GS sfGFP R (complement(5688..5715))">
+          <path class="circular-preview__leader"
+            d="M 553.88 377.86 L 399.28 189.10 L 159.00 810.81"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="69.00"
+            y="797.81"
+            width="90.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="147.00"
+              y="810.81"
+              text-anchor="end"
+              fill="#0f223e">
+              GS sfGFP R
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_34"
+          data-tooltip-name="Z34 GS F"
+          data-tooltip-meta="primer_bind | Strand +"
+          data-tooltip-location="5772..5790"
+          data-tooltip-description=""
+          data-feature-x="578.16"
+          data-feature-y="359.52"
+          data-bend-x="438.74"
+          data-bend-y="159.27"
+          data-label-center-y="210.81"
+          aria-label="Z34 GS F (5772..5790)">
+          <path class="circular-preview__leader"
+            d="M 578.16 359.52 L 438.74 159.27 L 159.00 210.81"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="73.00"
+            y="197.81"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="147.00"
+              y="210.81"
+              text-anchor="end"
+              fill="#0f223e">
+              Z34 GS F
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_5"
+          data-tooltip-name="Z32 GS F"
+          data-tooltip-meta="primer_bind | Strand -"
+          data-tooltip-location="complement(2109..2119)"
+          data-tooltip-description=""
+          data-feature-x="1142.48"
+          data-feature-y="867.97"
+          data-bend-x="1356.13"
+          data-bend-y="985.83"
+          data-label-center-y="1029.70"
+          aria-label="Z32 GS F (complement(2109..2119))">
+          <path class="circular-preview__leader"
+            d="M 1142.48 867.97 L 1356.13 985.83 L 1443.00 1029.70"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1443.00"
+            y="1016.70"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1455.00"
+              y="1029.70"
+              text-anchor="start"
+              fill="#0f223e">
+              Z32 GS F
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_15"
+          data-tooltip-name="vector R new"
+          data-tooltip-meta="primer_bind | Strand -"
+          data-tooltip-location="complement(4951..4991)"
+          data-tooltip-description=""
+          data-feature-x="386.87"
+          data-feature-y="609.61"
+          data-bend-x="175.86"
+          data-bend-y="573.95"
+          data-label-center-y="1050.81"
+          aria-label="vector R new (complement(4951..4991))">
+          <path class="circular-preview__leader"
+            d="M 386.87 609.61 L 175.86 573.95 L 159.00 1050.81"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="54.20"
+            y="1037.81"
+            width="104.80"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="147.00"
+              y="1050.81"
+              text-anchor="end"
+              fill="#0f223e">
+              vector R new
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_42"
+          data-tooltip-name="PDL1 R"
+          data-tooltip-meta="primer_bind | Strand -"
+          data-tooltip-location="complement(6133..6157)"
+          data-tooltip-description=""
+          data-feature-x="696.75"
+          data-feature-y="272.73"
+          data-bend-x="643.63"
+          data-bend-y="65.42"
+          data-label-center-y="205.00"
+          aria-label="PDL1 R (complement(6133..6157))">
+          <path class="circular-preview__leader"
+            d="M 696.75 272.73 L 643.63 65.42 L 1443.00 205.00"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1443.00"
+            y="192.00"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1455.00"
+              y="205.00"
+              text-anchor="start"
+              fill="#0f223e">
+              PDL1 R
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_33"
+          data-tooltip-name="overlap"
+          data-tooltip-meta="misc_feature | Strand +"
+          data-tooltip-location="5742..5765"
+          data-tooltip-description=""
+          data-feature-x="551.80"
+          data-feature-y="341.50"
+          data-bend-x="424.83"
+          data-bend-y="169.24"
+          data-label-center-y="330.81"
+          aria-label="overlap (5742..5765)">
+          <path class="circular-preview__leader"
+            d="M 551.80 341.50 L 424.83 169.24 L 159.00 330.81"
+            stroke="#297c8d"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="73.00"
+            y="317.81"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e2eff1"
+            stroke="#297c8d"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="147.00"
+              y="330.81"
+              text-anchor="end"
+              fill="#0f223e">
+              overlap
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_30"
+          data-tooltip-name="sfGFP Z32 R"
+          data-tooltip-meta="primer_bind | Strand -"
+          data-tooltip-location="complement(5717..5738)"
+          data-tooltip-description=""
+          data-feature-x="543.25"
+          data-feature-y="347.97"
+          data-bend-x="411.93"
+          data-bend-y="179.00"
+          data-label-center-y="410.81"
+          aria-label="sfGFP Z32 R (complement(5717..5738))">
+          <path class="circular-preview__leader"
+            d="M 543.25 347.97 L 411.93 179.00 L 159.00 410.81"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="61.60"
+            y="397.81"
+            width="97.40"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="147.00"
+              y="410.81"
+              text-anchor="end"
+              fill="#0f223e">
+              sfGFP Z32 R
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_35"
+          data-tooltip-name="Z32 GS F"
+          data-tooltip-meta="primer_bind | Strand +"
+          data-tooltip-location="5772..5790"
+          data-tooltip-description=""
+          data-feature-x="561.02"
+          data-feature-y="334.89"
+          data-bend-x="438.74"
+          data-bend-y="159.27"
+          data-label-center-y="250.81"
+          aria-label="Z32 GS F (5772..5790)">
+          <path class="circular-preview__leader"
+            d="M 561.02 334.89 L 438.74 159.27 L 159.00 250.81"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="73.00"
+            y="237.81"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="147.00"
+              y="250.81"
+              text-anchor="end"
+              fill="#0f223e">
+              Z32 GS F
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_22"
+          data-tooltip-name="GS PD1 F"
+          data-tooltip-meta="primer_bind | Strand +"
+          data-tooltip-location="5700..5715"
+          data-tooltip-description=""
+          data-feature-x="536.79"
+          data-feature-y="353.09"
+          data-bend-x="402.17"
+          data-bend-y="186.74"
+          data-label-center-y="570.81"
+          aria-label="GS PD1 F (5700..5715)">
+          <path class="circular-preview__leader"
+            d="M 536.79 353.09 L 402.17 186.74 L 159.00 570.81"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="73.00"
+            y="557.81"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="147.00"
+              y="570.81"
+              text-anchor="end"
+              fill="#0f223e">
+              GS PD1 F
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="right"
+          data-tooltip-key="gbk_feature_6"
+          data-tooltip-name="NCH2 GS F"
+          data-tooltip-meta="primer_bind | Strand -"
+          data-tooltip-location="complement(2109..2119)"
+          data-tooltip-description=""
+          data-feature-x="1168.75"
+          data-feature-y="882.46"
+          data-bend-x="1356.13"
+          data-bend-y="985.83"
+          data-label-center-y="1069.70"
+          aria-label="NCH2 GS F (complement(2109..2119))">
+          <path class="circular-preview__leader"
+            d="M 1168.75 882.46 L 1356.13 985.83 L 1443.00 1069.70"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="1443.00"
+            y="1056.70"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="1455.00"
+              y="1069.70"
+              text-anchor="start"
+              fill="#0f223e">
+              NCH2 GS F
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_36"
+          data-tooltip-name="GS PDL1 F"
+          data-tooltip-meta="primer_bind | Strand +"
+          data-tooltip-location="5775..5824"
+          data-tooltip-description=""
+          data-feature-x="550.63"
+          data-feature-y="305.67"
+          data-bend-x="448.25"
+          data-bend-y="152.78"
+          data-label-center-y="50.81"
+          aria-label="GS PDL1 F (5775..5824)">
+          <path class="circular-preview__leader"
+            d="M 550.63 305.67 L 448.25 152.78 L 159.00 50.81"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="73.00"
+            y="37.81"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="147.00"
+              y="50.81"
+              text-anchor="end"
+              fill="#0f223e">
+              GS PDL1 F
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_17"
+          data-tooltip-name="sfGFP F"
+          data-tooltip-meta="primer_bind | Strand +"
+          data-tooltip-location="4967..5001"
+          data-tooltip-description=""
+          data-feature-x="358.28"
+          data-feature-y="598.95"
+          data-bend-x="177.26"
+          data-bend-y="565.98"
+          data-label-center-y="930.81"
+          aria-label="sfGFP F (4967..5001)">
+          <path class="circular-preview__leader"
+            d="M 358.28 598.95 L 177.26 565.98 L 159.00 930.81"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="73.00"
+            y="917.81"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="147.00"
+              y="930.81"
+              text-anchor="end"
+              fill="#0f223e">
+              sfGFP F
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_31"
+          data-tooltip-name="sfGFP Z34 R"
+          data-tooltip-meta="primer_bind | Strand -"
+          data-tooltip-location="complement(5717..5735)"
+          data-tooltip-description=""
+          data-feature-x="524.32"
+          data-feature-y="324.69"
+          data-bend-x="411.19"
+          data-bend-y="179.58"
+          data-label-center-y="450.81"
+          aria-label="sfGFP Z34 R (complement(5717..5735))">
+          <path class="circular-preview__leader"
+            d="M 524.32 324.69 L 411.19 179.58 L 159.00 450.81"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="61.60"
+            y="437.81"
+            width="97.40"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="147.00"
+              y="450.81"
+              text-anchor="end"
+              fill="#0f223e">
+              sfGFP Z34 R
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_23"
+          data-tooltip-name="Z34 GS F"
+          data-tooltip-meta="primer_bind | Strand +"
+          data-tooltip-location="5700..5715"
+          data-tooltip-description=""
+          data-feature-x="517.92"
+          data-feature-y="329.77"
+          data-bend-x="402.17"
+          data-bend-y="186.74"
+          data-label-center-y="610.81"
+          aria-label="Z34 GS F (5700..5715)">
+          <path class="circular-preview__leader"
+            d="M 517.92 329.77 L 402.17 186.74 L 159.00 610.81"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="73.00"
+            y="597.81"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="147.00"
+              y="610.81"
+              text-anchor="end"
+              fill="#0f223e">
+              Z34 GS F
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_19"
+          data-tooltip-name="superfolder GFP"
+          data-tooltip-meta="cds | Strand +"
+          data-tooltip-location="join(4986..4988,4989..5699)"
+          data-tooltip-description="mammalian codon-optimized"
+          data-feature-x="387.72"
+          data-feature-y="435.44"
+          data-bend-x="255.13"
+          data-bend-y="357.12"
+          data-label-center-y="850.81"
+          aria-label="superfolder GFP (join(4986..4988,4989..5699)) - mammalian codon-optimized">
+          <path class="circular-preview__leader"
+            d="M 387.72 435.44 L 255.13 357.12 L 159.00 850.81"
+            stroke="#3d8a69"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="32.00"
+            y="837.81"
+            width="127.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e5f2eb"
+            stroke="#3d8a69"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="147.00"
+              y="850.81"
+              text-anchor="end"
+              fill="#0f223e">
+              superfolder GFP
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_37"
+          data-tooltip-name="GS"
+          data-tooltip-meta="misc_feature | Strand +"
+          data-tooltip-location="5775..5804"
+          data-tooltip-description=""
+          data-feature-x="530.03"
+          data-feature-y="283.38"
+          data-bend-x="443.10"
+          data-bend-y="156.26"
+          data-label-center-y="90.81"
+          aria-label="GS (5775..5804)">
+          <path class="circular-preview__leader"
+            d="M 530.03 283.38 L 443.10 156.26 L 159.00 90.81"
+            stroke="#297c8d"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="73.00"
+            y="77.81"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e2eff1"
+            stroke="#297c8d"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="147.00"
+              y="90.81"
+              text-anchor="end"
+              fill="#0f223e">
+              GS
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_18"
+          data-tooltip-name="6xHis"
+          data-tooltip-meta="cds | Strand +"
+          data-tooltip-location="4968..4985"
+          data-tooltip-description="6xHis affinity tag"
+          data-feature-x="328.15"
+          data-feature-y="597.06"
+          data-bend-x="176.44"
+          data-bend-y="570.58"
+          data-label-center-y="970.81"
+          aria-label="6xHis (4968..4985) - 6xHis affinity tag">
+          <path class="circular-preview__leader"
+            d="M 328.15 597.06 L 176.44 570.58 L 159.00 970.81"
+            stroke="#3d8a69"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="73.00"
+            y="957.81"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e5f2eb"
+            stroke="#3d8a69"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="147.00"
+              y="970.81"
+              text-anchor="end"
+              fill="#0f223e">
+              6xHis
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_24"
+          data-tooltip-name="Z32 GS F"
+          data-tooltip-meta="primer_bind | Strand +"
+          data-tooltip-location="5700..5715"
+          data-tooltip-description=""
+          data-feature-x="499.05"
+          data-feature-y="306.45"
+          data-bend-x="402.17"
+          data-bend-y="186.74"
+          data-label-center-y="650.81"
+          aria-label="Z32 GS F (5700..5715)">
+          <path class="circular-preview__leader"
+            d="M 499.05 306.45 L 402.17 186.74 L 159.00 650.81"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="73.00"
+            y="637.81"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="147.00"
+              y="650.81"
+              text-anchor="end"
+              fill="#0f223e">
+              Z32 GS F
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_38"
+          data-tooltip-name="GS PD1 F"
+          data-tooltip-meta="primer_bind | Strand +"
+          data-tooltip-location="5775..5804"
+          data-tooltip-description=""
+          data-feature-x="513.10"
+          data-feature-y="258.62"
+          data-bend-x="443.10"
+          data-bend-y="156.26"
+          data-label-center-y="130.81"
+          aria-label="GS PD1 F (5775..5804)">
+          <path class="circular-preview__leader"
+            d="M 513.10 258.62 L 443.10 156.26 L 159.00 130.81"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="73.00"
+            y="117.81"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="147.00"
+              y="130.81"
+              text-anchor="end"
+              fill="#0f223e">
+              GS PD1 F
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_25"
+          data-tooltip-name="NCH2 GS F"
+          data-tooltip-meta="primer_bind | Strand +"
+          data-tooltip-location="5700..5715"
+          data-tooltip-description=""
+          data-feature-x="480.18"
+          data-feature-y="283.13"
+          data-bend-x="402.17"
+          data-bend-y="186.74"
+          data-label-center-y="690.81"
+          aria-label="NCH2 GS F (5700..5715)">
+          <path class="circular-preview__leader"
+            d="M 480.18 283.13 L 402.17 186.74 L 159.00 690.81"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="73.00"
+            y="677.81"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="147.00"
+              y="690.81"
+              text-anchor="end"
+              fill="#0f223e">
+              NCH2 GS F
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_26"
+          data-tooltip-name="GS PDL1 F"
+          data-tooltip-meta="primer_bind | Strand +"
+          data-tooltip-location="5700..5715"
+          data-tooltip-description=""
+          data-feature-x="461.30"
+          data-feature-y="259.81"
+          data-bend-x="402.17"
+          data-bend-y="186.74"
+          data-label-center-y="730.81"
+          aria-label="GS PDL1 F (5700..5715)">
+          <path class="circular-preview__leader"
+            d="M 461.30 259.81 L 402.17 186.74 L 159.00 730.81"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="73.00"
+            y="717.81"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="147.00"
+              y="730.81"
+              text-anchor="end"
+              fill="#0f223e">
+              GS PDL1 F
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_39"
+          data-tooltip-name="GS sfGFP R"
+          data-tooltip-meta="primer_bind | Strand -"
+          data-tooltip-location="complement(5775..5790)"
+          data-tooltip-description=""
+          data-feature-x="493.10"
+          data-feature-y="235.96"
+          data-bend-x="439.51"
+          data-bend-y="158.74"
+          data-label-center-y="170.81"
+          aria-label="GS sfGFP R (complement(5775..5790))">
+          <path class="circular-preview__leader"
+            d="M 493.10 235.96 L 439.51 158.74 L 159.00 170.81"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="69.00"
+            y="157.81"
+            width="90.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="147.00"
+              y="170.81"
+              text-anchor="end"
+              fill="#0f223e">
+              GS sfGFP R
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_27"
+          data-tooltip-name="vector TEV F"
+          data-tooltip-meta="primer_bind | Strand +"
+          data-tooltip-location="5706..5735"
+          data-tooltip-description=""
+          data-feature-x="448.12"
+          data-feature-y="231.95"
+          data-bend-x="408.49"
+          data-bend-y="181.69"
+          data-label-center-y="490.81"
+          aria-label="vector TEV F (5706..5735)">
+          <path class="circular-preview__leader"
+            d="M 448.12 231.95 L 408.49 181.69 L 159.00 490.81"
+            stroke="#875812"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="54.20"
+            y="477.81"
+            width="104.80"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#f2e9dc"
+            stroke="#875812"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="147.00"
+              y="490.81"
+              text-anchor="end"
+              fill="#0f223e">
+              vector TEV F
+            </text>
+          
+        </g>
+      
+        <g
+          class="circular-preview__annotation"
+          data-preview-tooltip="feature"
+          data-label-side="left"
+          data-tooltip-key="gbk_feature_28"
+          data-tooltip-name="GS"
+          data-tooltip-meta="misc_feature | Strand +"
+          data-tooltip-location="5706..5714"
+          data-tooltip-description=""
+          data-feature-x="424.71"
+          data-feature-y="212.25"
+          data-bend-x="403.38"
+          data-bend-y="185.76"
+          data-label-center-y="530.81"
+          aria-label="GS (5706..5714)">
+          <path class="circular-preview__leader"
+            d="M 424.71 212.25 L 403.38 185.76 L 159.00 530.81"
+            stroke="#297c8d"></path>
+          <rect
+            class="circular-preview__label-box"
+            x="73.00"
+            y="517.81"
+            width="86.00"
+            height="26.00"
+            rx="10"
+            ry="10"
+            fill="#e2eff1"
+            stroke="#297c8d"></rect>
+          
+            <text
+              class="circular-preview__label-text"
+              x="147.00"
+              y="530.81"
+              text-anchor="end"
+              fill="#0f223e">
+              GS
+            </text>
+          
+        </g>
+      
+        
+    <g class="circular-preview__center">
+      <circle cx="801.00" cy="679.58" r="234.00" class="circular-preview__center-disc"></circle>
+      <text x="801.00" y="665.58" class="circular-preview__title">pET28a-His-sfGFP</text>
+      <text x="801.00" y="697.58" class="circular-preview__subtitle">6,400 bp · 45 features</text>
+    </g>
+  
+      </g>
+    </svg>
+  </main>
+  
+  <script>
+    (() => {
+      const LABEL_PADDING_X = 12;
+      const MIN_LABEL_WIDTH = 70;
+      const VIEWBOX_GUTTER = 32;
+      const TOOLTIP_OFFSET = 12;
+
+      function escapeText(value) {
+        return String(value || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function ensureTooltipNode() {
+        let node = document.querySelector('.circular-preview__hover-tooltip');
+        if (node) {
+          return node;
+        }
+        node = document.createElement('div');
+        node.className = 'circular-preview__hover-tooltip';
+        node.hidden = true;
+        document.body.appendChild(node);
+        return node;
+      }
+
+      function hideTooltip() {
+        const tooltip = document.querySelector('.circular-preview__hover-tooltip');
+        if (tooltip) {
+          tooltip.hidden = true;
+          tooltip.dataset.owner = '';
+        }
+      }
+
+      function buildTooltipHtml(target) {
+        const name = String(target?.dataset?.tooltipName || '').trim();
+        const meta = String(target?.dataset?.tooltipMeta || '').trim();
+        const location = String(target?.dataset?.tooltipLocation || '').trim();
+        const description = String(target?.dataset?.tooltipDescription || '').trim();
+        if (!name && !meta && !location && !description) {
+          return '';
+        }
+        return [
+          name ? '<p class="circular-preview__hover-title">' + escapeText(name) + '</p>' : '',
+          meta ? '<p>' + escapeText(meta) + '</p>' : '',
+          location ? '<p>' + escapeText(location) + '</p>' : '',
+          description ? '<p class="circular-preview__hover-description">' + escapeText(description) + '</p>' : ''
+        ].filter(Boolean).join('');
+      }
+
+      function positionTooltip(tooltip, event) {
+        const rawX = Number(event?.clientX);
+        const rawY = Number(event?.clientY);
+        const startX = Number.isFinite(rawX) ? rawX + TOOLTIP_OFFSET : TOOLTIP_OFFSET;
+        const startY = Number.isFinite(rawY) ? rawY + TOOLTIP_OFFSET : TOOLTIP_OFFSET;
+        const tooltipRect = tooltip.getBoundingClientRect();
+        const viewportWidth = Number(window?.innerWidth) || 0;
+        const viewportHeight = Number(window?.innerHeight) || 0;
+
+        let left = Math.max(8, startX);
+        let top = Math.max(8, startY);
+
+        if (viewportWidth > 0) {
+          left = Math.min(left, Math.max(8, viewportWidth - tooltipRect.width - 8));
+        }
+        if (viewportHeight > 0) {
+          top = Math.min(top, Math.max(8, viewportHeight - tooltipRect.height - 8));
+        }
+
+        tooltip.style.left = left.toFixed(0) + 'px';
+        tooltip.style.top = top.toFixed(0) + 'px';
+      }
+
+      function showTooltip(target, event) {
+        const html = buildTooltipHtml(target);
+        if (!html) {
+          hideTooltip();
+          return;
+        }
+        const tooltip = ensureTooltipNode();
+        const ownerKey = String(target?.dataset?.tooltipKey || '');
+        if (tooltip.dataset.owner !== ownerKey) {
+          tooltip.innerHTML = html;
+          tooltip.dataset.owner = ownerKey;
+        }
+        tooltip.hidden = false;
+        positionTooltip(tooltip, event);
+      }
+
+      function bindFeatureHoverCards() {
+        const svg = document.querySelector('.preview-shell svg');
+        if (!svg || svg.dataset.hoverCardsBound === 'true') {
+          return;
+        }
+
+        svg.dataset.hoverCardsBound = 'true';
+        svg.querySelectorAll('[data-preview-tooltip="feature"]').forEach((node) => {
+          node.addEventListener('pointerenter', (event) => {
+            showTooltip(node, event);
+          });
+          node.addEventListener('pointermove', (event) => {
+            showTooltip(node, event);
+          });
+          node.addEventListener('pointerleave', () => {
+            hideTooltip();
+          });
+        });
+
+        svg.addEventListener('pointerleave', () => {
+          hideTooltip();
+        });
+        window.addEventListener('blur', () => {
+          hideTooltip();
+        });
+      }
+
+      function fitAnnotationBoxes() {
+        const svg = document.querySelector('.preview-shell svg');
+        const scene = svg?.querySelector('.circular-preview__scene');
+        if (!svg || !scene) {
+          return;
+        }
+
+        svg.querySelectorAll('.circular-preview__annotation').forEach((annotation) => {
+          const rect = annotation.querySelector('.circular-preview__label-box');
+          const leader = annotation.querySelector('.circular-preview__leader');
+          const textNodes = annotation.querySelectorAll('.circular-preview__label-text');
+          if (!rect || !leader || !textNodes.length) {
+            return;
+          }
+
+          let minX = Number.POSITIVE_INFINITY;
+          let maxX = Number.NEGATIVE_INFINITY;
+          textNodes.forEach((node) => {
+            const box = node.getBBox();
+            if (!Number.isFinite(box.x) || !Number.isFinite(box.width)) {
+              return;
+            }
+            minX = Math.min(minX, box.x);
+            maxX = Math.max(maxX, box.x + box.width);
+          });
+
+          if (!Number.isFinite(minX) || !Number.isFinite(maxX)) {
+            return;
+          }
+
+          const width = Math.max(MIN_LABEL_WIDTH, (maxX - minX) + (LABEL_PADDING_X * 2));
+          const x = minX - LABEL_PADDING_X;
+          rect.setAttribute('x', x.toFixed(2));
+          rect.setAttribute('width', width.toFixed(2));
+
+          const featureX = Number(annotation.dataset.featureX);
+          const featureY = Number(annotation.dataset.featureY);
+          const bendX = Number(annotation.dataset.bendX);
+          const bendY = Number(annotation.dataset.bendY);
+          const centerY = Number(annotation.dataset.labelCenterY);
+          if (![featureX, featureY, bendX, bendY, centerY].every(Number.isFinite)) {
+            return;
+          }
+
+          const endX = annotation.dataset.labelSide === 'right'
+            ? x
+            : x + width;
+          leader.setAttribute(
+            'd',
+            `M ${featureX.toFixed(2)} ${featureY.toFixed(2)} L ${bendX.toFixed(2)} ${bendY.toFixed(2)} L ${endX.toFixed(2)} ${centerY.toFixed(2)}`
+          );
+        });
+
+        const bounds = scene.getBBox();
+        if (![bounds.x, bounds.y, bounds.width, bounds.height].every(Number.isFinite)) {
+          return;
+        }
+
+        svg.setAttribute(
+          'viewBox',
+          [
+            Math.floor(bounds.x - VIEWBOX_GUTTER),
+            Math.floor(bounds.y - VIEWBOX_GUTTER),
+            Math.ceil(bounds.width + (VIEWBOX_GUTTER * 2)),
+            Math.ceil(bounds.height + (VIEWBOX_GUTTER * 2))
+          ].join(' ')
+        );
+      }
+
+      function scheduleFit() {
+        bindFeatureHoverCards();
+        window.requestAnimationFrame(() => {
+          fitAnnotationBoxes();
+          bindFeatureHoverCards();
+          window.setTimeout(fitAnnotationBoxes, 48);
+        });
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', scheduleFit, { once: true });
+      } else {
+        scheduleFit();
+      }
+
+      if (document.fonts?.ready) {
+        document.fonts.ready.then(scheduleFit).catch(() => {});
+      }
+
+      window.addEventListener('load', scheduleFit, { once: true });
+    })();
+  </script>
+</body>
+</html>

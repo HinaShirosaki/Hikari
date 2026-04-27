@@ -44,6 +44,7 @@ export const CLONING_PRIMER_TM_THRESHOLDS = Object.freeze({
 });
 
 export const DEFAULT_CLONING_PREFERENCES = Object.freeze({
+  allowRestrictionLigation: true,
   preferRestrictionLigation: true,
   preferGibsonForMultiFragment: true,
   maxPrimerEncodedInsertionAA: 30,
@@ -1616,11 +1617,19 @@ export function assembleCloningPlan(payload = {}) {
     preferences: config,
     circular: Boolean(selectedHost)
   });
-  const restrictionLigation = evaluateRestrictionLigation({
-    host: selectedHost,
-    fragmentMap: orderedFragmentMap,
-    preferences: config
-  });
+  const restrictionLigation = config?.allowRestrictionLigation === false
+    ? {
+        feasible: false,
+        selectedSites: null,
+        candidatePairs: [],
+        warnings: [],
+        reason: 'Restriction-ligation is disabled for this cloning plan.'
+      }
+    : evaluateRestrictionLigation({
+        host: selectedHost,
+        fragmentMap: orderedFragmentMap,
+        preferences: config
+      });
   const siteDirectedMutagenesis = evaluateSiteDirectedMutagenesis({
     host: selectedHost,
     resultSequence: normalizedResultSequence,
