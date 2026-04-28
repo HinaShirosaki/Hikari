@@ -3,6 +3,23 @@ module.exports = function registerStorageAndImportContracts(context = {}) {
   const __dirname = context.__dirname || process.cwd();
 
   with (scope) {
+    const readLocalSource = (...parts) => fs.readFileSync(path.join(__dirname, ...parts), 'utf8');
+    const readMainProcessSource = () => [
+      readLocalSource('src', 'main', 'main.js'),
+      readLocalSource('src', 'main', 'app', 'start-main-app.js'),
+      readLocalSource('src', 'main', 'app', 'main-runtime.js'),
+      readLocalSource('src', 'main', 'app', 'agent-log-runtime.js')
+    ].join('\n');
+    const readPreloadStorageSource = () => [
+      readLocalSource('src', 'main', 'preload.js'),
+      readLocalSource('src', 'main', 'preload', 'create-preload-api.js'),
+      readLocalSource('src', 'main', 'preload', 'api', 'storage-api.js')
+    ].join('\n');
+    const readRendererStorageSource = () => [
+      readLocalSource('src', 'renderer', 'app', 'start-renderer-app.js'),
+      readLocalSource('src', 'renderer', 'app', 'storage-import.js')
+    ].join('\n');
+
     test('data-helpers default bundle hydrator preserves parsed snapshot settings', async () => {
       const { createMainDataHelpers } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'data-helpers.js'));
       const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'data-helpers-default-hydrate-'));
@@ -335,11 +352,11 @@ module.exports = function registerStorageAndImportContracts(context = {}) {
     });
 
     test('chemical inventory sync uses sqlite-only bundle writes instead of a chemical json file', () => {
-      const preloadSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'preload.js'), 'utf8');
+      const preloadSource = readPreloadStorageSource();
       const dataRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-data-ipc.js'), 'utf8');
       const chemicalInventorySource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'lab-common-inventory.js'), 'utf8');
-      assert.match(preloadSource, /syncSqliteBundle:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\('storage:sync-sqlite-bundle', payload\)/);
-      assert.match(dataRegistrarSource, /ipcMain\.handle\('storage:sync-sqlite-bundle'/);
+      assert.match(preloadSource, /syncSqliteBundle:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\(STORAGE\.SYNC_SQLITE_BUNDLE, payload\)/);
+      assert.match(dataRegistrarSource, /ipcMain\.handle\(STORAGE\.SYNC_SQLITE_BUNDLE/);
       assert.match(chemicalInventorySource, /window\.enanaApi\?\.syncSqliteBundle/);
       assert.match(chemicalInventorySource, /const targetPath = `\$\{normalizedRoot\}\/enana-chemicals\.index\.sqlite`;/);
       assert.equal(chemicalInventorySource.includes('enana-chemicals.ena.json'), false);
@@ -348,7 +365,7 @@ module.exports = function registerStorageAndImportContracts(context = {}) {
     test('chemical bundle hydration/import no longer depends on legacy chemical json fallback', () => {
       const hydrationSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'storage-hydration.js'), 'utf8');
       const importSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'storage-import.js'), 'utf8');
-      const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
+      const mainSource = readMainProcessSource();
       assert.equal(hydrationSource.includes('legacyChemicalsPath'), false);
       assert.equal(hydrationSource.includes('hydrateFromLegacyChemicals'), false);
       assert.equal(mainSource.includes('CHEMICALS_DATA_FILE_PATH'), false);
@@ -358,11 +375,11 @@ module.exports = function registerStorageAndImportContracts(context = {}) {
     });
 
     test('renderer storage import wiring runs on save callback and startup hydration path', () => {
-      const rendererSource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'renderer.js'), 'utf8');
-      assert.match(rendererSource, /onStoragePathSaved:\s*async\s*\(storagePath\)\s*=>\s*\{\s*const result = await runStorageRootImport\(storagePath, \{ persistMergedState: true \}\);/);
+      const rendererSource = readRendererStorageSource();
+      assert.match(rendererSource, /onStoragePathSaved:\s*async\s*\(storagePath\)\s*=>\s*\{\s*const result = await storageImportController\.runStorageRootImport\(storagePath, \{ persistMergedState: true \}\);/);
       assert.match(rendererSource, /async function hydrateStateFromStorageRoot\(\)/);
       assert.equal(rendererSource.includes('hydrateStateFromDataFile'), false);
-      assert.match(rendererSource, /async function initApp\(\)\s*\{\s*await hydrateStateFromStorageRoot\(\);/);
+      assert.match(rendererSource, /async function initApp\(\)\s*\{\s*await storageImportController\.hydrateStateFromStorageRoot\(\);/);
       assert.match(rendererSource, /state\.projects = mergeRecordsById\(state\.projects, patch\.projects, 'project'\);/);
       assert.match(rendererSource, /mergeStorageImportPatch\(result\.statePatch\);/);
       assert.equal(/state\.settings\s*=\s*result\.statePatch\.settings/.test(rendererSource), false);
@@ -378,12 +395,12 @@ module.exports = function registerStorageAndImportContracts(context = {}) {
       const agentDir = path.join(__dirname, 'src', 'main', 'helpers', 'agent');
       const agentPath = (...parts) => path.join(agentDir, ...parts);
       const agentRegistrarPath = (...parts) => path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc', ...parts);
-      const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
+      const mainSource = readMainProcessSource();
       const appPathsSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'app-paths.js'), 'utf8');
       const agentChatHandlerSource = fs.readFileSync(agentRegistrarPath('agent-chat-handler.js'), 'utf8');
       const controllerUtilsSource = fs.readFileSync(agentPath('shared', 'agent-controller-utils.js'), 'utf8');
       assert.match(mainSource, /const AGENT_CHAT_LOG_FILE_NAME = 'agent-chat\.log';/);
-      assert.match(mainSource, /void ensureAgentChatLogFile\(getAgentChatLogPath\(\)\);/);
+      assert.match(mainSource, /runtime\.agentLogRuntime\.ensureAgentChatLogFile\(runtime\.appPaths\.getAgentChatLogPath\(\)\)/);
       assert.match(mainSource, /createMainAppPaths/);
       assert.match(appPathsSource, /ENANA_AGENT_CHAT_LOG_PATH/);
       assert.match(controllerUtilsSource, /apiKeyProvided: Boolean\(cleanText\(source\.apiKey, 12\)\)/);

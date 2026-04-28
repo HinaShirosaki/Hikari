@@ -104,7 +104,8 @@ export function initSequenceViewer(options = {}) {
     : null;
 
   function getBridge() {
-    return options?.apiBridge
+    return (typeof options?.getApiBridge === 'function' ? options.getApiBridge() : null)
+      || options?.apiBridge
       || options?.bridge
       || globalThis?.window?.enanaApi
       || globalThis?.enanaApi

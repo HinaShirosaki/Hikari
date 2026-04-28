@@ -29,7 +29,6 @@ function createScienceToolRoundLoopRuntime(deps = {}) {
     : null;
 
   const {
-    buildToolRoundSatisfactionFeedback,
     checkCurrentToolRoundSatisfaction
   } = createScienceToolRoundSatisfactionRuntime(deps);
 
@@ -459,22 +458,22 @@ function createScienceToolRoundLoopRuntime(deps = {}) {
       state.intermediateStates.push(buildIntermediateState(
         'science_tool_round_satisfaction',
         toolRoundSatisfaction.satisfied === true
-          ? 'Main agent judged the latest tool round satisfying enough to pre-synthesize.'
-          : 'Main agent judged the latest tool round not satisfying enough yet.',
+          ? 'Main agent committed to a synthesis-ready answer after the latest tool round.'
+          : 'Main agent committed to another tool round before synthesizing.',
         {
           assumptions: [
             cleanText(toolRoundSatisfaction.reason, 320)
               || (
                 toolRoundSatisfaction.satisfied === true
-                  ? 'The current tool evidence feels sufficient for pre-synthesis.'
-                  : 'The current tool evidence does not feel sufficient yet.'
+                  ? 'The model produced a synthesis-ready draft instead of another tool call.'
+                  : 'The model emitted another tool call instead of a synthesis-ready draft.'
               )
           ],
           evidence: roundEvidence,
           open_questions: toolRoundSatisfaction.satisfied === true
             ? []
             : uniqueStrings([
-              'Another tool round is needed before pre-synthesis.'
+              'Another tool round is queued before synthesis.'
             ], 4),
           confidence: toolRoundSatisfaction.satisfied === true
             ? (roundSucceeded ? 0.66 : 0.54)
@@ -491,8 +490,8 @@ function createScienceToolRoundLoopRuntime(deps = {}) {
         message: cleanText(toolRoundSatisfaction.reason, 320)
           || (
             toolRoundSatisfaction.satisfied === true
-              ? 'Main agent marked the tool round as satisfying.'
-              : 'Main agent requested another tool round before pre-synthesis.'
+              ? 'Main agent committed to a synthesis-ready answer.'
+              : 'Main agent committed to another tool round before synthesizing.'
           ),
         meta: {
           round: state.roundsExecuted,
@@ -506,19 +505,6 @@ function createScienceToolRoundLoopRuntime(deps = {}) {
       if (toolRoundSatisfaction.satisfied !== true && state.roundsExecuted < maxRounds) {
         state.currentSession = toolRoundSatisfaction.session || state.currentSession;
         state.latestAssistantText = cleanText(toolRoundSatisfaction.latestAssistantText, 12000) || assistantAfterToolRound;
-        const hasPendingToolUse = asArray(toolRoundSatisfaction.pendingValidToolCalls).length > 0
-          || asArray(toolRoundSatisfaction.pendingToolCalls).length > 0;
-        if (!hasPendingToolUse) {
-          state.currentSession = await continueAgentSessionWithUserMessage(
-            state.currentSession,
-            buildToolRoundSatisfactionFeedback(toolRoundSatisfaction),
-            traceContext
-          );
-          state.latestAssistantText = cleanText(extractAgentSessionText(state.currentSession), 12000);
-          if (state.toolRoundArtifacts.length) {
-            state.toolRoundArtifacts[state.toolRoundArtifacts.length - 1].assistant_after_tool = cleanText(state.latestAssistantText, 4000);
-          }
-        }
         continue;
       }
       await evaluateCurrentLoopState(state, {

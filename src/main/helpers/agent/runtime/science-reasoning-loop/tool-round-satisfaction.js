@@ -3,65 +3,15 @@
 const { createAgentLlmRuntimeHelpers } = require('../../shared/agent-llm-utils.js');
 
 function createScienceToolRoundSatisfactionRuntime(deps = {}) {
-  const {
-    asArray,
-    cleanText,
-    safeParseJson
-  } = createAgentLlmRuntimeHelpers(deps);
+  const { asArray, cleanText } = createAgentLlmRuntimeHelpers(deps);
 
-  function normalizeToolRoundSatisfactionPayload(rawPayload, fallbackReason = '') {
-    const source = rawPayload && typeof rawPayload === 'object' ? rawPayload : {};
-    return {
-      satisfied: source.satisfied === true,
-      reason: cleanText(source.reason, 320)
-        || cleanText(fallbackReason, 320)
-        || 'No tool-round satisfaction rationale was provided.',
-      trace_sentence: cleanText(source.trace_sentence, 240)
-        || 'I am deciding whether the latest tool round feels sufficient before pre-synthesis.'
-    };
-  }
-
-  function parseToolRoundSatisfactionResponse(text = '') {
-    const rawText = cleanText(text, 12000);
-    if (!rawText) {
-      return null;
-    }
-    const xmlSatisfied = rawText.match(/<satisfied>\s*(true|false)\s*<\/satisfied>/i);
-    if (xmlSatisfied) {
-      const xmlReason = rawText.match(/<reason>\s*([\s\S]*?)\s*<\/reason>/i);
-      return {
-        satisfied: /^true$/i.test(String(xmlSatisfied[1] || '')),
-        reason: cleanText(xmlReason?.[1], 320),
-        trace_sentence: 'I am deciding whether the latest tool round feels sufficient before pre-synthesis.'
-      };
-    }
-    const fencedJson = rawText.match(/```(?:json)?\s*([\s\S]*?)```/i);
-    const parsed = safeParseJson(fencedJson?.[1] || rawText, null);
-    if (parsed && typeof parsed === 'object' && typeof parsed.satisfied === 'boolean') {
-      return {
-        satisfied: parsed.satisfied === true,
-        reason: cleanText(parsed.reason, 320),
-        trace_sentence: 'I am deciding whether the latest tool round feels sufficient before pre-synthesis.'
-      };
-    }
-    return null;
-  }
-
-  function buildToolRoundSatisfactionQuestion() {
+  function buildToolRoundDecisionQuestion() {
     return [
-      'Before pre-synthesizing, decide whether the current tool call results are satisfying.',
-      'If they are satisfying, reply with only this block and nothing else:',
-      '<tool_round_satisfaction><satisfied>true</satisfied><reason>one short sentence</reason></tool_round_satisfaction>',
-      'If they are not satisfying, do not reply with a satisfaction block. Continue directly with the next best tool call or tightly scoped parallel tool batch.'
+      'The latest tool round just completed. Pick exactly one next step and respond accordingly:',
+      '- If more evidence is still needed, emit your next tool call (one call, or a tightly scoped parallel batch). Do not also write prose; the runtime will execute the calls and return their outputs.',
+      '- Otherwise, if the current evidence is enough to answer the user, write your synthesis-ready draft answer as plain assistant text and do not call any tool.',
+      'Choose only one path. The runtime will execute any tool calls you emit, or hand the assistant text off to final synthesis.'
     ].join('\n');
-  }
-
-  function buildToolRoundSatisfactionFeedback(satisfaction) {
-    return [
-      'The latest tool results are not satisfying yet.',
-      cleanText(satisfaction?.reason, 320) ? `Reason: ${cleanText(satisfaction.reason, 320)}` : '',
-      'Continue with the next best tool call or tightly scoped parallel tool batch. Do not pre-synthesize yet.'
-    ].filter(Boolean).join('\n');
   }
 
   async function checkCurrentToolRoundSatisfaction(input = {}) {
@@ -83,23 +33,22 @@ function createScienceToolRoundSatisfactionRuntime(deps = {}) {
     const toolSchemaMap = input.toolSchemaMap instanceof Map ? input.toolSchemaMap : new Map();
     const session = input.session || null;
     const assistantTextForRound = cleanText(input.assistantTextForRound, 12000);
-    const roundsExecuted = Number(input.roundsExecuted) || 0;
-    const maxRounds = Number(input.maxRounds) || 0;
     const traceContext = input.traceContext || null;
 
     if (askMainAgentToolRoundSatisfaction) {
-      const overridden = normalizeToolRoundSatisfactionPayload(
-        await askMainAgentToolRoundSatisfaction({
-          session,
-          latestAssistantText: assistantTextForRound,
-          roundsExecuted,
-          maxRounds,
-          traceContext
-        }),
-        'Main-agent tool-round satisfaction check returned no explicit reason.'
-      );
+      const overridden = await askMainAgentToolRoundSatisfaction({
+        session,
+        latestAssistantText: assistantTextForRound,
+        roundsExecuted: Number(input.roundsExecuted) || 0,
+        maxRounds: Number(input.maxRounds) || 0,
+        traceContext
+      }) || {};
       return {
-        ...overridden,
+        satisfied: overridden?.satisfied === true,
+        reason: cleanText(overridden?.reason, 320)
+          || 'Custom next-step hook returned no explicit reason.',
+        trace_sentence: cleanText(overridden?.trace_sentence, 240)
+          || 'I am deciding the next step from the custom hook.',
         session,
         latestAssistantText: assistantTextForRound,
         pendingToolCalls: [],
@@ -107,55 +56,42 @@ function createScienceToolRoundSatisfactionRuntime(deps = {}) {
       };
     }
 
-    const satisfactionSession = await continueAgentSessionWithUserMessage(
+    const decisionSession = await continueAgentSessionWithUserMessage(
       session,
-      buildToolRoundSatisfactionQuestion(),
+      buildToolRoundDecisionQuestion(),
       traceContext
     );
-    const satisfactionText = cleanText(extractAgentSessionText(satisfactionSession), 12000);
-    const pendingToolCalls = asArray(extractAgentSessionFunctionCalls(satisfactionSession)).map(normalizeToolCall);
+    const decisionText = cleanText(extractAgentSessionText(decisionSession), 12000);
+    const pendingToolCalls = asArray(extractAgentSessionFunctionCalls(decisionSession)).map(normalizeToolCall);
     const pendingValidToolCalls = pendingToolCalls.filter((call) => toolSchemaMap.has(call.name));
-    const parsedSatisfaction = normalizeToolRoundSatisfactionPayload(
-      parseToolRoundSatisfactionResponse(satisfactionText),
-      satisfactionText
-    );
 
-    if (pendingValidToolCalls.length) {
+    if (pendingToolCalls.length > 0) {
       return {
-        ...parsedSatisfaction,
         satisfied: false,
-        session: satisfactionSession,
-        latestAssistantText: satisfactionText,
+        reason: 'Main agent committed to another tool round.',
+        trace_sentence: 'I am running another tool round before synthesizing.',
+        session: decisionSession,
+        latestAssistantText: decisionText,
         pendingToolCalls,
         pendingValidToolCalls
       };
     }
 
-    if (parsedSatisfaction.satisfied === true) {
-      return {
-        ...parsedSatisfaction,
-        session,
-        latestAssistantText: assistantTextForRound,
-        pendingToolCalls: [],
-        pendingValidToolCalls: []
-      };
-    }
-
     return {
-      ...parsedSatisfaction,
-      satisfied: false,
-      session: satisfactionSession,
-      latestAssistantText: satisfactionText,
-      pendingToolCalls,
+      satisfied: true,
+      reason: decisionText
+        ? 'Main agent committed to a synthesis-ready answer.'
+        : 'Main agent emitted no further tool call; treating as ready for synthesis.',
+      trace_sentence: 'I am moving to final synthesis with the current evidence.',
+      session: decisionSession,
+      latestAssistantText: decisionText || assistantTextForRound,
+      pendingToolCalls: [],
       pendingValidToolCalls: []
     };
   }
 
   return {
-    normalizeToolRoundSatisfactionPayload,
-    parseToolRoundSatisfactionResponse,
-    buildToolRoundSatisfactionQuestion,
-    buildToolRoundSatisfactionFeedback,
+    buildToolRoundDecisionQuestion,
     checkCurrentToolRoundSatisfaction
   };
 }

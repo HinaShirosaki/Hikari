@@ -13,6 +13,7 @@ const {
   DRAFT_TYPE_LABELS,
   FIELD_LABEL_MAP
 } = require('./telegram-bot/config.js');
+const { TELEGRAM_COMMAND_EVENT } = require('../../shared/ipc/channels');
 
 function getMainWindowSafe(getMainWindow) {
   const mainWindow = typeof getMainWindow === 'function' ? getMainWindow() : null;
@@ -131,7 +132,7 @@ function sendTelegramCommandToRenderer(getMainWindow, payload) {
   if (!mainWindow) {
     return false;
   }
-  mainWindow.webContents.send('telegram-command', payload);
+  mainWindow.webContents.send(TELEGRAM_COMMAND_EVENT, payload);
   return true;
 }
 

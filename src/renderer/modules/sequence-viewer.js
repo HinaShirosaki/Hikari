@@ -22,15 +22,18 @@ function readWrapperStoragePath() {
 }
 
 export function initSequenceViewer(options = {}) {
-  const bridge = options?.apiBridge
-    || options?.bridge
-    || globalThis?.window?.enanaApi
-    || globalThis?.enanaApi
-    || ((typeof window !== 'undefined' && window?.enanaApi) ? window.enanaApi : null);
+  const getApiBridge = typeof options?.getApiBridge === 'function'
+    ? options.getApiBridge
+    : () => options?.apiBridge
+      || options?.bridge
+      || globalThis?.window?.enanaApi
+      || globalThis?.enanaApi
+      || ((typeof window !== 'undefined' && window?.enanaApi) ? window.enanaApi : null);
   return indexModule.initSequenceViewer({
     ...options,
     document: options?.document || globalThis?.document || (typeof document !== 'undefined' ? document : null),
-    apiBridge: bridge,
+    apiBridge: getApiBridge(),
+    getApiBridge,
     storagePath: String(options?.storagePath || readWrapperStoragePath() || '').trim()
   });
 }
