@@ -6,6 +6,20 @@ module.exports = function registerAgentContractsA(context = {}) {
     const agentDir = path.join(__dirname, 'src', 'main', 'helpers', 'agent');
     const agentPath = (...parts) => path.join(agentDir, ...parts);
     const agentRegistrarPath = (...parts) => path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc', ...parts);
+    const readLocalSource = (...parts) => fs.readFileSync(path.join(__dirname, ...parts), 'utf8');
+    const readMainProcessSource = () => [
+      readLocalSource('src', 'main', 'main.js'),
+      readLocalSource('src', 'main', 'app', 'start-main-app.js'),
+      readLocalSource('src', 'main', 'app', 'main-runtime.js'),
+      readLocalSource('src', 'main', 'ipc', 'index.js')
+    ].join('\n');
+    const readPreloadSource = () => [
+      readLocalSource('src', 'main', 'preload.js'),
+      readLocalSource('src', 'main', 'preload', 'create-preload-api.js'),
+      readLocalSource('src', 'main', 'preload', 'api', 'agent-api.js'),
+      readLocalSource('src', 'main', 'preload', 'api', 'llm-api.js'),
+      readLocalSource('src', 'main', 'preload', 'api', 'system-api.js')
+    ].join('\n');
 
     test('agent registrar keeps intent-only lifecycle stages and replay IPC handlers', () => {
       const agentChatHandlerSource = fs.readFileSync(agentRegistrarPath('agent-chat-handler.js'), 'utf8');
@@ -18,14 +32,14 @@ module.exports = function registerAgentContractsA(context = {}) {
       assert.match(controllerCoreSource, /stage: 'controller_intent_only_selected'/);
       assert.match(controllerCoreSource, /stage: 'controller_intent_only'/);
       assert.match(controllerCoreSource, /stage: 'parser_completed'/);
-      assert.match(logHandlersSource, /ipcMain\.handle\('agent:logs:list-requests'/);
-      assert.match(logHandlersSource, /ipcMain\.handle\('agent:logs:replay'/);
+      assert.match(logHandlersSource, /ipcMain\.handle\(AGENT\.LOGS_LIST_REQUESTS/);
+      assert.match(logHandlersSource, /ipcMain\.handle\(AGENT\.LOGS_REPLAY/);
       assert.equal(/agent-validation-safety/.test(combinedSource), false);
     });
 
     test('agent no longer depends on a serialized io contract file', () => {
-      const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
-      const preloadSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'preload.js'), 'utf8');
+      const mainSource = readMainProcessSource();
+      const preloadSource = readPreloadSource();
       const promptsSource = fs.readFileSync(path.join(__dirname, 'data', 'llm-prompts.json'), 'utf8');
       assert.equal(mainSource.includes('agent-io-contract.json'), false);
       assert.equal(mainSource.includes("agent:get-io-contract"), false);
@@ -56,43 +70,43 @@ module.exports = function registerAgentContractsA(context = {}) {
     });
 
     test('agent log replay and developer tool smoke-test IPC bridges remain wired without contract file', () => {
-      const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
+      const mainSource = readMainProcessSource();
       const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');
       const agentChatHandlerSource = fs.readFileSync(agentRegistrarPath('agent-chat-handler.js'), 'utf8');
       const logHandlersSource = fs.readFileSync(agentRegistrarPath('agent-log-handlers.js'), 'utf8');
-      const preloadSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'preload.js'), 'utf8');
+      const preloadSource = readPreloadSource();
       assert.match(mainSource, /createMainAgentServices/);
       assert.match(mainAgentServicesSource, /createAgentToolSmokeTestRuntime/);
       assert.match(mainSource, /registerAgentIpc/);
-      assert.match(logHandlersSource, /ipcMain\.handle\('agent:developer:test-tools'/);
+      assert.match(logHandlersSource, /ipcMain\.handle\(AGENT\.DEVELOPER_TEST_TOOLS/);
       assert.match(logHandlersSource, /agentToolSmokeTestRuntime\.runTool/);
       assert.match(logHandlersSource, /normalizedPayload\?\.toolName/);
-      assert.match(logHandlersSource, /ipcMain\.handle\('agent:logs:list-requests'/);
-      assert.match(logHandlersSource, /ipcMain\.handle\('agent:logs:replay'/);
-      assert.match(agentChatHandlerSource, /agent-progress/);
+      assert.match(logHandlersSource, /ipcMain\.handle\(AGENT\.LOGS_LIST_REQUESTS/);
+      assert.match(logHandlersSource, /ipcMain\.handle\(AGENT\.LOGS_REPLAY/);
+      assert.match(agentChatHandlerSource, /AGENT_PROGRESS_EVENT/);
       assert.match(agentChatHandlerSource, /clientRequestId/);
       assert.match(agentChatHandlerSource, /request_id:/);
-      assert.match(preloadSource, /agentDeveloperTestTools:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\('agent:developer:test-tools', payload\)/);
-      assert.match(preloadSource, /agentLogsListRequests:\s*\(\)\s*=>\s*ipcRenderer\.invoke\('agent:logs:list-requests'\)/);
-      assert.match(preloadSource, /agentLogsReplay:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\('agent:logs:replay', payload\)/);
+      assert.match(preloadSource, /agentDeveloperTestTools:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\(AGENT\.DEVELOPER_TEST_TOOLS, payload\)/);
+      assert.match(preloadSource, /agentLogsListRequests:\s*\(\)\s*=>\s*ipcRenderer\.invoke\(AGENT\.LOGS_LIST_REQUESTS\)/);
+      assert.match(preloadSource, /agentLogsReplay:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\(AGENT\.LOGS_REPLAY, payload\)/);
       assert.match(preloadSource, /onAgentProgress:\s*\(handler\)\s*=>\s*\{/);
-      assert.match(preloadSource, /ipcRenderer\.on\('agent-progress', listener\)/);
+      assert.match(preloadSource, /ipcRenderer\.on\(AGENT_PROGRESS_EVENT, listener\)/);
     });
 
     test('agent chat session log IPC bridges are wired through agent registrar and preload', () => {
-      const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
+      const mainSource = readMainProcessSource();
       const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');
       const logHandlersSource = fs.readFileSync(agentRegistrarPath('agent-log-handlers.js'), 'utf8');
-      const preloadSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'preload.js'), 'utf8');
+      const preloadSource = readPreloadSource();
       assert.match(mainSource, /createMainAgentServices/);
       assert.match(mainAgentServicesSource, /createAgentChatLogRuntime/);
       assert.match(mainSource, /registerAgentIpc/);
-      assert.match(logHandlersSource, /ipcMain\.handle\('agent:chat-log:create-session'/);
-      assert.match(logHandlersSource, /ipcMain\.handle\('agent:chat-log:list-sessions'/);
-      assert.match(logHandlersSource, /ipcMain\.handle\('agent:chat-log:get-session'/);
-      assert.match(preloadSource, /agentChatLogCreateSession:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\('agent:chat-log:create-session', payload\)/);
-      assert.match(preloadSource, /agentChatLogListSessions:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\('agent:chat-log:list-sessions', payload\)/);
-      assert.match(preloadSource, /agentChatLogGetSession:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\('agent:chat-log:get-session', payload\)/);
+      assert.match(logHandlersSource, /ipcMain\.handle\(AGENT\.CHAT_LOG_CREATE_SESSION/);
+      assert.match(logHandlersSource, /ipcMain\.handle\(AGENT\.CHAT_LOG_LIST_SESSIONS/);
+      assert.match(logHandlersSource, /ipcMain\.handle\(AGENT\.CHAT_LOG_GET_SESSION/);
+      assert.match(preloadSource, /agentChatLogCreateSession:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\(AGENT\.CHAT_LOG_CREATE_SESSION, payload\)/);
+      assert.match(preloadSource, /agentChatLogListSessions:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\(AGENT\.CHAT_LOG_LIST_SESSIONS, payload\)/);
+      assert.match(preloadSource, /agentChatLogGetSession:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\(AGENT\.CHAT_LOG_GET_SESSION, payload\)/);
     });
 
     test('agent registrar controller output returns parser payload and optional developer trace', () => {
@@ -132,7 +146,7 @@ module.exports = function registerAgentContractsA(context = {}) {
     });
 
     test('main agent logs persist redacted llm traces and replay wiring', () => {
-      const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
+      const mainSource = readMainProcessSource();
       const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');
       const controllerUtilsSource = fs.readFileSync(agentPath('shared', 'agent-controller-utils.js'), 'utf8');
       const observabilitySource = fs.readFileSync(agentPath('shared', 'agent-observability.js'), 'utf8');
@@ -177,7 +191,7 @@ module.exports = function registerAgentContractsA(context = {}) {
     });
 
     test('science controller path is wired through the agent registrar and shared reasoning loop', () => {
-      const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
+      const mainSource = readMainProcessSource();
       const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');
       const dispatcherSource = fs.readFileSync(agentRegistrarPath('agent-intent-dispatcher.js'), 'utf8');
       assert.match(mainSource, /createMainAgentServices/);
@@ -195,9 +209,9 @@ module.exports = function registerAgentContractsA(context = {}) {
       const purchaseSource = fs.readFileSync(agentPath('tools', 'agent-purchase-recommendation.js'), 'utf8');
       const executorsSource = fs.readFileSync(agentPath('tools', 'register-agent-tool-executors.js'), 'utf8');
       const dispatcherSource = fs.readFileSync(agentRegistrarPath('agent-intent-dispatcher.js'), 'utf8');
-      const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
+      const mainSource = readMainProcessSource();
       const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');
-      const preloadSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'preload.js'), 'utf8');
+      const preloadSource = readPreloadSource();
       const systemRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-system-ipc.js'), 'utf8');
 
       assert.match(purchaseSource, /function createPurchaseRecommendationRuntime\(deps = \{\}\)/);
@@ -213,10 +227,11 @@ module.exports = function registerAgentContractsA(context = {}) {
       assert.match(dispatcherSource, /required_terms:\s*parseCompactList\(parserPayload\?\.entities\?\.required_attributes/);
       assert.match(dispatcherSource, /stage:\s*'purchase_recommendation_started'/);
       assert.match(dispatcherSource, /stage:\s*'purchase_recommendation_completed'/);
-      assert.match(preloadSource, /openExternalUrl:\s*\(url\)\s*=>\s*ipcRenderer\.invoke\('system:open-external-url', \{ url \}\)/);
-      assert.match(systemRegistrarSource, /ipcMain\.handle\('system:open-external-url'/);
+      assert.match(preloadSource, /openExternalUrl:\s*\(url\)\s*=>\s*ipcRenderer\.invoke\(SYSTEM\.OPEN_EXTERNAL_URL, \{ url \}\)/);
+      assert.match(systemRegistrarSource, /ipcMain\.handle\(SYSTEM\.OPEN_EXTERNAL_URL/);
       assert.match(systemRegistrarSource, /shell\.openExternal\(url\)/);
-      assert.match(mainSource, /registerSystemIpc\(\{[\s\S]*shell,/);
+      assert.match(mainSource, /registerSystemIpc\(system\)/);
+      assert.match(mainSource, /system:\s*\{[\s\S]*shell,/);
     });
 
     test('agent tool loading and execution helpers expose catalogs and generic executor registry', () => {
@@ -334,7 +349,7 @@ module.exports = function registerAgentContractsA(context = {}) {
       });
       assert.equal(fs.existsSync(agentPath('agent-python.js')), false);
 
-      const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
+      const mainSource = readMainProcessSource();
       assert.equal(/agent-routing/.test(mainSource), false);
       assert.equal(/agent-response-layer/.test(mainSource), false);
       assert.equal(/agent-validation-safety/.test(mainSource), false);

@@ -404,6 +404,78 @@ ORIGIN
       }
     });
 
+    test('sequence library helper upserts recognized backbones into the SequenceViewer JSON store', async () => {
+      const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'sequence-library-backbone-store-'));
+      try {
+        const backbonePayload = {
+          schema_name: 'enana_recognized_backbone',
+          schema_version: '1.0.0',
+          updated_at: '2026-04-25T12:00:00.000Z',
+          source_record: {
+            name: 'HostVector',
+            entry_id: 'entry_host',
+            entry_status: 'saved',
+            sequence_signature: 'seq_host',
+            topology: 'circular'
+          },
+          recognition: {
+            host_vector_id: 'entry_host',
+            host_vector_name: 'HostVector',
+            candidate_id: 'candidate_1',
+            promoter_name: 'T7 promoter',
+            variant_mode: 'gibson'
+          },
+          backbone: {
+            name: 'Backbone (HostVector)',
+            type: 'backbone',
+            sequence: 'ATGCGTACGCTAGTTACCGGATCA',
+            sequence_length: 24,
+            segments: [{ start: 0, end: 16 }, { start: 22, end: 30 }]
+          },
+          insert: {
+            name: 'Insert (HostVector)',
+            type: 'insert',
+            sequence: 'GGAACC',
+            sequence_length: 6,
+            segments: [{ start: 16, end: 22 }]
+          }
+        };
+
+        const upserted = await sequenceLibrary.upsertRecognizedBackbone({
+          storagePath: storageRoot,
+          backbone: backbonePayload
+        });
+        assert.equal(upserted.relativePath, 'SequenceViewer/protein-builder-backbones.json');
+        assert.equal(upserted.entry.backboneName, 'Backbone (HostVector)');
+
+        const storePath = path.join(storageRoot, 'SequenceViewer', 'protein-builder-backbones.json');
+        const store = JSON.parse(await fsPromises.readFile(storePath, 'utf8'));
+        assert.equal(store.schema_name, 'enana_recognized_backbone_store');
+        assert.equal(store.backbones.length, 1);
+
+        await sequenceLibrary.upsertRecognizedBackbone({
+          storagePath: storageRoot,
+          backbone: {
+            ...backbonePayload,
+            recognition: {
+              ...backbonePayload.recognition,
+              promoter_name: 'T7 promoter updated'
+            }
+          }
+        });
+        const updatedStore = JSON.parse(await fsPromises.readFile(storePath, 'utf8'));
+        assert.equal(updatedStore.backbones.length, 1);
+        assert.equal(updatedStore.backbones[0].recognition.promoter_name, 'T7 promoter updated');
+
+        const listed = await sequenceLibrary.listRecognizedBackbones({ storagePath: storageRoot });
+        assert.equal(listed.results.length, 1);
+        assert.equal(listed.results[0].relativePath, 'SequenceViewer/protein-builder-backbones.json');
+        assert.equal(listed.results[0].insertionOffset, 16);
+      } finally {
+        await fsPromises.rm(storageRoot, { recursive: true, force: true });
+      }
+    });
+
     test('sequence library helper exposes Gibson and restriction variants for promoter-anchored expression inserts', async () => {
       const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'sequence-library-expression-backbone-'));
       try {

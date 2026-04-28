@@ -1,0 +1,21 @@
+'use strict';
+
+const { LLM } = require('../../../shared/ipc/channels');
+
+function createLlmApi(ipcRenderer) {
+  return {
+    getCodexLlmStatus: () => ipcRenderer.invoke(LLM.CODEX_STATUS),
+    getCodexLlmCatalog: () => ipcRenderer.invoke(LLM.CODEX_CATALOG),
+    loginCodexLlm: () => ipcRenderer.invoke(LLM.CODEX_LOGIN),
+    clearCodexLlmLogin: () => ipcRenderer.invoke(LLM.CODEX_CLEAR_LOGIN),
+    setCodexLlmModel: (model) => ipcRenderer.invoke(LLM.CODEX_SET_MODEL, { model }),
+    setCodexLlmReasoningEffort: (reasoningEffort) => (
+      ipcRenderer.invoke(LLM.CODEX_SET_REASONING_EFFORT, { reasoningEffort })
+    ),
+    runCodexLlmPrompt: (payload) => ipcRenderer.invoke(LLM.CODEX_GENERATE, payload)
+  };
+}
+
+module.exports = {
+  createLlmApi
+};

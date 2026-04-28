@@ -17,6 +17,9 @@ const FEATURE_SOURCE_SQL_ANNOTATION_PROTEIN = 'sql_annotation_protein';
 const ALIGNMENTS_DIR_NAME = 'alignments';
 const ALIGNMENTS_MANIFEST_FILE_NAME = 'alignment-sessions.json';
 const RECOGNIZED_BACKBONE_ARTIFACT_DIR_NAME = 'protein-builder/backbones';
+const RECOGNIZED_BACKBONE_STORE_FILE_NAME = 'protein-builder-backbones.json';
+const RECOGNIZED_BACKBONE_STORE_SCHEMA_NAME = 'enana_recognized_backbone_store';
+const RECOGNIZED_BACKBONE_STORE_SCHEMA_VERSION = '1.0.0';
 const RECOGNIZED_BACKBONE_SCHEMA_NAME = 'enana_recognized_backbone';
 const ORF_START_CODONS = new Set(['ATG']);
 const ORF_STOP_CODONS = new Set(['TAA', 'TAG', 'TGA']);
@@ -430,6 +433,148 @@ function computeRecognizedBackboneInsertionOffset(segments, sequenceLength) {
     return normalized.reduce((total, segment) => total + Math.max(0, segment.end - segment.start), 0);
   }
   return null;
+}
+
+function getRecognizedBackboneStorePath(paths) {
+  return path.join(paths.libraryRoot, RECOGNIZED_BACKBONE_STORE_FILE_NAME);
+}
+
+function cloneJsonValue(value) {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+  try {
+    return JSON.parse(JSON.stringify(value));
+  } catch {
+    return null;
+  }
+}
+
+function buildRecognizedBackboneStoreId(backbone = {}) {
+  const basis = JSON.stringify({
+    sourceEntryId: cleanText(backbone?.source_record?.entry_id, 200),
+    sourceName: cleanText(backbone?.source_record?.name, 200),
+    sourceSignature: cleanText(backbone?.source_record?.sequence_signature, 200),
+    hostVectorId: cleanText(backbone?.recognition?.host_vector_id, 200),
+    hostVectorName: cleanText(backbone?.recognition?.host_vector_name, 200),
+    candidateId: cleanText(backbone?.recognition?.candidate_id, 200),
+    variantMode: cleanText(backbone?.recognition?.variant_mode, 80),
+    backboneSequence: normalizeSequenceText(backbone?.backbone?.sequence || ''),
+    insertSequence: normalizeSequenceText(backbone?.insert?.sequence || '')
+  });
+  const hash = crypto.createHash('sha1').update(basis).digest('hex').slice(0, 16);
+  return `recognized_backbone_${hash}`;
+}
+
+function normalizeRecognizedBackboneForStore(backbone = {}) {
+  const normalized = cloneJsonValue(backbone);
+  if (!normalized || typeof normalized !== 'object' || Array.isArray(normalized)) {
+    throw new Error('Missing recognized backbone payload.');
+  }
+  if (String(normalized?.schema_name || '') !== RECOGNIZED_BACKBONE_SCHEMA_NAME) {
+    throw new Error('Recognized backbone payload has an unsupported schema.');
+  }
+
+  const nowIso = new Date().toISOString();
+  normalized.id = cleanText(normalized?.id, 200) || buildRecognizedBackboneStoreId(normalized);
+  normalized.schema_name = RECOGNIZED_BACKBONE_SCHEMA_NAME;
+  normalized.schema_version = cleanText(normalized?.schema_version, 40) || '1.0.0';
+  normalized.created_at = cleanText(normalized?.created_at, 120) || cleanText(normalized?.updated_at, 120) || nowIso;
+  normalized.updated_at = cleanText(normalized?.updated_at, 120) || nowIso;
+  return normalized;
+}
+
+async function readRecognizedBackboneStore(paths) {
+  const storePath = getRecognizedBackboneStorePath(paths);
+  try {
+    const parsed = JSON.parse(await fs.readFile(storePath, 'utf8'));
+    const backbones = Array.isArray(parsed?.backbones)
+      ? parsed.backbones
+      : (Array.isArray(parsed?.records) ? parsed.records : []);
+    return {
+      schema_name: RECOGNIZED_BACKBONE_STORE_SCHEMA_NAME,
+      schema_version: cleanText(parsed?.schema_version, 40) || RECOGNIZED_BACKBONE_STORE_SCHEMA_VERSION,
+      updated_at: cleanText(parsed?.updated_at, 120),
+      backbones: backbones
+        .map((item) => {
+          try {
+            return normalizeRecognizedBackboneForStore(item);
+          } catch {
+            return null;
+          }
+        })
+        .filter(Boolean)
+    };
+  } catch (error) {
+    if (String(error?.code || '') !== 'ENOENT') {
+      throw error;
+    }
+  }
+
+  return {
+    schema_name: RECOGNIZED_BACKBONE_STORE_SCHEMA_NAME,
+    schema_version: RECOGNIZED_BACKBONE_STORE_SCHEMA_VERSION,
+    updated_at: '',
+    backbones: []
+  };
+}
+
+async function writeRecognizedBackboneStore(paths, store) {
+  const storePath = getRecognizedBackboneStorePath(paths);
+  await fs.mkdir(path.dirname(storePath), { recursive: true });
+  await fs.writeFile(storePath, JSON.stringify({
+    schema_name: RECOGNIZED_BACKBONE_STORE_SCHEMA_NAME,
+    schema_version: RECOGNIZED_BACKBONE_STORE_SCHEMA_VERSION,
+    updated_at: cleanText(store?.updated_at, 120) || new Date().toISOString(),
+    backbones: Array.isArray(store?.backbones) ? store.backbones : []
+  }, null, 2), 'utf8');
+  return storePath;
+}
+
+function buildRecognizedBackboneListItem(parsed, paths, sourcePath = '') {
+  if (!parsed || String(parsed?.schema_name || '') !== RECOGNIZED_BACKBONE_SCHEMA_NAME) {
+    return null;
+  }
+
+  const hostVectorName = cleanText(parsed?.recognition?.host_vector_name, 160);
+  const sourceRecordName = cleanText(parsed?.source_record?.name, 160);
+  const backboneName = cleanText(parsed?.backbone?.name, 160);
+  const promoterName = cleanText(parsed?.recognition?.promoter_name, 160);
+  const backboneSequence = normalizeSequenceText(parsed?.backbone?.sequence || '');
+  const insertSequence = normalizeSequenceText(parsed?.insert?.sequence || '');
+  const backboneLength = Math.max(0, Number(parsed?.backbone?.sequence_length) || backboneSequence.length);
+  const insertLength = Math.max(0, Number(parsed?.insert?.sequence_length) || insertSequence.length);
+  const originalSequenceLength = Math.max(backboneLength + insertLength, backboneSequence.length);
+  const backboneSegments = normalizeBackboneSegments(parsed?.backbone?.segments, originalSequenceLength);
+  const insertSegments = normalizeBackboneSegments(parsed?.insert?.segments, originalSequenceLength);
+  const insertionOffset = computeRecognizedBackboneInsertionOffset(backboneSegments, originalSequenceLength);
+  const fallbackPath = sourcePath || getRecognizedBackboneStorePath(paths);
+
+  return {
+    id: cleanText(parsed?.id, 200) || toPosixRelative(paths.storageRoot, fallbackPath),
+    sourceKind: 'recognized_backbone',
+    fileName: path.basename(fallbackPath),
+    relativePath: toPosixRelative(paths.storageRoot, fallbackPath),
+    updatedAt: cleanText(parsed?.updated_at, 120),
+    sourceRecordName,
+    sourceEntryId: cleanText(parsed?.source_record?.entry_id, 200),
+    sourceEntryStatus: normalizeStatus(parsed?.source_record?.entry_status),
+    topology: cleanText(parsed?.source_record?.topology, 40) || 'linear',
+    hostVectorName,
+    promoterName,
+    variantMode: cleanText(parsed?.recognition?.variant_mode, 40).toLowerCase() === 'restriction'
+      ? 'restriction'
+      : 'gibson',
+    backboneName: backboneName || hostVectorName || sourceRecordName || 'Stored backbone',
+    backboneSequence,
+    backboneLength,
+    backboneSegments,
+    insertName: cleanText(parsed?.insert?.name, 160) || 'Stored insert',
+    insertSequence,
+    insertLength,
+    insertSegments,
+    insertionOffset
+  };
 }
 
 function stripExtension(name) {
@@ -2092,18 +2237,40 @@ async function listRecognizedBackbones({ storagePath, query = '', limit = 50 }) 
   const paths = resolveLibraryPaths(storagePath);
   await ensureLibraryDirectories(paths);
 
+  const matchesQuery = (item) => {
+    if (!safeQuery) {
+      return true;
+    }
+    return [
+      item?.hostVectorName,
+      item?.sourceRecordName,
+      item?.backboneName,
+      item?.promoterName,
+      item?.variantMode
+    ].join(' ').toLowerCase().includes(safeQuery);
+  };
+
   const artifactsRoot = path.join(paths.libraryRoot, RECOGNIZED_BACKBONE_ARTIFACT_DIR_NAME);
+  const resultsById = new Map();
+  const store = await readRecognizedBackboneStore(paths);
+  store.backbones.forEach((backbone) => {
+    const item = buildRecognizedBackboneListItem(backbone, paths);
+    if (item && matchesQuery(item)) {
+      resultsById.set(cleanText(item.id, 300), item);
+    }
+  });
+
   let entries = [];
   try {
     entries = await fs.readdir(artifactsRoot, { withFileTypes: true });
   } catch (error) {
     if (String(error?.code || '') === 'ENOENT') {
-      return { query: cleanText(query, 600), results: [] };
+      entries = [];
+    } else {
+      throw error;
     }
-    throw error;
   }
 
-  const results = [];
   await Promise.all(entries.map(async (entry) => {
     if (!entry?.isFile?.() || !String(entry.name || '').toLowerCase().endsWith('.json')) {
       return;
@@ -2116,62 +2283,19 @@ async function listRecognizedBackbones({ storagePath, query = '', limit = 50 }) 
     } catch {
       return;
     }
-    if (!parsed || String(parsed?.schema_name || '') !== RECOGNIZED_BACKBONE_SCHEMA_NAME) {
+    let normalized = null;
+    try {
+      normalized = normalizeRecognizedBackboneForStore(parsed);
+    } catch {
       return;
     }
-
-    const hostVectorName = cleanText(parsed?.recognition?.host_vector_name, 160);
-    const sourceRecordName = cleanText(parsed?.source_record?.name, 160);
-    const backboneName = cleanText(parsed?.backbone?.name, 160);
-    const promoterName = cleanText(parsed?.recognition?.promoter_name, 160);
-    const searchableText = [
-      hostVectorName,
-      sourceRecordName,
-      backboneName,
-      promoterName,
-      cleanText(parsed?.recognition?.variant_mode, 40)
-    ].join(' ').toLowerCase();
-
-    if (safeQuery && !searchableText.includes(safeQuery)) {
-      return;
+    const item = buildRecognizedBackboneListItem(normalized, paths, filePath);
+    if (item && matchesQuery(item) && !resultsById.has(cleanText(item.id, 300))) {
+      resultsById.set(cleanText(item.id, 300), item);
     }
-
-    const backboneSequence = normalizeSequenceText(parsed?.backbone?.sequence || '');
-    const insertSequence = normalizeSequenceText(parsed?.insert?.sequence || '');
-    const backboneLength = Math.max(0, Number(parsed?.backbone?.sequence_length) || backboneSequence.length);
-    const insertLength = Math.max(0, Number(parsed?.insert?.sequence_length) || insertSequence.length);
-    const originalSequenceLength = Math.max(backboneLength + insertLength, backboneSequence.length);
-    const backboneSegments = normalizeBackboneSegments(parsed?.backbone?.segments, originalSequenceLength);
-    const insertSegments = normalizeBackboneSegments(parsed?.insert?.segments, originalSequenceLength);
-    const insertionOffset = computeRecognizedBackboneInsertionOffset(backboneSegments, originalSequenceLength);
-    const updatedAt = cleanText(parsed?.updated_at, 120);
-    results.push({
-      id: toPosixRelative(paths.storageRoot, filePath),
-      sourceKind: 'recognized_backbone',
-      fileName: entry.name,
-      relativePath: toPosixRelative(paths.storageRoot, filePath),
-      updatedAt,
-      sourceRecordName,
-      sourceEntryId: cleanText(parsed?.source_record?.entry_id, 200),
-      sourceEntryStatus: normalizeStatus(parsed?.source_record?.entry_status),
-      topology: cleanText(parsed?.source_record?.topology, 40) || 'linear',
-      hostVectorName,
-      promoterName,
-      variantMode: cleanText(parsed?.recognition?.variant_mode, 40).toLowerCase() === 'restriction'
-        ? 'restriction'
-        : 'gibson',
-      backboneName: backboneName || hostVectorName || sourceRecordName || 'Stored backbone',
-      backboneSequence,
-      backboneLength,
-      backboneSegments,
-      insertName: cleanText(parsed?.insert?.name, 160) || 'Stored insert',
-      insertSequence,
-      insertLength,
-      insertSegments,
-      insertionOffset
-    });
   }));
 
+  const results = Array.from(resultsById.values());
   results.sort((left, right) => {
     const leftTime = Date.parse(String(left?.updatedAt || '')) || 0;
     const rightTime = Date.parse(String(right?.updatedAt || '')) || 0;
@@ -2184,6 +2308,35 @@ async function listRecognizedBackbones({ storagePath, query = '', limit = 50 }) 
   return {
     query: cleanText(query, 600),
     results: results.slice(0, safeLimit)
+  };
+}
+
+async function upsertRecognizedBackbone({ storagePath, backbone = {} }) {
+  const paths = resolveLibraryPaths(storagePath);
+  await ensureLibraryDirectories(paths);
+
+  const normalized = normalizeRecognizedBackboneForStore(backbone);
+  const nowIso = new Date().toISOString();
+  normalized.updated_at = nowIso;
+
+  const store = await readRecognizedBackboneStore(paths);
+  const existingIndex = store.backbones.findIndex((item) => cleanText(item?.id, 200) === normalized.id);
+  if (existingIndex >= 0) {
+    normalized.created_at = cleanText(store.backbones[existingIndex]?.created_at, 120) || normalized.created_at;
+    store.backbones[existingIndex] = normalized;
+  } else {
+    normalized.created_at = cleanText(normalized?.created_at, 120) || nowIso;
+    store.backbones.push(normalized);
+  }
+  store.updated_at = nowIso;
+
+  const storePath = await writeRecognizedBackboneStore(paths, store);
+  return {
+    id: normalized.id,
+    filePath: storePath,
+    fileName: path.basename(storePath),
+    relativePath: toPosixRelative(paths.storageRoot, storePath),
+    entry: buildRecognizedBackboneListItem(normalized, paths, storePath)
   };
 }
 
@@ -2223,6 +2376,7 @@ module.exports = {
   annotateSequenceRecord,
   searchSequenceFeatures,
   listRecognizedBackbones,
+  upsertRecognizedBackbone,
   recognizeSequenceBackbone,
   sanitizeFileName
 };

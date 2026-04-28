@@ -3,6 +3,29 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
   const __dirname = context.__dirname || process.cwd();
 
   with (scope) {
+    const readLocalSource = (...parts) => fs.readFileSync(path.join(__dirname, ...parts), 'utf8');
+    const readMainProcessSource = () => [
+      readLocalSource('src', 'main', 'main.js'),
+      readLocalSource('src', 'main', 'app', 'start-main-app.js'),
+      readLocalSource('src', 'main', 'app', 'main-runtime.js'),
+      readLocalSource('src', 'main', 'ipc', 'index.js')
+    ].join('\n');
+    const readPreloadSource = () => [
+      readLocalSource('src', 'main', 'preload.js'),
+      readLocalSource('src', 'main', 'preload', 'create-preload-api.js'),
+      readLocalSource('src', 'main', 'preload', 'api', 'agent-api.js'),
+      readLocalSource('src', 'main', 'preload', 'api', 'llm-api.js'),
+      readLocalSource('src', 'main', 'preload', 'api', 'sequence-library-api.js'),
+      readLocalSource('src', 'main', 'preload', 'api', 'storage-api.js'),
+      readLocalSource('src', 'main', 'preload', 'api', 'system-api.js'),
+      readLocalSource('src', 'main', 'preload', 'api', 'telegram-api.js')
+    ].join('\n');
+    const readRendererShellSource = () => [
+      readLocalSource('src', 'renderer', 'app', 'start-renderer-app.js'),
+      readLocalSource('src', 'renderer', 'app', 'navigation-shell.js'),
+      readLocalSource('src', 'renderer', 'app', 'topbar-search.js')
+    ].join('\n');
+
     test('view constants, index sections, and app registry stay in sync', () => {
       const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
       const registry = JSON.parse(fs.readFileSync(path.join(__dirname, 'ui', 'config', 'app-registry.json'), 'utf8'));
@@ -34,15 +57,15 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
     });
 
     test('renderer routes personal inventory aliases to merged sample workspace', () => {
-      const source = readSource('src/renderer/renderer.js');
+      const source = readRendererShellSource();
       const moduleRuntimeSource = readSource('src/renderer/module-runtime.js');
       const registry = JSON.parse(fs.readFileSync(path.join(__dirname, 'ui', 'config', 'app-registry.json'), 'utf8'));
       const sampleEntry = registry.apps.find((app) => app.id === 'sample-inventory');
-      assert.match(source, /function normalizeViewId\(viewId\)\s*\{\s*return viewId === VIEWS\.PERSONAL_INVENTORY \? VIEWS\.SAMPLE_REGISTRY : viewId;\s*\}/);
+      assert.match(source, /function normalizeViewId\(VIEWS, viewId\)\s*\{\s*return viewId === VIEWS\.PERSONAL_INVENTORY \? VIEWS\.SAMPLE_REGISTRY : viewId;\s*\}/);
       assert.ok(sampleEntry);
       assert.ok(sampleEntry.aliases.includes('inventory'));
       assert.equal(sampleEntry.searchInputId, 'sample-search');
-      assert.match(source, /const SEARCH_SCOPE_TARGETS = buildSearchScopeMap\(APP_REGISTRY\);/);
+      assert.match(source, /const searchScopeTargets = buildSearchScopeMap\(\{\s*apps: APP_REGISTRY,/);
       assert.match(source, /const showSampleInventoryWorkspace = nextView === VIEWS\.SAMPLE_REGISTRY;/);
       assert.match(source, /moduleRuntime\.renderView\(nextView\);/);
       assert.match(moduleRuntimeSource, /function renderSampleRegistryWorkspace\(modules\) \{\s*modules\.personalInventory\.renderSections\(\);\s*modules\.sampleRegistry\.render\(\);\s*\}/);
@@ -50,7 +73,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
     });
 
     test('renderer defines sequence viewer aliases and showView render hook', () => {
-      const source = readSource('src/renderer/renderer.js');
+      const source = readRendererShellSource();
       const moduleRuntimeSource = readSource('src/renderer/module-runtime.js');
       const registry = JSON.parse(fs.readFileSync(path.join(__dirname, 'ui', 'config', 'app-registry.json'), 'utf8'));
       const sequenceEntry = registry.apps.find((app) => app.id === 'sequence-viewer');
@@ -163,9 +186,17 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.equal(fs.existsSync(resolved), true);
     });
 
+    test('main window keeps split preload CommonJS modules available', () => {
+      const source = fs.readFileSync(path.join(__dirname, 'src', 'main', 'windows', 'create-main-window.js'), 'utf8');
+      assert.match(source, /contextIsolation:\s*true/);
+      assert.match(source, /nodeIntegration:\s*false/);
+      assert.match(source, /sandbox:\s*false/);
+      assert.match(source, /preload:\s*preloadPath/);
+    });
+
     test('telegram bridge keeps only supported renderer IPC channel', () => {
       const telegramBotSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'lib', 'telegramBot.js'), 'utf8');
-      const preloadSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'preload.js'), 'utf8');
+      const preloadSource = readPreloadSource();
       assert.equal(telegramBotSource.includes('telegram-message'), false);
       assert.equal(preloadSource.includes('onTelegramCommand'), true);
     });
@@ -174,7 +205,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       const agentDir = path.join(__dirname, 'src', 'main', 'helpers', 'agent');
       const agentPath = (...parts) => path.join(agentDir, ...parts);
       const agentRegistrarPath = (...parts) => path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc', ...parts);
-      const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
+      const mainSource = readMainProcessSource();
       const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');
       const dataRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-data-ipc.js'), 'utf8');
       const agentRegistrarSource = fs.readFileSync(agentRegistrarPath('index.js'), 'utf8');
@@ -223,18 +254,18 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
     });
 
     test('settings expose Codex login recovery controls through preload and system IPC', () => {
-      const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
-      const preloadSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'preload.js'), 'utf8');
+      const mainSource = readMainProcessSource();
+      const preloadSource = readPreloadSource();
       const systemRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-system-ipc.js'), 'utf8');
       const settingsSource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'settings.js'), 'utf8');
       const settingsHtml = fs.readFileSync(path.join(__dirname, 'ui', 'html', 'views', 'setting-view.html'), 'utf8');
 
       assert.match(mainSource, /launchCodexCliLogin/);
       assert.match(mainSource, /clearCodexCliStoredLogin/);
-      assert.match(preloadSource, /loginCodexLlm:\s*\(\)\s*=>\s*ipcRenderer\.invoke\('llm:codex-login'\)/);
-      assert.match(preloadSource, /clearCodexLlmLogin:\s*\(\)\s*=>\s*ipcRenderer\.invoke\('llm:codex-clear-login'\)/);
-      assert.match(systemRegistrarSource, /ipcMain\.handle\('llm:codex-login'/);
-      assert.match(systemRegistrarSource, /ipcMain\.handle\('llm:codex-clear-login'/);
+      assert.match(preloadSource, /loginCodexLlm:\s*\(\)\s*=>\s*ipcRenderer\.invoke\(LLM\.CODEX_LOGIN\)/);
+      assert.match(preloadSource, /clearCodexLlmLogin:\s*\(\)\s*=>\s*ipcRenderer\.invoke\(LLM\.CODEX_CLEAR_LOGIN\)/);
+      assert.match(systemRegistrarSource, /ipcMain\.handle\(LLM\.CODEX_LOGIN/);
+      assert.match(systemRegistrarSource, /ipcMain\.handle\(LLM\.CODEX_CLEAR_LOGIN/);
       assert.match(settingsSource, /window\.enanaApi\?\.loginCodexLlm/);
       assert.match(settingsSource, /window\.enanaApi\?\.clearCodexLlmLogin/);
       assert.match(settingsHtml, /id="setting-codex-status"/);
@@ -244,29 +275,29 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
 
     test('main and preload expose sequence library IPC bridge through the data registrar', () => {
       const dataRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-data-ipc.js'), 'utf8');
-      const preloadSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'preload.js'), 'utf8');
-      assert.match(dataRegistrarSource, /ipcMain\.handle\('sequence-library:list'/);
-      assert.match(dataRegistrarSource, /ipcMain\.handle\('sequence-library:get'/);
-      assert.match(dataRegistrarSource, /ipcMain\.handle\('sequence-library:upsert'/);
-      assert.match(dataRegistrarSource, /ipcMain\.handle\('sequence-library:promote'/);
-      assert.match(dataRegistrarSource, /ipcMain\.handle\('sequence-library:delete'/);
-      assert.match(dataRegistrarSource, /ipcMain\.handle\('sequence-library:search-features'/);
-      assert.match(dataRegistrarSource, /ipcMain\.handle\('sequence-library:annotate'/);
-      assert.match(dataRegistrarSource, /ipcMain\.handle\('sequence-library:recognize-backbone'/);
-      assert.match(preloadSource, /sequenceLibraryList:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\('sequence-library:list', payload\)/);
-      assert.match(preloadSource, /sequenceLibraryGet:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\('sequence-library:get', payload\)/);
-      assert.match(preloadSource, /sequenceLibraryUpsert:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\('sequence-library:upsert', payload\)/);
-      assert.match(preloadSource, /sequenceLibrarySearchFeatures:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\('sequence-library:search-features', payload\)/);
-      assert.match(preloadSource, /sequenceLibraryAnnotate:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\('sequence-library:annotate', payload\)/);
-      assert.match(preloadSource, /sequenceLibraryRecognizeBackbone:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\('sequence-library:recognize-backbone', payload\)/);
+      const preloadSource = readPreloadSource();
+      assert.match(dataRegistrarSource, /ipcMain\.handle\(SEQUENCE_LIBRARY\.LIST/);
+      assert.match(dataRegistrarSource, /ipcMain\.handle\(SEQUENCE_LIBRARY\.GET/);
+      assert.match(dataRegistrarSource, /ipcMain\.handle\(SEQUENCE_LIBRARY\.UPSERT/);
+      assert.match(dataRegistrarSource, /ipcMain\.handle\(SEQUENCE_LIBRARY\.PROMOTE/);
+      assert.match(dataRegistrarSource, /ipcMain\.handle\(SEQUENCE_LIBRARY\.DELETE/);
+      assert.match(dataRegistrarSource, /ipcMain\.handle\(SEQUENCE_LIBRARY\.SEARCH_FEATURES/);
+      assert.match(dataRegistrarSource, /ipcMain\.handle\(SEQUENCE_LIBRARY\.ANNOTATE/);
+      assert.match(dataRegistrarSource, /ipcMain\.handle\(SEQUENCE_LIBRARY\.RECOGNIZE_BACKBONE/);
+      assert.match(preloadSource, /sequenceLibraryList:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\(SEQUENCE_LIBRARY\.LIST, payload\)/);
+      assert.match(preloadSource, /sequenceLibraryGet:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\(SEQUENCE_LIBRARY\.GET, payload\)/);
+      assert.match(preloadSource, /sequenceLibraryUpsert:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\(SEQUENCE_LIBRARY\.UPSERT, payload\)/);
+      assert.match(preloadSource, /sequenceLibrarySearchFeatures:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\(SEQUENCE_LIBRARY\.SEARCH_FEATURES, payload\)/);
+      assert.match(preloadSource, /sequenceLibraryAnnotate:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\(SEQUENCE_LIBRARY\.ANNOTATE, payload\)/);
+      assert.match(preloadSource, /sequenceLibraryRecognizeBackbone:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\(SEQUENCE_LIBRARY\.RECOGNIZE_BACKBONE, payload\)/);
     });
 
     test('main and preload expose storage root import IPC bridge through the data registrar', () => {
       const dataRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-data-ipc.js'), 'utf8');
-      const preloadSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'preload.js'), 'utf8');
-      assert.match(dataRegistrarSource, /ipcMain\.handle\('storage:import-root'/);
+      const preloadSource = readPreloadSource();
+      assert.match(dataRegistrarSource, /ipcMain\.handle\(STORAGE\.IMPORT_ROOT/);
       assert.match(dataRegistrarSource, /importStorageRoot\(\{ storagePath \}\)/);
-      assert.match(preloadSource, /importStorageRoot:\s*\(storagePath\)\s*=>\s*ipcRenderer\.invoke\('storage:import-root', \{ storagePath \}\)/);
+      assert.match(preloadSource, /importStorageRoot:\s*\(storagePath\)\s*=>\s*ipcRenderer\.invoke\(STORAGE\.IMPORT_ROOT, \{ storagePath \}\)/);
     });
   }
 };

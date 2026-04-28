@@ -242,7 +242,7 @@ function createScienceLoopExitJudgeRuntime(deps = {}) {
   function buildFallbackEvaluation(input = {}) {
     const context = collectCriteriaEvaluationContext(input, input.preSynthesizedAnswer);
     const roundsExecuted = Number(input.roundsExecuted) || 0;
-    const maxRounds = Math.max(1, Number(input.maxRounds) || 4);
+    const maxRounds = Math.max(1, Number(input.maxRounds) || 8);
     const clarifiedInput = cleanText(input.message || input.clarifiedInput || input.originalMessage, 3200);
     const exitCriteria = input.exitCriteria && typeof input.exitCriteria === 'object' ? input.exitCriteria : {};
     const unstableInferenceChecks = getUnstableScienceInferenceChecks(

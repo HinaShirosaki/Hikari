@@ -885,6 +885,7 @@ function buildDnaPartFromProtein(part, options = {}) {
         ok: true,
         label: cleanText(part?.label, 160) || 'POI',
         dnaSequence: poiSource.dnaSequence,
+        templateSequence: poiSource.dnaSequence,
         reusedSource: poiSource.note
       };
     }
@@ -896,6 +897,7 @@ function buildDnaPartFromProtein(part, options = {}) {
       ok: true,
       label: cleanText(part?.label, 160) || 'Block',
       dnaSequence: alignDnaToProteinSequence(sourceDnaSequence, proteinSequence),
+      templateSequence: alignDnaToProteinSequence(sourceDnaSequence, proteinSequence),
       reusedSource: cleanText(part?.kind, 40).toLowerCase() === 'feature'
         ? `Reused stored DNA for ${cleanText(part?.label, 160) || 'feature block'}.`
         : ''
@@ -949,6 +951,7 @@ function buildDnaConstruct(payload = {}, options = {}) {
     parts.push({
       label: dnaPart.label,
       dnaSequence: dnaPart.dnaSequence,
+      templateSequence: normalizeSequenceText(dnaPart.templateSequence || ''),
       length: dnaPart.dnaSequence.length
     });
   });

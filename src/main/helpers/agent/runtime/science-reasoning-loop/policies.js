@@ -75,9 +75,9 @@ function normalizeScienceReasoningEffort(intent, parserPayload = {}) {
 
 function getDefaultScienceMaxRounds(intent, reasoningEffort) {
   if (['general_science_question', 'project_science_question'].includes(intent)) {
-    return reasoningEffort >= 2 ? 5 : 3;
+    return reasoningEffort >= 2 ? 8 : 5;
   }
-  return 4;
+  return 6;
 }
 
 module.exports = {

@@ -1,5 +1,7 @@
 'use strict';
 
+const { AGENT } = require('../../../../shared/ipc/channels');
+
 function registerAgentLogHandlers({
   ipcMain,
   cleanText,
@@ -29,7 +31,7 @@ function registerAgentLogHandlers({
     };
   }
 
-  ipcMain.handle('agent:chat-log:create-session', async (_event, payload) => {
+  ipcMain.handle(AGENT.CHAT_LOG_CREATE_SESSION, async (_event, payload) => {
     const normalizedPayload = normalizeJsonPayload(payload, {});
     const storagePath = getAgentChatSessionStoragePath(normalizedPayload);
     if (!storagePath) {
@@ -54,7 +56,7 @@ function registerAgentLogHandlers({
     }
   });
 
-  ipcMain.handle('agent:chat-log:list-sessions', async (_event, payload) => {
+  ipcMain.handle(AGENT.CHAT_LOG_LIST_SESSIONS, async (_event, payload) => {
     const normalizedPayload = normalizeJsonPayload(payload, {});
     const storagePath = getAgentChatSessionStoragePath(normalizedPayload);
     if (!storagePath) {
@@ -76,7 +78,7 @@ function registerAgentLogHandlers({
     }
   });
 
-  ipcMain.handle('agent:chat-log:get-session', async (_event, payload) => {
+  ipcMain.handle(AGENT.CHAT_LOG_GET_SESSION, async (_event, payload) => {
     const normalizedPayload = normalizeJsonPayload(payload, {});
     const storagePath = getAgentChatSessionStoragePath(normalizedPayload);
     const sessionId = cleanText(normalizedPayload?.sessionId || normalizedPayload?.session_id, 120);
@@ -106,7 +108,7 @@ function registerAgentLogHandlers({
     }
   });
 
-  ipcMain.handle('agent:developer:test-tools', async (_event, payload) => {
+  ipcMain.handle(AGENT.DEVELOPER_TEST_TOOLS, async (_event, payload) => {
     const normalizedPayload = normalizeJsonPayload(payload, {});
     const executionFlags = controllerUtils.resolveAgentExecutionFlags(
       normalizedPayload,
@@ -157,7 +159,7 @@ function registerAgentLogHandlers({
     }
   });
 
-  ipcMain.handle('agent:generate-protocol', async (_event, payload) => {
+  ipcMain.handle(AGENT.GENERATE_PROTOCOL, async (_event, payload) => {
     if (!protocolGenerationRuntime || typeof protocolGenerationRuntime.generateProtocol !== 'function') {
       return {
         ok: false,
@@ -230,7 +232,7 @@ function registerAgentLogHandlers({
     }
   });
 
-  ipcMain.handle('agent:logs:list-requests', async () => {
+  ipcMain.handle(AGENT.LOGS_LIST_REQUESTS, async () => {
     try {
       const rows = await observability.readLifecycleLogs({
         logPath: getAgentChatLogPath(),
@@ -309,7 +311,7 @@ function registerAgentLogHandlers({
     }
   });
 
-  ipcMain.handle('agent:logs:replay', async (_event, payload) => {
+  ipcMain.handle(AGENT.LOGS_REPLAY, async (_event, payload) => {
     const requestId = cleanText(payload?.requestId, 80);
     if (!requestId) {
       return {

@@ -167,16 +167,29 @@ function normalizeFragment(fragment, index) {
   const sequence = orientation === 'reverse'
     ? reverseComplementDna(baseSequence)
     : baseSequence;
+  const rawTemplateSequence = normalizeSequence(
+    fragment?.templateSequence
+    || fragment?.metadata?.templateSequence
+    || fragment?.metadata?.sourceTemplateSequence
+    || ''
+  );
+  const templateSequence = rawTemplateSequence && orientation === 'reverse'
+    ? reverseComplementDna(rawTemplateSequence)
+    : rawTemplateSequence;
   const type = String(fragment?.type || '').trim().toLowerCase() || 'insert';
+  const metadata = fragment?.metadata && typeof fragment.metadata === 'object'
+    ? { ...fragment.metadata }
+    : {};
+  if (templateSequence) {
+    metadata.templateSequence = templateSequence;
+  }
 
   return {
     id: String(fragment?.id || buildStableFragmentId('fragment', index)),
     name: String(fragment?.name || fragment?.id || buildStableFragmentId('fragment', index)).trim() || buildStableFragmentId('fragment', index),
     type,
     orientation,
-    metadata: fragment?.metadata && typeof fragment.metadata === 'object'
-      ? { ...fragment.metadata }
-      : {},
+    metadata,
     sequence
   };
 }
@@ -729,6 +742,90 @@ function buildPrimerRecord({ name, role, sequence, tailSequence = '', bindingSeq
   };
 }
 
+function findTemplateCoreInDesiredSequence(desiredSequence, templateSequence) {
+  const desired = normalizeSequence(desiredSequence);
+  const template = normalizeSequence(templateSequence);
+  if (!desired.length || !template.length) {
+    return null;
+  }
+
+  const exactIndex = desired.indexOf(template);
+  if (exactIndex >= 0) {
+    return {
+      desiredStart: exactIndex,
+      templateStart: 0,
+      length: template.length
+    };
+  }
+
+  const minimumUsefulLength = Math.min(18, desired.length, template.length);
+  for (let length = Math.min(desired.length, template.length); length >= minimumUsefulLength; length -= 1) {
+    for (let templateStart = 0; templateStart + length <= template.length; templateStart += 1) {
+      const candidate = template.slice(templateStart, templateStart + length);
+      const desiredStart = desired.indexOf(candidate);
+      if (desiredStart >= 0) {
+        return {
+          desiredStart,
+          templateStart,
+          length
+        };
+      }
+    }
+  }
+
+  return null;
+}
+
+function resolveFragmentPrimerTemplate(fragment = {}) {
+  const desiredSequence = normalizeSequence(fragment?.sequence || '');
+  const templateSequence = normalizeSequence(
+    fragment?.templateSequence
+    || fragment?.metadata?.templateSequence
+    || fragment?.metadata?.sourceTemplateSequence
+    || ''
+  );
+
+  if (!desiredSequence.length) {
+    return {
+      desiredSequence: '',
+      templateSequence: '',
+      forwardAddedSequence: '',
+      reverseAddedSequence: '',
+      warnings: []
+    };
+  }
+
+  if (!templateSequence.length) {
+    return {
+      desiredSequence,
+      templateSequence: desiredSequence,
+      forwardAddedSequence: '',
+      reverseAddedSequence: '',
+      warnings: []
+    };
+  }
+
+  const core = findTemplateCoreInDesiredSequence(desiredSequence, templateSequence);
+  if (!core) {
+    return {
+      desiredSequence,
+      templateSequence: desiredSequence,
+      forwardAddedSequence: '',
+      reverseAddedSequence: '',
+      warnings: ['Template sequence did not align to the desired fragment; primer binding falls back to the desired fragment sequence.']
+    };
+  }
+
+  const templateCore = templateSequence.slice(core.templateStart, core.templateStart + core.length);
+  return {
+    desiredSequence,
+    templateSequence: templateCore,
+    forwardAddedSequence: desiredSequence.slice(0, core.desiredStart),
+    reverseAddedSequence: desiredSequence.slice(core.desiredStart + core.length),
+    warnings: []
+  };
+}
+
 function summarizePrimerPlan(primers, overlaps = []) {
   const safePrimers = asArray(primers);
   const tmValues = safePrimers.map((primer) => Number(primer?.tm) || 0);
@@ -820,24 +917,44 @@ function designAssemblyPrimersForRoute(fragments, junctions, thresholds, config)
   safeFragments.forEach((fragment, index) => {
     const nextJunction = safeJunctions.find((junction) => junction.leftFragmentId === fragment.id && !junction.wrapAround)
       || safeJunctions.find((junction) => junction.leftFragmentId === fragment.id && junction.wrapAround);
-    const reverseTail = nextJunction && nextJunction.mode === 'primer-introduced'
+    const templateDesign = resolveFragmentPrimerTemplate(fragment);
+    const forwardTail = normalizeSequence(templateDesign.forwardAddedSequence);
+    const nextOverlap = nextJunction && nextJunction.mode === 'primer-introduced'
       ? normalizeSequence(nextJunction.overlapSequence)
       : '';
-    const forwardBinding = selectBindingWindow(fragment.sequence, 'forward', thresholds, 0, config);
-    const reverseBinding = selectBindingWindow(fragment.sequence, 'reverse', thresholds, reverseTail.length, config);
+    const reverseTargetTail = `${normalizeSequence(templateDesign.reverseAddedSequence)}${nextOverlap}`;
+    const reverseTail = reverseTargetTail ? reverseComplementDna(reverseTargetTail) : '';
+    const forwardBinding = selectBindingWindow(templateDesign.templateSequence, 'forward', thresholds, forwardTail.length, config);
+    const reverseBinding = selectBindingWindow(templateDesign.templateSequence, 'reverse', thresholds, reverseTail.length, config);
 
     if (!forwardBinding || !reverseBinding) {
       warnings.push(`Unable to find compatible binding windows for ${fragment.name}.`);
       return;
     }
 
+    const forwardWarnings = [
+      ...asArray(templateDesign.warnings),
+      forwardTail
+        ? `Adds ${forwardTail.length} nt at the 5' end from the primer tail.`
+        : ''
+    ].filter(Boolean);
+    const reverseWarnings = [
+      normalizeSequence(templateDesign.reverseAddedSequence)
+        ? `Adds ${normalizeSequence(templateDesign.reverseAddedSequence).length} nt at the 3' end from the primer tail.`
+        : '',
+      nextJunction?.mode === 'primer-introduced'
+        ? `Carries a ${nextJunction.overlapLength} nt overlap into ${nextJunction.rightFragmentName}.`
+        : ''
+    ].filter(Boolean);
+
     primers.push(
       buildPrimerRecord({
         name: `${fragment.name}_F`,
         role: index === 0 ? 'assembly-forward-start' : 'assembly-forward',
-        sequence: forwardBinding.bindingSequence,
+        sequence: `${forwardTail}${forwardBinding.bindingSequence}`,
+        tailSequence: forwardTail,
         bindingSequence: forwardBinding.bindingSequence,
-        warnings: []
+        warnings: forwardWarnings
       })
     );
     primers.push(
@@ -847,9 +964,7 @@ function designAssemblyPrimersForRoute(fragments, junctions, thresholds, config)
         sequence: `${reverseTail}${reverseBinding.bindingSequence}`,
         tailSequence: reverseTail,
         bindingSequence: reverseBinding.bindingSequence,
-        warnings: nextJunction?.mode === 'primer-introduced'
-          ? [`Carries a ${nextJunction.overlapLength} nt overlap into ${nextJunction.rightFragmentName}.`]
-          : []
+        warnings: reverseWarnings
       })
     );
   });

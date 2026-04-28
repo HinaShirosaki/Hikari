@@ -580,6 +580,105 @@ test('[EDGE] protein-builder Gibson backbone keeps primer design on the Gibson r
   assert.equal(plan.primerOligoPlan.primers.some((primer) => /Adds .* to the 5' end/i.test(String(primer.warnings || ''))), false);
 });
 
+test('[EDGE] protein-builder Gibson backbone uses the saved insertion offset for junction primers', () => {
+  const notebookAdapter = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'protein-builder-cloning-notebook.js')
+  );
+  const fileStart = 'GGATCTGCGATCGCTCCGGTGCCCGTCAGTG';
+  const leftFlank = 'ATGCGTACGATCGTACGATCGTACGATCGA';
+  const rightFlank = 'GTGCTAGCTGGCCAGACATGATAAGATACATTG';
+  const upstreamBackbone = `${fileStart}TTTTTATATATATATATATAT${leftFlank}`;
+  const downstreamBackbone = `${rightFlank}GGCCGATATATATATATCGCGCGC`;
+  const backboneSequence = `${upstreamBackbone}${downstreamBackbone}`;
+  const insertSequence = [
+    'CACCACCACCACCACCACGAAAAC',
+    'GCGCGATTTTTTTTTTGCGCGAT',
+    'CACCGTGAAAGTGAATGCCCCGTAT'
+  ].join('');
+  const plan = notebookAdapter.buildProteinBuilderCloningPlan({
+    constructName: 'Offset-POI',
+    backbone: {
+      hostVectorName: 'Host Backbone',
+      topology: 'circular',
+      variantMode: 'gibson',
+      insertionOffset: upstreamBackbone.length,
+      backboneSequence
+    },
+    dnaConstruct: {
+      sequence: insertSequence,
+      length: insertSequence.length,
+      parts: [{ label: 'POI', dnaSequence: insertSequence }]
+    },
+    assembledRecord: {
+      name: 'Offset-POI (Host Backbone)',
+      sequence: `${upstreamBackbone}${insertSequence}${downstreamBackbone}`
+    }
+  });
+  const wrapJunction = plan.routeEvaluations.gibson.junctions.find((junction) => junction.wrapAround);
+  const hostForward = plan.primerOligoPlan.primers.find((primer) => primer.name === 'Host Backbone_F');
+  const insertReverse = plan.primerOligoPlan.primers.find((primer) => primer.name === 'Offset-POI_R');
+
+  assert.equal(plan.recommendedAssemblyStrategy, 'gibson');
+  assert.equal(plan.primerOligoPlan.feasible, true);
+  assert.equal(wrapJunction.overlapSequence.startsWith(rightFlank.slice(0, 16)), true);
+  assert.equal(wrapJunction.overlapSequence.startsWith(fileStart.slice(0, 16)), false);
+  assert.equal(hostForward.bindingSequence.startsWith(rightFlank.slice(0, 16)), true);
+  assert.equal(insertReverse.tailSequence, toolBox.reverseComplementDna(wrapJunction.overlapSequence));
+});
+
+test('[EDGE] protein-builder Gibson insert primers bind the linked source CDS and add missing tags as tails', () => {
+  const notebookAdapter = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'protein-builder-cloning-notebook.js')
+  );
+  const leftFlank = 'ATGCGTACGATCGTACGATCGTACGATCGA';
+  const rightFlank = 'GTGCTAGCTGGCCAGACATGATAAGATACATTG';
+  const upstreamBackbone = `TTTTTATATATATATATATAT${leftFlank}`;
+  const downstreamBackbone = `${rightFlank}GGCCGATATATATATATCGCGCGC`;
+  const backboneSequence = `${upstreamBackbone}${downstreamBackbone}`;
+  const tagAndLinker = 'ATGCACCACCACCACCACCACGAAAACCTGTACTTC';
+  const sourceCds = 'CAGGGCGCGTTTACCGTGACCGTGCCGAAAGATCTGTACGTGGTGGAATACGGCAGCAACATGACC';
+  const insertSequence = `${tagAndLinker}${sourceCds}`;
+  const plan = notebookAdapter.buildProteinBuilderCloningPlan({
+    constructName: 'Tagged-POI',
+    backbone: {
+      hostVectorName: 'Host Backbone',
+      topology: 'circular',
+      variantMode: 'gibson',
+      insertionOffset: upstreamBackbone.length,
+      backboneSequence
+    },
+    dnaConstruct: {
+      sequence: insertSequence,
+      length: insertSequence.length,
+      parts: [
+        { label: '6xHis-TEV', dnaSequence: tagAndLinker, length: tagAndLinker.length },
+        {
+          label: 'PD-L1',
+          dnaSequence: sourceCds,
+          templateSequence: sourceCds,
+          length: sourceCds.length
+        }
+      ]
+    },
+    assembledRecord: {
+      name: 'Tagged-POI (Host Backbone)',
+      sequence: `${upstreamBackbone}${insertSequence}${downstreamBackbone}`
+    }
+  });
+  const insertForward = plan.primerOligoPlan.primers.find((primer) => primer.name === 'Tagged-POI_F');
+  const insertReverse = plan.primerOligoPlan.primers.find((primer) => primer.name === 'Tagged-POI_R');
+  const wrapJunction = plan.routeEvaluations.gibson.junctions.find((junction) => junction.wrapAround);
+
+  assert.equal(plan.recommendedAssemblyStrategy, 'gibson');
+  assert.equal(plan.primerOligoPlan.feasible, true);
+  assert.equal(insertForward.tailSequence, tagAndLinker);
+  assert.equal(insertForward.bindingSequence.startsWith(sourceCds.slice(0, 18)), true);
+  assert.equal(insertForward.bindingSequence.startsWith(tagAndLinker.slice(0, 18)), false);
+  assert.equal(insertForward.warnings.some((warning) => /Adds 36 nt at the 5' end/i.test(warning)), true);
+  assert.equal(insertReverse.bindingSequence, toolBox.reverseComplementDna(sourceCds.slice(sourceCds.length - insertReverse.bindingSequence.length)));
+  assert.equal(insertReverse.tailSequence, toolBox.reverseComplementDna(wrapJunction.overlapSequence));
+});
+
 [
   [[1, 2, 3], [2, 4, 6], { slope: 2, intercept: 0, rSquared: 1 }],
   [[1, 2, 3], [3, 2, 1], { slope: -1, intercept: 4, rSquared: 1 }],

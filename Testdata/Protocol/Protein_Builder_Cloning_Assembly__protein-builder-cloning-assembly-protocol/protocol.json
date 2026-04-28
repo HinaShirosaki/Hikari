@@ -1,7 +1,7 @@
 {
   "schema_name": "enana_protocols",
   "schema_version": "1.0.0",
-  "updated_at": "2026-04-27T20:46:11.554Z",
+  "updated_at": "2026-04-28T16:52:49.407Z",
   "protocol": {
     "id": "protein-builder-cloning-assembly-protocol",
     "name": "Protein Builder Cloning Assembly",
@@ -15,13 +15,28 @@
     "steps": [
       {
         "id": "protein-builder-cloning-assembly-protocol_step_1",
-        "text": "Reassess inputs: No executable route was identified. Re-check backbone choice, fragment order, or edit size.",
+        "text": "Amplify fragments: PCR-amplify all fragments using the overlap-bearing primer set.",
+        "placeholders": []
+      },
+      {
+        "id": "protein-builder-cloning-assembly-protocol_step_2",
+        "text": "Assemble reaction: Combine fragments in a Gibson-style assembly reaction using the planned overlap order.",
+        "placeholders": []
+      },
+      {
+        "id": "protein-builder-cloning-assembly-protocol_step_3",
+        "text": "Transform and recover: Transform the assembly reaction into competent cells and recover colonies.",
+        "placeholders": []
+      },
+      {
+        "id": "protein-builder-cloning-assembly-protocol_step_4",
+        "text": "Validate junctions: Screen every junction by colony PCR and sequence through the assembled insert.",
         "placeholders": []
       }
     ],
     "troubleshooting": "If primer design is infeasible, adjust the selected backbone, fragment order, or assembly strategy.",
     "createdAt": "2026-04-27T02:49:43.556Z",
-    "updatedAt": "2026-04-27T20:46:11.521Z",
+    "updatedAt": "2026-04-28T01:49:05.527Z",
     "source": "protein_builder_cloning_assembly"
   }
 }

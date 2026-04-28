@@ -1,5 +1,7 @@
 'use strict';
 
+const { LLM, TELEGRAM, SYSTEM } = require('../../../shared/ipc/channels');
+
 function registerSystemIpc(deps = {}) {
   const ipcMain = deps.ipcMain;
   const shell = deps.shell || null;
@@ -65,7 +67,7 @@ function registerSystemIpc(deps = {}) {
     }
   }
 
-  ipcMain.handle('llm:codex-status', async () => {
+  ipcMain.handle(LLM.CODEX_STATUS, async () => {
     const status = await getCodexLoginStatus({ cwd: getCodexCliWorkingDirectory(), forceRefresh: true });
     return {
       ok: status.ok === true,
@@ -77,7 +79,7 @@ function registerSystemIpc(deps = {}) {
     };
   });
 
-  ipcMain.handle('llm:codex-login', async () => {
+  ipcMain.handle(LLM.CODEX_LOGIN, async () => {
     if (typeof launchCodexCliLogin !== 'function') {
       return { ok: false, error: 'Codex login is unavailable.' };
     }
@@ -100,7 +102,7 @@ function registerSystemIpc(deps = {}) {
     }
   });
 
-  ipcMain.handle('llm:codex-clear-login', async () => {
+  ipcMain.handle(LLM.CODEX_CLEAR_LOGIN, async () => {
     if (typeof clearCodexCliStoredLogin !== 'function') {
       return { ok: false, error: 'Codex login reset is unavailable.' };
     }
@@ -131,7 +133,7 @@ function registerSystemIpc(deps = {}) {
     }
   });
 
-  ipcMain.handle('llm:codex-catalog', async () => {
+  ipcMain.handle(LLM.CODEX_CATALOG, async () => {
     const catalog = getCodexCliCatalog();
     return {
       ok: catalog.ok !== false,
@@ -152,7 +154,7 @@ function registerSystemIpc(deps = {}) {
     };
   });
 
-  ipcMain.handle('llm:codex-set-model', async (_event, payload) => {
+  ipcMain.handle(LLM.CODEX_SET_MODEL, async (_event, payload) => {
     const normalizedPayload = normalizeJsonPayload(payload, {});
     const previousModel = getCodexCliModel();
     const model = setCodexCliModel(cleanText(normalizedPayload?.model, 120));
@@ -163,7 +165,7 @@ function registerSystemIpc(deps = {}) {
     };
   });
 
-  ipcMain.handle('llm:codex-set-reasoning-effort', async (_event, payload) => {
+  ipcMain.handle(LLM.CODEX_SET_REASONING_EFFORT, async (_event, payload) => {
     const normalizedPayload = normalizeJsonPayload(payload, {});
     const previousReasoningEffort = getCodexCliReasoningEffort();
     const reasoningEffort = setCodexCliReasoningEffort(cleanText(normalizedPayload?.reasoningEffort, 40));
@@ -174,7 +176,7 @@ function registerSystemIpc(deps = {}) {
     };
   });
 
-  ipcMain.handle('llm:codex-generate', async (_event, payload) => {
+  ipcMain.handle(LLM.CODEX_GENERATE, async (_event, payload) => {
     try {
       const normalizedPayload = normalizeJsonPayload(payload, {});
       const promptRaw = typeof normalizedPayload?.prompt === 'string' ? normalizedPayload.prompt.trim() : '';
@@ -209,7 +211,7 @@ function registerSystemIpc(deps = {}) {
     }
   });
 
-  ipcMain.handle('telegram:get-config', async () => {
+  ipcMain.handle(TELEGRAM.GET_CONFIG, async () => {
     const state = getTelegramState();
     return {
       ok: true,
@@ -219,7 +221,7 @@ function registerSystemIpc(deps = {}) {
     };
   });
 
-  ipcMain.handle('telegram:set-token', async (_event, payload) => {
+  ipcMain.handle(TELEGRAM.SET_TOKEN, async (_event, payload) => {
     const normalizedPayload = normalizeJsonPayload(payload, {});
     const token = typeof normalizedPayload?.token === 'string' ? normalizedPayload.token.trim() : '';
     if (!token) {
@@ -242,7 +244,7 @@ function registerSystemIpc(deps = {}) {
     }
   });
 
-  ipcMain.handle('telegram:clear-token', async () => {
+  ipcMain.handle(TELEGRAM.CLEAR_TOKEN, async () => {
     try {
       setSavedTelegramToken('');
       await writeSavedTelegramToken('');
@@ -259,7 +261,7 @@ function registerSystemIpc(deps = {}) {
     }
   });
 
-  ipcMain.handle('system:open-external-url', async (_event, payload) => {
+  ipcMain.handle(SYSTEM.OPEN_EXTERNAL_URL, async (_event, payload) => {
     const normalizedPayload = normalizeJsonPayload(payload, {});
     const url = normalizeExternalUrl(normalizedPayload?.url);
     if (!url) {

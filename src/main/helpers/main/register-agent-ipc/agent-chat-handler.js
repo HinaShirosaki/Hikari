@@ -6,6 +6,7 @@ const {
   isAgentRequestAbortError,
   runWithAgentRequestContext
 } = require('../../agent/shared/agent-request-context.js');
+const { AGENT, AGENT_PROGRESS_EVENT } = require('../../../../shared/ipc/channels');
 
 function registerAgentChatHandler({
   ipcMain,
@@ -40,7 +41,7 @@ function registerAgentChatHandler({
     }).filter((attachment) => attachment.name);
   }
 
-  ipcMain.handle('agent:chat:cancel', async (_event, payload) => {
+  ipcMain.handle(AGENT.CHAT_CANCEL, async (_event, payload) => {
     const normalizedPayload = normalizeJsonPayload(payload, {});
     const clientRequestId = cleanText(
       normalizedPayload?.clientRequestId || normalizedPayload?.client_request_id,
@@ -72,7 +73,7 @@ function registerAgentChatHandler({
     };
   });
 
-  ipcMain.handle('agent:chat', async (event, payload) => {
+  ipcMain.handle(AGENT.CHAT, async (event, payload) => {
     const normalizedPayload = normalizeJsonPayload(payload, {});
     const executionFlags = controllerUtils.resolveAgentExecutionFlags(
       normalizedPayload,
@@ -111,7 +112,7 @@ function registerAgentChatHandler({
         if (!progressPayload) {
           return;
         }
-        progressSender('agent-progress', progressPayload);
+        progressSender(AGENT_PROGRESS_EVENT, progressPayload);
       }
     });
     const controllerRuntime = {

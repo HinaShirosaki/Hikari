@@ -2,6 +2,11 @@
 
 const path = require('node:path');
 const { parseChemicalImportFile } = require('./chemical-import-parser');
+const {
+  STORAGE,
+  INVENTORY,
+  SEQUENCE_LIBRARY
+} = require('../../../shared/ipc/channels');
 
 function registerDataIpc(deps = {}) {
   const ipcMain = deps.ipcMain;
@@ -29,6 +34,7 @@ function registerDataIpc(deps = {}) {
   const annotateSequenceRecord = deps.annotateSequenceRecord;
   const searchSequenceFeatures = deps.searchSequenceFeatures;
   const listRecognizedBackbones = deps.listRecognizedBackbones;
+  const upsertRecognizedBackbone = deps.upsertRecognizedBackbone;
   const recognizeSequenceBackbone = deps.recognizeSequenceBackbone;
 
   function safeParseJson(value, fallback = null) {
@@ -177,7 +183,7 @@ function registerDataIpc(deps = {}) {
     };
   }
 
-  ipcMain.handle('data:auto-save', async (_event, payload) => {
+  ipcMain.handle(STORAGE.AUTO_SAVE, async (_event, payload) => {
     const normalizedPayload = normalizeJsonPayload(payload, {});
     const { data, filePath } = normalizedPayload;
     if (!data) {
@@ -186,7 +192,7 @@ function registerDataIpc(deps = {}) {
     return mainDataHelpers.autoSaveDataFile({ data, filePath });
   });
 
-  ipcMain.handle('storage:sync-sqlite-bundle', async (_event, payload) => {
+  ipcMain.handle(STORAGE.SYNC_SQLITE_BUNDLE, async (_event, payload) => {
     const normalizedPayload = normalizeJsonPayload(payload, {});
     const sqlitePath = cleanText(normalizedPayload?.sqlitePath || normalizedPayload?.filePath, 2400);
     const mode = cleanText(normalizedPayload?.mode, 40);
@@ -211,7 +217,7 @@ function registerDataIpc(deps = {}) {
     }
   });
 
-  ipcMain.handle('storage:pick-directory', async (_event, payload) => {
+  ipcMain.handle(STORAGE.PICK_DIRECTORY, async (_event, payload) => {
     const normalizedPayload = normalizeJsonPayload(payload, {});
     const currentPath = typeof normalizedPayload?.currentPath === 'string' ? normalizedPayload.currentPath.trim() : '';
     const result = await dialog.showOpenDialog({
@@ -227,7 +233,7 @@ function registerDataIpc(deps = {}) {
     return { ok: true, path: result.filePaths[0] };
   });
 
-  ipcMain.handle('storage:ensure-directory', async (_event, payload) => {
+  ipcMain.handle(STORAGE.ENSURE_DIRECTORY, async (_event, payload) => {
     const normalizedPayload = normalizeJsonPayload(payload, {});
     const targetPath = typeof normalizedPayload?.path === 'string' ? normalizedPayload.path.trim() : '';
     if (!targetPath) {
@@ -242,7 +248,7 @@ function registerDataIpc(deps = {}) {
     }
   });
 
-  ipcMain.handle('storage:store-imported-file', async (_event, payload) => {
+  ipcMain.handle(STORAGE.STORE_IMPORTED_FILE, async (_event, payload) => {
     try {
       const stored = await storeImportedFile(normalizeJsonPayload(payload, {}));
       return { ok: true, ...stored };
@@ -251,7 +257,7 @@ function registerDataIpc(deps = {}) {
     }
   });
 
-  ipcMain.handle('storage:write-json-file', async (_event, payload) => {
+  ipcMain.handle(STORAGE.WRITE_JSON_FILE, async (_event, payload) => {
     const normalizedPayload = normalizeJsonPayload(payload, {});
     try {
       const result = await writeJsonStorageFile(normalizedPayload);
@@ -267,7 +273,7 @@ function registerDataIpc(deps = {}) {
     }
   });
 
-  ipcMain.handle('storage:open-file', async (_event, payload) => {
+  ipcMain.handle(STORAGE.OPEN_FILE, async (_event, payload) => {
     const normalizedPayload = normalizeJsonPayload(payload, {});
     const targetPath = typeof normalizedPayload?.path === 'string' ? normalizedPayload.path.trim() : '';
     if (!targetPath) {
@@ -288,7 +294,7 @@ function registerDataIpc(deps = {}) {
     return { ok: true, path: resolvedPath };
   });
 
-  ipcMain.handle('storage:read-file-base64', async (_event, payload) => {
+  ipcMain.handle(STORAGE.READ_FILE_BASE64, async (_event, payload) => {
     const normalizedPayload = normalizeJsonPayload(payload, {});
     const targetPath = typeof normalizedPayload?.path === 'string' ? normalizedPayload.path.trim() : '';
     if (!targetPath) {
@@ -312,7 +318,7 @@ function registerDataIpc(deps = {}) {
     }
   });
 
-  ipcMain.handle('inventory:parse-chemical-import', async (_event, payload) => {
+  ipcMain.handle(INVENTORY.PARSE_CHEMICAL_IMPORT, async (_event, payload) => {
     const normalizedPayload = normalizeJsonPayload(payload, {});
     const fileName = cleanText(normalizedPayload?.fileName, 300);
     const dataBase64 = String(normalizedPayload?.dataBase64 || '').trim();
@@ -334,7 +340,7 @@ function registerDataIpc(deps = {}) {
     }
   });
 
-  ipcMain.handle('storage:import-root', async (_event, payload) => {
+  ipcMain.handle(STORAGE.IMPORT_ROOT, async (_event, payload) => {
     const normalizedPayload = normalizeJsonPayload(payload, {});
     const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
     if (!storagePath) {
@@ -348,7 +354,7 @@ function registerDataIpc(deps = {}) {
     }
   });
 
-  ipcMain.handle('storage:discover-papers', async (_event, payload) => {
+  ipcMain.handle(STORAGE.DISCOVER_PAPERS, async (_event, payload) => {
     const normalizedPayload = normalizeJsonPayload(payload, {});
     const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
     if (!storagePath) {
@@ -370,7 +376,7 @@ function registerDataIpc(deps = {}) {
     }
   });
 
-  ipcMain.handle('sequence-library:list', async (_event, payload) => {
+  ipcMain.handle(SEQUENCE_LIBRARY.LIST, async (_event, payload) => {
     try {
       const normalizedPayload = normalizeJsonPayload(payload, {});
       const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
@@ -385,7 +391,7 @@ function registerDataIpc(deps = {}) {
     }
   });
 
-  ipcMain.handle('sequence-library:get', async (_event, payload) => {
+  ipcMain.handle(SEQUENCE_LIBRARY.GET, async (_event, payload) => {
     try {
       const normalizedPayload = normalizeJsonPayload(payload, {});
       const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
@@ -409,7 +415,7 @@ function registerDataIpc(deps = {}) {
     }
   });
 
-  ipcMain.handle('sequence-library:upsert', async (_event, payload) => {
+  ipcMain.handle(SEQUENCE_LIBRARY.UPSERT, async (_event, payload) => {
     try {
       const normalizedPayload = normalizeJsonPayload(payload, {});
       const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
@@ -439,7 +445,7 @@ function registerDataIpc(deps = {}) {
     }
   });
 
-  ipcMain.handle('sequence-library:promote', async (_event, payload) => {
+  ipcMain.handle(SEQUENCE_LIBRARY.PROMOTE, async (_event, payload) => {
     try {
       const normalizedPayload = normalizeJsonPayload(payload, {});
       const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
@@ -461,7 +467,7 @@ function registerDataIpc(deps = {}) {
     }
   });
 
-  ipcMain.handle('sequence-library:delete', async (_event, payload) => {
+  ipcMain.handle(SEQUENCE_LIBRARY.DELETE, async (_event, payload) => {
     try {
       const normalizedPayload = normalizeJsonPayload(payload, {});
       const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
@@ -479,7 +485,7 @@ function registerDataIpc(deps = {}) {
     }
   });
 
-  ipcMain.handle('sequence-library:search-features', async (_event, payload) => {
+  ipcMain.handle(SEQUENCE_LIBRARY.SEARCH_FEATURES, async (_event, payload) => {
     try {
       const normalizedPayload = normalizeJsonPayload(payload, {});
       const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
@@ -497,7 +503,7 @@ function registerDataIpc(deps = {}) {
     }
   });
 
-  ipcMain.handle('sequence-library:list-backbones', async (_event, payload) => {
+  ipcMain.handle(SEQUENCE_LIBRARY.LIST_BACKBONES, async (_event, payload) => {
     try {
       const normalizedPayload = normalizeJsonPayload(payload, {});
       const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
@@ -518,7 +524,27 @@ function registerDataIpc(deps = {}) {
     }
   });
 
-  ipcMain.handle('sequence-library:annotate', async (_event, payload) => {
+  ipcMain.handle(SEQUENCE_LIBRARY.UPSERT_BACKBONE, async (_event, payload) => {
+    try {
+      const normalizedPayload = normalizeJsonPayload(payload, {});
+      const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
+      if (!storagePath) {
+        return { ok: false, error: 'Missing storage path.' };
+      }
+      if (typeof upsertRecognizedBackbone !== 'function') {
+        throw new Error('Stored backbone API unavailable.');
+      }
+      const result = await upsertRecognizedBackbone({
+        storagePath,
+        backbone: normalizedPayload?.backbone || normalizedPayload?.data || {}
+      });
+      return { ok: true, ...result };
+    } catch (error) {
+      return { ok: false, error: String(error?.message || error) };
+    }
+  });
+
+  ipcMain.handle(SEQUENCE_LIBRARY.ANNOTATE, async (_event, payload) => {
     try {
       const normalizedPayload = normalizeJsonPayload(payload, {});
       const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
@@ -540,7 +566,7 @@ function registerDataIpc(deps = {}) {
     }
   });
 
-  ipcMain.handle('sequence-library:recognize-backbone', async (_event, payload) => {
+  ipcMain.handle(SEQUENCE_LIBRARY.RECOGNIZE_BACKBONE, async (_event, payload) => {
     try {
       const normalizedPayload = normalizeJsonPayload(payload, {});
       const storagePath = cleanText(normalizedPayload?.storagePath, 2000);

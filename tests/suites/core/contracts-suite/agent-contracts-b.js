@@ -6,6 +6,13 @@ module.exports = function registerAgentContractsB(context = {}) {
     const agentDir = path.join(__dirname, 'src', 'main', 'helpers', 'agent');
     const agentPath = (...parts) => path.join(agentDir, ...parts);
     const agentRegistrarPath = (...parts) => path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc', ...parts);
+    const readLocalSource = (...parts) => fs.readFileSync(path.join(__dirname, ...parts), 'utf8');
+    const readMainProcessSource = () => [
+      readLocalSource('src', 'main', 'main.js'),
+      readLocalSource('src', 'main', 'app', 'start-main-app.js'),
+      readLocalSource('src', 'main', 'app', 'main-runtime.js'),
+      readLocalSource('src', 'main', 'ipc', 'index.js')
+    ].join('\n');
 
     test('science reasoning helper exports shared loop runtime and renderer consumes science payloads', () => {
       const helperSource = fs.readFileSync(agentPath('runtime', 'science-reasoning-loop', 'index.js'), 'utf8');
@@ -37,7 +44,7 @@ module.exports = function registerAgentContractsB(context = {}) {
       const helperSource = fs.readFileSync(agentPath('deep-research', 'index.js'), 'utf8');
       const step4Source = fs.readFileSync(agentPath('deep-research', 'step-4-execute-plan.js'), 'utf8');
       const step5Source = fs.readFileSync(agentPath('deep-research', 'step-5-assemble-final-answer.js'), 'utf8');
-      const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
+      const mainSource = readMainProcessSource();
       const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');
       const agentRegistrarSource = fs.readFileSync(agentRegistrarPath('index.js'), 'utf8');
       const controllerCoreSource = fs.readFileSync(agentRegistrarPath('agent-controller-core.js'), 'utf8');
@@ -218,7 +225,7 @@ module.exports = function registerAgentContractsB(context = {}) {
     });
 
     test('main wires intent parser + observability paths for parser-only controller', () => {
-      const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
+      const mainSource = readMainProcessSource();
       const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');
       const controllerCoreSource = fs.readFileSync(agentRegistrarPath('agent-controller-core.js'), 'utf8');
       const controllerUtilsSource = fs.readFileSync(agentPath('shared', 'agent-controller-utils.js'), 'utf8');
@@ -324,7 +331,7 @@ module.exports = function registerAgentContractsB(context = {}) {
     });
 
     test('science runtimes use canonical catalog tools and main wires their schemas and executors', () => {
-      const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
+      const mainSource = readMainProcessSource();
       const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');
       const { SCIENCE_REASONING_INTENTS, getScienceReasoningPolicy } = require(agentPath('runtime', 'science-reasoning-loop', 'index.js'));
       const { DEEP_RESEARCH_POLICIES } = require(agentPath('deep-research', 'index.js'));
@@ -363,7 +370,7 @@ module.exports = function registerAgentContractsB(context = {}) {
     });
 
     test('main no longer wires legacy routing and phase orchestration helpers', () => {
-      const mainSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
+      const mainSource = readMainProcessSource();
       assert.equal(/require\('\.\/helpers\/agent\/agent-routing'/.test(mainSource), false);
       assert.equal(/require\('\.\/helpers\/agent\/agent-paper-analysis'/.test(mainSource), false);
       assert.equal(/require\('\.\/helpers\/agent\/agent-project-retrieval'/.test(mainSource), false);

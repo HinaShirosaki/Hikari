@@ -51,6 +51,10 @@ export function createRendererModuleRuntime(config = {}) {
   const sequenceViewerDetailViewId = String(config?.sequenceViewerDetailViewId || '').trim();
   const onStoragePathSaved = config?.onStoragePathSaved || (async () => {});
   const rootDocument = config?.rootDocument || globalThis?.document || null;
+  const apiBridge = config?.apiBridge || globalThis?.window?.enanaApi || globalThis?.enanaApi || null;
+  const getApiBridge = typeof config?.getApiBridge === 'function'
+    ? config.getApiBridge
+    : () => apiBridge || globalThis?.window?.enanaApi || globalThis?.enanaApi || null;
   const selectionInsightsController = createSelectionInsightsController({
     state,
     persist,
@@ -170,6 +174,8 @@ export function createRendererModuleRuntime(config = {}) {
       state,
       persist,
       createId,
+      apiBridge,
+      getApiBridge,
       onNotebookEntriesChanged: () => {
         rendererServices.project.handleProjectsChanged();
         rendererServices.protocol.handleProtocolsChanged();
