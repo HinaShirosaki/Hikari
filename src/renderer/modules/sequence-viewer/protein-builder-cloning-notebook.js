@@ -83,6 +83,46 @@ function buildBackboneName(backbone = {}) {
     || 'Stored backbone';
 }
 
+function resolveBackboneInsertionOffset(backboneSequence, backbone = {}) {
+  const sequenceLength = Math.max(0, normalizeSequenceText(backboneSequence || '').length);
+  const explicitOffset = Number(backbone?.insertionOffset);
+  if (!Number.isFinite(explicitOffset)) {
+    return sequenceLength;
+  }
+  return Math.max(0, Math.min(sequenceLength, Math.round(explicitOffset)));
+}
+
+function linearizeBackboneAtInsertionOffset(backboneSequence, backbone = {}) {
+  const sequence = normalizeSequenceText(backboneSequence || '');
+  if (!sequence.length || cleanText(backbone?.topology, 40).toLowerCase() === 'linear') {
+    return sequence;
+  }
+
+  const insertionOffset = resolveBackboneInsertionOffset(sequence, backbone);
+  if (insertionOffset <= 0 || insertionOffset >= sequence.length) {
+    return sequence;
+  }
+
+  return `${sequence.slice(insertionOffset)}${sequence.slice(0, insertionOffset)}`;
+}
+
+function resolveDnaConstructTemplateSequence(dnaConstruct = {}) {
+  const desiredSequence = normalizeSequenceText(dnaConstruct?.sequence || '');
+  if (!desiredSequence.length) {
+    return '';
+  }
+
+  return asArray(dnaConstruct?.parts)
+    .map((part) => normalizeSequenceText(
+      part?.templateSequence
+      || part?.sourceTemplateSequence
+      || part?.sourceDnaSequence
+      || ''
+    ))
+    .filter((sequence) => sequence.length)
+    .sort((left, right) => right.length - left.length)[0] || '';
+}
+
 function resolveBackboneCloningPreferences(backbone = {}) {
   const variantMode = cleanText(backbone?.variantMode || backbone?.variant_mode, 60).toLowerCase();
   if (variantMode === 'restriction' || variantMode === 'restriction-ligation') {
@@ -134,8 +174,10 @@ export function buildProteinBuilderCloningPlan({
   assembledRecord = {},
   constructName = ''
 } = {}) {
-  const backboneSequence = normalizeSequenceText(backbone?.backboneSequence || '');
+  const rawBackboneSequence = normalizeSequenceText(backbone?.backboneSequence || '');
+  const backboneSequence = linearizeBackboneAtInsertionOffset(rawBackboneSequence, backbone);
   const insertSequence = normalizeSequenceText(dnaConstruct?.sequence || '');
+  const insertTemplateSequence = resolveDnaConstructTemplateSequence(dnaConstruct);
   const resultSequence = normalizeSequenceText(assembledRecord?.sequence || '');
   const safeConstructName = cleanText(constructName, 160)
     || cleanText(assembledRecord?.name, 160)
@@ -164,7 +206,8 @@ export function buildProteinBuilderCloningPlan({
         sequence: insertSequence,
         metadata: {
           source: 'protein_builder',
-          partCount: asArray(dnaConstruct?.parts).length
+          partCount: asArray(dnaConstruct?.parts).length,
+          templateSequence: insertTemplateSequence
         }
       }
     ],

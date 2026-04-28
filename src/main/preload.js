@@ -20,6 +20,7 @@ contextBridge.exposeInMainWorld('enanaApi', {
   sequenceLibraryDelete: (payload) => ipcRenderer.invoke('sequence-library:delete', payload),
   sequenceLibrarySearchFeatures: (payload) => ipcRenderer.invoke('sequence-library:search-features', payload),
   sequenceLibraryListBackbones: (payload) => ipcRenderer.invoke('sequence-library:list-backbones', payload),
+  sequenceLibraryUpsertBackbone: (payload) => ipcRenderer.invoke('sequence-library:upsert-backbone', payload),
   sequenceLibraryAnnotate: (payload) => ipcRenderer.invoke('sequence-library:annotate', payload),
   sequenceLibraryRecognizeBackbone: (payload) => ipcRenderer.invoke('sequence-library:recognize-backbone', payload),
   getTelegramBotConfig: () => ipcRenderer.invoke('telegram:get-config'),

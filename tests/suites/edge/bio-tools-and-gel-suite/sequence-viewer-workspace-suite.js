@@ -1447,6 +1447,149 @@ test('[EDGE] sequence-viewer protein builder can open an assembled plasmid from 
   assert.equal(appState.notebookEntries[0].resultTable.rows.length > 0, true);
 });
 
+test('[EDGE] sequence-viewer protein builder confirm uses edited final sequence for cloning primers', async () => {
+  const ids = [
+    'sequence-viewer-home-workspace',
+    'sequence-viewer-protein-builder-workspace',
+    'sequence-viewer-detail-workspace',
+    'sequence-viewer-protein-builder-confirmation',
+    'sequence-viewer-protein-builder-confirmation-summary',
+    'sequence-viewer-protein-builder-confirmation-back-btn',
+    'sequence-viewer-protein-builder-confirmation-confirm-btn',
+    'sequence-viewer-mode-paste',
+    'sequence-viewer-mode-file',
+    'sequence-viewer-paste-panel',
+    'sequence-viewer-file-panel',
+    'sequence-viewer-textarea',
+    'sequence-viewer-file-input',
+    'sequence-viewer-file-choose',
+    'sequence-viewer-file-name',
+    'sequence-viewer-load-btn',
+    'sequence-viewer-annotate-btn',
+    'sequence-viewer-clear-btn',
+    'sequence-viewer-status',
+    'sequence-viewer-messages',
+    'sequence-viewer-record-select',
+    'sequence-viewer-save-name',
+    'sequence-viewer-stat-format',
+    'sequence-viewer-stat-length',
+    'sequence-viewer-stat-topology',
+    'sequence-viewer-stat-gc',
+    'sequence-viewer-stat-ambiguous',
+    'sequence-viewer-stat-quality',
+    'sequence-viewer-stat-features',
+    'sequence-viewer-stat-restriction-sites',
+    'sequence-viewer-feature-rail-host',
+    'sequence-viewer-feature-detail',
+    'sequence-viewer-sequence-host'
+  ];
+  const document = createMockDocument(ids);
+  const moduleWithDom = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    { document }
+  );
+  const appState = { projects: [], protocols: [], notebookEntries: [] };
+  let persisted = false;
+  let changedCount = 0;
+  const viewer = moduleWithDom.initSequenceViewer({
+    state: appState,
+    persist: () => {
+      persisted = true;
+    },
+    createId: () => 'edited-final-plan-id',
+    onNotebookEntriesChanged: () => {
+      changedCount += 1;
+    }
+  });
+  const leftFlank = 'ATGCGTACGATCGTACGATCGTACGATCGA';
+  const rightFlank = 'GTGCTAGCTGGCCAGACATGATAAGATACATTG';
+  const upstreamBackbone = `TTTTTATATATATATATATAT${leftFlank}`;
+  const downstreamBackbone = `${rightFlank}GGCCGATATATATATATCGCGCGC`;
+  const originalTag = 'ATGCACCACCACCACCACCACGAAAACCTGTACTTC';
+  const editedTag = `${originalTag}GCCGCC`;
+  const sourceCds = 'CAGGGCGCGTTTACCGTGACCGTGCCGAAAGATCTGTACGTGGTGGAATACGGCAGCAACATGACC';
+  const originalInsert = `${originalTag}${sourceCds}`;
+  const editedInsert = `${editedTag}${sourceCds}`;
+  const backboneSequence = `${upstreamBackbone}${downstreamBackbone}`;
+  const originalSequence = `${upstreamBackbone}${originalInsert}${downstreamBackbone}`;
+  const editedSequence = `${upstreamBackbone}${editedInsert}${downstreamBackbone}`;
+  const confirmation = {
+    recordName: 'Tagged-POI (Host Backbone)',
+    constructName: 'Tagged-POI',
+    backboneName: 'Host Backbone',
+    plasmidLength: originalSequence.length,
+    insertLength: originalInsert.length,
+    notebookEntryId: 'edited-final-plan',
+    cloningDesignSource: {
+      constructName: 'Tagged-POI',
+      backbone: {
+        hostVectorName: 'Host Backbone',
+        topology: 'circular',
+        variantMode: 'gibson',
+        insertionOffset: upstreamBackbone.length,
+        backboneSequence
+      },
+      dnaConstruct: {
+        sequence: originalInsert,
+        length: originalInsert.length,
+        parts: [
+          { label: '6xHis-TEV', dnaSequence: originalTag, length: originalTag.length },
+          { label: 'PD-L1', dnaSequence: sourceCds, templateSequence: sourceCds, length: sourceCds.length }
+        ]
+      },
+      assembledRecord: {
+        name: 'Tagged-POI (Host Backbone)',
+        sequence: originalSequence,
+        topology: 'circular',
+        features: []
+      }
+    }
+  };
+
+  viewer.loadFromExternal({
+    name: 'Tagged-POI (Host Backbone)',
+    sequence: editedSequence,
+    topology: 'circular',
+    source: 'protein_builder',
+    features: [
+      {
+        id: 'protein_builder_backbone',
+        name: 'Backbone (Host Backbone)',
+        type: 'backbone',
+        strand: 1,
+        source: 'protein_builder',
+        segments: [
+          { start: 0, end: upstreamBackbone.length },
+          { start: upstreamBackbone.length + editedInsert.length, end: editedSequence.length }
+        ]
+      },
+      {
+        id: 'protein_builder_insert',
+        name: 'Tagged-POI',
+        type: 'insert',
+        strand: 1,
+        source: 'protein_builder',
+        segments: [{ start: upstreamBackbone.length, end: upstreamBackbone.length + editedInsert.length }]
+      }
+    ]
+  }, {
+    proteinBuilderConfirmation: confirmation
+  });
+
+  trigger(document.getElementById('sequence-viewer-protein-builder-confirmation-confirm-btn'), 'click');
+  await flushAsync();
+
+  assert.equal(persisted, true);
+  assert.equal(changedCount, 1);
+  assert.equal(appState.notebookEntries.length, 1);
+  assert.equal(appState.notebookEntries[0].proteinBuilderCloningDesign.insertLength, editedInsert.length);
+  assert.equal(appState.notebookEntries[0].proteinBuilderCloningDesign.assembledLength, editedSequence.length);
+  const forwardPrimer = appState.notebookEntries[0].resultTable.rows.find((row) => row.name === 'Tagged-POI_F');
+  assert.equal(Boolean(forwardPrimer), true);
+  assert.equal(forwardPrimer.sequence.startsWith(editedTag), true);
+  assert.match(forwardPrimer.notes, new RegExp(`Adds ${editedTag.length} nt at the 5' end`, 'i'));
+});
+
 test('[EDGE] sequence-viewer protein builder only lists recognized backbone selections for plasmid assembly', async () => {
   const ids = [
     'sequence-viewer-home-workspace',
@@ -1839,15 +1982,17 @@ test('[EDGE] sequence-viewer backbone recognition stores a Protein Builder artif
     'sequence-viewer-sequence-host'
   ];
   const recognizeCalls = [];
-  const writeJsonCalls = [];
+  const upsertBackboneCalls = [];
   const document = createMockDocument(ids);
   const window = {
     enanaApi: {
-      writeJsonFile: async (payload) => {
-        writeJsonCalls.push(payload);
+      sequenceLibraryUpsertBackbone: async (payload) => {
+        upsertBackboneCalls.push(payload);
         return {
           ok: true,
-          filePath: '/tmp/sequence-viewer-tests/SequenceViewer/protein-builder/backbones/derived_vector.recognized-backbone.json'
+          id: 'recognized_backbone_host',
+          filePath: '/tmp/sequence-viewer-tests/SequenceViewer/protein-builder-backbones.json',
+          relativePath: 'SequenceViewer/protein-builder-backbones.json'
         };
       },
       sequenceLibraryRecognizeBackbone: async (payload) => {
@@ -1990,14 +2135,13 @@ test('[EDGE] sequence-viewer backbone recognition stores a Protein Builder artif
   assert.equal(featureRailHost.innerHTML.includes('T7 promoter'), false);
   assert.equal(featureRailHost.innerHTML.includes('Backbone (HostVector)'), false);
   assert.equal(featureDetail.innerHTML.includes('Insert (HostVector)'), false);
-  assert.equal(writeJsonCalls.length, 1);
-  assert.equal(writeJsonCalls[0].targetFolder, 'SequenceViewer/protein-builder/backbones');
-  assert.match(String(writeJsonCalls[0].fileName || ''), /recognized-backbone\.json$/);
-  assert.equal(writeJsonCalls[0].data?.recognition?.variant_mode, 'gibson');
-  assert.equal(writeJsonCalls[0].data?.recognition?.promoter_name, 'T7 promoter');
-  assert.equal(writeJsonCalls[0].data?.backbone?.sequence_length, 24);
-  assert.equal(writeJsonCalls[0].data?.insert?.sequence_length, 6);
-  assert.match(status.textContent, /Stored a Protein Builder backbone file/i);
+  assert.equal(upsertBackboneCalls.length, 1);
+  assert.equal(upsertBackboneCalls[0].storagePath, '/tmp/sequence-viewer-tests');
+  assert.equal(upsertBackboneCalls[0].backbone?.recognition?.variant_mode, 'gibson');
+  assert.equal(upsertBackboneCalls[0].backbone?.recognition?.promoter_name, 'T7 promoter');
+  assert.equal(upsertBackboneCalls[0].backbone?.backbone?.sequence_length, 24);
+  assert.equal(upsertBackboneCalls[0].backbone?.insert?.sequence_length, 6);
+  assert.match(status.textContent, /Stored a Protein Builder backbone selection/i);
   assert.match(status.textContent, /original sequence was left unchanged/i);
 });
 

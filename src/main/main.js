@@ -55,6 +55,7 @@ const {
   annotateSequenceRecord,
   searchSequenceFeatures,
   listRecognizedBackbones,
+  upsertRecognizedBackbone,
   recognizeSequenceBackbone
 } = require('./helpers/main/sequence-library');
 const {
@@ -334,6 +335,7 @@ registerDataIpc({
   annotateSequenceRecord,
   searchSequenceFeatures,
   listRecognizedBackbones,
+  upsertRecognizedBackbone,
   recognizeSequenceBackbone
 });
 

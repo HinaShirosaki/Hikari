@@ -29,6 +29,7 @@ function registerDataIpc(deps = {}) {
   const annotateSequenceRecord = deps.annotateSequenceRecord;
   const searchSequenceFeatures = deps.searchSequenceFeatures;
   const listRecognizedBackbones = deps.listRecognizedBackbones;
+  const upsertRecognizedBackbone = deps.upsertRecognizedBackbone;
   const recognizeSequenceBackbone = deps.recognizeSequenceBackbone;
 
   function safeParseJson(value, fallback = null) {
@@ -511,6 +512,26 @@ function registerDataIpc(deps = {}) {
         storagePath,
         query: cleanText(normalizedPayload?.query, 600),
         limit: Number(normalizedPayload?.limit)
+      });
+      return { ok: true, ...result };
+    } catch (error) {
+      return { ok: false, error: String(error?.message || error) };
+    }
+  });
+
+  ipcMain.handle('sequence-library:upsert-backbone', async (_event, payload) => {
+    try {
+      const normalizedPayload = normalizeJsonPayload(payload, {});
+      const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
+      if (!storagePath) {
+        return { ok: false, error: 'Missing storage path.' };
+      }
+      if (typeof upsertRecognizedBackbone !== 'function') {
+        throw new Error('Stored backbone API unavailable.');
+      }
+      const result = await upsertRecognizedBackbone({
+        storagePath,
+        backbone: normalizedPayload?.backbone || normalizedPayload?.data || {}
       });
       return { ok: true, ...result };
     } catch (error) {

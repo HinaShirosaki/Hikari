@@ -1,0 +1,197 @@
+{
+  "schema_name": "enana_notebook_pages",
+  "schema_version": "1.0.0",
+  "updated_at": "2026-04-28T01:49:05.561Z",
+  "notebookEntry": {
+    "id": "1777340926903-6248d3bf3cef8",
+    "notebookType": "biology",
+    "projectId": "1777258183556-6354a25f71fc4",
+    "projectName": "Protein Builder",
+    "protocolId": "protein-builder-cloning-assembly-protocol",
+    "protocolName": "Protein Builder Cloning Assembly",
+    "experimentName": "Protein Builder Insert cloning primer design",
+    "protocolSnapshot": {
+      "id": "protein-builder-cloning-assembly-protocol",
+      "name": "Protein Builder Cloning Assembly",
+      "category": "",
+      "purpose": "Design cloning primers and PCR setup for a Protein Builder assembled construct.",
+      "steps": [
+        {
+          "id": "protein-builder-cloning-assembly-protocol_step_1",
+          "text": "Amplify fragments: PCR-amplify all fragments using the overlap-bearing primer set.",
+          "placeholders": []
+        },
+        {
+          "id": "protein-builder-cloning-assembly-protocol_step_2",
+          "text": "Assemble reaction: Combine fragments in a Gibson-style assembly reaction using the planned overlap order.",
+          "placeholders": []
+        },
+        {
+          "id": "protein-builder-cloning-assembly-protocol_step_3",
+          "text": "Transform and recover: Transform the assembly reaction into competent cells and recover colonies.",
+          "placeholders": []
+        },
+        {
+          "id": "protein-builder-cloning-assembly-protocol_step_4",
+          "text": "Validate junctions: Screen every junction by colony PCR and sequence through the assembled insert.",
+          "placeholders": []
+        }
+      ]
+    },
+    "values": {},
+    "result": "Protein Builder cloning assembly design\n\nConstruct: Protein Builder Insert\nBackbone: Promoter-aligned backbone\nAssembled construct length: 3,825 bp\nRecommended route: Gibson assembly\nPrimer threshold: strict\n\nPCR program\nPolymerase: High-fidelity DNA polymerase\nLongest PCR target: 3,429 bp\n- Initial denaturation: 98 C, 30 s, 1 cycle\n- Denaturation: 98 C, 10 s, 30 cycles\n- Annealing: 56 C, 20 s, 30 cycles\n- Extension: 72 C, 1 min 45 s, 30 cycles\n- Final extension: 72 C, 2 min, 1 cycle\n- Hold: 4 C, hold, 1 cycle\n- Annealing temperature is estimated from the lowest primer binding Tm (59.3 C) minus 3 C.\n- Extension is estimated at 30 s/kb for the longest planned PCR target (3,429 bp). Adjust to the polymerase data sheet.\n\nPrimers\n- Promoter-aligned backbone_F; role: Assembly Forward Start; sequence: GTGCTAGCTGGCCAGACATGATAAGATAC; length: 29 nt; Tm: 61.5 C; GC: 48.3%\n- Promoter-aligned backbone_R; role: Assembly Reverse Overlap; sequence: CAGGTTTTCGTGGTGGTGGTGGTGGTGGGTGGCCCTCCTTCGCCGGT; length: 47 nt; Tm: 62.0 C; GC: 66.0%; notes: Carries a 27 nt overlap into Protein Builder Insert.\n- Protein Builder Insert_F; role: Assembly Forward; sequence: CACCACCACCACCACCACGAAAACCTGTACTTCCAGGGCGCGTTTACCGTGACCGTGCCG; length: 60 nt; Tm: 60.2 C; GC: 61.7%; notes: Adds 39 nt at the 5' end from the primer tail.\n- Protein Builder Insert_R; role: Assembly Reverse Overlap; sequence: CAATGTATCTTATCATGTCTGGCCAGCTAGCACATACGGGGCATTCACTTTCACGGTG; length: 58 nt; Tm: 59.3 C; GC: 48.3%; notes: Carries a 33 nt overlap into Promoter-aligned backbone.\n\nAssembly procedure\n1. Amplify fragments: PCR-amplify all fragments using the overlap-bearing primer set.\n2. Assemble reaction: Combine fragments in a Gibson-style assembly reaction using the planned overlap order.\n3. Transform and recover: Transform the assembly reaction into competent cells and recover colonies.\n4. Validate junctions: Screen every junction by colony PCR and sequence through the assembled insert.\n\nValidation plan\n- colony-pcr, all designed assembly junctions: Confirm that every overlap assembled as planned.\n- sanger-sequencing, assembled insert and adjacent backbone sequence: Verify seamless junction formation.\n\nWarnings\n- Existing terminal overlap is too weak; engineered primer overlap is recommended.\n- No terminal overlap is present; a primer-introduced overlap is required.\n- No supported edit request was provided.",
+    "resultTable": {
+      "columns": [
+        {
+          "field": "name",
+          "title": "Primer"
+        },
+        {
+          "field": "role",
+          "title": "Role"
+        },
+        {
+          "field": "sequence",
+          "title": "Sequence"
+        },
+        {
+          "field": "length",
+          "title": "Length"
+        },
+        {
+          "field": "tm",
+          "title": "Binding Tm"
+        },
+        {
+          "field": "gc",
+          "title": "GC%"
+        },
+        {
+          "field": "notes",
+          "title": "Notes"
+        }
+      ],
+      "rows": [
+        {
+          "id": "Promoter-aligned backbone_F",
+          "name": "Promoter-aligned backbone_F",
+          "role": "Assembly Forward Start",
+          "sequence": "GTGCTAGCTGGCCAGACATGATAAGATAC",
+          "length": "29",
+          "tm": "61.5 C",
+          "gc": "48.3%",
+          "notes": ""
+        },
+        {
+          "id": "Promoter-aligned backbone_R",
+          "name": "Promoter-aligned backbone_R",
+          "role": "Assembly Reverse Overlap",
+          "sequence": "CAGGTTTTCGTGGTGGTGGTGGTGGTGGGTGGCCCTCCTTCGCCGGT",
+          "length": "47",
+          "tm": "62.0 C",
+          "gc": "66.0%",
+          "notes": "Carries a 27 nt overlap into Protein Builder Insert."
+        },
+        {
+          "id": "Protein Builder Insert_F",
+          "name": "Protein Builder Insert_F",
+          "role": "Assembly Forward",
+          "sequence": "CACCACCACCACCACCACGAAAACCTGTACTTCCAGGGCGCGTTTACCGTGACCGTGCCG",
+          "length": "60",
+          "tm": "60.2 C",
+          "gc": "61.7%",
+          "notes": "Adds 39 nt at the 5' end from the primer tail."
+        },
+        {
+          "id": "Protein Builder Insert_R",
+          "name": "Protein Builder Insert_R",
+          "role": "Assembly Reverse Overlap",
+          "sequence": "CAATGTATCTTATCATGTCTGGCCAGCTAGCACATACGGGGCATTCACTTTCACGGTG",
+          "length": "58",
+          "tm": "59.3 C",
+          "gc": "48.3%",
+          "notes": "Carries a 33 nt overlap into Promoter-aligned backbone."
+        }
+      ]
+    },
+    "resultFiles": [],
+    "resultFileRecords": [],
+    "storageFolder": "",
+    "updatedAt": "2026-04-28T01:49:05.527Z",
+    "createdAt": "2026-04-28T01:48:46.900Z",
+    "notebookState": "planned",
+    "executedAt": "",
+    "agentDraftStatus": "",
+    "agentDraftMeta": {},
+    "selectionInsights": [],
+    "proteinBuilderCloningDesign": {
+      "source": "protein_builder_cloning_assembly",
+      "constructName": "Protein Builder Insert",
+      "backboneName": "Promoter-aligned backbone",
+      "assembledRecordName": "Protein Builder Insert (Promoter-aligned backbone)",
+      "assembledLength": 3825,
+      "insertLength": 390,
+      "recommendedAssemblyStrategy": "gibson",
+      "primerCount": 4,
+      "pcrProgram": {
+        "polymerase": "High-fidelity DNA polymerase",
+        "annealingTemperature": 56,
+        "longestAmpliconLength": 3429,
+        "pcrTargets": [
+          {
+            "name": "Promoter-aligned backbone",
+            "role": "backbone",
+            "length": 3429
+          },
+          {
+            "name": "Protein Builder Insert",
+            "role": "insert",
+            "length": 390
+          }
+        ],
+        "steps": [
+          {
+            "label": "Initial denaturation",
+            "temperature": "98 C",
+            "time": "30 s",
+            "cycles": "1"
+          },
+          {
+            "label": "Denaturation",
+            "temperature": "98 C",
+            "time": "10 s",
+            "cycles": "30"
+          },
+          {
+            "label": "Annealing",
+            "temperature": "56 C",
+            "time": "20 s",
+            "cycles": "30"
+          },
+          {
+            "label": "Extension",
+            "temperature": "72 C",
+            "time": "1 min 45 s",
+            "cycles": "30"
+          },
+          {
+            "label": "Final extension",
+            "temperature": "72 C",
+            "time": "2 min",
+            "cycles": "1"
+          },
+          {
+            "label": "Hold",
+            "temperature": "4 C",
+            "time": "hold",
+            "cycles": "1"
+          }
+        ],
+        "notes": [
+          "Annealing temperature is estimated from the lowest primer binding Tm (59.3 C) minus 3 C.",
+          "Extension is estimated at 30 s/kb for the longest planned PCR target (3,429 bp). Adjust to the polymerase data sheet."
+        ]
+      }
+    }
+  }
+}
