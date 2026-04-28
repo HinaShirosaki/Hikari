@@ -90,7 +90,7 @@ function createScienceToolRoundLoopRuntime(deps = {}) {
 
       if (schemaRequests.length && !rawCalls.length) {
         schemaHydrationTurns += 1;
-        if (schemaHydrationTurns > Math.max(2, maxRounds * 2)) {
+        if (schemaHydrationTurns > Math.max(4, maxRounds * 3)) {
           recordLifecycleEvent(lifecycleRecorder, {
             stage: 'science_tool_schema_budget_exhausted',
             status: 'failed',

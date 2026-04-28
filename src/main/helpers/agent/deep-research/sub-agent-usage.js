@@ -163,7 +163,7 @@ async function runCompletionCheck(input = {}, deps = {}) {
   }
 
   const roundsExecuted = Number(input.roundsExecuted) || 0;
-  const maxRounds = Math.max(1, Number(input.maxRounds) || 4);
+  const maxRounds = Math.max(1, Number(input.maxRounds) || 8);
   const satisfied = fallbackMissing.length === 0 && citations.length > 0 && roundsExecuted >= 1;
   const shouldContinue = satisfied === false && roundsExecuted < maxRounds;
   const nextTool = asArray(input.researchPlan?.possible_tools_or_sources)

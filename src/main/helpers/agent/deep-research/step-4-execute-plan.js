@@ -453,7 +453,7 @@ async function runStep4ExecutePlan(input = {}, deps = {}) {
     throw new Error('Deep research execution requires runCompletionCheck.');
   }
 
-  const maxRounds = Math.max(1, Number(input.maxRounds) || 4);
+  const maxRounds = Math.max(1, Number(input.maxRounds) || 8);
   const requestedToolNames = Array.isArray(input.researchPlan?.possible_tools_or_sources) && input.researchPlan.possible_tools_or_sources.length
     ? asArray(input.researchPlan.possible_tools_or_sources)
     : null;

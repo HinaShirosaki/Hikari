@@ -155,17 +155,17 @@ function createScienceReasoningLoopRuntime(deps = {}) {
     const maxRounds = clamp(
       Number(input.maxRounds || deps.maxRounds || getDefaultScienceMaxRounds(intent, reasoningEffort)),
       1,
-      8
+      12
     );
     const maxInferenceRetries = clamp(
-      Number(input.maxInferenceRetries ?? deps.maxInferenceRetries ?? 2),
+      Number(input.maxInferenceRetries ?? deps.maxInferenceRetries ?? 3),
       0,
-      3
+      5
     );
     const maxToolsPerRound = clamp(
       Number(input.maxToolsPerRound ?? deps.maxToolsPerRound ?? 4),
       1,
-      6
+      8
     );
     const lifecycleRecorder = input.lifecycleRecorder || null;
     const conversation = asArray(input.conversation);
