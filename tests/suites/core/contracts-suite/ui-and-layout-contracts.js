@@ -186,6 +186,14 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.equal(fs.existsSync(resolved), true);
     });
 
+    test('main window keeps split preload CommonJS modules available', () => {
+      const source = fs.readFileSync(path.join(__dirname, 'src', 'main', 'windows', 'create-main-window.js'), 'utf8');
+      assert.match(source, /contextIsolation:\s*true/);
+      assert.match(source, /nodeIntegration:\s*false/);
+      assert.match(source, /sandbox:\s*false/);
+      assert.match(source, /preload:\s*preloadPath/);
+    });
+
     test('telegram bridge keeps only supported renderer IPC channel', () => {
       const telegramBotSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'lib', 'telegramBot.js'), 'utf8');
       const preloadSource = readPreloadSource();

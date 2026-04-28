@@ -1,7 +1,7 @@
 {
   "schema_name": "enana_protocols",
   "schema_version": "1.0.0",
-  "updated_at": "2026-04-28T01:49:05.561Z",
+  "updated_at": "2026-04-28T16:53:02.664Z",
   "protocol": {
     "id": "1774024680081-6b02b28fd6d39",
     "name": "IPTG-Induced Recombinant Protein Expression in BL21(DE3)",

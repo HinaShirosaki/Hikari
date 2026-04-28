@@ -18,6 +18,10 @@ function createMainWindow({
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
+      // The preload bridge is split across local CommonJS modules. Electron's
+      // renderer sandbox only exposes a limited require(), so keep Node access
+      // available to preload while the renderer itself remains isolated.
+      sandbox: false,
       preload: preloadPath
     }
   });
