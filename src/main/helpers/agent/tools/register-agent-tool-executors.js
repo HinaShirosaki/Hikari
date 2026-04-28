@@ -85,6 +85,48 @@ function buildExecutorSummary(cleanText, toolName, items = [], emptyText) {
   return `${cleanText(toolName, 120) || 'Tool'} matched ${count} item${count === 1 ? '' : 's'}.`;
 }
 
+function ensureObject(value) {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+
+function asArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function resolveContextProject(args = {}, context = {}) {
+  const argsProject = ensureObject(args?.project);
+  if (Object.keys(argsProject).length) {
+    return argsProject;
+  }
+  return ensureObject(context?.project);
+}
+
+function resolveProjectSelector(cleanText, args = {}, context = {}, parserPayload = {}) {
+  const project = resolveContextProject(args, context);
+  const entities = ensureObject(parserPayload?.entities);
+  return {
+    project,
+    projectId: cleanText(
+      args?.project_id
+      || args?.projectId
+      || project?.id
+      || project?.projectId
+      || entities?.project_id
+      || entities?.projectId,
+      160
+    ),
+    projectName: cleanText(
+      args?.project_name
+      || args?.projectName
+      || project?.name
+      || project?.projectName
+      || entities?.project_name
+      || entities?.projectName,
+      220
+    )
+  };
+}
+
 function resolvePaperDownloadContext(args = {}, context = {}) {
   const snapshot = context?.snapshot && typeof context.snapshot === 'object'
     ? context.snapshot
@@ -135,7 +177,16 @@ function registerAgentToolExecutors(deps = {}) {
   const pythonSandboxToolRuntime = deps.pythonSandboxToolRuntime || {};
   const commandLineRuntime = deps.commandLineRuntime || {};
   const notebookDraftRuntime = deps.notebookDraftRuntime || {};
+  const protocolMatchingRuntime = deps.protocolMatchingRuntime || {};
+  const notebookGenerationRuntime = deps.notebookGenerationRuntime || {};
+  const subAgentRuntime = deps.subAgentRuntime || {};
+  const memoryRuntime = deps.memoryRuntime || {};
   const paperDownloadRuntime = deps.paperDownloadRuntime || {};
+  const paperAnalysisRuntime = deps.paperAnalysisRuntime || {};
+  const protocolGenerationRuntime = deps.protocolGenerationRuntime || {};
+  const agentAppApi = deps.agentAppApi && typeof deps.agentAppApi === 'object'
+    ? deps.agentAppApi
+    : {};
   const getAgentPythonSandboxRoot = typeof deps.getAgentPythonSandboxRoot === 'function'
     ? deps.getAgentPythonSandboxRoot
     : (() => '');
@@ -203,6 +254,124 @@ function registerAgentToolExecutors(deps = {}) {
     };
   });
 
+  genericAgentToolRuntime.registerToolExecutor('protocol-matching', async ({ args, context, state }) => {
+    const parserPayload = resolveToolParserPayload(args, context, {
+      protocol_candidates: Array.isArray(args?.protocol_candidates)
+        ? args.protocol_candidates
+        : undefined
+    });
+    const { projectId, projectName } = resolveProjectSelector(cleanText, args, context, parserPayload);
+    const protocolCandidates = asArray(args?.protocol_candidates).length
+      ? asArray(args.protocol_candidates)
+      : asArray(parserPayload?.protocol_candidates);
+    const snapshot = context?.snapshot && typeof context.snapshot === 'object' ? context.snapshot : {};
+    const input = {
+      provider: cleanText(context?.provider, 80),
+      endpoint: cleanText(context?.endpoint, 2000),
+      apiKey: cleanText(context?.apiKey, 400),
+      model: cleanText(context?.model, 120),
+      snapshot,
+      protocols: asArray(args?.protocols),
+      protocolCandidates,
+      message: cleanText(args?.message || context?.message, 3200),
+      conversation: Array.isArray(context?.conversation) ? context.conversation : [],
+      parserPayload,
+      fallbackProtocol: args?.fallback_protocol && typeof args.fallback_protocol === 'object'
+        ? args.fallback_protocol
+        : null,
+      projectId,
+      projectName,
+      traceContext: context?.traceContext || null
+    };
+    const result = agentAppApi?.protocol && typeof agentAppApi.protocol.matchForNotebook === 'function'
+      ? await agentAppApi.protocol.matchForNotebook(input)
+      : (typeof protocolMatchingRuntime.selectProtocol === 'function'
+        ? await protocolMatchingRuntime.selectProtocol(input)
+        : {
+          ok: false,
+          status: 'error',
+          error: 'Protocol matching runtime is not configured.'
+        });
+    const selectedProtocol = result?.selected_protocol && typeof result.selected_protocol === 'object'
+      ? result.selected_protocol
+      : null;
+    if (selectedProtocol && state && typeof state === 'object') {
+      state.lastSelectedProtocol = selectedProtocol;
+    }
+    const rankedMatches = asArray(result?.ranked_matches);
+    const items = rankedMatches.length
+      ? rankedMatches
+      : (selectedProtocol ? [selectedProtocol] : []);
+
+    return {
+      ...result,
+      ok: result?.ok === false ? false : true,
+      status: cleanText(result?.status, 80) || (selectedProtocol ? 'selected' : 'no_match'),
+      items,
+      citations: buildToolCitations(
+        cleanText,
+        items,
+        'protocol-matching',
+        'Ranked local protocol records for notebook generation.'
+      ),
+      summary: cleanText(result?.summary, 320)
+        || (selectedProtocol
+          ? `Selected protocol ${cleanText(selectedProtocol?.name || selectedProtocol?.id, 220) || 'record'}.`
+          : cleanText(result?.rationale, 320) || 'protocol-matching returned no selected protocol.')
+    };
+  });
+
+  genericAgentToolRuntime.registerToolExecutor('notebook-generation', async ({ args, context, state }) => {
+    const selectedProtocol = args?.selected_protocol && typeof args.selected_protocol === 'object'
+      ? args.selected_protocol
+      : (args?.selectedProtocol && typeof args.selectedProtocol === 'object'
+        ? args.selectedProtocol
+        : (state?.lastSelectedProtocol && typeof state.lastSelectedProtocol === 'object'
+          ? state.lastSelectedProtocol
+          : null));
+    const project = resolveContextProject(args, context);
+    const pendingValues = args?.pending_values && typeof args.pending_values === 'object'
+      ? args.pending_values
+      : (args?.pendingValues && typeof args.pendingValues === 'object' ? args.pendingValues : {});
+    const input = {
+      provider: cleanText(context?.provider, 80),
+      endpoint: cleanText(context?.endpoint, 2000),
+      apiKey: cleanText(context?.apiKey, 400),
+      model: cleanText(context?.model, 120),
+      message: cleanText(args?.message || context?.message, 3200),
+      conversation: Array.isArray(context?.conversation) ? context.conversation : [],
+      snapshot: context?.snapshot && typeof context.snapshot === 'object' ? context.snapshot : {},
+      parserPayload: resolveToolParserPayload(args, context),
+      selectedProtocol,
+      project,
+      pendingValues,
+      traceContext: context?.traceContext || null,
+      lifecycleRecorder: context?.lifecycleRecorder || null
+    };
+    const result = agentAppApi?.notebook && typeof agentAppApi.notebook.generateFromProtocol === 'function'
+      ? await agentAppApi.notebook.generateFromProtocol(input)
+      : (typeof notebookGenerationRuntime.generateNotebook === 'function'
+        ? await notebookGenerationRuntime.generateNotebook(input)
+        : {
+          ok: false,
+          status: 'error',
+          error: 'Notebook generation runtime is not configured.'
+        });
+    const notebook = result?.notebook && typeof result.notebook === 'object' ? result.notebook : null;
+    if (notebook && state && typeof state === 'object') {
+      state.lastGeneratedNotebook = notebook;
+    }
+    return {
+      ...result,
+      ok: result?.ok === false ? false : true,
+      items: notebook ? [notebook] : [],
+      summary: cleanText(result?.summary || result?.fill_summary, 320)
+        || (notebook
+          ? `Generated notebook draft from ${cleanText(selectedProtocol?.name, 220) || 'selected protocol'}.`
+          : cleanText(result?.follow_up_questions?.[0], 320) || 'notebook-generation needs more information.')
+    };
+  });
+
   genericAgentToolRuntime.registerToolExecutor('web-search', async ({ args, context }) => {
     if (!webSearchRuntime || typeof webSearchRuntime.execute !== 'function') {
       return {
@@ -224,6 +393,83 @@ function registerAgentToolExecutors(deps = {}) {
         : null,
       external_web_access: args?.external_web_access !== false
     });
+  });
+
+  genericAgentToolRuntime.registerToolExecutor('sub-agent', async ({ args, context }) => {
+    if (!subAgentRuntime || typeof subAgentRuntime.execute !== 'function') {
+      return {
+        ok: false,
+        status: 'error',
+        error: 'Sub-agent runtime is not configured.',
+        summary: 'Sub-agent runtime is not configured.'
+      };
+    }
+    const parentRequestId = cleanText(
+      args?.metadata?.parent_request_id || context?.lifecycleRecorder?.requestId || context?.requestId,
+      160
+    );
+    const metadata = {
+      ...(args?.metadata && typeof args.metadata === 'object' ? args.metadata : {}),
+      ...(parentRequestId ? { parent_request_id: parentRequestId } : {})
+    };
+    const result = await subAgentRuntime.execute({
+      ...args,
+      metadata
+    });
+    const agent = result?.agent && typeof result.agent === 'object' ? result.agent : null;
+    return {
+      ...result,
+      items: Array.isArray(result?.items) ? result.items : (agent ? [agent] : []),
+      summary: cleanText(result?.summary, 320)
+        || (agent
+          ? `sub-agent ${cleanText(agent?.id, 160) || 'session'} ${cleanText(result?.status, 80) || 'updated'}.`
+          : `sub-agent ${cleanText(result?.status, 80) || 'completed'}.`)
+    };
+  });
+
+  genericAgentToolRuntime.registerToolExecutor('memory', async ({ args, context }) => {
+    if (!memoryRuntime || typeof memoryRuntime.execute !== 'function') {
+      return {
+        ok: false,
+        status: 'error',
+        error: 'Memory runtime is not configured.',
+        summary: 'Memory runtime is not configured.'
+      };
+    }
+    const project = resolveContextProject(args, context);
+    const projectName = cleanText(
+      args?.project_name
+      || args?.projectName
+      || args?.record?.project_name
+      || args?.record?.projectName
+      || project?.name
+      || project?.projectName,
+      220
+    );
+    const record = args?.record && typeof args.record === 'object'
+      ? {
+        ...args.record,
+        ...(projectName && !cleanText(args.record.project_name || args.record.projectName, 220)
+          ? { project_name: projectName }
+          : {})
+      }
+      : undefined;
+    const result = await memoryRuntime.execute({
+      ...args,
+      ...(projectName && !cleanText(args?.project_name || args?.projectName, 220) ? { project_name: projectName } : {}),
+      ...(record ? { record } : {})
+    });
+    return {
+      ...result,
+      citations: buildToolCitations(
+        cleanText,
+        result?.items,
+        'memory',
+        'Matched long-term agent memory records.'
+      ),
+      summary: cleanText(result?.summary, 320)
+        || buildExecutorSummary(cleanText, 'memory', result?.items, 'memory returned no matches.')
+    };
   });
 
   genericAgentToolRuntime.registerToolExecutor('literature-search', async ({ args, context }) => {
@@ -325,6 +571,46 @@ function registerAgentToolExecutors(deps = {}) {
     };
   });
 
+  genericAgentToolRuntime.registerToolExecutor('paper-analysis', async ({ args, context }) => {
+    if (!paperAnalysisRuntime || typeof paperAnalysisRuntime.analyzePaper !== 'function') {
+      return {
+        ok: false,
+        status: 'error',
+        error: 'Paper analysis runtime is not configured.',
+        summary: 'Paper analysis runtime is not configured.'
+      };
+    }
+    return paperAnalysisRuntime.analyzePaper({
+      ...args,
+      provider: cleanText(context?.provider, 80),
+      endpoint: cleanText(context?.endpoint, 2000),
+      apiKey: cleanText(context?.apiKey, 400),
+      model: cleanText(context?.model, 120),
+      message: cleanText(args?.message || context?.message, 2400),
+      traceContext: context?.traceContext || null
+    });
+  });
+
+  genericAgentToolRuntime.registerToolExecutor('protocol-generation', async ({ args, context }) => {
+    if (!protocolGenerationRuntime || typeof protocolGenerationRuntime.generateProtocol !== 'function') {
+      return {
+        ok: false,
+        status: 'error',
+        error: 'Protocol generation runtime is not configured.',
+        summary: 'Protocol generation runtime is not configured.'
+      };
+    }
+    return protocolGenerationRuntime.generateProtocol({
+      ...args,
+      provider: cleanText(context?.provider, 80),
+      endpoint: cleanText(context?.endpoint, 2000),
+      apiKey: cleanText(context?.apiKey, 400),
+      model: cleanText(context?.model, 120),
+      message: cleanText(args?.message || context?.message, 2400),
+      traceContext: context?.traceContext || null
+    });
+  });
+
   genericAgentToolRuntime.registerToolExecutor('python-sandbox', async ({ args, context }) => {
     const result = await pythonSandboxToolRuntime.execute(args, {
       parent_request_id: cleanText(context?.lifecycleRecorder?.requestId || context?.requestId, 160),
@@ -398,13 +684,19 @@ function registerAgentToolExecutors(deps = {}) {
   return [
     'inventory-lookup',
     'record-lookup',
-    'web-search',
-    'literature-search',
-    'paper-download',
-    'purchase-recommendation',
+    'protocol-matching',
+    'notebook-generation',
+    'notebook-draft',
     'python-sandbox',
     'command-line',
-    'notebook-draft'
+    'web-search',
+    'sub-agent',
+    'memory',
+    'literature-search',
+    'purchase-recommendation',
+    'paper-download',
+    'paper-analysis',
+    'protocol-generation'
   ];
 }
 

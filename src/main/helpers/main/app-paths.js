@@ -96,6 +96,15 @@ function createMainAppPaths(deps = {}) {
     return path.join(getDefaultAppDataRoot(), 'Tmp', 'agent-python-sandbox');
   }
 
+  function getAgentMemoryFilePath() {
+    const override = String(processObject.env.ENANA_AGENT_MEMORY_PATH || '').trim();
+    if (override) {
+      return path.resolve(override);
+    }
+
+    return path.join(getDefaultAppDataRoot(), 'Agent', 'memory.json');
+  }
+
   function getAgentChatSessionStoragePath(payload) {
     return cleanText(
       payload?.stateSnapshot?.settings?.storagePath
@@ -112,6 +121,7 @@ function createMainAppPaths(deps = {}) {
     getTelegramConfigPath,
     getAgentChatLogPath,
     getAgentPythonSandboxRoot,
+    getAgentMemoryFilePath,
     getAgentChatSessionStoragePath
   };
 }

@@ -337,14 +337,19 @@ module.exports = function registerAgentContractsB(context = {}) {
       const { DEEP_RESEARCH_POLICIES } = require(agentPath('deep-research', 'index.js'));
       const { getToolInputSchemas } = require(agentPath('tools', 'agent-tool-loading.js'));
       const { REASONING_ENTRY_TOOL_SCOPES } = require(agentPath('tools', 'agent-tool-provide.js'));
+      const catalogToolCount = getToolInputSchemas().length;
 
       SCIENCE_REASONING_INTENTS.map((intent) => getScienceReasoningPolicy(intent)).forEach((policy) => {
-        assert.equal(policy.tool_scope, null);
+        assert.equal(Array.isArray(policy.tool_scope), true);
+        assert.equal(policy.tool_scope.length > 0, true);
+        assert.equal(policy.tool_scope.length < catalogToolCount, true);
         const resolved = getToolInputSchemas(policy.tool_scope);
         assert.equal(resolved.length > 0, true);
       });
       Object.values(DEEP_RESEARCH_POLICIES).forEach((policy) => {
-        assert.equal(policy.tool_scope, null);
+        assert.equal(Array.isArray(policy.tool_scope), true);
+        assert.equal(policy.tool_scope.length > 0, true);
+        assert.equal(policy.tool_scope.length < catalogToolCount, true);
         const resolved = getToolInputSchemas(policy.tool_scope);
         assert.equal(resolved.length > 0, true);
       });

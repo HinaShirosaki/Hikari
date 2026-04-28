@@ -6,17 +6,68 @@ const {
   resolveCanonicalToolName
 } = require('./agent-tool-loading.js');
 
-function buildUnrestrictedIntentToolScope() {
-  return Object.freeze({
-    general_science_question: null,
-    project_science_question: null,
-    result_analysis: null
-  });
+function freezeToolScope(toolNames = []) {
+  return Object.freeze(toolNames.slice());
 }
 
 const REASONING_ENTRY_TOOL_SCOPES = Object.freeze({
-  science_reasoning_entry: buildUnrestrictedIntentToolScope(),
-  deep_research_entry: buildUnrestrictedIntentToolScope()
+  science_reasoning_entry: Object.freeze({
+    general_science_question: freezeToolScope([
+      'literature-search',
+      'web-search',
+      'paper-analysis',
+      'protocol-generation',
+      'python-sandbox'
+    ]),
+    project_science_question: freezeToolScope([
+      'record-lookup',
+      'inventory-lookup',
+      'literature-search',
+      'web-search',
+      'paper-analysis',
+      'protocol-generation',
+      'python-sandbox'
+    ]),
+    result_analysis: freezeToolScope([
+      'python-sandbox',
+      'record-lookup',
+      'inventory-lookup',
+      'literature-search',
+      'web-search',
+      'paper-analysis'
+    ])
+  }),
+  deep_research_entry: Object.freeze({
+    general_science_question: freezeToolScope([
+      'literature-search',
+      'web-search',
+      'paper-download',
+      'paper-analysis',
+      'protocol-generation',
+      'sub-agent',
+      'python-sandbox'
+    ]),
+    project_science_question: freezeToolScope([
+      'record-lookup',
+      'inventory-lookup',
+      'literature-search',
+      'web-search',
+      'paper-download',
+      'paper-analysis',
+      'protocol-generation',
+      'sub-agent',
+      'python-sandbox'
+    ]),
+    result_analysis: freezeToolScope([
+      'python-sandbox',
+      'record-lookup',
+      'inventory-lookup',
+      'literature-search',
+      'web-search',
+      'paper-analysis',
+      'sub-agent'
+    ])
+  })
 });
 
 function defaultAsArray(value) {
@@ -107,8 +158,8 @@ function createAgentToolProviderRuntime(deps = {}) {
     const normalizedEntryPoint = cleanText(entryPoint, 80);
     const normalizedIntent = cleanText(intent, 80);
     const entryScopes = entryToolScopes[normalizedEntryPoint] || {};
-    const scopedToolNames = normalizeRequestedToolNames(entryScopes[normalizedIntent], 20);
-    if (scopedToolNames.length) {
+    if (Object.prototype.hasOwnProperty.call(entryScopes, normalizedIntent)) {
+      const scopedToolNames = normalizeRequestedToolNames(entryScopes[normalizedIntent], 20);
       return scopedToolNames;
     }
     return uniqueStrings(normalizeRequestedToolNames(listCatalogToolNames(), 40), 40);

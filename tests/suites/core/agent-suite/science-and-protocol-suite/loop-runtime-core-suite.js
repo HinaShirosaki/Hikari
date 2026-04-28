@@ -293,7 +293,7 @@ module.exports = function registerLoopRuntimeCoreSuite(context = {}) {
       );
     });
 
-    test('science reasoning loop waits for the main-agent satisfaction check before pre-synthesizing', async () => {
+    test('science reasoning loop uses post-tool assistant tool calls before pre-synthesizing', async () => {
       const scriptedTurns = [
         {
           calls: [
@@ -303,25 +303,16 @@ module.exports = function registerLoopRuntimeCoreSuite(context = {}) {
           text: 'I will gather a focused paper and a broader review in parallel.'
         },
         {
-          calls: [],
-          text: 'I have a focused paper and a broader review, but the tool results are not satisfying yet because I still need a deterministic fit.'
-        },
-        {
           calls: [
             { callId: 'call-3', name: 'python-sandbox', argsText: JSON.stringify({ code: 'fit_escape_curve()', purpose: 'Check whether the observed trend is robust.' }) }
           ],
-          text: 'I will run a deterministic fit next.'
+          text: 'I have a focused paper and a broader review, so I will run a deterministic fit next.'
         },
         {
           calls: [],
           text: 'The deterministic fit plus the literature context are now satisfying enough to answer.'
-        },
-        {
-          calls: [],
-          text: '<tool_round_satisfaction><satisfied>true</satisfied><reason>The current tool results are satisfying enough to pre-synthesize.</reason></tool_round_satisfaction>'
         }
       ];
-      const satisfactionPrompts = [];
       const evaluationSnapshots = [];
       const feedbackMessages = [];
       const lifecycleEvents = [];
@@ -331,17 +322,7 @@ module.exports = function registerLoopRuntimeCoreSuite(context = {}) {
         extractAgentSessionText: (session) => scriptedTurns[session.step].text,
         continueAgentSessionWithToolOutputs: async (session) => ({ step: session.step + 1 }),
         continueAgentSessionWithUserMessage: async (session, feedback) => {
-          const message = String(feedback || '');
-          if (/Before pre-synthesizing, decide whether the current tool call results are satisfying\./i.test(message)) {
-            satisfactionPrompts.push(message);
-            if (session.step === 1) {
-              return { step: 2 };
-            }
-            if (session.step === 3) {
-              return { step: 4 };
-            }
-          }
-          feedbackMessages.push(message);
+          feedbackMessages.push(String(feedback || ''));
           return { step: session.step + 1 };
         },
         evaluateScienceRound: async ({ roundsExecuted, preSynthesizedAnswer, toolTrace }) => {
@@ -363,7 +344,7 @@ module.exports = function registerLoopRuntimeCoreSuite(context = {}) {
           answer: 'Resistance often involves pathway reactivation and compensatory signaling, and the deterministic fit supports a real trend rather than a single outlier.',
           confidence: 0.78,
           decision_record: {
-            assumptions: ['The main-agent satisfaction check delayed pre-synthesis until the fit was available.'],
+            assumptions: ['The post-tool assistant call delayed pre-synthesis until the fit was available.'],
             open_questions: [],
             verification_notes: ['Two tool rounds completed before synthesis.']
           },
@@ -506,12 +487,6 @@ module.exports = function registerLoopRuntimeCoreSuite(context = {}) {
 
       assert.equal(result.status, 'completed');
       assert.equal(result.rounds_executed, 2);
-      assert.equal(satisfactionPrompts.length, 2);
-      assert.match(satisfactionPrompts[0], /Before pre-synthesizing, decide whether the current tool call results are satisfying\./i);
-      assert.doesNotMatch(satisfactionPrompts[0], /Clarified request:/);
-      assert.doesNotMatch(satisfactionPrompts[0], /Intent:/);
-      assert.doesNotMatch(satisfactionPrompts[0], /Science policy:/);
-      assert.doesNotMatch(satisfactionPrompts[0], /Latest assistant turn/i);
       assert.equal(evaluationSnapshots.length, 1);
       assert.equal(evaluationSnapshots[0].roundsExecuted, 2);
       assert.equal(evaluationSnapshots[0].toolTrace.length, 3);
@@ -522,6 +497,14 @@ module.exports = function registerLoopRuntimeCoreSuite(context = {}) {
       assert.equal(feedbackMessages.length, 0);
       assert.equal(result.intermediate_states.some((state) => state.stage === 'science_tool_round_satisfaction'), true);
       assert.equal(lifecycleEvents.some((event) => event.stage === 'science_tool_round_unsatisfied' && event.meta.round === 1), true);
+      assert.equal(
+        lifecycleEvents.some((event) => (
+          event.stage === 'science_tool_round_unsatisfied'
+          && event.meta.round === 1
+          && event.meta.pending_tool_names.includes('python-sandbox')
+        )),
+        true
+      );
       assert.equal(lifecycleEvents.some((event) => event.stage === 'science_tool_round_satisfied' && event.meta.round === 2), true);
       assert.match(result.answer, /deterministic fit supports a real trend/i);
     });

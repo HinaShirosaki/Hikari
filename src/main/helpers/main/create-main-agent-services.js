@@ -44,12 +44,15 @@ const { normalizeToolInvocationArgs } = require('../agent/tools/agent-tool-loadi
 const { createAgentToolCallRuntime } = require('../agent/tools/agent-tool-execution.js');
 const { createAgentToolProviderRuntime } = require('../agent/tools/agent-tool-provide.js');
 const { createAgentCommandLineRuntime } = require('../agent/tools/agent-command-line.js');
+const { createAgentSubAgentRuntime } = require('../agent/tools/agent-sub-agent.js');
+const { createAgentMemoryRuntime } = require('../agent/context/agent-memory.js');
 const { createNotebookDraftRuntime } = require('../agent/tools/agent-notebook-draft.js');
 const { createWebSearchRuntime } = require('../agent/tools/agent-web-search.js');
 const { createLiteratureSearchRuntime } = require('../agent/tools/agent-literature-search.js');
 const { createLiteratureSearchWorkflowRuntime } = require('../agent/literature-search/agent-literature-search-workflow.js');
 const { createPurchaseRecommendationRuntime } = require('../agent/tools/agent-purchase-recommendation.js');
 const { createProtocolGenerationRuntime } = require('../agent/tools/agent-protocol-generation.js');
+const { createPaperAnalysisRuntime } = require('../agent/tools/agent-paper-analysis.js');
 const { createPaperContextLoaderRuntime } = require('../agent/tools/agent-paper-context-loader.js');
 const { createPaperDownloadRuntime } = require('../agent/tools/agent-paper-download.js');
 const { createPdfTextExtractionRuntime } = require('../agent/tools/agent-pdf-text-extraction.js');
@@ -125,6 +128,9 @@ function createMainAgentServices(deps = {}) {
   const getAgentPythonSandboxRoot = typeof deps.getAgentPythonSandboxRoot === 'function'
     ? deps.getAgentPythonSandboxRoot
     : (() => '');
+  const getAgentMemoryFilePath = typeof deps.getAgentMemoryFilePath === 'function'
+    ? deps.getAgentMemoryFilePath
+    : (() => cleanText(deps.agentMemoryFilePath, 2400));
   const getBundlePaths = typeof deps.getBundlePaths === 'function'
     ? deps.getBundlePaths
     : (() => ({}));
@@ -219,6 +225,12 @@ function createMainAgentServices(deps = {}) {
     pickTopMatches: agentRuntimeSupport.pickTopMatches,
     getAgentRuntimeFactory: agentRuntimeRegistry.getRuntimeFactory,
     getRunTool: () => agentToolRuntime?.runAgentTool || null
+  });
+  const protocolMatchingRuntime = createProtocolMatchingRuntime({
+    ...sharedAgentLlmDeps
+  });
+  const notebookGenerationRuntime = createNotebookGenerationRuntime({
+    ...sharedAgentLlmDeps
   });
 
   const agentLookupRuntime = createAgentLookupRuntime({
@@ -320,6 +332,34 @@ function createMainAgentServices(deps = {}) {
   const protocolGenerationRuntime = createProtocolGenerationRuntime({
     ...sharedAgentLlmDeps
   });
+  const paperAnalysisRuntime = createPaperAnalysisRuntime({
+    ...sharedAgentLlmDeps,
+    protocolGenerationRuntime
+  });
+  const subAgentRuntime = createAgentSubAgentRuntime({
+    ...sharedAgentLlmDeps,
+    runSubAgentTurn: async (turnInput = {}) => {
+      const result = await agentLlmRuntimeHelpers.requestAssistantText({
+        stage: 'agent_sub_agent_turn',
+        systemPrompt: cleanText(turnInput?.system_prompt, 40000),
+        userPrompt: cleanText(turnInput?.message, 40000),
+        traceContext: turnInput?.traceContext || null,
+        defaultError: 'Sub-agent text provider is not configured.'
+      });
+      const assistantMessage = cleanText(result?.text || result?.assistant_message || result?.message, 20000);
+      return {
+        assistant_message: assistantMessage,
+        summary: assistantMessage ? cleanText(assistantMessage, 500) : cleanText(result?.error, 500),
+        metadata: {
+          provider_ok: result?.ok === true
+        }
+      };
+    }
+  });
+  const memoryRuntime = createAgentMemoryRuntime({
+    ...sharedAgentLlmDeps,
+    memoryFilePath: cleanText(getAgentMemoryFilePath(), 2400)
+  });
 
   const pdfTextExtractionRuntime = createPdfTextExtractionRuntime({
     fetch: typeof globalThis.fetch === 'function' ? globalThis.fetch.bind(globalThis) : null
@@ -373,7 +413,14 @@ function createMainAgentServices(deps = {}) {
     pythonSandboxToolRuntime,
     commandLineRuntime: commandLineToolRuntime,
     notebookDraftRuntime,
+    protocolMatchingRuntime,
+    notebookGenerationRuntime,
+    agentAppApi,
+    subAgentRuntime,
+    memoryRuntime,
     paperDownloadRuntime,
+    paperAnalysisRuntime,
+    protocolGenerationRuntime,
     getAgentPythonSandboxRoot
   });
 

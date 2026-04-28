@@ -177,6 +177,7 @@ function createMainRuntime({
     getDefaultDataFilePath: appPaths.getDefaultDataFilePath,
     BrowserWindow,
     getAgentPythonSandboxRoot: appPaths.getAgentPythonSandboxRoot,
+    getAgentMemoryFilePath: appPaths.getAgentMemoryFilePath,
     getBundlePaths,
     hydrateSnapshotFromBundle,
     syncBundleFromSnapshot
