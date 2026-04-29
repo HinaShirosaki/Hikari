@@ -34,6 +34,7 @@ export function createSequenceViewerDetailController(config = {}) {
   const onRequestClear = config?.onRequestClear || (() => {});
   const onRequestSave = config?.onRequestSave || (() => {});
   const onRequestAlignment = config?.onRequestAlignment || (() => {});
+  const onRequestCloningDesign = config?.onRequestCloningDesign || (() => {});
   const onSelectAlignmentSession = config?.onSelectAlignmentSession || (() => {});
   const onConfirmProteinBuilderConstruct = config?.onConfirmProteinBuilderConstruct || (() => {});
   const onReturnToProteinBuilder = config?.onReturnToProteinBuilder || (() => {});
@@ -41,6 +42,7 @@ export function createSequenceViewerDetailController(config = {}) {
   const onRefreshLibraryEntries = config?.onRefreshLibraryEntries || (() => {});
   const onReferenceRecordChanged = config?.onReferenceRecordChanged || (() => {});
   const onApplySequenceEdit = config?.onApplySequenceEdit || (async () => {});
+  const hasCloningDesignSource = config?.hasCloningDesignSource || (() => false);
 
   const hoverController = createSequenceHoverTooltipController(rootDocument);
   const hideSequenceHoverTooltip = () => hoverController.hide();
@@ -252,6 +254,11 @@ export function createSequenceViewerDetailController(config = {}) {
     }
     if (elements.alignmentOpenBtn) {
       elements.alignmentOpenBtn.disabled = !hasRecord;
+    }
+    if (elements.cloningDesignBtn) {
+      const canOpenCloningDesign = hasRecord && Boolean(hasCloningDesignSource());
+      elements.cloningDesignBtn.hidden = !canOpenCloningDesign;
+      elements.cloningDesignBtn.disabled = !canOpenCloningDesign;
     }
   }
 
@@ -511,6 +518,7 @@ export function createSequenceViewerDetailController(config = {}) {
       onRequestClear,
       onRequestSave,
       onRequestAlignment,
+      onRequestCloningDesign,
       onSelectAlignmentSession,
       onConfirmProteinBuilderConstruct,
       onReturnToProteinBuilder,

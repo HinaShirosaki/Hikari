@@ -421,6 +421,36 @@
             "type": "string"
           },
           "maxItems": 5
+        },
+        "evidence_context": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "tool_name": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              },
+              "summary": {
+                "type": "string"
+              },
+              "item_count": {
+                "type": "integer"
+              },
+              "citations": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "maxItems": 12
+              }
+            }
+          },
+          "maxItems": 8
         }
       }
     }

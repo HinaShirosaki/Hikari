@@ -169,6 +169,166 @@ function createAgentIntentDispatcher({
     return output;
   }
 
+  function uniqueStrings(values = [], max = 12) {
+    const seen = new Set();
+    const output = [];
+    asArray(values).forEach((value) => {
+      const normalized = cleanText(value, 220);
+      if (!normalized) {
+        return;
+      }
+      const key = normalized.toLowerCase();
+      if (seen.has(key) || output.length >= max) {
+        return;
+      }
+      seen.add(key);
+      output.push(normalized);
+    });
+    return output;
+  }
+
+  function buildNotebookDraftEvidencePlan({
+    message = '',
+    parserPayload = {},
+    projectName = ''
+  } = {}) {
+    const sourceText = cleanText([
+      message,
+      parserPayload?.entities?.requested_output,
+      parserPayload?.entities?.workflow_step
+    ].filter(Boolean).join(' '), 4200);
+    const lower = sourceText.toLowerCase();
+    const wantsExternalEvidence = /\b(papers?|literature|publications?|references?|recent|latest|current|evidence|pubmed|doi|article)\b/.test(lower);
+    const wantsPaperAnalysis = Boolean(cleanText(parserPayload?.entities?.paper_title, 260));
+    const evidenceRequired = wantsExternalEvidence || wantsPaperAnalysis;
+    if (!evidenceRequired) {
+      return {
+        evidence_required: false,
+        required_first_tools: [],
+        terminal_tool: 'notebook-draft',
+        query: '',
+        reason: 'The planned notebook draft can use local workflow and notebook context directly.'
+      };
+    }
+    const query = cleanText(uniqueStrings([
+      projectName,
+      parserPayload?.entities?.project_name,
+      parserPayload?.entities?.workflow_step,
+      ...asArray(parserPayload?.protocol_candidates),
+      message
+    ], 8).join(' '), 600);
+    return {
+      evidence_required: true,
+      required_first_tools: [
+        'record-lookup',
+        'literature-search',
+        ...(wantsPaperAnalysis ? ['paper-analysis'] : [])
+      ],
+      terminal_tool: 'notebook-draft',
+      query,
+      reason: wantsPaperAnalysis
+        ? 'The notebook draft request references a specific paper, so paper evidence should inform the planned experiment.'
+        : 'The notebook draft request asks for external or recent evidence before planning the next experiment.'
+    };
+  }
+
+  function buildToolParserPayload(parserPayload = {}) {
+    const output = {
+      primary_intent: cleanText(parserPayload?.primary_intent, 80)
+    };
+    if (typeof parserPayload?.needs_clarification === 'boolean') {
+      output.needs_clarification = parserPayload.needs_clarification;
+    }
+    const clarificationReason = cleanText(parserPayload?.clarification_reason, 300);
+    if (clarificationReason) {
+      output.clarification_reason = clarificationReason;
+    }
+    const reasoningSummary = cleanText(parserPayload?.reasoning_summary, 700);
+    if (reasoningSummary) {
+      output.reasoning_summary = reasoningSummary;
+    }
+    if (parserPayload?.entities && typeof parserPayload.entities === 'object' && !Array.isArray(parserPayload.entities)) {
+      output.entities = parserPayload.entities;
+    }
+    if (parserPayload?.inventory_search && typeof parserPayload.inventory_search === 'object' && !Array.isArray(parserPayload.inventory_search)) {
+      output.inventory_search = parserPayload.inventory_search;
+    }
+    const protocolCandidates = uniqueStrings(parserPayload?.protocol_candidates, 8);
+    if (protocolCandidates.length) {
+      output.protocol_candidates = protocolCandidates;
+    }
+    return output;
+  }
+
+  function normalizeNotebookDraftEvidence(toolName = '', envelope = {}) {
+    const result = envelope?.result && typeof envelope.result === 'object'
+      ? envelope.result
+      : {};
+    const summary = cleanText(envelope?.summary || result?.summary || result?.error || envelope?.error, 700);
+    if (!summary && envelope?.ok === false) {
+      return null;
+    }
+    return {
+      tool_name: cleanText(toolName || envelope?.tool_name, 120),
+      status: envelope?.ok === false ? 'failed' : (cleanText(result?.status, 80) || 'completed'),
+      summary: summary || `${cleanText(toolName || envelope?.tool_name, 120) || 'Evidence tool'} completed.`,
+      item_count: asArray(result?.items).length,
+      citations: asArray(result?.citations).slice(0, 6).map((citation) => ({
+        source: cleanText(citation?.source, 120),
+        pointer: cleanText(citation?.pointer, 260),
+        reason: cleanText(citation?.reason, 260)
+      })).filter((citation) => citation.source || citation.pointer || citation.reason)
+    };
+  }
+
+  async function collectNotebookDraftEvidence({
+    runTrackedTool,
+    plan = {},
+    parserPayload = {},
+    message = ''
+  } = {}) {
+    if (!plan?.evidence_required || typeof runTrackedTool !== 'function') {
+      return [];
+    }
+    const query = cleanText(plan.query || message, 600);
+    const toolParserPayload = buildToolParserPayload(parserPayload);
+    const evidence = [];
+    for (const toolName of asArray(plan.required_first_tools)) {
+      let args = {};
+      if (toolName === 'record-lookup') {
+        args = {
+          query,
+          limit: 6,
+          parser_payload: toolParserPayload
+        };
+      } else if (toolName === 'literature-search') {
+        args = {
+          query,
+          message: cleanText(message, 1200),
+          parser_payload: toolParserPayload,
+          prefer_recent: true,
+          limit: 6,
+          max_per_source: 4
+        };
+      } else if (toolName === 'paper-analysis') {
+        args = {
+          paper_title: cleanText(parserPayload?.entities?.paper_title, 260),
+          message: cleanText(message, 1200)
+        };
+      } else {
+        continue;
+      }
+      const envelope = await runTrackedTool(toolName, args, {
+        allowWriteTools: false
+      });
+      const normalized = normalizeNotebookDraftEvidence(toolName, envelope);
+      if (normalized) {
+        evidence.push(normalized);
+      }
+    }
+    return evidence;
+  }
+
   async function dispatchIntent({
     payload,
     context,
@@ -313,12 +473,48 @@ function createAgentIntentDispatcher({
         result.notebookDraft = null;
       } else {
         const runTrackedTool = createLifecycleToolRunner(trackedToolRunnerContext);
+        const project = {
+          id: cleanText(projectId, 120),
+          name: cleanText(projectName, 220)
+        };
+        const evidencePlan = buildNotebookDraftEvidencePlan({
+          message,
+          parserPayload,
+          projectName: project.name
+        });
+        observability.recordLifecycleEvent(lifecycleRecorder, {
+          stage: 'notebook_draft_evidence_plan',
+          status: evidencePlan.evidence_required ? 'started' : 'ok',
+          routing_intent: 'notebook_draft',
+          message: evidencePlan.reason,
+          meta: {
+            evidence_required: evidencePlan.evidence_required,
+            required_first_tools: evidencePlan.required_first_tools,
+            terminal_tool: evidencePlan.terminal_tool
+          }
+        });
+        const evidenceContext = await collectNotebookDraftEvidence({
+          runTrackedTool,
+          plan: evidencePlan,
+          parserPayload,
+          message
+        });
+        if (evidencePlan.evidence_required) {
+          observability.recordLifecycleEvent(lifecycleRecorder, {
+            stage: 'notebook_draft_evidence_completed',
+            status: evidenceContext.length ? 'ok' : 'pending',
+            routing_intent: 'notebook_draft',
+            message: `Notebook-draft evidence items=${evidenceContext.length}.`,
+            meta: {
+              evidence_count: evidenceContext.length,
+              required_first_tools: evidencePlan.required_first_tools
+            }
+          });
+        }
         const notebookDraftTool = await runTrackedTool('notebook-draft', {
-          project: {
-            id: cleanText(projectId, 120),
-            name: cleanText(projectName, 220)
-          },
-          protocol_candidates: asArray(parserPayload.protocol_candidates)
+          project,
+          protocol_candidates: asArray(parserPayload.protocol_candidates),
+          evidence_context: evidenceContext
         }, {
           allowWriteTools: false
         });

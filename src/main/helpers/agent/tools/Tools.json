@@ -17,7 +17,7 @@
   },
   {
     "name": "notebook-draft",
-    "description": "Propose a likely next experiment, prepare a planned biology notebook draft, and wait for explicit confirmation before creating the page."
+    "description": "Propose a likely next experiment, optionally using prior record/literature evidence, prepare a planned biology notebook draft, and wait for explicit confirmation before creating the page."
   },
   {
     "name": "python-sandbox",

@@ -2811,6 +2811,7 @@
         <div class="sequence-viewer-detail-topbar">
           <button id="sequence-viewer-back-btn" type="button" class="ghost-btn">Back to Library</button>
           <button id="sequence-viewer-detail-protein-builder-btn" type="button" class="ghost-btn">Protein Builder</button>
+          <button id="sequence-viewer-cloning-design-btn" type="button" class="primary-btn" hidden>Cloning Design</button>
           <label class="sequence-viewer-save-name-wrap">
             Save Name
             <input id="sequence-viewer-save-name" placeholder="e.g. pLenti_GFP" />
@@ -3047,6 +3048,63 @@
             <div class="form-actions">
               <button id="sequence-viewer-backbone-dialog-apply-btn" type="button" class="primary-btn">Apply Selection</button>
               <button id="sequence-viewer-backbone-dialog-cancel-btn" type="button" class="ghost-btn">Cancel</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="sequence-viewer-cloning-design-workspace" class="sequence-viewer-cloning-design-workspace" hidden>
+        <div class="sequence-viewer-cloning-design-toolbar">
+          <div class="sequence-viewer-cloning-design-toolbar-nav">
+            <button id="sequence-viewer-cloning-design-back-btn" type="button" class="ghost-btn">Back to Sequence</button>
+          </div>
+          <div class="sequence-viewer-cloning-design-toolbar-copy">
+            <h2>Cloning Design</h2>
+            <span id="sequence-viewer-cloning-design-status" class="small-note">Edit the active sequence to enable cloning design.</span>
+          </div>
+          <div class="form-actions sequence-viewer-cloning-design-toolbar-actions">
+            <button id="sequence-viewer-cloning-design-run-btn" type="button" class="primary-btn">Design Primers</button>
+          </div>
+        </div>
+
+        <div class="sequence-viewer-cloning-design-grid left-rail-template">
+          <aside class="sequence-viewer-cloning-design-sidebar app-left-rail left-rail-template__rail" data-sync-left-rail>
+            <section class="sequence-viewer-cloning-design-panel">
+              <div class="plannotate-card-head">
+                <h4>Route</h4>
+              </div>
+              <div id="sequence-viewer-cloning-design-strategy-list" class="sequence-viewer-mode-switch sequence-viewer-cloning-design-strategy-list" role="tablist" aria-label="Cloning design route"></div>
+            </section>
+
+            <section class="sequence-viewer-cloning-design-panel">
+              <div class="plannotate-card-head">
+                <h4>Sequence Edit</h4>
+              </div>
+              <div id="sequence-viewer-cloning-design-edit-summary" class="sequence-viewer-cloning-design-edit-summary calc-output">
+                <p class="small-note">Edit summary will appear here.</p>
+              </div>
+            </section>
+
+            <section id="sequence-viewer-cloning-design-range-panel" class="sequence-viewer-cloning-design-panel" hidden>
+              <div class="plannotate-card-head">
+                <h4>Amplicon</h4>
+              </div>
+              <div class="form-grid sequence-viewer-cloning-design-range-grid">
+                <label>
+                  Start
+                  <input id="sequence-viewer-cloning-design-insert-start" type="number" min="1" step="1" />
+                </label>
+                <label>
+                  End
+                  <input id="sequence-viewer-cloning-design-insert-end" type="number" min="1" step="1" />
+                </label>
+              </div>
+            </section>
+          </aside>
+
+          <div class="sequence-viewer-cloning-design-main left-rail-template__main">
+            <div id="sequence-viewer-cloning-design-result" class="sequence-viewer-cloning-design-result">
+              <p class="small-note">Choose a route, then design primers.</p>
             </div>
           </div>
         </div>

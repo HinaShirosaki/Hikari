@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "updated_at": "2026-04-29T01:10:51.949Z",
+  "sessions": [
+    {
+      "id": "chat-mojcxblr-wllcqrp5",
+      "title": "How to express TEV protease. Give me detailed protocol",
+      "project_id": "",
+      "project_name": "",
+      "log_file": "chat-mojcxblr-wllcqrp5.log",
+      "created_at": "2026-04-29T01:09:13.599Z",
+      "updated_at": "2026-04-29T01:10:51.894Z",
+      "status": "active",
+      "message_count": 2,
+      "request_count": 1,
+      "last_message_preview": "What expression medium volume, antibiotic, and overnight starter culture volume should be used for the TEV protease expression culture? At what OD600 should induction begin, and what final IPTG concentration should be used? What post-induction temperature and shaking duration should be used? What centrifugation speed, time, and temperature should be used to harvest the cells? Please provide volume. Please provide antibiotic. Please provide value. Please provide concentration. Please provide temperature. Please provide time.",
+      "last_user_message_preview": "How to express TEV protease. Give me detailed protocol",
+      "response_type": "",
+      "last_request_id": "1777424955501-8980b0b6",
+      "last_error": ""
+    },
+    {
+      "id": "chat-mojcw4u8-im08mohg",
+      "title": "How to express TEV protease. Give me detailed protocol",
+      "project_id": "",
+      "project_name": "",
+      "log_file": "chat-mojcw4u8-im08mohg.log",
+      "created_at": "2026-04-29T01:08:18.176Z",
+      "updated_at": "2026-04-29T01:08:42.250Z",
+      "status": "active",
+      "message_count": 2,
+      "request_count": 1,
+      "last_message_preview": "Intent parsing completed.",
+      "last_user_message_preview": "How to express TEV protease. Give me detailed protocol",
+      "response_type": "",
+      "last_request_id": "1777424922244-6561d2eb",
+      "last_error": ""
+    }
+  ],
+  "transforms": {
+    "updated_at": "2026-04-29T01:10:51.949Z",
+    "output_folder": "transformed",
+    "files": {
+      "chat-mojcw4u8-im08mohg.log": {
+        "source_file": "chat-mojcw4u8-im08mohg.log",
+        "output_file": "transformed/chat-mojcw4u8-im08mohg.json",
+        "status": "complete",
+        "source_mtime_ms": 1777424922252.5793,
+        "source_size": 4059,
+        "source_line_count": 10,
+        "trace_count": 0,
+        "transformed_at": "2026-04-29T01:08:56.696Z",
+        "error": ""
+      },
+      "chat-mojcxblr-wllcqrp5.log": {
+        "source_file": "chat-mojcxblr-wllcqrp5.log",
+        "output_file": "transformed/chat-mojcxblr-wllcqrp5.json",
+        "status": "complete",
+        "source_mtime_ms": 1777425051906.0767,
+        "source_size": 43712,
+        "source_line_count": 17,
+        "trace_count": 5,
+        "transformed_at": "2026-04-29T01:10:51.947Z",
+        "error": ""
+      }
+    }
+  }
+}

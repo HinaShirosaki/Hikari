@@ -668,6 +668,10 @@ function registerAgentToolExecutors(deps = {}) {
   });
 
   genericAgentToolRuntime.registerToolExecutor('notebook-draft', async ({ args, context }) => notebookDraftRuntime.generateNotebookDraft({
+    provider: cleanText(context?.provider, 80),
+    endpoint: cleanText(context?.endpoint, 2000),
+    apiKey: cleanText(context?.apiKey, 400),
+    model: cleanText(context?.model, 120),
     message: cleanText(context?.message, 3200),
     conversation: Array.isArray(context?.conversation) ? context.conversation : [],
     snapshot: context?.snapshot && typeof context.snapshot === 'object' ? context.snapshot : {},
@@ -677,6 +681,7 @@ function registerAgentToolExecutors(deps = {}) {
       : (context?.project && typeof context.project === 'object' ? context.project : {}),
     workflowId: cleanText(args?.workflow_id, 120),
     protocolCandidates: Array.isArray(args?.protocol_candidates) ? args.protocol_candidates : [],
+    evidenceContext: Array.isArray(args?.evidence_context) ? args.evidence_context : [],
     traceContext: context?.traceContext || null,
     lifecycleRecorder: context?.lifecycleRecorder || null
   }));
