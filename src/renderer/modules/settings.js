@@ -68,6 +68,28 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
   let activeSettingsPanel = settingsNavItems[0]?.dataset.settingsTarget || 'appearance';
   const looksLikeEndpoint = (value) => /^[a-z]+:\/\//i.test(String(value || '').trim());
 
+  function renderCodexAccessFields(provider = '') {
+    const isCodexProvider = provider === 'codex';
+    const endpointLabel = settingApiEndpoint?.closest('label');
+    const apiKeyLabel = settingApiKey?.closest('label');
+    if (endpointLabel) {
+      endpointLabel.hidden = isCodexProvider;
+    }
+    if (apiKeyLabel) {
+      apiKeyLabel.hidden = isCodexProvider;
+    }
+    if (isCodexProvider) {
+      if (settingApiEndpoint) {
+        settingApiEndpoint.value = '';
+        settingApiEndpoint.placeholder = '';
+      }
+      if (settingApiKey) {
+        settingApiKey.value = '';
+        settingApiKey.placeholder = '';
+      }
+    }
+  }
+
   populateLlmProviderOptions();
 
   settingsNavItems.forEach((item) => {
@@ -306,11 +328,16 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
     settingModel.value = llm.model || '';
     settingModel.placeholder = modelPlaceholderForProvider(llmProvider);
     refreshLlmModelAndReasoningFields(llmProvider, llm.reasoningEffort);
-    settingApiEndpoint.value = llm.apiEndpoint
-      || (llm.api && looksLikeEndpoint(llm.api) ? llm.api : defaultLlmEndpointForProvider(llmProvider));
-    settingApiEndpoint.placeholder = defaultLlmEndpointForProvider(llmProvider);
-    settingApiKey.value = llm.apiKey || (llm.api && !looksLikeEndpoint(llm.api) ? llm.api : '');
-    settingApiKey.placeholder = apiKeyPlaceholderForProvider(llmProvider);
+    if (llmProvider === 'codex') {
+      renderCodexAccessFields(llmProvider);
+    } else {
+      settingApiEndpoint.value = llm.apiEndpoint
+        || (llm.api && looksLikeEndpoint(llm.api) ? llm.api : defaultLlmEndpointForProvider(llmProvider));
+      settingApiEndpoint.placeholder = defaultLlmEndpointForProvider(llmProvider);
+      settingApiKey.value = llm.apiKey || (llm.api && !looksLikeEndpoint(llm.api) ? llm.api : '');
+      settingApiKey.placeholder = apiKeyPlaceholderForProvider(llmProvider);
+      renderCodexAccessFields(llmProvider);
+    }
     if (settingAgentDeveloperMode) {
       settingAgentDeveloperMode.checked = state.settings?.agent?.developerMode === true;
     }
@@ -549,8 +576,10 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
     const provider = normalizeLlmProvider(settingProvider?.value, settingApiEndpoint.value);
     const model = normalizeModelForProvider(provider, settingModel?.value);
     const reasoningEffort = normalizeReasoningForProvider(provider, model, settingReasoningEffort?.value);
-    const endpoint = settingApiEndpoint.value.trim() || defaultLlmEndpointForProvider(provider);
-    const apiKey = settingApiKey.value.trim();
+    const endpoint = provider === 'codex'
+      ? ''
+      : (settingApiEndpoint.value.trim() || defaultLlmEndpointForProvider(provider));
+    const apiKey = provider === 'codex' ? '' : settingApiKey.value.trim();
 
     state.settings.llm = {
       provider,
@@ -593,13 +622,17 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
     const nextDefault = defaultLlmEndpointForProvider(provider);
     const currentEndpoint = settingApiEndpoint.value.trim();
 
-    if (!currentEndpoint || currentEndpoint === previousDefault) {
+    if (provider === 'codex') {
+      settingApiEndpoint.value = '';
+      settingApiKey.value = '';
+    } else if (!currentEndpoint || currentEndpoint === previousDefault) {
       settingApiEndpoint.value = nextDefault;
     }
     settingApiEndpoint.placeholder = nextDefault;
     settingModel.placeholder = modelPlaceholderForProvider(provider);
     settingApiKey.placeholder = apiKeyPlaceholderForProvider(provider);
     activeLlmProvider = provider;
+    renderCodexAccessFields(provider);
     refreshLlmModelAndReasoningFields(provider, settingReasoningEffort?.value);
     renderCodexStatus();
     if (provider === 'codex') {

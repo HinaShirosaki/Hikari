@@ -292,10 +292,10 @@ test('[P1] normalizeState migrates legacy endpoint from llm.api URL', () => {
   assert.equal(normalized.settings.llm.provider, 'openai');
 });
 
-test('[P1] normalizeState treats codex:// legacy llm.api as endpoint', () => {
+test('[P1] normalizeState treats codex:// legacy llm.api as a Codex agent marker', () => {
   const normalized = shared.normalizeState({ settings: { llm: { provider: 'codex', api: 'codex://cli' } } });
   assert.equal(normalized.settings.llm.provider, 'codex');
-  assert.equal(normalized.settings.llm.apiEndpoint, 'codex://cli');
+  assert.equal(normalized.settings.llm.apiEndpoint, '');
   assert.equal(normalized.settings.llm.apiKey, '');
 });
 
@@ -326,7 +326,7 @@ test('[P1] normalizeState infers llm.provider from endpoint', () => {
   assert.equal(normalized.settings.llm.provider, 'gemini');
 });
 
-test('[P1] normalizeState infers llm.provider from codex endpoint', () => {
+test('[P1] normalizeState infers llm.provider from legacy codex marker without keeping an endpoint', () => {
   const normalized = shared.normalizeState({
     settings: {
       llm: {
@@ -335,6 +335,7 @@ test('[P1] normalizeState infers llm.provider from codex endpoint', () => {
     }
   });
   assert.equal(normalized.settings.llm.provider, 'codex');
+  assert.equal(normalized.settings.llm.apiEndpoint, '');
 });
 
 test('[P1] normalizeState preserves supported llm reasoning effort values', () => {
@@ -659,7 +660,7 @@ const removedCodeGuards = [
   ['package.json', /"check:dom-ids": "node scripts\/check-dom-ids\.mjs"/, true],
   ['package.json', /"dist": "npm run build:ui && electron-forge make"/, true],
   ['package.json', /"package:app": "npm run build:ui && electron-forge package"/, true],
-  ['src/renderer/modules/agent-chat.js', /apiKey: String\(state\.settings\?\.llm\?\.apiKey/, true]
+  ['src/renderer/modules/agent-chat.js', /apiKey: provider === 'codex' \? '' : String\(state\.settings\?\.llm\?\.apiKey/, true]
 ];
 
 removedCodeGuards.forEach(([relativePath, pattern, shouldMatch], idx) => {

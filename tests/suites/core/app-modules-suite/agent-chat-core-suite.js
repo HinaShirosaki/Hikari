@@ -187,6 +187,51 @@ test('agent-chat renders assistant markdown with emphasis, tables, and escaped H
   assert.doesNotMatch(history.innerHTML, /<script>/);
 });
 
+test('agent-chat normalizes Codex agent answer envelopes', () => {
+  const responseModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat-response.js'));
+  const completed = responseModule.normalizeAgentResponse({
+    parser: {
+      primary_intent: 'codex_agent',
+      needs_clarification: false,
+      reasoning_summary: 'Parser fallback should not render first.'
+    },
+    codex_agent: {
+      status: 'completed',
+      answer: 'Codex owned the lifecycle and produced this answer.',
+      follow_up_questions: [],
+      citations: [
+        {
+          source: 'record-lookup',
+          pointer: 'notebook:1',
+          reason: 'Matched local evidence.'
+        }
+      ],
+      reasoning_summary: 'Verified with local records.'
+    }
+  });
+
+  assert.equal(completed.assistantText, 'Codex owned the lifecycle and produced this answer.');
+  assert.equal(completed.codexAgent.status, 'completed');
+  assert.equal(completed.codexAgent.citations.length, 1);
+
+  const needsMoreInfo = responseModule.normalizeAgentResponse({
+    parser: {
+      primary_intent: 'codex_agent',
+      needs_clarification: true,
+      reasoning_summary: 'Fallback parser text.'
+    },
+    codex_agent: {
+      status: 'needs_more_info',
+      answer: 'Which project should I use?',
+      follow_up_questions: ['Which project should I use?'],
+      citations: []
+    }
+  });
+
+  assert.equal(needsMoreInfo.assistantText, 'Which project should I use?');
+  assert.equal(needsMoreInfo.codexAgent.status, 'needs_more_info');
+});
+
 test('agent-chat renders completed science thinking trace details in assistant metadata', () => {
   const renderingModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'rendering.js'));
   const document = createMockDocument(['agent-chat-history']);

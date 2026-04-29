@@ -29,7 +29,7 @@
   },
   {
     "name": "web-search",
-    "description": "Search the public web through the agent's shared provider-backed web-search API. This uses provider-native web search when available, or Codex CLI with `--search` when the agent runs on Codex."
+    "description": "Search the public web through the agent's shared web-search transport. This uses provider-native web search when available, or Codex agent search when the agent runs on Codex."
   },
   {
     "name": "sub-agent",

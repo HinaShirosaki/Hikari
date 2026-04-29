@@ -62,6 +62,8 @@ const { createAgentInventoryLookupRuntime } = require('../agent/tools/agent-inve
 const { createAgentRecordLookupRuntime } = require('../agent/tools/agent-record-lookup.js');
 const { createAgentRuntimeSupport } = require('../agent/runtime/agent-runtime-support.js');
 const { createAgentSubAppApi } = require('../agent/runtime/agent-sub-app-api.js');
+const { createCodexAgentMcpHost } = require('../agent/codex-agent/mcp-host.js');
+const { createCodexAgentRuntime } = require('../agent/codex-agent/runtime.js');
 const { registerAgentToolExecutors } = require('../agent/tools/register-agent-tool-executors.js');
 const { asArray, clamp, createUniqueStrings } = require('./value-utils.js');
 
@@ -110,12 +112,6 @@ function createMainAgentServices(deps = {}) {
   const requestCodexCliText = typeof deps.requestCodexCliText === 'function'
     ? deps.requestCodexCliText
     : (async () => '');
-  const resolveCodexApiKey = typeof deps.resolveCodexApiKey === 'function'
-    ? deps.resolveCodexApiKey
-    : (() => '');
-  const resolveCodexEndpoint = typeof deps.resolveCodexEndpoint === 'function'
-    ? deps.resolveCodexEndpoint
-    : ((endpoint = '') => cleanText(endpoint, 2000));
   const getCodexCliWorkingDirectory = typeof deps.getCodexCliWorkingDirectory === 'function'
     ? deps.getCodexCliWorkingDirectory
     : (() => process.cwd());
@@ -146,12 +142,18 @@ function createMainAgentServices(deps = {}) {
     ? deps.syncBundleFromSnapshot
     : (async () => ({ bundlePaths: {}, sidecarPaths: {} }));
   const uniqueStrings = createUniqueStrings(cleanText);
+  let codexAgentMcpHost = null;
+  async function requestCodexAgentText(input = {}) {
+    if (codexAgentMcpHost && typeof codexAgentMcpHost.ensureStarted === 'function') {
+      await codexAgentMcpHost.ensureStarted();
+    }
+    return requestCodexCliText(input);
+  }
+
   const sharedLlmTransportDeps = {
     parsePdfDataUrl,
     toInputText,
-    requestCodexCliText,
-    resolveCodexApiKey,
-    resolveCodexEndpoint,
+    requestCodexCliText: requestCodexAgentText,
     getCodexCliWorkingDirectory,
     requestClaudeMessagesWithBackoff,
     requestGeminiGenerateContentWithBackoff,
@@ -424,6 +426,27 @@ function createMainAgentServices(deps = {}) {
     getAgentPythonSandboxRoot
   });
 
+  codexAgentMcpHost = createCodexAgentMcpHost({
+    runTool: agentToolRuntime.runAgentTool,
+    env: process.env,
+    getSnapshot: () => ({
+      data_file_path: cleanText(getDefaultDataFilePath(), 2000)
+    }),
+    getContextDefaults: () => ({
+      cwd: process.cwd(),
+      dataFilePath: cleanText(getDefaultDataFilePath(), 2000),
+      fallbackDataFilePath: cleanText(getDefaultDataFilePath(), 2000)
+    })
+  });
+
+  const codexAgentRuntime = createCodexAgentRuntime({
+    cleanText,
+    requestCodexAgentText,
+    recordAgentLlmTrace: controllerUtils.recordAgentLlmTrace,
+    recordLifecycleEvent: observability.recordLifecycleEvent,
+    getWorkingDirectory: getCodexCliWorkingDirectory
+  });
+
   const scienceReasoningLoopRuntime = createScienceReasoningLoopRuntime({
     ...sharedAgentLlmDeps,
     clamp,
@@ -465,6 +488,9 @@ function createMainAgentServices(deps = {}) {
     deepResearchRuntime,
     scienceMainUtils,
     agentToolRuntime,
+    codexAgentRuntime,
+    codexAgentMcpHost,
+    requestCodexAgentText,
     agentSkillRuntime,
     agentChatLogRuntime,
     agentToolSmokeTestRuntime,

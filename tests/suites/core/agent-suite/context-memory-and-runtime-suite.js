@@ -1094,7 +1094,7 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
           requestId: 'req-lifecycle-1'
         },
         provider: 'codex',
-        endpoint: 'codex://cli',
+        endpoint: '',
         apiKey: '',
         model: 'gpt-5.4-mini',
         message: 'Find endotoxin-free pipette tips to buy.',
@@ -2157,7 +2157,7 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
       assert.equal(result.run_id, 'py-tool-1');
     });
 
-    test('provider bridge routes codex multimodal file requests through the simple Codex bridge surface', async () => {
+    test('provider bridge routes codex multimodal file requests through the Codex agent surface', async () => {
       const { createAgentLlmProviderBridge } = require(path.join(
         __dirname,
         'src',
@@ -2173,8 +2173,6 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
           CODEX: 'codex',
           OPENAI: 'openai'
         },
-        resolveCodexEndpoint: () => 'https://chatgpt.com/backend-api/codex/responses',
-        resolveCodexApiKey: () => 'oauth-access-token',
         requestCodexCliText: async (input = {}) => {
           calls.push(input);
           return '{"selected":true}';
@@ -2195,8 +2193,8 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
       assert.equal(result.ok, true);
       assert.equal(result.payload.selected, true);
       assert.equal(calls.length, 1);
-      assert.equal(calls[0].endpoint, 'https://chatgpt.com/backend-api/codex/responses');
-      assert.equal(calls[0].apiKey, 'oauth-access-token');
+      assert.equal(Object.prototype.hasOwnProperty.call(calls[0], 'endpoint'), false);
+      assert.equal(Object.prototype.hasOwnProperty.call(calls[0], 'apiKey'), false);
       assert.equal(calls[0].fileName, 'paper.pdf');
       assert.equal(calls[0].pdfDataUrl, 'data:application/pdf;base64,QUJD');
       assert.match(calls[0].prompt, /Return valid JSON only\./);
@@ -2256,7 +2254,7 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
       assert.deepEqual(calls[0].include, ['web_search_call.action.sources']);
     });
 
-    test('provider bridge routes codex web search through the simple Codex web-search bridge surface', async () => {
+    test('provider bridge routes codex web search through the Codex agent web-search surface', async () => {
       const { createAgentLlmProviderBridge } = require(path.join(
         __dirname,
         'src',
@@ -2271,8 +2269,6 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
         LLM_PROVIDERS: {
           CODEX: 'codex'
         },
-        resolveCodexEndpoint: () => 'https://chatgpt.com/backend-api/codex/responses',
-        resolveCodexApiKey: () => 'oauth-access-token',
         requestCodexCliText: async (input = {}) => {
           calls.push(input);
           return JSON.stringify({
@@ -2298,13 +2294,13 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
 
       assert.equal(result.ok, true);
       assert.equal(result.results.length, 1);
-      assert.equal(calls[0].endpoint, 'https://chatgpt.com/backend-api/codex/responses');
-      assert.equal(calls[0].apiKey, 'oauth-access-token');
+      assert.equal(Object.prototype.hasOwnProperty.call(calls[0], 'endpoint'), false);
+      assert.equal(Object.prototype.hasOwnProperty.call(calls[0], 'apiKey'), false);
       assert.equal(calls[0].enableWebSearch, true);
       assert.match(calls[0].prompt, /Search query:/);
     });
 
-    test('runtime helpers wire codex structured requests through the shared simple Codex provider API surface', async () => {
+    test('runtime helpers wire codex structured requests through the shared Codex agent provider surface', async () => {
       const { createAgentLlmProviderBridge } = require(path.join(
         __dirname,
         'src',
@@ -2329,8 +2325,6 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
         LLM_PROVIDERS: {
           CODEX: 'codex'
         },
-        resolveCodexEndpoint: () => 'https://chatgpt.com/backend-api/codex/responses',
-        resolveCodexApiKey: () => 'oauth-access-token',
         requestCodexCliText: async (input = {}) => {
           calls.push(input);
           return '{"primary_intent":"general_science_question","needs_clarification":false,"clarifying_question":"","clarification_options":[],"entities":{"projects":[],"samples":[],"proteins":[],"genes":[],"reagents":[],"vendors":[],"inventory_queries":[],"record_queries":[],"assays":[],"gels":[],"papers":[],"protocols":[],"notebooks":[],"purchase_requirements":[]},"reasoning_summary":"Parsed intent.","confidence":"high","reasoning_effort":1}';
@@ -2342,7 +2336,7 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
 
       const result = await helpers.requestStructuredJsonPayload({
         provider: 'codex',
-        endpoint: 'codex://cli',
+        endpoint: '',
         model: 'gpt-5.4-mini',
         stage: 'intent_parser',
         systemPrompt: 'Return valid JSON only.',
@@ -2357,8 +2351,8 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
 
       assert.equal(result.ok, true);
       assert.equal(calls.length, 1);
-      assert.equal(calls[0].endpoint, 'https://chatgpt.com/backend-api/codex/responses');
-      assert.equal(calls[0].apiKey, 'oauth-access-token');
+      assert.equal(Object.prototype.hasOwnProperty.call(calls[0], 'endpoint'), false);
+      assert.equal(Object.prototype.hasOwnProperty.call(calls[0], 'apiKey'), false);
       assert.equal(calls[0].enableWebSearch, true);
       assert.match(calls[0].prompt, /Return valid JSON only\./);
       assert.match(calls[0].prompt, /User asks a science question\./);

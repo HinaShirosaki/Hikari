@@ -8,14 +8,8 @@ function defaultCleanText(value, _maxLength = 2000) {
   return text;
 }
 
-function createOpenAiCliLlmProvider(deps = {}) {
+function createCodexAgentLlmProvider(deps = {}) {
   const cleanText = typeof deps.cleanText === 'function' ? deps.cleanText : defaultCleanText;
-  const resolveCodexEndpoint = typeof deps.resolveCodexEndpoint === 'function'
-    ? deps.resolveCodexEndpoint
-    : ((endpoint) => cleanText(endpoint, 2000));
-  const resolveCodexApiKey = typeof deps.resolveCodexApiKey === 'function'
-    ? deps.resolveCodexApiKey
-    : ((input = {}) => cleanText(input.apiKey, 400));
   const requestCodexCliText = typeof deps.requestCodexCliText === 'function' ? deps.requestCodexCliText : null;
   const getWorkingDirectory = typeof deps.getWorkingDirectory === 'function'
     ? deps.getWorkingDirectory
@@ -57,36 +51,23 @@ function createOpenAiCliLlmProvider(deps = {}) {
   }
 
   function resolveCodexRequestOptions(input = {}) {
-    const endpoint = cleanText(resolveCodexEndpoint(input.endpoint), 2000);
-    const apiKey = cleanText(resolveCodexApiKey({
-      apiKey: input.apiKey,
-      endpoint: input.endpoint
-    }), 4000);
-    if (!endpoint) {
+    if (!requestCodexCliText) {
       return {
         ok: false,
-        error: cleanText(input.defaultError, 600) || 'OpenAI CLI endpoint is not configured.'
-      };
-    }
-    if (!apiKey) {
-      return {
-        ok: false,
-        error: cleanText(input.defaultError, 600) || 'OpenAI CLI OAuth credentials are not configured. Run `codex login` first.'
+        error: cleanText(input.defaultError, 600) || 'Codex agent transport is not configured.'
       };
     }
     return {
-      ok: true,
-      endpoint,
-      apiKey
+      ok: true
     };
   }
 
-  async function requestTextViaLegacyCli(input = {}) {
+  async function requestTextViaCodexAgent(input = {}) {
     const normalizedStage = cleanText(input.stage, 120) || 'agent_stage';
     if (!requestCodexCliText) {
       return {
         ok: false,
-        error: cleanText(input.defaultError, 600) || 'OpenAI CLI text input is not configured.'
+        error: cleanText(input.defaultError, 600) || 'Codex agent text input is not configured.'
       };
     }
 
@@ -104,9 +85,7 @@ function createOpenAiCliLlmProvider(deps = {}) {
         model: cleanText(input.model, 120),
         enableWebSearch: input.enableWebSearch === true,
         cwd: getWorkingDirectory(),
-        attachments,
-        endpoint: cleanText(input.endpoint, 2000),
-        apiKey: cleanText(input.apiKey, 4000)
+        attachments
       });
       await recordTrace(input.traceContext, {
         stage: normalizedStage,
@@ -114,7 +93,7 @@ function createOpenAiCliLlmProvider(deps = {}) {
         model: cleanText(input.model, 120),
         summary: attachments.length
           ? `${normalizedStage} completed via Codex multimodal prompt transport.`
-          : `${normalizedStage} completed via legacy OpenAI CLI fallback.`,
+          : `${normalizedStage} completed via Codex agent transport.`,
         requestPayload: {
           model: cleanText(input.model, 120),
           prompt,
@@ -150,12 +129,12 @@ function createOpenAiCliLlmProvider(deps = {}) {
     }
   }
 
-  async function requestFileInputViaLegacyCli(input = {}) {
+  async function requestFileInputViaCodexAgent(input = {}) {
     const normalizedStage = cleanText(input.stage, 120) || 'agent_stage';
     if (!requestCodexCliText) {
       return {
         ok: false,
-        error: cleanText(input.defaultError, 600) || 'OpenAI CLI file input is not configured.'
+        error: cleanText(input.defaultError, 600) || 'Codex agent file input is not configured.'
       };
     }
 
@@ -180,15 +159,13 @@ function createOpenAiCliLlmProvider(deps = {}) {
         enableWebSearch: input.enableWebSearch === true,
         cwd: getWorkingDirectory(),
         fileName: normalizedFileName,
-        pdfDataUrl: normalizedFileData,
-        endpoint: cleanText(input.endpoint, 2000),
-        apiKey: cleanText(input.apiKey, 4000)
+        pdfDataUrl: normalizedFileData
       });
       await recordTrace(input.traceContext, {
         stage: normalizedStage,
         provider: providerId,
         model: cleanText(input.model, 120),
-        summary: `${normalizedStage} completed via legacy OpenAI CLI fallback.`,
+        summary: `${normalizedStage} completed via Codex agent transport.`,
         requestPayload: {
           model: cleanText(input.model, 120),
           prompt,
@@ -223,13 +200,13 @@ function createOpenAiCliLlmProvider(deps = {}) {
     }
   }
 
-  async function requestWebSearchViaLegacyCli(input = {}) {
+  async function requestWebSearchViaCodexAgent(input = {}) {
     const normalizedStage = cleanText(input.stage, 120) || 'web_search';
     const normalizedQuery = cleanText(input.query, 1200);
     if (!requestCodexCliText) {
       return {
         ok: false,
-        error: cleanText(input.defaultError, 600) || 'OpenAI CLI web search is not configured.'
+        error: cleanText(input.defaultError, 600) || 'Codex agent web search is not configured.'
       };
     }
     if (!normalizedQuery) {
@@ -251,15 +228,13 @@ function createOpenAiCliLlmProvider(deps = {}) {
         prompt,
         model: cleanText(input.model, 120),
         enableWebSearch: true,
-        cwd: getWorkingDirectory(),
-        endpoint: cleanText(input.endpoint, 2000),
-        apiKey: cleanText(input.apiKey, 4000)
+        cwd: getWorkingDirectory()
       });
       await recordTrace(input.traceContext, {
         stage: normalizedStage,
         provider: providerId,
         model: cleanText(input.model, 120),
-        summary: `${normalizedStage} completed via legacy OpenAI CLI fallback.`,
+        summary: `${normalizedStage} completed via Codex agent transport.`,
         requestPayload: {
           model: cleanText(input.model, 120),
           prompt,
@@ -294,7 +269,7 @@ function createOpenAiCliLlmProvider(deps = {}) {
     if (!requestCodexCliText) {
       return {
         ok: false,
-        error: cleanText(input.defaultError, 600) || 'OpenAI CLI image input is not configured.'
+        error: cleanText(input.defaultError, 600) || 'Codex agent image input is not configured.'
       };
     }
     const normalizedImageData = cleanText(input.imageDataUrl || input.imageUrl, 400000);
@@ -316,9 +291,7 @@ function createOpenAiCliLlmProvider(deps = {}) {
         model: cleanText(input.model, 120),
         enableWebSearch: input.enableWebSearch === true,
         cwd: getWorkingDirectory(),
-        imageDataUrl: normalizedImageData,
-        endpoint: cleanText(input.endpoint, 2000),
-        apiKey: cleanText(input.apiKey, 4000)
+        imageDataUrl: normalizedImageData
       });
       await recordTrace(input.traceContext, {
         stage: normalizedStage,
@@ -363,11 +336,7 @@ function createOpenAiCliLlmProvider(deps = {}) {
     if (!resolved.ok) {
       return resolved;
     }
-    return requestTextViaLegacyCli({
-      ...input,
-      endpoint: resolved.endpoint,
-      apiKey: resolved.apiKey
-    });
+    return requestTextViaCodexAgent(input);
   }
 
   async function requestImageInput(input = {}) {
@@ -375,11 +344,7 @@ function createOpenAiCliLlmProvider(deps = {}) {
     if (!resolved.ok) {
       return resolved;
     }
-    return requestImageInputViaCodex({
-      ...input,
-      endpoint: resolved.endpoint,
-      apiKey: resolved.apiKey
-    });
+    return requestImageInputViaCodex(input);
   }
 
   async function requestFileInput(input = {}) {
@@ -387,11 +352,7 @@ function createOpenAiCliLlmProvider(deps = {}) {
     if (!resolved.ok) {
       return resolved;
     }
-    return requestFileInputViaLegacyCli({
-      ...input,
-      endpoint: resolved.endpoint,
-      apiKey: resolved.apiKey
-    });
+    return requestFileInputViaCodexAgent(input);
   }
 
   async function requestWebSearch(input = {}) {
@@ -399,11 +360,7 @@ function createOpenAiCliLlmProvider(deps = {}) {
     if (!resolved.ok) {
       return resolved;
     }
-    return requestWebSearchViaLegacyCli({
-      ...input,
-      endpoint: resolved.endpoint,
-      apiKey: resolved.apiKey
-    });
+    return requestWebSearchViaCodexAgent(input);
   }
 
   return {
@@ -415,5 +372,5 @@ function createOpenAiCliLlmProvider(deps = {}) {
 }
 
 module.exports = {
-  createOpenAiCliLlmProvider
+  createCodexAgentLlmProvider
 };

@@ -243,6 +243,10 @@ export function initAgentChat({
       request_aborted: 'Request stopped',
       controller_intent_only_selected: 'Preparing parser-first request',
       controller_intent_only: 'Running parser-first controller',
+      controller_codex_agent_selected: 'Preparing Codex agent request',
+      controller_codex_agent: 'Routing to Codex agent',
+      codex_agent_started: 'Codex agent running',
+      codex_agent_completed: 'Codex agent completed',
       parser_completed: 'Intent parsed',
       protocol_to_notebook_followup: 'Continuing notebook follow-up',
       protocol_to_notebook_completed: 'Notebook draft status updated',
@@ -904,8 +908,12 @@ export function initAgentChat({
           provider: String(state.settings?.llm?.provider || '').trim(),
           model: String(state.settings?.llm?.model || '').trim(),
           reasoningEffort: String(state.settings?.llm?.reasoningEffort || '').trim().toLowerCase(),
-          apiEndpoint: String(state.settings?.llm?.apiEndpoint || '').trim(),
-          apiKey: String(state.settings?.llm?.apiKey || '').trim()
+          apiEndpoint: String(state.settings?.llm?.provider || '').trim() === 'codex'
+            ? ''
+            : String(state.settings?.llm?.apiEndpoint || '').trim(),
+          apiKey: String(state.settings?.llm?.provider || '').trim() === 'codex'
+            ? ''
+            : String(state.settings?.llm?.apiKey || '').trim()
         },
         agent: {
           developerMode: state.settings?.agent?.developerMode === true,
@@ -949,6 +957,7 @@ export function initAgentChat({
           parser: response.parser,
           protocol_to_notebook: response.protocolWorkflow,
           notebook_draft: response.notebookDraftWorkflow,
+          codex_agent: response.codexAgent,
           purchase_recommendation: response.purchaseRecommendation,
           inventory_lookup: response.inventoryLookup,
           record_lookup: response.recordLookup,

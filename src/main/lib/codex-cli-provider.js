@@ -10,13 +10,18 @@ const {
   onAgentRequestAbort,
   throwIfAgentRequestAborted
 } = require('../helpers/agent/shared/agent-request-context.js');
+const {
+  buildEnanaCodexAgentsInstructions
+} = require('../helpers/agent/codex-agent/agent-instructions.js');
+const {
+  ensureEnanaCodexAgentsFile,
+  ensureEnanaCodexMcpConfig
+} = require('../helpers/agent/codex-agent/runtime-files.js');
 
 const DEFAULT_TIMEOUT_MS = 180000;
 const LOGIN_STATUS_TIMEOUT_MS = 12000;
 const LOGIN_STATUS_CACHE_TTL_MS = 30000;
 const CODEX_LOGIN_LAUNCH_GRACE_MS = 1500;
-const OPENAI_CODEX_BACKEND_API_BASE_URL = 'https://chatgpt.com/backend-api';
-const OPENAI_CODEX_RESPONSES_ENDPOINT = `${OPENAI_CODEX_BACKEND_API_BASE_URL}/codex/responses`;
 const OPENAI_CODEX_LOGIN_URL = 'https://chatgpt.com/auth/login';
 const CODEX_TMP_DIR_NAME = 'codex-cli';
 const CODEX_MODELS_CACHE_FILE = 'models_cache.json';
@@ -197,12 +202,21 @@ function sanitizeFileName(fileName, fallback = 'paper.pdf') {
   return `${normalized}.pdf`;
 }
 
-function parsePdfDataUrl(pdfDataUrl) {
-  const match = String(pdfDataUrl || '').trim().match(/^data:application\/pdf(?:;charset=[^;,]+)?;base64,(.+)$/i);
-  if (!match?.[1]) {
+function sanitizeAttachmentFileName(fileName, fallback = 'attachment.bin') {
+  const raw = String(fileName || '').trim().replace(/[/\\]+/g, '_');
+  const safe = raw.replace(/[^A-Za-z0-9._-]/g, '_').replace(/^_+|_+$/g, '');
+  return safe || fallback;
+}
+
+function parseBase64DataUrl(dataUrl = '') {
+  const match = String(dataUrl || '').trim().match(/^data:([^;,]+)(?:;charset=[^;,]+)?;base64,(.+)$/i);
+  if (!match?.[2]) {
     return null;
   }
-  return Buffer.from(match[1], 'base64');
+  return {
+    mimeType: cleanText(match[1], 120),
+    buffer: Buffer.from(match[2], 'base64')
+  };
 }
 
 function isMissingBinaryError(error) {
@@ -325,288 +339,6 @@ function readCodexCliOAuthProfile() {
   };
 }
 
-function resolveCodexCliResponsesEndpoint(endpoint = '') {
-  const raw = cleanText(endpoint, 2400);
-  if (!raw || raw.toLowerCase().startsWith('codex://')) {
-    return OPENAI_CODEX_RESPONSES_ENDPOINT;
-  }
-  if (!/^https?:\/\//i.test(raw)) {
-    return OPENAI_CODEX_RESPONSES_ENDPOINT;
-  }
-  const normalized = raw.replace(/\/+$/, '');
-  if (/\/backend-api\/codex$/i.test(normalized)) {
-    return `${normalized}/responses`;
-  }
-  if (/\/backend-api\/codex\/responses$/i.test(normalized)) {
-    return normalized;
-  }
-  if (/https?:\/\/chatgpt\.com\/backend-api\/responses$/i.test(normalized)) {
-    return `${OPENAI_CODEX_BACKEND_API_BASE_URL}/codex/responses`;
-  }
-  if (/\/responses$/i.test(normalized)) {
-    return normalized;
-  }
-  if (/\/backend-api$/i.test(normalized)) {
-    return `${normalized}/codex/responses`;
-  }
-  return normalized;
-}
-
-function resolveCodexCliAccountId(explicitAccountId = '') {
-  const provided = cleanText(explicitAccountId, 400);
-  if (provided) {
-    return provided;
-  }
-  const envAccountId = cleanText(
-    process.env.ENANA_CODEX_ACCOUNT_ID
-      || process.env.OPENAI_CODEX_ACCOUNT_ID
-      || process.env.CHATGPT_ACCOUNT_ID,
-    400
-  );
-  if (envAccountId) {
-    return envAccountId;
-  }
-  const profile = readCodexCliOAuthProfile();
-  return cleanText(profile.accountId, 400);
-}
-
-function resolveCodexCliAccessToken(explicitToken = '') {
-  const provided = cleanText(explicitToken, 20000);
-  if (provided && !isCodexCliAccessTokenExpired(provided)) {
-    return provided;
-  }
-
-  const envToken = cleanText(
-    process.env.ENANA_CODEX_ACCESS_TOKEN
-      || process.env.OPENAI_OAUTH_TOKEN
-      || process.env.CHATGPT_OAUTH_TOKEN,
-    20000
-  );
-  if (envToken && !isCodexCliAccessTokenExpired(envToken)) {
-    return envToken;
-  }
-
-  const profile = readCodexCliOAuthProfile();
-  if (profile.expired === true) {
-    return '';
-  }
-  return cleanText(profile.accessToken, 20000);
-}
-
-function extractResponseText(payload) {
-  if (typeof payload?.output_text === 'string' && payload.output_text.trim()) {
-    return payload.output_text.trim();
-  }
-
-  const chunks = [];
-  const output = Array.isArray(payload?.output) ? payload.output : [];
-  output.forEach((item) => {
-    if (item?.type === 'message') {
-      const content = Array.isArray(item.content) ? item.content : [];
-      content.forEach((entry) => {
-        if (entry?.type === 'output_text' && entry.text) {
-          chunks.push(String(entry.text));
-        }
-      });
-      return;
-    }
-    if (item?.type === 'output_text' && item.text) {
-      chunks.push(String(item.text));
-    }
-  });
-  return chunks.join('\n').trim();
-}
-
-function sleep(ms) {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
-}
-
-function sleepWithAbort(ms, signal) {
-  if (!signal) {
-    return sleep(ms);
-  }
-  if (signal.aborted) {
-    return Promise.reject(createAgentRequestAbortError(signal.reason || 'Agent request stopped.'));
-  }
-  return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      signal.removeEventListener('abort', onAbort);
-      resolve();
-    }, ms);
-    const onAbort = () => {
-      clearTimeout(timeout);
-      signal.removeEventListener('abort', onAbort);
-      reject(createAgentRequestAbortError(signal.reason || 'Agent request stopped.'));
-    };
-    signal.addEventListener('abort', onAbort, { once: true });
-  });
-}
-
-function parseCodexSseEvents(raw = '') {
-  return String(raw || '')
-    .split(/\n\n+/)
-    .map((block) => block.trim())
-    .filter(Boolean)
-    .map((block) => {
-      const lines = block.split(/\n/);
-      const event = cleanText(
-        (lines.find((line) => line.startsWith('event:')) || '').slice(6),
-        200
-      );
-      const dataText = lines
-        .filter((line) => line.startsWith('data:'))
-        .map((line) => line.slice(5).trim())
-        .join('\n');
-      return {
-        event,
-        dataText,
-        data: safeParseJson(dataText, null)
-      };
-    });
-}
-
-function buildCodexResponsePayloadFromSse(raw = '') {
-  const events = parseCodexSseEvents(raw);
-  const outputItems = [];
-  const outputTextChunks = [];
-  let responseEnvelope = null;
-
-  events.forEach((entry) => {
-    const payload = entry.data && typeof entry.data === 'object' ? entry.data : null;
-    if (!payload) {
-      return;
-    }
-    if (payload.type === 'response.output_text.done' && payload.text) {
-      outputTextChunks.push(String(payload.text));
-      return;
-    }
-    if (payload.type === 'response.output_item.done' && payload.item && typeof payload.item === 'object') {
-      outputItems.push(payload.item);
-      return;
-    }
-    if (payload.type === 'response.completed' && payload.response && typeof payload.response === 'object') {
-      responseEnvelope = payload.response;
-    }
-  });
-
-  const reconstructedText = cleanText(outputTextChunks.join(''), 120000);
-  const normalizedOutput = outputItems.map((item) => {
-    const normalized = item && typeof item === 'object' ? item : {};
-    if (normalized.type === 'message') {
-      const content = Array.isArray(normalized.content) ? normalized.content : [];
-      return {
-        ...normalized,
-        content: content.map((entry) => (entry && typeof entry === 'object' ? entry : {}))
-      };
-    }
-    if (normalized.type === 'function_call') {
-      return {
-        ...normalized,
-        arguments: String(normalized.arguments || '')
-      };
-    }
-    return normalized;
-  });
-
-  return {
-    ...(responseEnvelope && typeof responseEnvelope === 'object' ? responseEnvelope : {}),
-    output: normalizedOutput,
-    output_text: reconstructedText,
-    _raw_event_stream: String(raw || '')
-  };
-}
-
-async function requestCodexResponsesJson({
-  endpoint,
-  apiKey,
-  accountId = '',
-  body,
-  timeoutMs = DEFAULT_TIMEOUT_MS,
-  retryStatuses = [429, 503],
-  maxRetries = 3
-} = {}) {
-  const abortSignal = getAgentRequestAbortSignal();
-  let attempt = 0;
-
-  while (attempt <= maxRetries) {
-    throwIfAgentRequestAborted('Agent request stopped before sending Codex request.');
-    const timeoutController = new AbortController();
-    const timeoutHandle = setTimeout(() => {
-      timeoutController.abort(createAgentRequestAbortError('Codex request timed out.'));
-    }, Math.max(1000, Number(timeoutMs) || DEFAULT_TIMEOUT_MS));
-    const relayAbort = () => {
-      timeoutController.abort(abortSignal?.reason || createAgentRequestAbortError('Agent request stopped.'));
-    };
-    if (abortSignal) {
-      abortSignal.addEventListener('abort', relayAbort, { once: true });
-    }
-
-    try {
-      const headers = {
-        'Content-Type': 'application/json',
-        Accept: 'text/event-stream',
-        Authorization: `Bearer ${apiKey}`,
-        'User-Agent': 'CodexBar'
-      };
-      const resolvedAccountId = cleanText(accountId, 400);
-      if (resolvedAccountId) {
-        headers['ChatGPT-Account-Id'] = resolvedAccountId;
-      }
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(body),
-        signal: timeoutController.signal
-      });
-      clearTimeout(timeoutHandle);
-      if (abortSignal) {
-        abortSignal.removeEventListener('abort', relayAbort);
-      }
-
-      if (!retryStatuses.includes(response.status)) {
-        if (!response.ok) {
-          throw new Error(`Codex API error (${response.status}): ${await response.text()}`);
-        }
-        const raw = await response.text();
-        const parsedJson = safeParseJson(raw, null);
-        if (parsedJson && typeof parsedJson === 'object') {
-          return parsedJson;
-        }
-        return buildCodexResponsePayloadFromSse(raw);
-      }
-
-      if (attempt >= maxRetries) {
-        throw new Error(`Codex API rate-limited (${response.status}): ${await response.text()}`);
-      }
-
-      const retryAfterHeader = Number(response.headers.get('retry-after'));
-      const retryAfterMs = Number.isFinite(retryAfterHeader) && retryAfterHeader > 0
-        ? retryAfterHeader * 1000
-        : 500 * (2 ** attempt) + Math.floor(Math.random() * 300);
-      await sleepWithAbort(retryAfterMs, abortSignal);
-      attempt += 1;
-    } catch (error) {
-      clearTimeout(timeoutHandle);
-      if (abortSignal) {
-        abortSignal.removeEventListener('abort', relayAbort);
-      }
-      if (isAgentRequestAbortError(error) || abortSignal?.aborted) {
-        throw createAgentRequestAbortError(abortSignal?.reason || error?.message || 'Agent request stopped.');
-      }
-      if (attempt >= maxRetries) {
-        throw error;
-      }
-      const waitMs = 350 * (2 ** attempt) + Math.floor(Math.random() * 250);
-      await sleepWithAbort(waitMs, abortSignal);
-      attempt += 1;
-    }
-  }
-
-  throw new Error('Codex API request failed after retries.');
-}
-
 function resolveCodexCliRuntimeHomeDirectory(cwd = '') {
   const explicit = String(process.env.ENANA_CODEX_HOME || '').trim();
   if (explicit) {
@@ -635,6 +367,10 @@ async function removeFileIfExists(targetPath = '') {
   }
   await fs.rm(targetPath, { force: true });
   return true;
+}
+
+async function ensureCodexCliAgentsFile(cwd = '') {
+  return ensureEnanaCodexAgentsFile(resolveWorkingDirectory(cwd));
 }
 
 async function copyFileIfChanged(sourcePath = '', targetPath = '') {
@@ -678,11 +414,17 @@ async function ensureCodexCliRuntimeHome(cwd = '') {
 
   const sourceHome = getNativeCodexCliHomeDirectory();
   if (!sourceHome) {
+    await ensureEnanaCodexMcpConfig(path.join(runtimeHome, CODEX_CONFIG_FILE), {
+      workspace: resolveWorkingDirectory(cwd)
+    });
     return runtimeHome;
   }
   const resolvedSource = path.resolve(sourceHome);
   const resolvedTarget = path.resolve(runtimeHome);
   if (resolvedSource === resolvedTarget || !(await pathExists(resolvedSource))) {
+    await ensureEnanaCodexMcpConfig(path.join(runtimeHome, CODEX_CONFIG_FILE), {
+      workspace: resolveWorkingDirectory(cwd)
+    });
     return runtimeHome;
   }
 
@@ -692,6 +434,9 @@ async function ensureCodexCliRuntimeHome(cwd = '') {
       path.join(resolvedTarget, fileName)
     )
   )));
+  await ensureEnanaCodexMcpConfig(path.join(runtimeHome, CODEX_CONFIG_FILE), {
+    workspace: resolveWorkingDirectory(cwd)
+  });
   return runtimeHome;
 }
 
@@ -1105,9 +850,10 @@ function buildCodexCliExecArgs({ outputFile = '', model = '', reasoningEffort = 
 }
 
 async function runCodexCommand({ args, cwd, env = process.env, input = '', timeoutMs = DEFAULT_TIMEOUT_MS }) {
+  const safeCwd = resolveWorkingDirectory(cwd);
+  await ensureCodexCliAgentsFile(safeCwd);
   return new Promise((resolve, reject) => {
     throwIfAgentRequestAborted('Agent request stopped before starting Codex CLI.');
-    const safeCwd = resolveWorkingDirectory(cwd);
     const child = spawn(resolveCodexBinary(), args, {
       cwd: safeCwd,
       env,
@@ -1282,20 +1028,98 @@ async function getCodexLoginStatus({ cwd = process.cwd(), forceRefresh = false }
   return result;
 }
 
+async function createCodexOutputFilePath(cwd = '') {
+  const safeCwd = resolveWorkingDirectory(cwd);
+  const outputDir = path.join(safeCwd, 'Tmp', CODEX_TMP_DIR_NAME);
+  await fs.mkdir(outputDir, { recursive: true });
+  return path.join(outputDir, `last-message-${Date.now()}-${Math.random().toString(16).slice(2)}.txt`);
+}
+
+async function stageCodexPromptAttachments({
+  cwd = '',
+  fileName = '',
+  pdfDataUrl = '',
+  imageDataUrl = '',
+  imageUrl = '',
+  attachments = []
+} = {}) {
+  const safeCwd = resolveWorkingDirectory(cwd);
+  const rawAttachments = Array.isArray(attachments) && attachments.length
+    ? attachments.map((attachment) => {
+      const source = attachment && typeof attachment === 'object' ? attachment : {};
+      return {
+        kind: cleanText(source.kind, 40),
+        name: sanitizeAttachmentFileName(source.name || 'attachment.bin'),
+        dataUrl: cleanText(source.dataUrl || source.data_url, 400000)
+      };
+    })
+    : [
+      ...(pdfDataUrl ? [{
+        kind: 'file',
+        name: sanitizeFileName(fileName || 'paper.pdf'),
+        dataUrl: String(pdfDataUrl)
+      }] : []),
+      ...(cleanText(imageDataUrl || imageUrl, 400000) ? [{
+        kind: 'image',
+        name: 'image.png',
+        dataUrl: cleanText(imageDataUrl || imageUrl, 400000)
+      }] : [])
+    ];
+  const normalized = rawAttachments.filter((attachment) => attachment.dataUrl);
+  if (!normalized.length) {
+    return [];
+  }
+  const attachmentDir = path.join(safeCwd, 'CodexAttachments');
+  await fs.mkdir(attachmentDir, { recursive: true });
+  const staged = [];
+  for (let index = 0; index < normalized.length; index += 1) {
+    const attachment = normalized[index];
+    const parsed = parseBase64DataUrl(attachment.dataUrl);
+    if (!parsed?.buffer?.length) {
+      continue;
+    }
+    const fallback = attachment.kind === 'image' ? `image-${index + 1}.png` : `attachment-${index + 1}.bin`;
+    const filePath = path.join(attachmentDir, sanitizeAttachmentFileName(attachment.name, fallback));
+    await fs.writeFile(filePath, parsed.buffer);
+    staged.push({
+      kind: attachment.kind || (parsed.mimeType.startsWith('image/') ? 'image' : 'file'),
+      name: path.basename(filePath),
+      mimeType: parsed.mimeType,
+      path: filePath,
+      relativePath: path.relative(safeCwd, filePath)
+    });
+  }
+  return staged;
+}
+
+function buildCodexPromptWithStagedAttachments(prompt = '', stagedAttachments = []) {
+  const cleanPrompt = String(prompt || '').trim();
+  if (!stagedAttachments.length) {
+    return cleanPrompt;
+  }
+  const attachmentRows = stagedAttachments.map((attachment) => (
+    `- ${attachment.name} (${attachment.mimeType || attachment.kind || 'file'}): ${attachment.relativePath}`
+  ));
+  return [
+    cleanPrompt,
+    'Enana staged the following input files in this Codex workspace. Read them from disk if they are relevant:',
+    attachmentRows.join('\n')
+  ].join('\n\n');
+}
+
 async function requestCodexCliText({
   prompt,
   model = '',
   reasoningEffort = '',
   enableWebSearch = false,
-  cwd = process.cwd(),
+  cwd = '',
   timeoutMs = DEFAULT_TIMEOUT_MS,
   fileName = '',
   pdfDataUrl = '',
   imageDataUrl = '',
   imageUrl = '',
   attachments = [],
-  endpoint = '',
-  apiKey = ''
+  envOverrides = {}
 }) {
   throwIfAgentRequestAborted('Agent request stopped before starting Codex prompt.');
   const cleanPrompt = String(prompt || '').trim();
@@ -1303,104 +1127,67 @@ async function requestCodexCliText({
     throw new Error('Prompt is required for Codex request.');
   }
 
-  const loginStatus = await getCodexLoginStatus({ cwd });
+  const safeCwd = resolveWorkingDirectory(cwd);
+  if (cleanText(cwd, 2400)) {
+    await ensureCodexCliAgentsFile(safeCwd);
+  }
+
+  const loginStatus = await getCodexLoginStatus({ cwd: safeCwd });
   if (!loginStatus.loggedIn) {
     throw new Error(loginStatus.message || 'Codex ChatGPT OAuth credentials are not configured.');
   }
 
-  const resolvedEndpoint = resolveCodexCliResponsesEndpoint(endpoint);
-  const resolvedApiKey = resolveCodexCliAccessToken(apiKey);
-  if (!resolvedApiKey) {
-    throw new Error('Codex ChatGPT OAuth credentials are not configured. Run `codex login` first.');
-  }
-  const resolvedAccountId = resolveCodexCliAccountId();
-
-  const resolvedModel = resolveCodexCliModel(model);
-  const resolvedReasoningEffort = resolveCodexCliReasoningEffort(reasoningEffort, resolvedModel);
-  const normalizedAttachments = Array.isArray(attachments)
-    ? attachments.map((attachment) => {
-      const source = attachment && typeof attachment === 'object' ? attachment : {};
-      return {
-        kind: cleanText(source.kind, 40),
-        name: sanitizeFileName(source.name || 'attachment'),
-        dataUrl: cleanText(source.dataUrl || source.data_url, 400000)
-      };
-    }).filter((attachment) => attachment.dataUrl)
-    : [];
-  const normalizedImageData = cleanText(imageDataUrl || imageUrl, 400000);
-  const effectiveAttachments = normalizedAttachments.length
-    ? normalizedAttachments
-    : [
-      ...(pdfDataUrl ? [{
-        kind: 'file',
-        name: sanitizeFileName(fileName || 'paper.pdf'),
-        dataUrl: String(pdfDataUrl)
-      }] : []),
-      ...(normalizedImageData ? [{
-        kind: 'image',
-        name: 'image',
-        dataUrl: normalizedImageData
-      }] : [])
-    ];
-  const requestInput = [
-    {
-      role: 'user',
-      content: [
-        { type: 'input_text', text: cleanPrompt },
-        ...effectiveAttachments.map((attachment) => (
-          attachment.kind === 'image'
-            ? {
-              type: 'input_image',
-              image_url: attachment.dataUrl
-            }
-            : {
-              type: 'input_file',
-              filename: attachment.name,
-              file_data: attachment.dataUrl
-            }
-        ))
-      ]
-    }
-  ];
-
-  const body = {
-    model: resolvedModel,
-    instructions: 'Follow the user input and attached context exactly. If the input requests JSON only, return JSON only.',
-    input: requestInput,
-    store: false,
-    stream: true
+  const stagedAttachments = await stageCodexPromptAttachments({
+    cwd: safeCwd,
+    fileName,
+    pdfDataUrl,
+    imageDataUrl,
+    imageUrl,
+    attachments
+  });
+  const promptWithAttachments = buildCodexPromptWithStagedAttachments(cleanPrompt, stagedAttachments);
+  const outputFile = await createCodexOutputFilePath(safeCwd);
+  const baseEnv = await buildCodexCommandEnv(safeCwd);
+  const env = {
+    ...baseEnv,
+    ...(envOverrides && typeof envOverrides === 'object' ? envOverrides : {})
   };
-  if (resolvedReasoningEffort) {
-    body.reasoning = {
-      effort: resolvedReasoningEffort
-    };
-  }
-  if (enableWebSearch === true) {
-    body.tools = [{ type: 'web_search' }];
-    body.tool_choice = 'auto';
-  }
+  const args = buildCodexCliExecArgs({
+    outputFile,
+    model,
+    reasoningEffort,
+    enableWebSearch
+  });
 
-  const response = await requestCodexResponsesJson({
-    endpoint: resolvedEndpoint,
-    apiKey: resolvedApiKey,
-    accountId: resolvedAccountId,
-    body,
+  const commandResult = await runCodexCommand({
+    args,
+    cwd: safeCwd,
+    env,
+    input: promptWithAttachments,
     timeoutMs
   });
 
   throwIfAgentRequestAborted('Agent request stopped before reading Codex output.');
-  const resultText = cleanText(extractResponseText(response), 120000);
+  let outputText = '';
+  try {
+    outputText = await fs.readFile(outputFile, 'utf8');
+  } catch {
+    outputText = '';
+  }
+  await removeFileIfExists(outputFile).catch(() => {});
+  const resultText = cleanText(outputText || commandResult.stdout, 120000);
   if (!resultText) {
-    throw new Error('Codex provider returned an empty response.');
+    throw new Error('Codex CLI returned an empty response.');
   }
   return resultText;
 }
 
 module.exports = {
-  OPENAI_CODEX_RESPONSES_ENDPOINT,
   OPENAI_CODEX_LOGIN_URL,
+  buildEnanaCodexAgentsInstructions,
   buildCodexCliExecArgs,
   clearCodexCliStoredLogin,
+  ensureCodexCliAgentsFile,
   ensureCodexCliRuntimeHome,
   extractCodexLoginUrl,
   getCodexCliCatalog,
@@ -1411,8 +1198,6 @@ module.exports = {
   invalidateCodexLoginStatusCache,
   launchCodexCliLogin,
   readCodexCliOAuthProfile,
-  resolveCodexCliAccessToken,
-  resolveCodexCliResponsesEndpoint,
   resolveCodexCliRuntimeHomeDirectory,
   setCodexCliModel,
   setCodexCliReasoningEffort,

@@ -1,6 +1,6 @@
 'use strict';
 
-const { createOpenAiCliLlmProvider } = require('./llm-providers/openai-cli-provider.js');
+const { createCodexAgentLlmProvider } = require('./llm-providers/codex-agent-provider.js');
 const { createOpenAiLlmProvider } = require('./llm-providers/openai-provider.js');
 const { createClaudeLlmProvider } = require('./llm-providers/claude-provider.js');
 const { createGeminiLlmProvider } = require('./llm-providers/gemini-provider.js');
@@ -128,12 +128,6 @@ function createAgentLlmProviderBridge(deps = {}) {
   const requestClaudeMessagesWithBackoff = deps.requestClaudeMessagesWithBackoff;
   const requestGeminiGenerateContentWithBackoff = deps.requestGeminiGenerateContentWithBackoff;
   const requestOpenAiResponsesWithBackoff = deps.requestOpenAiResponsesWithBackoff;
-  const resolveCodexApiKey = typeof deps.resolveCodexApiKey === 'function'
-    ? deps.resolveCodexApiKey
-    : ((input = {}) => cleanText(input.apiKey, 400));
-  const resolveCodexEndpoint = typeof deps.resolveCodexEndpoint === 'function'
-    ? deps.resolveCodexEndpoint
-    : ((endpoint = '') => cleanText(endpoint, 2000));
   const extractClaudeResponseText = typeof deps.extractClaudeResponseText === 'function'
     ? deps.extractClaudeResponseText
     : ((payload) => defaultExtractClaudeResponseText(payload, asArray));
@@ -225,7 +219,7 @@ function createAgentLlmProviderBridge(deps = {}) {
     });
   }
 
-  const openAiCliProvider = createOpenAiCliLlmProvider({
+  const codexAgentProvider = createCodexAgentLlmProvider({
     asArray,
     cleanText,
     providerId: LLM_PROVIDERS.CODEX,
@@ -233,8 +227,6 @@ function createAgentLlmProviderBridge(deps = {}) {
     parsePdfDataUrl,
     requestOpenAiResponsesWithBackoff,
     requestCodexCliText,
-    resolveCodexApiKey,
-    resolveCodexEndpoint,
     getWorkingDirectory: getCodexCliWorkingDirectory,
     extractResponseText,
     recordTrace,
@@ -279,7 +271,7 @@ function createAgentLlmProviderBridge(deps = {}) {
 
   function getProviderAdapter(provider = '') {
     if (provider === LLM_PROVIDERS.CODEX) {
-      return openAiCliProvider;
+      return codexAgentProvider;
     }
     if (provider === LLM_PROVIDERS.CLAUDE) {
       return claudeProvider;

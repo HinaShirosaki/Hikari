@@ -549,7 +549,7 @@
     }
   },
   "web-search": {
-    "description": "Use this tool for broad external web retrieval when the agent needs current or general internet sources rather than paper-specific scholarly search. Provide `query` when possible, and optionally constrain `allowed_domains` for focused retrieval. The runtime routes through the shared provider-backed web-search API, including provider-native search and Codex CLI `--search` support.",
+    "description": "Use this tool for broad external web retrieval when the agent needs current or general internet sources rather than paper-specific scholarly search. Provide `query` when possible, and optionally constrain `allowed_domains` for focused retrieval. The runtime routes through the shared web-search transport, including provider-native search and Codex agent search support.",
     "input_schema": {
       "type": "object",
       "additionalProperties": false,

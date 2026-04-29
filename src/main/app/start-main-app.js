@@ -66,6 +66,9 @@ function startMainApp() {
 
   app.on('before-quit', () => {
     runtime.chatLogTransformMonitor.stop();
+    if (runtime.codexAgentMcpHost && typeof runtime.codexAgentMcpHost.close === 'function') {
+      void runtime.codexAgentMcpHost.close();
+    }
     runtime.telegramRuntime.stopTelegramBot('app quit');
   });
 }

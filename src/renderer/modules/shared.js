@@ -530,12 +530,15 @@ export function normalizeState(parsed) {
     : {};
   const legacyApi = String(rawLlm.api || '').trim();
   const legacyApiLooksLikeEndpoint = /^[a-z]+:\/\//i.test(legacyApi);
-  const legacyEndpoint = legacyApiLooksLikeEndpoint ? legacyApi : '';
+  const legacyCodexMarker = legacyApi.toLowerCase().startsWith('codex://');
+  const legacyEndpoint = legacyApiLooksLikeEndpoint && !legacyCodexMarker ? legacyApi : '';
   const legacyApiKey = legacyApi && !legacyApiLooksLikeEndpoint ? legacyApi : '';
-  const llmProvider = normalizeLlmProvider(rawLlm.provider, rawLlm.apiEndpoint || legacyEndpoint);
+  const llmProvider = normalizeLlmProvider(rawLlm.provider, rawLlm.apiEndpoint || legacyApi || legacyEndpoint);
   const llmModel = String(rawLlm.model || '').trim();
-  const llmEndpoint = String(rawLlm.apiEndpoint || legacyEndpoint || '').trim()
-    || defaultLlmEndpointForProvider(llmProvider);
+  const llmEndpoint = llmProvider === 'codex'
+    ? ''
+    : (String(rawLlm.apiEndpoint || legacyEndpoint || '').trim()
+      || defaultLlmEndpointForProvider(llmProvider));
   const llmReasoningEffort = normalizeReasoningEffort(
     llmProvider,
     llmModel,
@@ -647,7 +650,7 @@ export function normalizeState(parsed) {
         model: llmModel,
         reasoningEffort: llmReasoningEffort,
         apiEndpoint: llmEndpoint,
-        apiKey: String(rawLlm.apiKey || legacyApiKey).trim(),
+        apiKey: llmProvider === 'codex' ? '' : String(rawLlm.apiKey || legacyApiKey).trim(),
         api: legacyApi
       },
       agent: {

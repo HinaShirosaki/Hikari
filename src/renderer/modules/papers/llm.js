@@ -21,11 +21,15 @@ function getLlmRequestConfig(llm) {
   const legacyLooksLikeEndpoint = /^[a-z]+:\/\//i.test(legacySetting);
   const endpointCandidate = String(llm?.apiEndpoint || '').trim() || (legacyLooksLikeEndpoint ? legacySetting : '');
   const provider = normalizeLlmProvider(llm?.provider, endpointCandidate);
-  const endpoint = endpointCandidate || defaultLlmEndpointForProvider(provider);
-  const token = String(llm?.apiKey || '').trim() || (legacySetting && !legacyLooksLikeEndpoint ? legacySetting : '');
+  const endpoint = provider === LLM_PROVIDERS.CODEX
+    ? ''
+    : (endpointCandidate || defaultLlmEndpointForProvider(provider));
+  const token = provider === LLM_PROVIDERS.CODEX
+    ? ''
+    : (String(llm?.apiKey || '').trim() || (legacySetting && !legacyLooksLikeEndpoint ? legacySetting : ''));
 
   if (providerRequiresApiKey(provider) && !token) {
-    throw new Error('Missing API key in Settings > LLM Model & API.');
+    throw new Error('Missing API key in Settings > LLM Model & Access.');
   }
 
   return { provider, endpoint, token };
@@ -53,7 +57,7 @@ async function requestResponses({ llm, modelFallbackPrompt, fileName, pdfDataUrl
   const { provider, endpoint, token } = getLlmRequestConfig(llm);
   const model = String(llm?.model || '').trim();
   if (!model && provider !== LLM_PROVIDERS.CODEX) {
-    throw new Error('Missing model in Settings > LLM Model & API.');
+    throw new Error('Missing model in Settings > LLM Model & Access.');
   }
 
   if (provider === LLM_PROVIDERS.CLAUDE) {
@@ -256,7 +260,7 @@ async function requestGemini({ endpoint, token, model, prompt, pdfDataUrl }) {
 
 async function requestCodex({ model, reasoningEffort, prompt, fileName, pdfDataUrl }) {
   if (!window.enanaApi?.runCodexLlmPrompt) {
-    throw new Error('Codex CLI bridge is unavailable in this build.');
+    throw new Error('Codex agent bridge is unavailable in this build.');
   }
   const result = await window.enanaApi.runCodexLlmPrompt({
     model,
@@ -266,7 +270,7 @@ async function requestCodex({ model, reasoningEffort, prompt, fileName, pdfDataU
     pdfDataUrl
   });
   if (!result?.ok) {
-    throw new Error(String(result?.error || 'Codex CLI request failed.'));
+    throw new Error(String(result?.error || 'Codex agent request failed.'));
   }
   return String(result?.text || '').trim();
 }

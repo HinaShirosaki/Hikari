@@ -1667,6 +1667,211 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
       assert.match(String(result.skill_command.summary || ''), /completed successfully/i);
     });
 
+    test('controller core routes Codex provider through the Codex-owned agent runtime', async () => {
+      const { createAgentControllerCore } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc', 'agent-controller-core.js'));
+      let parserCallCount = 0;
+      let codexRunInput = null;
+      let setModelValue = '';
+      let setReasoningValue = '';
+      const lifecycleStages = [];
+      const controller = createAgentControllerCore({
+        deps: {
+          LLM_PROVIDERS: {
+            OPENAI: 'openai',
+            CODEX: 'codex'
+          }
+        },
+        cleanText: (value, _maxLength = 2000) => {
+          const text = String(value || '').trim();
+          return text || '';
+        },
+        controllerUtils: {
+          resolveAgentLlmSource: () => ({
+            provider: 'codex',
+            endpoint: '',
+            apiKey: '',
+            model: 'gpt-5.4'
+          }),
+          resolveAgentProvider: () => 'codex',
+          extractConversation: (conversation) => (Array.isArray(conversation) ? conversation : []),
+          resolveAgentExecutionFlags: () => ({ developerMode: true }),
+          createAgentLlmTraceContext: () => ({
+            enabled: true,
+            requestId: 'req-codex-agent-controller',
+            logPath: '',
+            provider: 'codex',
+            model: 'gpt-5.4',
+            rows: [
+              {
+                stage: 'codex_agent_runtime',
+                provider: 'codex',
+                model: 'gpt-5.4',
+                summary: 'Codex runtime ran.'
+              }
+            ],
+            entries: []
+          }),
+          requestText: async () => {
+            throw new Error('Selection insight text path should be skipped for Codex-owned lifecycle.');
+          },
+          requestWebSearch: async () => {
+            throw new Error('Selection insight web-search path should be skipped for Codex-owned lifecycle.');
+          },
+          async requestIntentParserPayload() {
+            parserCallCount += 1;
+            throw new Error('Intent parser should be skipped for Codex-owned lifecycle.');
+          }
+        },
+        observability: {
+          recordLifecycleEvent: (_recorder, event = {}) => {
+            lifecycleStages.push(event.stage || '');
+          }
+        },
+        protocolNotebookRuntime: {
+          buildSessionKey: () => 'codex-agent-controller',
+          hasPendingSession: () => {
+            throw new Error('Open context parser bypass should be skipped for Codex-owned lifecycle.');
+          }
+        },
+        scienceReasoningLoopRuntime: {
+          runGeneralScienceQuestion: async () => {
+            throw new Error('Science runtime should be skipped for Codex-owned lifecycle.');
+          },
+          runProjectScienceQuestion: async () => {
+            throw new Error('Project science runtime should be skipped for Codex-owned lifecycle.');
+          },
+          runResultAnalysis: async () => {
+            throw new Error('Result-analysis runtime should be skipped for Codex-owned lifecycle.');
+          }
+        },
+        deepResearchRuntime: null,
+        codexAgentRuntime: {
+          async run(input = {}) {
+            codexRunInput = input;
+            return {
+              ok: true,
+              provider: 'codex',
+              model: input.model,
+              parser: {
+                primary_intent: 'codex_agent',
+                needs_clarification: false,
+                reasoning_summary: 'Codex handled the whole turn.',
+                entities: {},
+                inventory_search: {
+                  normalized_query: null,
+                  candidate_terms: [],
+                  aliases: [],
+                  search_mode: null
+                },
+                protocol_candidates: []
+              },
+              codex_agent: {
+                status: 'completed',
+                answer: 'Codex final answer.',
+                follow_up_questions: [],
+                citations: [],
+                reasoning_summary: 'Codex handled the whole turn.'
+              },
+              thinking_trace: {
+                final_synthesize: 'Codex synthesized the answer.'
+              }
+            };
+          }
+        },
+        scienceMainUtils: {},
+        agentToolRuntime: {
+          normalizeAgentSnapshot: (snapshot) => (snapshot && typeof snapshot === 'object' ? snapshot : {}),
+          listSkills: () => [],
+          parseSkillInvocation: () => ({
+            type: 'none',
+            active_skill_names: [],
+            cleaned_message: 'Why was SUMO1 weak?'
+          }),
+          buildSkillsPromptPayload: () => ({
+            active_skills_prompt: '',
+            skills_catalog_prompt: ''
+          })
+        },
+        executeInventoryLookup: async () => {
+          throw new Error('Inventory lookup should not run before Codex agent runtime.');
+        },
+        executeRecordLookup: async () => {
+          throw new Error('Record lookup should not run before Codex agent runtime.');
+        },
+        getAgentChatLogPath: () => '',
+        getDefaultDataFilePath: () => '',
+        setCodexCliModel: (model) => {
+          setModelValue = model;
+        },
+        setCodexCliReasoningEffort: (reasoningEffort) => {
+          setReasoningValue = reasoningEffort;
+        },
+        lifecycleService: {
+          normalizeJsonPayload: (payload, fallback = {}) => (
+            payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : fallback
+          ),
+          asArray: (value) => (Array.isArray(value) ? value : [])
+        }
+      });
+
+      const result = await controller.runAgentControllerCore({
+        message: 'Why was SUMO1 weak?',
+        projectId: 'proj-1',
+        projectName: 'Atlas',
+        conversation: [
+          { role: 'user', text: 'Open Atlas.' }
+        ],
+        attachments: [
+          {
+            name: 'atlas.pdf',
+            kind: 'file',
+            dataUrl: 'data:application/pdf;base64,abc'
+          }
+        ],
+        llm: {
+          provider: 'codex',
+          model: 'gpt-5.4',
+          reasoningEffort: 'high'
+        },
+        agent: {
+          selectionInsight: {
+            actionType: 'what_is_it',
+            selectedText: 'SUMO1'
+          }
+        },
+        stateSnapshot: {
+          data_file_path: '/tmp/enana-data.json',
+          settings: {
+            agent: {
+              developerMode: true
+            }
+          }
+        }
+      }, {
+        requestId: 'req-codex-agent-controller',
+        lifecycleRecorder: {
+          requestId: 'req-codex-agent-controller',
+          events: []
+        }
+      });
+
+      assert.equal(parserCallCount, 0);
+      assert.equal(setModelValue, 'gpt-5.4');
+      assert.equal(setReasoningValue, 'high');
+      assert.equal(result.ok, true);
+      assert.equal(result.parser.primary_intent, 'codex_agent');
+      assert.equal(result.codex_agent.answer, 'Codex final answer.');
+      assert.equal(result.developer_trace.length, 1);
+      assert.equal(codexRunInput.model, 'gpt-5.4');
+      assert.equal(codexRunInput.reasoningEffort, 'high');
+      assert.equal(codexRunInput.projectName, 'Atlas');
+      assert.equal(codexRunInput.selectionInsight.selectedText, 'SUMO1');
+      assert.equal(codexRunInput.attachments[0].name, 'atlas.pdf');
+      assert.equal(codexRunInput.conversation[codexRunInput.conversation.length - 1].text, 'Why was SUMO1 weak?');
+      assert.equal(lifecycleStages.includes('controller_codex_agent'), true);
+      assert.equal(lifecycleStages.includes('controller_intent_only'), false);
+    });
+
     test('controller core bypasses the parser for selection insight explanations and uses direct text requests', async () => {
       const { createAgentControllerCore } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc', 'agent-controller-core.js'));
       let parserCallCount = 0;

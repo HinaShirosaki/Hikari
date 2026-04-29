@@ -268,6 +268,9 @@ function createAgentControllerUtils(deps = {}) {
     const skillCommand = source.skill_command && typeof source.skill_command === 'object'
       ? source.skill_command
       : null;
+    const codexAgent = source.codex_agent && typeof source.codex_agent === 'object'
+      ? source.codex_agent
+      : null;
     const generalScienceQuestion = source.general_science_question && typeof source.general_science_question === 'object'
       ? source.general_science_question
       : null;
@@ -415,6 +418,15 @@ function createAgentControllerUtils(deps = {}) {
           summary: cleanText(skillCommand.summary, 500)
         }
         : null,
+      codex_agent: codexAgent
+        ? {
+          status: cleanText(codexAgent.status, 40),
+          answer: cleanText(codexAgent.answer, 500),
+          reasoning_summary: cleanText(codexAgent.reasoning_summary, 500),
+          follow_up_count: asArray(codexAgent.follow_up_questions).length,
+          citation_count: asArray(codexAgent.citations).length
+        }
+        : null,
       general_science_question: generalScienceQuestion
         ? {
           status: cleanText(generalScienceQuestion.status, 40),
@@ -485,7 +497,7 @@ function createAgentControllerUtils(deps = {}) {
     if (!value) {
       return '';
     }
-    if (value.startsWith('codex://') || value.includes('codex cli') || value.includes('openai-cli')) {
+    if (value.startsWith('codex://') || value.includes('codex cli') || value.includes('codex agent')) {
       return LLM_PROVIDERS.CODEX;
     }
     if (value.includes('anthropic.com')) {
@@ -527,8 +539,8 @@ function createAgentControllerUtils(deps = {}) {
 
   function resolveAgentEndpoint(llm, provider = DEFAULT_LLM_PROVIDER) {
     const endpoint = cleanText(llm?.apiEndpoint, 300);
-    if (provider === LLM_PROVIDERS.CODEX && endpoint) {
-      return endpoint;
+    if (provider === LLM_PROVIDERS.CODEX) {
+      return '';
     }
     if (endpoint && /^https?:\/\//i.test(endpoint)) {
       return endpoint;

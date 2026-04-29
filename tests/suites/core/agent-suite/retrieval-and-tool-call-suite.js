@@ -594,7 +594,7 @@ Workspace body
       assert.equal(result.items[0].title, 'Vendor A Syringe Filter');
     });
 
-    test('purchase recommendation runtime uses the simple bridge web-search api for codex fast search mode', async () => {
+    test('purchase recommendation runtime uses the Codex agent web-search surface for fast search mode', async () => {
       const { createPurchaseRecommendationRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-purchase-recommendation.js'));
       const webSearchCalls = [];
       let structuredCalls = 0;

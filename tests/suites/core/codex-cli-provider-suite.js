@@ -81,6 +81,29 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
       }
     }
 
+    function createFakeCodexBinary(workspaceDir) {
+      const fakePath = path.join(workspaceDir, 'fake-codex.js');
+      const capturePath = path.join(workspaceDir, 'fake-codex-call.json');
+      fs.writeFileSync(fakePath, [
+        '#!/usr/bin/env node',
+        "const fs = require('node:fs');",
+        'const args = process.argv.slice(2);',
+        'let stdin = "";',
+        "process.stdin.on('data', (chunk) => { stdin += String(chunk || ''); });",
+        "process.stdin.on('end', () => {",
+        "  const outputIndex = args.indexOf('--output-last-message');",
+        "  const outputFile = outputIndex >= 0 ? args[outputIndex + 1] : '';",
+        '  fs.writeFileSync(process.env.ENANA_FAKE_CODEX_CAPTURE, JSON.stringify({ args, stdin, cwd: process.cwd(), codexHome: process.env.CODEX_HOME }, null, 2));',
+        "  if (outputFile) { fs.writeFileSync(outputFile, 'OK from fake codex'); }",
+        '});'
+      ].join('\n'), 'utf8');
+      fs.chmodSync(fakePath, 0o755);
+      return {
+        fakePath,
+        capturePath
+      };
+    }
+
     test('codex cli provider stores and clears the configured model', () => {
       withCodexHome({}, () => {
         const provider = loadProvider();
@@ -191,6 +214,7 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
         assert.equal(fs.existsSync(path.join(runtimeHome, 'config.toml')), true);
         assert.equal(fs.existsSync(path.join(runtimeHome, 'models_cache.json')), true);
         assert.equal(fs.existsSync(path.join(runtimeHome, 'skills')), true);
+        assert.match(fs.readFileSync(path.join(runtimeHome, 'config.toml'), 'utf8'), /\[mcp_servers\.enana\]/);
       } finally {
         if (typeof previousCodexHome === 'string') {
           process.env.CODEX_HOME = previousCodexHome;
@@ -207,36 +231,321 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
       }
     });
 
-    test('codex cli provider maps codex:// endpoints to the ChatGPT Codex backend responses API', () => {
-      const provider = loadProvider();
-      assert.equal(
-        provider.resolveCodexCliResponsesEndpoint('codex://cli'),
-        'https://chatgpt.com/backend-api/codex/responses'
-      );
-      assert.equal(
-        provider.resolveCodexCliResponsesEndpoint('https://chatgpt.com/backend-api'),
-        'https://chatgpt.com/backend-api/codex/responses'
-      );
-      assert.equal(
-        provider.resolveCodexCliResponsesEndpoint('https://chatgpt.com/backend-api/responses'),
-        'https://chatgpt.com/backend-api/codex/responses'
-      );
-      assert.equal(
-        provider.resolveCodexCliResponsesEndpoint('https://chatgpt.com/backend-api/codex'),
-        'https://chatgpt.com/backend-api/codex/responses'
-      );
-      assert.equal(
-        provider.resolveCodexCliResponsesEndpoint('https://chatgpt.com/backend-api/codex/responses'),
-        'https://chatgpt.com/backend-api/codex/responses'
-      );
+    test('codex cli provider writes Enana AGENTS.md guidance into the runtime workspace', async () => {
+      const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'enana-codex-agents-'));
+      try {
+        const provider = loadProvider();
+        const agentsPath = await provider.ensureCodexCliAgentsFile(workspaceDir);
+        const firstContent = fs.readFileSync(agentsPath, 'utf8');
+        assert.equal(agentsPath, path.join(workspaceDir, 'AGENTS.md'));
+        assert.match(firstContent, /ENANA_CODEX_AGENT_INSTRUCTIONS_START/);
+        assert.match(firstContent, /literature-search/);
+        assert.match(firstContent, /paper-download/);
+        assert.match(firstContent, /loads bounded paper context blocks/);
+
+        fs.writeFileSync(agentsPath, `${firstContent}\nLocal note stays here.\n`, 'utf8');
+        await provider.ensureCodexCliAgentsFile(workspaceDir);
+        const secondContent = fs.readFileSync(agentsPath, 'utf8');
+        assert.equal((secondContent.match(/ENANA_CODEX_AGENT_INSTRUCTIONS_START/g) || []).length, 1);
+        assert.match(secondContent, /Local note stays here/);
+      } finally {
+        fs.rmSync(workspaceDir, { recursive: true, force: true });
+      }
     });
 
-    test('codex cli provider uses the streamed Codex backend contract for prompt requests', async () => {
+    test('codex agent MCP gateway exposes Enana tools and instruction resources', async () => {
+      const { createCodexAgentMcpGateway } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'codex-agent',
+        'mcp-gateway.js'
+      ));
+      const calls = [];
+      const gateway = createCodexAgentMcpGateway({
+        runTool: async (toolId, args, snapshot, context) => {
+          calls.push({ toolId, args, snapshot, context });
+          return {
+            ok: true,
+            items: [{ id: 'item-1' }],
+            summary: 'Inventory lookup completed.'
+          };
+        }
+      });
+
+      const searchResult = gateway.toolSearch({ query: 'download paper pdf', limit: 6 });
+      assert.equal(searchResult.ok, true);
+      assert.equal(searchResult.results.some((entry) => entry.tool_id === 'paper-download'), true);
+
+      const infoResult = gateway.toolInfo({ tool_id: 'literature-search', detail_level: 'schema' });
+      assert.equal(infoResult.ok, true);
+      assert.equal(infoResult.tool.tool_id, 'literature-search');
+      assert.equal(infoResult.tool.input_schema.type, 'object');
+
+      const callResult = await gateway.toolCall({
+        tool_id: 'inventory-lookup',
+        args: {
+          query: 'PEI',
+          limit: 3
+        }
+      }, {
+        snapshot: { inventory: [] },
+        requestId: 'req-1'
+      });
+      assert.equal(callResult.ok, true);
+      assert.equal(callResult.status, 'completed');
+      assert.equal(calls.length, 1);
+      assert.equal(calls[0].toolId, 'inventory-lookup');
+      assert.equal(calls[0].args.query, 'PEI');
+      assert.equal(calls[0].snapshot.inventory.length, 0);
+      assert.equal(calls[0].context.requestId, 'req-1');
+
+      const invalidResult = await gateway.toolCall({
+        tool_id: 'inventory-lookup',
+        args: {
+          query: 'PEI',
+          limit: 'many'
+        }
+      });
+      assert.equal(invalidResult.ok, false);
+      assert.equal(invalidResult.status, 'invalid_arguments');
+
+      const instructions = gateway.resourceRead({ uri: 'enana://instructions/codex-agent' });
+      assert.equal(instructions.ok, true);
+      assert.match(instructions.contents, /Inference verification rules/);
+      assert.match(instructions.contents, /paper-download/);
+    });
+
+    test('codex agent runtime builds a whole-turn prompt and parses the answer envelope', async () => {
+      const { createCodexAgentRuntime } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'codex-agent',
+        'runtime.js'
+      ));
+      const calls = [];
+      const traceRows = [];
+      const lifecycleEvents = [];
+      const runtime = createCodexAgentRuntime({
+        cleanText: (value, maxLength = 2000) => {
+          const text = String(value || '').trim();
+          return maxLength > 0 ? text.slice(0, maxLength) : text;
+        },
+        requestCodexAgentText: async (input = {}) => {
+          calls.push(input);
+          return JSON.stringify({
+            status: 'completed',
+            assistant_text: 'Atlas SUMO1 likely needs a follow-up expression check.',
+            follow_up_questions: [],
+            reasoning_summary: 'Used local project context and verified the conclusion.',
+            citations: [
+              {
+                source: 'record-lookup',
+                pointer: 'notebook:atlas-sumo1',
+                reason: 'Matched the selected project record.'
+              }
+            ]
+          });
+        },
+        recordAgentLlmTrace: async (_traceContext, event = {}) => {
+          traceRows.push(event);
+        },
+        recordLifecycleEvent: (_recorder, event = {}) => {
+          lifecycleEvents.push(event);
+        },
+        getWorkingDirectory: () => '/tmp/enana-workspace'
+      });
+
+      const result = await runtime.run({
+        message: 'Why was SUMO1 conjugation weak?',
+        conversation: [
+          { role: 'user', text: 'Open Atlas.' },
+          { role: 'assistant', text: 'Atlas is open.' }
+        ],
+        attachments: [
+          {
+            name: 'pilot.pdf',
+            kind: 'file',
+            mimeType: 'application/pdf',
+            size: 1234,
+            dataUrl: 'data:application/pdf;base64,abc'
+          }
+        ],
+        projectId: 'proj-1',
+        projectName: 'Atlas SUMO1',
+        selectionInsight: {
+          actionType: 'what_is_it',
+          selectedText: 'weak conjugation'
+        },
+        snapshot: {
+          data_file_path: '/tmp/enana-data.json'
+        },
+        model: 'gpt-5.4',
+        reasoningEffort: 'high',
+        traceContext: { requestId: 'req-codex-runtime', rows: [], entries: [] },
+        lifecycleRecorder: { requestId: 'req-codex-runtime', events: [] }
+      });
+
+      assert.equal(calls.length, 1);
+      assert.equal(calls[0].model, 'gpt-5.4');
+      assert.equal(calls[0].reasoningEffort, 'high');
+      assert.equal(calls[0].enableWebSearch, true);
+      assert.match(calls[0].prompt, /Codex-Owned Agent Request/);
+      assert.match(calls[0].prompt, /Current user request:\nWhy was SUMO1 conjugation weak\?/);
+      assert.match(calls[0].prompt, /Recent conversation:/);
+      assert.match(calls[0].prompt, /Selection insight context:/);
+      assert.match(calls[0].prompt, /pilot\.pdf/);
+      assert.match(calls[0].prompt, /"assistant_text"/);
+      const mcpContext = JSON.parse(calls[0].envOverrides.ENANA_CODEX_REQUEST_CONTEXT);
+      assert.equal(mcpContext.provider, 'codex');
+      assert.equal(mcpContext.model, 'gpt-5.4');
+      assert.equal(mcpContext.project.name, 'Atlas SUMO1');
+      assert.equal(mcpContext.dataFilePath, '/tmp/enana-data.json');
+      assert.equal(result.ok, true);
+      assert.equal(result.parser.primary_intent, 'codex_agent');
+      assert.equal(result.codex_agent.status, 'completed');
+      assert.match(result.codex_agent.answer, /SUMO1 likely/);
+      assert.equal(result.codex_agent.citations.length, 1);
+      assert.equal(traceRows.some((row) => row.stage === 'codex_agent_runtime'), true);
+      assert.equal(lifecycleEvents.some((event) => event.stage === 'codex_agent_completed'), true);
+    });
+
+    test('codex agent runtime wraps non-json output with a parse warning', async () => {
+      const { createCodexAgentRuntime } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'codex-agent',
+        'runtime.js'
+      ));
+      const traceRows = [];
+      const runtime = createCodexAgentRuntime({
+        cleanText: (value, maxLength = 2000) => {
+          const text = String(value || '').trim();
+          return maxLength > 0 ? text.slice(0, maxLength) : text;
+        },
+        requestCodexAgentText: async () => 'Plain answer from Codex.',
+        recordAgentLlmTrace: async (_traceContext, event = {}) => {
+          traceRows.push(event);
+        }
+      });
+
+      const result = await runtime.run({
+        message: 'Answer plainly.',
+        model: 'gpt-5.4',
+        traceContext: { requestId: 'req-codex-raw', rows: [], entries: [] }
+      });
+
+      assert.equal(result.ok, true);
+      assert.equal(result.codex_agent.answer, 'Plain answer from Codex.');
+      assert.equal(result.warnings.length, 1);
+      assert.match(result.warnings[0], /non-JSON output/);
+      assert.equal(traceRows.some((row) => row.stage === 'codex_agent_parse_warning'), true);
+    });
+
+    test('codex MCP stdio server forwards request context from the Codex command environment', async () => {
+      const { createCodexAgentMcpStdioServer } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'codex-agent',
+        'mcp-stdio-server.js'
+      ));
+      let capturedContext = null;
+      const outputChunks = [];
+      const server = createCodexAgentMcpStdioServer({
+        input: { on() {} },
+        output: {
+          write(chunk) {
+            outputChunks.push(String(chunk || ''));
+          }
+        },
+        env: {
+          ENANA_CODEX_REQUEST_CONTEXT: JSON.stringify({
+            provider: 'codex',
+            model: 'gpt-5.4',
+            project: {
+              id: 'proj-1',
+              name: 'Atlas'
+            },
+            traceRequestId: 'req-ctx'
+          })
+        },
+        gateway: {
+          async callGatewayTool(_name, _args, context = {}) {
+            capturedContext = context;
+            return {
+              ok: true,
+              results: []
+            };
+          }
+        }
+      });
+
+      await server.handleRequest({
+        jsonrpc: '2.0',
+        id: 7,
+        method: 'tools/call',
+        params: {
+          name: 'tool_search',
+          arguments: {
+            query: 'paper'
+          }
+        }
+      });
+
+      assert.equal(capturedContext.provider, 'codex');
+      assert.equal(capturedContext.model, 'gpt-5.4');
+      assert.equal(capturedContext.project.name, 'Atlas');
+      assert.equal(capturedContext.traceRequestId, 'req-ctx');
+      assert.equal(capturedContext.mcpRequest.id, 7);
+      assert.equal(outputChunks.join('').includes('"jsonrpc":"2.0"'), true);
+    });
+
+    test('codex agent MCP config includes the app host callback when available', async () => {
+      const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'enana-codex-mcp-config-'));
+      const previousHost = process.env.ENANA_CODEX_MCP_HOST;
+      const previousToken = process.env.ENANA_CODEX_MCP_TOKEN;
+      process.env.ENANA_CODEX_MCP_HOST = 'http://127.0.0.1:43123';
+      process.env.ENANA_CODEX_MCP_TOKEN = 'test-token';
+      try {
+        const provider = loadProvider();
+        const runtimeHome = await provider.ensureCodexCliRuntimeHome(workspaceDir);
+        const configText = fs.readFileSync(path.join(runtimeHome, 'config.toml'), 'utf8');
+        assert.match(configText, /\[mcp_servers\.enana\]/);
+        assert.match(configText, /ENANA_CODEX_MCP_HOST/);
+        assert.match(configText, /http:\/\/127\.0\.0\.1:43123/);
+        assert.match(configText, /ENANA_CODEX_MCP_TOKEN/);
+      } finally {
+        if (typeof previousHost === 'string') {
+          process.env.ENANA_CODEX_MCP_HOST = previousHost;
+        } else {
+          delete process.env.ENANA_CODEX_MCP_HOST;
+        }
+        if (typeof previousToken === 'string') {
+          process.env.ENANA_CODEX_MCP_TOKEN = previousToken;
+        } else {
+          delete process.env.ENANA_CODEX_MCP_TOKEN;
+        }
+        fs.rmSync(workspaceDir, { recursive: true, force: true });
+      }
+    });
+
+    test('codex cli provider runs codex exec with Enana AGENTS.md and MCP config', async () => {
       const accessToken = buildJwt({
         exp: Math.floor(Date.now() / 1000) + 3600,
         email: 'scientist@example.com'
       });
-      withCodexHome({
+      await withCodexHome({
         authFile: {
           auth_mode: 'chatgpt',
           tokens: {
@@ -247,51 +556,42 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
         }
       }, async () => {
         const provider = loadProvider();
-        const previousFetch = global.fetch;
-        const calls = [];
-        global.fetch = async (url, init = {}) => {
-          calls.push({ url, init });
-          return {
-            ok: true,
-            status: 200,
-            headers: {
-              get(name) {
-                return ({ 'content-type': 'text/event-stream' })[String(name || '').toLowerCase()] || null;
-              }
-            },
-            async text() {
-              return [
-                'event: response.created',
-                'data: {"type":"response.created","response":{"id":"resp_123","status":"in_progress","output":[]}}',
-                '',
-                'event: response.output_text.done',
-                'data: {"type":"response.output_text.done","text":"OK"}',
-                '',
-                'event: response.output_item.done',
-                'data: {"type":"response.output_item.done","item":{"id":"msg_123","type":"message","status":"completed","role":"assistant","content":[{"type":"output_text","text":"OK"}]}}',
-                '',
-                'event: response.completed',
-                'data: {"type":"response.completed","response":{"id":"resp_123","status":"completed","output":[]}}'
-              ].join('\n');
-            }
-          };
-        };
+        const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'enana-codex-request-'));
+        const fakeCodex = createFakeCodexBinary(workspaceDir);
+        const previousCodexCli = process.env.ENANA_CODEX_CLI;
+        const previousCapture = process.env.ENANA_FAKE_CODEX_CAPTURE;
+        process.env.ENANA_CODEX_CLI = fakeCodex.fakePath;
+        process.env.ENANA_FAKE_CODEX_CAPTURE = fakeCodex.capturePath;
 
         try {
           const result = await provider.requestCodexCliText({
-            prompt: 'Return OK only.'
+            prompt: 'Return OK only.',
+            cwd: workspaceDir,
+            enableWebSearch: true
           });
-          assert.equal(result, 'OK');
-          assert.equal(calls.length, 1);
-          assert.equal(calls[0].url, 'https://chatgpt.com/backend-api/codex/responses');
-          assert.equal(JSON.parse(calls[0].init.body).store, false);
-          assert.equal(JSON.parse(calls[0].init.body).stream, true);
-          assert.equal(JSON.parse(calls[0].init.body).input[0].content[0].text, 'Return OK only.');
-          assert.equal(calls[0].init.headers['User-Agent'], 'CodexBar');
-          assert.equal(calls[0].init.headers['ChatGPT-Account-Id'], 'acct-456');
-          assert.equal(calls[0].init.headers.Accept, 'text/event-stream');
+          const captured = JSON.parse(fs.readFileSync(fakeCodex.capturePath, 'utf8'));
+          const runtimeConfig = fs.readFileSync(path.join(captured.codexHome, 'config.toml'), 'utf8');
+          assert.equal(result, 'OK from fake codex');
+          assert.equal(fs.realpathSync(captured.cwd), fs.realpathSync(workspaceDir));
+          assert.equal(captured.args.includes('exec'), true);
+          assert.equal(captured.args.includes('--search'), true);
+          assert.equal(captured.args.includes('--output-last-message'), true);
+          assert.match(captured.stdin, /Return OK only\./);
+          assert.equal(fs.existsSync(path.join(workspaceDir, 'AGENTS.md')), true);
+          assert.match(runtimeConfig, /\[mcp_servers\.enana\]/);
+          assert.match(runtimeConfig, /mcp-stdio-server\.js/);
         } finally {
-          global.fetch = previousFetch;
+          if (typeof previousCodexCli === 'string') {
+            process.env.ENANA_CODEX_CLI = previousCodexCli;
+          } else {
+            delete process.env.ENANA_CODEX_CLI;
+          }
+          if (typeof previousCapture === 'string') {
+            process.env.ENANA_FAKE_CODEX_CAPTURE = previousCapture;
+          } else {
+            delete process.env.ENANA_FAKE_CODEX_CAPTURE;
+          }
+          fs.rmSync(workspaceDir, { recursive: true, force: true });
         }
       });
     });
@@ -310,7 +610,7 @@ https://auth.openai.com/oauth/authorize?response_type=code&client_id=test-client
       );
     });
 
-    test('codex cli provider imports chatgpt oauth credentials from auth.json for login status and bearer auth', async () => {
+    test('codex cli provider imports chatgpt oauth credentials from auth.json for login status', async () => {
       const accessToken = buildJwt({
         exp: Math.floor(Date.now() / 1000) + 3600,
         email: 'scientist@example.com'
@@ -342,7 +642,6 @@ https://auth.openai.com/oauth/authorize?response_type=code&client_id=test-client
         assert.equal(status.expired, false);
         assert.equal(status.sourcePath, path.join(tmpDir, 'auth.json'));
         assert.match(String(status.message || ''), /auth\.json/i);
-        assert.equal(provider.resolveCodexCliAccessToken(''), accessToken);
       } finally {
         if (typeof previousCodexHome === 'string') {
           process.env.CODEX_HOME = previousCodexHome;
@@ -392,7 +691,6 @@ https://auth.openai.com/oauth/authorize?response_type=code&client_id=test-client
         const profile = provider.readCodexCliOAuthProfile();
         assert.equal(profile.accessToken, appAccessToken);
         assert.equal(profile.sourcePath, path.join(appHome, 'auth.json'));
-        assert.equal(provider.resolveCodexCliAccessToken(''), appAccessToken);
       } finally {
         if (typeof previousCodexHome === 'string') {
           process.env.CODEX_HOME = previousCodexHome;
@@ -409,7 +707,7 @@ https://auth.openai.com/oauth/authorize?response_type=code&client_id=test-client
       }
     });
 
-    test('codex cli provider refuses expired oauth access tokens for bridge auth resolution', async () => {
+    test('codex cli provider refuses expired oauth access tokens for login status', async () => {
       const expiredAccessToken = buildJwt({
         exp: Math.floor(Date.now() / 1000) - 3600,
         email: 'scientist@example.com'
@@ -430,7 +728,6 @@ https://auth.openai.com/oauth/authorize?response_type=code&client_id=test-client
 
       try {
         const provider = loadProvider();
-        assert.equal(provider.resolveCodexCliAccessToken(''), '');
         const status = await provider.getCodexLoginStatus({ forceRefresh: true });
         assert.equal(status.loggedIn, false);
         assert.equal(status.source, 'stored');

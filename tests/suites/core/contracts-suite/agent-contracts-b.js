@@ -136,7 +136,7 @@ module.exports = function registerAgentContractsB(context = {}) {
       const protocolSource = fs.readFileSync(agentPath('tools', 'agent-protocol-generation.js'), 'utf8');
       const llmUtilsSource = fs.readFileSync(agentPath('shared', 'agent-llm-utils.js'), 'utf8');
       const llmBridgeSource = fs.readFileSync(agentPath('shared', 'agent-llm-provider-bridge.js'), 'utf8');
-      const openAiCliProviderSource = fs.readFileSync(agentPath('shared', 'llm-providers', 'openai-cli-provider.js'), 'utf8');
+      const codexAgentProviderSource = fs.readFileSync(agentPath('shared', 'llm-providers', 'codex-agent-provider.js'), 'utf8');
       const openAiProviderSource = fs.readFileSync(agentPath('shared', 'llm-providers', 'openai-provider.js'), 'utf8');
       const claudeProviderSource = fs.readFileSync(agentPath('shared', 'llm-providers', 'claude-provider.js'), 'utf8');
       const geminiProviderSource = fs.readFileSync(agentPath('shared', 'llm-providers', 'gemini-provider.js'), 'utf8');
@@ -179,14 +179,14 @@ module.exports = function registerAgentContractsB(context = {}) {
       assert.doesNotMatch(llmUtilsSource, /requestOpenAiResponsesWithBackoff/);
       assert.doesNotMatch(llmUtilsSource, /requestClaudeMessagesWithBackoff/);
       assert.doesNotMatch(llmUtilsSource, /requestGeminiGenerateContentWithBackoff/);
-      assert.match(llmBridgeSource, /llm-providers\/openai-cli-provider/);
+      assert.match(llmBridgeSource, /llm-providers\/codex-agent-provider/);
       assert.match(llmBridgeSource, /llm-providers\/openai-provider/);
       assert.match(llmBridgeSource, /llm-providers\/claude-provider/);
       assert.match(llmBridgeSource, /llm-providers\/gemini-provider/);
       assert.match(openAiProviderSource, /input_file/);
       assert.match(geminiProviderSource, /inlineData/);
       assert.match(claudeProviderSource, /document/);
-      assert.match(openAiCliProviderSource, /enableWebSearch/);
+      assert.match(codexAgentProviderSource, /enableWebSearch/);
       assert.match(mainAgentServicesSource, /createWebSearchRuntime/);
       assert.match(mainAgentServicesSource, /const webSearchRuntime = createWebSearchRuntime/);
       assert.match(mainAgentServicesSource, /webSearchRuntime,/);

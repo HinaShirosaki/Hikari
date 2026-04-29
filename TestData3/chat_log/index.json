@@ -1,7 +1,24 @@
 {
   "version": 1,
-  "updated_at": "2026-04-29T02:12:19.434Z",
+  "updated_at": "2026-04-29T14:36:30.442Z",
   "sessions": [
+    {
+      "id": "chat-mok5qyqr-o9brqxp7",
+      "title": "What is the difference between CD4+ and CD8+ cells?",
+      "project_id": "",
+      "project_name": "",
+      "log_file": "chat-mok5qyqr-o9brqxp7.log",
+      "created_at": "2026-04-29T14:36:05.859Z",
+      "updated_at": "2026-04-29T14:36:30.408Z",
+      "status": "active",
+      "message_count": 2,
+      "request_count": 1,
+      "last_message_preview": "CD4+ cells are helper T cells that coordinate immune responses by activating other immune cells, whereas CD8+ cells are cytotoxic T cells that directly kill infected or abnormal cells.",
+      "last_user_message_preview": "What is the difference between CD4+ and CD8+ cells?",
+      "response_type": "",
+      "last_request_id": "1777473381565-832595e1",
+      "last_error": ""
+    },
     {
       "id": "chat-mojepvrf-uwtifvng",
       "title": "How antigen is presented to B cells? Think harder",
@@ -55,7 +72,7 @@
     }
   ],
   "transforms": {
-    "updated_at": "2026-04-29T02:12:19.434Z",
+    "updated_at": "2026-04-29T14:36:30.442Z",
     "output_folder": "transformed",
     "files": {
       "chat-mojcw4u8-im08mohg.log": {
@@ -89,6 +106,17 @@
         "source_line_count": 46,
         "trace_count": 15,
         "transformed_at": "2026-04-29T02:12:19.432Z",
+        "error": ""
+      },
+      "chat-mok5qyqr-o9brqxp7.log": {
+        "source_file": "chat-mok5qyqr-o9brqxp7.log",
+        "output_file": "transformed/chat-mok5qyqr-o9brqxp7.json",
+        "status": "complete",
+        "source_mtime_ms": 1777473390412.2957,
+        "source_size": 13856,
+        "source_line_count": 13,
+        "trace_count": 1,
+        "transformed_at": "2026-04-29T14:36:30.438Z",
         "error": ""
       }
     }
